@@ -197,7 +197,7 @@ void PR_StackTrace (void)
 		if (!f)
 			Con_Printf ("<NULL FUNCTION>\n");
 		else
-			Con_Printf ("%12s : %s : statement %i\n", pr_strings + f->s_file, pr_strings + f->s_name, pr_stack[i].s - f->first_statement);
+			Con_Printf ("%12s : %s : statement %i\n", PR_GetString(f->s_file), PR_GetString(f->s_name), pr_stack[i].s - f->first_statement);
 	}
 }
 
@@ -232,7 +232,7 @@ void PR_Profile_f (void)
 		if (best)
 		{
 			if (num < 10)
-				Con_Printf ("%7i %s\n", best->profile, pr_strings+best->s_name);
+				Con_Printf ("%7i %s\n", best->profile, PR_GetString(best->s_name));
 			num++;
 			best->profile = 0;
 		}
@@ -348,11 +348,14 @@ int PR_LeaveFunction (void)
 	return pr_stack[pr_depth].s;
 }
 
+void PR_ReInitStrings (void);
 void PR_Execute_ProgsLoaded(void)
 {
 	// dump the stack
 	pr_depth = 0;
 	localstack_used = 0;
+	// reset the string table
+	PR_ReInitStrings();
 }
 
 /*
@@ -424,3 +427,34 @@ chooseexecprogram:
 	}
 }
 
+// LordHavoc: grabbed these from QWSV, works around a gcc 2.95.3 compiler bug
+#define MAX_PRSTR 1024
+static char *pr_strtbl[MAX_PRSTR];
+static int num_prstr;
+
+char *PR_GetString (int num)
+{
+	return num >= 0 ? pr_strings + num : pr_strtbl[-num];
+}
+
+int PR_SetString (char *s)
+{
+	if (s >= pr_strings)
+		return (int) (s - pr_strings);
+	else
+	{
+		int i;
+		for (i = 0; i <= num_prstr; i++)
+			if (pr_strtbl[i] == s)
+				return -i;
+		if (num_prstr >= (MAX_PRSTR - 1))
+			Host_Error ("PR_Setstring: ran out of string table slots");
+		pr_strtbl[++num_prstr] = s;
+		return -num_prstr;
+	}
+}
+
+void PR_ReInitStrings (void)
+{
+	num_prstr = 0;
+}
