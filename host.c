@@ -755,7 +755,7 @@ void _Host_Frame (float time)
 		CL_ReadFromServer();
 	}
 
-	ui_update();
+	//ui_update();
 
 	CL_VideoFrame();
 

@@ -1313,7 +1313,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	if (!mouseactive)
 	{
 		GetCursorPos (&current_pos);
-		ui_mouseupdate(current_pos.x - window_x, current_pos.y - window_y);
+		//ui_mouseupdate(current_pos.x - window_x, current_pos.y - window_y);
 		in_mouse_x = in_mouse_y = 0;
 		return;
 	}

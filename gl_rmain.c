@@ -337,7 +337,8 @@ void Render_Init(void)
 	R_Light_Init();
 	R_Particles_Init();
 	R_Explosion_Init();
-	ui_init();
+	//ui_init();
+	UI_Init();
 	Sbar_Init();
 	R_LightningBeams_Init();
 }

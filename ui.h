@@ -1,7 +1,7 @@
 
 #ifndef UI_H
 #define UI_H
-
+/*
 // these defines and structures are for internal use only
 // (ui_t is passed around by users of the system, but should not be altered)
 #define MAX_UI_COUNT 16
@@ -78,7 +78,58 @@ void ui_item_remove(ui_t *ui, char *basename, int number);
 // checks if a panel is enabled
 int ui_uiactive(ui_t *ui);
 // enables/disables a panel on the screen
-void ui_activate(ui_t *ui, int yes);
+void ui_activate(ui_t *ui, int yes);*/
+
+// AK: new passive ui (like the menu stuff)
+#define UI_TEXT_DEFAULT_LENGTH 255
+typedef void * ui_item_t;
+typedef void * ui_itemlist_t;
+
+void UI_Init(void);
+
+void UI_Key(ui_itemlist_t, int key, int ascii);
+void UI_Draw(ui_itemlist_t);
+
+void UI_SetFocus(ui_itemlist_t, ui_item_t);
+void UI_SetNeighbors(ui_item_t left, ui_item_t right, ui_item_t up, ui_item_t down);
+
+// item stuff
+ui_item_t UI_CreateButton(const char *caption, float x, float y, void(*action)(ui_item_t)); 
+ui_item_t UI_CreateLabel(const char *caption, float x, float y);
+ui_item_t UI_CreateText(const char *caption, float x, float y, const char *allowed, int maxlen, int scrolllen);
+void UI_FreeItem(ui_item_t);
+
+const char* UI_GetCaption(ui_item_t);
+void UI_SetCaption(ui_item_t, const char *);
+
+// itemlist stuff
+ui_itemlist_t UI_CreateItemList(float x, float y);
+void UI_FreeItemList(ui_itemlist_t);
+
+void UI_AddItem(ui_itemlist_t, ui_item_t);
+
+// AK: new callback system
+#define UI_MAX_CALLBACK_COUNT 10
+
+#define UI_SLOTUSED	1
+typedef struct ui_callback_s
+{
+	unsigned int flag;
+	void (*keydown) (int num, char ascii);
+	void (*draw)	(void);
+} ui_callback_t;
+
+// functions which should be used
+void UI_Callback_Init(void);
+void UI_Callback_Reset(void);
+
+void UI_Callback_SetupSlot(int slotnr, void(*keydownf)(int num, char ascii), void(*drawf)(void));
+void UI_Callback_ResetSlot(int slotnr);
+int  UI_Callback_GetFreeSlot(void);
+int	 UI_Callback_IsSlotUsed(int slotnr);
+
+void UI_Callback_Draw(void);
+void UI_Callback_KeyDown(int num, char ascii);
 
 #endif
 

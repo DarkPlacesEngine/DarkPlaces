@@ -1020,8 +1020,9 @@ void CL_UpdateScreen(void)
 			SCR_CheckDrawCenterString();
 		}
 		MR_Draw();
+		UI_Callback_Draw();
 		CL_DrawVideo();
-		ui_draw();
+		//ui_draw();
 		if (cls.signon == SIGNONS)
 		{
 			R_TimeReport("2d");

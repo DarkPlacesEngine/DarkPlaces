@@ -204,7 +204,7 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 #endif
 }
 
-mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline)
+mempool_t *_Mem_AllocPool(const char *name, mempool_t *parent, const char *filename, int fileline)
 {
 	mempool_t *pool;
 	pool = malloc(sizeof(mempool_t));
@@ -219,6 +219,7 @@ mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline)
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
 	strlcpy (pool->name, name, sizeof (pool->name));
+	pool->parent = parent;
 	pool->next = poolchain;
 	poolchain = pool;
 	return pool;
@@ -226,7 +227,8 @@ mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline)
 
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 {
-	mempool_t **chainaddress;
+	mempool_t **chainaddress, *iter, *temp;
+	
 	if (*pool)
 	{
 		if ((*pool)->sentinel1 != MEMHEADER_SENTINEL1)
@@ -243,6 +245,11 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 		while ((*pool)->chain)
 			Mem_Free((void *)((qbyte *) (*pool)->chain + sizeof(memheader_t)));
 
+		// free child pools, too
+		for(iter = poolchain; iter; temp = iter = iter->next)
+			if(iter->parent == *pool)
+				_Mem_FreePool(&temp, filename, fileline);
+		
 		// free the pool itself
 		memset(*pool, 0xBF, sizeof(mempool_t));
 		free(*pool);
@@ -252,6 +259,8 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 
 void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 {
+	mempool_t *chainaddress;
+	
 	if (pool == NULL)
 		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
 	if (pool->sentinel1 != MEMHEADER_SENTINEL1)
@@ -262,6 +271,12 @@ void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 	// free memory owned by the pool
 	while (pool->chain)
 		Mem_Free((void *)((qbyte *) pool->chain + sizeof(memheader_t)));
+
+	// empty child pools, too
+	for(chainaddress = poolchain; chainaddress; chainaddress = chainaddress->next)
+		if(chainaddress->parent == pool)
+			_Mem_EmptyPool(chainaddress, filename, fileline);
+
 }
 
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline)
@@ -403,6 +418,7 @@ void Memory_Init (void)
 {
 	tempmempool = Mem_AllocPool("Temporary Memory");
 	zonemempool = Mem_AllocPool("Zone");
+	poolchain = NULL;
 }
 
 void Memory_Init_Commands (void)

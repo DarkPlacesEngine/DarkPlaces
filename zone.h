@@ -103,6 +103,8 @@ typedef struct mempool_s
 	char name[POOLNAMESIZE];
 	// linked into global mempool list
 	struct mempool_s *next;
+	// parent object (used for nested memory pools)
+	struct mempool_s *parent;
 	// file name and line where Mem_AllocPool was called
 	const char *filename;
 	int fileline;
@@ -115,13 +117,14 @@ mempool_t;
 #define Mem_Free(mem) _Mem_Free(mem, __FILE__, __LINE__)
 #define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
 #define Mem_CheckSentinelsGlobal() _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
-#define Mem_AllocPool(name) _Mem_AllocPool(name, __FILE__, __LINE__)
+#define Mem_AllocPool(name) _Mem_AllocPool(name, NULL, __FILE__, __LINE__)
+#define Mem_AllocNestedPool(name, parent) _Mem_AllocPool(name, (parent), __FILE__, __LINE__)
 #define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
 #define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)
 
 void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline);
 void _Mem_Free(void *data, const char *filename, int fileline);
-mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline);
+mempool_t *_Mem_AllocPool(const char *name, mempool_t *parent, const char *filename, int fileline);
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
 void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
 void _Mem_CheckSentinels(void *data, const char *filename, int fileline);
