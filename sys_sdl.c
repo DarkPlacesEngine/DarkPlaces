@@ -209,7 +209,7 @@ char *Sys_GetClipboardData (void)
 #endif
 }
 
-int SDL_main (int argc, char *argv[])
+int main (int argc, const char *argv[])
 {
 	double frameoldtime, framenewtime;
 

@@ -133,7 +133,8 @@ LDFLAGS_RELEASE=
 OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_SOUND) $(OBJ_CD) $(OBJ_COMMON)
 
 LDFLAGS_UNIXCOMMON=-lm
-LDFLAGS_UNIXCL=-L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
+#LDFLAGS_UNIXCL=-L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
+LDFLAGS_UNIXCL=$(UNIX_X11LIBPATH) -lX11 -lXext -lXxf86dga -lXxf86vm $(LIB_SOUND)
 LDFLAGS_UNIXSDL=`sdl-config --libs`
 EXE_UNIXCL=darkplaces-glx
 EXE_UNIXSV=darkplaces-dedicated
