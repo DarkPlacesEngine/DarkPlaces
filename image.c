@@ -537,6 +537,14 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	for (c = basename;*c;c++)
 		if (*c == '*')
 			*c = '#';
+	sprintf (name, "override/%s.tga", basename);
+	f = COM_LoadFile(name, true);
+	if (f)
+	{
+		data = LoadTGA (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	sprintf (name, "textures/%s.tga", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
