@@ -90,11 +90,11 @@ mempool_t *netconn_mempool = NULL;
 
 cvar_t cl_netport = {0, "cl_port", "0"};
 cvar_t cl_netaddress = {0, "cl_netaddress", "0.0.0.0"};
-cvar_t cl_netaddress_ipv6 = {0, "cl_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:0"};
+//cvar_t cl_netaddress_ipv6 = {0, "cl_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:0"};
 
 cvar_t sv_netport = {0, "port", "26000"};
 cvar_t sv_netaddress = {0, "sv_netaddress", "0.0.0.0"};
-cvar_t sv_netaddress_ipv6 = {0, "sv_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:26000"};
+//cvar_t sv_netaddress_ipv6 = {0, "sv_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:26000"};
 
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress)
 {
@@ -355,7 +355,7 @@ void NetConn_OpenClientPorts(void)
 	Con_Printf("Client using port %i\n", port);
 	NetConn_OpenClientPort("local", port);
 	NetConn_OpenClientPort(cl_netaddress.string, port);
-	NetConn_OpenClientPort(cl_netaddress_ipv6.string, port);
+	//NetConn_OpenClientPort(cl_netaddress_ipv6.string, port);
 }
 
 void NetConn_CloseServerPorts(void)
@@ -403,7 +403,7 @@ void NetConn_OpenServerPorts(int opennetports)
 	if (opennetports)
 	{
 		NetConn_OpenServerPort(sv_netaddress.string, port);
-		NetConn_OpenServerPort(sv_netaddress_ipv6.string, port);
+		//NetConn_OpenServerPort(sv_netaddress_ipv6.string, port);
 	}
 	if (sv_numsockets == 0)
 		Host_Error("NetConn_OpenServerPorts: unable to open any ports!\n");
@@ -1606,10 +1606,10 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
 	Cvar_RegisterVariable(&cl_netaddress);
-	Cvar_RegisterVariable(&cl_netaddress_ipv6);
+	//Cvar_RegisterVariable(&cl_netaddress_ipv6);
 	Cvar_RegisterVariable(&sv_netport);
 	Cvar_RegisterVariable(&sv_netaddress);
-	Cvar_RegisterVariable(&sv_netaddress_ipv6);
+	//Cvar_RegisterVariable(&sv_netaddress_ipv6);
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (i = 0;sv_masters[i].name;i++)
