@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -28,73 +28,38 @@ qbyte *S_Alloc (int size);
 ResampleSfx
 ================
 */
-void ResampleSfx (sfx_t *sfx, int inrate, qbyte *data, char *name)
+void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 {
-	int		outcount;
-	int		srcsample, srclength;
-	float	stepscale;
-	int		i;
-	int		samplefrac, fracstep;
-	sfxcache_t	*sc;
-	
-	sc = sfx->sfxcache;
-	if (!sc)
-		return;
+	int i, outcount, srcsample, srclength, samplefrac, fracstep;
 
-	stepscale = (float)inrate / shm->speed;	// this is usually 0.5, 1, or 2
+	// this is usually 0.5 (128), 1 (256), or 2 (512)
+	fracstep = ((double) sc->speed / (double) shm->speed) * 256.0;
 
 	srclength = sc->length << sc->stereo;
 
-	outcount = sc->length / stepscale;
+	outcount = (double) sc->length * (double) shm->speed / (double) sc->speed;
 	sc->length = outcount;
 	if (sc->loopstart != -1)
-		sc->loopstart = sc->loopstart / stepscale;
+		sc->loopstart = (double) sc->loopstart * (double) shm->speed / (double) sc->speed;
 
 	sc->speed = shm->speed;
-//	if (loadas8bit.value)
-//		sc->width = 1;
-//	else
-//		sc->width = inwidth;
-//	sc->stereo = 0;
 
 // resample / decimate to the current source rate
 
-	if (stepscale == 1/* && inwidth == 1*/ && sc->width == 1)
+	if (fracstep == 256)
 	{
-// fast special case
-		/*
-		// LordHavoc: I do not serve the readability gods...
-		int *indata, *outdata;
-		int count4, count1;
-		count1 = outcount << sc->stereo;
-		count4 = count1 >> 2;
-		indata = (void *)data;
-		outdata = (void *)sc->data;
-		while (count4--)
-			*outdata++ = *indata++ ^ 0x80808080;
-		if (count1 & 2)
-			((short*)outdata)[0] = ((short*)indata)[0] ^ 0x8080;
-		if (count1 & 1)
-			((char*)outdata)[2] = ((char*)indata)[2] ^ 0x80;
-		*/
-		if (sc->stereo) // LordHavoc: stereo sound support
-			outcount *= 2;
-		for (i=0 ; i<outcount ; i++)
-			((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
-	}
-	else if (stepscale == 1/* && inwidth == 2*/ && sc->width == 2) // LordHavoc: quick case for 16bit
-	{
-		if (sc->stereo) // LordHavoc: stereo sound support
-			outcount *= 2;
-		for (i=0 ; i<outcount ;i++)
-			((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
+		if (sc->width == 1) // 8bit
+			for (i = 0;i < srclength;i++)
+				((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
+		else //if (sc->width == 2) // 16bit
+			for (i = 0;i < srclength;i++)
+				((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
 	}
 	else
 	{
 // general case
-		Con_DPrintf("ResampleSfx: resampling sound %s\n", sfx->name);
+		Con_DPrintf("ResampleSfx: resampling sound %s\n", name);
 		samplefrac = 0;
-		fracstep = stepscale*256;
 		if ((fracstep & 255) == 0) // skipping points on perfect multiple
 		{
 			srcsample = 0;
@@ -254,7 +219,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	qbyte	*data;
 	wavinfo_t	info;
 	int		len;
-	float	stepscale;
 	sfxcache_t	*sc;
 
 // see if still in memory
@@ -292,9 +256,8 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	}
 	*/
 
-	stepscale = (float)info.rate / shm->speed;
-	len = info.samples / stepscale;
-
+	// calculate resampled length
+	len = (int) ((double) info.samples * (double) shm->speed / (double) info.rate);
 	len = len * info.width * info.channels;
 
 	// FIXME: add S_UnloadSounds or something?
@@ -313,7 +276,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	sc->width = info.width;
 	sc->stereo = info.channels == 2;
 
-	ResampleSfx (s, sc->speed, data + info.dataofs, s->name);
+	ResampleSfx (sc, data + info.dataofs, s->name);
 
 	Mem_Free(data);
 	return sc;
@@ -424,7 +387,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 
 	if (!wav)
 		return info;
-		
+
 	iff_data = wav;
 	iff_end = wav + wavlength;
 
@@ -503,7 +466,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 		info.samples = samples;
 
 	info.dataofs = data_p - wav;
-	
+
 	return info;
 }
 
