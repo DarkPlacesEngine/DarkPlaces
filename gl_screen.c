@@ -88,7 +88,6 @@ cvar_t		scr_showram = {"showram","1"};
 cvar_t		scr_showturtle = {"showturtle","0"};
 cvar_t		scr_showpause = {"showpause","1"};
 cvar_t		scr_printspeed = {"scr_printspeed","8"};
-cvar_t		gl_triplebuffer = {"gl_triplebuffer", "1", true };
 cvar_t		showfps = {"showfps", "0", true};
 
 extern	cvar_t	crosshair;
@@ -107,8 +106,6 @@ int			clearnotify;
 extern int                     sb_lines;
 
 extern viddef_t        vid;                            // global video state
-
-vrect_t		scr_vrect;
 
 qboolean	scr_disabled_for_loading;
 qboolean	scr_drawloading;
@@ -340,8 +337,6 @@ static void SCR_CalcRefdef (void)
 
 	r_refdef.fov_x = scr_fov.value;
 	r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.vrect.width, r_refdef.vrect.height);
-
-	scr_vrect = r_refdef.vrect;
 }
 
 
@@ -390,7 +385,6 @@ void SCR_Init (void)
 	Cvar_RegisterVariable (&scr_showpause);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
-	Cvar_RegisterVariable (&gl_triplebuffer);
 	Cvar_RegisterVariable (&showfps);
 
 //
@@ -422,7 +416,7 @@ void SCR_DrawRam (void)
 	if (!r_cache_thrash)
 		return;
 
-	Draw_Pic (scr_vrect.x+32, scr_vrect.y, scr_ram);
+	Draw_Pic (32, 0, scr_ram);
 }
 
 /*
@@ -447,7 +441,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	Draw_Pic (scr_vrect.x, scr_vrect.y, scr_turtle);
+	Draw_Pic (0, 0, scr_turtle);
 }
 
 /*
@@ -462,7 +456,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	Draw_Pic (scr_vrect.x+64, scr_vrect.y, scr_net);
+	Draw_Pic (64, 0, scr_net);
 }
 
 /*
@@ -547,18 +541,6 @@ void SCR_SetUpToDrawConsole (void)
 		if (scr_conlines < scr_con_current)
 			scr_con_current = scr_conlines;
 	}
-
-	/*
-	if (clearconsole++ < vid.numpages)
-	{
-		Sbar_Changed ();
-	}
-	else if (clearnotify++ < vid.numpages)
-	{
-	}
-	else
-		con_notifylines = 0;
-	*/
 }
 	
 /*
@@ -879,8 +861,6 @@ void SCR_UpdateScreen (void)
 	if (!gl_arrays)
 		gl_vertexarrays.value = 0;
 
-	vid.numpages = 2 + gl_triplebuffer.value;
-
 	scr_copytop = 0;
 	scr_copyeverything = 0;
 
@@ -955,7 +935,7 @@ void SCR_UpdateScreen (void)
 	else
 	{
 		if (crosshair.value)
-			Draw_Character (scr_vrect.x + scr_vrect.width/2, scr_vrect.y + scr_vrect.height/2, '+');
+			Draw_Character (r_refdef.vrect.x + r_refdef.vrect.width/2, r_refdef.vrect.y + r_refdef.vrect.height/2, '+');
 		
 		SCR_DrawRam ();
 		SCR_DrawNet ();

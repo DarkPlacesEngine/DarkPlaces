@@ -792,7 +792,7 @@ void V_CalcRefdef (void)
 
 	view->model = cl.model_precache[cl.stats[STAT_WEAPON]];
 	view->frame = cl.stats[STAT_WEAPONFRAME];
-	view->colormap = vid.colormap;
+	view->colormap = 0; //vid.colormap;
 
 // set up the refresh position
 	VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
@@ -830,8 +830,6 @@ The player's clipping box goes from (-16 -16 -24) to (16 16 32) from
 the entity origin, so any view position inside that will be valid
 ==================
 */
-extern vrect_t	scr_vrect;
-
 void V_RenderView (void)
 {
 	if (con_forcedup)

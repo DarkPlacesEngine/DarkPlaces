@@ -178,8 +178,8 @@ void R_PushDlights (void)
 
 	r_dlightframecount = r_framecount + 1;	// because the count hasn't advanced yet for this frame
 
-//	if (gl_flashblend.value || !r_dynamic.value)
-//		return;
+	if (/*gl_flashblend.value ||*/ !r_dynamic.value)
+		return;
 
 	l = cl_dlights;
 
@@ -314,7 +314,7 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 	vec3_t	dist;
 	float	brightness, r, f;
 
-	if (/*gl_flashblend.value || !r_dynamic.value || */(!dlightbits[0] && !dlightbits[1] && !dlightbits[2] && !dlightbits[3] && !dlightbits[4] && !dlightbits[5] && !dlightbits[6] && !dlightbits[7]))
+	if (/*gl_flashblend.value ||*/ !r_dynamic.value || (!dlightbits[0] && !dlightbits[1] && !dlightbits[2] && !dlightbits[3] && !dlightbits[4] && !dlightbits[5] && !dlightbits[6] && !dlightbits[7]))
 		return;
 
 	for (i=0 ; i<MAX_DLIGHTS ; i++)
@@ -343,8 +343,8 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 	vec3_t	dist;
 	float	brightness, r, f;
 
-//	if (gl_flashblend.value || !r_dynamic.value)
-//		return;
+	if (/*gl_flashblend.value ||*/ !r_dynamic.value)
+		return;
 
 	for (i=0 ; i<MAX_DLIGHTS ; i++)
 	{

@@ -735,11 +735,6 @@ void VID_Init(unsigned char *palette)
 	Cvar_RegisterVariable (&in_dgamouse);
 	Cvar_RegisterVariable (&m_filter);
 	
-	vid.maxwarpwidth = WARP_WIDTH;
-	vid.maxwarpheight = WARP_HEIGHT;
-	vid.colormap = host_colormap;
-	vid.fullbright = 256 - LittleLong (*((int *)vid.colormap + 2048));
-
 // interpret command-line params
 
 // set vid parameters
@@ -877,7 +872,6 @@ void VID_Init(unsigned char *palette)
 	vid.height = vid.conheight;
 
 	vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
-	vid.numpages = 2;
 
 	InitSig(); // trap evil signals
 

@@ -571,9 +571,9 @@ void Con_DrawNotify (void)
 		
 		// LordHavoc: speedup, and other improvements
 		if (team_message)
-			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
-		else
 			sprintf(temptext, "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
+		else
+			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		while (strlen(temptext) >= con_linewidth)
 		{
 			Draw_String (8, v, temptext, con_linewidth);

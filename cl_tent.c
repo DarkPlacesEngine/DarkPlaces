@@ -338,7 +338,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-//		R_ParticleExplosion (pos, false);
+		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -352,7 +352,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-//		R_ParticleExplosion (pos, false);
+		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 600;
@@ -382,7 +382,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-//		R_ParticleExplosion (pos, false);
+		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -396,7 +396,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-//		R_ParticleExplosion (pos, false);
+		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -410,7 +410,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-//		R_BlobExplosion (pos);
+		R_BlobExplosion (pos);
 
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		dl = CL_AllocDlight (0);
@@ -501,7 +501,8 @@ entity_t *CL_NewTempEntity (void)
 	cl_visedicts[cl_numvisedicts] = ent;
 	cl_numvisedicts++;
 
-	ent->colormap = vid.colormap;
+//	ent->colormap = vid.colormap;
+	ent->colormap = 0;
 	ent->scale = 1;
 	ent->alpha = 1;
 	ent->colormod[0] = ent->colormod[1] = ent->colormod[2] = 1;
