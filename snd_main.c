@@ -320,6 +320,7 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 
 			channels[i].sfx = ambient_sfxs[i];
 			channels[i].flags |= CHANNELFLAG_FORCELOOP;
+			channels[i].master_vol = 0;
 		}
 	}
 
@@ -761,10 +762,6 @@ void S_UpdateAmbientSounds (void)
 	int			ambient_channel;
 	channel_t	*chan;
 	qbyte		ambientlevels[NUM_AMBIENTS];
-
-	// Mute ambient sounds until proven otherwise
-	for (ambient_channel = 0 ; ambient_channel < NUM_AMBIENTS;ambient_channel++)
-		channels[ambient_channel].master_vol = 0;
 
 	if (ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
 		return;
