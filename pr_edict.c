@@ -215,10 +215,10 @@ edict_t *ED_Alloc (void)
 			return e;
 		}
 	}
-	
+
 	if (i == MAX_EDICTS)
 		Host_Error ("ED_Alloc: no free edicts");
-		
+
 	sv.num_edicts++;
 	e = EDICT_NUM(i);
 	ED_ClearEdict (e);
@@ -249,7 +249,7 @@ void ED_Free (edict_t *ed)
 	VectorClear(ed->v->angles);
 	ed->v->nextthink = -1;
 	ed->v->solid = 0;
-	
+
 	ed->freetime = sv.time;
 }
 
@@ -264,7 +264,7 @@ ddef_t *ED_GlobalAtOfs (int ofs)
 {
 	ddef_t		*def;
 	int			i;
-	
+
 	for (i=0 ; i<progs->numglobaldefs ; i++)
 	{
 		def = &pr_globaldefs[i];
@@ -283,7 +283,7 @@ ddef_t *ED_FieldAtOfs (int ofs)
 {
 	ddef_t		*def;
 	int			i;
-	
+
 	for (i=0 ; i<progs->numfielddefs ; i++)
 	{
 		def = &pr_fielddefs[i];
@@ -774,7 +774,7 @@ void ED_WriteGlobals (qfile_t *f)
 
 		name = PR_GetString(def->s_name);
 		FS_Printf (f,"\"%s\" ", name);
-		FS_Printf (f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));		
+		FS_Printf (f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));
 	}
 	FS_Printf (f,"}\n");
 }
@@ -877,11 +877,11 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
 	case ev_string:
 		*(string_t *)d = PR_SetString(ED_NewString(s));
 		break;
-		
+
 	case ev_float:
 		*(float *)d = atof (s);
 		break;
-		
+
 	case ev_vector:
 		strcpy (string, s);
 		v = string;
@@ -1047,7 +1047,7 @@ void ED_LoadFromFile (const char *data)
 	ent = NULL;
 	inhibit = 0;
 	pr_global_struct->time = sv.time;
-	
+
 // parse ents
 	while (1)
 	{
@@ -1068,7 +1068,7 @@ void ED_LoadFromFile (const char *data)
 		{
 			if (((int)ent->v->spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
 			{
-				ED_Free (ent);	
+				ED_Free (ent);
 				inhibit++;
 				continue;
 			}
@@ -1166,6 +1166,7 @@ dpfield_t dpfields[] =
 PR_LoadProgs
 ===============
 */
+extern void PR_Cmd_Reset (void);
 void PR_LoadProgs (void)
 {
 	int i;
@@ -1380,6 +1381,7 @@ void PR_LoadProgs (void)
 
 	FindEdictFieldOffsets(); // LordHavoc: update field offset list
 	PR_Execute_ProgsLoaded();
+	PR_Cmd_Reset();
 }
 
 
@@ -1506,6 +1508,7 @@ void PR_Globals_f (void)
 PR_Init
 ===============
 */
+extern void PR_Cmd_Init(void);
 void PR_Init (void)
 {
 	Cmd_AddCommand ("edict", ED_PrintEdict_f);
@@ -1549,6 +1552,8 @@ void PR_Init (void)
 
 	progs_mempool = Mem_AllocPool("progs.dat");
 	edictstring_mempool = Mem_AllocPool("edict strings");
+
+	PR_Cmd_Init();
 }
 
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons

@@ -20,7 +20,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t	sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled autoaim by default
+cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled autoaim by default
+cvar_t pr_zone_min_strings = {0, "pr_zone_min_strings", "64"};
+
+mempool_t *pr_strings_mempool;
+
+#define MAX_VARSTRING 4096
+
+char pr_varstring_temp[MAX_VARSTRING];
 
 #define	RETURN_EDICT(e) (((int *)pr_globals)[OFS_RETURN] = EDICT_TO_PROG(e))
 
@@ -36,13 +43,25 @@ cvar_t	sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled au
 
 char *PF_VarString (int	first)
 {
-	int		i;
-	static char out[4096]; // FIXME: buffer overflow potential
+	int i, j, end;
+	char *s;
 
-	out[0] = 0;
+	end = 0;
 	for (i = first;i < pr_argc;i++)
-		strcat (out, G_STRING((OFS_PARM0+i*3)));
-	return out;
+	{
+		// LordHavoc: FIXME: this is just a strlcat inlined
+		s = G_STRING((OFS_PARM0+i*3));
+		j = strlen(s);
+		if (j > MAX_VARSTRING - 1 - end)
+			j = MAX_VARSTRING - 1 - end;
+		if (j > 0)
+		{
+			memcpy(pr_varstring_temp + end, s, j);
+			end += j;
+		}
+	}
+	pr_varstring_temp[end] = 0;
+	return pr_varstring_temp;
 }
 
 char *ENGINE_EXTENSIONS =
@@ -89,8 +108,10 @@ char *ENGINE_EXTENSIONS =
 "DP_TE_PARTICLERAIN "
 "DP_TE_PARTICLESNOW "
 "DP_TE_SPARK "
+"FRIK_FILE "
 "NEH_CMD_PLAY2 "
 "NEH_RESTOREGAME "
+"QSG_FILE "
 "TW_SV_STEPCONTROL "
 ;
 
@@ -226,7 +247,7 @@ void PF_setorigin (void)
 void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 {
 	int		i;
-	
+
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
 			Host_Error ("backwards mins/maxs");
@@ -329,18 +350,18 @@ void PF_sprint (void)
 	char		*s;
 	client_t	*client;
 	int			entnum;
-	
+
 	entnum = G_EDICTNUM(OFS_PARM0);
 	s = PF_VarString(1);
-	
+
 	if (entnum < 1 || entnum > svs.maxclients)
 	{
 		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
-		
+
 	client = &svs.clients[entnum-1];
-		
+
 	MSG_WriteChar (&client->message,svc_print);
 	MSG_WriteString (&client->message, s );
 }
@@ -360,16 +381,16 @@ void PF_centerprint (void)
 	char		*s;
 	client_t	*client;
 	int			entnum;
-	
+
 	entnum = G_EDICTNUM(OFS_PARM0);
 	s = PF_VarString(1);
-	
+
 	if (entnum < 1 || entnum > svs.maxclients)
 	{
 		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
-		
+
 	client = &svs.clients[entnum-1];
 
 	MSG_WriteChar (&client->message,svc_centerprint);
@@ -389,12 +410,12 @@ void PF_normalize (void)
 	float	*value1;
 	vec3_t	newvalue;
 	float	new;
-	
+
 	value1 = G_VECTOR(OFS_PARM0);
 
 	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
 	new = sqrt(new);
-	
+
 	if (new == 0)
 		newvalue[0] = newvalue[1] = newvalue[2] = 0;
 	else
@@ -404,7 +425,7 @@ void PF_normalize (void)
 		newvalue[1] = value1[1] * new;
 		newvalue[2] = value1[2] * new;
 	}
-	
+
 	VectorCopy (newvalue, G_VECTOR(OFS_RETURN));
 }
 
@@ -424,7 +445,7 @@ void PF_vlen (void)
 
 	new = value1[0] * value1[0] + value1[1] * value1[1] + value1[2]*value1[2];
 	new = sqrt(new);
-	
+
 	G_FLOAT(OFS_RETURN) = new;
 }
 
@@ -439,7 +460,7 @@ void PF_vectoyaw (void)
 {
 	float	*value1;
 	float	yaw;
-	
+
 	value1 = G_VECTOR(OFS_PARM0);
 
 	if (value1[1] == 0 && value1[0] == 0)
@@ -467,7 +488,7 @@ void PF_vectoangles (void)
 	float	*value1;
 	float	forward;
 	float	yaw, pitch;
-	
+
 	value1 = G_VECTOR(OFS_PARM0);
 
 	if (value1[1] == 0 && value1[0] == 0)
@@ -533,7 +554,7 @@ void PF_particle (void)
 	float		*org, *dir;
 	float		color;
 	float		count;
-			
+
 	org = G_VECTOR(OFS_PARM0);
 	dir = G_VECTOR(OFS_PARM1);
 	color = G_FLOAT(OFS_PARM2);
@@ -556,11 +577,11 @@ void PF_ambientsound (void)
 	float 		vol, attenuation;
 	int			i, soundnum, large;
 
-	pos = G_VECTOR (OFS_PARM0);			
+	pos = G_VECTOR (OFS_PARM0);
 	samp = G_STRING(OFS_PARM1);
 	vol = G_FLOAT(OFS_PARM2);
 	attenuation = G_FLOAT(OFS_PARM3);
-	
+
 // check to see if samp was properly precached
 	for (soundnum=0, check = sv.sound_precache ; *check ; check++, soundnum++)
 		if (!strcmp(*check,samp))
@@ -618,13 +639,13 @@ void PF_sound (void)
 	edict_t		*entity;
 	int 		volume;
 	float attenuation;
-		
+
 	entity = G_EDICT(OFS_PARM0);
 	channel = G_FLOAT(OFS_PARM1);
 	sample = G_STRING(OFS_PARM2);
 	volume = G_FLOAT(OFS_PARM3) * 255;
 	attenuation = G_FLOAT(OFS_PARM4);
-	
+
 	if (volume < 0 || volume > 255)
 		Host_Error ("SV_StartSound: volume = %i", volume);
 
@@ -2647,7 +2668,227 @@ void PF_Fixme (void)
 	Host_Error ("unimplemented QC builtin"); // LordHavoc: was misspelled (bulitin)
 }
 
+#define MAX_PRFILES 256
 
+qfile_t *pr_files[MAX_PRFILES];
+
+void PR_Files_Init(void)
+{
+	memset(pr_files, 0, sizeof(pr_files));
+}
+
+void PR_Files_CloseAll(void)
+{
+	int i;
+	for (i = 0;i < MAX_PRFILES;i++)
+	{
+		if (pr_files[i])
+			FS_Close(pr_files[i]);
+		pr_files[i] = NULL;
+	}
+}
+
+//float(string s) stof = #81; // get numerical value from a string
+void PF_stof(void)
+{
+	char *s = PF_VarString(0);
+	G_FLOAT(OFS_RETURN) = atof(s);
+}
+
+//float(string filename, float mode) fopen = #110; // opens a file inside quake/gamedir/data/ (mode is FILE_READ, FILE_APPEND, or FILE_WRITE), returns fhandle >= 0 if successful, or fhandle < 0 if unable to open file for any reason
+void PF_fopen(void)
+{
+	int filenum, mode;
+	char *modestring, *filename;
+	for (filenum = 0;filenum < MAX_PRFILES;filenum++)
+		if (pr_files[filenum] == NULL)
+			break;
+	if (filenum >= MAX_PRFILES)
+	{
+		Con_Printf("PF_fopen: ran out of file handles (%i)\n", MAX_PRFILES);
+		G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+	mode = G_FLOAT(OFS_PARM1);
+	switch(mode)
+	{
+	case 0: // FILE_READ
+		modestring = "rb";
+		break;
+	case 1: // FILE_APPEND
+		modestring = "ab";
+		break;
+	case 2: // FILE_WRITE
+		modestring = "wb";
+		break;
+	default:
+		Con_Printf("PF_fopen: no such mode %i (valid: 0 = read, 1 = append, 2 = write)\n", mode);
+		G_FLOAT(OFS_RETURN) = -3;
+		return;
+	}
+	filename = G_STRING(OFS_PARM0);
+	// .. is parent directory on many platforms
+	// / is parent directory on Amiga
+	// : is root of drive on Amiga (also used as a directory separator on Mac, but / works there too, so that's a bad idea)
+	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
+	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
+	{
+		Con_Printf("PF_fopen: dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", filename);
+		G_FLOAT(OFS_RETURN) = -4;
+		return;
+	}
+	pr_files[filenum] = FS_Open(va("data/%s", filename), modestring, false);
+	if (pr_files[filenum] == NULL)
+		G_FLOAT(OFS_RETURN) = -1;
+	else
+		G_FLOAT(OFS_RETURN) = filenum;
+}
+
+//void(float fhandle) fclose = #111; // closes a file
+void PF_fclose(void)
+{
+	int filenum = G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_PRFILES)
+	{
+		Con_Printf("PF_fclose: invalid file handle %i\n", filenum);
+		return;
+	}
+	if (pr_files[filenum] == NULL)
+	{
+		Con_Printf("PF_fclose: no such file handle %i (or file has been closed)\n", filenum);
+		return;
+	}
+	FS_Close(pr_files[filenum]);
+	pr_files[filenum] = NULL;
+}
+
+//string(float fhandle) fgets = #112; // reads a line of text from the file and returns as a tempstring
+void PF_fgets(void)
+{
+	int c, end;
+	static char string[MAX_VARSTRING];
+	int filenum = G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_PRFILES)
+	{
+		Con_Printf("PF_fgets: invalid file handle %i\n", filenum);
+		return;
+	}
+	if (pr_files[filenum] == NULL)
+	{
+		Con_Printf("PF_fgets: no such file handle %i (or file has been closed)\n", filenum);
+		return;
+	}
+	end = 0;
+	for (;;)
+	{
+		c = FS_Getc(pr_files[filenum]);
+		if (c == '\r' || c == '\n' || c < 0)
+			break;
+		if (end < MAX_VARSTRING - 1)
+			string[end++] = c;
+	}
+	string[end] = 0;
+	// remove \n following \r
+	if (c == '\r')
+		c = FS_Getc(pr_files[filenum]);
+	if (developer.integer)
+		Con_Printf("fgets: %s\n", string);
+	if (c >= 0)
+		G_INT(OFS_RETURN) = PR_SetString(string);
+	else
+		G_INT(OFS_RETURN) = 0;
+}
+
+//void(float fhandle, string s) fputs = #113; // writes a line of text to the end of the file
+void PF_fputs(void)
+{
+	int stringlength;
+	char *s = PF_VarString(1);
+	int filenum = G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_PRFILES)
+	{
+		Con_Printf("PF_fputs: invalid file handle %i\n", filenum);
+		return;
+	}
+	if (pr_files[filenum] == NULL)
+	{
+		Con_Printf("PF_fputs: no such file handle %i (or file has been closed)\n", filenum);
+		return;
+	}
+	if ((stringlength = strlen(s)))
+		FS_Write(pr_files[filenum], s, stringlength);
+	if (developer.integer)
+		Con_Printf("fputs: %s\n", s);
+}
+
+//float(string s) strlen = #114; // returns how many characters are in a string
+void PF_strlen(void)
+{
+	char *s;
+	s = G_STRING(OFS_PARM0);
+	if (s)
+		G_FLOAT(OFS_RETURN) = strlen(s);
+	else
+		G_FLOAT(OFS_RETURN) = 0;
+}
+
+//string(string s1, string s2) strcat = #115; // concatenates two strings (for example "abc", "def" would return "abcdef") and returns as a tempstring
+void PF_strcat(void)
+{
+	char *s = PF_VarString(0);
+	G_INT(OFS_RETURN) = PR_SetString(s);
+}
+
+//string(string s, float start, float length) substring = #116; // returns a section of a string as a tempstring
+void PF_substring(void)
+{
+	int end, start, length, slen;
+	char *s;
+	char string[MAX_VARSTRING];
+	s = G_STRING(OFS_PARM0);
+	start = G_FLOAT(OFS_PARM1);
+	length = G_FLOAT(OFS_PARM2);
+	if (s)
+		slen = strlen(s);
+	else
+		slen = 0;
+	if (start < 0)
+		start = 0;
+	if (length > slen - start)
+		length = slen - start;
+	if (length > MAX_VARSTRING - 1)
+		length = MAX_VARSTRING - 1;
+	end = 0;
+	if (length > 0)
+	{
+		memcpy(string, s + start, length);
+		end = length;
+	}
+	string[end] = 0;
+	G_INT(OFS_RETURN) = PR_SetString(string);
+}
+
+//vector(string s) stov = #117; // returns vector value from a string
+void PF_stov(void)
+{
+	Math_atov(PF_VarString(0), G_VECTOR(OFS_RETURN));
+}
+
+//string(string s) strzone = #118; // makes a copy of a string into the string zone and returns it, this is often used to keep around a tempstring for longer periods of time (tempstrings are replaced often)
+void PF_strzone(void)
+{
+	char *in, *out;
+	in = G_STRING(OFS_PARM0);
+	out = Mem_Alloc(pr_strings_mempool, strlen(in) + 1);
+	strcpy(out, in);
+	G_INT(OFS_RETURN) = PR_SetString(out);
+}
+
+//void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
+void PF_strunzone(void)
+{
+	Mem_Free(G_STRING(OFS_PARM0));
+}
 
 builtin_t pr_builtin[] =
 {
@@ -2741,7 +2982,7 @@ PF_setspawnparms,
 
 PF_Fixme,				// #79 LordHavoc: dunno who owns 79-89, so these are just padding
 PF_Fixme,				// #80
-PF_Fixme,				// #81
+PF_stof,				// #81 float(string s) stof = #81;
 PF_Fixme,				// #82
 PF_Fixme,				// #83
 PF_Fixme,				// #84
@@ -2762,10 +3003,27 @@ PF_pow,					// #97
 PF_FindFloat,			// #98
 PF_checkextension,		// #99
 #define a PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme,
-#define aa a a a a a a a a a a
-aa // #200
-aa // #300
-aa // #400
+a						// #100-109
+PF_fopen,				// #110 float(string filename, float mode) fopen = #110;
+PF_fclose,				// #111 void(float fhandle) fclose = #111;
+PF_fgets,				// #112 string(float fhandle) fgets = #112;
+PF_fputs,				// #113 void(float fhandle, string s) fputs = #113;
+PF_strlen,				// #114 float(string s) strlen = #114;
+PF_strcat,				// #115 string(string s1, string s2) strcat = #115;
+PF_substring,			// #116 string(string s, float start, float length) substring = #116;
+PF_stov,				// #117 vector(string) stov = #117;
+PF_strzone,				// #118 string(string s) strzone = #118;
+PF_strunzone,			// #119 void(string s) strunzone = #119;
+a						// #120-129
+a						// #130-139
+a						// #140-149
+a						// #150-159
+a						// #160-169
+a						// #170-179
+a						// #180-189
+a						// #190-199
+a a a a a a a a a a		// #200-299
+a a a a a a a a a a		// #300-399
 PF_copyentity,			// #400 LordHavoc: builtin range (4xx)
 PF_setcolors,			// #401
 PF_findchain,			// #402
@@ -2810,4 +3068,16 @@ PF_getsurfaceclippedpoint,// #439 vector(entity e, float s, vector p) getsurface
 
 builtin_t *pr_builtins = pr_builtin;
 int pr_numbuiltins = sizeof(pr_builtin)/sizeof(pr_builtin[0]);
+
+void PR_Cmd_Init(void)
+{
+	pr_strings_mempool = Mem_AllocPool("pr_stringszone");
+	PR_Files_Init();
+}
+
+void PR_Cmd_Reset(void)
+{
+	Mem_EmptyPool(pr_strings_mempool);
+	PR_Files_CloseAll();
+}
 
