@@ -847,11 +847,11 @@ void Host_Color_f(void)
 	int		playercolor;
 	dfunction_t *f;
 	func_t	SV_ChangeTeam;
-	
+
 	if (Cmd_Argc() == 1)
 	{
 		Con_Printf ("\"color\" is \"%i %i\"\n", cl_color.integer >> 4, cl_color.integer & 15);
-		Con_Printf ("color <0-13> [0-13]\n");
+		Con_Printf ("color <0-15> [0-15]\n");
 		return;
 	}
 
