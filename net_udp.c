@@ -258,11 +258,11 @@ int UDP_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 		int e = WSAGetLastError();
 		if (e == WSAEWOULDBLOCK || e == WSAECONNREFUSED)
 			return 0;
-		Con_Printf("UDP_Read: WASGetLastError == %i\n", e);
+		Con_Printf("UDP_Read(%i, %p, %i, <%s>): WSAGetLastError == %i\n", socket, buf, len, UDP_AddrToString(addr), e);
 #else
 		if (errno == EWOULDBLOCK || errno == ECONNREFUSED)
 			return 0;
-		Con_Printf("UDP_Read: errno == %i (%s)\n", errno, strerror(errno));
+		Con_Printf("UDP_Read(%i, %p, %i, <%s>): errno == %i (%s)\n", socket, buf, len, UDP_AddrToString(addr), errno, strerror(errno));
 #endif
 	}
 	else if (developer_networking.integer)
@@ -328,11 +328,11 @@ int UDP_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 		int e = WSAGetLastError();
 		if (e == WSAEWOULDBLOCK)
 			return 0;
-		Con_Printf("UDP_Write: WASGetLastError == %i\n", e);
+		Con_Printf("UDP_Write(%i, %p, %i, <%s>): WSAGetLastError == %i\n", socket, buf, len, UDP_AddrToString(addr), e);
 #else
 		if (errno == EWOULDBLOCK)
 			return 0;
-		Con_Printf("UDP_Write: errno == %i (%s)\n", errno, strerror(errno));
+		Con_Printf("UDP_Write(%i, %p, %i, <%s>): errno == %i (%s)\n", socket, buf, len, UDP_AddrToString(addr), errno, strerror(errno));
 #endif
 	}
 	return ret;
