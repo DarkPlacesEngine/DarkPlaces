@@ -2171,7 +2171,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		R_Shadow_Stage_Light(shadow && gl_stencil);
 
 		ent = &cl_entities[0].render;
-		if (ent->model && ent->model->DrawLight)
+		if (ent->model && ent->model->DrawLight && (ent->flags & RENDER_LIGHT))
 		{
 			Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
 			Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
