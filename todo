@@ -15,10 +15,11 @@
 0 darkplaces: finish the parital update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers
 0 darkplaces: fix particle trails (I think trail start is identical to trail end)
 0 darkplaces: fix particle trails! (Supajoe)
+0 darkplaces: fix skybox geometry (SeienAbunae)
+0 darkplaces: frikbot scores don't update (Todd)
 0 darkplaces: funky lightmaps in prydon gate and dm1 on TNT1/2, which get worse the more times you reload it?  (NotoriousRay, Uffe)
 0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 0 darkplaces: have a look at CFQ and figure out why its b0rked
-0 darkplaces: in Battlemech the frikbots can't score (Todd)
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
