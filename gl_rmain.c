@@ -51,7 +51,7 @@ unsigned short d_lightstylevalue[256];
 
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
-cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "1"};
+cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "0"};
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
@@ -642,7 +642,7 @@ void R_DrawFakeShadows (void)
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
 		ent = r_refdef.entities[i];
-		if (ent->model && ent->model->DrawFakeShadow)
+		if ((ent->flags & RENDER_SHADOW) && ent->model && ent->model->DrawFakeShadow)
 			ent->model->DrawFakeShadow(ent);
 	}
 }
@@ -709,14 +709,57 @@ int LightAndVis_CullBox(const vec3_t mins, const vec3_t maxs)
 	return true;
 }
 
+int LightAndVis_CullPointCloud(int numpoints, const float *points)
+{
+	int i;
+	const float *p;
+	int stackpos, sides;
+	mnode_t *node, *stack[4096];
+	//if (R_CullBox(mins, maxs))
+	//	return true;
+	if (cl.worldmodel == NULL)
+		return false;
+	stackpos = 0;
+	stack[stackpos++] = cl.worldmodel->nodes;
+	while (stackpos)
+	{
+		node = stack[--stackpos];
+		if (node->contents < 0)
+		{
+			if (((mleaf_t *)node)->visframe == r_framecount && ((mleaf_t *)node)->worldnodeframe == shadowframecount)
+				return false;
+		}
+		else
+		{
+			sides = 0;
+			for (i = 0, p = points;i < numpoints && sides != 3;i++, p += 3)
+			{
+				if (DotProduct(p, node->plane->normal) < node->plane->dist)
+					sides |= 1;
+				else
+					sides |= 2;
+			}
+			if (sides & 2 && stackpos < 4096)
+				stack[stackpos++] = node->children[1];
+			if (sides & 1 && stackpos < 4096)
+				stack[stackpos++] = node->children[0];
+		}
+	}
+	return true;
+}
+
 
 void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float cullradius, float lightradius, vec3_t lightmins, vec3_t lightmaxs, vec3_t clipmins, vec3_t clipmaxs)
 {
+	vec3_t relativelightorigin;
+	#if 0
 	int i;
-	vec3_t p, p2, temp, relativelightorigin, mins, maxs;
+	vec3_t p, p2, temp, relativelightorigin/*, mins, maxs*/;
 	float dist, projectdistance;
+	float points[16][3];
+	#endif
 	// rough checks
-	if (ent->model == NULL || ent->model->DrawShadowVolume == NULL || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
+	if (!(ent->flags & RENDER_SHADOW) || ent->model == NULL || ent->model->DrawShadowVolume == NULL)
 		return;
 	if (r_shadow_cull.integer)
 	{
@@ -726,10 +769,24 @@ void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float c
 		 || Light_CullBox(ent->mins, ent->maxs))
 			return;
 	}
+	#if 0
 	if (r_shadow_cull.integer)
 	{
 		projectdistance = cullradius;
 		// calculate projected bounding box and decide if it is on-screen
+		for (i = 0;i < 8;i++)
+		{
+			temp[0] = i & 1 ? ent->model->normalmaxs[0] : ent->model->normalmins[0];
+			temp[1] = i & 2 ? ent->model->normalmaxs[1] : ent->model->normalmins[1];
+			temp[2] = i & 4 ? ent->model->normalmaxs[2] : ent->model->normalmins[2];
+			Matrix4x4_Transform(&ent->matrix, temp, points[i]);
+			VectorSubtract(points[i], lightorigin, temp);
+			dist = projectdistance / sqrt(DotProduct(temp, temp));
+			VectorMA(points[i], dist, temp, points[i+8]);
+		}
+		if (LightAndVis_CullPointCloud(16, points[0]))
+			return;
+		/*
 		for (i = 0;i < 8;i++)
 		{
 			p2[0] = i & 1 ? ent->model->normalmaxs[0] : ent->model->normalmins[0];
@@ -759,7 +816,9 @@ void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float c
 		 || mins[2] >= clipmaxs[2] || maxs[2] <= clipmins[2]
 		 || LightAndVis_CullBox(mins, maxs))
 			return;
+		*/
 	}
+	#endif
 	Matrix4x4_Transform(&ent->inversematrix, lightorigin, relativelightorigin);
 	ent->model->DrawShadowVolume (ent, relativelightorigin, lightradius);
 }
@@ -931,14 +990,8 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 		else
 			R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
 		if (r_drawentities.integer)
-		{
 			for (i = 0;i < r_refdef.numentities;i++)
-			{
-				ent = r_refdef.entities[i];
-				if (ent->model)
-					R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
-			}
-		}
+				R_TestAndDrawShadowVolume(r_refdef.entities[i], wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
 
 		if (!visiblevolumes)
 		{

@@ -473,6 +473,7 @@ static void CL_RelinkStaticEntities(void)
 CL_RelinkEntities
 ===============
 */
+extern qboolean Nehahrademcompatibility;
 static void CL_RelinkNetworkEntities(void)
 {
 	entity_t *ent;
@@ -749,6 +750,16 @@ static void CL_RelinkNetworkEntities(void)
 		CL_BoundingBoxForEntity(&ent->render);
 		if (ent->render.model && ent->render.model->name[0] == '*' && ent->render.model->type == mod_brush)
 			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
+
+		// note: the cl.viewentity and intermission check is to hide player
+		// shadow during intermission and during the Nehahra movie and
+		// Nehahra cinematics
+		if (!(ent->state_current.effects & EF_NOSHADOW)
+		 && !(ent->state_current.effects & EF_ADDITIVE)
+		 && (ent->state_current.alpha == 255)
+		 && !(ent->render.flags & RENDER_VIEWMODEL)
+		 && (i != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility)))
+			ent->render.flags |= RENDER_SHADOW;
 
 		if (r_refdef.numentities < r_refdef.maxentities)
 			r_refdef.entities[r_refdef.numentities++] = &ent->render;

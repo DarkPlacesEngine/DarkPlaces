@@ -53,6 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EF_FULLBRIGHT			512		// LordHavoc: fullbright
 #define EF_FLAME				1024	// LordHavoc: on fire
 #define EF_STARDUST				2048	// LordHavoc: showering sparks
+#define EF_NOSHADOW				4096	// LordHavoc: does not cast a shadow
 
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 
@@ -300,6 +301,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_EXTERIORMODEL 8
 #define RENDER_LOWPRECISION 16 // send as low precision coordinates to save bandwidth
 #define RENDER_COLORMAPPED 32
+#define RENDER_SHADOW 64 // cast shadow
 
 typedef struct
 {
