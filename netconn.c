@@ -154,7 +154,7 @@ static qboolean _hc_testint( int A, hostcache_infofield_t op, int B )
 	int diff;
 
 	diff = A - B;
-	switch( hostcache_currentmask.pingtest ) {
+	switch( op ) {
 			case HCMO_GREATER:
 				if( !diff )
 					return false;
