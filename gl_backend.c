@@ -1093,22 +1093,19 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), p ? p : varray_buf_vertex3f);CHECKGLERROR
 	}
 
-	if (gl_state.colorarray)
+	p = gl_state.pointervertexcount ? m->pointer_color : NULL;
+	if (gl_state.pointer_color != p)
 	{
-		p = gl_state.pointervertexcount ? m->pointer_color : NULL;
-		if (gl_state.pointer_color != p)
-		{
 #ifdef MESH_BATCH
-			if (gl_batchelementcount)
-				R_Mesh_EndBatch();
+		if (gl_batchelementcount)
+			R_Mesh_EndBatch();
 #endif
-			gl_state.pointer_color = p;
-			if (p || gl_mesh_floatcolors.integer)
-				qglColorPointer(4, GL_FLOAT, sizeof(float[4]), p ? p : varray_buf_color4f);
-			else
-				qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(GLubyte[4]), p ? p : varray_buf_color4b);
-			CHECKGLERROR
-		}
+		gl_state.pointer_color = p;
+		if (p || gl_mesh_floatcolors.integer)
+			qglColorPointer(4, GL_FLOAT, sizeof(float[4]), p ? p : varray_buf_color4f);
+		else
+			qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(GLubyte[4]), p ? p : varray_buf_color4b);
+		CHECKGLERROR
 	}
 }
 
@@ -1729,38 +1726,35 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	l = r_mesh_rcachesequentialchain_current;
 	if (l == lhead)
 		l = l->next;
-	if (l != lhead)
+	while (l != lhead && l->data->offset < offsetend && l->data->offset + l->data->request.data_size > offset)
 	{
-		while (l->data->offset < offsetend && l->data->offset + l->data->request.data_size > offset)
-		{
 	//r_mesh_rcachesequentialchain_current = l;
 	//R_Mesh_CacheArray_ValidateState(8);
-			lnext = l->next;
-			// if at the end of the chain, wrap around
-			if (lnext == lhead)
-				lnext = lnext->next;
+		lnext = l->next;
+		// if at the end of the chain, wrap around
+		if (lnext == lhead)
+			lnext = lnext->next;
 	//r_mesh_rcachesequentialchain_current = lnext;
 	//R_Mesh_CacheArray_ValidateState(10);
 
-			// unlink from sequential chain
-			l->next->prev = l->prev;
-			l->prev->next = l->next;
+		// unlink from sequential chain
+		l->next->prev = l->prev;
+		l->prev->next = l->next;
 	//R_Mesh_CacheArray_ValidateState(11);
-			// link into free chain
-			l->next = &r_mesh_rcachefreechain;
-			l->prev = l->next->prev;
-			l->next->prev = l->prev->next = l;
+		// link into free chain
+		l->next = &r_mesh_rcachefreechain;
+		l->prev = l->next->prev;
+		l->next->prev = l->prev->next = l;
 	//R_Mesh_CacheArray_ValidateState(12);
 
-			l = &l->data->hashlink;
-			// unlink from hash chain
-			l->next->prev = l->prev;
-			l->prev->next = l->next;
+		l = &l->data->hashlink;
+		// unlink from hash chain
+		l->next->prev = l->prev;
+		l->prev->next = l->next;
 
-			l = lnext;
+		l = lnext;
 	//r_mesh_rcachesequentialchain_current = l;
 	//R_Mesh_CacheArray_ValidateState(9);
-		}
 	}
 	//r_mesh_rcachesequentialchain_current = l;
 	//R_Mesh_CacheArray_ValidateState(5);
