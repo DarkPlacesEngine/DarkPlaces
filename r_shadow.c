@@ -1910,7 +1910,7 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 
 	rtlight->lightmap_cullradius = bound(0, rtlight->radius, 2048.0f);
 	rtlight->lightmap_cullradius2 = rtlight->lightmap_cullradius * rtlight->lightmap_cullradius;
-	VectorScale(rtlight->color, rtlight->radius * d_lightstylevalue[rtlight->style] * 0.25f, rtlight->lightmap_light);
+	VectorScale(rtlight->color, rtlight->radius * d_lightstylevalue[rtlight->style] * 0.125f, rtlight->lightmap_light);
 	rtlight->lightmap_subtract = 1.0f / rtlight->lightmap_cullradius2;
 }
 
@@ -2158,6 +2158,9 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				if (!(ent->flags & RENDER_SHADOW) || !ent->model || !ent->model->DrawShadowVolume)
 					continue;
 				Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
+				// light emitting entities should not cast their own shadow
+				if (VectorLength2(relativelightorigin) < 0.1)
+					continue;
 				ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, ent->model->numsurfaces, ent->model->surfacelist);
 			}
 		}
