@@ -365,6 +365,7 @@ PR_ExecuteProgram
 #define OPB ((eval_t *)&pr_globals[(unsigned short) st->b])
 #define OPC ((eval_t *)&pr_globals[(unsigned short) st->c])
 extern cvar_t pr_boundscheck;
+extern cvar_t pr_traceqc;
 void PR_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st;
@@ -382,7 +383,7 @@ void PR_ExecuteProgram (func_t fnum, const char *errormessage)
 
 	f = &pr_functions[fnum];
 
-	pr_trace = false;
+	pr_trace = pr_traceqc.integer;
 
 	// we know we're done when pr_depth drops to this
 	exitdepth = pr_depth;

@@ -68,6 +68,8 @@ cvar_t	nehx18 = {0, "nehx18", "0"};cvar_t	nehx19 = {0, "nehx19", "0"};
 cvar_t	cutscene = {0, "cutscene", "1"};
 // LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 cvar_t	pr_boundscheck = {0, "pr_boundscheck", "1"};
+// LordHavoc: prints every opcode as it executes - warning: this is significant spew
+cvar_t	pr_traceqc = {0, "pr_traceqc", "0"};
 
 #define	MAX_FIELD_LEN	64
 #define GEFV_CACHESIZE	2
@@ -1539,6 +1541,7 @@ void PR_Init (void)
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&pr_boundscheck);
+	Cvar_RegisterVariable (&pr_traceqc);
 
 	progs_mempool = Mem_AllocPool("progs.dat");
 	edictstring_mempool = Mem_AllocPool("edict strings");
