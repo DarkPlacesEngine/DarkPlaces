@@ -69,6 +69,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EF_FLAME				1024	// LordHavoc: on fire
 #define EF_STARDUST				2048	// LordHavoc: showering sparks
 #define EF_NOSHADOW				4096	// LordHavoc: does not cast a shadow
+#define EF_NODEPTHTEST			8192	// LordHavoc: shows through walls
 
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 

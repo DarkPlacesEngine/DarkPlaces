@@ -453,7 +453,7 @@ static void R_MarkEntities (void)
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
-		 && !VIS_CullBox(ent->mins, ent->maxs)
+		 && (!VIS_CullBox(ent->mins, ent->maxs) || (ent->effects & EF_NODEPTHTEST))
 		 && (!envmap || !(ent->flags & (RENDER_VIEWMODEL | RENDER_EXTERIORMODEL))))
 			ent->visframe = r_framecount;
 	}
@@ -836,7 +836,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
-	GL_DepthTest(true);
+	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	if (fogenabled)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
@@ -868,7 +868,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 void R_DrawNoModel(entity_render_t *ent)
 {
 	//if ((ent->effects & EF_ADDITIVE) || (ent->alpha < 1))
-		R_MeshQueue_AddTransparent(ent->origin, R_DrawNoModelCallback, ent, 0);
+		R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_DrawNoModelCallback, ent, 0);
 	//else
 	//	R_DrawNoModelCallback(ent, 0);
 }

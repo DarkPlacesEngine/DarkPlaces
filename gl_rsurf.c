@@ -725,6 +725,9 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	// LordHavoc: HalfLife maps have freaky skypolys...
 	if (ent->model->brush.ishlbsp)
 		return;
+	// sky rendering transparently would be too difficult
+	if (ent->flags & RENDER_TRANSPARENT)
+		return;
 
 	if (skyrendernow)
 	{
@@ -789,7 +792,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	if (surf->flags & SURF_WATERALPHA)
 		currentalpha *= r_wateralpha.value;
 
-	GL_DepthTest(true);
+	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	if (ent->effects & EF_ADDITIVE)
 	{
 		rendertype = SURFRENDER_ADD;
@@ -806,7 +809,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	{
 		rendertype = SURFRENDER_OPAQUE;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(true);
+		GL_DepthMask(!(ent->effects & EF_NODEPTHTEST));
 	}
 
 	turb = (surf->flags & SURF_DRAWTURB) && r_waterscroll.value;
@@ -1360,7 +1363,7 @@ void R_DrawSurfaces(entity_render_t *ent, int flagsmask)
 						if (surf->visframe == r_framecount)
 						{
 							Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-							R_MeshQueue_AddTransparent(center, RSurfShader_Transparent_Callback, ent, surf - ent->model->brushq1.surfaces);
+							R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surf - ent->model->brushq1.surfaces);
 						}
 					}
 				}
@@ -1412,7 +1415,7 @@ void R_DrawSurfaces(entity_render_t *ent, int flagsmask)
 						else
 						{
 							Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-							R_MeshQueue_AddTransparent(center, RSurfShader_Transparent_Callback, ent, surf - ent->model->brushq1.surfaces);
+							R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surf - ent->model->brushq1.surfaces);
 						}
 					}
 				}
@@ -1919,6 +1922,9 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3msurface_t *face)
 	rmeshstate_t m;
 	if (!face->num_triangles)
 		return;
+	// drawing sky transparently would be too difficult
+	if (ent->flags & RENDER_TRANSPARENT)
+		return;
 	c_faces++;
 	if (skyrendernow)
 	{
@@ -2171,7 +2177,7 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 	else
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
-	GL_DepthTest(true);
+	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 	m.tex[0] = R_GetTexture(face->texture->skin.base);
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
 	colorscale = r_lightmapintensity;
@@ -2210,7 +2216,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3msurface_t *face)
 		facecenter[1] = (face->mins[1] + face->maxs[1]) * 0.5f;
 		facecenter[2] = (face->mins[2] + face->maxs[2]) * 0.5f;
 		Matrix4x4_Transform(&ent->matrix, facecenter, center);
-		R_MeshQueue_AddTransparent(center, R_Q3BSP_DrawFace_TransparentCallback, ent, face - ent->model->brushq3.data_faces);
+		R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, R_Q3BSP_DrawFace_TransparentCallback, ent, face - ent->model->brushq3.data_faces);
 		return;
 	}
 	R_Mesh_Matrix(&ent->matrix);
