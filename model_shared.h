@@ -308,7 +308,7 @@ void Mod_LoadModels(void);
 extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
-int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end);
+int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end, int ignore);
 void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles);
 void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
