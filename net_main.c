@@ -708,7 +708,7 @@ returns -1 if the connection died
 int NET_SendMessage (qsocket_t *sock, sizebuf_t *data)
 {
 	int		r;
-	
+
 	if (!sock)
 		return -1;
 
@@ -730,7 +730,7 @@ int NET_SendMessage (qsocket_t *sock, sizebuf_t *data)
 int NET_SendUnreliableMessage (qsocket_t *sock, sizebuf_t *data)
 {
 	int		r;
-	
+
 	if (!sock)
 		return -1;
 
@@ -760,7 +760,7 @@ message to be transmitted.
 qboolean NET_CanSendMessage (qsocket_t *sock)
 {
 	int		r;
-	
+
 	if (!sock)
 		return false;
 
@@ -770,7 +770,7 @@ qboolean NET_CanSendMessage (qsocket_t *sock)
 	SetNetTime();
 
 	r = sfunc.CanSendMessage(sock);
-	
+
 	return r;
 }
 
@@ -808,71 +808,43 @@ int NET_SendToAll(sizebuf_t *data, int blocktime)
 	double		start;
 	int			i;
 	int			count = 0;
-	qboolean	state1 [MAX_SCOREBOARD];
-	qboolean	state2 [MAX_SCOREBOARD];
+	qbyte		state [MAX_SCOREBOARD];
 
-	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
-	{
-		if (!host_client->netconnection)
-			continue;
-		if (host_client->active)
-		{
-			if (host_client->netconnection->driver == 0)
-			{
-				NET_SendMessage(host_client->netconnection, data);
-				state1[i] = true;
-				state2[i] = true;
-				continue;
-			}
-			count++;
-			state1[i] = false;
-			state2[i] = false;
-		}
-		else
-		{
-			state1[i] = true;
-			state2[i] = true;
-		}
-	}
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		state[i] = (host_client->netconnection && host_client->active) ? 0 : 2;
 
+	// for every player (simultaneously) wait for the first CanSendMessage
+	// and send the message, then wait for a second CanSendMessage (verifying
+	// it was received)
 	start = Sys_DoubleTime();
-	while (count)
+	do
 	{
 		count = 0;
-		for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
+		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		{
-			if (! state1[i])
+			if (state[i] < 2)
 			{
+				// need to send to this one
 				if (NET_CanSendMessage (host_client->netconnection))
 				{
-					state1[i] = true;
-					NET_SendMessage(host_client->netconnection, data);
+					if (state[i] == 0)
+					{
+						if (NET_SendMessage (host_client->netconnection, data) == 1)
+							state[i] = 2; // connection lost
+						else
+							count++;
+					}
+					state[i]++;
 				}
 				else
 				{
 					NET_GetMessage (host_client->netconnection);
+					count++;
 				}
-				count++;
-				continue;
-			}
-
-			if (! state2[i])
-			{
-				if (NET_CanSendMessage (host_client->netconnection))
-				{
-					state2[i] = true;
-				}
-				else
-				{
-					NET_GetMessage (host_client->netconnection);
-				}
-				count++;
-				continue;
 			}
 		}
-		if ((Sys_DoubleTime() - start) > blocktime)
-			break;
 	}
+	while (count && (Sys_DoubleTime() - start) < blocktime);
 	return count;
 }
 
