@@ -1670,7 +1670,7 @@ void M_Menu_Options_Graphics_AdjustSliders (int dir)
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_dlight_shadows,		!r_shadow_realtime_dlight_shadows.integer);
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world,					!r_shadow_realtime_world.integer);
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_dlightshadows,	!r_shadow_realtime_world_dlightshadows.integer);
-	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_lightmaps,		!r_shadow_realtime_world_lightmaps.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_lightmaps,		bound(0, r_shadow_realtime_world_lightmaps.value + dir * 0.1, 1));
 	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_shadows,			!r_shadow_realtime_world_shadows.integer);
 }
 
@@ -1696,7 +1696,7 @@ void M_Options_Graphics_Draw (void)
 	M_Options_PrintCheckbox("      RT DLight Shadows", true, r_shadow_realtime_dlight_shadows.integer);
 	M_Options_PrintCheckbox("               RT World", true, r_shadow_realtime_world.integer);
 	M_Options_PrintCheckbox("RT World DLight Shadows", true, r_shadow_realtime_world_dlightshadows.integer);
-	M_Options_PrintCheckbox("     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.integer);
+	M_Options_PrintSlider(  "     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.value, 0, 1);
 	M_Options_PrintCheckbox("        RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
 }
 
