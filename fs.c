@@ -945,58 +945,10 @@ void FS_Init (void)
 		return;
 	}
 
-	switch(gamemode)
-	{
-		case GAME_NORMAL:
-			Cvar_SetQuick (&scr_screenshot_name, "dp");
-			break;
-		case GAME_HIPNOTIC:
-			Cvar_SetQuick (&scr_screenshot_name, "hipnotic");
-			break;
-		case GAME_ROGUE:
-			Cvar_SetQuick (&scr_screenshot_name, "rogue");
-			break;
-		case GAME_NEHAHRA:
-			Cvar_SetQuick (&scr_screenshot_name, "nehahra");
-			break;
-		case GAME_NEXUIZ:
-			Cvar_SetQuick (&scr_screenshot_name, "nexuiz");
-			break;
-		case GAME_TRANSFUSION:
-			Cvar_SetQuick (&scr_screenshot_name, "transfusion");
-			break;
-		case GAME_GOODVSBAD2:
-			Cvar_SetQuick (&scr_screenshot_name, "gvb2");
-			break;
-		case GAME_TEU:
-			Cvar_SetQuick (&scr_screenshot_name, "teu");
-			break;
-		case GAME_BATTLEMECH:
-			Cvar_SetQuick (&scr_screenshot_name, "battlemech");
-			break;
-		case GAME_ZYMOTIC:
-			Cvar_SetQuick (&scr_screenshot_name, "zymotic");
-			break;
-		case GAME_FNIGGIUM:
-			Cvar_SetQuick (&scr_screenshot_name, "fniggium");
-			break;
-		case GAME_SETHERAL:
-			Cvar_SetQuick (&scr_screenshot_name, "setheral");
-			break;
-		case GAME_SOM:
-			Cvar_SetQuick (&scr_screenshot_name, "som");
-			break;
-		case GAME_TENEBRAE:
-			Cvar_SetQuick (&scr_screenshot_name, "tenebrae");
-			break;
-		default:
-			Cvar_SetQuick (&scr_screenshot_name, "dp");
-			break;
-	}
-
 	// start up with GAMENAME by default (id1)
 	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
 	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
+	Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 
 	// add the game-specific path, if any
 	if (gamedirname[0])
@@ -1008,13 +960,19 @@ void FS_Init (void)
 
 	// -game <gamedir>
 	// Adds basedir/gamedir as an override game
-	i = COM_CheckParm ("-game");
-	if (i && i < com_argc-1)
+	// LordHavoc: now supports multiple -game directories
+	for (i = 1;i < com_argc;i++)
 	{
-		fs_modified = true;
-		strlcpy (com_modname, com_argv[i+1], sizeof (com_modname));
-		FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i+1]));
-		Cvar_SetQuick (&scr_screenshot_name, com_modname);
+		if (!com_argv[i])
+			continue;
+		if (!strcmp (com_argv[i], "-game") && i < com_argc-1)
+		{
+			i++;
+			fs_modified = true;
+			strlcpy (com_modname, com_argv[i], sizeof (com_modname));
+			FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i]));
+			Cvar_SetQuick (&scr_screenshot_name, com_modname);
+		}
 	}
 }
 
