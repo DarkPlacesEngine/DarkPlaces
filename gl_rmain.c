@@ -738,10 +738,12 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	}
 
 	if (visiblevolumes)
+	{
 		qglEnable(GL_CULL_FACE);
+		qglDisable(GL_SCISSOR_TEST);
+	}
 	else
 		R_Shadow_Stage_End();
-	qglDisable(GL_SCISSOR_TEST);
 }
 
 static void R_SetFrustum (void)
@@ -908,11 +910,8 @@ void R_RenderView (void)
 	R_DrawModels();
 	R_TimeReport("models");
 
-	if (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer)
-	{
-		R_ShadowVolumeLighting(false);
-		R_TimeReport("dynlight");
-	}
+	R_ShadowVolumeLighting(false);
+	R_TimeReport("rtlights");
 
 	R_DrawLightningBeams();
 	R_TimeReport("lightning");

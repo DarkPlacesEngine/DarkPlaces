@@ -35,6 +35,8 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+3 darkplaces: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
+0 dpmod: fix angled corpse bug
 0 darkplaces: add lava-steam particle puff effect for bursting lava bubbles (Zombie) 
 0 darkplaces: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
 0 darkplaces: make console editing allow cursoring left/right on the line and insert and delete, etc (Vic)
