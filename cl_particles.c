@@ -713,6 +713,8 @@ void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
 	{
 		k = particlepalette[224 + (rand()&15)];
 		particle(pt_flame, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 4, 4, lhrandom(64, 128), 9999, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(0, 64), 0, 0, 0, 0, 1, 0);
+		if (count & 1)
+			particle(pt_fade, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, 6, 6, lhrandom(48, 96), 9999, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 32), 64.0f, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -725,6 +727,8 @@ void CL_Flames (vec3_t org, vec3_t vel, int count)
 	{
 		k = particlepalette[224 + (rand()&15)];
 		particle(pt_flame, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 4, 4, lhrandom(64, 128), 9999, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 1, 0);
+		//if (count & 1)
+		//	particle(pt_fade, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], false, true, 6, 6, lhrandom(32, 64), 9999, 0, org[0], org[1], org[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 64.0f, 0, 0, 0, 0, 0);
 	}
 }
 
