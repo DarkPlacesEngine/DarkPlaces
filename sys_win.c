@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -28,10 +28,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "conproc.h"
 #include "direct.h"
 
-#define CONSOLE_ERROR_TIMEOUT	60.0	// # of seconds to wait on Sys_Error running
-										//  dedicated before exiting
-#define PAUSE_SLEEP		50				// sleep time on pause or minimization
-#define NOT_FOCUS_SLEEP	20				// sleep time when not focus
+// # of seconds to wait on Sys_Error running dedicated before exiting
+#define CONSOLE_ERROR_TIMEOUT	60.0
+// sleep time on pause or minimization
+#define PAUSE_SLEEP		50
+// sleep time when not focus
+#define NOT_FOCUS_SLEEP	20
 
 int			starttime;
 qboolean	ActiveApp, Minimized;
@@ -59,7 +61,7 @@ QFile	*sys_handles[MAX_HANDLES];
 int		findhandle (void)
 {
 	int		i;
-	
+
 	for (i=1 ; i<MAX_HANDLES ; i++)
 		if (!sys_handles[i])
 			return i;
@@ -123,7 +125,7 @@ int Sys_FileOpenWrite (char *path)
 		return 0;
 	}
 	sys_handles[i] = f;
-	
+
 	return i;
 }
 
@@ -151,14 +153,14 @@ int Sys_FileWrite (int handle, void *data, int count)
 int	Sys_FileTime (char *path)
 {
 	QFile	*f;
-	
+
 	f = Qopen(path, "rb");
 	if (f)
 	{
 		Qclose(f);
 		return 1;
 	}
-	
+
 	return -1;
 }
 
@@ -215,8 +217,7 @@ void Sys_Error (char *error, ...)
 		sc_return_on_enter = true;	// so Enter will get us out of here
 
 		while (!Sys_ConsoleInput () && ((Sys_DoubleTime () - starttime) < CONSOLE_ERROR_TIMEOUT))
-		{
-		}
+			SleepUntilInput(1);
 	}
 	else
 	{
@@ -229,9 +230,7 @@ void Sys_Error (char *error, ...)
 			MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 		}
 		else
-		{
 			MessageBox(NULL, text, "Double Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
-		}
 	}
 
 	if (!in_sys_error1)
@@ -252,7 +251,6 @@ void Sys_Error (char *error, ...)
 
 void Sys_Quit (void)
 {
-
 	Host_Shutdown();
 
 	if (tevent)
@@ -275,6 +273,9 @@ Sys_DoubleTime
 */
 double Sys_DoubleTime (void)
 {
+	static int first = true;
+	static double oldtime = 0.0, curtime = 0.0;
+	double newtime;
 	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
 #if WIN32_USETIMEGETTIME
 	// timeGetTime
@@ -283,36 +284,13 @@ double Sys_DoubleTime (void)
 	// features:
 	// reasonable accuracy (millisecond)
 	// issues:
-	// none known
-	static int first = true;
-	static double oldtime = 0.0, basetime = 0.0, old = 0.0;
-	double newtime, now;
+	// wraps around every 47 days or so (but this is non-fatal to us, odd times are rejected, only causes a one frame stutter)
 
-	now = (double) timeGetTime () + basetime;
-
+	// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
 	if (first)
-	{
-		first = false;
-		basetime = now;
-		now = 0;
-	}
+		timeBeginPeriod (1);
 
-	if (now < old)
-	{
-		// wrapped
-		basetime += (65536.0 * 65536.0);
-		now += (65536.0 * 65536.0);
-	}
-	old = now;
-
-	newtime = now / 1000.0;
-
-	if (newtime < oldtime)
-		Sys_Error("Sys_DoubleTime: time running backwards??\n");
-
-	oldtime = newtime;
-
-	return newtime;
+	newtime = (double) timeGetTime () / 1000.0;
 #else
 	// QueryPerformanceCounter
 	// platform:
@@ -321,46 +299,39 @@ double Sys_DoubleTime (void)
 	// very accurate (CPU cycles)
 	// known issues:
 	// does not necessarily match realtime too well (tends to get faster and faster in win98)
-	static int first = true;
-	static double oldtime = 0.0, basetime = 0.0, timescale = 0.0;
-	double newtime;
+	// wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
+	static double timescale = 0.0;
 	LARGE_INTEGER PerformanceFreq;
 	LARGE_INTEGER PerformanceCount;
 
-	if (first)
-	{
-		if (!QueryPerformanceFrequency (&PerformanceFreq))
-			Sys_Error ("No hardware timer available");
-
-#ifdef __BORLANDC__
-		timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
-#else
-		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
-#endif	
-	}
-
+	if (!QueryPerformanceFrequency (&PerformanceFreq))
+		Sys_Error ("No hardware timer available");
 	QueryPerformanceCounter (&PerformanceCount);
 
 #ifdef __BORLANDC__
-	newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale - basetime;
+	timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
+	newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
 #else
-	newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale - basetime;
-#endif	
+	timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
+	newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
+#endif
+#endif
 
 	if (first)
 	{
 		first = false;
-		basetime = newtime;
-		newtime = 0;
+		oldtime = newtime;
 	}
 
 	if (newtime < oldtime)
-		Sys_Error("Sys_DoubleTime: time running backwards??\n");
+		Con_Printf("Sys_DoubleTime: time running backwards??\n");
+	else
+	{
+		curtime += newtime - oldtime;
+		oldtime = newtime;
+	}
 
-	oldtime = newtime;
-
-	return newtime;
-#endif
+	return curtime;
 }
 
 
@@ -399,7 +370,7 @@ char *Sys_ConsoleInput (void)
 				switch (ch)
 				{
 					case '\r':
-						WriteFile(houtput, "\r\n", 2, &dummy, NULL);	
+						WriteFile(houtput, "\r\n", 2, &dummy, NULL);
 
 						if (len)
 						{
@@ -418,7 +389,7 @@ char *Sys_ConsoleInput (void)
 						break;
 
 					case '\b':
-						WriteFile(houtput, "\b \b", 3, &dummy, NULL);	
+						WriteFile(houtput, "\b \b", 3, &dummy, NULL);
 						if (len)
 						{
 							len--;
@@ -428,7 +399,7 @@ char *Sys_ConsoleInput (void)
 					default:
 						if (ch >= ' ')
 						{
-							WriteFile(houtput, &ch, 1, &dummy, NULL);	
+							WriteFile(houtput, &ch, 1, &dummy, NULL);
 							text[len] = ch;
 							len = (len + 1) & 0xff;
 						}
@@ -451,7 +422,7 @@ void Sys_Sleep (void)
 
 void Sys_SendKeyEvents (void)
 {
-    MSG        msg;
+	MSG msg;
 
 	while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
 	{
@@ -461,8 +432,8 @@ void Sys_SendKeyEvents (void)
 		if (!GetMessage (&msg, NULL, 0, 0))
 			Sys_Quit ();
 
-      	TranslateMessage (&msg);
-      	DispatchMessage (&msg);
+		TranslateMessage (&msg);
+		DispatchMessage (&msg);
 	}
 }
 
@@ -470,7 +441,7 @@ void Sys_SendKeyEvents (void)
 /*
 ==============================================================================
 
- WINDOWS CRAP
+WINDOWS CRAP
 
 ==============================================================================
 */
@@ -499,9 +470,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	static	char	cwd[1024];
 	int				t;
 
-    /* previous instances do not exist in Win32 */
-    if (hPrevInstance)
-        return 0;
+	/* previous instances do not exist in Win32 */
+	if (hPrevInstance)
+		return 0;
 
 	global_hInstance = hInstance;
 	global_nCmdShow = nCmdShow;
@@ -593,22 +564,13 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 // because sound is off until we become active
 	S_BlockSound ();
 
-#if WIN32_USETIMEGETTIME
-	// make sure the timer is high precision, otherwise NT gets 18ms resolution
-	// LordHavoc:
-	// Windows 2000 Advanced Server (and possibly other versions)
-	// apparently have a broken timer, because it runs at more like 10x speed
-	// if this isn't used, heh
-	timeBeginPeriod (1);
-#endif
-
 	Host_Init ();
 
 	Sys_Shared_LateInit();
 
 	oldtime = Sys_DoubleTime ();
 
-    /* main window message loop */
+	/* main window message loop */
 	while (1)
 	{
 		if (cls.state != ca_dedicated)
@@ -628,7 +590,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		oldtime = newtime;
 	}
 
-    /* return success of application */
-    return true;
+	/* return success of application */
+	return true;
 }
 
