@@ -2230,12 +2230,12 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		R_Shadow_EnlargeClusterBuffer(model->brush.num_pvsclusters);
 		R_Shadow_EnlargeSurfaceBuffer(model->nummodelsurfaces); 
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
+		rtlight->static_numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
+		rtlight->static_clusterpvs = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusterpvsbytes);
 		if (numclusters)
 		{
 			rtlight->static_numclusters = numclusters;
-			rtlight->static_numclusterpvsbytes = (model->brush.num_pvsclusters + 7) >> 3;
 			rtlight->static_clusterlist = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusters * sizeof(*rtlight->static_clusterlist));
-			rtlight->static_clusterpvs = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusterpvsbytes);
 			memcpy(rtlight->static_clusterlist, r_shadow_buffer_clusterlist, rtlight->static_numclusters * sizeof(*rtlight->static_clusterlist));
 			memcpy(rtlight->static_clusterpvs, r_shadow_buffer_clusterpvs, rtlight->static_numclusterpvsbytes);
 		}
