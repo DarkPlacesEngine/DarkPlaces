@@ -13,9 +13,9 @@ typedef struct
 } dlight_t;
 
 // LordHavoc: this affects the lighting scale of the whole game
-//#define LIGHTOFFSET 16384.0f
-//#define LIGHTSCALE1 2.0f
 #define LIGHTOFFSET 4096.0f
-#define LIGHTSCALE1 1.0f
-#define LIGHTSCALE (LIGHTSCALE1*LIGHTSCALE1)
-#define LIGHTSCALE2 LIGHTSCALE
+
+extern void R_CompleteLightPoint (vec3_t color, vec3_t p);
+extern void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
+extern void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
+extern void R_LightPoint (vec3_t color, vec3_t p);

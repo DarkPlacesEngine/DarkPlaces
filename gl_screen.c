@@ -58,7 +58,7 @@ Con_Printf ();
 net 
 turn off messages option
 
-the refresh is allways rendered, unless the console is full screen
+the refresh is always rendered, unless the console is full screen
 
 
 console is:
@@ -442,7 +442,7 @@ void SCR_DrawTurtle (void)
 	if (!scr_showturtle.value)
 		return;
 
-	if (host_frametime < 0.1)
+	if (cl.frametime < 0.1)
 	{
 		count = 0;
 		return;
@@ -827,8 +827,6 @@ text to the screen.
 LordHavoc: due to my rewrite of R_WorldNode, it no longer takes 256k of stack space :)
 ==================
 */
-extern cvar_t gl_vertexarrays;
-extern qboolean gl_arrays;
 void GL_Finish();
 void SCR_UpdateScreen (void)
 {
@@ -836,9 +834,6 @@ void SCR_UpdateScreen (void)
 
 	if (r_speeds.value)
 		time1 = Sys_FloatTime ();
-
-	if (!gl_arrays)
-		gl_vertexarrays.value = 0;
 
 	scr_copytop = 0;
 	scr_copyeverything = 0;

@@ -27,7 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define DWORD	unsigned long
 #endif
 
-#define	PAINTBUFFER_SIZE	512
+// LordHavoc: was 512, expanded to 2048
+#define	PAINTBUFFER_SIZE	2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 int		snd_scaletable[32][256];
 int 	*snd_p, snd_linear_count, snd_vol;
@@ -46,20 +47,9 @@ void Snd_WriteLinearBlastStereo16 (void)
 		for (i=0 ; i<snd_linear_count ; i+=2)
 		{
 			val = (snd_p[i+1]*snd_vol)>>8;
-			if (val > 0x7fff)
-				snd_out[i] = 0x7fff;
-			else if (val < (short)0x8000)
-				snd_out[i] = (short)0x8000;
-			else
-				snd_out[i] = val;
-
-			val = (snd_p[i]*snd_vol)>>8;
-			if (val > 0x7fff)
-				snd_out[i+1] = 0x7fff;
-			else if (val < (short)0x8000)
-				snd_out[i+1] = (short)0x8000;
-			else
-				snd_out[i+1] = val;
+			snd_out[i  ] = bound(-32768, val, 32767);
+			val = (snd_p[i  ]*snd_vol)>>8;
+			snd_out[i+1] = bound(-32768, val, 32767);
 		}
 	}
 	else
@@ -67,20 +57,9 @@ void Snd_WriteLinearBlastStereo16 (void)
 		for (i=0 ; i<snd_linear_count ; i+=2)
 		{
 			val = (snd_p[i]*snd_vol)>>8;
-			if (val > 0x7fff)
-				snd_out[i] = 0x7fff;
-			else if (val < (short)0x8000)
-				snd_out[i] = (short)0x8000;
-			else
-				snd_out[i] = val;
-
+			snd_out[i] = bound(-32768, val, 32767);
 			val = (snd_p[i+1]*snd_vol)>>8;
-			if (val > 0x7fff)
-				snd_out[i+1] = 0x7fff;
-			else if (val < (short)0x8000)
-				snd_out[i+1] = (short)0x8000;
-			else
-				snd_out[i+1] = val;
+			snd_out[i+1] = bound(-32768, val, 32767);
 		}
 	}
 }
@@ -107,8 +86,7 @@ void S_TransferStereo16 (int endtime)
 	{
 		reps = 0;
 
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, 
-									   &pbuf2, &dwSize2, 0)) != DS_OK)
+		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2, &dwSize2, 0)) != DS_OK)
 		{
 			if (hresult != DSERR_BUFFERLOST)
 			{
@@ -194,8 +172,7 @@ void S_TransferPaintBuffer(int endtime)
 	{
 		reps = 0;
 
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, 
-									   &pbuf2,&dwSize2, 0)) != DS_OK)
+		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2,&dwSize2, 0)) != DS_OK)
 		{
 			if (hresult != DSERR_BUFFERLOST)
 			{
@@ -226,12 +203,8 @@ void S_TransferPaintBuffer(int endtime)
 		while (count--)
 		{
 			val = (*p * snd_vol) >> 8;
+			out[out_idx] = bound(-32768, val, 32767);
 			p+= step;
-			if (val > 0x7fff)
-				val = 0x7fff;
-			else if (val < (short)0x8000)
-				val = (short)0x8000;
-			out[out_idx] = val;
 			out_idx = (out_idx + 1) & out_mask;
 		}
 	}
@@ -240,19 +213,16 @@ void S_TransferPaintBuffer(int endtime)
 		unsigned char *out = (unsigned char *) pbuf;
 		while (count--)
 		{
-			val = (*p * snd_vol) >> 8;
+			val = ((*p * snd_vol) >> 16) + 128;
+			out[out_idx] = bound(0, val, 255);
 			p+= step;
-			if (val > 0x7fff)
-				val = 0x7fff;
-			else if (val < (short)0x8000)
-				val = (short)0x8000;
-			out[out_idx] = (val>>8) + 128;
 			out_idx = (out_idx + 1) & out_mask;
 		}
 	}
 
 #ifdef _WIN32
-	if (pDSBuf) {
+	if (pDSBuf)
+	{
 		DWORD dwNewpos, dwWrite;
 		int il = paintedtime;
 		int ir = endtime - paintedtime;
@@ -291,15 +261,15 @@ void S_PaintChannels(int endtime)
 
 	while (paintedtime < endtime)
 	{
-	// if paintbuffer is smaller than DMA buffer
+		// if paintbuffer is smaller than DMA buffer
 		end = endtime;
 		if (endtime - paintedtime > PAINTBUFFER_SIZE)
 			end = paintedtime + PAINTBUFFER_SIZE;
 
-	// clear the paint buffer
+		// clear the paint buffer
 		memset(paintbuffer, 0, (end - paintedtime) * sizeof(portable_samplepair_t));
 
-	// paint in the channels.
+		// paint in the channels.
 		ch = channels;
 		for (i=0; i<total_channels ; i++, ch++)
 		{
@@ -314,7 +284,8 @@ void S_PaintChannels(int endtime)
 			ltime = paintedtime;
 
 			while (ltime < end)
-			{	// paint up to end
+			{
+				// paint up to end
 				if (ch->end < end)
 					count = ch->end - ltime;
 				else
@@ -330,7 +301,7 @@ void S_PaintChannels(int endtime)
 					ltime += count;
 				}
 
-			// if at end of loop, restart
+				// if at end of loop, restart
 				if (ltime >= ch->end)
 				{
 					if (sc->loopstart >= 0)
@@ -339,7 +310,8 @@ void S_PaintChannels(int endtime)
 						ch->end = ltime + sc->length - ch->pos;
 					}
 					else				
-					{	// channel just stopped
+					{
+						// channel just stopped
 						ch->sfx = NULL;
 						break;
 					}
@@ -348,7 +320,7 @@ void S_PaintChannels(int endtime)
 															  
 		}
 
-	// transfer out according to DMA format
+		// transfer out according to DMA format
 		S_TransferPaintBuffer(end);
 		paintedtime = end;
 	}
@@ -375,11 +347,12 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 		ch->leftvol = 255;
 	if (ch->rightvol > 255)
 		ch->rightvol = 255;
-		
+
 	lscale = snd_scaletable[ch->leftvol >> 3];
 	rscale = snd_scaletable[ch->rightvol >> 3];
-	if (sc->stereo) // LordHavoc: stereo sound support, and optimizations
+	if (sc->stereo)
 	{
+		// LordHavoc: stereo sound support, and optimizations
 		sfx = (unsigned char *)sc->data + ch->pos * 2;
 
 		for (i=0 ; i<count ; i++)
@@ -413,14 +386,15 @@ void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
 
 	leftvol = ch->leftvol;
 	rightvol = ch->rightvol;
-	if (sc->stereo) // LordHavoc: stereo sound support, and optimizations
+	if (sc->stereo)
 	{
+		// LordHavoc: stereo sound support, and optimizations
 		sfx = (signed short *)sc->data + ch->pos * 2;
 
 		for (i=0 ; i<count ; i++)
 		{
-			paintbuffer[i].left += (short) ((int) (*sfx++ * leftvol) >> 8);
-			paintbuffer[i].right += (short) ((int) (*sfx++ * rightvol) >> 8);
+			paintbuffer[i].left += (*sfx++ * leftvol) >> 8;
+			paintbuffer[i].right += (*sfx++ * rightvol) >> 8;
 		}
 	}
 	else
@@ -429,8 +403,8 @@ void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
 
 		for (i=0 ; i<count ; i++)
 		{
-			paintbuffer[i].left += (short) ((int) (*sfx * leftvol) >> 8);
-			paintbuffer[i].right += (short) ((int) (*sfx++ * rightvol) >> 8);
+			paintbuffer[i].left += (*sfx * leftvol) >> 8;
+			paintbuffer[i].right += (*sfx++ * rightvol) >> 8;
 		}
 	}
 

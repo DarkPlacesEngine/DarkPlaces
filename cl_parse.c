@@ -65,24 +65,25 @@ char *svc_strings[128] =
 	"svc_cdtrack",			// [byte] track [byte] looptrack
 	"svc_sellscreen",
 	"svc_cutscene",
-	"svc_showlmp",	// [string] iconlabel [string] lmpfile [byte] x [byte] y
+	"svc_showlmp",	// [string] iconlabel [string] lmpfile [short] x [short] y
 	"svc_hidelmp",	// [string] iconlabel
-	"svc_skybox", // [string] skyname
-	"?", // 38
-	"?", // 39
-	"?", // 40
-	"?", // 41
-	"?", // 42
-	"?", // 43
-	"?", // 44
-	"?", // 45
-	"?", // 46
-	"?", // 47
-	"?", // 48
-	"?", // 49
-	"svc_farclip", // [coord] size
-	"svc_fog", // [byte] enable <optional past this point, only included if enable is true> [short] density*4096 [byte] red [byte] green [byte] blue
-	"svc_playerposition" // [float] x [float] y [float] z
+	"", // 37
+	"", // 38
+	"", // 39
+	"", // 40
+	"", // 41
+	"", // 42
+	"", // 43
+	"", // 44
+	"", // 45
+	"", // 46
+	"", // 47
+	"", // 48
+	"", // 49
+	"", // 50
+	"svc_fog", // 51
+	"svc_effect", // [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
+	"svc_effect2", // [vector] org [short] modelindex [byte] startframe [byte] framecount [byte] framerate
 };
 
 //=============================================================================
@@ -119,14 +120,14 @@ entity_t	*CL_EntityNum (int num)
 CL_ParseStartSoundPacket
 ==================
 */
-void CL_ParseStartSoundPacket(void)
+void CL_ParseStartSoundPacket(int largesoundindex)
 {
     vec3_t  pos;
     int 	channel, ent;
     int 	sound_num;
     int 	volume;
     int 	field_mask;
-    float 	attenuation;  
+    float 	attenuation;
  	int		i;
 	           
     field_mask = MSG_ReadByte(); 
@@ -142,7 +143,13 @@ void CL_ParseStartSoundPacket(void)
 		attenuation = DEFAULT_SOUND_PACKET_ATTENUATION;
 	
 	channel = MSG_ReadShort ();
-	sound_num = MSG_ReadByte ();
+	if (largesoundindex)
+		sound_num = (unsigned short) MSG_ReadShort ();
+	else
+		sound_num = MSG_ReadByte ();
+
+	if (sound_num >= MAX_SOUNDS)
+		Host_Error("CL_ParseStartSoundPacket: sound_num (%i) >= MAX_SOUNDS (%i)\n", sound_num, MAX_SOUNDS);
 
 	ent = channel >> 3;
 	channel &= 7;
@@ -455,7 +462,7 @@ relinked.  Other attributes can change without relinking.
 */
 void CL_ParseUpdate (int bits)
 {
-	int			i, modnum, num, alpha, scale, glowsize, glowcolor, colormod;
+	int			i, modnum, num, alpha, scale, glowsize, glowcolor, colormod, frame;
 	model_t		*model;
 	qboolean	forcelink;
 	entity_t	*ent;
@@ -511,21 +518,8 @@ void CL_ParseUpdate (int bits)
 	modnum = bits & U_MODEL ? MSG_ReadByte() : baseline->modelindex;
 	if (modnum >= MAX_MODELS)
 		Host_Error ("CL_ParseModel: bad modnum");
-	ent->deltabaseline.modelindex = modnum;
-		
-	model = cl.model_precache[modnum];
-	if (model != ent->model)
-	{
-		ent->model = model;
-	// automatic animation (torches, etc) can be either all together
-	// or randomized
-		if (model)
-			ent->syncbase = model->synctype == ST_RAND ? (float)(rand()&0x7fff) / 0x7fff : 0.0;
-		else
-			forcelink = true;	// hack to make null model players work
-	}
 
-	ent->frame = ((bits & U_FRAME) ? MSG_ReadByte() : (baseline->frame & 0xFF));
+	frame = ((bits & U_FRAME) ? MSG_ReadByte() : (baseline->frame & 0xFF));
 
 	i = bits & U_COLORMAP ? MSG_ReadByte() : baseline->colormap;
 	ent->deltabaseline.colormap = i;
@@ -564,14 +558,36 @@ void CL_ParseUpdate (int bits)
 	glowsize = bits & U_GLOWSIZE ? MSG_ReadByte() : baseline->glowsize;
 	glowcolor = bits & U_GLOWCOLOR ? MSG_ReadByte() : baseline->glowcolor;
 	colormod = bits & U_COLORMOD ? MSG_ReadByte() : baseline->colormod;
-	ent->frame |= ((bits & U_FRAME2) ? (MSG_ReadByte() << 8) : (baseline->frame & 0xFF00));
+	modnum |= ((bits & U_MODEL2) ? (MSG_ReadByte() << 8) : (baseline->modelindex & 0xFF00));
+	frame |= ((bits & U_FRAME2) ? (MSG_ReadByte() << 8) : (baseline->frame & 0xFF00));
+
+	if (modnum >= MAX_MODELS)
+		Host_Error("modnum (%i) >= MAX_MODELS (%i)\n", modnum, MAX_MODELS);
+
+	model = cl.model_precache[modnum];
+	if (model != ent->model)
+	{
+		ent->model = model;
+	// automatic animation (torches, etc) can be either all together
+	// or randomized
+		if (model)
+			ent->syncbase = model->synctype == ST_RAND ? (float)(rand()&0x7fff) / 0x7fff : 0.0;
+		else
+			forcelink = true;	// hack to make null model players work
+	}
+
+	ent->frame = frame;
+	if (model && (unsigned) frame >= model->numframes)
+		Con_DPrintf("CL_ParseUpdate: no such frame %i in \"%s\"\n", frame, model->name);
+
 	ent->deltabaseline.alpha = alpha;
 	ent->deltabaseline.scale = scale;
 	ent->deltabaseline.effects = ent->effects;
 	ent->deltabaseline.glowsize = glowsize;
 	ent->deltabaseline.glowcolor = glowcolor;
 	ent->deltabaseline.colormod = colormod;
-	ent->deltabaseline.frame = ent->frame;
+	ent->deltabaseline.modelindex = modnum;
+	ent->deltabaseline.frame = frame;
 	ent->alpha = (float) alpha * (1.0 / 255.0);
 	ent->scale = (float) scale * (1.0 / 16.0);
 	ent->glowsize = glowsize * 4.0;
@@ -579,7 +595,7 @@ void CL_ParseUpdate (int bits)
 	ent->colormod[0] = (float) ((colormod >> 5) & 7) * (1.0 / 7.0);
 	ent->colormod[1] = (float) ((colormod >> 2) & 7) * (1.0 / 7.0);
 	ent->colormod[2] = (float) (colormod & 3) * (1.0 / 3.0);
-	if (bits & U_EXTEND1 && Nehahrademcompatibility) // LordHavoc: to allow playback of the early Nehahra movie segments
+	if (bits & U_EXTEND1 && Nehahrademcompatibility) // LordHavoc: to allow playback of the Nehahra movie
 	{
 		i = MSG_ReadFloat();
 		ent->alpha = MSG_ReadFloat();
@@ -608,11 +624,14 @@ void CL_ParseUpdate (int bits)
 CL_ParseBaseline
 ==================
 */
-void CL_ParseBaseline (entity_t *ent)
+void CL_ParseBaseline (entity_t *ent, int largemodelindex)
 {
 	int			i;
-	
-	ent->baseline.modelindex = MSG_ReadByte ();
+
+	if (largemodelindex)
+		ent->baseline.modelindex = (unsigned short) MSG_ReadShort ();
+	else
+		ent->baseline.modelindex = MSG_ReadByte ();
 	ent->baseline.frame = MSG_ReadByte ();
 	ent->baseline.colormap = MSG_ReadByte();
 	ent->baseline.skin = MSG_ReadByte();
@@ -626,6 +645,9 @@ void CL_ParseBaseline (entity_t *ent)
 	ent->baseline.glowsize = 0;
 	ent->baseline.glowcolor = 254;
 	ent->baseline.colormod = 255;
+	
+	if (ent->baseline.modelindex >= MAX_MODELS)
+		Host_Error("CL_ParseBaseline: modelindex (%i) >= MAX_MODELS (%i)\n", ent->baseline.modelindex, MAX_MODELS);
 }
 
 
@@ -639,7 +661,13 @@ Server information pertaining to this client only
 void CL_ParseClientdata (int bits)
 {
 	int		i, j;
-	
+
+	bits &= 0xFFFF;
+	if (bits & SU_EXTEND1)
+		bits |= (MSG_ReadByte() << 16);
+	if (bits & SU_EXTEND2)
+		bits |= (MSG_ReadByte() << 24);
+
 	if (bits & SU_VIEWHEIGHT)
 		cl.viewheight = MSG_ReadChar ();
 	else
@@ -654,9 +682,18 @@ void CL_ParseClientdata (int bits)
 	for (i=0 ; i<3 ; i++)
 	{
 		if (bits & (SU_PUNCH1<<i) )
-			cl.punchangle[i] = MSG_ReadChar();
+		{
+			if (dpprotocol)
+				cl.punchangle[i] = MSG_ReadPreciseAngle();
+			else
+				cl.punchangle[i] = MSG_ReadChar();
+		}
 		else
 			cl.punchangle[i] = 0;
+		if (bits & (SU_PUNCHVEC1<<i))
+			cl.punchvector[i] = MSG_ReadFloatCoord();
+		else
+			cl.punchvector[i] = 0;
 		if (bits & (SU_VELOCITY1<<i) )
 			cl.mvelocity[0][i] = MSG_ReadChar()*16;
 		else
@@ -699,7 +736,7 @@ void CL_ParseClientdata (int bits)
 CL_ParseStatic
 =====================
 */
-void CL_ParseStatic (void)
+void CL_ParseStatic (int largemodelindex)
 {
 	entity_t *ent;
 	int		i;
@@ -709,11 +746,15 @@ void CL_ParseStatic (void)
 		Host_Error ("Too many static entities");
 	ent = &cl_static_entities[i];
 	cl.num_statics++;
-	CL_ParseBaseline (ent);
+	CL_ParseBaseline (ent, largemodelindex);
 
 // copy it to the current state
 	ent->model = cl.model_precache[ent->baseline.modelindex];
-	ent->frame = ent->baseline.frame;
+	ent->frame = ent->frame1 = ent->frame2 = ent->baseline.frame;
+	ent->framelerp = 0;
+	ent->lerp_starttime = -1;
+	// make torchs play out of sync
+	ent->frame1start = ent->frame2start = -(rand() & 32767);
 	ent->colormap = -1; // no special coloring
 	ent->skinnum = ent->baseline.skin;
 	ent->effects = ent->baseline.effects;
@@ -738,15 +779,41 @@ void CL_ParseStaticSound (void)
 {
 	vec3_t		org;
 	int			sound_num, vol, atten;
-	int			i;
-	
-	for (i=0 ; i<3 ; i++)
-		org[i] = MSG_ReadCoord ();
+
+	MSG_ReadVector(org);
 	sound_num = MSG_ReadByte ();
 	vol = MSG_ReadByte ();
 	atten = MSG_ReadByte ();
 	
 	S_StaticSound (cl.sound_precache[sound_num], org, vol, atten);
+}
+
+void CL_ParseEffect (void)
+{
+	vec3_t		org;
+	int			modelindex, startframe, framecount, framerate;
+
+	MSG_ReadVector(org);
+	modelindex = MSG_ReadByte ();
+	startframe = MSG_ReadByte ();
+	framecount = MSG_ReadByte ();
+	framerate = MSG_ReadByte ();
+
+	CL_Effect(org, modelindex, startframe, framecount, framerate);
+}
+
+void CL_ParseEffect2 (void)
+{
+	vec3_t		org;
+	int			modelindex, startframe, framecount, framerate;
+
+	MSG_ReadVector(org);
+	modelindex = MSG_ReadShort ();
+	startframe = MSG_ReadByte ();
+	framecount = MSG_ReadByte ();
+	framerate = MSG_ReadByte ();
+
+	CL_Effect(org, modelindex, startframe, framecount, framerate);
 }
 
 
@@ -919,9 +986,13 @@ void CL_ParseServerMessage (void)
 			break;
 			
 		case svc_sound:
-			CL_ParseStartSoundPacket();
+			CL_ParseStartSoundPacket(false);
 			break;
-			
+
+		case svc_sound2:
+			CL_ParseStartSoundPacket(true);
+			break;
+
 		case svc_stopsound:
 			i = MSG_ReadShort();
 			S_StopSound(i>>3, i&7);
@@ -952,14 +1023,30 @@ void CL_ParseServerMessage (void)
 			R_ParseParticleEffect ();
 			break;
 
+		case svc_effect:
+			CL_ParseEffect ();
+			break;
+
+		case svc_effect2:
+			CL_ParseEffect2 ();
+			break;
+
 		case svc_spawnbaseline:
 			i = MSG_ReadShort ();
 			// must use CL_EntityNum() to force cl.num_entities up
-			CL_ParseBaseline (CL_EntityNum(i));
+			CL_ParseBaseline (CL_EntityNum(i), false);
+			break;
+		case svc_spawnbaseline2:
+			i = MSG_ReadShort ();
+			// must use CL_EntityNum() to force cl.num_entities up
+			CL_ParseBaseline (CL_EntityNum(i), false);
 			break;
 		case svc_spawnstatic:
-			CL_ParseStatic ();
-			break;			
+			CL_ParseStatic (false);
+			break;
+		case svc_spawnstatic2:
+			CL_ParseStatic (true);
+			break;
 		case svc_temp_entity:
 			CL_ParseTEnt ();
 			break;
@@ -1036,24 +1123,6 @@ void CL_ParseServerMessage (void)
 			break;
 		case svc_showlmp:
 			SHOWLMP_decodeshow();
-			break;
-	// LordHavoc: extra worldspawn fields (fog, sky, farclip)
-		case svc_skybox:
-			R_SetSkyBox(MSG_ReadString());
-			break;
-		case svc_farclip:
-			r_farclip.value = MSG_ReadCoord();
-			break;
-		case svc_fog:
-			if (MSG_ReadByte())
-			{
-				fog_density = MSG_ReadShort() * (1.0f / 4096.0f);
-				fog_red = MSG_ReadByte() * (1.0 / 255.0);
-				fog_green = MSG_ReadByte() * (1.0 / 255.0);
-				fog_blue = MSG_ReadByte() * (1.0 / 255.0);
-			}
-			else
-				fog_density = 0.0f;
 			break;
 		}
 	}

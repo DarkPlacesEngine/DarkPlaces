@@ -55,10 +55,7 @@ typedef struct entity_s
 	float					alpha;			// opacity (alpha) of the model
 	float					colormod[3];	// color tint for model
 	float					scale;			// size the model is shown
-	int						draw_lastpose, draw_pose; // for interpolation
-	float					draw_lerpstart; // for interpolation
-	struct model_s			*draw_lastmodel; // for interpolation
-	float					trail_leftover;
+	float					trail_time;
 	float					glowsize;		// how big the glow is
 	byte					glowcolor;		// color of glow and particle trail (paletted)
 	byte					glowtrail;		// leaves a trail of particles
@@ -66,10 +63,17 @@ typedef struct entity_s
 
 	struct model_s			*model;			// NULL = no model
 	struct efrag_s			*efrag;			// linked list of efrags
-	int						frame;
+	int						frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
+	struct model_s			*lerp_model;	// lerp resets when model changes
+	float					lerp_starttime;	// start of this transition
+	int						frame1;			// frame that the model is interpolating from
+	int						frame2;			// frame that the model is interpolating to
+	double					framelerp;		// interpolation factor, usually computed from lerp_starttime
+	double					frame1start;	// time frame1 began playing (for framegroup animations)
+	double					frame2start;	// time frame2 began playing (for framegroup animations)
 	float					syncbase;		// for client-side animations
 	int						colormap;
-	int						effects;		// light, particals, etc
+	int						effects;		// light, particles, etc
 	int						skinnum;		// for Alias models
 	int						visframe;		// last frame this entity was
 											//  found in an active leaf
@@ -89,6 +93,7 @@ typedef struct
 {
 	vrect_t		vrect;				// subwindow in video for refresh
 									// FIXME: not need vrect next field here?
+	/*
 	vrect_t		aliasvrect;			// scaled Alias version
 	int			vrectright, vrectbottom;	// right & bottom screen coords
 	int			aliasvrectright, aliasvrectbottom;	// scaled Alias versions
@@ -104,15 +109,16 @@ typedef struct
 	float		fvrectbottom;			// bottommost edge, for Alias clamping
 	float		horizontalFieldOfView;	// at Z = 1.0, this many X is visible 
 										// 2.0 = 90 degrees
-	float		xOrigin;			// should probably allways be 0.5
+	float		xOrigin;			// should probably always be 0.5
 	float		yOrigin;			// between be around 0.3 to 0.5
+	*/
 
 	vec3_t		vieworg;
 	vec3_t		viewangles;
 	
 	float		fov_x, fov_y;
 
-	int			ambientlight;
+//	int			ambientlight;
 } refdef_t;
 
 
@@ -126,46 +132,44 @@ extern vec3_t	r_origin, vpn, vright, vup;
 
 extern	struct texture_s	*r_notexture_mip;
 
-extern void R_Init (void);
-extern void R_InitTextures (void);
-extern void R_InitEfrags (void);
-extern void R_RenderView (void);		// must set r_refdef first
-extern void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect);
+void R_Init (void);
+void R_InitTextures (void);
+void R_InitEfrags (void);
+void R_RenderView (void);		// must set r_refdef first
+void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect);
 								// called whenever r_refdef or vid change
 // LordHavoc: changed this for sake of GLQuake
-extern void R_InitSky (byte *src, int bytesperpixel);	// called at level load
-//extern void R_InitSky (struct texture_s *mt);	// called at level load
+void R_InitSky (byte *src, int bytesperpixel);	// called at level load
+//void R_InitSky (struct texture_s *mt);	// called at level load
 
-extern void R_AddEfrags (entity_t *ent);
-extern void R_RemoveEfrags (entity_t *ent);
+void R_AddEfrags (entity_t *ent);
+void R_RemoveEfrags (entity_t *ent);
 
-extern void R_NewMap (void);
+void R_NewMap (void);
 
 
-extern void R_ParseParticleEffect (void);
-extern void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
-extern void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
-extern void R_RocketTrail2 (vec3_t start, vec3_t end, int type, entity_t *ent);
-extern void R_SparkShower (vec3_t org, vec3_t dir, int count);
-extern void R_BloodPuff (vec3_t org);
+void R_ParseParticleEffect (void);
+void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
+void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
+void R_RocketTrail2 (vec3_t start, vec3_t end, int type, entity_t *ent);
+void R_SparkShower (vec3_t org, vec3_t dir, int count);
+void R_BloodPuff (vec3_t org, vec3_t vel, int count);
+void R_FlameCube (vec3_t mins, vec3_t maxs, int count);
+void R_Flames (vec3_t org, vec3_t vel, int count);
 
-extern void R_EntityParticles (entity_t *ent);
-extern void R_BlobExplosion (vec3_t org);
-extern void R_ParticleExplosion (vec3_t org, int smoke);
-extern void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
-extern void R_LavaSplash (vec3_t org);
-extern void R_TeleportSplash (vec3_t org);
+void R_EntityParticles (entity_t *ent);
+void R_BlobExplosion (vec3_t org);
+void R_ParticleExplosion (vec3_t org, int smoke);
+void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
+void R_LavaSplash (vec3_t org);
+void R_TeleportSplash (vec3_t org);
 
-extern void R_NewExplosion(vec3_t org);
+void R_NewExplosion(vec3_t org);
 
-extern void R_PushDlights (void);
-extern void R_DrawWorld (void);
-//extern void R_RenderDlights (void);
-extern void R_DrawParticles (void);
-extern void R_MoveParticles (void);
-extern void R_DrawExplosions (void);
-extern void R_MoveExplosions (void);
-
-extern void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
-extern void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
-extern void R_LightPoint (vec3_t color, vec3_t p);
+void R_PushDlights (void);
+void R_DrawWorld (void);
+//void R_RenderDlights (void);
+void R_DrawParticles (void);
+void R_MoveParticles (void);
+void R_DrawExplosions (void);
+void R_MoveExplosions (void);

@@ -40,6 +40,8 @@ typedef struct
 	qboolean	loadgame;			// handle connections specially
 
 	double		time;
+
+	double		frametime;
 	
 	int			lastcheck;			// used by PF_checkclient
 	double		lastchecktime;
@@ -204,8 +206,8 @@ extern	edict_t		*sv_player;
 void SV_Init (void);
 
 void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count);
-void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
-    float attenuation);
+void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate);
+void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, float attenuation);
 
 void SV_DropClient (qboolean crash);
 

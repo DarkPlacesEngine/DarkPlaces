@@ -55,8 +55,8 @@ typedef struct texture_s
 {
 	char		name[16];
 	unsigned	width, height;
-	int			gl_texturenum;
-	int			gl_glowtexturenum; // LordHavoc: fullbrights on walls
+	rtexture_t	*texture;
+	rtexture_t	*glowtexture; // LordHavoc: fullbrights on walls
 	struct msurface_s	*texturechain;	// for gl_texsort drawing
 	int			anim_total;				// total tenths in sequence ( 0 = no)
 	int			anim_min, anim_max;		// time for this frame min <=time< max
@@ -77,6 +77,8 @@ typedef struct texture_s
 // LordHavoc: added these for lava and teleport textures
 #define SURF_DRAWNOALPHA	0x100
 #define SURF_DRAWFULLBRIGHT	0x200
+// LordHavoc: light both sides
+#define SURF_LIGHTBOTHSIDES		0x400
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct

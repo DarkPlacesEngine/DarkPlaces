@@ -44,6 +44,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // effects/model (can be used as model flags or entity effects)
 #define	EF_REFLECTIVE			256		// LordHavoc: shiny metal objects :)
 #define EF_FULLBRIGHT			512		// LordHavoc: fullbright
+#define EF_FLAME				1024	// LordHavoc: on fire
 
 // if the high bit of the servercmd is set, the low bits are fast update flags:
 #define	U_MOREBITS	(1<<0)
@@ -81,7 +82,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define U_GLOWTRAIL	(1<<24) // leaves a trail of particles (of color .glowcolor, or black if it is a negative glowsize)
 #define U_VIEWMODEL	(1<<25) // attachs the model to the view (origin and angles become relative to it), only shown to owner, a more powerful alternative to .weaponmodel and such
 #define U_FRAME2	(1<<26) // 1 byte, this is .frame & 0xFF00 (second byte)
-#define U_UNUSED27	(1<<27) // future expansion
+#define U_MODEL2	(1<<27) // 1 byte, this is .modelindex & 0xFF00 (second byte)
 #define U_UNUSED28	(1<<28) // future expansion
 #define U_UNUSED29	(1<<29) // future expansion
 #define U_UNUSED30	(1<<30) // future expansion
@@ -102,6 +103,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	SU_WEAPONFRAME	(1<<12)
 #define	SU_ARMOR		(1<<13)
 #define	SU_WEAPON		(1<<14)
+#define SU_EXTEND1		(1<<15)
+// first extend byte
+#define SU_PUNCHVEC1	(1<<16)
+#define SU_PUNCHVEC2	(1<<17)
+#define SU_PUNCHVEC3	(1<<18)
+#define SU_UNUSED19		(1<<19)
+#define SU_UNUSED20		(1<<20)
+#define SU_UNUSED21		(1<<21)
+#define SU_UNUSED22		(1<<22)
+#define SU_EXTEND2		(1<<23) // another byte to follow, future expansion
+// second extend byte
+#define SU_UNUSED24		(1<<24)
+#define SU_UNUSED25		(1<<25)
+#define SU_UNUSED26		(1<<26)
+#define SU_UNUSED27		(1<<27)
+#define SU_UNUSED28		(1<<28)
+#define SU_UNUSED29		(1<<29)
+#define SU_UNUSED30		(1<<30)
+#define SU_EXTEND3		(1<<31) // another byte to follow, future expansion
 
 // a sound with no channel is a local only sound
 #define	SND_VOLUME		(1<<0)		// a byte
@@ -176,13 +196,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define svc_cutscene		34
 
-#define	svc_showlmp			35		// [string] slotname [string] lmpfilename [coord] x [coord] y
+#define	svc_showlmp			35		// [string] slotname [string] lmpfilename [short] x [short] y
 #define	svc_hidelmp			36		// [string] slotname
-#define	svc_skybox			37		// [string] skyname
 
-#define svc_farclip			50		// [coord] size (default is 6144)
-#define svc_fog				51		// [byte] enable <optional past this point, only included if enable is true> [short] density*4096 [byte] red [byte] green [byte] blue
-//#define svc_playerposition	52		// only used in dpprotocol mode
+#define svc_unused1
+#define svc_fog				51		// unfinished
+#define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
+#define svc_effect2			53		// [vector] org [short] modelindex [byte] startframe [byte] framecount [byte] framerate
+#define	svc_sound2			54		// short soundindex instead of byte
+#define	svc_spawnbaseline2	55		// short modelindex instead of byte
+#define svc_spawnstatic2	56		// short modelindex instead of byte
 
 //
 // client to server
@@ -233,3 +256,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: block2 - 70-80
 #define TE_EXPLOSIONQUAD	70 // [vector] origin
 #define	TE_BLOOD2			71 // [vector] origin
+#define TE_SMALLFLASH		72 // [vector] origin
+#define TE_CUSTOMFLASH		73 // [vector] origin [byte] radius / 8 - 1 [byte] lifetime / 256 - 1 [byte] red [byte] green [byte] blue
+#define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count

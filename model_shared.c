@@ -34,7 +34,8 @@ extern void Mod_LoadQ2AliasModel (model_t *mod, void *buffer);
 extern void Mod_LoadZymoticModel (model_t *mod, void *buffer);
 model_t *Mod_LoadModel (model_t *mod, qboolean crash);
 
-#define	MAX_MOD_KNOWN	512
+// LordHavoc: increased from 512 to 2048
+#define	MAX_MOD_KNOWN	2048
 model_t	mod_known[MAX_MOD_KNOWN];
 int		mod_numknown;
 
@@ -87,7 +88,7 @@ void Mod_ClearAll (void)
 	model_t	*mod;
 	
 	for (i=0 , mod=mod_known ; i<mod_numknown ; i++, mod++)
-		if (mod->type != mod_alias)
+		if (!mod->cachesize)
 			mod->needload = true;
 }
 
@@ -137,10 +138,8 @@ void Mod_TouchModel (char *name)
 	mod = Mod_FindName (name);
 	
 	if (!mod->needload)
-	{
-		if (mod->type == mod_alias)
+		if (mod->cachesize)
 			Cache_Check (&mod->cache);
-	}
 }
 
 /*
@@ -157,7 +156,7 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 
 	if (!mod->needload)
 	{
-		if (mod->type == mod_alias)
+		if (mod->cachesize)
 		{
 			d = Cache_Check (&mod->cache);
 			if (d)
@@ -263,7 +262,7 @@ void Mod_Print (void)
 	Con_Printf ("Cached models:\n");
 	for (i=0, mod=mod_known ; i < mod_numknown ; i++, mod++)
 	{
-		Con_Printf ("%8p : %s\n",mod->cache.data, mod->name);
+		Con_Printf ("%4iK : %8p : %s\n", (mod->cachesize + 1023) / 1024, mod->cache.data, mod->name);
 	}
 }
 

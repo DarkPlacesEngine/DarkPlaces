@@ -22,7 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 cvar_t r_lightmodels = {"r_lightmodels", "1"};
-cvar_t r_modelsdonttransformnormals = {"r_modelsdonttransformnormals", "0"};
+
+extern cvar_t gl_transform;
 
 void r_light_start()
 {
@@ -35,7 +36,6 @@ void r_light_shutdown()
 void R_Light_Init()
 {
 	Cvar_RegisterVariable(&r_lightmodels);
-	Cvar_RegisterVariable(&r_modelsdonttransformnormals);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown);
 }
 
@@ -91,7 +91,7 @@ void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 		return;
 
 	// for comparisons to minimum acceptable light
-	maxdist = light->radius * light->radius * LIGHTSCALE;
+	maxdist = light->radius * light->radius;
 
 	// clamp radius to avoid exceeding 32768 entry division table
 	if (maxdist > 4194304)
@@ -139,7 +139,7 @@ loc0:
 		if (surf->flags & SURF_PLANEBACK)
 			dist = -dist;
 
-		if (dist < -0.25f)
+		if (dist < -0.25f && !(surf->flags & SURF_LIGHTBOTHSIDES))
 			continue;
 
 		dist2 = dist * dist;
@@ -256,7 +256,9 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 		int		row = (model->numleafs+7)>>3;
 		float	low[3], high[3], radius, dist, maxdist;
 
-		radius = light->radius * LIGHTSCALE1;
+		lightframe++;
+
+		radius = light->radius * 2;
 
 		// clamp radius to avoid exceeding 32768 entry division table
 		if (radius > 2048)
@@ -268,7 +270,6 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 		// for comparisons to minimum acceptable light
 		maxdist = radius*radius;
 
-		lightframe++;
 		k = 0;
 		while (k < row)
 		{
@@ -312,7 +313,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 								if (surf->flags & SURF_PLANEBACK)
 									dist = -dist;
 								// LordHavoc: make sure it is infront of the surface and not too far away
-								if (dist >= -0.25f && dist < radius)
+								if ((dist >= -0.25f || (surf->flags & SURF_LIGHTBOTHSIDES)) && dist < radius)
 								{
 									int d;
 									float dist2, impact[3];
@@ -666,19 +667,6 @@ loc0:
 	}
 }
 
-void R_LightPoint (vec3_t color, vec3_t p)
-{
-	if (r_fullbright.value || !cl.worldmodel->lightdata)
-	{
-		color[0] = color[1] = color[2] = 255;
-		return;
-	}
-	
-	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
-	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
-}
-
-// LordHavoc: R_DynamicLightPoint - acumulates the dynamic lighting
 void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 {
 	int		i, j, k;
@@ -694,15 +682,17 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 		{
 			for (i=0 ; i<32 ; i++)
 			{
-				if ((!((1 << (i&31)) & dlightbits[i>>5])) || cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
+				if (!((1 << i) & dlightbits[j]))
 					continue;
 				k = (j<<5)+i;
+				if (cl_dlights[k].die < cl.time || !cl_dlights[k].radius)
+					continue;
 				VectorSubtract (org, cl_dlights[k].origin, dist);
 				f = DotProduct(dist, dist) + LIGHTOFFSET;
-				r = cl_dlights[k].radius*cl_dlights[k].radius*LIGHTSCALE;
+				r = cl_dlights[k].radius*cl_dlights[k].radius;
 				if (f < r)
 				{
-					brightness = r * (256.0f / LIGHTSCALE2) / f;
+					brightness = r * 128.0f / f;
 					color[0] += brightness * cl_dlights[k].color[0];
 					color[1] += brightness * cl_dlights[k].color[1];
 					color[2] += brightness * cl_dlights[k].color[2];
@@ -712,7 +702,65 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 	}
 }
 
-// same as above but no bitmask to check
+void R_CompleteLightPoint (vec3_t color, vec3_t p)
+{
+	mleaf_t *leaf;
+	leaf = Mod_PointInLeaf(p, cl.worldmodel);
+	if (leaf->contents == CONTENTS_SOLID)
+	{
+		color[0] = color[1] = color[2] = 0;
+		return;
+	}
+
+	if (r_fullbright.value || !cl.worldmodel->lightdata)
+	{
+		color[0] = color[1] = color[2] = 255;
+		return;
+	}
+	
+	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
+	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+
+	R_DynamicLightPoint(color, p, leaf->dlightbits);
+}
+
+void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
+{
+	mleaf_t *leaf;
+	leaf = Mod_PointInLeaf(p, cl.worldmodel);
+	if (leaf->contents == CONTENTS_SOLID)
+	{
+		color[0] = color[1] = color[2] = 0;
+		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
+		return;
+	}
+
+	if (r_fullbright.value || !cl.worldmodel->lightdata)
+	{
+		color[0] = color[1] = color[2] = 255;
+		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
+		return;
+	}
+	
+	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
+	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+
+	if (leaf->dlightframe == r_dlightframecount)
+	{
+		dlightbits[0] = leaf->dlightbits[0];
+		dlightbits[1] = leaf->dlightbits[1];
+		dlightbits[2] = leaf->dlightbits[2];
+		dlightbits[3] = leaf->dlightbits[3];
+		dlightbits[4] = leaf->dlightbits[4];
+		dlightbits[5] = leaf->dlightbits[5];
+		dlightbits[6] = leaf->dlightbits[6];
+		dlightbits[7] = leaf->dlightbits[7];
+	}
+	else
+		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
+}
+
+/* // not currently used
 void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 {
 	int		i;
@@ -728,10 +776,10 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 			continue;
 		VectorSubtract (org, cl_dlights[i].origin, dist);
 		f = DotProduct(dist, dist) + LIGHTOFFSET;
-		r = cl_dlights[i].radius*cl_dlights[i].radius*LIGHTSCALE;
+		r = cl_dlights[i].radius*cl_dlights[i].radius;
 		if (f < r)
 		{
-			brightness = r * (256.0f / LIGHTSCALE2) / f;
+			brightness = r * 256.0f / f;
 			if (cl_dlights[i].dark)
 				brightness = -brightness;
 			color[0] += brightness * cl_dlights[i].color[0];
@@ -740,19 +788,12 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 		}
 	}
 }
-
-void R_CompleteLightPoint (vec3_t color, vec3_t p)
-{
-	R_LightPoint(color, p);
-	R_DynamicLightPointNoMask(color, p);
-}
+*/
 
 extern float *aliasvert;
-extern float *modelaliasvert;
 extern float *aliasvertnorm;
 extern byte *aliasvertcolor;
 extern float modelalpha;
-extern int modeldlightbits[8];
 void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 {
 	// LordHavoc: warning: reliance on int being 4 bytes here (of course the d_8to24table relies on that too...)
@@ -765,31 +806,10 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 		vec3_t color;
 		vec3_t origin;
 	} nearlight[MAX_DLIGHTS];
+	int modeldlightbits[8];
 	avc = aliasvertcolor;
 	avn = aliasvertnorm;
 	a = (byte) bound((int) 0, (int) (modelalpha * 255.0f), (int) 255);
-	if (currententity->effects & EF_FULLBRIGHT)
-	{
-		if (lighthalf)
-		{
-			((byte *)&color)[0] = (byte) ((float) (128.0f * currententity->colormod[0]));
-			((byte *)&color)[1] = (byte) ((float) (128.0f * currententity->colormod[1]));
-			((byte *)&color)[2] = (byte) ((float) (128.0f * currententity->colormod[2]));
-		}
-		else
-		{
-			((byte *)&color)[0] = (byte) ((float) (255.0f * currententity->colormod[0]));
-			((byte *)&color)[1] = (byte) ((float) (255.0f * currententity->colormod[1]));
-			((byte *)&color)[2] = (byte) ((float) (255.0f * currententity->colormod[2]));
-		}
-		((byte *)&color)[3] = a;
-		for (i = 0;i < numverts;i++)
-		{
-			*((int *)avc) = color;
-			avc += 4;
-		}
-		return;
-	}
 	if (lighthalf)
 	{
 		mod[0] = currententity->colormod[0] * 0.5f;
@@ -802,37 +822,11 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 		mod[1] = currententity->colormod[1];
 		mod[2] = currententity->colormod[2];
 	}
-	basecolor[0] *= mod[0];
-	basecolor[1] *= mod[1];
-	basecolor[2] *= mod[2];
-	if (!r_lightmodels.value)
+	if (currententity->effects & EF_FULLBRIGHT)
 	{
-		for (i = 0;i < MAX_DLIGHTS;i++)
-		{
-			if (!modeldlightbits[i >> 5])
-			{
-				i |= 31;
-				continue;
-			}
-			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
-				continue;
-			VectorSubtract (center, cl_dlights[i].origin, dist);
-			t1 = cl_dlights[i].radius*cl_dlights[i].radius*LIGHTSCALE;
-			t2 = DotProduct(dist,dist) * (1.0f / LIGHTSCALE) + LIGHTOFFSET;
-			if (t2 < t1)
-			{
-				dist[0] = cl_dlights[i].color[0] * t1 * mod[0];
-				dist[1] = cl_dlights[i].color[1] * t1 * mod[1];
-				dist[2] = cl_dlights[i].color[2] * t1 * mod[2];
-				t1 = (224.0f / LIGHTSCALE / LIGHTSCALE) / t2;
-				basecolor[0] += dist[0] * t1;
-				basecolor[1] += dist[1] * t1;
-				basecolor[2] += dist[2] * t1;
-			}
-		}
-		((byte *)&color)[0] = bound(0, basecolor[0], 255);
-		((byte *)&color)[1] = bound(0, basecolor[1], 255);
-		((byte *)&color)[2] = bound(0, basecolor[2], 255);
+		((byte *)&color)[0] = (byte) (255.0f * mod[0]);
+		((byte *)&color)[1] = (byte) (255.0f * mod[1]);
+		((byte *)&color)[2] = (byte) (255.0f * mod[2]);
 		((byte *)&color)[3] = a;
 		for (i = 0;i < numverts;i++)
 		{
@@ -841,36 +835,43 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 		}
 		return;
 	}
-	else
+	R_ModelLightPoint(basecolor, center, modeldlightbits);
+
+	basecolor[0] *= mod[0];
+	basecolor[1] *= mod[1];
+	basecolor[2] *= mod[2];
+	for (i = 0;i < MAX_DLIGHTS;i++)
 	{
-		for (i = 0;i < MAX_DLIGHTS;i++)
+		if (!modeldlightbits[i >> 5])
 		{
-			if (!modeldlightbits[i >> 5])
+			i |= 31;
+			continue;
+		}
+		if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
+			continue;
+		VectorSubtract (center, cl_dlights[i].origin, dist);
+		t2 = DotProduct(dist,dist) + LIGHTOFFSET;
+		t1 = cl_dlights[i].radius*cl_dlights[i].radius;
+		if (t2 < t1)
+		{
+			// transform the light into the model's coordinate system
+			if (gl_transform.value)
+				softwareuntransform(cl_dlights[i].origin, nearlight[nearlights].origin);
+			else
 			{
-				i |= 31;
-				continue;
+				VectorCopy(cl_dlights[i].origin, nearlight[nearlights].origin);
 			}
-			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
-				continue;
-			VectorSubtract (center, cl_dlights[i].origin, dist);
-			t1 = cl_dlights[i].radius*cl_dlights[i].radius*LIGHTSCALE;
-			t2 = DotProduct(dist,dist) * (1.0f / LIGHTSCALE) + LIGHTOFFSET;
-			if (t2 < t1)
-			{
-				if (r_modelsdonttransformnormals.value)
-					softwareuntransform(cl_dlights[i].origin, nearlight[nearlights].origin);
-				else
-				{
-					VectorCopy(cl_dlights[i].origin, nearlight[nearlights].origin);
-				}
-				nearlight[nearlights].color[0] = cl_dlights[i].color[0] * t1 * mod[0];
-				nearlight[nearlights].color[1] = cl_dlights[i].color[1] * t1 * mod[1];
-				nearlight[nearlights].color[2] = cl_dlights[i].color[2] * t1 * mod[2];
-//				t1 = (128.0f / LIGHTSCALE2) / t2;
-//				basecolor[0] += nearlight[nearlights].color[0] * t1;
-//				basecolor[1] += nearlight[nearlights].color[1] * t1;
-//				basecolor[2] += nearlight[nearlights].color[2] * t1;
+			nearlight[nearlights].color[0] = cl_dlights[i].color[0] * t1 * mod[0];
+			nearlight[nearlights].color[1] = cl_dlights[i].color[1] * t1 * mod[1];
+			nearlight[nearlights].color[2] = cl_dlights[i].color[2] * t1 * mod[2];
+			if (r_lightmodels.value)
 				nearlights++;
+			else
+			{
+				t1 = 1.0f / t2;
+				basecolor[0] += nearlight[nearlights].color[0] * t1;
+				basecolor[1] += nearlight[nearlights].color[1] * t1;
+				basecolor[2] += nearlight[nearlights].color[2] * t1;
 			}
 		}
 	}
@@ -886,10 +887,7 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 		int temp;
 		vec3_t v;
 		float *av;
-		if (r_modelsdonttransformnormals.value)
-			av = modelaliasvert;
-		else
-			av = aliasvert;
+		av = aliasvert;
 		if (nearlights == 1)
 		{
 			for (i = 0;i < numverts;i++)
@@ -898,10 +896,13 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 				t = DotProduct(avn,v);
 				if (t > 0)
 				{
-					t /= DotProduct(v,v);
-					temp = (int) ((float) (basecolor[0] + nearlight[0].color[0] * t));if (temp < 0) temp = 0;else if (temp > 255) temp = 255;avc[0] = temp;
-					temp = (int) ((float) (basecolor[1] + nearlight[0].color[1] * t));if (temp < 0) temp = 0;else if (temp > 255) temp = 255;avc[1] = temp;
-					temp = (int) ((float) (basecolor[2] + nearlight[0].color[2] * t));if (temp < 0) temp = 0;else if (temp > 255) temp = 255;avc[2] = temp;
+					t /= (DotProduct(v,v) + LIGHTOFFSET);
+					temp = (int) ((float) (basecolor[0] + nearlight[0].color[0] * t));
+					avc[0] = bound(0, temp, 255);
+					temp = (int) ((float) (basecolor[1] + nearlight[0].color[1] * t));
+					avc[1] = bound(0, temp, 255);
+					temp = (int) ((float) (basecolor[2] + nearlight[0].color[2] * t));
+					avc[2] = bound(0, temp, 255);
 					avc[3] = a;
 				}
 				else
@@ -913,31 +914,35 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 		}
 		else
 		{
-			int i1, i2, i3, k;
 			for (i = 0;i < numverts;i++)
 			{
+				int lit;
 				t1 = basecolor[0];
 				t2 = basecolor[1];
 				t3 = basecolor[2];
-				k = false;
+				lit = false;
 				for (j = 0;j < nearlights;j++)
 				{
 					VectorSubtract(nearlight[j].origin, av, v);
 					t = DotProduct(avn,v);
 					if (t > 0)
 					{
-						t /= DotProduct(v,v);
+						t /= (DotProduct(v,v) + LIGHTOFFSET);
 						t1 += nearlight[j].color[0] * t;
 						t2 += nearlight[j].color[1] * t;
 						t3 += nearlight[j].color[2] * t;
-						k = true;
+						lit = true;
 					}
 				}
-				if (k)
+				if (lit)
 				{
-					i1 = t1;if (i1 < 0) i1 = 0;else if (i1 > 255) i1 = 255;avc[0] = i1;
-					i2 = t2;if (i2 < 0) i2 = 0;else if (i2 > 255) i2 = 255;avc[1] = i2;
-					i3 = t3;if (i3 < 0) i3 = 0;else if (i3 > 255) i3 = 255;avc[2] = i3;
+					int i1, i2, i3;
+					i1 = (int) t1;
+					avc[0] = bound(0, i1, 255);
+					i2 = (int) t2;
+					avc[1] = bound(0, i2, 255);
+					i3 = (int) t3;
+					avc[2] = bound(0, i3, 255);
 					avc[3] = a;
 				}
 				else // dodge the costly float -> int conversions

@@ -175,9 +175,6 @@ void CL_EstablishConnection (char *host)
 	cls.signon = 0;				// need all the signon messages before playing
 }
 
-extern int numgltextures;
-extern int texels;
-
 /*
 =====================
 CL_SignonReply
@@ -224,8 +221,6 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		
 	case 4:
 		SCR_EndLoadingPlaque ();		// allow normal screen updates
-		// LordHavoc: debugging purposes
-		Con_DPrintf("Texture slots in use: %i : %i : %i texels\n", texture_extension_number, numgltextures, texels);
 		break;
 	}
 }
@@ -280,8 +275,7 @@ void CL_PrintEntities_f (void)
 			Con_Printf ("EMPTY\n");
 			continue;
 		}
-		Con_Printf ("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n"
-		,ent->model->name,ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+		Con_Printf ("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
 	}
 }
 
@@ -374,8 +368,9 @@ float	CL_LerpPoint (void)
 	float	f, frac;
 
 	f = cl.mtime[0] - cl.mtime[1];
-	
-	if (!f || cl_nolerp.value || cls.timedemo || sv.active)
+
+	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)
+	if (!f || cl_nolerp.value || cls.timedemo || (sv.active && svs.maxclients == 1))
 	{
 		cl.time = cl.mtime[0];
 		return 1;
@@ -460,8 +455,8 @@ void CL_RelinkEntities (void)
 	{
 		if (!ent->model)
 		{	// empty slot
-			if (ent->forcelink)
-				R_RemoveEfrags (ent);	// just became empty
+//			if (ent->forcelink)
+//				R_RemoveEfrags (ent);	// just became empty
 			continue;
 		}
 
@@ -470,29 +465,10 @@ void CL_RelinkEntities (void)
 		{
 			ent->model = NULL;
 			// LordHavoc: free on the same frame, not the next
-			if (ent->forcelink)
-				R_RemoveEfrags (ent);	// just became empty
+//			if (ent->forcelink)
+//				R_RemoveEfrags (ent);	// just became empty
 			continue;
 		}
-
-		// LordHavoc: animation interpolation, note: framegroups partially override this in the renderer
-		/*
-		if (ent->model != ent->lerp_model || ent->lerp_time > cl.time)
-		{
-			ent->lerp_frame1 = ent->lerp_frame2 = ent->frame;
-			ent->lerp_time = cl.time;
-			ent->lerp = 0;
-		}
-		else if (ent->frame != ent->lerp_frame2)
-		{
-			ent->lerp_frame1 = ent->lerpframe2;
-			ent->lerp_frame2 = ent->frame;
-			ent->lerp_time = cl.time;
-			ent->lerp = 0;
-		}
-		else
-			ent->lerp = bound(0, (cl.time - ent->lerp_time) * 10.0f, 1);
-		*/
 
 		VectorCopy (ent->origin, oldorg);
 
@@ -532,12 +508,12 @@ void CL_RelinkEntities (void)
 			R_EntityParticles (ent);
 		if (ent->effects & EF_MUZZLEFLASH)
 		{
-			vec3_t		fv, rv, uv;
+			vec3_t		fv;
 
 			dl = CL_AllocDlight (i);
 			VectorCopy (ent->origin,  dl->origin);
 			dl->origin[2] += 16;
-			AngleVectors (ent->angles, fv, rv, uv);
+			AngleVectors (ent->angles, fv, NULL, NULL);
 			 
 			VectorMA (dl->origin, 18, fv, dl->origin);
 			dl->radius = 100 + (rand()&31);
@@ -588,6 +564,25 @@ void CL_RelinkEntities (void)
 			dl->radius = 200 + (rand()&31);
 			dl->die = cl.time + 0.001;
 			dl->color[0] = 0.05;dl->color[1] = 0.05;dl->color[2] = 0.8;
+		}
+		else if (ent->effects & EF_FLAME)
+		{
+			if (ent->model)
+			{
+				vec3_t mins, maxs;
+				int temp;
+				VectorAdd(ent->origin, ent->model->mins, mins);
+				VectorAdd(ent->origin, ent->model->maxs, maxs);
+				// how many flames to make
+				temp = (int) (cl.time * 30) - (int) (cl.oldtime * 30);
+				R_FlameCube(mins, maxs, temp);
+			}
+			dl = CL_AllocDlight (i);
+			VectorCopy (ent->origin, dl->origin);
+			dl->radius = 200 + (rand()&31);
+			dl->die = cl.time + 0.25;
+			dl->decay = dl->radius * 4;
+			dl->color[0] = 1.0;dl->color[1] = 0.7;dl->color[2] = 0.3;
 		}
 
 		if (ent->model->flags) // LordHavoc: if the model has no flags, don't check each
@@ -643,10 +638,7 @@ void CL_RelinkEntities (void)
 		if (!ent->model || ent->effects & EF_NODRAW)
 			continue;
 		if (cl_numvisedicts < MAX_VISEDICTS)
-		{
-			cl_visedicts[cl_numvisedicts] = ent;
-			cl_numvisedicts++;
-		}
+			cl_visedicts[cl_numvisedicts++] = ent;
 	}
 
 }
@@ -664,7 +656,7 @@ int CL_ReadFromServer (void)
 	int		ret;
 
 	cl.oldtime = cl.time;
-	cl.time += host_frametime;
+	cl.time += cl.frametime;
 	
 	do
 	{
@@ -683,6 +675,7 @@ int CL_ReadFromServer (void)
 
 	CL_RelinkEntities ();
 	CL_UpdateTEnts ();
+	CL_DoEffects ();
 
 //
 // bring the links up to date
@@ -712,7 +705,6 @@ void CL_SendCmd (void)
 	
 	// send the unreliable message
 		CL_SendMove (&cmd);
-	
 	}
 
 	if (cls.demoplayback)

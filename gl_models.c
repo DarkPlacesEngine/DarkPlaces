@@ -1,6 +1,9 @@
 
 #include "quakedef.h"
 
+cvar_t gl_transform = {"gl_transform", "1"};
+cvar_t gl_lockarrays = {"gl_lockarrays", "1"};
+
 typedef struct
 {
 	float m[3][4];
@@ -8,14 +11,46 @@ typedef struct
 
 // LordHavoc: vertex array
 float *aliasvert;
-float *modelaliasvert;
 float *aliasvertnorm;
 byte *aliasvertcolor;
 byte *aliasvertcolor2;
 zymbonematrix *zymbonepose;
 int *aliasvertusage;
 
-int chrometexture;
+rtexture_t *chrometexture;
+
+int arraylocked = false;
+void GL_LockArray(int first, int count)
+{
+	if (gl_supportslockarrays && gl_lockarrays.value)
+	{
+		qglLockArraysEXT(first, count);
+		arraylocked = true;
+	}
+}
+
+void GL_UnlockArray()
+{
+	if (arraylocked)
+	{
+		qglUnlockArraysEXT();
+		arraylocked = false;
+	}
+}
+
+void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
+{
+    glTranslatef (origin[0], origin[1], origin[2]);
+
+	if (scale != 1)
+		glScalef (scale, scale, scale);
+	if (angles[1])
+	    glRotatef (angles[1],  0, 0, 1);
+	if (angles[0])
+	    glRotatef (-angles[0],  0, 1, 0);
+	if (angles[2])
+	    glRotatef (angles[2],  1, 0, 0);
+}
 
 void makechrometexture()
 {
@@ -23,7 +58,7 @@ void makechrometexture()
 	byte noise[64*64];
 	byte data[64*64][4];
 
-	fractalnoise(noise, 64, 16);
+	fractalnoise(noise, 64, 8);
 
 	// convert to RGBA data
 	for (i = 0;i < 64*64;i++)
@@ -32,14 +67,13 @@ void makechrometexture()
 		data[i][3] = 255;
 	}
 
-	chrometexture = GL_LoadTexture ("chrometexture", 64, 64, &data[0][0], true, false, 4);
+	chrometexture = R_LoadTexture ("chrometexture", 64, 64, &data[0][0], TEXF_MIPMAP | TEXF_RGBA | TEXF_PRECACHE);
 }
 
 void gl_models_start()
 {
 	// allocate vertex processing arrays
 	aliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
-	modelaliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
 	aliasvertnorm = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
 	aliasvertcolor = qmalloc(sizeof(byte[MD2MAX_VERTS][4]));
 	aliasvertcolor2 = qmalloc(sizeof(byte[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
@@ -60,6 +94,9 @@ void gl_models_shutdown()
 
 void GL_Models_Init()
 {
+	Cvar_RegisterVariable(&gl_transform);
+	Cvar_RegisterVariable(&gl_lockarrays);
+
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown);
 }
 
@@ -68,74 +105,121 @@ extern vec3_t softwaretransform_y;
 extern vec3_t softwaretransform_z;
 extern vec_t softwaretransform_scale;
 extern vec3_t softwaretransform_offset;
-extern cvar_t r_modelsdonttransformnormals;
-void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1, vec3_t translate1, trivert2 *verts2, vec3_t scale2, vec3_t translate2)
+void R_AliasTransformVerts(int vertcount)
 {
 	int i;
 	vec3_t point, matrix_x, matrix_y, matrix_z;
 	float *av, *avn;
 	av = aliasvert;
 	avn = aliasvertnorm;
-	VectorScale(softwaretransform_x, softwaretransform_scale, matrix_x);
-	VectorScale(softwaretransform_y, softwaretransform_scale, matrix_y);
-	VectorScale(softwaretransform_z, softwaretransform_scale, matrix_z);
-	if (lerp < 0) lerp = 0;
-	if (lerp > 1) lerp = 1;
-	if (lerp != 0)
+	matrix_x[0] = softwaretransform_x[0] * softwaretransform_scale;
+	matrix_x[1] = softwaretransform_y[0] * softwaretransform_scale;
+	matrix_x[2] = softwaretransform_z[0] * softwaretransform_scale;
+	matrix_y[0] = softwaretransform_x[1] * softwaretransform_scale;
+	matrix_y[1] = softwaretransform_y[1] * softwaretransform_scale;
+	matrix_y[2] = softwaretransform_z[1] * softwaretransform_scale;
+	matrix_z[0] = softwaretransform_x[2] * softwaretransform_scale;
+	matrix_z[1] = softwaretransform_y[2] * softwaretransform_scale;
+	matrix_z[2] = softwaretransform_z[2] * softwaretransform_scale;
+	for (i = 0;i < vertcount;i++)
 	{
-		float ilerp, ilerp127, lerp127, scalex1, scalex2, translatex, scaley1, scaley2, translatey, scalez1, scalez2, translatez;
-		ilerp = 1 - lerp;
-		ilerp127 = ilerp * (1.0 / 127.0);
-		lerp127 = lerp * (1.0 / 127.0);
-		// calculate combined interpolation variables
-		scalex1 = scale1[0] * ilerp;scalex2 = scale2[0] *  lerp;translatex = translate1[0] * ilerp + translate2[0] *  lerp;
-		scaley1 = scale1[1] * ilerp;scaley2 = scale2[1] *  lerp;translatey = translate1[1] * ilerp + translate2[1] *  lerp;
-		scalez1 = scale1[2] * ilerp;scalez2 = scale2[2] *  lerp;translatez = translate1[2] * ilerp + translate2[2] *  lerp;
-		// generate vertices
-		if (r_modelsdonttransformnormals.value)
+		// rotate, scale, and translate the vertex locations
+		VectorCopy(av, point);
+		av[0] = DotProduct(point, matrix_x) + softwaretransform_offset[0];
+		av[1] = DotProduct(point, matrix_y) + softwaretransform_offset[1];
+		av[2] = DotProduct(point, matrix_z) + softwaretransform_offset[2];
+		// rotate the normals
+		VectorCopy(avn, point);
+		avn[0] = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
+		avn[1] = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
+		avn[2] = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
+		av += 3;
+		avn += 3;
+	}
+}
+
+void R_AliasLerpVerts(int vertcount,
+					  float lerp1, trivertx_t *verts1, vec3_t fscale1, vec3_t translate1,
+					  float lerp2, trivertx_t *verts2, vec3_t fscale2, vec3_t translate2,
+					  float lerp3, trivertx_t *verts3, vec3_t fscale3, vec3_t translate3,
+					  float lerp4, trivertx_t *verts4, vec3_t fscale4, vec3_t translate4)
+{
+	int i;
+	vec3_t scale1, scale2, scale3, scale4, translate;
+	float *n1, *n2, *n3, *n4;
+	float *av, *avn;
+	av = aliasvert;
+	avn = aliasvertnorm;
+	VectorScaleQuick(fscale1, lerp1, scale1);
+	if (lerp2)
+	{
+		VectorScaleQuick(fscale2, lerp2, scale2);
+		if (lerp3)
 		{
-			float *modelav = modelaliasvert;
-			for (i = 0;i < vertcount;i++)
+			VectorScaleQuick(fscale3, lerp3, scale3);
+			if (lerp4)
 			{
-				// rotate, scale, and translate the vertex locations
-				point[0] = verts1->v[0] * scalex1 + verts2->v[0] * scalex2 + translatex;
-				point[1] = verts1->v[1] * scaley1 + verts2->v[1] * scaley2 + translatey;
-				point[2] = verts1->v[2] * scalez1 + verts2->v[2] * scalez2 + translatez;
-				// save mostly un-transformed copy for lighting
-				modelav[0] = point[0] * softwaretransform_scale;
-				modelav[1] = point[1] * softwaretransform_scale;
-				modelav[2] = point[2] * softwaretransform_scale;
-				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-				// decompress but do not transform the normals
-				avn[0] = verts1->n[0] * ilerp127 + verts2->n[0] * lerp127;
-				avn[1] = verts1->n[1] * ilerp127 + verts2->n[1] * lerp127;
-				avn[2] = verts1->n[2] * ilerp127 + verts2->n[2] * lerp127;
-				modelav += 3;
-				av += 3;
-				avn += 3;
-				verts1++;verts2++;
+				VectorScaleQuick(fscale4, lerp4, scale4);
+				translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2 + translate3[0] * lerp3 + translate4[0] * lerp4;
+				translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2 + translate3[1] * lerp3 + translate4[1] * lerp4;
+				translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2 + translate3[2] * lerp3 + translate4[2] * lerp4;
+				// generate vertices
+				for (i = 0;i < vertcount;i++)
+				{
+					av[0] = verts1->v[0] * scale1[0] + verts2->v[0] * scale2[0] + verts3->v[0] * scale3[0] + verts4->v[0] * scale4[0] + translate[0];
+					av[1] = verts1->v[1] * scale1[1] + verts2->v[1] * scale2[1] + verts3->v[1] * scale3[1] + verts4->v[1] * scale4[1] + translate[1];
+					av[2] = verts1->v[2] * scale1[2] + verts2->v[2] * scale2[2] + verts3->v[2] * scale3[2] + verts4->v[2] * scale4[2] + translate[2];
+					n1 = m_bytenormals[verts1->lightnormalindex];
+					n2 = m_bytenormals[verts2->lightnormalindex];
+					n3 = m_bytenormals[verts3->lightnormalindex];
+					n4 = m_bytenormals[verts4->lightnormalindex];
+					avn[0] = n1[0] * lerp1 + n2[0] * lerp2 + n3[0] * lerp3 + n4[0] * lerp4;
+					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3 + n4[1] * lerp4;
+					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3 + n4[2] * lerp4;
+					av += 3;
+					avn += 3;
+					verts1++;verts2++;verts3++;verts4++;
+				}
+			}
+			else
+			{
+				translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2 + translate3[0] * lerp3;
+				translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2 + translate3[1] * lerp3;
+				translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2 + translate3[2] * lerp3;
+				// generate vertices
+				for (i = 0;i < vertcount;i++)
+				{
+					av[0] = verts1->v[0] * scale1[0] + verts2->v[0] * scale2[0] + verts3->v[0] * scale3[0] + translate[0];
+					av[1] = verts1->v[1] * scale1[1] + verts2->v[1] * scale2[1] + verts3->v[1] * scale3[1] + translate[1];
+					av[2] = verts1->v[2] * scale1[2] + verts2->v[2] * scale2[2] + verts3->v[2] * scale3[2] + translate[2];
+					n1 = m_bytenormals[verts1->lightnormalindex];
+					n2 = m_bytenormals[verts2->lightnormalindex];
+					n3 = m_bytenormals[verts3->lightnormalindex];
+					avn[0] = n1[0] * lerp1 + n2[0] * lerp2 + n3[0] * lerp3;
+					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3;
+					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3;
+					av += 3;
+					avn += 3;
+					verts1++;verts2++;verts3++;
+				}
 			}
 		}
 		else
 		{
+			translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2;
+			translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2;
+			translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2;
+			// generate vertices
 			for (i = 0;i < vertcount;i++)
 			{
-				// rotate, scale, and translate the vertex locations
-				point[0] = verts1->v[0] * scalex1 + verts2->v[0] * scalex2 + translatex;
-				point[1] = verts1->v[1] * scaley1 + verts2->v[1] * scaley2 + translatey;
-				point[2] = verts1->v[2] * scalez1 + verts2->v[2] * scalez2 + translatez;
-				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-				// rotate the normals
-				point[0] = verts1->n[0] * ilerp127 + verts2->n[0] * lerp127;
-				point[1] = verts1->n[1] * ilerp127 + verts2->n[1] * lerp127;
-				point[2] = verts1->n[2] * ilerp127 + verts2->n[2] * lerp127;
-				avn[0] = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-				avn[1] = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-				avn[2] = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
+				av[0] = verts1->v[0] * scale1[0] + verts2->v[0] * scale2[0] + translate[0];
+				av[1] = verts1->v[1] * scale1[1] + verts2->v[1] * scale2[1] + translate[1];
+				av[2] = verts1->v[2] * scale1[2] + verts2->v[2] * scale2[2] + translate[2];
+				n1 = m_bytenormals[verts1->lightnormalindex];
+				n2 = m_bytenormals[verts2->lightnormalindex];
+				avn[0] = n1[0] * lerp1 + n2[0] * lerp2;
+				avn[1] = n1[1] * lerp1 + n2[1] * lerp2;
+				avn[2] = n1[2] * lerp1 + n2[2] * lerp2;
 				av += 3;
 				avn += 3;
 				verts1++;verts2++;
@@ -144,28 +228,22 @@ void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1
 	}
 	else
 	{
+		translate[0] = translate1[0] * lerp1;
+		translate[1] = translate1[1] * lerp1;
+		translate[2] = translate1[2] * lerp1;
 		// generate vertices
-		if (r_modelsdonttransformnormals.value)
+		if (lerp1 != 1)
 		{
-			float *modelav = modelaliasvert;
+			// general but almost never used case
 			for (i = 0;i < vertcount;i++)
 			{
-				// rotate, scale, and translate the vertex locations
-				point[0] = verts1->v[0] * scale1[0] + translate1[0];
-				point[1] = verts1->v[1] * scale1[1] + translate1[1];
-				point[2] = verts1->v[2] * scale1[2] + translate1[2];
-				// save mostly un-transformed copy for lighting
-				modelav[0] = point[0] * softwaretransform_scale;
-				modelav[1] = point[1] * softwaretransform_scale;
-				modelav[2] = point[2] * softwaretransform_scale;
-				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-				// decompress normal but do not rotate it
-				avn[0] = verts1->n[0] * (1.0f / 127.0f);
-				avn[1] = verts1->n[1] * (1.0f / 127.0f);
-				avn[2] = verts1->n[2] * (1.0f / 127.0f);
-				modelav += 3;
+				av[0] = verts1->v[0] * scale1[0] + translate[0];
+				av[1] = verts1->v[1] * scale1[1] + translate[1];
+				av[2] = verts1->v[2] * scale1[2] + translate[2];
+				n1 = m_bytenormals[verts1->lightnormalindex];
+				avn[0] = n1[0] * lerp1;
+				avn[1] = n1[1] * lerp1;
+				avn[2] = n1[2] * lerp1;
 				av += 3;
 				avn += 3;
 				verts1++;
@@ -173,22 +251,13 @@ void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1
 		}
 		else
 		{
+			// fast normal case
 			for (i = 0;i < vertcount;i++)
 			{
-				// rotate, scale, and translate the vertex locations
-				point[0] = verts1->v[0] * scale1[0] + translate1[0];
-				point[1] = verts1->v[1] * scale1[1] + translate1[1];
-				point[2] = verts1->v[2] * scale1[2] + translate1[2];
-				av[0] = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-				av[1] = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-				av[2] = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-				// rotate the normals
-				point[0] = verts1->n[0] * (1.0f / 127.0f);
-				point[1] = verts1->n[1] * (1.0f / 127.0f);
-				point[2] = verts1->n[2] * (1.0f / 127.0f);
-				avn[0] = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-				avn[1] = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-				avn[2] = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
+				av[0] = verts1->v[0] * scale1[0] + translate[0];
+				av[1] = verts1->v[1] * scale1[1] + translate[1];
+				av[2] = verts1->v[2] * scale1[2] + translate[2];
+				VectorCopy(m_bytenormals[verts1->lightnormalindex], avn);
 				av += 3;
 				avn += 3;
 				verts1++;
@@ -197,35 +266,11 @@ void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1
 	}
 }
 
-float R_CalcAnimLerp(entity_t *ent, int pose, float lerpscale)
+void GL_DrawModelMesh(rtexture_t *skin, byte *colors, maliashdr_t *maliashdr)
 {
-	if (ent->draw_lastmodel == ent->model && ent->draw_lerpstart <= cl.time)
-	{
-		if (pose != ent->draw_pose)
-		{
-			ent->draw_lastpose = ent->draw_pose;
-			ent->draw_pose = pose;
-			ent->draw_lerpstart = cl.time;
-			return 0;
-		}
-		else
-			return ((cl.time - ent->draw_lerpstart) * lerpscale);
-	}
-	else // uninitialized
-	{
-		ent->draw_lastmodel = ent->model;
-		ent->draw_lastpose = ent->draw_pose = pose;
-		ent->draw_lerpstart = cl.time;
-		return 0;
-	}
-}
-
-void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
-{
-	int i;
 	if (!r_render.value)
 		return;
-	glBindTexture(GL_TEXTURE_2D, skin);
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skin));
 	if (!colors)
 	{
 		if (lighthalf)
@@ -233,41 +278,16 @@ void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
 		else
 			glColor3f(1.0f, 1.0f, 1.0f);
 	}
-	if (gl_vertexarrays.value)
+	if (colors)
 	{
-		if (colors)
-		{
-			qglColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
-			glEnableClientState(GL_COLOR_ARRAY);
-		}
-
-		qglTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) maliashdr->texdata + (int) maliashdr));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		qglDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
-
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		if (colors)
-			glDisableClientState(GL_COLOR_ARRAY);
+		glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+		glEnableClientState(GL_COLOR_ARRAY);
 	}
-	else
-	{
-		unsigned short *in, index;
-		float *tex;
-		in = (void *)((int) maliashdr + maliashdr->tridata);
-		glBegin(GL_TRIANGLES);
-		tex = (void *)((int) maliashdr + maliashdr->texdata);
-		for (i = 0;i < maliashdr->numtris * 3;i++)
-		{
-			index = *in++;
-			glTexCoord2f(tex[index*2], tex[index*2+1]);
-			if (colors)
-				glColor4f(colors[index*4] * (1.0f / 255.0f), colors[index*4+1] * (1.0f / 255.0f), colors[index*4+2] * (1.0f / 255.0f), colors[index*4+3] * (1.0f / 255.0f));
-			glVertex3fv(&aliasvert[index*3]);
-		}
-		glEnd();
-	}
+
+	glDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
+
+	if (colors)
+		glDisableClientState(GL_COLOR_ARRAY);
 	// leave it in a state for additional passes
 	glDepthMask(0);
 	glEnable(GL_BLEND);
@@ -299,43 +319,35 @@ R_DrawAliasFrame
 */
 extern vec3_t lightspot;
 void R_LightModel(int numverts, vec3_t center, vec3_t basecolor);
-void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, int frame, int *skin, int colormap, int effects, int flags)
+void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t **skin, int colormap, int effects, int flags)
 {
-	int		i, pose;
-	float	lerpscale, lerp;
-	maliasframe_t *frameinfo;
-
+	if (gl_transform.value)
+	{
+		if (r_render.value)
+		{
+			glPushMatrix();
+			GL_SetupModelTransform(org, angles, scale);
+		}
+	}
+	// always needed, for model lighting
 	softwaretransformforentity(ent);
 
-	if ((frame >= maliashdr->numframes) || (frame < 0))
-	{
-		Con_DPrintf ("R_AliasSetupFrame: no such frame %d\n", frame);
-		frame = 0;
-	}
-
-	frameinfo = ((maliasframe_t *)((int) maliashdr + maliashdr->framedata)) + frame;
-	pose = frameinfo->start;
-
-	if (frameinfo->length > 1)
-	{
-		lerpscale = frameinfo->rate;
-		pose += (int)(cl.time * frameinfo->rate) % frameinfo->length;
-	}
-	else
-		lerpscale = 10.0f;
-
-	lerp = R_CalcAnimLerp(ent, pose, lerpscale);
-
-	R_AliasLerpVerts(maliashdr->numverts, lerp, (trivert2 *)((int) maliashdr + maliashdr->posedata) + ent->draw_lastpose * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin, (trivert2 *)((int) maliashdr + maliashdr->posedata) + ent->draw_pose * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin);
+	R_AliasLerpVerts(maliashdr->numverts,
+		blend[0].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[0].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin,
+		blend[1].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[1].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin,
+		blend[2].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[2].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin,
+		blend[3].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[3].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin);
+	if (!gl_transform.value)
+		R_AliasTransformVerts(maliashdr->numverts);
 
 	// prep the vertex array as early as possible
 	if (r_render.value)
 	{
-		if (gl_vertexarrays.value)
-		{
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-		}
+		glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glEnableClientState(GL_VERTEX_ARRAY);
+		glTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) maliashdr->texdata + (int) maliashdr));
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		GL_LockArray(0, maliashdr->numverts);
 	}
 
 	R_LightModel(maliashdr->numverts, org, color);
@@ -408,64 +420,20 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 		VectorSubtract(org, r_refdef.vieworg, diff);
 		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 
-		if (gl_vertexarrays.value)
-		{
-			qglDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
-		}
-		else
-		{
-			unsigned short *in;
-			in = (void *)((int) maliashdr + maliashdr->tridata);
-			glBegin(GL_TRIANGLES);
-			for (i = 0;i < maliashdr->numtris * 3;i++)
-				glVertex3fv(&aliasvert[*in++ * 3]);
-			glEnd();
-		}
+		glDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
 
 		glEnable (GL_TEXTURE_2D);
 		glColor3f (1,1,1);
 	}
-	if (gl_vertexarrays.value)
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-	if (!fogenabled && r_shadows.value && !(effects & EF_ADDITIVE) && shadow)
-	{
-		// flatten it to make a shadow
-		float *av = aliasvert + 2, l = lightspot[2] + 0.125;
-		av = aliasvert + 2;
-		for (i = 0;i < maliashdr->numverts;i++, av+=3)
-			if (*av > l)
-				*av = l;
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-		glColor4f (0,0,0,0.5 * alpha);
-
-		if (gl_vertexarrays.value)
-		{
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-			qglDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
-		{
-			unsigned short *in;
-			in = (void *)((int) maliashdr + maliashdr->tridata);
-			glBegin(GL_TRIANGLES);
-			for (i = 0;i < maliashdr->numtris * 3;i++)
-				glVertex3fv(&aliasvert[*in++ * 3]);
-			glEnd();
-		}
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
+	GL_UnlockArray();
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
 	glDepthMask(1);
+
+	glPopMatrix();
 }
 
 /*
@@ -474,91 +442,72 @@ R_DrawQ2AliasFrame
 
 =================
 */
-void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, int frame, int skin, int effects, int flags)
+void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t *skin, int effects, int flags)
 {
 	int *order, count;
-	float lerp;
-	md2memframe_t *frame1, *frame2;
+	md2frame_t *frame1, *frame2, *frame3, *frame4;
 
 	if (r_render.value)
-		glBindTexture(GL_TEXTURE_2D, skin);
+		glBindTexture(GL_TEXTURE_2D, R_GetTexture(skin));
 
+	if (gl_transform.value)
+	{
+		if (r_render.value)
+		{
+			glPushMatrix();
+			GL_SetupModelTransform(org, angles, scale);
+		}
+	}
+	// always needed, for model lighting
 	softwaretransformforentity(ent);
 
-	if ((frame >= pheader->num_frames) || (frame < 0))
-	{
-		Con_DPrintf ("R_SetupQ2AliasFrame: no such frame %d\n", frame);
-		frame = 0;
-	}
-
-	lerp = R_CalcAnimLerp(ent, frame, 10);
-
-	frame1 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * ent->draw_lastpose));
-	frame2 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * ent->draw_pose));
-	R_AliasLerpVerts(pheader->num_xyz, lerp, frame1->verts, frame1->scale, frame1->translate, frame2->verts, frame2->scale, frame2->translate);
+	frame1 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[0].frame));
+	frame2 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[1].frame));
+	frame3 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[2].frame));
+	frame4 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[3].frame));
+	R_AliasLerpVerts(pheader->num_xyz,
+		blend[0].lerp, frame1->verts, frame1->scale, frame1->translate,
+		blend[1].lerp, frame2->verts, frame2->scale, frame2->translate,
+		blend[2].lerp, frame3->verts, frame3->scale, frame3->translate,
+		blend[3].lerp, frame4->verts, frame4->scale, frame4->translate);
+	if (!gl_transform.value)
+		R_AliasTransformVerts(pheader->num_xyz);
 
 	R_LightModel(pheader->num_xyz, org, color);
 
 	if (!r_render.value)
 		return;
-	if (gl_vertexarrays.value)
-	{
-		// LordHavoc: big mess...
-		// using arrays only slightly, although it is enough to prevent duplicates
-		// (saving half the transforms)
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		qglColorPointer(4, GL_UNSIGNED_BYTE, 0, aliasvertcolor);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
+	// LordHavoc: big mess...
+	// using vertex arrays only slightly, although it is enough to prevent duplicates
+	// (saving half the transforms)
+	glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+	glColorPointer(4, GL_UNSIGNED_BYTE, 0, aliasvertcolor);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glEnableClientState(GL_COLOR_ARRAY);
 
-		order = (int *)((int)pheader + pheader->ofs_glcmds);
-		while(1)
-		{
-			if (!(count = *order++))
-				break;
-			if (count > 0)
-				glBegin(GL_TRIANGLE_STRIP);
-			else
-			{
-				glBegin(GL_TRIANGLE_FAN);
-				count = -count;
-			}
-			do
-			{
-				glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-				qglArrayElement(order[2]);
-				order += 3;
-			}
-			while (count--);
-		}
-
-		glDisableClientState(GL_COLOR_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}
-	else
+	order = (int *)((int)pheader + pheader->ofs_glcmds);
+	while(1)
 	{
-		order = (int *)((int)pheader + pheader->ofs_glcmds);
-		while(1)
+		if (!(count = *order++))
+			break;
+		if (count > 0)
+			glBegin(GL_TRIANGLE_STRIP);
+		else
 		{
-			if (!(count = *order++))
-				break;
-			if (count > 0)
-				glBegin(GL_TRIANGLE_STRIP);
-			else
-			{
-				glBegin(GL_TRIANGLE_FAN);
-				count = -count;
-			}
-			do
-			{
-				glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-				glColor4f(aliasvertcolor[order[2] * 4] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 1] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 2] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 3] * (1.0f / 255.0f));
-				glVertex3fv(&aliasvert[order[2] * 3]);
-				order += 3;
-			}
-			while (count--);
+			glBegin(GL_TRIANGLE_FAN);
+			count = -count;
 		}
+		do
+		{
+			glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
+			glArrayElement(order[2]);
+			order += 3;
+		}
+		while (count--);
 	}
+
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
 
 	if (fogenabled)
 	{
@@ -572,124 +521,33 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 			glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 		}
 
-		if (gl_vertexarrays.value)
-		{
-			// LordHavoc: big mess...
-			// using arrays only slightly, although it is enough to prevent duplicates
-			// (saving half the transforms)
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
+		// LordHavoc: big mess...
+		// using vertex arrays only slightly, although it is enough to prevent duplicates
+		// (saving half the transforms)
+		glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+		glEnableClientState(GL_VERTEX_ARRAY);
 
-			order = (int *)((int)pheader + pheader->ofs_glcmds);
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					qglArrayElement(order[2]);
-					order += 3;
-				}
-				while (count--);
-			}
-
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
+		order = (int *)((int)pheader + pheader->ofs_glcmds);
+		while(1)
 		{
-			order = (int *)((int)pheader + pheader->ofs_glcmds);
-			while(1)
+			if (!(count = *order++))
+				break;
+			if (count > 0)
+				glBegin(GL_TRIANGLE_STRIP);
+			else
 			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
+				glBegin(GL_TRIANGLE_FAN);
+				count = -count;
 			}
+			do
+			{
+				glArrayElement(order[2]);
+				order += 3;
+			}
+			while (count--);
 		}
 
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
-
-	if (!fogenabled && r_shadows.value && !(effects & EF_ADDITIVE) && shadow)
-	{
-		int i;
-		float *av = aliasvert + 2, l = lightspot[2] + 0.125;
-		av = aliasvert + 2;
-		for (i = 0;i < pheader->num_xyz;i++, av+=3)
-			if (*av > l)
-				*av = l;
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-		glColor4f (0,0,0,0.5 * alpha);
-
-		if (gl_vertexarrays.value)
-		{
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-						
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					qglArrayElement(order[2]);
-					order += 3;
-				}
-				while (count--);
-			}
-
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
-		{
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
-			}
-		}
+		glDisableClientState(GL_VERTEX_ARRAY);
 
 		glEnable (GL_TEXTURE_2D);
 		glColor3f (1,1,1);
@@ -698,56 +556,168 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
 	glDepthMask(1);
+
+	if (gl_transform.value)
+		glPopMatrix();
 }
 
-void ZymoticLerpBones(int count, float lerp2, zymbonematrix *bone1, zymbonematrix *bone2, zymbone_t *bone, float rootorigin[3], float rootangles[3])
+void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone, float rootorigin[3], float rootangles[3], float rootscale)
 {
-	float lerp1;
-	zymbonematrix *out, rootmatrix, m;
+	float lerp1, lerp2, lerp3, lerp4;
+	zymbonematrix *out, rootmatrix, m, *bone1, *bone2, *bone3, *bone4;
 	lerp1 = 1 - lerp2;
 	out = zymbonepose;
 	AngleVectors(rootangles, rootmatrix.m[0], rootmatrix.m[1], rootmatrix.m[2]);
+	VectorScale(rootmatrix.m[0], rootscale, rootmatrix.m[0]);
+	VectorScale(rootmatrix.m[1], rootscale, rootmatrix.m[1]);
+	VectorScale(rootmatrix.m[2], rootscale, rootmatrix.m[2]);
 	rootmatrix.m[0][3] = rootorigin[0];
 	rootmatrix.m[1][3] = rootorigin[1];
 	rootmatrix.m[2][3] = rootorigin[2];
-	if (lerp1 != 1) // interpolation
+	bone1 = bonebase + blend[0].frame * count;
+	lerp1 = blend[0].lerp;
+	if (blend[1].lerp)
 	{
-		while(count--)
+		bone2 = bonebase + blend[1].frame * count;
+		lerp2 = blend[1].lerp;
+		if (blend[2].lerp)
 		{
-			// interpolate matrices
-			m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2;
-			m.m[0][1] = bone1->m[0][1] * lerp1 + bone2->m[0][1] * lerp2;
-			m.m[0][2] = bone1->m[0][2] * lerp1 + bone2->m[0][2] * lerp2;
-			m.m[0][3] = bone1->m[0][3] * lerp1 + bone2->m[0][3] * lerp2;
-			m.m[1][0] = bone1->m[1][0] * lerp1 + bone2->m[1][0] * lerp2;
-			m.m[1][1] = bone1->m[1][1] * lerp1 + bone2->m[1][1] * lerp2;
-			m.m[1][2] = bone1->m[1][2] * lerp1 + bone2->m[1][2] * lerp2;
-			m.m[1][3] = bone1->m[1][3] * lerp1 + bone2->m[1][3] * lerp2;
-			m.m[2][0] = bone1->m[2][0] * lerp1 + bone2->m[2][0] * lerp2;
-			m.m[2][1] = bone1->m[2][1] * lerp1 + bone2->m[2][1] * lerp2;
-			m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2;
-			m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2;
-			if (bone->parent >= 0)
-				R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+			bone3 = bonebase + blend[2].frame * count;
+			lerp3 = blend[2].lerp;
+			if (blend[3].lerp)
+			{
+				// 4 poses
+				bone4 = bonebase + blend[3].frame * count;
+				lerp4 = blend[3].lerp;
+				while(count--)
+				{
+					// interpolate matrices
+					m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2 + bone3->m[0][0] * lerp3 + bone4->m[0][0] * lerp4;
+					m.m[0][1] = bone1->m[0][1] * lerp1 + bone2->m[0][1] * lerp2 + bone3->m[0][1] * lerp3 + bone4->m[0][1] * lerp4;
+					m.m[0][2] = bone1->m[0][2] * lerp1 + bone2->m[0][2] * lerp2 + bone3->m[0][2] * lerp3 + bone4->m[0][2] * lerp4;
+					m.m[0][3] = bone1->m[0][3] * lerp1 + bone2->m[0][3] * lerp2 + bone3->m[0][3] * lerp3 + bone4->m[0][3] * lerp4;
+					m.m[1][0] = bone1->m[1][0] * lerp1 + bone2->m[1][0] * lerp2 + bone3->m[1][0] * lerp3 + bone4->m[1][0] * lerp4;
+					m.m[1][1] = bone1->m[1][1] * lerp1 + bone2->m[1][1] * lerp2 + bone3->m[1][1] * lerp3 + bone4->m[1][1] * lerp4;
+					m.m[1][2] = bone1->m[1][2] * lerp1 + bone2->m[1][2] * lerp2 + bone3->m[1][2] * lerp3 + bone4->m[1][2] * lerp4;
+					m.m[1][3] = bone1->m[1][3] * lerp1 + bone2->m[1][3] * lerp2 + bone3->m[1][3] * lerp3 + bone4->m[1][3] * lerp4;
+					m.m[2][0] = bone1->m[2][0] * lerp1 + bone2->m[2][0] * lerp2 + bone3->m[2][0] * lerp3 + bone4->m[2][0] * lerp4;
+					m.m[2][1] = bone1->m[2][1] * lerp1 + bone2->m[2][1] * lerp2 + bone3->m[2][1] * lerp3 + bone4->m[2][1] * lerp4;
+					m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2 + bone3->m[2][2] * lerp3 + bone4->m[2][2] * lerp4;
+					m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2 + bone3->m[2][3] * lerp3 + bone4->m[2][3] * lerp4;
+					if (bone->parent >= 0)
+						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+					else
+						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+					bone1++;
+					bone2++;
+					bone3++;
+					bone4++;
+					bone++;
+					out++;
+				}
+			}
 			else
-				R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
-			bone1++;
-			bone2++;
-			bone++;
-			out++;
+			{
+				// 3 poses
+				while(count--)
+				{
+					// interpolate matrices
+					m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2 + bone3->m[0][0] * lerp3;
+					m.m[0][1] = bone1->m[0][1] * lerp1 + bone2->m[0][1] * lerp2 + bone3->m[0][1] * lerp3;
+					m.m[0][2] = bone1->m[0][2] * lerp1 + bone2->m[0][2] * lerp2 + bone3->m[0][2] * lerp3;
+					m.m[0][3] = bone1->m[0][3] * lerp1 + bone2->m[0][3] * lerp2 + bone3->m[0][3] * lerp3;
+					m.m[1][0] = bone1->m[1][0] * lerp1 + bone2->m[1][0] * lerp2 + bone3->m[1][0] * lerp3;
+					m.m[1][1] = bone1->m[1][1] * lerp1 + bone2->m[1][1] * lerp2 + bone3->m[1][1] * lerp3;
+					m.m[1][2] = bone1->m[1][2] * lerp1 + bone2->m[1][2] * lerp2 + bone3->m[1][2] * lerp3;
+					m.m[1][3] = bone1->m[1][3] * lerp1 + bone2->m[1][3] * lerp2 + bone3->m[1][3] * lerp3;
+					m.m[2][0] = bone1->m[2][0] * lerp1 + bone2->m[2][0] * lerp2 + bone3->m[2][0] * lerp3;
+					m.m[2][1] = bone1->m[2][1] * lerp1 + bone2->m[2][1] * lerp2 + bone3->m[2][1] * lerp3;
+					m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2 + bone3->m[2][2] * lerp3;
+					m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2 + bone3->m[2][3] * lerp3;
+					if (bone->parent >= 0)
+						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+					else
+						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+					bone1++;
+					bone2++;
+					bone3++;
+					bone++;
+					out++;
+				}
+			}
+		}
+		else
+		{
+			// 2 poses
+			while(count--)
+			{
+				// interpolate matrices
+				m.m[0][0] = bone1->m[0][0] * lerp1 + bone2->m[0][0] * lerp2;
+				m.m[0][1] = bone1->m[0][1] * lerp1 + bone2->m[0][1] * lerp2;
+				m.m[0][2] = bone1->m[0][2] * lerp1 + bone2->m[0][2] * lerp2;
+				m.m[0][3] = bone1->m[0][3] * lerp1 + bone2->m[0][3] * lerp2;
+				m.m[1][0] = bone1->m[1][0] * lerp1 + bone2->m[1][0] * lerp2;
+				m.m[1][1] = bone1->m[1][1] * lerp1 + bone2->m[1][1] * lerp2;
+				m.m[1][2] = bone1->m[1][2] * lerp1 + bone2->m[1][2] * lerp2;
+				m.m[1][3] = bone1->m[1][3] * lerp1 + bone2->m[1][3] * lerp2;
+				m.m[2][0] = bone1->m[2][0] * lerp1 + bone2->m[2][0] * lerp2;
+				m.m[2][1] = bone1->m[2][1] * lerp1 + bone2->m[2][1] * lerp2;
+				m.m[2][2] = bone1->m[2][2] * lerp1 + bone2->m[2][2] * lerp2;
+				m.m[2][3] = bone1->m[2][3] * lerp1 + bone2->m[2][3] * lerp2;
+				if (bone->parent >= 0)
+					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+				else
+					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+				bone1++;
+				bone2++;
+				bone++;
+				out++;
+			}
 		}
 	}
-	else // no interpolation
+	else
 	{
-		while(count--)
+		// 1 pose
+		if (lerp1 != 1)
 		{
-			if (bone->parent >= 0)
-				R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &bone1->m[0], &out->m[0]);
-			else
-				R_ConcatTransforms(&rootmatrix.m[0], &bone1->m[0], &out->m[0]);
-			bone1++;
-			bone++;
-			out++;
+			// lerp != 1.0
+			while(count--)
+			{
+				// interpolate matrices
+				m.m[0][0] = bone1->m[0][0] * lerp1;
+				m.m[0][1] = bone1->m[0][1] * lerp1;
+				m.m[0][2] = bone1->m[0][2] * lerp1;
+				m.m[0][3] = bone1->m[0][3] * lerp1;
+				m.m[1][0] = bone1->m[1][0] * lerp1;
+				m.m[1][1] = bone1->m[1][1] * lerp1;
+				m.m[1][2] = bone1->m[1][2] * lerp1;
+				m.m[1][3] = bone1->m[1][3] * lerp1;
+				m.m[2][0] = bone1->m[2][0] * lerp1;
+				m.m[2][1] = bone1->m[2][1] * lerp1;
+				m.m[2][2] = bone1->m[2][2] * lerp1;
+				m.m[2][3] = bone1->m[2][3] * lerp1;
+				if (bone->parent >= 0)
+					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
+				else
+					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
+				bone1++;
+				bone++;
+				out++;
+			}
+		}
+		else
+		{
+			// lerp == 1.0
+			while(count--)
+			{
+				if (bone->parent >= 0)
+					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &bone1->m[0], &out->m[0]);
+				else
+					R_ConcatTransforms(&rootmatrix.m[0], &bone1->m[0], &out->m[0]);
+				bone1++;
+				bone++;
+				out++;
+			}
 		}
 	}
 }
@@ -852,65 +822,35 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 
 void GL_DrawZymoticModelMesh(byte *colors, zymtype1header_t *m)
 {
-	int i, c, *renderlist, *texturenum;
+	int i, c, *renderlist;
+	rtexture_t **texture;
 	if (!r_render.value)
 		return;
 	renderlist = (int *)(m->lump_render.start + (int) m);
-	texturenum = (int *)(m->lump_shaders.start + (int) m);
-	if (gl_vertexarrays.value)
+	texture = (rtexture_t **)(m->lump_shaders.start + (int) m);
+	glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	glColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
+	glEnableClientState(GL_COLOR_ARRAY);
+
+	glTexCoordPointer(2, GL_FLOAT, 0, (float *)(m->lump_texcoords.start + (int) m));
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	for (i = 0;i < m->numshaders;i++)
 	{
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		glEnableClientState(GL_VERTEX_ARRAY);
-
-		qglColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
-		glEnableClientState(GL_COLOR_ARRAY);
-
-		qglTexCoordPointer(2, GL_FLOAT, 0, (float *)(m->lump_texcoords.start + (int) m));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		for (i = 0;i < m->numshaders;i++)
-		{
-			c = (*renderlist++) * 3;
-			glBindTexture(GL_TEXTURE_2D, *texturenum++);
-			qglDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
-			renderlist += c;
-		}
-
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		glDisableClientState(GL_COLOR_ARRAY);
-
-		glDisableClientState(GL_VERTEX_ARRAY);
+		c = (*renderlist++) * 3;
+		glBindTexture(GL_TEXTURE_2D, R_GetTexture(*texture));
+		texture++;
+		glDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
+		renderlist += c;
 	}
-	else
-	{
-		int index;
-		float *tex;
-		tex = (float *)(m->lump_texcoords.start + (int) m);
 
-		for (i = 0;i < m->numshaders;i++)
-		{
-			c = *renderlist++;
-			glBindTexture(GL_TEXTURE_2D, *texturenum++);
-			glBegin(GL_TRIANGLES);
-			while (c--)
-			{
-				index = *renderlist++;
-				glTexCoord2fv(tex + index*2);
-				glColor4ubv(colors + index*4);
-				glVertex3fv(aliasvert + index*3);
-				index = *renderlist++;
-				glTexCoord2fv(tex + index*2);
-				glColor4ubv(colors + index*4);
-				glVertex3fv(aliasvert + index*3);
-				index = *renderlist++;
-				glTexCoord2fv(tex + index*2);
-				glColor4ubv(colors + index*4);
-				glVertex3fv(aliasvert + index*3);
-			}
-			glEnd();
-		}
-	}
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+	glDisableClientState(GL_COLOR_ARRAY);
+
+	glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
@@ -927,103 +867,19 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 
 	VectorSubtract(org, r_refdef.vieworg, diff);
 	glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
-	if (gl_vertexarrays.value)
+
+	glVertexPointer(3, GL_FLOAT, 0, aliasvert);
+	glEnableClientState(GL_VERTEX_ARRAY);
+
+	for (i = 0;i < m->numshaders;i++)
 	{
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		glEnableClientState(GL_VERTEX_ARRAY);
-
-		for (i = 0;i < m->numshaders;i++)
-		{
-			c = (*renderlist++) * 3;
-			qglDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
-			renderlist += c;
-		}
-
-		glDisableClientState(GL_VERTEX_ARRAY);
+		c = (*renderlist++) * 3;
+		glDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
+		renderlist += c;
 	}
-	else
-	{
-		int index;
-		float *tex;
-		tex = (float *)(m->lump_texcoords.start + (int) m);
 
-		glBegin(GL_TRIANGLES);
-		for (i = 0;i < m->numshaders;i++)
-		{
-			c = *renderlist++;
-			while (c--)
-			{
-				index = *renderlist++;
-				glVertex3fv(aliasvert + index*3);
-				index = *renderlist++;
-				glVertex3fv(aliasvert + index*3);
-				index = *renderlist++;
-				glVertex3fv(aliasvert + index*3);
-			}
-		}
-		glEnd();
-	}
-	glEnable(GL_TEXTURE_2D);
-	glColor3f (1,1,1);
-}
+	glDisableClientState(GL_VERTEX_ARRAY);
 
-void GL_DrawZymoticModelMeshShadow(zymtype1header_t *m)
-{
-	int i, c, *renderlist;
-	float *av, l;
-	if (!r_render.value)
-		return;
-
-	// flatten it to make a shadow
-	av = aliasvert + 2;
-	l = lightspot[2] + 0.125;
-	for (i = 0;i < m->numverts;i++, av+=3)
-		if (*av > l)
-			*av = l;
-
-	renderlist = (int *)(m->lump_render.start + (int) m);
-	glDisable(GL_TEXTURE_2D);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(0); // disable zbuffer updates
-
-	glColor4f(0.0f, 0.0f, 0.0f, 0.5f);
-	if (gl_vertexarrays.value)
-	{
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		glEnableClientState(GL_VERTEX_ARRAY);
-
-		for (i = 0;i < m->numshaders;i++)
-		{
-			c = (*renderlist++) * 3;
-			qglDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
-			renderlist += c;
-		}
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}
-	else
-	{
-		int index;
-		float *tex;
-		tex = (float *)(m->lump_texcoords.start + (int) m);
-
-		glBegin(GL_TRIANGLES);
-		for (i = 0;i < m->numshaders;i++)
-		{
-			c = *renderlist++;
-			while (c--)
-			{
-				index = *renderlist++;
-				glVertex3fv(aliasvert + index*3);
-				index = *renderlist++;
-				glVertex3fv(aliasvert + index*3);
-				index = *renderlist++;
-				glVertex3fv(aliasvert + index*3);
-			}
-		}
-		glEnd();
-	}
 	glEnable(GL_TEXTURE_2D);
 	glColor3f (1,1,1);
 }
@@ -1033,47 +889,9 @@ void GL_DrawZymoticModelMeshShadow(zymtype1header_t *m)
 R_DrawZymoticFrame
 =================
 */
-void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, int frame, int skinblah, int effects, int flags)
+void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, int skinblah, int effects, int flags)
 {
-	zymscene_t *scene;
-	float scenetime, scenefrac;
-	int sceneframe1, sceneframe2;
-	zymbonematrix *basebonepose;
-	if ((frame >= m->numscenes) || (frame < 0))
-	{
-		Con_DPrintf ("R_ZymoticSetupFrame: no such frame %d\n", frame);
-		frame = 0;
-	}
-
-	scene = (zymscene_t *)(m->lump_scenes.start + (int) m) + frame;
-	if (ent->draw_lastmodel != ent->model || ent->draw_pose != frame || ent->draw_lerpstart >= cl.time)
-	{
-		ent->draw_lastmodel = ent->model;
-		ent->draw_lastpose = -1;
-		ent->draw_pose = frame;
-		ent->draw_lerpstart = cl.time;
-	}
-	scenetime = (cl.time - ent->draw_lerpstart) * scene->framerate;
-	sceneframe1 = (int) scenetime;
-	sceneframe2 = sceneframe1 + 1;
-	scenefrac = scenetime - sceneframe1;
-	if (scene->flags & ZYMSCENEFLAG_NOLOOP)
-	{
-		if (sceneframe1 > (scene->length - 1))
-			sceneframe1 = (scene->length - 1);
-		if (sceneframe2 > (scene->length - 1))
-			sceneframe2 = (scene->length - 1);
-	}
-	else
-	{
-		sceneframe1 %= scene->length;
-		sceneframe2 %= scene->length;
-	}
-	if (sceneframe2 == sceneframe1)
-		scenefrac = 0;
-
-	basebonepose = (zymbonematrix *)(m->lump_poses.start + (int) m);
-	ZymoticLerpBones(m->numbones, scenefrac, basebonepose + sceneframe1 * m->numbones, basebonepose + sceneframe2 * m->numbones, (zymbone_t *)(m->lump_bones.start + (int) m), org, angles);
+	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), blend, (zymbone_t *)(m->lump_bones.start + (int) m), org, angles, scale);
 	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
@@ -1106,15 +924,11 @@ void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_
 	if (fogenabled)
 		GL_DrawZymoticModelMeshFog(org, m);
 
-	if (!fogenabled && r_shadows.value && !(effects & EF_ADDITIVE) && shadow)
-		GL_DrawZymoticModelMeshShadow(m);
-
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
 	glDepthMask(1);
 }
 
-int modeldlightbits[8];
 extern int r_dlightframecount;
 
 /*
@@ -1123,13 +937,12 @@ R_DrawAliasModel
 
 =================
 */
-void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, vec3_t angles, int effects, int flags, int colormap)
+void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap)
 {
 	int			i;
 	vec3_t		mins, maxs, color;
-	mleaf_t		*leaf;
 	void		*modelheader;
-	int			*skinset;
+	rtexture_t	**skinset;
 
 	if (alpha < (1.0 / 64.0))
 		return; // basically completely transparent
@@ -1141,30 +954,6 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 		return;
 
 	c_models++;
-
-	leaf = Mod_PointInLeaf (org, cl.worldmodel);
-	if (leaf->dlightframe == r_dlightframecount)
-		for (i = 0;i < 8;i++)
-			modeldlightbits[i] = leaf->dlightbits[i];
-	else
-		for (i = 0;i < 8;i++)
-			modeldlightbits[i] = 0;
-
-	// get lighting information
-
-	if ((flags & EF_FULLBRIGHT) || (effects & EF_FULLBRIGHT))
-		color[0] = color[1] = color[2] = 256;
-	else
-		R_LightPoint (color, org);
-
-	if (r_render.value)
-		glDisable(GL_ALPHA_TEST);
-
-	if (frame < 0 || frame >= clmodel->numframes)
-	{
-		frame = 0;
-		Con_DPrintf("invalid skin number %d for model %s\n", frame, clmodel->name);
-	}
 
 	if (skin < 0 || skin >= clmodel->numskins)
 	{
@@ -1178,7 +967,7 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 //		int *skinanimrange = (int *) (clmodel->skinanimrange + (int) modelheader) + skin * 2;
 //		int *skinanim = (int *) (clmodel->skinanim + (int) modelheader);
 		int *skinanimrange = clmodel->skinanimrange + skin * 2;
-		int *skinanim = clmodel->skinanim;
+		rtexture_t **skinanim = clmodel->skinanim;
 		i = skinanimrange[0];
 		if (skinanimrange[1] > 1) // animated
 			i += ((int) (cl.time * 10) % skinanimrange[1]);
@@ -1190,9 +979,9 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 
 	c_alias_polys += clmodel->numtris;
 	if (clmodel->aliastype == ALIASTYPE_ZYM)
-		R_DrawZymoticFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, frame, 0, effects, flags);
+		R_DrawZymoticFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, 0                   , effects, flags);
 	else if (clmodel->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, frame, skinset[0], effects, flags);
+		R_DrawQ2AliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset[0]          , effects, flags);
 	else
-		R_DrawAliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, frame, skinset, colormap, effects, flags);
+		R_DrawAliasFrame   (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset   , colormap, effects, flags);
 }

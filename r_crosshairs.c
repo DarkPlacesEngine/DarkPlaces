@@ -7,7 +7,7 @@ cvar_t crosshair_flashrange = {"crosshair_flashrange", "0.1", true};
 
 #define NUMCROSSHAIRS 5
 
-int crosshairtex[NUMCROSSHAIRS];
+rtexture_t *crosshairtex[NUMCROSSHAIRS];
 
 byte *crosshairtexdata[NUMCROSSHAIRS] =
 {
@@ -106,7 +106,7 @@ void crosshairload(int num, byte *in)
 		data[i][0] = data[i][1] = data[i][2] = 255;
 		data[i][3] = (in[i] - '0') * 255 / 7;
 	}
-	crosshairtex[num] = GL_LoadTexture(va("crosshair%02d", num), 16, 16, &data[0][0], false, true, 4);
+	crosshairtex[num] = R_LoadTexture(va("crosshair%02d", num), 16, 16, &data[0][0], TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 
 void r_crosshairs_start()

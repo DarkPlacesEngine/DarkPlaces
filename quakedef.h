@@ -64,8 +64,8 @@ extern int buildnumber;
 #define	ROLL	2
 
 
-#define	MAX_QPATH		64			// max length of a quake game pathname
-#define	MAX_OSPATH		128			// max length of a filesystem pathname
+#define	MAX_QPATH		128			// max length of a quake game pathname
+#define	MAX_OSPATH		1024		// max length of a filesystem pathname
 
 #define	ON_EPSILON		0.1			// point on plane side epsilon
 
@@ -79,8 +79,9 @@ extern int buildnumber;
 // LordHavoc: increased entity limit to 2048 from 600
 #define	MAX_EDICTS		2048		// FIXME: ouch! ouch! ouch!
 #define	MAX_LIGHTSTYLES	64
-#define	MAX_MODELS		256			// these are sent over the net as bytes
-#define	MAX_SOUNDS		256			// so they cannot be blindly increased
+// LordHavoc: increased model and sound limits from 256 and 256 to 1024 and 1024 (and added protocol extensions accordingly)
+#define	MAX_MODELS		1024			// these are sent over the net as bytes
+#define	MAX_SOUNDS		1024			// so they cannot be blindly increased
 
 #define	SAVEGAME_COMMENT_LENGTH	39
 
@@ -204,6 +205,8 @@ typedef struct
 } entity_state_t;
 
 
+#include "r_textures.h"
+
 #include "wad.h"
 #include "draw.h"
 #include "cvar.h"
@@ -270,8 +273,6 @@ extern	double		host_realframetime;	// LordHavoc: the real frametime, before slow
 extern	int			host_framecount;	// incremented every frame, never reset
 extern	double		realtime;			// not bounded in any way, changed at
 										// start of every frame, never reset
-
-extern	double		sv_frametime;
 
 void Host_ClearMemory (void);
 void Host_ServerFrame (void);

@@ -39,7 +39,56 @@ void Mod_BrushInit (void)
 	memset (mod_novis, 0xff, sizeof(mod_novis));
 }
 
-// Mod_PointInLeaf moved to cpu_noasm.c
+/*
+===============
+Mod_PointInLeaf
+===============
+*/
+mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
+{
+	mnode_t		*node;
+	
+//	if (!model || !model->nodes)
+//		Sys_Error ("Mod_PointInLeaf: bad model");
+
+	node = model->nodes;
+	if (node->contents < 0)
+		return (mleaf_t *)node;
+	while (1)
+	{
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct (p,node->plane->normal)) < node->plane->dist];
+		if (node->contents < 0)
+			return (mleaf_t *)node;
+	}
+	
+	return NULL;	// never reached
+}
+/*
+mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
+{
+	mnode_t		*node;
+	float		d;
+	mplane_t	*plane;
+	
+	if (!model || !model->nodes)
+		Sys_Error ("Mod_PointInLeaf: bad model");
+
+	node = model->nodes;
+	while (1)
+	{
+		if (node->contents < 0)
+			return (mleaf_t *)node;
+		plane = node->plane;
+		d = DotProduct (p,plane->normal) - plane->dist;
+		if (d > 0)
+			node = node->children[0];
+		else
+			node = node->children[1];
+	}
+	
+	return NULL;	// never reached
+}
+*/
 
 /*
 ===================
@@ -104,7 +153,7 @@ Mod_LoadTextures
 */
 void Mod_LoadTextures (lump_t *l)
 {
-	int		i, j, num, max, altmax, bytesperpixel, freeimage, transparent, fullbrights;
+	int		i, j, num, max, altmax;
 	miptex_t	*mt;
 	texture_t	*tx, *tx2;
 	texture_t	*anims[10];
@@ -156,143 +205,135 @@ void Mod_LoadTextures (lump_t *l)
 		for (;j < 16;j++)
 			tx->name[j] = 0;
 
-		tx->width = mt->width;
-		tx->height = mt->height;
 		for (j=0 ; j<MIPLEVELS ; j++)
 			tx->offsets[j] = 0;
-		freeimage = true;
-		transparent = true;
-		fullbrights = false;
-		bytesperpixel = 4;
-		data = loadimagepixels(tx->name, false, 0, 0); //tx->width, tx->height);
-		if (!data) // no external texture found
+		tx->transparent = false;
+		data = loadimagepixels(tx->name, false, 0, 0);
+		if (data)
 		{
-			if (hlbsp)
+			if (!hlbsp && !strncmp(tx->name,"sky",3) && image_width == 256 && image_height == 128) // LordHavoc: HL sky textures are entirely unrelated
 			{
-				if (mt->offsets[0]) // texture included
-				{
-					freeimage = true;
-					transparent = true;
-					bytesperpixel = 4;
-					data = W_ConvertWAD3Texture(mt);
-					tx->width = image_width;
-					tx->height = image_height;
-					/*
-					byte *in, *out, *pal;
-//					int palsize;
-					int d, p;
-					bytesperpixel = 4;
-					freeimage = true;
-					transparent = false;
-					in = (byte *)((int) mt + mt->offsets[0]);
-					data = out = qmalloc(mt->width * mt->height * 4);
-					pal = in + (((mt->width * mt->height) * 85) >> 6);
-//					palsize = pal[1] * 0x100 + pal[0];
-//					if (palsize >= 256)
-//						palsize = 256;
-					pal += 2;
-					for (d = 0;d < mt->width * mt->height;d++)
-					{
-						p = *in++;
-						if (mt->name[0] == '{' && p == 255)
-						{
-							out[0] = out[1] = out[2] = out[3] = 0;
-							transparent = true;
-						}
-						else
-						{
-							p *= 3;
-							out[0] = pal[p];
-							out[1] = pal[p+1];
-							out[2] = pal[p+2];
-							out[3] = 255;
-						}
-						out += 4;
-					}
-					*/
-				}
-				if (!data)
-				{
-					freeimage = true;
-					transparent = true;
-					bytesperpixel = 4;
-					data = W_GetTexture(mt->name);
-					tx->width = image_width;
-					tx->height = image_height;
-				}
-				if (!data)
-				{
-					freeimage = false;
-					transparent = false;
-					bytesperpixel = 1;
-					data = (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]);
-					tx->width = tx->height = 16;
-				}
+				tx->width = image_width;
+				tx->height = image_height;
+				tx->transparent = false;
+				tx->texture = NULL;
+				tx->glowtexture = NULL;
+				R_InitSky (data, 4);
 			}
 			else
 			{
-				if (mt->offsets[0]) // texture included
-				{
-					freeimage = false;
-					transparent = false;
-					bytesperpixel = 1;
-					data = (byte *)((int) mt + mt->offsets[0]);
-					tx->width = mt->width;
-					tx->height = mt->height;
-					if (r_fullbrights.value && tx->name[0] != '*')
-					{
-						for (j = 0;j < tx->width*tx->height;j++)
-						{
-							if (data[j] >= 224) // fullbright
-							{
-								fullbrights = true;
-								break;
-							}
-						}
-					}
-				}
-				else // no texture, and no external replacement texture was found
-				{
-					freeimage = false;
-					transparent = false;
-					bytesperpixel = 1;
-					data = (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]);
-					tx->width = tx->height = 16;
-				}
+				tx->width = mt->width;
+				tx->height = mt->height;
+				tx->transparent = true;
+				tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+				tx->glowtexture = NULL;
 			}
-		}
-		if (!hlbsp && !strncmp(tx->name,"sky",3) && tx->width == 256 && tx->height == 128) // LordHavoc: HL sky textures are entirely unrelated
-		{
-			tx->transparent = false;
-			R_InitSky (data, bytesperpixel);
+			qfree(data);
 		}
 		else
 		{
-			if (fullbrights)
+			if (!hlbsp && !strncmp(tx->name,"sky",3) && mt->width == 256 && mt->height == 128) // LordHavoc: HL sky textures are entirely unrelated
 			{
-				char name[64];
-				byte *data2;
+				tx->width = mt->width;
+				tx->height = mt->height;
 				tx->transparent = false;
-				data2 = qmalloc(tx->width*tx->height);
-				for (j = 0;j < tx->width*tx->height;j++)
-					data2[j] = data[j] >= 224 ? 0 : data[j]; // no fullbrights
-				tx->gl_texturenum = GL_LoadTexture (tx->name, tx->width, tx->height, data2, true, false, 1);
-				strcpy(name, tx->name);
-				strcat(name, "_glow");
-				for (j = 0;j < tx->width*tx->height;j++)
-					data2[j] = data[j] >= 224 ? data[j] : 0; // only fullbrights
-				tx->gl_glowtexturenum = GL_LoadTexture (name, tx->width, tx->height, data2, true, false, 1);
-				qfree(data2);
+				tx->texture = NULL;
+				tx->glowtexture = NULL;
+				R_InitSky ((byte *)((int) mt + mt->offsets[0]), 1);
 			}
 			else
 			{
-				tx->transparent = transparent;
-				tx->gl_texturenum = GL_LoadTexture (tx->name, tx->width, tx->height, data, true, transparent, bytesperpixel);
-				tx->gl_glowtexturenum = 0;
+				if (hlbsp)
+				{
+					if (mt->offsets[0]) // texture included
+					{
+						data = W_ConvertWAD3Texture(mt);
+						if (data)
+						{
+							tx->width = mt->width;
+							tx->height = mt->height;
+							tx->transparent = true;
+							tx->texture = R_LoadTexture (tx->name, mt->width, mt->height, data, TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+							tx->glowtexture = NULL;
+							qfree(data);
+						}
+					}
+					if (!data)
+					{
+						data = W_GetTexture(mt->name);
+						// get the size from the wad texture
+						if (data)
+						{
+							tx->width = image_width;
+							tx->height = image_height;
+							tx->transparent = true;
+							tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+							tx->glowtexture = NULL;
+							qfree(data);
+						}
+					}
+					if (!data)
+					{
+						tx->width = r_notexture_mip->width;
+						tx->height = r_notexture_mip->height;
+						tx->transparent = false;
+						tx->texture = R_LoadTexture ("notexture", tx->width, tx->height, (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]), TEXF_MIPMAP | TEXF_PRECACHE);
+						tx->glowtexture = NULL;
+					}
+				}
+				else
+				{
+					if (mt->offsets[0]) // texture included
+					{
+						int fullbrights;
+						data = (byte *)((int) mt + mt->offsets[0]);
+						tx->width = mt->width;
+						tx->height = mt->height;
+						tx->transparent = false;
+						fullbrights = false;
+						if (r_fullbrights.value && tx->name[0] != '*')
+						{
+							for (j = 0;j < tx->width*tx->height;j++)
+							{
+								if (data[j] >= 224) // fullbright
+								{
+									fullbrights = true;
+									break;
+								}
+							}
+						}
+						if (fullbrights)
+						{
+							char name[64];
+							byte *data2;
+							data2 = qmalloc(tx->width*tx->height);
+							for (j = 0;j < tx->width*tx->height;j++)
+								data2[j] = data[j] >= 224 ? 0 : data[j]; // no fullbrights
+							tx->texture = R_LoadTexture (tx->name, tx->width, tx->height, data2, TEXF_MIPMAP | TEXF_PRECACHE);
+							strcpy(name, tx->name);
+							strcat(name, "_glow");
+							for (j = 0;j < tx->width*tx->height;j++)
+								data2[j] = data[j] >= 224 ? data[j] : 0; // only fullbrights
+							tx->glowtexture = R_LoadTexture (name, tx->width, tx->height, data2, TEXF_MIPMAP | TEXF_PRECACHE);
+							qfree(data2);
+						}
+						else
+						{
+							tx->texture = R_LoadTexture (tx->name, tx->width, tx->height, data, TEXF_MIPMAP | TEXF_PRECACHE);
+							tx->glowtexture = NULL;
+						}
+					}
+					else // no texture, and no external replacement texture was found
+					{
+						tx->width = r_notexture_mip->width;
+						tx->height = r_notexture_mip->height;
+						tx->transparent = false;
+						tx->texture = R_LoadTexture ("notexture", tx->width, tx->height, (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]), TEXF_MIPMAP | TEXF_PRECACHE);
+						tx->glowtexture = NULL;
+					}
+				}
 			}
 		}
-		if (freeimage)
-			qfree(data);
 	}
 
 //
@@ -304,7 +345,7 @@ void Mod_LoadTextures (lump_t *l)
 		if (!tx || tx->name[0] != '+')
 			continue;
 		if (tx->anim_next)
-			continue;	// allready sequenced
+			continue;	// already sequenced
 
 	// find the number of frames in the animation
 		memset (anims, 0, sizeof(anims));
@@ -773,7 +814,7 @@ void Mod_LoadFaces (lump_t *l)
 //		if (!strncmp(out->texinfo->texture->name,"*",1))		// turbulent
 		if (out->texinfo->texture->name[0] == '*') // LordHavoc: faster check
 		{
-			out->flags |= (SURF_DRAWTURB | SURF_DRAWTILED);
+			out->flags |= (SURF_DRAWTURB | SURF_DRAWTILED | SURF_LIGHTBOTHSIDES);
 			// LordHavoc: some turbulent textures should be fullbright and solid
 			if (!strncmp(out->texinfo->texture->name,"*lava",5)
 			 || !strncmp(out->texinfo->texture->name,"*teleport",9)

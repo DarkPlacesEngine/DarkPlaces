@@ -702,14 +702,15 @@ void IN_MouseMove (usercmd_t *cmd)
 
 	if (in_mlook.state & 1)
 		V_StopPitchDrift ();
-		
+	
+	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
 	if ( (in_mlook.state & 1) && !(in_strafe.state & 1))
 	{
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-		if (cl.viewangles[PITCH] > 80)
-			cl.viewangles[PITCH] = 80;
-		if (cl.viewangles[PITCH] < -70)
-			cl.viewangles[PITCH] = -70;
+		if (cl.viewangles[PITCH] > 90)
+			cl.viewangles[PITCH] = 90;
+		if (cl.viewangles[PITCH] < -90)
+			cl.viewangles[PITCH] = -90;
 	}
 	else
 	{
@@ -1090,7 +1091,7 @@ void IN_JoyMove (usercmd_t *cmd)
 		speed = cl_movespeedkey.value;
 	else
 		speed = 1;
-	aspeed = speed * host_frametime;
+	aspeed = speed * host_realframetime;
 
 	// loop through the axes
 	for (i = 0; i < JOY_MAX_AXES; i++)

@@ -31,6 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ===============================================================================
 */
 
+
 char *PF_VarString (int	first)
 {
 	int		i;
@@ -44,60 +45,65 @@ char *PF_VarString (int	first)
 	return out;
 }
 
-char *QSG_EXTENSIONS = "\
-DP_BLOOD \
-DP_BLOODSHOWER \
-DP_CORPSE \
-DP_DRAWONLYTOCLIENT \
-DP_EXPLOSION3 \
-DP_PARTICLECUBE \
-DP_PARTICLERAIN \
-DP_PARTICLESNOW \
-DP_GETLIGHT \
-DP_NODRAWTOCLIENT \
-DP_RANDOMVEC \
+char *ENGINE_EXTENSIONS = "\
+DP_ENT_ALPHA \
+DP_ENT_COLORMOD \
+DP_ENT_DELTACOMPRESS \
+DP_ENT_GLOW \
+DP_ENT_SCALE \
+DP_ENT_VIEWMODEL \
+DP_GFX_FOG \
+DP_HALFLIFE_MAP \
+DP_INPUTBUTTONS \
+DP_MONSTERWALK \
+DP_MOVETYPEFOLLOW \
+DP_SOLIDCORPSE \
 DP_REGISTERCVAR \
-DP_SPARK \
 DP_SPRITE32 \
-DP_MODEL32 \
-DP_TRACEBOX \
-DP_MINMAXBOUND \
-DP_FINDFLOAT \
-NEH_PLAY2 \
-QSG_ALPHA \
-QSG_BUTTONS \
-QSG_CHANGEPITCH \
-QSG_COLORMOD \
-QSG_DELTA \
-QSG_ETOS \
-QSG_FOG \
-QSG_FOLLOW \
-QSG_GLOW \
-QSG_MATH \
-QSG_MONSTERWALK \
-QSG_QUAKE2MODEL \
-QSG_SCALE \
-QSG_SKYBOX \
-QSG_TRACETOSS \
-QSG_VIEWMODEL \
-QSG_COPYENT \
+DP_SV_DRAWONLYTOCLIENT \
+DP_SV_NODRAWTOCLIENT \
+DP_SV_SETCOLOR \
+DP_SV_EFFECT \
+DP_TE_BLOOD \
+DP_TE_BLOODSHOWER \
+DP_TE_EXPLOSIONRGB \
+DP_TE_PARTICLECUBE \
+DP_TE_PARTICLERAIN \
+DP_TE_PARTICLESNOW \
+DP_TE_SPARK \
+DP_QC_CHANGEPITCH \
+DP_QC_COPYENTITY \
+DP_QC_ETOS \
+DP_QC_FINDFLOAT \
+DP_QC_FINDCHAIN \
+DP_QC_FINDCHAINFLOAT \
+DP_QC_GETLIGHT \
+DP_QC_SINCOSSQRTPOW \
+DP_QC_MINMAXBOUND \
+DP_QC_RANDOMVEC \
+DP_QC_TRACEBOX \
+DP_QC_TRACETOSS \
+DP_QUAKE2_MODEL \
+NEH_CMD_PLAY2 \
 ";
 
 qboolean checkextension(char *name)
 {
 	int len;
-	char *e;
+	char *e, *start;
 	len = strlen(name);
-	for (e = QSG_EXTENSIONS;*e;e++)
+	for (e = ENGINE_EXTENSIONS;*e;e++)
 	{
 		while (*e == ' ')
 			e++;
 		if (!*e)
 			break;
-		if (!strncasecmp(e, name, len))
-			return true;
+		start = e;
 		while (*e && *e != ' ')
 			e++;
+		if (e - start == len)
+			if (!strncasecmp(e, name, len))
+				return true;
 	}
 	return false;
 }
@@ -132,8 +138,7 @@ void PF_error (void)
 	edict_t	*ed;
 	
 	s = PF_VarString(0);
-	Con_Printf ("======SERVER ERROR in %s:\n%s\n"
-	,pr_strings + pr_xfunction->s_name,s);
+	Con_Printf ("======SERVER ERROR in %s:\n%s\n", pr_strings + pr_xfunction->s_name, s);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
 
@@ -156,13 +161,13 @@ void PF_objerror (void)
 	edict_t	*ed;
 	
 	s = PF_VarString(0);
-	Con_Printf ("======OBJECT ERROR in %s:\n%s\n"
-	,pr_strings + pr_xfunction->s_name,s);
+	Con_Printf ("======OBJECT ERROR in %s:\n%s\n", pr_strings + pr_xfunction->s_name, s);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
 	ED_Free (ed);
-	
-	Host_Error ("Program error");
+
+// LordHavoc: bug fix - no longer kills server
+//	Host_Error ("Program error");
 }
 
 
@@ -178,6 +183,20 @@ makevectors(vector)
 void PF_makevectors (void)
 {
 	AngleVectors (G_VECTOR(OFS_PARM0), pr_global_struct->v_forward, pr_global_struct->v_right, pr_global_struct->v_up);
+}
+
+/*
+==============
+PF_vectorvectors
+
+Writes new values for v_forward, v_up, and v_right based on the given forward vector
+vectorvectors(vector, vector)
+==============
+*/
+void PF_vectorvectors (void)
+{
+	VectorNormalize2(G_VECTOR(OFS_PARM0), pr_global_struct->v_forward);
+	VectorVectors(pr_global_struct->v_forward, pr_global_struct->v_right, pr_global_struct->v_up);
 }
 
 /*
@@ -203,6 +222,7 @@ void PF_setorigin (void)
 
 void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 {
+	/*
 	float	*angles;
 	vec3_t	rmin, rmax;
 	float	bounds[2][3];
@@ -210,11 +230,14 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 	float	a;
 	vec3_t	base, transformed;
 	int		i, j, k, l;
+	*/
+	int		i;
 	
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
 			PR_RunError ("backwards mins/maxs");
 
+	/*
 	rotate = false;		// FIXME: implement rotation properly again
 
 	if (!rotate)
@@ -271,7 +294,13 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 	VectorCopy (rmin, e->v.mins);
 	VectorCopy (rmax, e->v.maxs);
 	VectorSubtract (max, min, e->v.size);
+	*/
 	
+// set derived values
+	VectorCopy (min, e->v.mins);
+	VectorCopy (max, e->v.maxs);
+	VectorSubtract (max, min, e->v.size);
+
 	SV_LinkEdict (e, false);
 }
 
@@ -280,6 +309,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 PF_setsize
 
 the size box is rotated by the current angle
+LordHavoc: no it isn't...
 
 setsize (entity, minvector, maxvector)
 =================
@@ -528,11 +558,19 @@ void PF_vectoangles (void)
 	}
 	else
 	{
-		yaw = (int) (atan2(value1[1], value1[0]) * 180 / M_PI);
-		if (yaw < 0)
-			yaw += 360;
+		// LordHavoc: optimized a bit
+		if (value1[0])
+		{
+			yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
+			if (yaw < 0)
+				yaw += 360;
+		}
+		else if (value1[1] > 0)
+			yaw = 90;
+		else
+			yaw = 270;
 
-		forward = sqrt (value1[0]*value1[0] + value1[1]*value1[1]);
+		forward = sqrt(value1[0]*value1[0] + value1[1]*value1[1]);
 		pitch = (int) (atan2(value1[2], forward) * 180 / M_PI);
 		if (pitch < 0)
 			pitch += 360;
@@ -633,7 +671,7 @@ Each entity can have eight independant sound sources, like voice,
 weapon, feet, etc.
 
 Channel 0 is an auto-allocate channel, the others override anything
-allready running on that entity/channel pair.
+already running on that entity/channel pair.
 
 An attenuation of 0 will play full volume everywhere in the level.
 Larger attenuations will drop off.
@@ -675,9 +713,9 @@ break()
 */
 void PF_break (void)
 {
-Con_Printf ("break statement\n");
-*(int *)-4 = 0;	// dump to debugger
-//	PR_RunError ("break statement");
+//	Con_Printf ("break statement\n");
+//	*(int *)-4 = 0;	// dump to debugger
+	PR_RunError ("break statement");
 }
 
 /*
@@ -864,7 +902,7 @@ PF_checkclient
 Returns a client (or object that has a client enemy) that would be a
 valid target.
 
-If there are more than one valid options, they are cycled each frame
+If there is more than one valid option, they are cycled each frame
 
 If (self.origin + self.viewofs) is not in the PVS of the current target,
 it is not returned at all.
@@ -872,7 +910,6 @@ it is not returned at all.
 name checkclient ()
 =================
 */
-#define	MAX_CHECK	16
 int c_invis, c_notvis;
 void PF_checkclient (void)
 {
@@ -1108,8 +1145,11 @@ void PF_Find (void)
 	e = G_EDICTNUM(OFS_PARM0);
 	f = G_INT(OFS_PARM1);
 	s = G_STRING(OFS_PARM2);
-	if (!s)
-		PR_RunError ("PF_Find: bad search string");
+	if (!s || !s[0])
+	{
+		RETURN_EDICT(sv.edicts);
+		return;
+	}
 		
 	for (e++ ; e < sv.num_edicts ; e++)
 	{
@@ -1156,6 +1196,72 @@ void PF_FindFloat (void)
 	RETURN_EDICT(sv.edicts);
 }
 
+// chained search for strings in entity fields
+// entity(.string field, string match) findchain = #402;
+void PF_findchain (void)
+{
+	int		i;	
+	int		f;
+	char	*s, *t;
+	edict_t	*ent, *chain;
+
+	chain = (edict_t *)sv.edicts;
+
+	f = G_INT(OFS_PARM0);
+	s = G_STRING(OFS_PARM1);
+	if (!s || !s[0])
+	{
+		RETURN_EDICT(sv.edicts);
+		return;
+	}
+		
+	ent = NEXT_EDICT(sv.edicts);
+	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
+	{
+		if (ent->free)
+			continue;
+		t = E_STRING(ent,f);
+		if (!t)
+			continue;
+		if (strcmp(t,s))
+			continue;
+
+		ent->v.chain = EDICT_TO_PROG(chain);
+		chain = ent;
+	}
+
+	RETURN_EDICT(chain);
+}
+
+// LordHavoc: chained search for float, int, and entity reference fields
+// entity(.string field, float match) findchainfloat = #403;
+void PF_findchainfloat (void)
+{
+	int		i;	
+	int		f;
+	float	s;
+	edict_t	*ent, *chain;
+
+	chain = (edict_t *)sv.edicts;
+
+	f = G_INT(OFS_PARM0);
+	s = G_FLOAT(OFS_PARM1);
+		
+	ent = NEXT_EDICT(sv.edicts);
+	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
+	{
+		if (ent->free)
+			continue;
+		if (E_FLOAT(ent,f) != s)
+			continue;
+
+		ent->v.chain = EDICT_TO_PROG(chain);
+		chain = ent;
+	}
+
+	RETURN_EDICT(chain);
+}
+
 void PR_CheckEmptyString (char *s)
 {
 	if (s[0] <= ' ')
@@ -1192,7 +1298,7 @@ void PF_precache_sound (void)
 	PR_RunError ("PF_precache_sound: overflow");
 }
 
-int blahblah = 0;
+extern qboolean hlbsp;
 void PF_precache_model (void)
 {
 	char	*s;
@@ -1202,6 +1308,8 @@ void PF_precache_model (void)
 		PR_RunError ("PF_Precache_*: Precache can only be done in spawn functions");
 		
 	s = G_STRING(OFS_PARM0);
+	if (hlbsp && ((!s) || (!s[0])))
+		return;
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 	PR_CheckEmptyString (s);
 
@@ -1210,11 +1318,7 @@ void PF_precache_model (void)
 		if (!sv.model_precache[i])
 		{
 			sv.model_precache[i] = s;
-			if (sv.active < 0)
-				blahblah++;
 			sv.models[i] = Mod_ForName (s, true);
-			if (sv.active < 0)
-				blahblah++;
 			return;
 		}
 		if (!strcmp(sv.model_precache[i], s))
@@ -1699,9 +1803,17 @@ void PF_makestatic (void)
 	
 	ent = G_EDICT(OFS_PARM0);
 
-	MSG_WriteByte (&sv.signon,svc_spawnstatic);
-
-	MSG_WriteByte (&sv.signon, SV_ModelIndex(pr_strings + ent->v.model));
+	i = SV_ModelIndex(pr_strings + ent->v.model);
+	if (i >= 256)
+	{
+		MSG_WriteByte (&sv.signon,svc_spawnstatic2);
+		MSG_WriteShort (&sv.signon, i);
+	}
+	else
+	{
+		MSG_WriteByte (&sv.signon,svc_spawnstatic);
+		MSG_WriteByte (&sv.signon, i);
+	}
 
 	MSG_WriteByte (&sv.signon, ent->v.frame);
 	MSG_WriteByte (&sv.signon, ent->v.colormap);
@@ -1829,7 +1941,7 @@ void PF_registercvar (void)
 	name = G_STRING(OFS_PARM1);
 	value = G_STRING(OFS_PARM2);
 	G_FLOAT(OFS_RETURN) = 0;
-// first check to see if it has allready been defined
+// first check to see if it has already been defined
 	if (Cvar_FindVar (name))
 		return;
 	
@@ -1988,6 +2100,405 @@ void PF_setcolor (void)
 	MSG_WriteByte (&sv.reliable_datagram, i);
 }
 
+/*
+=================
+PF_effect
+
+effect(origin, modelname, startframe, framecount, framerate)
+=================
+*/
+void PF_effect (void)
+{
+	char *s;
+	s = G_STRING(OFS_PARM1);
+	if (!s || !s[0])
+		PR_RunError("effect: no model specified\n");
+
+	SV_StartEffect(G_VECTOR(OFS_PARM0), SV_ModelIndex(s), G_FLOAT(OFS_PARM2), G_FLOAT(OFS_PARM3), G_FLOAT(OFS_PARM4));
+}
+
+void PF_te_blood (void)
+{
+	if (G_FLOAT(OFS_PARM2) < 1)
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_BLOOD);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// velocity
+	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[0], 127));
+	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[1], 127));
+	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[2], 127));
+	// count
+	MSG_WriteByte(&sv.datagram, bound(0, (int) G_FLOAT(OFS_PARM2), 255));
+}
+
+void PF_te_bloodshower (void)
+{
+	if (G_FLOAT(OFS_PARM3) < 1)
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_BLOODSHOWER);
+	// min
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// max
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// speed
+	MSG_WriteFloatCoord(&sv.datagram, G_FLOAT(OFS_PARM2));
+	// count
+	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
+}
+
+void PF_te_explosionrgb (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_EXPLOSIONRGB);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// color
+	MSG_WriteByte(&sv.datagram, bound(0, (int) (G_VECTOR(OFS_PARM1)[0] * 255), 255));
+	MSG_WriteByte(&sv.datagram, bound(0, (int) (G_VECTOR(OFS_PARM1)[1] * 255), 255));
+	MSG_WriteByte(&sv.datagram, bound(0, (int) (G_VECTOR(OFS_PARM1)[2] * 255), 255));
+}
+
+void PF_te_particlecube (void)
+{
+	if (G_FLOAT(OFS_PARM3) < 1)
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_PARTICLECUBE);
+	// min
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// max
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// velocity
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	// count
+	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
+	// color
+	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM4));
+	// gravity true/false
+	MSG_WriteByte(&sv.datagram, ((int) G_FLOAT(OFS_PARM5)) != 0);
+	// randomvel
+	MSG_WriteFloatCoord(&sv.datagram, G_FLOAT(OFS_PARM6));
+}
+
+void PF_te_particlerain (void)
+{
+	if (G_FLOAT(OFS_PARM3) < 1)
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_PARTICLERAIN);
+	// min
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// max
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// velocity
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	// count
+	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
+	// color
+	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM4));
+}
+
+void PF_te_particlesnow (void)
+{
+	if (G_FLOAT(OFS_PARM3) < 1)
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_PARTICLESNOW);
+	// min
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// max
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// velocity
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+	// count
+	MSG_WriteShort(&sv.datagram, bound(0, G_FLOAT(OFS_PARM3), 65535));
+	// color
+	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM4));
+}
+
+void PF_te_spark (void)
+{
+	if (G_FLOAT(OFS_PARM2) < 1)
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_SPARK);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// velocity
+	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[0], 127));
+	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[1], 127));
+	MSG_WriteByte(&sv.datagram, bound(-128, (int) G_VECTOR(OFS_PARM1)[2], 127));
+	// count
+	MSG_WriteByte(&sv.datagram, bound(0, (int) G_FLOAT(OFS_PARM2), 255));
+}
+
+void PF_te_gunshotquad (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_GUNSHOTQUAD);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_spikequad (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_SPIKEQUAD);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_superspikequad (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_SUPERSPIKEQUAD);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_explosionquad (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_EXPLOSIONQUAD);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_smallflash (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_SMALLFLASH);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_customflash (void)
+{
+	if (G_FLOAT(OFS_PARM1) < 8 || G_FLOAT(OFS_PARM2) < (1.0 / 256.0))
+		return;
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_CUSTOMFLASH);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// radius
+	MSG_WriteByte(&sv.datagram, bound(0, G_FLOAT(OFS_PARM1) / 8 - 1, 255));
+	// lifetime
+	MSG_WriteByte(&sv.datagram, bound(0, G_FLOAT(OFS_PARM2) / 256 - 1, 255));
+	// color
+	MSG_WriteByte(&sv.datagram, bound(0, G_VECTOR(OFS_PARM3)[0] * 255, 255));
+	MSG_WriteByte(&sv.datagram, bound(0, G_VECTOR(OFS_PARM3)[1] * 255, 255));
+	MSG_WriteByte(&sv.datagram, bound(0, G_VECTOR(OFS_PARM3)[2] * 255, 255));
+}
+
+void PF_te_gunshot (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_GUNSHOT);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_spike (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_SPIKE);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_superspike (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_SUPERSPIKE);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_explosion (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_EXPLOSION);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_tarexplosion (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_TAREXPLOSION);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_wizspike (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_WIZSPIKE);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_knightspike (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_KNIGHTSPIKE);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_lavasplash (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_LAVASPLASH);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_teleport (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_TELEPORT);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
+void PF_te_explosion2 (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_EXPLOSION2);
+	// origin
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+	// color
+	MSG_WriteByte(&sv.datagram, G_FLOAT(OFS_PARM1));
+}
+
+void PF_te_lightning1 (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_LIGHTNING1);
+	// owner entity
+	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
+	// start
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// end
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+}
+
+void PF_te_lightning2 (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_LIGHTNING2);
+	// owner entity
+	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
+	// start
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// end
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+}
+
+void PF_te_lightning3 (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_LIGHTNING3);
+	// owner entity
+	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
+	// start
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// end
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+}
+
+void PF_te_beam (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_BEAM);
+	// owner entity
+	MSG_WriteShort(&sv.datagram, G_EDICTNUM(OFS_PARM0));
+	// start
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM1)[2]);
+	// end
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
+}
+
 void PF_Fixme (void)
 {
 	PR_RunError ("unimplemented builtin"); // LordHavoc: was misspelled (bulitin)
@@ -2085,37 +2596,67 @@ PF_precache_file,
 
 PF_setspawnparms,
 
-PF_Fixme,			// #79 LordHavoc: dunno who owns 79-89, so these are just padding
-PF_Fixme,			// #80 
-PF_Fixme,			// #81
-PF_Fixme,			// #82
-PF_Fixme,			// #83
-PF_Fixme,			// #84
-PF_Fixme,			// #85
-PF_Fixme,			// #86
-PF_Fixme,			// #87
-PF_Fixme,			// #88
-PF_Fixme,			// #89
+PF_Fixme,				// #79 LordHavoc: dunno who owns 79-89, so these are just padding
+PF_Fixme,				// #80 
+PF_Fixme,				// #81
+PF_Fixme,				// #82
+PF_Fixme,				// #83
+PF_Fixme,				// #84
+PF_Fixme,				// #85
+PF_Fixme,				// #86
+PF_Fixme,				// #87
+PF_Fixme,				// #88
+PF_Fixme,				// #89
 
-PF_tracebox,		// #90 LordHavoc builtin range (9x)
-PF_randomvec,		// #91
-PF_GetLight,		// #92
-PF_registercvar,	// #93
-PF_min,				// #94
-PF_max,				// #95
-PF_bound,			// #96
-PF_pow,				// #97
-PF_FindFloat,		// #98
-PF_checkextension,	// #99
+PF_tracebox,			// #90 LordHavoc builtin range (9x)
+PF_randomvec,			// #91
+PF_GetLight,			// #92
+PF_registercvar,		// #93
+PF_min,					// #94
+PF_max,					// #95
+PF_bound,				// #96
+PF_pow,					// #97
+PF_FindFloat,			// #98
+PF_checkextension,		// #99
 #define a PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme,
 #define aa a a a a a a a a a a
 aa // #200
 aa // #300
 aa // #400
-PF_copyentity,		// #400 LordHavoc: builtin range (4xx)
-PF_setcolor,		// #401
+PF_copyentity,			// #400 LordHavoc: builtin range (4xx)
+PF_setcolor,			// #401
+PF_findchain,			// #402
+PF_findchainfloat,		// #403
+PF_effect,				// #404
+PF_te_blood,			// #405
+PF_te_bloodshower,		// #406
+PF_te_explosionrgb,		// #407
+PF_te_particlecube,		// #408
+PF_te_particlerain,		// #409
+PF_te_particlesnow,		// #410
+PF_te_spark,			// #411
+PF_te_gunshotquad,		// #412
+PF_te_spikequad,		// #413
+PF_te_superspikequad,	// #414
+PF_te_explosionquad,	// #415
+PF_te_smallflash,		// #416
+PF_te_customflash,		// #417
+PF_te_gunshot,			// #418
+PF_te_spike,			// #419
+PF_te_superspike,		// #420
+PF_te_explosion,		// #421
+PF_te_tarexplosion,		// #422
+PF_te_wizspike,			// #423
+PF_te_knightspike,		// #424
+PF_te_lavasplash,		// #425
+PF_te_teleport,			// #426
+PF_te_explosion2,		// #427
+PF_te_lightning1,		// #428
+PF_te_lightning2,		// #429
+PF_te_lightning3,		// #430
+PF_te_beam,				// #431
+PF_vectorvectors,		// #432
 };
 
 builtin_t *pr_builtins = pr_builtin;
 int pr_numbuiltins = sizeof(pr_builtin)/sizeof(pr_builtin[0]);
-

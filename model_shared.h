@@ -35,6 +35,19 @@ m*_t structures are in-memory
 
 typedef enum {mod_brush, mod_sprite, mod_alias} modtype_t;
 
+typedef struct animscene_s
+{
+	char name[32]; // for viewthing support
+	int firstframe;
+	int framecount;
+	int loop; // true or false
+	float framerate;
+}
+animscene_t;
+
+#define MAX_SKINS 256
+
+
 #include "model_brush.h"
 #include "model_sprite.h"
 #include "model_alias.h"
@@ -42,7 +55,7 @@ typedef enum {mod_brush, mod_sprite, mod_alias} modtype_t;
 typedef struct model_s
 {
 	char		name[MAX_QPATH];
-	qboolean	needload;		// bmodels and sprites don't cache normally
+	qboolean	needload;		// bmodels don't cache normally
 
 	modtype_t	type;
 	int			aliastype; // LordHavoc: Q2 model support
@@ -108,11 +121,16 @@ typedef struct model_s
 	// LordHavoc: useful for sprites and models
 	int			numtris;
 	int			numskins;
-	int			skinanimrange[1024]; // array of start and length pairs, note: offset from ->cache.data
-	int			skinanim[1024*5]; // texture numbers for each frame (indexed by animrange), note: offset from ->cache.data, second note: normal pants shirt glow body (normal contains no shirt/pants/glow colors and body is normal + pants + shirt, but not glow)
+	int			skinanimrange[MAX_SKINS*2]; // array of start and length pairs
+	rtexture_t	*skinanim[MAX_SKINS*5]; // texture numbers for each frame (indexed by animrange), note: normal pants shirt glow body (normal contains no shirt/pants/glow colors and body is normal + pants + shirt, but not glow)
+	int			ofs_scenes; // offset from Mod_ExtraData(model) memory to array of animscene_t structs
+	// these are used simply to simplify model/sprite/whatever processing and are specific to each type
+	int			ofs_frames; // offset from Mod_ExtraData(model) memory to array of model specific frame structs
+	int			framesize; // size of model specific frame structs
 
 // additional model data
 	cache_user_t	cache;		// only access through Mod_Extradata
+	int			cachesize;		// size of cached data (zero if not cached)
 
 } model_t;
 

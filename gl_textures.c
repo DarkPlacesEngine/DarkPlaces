@@ -1,9 +1,10 @@
 #include "quakedef.h"
 
-cvar_t		gl_max_size = {"gl_max_size", "2048"};
-cvar_t		gl_picmip = {"gl_picmip", "0"};
-cvar_t		gl_lerpimages = {"gl_lerpimages", "1"};
+cvar_t		r_max_size = {"r_max_size", "2048"};
+cvar_t		r_picmip = {"r_picmip", "0"};
+cvar_t		r_lerpimages = {"r_lerpimages", "1"};
 cvar_t		r_upload = {"r_upload", "1"};
+cvar_t		r_precachetextures = {"r_precachetextures", "1", true};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR; //NEAREST;
 int		gl_filter_max = GL_LINEAR;
@@ -14,27 +15,43 @@ int		texels;
 // 65536x65536
 #define MAXMIPS 16
 
+#define GLTEXF_LERPED 1
+#define GLTEXF_UPLOADED 2
+
 typedef struct
 {
 	char	identifier[64];
-	int		texnum;
-	int		texeldatasize;
-	byte	*texels[MAXMIPS];
-	unsigned short texelsize[MAXMIPS][2];
+	int		texnum; // GL texture slot number
+	int		texeldatasize; // computed memory usage of this texture (including mipmaps, expansion to 32bit, etc)
+	byte	*inputtexels; // copy of the original texture supplied to the upload function, for re-uploading or deferred uploads (non-precached)
+	int		inputtexeldatasize; // size of the original texture
 	unsigned short width, height;
 // LordHavoc: CRC to identify cache mismatchs
 	unsigned short crc;
-	char	mipmap;
-	char	alpha;
-	char	bytesperpixel;
-	char	lerped; // whether this texture was uploaded with or without interpolation
-	char	inuse; // cleared during texture purge when loading new level
-	char	pad; // unused
+	int flags; // the requested flags when the texture was supplied to the upload function
+	int internalflags; // internal notes (lerped, etc)
 } gltexture_t;
 
 #define	MAX_GLTEXTURES	4096
 gltexture_t	*gltextures;
-int			numgltextures;
+unsigned int numgltextures = 0, gl_texture_number = 1;
+
+void GL_UploadTexture(gltexture_t *t);
+
+int R_GetTexture(rtexture_t *rt)
+{
+	gltexture_t *glt;
+	if (!rt)
+		return 0;
+	glt = (gltexture_t *)rt;
+	if (!(glt->internalflags & GLTEXF_UPLOADED))
+	{
+		GL_UploadTexture(glt);
+		if (!(glt->internalflags & GLTEXF_UPLOADED))
+			Host_Error("R_GetTexture: unable to upload texture\n");
+	}
+	return glt->texnum;
+}
 
 typedef struct
 {
@@ -42,7 +59,8 @@ typedef struct
 	int	minimize, maximize;
 } glmode_t;
 
-glmode_t modes[] = {
+glmode_t modes[] =
+{
 	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
 	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
 	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
@@ -92,7 +110,7 @@ void Draw_TextureMode_f (void)
 	// change all the existing mipmap texture objects
 	for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
 	{
-		if (glt->mipmap)
+		if (glt->flags & TEXF_MIPMAP)
 		{
 			glBindTexture(GL_TEXTURE_2D, glt->texnum);
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
@@ -101,59 +119,45 @@ void Draw_TextureMode_f (void)
 	}
 }
 
-void GL_TextureStats_Print(char *name, int total, int crc, int mip, int alpha)
+void GL_TextureStats_Print(char *name, int total, int total2, int loaded, int crc, int mip, int alpha, int total2valid)
 {
-	char n[64];
-	int c = 0;
 	if (!name[0])
 		name = "<unnamed>";
-	while (name[c] && c < 28)
-		n[c++] = name[c];
-	// no need to pad since the name was moved to last
-//	while (c < 28)
-//		n[c++] = ' ';
-	n[c] = 0;
-	Con_Printf("%5i %04X %s %s %s\n", total, crc, mip ? "yes" : "no ", alpha ? "yes  " : "no   ", n);
-}
-
-void GL_TextureStats_f(void)
-{
-	int i, s = 0, sc = 0, t = 0;
-	gltexture_t *glt;
-	Con_Printf("kbytes crc  mip alpha name\n");
-	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
-	{
-		GL_TextureStats_Print(glt->identifier, (glt->texeldatasize + 512) >> 10, glt->crc, glt->mipmap, glt->alpha);
-		t += glt->texeldatasize;
-		if (glt->identifier[0] == '&')
-		{
-			sc++;
-			s += glt->texeldatasize;
-		}
-	}
-	Con_Printf("%i textures, totalling %.3fMB, %i are (usually) unnecessary model skins totalling %.3fMB\n", numgltextures, t / 1048576.0, sc, s / 1048576.0);
+	Con_Printf("%5iK %c%5iK%c %04X %s %s %s %s\n", total, total2valid ? ' ' : '(', total2, total2valid ? ' ' : ')', crc, loaded ? "loaded" : "      ", mip ? "mip" : "   ", alpha ? "alpha" : "     ", name);
 }
 
 void GL_TextureStats_PrintTotal(void)
 {
-	int i, s = 0, sc = 0, t = 0;
+	int i, t = 0, p = 0, loaded = 0, loadedt = 0, loadedp = 0;
 	gltexture_t *glt;
 	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
 	{
 		t += glt->texeldatasize;
-		if (glt->identifier[0] == '&')
+		p += glt->inputtexeldatasize;
+		if (glt->internalflags & GLTEXF_UPLOADED)
 		{
-			sc++;
-			s += glt->texeldatasize;
+			loaded++;
+			loadedt += glt->texeldatasize;
+			loadedp += glt->inputtexeldatasize;
 		}
 	}
-	Con_Printf("%i textures, totalling %.3fMB, %i are (usually) unnecessary model skins totalling %.3fMB\n", numgltextures, t / 1048576.0, sc, s / 1048576.0);
+	Con_Printf("total: %i (%.3fMB, %.3fMB original), uploaded %i (%.3fMB, %.3fMB original), upload on demand %i (%.3fMB, %.3fMB original)\n", numgltextures, t / 1048576.0, p / 1048576.0, loaded, loadedt / 1048576.0, loadedp / 1048576.0, numgltextures - loaded, (t - loadedt) / 1048576.0, (p - loadedp) / 1048576.0);
+}
+
+void GL_TextureStats_f(void)
+{
+	int i;
+	gltexture_t *glt;
+	Con_Printf("kbytes original crc  loaded mip alpha name\n");
+	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
+		GL_TextureStats_Print(glt->identifier, (glt->texeldatasize + 1023) / 1024, (glt->inputtexeldatasize + 1023) / 1024, glt->internalflags & GLTEXF_UPLOADED, glt->crc, glt->flags & TEXF_MIPMAP, glt->flags & TEXF_ALPHA, glt->inputtexels != NULL);
+	GL_TextureStats_PrintTotal();
 }
 
 char engineversion[40];
 
 //void GL_UploadTexture (gltexture_t *glt);
-void gl_textures_start()
+void r_textures_start()
 {
 //	int i;
 //	gltexture_t *glt;
@@ -161,38 +165,39 @@ void gl_textures_start()
 //		GL_UploadTexture(glt);
 }
 
-void gl_textures_shutdown()
+void r_textures_shutdown()
 {
 }
 
-void GL_Textures_Init (void)
+void R_Textures_Init (void)
 {
 	Cmd_AddCommand("r_texturestats", GL_TextureStats_f);
-	Cvar_RegisterVariable (&gl_max_size);
-	Cvar_RegisterVariable (&gl_picmip);
-	Cvar_RegisterVariable (&gl_lerpimages);
+	Cvar_RegisterVariable (&r_max_size);
+	Cvar_RegisterVariable (&r_picmip);
+	Cvar_RegisterVariable (&r_lerpimages);
 	Cvar_RegisterVariable (&r_upload);
+	Cvar_RegisterVariable (&r_precachetextures);
 #ifdef NORENDER
 	r_upload.value = 0;
 #endif
 
 	// 3dfx can only handle 256 wide textures
 	if (!Q_strncasecmp ((char *)gl_renderer, "3dfx",4) || strstr((char *)gl_renderer, "Glide"))
-		Cvar_Set ("gl_max_size", "256");
+		Cvar_Set ("r_max_size", "256");
 
 	gltextures = qmalloc(sizeof(gltexture_t) * MAX_GLTEXTURES);
 	memset(gltextures, 0, sizeof(gltexture_t) * MAX_GLTEXTURES);
 	Cmd_AddCommand ("gl_texturemode", &Draw_TextureMode_f);
 
-	R_RegisterModule("GL_Textures", gl_textures_start, gl_textures_shutdown);
+	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown);
 }
 
 /*
 ================
-GL_FindTexture
+R_FindTexture
 ================
 */
-int GL_FindTexture (char *identifier)
+int R_FindTexture (char *identifier)
 {
 	int		i;
 	gltexture_t	*glt;
@@ -206,7 +211,7 @@ int GL_FindTexture (char *identifier)
 	return -1;
 }
 
-void GL_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
+void R_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
 {
 	int		j, xi, oldx = 0, f, fstep, l1, l2, endx;
 	fstep = (int) (inwidth*65536.0f/outwidth);
@@ -240,12 +245,12 @@ void GL_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
 
 /*
 ================
-GL_ResampleTexture
+R_ResampleTexture
 ================
 */
-void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,  int outwidth, int outheight)
+void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,  int outwidth, int outheight)
 {
-	if (gl_lerpimages.value)
+	if (r_lerpimages.value)
 	{
 		int		i, j, yi, oldy, f, fstep, l1, l2, endy = (inheight-1);
 		byte	*inrow, *out, *row1, *row2;
@@ -256,8 +261,8 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 		row2 = qmalloc(outwidth*4);
 		inrow = indata;
 		oldy = 0;
-		GL_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
-		GL_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
+		R_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
+		R_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
 		for (i = 0, f = 0;i < outheight;i++,f += fstep)
 		{
 			yi = f >> 16;
@@ -267,9 +272,9 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 				if (yi == oldy+1)
 					memcpy(row1, row2, outwidth*4);
 				else
-					GL_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
+					R_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
 				if (yi < endy)
-					GL_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
+					R_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
 				else
 					memcpy(row2, row1, outwidth*4);
 				oldy = yi;
@@ -324,61 +329,6 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 			}
 		}
 	}
-}
-
-void GL_FreeTexels(gltexture_t *glt)
-{
-	if (glt->texels[0])
-		qfree(glt->texels[0]);
-	glt->texels[0] = 0;
-}
-
-void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
-{
-	int i, w, h, size;
-	if (glt->texels[0])
-		GL_FreeTexels(glt);
-	glt->texelsize[0][0] = width;
-	glt->texelsize[0][1] = height;
-	if (mipmapped)
-	{
-		size = 0;
-		w = width;h = height;
-		i = 0;
-		while (i < MAXMIPS)
-		{
-			glt->texelsize[i][0] = w;
-			glt->texelsize[i][1] = h;
-			glt->texels[i++] = (void *)size;
-			size += w*h*4;
-			if (w > 1)
-			{
-				w >>= 1;
-				if (h > 1)
-					h >>= 1;
-			}
-			else if (h > 1)
-				h >>= 1;
-			else
-				break;
-		}
-		glt->texeldatasize = size;
-		while (i < MAXMIPS)
-			glt->texels[i++] = NULL;
-		glt->texels[0] = qmalloc(size);
-		for (i = 1;i < MAXMIPS && glt->texels[i];i++)
-			glt->texels[i] += (int) glt->texels[0];
-	}
-	else
-	{
-		size = width*height*4;
-		glt->texeldatasize = size;
-		glt->texels[0] = qmalloc(size);
-		for (i = 1;i < MAXMIPS;i++)
-			glt->texels[i] = NULL;
-	}
-	if (!glt->texels[0])
-		Sys_Error("GL_AllocTexels: out of memory\n");
 }
 
 // in can be the same as out
@@ -451,18 +401,68 @@ void GL_MipReduce(byte *in, byte *out, int width, int height, int destwidth, int
 	}
 }
 
-void GL_UploadTexture (gltexture_t *glt)
+void GL_Upload32(int glslot, byte *data, int width, int height, int flags)
 {
-	int mip, width, height;
+	int mip, width2, height2, width3, height3, internalformat;
+	byte *gammadata, *buffer;
+
 	if (!r_upload.value)
 		return;
-	glBindTexture(GL_TEXTURE_2D, glt->texnum);
-	width = glt->width;
-	height = glt->height;
-	for (mip = 0;mip < MAXMIPS && glt->texels[mip];mip++)
-		glTexImage2D(GL_TEXTURE_2D, mip, glt->alpha ? 4 : 3, glt->texelsize[mip][0], glt->texelsize[mip][1], 0, GL_RGBA, GL_UNSIGNED_BYTE, glt->texels[mip]);
-	if (glt->mipmap)
+
+	// 3 and 4 are converted by the driver to it's preferred format for the current display mode
+	internalformat = 3;
+	if (flags & TEXF_ALPHA)
+		internalformat = 4;
+
+	// calculate power of 2 size
+	width2 = 1;while (width2 < width) width2 <<= 1;
+	height2 = 1;while (height2 < height) height2 <<= 1;
+	// calculate final size (mipmapped downward to this)
+	width3 = width2 >> (int) r_picmip.value;
+	height3 = height2 >> (int) r_picmip.value;
+	while (width3 > (int) r_max_size.value) width3 >>= 1;
+	while (height3 > (int) r_max_size.value) height3 >>= 1;
+	if (width3 < 1) width3 = 1;
+	if (height3 < 1) height3 = 1;
+
+	gammadata = qmalloc(width*height*4);
+	buffer = qmalloc(width2*height2*4);
+	if (!gammadata || !buffer)
+		Host_Error("GL_Upload32: out of memory\n");
+
+	Image_CopyRGBAGamma(data, gammadata, width*height);
+
+	R_ResampleTexture(gammadata, width, height, buffer, width2, height2);
+
+	qfree(gammadata);
+
+	while (width2 > width3 || height2 > height3)
 	{
+		GL_MipReduce(buffer, buffer, width2, height2, width3, height3);
+
+		if (width2 > width3)
+			width2 >>= 1;
+		if (height2 > height3)
+			height2 >>= 1;
+	}
+
+	glBindTexture(GL_TEXTURE_2D, glslot);
+	mip = 0;
+	glTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width2, height2, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	if (flags & TEXF_MIPMAP)
+	{
+		while (width2 > 1 || height2 > 1)
+		{
+			GL_MipReduce(buffer, buffer, width2, height2, 1, 1);
+
+			if (width2 > 1)
+				width2 >>= 1;
+			if (height2 > 1)
+				height2 >>= 1;
+
+			glTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width2, height2, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+		}
+
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 	}
@@ -472,6 +472,64 @@ void GL_UploadTexture (gltexture_t *glt)
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 	}
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+
+	qfree(buffer);
+}
+
+void GL_Upload8 (int glslot, byte *data, int width, int height, int flags)
+{
+	byte *data32;
+	data32 = qmalloc(width*height*4);
+	Image_Copy8bitRGBA(data, data32, width*height, d_8to24table);
+	GL_Upload32(glslot, data32, width, height, flags);
+	qfree(data32);
+}
+
+void GL_UploadTexture (gltexture_t *glt)
+{
+	if (glt->inputtexels == NULL)
+		return;
+	if (glt->flags & TEXF_RGBA)
+		GL_Upload32(glt->texnum, glt->inputtexels, glt->width, glt->height, glt->flags);
+	else // 8bit
+		GL_Upload8(glt->texnum, glt->inputtexels, glt->width, glt->height, glt->flags);
+	glt->internalflags |= GLTEXF_UPLOADED;
+	qfree(glt->inputtexels);
+	glt->inputtexels = NULL;
+}
+
+int R_CalcTexelDataSize (int width, int height, int mipmapped)
+{
+	int width2, height2, size;
+	width2 = 1;while (width2 < width) width2 <<= 1;
+	height2 = 1;while (height2 < height) height2 <<= 1;
+	// calculate final size (mipmapped downward to this)
+	width2 >>= (int) r_picmip.value;
+	height2 >>= (int) r_picmip.value;
+	while (width2 > (int) r_max_size.value) width2 >>= 1;
+	while (height2 > (int) r_max_size.value) height2 >>= 1;
+	if (width2 < 1) width2 = 1;
+	if (height2 < 1) height2 = 1;
+
+	size = 0;
+	if (mipmapped)
+	{
+		while (width2 > 1 || height2 > 1)
+		{
+			size += width2 * height2;
+			if (width2 > 1)
+				width2 >>= 1;
+			if (height2 > 1)
+				height2 >>= 1;
+		}
+		size++; // count the last 1x1 mipmap
+	}
+	else
+		size = width2*height2;
+
+	size *= 4; // RGBA
+
+	return size;
 }
 
 /*
@@ -479,49 +537,77 @@ void GL_UploadTexture (gltexture_t *glt)
 GL_LoadTexture
 ================
 */
-int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolean mipmap, qboolean alpha, int bytesperpixel)
+rtexture_t *R_LoadTexture (char *identifier, int width, int height, byte *data, int flags)
 {
+	int				i, bytesperpixel, internalflags, precache;
+	gltexture_t		*glt;
 	unsigned short	crc;
-	int				i, width2, height2, width3, height3, w, h, mip;
-	gltexture_t		*glt, *freeglt;
-	// LordHavoc: texture caching, turned out to be a waste of time (and immense waste of diskspace)
-	//char			cachefilename[1024], *cachefile;
 
 	if (isDedicated)
-		return 1;
+		return NULL;
 
-	freeglt = NULL;
+	if (!identifier[0])
+		Host_Error("R_LoadTexture: no identifier\n");
+
+	// clear the alpha flag if the texture has no transparent pixels
+	if (flags & TEXF_ALPHA)
+	{
+		int alpha = false;
+		if (flags & TEXF_RGBA)
+		{
+			for (i = 0;i < width * height;i++)
+			{
+				if (data[i * 4 + 3] < 255)
+				{
+					alpha = true;
+					break;
+				}
+			}
+		}
+		else
+		{
+			for (i = 0;i < width * height;i++)
+			{
+				if (data[i] == 255)
+				{
+					alpha = true;
+					break;
+				}
+			}
+		}
+		if (!alpha)
+			flags &= ~TEXF_ALPHA;
+	}
+
+	if (flags & TEXF_RGBA)
+		bytesperpixel = 4;
+	else
+		bytesperpixel = 1;
+
+	internalflags = 0;
+	if (r_lerpimages.value != 0)
+		internalflags |= GLTEXF_LERPED;
 
 	// LordHavoc: do a CRC to confirm the data really is the same as previous occurances.
 	crc = CRC_Block(data, width*height*bytesperpixel);
 	// see if the texture is already present
-	if (identifier[0])
+	for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
 	{
-		for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
+		if (!strcmp (identifier, glt->identifier))
 		{
-			if (glt->inuse)
+			// LordHavoc: everyone hates cache mismatchs, so I fixed it
+			if (crc != glt->crc || width != glt->width || height != glt->height || flags != glt->flags)
 			{
-				if (!strcmp (identifier, glt->identifier))
-				{
-					// LordHavoc: everyone hates cache mismatchs, so I fixed it
-					if (crc != glt->crc || width != glt->width || height != glt->height)
-					{
-						Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
-						goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
-					}
-					if ((gl_lerpimages.value != 0) != glt->lerped)
-						goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
-					return glt->texnum;
-				}
+				Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
+				goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
 			}
-			else
-				freeglt = glt;
+			if (internalflags != glt->internalflags)
+				goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
+			return (rtexture_t *)glt;
 		}
 	}
-	else
-		i = 0;
-	// LordHavoc: although this could be an else condition as it was in the original id code,
-	//            it is more clear this way
+
+/*
 	if (freeglt)
 	{
 		glt = freeglt;
@@ -529,152 +615,52 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolea
 	}
 	else
 	{
+*/
 		// LordHavoc: check if there are still slots available
 		if (numgltextures >= MAX_GLTEXTURES)
 			Sys_Error ("GL_LoadTexture: ran out of texture slots (%d)\n", MAX_GLTEXTURES);
 		glt = &gltextures[numgltextures++];
-		glt->texnum = texture_extension_number;
-		texture_extension_number++;
+		glt->texnum = gl_texture_number++;
 		strcpy (glt->identifier, identifier);
-	}
+//	}
 
 // LordHavoc: label to drop out of the loop into the setup code
 GL_LoadTexture_setup:
-	// calculate power of 2 size
-	width2 = 1;while (width2 < width) width2 <<= 1;
-	height2 = 1;while (height2 < height) height2 <<= 1;
-	// calculate final size (mipmapped downward to this)
-	width3 = width2 >> (int) gl_picmip.value;
-	height3 = height2 >> (int) gl_picmip.value;
-	while (width3 > (int) gl_max_size.value) width3 >>= 1;
-	while (height3 > (int) gl_max_size.value) height3 >>= 1;
-	if (width3 < 1) width3 = 1;
-	if (height3 < 1) height3 = 1;
-
-	// final storage
-	GL_AllocTexels(glt, width3, height3, mipmap);
 	glt->crc = crc; // LordHavoc: used to verify textures are identical
 	glt->width = width;
 	glt->height = height;
-	glt->mipmap = mipmap;
-	glt->bytesperpixel = bytesperpixel;
-	glt->lerped = gl_lerpimages.value != 0;
-	glt->alpha = false; // updated later
-	glt->inuse = true;
-	/*
-	// LordHavoc: texture caching, turned out to be a waste of time (and immense waste of diskspace)
-	sprintf(cachefilename, "%s%x%x%x.texels", identifier, width3, height3, crc);
-	for (i = 0;cachefilename[i];i++)
-	{
-		if (cachefilename[i] <= ' ' || cachefilename[i] >= 127 || cachefilename[i] == '/' || cachefilename[i] == '\\' || cachefilename[i] == ':' || cachefilename[i] == '*' || cachefilename[i] == '?')
-			cachefilename[i] = '@';
-		if (cachefilename[i] >= 'A' && cachefilename[i] <= 'Z')
-			cachefilename[i] += 'a' - 'A';
-	}
-	cachefile = COM_LoadMallocFile(cachefilename, true);
-	if (cachefile)
-	{
-		if (cachefile[0] == 'D' && cachefile[1] == 'P' && cachefile[2] == 'C' && cachefile[3] == 'T')
-		{
-			memcpy(glt->texels[0], cachefile + 4, width3*height3*4);
-			qfree(cachefile);
-//			Con_Printf("loaded cache texture %s\n", cachefilename);
-			goto cacheloaded;
-		}
-		else
-			qfree(cachefile);
-	}
-	*/
-	if (width == width3 && height == height3) // perfect match
-	{
-		if (bytesperpixel == 1) // 8bit
-			Image_Copy8bitRGBA(data, glt->texels[0], width*height, d_8to24table);
-		else
-			Image_CopyRGBAGamma(data, glt->texels[0], width*height);
-	}
-	else if (width == width2 && height == height2) // perfect match for top level, but needs to be reduced
-	{
-		byte *temptexels2;
-		temptexels2 = qmalloc(width2*height2*4); // scaleup buffer
-		if (bytesperpixel == 1) // 8bit
-			Image_Copy8bitRGBA(data, temptexels2, width*height, d_8to24table);
-		else
-			Image_CopyRGBAGamma(data, temptexels2, width*height);
-		while (width2 > width3 || height2 > height3)
-		{
-			w = width2;h = height2;
-			if (width2 > width3) width2 >>= 1;
-			if (height2 > height3) height2 >>= 1;
-			if (width2 <= width3 && height2 <= height3) // size achieved
-				GL_MipReduce(temptexels2, glt->texels[0], w, h, width3, height3);
-			else
-				GL_MipReduce(temptexels2, temptexels2, w, h, width3, height3);
-		}
-		qfree(temptexels2);
-	}
-	else // scaling...
-	{
-		byte *temptexels;
-		// pre-scaleup buffer
-		temptexels = qmalloc(width*height*4);
-		if (bytesperpixel == 1) // 8bit
-			Image_Copy8bitRGBA(data, temptexels, width*height, d_8to24table);
-		else
-			Image_CopyRGBAGamma(data, temptexels, width*height);
-		if (width2 != width3 || height2 != height3) // reduced by gl_pic_mip or gl_max_size
-		{
-			byte *temptexels2;
-			temptexels2 = qmalloc(width2*height2*4); // scaleup buffer
-			GL_ResampleTexture(temptexels, width, height, temptexels2, width2, height2);
-			while (width2 > width3 || height2 > height3)
-			{
-				w = width2;h = height2;
-				if (width2 > width3) width2 >>= 1;
-				if (height2 > height3) height2 >>= 1;
-				if (width2 <= width3 && height2 <= height3) // size achieved
-					GL_MipReduce(temptexels2, glt->texels[0], w, h, width3, height3);
-				else
-					GL_MipReduce(temptexels2, temptexels2, w, h, width3, height3);
-			}
-			qfree(temptexels2);
-		}
-		else // copy directly
-			GL_ResampleTexture(temptexels, width, height, glt->texels[0], width2, height2);
-		qfree(temptexels);
-	}
-	/*
-	// LordHavoc: texture caching, turned out to be a waste of time (and immense waste of diskspace)
-	Con_Printf("writing cache texture %s\n", cachefilename);
-	cachefile = qmalloc(width3*height3*4 + 4);
-	cachefile[0] = 'D';
-	cachefile[1] = 'P';
-	cachefile[2] = 'C';
-	cachefile[3] = 'T';
-	memcpy(cachefile + 4, glt->texels[0], width3*height3*4);
-	COM_WriteFile(cachefilename, cachefile, width3*height3*4 + 4);
-	qfree(cachefile);
-cacheloaded:
-	*/
-	if (alpha)
-	{
-		byte	*in = glt->texels[0] + 3;
-		for (i = 0;i < width*height;i++, in += 4)
-			if (*in < 255)
-			{
-				glt->alpha = true;
-				break;
-			}
-	}
-	// this loop is skipped if there are no mipmaps to generate
-	for (mip = 1;mip < MAXMIPS && glt->texels[mip];mip++)
-		GL_MipReduce(glt->texels[mip-1], glt->texels[mip], glt->texelsize[mip-1][0], glt->texelsize[mip-1][1], 1, 1);
-	GL_UploadTexture(glt);
-	GL_FreeTexels(glt);
+	glt->flags = flags;
+	glt->internalflags = internalflags;
 
-//	if (bytesperpixel == 1) // 8bit
-//		GL_Upload8 (data, width, height, mipmap, alpha);
-//	else // 32bit
-//		GL_Upload32 (data, width, height, mipmap, true);
+	if (glt->inputtexels)
+		qfree(glt->inputtexels);
+	glt->inputtexeldatasize = width*height*bytesperpixel;
+	glt->inputtexels = qmalloc(glt->inputtexeldatasize);
 
-	return glt->texnum;
+	memcpy(glt->inputtexels, data, glt->inputtexeldatasize);
+
+	glt->texeldatasize = R_CalcTexelDataSize(width, height, flags & TEXF_MIPMAP);
+
+	precache = false;
+	if (r_precachetextures.value >= 1)
+	{
+		if (flags & TEXF_PRECACHE)
+			precache = true;
+		if (r_precachetextures.value >= 2)
+			precache = true;
+	}
+
+	if (precache)
+		GL_UploadTexture(glt);
+
+	return (rtexture_t *)glt;
+}
+
+// only used for lightmaps
+int R_GetTextureSlots(int count)
+{
+	int i;
+	i = gl_texture_number;
+	gl_texture_number += count;
+	return i;
 }

@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define MSG_ReadVector(v) {(v)[0] = MSG_ReadCoord();(v)[1] = MSG_ReadCoord();(v)[2] = MSG_ReadCoord();}
-
 cvar_t r_glowinglightning = {"r_glowinglightning", "1", true};
 
 int			num_temp_entities;
@@ -242,11 +240,11 @@ void CL_ParseTEnt (void)
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
 		count = MSG_ReadByte (); // amount of particles
-		R_BloodPuff(pos);
+		R_BloodPuff(pos, dir, count);
 		break;
 	case TE_BLOOD2:	// blood puff
 		MSG_ReadVector(pos);
-		R_BloodPuff(pos);
+		R_BloodPuff(pos, vec3_origin, 10);
 		break;
 	case TE_SPARK:	// spark shower
 		MSG_ReadVector(pos);
@@ -398,6 +396,36 @@ void CL_ParseTEnt (void)
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
+	case TE_SMALLFLASH:
+		MSG_ReadVector(pos);
+		FindNonSolidLocation(pos);
+		dl = CL_AllocDlight (0);
+		VectorCopy (pos, dl->origin);
+		dl->radius = 200;
+		dl->die = cl.time + 0.2;
+		dl->decay = 1000;
+		dl->color[0] = dl->color[1] = dl->color[2] = 1;
+		break;
+
+	case TE_CUSTOMFLASH:
+		MSG_ReadVector(pos);
+		FindNonSolidLocation(pos);
+		dl = CL_AllocDlight (0);
+		VectorCopy (pos, dl->origin);
+		dl->radius = MSG_ReadByte() * 8;
+		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
+		dl->die = cl.time + velspeed;
+		dl->decay = dl->radius / velspeed;
+		dl->color[0] = MSG_ReadByte() * (1.0 / 255.0);dl->color[1] = MSG_ReadByte() * (1.0 / 255.0);dl->color[2] = MSG_ReadByte() * (1.0 / 255.0);
+		break;
+
+	case TE_FLAMEJET:
+		MSG_ReadVector(pos);
+		MSG_ReadVector(dir);
+		count = MSG_ReadByte();
+		R_Flames(pos, dir, count);
+		break;
+
 	case TE_LIGHTNING1:				// lightning bolts
 		CL_ParseBeam (Mod_ForName("progs/bolt.mdl", true));
 		break;
@@ -467,15 +495,13 @@ entity_t *CL_NewTempEntity (void)
 {
 	entity_t	*ent;
 
-	if (cl_numvisedicts == MAX_VISEDICTS)
+	if (cl_numvisedicts >= MAX_VISEDICTS)
 		return NULL;
-	if (num_temp_entities == MAX_TEMP_ENTITIES)
+	if (num_temp_entities >= MAX_TEMP_ENTITIES)
 		return NULL;
-	ent = &cl_temp_entities[num_temp_entities];
+	ent = &cl_temp_entities[num_temp_entities++];
 	memset (ent, 0, sizeof(*ent));
-	num_temp_entities++;
-	cl_visedicts[cl_numvisedicts] = ent;
-	cl_numvisedicts++;
+	cl_visedicts[cl_numvisedicts++] = ent;
 
 	ent->colormap = -1; // no special coloring
 	ent->scale = 1;
@@ -559,7 +585,7 @@ void CL_UpdateTEnts (void)
 				VectorCopy (ent->origin,  dl->origin);
 				dl->radius = 100 + (rand()&31);
 				dl->die = cl.time + 0.001;
-				dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 1;
+				dl->color[0] = dl->color[1] = dl->color[2] = r_glowinglightning.value * 0.25f;
 			}
 
 			VectorMA(org, 30, dist, org);

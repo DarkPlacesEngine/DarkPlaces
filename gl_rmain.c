@@ -73,7 +73,6 @@ cvar_t	r_speeds = {"r_speeds","0"};
 cvar_t	r_speeds2 = {"r_speeds2","0"};
 cvar_t	r_fullbright = {"r_fullbright","0"};
 //cvar_t	r_lightmap = {"r_lightmap","0"};
-cvar_t	r_shadows = {"r_shadows","0"};
 cvar_t	r_wateralpha = {"r_wateralpha","1"};
 cvar_t	r_dynamic = {"r_dynamic","1"};
 cvar_t	r_novis = {"r_novis","0"};
@@ -225,7 +224,6 @@ void GL_Main_Init()
 	FOG_registercvars();
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
-	Cvar_RegisterVariable (&r_shadows);
 	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_speeds2);
 	Cvar_RegisterVariable (&contrast);
@@ -257,6 +255,7 @@ extern void R_Crosshairs_Init();
 extern void R_Light_Init();
 extern void R_Particles_Init();
 extern void R_Explosion_Init();
+extern void CL_Effects_Init();
 
 void Render_Init()
 {
@@ -272,6 +271,7 @@ void Render_Init()
 	R_Light_Init();
 	R_Particles_Init();
 	R_Explosion_Init();
+	CL_Effects_Init();
 	R_StartModules();
 }
 
@@ -280,7 +280,7 @@ void Render_Init()
 GL_Init
 ===============
 */
-extern char *QSG_EXTENSIONS;
+extern char *ENGINE_EXTENSIONS;
 void GL_Init (void)
 {
 	gl_vendor = glGetString (GL_VENDOR);
@@ -296,10 +296,10 @@ void GL_Init (void)
 //	Con_Printf ("%s %s\n", gl_renderer, gl_version);
 
 	VID_CheckMultitexture();
-	VID_CheckVertexArrays();
+	VID_CheckCVA();
 
 	// LordHavoc: report supported extensions
-	Con_Printf ("\nQSG extensions: %s\n", QSG_EXTENSIONS);
+	Con_Printf ("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
 
 	glCullFace(GL_FRONT);
 	glEnable(GL_TEXTURE_2D);
@@ -325,13 +325,6 @@ void R_RotateForEntity (entity_t *e)
 }
 */
 
-// LordHavoc: if not for the fact BRIGHTFIELD particles require this, it would be removed...
-#define NUMVERTEXNORMALS	162
-
-float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
-#include "anorms.h"
-};
-
 // LordHavoc: shading stuff
 vec3_t	shadevector;
 vec3_t	shadecolor;
@@ -341,7 +334,49 @@ float	modelalpha;
 //==================================================================================
 
 void R_DrawBrushModel (entity_t *e);
-void R_DrawSpriteModel (entity_t *e);
+void R_DrawSpriteModel (entity_t *e, frameblend_t *blend);
+
+void R_LerpUpdate(entity_t *ent)
+{
+	int frame;
+	frame = ent->frame;
+	if (ent->model && ent->frame >= ent->model->numframes)
+	{
+		Con_Printf("R_LerpUpdate: no such frame%6i in \"%s\"\n", ent->frame, ent->model->name);
+		frame = 0;
+	}
+
+	if (ent->lerp_model != ent->model)
+	{
+		// reset all interpolation information
+		ent->lerp_model = ent->model;
+		ent->frame1 = ent->frame2 = frame;
+		ent->frame1start = ent->frame2start = cl.time;
+		ent->framelerp = 1;
+		ent->lerp_starttime = 0;
+	}
+	else if (ent->frame2 != frame)
+	{
+		// transition to new frame
+		ent->frame1 = ent->frame2;
+		ent->frame1start = ent->frame2start;
+		ent->frame2 = frame;
+		ent->frame2start = cl.time;
+		ent->framelerp = 0;
+		ent->lerp_starttime = cl.time;
+	}
+	else
+	{
+		// lerp_starttime < 0 is used to prevent changing of framelerp
+		if (ent->lerp_starttime >= 0)
+		{
+			// update transition
+			ent->framelerp = (cl.time - ent->lerp_starttime) * 10;
+			ent->framelerp = bound(0, ent->framelerp, 1);
+		}
+	}
+}
+
 
 /*
 =============
@@ -370,6 +405,7 @@ void R_DrawEntitiesOnList1 (void)
 void R_DrawEntitiesOnList2 (void)
 {
 	int		i;
+	frameblend_t blend[4];
 
 	if (!r_drawentities.value)
 		return;
@@ -382,11 +418,18 @@ void R_DrawEntitiesOnList2 (void)
 		switch (currententity->model->type)
 		{
 		case mod_alias:
-			R_DrawAliasModel (currententity, true, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->angles, currententity->effects, currententity->model->flags, currententity->colormap);
+			if (!strcmp(currententity->model->name, "progs/flame2.mdl"))
+				blend[0].frame = 0;
+
+			R_LerpUpdate(currententity);
+			R_LerpAnimation(currententity->model, currententity->frame1, currententity->frame2, currententity->frame1start, currententity->frame2start, currententity->framelerp, blend);
+			R_DrawAliasModel (currententity, true, modelalpha, currententity->model, blend, currententity->skinnum, currententity->origin, currententity->angles, currententity->scale, currententity->effects, currententity->model->flags, currententity->colormap);
 			break;
 
 		case mod_sprite:
-			R_DrawSpriteModel (currententity);
+			R_LerpUpdate(currententity);
+			R_LerpAnimation(currententity->model, currententity->frame1, currententity->frame2, currententity->frame1start, currententity->frame2start, currententity->framelerp, blend);
+			R_DrawSpriteModel (currententity, blend);
 			break;
 
 		default:
@@ -402,6 +445,8 @@ R_DrawViewModel
 */
 void R_DrawViewModel (void)
 {
+	frameblend_t blend[4];
+
 	if (!r_drawviewmodel.value || chase_active.value || envmap || !r_drawentities.value || cl.items & IT_INVISIBILITY || cl.stats[STAT_HEALTH] <= 0 || !cl.viewent.model)
 		return;
 
@@ -411,9 +456,12 @@ void R_DrawViewModel (void)
 	currententity->scale = 1;
 	VectorCopy(cl_entities[cl.viewentity].colormod, currententity->colormod);
 
+	R_LerpUpdate(currententity);
+	R_LerpAnimation(currententity->model, currententity->frame1, currententity->frame2, currententity->frame1start, currententity->frame2start, currententity->framelerp, blend);
+
 	// hack the depth range to prevent view model from poking into walls
 	glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-	R_DrawAliasModel (currententity, false, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->angles, currententity->effects, currententity->model->flags, currententity->colormap);
+	R_DrawAliasModel (currententity, false, modelalpha, currententity->model, blend, currententity->skinnum, currententity->origin, currententity->angles, currententity->scale, currententity->effects, currententity->model->flags, currententity->colormap);
 	glDepthRange (gldepthmin, gldepthmax);
 }
 
@@ -746,9 +794,6 @@ void R_RenderView (void)
 	else
 		starttime = currtime = 0;
 	R_Clear();
-	skypolyclear();
-	wallpolyclear();
-	transpolyclear();
 	skyisvisible = false;
 	TIMEREPORT(time_clear)
 
@@ -757,6 +802,11 @@ void R_RenderView (void)
 	R_SetupFrame ();
 	R_SetFrustum ();
 	R_SetupGL ();
+
+	skypolyclear();
+	wallpolyclear();
+	transpolyclear();
+
 	TIMEREPORT(time_setup)
 
 	R_MarkLeaves ();	// done here so we know if we're in water
@@ -777,8 +827,8 @@ void R_RenderView (void)
 	wallpolyrender();
 	TIMEREPORT(time_wall)
 
-//	if (!intimerefresh)
-//		S_ExtraUpdate ();	// don't let sound get messed up if going slow
+	if (!intimerefresh && !r_speeds2.value)
+		S_ExtraUpdate ();	// don't let sound get messed up if going slow
 
 	R_DrawEntitiesOnList2 (); // other models
 //	R_RenderDlights ();
