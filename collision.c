@@ -415,8 +415,8 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 		rhc.hull = HullForBBoxEntity (corigin, cmins, cmaxs, mins, maxs, offset);
 
 		// trace a line through the generated clipping hull
-		VectorCopy(start, rhc.start);
-		VectorCopy(end, rhc.end);
+		VectorSubtract(start, offset, rhc.start);
+		VectorSubtract(end, offset, rhc.end);
 		VectorCopy(rhc.end, rhc.trace->endpos);
 		VectorSubtract(rhc.end, rhc.start, rhc.dist);
 		if (DotProduct(rhc.dist, rhc.dist) > 0.00001)
