@@ -702,6 +702,7 @@ void S_UpdateAmbientSounds (void)
 		if (ambient_sfx[ambient_channel] && ambient_sfx[ambient_channel]->silentlymissing)
 			continue;
 		chan = &channels[ambient_channel];
+		chan->forceloop = true;
 		chan->sfx = ambient_sfx[ambient_channel];
 
 		vol = ambient_level.value * l->ambient_sound_level[ambient_channel];
