@@ -1489,7 +1489,7 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	for (i = 0;i < model->nummodelsurfaces;i++)
 	{
-		surf = model->modelsortedsurfaces[i];
+		surf = model->surfaces + i + model->firstmodelsurface;
 		if (surf->visframe == r_framecount)
 		{
 			// mark any backface surfaces as not visible

@@ -1381,33 +1381,6 @@ static void Mod_LoadFaces (lump_t *l)
 	}
 }
 
-static model_t *sortmodel;
-
-static int Mod_SurfaceQSortCompare(const void *voida, const void *voidb)
-{
-	const msurface_t *a, *b;
-	a = *((const msurface_t **)voida);
-	b = *((const msurface_t **)voidb);
-	if (a->shader != b->shader)
-		return (qbyte *) a->shader - (qbyte *) b->shader;
-	if (a->texinfo->texture != b->texinfo->texture);
-		return a->texinfo->texture - b->texinfo->texture;
-	return 0;
-}
-
-static void Mod_BrushSortedSurfaces(model_t *model, mempool_t *pool)
-{
-	int surfnum;
-	sortmodel = model;
-	sortmodel->modelsortedsurfaces = Mem_Alloc(pool, sortmodel->nummodelsurfaces * sizeof(msurface_t *));
-	for (surfnum = 0;surfnum < sortmodel->nummodelsurfaces;surfnum++)
-		sortmodel->modelsortedsurfaces[surfnum] = &sortmodel->surfaces[surfnum + sortmodel->firstmodelsurface];
-
-	if (r_sortsurfaces.integer)
-		qsort(sortmodel->modelsortedsurfaces, sortmodel->nummodelsurfaces, sizeof(msurface_t *), Mod_SurfaceQSortCompare);
-}
-
-
 /*
 =================
 Mod_SetParent
@@ -2535,8 +2508,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 		mod->Draw = R_DrawBrushModelNormal;
 		mod->DrawShadow = NULL;
-
-		Mod_BrushSortedSurfaces(mod, mainmempool);
 
 		// LordHavoc: only register submodels if it is the world
 		// (prevents bsp models from replacing world submodels)
