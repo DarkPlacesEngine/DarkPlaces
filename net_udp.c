@@ -47,7 +47,7 @@ static int net_controlsocket;
 static int net_broadcastsocket = 0;
 static struct qsockaddr broadcastaddr;
 
-static union {int i;unsigned char d[4];} myAddr;
+static union {unsigned int i;unsigned char d[4];} myAddr;
 
 //=============================================================================
 

@@ -471,7 +471,7 @@ static void HandleEvents(void)
 			break;
 		case ClientMessage:
 			// window manager messages
-			if ((event.xclient.format == 32) && (event.xclient.data.l[0] == wm_delete_window_atom))
+			if ((event.xclient.format == 32) && ((unsigned int)event.xclient.data.l[0] == wm_delete_window_atom))
 				Sys_Quit();
 			break;
 		case MapNotify:

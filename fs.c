@@ -383,7 +383,7 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, FILE *packhandle, pk3_end
 		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
 	buffer = Mem_Alloc (tempmempool, maxsize);
 	fseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (fread (buffer, 1, maxsize, packhandle) != maxsize)
+	if (fread (buffer, 1, maxsize, packhandle) != (unsigned long) maxsize)
 	{
 		Mem_Free (buffer);
 		return false;
@@ -475,7 +475,7 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		if ((ptr[8] & 0x29) == 0 && (ptr[38] & 0x18) == 0)
 		{
 			// Still enough bytes for the name?
-			if (remaining < namesize || namesize >= sizeof (*pack->files))
+			if ((size_t) remaining < namesize || namesize >= sizeof (*pack->files))
 			{
 				Mem_Free (central_dir);
 				return -1;
@@ -538,8 +538,9 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	if (eocd.disknum != 0 || eocd.cdir_disknum != 0)
 		Sys_Error ("%s is a multi-volume ZIP archive", packfile);
 
-	if (eocd.nbentries > MAX_FILES_IN_PACK)
-		Sys_Error ("%s contains too many files (%hu)", packfile, eocd.nbentries);
+	// LordHavoc: was always false because nbentries is an unsigned short and MAX_FILES_IN_PACK is 65536
+	//if (eocd.nbentries > (unsigned int) MAX_FILES_IN_PACK)
+	//	Sys_Error ("%s contains too many files (%hu)", packfile, eocd.nbentries);
 
 	// Create a package structure in memory
 	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
@@ -1369,7 +1370,7 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		}
 
 		// If we need to go back in the file
-		if (offset <= crt_offset)
+		if (offset <= (long) crt_offset)
 		{
 			// If we still have the data we need in the output buffer
 			if (crt_offset - offset <= ztk->out_ind)
@@ -1395,7 +1396,7 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		}
 
 		// Skip all data until we reach the requested offset
-		while (crt_offset < offset)
+		while ((long) crt_offset < offset)
 		{
 			size_t diff = offset - crt_offset;
 			size_t count, len;
@@ -1428,7 +1429,7 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		default:
 			return -1;
 	}
-	if (offset < 0 || offset > file->length)
+	if (offset < 0 || offset > (long) file->length)
 		return -1;
 
 	if (fseek (file->stream, file->offset + offset, SEEK_SET) == -1)
@@ -1477,7 +1478,7 @@ char* FS_Gets (qfile_t* file, char* buffer, int buffersize)
 	if (! (file->flags & FS_FLAG_PACKED))
 		return fgets (buffer, buffersize, file->stream);
 
-	for (ind = 0; ind < buffersize - 1; ind++)
+	for (ind = 0; ind < (size_t) buffersize - 1; ind++)
 	{
 		int c = FS_Getc (file);
 		switch (c)

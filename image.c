@@ -482,7 +482,7 @@ qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
 	qbyte *image_rgba;
 	const q2wal_t *inwal = (const void *)f;
 
-	if (fs_filesize < sizeof(q2wal_t))
+	if (fs_filesize < (int) sizeof(q2wal_t))
 	{
 		Con_Printf("LoadWAL: invalid WAL file\n");
 		return NULL;
@@ -498,7 +498,7 @@ qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
 	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
 		return NULL;
 
-	if (fs_filesize < sizeof(q2wal_t) + LittleLong(inwal->offsets[0]) + image_width * image_height)
+	if ((int) fs_filesize < (int) sizeof(q2wal_t) + (int) LittleLong(inwal->offsets[0]) + image_width * image_height)
 	{
 		Con_Printf("LoadWAL: invalid WAL file\n");
 		return NULL;
