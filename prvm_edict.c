@@ -1480,7 +1480,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	
 	prog->self = PRVM_ED_FindGlobal("self");
 
-	if( PRVM_ED_FindGlobal("time") && PRVM_ED_FindGlobal("time")->type == ev_float )
+	if( PRVM_ED_FindGlobal("time") && PRVM_ED_FindGlobal("time")->type & ev_float )
 		prog->time = &PRVM_G_FLOAT(PRVM_ED_FindGlobal("time")->ofs);
 
 	if(PRVM_ED_FindField ("chain"))
