@@ -36,6 +36,8 @@
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
+0 darkplaces: hitting capslock and tab at the same time segfaults
+0 darkplaces: add more joystick buttons, 3 isn't enough (Static_Fiend)
 0 darkplaces: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
 0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
@@ -300,7 +302,7 @@
 2 dpmod: write a readme for the menu progs code to get people started with it, and know what is and is not possible, what builtins do, etc (Urre)
 2 dpzoo: swinging doors
 2 hmap2: add "_minlight" "red green blue" and "_ambientlight" "red green blue" fields to worldspawn parsing (Harb)
-2 hmap2: add hlwad support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd)
+2 hmap2: add hlwad support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd, FrikaC)
 2 hmap2: make water have lightmaps (unless -nowaterlightmaps is specified)
 2 hmap2: tweak the light point generation a bit more to try to solve the 'corner light' glitch (Urre)
 3 LordHavoc: read up on dynamic visibility
