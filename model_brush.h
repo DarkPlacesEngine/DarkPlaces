@@ -71,6 +71,7 @@ mplane_t;
 #define SURF_SHADOWCAST 0x1000 // this polygon can cast stencil shadows
 #define SURF_SHADOWLIGHT 0x2000 // this polygon can be lit by stencil shadowing
 #define SURF_WATERALPHA 0x4000 // this polygon's alpha is modulated by r_wateralpha
+#define SURF_SOLIDCLIP 0x8000 // this polygon blocks movement
 
 #define SURFRENDER_OPAQUE 0
 #define SURFRENDER_ALPHA 1
@@ -212,6 +213,9 @@ typedef struct msurface_s
 	int dlightbits[8];
 	// avoid redundent addition of dlights
 	int lightframe;
+
+	// avoid multiple collision traces with a surface polygon
+	int colframe;
 
 	// these are just 3D points defining the outline of the polygon,
 	// no texcoord info (that can be generated from these)

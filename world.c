@@ -30,10 +30,12 @@ line of sight checks trace->crosscontent, but bullets don't
 */
 
 cvar_t sv_useareanodes = {CVAR_NOTIFY, "sv_useareanodes", "1"};
+cvar_t sv_polygoncollisions = {CVAR_NOTIFY, "sv_polygoncollisions", "0"};
 
 void SV_World_Init(void)
 {
 	Cvar_RegisterVariable(&sv_useareanodes);
+	Cvar_RegisterVariable(&sv_polygoncollisions);
 	Collision_Init ();
 }
 
@@ -121,8 +123,8 @@ typedef struct areanode_s
 	link_t	solid_edicts;
 } areanode_t;
 
-#define	AREA_DEPTH	4
-#define	AREA_NODES	32
+#define	AREA_DEPTH	10
+#define	AREA_NODES	(1 << (AREA_DEPTH + 1))
 
 static	areanode_t	sv_areanodes[AREA_NODES];
 static	int			sv_numareanodes;
@@ -444,7 +446,10 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 	}
 
-	Collision_ClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
+	if (sv_polygoncollisions.integer && (mins[0] != maxs[0] || mins[1] != maxs[1] || mins[2] != maxs[2]))
+		Collision_PolygonClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
+	else
+		Collision_ClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
 
 	return trace;
 }
