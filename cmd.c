@@ -158,8 +158,6 @@ void Cbuf_Execute (void)
 		text = (char *)cmd_text.data;
 
 		quotes = 0;
-		while (*text && *text <= ' ')
-			text++;
 		for (i=0 ; i< cmd_text.cursize ; i++)
 		{
 			if (text[i] == '"')
@@ -183,7 +181,7 @@ void Cbuf_Execute (void)
 		{
 			i++;
 			cmd_text.cursize -= i;
-			memcpy (text, text+i, cmd_text.cursize);
+			memcpy (cmd_text.data, text+i, cmd_text.cursize);
 		}
 
 // execute the command line
