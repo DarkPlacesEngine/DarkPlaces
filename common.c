@@ -884,6 +884,55 @@ int COM_StringBeginsWith(const char *s, const char *match)
 	return true;
 }
 
+int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize)
+{
+	int argc;
+	char *tokenbufend;
+	const char *l;
+	argc = 0;
+	tokenbufend = tokenbuf + tokenbufsize;
+	l = *text;
+	while (*l && *l != '\n')
+	{
+		if (*l > ' ')
+		{
+			if (argc >= maxargc)
+				return -1;
+			argv[argc++] = tokenbuf;
+			if (*l == '"')
+			{
+				l++;
+				while (*l && *l != '"')
+				{
+					if (tokenbuf >= tokenbufend)
+						return -1;
+					*tokenbuf++ = *l++;
+				}
+				if (*l == '"')
+					l++;
+			}
+			else
+			{
+				while (*l > ' ')
+				{
+					if (tokenbuf >= tokenbufend)
+						return -1;
+					*tokenbuf++ = *l++;
+				}
+			}
+			if (tokenbuf >= tokenbufend)
+				return -1;
+			*tokenbuf++ = 0;
+		}
+		else
+			l++;
+	}
+	if (*l == '\n')
+		l++;
+	*text = l;
+	return argc;
+}
+
 // written by Elric, thanks Elric!
 char *SearchInfostring(const char *infostring, const char *key)
 {
