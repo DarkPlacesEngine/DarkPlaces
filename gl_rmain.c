@@ -663,6 +663,8 @@ void R_RenderScene(void)
 
 	r_framecount++;
 
+	R_MeshQueue_BeginScene();
+
 	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
 
 	R_SetFrustum();
@@ -685,8 +687,6 @@ void R_RenderScene(void)
 
 	R_MarkEntities();
 	R_TimeReport("markentity");
-
-	R_MeshQueue_BeginScene();
 
 	R_Shadow_UpdateWorldLightSelection();
 
