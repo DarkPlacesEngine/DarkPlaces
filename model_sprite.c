@@ -175,37 +175,40 @@ void Mod_Sprite_SharedSetup(long datapointer, int version, int *palette)
 			if (modelradius < x + y)
 				modelradius = x + y;
 
-			if (groupframes > 1)
-				sprintf (name, "%s_%i_%i", tempname, i, j);
-			else
-				sprintf (name, "%s_%i", tempname, i);
-			loadmodel->sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, r_mipsprites.integer, true);
-			loadmodel->sprdata_frames[realframes].fogtexture = image_masktex;
-
-			if (!loadmodel->sprdata_frames[realframes].texture)
+			if (width > 0 && height > 0)
 			{
-				pixbuf = Mem_Alloc(tempmempool, width*height*4);
-				if (version == SPRITE32_VERSION)
-					memcpy(pixbuf, (qbyte *)datapointer, width*height*4);
-				else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-					Image_Copy8bitRGBA((qbyte *)datapointer, pixbuf, width*height, palette);
-
-				loadmodel->sprdata_frames[realframes].texture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
-
-				// make fog version (just alpha)
-				for (k = 0;k < width*height;k++)
-				{
-					pixbuf[k*4+0] = 255;
-					pixbuf[k*4+1] = 255;
-					pixbuf[k*4+2] = 255;
-				}
 				if (groupframes > 1)
-					sprintf (name, "%s_%i_%ifog", tempname, i, j);
+					sprintf (name, "%s_%i_%i", tempname, i, j);
 				else
-					sprintf (name, "%s_%ifog", tempname, i);
-				loadmodel->sprdata_frames[realframes].fogtexture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
+					sprintf (name, "%s_%i", tempname, i);
+				loadmodel->sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, r_mipsprites.integer, true);
+				loadmodel->sprdata_frames[realframes].fogtexture = image_masktex;
 
-				Mem_Free(pixbuf);
+				if (!loadmodel->sprdata_frames[realframes].texture)
+				{
+					pixbuf = Mem_Alloc(tempmempool, width*height*4);
+					if (version == SPRITE32_VERSION)
+						memcpy(pixbuf, (qbyte *)datapointer, width*height*4);
+					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
+						Image_Copy8bitRGBA((qbyte *)datapointer, pixbuf, width*height, palette);
+
+					loadmodel->sprdata_frames[realframes].texture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
+
+					// make fog version (just alpha)
+					for (k = 0;k < width*height;k++)
+					{
+						pixbuf[k*4+0] = 255;
+						pixbuf[k*4+1] = 255;
+						pixbuf[k*4+2] = 255;
+					}
+					if (groupframes > 1)
+						sprintf (name, "%s_%i_%ifog", tempname, i, j);
+					else
+						sprintf (name, "%s_%ifog", tempname, i);
+					loadmodel->sprdata_frames[realframes].fogtexture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
+
+					Mem_Free(pixbuf);
+				}
 			}
 
 			if (version == SPRITE32_VERSION)
