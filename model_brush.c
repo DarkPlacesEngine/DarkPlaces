@@ -2860,11 +2860,11 @@ void Mod_Q1BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins,
 }
 */
 
-extern void R_Model_Brush_DrawSky(entity_render_t *ent);
-extern void R_Model_Brush_Draw(entity_render_t *ent);
-extern void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
-extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
-extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist);
+extern void R_Q1BSP_DrawSky(entity_render_t *ent);
+extern void R_Q1BSP_Draw(entity_render_t *ent);
+extern void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+extern void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
+extern void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 {
 	int i, j, k;
@@ -3017,10 +3017,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
-		mod->Draw = R_Model_Brush_Draw;
-		mod->GetLightInfo = R_Model_Brush_GetLightInfo;
-		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
-		mod->DrawLight = R_Model_Brush_DrawLight;
+		mod->Draw = R_Q1BSP_Draw;
+		mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+		mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+		mod->DrawLight = R_Q1BSP_DrawLight;
 		if (i != 0)
 		{
 			mod->brush.GetPVS = NULL;
@@ -3045,7 +3045,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surf->texinfo->texture->flags & SURF_DRAWSKY)
-					mod->DrawSky = R_Model_Brush_DrawSky;
+					mod->DrawSky = R_Q1BSP_DrawSky;
 				// LordHavoc: submodels always clip, even if water
 				if (mod->brush.numsubmodels - 1)
 					surf->flags |= SURF_SOLIDCLIP;

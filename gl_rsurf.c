@@ -1743,7 +1743,7 @@ void R_WorldVisibility(entity_render_t *ent)
 		R_DrawPortals(ent);
 }
 
-void R_Model_Brush_DrawSky(entity_render_t *ent)
+void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
@@ -1753,7 +1753,7 @@ void R_Model_Brush_DrawSky(entity_render_t *ent)
 	R_DrawSurfaces(ent, SURF_DRAWSKY);
 }
 
-void R_Model_Brush_Draw(entity_render_t *ent)
+void R_Q1BSP_Draw(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
@@ -1766,7 +1766,7 @@ void R_Model_Brush_Draw(entity_render_t *ent)
 	R_DrawSurfaces(ent, SURF_DRAWTURB | SURF_LIGHTMAP);
 }
 
-void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
+void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
@@ -1852,7 +1852,7 @@ void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin
 	*outnumsurfacespointer = outnumsurfaces;
 }
 
-void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
@@ -1886,7 +1886,7 @@ void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	}
 }
 
-void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs, modelorg;
