@@ -502,6 +502,52 @@ void CL_ValidateState(entity_state_t *s)
 	}
 }
 
+void CL_MoveLerpEntityStates(entity_t *ent)
+{
+	float odelta[3], adelta[3];
+	VectorSubtract(ent->state_current.origin, ent->persistent.neworigin, odelta);
+	VectorSubtract(ent->state_current.angles, ent->persistent.newangles, adelta);
+	if (!ent->state_previous.active || cls.timedemo || DotProduct(odelta, odelta) > 1000*1000 || cl_nolerp.integer)
+	{
+		// we definitely shouldn't lerp
+		ent->persistent.lerpdeltatime = 0;
+		ent->persistent.lerpstarttime = cl.mtime[1];
+		VectorCopy(ent->state_current.origin, ent->persistent.oldorigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.oldangles);
+		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
+	}
+	else// if (ent->state_current.flags & RENDER_STEP)
+	{
+		// monster interpolation
+		if (DotProduct(odelta, odelta) + DotProduct(adelta, adelta) > 0.01)
+		{
+			ent->persistent.lerpdeltatime = cl.time - ent->persistent.lerpstarttime;
+			ent->persistent.lerpstarttime = cl.mtime[1];
+			VectorCopy(ent->persistent.neworigin, ent->persistent.oldorigin);
+			VectorCopy(ent->persistent.newangles, ent->persistent.oldangles);
+			VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
+			VectorCopy(ent->state_current.angles, ent->persistent.newangles);
+		}
+	}
+	/*
+	else
+	{
+		// not a monster
+		ent->persistent.lerpstarttime = cl.mtime[1];
+		// no lerp if it's singleplayer
+		//if (sv.active && svs.maxclients == 1 && !ent->state_current.flags & RENDER_STEP)
+		//	ent->persistent.lerpdeltatime = 0;
+		//else
+			ent->persistent.lerpdeltatime = cl.mtime[0] - cl.mtime[1];
+		VectorCopy(ent->persistent.neworigin, ent->persistent.oldorigin);
+		VectorCopy(ent->persistent.newangles, ent->persistent.oldangles);
+		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
+	}
+	*/
+}
+
 /*
 ==================
 CL_ParseUpdate
@@ -606,28 +652,11 @@ void CL_ParseUpdate (int bits)
 	if (new.active)
 		CL_ValidateState(&new);
 
-	if (new.flags & RENDER_STEP) // FIXME: rename this flag?
-	{
-		// make time identical for memcmp
-		new.time = ent->state_current.time;
-		if (memcmp(&new, &ent->state_current, sizeof(entity_state_t)))
-		{
-			// set it back to what it should be
-			new.time = cl.mtime[0] + 0.1;
-			// state has changed
-			ent->state_previous = ent->state_current;
-			ent->state_current = new;
-			// assume 10fps animation
-			//ent->state_previous.time = cl.mtime[0] - 0.1;
-		}
-	}
-	else
-	{
-		ent->state_previous = ent->state_current;
-		ent->state_current = new;
-	}
+	ent->state_previous = ent->state_current;
+	ent->state_current = new;
 	if (ent->state_current.active)
 	{
+		CL_MoveLerpEntityStates(ent);
 		cl_entities_active[ent->state_current.number] = true;
 		// mark as visible (no kill this frame)
 		entlife[ent->state_current.number] = 2;
@@ -647,7 +676,7 @@ void CL_ReadEntityFrame(void)
 		ent = &cl_entities[entityframe.entitydata[i].number];
 		ent->state_previous = ent->state_current;
 		ent->state_current = entityframe.entitydata[i];
-		ent->state_current.time = cl.mtime[0];
+		CL_MoveLerpEntityStates(ent);
 		// the entity lives again...
 		entlife[ent->state_current.number] = 2;
 		cl_entities_active[ent->state_current.number] = true;

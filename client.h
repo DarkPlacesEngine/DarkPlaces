@@ -153,6 +153,18 @@ typedef struct entity_persistent_s
 	// muzzleflash fading
 	float muzzleflash;
 
+	// interpolated movement
+
+	// start time of move
+	float lerpstarttime;
+	// time difference from start to end of move
+	float lerpdeltatime;
+	// the move itself, start and end
+	float oldorigin[3];
+	float oldangles[3];
+	float neworigin[3];
+	float newangles[3];
+
 	// interpolated animation
 
 	// lerp resets when model changes
