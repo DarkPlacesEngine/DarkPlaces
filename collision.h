@@ -2,8 +2,6 @@
 #ifndef COLLISION_H
 #define COLLISION_H
 
-#include "winding.h"
-
 typedef struct plane_s
 {
 	vec3_t	normal;
