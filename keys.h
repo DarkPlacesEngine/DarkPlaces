@@ -151,7 +151,7 @@ extern keydest_t key_dest;
 
 void Key_Event (int key, qboolean down);
 void Key_Init (void);
-void Key_WriteBindings (QFile *f);
+void Key_WriteBindings (qfile_t *f);
 void Key_SetBinding (int keynum, char *binding);
 void Key_ClearStates (void);
 

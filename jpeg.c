@@ -359,7 +359,7 @@ static void JPEG_MemSrc (j_decompress_ptr cinfo, qbyte *buffer)
 	cinfo->src = (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
 
 	cinfo->src->next_input_byte = buffer;
-	cinfo->src->bytes_in_buffer = com_filesize;
+	cinfo->src->bytes_in_buffer = fs_filesize;
 
 	cinfo->src->init_source = JPEG_Noop;
 	cinfo->src->fill_input_buffer = JPEG_FillInputBuffer;

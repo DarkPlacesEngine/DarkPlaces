@@ -473,7 +473,7 @@ void CL_ReadPointFile_f (void)
 		fclose(f);
 	}
 #else
-	pointfile = COM_LoadFile(va("maps/%s.pts", cl.worldmodel->name), true);
+	pointfile = FS_LoadFile(va("maps/%s.pts", cl.worldmodel->name), true);
 #endif
 	if (!pointfile)
 	{

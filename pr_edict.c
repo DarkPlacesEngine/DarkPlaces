@@ -622,7 +622,7 @@ ED_Write
 For savegames
 =============
 */
-void ED_Write (QFile *f, edict_t *ed)
+void ED_Write (qfile_t *f, edict_t *ed)
 {
 	ddef_t	*d;
 	int		*v;
@@ -630,11 +630,11 @@ void ED_Write (QFile *f, edict_t *ed)
 	char	*name;
 	int		type;
 
-	Qprintf (f, "{\n");
+	FS_Printf (f, "{\n");
 
 	if (ed->free)
 	{
-		Qprintf (f, "}\n");
+		FS_Printf (f, "}\n");
 		return;
 	}
 
@@ -655,11 +655,11 @@ void ED_Write (QFile *f, edict_t *ed)
 		if (j == type_size[type])
 			continue;
 
-		Qprintf (f,"\"%s\" ",name);
-		Qprintf (f,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
+		FS_Printf (f,"\"%s\" ",name);
+		FS_Printf (f,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
 	}
 
-	Qprintf (f, "}\n");
+	FS_Printf (f, "}\n");
 }
 
 void ED_PrintNum (int ent)
@@ -753,14 +753,14 @@ FIXME: need to tag constants, doesn't really work
 ED_WriteGlobals
 =============
 */
-void ED_WriteGlobals (QFile *f)
+void ED_WriteGlobals (qfile_t *f)
 {
 	ddef_t		*def;
 	int			i;
 	char		*name;
 	int			type;
 
-	Qprintf (f,"{\n");
+	FS_Printf (f,"{\n");
 	for (i=0 ; i<progs->numglobaldefs ; i++)
 	{
 		def = &pr_globaldefs[i];
@@ -773,10 +773,10 @@ void ED_WriteGlobals (QFile *f)
 			continue;
 
 		name = PR_GetString(def->s_name);
-		Qprintf (f,"\"%s\" ", name);
-		Qprintf (f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));		
+		FS_Printf (f,"\"%s\" ", name);
+		FS_Printf (f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));		
 	}
-	Qprintf (f,"}\n");
+	FS_Printf (f,"}\n");
 }
 
 /*
@@ -1181,18 +1181,18 @@ void PR_LoadProgs (void)
 	Mem_EmptyPool(progs_mempool);
 	Mem_EmptyPool(edictstring_mempool);
 
-	temp = COM_LoadFile ("progs.dat", false);
+	temp = FS_LoadFile ("progs.dat", false);
 	if (!temp)
 		Host_Error ("PR_LoadProgs: couldn't load progs.dat");
 
-	progs = (dprograms_t *)Mem_Alloc(progs_mempool, com_filesize);
+	progs = (dprograms_t *)Mem_Alloc(progs_mempool, fs_filesize);
 
-	memcpy(progs, temp, com_filesize);
+	memcpy(progs, temp, fs_filesize);
 	Mem_Free(temp);
 
-	Con_DPrintf ("Programs occupy %iK.\n", com_filesize/1024);
+	Con_DPrintf ("Programs occupy %iK.\n", fs_filesize/1024);
 
-	pr_crc = CRC_Block((qbyte *)progs, com_filesize);
+	pr_crc = CRC_Block((qbyte *)progs, fs_filesize);
 
 // byte swap the header
 	for (i = 0;i < (int) sizeof(*progs) / 4;i++)

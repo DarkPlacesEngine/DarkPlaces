@@ -93,7 +93,7 @@ qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 	const qbyte *palette, *fin, *enddata;
 	int x, y, x2, dataByte;
 
-	if (loadsize < (int)sizeof(pcx) + 768)
+	if (fs_filesize < (int)sizeof(pcx) + 768)
 	{
 		Con_Printf ("Bad pcx file\n");
 		return NULL;
@@ -132,7 +132,7 @@ qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 	image_width = pcx.xmax+1;
 	image_height = pcx.ymax+1;
 
-	palette = f + loadsize - 768;
+	palette = f + fs_filesize - 768;
 
 	image_rgba = Mem_Alloc(tempmempool, image_width*image_height*4);
 	if (!image_rgba)
@@ -231,10 +231,10 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	TargaHeader targa_header;
 	unsigned char palette[256*4], *p;
 
-	if (loadsize < 19)
+	if (fs_filesize < 19)
 		return NULL;
 
-	enddata = f + loadsize;
+	enddata = f + fs_filesize;
 
 	targa_header.id_length = f[0];
 	targa_header.colormap_type = f[1];
@@ -441,7 +441,7 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight)
 	qbyte *image_rgba;
 	int width, height;
 
-	if (loadsize < 9)
+	if (fs_filesize < 9)
 	{
 		Con_Printf("LoadLMP: invalid LMP file\n");
 		return NULL;
@@ -458,7 +458,7 @@ qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight)
 	if ((matchwidth && width != matchwidth) || (matchheight && height != matchheight))
 		return NULL;
 
-	if (loadsize < 8 + width * height)
+	if (fs_filesize < 8 + width * height)
 	{
 		Con_Printf("LoadLMP: invalid LMP file\n");
 		return NULL;
@@ -487,7 +487,7 @@ qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight)
 	qbyte *image_8bit;
 	int width, height;
 
-	if (loadsize < 9)
+	if (fs_filesize < 9)
 	{
 		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
 		return NULL;
@@ -504,7 +504,7 @@ qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight)
 	if ((matchwidth && width != matchwidth) || (matchheight && height != matchheight))
 		return NULL;
 
-	if (loadsize < 8 + width * height)
+	if (fs_filesize < 8 + width * height)
 	{
 		Con_Printf("LoadLMPAs8Bit: invalid LMP file\n");
 		return NULL;
@@ -550,63 +550,63 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 		if (*c == '*')
 			*c = '#';
 	sprintf (name, "override/%s.tga", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "override/%s.jpg", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = JPEG_LoadImage (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "textures/%s.tga", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "textures/%s.jpg", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = JPEG_LoadImage (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "textures/%s.pcx", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadPCX (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "%s.tga", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "%s.jpg", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = JPEG_LoadImage (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "%s.pcx", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadPCX (f, matchwidth, matchheight);
 		goto loaded;
 	}
 	sprintf (name, "%s.lmp", basename);
-	f = COM_LoadFile(name, true);
+	f = FS_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadLMP (f, matchwidth, matchheight);
@@ -768,7 +768,7 @@ qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int heig
 		*out++ = in[1];
 		*out++ = in[0];
 	}
-	ret = COM_WriteFile (filename, buffer, width*height*3 + 18 );
+	ret = FS_WriteFile (filename, buffer, width*height*3 + 18 );
 
 	Mem_Free(buffer);
 	return ret;
@@ -803,7 +803,7 @@ void Image_WriteTGARGB (const char *filename, int width, int height, const qbyte
 			*out++ = in[0];
 		}
 	}
-	COM_WriteFile (filename, buffer, width*height*3 + 18 );
+	FS_WriteFile (filename, buffer, width*height*3 + 18 );
 
 	Mem_Free(buffer);
 }
@@ -838,7 +838,7 @@ void Image_WriteTGARGBA (const char *filename, int width, int height, const qbyt
 			*out++ = in[3];
 		}
 	}
-	COM_WriteFile (filename, buffer, width*height*4 + 18 );
+	FS_WriteFile (filename, buffer, width*height*4 + 18 );
 
 	Mem_Free(buffer);
 }

@@ -321,13 +321,13 @@ Writes key bindings and archived cvars to config.cfg
 */
 void Host_WriteConfiguration (void)
 {
-	QFile *f;
+	qfile_t *f;
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
 	if (host_initialized && cls.state != ca_dedicated)
 	{
-		f = Qopen (va("%s/config.cfg",com_gamedir), "w");
+		f = FS_Open ("config.cfg", "w", false);
 		if (!f)
 		{
 			Con_Printf ("Couldn't write config.cfg.\n");
@@ -337,7 +337,7 @@ void Host_WriteConfiguration (void)
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (f);
 
-		Qclose (f);
+		FS_Close (f);
 	}
 }
 
@@ -856,7 +856,6 @@ void Host_Frame (float time)
 //============================================================================
 
 void Render_Init(void);
-void QuakeIO_Init(void);
 
 /*
 ====================
@@ -880,7 +879,6 @@ void Host_Init (void)
 	Memory_Init_Commands();
 	R_Modules_Init();
 	Cbuf_Init ();
-	QuakeIO_Init ();
 	V_Init ();
 	COM_Init ();
 	Host_InitLocal ();

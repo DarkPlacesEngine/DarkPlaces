@@ -29,13 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #pragma warning(disable : 4018)		// LordHavoc: MSVC++ 4 x86, signed/unsigned mismatch
 #endif
 
-#ifdef _WIN32
-#include <windows.h>
-#define strcasecmp stricmp
-#define strncasecmp strnicmp
-#endif
-
-//#include <GL/gl.h>
 
 //====================================================
 

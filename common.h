@@ -21,10 +21,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef COMMON_H
 #define COMMON_H
 
-// LordHavoc: MSVC has a different name for snprintf
+// MSVC has a different name for several standard functions
 #ifdef WIN32
-#define snprintf _snprintf
+# define snprintf _snprintf
+# define vsnprintf _vsnprintf
+# define strcasecmp stricmp
+# define strncasecmp strnicmp
 #endif
+
 
 //============================================================================
 
@@ -125,17 +129,10 @@ extern int dpprotocol;
 
 //============================================================================
 
-int Q_strcasecmp (const char *s1, const char *s2);
-int Q_strncasecmp (const char *s1, const char *s2, int n);
-
-//============================================================================
-
 extern char com_token[1024];
-extern qboolean com_eof;
 
 int COM_ParseToken (const char **data);
 
-extern char com_basedir[MAX_OSPATH];
 extern int com_argc;
 extern const char **com_argv;
 
@@ -144,28 +141,11 @@ void COM_Init (void);
 void COM_InitArgv (void);
 void COM_InitGameType (void);
 
-void COM_StripExtension (const char *in, char *out);
-void COM_FileBase (const char *in, char *out);
-void COM_DefaultExtension (char *path, const char *extension);
-
 char	*va(const char *format, ...);
 // does a varargs printf into a temp buffer
 
 
 //============================================================================
-
-extern int com_filesize;
-
-extern	char	com_gamedir[MAX_OSPATH];
-
-qboolean COM_WriteFile (const char *filename, void *data, int len);
-int COM_FOpenFile (const char *filename, QFile **file, qboolean quiet, qboolean zip);
-
-// set by COM_LoadFile functions
-extern int loadsize;
-qbyte *COM_LoadFile (const char *path, qboolean quiet);
-
-int COM_FileExists(const char *filename);
 
 extern	struct cvar_s	registered;
 
@@ -178,6 +158,7 @@ extern	struct cvar_s	registered;
 
 extern int gamemode;
 extern char *gamename;
+extern char *gamedirname;
 extern char com_modname[MAX_OSPATH];
 
 // LordHavoc: useful...

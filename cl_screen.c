@@ -476,7 +476,7 @@ void CL_Screen_Init(void)
 
 	// HACK HACK HACK
 	// load the image data for the player image in the config menu
-	dat = (qpic_t *)COM_LoadFile ("gfx/menuplyr.lmp", false);
+	dat = (qpic_t *)FS_LoadFile ("gfx/menuplyr.lmp", false);
 	if (!dat)
 		Sys_Error("unable to load gfx/menuplyr.lmp");
 	SwapPic (dat);
@@ -821,9 +821,9 @@ void SCR_ScreenShot_f (void)
 	for (; i<=9999 ; i++)
 	{
 		sprintf (filename, "dp%04i.tga", i);
-		sprintf (checkname, "%s/%s", com_gamedir, filename);
-		if (Sys_FileTime(checkname) == -1)
-			break;	// file doesn't exist
+		sprintf (checkname, "%s/%s", fs_gamedir, filename);
+		if (!FS_SysFileExists(checkname))
+			break;
 	}
 	if (i==10000)
 	{

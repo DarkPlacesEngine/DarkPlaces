@@ -676,20 +676,20 @@ void M_ScanSaves (void)
 	int		i, j;
 	char	name[MAX_OSPATH];
 	char	*str;
-	QFile	*f;
+	qfile_t	*f;
 	int		version;
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
 	{
 		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
 		loadable[i] = false;
-		sprintf (name, "%s/s%i.sav", com_gamedir, i);
-		f = Qopen (name, "rz");
+		sprintf (name, "%s/s%i.sav", fs_gamedir, i);
+		f = FS_Open (name, "r", false);
 		if (!f)
 			continue;
-		str = Qgetline (f);
+		str = FS_Getline (f);
 		sscanf (str, "%i\n", &version);
-		str = Qgetline (f);
+		str = FS_Getline (f);
 		strncpy (m_filenames[i], str, sizeof(m_filenames[i])-1);
 
 	// change _ back to space
@@ -697,7 +697,7 @@ void M_ScanSaves (void)
 			if (m_filenames[i][j] == '_')
 				m_filenames[i][j] = ' ';
 		loadable[i] = true;
-		Qclose (f);
+		FS_Close (f);
 	}
 }
 
@@ -949,7 +949,7 @@ void M_MenuPlayerTranslate (qbyte *translation, int top, int bottom)
 	if (menuplyr_load)
 	{
 		menuplyr_load = false;
-		f = COM_LoadFile("gfx/menuplyr.lmp", true);
+		f = FS_LoadFile("gfx/menuplyr.lmp", true);
 		if (!f)
 		{
 			menuplyr_failed = true;
@@ -3572,9 +3572,9 @@ void M_Init (void)
 
 	if (gamemode == GAME_NEHAHRA)
 	{
-		if (COM_FileExists("maps/neh1m4.bsp"))
+		if (FS_FileExists("maps/neh1m4.bsp"))
 		{
-			if (COM_FileExists("hearing.dem"))
+			if (FS_FileExists("hearing.dem"))
 			{
 				Con_Printf("Nehahra movie and game detected.\n");
 				NehGameType = TYPE_BOTH;
@@ -3587,7 +3587,7 @@ void M_Init (void)
 		}
 		else
 		{
-			if (COM_FileExists("hearing.dem"))
+			if (FS_FileExists("hearing.dem"))
 			{
 				Con_Printf("Nehahra movie detected.\n");
 				NehGameType = TYPE_DEMO;

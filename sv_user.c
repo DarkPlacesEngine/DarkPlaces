@@ -580,23 +580,23 @@ nextmsg:
 			case clc_stringcmd:
 				s = MSG_ReadString ();
 				ret = 0;
-				if (Q_strncasecmp(s, "status", 6) == 0
-				 || Q_strncasecmp(s, "name", 4) == 0
-				 || Q_strncasecmp(s, "say", 3) == 0
-				 || Q_strncasecmp(s, "say_team", 8) == 0
-				 || Q_strncasecmp(s, "tell", 4) == 0
-				 || Q_strncasecmp(s, "color", 5) == 0
-				 || Q_strncasecmp(s, "kill", 4) == 0
-				 || Q_strncasecmp(s, "pause", 5) == 0
-				 || Q_strncasecmp(s, "spawn", 5) == 0
-				 || Q_strncasecmp(s, "begin", 5) == 0
-				 || Q_strncasecmp(s, "prespawn", 8) == 0
-				 || Q_strncasecmp(s, "kick", 4) == 0
-				 || Q_strncasecmp(s, "ping", 4) == 0
-				 || Q_strncasecmp(s, "ban", 3) == 0
-				 || Q_strncasecmp(s, "pmodel", 6) == 0
-				 || (gamemode == GAME_NEHAHRA && (Q_strncasecmp(s, "max", 3) == 0 || Q_strncasecmp(s, "monster", 7) == 0 || Q_strncasecmp(s, "scrag", 5) == 0 || Q_strncasecmp(s, "gimme", 5) == 0 || Q_strncasecmp(s, "wraith", 6) == 0))
-				 || (gamemode != GAME_NEHAHRA && (Q_strncasecmp(s, "god", 3) == 0 || Q_strncasecmp(s, "notarget", 8) == 0 || Q_strncasecmp(s, "fly", 3) == 0 || Q_strncasecmp(s, "give", 4) == 0 || Q_strncasecmp(s, "noclip", 6) == 0)))
+				if (strncasecmp(s, "status", 6) == 0
+				 || strncasecmp(s, "name", 4) == 0
+				 || strncasecmp(s, "say", 3) == 0
+				 || strncasecmp(s, "say_team", 8) == 0
+				 || strncasecmp(s, "tell", 4) == 0
+				 || strncasecmp(s, "color", 5) == 0
+				 || strncasecmp(s, "kill", 4) == 0
+				 || strncasecmp(s, "pause", 5) == 0
+				 || strncasecmp(s, "spawn", 5) == 0
+				 || strncasecmp(s, "begin", 5) == 0
+				 || strncasecmp(s, "prespawn", 8) == 0
+				 || strncasecmp(s, "kick", 4) == 0
+				 || strncasecmp(s, "ping", 4) == 0
+				 || strncasecmp(s, "ban", 3) == 0
+				 || strncasecmp(s, "pmodel", 6) == 0
+				 || (gamemode == GAME_NEHAHRA && (strncasecmp(s, "max", 3) == 0 || strncasecmp(s, "monster", 7) == 0 || strncasecmp(s, "scrag", 5) == 0 || strncasecmp(s, "gimme", 5) == 0 || strncasecmp(s, "wraith", 6) == 0))
+				 || (gamemode != GAME_NEHAHRA && (strncasecmp(s, "god", 3) == 0 || strncasecmp(s, "notarget", 8) == 0 || strncasecmp(s, "fly", 3) == 0 || strncasecmp(s, "give", 4) == 0 || strncasecmp(s, "noclip", 6) == 0)))
 				{
 					ret = 1;
 					Cmd_ExecuteString (s, src_client);

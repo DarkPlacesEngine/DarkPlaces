@@ -379,7 +379,7 @@ Host_Savegame_f
 void Host_Savegame_f (void)
 {
 	char	name[256];
-	QFile	*f;
+	qfile_t	*f;
 	int		i;
 	char	comment[SAVEGAME_COMMENT_LENGTH+1];
 
@@ -425,34 +425,35 @@ void Host_Savegame_f (void)
 		}
 	}
 
-	sprintf (name, "%s/%s", com_gamedir, Cmd_Argv(1));
-	COM_DefaultExtension (name, ".sav");
+	strncpy (name, Cmd_Argv(1), sizeof (name) - 1);
+	name[sizeof (name) - 1] = '\0';
+	FS_DefaultExtension (name, ".sav");
 
 	Con_Printf ("Saving game to %s...\n", name);
-	f = Qopen (name, "w");
+	f = FS_Open (name, "w", false);
 	if (!f)
 	{
 		Con_Printf ("ERROR: couldn't open.\n");
 		return;
 	}
 
-	Qprintf (f, "%i\n", SAVEGAME_VERSION);
+	FS_Printf (f, "%i\n", SAVEGAME_VERSION);
 	Host_SavegameComment (comment);
-	Qprintf (f, "%s\n", comment);
+	FS_Printf (f, "%s\n", comment);
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
-		Qprintf (f, "%f\n", svs.clients->spawn_parms[i]);
-	Qprintf (f, "%d\n", current_skill);
-	Qprintf (f, "%s\n", sv.name);
-	Qprintf (f, "%f\n",sv.time);
+		FS_Printf (f, "%f\n", svs.clients->spawn_parms[i]);
+	FS_Printf (f, "%d\n", current_skill);
+	FS_Printf (f, "%s\n", sv.name);
+	FS_Printf (f, "%f\n",sv.time);
 
 // write the light styles
 
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
 		if (sv.lightstyles[i])
-			Qprintf (f, "%s\n", sv.lightstyles[i]);
+			FS_Printf (f, "%s\n", sv.lightstyles[i]);
 		else
-			Qprintf (f,"m\n");
+			FS_Printf (f,"m\n");
 	}
 
 
@@ -460,9 +461,9 @@ void Host_Savegame_f (void)
 	for (i=0 ; i<sv.num_edicts ; i++)
 	{
 		ED_Write (f, EDICT_NUM(i));
-		Qflush (f);
+		FS_Flush (f);
 	}
-	Qclose (f);
+	FS_Close (f);
 	Con_Printf ("done.\n");
 }
 
@@ -485,15 +486,15 @@ void Host_Loadgame_f (void)
 		return;
 	}
 
-	sprintf (sv_loadgame, "%s/%s", com_gamedir, Cmd_Argv(1));
-	COM_DefaultExtension (sv_loadgame, ".sav");
+	sprintf (sv_loadgame, "%s/%s", fs_gamedir, Cmd_Argv(1));
+	FS_DefaultExtension (sv_loadgame, ".sav");
 
 	Con_Printf ("Loading game from %s...\n", sv_loadgame);
 }
 
 void Host_PerformLoadGame(char *name)
 {
-	QFile *f;
+	qfile_t *f;
 	char mapname[MAX_QPATH];
 	float time, tfloat;
 	char buf[32768];
@@ -507,39 +508,39 @@ void Host_PerformLoadGame(char *name)
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	f = Qopen (name, "rz");
+	f = FS_Open (name, "r", false);
 	if (!f)
 	{
 		Con_Printf ("ERROR: couldn't open.\n");
 		return;
 	}
 
-	str = Qgetline (f);
+	str = FS_Getline (f);
 	sscanf (str, "%i\n", &version);
 	if (version != SAVEGAME_VERSION)
 	{
-		Qclose (f);
+		FS_Close (f);
 		Con_Printf ("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
 		return;
 	}
 
 	SCR_BeginLoadingPlaque ();
 
-	str = Qgetline (f);
+	str = FS_Getline (f);
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 	{
-		str = Qgetline (f);
+		str = FS_Getline (f);
 		sscanf (str, "%f\n", &spawn_parms[i]);
 	}
 // this silliness is so we can load 1.06 save files, which have float skill values
-	str = Qgetline (f);
+	str = FS_Getline (f);
 	sscanf (str, "%f\n", &tfloat);
 	current_skill = (int)(tfloat + 0.1);
 	Cvar_SetValue ("skill", (float)current_skill);
 
-	strcpy (mapname, Qgetline (f));
+	strcpy (mapname, FS_Getline (f));
 
-	str = Qgetline (f);
+	str = FS_Getline (f);
 	sscanf (str, "%f\n",&time);
 
 	CL_Disconnect_f ();
@@ -557,7 +558,7 @@ void Host_PerformLoadGame(char *name)
 
 	for (i = 0;i < MAX_LIGHTSTYLES;i++)
 	{
-		str = Qgetline (f);
+		str = FS_Getline (f);
 		sv.lightstyles[i] = Mem_Alloc(edictstring_mempool, strlen(str)+1);
 		strcpy (sv.lightstyles[i], str);
 	}
@@ -565,11 +566,11 @@ void Host_PerformLoadGame(char *name)
 // load the edicts out of the savegame file
 	// -1 is the globals
 	entnum = -1;
-	while (!Qeof(f))
+	while (!FS_Eof (f))
 	{
 		for (i = 0;i < (int)sizeof(buf) - 1;i++)
 		{
-			r = Qgetc (f);
+			r = FS_Getc (f);
 			if (r == EOF || !r)
 				break;
 			buf[i] = r;
@@ -615,7 +616,7 @@ void Host_PerformLoadGame(char *name)
 	sv.num_edicts = entnum;
 	sv.time = time;
 
-	Qclose (f);
+	FS_Close (f);
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients->spawn_parms[i] = spawn_parms[i];
@@ -821,7 +822,7 @@ void Host_Tell_f(void)
 	{
 		if (!client->active || !client->spawned)
 			continue;
-		if (Q_strcasecmp(client->name, Cmd_Argv(1)))
+		if (strcasecmp(client->name, Cmd_Argv(1)))
 			continue;
 		host_client = client;
 		SV_ClientPrintf("%s", text);
@@ -1185,7 +1186,7 @@ void Host_Kick_f (void)
 		{
 			if (!host_client->active)
 				continue;
-			if (Q_strcasecmp(host_client->name, Cmd_Argv(1)) == 0)
+			if (strcasecmp(host_client->name, Cmd_Argv(1)) == 0)
 				break;
 		}
 	}

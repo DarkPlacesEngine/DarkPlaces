@@ -291,7 +291,7 @@ typedef struct
 	qboolean timedemo;
 	// -1 = use normal cd track
 	int forcetrack;
-	QFile *demofile;
+	qfile_t *demofile;
 	// to meter out one message a frame
 	int td_lastframe;
 	// host_framecount at start
