@@ -663,7 +663,6 @@ void R_RenderView (void)
 
 	R_DrawSurfaces(SHADERSTAGE_SKY);
 	R_DrawSurfaces(SHADERSTAGE_NORMAL);
-	R_DrawSurfaces(SHADERSTAGE_FOG);
 	R_TimeReport("surfdraw");
 
 	if (r_drawportals.integer)

@@ -1426,6 +1426,9 @@ static void RSurfShader_Wall_Fullbright(msurface_t *firstsurf)
 	for (surf = firstsurf;surf;surf = surf->chain)
 		if (surf->currenttexture->glowtexture)
 			RSurfShader_Wall_Pass_Glow(surf);
+	if (fogenabled)
+		for (surf = firstsurf;surf;surf = surf->chain)
+			RSurfShader_Wall_Pass_Fog(surf);
 }
 
 static void RSurfShader_Wall_Vertex(msurface_t *firstsurf)
@@ -1439,6 +1442,9 @@ static void RSurfShader_Wall_Vertex(msurface_t *firstsurf)
 	for (surf = firstsurf;surf;surf = surf->chain)
 		if (surf->currenttexture->glowtexture)
 			RSurfShader_Wall_Pass_Glow(surf);
+	if (fogenabled)
+		for (surf = firstsurf;surf;surf = surf->chain)
+			RSurfShader_Wall_Pass_Fog(surf);
 }
 
 static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
@@ -1454,6 +1460,9 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 		for (surf = firstsurf;surf;surf = surf->chain)
 			if (surf->currenttexture->glowtexture)
 				RSurfShader_Wall_Pass_Glow(surf);
+		if (fogenabled)
+			for (surf = firstsurf;surf;surf = surf->chain)
+				RSurfShader_Wall_Pass_Fog(surf);
 	}
 	else if (r_multitexture.integer)
 	{
@@ -1467,6 +1476,9 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 			for (surf = firstsurf;surf;surf = surf->chain)
 				if (surf->currenttexture->glowtexture)
 					RSurfShader_Wall_Pass_Glow(surf);
+			if (fogenabled)
+				for (surf = firstsurf;surf;surf = surf->chain)
+					RSurfShader_Wall_Pass_Fog(surf);
 		}
 		else
 		{
@@ -1481,6 +1493,9 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 			for (surf = firstsurf;surf;surf = surf->chain)
 				if (surf->currenttexture->glowtexture)
 					RSurfShader_Wall_Pass_Glow(surf);
+			if (fogenabled)
+				for (surf = firstsurf;surf;surf = surf->chain)
+					RSurfShader_Wall_Pass_Fog(surf);
 		}
 	}
 	else if (firstsurf->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1 || currentrenderentity->effects & EF_ADDITIVE)
@@ -1493,6 +1508,9 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 		for (surf = firstsurf;surf;surf = surf->chain)
 			if (surf->currenttexture->glowtexture)
 				RSurfShader_Wall_Pass_Glow(surf);
+		if (fogenabled)
+			for (surf = firstsurf;surf;surf = surf->chain)
+				RSurfShader_Wall_Pass_Fog(surf);
 	}
 	else
 	{
@@ -1508,6 +1526,9 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 			for (surf = firstsurf;surf;surf = surf->chain)
 				if (surf->currenttexture->glowtexture)
 					RSurfShader_Wall_Pass_Glow(surf);
+			if (fogenabled)
+				for (surf = firstsurf;surf;surf = surf->chain)
+					RSurfShader_Wall_Pass_Fog(surf);
 		}
 		else
 		{
@@ -1524,17 +1545,11 @@ static void RSurfShader_Wall_Lightmap(msurface_t *firstsurf)
 			for (surf = firstsurf;surf;surf = surf->chain)
 				if (surf->currenttexture->glowtexture)
 					RSurfShader_Wall_Pass_Glow(surf);
+			if (fogenabled)
+				for (surf = firstsurf;surf;surf = surf->chain)
+					RSurfShader_Wall_Pass_Fog(surf);
 		}
 	}
-}
-
-static void RSurfShader_Wall_Fog(msurface_t *firstsurf)
-{
-	msurface_t *surf;
-	if (!fogenabled)
-		return;
-	for (surf = firstsurf;surf;surf = surf->chain)
-		RSurfShader_Wall_Pass_Fog(surf);
 }
 
 /*
@@ -1862,11 +1877,11 @@ loc1:
 		goto loc1;
 }
 
-Cshader_t Cshader_wall_vertex = {{NULL, RSurfShader_Wall_Vertex, RSurfShader_Wall_Fog}, NULL};
-Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap, RSurfShader_Wall_Fog}, NULL};
-Cshader_t Cshader_wall_fullbright = {{NULL, RSurfShader_Wall_Fullbright, RSurfShader_Wall_Fog}, NULL};
-Cshader_t Cshader_water = {{NULL, RSurfShader_Water, NULL}, NULL};
-Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL, NULL}, NULL};
+Cshader_t Cshader_wall_vertex = {{NULL, RSurfShader_Wall_Vertex}, NULL};
+Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap}, NULL};
+Cshader_t Cshader_wall_fullbright = {{NULL, RSurfShader_Wall_Fullbright}, NULL};
+Cshader_t Cshader_water = {{NULL, RSurfShader_Water}, NULL};
+Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL}, NULL};
 
 int Cshader_count = 5;
 Cshader_t *Cshaders[5] =
@@ -2125,5 +2140,4 @@ void R_DrawBrushModelNormal (void)
 	if (!skyrendermasked)
 		R_DrawSurfaces(SHADERSTAGE_SKY);
 	R_DrawSurfaces(SHADERSTAGE_NORMAL);
-	R_DrawSurfaces(SHADERSTAGE_FOG);
 }
