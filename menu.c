@@ -1469,7 +1469,7 @@ void M_Options_Key (int k, char ascii)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	34
+#define	OPTIONS_EFFECTS_ITEMS	37
 
 int options_effects_cursor;
 
@@ -1499,6 +1499,9 @@ extern cvar_t cl_particles_blood;
 extern cvar_t cl_particles_blood_alpha;
 extern cvar_t cl_particles_blood_bloodhack;
 extern cvar_t cl_particles_explosions_shell;
+extern cvar_t cl_beams_polygon;
+extern cvar_t cl_beams_relative;
+extern cvar_t cl_beams_lightatend;
 extern cvar_t r_lightningbeam_thickness;
 extern cvar_t r_lightningbeam_scroll;
 extern cvar_t r_lightningbeam_repeatdistance;
@@ -1531,6 +1534,9 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood_bloodhack, !cl_particles_blood_bloodhack.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_polygons, !cl_beams_polygons.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_relative, !cl_beams_relative.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_beams_lightatend, !cl_beams_lightatend.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lightningbeam_thickness, bound(1, r_lightningbeam_thickness.integer + dir, 10));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lightningbeam_scroll, bound(0, r_lightningbeam_scroll.integer + dir, 10));
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lightningbeam_repeatdistance, bound(64, r_lightningbeam_repeatdistance.integer + dir * 64, 1024));
@@ -1583,13 +1589,16 @@ void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("                 Blood", true, cl_particles_blood.integer);
 	M_Options_PrintSlider(  "         Blood Opacity", true, cl_particles_blood_alpha.value, 0.2, 1);
 	M_Options_PrintCheckbox("Force New Blood Effect", true, cl_particles_blood_bloodhack.integer);
-	M_Options_PrintSlider(  "   Lightning Thickness", true, r_lightningbeam_thickness.integer, 1, 10);
-	M_Options_PrintSlider(  "      Lightning Scroll", true, r_lightningbeam_scroll.integer, 0, 10);
-	M_Options_PrintSlider(  " Lightning Repeat Dist", true, r_lightningbeam_repeatdistance.integer, 64, 1024);
-	M_Options_PrintSlider(  "   Lightning Color Red", true, r_lightningbeam_color_red.value, 0, 1);
-	M_Options_PrintSlider(  " Lightning Color Green", true, r_lightningbeam_color_green.value, 0, 1);
-	M_Options_PrintSlider(  "  Lightning Color Blue", true, r_lightningbeam_color_blue.value, 0, 1);
-	M_Options_PrintCheckbox(" Lightning QMB Texture", true, r_lightningbeam_qmbtexture.integer);
+	M_Options_PrintCheckbox("    Lightning Polygons", true, cl_beams_polygons.integer);
+	M_Options_PrintCheckbox("Lightning Smooth Sweep", true, cl_beams_relative.integer);
+	M_Options_PrintCheckbox("   Lightning End Light", true, cl_beams_lightatend.integer);
+	M_Options_PrintSlider(  "   Lightning Thickness", cl_beams_polygons.integer, r_lightningbeam_thickness.integer, 1, 10);
+	M_Options_PrintSlider(  "      Lightning Scroll", cl_beams_polygons.integer, r_lightningbeam_scroll.integer, 0, 10);
+	M_Options_PrintSlider(  " Lightning Repeat Dist", cl_beams_polygons.integer, r_lightningbeam_repeatdistance.integer, 64, 1024);
+	M_Options_PrintSlider(  "   Lightning Color Red", cl_beams_polygons.integer, r_lightningbeam_color_red.value, 0, 1);
+	M_Options_PrintSlider(  " Lightning Color Green", cl_beams_polygons.integer, r_lightningbeam_color_green.value, 0, 1);
+	M_Options_PrintSlider(  "  Lightning Color Blue", cl_beams_polygons.integer, r_lightningbeam_color_blue.value, 0, 1);
+	M_Options_PrintCheckbox(" Lightning QMB Texture", cl_beams_polygons.integer, r_lightningbeam_qmbtexture.integer);
 	M_Options_PrintCheckbox("   Model Interpolation", true, r_lerpmodels.integer);
 	M_Options_PrintCheckbox("  Sprite Interpolation", true, r_lerpsprites.integer);
 	M_Options_PrintSlider(  "            View Blend", true, gl_polyblend.value, 0, 1);
