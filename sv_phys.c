@@ -471,6 +471,22 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 	return blocked;
 }
 
+int SV_SetOnGround (edict_t *ent)
+{
+	vec3_t end;
+	trace_t trace;
+	if ((int)ent->v->flags & FL_ONGROUND)
+		return 1;
+	VectorSet(end, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2] - 1);
+	trace = SV_Move(ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
+	if (trace.fraction < 1 && trace.plane.normal[2] >= 0.7)
+	{
+		ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+		ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+		return 1;
+	}
+	return 0;
+}
 
 /*
 ============
@@ -507,24 +523,24 @@ SV_PushEntity
 Does not change the entities velocity at all
 ============
 */
-trace_t SV_PushEntity (edict_t *ent, vec3_t push, vec3_t pushangles)
+trace_t SV_PushEntity (edict_t *ent, vec3_t push)
 {
+	int type;
 	trace_t trace;
 	vec3_t end;
 
 	VectorAdd (ent->v->origin, push, end);
 
 	if (ent->v->movetype == MOVETYPE_FLYMISSILE)
-		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_MISSILE, ent);
+		type = MOVE_MISSILE;
 	else if (ent->v->solid == SOLID_TRIGGER || ent->v->solid == SOLID_NOT)
-		// only clip against bmodels
-		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NOMONSTERS, ent);
+		type = MOVE_NOMONSTERS; // only clip against bmodels
 	else
-		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
+		type = MOVE_NORMAL;
+
+	trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, type, ent);
 
 	VectorCopy (trace.endpos, ent->v->origin);
-	// FIXME: turn players specially
-	ent->v->angles[1] += trace.fraction * pushangles[1];
 	SV_LinkEdict (ent, true);
 
 	if (trace.ent && (!((int)ent->v->flags & FL_ONGROUND) || ent->v->groundentity != EDICT_TO_PROG(trace.ent)))
@@ -548,6 +564,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, org2;
 	int num_moved;
 	model_t *pushermodel;
+	trace_t trace;
 
 	if (!pusher->v->velocity[0] && !pusher->v->velocity[1] && !pusher->v->velocity[2] && !pusher->v->avelocity[0] && !pusher->v->avelocity[1] && !pusher->v->avelocity[2])
 	{
@@ -705,7 +722,9 @@ void SV_PushMove (edict_t *pusher, float movetime)
 
 		// try moving the contacted entity
 		pusher->v->solid = SOLID_NOT;
-		SV_PushEntity (check, move, moveangle);
+		trace = SV_PushEntity (check, move);
+		// FIXME: turn players specially
+		check->v->angles[1] += trace.fraction * moveangle[1];
 		pusher->v->solid = savesolid; // was SOLID_BSP
 
 		// if it is still inside the pusher, block
@@ -714,7 +733,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 			// try moving the contacted entity a tiny bit further to account for precision errors
 			pusher->v->solid = SOLID_NOT;
 			VectorScale(move, 0.1, move);
-			SV_PushEntity (check, move, vec3_origin);
+			SV_PushEntity (check, move);
 			pusher->v->solid = savesolid;
 			if (SV_ClipMoveToEntity(pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin).startsolid)
 			{
@@ -948,7 +967,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 			case 7: dir[0] = -2; dir[1] = -2; break;
 		}
 
-		SV_PushEntity (ent, dir, vec3_origin);
+		SV_PushEntity (ent, dir);
 
 		// retry the original move
 		ent->v->velocity[0] = oldvel[0];
@@ -983,7 +1002,7 @@ Only used by players
 void SV_WalkMove (edict_t *ent)
 {
 	int clip, oldonground, originalmove_clip, originalmove_flags, originalmove_groundentity;
-	vec3_t upmove, downmove, oldorg, oldvel, nosteporg, nostepvel, stepnormal, originalmove_origin, originalmove_velocity;
+	vec3_t upmove, downmove, start_origin, start_velocity, stepnormal, originalmove_origin, originalmove_velocity;
 	trace_t downtrace;
 
 	SV_CheckVelocity(ent);
@@ -992,108 +1011,120 @@ void SV_WalkMove (edict_t *ent)
 	oldonground = (int)ent->v->flags & FL_ONGROUND;
 	ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
 
-	VectorCopy (ent->v->origin, oldorg);
-	VectorCopy (ent->v->velocity, oldvel);
+	VectorCopy (ent->v->origin, start_origin);
+	VectorCopy (ent->v->velocity, start_velocity);
 
 	clip = SV_FlyMove (ent, sv.frametime, NULL);
+
+	SV_SetOnGround (ent);
+	SV_CheckVelocity(ent);
+
 	VectorCopy(ent->v->origin, originalmove_origin);
 	VectorCopy(ent->v->velocity, originalmove_velocity);
 	originalmove_clip = clip;
 	originalmove_flags = (int)ent->v->flags;
-	originalmove_groundentity = ent->v->groundentity; 
-
-	SV_CheckVelocity(ent);
+	originalmove_groundentity = ent->v->groundentity;
 
 	// if move didn't block on a step, return
-	if ( !(clip & 2) )
-		return;
-
-	// if move was not trying to move into the step, return
-	if (fabs(oldvel[0]) < 0.03125 && fabs(oldvel[1]) < 0.03125)
-		return;
-
-	if (ent->v->movetype != MOVETYPE_FLY)
+	if (clip & 2)
 	{
-		if (!oldonground && ent->v->waterlevel == 0 && (!sv_jumpstep.integer || !sv_gameplayfix_stepwhilejumping.integer))
-			// don't stair up while jumping
+		// if move was not trying to move into the step, return
+		if (fabs(start_velocity[0]) < 0.03125 && fabs(start_velocity[1]) < 0.03125)
 			return;
-
-		if (ent->v->movetype != MOVETYPE_WALK)
-			// gibbed by a trigger
+	
+		if (sv_nostep.integer)
 			return;
+		
+		if ((int)ent->v->flags & FL_WATERJUMP)
+			return;
+	
+		if (ent->v->movetype != MOVETYPE_FLY)
+		{
+			// return if gibbed by a trigger
+			if (ent->v->movetype != MOVETYPE_WALK)
+				return;
+	
+			// only step up while jumping if that is enabled
+			if (!(sv_jumpstep.integer && sv_gameplayfix_stepwhilejumping.integer))
+				if (!oldonground && ent->v->waterlevel == 0)
+					return;
+		}
+	
+		// try moving up and forward to go up a step
+		// back to start pos
+		VectorCopy (start_origin, ent->v->origin);
+		VectorCopy (start_velocity, ent->v->velocity);
+	
+		// move up
+		VectorClear (upmove);
+		upmove[2] = sv_stepheight.value;
+		// FIXME: don't link?
+		SV_PushEntity(ent, upmove);
+	
+		// move forward
+		ent->v->velocity[2] = 0;
+		clip = SV_FlyMove (ent, sv.frametime, stepnormal);
+		ent->v->velocity[2] += start_velocity[2];
+	
+		SV_CheckVelocity(ent);
+	
+		// check for stuckness, possibly due to the limited precision of floats
+		// in the clipping hulls
+		if (clip
+		 && fabs(originalmove_origin[1] - ent->v->origin[1]) < 0.03125
+		 && fabs(originalmove_origin[0] - ent->v->origin[0]) < 0.03125)
+		{
+			//Con_Printf("wall\n");
+			// stepping up didn't make any progress, revert to original move
+			VectorCopy(originalmove_origin, ent->v->origin);
+			VectorCopy(originalmove_velocity, ent->v->velocity);
+			//clip = originalmove_clip;
+			ent->v->flags = originalmove_flags;
+			ent->v->groundentity = originalmove_groundentity; 
+			// now try to unstick if needed
+			//clip = SV_TryUnstick (ent, oldvel);
+			return;
+		}
+
+		//Con_Printf("step - ");
+
+		// extra friction based on view angle
+		if (clip & 2 && sv_wallfriction.integer)
+			SV_WallFriction (ent, stepnormal);
 	}
-
-	SV_CheckVelocity(ent);
-
-	if (sv_nostep.integer || (int)ent->v->flags & FL_WATERJUMP )
+	else if (!sv_gameplayfix_stepdown.integer || !oldonground || ((int)ent->v->flags & FL_ONGROUND))
 		return;
-
-	VectorCopy (ent->v->origin, nosteporg);
-	VectorCopy (ent->v->velocity, nostepvel);
-
-	// try moving up and forward to go up a step
-	// back to start pos
-	VectorCopy (oldorg, ent->v->origin);
-
-	VectorClear (upmove);
-	VectorClear (downmove);
-	upmove[2] = sv_stepheight.value;
-	downmove[2] = -sv_stepheight.value + oldvel[2]*sv.frametime;
-
-	// move up
-	// FIXME: don't link?
-	SV_PushEntity(ent, upmove, vec3_origin);
-
-	// move forward
-	ent->v->velocity[0] = oldvel[0];
-	ent->v->velocity[1] = oldvel[1];
-	ent->v->velocity[2] = 0;
-	clip = SV_FlyMove (ent, sv.frametime, stepnormal);
-	ent->v->velocity[2] += oldvel[2];
-
-	// check for stuckness, possibly due to the limited precision of floats
-	// in the clipping hulls
-	if (clip
-	 && fabs(oldorg[1] - ent->v->origin[1]) < 0.03125
-	 && fabs(oldorg[0] - ent->v->origin[0]) < 0.03125)
-	{
-		// stepping up didn't make any progress, revert to original move
-		VectorCopy(originalmove_origin, ent->v->origin);
-		VectorCopy(originalmove_velocity, ent->v->velocity);
-		clip = originalmove_clip;
-		ent->v->flags = originalmove_flags;
-		ent->v->groundentity = originalmove_groundentity; 
-		// now try to unstick if needed
-		//clip = SV_TryUnstick (ent, oldvel);
-		return;
-	}
-
-	// extra friction based on view angle
-	if (clip & 2 && sv_wallfriction.integer)
-		SV_WallFriction (ent, stepnormal);
 
 	// move down
+	VectorClear (downmove);
+	downmove[2] = -sv_stepheight.value + start_velocity[2]*sv.frametime;
 	// FIXME: don't link?
-	downtrace = SV_PushEntity (ent, downmove, vec3_origin);
+	downtrace = SV_PushEntity (ent, downmove);
 
-	if (downtrace.plane.normal[2] > 0.7)
+	if (downtrace.fraction < 1 && downtrace.plane.normal[2] > 0.7)
 	{
-		// LordHavoc: disabled this so you can walk on monsters/players
+		// LordHavoc: disabled this check so you can walk on monsters/players
 		//if (ent->v->solid == SOLID_BSP)
 		{
+			//Con_Printf("onground\n");
 			ent->v->flags =	(int)ent->v->flags | FL_ONGROUND;
 			ent->v->groundentity = EDICT_TO_PROG(downtrace.ent);
 		}
 	}
 	else
 	{
+		//Con_Printf("slope\n");
 		// if the push down didn't end up on good ground, use the move without
 		// the step up.  This happens near wall / slope combinations, and can
 		// cause the player to hop up higher on a slope too steep to climb
-		VectorCopy (nosteporg, ent->v->origin);
-		VectorCopy (nostepvel, ent->v->velocity);
+		VectorCopy(originalmove_origin, ent->v->origin);
+		VectorCopy(originalmove_velocity, ent->v->velocity);
+		//clip = originalmove_clip;
+		ent->v->flags = originalmove_flags;
+		ent->v->groundentity = originalmove_groundentity; 
 	}
 
+	SV_SetOnGround (ent);
 	SV_CheckVelocity(ent);
 }
 
@@ -1238,7 +1269,7 @@ void SV_Physics_Toss (edict_t *ent)
 
 // move origin
 	VectorScale (ent->v->velocity, sv.frametime, move);
-	trace = SV_PushEntity (ent, move, vec3_origin);
+	trace = SV_PushEntity (ent, move);
 	if (ent->e->free)
 		return;
 
