@@ -725,6 +725,7 @@ static void zymswapintblock(int *m, int size)
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
 	int i, pbase, *bonecount;
+	unsigned int count, a, b, c, *renderlist, *renderlistend;
 	rtexture_t **texture;
 	char *shadername;
 	zymtype1header_t *pinmodel, *pheader;
@@ -738,7 +739,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		Host_Error ("Mod_LoadZymoticModel: %s is not a zymotic model\n");
 
 	if (BigLong(pinmodel->type) != 1)
-		Host_Error ("Mod_LoadZymoticModel: only type 1 (skeletal pose) models are currently supported\n");
+		Host_Error ("Mod_LoadZymoticModel: only type 1 (skeletal pose) models are currently supported (name = %s)\n", loadmodel->name);
 
 	loadmodel->type = mod_alias;
 	loadmodel->aliastype = ALIASTYPE_ZYM;
@@ -829,7 +830,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		SWAPLONG(bone[i].flags);
 		SWAPLONG(bone[i].parent);
 		if (bone[i].parent >= i)
-			Host_Error("Mod_LoadZymoticModel: bone[i].parent >= i\n");
+			Host_Error("Mod_LoadZymoticModel: bone[i].parent >= i in %s\n", loadmodel->name);
 	}
 
 //	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
@@ -837,7 +838,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	bonecount = (void *) (pheader->lump_vertbonecounts.start + pbase);
 	for (i = 0;i < pheader->numbones;i++)
 		if (bonecount[i] < 1)
-			Host_Error("Mod_LoadZymoticModel: bone vertex count < 1\n");
+			Host_Error("Mod_LoadZymoticModel: bone vertex count < 1 in %s\n", loadmodel->name);
 
 //	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
 	zymswapintblock((void *) (pheader->lump_verts.start + pbase), pheader->lump_verts.length);
@@ -847,6 +848,32 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 
 //	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
 	zymswapintblock((void *) (pheader->lump_render.start + pbase), pheader->lump_render.length);
+	// validate renderlist and swap winding order of tris
+	renderlist = (void *) (pheader->lump_render.start + pbase);
+	renderlistend = (void *) ((byte *) renderlist + pheader->lump_render.length);
+	i = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
+	if (pheader->lump_render.length != i)
+		Host_Error("Mod_LoadZymoticModel: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, i);
+	for (i = 0;i < pheader->numshaders;i++)
+	{
+		if (renderlist >= renderlistend)
+			Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+		count = *renderlist++;
+		if (renderlist + count * 3 > renderlistend)
+			Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+		while (count--)
+		{
+			a = renderlist[0];
+			b = renderlist[1];
+			c = renderlist[2];
+			if (a >= pheader->numverts || b >= pheader->numverts || c >= pheader->numverts)
+				Host_Error("Mod_LoadZymoticModel: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
+			renderlist[0] = c;
+			renderlist[1] = b;
+			renderlist[2] = a;
+			renderlist += 3;
+		}
+	}
 
 //	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
 	shadername = (void *) (pheader->lump_shaders.start + pbase);
