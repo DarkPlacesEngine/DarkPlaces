@@ -65,7 +65,7 @@ cvar_t	gl_fogblue = {0, "gl_fogblue","0.3"};
 cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
 cvar_t	gl_fogend = {0, "gl_fogend","0"};
 
-cvar_t	r_ser = {CVAR_SAVE, "r_ser", "1"};
+cvar_t	r_ser = {CVAR_SAVE, "r_ser", "0"};
 
 cvar_t r_multitexture = {0, "r_multitexture", "1"};
 
