@@ -1503,8 +1503,8 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 			n[1] = dv[0][2]*dv[1][0]-dv[0][0]*dv[1][2];
 			n[2] = dv[0][0]*dv[1][1]-dv[0][1]*dv[1][0];
 			*/
-			n[0] = ((p0[0] + p0[1] + p0[2]) - (p1[0] + p1[1] + p1[2]));
-			n[1] = ((p2[0] + p2[1] + p2[2]) - (p0[0] + p0[1] + p0[2]));
+			n[0] = ((p1[0] + p1[1] + p1[2]) - (p0[0] + p0[1] + p0[2]));
+			n[1] = ((p0[0] + p0[1] + p0[2]) - (p2[0] + p2[1] + p2[2]));
 			n[2] = ibumpscale;
 			VectorNormalize(n);
 			/*
@@ -1518,7 +1518,7 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 			out[0] = 128.0f + n[0] * 127.0f;
 			out[1] = 128.0f + n[1] * 127.0f;
 			out[2] = 128.0f + n[2] * 127.0f;
-			out[3] = 255;
+			out[3] = (p0[0] + p0[1] + p0[2]) / 3;
 			out += 4;
 		}
 	}
