@@ -248,13 +248,15 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 			//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
 
-			if (trace.allsolid)
+			/*
+			if (trace.startsolid)
 			{
 				// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
 				// entity is trapped in another solid
 				VectorClear(ent->v->velocity);
 				return 3;
 			}
+			*/
 
 			if (trace.fraction > 0)
 			{
@@ -341,13 +343,15 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 
 			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 
-			if (trace.allsolid)
+			/*
+			if (trace.startsolid)
 			{
 				// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
 				// entity is trapped in another solid
 				VectorClear(ent->v->velocity);
 				return 3;
 			}
+			*/
 
 			if (trace.fraction > 0)
 			{

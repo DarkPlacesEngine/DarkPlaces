@@ -66,7 +66,7 @@ void SV_SetIdealPitch (void)
 
 		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, sv_player);
 		// if looking at a wall, leave ideal the way is was
-		if (tr.allsolid)
+		if (tr.startsolid)
 			return;
 
 		// near a dropoff
