@@ -7,7 +7,7 @@
 int		image_width;
 int		image_height;
 
-#if 1
+#if 0
 // written by LordHavoc in a readable way, optimized by Vic, further optimized by LordHavoc (the non-special index case), readable version preserved below this
 void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
