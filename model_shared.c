@@ -775,7 +775,7 @@ int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, 
 		skinframe->detail = mod_shared_detailtextures[(detailtexturecycle++) % NUM_DETAILTEXTURES];
 	skinframe->base = R_LoadTexture2D (loadmodel->texturepool, basename, s.basepixels_width, s.basepixels_height, s.basepixels, TEXTYPE_RGBA, textureflags, NULL);
 	if (s.nmappixels != NULL)
-		skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), s.basepixels_width, s.basepixels_height, s.nmappixels, TEXTYPE_RGBA, textureflags, NULL);
+		skinframe->nmap = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", basename), s.nmappixels_width, s.nmappixels_height, s.nmappixels, TEXTYPE_RGBA, textureflags, NULL);
 	if (s.glosspixels != NULL)
 		skinframe->gloss = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", basename), s.glosspixels_width, s.glosspixels_height, s.glosspixels, TEXTYPE_RGBA, textureflags, NULL);
 	if (s.glowpixels != NULL && loadglowtexture)
