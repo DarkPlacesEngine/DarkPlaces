@@ -788,15 +788,13 @@ loc0:
 			surf = cl.worldmodel->brushq1.surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surf++)
 			{
-				if (!(surf->flags & SURF_LIGHTMAP))
+				if (!(surf->flags & SURF_LIGHTMAP) || !surf->samples)
 					continue;	// no lightmaps
 
-				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3])- surf->texturemins[0];
+				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3]) - surf->texturemins[0];
 				dt = (int) (x * surf->texinfo->vecs[1][0] + y * surf->texinfo->vecs[1][1] + mid * surf->texinfo->vecs[1][2] + surf->texinfo->vecs[1][3]) - surf->texturemins[1];
-				ds = bound(0, ds, surf->extents[0]);
-				dt = bound(0, dt, surf->extents[1]);
 
-				if (surf->samples)
+				if (ds >= 0 && ds < surf->extents[0] && dt >= 0 && dt < surf->extents[1])
 				{
 					qbyte *lightmap;
 					int lmwidth, lmheight, maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
@@ -853,8 +851,8 @@ middle sample (the one which was requested)
 					ambientcolor[0] += (float) ((((((((r11-r10) * dsfrac) >> 4) + r10)-((((r01-r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) + ((((r01-r00) * dsfrac) >> 4) + r00)) * (1.0f / 32768.0f);
 					ambientcolor[1] += (float) ((((((((g11-g10) * dsfrac) >> 4) + g10)-((((g01-g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) + ((((g01-g00) * dsfrac) >> 4) + g00)) * (1.0f / 32768.0f);
 					ambientcolor[2] += (float) ((((((((b11-b10) * dsfrac) >> 4) + b10)-((((b01-b00) * dsfrac) >> 4) + b00)) * dtfrac) >> 4) + ((((b01-b00) * dsfrac) >> 4) + b00)) * (1.0f / 32768.0f);
+					return true; // success
 				}
-				return true; // success
 			}
 		}
 
