@@ -30,6 +30,11 @@ typedef enum
 }
 ptype_t;
 
+#define PARTICLE_INVALID 0
+#define PARTICLE_BILLBOARD 1
+#define PARTICLE_BEAM 2
+#define PARTICLE_ORIENTED_DOUBLESIDED 3
+
 #define P_TEXNUM_FIRSTBIT 0
 #define P_TEXNUM_BITS 6
 #define P_ORIENTATION_FIRSTBIT (P_TEXNUM_FIRSTBIT + P_TEXNUM_BITS)
@@ -446,7 +451,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			while(count--)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_BEAM, k, k, tex_particle, false, true, 0.4f, 0.015f, lhrandom(64, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
 			}
 		}
 	}
@@ -565,7 +570,7 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_UPRIGHT_FACING, k, k, tex_particle, true, true, 0.5, 8, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+			particle(pt_rain, PARTICLE_BEAM, k, k, tex_particle, true, true, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
 		}
 		break;
 	case 1:
@@ -1182,7 +1187,7 @@ void R_Particles_Init (void)
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
 	int additive, texnum, orientation;
-	float org[3], up2[3], right2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
+	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	particletexture_t *tex;
 	rmeshstate_t m;
 	const particle_t *p = calldata1;
@@ -1203,57 +1208,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	if (orientation == PARTICLE_BILLBOARD)
-	{
-		VectorScale(vright, p->scalex, right);
-		VectorScale(vup, p->scaley, up);
-	}
-	else if (orientation == PARTICLE_UPRIGHT_FACING)
-	{
-		v[0] = r_origin[0] - org[0];
-		v[1] = r_origin[1] - org[1];
-		v[2] = 0;
-		VectorNormalizeFast(v);
-		VectorVectors(v, right2, up2);
-		VectorScale(right2, p->scalex, right);
-		VectorScale(up2, p->scaley, up);
-	}
-	else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
-	{
-		// double-sided
-		if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
-		{
-			VectorNegate(p->vel2, v);
-			VectorVectors(v, right, up);
-		}
-		else
-			VectorVectors(p->vel2, right, up);
-		VectorScale(right, p->scalex, right);
-		VectorScale(up, p->scaley, up);
-	}
-	else
-		Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
-	varray_vertex[0] = org[0] - right[0] - up[0];
-	varray_vertex[1] = org[1] - right[1] - up[1];
-	varray_vertex[2] = org[2] - right[2] - up[2];
-	varray_vertex[4] = org[0] - right[0] + up[0];
-	varray_vertex[5] = org[1] - right[1] + up[1];
-	varray_vertex[6] = org[2] - right[2] + up[2];
-	varray_vertex[8] = org[0] + right[0] + up[0];
-	varray_vertex[9] = org[1] + right[1] + up[1];
-	varray_vertex[10] = org[2] + right[2] + up[2];
-	varray_vertex[12] = org[0] + right[0] - up[0];
-	varray_vertex[13] = org[1] + right[1] - up[1];
-	varray_vertex[14] = org[2] + right[2] - up[2];
 	tex = &particletexture[texnum];
-	varray_texcoord[0][0] = tex->s1;
-	varray_texcoord[0][1] = tex->t1;
-	varray_texcoord[0][2] = tex->s1;
-	varray_texcoord[0][3] = tex->t2;
-	varray_texcoord[0][4] = tex->s2;
-	varray_texcoord[0][5] = tex->t2;
-	varray_texcoord[0][6] = tex->s2;
-	varray_texcoord[0][7] = tex->t1;
 	cr = p->color[0] * (1.0f / 255.0f);
 	cg = p->color[1] * (1.0f / 255.0f);
 	cb = p->color[2] * (1.0f / 255.0f);
@@ -1273,10 +1228,69 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 			cb += fogcolor[2] * fog;
 		}
 	}
-	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * r_colorscale;
-	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * r_colorscale;
-	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * r_colorscale;
-	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
+	cr *= r_colorscale;
+	cg *= r_colorscale;
+	cb *= r_colorscale;
+
+	varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = cr;
+	varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = cg;
+	varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = cb;
+	varray_color[ 3] = varray_color[ 7] = varray_color[11] = varray_color[15] = ca;
+	varray_texcoord[0][0] = tex->s2;varray_texcoord[0][1] = tex->t1;
+	varray_texcoord[0][2] = tex->s1;varray_texcoord[0][3] = tex->t1;
+	varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t2;
+	varray_texcoord[0][6] = tex->s2;varray_texcoord[0][7] = tex->t2;
+
+	if (orientation == PARTICLE_BEAM)
+	{
+		VectorMA(p->org, -p->scaley, p->vel, v);
+		VectorMA(p->org, p->scaley, p->vel, up2);
+		R_CalcBeamVerts(varray_vertex, v, up2, p->scalex);
+	}
+	else if (orientation == PARTICLE_BILLBOARD)
+	{
+		VectorScale(vright, p->scalex, right);
+		VectorScale(vup, p->scaley, up);
+		varray_vertex[ 0] = org[0] + right[0] - up[0];
+		varray_vertex[ 1] = org[1] + right[1] - up[1];
+		varray_vertex[ 2] = org[2] + right[2] - up[2];
+		varray_vertex[ 4] = org[0] - right[0] - up[0];
+		varray_vertex[ 5] = org[1] - right[1] - up[1];
+		varray_vertex[ 6] = org[2] - right[2] - up[2];
+		varray_vertex[ 8] = org[0] - right[0] + up[0];
+		varray_vertex[ 9] = org[1] - right[1] + up[1];
+		varray_vertex[10] = org[2] - right[2] + up[2];
+		varray_vertex[12] = org[0] + right[0] + up[0];
+		varray_vertex[13] = org[1] + right[1] + up[1];
+		varray_vertex[14] = org[2] + right[2] + up[2];
+	}
+	else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+	{
+		// double-sided
+		if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
+		{
+			VectorNegate(p->vel2, v);
+			VectorVectors(v, right, up);
+		}
+		else
+			VectorVectors(p->vel2, right, up);
+		VectorScale(right, p->scalex, right);
+		VectorScale(up, p->scaley, up);
+		varray_vertex[ 0] = org[0] + right[0] - up[0];
+		varray_vertex[ 1] = org[1] + right[1] - up[1];
+		varray_vertex[ 2] = org[2] + right[2] - up[2];
+		varray_vertex[ 4] = org[0] - right[0] - up[0];
+		varray_vertex[ 5] = org[1] - right[1] - up[1];
+		varray_vertex[ 6] = org[2] - right[2] - up[2];
+		varray_vertex[ 8] = org[0] - right[0] + up[0];
+		varray_vertex[ 9] = org[1] - right[1] + up[1];
+		varray_vertex[10] = org[2] - right[2] + up[2];
+		varray_vertex[12] = org[0] + right[0] + up[0];
+		varray_vertex[13] = org[1] + right[1] + up[1];
+		varray_vertex[14] = org[2] + right[2] + up[2];
+	}
+	else
+		Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
 	R_Mesh_Draw(4, 2, polygonelements);
 }
 

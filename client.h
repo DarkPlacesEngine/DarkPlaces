@@ -598,11 +598,6 @@ void CL_InitTEnts (void);
 // cl_part
 //
 
-#define PARTICLE_INVALID 0
-#define PARTICLE_BILLBOARD 1
-#define PARTICLE_UPRIGHT_FACING 2
-#define PARTICLE_ORIENTED_DOUBLESIDED 3
-
 void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
 
