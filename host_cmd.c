@@ -1670,16 +1670,7 @@ void Host_Startdemos_f (void)
 	int		i, c;
 
 	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
-	{
-		if (!sv.active)
-		{
-			if (gamemode == GAME_TRANSFUSION)
-				Cbuf_AddText ("map bb1\n");
-			else
-				Cbuf_AddText ("map start\n");
-		}
 		return;
-	}
 
 	c = Cmd_Argc() - 1;
 	if (c > MAX_DEMOS)
