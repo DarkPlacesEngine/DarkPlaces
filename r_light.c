@@ -274,9 +274,17 @@ loc0:
 		if (dist2 >= maxdist)
 			continue;
 
-		impact[0] = rd->origin[0] - surf->plane->normal[0] * dist;
-		impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
-		impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
+		if (node->plane->type < 3)
+		{
+			VectorCopy(rd->origin, impact);
+			impact[node->plane->type] -= dist;
+		}
+		else
+		{
+			impact[0] = rd->origin[0] - surf->plane->normal[0] * dist;
+			impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
+			impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
+		}
 
 		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
 
@@ -425,9 +433,17 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 
 								dist2 = dist * dist;
 
-								impact[0] = rd->origin[0] - surf->plane->normal[0] * dist;
-								impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
-								impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
+								if (surf->plane->type < 3)
+								{
+									VectorCopy(rd->origin, impact);
+									impact[surf->plane->type] -= dist;
+								}
+								else
+								{
+									impact[0] = rd->origin[0] - surf->plane->normal[0] * dist;
+									impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
+									impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
+								}
 
 								impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
 								d = bound(0, impacts, surf->extents[0] + 16) - impacts;
