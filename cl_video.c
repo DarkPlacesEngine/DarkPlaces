@@ -118,8 +118,6 @@ void CL_VideoStop(void)
 {
 	cl_videoplaying = false;
 
-	S_RawSamples_ClearQueue();
-
 	if (cl_videostream)
 		dpvsimpledecode_close(cl_videostream);
 	cl_videostream = NULL;
