@@ -157,14 +157,14 @@ void Con_CheckResize (void)
 	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
 	char	tbuf[CON_TEXTSIZE];
 
-	width = (vid.conwidth >> 3) - 2;
+	width = (vid.conwidth >> 3);
 
 	if (width == con_linewidth)
 		return;
 
 	if (width < 1)			// video hasn't been initialized yet
 	{
-		width = 78; // LordHavoc: changed from 38 to 78 (320 -> 640 conversion)
+		width = 80;
 		con_linewidth = width;
 		con_totallines = CON_TEXTSIZE / con_linewidth;
 		memset (con_text, ' ', CON_TEXTSIZE);
@@ -260,8 +260,7 @@ void Con_Linefeed (void)
 {
 	con_x = 0;
 	con_current++;
-	memset (&con_text[(con_current%con_totallines)*con_linewidth]
-	, ' ', con_linewidth);
+	memset (&con_text[(con_current%con_totallines)*con_linewidth], ' ', con_linewidth);
 }
 
 /*
@@ -495,7 +494,7 @@ void Con_DrawInput (void)
 		text += 1 + key_linepos - con_linewidth;
 
 	// draw it
-	DrawQ_String(8, con_vislines - 16, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+	DrawQ_String(0, con_vislines - 16, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 	// remove cursor
 	key_lines[edit_line][key_linepos] = 0;
@@ -533,7 +532,7 @@ void Con_DrawNotify (void)
 
 		clearnotify = 0;
 
-		DrawQ_String(8, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+		DrawQ_String(0, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 		v += 8;
 	}
@@ -552,13 +551,13 @@ void Con_DrawNotify (void)
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		while (strlen(temptext) >= con_linewidth)
 		{
-			DrawQ_String (8, v, temptext, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+			DrawQ_String (0, v, temptext, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 			strcpy(temptext, &temptext[con_linewidth]);
 			v += 8;
 		}
 		if (strlen(temptext) > 0)
 		{
-			DrawQ_String (8, v, temptext, 0, 8, 8, 1, 1, 1, 1, 0);
+			DrawQ_String (0, v, temptext, 0, 8, 8, 1, 1, 1, 1, 0);
 			v += 8;
 		}
 	}
@@ -602,7 +601,7 @@ void Con_DrawConsole (int lines)
 		j = max(i - con_backscroll, 0);
 		text = con_text + (j % con_totallines)*con_linewidth;
 
-		DrawQ_String(8, y, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+		DrawQ_String(0, y, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 	}
 
 // draw the input prompt, user text, and cursor if desired
