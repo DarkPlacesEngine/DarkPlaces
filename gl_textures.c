@@ -73,6 +73,10 @@ gltextureimage_t;
 
 typedef struct gltexture_s
 {
+	// this field is exposed to the R_GetTexture macro, for speed reasons
+	// (must be identical in rtexture_t)
+	int texnum; // GL texture slot number
+
 	// pointer to texturepool (check this to see if the texture is allocated)
 	struct gltexturepool_s *pool;
 	// pointer to next texture in texturepool chain
@@ -168,15 +172,19 @@ static void R_PrecacheTexture(gltexture_t *glt)
 		R_UploadTexture(glt);
 }
 
-int R_GetTexture(rtexture_t *rt)
+int R_RealGetTexture(rtexture_t *rt)
 {
-	gltexture_t *glt;
-	if (!rt)
+	if (rt)
+	{
+		gltexture_t *glt;
+		glt = (gltexture_t *)rt;
+		if (glt->flags & GLTEXF_UPLOAD)
+			R_UploadTexture(glt);
+		glt->texnum = glt->image->texnum;
+		return glt->image->texnum;
+	}
+	else
 		return 0;
-	glt = (gltexture_t *)rt;
-	if (glt->flags & GLTEXF_UPLOAD)
-		R_UploadTexture(glt);
-	return glt->image->texnum;
 }
 
 void R_FreeTexture(rtexture_t *rt)
@@ -542,6 +550,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 
 		qglTexSubImage2D(GL_TEXTURE_2D, 0, glt->x, glt->y, glt->width, glt->height, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 		CHECKGLERROR
+		glt->texnum = glt->image->texnum;
 		return;
 	}
 
@@ -626,6 +635,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 		CHECKGLERROR
 	}
+	glt->texnum = glt->image->texnum;
 }
 
 static void R_FindImageForTexture(gltexture_t *glt)
@@ -636,6 +646,9 @@ static void R_FindImageForTexture(gltexture_t *glt)
 	gltextureimage_t *image, **imagechainpointer;
 	texinfo = glt->textype;
 	pool = glt->pool;
+
+	// remains -1 until uploaded
+	glt->texnum = -1;
 
 	x = 0;
 	y = 0;

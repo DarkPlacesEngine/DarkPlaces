@@ -23,10 +23,11 @@
 // 32bit RGBA
 #define TEXTYPE_RGBA 3
 
-// contents of this structure are private to gl_textures.c
+// contents of this structure are mostly private to gl_textures.c
 typedef struct
 {
-	int useless;
+	// this is exposed (rather than private) for speed reasons only
+	int texnum;
 }
 rtexture_t;
 
@@ -64,7 +65,8 @@ void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, 
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
-int R_GetTexture (rtexture_t *rt);
+#define R_GetTexture(rt) ((rt) ? ((rt)->texnum >= 0 ? (rt)->texnum : R_RealGetTexture(rt)) : 0)
+int R_RealGetTexture (rtexture_t *rt);
 
 // returns true if the texture is transparent (useful for rendering code)
 int R_TextureHasAlpha(rtexture_t *rt);
