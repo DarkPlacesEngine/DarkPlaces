@@ -29,7 +29,6 @@ cvar_t halflifebsp = {0, "halflifebsp", "0"};
 cvar_t r_novis = {0, "r_novis", "0"};
 cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
-cvar_t r_vertexsurfacesthreshold = {CVAR_SAVE, "r_vertexsurfacesthreshold", "0"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
 
@@ -49,7 +48,6 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable(&r_novis);
 	Cvar_RegisterVariable(&r_miplightmaps);
 	Cvar_RegisterVariable(&r_lightmaprgba);
-	Cvar_RegisterVariable(&r_vertexsurfacesthreshold);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_sortsurfaces);
 	memset(mod_novis, 0xff, sizeof(mod_novis));
@@ -227,17 +225,20 @@ static void Mod_LoadTextures (lump_t *l)
 
 	// add two slots for notexture walls and notexture liquids
 	loadmodel->numtextures = m->nummiptex + 2;
-	loadmodel->textures = Mem_Alloc(loadmodel->mempool, loadmodel->numtextures * sizeof(*loadmodel->textures));
+	loadmodel->textures = Mem_Alloc(loadmodel->mempool, loadmodel->numtextures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	for (i = 0;i < loadmodel->numtextures;i++)
+	for (i = 0, tx = loadmodel->textures;i < loadmodel->numtextures;i++, tx++)
 	{
-		loadmodel->textures[i] = tx = Mem_Alloc(loadmodel->mempool, sizeof(texture_t));
 		tx->width = 16;
 		tx->height = 16;
 		tx->texture = r_notexture;
+		tx->shader = &Cshader_wall_lightmap;
 		if (i == loadmodel->numtextures - 1)
-			tx->flags = SURF_DRAWTURB | SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA | SURF_CLIPSOLID;
+		{
+			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
+			tx->shader = &Cshader_water;
+		}
 	}
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
@@ -278,13 +279,10 @@ static void Mod_LoadTextures (lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		tx = loadmodel->textures[i];
+		tx = loadmodel->textures + i;
 		strcpy(tx->name, name);
 		tx->width = mtwidth;
 		tx->height = mtheight;
-		tx->texture = NULL;
-		tx->glowtexture = NULL;
-		tx->fogtexture = NULL;
 
 		if (!tx->name[0])
 		{
@@ -412,20 +410,23 @@ static void Mod_LoadTextures (lump_t *l)
 
 		if (tx->name[0] == '*')
 		{
-			tx->flags |= (SURF_DRAWTURB | SURF_LIGHTBOTHSIDES);
+			tx->flags |= SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 			// LordHavoc: some turbulent textures should be fullbright and solid
 			if (!strncmp(tx->name,"*lava",5)
 			 || !strncmp(tx->name,"*teleport",9)
 			 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-				tx->flags |= (SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA | SURF_CLIPSOLID);
+				tx->flags |= SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA;
+			tx->shader = &Cshader_water;
 		}
 		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
-			tx->flags |= (SURF_DRAWSKY | SURF_CLIPSOLID);
+		{
+			tx->flags |= SURF_DRAWSKY;
+			tx->shader = &Cshader_sky;
+		}
 		else
 		{
 			tx->flags |= SURF_LIGHTMAP;
-			if (!R_TextureHasAlpha(tx->texture))
-				tx->flags |= SURF_CLIPSOLID;
+			tx->shader = &Cshader_wall_lightmap;
 		}
 
 		tx->detailtexture = detailtextures[i % NUM_DETAILTEXTURES];
@@ -434,7 +435,7 @@ static void Mod_LoadTextures (lump_t *l)
 	// sequence the animations
 	for (i = 0;i < m->nummiptex;i++)
 	{
-		tx = loadmodel->textures[i];
+		tx = loadmodel->textures + i;
 		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
 		if (tx->anim_total[0] || tx->anim_total[1])
@@ -446,7 +447,7 @@ static void Mod_LoadTextures (lump_t *l)
 
 		for (j = i;j < m->nummiptex;j++)
 		{
-			tx2 = loadmodel->textures[j];
+			tx2 = loadmodel->textures + j;
 			if (!tx2 || tx2->name[0] != '+' || strcmp (tx2->name+2, tx->name+2))
 				continue;
 
@@ -883,15 +884,20 @@ static void Mod_LoadTexinfo (lump_t *l)
 			if ((unsigned int) miptex >= (unsigned int) loadmodel->numtextures)
 				Con_Printf ("error in model \"%s\": invalid miptex index %i (of %i)\n", loadmodel->name, miptex, loadmodel->numtextures);
 			else
-				out->texture = loadmodel->textures[miptex];
+				out->texture = loadmodel->textures + miptex;
 		}
-		if (out->texture == NULL)
+		if (out->flags & TEX_SPECIAL)
 		{
-			// choose either the liquid notexture, or the normal notexture
-			if (out->flags & TEX_SPECIAL)
-				out->texture = loadmodel->textures[loadmodel->numtextures - 1];
-			else
-				out->texture = loadmodel->textures[loadmodel->numtextures - 2];
+			// if texture chosen is NULL or the shader needs a lightmap,
+			// force to notexture water shader
+			if (out->texture == NULL || out->texture->shader->flags & SHADERFLAGS_NEEDLIGHTMAP)
+				out->texture = loadmodel->textures + (loadmodel->numtextures - 1);
+		}
+		else
+		{
+			// if texture chosen is NULL, force to notexture
+			if (out->texture == NULL)
+				out->texture = loadmodel->textures + (loadmodel->numtextures - 2);
 		}
 	}
 }
@@ -1164,13 +1170,15 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 	{
 		s = DotProduct (in, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
 		t = DotProduct (in, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
-		u = (s + 8 - surf->texturemins[0]) * (1.0 / 16.0) * uscale + ubase;
-		v = (t + 8 - surf->texturemins[1]) * (1.0 / 16.0) * vscale + vbase;
+		u = (s + 8 - surf->texturemins[0]) * (1.0 / 16.0);
+		v = (t + 8 - surf->texturemins[1]) * (1.0 / 16.0);
 		// LordHavoc: calc lightmap data offset for vertex lighting to use
 		iu = (int) u;
 		iv = (int) v;
 		iu = bound(0, iu, smax);
 		iv = bound(0, iv, tmax);
+		u = u * uscale + ubase;
+		v = v * vscale + vbase;
 
 		mesh->verts[i * 4 + 0] = in[0];
 		mesh->verts[i * 4 + 1] = in[1];
@@ -1328,56 +1336,18 @@ static void Mod_LoadFaces (lump_t *l)
 			out->samples = loadmodel->lightdata + (i * 3);
 
 		Mod_GenerateSurfacePolygon(out);
-
-		if (out->texinfo->texture->flags & SURF_DRAWSKY)
+		if (out->texinfo->texture->shader == &Cshader_wall_lightmap)
 		{
-			out->shader = &Cshader_sky;
-			out->samples = NULL;
-			Mod_GenerateVertexMesh (out);
-		}
-		else if (out->texinfo->texture->flags & SURF_DRAWTURB)
-		{
-			out->shader = &Cshader_water;
-			out->samples = NULL;
-			Mod_GenerateVertexMesh (out);
+			if ((out->extents[0] >> 4) + 1 > (256) || (out->extents[1] >> 4) + 1 > (256))
+				Host_Error ("Bad surface extents");
+			Mod_GenerateWallMesh (out, false);
+			// stainmap for permanent marks on walls
+			out->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+			// clear to white
+			memset(out->stainsamples, 255, ssize * tsize * 3);
 		}
 		else
-		{
-			if (!R_TextureHasAlpha(out->texinfo->texture->texture))
-				out->flags |= SURF_CLIPSOLID;
-			if (out->texinfo->flags & TEX_SPECIAL)
-			{
-				// qbsp couldn't find the texture for this surface, but it was either turb or sky...  assume turb
-				out->shader = &Cshader_water;
-				out->shader = &Cshader_water;
-				out->samples = NULL;
-				Mod_GenerateVertexMesh (out);
-			}
-			else if ((out->extents[0] >> 4) + 1 > (256) || (out->extents[1] >> 4) + 1 > (256))
-			{
-				Con_Printf ("Bad surface extents, converting to fullbright polygon");
-				out->shader = &Cshader_wall_fullbright;
-				out->samples = NULL;
-				Mod_GenerateVertexMesh(out);
-			}
-			else
-			{
-				// stainmap for permanent marks on walls
-				out->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
-				// clear to white
-				memset(out->stainsamples, 255, ssize * tsize * 3);
-				if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
-				{
-					out->shader = &Cshader_wall_vertex;
-					Mod_GenerateWallMesh (out, true);
-				}
-				else
-				{
-					out->shader = &Cshader_wall_lightmap;
-					Mod_GenerateWallMesh (out, false);
-				}
-			}
-		}
+			Mod_GenerateVertexMesh (out);
 	}
 }
 
@@ -2462,7 +2432,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
 		{
 			// we only need to have a drawsky function if it is used (usually only on world model)
-			if (surf->shader == &Cshader_sky)
+			if (surf->texinfo->texture->shader == &Cshader_sky)
 				mod->DrawSky = R_DrawBrushModelSky;
 			for (k = 0;k < surf->numedges;k++)
 			{

@@ -156,7 +156,7 @@ typedef struct model_s
 	hull_t			hulls[MAX_MAP_HULLS];
 
 	int				numtextures;
-	texture_t		**textures;
+	texture_t		*textures;
 
 	qbyte			*visdata;
 	qbyte			*lightdata;
