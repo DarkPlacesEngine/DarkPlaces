@@ -677,7 +677,7 @@ void SCR_ScreenShot_f (void)
 	else
 		sprintf(filename, "%s%06d.tga", base, shotnumber);
 
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		Con_Printf("Wrote %s\n", filename);
 	else
 		Con_Printf("unable to write %s\n", filename);
@@ -696,7 +696,7 @@ void SCR_CaptureAVIDemo(void)
 	else
 		sprintf(filename, "video/dp%06d.tga", cl_avidemo_frame);
 
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		cl_avidemo_frame++;
 	else
 	{
@@ -717,15 +717,16 @@ struct
 {
 	float angles[3];
 	char *name;
+	qboolean flipx, flipy;
 }
 envmapinfo[6] =
 {
-	{{  0,   0, 0}, "ft"},
-	{{  0,  90, 0}, "rt"},
-	{{  0, 180, 0}, "bk"},
-	{{  0, 270, 0}, "lf"},
-	{{-90,  90, 0}, "up"},
-	{{ 90,  90, 0}, "dn"}
+	{{  0,   0, 0}, "rt",  true, false},
+	{{  0,  90, 0}, "ft",  true, false},
+	{{  0, 180, 0}, "lf",  true, false},
+	{{  0, 270, 0}, "bk",  true, false},
+	{{-90, 180, 0}, "up", false,  true},
+	{{ 90, 180, 0}, "dn", false,  true}
 };
 
 static void R_Envmap_f (void)
@@ -767,8 +768,10 @@ static void R_Envmap_f (void)
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
 		R_ClearScreen();
+		R_Mesh_Start();
 		R_RenderView();
-		SCR_ScreenShot(filename, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, false);
+		R_Mesh_Finish();
+		SCR_ScreenShot(filename, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, false, false);
 	}
 
 	envmap = false;
