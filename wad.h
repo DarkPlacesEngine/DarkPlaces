@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // wad.h
 
+#ifndef WAD_H
+#define WAD_H
+
 //===============
 //   TYPES
 //===============
@@ -76,3 +79,6 @@ extern int image_width, image_height;
 void	W_LoadTextureWadFile (char *filename, int complain);
 qbyte	*W_GetTexture (char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
 qbyte	*W_ConvertWAD3Texture(miptex_t *tex); // returns tempmempool allocated image data, width and height are in image_width and image_height
+
+#endif
+

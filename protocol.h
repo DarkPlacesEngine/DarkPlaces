@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // protocol.h -- communications protocols
 
+#ifndef PROTOCOL_H
+#define PROTOCOL_H
+
 #define	PROTOCOL_VERSION	15
 #define	DPPROTOCOL_VERSION1	96
 #define	DPPROTOCOL_VERSION2	97
@@ -416,12 +419,8 @@ void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f);
 void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg);
 // (client) reads a frame from network stream
 void EntityFrame_Read(entity_database_t *d);
-// (client) reads (and interpolates) the eye location from the database,
-// given a current time
-//int EntityFrame_FetchEye(entity_database_t *d, vec3_t eye, double time);
-// (client) fetchs an entity from the frame by index into the entity list
-//int EntityFrame_FetchEntityByIndex(entity_frame_t *f, entity_state_t *e, int index);
-// (client) fetchs an entity from the frame by entity number
-//int EntityFrame_FetchEntityByNumber(entity_frame_t *f, entity_state_t *e, int number);
 // (client) returns the frame number of the most recent frame recieved
 int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
+
+#endif
+

@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // server.h
 
+#ifndef SERVER_H
+#define SERVER_H
+
 typedef struct
 {
 	int			maxclients;
@@ -166,7 +169,6 @@ typedef struct client_s
 // edict->flags
 #define	FL_FLY					1
 #define	FL_SWIM					2
-//#define	FL_GLIMPSE				4
 #define	FL_CONVEYOR				4
 #define	FL_CLIENT				8
 #define	FL_INWATER				16
@@ -265,3 +267,6 @@ void SV_CheckForNewClients (void);
 void SV_RunClients (void);
 void SV_SaveSpawnparms (void);
 void SV_SpawnServer (char *server);
+
+#endif
+

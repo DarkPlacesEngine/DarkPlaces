@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // net.h -- quake's interface to the networking layer
 
+#ifndef NET_H
+#define NET_H
+
 struct qsockaddr
 {
 	short sa_family;
@@ -149,9 +152,6 @@ typedef struct qsocket_s
 } qsocket_t;
 
 extern qsocket_t	*net_activeSockets;
-// LordHavoc: sockets are dynamically allocated now
-//extern qsocket_t	*net_freeSockets;
-//extern int			net_numsockets;
 extern mempool_t *net_mempool;
 
 typedef struct
@@ -330,3 +330,6 @@ extern	qboolean	slistLocal;
 extern cvar_t hostname;
 
 void NET_Slist_f (void);
+
+#endif
+

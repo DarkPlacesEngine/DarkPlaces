@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifndef ZONE_H
 #define ZONE_H
+
 #define POOLNAMESIZE 128
 // give malloc padding so we can't waste most of a page at the end
 #define MEMCLUMPSIZE (65536 - 1536)
@@ -116,4 +117,6 @@ void Memory_Init_Commands (void);
 extern mempool_t *zonemempool;
 #define Z_Malloc(size) Mem_Alloc(zonemempool,size)
 #define Z_Free(data) Mem_Free(data)
+
 #endif
+

@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // winquake.h: Win32-specific Quake header file
 
+#ifndef WINQUAKE_H
+#define WINQUAKE_H
+
 #include <windows.h>
 
 #ifndef SERVERONLY
@@ -44,7 +47,6 @@ extern LPDIRECTSOUND pDS;
 extern LPDIRECTSOUNDBUFFER pDSBuf;
 
 extern DWORD gSndBufSize;
-//#define SNDBUFSIZE 65536
 
 void	VID_LockBuffer (void);
 void	VID_UnlockBuffer (void);
@@ -99,3 +101,6 @@ struct hostent FAR * (PASCAL FAR *pgethostbyaddr)(const char FAR * addr,
 												  int len, int type);
 int (PASCAL FAR *pgetsockname)(SOCKET s, struct sockaddr FAR *name,
 							   int FAR * namelen);
+
+#endif
+

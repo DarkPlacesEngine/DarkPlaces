@@ -1,4 +1,7 @@
 
+#ifndef CL_LIGHT_H
+#define CL_LIGHT_H
+
 // LordHavoc: 256 dynamic lights
 #define	MAX_DLIGHTS		256
 typedef struct
@@ -25,3 +28,6 @@ extern dlight_t cl_dlights[MAX_DLIGHTS];
 
 extern void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
 extern void CL_DecayLights (void);
+
+#endif
+

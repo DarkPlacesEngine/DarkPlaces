@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // net_udp.h
 
+#ifndef NET_UDP_H
+#define NET_UDP_H
+
 int  UDP_Init (void);
 void UDP_Shutdown (void);
 void UDP_Listen (qboolean state);
@@ -37,3 +40,6 @@ int  UDP_GetAddrFromName (char *name, struct qsockaddr *addr);
 int  UDP_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2);
 int  UDP_GetSocketPort (struct qsockaddr *addr);
 int  UDP_SetSocketPort (struct qsockaddr *addr, int port);
+
+#endif
+

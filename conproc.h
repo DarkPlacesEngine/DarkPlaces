@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // conproc.h
 
+#ifndef CONPROC_H
+#define CONPROC_H
+
 #define CCOM_WRITE_TEXT		0x2
 // Param1 : Text
 
@@ -34,4 +37,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 void InitConProc (HANDLE hFile, HANDLE heventParent, HANDLE heventChild);
 void DeinitConProc (void);
+
+#endif
 

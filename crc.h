@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 /* crc.h */
 
+#ifndef CRC_H
+#define CRC_H
+
 void CRC_Init(unsigned short *crcvalue);
 void CRC_ProcessByte(unsigned short *crcvalue, qbyte data);
 // LordHavoc: added this for speed reasons
@@ -26,3 +29,6 @@ void CRC_ProcessBytes(unsigned short *crcvalue, qbyte *data, int size);
 unsigned short CRC_Value(unsigned short crcvalue);
 // LordHavoc: further speed and usability improvement
 unsigned short CRC_Block(qbyte *data, int size);
+
+#endif
+

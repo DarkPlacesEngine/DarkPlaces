@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // quakedef.h -- primary header for client
 
+#ifndef QUAKEDEF_H
+#define QUAKEDEF_H
+
 #define QUAKE_GAME // as opposed to utilities
 
 #include <math.h>
@@ -297,3 +300,6 @@ void fractalnoisequick(unsigned char *noise, int size, int startgrid);
 #include "image.h"
 
 void Sys_Shared_Init(void);
+
+#endif
+

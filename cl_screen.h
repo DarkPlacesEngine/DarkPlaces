@@ -1,4 +1,7 @@
 
+#ifndef CL_SCREEN_H
+#define CL_SCREEN_H
+
 // drawqueue stuff for use by client to feed 2D art to renderer
 #define MAX_DRAWQUEUE 262144
 
@@ -33,3 +36,6 @@ extern cvar_t scr_2dresolution;
 void CL_Screen_NewMap(void);
 void CL_Screen_Init(void);
 void CL_UpdateScreen(void);
+
+#endif
+

@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // net_wins.h
 
+#ifndef NET_WINS_H
+#define NET_WINS_H
+
 int  WINS_Init (void);
 void WINS_Shutdown (void);
 void WINS_Listen (qboolean state);
@@ -37,3 +40,6 @@ int  WINS_GetAddrFromName (char *name, struct qsockaddr *addr);
 int  WINS_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2);
 int  WINS_GetSocketPort (struct qsockaddr *addr);
 int  WINS_SetSocketPort (struct qsockaddr *addr, int port);
+
+#endif
+

@@ -18,7 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-// refresh.h -- public interface to refresh functions
+#ifndef RENDER_H
+#define RENDER_H
 
 // 1.0f / N table
 extern float ixtable[4096];
@@ -64,15 +65,11 @@ extern float *aliasvertcolor;
 // vis stuff
 extern cvar_t r_novis;
 
-// model transform stuff
-//extern cvar_t gl_transform;
-
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
 
 //=============================================================================
 
-//extern	qboolean	r_cache_thrash;		// compatability
 extern	entity_render_t	*currentrenderentity;
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
@@ -100,15 +97,11 @@ extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
 extern	cvar_t	r_waterripple;
 
-//extern	float	r_world_matrix[16];
-
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first
 
 
 void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
-
-//int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
 
 void R_NewMap (void);
 
@@ -129,7 +122,7 @@ void R_DrawExplosions(void);
 #define gl_solid_format 3
 #define gl_alpha_format 4
 
-//#define PARANOID
+//#define PARANOID 1
 
 // LordHavoc: was a major time waster
 #define R_CullBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) == 2 || frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) == 2 || frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) == 2 || frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) == 2)
@@ -138,7 +131,6 @@ void R_DrawExplosions(void);
 extern qboolean fogenabled;
 extern vec3_t fogcolor;
 extern vec_t fogdensity;
-//#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2])*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2]))))
 #define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0])*((v)[0] - r_origin[0])+((v)[1] - r_origin[1])*((v)[1] - r_origin[1])+((v)[2] - r_origin[2])*((v)[2] - r_origin[2])))))
 #define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
 
@@ -190,3 +182,6 @@ void R_TimeReport_End(void);
 
 // r_stain
 void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
+
+#endif
+

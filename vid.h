@@ -19,6 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vid.h -- video driver defs
 
+#ifndef VID_H
+#define VID_H
+
 typedef struct
 {
 	// these are set with VID_GetWindowSize and can change from frame to frame
@@ -26,7 +29,6 @@ typedef struct
 	int		realy;
 	int		realwidth;
 	int		realheight;
-//	int		recalc_refdef;	// if true, recalc vid-based stuff
 
 	int		conwidth;
 	int		conheight;
@@ -62,3 +64,6 @@ int VID_SetGamma (float prescale, float gamma, float scale, float base);
 void VID_GetWindowSize (int *x, int *y, int *width, int *height);
 
 void VID_Finish (void);
+
+#endif
+

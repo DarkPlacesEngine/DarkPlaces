@@ -1,4 +1,7 @@
 
+#ifndef PALLETE_H
+#define PALLETE_H
+
 extern cvar_t v_gamma;
 extern cvar_t v_contrast;
 extern cvar_t v_brightness;
@@ -18,3 +21,6 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, uns
 
 void Gamma_Init(void);
 void Palette_Init(void);
+
+#endif
+
