@@ -637,6 +637,9 @@ void R_RenderView (void)
 	R_BlendView();
 	R_TimeReport("blendview");
 
+	R_DrawCrosshair();
+	R_TimeReport("crosshair");
+
 	// render any queued meshs
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");

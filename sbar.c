@@ -760,7 +760,7 @@ void Sbar_ShowFPS(void)
 Sbar_Draw
 ===============
 */
-void DrawCrosshair(int num);
+//void DrawCrosshair(int num);
 void Sbar_Draw (void)
 {
 	if (scr_con_current == vid.conheight)
@@ -869,8 +869,8 @@ void Sbar_Draw (void)
 	if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
 		Sbar_MiniDeathmatchOverlay ();
 
-	if (crosshair.integer >= 1)
-		DrawCrosshair(crosshair.integer - 1);
+//	if (crosshair.integer >= 1)
+//		DrawCrosshair(crosshair.integer - 1);
 
 	if (cl.intermission == 1)
 		Sbar_IntermissionOverlay();
