@@ -53,10 +53,8 @@ matrix4x4_t listener_matrix;
 vec_t sound_nominal_clip_dist=1000.0;
 mempool_t *snd_mempool;
 
-// sample PAIRS
 int soundtime;
 int paintedtime;
-
 
 // Linked list of known sfx
 sfx_t *known_sfx = NULL;
@@ -93,7 +91,7 @@ const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/ambience/w
 
 void S_SoundInfo_f(void)
 {
-	if (!sound_started || !shm)
+	if (!sound_started)
 	{
 		Con_Print("sound system not started\n");
 		return;
@@ -657,6 +655,10 @@ void S_StopSound(int entnum, int entchannel)
 void S_StopAllSounds (void)
 {
 	unsigned int i;
+	unsigned char *pbuf;
+
+	if (!sound_started)
+		return;
 
 	for (i = 0; i < total_channels; i++)
 		S_StopChannel (i);
@@ -664,7 +666,23 @@ void S_StopAllSounds (void)
 	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 
-	S_ClearBuffer ();
+	// Clear sound buffer
+	pbuf = S_LockBuffer();
+	if (pbuf != NULL)
+	{
+		int setsize = shm->samples * shm->format.width;
+		int	clear = (shm->format.width == 1) ? 0x80 : 0;
+
+		// FIXME: is it (still) true? (check with OSS and ALSA)
+		// on i586/i686 optimized versions of glibc, glibc *wrongly* IMO,
+		// reads the memory area before writing to it causing a seg fault
+		// since the memory is PROT_WRITE only and not PROT_READ|PROT_WRITE
+		//memset(shm->buffer, clear, shm->samples * shm->format.width);
+		while (setsize--)
+			*pbuf++ = clear;
+
+		S_UnlockBuffer ();
+	}
 }
 
 void S_PauseGameSounds (qboolean toggle)
@@ -684,37 +702,6 @@ void S_PauseGameSounds (qboolean toggle)
 void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 	channels[ch_ind].master_vol = fvol * 255;
-}
-
-
-void S_ClearBuffer(void)
-{
-	int	clear;
-	unsigned char *pbuf;
-
-	if (!sound_started || !shm)
-		return;
-
-	if (shm->format.width == 1)
-		clear = 0x80;	// 8 bit sound (unsigned)
-	else
-		clear = 0;		// 16 bit sound (signed)
-
-	pbuf = S_LockBuffer();
-	if (pbuf != NULL)
-	{
-		int setsize = shm->samples * shm->format.width;
-
-		while (setsize--)
-			*pbuf++ = clear;
-
-		// on i586/i686 optimized versions of glibc, glibc *wrongly* IMO,
-		// reads the memory area before writing to it causing a seg fault
-		// since the memory is PROT_WRITE only and not PROT_READ|PROT_WRITE
-		//memset(shm->buffer, clear, shm->samples * shm->format.width);
-
-		S_UnlockBuffer ();
-	}
 }
 
 
@@ -772,7 +759,7 @@ void S_UpdateAmbientSounds (void)
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
 	{
 		chan = &channels[ambient_channel];
-		if (chan->sfx == NULL || (chan->sfx->flags & SFXFLAG_FILEMISSING))
+		if (chan->sfx == NULL || chan->sfx->fetcher == NULL)
 			continue;
 
 		vol = ambient_level.value * ambientlevels[ambient_channel];
