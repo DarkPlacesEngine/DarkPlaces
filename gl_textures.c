@@ -365,7 +365,7 @@ static void GL_TextureMode_f (void)
 		for (image = pool->imagechain;image;image = image->imagechain)
 		{
 			// only update already uploaded images
-			if (!(image->flags & GLTEXF_UPLOAD))
+			if (!(image->flags & GLTEXF_UPLOAD) && !(image->flags & (TEXF_FORCENEAREST | TEXF_FORCELINEAR)))
 			{
 				qglGetIntegerv(gltexturetypebindingenums[image->texturetype], &oldbindtexnum);
 				qglBindTexture(gltexturetypeenums[image->texturetype], image->texnum);
