@@ -69,10 +69,27 @@ void R_Mesh_Start(void);
 // (only valid after R_Mesh_Start)
 void R_Mesh_Finish(void);
 
-// sets up the requested transform matrix
+// sets up the requested vertex transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);
-
-// set up the requested state
+// sets the vertex array pointer
+void R_Mesh_VertexPointer(const float *vertex3f);
+// sets the color array pointer (GL_Color only works when this is NULL)
+void R_Mesh_ColorPointer(const float *color4f);
+// sets the texcoord array pointer for an array unit
+void R_Mesh_TexCoordPointer(unsigned int unitnum, unsigned int numcomponents, const float *texcoord);
+// sets all textures bound to an image unit (multiple can be non-zero at once, according to OpenGL rules the highest one overrides the others)
+void R_Mesh_TexBindAll(unsigned int unitnum, unsigned int tex1d, unsigned int tex2d, unsigned int tex3d, unsigned int texcubemap);
+// sets these are like TexBindAll with only one of the texture indices non-zero
+// (binds one texture type and unbinds all other types)
+void R_Mesh_TexBind1D(unsigned int unitnum, unsigned int texnum);
+void R_Mesh_TexBind(unsigned int unitnum, unsigned int texnum);
+void R_Mesh_TexBind3D(unsigned int unitnum, unsigned int texnum);
+void R_Mesh_TexBindCubeMap(unsigned int unitnum, unsigned int texnum);
+// sets the texcoord matrix for a texenv unit
+void R_Mesh_TexMatrix(unsigned int unitnum, const matrix4x4_t *matrix);
+// sets the combine state for a texenv unit
+void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, int rgbscale, int alphascale);
+// set up the requested entire rendering state
 void R_Mesh_State(const rmeshstate_t *m);
 
 // renders a mesh
