@@ -323,8 +323,8 @@ extern int gl_texturecubemap;
 
 extern int gl_dot3arb;
 #ifndef GL_DOT3_RGB_ARB
-#define DOT3_RGB_ARB				0x86AE
-#define DOT3_RGBA_ARB				0x86AF
+#define GL_DOT3_RGB_ARB				0x86AE
+#define GL_DOT3_RGBA_ARB				0x86AF
 #endif
 
 /*

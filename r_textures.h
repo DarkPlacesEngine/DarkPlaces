@@ -13,8 +13,10 @@
 // allocated as a fragment in a larger texture, mipmap is not allowed with
 // this, mostly used for lightmaps
 #define TEXF_FRAGMENT 0x00000010
+// indicates texture coordinates should be clamped rather than wrapping
+#define TEXF_CLAMP 0x00000020
 // used for checking if textures mismatch
-#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT)
+#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT | TEXF_CLAMP)
 
 // 8bit quake paletted
 #define TEXTYPE_QPALETTE 1

@@ -10,13 +10,13 @@ typedef struct
 
 // LordHavoc: vertex arrays
 
-float *aliasvertbuf;
 float *aliasvertcolorbuf;
-float *aliasvert; // this may point at aliasvertbuf or at vertex arrays in the mesh backend
 float *aliasvertcolor; // this may point at aliasvertcolorbuf or at vertex arrays in the mesh backend
+float *aliasvert_svectors;
+float *aliasvert_tvectors;
+float *aliasvert_normals;
 
 float *aliasvertcolor2;
-float *aliasvertnorm;
 int *aliasvertusage;
 zymbonematrix *zymbonepose;
 
@@ -26,9 +26,10 @@ void gl_models_start(void)
 {
 	// allocate vertex processing arrays
 	gl_models_mempool = Mem_AllocPool("GL_Models");
-	aliasvert = aliasvertbuf = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
 	aliasvertcolor = aliasvertcolorbuf = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
-	aliasvertnorm = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][3]));
+	aliasvert_svectors = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
+	aliasvert_tvectors = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
+	aliasvert_normals = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
 	aliasvertcolor2 = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
 	zymbonepose = Mem_Alloc(gl_models_mempool, sizeof(zymbonematrix[256]));
 	aliasvertusage = Mem_Alloc(gl_models_mempool, sizeof(int[MD2MAX_VERTS]));
@@ -87,7 +88,7 @@ void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3 + n4[1] * lerp4;
 					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3 + n4[2] * lerp4;
 					av += 4;
-					avn += 3;
+					avn += 4;
 					verts1++;verts2++;verts3++;verts4++;
 				}
 			}
@@ -109,7 +110,7 @@ void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3;
 					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3;
 					av += 4;
-					avn += 3;
+					avn += 4;
 					verts1++;verts2++;verts3++;
 				}
 			}
@@ -131,7 +132,7 @@ void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 				avn[1] = n1[1] * lerp1 + n2[1] * lerp2;
 				avn[2] = n1[2] * lerp1 + n2[2] * lerp2;
 				av += 4;
-				avn += 3;
+				avn += 4;
 				verts1++;verts2++;
 			}
 		}
@@ -155,7 +156,7 @@ void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 				avn[1] = n1[1] * lerp1;
 				avn[2] = n1[2] * lerp1;
 				av += 4;
-				avn += 3;
+				avn += 4;
 				verts1++;
 			}
 		}
@@ -169,7 +170,7 @@ void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 				av[2] = verts1->v[2] * scale1[2] + translate[2];
 				VectorCopy(m_bytenormals[verts1->lightnormalindex], avn);
 				av += 4;
-				avn += 3;
+				avn += 4;
 				verts1++;
 			}
 		}
@@ -265,7 +266,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		blendfunc2 = GL_ZERO;
 	}
 
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 	memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[4]));
 	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
 	{
@@ -287,7 +288,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			varray_texcoord[0][i + 0] *= 8.0f;
 			varray_texcoord[0][i + 1] *= 8.0f;
 		}
-		R_LightModel(ent, model->numverts, varray_vertex, aliasvertnorm, varray_color, colorscale, colorscale, colorscale, false);
+		R_LightModel(ent, model->numverts, varray_vertex, aliasvert_normals, varray_color, colorscale, colorscale, colorscale, false);
 		GL_UseColorArray();
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		return;
@@ -331,7 +332,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		else
 		{
 			GL_UseColorArray();
-			R_LightModel(ent, model->numverts, varray_vertex, aliasvertnorm, varray_color, colorscale * ifog, colorscale * ifog, colorscale * ifog, false);
+			R_LightModel(ent, model->numverts, varray_vertex, aliasvert_normals, varray_color, colorscale * ifog, colorscale * ifog, colorscale * ifog, false);
 		}
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		c_alias_polys += model->numtris;
@@ -362,7 +363,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 				else
 				{
 					GL_UseColorArray();
-					R_LightModel(ent, model->numverts, varray_vertex, aliasvertnorm, varray_color, pantscolor[0] * colorscale * ifog, pantscolor[1] * colorscale * ifog, pantscolor[2] * colorscale * ifog, false);
+					R_LightModel(ent, model->numverts, varray_vertex, aliasvert_normals, varray_color, pantscolor[0] * colorscale * ifog, pantscolor[1] * colorscale * ifog, pantscolor[2] * colorscale * ifog, false);
 				}
 				R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				c_alias_polys += model->numtris;
@@ -391,7 +392,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 				else
 				{
 					GL_UseColorArray();
-					R_LightModel(ent, model->numverts, varray_vertex, aliasvertnorm, varray_color, shirtcolor[0] * colorscale * ifog, shirtcolor[1] * colorscale * ifog, shirtcolor[2] * colorscale * ifog, false);
+					R_LightModel(ent, model->numverts, varray_vertex, aliasvert_normals, varray_color, shirtcolor[0] * colorscale * ifog, shirtcolor[1] * colorscale * ifog, shirtcolor[2] * colorscale * ifog, false);
 				}
 				R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				c_alias_polys += model->numtris;
@@ -475,14 +476,14 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 				{
 					model = ent->model;
 					R_Mesh_ResizeCheck(model->numverts * 2);
-					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 					Matrix4x4_Transform(&ent->inversematrix, sl->origin, temp);
 					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
 					R_Shadow_Volume(model->numverts, model->numtris, varray_vertex, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, sl->cullradius + model->radius - sqrt(f), true);
 					GL_UseColorArray();
 					lightscale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					VectorScale(sl->light, lightscale, lightcolor);
-					R_Shadow_VertexLight(model->numverts, varray_vertex, aliasvertnorm, temp, sl->cullradius2, sl->distbias, sl->subtract, lightcolor);
+					R_Shadow_VertexLight(model->numverts, varray_vertex, aliasvert_normals, temp, sl->cullradius2, sl->distbias, sl->subtract, lightcolor);
 					R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				}
 			}
@@ -497,12 +498,12 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 				{
 					model = ent->model;
 					R_Mesh_ResizeCheck(model->numverts * 2);
-					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 					Matrix4x4_Transform(&ent->inversematrix, rd->origin, temp);
 					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
 					R_Shadow_Volume(model->numverts, model->numtris, varray_vertex, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, rd->cullradius + model->radius - sqrt(f), true);
 					GL_UseColorArray();
-					R_Shadow_VertexLight(model->numverts, varray_vertex, aliasvertnorm, temp, rd->cullradius2, LIGHTOFFSET, rd->subtract, rd->light);
+					R_Shadow_VertexLight(model->numverts, varray_vertex, aliasvert_normals, temp, rd->cullradius2, LIGHTOFFSET, rd->subtract, rd->light);
 					R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				}
 			}
@@ -531,7 +532,7 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 	R_Mesh_State(&m);
 
 	c_alias_polys += model->numtris;
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 
 	// put a light direction in the entity's coordinate space
 	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, projection);
@@ -558,10 +559,12 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 	R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 }
 
-void R_Model_Alias_DrawDepth(entity_render_t *ent)
+void R_Model_Alias_DrawBaseLighting(entity_render_t *ent)
 {
+	R_Mesh_Matrix(&ent->matrix);
+	GL_Color(0, 0, 0, 1);
 	R_Mesh_ResizeCheck(ent->model->numverts);
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 	R_Mesh_Draw(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices);
 }
 
@@ -571,24 +574,22 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	projectdistance = lightradius + ent->model->radius - sqrt(DotProduct(relativelightorigin, relativelightorigin));
 	if (projectdistance > 0.1)
 	{
+		R_Mesh_Matrix(&ent->matrix);
 		R_Mesh_ResizeCheck(ent->model->numverts * 2);
-		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 		R_Shadow_Volume(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_indices, ent->model->mdlmd2data_triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
 	}
 }
 
-void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
+void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
 {
+	skinframe_t *skinframe;
+	R_Mesh_Matrix(&ent->matrix);
+	skinframe = R_FetchSkinFrame(ent);
 	R_Mesh_ResizeCheck(ent->model->numverts);
-	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-	R_Shadow_Light(ent->model->numverts, aliasvertnorm, relativelightorigin, lightradius, lightdistbias, lightsubtract, lightcolor);
-	GL_UseColorArray();
-	R_Mesh_Draw(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices);
-}
-
-void R_Model_Alias_DrawOntoLight(entity_render_t *ent)
-{
-	// FIXME
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
+	Mod_BuildTextureVectorsAndNormals(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_texcoords, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals);
+	R_Shadow_RenderLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, skinframe->base, r_notexture, NULL, NULL);
 }
 
 int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)
@@ -919,10 +920,10 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	R_Mesh_State(&mstate);
 	ZymoticLerpBones(ent->model->zymnum_bones, (zymbonematrix *) ent->model->zymdata_poses, ent->frameblend, ent->model->zymdata_bones);
 	ZymoticTransformVerts(numverts, varray_vertex, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
-	ZymoticCalcNormals(numverts, varray_vertex, aliasvertnorm, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
+	ZymoticCalcNormals(numverts, varray_vertex, aliasvert_normals, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
 	memcpy(varray_texcoord[0], ent->model->zymdata_texcoords, ent->model->zymnum_verts * sizeof(float[4]));
 	GL_UseColorArray();
-	R_LightModel(ent, numverts, varray_vertex, aliasvertnorm, varray_color, ifog * colorscale, ifog * colorscale, ifog * colorscale, false);
+	R_LightModel(ent, numverts, varray_vertex, aliasvert_normals, varray_color, ifog * colorscale, ifog * colorscale, ifog * colorscale, false);
 	R_Mesh_Draw(numverts, numtriangles, elements);
 	c_alias_polys += numtriangles;
 

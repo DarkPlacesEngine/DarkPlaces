@@ -221,7 +221,7 @@ void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles)
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
-void GL_SetupView_Mode_Perspective (double aspect, double fovx, double fovy, double zNear, double zFar)
+void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, double zFar)
 {
 	double xmax, ymax;
 
@@ -236,6 +236,39 @@ void GL_SetupView_Mode_Perspective (double aspect, double fovx, double fovy, dou
 	ymax = zNear * tan(fovy * M_PI / 360.0);
 	// set view pyramid
 	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
+	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+	GL_SetupView_Orientation_Identity();
+}
+
+void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, double zNear)
+{
+	double nudge, m[16];
+
+	if (!r_render.integer)
+		return;
+
+	// set up viewpoint
+	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
+	qglLoadIdentity ();CHECKGLERROR
+	// set view pyramid
+	nudge = 1.0 - 1.0 / (1<<23);
+	m[ 0] = 1.0 / tan(fovx * M_PI / 360.0);
+	m[ 1] = 0;
+	m[ 2] = 0;
+	m[ 3] = 0;
+	m[ 4] = 0;
+	m[ 5] = 1.0 / tan(fovy * M_PI / 360.0);
+	m[ 6] = 0;
+	m[ 7] = 0;
+	m[ 8] = 0;
+	m[ 9] = 0;
+	m[10] = -1 * nudge;
+	m[11] = -1 * nudge;
+	m[12] = 0;
+	m[13] = 0;
+	m[14] = -2 * zNear * nudge;
+	m[15] = 0;
+	qglLoadMatrixd(m);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 }
@@ -258,6 +291,7 @@ typedef struct gltextureunit_s
 	unsigned int t1d, t2d, t3d, tcubemap;
 	unsigned int arrayenabled;
 	float rgbscale;
+	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
 }
 gltextureunit_t;
@@ -292,6 +326,8 @@ void GL_SetupTextureState(void)
 		unit->t3d = 0;
 		unit->tcubemap = 0;
 		unit->rgbscale = 1;
+		unit->combinergb = GL_MODULATE;
+		unit->combinealpha = GL_MODULATE;
 		unit->arrayenabled = false;
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		if (gl_texture3d)
@@ -444,7 +480,7 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	}
 }
 
-void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index)
+void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, const int *index)
 {
 	int arraylocked = false;
 	c_meshs++;
@@ -461,9 +497,9 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index
 		arraylocked = true;
 	}
 	if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, (GLuint *) index);
+		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, (const GLuint *) index);
 	else
-		qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, (GLuint *) index);
+		qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, (const GLuint *) index);
 	CHECKGLERROR
 	if (arraylocked)
 	{
@@ -485,7 +521,7 @@ void _R_Mesh_ResizeCheck(int numverts)
 }
 
 // renders the mesh
-void R_Mesh_Draw(int numverts, int numtriangles, int *elements)
+void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 {
 	BACKENDACTIVECHECK
 
@@ -599,7 +635,7 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 
 void R_Mesh_TextureState(const rmeshstate_t *m)
 {
-	int i;
+	int i, combinergb, combinealpha;
 	float rgbscale;
 	gltextureunit_t *unit;
 
@@ -642,6 +678,32 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 						qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
 					}
 					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+				}
+			}
+			combinergb = m->texcombinergb[i];
+			combinealpha = m->texcombinealpha[i];
+			if (!combinergb)
+				combinergb = GL_MODULATE;
+			if (!combinealpha)
+				combinealpha = GL_MODULATE;
+			if (unit->combinergb != combinergb)
+			{
+				unit->combinergb = combinergb;
+				if (gl_combine.integer)
+				{
+					qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
+				}
+				else
+				{
+					qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
+				}
+			}
+			if (unit->combinealpha != combinealpha)
+			{
+				unit->combinealpha = combinealpha;
+				if (gl_combine.integer)
+				{
+					qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
 				}
 			}
 			if (unit->t1d != m->tex1d[i])

@@ -52,6 +52,8 @@ static textypeinfo_t textype_rgba_alpha     = {TEXTYPE_RGBA    , 4, 4, GL_RGBA, 
 #define GLTEXTURETYPE_3D 2
 #define GLTEXTURETYPE_CUBEMAP 3
 
+static int gltexturetypeenums[4] = {GL_TEXTURE_1D, GL_TEXTURE_2D, GL_TEXTURE_3D, GL_TEXTURE_CUBE_MAP_ARB};
+static int gltexturetypedimensions[4] = {1, 2, 3, 2};
 static int cubemapside[6] =
 {
 	GL_TEXTURE_CUBE_MAP_POSITIVE_X_ARB,
@@ -541,32 +543,39 @@ void R_MakeResizeBufferBigger(int size)
 	}
 }
 
+static void GL_SetupTextureParameters(int flags, int texturetype)
+{
+	int textureenum = gltexturetypeenums[texturetype];
+	int wrapmode = (flags & TEXF_CLAMP) ? GL_CLAMP : GL_REPEAT;
+
+	CHECKGLERROR
+
+	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_S, wrapmode);
+	if (gltexturetypedimensions[texturetype] >= 2)
+		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);
+	if (gltexturetypedimensions[texturetype] >= 3)
+		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_R, wrapmode);
+
+	if (flags & TEXF_MIPMAP)
+		qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+	else
+		qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+	qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+
+	CHECKGLERROR
+}
+
 static void R_Upload(gltexture_t *glt, qbyte *data)
 {
 	int i, mip, width, height, depth, internalformat;
 	qbyte *prevbuffer;
 	prevbuffer = data;
 
+	CHECKGLERROR
+
 	glt->texnum = glt->image->texnum;
-	switch(glt->image->texturetype)
-	{
-	case GLTEXTURETYPE_1D:
-		qglBindTexture(GL_TEXTURE_1D, glt->image->texnum);
-		CHECKGLERROR
-		break;
-	case GLTEXTURETYPE_2D:
-		qglBindTexture(GL_TEXTURE_2D, glt->image->texnum);
-		CHECKGLERROR
-		break;
-	case GLTEXTURETYPE_3D:
-		qglBindTexture(GL_TEXTURE_3D, glt->image->texnum);
-		CHECKGLERROR
-		break;
-	case GLTEXTURETYPE_CUBEMAP:
-		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, glt->image->texnum);
-		CHECKGLERROR
-		break;
-	}
+	qglBindTexture(gltexturetypeenums[glt->image->texturetype], glt->image->texnum);
+	CHECKGLERROR
 	glt->flags &= ~GLTEXF_UPLOAD;
 	gl_backend_rebindtextures = true;
 
@@ -583,31 +592,20 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			case GLTEXTURETYPE_1D:
 				qglTexImage1D(GL_TEXTURE_1D, 0, glt->image->glinternalformat, glt->image->width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
 				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-				CHECKGLERROR
 				break;
 			case GLTEXTURETYPE_2D:
 				qglTexImage2D(GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
 				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-				CHECKGLERROR
 				break;
 			case GLTEXTURETYPE_3D:
 				qglTexImage3D(GL_TEXTURE_3D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, glt->image->depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
-				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 				CHECKGLERROR
 				break;
 			default:
 				Host_Error("R_Upload: fragment texture of type other than 1D, 2D, or 3D\n");
 				break;
 			}
+			GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
 		}
 
 		if (prevbuffer == NULL)
@@ -708,17 +706,6 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 				qglTexImage1D(GL_TEXTURE_1D, mip++, internalformat, width, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 				CHECKGLERROR
 			}
-			qglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
-		}
-		else
-		{
-			qglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
 		}
 		break;
 	case GLTEXTURETYPE_2D:
@@ -733,17 +720,6 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 				qglTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 				CHECKGLERROR
 			}
-			qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
-		}
-		else
-		{
-			qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
 		}
 		break;
 	case GLTEXTURETYPE_3D:
@@ -758,17 +734,6 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 				qglTexImage3D(GL_TEXTURE_3D, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 				CHECKGLERROR
 			}
-			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
-		}
-		else
-		{
-			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
 		}
 		break;
 	case GLTEXTURETYPE_CUBEMAP:
@@ -790,21 +755,11 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 					qglTexImage2D(cubemapside[i], mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 					CHECKGLERROR
 				}
-				qglTexParameteri(cubemapside[i], GL_TEXTURE_MIN_FILTER, gl_filter_min);
-				CHECKGLERROR
-				qglTexParameteri(cubemapside[i], GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-				CHECKGLERROR
-			}
-			else
-			{
-				qglTexParameteri(cubemapside[i], GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				CHECKGLERROR
-				qglTexParameteri(cubemapside[i], GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-				CHECKGLERROR
 			}
 		}
 		break;
 	}
+	GL_SetupTextureParameters(glt->image->flags, glt->image->texturetype);
 }
 
 static void R_FindImageForTexture(gltexture_t *glt)
@@ -834,9 +789,11 @@ static void R_FindImageForTexture(gltexture_t *glt)
 				continue;
 			if (image->texturetype != glt->texturetype)
 				continue;
+			if ((image->flags ^ glt->flags) & (TEXF_MIPMAP | TEXF_ALPHA | TEXF_CLAMP))
+				continue;
 			if (image->glformat != texinfo->glformat || image->glinternalformat != texinfo->glinternalformat)
 				continue;
-			if (glt->width > image->width || glt->height > image->height)
+			if (glt->width > image->width || glt->height > image->height || glt->depth > image->depth)
 				continue;
 
 			// got a fragments texture, find a place in it if we can
@@ -878,10 +835,10 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		// make sure the created image is big enough for the fragment
 		for (image->width = block_size;image->width < glt->width;image->width <<= 1);
 		image->height = 1;
-		if (glt->texturetype != GLTEXTURETYPE_1D)
+		if (gltexturetypedimensions[glt->texturetype] >= 2)
 			for (image->height = block_size;image->height < glt->height;image->height <<= 1);
 		image->depth = 1;
-		if (glt->texturetype == GLTEXTURETYPE_3D)
+		if (gltexturetypedimensions[glt->texturetype] >= 3)
 			for (image->depth = block_size;image->depth < glt->depth;image->depth <<= 1);
 		image->blockallocation = Mem_Alloc(texturemempool, image->width * sizeof(short));
 		memset(image->blockallocation, 0, image->width * sizeof(short));
@@ -918,7 +875,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 	image->texturetype = glt->texturetype;
 	image->glinternalformat = texinfo->glinternalformat;
 	image->glformat = texinfo->glformat;
-	image->flags = (glt->flags & (TEXF_MIPMAP | TEXF_ALPHA)) | GLTEXF_UPLOAD;
+	image->flags = (glt->flags & (TEXF_MIPMAP | TEXF_ALPHA | TEXF_CLAMP)) | GLTEXF_UPLOAD;
 	image->bytesperpixel = texinfo->internalbytesperpixel;
 	image->sides = image->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	// get a texture number to use

@@ -522,7 +522,7 @@ void R_DrawViewModel (void)
 }
 
 void R_DrawNoModel(entity_render_t *ent);
-void R_DrawModels (void)
+void R_DrawModels (int baselighting)
 {
 	int i;
 	entity_render_t *ent;
@@ -538,7 +538,12 @@ void R_DrawModels (void)
 		{
 			if (ent->model)
 			{
-				if (ent->model->Draw)
+				if (baselighting && ent->model->DrawBaseLighting != NULL)
+				{
+					if (ent->model->DrawBaseLighting)
+						ent->model->DrawBaseLighting(ent);
+				}
+				else if (ent->model->Draw)
 					ent->model->Draw(ent);
 			}
 			else
@@ -630,7 +635,6 @@ void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float l
 #endif
 			{
 				Matrix4x4_Transform(&ent->inversematrix, lightorigin, relativelightorigin);
-				R_Mesh_Matrix(&ent->matrix);
 				ent->model->DrawShadowVolume (ent, relativelightorigin, lightradius, visiblevolume);
 			}
 			}
@@ -662,6 +666,8 @@ void R_DrawShadowVolumes (void)
 	{
 		if (d_lightstylevalue[sl->style] <= 0)
 			continue;
+		if (r_light_debuglight.integer >= 0 && lnum != r_light_debuglight.integer)
+			continue;
 		/*
 		mins[0] = sl->origin[0] - sl->cullradius;
 		maxs[0] = sl->origin[0] + sl->cullradius;
@@ -691,7 +697,6 @@ void R_DrawShadowVolumes (void)
 		if (ent->model && ent->model->DrawShadowVolume && ent->maxs[0] >= mins[0] && ent->mins[0] <= maxs[0] && ent->maxs[1] >= mins[1] && ent->mins[1] <= maxs[1] && ent->maxs[2] >= mins[2] && ent->mins[2] <= maxs[2])
 		{
 			Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
-			R_Mesh_Matrix(&ent->matrix);
 			ent->model->DrawShadowVolume (ent, relativelightorigin, sl->cullradius, true);
 		}
 		*/
@@ -714,7 +719,6 @@ void R_DrawShadowVolumes (void)
 				if (ent->model && ent->model->DrawShadowVolume && ent->maxs[0] >= mins[0] && ent->mins[0] <= maxs[0] && ent->maxs[1] >= mins[1] && ent->mins[1] <= maxs[1] && ent->maxs[2] >= mins[2] && ent->mins[2] <= maxs[2])
 				{
 					Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
-					R_Mesh_Matrix(&ent->matrix);
 					ent->model->DrawShadowVolume (ent, relativelightorigin, sl->cullradius, true);
 				}
 				*/
@@ -745,7 +749,6 @@ void R_DrawShadowVolumes (void)
 		if (ent != rd->ent && ent->model && ent->model->DrawShadowVolume && ent->maxs[0] >= mins[0] && ent->mins[0] <= maxs[0] && ent->maxs[1] >= mins[1] && ent->mins[1] <= maxs[1] && ent->maxs[2] >= mins[2] && ent->mins[2] <= maxs[2])
 		{
 			Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-			R_Mesh_Matrix(&ent->matrix);
 			ent->model->DrawShadowVolume (ent, relativelightorigin, rd->cullradius, true);
 		}
 		*/
@@ -761,7 +764,6 @@ void R_DrawShadowVolumes (void)
 				if (ent != rd->ent && ent->model && ent->model->DrawShadowVolume && ent->maxs[0] >= mins[0] && ent->mins[0] <= maxs[0] && ent->maxs[1] >= mins[1] && ent->mins[1] <= maxs[1] && ent->maxs[2] >= mins[2] && ent->mins[2] <= maxs[2])
 				{
 					Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-					R_Mesh_Matrix(&ent->matrix);
 					ent->model->DrawShadowVolume (ent, relativelightorigin, rd->cullradius, true);
 				}
 				*/
@@ -779,11 +781,11 @@ void R_CreateShadowSphere(void)
 	vec3_t angles, angles2, angles3, angles4;
 	float verts[12];
 	shadowsphere = Mod_ShadowMesh_Begin(zonemempool);
-	for (i = 0;i < SHADOWSPHERE_SEGMENTS;i++)
+	for (i = 0;i < SHADOWSPHERE_SEGMENTS / 2;i++)
 	{
 		for (j = 0;j < SHADOWSPHERE_SEGMENTS;j++)
 		{
-			angles[0] = i * 360.0f / SHADOWSPHERE_SEGMENTS;
+			angles[0] = (i * 360.0f / SHADOWSPHERE_SEGMENTS) + 90.0f;
 			angles[1] = j * 360.0f / SHADOWSPHERE_SEGMENTS;
 			angles[2] = 0;
 			VectorCopy(angles, angles2);
@@ -797,43 +799,48 @@ void R_CreateShadowSphere(void)
 			AngleVectorsFLU(angles2, verts + 9, NULL, NULL);
 			AngleVectorsFLU(angles3, verts + 6, NULL, NULL);
 			AngleVectorsFLU(angles4, verts + 3, NULL, NULL);
-			VectorScale(&verts[0], 64.0f, &verts[0]);
-			VectorScale(&verts[3], 64.0f, &verts[3]);
-			VectorScale(&verts[6], 64.0f, &verts[6]);
-			VectorScale(&verts[9], 64.0f, &verts[9]);
+			VectorScale(&verts[0], 1.0f, &verts[0]);
+			VectorScale(&verts[3], 1.0f, &verts[3]);
+			VectorScale(&verts[6], 1.0f, &verts[6]);
+			VectorScale(&verts[9], 1.0f, &verts[9]);
 			Mod_ShadowMesh_AddPolygon(zonemempool, shadowsphere, 4, verts);
+			/*
 			AngleVectorsFLU(angles, verts, NULL, NULL);
 			AngleVectorsFLU(angles2, verts + 3, NULL, NULL);
 			AngleVectorsFLU(angles3, verts + 6, NULL, NULL);
 			AngleVectorsFLU(angles4, verts + 9, NULL, NULL);
-			VectorScale(&verts[0], 128.0f, &verts[0]);
-			VectorScale(&verts[3], 128.0f, &verts[3]);
-			VectorScale(&verts[6], 128.0f, &verts[6]);
-			VectorScale(&verts[9], 128.0f, &verts[9]);
+			VectorScale(&verts[0], -4.0f, &verts[0]);
+			VectorScale(&verts[3], -4.0f, &verts[3]);
+			VectorScale(&verts[6], -4.0f, &verts[6]);
+			VectorScale(&verts[9], -4.0f, &verts[9]);
 			Mod_ShadowMesh_AddPolygon(zonemempool, shadowsphere, 4, verts);
+			*/
 		}
 	}
 	shadowsphere = Mod_ShadowMesh_Finish(zonemempool, shadowsphere);
 }
 
 
-void R_DrawShadowSphere(vec3_t origin, float radius, int visiblevolume)
+void R_DrawShadowSphere(vec3_t origin, float cullradius, float lightradius, int visiblevolume)
 {
-	int i;
-	float *v;
 	shadowmesh_t *mesh;
-	//matrix4x4_t matrix;
+	matrix4x4_t matrix;
 	if (!shadowsphere)
 		R_CreateShadowSphere();
-	//Matrix4x4_CreateTranslate(&matrix, origin[0], origin[1], origin[2]);
-	//Matrix4x4_ConcatScale(&matrix, radius);
-	//R_Mesh_Matrix(&matrix);
-	R_Mesh_Matrix(&r_identitymatrix);
+	Matrix4x4_CreateScale(&matrix, lightradius);
+	Matrix4x4_ConcatTranslate(&matrix, origin[0], origin[1], origin[2]);
+	R_Mesh_Matrix(&matrix);
 	for (mesh = shadowsphere;mesh;mesh = mesh->next)
 	{
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		for (i = 0, v = varray_vertex;i < mesh->numverts;i++, v += 4)
-			VectorMA(origin, radius, v, v);
+		R_Shadow_RenderVolume(mesh->numverts, mesh->numtriangles, mesh->elements, visiblevolume);
+	}
+	Matrix4x4_CreateScale(&matrix, -cullradius);
+	Matrix4x4_ConcatTranslate(&matrix, origin[0], origin[1], origin[2]);
+	R_Mesh_Matrix(&matrix);
+	for (mesh = shadowsphere;mesh;mesh = mesh->next)
+	{
+		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		R_Shadow_RenderVolume(mesh->numverts, mesh->numtriangles, mesh->elements, visiblevolume);
 	}
 }
@@ -844,46 +851,19 @@ void R_ShadowVolumeLighting (void)
 	entity_render_t *ent;
 	int lnum;
 	float f;
-	vec3_t mins, maxs, relativelightorigin, lightcolor;
+	vec3_t mins, maxs, relativelightorigin, relativeeyeorigin, lightcolor;
 	mlight_t *sl;
 	rdlight_t *rd;
 
-	R_Shadow_Stage_Depth();
-	ent = &cl_entities[0].render;
-	if (ent->model && ent->model->DrawDepth)
-	{
-		R_Mesh_Matrix(&ent->matrix);
-		ent->model->DrawDepth(ent);
-	}
-	if (r_drawentities.integer)
-	{
-		for (i = 0;i < r_refdef.numentities;i++)
-		{
-			ent = r_refdef.entities[i];
-			if (ent->visframe == r_framecount && ent->model && ent->model->DrawDepth)
-			{
-				R_Mesh_Matrix(&ent->matrix);
-				ent->model->DrawDepth(ent);
-			}
-		}
-	}
-
+	R_Shadow_Stage_Begin();
 	for (lnum = 0, sl = cl.worldmodel->lights;lnum < cl.worldmodel->numlights;lnum++, sl++)
 	{
 		if (d_lightstylevalue[sl->style] <= 0)
 			continue;
+		if (r_light_debuglight.integer >= 0 && lnum != r_light_debuglight.integer)
+			continue;
 		VectorCopy(sl->mins, mins);
 		VectorCopy(sl->maxs, maxs);
-		/*
-		mins[0] = sl->origin[0] - sl->cullradius;
-		maxs[0] = sl->origin[0] + sl->cullradius;
-		mins[1] = sl->origin[1] - sl->cullradius;
-		maxs[1] = sl->origin[1] + sl->cullradius;
-		mins[2] = sl->origin[2] - sl->cullradius;
-		maxs[2] = sl->origin[2] + sl->cullradius;
-		if (R_CullBox(mins, maxs))
-			continue;
-		*/
 		if (R_CullBox(mins, maxs))
 			continue;
 
@@ -891,7 +871,7 @@ void R_ShadowVolumeLighting (void)
 		VectorScale(sl->light, f, lightcolor);
 
 		R_Shadow_Stage_ShadowVolumes();
-		R_DrawShadowSphere(sl->origin, 1.0f/*sl->cullradius - 16*/, false);
+		R_DrawShadowSphere(sl->origin, sl->cullradius, sl->lightradius * 2, false);
 		if (sl->shadowvolume && r_staticworldlights.integer)
 			R_DrawWorldLightShadowVolume(sl, false);
 		else
@@ -901,12 +881,14 @@ void R_ShadowVolumeLighting (void)
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
 				ent = r_refdef.entities[i];
+				/*
 				if (ent->maxs[0] >= mins[0]
 				 && ent->mins[0] <= maxs[0]
 				 && ent->maxs[1] >= mins[1]
 				 && ent->mins[1] <= maxs[1]
 				 && ent->maxs[2] >= mins[2]
 				 && ent->mins[2] <= maxs[2])
+				*/
 					R_TestAndDrawShadowVolume(r_refdef.entities[i], sl->origin, sl->cullradius, false);
 			}
 		}
@@ -916,8 +898,8 @@ void R_ShadowVolumeLighting (void)
 		if (ent->model && ent->model->DrawLight)
 		{
 			Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
-			R_Mesh_Matrix(&ent->matrix);
-			ent->model->DrawLight(ent, relativelightorigin, sl->cullradius, sl->distbias, sl->subtract, lightcolor);
+			Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+			ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, sl->lightradius, sl->distbias, sl->subtract, lightcolor);
 		}
 		if (r_drawentities.integer)
 		{
@@ -925,16 +907,17 @@ void R_ShadowVolumeLighting (void)
 			{
 				ent = r_refdef.entities[i];
 				if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
+				/*
 				 && ent->maxs[0] >= mins[0]
 				 && ent->mins[0] <= maxs[0]
 				 && ent->maxs[1] >= mins[1]
 				 && ent->mins[1] <= maxs[1]
 				 && ent->maxs[2] >= mins[2]
-				 && ent->mins[2] <= maxs[2])
+				 && ent->mins[2] <= maxs[2]*/)
 				{
 					Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
-					R_Mesh_Matrix(&ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, sl->cullradius, sl->distbias, sl->subtract, lightcolor);
+					Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, sl->lightradius, sl->distbias, sl->subtract, lightcolor);
 				}
 			}
 		}
@@ -957,13 +940,15 @@ void R_ShadowVolumeLighting (void)
 			for (i = 0;i < r_refdef.numentities;i++)
 			{
 				ent = r_refdef.entities[i];
+				/*
 				if (ent->maxs[0] >= mins[0]
 				 && ent->mins[0] <= maxs[0]
 				 && ent->maxs[1] >= mins[1]
 				 && ent->mins[1] <= maxs[1]
 				 && ent->maxs[2] >= mins[2]
 				 && ent->mins[2] <= maxs[2])
-				R_TestAndDrawShadowVolume(ent, rd->origin, rd->cullradius, false);
+				*/
+					R_TestAndDrawShadowVolume(ent, rd->origin, rd->cullradius, false);
 			}
 		}
 
@@ -972,8 +957,8 @@ void R_ShadowVolumeLighting (void)
 		if (ent->model && ent->model->DrawLight)
 		{
 			Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-			R_Mesh_Matrix(&ent->matrix);
-			ent->model->DrawLight(ent, relativelightorigin, rd->cullradius, LIGHTOFFSET, rd->subtract, rd->light);
+			Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+			ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rd->cullradius, LIGHTOFFSET, rd->subtract, rd->light);
 		}
 		if (r_drawentities.integer)
 		{
@@ -981,37 +966,18 @@ void R_ShadowVolumeLighting (void)
 			{
 				ent = r_refdef.entities[i];
 				if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
+				/*
 				 && ent->maxs[0] >= mins[0]
 				 && ent->mins[0] <= maxs[0]
 				 && ent->maxs[1] >= mins[1]
 				 && ent->mins[1] <= maxs[1]
 				 && ent->maxs[2] >= mins[2]
-				 && ent->mins[2] <= maxs[2])
+				 && ent->mins[2] <= maxs[2]*/)
 				{
 					Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-					R_Mesh_Matrix(&ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, rd->cullradius, LIGHTOFFSET, rd->subtract, rd->light);
+					Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rd->cullradius, LIGHTOFFSET, rd->subtract, rd->light);
 				}
-			}
-		}
-	}
-
-	R_Shadow_Stage_Textures();
-	ent = &cl_entities[0].render;
-	if (ent->model && ent->model->DrawOntoLight)
-	{
-		R_Mesh_Matrix(&ent->matrix);
-		ent->model->DrawOntoLight(ent);
-	}
-	if (r_drawentities.integer)
-	{
-		for (i = 0;i < r_refdef.numentities;i++)
-		{
-			ent = r_refdef.entities[i];
-			if (ent->visframe == r_framecount && ent->model && ent->model->DrawOntoLight)
-			{
-				R_Mesh_Matrix(&ent->matrix);
-				ent->model->DrawOntoLight(ent);
 			}
 		}
 	}
@@ -1133,7 +1099,8 @@ void R_RenderView (void)
 	R_TimeReport("markentity");
 
 	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-	GL_SetupView_Mode_Perspective((double) r_refdef.height / r_refdef.width, r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
+	//GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
+	GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
 	GL_SetupView_Orientation_FromEntity (r_refdef.vieworg, r_refdef.viewangles);
 	qglDepthFunc(GL_LEQUAL);
 
@@ -1142,17 +1109,7 @@ void R_RenderView (void)
 
 	if (r_shadows.integer == 3)
 	{
-		if (!gl_stencil)
-		{
-			Con_Printf("Stencil not enabled, turning off r_shadows 3\n");
-			Cvar_SetValueQuick(&r_shadows, 0);
-		}
-		else if (!gl_texture3d)
-		{
-			Con_Printf("3D texture support not detected, turning off r_shadows 3\n");
-			Cvar_SetValueQuick(&r_shadows, 0);
-		}
-		else if (!gl_texturecubemap)
+		if (!gl_texturecubemap)
 		{
 			Con_Printf("Cubemap texture support not detected, turning off r_shadows 3\n");
 			Cvar_SetValueQuick(&r_shadows, 0);
@@ -1162,21 +1119,37 @@ void R_RenderView (void)
 			Con_Printf("Bumpmapping support not detected, turning off r_shadows 3\n");
 			Cvar_SetValueQuick(&r_shadows, 0);
 		}
+		else if (!gl_stencil)
+		{
+			Con_Printf("Stencil not enabled, turning off r_shadows 3, please type vid_stencil 1;vid_restart and try again\n");
+			Cvar_SetValueQuick(&r_shadows, 0);
+		}
+		else if (!gl_combine.integer)
+		{
+			Con_Printf("Combine disabled, please turn on gl_combine, turning off r_shadows 3\n");
+			Cvar_SetValueQuick(&r_shadows, 0);
+		}
 	}
 
 	if (R_DrawBrushModelsSky())
 		R_TimeReport("bmodelsky");
 
 	// must occur early because it can draw sky
-	R_DrawWorld(world);
+	R_DrawWorld(world, r_shadows.integer == 3);
 	R_TimeReport("world");
 
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
-	R_DrawModels();
+	R_DrawModels(r_shadows.integer == 3);
 	R_TimeReport("models");
+
+	if (r_shadows.integer == 1)
+	{
+		R_DrawFakeShadows();
+		R_TimeReport("fakeshadows");
+	}
 
 	if (r_shadows.integer == 3)
 		R_ShadowVolumeLighting();
@@ -1201,11 +1174,6 @@ void R_RenderView (void)
 
 	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();
-	if (r_shadows.integer == 1)
-	{
-		R_DrawFakeShadows();
-		R_TimeReport("fakeshadows");
-	}
 	if (r_shadows.integer == 2)
 	{
 		R_DrawShadowVolumes();

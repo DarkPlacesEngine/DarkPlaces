@@ -416,6 +416,8 @@ static void Mod_LoadTextures (lump_t *l)
 			 || !strncmp(tx->name,"*teleport",9)
 			 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
 				tx->flags |= SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA;
+			else
+				tx->flags |= SURF_WATERALPHA;
 			tx->shader = &Cshader_water;
 		}
 		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
@@ -432,6 +434,9 @@ static void Mod_LoadTextures (lump_t *l)
 		}
 
 		tx->detailtexture = detailtextures[i % NUM_DETAILTEXTURES];
+		// start out with no animation
+		tx->currentframe[0] = tx;
+		tx->currentframe[1] = tx;
 	}
 
 	// sequence the animations
@@ -1115,6 +1120,37 @@ void Mod_ShadowBrush_AddPolygon(mempool_t *mempool, svbrush_t *brush, int numver
 	memcpy(poly->verts, verts, numverts * sizeof(float[3]));
 }
 
+void Mod_ShadowBrush_AddPolygonI(mempool_t *mempool, svbrush_t *brush, int numverts, float *verts)
+{
+	int i;
+	float normal[3], dist, dir0[3], dir1[3], *v0, *v1, *v2;
+	svpolygon_t *poly;
+	for (i = 0, v0 = verts + (numverts - 2) * 3, v1 = verts + (numverts - 1) * 3, v2 = verts;i < numverts;i++, v0 = v1, v1 = v2, v2 += 3)
+	{
+		VectorSubtract(v0, v1, dir0);
+		VectorSubtract(v2, v1, dir1);
+		CrossProduct(dir0, dir1, normal);
+		if (DotProduct(normal, normal) >= 0.1)
+			break;
+	}
+	if (i == numverts)
+		return;
+	VectorNormalize(normal);
+	dist = DotProduct(verts, normal);
+	VectorNegate(normal, normal);
+	dist = -dist;
+
+	poly = Mem_Alloc(mempool, sizeof(svpolygon_t) + numverts * sizeof(float[3]));
+	poly->numverts = numverts;
+	poly->verts = (float *)(poly + 1);
+	VectorCopy(normal, poly->normal);
+	poly->dist = dist;
+	poly->next = brush->polygons;
+	brush->polygons = poly;
+	for (i = 0, v0 = verts + (numverts - 1) * 3, v1 = poly->verts;i < numverts;i++, v0 -= 3, v1 += 3)
+		VectorCopy(v0, v1);
+}
+
 void Mod_ShadowBrush_EndBrush(svworld_t *world, svbrush_t *brush)
 {
 	int i;
@@ -1190,7 +1226,7 @@ void Mod_ProcessLightList(void)
 		e->cullradius2 = DotProduct(e->light, e->light) / (e->falloff * e->falloff * 8192.0f * 8192.0f);// + 4096.0f;
 		if (e->cullradius2 > 4096.0f * 4096.0f)
 			e->cullradius2 = 4096.0f * 4096.0f;
-		e->cullradius = sqrt(e->cullradius2);
+		e->cullradius = e->lightradius = sqrt(e->cullradius2);
 		leaf = Mod_PointInLeaf(e->origin, loadmodel);
 		if (leaf->compressed_vis)
 			pvs = Mod_DecompressVis (leaf->compressed_vis, loadmodel);
@@ -1229,6 +1265,7 @@ void Mod_ProcessLightList(void)
 				if (loadmodel->surfacevisframes[j] == -2)
 					e->surfaces[e->numsurfaces++] = loadmodel->surfaces + j;
 		}
+#if 1
 		{
 		// find bounding box and sphere of lit surfaces
 		// (these will be used for creating a shape to clip the light)
@@ -1253,25 +1290,37 @@ void Mod_ProcessLightList(void)
 					radius2 = dist;
 			}
 		}
-		/*
 		if (e->cullradius2 > radius2)
 		{
 			e->cullradius2 = radius2;
 			e->cullradius = sqrt(e->cullradius2);
 		}
-		*/
 		}
+#endif
+#if 1
+		e->mins[0] = e->origin[0] - e->cullradius;
+		e->maxs[0] = e->origin[0] + e->cullradius;
+		e->mins[1] = e->origin[1] - e->cullradius;
+		e->maxs[1] = e->origin[1] + e->cullradius;
+		e->mins[2] = e->origin[2] - e->cullradius;
+		e->maxs[2] = e->origin[2] + e->cullradius;
+#endif
 #if 1
 		// clip shadow volumes against eachother to remove unnecessary
 		// polygons (and sections of polygons)
 		{
-			vec3_t temp, outermins, outermaxs, innermins, innermaxs;
+			vec3_t temp;
+			//vec3_t polymins, polymaxs;
 			int maxverts = 4;
 			float *verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
 			float f, *v0, *v1, projectdistance;
 			svworld_t *svworld;
 			svbrush_t *svbrush;
 
+			svworld = Mod_ShadowBrush_NewWorld(loadmodel->mempool);
+#if 0
+			{
+			vec3_t outermins, outermaxs, innermins, innermaxs;
 			innermins[0] = e->mins[0] - 1;
 			innermins[1] = e->mins[1] - 1;
 			innermins[2] = e->mins[2] - 1;
@@ -1284,57 +1333,6 @@ void Mod_ProcessLightList(void)
 			outermaxs[0] = loadmodel->normalmaxs[0] + 1;
 			outermaxs[1] = loadmodel->normalmaxs[1] + 1;
 			outermaxs[2] = loadmodel->normalmaxs[2] + 1;
-			svworld = Mod_ShadowBrush_NewWorld(loadmodel->mempool);
-			for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
-			{
-				if (!(surf->flags & SURF_SHADOWCAST))
-					continue;
-				f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
-				if (surf->flags & SURF_PLANEBACK)
-					f = -f;
-				projectdistance = e->cullradius + f;
-				if (projectdistance < 0.1 || projectdistance > e->cullradius)
-					continue;
-				VectorSubtract(e->origin, surf->poly_center, temp);
-				if (DotProduct(temp, temp) > (surf->poly_radius2 + e->cullradius2))
-					continue;
-				if (maxverts < surf->poly_numverts)
-				{
-					maxverts = surf->poly_numverts;
-					if (verts)
-						Mem_Free(verts);
-					verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-				}
-				svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
-				// copy the original polygon, reversed, for the front cap of the volume
-				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
-					VectorCopy(v0, v1);
-				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
-				// project the original polygon, for the back cap of the volume
-				for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
-				{
-					VectorSubtract(v0, e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(v0, projectdistance, temp, v1);
-				}
-				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
-				// project the shadow volume sides
-				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
-				{
-					VectorCopy(v0, &verts[0]);
-					VectorCopy(v1, &verts[3]);
-					VectorCopy(v1, &verts[6]);
-					VectorCopy(v0, &verts[9]);
-					VectorSubtract(&verts[6], e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-					VectorSubtract(&verts[9], e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-					Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
-				}
-				Mod_ShadowBrush_EndBrush(svworld, svbrush);
-			}
 			// add bounding box around the whole shadow volume set,
 			// facing inward to limit light area, with an outer bounding box
 			// facing outward (this is needed by the shadow rendering method)
@@ -1416,6 +1414,113 @@ void Mod_ProcessLightList(void)
 			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermins[2];
 			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
 			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			}
+#endif
+#define SHADOWCASTFRONT 1
+#if SHADOWCASTFRONT
+			for (j = 0;j < e->numsurfaces;j++)
+			{
+				surf = e->surfaces[j];
+#else
+			for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
+			{
+#endif
+				if (!(surf->flags & SURF_CLIPSOLID))
+					continue;
+				f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
+				if (surf->flags & SURF_PLANEBACK)
+					f = -f;
+#if SHADOWCASTFRONT
+				projectdistance = e->cullradius - f;
+#else
+				projectdistance = e->cullradius + f;
+#endif
+				if (projectdistance < 0.1 || projectdistance > e->cullradius)
+					continue;
+				VectorSubtract(e->origin, surf->poly_center, temp);
+				if (DotProduct(temp, temp) > (surf->poly_radius2 + e->cullradius2))
+					continue;
+				/*
+				VectorCopy(surf->poly_verts, polymins);
+				VectorCopy(surf->poly_verts, polymaxs);
+				for (k = 0, v0 = surf->poly_verts;k < surf->poly_numverts;k++, v0 += 3)
+				{
+					if (polymins[0] > v0[0]) polymins[0] = v0[0];if (polymaxs[0] < v0[0]) polymaxs[0] = v0[0];
+					if (polymins[1] > v0[1]) polymins[1] = v0[1];if (polymaxs[1] < v0[1]) polymaxs[1] = v0[1];
+					if (polymins[2] > v0[2]) polymins[2] = v0[2];if (polymaxs[2] < v0[2]) polymaxs[2] = v0[2];
+				}
+				if (polymins[0] > e->maxs[0] || polymaxs[0] < e->mins[0]
+				 || polymins[1] > e->maxs[1] || polymaxs[1] < e->mins[1]
+				 || polymins[2] > e->maxs[2] || polymaxs[2] < e->mins[2])
+					continue;
+				*/
+				if (maxverts < surf->poly_numverts)
+				{
+					maxverts = surf->poly_numverts;
+					if (verts)
+						Mem_Free(verts);
+					verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
+				}
+				svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+#if SHADOWCASTFRONT
+				// copy the original polygon, for the front cap of the volume
+				for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
+					VectorCopy(v0, v1);
+				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
+				// project the original polygon, reversed, for the back cap of the volume
+				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
+				{
+					VectorSubtract(v0, e->origin, temp);
+					VectorNormalize(temp);
+					VectorMA(v0, projectdistance, temp, v1);
+				}
+				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
+				// project the shadow volume sides
+				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
+				{
+					VectorCopy(v1, &verts[0]);
+					VectorCopy(v0, &verts[3]);
+					VectorCopy(v0, &verts[6]);
+					VectorCopy(v1, &verts[9]);
+					VectorSubtract(&verts[6], e->origin, temp);
+					VectorNormalize(temp);
+					VectorMA(&verts[6], projectdistance, temp, &verts[6]);
+					VectorSubtract(&verts[9], e->origin, temp);
+					VectorNormalize(temp);
+					VectorMA(&verts[9], projectdistance, temp, &verts[9]);
+					Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+				}
+#else
+				// copy the original polygon, reversed, for the front cap of the volume
+				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
+					VectorCopy(v0, v1);
+				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
+				// project the original polygon, for the back cap of the volume
+				for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
+				{
+					VectorSubtract(v0, e->origin, temp);
+					VectorNormalize(temp);
+					VectorMA(v0, projectdistance, temp, v1);
+				}
+				Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, surf->poly_numverts, verts);
+				// project the shadow volume sides
+				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;k++, v0 = v1, v1 += 3)
+				{
+					VectorCopy(v0, &verts[0]);
+					VectorCopy(v1, &verts[3]);
+					VectorCopy(v1, &verts[6]);
+					VectorCopy(v0, &verts[9]);
+					VectorSubtract(&verts[6], e->origin, temp);
+					VectorNormalize(temp);
+					VectorMA(&verts[6], projectdistance, temp, &verts[6]);
+					VectorSubtract(&verts[9], e->origin, temp);
+					VectorNormalize(temp);
+					VectorMA(&verts[9], projectdistance, temp, &verts[9]);
+					Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+				}
+#endif
+				Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			}
 			// clip away hidden polygons
 			Mod_ShadowBrush_ProcessWorld(loadmodel->mempool, svworld);
 			// build the triangle mesh
@@ -2055,6 +2160,25 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 }
 #endif
 
+surfmesh_t *Mod_AllocSurfMesh(int numverts, int numtriangles)
+{
+	surfmesh_t *mesh;
+	mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + numtriangles * sizeof(int[6]) + numverts * (4 + 4 + 4 + 4 + 4 + 4 + 4 + 1) * sizeof(float));
+	mesh->numverts = numverts;
+	mesh->numtriangles = numtriangles;
+	mesh->verts = (float *)(mesh + 1);
+	mesh->str = mesh->verts + mesh->numverts * 4;
+	mesh->uvw = mesh->str + mesh->numverts * 4;
+	mesh->abc = mesh->uvw + mesh->numverts * 4;
+	mesh->svectors = (float *)(mesh->abc + mesh->numverts * 4);
+	mesh->tvectors = mesh->svectors + mesh->numverts * 4;
+	mesh->normals = mesh->tvectors + mesh->numverts * 4;
+	mesh->lightmapoffsets = (int *)(mesh->normals + mesh->numverts * 4);
+	mesh->index = mesh->lightmapoffsets + mesh->numverts;
+	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
+	return mesh;
+}
+
 void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 {
 	int i, iu, iv, *index, smax, tmax;
@@ -2091,17 +2215,7 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		vscale = (vscale - vbase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 	}
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 4 + 4 + 4 + 1 + 3) * sizeof(float));
-	mesh->numverts = surf->poly_numverts;
-	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->verts = (float *)(mesh + 1);
-	mesh->str = mesh->verts + mesh->numverts * 4;
-	mesh->uvw = mesh->str + mesh->numverts * 4;
-	mesh->abc = mesh->uvw + mesh->numverts * 4;
-	mesh->lightmapoffsets = (int *)(mesh->abc + mesh->numverts * 4);
-	mesh->index = mesh->lightmapoffsets + mesh->numverts;
-	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
-	mesh->normals = (float *)(mesh->triangleneighbors + mesh->numtriangles * 3);
+	surf->mesh = mesh = Mod_AllocSurfMesh(surf->poly_numverts, surf->poly_numverts - 2);
 
 	index = mesh->index;
 	for (i = 0;i < mesh->numtriangles;i++)
@@ -2139,10 +2253,8 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		mesh->abc[i * 4 + 0] = s * (1.0f / 16.0f);
 		mesh->abc[i * 4 + 1] = t * (1.0f / 16.0f);
 		mesh->lightmapoffsets[i] = ((iv * (smax+1) + iu) * 3);
-		mesh->normals[i * 3 + 0] = normal[0];
-		mesh->normals[i * 3 + 1] = normal[1];
-		mesh->normals[i * 3 + 2] = normal[2];
 	}
+	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->verts, mesh->str, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals);
 }
 
 void Mod_GenerateVertexMesh (msurface_t *surf)
@@ -2154,15 +2266,7 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	surf->lightmaptexturestride = 0;
 	surf->lightmaptexture = NULL;
 
-	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[6]) + surf->poly_numverts * (4 + 4 + 4 + 3) * sizeof(float));
-	mesh->numverts = surf->poly_numverts;
-	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->verts = (float *)(mesh + 1);
-	mesh->str = mesh->verts + mesh->numverts * 4;
-	mesh->abc = mesh->str + mesh->numverts * 4;
-	mesh->index = (int *)(mesh->abc + mesh->numverts * 4);
-	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
-	mesh->normals = (float *)(mesh->triangleneighbors + mesh->numtriangles * 3);
+	surf->mesh = mesh = Mod_AllocSurfMesh(surf->poly_numverts, surf->poly_numverts - 2);
 
 	index = mesh->index;
 	for (i = 0;i < mesh->numtriangles;i++)
@@ -2185,12 +2289,12 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 		mesh->verts[i * 4 + 2] = in[2];
 		mesh->str[i * 4 + 0] = s / surf->texinfo->texture->width;
 		mesh->str[i * 4 + 1] = t / surf->texinfo->texture->height;
+		mesh->uvw[i * 4 + 0] = 0;
+		mesh->uvw[i * 4 + 1] = 0;
 		mesh->abc[i * 4 + 0] = s * (1.0f / 16.0f);
 		mesh->abc[i * 4 + 1] = t * (1.0f / 16.0f);
-		mesh->normals[i * 3 + 0] = normal[0];
-		mesh->normals[i * 3 + 1] = normal[1];
-		mesh->normals[i * 3 + 2] = normal[2];
 	}
+	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->verts, mesh->str, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals);
 }
 
 void Mod_GenerateSurfacePolygon (msurface_t *surf)
@@ -3309,6 +3413,40 @@ static void Mod_MakePortals(void)
 	Mod_FinalizePortals();
 }
 
+static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, mempool_t *mempool)
+{
+	#if 0
+	int surfnum, vertnum, snum, vnum;
+	msurface_t *surf, *s;
+	float *v0, *v1, *v2, *v3;
+	for (surf = surfaces, surfnum = 0;surfnum < numsurfaces;surf++, surfnum++)
+	{
+		surf->neighborsurfaces = Mem_Alloc(mempool, surf->poly_numverts * sizeof(msurface_t *));
+		for (vertnum = 0;vertnum < surf->poly_numverts;vertnum++)
+		{
+			v0 = surf->poly_verts + ((vertnum + 1) % surf->poly_numverts) * 3;
+			v1 = surf->poly_verts + vertnum * 3;
+			surf->neighborsurfaces[vertnum] = NULL;
+			for (s = surfaces, snum = 0;snum < numsurfaces;s++, snum++)
+			{
+				if (s == surf)
+					continue;
+				for (vnum = 0, v2 = s->poly_verts + (s->poly_numverts - 1) * 3, v3 = s->poly_verts;vnum < s->poly_numverts;vnum++, v2 = v3, v3 += 3)
+				{
+					if (v0[0] == v2[0] && v0[1] == v2[1] && v0[2] == v2[2] && v1[0] == v3[0] && v1[1] == v3[1] && v1[2] == v3[2])
+					{
+						surf->neighborsurfaces[vertnum] = s;
+						break;
+					}
+				}
+				if (vnum < s->poly_numverts)
+					break;
+			}
+		}
+	}
+	#endif
+}
+
 /*
 =================
 Mod_LoadBrushModel
@@ -3317,10 +3455,9 @@ Mod_LoadBrushModel
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
 //extern void R_Model_Brush_DrawFakeShadow(entity_render_t *ent);
-extern void R_Model_Brush_DrawDepth(entity_render_t *ent);
+extern void R_Model_Brush_DrawBaseLighting(entity_render_t *ent);
 extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
-extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
-extern void R_Model_Brush_DrawOntoLight(entity_render_t *ent);
+extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
 	int			i, j;
@@ -3413,10 +3550,10 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->DrawSky = NULL;
 		mod->Draw = R_Model_Brush_Draw;
 		mod->DrawFakeShadow = NULL;
-		mod->DrawDepth = R_Model_Brush_DrawDepth;
+		mod->DrawBaseLighting = R_Model_Brush_DrawBaseLighting;
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
-		mod->DrawOntoLight = R_Model_Brush_DrawOntoLight;
+		mod->texturesurfacechains = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(msurface_t *));
 		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
@@ -3425,6 +3562,10 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 				// we only need to have a drawsky function if it is used (usually only on world model)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
+				// link into texture chain
+				surf->texturechain = mod->texturesurfacechains[surf->texinfo->texture - mod->textures];
+				mod->texturesurfacechains[surf->texinfo->texture - mod->textures] = surf;
+				// calculate bounding shapes
 				for (k = 0;k < surf->numedges;k++)
 				{
 					l = mod->surfedges[k + surf->firstedge];
@@ -3478,6 +3619,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			mod->radius2 = 0;
 			mod->shadowmesh = NULL;
 		}
+		Mod_BuildSurfaceNeighbors(mod->surfaces + mod->firstmodelsurface, mod->nummodelsurfaces, originalloadmodel->mempool);
 
 		mod->numleafs = bm->visleafs;
 
