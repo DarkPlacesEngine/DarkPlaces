@@ -1481,7 +1481,7 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 				surf->currenttexture = t;
 				surf->texturechain = t->surfacechain;
 				t->surfacechain = surf;
-				if (surf->lightmaptexture != NULL)
+				if (!r_vertexsurfaces.integer && surf->lightmaptexture != NULL)
 				{
 					if (surf->cached_dlight
 					|| surf->cached_ambient != r_ambient.value
