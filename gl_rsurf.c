@@ -648,7 +648,6 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 							}
 						}
 					}
-					R_Mesh_State(&m);
 					GL_LockArrays(0, surface->mesh.num_vertices);
 					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 					GL_LockArrays(0, 0);
@@ -775,7 +774,6 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 									c[3] = a;
 								}
 							}
-							R_Mesh_State(&m);
 							GL_LockArrays(0, surface->mesh.num_vertices);
 							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 							GL_LockArrays(0, 0);
@@ -805,7 +803,6 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 								R_Mesh_ColorPointer(NULL);
 								GL_Color(r, g, b, a);
 							}
-							R_Mesh_State(&m);
 							GL_LockArrays(0, surface->mesh.num_vertices);
 							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 							GL_LockArrays(0, 0);
