@@ -513,6 +513,22 @@ void R_Textures_Frame (void)
 	}
 }
 
+void R_MakeResizeBufferBigger(int size)
+{
+	if (resizebuffersize < size)
+	{
+		resizebuffersize = size;
+		if (resizebuffer)
+			Mem_Free(resizebuffer);
+		if (colorconvertbuffer)
+			Mem_Free(colorconvertbuffer);
+		resizebuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
+		colorconvertbuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
+		if (!resizebuffer || !colorconvertbuffer)
+			Host_Error("R_Upload: out of memory\n");
+	}
+}
+
 static void R_Upload(gltexture_t *glt, qbyte *data)
 {
 	int mip, width, height, internalformat;
@@ -528,22 +544,10 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 
 	if (glt->flags & TEXF_FRAGMENT)
 	{
-		if (resizebuffersize < glt->image->width * glt->image->height * glt->image->bytesperpixel)
-		{
-			resizebuffersize = glt->image->width * glt->image->height * glt->image->bytesperpixel;
-			if (resizebuffer)
-				Mem_Free(resizebuffer);
-			if (colorconvertbuffer)
-				Mem_Free(colorconvertbuffer);
-			resizebuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
-			colorconvertbuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
-			if (!resizebuffer || !colorconvertbuffer)
-				Host_Error("R_Upload: out of memory\n");
-		}
-
 		if (glt->image->flags & GLTEXF_UPLOAD)
 		{
 			Con_DPrintf("uploaded new fragments image\n");
+			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->bytesperpixel);
 			glt->image->flags &= ~GLTEXF_UPLOAD;
 			memset(resizebuffer, 255, glt->image->width * glt->image->height * glt->image->bytesperpixel);
 			qglTexImage2D (GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
@@ -556,6 +560,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 
 		if (prevbuffer == NULL)
 		{
+			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->bytesperpixel);
 			memset(resizebuffer, 255, glt->width * glt->height * glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 		}
@@ -563,6 +568,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		{
 			// promote paletted to RGBA, so we only have to worry about RGB and
 			// RGBA in the rest of this code
+			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->bytesperpixel);
 			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height, d_8to24table);
 			prevbuffer = colorconvertbuffer;
 		}
@@ -579,18 +585,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	for (width = 1;width < glt->width;width <<= 1);
 	for (height = 1;height < glt->height;height <<= 1);
 
-	if (resizebuffersize < width * height * glt->image->bytesperpixel)
-	{
-		resizebuffersize = width * height * glt->image->bytesperpixel;
-		if (resizebuffer)
-			Mem_Free(resizebuffer);
-		if (colorconvertbuffer)
-			Mem_Free(colorconvertbuffer);
-		resizebuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
-		colorconvertbuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
-		if (!resizebuffer || !colorconvertbuffer)
-			Host_Error("R_Upload: out of memory\n");
-	}
+	R_MakeResizeBufferBigger(width * height * glt->image->bytesperpixel);
 
 	if (prevbuffer == NULL)
 	{
