@@ -1493,7 +1493,7 @@ void CL_MoveParticles (void)
 				break;
 			case pt_decal:
 				// FIXME: this has fairly wacky handling of alpha
-				p->alphafade = cl.time > (p->time2 + cl_decals_time.value) ? (p->alpha / cl_decals_fadetime.value) : 0;
+				p->alphafade = cl.time > (p->time2 + cl_decals_time.value) ? (255 / cl_decals_fadetime.value) : 0;
 #ifndef WORKINGLQUAKE
 				if (p->owner->model == p->ownermodel)
 				{
