@@ -25,7 +25,6 @@ void GL_ActiveTexture(int num);
 void GL_ClientActiveTexture(int num);
 void GL_Scissor(int x, int y, int width, int height); // AK for DRAWQUEUE_SETCLIP
 void GL_ScissorTest(int state);	// AK for DRAWQUEUE_(RE)SETCLIP
- 
 
 extern cvar_t gl_lockarrays;
 extern cvar_t gl_mesh_copyarrays;
@@ -76,6 +75,8 @@ void R_Mesh_State_Texture(const rmeshstate_t *m);
 
 // renders a mesh
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
+// renders a mesh as lines
+void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, int *elements);
 
 // saves a section of the rendered frame to a .tga or .jpg file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg);

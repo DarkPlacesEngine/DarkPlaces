@@ -617,7 +617,7 @@ void GL_ScissorTest(int state)
 {
 	if(gl_state.scissortest == state)
 		return;
-	
+
 	CHECKGLERROR
 	if((gl_state.scissortest = state))
 		qglEnable(GL_SCISSOR_TEST);
@@ -1001,6 +1001,19 @@ void R_Mesh_State_Texture(const rmeshstate_t *m)
 			CHECKGLERROR
 		}
 	}
+}
+
+void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, int *elements)
+{
+	qglBegin(GL_LINES);
+	for (;numtriangles;numtriangles--, elements += 3)
+	{
+		qglArrayElement(elements[0]);qglArrayElement(elements[1]);
+		qglArrayElement(elements[1]);qglArrayElement(elements[2]);
+		qglArrayElement(elements[2]);qglArrayElement(elements[0]);
+	}
+	qglEnd();
+	CHECKGLERROR
 }
 
 /*
