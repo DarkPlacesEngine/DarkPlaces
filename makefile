@@ -40,13 +40,8 @@ LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl 
 all: buildnum darkplaces-glx
 #all: darkplaces-glx darkplaces-3dfx
 
-buildnum/buildnum:
-	cd buildnum
-	make
-	cd ..
-
-buildnum: buildnum/buildnum
-	buildnum/buildnum buildnumber.c
+buildnum:
+	make -C buildnum
 
 .c.o:
 	gcc $(CFLAGS) -c $*.c
@@ -59,6 +54,7 @@ darkplaces-3dfx: $(OBJECTS) in_svgalib.o vid_3dfxsvga.o
 
 
 clean:
+	-make -C buildnum clean
 	-rm -f darkplaces-glx darkplaces-3dfx
 	-rm -f vid_glx.o in_svgalib.o vid_3dfxsvga.o $(OBJECTS) *.d
 
