@@ -717,16 +717,23 @@ struct
 {
 	float angles[3];
 	char *name;
-	qboolean flipx, flipy;
+	qboolean flipx, flipy, flipdiagonaly;
 }
-envmapinfo[6] =
+envmapinfo[12] =
 {
-	{{  0,   0, 0}, "rt",  true, false},
-	{{  0,  90, 0}, "ft",  true, false},
-	{{  0, 180, 0}, "lf",  true, false},
-	{{  0, 270, 0}, "bk",  true, false},
-	{{-90, 180, 0}, "up", false,  true},
-	{{ 90, 180, 0}, "dn", false,  true}
+	{{  0,   0, 0}, "rt",  true, false, false},
+	{{  0,  90, 0}, "ft",  true, false, false},
+	{{  0, 180, 0}, "lf",  true, false, false},
+	{{  0, 270, 0}, "bk",  true, false, false},
+	{{-90, 180, 0}, "up", false,  true, false},
+	{{ 90, 180, 0}, "dn", false,  true, false},
+
+	{{  0,   0, 0}, "px",  true,  true,  true},
+	{{  0,  90, 0}, "py", false,  true, false},
+	{{  0, 180, 0}, "nx", false, false,  true},
+	{{  0, 270, 0}, "ny",  true, false, false},
+	{{-90, 180, 0}, "pz", false, false,  true},
+	{{ 90, 180, 0}, "nz", false, false,  true}
 };
 
 static void R_Envmap_f (void)
@@ -763,7 +770,7 @@ static void R_Envmap_f (void)
 	r_refdef.fov_x = 90;
 	r_refdef.fov_y = 90;
 
-	for (j = 0;j < 6;j++)
+	for (j = 0;j < 12;j++)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
 		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
@@ -771,7 +778,7 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, false, false);
+		SCR_ScreenShot(filename, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false);
 	}
 
 	envmap = false;
