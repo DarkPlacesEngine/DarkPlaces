@@ -655,15 +655,24 @@ SCR_ScreenShot_f
 */
 void SCR_ScreenShot_f (void)
 {
-	int shotnumber;
+	static int shotnumber;
+	static char oldname[MAX_QPATH];
 	char base[MAX_QPATH];
 	char filename[MAX_QPATH];
+	qbyte *buffer1;
+	qbyte *buffer2;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
 	sprintf (base, "screenshots/%s", scr_screenshot_name.string);
-	
+
+	if (strcmp (oldname, scr_screenshot_name.string))
+	{
+		sprintf(oldname, "%s", scr_screenshot_name.string);
+		shotnumber = 0;
+	}
+
 	// find a file name to save it to
-	for (shotnumber=0;shotnumber < 1000000;shotnumber++)
+	for (;shotnumber < 1000000;shotnumber++)
 		if (!FS_SysFileExists(va("%s/%s%06d.tga", fs_gamedir, base, shotnumber)) && !FS_SysFileExists(va("%s/%s%06d.jpg", fs_gamedir, base, shotnumber)))
 			break;
 	if (shotnumber >= 1000000)
@@ -677,10 +686,17 @@ void SCR_ScreenShot_f (void)
 	else
 		sprintf(filename, "%s%06d.tga", base, shotnumber);
 
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
+	buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+	buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+
+	if (SCR_ScreenShot (filename, buffer1, buffer2, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		Con_Printf("Wrote %s\n", filename);
 	else
 		Con_Printf("unable to write %s\n", filename);
+
+	Mem_Free (buffer1);
+	Mem_Free (buffer2);
+
 	shotnumber++;
 }
 
@@ -688,20 +704,43 @@ static int cl_avidemo_frame = 0;
 
 void SCR_CaptureAVIDemo(void)
 {
+	static qbyte *avi_buffer1 = NULL;
+	static qbyte *avi_buffer2 = NULL;
 	char filename[32];
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
+
+	if (cl_avidemo.integer)
+	{
+		if (avi_buffer1 == NULL)
+		{
+			avi_buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+			avi_buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+		}
+	}
+	else
+	{
+		if (avi_buffer1 != NULL)
+		{
+			Mem_Free (avi_buffer1);
+			Mem_Free (avi_buffer2);
+			avi_buffer1 = NULL;
+			avi_buffer2 = NULL;
+		}
+		cl_avidemo_frame = 0;
+		return;
+	}
 
 	if (jpeg)
 		sprintf(filename, "video/dp%06d.jpg", cl_avidemo_frame);
 	else
 		sprintf(filename, "video/dp%06d.tga", cl_avidemo_frame);
 
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
+	if (SCR_ScreenShot(filename, avi_buffer1, avi_buffer2, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		cl_avidemo_frame++;
 	else
 	{
 		Cvar_SetValueQuick(&cl_avidemo, 0);
-		Con_Printf("avi saving failed on frame %i, out of disk space?  stopping avi demo catpure.\n", cl_avidemo_frame);
+		Con_Printf("avi saving failed on frame %i, out of disk space? stopping avi demo capture.\n", cl_avidemo_frame);
 		cl_avidemo_frame = 0;
 	}
 }
@@ -740,6 +779,8 @@ static void R_Envmap_f (void)
 {
 	int j, size;
 	char filename[256], basename[256];
+	qbyte *buffer1;
+	qbyte *buffer2;
 
 	if (Cmd_Argc() != 3)
 	{
@@ -770,6 +811,9 @@ static void R_Envmap_f (void)
 	r_refdef.fov_x = 90;
 	r_refdef.fov_y = 90;
 
+	buffer1 = Mem_Alloc(tempmempool, size * size * 3);
+	buffer2 = Mem_Alloc(tempmempool, size * size * 3);
+
 	for (j = 0;j < 12;j++)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
@@ -778,8 +822,11 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false);
 	}
+
+	Mem_Free (buffer1);
+	Mem_Free (buffer2);
 
 	envmap = false;
 }
@@ -902,10 +949,7 @@ void CL_UpdateScreen(void)
 	if (!scr_initialized || !con_initialized || vid_hidden)
 		return;				// not initialized yet
 
-	if (cl_avidemo.integer)
-		SCR_CaptureAVIDemo();
-	else
-		cl_avidemo_frame = 0;
+	SCR_CaptureAVIDemo();
 
 	if (cls.signon == SIGNONS)
 		R_TimeReport("other");
