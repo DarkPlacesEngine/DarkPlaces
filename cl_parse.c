@@ -983,19 +983,9 @@ void CL_ParseServerMessage (void)
 				cl.paused = MSG_ReadByte ();
 
 				if (cl.paused)
-				{
 					CDAudio_Pause ();
-#ifdef _WIN32
-					VID_HandlePause (true);
-#endif
-				}
 				else
-				{
 					CDAudio_Resume ();
-#ifdef _WIN32
-					VID_HandlePause (false);
-#endif
-				}
 			}
 			break;
 			
@@ -1069,7 +1059,8 @@ void CL_ParseServerMessage (void)
 			R_SetSkyBox(MSG_ReadString());
 			break;
 		case svc_skyboxsize:
-			/*r_skyboxsize.value = */MSG_ReadCoord();
+			i = MSG_ReadCoord();
+			// r_skyboxsize.value = MSG_ReadCoord();
 			break;
 		case svc_fog:
 			if (MSG_ReadByte())

@@ -510,39 +510,7 @@ POINT TESTING IN HULLS
 ===============================================================================
 */
 
-#if	!id386
-
-/*
-==================
-SV_HullPointContents
-
-==================
-*/
-int SV_HullPointContents (hull_t *hull, int num, vec3_t p)
-{
-	dclipnode_t	*node;
-	mplane_t	*plane;
-
-	while (num >= 0)
-	{
-		if (num < hull->firstclipnode || num > hull->lastclipnode)
-			Sys_Error ("SV_HullPointContents: bad node number");
-	
-		node = hull->clipnodes + num;
-		plane = hull->planes + node->planenum;
-		
-// LordHavoc: optimized this slightly (probably no actual impact due to compiler optimization)
-		if (plane->type < 3)
-			num = node->children[p[plane->type] < plane->dist];
-		else
-			num = node->children[DotProduct (plane->normal, p) < plane->dist];
-	}
-	
-	return num;
-}
-
-#endif	// !id386
-
+// SV_HullPointContents moved to cpu_noasm.c
 
 /*
 ============

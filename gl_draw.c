@@ -130,6 +130,7 @@ int Scrap_AllocBlock (int w, int h, int *x, int *y)
 	}
 
 	Sys_Error ("Scrap_AllocBlock: full");
+	return 0;
 }
 
 int	scrap_uploads;
@@ -403,7 +404,7 @@ void Draw_Init (void)
 
 	start = Hunk_LowMark();
 
-	cb = (qpic_t *)COM_LoadTempFile ("gfx/conback.lmp", false);
+	cb = (qpic_t *)COM_LoadMallocFile ("gfx/conback.lmp", false);
 	if (!cb)
 		Sys_Error ("Couldn't load gfx/conback.lmp");
 	SwapPic (cb);
@@ -411,15 +412,15 @@ void Draw_Init (void)
 	// hack the version number directly into the pic
 #ifdef NEHAHRA
 #if defined(__linux__)
-	sprintf (ver, "(DPNehahra %.2f, Linux %2.2f, gl %.2f) %.2f", (float) DP_VERSION, (float)LINUX_VERSION, (float)GLQUAKE_VERSION, (float)VERSION);
+	sprintf (ver, "DPNehahra Linux GL %.2f", (float) VERSION);
 #else
-	sprintf (ver, "(DPNehahra %.2f, gl %.2f) %.2f", (float) DP_VERSION, (float)GLQUAKE_VERSION, (float)VERSION);
+	sprintf (ver, "DPNehahra Windows GL %.2f", (float) VERSION);
 #endif
 #else
 #if defined(__linux__)
-	sprintf (ver, "(DarkPlaces %.2f, Linux %2.2f, gl %.2f) %.2f", (float) DP_VERSION, (float)LINUX_VERSION, (float)GLQUAKE_VERSION, (float)VERSION);
+	sprintf (ver, "DarkPlaces Linux GL %.2f", (float)VERSION);
 #else
-	sprintf (ver, "(DarkPlaces %.2f, gl %.2f) %.2f", (float) DP_VERSION, (float)GLQUAKE_VERSION, (float)VERSION);
+	sprintf (ver, "DarkPlaces Windows GL %.2f", (float)VERSION);
 #endif
 #endif
 	dest = cb->data + 320*186 + 320 - 11 - 8*strlen(ver);
@@ -437,7 +438,7 @@ void Draw_Init (void)
 	conback->height = vid.height;
 
 	// free loaded console
-	Hunk_FreeToLowMark(start);
+	free(cb);
 
 	// save a texture slot for translated picture
 	translate_texture = texture_extension_number++;
@@ -861,7 +862,7 @@ int GL_FindTexture (char *identifier)
 	return -1;
 }
 
-extern byte gamma[];
+extern byte qgamma[];
 
 // LordHavoc: gamma correction and improved resampling
 void GL_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
@@ -881,17 +882,17 @@ void GL_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
 		{
 			l2 = f - xi;
 			l1 = 1 - l2;
-			*out++ = gamma[(byte) (in[0] * l1 + in[4] * l2)];
-			*out++ = gamma[(byte) (in[1] * l1 + in[5] * l2)];
-			*out++ = gamma[(byte) (in[2] * l1 + in[6] * l2)];
-			*out++ =       (byte) (in[3] * l1 + in[7] * l2) ;
+			*out++ = qgamma[(byte) (in[0] * l1 + in[4] * l2)];
+			*out++ = qgamma[(byte) (in[1] * l1 + in[5] * l2)];
+			*out++ = qgamma[(byte) (in[2] * l1 + in[6] * l2)];
+			*out++ =        (byte) (in[3] * l1 + in[7] * l2) ;
 		}
 		else // last pixel of the line has no pixel to lerp to
 		{
-			*out++ = gamma[in[0]];
-			*out++ = gamma[in[1]];
-			*out++ = gamma[in[2]];
-			*out++ =       in[3] ;
+			*out++ = qgamma[in[0]];
+			*out++ = qgamma[in[1]];
+			*out++ = qgamma[in[2]];
+			*out++ =        in[3] ;
 		}
 	}
 }
@@ -977,10 +978,10 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 			frac = fracstep >> 1;
 			for (j=0 ; j<outwidth ; j+=4)
 			{
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ = gamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
+				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
+				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
+				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
+				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
 			}
 		}
 	}
@@ -1135,9 +1136,9 @@ texels += scaled_width * scaled_height;
 		out = (byte *)scaled;
 		for (i = 0;i < width*height;i++)
 		{
-			*out++ = gamma[*in++];
-			*out++ = gamma[*in++];
-			*out++ = gamma[*in++];
+			*out++ = qgamma[*in++];
+			*out++ = qgamma[*in++];
+			*out++ = qgamma[*in++];
 			*out++ = *in++;
 		}
 	}
@@ -1182,7 +1183,7 @@ texels += scaled_width * scaled_height;
 void GL_Upload8_EXT (byte *data, int width, int height,  qboolean mipmap)
 {
 	int		scaled_width, scaled_height;
-	byte	*scaled;
+	byte	*scaled = NULL;
 
 	for (scaled_width = 1 ; scaled_width < width ; scaled_width<<=1)
 		;
@@ -1212,7 +1213,7 @@ void GL_Upload8_EXT (byte *data, int width, int height,  qboolean mipmap)
 	else
 	{
 		scaled = malloc(scaled_width*scaled_height*4);
-		GL_Resample8BitTexture (data, width, height, (void*) &scaled, scaled_width, scaled_height);
+		GL_Resample8BitTexture (data, width, height, (void*) scaled, scaled_width, scaled_height);
 	}
 
 	glTexImage2D (GL_TEXTURE_2D, 0, GL_COLOR_INDEX8_EXT, scaled_width, scaled_height, 0, GL_COLOR_INDEX, GL_UNSIGNED_BYTE, scaled);

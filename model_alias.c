@@ -225,7 +225,6 @@ Fill background pixels so mipmapping doesn't have haloes - Ed
 =================
 */
 
-/*
 typedef struct
 {
 	short		x, y;
@@ -293,7 +292,6 @@ void Mod_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
 		skin[x + skinwidth * y] = fdc;
 	}
 }
-*/
 
 /*
 ===============
@@ -322,8 +320,8 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int bytesperp
 	{
 		if (pskintype->type == ALIAS_SKIN_SINGLE)
 		{
-//			if (bytesperpixel == 1)
-//				Mod_FloodFillSkin( skin, pheader->skinwidth, pheader->skinheight );
+			if (bytesperpixel == 1)
+				Mod_FloodFillSkin( skin, pheader->skinwidth, pheader->skinheight );
 
 			// save 8 bit texels for the player model to remap
 	//		if (!strcmp(loadmodel->name,"progs/player.mdl")) {
@@ -351,8 +349,8 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int bytesperp
 
 			for (j = 0;j < groupskins;j++)
 			{
-//					if (bytesperpixel == 1)
-//						Mod_FloodFillSkin( skin, pheader->skinwidth, pheader->skinheight );
+					if (bytesperpixel == 1)
+						Mod_FloodFillSkin( skin, pheader->skinwidth, pheader->skinheight );
 					if (j == 0)
 					{
 						texels = Hunk_AllocName(s, loadname);

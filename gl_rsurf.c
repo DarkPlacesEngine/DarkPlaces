@@ -63,7 +63,7 @@ void glrsurf_init()
 	Cvar_RegisterVariable(&gl_nosubimagefragments);
 	Cvar_RegisterVariable(&gl_nosubimage);
 	// check if it's the glquake minigl driver
-	if (strnicmp(gl_vendor,"3Dfx",4)==0)
+	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
 	{
 		Cvar_SetValue("gl_nosubimagefragments", 1);
@@ -555,7 +555,7 @@ void DrawTextureChains (void)
 		// subdivided water surface warp
 		if (s->flags & SURF_DRAWTURB)
 		{
-			int light, alpha, r, g, b;
+			int light, alpha, r = 0, g = 0, b = 0;
 			vec3_t nv, shadecolor;
 			alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
 			light = false;
@@ -842,7 +842,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 			if (s->flags & SURF_DRAWTURB)
 			{
 				glpoly_t	*p;
-				int			light, alpha, r, g, b;
+				int			light, alpha, r = 0, g = 0, b = 0;
 				vec3_t		shadecolor;
 
 				if (s->flags & SURF_DRAWNOALPHA)
@@ -1088,7 +1088,7 @@ loc0:
 		{
 			for (;c;c--, surf++)
 			{
-				if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
+				if (surf->visframe == r_framecount && (!(surf->flags & SURF_PLANEBACK)))
 				{
 					surf->texturechain = surf->texinfo->texture->texturechain;
 					surf->texinfo->texture->texturechain = surf;
@@ -1142,7 +1142,7 @@ void R_WorldNode ()
 				mleaf_t		*pleaf;
 				pleaf = (mleaf_t *)node;
 
-				if (c = pleaf->nummarksurfaces)
+				if ((c = pleaf->nummarksurfaces))
 				{
 					msurface_t	**mark;
 					mark = pleaf->firstmarksurface;
@@ -1188,7 +1188,7 @@ loc0:
 		// backside
 		side = dot >= 0;
 	// draw stuff
-		if (c = node->numsurfaces)
+		if ((c = node->numsurfaces))
 		{
 			msurface_t	*surf;
 			surf = cl.worldmodel->surfaces + node->firstsurface;
@@ -1391,6 +1391,7 @@ int AllocBlock (int w, int h, int *x, int *y)
 	}
 
 	Sys_Error ("AllocBlock: full");
+	return 0;
 }
 
 

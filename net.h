@@ -253,10 +253,6 @@ extern unsigned short ntohs (unsigned short netshort);
 #endif
 #endif
 
-#ifdef IDGODS
-qboolean IsID(struct qsockaddr *addr);
-#endif
-
 //============================================================================
 //
 // public network functions

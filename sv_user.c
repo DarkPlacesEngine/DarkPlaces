@@ -456,7 +456,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	host_client->ping_times[host_client->num_pings%NUM_PING_TIMES]
 		= sv.time - MSG_ReadFloat ();
 	host_client->num_pings++;
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_ping))
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
 	{
 		for (i=0, total = 0;i < NUM_PING_TIMES;i++)
 			total += host_client->ping_times[i];
@@ -473,7 +473,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	move->forwardmove = MSG_ReadShort ();
 	move->sidemove = MSG_ReadShort ();
 	move->upmove = MSG_ReadShort ();
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_movement))
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_movement)))
 	{
 		val->vector[0] = move->forwardmove;
 		val->vector[1] = move->sidemove;
@@ -485,12 +485,12 @@ void SV_ReadClientMove (usercmd_t *move)
 	host_client->edict->v.button0 = bits & 1;
 	host_client->edict->v.button2 = (bits & 2)>>1;
 	// LordHavoc: added 6 new buttons
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_button3)) val->_float = ((bits >> 2) & 1);
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_button4)) val->_float = ((bits >> 3) & 1);
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_button5)) val->_float = ((bits >> 4) & 1);
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_button6)) val->_float = ((bits >> 5) & 1);
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_button7)) val->_float = ((bits >> 6) & 1);
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_button8)) val->_float = ((bits >> 7) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((bits >> 2) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((bits >> 3) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button5))) val->_float = ((bits >> 4) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((bits >> 5) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((bits >> 6) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((bits >> 7) & 1);
 
 	i = MSG_ReadByte ();
 	if (i)
@@ -552,10 +552,7 @@ nextmsg:
 				
 			case clc_stringcmd:	
 				s = MSG_ReadString ();
-				if (host_client->privileged)
-					ret = 2;
-				else
-					ret = 0;
+				ret = 0;
 				if (Q_strncasecmp(s, "status", 6) == 0
 				 || Q_strncasecmp(s, "name", 4) == 0
 				 || Q_strncasecmp(s, "say", 3) == 0
@@ -573,13 +570,20 @@ nextmsg:
 				 || Q_strncasecmp(s, "pmodel", 6) == 0
 				 || (nehahra && (Q_strncasecmp(s, "max", 3) == 0 || Q_strncasecmp(s, "monster", 7) == 0 || Q_strncasecmp(s, "scrag", 5) == 0 || Q_strncasecmp(s, "gimme", 5) == 0 || Q_strncasecmp(s, "wraith", 6) == 0))
 				 || (!nehahra && (Q_strncasecmp(s, "god", 3) == 0 || Q_strncasecmp(s, "notarget", 8) == 0 || Q_strncasecmp(s, "fly", 3) == 0 || Q_strncasecmp(s, "give", 4) == 0 || Q_strncasecmp(s, "noclip", 6) == 0)))
+				{
 					ret = 1;
+					Cmd_ExecuteString (s, src_client);
+				}
+				else
+					Con_DPrintf("%s tried to %s\n", host_client->name, s);
+				/*
 				if (ret == 2)
 					Cbuf_InsertText (s);
 				else if (ret == 1)
 					Cmd_ExecuteString (s, src_client);
 				else
 					Con_DPrintf("%s tried to %s\n", host_client->name, s);
+				*/
 				break;
 				
 			case clc_disconnect:

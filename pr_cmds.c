@@ -89,11 +89,11 @@ qboolean checkextension(char *name)
 	len = strlen(name);
 	for (e = QSG_EXTENSIONS;*e;e++)
 	{
-		if (!*e || e[len] == ' ' && !strnicmp(e, name, len))
+		while (*e == ' ')
+			e++;
+		if (!*e || (e[len] == ' ' && !strncasecmp(e, name, len)))
 			return TRUE;
 		while (*e && *e != ' ')
-			e++;
-		while (*e == ' ')
 			e++;
 	}
 	return FALSE;
@@ -1556,14 +1556,14 @@ void PF_changepitch (void)
 	
 	ent = G_EDICT(OFS_PARM0);
 	current = anglemod( ent->v.angles[0] );
-	if (val = GETEDICTFIELDVALUE(ent, eval_idealpitch))
+	if ((val = GETEDICTFIELDVALUE(ent, eval_idealpitch)))
 		ideal = val->_float;
 	else
 	{
 		PR_RunError ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
 		return;
 	}
-	if (val = GETEDICTFIELDVALUE(ent, eval_pitch_speed))
+	if ((val = GETEDICTFIELDVALUE(ent, eval_pitch_speed)))
 		speed = val->_float;
 	else
 	{

@@ -866,8 +866,7 @@ void GL_Finish();
 int c_nodes;
 void SCR_UpdateScreen (void)
 {
-	static float	oldscr_viewsize;
-	double	time1, time2;
+	double	time1 = 0, time2;
 
 	if (r_speeds.value)
 	{

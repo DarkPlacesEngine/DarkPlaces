@@ -75,6 +75,6 @@ void	*W_GetLumpNum (int num);
 void SwapPic (qpic_t *pic);
 
 // LordHavoc: added alternate texture WAD2/WAD3 system for easier loading of HalfLife texture wads
-extern image_width, image_height;
+extern int image_width, image_height;
 void	W_LoadTextureWadFile (char *filename, int complain);
 byte	*W_GetTexture (char *name, int matchwidth, int matchheight); // returns malloc'd image data, width and height are in image_width and image_height (yeah yeah so I'm lazy...)
