@@ -12,6 +12,8 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: server should send sv_gravity to client somehow (Vermeulen)
+0 darkplaces: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
 0 darkplaces: add _reflect textures which filter use of skybox as a cubemap reflection (FrikaC)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely

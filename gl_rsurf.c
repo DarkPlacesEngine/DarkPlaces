@@ -1946,8 +1946,50 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
-	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->numtriangles)
+	if (!face->numtriangles)
 		return;
+	if (face->texture->renderflags)
+	{
+		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY)
+		{
+			if (skyrendernow)
+			{
+				skyrendernow = false;
+				if (skyrendermasked)
+					R_Sky();
+			}
+
+			R_Mesh_Matrix(&ent->matrix);
+
+			GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
+			if (skyrendermasked)
+			{
+				// depth-only (masking)
+				qglColorMask(0,0,0,0);
+				// just to make sure that braindead drivers don't draw anything
+				// despite that colormask...
+				GL_BlendFunc(GL_ZERO, GL_ONE);
+			}
+			else
+			{
+				// fog sky
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+			}
+			GL_DepthMask(true);
+			GL_DepthTest(true);
+
+			memset(&m, 0, sizeof(m));
+			R_Mesh_State_Texture(&m);
+
+			GL_VertexPointer(face->data_vertex3f);
+			R_Mesh_Draw(face->numvertices, face->numtriangles, face->data_element3i);
+			qglColorMask(1,1,1,1);
+			return;
+		}
+		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW)
+			return;
+	}
+	R_Mesh_Matrix(&ent->matrix);
 	face->visframe = r_framecount;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);

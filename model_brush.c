@@ -1833,15 +1833,25 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 		out->firstmarksurface = loadmodel->brushq1.marksurfaces + LittleShort(in->firstmarksurface);
 		out->nummarksurfaces = LittleShort(in->nummarksurfaces);
+		if (out->firstmarksurface < 0 || LittleShort(in->firstmarksurface) + out->nummarksurfaces > loadmodel->brushq1.nummarksurfaces)
+		{
+			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid marksurface range %i:%i outside range %i:%i\n", out->firstmarksurface, out->firstmarksurface + out->nummarksurfaces, 0, loadmodel->brushq1.nummarksurfaces);
+			out->firstmarksurface = NULL;
+			out->nummarksurfaces = 0;
+		}
 
 		out->pvsdata = pvs;
+		memset(out->pvsdata, 0xFF, pvschainbytes);
 		pvs += pvschainbytes;
 
 		p = LittleLong(in->visofs);
 		if (p >= 0)
-			Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, out->pvsdata, out->pvsdata + pvschainbytes);
-		else
-			memset(out->pvsdata, 0xFF, pvschainbytes);
+		{
+			if (p >= loadmodel->brushq1.num_compressedpvs)
+				Con_Printf("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
+			else
+				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, out->pvsdata, out->pvsdata + pvschainbytes);
+		}
 
 		for (j = 0;j < 4;j++)
 			out->ambient_sound_level[j] = in->ambient_level[j];
@@ -3322,6 +3332,8 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		out->renderflags = 0;
 		if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk"))
 			out->renderflags |= Q3MTEXTURERENDERFLAGS_NODRAW;
+		if (!strncmp(out->name, "textures/skies/", 15))
+			out->renderflags |= Q3MTEXTURERENDERFLAGS_SKY;
 
 		out->number = i;
 		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
