@@ -662,9 +662,13 @@ void CL_RelinkEntities (void)
 
 		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
 		{
+			vec3_t vec;
 			dlightradius = VectorLength(dlightcolor);
 			d = 1.0f / dlightradius;
-			CL_AllocDlight (ent, ent->render.origin, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
+			VectorCopy(ent->render.origin, vec);
+			if (i == cl.viewentity && !chase_active.value)
+				vec[2] += 30;
+			CL_AllocDlight (ent, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
 		}
 
 		if (chase_active.value)
