@@ -1217,10 +1217,6 @@ static void Mod_LoadFaces (lump_t *l)
 		out->cached_dlight = true;
 		out->cached_ambient = -1000;
 		out->cached_lightscalebit = -1000;
-		out->cached_light[0] = -1000;
-		out->cached_light[1] = -1000;
-		out->cached_light[2] = -1000;
-		out->cached_light[3] = -1000;
 
 		CalcSurfaceExtents (out);
 
