@@ -89,6 +89,13 @@ WARNS = -w-
 # for debugging
 #WARNS = -w
 
+COMPOPTS = $(DEBUGOPTS) $(OPT) $(WARNS) -R -WM -H-
+
+# for normal releases
+LINKOPTS = -w-dup -w-dpl -Tpe -aa -V4.0 -c -Gn -Gz -x -L$(LIBS)
+# for debugging
+#LINKOPTS = -w -v -w-dup -w-dpl -Tpe -aa -V4.0 -c -Gn -Gz -m -M -s -L$(LIBS)
+
 # you shouldn't need to change anything below this line
 
 SYSLIBS = $(CROOT)\LIB
@@ -284,349 +291,349 @@ $(DPROOT)\opengl32.lib+
 ($CROOT)\LIB\cw32.lib
 
 |
-r_crosshairs.obj :  r_crosshairs.c
+$(OBJS)\r_crosshairs.obj :  $(DPROOT)\r_crosshairs.c
   $(BCC32) -P- -c @&&|
- $(CompOptsAt_darkplacesdexe) $(CompInheritOptsAt_darkplacesdexe) -o$@ r_crosshairs.c
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_crosshairs.c
 |
 
-r_modules.obj :  r_modules.c
+$(OBJS)\r_modules.obj :  $(DPROOT)\r_modules.c
   $(BCC32) -P- -c @&&|
- $(CompOptsAt_darkplacesdexe) $(CompInheritOptsAt_darkplacesdexe) -o$@ r_modules.c
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_modules.c
 |
 
-gl_textures.obj :  gl_textures.c
+$(OBJS)\gl_textures.obj :  $(DPROOT)\gl_textures.c
   $(BCC32) -P- -c @&&|
- $(CompOptsAt_darkplacesdexe) $(CompInheritOptsAt_darkplacesdexe) -o$@ gl_textures.c
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_textures.c
 |
 
-gl_models.obj :  gl_models.c
+$(OBJS)\gl_models.obj :  $(DPROOT)\gl_models.c
   $(BCC32) -P- -c @&&|
- $(CompOptsAt_darkplacesdexe) $(CompInheritOptsAt_darkplacesdexe) -o$@ gl_models.c
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_models.c
 |
 
-buildnumber.obj :  buildnumber.c
+$(OBJS)\buildnumber.obj :  $(DPROOT)\buildnumber.c
   $(BCC32) -P- -c @&&|
- $(CompOptsAt_darkplacesdexe) $(CompInheritOptsAt_darkplacesdexe) -o$@ buildnumber.c
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\buildnumber.c
 |
 
-cpu_noasm.obj :  cpu_noasm.c
+$(OBJS)\cpu_noasm.obj :  $(DPROOT)\cpu_noasm.c
   $(BCC32) -P- -c @&&|
- $(CompOptsAt_darkplacesdexe) $(CompInheritOptsAt_darkplacesdexe) -o$@ cpu_noasm.c
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cpu_noasm.c
 
 |
-$(OBJS)\cl_main.obj :  cl_main.c
+$(OBJS)\cl_main.obj :  $(DPROOT)\cl_main.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cl_main.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cl_main.c
 |
 
-$(OBJS)\net_wipx.obj :  net_wipx.c
+$(OBJS)\net_wipx.obj :  $(DPROOT)\net_wipx.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_wipx.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_wipx.c
 |
 
-$(OBJS)\net_wins.obj :  net_wins.c
+$(OBJS)\net_wins.obj :  $(DPROOT)\net_wins.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_wins.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_wins.c
 |
 
-$(OBJS)\cd_win.obj :  cd_win.c
+$(OBJS)\cd_win.obj :  $(DPROOT)\cd_win.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cd_win.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cd_win.c
 |
 
-$(OBJS)\r_part.obj :  r_part.c
+$(OBJS)\r_part.obj :  $(DPROOT)\r_part.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ r_part.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_part.c
 |
 
-$(OBJS)\world.obj :  world.c
+$(OBJS)\world.obj :  $(DPROOT)\world.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ world.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\world.c
 |
 
-$(OBJS)\view.obj :  view.c
+$(OBJS)\view.obj :  $(DPROOT)\view.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ view.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\view.c
 |
 
-$(OBJS)\vid_wgl.obj :  vid_wgl.c
+$(OBJS)\vid_wgl.obj :  $(DPROOT)\vid_wgl.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ vid_wgl.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\vid_wgl.c
 |
 
-$(OBJS)\vid_shared.obj :  vid_shared.c
+$(OBJS)\vid_shared.obj :  $(DPROOT)\vid_shared.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ vid_shared.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\vid_shared.c
 |
 
-$(OBJS)\wad.obj :  wad.c
+$(OBJS)\wad.obj :  $(DPROOT)\wad.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ wad.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\wad.c
 |
 
-$(OBJS)\transform.obj :  transform.c
+$(OBJS)\transform.obj :  $(DPROOT)\transform.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ transform.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\transform.c
 |
 
-$(OBJS)\sys_win.obj :  sys_win.c
+$(OBJS)\sys_win.obj :  $(DPROOT)\sys_win.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ sys_win.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sys_win.c
 |
 
-$(OBJS)\sv_user.obj :  sv_user.c
+$(OBJS)\sv_user.obj :  $(DPROOT)\sv_user.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ sv_user.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sv_user.c
 |
 
-$(OBJS)\sv_phys.obj :  sv_phys.c
+$(OBJS)\sv_phys.obj :  $(DPROOT)\sv_phys.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ sv_phys.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sv_phys.c
 |
 
-$(OBJS)\sv_move.obj :  sv_move.c
+$(OBJS)\sv_move.obj :  $(DPROOT)\sv_move.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ sv_move.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sv_move.c
 |
 
-$(OBJS)\sv_main.obj :  sv_main.c
+$(OBJS)\sv_main.obj :  $(DPROOT)\sv_main.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ sv_main.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sv_main.c
 |
 
-$(OBJS)\snd_win.obj :  snd_win.c
+$(OBJS)\snd_win.obj :  $(DPROOT)\snd_win.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ snd_win.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\snd_win.c
 |
 
-$(OBJS)\snd_mix.obj :  snd_mix.c
+$(OBJS)\snd_mix.obj :  $(DPROOT)\snd_mix.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ snd_mix.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\snd_mix.c
 |
 
-$(OBJS)\snd_mem.obj :  snd_mem.c
+$(OBJS)\snd_mem.obj :  $(DPROOT)\snd_mem.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ snd_mem.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\snd_mem.c
 |
 
-$(OBJS)\snd_dma.obj :  snd_dma.c
+$(OBJS)\snd_dma.obj :  $(DPROOT)\snd_dma.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ snd_dma.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\snd_dma.c
 |
 
-$(OBJS)\sbar.obj :  sbar.c
+$(OBJS)\sbar.obj :  $(DPROOT)\sbar.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ sbar.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sbar.c
 |
 
-$(OBJS)\zone.obj :  zone.c
+$(OBJS)\zone.obj :  $(DPROOT)\zone.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ zone.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\zone.c
 |
 
-$(OBJS)\model_sprite.obj :  model_sprite.c
+$(OBJS)\model_sprite.obj :  $(DPROOT)\model_sprite.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ model_sprite.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\model_sprite.c
 |
 
-$(OBJS)\pr_exec.obj :  pr_exec.c
+$(OBJS)\pr_exec.obj :  $(DPROOT)\pr_exec.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ pr_exec.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\pr_exec.c
 |
 
-$(OBJS)\pr_edict.obj :  pr_edict.c
+$(OBJS)\pr_edict.obj :  $(DPROOT)\pr_edict.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ pr_edict.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\pr_edict.c
 |
 
-$(OBJS)\pr_cmds.obj :  pr_cmds.c
+$(OBJS)\pr_cmds.obj :  $(DPROOT)\pr_cmds.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ pr_cmds.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\pr_cmds.c
 |
 
-$(OBJS)\net_win.obj :  net_win.c
+$(OBJS)\net_win.obj :  $(DPROOT)\net_win.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_win.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_win.c
 |
 
-$(OBJS)\net_vcr.obj :  net_vcr.c
+$(OBJS)\net_vcr.obj :  $(DPROOT)\net_vcr.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_vcr.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_vcr.c
 |
 
-$(OBJS)\net_main.obj :  net_main.c
+$(OBJS)\net_main.obj :  $(DPROOT)\net_main.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_main.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_main.c
 |
 
-$(OBJS)\net_loop.obj :  net_loop.c
+$(OBJS)\net_loop.obj :  $(DPROOT)\net_loop.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_loop.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_loop.c
 |
 
-$(OBJS)\net_dgrm.obj :  net_dgrm.c
+$(OBJS)\net_dgrm.obj :  $(DPROOT)\net_dgrm.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ net_dgrm.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\net_dgrm.c
 |
 
-$(OBJS)\r_light.obj :  r_light.c
+$(OBJS)\r_light.obj :  $(DPROOT)\r_light.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ r_light.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_light.c
 |
 
-$(OBJS)\in_win.obj :  in_win.c
+$(OBJS)\in_win.obj :  $(DPROOT)\in_win.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ in_win.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\in_win.c
 |
 
-$(OBJS)\model_brush.obj :  model_brush.c
+$(OBJS)\model_brush.obj :  $(DPROOT)\model_brush.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ model_brush.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\model_brush.c
 |
 
-$(OBJS)\model_alias.obj :  model_alias.c
+$(OBJS)\model_alias.obj :  $(DPROOT)\model_alias.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ model_alias.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\model_alias.c
 |
 
-$(OBJS)\menu.obj :  menu.c
+$(OBJS)\menu.obj :  $(DPROOT)\menu.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ menu.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\menu.c
 |
 
-$(OBJS)\mathlib.obj :  mathlib.c
+$(OBJS)\mathlib.obj :  $(DPROOT)\mathlib.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ mathlib.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\mathlib.c
 |
 
-$(OBJS)\keys.obj :  keys.c
+$(OBJS)\keys.obj :  $(DPROOT)\keys.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ keys.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\keys.c
 |
 
-$(OBJS)\model_shared.obj :  model_shared.c
+$(OBJS)\model_shared.obj :  $(DPROOT)\model_shared.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ model_shared.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\model_shared.c
 |
 
-$(OBJS)\gl_screen.obj :  gl_screen.c
+$(OBJS)\gl_screen.obj :  $(DPROOT)\gl_screen.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_screen.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_screen.c
 |
 
-$(OBJS)\image.obj :  image.c
+$(OBJS)\image.obj :  $(DPROOT)\image.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ image.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\image.c
 |
 
-$(OBJS)\host_cmd.obj :  host_cmd.c
+$(OBJS)\host_cmd.obj :  $(DPROOT)\host_cmd.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ host_cmd.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\host_cmd.c
 |
 
-$(OBJS)\host.obj :  host.c
+$(OBJS)\host.obj :  $(DPROOT)\host.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ host.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\host.c
 |
 
-$(OBJS)\hcompress.obj :  hcompress.c
+$(OBJS)\hcompress.obj :  $(DPROOT)\hcompress.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ hcompress.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\hcompress.c
 |
 
-$(OBJS)\gl_warp.obj :  gl_warp.c
+$(OBJS)\gl_warp.obj :  $(DPROOT)\gl_warp.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_warp.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_warp.c
 |
 
-$(OBJS)\fractalnoise.obj :  fractalnoise.c
+$(OBJS)\fractalnoise.obj :  $(DPROOT)\fractalnoise.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ fractalnoise.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\fractalnoise.c
 |
 
-$(OBJS)\gl_rmisc.obj :  gl_rmisc.c
+$(OBJS)\gl_rmisc.obj :  $(DPROOT)\gl_rmisc.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_rmisc.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_rmisc.c
 |
 
-$(OBJS)\gl_rmain.obj :  gl_rmain.c
+$(OBJS)\gl_rmain.obj :  $(DPROOT)\gl_rmain.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_rmain.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_rmain.c
 |
 
-$(OBJS)\gl_refrag.obj :  gl_refrag.c
+$(OBJS)\gl_refrag.obj :  $(DPROOT)\gl_refrag.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_refrag.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_refrag.c
 |
 
-$(OBJS)\gl_poly.obj :  gl_poly.c
+$(OBJS)\gl_poly.obj :  $(DPROOT)\gl_poly.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_poly.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_poly.c
 |
 
-$(OBJS)\gl_draw.obj :  gl_draw.c
+$(OBJS)\gl_draw.obj :  $(DPROOT)\gl_draw.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_draw.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_draw.c
 |
 
-$(OBJS)\gl_rsurf.obj :  gl_rsurf.c
+$(OBJS)\gl_rsurf.obj :  $(DPROOT)\gl_rsurf.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ gl_rsurf.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\gl_rsurf.c
 |
 
-$(OBJS)\cl_tent.obj :  cl_tent.c
+$(OBJS)\cl_tent.obj :  $(DPROOT)\cl_tent.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cl_tent.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cl_tent.c
 |
 
 $(OBJS)\crc.obj :  crc.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ crc.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\crc.c
 |
 
-$(OBJS)\console.obj :  console.c
+$(OBJS)\console.obj :  $(DPROOT)\console.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ console.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\console.c
 |
 
-$(OBJS)\conproc.obj :  conproc.c
+$(OBJS)\conproc.obj :  $(DPROOT)\conproc.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ conproc.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\conproc.c
 |
 
-$(OBJS)\common.obj :  common.c
-  $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ common.c
+$(OBJS)\common.obj :  $(DPROOT)\common.c
+  $(BCC32) -P- -c @&&|                       
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\common.c
 |
 
-$(OBJS)\cmd.obj :  cmd.c
+$(OBJS)\cmd.obj :  $(DPROOT)\cmd.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cmd.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cmd.c
 |
 
-$(OBJS)\cvar.obj :  cvar.c
+$(OBJS)\cvar.obj :  $(DPROOT)\cvar.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cvar.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cvar.c
 |
 
-$(OBJS)\chase.obj :  chase.c
+$(OBJS)\chase.obj :  $(DPROOT)\chase.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ chase.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\chase.c
 |
 
-$(OBJS)\cl_input.obj :  cl_input.c
+$(OBJS)\cl_input.obj :  $(DPROOT)\cl_input.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cl_input.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cl_input.c
 |
 
-$(OBJS)\cl_demo.obj :  cl_demo.c
+$(OBJS)\cl_demo.obj :  $(DPROOT)\cl_demo.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cl_demo.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cl_demo.c
 |
 
-$(OBJS)\cl_parse.obj :  cl_parse.c
+$(OBJS)\cl_parse.obj :  $(DPROOT)\cl_parse.c
   $(BCC32) -P- -c @&&|
- $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ cl_parse.c
+ $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\cl_parse.c
 |
 
 
