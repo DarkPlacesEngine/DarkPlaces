@@ -918,12 +918,12 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 					f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->subtract;
 					if (f > 0)
 					{
-						#if SLOWMATH
+						//#if SLOWMATH
 						t = 1.0f / sqrt(dist2);
-						#else
-						*((int *)&t) = 0x5f3759df - ((* (int *) &dist2) >> 1);
-						t = t * (1.5f - (dist2 * 0.5f * t * t));
-						#endif
+						//#else
+						//*((int *)&t) = 0x5f3759df - ((* (int *) &dist2) >> 1);
+						//t = t * (1.5f - (dist2 * 0.5f * t * t));
+						//#endif
 
 						// dot * t is dotproduct with a normalized v.
 						// (the result would be -1 to +1, but we already
