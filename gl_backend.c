@@ -810,9 +810,16 @@ void R_Mesh_State(const rmeshstate_t *m)
 			texturergbscale[i] = 1;
 	}
 	if (overbright)
+	{
 		for (i = backendunits - 1;i >= 0;i--)
+		{
 			if (m->tex[i])
+			{
 				texturergbscale[i] = 4;
+				break;
+			}
+		}
+	}
 
 	if (backendunits > 1)
 	{
