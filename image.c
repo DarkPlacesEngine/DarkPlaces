@@ -723,6 +723,22 @@ rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *f
 	return rt;
 }
 
+rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale)
+{
+	qbyte *data, *data2;
+	rtexture_t *rt;
+	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
+		return 0;
+	data2 = Mem_Alloc(tempmempool, image_width * image_height * 4);
+
+	Image_HeightmapToNormalmap(data, data2, image_width, image_height, (flags & TEXF_CLAMP) != 0, bumpscale);
+	rt = R_LoadTexture2D(pool, filename, image_width, image_height, data2, TEXTYPE_RGBA, flags, NULL);
+
+	Mem_Free(data2);
+	Mem_Free(data);
+	return rt;
+}
+
 qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data)
 {
 	qboolean ret;
