@@ -306,6 +306,7 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf);
 		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf);
 		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf);
+		else if (!memcmp(buf, "IDS2", 4)) Mod_IDS2_Load(mod, buf);
 		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf);
 		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf);
 		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf);

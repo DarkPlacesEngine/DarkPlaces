@@ -45,9 +45,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // <endrepeat>
 //-------------------------------------------------------
 
-#define SPRITE_VERSION	1
+#define SPRITE_VERSION		1
 #define SPRITEHL_VERSION	2
 #define SPRITE32_VERSION	32
+
+#define SPRITE2_VERSION		2
 
 typedef struct
 {
@@ -75,6 +77,21 @@ typedef struct
 	float		beamlength;
 	synctype_t	synctype;
 } dspritehl_t;
+
+typedef struct
+{
+	int		width, height;
+	int		origin_x, origin_y;		// raster coordinates inside pic
+	char	name[64];				// name of pcx file
+} dsprite2frame_t;
+
+typedef struct
+{
+	int				ident;
+	int				version;
+	int				numframes;
+	dsprite2frame_t	frames[1];		// variable sized
+} dsprite2_t;
 
 #define SPR_VP_PARALLEL_UPRIGHT		0
 #define SPR_FACING_UPRIGHT			1

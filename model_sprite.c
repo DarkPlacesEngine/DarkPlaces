@@ -38,7 +38,7 @@ void Mod_SpriteInit (void)
 }
 
 static int alphaonlytable[4] = {255 | 0x80000000, 255 | 0x80000000, 255 | 0x80000000, 3};
-static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette, int *alphapalette)
+static void Mod_Sprite_SharedSetup(const qbyte *datapointer, int version, const int *palette, const int *alphapalette)
 {
 	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
 	dspriteframetype_t	*pinframetype;
@@ -48,13 +48,11 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 	float				modelradius, interval;
 	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	qbyte				*pixbuf;
-	void				*startframes;
+	const void			*startframes;
 	modelradius = 0;
 
 	if (loadmodel->numframes < 1)
 		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d\n", loadmodel->numframes);
-
-	loadmodel->type = mod_sprite;
 
 	// LordHavoc: hack to allow sprites to be non-fullbright
 	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
@@ -65,10 +63,6 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 			break;
 		}
 	}
-
-	// LordHavoc: 32bit textures
-	if (version != SPRITE_VERSION && version != SPRITE32_VERSION && version != SPRITEHL_VERSION)
-		Host_Error("Mod_Sprite_SharedSetup: unsupported version %i, only %i (quake), %i (HalfLife), and %i (sprite32) supported", version, SPRITE_VERSION, SPRITEHL_VERSION, SPRITE32_VERSION);
 
 //
 // load the frames
@@ -210,16 +204,14 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 }
 
 extern void R_Model_Sprite_Draw(entity_render_t *ent);
-void Mod_IDSP_Load(model_t *mod, void *buffer)
+void Mod_IDSP_Load(model_t *mod, const void *buffer)
 {
-	int version, i, rendermode;
-	qbyte palette[256][4], alphapalette[256][4], *in;
-	dsprite_t *pinqsprite;
-	dspritehl_t *pinhlsprite;
-	qbyte *datapointer;
+	int version;
+	const qbyte *datapointer;
 
 	datapointer = buffer;
 
+	loadmodel->type = mod_sprite;
 	loadmodel->flags2 = EF_FULLBRIGHT;
 
 	loadmodel->DrawSky = NULL;
@@ -230,6 +222,8 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 	version = LittleLong(((dsprite_t *)buffer)->version);
 	if (version == SPRITE_VERSION || version == SPRITE32_VERSION)
 	{
+		dsprite_t *pinqsprite;
+
 		pinqsprite = (dsprite_t *)datapointer;
 		datapointer += sizeof(dsprite_t);
 
@@ -241,6 +235,11 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 	}
 	else if (version == SPRITEHL_VERSION)
 	{
+		int i, rendermode;
+		qbyte palette[256][4], alphapalette[256][4];
+		const qbyte *in;
+		dspritehl_t *pinhlsprite;
+
 		pinhlsprite = (dspritehl_t *)datapointer;
 		datapointer += sizeof(dspritehl_t);
 
@@ -313,6 +312,99 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (int *)(&palette[0][0]), (int *)(&alphapalette[0][0]));
 	}
 	else
-		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", loadmodel->name, version);
+		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i). Only %i (quake), %i (HalfLife), and %i (sprite32) supported",
+					loadmodel->name, version, SPRITE_VERSION, SPRITEHL_VERSION, SPRITE32_VERSION);
 }
 
+
+void Mod_IDS2_Load(model_t *mod, const void *buffer)
+{
+	int i, version;
+	const dsprite2_t *pinqsprite;
+	float modelradius;
+	
+	loadmodel->type = mod_sprite;
+	loadmodel->flags2 = EF_FULLBRIGHT;
+
+	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Model_Sprite_Draw;
+	loadmodel->DrawShadowVolume = NULL;
+	loadmodel->DrawLight = NULL;
+
+	pinqsprite = (dsprite2_t *)buffer;
+
+	version = LittleLong(pinqsprite->version);
+	if (version != SPRITE2_VERSION)
+		Host_Error("Mod_IDS2_Load: %s has wrong version number (%i should be 2 (quake 2)", loadmodel->name, version);
+
+	loadmodel->numframes = LittleLong (pinqsprite->numframes);
+	if (loadmodel->numframes < 1)
+		Host_Error ("Mod_IDS2_Load: Invalid # of frames: %d\n", loadmodel->numframes);
+	loadmodel->sprite.sprnum_type = SPR_VP_PARALLEL;
+	loadmodel->synctype = ST_SYNC;
+
+	// Hack to allow sprites to be non-fullbright
+	for (i = 0;i < MAX_QPATH && loadmodel->name[i];i++)
+	{
+		if (loadmodel->name[i] == '!')
+		{
+			loadmodel->flags2 &= ~EF_FULLBRIGHT;
+			break;
+		}
+	}
+
+	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
+	loadmodel->sprite.sprdata_frames = Mem_Alloc(loadmodel->mempool, sizeof(mspriteframe_t) * loadmodel->numframes);
+
+	modelradius = 0;
+	for (i = 0;i < loadmodel->numframes;i++)
+	{
+		int origin[2], x, y, width, height;
+		const dsprite2frame_t *pinframe;
+		mspriteframe_t *sprframe;
+
+		dpsnprintf(loadmodel->animscenes[i].name, sizeof(loadmodel->animscenes[i].name), "frame %i", i);
+		loadmodel->animscenes[i].firstframe = i;
+		loadmodel->animscenes[i].framecount = 1;
+		loadmodel->animscenes[i].framerate = 10;
+		loadmodel->animscenes[i].loop = true;
+
+		pinframe = &pinqsprite->frames[i];
+
+		origin[0] = LittleLong (pinframe->origin_x);
+		origin[1] = LittleLong (pinframe->origin_y);
+		width = LittleLong (pinframe->width);
+		height = LittleLong (pinframe->height);
+
+		sprframe = &loadmodel->sprite.sprdata_frames[i];
+
+		sprframe->left = origin[0];
+		sprframe->right = origin[0] + width;
+		sprframe->up = origin[1];
+		sprframe->down = origin[1] - height;
+
+		x = max(sprframe->left * sprframe->left, sprframe->right * sprframe->right);
+		y = max(sprframe->up * sprframe->up, sprframe->down * sprframe->down);
+		if (modelradius < x + y)
+			modelradius = x + y;
+
+		if (width > 0 && height > 0)
+		{
+			sprframe->texture = loadtextureimagewithmask(loadmodel->texturepool, pinframe->name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP);
+			sprframe->fogtexture = image_masktex;
+
+			// TODO: use a default texture if we can't load it?
+			if (sprframe->texture == NULL)
+				Host_Error("Mod_IDS2_Load: failed to load %s", pinframe->name);
+		}
+	}
+
+	modelradius = sqrt(modelradius);
+	for (i = 0;i < 3;i++)
+	{
+		loadmodel->normalmins[i] = loadmodel->yawmins[i] = loadmodel->rotatedmins[i] = -modelradius;
+		loadmodel->normalmaxs[i] = loadmodel->yawmaxs[i] = loadmodel->rotatedmaxs[i] = modelradius;
+	}
+	loadmodel->radius = modelradius;
+	loadmodel->radius2 = modelradius * modelradius;
+}
