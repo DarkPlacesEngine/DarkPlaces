@@ -205,6 +205,14 @@ static int XLateKey(XKeyEvent *ev, char *ascii)
 		case XK_KP_Divide: key = K_KP_SLASH; break;
 
 		default:
+			if (keysym < 32 && keysym > 126)
+				break;
+
+			if (keysym >= 'A' && keysym <= 'Z')
+				key = keysym - 'A' + 'a';
+			else
+				key = keysym;
+
 			break;
 	}
 
