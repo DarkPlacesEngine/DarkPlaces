@@ -82,7 +82,7 @@ f darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) t
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 d darkplaces: fix con_notify (should control number of lines)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
-0 darkplaces: fix key based turning being affected by slowmo - it should not be
+d darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 0 darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
