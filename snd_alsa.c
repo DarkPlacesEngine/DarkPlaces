@@ -29,6 +29,7 @@
 #include <alsa/asoundlib.h>
 
 #include "quakedef.h"
+#include "snd_main.h"
 
 static int			snd_inited;
 static snd_pcm_uframes_t buffer_size;
