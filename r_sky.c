@@ -6,13 +6,9 @@
 cvar_t r_sky = {CVAR_SAVE, "r_sky", "1"};
 cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1"};
 cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2"};
-qboolean skyavailable_quake;
-qboolean skyavailable_box;
 int skyrendernow;
 int skyrendermasked;
 
-static rtexture_t *solidskytexture;
-static rtexture_t *alphaskytexture;
 static int skyrendersphere;
 static int skyrenderbox;
 static rtexturepool_t *skytexturepool;
@@ -62,9 +58,9 @@ void R_SkyStartFrame(void)
 	skyrendermasked = false;
 	if (r_sky.integer && !fogenabled)
 	{
-		if (skyavailable_box)
+		if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 			skyrenderbox = true;
-		else if (skyavailable_quake)
+		else if (cl.worldmodel->brush.solidskytexture)
 			skyrendersphere = true;
 		// for depth-masked sky, render the sky on the first sky surface encountered
 		skyrendernow = true;
@@ -90,17 +86,20 @@ void R_UnloadSkyBox(void)
 
 void R_LoadSkyBox(void)
 {
-	int i, j;
+	int i, j, success;
 	int indices[4] = {0,1,2,3};
 	char name[1024];
 	qbyte *image_rgba;
 	qbyte *temp;
+
 	R_UnloadSkyBox();
+
 	if (!skyname[0])
 		return;
 
 	for (j=0; j<3; j++)
 	{
+		success = 0;
 		for (i=0; i<6; i++)
 		{
 			if (snprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
@@ -119,22 +118,15 @@ void R_LoadSkyBox(void)
 			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
 			Mem_Free(image_rgba);
 			Mem_Free(temp);
+			success++;
 		}
 
-		for (i=0; i<6; i++)
-		{
-			if (skyboxside[i] == NULL)
-			{
-				R_UnloadSkyBox();
-				break;
-			}
-		}
-
-		if (skyboxside[0] != NULL)
-			return;
+		if (success)
+			break;
 	}
 
-	Con_Printf ("Failed to load %s as skybox\n", skyname);
+	if (j == 3)
+		Con_Printf ("Failed to load %s as skybox\n", skyname);
 }
 
 int R_SetSkyBox(const char *sky)
@@ -148,20 +140,12 @@ int R_SetSkyBox(const char *sky)
 		return false;
 	}
 
-	skyavailable_box = false;
 	strcpy(skyname, sky);
 
-	R_UnloadSkyBox();
 	R_LoadSkyBox();
 
 	if (!skyname[0])
 		return true;
-
-	if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
-	{
-		skyavailable_box = true;
-		return true;
-	}
 	return false;
 }
 
@@ -290,7 +274,7 @@ static void R_SkyBox(void)
 	GL_Color(1, 1, 1, 1);
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
-	GL_DepthMask(true);
+	GL_DepthMask(false);
 	GL_DepthTest(false); // don't modify or read zbuffer
 	m.pointer_vertex = skyboxvertex3f;
 	m.pointer_texcoord[0] = skyboxtexcoord2f;
@@ -391,13 +375,13 @@ static void R_SkySphere(void)
 	GL_DepthTest(false); // don't modify or read zbuffer
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = skysphere_vertex3f;
-	m.tex[0] = R_GetTexture(solidskytexture);
+	m.tex[0] = R_GetTexture(cl.worldmodel->brush.solidskytexture);
 	m.pointer_texcoord[0] = skysphere_texcoord2f;
 	m.texmatrix[0] = scroll1matrix;
 	if (r_textureunits.integer >= 2)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
-		m.tex[1] = R_GetTexture(alphaskytexture);
+		m.tex[1] = R_GetTexture(cl.worldmodel->brush.alphaskytexture);
 		m.texcombinergb[1] = gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL;
 		m.pointer_texcoord[1] = skysphere_texcoord2f;
 		m.texmatrix[1] = scroll2matrix;
@@ -415,7 +399,7 @@ static void R_SkySphere(void)
 		GL_LockArrays(0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		m.tex[0] = R_GetTexture(alphaskytexture);
+		m.tex[0] = R_GetTexture(cl.worldmodel->brush.alphaskytexture);
 		m.texmatrix[0] = scroll2matrix;
 		R_Mesh_State(&m);
 		GL_LockArrays(0, skysphere_numverts);
@@ -455,94 +439,16 @@ void R_Sky(void)
 
 //===============================================================
 
-/*
-=============
-R_InitSky
-
-A sky texture is 256*128, with the right side being a masked overlay
-==============
-*/
-void R_InitSky (qbyte *src, int bytesperpixel)
-{
-	int i, j;
-	unsigned solidpixels[128*128], alphapixels[128*128];
-
-	skyavailable_quake = true;
-
-	// flush skytexturepool so we won't build up a leak from uploading textures multiple times
-	R_FreeTexturePool(&skytexturepool);
-	skytexturepool = R_AllocTexturePool();
-	solidskytexture = NULL;
-	alphaskytexture = NULL;
-
-	if (bytesperpixel == 4)
-	{
-		for (i = 0;i < 128;i++)
-		{
-			for (j = 0;j < 128;j++)
-			{
-				solidpixels[(i*128) + j] = ((unsigned *)src)[i*256+j+128];
-				alphapixels[(i*128) + j] = ((unsigned *)src)[i*256+j];
-			}
-		}
-	}
-	else
-	{
-		// make an average value for the back to avoid
-		// a fringe on the top level
-		int p, r, g, b;
-		union
-		{
-			unsigned int i;
-			unsigned char b[4];
-		}
-		rgba;
-		r = g = b = 0;
-		for (i = 0;i < 128;i++)
-		{
-			for (j = 0;j < 128;j++)
-			{
-				rgba.i = palette_complete[src[i*256 + j + 128]];
-				r += rgba.b[0];
-				g += rgba.b[1];
-				b += rgba.b[2];
-			}
-		}
-		rgba.b[0] = r/(128*128);
-		rgba.b[1] = g/(128*128);
-		rgba.b[2] = b/(128*128);
-		rgba.b[3] = 0;
-		for (i = 0;i < 128;i++)
-		{
-			for (j = 0;j < 128;j++)
-			{
-				solidpixels[(i*128) + j] = palette_complete[src[i*256 + j + 128]];
-				alphapixels[(i*128) + j] = (p = src[i*256 + j]) ? palette_complete[p] : rgba.i;
-			}
-		}
-	}
-
-	solidskytexture = R_LoadTexture2D(skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) solidpixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	alphaskytexture = R_LoadTexture2D(skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) alphapixels, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
-}
-
-void R_ResetQuakeSky(void)
-{
-	skyavailable_quake = false;
-}
-
 void R_ResetSkyBox(void)
 {
 	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
 	skyname[0] = 0;
-	skyavailable_box = false;
+	R_LoadSkyBox();
 }
 
 static void r_sky_start(void)
 {
 	skytexturepool = R_AllocTexturePool();
-	solidskytexture = NULL;
-	alphaskytexture = NULL;
 	R_LoadSkyBox();
 }
 
@@ -550,13 +456,12 @@ static void r_sky_shutdown(void)
 {
 	R_UnloadSkyBox();
 	R_FreeTexturePool(&skytexturepool);
-	solidskytexture = NULL;
-	alphaskytexture = NULL;
 }
 
 static void r_sky_newmap(void)
 {
 }
+
 
 void R_Sky_Init(void)
 {
@@ -564,8 +469,8 @@ void R_Sky_Init(void)
 	Cvar_RegisterVariable (&r_sky);
 	Cvar_RegisterVariable (&r_skyscroll1);
 	Cvar_RegisterVariable (&r_skyscroll2);
-	R_ResetSkyBox();
-	R_ResetQuakeSky();
+	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
+	skyname[0] = 0;
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
 }
 

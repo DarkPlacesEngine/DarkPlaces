@@ -43,7 +43,6 @@ extern int skyrendernow, skyrendermasked;
 extern int R_SetSkyBox(const char *sky);
 extern void R_SkyStartFrame(void);
 extern void R_Sky(void);
-extern void R_ResetQuakeSky(void);
 extern void R_ResetSkyBox(void);
 
 // SHOWLMP stuff (Nehahra)

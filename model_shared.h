@@ -179,6 +179,9 @@ typedef struct model_brush_s
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
 
 	char skybox[64];
+
+	rtexture_t *solidskytexture;
+	rtexture_t *alphaskytexture;
 }
 model_brush_t;
 
