@@ -83,9 +83,9 @@ f darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) t
 d darkplaces: fix con_notify (should control number of lines)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 d darkplaces: fix key based turning being affected by slowmo - it should not be
-0 darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
-0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
-0 darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
+-n darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
+-f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
+-n darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
 0 darkplaces: make Com_HexDumpToConsole not use color
