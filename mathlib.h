@@ -176,5 +176,9 @@ tinydoubleplane_t;
 
 void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);
 
+// print a matrix to the console
+struct matrix4x4_s;
+void Matrix4x4_Print(const struct matrix4x4_s *in);
+
 #endif
 
