@@ -1043,9 +1043,9 @@ void S_RawSamples_Enqueue(short *samples, unsigned int length)
 	if (s_rawsamplesbuffer_count + length > RAWSAMPLESBUFFER)
 		return;
 	b2 = (s_rawsamplesbuffer_start + s_rawsamplesbuffer_count) % RAWSAMPLESBUFFER;
-	b3 = (s_rawsamplesbuffer_start + s_rawsamplesbuffer_count + length) % RAWSAMPLESBUFFER;
-	if (b3 < b2)
+	if (b2 + length > RAWSAMPLESBUFFER)
 	{
+		b3 = (b2 + length) % RAWSAMPLESBUFFER;
 		memcpy(s_rawsamplesbuffer + b2 * 2, samples, (RAWSAMPLESBUFFER - b2) * sizeof(short[2]));
 		memcpy(s_rawsamplesbuffer, samples + (RAWSAMPLESBUFFER - b2) * 2, b3 * sizeof(short[2]));
 	}
@@ -1065,9 +1065,9 @@ void S_RawSamples_Dequeue(int *samples, unsigned int length)
 	if (l > s_rawsamplesbuffer_count)
 		l = s_rawsamplesbuffer_count;
 	b1 = (s_rawsamplesbuffer_start) % RAWSAMPLESBUFFER;
-	b2 = (s_rawsamplesbuffer_start + l) % RAWSAMPLESBUFFER;
-	if (b2 < b1)
+	if (b1 + l > RAWSAMPLESBUFFER)
 	{
+		b2 = (b1 + l) % RAWSAMPLESBUFFER;
 		//memcpy(samples, s_rawsamplesbuffer + b1 * 2, (RAWSAMPLESBUFFER - b1) * sizeof(short[2]));
 		//memcpy(samples + (RAWSAMPLESBUFFER - b1) * 2, s_rawsamplesbuffer, b2 * sizeof(short[2]));
 		for (out = samples, in = s_rawsamplesbuffer + b1 * 2, count = (RAWSAMPLESBUFFER - b1) * 2, i = 0;i < count;i++)
