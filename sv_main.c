@@ -1090,7 +1090,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	MSG_WriteLong(msg, d->currentcommit->framenum);
 	if (developer_networkentities.integer >= 1)
 	{
-		Con_Printf("send svc_entities ref:%i num:%i (database: ref:%i commits:", d->referenceframenum, d->currentcommit->framenum, d->referenceframenum);
+		Con_Printf("send svc_entities num:%i ref:%i (database: ref:%i commits:", d->currentcommit->framenum, d->referenceframenum, d->referenceframenum);
 		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 			if (d->commit[i].numentities)
 				Con_Printf(" %i", d->commit[i].framenum);
