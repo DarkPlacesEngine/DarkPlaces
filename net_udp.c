@@ -318,7 +318,7 @@ int UDP_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 
 //=============================================================================
 
-char *UDP_AddrToString (struct qsockaddr *addr)
+char *UDP_AddrToString (const struct qsockaddr *addr)
 {
 	static char buffer[22];
 	int haddr;
@@ -363,7 +363,7 @@ int UDP_GetSocketAddr (int socket, struct qsockaddr *addr)
 
 //=============================================================================
 
-int UDP_GetNameFromAddr (struct qsockaddr *addr, char *name)
+int UDP_GetNameFromAddr (const struct qsockaddr *addr, char *name)
 {
 	struct hostent *hostentry;
 
@@ -400,7 +400,7 @@ int UDP_GetAddrFromName(const char *name, struct qsockaddr *addr)
 
 //=============================================================================
 
-int UDP_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2)
+int UDP_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2)
 {
 	if (addr1->sa_family != addr2->sa_family)
 		return -1;
