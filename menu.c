@@ -3584,6 +3584,9 @@ level_t		transfusionlevels[] =
 	{"fragm",		"Frag'M"},
 	{"maim",		"Maim"},
 	{"qe1m7",		"The House of Chthon"},
+	{"qdm1",		"Dm-Place of Two Deaths"},
+	{"qdm4",		"Dm-The Bad Place"},
+	{"qdm5",		"Dm-The Cistern"},
 	{"qmorbias",	"Dm-Morbias"},
 	{"simple",		"Dead Simple"}
 };
@@ -3598,9 +3601,9 @@ episode_t	transfusionepisodes[] =
 	{"Post Mortem", 45, 9},
 	{"Cryptic Passage", 54, 10},
 	{"Cryptic BloodBath", 64, 4},
-	{"Blood 2", 68, 6},
-	{"Transfusion", 74, 9},
-	{"Conversions", 83, 6}
+	{"Blood 2", 68, 8},
+	{"Transfusion", 76, 9},
+	{"Conversions", 85, 9}
 };
 
 level_t goodvsbad2levels[] =
