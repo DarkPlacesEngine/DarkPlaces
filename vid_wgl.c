@@ -307,7 +307,8 @@ void VID_Finish (void)
 	int vid_usemouse;
 	if (r_render.integer && !scr_skipupdate)
 	{
-		qglFinish();
+		if (r_speeds.integer || gl_finish.integer)
+			qglFinish();
 		hdc = GetDC(mainwindow);
 		SwapBuffers(hdc);
 		ReleaseDC(mainwindow, hdc);

@@ -1384,7 +1384,8 @@ showtris:
 	{
 		// tell driver to commit it's partially full geometry queue to the rendering queue
 		// (this doesn't wait for the commands themselves to complete)
-		qglFlush();
+		if (gl_finish.integer)
+			qglFlush();
 	}
 	else
 	{

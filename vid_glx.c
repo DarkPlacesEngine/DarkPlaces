@@ -607,7 +607,8 @@ void VID_Finish (void)
 	int usemouse;
 	if (r_render.integer)
 	{
-		qglFinish();
+		if (r_speeds.integer || gl_finish.integer)
+			qglFinish();
 		qglXSwapBuffers(vidx11_display, win);
 	}
 

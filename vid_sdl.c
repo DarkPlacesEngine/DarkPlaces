@@ -474,7 +474,8 @@ void VID_Finish (void)
 	Uint8 appstate;
 	int vid_usemouse;
 
-	qglFinish();
+	if (r_speeds.integer || gl_finish.integer)
+		qglFinish();
 	SDL_GL_SwapBuffers();
 
 	//react on appstate changes

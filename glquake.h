@@ -303,7 +303,6 @@ extern int gl_combine_extension;
 #define GL_MAX_ELEMENTS_INDICES			0x80E9
 #endif
 
-extern cvar_t gl_combine;
 
 extern int gl_textureshader;
 #ifndef GL_TEXTURE_SHADER_NV
