@@ -3147,26 +3147,12 @@ void PF_setattachment (void)
 /////////////////////////////////////////
 // DP_MD3_TAGINFO extension coded by VorteX
 
-//float(entity ent, string tagname) gettagindex;
-void PF_gettagindex (void)
+int SV_GetTagIndex (edict_t *e, char *tagname)
 {
-	edict_t *e = G_EDICT(OFS_PARM0);
-	const char *tagname = G_STRING(OFS_PARM1);
-	int modelindex, tagindex, i;
+	int tagindex, i;
 	model_t *model;
 
-	if (e == sv.edicts)
-		PF_WARNING("gettagindex: can't affect world entity\n");
-	if (e->e->free)
-		PF_WARNING("gettagindex: can't affect free entity\n");
-
-	modelindex = (int)e->v->modelindex;
-	if (modelindex <= 0 || modelindex > MAX_MODELS)
-	{
-		Con_DPrintf("gettagindex(entity #%i): null or non-precached model\n", NUM_FOR_EDICT(e));
-		return;
-	}
-	model = sv.models[modelindex];
+	model = sv.models[(int)e->v->modelindex];
 
 	tagindex = -1;
 	if (model->data_overridetagnamesforskin && (unsigned int)e->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)e->v->skin].num_overridetagnames)
@@ -3191,9 +3177,7 @@ void PF_gettagindex (void)
 			}
 		}
 	}
-	if (tagindex == -1)
-		Con_DPrintf("gettagindex(entity #%i): tag \"%s\" not found\n", NUM_FOR_EDICT(e), tagname);
-	G_FLOAT(OFS_RETURN) = tagindex + 1;
+	return tagindex + 1;
 };
 
 // Warnings/errors code:
@@ -3202,12 +3186,16 @@ void PF_gettagindex (void)
 // 2 - free entity
 // 3 - null or non-precached model
 // 4 - no tags with requested index
+// 5 - runaway loop at attachment chain
+extern cvar_t cl_bob;
+extern cvar_t cl_bobcycle;
+extern cvar_t cl_bobup;
 int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 {
 	eval_t *val;
-	float scale;
-	int modelindex, tagsnum, reqframe;
-	matrix4x4_t entitymatrix, tagmatrix;
+	int modelindex, reqtag, reqframe, attachloop;
+	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
+	edict_t *attachent;
 	model_t *model;
 
 	Matrix4x4_CreateIdentity(out); // warnings and errors return identical matrix
@@ -3222,70 +3210,148 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 		return 3;
 
 	model = sv.models[modelindex];
-	tagsnum = model->alias.aliasnum_tags;
+	reqtag = model->alias.aliasnum_tags;
 
-	if (tagindex <= 0 || tagindex > tagsnum)
+	if (tagindex <= 0 || tagindex > reqtag)
 	{
-		if (tagsnum && tagindex) // Only appear if model has no tags or not-null tag requested
+		if (reqtag && tagindex) // Only appear if model has no tags or not-null tag requested
 			return 4;
 		return 0;
 	}
 
 	if (ent->v->frame < 0 || ent->v->frame > model->alias.aliasnum_tagframes)
-		reqframe = 0; // if model has wrong frame, engine automatically switches to model first frame
+		reqframe = model->numframes - 1; // if model has wrong frame, engine automatically switches to model last frame
 	else
 		reqframe = ent->v->frame;
 
-	// just reusing a temp
-	modelindex = (tagindex - 1) + ent->v->frame*tagsnum;
-
-	// transform tag by its own entity matrix
-	Matrix4x4_Copy(&tagmatrix, &model->alias.aliasdata_tags[modelindex].matrix);
-	// FIXME: add scale parameter
-	scale = 1;
-	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
-	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], scale);
-	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-	// True origin for rotation (Matrix4x4_Concat creates wrong), this is done using all rotation matrix
-	out->m[0][3] = entitymatrix.m[0][3] + entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3];
-	out->m[1][3] = entitymatrix.m[1][3] + entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3];
-	out->m[2][3] = entitymatrix.m[2][3] + entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3];		
-
-	// additional actions for render-view entities
-	if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
-	{// RENDER_VIEWMODEL
-		Matrix4x4_Copy(&tagmatrix, out);
-		ent = EDICT_NUM(val->edict);
-		// FIXME: add bobbing (cl_bob), add scale parameter
-		scale = 1;
-		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2] + ent->v->view_ofs[2], ent->v->v_angle[0], ent->v->v_angle[1], ent->v->v_angle[2], scale);
-		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-		out->m[0][3] = entitymatrix.m[0][3] + entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3];
-		out->m[1][3] = entitymatrix.m[1][3] + entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3];
-		out->m[2][3] = entitymatrix.m[2][3] + entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3];		
-		Con_DPrintf("SV_GetTagMatrix: returned origin is %f %f %f\n", out->m[0][3], out->m[1][3], out->m[2][3]);
-		return 0;
+	// get initial tag matrix
+	if (tagindex)
+	{
+		reqtag = (tagindex - 1) + ent->v->frame*model->alias.aliasnum_tags;
+		Matrix4x4_Copy(&tagmatrix, &model->alias.aliasdata_tags[reqtag].matrix);
 	}
-	// RENDER_VIEWMODEL can't be attached by tag, right?
-	val = GETEDICTFIELDVALUE(ent, eval_tag_entity);
-	if (val->edict)
-	{// DP_GFX_QUAKE3MODELTAGS
+	else
+		Matrix4x4_CreateIdentity(&tagmatrix);
+
+	if ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict) 
+	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
+		attachloop = 0;
 		do
 		{
-			ent = EDICT_NUM(val->edict);
-			// FIXME: add scale parameter
-			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], scale);
+			attachent = EDICT_NUM(val->edict); // to this it entity our entity is attached
+			val = GETEDICTFIELDVALUE(ent, eval_tag_index);
+			if (val->_float) 
+			{// got tagname on parent entity attachment tag via tag_index (and got it's matrix)
+				model = sv.models[(int)attachent->v->modelindex];
+				reqtag = (val->_float - 1) + attachent->v->frame*model->alias.aliasnum_tags;
+				Matrix4x4_Copy(&attachmatrix, &model->alias.aliasdata_tags[reqtag].matrix);
+			}
+			else
+				Matrix4x4_CreateIdentity(&attachmatrix);
+
+			// apply transformation by child entity matrix
+			val = GETEDICTFIELDVALUE(ent, eval_scale);
+			if (val->_float == 0)
+				val->_float = 1;
+			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], val->_float);
 			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
-			// True origin for rotation (Matrix4x4_Concat creates wrong), this is done using all rotation matrix
-			out->m[0][3] = entitymatrix.m[0][3] + entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3];
-			out->m[1][3] = entitymatrix.m[1][3] + entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3];
-			out->m[2][3] = entitymatrix.m[2][3] + entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3];		
-		
-		}
+			out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
+			out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
+			out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);		
+			Matrix4x4_Copy(&tagmatrix, out);
+
+			// finally transformate by matrix of tag on parent entity
+			Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
+			out->m[0][3] = attachmatrix.m[0][3] + attachmatrix.m[0][0]*tagmatrix.m[0][3] + attachmatrix.m[0][1]*tagmatrix.m[1][3] + attachmatrix.m[0][2]*tagmatrix.m[2][3];
+			out->m[1][3] = attachmatrix.m[1][3] + attachmatrix.m[1][0]*tagmatrix.m[0][3] + attachmatrix.m[1][1]*tagmatrix.m[1][3] + attachmatrix.m[1][2]*tagmatrix.m[2][3];
+			out->m[2][3] = attachmatrix.m[2][3] + attachmatrix.m[2][0]*tagmatrix.m[0][3] + attachmatrix.m[2][1]*tagmatrix.m[1][3] + attachmatrix.m[2][2]*tagmatrix.m[2][3];		
+			Matrix4x4_Copy(&tagmatrix, out);
+
+			ent = attachent;
+			attachloop += 1;
+			if (attachloop > 255) // prevent runaway looping
+				return 5;
+		} 
 		while ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict);
+	}
+
+	// normal or RENDER_VIEWMODEL entity (or main parent entity on attach chain)
+	val = GETEDICTFIELDVALUE(ent, eval_scale);
+	if (val->_float == 0)
+		val->_float = 1;
+	// Alias models have inverse pitch, bmodels can't have tags, so don't check for modeltype...
+	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], val->_float);
+	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+	out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
+	out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
+	out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);		
+
+	if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
+	{// RENDER_VIEWMODEL magic
+		Matrix4x4_Copy(&tagmatrix, out);
+		ent = EDICT_NUM(val->edict);
+
+		val = GETEDICTFIELDVALUE(ent, eval_scale);
+		if (val->_float == 0)
+			val->_float = 1;
+
+		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2] + ent->v->view_ofs[2], ent->v->v_angle[0], ent->v->v_angle[1], ent->v->v_angle[2], val->_float);
+		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+		out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
+		out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
+		out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);		
+
+		/*
+		// Cl_bob, ported from rendering code
+		if (ent->v->health > 0 && cl_bob.value && cl_bobcycle.value)
+		{
+			double bob, cycle;
+			// LordHavoc: this code is *weird*, but not replacable (I think it
+			// should be done in QC on the server, but oh well, quake is quake)
+			// LordHavoc: figured out bobup: the time at which the sin is at 180
+			// degrees (which allows lengthening or squishing the peak or valley)
+			cycle = sv.time/cl_bobcycle.value;
+			cycle -= (int)cycle;
+			if (cycle < cl_bobup.value)
+				cycle = sin(M_PI * cycle / cl_bobup.value);
+			else
+				cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+			// bob is proportional to velocity in the xy plane
+			// (don't count Z, or jumping messes it up)
+			bob = sqrt(ent->v->velocity[0]*ent->v->velocity[0] + ent->v->velocity[1]*ent->v->velocity[1])*cl_bob.value;
+			bob = bob*0.3 + bob*0.7*cycle;
+			out->m[2][3] += bound(-7, bob, 4);
+		}
+		*/
 	}
 	return 0;
 }
+
+//float(entity ent, string tagname) gettagindex;
+
+void PF_gettagindex (void)
+{
+	edict_t *ent = G_EDICT(OFS_PARM0);
+	char *tag_name = G_STRING(OFS_PARM1);
+	int modelindex, tag_index;
+
+	if (ent == sv.edicts)
+		PF_WARNING("gettagindex: can't affect world entity\n");
+	if (ent->e->free)
+		PF_WARNING("gettagindex: can't affect free entity\n");
+
+	modelindex = (int)ent->v->modelindex;
+	tag_index = 0;
+	if (modelindex <= 0 || modelindex > MAX_MODELS)
+		Con_DPrintf("gettagindex(entity #%i): null or non-precached model\n", NUM_FOR_EDICT(ent));
+	else
+	{
+		tag_index = SV_GetTagIndex(ent, tag_name);
+		if (tag_index == 0)
+			Con_DPrintf("gettagindex(entity #%i): tag \"%s\" not found\n", NUM_FOR_EDICT(ent), tag_name);
+	}
+	G_FLOAT(OFS_RETURN) = tag_index;
+};
 
 //vector(entity ent, float tagindex) gettaginfo;
 void PF_gettaginfo (void)
@@ -3311,6 +3377,9 @@ void PF_gettaginfo (void)
 			break;
 		case 4:
 			Con_DPrintf("SV_GetTagMatrix(entity #%i): model has no tag with requested index %i\n", NUM_FOR_EDICT(e), tagindex);
+			break;
+		case 5:
+			Con_DPrintf("SV_GetTagMatrix(entity #%i): runaway loop at attachment chain\n", NUM_FOR_EDICT(e));
 			break;
 	}
 }
