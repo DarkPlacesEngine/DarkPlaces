@@ -212,7 +212,7 @@ DYNAMIC LIGHTS
 R_MarkLights
 =============
 */
-static void R_OldMarkLights (vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node)
+static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node)
 {
 	float ndist, maxdist;
 	msurface_t *surf;
@@ -255,7 +255,7 @@ loc0:
 	}
 
 // mark the polygons
-	surf = currentrenderentity->model->surfaces + node->firstsurface;
+	surf = ent->model->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
 		int d, impacts, impactt;
@@ -311,7 +311,7 @@ loc0:
 	{
 		if (node->children[1]->contents >= 0)
 		{
-			R_OldMarkLights (lightorigin, rd, bit, bitindex, node->children[0]);
+			R_OldMarkLights (ent, lightorigin, rd, bit, bitindex, node->children[0]);
 			node = node->children[1];
 			goto loc0;
 		}
@@ -329,7 +329,7 @@ loc0:
 }
 
 
-static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
+static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int bitindex)
 {
 	static int lightframe = 0;
 	mleaf_t *pvsleaf;
@@ -345,12 +345,12 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 	if (!r_dynamic.integer)
 		return;
 
-	model = currentrenderentity->model;
+	model = ent->model;
 	softwareuntransform(rd->origin, lightorigin);
 
 	if (!r_vismarklights.integer)
 	{
-		R_OldMarkLights(lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
+		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
 		return;
 	}
 
@@ -358,7 +358,7 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 	if (pvsleaf == NULL)
 	{
 		Con_Printf("R_VisMarkLights: NULL leaf??\n");
-		R_OldMarkLights(lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
+		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
 		return;
 	}
 
@@ -366,7 +366,7 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 	if (!in)
 	{
 		// no vis info, so make all visible
-		R_OldMarkLights(lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
+		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
 		return;
 	}
 
@@ -476,11 +476,11 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 	}
 }
 
-void R_MarkLights(void)
+void R_MarkLights(entity_render_t *ent)
 {
 	int i;
 	for (i = 0;i < r_numdlights;i++)
-		R_VisMarkLights (r_dlight + i, 1 << (i & 31), i >> 5);
+		R_VisMarkLights (ent, r_dlight + i, 1 << (i & 31), i >> 5);
 }
 
 /*
@@ -693,7 +693,7 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 	}
 }
 
-void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
+void R_ModelLightPoint (entity_render_t *ent, vec3_t color, vec3_t p, int *dlightbits)
 {
 	mleaf_t *leaf;
 	leaf = Mod_PointInLeaf(p, cl.worldmodel);
@@ -704,7 +704,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 		return;
 	}
 
-	if (r_fullbright.integer || !cl.worldmodel->lightdata || currentrenderentity->effects & EF_FULLBRIGHT)
+	if (r_fullbright.integer || !cl.worldmodel->lightdata || ent->effects & EF_FULLBRIGHT)
 	{
 		color[0] = color[1] = color[2] = 2;
 		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
@@ -730,7 +730,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
 }
 
-void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords)
+void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0, maxnearlights = r_modellights.integer;
 	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, f, dist2, mscale, dot, stylescale, intensity, ambientcolor[3];
@@ -751,30 +751,30 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	int modeldlightbits[8];
 	mlight_t *sl;
 	rdlight_t *rd;
-	a = currentrenderentity->alpha;
+	a = ent->alpha;
 	// scale of the model's coordinate space, to alter light attenuation to match
 	// make the mscale squared so it can scale the squared distance results
-	mscale = currentrenderentity->scale * currentrenderentity->scale;
-	if ((maxnearlights != 0) && !r_fullbright.integer && !(currentrenderentity->effects & EF_FULLBRIGHT))
+	mscale = ent->scale * ent->scale;
+	if ((maxnearlights != 0) && !r_fullbright.integer && !(ent->effects & EF_FULLBRIGHT))
 	{
-		R_ModelLightPoint(basecolor, currentrenderentity->origin, modeldlightbits);
+		R_ModelLightPoint(ent, basecolor, ent->origin, modeldlightbits);
 
 		nl = &nearlight[0];
-		VectorSubtract(currentrenderentity->origin, currentrenderentity->entlightsorigin, v);
-		if ((realtime > currentrenderentity->entlightstime && DotProduct(v,v) >= 1.0f))
+		VectorSubtract(ent->origin, ent->entlightsorigin, v);
+		if ((realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))
 		{
-			currentrenderentity->numentlights = 0;
-			currentrenderentity->entlightstime = realtime + 0.2;
-			VectorCopy(currentrenderentity->origin, currentrenderentity->entlightsorigin);
-			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && currentrenderentity->numentlights < MAXENTLIGHTS;i++, sl++)
-				if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
-					currentrenderentity->entlights[currentrenderentity->numentlights++] = i;
+			ent->numentlights = 0;
+			ent->entlightstime = realtime + 0.2;
+			VectorCopy(ent->origin, ent->entlightsorigin);
+			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
+				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false) == 1)
+					ent->entlights[ent->numentlights++] = i;
 		}
-		for (i = 0;i < currentrenderentity->numentlights;i++)
+		for (i = 0;i < ent->numentlights;i++)
 		{
-			sl = cl.worldmodel->lights + currentrenderentity->entlights[i];
+			sl = cl.worldmodel->lights + ent->entlights[i];
 			stylescale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-			VectorSubtract (currentrenderentity->origin, sl->origin, v);
+			VectorSubtract (ent->origin, sl->origin, v);
 			f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract) * stylescale;
 			VectorScale(sl->light, f, ambientcolor);
 			intensity = DotProduct(ambientcolor, ambientcolor);
@@ -825,7 +825,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
 				continue;
 			rd = r_dlight + i;
-			VectorSubtract (currentrenderentity->origin, rd->origin, v);
+			VectorSubtract (ent->origin, rd->origin, v);
 			f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
 			VectorScale(rd->light, f, ambientcolor);
 			intensity = DotProduct(ambientcolor, ambientcolor);
@@ -874,7 +874,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	}
 	else
 	{
-		R_CompleteLightPoint (basecolor, currentrenderentity->origin, true, NULL);
+		R_CompleteLightPoint (basecolor, ent->origin, true, NULL);
 	}
 	basecolor[0] *= colorr;
 	basecolor[1] *= colorg;

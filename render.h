@@ -77,7 +77,6 @@ void R_FillColors(float *out, int verts, float r, float g, float b, float a);
 
 //=============================================================================
 
-extern	entity_render_t	*currentrenderentity;
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
 extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
@@ -111,14 +110,19 @@ void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
 
 void R_NewMap (void);
 
-void R_DrawWorld(void);
-void R_SetupForWorldRendering(void);
-void R_MarkWorldLights(void);
-void R_PrepareSurfaces(void);
-void R_DrawSurfaces(int type);
-void R_DrawPortals(void);
+void R_DrawWorld(entity_render_t *ent);
+void R_SetupForWorldRendering(entity_render_t *ent);
+void R_MarkWorldLights(entity_render_t *ent);
+void R_PrepareSurfaces(entity_render_t *ent);
+void R_DrawSurfaces(entity_render_t *ent, int type);
+void R_DrawPortals(entity_render_t *ent);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
+void R_DrawBrushModelSky (entity_render_t *ent);
+void R_DrawBrushModelNormal (entity_render_t *ent);
+void R_DrawZymoticModel (entity_render_t *ent);
+void R_DrawQ1Q2AliasModel(entity_render_t *ent);
+void R_DrawSpriteModel (entity_render_t *ent);
 
 // LordHavoc: vertex transform
 #include "transform.h"
@@ -151,14 +155,11 @@ void R_Mesh_EnlargeFarClipBBox(vec3_t mins, vec3_t maxs);
 
 #include "r_modules.h"
 
+#include "meshqueue.h"
+
 extern float overbrightscale;
 
 #include "r_lerpanim.h"
-
-void R_DrawBrushModelSky (void);
-void R_DrawBrushModelNormal (void);
-void R_DrawAliasModel (void);
-void R_DrawSpriteModel (void);
 
 extern cvar_t r_render;
 #include "image.h"

@@ -198,66 +198,89 @@ void R_AliasLerpVerts(int vertcount,
 	}
 }
 
-skinframe_t *R_FetchSkinFrame(void)
+skinframe_t *R_FetchSkinFrame(entity_render_t *ent)
 {
-	model_t *model = currentrenderentity->model;
-	if (model->skinscenes[currentrenderentity->skinnum].framecount > 1)
-		return &model->skinframes[model->skinscenes[currentrenderentity->skinnum].firstframe + (int) (cl.time * 10) % model->skinscenes[currentrenderentity->skinnum].framecount];
+	model_t *model = ent->model;
+	if (model->skinscenes[ent->skinnum].framecount > 1)
+		return &model->skinframes[model->skinscenes[ent->skinnum].firstframe + (int) (cl.time * 10) % model->skinscenes[ent->skinnum].framecount];
 	else
-		return &model->skinframes[model->skinscenes[currentrenderentity->skinnum].firstframe];
+		return &model->skinframes[model->skinscenes[ent->skinnum].firstframe];
 }
 
-void R_SetupMDLMD2Frames(float colorr, float colorg, float colorb)
+void R_SetupMDLMD2Frames(entity_render_t *ent, float colorr, float colorg, float colorb)
 {
 	md2frame_t *frame1, *frame2, *frame3, *frame4;
 	trivertx_t *frame1verts, *frame2verts, *frame3verts, *frame4verts;
 	model_t *model;
-	model = currentrenderentity->model;
+	model = ent->model;
 
-	frame1 = &model->mdlmd2data_frames[currentrenderentity->frameblend[0].frame];
-	frame2 = &model->mdlmd2data_frames[currentrenderentity->frameblend[1].frame];
-	frame3 = &model->mdlmd2data_frames[currentrenderentity->frameblend[2].frame];
-	frame4 = &model->mdlmd2data_frames[currentrenderentity->frameblend[3].frame];
-	frame1verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[0].frame * model->numverts];
-	frame2verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[1].frame * model->numverts];
-	frame3verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[2].frame * model->numverts];
-	frame4verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[3].frame * model->numverts];
+	frame1 = &model->mdlmd2data_frames[ent->frameblend[0].frame];
+	frame2 = &model->mdlmd2data_frames[ent->frameblend[1].frame];
+	frame3 = &model->mdlmd2data_frames[ent->frameblend[2].frame];
+	frame4 = &model->mdlmd2data_frames[ent->frameblend[3].frame];
+	frame1verts = &model->mdlmd2data_pose[ent->frameblend[0].frame * model->numverts];
+	frame2verts = &model->mdlmd2data_pose[ent->frameblend[1].frame * model->numverts];
+	frame3verts = &model->mdlmd2data_pose[ent->frameblend[2].frame * model->numverts];
+	frame4verts = &model->mdlmd2data_pose[ent->frameblend[3].frame * model->numverts];
 	R_AliasLerpVerts(model->numverts,
-		currentrenderentity->frameblend[0].lerp, frame1verts, frame1->scale, frame1->translate,
-		currentrenderentity->frameblend[1].lerp, frame2verts, frame2->scale, frame2->translate,
-		currentrenderentity->frameblend[2].lerp, frame3verts, frame3->scale, frame3->translate,
-		currentrenderentity->frameblend[3].lerp, frame4verts, frame4->scale, frame4->translate);
+		ent->frameblend[0].lerp, frame1verts, frame1->scale, frame1->translate,
+		ent->frameblend[1].lerp, frame2verts, frame2->scale, frame2->translate,
+		ent->frameblend[2].lerp, frame3verts, frame3->scale, frame3->translate,
+		ent->frameblend[3].lerp, frame4verts, frame4->scale, frame4->translate);
 
-	R_LightModel(model->numverts, colorr, colorg, colorb, false);
+	R_LightModel(ent, model->numverts, colorr, colorg, colorb, false);
 
 	R_AliasTransformVerts(model->numverts);
 }
 
-void R_DrawQ1Q2AliasModel (float fog)
+void R_DrawQ1Q2AliasModelCallback (void *calldata1, int calldata2)
 {
 	int c, pantsfullbright, shirtfullbright, colormapped;
 	float pantscolor[3], shirtcolor[3];
+	float fog;
+	vec3_t diff;
 	qbyte *bcolor;
 	rmeshbufferinfo_t m;
 	model_t *model;
 	skinframe_t *skinframe;
+	entity_render_t *ent;
 
-	model = currentrenderentity->model;
+	ent = calldata1;
+	softwaretransformforentity(ent);
 
-	skinframe = R_FetchSkinFrame();
+	fog = 0;
+	if (fogenabled)
+	{
+		VectorSubtract(ent->origin, r_origin, diff);
+		fog = DotProduct(diff,diff);
+		if (fog < 0.01f)
+			fog = 0.01f;
+		fog = exp(fogdensity/fog);
+		if (fog > 1)
+			fog = 1;
+		if (fog < 0.01f)
+			fog = 0;
+		// fog method: darken, additive fog
+		// 1. render model as normal, scaled by inverse of fog alpha (darkens it)
+		// 2. render fog as additive
+	}
 
-	colormapped = !skinframe->merged || (currentrenderentity->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt));
+	model = ent->model;
+
+	skinframe = R_FetchSkinFrame(ent);
+
+	colormapped = !skinframe->merged || (ent->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt));
 	if (!colormapped && !fog && !skinframe->glow && !skinframe->fog)
 	{
 		// fastpath for the normal situation (one texture)
 		memset(&m, 0, sizeof(m));
-		if (currentrenderentity->effects & EF_ADDITIVE)
+		if (ent->effects & EF_ADDITIVE)
 		{
 			m.transparent = true;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 		}
-		else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
+		else if (ent->alpha != 1.0 || skinframe->fog != NULL)
 		{
 			m.transparent = true;
 			m.blendfunc1 = GL_SRC_ALPHA;
@@ -281,7 +304,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 
 			aliasvert = m.vertex;
 			aliasvertcolor = m.color;
-			R_SetupMDLMD2Frames(m.colorscale * (1 - fog), m.colorscale * (1 - fog), m.colorscale * (1 - fog));
+			R_SetupMDLMD2Frames(ent, m.colorscale * (1 - fog), m.colorscale * (1 - fog), m.colorscale * (1 - fog));
 			aliasvert = aliasvertbuf;
 			aliasvertcolor = aliasvertcolorbuf;
 
@@ -290,16 +313,16 @@ void R_DrawQ1Q2AliasModel (float fog)
 		return;
 	}
 
-	R_SetupMDLMD2Frames(1 - fog, 1 - fog, 1 - fog);
+	R_SetupMDLMD2Frames(ent, 1 - fog, 1 - fog, 1 - fog);
 
 	if (colormapped)
 	{
 		// 128-224 are backwards ranges
-		c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
+		c = (ent->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
 		bcolor = (qbyte *) (&d_8to24table[c]);
 		pantsfullbright = c >= 224;
 		VectorScale(bcolor, (1.0f / 255.0f), pantscolor);
-		c = (currentrenderentity->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
+		c = (ent->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
 		bcolor = (qbyte *) (&d_8to24table[c]);
 		shirtfullbright = c >= 224;
 		VectorScale(bcolor, (1.0f / 255.0f), shirtcolor);
@@ -311,13 +334,13 @@ void R_DrawQ1Q2AliasModel (float fog)
 	}
 
 	memset(&m, 0, sizeof(m));
-	if (currentrenderentity->effects & EF_ADDITIVE)
+	if (ent->effects & EF_ADDITIVE)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
+	else if (ent->alpha != 1.0 || skinframe->fog != NULL)
 	{
 		m.transparent = true;
 		m.blendfunc1 = GL_SRC_ALPHA;
@@ -347,7 +370,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 		if (skinframe->pants)
 		{
 			memset(&m, 0, sizeof(m));
-			m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+			m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 			m.numtriangles = model->numtris;
@@ -357,7 +380,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 			{
 				c_alias_polys += m.numtriangles;
 				if (pantsfullbright)
-					R_FillColors(m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale, currentrenderentity->alpha);
+					R_FillColors(m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale, ent->alpha);
 				else
 					R_ModulateColors(aliasvertcolor, m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale);
 				memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
@@ -369,7 +392,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 		if (skinframe->shirt)
 		{
 			memset(&m, 0, sizeof(m));
-			m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+			m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 			m.numtriangles = model->numtris;
@@ -379,7 +402,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 			{
 				c_alias_polys += m.numtriangles;
 				if (shirtfullbright)
-					R_FillColors(m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale, currentrenderentity->alpha);
+					R_FillColors(m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale, ent->alpha);
 				else
 					R_ModulateColors(aliasvertcolor, m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale);
 				memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
@@ -392,7 +415,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 	if (skinframe->glow)
 	{
 		memset(&m, 0, sizeof(m));
-		m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+		m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 		m.numtriangles = model->numtris;
@@ -401,7 +424,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			c_alias_polys += m.numtriangles;
-			R_FillColors(m.color, m.numverts, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, currentrenderentity->alpha);
+			R_FillColors(m.color, m.numverts, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, ent->alpha);
 			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
 			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
 			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
@@ -411,7 +434,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 	if (fog)
 	{
 		memset(&m, 0, sizeof(m));
-		m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+		m.transparent = ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || skinframe->fog != NULL;
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 		m.numtriangles = model->numtris;
@@ -420,7 +443,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			c_alias_polys += m.numtriangles;
-			R_FillColors(m.color, m.numverts, fog * m.colorscale, fog * m.colorscale, fog * m.colorscale, currentrenderentity->alpha);
+			R_FillColors(m.color, m.numverts, fog * m.colorscale, fog * m.colorscale, fog * m.colorscale, ent->alpha);
 			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
 			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
 			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
@@ -689,110 +712,31 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 	}
 }
 
-void R_DrawZymoticModelMesh(zymtype1header_t *m, float fog)
-{
-	rmeshbufferinfo_t mbuf;
-	int i, *renderlist;
-	rtexture_t **texture;
-
-	texture = (rtexture_t **)(m->lump_shaders.start + (int) m);
-
-	renderlist = (int *)(m->lump_render.start + (int) m);
-	for (i = 0;i < m->numshaders;i++)
-	{
-		memset(&mbuf, 0, sizeof(mbuf));
-		mbuf.numverts = m->numverts;
-		mbuf.numtriangles = *renderlist++;
-		if (currentrenderentity->effects & EF_ADDITIVE)
-		{
-			mbuf.transparent = true;
-			mbuf.blendfunc1 = GL_SRC_ALPHA;
-			mbuf.blendfunc2 = GL_ONE;
-		}
-		else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(texture[i]))
-		{
-			mbuf.transparent = true;
-			mbuf.blendfunc1 = GL_SRC_ALPHA;
-			mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		}
-		else
-		{
-			mbuf.transparent = false;
-			mbuf.blendfunc1 = GL_ONE;
-			mbuf.blendfunc2 = GL_ZERO;
-		}
-		mbuf.tex[0] = R_GetTexture(texture[i]);
-		if (R_Mesh_Draw_GetBuffer(&mbuf, true))
-		{
-			c_alias_polys += mbuf.numtriangles;
-			memcpy(mbuf.index, renderlist, mbuf.numtriangles * sizeof(int[3]));
-			memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
-			R_ModulateColors(aliasvertcolor, mbuf.color, mbuf.numverts, mbuf.colorscale, mbuf.colorscale, mbuf.colorscale);
-			//memcpy(mbuf.color, aliasvertcolor, mbuf.numverts * sizeof(float[4]));
-			memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
-			R_Mesh_Render();
-		}
-		renderlist += mbuf.numtriangles * 3;
-	}
-
-	if (fog)
-	{
-		renderlist = (int *)(m->lump_render.start + (int) m);
-		for (i = 0;i < m->numshaders;i++)
-		{
-			memset(&mbuf, 0, sizeof(mbuf));
-			mbuf.numverts = m->numverts;
-			mbuf.numtriangles = *renderlist++;
-			mbuf.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(texture[i]);
-			mbuf.blendfunc1 = GL_SRC_ALPHA;
-			mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-			// FIXME: need alpha mask for fogging...
-			//mbuf.tex[0] = R_GetTexture(texture[i]);
-			if (R_Mesh_Draw_GetBuffer(&mbuf, false))
-			{
-				c_alias_polys += mbuf.numtriangles;
-				memcpy(mbuf.index, renderlist, mbuf.numtriangles * sizeof(int[3]));
-				memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
-				R_FillColors(mbuf.color, mbuf.numverts, fogcolor[0] * mbuf.colorscale, fogcolor[1] * mbuf.colorscale, fogcolor[2] * mbuf.colorscale, currentrenderentity->alpha * fog);
-				//memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
-				R_Mesh_Render();
-			}
-			renderlist += mbuf.numtriangles * 3;
-		}
-	}
-}
-
-void R_DrawZymoticModel (float fog)
-{
-	zymtype1header_t *m;
-
-	// FIXME: do better fog
-	m = currentrenderentity->model->zymdata_header;
-	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m));
-	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
-	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
-
-	R_LightModel(m->numverts, 1 - fog, 1 - fog, 1 - fog, true);
-
-	R_DrawZymoticModelMesh(m, fog);
-}
-
-void R_DrawAliasModel (void)
+void R_DrawZymoticModelMeshCallback (void *calldata1, int calldata2)
 {
 	float fog;
 	vec3_t diff;
+	int i, *renderlist;
+	zymtype1header_t *m;
+	rtexture_t *texture;
+	rmeshbufferinfo_t mbuf;
+	entity_render_t *ent;
+	int shadernum;
 
-	if (currentrenderentity->alpha < (1.0f / 64.0f))
-		return; // basically completely transparent
+	ent = calldata1;
+	shadernum = calldata2;
 
-	c_models++;
-
-	softwaretransformforentity(currentrenderentity);
+	// find the vertex index list and texture
+	m = ent->model->zymdata_header;
+	renderlist = (int *)(m->lump_render.start + (int) m);
+	for (i = 0;i < shadernum;i++)
+		renderlist += renderlist[0] * 3 + 1;
+	texture = ((rtexture_t **)(m->lump_shaders.start + (int) m))[shadernum];
 
 	fog = 0;
 	if (fogenabled)
 	{
-		VectorSubtract(currentrenderentity->origin, r_origin, diff);
+		VectorSubtract(ent->origin, r_origin, diff);
 		fog = DotProduct(diff,diff);
 		if (fog < 0.01f)
 			fog = 0.01f;
@@ -806,9 +750,98 @@ void R_DrawAliasModel (void)
 		// 2. render fog as additive
 	}
 
-	if (currentrenderentity->model->aliastype == ALIASTYPE_ZYM)
-		R_DrawZymoticModel(fog);
+	softwaretransformforentity(ent);
+	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), ent->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m));
+	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
+	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
+
+	R_LightModel(ent, m->numverts, 1 - fog, 1 - fog, 1 - fog, true);
+
+	memset(&mbuf, 0, sizeof(mbuf));
+	mbuf.numverts = m->numverts;
+	mbuf.numtriangles = renderlist[0];
+	mbuf.transparent = false;
+	if (ent->effects & EF_ADDITIVE)
+	{
+		mbuf.blendfunc1 = GL_SRC_ALPHA;
+		mbuf.blendfunc2 = GL_ONE;
+	}
+	else if (ent->alpha != 1.0 || R_TextureHasAlpha(texture))
+	{
+		mbuf.blendfunc1 = GL_SRC_ALPHA;
+		mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
 	else
-		R_DrawQ1Q2AliasModel(fog);
+	{
+		mbuf.blendfunc1 = GL_ONE;
+		mbuf.blendfunc2 = GL_ZERO;
+	}
+	mbuf.tex[0] = R_GetTexture(texture);
+	if (R_Mesh_Draw_GetBuffer(&mbuf, true))
+	{
+		c_alias_polys += mbuf.numtriangles;
+		memcpy(mbuf.index, renderlist + 1, mbuf.numtriangles * sizeof(int[3]));
+		memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
+		R_ModulateColors(aliasvertcolor, mbuf.color, mbuf.numverts, mbuf.colorscale, mbuf.colorscale, mbuf.colorscale);
+		//memcpy(mbuf.color, aliasvertcolor, mbuf.numverts * sizeof(float[4]));
+		memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
+		R_Mesh_Render();
+	}
+
+	if (fog)
+	{
+		memset(&mbuf, 0, sizeof(mbuf));
+		mbuf.numverts = m->numverts;
+		mbuf.numtriangles = renderlist[0];
+		mbuf.transparent = false;
+		mbuf.blendfunc1 = GL_SRC_ALPHA;
+		mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		// FIXME: need alpha mask for fogging...
+		//mbuf.tex[0] = R_GetTexture(texture);
+		if (R_Mesh_Draw_GetBuffer(&mbuf, false))
+		{
+			c_alias_polys += mbuf.numtriangles;
+			memcpy(mbuf.index, renderlist + 1, mbuf.numtriangles * sizeof(int[3]));
+			memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
+			R_FillColors(mbuf.color, mbuf.numverts, fogcolor[0] * mbuf.colorscale, fogcolor[1] * mbuf.colorscale, fogcolor[2] * mbuf.colorscale, ent->alpha * fog);
+			//memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
+			R_Mesh_Render();
+		}
+	}
+}
+
+void R_DrawZymoticModel (entity_render_t *ent)
+{
+	int i;
+	zymtype1header_t *m;
+	rtexture_t *texture;
+
+	if (ent->alpha < (1.0f / 64.0f))
+		return; // basically completely transparent
+
+	c_models++;
+
+	m = ent->model->zymdata_header;
+	for (i = 0;i < m->numshaders;i++)
+	{
+		texture = ((rtexture_t **)(m->lump_shaders.start + (int) m))[i];
+		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_TextureHasAlpha(texture))
+			R_MeshQueue_AddTransparent(ent->origin, R_DrawZymoticModelMeshCallback, ent, i);
+		else
+			R_MeshQueue_Add(R_DrawZymoticModelMeshCallback, ent, i);
+	}
+}
+
+void R_DrawQ1Q2AliasModel(entity_render_t *ent)
+{
+	if (ent->alpha < (1.0f / 64.0f))
+		return; // basically completely transparent
+
+	c_models++;
+
+	if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchSkinFrame(ent)->fog != NULL)
+		R_MeshQueue_AddTransparent(ent->origin, R_DrawQ1Q2AliasModelCallback, ent, 0);
+	else
+		R_MeshQueue_Add(R_DrawQ1Q2AliasModelCallback, ent, 0);
 }
 

@@ -193,11 +193,11 @@ typedef struct model_s
 	mspriteframe_t	*sprdata_frames;
 
 	// draw the model
-	void(*Draw)(void);
+	void(*Draw)(struct entity_render_s *ent);
 	// draw the model's sky polygons (only used by brush models)
-	void(*DrawSky)(void);
+	void(*DrawSky)(struct entity_render_s *ent);
 	// draw the model's shadows
-	void(*DrawShadow)(void);
+	void(*DrawShadow)(struct entity_render_s *ent);
 
 	// memory pool for allocations
 	mempool_t		*mempool;
