@@ -1288,9 +1288,11 @@ void SV_Physics_Toss (edict_t *ent)
 		}
 		else if (ent->v->movetype == MOVETYPE_BOUNCE)
 		{
+			float d;
 			ClipVelocity (ent->v->velocity, trace.plane.normal, ent->v->velocity, 1.5);
 			// LordHavoc: fixed grenades not bouncing when fired down a slope
-			if (trace.plane.normal[2] > 0.7 && DotProduct(trace.plane.normal, ent->v->velocity) < 60)
+			d = DotProduct(trace.plane.normal, ent->v->velocity);
+			if (trace.plane.normal[2] > 0.7 && fabs(d) < 60)
 			{
 				ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
 				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
