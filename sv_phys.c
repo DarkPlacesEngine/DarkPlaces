@@ -955,7 +955,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 
 	// still not moving
 	VectorClear (ent->v->velocity);
-	Con_Printf("TryUnstick - failure.\n");
+	Con_DPrintf("TryUnstick - failure.\n");
 	return 7;
 }
 
