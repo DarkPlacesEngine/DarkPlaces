@@ -47,6 +47,7 @@ cvar_t sv_nostep = {CVAR_NOTIFY, "sv_nostep","0"};
 cvar_t sv_stepheight = {CVAR_NOTIFY, "sv_stepheight", "18"};
 cvar_t sv_jumpstep = {CVAR_NOTIFY, "sv_jumpstep", "1"};
 cvar_t sv_wallfriction = {CVAR_NOTIFY, "sv_wallfriction", "1"};
+cvar_t sv_newflymove = {CVAR_NOTIFY, "sv_newflymove", "1"};
 
 #define	MOVE_EPSILON	0.01
 
@@ -57,6 +58,7 @@ void SV_Phys_Init (void)
 	Cvar_RegisterVariable(&sv_stepheight);
 	Cvar_RegisterVariable(&sv_jumpstep);
 	Cvar_RegisterVariable(&sv_wallfriction);
+	Cvar_RegisterVariable(&sv_newflymove);
 }
 
 /*
@@ -198,30 +200,17 @@ returns the blocked flags (1 = floor, 2 = step / wall)
 ==================
 */
 #define STOP_EPSILON 0.1
-int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
+void ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 {
-	int i, blocked;
-	float backoff, change;
+	int i;
+	float backoff;
 
-	blocked = 0;
-	// flag if it's a floor
-	if (normal[2] > 0)
-		blocked |= 1;
-	// flag if it's a step
-	if (!normal[2])
-		blocked |= 2;
-
-	backoff = DotProduct (in, normal) * overbounce;
+	backoff = -DotProduct (in, normal) * overbounce;
+	VectorMA(in, backoff, normal, out);
 
 	for (i = 0;i < 3;i++)
-	{
-		change = normal[i] * backoff;
-		out[i] = in[i] - change;
 		if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON)
 			out[i] = 0;
-	}
-
-	return blocked;
 }
 
 
@@ -234,158 +223,246 @@ Returns the clipflags if the velocity was modified (hit something solid)
 1 = floor
 2 = wall / step
 4 = dead stop
-If steptrace is not NULL, the trace of any vertical wall hit will be stored
+If stepnormal is not NULL, the plane normal of any vertical wall hit will be stored
 ============
 */
 // LordHavoc: increased from 5 to 20
 #define MAX_CLIP_PLANES 20
-int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
+int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 {
-	int i, j, blocked, impact, numplanes, bumpcount, numbumps;
-	float d, time_left;
-	vec3_t dir, end, planes[MAX_CLIP_PLANES], primal_velocity, original_velocity, new_velocity;
-	trace_t trace;
-
-	numbumps = 4;
-
-	blocked = 0;
-	VectorCopy (ent->v->velocity, original_velocity);
-	VectorCopy (ent->v->velocity, primal_velocity);
-	numplanes = 0;
-
-	time_left = time;
-
-	for (bumpcount=0 ; bumpcount<numbumps ; bumpcount++)
+	if (sv_newflymove.integer)
 	{
-		if (!ent->v->velocity[0] && !ent->v->velocity[1] && !ent->v->velocity[2])
-			break;
+		int blocked, impact, bumpcount;
+		vec3_t end, primal_velocity;
+		trace_t trace;
 
-		for (i=0 ; i<3 ; i++)
-			end[i] = ent->v->origin[i] + time_left * ent->v->velocity[i];
+		blocked = 0;
+		VectorCopy (ent->v->velocity, primal_velocity);
 
-		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
-
-		if (trace.allsolid)
+		for (bumpcount = 0;bumpcount < 4;bumpcount++)
 		{
-			// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
-			// entity is trapped in another solid
-			VectorClear(ent->v->velocity);
-			return 3;
+			if (!ent->v->velocity[0] && !ent->v->velocity[1] && !ent->v->velocity[2])
+				break;
+
+			VectorMA(ent->v->origin, time, ent->v->velocity, end);
+			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
+			//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
+
+			if (trace.allsolid)
+			{
+				// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
+				// entity is trapped in another solid
+				VectorClear(ent->v->velocity);
+				return 3;
+			}
+
+			if (trace.fraction > 0)
+			{
+				// actually covered some distance
+				VectorCopy (trace.endpos, ent->v->origin);
+			}
+
+			// break if it moved the entire distance
+			if (trace.fraction == 1)
+				break;
+
+			if (!trace.ent)
+				Host_Error ("SV_FlyMove: !trace.ent");
+
+			if ((int) ent->v->flags & FL_ONGROUND)
+			{
+				if (ent->v->groundentity == EDICT_TO_PROG(trace.ent))
+					impact = false;
+				else
+				{
+					ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
+					impact = true;
+				}
+			}
+			else
+				impact = true;
+
+			if (trace.plane.normal[2] > 0.7)
+			{
+				// floor
+				blocked |= 1;
+				ent->v->flags = (int)ent->v->flags | FL_ONGROUND;
+				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+			}
+			if (!trace.plane.normal[2])
+			{
+				// step
+				blocked |= 2;
+				// save the trace for player extrafriction
+				if (stepnormal)
+					VectorCopy(trace.plane.normal, stepnormal);
+			}
+
+			// run the impact function
+			if (impact)
+			{
+				SV_Impact (ent, trace.ent);
+
+				// break if removed by the impact function
+				if (ent->free)
+					break;
+			}
+
+			time *= 1 - trace.fraction;
+
+			ClipVelocity (ent->v->velocity, trace.plane.normal, ent->v->velocity, 1);
 		}
 
-		if (trace.fraction > 0)
+		return blocked;
+	}
+	else
+	{
+		int i, j, blocked, impact, numplanes, bumpcount, numbumps;
+		float d, time_left;
+		vec3_t dir, end, planes[MAX_CLIP_PLANES], primal_velocity, original_velocity, new_velocity;
+		trace_t trace;
+
+		numbumps = 4;
+
+		blocked = 0;
+		VectorCopy (ent->v->velocity, original_velocity);
+		VectorCopy (ent->v->velocity, primal_velocity);
+		numplanes = 0;
+
+		time_left = time;
+
+		for (bumpcount=0 ; bumpcount<numbumps ; bumpcount++)
 		{
-			// actually covered some distance
-			VectorCopy (trace.endpos, ent->v->origin);
-			VectorCopy (ent->v->velocity, original_velocity);
-			numplanes = 0;
-		}
+			if (!ent->v->velocity[0] && !ent->v->velocity[1] && !ent->v->velocity[2])
+				break;
 
-		// break if it moved the entire distance
-		if (trace.fraction == 1)
-			 break;
+			for (i=0 ; i<3 ; i++)
+				end[i] = ent->v->origin[i] + time_left * ent->v->velocity[i];
 
-		if (!trace.ent)
-			Host_Error ("SV_FlyMove: !trace.ent");
+			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 
-		if ((int) ent->v->flags & FL_ONGROUND)
-		{
-			if (ent->v->groundentity == EDICT_TO_PROG(trace.ent))
-				impact = false;
+			if (trace.allsolid)
+			{
+				// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
+				// entity is trapped in another solid
+				VectorClear(ent->v->velocity);
+				return 3;
+			}
+
+			if (trace.fraction > 0)
+			{
+				// actually covered some distance
+				VectorCopy (trace.endpos, ent->v->origin);
+				VectorCopy (ent->v->velocity, original_velocity);
+				numplanes = 0;
+			}
+
+			// break if it moved the entire distance
+			if (trace.fraction == 1)
+				break;
+
+			if (!trace.ent)
+				Host_Error ("SV_FlyMove: !trace.ent");
+
+			if ((int) ent->v->flags & FL_ONGROUND)
+			{
+				if (ent->v->groundentity == EDICT_TO_PROG(trace.ent))
+					impact = false;
+				else
+				{
+					ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
+					impact = true;
+				}
+			}
+			else
+				impact = true;
+
+			if (trace.plane.normal[2] > 0.7)
+			{
+				// floor
+				blocked |= 1;
+				ent->v->flags =	(int)ent->v->flags | FL_ONGROUND;
+				ent->v->groundentity = EDICT_TO_PROG(trace.ent);
+			}
+			if (!trace.plane.normal[2])
+			{
+				// step
+				blocked |= 2;
+				// save the trace for player extrafriction
+				if (stepnormal)
+					VectorCopy(trace.plane.normal, stepnormal);
+			}
+
+			// run the impact function
+			if (impact)
+			{
+				SV_Impact (ent, trace.ent);
+
+				// break if removed by the impact function
+				if (ent->free)
+					break;
+			}
+
+
+			time_left -= time_left * trace.fraction;
+
+			// clipped to another plane
+			if (numplanes >= MAX_CLIP_PLANES)
+			{
+				// this shouldn't really happen
+				VectorClear(ent->v->velocity);
+				return 3;
+			}
+
+			VectorCopy (trace.plane.normal, planes[numplanes]);
+			numplanes++;
+
+			// modify original_velocity so it parallels all of the clip planes
+			for (i=0 ; i<numplanes ; i++)
+			{
+				ClipVelocity (original_velocity, planes[i], new_velocity, 1);
+				for (j=0 ; j<numplanes ; j++)
+					if (j != i)
+					{
+						// not ok
+						if (DotProduct (new_velocity, planes[j]) < 0)
+							break;
+					}
+				if (j == numplanes)
+					break;
+			}
+
+			if (i != numplanes)
+			{
+				// go along this plane
+				VectorCopy (new_velocity, ent->v->velocity);
+			}
 			else
 			{
-				ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
-				impact = true;
-			}
-		}
-		else
-			impact = true;
-
-		if (trace.plane.normal[2] > 0.7)
-		{
-			// floor
-			blocked |= 1;
-			ent->v->flags =	(int)ent->v->flags | FL_ONGROUND;
-			ent->v->groundentity = EDICT_TO_PROG(trace.ent);
-		}
-		if (!trace.plane.normal[2])
-		{
-			// step
-			blocked |= 2;
-			// save the trace for player extrafriction
-			if (steptrace)
-				*steptrace = trace;
-		}
-
-		// run the impact function
-		if (impact)
-		{
-			SV_Impact (ent, trace.ent);
-
-			// break if removed by the impact function
-			if (ent->free)
-				break;
-		}
-
-
-		time_left -= time_left * trace.fraction;
-
-		// clipped to another plane
-		if (numplanes >= MAX_CLIP_PLANES)
-		{
-			// this shouldn't really happen
-			VectorClear(ent->v->velocity);
-			return 3;
-		}
-
-		VectorCopy (trace.plane.normal, planes[numplanes]);
-		numplanes++;
-
-		// modify original_velocity so it parallels all of the clip planes
-		for (i=0 ; i<numplanes ; i++)
-		{
-			ClipVelocity (original_velocity, planes[i], new_velocity, 1);
-			for (j=0 ; j<numplanes ; j++)
-				if (j != i)
+				// go along the crease
+				if (numplanes != 2)
 				{
-					// not ok
-					if (DotProduct (new_velocity, planes[j]) < 0)
-						break;
+					VectorClear(ent->v->velocity);
+					return 7;
 				}
-			if (j == numplanes)
-				break;
-		}
+				CrossProduct (planes[0], planes[1], dir);
+				// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
+				VectorNormalize(dir);
+				d = DotProduct (dir, ent->v->velocity);
+				VectorScale (dir, d, ent->v->velocity);
+			}
 
-		if (i != numplanes)
-		{
-			// go along this plane
-			VectorCopy (new_velocity, ent->v->velocity);
-		}
-		else
-		{
-			// go along the crease
-			if (numplanes != 2)
+			// if original velocity is against the original velocity,
+			// stop dead to avoid tiny occilations in sloping corners
+			if (DotProduct (ent->v->velocity, primal_velocity) <= 0)
 			{
 				VectorClear(ent->v->velocity);
-				return 7;
+				return blocked;
 			}
-			CrossProduct (planes[0], planes[1], dir);
-			// LordHavoc: thanks to taniwha of QuakeForge for pointing out this fix for slowed falling in corners
-			VectorNormalize(dir);
-			d = DotProduct (dir, ent->v->velocity);
-			VectorScale (dir, d, ent->v->velocity);
 		}
 
-		// if original velocity is against the original velocity,
-		// stop dead to avoid tiny occilations in sloping corners
-		if (DotProduct (ent->v->velocity, primal_velocity) <= 0)
-		{
-			VectorClear(ent->v->velocity);
-			return blocked;
-		}
+		return blocked;
 	}
-
-	return blocked;
 }
 
 
@@ -806,21 +883,21 @@ SV_WallFriction
 
 ============
 */
-void SV_WallFriction (edict_t *ent, trace_t *trace)
+void SV_WallFriction (edict_t *ent, float *stepnormal)
 {
 	float d, i;
 	vec3_t forward, into, side;
 
 	AngleVectors (ent->v->v_angle, forward, NULL, NULL);
-	d = DotProduct (trace->plane.normal, forward);
+	d = DotProduct (stepnormal, forward);
 
 	d += 0.5;
 	if (d >= 0)
 		return;
 
 	// cut the tangential velocity
-	i = DotProduct (trace->plane.normal, ent->v->velocity);
-	VectorScale (trace->plane.normal, i, into);
+	i = DotProduct (stepnormal, ent->v->velocity);
+	VectorScale (stepnormal, i, into);
 	VectorSubtract (ent->v->velocity, into, side);
 
 	ent->v->velocity[0] = side[0] * (1 + d);
@@ -843,7 +920,6 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 {
 	int i, clip;
 	vec3_t oldorg, dir;
-	trace_t steptrace;
 
 	VectorCopy (ent->v->origin, oldorg);
 	VectorClear (dir);
@@ -869,7 +945,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 		ent->v->velocity[0] = oldvel[0];
 		ent->v->velocity[1] = oldvel[1];
 		ent->v->velocity[2] = 0;
-		clip = SV_FlyMove (ent, 0.1, &steptrace);
+		clip = SV_FlyMove (ent, 0.1, NULL);
 
 		if (fabs(oldorg[1] - ent->v->origin[1]) > 4
 		 || fabs(oldorg[0] - ent->v->origin[0]) > 4)
@@ -894,8 +970,8 @@ Only used by players
 void SV_WalkMove (edict_t *ent)
 {
 	int clip, oldonground;
-	vec3_t upmove, downmove, oldorg, oldvel, nosteporg, nostepvel;
-	trace_t steptrace, downtrace;
+	vec3_t upmove, downmove, oldorg, oldvel, nosteporg, nostepvel, stepnormal;
+	trace_t downtrace;
 
 	// do a regular slide move unless it looks like you ran into a step
 	oldonground = (int)ent->v->flags & FL_ONGROUND;
@@ -904,7 +980,7 @@ void SV_WalkMove (edict_t *ent)
 	VectorCopy (ent->v->origin, oldorg);
 	VectorCopy (ent->v->velocity, oldvel);
 
-	clip = SV_FlyMove (ent, sv.frametime, &steptrace);
+	clip = SV_FlyMove (ent, sv.frametime, NULL);
 
 	// if move didn't block on a step, return
 	if ( !(clip & 2) )
@@ -947,7 +1023,7 @@ void SV_WalkMove (edict_t *ent)
 	ent->v->velocity[0] = oldvel[0];
 	ent->v->velocity[1] = oldvel[1];
 	ent->v->velocity[2] = 0;
-	clip = SV_FlyMove (ent, sv.frametime, &steptrace);
+	clip = SV_FlyMove (ent, sv.frametime, stepnormal);
 	ent->v->velocity[2] += oldvel[2];
 
 	// check for stuckness, possibly due to the limited precision of floats
@@ -960,7 +1036,7 @@ void SV_WalkMove (edict_t *ent)
 
 	// extra friction based on view angle
 	if (clip & 2 && sv_wallfriction.integer)
-		SV_WallFriction (ent, &steptrace);
+		SV_WallFriction (ent, stepnormal);
 
 	// move down
 	// FIXME: don't link?
