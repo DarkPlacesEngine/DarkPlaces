@@ -906,6 +906,7 @@ int		setup_oldbottom;
 int		setup_top;
 int		setup_bottom;
 int		setup_rate;
+int		setup_oldrate;
 
 #define	NUM_SETUP_CMDS	5
 
@@ -1096,6 +1097,9 @@ forward:
 			Cbuf_AddText ( va ("name \"%s\"\n", setup_myname) );
 		if (setup_top != setup_oldtop || setup_bottom != setup_oldbottom)
 			Cbuf_AddText( va ("color %i %i\n", setup_top, setup_bottom) );
+		if (setup_rate != setup_oldrate)
+			Cbuf_AddText(va("rate %i\n", setup_rate));
+
 		m_entersound = true;
 		M_Menu_MultiPlayer_f ();
 		break;
