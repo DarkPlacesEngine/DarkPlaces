@@ -267,11 +267,11 @@ static void CL_PrintEntities_f (void)
 			Con_Printf ("EMPTY\n");
 			continue;
 		}
-		strncpy(name, ent->render.model->name, 30);
-		name[30] = 0;
-		for (j = strlen(name);j < 30;j++)
+		strncpy(name, ent->render.model->name, 25);
+		name[25] = 0;
+		for (j = strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Con_Printf ("%s:%04i (%5i %5i %5i) [%3i %3i %3i]\n", name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360);
+		Con_Printf ("%s:%04i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
@@ -585,9 +585,10 @@ static void CL_RelinkNetworkEntities()
 				else if (ent->render.model->flags & EF_ROCKET)
 				{
 					CL_RocketTrail (oldorg, ent->render.origin, 0, ent);
-					dlightcolor[0] += 200.0f;
-					dlightcolor[1] += 160.0f;
-					dlightcolor[2] +=  80.0f;
+					// LordHavoc: changed from 200, 160, 80 to 250, 200, 100
+					dlightcolor[0] += 250.0f;
+					dlightcolor[1] += 200.0f;
+					dlightcolor[2] += 100.0f;
 				}
 				else if (ent->render.model->flags & EF_GRENADE)
 				{
