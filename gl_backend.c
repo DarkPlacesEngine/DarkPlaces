@@ -884,7 +884,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
 		return;
 	}
-	CHECKGLERROR
+	//CHECKGLERROR
 	if (r_showtrispass)
 	{
 		R_Mesh_Draw_ShowTris(numverts, numtriangles, elements);
@@ -1014,13 +1014,14 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		}
 		else if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
 		{
-			qglDrawRangeElements(GL_TRIANGLES, 0, numverts, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
+			qglDrawRangeElements(GL_TRIANGLES, 0, numverts, numelements, GL_UNSIGNED_INT, elements);
+			CHECKGLERROR
 		}
 		else
 		{
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
+			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, elements);
+			CHECKGLERROR
 		}
-		CHECKGLERROR
 	}
 }
 
