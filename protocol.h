@@ -286,7 +286,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TE_SUPERSPIKEQUAD	59 // [vector] origin
 // LordHavoc: block2 - 70-80
 #define TE_EXPLOSIONQUAD	70 // [vector] origin
-#define	TE_BLOOD2			71 // [vector] origin
+#define	TE_UNUSED1			71 // unused
 #define TE_SMALLFLASH		72 // [vector] origin
 #define TE_CUSTOMFLASH		73 // [vector] origin [byte] radius / 8 - 1 [byte] lifetime / 256 - 1 [byte] red [byte] green [byte] blue
 #define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count
