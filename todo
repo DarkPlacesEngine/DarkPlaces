@@ -1,4 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
+-d darkplaces: add DP_SND_OGGVORBIS extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 -d darkplaces: add a config saving command (Speeds)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
@@ -35,7 +36,6 @@
 0 darkplaces: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
 0 darkplaces: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
-0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 0 darkplaces: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 darkplaces: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
 0 darkplaces: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
@@ -260,8 +260,6 @@
 2 darkplaces: add KDE/gnome icons somehow using darkplaces72x72.png (de-we)
 2 darkplaces: add a flag/effect/whatever for double sided entity rendering (disable cull face for this entity) (yummyluv)
 2 darkplaces: add a loading screen (gfx/loadback.tga or the loading plaque if that's not found) before loading commences so that people have something to look at when the engine starts... (SeienAbunae)
-2 darkplaces: add and document DP_SOUND_DIRECTIONLESSATTNNONE extension
-2 darkplaces: add and document DP_SOUND_STEREOWAV extension
 2 darkplaces: add another TE_TELEPORT effect that spawns particles at a model's vertices (Urre)
 2 darkplaces: add back random framegroup animation sync for sprites and models (Elric)
 2 darkplaces: add cvar callbacks and make net cvars have callbacks
@@ -443,6 +441,8 @@ d darkplaces: add airborn blood images to the particlefont which would look like
 d darkplaces: add an extension for EF_RED and EF_BLUE (FrikaC)
 d darkplaces: add an optimized special case to AngleVectors for roll == 0, thanks to fuh for the idea
 d darkplaces: add and document DP_HALFLIFE_MAP_CVAR extension (the cvar which has existed for a long time)
+d darkplaces: add and document DP_SND_DIRECTIONLESSATTNNONE extension
+d darkplaces: add and document DP_SND_STEREOWAV extension
 d darkplaces: add anisotropic filtering options (Zombie_13, zinx)
 d darkplaces: add bullet hole decals to the particlefont (Vermeulen)
 d darkplaces: add cl_decals to effects options menu
