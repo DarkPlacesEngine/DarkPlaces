@@ -81,7 +81,7 @@ char *svc_strings[] =
 	"?", // 48
 	"?", // 49
 	"svc_skyboxsize", // [coord] size
-	"svc_fog" // [byte] enable <optional past this point, only included if enable is true> [float] density [byte] red [byte] green [byte] blue
+	"svc_fog" // [byte] enable <optional past this point, only included if enable is true> [short * 4096] density [byte] red [byte] green [byte] blue
 };
 
 //=============================================================================
@@ -1107,7 +1107,7 @@ void CL_ParseServerMessage (void)
 		case svc_fog:
 			if (MSG_ReadByte())
 			{
-				r_fogdensity.value = MSG_ReadFloat();
+				r_fogdensity.value = MSG_ReadShort() * (1.0f / 4096.0f);
 				r_fogred.value = MSG_ReadByte() * (1.0 / 255.0);
 				r_foggreen.value = MSG_ReadByte() * (1.0 / 255.0);
 				r_fogblue.value = MSG_ReadByte() * (1.0 / 255.0);
