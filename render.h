@@ -183,5 +183,7 @@ void R_TimeReport_End(void);
 // r_stain
 void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
 
+void R_DrawCrosshair(void);
+
 #endif
 
