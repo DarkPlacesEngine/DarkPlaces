@@ -850,6 +850,11 @@ void R_ClearScreen(void)
 	{
 		// clear to black
 		qglClearColor(0,0,0,0);CHECKGLERROR
+		qglClearDepth(1);CHECKGLERROR
+		if (gl_stencil)
+		{
+			qglClearStencil(0);CHECKGLERROR
+		}
 		// clear the screen
 		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));CHECKGLERROR
 		// set dithering mode
