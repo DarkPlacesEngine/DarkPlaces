@@ -3905,9 +3905,11 @@ parseerror:
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 		}
 		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true))
-			Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true);
+			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true))
+				Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
 	}
-	Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
+	if (c)
+		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
 }
 
 static void Mod_Q3BSP_LoadPlanes(lump_t *l)
@@ -4196,11 +4198,13 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		else
 			out->effect = loadmodel->brushq3.data_effects + n;
 		n = LittleLong(in->lightmapindex);
-		if (n < -1 || n >= loadmodel->brushq3.num_lightmaps)
+		if (n >= loadmodel->brushq3.num_lightmaps)
 		{
-			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
+			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
 			n = -1;
 		}
+		else if (n < 0)
+			n = -1;
 		if (n == -1)
 			out->lightmaptexture = NULL;
 		else
@@ -4775,7 +4779,7 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 		// leafs to find real number of clusters
 		loadmodel->brush.num_pvsclusters = 1;
 		for (i = 0;i < loadmodel->brushq3.num_leafs;i++)
-			loadmodel->brush.num_pvsclusters = min(loadmodel->brush.num_pvsclusters, loadmodel->brushq3.data_leafs[i].clusterindex + 1);
+			loadmodel->brush.num_pvsclusters = max(loadmodel->brush.num_pvsclusters, loadmodel->brushq3.data_leafs[i].clusterindex + 1);
 
 		// create clusters
 		loadmodel->brush.num_pvsclusterbytes = (loadmodel->brush.num_pvsclusters + 7) / 8;
