@@ -104,7 +104,7 @@ cvar_t r_watershader = {CVAR_SAVE, "r_watershader", "1"};
 cvar_t r_bloom = {CVAR_SAVE, "r_bloom", "0"};
 cvar_t r_bloom_intensity = {CVAR_SAVE, "r_bloom_intensity", "2"};
 cvar_t r_bloom_blur = {CVAR_SAVE, "r_bloom_blur", "8"};
-cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "256"};
+cvar_t r_bloom_resolution = {CVAR_SAVE, "r_bloom_resolution", "320"};
 cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
 rtexturepool_t *r_main_texturepool;
 rtexture_t *r_bloom_texture_screen;
@@ -217,9 +217,7 @@ void gl_main_start(void)
 
 void gl_main_shutdown(void)
 {
-	// this seems to cause a already freed crash after a couple vid_restarts...
-	//R_FreeTexturePool(&r_main_texturepool);
-	r_main_texturepool = NULL;
+	R_FreeTexturePool(&r_main_texturepool);
 	r_bloom_texture_screen = NULL;
 	r_bloom_texture_bloom = NULL;
 }
@@ -547,7 +545,7 @@ static void R_BlendView(void)
 		for (screenwidth = 1;screenwidth < vid.realwidth;screenwidth *= 2);
 		for (screenheight = 1;screenheight < vid.realheight;screenheight *= 2);
 		bloomwidth = min(r_view_width, r_bloom_resolution.integer);
-		bloomheight = min(r_view_height, r_bloom_resolution.integer);
+		bloomheight = min(r_view_height, bloomwidth * r_view_height / r_view_width);
 		varray_texcoord2f[0][0] = 0;
 		varray_texcoord2f[0][1] = (float)r_view_height / (float)screenheight;
 		varray_texcoord2f[0][2] = (float)r_view_width / (float)screenwidth;
@@ -605,7 +603,7 @@ static void R_BlendView(void)
 		c_bloomcopypixels += bloomwidth * bloomheight;
 		// blend on at multiple offsets vertically
 		// TODO: do offset blends using GLSL
-		range = r_bloom_blur.integer;//(int)(r_bloom_blur.value * bloomwidth / 320);
+		range = r_bloom_blur.integer * bloomwidth / 320;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		for (x = -range;x <= range;x++)
 		{
@@ -635,7 +633,7 @@ static void R_BlendView(void)
 		c_bloomcopypixels += bloomwidth * bloomheight;
 		// blend on at multiple offsets horizontally
 		// TODO: do offset blends using GLSL
-		range = r_bloom_blur.integer * bloomheight / r_view_height;//(int)(r_bloom_blur.value * bloomwidth / 320);
+		range = r_bloom_blur.integer * bloomwidth / 320;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		for (x = -range;x <= range;x++)
 		{
