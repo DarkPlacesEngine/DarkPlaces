@@ -354,6 +354,8 @@ qboolean PK3_OpenLibrary (void)
 
 #ifdef WIN32
 	dllname = "zlib.dll";
+#elif defined(MACOSX)
+	dllname = "libz.dylib";
 #else
 	dllname = "libz.so";
 #endif
@@ -543,7 +545,9 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 		remaining -= count;
 	}
 
-	Mem_Free (central_dir);
+	// If the package is empty, central_dir is NULL here
+	if (central_dir != NULL)
+		Mem_Free (central_dir);
 	return pack->numfiles;
 }
 
@@ -602,7 +606,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	packlist = pack;
 
 	real_nb_files = PK3_BuildFileList (pack, &eocd);
-	if (real_nb_files <= 0)
+	if (real_nb_files < 0)
 		Sys_Error ("%s is not a valid PK3 file", packfile);
 
 	Con_Printf("Added packfile %s (%i files)\n", packfile, real_nb_files);
