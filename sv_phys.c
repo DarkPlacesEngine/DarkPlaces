@@ -235,7 +235,7 @@ If steptrace is not NULL, the trace of any vertical wall hit will be stored
 ============
 */
 // LordHavoc: increased from 5 to 20, to partially fix angled corner sticking
-// (example - start.bsp hall to e1m4, leading to the pool there are two
+// (example - start.bsp hall to e4, leading to the pool there are two
 //  angled corners, which you could get stuck on, now they are just a one
 //  frame hiccup)
 #define	MAX_CLIP_PLANES	20
