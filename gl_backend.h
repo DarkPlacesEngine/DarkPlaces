@@ -85,6 +85,8 @@ qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *b
 void R_ClearScreen(void);
 // invoke refresh of frame
 void SCR_UpdateScreen(void);
+// invoke refresh of loading plaque (nothing else seen)
+void SCR_UpdateLoadingScreen(void);
 
 // public structure
 typedef struct rcachearrayrequest_s
