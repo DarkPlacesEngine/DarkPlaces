@@ -2000,7 +2000,6 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 				Matrix4x4_Transform(&imatrix1, face->data_vertex3f + (j+i)*3, v[i]);
 			if (face->texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
 			{
-				CL_SparkShower (center, vec3_origin, 1);
 				forward[0] = r_vieworigin[0] - center2[0];
 				forward[1] = r_vieworigin[1] - center2[1];
 				forward[2] = 0;
