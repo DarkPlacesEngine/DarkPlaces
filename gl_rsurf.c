@@ -559,10 +559,7 @@ static int RSurfShader_Sky(int stage, msurface_t *s)
 			m.cg = 1;
 			m.cb = 1;
 			m.ca = 1;
-			if (r_mergesky.integer)
-				m.tex[0] = R_GetTexture(mergeskytexture);
-			else
-				m.tex[0] = R_GetTexture(solidskytexture);
+			m.tex[0] = R_GetTexture(solidskytexture);
 			m.texcoords[0] = &svert[0].st[0];
 			m.texcoordstep[0] = sizeof(surfvert_t);
 			speedscale = cl.time * (8.0/128.0);
@@ -619,7 +616,7 @@ static int RSurfShader_Sky(int stage, msurface_t *s)
 	}
 	else if (stage == 1)
 	{
-		if (skyrenderglquake && !r_mergesky.integer)
+		if (skyrenderglquake)
 		{
 			memset(&m, 0, sizeof(m));
 			m.transparent = false;

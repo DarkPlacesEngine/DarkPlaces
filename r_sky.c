@@ -3,7 +3,6 @@
 void LoadSky_f(void);
 
 cvar_t r_skyquality = {CVAR_SAVE, "r_skyquality", "2"};
-cvar_t r_mergesky = {CVAR_SAVE, "r_mergesky", "0"};
 cvar_t r_skyflush = {0, "r_skyflush", "0"};
 
 static char skyworldname[1024];
@@ -49,7 +48,6 @@ void R_Sky_Init(void)
 {
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
 	Cvar_RegisterVariable (&r_skyquality);
-	Cvar_RegisterVariable (&r_mergesky);
 	Cvar_RegisterVariable (&r_skyflush);
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
 }
@@ -80,12 +78,6 @@ void R_SkyStartFrame(void)
 				skyrendersphere = true;
 				break;
 			}
-		}
-		if (r_mergesky.integer && (skyrenderglquake || skyrendersphere))
-		{
-	//		R_BuildSky((int) (cl.time * 8.0), (int) (cl.time * 16.0));
-	//		R_BuildSky((int) (cl.time * -8.0), 0);
-			R_BuildSky(0, (int) (cl.time * 8.0));
 		}
 		if (skyrenderbox || skyrendersphere)
 		{
@@ -347,23 +339,14 @@ static void R_SkySphere(void)
 	speedscale2 = cl.time*16.0/128.0;
 	speedscale2 -= (int)speedscale2;
 	skyspherearrays(vert, tex, tex2, skysphere, speedscale, speedscale2);
-	// do not lock the texcoord array, because it will be switched
-	if (r_mergesky.integer)
-	{
-		m.tex[0] = R_GetTexture(mergeskytexture);
-		R_Mesh_Draw(&m);
-	}
-	else
-	{
-		m.tex[0] = R_GetTexture(solidskytexture);
-		R_Mesh_Draw(&m);
+	m.tex[0] = R_GetTexture(solidskytexture);
+	R_Mesh_Draw(&m);
 
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		m.tex[0] = R_GetTexture(alphaskytexture);
-		m.texcoords[0] = tex2;
-		R_Mesh_Draw(&m);
-	}
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	m.tex[0] = R_GetTexture(alphaskytexture);
+	m.texcoords[0] = tex2;
+	R_Mesh_Draw(&m);
 	R_Mesh_Render();
 	if (r_skyflush.integer)
 		glFlush();

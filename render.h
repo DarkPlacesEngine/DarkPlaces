@@ -38,7 +38,6 @@ extern rtexture_t *solidskytexture;
 extern rtexture_t *alphaskytexture;
 extern rtexture_t *mergeskytexture;
 extern int skyrendernow, skyrendermasked, skyrenderglquake;
-extern cvar_t r_mergesky;
 extern void R_SkyStartFrame(void);
 extern void R_Sky(void);
 
