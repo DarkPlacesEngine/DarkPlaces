@@ -4215,10 +4215,10 @@ void MR_Init()
 		Cvar_SetValueQuick(&forceqmenu,1);
 	// use -useqmenu for debugging proposes, cause it starts
 	// the normal quake menu only the first time
-	else if(COM_CheckParm("-useqmenu"))
+	if(COM_CheckParm("-useqmenu"))
 		MR_SetRouting (TRUE);
-	
-	MR_SetRouting (FALSE);
+	else 
+		MR_SetRouting (FALSE);
 }
 
 
