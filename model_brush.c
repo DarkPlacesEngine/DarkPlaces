@@ -1817,8 +1817,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 	loadmodel->brushq1.numsurfaces = count;
 	loadmodel->brushq1.surfacevisframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
-	loadmodel->brushq1.surfacepvsframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
-	loadmodel->brushq1.pvssurflist = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
 
 	for (surfnum = 0, surf = loadmodel->brushq1.surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, in++, surf++)
 	{
@@ -2848,42 +2846,6 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	}
 }
 
-static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
-{
-	int i, j;
-	for (i = 0;i < model->brushq1.numtextures;i++)
-		model->brushq1.pvstexturechainslength[i] = 0;
-	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
-	{
-		if (model->brushq1.surfacepvsframes[j] == model->brushq1.pvsframecount)
-		{
-			model->brushq1.pvssurflist[model->brushq1.pvssurflistlength++] = j;
-			model->brushq1.pvstexturechainslength[model->brushq1.surfaces[j].texinfo->texture->number]++;
-		}
-	}
-	for (i = 0, j = 0;i < model->brushq1.numtextures;i++)
-	{
-		if (model->brushq1.pvstexturechainslength[i])
-		{
-			model->brushq1.pvstexturechains[i] = model->brushq1.pvstexturechainsbuffer + j;
-			j += model->brushq1.pvstexturechainslength[i] + 1;
-		}
-		else
-			model->brushq1.pvstexturechains[i] = NULL;
-	}
-	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
-		if (model->brushq1.surfacepvsframes[j] == model->brushq1.pvsframecount)
-			*model->brushq1.pvstexturechains[model->brushq1.surfaces[j].texinfo->texture->number]++ = model->brushq1.surfaces + j;
-	for (i = 0;i < model->brushq1.numtextures;i++)
-	{
-		if (model->brushq1.pvstexturechainslength[i])
-		{
-			*model->brushq1.pvstexturechains[i] = NULL;
-			model->brushq1.pvstexturechains[i] -= model->brushq1.pvstexturechainslength[i];
-		}
-	}
-}
-
 //Returns PVS data for a given point
 //(note: can return NULL)
 static qbyte *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
@@ -3058,7 +3020,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	if (loadmodel->isworldmodel)
 		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
@@ -3202,10 +3163,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->brush.LightPoint = NULL;
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
-		mod->brushq1.pvstexturechains = Mem_Alloc(loadmodel->mempool, mod->brushq1.numtextures * sizeof(msurface_t **));
-		mod->brushq1.pvstexturechainsbuffer = Mem_Alloc(loadmodel->mempool,(mod->nummodelsurfaces + mod->brushq1.numtextures) * sizeof(msurface_t *));
-		mod->brushq1.pvstexturechainslength = Mem_Alloc(loadmodel->mempool, mod->brushq1.numtextures * sizeof(int));
-		Mod_Q1BSP_BuildPVSTextureChains(mod);
 		Mod_Q1BSP_BuildLightmapUpdateChains(loadmodel->mempool, mod);
 		if (mod->nummodelsurfaces)
 		{

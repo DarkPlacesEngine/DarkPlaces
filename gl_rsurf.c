@@ -38,7 +38,7 @@ cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
-cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "1"};
+cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
 cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1"};
 cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygonoffset", "0"};
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0"};
@@ -1215,7 +1215,7 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
-	int i, *surfacevisframes, texturenumber, flagsmask;
+	int i, j, f, *surfacevisframes, flagsmask;
 	msurface_t *surface, **surfacechain;
 	texture_t *t, *texture;
 	model_t *model = ent->model;
@@ -1261,43 +1261,59 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	R_UpdateTextureInfo(ent);
 	surfacevisframes = model->brushq1.surfacevisframes;
 	flagsmask = skysurfaces ? SURF_DRAWSKY : (SURF_DRAWTURB | SURF_LIGHTMAP);
-	for (texturenumber = 0, t = model->brushq1.textures;texturenumber < model->brushq1.numtextures;texturenumber++, t++)
+	f = 0;
+	t = NULL;
+	numsurfacelist = 0;
+	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 	{
-		if ((t->flags & flagsmask) && (texture = t->currentframe) && (surfacechain = model->brushq1.pvstexturechains[texturenumber]) != NULL)
+		if (surfacevisframes[j] == r_framecount)
 		{
-			numsurfacelist = 0;
-			for (i = 0;(surface = surfacechain[i]);i++)
+			surface = model->brushq1.surfaces + j;
+			if (t != surface->texinfo->texture)
 			{
-				if (surfacevisframes[surface - model->brushq1.surfaces] == r_framecount)
+				if (numsurfacelist)
 				{
-					// mark any backface surfaces as not visible
-					if (PlaneDist(modelorg, surface->plane) < surface->plane->dist)
+					R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
+					numsurfacelist = 0;
+				}
+				t = surface->texinfo->texture;
+				f = t->flags & flagsmask;
+				texture = t->currentframe;
+			}
+			if (f)
+			{
+				// mark any backface surfaces as not visible
+				if (PlaneDist(modelorg, surface->plane) < surface->plane->dist)
+				{
+					if (!(surface->flags & SURF_PLANEBACK))
 					{
-						if (!(surface->flags & SURF_PLANEBACK))
-							surfacevisframes[surface - model->brushq1.surfaces] = -1;
-					}
-					else
-					{
-						if ((surface->flags & SURF_PLANEBACK))
-							surfacevisframes[surface - model->brushq1.surfaces] = -1;
-					}
-					// add face to draw list and update lightmap if necessary
-					c_faces++;
-					surface->visframe = r_framecount;
-					if (surface->cached_dlight && surface->lightmaptexture != NULL)
-						R_BuildLightMap(ent, surface);
-					surfacelist[numsurfacelist++] = surface;
-					if (numsurfacelist >= maxsurfacelist)
-					{
-						R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
-						numsurfacelist = 0;
+						surfacevisframes[j] = -1;
+						continue;
 					}
 				}
+				else
+				{
+					if ((surface->flags & SURF_PLANEBACK))
+					{
+						surfacevisframes[j] = -1;
+						continue;
+					}
+				}
+				// add face to draw list and update lightmap if necessary
+				c_faces++;
+				if (surface->cached_dlight && surface->lightmaptexture != NULL)
+					R_BuildLightMap(ent, surface);
+				surfacelist[numsurfacelist++] = surface;
+				if (numsurfacelist >= maxsurfacelist)
+				{
+					R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
+					numsurfacelist = 0;
+				}
 			}
-			if (numsurfacelist)
-				R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
 		}
 	}
+	if (numsurfacelist)
+		R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
 }
 
 static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
@@ -1345,6 +1361,7 @@ static void R_DrawPortals(void)
 	for (portalnum = 0, portal = model->brushq1.portals;portalnum < model->brushq1.numportals;portalnum++, portal++)
 	{
 		if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
+		if (!R_CullBox(portal->mins, portal->maxs))
 		{
 			VectorClear(center);
 			for (i = 0;i < portal->numpoints;i++)
@@ -1363,6 +1380,9 @@ void R_WorldVisibility(void)
 	mleaf_t *viewleaf;
 	model_t *model = r_refdef.worldmodel;
 	int *surfacevisframes = model->brushq1.surfacevisframes;
+	int leafstackpos;
+	mportal_t *p;
+	mleaf_t *leafstack[8192];
 
 	if (!model || !model->brushq1.PointInLeaf)
 		return;
@@ -1371,53 +1391,23 @@ void R_WorldVisibility(void)
 	if (!viewleaf)
 		return;
 
-	if (model->brushq1.pvsviewleaf != viewleaf || model->brushq1.pvsviewleafnovis != r_novis.integer)
-	{
-		int *surfacepvsframes = model->brushq1.surfacepvsframes;
-		model->brushq1.pvsframecount++;
-		model->brushq1.pvsviewleaf = viewleaf;
-		model->brushq1.pvsviewleafnovis = r_novis.integer;
-		model->brushq1.pvsleafchain = NULL;
-		model->brushq1.pvssurflistlength = 0;
-		for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
-		{
-			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex))
-			{
-				leaf->pvsframe = model->brushq1.pvsframecount;
-				leaf->pvschain = model->brushq1.pvsleafchain;
-				model->brushq1.pvsleafchain = leaf;
-				// mark surfaces bounding this leaf as visible
-				for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
-					surfacepvsframes[*mark] = model->brushq1.pvsframecount;
-			}
-		}
-		model->brushq1.BuildPVSTextureChains(model);
-	}
-
-	if (r_surfaceworldnode.integer || viewleaf->contents == CONTENTS_SOLID)
+	if (viewleaf->contents == CONTENTS_SOLID || r_surfaceworldnode.integer)
 	{
 		// equivilant to quake's RecursiveWorldNode but faster and more effective
-		for (leaf = model->brushq1.pvsleafchain;leaf;leaf = leaf->pvschain)
+		for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
 		{
-			if (!R_CullBox (leaf->mins, leaf->maxs))
+			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
 			{
 				c_leafs++;
 				leaf->visframe = r_framecount;
+				if (leaf->nummarksurfaces)
+					for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
+						surfacevisframes[*mark] = r_framecount;
 			}
-		}
-		for (i = 0;i < model->brushq1.pvssurflistlength;i++)
-		{
-			int surfacenum = model->brushq1.pvssurflist[i];
-			msurface_t *surface = model->brushq1.surfaces + surfacenum;
-			if (!R_CullBox (surface->poly_mins, surface->poly_maxs))
-				surfacevisframes[surfacenum] = r_framecount;
 		}
 	}
 	else
 	{
-		int leafstackpos;
-		mportal_t *p;
-		mleaf_t *leafstack[8192];
 		// LordHavoc: portal-passage worldnode with PVS;
 		// follows portals leading outward from viewleaf, does not venture
 		// offscreen or into leafs that are not visible, faster than Quake's
@@ -1604,7 +1594,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				if (t->flags & SURF_LIGHTMAP && t->skin.fog == NULL)
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texinfo->texture->skin.base, surface->texinfo->texture->skin.gloss, surface->texinfo->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
-			else if (ent != r_refdef.worldentity || surface->visframe == r_framecount)
+			else if (ent != r_refdef.worldentity || ent->model->brushq1.surfacevisframes[surface - ent->model->brushq1.surfaces] == r_framecount)
 			{
 				t = surface->texinfo->texture->currentframe;
 				// FIXME: transparent surfaces need to be lit later

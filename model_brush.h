@@ -144,13 +144,6 @@ typedef struct msurface_s
 	// if lightmap settings changed, this forces update
 	int cached_dlight;
 
-	// should be drawn if visframe == r_framecount (set by PrepareSurfaces)
-	int visframe;
-	// should be drawn if onscreen and not a backface (used for setting visframe)
-	//int pvsframe;
-	// chain of surfaces marked visible by pvs
-	//struct msurface_s *pvschain;
-
 	// surface number, to avoid having to do a divide to find the number of a surface from it's address
 	int number;
 
