@@ -711,7 +711,7 @@ void VM_str_cvar(void)
 	
 	strcpy(out, cvar_string);
 
-	PRVM_G_INT(OFS_PARM0) = PRVM_SetString(out);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(out);
 }
 
 /*
