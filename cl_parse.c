@@ -477,14 +477,14 @@ void CL_ValidateState(entity_state_t *s)
 
 	model = cl.model_precache[s->modelindex];
 	Mod_CheckLoaded(model);
-	if (model && s->frame >= model->numframes)
+	if (model && model->type && s->frame >= model->numframes)
 	{
-		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
+		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\" (which has %i frames)\n", s->frame, model->name, model->numframes);
 		s->frame = 0;
 	}
-	if (model && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
+	if (model && model->type && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
 	{
-		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
+		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\" (which has %i skins)\n", s->skin, model->name, model->numskins);
 		s->skin = 0;
 	}
 }
