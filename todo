@@ -3,7 +3,7 @@
 -d darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
 -d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, -Harb, FrikaC)
 -d darkplaces client: add a config saving command (Speeds)
--d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
+-d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, -frightfan, -Error)
 -d darkplaces client: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 -d darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 -d darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
