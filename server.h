@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct
 {
 	int			maxclients;
-	int			maxclientslimit;
 	struct client_s	*clients;		// [maxclients]
 	int			serverflags;		// episode completion information
 	qboolean	changelevel_issued;	// cleared when at SV_SpawnServer
@@ -269,6 +268,8 @@ void SV_CheckForNewClients (void);
 void SV_RunClients (void);
 void SV_SaveSpawnparms (void);
 void SV_SpawnServer (char *server);
+
+void SV_SetMaxClients(int n);
 
 #endif
 

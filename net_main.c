@@ -162,7 +162,7 @@ static void NET_Listen_f (void)
 
 static void MaxPlayers_f (void)
 {
-	int 	n;
+	int n;
 
 	if (Cmd_Argc () != 2)
 	{
@@ -177,13 +177,9 @@ static void MaxPlayers_f (void)
 	}
 
 	n = atoi(Cmd_Argv(1));
-	if (n < 1)
-		n = 1;
-	if (n > svs.maxclientslimit)
-	{
-		n = svs.maxclientslimit;
+	n = bound(1, n, MAX_SCOREBOARD);
+	if (svs.maxclients 1= n)
 		Con_Printf ("\"maxplayers\" set to \"%u\"\n", n);
-	}
 
 	if ((n == 1) && listening)
 		Cbuf_AddText ("listen 0\n");
@@ -191,7 +187,7 @@ static void MaxPlayers_f (void)
 	if ((n > 1) && (!listening))
 		Cbuf_AddText ("listen 1\n");
 
-	svs.maxclients = n;
+	SV_SetMaxClients(n);
 }
 
 
