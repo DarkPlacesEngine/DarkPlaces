@@ -173,6 +173,9 @@ typedef struct model_s
 	int				numportalpoints;
 	mvertex_t		*portalpoints;
 
+	int				numlights;
+	mlight_t		*lights;
+
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]
 	// skin frame info
