@@ -418,7 +418,7 @@ void R_DrawQueue(void)
 			quadelements[pos++] = num + 3;
 		}
 	}
-	GL_SetupView_ViewPort(vid.realx, vid.realy, vid.realwidth, vid.realheight);
+	qglViewport(0, 0, vid.realwidth, vid.realheight);
 	GL_SetupView_Mode_Ortho(0, 0, vid.conwidth, vid.conheight, -10, 100);
 	qglDepthFunc(GL_LEQUAL);
 	R_Mesh_Start();

@@ -7,7 +7,6 @@
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelements[768];
 
-void GL_SetupView_ViewPort(int x, int y, int width, int height);
 void GL_SetupView_Orientation_Identity(void);
 void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix);
 void GL_SetupView_Mode_Perspective(double fovx, double fovy, double zNear, double zFar);

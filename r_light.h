@@ -27,8 +27,7 @@ rdlight_t;
 extern int r_numdlights;
 extern rdlight_t r_dlight[MAX_DLIGHTS];
 
-void R_BuildLightList(void);
-void R_AnimateLight(void);
+void R_UpdateLights(void);
 void R_MarkLights(entity_render_t *ent);
 void R_DrawCoronas(void);
 void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const vec3_t p, int dynamic, const mleaf_t *leaf);

@@ -1133,6 +1133,7 @@ int CL_ReadFromServer(void)
 
 		// move particles
 		CL_MoveParticles();
+		R_MoveExplosions();
 
 		// link stuff
 		CL_RelinkWorld();

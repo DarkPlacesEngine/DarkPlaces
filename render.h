@@ -109,8 +109,9 @@ extern cvar_t r_wateralpha;
 extern cvar_t r_dynamic;
 extern cvar_t r_drawcollisionbrushes;
 
-void R_Init (void);
-void R_RenderView (void); // must set r_refdef first
+void R_Init(void);
+void R_UpdateWorld(void); // needs no r_refdef
+void R_RenderView(void); // must call R_UpdateWorld and set r_refdef first
 
 
 void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
@@ -132,17 +133,6 @@ extern vec3_t fogcolor;
 extern vec_t fogdensity;
 #define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_vieworigin[0])*((v)[0] - r_vieworigin[0])+((v)[1] - r_vieworigin[1])*((v)[1] - r_vieworigin[1])+((v)[2] - r_vieworigin[2])*((v)[2] - r_vieworigin[2])))))
 #define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
-
-// start a farclip measuring session
-void R_FarClip_Start(vec3_t origin, vec3_t direction, vec_t startfarclip);
-// enlarge farclip to accomodate box
-void R_FarClip_Box(vec3_t mins, vec3_t maxs);
-// return farclip value
-float R_FarClip_Finish(void);
-
-// updates farclip distance so it is large enough for the specified box
-// (*important*)
-void R_Mesh_EnlargeFarClipBBox(vec3_t mins, vec3_t maxs);
 
 #include "r_modules.h"
 

@@ -142,7 +142,7 @@ vec_t fogdensity;
 float fog_density, fog_red, fog_green, fog_blue;
 qboolean fogenabled;
 qboolean oldgl_fogenable;
-void R_SetupFog(void)
+void R_UpdateFog(void)
 {
 	if (gamemode == GAME_NEHAHRA)
 	{
@@ -267,28 +267,16 @@ void GL_Main_Init(void)
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
 
-vec3_t r_farclip_origin;
-vec3_t r_farclip_direction;
-vec_t r_farclip_directiondist;
-vec_t r_farclip_meshfarclip;
-int r_farclip_directionbit0;
-int r_farclip_directionbit1;
-int r_farclip_directionbit2;
-
-// start a farclip measuring session
-void R_FarClip_Start(vec3_t origin, vec3_t direction, vec_t startfarclip)
-{
-	VectorCopy(origin, r_farclip_origin);
-	VectorCopy(direction, r_farclip_direction);
-	r_farclip_directiondist = DotProduct(r_farclip_origin, r_farclip_direction);
-	r_farclip_directionbit0 = r_farclip_direction[0] < 0;
-	r_farclip_directionbit1 = r_farclip_direction[1] < 0;
-	r_farclip_directionbit2 = r_farclip_direction[2] < 0;
-	r_farclip_meshfarclip = r_farclip_directiondist + startfarclip;
-}
+static vec3_t r_farclip_origin;
+static vec3_t r_farclip_direction;
+static vec_t r_farclip_directiondist;
+static vec_t r_farclip_meshfarclip;
+static int r_farclip_directionbit0;
+static int r_farclip_directionbit1;
+static int r_farclip_directionbit2;
 
 // enlarge farclip to accomodate box
-void R_FarClip_Box(vec3_t mins, vec3_t maxs)
+static void R_FarClip_Box(vec3_t mins, vec3_t maxs)
 {
 	float d;
 	d = (r_farclip_directionbit0 ? mins[0] : maxs[0]) * r_farclip_direction[0]
@@ -299,8 +287,23 @@ void R_FarClip_Box(vec3_t mins, vec3_t maxs)
 }
 
 // return farclip value
-float R_FarClip_Finish(void)
+static float R_FarClip(vec3_t origin, vec3_t direction, vec_t startfarclip)
 {
+	int i;
+
+	VectorCopy(origin, r_farclip_origin);
+	VectorCopy(direction, r_farclip_direction);
+	r_farclip_directiondist = DotProduct(r_farclip_origin, r_farclip_direction);
+	r_farclip_directionbit0 = r_farclip_direction[0] < 0;
+	r_farclip_directionbit1 = r_farclip_direction[1] < 0;
+	r_farclip_directionbit2 = r_farclip_direction[2] < 0;
+	r_farclip_meshfarclip = r_farclip_directiondist + startfarclip;
+
+	if (cl.worldmodel)
+		R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
+	for (i = 0;i < r_refdef.numentities;i++)
+		R_FarClip_Box(r_refdef.entities[i]->mins, r_refdef.entities[i]->maxs);
+	
 	return r_farclip_meshfarclip - r_farclip_directiondist;
 }
 
@@ -417,9 +420,6 @@ static void R_MarkEntities (void)
 	Matrix4x4_CreateIdentity(&ent->matrix);
 	Matrix4x4_CreateIdentity(&ent->inversematrix);
 
-	if (cl.worldmodel)
-		R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
-
 	if (!r_drawentities.integer)
 		return;
 
@@ -436,10 +436,7 @@ static void R_MarkEntities (void)
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
 		 && !VIS_CullBox(ent->mins, ent->maxs)
 		 && (!envmap || !(ent->flags & (RENDER_VIEWMODEL | RENDER_EXTERIORMODEL))))
-		{
 			ent->visframe = r_framecount;
-			R_FarClip_Box(ent->mins, ent->maxs);
-		}
 	}
 }
 
@@ -718,14 +715,18 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	if (visiblevolumes)
 	{
 		qglEnable(GL_CULL_FACE);
-		qglDisable(GL_SCISSOR_TEST);
+		GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
 	}
 	else
 		R_Shadow_Stage_End();
 }
 
-static void R_SetFrustum (void)
+static void R_SetFrustum(void)
 {
+	// break apart the viewentity matrix into vectors for various purposes
+	Matrix4x4_ToVectors(&r_refdef.viewentitymatrix, r_viewforward, r_viewleft, r_viewup, r_vieworigin);
+	VectorNegate(r_viewleft, r_viewright);
+
 	// LordHavoc: note to all quake engine coders, the special case for 90
 	// degrees assumed a square view (wrong), so I removed it, Quake2 has it
 	// disabled as well.
@@ -750,34 +751,6 @@ static void R_SetFrustum (void)
 	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
 	PlaneClassify(&frustum[3]);
 }
-
-/*
-===============
-R_SetupFrame
-===============
-*/
-static void R_SetupFrame (void)
-{
-// don't allow cheats in multiplayer
-	if (!cl.islocalgame)
-	{
-		if (r_fullbright.integer != 0)
-			Cvar_Set ("r_fullbright", "0");
-		if (r_ambient.value != 0)
-			Cvar_Set ("r_ambient", "0");
-	}
-
-	r_framecount++;
-
-	// break apart the viewentity matrix into vectors for various purposes
-	Matrix4x4_ToVectors(&r_refdef.viewentitymatrix, r_viewforward, r_viewleft, r_viewup, r_vieworigin);
-	VectorNegate(r_viewleft, r_viewright);
-
-	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-
-	R_AnimateLight();
-}
-
 
 static void R_BlendView(void)
 {
@@ -811,68 +784,110 @@ static void R_BlendView(void)
 	R_Mesh_Draw(3, 1, polygonelements);
 }
 
-/*
-================
-R_RenderView
-
-r_refdef must be set before the first call
-================
-*/
-extern void R_DrawLightningBeams (void);
-void R_RenderView (void)
+void R_UpdateWorld(void)
 {
-	entity_render_t *world;
 	if (!r_refdef.entities/* || !cl.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
-	if (r_shadow_realtime_world.integer)
+	if (r_shadow_realtime_world.integer && !gl_stencil)
 	{
-		if (!gl_stencil)
-		{
-			Con_Printf("Realtime world lighting requires 32bit color turning off r_shadow_realtime_world, please type vid_bitsperpixel 32;vid_restart and try again\n");
-			Cvar_SetValueQuick(&r_shadow_realtime_world, 0);
-		}
+		Con_Printf("Realtime world lighting requires 32bit color; turning off r_shadow_realtime_world, please type vid_bitsperpixel 32;vid_restart and try again\n");
+		Cvar_SetValueQuick(&r_shadow_realtime_world, 0);
 	}
 
-	world = &cl_entities[0].render;
-
-	// FIXME: move to client
-	R_MoveExplosions();
-	R_TimeReport("mexplosion");
-
-	qglPolygonOffset(0, 0);
-	qglEnable(GL_POLYGON_OFFSET_FILL);
+	// don't allow cheats in multiplayer
+	if (!cl.islocalgame)
+	{
+		if (r_fullbright.integer != 0)
+			Cvar_Set ("r_fullbright", "0");
+		if (r_ambient.value != 0)
+			Cvar_Set ("r_ambient", "0");
+	}
 
 	R_Textures_Frame();
-	R_SetupFrame();
+	R_UpdateFog();
+	R_UpdateLights();
+}
+
+void R_RenderScene(void);
+
+/*
+================
+R_RenderView
+================
+*/
+void R_RenderView(void)
+{
+	if (!r_refdef.entities/* || !cl.worldmodel*/)
+		return; //Host_Error ("R_RenderView: NULL worldmodel");
+	
+	r_refdef.width = bound(0, r_refdef.width, vid.realwidth);
+	r_refdef.height = bound(0, r_refdef.height, vid.realheight);
+	r_refdef.x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
+	r_refdef.y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
+	r_refdef.fov_x = bound(1, r_refdef.fov_x, 170);
+	r_refdef.fov_y = bound(1, r_refdef.fov_y, 170);
+
+	// GL is weird because it's bottom to top, r_refdef.y is top to bottom
+	qglViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);
+	GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	GL_ScissorTest(true);
+	R_ClearScreen();
+
 	R_SetFrustum();
-	R_SetupFog();
-	R_SkyStartFrame();
-	R_BuildLightList();
-	R_TimeReport("setup");
+	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
 
-	if (cl.worldmodel && cl.worldmodel->brush.FatPVS)
-		cl.worldmodel->brush.FatPVS(cl.worldmodel, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
-
-	R_WorldVisibility(world);
-	R_TimeReport("worldvis");
-
-	R_FarClip_Start(r_vieworigin, r_viewforward, 768.0f);
-	R_MarkEntities();
-	r_farclip = R_FarClip_Finish() + 256.0f;
 	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
 	else
 		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
+
 	GL_SetupView_Orientation_FromEntity(&r_refdef.viewentitymatrix);
+	R_TimeReport("setup");
+
+	R_RenderScene();
+
+	R_BlendView();
+	R_TimeReport("blendview");
+	
+	GL_Scissor(0, 0, vid.realwidth, vid.realheight);
+	GL_ScissorTest(false);
+}
+
+extern void R_DrawLightningBeams (void);
+void R_RenderScene(void)
+{
+	entity_render_t *world;
+
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
+
+	r_framecount++;
+
+	R_SkyStartFrame();
+
+	if (cl.worldmodel && cl.worldmodel->brush.FatPVS)
+		cl.worldmodel->brush.FatPVS(cl.worldmodel, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
+	world = &cl_entities[0].render;
+	R_WorldVisibility(world);
+	R_TimeReport("worldvis");
+
+	R_MarkEntities();
 	R_TimeReport("markentity");
 
 	qglDepthFunc(GL_LEQUAL);
+	qglPolygonOffset(0, 0);
+	qglEnable(GL_POLYGON_OFFSET_FILL);
 
 	R_Mesh_Start();
 	R_MeshQueue_BeginScene();
 
 	R_Shadow_UpdateWorldLightSelection();
+
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
 
 	if (R_DrawBrushModelsSky())
 		R_TimeReport("bmodelsky");
@@ -888,8 +903,16 @@ void R_RenderView (void)
 	R_DrawModels();
 	R_TimeReport("models");
 
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
+
 	R_ShadowVolumeLighting(false);
 	R_TimeReport("rtlights");
+
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
 
 	R_DrawLightningBeams();
 	R_TimeReport("lightning");
@@ -909,9 +932,6 @@ void R_RenderView (void)
 	R_DrawWorldCrosshair();
 	R_TimeReport("crosshair");
 
-	R_BlendView();
-	R_TimeReport("blendview");
-
 	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();
 
@@ -926,6 +946,10 @@ void R_RenderView (void)
 
 	qglPolygonOffset(0, 0);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
+
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
 }
 
 /*

@@ -81,14 +81,15 @@ void R_Light_Init(void)
 
 /*
 ==================
-R_AnimateLight
+R_UpdateLights
 ==================
 */
-void R_AnimateLight (void)
+void R_UpdateLights(void)
 {
 	int i, j, k;
+	dlight_t *cd;
+	rdlight_t *rd;
 
-//
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
 	i = (int)(cl.time * 10);
@@ -104,14 +105,6 @@ void R_AnimateLight (void)
 		k = k*22;
 		d_lightstylevalue[j] = k;
 	}
-}
-
-
-void R_BuildLightList(void)
-{
-	int i;
-	dlight_t *cd;
-	rdlight_t *rd;
 
 	r_numdlights = 0;
 	c_dlights = 0;
