@@ -92,6 +92,8 @@ int eval_glow_color;
 int eval_items2;
 int eval_scale;
 int eval_alpha;
+int eval_renderamt; // HalfLife support
+int eval_rendertype; // HalfLife support
 int eval_fullbright;
 int eval_ammo_shells1;
 int eval_ammo_nails1;
@@ -137,6 +139,8 @@ void FindEdictFieldOffsets()
 	eval_items2 = FindFieldOffset("items2");
 	eval_scale = FindFieldOffset("scale");
 	eval_alpha = FindFieldOffset("alpha");
+	eval_renderamt = FindFieldOffset("renderamt"); // HalfLife support
+	eval_rendertype = FindFieldOffset("rendertype"); // HalfLife support
 	eval_fullbright = FindFieldOffset("fullbright");
 	eval_ammo_shells1 = FindFieldOffset("ammo_shells1");
 	eval_ammo_nails1 = FindFieldOffset("ammo_nails1");
