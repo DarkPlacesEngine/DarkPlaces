@@ -1105,19 +1105,19 @@ void M_Transfusion_Skill_Key (int key, char ascii)
 		switch (m_skill_cursor)
 		{
 		case 0:
-			Cbuf_AddText ("skill 0\n");
-			break;
-		case 1:
 			Cbuf_AddText ("skill 1\n");
 			break;
-		case 2:
+		case 1:
 			Cbuf_AddText ("skill 2\n");
 			break;
-		case 3:
+		case 2:
 			Cbuf_AddText ("skill 3\n");
 			break;
-		case 4:
+		case 3:
 			Cbuf_AddText ("skill 4\n");
+			break;
+		case 4:
+			Cbuf_AddText ("skill 5\n");
 			break;
 		}
 		key_dest = key_game;
@@ -3562,6 +3562,8 @@ level_t		transfusionlevels[] =
 	{"cpbb04",		"Deadly Inspirations"},
 
 	{"b2a15",		"Area 15 (B2)"},
+	{"b2bodies",	"BB_Bodies (B2)"},
+	{"b2cabana",	"BB_Cabana"},
 	{"b2power",		"BB_Power"},
 	{"barena",		"Blood Arena"},
 	{"bkeep",		"Blood Keep"},
@@ -3804,17 +3806,31 @@ void M_GameOptions_Draw (void)
 			}
 			M_Print(160, 72, msg);
 		}
-
 		M_Print(0, 80, "            Skill");
-		if (skill.integer == 0)
-			M_Print(160, 80, "Easy difficulty");
-		else if (skill.integer == 1)
-			M_Print(160, 80, "Normal difficulty");
-		else if (skill.integer == 2)
-			M_Print(160, 80, "Hard difficulty");
+		if (gamemode == GAME_TRANSFUSION)
+		{
+			if (skill.integer == 1)
+				M_Print(160, 80, "Still Kicking");
+			else if (skill.integer == 2)
+				M_Print(160, 80, "Pink On The Inside");
+			else if (skill.integer == 3)
+				M_Print(160, 80, "Lightly Broiled");
+			else if (skill.integer == 4)
+				M_Print(160, 80, "Well Done");
+			else
+				M_Print(160, 80, "Extra Crispy");
+		}
 		else
-			M_Print(160, 80, "Nightmare difficulty");
-
+		{
+			if (skill.integer == 0)
+				M_Print(160, 80, "Easy difficulty");
+			else if (skill.integer == 1)
+				M_Print(160, 80, "Normal difficulty");
+			else if (skill.integer == 2)
+				M_Print(160, 80, "Hard difficulty");
+			else
+				M_Print(160, 80, "Nightmare difficulty");
+		}
 		M_Print(0, 88, "       Frag Limit");
 		if (fraglimit.integer == 0)
 			M_Print(160, 88, "none");
@@ -3962,10 +3978,10 @@ void M_NetStart_Change (int dir)
 		Cvar_SetValueQuick (&skill, skill.integer + dir);
 		if (gamemode == GAME_TRANSFUSION)
 		{
-			if (skill.integer > 4)
-				Cvar_SetValueQuick (&skill, 0);
-			if (skill.integer < 0)
-				Cvar_SetValueQuick (&skill, 4);
+			if (skill.integer > 5)
+				Cvar_SetValueQuick (&skill, 1);
+			if (skill.integer < 1)
+				Cvar_SetValueQuick (&skill, 5);
 		}
 		else
 		{
