@@ -174,6 +174,8 @@ typedef struct model_s
 	int				numtextures;
 	texture_t		*textures;
 
+	msurface_t		**texturesurfacechains;
+
 	qbyte			*visdata;
 	qbyte			*lightdata;
 	char			*entities;
@@ -191,6 +193,11 @@ typedef struct model_s
 	shadowmesh_t	*shadowmesh;
 	vec3_t			shadowmesh_mins, shadowmesh_maxs, shadowmesh_center;
 	float			shadowmesh_radius;
+
+	// pvs visibility marking
+	mleaf_t			*pvsviewleaf;
+	int				pvsviewleafnovis;
+	int				pvsframecount;
 
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]
@@ -236,13 +243,12 @@ typedef struct model_s
 	void(*DrawFakeShadow)(struct entity_render_s *ent);
 
 	// functions used only in shadow volume rendering mode
-	void(*DrawDepth)(struct entity_render_s *ent);
+	// draw the base lighting for the model (glowing areas, etc)
+	void(*DrawBaseLighting)(struct entity_render_s *ent);
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
 	// draw the lighting on a model (through stencil)
-	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor);
-	// draw the model with lighting already in framebuffer
-	void(*DrawOntoLight)(struct entity_render_s *ent);
+	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor);
 
 	// memory pool for allocations
 	mempool_t		*mempool;
@@ -279,8 +285,9 @@ void Mod_LoadModels(void);
 extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
-int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end);
-void Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles);
+int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end);
+void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles);
+void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh);

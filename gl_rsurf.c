@@ -40,11 +40,6 @@ cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
 
 static int dlightdivtable[32768];
 
-// variables used by R_PVSUpdate
-int r_pvsframecount = 0;
-mleaf_t *r_pvsviewleaf = NULL;
-int r_pvsviewleafnovis = 0;
-
 static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 {
 	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract, k;
@@ -752,7 +747,7 @@ static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, co
 	return false;
 }
 
-static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -789,14 +784,17 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	}
 	m.depthwrite = true;
 	R_Mesh_State(&m);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+		if (surf->visframe == r_framecount)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 	qglColorMask(1,1,1,1);
@@ -877,21 +875,25 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 }
 
-static void RSurfShader_Water(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_Water(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	vec3_t center;
 	if ((r_wateralpha.value < 1 && !(texture->flags & SURF_DRAWNOALPHA)) || ent->effects & EF_ADDITIVE || texture->fogtexture)
 	{
-		for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+		for (surf = firstsurf;surf;surf = surf->texturechain)
 		{
-			Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-			R_MeshQueue_AddTransparent(center, RSurfShader_Water_Callback, ent, surf - ent->model->surfaces);
+			if (surf->visframe == r_framecount)
+			{
+				Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
+				R_MeshQueue_AddTransparent(center, RSurfShader_Water_Callback, ent, surf - ent->model->surfaces);
+			}
 		}
 	}
 	else
-		for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-			RSurfShader_Water_Callback(ent, surf - ent->model->surfaces);
+		for (surf = firstsurf;surf;surf = surf->texturechain)
+			if (surf->visframe == r_framecount)
+				RSurfShader_Water_Callback(ent, surf - ent->model->surfaces);
 }
 
 static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const msurface_t *surf)
@@ -945,41 +947,6 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	}
 }
 
-static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, const msurface_t *surf)
-{
-	const surfmesh_t *mesh;
-	rmeshstate_t m;
-	float modelorg[3];
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
-	memset(&m, 0, sizeof(m));
-	if (ent->effects & EF_ADDITIVE)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE;
-	}
-	else if (surf->currenttexture->fogtexture != NULL || ent->alpha < 1)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	}
-	else
-	{
-		m.blendfunc1 = GL_ONE;
-		m.blendfunc2 = GL_ZERO;
-	}
-	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
-	R_Mesh_State(&m);
-	GL_UseColorArray();
-	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-	{
-		R_Mesh_ResizeCheck(mesh->numverts);
-		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
-		RSurf_FoggedColors(varray_vertex, varray_color, 1, 1, 1, ent->alpha, r_colorscale, mesh->numverts, modelorg);
-		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
-	}
-}
-
 static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurface_t *surf)
 {
 	const surfmesh_t *mesh;
@@ -1025,7 +992,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1036,7 +1003,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.tex[0] = R_GetTexture(texture->texture);
-	m.tex[1] = R_GetTexture(texture->surfacechain->lightmaptexture);
+	m.tex[1] = R_GetTexture(firstsurf->lightmaptexture);
 	m.tex[2] = R_GetTexture(texture->detailtexture);
 	m.texrgbscale[0] = 1;
 	m.texrgbscale[1] = 4;
@@ -1044,27 +1011,30 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	R_Mesh_State(&m);
 	cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
 	GL_Color(cl, cl, cl, 1);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-		if (m.tex[1] != lightmaptexturenum)
+		if (surf->visframe == r_framecount)
 		{
-			m.tex[1] = lightmaptexturenum;
-			R_Mesh_State(&m);
-		}
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[2], mesh->abc, mesh->numverts * sizeof(float[4]));
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
+			if (m.tex[1] != lightmaptexturenum)
+			{
+				m.tex[1] = lightmaptexturenum;
+				R_Mesh_State(&m);
+			}
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[2], mesh->abc, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1074,31 +1044,34 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.tex[0] = R_GetTexture(texture->texture);
-	m.tex[1] = R_GetTexture(texture->surfacechain->lightmaptexture);
+	m.tex[1] = R_GetTexture(firstsurf->lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[1] = 4;
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-		if (m.tex[1] != lightmaptexturenum)
+		if (surf->visframe == r_framecount)
 		{
-			m.tex[1] = lightmaptexturenum;
-			R_Mesh_State(&m);
-		}
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
+			if (m.tex[1] != lightmaptexturenum)
+			{
+				m.tex[1] = lightmaptexturenum;
+				R_Mesh_State(&m);
+			}
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1109,19 +1082,22 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	m.tex[0] = R_GetTexture(texture->texture);
 	R_Mesh_State(&m);
 	GL_Color(1, 1, 1, 1);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+		if (surf->visframe == r_framecount)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1130,30 +1106,33 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ZERO;
 	m.blendfunc2 = GL_SRC_COLOR;
-	m.tex[0] = R_GetTexture(texture->surfacechain->lightmaptexture);
+	m.tex[0] = R_GetTexture(firstsurf->lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[0] = 4;
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-		if (m.tex[0] != lightmaptexturenum)
+		if (surf->visframe == r_framecount)
 		{
-			m.tex[0] = lightmaptexturenum;
-			R_Mesh_State(&m);
-		}
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->uvw, mesh->numverts * sizeof(float[4]));
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
+			if (m.tex[0] != lightmaptexturenum)
+			{
+				m.tex[0] = lightmaptexturenum;
+				R_Mesh_State(&m);
+			}
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->uvw, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1172,9 +1151,9 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	}
 	R_Mesh_State(&m);
 	GL_UseColorArray();
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		if (surf->dlightframe == r_framecount)
+		if (surf->visframe == r_framecount && surf->dlightframe == r_framecount)
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
@@ -1193,7 +1172,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1205,21 +1184,24 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	R_Mesh_State(&m);
 	GL_UseColorArray();
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+		if (surf->visframe == r_framecount)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			if (m.tex[0])
-				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
-			RSurf_FogPassColors(varray_vertex, varray_color, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				if (m.tex[0])
+					memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+				RSurf_FogPassColors(varray_vertex, varray_color, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1230,19 +1212,22 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	m.tex[0] = R_GetTexture(texture->detailtexture);
 	R_Mesh_State(&m);
 	GL_Color(1, 1, 1, 1);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+		if (surf->visframe == r_framecount)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->abc, mesh->numverts * sizeof(float[4]));
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->abc, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	const surfmesh_t *mesh;
@@ -1253,52 +1238,47 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	m.tex[0] = R_GetTexture(texture->glowtexture);
 	R_Mesh_State(&m);
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+		if (surf->visframe == r_framecount)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
-			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
-			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
 		}
 	}
 }
 
-static void RSurfShader_Wall_Fullbright_Callback(const void *calldata1, int calldata2)
-{
-	const entity_render_t *ent = calldata1;
-	const msurface_t *surf = ent->model->surfaces + calldata2;
-	R_Mesh_Matrix(&ent->matrix);
-	RSurfShader_Wall_Pass_BaseFullbright(ent, surf);
-	if (surf->currenttexture->glowtexture)
-		RSurfShader_Wall_Pass_Glow(ent, surf);
-	if (fogenabled)
-		RSurfShader_Wall_Pass_Fog(ent, surf);
-}
-
-static void RSurfShader_Wall_Fullbright(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
-	vec3_t center;
-	if (ent->effects & EF_ADDITIVE || ent->alpha < 1 || texture->fogtexture != NULL)
-	{
-		for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-		{
-			Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-			R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Fullbright_Callback, ent, surf - ent->model->surfaces);
-		}
-	}
+	const surfmesh_t *mesh;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ZERO;
+	m.tex[0] = R_GetTexture(texture->glowtexture);
+	R_Mesh_State(&m);
+	if (m.tex[0])
+		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	else
+		GL_Color(0, 0, 0, 1);
+	for (surf = firstsurf;surf;surf = surf->texturechain)
 	{
-		for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-			RSurfShader_Wall_Pass_BaseFullbright(ent, surf);
-		if (texture->glowtexture)
-			for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-				RSurfShader_Wall_Pass_Glow(ent, surf);
-		if (fogenabled)
-			for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-				RSurfShader_Wall_Pass_Fog(ent, surf);
+		if (surf->visframe == r_framecount)
+		{
+			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+			{
+				R_Mesh_ResizeCheck(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
+				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+			}
+		}
 	}
 }
 
@@ -1314,30 +1294,36 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 		RSurfShader_Wall_Pass_Fog(ent, surf);
 }
 
-static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_t *texture)
+static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
 	vec3_t center;
-	if (ent->effects & EF_ADDITIVE || ent->alpha < 1 || texture->fogtexture != NULL)
+	if (texture->rendertype != SURFRENDER_OPAQUE)
 	{
 		// transparent vertex shaded from lightmap
-		for (surf = texture->surfacechain;surf;surf = surf->texturechain)
+		for (surf = firstsurf;surf;surf = surf->texturechain)
 		{
-			Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-			R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->surfaces);
+			if (surf->visframe == r_framecount)
+			{
+				Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
+				R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->surfaces);
+			}
 		}
 	}
 	else if (r_vertexsurfaces.integer)
 	{
 		// opaque vertex shaded from lightmap
-		for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-			RSurfShader_Wall_Pass_BaseVertex(ent, surf);
+		for (surf = firstsurf;surf;surf = surf->texturechain)
+			if (surf->visframe == r_framecount)
+				RSurfShader_Wall_Pass_BaseVertex(ent, surf);
 		if (texture->glowtexture)
-			for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-				RSurfShader_Wall_Pass_Glow(ent, surf);
+			for (surf = firstsurf;surf;surf = surf->texturechain)
+				if (surf->visframe == r_framecount)
+					RSurfShader_Wall_Pass_Glow(ent, surf);
 		if (fogenabled)
-			for (surf = texture->surfacechain;surf;surf = surf->texturechain)
-				RSurfShader_Wall_Pass_Fog(ent, surf);
+			for (surf = firstsurf;surf;surf = surf->texturechain)
+				if (surf->visframe == r_framecount)
+					RSurfShader_Wall_Pass_Fog(ent, surf);
 	}
 	else
 	{
@@ -1345,75 +1331,122 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 		if (r_textureunits.integer >= 2)
 		{
 			if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture);
+				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, firstsurf);
 			else
 			{
-				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture);
+				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, firstsurf);
 				if (r_detailtextures.integer)
-					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture);
+					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
 			}
 		}
 		else
 		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture);
-			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture);
+			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, firstsurf);
 			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture);
+				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
 		}
 		if (!r_dlightmap.integer && !(ent->effects & EF_FULLBRIGHT))
-			RSurfShader_OpaqueWall_Pass_Light(ent, texture);
+			RSurfShader_OpaqueWall_Pass_Light(ent, texture, firstsurf);
 		if (texture->glowtexture)
-			RSurfShader_OpaqueWall_Pass_Glow(ent, texture);
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, firstsurf);
 		if (fogenabled)
-			RSurfShader_OpaqueWall_Pass_Fog(ent, texture);
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, firstsurf);
 	}
 }
 
-Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap}, SHADERFLAGS_NEEDLIGHTMAP};
-Cshader_t Cshader_wall_fullbright = {{NULL, RSurfShader_Wall_Fullbright}, 0};
-Cshader_t Cshader_water = {{NULL, RSurfShader_Water}, 0};
-Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL}, 0};
+static void RSurfShader_Wall_Lightmap_BaseLighting(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
+{
+	const msurface_t *surf;
+	if (cl.worldmodel->numlights)
+		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, firstsurf);
+	else if (r_vertexsurfaces.integer)
+	{
+		// opaque vertex shaded from lightmap
+		for (surf = firstsurf;surf;surf = surf->texturechain)
+			if (surf->visframe == r_framecount)
+				RSurfShader_Wall_Pass_BaseVertex(ent, surf);
+		if (texture->glowtexture)
+			for (surf = firstsurf;surf;surf = surf->texturechain)
+				if (surf->visframe == r_framecount)
+					RSurfShader_Wall_Pass_Glow(ent, surf);
+	}
+	else
+	{
+		// opaque lightmapped
+		if (r_textureunits.integer >= 2)
+		{
+			if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
+				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, firstsurf);
+			else
+			{
+				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, firstsurf);
+				if (r_detailtextures.integer)
+					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
+			}
+		}
+		else
+		{
+			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, firstsurf);
+			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, firstsurf);
+			if (r_detailtextures.integer)
+				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
+		}
+		if (!r_dlightmap.integer && !(ent->effects & EF_FULLBRIGHT))
+			RSurfShader_OpaqueWall_Pass_Light(ent, texture, firstsurf);
+		if (texture->glowtexture)
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, firstsurf);
+	}
+}
 
-int Cshader_count = 4;
-Cshader_t *Cshaders[4] =
+Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap, RSurfShader_Wall_Lightmap_BaseLighting}, SHADERFLAGS_NEEDLIGHTMAP};
+Cshader_t Cshader_water = {{NULL, RSurfShader_Water, NULL}, 0};
+Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL, NULL}, 0};
+
+int Cshader_count = 3;
+Cshader_t *Cshaders[3] =
 {
 	&Cshader_wall_lightmap,
-	&Cshader_wall_fullbright,
 	&Cshader_water,
 	&Cshader_sky
 };
 
-void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
+void R_PrepareSurfaces(entity_render_t *ent)
 {
-	int i, alttextures, texframe, framecount, numtextures, numsurfaces, *surfacevisframes;
-	texture_t *t, *textures;
+	int i, texframe, numsurfaces, *surfacevisframes;
 	model_t *model;
 	msurface_t *surf, *surfaces;
+	texture_t *t;
 	vec3_t modelorg;
 
 	if (!ent->model)
 		return;
 
-	// mark the surfaces touched by dynamic lights
-	if (normal && r_dynamic.integer)
-		R_MarkLights(ent);
-
-	R_Mesh_Matrix(&ent->matrix);
-
 	model = ent->model;
-	alttextures = ent->frame != 0;
-	texframe = (int)(cl.time * 5.0f);
-
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
-
-	numtextures = model->numtextures;
-	textures = model->textures;
 	numsurfaces = model->nummodelsurfaces;
 	surfaces = model->surfaces + model->firstmodelsurface;
 	surfacevisframes = model->surfacevisframes + model->firstmodelsurface;
 
-	for (i = 0;i < numtextures;i++)
-		textures[i].surfacechain = NULL;
+	texframe = (int)(cl.time * 5.0f);
+	for (i = 0;i < model->numtextures;i++)
+	{
+		t = model->textures + i;
+		if (ent->effects & EF_ADDITIVE)
+			t->rendertype = SURFRENDER_ADD;
+		else if (ent->alpha < 1 || t->flags & SURF_WATERALPHA || t->fogtexture != NULL)
+			t->rendertype = SURFRENDER_ALPHA;
+		else
+			t->rendertype = SURFRENDER_OPAQUE;
+		if (t->animated)
+		{
+			t->currentframe[0] = t->anim_frames[0][(t->anim_total[0] >= 2) ? (texframe % t->anim_total[0]) : 0];
+			t->currentframe[1] = t->anim_frames[1][(t->anim_total[1] >= 2) ? (texframe % t->anim_total[1]) : 0];
+		}
+	}
+
+	if (r_dynamic.integer)
+		R_MarkLights(ent);
 
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
 	{
@@ -1435,30 +1468,19 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 #endif
 			{
 				c_faces++;
-				t = surf->texinfo->texture;
-				if (t->animated)
-				{
-					framecount = t->anim_total[alttextures];
-					if (framecount >= 2)
-						t = t->anim_frames[alttextures][texframe % framecount];
-					else
-						t = t->anim_frames[alttextures][0];
-				}
-				surf->currenttexture = t;
-				surf->texturechain = t->surfacechain;
-				t->surfacechain = surf;
+				surf->visframe = r_framecount;
 				if (!r_vertexsurfaces.integer && surf->lightmaptexture != NULL)
 				{
 					if (surf->cached_dlight
-					|| surf->cached_ambient != r_ambient.value
-					|| surf->cached_lightmapscalebit != r_lightmapscalebit)
+					 || surf->cached_ambient != r_ambient.value
+					 || surf->cached_lightmapscalebit != r_lightmapscalebit)
 						R_BuildLightMap(ent, surf, false); // base lighting changed
 					else if (r_dynamic.integer)
 					{
 						if  (surf->styles[0] != 255 && (d_lightstylevalue[surf->styles[0]] != surf->cached_light[0]
-						|| (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
-						|| (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
-						|| (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
+						 || (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
+						 || (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
+						 || (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
 							R_BuildLightMap(ent, surf, false); // base lighting changed
 						else if (surf->dlightframe == r_framecount && r_dlightmap.integer)
 							R_BuildLightMap(ent, surf, true); // only dlights
@@ -1467,16 +1489,16 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 			}
 		}
 	}
+}
 
-	if (sky)
-		for (i = 0, t = textures;i < numtextures;i++, t++)
-			if (t->surfacechain && t->shader->shaderfunc[SHADERSTAGE_SKY])
-				t->shader->shaderfunc[SHADERSTAGE_SKY](ent, t);
-
-	if (normal)
-		for (i = 0, t = textures;i < numtextures;i++, t++)
-			if (t->surfacechain && t->shader->shaderfunc[SHADERSTAGE_NORMAL])
-				t->shader->shaderfunc[SHADERSTAGE_NORMAL](ent, t);
+void R_DrawSurfaces(entity_render_t *ent, int type)
+{
+	int i;
+	texture_t *t;
+	R_Mesh_Matrix(&ent->matrix);
+	for (i = 0, t = ent->model->textures;i < ent->model->numtextures;i++, t++)
+		if (t->shader->shaderfunc[type] && ent->model->texturesurfacechains[i])
+			t->shader->shaderfunc[type](ent, t, ent->model->texturesurfacechains[i]);
 }
 
 static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
@@ -1519,7 +1541,7 @@ static void R_DrawPortals(entity_render_t *ent)
 
 	for (portal = ent->model->portals, endportal = portal + ent->model->numportals;portal < endportal;portal++)
 	{
-		if (portal->here->pvsframe == r_pvsframecount || portal->past->pvsframe == r_pvsframecount)
+		if (portal->here->pvsframe == ent->model->pvsframecount || portal->past->pvsframe == ent->model->pvsframecount)
 		{
 			if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 			{
@@ -1535,7 +1557,7 @@ static void R_DrawPortals(entity_render_t *ent)
 	}
 }
 
-void R_DrawBrushModel(entity_render_t *ent, int sky, int normal)
+void R_PrepareBrushModel(entity_render_t *ent)
 {
 	int i, numsurfaces, *surfacevisframes, *surfacepvsframes;
 	msurface_t *surf;
@@ -1563,7 +1585,7 @@ void R_DrawBrushModel(entity_render_t *ent, int sky, int normal)
 			if ((surf->flags & SURF_PLANEBACK))
 			{
 				surfacevisframes[i] = r_framecount;
-				surfacepvsframes[i] = r_pvsframecount;
+				surfacepvsframes[i] = model->pvsframecount;
 			}
 		}
 		else
@@ -1571,16 +1593,16 @@ void R_DrawBrushModel(entity_render_t *ent, int sky, int normal)
 			if (!(surf->flags & SURF_PLANEBACK))
 			{
 				surfacevisframes[i] = r_framecount;
-				surfacepvsframes[i] = r_pvsframecount;
+				surfacepvsframes[i] = model->pvsframecount;
 			}
 		}
 #else
 		surfacevisframes[i] = r_framecount;
-		surfacepvsframes[i] = r_pvsframecount;
+		surfacepvsframes[i] = model->pvsframecount;
 #endif
 		surf->dlightframe = -1;
 	}
-	R_DrawSurfaces(ent, sky, normal);
+	R_PrepareSurfaces(ent);
 }
 
 void R_SurfaceWorldNode (entity_render_t *ent)
@@ -1599,7 +1621,7 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
 	{
-		if (surfacepvsframes[i] == r_pvsframecount)
+		if (surfacepvsframes[i] == model->pvsframecount)
 		{
 #if WORLDNODECULLBACKFACES
 			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
@@ -1666,7 +1688,7 @@ loc0:
 		{
 			leaf->worldnodeframe = r_framecount;
 			// FIXME: R_NotCulledBox is absolute, should be done relative
-			if (leaf->pvsframe == r_pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+			if (leaf->pvsframe == ent->model->pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
 			{
 				p->visframe = r_framecount;
 				pstack[portalstack++] = p;
@@ -1744,7 +1766,7 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 				{
 					leaf->worldnodeframe = r_framecount;
 					// FIXME: R_NotCulledBox is absolute, should be done relative
-					if (leaf->pvsframe == r_pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+					if (leaf->pvsframe == ent->model->pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
 						leafstack[leafstackpos++] = leaf;
 				}
 			}
@@ -1754,40 +1776,41 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 		R_DrawPortals(ent);
 }
 
-void R_PVSUpdate (mleaf_t *viewleaf)
+void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 {
 	int i, j, l, c, bits, *surfacepvsframes, *mark;
 	mleaf_t *leaf;
 	qbyte *vis;
+	model_t *model;
 
-	if (r_pvsviewleaf == viewleaf && r_pvsviewleafnovis == r_novis.integer)
-		return;
-
-	r_pvsframecount++;
-	r_pvsviewleaf = viewleaf;
-	r_pvsviewleafnovis = r_novis.integer;
-
-	if (viewleaf)
+	model = ent->model;
+	if (model && (model->pvsviewleaf != viewleaf || model->pvsviewleafnovis != r_novis.integer))
 	{
-		surfacepvsframes = cl.worldmodel->surfacepvsframes;
-		vis = Mod_LeafPVS (viewleaf, cl.worldmodel);
-		for (j = 0;j < cl.worldmodel->numleafs;j += 8)
+		model->pvsframecount++;
+		model->pvsviewleaf = viewleaf;
+		model->pvsviewleafnovis = r_novis.integer;
+		if (viewleaf)
 		{
-			bits = *vis++;
-			if (bits)
+			surfacepvsframes = model->surfacepvsframes;
+			vis = Mod_LeafPVS (viewleaf, model);
+			for (j = 0;j < model->numleafs;j += 8)
 			{
-				l = cl.worldmodel->numleafs - j;
-				if (l > 8)
-					l = 8;
-				for (i = 0;i < l;i++)
+				bits = *vis++;
+				if (bits)
 				{
-					if (bits & (1 << i))
+					l = model->numleafs - j;
+					if (l > 8)
+						l = 8;
+					for (i = 0;i < l;i++)
 					{
-						leaf = &cl.worldmodel->leafs[j + i + 1];
-						leaf->pvsframe = r_pvsframecount;
-						// mark surfaces bounding this leaf as visible
-						for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
-							surfacepvsframes[*mark++] = r_pvsframecount;
+						if (bits & (1 << i))
+						{
+							leaf = &model->leafs[j + i + 1];
+							leaf->pvsframe = model->pvsframecount;
+							// mark surfaces bounding this leaf as visible
+							for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
+								surfacepvsframes[*mark++] = model->pvsframecount;
+						}
 					}
 				}
 			}
@@ -1800,33 +1823,52 @@ void R_PVSUpdate (mleaf_t *viewleaf)
 R_DrawWorld
 =============
 */
-void R_DrawWorld (entity_render_t *ent)
+void R_DrawWorld (entity_render_t *ent, int baselighting)
 {
+	vec3_t modelorg;
 	mleaf_t *viewleaf;
-	viewleaf = Mod_PointInLeaf (r_origin, cl.worldmodel);
-	R_PVSUpdate(viewleaf);
+
+	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	viewleaf = Mod_PointInLeaf (modelorg, ent->model);
+	R_PVSUpdate(ent, viewleaf);
+
 	if (!viewleaf)
 		return;
+
 	if (r_surfaceworldnode.integer || viewleaf->contents == CONTENTS_SOLID)
 		R_SurfaceWorldNode (ent);
 	else
 		R_PortalWorldNode (ent, viewleaf);
-	R_DrawSurfaces(ent, true, true);
+	R_PrepareSurfaces(ent);
+	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
+	if (baselighting)
+		R_DrawSurfaces(ent, SHADERSTAGE_BASELIGHTING);
+	else
+		R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
 }
 
 void R_Model_Brush_DrawSky (entity_render_t *ent)
 {
-	R_DrawBrushModel(ent, true, false);
+	if (ent != &cl_entities[0].render)
+		R_PrepareBrushModel(ent);
+	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
 }
 
 void R_Model_Brush_Draw (entity_render_t *ent)
 {
 	c_bmodels++;
-	R_DrawBrushModel(ent, false, true);
+	if (ent != &cl_entities[0].render)
+		R_PrepareBrushModel(ent);
+	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
 }
 
-void R_Model_Brush_DrawDepth (entity_render_t *ent)
+void R_Model_Brush_DrawBaseLighting (entity_render_t *ent)
 {
+	c_bmodels++;
+	if (ent != &cl_entities[0].render)
+		R_PrepareBrushModel(ent);
+	R_DrawSurfaces(ent, SHADERSTAGE_BASELIGHTING);
+	/*
 	shadowmesh_t *mesh;
 	if (!cl.worldmodel->numlights)
 		GL_Color(0.3, 0.3, 0.3, 1);
@@ -1838,17 +1880,19 @@ void R_Model_Brush_DrawDepth (entity_render_t *ent)
 	}
 	if (!cl.worldmodel->numlights)
 		GL_Color(0, 0, 0, 1);
+	*/
 }
 
 void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
 {
-#if 0
+#if 1
 	float projectdistance, temp[3];
 	shadowmesh_t *mesh;
 	VectorSubtract(relativelightorigin, ent->model->shadowmesh_center, temp);
 	projectdistance = lightradius + ent->model->shadowmesh_radius - sqrt(DotProduct(temp, temp));
 	if (projectdistance >= 0.1)
 	{
+		R_Mesh_Matrix(&ent->matrix);
 		for (mesh = ent->model->shadowmesh;mesh;mesh = mesh->next)
 		{
 			R_Mesh_ResizeCheck(mesh->numverts * 2);
@@ -1861,10 +1905,11 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	msurface_t *surf;
 	float projectdistance, f, temp[3], lightradius2;
 	surfmesh_t *mesh;
+	R_Mesh_Matrix(&ent->matrix);
 	lightradius2 = lightradius * lightradius;
 	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 	{
-		if (surf->flags & SURF_SHADOWCAST)
+		if (surf->rendertype == SURFRENDER_OPAQUE && surf->flags & SURF_SHADOWCAST)
 		{
 			f = PlaneDiff(relativelightorigin, surf->plane);
 			if (surf->flags & SURF_PLANEBACK)
@@ -1889,47 +1934,43 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 #endif
 }
 
-void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
+void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
 {
-	int i;
+	int tnum;
 	msurface_t *surf;
+	texture_t *t;
 	float f, lightradius2;
 	surfmesh_t *mesh;
-	vec3_t modelorg;
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	R_Mesh_Matrix(&ent->matrix);
+	if (ent != &cl_entities[0].render)
+		R_PrepareBrushModel(ent);
 	lightradius2 = lightradius * lightradius;
-	GL_UseColorArray();
-	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
+	for (tnum = 0;tnum < ent->model->numtextures;tnum++)
 	{
-		if (surf->flags & SURF_SHADOWLIGHT)
+		t = ent->model->textures + tnum;
+		if (ent->model->texturesurfacechains[tnum] && t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
 		{
-			f = PlaneDiff(relativelightorigin, surf->plane);
-			if (surf->flags & SURF_PLANEBACK)
-				f = -f;
-			if (f >= -0.1 && f < lightradius)
+			t = t->currentframe[ent->frame != 0];
+			for (surf = ent->model->texturesurfacechains[tnum];surf;surf = surf->texturechain)
 			{
-				f = PlaneDiff(modelorg, surf->plane);
-				if (surf->flags & SURF_PLANEBACK)
-					f = -f;
-				if (f > 0)
+				if (surf->visframe == r_framecount)
 				{
-					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+					f = PlaneDiff(relativelightorigin, surf->plane);
+					if (surf->flags & SURF_PLANEBACK)
+						f = -f;
+					if (f >= -0.1 && f < lightradius)
 					{
-						R_Mesh_ResizeCheck(mesh->numverts);
-						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-						R_Shadow_Light(mesh->numverts, mesh->normals, relativelightorigin, lightradius, lightdistbias, lightsubtract, lightcolor);
-						R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+						for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+						{
+							R_Mesh_ResizeCheck(mesh->numverts);
+							memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+							R_Shadow_RenderLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->texture, r_notexture, NULL, NULL);
+						}
 					}
 				}
 			}
 		}
 	}
-}
-
-void R_Model_Brush_DrawOntoLight(entity_render_t *ent)
-{
-	// FIXME
-	c_bmodels++;
 }
 
 /*
@@ -2009,10 +2050,6 @@ static void gl_surf_shutdown(void)
 
 static void gl_surf_newmap(void)
 {
-	// reset pvs visibility variables so it will update on first frame
-	r_pvsframecount = 1;
-	r_pvsviewleaf = NULL;
-	r_pvsviewleafnovis = false;
 }
 
 void GL_Surf_Init(void)

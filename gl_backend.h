@@ -7,12 +7,13 @@
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelements[768];
 
-void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index);
+void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, const int *index);
 
 void GL_SetupView_ViewPort (int x, int y, int width, int height);
 void GL_SetupView_Orientation_Identity (void);
 void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles);
-void GL_SetupView_Mode_Perspective (double aspect, double fovx, double fovy, double zNear, double zFar);
+void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, double zFar);
+void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, double zNear);
 void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar);
 void GL_UseColorArray(void);
 void GL_Color(float cr, float cg, float cb, float ca);
@@ -34,6 +35,8 @@ typedef struct
 	int tex3d[MAX_TEXTUREUNITS];
 	int texcubemap[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
+	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
+	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
 }
 rmeshstate_t;
 
@@ -72,7 +75,7 @@ void R_Mesh_TextureState(const rmeshstate_t *m);
 void _R_Mesh_ResizeCheck(int numverts);
 
 // renders the mesh in the varray_* buffers
-void R_Mesh_Draw(int numverts, int numtriangles, int *elements);
+void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
 
 // saves a section of the rendered frame to a .tga file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);

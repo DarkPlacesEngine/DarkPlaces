@@ -383,7 +383,7 @@ static void Mod_Flush (void)
 	Mod_LoadModels();
 }
 
-int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end)
+int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end)
 {
 	int i;
 	for (i = 0;i < numtriangles;i++, elements += 3)
@@ -398,15 +398,86 @@ int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end
 	return -1;
 }
 
-void Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles)
+void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles)
 {
-	int i, *e, *n;
+	int i, *n;
+	const int *e;
 	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
 	{
 		n[0] = Mod_FindTriangleWithEdge(elements, numtriangles, e[1], e[0]);
 		n[1] = Mod_FindTriangleWithEdge(elements, numtriangles, e[2], e[1]);
 		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2]);
 	}
+}
+
+void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals)
+{
+	int i, tnum, voffset;
+	float vert[3][4], vec[3][4], sdir[3], tdir[3], normal[3], f, *v;
+	const int *e;
+	// clear the vectors
+	memset(svectors, 0, numverts * sizeof(float[4]));
+	memset(tvectors, 0, numverts * sizeof(float[4]));
+	memset(normals, 0, numverts * sizeof(float[4]));
+	// process each vertex of each triangle and accumulate the results
+	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
+	{
+		// calculate texture matrix for triangle
+		voffset = e[0] * 4;
+		vert[0][0] = vertex[voffset+0];
+		vert[0][1] = vertex[voffset+1];
+		vert[0][2] = vertex[voffset+2];
+		vert[0][3] = texcoord[voffset];
+		voffset = e[1] * 4;
+		vert[1][0] = vertex[voffset+0];
+		vert[1][1] = vertex[voffset+1];
+		vert[1][2] = vertex[voffset+2];
+		vert[1][3] = texcoord[voffset];
+		voffset = e[2] * 4;
+		vert[2][0] = vertex[voffset+0];
+		vert[2][1] = vertex[voffset+1];
+		vert[2][2] = vertex[voffset+2];
+		vert[2][3] = texcoord[voffset];
+		VectorSubtract(vert[1], vert[0], vec[0]);
+		VectorSubtract(vert[2], vert[0], vec[1]);
+		CrossProduct(vec[0], vec[1], normal);
+		if (DotProduct(normal, normal) >= 0.001)
+		{
+			VectorNormalize(normal);
+			sdir[0] = (vert[1][3] - vert[0][3]) * (vert[2][0] - vert[0][0]) - (vert[2][3] - vert[0][3]) * (vert[1][0] - vert[0][0]);
+			sdir[1] = (vert[1][3] - vert[0][3]) * (vert[2][1] - vert[0][1]) - (vert[2][3] - vert[0][3]) * (vert[1][1] - vert[0][1]);
+			sdir[2] = (vert[1][3] - vert[0][3]) * (vert[2][2] - vert[0][2]) - (vert[2][3] - vert[0][3]) * (vert[1][2] - vert[0][2]);
+			VectorNormalize(sdir);
+			f = -DotProduct(sdir, normal);
+			VectorMA(sdir, f, normal, sdir);
+			VectorNormalize(sdir);
+			CrossProduct(sdir, normal, tdir);
+			// this is probably not necessary
+			VectorNormalize(tdir);
+			// accumulate matrix onto verts used by triangle
+			for (i = 0;i < 3;i++)
+			{
+				voffset = e[i] * 4;
+				svectors[voffset    ] += sdir[0];
+				svectors[voffset + 1] += sdir[1];
+				svectors[voffset + 2] += sdir[2];
+				tvectors[voffset    ] += tdir[0];
+				tvectors[voffset + 1] += tdir[1];
+				tvectors[voffset + 2] += tdir[2];
+				normals[voffset    ] += normal[0];
+				normals[voffset + 1] += normal[1];
+				normals[voffset + 2] += normal[2];
+			}
+		}
+	}
+	// now we could divide the vectors by the number of averaged values on
+	// each vertex...  but instead normalize them
+	for (i = 0, v = svectors;i < numverts;i++, v += 4)
+		VectorNormalize(v);
+	for (i = 0, v = tvectors;i < numverts;i++, v += 4)
+		VectorNormalize(v);
+	for (i = 0, v = normals;i < numverts;i++, v += 4)
+		VectorNormalize(v);
 }
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts)
@@ -460,7 +531,7 @@ void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numve
 	while (numverts + mesh->numverts > mesh->maxverts || (numverts - 2) + mesh->numtriangles > mesh->maxtriangles)
 	{
 		if (mesh->next == NULL)
-			mesh->next = Mod_ShadowMesh_Alloc(mempool, max(1000, numverts));
+			mesh->next = Mod_ShadowMesh_Alloc(mempool, max(4096, numverts));
 		mesh = mesh->next;
 	}
 	i1 = Mod_ShadowMesh_AddVertex(mesh, verts);
@@ -479,7 +550,7 @@ void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numve
 
 shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool)
 {
-	return Mod_ShadowMesh_Alloc(mempool, 1000);
+	return Mod_ShadowMesh_Alloc(mempool, 4096);
 }
 
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)

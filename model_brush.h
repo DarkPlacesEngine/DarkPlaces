@@ -57,22 +57,39 @@ mplane_t;
 
 #define SHADERSTAGE_SKY 0
 #define SHADERSTAGE_NORMAL 1
-#define SHADERSTAGE_COUNT 2
+#define SHADERSTAGE_BASELIGHTING 2
+#define SHADERSTAGE_COUNT 3
 
 #define SHADERFLAGS_NEEDLIGHTMAP 1
 
+#define SURF_PLANEBACK 2
+#define SURF_DRAWSKY 4
+#define SURF_DRAWTURB 0x10
+#define SURF_LIGHTMAP 0x20
+#define SURF_DRAWNOALPHA 0x100
+#define SURF_DRAWFULLBRIGHT 0x200
+#define SURF_LIGHTBOTHSIDES 0x400
+#define SURF_CLIPSOLID 0x800 // this polygon can obscure other polygons
+#define SURF_SHADOWCAST 0x1000 // this polygon can cast stencil shadows
+#define SURF_SHADOWLIGHT 0x2000 // this polygon can be lit by stencil shadowing
+#define SURF_WATERALPHA 0x4000 // this polygon's alpha is modulated by r_wateralpha
+
+#define SURFRENDER_OPAQUE 0
+#define SURFRENDER_ALPHA 1
+#define SURFRENDER_ADD 2
+
 struct entity_render_s;
 struct texture_s;
+struct msurface_s;
 // change this stuff when real shaders are added
 typedef struct Cshader_s
 {
-	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const struct texture_s *texture);
+	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const struct texture_s *texture, const struct msurface_s *firstsurf);
 	int flags;
 }
 Cshader_t;
 
 extern Cshader_t Cshader_wall_lightmap;
-extern Cshader_t Cshader_wall_fullbright;
 extern Cshader_t Cshader_water;
 extern Cshader_t Cshader_sky;
 
@@ -84,6 +101,9 @@ typedef struct texture_s
 	unsigned int width, height;
 	// SURF_ flags
 	unsigned int flags;
+
+	// type of rendering (SURFRENDER_ value)
+	int rendertype;
 
 	// base texture without fullbrights, never NULL
 	rtexture_t *texture;
@@ -97,9 +117,6 @@ typedef struct texture_s
 	// shader to use for this texture
 	Cshader_t *shader;
 
-	// list of surfaces to render using this texture
-	struct msurface_s *surfacechain;
-
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
 	// direct pointers to each of the frames in the sequences
@@ -108,20 +125,11 @@ typedef struct texture_s
 	// set if animated or there is an alternate frame set
 	// (this is an optimization in the renderer)
 	int animated;
+	// the current texture frames in animation
+	// (index with entity frame != 0)
+	struct texture_s *currentframe[2];
 }
 texture_t;
-
-
-#define SURF_PLANEBACK 2
-#define SURF_DRAWSKY 4
-#define SURF_DRAWTURB 0x10
-#define SURF_LIGHTMAP 0x20
-#define SURF_DRAWNOALPHA 0x100
-#define SURF_DRAWFULLBRIGHT 0x200
-#define SURF_LIGHTBOTHSIDES 0x400
-#define SURF_CLIPSOLID 0x800 // this polygon can obscure other polygons
-#define SURF_SHADOWCAST 0x1000 // this polygon can cast stencil shadows
-#define SURF_SHADOWLIGHT 0x2000 // this polygon can be lit by stencil shadowing
 
 typedef struct
 {
@@ -145,6 +153,8 @@ typedef struct surfmesh_s
 	int numverts;
 	int numtriangles;
 	float *verts;
+	float *svectors;
+	float *tvectors;
 	float *normals;
 	int *lightmapoffsets;
 	float *str;
@@ -159,8 +169,8 @@ typedef struct msurface_s
 {
 	// surface number, to avoid having to do a divide to find the number of a surface from it's address
 	int number;
-	// should be drawn if visframe == r_framecount (set by WorldNode functions)
-	//int visframe;
+	// should be drawn if visframe == r_framecount (set by PrepareSurfaces)
+	int visframe;
 	// should be drawn if onscreen and not a backface (used for setting visframe)
 	//int pvsframe;
 	// chain of surfaces marked visible by pvs
@@ -206,6 +216,9 @@ typedef struct msurface_s
 	vec3_t poly_mins, poly_maxs, poly_center;
 	// bounding sphere radius (around poly_center)
 	float poly_radius, poly_radius2;
+
+	// neighboring surfaces (one per poly_numverts)
+	struct msurface_s **neighborsurfaces;
 
 	// these are regenerated every frame
 	// lighting info
@@ -331,7 +344,9 @@ typedef struct mlight_s
 	float distbias;
 	// light style controlling this light
 	int style;
-	// maximum extent of the light for various purposes
+	// maximum extent of the light for shading purposes
+	float lightradius;
+	// maximum extent of the light for culling purposes
 	float cullradius;
 	float cullradius2;
 	// surfaces this shines on

@@ -205,7 +205,6 @@ DYNAMIC LIGHTS
 R_MarkLights
 =============
 */
-extern int r_pvsframecount;
 static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node)
 {
 	float ndist, maxdist;
@@ -242,7 +241,7 @@ loc0:
 	surf = ent->model->surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surf++)
 	{
-		if (surfacepvsframes[surf->number] != r_pvsframecount)
+		if (surfacepvsframes[surf->number] != ent->model->pvsframecount)
 			continue;
 		dist = ndist;
 		if (surf->flags & SURF_PLANEBACK)
@@ -382,7 +381,7 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 							if (surf->lightframe == lightframe)
 								continue;
 							surf->lightframe = lightframe;
-							if (surfacepvsframes[surf->number] != r_pvsframecount)
+							if (surfacepvsframes[surf->number] != model->pvsframecount)
 								continue;
 							dist = PlaneDiff(lightorigin, surf->plane);
 							if (surf->flags & SURF_PLANEBACK)
@@ -867,7 +866,7 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 			avc[3] = a;
 			avc += 4;
 			av += 4;
-			avn += 3;
+			avn += 4;
 		}
 	}
 	else

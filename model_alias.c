@@ -250,10 +250,9 @@ static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, qbyte *skintem
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
 extern void R_Model_Alias_Draw(entity_render_t *ent);
 extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
-extern void R_Model_Alias_DrawDepth(entity_render_t *ent);
+extern void R_Model_Alias_DrawBaseLighting(entity_render_t *ent);
 extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
-extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
-extern void R_Model_Alias_DrawOntoLight(entity_render_t *ent);
+extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
 void Mod_LoadAliasModel (model_t *mod, void *buffer)
 {
 	int						i, j, version, numverts, totalposes, totalskins, skinwidth, skinheight, totalverts, groupframes, groupskins;
@@ -289,10 +288,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
-	loadmodel->DrawDepth = R_Model_Alias_DrawDepth;
+	loadmodel->DrawBaseLighting = R_Model_Alias_DrawBaseLighting;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
-	loadmodel->DrawOntoLight = R_Model_Alias_DrawOntoLight;
 
 	loadmodel->numskins = LittleLong(pinmodel->numskins);
 	BOUNDI(loadmodel->numskins,0,256);
@@ -616,10 +614,9 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
-	loadmodel->DrawDepth = R_Model_Alias_DrawDepth;
+	loadmodel->DrawBaseLighting = R_Model_Alias_DrawBaseLighting;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
-	loadmodel->DrawOntoLight = R_Model_Alias_DrawOntoLight;
 
 	if (LittleLong(pinmodel->num_tris < 1) || LittleLong(pinmodel->num_tris) > MD2MAX_TRIANGLES)
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
@@ -806,23 +803,12 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
 }
 
-static void zymswapintblock(int *m, int size)
-{
-	size /= 4;
-	while(size--)
-	{
-		*m = BigLong(*m);
-		m++;
-	}
-}
-
 extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
 extern void R_Model_Zymotic_Draw(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent);
-extern void R_Model_Zymotic_DrawDepth(entity_render_t *ent);
+extern void R_Model_Zymotic_DrawBaseLighting(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
-extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
-extern void R_Model_Zymotic_DrawOntoLight(entity_render_t *ent);
+extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
 	zymtype1header_t *pinmodel, *pheader;
@@ -840,10 +826,9 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Zymotic_Draw;
 	loadmodel->DrawFakeShadow = NULL;//R_Model_Zymotic_DrawFakeShadow;
-	loadmodel->DrawDepth = NULL;//R_Model_Zymotic_DrawDepth;
+	loadmodel->DrawBaseLighting = NULL;//R_Model_Zymotic_DrawBaseLighting;
 	loadmodel->DrawShadowVolume = NULL;//R_Model_Zymotic_DrawShadowVolume;
 	loadmodel->DrawLight = NULL;//R_Model_Zymotic_DrawLight;
-	loadmodel->DrawOntoLight = NULL;//R_Model_Zymotic_DrawOntoLight;
 
 	// byteswap header
 	pheader = pinmodel;
