@@ -226,6 +226,10 @@ cubemapinfo_t;
 static int numcubemaps;
 static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 
+GLhandleARB r_shadow_program_light_diffusegloss = 0;
+GLhandleARB r_shadow_program_light_diffuse = 0;
+GLhandleARB r_shadow_program_light_gloss = 0;
+
 void R_Shadow_UncompileWorldLights(void);
 void R_Shadow_ClearWorldLights(void);
 void R_Shadow_SaveWorldLights(void);
@@ -236,6 +240,16 @@ void R_Shadow_EditLights_Reload_f(void);
 void R_Shadow_ValidateCvars(void);
 static void R_Shadow_MakeTextures(void);
 void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, dlight_t *light);
+
+// beginnings of GL_ARB_shaders support, not done yet
+GLhandleARB GL_Backend_LoadProgram(const char *vertexshaderfilename, const char *fragmentshaderfilename)
+{
+	return 0;
+}
+
+void GL_Backend_FreeProgram(GLhandleARB prog)
+{
+}
 
 void r_shadow_start(void)
 {
@@ -268,11 +282,23 @@ void r_shadow_start(void)
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	r_shadow_buffer_surfacepvs = NULL;
 	r_shadow_buffer_surfacelist = NULL;
+	if (gl_support_fragment_shader)
+	{
+		r_shadow_program_light_diffusegloss = GL_Backend_LoadProgram("glsl/diffusegloss.vert", "glsl/diffusegloss.frag");
+		r_shadow_program_light_diffuse = GL_Backend_LoadProgram("glsl/diffuse.vert", "glsl/diffuse.frag");
+		r_shadow_program_light_gloss = GL_Backend_LoadProgram("glsl/gloss.vert", "glsl/gloss.frag");
+	}
 }
 
 void r_shadow_shutdown(void)
 {
 	R_Shadow_UncompileWorldLights();
+	GL_Backend_FreeProgram(r_shadow_program_light_diffusegloss);
+	r_shadow_program_light_diffusegloss = 0;
+	GL_Backend_FreeProgram(r_shadow_program_light_diffuse);
+	r_shadow_program_light_diffuse = 0;
+	GL_Backend_FreeProgram(r_shadow_program_light_gloss);
+	r_shadow_program_light_gloss = 0;
 	numcubemaps = 0;
 	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
