@@ -58,6 +58,17 @@ skinframe_t;
 
 #define MAX_SKINS 256
 
+typedef struct shadowmesh_s
+{
+	struct shadowmesh_s *next;
+	int numverts, maxverts;
+	int numtriangles, maxtriangles;
+	float *verts;
+	int *elements;
+	int *neighbors;
+}
+shadowmesh_t;
+
 
 #include "model_brush.h"
 #include "model_sprite.h"
@@ -176,6 +187,11 @@ typedef struct model_s
 	int				numlights;
 	mlight_t		*lights;
 
+	// used only for casting dynamic shadow volumes
+	shadowmesh_t	*shadowmesh;
+	vec3_t			shadowmesh_mins, shadowmesh_maxs, shadowmesh_center;
+	float			shadowmesh_radius;
+
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]
 	// skin frame info
@@ -202,6 +218,8 @@ typedef struct model_s
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw a fake shadow for the model
 	void(*DrawFakeShadow)(struct entity_render_s *ent);
+	// draw a shadow volume for the model based on light source
+	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
 
 	// memory pool for allocations
 	mempool_t		*mempool;
@@ -240,6 +258,15 @@ extern char loadname[32];	// for hunk tags
 
 int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end);
 void Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles);
+
+shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts);
+shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh);
+int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *v);
+void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts);
+shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool);
+shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh);
+void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
+void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
 #endif	// __MODEL__
 

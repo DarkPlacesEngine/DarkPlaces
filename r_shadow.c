@@ -36,10 +36,15 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, int *neighbors, vec3_t relativelightorigin, float projectdistance, int visiblevolume)
+void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance, int visiblevolume)
 {
 	int i, *e, *n, *out, tris;
 	float *v0, *v1, *v2, temp[3], f;
+	if (projectdistance < 0.1)
+	{
+		Con_Printf("R_Shadow_Volume: projectdistance %f\n");
+		return;
+	}
 // terminology:
 //
 // frontface:
@@ -84,8 +89,15 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 	for (i = 0, v0 = vertex, v1 = vertex + numverts * 4;i < numverts;i++, v0 += 4, v1 += 4)
 	{
 		VectorSubtract(v0, relativelightorigin, temp);
+#if 0
+		f = lightradius / sqrt(DotProduct(temp,temp));
+		if (f < 1)
+			f = 1;
+		VectorMA(relativelightorigin, f, temp, v1);
+#else
 		f = projectdistance / sqrt(DotProduct(temp,temp));
 		VectorMA(v0, f, temp, v1);
+#endif
 	}
 
 	// check which triangles are facing the light
@@ -113,7 +125,7 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 #else
 		// readable version
 		{
-		float dir0[3], dir1[3],
+		float dir0[3], dir1[3];
 
 		// calculate two mostly perpendicular edge directions
 		VectorSubtract(v0, v1, dir0);
@@ -133,7 +145,6 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 		// the normal is not normalized because it is used on both sides of
 		// the comparison, so it's magnitude does not matter
 		trianglefacinglight[i] = DotProduct(relativelightorigin, temp) >= DotProduct(v0, temp);
-		}
 #endif
 	}
 
@@ -150,6 +161,7 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 		{
 			// triangle is backface and therefore casts shadow,
 			// output front and back caps for shadow volume
+#if 1
 			// front cap (with flipped winding order)
 			out[0] = e[0];
 			out[1] = e[2];
@@ -160,6 +172,14 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 			out[5] = e[2] + numverts;
 			out += 6;
 			tris += 2;
+#else
+			// rear cap
+			out[0] = e[0] + numverts;
+			out[1] = e[1] + numverts;
+			out[2] = e[2] + numverts;
+			out += 3;
+			tris += 1;
+#endif
 			// check the edges
 			if (n[0] < 0 || trianglefacinglight[n[0]])
 			{
@@ -199,14 +219,16 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 	// draw the volume
 	if (visiblevolume)
 	{
-		qglDisable(GL_CULL_FACE);
+		//qglDisable(GL_CULL_FACE);
 		R_Mesh_Draw(numverts * 2, tris, shadowelements);
-		qglEnable(GL_CULL_FACE);
+		//qglEnable(GL_CULL_FACE);
 	}
 	else
 	{
 		qglColorMask(0,0,0,0);
+		qglDepthMask(0);
 		qglEnable(GL_STENCIL_TEST);
+
 		// increment stencil if backface is behind depthbuffer
 		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
@@ -215,9 +237,11 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 		R_Mesh_Draw(numverts * 2, tris, shadowelements);
+
 		// restore to normal quake rendering
 		qglDisable(GL_STENCIL_TEST);
 		qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+		qglDepthMask(1);
 		qglColorMask(1,1,1,1);
 	}
 }

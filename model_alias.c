@@ -248,6 +248,7 @@ static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, qbyte *skintem
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
+extern void R_DrawQ1Q2AliasModelShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
 void Mod_LoadAliasModel (model_t *mod, void *buffer)
 {
 	int						i, j, version, numverts, totalposes, totalskins, skinwidth, skinheight, totalverts, groupframes, groupskins;
@@ -530,6 +531,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawFakeShadow = R_DrawQ1Q2AliasModelFakeShadow;
+	loadmodel->DrawShadowVolume = R_DrawQ1Q2AliasModelShadowVolume;
 
 	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
