@@ -46,6 +46,9 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers);
 // returns true if the entity is in solid currently
 int SV_TestEntityPosition (edict_t *ent);
 
+// returns list of entities touching a box
+int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list);
+
 // mins and maxs are relative
 // if the entire move stays in a solid volume, trace.allsolid will be set
 
