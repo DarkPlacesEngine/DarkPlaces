@@ -178,4 +178,95 @@ More dynamic lights (32 changed to 256).
 More precached models and sounds (256 changed to 4096).
 Many more features documented in dpextensions.qc. (bullet tracing on models, qc player input, etc)
 
-
+Commandline options as of 2004-10-05:
+BSD GLX: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1, useful only for using fxmesa or similar, if you don't know what this is for, you don't need it
+BSD GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
+BSD GLX: -novideosync disables GLX_SGI_video_sync
+BSD Sound: -cddev <devicepath> chooses which CD drive to use
+Client: -benchmark <demoname> runs a timedemo and quits, results of any timedemo can be found in gamedir/benchmark.log (for example id1/benchmark.log)
+Client: -forceqmenu disables menu.dat (same as +forceqmenu 1)
+Client: -particles <number> changes maximum number of particles at once, default 32768
+Client: -texbrightness <number> sets the quake palette brightness (brightness of black), allowing you to make quake textures brighter/darker, not recommended
+Client: -texcontrast <number> sets the quake palette contrast, allowing you to make quake textures brighter/darker, not recommended
+Client: -texgamma <number> sets the quake palette gamma, allowing you to make quake textures brighter/darker, not recommended
+Client: -useqmenu causes the first time you open the menu to use the quake menu, then reverts to menu.dat (if forceqmenu is 0)
+Console: -condebug logs console messages to qconsole.log with sync on (so it keeps every message up to a crash), see also log_file and log_sync
+Console: -developer enables warnings and other notices (RECOMMENDED for mod developers)
+Console: -nostdout disables text output to the terminal the game was launched from
+Filesystem: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
+Filesystem: -path <path ..> specifies the full search path manually, overriding the generated one, example: -path c:\quake\id1 c:\quake\pak0.pak c:\quake\pak1.pak (not recommended)
+GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
+GL: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
+GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
+GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
+GL: -nodot3 disables GL_ARB_texture_env_dot3 (required for bumpmapping)
+GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
+GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
+GL: -nofragmentshader disables GL_ARB_fragment_shader (currently unused, allows pixel shader effects)
+GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
+GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
+GL: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)
+GL: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rendering)
+GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
+GL: -notextureshader disables GL_NV_texture_shader (required for the Geforce3 water shader, NVIDIA only)
+GL: -novertexshader disables GL_ARB_vertex_shader (currently unused, allows vertex shader effects)
+Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech 
+Game: -fniggium runs the post apocalyptic melee RPG Fniggium 
+Game: -goodvsbad2 runs the psychadelic RTS FPS game Good Vs Bad 2
+Game: -hipnotic runs Quake mission pack 1: The Scourge of Armagon
+Game: -nehahra runs The Seal of Nehahra movie and game
+Game: -neoteric runs the game Neoteric
+Game: -netherworld runs the game Netherworld: Dark Masters
+Game: -nexuiz runs the multiplayer game Nexuiz
+Game: -openquartz runs the game OpenQuartz, a standalone GPL replacement of the quake content
+Game: -prydon runs the topdown point and click action-RPG Prydon Gate
+Game: -quake runs the game Quake (default)
+Game: -rogue runs Quake mission pack 2: The Dissolution of Eternity
+Game: -setheral runs the multiplayer game Setheral 
+Game: -som runs the multiplayer game Son Of Man 
+Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
+Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
+Game: -transfusion runs Transfusion (the recreation of Blood in Quake)
+Game: -zymotic runs the singleplayer game Zymotic
+Input: -nomouse disables mouse support (see also vid_mouse cvar)
+Linux ALSA Sound: -sndbits <number> sets sound precision to 8 or 16 bit (email me if you want others added)
+Linux ALSA Sound: -sndmono sets sound output to mono
+Linux ALSA Sound: -sndpcm <devicename> selects which pcm device to us, default is "default"
+Linux ALSA Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+Linux ALSA Sound: -sndstereo sets sound output to stereo
+Linux GLX: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1, useful only for using fxmesa or similar, if you don't know what this is for, you don't need it
+Linux GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
+Linux GLX: -novideosync disables GLX_SGI_video_sync
+Linux OSS Sound: -sndbits <bits> chooses 8 bit or 16 bit sound output
+Linux OSS Sound: -sndmono sets sound output to mono
+Linux OSS Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+Linux OSS Sound: -sndstereo sets sound output to stereo
+Linux Sound: -cddev <devicepath> chooses which CD drive to use
+MacOSX GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
+MacOSX GLX: -novideosync disables GLX_SGI_video_sync
+SDL GL: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1 (Linux/BSD) or opengl32.dll (windows) or OpenGL.framework (MacOSX), useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
+SDL Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+Server: -dedicated [playerlimit] starts a dedicated server (with a command console), default playerlimit is 8
+Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
+Server: -listen [playerlimit] starts a multiplayer server with graphical client, like singleplayer but other players can connect, default playerlimit is 8
+Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
+Sound: -nocdaudio disables CD audio support
+Sound: -nosound disables sound (including CD audio)
+Sound: -novorbis disables ogg vorbis sound support
+Sound: -simsound runs sound mixing but with no output
+Video: -bpp <bits> performs +vid_bitsperpixel <bits> (example -bpp 32 or -bpp 16)
+Video: -fullscreen performs +vid_fullscreen 1
+Video: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
+Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
+Video: -window performs +vid_fullscreen 0
+Windows DirectSound: -primarysound locks the sound hardware for exclusive use
+Windows DirectSound: -snoforceformat uses the format that DirectSound returns, rather than forcing it
+Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (ignored with -dinput, windows only)
+Windows GDI Input: -noforcemparms disables setting of mouse parameters (ignored with -dinput, windows only)
+Windows GDI Input: -noforcemspd disables setting of mouse speed (ignored with -dinput, windows only)
+Windows Input: -dinput uses DirectInput (instead of GDI) for mouse/joystick input, may be more precise or responsive, but probably not
+Windows Input: -nojoy disables joystick support, may be a small speed increase
+Windows Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+Windows Sound: -wavonly uses wave sound instead of DirectSound
+Windows WGL: -gl_driver <drivername> selects a GL driver library, default is opengl32.dll, useful only for 3dfxogl.dll or 3dfxvgl.dll, if you don't know what this is for, you don't need it
+Windows WGL: -novideosync disables WGL_EXT_swap_control
