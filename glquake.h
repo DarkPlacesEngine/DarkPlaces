@@ -99,8 +99,6 @@ extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light valu
 
 extern	qboolean	envmap;
 
-extern	int	skytexturenum;		// index in cl.loadmodel, not gl texture object
-
 extern	cvar_t	r_drawentities;
 extern	cvar_t	r_drawviewmodel;
 extern	cvar_t	r_speeds;
