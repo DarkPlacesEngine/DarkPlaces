@@ -18,7 +18,7 @@ int gl_supportslockarrays = false;
 int gl_videosyncavailable = false;
 // stencil available
 int gl_stencil = false;
-// GL_EXT_texture3D
+// 3D textures available
 int gl_texture3d = false;
 // GL_ARB_texture_cubemap
 int gl_texturecubemap = false;
@@ -174,9 +174,9 @@ void (GLAPIENTRY *qglDrawRangeElementsEXT)(GLenum mode, GLuint start, GLuint end
 
 //void (GLAPIENTRY *qglColorTableEXT)(int, int, int, int, int, const void *);
 
-void (GLAPIENTRY *qglTexImage3DEXT)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-void (GLAPIENTRY *qglTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
-void (GLAPIENTRY *qglCopyTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+void (GLAPIENTRY *qglTexImage3D)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 
 
 int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent)
@@ -333,9 +333,9 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 
 static gl_extensionfunctionlist_t texture3dfuncs[] =
 {
-	{"glTexImage3DEXT", (void **) &qglTexImage3DEXT},
-	{"glTexSubImage3DEXT", (void **) &qglTexSubImage3DEXT},
-	{"glCopyTexSubImage3DEXT", (void **) &qglCopyTexSubImage3DEXT},
+	{"glTexImage3D", (void **) &qglTexImage3D},
+	{"glTexSubImage3D", (void **) &qglTexSubImage3D},
+	{"glCopyTexSubImage3D", (void **) &qglCopyTexSubImage3D},
 	{NULL, NULL}
 };
 
@@ -369,7 +369,7 @@ void VID_CheckExtensions(void)
 			gl_dot3arb = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
 	}
 
-	gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dfuncs, "-notexture3d", false);
+	gl_texture3d = GL_CheckExtension("glTexImage3D", texture3dfuncs, "-notexture3d", false);
 	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 
@@ -440,8 +440,6 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 
 void VID_Shared_Init(void)
 {
-	int i;
-
 	Cvar_RegisterVariable(&vid_fullscreen);
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);
@@ -454,22 +452,6 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 	Cmd_AddCommand("vid_restart", VID_Restart_f);
-
-// interpret command-line parameters
-	if ((i = COM_CheckParm("-window")) != 0)
-		Cvar_SetValueQuick(&vid_fullscreen, false);
-	if ((i = COM_CheckParm("-fullscreen")) != 0)
-		Cvar_SetValueQuick(&vid_fullscreen, true);
-	if ((i = COM_CheckParm("-width")) != 0)
-		Cvar_SetQuick(&vid_width, com_argv[i+1]);
-	if ((i = COM_CheckParm("-height")) != 0)
-		Cvar_SetQuick(&vid_height, com_argv[i+1]);
-	if ((i = COM_CheckParm("-bpp")) != 0)
-		Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
-	if ((i = COM_CheckParm("-nostencil")) != 0)
-		Cvar_SetValueQuick(&vid_stencil, 0);
-	if ((i = COM_CheckParm("-stencil")) != 0)
-		Cvar_SetValueQuick(&vid_stencil, 1);
 }
 
 int current_vid_fullscreen;
@@ -528,8 +510,30 @@ void VID_Restart_f(void)
 	VID_OpenSystems();
 }
 
+int vid_commandlinecheck = true;
 void VID_Open(void)
 {
+	int i;
+	if (vid_commandlinecheck)
+	{
+		// interpret command-line parameters
+		vid_commandlinecheck = false;
+		if ((i = COM_CheckParm("-window")) != 0)
+			Cvar_SetValueQuick(&vid_fullscreen, false);
+		if ((i = COM_CheckParm("-fullscreen")) != 0)
+			Cvar_SetValueQuick(&vid_fullscreen, true);
+		if ((i = COM_CheckParm("-width")) != 0)
+			Cvar_SetQuick(&vid_width, com_argv[i+1]);
+		if ((i = COM_CheckParm("-height")) != 0)
+			Cvar_SetQuick(&vid_height, com_argv[i+1]);
+		if ((i = COM_CheckParm("-bpp")) != 0)
+			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
+		if ((i = COM_CheckParm("-nostencil")) != 0)
+			Cvar_SetValueQuick(&vid_stencil, 0);
+		if ((i = COM_CheckParm("-stencil")) != 0)
+			Cvar_SetValueQuick(&vid_stencil, 1);
+	}
+
 	Con_Printf("Starting video system\n");
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_stencil.integer))
 	{

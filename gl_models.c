@@ -581,7 +581,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, f
 {
 	R_Mesh_ResizeCheck(ent->model->numverts);
 	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-	R_Shadow_VertexLight(ent->model->numverts, varray_vertex, aliasvertnorm, relativelightorigin, lightradius * lightradius, lightdistbias, lightsubtract, lightcolor);
+	R_Shadow_Light(ent->model->numverts, aliasvertnorm, relativelightorigin, lightradius, lightdistbias, lightsubtract, lightcolor);
 	GL_UseColorArray();
 	R_Mesh_Draw(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices);
 }
