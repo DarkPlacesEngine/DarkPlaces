@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-int RecursiveLightPoint (vec3_t color, mnode_t *node, float x, float y, float startz, float endz)
+int SV_RecursiveLightPoint (vec3_t color, mnode_t *node, float x, float y, float startz, float endz)
 {
 	int		side, distz = endz - startz;
 	float	front, back;
@@ -72,7 +72,7 @@ loc0:
 	}
 	
 	// go down front side
-	if (node->children[side]->contents >= 0 && RecursiveLightPoint (color, node->children[side], x, y, startz, mid))
+	if (node->children[side]->contents >= 0 && SV_RecursiveLightPoint (color, node->children[side], x, y, startz, mid))
 		return true;	// hit something
 	else
 	{
@@ -81,10 +81,6 @@ loc0:
 		{
 			int i, ds, dt;
 			msurface_t *surf;
-			lightspot[0] = x;
-			lightspot[1] = y;
-			lightspot[2] = mid;
-			lightplane = node->plane;
 
 			surf = sv.worldmodel->surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surf++)
@@ -115,7 +111,7 @@ loc0:
 
 					for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
 					{
-						scale = d_lightstylevalue[surf->styles[maps]];
+						scale = 256; // FIXME: server doesn't know what light styles are doing
 						r00 += lightmap[      0] * scale;g00 += lightmap[      1] * scale;b00 += lightmap[      2] * scale;
 						r01 += lightmap[      3] * scale;g01 += lightmap[      4] * scale;b01 += lightmap[      5] * scale;
 						r10 += lightmap[line3+0] * scale;g10 += lightmap[line3+1] * scale;b10 += lightmap[line3+2] * scale;
@@ -150,5 +146,5 @@ void SV_LightPoint (vec3_t color, vec3_t p)
 	}
 	
 	color[0] = color[1] = color[2] = 0;
-	RecursiveLightPoint (color, sv.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+	SV_RecursiveLightPoint (color, sv.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 }
