@@ -26,11 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "conproc.h"
 #include "direct.h"
 
-// LordHavoc: raised min to 64mb (was 8.5mb)
-#define MINIMUM_WIN_MEMORY		0x04000000
-// LordHavoc: raised max to 64mb (was 16mb)
-#define MAXIMUM_WIN_MEMORY		0x04000000
-
 #define CONSOLE_ERROR_TIMEOUT	60.0	// # of seconds to wait on Sys_Error running
 										//  dedicated before exiting
 #define PAUSE_SLEEP		50				// sleep time on pause or minimization
@@ -694,6 +689,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 // take the greater of all the available memory or half the total memory,
 // but at least 8 Mb and no more than 16 Mb, unless they explicitly
 // request otherwise
+	/*
 	host_parms.memsize = lpBuffer.dwAvailPhys;
 
 	if (host_parms.memsize < MINIMUM_WIN_MEMORY)
@@ -704,6 +700,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	if (host_parms.memsize > MAXIMUM_WIN_MEMORY)
 		host_parms.memsize = MAXIMUM_WIN_MEMORY;
+	*/
+	host_parms.memsize = DEFAULTMEM * 1048576;
 
 	if ((t = COM_CheckParm("-heapsize")))
 	{

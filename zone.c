@@ -271,7 +271,7 @@ typedef struct
 {
 	int		sentinal;
 	int		size;		// including sizeof(hunk_t), -1 = not allocated
-	char	name[8];
+	char	name[24];
 } hunk_t;
 
 byte	*hunk_base;
@@ -280,16 +280,13 @@ int		hunk_size;
 int		hunk_low_used;
 int		hunk_high_used;
 
-qboolean	hunk_tempactive;
-int		hunk_tempmark;
-
 void R_FreeTextures (void);
 
 /*
 ==============
 Hunk_Check
 
-Run consistancy and sentinal trahing checks
+Run consistancy and sentinal trashing checks
 ==============
 */
 void Hunk_Check (void)
@@ -299,8 +296,8 @@ void Hunk_Check (void)
 	for (h = (hunk_t *)hunk_base ; (byte *)h != hunk_base + hunk_low_used ; )
 	{
 		if (h->sentinal != HUNK_SENTINAL)
-			Sys_Error ("Hunk_Check: trahsed sentinal");
-		if (h->size < 16 || h->size + (byte *)h - hunk_base > hunk_size)
+			Sys_Error ("Hunk_Check: trashed sentinal");
+		if (h->size < sizeof(hunk_t) || h->size + (byte *)h - hunk_base > hunk_size)
 			Sys_Error ("Hunk_Check: bad size");
 		h = (hunk_t *)((byte *)h+h->size);
 	}
@@ -317,11 +314,11 @@ Otherwise, allocations with the same name will be totaled up before printing.
 void Hunk_Print (qboolean all)
 {
 	hunk_t	*h, *next, *endlow, *starthigh, *endhigh;
-	int		count, sum;
+	int		count, sum, i;
 	int		totalblocks;
-	char	name[9];
+	char	name[25];
 
-	name[8] = 0;
+	name[24] = 0;
 	count = 0;
 	sum = 0;
 	totalblocks = 0;
@@ -331,7 +328,7 @@ void Hunk_Print (qboolean all)
 	starthigh = (hunk_t *)(hunk_base + hunk_size - hunk_high_used);
 	endhigh = (hunk_t *)(hunk_base + hunk_size);
 
-	Con_Printf ("          :%8i total hunk size\n", hunk_size);
+	Con_Printf ("          :%8i total hunk                 size\n", hunk_size);
 	Con_Printf ("-------------------------\n");
 
 	while (1)
@@ -358,7 +355,7 @@ void Hunk_Print (qboolean all)
 	//
 		if (h->sentinal != HUNK_SENTINAL)
 			Sys_Error ("Hunk_Check: trashed sentinal");
-		if (h->size < 16 || h->size + (byte *)h - hunk_base > hunk_size)
+		if (h->size < sizeof(hunk_t) || h->size + (byte *)h - hunk_base > hunk_size)
 			Sys_Error ("Hunk_Check: bad size");
 			
 		next = (hunk_t *)((byte *)h+h->size);
@@ -369,18 +366,26 @@ void Hunk_Print (qboolean all)
 	//
 	// print the single block
 	//
-		memcpy (name, h->name, 8);
+		// LordHavoc: pad name to full length
+		for (i = 0;i < 24;i++)
+		{
+			if (!h->name[i])
+				break;
+			name[i] = h->name[i];
+		}
+		for (;i < 24;i++)
+			name[i] = ' ';
+		//memcpy (name, h->name, 24);
 		if (all)
-			Con_Printf ("%8p :%8i %8s\n",h, h->size, name);
+			Con_Printf ("%8p :%8i %s\n",h, h->size, name);
 			
 	//
 	// print the total
 	//
-		if (next == endlow || next == endhigh || 
-		strncmp (h->name, next->name, 8) )
+		if (next == endlow || next == endhigh || strncmp(h->name, next->name, 24))
 		{
 			if (!all)
-				Con_Printf ("          :%8i %8s (TOTAL)\n",sum, name);
+				Con_Printf ("          :%8i %s (TOTAL)\n",sum, name);
 			count = 0;
 			sum = 0;
 		}
@@ -388,7 +393,7 @@ void Hunk_Print (qboolean all)
 		h = next;
 	}
 
-	Con_Printf ("-------------------------\n");
+//	Con_Printf ("-------------------------\n");
 	Con_Printf ("%8i total blocks\n", totalblocks);
 	
 }
@@ -423,19 +428,9 @@ void *Hunk_AllocName (int size, char *name)
 	
 	h->size = size;
 	h->sentinal = HUNK_SENTINAL;
-	strncpy (h->name, name, 8);
+	strncpy (h->name, name, 24);
 	
 	return (void *)(h+1);
-}
-
-/*
-===================
-Hunk_Alloc
-===================
-*/
-void *Hunk_Alloc (int size)
-{
-	return Hunk_AllocName (size, "unknown");
 }
 
 int	Hunk_LowMark (void)
@@ -453,22 +448,11 @@ void Hunk_FreeToLowMark (int mark)
 
 int	Hunk_HighMark (void)
 {
-	if (hunk_tempactive)
-	{
-		hunk_tempactive = false;
-		Hunk_FreeToHighMark (hunk_tempmark);
-	}
-
 	return hunk_high_used;
 }
 
 void Hunk_FreeToHighMark (int mark)
 {
-	if (hunk_tempactive)
-	{
-		hunk_tempactive = false;
-		Hunk_FreeToHighMark (hunk_tempmark);
-	}
 	if (mark < 0 || mark > hunk_high_used)
 		Sys_Error ("Hunk_FreeToHighMark: bad mark %i", mark);
 	memset (hunk_base + hunk_size - hunk_high_used, 0, hunk_high_used - mark);
@@ -487,12 +471,6 @@ void *Hunk_HighAllocName (int size, char *name)
 
 	if (size < 0)
 		Sys_Error ("Hunk_HighAllocName: bad size: %i", size);
-
-	if (hunk_tempactive)
-	{
-		Hunk_FreeToHighMark (hunk_tempmark);
-		hunk_tempactive = false;
-	}
 
 #ifdef PARANOID
 	Hunk_Check ();
@@ -517,35 +495,6 @@ void *Hunk_HighAllocName (int size, char *name)
 	strncpy (h->name, name, 8);
 
 	return (void *)(h+1);
-}
-
-
-/*
-=================
-Hunk_TempAlloc
-
-Return space from the top of the hunk
-=================
-*/
-void *Hunk_TempAlloc (int size)
-{
-	void	*buf;
-
-	size = (size+15)&~15;
-	
-	if (hunk_tempactive)
-	{
-		Hunk_FreeToHighMark (hunk_tempmark);
-		hunk_tempactive = false;
-	}
-	
-	hunk_tempmark = Hunk_HighMark ();
-
-	buf = Hunk_HighAllocName (size, "temp");
-
-	hunk_tempactive = true;
-
-	return buf;
 }
 
 /*

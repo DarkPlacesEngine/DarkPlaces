@@ -340,9 +340,9 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, in
 			sprintf (name, "%s_%i", loadmodel->name, i);
 
 			Mod_FloodFillSkin( skin, width, height );
-			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FBD, va("%s_normal", name)); // normal (no special colors)
-			*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0040, va("%s_pants",  name)); // pants
-			*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0002, va("%s_shirt",  name)); // shirt
+			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FBD, va("&%s_normal", name)); // normal (no special colors)
+			*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0040, va("&%s_pants",  name)); // pants
+			*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0002, va("&%s_shirt",  name)); // shirt
 			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow",   name)); // glow
 			*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body",   name)); // body (normal + pants + shirt, but not glow)
 			pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
@@ -363,9 +363,9 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, in
 				sprintf (name, "%s_%i_%i", loadmodel->name, i,j);
 
 				Mod_FloodFillSkin( skin, width, height );
-				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FBD, va("%s_normal", name)); // normal (no special colors)
-				*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0040, va("%s_pants",  name)); // pants
-				*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0002, va("%s_shirt",  name)); // shirt
+				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FBD, va("&%s_normal", name)); // normal (no special colors)
+				*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0040, va("&%s_pants",  name)); // pants
+				*skintexnum++ = GL_SkinSplitShirt((byte *)pskintype, skintemp, width, height, 0x0002, va("&%s_shirt",  name)); // shirt
 				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow",   name)); // glow
 				*skintexnum++ = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body",   name)); // body (normal + pants + shirt, but not glow)
 				pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
@@ -463,7 +463,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	}
 
 	// rebuild the model
-	mheader = Hunk_AllocName (sizeof(maliashdr_t), loadname);
+	mheader = Hunk_AllocName (sizeof(maliashdr_t), va("%s model header", loadname));
 	mod->flags = LittleLong (pinmodel->flags);
 	mod->type = mod_alias;
 // endian-adjust and copy the data, starting with the alias model header
@@ -503,7 +503,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	}
 
 // load triangle data
-	pouttris = Hunk_AllocName(sizeof(unsigned short[3]) * numtris, loadname);
+	pouttris = Hunk_AllocName(sizeof(unsigned short[3]) * numtris, va("%s triangles", loadname));
 	mheader->tridata = (int) pouttris - (int) mheader;
 	pintriangles = (dtriangle_t *)&pinstverts[mheader->numverts];
 
@@ -548,7 +548,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		*pouttris++ = vertremap[temptris[i][2]];
 	}
 	// store the texture coordinates
-	pouttexcoords = Hunk_AllocName(sizeof(float[2]) * totalverts, loadname);
+	pouttexcoords = Hunk_AllocName(sizeof(float[2]) * totalverts, va("%s texcoords", loadname));
 	mheader->texdata = (int) pouttexcoords - (int) mheader;
 	for (i = 0;i < totalverts;i++)
 	{
@@ -558,9 +558,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 // load the frames
 	posenum = 0;
-	frame = Hunk_AllocName(sizeof(maliasframe_t) * numframes, loadname);
+	frame = Hunk_AllocName(sizeof(maliasframe_t) * numframes, va("%s frame info", loadname));
 	mheader->framedata = (int) frame - (int) mheader;
-	posevert = Hunk_AllocName(sizeof(trivert2) * numposes * totalverts, loadname);
+	posevert = Hunk_AllocName(sizeof(trivert2) * numposes * totalverts, va("%s vertex data", loadname));
 	mheader->posedata = (int) posevert - (int) mheader;
 	pframetype = (daliasframetype_t *)&pintriangles[numtris];
 
@@ -712,7 +712,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		 + LittleLong(pinmodel->num_glcmds) * sizeof(int);
 	if (size <= 0 || size >= MD2MAX_SIZE)
 		Host_Error ("%s is not a valid model", mod->name);
-	pheader = Hunk_AllocName (size, loadname);
+	pheader = Hunk_AllocName (size, va("%s Quake2 model", loadname));
 	
 	mod->flags = 0; // there are no MD2 flags
 	mod->numframes = LittleLong(pinmodel->num_frames);

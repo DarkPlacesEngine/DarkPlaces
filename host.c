@@ -798,7 +798,7 @@ Host_Init
 */
 void Host_Init ()
 {
-
+	/*
 	if (standard_quake)
 		minimum_memory = MINIMUM_MEMORY;
 	else
@@ -809,6 +809,7 @@ void Host_Init ()
 
 	if (host_parms.memsize < minimum_memory)
 		Sys_Error ("Only %4.1f megs of memory available, can't execute game", host_parms.memsize / (float)0x100000);
+	*/
 
 	com_argc = host_parms.argc;
 	com_argv = host_parms.argv;

@@ -1634,25 +1634,24 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 // extract the filename base name for hunk tag
 	COM_FileBase (path, base);
 	
-	if (usehunk == 1)
-		buf = Hunk_AllocName (len+1, base);
-	else if (usehunk == 2)
-		buf = Hunk_TempAlloc (len+1);
-	else if (usehunk == 0)
-		buf = Z_Malloc (len+1);
-	else if (usehunk == 3)
-		buf = Cache_Alloc (loadcache, len+1, base);
-	else if (usehunk == 4)
+	switch (usehunk)
 	{
-		if (len+1 > loadsize)
-			buf = Hunk_TempAlloc (len+1);
-		else
-			buf = loadbuf;
-	}
-	else if (usehunk == 5)
+	case 1:
+		buf = Hunk_AllocName (len+1, va("%s (file)", path));
+		break;
+//	case 0:
+//		buf = Z_Malloc (len+1);
+//		break;
+	case 3:
+		buf = Cache_Alloc (loadcache, len+1, base);
+		break;
+	case 5:
 		buf = qmalloc (len+1);
-	else
-		Sys_Error ("COM_LoadFile: bad usehunk");
+		break;
+//	default:
+//		Sys_Error ("COM_LoadFile: bad usehunk");
+//		break;
+	}
 
 	if (!buf)
 		Sys_Error ("COM_LoadFile: not enough space for %s", path);
@@ -1670,11 +1669,6 @@ byte *COM_LoadHunkFile (char *path, qboolean quiet)
 	return COM_LoadFile (path, 1, quiet);
 }
 
-byte *COM_LoadTempFile (char *path, qboolean quiet)
-{
-	return COM_LoadFile (path, 2, quiet);
-}
-
 // LordHavoc: returns malloc'd memory
 byte *COM_LoadMallocFile (char *path, qboolean quiet)
 {
@@ -1685,18 +1679,6 @@ void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet)
 {
 	loadcache = cu;
 	COM_LoadFile (path, 3, quiet);
-}
-
-// uses temp hunk if larger than bufsize
-byte *COM_LoadStackFile (char *path, void *buffer, int bufsize, qboolean quiet)
-{
-	byte    *buf;
-	
-	loadbuf = (byte *)buffer;
-	loadsize = bufsize;
-	buf = COM_LoadFile (path, 4, quiet);
-	
-	return buf;
 }
 
 /*
@@ -1741,7 +1723,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 	if (numpackfiles != PAK0_COUNT)
 		com_modified = true;    // not the original file
 
-	newfiles = Hunk_AllocName (numpackfiles * sizeof(packfile_t), "packfile");
+	newfiles = Hunk_AllocName (numpackfiles * sizeof(packfile_t), "pack file-table");
 
 	info = qmalloc(sizeof(*info)*MAX_FILES_IN_PACK);
 	Sys_FileSeek (packhandle, header.dirofs);
@@ -1765,7 +1747,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 	}
 	qfree(info);
 
-	pack = Hunk_Alloc (sizeof (pack_t));
+	pack = Hunk_AllocName (sizeof (pack_t), packfile);
 	strcpy (pack->filename, packfile);
 	pack->handle = packhandle;
 	pack->numfiles = numpackfiles;
@@ -1796,7 +1778,7 @@ void COM_AddGameDirectory (char *dir)
 //
 // add the directory to the search path
 //
-	search = Hunk_Alloc (sizeof(searchpath_t));
+	search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
 	strcpy (search->filename, dir);
 	search->next = com_searchpaths;
 	com_searchpaths = search;
@@ -1810,10 +1792,10 @@ void COM_AddGameDirectory (char *dir)
 		pak = COM_LoadPackFile (pakfile);
 		if (!pak)
 			break;
-		search = Hunk_Alloc (sizeof(searchpath_t));
+		search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
 		search->pack = pak;
 		search->next = com_searchpaths;
-		com_searchpaths = search;               
+		com_searchpaths = search;
 	}
 
 //
@@ -1898,7 +1880,7 @@ void COM_InitFilesystem (void)
 
 //
 // -path <dir or packfile> [<dir or packfile>] ...
-// Fully specifies the exact serach path, overriding the generated one
+// Fully specifies the exact search path, overriding the generated one
 //
 	i = COM_CheckParm ("-path");
 	if (i)
@@ -1910,7 +1892,7 @@ void COM_InitFilesystem (void)
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
 			
-			search = Hunk_Alloc (sizeof(searchpath_t));
+			search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
 			if ( !strcmp(COM_FileExtension(com_argv[i]), "pak") )
 			{
 				search->pack = COM_LoadPackFile (com_argv[i]);

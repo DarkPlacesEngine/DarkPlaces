@@ -268,7 +268,7 @@ int main (int argc, char **argv)
 
 	memset (&host_parms, 0, sizeof(host_parms));
 
-	host_parms.memsize = 16384*1024;
+	host_parms.memsize = DEFAULTMEM * 1024*1024;
 	host_parms.membase = qmalloc(parms.memsize);
 
 	_getcwd (cwd, sizeof(cwd));
