@@ -56,7 +56,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 				((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
 		else //if (sc->width == 2) // 16bit
 			for (i = 0;i < srclength;i++)
-				((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
+				((short *)sc->data)[i] = ((short *)data)[i];
 	}
 	else
 	{
@@ -74,8 +74,8 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 					fracstep <<= 1;
 					for (i=0 ; i<outcount ; i++)
 					{
-						*out++ = LittleShort (in[srcsample  ]);
-						*out++ = LittleShort (in[srcsample+1]);
+						*out++ = in[srcsample  ];
+						*out++ = in[srcsample+1];
 						srcsample += fracstep;
 					}
 				}
@@ -83,7 +83,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 				{
 					for (i=0 ; i<outcount ; i++)
 					{
-						*out++ = LittleShort (in[srcsample  ]);
+						*out++ = in[srcsample];
 						srcsample += fracstep;
 					}
 				}
@@ -258,6 +258,21 @@ sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 	sc->speed = info.rate;
 	sc->width = info.width;
 	sc->stereo = info.channels == 2;
+
+#if BYTE_ORDER != LITTLE_ENDIAN
+	// We must convert the WAV data from little endian
+	// to the machine endianess before resampling it
+	if (info.width == 2)
+	{
+		int i;
+		short* ptr;
+
+		len = info.samples * info.channels;
+		ptr = (short*)(data + info.dataofs);
+		for (i = 0; i < len; i++)
+			ptr[i] = LittleShort (ptr[i]);
+	}
+#endif
 
 	ResampleSfx(sc, data + info.dataofs, s->name);
 

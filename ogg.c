@@ -372,7 +372,7 @@ sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	ogg_int64_t len;
 	char *buff;
 	ogg_int64_t done;
-	int bs;
+	int bs, bigendian;
 	long ret;
 	sfxcache_t *sc;
 
@@ -411,7 +411,12 @@ sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	buff = Mem_Alloc (tempmempool, (int)len);
 	done = 0;
 	bs = 0;
-	while ((ret = qov_read (&vf, &buff[done], (int)(len - done), 0, 2, 1, &bs)) > 0)
+#if BYTE_ORDER == LITTLE_ENDIAN
+	bigendian = 0;
+#else
+	bigendian = 1;
+#endif
+	while ((ret = qov_read (&vf, &buff[done], (int)(len - done), bigendian, 2, 1, &bs)) > 0)
 		done += ret;
 
 	// Calculate resampled length
