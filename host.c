@@ -769,10 +769,9 @@ void _Host_Frame (float time)
 	if (cls.signon == SIGNONS && cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
 	{
 		// LordHavoc: this used to use renderer variables (eww)
-		vec3_t forward, right, up, origin;
-		Matrix4x4_ToVectors(&cl_entities[cl.viewentity].render.matrix, forward, right, up, origin);
-		VectorNegate(right, right);
-		S_Update(origin, forward, right, up);
+		vec3_t forward, left, up, origin;
+		Matrix4x4_ToVectors(&cl_entities[cl.viewentity].render.matrix, forward, left, up, origin);
+		S_Update(origin, forward, left, up);
 	}
 	else
 		S_Update(vec3_origin, vec3_origin, vec3_origin, vec3_origin);
