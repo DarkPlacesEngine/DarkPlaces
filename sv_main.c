@@ -452,6 +452,7 @@ void SV_PrepareEntitiesForSending(void)
 	int e, i;
 	float f;
 	edict_t *ent;
+	eval_t *val;
 	entity_state_t cs;
 	// send all entities that touch the pvs
 	numsendentities = 0;
@@ -482,6 +483,16 @@ void SV_PrepareEntitiesForSending(void)
 		cs.glowsize = (qbyte)bound(0, i, 255);
 		if (GETEDICTFIELDVALUE(ent, eval_glow_trail)->_float)
 			cs.flags |= RENDER_GLOWTRAIL;
+
+		// don't need to init cs.colormod because the defaultstate did that for us
+		//cs.colormod[0] = cs.colormod[1] = cs.colormod[2] = 32;
+		val = GETEDICTFIELDVALUE(ent, eval_colormod);
+		if (val->vector[0] || val->vector[1] || val->vector[2])
+		{
+			i = val->vector[0] * 32.0f;cs.colormod[0] = bound(0, i, 255);
+			i = val->vector[1] * 32.0f;cs.colormod[1] = bound(0, i, 255);
+			i = val->vector[2] * 32.0f;cs.colormod[2] = bound(0, i, 255);
+		}
 
 		cs.modelindex = 0;
 		i = (int)ent->v->modelindex;
