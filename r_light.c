@@ -171,7 +171,7 @@ void R_DrawCoronas(void)
 			VectorSubtract(rd->origin, vpn, diff);
 			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
-				scale = 1.0f / 262144.0f;
+				scale = 1.0f / 131072.0f;
 				m.cr = rd->light[0] * scale;
 				m.cg = rd->light[1] * scale;
 				m.cb = rd->light[2] * scale;
@@ -754,11 +754,14 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	int modeldlightbits[8];
 	mlight_t *sl;
 	a = currentrenderentity->alpha;
-	if (currentrenderentity->effects & EF_FULLBRIGHT)
+	// scale of the model's coordinate space, to alter light attenuation to match
+	// make the mscale squared so it can scale the squared distance results
+	mscale = currentrenderentity->scale * currentrenderentity->scale;
+	if (r_fullbright.integer || r_ambient.value > 128.0f || currentrenderentity->effects & EF_FULLBRIGHT)
 	{
-		basecolor[0] = colorr;
-		basecolor[1] = colorg;
-		basecolor[2] = colorb;
+		basecolor[0] = colorr * 2.0f;
+		basecolor[1] = colorg * 2.0f;
+		basecolor[2] = colorb * 2.0f;
 	}
 	else
 	{
@@ -767,17 +770,50 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			R_ModelLightPoint(basecolor, currentrenderentity->origin, modeldlightbits);
 
 			nl = &nearlight[0];
-			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && nearlights < MAX_DLIGHTS;i++, sl++)
+			VectorSubtract(currentrenderentity->origin, currentrenderentity->entlightsorigin, v);
+			if ((realtime > currentrenderentity->entlightstime && DotProduct(v,v) >= 1.0f) || currentrenderentity->numentlights >= MAXENTLIGHTS)
 			{
-				if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
+				currentrenderentity->numentlights = 0;
+				currentrenderentity->entlightstime = realtime + 0.2;
+				VectorCopy(currentrenderentity->origin, currentrenderentity->entlightsorigin);
+				for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && nearlights < MAX_DLIGHTS;i++, sl++)
 				{
-					nl->falloff = sl->falloff;
+					if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
+					{
+						if (currentrenderentity->numentlights < MAXENTLIGHTS)
+							currentrenderentity->entlights[currentrenderentity->numentlights++] = i;
+
+						// integrate mscale into falloff, for maximum speed
+						nl->falloff = mscale * sl->falloff;
+						// transform the light into the model's coordinate system
+						if (worldcoords)
+							VectorCopy(sl->origin, nl->origin);
+						else
+							softwareuntransform(sl->origin, nl->origin);
+						f = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
+						VectorScale(sl->light, f, nl->light);
+						//nl->cullradius2 = 99999999;
+						nl->lightsubtract = sl->subtract;
+						nl->offset = sl->distbias;
+						nl++;
+						nearlights++;
+					}
+				}
+			}
+			else
+			{
+				for (i = 0;i < currentrenderentity->numentlights && nearlights < MAX_DLIGHTS;i++)
+				{
+					sl = cl.worldmodel->lights + currentrenderentity->entlights[i];
+
+					// integrate mscale into falloff, for maximum speed
+					nl->falloff = mscale * sl->falloff;
 					// transform the light into the model's coordinate system
 					if (worldcoords)
 						VectorCopy(sl->origin, nl->origin);
 					else
 						softwareuntransform(sl->origin, nl->origin);
-					f = d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
+					f = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					VectorScale(sl->light, f, nl->light);
 					//nl->cullradius2 = 99999999;
 					nl->lightsubtract = sl->subtract;
@@ -803,6 +839,8 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						VectorCopy(r_dlight[i].origin, nl->origin);
 					else
 						softwareuntransform(r_dlight[i].origin, nl->origin);
+					// integrate mscale into falloff, for maximum speed
+					nl->falloff = mscale;
 					// scale the cullradius so culling by distance is done before mscale is applied
 					//nl->cullradius2 = r_dlight[i].cullradius2 * currentrenderentity->scale * currentrenderentity->scale;
 					nl->light[0] = r_dlight[i].light[0] * colorr;
@@ -822,9 +860,6 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	basecolor[1] *= colorg;
 	basecolor[2] *= colorb;
 	avc = aliasvertcolor;
-	// scale of the model's coordinate space, to alter light attenuation to match
-	// make the mscale squared so it can scale the squared distance results
-	mscale = currentrenderentity->scale * currentrenderentity->scale;
 	if (nearlights)
 	{
 		av = aliasvert;
@@ -837,7 +872,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 				// distance attenuation
 				VectorSubtract(nl->origin, av, v);
 				dist2 = DotProduct(v,v);
-				f = (1.0f / (dist2 * mscale + nl->offset)) - nl->lightsubtract;
+				f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->lightsubtract;
 				if (f > 0)
 				{
 					// directional shading
