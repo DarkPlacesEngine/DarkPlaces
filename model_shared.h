@@ -115,8 +115,6 @@ typedef struct model_s
 
 	// brush model specific
 	int				firstmodelsurface, nummodelsurfaces;
-	// LordHavoc: sorted surface pointer array, sorted by shader type and then by texture
-	msurface_t		**modelsortedsurfaces; // [nummodelsurfaces]
 
 	// lightmap format, set to r_lightmaprgba when model is loaded
 	int				lightmaprgba;
