@@ -1226,7 +1226,7 @@ void CL_ParseTempEntity(void)
 		CL_ParticleExplosion(pos);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
-		CL_AllocDlight(NULL, &tempmatrix, 350, 2.5f, 2.0f, 1.0f, 700, 0.5, 0, 0, true, 1);
+		CL_AllocDlight(NULL, &tempmatrix, 350, 4.0f, 2.0f, 1.00f, 700, 0.5, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
