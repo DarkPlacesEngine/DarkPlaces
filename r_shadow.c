@@ -276,6 +276,25 @@ int *R_Shadow_ResizeShadowElements(int numtris)
 
 /*
 // readable version of some code found below
+//if ((t >= trianglerange_start && t < trianglerange_end) ? (t < i && !trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
+int PointInfrontOfTriangle(const float *p, const float *a, const float *b, const float *c)
+{
+	float dir0[3], dir1[3], normal[3];
+
+	// calculate two mostly perpendicular edge directions
+	VectorSubtract(a, b, dir0);
+	VectorSubtract(c, b, dir1);
+
+	// we have two edge directions, we can calculate a third vector from
+	// them, which is the direction of the surface normal (it's magnitude
+	// is not 1 however)
+	CrossProduct(dir0, dir1, normal);
+
+	// compare distance of light along normal, with distance of any point
+	// of the triangle along the same normal (the triangle is planar,
+	// I.E. flat, so all points give the same answer)
+	return DotProduct(p, normal) > DotProduct(a, normal);
+}
 int checkcastshadowfromedge(int t, int i)
 {
 	int *te;
