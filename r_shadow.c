@@ -2422,15 +2422,15 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				GL_LockArrays(0, mesh->numverts);
 				if (r_shadowstage == SHADOWSTAGE_STENCIL)
 				{
-					// decrement stencil if frontface is behind depthbuffer
-					qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
-					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
-					c_rtcached_shadowmeshes++;
-					c_rtcached_shadowtris += mesh->numtriangles;
 					// increment stencil if backface is behind depthbuffer
 					qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 					qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+					c_rtcached_shadowmeshes++;
+					c_rtcached_shadowtris += mesh->numtriangles;
+					// decrement stencil if frontface is behind depthbuffer
+					qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
+					qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 				}
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 				c_rtcached_shadowmeshes++;
@@ -2872,6 +2872,12 @@ void R_Shadow_LoadWorldLights(void)
 				corona = 0;
 			if (a < 9 || !strcmp(cubemapname, "\"\""))
 				cubemapname[0] = 0;
+			// remove quotes on cubemapname
+			if (cubemapname[0] == '"' && cubemapname[strlen(cubemapname) - 1] == '"')
+			{
+				cubemapname[strlen(cubemapname)-1] = 0;
+				strcpy(cubemapname, cubemapname + 1);
+			}
 			*s = '\n';
 			if (a < 8)
 			{
