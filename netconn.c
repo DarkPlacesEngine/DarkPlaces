@@ -101,6 +101,21 @@ hostcache_t hostcache_cache[HOSTCACHE_TOTALSIZE];
 
 qboolean	hostcache_consoleoutput;
 
+#if 0
+static void _HostCache_PingTest(void)
+{
+	int i;
+	for( i = 0 ; i < 50 ; i++ ) {
+		memset( &hostcache_cache[hostcache_cachecount], 0, sizeof( hostcache_t ) );
+		hostcache_cache[hostcache_cachecount].info.ping = rand() % 450;
+		hostcache_cache[hostcache_cachecount].finished = true;
+		sprintf( hostcache_cache[hostcache_cachecount].line1, "%i", hostcache_cache[hostcache_cachecount].info.ping );
+		_HostCache_Insert( &hostcache_cache[hostcache_cachecount] );
+		hostcache_cachecount++;
+	}
+}
+#endif
+
 // helper function to insert a value into the viewset
 // spare entries will be removed
 static void _HostCache_ViewSet_InsertBefore( int index, hostcache_t *entry )
@@ -144,9 +159,9 @@ static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
 	else if( hostcache_sortbyfield == HCIF_NAME )
 		result = strcmp( B->info.name, A->info.name );
 	
-	if( result > 0 && hostcache_sortdescending)
-		return true;
-	return false;
+	if( hostcache_sortdescending )
+		return result > 0;
+	return result < 0;
 }
 
 static qboolean _hc_testint( int A, hostcache_infofield_t op, int B )
@@ -230,18 +245,18 @@ static void _HostCache_Insert( hostcache_t *entry )
 		_HostCache_ViewSet_InsertBefore( hostcache_viewcount, entry );
 		return;
 	}
-	start = 1;
+	start = 0;
 	end = hostcache_viewcount - 1;
-	while( end > start )
+	while( end > start + 1 )
 	{
 		mid = (start + end) / 2;
 		// test the item that lies in the middle between start and end
 		if( _HostCache_SortTest( entry, hostcache_viewset[mid] ) )
 			// the item has to be in the upper half
-			end = mid - 1;
+			end = mid;
 		else 
 			// the item has to be in the lower half
-			start = mid + 1;
+			start = mid;
 	}
 	_HostCache_ViewSet_InsertBefore( start + 1, entry );
 }
