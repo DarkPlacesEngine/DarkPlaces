@@ -2610,12 +2610,12 @@ static void clippointtosurface(msurface_t *surf, vec3_t p, vec3_t out)
 		VectorNegate(surf->plane->normal, normal);
 	else
 		VectorCopy(surf->plane->normal, normal);
-	for (i = 0, j = surf->poly_numverts - 1;i < surf->poly_numverts;j = i, i++)
+	for (i = 0, j = surf->mesh.num_vertices - 1;i < surf->mesh.num_vertices;j = i, i++)
 	{
-		VectorSubtract(&surf->poly_verts[j * 3], &surf->poly_verts[i * 3], v1);
+		VectorSubtract(&surf->mesh.data_vertex3f[j * 3], &surf->mesh.data_vertex3f[i * 3], v1);
 		VectorNormalizeFast(v1);
 		CrossProduct(v1, normal, clipplanenormal);
-		clipplanedist = DotProduct(&surf->poly_verts[i * 3], clipplanenormal);
+		clipplanedist = DotProduct(&surf->mesh.data_vertex3f[i * 3], clipplanenormal);
 		clipdist = DotProduct(out, clipplanenormal) - clipplanedist;
 		if (clipdist > 0)
 		{
@@ -2652,7 +2652,7 @@ void PF_getsurfacenumpoints(void)
 		return;
 	}
 
-	G_FLOAT(OFS_RETURN) = surf->poly_numverts;
+	G_FLOAT(OFS_RETURN) = surf->mesh.num_vertices;
 }
 //PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
 void PF_getsurfacepoint(void)
@@ -2667,10 +2667,10 @@ void PF_getsurfacepoint(void)
 	if (!(surf = getsurface(ed, G_FLOAT(OFS_PARM1))))
 		return;
 	pointnum = G_FLOAT(OFS_PARM2);
-	if (pointnum < 0 || pointnum >= surf->poly_numverts)
+	if (pointnum < 0 || pointnum >= surf->mesh.num_vertices)
 		return;
 	// FIXME: implement rotation/scaling
-	VectorAdd(&surf->poly_verts[pointnum * 3], ed->v->origin, G_VECTOR(OFS_RETURN));
+	VectorAdd(&surf->mesh.data_vertex3f[pointnum * 3], ed->v->origin, G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
 void PF_getsurfacenormal(void)

@@ -137,8 +137,8 @@ mtexinfo_t;
 typedef struct msurface_s
 {
 	// bounding box for onscreen checks
-	vec3_t poly_mins;
-	vec3_t poly_maxs;
+	vec3_t mins;
+	vec3_t maxs;
 
 	// the node plane this is on, backwards if SURF_PLANEBACK flag set
 	mplane_t *plane;
@@ -156,9 +156,6 @@ typedef struct msurface_s
 
 	// surface number, to avoid having to do a divide to find the number of a surface from it's address
 	int number;
-
-	// center for sorting transparent meshes
-	vec3_t poly_center;
 
 	// index into d_lightstylevalue array, 255 means not used (black)
 	qbyte styles[MAXLIGHTMAPS];
@@ -182,16 +179,9 @@ typedef struct msurface_s
 	// avoid multiple collision traces with a surface polygon
 	int colframe;
 
-	// these are just 3D points defining the outline of the polygon,
-	// no texcoord info (that can be generated from these)
-	int poly_numverts;
-	float *poly_verts;
-
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
 
-	// neighboring surfaces (one per poly_numverts)
-	//struct msurface_s **neighborsurfaces;
 	// currently used only for generating static shadow volumes
 	int lighttemp_castshadow;
 
@@ -821,6 +811,10 @@ q3meffect_t;
 
 typedef struct q3msurface_s
 {
+	// bounding box for culling
+	vec3_t mins;
+	vec3_t maxs;
+
 	// FIXME: collisionmarkframe should be kept in a separate array
 	// FIXME: shadowmark should be kept in a separate array
 
@@ -828,9 +822,6 @@ typedef struct q3msurface_s
 	struct q3meffect_s *effect;
 	rtexture_t *lightmaptexture;
 	int collisionmarkframe; // don't collide twice in one trace
-	// bounding box for culling
-	float mins[3];
-	float maxs[3];
 
 	surfmesh_t mesh;
 
