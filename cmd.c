@@ -252,6 +252,7 @@ void Cmd_StuffCmds_f (void)
 			build[l++] = '\n';
 			build[l++] = 0;
 			Cbuf_InsertText (build);
+			i--;
 		}
 	}
 }
