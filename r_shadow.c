@@ -2185,7 +2185,7 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 
 	rtlight->lightmap_cullradius = bound(0, rtlight->radius, 2048.0f);
 	rtlight->lightmap_cullradius2 = rtlight->lightmap_cullradius * rtlight->lightmap_cullradius;
-	VectorScale(rtlight->color, rtlight->radius * d_lightstylevalue[rtlight->style] * 0.125f, rtlight->lightmap_light);
+	VectorScale(rtlight->color, rtlight->radius * (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * 0.125f, rtlight->lightmap_light);
 	rtlight->lightmap_subtract = 1.0f / rtlight->lightmap_cullradius2;
 }
 
@@ -2334,7 +2334,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	cullmaxs[0] = rtlight->shadoworigin[0] + rtlight->radius;
 	cullmaxs[1] = rtlight->shadoworigin[1] + rtlight->radius;
 	cullmaxs[2] = rtlight->shadoworigin[2] + rtlight->radius;
-	if (d_lightstylevalue[rtlight->style] <= 0)
+	if (rtlight->style >= 0 && d_lightstylevalue[rtlight->style] <= 0)
 		return;
 	numclusters = 0;
 	clusterlist = NULL;
@@ -2381,7 +2381,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	if (R_Shadow_ScissorForBBox(cullmins, cullmaxs))
 		return;
 
-	f = d_lightstylevalue[rtlight->style] * (1.0f / 256.0f);
+	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f);
 	VectorScale(rtlight->color, f, lightcolor);
 	/*
 	if (rtlight->selected)

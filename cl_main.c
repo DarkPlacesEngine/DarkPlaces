@@ -745,7 +745,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			tempmatrix.m[0][3] = v[0];
 			tempmatrix.m[1][3] = v[1];
 			tempmatrix.m[2][3] = v[2];
-			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, 0, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, -1, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			e->persistent.muzzleflash -= cl.frametime * 10;
 		}
 		// LordHavoc: if the model has no flags, don't check each
@@ -818,7 +818,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// hack to make glowing player light shine on their gun
 			//if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
 			//	dlightmatrix.m[2][3] += 30;
-			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		}
 		// custom rtlight
 		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
@@ -1068,7 +1068,7 @@ void CL_RelinkBeams(void)
 			{
 				// FIXME: create a matrix from the beam start/end orientation
 				Matrix4x4_CreateTranslate(&tempmatrix, b->end[0], b->end[1], b->end[2]);
-				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
+				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, -1, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			}
 			if (cl_beams_polygons.integer)
 				continue;
