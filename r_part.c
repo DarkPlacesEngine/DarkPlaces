@@ -25,8 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
 typedef enum {
-	pt_static, pt_grav, pt_blob, pt_blob2, pt_smoke, pt_snow, pt_bloodcloud,
-	pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade, pt_smokecloud
+	pt_static, pt_grav, pt_blob, pt_blob2, pt_smoke, pt_snow, pt_bloodcloud, pt_fallfadespark, pt_bubble, pt_fade, pt_smokecloud
 } ptype_t;
 
 typedef struct particle_s
@@ -494,7 +493,7 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	for (i = 0;i < 512;i++)
-		particle2(pt_fadespark2, colorStart + (i % colorLength), particletexture, 1.5, 255, 0.3, org, 8, 192);
+		particle2(pt_fade, colorStart + (i % colorLength), particletexture, 1.5, 255, 0.3, org, 8, 192);
 }
 
 /*
@@ -577,19 +576,20 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 	center[0] = (mins[0] + maxs[0]) * 0.5;
 	center[1] = (mins[1] + maxs[1]) * 0.5;
 	center[2] = (mins[2] + maxs[2]) * 0.5;
-	velscale[0] = velspeed * 2.0 / diff[0];
-	velscale[1] = velspeed * 2.0 / diff[1];
-	velscale[2] = velspeed * 2.0 / diff[2];
+	// FIXME: change velspeed back to 2.0x after fixing mod
+	velscale[0] = velspeed * 0.5 / diff[0];
+	velscale[1] = velspeed * 0.5 / diff[1];
+	velscale[2] = velspeed * 0.5 / diff[2];
 	
 	while (count--)
 	{
 		ALLOCPARTICLE
 
 		p->texnum = smokeparticletexture[rand()&7];
-		p->scale = 12;
+		p->scale = lhrandom(6, 8);
 		p->alpha = 96 + (rand()&63);
 		p->die = cl.time + 2;
-		p->type = pt_fadespark;
+		p->type = pt_bloodcloud;
 		p->color = (rand()&3)+68;
 		for (j=0 ; j<3 ; j++)
 		{
@@ -857,10 +857,11 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				*/
 
 			case 2:	// blood
+			case 4:	// slight blood
 				dec = 0.025f;
 				p->texnum = smokeparticletexture[rand()&7];
 				p->scale = lhrandom(6, 8);
-				p->alpha = 255;
+				p->alpha = type == 4 ? 192 : 255;
 				p->color = (rand()&3)+68;
 				p->type = pt_bloodcloud;
 				p->die = cl.time + 9999;
@@ -873,45 +874,14 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 
 			case 3:
 			case 5:	// tracer
-				dec = 0.01f;
-				p->texnum = particletexture;
-				p->scale = 2;
-				p->alpha = 255;
-				p->die = cl.time + 0.2; //5;
-				p->type = pt_static;
-				if (type == 3)
-					p->color = 52 + ((tracercount&4)<<1);
-				else
-					p->color = 230 + ((tracercount&4)<<1);
-
-				tracercount++;
-
-				VectorCopy (start, p->org);
-				if (tracercount & 1)
-				{
-					p->vel[0] = 30*vec[1];
-					p->vel[1] = 30*-vec[0];
-				}
-				else
-				{
-					p->vel[0] = 30*-vec[1];
-					p->vel[1] = 30*vec[0];
-				}
-				break;
-
-			case 4:	// slight blood
-				dec = 0.025f; // sparse trail
+				dec = 0.02f;
 				p->texnum = smokeparticletexture[rand()&7];
-				p->scale = lhrandom(6, 8);
-				p->alpha = 192;
-				p->color = (rand()&3)+68;
-				p->type = pt_fadespark2;
-				p->die = cl.time + 9999;
-				for (j=0 ; j<3 ; j++)
-				{
-					p->vel[j] = (rand()&15)-8;
-					p->org[j] = start[j] + ((rand()&3)-2);
-				}
+				p->scale = 4;
+				p->alpha = 64 + (rand()&31);
+				p->color = type == 3 ? 56 : 234;
+				p->type = pt_fade;
+				p->die = cl.time + 10000;
+				VectorCopy(start, p->org);
 				break;
 
 			case 6:	// voor trail
@@ -920,7 +890,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				p->scale = lhrandom(3, 5);
 				p->alpha = 255;
 				p->color = 9*16 + 8 + (rand()&3);
-				p->type = pt_fadespark2;
+				p->type = pt_fade;
 				p->die = cl.time + 2;
 				for (j=0 ; j<3 ; j++)
 				{
@@ -1099,26 +1069,8 @@ void R_DrawParticles (void)
 			if (p->alpha < 1 || p->scale < 1)
 				p->die = -1;
 			break;
-		case pt_fadespark:
-			p->alpha -= frametime * 256;
-			p->vel[2] -= gravity;
-			if (p->alpha < 1)
-				p->die = -1;
-			break;
-		case pt_fadespark2:
-			p->alpha -= frametime * 512;
-			p->vel[2] -= gravity;
-			if (p->alpha < 1)
-				p->die = -1;
-			break;
 		case pt_fallfadespark:
 			p->alpha -= frametime * 256;
-			p->vel[2] -= gravity;
-			if (p->alpha < 1)
-				p->die = -1;
-			break;
-		case pt_fallfadespark2:
-			p->alpha -= frametime * 512;
 			p->vel[2] -= gravity;
 			if (p->alpha < 1)
 				p->die = -1;
@@ -1129,16 +1081,19 @@ void R_DrawParticles (void)
 				p->die = -1;
 			break;
 		case pt_bubble:
-			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_EMPTY)
+			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (a != CONTENTS_WATER && a != CONTENTS_SLIME)
 				p->die = -1;
-			p->vel[2] += gravity;
-			if (p->vel[2] >= 200)
-				p->vel[2] = lhrandom(130, 200);
+			p->vel[2] += gravity * 0.25;
+			p->vel[0] *= (1 - (frametime * 0.0625));
+			p->vel[1] *= (1 - (frametime * 0.0625));
+			p->vel[2] *= (1 - (frametime * 0.0625));
 			if (cl.time > p->time2)
 			{
 				p->time2 = cl.time + lhrandom(0, 0.5);
-				p->vel[0] = lhrandom(-32,32);
-				p->vel[1] = lhrandom(-32,32);
+				p->vel[0] += lhrandom(-32,32);
+				p->vel[1] += lhrandom(-32,32);
+				p->vel[2] += lhrandom(-32,32);
 			}
 			p->alpha -= frametime * 64;
 			if (p->alpha < 1)
