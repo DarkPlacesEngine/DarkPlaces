@@ -115,6 +115,7 @@ the (currently upcoming) game Doom3.
 #include "r_shadow.h"
 #include "cl_collision.h"
 #include "portals.h"
+#include "image.h"
 
 extern void R_Shadow_EditLights_Init(void);
 
@@ -146,6 +147,9 @@ rtexture_t *r_shadow_attenuation3dtexture;
 rtexture_t *r_shadow_blankbumptexture;
 rtexture_t *r_shadow_blankglosstexture;
 rtexture_t *r_shadow_blankwhitetexture;
+
+// used only for light filters (cubemaps)
+rtexturepool_t *r_shadow_filters_texturepool;
 
 cvar_t r_shadow_realtime_world_lightmaps = {0, "r_shadow_realtime_world_lightmaps", "0"};
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
@@ -201,6 +205,7 @@ void r_shadow_start(void)
 	r_shadow_blankglosstexture = NULL;
 	r_shadow_blankwhitetexture = NULL;
 	r_shadow_texturepool = NULL;
+	r_shadow_filters_texturepool = NULL;
 	R_Shadow_ClearWorldLights();
 	r_shadow_reloadlights = true;
 }
@@ -216,6 +221,7 @@ void r_shadow_shutdown(void)
 	r_shadow_blankglosstexture = NULL;
 	r_shadow_blankwhitetexture = NULL;
 	R_FreeTexturePool(&r_shadow_texturepool);
+	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowelements = 0;
 	shadowelements = NULL;
 	maxvertexupdate = 0;
@@ -1291,14 +1297,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(basetexture);
-			m.texcubemap[1] = R_GetTexture(lightcubemap);
 			m.pointer_texcoord[0] = texcoord2f;
-			m.pointer_texcoord[1] = lightcubemap ? varray_texcoord3f[1] : NULL;
+			if (lightcubemap)
+			{
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -1341,14 +1349,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(basetexture);
-			m.texcubemap[1] = R_GetTexture(lightcubemap);
 			m.pointer_texcoord[0] = texcoord2f;
-			m.pointer_texcoord[1] = lightcubemap ? varray_texcoord3f[1] : NULL;
+			if (lightcubemap)
+			{
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -1426,14 +1436,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(basetexture);
-			m.texcubemap[1] = R_GetTexture(lightcubemap);
 			m.pointer_texcoord[0] = texcoord2f;
-			m.pointer_texcoord[1] = lightcubemap ? varray_texcoord3f[1] : NULL;
+			if (lightcubemap)
+			{
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -1479,14 +1491,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(basetexture);
-			m.texcubemap[1] = R_GetTexture(lightcubemap);
 			m.pointer_texcoord[0] = texcoord2f;
-			m.pointer_texcoord[1] = lightcubemap ? varray_texcoord3f[1] : NULL;
+			if (lightcubemap)
+			{
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
 			VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -1597,14 +1611,16 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(glosstexture);
-			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			if (lightcubemap)
+			{
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+			}
 			m.pointer_texcoord[0] = texcoord2f;
-			m.pointer_texcoord[1] = lightcubemap ? varray_texcoord3f[1] : NULL;
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
 			VectorScale(lightcolor, colorscale, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -1719,14 +1735,16 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(glosstexture);
-			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			if (lightcubemap)
+			{
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+			}
 			m.pointer_texcoord[0] = texcoord2f;
-			m.pointer_texcoord[1] = lightcubemap ? varray_texcoord3f[1] : NULL;
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
 			VectorScale(lightcolor, colorscale, color2);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -1805,8 +1823,8 @@ void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matri
 	}
 	for (mesh = light->meshchain_light;mesh;mesh = mesh->next)
 	{
-		R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, NULL);
-		R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_specular, mesh->map_normal, NULL);
+		R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, light->cubemap);
+		R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_specular, mesh->map_normal, light->cubemap);
 	}
 }
 
@@ -1824,6 +1842,93 @@ vec3_t r_editlights_cursorlocation;
 
 static int lightpvsbytes;
 static qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
+//static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
+typedef struct suffixinfo
+{
+	char *suffix;
+	int flipx, flipy, flipdiagonal;
+}
+suffixinfo_t;
+static suffixinfo_t suffix[3][6] =
+{
+	{
+		{"posx", false, false, false},
+		{"negx", false, false, false},
+		{"posy", false, false, false},
+		{"negy", false, false, false},
+		{"posz", false, false, false},
+		{"negz", false, false, false}
+	},
+	{
+		{"px", false, false, false},
+		{"nx", false, false, false},
+		{"py", false, false, false},
+		{"ny", false, false, false},
+		{"pz", false, false, false},
+		{"nz", false, false, false}
+	},
+	{
+		{"ft", true, false, true},
+		{"bk", false, true, true},
+		{"lf", true, true, false},
+		{"rt", false, false, false},
+		{"up", false, false, false},
+		{"dn", false, false, false}
+	}
+};
+
+static int componentorder[4] = {0, 1, 2, 3};
+
+rtexture_t *R_Shadow_LoadCubemap(const char *basename)
+{
+	int i, j, cubemapsize;
+	qbyte *cubemappixels, *image_rgba;
+	rtexture_t *cubemaptexture;
+	char name[256];
+	// must start 0 so the first loadimagepixels has no requested width/height
+	cubemapsize = 0;
+	cubemappixels = NULL;
+	cubemaptexture = NULL;
+	for (j = 0;j < 3 && !cubemappixels;j++)
+	{
+		for (i = 0;i < 6;i++)
+		{
+			snprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
+			if ((image_rgba = loadimagepixels(name, true, cubemapsize, cubemapsize)))
+			{
+				if (image_width == image_height)
+				{
+					if (!cubemappixels && image_width >= 1)
+					{
+						cubemapsize = image_width;
+						// note this clears to black, so unavailable sizes are black
+						cubemappixels = Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
+					}
+					if (cubemappixels)
+						Image_CopyMux(cubemappixels+i*cubemapsize*cubemapsize*4, image_rgba, cubemapsize, cubemapsize, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, componentorder);
+				}
+				else
+					Con_Printf("Cubemap image \"%s\" (%ix%i) is not square, OpenGL requires square cubemaps.\n", name, image_width, image_height);
+				Mem_Free(image_rgba);
+			}
+		}
+	}
+	if (cubemappixels)
+	{
+		if (!r_shadow_filters_texturepool)
+			r_shadow_filters_texturepool = R_AllocTexturePool();
+		cubemaptexture = R_LoadTextureCubeMap(r_shadow_filters_texturepool, basename, cubemapsize, cubemappixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+		Mem_Free(cubemappixels);
+	}
+	else
+		Con_Printf("Failed to load Cubemap \"%s\"\n", basename);
+	return cubemaptexture;
+}
+
+void R_Shadow_FreeCubemaps(void)
+{
+	R_FreeTexturePool(&r_shadow_filters_texturepool);
+}
 
 void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style, const char *cubemapname, int castshadow)
 {
@@ -1863,7 +1968,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	{
 		e->cubemapname = Mem_Alloc(r_shadow_mempool, strlen(cubemapname) + 1);
 		strcpy(e->cubemapname, cubemapname);
-		// FIXME: add cubemap loading (and don't load a cubemap twice)
+		e->cubemap = R_Shadow_LoadCubemap(e->cubemapname);
 	}
 	// FIXME: rewrite this to store ALL geometry into a cache in the light
 	if (e->castshadows)
@@ -2066,6 +2171,7 @@ void R_Shadow_ClearWorldLights(void)
 	while (r_shadow_worldlightchain)
 		R_Shadow_FreeWorldLight(r_shadow_worldlightchain);
 	r_shadow_selectedlight = NULL;
+	R_Shadow_FreeCubemaps();
 }
 
 void R_Shadow_SelectLight(worldlight_t *light)

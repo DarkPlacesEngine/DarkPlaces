@@ -7,6 +7,38 @@
 int		image_width;
 int		image_height;
 
+void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int height, int flipx, int flipy, int flipdiagonal, int numincomponents, int numoutcomponents, int *inputcomponentindices)
+{
+	int c, x, y;
+	const qbyte *in, *inrow, *incolumn;
+	if (flipdiagonal)
+	{
+		for (y = 0;y < height;y++)
+		{
+			incolumn = inpixels + (flipx ? width - 1 - y : y) * numincomponents;
+			for (x = 0;x < width;x++)
+			{
+				in = incolumn + (flipy ? height - 1 - x : x) * width * numincomponents;
+				for (c = 0;c < numoutcomponents;c++)
+					*outpixels++ = in[inputcomponentindices[c]];
+			}
+		}
+	}
+	else
+	{
+		for (y = 0;y < height;y++)
+		{
+			inrow = inpixels + (flipy ? height - 1 - y : y) * width * numincomponents;
+			for (x = 0;x < width;x++)
+			{
+				in = inrow + (flipx ? width - 1 - x : x) * numincomponents;
+				for (c = 0;c < numoutcomponents;c++)
+					*outpixels++ = in[inputcomponentindices[c]];
+			}
+		}
+	}
+}
+
 void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *gammar, const qbyte *gammag, const qbyte *gammab)
 {
 	while (pixels--)

@@ -2,6 +2,10 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
+// swizzle components (even converting number of components) and flip images
+// (warning: input must be different than output due to non-linear read/write)
+void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int height, int flipx, int flipy, int flipdiagonal, int numincomponents, int numoutcomponents, int *inputcomponentindices);
+
 // applies gamma correction to RGB pixels, in can be the same as out
 void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *gammar, const qbyte *gammag, const qbyte *gammab);
 
