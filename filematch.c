@@ -3,8 +3,9 @@
 
 // LordHavoc: some portable directory listing code I wrote for lmp2pcx, now used in darkplaces to load id1/*.pak and such...
 
-int matchpattern(char *in, char *pattern)
+int matchpattern(char *in, char *pattern, int caseinsensitive)
 {
+	int c1, c2;
 	while (*pattern)
 	{
 		switch (*pattern)
@@ -39,7 +40,18 @@ int matchpattern(char *in, char *pattern)
 			break;
 		default:
 			if (*in != *pattern)
-				return 0; // no match
+			{
+				if (!caseinsensitive)
+					return 0; // no match
+				c1 = *in;
+				if (c1 >= 'A' && c1 <= 'Z')
+					c1 += 'a' - 'A';
+				c2 = *pattern;
+				if (c2 >= 'A' && c2 <= 'Z')
+					c2 += 'a' - 'A';
+				if (c1 != c2)
+					return 0; // no match
+			}
 			in++;
 			pattern++;
 			break;

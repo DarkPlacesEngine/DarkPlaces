@@ -1386,7 +1386,7 @@ void COM_AddGameDirectory (char *dir)
 	list = listdirectory(dir);
 	for (current = list;current;current = current->next)
 	{
-		if (matchpattern(current->text, "*.pak"))
+		if (matchpattern(current->text, "*.pak", true))
 		{
 			sprintf (pakfile, "%s/%s", dir, current->text);
 			pak = COM_LoadPackFile (pakfile);
