@@ -822,6 +822,7 @@ Key_Init (void)
 	consolekeys[K_DOWNARROW] = true; consolekeys[K_KP_DOWNARROW] = true;
 	consolekeys[K_BACKSPACE] = true;
 	consolekeys[K_DEL] = true; consolekeys[K_KP_DEL] = true;
+	consolekeys[K_INS] = true; consolekeys[K_KP_INS] = true;
 	consolekeys[K_HOME] = true; consolekeys[K_KP_HOME] = true;
 	consolekeys[K_END] = true; consolekeys[K_KP_END] = true;
 	consolekeys[K_PGUP] = true; consolekeys[K_KP_PGUP] = true;
@@ -829,6 +830,10 @@ Key_Init (void)
 	consolekeys[K_SHIFT] = true;
 	consolekeys[K_MWHEELUP] = true;
 	consolekeys[K_MWHEELDOWN] = true;
+	consolekeys[K_KP_PLUS] = true;
+	consolekeys[K_KP_MINUS] = true;
+	consolekeys[K_KP_DIVIDE] = true;
+	consolekeys[K_KP_MULTIPLY] = true;
 	consolekeys['`'] = false;
 	consolekeys['~'] = false;
 

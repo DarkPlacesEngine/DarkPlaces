@@ -679,6 +679,8 @@ Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 */
 void Con_DrawInput (void)
 {
+	int		y;
+	int		i;
 	char editlinecopy[257], *text;
 
 	if (!key_consoleactive)
@@ -691,11 +693,17 @@ void Con_DrawInput (void)
 	// use strlen of edit_line instead of key_linepos to allow editing
 	// of early characters w/o erasing
 
+	y = strlen(text);
+
+// fill out remainder with spaces
+	for (i = y; i < 256; i++)
+		text[i] = ' ';
+
 	// add the cursor frame
 	if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
 		text[key_linepos] = 11 + 130 * key_insert;	// either solid or triangle facing right
 
-	text[key_linepos + 1] = 0;
+//	text[key_linepos + 1] = 0;
 
 	// prestep if horizontally scrolling
 	if (key_linepos >= con_linewidth)
@@ -705,7 +713,7 @@ void Con_DrawInput (void)
 	DrawQ_String(0, con_vislines - 16, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 	// remove cursor
-	key_lines[edit_line][key_linepos] = 0;
+//	key_lines[edit_line][key_linepos] = 0;
 }
 
 
