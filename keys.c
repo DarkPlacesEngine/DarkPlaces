@@ -162,6 +162,11 @@ keyname_t keynames[] =
 
 	{"SEMICOLON", ';'},	// because a raw semicolon seperates commands
 
+	{"TILDE", '~'},
+	{"BACKQUOTE", '`'},
+	{"QUOTE", '"'},
+	{"APOSTROPHE", '\''},
+
 	{NULL,0}
 };
 
