@@ -31,12 +31,11 @@ static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 cvar_t r_ambient = {0, "r_ambient", "0"};
 cvar_t r_vertexsurfaces = {0, "r_vertexsurfaces", "0"};
 cvar_t r_dlightmap = {CVAR_SAVE, "r_dlightmap", "1"};
-//cvar_t r_drawportals = {0, "r_drawportals", "0"};
+cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
-cvar_t r_cullsurface = {0, "r_cullsurface", "0"};
 
 static int dlightdivtable[32768];
 
@@ -44,7 +43,6 @@ static int dlightdivtable[32768];
 int r_pvsframecount = 0;
 mleaf_t *r_pvsviewleaf = NULL;
 int r_pvsviewleafnovis = 0;
-msurface_t *r_pvsfirstsurface = NULL;
 
 static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 {
@@ -1421,7 +1419,7 @@ Cshader_t *Cshaders[4] =
 
 void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 {
-	int i, alttextures, texframe, framecount, numtextures, numsurfaces;
+	int i, alttextures, texframe, framecount, numtextures, numsurfaces, *surfacevisframes;
 	texture_t *t, *textures;
 	model_t *model;
 	msurface_t *surf, *surfaces;
@@ -1429,6 +1427,10 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 
 	if (!ent->model)
 		return;
+
+	// mark the surfaces touched by dynamic lights
+	if (normal && r_dynamic.integer)
+		R_MarkLights(ent);
 
 	R_Mesh_Matrix(&ent->matrix);
 
@@ -1438,48 +1440,63 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 
-	textures = model->textures;
 	numtextures = model->numtextures;
-	surfaces = model->surfaces + model->firstmodelsurface;
+	textures = model->textures;
 	numsurfaces = model->nummodelsurfaces;
+	surfaces = model->surfaces + model->firstmodelsurface;
+	surfacevisframes = model->surfacevisframes + model->firstmodelsurface;
 
 	for (i = 0;i < numtextures;i++)
 		textures[i].surfacechain = NULL;
 
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
 	{
-		if (surf->visframe == r_framecount)
+		if (surfacevisframes[i] == r_framecount)
 		{
+#if !WORLDNODECULLBACKFACES
 			// mark any backface surfaces as not visible
 			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 			{
 				if (!(surf->flags & SURF_PLANEBACK))
-					surf->visframe = -1;
+					surfacevisframes[i] = -1;
 			}
 			else
 			{
-				if (surf->flags & SURF_PLANEBACK)
-					surf->visframe = -1;
+				if ((surf->flags & SURF_PLANEBACK))
+					surfacevisframes[i] = -1;
 			}
-			if (surf->visframe == r_framecount)
+			if (surfacevisframes[i] == r_framecount)
+#endif
 			{
-				if (r_cullsurface.integer && R_CullBox (surf->poly_mins, surf->poly_maxs))
-					surf->visframe = -1;
-				else
+				c_faces++;
+				t = surf->texinfo->texture;
+				if (t->animated)
 				{
-					c_faces++;
-					t = surf->texinfo->texture;
-					if (t->animated)
+					framecount = t->anim_total[alttextures];
+					if (framecount >= 2)
+						t = t->anim_frames[alttextures][texframe % framecount];
+					else
+						t = t->anim_frames[alttextures][0];
+				}
+				surf->currenttexture = t;
+				surf->texturechain = t->surfacechain;
+				t->surfacechain = surf;
+				if (surf->lightmaptexture != NULL)
+				{
+					if (surf->cached_dlight
+					|| surf->cached_ambient != r_ambient.value
+					|| surf->cached_lightscalebit != lightscalebit)
+						R_BuildLightMap(ent, surf, false); // base lighting changed
+					else if (r_dynamic.integer)
 					{
-						framecount = t->anim_total[alttextures];
-						if (framecount >= 2)
-							t = t->anim_frames[alttextures][texframe % framecount];
-						else
-							t = t->anim_frames[alttextures][0];
+						if  (surf->styles[0] != 255 && (d_lightstylevalue[surf->styles[0]] != surf->cached_light[0]
+						|| (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
+						|| (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
+						|| (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
+							R_BuildLightMap(ent, surf, false); // base lighting changed
+						else if (surf->dlightframe == r_framecount && r_dlightmap.integer)
+							R_BuildLightMap(ent, surf, true); // only dlights
 					}
-					surf->currenttexture = t;
-					surf->texturechain = t->surfacechain;
-					t->surfacechain = surf;
 				}
 			}
 		}
@@ -1491,41 +1508,11 @@ void R_DrawSurfaces(entity_render_t *ent, int sky, int normal)
 				t->shader->shaderfunc[SHADERSTAGE_SKY](ent, t);
 
 	if (normal)
-	{
-		if (r_dynamic.integer)
-			R_MarkLights(ent);
-
-		if (!r_vertexsurfaces.integer)
-		{
-			for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
-			{
-				if (surf->visframe == r_framecount && surf->lightmaptexture != NULL)
-				{
-					if (surf->cached_dlight
-					 || surf->cached_ambient != r_ambient.value
-					 || surf->cached_lightscalebit != lightscalebit)
-						R_BuildLightMap(ent, surf, false); // base lighting changed
-					else if (r_dynamic.integer)
-					{
-						if  (surf->styles[0] != 255 && (d_lightstylevalue[surf->styles[0]] != surf->cached_light[0]
-						 || (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
-						 || (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
-						 || (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
-							R_BuildLightMap(ent, surf, false); // base lighting changed
-						else if (surf->dlightframe == r_framecount && r_dlightmap.integer)
-							R_BuildLightMap(ent, surf, true); // only dlights
-					}
-				}
-			}
-		}
-
 		for (i = 0, t = textures;i < numtextures;i++, t++)
 			if (t->surfacechain && t->shader->shaderfunc[SHADERSTAGE_NORMAL])
 				t->shader->shaderfunc[SHADERSTAGE_NORMAL](ent, t);
-	}
 }
 
-/*
 static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 {
 	int i;
@@ -1540,14 +1527,14 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 	R_Mesh_ResizeCheck(portal->numpoints, portal->numpoints - 2);
-	for (i = 0;i < mesh->numtriangles;i++)
+	for (i = 0;i < portal->numpoints - 2;i++)
 	{
 		varray_element[i * 3 + 0] = 0;
 		varray_element[i * 3 + 1] = i + 1;
 		varray_element[i * 3 + 2] = i + 2;
 	}
 	i = portal - ent->model->portals;
-	R_FillColors(varray_color, mesh->numverts,
+	R_FillColors(varray_color, portal->numpoints,
 		((i & 0x0007) >> 0) * (1.0f / 7.0f) * mesh_colorscale,
 		((i & 0x0038) >> 3) * (1.0f / 7.0f) * mesh_colorscale,
 		((i & 0x01C0) >> 6) * (1.0f / 7.0f) * mesh_colorscale,
@@ -1574,7 +1561,7 @@ static void R_DrawPortals(entity_render_t *ent)
 
 	for (portal = ent->model->portals, endportal = portal + ent->model->numportals;portal < endportal;portal++)
 	{
-		if (portal->here->visframe == r_framecount || portal->past->visframe == r_framecount)
+		if (portal->here->pvsframe == r_pvsframecount || portal->past->pvsframe == r_pvsframecount)
 		{
 			VectorClear(temp);
 			for (i = 0;i < portal->numpoints;i++)
@@ -1586,36 +1573,90 @@ static void R_DrawPortals(entity_render_t *ent)
 		}
 	}
 }
-*/
 
 void R_DrawBrushModel(entity_render_t *ent, int sky, int normal)
 {
-	int i;
+	int i, numsurfaces, *surfacevisframes, *surfacepvsframes;
 	msurface_t *surf;
 	model_t *model;
+#if WORLDNODECULLBACKFACES
 	vec3_t modelorg;
+#endif
 
 	// because bmodels can be reused, we have to decide which things to render
 	// from scratch every time
 	model = ent->model;
+#if WORLDNODECULLBACKFACES
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
-	for (i = 0;i < model->nummodelsurfaces;i++)
+#endif
+	numsurfaces = model->nummodelsurfaces;
+	surf = model->surfaces + model->firstmodelsurface;
+	surfacevisframes = model->surfacevisframes + model->firstmodelsurface;
+	surfacepvsframes = model->surfacepvsframes + model->firstmodelsurface;
+	for (i = 0;i < numsurfaces;i++, surf++)
 	{
-		surf = model->surfaces + model->firstmodelsurface + i;
-		surf->visframe = r_framecount;
-		surf->pvsframe = -1;
-		surf->worldnodeframe = -1;
-		surf->lightframe = -1;
+#if WORLDNODECULLBACKFACES
+		// mark any backface surfaces as not visible
+		if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+		{
+			if ((surf->flags & SURF_PLANEBACK))
+			{
+				surfacevisframes[i] = r_framecount;
+				surfacepvsframes[i] = r_pvsframecount;
+			}
+		}
+		else
+		{
+			if (!(surf->flags & SURF_PLANEBACK))
+			{
+				surfacevisframes[i] = r_framecount;
+				surfacepvsframes[i] = r_pvsframecount;
+			}
+		}
+#else
+		surfacevisframes[i] = r_framecount;
+		surfacepvsframes[i] = r_pvsframecount;
+#endif
 		surf->dlightframe = -1;
 	}
 	R_DrawSurfaces(ent, sky, normal);
 }
 
-void R_SurfaceWorldNode (void)
+void R_SurfaceWorldNode (entity_render_t *ent)
 {
-	msurface_t *surf;
-	for (surf = r_pvsfirstsurface;surf;surf = surf->pvschain)
-		surf->visframe = r_framecount;
+	int i, numsurfaces, *surfacevisframes, *surfacepvsframes;
+	msurface_t *surfaces, *surf;
+	model_t *model;
+	vec3_t modelorg;
+
+	model = ent->model;
+	numsurfaces = model->nummodelsurfaces;
+	surfaces = model->surfaces + model->firstmodelsurface;
+	surfacevisframes = model->surfacevisframes + model->firstmodelsurface;
+	surfacepvsframes = model->surfacepvsframes + model->firstmodelsurface;
+	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+
+	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
+	{
+		if (surfacepvsframes[i] == r_pvsframecount)
+		{
+#if WORLDNODECULLBACKFACES
+			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+			{
+				if ((surf->flags & SURF_PLANEBACK) && R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+					surfacevisframes[i] = r_framecount;
+			}
+			else
+			{
+				if (!(surf->flags & SURF_PLANEBACK) && R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+					surfacevisframes[i] = r_framecount;
+			}
+#else
+			if (R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+				surfacevisframes[i] = r_framecount;
+#endif
+		}
+	}
 }
 
 /*
@@ -1681,15 +1722,21 @@ loc1:
 
 static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 {
-	int c, leafstackpos;
+	int c, leafstackpos, *mark, *surfacevisframes;
+#if WORLDNODECULLBACKFACES
+	int n;
+	msurface_t *surf;
+#endif
 	mleaf_t *leaf, *leafstack[8192];
 	mportal_t *p;
-	msurface_t **mark;
 	vec3_t modelorg;
+	msurface_t *surfaces;
 	// LordHavoc: portal-passage worldnode with PVS;
 	// follows portals leading outward from viewleaf, does not venture
 	// offscreen or into leafs that are not visible, faster than Quake's
 	// RecursiveWorldNode
+	surfaces = ent->model->surfaces;
+	surfacevisframes = ent->model->surfacevisframes;
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	viewleaf->worldnodeframe = r_framecount;
 	leafstack[0] = viewleaf;
@@ -1698,12 +1745,32 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 	{
 		c_leafs++;
 		leaf = leafstack[--leafstackpos];
-		// only useful for drawing portals
-		//leaf->visframe = r_framecount;
 		// draw any surfaces bounding this leaf
 		if (leaf->nummarksurfaces)
+		{
 			for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
-				(*mark++)->visframe = r_framecount;
+			{
+#if WORLDNODECULLBACKFACES
+				n = *mark++;
+				if (surfacevisframes[n] != r_framecount)
+				{
+					surf = surfaces + n;
+					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+					{
+						if ((surf->flags & SURF_PLANEBACK))
+							surfacevisframes[n] = r_framecount;
+					}
+					else
+					{
+						if (!(surf->flags & SURF_PLANEBACK))
+							surfacevisframes[n] = r_framecount;
+					}
+				}
+#else
+				surfacevisframes[*mark++] = r_framecount;
+#endif
+			}
+		}
 		// follow portals into other leafs
 		for (p = leaf->portals;p;p = p->next)
 		{
@@ -1717,17 +1784,16 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 			}
 		}
 	}
-	//if (r_drawportals.integer)
-	//	R_DrawPortals(ent);
+	if (r_drawportals.integer)
+		R_DrawPortals(ent);
 }
 
 
 void R_PVSUpdate (mleaf_t *viewleaf)
 {
-	int i, j, l, c, bits;
+	int i, j, l, c, bits, *surfacepvsframes, *mark;
 	mleaf_t *leaf;
 	qbyte *vis;
-	msurface_t **mark, *surf;
 
 	if (r_pvsviewleaf == viewleaf && r_pvsviewleafnovis == r_novis.integer)
 		return;
@@ -1738,6 +1804,7 @@ void R_PVSUpdate (mleaf_t *viewleaf)
 
 	if (viewleaf)
 	{
+		surfacepvsframes = cl.worldmodel->surfacepvsframes;
 		vis = Mod_LeafPVS (viewleaf, cl.worldmodel);
 		for (j = 0;j < cl.worldmodel->numleafs;j += 8)
 		{
@@ -1755,23 +1822,11 @@ void R_PVSUpdate (mleaf_t *viewleaf)
 						leaf->pvsframe = r_pvsframecount;
 						// mark surfaces bounding this leaf as visible
 						for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
-							(*mark++)->pvsframe = r_pvsframecount;
+							surfacepvsframes[*mark++] = r_pvsframecount;
 					}
 				}
 			}
 		}
-		// build pvs surfacechain
-		r_pvsfirstsurface = NULL;
-		mark = &r_pvsfirstsurface;
-		for (c = cl.worldmodel->nummodelsurfaces, surf = cl.worldmodel->surfaces + cl.worldmodel->firstmodelsurface;c;c--, surf++)
-		{
-			if (surf->pvsframe == r_pvsframecount)
-			{
-				*mark = surf;
-				mark = &surf->pvschain;
-			}
-		}
-		*mark = NULL;
 	}
 }
 
@@ -1788,7 +1843,7 @@ void R_DrawWorld (entity_render_t *ent)
 	if (!viewleaf)
 		return;
 	if (r_surfaceworldnode.integer || viewleaf->contents == CONTENTS_SOLID)
-		R_SurfaceWorldNode ();
+		R_SurfaceWorldNode (ent);
 	else
 		R_PortalWorldNode (ent, viewleaf);
 	R_DrawSurfaces(ent, true, true);
@@ -1824,7 +1879,6 @@ static void gl_surf_newmap(void)
 	r_pvsframecount = 1;
 	r_pvsviewleaf = NULL;
 	r_pvsviewleafnovis = false;
-	r_pvsfirstsurface = NULL;
 }
 
 void GL_Surf_Init(void)
@@ -1837,12 +1891,11 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&r_vertexsurfaces);
 	Cvar_RegisterVariable(&r_dlightmap);
-	//Cvar_RegisterVariable(&r_drawportals);
+	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_testvis);
 	Cvar_RegisterVariable(&r_floatbuildlightmap);
 	Cvar_RegisterVariable(&r_detailtextures);
 	Cvar_RegisterVariable(&r_surfaceworldnode);
-	Cvar_RegisterVariable(&r_cullsurface);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

@@ -1287,9 +1287,12 @@ static void Mod_LoadFaces (lump_t *l)
 
 	loadmodel->surfaces = out;
 	loadmodel->numsurfaces = count;
+	loadmodel->surfacevisframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
+	loadmodel->surfacepvsframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
 
 	for (surfnum = 0;surfnum < count;surfnum++, in++, out++)
 	{
+		out->number = surfnum;
 		// FIXME: validate edges, texinfo, etc?
 		out->firstedge = LittleLong(in->firstedge);
 		out->numedges = LittleShort(in->numedges);
@@ -1599,21 +1602,21 @@ Mod_LoadMarksurfaces
 */
 static void Mod_LoadMarksurfaces (lump_t *l)
 {
-	int		i, j;
-	short	*in;
+	int i, j;
+	short *in;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
 	loadmodel->nummarksurfaces = l->filelen / sizeof(*in);
-	loadmodel->marksurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->nummarksurfaces * sizeof(msurface_t *));
+	loadmodel->marksurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->nummarksurfaces * sizeof(int));
 
 	for (i = 0;i < loadmodel->nummarksurfaces;i++)
 	{
 		j = (unsigned) LittleShort(in[i]);
 		if (j >= loadmodel->numsurfaces)
 			Host_Error ("Mod_ParseMarksurfaces: bad surface number");
-		loadmodel->marksurfaces[i] = loadmodel->surfaces + j;
+		loadmodel->marksurfaces[i] = j;
 	}
 }
 

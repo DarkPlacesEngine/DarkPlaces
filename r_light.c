@@ -219,11 +219,12 @@ DYNAMIC LIGHTS
 R_MarkLights
 =============
 */
+extern int r_pvsframecount;
 static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node)
 {
 	float ndist, maxdist;
 	msurface_t *surf;
-	int i;
+	int i, *surfacepvsframes;
 	int d, impacts, impactt;
 	float dist, dist2, impact[3];
 
@@ -233,6 +234,7 @@ static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t
 	// for comparisons to minimum acceptable light
 	maxdist = rd->cullradius2;
 
+	surfacepvsframes = ent->model->surfacepvsframes;
 loc0:
 	if (node->contents < 0)
 		return;
@@ -254,7 +256,7 @@ loc0:
 	surf = ent->model->surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surf++)
 	{
-		if (surf->visframe != r_framecount)
+		if (surfacepvsframes[surf->number] != r_pvsframecount)
 			continue;
 		dist = ndist;
 		if (surf->flags & SURF_PLANEBACK)
@@ -329,8 +331,8 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	mleaf_t *pvsleaf;
 	vec3_t lightorigin;
 	model_t *model;
-	int i, k, m, c, leafnum;
-	msurface_t *surf, **mark;
+	int i, k, m, c, leafnum, *surfacepvsframes, *mark;
+	msurface_t *surf;
 	mleaf_t *leaf;
 	qbyte *in;
 	int row;
@@ -363,6 +365,7 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	maxdist = rd->cullradius2;
 
 	row = (model->numleafs+7)>>3;
+	surfacepvsframes = model->surfacepvsframes;
 
 	k = 0;
 	while (k < row)
@@ -388,12 +391,12 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 						mark = leaf->firstmarksurface;
 						do
 						{
-							surf = *mark++;
+							surf = model->surfaces + *mark++;
 							// if not visible in current frame, or already marked because it was in another leaf we passed, skip
 							if (surf->lightframe == lightframe)
 								continue;
 							surf->lightframe = lightframe;
-							if (surf->visframe != r_framecount)
+							if (surfacepvsframes[surf->number] != r_pvsframecount)
 								continue;
 							dist = PlaneDiff(lightorigin, surf->plane);
 							if (surf->flags & SURF_PLANEBACK)
