@@ -304,53 +304,6 @@ int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
 
 void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, rtexture_t **skintex)
 {
-#if 0
-	int skin_normal, skin_pants, skin_shirt, skin_glow, skin_body, temp;
-	skin_normal = loadtextureimage(va("%s_normal", basename));
-	skin_pants  = loadtextureimage(va("%s_pants" , basename));
-	skin_shirt  = loadtextureimage(va("%s_shirt" , basename));
-	skin_glow   = loadtextureimage(va("%s_glow"  , basename));
-	skin_body   = loadtextureimage(va("%s_body"  , basename));
-	if (!(skin_normal || skin_pants || skin_shirt || skin_glow || skin_body))
-		skin_body = loadtextureimage(name);
-	if (skin_normal || skin_pants || skin_shirt || skin_glow || skin_body)
-	{
-		skintexnum[0] = skin_normal;
-		skintexnum[1] = skin_pants;
-		skintexnum[2] = skin_shirt;
-		skintexnum[3] = skin_glow;
-		skintexnum[4] = skin_body;
-	}
-	else
-	{
-		Mod_FloodFillSkin(skin, width, height);
-		skin_normal = GL_SkinCheck((byte *)pskintype, width, height, 0x3FBD);
-		skin_pants = GL_SkinCheck((byte *)pskintype, width, height, 0x0040);
-		skin_shirt = GL_SkinCheck((byte *)pskintype, width, height, 0x0002);
-		skin_glow = GL_SkinCheck((byte *)pskintype, width, height, 0xC000);
-		skin_body = GL_SkinCheck((byte *)pskintype, width, height, 0x3FFF);
-		if (skin_pants || skin_shirt)
-		{
-			byte *saveskin;
-			saveskin = Hunk_AllocName(width*height, va("%s skin", loadname));
-			memcpy((saveskin, byte *)pskintype, width*height);
-			temp = (int) saveskin - (int) mheader;
-			skintexnum[0] = skin_normal ? -temp : 0;
-			skintexnum[1] = skin_pants ? -temp : 0;
-			skintexnum[2] = skin_shirt ? -temp : 0;
-			skintexnum[3] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
-			skintexnum[4] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
-		}
-		else
-		{
-			skintexnum[0] = 0;
-			skintexnum[1] = 0;
-			skintexnum[2] = 0;
-			skintexnum[3] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
-			skintexnum[4] = GL_SkinSplit((byte *)pskintype, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
-		}
-	}
-#else
 	skintex[0] = loadtextureimage(va("%s_normal", basename), 0, 0, false, r_mipskins.value, true);
 	skintex[1] = NULL;
 	skintex[2] = NULL;
@@ -378,7 +331,8 @@ void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *s
 				skintex[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_base", basename), true); // no special colors
 		}
 	}
-#endif
+	if (R_TextureHasAlpha(skintex[0]))
+		loadmodel->flags2 |= MODF_TRANSPARENT;
 }
 
 /*
@@ -431,7 +385,7 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 
 	skinrange = loadmodel->skinanimrange;
 	skintex = loadmodel->skinanim;
-//	skinrange = Hunk_AllocName (sizeof(int) * (skinranges + skincount), loadname);	
+//	skinrange = Hunk_AllocName (sizeof(int) * (skinranges + skincount), loadname);
 //	skintexnum = skinrange + skinranges * 2;
 //	loadmodel->skinanimrange = (int) skinrange - (int) pheader;
 //	loadmodel->skinanim = (int) skintexnum - (int) pheader;
@@ -538,7 +492,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	BOUNDI(skinwidth,0,4096);
 	skinheight = LittleLong (pinmodel->skinheight);
 	BOUNDI(skinheight,0,1024);
-	
+
 	pskintype = (daliasskintype_t *)&pinmodel[1];
 	pinstverts = (stvert_t *)Mod_SkipAllSkins (numskins, pskintype, skinwidth * skinheight);
 	pintriangles = (dtriangle_t *)&pinstverts[numverts];

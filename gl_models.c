@@ -52,6 +52,7 @@ void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
 	    glRotatef (angles[2],  1, 0, 0);
 }
 
+// currently unused reflection effect texture
 void makechrometexture(void)
 {
 	int i;
@@ -317,7 +318,7 @@ R_DrawAliasFrame
 =================
 */
 void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor);
-void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t **skin, int colormap, int effects, int flags)
+void R_DrawAliasFrame (model_t *model, maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t **skin, int colormap, int effects, int flags)
 {
 	if (gl_transform.value)
 	{
@@ -360,7 +361,7 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 		glEnable(GL_BLEND);
 		glDepthMask(0);
 	}
-	else if (alpha != 1.0)
+	else if (alpha != 1.0 || (model->flags2 & MODF_TRANSPARENT))
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_BLEND);
@@ -440,7 +441,7 @@ R_DrawQ2AliasFrame
 
 =================
 */
-void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t *skin, int effects, int flags)
+void R_DrawQ2AliasFrame (model_t *model, md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t *skin, int effects, int flags)
 {
 	int *order, count;
 	md2frame_t *frame1, *frame2, *frame3, *frame4;
@@ -879,7 +880,7 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 R_DrawZymoticFrame
 =================
 */
-void R_DrawZymoticFrame (zymtype1header_t *m, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, int skinblah, int effects, int flags)
+void R_DrawZymoticFrame (model_t *model, zymtype1header_t *m, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, int skinblah, int effects, int flags)
 {
 	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), blend, (zymbone_t *)(m->lump_bones.start + (int) m), org, angles, scale);
 	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
@@ -967,9 +968,9 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, f
 
 	c_alias_polys += clmodel->numtris;
 	if (clmodel->aliastype == ALIASTYPE_ZYM)
-		R_DrawZymoticFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, 0                   , effects, flags);
+		R_DrawZymoticFrame (clmodel, modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, 0                   , effects, flags);
 	else if (clmodel->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasFrame (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset[0]          , effects, flags);
+		R_DrawQ2AliasFrame (clmodel, modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset[0]          , effects, flags);
 	else
-		R_DrawAliasFrame   (modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset   , colormap, effects, flags);
+		R_DrawAliasFrame   (clmodel, modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset   , colormap, effects, flags);
 }

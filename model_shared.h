@@ -52,6 +52,8 @@ animscene_t;
 #include "model_sprite.h"
 #include "model_alias.h"
 
+#define MODF_TRANSPARENT 1
+
 typedef struct model_s
 {
 	char		name[MAX_QPATH];
@@ -62,14 +64,15 @@ typedef struct model_s
 	int			fullbright; // LordHavoc: if true (normally only for sprites) the model/sprite/bmodel is always rendered fullbright
 	int			numframes;
 	synctype_t	synctype;
-	
+
 	int			flags;
+	int			flags2; // engine calculated flags, ones that can not be set in the file
 
 // volume occupied by the model graphics
 	vec3_t		mins, maxs;
 	float		radius;
 
-// solid volume for clipping 
+// solid volume for clipping
 	qboolean	clipbox;
 	vec3_t		clipmins, clipmaxs;
 
