@@ -202,11 +202,11 @@ static void mod_newmap(void)
 
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 	{
-		if (mod_known[i].name[0] && mod_known[i].type == mod_brushq1)
+		if (mod_known[i].name[0])
 		{
 			for (surfacenum = 0, surface = mod_known[i].brush.data_surfaces;surfacenum < mod_known[i].brush.num_surfaces;surfacenum++, surface++)
 			{
-				if (surface->texture->flags & SURF_LIGHTMAP)
+				if (surface->stainsamples)
 				{
 					ssize = (surface->extents[0] >> 4) + 1;
 					tsize = (surface->extents[1] >> 4) + 1;
