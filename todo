@@ -41,10 +41,12 @@
 0 dpmod: items aren't respawning in coop, they should
 0 dpmod: up nail limit to 500 (scar3crow)
 0 dpzoo: colored lighting
+0 dpzoo: func_train with sky brushes
 0 dpzoo: particlecube
 0 dpzoo: rain
 0 dpzoo: rotating fan bmodels
 0 dpzoo: rtlights in normal mode (when that extension is made)
+0 dpzoo: skybox
 0 dpzoo: snow
 0 dpzoo: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
 0 dpzoo: transparent glass bmodels (DP_ENT_ALPHA)
