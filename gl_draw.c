@@ -426,8 +426,6 @@ void R_DrawQueue(void)
 	chartexnum = R_GetTexture(char_texture);
 
 	memset(&m, 0, sizeof(m));
-	m.tex[0] = 0;
-	R_Mesh_State_Texture(&m);
 
 	currentpic = "";
 	pic = NULL;
@@ -475,9 +473,9 @@ void R_DrawQueue(void)
 				m.tex[0] = chartexnum;
 			}
 			batchcount = 0;
-			GL_VertexPointer(varray_vertex3f);
+			m.pointer_vertex = varray_vertex3f;
 			m.pointer_texcoord[0] = varray_texcoord2f[0];
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			at = varray_texcoord2f[0];
 			av = varray_vertex3f;
 			while ((num = *str++) && x < vid.conwidth)
@@ -514,11 +512,11 @@ void R_DrawQueue(void)
 			break;
 		case DRAWQUEUE_MESH:
 			mesh = (void *)(dq + 1);
-			GL_VertexPointer(mesh->data_vertex3f);
+			m.pointer_vertex = mesh->data_vertex3f;
 			GL_ColorPointer(mesh->data_color4f);
 			m.tex[0] = R_GetTexture(mesh->texture);
 			m.pointer_texcoord[0] = mesh->data_texcoord2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 			GL_ColorPointer(NULL);
 			currentpic = "\0";
@@ -548,7 +546,8 @@ void R_DrawQueue(void)
 	{
 		// all the blends ignore depth
 		memset(&m, 0, sizeof(m));
-		R_Mesh_State_Texture(&m);
+		m.pointer_vertex = blendvertex3f;
+		R_Mesh_State(&m);
 		GL_DepthMask(true);
 		GL_DepthTest(false);
 		if (v_color_enable.integer)
@@ -562,7 +561,6 @@ void R_DrawQueue(void)
 		if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 		{
 			GL_BlendFunc(GL_DST_COLOR, GL_ONE);
-			GL_VertexPointer(blendvertex3f);
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
@@ -581,7 +579,6 @@ void R_DrawQueue(void)
 		if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
-			GL_VertexPointer(blendvertex3f);
 			GL_Color(c[0], c[1], c[2], 1);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}

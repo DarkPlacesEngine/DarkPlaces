@@ -561,17 +561,6 @@ void GL_ColorMask(int r, int g, int b, int a)
 	}
 }
 
-void GL_VertexPointer(const float *p)
-{
-	if (gl_state.pointer_vertex != p)
-	{
-		gl_state.pointer_vertex = p;
-		CHECKGLERROR
-		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), gl_state.pointer_vertex);
-		CHECKGLERROR
-	}
-}
-
 void GL_ColorPointer(const float *p)
 {
 	if (gl_state.pointer_color != p)
@@ -909,12 +898,20 @@ void R_Mesh_TextureMatrix(int unitnumber, const matrix4x4_t *matrix)
 	}
 }
 
-void R_Mesh_State_Texture(const rmeshstate_t *m)
+void R_Mesh_State(const rmeshstate_t *m)
 {
 	int i, combinergb, combinealpha, scale, arrayis3d;
 	gltextureunit_t *unit;
 
 	BACKENDACTIVECHECK
+
+	if (gl_state.pointer_vertex != m->pointer_vertex)
+	{
+		gl_state.pointer_vertex = m->pointer_vertex;
+		CHECKGLERROR
+		qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), gl_state.pointer_vertex);
+		CHECKGLERROR
+	}
 
 	if (gl_backend_rebindtextures)
 	{
@@ -1259,7 +1256,7 @@ showtris:
 		GL_DepthTest(GL_FALSE);
 		GL_DepthMask(GL_FALSE);
 		memset(&m, 0, sizeof(m));
-		R_Mesh_State_Texture(&m);
+		R_Mesh_State(&m);
 		r_showtrispass = true;
 		GL_ShowTrisColor(0.2,0.2,0.2,1);
 		goto showtris;

@@ -281,7 +281,8 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	else
 		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
 	m.pointer_texcoord[0] = varray_texcoord2f[0];
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = varray_vertex3f;
+	R_Mesh_State(&m);
 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -305,7 +306,6 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 0, t1, t2);
 	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 8, t1 + 0.33, t2 + 0.33);
 	R_CalcLightningBeamPolygonTexCoord2f(varray_texcoord2f[0] + 16, t1 + 0.66, t2 + 0.66);
-	GL_VertexPointer(varray_vertex3f);
 
 	if (fogenabled)
 	{

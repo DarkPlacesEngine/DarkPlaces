@@ -190,12 +190,12 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	alpha = e->alpha;
 	GL_ColorPointer(NULL);
 	GL_Color(alpha, alpha, alpha, 1);
-	GL_VertexPointer(e->vert[0]);
 
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(explosiontexture);
 	m.pointer_texcoord[0] = explosiontexcoord2f[0];
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = e->vert[0];
+	R_Mesh_State(&m);
 
 	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
 }

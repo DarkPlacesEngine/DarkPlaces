@@ -16,7 +16,6 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2);
 void GL_DepthMask(int state);
 void GL_DepthTest(int state);
 void GL_ColorMask(int r, int g, int b, int a);
-void GL_VertexPointer(const float *p);
 void GL_ColorPointer(const float *p);
 void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ShowTrisColor(float cr, float cg, float cb, float ca);
@@ -50,6 +49,9 @@ typedef struct
 	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
 	// pointers
 	const float *pointer_texcoord[MAX_TEXTUREUNITS];
+
+	// other state set by this
+	const float *pointer_vertex;
 }
 rmeshstate_t;
 
@@ -70,7 +72,7 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix);
 void R_Mesh_TextureMatrix(int unitnumber, const matrix4x4_t *matrix);
 
 // set up the requested state
-void R_Mesh_State_Texture(const rmeshstate_t *m);
+void R_Mesh_State(const rmeshstate_t *m);
 
 // renders a mesh
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
