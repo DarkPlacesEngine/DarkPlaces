@@ -313,7 +313,7 @@ static float R_FarClip(vec3_t origin, vec3_t direction, vec_t startfarclip)
 		R_FarClip_Box(r_refdef.worldmodel->normalmins, r_refdef.worldmodel->normalmaxs);
 	for (i = 0;i < r_refdef.numentities;i++)
 		R_FarClip_Box(r_refdef.entities[i]->mins, r_refdef.entities[i]->maxs);
-	
+
 	return r_farclip_meshfarclip - r_farclip_directiondist;
 }
 
@@ -739,7 +739,7 @@ void R_RenderView(void)
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	r_rtworld = r_shadow_realtime_world.integer;
 	r_rtworldshadows = r_shadow_realtime_world_shadows.integer && gl_stencil;
-	r_rtdlight = r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer;
+	r_rtdlight = (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && !gl_flashblend.integer;
 	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
 	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 
@@ -765,7 +765,7 @@ void R_RenderView(void)
 
 	R_BlendView();
 	R_TimeReport("blendview");
-	
+
 	GL_Scissor(0, 0, vid.realwidth, vid.realheight);
 	GL_ScissorTest(false);
 }

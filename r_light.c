@@ -29,7 +29,7 @@ int r_numdlights = 0;
 cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
 cvar_t r_coronas = {CVAR_SAVE, "r_coronas", "1"};
-cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "1"};
+cvar_t gl_flashblend = {CVAR_SAVE, "gl_flashblend", "0"};
 
 static rtexture_t *lightcorona;
 static rtexturepool_t *lighttexturepool;
