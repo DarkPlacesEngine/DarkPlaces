@@ -1988,7 +1988,7 @@ void M_FindKeysForCommand (char *command, int *keys)
 
 	for (j=0 ; j<256 ; j++)
 	{
-		b = keybindings[j];
+		b = keybindings[0][j];
 		if (!b)
 			continue;
 		if (!strcmp (b, command) )
@@ -2007,11 +2007,11 @@ void M_UnbindCommand (char *command)
 
 	for (j=0 ; j<256 ; j++)
 	{
-		b = keybindings[j];
+		b = keybindings[0][j];
 		if (!b)
 			continue;
 		if (!strcmp (b, command))
-			Key_SetBinding (j, "");
+			Key_SetBinding (j, 0, "");
 	}
 }
 
