@@ -807,7 +807,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// hack to make glowing player light shine on their gun
 			//if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
 			//	dlightmatrix.m[2][3] += 30;
-			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, 0, false, 1);
+			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, 0, true, 1);
 		}
 		// custom rtlight
 		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
