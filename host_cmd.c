@@ -65,8 +65,8 @@ void Host_Status_f (void)
 	for (players = 0, j = 0;j < svs.maxclients;j++)
 		if (svs.clients[j].active)
 			players++;
-	print ("host:    %s\n", Cvar_VariableString ("hostname"));
-	print ("version: %s build %s\n", gamename, buildstring);
+	print ("host:     %s\n", Cvar_VariableString ("hostname"));
+	print ("version:  %s build %s\n", gamename, buildstring);
 	switch(sv.protocol)
 	{
 		case PROTOCOL_QUAKE: protocolname = sv.netquakecompatible ? "QUAKE" : "QUAKEDP";break;
@@ -79,8 +79,8 @@ void Host_Status_f (void)
 		default: protocolname = "PROTOCOL_UNKNOWN";break;
 	}
 	print ("protocol: %i (%s)\n", sv.protocol, protocolname);
-	print ("map:     %s\n", sv.name);
-	print ("players: %i active (%i max)\n\n", players, svs.maxclients);
+	print ("map:      %s\n", sv.name);
+	print ("players:  %i active (%i max)\n\n", players, svs.maxclients);
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 	{
 		if (!client->active)
@@ -516,8 +516,7 @@ void Host_Savegame_f (void)
 	FS_Printf(f, "%s\n", sv.name);
 	FS_Printf(f, "%f\n",sv.time);
 
-// write the light styles
-
+	// write the light styles
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
 		if (sv.lightstyles[i])
@@ -526,13 +525,9 @@ void Host_Savegame_f (void)
 			FS_Print(f,"m\n");
 	}
 
-
 	ED_WriteGlobals (f);
 	for (i=0 ; i<sv.num_edicts ; i++)
-	{
 		ED_Write (f, EDICT_NUM(i));
-		FS_Flush (f);
-	}
 	FS_Close (f);
 	Con_Print("done.\n");
 }

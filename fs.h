@@ -1,7 +1,7 @@
 /*
 	DarkPlaces file system
 
-	Copyright (C) 2003 Mathieu Olivier
+	Copyright (C) 2003-2005 Mathieu Olivier
 
 	This program is free software; you can redistribute it and/or
 	modify it under the terms of the GNU General Public License
@@ -48,16 +48,14 @@ qfile_t *FS_Open (const char* filepath, const char* mode, qboolean quiet);
 int FS_Close (qfile_t* file);
 size_t FS_Write (qfile_t* file, const void* data, size_t datasize);
 size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);
-int FS_Flush (qfile_t* file);
 int FS_Print(qfile_t* file, const char *msg);
 int FS_Printf(qfile_t* file, const char* format, ...);
 int FS_VPrintf(qfile_t* file, const char* format, va_list ap);
 int FS_Getc (qfile_t* file);
 int FS_Seek (qfile_t* file, long offset, int whence);
 long FS_Tell (qfile_t* file);
-char *FS_Gets (qfile_t* file, char* buffer, int buffersize);
+char *FS_Gets (qfile_t* file, char* buffer, size_t buffersize);
 char *FS_Getline (qfile_t *file);  // DO NOT FREE the returned buffer
-int FS_Eof (qfile_t* file);
 
 typedef struct fssearch_s
 {

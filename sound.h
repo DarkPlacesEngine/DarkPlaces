@@ -75,7 +75,6 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation);
 void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds (void);
 void S_PauseGameSounds (qboolean toggle);
-void S_ClearBuffer (void);
 
 void S_StopChannel (unsigned int channel_ind);
 qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value);
