@@ -798,9 +798,12 @@ void CL_LinkNetworkEntity(entity_t *e)
 			dlightradius = max(dlightradius, e->state_current.glowsize * 4);
 			VectorMA(dlightcolor, (1.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
 		}
-		if (e->state_current.light[3])
+		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
 		{
-			dlightradius = max(dlightradius, e->state_current.light[3]);
+			if (e->state_current.light[3])
+				dlightradius = max(dlightradius, e->state_current.light[3]);
+			else
+				dlightradius = max(dlightradius, 350);
 			if (VectorLength2(dlightcolor) == 0)
 				(dlightcolor[0] += 1, dlightcolor[1] += 1, dlightcolor[2] += 1);
 			else
@@ -813,7 +816,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// hack to make glowing player light shine on their gun
 			if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
 				dlightmatrix.m[2][3] += 30;
-			CL_AllocDlight(&e->render, &dlightmatrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, e->state_current.skin >= 16 ? e->state_current.skin : 0, e->state_current.lightstyle, !(e->state_current.lightpflags & 1), 1);
+			CL_AllocDlight(&e->render, &dlightmatrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, e->state_current.skin >= 16 ? e->state_current.skin : 0, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) ? ((e->state_current.lightpflags & PFLAGS_CORONA) != 0) : 1);
 		}
 		// trails need the previous frame
 		if (e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
@@ -839,6 +842,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 			V_CalcRefdef();
 		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->TraceBox)
 			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
+		if (gamemode == GAME_TENEBRAE && e->render.model && e->render.model->type == mod_sprite)
+			e->render.effects |= EF_ADDITIVE;
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
 		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)

@@ -30,16 +30,19 @@ d darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead
 -n darkplaces: net_slist should print out "No network." if networking is not initialized (yummyluv)
 d darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
 -n darkplaces: remove dead master server from default masters list (yummyluv)
--n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
+d darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
+d darkplaces: make light_lev dlights from qc require PFLAGS_FULLDYNAMIC flag
+d darkplaces: improve tenebrae compatibility by handling EF_FULLDYNAMIC flag in tenebrae mode, also make all sprites render additive
+0 darkplaces: figure out why bmodels aren't receiving lightmap dlights
 d darkplaces: fixed SV_TouchAreaGrid to not crash if SV_IncreaseEdicts is called during a touch function, by making a list of edicts to touch and then running through the list afterward (KGB|romi)
 d darkplaces: moved R_ShadowVolumeLighting to r_shadow.c
 d darkplaces: added RENDER_LIGHT flag to entity_render_t to make rtlighting optional per entity
 d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
 d darkplaces: safety checked lightmap access in Mod_Q1BSP_RecursiveLightPoint as one map Sajt uses was crashing (Sajt)
--n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (-Urre, -Wazat for Battlemech, FrikaC, -mashakos, RenegadeC, Sajt)
+-n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (-Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 -n darkplaces: fix cubemap upload scaling crashes (Urre)
 d darkplaces: make screenshots save to screenshots/fniggium%04i.tga in GAME_FNIGGIUM (Sajt)
 d darkplaces: make screenshots save to screenshots directory (Sajt)

@@ -61,6 +61,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 
+// flags for the pflags field of entities
+#define PFLAGS_NOSHADOW			1
+#define PFLAGS_CORONA			2
+#define PFLAGS_FULLDYNAMIC		128 // must be set or the light fields are ignored
+
 // if the high bit of the servercmd is set, the low bits are fast update flags:
 #define U_MOREBITS		(1<<0)
 #define U_ORIGIN1		(1<<1)

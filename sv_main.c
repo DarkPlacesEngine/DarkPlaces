@@ -816,7 +816,29 @@ void SV_PrepareEntitiesForSending(void)
 		cs.lightstyle = (qbyte)GETEDICTFIELDVALUE(ent, eval_style)->_float;
 		cs.lightpflags = (qbyte)GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
 
-		cs.specialvisibilityradius = cs.light[3];
+		if (gamemode == GAME_TENEBRAE)
+		{
+			// tenebrae's EF_FULLDYNAMIC conflicts with Q2's EF_NODRAW
+			if (cs.effects & 16)
+			{
+				cs.effects &= ~16;
+				cs.lightpflags |= PFLAGS_FULLDYNAMIC;
+			}
+			// tenebrae's EF_GREEN conflicts with DP's EF_ADDITIVE
+			if (cs.effects & 32)
+			{
+				cs.effects &= ~32;
+				cs.light[0] = 0.2;
+				cs.light[1] = 1;
+				cs.light[2] = 0.2;
+				cs.light[3] = 200;
+				cs.lightpflags |= PFLAGS_FULLDYNAMIC;
+			}
+		}
+
+		cs.specialvisibilityradius = 0;
+		if (cs.lightpflags & PFLAGS_FULLDYNAMIC)
+			cs.specialvisibilityradius = max(cs.specialvisibilityradius, cs.light[3]);
 		if (cs.glowsize)
 			cs.specialvisibilityradius = max(cs.specialvisibilityradius, cs.glowsize * 4);
 		if (cs.flags & RENDER_GLOWTRAIL)

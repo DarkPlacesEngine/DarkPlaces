@@ -2718,7 +2718,7 @@ void R_Shadow_LoadLightsFile(void)
 
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
-	int entnum, style, islight, skin, pflags;
+	int entnum, style, islight, skin, pflags, effects;
 	char key[256], value[1024];
 	float origin[3], angles[3], radius, color[3], light, fadescale, lightscale, originhack[3], overridecolor[3];
 	const char *data;
@@ -2857,6 +2857,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				skin = (int)atof(value);
 			else if (!strcmp("pflags", key))
 				pflags = (int)atof(value);
+			else if (!strcmp("effects", key))
+				effects = (int)atof(value);
 		}
 		if (light <= 0 && islight)
 			light = 300;
@@ -2864,14 +2866,22 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			lightscale = 1;
 		if (fadescale <= 0)
 			fadescale = 1;
+		if (gamemode == GAME_TENEBRAE)
+		{
+			if (effects & EF_NODRAW)
+			{
+				pflags |= PFLAGS_FULLDYNAMIC;
+				effects &= ~EF_NODRAW;
+			}
+		}
 		radius = min(light * r_editlights_quakelightsizescale.value * lightscale / fadescale, 1048576);
 		light = sqrt(bound(0, light, 1048576)) * (1.0f / 16.0f);
 		if (color[0] == 1 && color[1] == 1 && color[2] == 1)
 			VectorCopy(overridecolor, color);
 		VectorScale(color, light, color);
 		VectorAdd(origin, originhack, origin);
-		if (radius >= 15)
-			R_Shadow_NewWorldLight(origin, angles, color, radius, !!(pflags & 2), style, !(pflags & 1), skin >= 16 ? va("cubemaps/%i", skin) : NULL);
+		if (radius >= 15 && !(pflags & PFLAGS_FULLDYNAMIC))
+			R_Shadow_NewWorldLight(origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va("cubemaps/%i", skin) : NULL);
 	}
 }
 
