@@ -26,8 +26,16 @@
 -d (jeremy janzen) darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 -d (joe hill) dpmod: make grapple off-hand (joe hill)
 -d (mashakos) darkplaces editlights: add r_editlights_editall command, same as _edit but affects all lights (mashakos)
+-d darkplaces protocol: PROTOCOL_DARKPLACES4 malfunctioning after a few seconds, probably not acknowledging packets properly (Sajt)
+-d darkplaces protocol: expand viewzoom to two bytes (8bit.8bit fixedpoint instead of 0.8bit like it is now) (Urre)
+-d darkplaces renderer: fix EF_ADDITIVE alias model entities not appearing in realtime lighting mode (VorteX)
+-d darkplaces renderer: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
+-d darkplaces renderer: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
+-d darkplaces renderer: water shader not working with fog (Tomaz)
+-d dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (Sajt)
 -f (Mitchell) darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f (Option42) darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
+-f darkplaces protocol: PROTOCOL_DARKPLACES5 not sending skin? (Sajt)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
@@ -65,8 +73,6 @@
 0 darkplaces parse: support ' quoted strings
 0 darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
-0 darkplaces protocol: PROTOCOL_DARKPLACES4 malfunctioning after a few seconds, probably not acknowledging packets properly (Sajt)
-0 darkplaces protocol: PROTOCOL_DARKPLACES5 not sending skin? (Sajt)
 0 darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 darkplaces protocol: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
 0 darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
@@ -74,29 +80,24 @@
 0 darkplaces protocol: add lava-steam particle puff effect for bursting lava bubbles (Zombie)
 0 darkplaces protocol: add support for .float corona and corona_radius to control corona intensity and radius on dlights 
 0 darkplaces protocol: document the TEI stuff used in Nexuiz?  check telejano site first (Sajt)
-0 darkplaces protocol: expand viewzoom to two bytes (8bit.8bit fixedpoint instead of 0.8bit like it is now) (Urre)
 0 darkplaces protocol: fix signon error when starting prydon without +map curig2 (FrikaC)
 0 darkplaces protocol: make a DP_EF_NODEPTHTEST extension which causes an entity to show through walls, useful for navigation markers (Urre, CheapAlert, Supajoe)
 0 darkplaces protocol: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces protocol: server should send sv_gravity to client somehow (Vermeulen)
-0 darkplaces renderer: "loadsky something;r_restart" results in skybox showing random textures from map (Randy)
-0 darkplaces renderer: EF_ADDITIVE alias model entities not appearing in realtime lighting mode? (VorteX)
 0 darkplaces renderer: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
 0 darkplaces renderer: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
 0 darkplaces renderer: add r_shadow_light_polygonoffset and polygonfactor cvars for lighting polygons (Diablo-D3)
 0 darkplaces renderer: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow
 0 darkplaces renderer: change sky handling to draw sky even if fog is on, and fog intensity should be cvar controlled (Deej, C0burn)
 0 darkplaces renderer: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
-0 darkplaces renderer: fix loadsky;r_restart;r_restart crash (sajt)
+0 darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
 0 darkplaces renderer: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 0 darkplaces renderer: fix q3bsp fogging (Sajt)
 0 darkplaces renderer: fix q3bsp map disappearing when noclipping outside it, and the entities still show up
-0 darkplaces renderer: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 0 darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 0 darkplaces renderer: fix vis problems when outside the level in q1bsp
-0 darkplaces renderer: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
-0 darkplaces renderer: water shader not working with fog (Tomaz)
+0 darkplaces server: PF_vectorvectors is broken, given a v_forward from makevectors (not using roll) it does not give the same v_right and v_up vectors (VorteX)
 0 darkplaces server: add DP_HALFLIFESPRITE extension (Urre)
 0 darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
 0 darkplaces server: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension
@@ -117,7 +118,6 @@
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
-0 dpmod: add q3bsp teleport target entity
 0 dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
 0 dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
@@ -133,8 +133,6 @@
 0 dpmod: make teleport leave an EF_ADDITIVE clone of the player which fades out
 0 dpmod: monsters falling out of level? (Sajt)
 0 dpmod: monsters shouldn't constantly do sightsounds on a slain player, it's annoying and silly
-0 dpmod: revert back to id1 weapons
-0 dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (Sajt)
 0 dpmod: test for any unnamed death messages that might be happening
 0 dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
@@ -207,7 +205,6 @@
 2 darkplaces client: add support for stereo shutter glasses
 2 darkplaces client: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 2 darkplaces client: decal clipping (romi, Sajt)
-2 darkplaces client: don't draw entities which are tagged to the camera entity; exterior view models and such
 2 darkplaces client: proquake secure protocol support for playing on proquake servers (sublim3)
 2 darkplaces collision: bmodel bounding boxes need to be calculated to account for clip brushes, which are not in the drawing hull (metlslime)
 2 darkplaces collision: do trace against patch bbox before testing triangles
@@ -220,7 +217,7 @@
 2 darkplaces menu: add lan searching to the server browser and related code (Vermeulen)
 2 darkplaces menu: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
 2 darkplaces physics: DP_SV_QCPHYSICS extension, calls SV_PhysicsQC function, which replaces the entire SV_Physics C function, calling all thinks and physics and everything (Urre, Sajt)
-2 darkplaces protocol: add beameffects.txt file which would describe a bunch of numbered beams usable with te_beameffect(beamnumber, start, end) call from server, should have configurable subdivide and jitter to do hl-like beams as well as railguns and such (CheapAlert, Vermeulen)
+2 darkplaces protocol: add effects.txt file which would describe a bunch of numbered effects usable with a .effectindex field on entities, these would range from point effects, to continuous emitters, to beams with jitter and other properties, each effect would have various info like dlight and particle spawning and beam rendering (CheapAlert, Supa, FrikaC, [TACO], Sajt, Urre, Vermeulen)
 2 darkplaces protocol: add rcon_password system similar to quakeworld server
 2 darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
 2 darkplaces protocol: rename PreciseAngle stuff to Angle16, add Angle8 functions (for EF_LOWPRECISION code), upgrade Angle functions to use Angle16 or Angle8 depending on protocol version, upgrade ammo/armor stats to 16bit (Urre, FrikaC, Sajt, mashakos, RenegadeC, scar3crow) 
@@ -250,7 +247,6 @@
 3 darkplaces client: make "wait" command wait for next network frame somehow when connected, to make frikbot .way files load properly (Nexuiz, Transfusion, FrikaC)
 3 darkplaces client: make a new caching system with handles (which can be purged) and give every entity a cache handle to a model instance, which contains cache handles for each mesh/array
 3 darkplaces client: mod browser (and ability to switch mods) (Sajt, mashakos)
-3 darkplaces client: scriptable particle effects (Supajoe, FrikaC, [TACO], Sajt, Urre, Vermeulen)
 3 darkplaces collision: add edge bevels in collision code, by trying all crossproduct combinations of an edge with planes from the other brush, and choosing only the ones which are valid
 3 darkplaces docs: add short and long documentation string to each cvar/command (QorpsE)
 3 darkplaces docs: write a documentation string in engine, and a command to dump documentation to a darkplaces.txt file (QorpsE)
@@ -350,6 +346,7 @@ d darkplaces client: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv
 d darkplaces client: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
 d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, Harb, FrikaC)
 d darkplaces client: add two cvars to replace sbar_alpha, one would control background as 0-1, and one would control everything else as 0-1
+d darkplaces client: don't draw entities which are tagged to the camera entity; exterior view models and such
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 d darkplaces client: locked console scrollback (sublim3)
 d darkplaces client: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
@@ -671,6 +668,7 @@ d dpmod: add back tarbaby gibs (scar3crow)
 d dpmod: add combo kill detection; rapid burst of kills (Sajt)
 d dpmod: add frags for killing monsters in dpmod (scar3crow)
 d dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (Sajt)
+d dpmod: add q3bsp teleport target entity
 d dpmod: add rotfish to spawnmonsters code (only spawn if they land in water) (Zombie)
 d dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
 d dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
@@ -685,6 +683,7 @@ d dpmod: make tarbabies explode larger (Sajt)
 d dpmod: make the in-wall spikeballs only appear in developer 1 mode (Tomaz)
 d dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 d dpmod: post new dpmod build.
+d dpmod: revert back to id1 weapons
 d dpmod: switch to new Tomaz weapon models
 d dpmod: up nail limit to 500 (scar3crow)
 d dpmod: use Tomaz's ammo box models (Tomaz) 
