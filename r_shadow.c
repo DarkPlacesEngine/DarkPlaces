@@ -3353,7 +3353,6 @@ void R_Shadow_EditLights_CopyInfo_f(void)
 void R_Shadow_EditLights_PasteInfo_f(void)
 {
 	vec3_t origin;
-	VectorCopy(r_shadow_selectedlight->origin, origin);
 	if (!r_editlights.integer)
 	{
 		Con_Print("Cannot paste light info when not in editing mode.  Set r_editlights to 1.\n");
@@ -3364,6 +3363,7 @@ void R_Shadow_EditLights_PasteInfo_f(void)
 		Con_Print("No selected light.\n");
 		return;
 	}
+	VectorCopy(r_shadow_selectedlight->origin, origin);
 	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
 	r_shadow_selectedlight = NULL;
 	R_Shadow_NewWorldLight(origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname);
