@@ -42,8 +42,8 @@ SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
 
 
 OBJ_COMMON= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
-OBJ_WGL= vid_wgl.o $(OBJ_CD) $(OBJ_SND) net_win.o net_wins.o sys_win.o
-OBJ_DED= vid_null.o cd_null.o snd_null.o net_win.o net_wins.o sys_win.o
+OBJ_WGL= vid_wgl.o $(OBJ_CD) $(OBJ_SND) net_bsd.o net_wins.o sys_win.o
+OBJ_DED= vid_null.o cd_null.o snd_null.o net_bsd.o net_wins.o sys_win.o
 
 
 # Compilation
