@@ -266,7 +266,7 @@ void Host_Map_f (void)
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-//	SCR_BeginLoadingPlaque ();
+	SCR_BeginLoadingPlaque ();
 
 	CL_Disconnect ();
 	Host_ShutdownServer(false);		
@@ -358,7 +358,7 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f (void)
 {
-//	SCR_BeginLoadingPlaque ();
+	SCR_BeginLoadingPlaque ();
 	cls.signon = 0;		// need new connection messages
 }
 
@@ -396,7 +396,7 @@ LOAD / SAVE GAME
 ===============
 Host_SavegameComment
 
-Writes a SAVEGAME_COMMENT_LENGTH character comment describing the current 
+Writes a SAVEGAME_COMMENT_LENGTH character comment describing the current
 ===============
 */
 void Host_SavegameComment (char *text)
@@ -461,7 +461,7 @@ void Host_Savegame_f (void)
 		Con_Printf ("Relative pathnames are not allowed.\n");
 		return;
 	}
-		
+
 	for (i=0 ; i<svs.maxclients ; i++)
 	{
 		if (svs.clients[i].active && (svs.clients[i].edict->v.health <= 0) )
@@ -473,7 +473,7 @@ void Host_Savegame_f (void)
 
 	sprintf (name, "%s/%s", com_gamedir, Cmd_Argv(1));
 	COM_DefaultExtension (name, ".sav");
-	
+
 	Con_Printf ("Saving game to %s...\n", name);
 	f = Qopen (name, "w");
 	if (!f)
@@ -481,7 +481,7 @@ void Host_Savegame_f (void)
 		Con_Printf ("ERROR: couldn't open.\n");
 		return;
 	}
-	
+
 	Qprintf (f, "%i\n", SAVEGAME_VERSION);
 	Host_SavegameComment (comment);
 	Qprintf (f, "%s\n", comment);
@@ -564,6 +564,9 @@ void Host_Loadgame_f (void)
 		Con_Printf ("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
 		return;
 	}
+
+	SCR_BeginLoadingPlaque ();
+
 	str = Qgetline (f);
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++) {
 		str = Qgetline (f);
@@ -581,7 +584,7 @@ void Host_Loadgame_f (void)
 	sscanf (str, "%f\n",&time);
 
 	CL_Disconnect_f ();
-	
+
 	SV_SpawnServer (mapname);
 	if (!sv.active)
 	{

@@ -2,7 +2,6 @@
 #include "quakedef.h"
 
 //cvar_t gl_transform = {0, "gl_transform", "1"};
-cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
 typedef struct
 {
@@ -20,25 +19,6 @@ int *aliasvertusage;
 rmeshinfo_t aliasmeshinfo;
 
 rtexture_t *chrometexture;
-
-int arraylocked = false;
-void GL_LockArray(int first, int count)
-{
-	if (gl_supportslockarrays && gl_lockarrays.integer)
-	{
-		qglLockArraysEXT(first, count);
-		arraylocked = true;
-	}
-}
-
-void GL_UnlockArray(void)
-{
-	if (arraylocked)
-	{
-		qglUnlockArraysEXT();
-		arraylocked = false;
-	}
-}
 
 /*
 void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
@@ -106,7 +86,6 @@ void gl_models_newmap(void)
 void GL_Models_Init(void)
 {
 //	Cvar_RegisterVariable(&gl_transform);
-	Cvar_RegisterVariable(&gl_lockarrays);
 
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }

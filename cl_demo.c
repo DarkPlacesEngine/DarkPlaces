@@ -49,8 +49,6 @@ void CL_NextDemo (void)
 	if (cls.demonum == -1)
 		return;		// don't play demos
 
-//	SCR_BeginLoadingPlaque ();
-
 	if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS)
 	{
 		cls.demonum = 0;
@@ -291,7 +289,7 @@ void CL_Record_f (void)
 
 	cls.forcetrack = track;
 	Qprintf (cls.demofile, "%i\n", cls.forcetrack);
-	
+
 	cls.demorecording = true;
 }
 
@@ -318,13 +316,11 @@ void CL_PlayDemo_f (void)
 		return;
 	}
 
-//	SCR_BeginLoadingPlaque();
-
 //
 // disconnect from server
 //
 	CL_Disconnect ();
-	
+
 //
 // open the demo file
 //
@@ -340,6 +336,8 @@ void CL_PlayDemo_f (void)
 		return;
 	}
 
+	SCR_BeginLoadingPlaque ();
+
 	cls.demoplayback = true;
 	cls.state = ca_connected;
 	cls.forcetrack = 0;
@@ -354,6 +352,7 @@ void CL_PlayDemo_f (void)
 		cls.forcetrack = -cls.forcetrack;
 // ZOID, fscanf is evil
 //	fscanf (cls.demofile, "%i\n", &cls.forcetrack);
+
 }
 
 /*

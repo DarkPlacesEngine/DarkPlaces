@@ -231,13 +231,6 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(3, 0, 0, -1,  1, -1);
 	R_Mesh_Draw(&m);
-	R_Mesh_Render();
-	if (r_skyflush.integer)
-		glFlush();
-	// clear the zbuffer that was used while rendering the sky
-	glClear(GL_DEPTH_BUFFER_BIT);
-	if (r_skyflush.integer)
-		glFlush();
 }
 
 static float skysphere[33*33*5];
@@ -342,21 +335,20 @@ static void R_SkySphere(void)
 	m.tex[0] = R_GetTexture(alphaskytexture);
 	m.texcoords[0] = tex2;
 	R_Mesh_Draw(&m);
-	R_Mesh_Render();
-	if (r_skyflush.integer)
-		glFlush();
-	// clear the zbuffer that was used while rendering the sky
-	glClear(GL_DEPTH_BUFFER_BIT);
-	if (r_skyflush.integer)
-		glFlush();
 }
 
 void R_Sky(void)
 {
-	if (skyrendersphere)
-		R_SkySphere();
-	else if (skyrenderbox)
-		R_SkyBox();
+	if (skyrendermasked)
+	{
+		if (skyrendersphere)
+			R_SkySphere();
+		else if (skyrenderbox)
+			R_SkyBox();
+
+		// clear the zbuffer that was used while rendering the sky
+		R_Mesh_ClearDepth();
+	}
 }
 
 //===============================================================

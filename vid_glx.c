@@ -76,8 +76,6 @@ static Colormap vidx11_colormap;
 
 /*-----------------------------------------------------------------------*/
 
-float		gldepthmin, gldepthmax;
-
 const char *gl_vendor;
 const char *gl_renderer;
 const char *gl_version;

@@ -57,8 +57,6 @@ int	VID_options_items = 0;
 
 /*-----------------------------------------------------------------------*/
 
-float		gldepthmin, gldepthmax;
-
 const char *gl_vendor;
 const char *gl_renderer;
 const char *gl_version;

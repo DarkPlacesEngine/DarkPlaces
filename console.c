@@ -93,8 +93,8 @@ void Con_ToggleConsole_f (void)
 	}
 	else
 		key_dest = key_console;
-	
-//	SCR_EndLoadingPlaque ();
+
+	SCR_EndLoadingPlaque ();
 	memset (con_times, 0, sizeof(con_times));
 }
 
@@ -109,7 +109,7 @@ void Con_Clear_f (void)
 		memset (con_text, ' ', CON_TEXTSIZE);
 }
 
-						
+
 /*
 ================
 Con_ClearNotify
@@ -118,12 +118,12 @@ Con_ClearNotify
 void Con_ClearNotify (void)
 {
 	int		i;
-	
+
 	for (i=0 ; i<NUM_CON_TIMES ; i++)
 		con_times[i] = 0;
 }
 
-						
+
 /*
 ================
 Con_MessageMode_f
@@ -137,7 +137,7 @@ void Con_MessageMode_f (void)
 	team_message = false;
 }
 
-						
+
 /*
 ================
 Con_MessageMode2_f
@@ -149,7 +149,7 @@ void Con_MessageMode2_f (void)
 	team_message = true;
 }
 
-						
+
 /*
 ================
 Con_CheckResize
@@ -186,7 +186,7 @@ void Con_CheckResize (void)
 			numlines = con_totallines;
 
 		numchars = oldwidth;
-	
+
 		if (con_linewidth < numchars)
 			numchars = con_linewidth;
 
@@ -322,7 +322,7 @@ void Con_Print (char *txt)
 			cr = false;
 		}
 
-		
+
 		if (!con_x)
 		{
 			Con_Linefeed ();
@@ -350,7 +350,7 @@ void Con_Print (char *txt)
 				con_x = 0;
 			break;
 		}
-		
+
 	}
 }
 
@@ -362,10 +362,10 @@ Con_DebugLog
 */
 void Con_DebugLog(char *file, char *fmt, ...)
 {
-    va_list argptr; 
+    va_list argptr;
     static char data[1024];
     int fd;
-    
+
     va_start(argptr, fmt);
     vsprintf(data, fmt, argptr);
     va_end(argptr);
@@ -453,7 +453,7 @@ void Con_DPrintf (char *fmt, ...)
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
-	
+
 	Con_Printf ("%s", msg);
 }
 
@@ -470,7 +470,7 @@ void Con_SafePrintf (char *fmt, ...)
 	va_list		argptr;
 	char		msg[1024];
 	int			temp;
-		
+
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
@@ -707,10 +707,10 @@ Con_CompleteCommandLine (void)
 	c = Cmd_CompleteCountPossible(s);
 	v = Cvar_CompleteCountPossible(s);
 	a = Cmd_CompleteAliasCountPossible(s);
-	
+
 	if (!(c + v + a))	// No possible matches
 		return;
-	
+
 	if (c + v + a == 1) {
 		if (c)
 			list[0] = Cmd_CompleteBuildList(s);
@@ -754,18 +754,18 @@ Con_CompleteCommandLine (void)
 			Con_Printf("%i possible command%s\n", c, (c > 1) ? "s: " : ":");
 			Con_DisplayList(list[0]);
 		}
-		
+
 		if (v) {
 			Con_Printf("%i possible variable%s\n", v, (v > 1) ? "s: " : ":");
 			Con_DisplayList(list[1]);
 		}
-		
+
 		if (a) {
 			Con_Printf("%i possible aliases%s\n", a, (a > 1) ? "s: " : ":");
 			Con_DisplayList(list[2]);
 		}
 	}
-	
+
 	if (cmd) {
 		strncpy(key_lines[edit_line] + 1, cmd, cmd_len);
 		key_linepos = cmd_len + 1;
