@@ -1183,6 +1183,7 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 	}
 }
 
+#if 0
 void BoundPoly(int numverts, float *verts, vec3_t mins, vec3_t maxs)
 {
 	int		i, j;
@@ -1203,7 +1204,6 @@ void BoundPoly(int numverts, float *verts, vec3_t mins, vec3_t maxs)
 	}
 }
 
-#if 0
 #define MAX_SUBDIVPOLYTRIANGLES 4096
 #define MAX_SUBDIVPOLYVERTS(MAX_SUBDIVPOLYTRIANGLES * 3)
 
