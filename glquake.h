@@ -73,34 +73,6 @@ extern	int glx, gly, glwidth, glheight;
 void R_TimeRefresh_f (void);
 void R_ReadPointFile_f (void);
 
-
-// LordHavoc: added dust, smoke, snow, bloodcloud, and many others
-typedef enum {
-	pt_static, pt_grav, pt_slowgrav, pt_fire, pt_explode, pt_explode2, pt_blob, pt_blob2, pt_dust, pt_smoke, pt_snow, pt_bulletpuff, pt_bloodcloud, pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade, pt_smokecloud
-} ptype_t;
-
-// !!! if this is changed, it must be changed in d_ifacea.h too !!!
-typedef struct particle_s
-{
-// driver-usable fields
-	vec3_t		org;
-	float		color;
-// drivers never touch the following fields
-	struct particle_s	*next;
-	vec3_t		vel;
-	float		ramp;
-	float		die;
-	ptype_t		type;
-	// LordHavoc: added for improved particle effects
-	float		scale;
-	short		texnum;
-	float		alpha; // 0-255
-	float		time2; // used for various things (snow fluttering, for example)
-	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
-//	vec3_t		pushvel; // temporary boost from explosions
-} particle_t;
-
-
 //====================================================
 
 
