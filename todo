@@ -34,6 +34,7 @@
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
+0 darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
 0 darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces client: interpolate punchangle and punchvector from network (Sajt)
 0 darkplaces client: make blood decals a bit lighter as they're nearly black (ashridah)
@@ -133,6 +134,7 @@
 0 dpmod: make spawning use viewzoom to start zoomed out 2.0 and then zoom in to 1.0 (Urre)
 0 dpmod: make teleport leave an EF_ADDITIVE clone of the player which fades out
 0 dpmod: monsters falling out of level? (Sajt)
+0 dpmod: monsters shouldn't constantly do sightsounds on a slain player, it's annoying and silly
 0 dpmod: revert back to id1 weapons
 0 dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (Sajt)
 0 dpmod: test for any unnamed death messages that might be happening
@@ -147,6 +149,7 @@
 0 dpzoo.map: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
 0 hmap2 -qbsp: add ORIGIN brush support in bmodel compilation (Carni)
 0 hmap2: add CAULK texture support - delete surfaces using this texture, or at least don't link them (Tomaz)
+0 hmap2: make LoadBrush reject incomplete brushes - they produce bogus polygon boundaries (Tomaz)
 0 hmap2: make sure seconds reports in all tools don't print secondssss when they're printing shorter and shorter updates (FrikaC)
 0 hmap2: release hmap2 (Vic, Supajoe, Urre)
 0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
