@@ -670,30 +670,28 @@ void Host_ServerFrame (void)
 {
 	// never run more than 5 frames at a time as a sanity limit
 	int framecount, framelimit = 5;
-	double advancetime, newtime;
+	double advancetime;
 	if (!sv.active)
+	{
+		sv.timer = 0;
 		return;
-	newtime = Sys_DoubleTime();
-	// if this is the first frame of a new server, ignore the huge time difference
-	if (!sv.timer)
-		sv.timer = newtime;
-	// if we're already past the new time, don't run a frame
-	// (does not happen if cl.islocalgame)
-	if (sv.timer > newtime)
-		return;
+	}
+	sv.timer += host_realframetime;
 	// run the world state
 	// don't allow simulation to run too fast or too slow or logic glitches can occur
-	for (framecount = 0;framecount < framelimit && sv.timer < newtime;framecount++)
+	for (framecount = 0;framecount < framelimit && sv.timer > 0;framecount++)
 	{
 		if (cl.islocalgame)
-			advancetime = min(newtime - sv.timer, sys_ticrate.value);
+			advancetime = min(sv.timer, sys_ticrate.value);
 		else
 			advancetime = sys_ticrate.value;
-		sv.timer += advancetime;
+		sv.timer -= advancetime;
 
 		// only advance time if not paused
 		// the game also pauses in singleplayer when menu or console is used
 		sv.frametime = advancetime * slowmo.value;
+		if (host_framerate.value)
+			sv.frametime = host_framerate.value;
 		if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
 			sv.frametime = 0;
 
@@ -720,8 +718,8 @@ void Host_ServerFrame (void)
 		NetConn_Heartbeat(0);
 	}
 	// if we fell behind too many frames just don't worry about it
-	if (sv.timer < newtime)
-		sv.timer = newtime;
+	if (sv.timer > 0)
+		sv.timer = 0;
 }
 
 
