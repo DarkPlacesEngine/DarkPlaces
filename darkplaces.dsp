@@ -168,6 +168,10 @@ SOURCE=.\crc.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\curves.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cvar.c
 # End Source File
 # Begin Source File
@@ -473,6 +477,10 @@ SOURCE=.\console.h
 # Begin Source File
 
 SOURCE=.\crc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\curves.h
 # End Source File
 # Begin Source File
 

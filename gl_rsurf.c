@@ -37,6 +37,7 @@ cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "1"};
+cvar_t r_curves_subdivide_level = {0, "r_curves_subdivide_level", "0"};
 
 static int dlightdivtable[32768];
 
@@ -1937,8 +1938,67 @@ void R_Q3BSP_DrawFace_Mesh(entity_render_t *ent, q3mface_t *face)
 	R_Mesh_Draw(face->numvertices, face->numtriangles, face->data_element3i);
 }
 
+#include "curves.h"
+
 void R_Q3BSP_DrawFace_Patch(entity_render_t *ent, q3mface_t *face)
 {
+	int *e, row0, row1, finalwidth, finalheight, x, y, xlevel = r_curves_subdivide_level.integer, ylevel = r_curves_subdivide_level.integer;
+	rmeshstate_t m;
+
+	finalwidth = ((face->patchsize[0] - 1) << xlevel) + 1;
+	finalheight = ((face->patchsize[1] - 1) << ylevel) + 1;
+
+	// generate vertex arrays
+	QuadraticSplinePatchSubdivideFloatBuffer(face->patchsize[0], face->patchsize[1], xlevel, ylevel, 3, face->data_vertex3f, varray_vertex3f);
+	QuadraticSplinePatchSubdivideFloatBuffer(face->patchsize[0], face->patchsize[1], xlevel, ylevel, 2, face->data_texcoordtexture2f, varray_texcoord2f[0]);
+	if (face->lightmaptexture)
+		QuadraticSplinePatchSubdivideFloatBuffer(face->patchsize[0], face->patchsize[1], xlevel, ylevel, 2, face->data_texcoordlightmap2f, varray_texcoord2f[1]);
+	else
+		QuadraticSplinePatchSubdivideFloatBuffer(face->patchsize[0], face->patchsize[1], xlevel, ylevel, 4, face->data_color4f, varray_color4f);
+
+	// generate elements
+	e = earray_element3i;
+	for (y = 0;y < finalheight - 1;y++)
+	{
+		row0 = (y + 0) * finalwidth;
+		row1 = (y + 1) * finalwidth;
+		for (x = 0;x < finalwidth - 1;x++)
+		{
+			*e++ = row0;
+			*e++ = row1;
+			*e++ = row0 + 1;
+			*e++ = row1;
+			*e++ = row1 + 1;
+			*e++ = row0 + 1;
+			row0++;
+			row1++;
+		}
+	}
+	for (x = 0;x < (finalwidth-1)*(finalheight-1)*6;x++)
+		if ((unsigned int)earray_element3i[x] >= (unsigned int)(finalwidth*finalheight))
+			Con_Printf("e[%i] = %i (> %i)\n", x, earray_element3i[x], finalwidth*finalheight);
+
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	if (face->lightmaptexture)
+	{
+		m.tex[1] = R_GetTexture(face->lightmaptexture);
+		m.pointer_texcoord[1] = varray_texcoord2f[1];
+		m.texrgbscale[1] = 2;
+		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	}
+	else
+	{
+		m.texrgbscale[0] = 2;
+		GL_ColorPointer(varray_color4f);
+	}
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(varray_vertex3f);
+	R_Mesh_Draw(finalwidth * finalheight, (finalwidth - 1) * (finalheight - 1) * 2, earray_element3i);
 }
 
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
@@ -2006,7 +2066,7 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		if (ent == &cl_entities[0].render)
+		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer)
 		{
 			Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 			pvs = model->brush.GetPVS(model, modelorg);
@@ -2075,6 +2135,7 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_floatbuildlightmap);
 	Cvar_RegisterVariable(&r_detailtextures);
 	Cvar_RegisterVariable(&r_surfaceworldnode);
+	Cvar_RegisterVariable(&r_curves_subdivide_level);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

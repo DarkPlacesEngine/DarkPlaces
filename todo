@@ -3,6 +3,10 @@
 -n darkplaces: fix a crash when changing level while using qe1 textures (Todd)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
+0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
+0 darkplaces: shadows are not working with model tag attachments (Electro)
+0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension
@@ -154,7 +158,7 @@
 1 darkplaces: display "No servers found" instead of a cursor when there are none (yummyluv)
 1 darkplaces: don't accept connect packets after first one (tell Willis)
 1 darkplaces: figure out what's causing skybox to go textureless occasionally (yummyluv)
-1 darkplaces: finish porting Quake2 keyboard stuff (such as clipboard) (Rick)
+1 darkplaces: finish porting Quake2 keyboard stuff (such as clipboard) (Rick, FrikaC)
 1 darkplaces: fix lots of bugs and then retitle the website to get more publicity: DarkPlaces: Re-live Quake again...
 1 darkplaces: fix stuck buttons during a level change (mercury82, tkimmet@ezworks.net)  (further note: this is from the console becoming active temporarily and catching the key release when the player lets go during the loading stage, make it possible to release a button that was pressed before the console was activated, or make it execute -commands for all pressed binds when level starts)
 1 darkplaces: make Host_Error call error reset functions on renderer subsystems?  (models are already flushed)
