@@ -458,6 +458,9 @@ void CL_ReadPointFile_f (void)
 	char *pointfile = NULL, *pointfilepos, *t, tchar;
 	char name[MAX_OSPATH];
 
+	if (!cl.worldmodel)
+		return;
+
 	FS_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".pts");
 #if WORKINGLQUAKE
