@@ -515,7 +515,7 @@ static void R_BlendView(void)
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
 	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE;
+	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.depthdisable = true; // magic
 	m.numtriangles = 1;
 	m.numverts = 3;
