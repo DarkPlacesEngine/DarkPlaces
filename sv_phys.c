@@ -75,7 +75,7 @@ void SV_CheckAllEnts (void)
 	check = NEXT_EDICT(sv.edicts);
 	for (e = 1;e < sv.num_edicts;e++, check = NEXT_EDICT(check))
 	{
-		if (check->free)
+		if (check->e->free)
 			continue;
 		if (check->v->movetype == MOVETYPE_PUSH
 		 || check->v->movetype == MOVETYPE_NONE
@@ -154,7 +154,7 @@ qboolean SV_RunThink (edict_t *ent)
 	pr_global_struct->self = EDICT_TO_PROG(ent);
 	pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
 	PR_ExecuteProgram (ent->v->think, "NULL think function");
-	return !ent->free;
+	return !ent->e->free;
 }
 
 /*
@@ -304,7 +304,7 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 				SV_Impact (ent, trace.ent);
 
 				// break if removed by the impact function
-				if (ent->free)
+				if (ent->e->free)
 					break;
 			}
 
@@ -399,7 +399,7 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 				SV_Impact (ent, trace.ent);
 
 				// break if removed by the impact function
-				if (ent->free)
+				if (ent->e->free)
 					break;
 			}
 
@@ -646,7 +646,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	check = NEXT_EDICT(sv.edicts);
 	for (e = 1;e < sv.num_edicts;e++, check = NEXT_EDICT(check))
 	{
-		if (check->free)
+		if (check->e->free)
 			continue;
 		if (check->v->movetype == MOVETYPE_PUSH
 		 || check->v->movetype == MOVETYPE_NONE
@@ -686,8 +686,8 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		if (check->v->movetype != MOVETYPE_WALK)
 			check->v->flags = (int)check->v->flags & ~FL_ONGROUND;
 
-		VectorCopy (check->v->origin, check->moved_from);
-		VectorCopy (check->v->angles, check->moved_fromangles);
+		VectorCopy (check->v->origin, check->e->moved_from);
+		VectorCopy (check->v->angles, check->e->moved_fromangles);
 		sv.moved_edicts[num_moved++] = check;
 
 		// try moving the contacted entity
@@ -727,8 +727,8 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				for (i = 0;i < num_moved;i++)
 				{
 					ed = sv.moved_edicts[i];
-					VectorCopy (ed->moved_from, ed->v->origin);
-					VectorCopy (ed->moved_fromangles, ed->v->angles);
+					VectorCopy (ed->e->moved_from, ed->v->origin);
+					VectorCopy (ed->e->moved_fromangles, ed->v->angles);
 					SV_LinkEdict (ed, false);
 				}
 
@@ -778,7 +778,7 @@ void SV_Physics_Pusher (edict_t *ent)
 		pr_global_struct->self = EDICT_TO_PROG(ent);
 		pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
 		PR_ExecuteProgram (ent->v->think, "NULL think function");
-		if (ent->free)
+		if (ent->e->free)
 			return;
 	}
 
@@ -1000,7 +1000,7 @@ void SV_WalkMove (edict_t *ent)
 	if (sv_nostep.integer)
 		return;
 
-	if ( (int)sv_player->v->flags & FL_WATERJUMP )
+	if ( (int)ent->v->flags & FL_WATERJUMP )
 		return;
 
 	VectorCopy (ent->v->origin, nosteporg);
@@ -1277,18 +1277,18 @@ void SV_Physics_Toss (edict_t *ent)
 		groundentity = PROG_TO_EDICT(ent->v->groundentity);
 		if (groundentity->v->solid == SOLID_BSP)
 		{
-			ent->suspendedinairflag = true;
+			ent->e->suspendedinairflag = true;
 			return;
 		}
-		else if (ent->suspendedinairflag && groundentity->free)
+		else if (ent->e->suspendedinairflag && groundentity->e->free)
 		{
 			// leave it suspended in the air
 			ent->v->groundentity = 0;
-			ent->suspendedinairflag = false;
+			ent->e->suspendedinairflag = false;
 			return;
 		}
 	}
-	ent->suspendedinairflag = false;
+	ent->e->suspendedinairflag = false;
 
 	SV_CheckVelocity (ent);
 
@@ -1302,7 +1302,7 @@ void SV_Physics_Toss (edict_t *ent)
 // move origin
 	VectorScale (ent->v->velocity, sv.frametime, move);
 	trace = SV_PushEntity (ent, move, vec3_origin);
-	if (ent->free)
+	if (ent->e->free)
 		return;
 
 	if (trace.fraction < 1)
@@ -1437,7 +1437,7 @@ void SV_Physics (void)
 	ent = sv.edicts;
 	for (i=0 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
 	{
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 
 		if (pr_global_struct->force_retouch)

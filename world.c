@@ -184,10 +184,10 @@ void SV_UnlinkEdict (edict_t *ent)
 	int i;
 	for (i = 0;i < ENTITYGRIDAREAS;i++)
 	{
-		if (ent->areagrid[i].prev)
+		if (ent->e->areagrid[i].prev)
 		{
-			RemoveLink (&ent->areagrid[i]);
-			ent->areagrid[i].prev = ent->areagrid[i].next = NULL;
+			RemoveLink (&ent->e->areagrid[i]);
+			ent->e->areagrid[i].prev = ent->e->areagrid[i].next = NULL;
 		}
 	}
 }
@@ -250,9 +250,9 @@ void SV_TouchAreaGrid(edict_t *ent)
 			{
 				next = l->next;
 				touch = EDICT_NUM(l->entitynumber);
-				if (touch->areagridmarknumber == sv_areagrid_marknumber)
+				if (touch->e->areagridmarknumber == sv_areagrid_marknumber)
 					continue;
-				touch->areagridmarknumber = sv_areagrid_marknumber;
+				touch->e->areagridmarknumber = sv_areagrid_marknumber;
 				if (ent->v->absmin[0] > touch->v->absmax[0]
 				 || ent->v->absmax[0] < touch->v->absmin[0]
 				 || ent->v->absmin[1] > touch->v->absmax[1]
@@ -294,9 +294,9 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 	{
 		// wow, something outside the grid, store it as such
 		if (ent->v->solid == SOLID_TRIGGER)
-			InsertLinkBefore (&ent->areagrid[0], &sv_areagrid_outside.trigger_edicts, NUM_FOR_EDICT(ent));
+			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.trigger_edicts, NUM_FOR_EDICT(ent));
 		else
-			InsertLinkBefore (&ent->areagrid[0], &sv_areagrid_outside.solid_edicts, NUM_FOR_EDICT(ent));
+			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.solid_edicts, NUM_FOR_EDICT(ent));
 		return;
 	}
 
@@ -307,9 +307,9 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++, gridnum++)
 		{
 			if (ent->v->solid == SOLID_TRIGGER)
-				InsertLinkBefore (&ent->areagrid[gridnum], &grid->trigger_edicts, NUM_FOR_EDICT(ent));
+				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->trigger_edicts, NUM_FOR_EDICT(ent));
 			else
-				InsertLinkBefore (&ent->areagrid[gridnum], &grid->solid_edicts, NUM_FOR_EDICT(ent));
+				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->solid_edicts, NUM_FOR_EDICT(ent));
 		}
 	}
 }
@@ -324,13 +324,13 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 {
 	model_t *model;
 
-	if (ent->areagrid[0].prev)
+	if (ent->e->areagrid[0].prev)
 		SV_UnlinkEdict (ent);	// unlink from old position
 
 	if (ent == sv.edicts)
 		return;		// don't add the world
 
-	if (ent->free)
+	if (ent->e->free)
 		return;
 
 // set the abs box
@@ -495,9 +495,9 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 	{
 		next = l->next;
 		touch = EDICT_NUM(l->entitynumber);
-		if (touch->areagridmarknumber == sv_areagrid_marknumber)
+		if (touch->e->areagridmarknumber == sv_areagrid_marknumber)
 			continue;
-		touch->areagridmarknumber = sv_areagrid_marknumber;
+		touch->e->areagridmarknumber = sv_areagrid_marknumber;
 		sv_areagrid_stats_entitychecks++;
 
 		if (clip->boxmins[0] > touch->v->absmax[0]

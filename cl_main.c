@@ -1572,7 +1572,7 @@ static void CL_PModel_f (void)
 	}
 
 	host_client->pmodel = i;
-	if ((val = GETEDICTFIELDVALUE(EDICT_NUM(host_client->edictnumber), eval_pmodel)))
+	if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
 		val->_float = i;
 }
 

@@ -851,7 +851,7 @@ int PF_newcheckclient (int check)
 		if (i == check)
 			break;	// didn't find anything else
 
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 		if (ent->v->health <= 0)
 			continue;
@@ -903,7 +903,7 @@ void PF_checkclient (void)
 
 	// return check if it might be visible
 	ent = EDICT_NUM(sv.lastcheck);
-	if (ent->free || ent->v->health <= 0)
+	if (ent->e->free || ent->v->health <= 0)
 	{
 		RETURN_EDICT(sv.edicts);
 		return;
@@ -1036,7 +1036,7 @@ void PF_findradius (void)
 	for (i=1 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
 	{
 		pr_xfunction->builtinsprofile++;
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 		if (ent->v->solid == SOLID_NOT)
 			continue;
@@ -1159,7 +1159,7 @@ void PF_Find (void)
 	{
 		pr_xfunction->builtinsprofile++;
 		ed = EDICT_NUM(e);
-		if (ed->free)
+		if (ed->e->free)
 			continue;
 		t = E_STRING(ed,f);
 		if (!t)
@@ -1190,7 +1190,7 @@ void PF_FindFloat (void)
 	{
 		pr_xfunction->builtinsprofile++;
 		ed = EDICT_NUM(e);
-		if (ed->free)
+		if (ed->e->free)
 			continue;
 		if (E_FLOAT(ed,f) == s)
 		{
@@ -1225,7 +1225,7 @@ void PF_findchain (void)
 	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
 	{
 		pr_xfunction->builtinsprofile++;
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 		t = E_STRING(ent,f);
 		if (!t)
@@ -1258,7 +1258,7 @@ void PF_findchainfloat (void)
 	for (i = 1;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
 	{
 		pr_xfunction->builtinsprofile++;
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 		if (E_FLOAT(ent,f) != s)
 			continue;
@@ -1428,7 +1428,7 @@ void PF_droptofloor (void)
 		ent->v->groundentity = EDICT_TO_PROG(trace.ent);
 		G_FLOAT(OFS_RETURN) = 1;
 		// if support is destroyed, keep suspended (gross hack for floating items in various maps)
-		ent->suspendedinairflag = true;
+		ent->e->suspendedinairflag = true;
 	}
 }
 
@@ -1527,7 +1527,7 @@ void PF_nextent (void)
 			return;
 		}
 		ent = EDICT_NUM(i);
-		if (!ent->free)
+		if (!ent->e->free)
 		{
 			RETURN_EDICT(ent);
 			return;
@@ -2103,7 +2103,7 @@ void PF_setcolor (void)
 
 	client = &svs.clients[entnum-1];
 	client->colors = i;
-	EDICT_NUM(client->edictnumber)->v->team = (i & 15) + 1;
+	client->edict->v->team = (i & 15) + 1;
 
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
 	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
@@ -2547,7 +2547,7 @@ static msurface_t *getsurface(edict_t *ed, int surfnum)
 {
 	int modelindex;
 	model_t *model;
-	if (!ed || ed->free)
+	if (!ed || ed->e->free)
 		return NULL;
 	modelindex = ed->v->modelindex;
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
@@ -2582,7 +2582,7 @@ void PF_getsurfacepoint(void)
 	int pointnum;
 	VectorClear(G_VECTOR(OFS_RETURN));
 	ed = G_EDICT(OFS_PARM0);
-	if (!ed || ed->free)
+	if (!ed || ed->e->free)
 		return;
 	if (!(surf = getsurface(ed, G_FLOAT(OFS_PARM1))))
 		return;
@@ -2628,7 +2628,7 @@ void PF_getsurfacenearpoint(void)
 	ed = G_EDICT(OFS_PARM0);
 	point = G_VECTOR(OFS_PARM1);
 
-	if (!ed || ed->free)
+	if (!ed || ed->e->free)
 		return;
 	modelindex = ed->v->modelindex;
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
@@ -2668,7 +2668,7 @@ void PF_getsurfaceclippedpoint(void)
 	vec3_t p, out;
 	VectorClear(G_VECTOR(OFS_RETURN));
 	ed = G_EDICT(OFS_PARM0);
-	if (!ed || ed->free)
+	if (!ed || ed->e->free)
 		return;
 	if (!(surf = getsurface(ed, G_FLOAT(OFS_PARM1))))
 		return;

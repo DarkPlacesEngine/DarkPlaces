@@ -67,13 +67,17 @@ typedef struct
 	char *lightstyles[MAX_LIGHTSTYLES];
 	int num_edicts;
 	int max_edicts;
-	// can NOT be array indexed, because edict_t is variable sized, but can be used to reference the world ent
+	// small edict_t structures which just contain pointers
+	// (allocated at server startup only)
 	edict_t *edicts;
-	// can be array indexed
-	edict_t **edictstable;
-	// array of QC edict field variables
+	// engine private edict information
+	// (dynamically resized - always access through edict_t!)
+	edict_engineprivate_t *edictsengineprivate;
+	// QuakeC fields array
+	// (dynamically resized - always access through edict_t!)
 	void *edictsfields;
 	// PushMove sometimes has to move entities back from a failed move
+	// (dynamically resized)
 	edict_t **moved_edicts;
 	// some actions are only valid during load
 	server_state_t state;
@@ -127,8 +131,8 @@ typedef struct client_s
 	// can be added to at any time, copied and clear once per frame
 	sizebuf_t message;
 	qbyte msgbuf[MAX_DATAGRAM];
-	// (clientnum+1)
-	int edictnumber;
+	// EDICT_NUM(clientnum+1)
+	edict_t *edict;
 	// for printing to other people
 	char name[32];
 	int colors;
