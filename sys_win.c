@@ -19,14 +19,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // sys_win.c -- Win32 system interface code
 
-#define WIN32_USETIMEGETTIME 0
-
 #include "quakedef.h"
 #include "winquake.h"
 #include "errno.h"
 #include "resource.h"
 #include "conproc.h"
 #include "direct.h"
+
+cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 
 // # of seconds to wait on Sys_Error running dedicated before exiting
 #define CONSOLE_ERROR_TIMEOUT	60.0
@@ -278,45 +278,52 @@ double Sys_DoubleTime (void)
 	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
 	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
-#if WIN32_USETIMEGETTIME
-	// timeGetTime
-	// platform:
-	// Windows 95/98/ME/NT/2000
-	// features:
-	// reasonable accuracy (millisecond)
-	// issues:
-	// wraps around every 47 days or so (but this is non-fatal to us, odd times are rejected, only causes a one frame stutter)
+	if (sys_usetimegettime.integer)
+	{
+		static int firsttimegettime = true;
+		// timeGetTime
+		// platform:
+		// Windows 95/98/ME/NT/2000/XP
+		// features:
+		// reasonable accuracy (millisecond)
+		// issues:
+		// wraps around every 47 days or so (but this is non-fatal to us, odd times are rejected, only causes a one frame stutter)
 
-	// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
-	if (first)
-		timeBeginPeriod (1);
+		// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
+		if (firsttimegettime)
+		{
+			timeBeginPeriod (1);
+			firsttimegettime = false;
+		}
 
-	newtime = (double) timeGetTime () / 1000.0;
-#else
-	// QueryPerformanceCounter
-	// platform:
-	// Windows 95/98/ME/NT/2000
-	// features:
-	// very accurate (CPU cycles)
-	// known issues:
-	// does not necessarily match realtime too well (tends to get faster and faster in win98)
-	// wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
-	static double timescale = 0.0;
-	LARGE_INTEGER PerformanceFreq;
-	LARGE_INTEGER PerformanceCount;
+		newtime = (double) timeGetTime () / 1000.0;
+	}
+	else
+	{
+		// QueryPerformanceCounter
+		// platform:
+		// Windows 95/98/ME/NT/2000/XP
+		// features:
+		// very accurate (CPU cycles)
+		// known issues:
+		// does not necessarily match realtime too well (tends to get faster and faster in win98)
+		// wraps around occasionally on some platforms (depends on CPU speed and probably other unknown factors)
+		double timescale;
+		LARGE_INTEGER PerformanceFreq;
+		LARGE_INTEGER PerformanceCount;
 
-	if (!QueryPerformanceFrequency (&PerformanceFreq))
-		Sys_Error ("No hardware timer available");
-	QueryPerformanceCounter (&PerformanceCount);
+		if (!QueryPerformanceFrequency (&PerformanceFreq))
+			Sys_Error ("No hardware timer available");
+		QueryPerformanceCounter (&PerformanceCount);
 
-#ifdef __BORLANDC__
-	timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
-	newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
-#else
-	timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
-	newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
-#endif
-#endif
+		#ifdef __BORLANDC__
+		timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
+		newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale;
+		#else
+		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
+		newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
+		#endif
+	}
 
 	if (first)
 	{
@@ -472,6 +479,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	/* previous instances do not exist in Win32 */
 	if (hPrevInstance)
 		return 0;
+
+	Cvar_RegisterVariable(&sys_usetimegettime);
 
 	global_hInstance = hInstance;
 	global_nCmdShow = nCmdShow;
