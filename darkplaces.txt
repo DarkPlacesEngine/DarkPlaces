@@ -1,455 +1,126 @@
-DarkPlaces engine 105 readme
-
-Some of the changes to the game:
-
-Sorted Edge Rasterizer system to reduce overdraw on the 3D card
-
-Nehahra support (using -nehahra option)
-
-Larger map size, more accurate movement and precise aiming (however Quake and HalfLife maps have an internal limitation of +-32768)
-
-Optimized QuakeC interpreter
-
-Bounds Checked QuakeC interpreter (optional, enabled by default, and still
-faster than original quake - code can not harm your computer, well, except
-using certain builtins in unintended ways perhaps)
-
-Colored lighting
-
-Optional lit particles (in color, of course)
-
-External .lit colored lighting file support (intended for custom map authors,
-who can now release classic quake compatible maps, with colored lighting in
-DarkPlaces, QuakeForge newtree and other engines that support .lit)
-
-HalfLife map support (place your HalfLife wads in quake/id1/textures/ or
-quake/MODDIR/textures/ - HalfLife maps do not themselves contain textures...)
-
-External texture support (.tga and .pcx supported, place a .tga or .pcx image
-in id1/textures/ and it will override that texture in maps, also works with
-HalfLife wads if they are listed in the "wad" key of worldspawn in the map)
-
-Different dynamic light falloff (cooler)
-
-Huge dynamic light speedup (no longer applicable, due to verted dlights)
-
-Lightmap upload speedup
-
-Selectable 24bit or 32bit lightmap format (gl_lightmaprgba 0/1) for
-compatibility, 24bit (RGB) is recommended for quality
-
-Redesigned particle effects (may make them obey physics later)
-
-Smoke trails
-
-Bubble trails underwater, currently only from rockets/grenades/explosions
-
-Dynamically lit water
-
-Rippling water surfaces (optional)
-
-Fog (optional, map settable, emulated so it works on any card)
-
-Interpolated model animations
-
-Alpha blended sprites (disabled on Matrox G200, resulting in hard edges, and
-fading does not work on ATI Rage Pro)
-
-Blended sprite animations (disabled on ATI Rage Pro)
-
-Interpolated monster movement and rotation (very smooth) on server (will
- move to client at some point, so demos will benefit)
-
-Transparent particles (partially working on Matrox G200 - particles are not
-blended at the edges (hard edge) but smoke fades, different behavior on
-ATI Rage Pro - does not fade)
-
-32bit color sprites supported (alpha disabled on Matrox G200, resulting in a
-hard silohuette edge for G200 users - my only recommendation: upgrade)
-
-24bit color model skins supported (same kind of change as the 32bit sprite
-format, will be superseded by external replacement skin images)
-
-TARGA and PCX textured skybox supported (map settable)
-
-Stereo wav playback for music purposes
-
-Non-directional playback of ATTN_NONE sounds for music purposes
-
-Quake2 model support (anything but players, which are unskinned because they
-do not contain a skin name list to load, I'm sort of considering adding
-a "skin" console command and related network protocol stuff, which would also
-support QW skins on the normal quake player model, although I'm not fond of
-potential issues with loading models while the server is running, I also need
-to support the weapon models...)
-
-Lighting on sprites if desired (put ! anywhere in the sprite filename and it
-will apply proper lighting, rather than making it fullbright)
-
-Overbright lighting (optional, use lightmode 0 to get the old GLQuake style
-lighting...  3DFX dithering looks nasty so 3DFX users might have to live
-without overbright lighting)
-
-Transparent polygon sorter (to draw polygons in the correct order)
-
-Faster wall rendering (paving the way toward shaders and other stuff)
-
-Fullbright support on walls (easy addition due to the new wall rendering)
-
-Skybox blocks view just like quake sky polygons did
-
-Brightness controls ("brightness" and "contrast" console variables)
-
-Directional model lighting (only a 0.1% slowdown and looks great :)
-
-Vertex array based model rendering (fast like Quake3)
-
-No messy .ms2 model mesh files (no glquake dir anymore either)
-
-64 player support
-
-Completely rewritten dynamic lighting engine, using a hybrid lightmap and
-vertex approach, and is fast on slow memory machines
-
-Rewritten model loader (for the second time)
-
-Multi-pass model rendering, supporting colormapping without uploads (shirt,
-pants, glowing areas...)
-
-New improved crosshair (team color coded)
-
-Improved angle rounding (better aiming on existing quake servers, does not
-support proquake precise aiming though)
-
-Many other things I forgot to mention
-
-
-New commandline options:
--sndspeed samplerate (default: 11025, note: quake's 22khz sounds are annoying)
-
-Mods specially supported:
--hipnotic (already supported in quake)
--rogue (already supported in quake)
--nehahra (must run Nehahra with this option, otherwise it will have demo
-          incompatibilities and other nonsense)
-
-New console commands:
-
-r_clipheight <60 or higher>
-how tall the screen is as far as the Sorted Edge Rasterizer is concerned (default: 600 lines).
-
-r_lerpimages <0 or 1>
-whether or not to smooth textures (defaults to on).
-
-loadsky <name>
-loads a skybox, if the images can be found, searchs moddir/gfx/env and
-moddir/env for them.
-(a skybox named base is 6 images named baseft.tga, basebk.tga, baseup.tga,
- basedn.tga, baselt.tga, basert.tga)
-
-fog "density red green blue"
-experiment with numbers around 0.1 for density, the color is 0.0 to 1.0 range
-
-contrast <0 to 1>
-1.0 is normal, reduce it in steps of 0.05 or so to brighten the screen,
-gets pretty washed out below 0.9
-
-brightness <1 to 5>
-1.0 is normal, increase it to brighten the game, 5 is ridiculous
-
-r_waterriple <0 to 16>
-0 is flat water, 16 is very choppy, higher than that is just plain crazy...
-
-r_particles <0 or 1>
-0 disables all particle effects, 1 enables them
-
-gl_vertex <0 or 1>
-uses singlepass vertex lighting (not advisable at the moment, as it is using
-the transparent polygon engine, and thus no zbuffering, which results in
-weird polygon overlap), faster on old singltexture cards.
-
-gl_multitexture <0 or 1>
-0 disables multitexture, 1 enables it (only if you have a multitexture
-capable driver), note: disabling this is recommended on TNT/TNT2 cards due
-to depth contention bugs with multitexture (does not happen on Geforce and
-above), so if you see weirdness on glowing textures in maps, disable this.
-
-gl_texsort <0 or 1>
-pick whichever is faster for you (0 is more direct, 1 is faster on most
-cards, note this does NOT disable multitexture like it did in glquake).
-
-gl_dynamicparticles <0 or 1>
-1 is for the killer CPU people, makes particles recieve lighting from the
-enviroment (see for yourself).
-
-chase_active <0 or 1>
-fixed up chase camera, nice over the shoulder view (chase_up and chase_back
-control position) and won't stick into walls.
-
-gl_conalpha <0 to 1>
-controls how opaque the console is
-
-gl_vertexarrays <0 or 1>
-enables/disables vertex array acceleration (useful only to compare speeds,
-otherwise keep it on if your drivers support vertex arrays).
-
-r_speeds <0 or 1>
-more mapper info than the original r_speeds! (BSP nodes and leafs relate to
-scene complexity)
-
-r_waterriple <0 to 32>
-makes the water wavey
-
-r_fullbrights <0 or 1>
-must restart map to see results, only affects map textures
-(model fullbrights are always enabled), if disabled you don't get glowing
- runes and lights and such
-
-gl_lightmode <0 or 1>
-1 enables overbright lighting, but degrades color quality a little (this
-looks particularly horrible on 3DFX cards in 16bit - note: 3DFX cards before
-the V5 ONLY had 16bit) and slows the framerate a bit, the increased color
-range is worth it though (the full software quake color range).
-
-r_farclip <1024 to 65536>
-how far you can see in a map before it goes black (glquake used 4096 units,
-this defaults to 6144 units).
-
-gl_lightmapalign <1, 2, 4, 8, or 16>
-lowering this (default is 4) can use less texture memory, but doesn't work
-in NVIDIA drivers, the default of 4 works
-
-gl_lightmaprgba <0 or 1>
-if set to 1 this will result in greatly degraded lighting quality in 16bit
-mode, no difference either way in 32bit, defaults to off but could possibly
-fix problems on certain drivers/cards
-
-(note: lightmaps are only updated when the static lighting animations change;
- dynamic lighting is done using vertex lighting methods to avoid lightmap
- uploads)
-
-gl_nosubimage <0 or 1>
-disables partial lightmap uploads entirely (this causes a horrible speed
-drain when lightmaps change, but is guarenteed to work on any card)
-
-gl_nosubimagefragments <0 or 1>
-uses glquake style lightmap uploads (slow, but not as slow as nosubimage),
-keep this off for max speed if it works
-
-r_ambient <0 to 128>
-singleplayer cheat, mainly for sake of Nehahra's extremely dark maps
-
-showfps <0 or 1>
-displays current framerate in top-right corner
-
-gl_lerpimages <0 or 1>
-disabling this speeds up loading but makes textures look worse (like glquake)
-
-slowmo <0 to 1>
-this controls the speed of the game (default 1), can be fun for novelty
-mainly (can be useful for variable speed demo playback too...)
-
-sys_ticrate <0.01 to 0.1>
-controls server rate, this is not a new command, however it applies to
-outgoing input packets now, and also limits the speed of the server in
-listen mode games...  0.05 (fast modem) or 0.1 (slow modem) is recommended,
-can go even lower for high bandwidth players
-
-decors <0 to 1024>
-controls how many decors (shell casings, gibs, nails in the walls,
-bullet holes, etc) to keep around in mods that care to check it (darkplaces)
-
-cutscene <0 or 1>
-whether to play cutscenes in Nehahra and any other mod that checks this
-
-pr_boundscheck <0 or 1>
-enabled by default, this makes sure that quake mods can not do nasty things
-to your computer, which not surprizingly breaks CRMod, if you feel the need
-to run a CRMod server using darkplaces, disable this...  but no guarentees
-CRMod will be able to make any sense of the changed data structures
-
-crosshair <0 or 1>
-not new, but mentioned here because it has a new look, and has settings below:
-
-crosshair_brightness <0 to 5>
-how bright the crosshair is, default 1.0
-
-crosshair_alpha <0 to 1>
-how opaque the crosshair is, default 1.0
-
-crosshair_flashspeed <0 to 10>
-how quickly the crosshair flashs, default 2 times a second
-
-crosshair_flashrange <0 to 1>
-how much the crosshair flashs (use 0 to disable flashing entirely),
-default 0.1
-
-r_lightmodels <0 or 1>
-enabled by default, this decides whether or not to use directional lighting
-on models (only 0.1% speed drain in my testing)
-
-r_explosionclip <0 or 1>
-disabled by default, this causes explosion effects to be clipped against the
-architecture, some CPU drain results.
-
-snd_swapstereo <0 or 1>
-if enabled this swaps the output channels, useful for people with backwards
-SB16 sound cards, added this at a friend's request
-
-pausedemo <0 or 1>
-halts demo playback until you type pausedemo again, also works for recording
-
-play2 <filename>
-plays the sound, a non-directional 'play' without distance fading
-
-
-
-
-movetype enhancements:
-
-MOVETYPE_WALK on non-players - bot coders rejoice!
-
-MOVETYPE_PUSH does not reset solid to SOLID_BSP, but rather to what it was
-(fixes teleport train crash in end.bsp)
-
-MOVETYPE_PUSH supports rotation
-(untested, just enabled the Quake2 stuff for it)
-
-
-
-mod enhancements:
-add the included darkplaces.qc file to your mod and read the comments in it
-for info on the features.
-
-fragment of wishlist:
-Precise aiming (yeah yeah... belongs in a TODO list for new protocol version)
-HalfLife model support (EWW the format is horrid)
-Quake3 model support
-Completely dynamic lighting (wishful thinking...  the CPU drain would probably be horrible)
-Model geometry tracing (bullets hitting the polygon mesh, not the box)
-
-Changes since before recorded history (1.03?):
-option for vertex lighting instead of lightmap (implemented, too low quality sadly)
-fixed HOM around view window when size < 100
-added back r_dynamic, r_particles
-fixed several particle bugs (bubble trails were not working, other stuff I forget)
-square particle textures, rather than triangle, reduces fillrate demand
-lit particles
-made new model lighting optional (about 0.1% speed difference in my tests)
-changed back model lighting scale to match world
-emulated fog
-eliminated most of the graphics options (gl_flashblend, gl_polyblend, r_lightmaps, r_norefresh, r_lightmaps, various others...  getting complaints already! :)
-glowing lightning beams (not the QBism glows, these are real dynamic lighting)
-improved directional lighting (per vertex direction and distance)
-bounds checking on QuakeC interpreter (still faster than original)
-QuakeC interpreter sped up (around 40%?)
-128 dynamic sound channels (instead of 8)
-particles are sorted like other transparent polygons
-256 dynamic lights
-"slowmo" cvar (scales time... 1.0 is normal)
-fixed r_waterripple
-removed BeginDisc (caused NVIDIA driver problems?)
-redesigned chase_active (broken, will be fixed)
-LINEAR text filtering only if conwidth < glwidth
-QC player movement
-multiple min/max (FrikaC's idea)
-optimized wallpoly copying
-optimized depthpoly copying
-optimized out unnecessary softwaretransform calls
-corrected misspellings in QSG extensions
-updated QSG extensions
-fixed color blocks in recent changes to score lists (remove 2 chars, make it less tall, use less spacing on main score list)
-allow skin colormaps 14 and 15 (freaky :)
-longer messagemode
-relative dynamic lighting on bmodels
-(numerous things omitted and forgotten)
-
-Engine done list (from my todo file, many things likely to be missing from this list)
-added NULL GL extension function checks to GLX version (should never happen, but apparently does for some people?), should not crash now but will not use those extensions either
-added force_centerview to GLX version
-fix bugs with model rendering on G400 and 3DFX Voodoo3/4/5 drivers (they apparently don't comprehend a vertex array step of 0, thus being ignorant toward the GL spec, sigh)
-sorted edge rasterizer
-add back svc_skybox for nehahra
-MOVETYPE_FOLLOW now works correctly on rotating objects
-bmodel rotation physics now work
-new vid_glx.c (contributed by zinx)
-removed DPNEHAHRA engine titling
-fixed some lighthalf, fog, and sky related bugs
-removed some 3D card hacks
-merged GL_Init code for all targets (note: vid_glx.c and vid_3dfxsvga.c may be broken)
-split sprite code out in gl_sprites.c
-rearranged palette management code
-removed all traces of 8bit upload support for now (may be added back)
-halved memory usage (although this prevents renderer restarting for the moment)
-implemented r_texturestats command
-removed old texture upload code
-rewrote use of host_parms
-rewrote some code relating to host_basepal
-bigendian support in pcx loading
-changed external texture character equivilant for * from + to # to avoid conflicts with animating textures
-removed cruft here and there
-force all textures to lowercase to mask potentially silly wad lump names in maps
-new crosshairs
-more stuff is extern in includes
-some general cleanup of the MOVETYPE_PUSH code
-rewrote portions of vid_wgl.c
-V_UpdatePalette renamed to V_UpdateBlends
-removed starting dialog code in wgl
-made SV_RecursiveHullCheck accessable in world.h
-document -sndspeed option in readme
-fixed sky rendering bug (oops, wasn't uploading with alpha)
-fixed skin loading bug
-update readme to mention that the -nehahra option lets you run Nehahra
-update readme to mention that dynamic lighting has been greatly sped up on slow memory machines
-reenable r_dynamic and gl_polyblend (due to popular complaint, but only disables a few effects)
-rewrote texture upload code (higher quality)
-rewrote texture management system
-model glowmaps
-second rewrite of model system (optimal rendering speed, multipass skin layers)
-fixed angle rounding (improved aiming)
-fix players above floor in HL maps (by implementing proper hull sizes)
-proper support for HL map hull sizes (unfortunately this didn't fix the sinking into grates bug)
-fancy crosshair
-SV_ChangeTeam function in QC to process all team changes
-disabled extrapolation when paused to avoid jittering
-make sys_ticrate affect listen servers
-fix flickering rocket light
-revert normal sky to GLQuake style
-added server-side latency based extrapolation (experimental, currently not optional either)
-removed SetPal
-fix dynamic water lighting (not always working)
-showfps
-x86 assembly enhancements (cpu_* code)
-disabled texture coordinate sanity checks in model loading because threewave CTF has an error in v_star.mdl
-copyentity builtin added
-transparent statusbar
-fixed HOM around view window when size < 100
-remove mention of GLQuake in texture slot report
-make new model lighting optional (speed test this)
-change back model lighting scale to match world
-software fog
-removed 72 fps cap
-eliminated most of the graphics options (gl_flashblend, gl_polyblend, r_lightmaps, r_norefresh
-glowing lightning beams
-improved directional lighting (per vertex direction and distance)
-QuakeC interpreter sped up (around 40%?)
-128 dynamic sound channels (instead of 8)
-particles are sorted like other transparent polygons
-256 dynamic lights
-"slowmo" cvar
-fixed waterripple
-removed BeginDisc (caused TNT driver problems?)
-redesigned chase_active
-LINEAR text filtering only if conwidth < glwidth
-QC player movement
-multiple min/max (FrikaC)
-optimize wallpoly copying
-optimize depthpoly copying
-optimize out unnecessary softwaretransforms
-correct misspellings in QSG extensions
-update QSG extensions
-fix color blocks in recent changes to score lists (remove 2 chars, make it less tall, use less spacing on main score list)
-allow skin colormaps 14 and 15
-longer messagemode (infinity)
-relative dynamic lighting on bmodels
+DarkPlaces engine readme : updated 20040206
+
+About the DarkPlaces glquake engine:
+DarkPlaces engine was started because I was unsatisfied with the other engines
+available soon after the quake source release (which did little more than add
+some flashy effects), and craved modding features for my DarkPlaces mod, and
+wanted some real enhancements to the online gaming experience as well.
+
+DarkPlaces engine is the result, I hope everyone likes it.
+
+I am not very good at writing documentation, so this readme is organized as a
+feature list, with information on each feature, I hope it is still adequate
+documentation.
+
+Questions/comments/bugreports/suggestions?
+Send email to havoc@telefragged.com.
+
+
+
+Supported games:
+Quake : -quake, this is active by default, gamedirs: id1
+Quake: Scourge of Armagon : -hipnotic or hipnotic in executable name or path, gamedirs: hipnotic, id1
+Quake: Dissolution of Eternity : -rogue or rogue in executable name or path, gamedirs: rogue, id1
+Nehahra : -nehahra or nehahra in executable name or path, gamedirs: nehahra, id1
+GoodVsBad2 : -goodvsbad2 or gvb2 in executable name or path, gamedirs: rts
+BattleMech : -battlemech or battlemech in executable name or path, gamedirs: base
+These games are considered officially supported, if any problems are seen,
+please make sure you are running the latest version of the game and engine,
+if you are, please report the problem.
+
+
+
+Future supported games:
+Nexuiz : -nexuiz or nexuiz in executable name or path, gamedirs: data
+Zymotic : -zymotic or zymotic in executable name or path, gamedirs: data
+Fniggium : -fniggium or fniggium in executable name or path, gamedirs: data
+Setheral : -setheral or setheral in executable name or path, gamedirs: data
+SonOfMan : -som or som in executable name or path, gamedirs: data
+These have incomplete support and will likely change before their release.
+
+
+
+Graphics features:
+Redesigned effects including smoke, blood, bubbles and explosions.
+Better looking dynamic lights.
+External texture support (see dpextensions.qc DP_GFX_EXTERNALTEXTURES)
+Realtime bumpmapped lighting/shadowing support (see r_shadow_help in game)
+.rtlights file support (improves performance/appearance of realtime lighting)
+.rtlights file editing (see r_editlights_help in game)
+Alpha blended sprites (instead of glquake's masked sprites).
+Interpolated entity movement and animations (both models and sprites).
+Overbright and fullbright support on walls and models (like winquake).
+Colormapping support on any q1 model (like winquake).
+Fog (set with "fog density red green blue" command)
+Skybox (loadsky "mtnsun_" will load "env/mtnsun_ft.tga" and so on).
+Sky rendering improved (no more glquake distortion).
+Sky polygons obscure geometry just like in winquake.
+Color calibration menu to ensure a proper Quake experience.
+Improved model lighting (directional shading).
+No messy .ms2 model mesh files (no glquake dir anymore either).
+New improved crosshair (team color coded).
+Improved image loading (smoother menus and such).
+Ability to disable particle effects (cl_particles* cvars).
+Decals (cl_decals cvar to enable).
+Stainmaps (cl_stainmap cvar to enable).
+Sorted transparent stuff to render better.
+Improved multitexture support (r_textureunits (1-4 supported), needs gl_combine 1 because of overbright)
+Improved chase cam (chase_active 1 no longer goes into walls)
+More configurable console background (scr_conalpha and scr_conbrightness)
+Optional fullbrights (r_fullbrights 0/1 followed by r_restart)
+Dynamic Farclip (no distance limits in huge maps)
+Improved gl_flashblend (now renders a corona instead of an ugly blob)
+DynamicLight coronas (more realism)
+Transparent statusbar (scr_conalpha) that does not block your view as much.
+No 8bit texture uploads (fixes 'green' walls in the distance).
+Fixed view blends (glquake was quite broken).
+
+Client features:
+Slightly improved aiming on quake servers (does not support proquake aiming).
+-sndspeed samplerate (default: 44100, quake used 11025)
+snd_swapstereo cvar (for people with backwards SB16 sound cards)
+Saves video settings to config and restores them properly
+Ability to change video settings during game (video options menu or vid_* cvars)
+showfps cvar.
+Video Options, Color Control, and Effects Options menus added, and more options.
+Sends 20fps network packets to improve modem play instead of one per frame. (sys_ticrate controls network framerate)
+Allow skin colormaps 14 and 15 (freaky :)
+Longer chat messages.
+No more 72fps limit, host_maxfps lets you decide.
+
+Server features: (Note server only supports darkplaces clients)
+More accurate movement and precise aiming.
+64 player support.
+sv_cheats cvar controls cheats (no longer based on deathmatch).
+slowmo cvar controls game speed.
+No crash with the buggy 'teleport train' in shub's pit.
+Allow skin colormaps 14 and 15 (freaky :)
+sys_ticrate applies to listen (client) servers as well as dedicated.
+
+Modding features:
+HalfLife map support (place your HalfLife wads in quake/id1/textures/ or quake/MODDIR/textures/ as the maps need them)
+Larger q1 and hl map size of +-32768 units.
+Colored lighting (.lit support) for q1 maps.
+Q3 map support (no shaders though), with no limits.
+Q2 and Q3 model support, with greatly increased limits (256 skins, 65536 frames, 65536 vertices, 65536 triangles).  (Note: md2 player models are not supported because they have no skin list)
+Optimized QuakeC interpreter so mods run faster.
+Bounds checking QuakeC interpreter so mods can't do naughty things with memory.
+Warnings for many common QuakeC errors.
+Unprecached models are now a warning (does not kill the server anymore).
+External texture support (see dpextensions.qc DP_GFX_EXTERNALTEXTURES).
+Fog ("fog" key in worldspawn, same parameters as fog command).
+.spr32 and halflife .spr sprites supported.  (Use Krimzon's tool to make spr32, and lhfire can render directly to spr32, or just use replacement textures on .spr).
+Skybox ("sky" key in worldspawn, works like loadsky and quake2).
+Stereo wav sounds supported (note music easily uses over 50mb of memory!).
+Ogg Vorbis sounds supported (note music easily uses over 50mb of memory!).
+ATTN_NONE sounds are no longer directional (good for music).
+play2 sound testing command (ATTN_NONE variant of play).
+r_texturestats and memstats and memlist commands to give memory use info.
+Lighting on sprites (put ! anywhere in sprite filename to enable).
+More r_speeds info (now a transparent overlay instead of spewing to console).
+Supports rotating bmodels (use avelocity, and keep in mind the bmodel needs the "origin" key set to rotate, or in q3 maps an origin brush works).
+More sound channels.
+More dynamic lights (32 changed to 256).
+More precached models and sounds (256 changed to 4096).
+Many more features documented in dpextensions.qc. (bullet tracing on models, qc player input, etc)
 
