@@ -279,7 +279,7 @@ void SV_SendServerinfo (client_t *client)
 	char			message[128];
 
 	// edicts get reallocated on level changes, so we need to update it here
-	client->edict = EDICT_NUM(client->number + 1);
+	client->edict = EDICT_NUM((client - svs.clients) + 1);
 
 
 	// LordHavoc: clear entityframe tracking
@@ -364,7 +364,6 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 
 	strcpy(client->name, "unconnected");
 	strcpy(client->old_name, "unconnected");
-	client->number = clientnum;
 	client->spawned = false;
 	client->edict = EDICT_NUM(clientnum+1);
 	client->message.data = client->msgbuf;
@@ -1137,7 +1136,7 @@ void SV_UpdateToReliableMessages (void)
 			strcpy(host_client->old_name, host_client->name);
 			// send notification to all clients
 			MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
-			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteByte (&sv.reliable_datagram, i);
 			MSG_WriteString (&sv.reliable_datagram, host_client->name);
 		}
 
@@ -1150,7 +1149,7 @@ void SV_UpdateToReliableMessages (void)
 			host_client->old_colors = host_client->colors;
 			// send notification to all clients
 			MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteByte (&sv.reliable_datagram, i);
 			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 		}
 
@@ -1161,7 +1160,7 @@ void SV_UpdateToReliableMessages (void)
 			host_client->old_frags = host_client->frags;
 			// send notification to all clients
 			MSG_WriteByte (&sv.reliable_datagram, svc_updatefrags);
-			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteByte (&sv.reliable_datagram, i);
 			MSG_WriteShort (&sv.reliable_datagram, host_client->frags);
 		}
 	}

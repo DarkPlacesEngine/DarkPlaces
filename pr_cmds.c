@@ -2230,7 +2230,7 @@ void PF_setcolor (void)
 		client->old_colors = client->colors;
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-		MSG_WriteByte (&sv.reliable_datagram, client->number);
+		MSG_WriteByte (&sv.reliable_datagram, client - svs.clients);
 		MSG_WriteByte (&sv.reliable_datagram, client->colors);
 	}
 }
