@@ -46,6 +46,7 @@ d darkplaces: typing ip in join game menu should show 'trying' and 'no response'
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 d darkplaces: fix 2D attenuation texturing which is all black
+0 darkplaces: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side yet (romi)
 3 darkplaces: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 darkplaces: make server send player ping times to client for scoreboard
 2 dpmod: write a readme for the menu progs code to get people started with it, and know what is and is not possible, what builtins do, etc (Urre)
