@@ -190,7 +190,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	int				reps;
 	int i;
 
-	memset(shm, 0, sizeof(*shm));
+	memset((void *)shm, 0, sizeof(*shm));
 	shm->channels = 2;
 	shm->samplebits = 16;
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
@@ -423,7 +423,7 @@ qboolean SNDDMA_InitWav (void)
 	snd_sent = 0;
 	snd_completed = 0;
 
-	memset(shm, 0, sizeof(*shm));
+	memset((void *)shm, 0, sizeof(*shm));
 	shm->channels = 2;
 	shm->samplebits = 16;
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
