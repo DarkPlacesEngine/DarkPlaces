@@ -115,6 +115,11 @@ Log_Init
 */
 void Log_Init (void)
 {
+	// Allocate a log queue
+	logq_size = 512;
+	logqueue = Mem_Alloc (tempmempool, logq_size);
+	logq_ind = 0;
+
 	Cvar_RegisterVariable (&log_file);
 	Cvar_RegisterVariable (&log_sync);
 
@@ -125,11 +130,6 @@ void Log_Init (void)
 		Cvar_SetValueQuick (&log_sync, 1);
 		unlink (va("%s/qconsole.log", fs_gamedir));
 	}
-
-	// Allocate a log queue
-	logq_size = 512;
-	logqueue = Mem_Alloc (tempmempool, logq_size);
-	logq_ind = 0;
 }
 
 
