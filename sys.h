@@ -48,16 +48,23 @@ qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfun
 void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
-
-//
-// system IO
-//
-void Sys_Error (const char *error, ...);
-// an error will cause the entire program to exit
-
 void Sys_Print(const char *msg);
 void Sys_Printf(const char *fmt, ...);
 // send text to the quake console (and possibly to terminal)
+
+// called after Com_InitArgv
+void Sys_Shared_EarlyInit (void);
+// called after Host_init
+void Sys_Shared_LateInit (void);
+
+// returns current timestamp
+char *Sys_TimeString(const char *timeformat);
+
+//
+// system IO interface (these are the sys functions that need to be implemented in a new driver atm)
+//
+void Sys_Error (const char *error, ...);
+// an error will cause the entire program to exit
 
 void Sys_PrintToTerminal(const char *text);
 // (may) output text to terminal which launched program
@@ -75,14 +82,6 @@ void Sys_Sleep(int milliseconds);
 
 void Sys_SendKeyEvents (void);
 // Perform Key_Event () callbacks until the input que is empty
-
-// called after Com_InitArgv
-void Sys_Shared_EarlyInit (void);
-// called after Host_init
-void Sys_Shared_LateInit (void);
-
-// returns current timestamp
-char *Sys_TimeString(const char *timeformat);
 
 #endif
 
