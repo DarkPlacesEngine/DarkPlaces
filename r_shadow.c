@@ -3215,6 +3215,17 @@ void R_Shadow_EditLights_Edit_f(void)
 	R_Shadow_NewWorldLight(origin, angles, color, radius, corona, style, shadows, cubemapname);
 }
 
+void R_Shadow_EditLights_EditAll_f(void)
+{
+	dlight_t *light;
+
+	for (light = r_shadow_worldlightchain;light;light = light->next)
+	{
+		R_Shadow_SelectLight(light);
+		R_Shadow_EditLights_Edit_f();
+	}
+}
+
 void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 {
 	float x, y;
@@ -3347,6 +3358,7 @@ void R_Shadow_EditLights_Init(void)
 	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f);
 	Cmd_AddCommand("r_editlights_spawn", R_Shadow_EditLights_Spawn_f);
 	Cmd_AddCommand("r_editlights_edit", R_Shadow_EditLights_Edit_f);
+	Cmd_AddCommand("r_editlights_editall", R_Shadow_EditLights_EditAll_f);
 	Cmd_AddCommand("r_editlights_remove", R_Shadow_EditLights_Remove_f);
 	Cmd_AddCommand("r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f);
 	Cmd_AddCommand("r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f);
