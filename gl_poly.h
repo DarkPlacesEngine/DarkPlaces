@@ -70,9 +70,8 @@ wallpoly_t;
 
 typedef struct
 {
-	// the order and type of these is crucial to the vertex array based rendering 
-	vec2_t tex;
-	vec3_t v;
+	float tex[2];
+	float v[4]; // 4th item is only for padding
 }
 skyvert_t;
 

@@ -246,7 +246,7 @@ void CL_ParseEntityLump(char *entdata)
 	char wadname[128];
 	int i, j, k;
 	FOG_clear(); // LordHavoc: no fog until set
-	skyname[0] = 0; // LordHavoc: no enviroment mapped sky until set
+	R_SetSkyBox(""); // LordHavoc: no enviroment mapped sky until set
 	r_farclip.value = 6144; // LordHavoc: default farclip distance
 	data = entdata;
 	if (!data)

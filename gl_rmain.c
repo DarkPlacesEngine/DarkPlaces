@@ -847,7 +847,7 @@ void R_RenderView (void)
 
 	skypolyrender(); // fogged sky polys, affects depth
 
-	if (skyname[0] && currentskypoly && !fogenabled)
+	if (currentskypoly)
 		R_Sky(); // does not affect depth, draws over the sky polys
 	TIMEREPORT(time_sky)
 
