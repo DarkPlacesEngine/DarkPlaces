@@ -106,7 +106,7 @@ OBJ_COMMON= \
 # being linked, because it should be recompiled every time an executable is
 # built to give the executable a proper date string
 OBJ_SV= builddate.c sys_linux.o vid_null.o $(OBJ_NOSOUND) $(OBJ_NOCD) $(OBJ_COMMON)
-OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_NOSOUND) $(OBJ_NOCD) $(OBJ_COMMON)
+OBJ_SDL= builddate.c sys_sdl.o vid_sdl.o $(OBJ_COMMONSOUND) snd_sdl.o cd_sdl.o $(OBJ_COMMON)
 
 
 # Compilation
@@ -307,6 +307,12 @@ vid_sdl.o: vid_sdl.c
 	$(DO_CC) `sdl-config --cflags`
 
 sys_sdl.o: sys_sdl.c
+	$(DO_CC) `sdl-config --cflags`
+
+snd_sdl.o: snd_sdl.c
+	$(DO_CC) `sdl-config --cflags`
+
+cd_sdl.o: cd_sdl.c
 	$(DO_CC) `sdl-config --cflags`
 
 darkplaces.o: %.o : %.rc
