@@ -391,7 +391,7 @@ void R_DrawQueue(void)
 		if (color != dq->color)
 		{
 			color = dq->color;
-			glColor4ub((byte)((color >> 24) & 0xFF) >> overbright, (byte)((color >> 16) & 0xFF) >> overbright, (byte)((color >> 8) & 0xFF) >> overbright, (byte)(color & 0xFF));
+			glColor4ub((byte)(((color >> 24) & 0xFF) >> overbright), (byte)(((color >> 16) & 0xFF) >> overbright), (byte)(((color >> 8) & 0xFF) >> overbright), (byte)(color & 0xFF));
 		}
 		x = dq->x;
 		y = dq->y;
