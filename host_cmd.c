@@ -763,7 +763,7 @@ void Host_Name_f (void)
 	if (strcmp(host_client->old_name, host_client->name))
 	{
 		if (host_client->spawned)
-			SV_BroadcastPrintf("%s changed name to %s\n", host_client->name, newName);
+			SV_BroadcastPrintf("%s changed name to %s\n", host_client->old_name, host_client->name);
 		strcpy(host_client->old_name, host_client->name);
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
