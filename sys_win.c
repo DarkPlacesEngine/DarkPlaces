@@ -132,6 +132,13 @@ void Sys_Quit (void)
 	exit (0);
 }
 
+void Sys_Print(const char *text)
+{
+	DWORD dummy;
+	extern HANDLE houtput;
+	if (cls.state == ca_dedicated)
+		WriteFile(houtput, text, strlen (text), &dummy, NULL);
+}
 
 /*
 ================

@@ -48,9 +48,6 @@ static char qfont_table[256] = {
 	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
 };
 
-//#ifdef WIN32
-//extern HANDLE houtput;
-//#endif
 
 #define MAX_PRINT_MSG	16384
 void Sys_Printf (const char *fmt, ...)
@@ -64,9 +61,6 @@ void Sys_Printf (const char *fmt, ...)
 	struct tm	*local = NULL;
 
 	unsigned char		*p;
-//#ifdef WIN32
-//	DWORD		dummy;
-//#endif
 
 	va_start (argptr, fmt);
 	vsnprintf (start, sizeof(start), fmt, argptr);
@@ -90,12 +84,7 @@ void Sys_Printf (const char *fmt, ...)
 	final[MAX_PRINT_MSG - 1] = 0;
 	for (p = (unsigned char *) final;*p; p++)
 		*p = qfont_table[*p];
-//#ifdef WIN32
-//	if (cls.state == ca_dedicated)
-//		WriteFile(houtput, final, strlen (final), &dummy, NULL);
-//#else
-	printf("%s", final);
-//#endif
+	Sys_Print(final);
 }
 
 

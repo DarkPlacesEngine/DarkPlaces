@@ -84,7 +84,11 @@ void Sys_Error (const char *error, ...)
 
 	Host_Shutdown ();
 	exit (1);
+}
 
+void Sys_Print(const char *text)
+{
+	printf("%s", text);
 }
 
 double Sys_DoubleTime (void)
