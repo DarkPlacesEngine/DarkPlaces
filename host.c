@@ -577,7 +577,7 @@ qboolean Host_FilterTime (double time)
 		{
 			// don't totally hog the CPU
 			if (timeleft >= 0.02)
-				Sys_Sleep(timeleft * 1000 - 5);
+				Sys_Sleep((int)(timeleft * 1000) - 5);
 			return false;
 		}
 	}

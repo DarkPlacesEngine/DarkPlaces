@@ -46,7 +46,7 @@ typedef struct sfx_s
 	char 	name[MAX_QPATH];
 	mempool_t	*mempool;
 	sfxcache_t	*sfxcache;
-	int silentlymissing; // true if missing and loaded with complain = false
+	qboolean silentlymissing; // true if missing and loaded with complain = false
 } sfx_t;
 
 typedef struct
@@ -100,9 +100,8 @@ void S_ExtraUpdate (void);
 sfx_t *S_GetCached(const char *name);
 sfx_t *S_PrecacheSound (char *sample, int complain);
 void S_TouchSound (char *sample);
-void S_ClearPrecache (void);
-void S_BeginPrecaching (void);
-void S_EndPrecaching (void);
+void S_ClearUsed (void);
+void S_PurgeUnused (void);
 void S_PaintChannels(int endtime);
 void S_InitPaintChannels (void);
 

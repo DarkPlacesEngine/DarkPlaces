@@ -82,23 +82,11 @@ sfx_t *S_PrecacheSound (char *sample, int complain)
 	return NULL;
 }
 
-void S_ClearPrecache (void)
-{
-}
-
 void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 {
 }
 
 void S_StopAllSounds (qboolean clear)
-{
-}
-
-void S_BeginPrecaching (void)
-{
-}
-
-void S_EndPrecaching (void)
 {
 }
 
