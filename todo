@@ -1,7 +1,7 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -(Carni) d darkplaces renderer: make sure r_novis works (Carni)
--(FrikaC, Sajt, RenegadeC) d darkplaces protocol: rename PreciseAngle stuff to Angle16, add Angle8 functions (for EF_LOWPRECISION code), upgrade Angle functions to use Angle16 or Angle8 depending on protocol version, upgrade ammo/armor stats to 16bit (Urre, FrikaC, Sajt, mashakos, RenegadeC, scar3crow) 
+-(FrikaC) d darkplaces protocol: rename PreciseAngle stuff to Angle16, add Angle8 functions (for EF_LOWPRECISION code), upgrade Angle functions to use Angle16 or Angle8 depending on protocol version, upgrade ammo/armor stats to 16bit (Urre, FrikaC, Sajt, mashakos, RenegadeC, scar3crow) 
 -(avirox) d darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
