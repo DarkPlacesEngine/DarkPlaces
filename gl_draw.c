@@ -377,9 +377,12 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
+float blendtexcoord2f[6] = {0, 0, 0, 0, 0, 0};
+float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
+
 int quadelements[768];
-float textverts[128*4*4];
-float texttexcoords[128*4*4];
+float textverts[128*4*3];
+float texttexcoords[128*4*2];
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright, texnum, additive, batch;
@@ -475,14 +478,14 @@ void R_DrawQueue(void)
 			}
 			GL_Color(c[0], c[1], c[2], c[3]);
 			R_Mesh_GetSpace(4);
-			varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
-			varray_texcoord[0][ 4] = 1;varray_texcoord[0][ 5] = 0;
-			varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
-			varray_texcoord[0][12] = 0;varray_texcoord[0][13] = 1;
-			varray_vertex[ 0] = x  ;varray_vertex[ 1] = y  ;varray_vertex[ 2] = 10;
-			varray_vertex[ 4] = x+w;varray_vertex[ 5] = y  ;varray_vertex[ 6] = 10;
-			varray_vertex[ 8] = x+w;varray_vertex[ 9] = y+h;varray_vertex[10] = 10;
-			varray_vertex[12] = x  ;varray_vertex[13] = y+h;varray_vertex[14] = 10;
+			varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 0;
+			varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
+			varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
+			varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
+			varray_vertex3f[ 0] = x  ;varray_vertex3f[ 1] = y  ;varray_vertex3f[ 2] = 10;
+			varray_vertex3f[ 3] = x+w;varray_vertex3f[ 4] = y  ;varray_vertex3f[ 5] = 10;
+			varray_vertex3f[ 6] = x+w;varray_vertex3f[ 7] = y+h;varray_vertex3f[ 8] = 10;
+			varray_vertex3f[ 9] = x  ;varray_vertex3f[10] = y+h;varray_vertex3f[11] = 10;
 			R_Mesh_Draw(4, 2, quadelements);
 			break;
 		case DRAWQUEUE_STRING:
@@ -506,21 +509,21 @@ void R_DrawQueue(void)
 					u = 0.0625f - (1.0f / 256.0f);
 					v = 0.0625f - (1.0f / 256.0f);
 					at[ 0] = s  ;at[ 1] = t  ;
-					at[ 4] = s+u;at[ 5] = t  ;
-					at[ 8] = s+u;at[ 9] = t+v;
-					at[12] = s  ;at[13] = t+v;
+					at[ 2] = s+u;at[ 3] = t  ;
+					at[ 4] = s+u;at[ 5] = t+v;
+					at[ 6] = s  ;at[ 7] = t+v;
 					av[ 0] = x  ;av[ 1] = y  ;av[ 2] = 10;
-					av[ 4] = x+w;av[ 5] = y  ;av[ 6] = 10;
-					av[ 8] = x+w;av[ 9] = y+h;av[10] = 10;
-					av[12] = x  ;av[13] = y+h;av[14] = 10;
-					at += 16;
-					av += 16;
+					av[ 3] = x+w;av[ 4] = y  ;av[ 5] = 10;
+					av[ 6] = x+w;av[ 7] = y+h;av[ 8] = 10;
+					av[ 9] = x  ;av[10] = y+h;av[11] = 10;
+					at += 8;
+					av += 12;
 					batchcount++;
 					if (batchcount >= 128)
 					{
 						R_Mesh_GetSpace(batchcount * 4);
-						memcpy(varray_vertex, textverts, sizeof(float[16]) * batchcount);
-						memcpy(varray_texcoord[0], texttexcoords, sizeof(float[16]) * batchcount);
+						R_Mesh_CopyVertex3f(textverts, batchcount * 4);
+						R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
 						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 						batchcount = 0;
 						at = texttexcoords;
@@ -532,8 +535,8 @@ void R_DrawQueue(void)
 			if (batchcount > 0)
 			{
 				R_Mesh_GetSpace(batchcount * 4);
-				memcpy(varray_vertex, textverts, sizeof(float[16]) * batchcount);
-				memcpy(varray_texcoord[0], texttexcoords, sizeof(float[16]) * batchcount);
+				R_Mesh_CopyVertex3f(textverts, batchcount * 4);
+				R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
 				R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 			}
 			break;
@@ -543,10 +546,10 @@ void R_DrawQueue(void)
 			R_Mesh_TextureState(&m);
 			GL_UseColorArray();
 			R_Mesh_GetSpace(mesh->numvertices);
-			memcpy(varray_vertex, mesh->vertices, sizeof(float[4]) * mesh->numvertices);
-			memcpy(varray_texcoord[0], mesh->texcoords, sizeof(float[4]) * mesh->numvertices);
-			memcpy(varray_color, mesh->colors, sizeof(float[4]) * mesh->numvertices);
-			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->indices);
+			R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numvertices);
+			R_Mesh_CopyTexCoord2f(0, mesh->texcoord2f, mesh->numvertices);
+			R_Mesh_CopyColor4f(mesh->color4f, mesh->numvertices);
+			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->element3i);
 			currentpic = "\0";
 			break;
 		}
@@ -575,12 +578,8 @@ void R_DrawQueue(void)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
 				R_Mesh_GetSpace(3);
-				varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
-				varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
-				varray_texcoord[0][8] = 0;varray_texcoord[0][9] = 0;
-				varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
-				varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
-				varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
+				R_Mesh_CopyVertex3f(blendvertex3f, 3);
+				R_Mesh_CopyTexCoord2f(0, blendtexcoord2f, 3);
 				R_Mesh_Draw(3, 1, polygonelements);
 				VectorScale(c, 0.5, c);
 			}
@@ -600,12 +599,8 @@ void R_DrawQueue(void)
 			R_Mesh_State(&m);
 			GL_Color(c[0], c[1], c[2], 1);
 			R_Mesh_GetSpace(3);
-			varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
-			varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
-			varray_texcoord[0][8] = 0;varray_texcoord[0][9] = 0;
-			varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
-			varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
-			varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
+			R_Mesh_CopyVertex3f(blendvertex3f, 3);
+			R_Mesh_CopyTexCoord2f(0, blendtexcoord2f, 3);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 	}

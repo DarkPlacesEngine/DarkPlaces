@@ -25,10 +25,10 @@ typedef struct drawqueuemesh_s
 	rtexture_t *texture;
 	int numtriangles;
 	int numvertices;
-	int *indices;
-	float *vertices;
-	float *texcoords;
-	float *colors;
+	int *element3i;
+	float *vertex3f;
+	float *texcoord2f;
+	float *color4f;
 }
 drawqueuemesh_t;
 

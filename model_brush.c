@@ -128,10 +128,10 @@ void Mod_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *
 			{
 				for (k = 0;k < mesh->numtriangles;k++)
 				{
-					tri = mesh->index + k * 3;
-					VectorCopy((mesh->verts + tri[0] * 4), vert[0]);
-					VectorCopy((mesh->verts + tri[1] * 4), vert[1]);
-					VectorCopy((mesh->verts + tri[2] * 4), vert[2]);
+					tri = mesh->element3i + k * 3;
+					VectorCopy((mesh->vertex3f + tri[0] * 3), vert[0]);
+					VectorCopy((mesh->vertex3f + tri[1] * 3), vert[1]);
+					VectorCopy((mesh->vertex3f + tri[2] * 3), vert[2]);
 					VectorSubtract(vert[1], vert[0], edge[0]);
 					VectorSubtract(vert[2], vert[1], edge[1]);
 					CrossProduct(edge[1], edge[0], facenormal);
@@ -1381,19 +1381,19 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 surfmesh_t *Mod_AllocSurfMesh(int numverts, int numtriangles)
 {
 	surfmesh_t *mesh;
-	mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + numtriangles * sizeof(int[6]) + numverts * (4 + 4 + 4 + 4 + 4 + 4 + 4 + 1) * sizeof(float));
+	mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + numtriangles * sizeof(int[6]) + numverts * (3 + 2 + 2 + 2 + 3 + 3 + 3 + 1) * sizeof(float));
 	mesh->numverts = numverts;
 	mesh->numtriangles = numtriangles;
-	mesh->verts = (float *)(mesh + 1);
-	mesh->str = mesh->verts + mesh->numverts * 4;
-	mesh->uvw = mesh->str + mesh->numverts * 4;
-	mesh->abc = mesh->uvw + mesh->numverts * 4;
-	mesh->svectors = (float *)(mesh->abc + mesh->numverts * 4);
-	mesh->tvectors = mesh->svectors + mesh->numverts * 4;
-	mesh->normals = mesh->tvectors + mesh->numverts * 4;
-	mesh->lightmapoffsets = (int *)(mesh->normals + mesh->numverts * 4);
-	mesh->index = mesh->lightmapoffsets + mesh->numverts;
-	mesh->triangleneighbors = mesh->index + mesh->numtriangles * 3;
+	mesh->vertex3f = (float *)(mesh + 1);
+	mesh->texcoordtexture2f = mesh->vertex3f + mesh->numverts * 3;
+	mesh->texcoordlightmap2f = mesh->texcoordtexture2f + mesh->numverts * 2;
+	mesh->texcoorddetail2f = mesh->texcoordlightmap2f + mesh->numverts * 2;
+	mesh->svector3f = (float *)(mesh->texcoorddetail2f + mesh->numverts * 2);
+	mesh->tvector3f = mesh->svector3f + mesh->numverts * 3;
+	mesh->normal3f = mesh->tvector3f + mesh->numverts * 3;
+	mesh->lightmapoffsets = (int *)(mesh->normal3f + mesh->numverts * 3);
+	mesh->element3i = mesh->lightmapoffsets + mesh->numverts;
+	mesh->neighbor3i = mesh->element3i + mesh->numtriangles * 3;
 	return mesh;
 }
 
@@ -1435,14 +1435,14 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 
 	surf->mesh = mesh = Mod_AllocSurfMesh(surf->poly_numverts, surf->poly_numverts - 2);
 
-	index = mesh->index;
+	index = mesh->element3i;
 	for (i = 0;i < mesh->numtriangles;i++)
 	{
 		*index++ = 0;
 		*index++ = i + 1;
 		*index++ = i + 2;
 	}
-	Mod_BuildTriangleNeighbors(mesh->triangleneighbors, mesh->index, mesh->numtriangles);
+	Mod_BuildTriangleNeighbors(mesh->neighbor3i, mesh->element3i, mesh->numtriangles);
 
 	VectorCopy(surf->plane->normal, normal);
 	if (surf->flags & SURF_PLANEBACK)
@@ -1461,18 +1461,18 @@ void Mod_GenerateWallMesh (msurface_t *surf, int vertexonly)
 		u = u * uscale + ubase;
 		v = v * vscale + vbase;
 
-		mesh->verts[i * 4 + 0] = in[0];
-		mesh->verts[i * 4 + 1] = in[1];
-		mesh->verts[i * 4 + 2] = in[2];
-		mesh->str[i * 4 + 0] = s / surf->texinfo->texture->width;
-		mesh->str[i * 4 + 1] = t / surf->texinfo->texture->height;
-		mesh->uvw[i * 4 + 0] = u;
-		mesh->uvw[i * 4 + 1] = v;
-		mesh->abc[i * 4 + 0] = s * (1.0f / 16.0f);
-		mesh->abc[i * 4 + 1] = t * (1.0f / 16.0f);
+		mesh->vertex3f[i * 3 + 0] = in[0];
+		mesh->vertex3f[i * 3 + 1] = in[1];
+		mesh->vertex3f[i * 3 + 2] = in[2];
+		mesh->texcoordtexture2f[i * 2 + 0] = s / surf->texinfo->texture->width;
+		mesh->texcoordtexture2f[i * 2 + 1] = t / surf->texinfo->texture->height;
+		mesh->texcoordlightmap2f[i * 2 + 0] = u;
+		mesh->texcoordlightmap2f[i * 2 + 1] = v;
+		mesh->texcoorddetail2f[i * 2 + 0] = s * (1.0f / 16.0f);
+		mesh->texcoorddetail2f[i * 2 + 1] = t * (1.0f / 16.0f);
 		mesh->lightmapoffsets[i] = ((iv * (smax+1) + iu) * 3);
 	}
-	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->verts, mesh->str, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals);
+	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->vertex3f, mesh->texcoordtexture2f, mesh->element3i, mesh->svector3f, mesh->tvector3f, mesh->normal3f);
 }
 
 void Mod_GenerateVertexMesh (msurface_t *surf)
@@ -1486,14 +1486,14 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 
 	surf->mesh = mesh = Mod_AllocSurfMesh(surf->poly_numverts, surf->poly_numverts - 2);
 
-	index = mesh->index;
+	index = mesh->element3i;
 	for (i = 0;i < mesh->numtriangles;i++)
 	{
 		*index++ = 0;
 		*index++ = i + 1;
 		*index++ = i + 2;
 	}
-	Mod_BuildTriangleNeighbors(mesh->triangleneighbors, mesh->index, mesh->numtriangles);
+	Mod_BuildTriangleNeighbors(mesh->neighbor3i, mesh->element3i, mesh->numtriangles);
 
 	VectorCopy(surf->plane->normal, normal);
 	if (surf->flags & SURF_PLANEBACK)
@@ -1502,17 +1502,17 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	{
 		s = (DotProduct (in, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]);
 		t = (DotProduct (in, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]);
-		mesh->verts[i * 4 + 0] = in[0];
-		mesh->verts[i * 4 + 1] = in[1];
-		mesh->verts[i * 4 + 2] = in[2];
-		mesh->str[i * 4 + 0] = s / surf->texinfo->texture->width;
-		mesh->str[i * 4 + 1] = t / surf->texinfo->texture->height;
-		mesh->uvw[i * 4 + 0] = 0;
-		mesh->uvw[i * 4 + 1] = 0;
-		mesh->abc[i * 4 + 0] = s * (1.0f / 16.0f);
-		mesh->abc[i * 4 + 1] = t * (1.0f / 16.0f);
+		mesh->vertex3f[i * 3 + 0] = in[0];
+		mesh->vertex3f[i * 3 + 1] = in[1];
+		mesh->vertex3f[i * 3 + 2] = in[2];
+		mesh->texcoordtexture2f[i * 2 + 0] = s / surf->texinfo->texture->width;
+		mesh->texcoordtexture2f[i * 2 + 1] = t / surf->texinfo->texture->height;
+		mesh->texcoordlightmap2f[i * 2 + 0] = 0;
+		mesh->texcoordlightmap2f[i * 2 + 1] = 0;
+		mesh->texcoorddetail2f[i * 2 + 0] = s * (1.0f / 16.0f);
+		mesh->texcoorddetail2f[i * 2 + 1] = t * (1.0f / 16.0f);
 	}
-	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->verts, mesh->str, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals);
+	Mod_BuildTextureVectorsAndNormals(mesh->numverts, mesh->numtriangles, mesh->vertex3f, mesh->texcoordtexture2f, mesh->element3i, mesh->svector3f, mesh->tvector3f, mesh->normal3f);
 }
 
 void Mod_GenerateSurfacePolygon (msurface_t *surf, int firstedge, int numedges)
@@ -2898,7 +2898,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 				// calculate bounding shapes
 				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 				{
-					for (k = 0, vec = mesh->verts;k < mesh->numverts;k++, vec += 4)
+					for (k = 0, vec = mesh->vertex3f;k < mesh->numverts;k++, vec += 3)
 					{
 						if (mod->normalmins[0] > vec[0]) mod->normalmins[0] = vec[0];
 						if (mod->normalmins[1] > vec[1]) mod->normalmins[1] = vec[1];

@@ -41,7 +41,7 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 #define CL_RunParticleEffect R_RunParticleEffect
 #define CL_LavaSplash R_LavaSplash
 #define CL_RocketTrail2 R_RocketTrail2
-void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width)
+void R_CalcBeam_Vertex3f (float *vert, vec3_t org1, vec3_t org2, float width)
 {
 	vec3_t right1, right2, diff, normal;
 
@@ -61,15 +61,15 @@ void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width)
 	vert[ 0] = org1[0] + width * right1[0];
 	vert[ 1] = org1[1] + width * right1[1];
 	vert[ 2] = org1[2] + width * right1[2];
-	vert[ 4] = org1[0] - width * right1[0];
-	vert[ 5] = org1[1] - width * right1[1];
-	vert[ 6] = org1[2] - width * right1[2];
-	vert[ 8] = org2[0] - width * right2[0];
-	vert[ 9] = org2[1] - width * right2[1];
-	vert[10] = org2[2] - width * right2[2];
-	vert[12] = org2[0] + width * right2[0];
-	vert[13] = org2[1] + width * right2[1];
-	vert[14] = org2[2] + width * right2[2];
+	vert[ 3] = org1[0] - width * right1[0];
+	vert[ 4] = org1[1] - width * right1[1];
+	vert[ 5] = org1[2] - width * right1[2];
+	vert[ 6] = org2[0] - width * right2[0];
+	vert[ 7] = org2[1] - width * right2[1];
+	vert[ 8] = org2[2] - width * right2[2];
+	vert[ 9] = org2[0] + width * right2[0];
+	vert[10] = org2[1] + width * right2[1];
+	vert[11] = org2[2] + width * right2[2];
 }
 void fractalnoise(qbyte *noise, int size, int startgrid)
 {
@@ -443,9 +443,9 @@ void CL_EntityParticles (entity_t *ent)
 		forward[2] = -sp;
 
 #ifdef WORKINGLQUAKE
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 0, 0, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, PBLEND_ADD, 2, 2, 255, 0, 0, 0, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #else
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, PBLEND_ADD, 2, 2, 255, 0, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 #endif
 	}
 }
@@ -572,7 +572,7 @@ void CL_ParticleExplosion (vec3_t org)
 		/*
 		// LordHavoc: smoke effect similar to UT2003, chews fillrate too badly up close
 		// smoke puff
-		if (cl_particles_smoke.integer)
+		if (cl_particles.integer && cl_particles_smoke.integer)
 		{
 			for (i = 0;i < 64;i++)
 			{
@@ -597,7 +597,7 @@ void CL_ParticleExplosion (vec3_t org)
 		}
 		*/
 
-		if (cl_particles_sparks.integer)
+		if (cl_particles.integer && cl_particles_sparks.integer)
 		{
 			// sparks
 			for (i = 0;i < 256;i++)
@@ -678,10 +678,11 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 {
 	vec3_t org2, org3;
 	int k;
-	if (!cl_particles.integer) return;
 
 	if (cl_stainmaps.integer)
 		R_Stain(org, 32, 96, 96, 96, 24, 128, 128, 128, 24);
+
+	if (!cl_particles.integer) return;
 
 	if (cl_particles_bulletimpacts.integer)
 	{
@@ -1026,7 +1027,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 1: // grenade trail
 				// FIXME: make it gradually stop smoking
 				dec = 3;
-				if (cl_particles.integer && cl_particles_smoke.integer)
+				if (smoke)
 				{
 					particle(pt_grow, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, cl_particles_smoke_alpha.value*100, cl_particles_smoke_alphafade.value*100, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), cl_particles_smoke_size.value, 0, 0, 0, 0, 0);
 				}
@@ -1669,7 +1670,7 @@ void R_InitParticles(void)
 	R_Particles_Init();
 }
 
-float varray_vertex[16], varray_texcoord[1][16];
+float varray_vertex3f[12], varray_texcoord2f[1][8];
 #endif
 
 #ifdef WORKINGLQUAKE
@@ -1746,77 +1747,67 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 
 	R_Mesh_GetSpace(4);
 #endif
-	if (p->orientation == PARTICLE_BILLBOARD)
+	if (p->orientation == PARTICLE_BILLBOARD || p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 	{
-		VectorScale(vright, p->scalex, right);
-		VectorScale(vup, p->scaley, up);
-		varray_vertex[ 0] = org[0] + right[0] - up[0];
-		varray_vertex[ 1] = org[1] + right[1] - up[1];
-		varray_vertex[ 2] = org[2] + right[2] - up[2];
-		varray_vertex[ 4] = org[0] - right[0] - up[0];
-		varray_vertex[ 5] = org[1] - right[1] - up[1];
-		varray_vertex[ 6] = org[2] - right[2] - up[2];
-		varray_vertex[ 8] = org[0] - right[0] + up[0];
-		varray_vertex[ 9] = org[1] - right[1] + up[1];
-		varray_vertex[10] = org[2] - right[2] + up[2];
-		varray_vertex[12] = org[0] + right[0] + up[0];
-		varray_vertex[13] = org[1] + right[1] + up[1];
-		varray_vertex[14] = org[2] + right[2] + up[2];
+		if (p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+		{
+			// double-sided
+			if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
+			{
+				VectorNegate(p->vel2, v);
+				VectorVectors(v, right, up);
+			}
+			else
+				VectorVectors(p->vel2, right, up);
+			VectorScale(right, p->scalex, right);
+			VectorScale(up, p->scaley, up);
+		}
+		else
+		{
+			VectorScale(vright, p->scalex, right);
+			VectorScale(vup, p->scaley, up);
+		}
+		varray_vertex3f[ 0] = org[0] - right[0] - up[0];
+		varray_vertex3f[ 1] = org[1] - right[1] - up[1];
+		varray_vertex3f[ 2] = org[2] - right[2] - up[2];
+		varray_vertex3f[ 3] = org[0] - right[0] + up[0];
+		varray_vertex3f[ 4] = org[1] - right[1] + up[1];
+		varray_vertex3f[ 5] = org[2] - right[2] + up[2];
+		varray_vertex3f[ 6] = org[0] + right[0] + up[0];
+		varray_vertex3f[ 7] = org[1] + right[1] + up[1];
+		varray_vertex3f[ 8] = org[2] + right[2] + up[2];
+		varray_vertex3f[ 9] = org[0] + right[0] - up[0];
+		varray_vertex3f[10] = org[1] + right[1] - up[1];
+		varray_vertex3f[11] = org[2] + right[2] - up[2];
+		varray_texcoord2f[0][0] = tex->s1;varray_texcoord2f[0][1] = tex->t2;
+		varray_texcoord2f[0][2] = tex->s1;varray_texcoord2f[0][3] = tex->t1;
+		varray_texcoord2f[0][4] = tex->s2;varray_texcoord2f[0][5] = tex->t1;
+		varray_texcoord2f[0][6] = tex->s2;varray_texcoord2f[0][7] = tex->t2;
 	}
 	else if (p->orientation == PARTICLE_SPARK)
 	{
 		VectorMA(p->org, -p->scaley, p->vel, v);
 		VectorMA(p->org, p->scaley, p->vel, up2);
-		R_CalcBeamVerts(varray_vertex, v, up2, p->scalex);
+		R_CalcBeam_Vertex3f(varray_vertex3f, v, up2, p->scalex);
+		varray_texcoord2f[0][0] = tex->s1;varray_texcoord2f[0][1] = tex->t2;
+		varray_texcoord2f[0][2] = tex->s1;varray_texcoord2f[0][3] = tex->t1;
+		varray_texcoord2f[0][4] = tex->s2;varray_texcoord2f[0][5] = tex->t1;
+		varray_texcoord2f[0][6] = tex->s2;varray_texcoord2f[0][7] = tex->t2;
 	}
 	else if (p->orientation == PARTICLE_BEAM)
-		R_CalcBeamVerts(varray_vertex, p->org, p->vel2, p->scalex);
-	else if (p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 	{
-		// double-sided
-		if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
-		{
-			VectorNegate(p->vel2, v);
-			VectorVectors(v, right, up);
-		}
-		else
-			VectorVectors(p->vel2, right, up);
-		VectorScale(right, p->scalex, right);
-		VectorScale(up, p->scaley, up);
-		varray_vertex[ 0] = org[0] + right[0] - up[0];
-		varray_vertex[ 1] = org[1] + right[1] - up[1];
-		varray_vertex[ 2] = org[2] + right[2] - up[2];
-		varray_vertex[ 4] = org[0] - right[0] - up[0];
-		varray_vertex[ 5] = org[1] - right[1] - up[1];
-		varray_vertex[ 6] = org[2] - right[2] - up[2];
-		varray_vertex[ 8] = org[0] - right[0] + up[0];
-		varray_vertex[ 9] = org[1] - right[1] + up[1];
-		varray_vertex[10] = org[2] - right[2] + up[2];
-		varray_vertex[12] = org[0] + right[0] + up[0];
-		varray_vertex[13] = org[1] + right[1] + up[1];
-		varray_vertex[14] = org[2] + right[2] + up[2];
-	}
-	else
-		Host_Error("R_DrawParticles: unknown particle orientation %i\n", p->orientation);
-
-	if (p->orientation == PARTICLE_BEAM)
-	{
+		R_CalcBeam_Vertex3f(varray_vertex3f, p->org, p->vel2, p->scalex);
 		VectorSubtract(p->vel2, p->org, up);
 		VectorNormalizeFast(up);
 		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f) - cl.time * 0.25;
 		v[1] = DotProduct(p->vel2, up) * (1.0f / 64.0f) - cl.time * 0.25;
-		varray_texcoord[0][0] = 1;varray_texcoord[0][1] = v[0];
-		varray_texcoord[0][4] = 0;varray_texcoord[0][5] = v[0];
-		varray_texcoord[0][8] = 0;varray_texcoord[0][9] = v[1];
-		varray_texcoord[0][12] = 1;varray_texcoord[0][13] = v[1];
+		varray_texcoord2f[0][0] = 1;varray_texcoord2f[0][1] = v[0];
+		varray_texcoord2f[0][2] = 0;varray_texcoord2f[0][3] = v[0];
+		varray_texcoord2f[0][4] = 0;varray_texcoord2f[0][5] = v[1];
+		varray_texcoord2f[0][6] = 1;varray_texcoord2f[0][7] = v[1];
 	}
 	else
-	{
-		varray_texcoord[0][0] = tex->s2;varray_texcoord[0][1] = tex->t1;
-		varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t1;
-		varray_texcoord[0][8] = tex->s1;varray_texcoord[0][9] = tex->t2;
-		varray_texcoord[0][12] = tex->s2;varray_texcoord[0][13] = tex->t2;
-	}
+		Host_Error("R_DrawParticles: unknown particle orientation %i\n", p->orientation);
 
 #if WORKINGLQUAKE
 	if (p->blendmode == 0)
@@ -1827,10 +1818,10 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	glColor4f(cr, cg, cb, ca);
 	glBegin(GL_QUADS);
-	glTexCoord2f(varray_texcoord[0][ 0], varray_texcoord[0][ 1]);glVertex3f(varray_vertex[ 0], varray_vertex[ 1], varray_vertex[ 2]);
-	glTexCoord2f(varray_texcoord[0][ 4], varray_texcoord[0][ 5]);glVertex3f(varray_vertex[ 4], varray_vertex[ 5], varray_vertex[ 6]);
-	glTexCoord2f(varray_texcoord[0][ 8], varray_texcoord[0][ 9]);glVertex3f(varray_vertex[ 8], varray_vertex[ 9], varray_vertex[10]);
-	glTexCoord2f(varray_texcoord[0][12], varray_texcoord[0][13]);glVertex3f(varray_vertex[12], varray_vertex[13], varray_vertex[14]);
+	glTexCoord2f(varray_texcoord2f[0][0], varray_texcoord2f[0][1]);glVertex3f(varray_vertex3f[ 0], varray_vertex3f[ 1], varray_vertex3f[ 2]);
+	glTexCoord2f(varray_texcoord2f[0][2], varray_texcoord2f[0][3]);glVertex3f(varray_vertex3f[ 3], varray_vertex3f[ 4], varray_vertex3f[ 5]);
+	glTexCoord2f(varray_texcoord2f[0][4], varray_texcoord2f[0][5]);glVertex3f(varray_vertex3f[ 6], varray_vertex3f[ 7], varray_vertex3f[ 8]);
+	glTexCoord2f(varray_texcoord2f[0][6], varray_texcoord2f[0][7]);glVertex3f(varray_vertex3f[ 9], varray_vertex3f[10], varray_vertex3f[11]);
 	glEnd();
 #else
 	R_Mesh_Draw(4, 2, polygonelements);

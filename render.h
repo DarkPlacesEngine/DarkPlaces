@@ -168,7 +168,8 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 void R_DrawWorldCrosshair(void);
 void R_Draw2DCrosshair(void);
 
-void R_CalcBeamVerts (float *vert, const vec3_t org1, const vec3_t org2, float width);
+void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, float width);
+void R_DrawSpriteMesh(const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2);
 
 #endif
 

@@ -94,6 +94,38 @@ extern vec3_t vec3_origin;
 #define VectorBlend(b1, b2, blend, c) do{float iblend = 1 - (blend);VectorMAM(iblend, b1, blend, b2, c);}while(0)
 #define BoxesOverlap(a,b,c,d) ((a)[0] <= (d)[0] && (b)[0] >= (c)[0] && (a)[1] <= (d)[1] && (b)[1] >= (c)[1] && (a)[2] <= (d)[2] && (b)[2] >= (c)[2])
 
+// fast PointInfrontOfTriangle
+// subtracts v1 from v0 and v2, combined into a crossproduct, combined with a
+// dotproduct of the light location relative to the first point of the
+// triangle (any point works, since any triangle is obviously flat), and
+// finally a comparison to determine if the light is infront of the triangle
+// (the goal of this statement) we do not need to normalize the surface
+// normal because both sides of the comparison use it, therefore they are
+// both multiplied the same amount...  furthermore the subtract can be done
+// on the vectors, saving a little bit of math in the dotproducts
+#define PointInfrontOfTriangle(p,a,b,c) (((p)[0] - (a)[0]) * (((a)[1] - (b)[1]) * ((c)[2] - (b)[2]) - ((a)[2] - (b)[2]) * ((c)[1] - (b)[1])) + ((p)[1] - (a)[1]) * (((a)[2] - (b)[2]) * ((c)[0] - (b)[0]) - ((a)[0] - (b)[0]) * ((c)[2] - (b)[2])) + ((p)[2] - (a)[2]) * (((a)[0] - (b)[0]) * ((c)[1] - (b)[1]) - ((a)[1] - (b)[1]) * ((c)[0] - (b)[0])) > 0)
+#if 0
+// readable version, kept only for explanatory reasons
+int PointInfrontOfTriangle(const float *p, const float *a, const float *b, const float *c)
+{
+	float dir0[3], dir1[3], normal[3];
+
+	// calculate two mostly perpendicular edge directions
+	VectorSubtract(a, b, dir0);
+	VectorSubtract(c, b, dir1);
+
+	// we have two edge directions, we can calculate a third vector from
+	// them, which is the direction of the surface normal (it's magnitude
+	// is not 1 however)
+	CrossProduct(dir0, dir1, normal);
+
+	// compare distance of light along normal, with distance of any point
+	// of the triangle along the same normal (the triangle is planar,
+	// I.E. flat, so all points give the same answer)
+	return DotProduct(p, normal) > DotProduct(a, normal);
+}
+#endif
+
 /*
 // LordHavoc: quaternion math, untested, don't know if these are correct,
 // need to add conversion to/from matrices

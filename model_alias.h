@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -50,10 +50,6 @@ typedef struct {
 	float		size;
 } daliashdr_t;
 
-#define	MAXALIASVERTS	4096
-#define	MAXALIASFRAMES	1024
-#define	MAXALIASTRIS	4096
-
 /*
 ========================================================================
 
@@ -66,13 +62,7 @@ typedef struct {
 // renamed a things to avoid conflicts
 
 #define MD2ALIAS_VERSION	8
-
-#define	MD2MAX_TRIANGLES	4096
-#define MD2MAX_VERTS		4096
-#define MD2MAX_FRAMES		1024
-#define	MD2MAX_SKINNAME	64
-// sanity checking size
-#define MD2MAX_SIZE	(16777216)
+#define	MD2_SKINNAME	64
 
 typedef struct
 {
@@ -80,7 +70,7 @@ typedef struct
 	short	t;
 } md2stvert_t;
 
-typedef struct 
+typedef struct
 {
 	short	index_xyz[3];
 	short	index_st[3];
@@ -286,10 +276,10 @@ typedef struct aliasmesh_s
 	int num_frames;
 	int num_vertices;
 	aliasskin_t *data_skins;
-	int *data_elements;
-	int *data_neighbors;
-	float *data_texcoords;
-	aliasvertex_t *data_vertices;
+	int *data_element3i;
+	int *data_neighbor3i;
+	float *data_texcoord2f;
+	aliasvertex_t *data_aliasvertex;
 }
 aliasmesh_t;
 

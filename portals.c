@@ -360,14 +360,12 @@ void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *ma
 			{
 				for (surfmesh = surf->mesh;surfmesh;surfmesh = surfmesh->chain)
 				{
-					for (j = 0, elements = surfmesh->index;j < surfmesh->numtriangles;j++, elements += 3)
+					for (j = 0, elements = surfmesh->element3i;j < surfmesh->numtriangles;j++, elements += 3)
 					{
-						VectorCopy((surfmesh->verts + elements[0] * 4), trianglepoints[0]);
-						VectorCopy((surfmesh->verts + elements[1] * 4), trianglepoints[1]);
-						VectorCopy((surfmesh->verts + elements[2] * 4), trianglepoints[2]);
-						if ((info->eye[0] - trianglepoints[0][0]) * ((trianglepoints[0][1] - trianglepoints[1][1]) * (trianglepoints[2][2] - trianglepoints[1][2]) - (trianglepoints[0][2] - trianglepoints[1][2]) * (trianglepoints[2][1] - trianglepoints[1][1]))
-						  + (info->eye[1] - trianglepoints[0][1]) * ((trianglepoints[0][2] - trianglepoints[1][2]) * (trianglepoints[2][0] - trianglepoints[1][0]) - (trianglepoints[0][0] - trianglepoints[1][0]) * (trianglepoints[2][2] - trianglepoints[1][2]))
-						  + (info->eye[2] - trianglepoints[0][2]) * ((trianglepoints[0][0] - trianglepoints[1][0]) * (trianglepoints[2][1] - trianglepoints[1][1]) - (trianglepoints[0][1] - trianglepoints[1][1]) * (trianglepoints[2][0] - trianglepoints[1][0])) > 0
+						VectorCopy((surfmesh->vertex3f + elements[0] * 3), trianglepoints[0]);
+						VectorCopy((surfmesh->vertex3f + elements[1] * 3), trianglepoints[1]);
+						VectorCopy((surfmesh->vertex3f + elements[2] * 3), trianglepoints[2]);
+						if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2])
 						 && Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
 							break;
 					}

@@ -43,9 +43,10 @@ rmeshstate_t;
 // overbright rendering scale for the current state
 extern int r_lightmapscalebit;
 extern float r_colorscale;
-extern float *varray_vertex;
-extern float *varray_color;
-extern float *varray_texcoord[MAX_TEXTUREUNITS];
+extern float *varray_vertex3f;
+extern float *varray_color4f;
+extern float *varray_texcoord3f[MAX_TEXTUREUNITS];
+extern float *varray_texcoord2f[MAX_TEXTUREUNITS];
 extern int mesh_maxverts;
 
 // adds console variables and registers the render module (only call from GL_Init)
@@ -74,6 +75,13 @@ void R_Mesh_TextureState(const rmeshstate_t *m);
 void R_Mesh_GetSpace(int numverts);
 // renders the mesh in the varray_* buffers
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
+
+// copies a vertex3f array into varray_vertex3f
+void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts);
+// copies a texcoord2f array into varray_texcoord[tmu]
+void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts);
+// copies a color4f array into varray_color4f
+void R_Mesh_CopyColor4f(const float *color4f, int numverts);
 
 // saves a section of the rendered frame to a .tga file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);

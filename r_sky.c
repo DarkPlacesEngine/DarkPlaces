@@ -121,11 +121,11 @@ static void R_SkyBox(void)
 	rmeshstate_t m;
 
 #define R_SkyBoxPolyVec(i,s,t,x,y,z) \
-	varray_vertex[i * 4 + 0] = (x) * 16.0f;\
-	varray_vertex[i * 4 + 1] = (y) * 16.0f;\
-	varray_vertex[i * 4 + 2] = (z) * 16.0f;\
-	varray_texcoord[0][i * 4 + 0] = (s);\
-	varray_texcoord[0][i * 4 + 1] = (t);
+	varray_vertex3f[i * 3 + 0] = (x) * 16.0f;\
+	varray_vertex3f[i * 3 + 1] = (y) * 16.0f;\
+	varray_vertex3f[i * 3 + 2] = (z) * 16.0f;\
+	varray_texcoord2f[0][i * 2 + 0] = (s);\
+	varray_texcoord2f[0][i * 2 + 1] = (t);
 
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 
@@ -197,20 +197,20 @@ static void R_SkyBox(void)
 #define skygridyrecip (1.0f / (skygridy))
 #define skysphere_numverts (skygridx1 * skygridy1)
 #define skysphere_numtriangles (skygridx * skygridy * 2)
-static float skysphere_vertex[skysphere_numverts * 4];
-static float skysphere_texcoord[skysphere_numverts * 4];
-static int skysphere_elements[skysphere_numtriangles * 3];
+static float skysphere_vertex3f[skysphere_numverts * 3];
+static float skysphere_texcoord2f[skysphere_numverts * 2];
+static int skysphere_element3i[skysphere_numtriangles * 3];
 
 static void skyspherecalc(void)
 {
 	int i, j, *e;
-	float a, b, x, ax, ay, v[3], length, *vertex, *texcoord;
+	float a, b, x, ax, ay, v[3], length, *vertex3f, *texcoord2f;
 	float dx, dy, dz;
 	dx = 16;
 	dy = 16;
 	dz = 16 / 3;
-	vertex = skysphere_vertex;
-	texcoord = skysphere_texcoord;
+	vertex3f = skysphere_vertex3f;
+	texcoord2f = skysphere_texcoord2f;
 	for (j = 0;j <= skygridy;j++)
 	{
 		a = j * skygridyrecip;
@@ -224,17 +224,14 @@ static void skyspherecalc(void)
 			v[1] = ay*x * dy;
 			v[2] = -sin((b + 0.5) * M_PI) * dz;
 			length = 3.0f / sqrt(v[0]*v[0]+v[1]*v[1]+(v[2]*v[2]*9));
-			*texcoord++ = v[0] * length;
-			*texcoord++ = v[1] * length;
-			*texcoord++ = 0;
-			*texcoord++ = 0;
-			*vertex++ = v[0];
-			*vertex++ = v[1];
-			*vertex++ = v[2];
-			*vertex++ = 1;
+			*texcoord2f++ = v[0] * length;
+			*texcoord2f++ = v[1] * length;
+			*vertex3f++ = v[0];
+			*vertex3f++ = v[1];
+			*vertex3f++ = v[2];
 		}
 	}
-	e = skysphere_elements;
+	e = skysphere_element3i;
 	for (j = 0;j < skygridy;j++)
 	{
 		for (i = 0;i < skygridx;i++)
@@ -254,7 +251,8 @@ static void skyspherecalc(void)
 static void R_SkySphere(void)
 {
 	int i;
-	float speedscale, *t;
+	float speedscale, *out2f;
+	const float *in2f;
 	static qboolean skysphereinitialized = false;
 	rmeshstate_t m;
 	if (!skysphereinitialized)
@@ -278,14 +276,13 @@ static void R_SkySphere(void)
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 
 	R_Mesh_GetSpace(skysphere_numverts);
-	memcpy(varray_vertex, skysphere_vertex, skysphere_numverts * sizeof(float[4]));
-	memcpy(varray_texcoord[0], skysphere_texcoord, skysphere_numverts * sizeof(float[4]));
-	for (i = 0, t = varray_texcoord[0];i < skysphere_numverts;i++, t += 4)
+	R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
+	for (i = 0, out2f = varray_texcoord2f[0], in2f = skysphere_texcoord2f;i < skysphere_numverts;i++)
 	{
-		t[0] += speedscale;
-		t[1] += speedscale;
+		*out2f++ = *in2f++ + speedscale;
+		*out2f++ = *in2f++ + speedscale;
 	}
-	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_elements);
+	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
@@ -296,14 +293,13 @@ static void R_SkySphere(void)
 	speedscale *= 2;
 
 	R_Mesh_GetSpace(skysphere_numverts);
-	memcpy(varray_vertex, skysphere_vertex, skysphere_numverts * sizeof(float[4]));
-	memcpy(varray_texcoord[0], skysphere_texcoord, skysphere_numverts * sizeof(float[4]));
-	for (i = 0, t = varray_texcoord[0];i < skysphere_numverts;i++, t += 4)
+	R_Mesh_CopyVertex3f(skysphere_vertex3f, skysphere_numverts);
+	for (i = 0, out2f = varray_texcoord2f[0], in2f = skysphere_texcoord2f;i < skysphere_numverts;i++)
 	{
-		t[0] += speedscale;
-		t[1] += speedscale;
+		*out2f++ = *in2f++ + speedscale;
+		*out2f++ = *in2f++ + speedscale;
 	}
-	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_elements);
+	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 }
 
 void R_Sky(void)

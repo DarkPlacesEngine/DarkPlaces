@@ -1138,16 +1138,15 @@ static void R_BlendView(void)
 
 	R_Mesh_GetSpace(3);
 	r = 64000;
-	varray_vertex[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
-	varray_vertex[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
-	varray_vertex[2] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r - vup[2] * r;
-	r *= 3;
-	varray_vertex[4] = varray_vertex[0] + vup[0] * r;
-	varray_vertex[5] = varray_vertex[1] + vup[1] * r;
-	varray_vertex[6] = varray_vertex[2] + vup[2] * r;
-	varray_vertex[8] = varray_vertex[0] + vright[0] * r;
-	varray_vertex[9] = varray_vertex[1] + vright[1] * r;
-	varray_vertex[10] = varray_vertex[2] + vright[2] * r;
+	varray_vertex3f[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
+	varray_vertex3f[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
+	varray_vertex3f[2] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r - vup[2] * r;
+	varray_vertex3f[3] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r + vup[0] * r * 3;
+	varray_vertex3f[4] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r + vup[1] * r * 3;
+	varray_vertex3f[5] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r + vup[2] * r * 3;
+	varray_vertex3f[6] = r_origin[0] + vpn[0] * 1.5 + vright[0] * r * 3 - vup[0] * r;
+	varray_vertex3f[7] = r_origin[1] + vpn[1] * 1.5 + vright[1] * r * 3 - vup[1] * r;
+	varray_vertex3f[8] = r_origin[2] + vpn[2] * 1.5 + vright[2] * r * 3 - vup[2] * r;
 	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 	R_Mesh_Draw(3, 1, polygonelements);
 }
@@ -1168,6 +1167,7 @@ void R_RenderView (void)
 
 	if (r_shadow_realtime.integer == 1)
 	{
+#if 0
 		if (!gl_texturecubemap)
 		{
 			Con_Printf("Cubemap texture support not detected, turning off r_shadow_realtime\n");
@@ -1178,14 +1178,16 @@ void R_RenderView (void)
 			Con_Printf("Bumpmapping support not detected, turning off r_shadow_realtime\n");
 			Cvar_SetValueQuick(&r_shadow_realtime, 0);
 		}
-		else if (!gl_stencil)
-		{
-			Con_Printf("Stencil not enabled, turning off r_shadow_realtime, please type vid_stencil 1;vid_bitsperpixel 32;vid_restart and try again\n");
-			Cvar_SetValueQuick(&r_shadow_realtime, 0);
-		}
 		else if (!gl_combine.integer)
 		{
 			Con_Printf("Combine disabled, please turn on gl_combine, turning off r_shadow_realtime\n");
+			Cvar_SetValueQuick(&r_shadow_realtime, 0);
+		}
+		else
+#endif
+		if (!gl_stencil)
+		{
+			Con_Printf("Stencil not enabled, turning off r_shadow_realtime, please type vid_stencil 1;vid_bitsperpixel 32;vid_restart and try again\n");
 			Cvar_SetValueQuick(&r_shadow_realtime, 0);
 		}
 	}
@@ -1363,24 +1365,24 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 
 	GL_UseColorArray();
 	R_Mesh_GetSpace(6);
-	varray_vertex[ 0] = -16;varray_vertex[ 1] =   0;varray_vertex[ 2] =   0;
-	varray_vertex[ 4] =  16;varray_vertex[ 5] =   0;varray_vertex[ 6] =   0;
-	varray_vertex[ 8] =   0;varray_vertex[ 9] = -16;varray_vertex[10] =   0;
-	varray_vertex[12] =   0;varray_vertex[13] =  16;varray_vertex[14] =   0;
-	varray_vertex[16] =   0;varray_vertex[17] =   0;varray_vertex[18] = -16;
-	varray_vertex[20] =   0;varray_vertex[21] =   0;varray_vertex[22] =  16;
-	varray_color[ 0] = 0.00f * r_colorscale;varray_color[ 1] = 0.00f * r_colorscale;varray_color[ 2] = 0.50f * r_colorscale;varray_color[ 3] = ent->alpha;
-	varray_color[ 4] = 0.00f * r_colorscale;varray_color[ 5] = 0.00f * r_colorscale;varray_color[ 6] = 0.50f * r_colorscale;varray_color[ 7] = ent->alpha;
-	varray_color[ 8] = 0.00f * r_colorscale;varray_color[ 9] = 0.50f * r_colorscale;varray_color[10] = 0.00f * r_colorscale;varray_color[11] = ent->alpha;
-	varray_color[12] = 0.00f * r_colorscale;varray_color[13] = 0.50f * r_colorscale;varray_color[14] = 0.00f * r_colorscale;varray_color[15] = ent->alpha;
-	varray_color[16] = 0.50f * r_colorscale;varray_color[17] = 0.00f * r_colorscale;varray_color[18] = 0.00f * r_colorscale;varray_color[19] = ent->alpha;
-	varray_color[20] = 0.50f * r_colorscale;varray_color[21] = 0.00f * r_colorscale;varray_color[22] = 0.00f * r_colorscale;varray_color[23] = ent->alpha;
+	varray_vertex3f[ 0] = -16;varray_vertex3f[ 1] =   0;varray_vertex3f[ 2] =   0;
+	varray_vertex3f[ 3] =  16;varray_vertex3f[ 4] =   0;varray_vertex3f[ 5] =   0;
+	varray_vertex3f[ 6] =   0;varray_vertex3f[ 7] = -16;varray_vertex3f[ 8] =   0;
+	varray_vertex3f[ 9] =   0;varray_vertex3f[10] =  16;varray_vertex3f[11] =   0;
+	varray_vertex3f[12] =   0;varray_vertex3f[13] =   0;varray_vertex3f[14] = -16;
+	varray_vertex3f[15] =   0;varray_vertex3f[16] =   0;varray_vertex3f[17] =  16;
+	varray_color4f[ 0] = 0.00f * r_colorscale;varray_color4f[ 1] = 0.00f * r_colorscale;varray_color4f[ 2] = 0.50f * r_colorscale;varray_color4f[ 3] = ent->alpha;
+	varray_color4f[ 4] = 0.00f * r_colorscale;varray_color4f[ 5] = 0.00f * r_colorscale;varray_color4f[ 6] = 0.50f * r_colorscale;varray_color4f[ 7] = ent->alpha;
+	varray_color4f[ 8] = 0.00f * r_colorscale;varray_color4f[ 9] = 0.50f * r_colorscale;varray_color4f[10] = 0.00f * r_colorscale;varray_color4f[11] = ent->alpha;
+	varray_color4f[12] = 0.00f * r_colorscale;varray_color4f[13] = 0.50f * r_colorscale;varray_color4f[14] = 0.00f * r_colorscale;varray_color4f[15] = ent->alpha;
+	varray_color4f[16] = 0.50f * r_colorscale;varray_color4f[17] = 0.00f * r_colorscale;varray_color4f[18] = 0.00f * r_colorscale;varray_color4f[19] = ent->alpha;
+	varray_color4f[20] = 0.50f * r_colorscale;varray_color4f[21] = 0.00f * r_colorscale;varray_color4f[22] = 0.00f * r_colorscale;varray_color4f[23] = ent->alpha;
 	if (fogenabled)
 	{
 		VectorSubtract(ent->origin, r_origin, diff);
 		f2 = exp(fogdensity/DotProduct(diff, diff));
 		f1 = 1 - f2;
-		for (i = 0, c = varray_color;i < 6;i++, c += 4)
+		for (i = 0, c = varray_color4f;i < 6;i++, c += 4)
 		{
 			c[0] = (c[0] * f1 + fogcolor[0] * f2) * r_colorscale;
 			c[1] = (c[1] * f1 + fogcolor[1] * f2) * r_colorscale;
@@ -1389,7 +1391,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	}
 	else
 	{
-		for (i = 0, c = varray_color;i < 6;i++, c += 4)
+		for (i = 0, c = varray_color4f;i < 6;i++, c += 4)
 		{
 			c[0] *= r_colorscale;
 			c[1] *= r_colorscale;
@@ -1407,7 +1409,7 @@ void R_DrawNoModel(entity_render_t *ent)
 	//	R_DrawNoModelCallback(ent, 0);
 }
 
-void R_CalcBeamVerts (float *vert, const vec3_t org1, const vec3_t org2, float width)
+void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, float width)
 {
 	vec3_t right1, right2, diff, normal;
 
@@ -1427,13 +1429,36 @@ void R_CalcBeamVerts (float *vert, const vec3_t org1, const vec3_t org2, float w
 	vert[ 0] = org1[0] + width * right1[0];
 	vert[ 1] = org1[1] + width * right1[1];
 	vert[ 2] = org1[2] + width * right1[2];
-	vert[ 4] = org1[0] - width * right1[0];
-	vert[ 5] = org1[1] - width * right1[1];
-	vert[ 6] = org1[2] - width * right1[2];
-	vert[ 8] = org2[0] - width * right2[0];
-	vert[ 9] = org2[1] - width * right2[1];
-	vert[10] = org2[2] - width * right2[2];
-	vert[12] = org2[0] + width * right2[0];
-	vert[13] = org2[1] + width * right2[1];
-	vert[14] = org2[2] + width * right2[2];
+	vert[ 3] = org1[0] - width * right1[0];
+	vert[ 4] = org1[1] - width * right1[1];
+	vert[ 5] = org1[2] - width * right1[2];
+	vert[ 6] = org2[0] - width * right2[0];
+	vert[ 7] = org2[1] - width * right2[1];
+	vert[ 8] = org2[2] - width * right2[2];
+	vert[ 9] = org2[0] + width * right2[0];
+	vert[10] = org2[1] + width * right2[1];
+	vert[11] = org2[2] + width * right2[2];
 }
+
+void R_DrawSpriteMesh(const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2)
+{
+	R_Mesh_GetSpace(4);
+	varray_texcoord2f[0][0] = 1;varray_texcoord2f[0][1] = 1;
+	varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
+	varray_texcoord2f[0][4] = 0;varray_texcoord2f[0][5] = 0;
+	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
+	varray_vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
+	varray_vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;
+	varray_vertex3f[ 2] = origin[2] + left[2] * scalex2 + up[2] * scaley1;
+	varray_vertex3f[ 3] = origin[0] + left[0] * scalex2 + up[0] * scaley2;
+	varray_vertex3f[ 4] = origin[1] + left[1] * scalex2 + up[1] * scaley2;
+	varray_vertex3f[ 5] = origin[2] + left[2] * scalex2 + up[2] * scaley2;
+	varray_vertex3f[ 6] = origin[0] + left[0] * scalex1 + up[0] * scaley2;
+	varray_vertex3f[ 7] = origin[1] + left[1] * scalex1 + up[1] * scaley2;
+	varray_vertex3f[ 8] = origin[2] + left[2] * scalex1 + up[2] * scaley2;
+	varray_vertex3f[ 9] = origin[0] + left[0] * scalex1 + up[0] * scaley1;
+	varray_vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
+	varray_vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
+	R_Mesh_Draw(4, 2, polygonelements);
+}
+

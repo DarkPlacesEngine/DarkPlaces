@@ -90,25 +90,8 @@ static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, int texture,
 	R_Mesh_State(&m);
 
 	GL_Color(red * r_colorscale, green * r_colorscale, blue * r_colorscale, alpha);
-	R_Mesh_GetSpace(4);
-	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 1;
-	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 0;
-	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 0;
-	varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 1;
 	// FIXME: negate left and right in loader
-	varray_vertex[0] = origin[0] + frame->down * up[0] - frame->left  * left[0];
-	varray_vertex[1] = origin[1] + frame->down * up[1] - frame->left  * left[1];
-	varray_vertex[2] = origin[2] + frame->down * up[2] - frame->left  * left[2];
-	varray_vertex[4] = origin[0] + frame->up   * up[0] - frame->left  * left[0];
-	varray_vertex[5] = origin[1] + frame->up   * up[1] - frame->left  * left[1];
-	varray_vertex[6] = origin[2] + frame->up   * up[2] - frame->left  * left[2];
-	varray_vertex[8] = origin[0] + frame->up   * up[0] - frame->right * left[0];
-	varray_vertex[9] = origin[1] + frame->up   * up[1] - frame->right * left[1];
-	varray_vertex[10] = origin[2] + frame->up   * up[2] - frame->right * left[2];
-	varray_vertex[12] = origin[0] + frame->down * up[0] - frame->right * left[0];
-	varray_vertex[13] = origin[1] + frame->down * up[1] - frame->right * left[1];
-	varray_vertex[14] = origin[2] + frame->down * up[2] - frame->right * left[2];
-	R_Mesh_Draw(4, 2, polygonelements);
+	R_DrawSpriteMesh(origin, left, up, frame->left, frame->right, frame->down, frame->up);
 }
 
 void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
