@@ -2391,9 +2391,9 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				if (r_textureunits.integer >= 3)
 					GL_Color(color[0], color[1], color[2], 1);
 				else if (r_textureunits.integer >= 2)
-					R_Shadow_VertexNoShadingWithZAttenuation(numvertices, vertex3f + 3 * firstvertex, color + 3 * firstvertex, matrix_modeltolight);
+					R_Shadow_VertexNoShadingWithZAttenuation(numvertices, vertex3f + 3 * firstvertex, color, matrix_modeltolight);
 				else
-					R_Shadow_VertexNoShadingWithXYZAttenuation(numvertices, vertex3f + 3 * firstvertex, color + 3 * firstvertex, matrix_modeltolight);
+					R_Shadow_VertexNoShadingWithXYZAttenuation(numvertices, vertex3f + 3 * firstvertex, color, matrix_modeltolight);
 				GL_LockArrays(firstvertex, numvertices);
 				R_Mesh_Draw(firstvertex, numvertices, numtriangles, elements);
 				GL_LockArrays(0, 0);
@@ -2441,11 +2441,11 @@ void R_Shadow_RenderLighting(int firstvertex, int numvertices, int numtriangles,
 				color[1] = bound(0, color2[1], 1);
 				color[2] = bound(0, color2[2], 1);
 				if (r_textureunits.integer >= 3)
-					R_Shadow_VertexShading(numvertices, vertex3f + 3 * firstvertex, normal3f + 3 * firstvertex, color + 3 * firstvertex, matrix_modeltolight);
+					R_Shadow_VertexShading(numvertices, vertex3f + 3 * firstvertex, normal3f + 3 * firstvertex, color, matrix_modeltolight);
 				else if (r_textureunits.integer >= 2)
-					R_Shadow_VertexShadingWithZAttenuation(numvertices, vertex3f + 3 * firstvertex, normal3f + 3 * firstvertex, color + 3 * firstvertex, matrix_modeltolight);
+					R_Shadow_VertexShadingWithZAttenuation(numvertices, vertex3f + 3 * firstvertex, normal3f + 3 * firstvertex, color, matrix_modeltolight);
 				else
-					R_Shadow_VertexShadingWithXYZAttenuation(numvertices, vertex3f + 3 * firstvertex, normal3f + 3 * firstvertex, color + 3 * firstvertex, matrix_modeltolight);
+					R_Shadow_VertexShadingWithXYZAttenuation(numvertices, vertex3f + 3 * firstvertex, normal3f + 3 * firstvertex, color, matrix_modeltolight);
 				GL_LockArrays(firstvertex, numvertices);
 				R_Mesh_Draw(firstvertex, numvertices, numtriangles, elements);
 				GL_LockArrays(0, 0);
