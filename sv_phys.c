@@ -1433,11 +1433,16 @@ trace_t SV_Trace_Toss (edict_t *tossent, edict_t *ignore)
 	float gravity, savesolid;
 	vec3_t move, end;
 	edict_t tempent, *tent;
+	entvars_t vars;
 	eval_t *val;
 	trace_t trace;
 
-	memcpy(&tempent, tossent, sizeof(edict_t));
+	// copy the vars over
+	memcpy(&vars, tossent->v, sizeof(entvars_t));
+	// set up the temp entity to point to the copied vars
 	tent = &tempent;
+	tent->v = &vars;
+
 	savesolid = tossent->v->solid;
 	tossent->v->solid = SOLID_NOT;
 
