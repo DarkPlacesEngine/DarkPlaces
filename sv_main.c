@@ -298,7 +298,7 @@ void SV_SendServerinfo (client_t *client)
 
 		// call the spawn function
 		pr_global_struct->time = sv.time;
-		pr_global_struct->self = EDICT_TO_PROG(sv_player);
+		pr_global_struct->self = EDICT_TO_PROG(client->edict);
 		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
 		PR_ExecuteProgram (pr_global_struct->PutClientInServer, "QC function PutClientInServer is missing");
 		host_client->spawned = true;
@@ -413,6 +413,8 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	// not been set up by the qc yet
 	if (client->netconnection)
 		SV_SendServerinfo (client);
+	else
+		client->spawned = true;
 }
 
 
@@ -1152,15 +1154,15 @@ void SV_UpdateToReliableMessages (void)
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
 		// update the host_client fields we care about according to the entity fields
-		sv_player = EDICT_NUM(i+1);
+		host_client->edict = EDICT_NUM(i+1);
 
 		// DP_SV_CLIENTNAME
-		name = PR_GetString(sv_player->v->netname);
+		name = PR_GetString(host_client->edict->v->netname);
 		if (name == NULL)
 			name = "";
 		// always point the string back at host_client->name to keep it safe
 		strlcpy (host_client->name, name, sizeof (host_client->name));
-		sv_player->v->netname = PR_SetString(host_client->name);
+		host_client->edict->v->netname = PR_SetString(host_client->name);
 		if (strcmp(host_client->old_name, host_client->name))
 		{
 			if (host_client->spawned)
@@ -1174,7 +1176,7 @@ void SV_UpdateToReliableMessages (void)
 
 		// DP_SV_CLIENTCOLORS
 		// this is always found (since it's added by the progs loader)
-		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)))
+		if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
 			host_client->colors = (int)val->_float;
 		if (host_client->old_colors != host_client->colors)
 		{
@@ -1186,7 +1188,7 @@ void SV_UpdateToReliableMessages (void)
 		}
 
 		// frags
-		host_client->frags = (int)sv_player->v->frags;
+		host_client->frags = (int)host_client->edict->v->frags;
 		if (host_client->old_frags != host_client->frags)
 		{
 			host_client->old_frags = host_client->frags;
@@ -1641,6 +1643,10 @@ void SV_SpawnServer (const char *server)
 		ent->e = sv.edictsengineprivate + i;
 		ent->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
 	}
+
+	// fix up client->edict pointers for returning clients right away...
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		host_client->edict = EDICT_NUM(i + 1);
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;

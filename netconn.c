@@ -1357,7 +1357,6 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 		{
 			if (host_client->netconnection && host_client->netconnection->mysocket == mysocket && !LHNETADDRESS_Compare(&host_client->netconnection->peeraddress, peeraddress))
 			{
-				sv_player = host_client->edict;
 				if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
 					SV_ReadClientMessage();
 				return ret;
@@ -1382,7 +1381,6 @@ void NetConn_ServerFrame(void)
 		if (host_client->netconnection && realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
-			sv_player = host_client->edict;
 			SV_DropClient(false);
 		}
 	}
