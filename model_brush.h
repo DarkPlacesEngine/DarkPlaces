@@ -240,8 +240,8 @@ typedef struct mnode_s
 	vec3_t mins;
 	vec3_t maxs;
 
+	mplane_t *plane; // != NULL
 // node specific
-	mplane_t *plane;
 	struct mnode_s *children[2];
 
 	unsigned short firstsurface;
@@ -262,6 +262,7 @@ typedef struct mleaf_s
 	vec3_t mins;
 	vec3_t maxs;
 
+	mplane_t *plane; // == NULL
 // leaf specific
 	// next leaf in pvschain
 	struct mleaf_s *pvschain;
