@@ -50,7 +50,7 @@ int WIPX_Init (void)
 	int		r;
 	WORD	wVersionRequested; 
 
-	if (COM_CheckParm ("-noipx"))
+	if (!COM_CheckParm ("-ipx")) // LordHavoc: changed -noipx to -ipx at Dabb's request, apparently crashs on computers without MS clients installed
 		return -1;
 
 // make sure LoadLibrary has happened successfully
