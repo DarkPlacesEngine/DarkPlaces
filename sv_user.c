@@ -459,13 +459,22 @@ void SV_ReadClientMove (usercmd_t *move)
 	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
 		total += host_client->ping_times[i];
 	host_client->ping = total / NUM_PING_TIMES; // can be used for prediction
-	host_client->latency = host_client->ping + sv_frametime; // push ahead by ticrate
+	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) ) // if paused for any reason, don't predict
+		host_client->latency = host_client->ping + sv_frametime; // push ahead by ticrate
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
 		val->_float = host_client->ping * 1000.0;
 
-// read current angles	
-	for (i=0 ; i<3 ; i++)
-		angle[i] = MSG_ReadAngle ();
+// read current angles
+	if (dpprotocol)
+	{
+		for (i=0 ; i<3 ; i++)
+			angle[i] = MSG_ReadPreciseAngle ();
+	}
+	else
+	{
+		for (i=0 ; i<3 ; i++)
+			angle[i] = MSG_ReadAngle ();
+	}
 
 	VectorCopy (angle, host_client->edict->v.v_angle);
 		
