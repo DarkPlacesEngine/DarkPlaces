@@ -859,7 +859,7 @@ loc0:
 			if (PROG_TO_EDICT(clip->passedict->v.owner) == touch)
 				continue;	// don't clip against owner
 			// LordHavoc: corpse code
-			if (clip->passedict->v.solid == SOLID_CORPSE && touch->v.solid == SOLID_SLIDEBOX)
+			if (clip->passedict->v.solid == SOLID_CORPSE && (touch->v.solid == SOLID_SLIDEBOX || touch->v.solid == SOLID_CORPSE))
 				continue;
 			if (clip->passedict->v.solid == SOLID_SLIDEBOX && touch->v.solid == SOLID_CORPSE)
 				continue;
@@ -870,6 +870,28 @@ loc0:
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
+		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
+		if (trace.allsolid)
+			clip->trace.allsolid = true;
+		if (trace.startsolid)
+		{
+			clip->trace.startsolid = true;
+			if (!clip->trace.ent)
+				clip->trace.ent = trace.ent;
+		}
+		if (trace.inopen)
+			clip->trace.inopen = true;
+		if (trace.inwater)
+			clip->trace.inwater = true;
+		if (trace.fraction < clip->trace.fraction)
+		{
+			clip->trace.fraction = trace.fraction;
+			VectorCopy(trace.endpos, clip->trace.endpos);
+			clip->trace.plane = trace.plane;
+			clip->trace.endcontents = trace.endcontents;
+			clip->trace.ent = trace.ent;
+		}
+		/*
 		if (trace.allsolid)
 		{
 			clip->trace = trace;
@@ -885,6 +907,7 @@ loc0:
 			else
 				clip->trace = trace;
 		}
+		*/
 	}
 
 // recurse down both sides
