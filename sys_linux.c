@@ -411,7 +411,7 @@ int main (int c, char **v)
 	host_parms.argc = com_argc;
 	host_parms.argv = com_argv;
 
-	host_parms.memsize = 24*1024*1024;
+	host_parms.memsize = DEFAULTMEM * 1024*1024;
 
 	j = COM_CheckParm("-mem");
 	if (j)

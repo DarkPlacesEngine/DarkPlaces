@@ -115,24 +115,36 @@ void GL_TextureStats_Print(char *name, int total, int crc, int mip, int alpha)
 
 void GL_TextureStats_f(void)
 {
-	int i, t = 0;
+	int i, s = 0, sc = 0, t = 0;
 	gltexture_t *glt;
 	Con_Printf("name                        kbytes crc  mip alpha\n");
 	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
 	{
 		GL_TextureStats_Print(glt->identifier, ((glt->totaltexels * 4) + 512) >> 10, glt->crc, glt->mipmap, glt->alpha);
 		t += glt->totaltexels;
+		if (glt->identifier[0] == '&')
+		{
+			sc++;
+			s += glt->totaltexels;
+		}
 	}
-	Con_Printf("%i textures, totalling %.3f mbytes\n", numgltextures, t / 1024.0 / 1024.0);
+	Con_Printf("%i textures, totalling %.3fMB, %i are (usually) unnecessary model skins totalling %.3fMB\n", numgltextures, t / 1048576.0, sc, s / 1048576.0);
 }
 
 void GL_TextureStats_PrintTotal(void)
 {
-	int i, t = 0;
+	int i, s = 0, sc = 0, t = 0;
 	gltexture_t *glt;
 	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
+	{
 		t += glt->totaltexels;
-	Con_Printf("%i textures, totalling %.3f mbytes\n", numgltextures, t / 1024.0 / 1024.0);
+		if (glt->identifier[0] == '&')
+		{
+			sc++;
+			s += glt->totaltexels;
+		}
+	}
+	Con_Printf("%i textures, totalling %.3fMB, %i are (usually) unnecessary model skins totalling %.3fMB\n", numgltextures, t / 1048576.0, sc, s / 1048576.0);
 }
 
 extern int buildnumber;

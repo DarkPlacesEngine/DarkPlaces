@@ -807,7 +807,7 @@ char *ED_NewString (char *string)
 	int		i,l;
 	
 	l = strlen(string) + 1;
-	new = Hunk_Alloc (l);
+	new = Hunk_AllocName (l, "edict string");
 	new_p = new;
 
 	for (i=0 ; i< l ; i++)

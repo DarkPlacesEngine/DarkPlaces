@@ -46,8 +46,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define UNUSED(x)	(x = x)	// for pesky compiler / lint warnings
 
-#define	MINIMUM_MEMORY			0x550000
-#define	MINIMUM_MEMORY_LEVELPAK	(MINIMUM_MEMORY + 0x100000)
+// LordHavoc: default heap size (unless -heapsize (win32 only) or -mem is used), in megabytes
+#define DEFAULTMEM 24
+//#define	MINIMUM_MEMORY			0x550000
+//#define	MINIMUM_MEMORY_LEVELPAK	(MINIMUM_MEMORY + 0x100000)
 
 #define MAX_NUM_ARGVS	50
 
