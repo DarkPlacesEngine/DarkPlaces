@@ -398,11 +398,6 @@ void Host_Reconnect_f (void)
 		Con_Print("reconnect : wait for signon messages again\n");
 		return;
 	}
-	if (cmd_source == src_command)
-	{
-		Con_Print("reconnect not valid from console\n");
-		return;
-	}
 	if (!cls.signon)
 	{
 		Con_Print("reconnect: no signon, ignoring reconnect\n");
