@@ -537,7 +537,7 @@ qboolean Host_FilterTime (double time)
 		Cvar_SetValue("host_minfps", 10.0f);
 	if (host_maxfps.value < host_minfps.value)
 		Cvar_SetValue("host_maxfps", host_minfps.value);
-	if (cl_avidemo.value < 0.1f)
+	if (cl_avidemo.value < 0.1f && cl_avidemo.value != 0.0f)
 		Cvar_SetValue("cl_avidemo", 0.0f);
 
 	// check if framerate is too high
