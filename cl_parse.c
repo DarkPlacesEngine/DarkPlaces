@@ -1607,7 +1607,9 @@ void CL_ParseServerMessage(void)
 
 		case svc_signonnum:
 			i = MSG_ReadByte ();
-			if (i <= cls.signon)
+			// LordHavoc: it's rude to kick off the client if they missed the
+			// reconnect somehow, so allow signon 1 even if at signon 1
+			if (i <= cls.signon && i != 1)
 				Host_Error ("Received signon %i when at %i", i, cls.signon);
 			cls.signon = i;
 			CL_SignonReply ();
