@@ -3278,10 +3278,13 @@ void PF_cvar_string (void)
 
 	str = G_STRING(OFS_PARM0);
 	var = Cvar_FindVar (str);
-
-	tmp = PR_GetTempString();
-	strcpy(tmp, var->string);
-
+	if (var)
+	{
+		tmp = PR_GetTempString();
+		strcpy(tmp, var->string);
+	}
+	else
+		tmp = "";
 	G_INT(OFS_RETURN) = PR_SetString(tmp);
 }
 
