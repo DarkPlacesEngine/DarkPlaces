@@ -697,6 +697,10 @@ void COM_InitGameType (void)
 		gamemode = GAME_BATTLEMECH;
 	else if (strstr(name, "zymotic"))
 		gamemode = GAME_ZYMOTIC;
+	else if (strstr(name, "fniggium"))
+		gamemode = GAME_FNIGGIUM;
+	else if (strstr(name, "setheral"))
+		gamemode = GAME_SETHERAL;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -720,6 +724,10 @@ void COM_InitGameType (void)
 		gamemode = GAME_BATTLEMECH;
 	else if (COM_CheckParm ("-zymotic"))
 		gamemode = GAME_ZYMOTIC;
+	else if (COM_CheckParm ("-fniggium"))
+		gamemode = GAME_FNIGGIUM;
+	else if (COM_CheckParm ("-setheral"))
+		gamemode = GAME_SETHERAL;
 
 	switch(gamemode)
 	{
@@ -761,6 +769,14 @@ void COM_InitGameType (void)
 		break;
 	case GAME_ZYMOTIC:
 		gamename = "Zymotic";
+		gamedirname = "data";
+		break;
+	case GAME_FNIGGIUM:
+		gamename = "Fniggium";
+		gamedirname = "data";
+		break;
+	case GAME_SETHERAL:
+		gamename = "Setheral";
 		gamedirname = "data";
 		break;
 	default:
