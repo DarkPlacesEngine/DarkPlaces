@@ -824,7 +824,10 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ONE;
+		if (r_shadow_realtime.integer >= 3)
+			m.depthdisable = true;
 		R_Mesh_State(&m);
+		qglDisable(GL_CULL_FACE);
 		GL_Color(0.0 * r_colorscale, 0.0125 * r_colorscale, 0.1 * r_colorscale, 1);
 	}
 	else
@@ -1066,6 +1069,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 
 	if (!visiblevolumes)
 		R_Shadow_Stage_End();
+	qglEnable(GL_CULL_FACE);
 	qglDisable(GL_SCISSOR_TEST);
 }
 
@@ -1239,7 +1243,7 @@ void R_RenderView (void)
 	R_DrawModels(r_shadow_lightingmode > 0);
 	R_TimeReport("models");
 
-	if (r_shadows.integer == 1)
+	if (r_shadows.integer == 1 && r_shadow_lightingmode <= 0)
 	{
 		R_DrawFakeShadows();
 		R_TimeReport("fakeshadow");
@@ -1271,7 +1275,7 @@ void R_RenderView (void)
 
 	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();
-	if (r_shadow_realtime.integer == 2)
+	if (r_shadow_realtime.integer >= 2)
 	{
 		R_ShadowVolumeLighting(true);
 		R_TimeReport("shadowvolume");
