@@ -1103,7 +1103,7 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 				R_Mesh_EndBatch();
 #endif
 			gl_state.pointer_color = p;
-			if (p != varray_buf_color4f || gl_mesh_floatcolors.integer)
+			if (p || gl_mesh_floatcolors.integer)
 				qglColorPointer(4, GL_FLOAT, sizeof(float[4]), p ? p : varray_buf_color4f);
 			else
 				qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(GLubyte[4]), p ? p : varray_buf_color4b);
@@ -1659,6 +1659,7 @@ static void R_Mesh_CacheArray_Shutdown(void)
 {
 }
 
+/*
 static void R_Mesh_CacheArray_ValidateState(int num)
 {
 	rcachearraylink_t *l, *lhead;
@@ -1670,6 +1671,7 @@ static void R_Mesh_CacheArray_ValidateState(int num)
 			return;
 	Sys_Error("%i", num);
 }
+*/
 
 int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 {
@@ -1677,7 +1679,7 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	rcachearrayitem_t *d;
 	int hashindex, offset, offsetend;
 
-	R_Mesh_CacheArray_ValidateState(3);
+	//R_Mesh_CacheArray_ValidateState(3);
 	// calculate a hashindex to choose a cache chain
 	r->data = NULL;
 	hashindex = CRC_Block((void *)r, sizeof(*r)) % RCACHEARRAY_HASHSIZE;
@@ -1712,13 +1714,15 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	offset = r_mesh_rcachedata_offset;
 	r_mesh_rcachedata_offset += r->data_size;
 	offsetend = r_mesh_rcachedata_offset;
-	R_Mesh_CacheArray_ValidateState(4);
+	//R_Mesh_CacheArray_ValidateState(4);
 
+	/*
 	{
 		int n;
 		for (lhead = &r_mesh_rcachesequentialchain, l = lhead->next, n = 0;l != lhead;l = l->next, n++);
 		Con_Printf("R_Mesh_CacheArray: new data range %i:%i, %i items are already linked\n", offset, offsetend, n);
 	}
+	*/
 
 	// make room for the new data (remove old items)
 	lhead = &r_mesh_rcachesequentialchain;
@@ -1729,24 +1733,24 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	{
 		while (l->data->offset < offsetend && l->data->offset + l->data->request.data_size > offset)
 		{
-	r_mesh_rcachesequentialchain_current = l;
-	R_Mesh_CacheArray_ValidateState(8);
+	//r_mesh_rcachesequentialchain_current = l;
+	//R_Mesh_CacheArray_ValidateState(8);
 			lnext = l->next;
 			// if at the end of the chain, wrap around
 			if (lnext == lhead)
 				lnext = lnext->next;
-	r_mesh_rcachesequentialchain_current = lnext;
-	R_Mesh_CacheArray_ValidateState(10);
+	//r_mesh_rcachesequentialchain_current = lnext;
+	//R_Mesh_CacheArray_ValidateState(10);
 
 			// unlink from sequential chain
 			l->next->prev = l->prev;
 			l->prev->next = l->next;
-	R_Mesh_CacheArray_ValidateState(11);
+	//R_Mesh_CacheArray_ValidateState(11);
 			// link into free chain
 			l->next = &r_mesh_rcachefreechain;
 			l->prev = l->next->prev;
 			l->next->prev = l->prev->next = l;
-	R_Mesh_CacheArray_ValidateState(12);
+	//R_Mesh_CacheArray_ValidateState(12);
 
 			l = &l->data->hashlink;
 			// unlink from hash chain
@@ -1754,12 +1758,12 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 			l->prev->next = l->next;
 
 			l = lnext;
-	r_mesh_rcachesequentialchain_current = l;
-	R_Mesh_CacheArray_ValidateState(9);
+	//r_mesh_rcachesequentialchain_current = l;
+	//R_Mesh_CacheArray_ValidateState(9);
 		}
 	}
-	r_mesh_rcachesequentialchain_current = l;
-	R_Mesh_CacheArray_ValidateState(5);
+	//r_mesh_rcachesequentialchain_current = l;
+	//R_Mesh_CacheArray_ValidateState(5);
 	// gobble an extra item if we have no free items available
 	if (r_mesh_rcachefreechain.next == &r_mesh_rcachefreechain)
 	{
@@ -1781,7 +1785,7 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 		l = lnext;
 	}
 	r_mesh_rcachesequentialchain_current = l;
-	R_Mesh_CacheArray_ValidateState(6);
+	//R_Mesh_CacheArray_ValidateState(6);
 
 	// now take an item from the free chain
 	l = r_mesh_rcachefreechain.next;
@@ -1797,13 +1801,13 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 	l->prev = l->next->prev;
 	while (l->next->data && l->data && l->next->data->offset <= d->offset)
 	{
-		Con_Printf(">\n");
+		//Con_Printf(">\n");
 		l->next = l->next->next;
 		l->prev = l->prev->next;
 	}
 	while (l->prev->data && l->data && l->prev->data->offset >= d->offset)
 	{
-		Con_Printf("<\n");
+		//Con_Printf("<\n");
 		l->prev = l->prev->prev;
 		l->next = l->next->prev;
 	}
@@ -1818,7 +1822,7 @@ int R_Mesh_CacheArray(rcachearrayrequest_t *r)
 
 	//r_mesh_rcachesequentialchain_current = d->sequentiallink.next;
 
-	R_Mesh_CacheArray_ValidateState(7);
+	//R_Mesh_CacheArray_ValidateState(7);
 	// and finally set the data pointer
 	r->data = r_mesh_rcachedata + d->offset;
 	// and tell the caller to fill the array
