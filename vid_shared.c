@@ -20,9 +20,15 @@ void (GLAPIENTRY *qglSelectTexture) (GLenum);
 void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
 void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 
+void Force_CenterView_f (void)
+{
+	cl.viewangles[PITCH] = 0;
+}
+
 void VID_InitCvars(void)
 {
 	Cvar_RegisterVariable(&vid_mode);
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&vid_fullscreen);
+	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 }

@@ -92,12 +92,6 @@ static void mousehandler(int buttonstate, int dx, int dy, int dz, int drx, int d
 }
 
 
-void Force_CenterView_f(void)
-{
-	cl.viewangles[PITCH] = 0;
-}
-
-
 void IN_Init(void)
 {
 	if (COM_CheckParm("-nokbd")) UseKeyboard = 0;
@@ -238,7 +232,6 @@ static void IN_init_mouse(void)
 	int mouserate = MOUSE_DEFAULTSAMPLERATE;
 
 	Cvar_RegisterVariable (&m_filter);
-	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 
 	mouse_buttons = 3;
 

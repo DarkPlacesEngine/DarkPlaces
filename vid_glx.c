@@ -776,11 +776,6 @@ void Sys_SendKeyEvents(void)
 	HandleEvents();
 }
 
-void Force_CenterView_f (void)
-{
-	cl.viewangles[PITCH] = 0;
-}
-
 void IN_Init(void)
 {
 }
