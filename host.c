@@ -302,7 +302,7 @@ void Host_WriteConfiguration (void)
 =================
 SV_ClientPrintf
 
-Sends text across to be displayed 
+Sends text across to be displayed
 FIXME: make this just a stuffed echo?
 =================
 */
@@ -525,6 +525,7 @@ Host_FilterTime
 Returns false if the time is too short to run a frame
 ===================
 */
+extern cvar_t cl_avidemo;
 qboolean Host_FilterTime (double time)
 {
 	double timecap;
@@ -536,9 +537,17 @@ qboolean Host_FilterTime (double time)
 		Cvar_SetValue("host_minfps", 10.0f);
 	if (host_maxfps.value < host_minfps.value)
 		Cvar_SetValue("host_maxfps", host_minfps.value);
+	if (cl_avidemo.value < 0.1f)
+		Cvar_SetValue("cl_avidemo", 0.0f);
 
-	 // check if framerate is too high
-	if (!cls.timedemo)
+	// check if framerate is too high
+	if (cl_avidemo.value >= 0.1f)
+	{
+		timecap = 1.0 / (double)cl_avidemo.value;
+		if ((realtime - oldrealtime) < timecap)
+			return false;
+	}
+	else if (!cls.timedemo)
 	{
 		timecap = sys_ticrate.value;
 		if (cls.state == ca_connected)
@@ -561,6 +570,12 @@ qboolean Host_FilterTime (double time)
 
 	if (host_framerate.value > 0)
 		host_frametime = host_framerate.value;
+	else if (cl_avidemo.value >= 0.1f)
+	{
+		// don't allow really short frames
+		//if (host_frametime > (1.0 / cl_avidemo.value))
+			host_frametime = (1.0 / cl_avidemo.value);
+	}
 	else
 	{
 		// don't allow really short frames
@@ -569,7 +584,7 @@ qboolean Host_FilterTime (double time)
 	}
 
 	cl.frametime = host_frametime = bound(0, host_frametime * slowmo.value, 0.1f); // LordHavoc: the QC code relies on no less than 10fps
-	
+
 	return true;
 }
 

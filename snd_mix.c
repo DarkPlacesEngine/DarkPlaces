@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -34,7 +34,87 @@ int		snd_scaletable[32][256];
 int 	*snd_p, snd_linear_count, snd_vol;
 short	*snd_out;
 
-void Snd_WriteLinearBlastStereo16 (void);
+/*
+// LordHavoc: disabled this because it desyncs with the video too easily
+extern cvar_t cl_avidemo;
+static FILE *cl_avidemo_soundfile = NULL;
+void S_CaptureAVISound(portable_samplepair_t *buf, int length)
+{
+	int i, n;
+	qbyte out[PAINTBUFFER_SIZE * 4];
+	char filename[MAX_OSPATH];
+
+	if (cl_avidemo.value >= 0.1f)
+	{
+		if (cl_avidemo_soundfile == NULL)
+		{
+			sprintf (filename, "%s/dpavi.wav", com_gamedir);
+			cl_avidemo_soundfile = fopen(filename, "wb");
+			memset(out, 0, 44);
+			fwrite(out, 1, 44, cl_avidemo_soundfile);
+			// header will be filled out when file is closed
+		}
+		fseek(cl_avidemo_soundfile, 0, SEEK_END);
+		// write the sound buffer as little endian 16bit interleaved stereo
+		for(i = 0;i < length;i++)
+		{
+			n = buf[i].left >> 2; // quiet enough to prevent clipping most of the time
+			n = bound(-32768, n, 32767);
+			out[i*4+0] = n & 0xFF;
+			out[i*4+1] = (n >> 8) & 0xFF;
+			n = buf[i].right >> 2; // quiet enough to prevent clipping most of the time
+			n = bound(-32768, n, 32767);
+			out[i*4+2] = n & 0xFF;
+			out[i*4+3] = (n >> 8) & 0xFF;
+		}
+		if (fwrite(out, 4, length, cl_avidemo_soundfile) < length)
+		{
+			Cvar_SetValueQuick(&cl_avidemo, 0);
+			Con_Printf("avi saving sound failed, out of disk space?  stopping avi demo capture.\n");
+		}
+	}
+	else if (cl_avidemo_soundfile)
+	{
+		// file has not been closed yet, close it
+		fseek(cl_avidemo_soundfile, 0, SEEK_END);
+		i = ftell(cl_avidemo_soundfile);
+
+		//"RIFF", (int) unknown (chunk size), "WAVE",
+		//"fmt ", (int) 16 (chunk size), (short) format 1 (uncompressed PCM), (short) 2 channels, (int) unknown rate, (int) unknown bytes per second, (short) 4 bytes per sample (channels * bytes per channel), (short) 16 bits per channel
+		//"data", (int) unknown (chunk size)
+		memcpy(out, "RIFF****WAVEfmt \x10\x00\x00\x00\x01\x00\x02\x00********\x04\x00\x10\x00data****", 44);
+		// the length of the whole RIFF chunk
+		n = i - 8;
+		out[4] = (n) & 0xFF;
+		out[5] = (n >> 8) & 0xFF;
+		out[6] = (n >> 16) & 0xFF;
+		out[7] = (n >> 24) & 0xFF;
+		// rate
+		n = shm->speed;
+		out[24] = (n) & 0xFF;
+		out[25] = (n >> 8) & 0xFF;
+		out[26] = (n >> 16) & 0xFF;
+		out[27] = (n >> 24) & 0xFF;
+		// bytes per second (rate * channels * bytes per channel)
+		n = shm->speed * 4;
+		out[28] = (n) & 0xFF;
+		out[29] = (n >> 8) & 0xFF;
+		out[30] = (n >> 16) & 0xFF;
+		out[31] = (n >> 24) & 0xFF;
+		// the length of the data chunk
+		n = i - 44;
+		out[40] = (n) & 0xFF;
+		out[41] = (n >> 8) & 0xFF;
+		out[42] = (n >> 16) & 0xFF;
+		out[43] = (n >> 24) & 0xFF;
+
+		fseek(cl_avidemo_soundfile, 0, SEEK_SET);
+		fwrite(out, 1, 44, cl_avidemo_soundfile);
+		fclose(cl_avidemo_soundfile);
+		cl_avidemo_soundfile = NULL;
+	}
+}
+*/
 
 void Snd_WriteLinearBlastStereo16 (void)
 {
@@ -158,10 +238,10 @@ void S_TransferPaintBuffer(int endtime)
 		S_TransferStereo16 (endtime);
 		return;
 	}
-	
+
 	p = (int *) paintbuffer;
 	count = (endtime - paintedtime) * shm->channels;
-	out_mask = shm->samples - 1; 
+	out_mask = shm->samples - 1;
 	out_idx = paintedtime * shm->channels & out_mask;
 	step = 3 - shm->channels;
 	snd_vol = volume.value*256;
@@ -225,7 +305,7 @@ void S_TransferPaintBuffer(int endtime)
 		DWORD dwNewpos, dwWrite;
 		int il = paintedtime;
 		int ir = endtime - paintedtime;
-		
+
 		ir += il;
 
 		pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
@@ -291,12 +371,12 @@ void S_PaintChannels(int endtime)
 					count = end - ltime;
 
 				if (count > 0)
-				{	
+				{
 					if (sc->width == 1)
 						SND_PaintChannelFrom8(ch, sc, count);
 					else
 						SND_PaintChannelFrom16(ch, sc, count);
-	
+
 					ltime += count;
 				}
 
@@ -308,7 +388,7 @@ void S_PaintChannels(int endtime)
 						ch->pos = sc->loopstart;
 						ch->end = ltime + sc->length - ch->pos;
 					}
-					else				
+					else
 					{
 						// channel just stopped
 						ch->sfx = NULL;
@@ -316,10 +396,11 @@ void S_PaintChannels(int endtime)
 					}
 				}
 			}
-															  
+
 		}
 
 		// transfer out according to DMA format
+		//S_CaptureAVISound(paintbuffer, end - paintedtime);
 		S_TransferPaintBuffer(end);
 		paintedtime = end;
 	}
@@ -328,7 +409,7 @@ void S_PaintChannels(int endtime)
 void SND_InitScaletable (void)
 {
 	int		i, j;
-	
+
 	for (i=0 ; i<32 ; i++)
 		for (j=0 ; j<256 ; j++)
 			snd_scaletable[i][j] = ((signed char)j) * i * 8;
@@ -370,7 +451,7 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 			paintbuffer[i].left += lscale[*sfx];
 			paintbuffer[i].right += rscale[*sfx++];
 		}
-		
+
 	}
 	ch->pos += count;
 }

@@ -587,8 +587,9 @@ rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, char* filename, int 
 	return rt;
 }
 
-void Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte *data)
+qboolean Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte *data)
 {
+	qboolean ret;
 	qbyte *buffer, *in, *out, *end;
 
 	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
@@ -611,9 +612,10 @@ void Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte 
 		*out++ = in[1];
 		*out++ = in[0];
 	}
-	COM_WriteFile (filename, buffer, width*height*3 + 18 );
+	ret = COM_WriteFile (filename, buffer, width*height*3 + 18 );
 
 	Mem_Free(buffer);
+	return ret;
 }
 
 void Image_WriteTGARGB (char *filename, int width, int height, qbyte *data)

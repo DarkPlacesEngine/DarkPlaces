@@ -1381,7 +1381,7 @@ COM_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-void COM_WriteFile (char *filename, void *data, int len)
+qboolean COM_WriteFile (char *filename, void *data, int len)
 {
 	int             handle;
 	char    name[MAX_OSPATH];
@@ -1394,13 +1394,14 @@ void COM_WriteFile (char *filename, void *data, int len)
 	handle = Sys_FileOpenWrite (name);
 	if (handle == -1)
 	{
-		Sys_Printf ("COM_WriteFile: failed on %s\n", name);
-		return;
+		Con_Printf ("COM_WriteFile: failed on %s\n", name);
+		return false;
 	}
 
-	Con_Printf ("COM_WriteFile: %s\n", name);
+	Con_DPrintf ("COM_WriteFile: %s\n", name);
 	Sys_FileWrite (handle, data, len);
 	Sys_FileClose (handle);
+	return true;
 }
 
 
