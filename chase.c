@@ -68,7 +68,7 @@ void Chase_Update (void)
 	chase_dest[1] = r_refdef.vieworg[1] + forward[1] * dist;
 	chase_dest[2] = r_refdef.vieworg[2] + forward[2] * dist + chase_up.value;
 
-	CL_TraceLine (r_refdef.vieworg, chase_dest, stop, normal, 0, true, NULL);
+	CL_TraceLine(r_refdef.vieworg, chase_dest, stop, normal, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY);
 	chase_dest[0] = stop[0] + forward[0] * 8 + normal[0] * 4;
 	chase_dest[1] = stop[1] + forward[1] * 8 + normal[1] * 4;
 	chase_dest[2] = stop[2] + forward[2] * 8 + normal[2] * 4;

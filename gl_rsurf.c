@@ -1902,9 +1902,17 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	}
 }
 
+void R_DrawCollisionBrush(colbrushf_t *brush)
+{
+	int i;
+	i = ((int)brush) / sizeof(colbrushf_t);
+	GL_Color((i & 31) * (1.0f / 32.0f) * r_colorscale, ((i >> 5) & 31) * (1.0f / 32.0f) * r_colorscale, ((i >> 10) & 31) * (1.0f / 32.0f) * r_colorscale, 0.2f);
+	GL_VertexPointer(brush->points->v);
+	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
+}
+
 void R_Q3BSP_DrawFace_Mesh(entity_render_t *ent, q3mface_t *face)
 {
-	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1926,7 +1934,7 @@ void R_Q3BSP_DrawFace_Mesh(entity_render_t *ent, q3mface_t *face)
 	}
 	R_Mesh_State_Texture(&m);
 	GL_VertexPointer(face->data_vertex3f);
-	R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+	R_Mesh_Draw(face->numvertices, face->numtriangles, face->data_element3i);
 }
 
 void R_Q3BSP_DrawFace_Patch(entity_render_t *ent, q3mface_t *face)
@@ -1935,6 +1943,8 @@ void R_Q3BSP_DrawFace_Patch(entity_render_t *ent, q3mface_t *face)
 
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
+	if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW)
+		return;
 	switch(face->type)
 	{
 		case Q3FACETYPE_POLYGON:
@@ -1961,8 +1971,22 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	q3mface_t *face;
 	model_t *model;
 	model = ent->model;
-	for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-		R_Q3BSP_DrawFace(ent, face);
+	R_Mesh_Matrix(&ent->matrix);
+	if (r_drawcollisionbrushes.integer < 2)
+		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+			R_Q3BSP_DrawFace(ent, face);
+	if (r_drawcollisionbrushes.integer >= 1)
+	{
+		rmeshstate_t m;
+		memset(&m, 0, sizeof(m));
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_DepthMask(false);
+		GL_DepthTest(true);
+		R_Mesh_State_Texture(&m);
+		for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
+			if (model->brushq3.data_thismodel->firstbrush[i].colbrushf && model->brushq3.data_thismodel->firstbrush[i].colbrushf->numtriangles)
+				R_DrawCollisionBrush(model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+	}
 }
 
 /*

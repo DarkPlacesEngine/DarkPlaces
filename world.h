@@ -57,7 +57,8 @@ int SV_TestEntityPosition (edict_t *ent);
 // passedict is explicitly excluded from clipping checks (normally NULL)
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict);
 
-int SV_PointContents(const vec3_t point);
+int SV_PointQ1Contents(const vec3_t point);
+int SV_PointSuperContents(const vec3_t point);
 
 #endif
 

@@ -1,6 +1,10 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: dedicated server should error out if it has no sockets (yummyluv)
+0 darkplaces: heartbeat should print an error message if used with no server running (yummyluv)
+0 darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
+0 darkplaces: investigate why server is not automatically sending heartbeats (yummyluv)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension

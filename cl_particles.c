@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 siextern float r_avertexnormals[NUMVERTEXNORMALS][3];
 #define m_bytenormals r_avertexnormals
 #define VectorNormalizeFast VectorNormalize
-#define CL_PointContents(v) (Mod_PointInLeaf(v,cl.worldmodel)->contents)
+#define CL_PointQ1Contents(v) (Mod_PointInLeaf(v,cl.worldmodel)->contents)
 typedef unsigned char qbyte;
 #define cl_stainmaps.integer 0
 void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
@@ -152,7 +152,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 #include "pmove.h"
 extern qboolean PM_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace);
 #endif
-float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels, void **hitent)
+float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, void **hitent, int hitsupercontentsmask)
 {
 #if QW
 	pmtrace_t trace;
@@ -442,7 +442,7 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 	{
 		VectorRandom(org2);
 		VectorMA(org, maxdist, org2, org2);
-		frac = CL_TraceLine(org, org2, v, normal, 0, true, &hitent);
+		frac = CL_TraceLine(org, org2, v, normal, true, &hitent, SUPERCONTENTS_SOLID);
 		if (bestfrac > frac)
 		{
 			bestfrac = frac;
@@ -606,7 +606,7 @@ void CL_ParticleExplosion (vec3_t org)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 	CL_SpawnDecalParticleForPoint(org, 40, 48, 255, tex_bulletdecal[rand()&7], 0xFFFFFF, 0xFFFFFF);
 
-	i = CL_PointContents(org);
+	i = CL_PointQ1Contents(org);
 	if ((i == CONTENTS_SLIME || i == CONTENTS_WATER) && cl_particles.integer && cl_particles_bubbles.integer)
 	{
 		for (i = 0;i < 128 * cl_particles_quality.value;i++)
@@ -631,7 +631,7 @@ void CL_ParticleExplosion (vec3_t org)
 					v[0] = org[0] + lhrandom(-64, 64);
 					v[1] = org[1] + lhrandom(-64, 64);
 					v[2] = org[2] + lhrandom(-8, 24);
-					if (CL_TraceLine(org, v, v2, NULL, 0, true, NULL) >= 0.1)
+					if (CL_TraceLine(org, v, v2, NULL, true, NULL, SUPERCONTENTS_SOLID) >= 0.1)
 						break;
 				}
 				VectorSubtract(v2, org, v2);
@@ -746,7 +746,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 				org2[0] = org[0] + 0.125f * lhrandom(-count, count);
 				org2[1] = org[1] + 0.125f * lhrandom(-count, count);
 				org2[2] = org[2] + 0.125f * lhrandom(-count, count);
-				CL_TraceLine(org, org2, org3, NULL, 0, true, NULL);
+				CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
 				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 9999, -0.2, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
 			}
 		}
@@ -790,7 +790,7 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 		org2[0] = org[0] + 0.125f * lhrandom(-bloodcount, bloodcount);
 		org2[1] = org[1] + 0.125f * lhrandom(-bloodcount, bloodcount);
 		org2[2] = org[2] + 0.125f * lhrandom(-bloodcount, bloodcount);
-		CL_TraceLine(org, org2, org3, NULL, 0, true, NULL);
+		CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
 		particle(pt_blood, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_bloodparticle[rand()&7], true, PBLEND_MOD, 8, 8, cl_particles_blood_alpha.value * 768 / cl_particles_quality.value, cl_particles_blood_alpha.value * 384 / cl_particles_quality.value, 9999, 0, -1, org3[0], org3[1], org3[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
 		bloodcount -= 16 / cl_particles_quality.value;
 	}
@@ -1072,7 +1072,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	VectorMA(start, dec, vec, pos);
 	len -= dec;
 
-	contents = CL_PointContents(pos);
+	contents = CL_PointQ1Contents(pos);
 	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
 		return;
 
@@ -1265,7 +1265,7 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, org);
 		if (p->bounce)
 		{
-			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true, &hitent) < 1)
+			if (CL_TraceLine(p->oldorg, p->org, v, normal, true, &hitent, SUPERCONTENTS_SOLID) < 1)
 			{
 				VectorCopy(v, p->org);
 				if (p->bounce < 0)
@@ -1322,7 +1322,7 @@ void CL_MoveParticles (void)
 		{
 			f = p->friction * frametime;
 			if (!content)
-				content = CL_PointContents(p->org);
+				content = CL_PointQ1Contents(p->org);
 			if (content != CONTENTS_EMPTY)
 				f *= 4;
 			f = 1.0f - f;
@@ -1335,7 +1335,7 @@ void CL_MoveParticles (void)
 			{
 			case pt_blood:
 				if (!content)
-					content = CL_PointContents(p->org);
+					content = CL_PointQ1Contents(p->org);
 				a = content;
 				if (a != CONTENTS_EMPTY)
 				{
@@ -1353,7 +1353,7 @@ void CL_MoveParticles (void)
 				break;
 			case pt_bubble:
 				if (!content)
-					content = CL_PointContents(p->org);
+					content = CL_PointQ1Contents(p->org);
 				if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
 				{
 					p->die = -1;
@@ -1370,7 +1370,7 @@ void CL_MoveParticles (void)
 					p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
 				}
 				if (!content)
-					content = CL_PointContents(p->org);
+					content = CL_PointQ1Contents(p->org);
 				a = content;
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
 					p->die = -1;

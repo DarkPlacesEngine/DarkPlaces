@@ -320,7 +320,7 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 	VectorNormalizeFast(lightdirection);
 
 	VectorMA(ent->origin, 65536.0f, lightdirection, v2);
-	if (CL_TraceLine(ent->origin, v2, floororigin, surfnormal, 0, false, NULL) == 1)
+	if (CL_TraceLine(ent->origin, v2, floororigin, surfnormal, false, NULL, SUPERCONTENTS_SOLID) == 1)
 		return;
 
 	R_Mesh_Matrix(&ent->matrix);

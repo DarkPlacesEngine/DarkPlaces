@@ -152,12 +152,14 @@ typedef struct model_brush_s
 	// submodels to load)
 	int numsubmodels;
 	// common functions
+	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
+	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
 	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
 	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength);
 	int (*BoxTouchingPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
-	void (*TraceBox)(struct model_s *model, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs);
+	void (*TraceBox)(struct model_s *model, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
 	// this is actually only found on brushq1, but NULL is handled gracefully
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
 }
@@ -265,11 +267,15 @@ typedef struct model_brushq2_s
 model_brushq2_t;
 */
 
+#define Q3MTEXTURERENDERFLAGS_NODRAW 1
+
 typedef struct q3mtexture_s
 {
 	char name[Q3PATHLENGTH];
 	int surfaceflags;
-	int contents;
+	int nativecontents;
+	int supercontents;
+	int renderflags;
 
 	int number;
 	skinframe_t skin;
@@ -558,6 +564,10 @@ void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
 int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
 int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
+
+// used for talking to the QuakeC mainly
+int Mod_Q1BSP_NativeContentsFromSuperContents(struct model_s *model, int supercontents);
+int Mod_Q1BSP_SuperContentsFromNativeContents(struct model_s *model, int nativecontents);
 
 extern cvar_t r_mipskins;
 

@@ -62,6 +62,7 @@ cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
 cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
+cvar_t r_drawcollisionbrushes = {0, "r_drawcollisionbrushes", "0"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0"};
 cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25"};
@@ -244,21 +245,22 @@ void GL_Main_Init(void)
 	Matrix4x4_CreateIdentity(&r_identitymatrix);
 // FIXME: move this to client?
 	FOG_registercvars();
-	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);
-	Cvar_RegisterVariable (&r_drawentities);
-	Cvar_RegisterVariable (&r_drawviewmodel);
-	Cvar_RegisterVariable (&r_shadows);
-	Cvar_RegisterVariable (&r_shadow_staticworldlights);
-	Cvar_RegisterVariable (&r_speeds);
-	Cvar_RegisterVariable (&r_fullbrights);
-	Cvar_RegisterVariable (&r_wateralpha);
-	Cvar_RegisterVariable (&r_dynamic);
-	Cvar_RegisterVariable (&r_fullbright);
-	Cvar_RegisterVariable (&r_textureunits);
-	Cvar_RegisterVariable (&r_shadow_cull);
-	Cvar_RegisterVariable (&r_lerpsprites);
-	Cvar_RegisterVariable (&r_lerpmodels);
-	Cvar_RegisterVariable (&r_waterscroll);
+	Cmd_AddCommand("timerefresh", R_TimeRefresh_f);
+	Cvar_RegisterVariable(&r_drawentities);
+	Cvar_RegisterVariable(&r_drawviewmodel);
+	Cvar_RegisterVariable(&r_shadows);
+	Cvar_RegisterVariable(&r_shadow_staticworldlights);
+	Cvar_RegisterVariable(&r_speeds);
+	Cvar_RegisterVariable(&r_fullbrights);
+	Cvar_RegisterVariable(&r_wateralpha);
+	Cvar_RegisterVariable(&r_dynamic);
+	Cvar_RegisterVariable(&r_fullbright);
+	Cvar_RegisterVariable(&r_textureunits);
+	Cvar_RegisterVariable(&r_shadow_cull);
+	Cvar_RegisterVariable(&r_lerpsprites);
+	Cvar_RegisterVariable(&r_lerpmodels);
+	Cvar_RegisterVariable(&r_waterscroll);
+	Cvar_RegisterVariable(&r_drawcollisionbrushes);
 	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -485,7 +487,7 @@ void R_DrawViewModel (void)
 */
 
 void R_DrawNoModel(entity_render_t *ent);
-void R_DrawModels ()
+void R_DrawModels(void)
 {
 	int i;
 	entity_render_t *ent;
@@ -506,7 +508,7 @@ void R_DrawModels ()
 	}
 }
 
-void R_DrawFakeShadows (void)
+void R_DrawFakeShadows(void)
 {
 	int i;
 	entity_render_t *ent;
@@ -917,7 +919,7 @@ void R_RenderView (void)
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
-	R_DrawModels(r_shadow_realtime_world.integer);
+	R_DrawModels();
 	R_TimeReport("models");
 
 	if (r_shadows.integer == 1 && !r_shadow_realtime_world.integer)

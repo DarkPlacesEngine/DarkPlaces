@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 #include "r_shadow.h"
+#include "winding.h"
 
 // note: model_shared.c sets up r_notexture, and r_surf_notexture
 
@@ -323,6 +324,41 @@ static void Mod_Q1BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3
 	VectorCopy(info.center, out);
 }
 
+int Mod_Q1BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents)
+{
+	switch(nativecontents)
+	{
+		case CONTENTS_EMPTY:
+			return 0;
+		case CONTENTS_SOLID:
+			return SUPERCONTENTS_SOLID;
+		case CONTENTS_WATER:
+			return SUPERCONTENTS_WATER;
+		case CONTENTS_SLIME:
+			return SUPERCONTENTS_SLIME;
+		case CONTENTS_LAVA:
+			return SUPERCONTENTS_LAVA;
+		case CONTENTS_SKY:
+			return SUPERCONTENTS_SKY;
+	}
+	return 0;
+}
+
+int Mod_Q1BSP_NativeContentsFromSuperContents(model_t *model, int supercontents)
+{
+	if (supercontents & SUPERCONTENTS_SOLID)
+		return CONTENTS_SOLID;
+	if (supercontents & SUPERCONTENTS_SKY)
+		return CONTENTS_SKY;
+	if (supercontents & SUPERCONTENTS_LAVA)
+		return CONTENTS_LAVA;
+	if (supercontents & SUPERCONTENTS_SLIME)
+		return CONTENTS_SLIME;
+	if (supercontents & SUPERCONTENTS_WATER)
+		return CONTENTS_WATER;
+	return CONTENTS_EMPTY;
+}
+
 typedef struct
 {
 	// the hull we're tracing through
@@ -364,37 +400,26 @@ loc0:
 	// check for empty
 	if (num < 0)
 	{
-		t->trace->endcontents = num;
-		if (t->trace->thiscontents)
+		num = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
+		if (!t->trace->startfound)
 		{
-			if (num == t->trace->thiscontents)
-				t->trace->allsolid = false;
-			else
-			{
-				// if the first leaf is solid, set startsolid
-				if (t->trace->allsolid)
-					t->trace->startsolid = true;
-				return HULLCHECKSTATE_SOLID;
-			}
-			return HULLCHECKSTATE_EMPTY;
+			t->trace->startfound = true;
+			t->trace->startsupercontents |= num;
+		}
+		if (num & SUPERCONTENTS_LIQUIDSMASK)
+			t->trace->inwater = true;
+		if (num == 0)
+			t->trace->inopen = true;
+		if (num & t->trace->hitsupercontentsmask)
+		{
+			// if the first leaf is solid, set startsolid
+			if (t->trace->allsolid)
+				t->trace->startsolid = true;
+			return HULLCHECKSTATE_SOLID;
 		}
 		else
 		{
-			if (num != CONTENTS_SOLID)
-			{
-				t->trace->allsolid = false;
-				if (num == CONTENTS_EMPTY)
-					t->trace->inopen = true;
-				else
-					t->trace->inwater = true;
-			}
-			else
-			{
-				// if the first leaf is solid, set startsolid
-				if (t->trace->allsolid)
-					t->trace->startsolid = true;
-				return HULLCHECKSTATE_SOLID;
-			}
+			t->trace->allsolid = false;
 			return HULLCHECKSTATE_EMPTY;
 		}
 	}
@@ -483,7 +508,7 @@ loc0:
 	return HULLCHECKSTATE_DONE;
 }
 
-static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs)
+static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
 	// this function currently only supports same size start and end
 	double boxsize[3];
@@ -492,6 +517,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3
 	memset(&rhc, 0, sizeof(rhc));
 	memset(trace, 0, sizeof(trace_t));
 	rhc.trace = trace;
+	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
 	rhc.trace->allsolid = true;
 	VectorSubtract(boxstartmaxs, boxstartmins, boxsize);
@@ -1993,293 +2019,6 @@ static void Mod_Q1BSP_LoadPlanes(lump_t *l)
 	}
 }
 
-#define MAX_POINTS_ON_WINDING 64
-
-typedef struct
-{
-	int numpoints;
-	int padding;
-	double points[8][3]; // variable sized
-}
-winding_t;
-
-/*
-==================
-NewWinding
-==================
-*/
-static winding_t *NewWinding(int points)
-{
-	winding_t *w;
-	int size;
-
-	if (points > MAX_POINTS_ON_WINDING)
-		Sys_Error("NewWinding: too many points\n");
-
-	size = sizeof(winding_t) + sizeof(double[3]) * (points - 8);
-	w = Mem_Alloc(loadmodel->mempool, size);
-	memset(w, 0, size);
-
-	return w;
-}
-
-static void FreeWinding(winding_t *w)
-{
-	Mem_Free(w);
-}
-
-/*
-=================
-BaseWindingForPlane
-=================
-*/
-static winding_t *BaseWindingForPlane(mplane_t *p)
-{
-	double org[3], vright[3], vup[3], normal[3];
-	winding_t *w;
-
-	VectorCopy(p->normal, normal);
-	VectorVectorsDouble(normal, vright, vup);
-
-	VectorScale(vup, 1024.0*1024.0*1024.0, vup);
-	VectorScale(vright, 1024.0*1024.0*1024.0, vright);
-
-	// project a really big	axis aligned box onto the plane
-	w = NewWinding(4);
-
-	VectorScale(p->normal, p->dist, org);
-
-	VectorSubtract(org, vright, w->points[0]);
-	VectorAdd(w->points[0], vup, w->points[0]);
-
-	VectorAdd(org, vright, w->points[1]);
-	VectorAdd(w->points[1], vup, w->points[1]);
-
-	VectorAdd(org, vright, w->points[2]);
-	VectorSubtract(w->points[2], vup, w->points[2]);
-
-	VectorSubtract(org, vright, w->points[3]);
-	VectorSubtract(w->points[3], vup, w->points[3]);
-
-	w->numpoints = 4;
-
-	return w;
-}
-
-/*
-==================
-ClipWinding
-
-Clips the winding to the plane, returning the new winding on the positive side
-Frees the input winding.
-If keepon is true, an exactly on-plane winding will be saved, otherwise
-it will be clipped away.
-==================
-*/
-static winding_t *ClipWinding(winding_t *in, mplane_t *split, int keepon)
-{
-	double	dists[MAX_POINTS_ON_WINDING + 1];
-	int		sides[MAX_POINTS_ON_WINDING + 1];
-	int		counts[3];
-	double	dot;
-	int		i, j;
-	double	*p1, *p2;
-	double	mid[3];
-	winding_t	*neww;
-	int		maxpts;
-
-	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
-
-	// determine sides for each point
-	for (i = 0;i < in->numpoints;i++)
-	{
-		dists[i] = dot = DotProduct(in->points[i], split->normal) - split->dist;
-		if (dot > ON_EPSILON)
-			sides[i] = SIDE_FRONT;
-		else if (dot < -ON_EPSILON)
-			sides[i] = SIDE_BACK;
-		else
-			sides[i] = SIDE_ON;
-		counts[sides[i]]++;
-	}
-	sides[i] = sides[0];
-	dists[i] = dists[0];
-
-	if (keepon && !counts[0] && !counts[1])
-		return in;
-
-	if (!counts[0])
-	{
-		FreeWinding(in);
-		return NULL;
-	}
-	if (!counts[1])
-		return in;
-
-	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
-	if (maxpts > MAX_POINTS_ON_WINDING)
-		Sys_Error("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
-
-	neww = NewWinding(maxpts);
-
-	for (i = 0;i < in->numpoints;i++)
-	{
-		if (neww->numpoints >= maxpts)
-			Sys_Error("ClipWinding: points exceeded estimate");
-
-		p1 = in->points[i];
-
-		if (sides[i] == SIDE_ON)
-		{
-			VectorCopy(p1, neww->points[neww->numpoints]);
-			neww->numpoints++;
-			continue;
-		}
-
-		if (sides[i] == SIDE_FRONT)
-		{
-			VectorCopy(p1, neww->points[neww->numpoints]);
-			neww->numpoints++;
-		}
-
-		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
-			continue;
-
-		// generate a split point
-		p2 = in->points[(i+1)%in->numpoints];
-
-		dot = dists[i] / (dists[i]-dists[i+1]);
-		for (j = 0;j < 3;j++)
-		{	// avoid round off error when possible
-			if (split->normal[j] == 1)
-				mid[j] = split->dist;
-			else if (split->normal[j] == -1)
-				mid[j] = -split->dist;
-			else
-				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
-		}
-
-		VectorCopy(mid, neww->points[neww->numpoints]);
-		neww->numpoints++;
-	}
-
-	// free the original winding
-	FreeWinding(in);
-
-	return neww;
-}
-
-
-/*
-==================
-DivideWinding
-
-Divides a winding by a plane, producing one or two windings.  The
-original winding is not damaged or freed.  If only on one side, the
-returned winding will be the input winding.  If on both sides, two
-new windings will be created.
-==================
-*/
-static void DivideWinding(winding_t *in, mplane_t *split, winding_t **front, winding_t **back)
-{
-	double	dists[MAX_POINTS_ON_WINDING + 1];
-	int		sides[MAX_POINTS_ON_WINDING + 1];
-	int		counts[3];
-	double	dot;
-	int		i, j;
-	double	*p1, *p2;
-	double	mid[3];
-	winding_t	*f, *b;
-	int		maxpts;
-
-	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
-
-	// determine sides for each point
-	for (i = 0;i < in->numpoints;i++)
-	{
-		dot = DotProduct(in->points[i], split->normal);
-		dot -= split->dist;
-		dists[i] = dot;
-		if (dot > ON_EPSILON) sides[i] = SIDE_FRONT;
-		else if (dot < -ON_EPSILON) sides[i] = SIDE_BACK;
-		else sides[i] = SIDE_ON;
-		counts[sides[i]]++;
-	}
-	sides[i] = sides[0];
-	dists[i] = dists[0];
-
-	*front = *back = NULL;
-
-	if (!counts[0])
-	{
-		*back = in;
-		return;
-	}
-	if (!counts[1])
-	{
-		*front = in;
-		return;
-	}
-
-	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
-
-	if (maxpts > MAX_POINTS_ON_WINDING)
-		Sys_Error("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
-
-	*front = f = NewWinding(maxpts);
-	*back = b = NewWinding(maxpts);
-
-	for (i = 0;i < in->numpoints;i++)
-	{
-		if (f->numpoints >= maxpts || b->numpoints >= maxpts)
-			Sys_Error("DivideWinding: points exceeded estimate");
-
-		p1 = in->points[i];
-
-		if (sides[i] == SIDE_ON)
-		{
-			VectorCopy(p1, f->points[f->numpoints]);
-			f->numpoints++;
-			VectorCopy(p1, b->points[b->numpoints]);
-			b->numpoints++;
-			continue;
-		}
-
-		if (sides[i] == SIDE_FRONT)
-		{
-			VectorCopy(p1, f->points[f->numpoints]);
-			f->numpoints++;
-		}
-		else if (sides[i] == SIDE_BACK)
-		{
-			VectorCopy(p1, b->points[b->numpoints]);
-			b->numpoints++;
-		}
-
-		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
-			continue;
-
-		// generate a split point
-		p2 = in->points[(i+1)%in->numpoints];
-
-		dot = dists[i] / (dists[i]-dists[i+1]);
-		for (j = 0;j < 3;j++)
-		{	// avoid round off error when possible
-			if (split->normal[j] == 1)
-				mid[j] = split->dist;
-			else if (split->normal[j] == -1)
-				mid[j] = -split->dist;
-			else
-				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
-		}
-
-		VectorCopy(mid, f->points[f->numpoints]);
-		f->numpoints++;
-		VectorCopy(mid, b->points[b->numpoints]);
-		b->numpoints++;
-	}
-}
-
 typedef struct portal_s
 {
 	mplane_t plane;
@@ -2455,7 +2194,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 				// advance to next portal
 				portal++;
 			}
-			FreeWinding(p->winding);
+			Winding_Free(p->winding);
 		}
 		FreePortal(p);
 		p = pnext;
@@ -2559,7 +2298,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	nodeportal = AllocPortal();
 	nodeportal->plane = *node->plane;
 
-	nodeportalwinding = BaseWindingForPlane(node->plane);
+	nodeportalwinding = Winding_NewFromPlane(node->plane->normal[0], node->plane->normal[1], node->plane->normal[2], node->plane->dist);
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
@@ -2577,7 +2316,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		else
 			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
 
-		nodeportalwinding = ClipWinding(nodeportalwinding, &clipplane, true);
+		nodeportalwinding = Winding_Clip(nodeportalwinding, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, true);
 		if (!nodeportalwinding)
 		{
 			Con_Printf("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
@@ -2610,7 +2349,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		RemovePortalFromNodes(portal);
 
 		// cut the portal into two portals, one on each side of the node plane
-		DivideWinding(portal->winding, plane, &frontwinding, &backwinding);
+		Winding_Divide(portal->winding, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, &frontwinding, &backwinding);
 
 		if (!frontwinding)
 		{
@@ -2635,7 +2374,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		*splitportal = *portal;
 		splitportal->chain = temp;
 		splitportal->winding = backwinding;
-		FreeWinding(portal->winding);
+		Winding_Free(portal->winding);
 		portal->winding = frontwinding;
 
 		if (side == 0)
@@ -2653,7 +2392,6 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	Mod_Q1BSP_RecursiveNodePortals(front);
 	Mod_Q1BSP_RecursiveNodePortals(back);
 }
-
 
 static void Mod_Q1BSP_MakePortals(void)
 {
@@ -2797,7 +2535,7 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 	}
 }
 
-void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
+static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	int i;
 	mplane_t *plane;
@@ -2830,12 +2568,12 @@ void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t r
 
 //Calculates a PVS that is the inclusive or of all leafs within radius pixels
 //of the given point.
-int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
+static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
 	int bytes = ((model->brushq1.numleafs - 1) + 7) >> 3;
 	bytes = min(bytes, pvsbufferlength);
 	memset(pvsbuffer, 0, bytes);
-	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, sv.worldmodel->brushq1.nodes);
+	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brushq1.nodes);
 	return bytes;
 }
 
@@ -2897,6 +2635,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
 	mod->brush.ishlbsp = i == 30;
 
+	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
+	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
 	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
@@ -3441,7 +3181,7 @@ static void Mod_Q2BSP_LoadModels(lump_t *l)
 */
 }
 
-void Mod_Q2BSP_Load(model_t *mod, void *buffer)
+void static Mod_Q2BSP_Load(model_t *mod, void *buffer)
 {
 	int i;
 	q2dheader_t *header;
@@ -3493,6 +3233,8 @@ void Mod_Q2BSP_Load(model_t *mod, void *buffer)
 	Mod_Q2BSP_LoadModels(&header->lumps[Q2LUMP_MODELS]);
 }
 
+static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents);
+static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int supercontents);
 
 static void Mod_Q3BSP_LoadEntities(lump_t *l)
 {
@@ -3553,7 +3295,11 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	{
 		strncpy(out->name, in->name, sizeof(out->name) - 1);
 		out->surfaceflags = LittleLong(in->surfaceflags);
-		out->contents = LittleLong(in->contents);
+		out->nativecontents = LittleLong(in->contents);
+		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
+		out->renderflags = 0;
+		if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk"))
+			out->renderflags |= Q3MTEXTURERENDERFLAGS_NODRAW;
 
 		out->number = i;
 		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
@@ -3617,11 +3363,8 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 {
 	q3dbrush_t *in;
 	q3mbrush_t *out;
-	int i, j, k, m, n, c, count, numpoints, numplanes;
-	winding_t *w;
-	mplane_t plane;
-	colpointf_t pointsbuf[256*3];
-	colplanef_t planesbuf[256], colplanef;
+	int i, j, n, c, count, numplanes, maxplanes;
+	mplane_t *planes;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3631,6 +3374,9 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 
 	loadmodel->brushq3.data_brushes = out;
 	loadmodel->brushq3.num_brushes = count;
+
+	maxplanes = 0;
+	planes = NULL;
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
@@ -3645,86 +3391,24 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->brushq3.num_textures);
 		out->texture = loadmodel->brushq3.data_textures + n;
 
-		// construct a collision brush, which needs points and planes...
-		// each point and plane should be unique, and they don't refer to
-		// eachother in any way, so keeping them unique is fairly easy
-		numpoints = 0;
-		numplanes = 0;
+		// make a list of mplane_t structs to construct a colbrush from
+		if (maxplanes < numplanes)
+		{
+			maxplanes = numplanes;
+			if (planes)
+				Mem_Free(planes);
+			planes = Mem_Alloc(tempmempool, sizeof(mplane_t) * maxplanes);
+		}
 		for (j = 0;j < out->numbrushsides;j++)
 		{
-			// for some reason the planes are all flipped compared to what I
-			// would expect, so this has to negate them...
-
-			// create a huge polygon for the plane
-			VectorNegate(out->firstbrushside[j].plane->normal, plane.normal);
-			plane.dist = -out->firstbrushside[j].plane->dist;
-			w = BaseWindingForPlane(&plane);
-			// clip it by all other planes
-			for (k = 0;k < out->numbrushsides && w;k++)
-			{
-				if (k != j)
-				{
-					VectorNegate(out->firstbrushside[k].plane->normal, plane.normal);
-					plane.dist = -out->firstbrushside[k].plane->dist;
-					w = ClipWinding(w, &plane, true);
-				}
-			}
-			// if nothing is left, skip it
-			// FIXME: should keep count of how many were skipped and report
-			// it, just for sake of statistics
-			if (!w)
-				continue;
-			// add the points uniquely (no duplicates)
-			for (k = 0;k < w->numpoints;k++)
-			{
-				for (m = 0;m < numpoints;m++)
-					if (VectorDistance2(w->points[k], pointsbuf[m].v) < DIST_EPSILON)
-						break;
-				if (m == numpoints)
-				{
-					// check if there are too many and skip the brush
-					if (numpoints >= 256)
-					{
-						Con_Printf("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many points for buffer\n");
-						FreeWinding(w);
-						goto failedtomakecolbrush;
-					}
-					// add the new one
-					VectorCopy(w->points[k], pointsbuf[numpoints].v);
-					numpoints++;
-				}
-			}
-			// add the plane uniquely (no duplicates)
-			memset(&colplanef, 0, sizeof(colplanef));
-			VectorCopy(out->firstbrushside[k].plane->normal, colplanef.normal);
-			colplanef.dist = out->firstbrushside[k].plane->dist;
-			for (k = 0;k < numplanes;k++)
-				if (VectorCompare(planesbuf[k].normal, colplanef.normal) && planesbuf[k].dist == colplanef.dist)
-					break;
-			if (k == numplanes)
-			{
-				// check if there are too many and skip the brush
-				if (numplanes >= 256)
-				{
-					Con_Printf("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
-					FreeWinding(w);
-					goto failedtomakecolbrush;
-				}
-				// add the new one
-				planesbuf[numplanes++] = colplanef;
-			}
-			FreeWinding(w);
+			VectorCopy(out->firstbrushside[j].plane->normal, planes[j].normal);
+			planes[j].dist = out->firstbrushside[j].plane->dist;
 		}
-		// if anything is left, create the collision brush
-		if (numplanes && numpoints)
-		{
-			out->colbrushf = Collision_AllocBrushFloat(loadmodel->mempool, numpoints, numplanes);
-			memcpy(out->colbrushf->points, pointsbuf, numpoints * sizeof(colpointf_t));
-			memcpy(out->colbrushf->planes, planesbuf, numplanes * sizeof(colplanef_t));
-		}
-		// return from errors to here
-		failedtomakecolbrush:;
+		// make the colbrush from the planes
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
 	}
+	if (planes)
+		Mem_Free(planes);
 }
 
 static void Mod_Q3BSP_LoadEffects(lump_t *l)
@@ -3960,7 +3644,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				invalidelements++;
 		if (invalidelements)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, texture->contents = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, out->type, out->texture->name, out->texture->surfaceflags, out->texture->contents, out->firstvertex, out->numvertices, out->firstelement, out->numelements);
+			Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, texture->nativecontents = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, out->type, out->texture->name, out->texture->surfaceflags, out->texture->nativecontents, out->firstvertex, out->numvertices, out->firstelement, out->numelements);
 			for (j = 0;j < out->numelements;j++)
 			{
 				Con_Printf(" %i", out->data_element3i[j]);
@@ -4217,13 +3901,13 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 	memcpy(loadmodel->brushq3.data_pvschains, (qbyte *)(in + 1), totalchains);
 }
 
-void Mod_Q3BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, vec_t radius)
+static void Mod_Q3BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, vec_t radius)
 {
 	// FIXME: finish this code
 	VectorCopy(in, out);
 }
 
-void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end)
+static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end)
 {
 	if (node->isnode)
 	{
@@ -4236,7 +3920,7 @@ void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, cons
 		dist = node->plane->dist - (1.0f / 8.0f);
 		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
 		{
-			if (DotProduct(ps->v, node->plane->normal) > dist || DotProduct(pe->v, node->plane->normal) > dist)
+			if (DotProduct(ps->v, node->plane->normal) >= dist || DotProduct(pe->v, node->plane->normal) >= dist)
 			{
 				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end);
 				break;
@@ -4245,7 +3929,7 @@ void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, cons
 		dist = node->plane->dist + (1.0f / 8.0f);
 		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
 		{
-			if (DotProduct(ps->v, node->plane->normal) < dist || DotProduct(pe->v, node->plane->normal) < dist)
+			if (DotProduct(ps->v, node->plane->normal) <= dist || DotProduct(pe->v, node->plane->normal) <= dist)
 			{
 				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end);
 				break;
@@ -4270,7 +3954,7 @@ void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, cons
 	}
 }
 
-void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
+static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
 {
 	// FIXME: write this
 	ambientcolor[0] += 255;
@@ -4278,7 +3962,7 @@ void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, v
 	ambientcolor[2] += 255;
 }
 
-void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs)
+static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
 	int i;
 	colbrushf_t *thisbrush_start, *thisbrush_end;
@@ -4290,6 +3974,7 @@ void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmin
 	thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
 	if (model->brushq3.num_nodes)
 		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end);
 	else
@@ -4329,16 +4014,44 @@ loc0:
 	return false;
 }
 
-int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	return Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, model->brushq3.data_nodes, pvs, mins, maxs);
 }
 
-int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
+static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
 	// FIXME: write this
 	memset(pvsbuffer, 0xFF, pvsbufferlength);
 	return pvsbufferlength;
+}
+
+static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents)
+{
+	int supercontents = 0;
+	if (nativecontents & Q2CONTENTS_SOLID)
+		supercontents |= SUPERCONTENTS_SOLID;
+	if (nativecontents & Q2CONTENTS_WATER)
+		supercontents |= SUPERCONTENTS_WATER;
+	if (nativecontents & Q2CONTENTS_SLIME)
+		supercontents |= SUPERCONTENTS_SLIME;
+	if (nativecontents & Q2CONTENTS_LAVA)
+		supercontents |= SUPERCONTENTS_LAVA;
+	return supercontents;
+}
+
+static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int supercontents)
+{
+	int nativecontents = 0;
+	if (supercontents & SUPERCONTENTS_SOLID)
+		nativecontents |= Q2CONTENTS_SOLID;
+	if (supercontents & SUPERCONTENTS_WATER)
+		nativecontents |= Q2CONTENTS_WATER;
+	if (supercontents & SUPERCONTENTS_SLIME)
+		nativecontents |= Q2CONTENTS_SLIME;
+	if (supercontents & SUPERCONTENTS_LAVA)
+		nativecontents |= Q2CONTENTS_LAVA;
+	return nativecontents;
 }
 
 //extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
@@ -4350,6 +4063,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
 	int i;
 	q3dheader_t *header;
+	float corner[3], yawradius, modelradius;
 
 	mod->type = mod_brushq3;
 
@@ -4365,6 +4079,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		R_ResetQuakeSky();
 	}
 
+	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
+	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
 	mod->brush.FatPVS = Mod_Q3BSP_FatPVS;
 	mod->brush.BoxTouchingPVS = Mod_Q3BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
@@ -4422,6 +4138,22 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 			mod->mempool = NULL;
 		}
 		mod->brushq3.data_thismodel = loadmodel->brushq3.data_models + i;
+
+		VectorCopy(mod->brushq3.data_thismodel->mins, mod->normalmins);
+		VectorCopy(mod->brushq3.data_thismodel->maxs, mod->normalmaxs);
+		corner[0] = max(fabs(mod->normalmins[0]), fabs(mod->normalmaxs[0]));
+		corner[1] = max(fabs(mod->normalmins[1]), fabs(mod->normalmaxs[1]));
+		corner[2] = max(fabs(mod->normalmins[2]), fabs(mod->normalmaxs[2]));
+		modelradius = sqrt(corner[0]*corner[0]+corner[1]*corner[1]+corner[2]*corner[2]);
+		yawradius = sqrt(corner[0]*corner[0]+corner[1]*corner[1]);
+		mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
+		mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
+		mod->yawmaxs[0] = mod->yawmaxs[1] = yawradius;
+		mod->yawmins[0] = mod->yawmins[1] = -yawradius;
+		mod->yawmins[2] = mod->normalmins[2];
+		mod->yawmaxs[2] = mod->normalmaxs[2];
+		mod->radius = modelradius;
+		mod->radius2 = modelradius * modelradius;
 	}
 }
 

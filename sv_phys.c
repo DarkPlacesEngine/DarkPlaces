@@ -854,18 +854,18 @@ qboolean SV_CheckWater (edict_t *ent)
 
 	ent->v->waterlevel = 0;
 	ent->v->watertype = CONTENTS_EMPTY;
-	cont = SV_PointContents(point);
+	cont = SV_PointQ1Contents(point);
 	if (cont <= CONTENTS_WATER)
 	{
 		ent->v->watertype = cont;
 		ent->v->waterlevel = 1;
 		point[2] = ent->v->origin[2] + (ent->v->mins[2] + ent->v->maxs[2])*0.5;
-		cont = SV_PointContents(point);
+		cont = SV_PointQ1Contents(point);
 		if (cont <= CONTENTS_WATER)
 		{
 			ent->v->waterlevel = 2;
 			point[2] = ent->v->origin[2] + ent->v->view_ofs[2];
-			cont = SV_PointContents(point);
+			cont = SV_PointQ1Contents(point);
 			if (cont <= CONTENTS_WATER)
 				ent->v->waterlevel = 3;
 		}
@@ -1117,7 +1117,7 @@ SV_CheckWaterTransition
 void SV_CheckWaterTransition (edict_t *ent)
 {
 	int cont;
-	cont = SV_PointContents(ent->v->origin);
+	cont = SV_PointQ1Contents(ent->v->origin);
 	if (!ent->v->watertype)
 	{
 		// just spawned here
@@ -1142,7 +1142,7 @@ void SV_CheckWaterTransition (edict_t *ent)
 			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
 
 		ent->v->watertype = CONTENTS_EMPTY;
-		ent->v->waterlevel = cont;
+		ent->v->waterlevel = 0;
 	}
 }
 

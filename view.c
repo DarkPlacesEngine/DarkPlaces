@@ -394,7 +394,7 @@ void V_CalcViewBlend(void)
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// set contents color
-		switch (CL_PointContents(r_refdef.vieworg))
+		switch (CL_PointQ1Contents(r_refdef.vieworg))
 		{
 		case CONTENTS_EMPTY:
 		case CONTENTS_SOLID:

@@ -238,13 +238,8 @@ void Host_ServerOptions (void)
 
 	numplayers = bound(1, numplayers, MAX_SCOREBOARD);
 
-	if (numplayers > 1)
-	{
-		if (!deathmatch.integer)
-			Cvar_SetValueQuick(&deathmatch, 1);
-	}
-	else
-		Cvar_SetValueQuick(&deathmatch, 0);
+	if (numplayers > 1 && !deathmatch.integer)
+		Cvar_SetValueQuick(&deathmatch, 1);
 
 	Cvar_SetValueQuick(&sv_maxplayers, numplayers);
 }

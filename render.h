@@ -99,13 +99,14 @@ extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light valu
 
 extern	qboolean	envmap;
 
-extern	cvar_t	r_drawentities;
-extern	cvar_t	r_drawviewmodel;
-extern	cvar_t	r_speeds;
-extern	cvar_t	r_fullbright;
-extern	cvar_t	r_wateralpha;
-extern	cvar_t	r_dynamic;
-extern	cvar_t	r_dlightmap;
+extern cvar_t r_drawentities;
+extern cvar_t r_drawviewmodel;
+extern cvar_t r_speeds;
+extern cvar_t r_fullbright;
+extern cvar_t r_wateralpha;
+extern cvar_t r_dynamic;
+extern cvar_t r_dlightmap;
+extern cvar_t r_drawcollisionbrushes;
 
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first

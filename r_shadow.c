@@ -1751,7 +1751,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		castshadowcount++;
 		VectorCopy(e->origin, e->mins);
 		VectorCopy(e->origin, e->maxs);
-		i = CL_PointContents(e->origin);
+		i = CL_PointQ1Contents(e->origin);
 		if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
 		{
 			qbyte *byteleafpvs;
@@ -1961,7 +1961,7 @@ void R_Shadow_SelectLightInView(void)
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.vieworg, NULL, NULL, 0, true, NULL) == 1.0f)
+			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.vieworg, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -2256,7 +2256,7 @@ void R_Shadow_SetCursorLocationForView(void)
 	vec_t dist, push, frac;
 	vec3_t dest, endpos, normal;
 	VectorMA(r_refdef.vieworg, r_editlights_cursordistance.value, vpn, dest);
-	frac = CL_TraceLine(r_refdef.vieworg, dest, endpos, normal, 0, true, NULL);
+	frac = CL_TraceLine(r_refdef.vieworg, dest, endpos, normal, true, NULL, SUPERCONTENTS_SOLID);
 	if (frac < 1)
 	{
 		dist = frac * r_editlights_cursordistance.value;

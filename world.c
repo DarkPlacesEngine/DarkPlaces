@@ -490,9 +490,9 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	VectorAdd(endtransformed, mins, endtransformedmins);
 
 	if (model && model->brush.TraceBox)
-		model->brush.TraceBox(model, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs);
+		model->brush.TraceBox(model, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, SUPERCONTENTS_SOLID);
 	else
-		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed);
+		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID);
 
 	if (trace.fraction < 1 || trace.startsolid)
 		trace.ent = ent;
@@ -584,17 +584,9 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 			clip->trace.fraction = trace.fraction;
 			VectorCopy(trace.endpos, clip->trace.endpos);
 			clip->trace.plane = trace.plane;
-			//clip->trace.endcontents = trace.endcontents;
 			clip->trace.ent = touch;
 		}
-		// FIXME: the handling of endcontents is really broken but works well enough for point checks
-		if (trace.endcontents < clip->trace.endcontents || trace.endcontents == CONTENTS_SOLID)
-		{
-			// lower numbered (lava is lower than water, for example)
-			// contents override higher numbered contents, except for
-			// CONTENTS_SOLID which overrides everything
-			clip->trace.endcontents = trace.endcontents;
-		}
+		clip->trace.startsupercontents |= trace.startsupercontents;
 		if (clip->trace.allsolid)
 			return;
 	}
@@ -705,10 +697,21 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	return clip.trace;
 }
 
-int SV_PointContents(const vec3_t point)
+int SV_PointQ1Contents(const vec3_t point)
 {
 #if 1
-	return SV_Move(point, vec3_origin, vec3_origin, point, MOVE_NOMONSTERS, NULL).endcontents;
+	return Mod_Q1BSP_NativeContentsFromSuperContents(NULL, SV_Move(point, vec3_origin, vec3_origin, point, MOVE_NOMONSTERS, NULL).startsupercontents);
+#else
+	if (sv.worldmodel && sv.worldmodel->brush.PointContents)
+		return sv.worldmodel->brush.PointContents(sv.worldmodel, point);
+	return CONTENTS_SOLID;
+#endif
+}
+
+int SV_PointSuperContents(const vec3_t point)
+{
+#if 1
+	return SV_Move(point, vec3_origin, vec3_origin, point, MOVE_NOMONSTERS, NULL).startsupercontents;
 #else
 	if (sv.worldmodel && sv.worldmodel->brush.PointContents)
 		return sv.worldmodel->brush.PointContents(sv.worldmodel, point);
