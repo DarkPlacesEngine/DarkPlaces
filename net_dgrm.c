@@ -923,23 +923,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 
 		// find the search start location
 		prevCvarName = MSG_ReadString();
-		if (*prevCvarName)
-		{
-			var = Cvar_FindVar (prevCvarName);
-			if (!var)
-				return NULL;
-			var = var->next;
-		}
-		else
-			var = cvar_vars;
-
-		// search for the next server cvar
-		while (var)
-		{
-			if (var->flags & CVAR_NOTIFY)
-				break;
-			var = var->next;
-		}
+		var = Cvar_FindVarAfter(prevCvarName, CVAR_NOTIFY);
 
 		// send the response
 

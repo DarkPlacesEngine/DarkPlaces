@@ -1889,8 +1889,8 @@ int currentqc_cvar;
 
 void PF_registercvar (void)
 {
-	char	*name, *value;
-	cvar_t	*variable;
+	char *name, *value;
+	cvar_t *variable;
 	name = G_STRING(OFS_PARM0);
 	value = G_STRING(OFS_PARM1);
 	G_FLOAT(OFS_RETURN) = 0;
@@ -1916,9 +1916,7 @@ void PF_registercvar (void)
 	strcpy (variable->string, value);
 	variable->value = atof (value);
 
-// link the variable in
-	variable->next = cvar_vars;
-	cvar_vars = variable;
+	Cvar_RegisterVariable(variable);
 	G_FLOAT(OFS_RETURN) = 1; // success
 }
 

@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t	*cvar_vars;
+cvar_t	*cvar_vars = NULL;
 char	*cvar_null_string = "";
 
 /*
@@ -31,13 +31,37 @@ Cvar_FindVar
 */
 cvar_t *Cvar_FindVar (char *var_name)
 {
-	cvar_t	*var;
+	cvar_t *var;
 
-	for (var=cvar_vars ; var ; var=var->next)
+	for (var = cvar_vars;var;var = var->next)
 		if (!strcmp (var_name, var->name))
 			return var;
 
 	return NULL;
+}
+
+cvar_t *Cvar_FindVarAfter (char *prev_var_name, int neededflags)
+{
+	cvar_t *var;
+
+	if (*prev_var_name)
+	{
+		var = Cvar_FindVar (prev_var_name);
+		if (!var)
+			return NULL;
+		var = var->next;
+	}
+	else
+		var = cvar_vars;
+
+	// search for the next cvar matching the needed flags
+	while (var)
+	{
+		if ((var->flags & neededflags) || !neededflags)
+			break;
+		var = var->next;
+	}
+	return var;
 }
 
 /*
