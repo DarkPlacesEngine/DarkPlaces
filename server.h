@@ -109,12 +109,6 @@ typedef struct client_s
 	// only valid before spawned
 	qboolean sendsignon;
 
-	// LordHavoc: to make netquake protocol get through NAT routers, have to wait for client to ack
-	// waiting for connect from client (stage 1)
-	qboolean waitingforconnect;
-	// send server info in next datagram (stage 2)
-	qboolean sendserverinfo;
-
 	// reliable messages must be sent periodically
 	double last_message;
 
