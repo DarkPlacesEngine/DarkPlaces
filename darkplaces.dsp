@@ -360,7 +360,7 @@ SOURCE=.\sbar.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\snd_dma.c
+SOURCE=.\snd_main.c
 # End Source File
 # Begin Source File
 
