@@ -26,6 +26,9 @@ int *trianglefacinglightlist;
 
 int maxshadowvertices;
 float *shadowvertex3f;
+int maxvertexupdate;
+int *vertexupdate;
+int vertexupdatenum;
 
 rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_normalcubetexture;
@@ -44,7 +47,7 @@ cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
 cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
-cvar_t r_shadow_shadownudge = {0, "r_shadow_shadownudge", "1"};
+cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "-1"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "100000"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
@@ -67,6 +70,9 @@ void r_shadow_start(void)
 	shadowelements = NULL;
 	maxshadowvertices = 0;
 	shadowvertex3f = NULL;
+	maxvertexupdate = 0;
+	vertexupdate = NULL;
+	vertexupdatenum = 0;
 	maxtrianglefacinglight = 0;
 	trianglefacinglight = NULL;
 	trianglefacinglightlist = NULL;
@@ -96,6 +102,9 @@ void r_shadow_shutdown(void)
 	shadowelements = NULL;
 	maxshadowvertices = 0;
 	shadowvertex3f = NULL;
+	maxvertexupdate = 0;
+	vertexupdate = NULL;
+	vertexupdatenum = 0;
 	maxtrianglefacinglight = 0;
 	trianglefacinglight = NULL;
 	trianglefacinglightlist = NULL;
@@ -119,27 +128,12 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
-	Cvar_RegisterVariable(&r_shadow_shadownudge);
+	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_portallight);
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
-}
-
-void R_Shadow_ProjectVertex3f(float *verts, int numverts, const float *relativelightorigin, float projectdistance)
-{
-	int i;
-	float *in, *out, diff[3];
-	in = verts;
-	out = verts + numverts * 3;
-	for (i = 0;i < numverts;i++, in += 3, out += 3)
-	{
-		VectorSubtract(in, relativelightorigin, diff);
-		VectorNormalizeFast(diff);
-		VectorMA(in, projectdistance, diff, out);
-		VectorMA(in, r_shadow_shadownudge.value, diff, in);
-	}
 }
 
 int R_Shadow_MakeTriangleShadowFlags_Vertex3f(const int *elements, const float *vertex, int numtris, qbyte *facing, int *list, const float *relativelightorigin)
@@ -163,10 +157,21 @@ int R_Shadow_MakeTriangleShadowFlags_Vertex3f(const int *elements, const float *
 	return tris;
 }
 
-int R_Shadow_BuildShadowVolumeTriangles(const int *elements, const int *neighbors, int numverts, const qbyte *facing, const int *facinglist, int numfacing, int *out)
+int R_Shadow_BuildShadowVolume(const int *elements, const int *neighbors, int numverts, const qbyte *facing, const int *facinglist, int numfacing, int *out, float *vertices, const float *relativelightorigin, float projectdistance)
 {
-	int i, tris;
+	int i, j, tris, vertexpointeradjust = numverts * 3;
 	const int *e, *n;
+	float *vin, *vout;
+
+	if (maxvertexupdate < numverts)
+	{
+		maxvertexupdate = numverts;
+		if (vertexupdate)
+			Mem_Free(vertexupdate);
+		vertexupdate = Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
+	}
+	vertexupdatenum++;
+
 	// check each frontface for bordering backfaces,
 	// and cast shadow polygons from those edges,
 	// also create front and back caps for shadow volume
@@ -184,6 +189,19 @@ int R_Shadow_BuildShadowVolumeTriangles(const int *elements, const int *neighbor
 	for (i = 0;i < numfacing;i++)
 	{
 		e = elements + facinglist[i] * 3;
+		// generate vertices if needed
+		for (j = 0;j < 3;j++)
+		{
+			if (vertexupdate[e[j]] != vertexupdatenum)
+			{
+				vertexupdate[e[j]] = vertexupdatenum;
+				vin = vertices + e[j] * 3;
+				vout = vin + vertexpointeradjust;
+				vout[0] = relativelightorigin[0] + projectdistance * (vin[0] - relativelightorigin[0]);
+				vout[1] = relativelightorigin[1] + projectdistance * (vin[1] - relativelightorigin[1]);
+				vout[2] = relativelightorigin[2] + projectdistance * (vin[2] - relativelightorigin[2]);
+			}
+		}
 		out[0] = e[2] + numverts;
 		out[1] = e[1] + numverts;
 		out[2] = e[0] + numverts;
@@ -319,14 +337,13 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 	if (!tris)
 		return;
 
-	// output triangle elements
-	tris = R_Shadow_BuildShadowVolumeTriangles(elements, neighbors, numverts, trianglefacinglight, trianglefacinglightlist, tris, shadowelements);
-	if (!tris)
-		return;
-
 	// by clever use of elements we can construct the whole shadow from
 	// the unprojected vertices and the projected vertices
-	R_Shadow_ProjectVertex3f(varray_vertex3f, numverts, relativelightorigin, projectdistance);
+
+	// output triangle elements and vertices
+	tris = R_Shadow_BuildShadowVolume(elements, neighbors, numverts, trianglefacinglight, trianglefacinglightlist, tris, shadowelements, varray_vertex3f, relativelightorigin, projectdistance);
+	if (!tris)
+		return;
 
 	if (r_shadowstage == SHADOWSTAGE_STENCIL)
 	{
@@ -1814,9 +1831,8 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 
 				// now that we have the buffers big enough, construct shadow volume mesh
 				memcpy(vertex3f, castmesh->vertex3f, castmesh->numverts * sizeof(float[3]));
-				R_Shadow_ProjectVertex3f(vertex3f, castmesh->numverts, e->origin, r_shadow_projectdistance.value);//, e->lightradius);
 				tris = R_Shadow_MakeTriangleShadowFlags_Vertex3f(castmesh->element3i, vertex3f, castmesh->numtriangles, trianglefacinglight, trianglefacinglightlist, e->origin);
-				tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->element3i, castmesh->neighbor3i, castmesh->numverts, trianglefacinglight, trianglefacinglightlist, tris, shadowelements);
+				tris = R_Shadow_BuildShadowVolume(castmesh->element3i, castmesh->neighbor3i, castmesh->numverts, trianglefacinglight, trianglefacinglightlist, tris, shadowelements, vertex3f, e->origin, r_shadow_projectdistance.value);
 				// add the constructed shadow volume mesh
 				Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->shadowvolume, castmesh->numverts, vertex3f, tris, shadowelements);
 			}
