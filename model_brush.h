@@ -35,21 +35,22 @@ BRUSH MODELS
 //
 typedef struct
 {
-	vec3_t		position;
+	vec3_t position;
 }
 mvertex_t;
 
-#define	SIDE_FRONT	0
-#define	SIDE_BACK	1
-#define	SIDE_ON		2
+#define SIDE_FRONT 0
+#define SIDE_BACK 1
+#define SIDE_ON 2
 
 
 // plane_t structure
 typedef struct mplane_s
 {
-	vec3_t	normal;
-	float	dist;
-	int		type;			// for texture axis selection and fast side tests
+	vec3_t normal;
+	float dist;
+	// for texture axis selection and fast side tests
+	int type;
 	// LordHavoc: faster than id's signbits system
 	int (*BoxOnPlaneSideFunc) (vec3_t emins, vec3_t emaxs, struct mplane_s *p);
 }
@@ -85,26 +86,26 @@ typedef struct texture_s
 texture_t;
 
 
-#define	SURF_PLANEBACK		2
-#define	SURF_DRAWSKY		4
-#define SURF_DRAWTURB		0x10
-#define SURF_LIGHTMAP		0x20
-#define SURF_DRAWNOALPHA	0x100
-#define SURF_DRAWFULLBRIGHT	0x200
-#define SURF_LIGHTBOTHSIDES	0x400
-#define SURF_CLIPSOLID		0x800 // this polygon can obscure other polygons
+#define SURF_PLANEBACK 2
+#define SURF_DRAWSKY 4
+#define SURF_DRAWTURB 0x10
+#define SURF_LIGHTMAP 0x20
+#define SURF_DRAWNOALPHA 0x100
+#define SURF_DRAWFULLBRIGHT 0x200
+#define SURF_LIGHTBOTHSIDES 0x400
+#define SURF_CLIPSOLID 0x800 // this polygon can obscure other polygons
 
 typedef struct
 {
-	unsigned short	v[2];
+	unsigned short v[2];
 }
 medge_t;
 
 typedef struct
 {
-	float		vecs[2][4];
-	texture_t	*texture;
-	int			flags;
+	float vecs[2][4];
+	texture_t *texture;
+	int flags;
 }
 mtexinfo_t;
 
@@ -127,69 +128,69 @@ surfmesh_t;
 typedef struct msurface_s
 {
 	// should be drawn if visframe == r_framecount (set by WorldNode functions)
-	int			visframe;
+	int visframe;
 	// should be drawn if onscreen and not a backface (used for setting visframe)
-	int			pvsframe;
+	int pvsframe;
 	// chain of surfaces marked visible by pvs
-	struct msurface_s	*pvschain;
+	struct msurface_s *pvschain;
 
 	// the node plane this is on, backwards if SURF_PLANEBACK flag set
-	mplane_t	*plane;
+	mplane_t *plane;
 	// SURF_ flags
-	int			flags;
-	struct Cshader_s	*shader;
-	struct msurface_s	*chain; // shader rendering chain
+	int flags;
+	struct Cshader_s *shader;
+	struct msurface_s *chain; // shader rendering chain
 
 	// look up in model->surfedges[], negative numbers are backwards edges
-	int			firstedge;
-	int			numedges;
+	int firstedge;
+	int numedges;
 
-	short		texturemins[2];
-	short		extents[2];
+	short texturemins[2];
+	short extents[2];
 
-	mtexinfo_t	*texinfo;
-	texture_t	*currenttexture; // updated (animated) during early surface processing each frame
+	mtexinfo_t *texinfo;
+	texture_t *currenttexture; // updated (animated) during early surface processing each frame
 
 	// index into d_lightstylevalue array, 255 means not used (black)
-	qbyte		styles[MAXLIGHTMAPS];
+	qbyte styles[MAXLIGHTMAPS];
 	// RGB lighting data [numstyles][height][width][3]
-	qbyte		*samples;
+	qbyte *samples;
 	// stain to apply on lightmap (soot/dirt/blood/whatever)
-	qbyte		*stainsamples;
+	qbyte *stainsamples;
 
 	// these fields are generated during model loading
 	// the lightmap texture fragment to use on the surface
 	rtexture_t *lightmaptexture;
 	// the stride when building lightmaps to comply with fragment update
-	int			lightmaptexturestride;
+	int lightmaptexturestride;
 	// mesh for rendering
-	surfmesh_t	*mesh;
+	surfmesh_t *mesh;
 
 	// these are just 3D points defining the outline of the polygon,
 	// no texcoord info (that can be generated from these)
-	int			poly_numverts;
-	float		*poly_verts;
+	int poly_numverts;
+	float *poly_verts;
 	// bounding box for onscreen checks, and center for sorting
-	vec3_t		poly_mins, poly_maxs, poly_center;
+	vec3_t poly_mins, poly_maxs, poly_center;
 
 	// these are regenerated every frame
 	// lighting info
-	int			dlightframe;
-	int			dlightbits[8];
+	int dlightframe;
+	int dlightbits[8];
 	// avoid redundent addition of dlights
-	int			lightframe;
+	int lightframe;
 	// only render each surface once
-	int			worldnodeframe;
+	int worldnodeframe;
 
 	// these cause lightmap updates if regenerated
 	// values currently used in lightmap
 	unsigned short cached_light[MAXLIGHTMAPS];
 	// if lightmap was lit by dynamic lights, force update on next frame
-	short		cached_dlight;
+	short cached_dlight;
 	// to cause lightmap to be rerendered when v_overbrightbits changes
-	short		cached_lightscalebit;
+	short cached_lightscalebit;
 	// rerender lightmaps when r_ambient changes
-	float		cached_ambient;
+	float cached_ambient;
 }
 msurface_t;
 
@@ -213,62 +214,66 @@ extern Cshader_t Cshader_wall_fullbright;
 extern Cshader_t Cshader_water;
 extern Cshader_t Cshader_sky;
 
-// warning: if this is changed, references must be updated in cpu_* assembly files
 typedef struct mnode_s
 {
 // common with leaf
-	int					contents;		// 0, to differentiate from leafs
+	// always 0 in nodes
+	int contents;
 
-	struct mnode_s		*parent;
-	struct mportal_s	*portals;
+	struct mnode_s *parent;
+	struct mportal_s *portals;
 
 	// for bounding box culling
-	vec3_t				mins;
-	vec3_t				maxs;
+	vec3_t mins;
+	vec3_t maxs;
 
 // node specific
-	mplane_t			*plane;
-	struct mnode_s		*children[2];
+	mplane_t *plane;
+	struct mnode_s *children[2];
 
-	unsigned short		firstsurface;
-	unsigned short		numsurfaces;
+	unsigned short firstsurface;
+	unsigned short numsurfaces;
 }
 mnode_t;
 
 typedef struct mleaf_s
 {
 // common with node
-	int					contents;		// will be a negative contents number
+	// always negative in leafs
+	int contents;
 
-	struct mnode_s		*parent;
-	struct mportal_s	*portals;
+	struct mnode_s *parent;
+	struct mportal_s *portals;
 
 	// for bounding box culling
-	vec3_t				mins;
-	vec3_t				maxs;
+	vec3_t mins;
+	vec3_t maxs;
 
 // leaf specific
-	int					pvsframe;		// potentially visible if current (r_pvsframecount)
-	int					worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
-	int					portalmarkid;	// used by polygon-through-portals visibility checker
+	// potentially visible if current (r_pvsframecount)
+	int pvsframe;
+	// used by certain worldnode variants to avoid processing the same leaf twice in a frame
+	int worldnodeframe;
+	// used by polygon-through-portals visibility checker
+	int portalmarkid;
 
-	qbyte				*compressed_vis;
+	qbyte *compressed_vis;
 
-	msurface_t			**firstmarksurface;
-	int					nummarksurfaces;
-	qbyte				ambient_sound_level[NUM_AMBIENTS];
+	msurface_t **firstmarksurface;
+	int nummarksurfaces;
+	qbyte ambient_sound_level[NUM_AMBIENTS];
 }
 mleaf_t;
 
 typedef struct
 {
-	dclipnode_t	*clipnodes;
-	mplane_t	*planes;
-	int			firstclipnode;
-	int			lastclipnode;
-	vec3_t		clip_mins;
-	vec3_t		clip_maxs;
-	vec3_t		clip_size;
+	dclipnode_t *clipnodes;
+	mplane_t *planes;
+	int firstclipnode;
+	int lastclipnode;
+	vec3_t clip_mins;
+	vec3_t clip_maxs;
+	vec3_t clip_size;
 }
 hull_t;
 
@@ -286,15 +291,24 @@ mportal_t;
 
 typedef struct mlight_s
 {
+	// location of light
 	vec3_t origin;
+	// distance attenuation scale (smaller is a larger light)
 	float falloff;
+	// color and brightness combined
 	vec3_t light;
+	// brightness bias, used for limiting radius without a hard edge
 	float subtract;
+	// spotlight direction
 	vec3_t spotdir;
-	float spotcone; // cosine of spotlight cone angle (or 0 if not a spotlight)
+	// cosine of spotlight cone angle (or 0 if not a spotlight)
+	float spotcone;
+	// distance bias (larger value is softer and darker)
 	float distbias;
+	// light style controlling this light
 	int style;
-	int numleafs; // used only for loading calculations, number of leafs this shines on
+	// used only for loading calculations, number of leafs this shines on
+	//int numleafs;
 }
 mlight_t;
 
