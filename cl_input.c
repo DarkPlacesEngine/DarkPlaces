@@ -366,7 +366,7 @@ void CL_SendMove(usercmd_t *cmd)
 	upmove += cmd->upmove;
 	total++;
 	// LordHavoc: cap outgoing movement messages to sys_ticrate
-	if ((cl.maxclients > 1) && (realtime - lastmovetime < sys_ticrate.value))
+	if (!cl.islocalgame && (realtime - lastmovetime < sys_ticrate.value))
 		return;
 	lastmovetime = realtime;
 	// average what has happened during this time
