@@ -15,3 +15,4 @@ typedef struct
 // LordHavoc: this affects the lighting scale of the whole game
 #define LIGHTOFFSET 16384.0f
 #define LIGHTSCALE 4.0f
+#define LIGHTSCALE2 4.0f

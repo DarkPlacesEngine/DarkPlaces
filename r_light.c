@@ -579,7 +579,7 @@ void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 				r = cl_dlights[k].radius*cl_dlights[k].radius*LIGHTSCALE;
 				if (f < r)
 				{
-					brightness = r * 16.0f / f;
+					brightness = r * (256.0f / LIGHTSCALE2) / f;
 					color[0] += brightness * cl_dlights[k].color[0];
 					color[1] += brightness * cl_dlights[k].color[1];
 					color[2] += brightness * cl_dlights[k].color[2];
@@ -608,7 +608,7 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 		r = cl_dlights[i].radius*cl_dlights[i].radius*LIGHTSCALE;
 		if (f < r)
 		{
-			brightness = r * 16.0f / f;
+			brightness = r * (256.0f / LIGHTSCALE2) / f;
 			if (cl_dlights[i].dark)
 				brightness = -brightness;
 			color[0] += brightness * cl_dlights[i].color[0];
@@ -701,7 +701,7 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 				nearlight[nearlights].color[0] = cl_dlights[i].color[0] * cl_dlights[i].radius * cl_dlights[i].radius * mod[0];
 				nearlight[nearlights].color[1] = cl_dlights[i].color[1] * cl_dlights[i].radius * cl_dlights[i].radius * mod[1];
 				nearlight[nearlights].color[2] = cl_dlights[i].color[2] * cl_dlights[i].radius * cl_dlights[i].radius * mod[2];
-				t1 = (128.0f / LIGHTSCALE) / t2;
+				t1 = (128.0f / LIGHTSCALE2) / t2;
 				basecolor[0] += nearlight[nearlights].color[0] * t1;
 				basecolor[1] += nearlight[nearlights].color[1] * t1;
 				basecolor[2] += nearlight[nearlights].color[2] * t1;
@@ -728,7 +728,7 @@ void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 				dist[0] = cl_dlights[i].color[0] * cl_dlights[i].radius * cl_dlights[i].radius * mod[0];
 				dist[1] = cl_dlights[i].color[1] * cl_dlights[i].radius * cl_dlights[i].radius * mod[1];
 				dist[2] = cl_dlights[i].color[2] * cl_dlights[i].radius * cl_dlights[i].radius * mod[2];
-				t1 = (192.0f / LIGHTSCALE) / t2;
+				t1 = (224.0f / LIGHTSCALE2) / t2;
 				basecolor[0] += dist[0] * t1;
 				basecolor[1] += dist[1] * t1;
 				basecolor[2] += dist[2] * t1;
