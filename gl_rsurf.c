@@ -99,9 +99,17 @@ static int R_AddDynamicLights (msurface_t *surf)
 		if (dist2 >= maxdist)
 			continue;
 
-		impact[0] = local[0] - surf->plane->normal[0] * dist;
-		impact[1] = local[1] - surf->plane->normal[1] * dist;
-		impact[2] = local[2] - surf->plane->normal[2] * dist;
+		if (surf->plane->type < 3)
+		{
+			VectorCopy(local, impact);
+			impact[surf->plane->type] -= dist;
+		}
+		else
+		{
+			impact[0] = local[0] - surf->plane->normal[0] * dist;
+			impact[1] = local[1] - surf->plane->normal[1] * dist;
+			impact[2] = local[2] - surf->plane->normal[2] * dist;
+		}
 
 		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
 		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
@@ -203,9 +211,17 @@ loc0:
 	{
 		maxdist3 = maxdist - dist2;
 
-		impact[0] = origin[0] - node->plane->normal[0] * ndist;
-		impact[1] = origin[1] - node->plane->normal[1] * ndist;
-		impact[2] = origin[2] - node->plane->normal[2] * ndist;
+		if (node->plane->type < 3)
+		{
+			VectorCopy(origin, impact);
+			impact[node->plane->type] -= ndist;
+		}
+		else
+		{
+			impact[0] = origin[0] - node->plane->normal[0] * ndist;
+			impact[1] = origin[1] - node->plane->normal[1] * ndist;
+			impact[2] = origin[2] - node->plane->normal[2] * ndist;
+		}
 
 		for (surf = model->surfaces + node->firstsurface, endsurf = surf + node->numsurfaces;surf < endsurf;surf++)
 		{
