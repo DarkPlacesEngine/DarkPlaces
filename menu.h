@@ -50,6 +50,7 @@ enum m_state_e {
 
 extern enum m_state_e m_state;
 extern char m_return_reason[32];
+void M_Update_Return_Reason(char *s);
 
 /*
 // hard-coded menus

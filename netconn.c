@@ -604,6 +604,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 {
 	cls.connect_trying = false;
+	M_Update_Return_Reason("");
 	// the connection request succeeded, stop current connection and set up a new connection
 	CL_Disconnect();
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
@@ -661,22 +662,25 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 		{
 			LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
 			Con_Printf("\"%s\" received, sending connect request back to %s\n", string, addressstring2);
+			M_Update_Return_Reason("Got challenge response");
 			NetConn_WriteString(mysocket, va("\377\377\377\377connect\\protocol\\darkplaces 3\\challenge\\%s", string + 10), peeraddress);
 			return true;
 		}
 		if (length == 6 && !memcmp(string, "accept", 6) && cls.connect_trying)
 		{
+			M_Update_Return_Reason("Accepted");
 			NetConn_ConnectionEstablished(mysocket, peeraddress);
 			return true;
 		}
 		if (length > 7 && !memcmp(string, "reject ", 7) && cls.connect_trying)
 		{
+			char rejectreason[32];
 			cls.connect_trying = false;
 			string += 7;
-			length = max(length - 7, (int)sizeof(m_return_reason) - 1);
-			memcpy(m_return_reason, string, length);
-			m_return_reason[length] = 0;
-			Con_Printf("%s\n", m_return_reason);
+			length = max(length - 7, (int)sizeof(rejectreason) - 1);
+			memcpy(rejectreason, string, length);
+			rejectreason[length] = 0;
+			M_Update_Return_Reason(rejectreason);
 			return true;
 		}
 		if (length >= 13 && !memcmp(string, "infoResponse\x0A", 13))
@@ -855,14 +859,15 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					length -= 4;
 					LHNETADDRESS_SetPort(&clientportaddress, port);
 				}
+				M_Update_Return_Reason("Accepted");
 				NetConn_ConnectionEstablished(mysocket, &clientportaddress);
 			}
 			break;
 		case CCREP_REJECT:
 			if (developer.integer)
 				Con_Printf("Datagram_ParseConnectionless: received CCREP_REJECT from %s.\n", addressstring2);
-			Con_Printf("%s\n", data);
-			strlcpy (m_return_reason, data, sizeof (m_return_reason));
+			cls.connect_trying = false;
+			M_Update_Return_Reason(data);
 			break;
 #if 0
 		case CCREP_SERVER_INFO:
@@ -934,25 +939,8 @@ void NetConn_ClientFrame(void)
 		if (cls.connect_remainingtries == 0)
 		{
 			cls.connect_trying = false;
-			if (m_state == m_slist)
-				strcpy (m_return_reason, "Connect: Failed");
-			else
-				Con_Print("Connect failed\n");
+			M_Update_Return_Reason("Connect: Failed");
 			return;
-		}
-		if (cls.connect_nextsendtime)
-		{
-			if (m_state == m_slist)
-				strcpy (m_return_reason, "Connect: Still trying");
-			else
-				Con_Print("Still trying...\n");
-		}
-		else
-		{
-			if (m_state == m_slist)
-				strcpy (m_return_reason, "Connect: Trying");
-			else
-				Con_Print("Trying...\n");
 		}
 		cls.connect_nextsendtime = realtime + 1;
 		cls.connect_remainingtries--;
@@ -1456,7 +1444,7 @@ void NetConn_QueryMasters(void)
 	if (!masterquerycount)
 	{
 		Con_Print("Unable to query master servers, no suitable network sockets active.\n");
-		strcpy(m_return_reason, "No network");
+		M_Update_Return_Reason("No network");
 	}
 }
 

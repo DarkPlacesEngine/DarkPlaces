@@ -224,7 +224,7 @@ void CL_EstablishConnection(const char *host)
 		return;
 
 	// clear menu's connect error message
-	m_return_reason[0] = 0;
+	M_Update_Return_Reason("");
 	cls.demonum = -1;
 
 	// stop demo loop in case this fails
@@ -237,6 +237,7 @@ void CL_EstablishConnection(const char *host)
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
 		cls.connect_nextsendtime = 0;
+		M_Update_Return_Reason("Trying to connect...");
 		if (sv.active)
 		{
 			NetConn_ClientFrame();
@@ -252,7 +253,7 @@ void CL_EstablishConnection(const char *host)
 	else
 	{
 		Con_Print("Unable to find a suitable network socket to connect to server.\n");
-		strcpy(m_return_reason, "No network");
+		M_Update_Return_Reason("No network");
 	}
 }
 
