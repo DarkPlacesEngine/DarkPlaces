@@ -105,7 +105,7 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const lhnetaddress_t *peeraddress)
 {
 	int ret = LHNET_Write(mysocket, data, length, peeraddress);
-	if (developer_networking.integer && ret != 0)
+	if (developer_networking.integer)
 	{
 		char addressstring[128], addressstring2[128];
 		LHNETADDRESS_ToString(LHNET_AddressFromSocket(mysocket), addressstring, sizeof(addressstring), true);
@@ -1014,7 +1014,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 										// allocated connection
 										strcpy(conn->address, addressstring2);
 										if (developer.integer)
-											Con_Printf("Datagram_ParseConnectionless: sending CCREP_ACCEPT to %s.\n", addressstring2);
+											Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", addressstring2);
 										NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 										// now set up the client struct
 										SV_ConnectClient(clientnum, conn);
