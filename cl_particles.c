@@ -431,11 +431,10 @@ void CL_SpawnDecalParticleForPoint(const vec3_t org, float maxdist, float size, 
 	int i;
 	float bestfrac, bestorg[3], bestnormal[3];
 	float frac, v[3], normal[3], org2[3];
-	void *besthitent;
 #ifdef WORKINGLQUAKE
-	void *hitent;
+	void *besthitent = NULL, *hitent;
 #else
-	entity_render_t *hitent;
+	entity_render_t *besthitent = NULL, *hitent;
 #endif
 	bestfrac = 10;
 	for (i = 0;i < 32;i++)
