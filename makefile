@@ -14,7 +14,7 @@ OBJECTS= buildnumber.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_pars
 #K6/athlon optimizations
 CPUOPTIMIZATIONS=-march=k6
 #686 optimizations
-#CPUOPTIMIZATIONS=-march=686
+#CPUOPTIMIZATIONS=-march=i686
 
 #use this line for profiling
 PROFILEOPTION=-pg -g
