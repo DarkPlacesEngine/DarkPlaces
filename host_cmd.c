@@ -795,7 +795,7 @@ void Host_Tell_f(void)
 	client_t *save;
 	int		j;
 	char	*p;
-	char	text[64];
+	char	text[1024]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
 
 	if (cmd_source == src_command)
 	{

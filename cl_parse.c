@@ -81,7 +81,7 @@ char *svc_strings[] =
 	"?", // 48
 	"?", // 49
 	"svc_farclip", // [coord] size
-	"svc_fog", // [byte] enable <optional past this point, only included if enable is true> [short * 4096] density [byte] red [byte] green [byte] blue
+	"svc_fog", // [byte] enable <optional past this point, only included if enable is true> [short] density*4096 [byte] red [byte] green [byte] blue
 	"svc_playerposition" // [float] x [float] y [float] z
 };
 
@@ -384,6 +384,8 @@ void CL_ParseServerInfo (void)
 			Con_Printf ("Server sent too many model precaches\n");
 			return;
 		}
+		if (strlen(str) >= MAX_QPATH)
+			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strcpy (model_precache[nummodels], str);
 		Mod_TouchModel (str);
 	}
@@ -400,6 +402,8 @@ void CL_ParseServerInfo (void)
 			Con_Printf ("Server sent too many sound precaches\n");
 			return;
 		}
+		if (strlen(str) >= MAX_QPATH)
+			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strcpy (sound_precache[numsounds], str);
 		S_TouchSound (str);
 	}

@@ -31,8 +31,8 @@ typedef union eval_s
 	int				edict;
 } eval_t;	
 
-// LordHavoc: increased number of leafs per entity limit from 16 to 64
-#define	MAX_ENT_LEAFS	64
+// LordHavoc: increased number of leafs per entity limit from 16 to 256
+#define	MAX_ENT_LEAFS	256
 typedef struct edict_s
 {
 	qboolean	free;

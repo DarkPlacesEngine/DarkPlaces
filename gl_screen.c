@@ -583,11 +583,11 @@ void SCR_DrawConsole (void)
 ============================================================================== 
 */ 
 
-/* 
+/*
 ================== 
 SCR_ScreenShot_f
 ================== 
-*/  
+*/
 void SCR_ScreenShot_f (void) 
 {
 	byte		*buffer;
@@ -621,7 +621,7 @@ void SCR_ScreenShot_f (void)
 
 	free (buffer);
 	Con_Printf ("Wrote %s\n", filename);
-} 
+}
 
 
 //=============================================================================

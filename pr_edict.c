@@ -759,7 +759,7 @@ ED_ParseGlobals
 */
 void ED_ParseGlobals (char *data)
 {
-	char	keyname[64];
+	char	keyname[1024]; // LordHavoc: good idea? bad idea?  was 64
 	ddef_t	*key;
 
 	while (1)

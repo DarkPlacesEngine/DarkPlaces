@@ -9,3 +9,4 @@ extern int loadtextureimagemask (char* filename, int matchwidth, int matchheight
 extern int image_masktexnum;
 extern int loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap);
 extern void Image_WriteTGARGB (char *filename, int width, int height, byte *data);
+extern void Image_WriteTGARGBA (char *filename, int width, int height, byte *data);
