@@ -117,31 +117,22 @@ shadowmesh_t;
 
 typedef struct model_alias_s
 {
-	// LordHavoc: Q2/ZYM model support
-	int				aliastype;
+	// mdl/md2/md3/zym model formats are treated the same after loading
 
-	// mdl/md2/md3 models are the same after loading
+	// the shader meshes comprising this model
 	int				aliasnum_meshes;
 	aliasmesh_t		*aliasdata_meshes;
 
+	// for md3 models
 	int				aliasnum_tags;
 	int				aliasnum_tagframes;
 	aliastag_t		*aliasdata_tags;
 
-	// for Zymotic models
-	int				zymnum_verts;
-	int				zymnum_tris;
-	int				zymnum_shaders;
-	int				zymnum_bones;
-	int				zymnum_scenes;
-	float			*zymdata_texcoords;
-	rtexture_t		**zymdata_textures;
-	qbyte			*zymdata_trizone;
-	zymbone_t		*zymdata_bones;
-	unsigned int	*zymdata_vertbonecounts;
-	zymvertex_t		*zymdata_verts;
-	unsigned int	*zymdata_renderlist;
-	float			*zymdata_poses;
+	// for skeletal models
+	int				aliasnum_bones;
+	aliasbone_t		*aliasdata_bones;
+	int				aliasnum_poses;
+	float			*aliasdata_poses;
 }
 model_alias_t;
 
@@ -647,6 +638,7 @@ void Mod_LoadModels(void);
 extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
 
+int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, int numvertices, int *remapvertices);
 void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles);
 void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);

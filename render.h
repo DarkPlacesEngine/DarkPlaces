@@ -59,11 +59,6 @@ extern char r_speeds_string[1024];
 // lighting stuff
 extern cvar_t r_ambient;
 
-// model rendering stuff
-extern float *aliasvert;
-extern float *aliasvertnorm;
-extern float *aliasvertcolor;
-
 // vis stuff
 extern cvar_t r_novis;
 
