@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int current_skill;
 char sv_spawnmap[MAX_QPATH];
 char sv_loadgame[MAX_OSPATH];
+int sv_restartmap;
 
 dfunction_t *ED_FindFunction (char *name);
 
@@ -299,7 +300,7 @@ void Host_Restart_f (void)
 
 	if (cmd_source != src_command)
 		return;
-	strcpy (sv_spawnmap, sv.name);
+	sv_restartmap = true;
 }
 
 /*
@@ -1603,8 +1604,14 @@ void Host_PerformSpawnServerAndLoadGame(void)
 		if (sv.active && cls.state != ca_dedicated)
 			Cmd_ExecuteString ("connect local", src_command);
 	}
+	else if (sv_restartmap)
+	{
+		strcpy(sv_spawnmap, sv.name);
+		SV_SpawnServer(sv_spawnmap);
+	}
 	sv_loadgame[0] = 0;
 	sv_spawnmap[0] = 0;
+	sv_restartmap = 0;
 }
 
 //=============================================================================
