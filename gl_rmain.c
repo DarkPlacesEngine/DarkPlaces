@@ -274,7 +274,8 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_fullbrights);
 	Cvar_RegisterVariable (&r_wateralpha);
 	Cvar_RegisterVariable (&r_dynamic);
-	Cvar_RegisterVariable (&r_waterripple); // LordHavoc: added waterripple
+	Cvar_RegisterVariable (&r_waterripple);
+	Cvar_RegisterVariable (&r_farclip);
 	if (nehahra)
 		Cvar_SetValue("r_fullbrights", 0);
 //	if (gl_vendor && strstr(gl_vendor, "3Dfx"))
