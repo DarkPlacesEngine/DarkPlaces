@@ -385,7 +385,7 @@ float MSG_ReadCoord32f (void)
 
 float MSG_ReadCoord (int protocol)
 {
-	if (protocol == PROTOCOL_QUAKE)
+	if (protocol == PROTOCOL_QUAKE || protocol == 250)
 		return MSG_ReadCoord13i();
 	else if (protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES5)
 		return MSG_ReadCoord32f();
