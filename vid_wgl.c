@@ -711,7 +711,7 @@ void VID_Init(void)
 	WNDCLASS wc;
 
 	InitCommonControls();
-	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON2));
+	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON1));
 
 	// Register the frame class
 	wc.style         = 0;
