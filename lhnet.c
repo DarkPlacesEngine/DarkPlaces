@@ -347,9 +347,9 @@ static const char *LHNETPRIVATE_StrError(void)
 	int i = WSAGetLastError();
 	switch (i)
 	{
-		case WSAEINTR:           return "WSAEINTR";                                     
+		case WSAEINTR:           return "WSAEINTR";
 		case WSAEBADF:           return "WSAEBADF";
-		case WSAEACCES:          return "WSAEACCES";          
+		case WSAEACCES:          return "WSAEACCES";
 		case WSAEFAULT:          return "WSAEFAULT";
 		case WSAEINVAL:          return "WSAEINVAL";
 		case WSAEMFILE:          return "WSAEMFILE";
@@ -392,7 +392,7 @@ static const char *LHNETPRIVATE_StrError(void)
 		case WSAEREMOTE:         return "WSAEREMOTE";
 		case WSAEDISCON:         return "WSAEDISCON";
 		case 0:                  return "no error";
-		default:                 return "unknown WSAE error";  
+		default:                 return "unknown WSAE error";
 	}
 #else
 	return strerror(errno);
@@ -565,7 +565,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				continue;
 			}
 #ifndef STANDALONETEST
-			if (cl_netlocalping.value && (Sys_DoubleTime() - cl_netlocalping.value * 1000.0) < p->sentdoubletime)
+			if (cl_netlocalping.value && (Sys_DoubleTime() - cl_netlocalping.value * (1.0 / 1000.0)) < p->sentdoubletime)
 				continue;
 #endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.addressdata.loop.port)
