@@ -103,8 +103,8 @@ int R_ExplosionVert(int column, int row)
 	int i;
 	float a, b, c;
 	i = row * (EXPLOSIONGRID + 1) + column;
-	a = row * M_PI * 2 / EXPLOSIONGRID;
-	b = column * M_PI * 2 / EXPLOSIONGRID;
+	a = ((double) row / EXPLOSIONGRID) * M_PI * 2;
+	b = (((double) column / EXPLOSIONGRID) + 0.5) * M_PI;
 	c = cos(b);
 	explosionpoint[i][0] = cos(a) * c;
 	explosionpoint[i][1] = sin(a) * c;
