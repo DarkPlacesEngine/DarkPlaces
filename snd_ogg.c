@@ -23,7 +23,7 @@
 
 
 #include "quakedef.h"
-#include "ogg.h"
+#include "snd_ogg.h"
 
 
 extern void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name);

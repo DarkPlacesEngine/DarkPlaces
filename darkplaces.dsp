@@ -280,10 +280,6 @@ SOURCE=.\netconn.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\ogg.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\palette.c
 # End Source File
 # Begin Source File
@@ -369,6 +365,10 @@ SOURCE=.\snd_mem.c
 # Begin Source File
 
 SOURCE=.\snd_mix.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\snd_ogg.c
 # End Source File
 # Begin Source File
 
@@ -592,10 +592,6 @@ SOURCE=.\netconn.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\ogg.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\palette.h
 # End Source File
 # Begin Source File
@@ -669,6 +665,10 @@ SOURCE=.\screen.h
 # Begin Source File
 
 SOURCE=.\server.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\snd_ogg.h
 # End Source File
 # Begin Source File
 
