@@ -425,17 +425,9 @@ void SZ_Write (sizebuf_t *buf, const void *data, int length)
 	memcpy (SZ_GetSpace(buf,length),data,length);
 }
 
-void SZ_Print (sizebuf_t *buf, const char *data)
-{
-	int len;
-	len = strlen(data)+1;
-
-// byte * cast to keep VC++ happy
-	if (buf->data[buf->cursize-1])
-		memcpy ((qbyte *)SZ_GetSpace(buf, len),data,len); // no trailing 0
-	else
-		memcpy ((qbyte *)SZ_GetSpace(buf, len-1)-1,data,len); // write over trailing 0
-}
+// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
+// attention, it has been eradicated from here, its only (former) use in
+// all of darkplaces.
 
 static char *hexchar = "0123456789ABCDEF";
 void Com_HexDumpToConsole(const qbyte *data, int size)
