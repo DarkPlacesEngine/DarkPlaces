@@ -2150,6 +2150,8 @@ int video_cursor_table[] = {56, 68, 80, 100};
 // note: if modes are added to the beginning of this list, update the
 // video_resolution = x; in M_Menu_Video_f below
 unsigned short video_resolutions[][2] = {{320,240}, {400,300}, {512,384}, {640,480}, {800,600}, {1024,768}, {1152,864}, {1280,960}, {1280,1024}, {1600,1200}, {1792,1344}, {1920,1440}, {2048,1536}, {0,0}};
+// this is the number of the 640x480 mode in the list
+#define VID_640 3
 #define VID_RES_COUNT ((int)(sizeof(video_resolutions) / sizeof(video_resolutions[0])) - 1)
 int video_resolution;
 
@@ -2173,11 +2175,11 @@ void M_Menu_Video_f (void)
 			break;
 	}
 
-	// Default to 800x600 if we didn't find it
+	// Default to VID_640 if we didn't find it
 	if (video_resolution == VID_RES_COUNT)
 	{
 		// may need to update this number if mode list changes
-		video_resolution = 4;
+		video_resolution = VID_640;
 		Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution][0]);
 		Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution][1]);
 	}
@@ -2226,10 +2228,10 @@ void M_Menu_Video_AdjustSliders (int dir)
 		case 0:
 		{
 			int new_resolution = video_resolution + dir;
-			if (new_resolution < 0)
+			if (gamemode == GAME_FNIGGIUM ? new_resolution < VID_640 : new_resolution < 0)
 				video_resolution = VID_RES_COUNT - 1;
 			else if (new_resolution > VID_RES_COUNT)
-				video_resolution = 0;
+				video_resolution = gamemode == GAME_FNIGGIUM ? VID_640 : 0;
 			else
 				video_resolution = new_resolution;
 
