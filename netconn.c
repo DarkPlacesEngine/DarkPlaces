@@ -125,7 +125,7 @@ static void _HostCache_ViewSet_Remove( int index )
 // returns true if A should be inserted before B
 static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
 {
-	int result; // > 0 if for numbers A > B and for text if A < B 
+	int result = 0; // > 0 if for numbers A > B and for text if A < B 
 
 	if( hostcache_sortbyfield == HCIF_PING )
 		result = A->info.ping - B->info.ping;
