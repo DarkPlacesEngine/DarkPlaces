@@ -114,8 +114,6 @@ void R_DrawPortals(void);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 
-#include "r_clip.h"
-
 // LordHavoc: vertex transform
 #include "transform.h"
 
@@ -145,11 +143,7 @@ void R_DrawBrushModelNormal (void);
 void R_DrawAliasModel (void);
 void R_DrawSpriteModel (void);
 
-void R_ClipSprite (void);
-void R_Entity_Callback(void *data, void *junk);
-
 extern cvar_t r_render;
-extern cvar_t r_ser;
 #include "image.h"
 
 extern cvar_t r_multitexture;

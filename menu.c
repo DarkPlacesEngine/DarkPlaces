@@ -1250,7 +1250,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define	OPTIONS_ITEMS	28
+#define	OPTIONS_ITEMS	27
 
 int		options_cursor;
 
@@ -1278,49 +1278,46 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&r_skyquality, bound(0, r_skyquality.integer + dir, 2));
 		break;
 	case 8:
-		Cvar_SetValueQuick (&r_ser, !r_ser.integer);
-		break;
-	case 9:
 		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
 		break;
-	case 10:
+	case 9:
 		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
 		break;
-	case 11:
+	case 10:
 		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
 		break;
-	case 12:
+	case 11:
 		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
 		break;
-	case 13:
+	case 12:
 		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.25, 5));
 		break;
-	case 14:
+	case 13:
 		Cvar_SetValueQuick (&v_contrast, bound(0.5, v_contrast.value + dir * 0.25, 5));
 		break;
-	case 15:
+	case 14:
 		Cvar_SetValueQuick (&v_brightness, bound(0, v_brightness.value + dir * 0.05, 0.8));
 		break;
-	case 16: // music volume
+	case 15: // music volume
 		#ifdef _WIN32
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
 		#else
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
 		#endif
 		break;
-	case 17: // sfx volume
+	case 16: // sfx volume
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 		break;
-	case 18:
+	case 17:
 		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
 		break;
-	case 19:
+	case 18:
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 		break;
-	case 20: // show framerate
+	case 19: // show framerate
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
 		break;
-	case 21: // always run
+	case 20: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValueQuick (&cl_forwardspeed, 200);
@@ -1332,22 +1329,22 @@ void M_Menu_Options_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 		break;
-	case 22: // lookspring
+	case 21: // lookspring
 		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
 		break;
-	case 23: // lookstrafe
+	case 22: // lookstrafe
 		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
 		break;
-	case 24: // mouse speed
+	case 23: // mouse speed
 		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
-	case 25: // mouse look
+	case 24: // mouse look
 		Cvar_SetValueQuick (&freelook, !freelook.integer);
 		break;
-	case 26: // invert mouse
+	case 25: // invert mouse
 		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
 		break;
-	case 27: // windowed mouse
+	case 26: // windowed mouse
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 		break;
 	}
@@ -1371,7 +1368,6 @@ void M_Options_Draw (void)
 	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
 	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 2);y += 8;
-	M_Print(16, y, "Hidden Surface Removal");M_DrawCheckbox(220, y, r_ser.integer);y += 8;
 	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, (v_overbrightbits.value) / 4);y += 8;
 	M_Print(16, y, "       Texture Combine");M_DrawCheckbox(220, y, gl_combine.integer);y += 8;
 	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;

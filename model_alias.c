@@ -27,11 +27,6 @@ void Mod_AliasInit (void)
 	Cvar_RegisterVariable(&r_mipskins);
 }
 
-static void Mod_Alias_SERAddEntity(void)
-{
-	R_Clip_AddBox(currentrenderentity->mins, currentrenderentity->maxs, R_Entity_Callback, currentrenderentity, NULL);
-}
-
 // LordHavoc: proper bounding box considerations
 static float aliasbboxmin[3], aliasbboxmax[3], modelyawradius, modelradius;
 
@@ -497,7 +492,6 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
 
-	loadmodel->SERAddEntity = Mod_Alias_SERAddEntity;
 	loadmodel->Draw = R_DrawAliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
@@ -572,7 +566,6 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 
 	loadmodel->type = mod_alias;
 	loadmodel->aliastype = ALIASTYPE_MDLMD2;
-	loadmodel->SERAddEntity = Mod_Alias_SERAddEntity;
 	loadmodel->Draw = R_DrawAliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
@@ -959,7 +952,6 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
 
-	loadmodel->SERAddEntity = Mod_Alias_SERAddEntity;
 	loadmodel->Draw = R_DrawAliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;

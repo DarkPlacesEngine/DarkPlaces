@@ -49,11 +49,6 @@ void Mod_BrushInit (void)
 	memset(mod_novis, 0xff, sizeof(mod_novis));
 }
 
-void Mod_Brush_SERAddEntity(void)
-{
-	R_Clip_AddBox(currentrenderentity->mins, currentrenderentity->maxs, R_Entity_Callback, currentrenderentity, NULL);
-}
-
 /*
 ===============
 Mod_PointInLeaf
@@ -2522,7 +2517,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 		mod->numleafs = bm->visleafs;
 
-		mod->SERAddEntity = Mod_Brush_SERAddEntity;
 		mod->Draw = R_DrawBrushModelNormal;
 		mod->DrawShadow = NULL;
 
