@@ -55,7 +55,7 @@ cvar_t con_notify = {CVAR_SAVE, "con_notify","4"};
 cvar_t logfile = {0, "logfile","0"};
 
 #define MAX_NOTIFYLINES 32
-// realtime time the line was generated for transparent notify lines
+// cl.time time the line was generated for transparent notify lines
 float con_times[MAX_NOTIFYLINES];
 
 int con_vislines;
@@ -322,7 +322,7 @@ void Con_Print (const char *txt)
 				if (con_notify.integer > MAX_NOTIFYLINES)
 					Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
 				if (con_notify.integer > 0)
-					con_times[con_current % con_notify.integer] = realtime;
+					con_times[con_current % con_notify.integer] = cl.time;
 			}
 		}
 
@@ -525,7 +525,7 @@ void Con_DrawNotify (void)
 		time = con_times[i % con_notify.integer];
 		if (time == 0)
 			continue;
-		time = realtime - time;
+		time = cl.time - time;
 		if (time > con_notifytime.value)
 			continue;
 		text = con_text + (i % con_totallines)*con_linewidth;
