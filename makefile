@@ -1,30 +1,40 @@
 #uncomment one of these according to your sound driver
 #if you use ALSA version 0.9.x
 #SND=snd_alsa_0_9.o
+#SOUNDLIB=-lasound
 #if you use ALSA version 0.5.x
-#SND=snd_alsa_0_5.o
+SND=snd_alsa_0_5.o
+SOUNDLIB=-lasound
 #if you use the kernel sound driver or OSS
-SND=snd_oss.o
+#SND=snd_oss.o
+#SOUNDLIB=
 
-OBJECTS= buildnumber.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o gl_poly.o gl_rmain.o gl_rmisc.o gl_rsurf.o gl_screen.o gl_warp.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_udp.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_part.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o $(SND) sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o sys_linux.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o cl_effects.o r_decals.o protocol.o quakeio.o
+OBJECTS= buildnumber.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o gl_poly.o gl_rmain.o gl_rmisc.o gl_rsurf.o gl_screen.o gl_warp.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_udp.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_part.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o $(SND) sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o sys_linux.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o cl_effects.o r_decals.o protocol.o quakeio.o r_clip.o
 
-OPTIMIZATIONS= -O6 -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations
-#OPTIMIZATIONS= -O -g
+#K6/athlon optimizations
+CPUOPTIMIZATIONS=-march=k6
+#686 optimizations
+#CPUOPTIMIZATIONS=-march=686
+
+#use this line for profiling
+PROFILEOPTION=-pg -g
+NOPROFILEOPTIMIZATIONS=
+#use this line for no profiling
+#PROFILEOPTION=
+#NOPROFILEOPTIMIZATIONS=-fomit-frame-pointer
 
 #note:
 #the -Werror can be removed to compile even if there are warnings,
-#the Quakeforge team uses this to ensure that all released versions are free
-#of warnings.
+#this is used to ensure that all released versions are free of warnings.
 
 #normal compile
-CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS)
+#OPTIMIZATIONS= -O6 -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS) $(PROFILEOPTION)
 #debug compile
-#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS)
+OPTIMIZATIONS= -O -g
+CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
 
-#if using oss or kernel sound driver, use this line
-LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lz
-#if using alsa, use this line
-#LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lasound -lz
+LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl $(SOUNDLIB) -lz $(PROFILEOPTION)
 
 #most people can't build the -3dfx version (-3dfx version needs some updates for new mesa)
 all: darkplaces-glx
