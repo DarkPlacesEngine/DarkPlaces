@@ -129,37 +129,6 @@ void SV_CheckVelocity (edict_t *ent)
 }
 
 /*
-=============
-SV_RunThink
-
-Runs thinking code if time.  There is some play in the exact time the think
-function will be called, because it is called before any movement is done
-in a frame.  Not used for pushmove objects, because they must be exact.
-Returns false if the entity removed itself.
-=============
-*/
-qboolean SV_RunThink (edict_t *ent)
-{
-	float thinktime;
-
-	thinktime = ent->v->nextthink;
-	if (thinktime <= 0 || thinktime > sv.time + sv.frametime)
-		return true;
-
-	// don't let things stay in the past.
-	// it is possible to start that way by a trigger with a local time.
-	if (thinktime < sv.time)
-		thinktime = sv.time;
-
-	ent->v->nextthink = 0;
-	pr_global_struct->time = thinktime;
-	pr_global_struct->self = EDICT_TO_PROG(ent);
-	pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-	PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
-	return !ent->e->free;
-}
-
-/*
 ==================
 SV_Impact
 
@@ -563,6 +532,8 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	float savesolid, movetime2, pushltime;
 	vec3_t mins, maxs, move, move1, moveangle, pushorig, pushang, a, forward, left, up, org, org2;
 	int num_moved;
+	int numcheckentities;
+	static edict_t *checkentities[MAX_EDICTS];
 	model_t *pushermodel;
 	trace_t trace;
 
@@ -673,11 +644,11 @@ void SV_PushMove (edict_t *pusher, float movetime)
 
 // see if any solid entities are inside the final position
 	num_moved = 0;
-	check = NEXT_EDICT(sv.edicts);
-	for (e = 1;e < sv.num_edicts;e++, check = NEXT_EDICT(check))
+
+	numcheckentities = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, checkentities);
+	for (e = 1;e < numcheckentities;e++)
 	{
-		if (check->e->free)
-			continue;
+		check = checkentities[e];
 		if (check->v->movetype == MOVETYPE_PUSH
 		 || check->v->movetype == MOVETYPE_NONE
 		 || check->v->movetype == MOVETYPE_FOLLOW
@@ -687,18 +658,8 @@ void SV_PushMove (edict_t *pusher, float movetime)
 
 		// if the entity is standing on the pusher, it will definitely be moved
 		if (!(((int)check->v->flags & FL_ONGROUND) && PROG_TO_EDICT(check->v->groundentity) == pusher))
-		{
-			if (check->v->absmin[0] >= maxs[0]
-			 || check->v->absmax[0] <= mins[0]
-			 || check->v->absmin[1] >= maxs[1]
-			 || check->v->absmax[1] <= mins[1]
-			 || check->v->absmin[2] >= maxs[2]
-			 || check->v->absmax[2] <= mins[2])
-				continue;
-
 			if (!SV_ClipMoveToEntity(pusher, check->v->origin, check->v->mins, check->v->maxs, check->v->origin).startsolid)
 				continue;
-		}
 
 		if (forward[0] != 1) // quick way to check if any rotation is used
 		{
@@ -806,6 +767,7 @@ void SV_Physics_Pusher (edict_t *ent)
 		// advances ent->v->ltime if not blocked
 		SV_PushMove (ent, movetime);
 
+	/*
 	if (thinktime > oldltime && thinktime <= ent->v->ltime)
 	{
 		ent->v->nextthink = 0;
@@ -814,6 +776,7 @@ void SV_Physics_Pusher (edict_t *ent)
 		pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
 		PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
 	}
+	*/
 }
 
 
@@ -1144,9 +1107,6 @@ void SV_Physics_Follow (edict_t *ent)
 	edict_t *e;
 
 	// regular thinking
-	if (!SV_RunThink (ent))
-		return;
-
 	// LordHavoc: implemented rotation on MOVETYPE_FOLLOW objects
 	e = PROG_TO_EDICT(ent->v->aiment);
 	if (e->v->angles[0] == ent->v->punchangle[0] && e->v->angles[1] == ent->v->punchangle[1] && e->v->angles[2] == ent->v->punchangle[2])
@@ -1229,10 +1189,6 @@ void SV_Physics_Toss (edict_t *ent)
 	trace_t trace;
 	vec3_t move;
 	edict_t *groundentity;
-
-	// regular thinking
-	if (!SV_RunThink (ent))
-		return;
 
 	// don't stick to ground if onground and moving upward
 	if (ent->v->velocity[2] >= (1.0 / 32.0) && ((int)ent->v->flags & FL_ONGROUND))
@@ -1375,9 +1331,6 @@ void SV_Physics_Step (edict_t *ent)
 			SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
 	}
 
-// regular thinking
-	SV_RunThink(ent);
-
 	SV_CheckWaterTransition(ent);
 }
 
@@ -1391,7 +1344,9 @@ SV_Physics
 */
 void SV_Physics (void)
 {
-	int i;
+	int i, end, retouch;
+	float nexttime;
+	vec3_t oldorigin;
 	edict_t *ent;
 
 // let the progs know that a new frame has started
@@ -1400,32 +1355,16 @@ void SV_Physics (void)
 	pr_global_struct->time = sv.time;
 	PR_ExecuteProgram (pr_global_struct->StartFrame, "QC function StartFrame is missing");
 
-//
-// treat each object in turn
-//
-	ent = sv.edicts;
-	for (i=0 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
+	retouch = pr_global_struct->force_retouch > 0;
+	end = i = sv_freezenonclients.integer ? svs.maxclients + 1 : sv.num_edicts;
+	for (i = 0, ent = sv.edicts;i < end;i++, ent = NEXT_EDICT(ent))
 	{
-		if (ent->e->free)
-			continue;
-
-		if (pr_global_struct->force_retouch)
-			SV_LinkEdict (ent, true);	// force retouch even for stationary
-
-		if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
-		{
-			// connected slot
-			// call standard client pre-think
-			SV_CheckVelocity (ent);
-			pr_global_struct->time = sv.time;
-			pr_global_struct->self = EDICT_TO_PROG(ent);
-			PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
-			SV_CheckVelocity (ent);
-		}
-		else if (sv_freezenonclients.integer)
+		if (ent->e->free || ent->v->movetype == MOVETYPE_NONE)
 			continue;
 
 		// LordHavoc: merged client and normal entity physics
+		VectorCopy(ent->v->origin, oldorigin);
+
 		switch ((int) ent->v->movetype)
 		{
 		case MOVETYPE_PUSH:
@@ -1433,79 +1372,136 @@ void SV_Physics (void)
 			SV_Physics_Pusher (ent);
 			break;
 		case MOVETYPE_NONE:
-			// LordHavoc: manually inlined the thinktime check here because MOVETYPE_NONE is used on so many objects
-			if (ent->v->nextthink > 0 && ent->v->nextthink <= sv.time + sv.frametime)
-				SV_RunThink (ent);
 			break;
 		case MOVETYPE_FOLLOW:
 			SV_Physics_Follow (ent);
 			break;
 		case MOVETYPE_NOCLIP:
-			if (SV_RunThink(ent))
-			{
-				SV_CheckWater(ent);
-				VectorMA(ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
-				VectorMA(ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
-			}
-			// relink normal entities here, players always get relinked so don't relink twice
-			if (!(i > 0 && i <= svs.maxclients))
-				SV_LinkEdict(ent, false);
+			SV_CheckWater(ent);
+			VectorMA(ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
+			VectorMA(ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
 			break;
 		case MOVETYPE_STEP:
 			SV_Physics_Step (ent);
 			break;
 		case MOVETYPE_WALK:
-			if (SV_RunThink (ent))
-			{
-				if (!SV_CheckWater (ent) && ! ((int)ent->v->flags & FL_WATERJUMP) )
-					SV_AddGravity (ent);
-				SV_CheckStuck (ent);
-				SV_WalkMove (ent);
-				// relink normal entities here, players always get relinked so don't relink twice
-				if (!(i > 0 && i <= svs.maxclients))
-					SV_LinkEdict (ent, true);
-			}
+			if (!SV_CheckWater(ent) && ! ((int)ent->v->flags & FL_WATERJUMP) )
+				SV_AddGravity(ent);
+			SV_CheckStuck(ent);
+			SV_WalkMove(ent);
 			break;
 		case MOVETYPE_TOSS:
 		case MOVETYPE_BOUNCE:
 		case MOVETYPE_BOUNCEMISSILE:
 		case MOVETYPE_FLYMISSILE:
-			SV_Physics_Toss (ent);
+			SV_Physics_Toss(ent);
 			break;
 		case MOVETYPE_FLY:
-			if (i > 0 && i <= svs.maxclients)
+			if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
 			{
-				if (SV_RunThink (ent))
-				{
-					SV_CheckWater (ent);
-					SV_WalkMove (ent);
-				}
+				SV_CheckWater(ent);
+				SV_WalkMove(ent);
 			}
 			else
-				SV_Physics_Toss (ent);
+				SV_Physics_Toss(ent);
 			break;
 		default:
 			Host_Error ("SV_Physics: bad movetype %i", (int)ent->v->movetype);
 			break;
 		}
 
-		if (i >= 1 && i <= svs.maxclients && svs.clients[i-1].spawned)
+		if (!VectorCompare(ent->v->origin, oldorigin) || retouch)
+			SV_LinkEdict(ent, true);
+	}
+
+	for (i = 1, ent = NEXT_EDICT(sv.edicts);i <= svs.maxclients;i++, ent = NEXT_EDICT(ent))
+	{
+		if (ent->e->free || !svs.clients[i-1].spawned)
+			continue;
+
+		// call standard client pre-think
+		SV_CheckVelocity (ent);
+		pr_global_struct->time = sv.time;
+		pr_global_struct->self = EDICT_TO_PROG(ent);
+		PR_ExecuteProgram (pr_global_struct->PlayerPreThink, "QC function PlayerPreThink is missing");
+		SV_CheckVelocity (ent);
+	}
+
+	nexttime = sv.time + sv.frametime;
+	end = i = sv_freezenonclients.integer ? svs.maxclients + 1 : sv.num_edicts;
+	for (i = 0, ent = sv.edicts;i < end;i++, ent = NEXT_EDICT(ent))
+	{
+		if (ent->e->free)
+			continue;
+
+		// LordHavoc: merged client and normal entity physics
+		switch ((int) ent->v->movetype)
 		{
-			SV_CheckVelocity (ent);
-
-			// call standard player post-think
-			SV_LinkEdict (ent, true);
-
-			SV_CheckVelocity (ent);
-
-			pr_global_struct->time = sv.time;
-			pr_global_struct->self = EDICT_TO_PROG(ent);
-			PR_ExecuteProgram (pr_global_struct->PlayerPostThink, "QC function PlayerPostThink is missing");
+		case MOVETYPE_PUSH:
+		case MOVETYPE_FAKEPUSH:
+			if (ent->v->nextthink && ent->v->ltime > ent->v->nextthink)
+			{
+				ent->v->nextthink = 0;
+				pr_global_struct->time = sv.time;
+				pr_global_struct->self = EDICT_TO_PROG(ent);
+				pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
+				PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
+			}
+			break;
+		case MOVETYPE_NONE:
+		case MOVETYPE_FOLLOW:
+		case MOVETYPE_NOCLIP:
+		case MOVETYPE_STEP:
+		case MOVETYPE_WALK:
+		case MOVETYPE_TOSS:
+		case MOVETYPE_BOUNCE:
+		case MOVETYPE_BOUNCEMISSILE:
+		case MOVETYPE_FLY:
+		case MOVETYPE_FLYMISSILE:
+			// LordHavoc: manually inlined SV_RunThink here
+			if (ent->v->nextthink && ent->v->nextthink <= nexttime)
+			{
+				/*
+				SV_RunThink
+				Runs thinking code if time.  There is some play in the exact time the think
+				function will be called, because it is called before any movement is done
+				in a frame.  Not used for pushmove objects, because they must be exact.
+				Returns false if the entity removed itself.
+				*/
+				float thinktime = ent->v->nextthink;
+				if (thinktime && thinktime < sv.time + sv.frametime)
+				{
+					ent->v->nextthink = 0;
+					// don't let things stay in the past.
+					// it is possible to start that way by a trigger with a local time.
+					pr_global_struct->time = max(thinktime, sv.time);
+					pr_global_struct->self = EDICT_TO_PROG(ent);
+					pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
+					PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
+				}
+			}
+			break;
+		default:
+			Host_Error ("SV_Physics: bad movetype %i", (int)ent->v->movetype);
+			break;
 		}
 	}
 
-	if (pr_global_struct->force_retouch)
-		pr_global_struct->force_retouch--;
+	for (i = 1, ent = NEXT_EDICT(sv.edicts);i <= svs.maxclients;i++, ent = NEXT_EDICT(ent))
+	{
+		if (ent->e->free || !svs.clients[i-1].spawned)
+			continue;
+
+		// call standard player post-think
+		SV_LinkEdict (ent, true);
+		SV_CheckVelocity (ent);
+		pr_global_struct->time = sv.time;
+		pr_global_struct->self = EDICT_TO_PROG(ent);
+		PR_ExecuteProgram (pr_global_struct->PlayerPostThink, "QC function PlayerPostThink is missing");
+	}
+
+	if (pr_global_struct->force_retouch > 0)
+		pr_global_struct->force_retouch = max(0, pr_global_struct->force_retouch - 1);
 
 	// LordHavoc: endframe support
 	if (EndFrameQC)
