@@ -173,22 +173,15 @@ void R_Model_Alias_GetMeshVerts(const entity_render_t *ent, aliasmesh_t *mesh, f
 				VectorM(lerp1, verts1->normal, normals);
 			}
 		}
-		else
+		else if (lerp1 != 1)
+		{
 			for (i = 0;i < vertcount;i++, vertices += 4, verts1++)
 				VectorM(lerp1, verts1->origin, vertices);
+		}
+		else
+			for (i = 0;i < vertcount;i++, vertices += 4, verts1++)
+				VectorCopy(verts1->origin, vertices);
 	}
-}
-
-skinframe_t *R_FetchSkinFrame(const entity_render_t *ent)
-{
-	model_t *model = ent->model;
-	int s = ent->skinnum;
-	if ((unsigned int)s >= (unsigned int)model->numskins)
-		s = 0;
-	if (model->skinscenes[s].framecount > 1)
-		return &model->skinframes[model->skinscenes[s].firstframe + (int) (cl.time * 10) % model->skinscenes[s].framecount];
-	else
-		return &model->skinframes[model->skinscenes[s].firstframe];
 }
 
 aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mesh)
@@ -201,8 +194,8 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 		s = model->skinscenes[s].firstframe + (int) (cl.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
 	else
 		s = model->skinscenes[s].firstframe;
-	if (s > mesh->num_skins)
-		return mesh->data_skins;
+	if (s >= mesh->num_skins)
+		s = 0;
 	return mesh->data_skins + s;
 }
 
@@ -411,7 +404,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	if (projectdistance > 0.1)
 	{
 		R_Mesh_Matrix(&ent->matrix);
-		for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++)
+		for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++, mesh++)
 		{
 			skin = R_FetchAliasSkin(ent, mesh);
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
