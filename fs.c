@@ -1069,12 +1069,13 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode, qboolean non
 		return NULL;
 	}
 
-	// For files opened in read mode, we now need to get the length
-	if (mod == O_RDONLY)
-	{
-		file->real_length = lseek (file->handle, 0, SEEK_END);
+	file->real_length = lseek (file->handle, 0, SEEK_END);
+
+	// For files opened in append mode, we start at the end of the file
+	if (mod & O_APPEND)
+		file->position = file->real_length;
+	else
 		lseek (file->handle, 0, SEEK_SET);
-	}
 
 	return file;
 }
@@ -1403,7 +1404,21 @@ Write "datasize" bytes into a file
 */
 size_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 {
-	ssize_t result = write (file->handle, data, datasize);
+	ssize_t result;
+
+	// If necessary, seek to the exact file position we're supposed to be
+	if (file->buff_ind != file->buff_len)
+		lseek (file->handle, file->buff_ind - file->buff_len, SEEK_CUR);
+
+	// Purge cached data
+	FS_Purge (file);
+
+	// Write the buffer and update the position
+	result = write (file->handle, data, datasize);
+	file->position = lseek (file->handle, 0, SEEK_CUR);
+	if (file->real_length < file->position)
+		file->real_length = file->position;
+
 	if (result < 0)
 		return 0;
 
@@ -1422,12 +1437,26 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 {
 	size_t count, done;
 
+	if (buffersize == 0)
+		return 0;
+
+	// Get rid of the ungetc character
+	if (file->ungetc != EOF)
+	{
+		((char*)buffer)[0] = file->ungetc;
+		buffersize--;
+		file->ungetc = EOF;
+		done = 1;
+	}
+	else
+		done = 0;
+
 	// First, we copy as many bytes as we can from "buff"
 	if (file->buff_ind < file->buff_len)
 	{
 		count = file->buff_len - file->buff_ind;
 
-		done = (buffersize > count) ? count : buffersize;
+		done += (buffersize > count) ? count : buffersize;
 		memcpy (buffer, &file->buff[file->buff_ind], done);
 		file->buff_ind += done;
 
@@ -1435,8 +1464,6 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		if (buffersize == 0)
 			return done;
 	}
-	else
-		done = 0;
 
 	// NOTE: at this point, the read buffer is always empty
 
@@ -1460,9 +1487,8 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 				done += nb;
 				file->position += nb;
 
-				// Invalidate the output data (for FS_Seek)
-				file->buff_len = 0;
-				file->buff_ind = 0;
+				// Purge cached data
+				FS_Purge (file);
 			}
 		}
 		else
@@ -1554,9 +1580,8 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			count = buffersize - ztk->zstream.avail_out;
 			file->position += count;
 
-			// Invalidate the output data (for FS_Seek)
-			file->buff_len = 0;
-			file->buff_ind = 0;
+			// Purge cached data
+			FS_Purge (file);
 		}
 
 		done += count;
@@ -1634,19 +1659,14 @@ int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 ====================
 FS_Getc
 
-Get stored ungetc character or the next character of a file
+Get the next character of a file
 ====================
 */
 int FS_Getc (qfile_t* file)
 {
 	char c;
 
-	if (file->ungetc != EOF)
-	{
-		c = file->ungetc;
-		file->ungetc = EOF;
-	}
-	else if (FS_Read (file, &c, 1) != 1)
+	if (FS_Read (file, &c, 1) != 1)
 		return EOF;
 
 	return c;
@@ -1657,12 +1677,17 @@ int FS_Getc (qfile_t* file)
 ====================
 FS_UnGetc
 
-Put a character back into the Getc buffer (only supports one character!)
+Put a character back into the read buffer (only supports one character!)
 ====================
 */
-void FS_UnGetc (qfile_t* file, unsigned char c)
+int FS_UnGetc (qfile_t* file, unsigned char c)
 {
+	// If there's already a character waiting to be read
+	if (file->ungetc != EOF)
+		return EOF;
+
 	file->ungetc = c;
+	return c;
 }
 
 
@@ -1678,11 +1703,6 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	ztoolkit_t *ztk;
 	qbyte* buffer;
 	size_t buffersize;
-
-	// if this is an uncompressed real file we can just call the kernel seek
-	// (necessary when writing files)
-	if (file->offset == 0 && ! (file->flags & QFILE_FLAG_DEFLATED))
-		return lseek (file->handle, offset, whence);
 
 	// Compute the file offset
 	switch (whence)
@@ -1712,9 +1732,8 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		return 0;
 	}
 
-	// Invalidate the read buffer contents
-	file->buff_ind = 0;
-	file->buff_len = 0;
+	// Purge cached data
+	FS_Purge (file);
 
 	// Unpacked or uncompressed files can seek directly
 	if (! (file->flags & QFILE_FLAG_DEFLATED))
@@ -1777,12 +1796,22 @@ Give the current position in a file
 */
 long FS_Tell (qfile_t* file)
 {
-	// if this is an uncompressed real file we can just call the kernel tell
-	// (necessary when writing files)
-	if (file->offset == 0 && ! (file->flags & QFILE_FLAG_DEFLATED))
-		return lseek (file->handle, 0, SEEK_CUR);
-	else
-		return file->position - file->buff_len + file->buff_ind;
+	return file->position - file->buff_len + file->buff_ind;
+}
+
+
+/*
+====================
+FS_Purge
+
+Erases any buffered input or output data
+====================
+*/
+void FS_Purge (qfile_t* file)
+{
+	file->buff_len = 0;
+	file->buff_ind = 0;
+	file->ungetc = EOF;
 }
 
 
