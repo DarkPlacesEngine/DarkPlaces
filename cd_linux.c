@@ -36,7 +36,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 // used by menu to ghost CD audio slider
-qboolean cdaudioinitialized = false;
+cvar_t	cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0"};
 static qboolean cdValid = false;
 static qboolean playing = false;
 static qboolean wasPlaying = false;

@@ -42,7 +42,6 @@ int total_channels;
 
 int snd_blocked = 0;
 static qboolean snd_ambient = 1;
-//qboolean snd_initialized = false;
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 
 // pointer should go away

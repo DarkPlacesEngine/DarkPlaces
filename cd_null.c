@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "quakedef.h"
 
-qboolean cdaudioinitialized = false;
+cvar_t	cdaudioinitialized = {CVAR_READONLY,"cdaudioinitialized","0"};
 
 void CDAudio_Play(qbyte track, qboolean looping)
 {
@@ -48,6 +48,7 @@ void CDAudio_Update(void)
 
 int CDAudio_Init(void)
 {
+	Cvar_RegisterVariable(&cdaudioinitialized);
 	return 0;
 }
 

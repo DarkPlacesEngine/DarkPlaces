@@ -26,13 +26,14 @@ cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
 cvar_t snd_staticvolume = {CVAR_SAVE, "snd_staticvolume", "1"};
 
-qboolean snd_initialized = false;
+cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 
 void S_Init (void)
 {
 	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&snd_staticvolume);
+	Cvar_RegisterVariable(&snd_initialized);
 }
 
 void S_AmbientOff (void)
