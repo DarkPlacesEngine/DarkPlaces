@@ -478,7 +478,10 @@ loc0:
 		if (touch == clip->passedict)
 			continue;
 		if (touch->v.solid == SOLID_TRIGGER)
+		{
+			ED_Print(touch);
 			Host_Error ("Trigger in clipping list");
+		}
 
 		if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP)
 			continue;
