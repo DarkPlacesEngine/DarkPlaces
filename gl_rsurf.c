@@ -2506,7 +2506,7 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				// if compiling an rtlight, capture the mesh
 				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->data_vertex3f, surface->data_svector3f, surface->data_tvector3f, surface->data_normal3f, surface->data_texcoordtexture2f, surface->num_triangles, surface->data_element3i);
 			}
-			else if ((ent != &cl_entities[0].render || surface->visframe == r_framecount) && !(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles)
+			else if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles)
 				R_Shadow_RenderLighting(surface->num_vertices, surface->num_triangles, surface->data_element3i, surface->data_vertex3f, surface->data_svector3f, surface->data_tvector3f, surface->data_normal3f, surface->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, surface->texture->skin.base, surface->texture->skin.nmap, surface->texture->skin.gloss, lightcubemap, LIGHTING_DIFFUSE | LIGHTING_SPECULAR);
 		}
 	}
