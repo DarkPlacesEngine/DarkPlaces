@@ -1562,7 +1562,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				if (t->flags & SURF_LIGHTMAP && t->skin.fog == NULL)
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
-			else if (ent != r_refdef.worldentity || r_worldsurfacevisible[surface - ent->model->brush.data_surfaces])
+			else if (ent != r_refdef.worldentity || r_worldsurfacevisible[surfacelist[surfacelistindex]])
 			{
 				t = surface->texture->currentframe;
 				// FIXME: transparent surfaces need to be lit later
@@ -2289,7 +2289,7 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				// if compiling an rtlight, capture the mesh
 				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
-			else if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->mesh.num_triangles)
+			else if ((ent != r_refdef.worldentity || r_worldsurfacevisible[surfacelist[surfacelistindex]]) && !(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->mesh.num_triangles)
 			{
 				if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 					qglDisable(GL_CULL_FACE);
