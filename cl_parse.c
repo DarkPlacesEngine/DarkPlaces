@@ -1516,7 +1516,6 @@ void CL_ParseServerMessage(void)
 					if (i >= 1 && i < MAX_SOUNDS)
 					{
 						sfx_t *sfx = S_PrecacheSound (s, true, false);
-						// FIXME: SFXFLAG_SERVEROSUND should be set on the sfx
 						if (!sfx)
 							Con_Printf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
 						cl.sound_precache[i] = sfx;
