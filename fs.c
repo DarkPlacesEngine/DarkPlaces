@@ -357,7 +357,7 @@ qboolean PK3_OpenLibrary (void)
 #elif defined(MACOSX)
 	dllname = "libz.dylib";
 #else
-	dllname = "libz.so";
+	dllname = "libz.so.1";
 #endif
 
 	// Load the DLL

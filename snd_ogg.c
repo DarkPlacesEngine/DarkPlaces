@@ -311,8 +311,8 @@ qboolean OGG_OpenLibrary (void)
 	dllname_vo = "libvorbis.dylib";
 	dllname_vf = "libvorbisfile.dylib";
 #else
-	dllname_vo = "libvorbis.so";
-	dllname_vf = "libvorbisfile.so";
+	dllname_vo = "libvorbis.so.0";
+	dllname_vf = "libvorbisfile.so.3";
 #endif
 
 	// Load the DLLs
