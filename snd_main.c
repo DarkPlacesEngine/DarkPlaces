@@ -61,7 +61,12 @@ int paintedtime;
 // Linked list of known sfx
 sfx_t *known_sfx = NULL;
 
-int sound_started = 0;
+qboolean sound_started = false;
+qboolean sound_spatialized = false;
+
+// Fake dma is a synchronous faking of the DMA progress used for
+// isolating performance in the renderer.
+qboolean fakedma = false;
 
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
@@ -81,15 +86,6 @@ cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0"};
 // ====================================================================
 // User-setable variables
 // ====================================================================
-
-
-//
-// Fake dma is a synchronous faking of the DMA progress used for
-// isolating performance in the renderer.
-//
-
-qboolean fakedma = false;
-
 
 void S_SoundInfo_f(void)
 {
@@ -132,13 +128,14 @@ void S_Startup(void)
 		if (!SNDDMA_Init())
 		{
 			Con_Print("S_Startup: SNDDMA_Init failed.\n");
-			sound_started = 0;
 			shm = NULL;
+			sound_started = false;
+			sound_spatialized = false;
 			return;
 		}
 	}
 
-	sound_started = 1;
+	sound_started = true;
 
 	Con_DPrintf("Sound sampling rate: %i\n", shm->format.speed);
 
@@ -156,7 +153,8 @@ void S_Shutdown(void)
 		SNDDMA_Shutdown();
 
 	shm = NULL;
-	sound_started = 0;
+	sound_started = false;
+	sound_spatialized = false;
 }
 
 void S_Restart_f(void)
@@ -794,12 +792,12 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	Matrix4x4_Invert_Simple(&listener_matrix, listenermatrix);
 	Matrix4x4_OriginFromMatrix(listenermatrix, listener_origin);
 
-// update general area ambient sound sources
+	// update general area ambient sound sources
 	S_UpdateAmbientSounds ();
 
 	combine = NULL;
 
-// update spatialization for static and dynamic sounds
+	// update spatialization for static and dynamic sounds
 	ch = channels+NUM_AMBIENTS;
 	for (i=NUM_AMBIENTS ; i<total_channels; i++, ch++)
 	{
@@ -809,12 +807,11 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		if (!ch->leftvol && !ch->rightvol)
 			continue;
 
-	// try to combine static sounds with a previous channel of the same
-	// sound effect so we don't mix five torches every frame
-
+		// try to combine static sounds with a previous channel of the same
+		// sound effect so we don't mix five torches every frame
 		if (i > MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS)
 		{
-		// see if it can just use the last one
+			// see if it can just use the last one
 			if (combine && combine->sfx == ch->sfx)
 			{
 				combine->leftvol += ch->leftvol;
@@ -822,7 +819,7 @@ void S_Update(const matrix4x4_t *listenermatrix)
 				ch->leftvol = ch->rightvol = 0;
 				continue;
 			}
-		// search for one
+			// search for one
 			combine = channels+MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;
 			for (j=MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS ; j<i; j++, combine++)
 				if (combine->sfx == ch->sfx)
@@ -843,9 +840,9 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		}
 	}
 
-//
-// debugging output
-//
+	sound_spatialized = true;
+
+	// debugging output
 	if (snd_show.integer)
 	{
 		total = 0;
@@ -857,7 +854,6 @@ void S_Update(const matrix4x4_t *listenermatrix)
 		Con_Printf("----(%u)----\n", total);
 	}
 
-// mix some sound
 	S_Update_();
 }
 
@@ -870,8 +866,8 @@ void GetSoundtime(void)
 
 	fullsamples = shm->samples / shm->format.channels;
 
-// it is possible to miscount buffers if it has wrapped twice between
-// calls to S_Update.  Oh well.
+	// it is possible to miscount buffers if it has wrapped twice between
+	// calls to S_Update.  Oh well.
 	samplepos = SNDDMA_GetDMAPos();
 
 	if (samplepos < oldsamplepos)
@@ -892,8 +888,9 @@ void GetSoundtime(void)
 
 void S_ExtraUpdate (void)
 {
-	if (snd_noextraupdate.integer)
-		return;		// don't pollute timings
+	if (snd_noextraupdate.integer || !sound_spatialized)
+		return;
+
 	S_Update_();
 }
 
