@@ -558,12 +558,12 @@ static void R_BlendView(void)
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = vertex3f;
+	R_Mesh_State(&m);
 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // magic
-	GL_VertexPointer(vertex3f);
 	GL_ColorPointer(NULL);
 	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 	r = 64;
@@ -765,7 +765,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
+	R_Mesh_State(&m);
 
 	R_Mesh_GetSpace(8);
 	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2];
@@ -836,7 +836,8 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&ent->matrix);
 
 	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = nomodelvertex3f;
+	R_Mesh_State(&m);
 
 	if (ent->flags & EF_ADDITIVE)
 	{
@@ -854,7 +855,6 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		GL_DepthMask(true);
 	}
 	GL_DepthTest(true);
-	GL_VertexPointer(nomodelvertex3f);
 	if (fogenabled)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
@@ -937,7 +937,6 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	R_Mesh_Matrix(&r_identitymatrix);
 	GL_ColorPointer(NULL);
 	GL_Color(cr, cg, cb, ca);
-	GL_VertexPointer(varray_vertex3f);
 	GL_BlendFunc(blendfunc1, blendfunc2);
 	GL_DepthMask(false);
 	GL_DepthTest(!depthdisable);
@@ -945,7 +944,8 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(texture);
 	m.pointer_texcoord[0] = spritetexcoord2f;
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = varray_vertex3f;
+	R_Mesh_State(&m);
 
 	varray_vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
 	varray_vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;

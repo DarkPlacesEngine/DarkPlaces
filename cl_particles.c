@@ -1885,7 +1885,8 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	memset(&m, 0, sizeof(m));
 	m.tex[0] = R_GetTexture(tex->texture);
 	m.pointer_texcoord[0] = particle_texcoord2f;
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = particle_vertex3f;
+	R_Mesh_State(&m);
 
 	if (p->blendmode == 0)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1895,7 +1896,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	GL_VertexPointer(particle_vertex3f);
 #endif
 	if (p->orientation == PARTICLE_BILLBOARD || p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 	{

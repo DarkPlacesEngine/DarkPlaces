@@ -237,12 +237,12 @@ static void R_SkyBox(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // don't modify or read zbuffer
-	GL_VertexPointer(skyboxvertex3f);
+	m.pointer_vertex = skyboxvertex3f;
 	m.pointer_texcoord[0] = skyboxtexcoord2f;
 	for (i = 0;i < 6;i++)
 	{
 		m.tex[0] = R_GetTexture(skyboxside[i]);
-		R_Mesh_State_Texture(&m);
+		R_Mesh_State(&m);
 		R_Mesh_Draw(6*4, 2, skyboxelements + i * 6);
 	}
 }
@@ -327,13 +327,13 @@ static void R_SkySphere(void)
 	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale * 2, speedscale * 2, 0);
 	Matrix4x4_CreateIdentity(&identitymatrix);
 
-	GL_VertexPointer(skysphere_vertex3f);
 	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // don't modify or read zbuffer
 	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = skysphere_vertex3f;
 	m.tex[0] = R_GetTexture(solidskytexture);
 	m.pointer_texcoord[0] = skysphere_texcoord2f;
 	R_Mesh_TextureMatrix(0, &scroll1matrix);
@@ -343,7 +343,7 @@ static void R_SkySphere(void)
 		m.tex[1] = R_GetTexture(alphaskytexture);
 		m.texcombinergb[1] = gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL;
 		m.pointer_texcoord[1] = skysphere_texcoord2f;
-		R_Mesh_State_Texture(&m);
+		R_Mesh_State(&m);
 		R_Mesh_TextureMatrix(1, &scroll2matrix);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 		R_Mesh_TextureMatrix(1, &identitymatrix);
@@ -351,12 +351,12 @@ static void R_SkySphere(void)
 	else
 	{
 		// two pass
-		R_Mesh_State_Texture(&m);
+		R_Mesh_State(&m);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		m.tex[0] = R_GetTexture(alphaskytexture);
-		R_Mesh_State_Texture(&m);
+		R_Mesh_State(&m);
 		R_Mesh_TextureMatrix(0, &scroll2matrix);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
 	}

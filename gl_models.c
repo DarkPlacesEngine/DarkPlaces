@@ -234,10 +234,10 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				m.texrgbscale[0] = 4;
 			}
 		}
-		R_Mesh_State_Texture(&m);
+		m.pointer_vertex = varray_vertex3f;
+		R_Mesh_State(&m);
 
 		c_alias_polys += mesh->num_triangles;
-		GL_VertexPointer(varray_vertex3f);
 		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 		if (layer->flags & ALIASLAYER_FOG)
 		{
@@ -739,7 +739,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		GL_DepthMask(true);
 	}
 	GL_DepthTest(true);
-	GL_VertexPointer(varray_vertex3f);
 
 	memset(&mstate, 0, sizeof(mstate));
 	colorscale = 1.0f;
@@ -750,7 +749,8 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	}
 	mstate.tex[0] = R_GetTexture(texture);
 	mstate.pointer_texcoord[0] = ent->model->alias.zymdata_texcoords;
-	R_Mesh_State_Texture(&mstate);
+	mstate.pointer_vertex = varray_vertex3f;
+	R_Mesh_State(&mstate);
 
 	ZymoticLerpBones(ent->model->alias.zymnum_bones, (zymbonematrix *) ent->model->alias.zymdata_poses, ent->frameblend, ent->model->alias.zymdata_bones);
 
@@ -774,13 +774,13 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
-		GL_VertexPointer(varray_vertex3f);
 
 		memset(&mstate, 0, sizeof(mstate));
 		// FIXME: need alpha mask for fogging...
 		//mstate.tex[0] = R_GetTexture(texture);
 		//mstate.pointer_texcoord = ent->model->alias.zymdata_texcoords;
-		R_Mesh_State_Texture(&mstate);
+		mstate.pointer_vertex = varray_vertex3f;
+		R_Mesh_State(&mstate);
 
 		GL_ColorPointer(NULL);
 		GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], ent->alpha * fog);

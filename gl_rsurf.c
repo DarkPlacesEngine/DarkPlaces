@@ -763,14 +763,14 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 
-	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
 
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
 		{
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			memset(&m, 0, sizeof(m));
+			m.pointer_vertex = surf->mesh.data_vertex3f;
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -850,11 +850,11 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		qglEnable (GL_TEXTURE_SHADER_NV);
 	}
 
-	GL_VertexPointer(surf->mesh.data_vertex3f);
+	m.pointer_vertex = surf->mesh.data_vertex3f;
 	m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 	m.pointer_texcoord[1] = surf->mesh.data_texcoordtexture2f;
 	m.texcombinergb[1] = GL_REPLACE;
-	R_Mesh_State_Texture(&m);
+	R_Mesh_State(&m);
 	if (fogenabled)
 	{
 		R_FillColors(varray_color4f, surf->mesh.num_vertices, 1, 1, 1, alpha);
@@ -871,14 +871,14 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	if (fogenabled)
 	{
 		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = surf->mesh.data_vertex3f;
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
 		m.tex[0] = R_GetTexture(texture->skin.fog);
-		GL_VertexPointer(surf->mesh.data_vertex3f);
 		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 		GL_ColorPointer(varray_color4f);
-		R_Mesh_State_Texture(&m);
+		R_Mesh_State(&m);
 		RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], alpha, 1, surf->mesh.num_vertices, modelorg);
 		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 	}
@@ -946,9 +946,9 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	GL_DepthTest(true);
 	GL_ColorPointer(varray_color4f);
 
-	GL_VertexPointer(surf->mesh.data_vertex3f);
+	m.pointer_vertex = surf->mesh.data_vertex3f;
 	m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-	R_Mesh_State_Texture(&m);
+	R_Mesh_State(&m);
 	R_FillColors(varray_color4f, surf->mesh.num_vertices, base, base, base, currentalpha);
 	if (!(ent->effects & EF_FULLBRIGHT))
 	{
@@ -973,10 +973,10 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	m.tex[0] = R_GetTexture(texture->skin.glow);
 	GL_ColorPointer(varray_color4f);
 
-	GL_VertexPointer(surf->mesh.data_vertex3f);
+	m.pointer_vertex = surf->mesh.data_vertex3f;
 	if (m.tex[0])
 		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-	R_Mesh_State_Texture(&m);
+	R_Mesh_State(&m);
 	RSurf_FoggedColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surf->mesh.num_vertices, modelorg);
 	R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 }
@@ -993,10 +993,10 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	m.tex[0] = R_GetTexture(texture->skin.fog);
 	GL_ColorPointer(varray_color4f);
 
-	GL_VertexPointer(surf->mesh.data_vertex3f);
+	m.pointer_vertex = surf->mesh.data_vertex3f;
 	if (m.tex[0])
 		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-	R_Mesh_State_Texture(&m);
+	R_Mesh_State(&m);
 	RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surf->mesh.num_vertices, modelorg);
 	R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 }
@@ -1031,17 +1031,13 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(co
 		if (surf->visframe == r_framecount)
 		{
 			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-			//if (m.tex[1] != lightmaptexturenum)
-			//{
-				m.tex[1] = lightmaptexturenum;
-			//	R_Mesh_State_Texture(&m);
-			//}
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.tex[1] = lightmaptexturenum;
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 			m.pointer_texcoord[1] = surf->mesh.data_texcoordlightmap2f;
 			m.pointer_texcoord[2] = surf->mesh.data_texcoorddetail2f;
 			m.pointer_texcoord[3] = surf->mesh.data_texcoordtexture2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1072,16 +1068,12 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(const 
 		if (surf->visframe == r_framecount)
 		{
 			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-			//if (m.tex[1] != lightmaptexturenum)
-			//{
-				m.tex[1] = lightmaptexturenum;
-			//	R_Mesh_State_Texture(&m);
-			//}
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.tex[1] = lightmaptexturenum;
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 			m.pointer_texcoord[1] = surf->mesh.data_texcoordlightmap2f;
 			m.pointer_texcoord[2] = surf->mesh.data_texcoorddetail2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1109,15 +1101,11 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(const entity
 		if (surf->visframe == r_framecount)
 		{
 			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-			//if (m.tex[1] != lightmaptexturenum)
-			//{
-				m.tex[1] = lightmaptexturenum;
-			//	R_Mesh_State_Texture(&m);
-			//}
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.tex[1] = lightmaptexturenum;
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 			m.pointer_texcoord[1] = surf->mesh.data_texcoordlightmap2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1141,9 +1129,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	{
 		if (surf->visframe == r_framecount)
 		{
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1166,14 +1154,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 		if (surf->visframe == r_framecount)
 		{
 			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-			//if (m.tex[0] != lightmaptexturenum)
-			//{
-				m.tex[0] = lightmaptexturenum;
-			//	R_Mesh_State_Texture(&m);
-			//}
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.tex[0] = lightmaptexturenum;
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordlightmap2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1194,10 +1178,10 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 	{
 		if (surf->visframe == r_framecount)
 		{
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			if (m.tex[0])
 				m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, 1, surf->mesh.num_vertices, modelorg);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
@@ -1219,9 +1203,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	{
 		if (surf->visframe == r_framecount)
 		{
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoorddetail2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1242,9 +1226,9 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	{
 		if (surf->visframe == r_framecount)
 		{
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1268,9 +1252,9 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 	{
 		if (surf->visframe == r_framecount)
 		{
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1297,14 +1281,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(const entity_render_t *
 		if (surf->visframe == r_framecount)
 		{
 			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
-			//if (m.tex[0] != lightmaptexturenum)
-			//{
-				m.tex[0] = lightmaptexturenum;
-			//	R_Mesh_State_Texture(&m);
-			//}
-			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.tex[0] = lightmaptexturenum;
+			m.pointer_vertex = surf->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordlightmap2f;
-			R_Mesh_State_Texture(&m);
+			R_Mesh_State(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
@@ -1554,10 +1534,10 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&ent->matrix);
-	GL_VertexPointer(varray_vertex3f);
 
 	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = varray_vertex3f;
+	R_Mesh_State(&m);
 
 	i = portal - ent->model->brushq1.portals;
 	GL_ColorPointer(NULL);
@@ -2045,22 +2025,28 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 void R_DrawCollisionBrush(colbrushf_t *brush)
 {
 	int i;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = brush->points->v;
+	R_Mesh_State(&m);
 	i = ((int)brush) / sizeof(colbrushf_t);
 	GL_ColorPointer(NULL);
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_VertexPointer(brush->points->v);
 	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
 }
 
 void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3mface_t *face)
 {
 	int i;
+	rmeshstate_t m;
 	if (!face->num_collisiontriangles)
 		return;
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = face->data_collisionvertex3f;
+	R_Mesh_State(&m);
 	i = ((int)face) / sizeof(q3mface_t);
 	GL_ColorPointer(NULL);
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_VertexPointer(face->data_collisionvertex3f);
 	R_Mesh_Draw(face->num_collisionvertices, face->num_collisiontriangles, face->data_collisionelement3i);
 }
 
@@ -2098,9 +2084,9 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 	GL_DepthTest(true);
 
 	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 
-	GL_VertexPointer(face->data_vertex3f);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 	GL_ColorMask(1,1,1,1);
 }
@@ -2121,8 +2107,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3mface_t
 	}
 	else
 		GL_Color(0, 0, 0, 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2140,8 +2126,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(entity_render_t *en
 	m.texrgbscale[1] = 2;
 	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2156,8 +2142,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(entity_render_t *ent, q3mface_t *f
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
 	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2172,8 +2158,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(entity_render_t *ent, q3mface_t *
 	m.pointer_texcoord[0] = face->data_texcoordlightmap2f;
 	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2191,8 +2177,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(entity_render_t *ent, q3mface
 		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
 	else
 		GL_Color(1, 1, 1, 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2212,8 +2198,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3mface_t *face
 	}
 	else
 		GL_Color(0, 0, 0, 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2249,8 +2235,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mfac
 		}
 		GL_ColorPointer(varray_color4f);
 	}
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2263,7 +2249,6 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3mface_t
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
-	R_Mesh_State_Texture(&m);
 	mul = 2.0f;
 	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value != 1)
 		mul *= r_shadow_realtime_world_lightmaps.value;
@@ -2280,7 +2265,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3mface_t
 		}
 		GL_ColorPointer(varray_color4f);
 	}
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2295,8 +2281,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
 	GL_ColorPointer(NULL);
 	GL_Color(r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), 1);
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
@@ -2356,8 +2342,8 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 		}
 		GL_ColorPointer(varray_color4f);
 	}
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
+	m.pointer_vertex = face->data_vertex3f;
+	R_Mesh_State(&m);
 	qglDisable(GL_CULL_FACE);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 	qglEnable(GL_CULL_FACE);
@@ -2530,12 +2516,9 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	}
 	if (r_drawcollisionbrushes.integer >= 1)
 	{
-		rmeshstate_t m;
-		memset(&m, 0, sizeof(m));
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
-		R_Mesh_State_Texture(&m);
 		qglPolygonOffset(r_drawcollisionbrushes_polygonfactor.value, r_drawcollisionbrushes_polygonoffset.value);
 		for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
 			if (model->brushq3.data_thismodel->firstbrush[i].colbrushf && model->brushq3.data_thismodel->firstbrush[i].colbrushf->numtriangles)
