@@ -558,27 +558,6 @@ void MSG_WriteDPCoord (sizebuf_t *sb, float f)
 		MSG_WriteShort (sb, (int)(f - 0.5f));
 }
 
-// used by client
-void MSG_WriteCoord (sizebuf_t *sb, float f)
-{
-	if (dpprotocol == DPPROTOCOL_VERSION2)
-	{
-		if (f >= 0)
-			MSG_WriteShort (sb, (int)(f + 0.5f));
-		else
-			MSG_WriteShort (sb, (int)(f - 0.5f));
-	}
-	else if (dpprotocol == DPPROTOCOL_VERSION1)
-		MSG_WriteFloat(sb, f);
-	else
-	{
-		if (f >= 0)
-			MSG_WriteShort (sb, (int)(f*8.0f + 0.5f));
-		else
-			MSG_WriteShort (sb, (int)(f*8.0f - 0.5f));
-	}
-}
-
 void MSG_WritePreciseAngle (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
@@ -734,7 +713,7 @@ float MSG_ReadDPCoord (void)
 // used by client
 float MSG_ReadCoord (void)
 {
-	if (dpprotocol == DPPROTOCOL_VERSION2)
+	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
 		return (signed short) MSG_ReadShort();
 	else if (dpprotocol == DPPROTOCOL_VERSION1)
 		return MSG_ReadFloat();

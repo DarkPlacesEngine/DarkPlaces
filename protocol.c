@@ -175,12 +175,24 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			delta = &baseline;
 		}
 		bits = 0;
-		if ((int) ent->origin[0] != (int) delta->origin[0])
-			bits |= E_ORIGIN1;
-		if ((int) ent->origin[1] != (int) delta->origin[1])
-			bits |= E_ORIGIN2;
-		if ((int) ent->origin[2] != (int) delta->origin[2])
-			bits |= E_ORIGIN3;
+		if (ent->flags & RENDER_LOWPRECISION)
+		{
+			if ((int) ent->origin[0] != (int) delta->origin[0])
+				bits |= E_ORIGIN1;
+			if ((int) ent->origin[1] != (int) delta->origin[1])
+				bits |= E_ORIGIN2;
+			if ((int) ent->origin[2] != (int) delta->origin[2])
+				bits |= E_ORIGIN3;
+		}
+		else
+		{
+			if (fabs(ent->origin[0] - delta->origin[0]) > 0.01f)
+				bits |= E_ORIGIN1;
+			if (fabs(ent->origin[1] - delta->origin[1]) > 0.01f)
+				bits |= E_ORIGIN2;
+			if (fabs(ent->origin[2] - delta->origin[2]) > 0.01f)
+				bits |= E_ORIGIN3;
+		}
 		if ((qbyte) (ent->angles[0] * (256.0f / 360.0f)) != (qbyte) (delta->angles[0] * (256.0f / 360.0f)))
 			bits |= E_ANGLE1;
 		if ((qbyte) (ent->angles[1] * (256.0f / 360.0f)) != (qbyte) (delta->angles[1] * (256.0f / 360.0f)))
@@ -235,12 +247,27 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 						MSG_WriteByte(msg, (bits >> 24) & 0xFF);
 				}
 			}
-			if (bits & E_ORIGIN1)
-				MSG_WriteShort(msg, ent->origin[0]);
-			if (bits & E_ORIGIN2)
-				MSG_WriteShort(msg, ent->origin[1]);
-			if (bits & E_ORIGIN3)
-				MSG_WriteShort(msg, ent->origin[2]);
+			// LordHavoc: have to write flags first, as they can modify protocol
+			if (bits & E_FLAGS)
+				MSG_WriteByte(msg, ent->flags);
+			if (ent->flags & RENDER_LOWPRECISION)
+			{
+				if (bits & E_ORIGIN1)
+					MSG_WriteShort(msg, ent->origin[0]);
+				if (bits & E_ORIGIN2)
+					MSG_WriteShort(msg, ent->origin[1]);
+				if (bits & E_ORIGIN3)
+					MSG_WriteShort(msg, ent->origin[2]);
+			}
+			else
+			{
+				if (bits & E_ORIGIN1)
+					MSG_WriteFloat(msg, ent->origin[0]);
+				if (bits & E_ORIGIN2)
+					MSG_WriteFloat(msg, ent->origin[1]);
+				if (bits & E_ORIGIN3)
+					MSG_WriteFloat(msg, ent->origin[2]);
+			}
 			if (bits & E_ANGLE1)
 				MSG_WriteAngle(msg, ent->angles[0]);
 			if (bits & E_ANGLE2)
@@ -271,8 +298,6 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 				MSG_WriteByte(msg, ent->glowsize);
 			if (bits & E_GLOWCOLOR)
 				MSG_WriteByte(msg, ent->glowcolor);
-			if (bits & E_FLAGS)
-				MSG_WriteByte(msg, ent->flags);
 		}
 	}
 	for (;onum < o->numentities;onum++)
@@ -365,12 +390,38 @@ void EntityFrame_Read(entity_database_t *d)
 				}
 			}
 
-			if (bits & E_ORIGIN1)
-				e->origin[0] = (signed short) MSG_ReadShort();
-			if (bits & E_ORIGIN2)
-				e->origin[1] = (signed short) MSG_ReadShort();
-			if (bits & E_ORIGIN3)
-				e->origin[2] = (signed short) MSG_ReadShort();
+			if (dpprotocol == DPPROTOCOL_VERSION2)
+			{
+				if (bits & E_ORIGIN1)
+					e->origin[0] = (signed short) MSG_ReadShort();
+				if (bits & E_ORIGIN2)
+					e->origin[1] = (signed short) MSG_ReadShort();
+				if (bits & E_ORIGIN3)
+					e->origin[2] = (signed short) MSG_ReadShort();
+			}
+			else
+			{
+				if (bits & E_FLAGS)
+					e->flags = MSG_ReadByte();
+				if (e->flags & RENDER_LOWPRECISION || dpprotocol == DPPROTOCOL_VERSION2)
+				{
+					if (bits & E_ORIGIN1)
+						e->origin[0] = (signed short) MSG_ReadShort();
+					if (bits & E_ORIGIN2)
+						e->origin[1] = (signed short) MSG_ReadShort();
+					if (bits & E_ORIGIN3)
+						e->origin[2] = (signed short) MSG_ReadShort();
+				}
+				else
+				{
+					if (bits & E_ORIGIN1)
+						e->origin[0] = MSG_ReadFloat();
+					if (bits & E_ORIGIN2)
+						e->origin[1] = MSG_ReadFloat();
+					if (bits & E_ORIGIN3)
+						e->origin[2] = MSG_ReadFloat();
+				}
+			}
 			if (bits & E_ANGLE1)
 				e->angles[0] = MSG_ReadAngle();
 			if (bits & E_ANGLE2)
@@ -401,8 +452,9 @@ void EntityFrame_Read(entity_database_t *d)
 				e->glowsize = MSG_ReadByte();
 			if (bits & E_GLOWCOLOR)
 				e->glowcolor = MSG_ReadByte();
-			if (bits & E_FLAGS)
-				e->flags = MSG_ReadByte();
+			if (dpprotocol == DPPROTOCOL_VERSION2)
+				if (bits & E_FLAGS)
+					e->flags = MSG_ReadByte();
 		}
 	}
 	while (old < oldend)
