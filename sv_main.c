@@ -35,6 +35,8 @@ static mempool_t *sv_edicts_mempool = NULL;
 
 //============================================================================
 
+extern void SV_Phys_Init (void);
+
 /*
 ===============
 SV_Init
@@ -60,6 +62,8 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_portal);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
+
+	SV_Phys_Init();
 
 	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
@@ -1805,7 +1809,7 @@ void SV_SpawnServer (char *server)
 
 // serverflags are for cross level information (sigils)
 	pr_global_struct->serverflags = svs.serverflags;
-	
+
 	ED_LoadFromFile (sv.worldmodel->entities);
 	// LordHavoc: clear world angles (to fix e3m3.bsp)
 	VectorClear(sv.edicts->v.angles);

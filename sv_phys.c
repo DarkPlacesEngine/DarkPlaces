@@ -44,10 +44,16 @@ cvar_t	sv_stopspeed = {0, "sv_stopspeed","100"};
 cvar_t	sv_gravity = {CVAR_NOTIFY, "sv_gravity","800"};
 cvar_t	sv_maxvelocity = {0, "sv_maxvelocity","2000"};
 cvar_t	sv_nostep = {0, "sv_nostep","0"};
+cvar_t	sv_stepheight = {0, "sv_stepheight", "18"};
 
 #define	MOVE_EPSILON	0.01
 
 void SV_Physics_Toss (edict_t *ent);
+
+void SV_Phys_Init (void)
+{
+	Cvar_RegisterVariable(&sv_stepheight);
+}
 
 /*
 ================
@@ -778,7 +784,7 @@ void SV_CheckStuck (edict_t *ent)
 		SV_LinkEdict (ent, true);
 		return;
 	}
-	
+
 	for (z=0 ; z< 18 ; z++)
 		for (i=-1 ; i <= 1 ; i++)
 			for (j=-1 ; j <= 1 ; j++)
@@ -931,7 +937,6 @@ SV_WalkMove
 Only used by players
 ======================
 */
-#define	STEPSIZE	18
 void SV_WalkMove (edict_t *ent)
 {
 	vec3_t		upmove, downmove;
@@ -977,8 +982,8 @@ void SV_WalkMove (edict_t *ent)
 
 	VectorClear (upmove);
 	VectorClear (downmove);
-	upmove[2] = STEPSIZE;
-	downmove[2] = -STEPSIZE + oldvel[2]*sv.frametime;
+	upmove[2] = sv_stepheight.value;
+	downmove[2] = -sv_stepheight.value + oldvel[2]*sv.frametime;
 
 // move up
 	SV_PushEntity (ent, upmove, vec3_origin);	// FIXME: don't link?
@@ -1257,10 +1262,11 @@ void SV_Physics_Toss (edict_t *ent)
 		groundentity = PROG_TO_EDICT(ent->v.groundentity);
 		if (groundentity != NULL && groundentity->v.solid == SOLID_BSP)
 			ent->suspendedinairflag = true;
-		else if (ent->suspendedinairflag && (groundentity == NULL || groundentity->v.solid != SOLID_BSP))
+		else if (ent->suspendedinairflag && (groundentity == NULL || groundentity->free))
 		{
 			// leave it suspended in the air
 			ent->v.groundentity = 0;
+			ent->suspendedinairflag = false;
 			return;
 		}
 	}
