@@ -1389,6 +1389,8 @@ void SV_SpawnServer (char *server)
 
 	sv.time = 1.0;
 
+	Mod_ClearUsed();
+
 	strcpy (sv.name, server);
 	sprintf (sv.modelname,"maps/%s.bsp", server);
 	sv.worldmodel = Mod_ForName(sv.modelname, false, true, true);
@@ -1449,6 +1451,8 @@ void SV_SpawnServer (char *server)
 	sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
 	SV_Physics ();
 	SV_Physics ();
+
+	Mod_PurgeUnused();
 
 // create a baseline for more efficient communications
 	SV_CreateBaseline ();
