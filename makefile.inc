@@ -193,7 +193,7 @@ OBJ_WINCD=cd_win.o
 #if you want no CD audio
 #OBJ_WINCD=$(OBJ_NOCD)
 
-OBJ_WGL= builddate.c sys_win.o vid_wgl.o conproc.o $(OBJ_WINSOUND) $(OBJ_WINCD) $(OBJ_COMMON)
+OBJ_WGL= builddate.c darkplaces.o sys_win.o vid_wgl.o conproc.o $(OBJ_WINSOUND) $(OBJ_WINCD) $(OBJ_COMMON)
 
 # Link
 LDFLAGS_WINCOMMON=-lwinmm -lwsock32
@@ -307,6 +307,9 @@ vid_sdl.o: vid_sdl.c
 
 sys_sdl.o: sys_sdl.c
 	$(DO_CC) `sdl-config --cflags`
+
+darkplaces.o: %.o : %.rc
+	windres -o $@ $<
 
 .c.o:
 	$(DO_CC)
