@@ -7,8 +7,6 @@
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelements[768];
 
-void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, const int *index);
-
 void GL_SetupView_ViewPort (int x, int y, int width, int height);
 void GL_SetupView_Orientation_Identity (void);
 void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles);
