@@ -343,8 +343,9 @@ void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark,
 	{
 		if (!info->surfacemark[*mark])
 		{
+			// FIXME?  this assumes q1bsp polygon surfaces
 			surf = info->model->brushq1.surfaces + *mark;
-			if (surf->poly_numverts)
+			if (surf->mesh.num_vertices)
 			{
 				if (surf->flags & SURF_PLANEBACK)
 				{
@@ -356,7 +357,7 @@ void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark,
 					if (DotProduct(info->eye, surf->plane->normal) < surf->plane->dist)
 						continue;
 				}
-				if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, surf->poly_verts, surf->poly_numverts, &portaltemppoints2[0][0], 256) < 3)
+				if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, surf->mesh.data_vertex3f, surf->mesh.num_vertices, &portaltemppoints2[0][0], 256) < 3)
 					continue;
 			}
 			else

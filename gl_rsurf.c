@@ -918,7 +918,11 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			msurface_t *surface = texturesurfacelist[texturesurfaceindex];
-			Matrix4x4_Transform(&ent->matrix, surface->poly_center, center);
+			vec3_t tempcenter;
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+			Matrix4x4_Transform(&ent->matrix, tempcenter, center);
 			R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->brushq1.surfaces);
 		}
 	}
@@ -1472,7 +1476,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
 						surface = model->brushq1.surfaces + surfaceindex;
-						if (BoxesOverlap(lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs) && (surface->flags & SURF_LIGHTMAP) && !surface->texinfo->texture->skin.fog)
+						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && (surface->flags & SURF_LIGHTMAP) && !surface->texinfo->texture->skin.fog)
 						{
 							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
 							{
@@ -1524,7 +1528,7 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brushq1.surfaces + surfacelist[surfacelistindex];
-			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->mesh.num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs);
+			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->mesh.num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
 	}
