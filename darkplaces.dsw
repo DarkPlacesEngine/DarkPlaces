@@ -3,7 +3,19 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "darkplaces"=.\darkplaces.dsp - Package Owner=<4>
+Project: "darkplaces"=".\darkplaces.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "dedicated"=".\dedicated.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
