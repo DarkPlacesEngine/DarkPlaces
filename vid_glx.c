@@ -684,7 +684,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 #if defined(__APPLE__) && defined(__MACH__)
 	drivername = "/usr/X11R6/lib/libGL.1.dylib";
 #else
-	drivername = "libGL.so.1"
+	drivername = "libGL.so.1";
 #endif
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
