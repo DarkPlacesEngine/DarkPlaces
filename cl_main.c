@@ -832,6 +832,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 		 && !(e->render.flags & RENDER_VIEWMODEL)
 		 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && cl.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 			e->render.flags |= RENDER_SHADOW;
+		if (!(e->render.effects & EF_FULLBRIGHT))
+			e->render.flags |= RENDER_LIGHT;
 		// as soon as player is known we can call V_CalcRefDef
 		if ((e - cl_entities) == cl.viewentity)
 			V_CalcRefdef();

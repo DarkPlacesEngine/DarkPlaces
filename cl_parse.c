@@ -447,9 +447,9 @@ void CL_ParseServerInfo (void)
 	// entire entity array was cleared, so just fill in a few fields
 	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
-	//ent->render.scale = 1;
+	ent->render.scale = 1; // some of the renderer still relies on scale
 	ent->render.alpha = 1;
-	ent->render.flags = RENDER_SHADOW;
+	ent->render.flags = RENDER_SHADOW | RENDER_LIGHT;
 	Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, 0, 0, 0, 0, 0, 0, 1);
 	Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
 	CL_BoundingBoxForEntity(&ent->render);

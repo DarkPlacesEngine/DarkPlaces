@@ -47,15 +47,16 @@ animscene_t;
 
 typedef struct skinframe_s
 {
+	rtexture_t *stain; // inverse modulate with background (used for decals and such)
+	rtexture_t *merged; // original texture without glow
 	rtexture_t *base; // original texture without pants/shirt/glow
 	rtexture_t *pants; // pants only (in greyscale)
 	rtexture_t *shirt; // shirt only (in greyscale)
-	rtexture_t *glow; // glow only (fullbrights)
-	rtexture_t *merged; // original texture without glow
-	rtexture_t *fog; // alpha of the base texture (if not opaque)
 	rtexture_t *nmap; // normalmap (bumpmap for dot3)
 	rtexture_t *gloss; // glossmap (for dot3)
 	rtexture_t *detail; // detail texture (silly bumps for non-dot3)
+	rtexture_t *glow; // glow only (fullbrights)
+	rtexture_t *fog; // alpha of the base texture (if not opaque)
 }
 skinframe_t;
 

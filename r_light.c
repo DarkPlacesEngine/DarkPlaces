@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "cl_collision.h"
 #include "r_shadow.h"
 
-rdlight_t r_dlight[MAX_DLIGHTS];
+dlight_t r_dlight[MAX_DLIGHTS];
 int r_numdlights = 0;
 
 cvar_t r_modellights = {CVAR_SAVE, "r_modellights", "4"};
@@ -87,8 +87,6 @@ R_UpdateLights
 void R_UpdateLights(void)
 {
 	int i, j, k;
-	dlight_t *cd;
-	rdlight_t *rd;
 
 // light animations
 // 'm' is normal light, 'a' is no light, 'z' is double bright
@@ -114,36 +112,13 @@ void R_UpdateLights(void)
 
 	for (i = 0;i < MAX_DLIGHTS;i++)
 	{
-		cd = cl_dlights + i;
-		if (cd->radius <= 0)
-			continue;
-		rd = &r_dlight[r_numdlights++];
-		VectorCopy(cd->origin, rd->origin);
-		VectorScale(cd->color, d_lightstylevalue[cd->style] * (1.0f / 256.0f), rd->color);
-		rd->radius = bound(0, cd->radius, 2048.0f);
-		VectorScale(rd->color, rd->radius * 64.0f, rd->light);
-#if 0
-		rd->cullradius2 = DotProduct(rd->light, rd->light) * (0.25f / (64.0f * 64.0f)) + 4096.0f;
-		// clamp radius to avoid overflowing division table in lightmap code
-		rd->cullradius2 = bound(0, rd->cullradius2, 2048.0f*2048.0f);
-		rd->cullradius = sqrt(rd->cullradius2);
-#else
-		rd->cullradius = rd->radius;
-		rd->cullradius2 = rd->cullradius * rd->cullradius;
-#endif
-		rd->subtract = 1.0f / rd->cullradius2;
-		rd->ent = cd->ent;
-		rd->cubemapnum = cd->cubemapnum;
-		rd->shadow = cd->shadow;
-		rd->corona = cd->corona;
-
-		rd->matrix_lighttoworld = cd->matrix;
-		Matrix4x4_ConcatScale(&rd->matrix_lighttoworld, rd->cullradius);
-		Matrix4x4_Invert_Simple(&rd->matrix_worldtolight, &rd->matrix_lighttoworld);
-		Matrix4x4_Concat(&rd->matrix_worldtoattenuationxyz, &matrix_attenuationxyz, &rd->matrix_worldtolight);
-		Matrix4x4_Concat(&rd->matrix_worldtoattenuationz, &matrix_attenuationz, &rd->matrix_worldtolight);
-
-		c_dlights++; // count every dlight in use
+		if (cl_dlights[i].radius > 0)
+		{
+			R_RTLight_UpdateFromDLight(&cl_dlights[i].rtlight, &cl_dlights[i], false);
+			// FIXME: use pointer instead of copy
+			r_dlight[r_numdlights++] = cl_dlights[i];
+			c_dlights++; // count every dlight in use
+		}
 	}
 }
 
@@ -151,37 +126,35 @@ void R_DrawCoronas(void)
 {
 	int i, lnum;
 	float cscale, scale, viewdist, dist;
-	rdlight_t *rd;
-	worldlight_t *wl;
+	dlight_t *light;
 	if (!r_coronas.integer)
 		return;
 	R_Mesh_Matrix(&r_identitymatrix);
 	viewdist = DotProduct(r_vieworigin, r_viewforward);
 	if (r_shadow_realtime_world.integer)
 	{
-		for (lnum = 0, wl = r_shadow_worldlightchain;wl;wl = wl->next, lnum++)
+		for (lnum = 0, light = r_shadow_worldlightchain;light;light = light->next, lnum++)
 		{
-			if (wl->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(wl->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(wl->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+			if (light->rtlight.corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(light->rtlight.shadoworigin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(light->rtlight.shadoworigin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
 			{
-				cscale = wl->corona * r_coronas.value * 0.25f;
-				scale = wl->radius * 0.25f;
-				R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, wl->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, wl->color[0] * cscale, wl->color[1] * cscale, wl->color[2] * cscale, 1);
+				cscale = light->rtlight.corona * r_coronas.value * 0.25f;
+				scale = light->rtlight.radius * 0.25f;
+				R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, light->rtlight.shadoworigin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->rtlight.color[0] * cscale, light->rtlight.color[1] * cscale, light->rtlight.color[2] * cscale, 1);
 			}
 		}
 	}
-	for (i = 0;i < r_numdlights;i++)
+	for (i = 0, light = r_dlight;i < r_numdlights;i++, light++)
 	{
-		rd = r_dlight + i;
-		if (rd->corona * r_coronas.value > 0 && (dist = (DotProduct(rd->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(rd->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+		if (light->corona * r_coronas.value > 0 && (dist = (DotProduct(light->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(light->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
 		{
-			cscale = rd->corona * r_coronas.value * 0.25f;
-			scale = rd->radius * 0.25f;
+			cscale = light->corona * r_coronas.value * 0.25f;
+			scale = light->radius * 0.25f;
 			if (gl_flashblend.integer)
 			{
 				cscale *= 4.0f;
 				scale *= 2.0f;
 			}
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, rd->color[0] * cscale, rd->color[1] * cscale, rd->color[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, light->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, light->color[0] * cscale, light->color[1] * cscale, light->color[2] * cscale, 1);
 		}
 	}
 }
@@ -202,7 +175,7 @@ static qbyte lightpvs[(MAX_MAP_LEAFS+7)>>3];
 R_MarkLights
 =============
 */
-static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node, qbyte *pvs, int pvsbits)
+static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlight_t *light, int bit, int bitindex, mnode_t *node, qbyte *pvs, int pvsbits)
 {
 	int i;
 	mleaf_t *leaf;
@@ -212,12 +185,12 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdli
 	while(node->contents >= 0)
 	{
 		dist = PlaneDiff(lightorigin, node->plane);
-		if (dist > rd->cullradius)
+		if (dist > light->rtlight.lightmap_cullradius)
 			node = node->children[0];
 		else
 		{
-			if (dist >= -rd->cullradius)
-				R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, node->children[0], pvs, pvsbits);
+			if (dist >= -light->rtlight.lightmap_cullradius)
+				R_RecursiveMarkLights(ent, lightorigin, light, bit, bitindex, node->children[0], pvs, pvsbits);
 			node = node->children[1];
 		}
 	}
@@ -231,7 +204,7 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdli
 		float sdist, maxdist, dist2, impact[3];
 		msurface_t *surf;
 		// mark the polygons
-		maxdist = rd->cullradius2;
+		maxdist = light->rtlight.lightmap_cullradius2;
 		surfacepvsframes = ent->model->brushq1.surfacepvsframes;
 		for (i = 0;i < leaf->nummarksurfaces;i++)
 		{
@@ -283,19 +256,19 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdli
 void R_MarkLights(entity_render_t *ent)
 {
 	int i, bit, bitindex;
-	rdlight_t *rd;
+	dlight_t *light;
 	vec3_t lightorigin;
 	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brushq1.num_leafs)
 	{
-		for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
+		for (i = 0, light = r_dlight;i < r_numdlights;i++, light++)
 		{
 			bit = 1 << (i & 31);
 			bitindex = i >> 5;
-			Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
+			Matrix4x4_Transform(&ent->inversematrix, light->origin, lightorigin);
 			lightpvsbytes = 0;
 			if (r_vismarklights.integer && ent->model->brush.FatPVS)
 				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
-			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
+			R_RecursiveMarkLights(ent, lightorigin, light, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
 		}
 	}
 }
@@ -348,17 +321,17 @@ void R_CompleteLightPoint(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffu
 	{
 		int i;
 		float f, v[3];
-		rdlight_t *rd;
+		dlight_t *light;
 		// FIXME: this really should handle dlights as diffusecolor/diffusenormal somehow
 		for (i = 0;i < r_numdlights;i++)
 		{
-			rd = r_dlight + i;
-			VectorSubtract(p, rd->origin, v);
+			light = r_dlight + i;
+			VectorSubtract(p, light->origin, v);
 			f = DotProduct(v, v);
-			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
+			if (f < light->rtlight.lightmap_cullradius2 && CL_TraceLine(p, light->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) == 1)
 			{
-				f = (1.0f / (f + LIGHTOFFSET)) - rd->subtract;
-				VectorMA(ambientcolor, f, rd->light, ambientcolor);
+				f = (1.0f / (f + LIGHTOFFSET)) - light->rtlight.lightmap_subtract;
+				VectorMA(ambientcolor, f, light->rtlight.lightmap_light, ambientcolor);
 			}
 		}
 	}
@@ -388,7 +361,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	float v[3], f, mscale, stylescale, intensity, ambientcolor[3], tempdiffusenormal[3];
 	nearlight_t *nl;
 	mlight_t *sl;
-	rdlight_t *rd;
+	dlight_t *light;
 
 	nearlights = 0;
 	maxnearlights = r_modellights.integer;
@@ -474,19 +447,19 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	{
 		for (i = 0;i < r_numdlights;i++)
 		{
-			rd = r_dlight + i;
-			VectorCopy(rd->origin, v);
+			light = r_dlight + i;
+			VectorCopy(light->origin, v);
 			if (v[0] < ent->mins[0]) v[0] = ent->mins[0];if (v[0] > ent->maxs[0]) v[0] = ent->maxs[0];
 			if (v[1] < ent->mins[1]) v[1] = ent->mins[1];if (v[1] > ent->maxs[1]) v[1] = ent->maxs[1];
 			if (v[2] < ent->mins[2]) v[2] = ent->mins[2];if (v[2] > ent->maxs[2]) v[2] = ent->maxs[2];
-			VectorSubtract (v, rd->origin, v);
-			if (DotProduct(v, v) < rd->cullradius2)
+			VectorSubtract (v, light->origin, v);
+			if (DotProduct(v, v) < light->rtlight.lightmap_cullradius2)
 			{
-				if (CL_TraceLine(ent->origin, rd->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) != 1)
+				if (CL_TraceLine(ent->origin, light->origin, NULL, NULL, false, NULL, SUPERCONTENTS_SOLID) != 1)
 					continue;
-				VectorSubtract (ent->origin, rd->origin, v);
-				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
-				VectorScale(rd->light, f, ambientcolor);
+				VectorSubtract (ent->origin, light->origin, v);
+				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - light->rtlight.lightmap_subtract);
+				VectorScale(light->rtlight.lightmap_light, f, ambientcolor);
 				intensity = DotProduct(ambientcolor, ambientcolor);
 				if (f < 0)
 					intensity *= -1.0f;
@@ -517,14 +490,14 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 					nl->intensity = intensity;
 					// transform the light into the model's coordinate system
 					if (worldcoords)
-						VectorCopy(rd->origin, nl->origin);
+						VectorCopy(light->origin, nl->origin);
 					else
 					{
-						Matrix4x4_Transform(&ent->inversematrix, rd->origin, nl->origin);
+						Matrix4x4_Transform(&ent->inversematrix, light->origin, nl->origin);
 						/*
 						Con_Printf("%i %s : %f %f %f : %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
 						, rd - r_dlight, ent->model->name
-						, rd->origin[0], rd->origin[1], rd->origin[2]
+						, light->origin[0], light->origin[1], light->origin[2]
 						, nl->origin[0], nl->origin[1], nl->origin[2]
 						, ent->inversematrix.m[0][0], ent->inversematrix.m[0][1], ent->inversematrix.m[0][2], ent->inversematrix.m[0][3]
 						, ent->inversematrix.m[1][0], ent->inversematrix.m[1][1], ent->inversematrix.m[1][2], ent->inversematrix.m[1][3]
@@ -535,10 +508,10 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 					// integrate mscale into falloff, for maximum speed
 					nl->falloff = mscale;
 					VectorCopy(ambientcolor, nl->ambientlight);
-					nl->light[0] = rd->light[0] * colorr * 4.0f;
-					nl->light[1] = rd->light[1] * colorg * 4.0f;
-					nl->light[2] = rd->light[2] * colorb * 4.0f;
-					nl->subtract = rd->subtract;
+					nl->light[0] = light->rtlight.lightmap_light[0] * colorr * 4.0f;
+					nl->light[1] = light->rtlight.lightmap_light[1] * colorg * 4.0f;
+					nl->light[2] = light->rtlight.lightmap_light[2] * colorb * 4.0f;
+					nl->subtract = light->rtlight.lightmap_subtract;
 					nl->offset = LIGHTOFFSET;
 				}
 			}

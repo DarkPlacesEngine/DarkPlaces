@@ -34,6 +34,22 @@
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
+d darkplaces: fixed SV_TouchAreaGrid to not crash if SV_IncreaseEdicts is called during a touch function, by making a list of edicts to touch and then running through the list afterward (KGB|romi)
+d darkplaces: moved R_ShadowVolumeLighting to r_shadow.c
+d darkplaces: added RENDER_LIGHT flag to entity_render_t to make rtlighting optional per entity
+d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
+d darkplaces: safety checked lightmap access in Mod_Q1BSP_RecursiveLightPoint as one map Sajt uses was crashing (Sajt)
+0 darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (Urre)
+0 darkplaces: figure out why cubemap upload scaling crashes (Urre)
+0 darkplaces: make screenshots save to screenshots/fniggium%04i.tga in GAME_FNIGGIUM (Sajt)
+0 darkplaces: make screenshots save to screenshots directory (Sajt)
+2 darkplaces: make corona occlusion testing use GL_ARB_occlusion_query instead of a CL_TraceLine (Riot)
+d darkplaces: default a few cvars accordingly for GAME_TENEBRAE mode
+d darkplaces: add skin and pflags support to light entity loader
+0 darkplaces: add EF_NOSHADOW to make entities that never cast shadows (Urre)
+2 darkplaces: fix fogging in realtime lighting mode, need to split the shaders into two stages, this will also fix decal bugs with fog (Electro, Mitchell)
+0 darkplaces: fix cl_nodelta 1, it's halting updates (Tomaz)
+0 darkplaces: player setup menu network speed is never applying to rate (Mitchell)
 d darkplaces: PF_traceline/PF_tracebox now work with world as the edict
 d darkplaces: make the static light built messages be developer prints (Tomaz)
 d dpmod: use Tomaz's ammo box models (Tomaz) 
@@ -279,7 +295,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 0 sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
 1 darkplaces: add DP_CLIENTCAMERA extension (.entity clientcamera; sets which entity the client views from) (Wazat for Battlemech, SeienAbunae)
 1 darkplaces: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech, SeienAbunae)
-1 darkplaces: add DP_EF_PRECISEANGLES extension (sends short angles instead of byte) (Wazat for Battlemech, FrikaC, mashakos, RenegadeC)
+1 darkplaces: add DP_EF_PRECISEANGLES extension (sends short angles instead of byte) (Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 1 darkplaces: add DP_QC_ENDFRAME extension/documentation and post it on wiki (tell Uffe, SeienAbunae)
 1 darkplaces: add DP_SV_READCLIENTINPUT extension (.vector clientinput; works like .movement but for mouse or any other similar controllers) (Wazat for Battlemech, FrikaC, SeienAbunae)
 1 darkplaces: add EndGame function (called on server shutdown or level change) (SeienAbunae, Nexuiz)

@@ -174,6 +174,8 @@ cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegener
 cvar_t r_shadow_worldshadows = {0, "r_shadow_worldshadows", "1"};
 cvar_t r_shadow_dlightshadows = {CVAR_SAVE, "r_shadow_dlightshadows", "1"};
 cvar_t r_shadow_showtris = {0, "r_shadow_showtris", "0"};
+cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
+cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
 int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
@@ -297,6 +299,8 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_worldshadows);
 	Cvar_RegisterVariable(&r_shadow_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_showtris);
+	Cvar_RegisterVariable(&r_shadow_staticworldlights);
+	Cvar_RegisterVariable(&r_shadow_cull);
 	if (gamemode == GAME_TENEBRAE)
 	{
 		Cvar_SetValue("r_shadow_gloss", 2);
@@ -1285,7 +1289,7 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, co
 	}
 }
 
-void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3], color2[3];
@@ -1574,7 +1578,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 	}
 }
 
-void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3], color2[3], colorscale;
@@ -1786,72 +1790,527 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 	}
 }
 
-void R_Shadow_DrawStaticWorldLight_Shadow(worldlight_t *light, matrix4x4_t *matrix)
+void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int isstatic)
 {
-	R_Mesh_Matrix(matrix);
-	if (r_shadow_showtris.integer)
-	{
-		shadowmesh_t *mesh;
-		rmeshstate_t m;
-		int depthenabled = qglIsEnabled(GL_DEPTH_TEST);
-		int stencilenabled = qglIsEnabled(GL_STENCIL_TEST);
-		qglDisable(GL_DEPTH_TEST);
-		qglDisable(GL_STENCIL_TEST);
-		//qglDisable(GL_CULL_FACE);
-		qglColorMask(1,1,1,1);
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State_Texture(&m);
-		GL_Color(0,0.1,0,1);
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		for (mesh = light->meshchain_shadow;mesh;mesh = mesh->next)
-		{
-			GL_VertexPointer(mesh->vertex3f);
-			R_Mesh_Draw_ShowTris(mesh->numverts, mesh->numtriangles, mesh->element3i);
-		}
-		//qglEnable(GL_CULL_FACE);
-		if (depthenabled)
-			qglEnable(GL_DEPTH_TEST);
-		if (stencilenabled)
-		{
-			qglEnable(GL_STENCIL_TEST);
-			qglColorMask(0,0,0,0);
-		}
-	}
-	R_Shadow_RenderShadowMeshVolume(light->meshchain_shadow);
+	int j, k;
+	float scale;
+	R_RTLight_Uncompile(rtlight);
+	memset(rtlight, 0, sizeof(*rtlight));
+
+	VectorCopy(light->origin, rtlight->shadoworigin);
+	VectorCopy(light->color, rtlight->color);
+	rtlight->radius = light->radius;
+	rtlight->cullradius = rtlight->radius;
+	rtlight->cullradius2 = rtlight->cullradius * rtlight->cullradius;
+	rtlight->cullmins[0] = rtlight->shadoworigin[0] - rtlight->cullradius;
+	rtlight->cullmins[1] = rtlight->shadoworigin[1] - rtlight->cullradius;
+	rtlight->cullmins[2] = rtlight->shadoworigin[2] - rtlight->cullradius;
+	rtlight->cullmaxs[0] = rtlight->shadoworigin[0] + rtlight->cullradius;
+	rtlight->cullmaxs[1] = rtlight->shadoworigin[1] + rtlight->cullradius;
+	rtlight->cullmaxs[2] = rtlight->shadoworigin[2] + rtlight->cullradius;
+	rtlight->cubemapname[0] = 0;
+	if (light->cubemapname[0])
+		strcpy(rtlight->cubemapname, light->cubemapname);
+	else if (light->cubemapnum > 0)
+		sprintf(rtlight->cubemapname, "cubemaps/%i", light->cubemapnum);
+	rtlight->shadow = light->shadow;
+	rtlight->corona = light->corona;
+	rtlight->style = light->style;
+	rtlight->isstatic = isstatic;
+	Matrix4x4_Invert_Simple(&rtlight->matrix_worldtolight, &light->matrix);
+	// ConcatScale won't work here because this needs to scale rotate and
+	// translate, not just rotate
+	scale = 1.0f / rtlight->radius;
+	for (k = 0;k < 3;k++)
+		for (j = 0;j < 4;j++)
+			rtlight->matrix_worldtolight.m[k][j] *= scale;
+	Matrix4x4_Concat(&rtlight->matrix_worldtoattenuationxyz, &matrix_attenuationxyz, &rtlight->matrix_worldtolight);
+	Matrix4x4_Concat(&rtlight->matrix_worldtoattenuationz, &matrix_attenuationz, &rtlight->matrix_worldtolight);
+
+	rtlight->lightmap_cullradius = bound(0, rtlight->radius, 2048.0f);
+	rtlight->lightmap_cullradius2 = rtlight->lightmap_cullradius * rtlight->lightmap_cullradius;
+	VectorScale(rtlight->color, rtlight->radius * d_lightstylevalue[rtlight->style] * 0.25f, rtlight->lightmap_light);
+	rtlight->lightmap_subtract = 1.0f / rtlight->lightmap_cullradius2;
 }
 
-void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matrix, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
+// compiles rtlight geometry
+// (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
+void R_RTLight_Compile(rtlight_t *rtlight)
 {
-	shadowmesh_t *mesh;
-	R_Mesh_Matrix(matrix);
-	if (r_shadow_showtris.integer)
+	int i, j, k, l, maxverts = 256, tris;
+	float *vertex3f = NULL, mins[3], maxs[3];
+	shadowmesh_t *mesh, *castmesh = NULL;
+	int lightpvsbytes;
+	qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
+	qbyte lightfullpvs[(MAX_MAP_LEAFS + 7)/ 8];
+
+	// compile the light
+	rtlight->compiled = true;
+	VectorCopy(rtlight->cullmins, mins);
+	VectorCopy(rtlight->cullmaxs, maxs);
+	if (rtlight->shadow)
+		castmesh = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
+	rtlight->static_meshchain_light = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, true, false, true);
+	if (cl.worldmodel)
 	{
-		rmeshstate_t m;
-		int depthenabled = qglIsEnabled(GL_DEPTH_TEST);
-		int stencilenabled = qglIsEnabled(GL_STENCIL_TEST);
-		qglDisable(GL_DEPTH_TEST);
-		qglDisable(GL_STENCIL_TEST);
-		//qglDisable(GL_CULL_FACE);
+		lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, rtlight->shadoworigin, 0, lightfullpvs, sizeof(lightfullpvs));
+		memset(lightpvs, 0, lightpvsbytes);
+		if (cl.worldmodel->brushq3.num_leafs)
+		{
+			q3mleaf_t *leaf;
+			q3mface_t *face;
+
+			// make a pvs that only includes things within the box
+			for (i = 0, leaf = cl.worldmodel->brushq3.data_leafs;i < cl.worldmodel->brushq3.num_leafs;i++, leaf++)
+				if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+					SETPVSBIT(lightpvs, leaf->clusterindex);
+
+			// make a cluster list for fast visibility checking during rendering
+			for (i = 0, rtlight->static_numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
+				if (CHECKPVSBIT(lightpvs, i))
+					rtlight->static_numclusters++;
+			rtlight->static_clusterindices = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusters * sizeof(int));
+			for (i = 0, rtlight->static_numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
+				if (CHECKPVSBIT(lightpvs, i))
+					rtlight->static_clusterindices[rtlight->static_numclusters++] = i;
+
+			VectorCopy(rtlight->shadoworigin, rtlight->cullmins);
+			VectorCopy(rtlight->shadoworigin, rtlight->cullmaxs);
+			for (i = 0, face = cl.worldmodel->brushq3.data_thismodel->firstface;i < cl.worldmodel->brushq3.data_thismodel->numfaces;i++, face++)
+				face->lighttemp_castshadow = false;
+			for (i = 0, leaf = cl.worldmodel->brushq3.data_leafs;i < cl.worldmodel->brushq3.num_leafs;i++, leaf++)
+			{
+				if (CHECKPVSBIT(lightpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+				{
+					for (k = 0;k < 3;k++)
+					{
+						if (rtlight->cullmins[k] > leaf->mins[k]) rtlight->cullmins[k] = leaf->mins[k];
+						if (rtlight->cullmaxs[k] < leaf->maxs[k]) rtlight->cullmaxs[k] = leaf->maxs[k];
+					}
+					for (j = 0;j < leaf->numleaffaces;j++)
+					{
+						face = leaf->firstleafface[j];
+						if (BoxesOverlap(face->mins, face->maxs, mins, maxs))
+							face->lighttemp_castshadow = true;
+					}
+				}
+			}
+
+			// add surfaces to shadow casting mesh and light mesh
+			for (i = 0, face = cl.worldmodel->brushq3.data_thismodel->firstface;i < cl.worldmodel->brushq3.data_thismodel->numfaces;i++, face++)
+			{
+				if (face->lighttemp_castshadow)
+				{
+					face->lighttemp_castshadow = false;
+					if (!(face->texture->surfaceflags & (Q3SURFACEFLAG_NODRAW | Q3SURFACEFLAG_SKY)))
+					{
+						if (rtlight->shadow)
+							if (!(face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT))
+								Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, face->data_vertex3f, NULL, NULL, NULL, NULL, face->num_triangles, face->data_element3i);
+						if (!(face->texture->surfaceflags & Q3SURFACEFLAG_SKY))
+							Mod_ShadowMesh_AddMesh(r_shadow_mempool, rtlight->static_meshchain_light, face->texture->skin.base, face->texture->skin.gloss, face->texture->skin.nmap, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, face->num_triangles, face->data_element3i);
+					}
+				}
+			}
+		}
+		else if (cl.worldmodel->brushq1.num_leafs)
+		{
+			mleaf_t *leaf;
+			msurface_t *surf;
+			VectorCopy(rtlight->shadoworigin, rtlight->cullmins);
+			VectorCopy(rtlight->shadoworigin, rtlight->cullmaxs);
+			i = CL_PointQ1Contents(rtlight->shadoworigin);
+
+			for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
+				surf->lighttemp_castshadow = false;
+
+			if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
+			{
+				qbyte *byteleafpvs;
+				qbyte *bytesurfacepvs;
+
+				byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.num_leafs);
+				bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
+
+				Portal_Visibility(cl.worldmodel, rtlight->shadoworigin, byteleafpvs, bytesurfacepvs, NULL, 0, true, mins, maxs, rtlight->cullmins, rtlight->cullmaxs);
+
+				// make a pvs that only includes things within the box
+				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
+				{
+					if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+					{
+						SETPVSBIT(lightpvs, leaf->clusterindex);
+						for (k = 0;k < 3;k++)
+						{
+							if (rtlight->cullmins[k] > leaf->mins[k]) rtlight->cullmins[k] = leaf->mins[k];
+							if (rtlight->cullmaxs[k] < leaf->maxs[k]) rtlight->cullmaxs[k] = leaf->maxs[k];
+						}
+					}
+				}
+	
+				for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
+					if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
+						surf->lighttemp_castshadow = true;
+
+				Mem_Free(byteleafpvs);
+				Mem_Free(bytesurfacepvs);
+	
+				// make a cluster list for fast visibility checking during rendering
+				for (i = 0, rtlight->static_numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						rtlight->static_numclusters++;
+				rtlight->static_clusterindices = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusters * sizeof(int));
+				for (i = 0, rtlight->static_numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						rtlight->static_clusterindices[rtlight->static_numclusters++] = i;
+			}
+			else
+			{
+				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
+				{
+					if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+					{
+						// make a pvs that only includes things within the box
+						SETPVSBIT(lightpvs, leaf->clusterindex);
+						for (k = 0;k < 3;k++)
+						{
+							if (rtlight->cullmins[k] > leaf->mins[k]) rtlight->cullmins[k] = leaf->mins[k];
+							if (rtlight->cullmaxs[k] < leaf->maxs[k]) rtlight->cullmaxs[k] = leaf->maxs[k];
+						}
+						for (j = 0;j < leaf->nummarksurfaces;j++)
+						{
+							surf = cl.worldmodel->brushq1.surfaces + leaf->firstmarksurface[j];
+							if (!surf->lighttemp_castshadow && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
+								surf->lighttemp_castshadow = true;
+						}
+					}
+				}
+
+				// make a pvs that only includes things within the box
+				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
+					if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
+						SETPVSBIT(lightpvs, leaf->clusterindex);
+
+				// make a cluster list for fast visibility checking during rendering
+				for (i = 0, rtlight->static_numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						rtlight->static_numclusters++;
+				rtlight->static_clusterindices = Mem_Alloc(r_shadow_mempool, rtlight->static_numclusters * sizeof(int));
+				for (i = 0, rtlight->static_numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
+					if (CHECKPVSBIT(lightpvs, i))
+						rtlight->static_clusterindices[rtlight->static_numclusters++] = i;
+			}
+
+			// add surfaces to shadow casting mesh and light mesh
+			for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
+			{
+				if (surf->lighttemp_castshadow)
+				{
+					surf->lighttemp_castshadow = false;
+					if (rtlight->shadow && (surf->flags & SURF_SHADOWCAST))
+						Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, surf->mesh.data_vertex3f, NULL, NULL, NULL, NULL, surf->mesh.num_triangles, surf->mesh.data_element3i);
+					if (!(surf->flags & SURF_DRAWSKY))
+						Mod_ShadowMesh_AddMesh(r_shadow_mempool, rtlight->static_meshchain_light, surf->texinfo->texture->skin.base, surf->texinfo->texture->skin.gloss, surf->texinfo->texture->skin.nmap, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, surf->mesh.num_triangles, surf->mesh.data_element3i);
+				}
+			}
+		}
+	}
+
+	// limit box to light bounds (in case it grew larger)
+	for (k = 0;k < 3;k++)
+	{
+		if (rtlight->cullmins[k] < rtlight->shadoworigin[k] - rtlight->radius) rtlight->cullmins[k] = rtlight->shadoworigin[k] - rtlight->radius;
+		if (rtlight->cullmaxs[k] > rtlight->shadoworigin[k] + rtlight->radius) rtlight->cullmaxs[k] = rtlight->shadoworigin[k] + rtlight->radius;
+	}
+	rtlight->cullradius = RadiusFromBoundsAndOrigin(rtlight->cullmins, rtlight->cullmaxs, rtlight->shadoworigin);
+	rtlight->cullradius = min(rtlight->cullradius, rtlight->radius);
+
+	// cast shadow volume from castmesh
+	castmesh = Mod_ShadowMesh_Finish(r_shadow_mempool, castmesh, false, true);
+	if (castmesh)
+	{
+		maxverts = 0;
+		for (mesh = castmesh;mesh;mesh = mesh->next)
+		{
+			R_Shadow_ResizeShadowElements(mesh->numtriangles);
+			maxverts = max(maxverts, mesh->numverts * 2);
+		}
+
+		if (maxverts > 0)
+		{
+			vertex3f = Mem_Alloc(r_shadow_mempool, maxverts * sizeof(float[3]));
+			// now that we have the buffers big enough, construct and add
+			// the shadow volume mesh
+			if (rtlight->shadow)
+				rtlight->static_meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
+			for (mesh = castmesh;mesh;mesh = mesh->next)
+			{
+				Mod_BuildTriangleNeighbors(mesh->neighbor3i, mesh->element3i, mesh->numtriangles);
+				if ((tris = R_Shadow_ConstructShadowVolume(castmesh->numverts, 0, castmesh->numtriangles, castmesh->element3i, castmesh->neighbor3i, castmesh->vertex3f, NULL, shadowelements, vertex3f, rtlight->shadoworigin, r_shadow_projectdistance.value)))
+					Mod_ShadowMesh_AddMesh(r_shadow_mempool, rtlight->static_meshchain_shadow, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
+			}
+			Mem_Free(vertex3f);
+			vertex3f = NULL;
+		}
+		// we're done with castmesh now
+		Mod_ShadowMesh_Free(castmesh);
+	}
+
+	rtlight->static_meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, rtlight->static_meshchain_shadow, false, false);
+	rtlight->static_meshchain_light = Mod_ShadowMesh_Finish(r_shadow_mempool, rtlight->static_meshchain_light, true, false);
+
+	k = 0;
+	if (rtlight->static_meshchain_shadow)
+		for (mesh = rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
+			k += mesh->numtriangles;
+	l = 0;
+	if (rtlight->static_meshchain_light)
+		for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
+			l += mesh->numtriangles;
+	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles, %i light triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], k, l);
+}
+
+void R_RTLight_Uncompile(rtlight_t *rtlight)
+{
+	if (rtlight->compiled)
+	{
+		if (rtlight->static_meshchain_shadow)
+			Mod_ShadowMesh_Free(rtlight->static_meshchain_shadow);
+		rtlight->static_meshchain_shadow = NULL;
+		if (rtlight->static_meshchain_light)
+			Mod_ShadowMesh_Free(rtlight->static_meshchain_light);
+		rtlight->static_meshchain_light = NULL;
+		if (rtlight->static_clusterindices)
+			Mem_Free(rtlight->static_clusterindices);
+		rtlight->static_clusterindices = NULL;
+		rtlight->static_numclusters = 0;
+		rtlight->compiled = false;
+	}
+}
+
+int shadowframecount = 0;
+
+void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t shadoworigin, vec_t shadowradius, vec3_t cullmins, vec3_t cullmaxs)
+{
+	// rough checks
+	if ((BoxesOverlap(ent->mins, ent->maxs, cullmins, cullmaxs) || !r_shadow_cull.integer) && (ent->flags & RENDER_SHADOW) && ent->model && ent->model->DrawShadowVolume)
+	{
+		vec3_t relativeshadoworigin;
+		Matrix4x4_Transform(&ent->inversematrix, shadoworigin, relativeshadoworigin);
+		ent->model->DrawShadowVolume (ent, relativeshadoworigin, shadowradius);
+	}
+}
+
+void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, dlight_t *light);
+
+void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
+{
+	int i, shadow;
+	entity_render_t *ent;
+	float f;
+	vec3_t relativelightorigin, relativeeyeorigin, lightcolor;
+	rtexture_t *cubemaptexture;
+	matrix4x4_t matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
+
+	if (d_lightstylevalue[rtlight->style] <= 0)
+		return;
+	if (rtlight->compiled)
+	{
+		if (R_CullBox(rtlight->cullmins, rtlight->cullmaxs))
+			return;
+		for (i = 0;i < rtlight->static_numclusters;i++)
+			if (CHECKPVSBIT(r_pvsbits, rtlight->static_clusterindices[i]))
+				break;
+		if (i == rtlight->static_numclusters)
+			return;
+	}
+	else if (VIS_CullBox(rtlight->cullmins, rtlight->cullmaxs))
+		return;
+	if (R_Shadow_ScissorForBBox(rtlight->cullmins, rtlight->cullmaxs))
+		return;
+
+	if (rtlight->isstatic && !rtlight->compiled && r_shadow_staticworldlights.integer)
+		R_RTLight_Compile(rtlight);
+	
+	f = d_lightstylevalue[rtlight->style] * (1.0f / 256.0f);
+	VectorScale(rtlight->color, f, lightcolor);
+	/*
+	if (rtlight->selected)
+	{
+		f = 2 + sin(realtime * M_PI * 4.0);
+		VectorScale(lightcolor, f, lightcolor);
+	}
+	*/
+
+	if (rtlight->cubemapname[0])
+		cubemaptexture = R_Shadow_Cubemap(rtlight->cubemapname);
+	else
+		cubemaptexture = NULL;
+
+	shadow = rtlight->shadow && (rtlight->isstatic ? r_shadow_worldshadows.integer : r_shadow_dlightshadows.integer);
+	if (shadow && (gl_stencil || visiblevolumes))
+	{
+		if (!visiblevolumes)
+			R_Shadow_Stage_ShadowVolumes();
+		ent = &cl_entities[0].render;
+		if (r_shadow_staticworldlights.integer && rtlight->compiled)
+		{
+			R_Mesh_Matrix(&ent->matrix);
+			if (r_shadow_showtris.integer)
+			{
+				shadowmesh_t *mesh;
+				rmeshstate_t m;
+				int depthenabled = qglIsEnabled(GL_DEPTH_TEST);
+				int stencilenabled = qglIsEnabled(GL_STENCIL_TEST);
+				qglDisable(GL_DEPTH_TEST);
+				qglDisable(GL_STENCIL_TEST);
+				//qglDisable(GL_CULL_FACE);
+				qglColorMask(1,1,1,1);
+				memset(&m, 0, sizeof(m));
+				R_Mesh_State_Texture(&m);
+				GL_Color(0,0.1,0,1);
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+				for (mesh = rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
+				{
+					GL_VertexPointer(mesh->vertex3f);
+					R_Mesh_Draw_ShowTris(mesh->numverts, mesh->numtriangles, mesh->element3i);
+				}
+				//qglEnable(GL_CULL_FACE);
+				if (depthenabled)
+					qglEnable(GL_DEPTH_TEST);
+				if (stencilenabled)
+				{
+					qglEnable(GL_STENCIL_TEST);
+					qglColorMask(0,0,0,0);
+				}
+			}
+			R_Shadow_RenderShadowMeshVolume(rtlight->static_meshchain_shadow);
+		}
+		else
+			R_TestAndDrawShadowVolume(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs);
+		if (r_drawentities.integer)
+			for (i = 0;i < r_refdef.numentities;i++)
+				if (r_refdef.entities[i]->flags & RENDER_SHADOW)
+					R_TestAndDrawShadowVolume(r_refdef.entities[i], rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs);
+	}
+
+	if (!visiblevolumes)
+	{
+		if (shadow && gl_stencil)
+			R_Shadow_Stage_LightWithShadows();
+		else
+			R_Shadow_Stage_LightWithoutShadows();
+
+		ent = &cl_entities[0].render;
+		if (ent->model && ent->model->DrawLight)
+		{
+			Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
+			Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
+			Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
+			Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rtlight->matrix_worldtoattenuationxyz, &ent->matrix);
+			Matrix4x4_Concat(&matrix_modeltoattenuationz, &rtlight->matrix_worldtoattenuationz, &ent->matrix);
+			if (r_shadow_staticworldlights.integer && rtlight->compiled)
+			{
+				//R_Shadow_DrawStaticWorldLight_Light(rtlight, &ent->matrix, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
+				shadowmesh_t *mesh;
+				R_Mesh_Matrix(&ent->matrix);
+				if (r_shadow_showtris.integer)
+				{
+					rmeshstate_t m;
+					int depthenabled = qglIsEnabled(GL_DEPTH_TEST);
+					int stencilenabled = qglIsEnabled(GL_STENCIL_TEST);
+					qglDisable(GL_DEPTH_TEST);
+					qglDisable(GL_STENCIL_TEST);
+					//qglDisable(GL_CULL_FACE);
+					memset(&m, 0, sizeof(m));
+					R_Mesh_State_Texture(&m);
+					GL_Color(0.2,0,0,1);
+					GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+					for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
+					{
+						GL_VertexPointer(mesh->vertex3f);
+						R_Mesh_Draw_ShowTris(mesh->numverts, mesh->numtriangles, mesh->element3i);
+					}
+					//qglEnable(GL_CULL_FACE);
+					if (depthenabled)
+						qglEnable(GL_DEPTH_TEST);
+					if (stencilenabled)
+						qglEnable(GL_STENCIL_TEST);
+				}
+				for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
+				{
+					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, cubemaptexture);
+					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_specular, mesh->map_normal, cubemaptexture);
+				}
+			}
+			else
+				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
+		}
+		if (r_drawentities.integer)
+		{
+			for (i = 0;i < r_refdef.numentities;i++)
+			{
+				ent = r_refdef.entities[i];
+				if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
+				 && BoxesOverlap(ent->mins, ent->maxs, rtlight->cullmins, rtlight->cullmaxs)
+				 && (ent->flags & RENDER_LIGHT))
+				{
+					Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
+					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
+					Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rtlight->matrix_worldtoattenuationxyz, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltoattenuationz, &rtlight->matrix_worldtoattenuationz, &ent->matrix);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
+				}
+			}
+		}
+	}
+}
+
+void R_ShadowVolumeLighting(int visiblevolumes)
+{
+	int lnum;
+	dlight_t *light;
+	rmeshstate_t m;
+
+	if (visiblevolumes)
+	{
 		memset(&m, 0, sizeof(m));
 		R_Mesh_State_Texture(&m);
-		GL_Color(0.2,0,0,1);
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		for (mesh = light->meshchain_light;mesh;mesh = mesh->next)
-		{
-			GL_VertexPointer(mesh->vertex3f);
-			R_Mesh_Draw_ShowTris(mesh->numverts, mesh->numtriangles, mesh->element3i);
-		}
-		//qglEnable(GL_CULL_FACE);
-		if (depthenabled)
-			qglEnable(GL_DEPTH_TEST);
-		if (stencilenabled)
-			qglEnable(GL_STENCIL_TEST);
+
+		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_DepthMask(false);
+		GL_DepthTest(r_shadow_visiblevolumes.integer < 2);
+		qglDisable(GL_CULL_FACE);
+		GL_Color(0.0, 0.0125, 0.1, 1);
 	}
-	for (mesh = light->meshchain_light;mesh;mesh = mesh->next)
+	else
+		R_Shadow_Stage_Begin();
+	shadowframecount++;
+	if (r_shadow_realtime_world.integer)
 	{
-		R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, light->cubemap);
-		R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_specular, mesh->map_normal, light->cubemap);
+		R_Shadow_LoadWorldLightsIfNeeded();
+		if (r_shadow_debuglight.integer >= 0)
+		{
+			for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
+				if (lnum == r_shadow_debuglight.integer)
+					R_DrawRTLight(&light->rtlight, visiblevolumes);
+		}
+		else
+			for (lnum = 0, light = r_shadow_worldlightchain;light;lnum++, light = light->next)
+				R_DrawRTLight(&light->rtlight, visiblevolumes);
 	}
+	if (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer)
+		for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
+			R_DrawRTLight(&light->rtlight, visiblevolumes);
+
+	if (visiblevolumes)
+	{
+		qglEnable(GL_CULL_FACE);
+		GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	}
+	else
+		R_Shadow_Stage_End();
 }
 
 cvar_t r_editlights = {0, "r_editlights", "0"};
@@ -1862,13 +2321,9 @@ cvar_t r_editlights_cursorgrid = {0, "r_editlights_grid", "4"};
 cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
 cvar_t r_editlights_rtlightssizescale = {CVAR_SAVE, "r_editlights_rtlightssizescale", "0.7"};
 cvar_t r_editlights_rtlightscolorscale = {CVAR_SAVE, "r_editlights_rtlightscolorscale", "2"};
-worldlight_t *r_shadow_worldlightchain;
-worldlight_t *r_shadow_selectedlight;
+dlight_t *r_shadow_worldlightchain;
+dlight_t *r_shadow_selectedlight;
 vec3_t r_editlights_cursorlocation;
-
-static int lightpvsbytes;
-static qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
-static qbyte lightfullpvs[(MAX_MAP_LEAFS + 7)/ 8];
 
 typedef struct cubemapinfo_s
 {
@@ -1992,10 +2447,7 @@ void R_Shadow_FreeCubemaps(void)
 
 void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname)
 {
-	int i, j, k, l, maxverts = 256, tris;
-	float *vertex3f = NULL, mins[3], maxs[3];
-	worldlight_t *e;
-	shadowmesh_t *mesh, *castmesh = NULL;
+	dlight_t *light;
 
 	if (radius < 15 || DotProduct(color, color) < 0.03)
 	{
@@ -2003,275 +2455,38 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 		return;
 	}
 
-	e = Mem_Alloc(r_shadow_mempool, sizeof(worldlight_t));
-	VectorCopy(origin, e->origin);
-	VectorCopy(angles, e->angles);
-	VectorCopy(color, e->color);
-	e->radius = radius;
-	e->style = style;
-	if (e->style < 0 || e->style >= MAX_LIGHTSTYLES)
+	light = Mem_Alloc(r_shadow_mempool, sizeof(dlight_t));
+	VectorCopy(origin, light->origin);
+	VectorCopy(angles, light->angles);
+	VectorCopy(color, light->color);
+	light->radius = radius;
+	light->style = style;
+	if (light->style < 0 || light->style >= MAX_LIGHTSTYLES)
 	{
-		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be >= 0 and < %i\n", e->style, MAX_LIGHTSTYLES);
-		e->style = 0;
+		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be >= 0 and < %i\n", light->style, MAX_LIGHTSTYLES);
+		light->style = 0;
 	}
-	e->drawshadows = shadowenable;
-	e->corona = corona;
+	light->shadow = shadowenable;
+	light->corona = corona;
+	if (cubemapname && cubemapname[0] && strlen(cubemapname) < sizeof(light->cubemapname))
+		strcpy(light->cubemapname, cubemapname);
+	Matrix4x4_CreateFromQuakeEntity(&light->matrix, light->origin[0], light->origin[1], light->origin[2], light->angles[0], light->angles[1], light->angles[2], 1);
+	light->next = r_shadow_worldlightchain;
+	r_shadow_worldlightchain = light;
 
-	Matrix4x4_CreateFromQuakeEntity(&e->matrix_lighttoworld, e->origin[0], e->origin[1], e->origin[2], e->angles[0], e->angles[1], e->angles[2], e->radius);
-	Matrix4x4_Invert_Simple(&e->matrix_worldtolight, &e->matrix_lighttoworld);
-	Matrix4x4_Concat(&e->matrix_worldtoattenuationxyz, &matrix_attenuationxyz, &e->matrix_worldtolight);
-	Matrix4x4_Concat(&e->matrix_worldtoattenuationz, &matrix_attenuationz, &e->matrix_worldtolight);
-
-	e->cullradius = e->radius;
-	for (k = 0;k < 3;k++)
-	{
-		mins[k] = e->origin[k] - e->radius;
-		maxs[k] = e->origin[k] + e->radius;
-	}
-
-	e->next = r_shadow_worldlightchain;
-	r_shadow_worldlightchain = e;
-	if (cubemapname && cubemapname[0])
-	{
-		e->cubemapname = Mem_Alloc(r_shadow_mempool, strlen(cubemapname) + 1);
-		strcpy(e->cubemapname, cubemapname);
-		e->cubemap = R_Shadow_Cubemap(e->cubemapname);
-	}
-	// FIXME: rewrite this to store ALL geometry into a cache in the light
-	if (e->drawshadows)
-		castmesh = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
-	e->meshchain_light = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, true, false, true);
-	if (cl.worldmodel)
-	{
-		lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, origin, 0, lightfullpvs, sizeof(lightfullpvs));
-		memset(lightpvs, 0, lightpvsbytes);
-		if (cl.worldmodel->brushq3.num_leafs)
-		{
-			q3mleaf_t *leaf;
-			q3mface_t *face;
-
-			// make a pvs that only includes things within the box
-			for (i = 0, leaf = cl.worldmodel->brushq3.data_leafs;i < cl.worldmodel->brushq3.num_leafs;i++, leaf++)
-				if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
-					SETPVSBIT(lightpvs, leaf->clusterindex);
-
-			// make a cluster list for fast visibility checking during rendering
-			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
-				if (CHECKPVSBIT(lightpvs, i))
-					e->numclusters++;
-			e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
-			for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
-				if (CHECKPVSBIT(lightpvs, i))
-					e->clusterindices[e->numclusters++] = i;
-
-			VectorCopy(e->origin, e->mins);
-			VectorCopy(e->origin, e->maxs);
-			for (i = 0, face = cl.worldmodel->brushq3.data_thismodel->firstface;i < cl.worldmodel->brushq3.data_thismodel->numfaces;i++, face++)
-				face->lighttemp_castshadow = false;
-			for (i = 0, leaf = cl.worldmodel->brushq3.data_leafs;i < cl.worldmodel->brushq3.num_leafs;i++, leaf++)
-			{
-				if (CHECKPVSBIT(lightpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
-				{
-					for (k = 0;k < 3;k++)
-					{
-						if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
-						if (e->maxs[k] < leaf->maxs[k]) e->maxs[k] = leaf->maxs[k];
-					}
-					for (j = 0;j < leaf->numleaffaces;j++)
-					{
-						face = leaf->firstleafface[j];
-						if (BoxesOverlap(face->mins, face->maxs, mins, maxs))
-							face->lighttemp_castshadow = true;
-					}
-				}
-			}
-
-			// add surfaces to shadow casting mesh and light mesh
-			for (i = 0, face = cl.worldmodel->brushq3.data_thismodel->firstface;i < cl.worldmodel->brushq3.data_thismodel->numfaces;i++, face++)
-			{
-				if (face->lighttemp_castshadow)
-				{
-					face->lighttemp_castshadow = false;
-					if (!(face->texture->surfaceflags & (Q3SURFACEFLAG_NODRAW | Q3SURFACEFLAG_SKY)))
-					{
-						if (e->drawshadows)
-							if (!(face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT))
-								Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, face->data_vertex3f, NULL, NULL, NULL, NULL, face->num_triangles, face->data_element3i);
-						if (!(face->texture->surfaceflags & Q3SURFACEFLAG_SKY))
-							Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->meshchain_light, face->texture->skin.base, face->texture->skin.gloss, face->texture->skin.nmap, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, face->num_triangles, face->data_element3i);
-					}
-				}
-			}
-		}
-		else if (cl.worldmodel->brushq1.num_leafs)
-		{
-			mleaf_t *leaf;
-			msurface_t *surf;
-			VectorCopy(e->origin, e->mins);
-			VectorCopy(e->origin, e->maxs);
-			i = CL_PointQ1Contents(e->origin);
-
-			for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
-				surf->lighttemp_castshadow = false;
-
-			if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
-			{
-				qbyte *byteleafpvs;
-				qbyte *bytesurfacepvs;
-
-				byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.num_leafs);
-				bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
-
-				Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, mins, maxs, e->mins, e->maxs);
-
-				// make a pvs that only includes things within the box
-				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
-				{
-					if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
-					{
-						SETPVSBIT(lightpvs, leaf->clusterindex);
-						for (k = 0;k < 3;k++)
-						{
-							if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
-							if (e->maxs[k] < leaf->maxs[k]) e->maxs[k] = leaf->maxs[k];
-						}
-					}
-				}
-	
-				for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
-					if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
-						surf->lighttemp_castshadow = true;
-
-				Mem_Free(byteleafpvs);
-				Mem_Free(bytesurfacepvs);
-	
-				// make a cluster list for fast visibility checking during rendering
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
-					if (CHECKPVSBIT(lightpvs, i))
-						e->numclusters++;
-				e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
-					if (CHECKPVSBIT(lightpvs, i))
-						e->clusterindices[e->numclusters++] = i;
-			}
-			else
-			{
-				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
-				{
-					if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
-					{
-						// make a pvs that only includes things within the box
-						SETPVSBIT(lightpvs, leaf->clusterindex);
-						for (k = 0;k < 3;k++)
-						{
-							if (e->mins[k] > leaf->mins[k]) e->mins[k] = leaf->mins[k];
-							if (e->maxs[k] < leaf->maxs[k]) e->maxs[k] = leaf->maxs[k];
-						}
-						for (j = 0;j < leaf->nummarksurfaces;j++)
-						{
-							surf = cl.worldmodel->brushq1.surfaces + leaf->firstmarksurface[j];
-							if (!surf->lighttemp_castshadow && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
-								surf->lighttemp_castshadow = true;
-						}
-					}
-				}
-
-				// make a pvs that only includes things within the box
-				for (i = 0, leaf = cl.worldmodel->brushq1.data_leafs;i < cl.worldmodel->brushq1.num_leafs;i++, leaf++)
-					if (CHECKPVSBIT(lightfullpvs, leaf->clusterindex) && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
-						SETPVSBIT(lightpvs, leaf->clusterindex);
-
-				// make a cluster list for fast visibility checking during rendering
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
-					if (CHECKPVSBIT(lightpvs, i))
-						e->numclusters++;
-				e->clusterindices = Mem_Alloc(r_shadow_mempool, e->numclusters * sizeof(int));
-				for (i = 0, e->numclusters = 0;i < cl.worldmodel->brush.num_pvsclusters;i++)
-					if (CHECKPVSBIT(lightpvs, i))
-						e->clusterindices[e->numclusters++] = i;
-			}
-
-			// add surfaces to shadow casting mesh and light mesh
-			for (i = 0, surf = cl.worldmodel->brushq1.surfaces + cl.worldmodel->brushq1.firstmodelsurface;i < cl.worldmodel->brushq1.nummodelsurfaces;i++, surf++)
-			{
-				if (surf->lighttemp_castshadow)
-				{
-					surf->lighttemp_castshadow = false;
-					if (e->drawshadows && (surf->flags & SURF_SHADOWCAST))
-						Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, surf->mesh.data_vertex3f, NULL, NULL, NULL, NULL, surf->mesh.num_triangles, surf->mesh.data_element3i);
-					if (!(surf->flags & SURF_DRAWSKY))
-						Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->meshchain_light, surf->texinfo->texture->skin.base, surf->texinfo->texture->skin.gloss, surf->texinfo->texture->skin.nmap, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, surf->mesh.num_triangles, surf->mesh.data_element3i);
-				}
-			}
-		}
-	}
-
-	// limit box to light bounds (in case it grew larger)
-	for (k = 0;k < 3;k++)
-	{
-		if (e->mins[k] < e->origin[k] - e->radius) e->mins[k] = e->origin[k] - e->radius;
-		if (e->maxs[k] > e->origin[k] + e->radius) e->maxs[k] = e->origin[k] + e->radius;
-	}
-	e->cullradius = RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin);
-
-	// cast shadow volume from castmesh
-	castmesh = Mod_ShadowMesh_Finish(r_shadow_mempool, castmesh, false, true);
-	if (castmesh)
-	{
-		maxverts = 0;
-		for (mesh = castmesh;mesh;mesh = mesh->next)
-		{
-			R_Shadow_ResizeShadowElements(mesh->numtriangles);
-			maxverts = max(maxverts, mesh->numverts * 2);
-		}
-
-		if (maxverts > 0)
-		{
-			vertex3f = Mem_Alloc(r_shadow_mempool, maxverts * sizeof(float[3]));
-			// now that we have the buffers big enough, construct and add
-			// the shadow volume mesh
-			if (e->drawshadows)
-				e->meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
-			for (mesh = castmesh;mesh;mesh = mesh->next)
-			{
-				Mod_BuildTriangleNeighbors(mesh->neighbor3i, mesh->element3i, mesh->numtriangles);
-				if ((tris = R_Shadow_ConstructShadowVolume(castmesh->numverts, 0, castmesh->numtriangles, castmesh->element3i, castmesh->neighbor3i, castmesh->vertex3f, NULL, shadowelements, vertex3f, e->origin, r_shadow_projectdistance.value)))
-					Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->meshchain_shadow, NULL, NULL, NULL, vertex3f, NULL, NULL, NULL, NULL, tris, shadowelements);
-			}
-			Mem_Free(vertex3f);
-			vertex3f = NULL;
-		}
-		// we're done with castmesh now
-		Mod_ShadowMesh_Free(castmesh);
-	}
-
-	e->meshchain_shadow = Mod_ShadowMesh_Finish(r_shadow_mempool, e->meshchain_shadow, false, false);
-	e->meshchain_light = Mod_ShadowMesh_Finish(r_shadow_mempool, e->meshchain_light, true, false);
-
-	k = 0;
-	if (e->meshchain_shadow)
-		for (mesh = e->meshchain_shadow;mesh;mesh = mesh->next)
-			k += mesh->numtriangles;
-	l = 0;
-	if (e->meshchain_light)
-		for (mesh = e->meshchain_light;mesh;mesh = mesh->next)
-			l += mesh->numtriangles;
-	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles, %i light triangles\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], k, l);
+	R_RTLight_UpdateFromDLight(&light->rtlight, light, true);
+	if (r_shadow_staticworldlights.integer)
+		R_RTLight_Compile(&light->rtlight);
 }
 
-void R_Shadow_FreeWorldLight(worldlight_t *light)
+void R_Shadow_FreeWorldLight(dlight_t *light)
 {
-	worldlight_t **lightpointer;
+	dlight_t **lightpointer;
 	for (lightpointer = &r_shadow_worldlightchain;*lightpointer && *lightpointer != light;lightpointer = &(*lightpointer)->next);
 	if (*lightpointer != light)
 		Sys_Error("R_Shadow_FreeWorldLight: light not linked into chain\n");
 	*lightpointer = light->next;
-	if (light->cubemapname)
-		Mem_Free(light->cubemapname);
-	if (light->meshchain_shadow)
-		Mod_ShadowMesh_Free(light->meshchain_shadow);
-	if (light->meshchain_light)
-		Mod_ShadowMesh_Free(light->meshchain_light);
+	R_RTLight_Uncompile(&light->rtlight);
 	Mem_Free(light);
 }
 
@@ -2283,7 +2498,7 @@ void R_Shadow_ClearWorldLights(void)
 	R_Shadow_FreeCubemaps();
 }
 
-void R_Shadow_SelectLight(worldlight_t *light)
+void R_Shadow_SelectLight(dlight_t *light)
 {
 	if (r_shadow_selectedlight)
 		r_shadow_selectedlight->selected = false;
@@ -2303,12 +2518,12 @@ void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
 void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
 {
 	float intensity;
-	const worldlight_t *light;
+	const dlight_t *light;
 	light = calldata1;
 	intensity = 0.5;
 	if (light->selected)
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
-	if (!light->meshchain_shadow)
+	if (!light->shadow)
 		intensity *= 0.5f;
 	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[calldata2], false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
@@ -2317,7 +2532,7 @@ void R_Shadow_DrawLightSprites(void)
 {
 	int i;
 	cachepic_t *pic;
-	worldlight_t *light;
+	dlight_t *light;
 
 	for (i = 0;i < 5;i++)
 	{
@@ -2334,7 +2549,7 @@ void R_Shadow_DrawLightSprites(void)
 void R_Shadow_SelectLightInView(void)
 {
 	float bestrating, rating, temp[3];
-	worldlight_t *best, *light;
+	dlight_t *best, *light;
 	best = NULL;
 	bestrating = 0;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
@@ -2386,18 +2601,17 @@ void R_Shadow_LoadWorldLights(void)
 				shadow = false;
 				t++;
 			}
-			a = sscanf(t, "%f %f %f %f %f %f %f %d %s %f %f %f %f", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname, &corona, &angles[0], &angles[1], &angles[2]);
+			a = sscanf(t, "%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname, &corona, &angles[0], &angles[1], &angles[2]);
 			if (a < 13)
-			{
-				corona = 0;
 				VectorClear(angles);
-			}
+			if (a < 10)
+				corona = 0;
 			if (a < 9)
 				cubemapname[0] = 0;
 			*s = '\n';
 			if (a < 8)
 			{
-				Con_Printf("found %d parameters on line %i, should be 8 or 9 parameters (origin[0] origin[1] origin[2] radius color[0] color[1] color[2] style cubemapname)\n", a, n + 1);
+				Con_Printf("found %d parameters on line %i, should be 8 or more parameters (origin[0] origin[1] origin[2] radius color[0] color[1] color[2] style \"cubemapname\" corona angles[0] angles[1] angles[2])\n", a, n + 1);
 				break;
 			}
 			VectorScale(color, r_editlights_rtlightscolorscale.value, color);
@@ -2414,7 +2628,7 @@ void R_Shadow_LoadWorldLights(void)
 
 void R_Shadow_SaveWorldLights(void)
 {
-	worldlight_t *light;
+	dlight_t *light;
 	int bufchars, bufmaxchars;
 	char *buf, *oldbuf;
 	char name[MAX_QPATH];
@@ -2432,7 +2646,7 @@ void R_Shadow_SaveWorldLights(void)
 	buf = NULL;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		sprintf(line, "%s%f %f %f %f %f %f %f %d %s\n", light->drawshadows ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "");
+		sprintf(line, "%s%f %f %f %f %f %f %f %d \"%s\" %f %f %f %f\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "", light->corona, light->angles[0], light->angles[1], light->angles[2]);
 		if (bufchars + (int) strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
@@ -2765,7 +2979,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		strcpy(cubemapname, r_shadow_selectedlight->cubemapname);
 	else
 		cubemapname[0] = 0;
-	shadows = r_shadow_selectedlight->drawshadows;
+	shadows = r_shadow_selectedlight->shadow;
 	corona = r_shadow_selectedlight->corona;
 	if (!strcmp(Cmd_Argv(1), "origin"))
 	{
@@ -2950,7 +3164,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		Con_Printf("Radius : %f\n", r_shadow_selectedlight->radius);
 		Con_Printf("Corona : %f\n", r_shadow_selectedlight->corona);
 		Con_Printf("Style  : %i\n", r_shadow_selectedlight->style);
-		Con_Printf("Shadows: %s\n", r_shadow_selectedlight->drawshadows ? "yes" : "no");
+		Con_Printf("Shadows: %s\n", r_shadow_selectedlight->shadow ? "yes" : "no");
 		Con_Printf("Cubemap: %s\n", r_shadow_selectedlight->cubemapname);
 		return;
 	}
@@ -2975,7 +3189,7 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	sprintf(temp, "Radius  %f", r_shadow_selectedlight->radius);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Corona  %f", r_shadow_selectedlight->corona);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Style   %i", r_shadow_selectedlight->style);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-	sprintf(temp, "Shadows %s", r_shadow_selectedlight->drawshadows ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Shadows %s", r_shadow_selectedlight->shadow ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Cubemap %s", r_shadow_selectedlight->cubemapname);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 }
 
@@ -2991,7 +3205,7 @@ void R_Shadow_EditLights_ToggleShadow_f(void)
 		Con_Printf("No selected light.\n");
 		return;
 	}
-	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->drawshadows, r_shadow_selectedlight->cubemapname);
+	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname);
 	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
 	r_shadow_selectedlight = NULL;
 }
@@ -3008,7 +3222,7 @@ void R_Shadow_EditLights_ToggleCorona_f(void)
 		Con_Printf("No selected light.\n");
 		return;
 	}
-	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->drawshadows, r_shadow_selectedlight->cubemapname);
+	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname);
 	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
 	r_shadow_selectedlight = NULL;
 }

@@ -127,6 +127,7 @@ void R_DrawExplosions(void);
 //#define PARANOID 1
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
+#define VIS_CullBox(mins,maxs) (R_CullBox((mins), (maxs)) || (cl.worldmodel && cl.worldmodel->brush.BoxTouchingPVS && !cl.worldmodel->brush.BoxTouchingPVS(cl.worldmodel, r_pvsbits, (mins), (maxs))))
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_main.c
 
 #include "quakedef.h"
+#include "r_shadow.h"
 
 // used for dlight push checking and other things
 int r_framecount;
@@ -55,13 +56,11 @@ unsigned short d_lightstylevalue[256];
 
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
-cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
 cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
 cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
-cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
 cvar_t r_drawcollisionbrushes = {0, "r_drawcollisionbrushes", "0"};
 
 cvar_t gl_fogenable = {0, "gl_fogenable", "0"};
@@ -249,14 +248,12 @@ void GL_Main_Init(void)
 	Cmd_AddCommand("timerefresh", R_TimeRefresh_f);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
-	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_speeds);
 	Cvar_RegisterVariable(&r_fullbrights);
 	Cvar_RegisterVariable(&r_wateralpha);
 	Cvar_RegisterVariable(&r_dynamic);
 	Cvar_RegisterVariable(&r_fullbright);
 	Cvar_RegisterVariable(&r_textureunits);
-	Cvar_RegisterVariable(&r_shadow_cull);
 	Cvar_RegisterVariable(&r_lerpsprites);
 	Cvar_RegisterVariable(&r_lerpmodels);
 	Cvar_RegisterVariable(&r_waterscroll);
@@ -407,8 +404,6 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 	return false;
 }
 
-#define VIS_CullBox(mins,maxs) (R_CullBox((mins), (maxs)) || (cl.worldmodel && cl.worldmodel->brush.BoxTouchingPVS && !cl.worldmodel->brush.BoxTouchingPVS(cl.worldmodel, r_pvsbits, (mins), (maxs))))
-
 //==================================================================================
 
 static void R_MarkEntities (void)
@@ -506,224 +501,6 @@ void R_DrawModels(void)
 				R_DrawNoModel(ent);
 		}
 	}
-}
-
-#include "r_shadow.h"
-
-int shadowframecount = 0;
-
-void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float cullradius, float lightradius, vec3_t lightmins, vec3_t lightmaxs, vec3_t clipmins, vec3_t clipmaxs, int lightmarked)
-{
-	vec3_t relativelightorigin;
-	// rough checks
-	if ((ent->flags & RENDER_SHADOW) && ent->model && ent->model->DrawShadowVolume && !(r_shadow_cull.integer && (ent->maxs[0] < lightmins[0] || ent->mins[0] > lightmaxs[0] || ent->maxs[1] < lightmins[1] || ent->mins[1] > lightmaxs[1] || ent->maxs[2] < lightmins[2] || ent->mins[2] > lightmaxs[2])))
-	{
-		Matrix4x4_Transform(&ent->inversematrix, lightorigin, relativelightorigin);
-		ent->model->DrawShadowVolume (ent, relativelightorigin, lightradius);
-	}
-}
-
-void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, worldlight_t *light);
-
-void R_ShadowVolumeLighting(int visiblevolumes)
-{
-	int i;
-	entity_render_t *ent;
-	int lnum;
-	float f, lightradius, cullradius;
-	vec3_t relativelightorigin, relativeeyeorigin, lightcolor, clipmins, clipmaxs;
-	worldlight_t *wl;
-	rdlight_t *rd;
-	rmeshstate_t m;
-	rtexture_t *cubemaptexture;
-	matrix4x4_t matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
-
-	if (visiblevolumes)
-	{
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State_Texture(&m);
-
-		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_DepthMask(false);
-		GL_DepthTest(r_shadow_visiblevolumes.integer < 2);
-		qglDisable(GL_CULL_FACE);
-		GL_Color(0.0, 0.0125, 0.1, 1);
-	}
-	else
-		R_Shadow_Stage_Begin();
-	shadowframecount++;
-	if (r_shadow_realtime_world.integer)
-	{
-		R_Shadow_LoadWorldLightsIfNeeded();
-		for (lnum = 0, wl = r_shadow_worldlightchain;wl;wl = wl->next, lnum++)
-		{
-			if (d_lightstylevalue[wl->style] <= 0)
-				continue;
-			if (R_CullBox(wl->mins, wl->maxs))
-				continue;
-			for (i = 0;i < wl->numclusters;i++)
-				if (CHECKPVSBIT(r_pvsbits, wl->clusterindices[i]))
-					break;
-			if (i == wl->numclusters)
-				continue;
-			if (r_shadow_debuglight.integer >= 0 && lnum != r_shadow_debuglight.integer)
-				continue;
-			if (R_Shadow_ScissorForBBox(wl->mins, wl->maxs))
-				continue;
-
-			cullradius = wl->cullradius;
-			lightradius = wl->radius;
-			VectorCopy(wl->mins, clipmins);
-			VectorCopy(wl->maxs, clipmaxs);
-
-			f = d_lightstylevalue[wl->style] * (1.0f / 256.0f);
-			VectorScale(wl->color, f, lightcolor);
-			if (wl->selected)
-			{
-				f = 2 + sin(realtime * M_PI * 4.0);
-				VectorScale(lightcolor, f, lightcolor);
-			}
-
-			if (r_shadow_worldshadows.integer && wl->drawshadows && (gl_stencil || visiblevolumes))
-			{
-				if (!visiblevolumes)
-					R_Shadow_Stage_ShadowVolumes();
-				ent = &cl_entities[0].render;
-				if (r_shadow_staticworldlights.integer)
-					R_Shadow_DrawStaticWorldLight_Shadow(wl, &ent->matrix);
-				else
-					R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs, true);
-				if (r_drawentities.integer)
-					for (i = 0;i < r_refdef.numentities;i++)
-						R_TestAndDrawShadowVolume(r_refdef.entities[i], wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs, true);
-			}
-
-			if (!visiblevolumes)
-			{
-				if (r_shadow_worldshadows.integer && wl->drawshadows && gl_stencil)
-					R_Shadow_Stage_LightWithShadows();
-				else
-					R_Shadow_Stage_LightWithoutShadows();
-
-				ent = &cl_entities[0].render;
-				if (ent->model && ent->model->DrawLight)
-				{
-					Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
-					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-					Matrix4x4_Concat(&matrix_modeltolight, &wl->matrix_worldtolight, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &wl->matrix_worldtoattenuationxyz, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationz, &wl->matrix_worldtoattenuationz, &ent->matrix);
-					if (r_shadow_staticworldlights.integer)
-						R_Shadow_DrawStaticWorldLight_Light(wl, &ent->matrix, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz);
-					else
-						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, wl->cubemap);
-				}
-				if (r_drawentities.integer)
-				{
-					for (i = 0;i < r_refdef.numentities;i++)
-					{
-						ent = r_refdef.entities[i];
-						if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
-						 && BoxesOverlap(ent->mins, ent->maxs, clipmins, clipmaxs)
-						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
-						{
-							Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
-							Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-							Matrix4x4_Concat(&matrix_modeltolight, &wl->matrix_worldtolight, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &wl->matrix_worldtoattenuationxyz, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationz, &wl->matrix_worldtoattenuationz, &ent->matrix);
-							ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, wl->cubemap);
-						}
-					}
-				}
-			}
-		}
-	}
-	if (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer)
-	{
-		for (lnum = 0, rd = r_dlight;lnum < r_numdlights;lnum++, rd++)
-		{
-			lightradius = rd->radius;
-			clipmins[0] = rd->origin[0] - lightradius;
-			clipmins[1] = rd->origin[1] - lightradius;
-			clipmins[2] = rd->origin[2] - lightradius;
-			clipmaxs[0] = rd->origin[0] + lightradius;
-			clipmaxs[1] = rd->origin[1] + lightradius;
-			clipmaxs[2] = rd->origin[2] + lightradius;
-			if (VIS_CullBox(clipmins, clipmaxs) || R_Shadow_ScissorForBBox(clipmins, clipmaxs))
-				continue;
-
-			cullradius = RadiusFromBoundsAndOrigin(clipmins, clipmaxs, rd->origin);
-			VectorCopy(rd->color, lightcolor);
-
-			if (rd->cubemapnum > 0)
-				cubemaptexture = R_Shadow_Cubemap(va("cubemaps/%i", rd->cubemapnum));
-			else
-				cubemaptexture = NULL;
-
-			if (r_shadow_dlightshadows.integer && rd->shadow && (gl_stencil || visiblevolumes))
-			{
-				if (!visiblevolumes)
-					R_Shadow_Stage_ShadowVolumes();
-				ent = &cl_entities[0].render;
-				R_TestAndDrawShadowVolume(ent, rd->origin, cullradius, lightradius, clipmins, clipmaxs, clipmins, clipmaxs, false);
-				if (r_drawentities.integer)
-				{
-					for (i = 0;i < r_refdef.numentities;i++)
-					{
-						ent = r_refdef.entities[i];
-						if (ent != rd->ent)
-							R_TestAndDrawShadowVolume(ent, rd->origin, cullradius, lightradius, clipmins, clipmaxs, clipmins, clipmaxs, false);
-					}
-				}
-			}
-
-			if (!visiblevolumes)
-			{
-				if (r_shadow_dlightshadows.integer && gl_stencil && rd->shadow)
-					R_Shadow_Stage_LightWithShadows();
-				else
-					R_Shadow_Stage_LightWithoutShadows();
-
-				ent = &cl_entities[0].render;
-				if (ent->model && ent->model->DrawLight)
-				{
-					Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-					Matrix4x4_Concat(&matrix_modeltolight, &rd->matrix_worldtolight, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rd->matrix_worldtoattenuationxyz, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationz, &rd->matrix_worldtoattenuationz, &ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
-				}
-				if (r_drawentities.integer)
-				{
-					for (i = 0;i < r_refdef.numentities;i++)
-					{
-						ent = r_refdef.entities[i];
-						if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
-						 && BoxesOverlap(ent->mins, ent->maxs, clipmins, clipmaxs)
-						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
-						{
-							Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-							Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-							Matrix4x4_Concat(&matrix_modeltolight, &rd->matrix_worldtolight, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rd->matrix_worldtoattenuationxyz, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationz, &rd->matrix_worldtoattenuationz, &ent->matrix);
-							ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (visiblevolumes)
-	{
-		qglEnable(GL_CULL_FACE);
-		GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-	}
-	else
-		R_Shadow_Stage_End();
 }
 
 static void R_SetFrustum(void)

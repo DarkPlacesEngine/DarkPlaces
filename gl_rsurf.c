@@ -46,6 +46,7 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract, k;
 	unsigned int *bl;
 	float dist, impact[3], local[3];
+	dlight_t *light;
 
 	lit = false;
 
@@ -53,17 +54,17 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 	tmax = (surf->extents[1] >> 4) + 1;
 	smax3 = smax * 3;
 
-	for (lnum = 0; lnum < r_numdlights; lnum++)
+	for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 	{
 		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
-		Matrix4x4_Transform(matrix, r_dlight[lnum].origin, local);
+		Matrix4x4_Transform(matrix, light->origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
-		maxdist = (int) r_dlight[lnum].cullradius2 + LIGHTOFFSET;
+		maxdist = (int) light->rtlight.lightmap_cullradius2 + LIGHTOFFSET;
 
 		dist2 = dist * dist;
 		dist2 += LIGHTOFFSET;
@@ -98,10 +99,10 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 		maxdist3 = maxdist - dist2;
 
 		// convert to 8.8 blocklights format
-		red = r_dlight[lnum].light[0] * (1.0f / 128.0f);
-		green = r_dlight[lnum].light[1] * (1.0f / 128.0f);
-		blue = r_dlight[lnum].light[2] * (1.0f / 128.0f);
-		subtract = (int) (r_dlight[lnum].subtract * 4194304.0f);
+		red = light->rtlight.lightmap_light[0] * (1.0f / 128.0f);
+		green = light->rtlight.lightmap_light[1] * (1.0f / 128.0f);
+		blue = light->rtlight.lightmap_light[2] * (1.0f / 128.0f);
+		subtract = (int) (light->rtlight.lightmap_subtract * 4194304.0f);
 		bl = intblocklights;
 
 		i = impactt;
@@ -139,6 +140,7 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 {
 	int lnum, s, t, smax, tmax, smax3, lit, impacts, impactt;
 	float sdtable[256], *bl, k, dist, dist2, maxdist, maxdist2, maxdist3, td1, td, red, green, blue, impact[3], local[3], subtract;
+	dlight_t *light;
 
 	lit = false;
 
@@ -146,17 +148,17 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 	tmax = (surf->extents[1] >> 4) + 1;
 	smax3 = smax * 3;
 
-	for (lnum = 0; lnum < r_numdlights; lnum++)
+	for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 	{
 		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
-		Matrix4x4_Transform(matrix, r_dlight[lnum].origin, local);
+		Matrix4x4_Transform(matrix, light->origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
-		maxdist = (int) r_dlight[lnum].cullradius2 + LIGHTOFFSET;
+		maxdist = (int) light->rtlight.lightmap_cullradius2 + LIGHTOFFSET;
 
 		dist2 = dist * dist;
 		dist2 += LIGHTOFFSET;
@@ -191,10 +193,10 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 		maxdist3 = maxdist - dist2;
 
 		// convert to 8.8 blocklights format
-		red = r_dlight[lnum].light[0];
-		green = r_dlight[lnum].light[1];
-		blue = r_dlight[lnum].light[2];
-		subtract = r_dlight[lnum].subtract * 32768.0f;
+		red = light->rtlight.lightmap_light[0];
+		green = light->rtlight.lightmap_light[1];
+		blue = light->rtlight.lightmap_light[2];
+		subtract = light->rtlight.lightmap_subtract * 32768.0f;
 		bl = floatblocklights;
 
 		td1 = impactt;
@@ -684,21 +686,21 @@ static int RSurf_LightSeparate_Vertex3f_Color4f(const matrix4x4_t *matrix, const
 	const float *v;
 	float *c;
 	int i, l, lit = false;
-	const rdlight_t *rd;
+	const dlight_t *light;
 	vec3_t lightorigin;
 	for (l = 0;l < r_numdlights;l++)
 	{
 		if (dlightbits[l >> 5] & (1 << (l & 31)))
 		{
-			rd = &r_dlight[l];
-			Matrix4x4_Transform(matrix, rd->origin, lightorigin);
+			light = &r_dlight[l];
+			Matrix4x4_Transform(matrix, light->origin, lightorigin);
 			for (i = 0, v = vert, c = color;i < numverts;i++, v += 3, c += 4)
 			{
 				f = VectorDistance2(v, lightorigin) + LIGHTOFFSET;
-				if (f < rd->cullradius2)
+				if (f < light->rtlight.lightmap_cullradius2)
 				{
-					f = ((1.0f / f) - rd->subtract) * scale;
-					VectorMA(c, f, rd->light, c);
+					f = ((1.0f / f) - light->rtlight.lightmap_subtract) * scale;
+					VectorMA(c, f, light->rtlight.lightmap_light, c);
 					lit = true;
 				}
 			}
@@ -1877,8 +1879,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 				t = surf->texinfo->texture->currentframe;
 				if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
 				{
-					R_Shadow_DiffuseLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, lightcubemap);
-					R_Shadow_SpecularLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, lightcubemap);
+					R_Shadow_DiffuseLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, lightcubemap);
+					R_Shadow_SpecularLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, lightcubemap);
 				}
 			}
 		}
@@ -2397,8 +2399,8 @@ void R_Q3BSP_DrawFaceLight(entity_render_t *ent, q3mface_t *face, vec3_t relativ
 {
 	if ((face->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) || !face->num_triangles)
 		return;
-	R_Shadow_DiffuseLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.base, face->texture->skin.nmap, lightcubemap);
-	R_Shadow_SpecularLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.gloss, face->texture->skin.nmap, lightcubemap);
+	R_Shadow_DiffuseLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.base, face->texture->skin.nmap, lightcubemap);
+	R_Shadow_SpecularLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.gloss, face->texture->skin.nmap, lightcubemap);
 }
 
 void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
