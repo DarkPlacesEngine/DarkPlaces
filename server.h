@@ -81,6 +81,10 @@ typedef struct client_s
 	qboolean		dropasap;			// has been told to go to another level
 	qboolean		sendsignon;			// only valid before spawned
 
+	// LordHavoc: to make netquake protocol get through NAT routers, have to wait for client to ack
+	qboolean		waitingforconnect;	// waiting for connect from client (stage 1)
+	qboolean		sendserverinfo;		// send server info in next datagram (stage 2)
+
 	double			last_message;		// reliable messages must be sent
 										// periodically
 

@@ -353,8 +353,9 @@ void IN_Move(usercmd_t *cmd)
 	/* Clear for next update */
 	mx = my = 0;
 
-	mouse_x *= sensitivity.value;
-	mouse_y *= sensitivity.value;
+	// LordHavoc: viewzoom affects mouse sensitivity for sniping
+	mouse_x *= sensitivity.value * cl.viewzoom;
+	mouse_y *= sensitivity.value * cl.viewzoom;
 
 	/* Add mouse X/Y movement to cmd */
 	if ( (in_strafe.state & 1) || (lookstrafe.integer && mouselook))

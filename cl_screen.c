@@ -736,7 +736,8 @@ static void SCR_CalcRefdef (void)
 	r_refdef.x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width) + vid.realx;
 	r_refdef.y = bound(0, r_refdef.y, vid.realheight - r_refdef.height) + vid.realy;
 
-	r_refdef.fov_x = scr_fov.value;
+	// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
+	r_refdef.fov_x = scr_fov.value * cl.viewzoom;
 	r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
 
 	if (cl.worldmodel)

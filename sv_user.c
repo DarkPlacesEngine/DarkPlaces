@@ -447,7 +447,7 @@ void SV_ClientThink (void)
 		return;
 	}
 
-	SV_AirMove ();	
+	SV_AirMove ();
 }
 
 
@@ -463,7 +463,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	int		bits;
 	eval_t	*val;
 	float	total;
-	
+
 // read ping time
 	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = sv.time - MSG_ReadFloat ();
 	host_client->num_pings++;
@@ -477,12 +477,12 @@ void SV_ReadClientMove (usercmd_t *move)
 		val->_float = host_client->ping * 1000.0;
 
 // read current angles
-	// dpprotocol
-	for (i=0 ; i<3 ; i++)
-		angle[i] = MSG_ReadPreciseAngle ();
+	// dpprotocol version 2
+	for (i = 0;i < 3;i++)
+		angle[i] = MSG_ReadFloat ();
 
 	VectorCopy (angle, host_client->edict->v.v_angle);
-		
+
 // read movement
 	move->forwardmove = MSG_ReadShort ();
 	move->sidemove = MSG_ReadShort ();
@@ -493,7 +493,7 @@ void SV_ReadClientMove (usercmd_t *move)
 		val->vector[1] = move->sidemove;
 		val->vector[2] = move->upmove;
 	}
-	
+
 // read buttons
 	bits = MSG_ReadByte ();
 	host_client->edict->v.button0 = bits & 1;
@@ -518,6 +518,7 @@ SV_ReadClientMessage
 Returns false if the client should be killed
 ===================
 */
+void SV_SendServerinfo (client_t *client);
 qboolean SV_ReadClientMessage (void)
 {
 	int		ret;
@@ -547,24 +548,30 @@ nextmsg:
 			{
 				Sys_Printf ("SV_ReadClientMessage: badread\n");
 				return false;
-			}	
-	
+			}
+
 			cmd = MSG_ReadChar ();
-			
+
+			if (cmd != -1 && host_client->waitingforconnect)
+			{
+				host_client->waitingforconnect = false;
+				host_client->sendserverinfo = true;
+			}
+
 			switch (cmd)
 			{
 			case -1:
 				goto nextmsg;		// end of message
-				
+
 			default:
 				Sys_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
 				return false;
-							
+
 			case clc_nop:
 //				Sys_Printf ("clc_nop\n");
 				break;
-				
-			case clc_stringcmd:	
+
+			case clc_stringcmd:
 				s = MSG_ReadString ();
 				ret = 0;
 				if (Q_strncasecmp(s, "status", 6) == 0

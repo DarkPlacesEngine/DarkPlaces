@@ -650,8 +650,9 @@ void IN_MouseMove (usercmd_t *cmd)
 	old_mouse_x = mx;
 	old_mouse_y = my;
 
-	mouse_x *= sensitivity.value;
-	mouse_y *= sensitivity.value;
+	// LordHavoc: viewzoom affects mouse sensitivity for sniping
+	mouse_x *= sensitivity.value * cl.viewzoom;
+	mouse_y *= sensitivity.value * cl.viewzoom;
 
 // add mouse X/Y movement to cmd
 	if ( (in_strafe.state & 1) || (lookstrafe.integer && mouselook))
@@ -1050,7 +1051,8 @@ void IN_JoyMove (usercmd_t *cmd)
 		speed = cl_movespeedkey.value;
 	else
 		speed = 1;
-	aspeed = speed * host_realframetime;
+	// LordHavoc: viewzoom affects sensitivity for sniping
+	aspeed = speed * host_realframetime * cl.viewzoom;
 
 	// loop through the axes
 	for (i = 0; i < JOY_MAX_AXES; i++)
