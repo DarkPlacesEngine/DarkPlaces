@@ -366,7 +366,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 					AngleVectors(ang, v, NULL, NULL);
 					f = noise1[j*32+i] * 1.5f;
 					VectorScale(v, f, v);
-					particle(pt_spark, noise2[j*32+i] * 0x010101, tex_smoke[random()&7], false, 10, lhrandom(128, 255), 9999, 1.5, end[0], end[1], end[2], v[0], v[1], v[2] + 160.0f, 512.0f, 0, 0, 0, 2, 0);
+					particle(pt_spark, noise2[j*32+i] * 0x010101, tex_smoke[rand()&7], false, 10, lhrandom(128, 255), 9999, 1.5, end[0], end[1], end[2], v[0], v[1], v[2] + 160.0f, 512.0f, 0, 0, 0, 2, 0);
 					VectorScale(v, 0.75, v);
 					particle(pt_spark, explosparkramp[(noise2[j*32+i] >> 5)], tex_particle, false, 10, lhrandom(128, 255), 9999, 1.5, end[0], end[1], end[2], v[0], v[1], v[2] + 160.0f, 512.0f, 0, 0, 0, 2, 0);
 				//	VectorRandom(v);

@@ -754,6 +754,7 @@ void CL_RelinkEntities (void)
 	CL_RelinkEffects();
 	CL_MoveParticles();
 	CL_UpdateDecals();
+	CL_UpdateTEnts ();
 }
 
 
@@ -793,7 +794,6 @@ int CL_ReadFromServer (void)
 		Con_Printf ("\n");
 
 	CL_RelinkEntities ();
-	CL_UpdateTEnts ();
 
 //
 // bring the links up to date
