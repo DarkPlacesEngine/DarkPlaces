@@ -225,6 +225,10 @@ sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 	if (!data)
 		return NULL;
 
+	// Don't try to load it if it's not a WAV file
+	if (memcmp (data, "RIFF", 4) || memcmp (data + 8, "WAVE", 4))
+		return NULL;
+
 	info = GetWavinfo (s->name, data, fs_filesize);
 	// Stereo sounds are allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
