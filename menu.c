@@ -1444,12 +1444,12 @@ void M_Options_Key (int k)
 		case 2:
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
-		case 22:
-			if (vid_menudrawfn)
-				M_Menu_Video_f ();
-			break;
 		default:
-			M_AdjustSliders (1);
+			// this is really just another case, but since it is calculated...
+			if (vid_menudrawfn && options_cursor == (OPTIONS_ITEMS - 1))
+				M_Menu_Video_f ();
+			else
+				M_AdjustSliders (1);
 			break;
 		}
 		return;
