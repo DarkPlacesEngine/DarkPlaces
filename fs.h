@@ -57,6 +57,18 @@ char *FS_Gets (qfile_t* file, char* buffer, int buffersize);
 char *FS_Getline (qfile_t *file);  // DO NOT FREE the returned buffer
 int FS_Eof (qfile_t* file);
 
+typedef struct fssearch_s
+{
+	int numfilenames;
+	char **filenames;
+	// array of filenames
+	char *filenamesbuffer;
+}
+fssearch_t;
+
+fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet);
+void FS_FreeSearch(fssearch_t *search);
+
 qbyte *FS_LoadFile (const char *path, qboolean quiet);
 qboolean FS_WriteFile (const char *filename, void *data, int len);
 
