@@ -502,9 +502,10 @@ void R_Shadow_PrepareShadowMark(int numtris)
 
 int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
-	int i, j, tris = 0, vr[3], t, outvertices = 0;
+	int i, tris = 0, vr[3], t, outvertices = 0;
 	const int *e, *n;
 	float f, temp[3];
+	const float *v;
 
 	if (maxvertexupdate < innumvertices)
 	{
@@ -532,7 +533,6 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 	{
 		t = shadowmarktris[i];
 		e = inelement3i + t * 3;
-		n = inneighbor3i + t * 3;
 		// make sure the vertices are created
 		for (j = 0;j < 3;j++)
 		{
@@ -540,14 +540,31 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 			{
 				vertexupdate[e[j]] = vertexupdatenum;
 				vertexremap[e[j]] = outvertices;
-				VectorSubtract(invertex3f + e[j] * 3, projectorigin, temp);
+				v = invertex3f + e[j] * 3;
+#if 1
+				outvertex3f[0] = v[0];
+				outvertex3f[1] = v[1];
+				outvertex3f[2] = v[2];
+				outvertex3f[3] = v[0] + 1000000 * (v[0] - projectorigin[0]);
+				outvertex3f[4] = v[1] + 1000000 * (v[1] - projectorigin[1]);
+				outvertex3f[5] = v[2] + 1000000 * (v[2] - projectorigin[2]);
+#else
+				VectorSubtract(v, projectorigin, temp);
 				f = projectdistance / VectorLength(temp);
-				VectorCopy(invertex3f + e[j] * 3, outvertex3f);
+				VectorCopy(v, outvertex3f);
 				VectorMA(projectorigin, f, temp, (outvertex3f + 3));
+#endif
 				outvertex3f += 6;
 				outvertices += 2;
 			}
 		}
+	}
+
+	for (i = 0;i < numshadowmarktris;i++)
+	{
+		t = shadowmarktris[i];
+		e = inelement3i + t * 3;
+		n = inneighbor3i + t * 3;
 		// output the front and back triangles
 		outelement3i[0] = vertexremap[e[0]];
 		outelement3i[1] = vertexremap[e[1]];
