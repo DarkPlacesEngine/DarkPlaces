@@ -332,8 +332,6 @@ static void R_SkySphere(void)
 	if (r_textureunits.integer >= 2)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
-		// LordHavoc: note that color is not set here because it does not
-		// matter with GL_REPLACE
 		m.tex[1] = R_GetTexture(alphaskytexture);
 		m.texcombinergb[1] = gl_combine.integer ? GL_INTERPOLATE_ARB : GL_DECAL;
 		m.pointer_texcoord[1] = skysphere_texcoord2f;
@@ -397,15 +395,8 @@ A sky texture is 256*128, with the right side being a masked overlay
 */
 void R_InitSky (qbyte *src, int bytesperpixel)
 {
-	int i, j, p, r, g, b;
-	qbyte skyupperlayerpixels[128*128*4], skylowerlayerpixels[128*128*4];
-	unsigned trans[128*128], transpix, *rgba;
-	union
-	{
-		int i;
-		qbyte b[4];
-	}
-	transpixunion;
+	int i, j;
+	unsigned solidpixels[128*128], alphapixels[128*128];
 
 	skyavailable_quake = true;
 
@@ -417,65 +408,53 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 
 	if (bytesperpixel == 4)
 	{
-		transpixunion.i = 0;
 		for (i = 0;i < 128;i++)
+		{
 			for (j = 0;j < 128;j++)
-				trans[(i*128) + j] = ((unsigned *)src)[i*256+j+128];
+			{
+				solidpixels[(i*128) + j] = ((unsigned *)src)[i*256+j+128];
+				alphapixels[(i*128) + j] = ((unsigned *)src)[i*256+j];
+			}
+		}
 	}
 	else
 	{
 		// make an average value for the back to avoid
 		// a fringe on the top level
+		int p, r, g, b;
+		union
+		{
+			unsigned int i;
+			unsigned char b[4];
+		}
+		rgba;
 		r = g = b = 0;
-		for (i=0 ; i<128 ; i++)
-		{
-			for (j=0 ; j<128 ; j++)
-			{
-				p = src[i*256 + j + 128];
-				rgba = &palette_complete[p];
-				trans[(i*128) + j] = *rgba;
-				r += ((qbyte *)rgba)[0];
-				g += ((qbyte *)rgba)[1];
-				b += ((qbyte *)rgba)[2];
-			}
-		}
-
-		transpixunion.i = 0;
-		transpixunion.b[0] = r/(128*128);
-		transpixunion.b[1] = g/(128*128);
-		transpixunion.b[2] = b/(128*128);
-		transpixunion.b[3] = 0;
-	}
-	transpix = transpixunion.i;
-
-	memcpy(skyupperlayerpixels, trans, 128*128*4);
-
-	solidskytexture = R_LoadTexture2D(skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-
-	if (bytesperpixel == 4)
-	{
 		for (i = 0;i < 128;i++)
-			for (j = 0;j < 128;j++)
-				trans[(i*128) + j] = ((unsigned *)src)[i*256+j];
-	}
-	else
-	{
-		for (i=0 ; i<128 ; i++)
 		{
-			for (j=0 ; j<128 ; j++)
+			for (j = 0;j < 128;j++)
 			{
-				p = src[i*256 + j];
-				if (p == 0)
-					trans[(i*128) + j] = transpix;
-				else
-					trans[(i*128) + j] = palette_complete[p];
+				rgba.i = palette_complete[src[i*256 + j + 128]];
+				r += rgba.b[0];
+				g += rgba.b[1];
+				b += rgba.b[2];
+			}
+		}
+		rgba.b[0] = r/(128*128);
+		rgba.b[1] = g/(128*128);
+		rgba.b[2] = b/(128*128);
+		rgba.b[3] = 0;
+		for (i = 0;i < 128;i++)
+		{
+			for (j = 0;j < 128;j++)
+			{
+				solidpixels[(i*128) + j] = palette_complete[src[i*256 + j + 128]];
+				alphapixels[(i*128) + j] = (p = src[i*256 + j]) ? palette_complete[p] : rgba.i;
 			}
 		}
 	}
 
-	memcpy(skylowerlayerpixels, trans, 128*128*4);
-
-	alphaskytexture = R_LoadTexture2D(skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
+	solidskytexture = R_LoadTexture2D(skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) solidpixels, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	alphaskytexture = R_LoadTexture2D(skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) alphapixels, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 void R_ResetQuakeSky(void)
