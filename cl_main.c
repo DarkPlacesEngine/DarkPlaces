@@ -1063,7 +1063,7 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	t2 = t1 + beamrepeatscale * length;
 
 	// the beam is 3 polygons in this configuration:
-	//  2   3
+	//  3   2
 	//   * *
 	// 1******
 	//   * *
