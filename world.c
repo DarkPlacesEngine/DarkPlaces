@@ -260,6 +260,7 @@ void SV_TouchAreaGrid(edict_t *ent)
 				 || ent->v->absmin[2] > touch->v->absmax[2]
 				 || ent->v->absmax[2] < touch->v->absmin[2])
 					continue;
+				// LordHavoc: id bug that won't be fixed: triggers do not ignore their owner like solid objects do
 				if (touch == ent)
 					continue;
 				if (!touch->v->touch || touch->v->solid != SOLID_TRIGGER)
