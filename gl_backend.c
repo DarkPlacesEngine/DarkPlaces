@@ -10,6 +10,7 @@ static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
 static cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
 static cvar_t gl_mesh_merge = {0, "gl_mesh_merge", "1"};
 static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
+static cvar_t gl_mesh_dupetransverts = {0, "gl_mesh_dupetransverts", "0"};
 
 typedef struct buf_mesh_s
 {
@@ -212,6 +213,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
 	Cvar_RegisterVariable(&gl_mesh_merge);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
+	Cvar_RegisterVariable(&gl_mesh_dupetransverts);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 	gl_backend_bufferchanges(true);
 	for (i = 0;i < 256;i++)
@@ -299,6 +301,14 @@ void R_Mesh_Render(void)
 
 CHECKGLERROR
 
+	// push out farclip based on vertices
+	for (i = 0;i < currentvertex;i++)
+	{
+		farclip = DotProduct(buf_vertex[i].v, vpn);
+		if (meshfarclip < farclip)
+			meshfarclip = farclip;
+	}
+
 	farclip = meshfarclip + 256.0f - viewdist; // + 256 just to be safe
 
 	// push out farclip for next frame
@@ -326,7 +336,6 @@ CHECKGLERROR
 	glDepthMask((GLboolean) depthmask);
 CHECKGLERROR
 
-CHECKGLERROR
 	glVertexPointer(3, GL_FLOAT, sizeof(buf_vertex_t), buf_vertex);
 CHECKGLERROR
 	glEnableClientState(GL_VERTEX_ARRAY);
@@ -674,92 +683,187 @@ CHECKGLERROR
 
 void R_Mesh_AddTransparent(void)
 {
-	int i, j, k;
-	float viewdistcompare, centerscaler, dist1, dist2, dist3, center, maxdist;
-	buf_vertex_t *vert1, *vert2, *vert3;
-	buf_transtri_t *tri;
-	buf_mesh_t *mesh;
-
-	// process and add transparent mesh triangles
-	if (!currenttranstriangle)
-		return;
-
-	// map farclip to 0-4095 list range
-	centerscaler = (TRANSDEPTHRES / r_farclip) * (1.0f / 3.0f);
-	viewdistcompare = viewdist + 4.0f;
-
-	memset(buf_transtri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));
-
-	// process in reverse because transtri_list adding code is in reverse as well
-	k = 0;
-	for (j = currenttranstriangle - 1;j >= 0;j--)
+	if (gl_mesh_dupetransverts.integer)
 	{
-		tri = &buf_transtri[j];
+		int i, j, k, index;
+		float viewdistcompare, centerscaler, dist1, dist2, dist3, center, maxdist;
+		buf_vertex_t *vert1, *vert2, *vert3;
+		buf_transtri_t *tri;
+		buf_mesh_t *mesh;
 
-		vert1 = &buf_transvertex[tri->index[0]];
-		vert2 = &buf_transvertex[tri->index[1]];
-		vert3 = &buf_transvertex[tri->index[2]];
+		// process and add transparent mesh triangles
+		if (!currenttranstriangle)
+			return;
 
-		dist1 = DotProduct(vert1->v, vpn);
-		dist2 = DotProduct(vert2->v, vpn);
-		dist3 = DotProduct(vert3->v, vpn);
+		// map farclip to 0-4095 list range
+		centerscaler = (TRANSDEPTHRES / r_farclip) * (1.0f / 3.0f);
+		viewdistcompare = viewdist + 4.0f;
 
-		maxdist = max(dist1, max(dist2, dist3));
-		if (maxdist < viewdistcompare)
-			continue;
+		memset(buf_transtri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));
 
-		center = (dist1 + dist2 + dist3) * centerscaler - viewdist;
-#if SLOWMATH
-		i = (int) center;
-		i = bound(0, i, (TRANSDEPTHRES - 1));
-#else
-		if (center < 0.0f)
-			center = 0.0f;
-		center += 8388608.0f;
-		i = *((long *)&center) & 0x7FFFFF;
-		i = min(i, (TRANSDEPTHRES - 1));
-#endif
-		tri->next = buf_transtri_list[i];
-		buf_transtri_list[i] = tri;
-		k++;
-	}
-
-	if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
-		R_Mesh_Render();
-
-	// note: can't batch these because they can be rendered in any order
-	// there can never be more transparent triangles than fit in main buffers
-	memcpy(&buf_vertex[currentvertex], &buf_transvertex[0], currenttransvertex * sizeof(buf_vertex_t));
-	if (floatcolors)
-		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[0], currenttransvertex * sizeof(buf_fcolor_t));
-	else
-		memcpy(&buf_fcolor[currentvertex], &buf_transbcolor[0], currenttransvertex * sizeof(buf_bcolor_t));
-	for (i = 0;i < backendunits;i++)
-		memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][0], currenttransvertex * sizeof(buf_texcoord_t));
-
-	for (j = TRANSDEPTHRES - 1;j >= 0;j--)
-	{
-		if ((tri = buf_transtri_list[j]))
+		// process in reverse because transtri_list adding code is in reverse as well
+		k = 0;
+		for (j = currenttranstriangle - 1;j >= 0;j--)
 		{
-			while(tri)
+			tri = &buf_transtri[j];
+
+			vert1 = &buf_transvertex[tri->index[0]];
+			vert2 = &buf_transvertex[tri->index[1]];
+			vert3 = &buf_transvertex[tri->index[2]];
+
+			dist1 = DotProduct(vert1->v, vpn);
+			dist2 = DotProduct(vert2->v, vpn);
+			dist3 = DotProduct(vert3->v, vpn);
+
+			maxdist = max(dist1, max(dist2, dist3));
+			if (maxdist < viewdistcompare)
+				continue;
+
+			center = (dist1 + dist2 + dist3) * centerscaler - viewdist;
+	#if SLOWMATH
+			i = (int) center;
+			i = bound(0, i, (TRANSDEPTHRES - 1));
+	#else
+			if (center < 0.0f)
+				center = 0.0f;
+			center += 8388608.0f;
+			i = *((long *)&center) & 0x7FFFFF;
+			i = min(i, (TRANSDEPTHRES - 1));
+	#endif
+			tri->next = buf_transtri_list[i];
+			buf_transtri_list[i] = tri;
+			k++;
+		}
+
+		if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + k * 3 > max_verts)
+			R_Mesh_Render();
+
+		currenttransmesh = 0;
+		currenttranstriangle = 0;
+		currenttransvertex = 0;
+
+		// note: can't batch these because they can be rendered in any order
+		// there can never be more transparent triangles than fit in main buffers
+		for (j = TRANSDEPTHRES - 1;j >= 0;j--)
+		{
+			if ((tri = buf_transtri_list[j]))
 			{
-				mesh = &buf_mesh[currentmesh++];
-				*mesh = *tri->mesh; // copy mesh properties
-				buf_tri[currenttriangle].index[0] = tri->index[0] + currentvertex;
-				buf_tri[currenttriangle].index[1] = tri->index[1] + currentvertex;
-				buf_tri[currenttriangle].index[2] = tri->index[2] + currentvertex;
-				mesh->firstvert = min(buf_tri[currenttriangle].index[0], min(buf_tri[currenttriangle].index[1], buf_tri[currenttriangle].index[2]));
-				mesh->lastvert = max(buf_tri[currenttriangle].index[0], max(buf_tri[currenttriangle].index[1], buf_tri[currenttriangle].index[2]));
-				mesh->firsttriangle = currenttriangle++;
-				mesh->triangles = 1;
-				tri = tri->next;
+				while(tri)
+				{
+					mesh = &buf_mesh[currentmesh++];
+					*mesh = *tri->mesh; // copy mesh properties
+					mesh->firstvert = currentvertex;
+					mesh->lastvert = currentvertex + 2;
+					mesh->firsttriangle = currenttriangle;
+					mesh->triangles = 1;
+					for (k = 0;k < 3;k++)
+					{
+						index = tri->index[k];
+						buf_tri[currenttriangle].index[k] = currentvertex;
+						memcpy(buf_vertex[currentvertex].v, buf_transvertex[index].v, sizeof(buf_vertex_t));
+						if (floatcolors)
+							memcpy(buf_fcolor[currentvertex].c, buf_transfcolor[index].c, sizeof(buf_fcolor_t));
+						else
+							memcpy(buf_bcolor[currentvertex].c, buf_transbcolor[index].c, sizeof(buf_bcolor_t));
+						for (i = 0;i < backendunits && tri->mesh->textures[i];i++)
+							memcpy(buf_texcoord[i][currentvertex].t, buf_transtexcoord[i][index].t, sizeof(buf_texcoord_t));
+						currentvertex++;
+					}
+					currenttriangle++;
+					tri = tri->next;
+				}
 			}
 		}
 	}
-	currentvertex += currenttransvertex;
-	currenttransmesh = 0;
-	currenttranstriangle = 0;
-	currenttransvertex = 0;
+	else
+	{
+		int i, j, k;
+		float viewdistcompare, centerscaler, dist1, dist2, dist3, center, maxdist;
+		buf_vertex_t *vert1, *vert2, *vert3;
+		buf_transtri_t *tri;
+		buf_mesh_t *mesh;
+
+		// process and add transparent mesh triangles
+		if (!currenttranstriangle)
+			return;
+
+		// map farclip to 0-4095 list range
+		centerscaler = (TRANSDEPTHRES / r_farclip) * (1.0f / 3.0f);
+		viewdistcompare = viewdist + 4.0f;
+
+		memset(buf_transtri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));
+
+		// process in reverse because transtri_list adding code is in reverse as well
+		k = 0;
+		for (j = currenttranstriangle - 1;j >= 0;j--)
+		{
+			tri = &buf_transtri[j];
+
+			vert1 = &buf_transvertex[tri->index[0]];
+			vert2 = &buf_transvertex[tri->index[1]];
+			vert3 = &buf_transvertex[tri->index[2]];
+
+			dist1 = DotProduct(vert1->v, vpn);
+			dist2 = DotProduct(vert2->v, vpn);
+			dist3 = DotProduct(vert3->v, vpn);
+
+			maxdist = max(dist1, max(dist2, dist3));
+			if (maxdist < viewdistcompare)
+				continue;
+
+			center = (dist1 + dist2 + dist3) * centerscaler - viewdist;
+	#if SLOWMATH
+			i = (int) center;
+			i = bound(0, i, (TRANSDEPTHRES - 1));
+	#else
+			if (center < 0.0f)
+				center = 0.0f;
+			center += 8388608.0f;
+			i = *((long *)&center) & 0x7FFFFF;
+			i = min(i, (TRANSDEPTHRES - 1));
+	#endif
+			tri->next = buf_transtri_list[i];
+			buf_transtri_list[i] = tri;
+			k++;
+		}
+
+		if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
+			R_Mesh_Render();
+
+		// note: can't batch these because they can be rendered in any order
+		// there can never be more transparent triangles than fit in main buffers
+		memcpy(&buf_vertex[currentvertex], &buf_transvertex[0], currenttransvertex * sizeof(buf_vertex_t));
+		if (floatcolors)
+			memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[0], currenttransvertex * sizeof(buf_fcolor_t));
+		else
+			memcpy(&buf_fcolor[currentvertex], &buf_transbcolor[0], currenttransvertex * sizeof(buf_bcolor_t));
+		for (i = 0;i < backendunits;i++)
+			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][0], currenttransvertex * sizeof(buf_texcoord_t));
+
+		for (j = TRANSDEPTHRES - 1;j >= 0;j--)
+		{
+			if ((tri = buf_transtri_list[j]))
+			{
+				while(tri)
+				{
+					mesh = &buf_mesh[currentmesh++];
+					*mesh = *tri->mesh; // copy mesh properties
+					buf_tri[currenttriangle].index[0] = tri->index[0] + currentvertex;
+					buf_tri[currenttriangle].index[1] = tri->index[1] + currentvertex;
+					buf_tri[currenttriangle].index[2] = tri->index[2] + currentvertex;
+					mesh->firstvert = min(buf_tri[currenttriangle].index[0], min(buf_tri[currenttriangle].index[1], buf_tri[currenttriangle].index[2]));
+					mesh->lastvert = max(buf_tri[currenttriangle].index[0], max(buf_tri[currenttriangle].index[1], buf_tri[currenttriangle].index[2]));
+					mesh->firsttriangle = currenttriangle++;
+					mesh->triangles = 1;
+					tri = tri->next;
+				}
+			}
+		}
+		currentvertex += currenttransvertex;
+		currenttransmesh = 0;
+		currenttranstriangle = 0;
+		currenttransvertex = 0;
+	}
 }
 
 void R_Mesh_Draw(const rmeshinfo_t *m)
@@ -924,23 +1028,10 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 			vert[i].v[0] = in[0];
 			vert[i].v[1] = in[1];
 			vert[i].v[2] = in[2];
-			// push out farclip based on vertices encountered
-			c = DotProduct(vert[i].v, vpn);
-			if (meshfarclip < c)
-				meshfarclip = c;
 		}
 	}
 	else
-	{
 		memcpy(vert, m->vertex, m->numverts * sizeof(buf_vertex_t));
-		// push out farclip based on vertices encountered
-		for (i = 0;i < m->numverts;i++)
-		{
-			c = DotProduct(vert[i].v, vpn);
-			if (meshfarclip < c)
-				meshfarclip = c;
-		}
-	}
 
 	if (floatcolors)
 	{
@@ -1164,11 +1255,6 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 
 	// buf_vertex_t must match the size of the decal vertex array (or vice versa)
 	memcpy(vert, m->vertex, 4 * sizeof(buf_vertex_t));
-	// push out farclip based on vertices encountered
-	c = DotProduct(vert[0].v, vpn);if (meshfarclip < c) meshfarclip = c;
-	c = DotProduct(vert[1].v, vpn);if (meshfarclip < c) meshfarclip = c;
-	c = DotProduct(vert[2].v, vpn);if (meshfarclip < c) meshfarclip = c;
-	c = DotProduct(vert[3].v, vpn);if (meshfarclip < c) meshfarclip = c;
 
 	if (floatcolors)
 	{
