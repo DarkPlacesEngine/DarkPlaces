@@ -67,7 +67,7 @@ extern char *buildstring;
 //
 // stats are integers communicated to the client by the server
 //
-#define	MAX_CL_STATS		32
+#define	MAX_CL_STATS		256
 #define	STAT_HEALTH			0
 #define	STAT_FRAGS			1
 #define	STAT_WEAPON			2
@@ -83,6 +83,11 @@ extern char *buildstring;
 #define	STAT_TOTALMONSTERS	12
 #define	STAT_SECRETS		13		// bumped on client side by svc_foundsecret
 #define	STAT_MONSTERS		14		// bumped by svc_killedmonster
+#define STAT_ITEMS			15 // FTE, DP
+#define STAT_VIEWHEIGHT		16 // FTE, DP
+//#define STAT_TIME			17 // FTE
+//#define STAT_VIEW2		20 // FTE
+#define STAT_VIEWZOOM		21 // DP
 
 // stock defines
 

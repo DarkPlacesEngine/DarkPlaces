@@ -83,7 +83,7 @@ char *svc_strings[128] =
 	"", // 48
 	"", // 49
 	"svc_cgame", //				50		// [short] length [bytes] data
-	"svc_unusedlh1", //			51		// unused
+	"svc_updatestatubyte", //			51		// [byte] stat [byte] value
 	"svc_effect", //			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 	"svc_effect2", //			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
 	"svc_sound2", //			54		// short soundindex instead of byte
@@ -332,9 +332,9 @@ void CL_ParseServerInfo (void)
 	// hack for unmarked Nehahra movie demos which had a custom protocol
 	if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
 		i = PROTOCOL_NEHAHRAMOVIE;
-	if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_NEHAHRAMOVIE)
+	if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_DARKPLACES6 && i != PROTOCOL_NEHAHRAMOVIE)
 	{
-		Host_Error("CL_ParseServerInfo: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_NEHAHRAMOVIE);
+		Host_Error("CL_ParseServerInfo: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), %i (DP6), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_DARKPLACES6, PROTOCOL_NEHAHRAMOVIE);
 		return;
 	}
 	cl.protocol = i;
@@ -592,6 +592,25 @@ void CL_ParseClientdata (int bits)
 {
 	int i, j;
 
+	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
+
+	if (cl.protocol != PROTOCOL_DARKPLACES6)
+	{
+		cl.stats[STAT_VIEWHEIGHT] = DEFAULT_VIEWHEIGHT;
+		cl.stats[STAT_ITEMS] = 0;
+		cl.stats[STAT_VIEWZOOM] = 255;
+	}
+	cl.idealpitch = 0;
+	cl.punchangle[0] = 0;
+	cl.punchangle[1] = 0;
+	cl.punchangle[2] = 0;
+	cl.punchvector[0] = 0;
+	cl.punchvector[1] = 0;
+	cl.punchvector[2] = 0;
+	cl.mvelocity[0][0] = 0;
+	cl.mvelocity[0][1] = 0;
+	cl.mvelocity[0][2] = 0;
+
 	bits &= 0xFFFF;
 	if (bits & SU_EXTEND1)
 		bits |= (MSG_ReadByte() << 16);
@@ -599,85 +618,63 @@ void CL_ParseClientdata (int bits)
 		bits |= (MSG_ReadByte() << 24);
 
 	if (bits & SU_VIEWHEIGHT)
-		cl.viewheight = MSG_ReadChar ();
-	else
-		cl.viewheight = DEFAULT_VIEWHEIGHT;
+		cl.stats[STAT_VIEWHEIGHT] = MSG_ReadChar ();
 
 	if (bits & SU_IDEALPITCH)
 		cl.idealpitch = MSG_ReadChar ();
-	else
-		cl.idealpitch = 0;
 
-	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
 	for (i = 0;i < 3;i++)
 	{
 		if (bits & (SU_PUNCH1<<i) )
 		{
-			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
 				cl.punchangle[i] = MSG_ReadAngle16i();
 			else if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
 				cl.punchangle[i] = MSG_ReadChar();
 			else
 				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
-		else
-			cl.punchangle[i] = 0;
 		if (bits & (SU_PUNCHVEC1<<i))
 		{
 			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.punchvector[i] = MSG_ReadCoord16i();
-			else if (cl.protocol == PROTOCOL_DARKPLACES5)
+			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
 				cl.punchvector[i] = MSG_ReadCoord32f();
 			else
 				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
-		else
-			cl.punchvector[i] = 0;
 		if (bits & (SU_VELOCITY1<<i) )
 		{
 			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.mvelocity[0][i] = MSG_ReadChar()*16;
-			else if (cl.protocol == PROTOCOL_DARKPLACES5)
+			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
 				cl.mvelocity[0][i] = MSG_ReadCoord32f();
 			else
 				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
-		else
-			cl.mvelocity[0][i] = 0;
 	}
 
-	i = MSG_ReadLong ();
-	if (cl.items != i)
-	{	// set flash times
-		for (j=0 ; j<32 ; j++)
-			if ( (i & (1<<j)) && !(cl.items & (1<<j)))
-				cl.item_gettime[j] = cl.time;
-		cl.items = i;
-	}
+	if (bits & SU_ITEMS)
+		cl.stats[STAT_ITEMS] = MSG_ReadLong ();
 
 	cl.onground = (bits & SU_ONGROUND) != 0;
 	cl.inwater = (bits & SU_INWATER) != 0;
 
-	if (cl.protocol == PROTOCOL_DARKPLACES5)
+	if (cl.protocol == PROTOCOL_DARKPLACES6)
+	{
+	}
+	else if (cl.protocol == PROTOCOL_DARKPLACES5)
 	{
 		cl.stats[STAT_WEAPONFRAME] = (bits & SU_WEAPONFRAME) ? MSG_ReadShort() : 0;
 		cl.stats[STAT_ARMOR] = (bits & SU_ARMOR) ? MSG_ReadShort() : 0;
 		cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadShort() : 0;
 		cl.stats[STAT_HEALTH] = MSG_ReadShort();
 		cl.stats[STAT_AMMO] = MSG_ReadShort();
-
 		cl.stats[STAT_SHELLS] = MSG_ReadShort();
 		cl.stats[STAT_NAILS] = MSG_ReadShort();
 		cl.stats[STAT_ROCKETS] = MSG_ReadShort();
 		cl.stats[STAT_CELLS] = MSG_ReadShort();
-		//cl.stats[STAT_GENERIC1] = MSG_ReadShort();
-		//cl.stats[STAT_GENERIC2] = MSG_ReadShort();
-		//cl.stats[STAT_GENERIC3] = MSG_ReadShort();
-		//cl.stats[STAT_GENERIC4] = MSG_ReadShort();
-		//cl.stats[STAT_GENERIC5] = MSG_ReadShort();
-		//cl.stats[STAT_GENERIC6] = MSG_ReadShort();
-
-		i = (unsigned short) MSG_ReadShort ();
+		cl.stats[STAT_ACTIVEWEAPON] = (unsigned short) MSG_ReadShort ();
 	}
 	else
 	{
@@ -686,38 +683,41 @@ void CL_ParseClientdata (int bits)
 		cl.stats[STAT_WEAPON] = (bits & SU_WEAPON) ? MSG_ReadByte() : 0;
 		cl.stats[STAT_HEALTH] = MSG_ReadShort();
 		cl.stats[STAT_AMMO] = MSG_ReadByte();
-	
 		cl.stats[STAT_SHELLS] = MSG_ReadByte();
 		cl.stats[STAT_NAILS] = MSG_ReadByte();
 		cl.stats[STAT_ROCKETS] = MSG_ReadByte();
 		cl.stats[STAT_CELLS] = MSG_ReadByte();
-
-		i = MSG_ReadByte ();
-		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
-			i = (1<<i);
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
+			cl.stats[STAT_ACTIVEWEAPON] = (1<<MSG_ReadByte ());
+		else
+			cl.stats[STAT_ACTIVEWEAPON] = MSG_ReadByte ();
 	}
 
-	// GAME_NEXUIZ hud needs weapon change time
-	// GAME_NEXUIZ uses a bit number as it's STAT_ACTIVEWEAPON, not a bitfield
-	// like other modes
-	if (cl.stats[STAT_ACTIVEWEAPON] != i)
-		cl.weapontime = cl.time;
-	cl.stats[STAT_ACTIVEWEAPON] = i;
-
-	cl.viewzoomold = cl.viewzoomnew; // for interpolation
 	if (bits & SU_VIEWZOOM)
 	{
-		if (cl.protocol == PROTOCOL_DARKPLACES5)
-			i = (unsigned short) MSG_ReadShort();
+		if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
+			cl.stats[STAT_VIEWZOOM] = (unsigned short) MSG_ReadShort();
 		else
-			i = MSG_ReadByte();
-		if (i < 2)
-			i = 2;
-		cl.viewzoomnew = (float) i * (1.0f / 255.0f);
+			cl.stats[STAT_VIEWZOOM] = MSG_ReadByte();
 	}
-	else
-		cl.viewzoomnew = 1;
 
+	// check for important changes
+
+	// set flash times
+	if (cl.olditems != cl.stats[STAT_ITEMS])
+		for (j = 0;j < 32;j++)
+			if ((cl.stats[STAT_ITEMS] & (1<<j)) && !(cl.olditems & (1<<j)))
+				cl.item_gettime[j] = cl.time;
+	cl.olditems = cl.stats[STAT_ITEMS];
+
+	// GAME_NEXUIZ hud needs weapon change time
+	if (cl.activeweapon != cl.stats[STAT_ACTIVEWEAPON])
+		cl.weapontime = cl.time;
+	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
+
+	// viewzoom interpolation
+	cl.viewzoomold = cl.viewzoomnew;
+	cl.viewzoomnew = (float) max(cl.stats[STAT_VIEWZOOM], 2) * (1.0f / 255.0f);
 }
 
 /*
@@ -1428,8 +1428,8 @@ void CL_ParseServerMessage(void)
 			// hack for unmarked Nehahra movie demos which had a custom protocol
 			if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
 				i = PROTOCOL_NEHAHRAMOVIE;
-			if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_NEHAHRAMOVIE)
-				Host_Error("CL_ParseServerMessage: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_NEHAHRAMOVIE);
+			if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_DARKPLACES6 && i != PROTOCOL_NEHAHRAMOVIE)
+				Host_Error("CL_ParseServerMessage: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), %i (DP6), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_DARKPLACES6, PROTOCOL_NEHAHRAMOVIE);
 			cl.protocol = i;
 			break;
 
@@ -1488,8 +1488,43 @@ void CL_ParseServerMessage(void)
 			CL_ParseStartSoundPacket(false);
 			break;
 
-		case svc_sound2:
-			CL_ParseStartSoundPacket(true);
+		case svc_precache:
+			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+			{
+				// was svc_sound2 in protocols 1, 2, 3, removed in 4, 5, changed to svc_precache in 6
+				CL_ParseStartSoundPacket(true);
+			}
+			else
+			{
+				int i = (unsigned short)MSG_ReadShort();
+				char *s = MSG_ReadString();
+				if (i < 32768)
+				{
+					if (i >= 1 && i < MAX_MODELS)
+					{
+						model_t *model = Mod_ForName(s, false, false, i == 1);
+						if (!model)
+							Con_Printf("svc_precache: Mod_ForName(\"%s\") failed\n", s);
+						cl.model_precache[i] = model;
+					}
+					else
+						Con_Printf("svc_precache: index %i outside range %i...%i\n", i, 1, MAX_MODELS);
+				}
+				else
+				{
+					i -= 32768;
+					if (i >= 1 && i < MAX_SOUNDS)
+					{
+						sfx_t *sfx = S_PrecacheSound (s, true, false);
+						// FIXME: SFXFLAG_SERVEROSUND should be set on the sfx
+						if (!sfx)
+							Con_Printf("svc_precache: S_PrecacheSound(\"%s\") failed\n", s);
+						cl.sound_precache[i] = sfx;
+					}
+					else
+						Con_Printf("svc_precache: index %i outside range %i...%i\n", i, 1, MAX_SOUNDS);
+				}
+			}
 			break;
 
 		case svc_stopsound:
@@ -1584,6 +1619,13 @@ void CL_ParseServerMessage(void)
 			cl.stats[i] = MSG_ReadLong ();
 			break;
 
+		case svc_updatestatubyte:
+			i = MSG_ReadByte ();
+			if (i < 0 || i >= MAX_CL_STATS)
+				Host_Error ("svc_updatestat: %i is invalid", i);
+			cl.stats[i] = MSG_ReadByte ();
+			break;
+
 		case svc_spawnstaticsound:
 			CL_ParseStaticSound (false);
 			break;
@@ -1676,7 +1718,7 @@ void CL_ParseServerMessage(void)
 				EntityFrame_CL_ReadFrame();
 			else if (cl.protocol == PROTOCOL_DARKPLACES4)
 				EntityFrame4_CL_ReadFrame();
-			else if (cl.protocol == PROTOCOL_DARKPLACES5)
+			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
 				EntityFrame5_CL_ReadFrame();
 			else
 				Host_Error("CL_ParseServerMessage: svc_entities: unknown cl.protocol %i\n", cl.protocol);

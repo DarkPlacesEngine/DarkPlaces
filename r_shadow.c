@@ -1533,15 +1533,15 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			VectorScale(lightcolor, colorscale, color2);
+			GL_LockArrays(0, numverts);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
-				GL_LockArrays(0, numverts);
 				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 			}
+			GL_LockArrays(0, 0);
 		}
 		if (diffusescale)
 		{
@@ -1809,15 +1809,15 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
 			VectorScale(lightcolor, colorscale, color2);
+			GL_LockArrays(0, numverts);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
 				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
-				GL_LockArrays(0, numverts);
 				R_Mesh_Draw(numverts, numtriangles, elements);
-				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 			}
+			GL_LockArrays(0, 0);
 		}
 		if (specularscale && (r_shadow_gloss.integer >= 2 || (r_shadow_gloss.integer >= 1 && glosstexture != r_shadow_blankglosstexture)))
 		{
@@ -2034,20 +2034,20 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 #endif
 					}
 				}
+				R_Mesh_State(&m);
+				GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
+				GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
+				VectorScale(lightcolor, colorscale, color2);
+				GL_LockArrays(0, numverts);
+				for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
+				{
+					GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					c_rt_lightmeshes++;
+					c_rt_lighttris += numtriangles;
+				}
+				GL_LockArrays(0, 0);
 			}
-			R_Mesh_State(&m);
-			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
-			GL_BlendFunc(GL_DST_ALPHA, GL_ONE);
-			VectorScale(lightcolor, colorscale, color2);
-			GL_LockArrays(0, numverts);
-			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
-			{
-				GL_Color(bound(0, color2[0], 1), bound(0, color2[1], 1), bound(0, color2[2], 1), 1);
-				R_Mesh_Draw(numverts, numtriangles, elements);
-				c_rt_lightmeshes++;
-				c_rt_lighttris += numtriangles;
-			}
-			GL_LockArrays(0, 0);
 		}
 	}
 	else
@@ -2084,6 +2084,10 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 #endif
 				}
 			}
+			if (r_textureunits.integer >= 3)
+				m.pointer_color = NULL;
+			else
+				m.pointer_color = varray_color4f;
 			R_Mesh_State(&m);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)
 			{
@@ -2091,20 +2095,11 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				color[1] = bound(0, color2[1], 1);
 				color[2] = bound(0, color2[2], 1);
 				if (r_textureunits.integer >= 3)
-				{
 					GL_Color(color[0], color[1], color[2], 1);
-					m.pointer_color = NULL;
-				}
 				else if (r_textureunits.integer >= 2)
-				{
 					R_Shadow_VertexNoShadingWithZAttenuation(numverts, vertex3f, color, matrix_modeltolight);
-					m.pointer_color = varray_color4f;
-				}
 				else
-				{
 					R_Shadow_VertexNoShadingWithXYZAttenuation(numverts, vertex3f, color, matrix_modeltolight);
-					m.pointer_color = varray_color4f;
-				}
 				GL_LockArrays(0, numverts);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				GL_LockArrays(0, 0);
@@ -2487,6 +2482,9 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		ent = &cl_entities[0].render;
 		if (ent->model && ent->model->DrawLight && (ent->flags & RENDER_LIGHT))
 		{
+			lightcolor2[0] = lightcolor[0] * ent->colormod[0] * ent->alpha;
+			lightcolor2[1] = lightcolor[1] * ent->colormod[1] * ent->alpha;
+			lightcolor2[2] = lightcolor[2] * ent->colormod[2] * ent->alpha;
 			Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
 			Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 			Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
@@ -2496,10 +2494,10 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 			{
 				R_Mesh_Matrix(&ent->matrix);
 				for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-					R_Shadow_RenderLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, mesh->map_specular, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale);
+					R_Shadow_RenderLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, mesh->map_specular, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale);
 			}
 			else
-				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, numsurfaces, surfacelist);
+				ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor2, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, rtlight->ambientscale, rtlight->diffusescale, rtlight->specularscale, numsurfaces, surfacelist);
 		}
 		if (r_drawentities.integer)
 		{
@@ -2510,7 +2508,9 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				// transparent meshes are deferred for later
 				if (ent->visframe == r_framecount && BoxesOverlap(ent->mins, ent->maxs, cullmins, cullmaxs) && ent->model && ent->model->DrawLight && (ent->flags & (RENDER_LIGHT | RENDER_TRANSPARENT)) == RENDER_LIGHT)
 				{
-					VectorScale(lightcolor, ent->alpha, lightcolor2);
+					lightcolor2[0] = lightcolor[0] * ent->colormod[0] * ent->alpha;
+					lightcolor2[1] = lightcolor[1] * ent->colormod[1] * ent->alpha;
+					lightcolor2[2] = lightcolor[2] * ent->colormod[2] * ent->alpha;
 					Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
 					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 					Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);

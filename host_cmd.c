@@ -75,6 +75,7 @@ void Host_Status_f (void)
 		case PROTOCOL_DARKPLACES3: protocolname = "PROTOCOL_DARKPLACES3";break;
 		case PROTOCOL_DARKPLACES4: protocolname = "PROTOCOL_DARKPLACES4";break;
 		case PROTOCOL_DARKPLACES5: protocolname = "PROTOCOL_DARKPLACES5";break;
+		case PROTOCOL_DARKPLACES6: protocolname = "PROTOCOL_DARKPLACES6";break;
 		default: protocolname = "PROTOCOL_UNKNOWN";break;
 	}
 	print ("protocol: %i (%s)\n", sv.protocol, protocolname);
@@ -1133,6 +1134,7 @@ void Host_Spawn_f (void)
 	client_t *client;
 	func_t RestoreGame;
 	mfunction_t *f;
+	int stats[MAX_CL_STATS];
 
 	if (cmd_source == src_command)
 	{
@@ -1247,7 +1249,7 @@ void Host_Spawn_f (void)
 	MSG_WriteAngle (&host_client->message, host_client->edict->v->angles[1], sv.protocol);
 	MSG_WriteAngle (&host_client->message, 0, sv.protocol);
 
-	SV_WriteClientdataToMessage (host_client->edict, &host_client->message);
+	SV_WriteClientdataToMessage (host_client, host_client->edict, &host_client->message, stats);
 
 	MSG_WriteByte (&host_client->message, svc_signonnum);
 	MSG_WriteByte (&host_client->message, 3);

@@ -144,6 +144,9 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			}
 			else
 				tint[0] = tint[1] = tint[2] = 1;
+			tint[0] *= ent->colormod[0];
+			tint[1] *= ent->colormod[1];
+			tint[2] *= ent->colormod[2];
 			if (!fullbright && !(ent->flags & RENDER_TRANSPARENT))
 				colorscale *= r_lightmapintensity;
 			colorscale *= ifog;

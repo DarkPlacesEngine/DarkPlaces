@@ -49,7 +49,7 @@ state bit 2 is edge triggered on the down to up transition
 kbutton_t	in_mlook, in_klook;
 kbutton_t	in_left, in_right, in_forward, in_back;
 kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
-kbutton_t	in_strafe, in_speed, in_jump, in_attack;
+kbutton_t	in_strafe, in_speed, in_jump, in_attack, in_use;
 kbutton_t	in_up, in_down;
 // LordHavoc: added 6 new buttons
 kbutton_t	in_button3, in_button4, in_button5, in_button6, in_button7, in_button8;
@@ -155,6 +155,9 @@ void IN_StrafeUp(void) {KeyUp(&in_strafe);}
 
 void IN_AttackDown(void) {KeyDown(&in_attack);}
 void IN_AttackUp(void) {KeyUp(&in_attack);}
+
+void IN_UseDown(void) {KeyDown(&in_use);}
+void IN_UseUp(void) {KeyUp(&in_use);}
 
 // LordHavoc: added 6 new buttons
 void IN_Button3Down(void) {KeyDown(&in_button3);}
@@ -305,31 +308,35 @@ CL_BaseMove
 Send the intended movement message to the server
 ================
 */
-void CL_BaseMove (usercmd_t *cmd)
+void CL_BaseMove (void)
 {
+	vec3_t temp;
 	if (cls.signon != SIGNONS)
 		return;
 
 	CL_AdjustAngles ();
 
-	memset (cmd, 0, sizeof(*cmd));
+	// PRYDON_CLIENTCURSOR needs to survive basemove resets
+	VectorCopy (cl.cmd.cursor_screen, temp);
+	memset (&cl.cmd, 0, sizeof(cl.cmd));
+	VectorCopy (temp, cl.cmd.cursor_screen);
 
 	if (in_strafe.state & 1)
 	{
-		cmd->sidemove += cl_sidespeed.value * CL_KeyState (&in_right);
-		cmd->sidemove -= cl_sidespeed.value * CL_KeyState (&in_left);
+		cl.cmd.sidemove += cl_sidespeed.value * CL_KeyState (&in_right);
+		cl.cmd.sidemove -= cl_sidespeed.value * CL_KeyState (&in_left);
 	}
 
-	cmd->sidemove += cl_sidespeed.value * CL_KeyState (&in_moveright);
-	cmd->sidemove -= cl_sidespeed.value * CL_KeyState (&in_moveleft);
+	cl.cmd.sidemove += cl_sidespeed.value * CL_KeyState (&in_moveright);
+	cl.cmd.sidemove -= cl_sidespeed.value * CL_KeyState (&in_moveleft);
 
-	cmd->upmove += cl_upspeed.value * CL_KeyState (&in_up);
-	cmd->upmove -= cl_upspeed.value * CL_KeyState (&in_down);
+	cl.cmd.upmove += cl_upspeed.value * CL_KeyState (&in_up);
+	cl.cmd.upmove -= cl_upspeed.value * CL_KeyState (&in_down);
 
 	if (! (in_klook.state & 1) )
 	{
-		cmd->forwardmove += cl_forwardspeed.value * CL_KeyState (&in_forward);
-		cmd->forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
+		cl.cmd.forwardmove += cl_forwardspeed.value * CL_KeyState (&in_forward);
+		cl.cmd.forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
 	}
 
 //
@@ -337,20 +344,71 @@ void CL_BaseMove (usercmd_t *cmd)
 //
 	if (in_speed.state & 1)
 	{
-		cmd->forwardmove *= cl_movespeedkey.value;
-		cmd->sidemove *= cl_movespeedkey.value;
-		cmd->upmove *= cl_movespeedkey.value;
+		cl.cmd.forwardmove *= cl_movespeedkey.value;
+		cl.cmd.sidemove *= cl_movespeedkey.value;
+		cl.cmd.upmove *= cl_movespeedkey.value;
 	}
 }
 
 
+#include "cl_collision.h"
+
+void CL_UpdatePrydonCursor(void)
+{
+	vec3_t temp, scale;
+
+	if (!cl_prydoncursor.integer)
+		VectorClear(cl.cmd.cursor_screen);
+
+	/*
+	if (cl.cmd.cursor_screen[0] < -1)
+	{
+		cl.viewangles[YAW] -= m_yaw.value * (cl.cmd.cursor_screen[0] - -1) * vid.realwidth * sensitivity.value * cl.viewzoom;
+		cl.cmd.cursor_screen[0] = -1;
+	}
+	if (cl.cmd.cursor_screen[0] > 1)
+	{
+		cl.viewangles[YAW] -= m_yaw.value * (cl.cmd.cursor_screen[0] - 1) * vid.realwidth * sensitivity.value * cl.viewzoom;
+		cl.cmd.cursor_screen[0] = 1;
+	}
+	if (cl.cmd.cursor_screen[1] < -1)
+	{
+		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - -1) * vid.realheight * sensitivity.value * cl.viewzoom;
+		cl.cmd.cursor_screen[1] = -1;
+	}
+	if (cl.cmd.cursor_screen[1] > 1)
+	{
+		cl.viewangles[PITCH] += m_pitch.value * (cl.cmd.cursor_screen[1] - 1) * vid.realheight * sensitivity.value * cl.viewzoom;
+		cl.cmd.cursor_screen[1] = 1;
+	}
+	*/
+	cl.cmd.cursor_screen[0] = bound(-1, cl.cmd.cursor_screen[0], 1);
+	cl.cmd.cursor_screen[1] = bound(-1, cl.cmd.cursor_screen[1], 1);
+	cl.cmd.cursor_screen[2] = 1;
+
+	scale[0] = -tan(r_refdef.fov_x * M_PI / 360.0);
+	scale[1] = -tan(r_refdef.fov_y * M_PI / 360.0);
+	scale[2] = 1;
+
+	// trace distance
+	VectorScale(scale, 1000000, scale);
+
+	// FIXME: use something other than renderer variables here
+	// (but they need to match)
+	VectorCopy(r_vieworigin, cl.cmd.cursor_start);
+	VectorSet(temp, cl.cmd.cursor_screen[2] * scale[2], cl.cmd.cursor_screen[0] * scale[0], cl.cmd.cursor_screen[1] * scale[1]);
+	Matrix4x4_Transform(&r_view_matrix, temp, cl.cmd.cursor_end);
+	cl.cmd.cursor_fraction = CL_SelectTraceLine(cl.cmd.cursor_start, cl.cmd.cursor_end, cl.cmd.cursor_impact, cl.cmd.cursor_normal, &cl.cmd.cursor_entitynumber);
+	// makes sparks where cursor is
+	//CL_SparkShower(cl.cmd.cursor_impact, cl.cmd.cursor_normal, 5, 0);
+}
 
 /*
 ==============
 CL_SendMove
 ==============
 */
-void CL_SendMove(usercmd_t *cmd)
+void CL_SendMove(void)
 {
 	int i;
 	int bits;
@@ -359,9 +417,11 @@ void CL_SendMove(usercmd_t *cmd)
 	static double lastmovetime;
 	static float forwardmove, sidemove, upmove, total; // accumulation
 
-	forwardmove += cmd->forwardmove;
-	sidemove += cmd->sidemove;
-	upmove += cmd->upmove;
+	CL_UpdatePrydonCursor();
+
+	forwardmove += cl.cmd.forwardmove;
+	sidemove += cl.cmd.sidemove;
+	upmove += cl.cmd.upmove;
 	total++;
 	// LordHavoc: cap outgoing movement messages to sys_ticrate
 	if (!cl.islocalgame && (realtime - lastmovetime < sys_ticrate.value))
@@ -378,8 +438,6 @@ void CL_SendMove(usercmd_t *cmd)
 	buf.cursize = 0;
 	buf.data = data;
 
-	cl.cmd = *cmd;
-
 	// send the movement message
 	MSG_WriteByte (&buf, clc_move);
 
@@ -395,7 +453,7 @@ void CL_SendMove(usercmd_t *cmd)
 		for (i = 0;i < 3;i++)
 			MSG_WriteAngle32f (&buf, cl.viewangles[i]);
 	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
 	{
 		for (i = 0;i < 3;i++)
 			MSG_WriteAngle16i (&buf, cl.viewangles[i]);
@@ -411,28 +469,58 @@ void CL_SendMove(usercmd_t *cmd)
 	// send button bits
 	bits = 0;
 
-	// LordHavoc: added 6 new buttons
-	if (in_attack.state  & 3) bits |=   1;in_attack.state  &= ~2;
-	if (in_jump.state    & 3) bits |=   2;in_jump.state    &= ~2;
-	if (in_button3.state & 3) bits |=   4;in_button3.state &= ~2;
-	if (in_button4.state & 3) bits |=   8;in_button4.state &= ~2;
-	if (in_button5.state & 3) bits |=  16;in_button5.state &= ~2;
-	if (in_button6.state & 3) bits |=  32;in_button6.state &= ~2;
-	if (in_button7.state & 3) bits |=  64;in_button7.state &= ~2;
-	if (in_button8.state & 3) bits |= 128;in_button8.state &= ~2;
+	// LordHavoc: added 13 new buttons and chat button
+	if (in_attack.state   & 3) bits |=   1;in_attack.state  &= ~2;
+	if (in_jump.state     & 3) bits |=   2;in_jump.state    &= ~2;
+	if (in_button3.state  & 3) bits |=   4;in_button3.state &= ~2;
+	if (in_button4.state  & 3) bits |=   8;in_button4.state &= ~2;
+	if (in_button5.state  & 3) bits |=  16;in_button5.state &= ~2;
+	if (in_button6.state  & 3) bits |=  32;in_button6.state &= ~2;
+	if (in_button7.state  & 3) bits |=  64;in_button7.state &= ~2;
+	if (in_button8.state  & 3) bits |= 128;in_button8.state &= ~2;
+	if (in_use.state      & 3) bits |= 256;in_use.state     &= ~2;
+	if (key_dest != key_game || key_consoleactive) bits |= 512;
+	if (cl_prydoncursor.integer) bits |= 1024;
+	// button bits 11-31 unused currently
+	if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
+	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
+	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
+	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
 
-	MSG_WriteByte (&buf, bits);
+	if (cl.protocol == PROTOCOL_DARKPLACES6)
+		MSG_WriteLong (&buf, bits);
+	else
+		MSG_WriteByte (&buf, bits);
 
 	MSG_WriteByte (&buf, in_impulse);
 	in_impulse = 0;
 
-	// FIXME: should ack latest 3 frames perhaps?
-	if (cl.latestframenum > 0)
+	// PRYDON_CLIENTCURSOR
+	if (cl.protocol == PROTOCOL_DARKPLACES6)
+	{
+		// 30 bytes
+		MSG_WriteShort (&buf, cl.cmd.cursor_screen[0] * 32767.0f);
+		MSG_WriteShort (&buf, cl.cmd.cursor_screen[1] * 32767.0f);
+		MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
+		MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
+		MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);
+		MSG_WriteFloat (&buf, cl.cmd.cursor_impact[0]);
+		MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
+		MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
+		MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
+	}
+
+	// ack the last few frame numbers
+	// (redundent to improve handling of client->server packet loss)
+	if (cl.latestframenums[LATESTFRAMENUMS-1] > 0)
 	{
 		if (developer_networkentities.integer >= 1)
-			Con_Printf("send clc_ackentities %i\n", cl.latestframenum);
-		MSG_WriteByte(&buf, clc_ackentities);
-		MSG_WriteLong(&buf, cl.latestframenum);
+			Con_Printf("send clc_ackframe %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
+		for (i = 0;i < LATESTFRAMENUMS;i++)
+		{
+			MSG_WriteByte(&buf, clc_ackframe);
+			MSG_WriteLong(&buf, cl.latestframenums[i]);
+		}
 	}
 
 	// deliver the message
@@ -491,6 +579,10 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-klook", IN_KLookUp);
 	Cmd_AddCommand ("+mlook", IN_MLookDown);
 	Cmd_AddCommand ("-mlook", IN_MLookUp);
+
+	// LordHavoc: added use button
+	Cmd_AddCommand ("+use", IN_UseDown);
+	Cmd_AddCommand ("-use", IN_UseUp);
 
 	// LordHavoc: added 6 new buttons
 	Cmd_AddCommand ("+button3", IN_Button3Down);

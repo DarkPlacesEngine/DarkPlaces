@@ -61,6 +61,8 @@ cvar_t cl_beams_lightatend = {CVAR_SAVE, "cl_beams_lightatend", "0"};
 
 cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
 
+cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0"};
+
 mempool_t *cl_refdef_mempool;
 mempool_t *cl_entities_mempool;
 
@@ -390,6 +392,7 @@ entity_t *CL_NewTempEntity(void)
 	ent->render.colormap = -1; // no special coloring
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
+	VectorSet(ent->render.colormod, 1, 1, 1);
 	return ent;
 }
 
@@ -530,6 +533,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		else
 			e->render.colormap = -1; // no special coloring
 		e->render.skinnum = e->state_current.skin;
+		VectorScale(e->state_current.colormod, (1.0f / 32.0f), e->render.colormod);
 		if (e->render.flags & RENDER_VIEWMODEL)
 		{
 			if (!r_drawviewmodel.integer || chase_active.integer || envmap)
@@ -610,6 +614,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// transfer certain model flags to effects
 			if (e->render.model->flags2 & EF_FULLBRIGHT)
 				e->render.effects |= EF_FULLBRIGHT;
+			if (cl_prydoncursor.integer && (e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e - cl_entities)
+				VectorScale(e->render.colormod, 2, e->render.colormod);
 		}
 
 		// animation lerp
@@ -886,6 +892,7 @@ void CL_RelinkWorld(void)
 	ent->render.flags = RENDER_SHADOW;
 	if (!r_fullbright.integer)
 		ent->render.flags |= RENDER_LIGHT;
+	VectorSet(ent->render.colormod, 1, 1, 1);
 }
 
 static void CL_RelinkStaticEntities(void)
@@ -905,6 +912,7 @@ static void CL_RelinkStaticEntities(void)
 		// hide player shadow during intermission or nehahra movie
 		if (!(e->render.effects & EF_NOSHADOW) && !(e->render.flags & RENDER_TRANSPARENT))
 			e->render.flags |= RENDER_SHADOW;
+		VectorSet(e->render.colormod, 1, 1, 1);
 		R_LerpAnimation(&e->render);
 		r_refdef.entities[r_refdef.numentities++] = &e->render;
 	}
@@ -931,7 +939,7 @@ static void CL_RelinkNetworkEntities(void)
 	ent->state_current.flags = RENDER_VIEWMODEL;
 	if (cl.stats[STAT_HEALTH] <= 0 || cl.intermission)
 		ent->state_current.modelindex = 0;
-	else if (cl.items & IT_INVISIBILITY)
+	else if (cl.stats[STAT_ITEMS] & IT_INVISIBILITY)
 	{
 		if (gamemode == GAME_TRANSFUSION)
 			ent->state_current.alpha = 128;
@@ -998,6 +1006,7 @@ static void CL_RelinkEffects(void)
 				ent->render.frame = ent->render.frame2;
 				ent->render.colormap = -1; // no special coloring
 				ent->render.alpha = 1;
+				VectorSet(ent->render.colormod, 1, 1, 1);
 
 				Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, e->origin[0], e->origin[1], e->origin[2], 0, 0, 0, 1);
 				Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
@@ -1198,10 +1207,10 @@ int CL_ReadFromServer(void)
 CL_SendCmd
 =================
 */
-void CL_SendCmd(usercmd_t *cmd)
+void CL_SendCmd(void)
 {
 	if (cls.signon == SIGNONS)
-		CL_SendMove(cmd);
+		CL_SendMove();
 
 	if (cls.demoplayback)
 	{
@@ -1349,6 +1358,8 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_beams_relative);
 	Cvar_RegisterVariable(&cl_beams_lightatend);
 	Cvar_RegisterVariable(&cl_noplayershadow);
+
+	Cvar_RegisterVariable(&cl_prydoncursor);
 
 	if (gamemode == GAME_NETHERWORLD)
 	{

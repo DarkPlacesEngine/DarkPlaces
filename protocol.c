@@ -30,9 +30,9 @@ entity_state_t defaultstate =
 	254,//unsigned char glowcolor;
 	0,//unsigned char flags;
 	0,//unsigned char tagindex;
-	255,//unsigned char colormod;
+	{32, 32, 32},//unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	{0,0,0,0}//unsigned char unused[4]; // !
+	{0,0}//unsigned char unused[2]; // !
 };
 
 // keep track of quake entities because they need to be killed if they get stale
@@ -100,7 +100,7 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (bits & U_EFFECTS2)	s.effects = (s.effects & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_GLOWSIZE)	s.glowsize = MSG_ReadByte();
 	if (bits & U_GLOWCOLOR)	s.glowcolor = MSG_ReadByte();
-	if (bits & U_COLORMOD)	s.colormod = MSG_ReadByte();
+	if (bits & U_COLORMOD)	{int c = MSG_ReadByte();s.colormod[0] = (qbyte)(((c >> 5) & 7) * (32.0f / 7.0f));s.colormod[1] = (qbyte)(((c >> 2) & 7) * (32.0f / 7.0f));s.colormod[2] = (qbyte)((c & 3) * (32.0f / 3.0f));}
 	if (bits & U_GLOWTRAIL) s.flags |= RENDER_GLOWTRAIL;
 	if (bits & U_FRAME2)	s.frame = (s.frame & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_MODEL2)	s.modelindex = (s.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
@@ -278,7 +278,7 @@ void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_sta
 		if (bits & U_EFFECTS2)		MSG_WriteByte(&buf, s->effects >> 8);
 		if (bits & U_GLOWSIZE)		MSG_WriteByte(&buf, s->glowsize);
 		if (bits & U_GLOWCOLOR)		MSG_WriteByte(&buf, s->glowcolor);
-		if (bits & U_COLORMOD)		MSG_WriteByte(&buf, s->colormod);
+		if (bits & U_COLORMOD)		{int c = ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 5) | ((int)bound(0, s->colormod[0] * (7.0f / 32.0f), 7) << 2) | ((int)bound(0, s->colormod[0] * (3.0f / 32.0f), 3) << 0);MSG_WriteByte(&buf, c);}
 		if (bits & U_FRAME2)		MSG_WriteByte(&buf, s->frame >> 8);
 		if (bits & U_MODEL2)		MSG_WriteByte(&buf, s->modelindex >> 8);
 
@@ -385,7 +385,7 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 		if (bits & E_ORIGIN3)
 			MSG_WriteCoord16i(msg, ent->origin[2]);
 	}
-	else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+	else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 	{
 		// LordHavoc: have to write flags first, as they can modify protocol
 		if (bits & E_FLAGS)
@@ -409,7 +409,7 @@ void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned
 				MSG_WriteCoord32f(msg, ent->origin[2]);
 		}
 	}
-	if (sv.protocol == PROTOCOL_DARKPLACES5 && !(ent->flags & RENDER_LOWPRECISION))
+	if ((sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6) && !(ent->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
 			MSG_WriteAngle16i(msg, ent->angles[0]);
@@ -525,7 +525,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 		if (bits & E_ORIGIN3)
 			e->origin[2] = MSG_ReadCoord16i();
 	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
 	{
 		if (bits & E_FLAGS)
 			e->flags = MSG_ReadByte();
@@ -550,7 +550,7 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 	}
 	else
 		Host_Error("EntityState_ReadFields: unknown cl.protocol %i\n", cl.protocol);
-	if (cl.protocol == PROTOCOL_DARKPLACES5 && !(e->flags & RENDER_LOWPRECISION))
+	if ((cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6) && !(e->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
 			e->angles[0] = MSG_ReadAngle16i();
@@ -861,7 +861,9 @@ void EntityFrame_CL_ReadFrame(void)
 	// read the frame header info
 	f->time = cl.mtime[0];
 	number = MSG_ReadLong();
-	cl.latestframenum = f->framenum = MSG_ReadLong();
+	for (i = 0;i < LATESTFRAMENUMS-1;i++)
+		cl.latestframenums[i] = cl.latestframenums[i+1];
+	cl.latestframenums[LATESTFRAMENUMS-1] = f->framenum = MSG_ReadLong();
 	f->eye[0] = MSG_ReadFloat();
 	f->eye[1] = MSG_ReadFloat();
 	f->eye[2] = MSG_ReadFloat();
@@ -1118,7 +1120,9 @@ void EntityFrame4_CL_ReadFrame(void)
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
 	// read the number of this frame
-	cl.latestframenum = framenum = MSG_ReadLong();
+	for (i = 0;i < LATESTFRAMENUMS-1;i++)
+		cl.latestframenums[i] = cl.latestframenums[i+1];
+	cl.latestframenums[LATESTFRAMENUMS-1] = framenum = MSG_ReadLong();
 	// read the start number
 	enumber = (unsigned short) MSG_ReadShort();
 	if (developer_networkentities.integer >= 1)
@@ -1519,6 +1523,12 @@ void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbi
 			MSG_WriteByte(msg, s->glowsize);
 			MSG_WriteByte(msg, s->glowcolor);
 		}
+		if (bits & E5_COLORMOD)
+		{
+			MSG_WriteByte(msg, s->colormod[0]);
+			MSG_WriteByte(msg, s->colormod[1]);
+			MSG_WriteByte(msg, s->colormod[2]);
+		}
 	}
 }
 
@@ -1623,6 +1633,12 @@ void EntityState5_ReadUpdate(entity_state_t *s)
 		s->glowsize = MSG_ReadByte();
 		s->glowcolor = MSG_ReadByte();
 	}
+	if (bits & E5_COLORMOD)
+	{
+		s->colormod[0] = MSG_ReadByte();
+		s->colormod[1] = MSG_ReadByte();
+		s->colormod[2] = MSG_ReadByte();
+	}
 
 
 	if (developer_networkentities.integer >= 2)
@@ -1674,6 +1690,8 @@ void EntityState5_ReadUpdate(entity_state_t *s)
 			Con_Printf(" E5_LIGHT %i:%i:%i:%i %i:%i", s->light[0], s->light[1], s->light[2], s->light[3], s->lightstyle, s->lightpflags);
 		if (bits & E5_GLOW)
 			Con_Printf(" E5_GLOW %i:%i", s->glowsize * 4, s->glowcolor);
+		if (bits & E5_COLORMOD)
+			Con_Printf(" E5_COLORMOD %f:%f:%f", s->colormod[0] / 32.0f, s->colormod[1] / 32.0f, s->colormod[2] / 32.0f);
 		Con_Print("\n");
 	}
 }
@@ -1711,6 +1729,8 @@ int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 			bits |= E5_LIGHT;
 		if (o->glowsize != n->glowsize || o->glowcolor != n->glowcolor)
 			bits |= E5_GLOW;
+		if (o->colormod[0] != n->colormod[0] || o->colormod[1] != n->colormod[1] || o->colormod[2] != n->colormod[2])
+			bits |= E5_COLORMOD;
 	}
 	else
 		if (o->active)
@@ -1720,11 +1740,13 @@ int EntityState5_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 
 void EntityFrame5_CL_ReadFrame(void)
 {
-	int n, enumber;
+	int i, n, enumber;
 	entity_t *ent;
 	entity_state_t *s;
 	// read the number of this frame to echo back in next input packet
-	cl.latestframenum = MSG_ReadLong();
+	for (i = 0;i < LATESTFRAMENUMS-1;i++)
+		cl.latestframenums[i] = cl.latestframenums[i+1];
+	cl.latestframenums[LATESTFRAMENUMS-1] = MSG_ReadLong();
 	// read entity numbers until we find a 0x8000
 	// (which would be remove world entity, but is actually a terminator)
 	while ((n = (unsigned short)MSG_ReadShort()) != 0x8000 && !msg_badread)
@@ -1766,23 +1788,16 @@ void EntityFrame5_CL_ReadFrame(void)
 	}
 }
 
-void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum, int viewentnum)
+void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum, int viewentnum)
 {
 	int i, j, k, l, bits;
 	entityframe5_changestate_t *s, *s2;
 	entityframe5_packetlog_t *p, *p2;
-	// scan for packets made obsolete by this ack
+	qbyte statsdeltabits[(MAX_CL_STATS+7)/8]; 
+	// scan for packets that were lost
 	for (i = 0, p = d->packetlog;i < ENTITYFRAME5_MAXPACKETLOGS;i++, p++)
 	{
-		// skip packets that are empty or in the future
-		if (p->packetnumber == 0 || p->packetnumber > framenum)
-			continue;
-		// if the packetnumber matches it is deleted without any processing 
-		// (since it was received).
-		// if the packet number is less than this ack it was lost and its
-		// important information will be repeated in this update if it is not
-		// already obsolete due to a later update.
-		if (p->packetnumber < framenum)
+		if (p->packetnumber && p->packetnumber <= framenum)
 		{
 			// packet was lost - merge deltabits into the main array so they
 			// will be re-sent, but only if there is no newer update of that
@@ -1797,7 +1812,7 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum, int viewent
 				{
 					if (p2->packetnumber > framenum)
 					{
-						for (l = 0, s2 = p2->states;l < p2->numstates;l++, p2++)
+						for (l = 0, s2 = p2->states;l < p2->numstates;l++, s2++)
 						{
 							if (s2->number == s->number)
 							{
@@ -1815,16 +1830,37 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum, int viewent
 					d->priorities[s->number] = EntityState5_Priority(d, d->states + viewentnum, d->states + s->number, d->deltabits[s->number], d->latestframenum - d->updateframenum[s->number]);
 				}
 			}
+			// mark lost stats
+			for (j = 0;j < MAX_CL_STATS;j++)
+			{
+				for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
+					statsdeltabits[l] = p->statsdeltabits[l] & ~d->statsdeltabits[l];
+				for (k = 0, p2 = d->packetlog;k < ENTITYFRAME5_MAXPACKETLOGS;k++, p2++)
+					if (p2->packetnumber > framenum)
+						for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
+							statsdeltabits[l] = p->statsdeltabits[l] & ~p2->statsdeltabits[l];
+				for (l = 0;l < (MAX_CL_STATS+7)/8;l++)
+					d->statsdeltabits[l] |= statsdeltabits[l];
+			}
+			// delete this packet log as it is now obsolete
+			p->packetnumber = 0;
 		}
-		// delete this packet log as it is now obsolete
-		p->packetnumber = 0;
 	}
+}
+
+void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum)
+{
+	int i;
+	// scan for packets made obsolete by this ack and delete them
+	for (i = 0;i < ENTITYFRAME5_MAXPACKETLOGS;i++)
+		if (d->packetlog[i].packetnumber <= framenum)
+			d->packetlog[i].packetnumber = 0;
 }
 
 int entityframe5_prioritychaincounts[E5_PROTOCOL_PRIORITYLEVELS];
 unsigned short entityframe5_prioritychains[E5_PROTOCOL_PRIORITYLEVELS][ENTITYFRAME5_MAXSTATES];
 
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum)
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats)
 {
 	const entity_state_t *n;
 	int i, num, l, framenum, packetlognumber, priority;
@@ -1834,10 +1870,31 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 
 	framenum = d->latestframenum + 1;
 
+	// if packet log is full, mark all frames as lost, this will cause
+	// it to send the lost data again
+	for (packetlognumber = 0;packetlognumber < ENTITYFRAME5_MAXPACKETLOGS;packetlognumber++)
+		if (d->packetlog[packetlognumber].packetnumber == 0)
+			break;
+	if (packetlognumber == ENTITYFRAME5_MAXPACKETLOGS)
+	{
+		EntityFrame5_LostFrame(d, framenum, viewentnum);
+		packetlognumber = 0;
+	}
+
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));
 	buf.data = data;
 	buf.maxsize = sizeof(data);
+
+	// detect changes in stats
+	for (i = 0;i < MAX_CL_STATS;i++)
+	{
+		if (d->stats[i] != stats[i])
+		{
+			d->statsdeltabits[i>>3] |= (1<<(i&7));
+			d->stats[i] = stats[i];
+		}
+	}
 
 	// detect changes in states
 	num = 0;
@@ -1898,52 +1955,64 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		}
 	}
 
-	// return early if there are no entities to send this time
-	if (l == 0)
-		return;
-
-	d->latestframenum = framenum;
-	MSG_WriteByte(msg, svc_entities);
-	MSG_WriteLong(msg, framenum);
-
-	// if packet log is full, an empty update is still written
-	// (otherwise the client might have nothing to ack to remove packetlogs)
-	for (packetlognumber = 0, packetlog = d->packetlog;packetlognumber < ENTITYFRAME5_MAXPACKETLOGS;packetlognumber++, packetlog++)
-		if (packetlog->packetnumber == 0)
-			break;
-	if (packetlognumber < ENTITYFRAME5_MAXPACKETLOGS)
+	// add packetlog entry
+	packetlog = d->packetlog + packetlognumber;
+	packetlog->packetnumber = framenum;
+	packetlog->numstates = 0;
+	// write stat updates
+	if (sv.protocol == PROTOCOL_DARKPLACES6)
 	{
-		// write to packet and log
-		packetlog->packetnumber = framenum;
-		packetlog->numstates = 0;
-		for (priority = E5_PROTOCOL_PRIORITYLEVELS - 1;priority >= 0 && packetlog->numstates < ENTITYFRAME5_MAXSTATES;priority--)
+		for (i = 0;i < MAX_CL_STATS;i++)
 		{
-			for (i = 0;i < entityframe5_prioritychaincounts[priority] && packetlog->numstates < ENTITYFRAME5_MAXSTATES;i++)
+			if (d->statsdeltabits[i>>3] & (1<<(i&7)))
 			{
-				num = entityframe5_prioritychains[priority][i];
-				n = d->states + num;
-				if (d->deltabits[num] & E5_FULLUPDATE)
-					d->deltabits[num] = E5_FULLUPDATE | EntityState5_DeltaBits(&defaultstate, n);
-				buf.cursize = 0;
-				EntityState5_WriteUpdate(num, n, d->deltabits[num], &buf);
-				// if the entity won't fit, try the next one
-				if (msg->cursize + buf.cursize + 2 > msg->maxsize)
-					continue;
-				// write entity to the packet
-				SZ_Write(msg, buf.data, buf.cursize);
-				// mark age on entity for prioritization
-				d->updateframenum[num] = framenum;
-				// log entity so deltabits can be restored later if lost
-				packetlog->states[packetlog->numstates].number = num;
-				packetlog->states[packetlog->numstates].bits = d->deltabits[num];
-				packetlog->numstates++;
-				// clear deltabits and priority so it won't be sent again
-				d->deltabits[num] = 0;
-				d->priorities[num] = 0;
+				d->statsdeltabits[i>>3] &= ~(1<<(i&7));
+				packetlog->statsdeltabits[i>>3] |= (1<<(i&7));
+				if (d->stats[i] >= 0 && d->stats[i] < 256)
+				{
+					MSG_WriteByte(msg, svc_updatestatubyte);
+					MSG_WriteByte(msg, i);
+					MSG_WriteByte(msg, d->stats[i]);
+				}
+				else
+				{
+					MSG_WriteByte(msg, svc_updatestat);
+					MSG_WriteByte(msg, i);
+					MSG_WriteLong(msg, d->stats[i]);
+				}
 			}
 		}
 	}
-
+	// write state updates
+	d->latestframenum = framenum;
+	MSG_WriteByte(msg, svc_entities);
+	MSG_WriteLong(msg, framenum);
+	for (priority = E5_PROTOCOL_PRIORITYLEVELS - 1;priority >= 0 && packetlog->numstates < ENTITYFRAME5_MAXSTATES;priority--)
+	{
+		for (i = 0;i < entityframe5_prioritychaincounts[priority] && packetlog->numstates < ENTITYFRAME5_MAXSTATES;i++)
+		{
+			num = entityframe5_prioritychains[priority][i];
+			n = d->states + num;
+			if (d->deltabits[num] & E5_FULLUPDATE)
+				d->deltabits[num] = E5_FULLUPDATE | EntityState5_DeltaBits(&defaultstate, n);
+			buf.cursize = 0;
+			EntityState5_WriteUpdate(num, n, d->deltabits[num], &buf);
+			// if the entity won't fit, try the next one
+			if (msg->cursize + buf.cursize + 2 > msg->maxsize)
+				continue;
+			// write entity to the packet
+			SZ_Write(msg, buf.data, buf.cursize);
+			// mark age on entity for prioritization
+			d->updateframenum[num] = framenum;
+			// log entity so deltabits can be restored later if lost
+			packetlog->states[packetlog->numstates].number = num;
+			packetlog->states[packetlog->numstates].bits = d->deltabits[num];
+			packetlog->numstates++;
+			// clear deltabits and priority so it won't be sent again
+			d->deltabits[num] = 0;
+			d->priorities[num] = 0;
+		}
+	}
 	MSG_WriteShort(msg, 0x8000);
 }
 

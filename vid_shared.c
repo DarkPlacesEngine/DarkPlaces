@@ -732,23 +732,23 @@ void IN_PostMove(void)
 IN_DoMove
 ===========
 */
-void IN_ProcessMove(usercmd_t *cmd)
+void IN_ProcessMove(void)
 {
 	// get basic movement from keyboard
-	CL_BaseMove(cmd);
+	CL_BaseMove();
 
 	// OS independent code
 	IN_PreMove();
 
 	// allow mice or other external controllers to add to the move
-	IN_Move(cmd);
+	IN_Move();
 
 	// OS independent code
 	IN_PostMove();
 }
 
 
-void IN_Mouse(usercmd_t *cmd, float mx, float my)
+void IN_Mouse(float mx, float my)
 {
 	int mouselook = (in_mlook.state & 1) || freelook.integer;
 	float mouse_x, mouse_y;
@@ -776,13 +776,21 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 	if(!in_client_mouse)
 		return;
 
+	if (cl_prydoncursor.integer)
+	{
+		cl.cmd.cursor_screen[0] += mouse_x / vid.realwidth;
+		cl.cmd.cursor_screen[1] += mouse_y / vid.realheight;
+		V_StopPitchDrift();
+		return;
+	}
+
 	// LordHavoc: viewzoom affects mouse sensitivity for sniping
 	mouse_x *= sensitivity.value * cl.viewzoom;
 	mouse_y *= sensitivity.value * cl.viewzoom;
 
 	// Add mouse X/Y movement to cmd
 	if ((in_strafe.state & 1) || (lookstrafe.integer && mouselook))
-		cmd->sidemove += m_side.value * mouse_x;
+		cl.cmd.sidemove += m_side.value * mouse_x;
 	else
 		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
 
@@ -794,9 +802,9 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 	else
 	{
 		if ((in_strafe.state & 1) && noclip_anglehack)
-			cmd->upmove -= m_forward.value * mouse_y;
+			cl.cmd.upmove -= m_forward.value * mouse_y;
 		else
-			cmd->forwardmove -= m_forward.value * mouse_y;
+			cl.cmd.forwardmove -= m_forward.value * mouse_y;
 	}
 }
 

@@ -70,6 +70,8 @@ void PF_VarString(int first, char *out, int outlength)
 }
 
 char *ENGINE_EXTENSIONS =
+"DP_BUTTONCHAT "
+"DP_BUTTONUSE "
 "DP_CL_LOADSKY "
 "DP_CON_SET "
 "DP_CON_SETA "
@@ -165,6 +167,7 @@ char *ENGINE_EXTENSIONS =
 "NEH_CMD_PLAY2 "
 "NEH_RESTOREGAME "
 "NXQ_GFX_LETTERBOX "
+"PRYDON_CLIENTCURSOR "
 "TENEBRAE_GFX_DLIGHTS "
 "TW_SV_STEPCONTROL "
 ;
@@ -351,10 +354,10 @@ PF_setmodel
 setmodel(entity, model)
 =================
 */
+static vec3_t quakemins = {-16, -16, -16}, quakemaxs = {16, 16, 16};
 void PF_setmodel (void)
 {
 	edict_t	*e;
-	char	*m, **check;
 	model_t	*mod;
 	int		i;
 
@@ -363,24 +366,19 @@ void PF_setmodel (void)
 		PF_WARNING("setmodel: can not modify world entity\n");
 	if (e->e->free)
 		PF_WARNING("setmodel: can not modify free entity\n");
-	m = G_STRING(OFS_PARM1);
-
-// check to see if model was properly precached
-	for (i=0, check = sv.model_precache ; *check ; i++, check++)
-		if (!strcmp(*check, m))
-			break;
-
-	if (!*check)
-		PF_WARNING(va("setmodel: no precache for model \"%s\"\n", m));
-
-
-	e->v->model = PR_SetString(*check);
+	i = SV_ModelIndex(G_STRING(OFS_PARM1), 1);
+	e->v->model = PR_SetString(sv.model_precache[i]);
 	e->v->modelindex = i;
 
-	mod = sv.models[ (int)e->v->modelindex];
+	mod = sv.models[i];
 
 	if (mod)
-		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs, true);
+	{
+		if (mod->type != mod_alias || sv_gameplayfix_setmodelrealbox.integer)
+			SetMinMaxSize (e, mod->normalmins, mod->normalmaxs, true);
+		else
+			SetMinMaxSize (e, quakemins, quakemaxs, true);
+	}
 	else
 		SetMinMaxSize (e, vec3_origin, vec3_origin, true);
 }
@@ -626,7 +624,6 @@ PF_ambientsound
 */
 void PF_ambientsound (void)
 {
-	char		**check;
 	char		*samp;
 	float		*pos;
 	float 		vol, attenuation;
@@ -638,15 +635,9 @@ void PF_ambientsound (void)
 	attenuation = G_FLOAT(OFS_PARM3);
 
 // check to see if samp was properly precached
-	for (soundnum=0, check = sv.sound_precache ; *check ; check++, soundnum++)
-		if (!strcmp(*check,samp))
-			break;
-
-	if (!*check)
-	{
-		Con_Printf("no precache: %s\n", samp);
+	soundnum = SV_SoundIndex(samp, 1);
+	if (!soundnum)
 		return;
-	}
 
 	large = false;
 	if (soundnum >= 256)
@@ -1356,59 +1347,17 @@ void PF_precache_file (void)
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 }
 
+
 void PF_precache_sound (void)
 {
-	char	*s;
-	int		i;
-	int		limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_SOUNDS);
-
-	if (sv.state != ss_loading)
-		PF_ERROR("PF_Precache_*: Precache can only be done in spawn functions");
-
-	s = G_STRING(OFS_PARM0);
+	SV_SoundIndex(G_STRING(OFS_PARM0), 2);
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
-	PR_CheckEmptyString (s);
-
-	for (i=0 ; i<limit ; i++)
-	{
-		if (!sv.sound_precache[i])
-		{
-			sv.sound_precache[i] = s;
-			return;
-		}
-		if (!strcmp(sv.sound_precache[i], s))
-			return;
-	}
-	PF_ERROR("PF_precache_sound: overflow");
 }
 
 void PF_precache_model (void)
 {
-	char	*s;
-	int		i;
-	int		limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_MODELS);
-
-	if (sv.state != ss_loading)
-		PF_ERROR("PF_Precache_*: Precache can only be done in spawn functions");
-
-	s = G_STRING(OFS_PARM0);
-	if (sv.worldmodel->brush.ishlbsp && ((!s) || (!s[0])))
-		return;
+	SV_ModelIndex(G_STRING(OFS_PARM0), 2);
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
-	PR_CheckEmptyString (s);
-
-	for (i = 0;i < limit;i++)
-	{
-		if (!sv.model_precache[i])
-		{
-			sv.model_precache[i] = s;
-			sv.models[i] = Mod_ForName (s, true, false, false);
-			return;
-		}
-		if (!strcmp(sv.model_precache[i], s))
-			return;
-	}
-	PF_ERROR("PF_precache_model: overflow");
 }
 
 
@@ -2250,8 +2199,8 @@ void PF_effect (void)
 	if (!s || !s[0])
 		PF_WARNING("effect: no model specified\n");
 
-	i = SV_ModelIndex(s);
-	if (i < 0)
+	i = SV_ModelIndex(s, 1);
+	if (!i)
 		PF_WARNING("effect: model not precached\n");
 	SV_StartEffect(G_VECTOR(OFS_PARM0), i, G_FLOAT(OFS_PARM2), G_FLOAT(OFS_PARM3), G_FLOAT(OFS_PARM4));
 }
@@ -3145,7 +3094,10 @@ int SV_GetTagIndex (edict_t *e, char *tagname)
 	int tagindex, i;
 	model_t *model;
 
-	model = sv.models[(int)e->v->modelindex];
+	i = e->v->modelindex;
+	if (i < 1 || i >= MAX_MODELS)
+		return -1;
+	model = sv.models[i];
 
 	tagindex = -1;
 	if (model->data_overridetagnamesforskin && (unsigned int)e->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)e->v->skin].num_overridetagnames)
@@ -3233,14 +3185,18 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 		{
 			attachent = EDICT_NUM(val->edict); // to this it entity our entity is attached
 			val = GETEDICTFIELDVALUE(ent, eval_tag_index);
-			if (val->_float) 
-			{// got tagname on parent entity attachment tag via tag_index (and got it's matrix)
+			Matrix4x4_CreateIdentity(&attachmatrix);
+			if (val->_float >= 1 && attachent->v->modelindex >= 1 && attachent->v->modelindex < MAX_MODELS)
+			{
 				model = sv.models[(int)attachent->v->modelindex];
-				reqtag = (val->_float - 1) + attachent->v->frame*model->alias.aliasnum_tags;
-				Matrix4x4_Copy(&attachmatrix, &model->alias.aliasdata_tags[reqtag].matrix);
+				if (val->_float < model->alias.aliasnum_tags)
+				{
+					// got tagname on parent entity attachment tag via tag_index (and got it's matrix)
+					model = sv.models[(int)attachent->v->modelindex];
+					reqtag = (val->_float - 1) + attachent->v->frame*model->alias.aliasnum_tags;
+					Matrix4x4_Copy(&attachmatrix, &model->alias.aliasdata_tags[reqtag].matrix);
+				}
 			}
-			else
-				Matrix4x4_CreateIdentity(&attachmatrix);
 
 			// apply transformation by child entity matrix
 			val = GETEDICTFIELDVALUE(ent, eval_scale);
@@ -3264,7 +3220,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 			attachloop += 1;
 			if (attachloop > 255) // prevent runaway looping
 				return 5;
-		} 
+		}
 		while ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict);
 	}
 

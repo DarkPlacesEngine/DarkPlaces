@@ -255,6 +255,9 @@ typedef struct entity_render_s
 	// render flags
 	int flags;
 
+	// colormod tinting of models
+	float colormod[3];
+
 	// interpolated animation
 
 	// frame that the model is interpolating from
@@ -337,6 +340,14 @@ typedef struct
 	float	forwardmove;
 	float	sidemove;
 	float	upmove;
+
+	vec3_t	cursor_screen;
+	vec3_t	cursor_start;
+	vec3_t	cursor_end;
+	vec3_t	cursor_impact;
+	vec3_t	cursor_normal;
+	vec_t	cursor_fraction;
+	int		cursor_entitynumber;
 } usercmd_t;
 
 typedef struct
@@ -456,16 +467,18 @@ typedef struct
 	// send a clc_nop periodically until connected
 	float sendnoptime;
 
-	// last command sent to the server
+	// current input to send to the server
 	usercmd_t cmd;
 
 // information for local display
 	// health, etc
 	int stats[MAX_CL_STATS];
-	// inventory bit flags
-	int items;
+	// last known inventory bit flags, for blinking
+	int olditems;
 	// cl.time of acquiring item, for blinking
 	float item_gettime[32];
+	// last known STAT_ACTIVEWEAPON
+	int activeweapon;
 	// cl.time of changing STAT_ACTIVEWEAPON
 	float weapontime;
 	// use pain anim frame if cl.time < this
@@ -503,7 +516,6 @@ typedef struct
 	float driftmove;
 	double laststop;
 
-	float viewheight;
 	// local amount for smoothing stepups
 	//float crouch;
 
@@ -569,8 +581,9 @@ typedef struct
 	int protocol;
 
 	// entity database stuff
-	// latest received entity frame number
-	int latestframenum;
+	// latest received entity frame numbers
+#define LATESTFRAMENUMS 3
+	int latestframenums[LATESTFRAMENUMS];
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
 }
@@ -624,6 +637,8 @@ extern cvar_t cl_explosions_size_end;
 extern cvar_t cl_explosions_lifetime;
 extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmapsclearonload;
+
+extern cvar_t cl_prydoncursor;
 
 // these are updated by CL_ClearState
 extern int cl_num_entities;
@@ -682,8 +697,8 @@ extern 	kbutton_t 	in_strafe;
 extern 	kbutton_t 	in_speed;
 
 void CL_InitInput (void);
-void CL_SendCmd (usercmd_t *cmd);
-void CL_SendMove (usercmd_t *cmd);
+void CL_SendCmd (void);
+void CL_SendMove (void);
 
 void CL_ValidateState(entity_state_t *s);
 void CL_MoveLerpEntityStates(entity_t *ent);
@@ -700,8 +715,8 @@ void CL_ClearState (void);
 
 
 int  CL_ReadFromServer (void);
-void CL_WriteToServer (usercmd_t *cmd);
-void CL_BaseMove (usercmd_t *cmd);
+void CL_WriteToServer (void);
+void CL_BaseMove (void);
 
 
 float CL_KeyState (kbutton_t *key);

@@ -308,6 +308,8 @@ cachepic_t	*Draw_CachePic (char *path)
 		pic->tex = draw_generateconchars();
 	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer.tga"))
 		pic->tex = draw_generatemousepointer();
+	if (pic->tex == NULL && !strcmp(path, "gfx/prydoncursor001.tga"))
+		pic->tex = draw_generatemousepointer();
 	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1.tga"))
 		pic->tex = draw_generatecrosshair(0);
 	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2.tga"))
