@@ -721,13 +721,16 @@ static void _Con_DrawString( float x, float y, const char *text, int maxlen, flo
 		// iterate until we get the next color tag or reach the end of the text part to draw
 		for( ; len && *last != _con_color_tag ; len--, last++ )
 			;
-		// draw the string
-		DrawQ_String( x, y, first, last - first, scalex, scaley, color[0], color[1], color[2], color[3], flags );
-		// update x to be at the new start position
-		x += (last - first) * scalex;
-		// if we have reached the end, we have finished
-		if( !len )
-			break;
+		// dont do anything if we havent read anything yet
+		if( last != text ) {
+			// draw the string
+			DrawQ_String( x, y, first, last - first, scalex, scaley, color[0], color[1], color[2], color[3], flags );
+			// update x to be at the new start position
+			x += (last - first) * scalex;
+			// if we have reached the end, we have finished
+			if( !len )
+				break;
+		}
 		first = last;
 		// jump over the tag
 		last++;
@@ -863,13 +866,13 @@ void Con_DrawNotify (void)
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		while (strlen(temptext) >= (size_t) con_linewidth)
 		{
-			DrawQ_String (0, v, temptext, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+			_Con_DrawString (0, v, temptext, con_linewidth, 8, 8, 0);
 			strcpy(temptext, &temptext[con_linewidth]);
 			v += 8;
 		}
 		if (strlen(temptext) > 0)
 		{
-			DrawQ_String (0, v, temptext, 0, 8, 8, 1, 1, 1, 1, 0);
+			_Con_DrawString (0, v, temptext, 0, 8, 8, 0);
 			v += 8;
 		}
 	}
