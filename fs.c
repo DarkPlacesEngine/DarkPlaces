@@ -262,7 +262,7 @@ int fs_filesize;
 
 pack_t *packlist = NULL;
 
-searchpath_t *fs_searchpaths;
+searchpath_t *fs_searchpaths = NULL;
 
 #define MAX_FILES_IN_PACK	65536
 
@@ -868,7 +868,7 @@ char *FS_FileExtension (const char *in)
 		separator = backslash;
 	if (separator < colon)
 		separator = colon;
-	if (dot < separator)
+	if (dot == NULL || dot < separator)
 		return "";
 	dot++;
 	for (i = 0;i < 7 && dot[i];i++)
@@ -896,6 +896,7 @@ void FS_Init (void)
 	Cmd_AddCommand ("ls", FS_Ls_f);
 
 	strcpy(fs_basedir, ".");
+	strcpy(fs_gamedir, ".");
 
 	PK3_OpenLibrary ();
 
@@ -903,30 +904,11 @@ void FS_Init (void)
 	// Overrides the system supplied base directory (under GAMENAME)
 	i = COM_CheckParm ("-basedir");
 	if (i && i < com_argc-1)
+	{
 		strlcpy (fs_basedir, com_argv[i+1], sizeof (fs_basedir));
-
-	i = strlen (fs_basedir);
-	if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
-		fs_basedir[i-1] = 0;
-
-	// start up with GAMENAME by default (id1)
-	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
-	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
-	if (gamedirname[0])
-	{
-		fs_modified = true;
-		strlcpy (com_modname, gamedirname, sizeof (com_modname));
-		FS_AddGameDirectory (va("%s/%s", fs_basedir, gamedirname));
-	}
-
-	// -game <gamedir>
-	// Adds basedir/gamedir as an override game
-	i = COM_CheckParm ("-game");
-	if (i && i < com_argc-1)
-	{
-		fs_modified = true;
-		strlcpy (com_modname, com_argv[i+1], sizeof (com_modname));
-		FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i+1]));
+		i = strlen (fs_basedir);
+		if (i > 0 && (fs_basedir[i-1] == '\\' || fs_basedir[i-1] == '/'))
+			fs_basedir[i-1] = 0;
 	}
 
 	// -path <dir or packfile> [<dir or packfile>] ...
@@ -935,7 +917,6 @@ void FS_Init (void)
 	if (i)
 	{
 		fs_modified = true;
-		fs_searchpaths = NULL;
 		while (++i < com_argc)
 		{
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
@@ -959,6 +940,29 @@ void FS_Init (void)
 			search->next = fs_searchpaths;
 			fs_searchpaths = search;
 		}
+		return;
+	}
+
+	// start up with GAMENAME by default (id1)
+	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
+	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
+
+	// add the game-specific path, if any
+	if (gamedirname[0])
+	{
+		fs_modified = true;
+		strlcpy (com_modname, gamedirname, sizeof (com_modname));
+		FS_AddGameDirectory (va("%s/%s", fs_basedir, gamedirname));
+	}
+
+	// -game <gamedir>
+	// Adds basedir/gamedir as an override game
+	i = COM_CheckParm ("-game");
+	if (i && i < com_argc-1)
+	{
+		fs_modified = true;
+		strlcpy (com_modname, com_argv[i+1], sizeof (com_modname));
+		FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i+1]));
 	}
 }
 
@@ -2025,7 +2029,7 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 	const char *name;
 	char linebuf[4096];
 	fssearch_t *search;
-	search = FS_Search(pattern, true, false);
+	search = FS_Search(pattern, true, true);
 	if (!search)
 		return 0;
 	numfiles = search->numfilenames;

@@ -131,7 +131,7 @@ d darkplaces: shadow volume rendering should not unlock the arrays between rende
 0 darkplaces: clean up Collision_TraceBrushBrush to have another temp variable besides f and clean up the enterfrac2 handling (Vic)
 0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
 0 darkplaces: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
-0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
+-n darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
 0 darkplaces: don't complain if lightning bolt models are missing in client (Electro, Sajt)

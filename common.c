@@ -43,7 +43,7 @@ char com_cmdline[CMDLINE_LENGTH];
 int gamemode;
 char *gamename;
 char *gamedirname;
-char com_modname[MAX_OSPATH];
+char com_modname[MAX_OSPATH] = "";
 
 
 /*
