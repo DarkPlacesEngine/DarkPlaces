@@ -30,6 +30,7 @@ typedef union eval_s
 	float			_float;
 	float			vector[3];
 	func_t			function;
+	int				ivector[3];
 	int				_int;
 	int				edict;
 } eval_t;
@@ -183,8 +184,8 @@ void PR_Execute_ProgsLoaded(void);
 void ED_PrintEdicts (void);
 void ED_PrintNum (int ent);
 
-char *PR_GetString (int num);
-int PR_SetString (char *s);
+#define PR_GetString(num) (pr_strings + num)
+#define PR_SetString(s) ((int) (s - pr_strings))
 
 #endif
 
