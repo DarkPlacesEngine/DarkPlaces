@@ -519,7 +519,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		// not a monster
 		ent->persistent.lerpstarttime = cl.mtime[1];
 		// no lerp if it's singleplayer
-		if (sv.active && svs.maxclients == 1 && !ent->state_current.flags & RENDER_STEP)
+		if (sv.active && svs.maxclients == 1)
 			ent->persistent.lerpdeltatime = 0;
 		else
 			ent->persistent.lerpdeltatime = cl.mtime[0] - cl.mtime[1];
