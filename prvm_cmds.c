@@ -1841,7 +1841,7 @@ void VM_fgets(void)
 	// remove \n following \r
 	if (c == '\r')
 		c = FS_Getc(VM_FILES[filenum]);
-	if (developer.integer)
+	if (developer.integer >= 3)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
 	if (c >= 0 || end)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetString(string);
@@ -3444,7 +3444,7 @@ void VM_M_gethostcachevalue( void )
 	else switch(type)
 	{
 	case 0:
-		PRVM_G_FLOAT ( OFS_RETURN ) = hostCacheCount;
+		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_viewcount;
 		return;
 	case 1:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
@@ -3492,18 +3492,18 @@ void VM_M_gethostcachestring(void)
 
 	hostnr = PRVM_G_FLOAT(OFS_PARM1);
 
-	if(hostnr < 0 || hostnr >= hostCacheCount)
+	if(hostnr < 0 || hostnr >= hostcache_viewcount)
 	{
 		Con_Print("VM_M_gethostcachestring: bad hostnr passed!\n");
 		return;
 	}
 
 	if( type == 0 )
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache[hostnr].cname );
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache_viewset[hostnr]->info.cname );
 	else if( type == 1 )
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache[hostnr].line1 );
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache_viewset[hostnr]->line1 );
 	else
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache[hostnr].line2 );
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache_viewset[hostnr]->line2 );
 }
 
 prvm_builtin_t vm_m_builtins[] = {
