@@ -46,6 +46,7 @@ void M_Menu_Main_f (void);
 void M_Menu_LanConfig_f (void);
 void M_Menu_GameOptions_f (void);
 void M_Menu_Search_f (void);
+void M_Menu_InetSearch_f (void);
 void M_Menu_ServerList_f (void);
 
 void M_Main_Draw (void);
@@ -64,6 +65,7 @@ void M_Main_Draw (void);
 void M_LanConfig_Draw (void);
 void M_GameOptions_Draw (void);
 void M_Search_Draw (void);
+void M_InetSearch_Draw (void);
 void M_ServerList_Draw (void);
 
 void M_Main_Key (int key);
@@ -82,6 +84,7 @@ void M_Main_Key (int key);
 void M_LanConfig_Key (int key);
 void M_GameOptions_Key (int key);
 void M_Search_Key (int key);
+void M_InetSearch_Key (int key);
 void M_ServerList_Key (int key);
 
 qboolean	m_entersound;		// play after drawing a frame, so caching
@@ -853,7 +856,7 @@ void M_MultiPlayer_Draw (void)
 
 	if (ipxAvailable || tcpipAvailable)
 		return;
-	M_PrintWhite ((320/2) - ((27*8)/2), 148, "No Communications Available");
+	M_PrintWhite ((320/2) - ((27*8)/2), 168, "No Communications Available");
 }
 
 
@@ -2148,8 +2151,8 @@ void M_Quit_Draw (void)
 /* LAN CONFIG MENU */
 
 int		lanConfig_cursor = -1;
-int		lanConfig_cursor_table [] = {72, 92, 124};
-#define NUM_LANCONFIG_CMDS	3
+int		lanConfig_cursor_table [] = {72, 92, 112, 144};
+#define NUM_LANCONFIG_CMDS	4
 
 int 	lanConfig_port;
 char	lanConfig_portname[6];
@@ -2213,9 +2216,10 @@ void M_LanConfig_Draw (void)
 	if (JoiningGame)
 	{
 		M_Print (basex, lanConfig_cursor_table[1], "Search for local games...");
-		M_Print (basex, 108, "Join game at:");
-		M_DrawTextBox (basex+8, lanConfig_cursor_table[2]-8, 22, 1);
-		M_Print (basex+16, lanConfig_cursor_table[2], lanConfig_joinname);
+		M_Print (basex, lanConfig_cursor_table[2], "Search for internet games...");
+		M_Print (basex, 128, "Join game at:");
+		M_DrawTextBox (basex+8, lanConfig_cursor_table[3]-8, 22, 1);
+		M_Print (basex+16, lanConfig_cursor_table[3], lanConfig_joinname);
 	}
 	else
 	{
@@ -2228,11 +2232,11 @@ void M_LanConfig_Draw (void)
 	if (lanConfig_cursor == 0)
 		M_DrawCharacter (basex+9*8 + 8*strlen(lanConfig_portname), lanConfig_cursor_table [0], 10+((int)(realtime*4)&1));
 
-	if (lanConfig_cursor == 2)
-		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [2], 10+((int)(realtime*4)&1));
+	if (lanConfig_cursor == 3)
+		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [3], 10+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
-		M_PrintWhite (basex, 148, m_return_reason);
+		M_PrintWhite (basex, 168, m_return_reason);
 }
 
 
@@ -2268,18 +2272,21 @@ void M_LanConfig_Key (int key)
 
 		M_ConfigureNetSubsystem ();
 
-		if (lanConfig_cursor == 1)
+		if (lanConfig_cursor == 1 || lanConfig_cursor == 2)
 		{
 			if (StartingGame)
 			{
 				M_Menu_GameOptions_f ();
 				break;
 			}
-			M_Menu_Search_f();
+			if (lanConfig_cursor == 1)
+				M_Menu_Search_f();
+			else
+				M_Menu_InetSearch_f();
 			break;
 		}
 
-		if (lanConfig_cursor == 2)
+		if (lanConfig_cursor == 3)
 		{
 			m_return_state = m_state;
 			m_return_onerror = true;
@@ -2298,7 +2305,7 @@ void M_LanConfig_Key (int key)
 				lanConfig_portname[strlen(lanConfig_portname)-1] = 0;
 		}
 
-		if (lanConfig_cursor == 2)
+		if (lanConfig_cursor == 3)
 		{
 			if (strlen(lanConfig_joinname))
 				lanConfig_joinname[strlen(lanConfig_joinname)-1] = 0;
@@ -2309,7 +2316,7 @@ void M_LanConfig_Key (int key)
 		if (key < 32 || key > 127)
 			break;
 
-		if (lanConfig_cursor == 2)
+		if (lanConfig_cursor == 3)
 		{
 			l = strlen(lanConfig_joinname);
 			if (l < 21)
@@ -2332,7 +2339,7 @@ void M_LanConfig_Key (int key)
 		}
 	}
 
-	if (StartingGame && lanConfig_cursor == 2)
+	if (StartingGame && lanConfig_cursor == 3)
 	{
 		if (key == K_UPARROW)
 			lanConfig_cursor = 1;
@@ -2993,6 +3000,63 @@ void M_Search_Key (int key)
 }
 
 //=============================================================================
+/* INTERNET SEARCH MENU */
+
+void M_Menu_InetSearch_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_search;
+	m_entersound = false;
+	slistSilent = true;
+	slistLocal = false;
+	searchComplete = false;
+	NET_InetSlist_f();
+
+}
+
+
+void M_InetSearch_Draw (void)
+{
+	cachepic_t	*p;
+	int x;
+
+	p = Draw_CachePic ("gfx/p_multi.lmp");
+	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
+	x = (320/2) - ((12*8)/2) + 4;
+	M_DrawTextBox (x-8, 32, 12, 1);
+	M_Print (x, 40, "Searching...");
+
+	if(slistInProgress)
+	{
+		NET_Poll();
+		return;
+	}
+
+	if (! searchComplete)
+	{
+		searchComplete = true;
+		searchCompleteTime = realtime;
+	}
+
+	if (hostCacheCount)
+	{
+		M_Menu_ServerList_f ();
+		return;
+	}
+
+	M_PrintWhite ((320/2) - ((22*8)/2), 64, "No Quake servers found");
+	if ((realtime - searchCompleteTime) < 3.0)
+		return;
+
+	M_Menu_LanConfig_f ();
+}
+
+
+void M_InetSearch_Key (int key)
+{
+}
+
+//=============================================================================
 /* SLIST MENU */
 
 int		slist_cursor;
@@ -3047,7 +3111,7 @@ void M_ServerList_Draw (void)
 	M_DrawCharacter (0, 32 + slist_cursor*8, 12+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
-		M_PrintWhite (16, 148, m_return_reason);
+		M_PrintWhite (16, 168, m_return_reason);
 }
 
 

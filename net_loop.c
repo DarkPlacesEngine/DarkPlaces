@@ -39,6 +39,11 @@ void Loop_Shutdown (void)
 }
 
 
+void Loop_Heartbeat (char *master)
+{
+}
+
+
 void Loop_Listen (qboolean state)
 {
 }
@@ -59,6 +64,12 @@ void Loop_SearchForHosts (qboolean xmit)
 	hostcache[0].maxusers = svs.maxclients;
 	hostcache[0].driver = net_driverlevel;
 	strcpy(hostcache[0].cname, "local");
+}
+
+
+qboolean Loop_SearchForInetHosts (char *master)
+{
+	return false;
 }
 
 

@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int			Loop_Init (void);
 void		Loop_Listen (qboolean state);
 void		Loop_SearchForHosts (qboolean xmit);
+qboolean	Loop_SearchForInetHosts (char *master);
 qsocket_t 	*Loop_Connect (char *host);
 qsocket_t 	*Loop_CheckNewConnections (void);
 int			Loop_GetMessage (qsocket_t *sock);
@@ -34,6 +35,7 @@ qboolean	Loop_CanSendMessage (qsocket_t *sock);
 qboolean	Loop_CanSendUnreliableMessage (qsocket_t *sock);
 void		Loop_Close (qsocket_t *sock);
 void		Loop_Shutdown (void);
+void		Loop_Heartbeat (char *master);
 
 #endif
 

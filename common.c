@@ -50,6 +50,7 @@ char com_cmdline[CMDLINE_LENGTH];
 int gamemode;
 char *gamename;
 char *gamedirname;
+char com_modname[MAX_OSPATH];
 
 /*
 
@@ -1425,10 +1426,12 @@ void COM_InitFilesystem (void)
 		com_basedir[i-1] = 0;
 
 // start up with GAMENAME by default (id1)
+	strcpy(com_modname, GAMENAME);
 	COM_AddGameDirectory (va("%s/"GAMENAME, com_basedir));
 	if (gamedirname[0])
 	{
 		com_modified = true;
+		strcpy(com_modname, gamedirname);
 		COM_AddGameDirectory (va("%s/%s", com_basedir, gamedirname));
 	}
 
@@ -1438,6 +1441,7 @@ void COM_InitFilesystem (void)
 	if (i && i < com_argc-1)
 	{
 		com_modified = true;
+		strcpy(com_modname, com_argv[i+1]);
 		COM_AddGameDirectory (va("%s/%s", com_basedir, com_argv[i+1]));
 	}
 

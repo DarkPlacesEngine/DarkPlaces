@@ -244,6 +244,20 @@ int UDP_CheckNewConnections (void)
 
 //=============================================================================
 
+int UDP_Recv (qbyte *buf, int len, struct qsockaddr *addr)
+{
+	return UDP_Read (net_acceptsocket, buf, len, addr);
+}
+
+//=============================================================================
+
+int UDP_Send (qbyte *buf, int len, struct qsockaddr *addr)
+{
+	return UDP_Write (net_acceptsocket, buf, len, addr);
+}
+
+//=============================================================================
+
 int UDP_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int addrlen = sizeof (struct qsockaddr);

@@ -175,6 +175,7 @@ extern	struct cvar_s	registered;
 
 extern int gamemode;
 extern char *gamename;
+extern char com_modname[MAX_OSPATH];
 
 // LordHavoc: useful...
 void COM_ToLowerString(const char *in, char *out);

@@ -268,6 +268,10 @@ SOURCE=.\net_main.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\net_master.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\net_win.c
 # End Source File
 # Begin Source File
@@ -565,6 +569,10 @@ SOURCE=.\net_dgrm.h
 # Begin Source File
 
 SOURCE=.\net_loop.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\net_master.h
 # End Source File
 # Begin Source File
 
