@@ -1158,6 +1158,8 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	// (and realize that the whole polygon assembly orients itself to face
 	//  the viewer)
 
+	R_Mesh_GetSpace(12);
+
 	// polygon 1, verts 0-3
 	VectorScale(right, r_lightningbeam_thickness.value, offset);
 	R_CalcLightningBeamPolygonVertices(varray_vertex, varray_texcoord[0], b->start, b->end, offset, t1, t2);

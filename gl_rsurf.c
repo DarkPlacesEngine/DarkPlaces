@@ -774,9 +774,9 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
-				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
+				R_Mesh_GetSpace(mesh->numverts);
+				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 			}
 		}
@@ -828,7 +828,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_ResizeCheck(mesh->numverts);
+		R_Mesh_GetSpace(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		scroll[0] = sin(cl.time) * 0.125f;
@@ -860,7 +860,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
+			R_Mesh_GetSpace(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			if (m.tex[0])
 				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
@@ -927,7 +927,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_ResizeCheck(mesh->numverts);
+		R_Mesh_GetSpace(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		R_FillColors(varray_color, mesh->numverts, base, base, base, currentalpha);
@@ -957,7 +957,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_ResizeCheck(mesh->numverts);
+		R_Mesh_GetSpace(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 		RSurf_FoggedColors(varray_vertex, varray_color, 1, 1, 1, currentalpha, r_colorscale, mesh->numverts, modelorg);
@@ -979,7 +979,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
-		R_Mesh_ResizeCheck(mesh->numverts);
+		R_Mesh_GetSpace(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		if (m.tex[0])
 			memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
@@ -1019,7 +1019,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
@@ -1057,7 +1057,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[1], mesh->uvw, mesh->numverts * sizeof(float[4]));
@@ -1084,7 +1084,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
@@ -1119,7 +1119,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->uvw, mesh->numverts * sizeof(float[4]));
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
@@ -1155,7 +1155,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 			{
 				if (RSurf_LightCheck(&ent->inversematrix, surf->dlightbits, mesh))
 				{
-					R_Mesh_ResizeCheck(mesh->numverts);
+					R_Mesh_GetSpace(mesh->numverts);
 					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 					memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 					R_FillColors(varray_color, mesh->numverts, 0, 0, 0, 1);
@@ -1186,7 +1186,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				if (m.tex[0])
 					memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
@@ -1214,7 +1214,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->abc, mesh->numverts * sizeof(float[4]));
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
@@ -1240,7 +1240,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
@@ -1269,7 +1269,7 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 		{
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				R_Mesh_ResizeCheck(mesh->numverts);
+				R_Mesh_GetSpace(mesh->numverts);
 				memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], mesh->str, mesh->numverts * sizeof(float[4]));
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
@@ -1511,7 +1511,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
-	R_Mesh_ResizeCheck(portal->numpoints);
+	R_Mesh_GetSpace(portal->numpoints);
 	i = portal - ent->model->portals;
 	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_colorscale,
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_colorscale,
@@ -1835,7 +1835,7 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 				{
 					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 					{
-						R_Mesh_ResizeCheck(mesh->numverts * 2);
+						R_Mesh_GetSpace(mesh->numverts);
 						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, mesh->index, mesh->triangleneighbors, relativelightorigin, lightradius, projectdistance);
 					}
@@ -1865,10 +1865,8 @@ void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relative
 			{
 				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 				{
-					R_Mesh_ResizeCheck(mesh->numverts);
-					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
-					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
+					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->verts, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
+					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->verts, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
 				}
 			}
 		}
@@ -1914,10 +1912,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 						{
 							for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 							{
-								R_Mesh_ResizeCheck(mesh->numverts);
-								memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
-								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
+								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->verts, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
+								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->verts, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
 							}
 						}
 					}
@@ -1942,10 +1938,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 					{
 						for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 						{
-							R_Mesh_ResizeCheck(mesh->numverts);
-							memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-							R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
-							R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
+							R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->verts, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
+							R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->verts, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
 						}
 					}
 				}

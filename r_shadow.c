@@ -22,6 +22,10 @@ int maxshadowelements;
 int *shadowelements;
 int maxtrianglefacinglight;
 qbyte *trianglefacinglight;
+int *trianglefacinglightlist;
+
+int maxshadowvertices;
+float *shadowvertices;
 
 rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_normalscubetexture;
@@ -61,8 +65,11 @@ void r_shadow_start(void)
 	r_shadow_mempool = Mem_AllocPool("R_Shadow");
 	maxshadowelements = 0;
 	shadowelements = NULL;
+	maxshadowvertices = 0;
+	shadowvertices = NULL;
 	maxtrianglefacinglight = 0;
 	trianglefacinglight = NULL;
+	trianglefacinglightlist = NULL;
 	r_shadow_normalscubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -87,8 +94,11 @@ void r_shadow_shutdown(void)
 	R_FreeTexturePool(&r_shadow_texturepool);
 	maxshadowelements = 0;
 	shadowelements = NULL;
+	maxshadowvertices = 0;
+	shadowvertices = NULL;
 	maxtrianglefacinglight = 0;
 	trianglefacinglight = NULL;
+	trianglefacinglightlist = NULL;
 	Mem_FreePool(&r_shadow_mempool);
 }
 
@@ -132,9 +142,9 @@ void R_Shadow_ProjectVertices(float *verts, int numverts, const float *relativel
 	}
 }
 
-void R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, int numtris, qbyte *trianglefacinglight, const float *relativelightorigin, float lightradius)
+int R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, int numtris, qbyte *facing, int *list, const float *relativelightorigin)
 {
-	int i;
+	int i, tris = 0;
 	const float *v0, *v1, *v2;
 	for (i = 0;i < numtris;i++, elements += 3)
 	{
@@ -150,13 +160,18 @@ void R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, 
 		// fast version
 		// subtracts v1 from v0 and v2, combined into a crossproduct,
 		// combined with a dotproduct of the light location relative to the
-		// first point of the triangle (any point works, since the triangle
+		// first point of the triangle (any point works, since any triangle
 		// is obviously flat), and finally a comparison to determine if the
 		// light is infront of the triangle (the goal of this statement)
-		trianglefacinglight[i] =
-		   (relativelightorigin[0] - v0[0]) * ((v0[1] - v1[1]) * (v2[2] - v1[2]) - (v0[2] - v1[2]) * (v2[1] - v1[1]))
+		if((relativelightorigin[0] - v0[0]) * ((v0[1] - v1[1]) * (v2[2] - v1[2]) - (v0[2] - v1[2]) * (v2[1] - v1[1]))
 		 + (relativelightorigin[1] - v0[1]) * ((v0[2] - v1[2]) * (v2[0] - v1[0]) - (v0[0] - v1[0]) * (v2[2] - v1[2]))
-		 + (relativelightorigin[2] - v0[2]) * ((v0[0] - v1[0]) * (v2[1] - v1[1]) - (v0[1] - v1[1]) * (v2[0] - v1[0])) > 0;
+		 + (relativelightorigin[2] - v0[2]) * ((v0[0] - v1[0]) * (v2[1] - v1[1]) - (v0[1] - v1[1]) * (v2[0] - v1[0])) > 0)
+		{
+			facing[i] = true;
+			list[tris++] = i;
+		}
+		else
+			facing[i] = false;
 #else
 		// readable version
 		{
@@ -179,69 +194,85 @@ void R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, 
 		// I.E. flat, so all points give the same answer)
 		// the normal is not normalized because it is used on both sides of
 		// the comparison, so it's magnitude does not matter
-		trianglefacinglight[i] = DotProduct(relativelightorigin, temp) >= DotProduct(v0, temp);
+		if (DotProduct(relativelightorigin, temp) >= DotProduct(v0, temp))
+		{
+			facing[i] = true;
+			list[tris++] = i;
+		}
+		else
+			facing[i] = false;
 		}
 #endif
 	}
+	return tris;
 }
 
-int R_Shadow_BuildShadowVolumeTriangles(const int *elements, const int *neighbors, int numtris, int numverts, const qbyte *trianglefacinglight, int *out)
+int R_Shadow_BuildShadowVolumeTriangles(const int *elements, const int *neighbors, int numverts, const qbyte *facing, const int *facinglist, int numfacing, int *out)
 {
 	int i, tris;
+	const int *e, *n;
 	// check each frontface for bordering backfaces,
 	// and cast shadow polygons from those edges,
 	// also create front and back caps for shadow volume
-	tris = 0;
-	for (i = 0;i < numtris;i++, elements += 3, neighbors += 3)
+	tris = numfacing * 2;
+	// output front caps
+	for (i = 0;i < numfacing;i++)
 	{
-		if (trianglefacinglight[i])
+		e = elements + facinglist[i] * 3;
+		out[0] = e[0];
+		out[1] = e[1];
+		out[2] = e[2];
+		out += 3;
+	}
+	// output back caps
+	for (i = 0;i < numfacing;i++)
+	{
+		e = elements + facinglist[i] * 3;
+		out[0] = e[2] + numverts;
+		out[1] = e[1] + numverts;
+		out[2] = e[0] + numverts;
+		out += 3;
+	}
+	// output sides around frontfaces
+	for (i = 0;i < numfacing;i++)
+	{
+		n = neighbors + facinglist[i] * 3;
+		// check the edges
+		if (n[0] < 0 || !facing[n[0]])
 		{
-			// triangle is frontface and therefore casts shadow,
-			// output front and back caps for shadow volume
-			// front cap
-			out[0] = elements[0];
-			out[1] = elements[1];
-			out[2] = elements[2];
-			// rear cap (with flipped winding order)
-			out[3] = elements[0] + numverts;
-			out[4] = elements[2] + numverts;
-			out[5] = elements[1] + numverts;
+			e = elements + facinglist[i] * 3;
+			out[0] = e[1];
+			out[1] = e[0];
+			out[2] = e[0] + numverts;
+			out[3] = e[1];
+			out[4] = e[0] + numverts;
+			out[5] = e[1] + numverts;
 			out += 6;
 			tris += 2;
-			// check the edges
-			if (neighbors[0] < 0 || !trianglefacinglight[neighbors[0]])
-			{
-				out[0] = elements[1];
-				out[1] = elements[0];
-				out[2] = elements[0] + numverts;
-				out[3] = elements[1];
-				out[4] = elements[0] + numverts;
-				out[5] = elements[1] + numverts;
-				out += 6;
-				tris += 2;
-			}
-			if (neighbors[1] < 0 || !trianglefacinglight[neighbors[1]])
-			{
-				out[0] = elements[2];
-				out[1] = elements[1];
-				out[2] = elements[1] + numverts;
-				out[3] = elements[2];
-				out[4] = elements[1] + numverts;
-				out[5] = elements[2] + numverts;
-				out += 6;
-				tris += 2;
-			}
-			if (neighbors[2] < 0 || !trianglefacinglight[neighbors[2]])
-			{
-				out[0] = elements[0];
-				out[1] = elements[2];
-				out[2] = elements[2] + numverts;
-				out[3] = elements[0];
-				out[4] = elements[2] + numverts;
-				out[5] = elements[0] + numverts;
-				out += 6;
-				tris += 2;
-			}
+		}
+		if (n[1] < 0 || !facing[n[1]])
+		{
+			e = elements + facinglist[i] * 3;
+			out[0] = e[2];
+			out[1] = e[1];
+			out[2] = e[1] + numverts;
+			out[3] = e[2];
+			out[4] = e[1] + numverts;
+			out[5] = e[2] + numverts;
+			out += 6;
+			tris += 2;
+		}
+		if (n[2] < 0 || !facing[n[2]])
+		{
+			e = elements + facinglist[i] * 3;
+			out[0] = e[0];
+			out[1] = e[2];
+			out[2] = e[2] + numverts;
+			out[3] = e[0];
+			out[4] = e[2] + numverts;
+			out[5] = e[0] + numverts;
+			out += 6;
+			tris += 2;
 		}
 	}
 	return tris;
@@ -250,16 +281,21 @@ int R_Shadow_BuildShadowVolumeTriangles(const int *elements, const int *neighbor
 void R_Shadow_ResizeTriangleFacingLight(int numtris)
 {
 	// make sure trianglefacinglight is big enough for this volume
+	// ameks ru ertaignelaficgnilhg tsib gie ongu hof rhtsiv lomu e
+	// m4k3 5ur3 7r14ng13f4c1n5115h7 15 b15 3n0u5h f0r 7h15 v01um3
 	if (maxtrianglefacinglight < numtris)
 	{
 		maxtrianglefacinglight = numtris;
 		if (trianglefacinglight)
 			Mem_Free(trianglefacinglight);
+		if (trianglefacinglightlist)
+			Mem_Free(trianglefacinglightlist);
 		trianglefacinglight = Mem_Alloc(r_shadow_mempool, maxtrianglefacinglight);
+		trianglefacinglightlist = Mem_Alloc(r_shadow_mempool, sizeof(int) * maxtrianglefacinglight);
 	}
 }
 
-void R_Shadow_ResizeShadowElements(int numtris)
+int *R_Shadow_ResizeShadowElements(int numtris)
 {
 	// make sure shadowelements is big enough for this volume
 	if (maxshadowelements < numtris * 24)
@@ -269,6 +305,19 @@ void R_Shadow_ResizeShadowElements(int numtris)
 			Mem_Free(shadowelements);
 		shadowelements = Mem_Alloc(r_shadow_mempool, maxshadowelements * sizeof(int));
 	}
+	return shadowelements;
+}
+
+float *R_Shadow_VertexBuffer(int numvertices)
+{
+	if (maxshadowvertices < numvertices)
+	{
+		maxshadowvertices = numvertices;
+		if (shadowvertices)
+			Mem_Free(shadowvertices);
+		shadowvertices = Mem_Alloc(r_shadow_mempool, maxshadowvertices * sizeof(float[4]));
+	}
+	return shadowvertices;
 }
 
 void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance)
@@ -279,6 +328,8 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 		Con_Printf("R_Shadow_Volume: projectdistance %f\n");
 		return;
 	}
+	if (!numverts)
+		return;
 // terminology:
 //
 // frontface:
@@ -296,8 +347,8 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 // description:
 // draws the shadow volumes of the model.
 // requirements:
-// vertex locations must already be in varray_vertex before use.
-// varray_vertex must have capacity for numverts * 2.
+// vertex locations must already be in vertices before use.
+// vertices must have capacity for numverts * 2.
 
 	// make sure trianglefacinglight is big enough for this volume
 	if (maxtrianglefacinglight < numtris)
@@ -308,35 +359,32 @@ void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, v
 		R_Shadow_ResizeShadowElements(numtris);
 
 	// check which triangles are facing the light
-	R_Shadow_MakeTriangleShadowFlags(elements, varray_vertex, numtris, trianglefacinglight, relativelightorigin, lightradius);
-
-	// generate projected vertices
-	// by clever use of elements we'll construct the whole shadow from
-	// the unprojected vertices and these projected vertices
-	R_Shadow_ProjectVertices(varray_vertex, numverts, relativelightorigin, projectdistance);
+	tris = R_Shadow_MakeTriangleShadowFlags(elements, varray_vertex, numtris, trianglefacinglight, trianglefacinglightlist, relativelightorigin);
+	if (!tris)
+		return;
 
 	// output triangle elements
-	tris = R_Shadow_BuildShadowVolumeTriangles(elements, neighbors, numtris, numverts, trianglefacinglight, shadowelements);
-	R_Shadow_RenderVolume(numverts * 2, tris, shadowelements);
-}
-
-void R_Shadow_RenderVolume(int numverts, int numtris, int *elements)
-{
-	if (!numverts || !numtris)
+	tris = R_Shadow_BuildShadowVolumeTriangles(elements, neighbors, numverts, trianglefacinglight, trianglefacinglightlist, tris, shadowelements);
+	if (!tris)
 		return;
+
+	// by clever use of elements we can construct the whole shadow from
+	// the unprojected vertices and the projected vertices
+	R_Shadow_ProjectVertices(varray_vertex, numverts, relativelightorigin, projectdistance);
+
 	if (r_shadowstage == SHADOWSTAGE_STENCIL)
 	{
 		// increment stencil if backface is behind depthbuffer
 		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
-		R_Mesh_Draw(numverts, numtris, elements);
+		R_Mesh_Draw(numverts * 2, tris, shadowelements);
 		c_rt_shadowmeshes++;
 		c_rt_shadowtris += numtris;
 		// decrement stencil if frontface is behind depthbuffer
 		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 	}
-	R_Mesh_Draw(numverts, numtris, elements);
+	R_Mesh_Draw(numverts * 2, tris, shadowelements);
 	c_rt_shadowmeshes++;
 	c_rt_shadowtris += numtris;
 }
@@ -351,7 +399,7 @@ void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
 		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 		for (mesh = firstmesh;mesh;mesh = mesh->next)
 		{
-			R_Mesh_ResizeCheck(mesh->numverts);
+			R_Mesh_GetSpace(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->elements);
 			c_rtcached_shadowmeshes++;
@@ -363,7 +411,7 @@ void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
 	}
 	for (mesh = firstmesh;mesh;mesh = mesh->next)
 	{
-		R_Mesh_ResizeCheck(mesh->numverts);
+		R_Mesh_GetSpace(mesh->numverts);
 		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->elements);
 		c_rtcached_shadowmeshes++;
@@ -1024,7 +1072,7 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out, int numverts, cons
 	}
 }
 
-void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3];
@@ -1050,9 +1098,11 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-			R_Shadow_TransformVertices(varray_texcoord[2], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_TransformVertices(varray_texcoord[2], numverts, vertices, matrix_modeltoattenuationxyz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1067,13 +1117,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 			qglEnable(GL_BLEND);
-			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1087,7 +1140,9 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, vertices, matrix_modeltoattenuationxyz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1100,8 +1155,10 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			R_Mesh_TextureState(&m);
 			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
 			qglEnable(GL_BLEND);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1113,13 +1170,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			R_Mesh_TextureState(&m);
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1137,8 +1197,10 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			GL_Color(1,1,1,1);
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1151,12 +1213,15 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 			qglEnable(GL_BLEND);
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationxyz);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltoattenuationxyz);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1175,10 +1240,12 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-			R_Shadow_TransformVertices(varray_texcoord[2], numverts, varray_vertex, matrix_modeltoattenuationxyz);
-			R_Shadow_TransformVertices(varray_texcoord[3], numverts, varray_vertex, matrix_modeltoattenuationz);
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_TransformVertices(varray_texcoord[2], numverts, vertices, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[3], numverts, vertices, matrix_modeltoattenuationz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1193,13 +1260,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 			qglEnable(GL_BLEND);
-			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1214,8 +1284,10 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationz);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, vertices, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltoattenuationz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1228,8 +1300,10 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			R_Mesh_TextureState(&m);
 			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
 			qglEnable(GL_BLEND);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1241,13 +1315,16 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			R_Mesh_TextureState(&m);
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1273,10 +1350,12 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			R_Mesh_State(&m);
 #endif
 			GL_UseColorArray();
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltoattenuationxyz);
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-			R_Shadow_VertexLightingWithXYAttenuationTexture(varray_color, numverts, varray_vertex, normals, color, relativelightorigin, lightradius, matrix_modeltofilter->m[2]);
+			R_Shadow_VertexLightingWithXYAttenuationTexture(varray_color, numverts, vertices, normals, color, relativelightorigin, lightradius, matrix_modeltofilter->m[2]);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 		}
 		else
@@ -1294,15 +1373,17 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			R_Mesh_State(&m);
 #endif
 			GL_UseColorArray();
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-			R_Shadow_VertexLighting(varray_color, numverts, varray_vertex, normals, color, relativelightorigin, lightradius);
+			R_Shadow_VertexLighting(varray_color, numverts, vertices, normals, color, relativelightorigin, lightradius);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 		}
 	}
 }
 
-void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3];
@@ -1326,8 +1407,10 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin);
+			R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1341,22 +1424,23 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglEnable(GL_BLEND);
 			// these comments are a test run through this math for intensity 0.5
 			// 0.5 * 0.5 = 0.25
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
 			// 0.25 * 0.25 = 0.0625
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
 			// 0.0625 * 0.0625 = 0.00390625
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
+			for (renders = 0;renders < 3;renders++)
+			{
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				R_Mesh_Draw(numverts, numtriangles, elements);
+			}
+			c_rt_lightmeshes += 3;
+			c_rt_lighttris += numtriangles * 3;
 
 			m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
 			R_Mesh_TextureState(&m);
 			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, vertices, matrix_modeltoattenuationxyz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1367,14 +1451,16 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			R_Mesh_TextureState(&m);
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1390,8 +1476,10 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin);
+			R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1405,26 +1493,22 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglEnable(GL_BLEND);
 			// these comments are a test run through this math for intensity 0.5
 			// 0.5 * 0.5 = 0.25
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
 			// 0.25 * 0.25 = 0.0625
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
 			// 0.0625 * 0.0625 = 0.00390625
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
+			for (renders = 0;renders < 3;renders++)
+			{
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				R_Mesh_Draw(numverts, numtriangles, elements);
+			}
+			c_rt_lightmeshes += 3;
+			c_rt_lighttris += numtriangles * 3;
 
 			m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
 			m.tex[1] = R_GetTexture(glosstexture);
 			R_Mesh_TextureState(&m);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
-			memcpy(varray_texcoord[1], texcoords, numverts * sizeof(float[4]));
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
 
@@ -1432,6 +1516,10 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				R_Shadow_TransformVertices(varray_texcoord[0], numverts, vertices, matrix_modeltoattenuationxyz);
+				memcpy(varray_texcoord[1], texcoords, numverts * sizeof(float[4]));
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1447,8 +1535,10 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglColorMask(0,0,0,1);
 			qglDisable(GL_BLEND);
 			GL_Color(1,1,1,1);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin);
+			R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord[1], numverts, vertices, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1462,24 +1552,25 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglEnable(GL_BLEND);
 			// these comments are a test run through this math for intensity 0.5
 			// 0.5 * 0.5 = 0.25
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
 			// 0.25 * 0.25 = 0.0625
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
 			// 0.0625 * 0.0625 = 0.00390625
-			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
+			for (renders = 0;renders < 3;renders++)
+			{
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				R_Mesh_Draw(numverts, numtriangles, elements);
+			}
+			c_rt_lightmeshes += 3;
+			c_rt_lighttris += numtriangles * 3;
 
 			m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
 			m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 			R_Mesh_TextureState(&m);
 			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationz);
+			R_Mesh_GetSpace(numverts);
+			memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, vertices, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltoattenuationz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1489,14 +1580,16 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			R_Mesh_TextureState(&m);
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
 			{
 				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_GetSpace(numverts);
+				memcpy(varray_vertex, vertices, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_TransformVertices(varray_texcoord[1], numverts, vertices, matrix_modeltofilter);
 				R_Mesh_Draw(numverts, numtriangles, elements);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
@@ -1697,11 +1790,14 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 				// now that we have the buffers big enough, construct shadow volume mesh
 				memcpy(verts, castmesh->verts, castmesh->numverts * sizeof(float[4]));
 				R_Shadow_ProjectVertices(verts, castmesh->numverts, e->origin, r_shadow_projectdistance.value);//, e->lightradius);
-				R_Shadow_MakeTriangleShadowFlags(castmesh->elements, verts, castmesh->numtriangles, trianglefacinglight, e->origin, e->lightradius);
-				tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->elements, castmesh->neighbors, castmesh->numtriangles, castmesh->numverts, trianglefacinglight, shadowelements);
+				tris = R_Shadow_MakeTriangleShadowFlags(castmesh->elements, verts, castmesh->numtriangles, trianglefacinglight, trianglefacinglightlist, e->origin);
+				tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->elements, castmesh->neighbors, castmesh->numverts, trianglefacinglight, trianglefacinglightlist, tris, shadowelements);
 				// add the constructed shadow volume mesh
 				Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->shadowvolume, castmesh->numverts, verts, tris, shadowelements);
 			}
+			if (verts)
+				Mem_Free(verts);
+			verts = NULL;
 			// we're done with castmesh now
 			Mod_ShadowMesh_Free(castmesh);
 			e->shadowvolume = Mod_ShadowMesh_Finish(r_shadow_mempool, e->shadowvolume);
@@ -1767,6 +1863,7 @@ void R_DrawLightSprite(int texnum, const vec3_t origin, vec_t scale, float cr, f
 	R_Mesh_State(&m);
 
 	GL_Color(cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
+	R_Mesh_GetSpace(4);
 	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
 	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
 	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;

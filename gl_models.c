@@ -233,9 +233,6 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 
 	memset(&m, 0, sizeof(m));
 	skin = R_FetchAliasSkin(ent, mesh);
-	R_Mesh_ResizeCheck(mesh->num_vertices);
-	R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, aliasvert_normals, NULL, NULL);
-	memcpy(varray_texcoord[0], mesh->data_texcoords, mesh->num_vertices * sizeof(float[4]));
 	for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 	{
 		if (((layer->flags & ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED) && ent->colormap < 0)
@@ -252,6 +249,9 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			R_Mesh_State(&m);
 			GL_Color(fogcolor[0] * fog * colorscale, fogcolor[1] * fog * colorscale, fogcolor[2] * fog * colorscale, ent->alpha);
 			c_alias_polys += mesh->num_triangles;
+			R_Mesh_GetSpace(mesh->num_vertices);
+			R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, aliasvert_normals, NULL, NULL);
+			memcpy(varray_texcoord[0], mesh->data_texcoords, mesh->num_vertices * sizeof(float[4]));
 			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_elements);
 			continue;
 		}
@@ -305,11 +305,14 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			fullbright = true;
 		if (ent->effects & EF_FULLBRIGHT)
 			fullbright = true;
+		c_alias_polys += mesh->num_triangles;
+		R_Mesh_GetSpace(mesh->num_vertices);
+		R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, aliasvert_normals, NULL, NULL);
+		memcpy(varray_texcoord[0], mesh->data_texcoords, mesh->num_vertices * sizeof(float[4]));
 		if (fullbright)
 			GL_Color(tint[0], tint[1], tint[2], ent->alpha);
 		else
 			R_LightModel(ent, mesh->num_vertices, varray_vertex, aliasvert_normals, varray_color, tint[0], tint[1], tint[2], false);
-		c_alias_polys += mesh->num_triangles;
 		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_elements);
 	}
 }
@@ -379,7 +382,7 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
-		R_Mesh_ResizeCheck(mesh->num_vertices);
+		R_Mesh_GetSpace(mesh->num_vertices);
 		R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, NULL, NULL, NULL);
 		for (i = 0, v = varray_vertex;i < mesh->num_vertices;i++, v += 4)
 		{
@@ -409,7 +412,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 			skin = R_FetchAliasSkin(ent, mesh);
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
 				continue;
-			R_Mesh_ResizeCheck(mesh->num_vertices * 2);
+			R_Mesh_GetSpace(mesh->num_vertices * 2);
 			R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, NULL, NULL, NULL);
 			R_Shadow_Volume(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, mesh->data_neighbors, relativelightorigin, lightradius, projectdistance);
 		}
@@ -419,7 +422,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int c, meshnum, layernum;
-	float fog, ifog, lightcolor2[3];
+	float fog, ifog, lightcolor2[3], *vertices;
 	vec3_t diff;
 	qbyte *bcolor;
 	aliasmesh_t *mesh;
@@ -454,8 +457,8 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
-		R_Mesh_ResizeCheck(mesh->num_vertices);
-		R_Model_Alias_GetMeshVerts(ent, mesh, varray_vertex, aliasvert_normals, aliasvert_svectors, aliasvert_tvectors);
+		vertices = R_Shadow_VertexBuffer(mesh->num_vertices);
+		R_Model_Alias_GetMeshVerts(ent, mesh, vertices, aliasvert_normals, aliasvert_svectors, aliasvert_tvectors);
 		for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 		{
 			if (!(layer->flags & ALIASLAYER_DRAW_PER_LIGHT)
@@ -468,7 +471,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (layer->flags & ALIASLAYER_SPECULAR)
 			{
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
+				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, vertices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
 			}
 			else if (layer->flags & ALIASLAYER_DIFFUSE)
 			{
@@ -497,7 +500,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
 				}
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
+				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_elements, vertices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, mesh->data_texcoords, relativelightorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
 			}
 		}
 	}
@@ -785,7 +788,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	numverts = ent->model->zymnum_verts;
 	numtriangles = *renderlist++;
 	elements = renderlist;
-	R_Mesh_ResizeCheck(numverts);
 
 	fog = 0;
 	if (fogenabled)
@@ -830,10 +832,11 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	mstate.tex[0] = R_GetTexture(texture);
 	R_Mesh_State(&mstate);
 	ZymoticLerpBones(ent->model->zymnum_bones, (zymbonematrix *) ent->model->zymdata_poses, ent->frameblend, ent->model->zymdata_bones);
+
+	R_Mesh_GetSpace(numverts);
 	ZymoticTransformVerts(numverts, varray_vertex, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
-	ZymoticCalcNormals(numverts, varray_vertex, aliasvert_normals, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
 	memcpy(varray_texcoord[0], ent->model->zymdata_texcoords, ent->model->zymnum_verts * sizeof(float[4]));
-	GL_UseColorArray();
+	ZymoticCalcNormals(numverts, varray_vertex, aliasvert_normals, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
 	R_LightModel(ent, numverts, varray_vertex, aliasvert_normals, varray_color, ifog * colorscale, ifog * colorscale, ifog * colorscale, false);
 	R_Mesh_Draw(numverts, numtriangles, elements);
 	c_alias_polys += numtriangles;
@@ -847,6 +850,8 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		//mstate.tex[0] = R_GetTexture(texture);
 		R_Mesh_State(&mstate);
 		GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
+		R_Mesh_GetSpace(numverts);
+		ZymoticTransformVerts(numverts, varray_vertex, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
 		R_Mesh_Draw(numverts, numtriangles, elements);
 		c_alias_polys += numtriangles;
 	}

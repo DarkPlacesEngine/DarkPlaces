@@ -72,10 +72,13 @@ void SCR_ScreenShot_f (void);
 // these are externally accessible
 int r_lightmapscalebit;
 float r_colorscale;
-float *varray_vertex;
-float *varray_color;
-float *varray_texcoord[MAX_TEXTUREUNITS];
+GLfloat *varray_vertex, *varray_buf_vertex;
+GLfloat *varray_color, *varray_buf_color;
+GLfloat *varray_texcoord[MAX_TEXTUREUNITS], *varray_buf_texcoord[MAX_TEXTUREUNITS];
 int mesh_maxverts;
+int varray_offset = 0, varray_offsetnext = 0;
+GLuint *varray_buf_elements;
+int mesh_maxelements = 3072;
 
 static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
@@ -84,7 +87,7 @@ static matrix4x4_t backend_glmodelviewmatrix;
 static matrix4x4_t backend_projectmatrix;
 
 static int backendunits, backendactive;
-static qbyte *varray_bcolor;
+static GLubyte *varray_bcolor, *varray_buf_bcolor;
 static mempool_t *gl_backend_mempool;
 
 /*
@@ -104,43 +107,76 @@ A0B, 01B, B1C, 12C, C2D, 23D, D3E, 34E
 *elements++ = i + row + 1;
 */
 
+void GL_Backend_AllocElementsArray(void)
+{
+	if (varray_buf_elements)
+		Mem_Free(varray_buf_elements);
+	varray_buf_elements = Mem_Alloc(gl_backend_mempool, mesh_maxelements * sizeof(GLuint));
+}
+
+void GL_Backend_FreeElementArray(void)
+{
+	if (varray_buf_elements)
+		Mem_Free(varray_buf_elements);
+	varray_buf_elements = NULL;
+}
+
 int polygonelements[768];
 
 void GL_Backend_AllocArrays(void)
 {
 	int i;
 
-	for (i = 0;i < POLYGONELEMENTS_MAXPOINTS - 2;i++)
+	if (!gl_backend_mempool)
 	{
-		polygonelements[i * 3 + 0] = 0;
-		polygonelements[i * 3 + 1] = i + 1;
-		polygonelements[i * 3 + 2] = i + 2;
+		gl_backend_mempool = Mem_AllocPool("GL_Backend");
+		varray_buf_vertex = NULL;
+		varray_buf_color = NULL;
+		varray_buf_bcolor = NULL;
+		varray_buf_elements = NULL;
+		for (i = 0;i < MAX_TEXTUREUNITS;i++)
+			varray_buf_texcoord[i] = NULL;
 	}
 
-	if (!gl_backend_mempool)
-		gl_backend_mempool = Mem_AllocPool("GL_Backend");
+	if (varray_buf_vertex)
+		Mem_Free(varray_buf_vertex);
+	varray_buf_vertex = NULL;
+	if (varray_buf_color)
+		Mem_Free(varray_buf_color);
+	varray_buf_color = NULL;
+	if (varray_buf_bcolor)
+		Mem_Free(varray_buf_bcolor);
+	varray_buf_bcolor = NULL;
+	for (i = 0;i < MAX_TEXTUREUNITS;i++)
+	{
+		if (varray_buf_texcoord[i])
+			Mem_Free(varray_buf_texcoord[i]);
+		varray_buf_texcoord[i] = NULL;
+	}
 
-	varray_vertex = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
-	varray_color = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
-	varray_bcolor = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(qbyte[4]));
+	varray_buf_vertex = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLfloat[4]));
+	varray_buf_color = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLfloat[4]));
+	varray_buf_bcolor = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLubyte[4]));
 	for (i = 0;i < backendunits;i++)
-		varray_texcoord[i] = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
+		varray_buf_texcoord[i] = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(GLfloat[4]));
 	for (;i < MAX_TEXTUREUNITS;i++)
-		varray_texcoord[i] = NULL;
+		varray_buf_texcoord[i] = NULL;
+
+	GL_Backend_AllocElementsArray();
 }
 
-void GL_Backend_FreeArrays(int resizingbuffers)
+void GL_Backend_FreeArrays(void)
 {
 	int i;
-	if (resizingbuffers)
-		Mem_EmptyPool(gl_backend_mempool);
-	else
-		Mem_FreePool(&gl_backend_mempool);
-	varray_vertex = NULL;
-	varray_color = NULL;
-	varray_bcolor = NULL;
+	Mem_FreePool(&gl_backend_mempool);
+
+	varray_buf_vertex = NULL;
+	varray_buf_color = NULL;
+	varray_buf_bcolor = NULL;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
-		varray_texcoord[i] = NULL;
+		varray_buf_texcoord[i] = NULL;
+
+	varray_buf_elements = NULL;
 }
 
 static void gl_backend_start(void)
@@ -173,7 +209,7 @@ static void gl_backend_shutdown(void)
 
 	Con_Printf("OpenGL Backend shutting down\n");
 
-	GL_Backend_FreeArrays(false);
+	GL_Backend_FreeArrays();
 }
 
 void GL_Backend_CheckCvars(void)
@@ -185,12 +221,11 @@ void GL_Backend_CheckCvars(void)
 		Cvar_SetValueQuick(&gl_mesh_maxverts, 21760);
 }
 
-void GL_Backend_ResizeArrays(int numtriangles)
+void GL_Backend_ResizeArrays(int numvertices)
 {
-	Cvar_SetValueQuick(&gl_mesh_maxverts, numtriangles);
+	Cvar_SetValueQuick(&gl_mesh_maxverts, numvertices);
 	GL_Backend_CheckCvars();
 	mesh_maxverts = gl_mesh_maxverts.integer;
-	GL_Backend_FreeArrays(true);
 	GL_Backend_AllocArrays();
 }
 
@@ -200,6 +235,15 @@ static void gl_backend_newmap(void)
 
 void gl_backend_init(void)
 {
+	int i;
+
+	for (i = 0;i < POLYGONELEMENTS_MAXPOINTS - 2;i++)
+	{
+		polygonelements[i * 3 + 0] = 0;
+		polygonelements[i * 3 + 1] = i + 1;
+		polygonelements[i * 3 + 2] = i + 2;
+	}
+
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
@@ -370,11 +414,11 @@ void GL_SetupTextureState(void)
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		if (gl_texture3d || gl_texturecubemap)
 		{
-			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
+			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_buf_texcoord[i]);CHECKGLERROR
 		}
 		else
 		{
-			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_buf_texcoord[i]);CHECKGLERROR
 		}
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
@@ -432,15 +476,15 @@ void GL_Backend_ResetState(void)
 	qglBlendFunc(gl_state.blendfunc1, gl_state.blendfunc2);CHECKGLERROR
 	qglDisable(GL_BLEND);CHECKGLERROR
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
-	qglVertexPointer(3, GL_FLOAT, sizeof(float[4]), varray_vertex);CHECKGLERROR
+	qglVertexPointer(3, GL_FLOAT, sizeof(GLfloat[4]), varray_buf_vertex);CHECKGLERROR
 	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 	if (gl_mesh_floatcolors.integer)
 	{
-		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), varray_color);CHECKGLERROR
+		qglColorPointer(4, GL_FLOAT, sizeof(GLfloat[4]), varray_buf_color);CHECKGLERROR
 	}
 	else
 	{
-		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_bcolor);CHECKGLERROR
+		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(GLubyte[4]), varray_buf_bcolor);CHECKGLERROR
 	}
 	GL_Color(1, 1, 1, 1);
 
@@ -502,12 +546,12 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	// (or a union)
 	volatile int *icolor;
 	volatile float *fcolor;
-	qbyte *bcolor;
+	GLubyte *bcolor;
 
 	total = numverts * 4;
 
 	// shift float to have 8bit fraction at base of number
-	fcolor = varray_color;
+	fcolor = varray_buf_color;
 	for (i = 0;i < total;)
 	{
 		fcolor[i    ] += 32768.0f;
@@ -518,18 +562,19 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	}
 
 	// then read as integer and kill float bits...
-	icolor = (int *)varray_color;
-	bcolor = varray_bcolor;
+	icolor = (int *)varray_buf_color;
+	bcolor = varray_buf_bcolor;
 	for (i = 0;i < total;)
 	{
-		k = icolor[i    ] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i    ] = (qbyte) k;
-		k = icolor[i + 1] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 1] = (qbyte) k;
-		k = icolor[i + 2] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 2] = (qbyte) k;
-		k = icolor[i + 3] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 3] = (qbyte) k;
+		k = icolor[i    ] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i    ] = (GLubyte) k;
+		k = icolor[i + 1] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 1] = (GLubyte) k;
+		k = icolor[i + 2] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 2] = (GLubyte) k;
+		k = icolor[i + 3] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 3] = (GLubyte) k;
 		i += 4;
 	}
 }
 
+/*
 // enlarges geometry buffers if they are too small
 void _R_Mesh_ResizeCheck(int numverts)
 {
@@ -540,8 +585,47 @@ void _R_Mesh_ResizeCheck(int numverts)
 		GL_Backend_ResetState();
 	}
 }
+*/
 
-// renders the mesh
+void GL_Backend_RenumberElements(int numelements, const int *in, int offset)
+{
+	int i;
+	for (i = 0;i < numelements;i++)
+		varray_buf_elements[i] = in[i] + offset;
+}
+
+// gets geometry space for a mesh
+void R_Mesh_GetSpace(int numverts)
+{
+	int i;
+
+	varray_offset = varray_offsetnext;
+	if (varray_offset + numverts > mesh_maxverts)
+	{
+		//flush stuff here
+		varray_offset = 0;
+	}
+	if (numverts > mesh_maxverts)
+	{
+		BACKENDACTIVECHECK
+		GL_Backend_ResizeArrays(numverts + 100);
+		GL_Backend_ResetState();
+		varray_offset = 0;
+	}
+
+	// for debugging
+	//varray_offset = rand() % (mesh_maxverts - numverts);
+
+	varray_vertex = varray_buf_vertex + varray_offset * 4;
+	varray_color = varray_buf_color + varray_offset * 4;
+	varray_bcolor = varray_buf_bcolor + varray_offset * 4;
+	for (i = 0;i < backendunits;i++)
+		varray_texcoord[i] = varray_buf_texcoord[i] + varray_offset * 4;
+
+	varray_offsetnext = varray_offset + numverts;
+}
+
+// renders the current mesh
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 {
 	int numelements;
@@ -551,28 +635,40 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		return;
 	}
 	numelements = numtriangles * 3;
+	if (mesh_maxelements < numelements)
+	{
+		mesh_maxelements = numelements;
+		GL_Backend_AllocElementsArray();
+	}
+	GL_Backend_RenumberElements(numelements, elements, varray_offset);
 	c_meshs++;
 	c_meshelements += numelements;
 	if (gl_state.colorarray && !gl_mesh_floatcolors.integer)
 		GL_ConvertColorsFloatToByte(numverts);
-	if (!r_render.integer)
-		return;
-	if (gl_supportslockarrays && gl_lockarrays.integer)
+	if (r_render.integer)
 	{
-		qglLockArraysEXT(0, numverts);
-		CHECKGLERROR
-		if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-			qglDrawRangeElements(GL_TRIANGLES, 0, numverts, numelements, GL_UNSIGNED_INT, (const GLuint *) elements);
+		if (gl_supportslockarrays && gl_lockarrays.integer)
+		{
+			qglLockArraysEXT(varray_offset, numverts);
+			CHECKGLERROR
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, varray_offset, varray_offset + numverts, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements);
+				CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements);
+				CHECKGLERROR
+			}
+			qglUnlockArraysEXT();
+			CHECKGLERROR
+		}
 		else
-			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) elements);
-		CHECKGLERROR
-		qglUnlockArraysEXT();
-		CHECKGLERROR
-	}
-	else
-	{
-		qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) elements);
-		CHECKGLERROR
+		{
+			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) varray_buf_elements);
+			CHECKGLERROR
+		}
 	}
 }
 

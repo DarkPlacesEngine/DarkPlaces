@@ -70,10 +70,8 @@ void R_Mesh_MainState(const rmeshstate_t *m);
 // sets up the requested texture state
 void R_Mesh_TextureState(const rmeshstate_t *m);
 
-// enlarges vertex arrays if they are too small
-#define R_Mesh_ResizeCheck(numverts) if ((numverts) > mesh_maxverts) _R_Mesh_ResizeCheck(numverts);
-void _R_Mesh_ResizeCheck(int numverts);
-
+// prepares varray_* buffers for rendering a mesh
+void R_Mesh_GetSpace(int numverts);
 // renders the mesh in the varray_* buffers
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
 

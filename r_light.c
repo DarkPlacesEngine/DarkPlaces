@@ -154,10 +154,6 @@ void R_DrawCoronas(void)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 	viewdist = DotProduct(r_origin, vpn);
-	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
-	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
-	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
-	varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 0;
 	for (i = 0;i < r_numdlights;i++)
 	{
 		rd = r_dlight + i;
@@ -176,6 +172,11 @@ void R_DrawCoronas(void)
 			scale = rd->cullradius * 0.25f;
 			if (gl_flashblend.integer)
 				scale *= 2.0f;
+			R_Mesh_GetSpace(4);
+			varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
+			varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
+			varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
+			varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 0;
 			varray_vertex[0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
 			varray_vertex[1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
 			varray_vertex[2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;

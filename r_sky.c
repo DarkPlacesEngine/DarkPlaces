@@ -127,50 +127,61 @@ static void R_SkyBox(void)
 	varray_texcoord[0][i * 4 + 0] = (s);\
 	varray_texcoord[0][i * 4 + 1] = (t);
 
+	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.depthdisable = true; // don't modify or read zbuffer
+
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
 	R_Mesh_State(&m);
-
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
-	
+	R_Mesh_GetSpace(4);
 	R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(2, 0, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(3, 0, 0,  1,  1,  1);
 	R_Mesh_Draw(4, 2, polygonelements);
+
 	m.tex[0] = R_GetTexture(skyboxside[1]); // back
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
+	R_Mesh_GetSpace(4);
 	R_SkyBoxPolyVec(0, 1, 0, -1,  1,  1);
 	R_SkyBoxPolyVec(1, 1, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
 	R_Mesh_Draw(4, 2, polygonelements);
+
 	m.tex[0] = R_GetTexture(skyboxside[0]); // right
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
+	R_Mesh_GetSpace(4);
 	R_SkyBoxPolyVec(0, 1, 0,  1,  1,  1);
 	R_SkyBoxPolyVec(1, 1, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(2, 0, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(3, 0, 0, -1,  1,  1);
 	R_Mesh_Draw(4, 2, polygonelements);
+
 	m.tex[0] = R_GetTexture(skyboxside[2]); // left
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
+	R_Mesh_GetSpace(4);
 	R_SkyBoxPolyVec(0, 1, 0, -1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(2, 0, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(3, 0, 0,  1, -1,  1);
 	R_Mesh_Draw(4, 2, polygonelements);
+
 	m.tex[0] = R_GetTexture(skyboxside[4]); // up
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
+	R_Mesh_GetSpace(4);
 	R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, 1,  1,  1,  1);
 	R_SkyBoxPolyVec(2, 0, 1, -1,  1,  1);
 	R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
 	R_Mesh_Draw(4, 2, polygonelements);
+
 	m.tex[0] = R_GetTexture(skyboxside[5]); // down
-	R_Mesh_State(&m);
+	R_Mesh_TextureState(&m);
+	R_Mesh_GetSpace(4);
 	R_SkyBoxPolyVec(0, 1, 0,  1,  1, -1);
 	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
@@ -257,8 +268,6 @@ static void R_SkySphere(void)
 	// wrap the scroll just to be extra kind to float accuracy
 	speedscale -= (int)speedscale;
 
-	R_Mesh_ResizeCheck(skysphere_numverts);
-
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
@@ -268,6 +277,7 @@ static void R_SkySphere(void)
 
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 
+	R_Mesh_GetSpace(skysphere_numverts);
 	memcpy(varray_vertex, skysphere_vertex, skysphere_numverts * sizeof(float[4]));
 	memcpy(varray_texcoord[0], skysphere_texcoord, skysphere_numverts * sizeof(float[4]));
 	for (i = 0, t = varray_texcoord[0];i < skysphere_numverts;i++, t += 4)
@@ -282,7 +292,12 @@ static void R_SkySphere(void)
 	m.tex[0] = R_GetTexture(alphaskytexture);
 	R_Mesh_State(&m);
 
-	// scroll it again, this makes the lower cloud layer scroll twice as fast (just like quake did)
+	// scroll the lower cloud layer twice as fast (just like quake did)
+	speedscale *= 2;
+
+	R_Mesh_GetSpace(skysphere_numverts);
+	memcpy(varray_vertex, skysphere_vertex, skysphere_numverts * sizeof(float[4]));
+	memcpy(varray_texcoord[0], skysphere_texcoord, skysphere_numverts * sizeof(float[4]));
 	for (i = 0, t = varray_texcoord[0];i < skysphere_numverts;i++, t += 4)
 	{
 		t[0] += speedscale;

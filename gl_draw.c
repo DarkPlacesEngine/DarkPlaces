@@ -378,6 +378,8 @@ void GL_Draw_Init (void)
 }
 
 int quadelements[768];
+float textverts[128*4*4];
+float texttexcoords[128*4*4];
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright, texnum, additive, batch;
@@ -471,6 +473,8 @@ void R_DrawQueue(void)
 				if (h == 0)
 					h = pic->height;
 			}
+			GL_Color(c[0], c[1], c[2], c[3]);
+			R_Mesh_GetSpace(4);
 			varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
 			varray_texcoord[0][ 4] = 1;varray_texcoord[0][ 5] = 0;
 			varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
@@ -479,7 +483,6 @@ void R_DrawQueue(void)
 			varray_vertex[ 4] = x+w;varray_vertex[ 5] = y  ;varray_vertex[ 6] = 10;
 			varray_vertex[ 8] = x+w;varray_vertex[ 9] = y+h;varray_vertex[10] = 10;
 			varray_vertex[12] = x  ;varray_vertex[13] = y+h;varray_vertex[14] = 10;
-			GL_Color(c[0], c[1], c[2], c[3]);
 			R_Mesh_Draw(4, 2, quadelements);
 			break;
 		case DRAWQUEUE_STRING:
@@ -491,8 +494,8 @@ void R_DrawQueue(void)
 				R_Mesh_TextureState(&m);
 			}
 			batchcount = 0;
-			at = varray_texcoord[0];
-			av = varray_vertex;
+			at = texttexcoords;
+			av = textverts;
 			GL_Color(c[0], c[1], c[2], c[3]);
 			while ((num = *str++) && x < vid.conwidth)
 			{
@@ -515,26 +518,34 @@ void R_DrawQueue(void)
 					batchcount++;
 					if (batchcount >= 128)
 					{
+						R_Mesh_GetSpace(batchcount * 4);
+						memcpy(varray_vertex, textverts, sizeof(float[16]) * batchcount);
+						memcpy(varray_texcoord[0], texttexcoords, sizeof(float[16]) * batchcount);
 						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 						batchcount = 0;
-						at = varray_texcoord[0];
-						av = varray_vertex;
+						at = texttexcoords;
+						av = textverts;
 					}
 				}
 				x += w;
 			}
 			if (batchcount > 0)
+			{
+				R_Mesh_GetSpace(batchcount * 4);
+				memcpy(varray_vertex, textverts, sizeof(float[16]) * batchcount);
+				memcpy(varray_texcoord[0], texttexcoords, sizeof(float[16]) * batchcount);
 				R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
+			}
 			break;
 		case DRAWQUEUE_MESH:
 			mesh = (void *)(dq + 1);
 			m.tex[0] = R_GetTexture(mesh->texture);
 			R_Mesh_TextureState(&m);
-			R_Mesh_ResizeCheck(mesh->numvertices);
+			GL_UseColorArray();
+			R_Mesh_GetSpace(mesh->numvertices);
 			memcpy(varray_vertex, mesh->vertices, sizeof(float[4]) * mesh->numvertices);
 			memcpy(varray_texcoord[0], mesh->texcoords, sizeof(float[4]) * mesh->numvertices);
 			memcpy(varray_color, mesh->colors, sizeof(float[4]) * mesh->numvertices);
-			GL_UseColorArray();
 			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->indices);
 			currentpic = "\0";
 			break;
@@ -543,13 +554,6 @@ void R_DrawQueue(void)
 
 	if (!vid_usinghwgamma)
 	{
-		// we use one big triangle for all the screen blends
-		varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
-		varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
-		varray_texcoord[0][8] = 0;varray_texcoord[0][9] = 0;
-		varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
-		varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
-		varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
 		// all the blends ignore depth
 		memset(&m, 0, sizeof(m));
 		m.depthdisable = true;
@@ -570,6 +574,13 @@ void R_DrawQueue(void)
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
+				R_Mesh_GetSpace(3);
+				varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
+				varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
+				varray_texcoord[0][8] = 0;varray_texcoord[0][9] = 0;
+				varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
+				varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
+				varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
 				R_Mesh_Draw(3, 1, polygonelements);
 				VectorScale(c, 0.5, c);
 			}
@@ -588,6 +599,13 @@ void R_DrawQueue(void)
 			m.blendfunc2 = GL_ONE;
 			R_Mesh_State(&m);
 			GL_Color(c[0], c[1], c[2], 1);
+			R_Mesh_GetSpace(3);
+			varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
+			varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
+			varray_texcoord[0][8] = 0;varray_texcoord[0][9] = 0;
+			varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
+			varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
+			varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 	}
