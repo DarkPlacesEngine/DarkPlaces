@@ -71,6 +71,7 @@ cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32"};
 
+cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "1"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
 cvar_t gl_finish = {0, "gl_finish", "0"};
@@ -971,6 +972,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
+	Cvar_RegisterVariable(&vid_vsync);
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&gl_finish);

@@ -305,6 +305,15 @@ void VID_Finish (void)
 {
 	HDC hdc;
 	int vid_usemouse;
+	static int	old_vsync	= -1;
+
+	if (old_vsync != vid_vsync.integer)
+	{
+		old_vsync = bound(0, vid_vsync.integer, 1);
+		Cvar_SetValueQuick(&vid_vsync, old_vsync);
+		qwglSwapIntervalEXT (old_vsync);
+	}
+
 	if (r_render.integer && !scr_skipupdate)
 	{
 		if (r_speeds.integer || gl_finish.integer)

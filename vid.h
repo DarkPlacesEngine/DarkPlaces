@@ -50,6 +50,7 @@ extern cvar_t vid_fullscreen;
 extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
+extern cvar_t vid_vsync;
 extern cvar_t vid_mouse;
 
 extern cvar_t gl_combine;

@@ -2365,10 +2365,10 @@ void M_Keys_Key (int k, char ascii)
 //=============================================================================
 /* VIDEO MENU */
 
-#define VIDEO_ITEMS 4
+#define VIDEO_ITEMS 5
 
 int video_cursor = 0;
-int video_cursor_table[] = {56, 68, 80, 100};
+int video_cursor_table[] = {56, 68, 80, 100, 120};
 // note: if modes are added to the beginning of this list, update the
 // video_resolution = x; in M_Menu_Video_f below
 unsigned short video_resolutions[][2] = {{320,240}, {400,300}, {512,384}, {640,480}, {800,600}, {1024,768}, {1152,864}, {1280,960}, {1280,1024}, {1600,1200}, {1792,1344}, {1920,1440}, {2048,1536}, {0,0}};
@@ -2435,6 +2435,10 @@ void M_Video_Draw (void)
 	// "Apply" button
 	M_Print(220, video_cursor_table[3], "Apply");
 
+	// Vertical Sync
+	M_Print(16, video_cursor_table[4], "         Vertical Sync");
+	M_DrawCheckbox(220, video_cursor_table[4], vid_vsync.integer);
+
 	// Cursor
 	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
 }
@@ -2468,6 +2472,10 @@ void M_Menu_Video_AdjustSliders (int dir)
 			break;
 		case 2:
 			Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
+			break;
+
+		case 4:
+			Cvar_SetValueQuick (&vid_vsync, !vid_vsync.integer);
 			break;
 	}
 }
