@@ -161,10 +161,10 @@ Two entities have touched, so run their touch functions
 void SV_Impact (edict_t *e1, edict_t *e2)
 {
 	int		old_self, old_other;
-	
+
 	old_self = pr_global_struct->self;
 	old_other = pr_global_struct->other;
-	
+
 	pr_global_struct->time = sv.time;
 	if (e1->v.touch && e1->v.solid != SOLID_NOT)
 	{
@@ -200,7 +200,7 @@ int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 	float	backoff;
 	float	change;
 	int		i, blocked;
-	
+
 	blocked = 0;
 	if (normal[2] > 0)
 		blocked |= 1;		// floor
@@ -247,7 +247,7 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 	trace_t		trace;
 	vec3_t		end;
 	float		time_left;
-	int			blocked;
+	int			blocked, impact;
 
 	numbumps = 4;
 
@@ -287,10 +287,23 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 		if (!trace.ent)
 			Host_Error ("SV_FlyMove: !trace.ent");
 
+		if ((int) ent->v.flags & FL_ONGROUND)
+		{
+			if (ent->v.groundentity == EDICT_TO_PROG(trace.ent))
+				impact = false;
+			else
+			{
+				ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+				impact = true;
+			}
+		}
+		else
+			impact = true;
+
 		if (trace.plane.normal[2] > 0.7)
 		{
 			blocked |= 1;		// floor
-			if (trace.ent->v.solid == SOLID_BSP)
+			//if (trace.ent->v.solid == SOLID_BSP)
 			{
 				ent->v.flags =	(int)ent->v.flags | FL_ONGROUND;
 				ent->v.groundentity = EDICT_TO_PROG(trace.ent);
@@ -306,7 +319,8 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 //
 // run the impact function
 //
-		SV_Impact (ent, trace.ent);
+		if (impact)
+			SV_Impact (ent, trace.ent);
 		if (ent->free)
 			break;		// removed by the impact function
 
@@ -795,7 +809,7 @@ qboolean SV_CheckWater (edict_t *ent)
 
 	point[0] = ent->v.origin[0];
 	point[1] = ent->v.origin[1];
-	point[2] = ent->v.origin[2] + ent->v.mins[2] + 1;	
+	point[2] = ent->v.origin[2] + ent->v.mins[2] + 1;
 	
 	ent->v.waterlevel = 0;
 	ent->v.watertype = CONTENTS_EMPTY;
@@ -866,7 +880,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 	vec3_t	dir;
 	int		clip;
 	trace_t	steptrace;
-	
+
 	VectorCopy (ent->v.origin, oldorg);
 	VectorClear (dir);
 
@@ -944,7 +958,7 @@ void SV_WalkMove (edict_t *ent)
 	
 	if (ent->v.movetype != MOVETYPE_WALK)
 		return;		// gibbed by a trigger
-	
+
 	if (sv_nostep.integer)
 		return;
 	
@@ -983,7 +997,7 @@ void SV_WalkMove (edict_t *ent)
 			clip = SV_TryUnstick (ent, oldvel);
 		}
 	}
-	
+
 // extra friction based on view angle
 	if ( clip & 2 )
 		SV_WallFriction (ent, &steptrace);
@@ -1228,12 +1242,13 @@ void SV_Physics_Toss (edict_t *ent)
 	trace_t	trace;
 	vec3_t	move;
 	float	backoff;
-	edict_t *groundentity;
+	//edict_t *groundentity;
 	// regular thinking
 	if (!SV_RunThink (ent))
 		return;
 
 // if onground, return without moving
+	/*
 	if ( ((int)ent->v.flags & FL_ONGROUND) )
 	{
 		// LordHavoc: fall if the groundentity was removed
@@ -1244,7 +1259,7 @@ void SV_Physics_Toss (edict_t *ent)
 				return;
 		}
 	}
-	ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+	*/
 
 	SV_CheckVelocity (ent);
 
@@ -1260,9 +1275,9 @@ void SV_Physics_Toss (edict_t *ent)
 // move origin
 	VectorScale (ent->v.velocity, sv.frametime, move);
 	trace = SV_PushEntity (ent, move, vec3_origin);
-	if (trace.fraction == 1)
-		return;
 	if (ent->free)
+		return;
+	if (trace.fraction == 1)
 		return;
 
 	if (ent->v.movetype == MOVETYPE_BOUNCE)
@@ -1279,19 +1294,14 @@ void SV_Physics_Toss (edict_t *ent)
 		ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 	else if (ent->v.movetype == MOVETYPE_BOUNCE)
 	{
-		if (trace.plane.normal[2] > 0.7)
+		// LordHavoc: fixed grenades not bouncing when fired down a slope
+		if (trace.plane.normal[2] > 0.7 && DotProduct(trace.plane.normal, ent->v.velocity) < 60)
+		//if (trace.plane.normal[2] > 0.7 && ent->v.velocity[2] < 60)
 		{
-			// LordHavoc: fixed grenades not bouncing when fired down a slope
-			if (DotProduct(trace.plane.normal, ent->v.velocity) < 100)
-			//if (ent->v.velocity[2] < 60)
-			{
-				ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-				ent->v.groundentity = EDICT_TO_PROG(trace.ent);
-				VectorClear (ent->v.velocity);
-				VectorClear (ent->v.avelocity);
-			}
-			else
-				ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
+			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+			VectorClear (ent->v.velocity);
+			VectorClear (ent->v.avelocity);
 		}
 		else
 			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
