@@ -883,6 +883,10 @@ void CL_ParseStatic (int large)
 
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);
 	VectorCopy (ent->state_baseline.angles, ent->render.angles);	
+
+	// This is definitely cheating...
+	if (ent->render.model == NULL)
+		cl.num_statics--;
 }
 
 /*
