@@ -3163,6 +3163,44 @@ episode_t	nehahraepisodes[] =
 // Map list for Transfusion
 level_t		transfusionlevels[] =
 {
+	{"e1m1",		"Cradle to Grave"},
+	{"e1m2",		"Wrong Side of the Tracks"},
+	{"e1m3",		"Phantom Express"},
+	{"e1m4",		"Dark Carnival"},
+	{"e1m5",		"Hallowed Grounds"},
+	{"e1m6",		"The Great Temple"},
+	{"e1m7",		"Altar of Stone"},
+	{"e1m8",		"House of Horrors"},
+
+	{"e2m1",		"Shipwrecked"},
+	{"e2m2",		"The Lumber Mill"},
+	{"e2m3",		"Rest for the Wicked"},
+	{"e2m4",		"The Overlooked Hotel"},
+	{"e2m5",		"The Haunting"},
+	{"e2m6",		"The Cold Rush"},
+	{"e2m7",		"Bowels of the Earth"},
+	{"e2m8",		"The Lair of Shial"},
+	{"e2m9",		"Thin Ice"},
+
+	{"e3m1",		"Ghost Town"},
+	{"e3m2",		"The Siege"},
+	{"e3m3",		"Raw Sewage"},
+	{"e3m4",		"The Sick Ward"},
+	{"e3m5",		"Spare Parts"},
+	{"e3m6",		"Monster Bait"},
+	{"e3m7",		"The Pit of Cerberus"},
+	{"e3m8",		"Catacombs"},
+
+	{"e4m1",		"Butchery Loves Company"},
+	{"e4m2",		"Breeding Grounds"},
+	{"e4m3",		"Charnel House"},
+	{"e4m4",		"Crystal Lake"},
+	{"e4m5",		"Fire and Brimstone"},
+	{"e4m6",		"The Ganglion Depths"},
+	{"e4m7",		"In the Flesh"},
+	{"e4m8",		"The Hall of the Epiphany"},
+	{"e4m9",		"Mall of the Dead"},
+
 	{"bb1",			"The Stronghold"},
 	{"bb2",			"Winter Wonderland"},
 	{"bb3",			"Bodies"},
@@ -3171,27 +3209,35 @@ level_t		transfusionlevels[] =
 	{"bb6",			"Twin Fortress"},
 	{"bb7",			"Midgard"},
 	{"bb8",			"Fun With Heads"},
-
-	{"e1m1",		"Cradle to Grave"},
-	{"e1m2",		"Wrong Side of the Tracks"},
-	{"e1m7",		"Altar of Stone"},
-	{"e2m8",		"The Lair of Shial"},
-	{"e3m1",		"Ghost Town"},
-	{"e3m7",		"The Pit of Cerberus"},
-	{"e4m1",		"Butchery Loves Company"},
-	{"e4m7",		"In the Flesh"},
-	{"e4m8",		"The Hall of the Epiphany"},
-	{"e4m9",		"Mall of the Dead"},
-
 	{"dm1",			"Monolith Building 11"},
 	{"dm2",			"Power!"},
 	{"dm3",			"Area 15"},
+
 	{"e6m1",		"Welcome to Your Life"},
+	{"e6m2",		"They Are Here"},
+	{"e6m3",		"Public Storage"},
+	{"e6m4",		"Aqueducts"},
+	{"e6m5",		"The Ruined Temple"},
+	{"e6m6",		"Forbidden Rituals"},
+	{"e6m7",		"The Dungeon"},
 	{"e6m8",		"Beauty and the Beast"},
 	{"e6m9",		"Forgotten Catacombs"},
 
+	{"cp01",		"Boat Docks"},
+	{"cp02",		"Old Opera House"},
+	{"cp03",		"Gothic Library"},
+	{"cp04",		"Lost Monastery"},
+	{"cp05",		"Steamboat"},
+	{"cp06",		"Graveyard"},
+	{"cp07",		"Mountain Pass"},
+	{"cp08",		"Abysmal Mine"},
+	{"cp09",		"Castle"},
+	{"cps1",		"Boggy Creek"},
+
 	{"cpbb01",		"Crypt of Despair"},
+	{"cpbb02",		"Pits of Blood"},
 	{"cpbb03",		"Unholy Cathedral"},
+	{"cpbb04",		"Deadly Inspirations"},
 
 	{"b2a15",		"Area 15 (B2)"},
 	{"barena",		"Blood Arena"},
@@ -3219,13 +3265,17 @@ level_t		transfusionlevels[] =
 
 episode_t	transfusionepisodes[] =
 {
-	{"Blood", 0, 8},
-	{"Blood Single Player", 8, 10},
-	{"Plasma Pack", 18, 6},
-	{"Cryptic Passage", 24, 2},
-	{"Blood 2", 26, 5},
-	{"Transfusion", 31, 9},
-	{"Conversions", 40, 6}
+	{"The Way of All Flesh", 0, 8},
+	{"Even Death May Die", 8, 9},
+	{"Farewell to Arms", 17, 8},
+	{"Dead Reckoning", 25, 9},
+	{"BloodBath", 34, 11},
+	{"Post Mortem", 45, 9},
+	{"Cryptic Passage", 54, 10},
+	{"Cryptic BloodBath", 64, 4},
+	{"Blood 2", 68, 5},
+	{"Transfusion", 73, 9},
+	{"Conversions", 82, 6}
 };
 
 level_t goodvsbad2levels[] =
@@ -3293,7 +3343,7 @@ gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
 gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
 gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
-gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 7};
+gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 11};
 gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
 gamelevels_t battlemechgame = {"Battlemech", battlemechlevels, battlemechepisodes, 1};
 gamelevels_t openquartzgame = {"OpenQuartz", openquartzlevels, openquartzepisodes, 3};
