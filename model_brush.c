@@ -109,11 +109,13 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p,
 		memset(out, 0, outsize);
 }
 
-static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_Brush_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int clusterindex, side, nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
-	node = model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode;
+	if (!model->brush.num_pvsclusters)
+		return true;
+	node = model->brush.data_nodes;
 	for (;;)
 	{
 		if (node->plane)
@@ -2907,7 +2909,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
 	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingPVS = Mod_Brush_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
@@ -5314,61 +5316,6 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	}
 }
 
-static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
-{
-	int clusterindex, side, nodestackindex = 0;
-	mnode_t *node, *nodestack[1024];
-	node = model->brush.data_nodes;
-	if (!model->brush.num_pvsclusters)
-		return true;
-	for (;;)
-	{
-		if (node->plane)
-		{
-			// node - recurse down the BSP tree
-			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-			if (side < 2)
-			{
-				// box is on one side of plane, take that path
-				node = node->children[side];
-			}
-			else
-			{
-				// box crosses plane, take one path and remember the other
-				if (nodestackindex < 1024)
-					nodestack[nodestackindex++] = node->children[0];
-				node = node->children[1];
-			}
-		}
-		else
-		{
-			// leaf - check cluster bit
-			clusterindex = ((mleaf_t *)node)->clusterindex;
-#if 0
-			if (clusterindex >= model->brush.num_pvsclusters)
-			{
-				Con_Printf("%i >= %i\n", clusterindex, model->brush.num_pvsclusters);
-				return true;
-			}
-#endif
-			if (CHECKPVSBIT(pvs, clusterindex))
-			{
-				// it is visible, return immediately with the news
-				return true;
-			}
-			else
-			{
-				// nothing to see here, try another path we didn't take earlier
-				if (nodestackindex == 0)
-					break;
-				node = nodestack[--nodestackindex];
-			}
-		}
-	}
-	// it is not visible
-	return false;
-}
-
 //Returns PVS data for a given point
 //(note: can return NULL)
 static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
@@ -5510,7 +5457,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q3BSP_GetPVS;
 	mod->brush.FatPVS = Mod_Q3BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Q3BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingPVS = Mod_Brush_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 	//mod->DrawSky = R_Q3BSP_DrawSky;
