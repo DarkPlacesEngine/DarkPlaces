@@ -1,6 +1,7 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
 -n darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
 -n darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
+-n darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
 -n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
 -n darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
 -n darkplaces: add bullet hole decals to the particlefont (Vermeulen)
@@ -35,7 +36,6 @@
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
 0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
-0 darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
 0 darkplaces: GAME_FNIGGIUM: startup loading screen (gfx/loadback.tga or whatever)
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension and document it
@@ -236,6 +236,7 @@
 2 hmap: hlight is not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
 3 LordHavoc: read up on dynamic visibility
 3 darkplaces: .loc support and other team messaging capabilities (sublim3)
+3 darkplaces: add .psk (ut2003) model support (Kazashi)
 3 darkplaces: add DP_ENT_COLORSHELL which puts a Q2-style colored shell on a model (Supajoe)
 3 darkplaces: add DP_SV_CRATEPHYSICS (NotoriousRay, SeienAbunae)
 3 darkplaces: add OpenGL Extensions menu to enable/disable various features (zombie_13)
