@@ -56,6 +56,14 @@ void S_TouchSound (char *sample)
 {
 }
 
+void S_ClearUsed (void)
+{
+}
+
+void S_PurgeUnused (void)
+{
+}
+
 void S_ClearBuffer (void)
 {
 }
