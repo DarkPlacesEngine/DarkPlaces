@@ -1270,6 +1270,19 @@ void SCR_DrawScreen (void)
 
 		R_TimeReport("setup");
 
+		if (r_showtrispass)
+		{
+			rmeshstate_t m;
+			r_showtrispass = 0;
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			GL_DepthTest(GL_FALSE);
+			GL_DepthMask(GL_FALSE);
+			memset(&m, 0, sizeof(m));
+			R_Mesh_State(&m);
+			GL_ShowTrisColor(0.2,0.2,0.2,1);
+			r_showtrispass = 1;
+		}
+
 		if (scr_conlines < vid.conheight && cls.signon == SIGNONS)
 		{
 			float size;
