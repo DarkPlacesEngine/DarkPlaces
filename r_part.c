@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
 typedef enum
 {
-	pt_static, pt_grav, pt_slowgrav, pt_blob, pt_blob2, pt_bulletsmoke, pt_smoke, pt_snow, pt_rain, pt_bloodcloud, pt_fallfadespark, pt_bubble, pt_fade, pt_smokecloud, pt_splash, pt_flame, pt_flamingdebris, pt_smokingdebris, pt_flamefall, pt_glow, pt_decal, pt_blood, pt_bloodsplatter
+	pt_static, pt_grav, pt_slowgrav, pt_blob, pt_blob2, pt_bulletsmoke, pt_smoke, pt_snow, pt_rain, pt_bloodcloud, pt_fallfadespark, pt_bubble, pt_fade, pt_smokecloud, pt_splash, pt_flame, pt_glow, pt_decal, pt_blood, pt_bloodsplatter
 }
 ptype_t;
 
@@ -1240,6 +1240,8 @@ void R_MoveParticles (void)
 				p->die = -1;
 			break;
 		default:
+			printf("unknown particle type %i\n", p->type);
+			p->die = -1;
 			break;
 		}
 
