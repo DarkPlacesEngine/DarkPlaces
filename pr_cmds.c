@@ -70,6 +70,8 @@ void PF_VarString(int first, char *out, int outlength)
 }
 
 char *ENGINE_EXTENSIONS =
+"DP_CON_SET "
+"DP_CON_SETA "
 "DP_CL_LOADSKY "
 "DP_EF_ADDITIVE "
 "DP_EF_BLUE "
