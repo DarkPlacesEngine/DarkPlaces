@@ -248,7 +248,7 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity ();CHECKGLERROR
-	qglOrtho(x1, y2, x2, y1, zNear, zFar);
+	qglOrtho(x1, x2, y2, y1, zNear, zFar);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
 }
