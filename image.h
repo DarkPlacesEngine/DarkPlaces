@@ -2,6 +2,10 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
+
+extern int image_width, image_height;
+
+
 // swizzle components (even converting number of components) and flip images
 // (warning: input must be different than output due to non-linear read/write)
 // (tip: component indices can contain values | 0x80000000 to tell it to

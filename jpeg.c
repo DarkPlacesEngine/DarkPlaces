@@ -23,6 +23,7 @@
 
 
 #include "quakedef.h"
+#include "image.h"
 #include "jpeg.h"
 
 

@@ -28,7 +28,6 @@ static const char rcsid[] =
 #include "quakedef.h"
 #include <ctype.h>
 
-extern void SCR_UpdateScreen (void);
 
 /*
 key up events are sent even if in console mode

@@ -18,7 +18,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "quakedef.h"
+#include "cdaudio.h"
 #include "image.h"
+#include "progsvm.h"
 
 #include "mprogdefs.h"
 

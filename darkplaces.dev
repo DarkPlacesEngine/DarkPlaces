@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=161
+UnitCount=158
 Type=0
 Ver=1
 ObjFiles=
@@ -180,7 +180,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit16]
-FileName=crc.h
+FileName=snd_main.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -250,7 +250,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit23]
-FileName=gl_warp_sin.h
+FileName=polygon.h
 CompileCpp=0
 Folder=Header Files
 Compile=1
@@ -940,7 +940,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit92]
-FileName=crc.c
+FileName=polygon.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
@@ -1609,26 +1609,6 @@ Priority=1000
 OverrideBuildCmd=0
 BuildCmd=
 
-[Unit159]
-FileName=polygon.c
-CompileCpp=0
-Folder=Source Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
-[Unit160]
-FileName=polygon.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
-
 [VersionInfo]
 Major=0
 Minor=1
@@ -1646,14 +1626,4 @@ OriginalFilename=
 ProductName=DarkPlaces
 ProductVersion=
 AutoIncBuildNr=0
-
-[Unit161]
-FileName=snd_main.h
-CompileCpp=0
-Folder=Header Files
-Compile=1
-Link=1
-Priority=1000
-OverrideBuildCmd=0
-BuildCmd=
 

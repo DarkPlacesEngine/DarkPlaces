@@ -164,10 +164,6 @@ SOURCE=.\console.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\crc.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\curves.c
 # End Source File
 # Begin Source File
@@ -500,10 +496,6 @@ SOURCE=.\console.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\crc.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\curves.h
 # End Source File
 # Begin Source File
@@ -676,6 +668,10 @@ SOURCE=.\server.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\snd_main.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\snd_ogg.h
 # End Source File
 # Begin Source File
@@ -685,10 +681,6 @@ SOURCE=.\snd_wav.h
 # Begin Source File
 
 SOURCE=.\sound.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\snd_main.h
 # End Source File
 # Begin Source File
 
