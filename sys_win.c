@@ -20,11 +20,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sys_win.c -- Win32 system interface code
 
 #include "quakedef.h"
-#include "winquake.h"
+#include <windows.h>
+#include <dsound.h>
 #include "errno.h"
 #include "resource.h"
 #include "conproc.h"
 #include "direct.h"
+
+extern void S_BlockSound (void);
+extern void S_UnblockSound (void);
 
 cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 
@@ -318,7 +322,6 @@ WinMain
 ==================
 */
 HINSTANCE	global_hInstance;
-int			global_nCmdShow;
 const char	*argv[MAX_NUM_ARGVS];
 char		program_name[MAX_OSPATH];
 
@@ -333,7 +336,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		return 0;
 
 	global_hInstance = hInstance;
-	global_nCmdShow = nCmdShow;
 
 	lpBuffer.dwLength = sizeof(MEMORYSTATUS);
 	GlobalMemoryStatus (&lpBuffer);
