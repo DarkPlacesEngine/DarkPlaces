@@ -354,7 +354,7 @@ void CL_ParseServerInfo (void)
 	cl.maxclients = MSG_ReadByte ();
 	if (cl.maxclients < 1 || cl.maxclients > MAX_SCOREBOARD)
 	{
-		Con_Printf("Bad maxclients (%u) from server\n", cl.maxclients);
+		Host_Error("Bad maxclients (%u) from server\n", cl.maxclients);
 		return;
 	}
 	Mem_EmptyPool(cl_scores_mempool);
@@ -373,6 +373,11 @@ void CL_ParseServerInfo (void)
 
 	// check memory integrity
 	Mem_CheckSentinelsGlobal();
+
+	S_StopAllSounds();
+	// if server is active, we already began a loading plaque
+	if (!sv.active)
+		SCR_BeginLoadingPlaque();
 
 	// disable until we get textures for it
 	R_ResetSkyBox();

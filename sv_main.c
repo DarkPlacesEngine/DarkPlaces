@@ -1607,6 +1607,9 @@ void SV_SpawnServer (const char *server)
 
 	Con_DPrintf("SpawnServer: %s\n", server);
 
+	if (cls.state != ca_dedicated)
+		SCR_BeginLoadingPlaque();
+
 	snprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
 	worldmodel = Mod_ForName(modelname, false, true, true);
 	if (!worldmodel || !worldmodel->TraceBox)
