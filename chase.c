@@ -21,9 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t	chase_back = {"chase_back", "48"};
-cvar_t	chase_up = {"chase_up", "22"};
-cvar_t	chase_active = {"chase_active", "0"};
+cvar_t	chase_back = {"chase_back", "48", true};
+cvar_t	chase_up = {"chase_up", "48", true};
+cvar_t	chase_active = {"chase_active", "0", true};
 
 void Chase_Init (void)
 {
@@ -57,7 +57,7 @@ void Chase_Update (void)
 	float	dist;
 
 	chase_back.value = bound(0, chase_back.value, 128);
-	chase_up.value = bound(-64, chase_up.value, 64);
+	chase_up.value = bound(-48, chase_up.value, 96);
 
 	AngleVectors (cl.viewangles, forward, NULL, NULL);
 
