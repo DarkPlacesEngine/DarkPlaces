@@ -1,9 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--d darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 -d darkplaces: add DP_EF_NOSHADOW extension (Urre)
--d darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 -d darkplaces: add GL_EXT_stencil_two_side support to shadow rendering - note: this got a 77% speedup! (fuh)
--d darkplaces: add a "edictset" command to console to set a single field of an edict to the specified value
 -d darkplaces: add a config saving command (Speeds)
 -d darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
@@ -14,6 +11,7 @@
 -d darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
 -d darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (Transfusion)
 -d darkplaces: add slowmo to options menu (Cristian Beltramo)
+-d darkplaces: add some cl_explosions_ cvars to control settings - start alpha, end alpha, start size, end size, life time (Supajoe, Mercury)
 -d darkplaces: add support for multiple -game's (note: this needs an enhanced COM_CheckParm to find the multiple matches) (Static_Fiend)
 -d darkplaces: add sv_maxrate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
 -d darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
@@ -70,7 +68,6 @@
 0 darkplaces: add cl_censor cvar which would replace 'swearing' with humorous messages (Deej) 
 0 darkplaces: add cl_netlag (ping, like cl_netlocalping_* but no range) and cl_netpacketloss/sv_netpacketloss cvars (packetloss percentage, half of this each way)
 0 darkplaces: add coronascale setting to rtlights (romi)
-0 darkplaces: add cubemap px/nx/py/ny/pz/nz loading in skybox loader
 0 darkplaces: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces: add de-we to credits page for the great icons (de-we)
 0 darkplaces: add graphics options menu and put realtime lighting stuff in it (Antti)
@@ -79,7 +76,6 @@
 0 darkplaces: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
 0 darkplaces: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
 0 darkplaces: add scaling capabilities to Image_CopyMux
-0 darkplaces: add some cl_explosions_ cvars to control settings - start alpha, end alpha, start size, end size, life time (Supajoe, Mercury)
 0 darkplaces: add support for .float corona and corona_radius to control corona intensity and radius on dlights (Electro) 
 0 darkplaces: add sv_gameplayfix_grenadebouncedownslopes cvar (default 1)
 0 darkplaces: add sv_gameplayfix_noairborncorpse cvar (default 1)
@@ -114,7 +110,6 @@
 0 darkplaces: figure out why dlights are flashing on/off in TEU, particularly test the flashlight (Electro)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
-0 darkplaces: fix black models bug with unlit maps (CheapAlert)
 0 darkplaces: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
 0 darkplaces: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
@@ -168,7 +163,6 @@
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: release darkplaces build
 0 darkplaces: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
-0 darkplaces: rename R_Model_Brush_ functions to R_Q1BSP_
 0 darkplaces: rename cl_fakelocalping_* to cl_netlocalping_* and *_fakepacketloss_* to *_netpacketloss_*
 0 darkplaces: rename everything possible in msurface_t, mleaf_t, and mnode_t to be named like q3mface_t, q3mleaf_t, and q3mnode_t, to make them more similar
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
@@ -434,6 +428,7 @@
 ? darkplaces: fix connecting to proquake servers through routers (Demonix)
 ? dpmod: apparently can't fire in start.bsp? (scar3crow)
 bug darkplaces: physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
+d darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
 d darkplaces: 12bit color textures in 16bit mode?? (Tomaz)
@@ -452,9 +447,11 @@ d darkplaces: add -benchmark commandline option which plays a demo, appends the 
 d darkplaces: add 66.28.32.64 to master server list (Willis)
 d darkplaces: add DP_GFX_EXTERNALTEXTURES extension (Electro)
 d darkplaces: add DP_LITSUPPORT extension and document it
+d darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 d darkplaces: add GAME_NEXUIZ mode
 d darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
 d darkplaces: add a "cmd" command to the client for sending arbitrary commands to the server, mainly for use with KRIMZON_SV_PARSECLIENTCOMMAND
+d darkplaces: add a "edictset" command to console to set a single field of an edict to the specified value
 d darkplaces: add a newline to map name printing
 d darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
 d darkplaces: add an optimized special case to AngleVectors for roll == 0, thanks to fuh for the idea
@@ -464,6 +461,7 @@ d darkplaces: add bullet hole decals to the particlefont (Vermeulen)
 d darkplaces: add cl_decals to effects options menu
 d darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
 d darkplaces: add constant insertion capabilities to Image_CopyMux
+d darkplaces: add cubemap px/nx/py/ny/pz/nz loading in skybox loader
 d darkplaces: add cvar_string builtin (Paul Timofeyev)
 d darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
 d darkplaces: add extension for tenebrae dlight entities
@@ -518,6 +516,7 @@ d darkplaces: fix "game speed" menu option, it's too far left (Tomaz)
 d darkplaces: fix 2D attenuation texturing which is all black
 d darkplaces: fix PF_substring's mishandling of the end variable (Fuh)
 d darkplaces: fix Short format entity origins to fix shell casings sitting in floor/above floor (Tomaz)
+d darkplaces: fix black models bug with unlit maps (CheapAlert)
 d darkplaces: fix bounding box bugs with viewmodelforclient (diGGer)
 d darkplaces: fix con_notify (should control number of lines)
 d darkplaces: fix cubemap upload scaling crashes (Urre)
@@ -624,6 +623,7 @@ d darkplaces: release new hmap (fixes compilation of TF entities for one person,
 d darkplaces: release new hqbsp with -wadpath support (also searchs in map's directory and map's parent directory)
 d darkplaces: remove dead master server from default masters list (yummyluv)
 d darkplaces: remove frags per hour rating from scoreboard because it depends on cl.scores[i]->entertime (which is never set)
+d darkplaces: rename R_Model_Brush_ functions to R_Q1BSP_
 d darkplaces: rename r_shadow_shadows to r_shadow_dlightshadows and add r_shadow_worldshadows (mashakos)
 d darkplaces: replace key system with twilight key system, note that this breaks existing mouse4 and mouse5 binds, and adds in_bindmap capability
 d darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
