@@ -349,7 +349,7 @@ static void CL_RelinkNetworkEntities()
 {
 	entity_t *ent;
 	int i, effects, temp;
-	float f, d, bobjrotate, bobjoffset, dlightradius, lerp;
+	float d, bobjrotate, bobjoffset, dlightradius, lerp;
 	vec3_t oldorg, neworg, delta, dlightcolor, v, v2, mins, maxs;
 
 	bobjrotate = ANGLEMOD(100*cl.time);
@@ -375,41 +375,39 @@ static void CL_RelinkNetworkEntities()
 		if (!ent->state_previous.active)
 		{
 			// only one state available
-			lerp = 1;
-			VectorCopy (ent->state_current.origin, oldorg); // skip trails
-			VectorCopy (ent->state_current.origin, neworg);
-			VectorCopy (ent->state_current.angles, ent->render.angles);
+			VectorCopy (ent->persistent.neworigin, neworg);
+			VectorCopy (ent->persistent.newangles, ent->render.angles);
+			VectorCopy (neworg, oldorg);
 		}
 		else
 		{
 			// if the delta is large, assume a teleport and don't lerp
-			VectorSubtract(ent->state_current.origin, ent->state_previous.origin, delta);
-			// LordHavoc: increased tolerance from 100 to 200, and now to 1000
-			if ((sv.active && svs.maxclients == 1 && !(ent->state_current.flags & RENDER_STEP)) || cls.timedemo || DotProduct(delta, delta) > 1000*1000 || cl_nolerp.integer)
-				lerp = 1;
-			else
+			VectorSubtract(ent->persistent.neworigin, ent->persistent.oldorigin, delta);
+			if (ent->persistent.lerpdeltatime > 0)
 			{
-				f = ent->state_current.time - ent->state_previous.time;
-				if (f > 0)
-					lerp = (cl.time - ent->state_previous.time) / f;
+				lerp = (cl.time - ent->persistent.lerpstarttime) / ent->persistent.lerpdeltatime;
+				if (lerp < 1)
+				{
+					// interpolate the origin and angles
+					VectorMA(ent->persistent.oldorigin, lerp, delta, neworg);
+					VectorSubtract(ent->persistent.newangles, ent->persistent.oldangles, delta);
+					if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+					if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+					if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+					VectorMA(ent->persistent.oldangles, lerp, delta, ent->render.angles);
+				}
 				else
-					lerp = 1;
+				{
+					// no interpolation
+					VectorCopy (ent->persistent.neworigin, neworg);
+					VectorCopy (ent->persistent.newangles, ent->render.angles);
+				}
 			}
-			if (lerp >= 1)
+			else
 			{
 				// no interpolation
-				VectorCopy (ent->state_current.origin, neworg);
-				VectorCopy (ent->state_current.angles, ent->render.angles);
-			}
-			else
-			{
-				// interpolate the origin and angles
-				VectorMA(ent->state_previous.origin, lerp, delta, neworg);
-				VectorSubtract(ent->state_current.angles, ent->state_previous.angles, delta);
-				if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
-				if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
-				if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
-				VectorMA(ent->state_previous.angles, lerp, delta, ent->render.angles);
+				VectorCopy (ent->persistent.neworigin, neworg);
+				VectorCopy (ent->persistent.newangles, ent->render.angles);
 			}
 		}
 
