@@ -83,57 +83,22 @@ void SleepUntilInput (int time);
 void Sys_Error (const char *error, ...)
 {
 	va_list		argptr;
-	char		text[1024], text2[1024];
-	char		*text3 = "Press Enter to exit\n";
-	char		*text4 = "***********************************\n";
-	char		*text5 = "\n";
-	DWORD		dummy;
-	double		starttime;
+	char		text[1024];
 	static int	in_sys_error0 = 0;
 	static int	in_sys_error1 = 0;
 	static int	in_sys_error2 = 0;
-	static int	in_sys_error3 = 0;
-
-	if (!in_sys_error3)
-		in_sys_error3 = 1;
 
 	va_start (argptr, error);
 	vsprintf (text, error, argptr);
 	va_end (argptr);
 
-	if (cls.state == ca_dedicated)
+	// close video so the message box is visible, unless we already tried that
+	if (!in_sys_error0 && cls.state != ca_dedicated)
 	{
-		va_start (argptr, error);
-		vsprintf (text, error, argptr);
-		va_end (argptr);
-
-		sprintf (text2, "ERROR: %s\n", text);
-		WriteFile (houtput, text5, strlen (text5), &dummy, NULL);
-		WriteFile (houtput, text4, strlen (text4), &dummy, NULL);
-		WriteFile (houtput, text2, strlen (text2), &dummy, NULL);
-		WriteFile (houtput, text3, strlen (text3), &dummy, NULL);
-		WriteFile (houtput, text4, strlen (text4), &dummy, NULL);
-
-
-		starttime = Sys_DoubleTime ();
-		sc_return_on_enter = true;	// so Enter will get us out of here
-
-		while (!Sys_ConsoleInput () && ((Sys_DoubleTime () - starttime) < CONSOLE_ERROR_TIMEOUT))
-			SleepUntilInput(1);
+		in_sys_error0 = 1;
+		VID_Shutdown();
 	}
-	else
-	{
-	// switch to windowed so the message box is visible, unless we already
-	// tried that and failed
-		if (!in_sys_error0)
-		{
-			in_sys_error0 = 1;
-			VID_Shutdown();
-			MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
-		}
-		else
-			MessageBox(NULL, text, "Double Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
-	}
+	MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 
 	if (!in_sys_error1)
 	{
