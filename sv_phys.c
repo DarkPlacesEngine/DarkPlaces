@@ -217,7 +217,7 @@ int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 		if (out[i] > -STOP_EPSILON && out[i] < STOP_EPSILON)
 			out[i] = 0;
 	}
-	
+
 	return blocked;
 }
 
@@ -1289,13 +1289,23 @@ void SV_Physics_Toss (edict_t *ent)
 	trace_t	trace;
 	vec3_t	move;
 	float	backoff;
+	edict_t *groundentity;
 	// regular thinking
 	if (!SV_RunThink (ent))
 		return;
 
 // if onground, return without moving
 	if ( ((int)ent->v.flags & FL_ONGROUND) )
-		return;
+	{
+		// LordHavoc: fall if the groundentity was removed
+		if (ent->v.groundentity)
+		{
+			groundentity = PROG_TO_EDICT(ent->v.groundentity);
+			if (groundentity && groundentity->v.solid != SOLID_NOT && groundentity->v.solid != SOLID_TRIGGER)
+				return;
+		}
+	}
+	ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 
 	SV_CheckVelocity (ent);
 
@@ -1315,7 +1325,7 @@ void SV_Physics_Toss (edict_t *ent)
 		return;
 	if (ent->free)
 		return;
-	
+
 	if (ent->v.movetype == MOVETYPE_BOUNCE)
 		backoff = 1.5;
 	else if (ent->v.movetype == MOVETYPE_BOUNCEMISSILE)
@@ -1327,16 +1337,22 @@ void SV_Physics_Toss (edict_t *ent)
 
 // stop if on ground
 	if (trace.plane.normal[2] > 0.7)
-	{		
-		if (ent->v.velocity[2] < 60 || (ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE))
+	{
+		// LordHavoc: fixed grenades not bouncing when fired down a slope
+		if (fabs(ent->v.velocity[2]) < 60 || (ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE))
+		//if (ent->v.velocity[2] < 60 || (ent->v.movetype != MOVETYPE_BOUNCE && ent->v.movetype != MOVETYPE_BOUNCEMISSILE))
 		{
 			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
 			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
 			VectorClear (ent->v.velocity);
 			VectorClear (ent->v.avelocity);
 		}
+		else
+			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 	}
-	
+	else
+		ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+
 // check for in water
 	SV_CheckWaterTransition (ent);
 }
