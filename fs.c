@@ -853,7 +853,9 @@ FS_AddGameHierarchy
 */
 void FS_AddGameHierarchy (const char *dir)
 {
+#ifndef WIN32
 	const char *homedir;
+#endif
 
 	strlcpy (com_modname, dir, sizeof (com_modname));
 
