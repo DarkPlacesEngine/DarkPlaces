@@ -959,6 +959,8 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 
 	texinfo = R_GetTexTypeInfo(textype, flags);
 	size = width * height * depth * sides * texinfo->inputbytesperpixel;
+	if (size < 1)
+		Sys_Error("R_LoadTexture: bogus texture size (%dx%dx%dx%dbppx%dsides = %d bytes)\n", width, height, depth, texinfo->inputbytesperpixel * 8, sides);
 
 	// clear the alpha flag if the texture has no transparent pixels
 	switch(textype)
@@ -1029,7 +1031,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	{
 		glt->inputtexels = Mem_Alloc(texturedatamempool, size);
 		if (glt->inputtexels == NULL)
-			Sys_Error("R_SetupTexture: out of memory\n");
+			Sys_Error("R_LoadTexture: out of memory\n");
 		memcpy(glt->inputtexels, data, size);
 	}
 	else
