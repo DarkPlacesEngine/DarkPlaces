@@ -3,6 +3,7 @@
 
 // here is the real ui drawing engine 
 
+/*
 #define FRAME_THICKNESS	2
 #define FRAME_COLOR1	0.2, 0.2, 0.5, 0, 0
 #define FRAME_COLOR2	0, 0, 0, 0.6, 0
@@ -39,6 +40,7 @@ static void UIG_DrawCursor(float x, float y, float r, float g, float b, float a,
 {
 	DrawQ_Fill(x,y,1, TEXT_FONTSIZE_Y, r, g, b, a, f);
 }
+*/
 
 static mempool_t *ui_mem;
 
