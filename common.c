@@ -467,14 +467,14 @@ void SZ_Print (sizebuf_t *buf, const char *data)
 }
 
 static char *hexchar = "0123456789ABCDEF";
-void SZ_HexDumpToConsole(const sizebuf_t *buf)
+void Com_HexDumpToConsole(const qbyte *data, int size)
 {
 	int i;
 	char text[1024];
 	char *cur, *flushpointer;
 	cur = text;
 	flushpointer = text + 512;
-	for (i = 0;i < buf->cursize;i++)
+	for (i = 0;i < size;i++)
 	{
 		if ((i & 15) == 0)
 		{
@@ -491,13 +491,13 @@ void SZ_HexDumpToConsole(const sizebuf_t *buf)
 			*cur++ = ' ';
 		if (i & 1)
 		{
-			*cur++ = hexchar[(buf->data[i] >> 4) & 15] | 0x80;
-			*cur++ = hexchar[(buf->data[i] >> 0) & 15] | 0x80;
+			*cur++ = hexchar[(data[i] >> 4) & 15] | 0x80;
+			*cur++ = hexchar[(data[i] >> 0) & 15] | 0x80;
 		}
 		else
 		{
-			*cur++ = hexchar[(buf->data[i] >> 4) & 15];
-			*cur++ = hexchar[(buf->data[i] >> 0) & 15];
+			*cur++ = hexchar[(data[i] >> 4) & 15];
+			*cur++ = hexchar[(data[i] >> 0) & 15];
 		}
 		if (cur >= flushpointer)
 		{
@@ -513,6 +513,11 @@ void SZ_HexDumpToConsole(const sizebuf_t *buf)
 		*cur++ = 0;
 		Con_Printf("%s", text);
 	}
+}
+
+void SZ_HexDumpToConsole(const sizebuf_t *buf)
+{
+	Com_HexDumpToConsole(buf->data, buf->cursize);
 }
 
 
