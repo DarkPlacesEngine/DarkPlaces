@@ -125,19 +125,18 @@ void SV_InitBoxHull (void)
 	for (i=0 ; i<6 ; i++)
 	{
 		box_clipnodes[i].planenum = i;
-		
+
 		side = i&1;
-		
+
 		box_clipnodes[i].children[side] = CONTENTS_EMPTY;
 		if (i != 5)
 			box_clipnodes[i].children[side^1] = i + 1;
 		else
 			box_clipnodes[i].children[side^1] = CONTENTS_SOLID;
-		
+
 		box_planes[i].type = i>>1;
 		box_planes[i].normal[i>>1] = 1;
 	}
-
 }
 
 
@@ -418,7 +417,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 
 	if (ent->area.prev)
 		SV_UnlinkEdict (ent);	// unlink from old position
-		
+
 	if (ent == sv.edicts)
 		return;		// don't add the world
 
@@ -842,12 +841,14 @@ loc0:
 		if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP)
 			continue;
 
-		if (clip->boxmins[0] > touch->v.absmax[0]
+		// LordHavoc: only do bbox check if it is a bbox entity
+		if (touch->v.solid != SOLID_BSP
+		 && (clip->boxmins[0] > touch->v.absmax[0]
 		 || clip->boxmaxs[0] < touch->v.absmin[0]
 		 || clip->boxmins[1] > touch->v.absmax[1]
 		 || clip->boxmaxs[1] < touch->v.absmin[1]
 		 || clip->boxmins[2] > touch->v.absmax[2]
-		 || clip->boxmaxs[2] < touch->v.absmin[2])
+		 || clip->boxmaxs[2] < touch->v.absmin[2]))
 			continue;
 
 		if (clip->passedict)
@@ -999,7 +1000,7 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	clip.trace = SV_ClipMoveToEntity (sv.edicts, start, mins, maxs, end);
 
 	// clip to entities
-	if (!clip.trace.allsolid)
+	//if (!clip.trace.allsolid)
 	{
 		// create the bounding box of the entire move
 		SV_MoveBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
