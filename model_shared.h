@@ -73,7 +73,8 @@ typedef struct overridetagnameset_s
 }
 overridetagnameset_t;
 
-// LordHavoc: replaces glpoly, triangle mesh
+// used for mesh lists in q1bsp/q3bsp map models
+// (the surfaces reference portions of these meshes)
 typedef struct surfmesh_s
 {
 	int num_triangles; // number of triangles in the mesh
