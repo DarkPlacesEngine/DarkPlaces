@@ -6,9 +6,11 @@ unsigned int d_8to24table[256];
 byte host_basepal[768];
 byte texgamma[256];
 
-cvar_t vid_gamma = {CVAR_SAVE, "vid_gamma", "1"};
-cvar_t vid_brightness = {CVAR_SAVE, "vid_brightness", "1"};
-cvar_t vid_contrast = {CVAR_SAVE, "vid_contrast", "1"};
+cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
+cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
+cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0"};
+cvar_t v_overbrightbits = {CVAR_SAVE, "v_overbrightbits", "0"};
+cvar_t v_hwgamma = {0, "v_hwgamma", "1"};
 
 void Palette_Setup8to24(void)
 {
@@ -117,45 +119,57 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, uns
 qboolean hardwaregammasupported = false;
 void VID_UpdateGamma(qboolean force)
 {
-	static float cachegamma = -1, cachebrightness = -1, cachecontrast = -1, cachelighthalf = -1;
+	static float cachegamma = -1, cachebrightness = -1, cachecontrast = -1;
+	static int cacheoverbrightbits = -1, cachehwgamma = -1;
 
 	// LordHavoc: don't mess with gamma tables if running dedicated
 	if (cls.state == ca_dedicated)
 		return;
 
-	if (!force && vid_gamma.value == cachegamma && vid_brightness.value == cachebrightness && vid_contrast.value == cachecontrast && lighthalf == cachelighthalf)
+	if (!force
+	 && v_gamma.value == cachegamma
+	 && v_contrast.value == cachecontrast
+	 && v_brightness.value == cachebrightness
+	 && v_overbrightbits.integer == cacheoverbrightbits
+	 && v_hwgamma.value == cachehwgamma)
 		return;
 
-	if (vid_gamma.value < 0.1)
-		Cvar_SetValue("vid_gamma", 0.1);
-	if (vid_gamma.value > 5.0)
-		Cvar_SetValue("vid_gamma", 5.0);
+	if (v_gamma.value < 0.1)
+		Cvar_SetValue("v_gamma", 0.1);
+	if (v_gamma.value > 5.0)
+		Cvar_SetValue("v_gamma", 5.0);
 
-	if (vid_brightness.value < 1.0)
-		Cvar_SetValue("vid_brightness", 1.0);
-	if (vid_brightness.value > 5.0)
-		Cvar_SetValue("vid_brightness", 5.0);
+	if (v_contrast.value < 0.5)
+		Cvar_SetValue("v_contrast", 0.5);
+	if (v_contrast.value > 5.0)
+		Cvar_SetValue("v_contrast", 5.0);
 
-	if (vid_contrast.value < 0.2)
-		Cvar_SetValue("vid_contrast", 0.2);
-	if (vid_contrast.value > 1)
-		Cvar_SetValue("vid_contrast", 1);
+	if (v_brightness.value < 0)
+		Cvar_SetValue("v_brightness", 0);
+	if (v_brightness.value > 0.8)
+		Cvar_SetValue("v_brightness", 0.8);
 
-	cachegamma = vid_gamma.value;
-	cachebrightness = vid_brightness.value;
-	cachecontrast = vid_contrast.value;
-	cachelighthalf = lighthalf;
+	cachegamma = v_gamma.value;
+	cachecontrast = v_contrast.value;
+	cachebrightness = v_brightness.value;
+	cacheoverbrightbits = v_overbrightbits.integer;
 
-	hardwaregammasupported = VID_SetGamma((cachelighthalf ? 2.0f : 1.0f), cachegamma, cachebrightness * cachecontrast, 1 - cachecontrast);
+	hardwaregammasupported = VID_SetGamma((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness);
 	if (!hardwaregammasupported)
+	{
 		Con_Printf("Hardware gamma not supported.\n");
+		Cvar_SetValue("v_hwgamma", 0);
+	}
+	cachehwgamma = v_hwgamma.integer;
 }
 
 void Gamma_Init(void)
 {
-	Cvar_RegisterVariable(&vid_gamma);
-	Cvar_RegisterVariable(&vid_brightness);
-	Cvar_RegisterVariable(&vid_contrast);
+	Cvar_RegisterVariable(&v_gamma);
+	Cvar_RegisterVariable(&v_brightness);
+	Cvar_RegisterVariable(&v_contrast);
+	Cvar_RegisterVariable(&v_hwgamma);
+	Cvar_RegisterVariable(&v_overbrightbits);
 }
 
 void Palette_Init(void)

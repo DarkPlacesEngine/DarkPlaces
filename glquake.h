@@ -40,17 +40,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern qboolean isG200;
 extern qboolean isRagePro;
 
-extern void GL_BeginRendering (int *x, int *y, int *width, int *height);
-extern void GL_EndRendering (void);
-
-extern	float	gldepthmin, gldepthmax;
+extern float gldepthmin, gldepthmax;
 
 //====================================================
 
-extern	const char *gl_vendor;
-extern	const char *gl_renderer;
-extern	const char *gl_version;
-extern	const char *gl_extensions;
+extern const char *gl_vendor;
+extern const char *gl_renderer;
+extern const char *gl_version;
+extern const char *gl_extensions;
 
 #ifndef _WIN32
 #define APIENTRY /* */

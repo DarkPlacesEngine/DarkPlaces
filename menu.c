@@ -117,7 +117,8 @@ void M_DrawBackground(void)
 	menu_height = 200;
 	menu_x = (vid.conwidth - menu_width) * 0.5;
 	menu_y = (vid.conheight - menu_height) * 0.5;
-	DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
+	//DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
 }
 
 /*
@@ -150,6 +151,21 @@ void M_Print (float cx, float cy, char *str)
 void M_PrintWhite (float cx, float cy, char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
+}
+
+void M_ItemPrint (float cx, float cy, char *str, int unghosted)
+{
+	/*
+	while (*str)
+	{
+		M_DrawCharacter (cx, cy, (*str++)+128);
+		cx += 8;
+	}
+	*/
+	if (unghosted)
+		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
+	else
+		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.7, 0.7, 0.7, 1, 0);
 }
 
 void M_DrawPic (float cx, float cy, char *picname)
@@ -1233,7 +1249,7 @@ again:
 //=============================================================================
 /* OPTIONS MENU */
 
-#define	OPTIONS_ITEMS	(vid_menudrawfn ? 25 : 24)
+#define	OPTIONS_ITEMS	26
 
 #define	SLIDER_RANGE	10
 
@@ -1253,58 +1269,56 @@ void M_AdjustSliders (int dir)
 
 	switch (options_cursor)
 	{
-	case 3:	// screen size
+	case 4:
+		Cvar_SetValue ("scr_2dresolution", bound(0, scr_2dresolution.value + dir * 0.2, 1));
+		break;
+	case 5:
 		Cvar_SetValue ("viewsize", bound(30, scr_viewsize.value + dir * 10, 120));
 		break;
-	case 4:
-		Cvar_SetValue ("r_ser", !r_ser.integer);
-		break;
-
-	case 5: // overbright rendering
-		Cvar_SetValue ("gl_lightmode", !gl_lightmode.integer);
-		break;
-
-	case 6: // dithering
-		Cvar_SetValue ("gl_dither", !gl_dither.integer);
-		break;
-
-	case 7: // sky quality
+	case 6:
 		Cvar_SetValue ("r_skyquality", bound(0, r_skyquality.integer + dir, 2));
 		break;
-
-	case 8:	// hardware gamma
-		Cvar_SetValue ("vid_gamma", bound(1, vid_gamma.value + dir * 0.25, 5));
+	case 7:
+		Cvar_SetValue ("r_ser", !r_ser.integer);
 		break;
-
-	case 9:	// hardware brightness
-		Cvar_SetValue ("vid_brightness", bound(1, vid_brightness.value + dir * 0.25, 5));
+	case 8:
+		Cvar_SetValue ("v_overbrightbits", bound(0, v_overbrightbits.integer + dir, 4));
 		break;
-
-	case 10:	// hardware contrast
-		Cvar_SetValue ("vid_contrast", bound(0.2, vid_contrast.value + dir * 0.08, 1));
+	case 9:
+		Cvar_SetValue ("gl_dither", !gl_dither.integer);
 		break;
-
-	case 11:	// software brightness
-		Cvar_SetValue ("r_brightness", bound(1, r_brightness.value + dir * 0.25, 5));
+	case 10:
+		Cvar_SetValue ("v_hwgamma", !v_hwgamma.integer);
 		break;
-
-	case 12: // software base brightness
-		Cvar_SetValue ("r_contrast", bound(0.2, r_contrast.value + dir * 0.08, 1));
+	case 11:
+		Cvar_SetValue ("v_gamma", bound(1, v_gamma.value + dir * 0.25, 5));
 		break;
-
-	case 13: // music volume
+	case 12:
+		Cvar_SetValue ("v_contrast", bound(0.5, v_contrast.value + dir * 0.25, 5));
+		break;
+	case 13:
+		Cvar_SetValue ("v_brightness", bound(0, v_brightness.value + dir * 0.05, 0.8));
+		break;
+	case 14: // music volume
 #ifdef _WIN32
 		Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 1.0, 1));
 #else
 		Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 0.1, 1));
 #endif
 		break;
-
-	case 14: // sfx volume
+	case 15: // sfx volume
 		Cvar_SetValue ("volume", bound(0, volume.value + dir * 0.1, 1));
 		break;
-
-	case 15: // always run
+	case 16:
+		Cvar_SetValue ("crosshair", bound(0, crosshair.integer + dir, 5));
+		break;
+	case 17:
+		Cvar_SetValue ("crosshair_size", bound(1, crosshair_size.value + dir, 5));
+		break;
+	case 18: // show framerate
+		Cvar_SetValue ("showfps", !showfps.integer);
+		break;
+	case 19: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValue ("cl_forwardspeed", 200);
@@ -1316,37 +1330,23 @@ void M_AdjustSliders (int dir)
 			Cvar_SetValue ("cl_backspeed", 400);
 		}
 		break;
-
-	case 16: // lookspring
+	case 20: // lookspring
 		Cvar_SetValue ("lookspring", !lookspring.integer);
 		break;
-
-	case 17: // lookstrafe
+	case 21: // lookstrafe
 		Cvar_SetValue ("lookstrafe", !lookstrafe.integer);
 		break;
-
-	case 18: // mouse speed
+	case 22: // mouse speed
 		Cvar_SetValue ("sensitivity", bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
-
-	case 19: // mouse look
+	case 23: // mouse look
 		Cvar_SetValue ("freelook", !freelook.integer);
 		break;
-
-	case 20: // invert mouse
+	case 24: // invert mouse
 		Cvar_SetValue ("m_pitch", -m_pitch.value);
 		break;
-
-	case 21: // windowed mouse
+	case 25: // windowed mouse
 		Cvar_SetValue ("vid_mouse", !vid_mouse.integer);
-		break;
-
-	case 22:
-		Cvar_SetValue ("crosshair", bound(0, crosshair.integer + dir, 5));
-		break;
-
-	case 23: // show framerate
-		Cvar_SetValue ("showfps", !showfps.integer);
 		break;
 	}
 }
@@ -1381,6 +1381,59 @@ void M_DrawCheckbox (int x, int y, int on)
 		M_Print (x, y, "off");
 }
 
+/*
+int m_2dres[] =
+{
+	320, 200,
+	320, 240,
+	400, 300,
+	512, 384,
+	640, 480,
+	800, 600,
+	1024, 768,
+	1280, 960,
+	1600, 1200,
+	2048, 1536
+};
+
+int M_Num2DResolutions(void)
+{
+	return sizeof(m_2dres) / sizeof(int[2]);
+};
+
+float M_Classify2DResolution(void)
+{
+	int i, num, *res, best, bestdist, diff[3];
+	num = M_Num2DResolutions();
+	best = -1;
+	bestdist = 1000000000;
+	for (i = 0;i < num;i++)
+	{
+		res = m_2dres + i * 2;
+		diff[0] = res[0] - vid.conwidth;
+		diff[1] = res[1] - vid.conheight;
+		diff[2] = 0;
+		dist = DotProduct(diff, diff);
+		if (bestdist > dist)
+		{
+			bestdist = dist;
+			best = i;
+		}
+	}
+	return i;
+}
+
+void M_Adjust2DResolution(int dir)
+{
+	int i, num;
+	i = M_Classify2DResolution() + dir;
+	num = M_Num2DResolutions() - 1;
+	i = bound(0, i, num);
+	Cvar_SetValue("v_2dwidth", m_2dres[i*2]);
+	Cvar_SetValue("v_2dheight", m_2dres[i*2+1]);
+}
+*/
+
 void M_Options_Draw (void)
 {
 	float y;
@@ -1394,18 +1447,22 @@ void M_Options_Draw (void)
 	M_Print(16, y, "    Customize controls");y += 8;
 	M_Print(16, y, "         Go to console");y += 8;
 	M_Print(16, y, "     Reset to defaults");y += 8;
+	M_ItemPrint(16, y, "         Video Options", vid_menudrawfn != NULL);y += 8;
+	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
-	M_Print(16, y, "Hidden Surface Removal");M_DrawCheckbox(220, y, r_ser.integer);y += 8;
-	M_Print(16, y, "  Overbright Rendering");M_DrawCheckbox(220, y, gl_lightmode.integer);y += 8;
-	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;
 	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 2);y += 8;
-	M_Print(16, y, "        Hardware Gamma");M_DrawSlider(220, y, (vid_gamma.value - 1) / 4);y += 8;
-	M_Print(16, y, "   Hardware Brightness");M_DrawSlider(220, y, (vid_brightness.value - 1) / 4);y += 8;
-	M_Print(16, y, "     Hardware Contrast");M_DrawSlider(220, y, (vid_contrast.value - 0.2) / 0.8);y += 8;
-	M_Print(16, y, "   Software Brightness");M_DrawSlider(220, y, (r_brightness.value - 1) / 4);y += 8;
-	M_Print(16, y, "     Software Contrast");M_DrawSlider(220, y, (r_contrast.value - 0.2) / 0.8);y += 8;
-	M_Print(16, y, "       CD Music Volume");M_DrawSlider(220, y, bgmvolume.value);y += 8;
-	M_Print(16, y, "          Sound Volume");M_DrawSlider(220, y, volume.value);y += 8;
+	M_Print(16, y, "Hidden Surface Removal");M_DrawCheckbox(220, y, r_ser.integer);y += 8;
+	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, (v_overbrightbits.value) / 4);y += 8;
+	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;
+	M_ItemPrint(16, y, "Hardware Gamma Control", hardwaregammasupported);M_DrawCheckbox(220, y, v_hwgamma.integer);y += 8;
+	M_ItemPrint(16, y, "                 Gamma", v_hwgamma.integer);M_DrawSlider(220, y, (v_gamma.value - 1) / 4);y += 8;
+	M_Print(16, y, "              Contrast");M_DrawSlider(220, y, (v_contrast.value - 0.5) / (5 - 0.5));y += 8;
+	M_Print(16, y, "            Brightness");M_DrawSlider(220, y, v_brightness.value / 0.8);y += 8;
+	M_ItemPrint(16, y, "       CD Music Volume", Cvar_FindVar("bgmvolume") != NULL);M_DrawSlider(220, y, bgmvolume.value);y += 8;
+	M_ItemPrint(16, y, "          Sound Volume", Cvar_FindVar("volume") != NULL);M_DrawSlider(220, y, volume.value);y += 8;
+	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
+	M_Print(16, y, "        Crosshair Size");M_DrawSlider(220, y, (crosshair_size.value - 1) / 4);y += 8;
+	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
 	M_Print(16, y, "            Always Run");M_DrawCheckbox(220, y, cl_forwardspeed.value > 200);y += 8;
 	M_Print(16, y, "            Lookspring");M_DrawCheckbox(220, y, lookspring.integer);y += 8;
 	M_Print(16, y, "            Lookstrafe");M_DrawCheckbox(220, y, lookstrafe.integer);y += 8;
@@ -1413,11 +1470,6 @@ void M_Options_Draw (void)
 	M_Print(16, y, "            Mouse Look");M_DrawCheckbox(220, y, freelook.integer);y += 8;
 	M_Print(16, y, "          Invert Mouse");M_DrawCheckbox(220, y, m_pitch.value < 0);y += 8;
 	M_Print(16, y, "             Use Mouse");M_DrawCheckbox(220, y, vid_mouse.integer);y += 8;
-	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
-	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
-	if (vid_menudrawfn)
-		M_Print(16, y, "         Video Options");
-	y += 8;
 
 	// cursor
 	M_DrawCharacter(200, 32 + options_cursor*8, 12+((int)(realtime*4)&1));
@@ -1446,12 +1498,12 @@ void M_Options_Key (int k)
 		case 2:
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
-		default:
-			// this is really just another case, but since it is calculated...
-			if (vid_menudrawfn && options_cursor == (OPTIONS_ITEMS - 1))
+		case 3:
+			if (vid_menudrawfn)
 				M_Menu_Video_f ();
-			else
-				M_AdjustSliders (1);
+			break;
+		default:
+			M_AdjustSliders (1);
 			break;
 		}
 		return;
@@ -1522,11 +1574,9 @@ void M_FindKeysForCommand (char *command, int *twokeys)
 {
 	int		count;
 	int		j;
-	int		l;
 	char	*b;
 
 	twokeys[0] = twokeys[1] = -1;
-	l = strlen(command);
 	count = 0;
 
 	for (j=0 ; j<256 ; j++)
@@ -1534,7 +1584,7 @@ void M_FindKeysForCommand (char *command, int *twokeys)
 		b = keybindings[j];
 		if (!b)
 			continue;
-		if (!strncmp (b, command, l) )
+		if (!strcmp (b, command) )
 		{
 			twokeys[count] = j;
 			count++;
@@ -1547,17 +1597,14 @@ void M_FindKeysForCommand (char *command, int *twokeys)
 void M_UnbindCommand (char *command)
 {
 	int		j;
-	int		l;
 	char	*b;
-
-	l = strlen(command);
 
 	for (j=0 ; j<256 ; j++)
 	{
 		b = keybindings[j];
 		if (!b)
 			continue;
-		if (!strncmp (b, command, l) )
+		if (!strcmp (b, command))
 			Key_SetBinding (j, "");
 	}
 }

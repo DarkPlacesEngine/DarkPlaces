@@ -146,7 +146,7 @@ extern vec_t fogdensity;
 
 #include "r_modules.h"
 
-extern qboolean lighthalf;
+extern float overbrightscale;
 
 #include "r_lerpanim.h"
 

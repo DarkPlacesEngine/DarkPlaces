@@ -160,7 +160,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_stufftext		9	// [string] stuffed into client's console buffer
 								// the string should be \n terminated
 #define	svc_setangle		10	// [angle3] set the view angle to this absolute value
-	
+
 #define	svc_serverinfo		11	// [long] version
 						// [string] signon string
 						// [string]..[0]model cache
@@ -173,11 +173,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_updatecolors	17	// [byte] [byte]
 #define	svc_particle		18	// [vec3] <variable>
 #define	svc_damage			19
-	
+
 #define	svc_spawnstatic		20
 //	svc_spawnbinary		21
 #define	svc_spawnbaseline	22
-	
+
 #define	svc_temp_entity		23
 
 #define	svc_setpause		24	// [byte] on / off
@@ -209,7 +209,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_sound2			54		// short soundindex instead of byte
 #define	svc_spawnbaseline2	55		// short modelindex instead of byte
 #define svc_spawnstatic2	56		// short modelindex instead of byte
-#define svc_unusedlh2			57
+#define svc_entities		57		// [short] numentities [int] deltaframe [float vector] eye [variable length] entitydata
 #define svc_unusedlh3			58
 #define	svc_spawnstaticsound2	59	// [coord3] [short] samp [byte] vol [byte] aten
 
@@ -275,12 +275,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct
 {
 	double	time; // time this state was built
+	vec3_t	origin;
+	vec3_t	angles;
+	int number; // entity number this state is for
 	unsigned short active; // true if a valid state
 	unsigned short modelindex;
 	unsigned short frame;
 	unsigned short effects;
-	vec3_t	origin;
-	vec3_t	angles;
 	byte	colormap;
 	byte	skin;
 	byte	alpha;
@@ -288,7 +289,59 @@ typedef struct
 	byte	glowsize;
 	byte	glowcolor;
 	byte	flags;
+	byte	padding[3];
 }
 entity_state_t;
 
+typedef struct
+{
+	int framenum;
+	int firstentity; // index into entitydata, modulo MAX_ENTITY_DATABASE
+	int endentity; // index into entitydata, firstentity + numentities
+}
+entity_frameinfo_t;
+
+#define MAX_ENTITY_HISTORY 64
+#define MAX_ENTITY_DATABASE 4096
+
+typedef struct
+{
+	// note: these can be far out of range, modulo with MAX_ENTITY_DATABASE to get a valid range (which may wrap)
+	// start and end of used area, when adding a new update to database, store at endpos, and increment endpos
+	// when removing updates from database, nudge down frames array to only contain useful frames
+	// this logic should explain better:
+	// if (numframes >= MAX_ENTITY_HISTORY || (frames[numframes - 1].endentity - frames[0].firstentity) + entitiestoadd > MAX_ENTITY_DATABASE)
+	//     flushdatabase();
+	// note: if numframes == 0, insert at start (0 in entitydata)
+	// the only reason this system is used is to avoid copying memory when frames are removed
+	int numframes;
+	int ackframe; // server only: last acknowledged frame
+	entity_frameinfo_t frames[MAX_ENTITY_HISTORY];
+	entity_state_t entitydata[MAX_ENTITY_DATABASE];
+}
+entity_database_t;
+
+// build entity data in this, to pass to entity read/write functions
+typedef struct
+{
+	int framenum;
+	int numentities;
+	entity_state_t entitydata[MAX_ENTITY_DATABASE];
+}
+entity_frame_t;
+
 void ClearStateToDefault(entity_state_t *s);
+// (server) clears the database to contain no frames (thus delta compression compresses against nothing)
+void EntityFrame_ClearDatabase(entity_database_t *d);
+// (server) acknowledge a frame as recieved by client (removes old frames from database, will use this new frame for delta compression)
+void EntityFrame_AckFrame(entity_database_t *d, int frame);
+// (server) clears frame, to prepare for adding entities
+void EntityFrame_Clear(entity_frame_t *f);
+// (server) allocates an entity slot in frame, returns NULL if full
+entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number);
+// (server) writes a frame to network stream
+void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, int deltaframe, int newframe, sizebuf_t *msg);
+// (client) reads a frame from network stream
+void EntityFrame_Read(entity_database_t *d, entity_frame_t *f);
+// (client) fetchs an entity from the database, read with _Read, fills in structs for current and previous state
+void EntityFrame_FetchEntity(entity_database_t *d, entity_state_t *previous, entity_state_t *current);
