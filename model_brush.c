@@ -4058,9 +4058,9 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	Matrix4x4_Transform(&model->brushq3.num_lightgrid_indexfromworld, p, transformed);
 	//Matrix4x4_Print(&model->brushq3.num_lightgrid_indexfromworld);
 	//Con_Printf("%f %f %f transformed %f %f %f clamped ", p[0], p[1], p[2], transformed[0], transformed[1], transformed[2]);
-	transformed[0] = bound(0, transformed[0], model->brushq3.num_lightgrid_isize[0]);
-	transformed[1] = bound(0, transformed[1], model->brushq3.num_lightgrid_isize[1]);
-	transformed[2] = bound(0, transformed[2], model->brushq3.num_lightgrid_isize[2]);
+	transformed[0] = bound(0, transformed[0], model->brushq3.num_lightgrid_isize[0] - 1);
+	transformed[1] = bound(0, transformed[1], model->brushq3.num_lightgrid_isize[1] - 1);
+	transformed[2] = bound(0, transformed[2], model->brushq3.num_lightgrid_isize[2] - 1);
 	index[0] = (int)floor(transformed[0]);
 	index[1] = (int)floor(transformed[1]);
 	index[2] = (int)floor(transformed[2]);
@@ -4071,12 +4071,18 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	for (k = 0;k < 2;k++)
 	{
 		blend1 = (k ? (transformed[2] - index[2]) : (1 - (transformed[2] - index[2])));
+		if (blend1 < 0.001f || index[2] + k >= model->brushq3.num_lightgrid_isize[2])
+			continue;
 		for (j = 0;j < 2;j++)
 		{
 			blend2 = blend1 * (j ? (transformed[1] - index[1]) : (1 - (transformed[1] - index[1])));
+			if (blend2 < 0.001f || index[1] + j >= model->brushq3.num_lightgrid_isize[1])
+				continue;
 			for (i = 0;i < 2;i++)
 			{
 				blend = blend2 * (i ? (transformed[0] - index[0]) : (1 - (transformed[0] - index[0])));
+				if (blend < 0.001f || index[0] + i >= model->brushq3.num_lightgrid_isize[0])
+					continue;
 				s = a + (k * model->brushq3.num_lightgrid_isize[1] + j) * model->brushq3.num_lightgrid_isize[0] + i;
 				VectorMA(ambientcolor, blend * (1.0f / 128.0f), s->ambientrgb, ambientcolor);
 				VectorMA(diffusecolor, blend * (1.0f / 128.0f), s->diffusergb, diffusecolor);
