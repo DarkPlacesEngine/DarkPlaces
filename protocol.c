@@ -722,6 +722,7 @@ void EntityFrame4_FreeDatabase(entity_database4_t *d)
 void EntityFrame4_ResetDatabase(entity_database4_t *d)
 {
 	int i;
+	d->ackframenum = -1;
 	d->referenceframenum = -1;
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 		d->commit[i].numentities = 0;
@@ -731,44 +732,59 @@ void EntityFrame4_ResetDatabase(entity_database4_t *d)
 
 int EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 {
-	int i, j, found = false;
+	int i, j, found;
 	entity_database4_commit_t *commit;
 	if (framenum == -1)
 	{
-		EntityFrame4_ResetDatabase(d);
-		return true;
+		// reset reference, but leave commits alone
+		d->referenceframenum = -1;
+		for (i = 0;i < d->maxreferenceentities;i++)
+			d->referenceentity[i] = defaultstate;
+		found = true;
 	}
-	if (d->referenceframenum == framenum)
-		return true;
-	for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
+	else if (d->referenceframenum == framenum)
+		found = true;
+	else
 	{
-		if (commit->numentities && commit->framenum <= framenum)
+		found = false;
+		for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
 		{
-			if (commit->framenum == framenum)
+			if (commit->numentities && commit->framenum <= framenum)
 			{
-				found = true;
-				d->referenceframenum = framenum;
-				if (developer_networkentities.integer >= 3)
+				if (commit->framenum == framenum)
 				{
-					for (j = 0;j < commit->numentities;j++)
+					found = true;
+					d->referenceframenum = framenum;
+					if (developer_networkentities.integer >= 3)
 					{
-						entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
-						if (commit->entity[j].active != s->active)
+						for (j = 0;j < commit->numentities;j++)
 						{
-							if (commit->entity[j].active)
-								Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
-							else
-								Con_Printf("commit entity %i has become inactive (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+							entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
+							if (commit->entity[j].active != s->active)
+							{
+								if (commit->entity[j].active)
+									Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+								else
+									Con_Printf("commit entity %i has become inactive (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+							}
+							*s = commit->entity[j];
 						}
-						*s = commit->entity[j];
 					}
+					else
+						for (j = 0;j < commit->numentities;j++)
+							*EntityFrame4_GetReferenceEntity(d, commit->entity[j].number) = commit->entity[j];
 				}
-				else
-					for (j = 0;j < commit->numentities;j++)
-						*EntityFrame4_GetReferenceEntity(d, commit->entity[j].number) = commit->entity[j];
+				commit->numentities = 0;
 			}
-			commit->numentities = 0;
 		}
+	}
+	if (developer_networkentities.integer >= 1)
+	{
+		Con_Printf("ack ref:%i database updated to: ref:%i commits:", framenum, d->referenceframenum);
+		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+			if (d->commit[i].numentities)
+				Con_Printf(" %i", d->commit[i].framenum);
+		Con_Print("\n");
 	}
 	return found;
 }
@@ -812,7 +828,7 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 	enumber = MSG_ReadShort();
 	if (developer_networkentities.integer >= 1)
 	{
-		Con_Printf("recv svc_entities ref:%i num:%i (database: ref:%i commits:", referenceframenum, framenum, d->referenceframenum);
+		Con_Printf("recv svc_entities num:%i ref:%i database: ref:%i commits:", framenum, referenceframenum, d->referenceframenum);
 		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 			if (d->commit[i].numentities)
 				Con_Printf(" %i", d->commit[i].framenum);
@@ -822,8 +838,6 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 	{
 		Con_Print("EntityFrame4_CL_ReadFrame: reference frame invalid (VERY BAD ERROR), this update will be skipped\n");
 		skip = true;
-		d->ackframenum = -1;
-		EntityFrame4_ResetDatabase(d);
 	}
 	d->currentcommit = NULL;
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
@@ -916,6 +930,8 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 		}
 	}
 	d->currentcommit = NULL;
+	if (skip)
+		EntityFrame4_ResetDatabase(d);
 }
 
 
