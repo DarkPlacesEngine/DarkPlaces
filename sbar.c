@@ -886,9 +886,6 @@ Sbar_Draw
 */
 void Sbar_Draw (void)
 {
-	if (scr_con_current == vid.conheight)
-		return;		// console is full screen
-
 	if (cl.intermission == 1)
 	{
 		Sbar_IntermissionOverlay();
