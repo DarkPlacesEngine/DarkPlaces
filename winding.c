@@ -465,3 +465,251 @@ void BufWinding_Divide(winding_t *in, double splitnormalx, double splitnormaly, 
 	}
 }
 
+void Polygon_Divide_Double(int innumpoints, const double *inpoints, double splitnormalx, double splitnormaly, double splitnormalz, double splitdist, int outfrontmaxpoints, double *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, double *outbackpoints, int *neededbackpoints)
+{
+	double dot, mid[3], splitnormal[3], dists[MAX_POINTS_ON_WINDING + 1];
+	const double *p1, *p2;
+	int i, j, frontpts, backpts, counts[3], sides[MAX_POINTS_ON_WINDING + 1];
+
+	if (neededfrontpoints)
+		*neededfrontpoints = 0;
+	if (neededbackpoints)
+		*neededbackpoints = 0;
+
+	if (innumpoints > MAX_POINTS_ON_WINDING || (!outfrontmaxpoints && !outbackmaxpoints))
+		return;
+
+	splitnormal[0] = splitnormalx;
+	splitnormal[1] = splitnormaly;
+	splitnormal[2] = splitnormalz;
+
+	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
+
+	// determine sides for each point
+	for (i = 0;i < innumpoints;i++)
+	{
+		dot = DotProduct(inpoints + i * 3, splitnormal);
+		dot -= splitdist;
+		dists[i] = dot;
+		if (dot > ON_EPSILON) sides[i] = SIDE_FRONT;
+		else if (dot < -ON_EPSILON) sides[i] = SIDE_BACK;
+		else sides[i] = SIDE_ON;
+		counts[sides[i]]++;
+	}
+	sides[i] = sides[0];
+	dists[i] = dists[0];
+
+	frontpts = 0;
+	backpts = 0;
+	for (i = 0;i < innumpoints;i++)
+	{
+		if (sides[i] != SIDE_ON)
+		{
+			if (sides[i] == SIDE_FRONT)
+				frontpts++;
+			else if (sides[i] == SIDE_BACK)
+				backpts++;
+			if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+				continue;
+		}
+		frontpts++;
+		backpts++;
+	}
+
+	if (neededfrontpoints)
+		*neededfrontpoints = frontpts;
+	if (neededbackpoints)
+		*neededbackpoints = backpts;
+	if ((outfrontmaxpoints && outfrontmaxpoints < frontpts) || (outbackmaxpoints && outbackmaxpoints < backpts))
+		return;
+
+	for (i = 0;i < innumpoints;i++)
+	{
+		p1 = inpoints + i * 3;
+
+		if (sides[i] == SIDE_ON)
+		{
+			if (outfrontmaxpoints)
+			{
+				VectorCopy(p1, outfrontpoints);
+				outfrontpoints += 3;
+			}
+			if (outbackmaxpoints)
+			{
+				VectorCopy(p1, outbackpoints);
+				outbackpoints += 3;
+			}
+			continue;
+		}
+
+		if (sides[i] == SIDE_FRONT)
+		{
+			if (outfrontmaxpoints)
+			{
+				VectorCopy(p1, outfrontpoints);
+				outfrontpoints += 3;
+			}
+		}
+		else if (sides[i] == SIDE_BACK)
+		{
+			if (outbackmaxpoints)
+			{
+				VectorCopy(p1, outbackpoints);
+				outbackpoints += 3;
+			}
+		}
+
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+
+		// generate a split point
+		p2 = inpoints + ((i+1)%innumpoints) * 3;
+
+		dot = dists[i] / (dists[i]-dists[i+1]);
+		for (j = 0;j < 3;j++)
+		{	// avoid round off error when possible
+			if (splitnormal[j] == 1)
+				mid[j] = splitdist;
+			else if (splitnormal[j] == -1)
+				mid[j] = -splitdist;
+			else
+				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
+		}
+
+		if (outfrontmaxpoints)
+		{
+			VectorCopy(mid, outfrontpoints);
+			outfrontpoints += 3;
+		}
+		if (outbackmaxpoints)
+		{
+			VectorCopy(mid, outbackpoints);
+			outbackpoints += 3;
+		}
+	}
+}
+
+void Polygon_Divide_Float(int innumpoints, const float *inpoints, float splitnormalx, float splitnormaly, float splitnormalz, float splitdist, int outfrontmaxpoints, float *outfrontpoints, int *neededfrontpoints, int outbackmaxpoints, float *outbackpoints, int *neededbackpoints)
+{
+	float dot, mid[3], splitnormal[3], dists[MAX_POINTS_ON_WINDING + 1];
+	const float *p1, *p2;
+	int i, j, frontpts, backpts, counts[3], sides[MAX_POINTS_ON_WINDING + 1];
+
+	if (neededfrontpoints)
+		*neededfrontpoints = 0;
+	if (neededbackpoints)
+		*neededbackpoints = 0;
+
+	if (innumpoints > MAX_POINTS_ON_WINDING || (!outfrontmaxpoints && !outbackmaxpoints))
+		return;
+
+	splitnormal[0] = splitnormalx;
+	splitnormal[1] = splitnormaly;
+	splitnormal[2] = splitnormalz;
+
+	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
+
+	// determine sides for each point
+	for (i = 0;i < innumpoints;i++)
+	{
+		dot = DotProduct(inpoints + i * 3, splitnormal);
+		dot -= splitdist;
+		dists[i] = dot;
+		if (dot > ON_EPSILON) sides[i] = SIDE_FRONT;
+		else if (dot < -ON_EPSILON) sides[i] = SIDE_BACK;
+		else sides[i] = SIDE_ON;
+		counts[sides[i]]++;
+	}
+	sides[i] = sides[0];
+	dists[i] = dists[0];
+
+	frontpts = 0;
+	backpts = 0;
+	for (i = 0;i < innumpoints;i++)
+	{
+		if (sides[i] != SIDE_ON)
+		{
+			if (sides[i] == SIDE_FRONT)
+				frontpts++;
+			else if (sides[i] == SIDE_BACK)
+				backpts++;
+			if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+				continue;
+		}
+		frontpts++;
+		backpts++;
+	}
+
+	if (neededfrontpoints)
+		*neededfrontpoints = frontpts;
+	if (neededbackpoints)
+		*neededbackpoints = backpts;
+	if ((outfrontmaxpoints && outfrontmaxpoints < frontpts) || (outbackmaxpoints && outbackmaxpoints < backpts))
+		return;
+
+	for (i = 0;i < innumpoints;i++)
+	{
+		p1 = inpoints + i * 3;
+
+		if (sides[i] == SIDE_ON)
+		{
+			if (outfrontmaxpoints)
+			{
+				VectorCopy(p1, outfrontpoints);
+				outfrontpoints += 3;
+			}
+			if (outbackmaxpoints)
+			{
+				VectorCopy(p1, outbackpoints);
+				outbackpoints += 3;
+			}
+			continue;
+		}
+
+		if (sides[i] == SIDE_FRONT)
+		{
+			if (outfrontmaxpoints)
+			{
+				VectorCopy(p1, outfrontpoints);
+				outfrontpoints += 3;
+			}
+		}
+		else if (sides[i] == SIDE_BACK)
+		{
+			if (outbackmaxpoints)
+			{
+				VectorCopy(p1, outbackpoints);
+				outbackpoints += 3;
+			}
+		}
+
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+
+		// generate a split point
+		p2 = inpoints + ((i+1)%innumpoints) * 3;
+
+		dot = dists[i] / (dists[i]-dists[i+1]);
+		for (j = 0;j < 3;j++)
+		{	// avoid round off error when possible
+			if (splitnormal[j] == 1)
+				mid[j] = splitdist;
+			else if (splitnormal[j] == -1)
+				mid[j] = -splitdist;
+			else
+				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
+		}
+
+		if (outfrontmaxpoints)
+		{
+			VectorCopy(mid, outfrontpoints);
+			outfrontpoints += 3;
+		}
+		if (outbackmaxpoints)
+		{
+			VectorCopy(mid, outbackpoints);
+			outbackpoints += 3;
+		}
+	}
+}
+
