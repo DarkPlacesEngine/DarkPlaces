@@ -254,7 +254,7 @@ void PR_PrintState(void)
 	int i;
 	if (pr_xfunction)
 	{
-		for (i = -4;i <= 0;i++)
+		for (i = -7;i <= 0;i++)
 			if (pr_xstatement + i >= pr_xfunction->first_statement)
 				PR_PrintStatement (pr_statements + pr_xstatement + i);
 	}
