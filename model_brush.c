@@ -4178,9 +4178,9 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	// FIXME: write this
 	if (!model->brushq3.num_lightgrid)
 	{
-		ambientcolor[0] += 128;
-		ambientcolor[1] += 128;
-		ambientcolor[2] += 128;
+		ambientcolor[0] = 1;
+		ambientcolor[1] = 1;
+		ambientcolor[2] = 1;
 		return;
 	}
 	Matrix4x4_Transform(&model->brushq3.num_lightgrid_indexfromworld, p, transformed);

@@ -1832,7 +1832,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3mface_t
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmap(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -1916,6 +1916,21 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mfac
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ONE);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+	GL_Color(r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	if (!face->num_triangles)
@@ -1935,8 +1950,8 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(ent, face);
 	else if (face->lightmaptexture)
 	{
-		if (r_textureunits.integer >= 2)
-			R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmap(ent, face);
+		if (r_textureunits.integer >= 2 && gl_combine.integer)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(ent, face);
 		else
 		{
 			R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(ent, face);
@@ -1951,6 +1966,8 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		if (face->texture->skin.glow)
 			R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
 	}
+	if (r_ambient.value)
+		R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(ent, face);
 	if (face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT)
 		qglEnable(GL_CULL_FACE);
 }
