@@ -247,11 +247,6 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		else
 		{
 			fullbright = !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT);
-			if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0 && !fullbright)
-			{
-				colorscale *= r_ambient.value * (2.0f / 128.0f);
-				fullbright = true;
-			}
 			if (layer->flags & (ALIASLAYER_COLORMAP_PANTS | ALIASLAYER_COLORMAP_SHIRT))
 			{
 				// 128-224 are backwards ranges
@@ -266,7 +261,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			}
 			else
 				tint[0] = tint[1] = tint[2] = 1;
-			if (r_shadow_realtime_world.integer)
+			if (r_shadow_realtime_world.integer && !fullbright)
 				VectorScale(tint, r_shadow_realtime_world_lightmaps.value, tint);
 			colorscale *= ifog;
 			if (fullbright)
