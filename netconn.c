@@ -143,14 +143,14 @@ int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
 	memcpy(conn->sendMessage, data->data, data->cursize);
 	conn->sendMessageLength = data->cursize;
 
-	if (conn->sendMessageLength <= MAX_DATAGRAM)
+	if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 	{
 		dataLen = conn->sendMessageLength;
 		eom = NETFLAG_EOM;
 	}
 	else
 	{
-		dataLen = MAX_DATAGRAM;
+		dataLen = MAX_PACKETFRAGMENT;
 		eom = 0;
 	}
 
@@ -182,14 +182,14 @@ static void NetConn_SendMessageNext(netconn_t *conn)
 
 	if (conn->sendMessageLength && !conn->canSend && conn->sendNext)
 	{
-		if (conn->sendMessageLength <= MAX_DATAGRAM)
+		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 		{
 			dataLen = conn->sendMessageLength;
 			eom = NETFLAG_EOM;
 		}
 		else
 		{
-			dataLen = MAX_DATAGRAM;
+			dataLen = MAX_PACKETFRAGMENT;
 			eom = 0;
 		}
 
@@ -220,14 +220,14 @@ static void NetConn_ReSendMessage(netconn_t *conn)
 
 	if (conn->sendMessageLength && !conn->canSend && (realtime - conn->lastSendTime) > 1.0)
 	{
-		if (conn->sendMessageLength <= MAX_DATAGRAM)
+		if (conn->sendMessageLength <= MAX_PACKETFRAGMENT)
 		{
 			dataLen = conn->sendMessageLength;
 			eom = NETFLAG_EOM;
 		}
 		else
 		{
-			dataLen = MAX_DATAGRAM;
+			dataLen = MAX_PACKETFRAGMENT;
 			eom = 0;
 		}
 
@@ -479,10 +479,10 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 							Con_DPrintf("ack sequencing error\n");
 						conn->lastMessageTime = realtime;
 						conn->timeout = realtime + net_messagetimeout.value;
-						conn->sendMessageLength -= MAX_DATAGRAM;
+						conn->sendMessageLength -= MAX_PACKETFRAGMENT;
 						if (conn->sendMessageLength > 0)
 						{
-							memcpy(conn->sendMessage, conn->sendMessage+MAX_DATAGRAM, conn->sendMessageLength);
+							memcpy(conn->sendMessage, conn->sendMessage+MAX_PACKETFRAGMENT, conn->sendMessageLength);
 							conn->sendNext = true;
 							NetConn_SendMessageNext(conn);
 						}
