@@ -99,6 +99,8 @@ typedef struct model_s
 	qboolean		isworldmodel;
 	// true if this model is a HalfLife .bsp file
 	qboolean		ishlbsp;
+	// true if this model was not successfully loaded and should be purged
+	qboolean		error;
 
 	// mod_brush, mod_alias, mod_sprite
 	modtype_t		type;
@@ -286,6 +288,7 @@ extern cvar_t r_fullbrights;
 void Mod_Init (void);
 void Mod_CheckLoaded (model_t *mod);
 void Mod_ClearAll (void);
+void Mod_ClearErrorModels (void);
 model_t *Mod_FindName (const char *name);
 model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
 void Mod_TouchModel (const char *name);

@@ -419,7 +419,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 	}
 }
 
-void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, float fcolor[8])
+void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])
 {
 	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
 	msurface_t *surf, *endsurf;
@@ -541,7 +541,7 @@ loc0:
 	}
 }
 
-void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
+void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
 {
 	int n;
 	float fcolor[8];

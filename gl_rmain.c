@@ -228,7 +228,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_dynamic);
 	Cvar_RegisterVariable (&r_fullbright);
 	Cvar_RegisterVariable (&r_textureunits);
-	if (gamemode == GAME_NEHAHRA)
+	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXIUZ)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
@@ -1396,7 +1396,7 @@ void R_DrawNoModel(entity_render_t *ent)
 	//	R_DrawNoModelCallback(ent, 0);
 }
 
-void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width)
+void R_CalcBeamVerts (float *vert, const vec3_t org1, const vec3_t org2, float width)
 {
 	vec3_t right1, right2, diff, normal;
 

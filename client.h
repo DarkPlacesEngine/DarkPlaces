@@ -569,6 +569,7 @@ void CL_TimeDemo_f (void);
 //
 void CL_Parse_Init(void);
 void CL_ParseServerMessage(void);
+void CL_Parse_DumpPacket(void);
 
 //
 // view
@@ -613,6 +614,9 @@ void CL_ParticleExplosion (vec3_t org);
 void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
 void CL_LavaSplash (vec3_t org);
 void CL_TeleportSplash (vec3_t org);
+void CL_BeamParticle (const vec3_t start, const vec3_t end, vec_t radius, float red, float green, float blue, float alpha, float lifetime);
+void CL_Tei_Smoke(const vec3_t pos, const vec3_t dir, int count);
+void CL_Tei_PlasmaHit(const vec3_t pos, const vec3_t dir, int count);
 void CL_MoveParticles(void);
 void R_MoveExplosions(void);
 void R_NewExplosion(vec3_t org);

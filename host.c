@@ -133,10 +133,16 @@ This shuts down both the client and server
 ================
 */
 char hosterrorstring[4096];
+extern char sv_spawnmap[MAX_QPATH];
+extern char sv_loadgame[MAX_OSPATH];
 void Host_Error (const char *error, ...)
 {
 	va_list argptr;
 	static qboolean inerror = false;
+
+	// make sure we don't get in a loading loop
+	sv_loadgame[0] = 0;
+	sv_spawnmap[0] = 0;
 
 	// LordHavoc: if first frame has not been shown, or currently shutting
 	// down, do Sys_Error instead
@@ -164,6 +170,8 @@ void Host_Error (const char *error, ...)
 	va_end (argptr);
 	Con_Printf ("Host_Error: %s\n",hosterrorstring);
 
+	CL_Parse_DumpPacket();
+
 	PR_Crash();
 
 	if (sv.active)
@@ -174,6 +182,9 @@ void Host_Error (const char *error, ...)
 
 	CL_Disconnect ();
 	cls.demonum = -1;
+
+	// unload any partially loaded models
+	Mod_ClearErrorModels();
 
 	inerror = false;
 
