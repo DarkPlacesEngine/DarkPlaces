@@ -1598,11 +1598,9 @@ void Host_PerformSpawnServerAndLoadGame(void)
 	if (sv_loadgame[0])
 		Host_PerformLoadGame(sv_loadgame);
 	else if (sv_spawnmap[0])
-	{
 		SV_SpawnServer(sv_spawnmap);
-		if (sv.active && cls.state == ca_disconnected)
-			Cmd_ExecuteString ("connect local", src_command);
-	}
+	if (sv.active && cls.state == ca_disconnected)
+		Cmd_ExecuteString ("connect local", src_command);
 	sv_loadgame[0] = 0;
 	sv_spawnmap[0] = 0;
 }
