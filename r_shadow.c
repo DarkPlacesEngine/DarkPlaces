@@ -40,6 +40,11 @@ cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 
 void R_Shadow_ClearWorldLights(void);
+void R_Shadow_SaveWorldLights(void);
+void R_Shadow_LoadWorldLights(void);
+void R_Shadow_LoadLightsFile(void);
+void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void);
+
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
@@ -77,7 +82,6 @@ void r_shadow_shutdown(void)
 	Mem_FreePool(&r_shadow_mempool);
 }
 
-void R_Shadow_LoadWorldLights(const char *mapname);
 void r_shadow_newmap(void)
 {
 	R_Shadow_ClearWorldLights();
@@ -507,7 +511,13 @@ void R_Shadow_Stage_Begin(void)
 	if (r_shadow_reloadlights && cl.worldmodel)
 	{
 		r_shadow_reloadlights = false;
-		R_Shadow_LoadWorldLights(cl.worldmodel->name);
+		R_Shadow_LoadWorldLights();
+		if (r_shadow_worldlightchain == NULL)
+		{
+			R_Shadow_LoadLightsFile();
+			if (r_shadow_worldlightchain == NULL)
+				R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
+		}
 	}
 
 	memset(&m, 0, sizeof(m));
@@ -1408,12 +1418,12 @@ void R_Shadow_SelectLightInView(void)
 	R_Shadow_SelectLight(best);
 }
 
-void R_Shadow_LoadWorldLights(const char *mapname)
+void R_Shadow_LoadWorldLights(void)
 {
 	int n, a, style;
 	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
 	float origin[3], radius, color[3];
-	COM_StripExtension(mapname, name);
+	COM_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".rtlights");
 	lightsstring = COM_LoadFile(name, false);
 	if (lightsstring)
@@ -1447,7 +1457,7 @@ void R_Shadow_LoadWorldLights(const char *mapname)
 	}
 }
 
-void R_Shadow_SaveWorldLights(const char *mapname)
+void R_Shadow_SaveWorldLights(void)
 {
 	worldlight_t *light;
 	int bufchars, bufmaxchars;
@@ -1456,7 +1466,7 @@ void R_Shadow_SaveWorldLights(const char *mapname)
 	char line[1024];
 	if (!r_shadow_worldlightchain)
 		return;
-	COM_StripExtension(mapname, name);
+	COM_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".rtlights");
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
@@ -1486,6 +1496,108 @@ void R_Shadow_SaveWorldLights(const char *mapname)
 	if (buf)
 		Mem_Free(buf);
 }
+
+void R_Shadow_LoadLightsFile(void)
+{
+	int n, a, style;
+	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
+	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
+	COM_StripExtension(cl.worldmodel->name, name);
+	strcat(name, ".lights");
+	lightsstring = COM_LoadFile(name, false);
+	if (lightsstring)
+	{
+		s = lightsstring;
+		n = 0;
+		while (*s)
+		{
+			t = s;
+			while (*s && *s != '\n')
+				s++;
+			if (!*s)
+				break;
+			*s = 0;
+			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %f %d", &origin[0], &origin[1], &origin[2], &falloff, &color[0], &color[1], &color[2], &subtract, &spotdir[0], &spotdir[1], &spotdir[2], &spotcone, &distbias, &style);
+			*s = '\n';
+			if (a < 14)
+			{
+				Con_Printf("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
+				break;
+			}
+			radius = sqrt(DotProduct(color, color) / (falloff * falloff * 16384.0f * 16384.0f));
+			radius = bound(15, radius, 4096);
+			VectorScale(color, (1.0f / 32768.0f), color);
+			R_Shadow_NewWorldLight(origin, radius, color, style, NULL);
+			s++;
+			n++;
+		}
+		if (*s)
+			Con_Printf("invalid lights file \"%s\"\n", name);
+		Mem_Free(lightsstring);
+	}
+}
+
+void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
+{
+	int entnum, style, islight;
+	char key[256], value[1024];
+	float origin[3], radius, color[3], light, scale;
+	const char *data;
+
+	data = cl.worldmodel->entities;
+	if (!data)
+		return;
+	for (entnum = 0;COM_ParseToken(&data) && com_token[0] == '{';entnum++)
+	{
+		light = 0;
+		origin[0] = origin[1] = origin[2] = 0;
+		color[0] = color[1] = color[2] = 1;
+		scale = 1;
+		style = 0;
+		islight = false;
+		while (1)
+		{
+			if (!COM_ParseToken(&data))
+				break; // error
+			if (com_token[0] == '}')
+				break; // end of entity
+			if (com_token[0] == '_')
+				strcpy(key, com_token + 1);
+			else
+				strcpy(key, com_token);
+			while (key[strlen(key)-1] == ' ') // remove trailing spaces
+				key[strlen(key)-1] = 0;
+			if (!COM_ParseToken(&data))
+				break; // error
+			strcpy(value, com_token);
+
+			// now that we have the key pair worked out...
+			if (!strcmp("light", key))
+				light = atof(value);
+			else if (!strcmp("origin", key))
+				sscanf(value, "%f %f %f", &origin[0], &origin[1], &origin[2]);
+			else if (!strcmp("color", key))
+				sscanf(value, "%f %f %f", &color[0], &color[1], &color[2]);
+			else if (!strcmp("wait", key))
+				scale = atof(value);
+			else if (!strcmp("classname", key))
+			{
+				if (!strncmp(value, "light", 5))
+					islight = true;
+			}
+			else if (!strcmp("style", key))
+				style = atoi(value);
+		}
+		if (light <= 0 && islight)
+			light = 300;
+		radius = bound(0, light / scale, 1048576) + 15.0f;
+		light = bound(0, light, 1048576) * (1.0f / 256.0f);
+		VectorScale(color, light, color);
+		if (radius >= 15)
+			R_Shadow_NewWorldLight(origin, radius, color, style, NULL);
+	}
+}
+
 
 void R_Shadow_SetCursorLocationForView(void)
 {
@@ -1556,14 +1668,26 @@ void R_Shadow_EditLights_Reload_f(void)
 	if (cl.worldmodel)
 	{
 		R_Shadow_ClearWorldLights();
-		R_Shadow_LoadWorldLights(cl.worldmodel->name);
+		R_Shadow_LoadWorldLights();
 	}
 }
 
 void R_Shadow_EditLights_Save_f(void)
 {
 	if (cl.worldmodel)
-		R_Shadow_SaveWorldLights(cl.worldmodel->name);
+		R_Shadow_SaveWorldLights();
+}
+
+void R_Shadow_EditLights_ImportLightEntitiesFromMap_f(void)
+{
+	R_Shadow_ClearWorldLights();
+	R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite();
+}
+
+void R_Shadow_EditLights_ImportLightsFile_f(void)
+{
+	R_Shadow_ClearWorldLights();
+	R_Shadow_LoadLightsFile();
 }
 
 void R_Shadow_EditLights_Spawn_f(void)
@@ -1701,4 +1825,6 @@ void R_Shadow_EditLights_Init(void)
 	Cmd_AddCommand("r_editlights_spawn", R_Shadow_EditLights_Spawn_f);
 	Cmd_AddCommand("r_editlights_edit", R_Shadow_EditLights_Edit_f);
 	Cmd_AddCommand("r_editlights_remove", R_Shadow_EditLights_Remove_f);
+	Cmd_AddCommand("r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f);
+	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f);
 }
