@@ -278,7 +278,8 @@ void Host_SaveConfig_f(void)
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
-	if (host_initialized && cls.state != ca_dedicated)
+	// LordHavoc: save a config only after Host_Frame finished the first frame
+	if (host_initialized && host_loopactive && cls.state != ca_dedicated)
 	{
 		f = FS_Open ("config.cfg", "wb", false, false);
 		if (!f)
