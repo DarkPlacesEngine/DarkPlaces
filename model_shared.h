@@ -210,6 +210,9 @@ typedef struct model_brush_s
 	int num_portalpoints;
 	mvertex_t *data_portalpoints;
 
+	int num_textures;
+	texture_t *data_textures;
+
 	// pvs
 	int num_pvsclusters;
 	int num_pvsclusterbytes;
@@ -268,9 +271,6 @@ typedef struct model_brushq1_s
 
 	hull_t			hulls[MAX_MAP_HULLS];
 
-	int				numtextures;
-	texture_t		*textures;
-
 	int				num_compressedpvs;
 	qbyte			*data_compressedpvs;
 
@@ -300,9 +300,6 @@ model_brushq2_t;
 
 typedef struct model_brushq3_s
 {
-	int num_textures;
-	q3mtexture_t *data_textures;
-
 	int num_models;
 	q3mmodel_t *data_models;
 
