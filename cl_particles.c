@@ -133,6 +133,21 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 	free(noisebuf);
 #undef n
 }
+void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
+{
+	float d;
+
+	right[0] = forward[2];
+	right[1] = -forward[0];
+	right[2] = forward[1];
+
+	d = DotProduct(forward, right);
+	right[0] -= d * forward[0];
+	right[1] -= d * forward[1];
+	right[2] -= d * forward[2];
+	VectorNormalizeFast(right);
+	CrossProduct(right, forward, up);
+}
 #else
 #include "cl_collision.h"
 #endif
@@ -523,6 +538,11 @@ void CL_ParticleExplosion (vec3_t org)
 		{
 			for (i = 0;i < 64;i++)
 			{
+#ifdef WORKINGLQUAKE
+				v2[0] = lhrandom(-64, 64);
+				v2[1] = lhrandom(-64, 64);
+				v2[2] = lhrandom(-8, 24);
+#else
 				for (k = 0;k < 16;k++)
 				{
 					v[0] = org[0] + lhrandom(-64, 64);
@@ -532,6 +552,7 @@ void CL_ParticleExplosion (vec3_t org)
 						break;
 				}
 				VectorSubtract(v2, org, v2);
+#endif
 				VectorScale(v2, 2.0f, v2);
 				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 12, 12, 255, 512, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
 			}
@@ -627,7 +648,13 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 	{
 		// smoke puff
 		if (cl_particles_smoke.integer)
-			particle(pt_static, PARTICLE_BILLBOARD, 0x606060, 0xA0A0A0, tex_smoke[rand()&7], true, true, 4, 4, 255, 1024, 9999, -0.2, 0, org[0], org[1], org[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
+		{
+			k = count / 4;
+			while(k--)
+			{
+				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 4, 4, 255, 1024, 9999, -0.2, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
+			}
+		}
 
 		if (cl_particles_sparks.integer)
 		{
@@ -1392,6 +1419,7 @@ static void r_part_shutdown(void)
 
 static void r_part_newmap(void)
 {
+	cl_numparticles = 0;
 }
 
 void R_Particles_Init (void)
@@ -1551,6 +1579,10 @@ void R_DrawParticles (void)
 	float minparticledist;
 	particle_t *p;
 
+#ifdef WORKINGLQUAKE
+	CL_MoveParticles();
+#endif
+
 	// LordHavoc: early out conditions
 	if ((!cl_numparticles) || (!r_drawparticles.integer))
 		return;
@@ -1558,16 +1590,17 @@ void R_DrawParticles (void)
 	minparticledist = DotProduct(r_origin, vpn) + 16.0f;
 
 #ifdef WORKINGLQUAKE
-	// helper code if anyone wants to port this to stock glquake engines
 	glBindTexture(GL_TEXTURE_2D, particlefonttexture);
 	glEnable(GL_BLEND);
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glDepthMask(0);
 	// LordHavoc: only render if not too close
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
 		if (DotProduct(p->org, vpn) >= minparticledist)
 			R_DrawParticleCallback(p, 0);
-	// helper code if anyone wants to port this to stock glquake engines
+	glDepthMask(1);
 	glDisable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 #else
 	// LordHavoc: only render if not too close
 	c_particles += cl_numparticles;
