@@ -799,25 +799,26 @@ void CL_LinkNetworkEntity(entity_t *e)
 			dlightradius = max(dlightradius, e->state_current.glowsize * 4);
 			VectorMA(dlightcolor, (1.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
 		}
-		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
-		{
-			if (e->state_current.light[3])
-				dlightradius = max(dlightradius, e->state_current.light[3]);
-			else
-				dlightradius = max(dlightradius, 350);
-			if (VectorLength2(dlightcolor) == 0)
-				(dlightcolor[0] += 1, dlightcolor[1] += 1, dlightcolor[2] += 1);
-			else
-				VectorMA(dlightcolor, (1.0f/256.0f), e->state_current.light, dlightcolor);
-		}
-		// make the dlight
+		// make the glow dlight
 		if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL))
 		{
-			dlightmatrix = e->render.matrix;
+			//dlightmatrix = e->render.matrix;
 			// hack to make glowing player light shine on their gun
 			//if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
 			//	dlightmatrix.m[2][3] += 30;
-			CL_AllocDlight(&e->render, &dlightmatrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, e->state_current.skin >= 16 ? e->state_current.skin : 0, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC) ? ((e->state_current.lightpflags & PFLAGS_CORONA) != 0) : 1);
+			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, 0, false, 1);
+		}
+		// custom rtlight
+		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
+		{
+			float light[4];
+			VectorScale(e->state_current.light, (1.0f / 256.0f), light);
+			light[3] = e->state_current.light[3];
+			if (light[0] == 0 && light[1] == 0 && light[2] == 0)
+				VectorSet(light, 1, 1, 1);
+			if (light[3] == 0)
+				light[3] = 350;
+			CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0);
 		}
 		// trails need the previous frame
 		if (e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
