@@ -908,6 +908,36 @@ void FS_AddGameDirectory (char *dir)
 
 
 /*
+================
+FS_AddHomeAsGameDirectory
+
+Use ~/.games/darkplaces/dir as fs_gamedir
+================
+*/
+void FS_AddHomeAsGameDirectory (const char *dir)
+{
+#ifndef _WIN32
+	char *homedir=getenv("HOME");
+	char gdir[MAX_OSPATH];
+	if(homedir)
+	{
+		int len = snprintf(gdir,sizeof(gdir),"%s/.darkplaces/%s/", homedir, dir);
+		Con_Printf("using %s for writing\n",gdir);
+		FS_CreatePath (gdir);
+
+		if ((len > 0) && (len < sizeof(gdir)) && (gdir[len-1] == '/'))
+			gdir[len-1] = 0;
+
+		strncpy(fs_gamedir,gdir,sizeof(fs_gamedir)-1);
+		fs_gamedir[sizeof(fs_gamedir)-1] = 0;
+		
+		FS_AddGameDirectory (gdir);
+	}
+#endif
+}
+
+
+/*
 ============
 FS_FileExtension
 ============
@@ -1009,6 +1039,7 @@ void FS_Init (void)
 	// start up with GAMENAME by default (id1)
 	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
 	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
+	FS_AddHomeAsGameDirectory(GAMENAME);
 	Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 
 	// add the game-specific path, if any
@@ -1017,6 +1048,7 @@ void FS_Init (void)
 		fs_modified = true;
 		strlcpy (com_modname, gamedirname, sizeof (com_modname));
 		FS_AddGameDirectory (va("%s/%s", fs_basedir, gamedirname));
+		FS_AddHomeAsGameDirectory(gamedirname);
 	}
 
 	// -game <gamedir>
@@ -1032,6 +1064,7 @@ void FS_Init (void)
 			fs_modified = true;
 			strlcpy (com_modname, com_argv[i], sizeof (com_modname));
 			FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i]));
+			FS_AddHomeAsGameDirectory(com_argv[i]);
 			Cvar_SetQuick (&scr_screenshot_name, com_modname);
 		}
 	}
