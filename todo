@@ -37,6 +37,10 @@ d darkplaces: revert noclip movement to match nq for compatibility with mods tha
 d darkplaces: make light_lev dlights from qc require PFLAGS_FULLDYNAMIC flag
 d darkplaces: improve tenebrae compatibility by handling EF_FULLDYNAMIC flag in tenebrae mode, also make all sprites render additive
 d darkplaces: add r_showtris cvar (Riot)
+0 darkplaces: figure out why dlights are flashing on/off in TEU, particularly test the flashlight (Electro)
+0 darkplaces: fix r_editlights_edit origin not working (romi)
+0 darkplaces: make players step down stairs rather than just flying off (Riot) 
+0 darkplaces: add DP_EF_NOSHADOW extension (Urre)
 0 darkplaces: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 3 darkplaces: figure out BoxOnPlaneSide crash that happens in dpmod dpdm2 deathmatch 7 occasionally
 2 darkplaces: add q2 sprite support sometime
@@ -156,7 +160,7 @@ d darkplaces: figure out and fix win32 networking problems
 0 darkplaces: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 5 darkplaces: lightshader files (probably loaded by the cubemap field already present in rtlights handling), these would indicate what attenuation textures to use for the light, what cubemap filter, whether to have a corona and so on (romi)
 1 darkplaces: shadow volumes from q3bsp brush models are broken, maybe inverted or something (Vermeulen)
-2 darkplaces: decal clipping (romi)
+2 darkplaces: decal clipping (romi, Sajt)
 7 darkplaces: shadow volume clipping (romi)
 0 dpmod: make run animation play back according to movement speed (along v_forward), instead of just playing a continuous loop based on time (Urre)
 1 darkplaces: q1bsp: parse submodels before leafs, so that the pvs can be allocated smaller (only enough for the world model's visleafs count) (Vic) 
@@ -460,7 +464,7 @@ d darkplaces: figure out what is causing invalid entity numbers in TouchAreaGrid
 ? dpmod: apparently can't fire in start.bsp? (scar3crow)
 resolvedbug darkplaces: Zerstorer: riot shotgun rotates even as a view model: need to ignore that model flag when a view model
 resolvedbug darkplaces: collision: 'wall stuttering' collision bugs: getting stuck and nudged out constantly when sliding along certain walls
-bug darkplaces: collision: q3bsp curve problems: comparing nudged impacts causes player to hit edges of triangles in a q3bsp curve closer than the surface
+resolvedbug darkplaces: collision: q3bsp curve problems: comparing nudged impacts causes player to hit edges of triangles in a q3bsp curve closer than the surface
 bug darkplaces: physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
