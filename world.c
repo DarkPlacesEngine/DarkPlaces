@@ -298,9 +298,9 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 	{
 		// wow, something outside the grid, store it as such
 		if (ent->v->solid == SOLID_TRIGGER)
-			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.trigger_edicts, NUM_FOR_EDICT(ent));
+			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.trigger_edicts, entitynumber);
 		else
-			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.solid_edicts, NUM_FOR_EDICT(ent));
+			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.solid_edicts, entitynumber);
 		return;
 	}
 
@@ -311,9 +311,9 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++, gridnum++)
 		{
 			if (ent->v->solid == SOLID_TRIGGER)
-				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->trigger_edicts, NUM_FOR_EDICT(ent));
+				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->trigger_edicts, entitynumber);
 			else
-				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->solid_edicts, NUM_FOR_EDICT(ent));
+				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->solid_edicts, entitynumber);
 		}
 	}
 }
