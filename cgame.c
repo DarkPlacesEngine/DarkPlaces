@@ -185,7 +185,7 @@ static void explosiondebris_framethink(localentity_t *self)
 {
 	if (gametime > self->dietime)
 	{
-		self->draw.scale -= frametime * 3;
+		self->draw.scale -= (float)(frametime * 3.0);
 		if (self->draw.scale < 0.05f)
 		{
 			entremove(self);
@@ -286,7 +286,7 @@ static void net_gibshower(unsigned char num)
 	time = CGVM_Time();
 	// read the network data
 	count = CGVM_MSG_ReadByte();
-	velocityscale = CGVM_MSG_ReadByte() * 100;
+	velocityscale = (float)(CGVM_MSG_ReadByte() * 100);
 	readvector(org);
 
 	for (i = 0;i < count;i++)
@@ -301,7 +301,7 @@ static void net_gibshower(unsigned char num)
 		e->draw.angles[2] = CGVM_RandomRange(0, 360);
 		VectorRandom(e->velocity);
 		VectorScale(e->velocity, velocityscale, e->velocity);
-		e->velocity[2] -= cg_gravity * 0.1;
+		e->velocity[2] -= (float)(cg_gravity * 0.1);
 		e->avelocity[0] = CGVM_RandomRange(0, 1440);
 		e->avelocity[1] = CGVM_RandomRange(0, 1440);
 		e->avelocity[2] = CGVM_RandomRange(0, 1440);
