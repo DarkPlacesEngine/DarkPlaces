@@ -188,6 +188,10 @@ void CL_ReadDemoMessage(void)
 		{
 			MSG_BeginReading();
 			CL_ParseServerMessage();
+
+			// In case the demo contains a "svc_disconnect" message
+			if (!cls.demoplayback)
+				return;
 		}
 		else
 		{
