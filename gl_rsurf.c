@@ -1242,9 +1242,9 @@ void R_DrawPortals()
 			while (portal)
 			{
 				transpolybegin(0, 0, 0, TPOLYTYPE_ALPHA);
-				point = portal->points;
-				endpoint = point + portal->numpoints;
-				for (;point < endpoint;point++)
+				point = portal->points + portal->numpoints - 1;
+				endpoint = portal->points;
+				for (;point >= endpoint;point--)
 					transpolyvertub(point->position[0], point->position[1], point->position[2], 0, 0, r, g, b, 32);
 				transpolyend();
 				portal = portal->next;
