@@ -1314,7 +1314,7 @@ void PF_precache_sound (void)
 {
 	char	*s;
 	int		i;
-	
+
 	if (sv.state != ss_loading)
 		PR_RunError ("PF_Precache_*: Precache can only be done in spawn functions");
 
@@ -1439,12 +1439,12 @@ void PF_droptofloor (void)
 	edict_t		*ent;
 	vec3_t		end;
 	trace_t		trace;
-	
+
 	ent = PROG_TO_EDICT(pr_global_struct->self);
 
 	VectorCopy (ent->v.origin, end);
 	end[2] -= 256;
-	
+
 	trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
 
 	if (trace.fraction == 1 || trace.allsolid)
@@ -1456,6 +1456,8 @@ void PF_droptofloor (void)
 		ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
 		ent->v.groundentity = EDICT_TO_PROG(trace.ent);
 		G_FLOAT(OFS_RETURN) = 1;
+		// if support is destroyed, keep suspended (gross hack for floating items in various maps)
+		ent->suspendedinairflag = true;
 	}
 }
 
@@ -1472,17 +1474,17 @@ void PF_lightstyle (void)
 	char	*val;
 	client_t	*client;
 	int			j;
-	
+
 	style = G_FLOAT(OFS_PARM0);
 	val = G_STRING(OFS_PARM1);
 
 // change the string in sv
 	sv.lightstyles[style] = val;
-	
+
 // send message to all clients on this server
 	if (sv.state != ss_active)
 		return;
-	
+
 	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 		if (client->active || client->spawned)
 		{
@@ -1542,7 +1544,7 @@ void PF_nextent (void)
 {
 	int		i;
 	edict_t	*ent;
-	
+
 	i = G_EDICTNUM(OFS_PARM0);
 	while (1)
 	{
@@ -1577,7 +1579,7 @@ void PF_aim (void)
 	trace_t	tr;
 	float	dist, bestdist;
 	float	speed;
-	
+
 	ent = G_EDICT(OFS_PARM0);
 	speed = G_FLOAT(OFS_PARM1);
 
@@ -1600,7 +1602,7 @@ void PF_aim (void)
 	VectorCopy (dir, bestdir);
 	bestdist = sv_aim.value;
 	bestent = NULL;
-	
+
 	check = NEXT_EDICT(sv.edicts);
 	for (i=1 ; i<sv.num_edicts ; i++, check = NEXT_EDICT(check) )
 	{
@@ -1625,7 +1627,7 @@ void PF_aim (void)
 			bestent = check;
 		}
 	}
-	
+
 	if (bestent)
 	{
 		VectorSubtract (bestent->v.origin, ent->v.origin, dir);
@@ -1633,7 +1635,7 @@ void PF_aim (void)
 		VectorScale (pr_global_struct->v_forward, dist, end);
 		end[2] = dir[2];
 		VectorNormalize (end);
-		VectorCopy (end, G_VECTOR(OFS_RETURN));	
+		VectorCopy (end, G_VECTOR(OFS_RETURN));
 	}
 	else
 	{
@@ -1652,12 +1654,12 @@ void PF_changeyaw (void)
 {
 	edict_t		*ent;
 	float		ideal, current, move, speed;
-	
+
 	ent = PROG_TO_EDICT(pr_global_struct->self);
 	current = ANGLEMOD(ent->v.angles[1]);
 	ideal = ent->v.ideal_yaw;
 	speed = ent->v.yaw_speed;
-	
+
 	if (current == ideal)
 		return;
 	move = ideal - current;
@@ -1681,7 +1683,7 @@ void PF_changeyaw (void)
 		if (move < -speed)
 			move = -speed;
 	}
-	
+
 	ent->v.angles[1] = ANGLEMOD (current + move);
 }
 
@@ -1695,7 +1697,7 @@ void PF_changepitch (void)
 	edict_t		*ent;
 	float		ideal, current, move, speed;
 	eval_t		*val;
-	
+
 	ent = G_EDICT(OFS_PARM0);
 	current = ANGLEMOD( ent->v.angles[0] );
 	if ((val = GETEDICTFIELDVALUE(ent, eval_idealpitch)))
@@ -1712,7 +1714,7 @@ void PF_changepitch (void)
 		PR_RunError ("PF_changepitch: .float idealpitch and .float pitch_speed must be defined to use changepitch");
 		return;
 	}
-	
+
 	if (current == ideal)
 		return;
 	move = ideal - current;
@@ -1736,7 +1738,7 @@ void PF_changepitch (void)
 		if (move < -speed)
 			move = -speed;
 	}
-	
+
 	ent->v.angles[0] = ANGLEMOD (current + move);
 }
 
@@ -1764,17 +1766,17 @@ sizebuf_t *WriteDest (void)
 	{
 	case MSG_BROADCAST:
 		return &sv.datagram;
-	
+
 	case MSG_ONE:
 		ent = PROG_TO_EDICT(pr_global_struct->msg_entity);
 		entnum = NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients)
 			PR_RunError ("WriteDest: not a client");
 		return &svs.clients[entnum-1].message;
-		
+
 	case MSG_ALL:
 		return &sv.reliable_datagram;
-	
+
 	case MSG_INIT:
 		return &sv.signon;
 
@@ -1782,7 +1784,7 @@ sizebuf_t *WriteDest (void)
 		PR_RunError ("WriteDest: bad destination");
 		break;
 	}
-	
+
 	return NULL;
 }
 
@@ -1835,7 +1837,7 @@ void PF_makestatic (void)
 {
 	edict_t	*ent;
 	int		i, large;
-	
+
 	ent = G_EDICT(OFS_PARM0);
 
 	large = false;
@@ -1905,7 +1907,7 @@ void PF_changelevel (void)
 	if (svs.changelevel_issued)
 		return;
 	svs.changelevel_issued = true;
-	
+
 	s = G_STRING(OFS_PARM0);
 	Cbuf_AddText (va("changelevel %s\n",s));
 }
@@ -1944,7 +1946,7 @@ void PF_randomvec (void)
 		temp[2] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
 	}
 	while (DotProduct(temp, temp) >= 1);
-	VectorCopy (temp, G_VECTOR(OFS_RETURN));	
+	VectorCopy (temp, G_VECTOR(OFS_RETURN));
 }
 
 void SV_LightPoint (vec3_t color, vec3_t p);
@@ -1966,7 +1968,7 @@ void PF_GetLight (void)
 	vec_t*		p;
 	p = G_VECTOR(OFS_PARM0);
 	SV_LightPoint (color, p);
-	VectorCopy (color, G_VECTOR(OFS_RETURN));	
+	VectorCopy (color, G_VECTOR(OFS_RETURN));
 }
 
 #define MAX_QC_CVARS 128
@@ -1983,7 +1985,7 @@ void PF_registercvar (void)
 // first check to see if it has already been defined
 	if (Cvar_FindVar (name))
 		return;
-	
+
 // check for overlap with a command
 	if (Cmd_Exists (name))
 	{
@@ -1996,12 +1998,12 @@ void PF_registercvar (void)
 
 // copy the name and value
 	variable = &qc_cvar[currentqc_cvar++];
-	variable->name = Z_Malloc (strlen(name)+1);	
+	variable->name = Z_Malloc (strlen(name)+1);
 	strcpy (variable->name, name);
-	variable->string = Z_Malloc (strlen(value)+1);	
+	variable->string = Z_Malloc (strlen(value)+1);
 	strcpy (variable->string, value);
 	variable->value = atof (value);
-	
+
 // link the variable in
 	variable->next = cvar_vars;
 	cvar_vars = variable;
