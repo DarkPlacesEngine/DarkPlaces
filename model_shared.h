@@ -547,8 +547,8 @@ typedef struct model_s
 {
 	// name and path of model, for example "progs/player.mdl"
 	char			name[MAX_QPATH];
-	// model needs to be loaded if this is true
-	qboolean		needload;
+	// model needs to be loaded if this is false
+	qboolean		loaded;
 	// set if the model is used in current map, models which are not, are purged
 	qboolean		used;
 	// true if this is the world model (I.E. defines what sky to use, and may contain submodels)
@@ -642,7 +642,6 @@ void Mod_CheckLoaded (model_t *mod);
 void Mod_ClearAll (void);
 model_t *Mod_FindName (const char *name);
 model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
-void Mod_TouchModel (const char *name);
 void Mod_UnloadModel (model_t *mod);
 
 void Mod_ClearUsed(void);
