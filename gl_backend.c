@@ -229,14 +229,17 @@ void GL_SetupView_Orientation_Identity (void)
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 
-void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles)
+void GL_SetupView_Orientation_FromEntity(matrix4x4_t *matrix)
 {
-	Matrix4x4_CreateRotate(&backend_viewmatrix, -90, 1, 0, 0);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, 90, 0, 0, 1);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[2], 1, 0, 0);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[0], 0, 1, 0);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[1], 0, 0, 1);
-	Matrix4x4_ConcatTranslate(&backend_viewmatrix, -origin[0], -origin[1], -origin[2]);
+	matrix4x4_t tempmatrix, basematrix;
+	Matrix4x4_Invert_Simple(&tempmatrix, matrix);
+	Matrix4x4_CreateRotate(&basematrix, -90, 1, 0, 0);
+	Matrix4x4_ConcatRotate(&basematrix, 90, 0, 0, 1);
+	Matrix4x4_Concat(&backend_viewmatrix, &basematrix, &tempmatrix);
+	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[2], 1, 0, 0);
+	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[0], 0, 1, 0);
+	//Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[1], 0, 0, 1);
+	//Matrix4x4_ConcatTranslate(&backend_viewmatrix, -origin[0], -origin[1], -origin[2]);
 	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
 }
 

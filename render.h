@@ -90,10 +90,11 @@ extern	int		c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c
 //
 // view origin
 //
-extern	vec3_t	vup;
-extern	vec3_t	vpn;
-extern	vec3_t	vright;
-extern	vec3_t	r_origin;
+extern	vec3_t	r_vieworigin;
+extern	vec3_t	r_viewforward;
+extern	vec3_t	r_viewleft;
+extern	vec3_t	r_viewright;
+extern	vec3_t	r_viewup;
 
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
@@ -129,7 +130,7 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs);
 extern qboolean fogenabled;
 extern vec3_t fogcolor;
 extern vec_t fogdensity;
-#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0])*((v)[0] - r_origin[0])+((v)[1] - r_origin[1])*((v)[1] - r_origin[1])+((v)[2] - r_origin[2])*((v)[2] - r_origin[2])))))
+#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_vieworigin[0])*((v)[0] - r_vieworigin[0])+((v)[1] - r_vieworigin[1])*((v)[1] - r_vieworigin[1])+((v)[2] - r_vieworigin[2])*((v)[2] - r_vieworigin[2])))))
 #define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
 
 // start a farclip measuring session

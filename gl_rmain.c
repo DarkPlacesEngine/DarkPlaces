@@ -39,10 +39,11 @@ qboolean envmap;
 float r_farclip;
 
 // view origin
-vec3_t r_origin;
-vec3_t vpn;
-vec3_t vright;
-vec3_t vup;
+vec3_t r_vieworigin;
+vec3_t r_viewforward;
+vec3_t r_viewleft;
+vec3_t r_viewright;
+vec3_t r_viewup;
 
 //
 // screen size info
@@ -117,22 +118,23 @@ qboolean intimerefresh = 0;
 static void R_TimeRefresh_f (void)
 {
 	int i;
-	float start, stop, time;
+	float timestart, timedelta, oldangles[3];
 
 	intimerefresh = 1;
-	start = Sys_DoubleTime ();
+	VectorCopy(cl.viewangles, oldangles);
+	VectorClear(cl.viewangles);
+
+	timestart = Sys_DoubleTime();
 	for (i = 0;i < 128;i++)
 	{
-		r_refdef.viewangles[0] = 0;
-		r_refdef.viewangles[1] = i/128.0*360.0;
-		r_refdef.viewangles[2] = 0;
+		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], 0, i / 128.0 * 360.0, 0, 1);
 		CL_UpdateScreen();
 	}
+	timedelta = Sys_DoubleTime() - timestart;
 
-	stop = Sys_DoubleTime ();
+	VectorCopy(oldangles, cl.viewangles);
 	intimerefresh = 0;
-	time = stop-start;
-	Con_Printf ("%f seconds (%f fps)\n", time, 128/time);
+	Con_Printf ("%f seconds (%f fps)\n", timedelta, 128/timedelta);
 }
 
 vec3_t fogcolor;
@@ -431,7 +433,8 @@ static void R_MarkEntities (void)
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
-		 && !VIS_CullBox(ent->mins, ent->maxs))
+		 && !VIS_CullBox(ent->mins, ent->maxs)
+		 && (!envmap || !(ent->flags & (RENDER_VIEWMODEL | RENDER_EXTERIORMODEL))))
 		{
 			ent->visframe = r_framecount;
 			R_FarClip_Box(ent->mins, ent->maxs);
@@ -617,7 +620,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 				if (ent->model && ent->model->DrawLight)
 				{
 					Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
-					Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 					Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
@@ -636,7 +639,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
 						{
 							Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
-							Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+							Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 							Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
 							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
 							Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
@@ -705,7 +708,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 				if (ent->model && ent->model->DrawLight)
 				{
 					Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-					Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 					Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
@@ -721,7 +724,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
 						{
 							Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-							Matrix4x4_Transform(&ent->inversematrix, r_origin, relativeeyeorigin);
+							Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
 							Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
 							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
 							Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
@@ -746,24 +749,24 @@ static void R_SetFrustum (void)
 	// degrees assumed a square view (wrong), so I removed it, Quake2 has it
 	// disabled as well.
 
-	// rotate VPN right by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[0].normal, vup, vpn, -(90-r_refdef.fov_x / 2 ) );
-	frustum[0].dist = DotProduct (r_origin, frustum[0].normal);
+	// rotate R_VIEWFORWARD right by FOV_X/2 degrees
+	RotatePointAroundVector( frustum[0].normal, r_viewup, r_viewforward, -(90 - r_refdef.fov_x / 2));
+	frustum[0].dist = DotProduct (r_vieworigin, frustum[0].normal);
 	PlaneClassify(&frustum[0]);
 
-	// rotate VPN left by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[1].normal, vup, vpn, 90-r_refdef.fov_x / 2 );
-	frustum[1].dist = DotProduct (r_origin, frustum[1].normal);
+	// rotate R_VIEWFORWARD left by FOV_X/2 degrees
+	RotatePointAroundVector( frustum[1].normal, r_viewup, r_viewforward, (90 - r_refdef.fov_x / 2));
+	frustum[1].dist = DotProduct (r_vieworigin, frustum[1].normal);
 	PlaneClassify(&frustum[1]);
 
-	// rotate VPN up by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[2].normal, vright, vpn, 90-r_refdef.fov_y / 2 );
-	frustum[2].dist = DotProduct (r_origin, frustum[2].normal);
+	// rotate R_VIEWFORWARD up by FOV_X/2 degrees
+	RotatePointAroundVector( frustum[2].normal, r_viewleft, r_viewforward, -(90 - r_refdef.fov_y / 2));
+	frustum[2].dist = DotProduct (r_vieworigin, frustum[2].normal);
 	PlaneClassify(&frustum[2]);
 
-	// rotate VPN down by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[3].normal, vright, vpn, -( 90 - r_refdef.fov_y / 2 ) );
-	frustum[3].dist = DotProduct (r_origin, frustum[3].normal);
+	// rotate R_VIEWFORWARD down by FOV_X/2 degrees
+	RotatePointAroundVector( frustum[3].normal, r_viewleft, r_viewforward, (90 - r_refdef.fov_y / 2));
+	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
 	PlaneClassify(&frustum[3]);
 }
 
@@ -785,12 +788,18 @@ static void R_SetupFrame (void)
 
 	r_framecount++;
 
-// build the transformation matrix for the given view angles
-	VectorCopy (r_refdef.vieworg, r_origin);
+	// break apart the viewentity matrix into vectors for various purposes
+	Matrix4x4_ToVectors(&r_refdef.viewentitymatrix, r_viewforward, r_viewleft, r_viewup, r_vieworigin);
+	VectorNegate(r_viewleft, r_viewright);
 
-	AngleVectors (r_refdef.viewangles, vpn, vright, vup);
+	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	if ((r_shadow_realtime_world.integer || r_shadow_shadows.integer) && gl_stencil)
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
+	else
+		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
+	GL_SetupView_Orientation_FromEntity(&r_refdef.viewentitymatrix);
 
-	R_AnimateLight ();
+	R_AnimateLight();
 }
 
 
@@ -814,15 +823,15 @@ static void R_BlendView(void)
 	GL_VertexPointer(vertex3f);
 	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 	r = 64000;
-	vertex3f[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
-	vertex3f[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
-	vertex3f[2] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r - vup[2] * r;
-	vertex3f[3] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r + vup[0] * r * 3;
-	vertex3f[4] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r + vup[1] * r * 3;
-	vertex3f[5] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r + vup[2] * r * 3;
-	vertex3f[6] = r_origin[0] + vpn[0] * 1.5 + vright[0] * r * 3 - vup[0] * r;
-	vertex3f[7] = r_origin[1] + vpn[1] * 1.5 + vright[1] * r * 3 - vup[1] * r;
-	vertex3f[8] = r_origin[2] + vpn[2] * 1.5 + vright[2] * r * 3 - vup[2] * r;
+	vertex3f[0] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r - r_viewup[0] * r;
+	vertex3f[1] = r_vieworigin[1] + r_viewforward[1] * 1.5 + r_viewleft[1] * r - r_viewup[1] * r;
+	vertex3f[2] = r_vieworigin[2] + r_viewforward[2] * 1.5 + r_viewleft[2] * r - r_viewup[2] * r;
+	vertex3f[3] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r + r_viewup[0] * r * 3;
+	vertex3f[4] = r_vieworigin[1] + r_viewforward[1] * 1.5 + r_viewleft[1] * r + r_viewup[1] * r * 3;
+	vertex3f[5] = r_vieworigin[2] + r_viewforward[2] * 1.5 + r_viewleft[2] * r + r_viewup[2] * r * 3;
+	vertex3f[6] = r_vieworigin[0] + r_viewforward[0] * 1.5 - r_viewleft[0] * r * 3 - r_viewup[0] * r;
+	vertex3f[7] = r_vieworigin[1] + r_viewforward[1] * 1.5 - r_viewleft[1] * r * 3 - r_viewup[1] * r;
+	vertex3f[8] = r_vieworigin[2] + r_viewforward[2] * 1.5 - r_viewleft[2] * r * 3 - r_viewup[2] * r;
 	R_Mesh_Draw(3, 1, polygonelements);
 }
 
@@ -864,22 +873,16 @@ void R_RenderView (void)
 	R_TimeReport("setup");
 
 	if (cl.worldmodel && cl.worldmodel->brush.FatPVS)
-		cl.worldmodel->brush.FatPVS(cl.worldmodel, r_origin, 2, r_pvsbits, sizeof(r_pvsbits));
+		cl.worldmodel->brush.FatPVS(cl.worldmodel, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
 
 	R_WorldVisibility(world);
 	R_TimeReport("worldvis");
 
-	R_FarClip_Start(r_origin, vpn, 768.0f);
+	R_FarClip_Start(r_vieworigin, r_viewforward, 768.0f);
 	R_MarkEntities();
 	r_farclip = R_FarClip_Finish() + 256.0f;
 	R_TimeReport("markentity");
 
-	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-	if ((r_shadow_realtime_world.integer || r_shadow_shadows.integer) && gl_stencil)
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
-	else
-		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
-	GL_SetupView_Orientation_FromEntity (r_refdef.vieworg, r_refdef.viewangles);
 	qglDepthFunc(GL_LEQUAL);
 
 	R_Mesh_Start();
@@ -970,7 +973,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	{
 		for (i = 0, v = vertex, c = color;i < 8;i++, v += 4, c += 4)
 		{
-			VectorSubtract(v, r_origin, diff);
+			VectorSubtract(v, r_vieworigin, diff);
 			f2 = exp(fogdensity/DotProduct(diff, diff));
 			f1 = 1 - f2;
 			c[0] = c[0] * f1 + fogcolor[0] * f2;
@@ -1047,7 +1050,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
 		GL_ColorPointer(color4f);
-		VectorSubtract(ent->origin, r_origin, diff);
+		VectorSubtract(ent->origin, r_vieworigin, diff);
 		f2 = exp(fogdensity/DotProduct(diff, diff));
 		f1 = 1 - f2;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
@@ -1086,12 +1089,12 @@ void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, flo
 	VectorNormalizeFast (normal);
 
 	// calculate 'right' vector for start
-	VectorSubtract (r_origin, org1, diff);
+	VectorSubtract (r_vieworigin, org1, diff);
 	VectorNormalizeFast (diff);
 	CrossProduct (normal, diff, right1);
 
 	// calculate 'right' vector for end
-	VectorSubtract (r_origin, org2, diff);
+	VectorSubtract (r_vieworigin, org2, diff);
 	VectorNormalizeFast (diff);
 	CrossProduct (normal, diff, right2);
 
@@ -1118,7 +1121,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 
 	if (fogenabled)
 	{
-		VectorSubtract(origin, r_origin, diff);
+		VectorSubtract(origin, r_vieworigin, diff);
 		ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
 	}
 

@@ -11,7 +11,7 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 	case SPR_VP_PARALLEL_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces view plane
-		VectorNegate(vpn, matrix3[0]);
+		VectorNegate(r_viewforward, matrix3[0]);
 		matrix3[0][2] = 0;
 		VectorNormalizeFast(matrix3[0]);
 		matrix3[1][0] = matrix3[0][1];
@@ -24,7 +24,7 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 	case SPR_FACING_UPRIGHT:
 		// flames and such
 		// vertical beam sprite, faces viewer's origin (not the view plane)
-		VectorSubtract(ent->origin, r_origin, matrix3[0]);
+		VectorSubtract(ent->origin, r_vieworigin, matrix3[0]);
 		matrix3[0][2] = 0;
 		VectorNormalizeFast(matrix3[0]);
 		matrix3[1][0] = matrix3[0][1];
@@ -40,25 +40,25 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 	case SPR_VP_PARALLEL:
 		// normal sprite
 		// faces view plane
-		VectorCopy(vpn, matrix3[0]);
-		VectorNegate(vright, matrix3[1]);
-		VectorCopy(vup, matrix3[2]);
+		VectorCopy(r_viewforward, matrix3[0]);
+		VectorCopy(r_viewleft, matrix3[1]);
+		VectorCopy(r_viewup, matrix3[2]);
 		break;
 	case SPR_ORIENTED:
 		// bullet marks on walls
 		// ignores viewer entirely
 		AngleVectorsFLU (ent->angles, matrix3[0], matrix3[1], matrix3[2]);
 		// nudge it toward the view, so it will be infront of the wall
-		VectorSubtract(org, vpn, org);
+		VectorSubtract(org, r_viewforward, org);
 		break;
 	case SPR_VP_PARALLEL_ORIENTED:
 		// I have no idea what people would use this for
 		// oriented relative to view space
 		// FIXME: test this and make sure it mimicks software
 		AngleVectorsFLU (ent->angles, matrix1[0], matrix1[1], matrix1[2]);
-		VectorCopy(vpn, matrix2[0]);
-		VectorNegate(vright, matrix2[1]);
-		VectorCopy(vup, matrix2[2]);
+		VectorCopy(r_viewforward, matrix2[0]);
+		VectorCopy(r_viewleft, matrix2[1]);
+		VectorCopy(r_viewup, matrix2[2]);
 		R_ConcatRotations (matrix1[0], matrix2[0], matrix3[0]);
 		break;
 	}
@@ -106,7 +106,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 
 	if (fogenabled)
 	{
-		VectorSubtract(ent->origin, r_origin, diff);
+		VectorSubtract(ent->origin, r_vieworigin, diff);
 		fog = exp(fogdensity/DotProduct(diff,diff));
 		if (fog > 1)
 			fog = 1;

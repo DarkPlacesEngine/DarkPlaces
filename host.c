@@ -688,7 +688,7 @@ void _Host_Frame (float time)
 	static double time3 = 0;
 	int pass1, pass2, pass3;
 	usercmd_t cmd; // Used for receiving input
-	
+
 	if (setjmp(host_abortserver))
 		return;			// something bad happened, or the server disconnected
 
@@ -709,7 +709,7 @@ void _Host_Frame (float time)
 
 	// Collect input into cmd
 	IN_ProcessMove(&cmd);
-	
+
 	// process console commands
 	Cbuf_Execute();
 
@@ -766,12 +766,13 @@ void _Host_Frame (float time)
 		time2 = Sys_DoubleTime();
 
 	// update audio
-	if (cls.signon == SIGNONS)
+	if (cls.signon == SIGNONS && cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
 	{
 		// LordHavoc: this used to use renderer variables (eww)
-		vec3_t forward, right, up;
-		AngleVectors(cl.viewangles, forward, right, up);
-		S_Update(cl_entities[cl.viewentity].render.origin, forward, right, up);
+		vec3_t forward, right, up, origin;
+		Matrix4x4_ToVectors(&cl_entities[cl.viewentity].render.matrix, forward, right, up, origin);
+		VectorNegate(right, right);
+		S_Update(origin, forward, right, up);
 	}
 	else
 		S_Update(vec3_origin, vec3_origin, vec3_origin, vec3_origin);
@@ -861,7 +862,6 @@ void Host_Init (void)
 	Host_InitLocal();
 	Key_Init();
 	Con_Init();
-	Chase_Init();
 	PR_Init();
 	PRVM_Init();
 	Mod_Init();
@@ -897,7 +897,7 @@ void Host_Init (void)
 		VID_Open();
 		SCR_BeginLoadingPlaque();
 	}
-	
+
 	MR_Init();
 }
 
@@ -927,7 +927,7 @@ void Host_Shutdown(void)
 
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
-	
+
 
 	Host_WriteConfiguration ();
 

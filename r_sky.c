@@ -362,7 +362,7 @@ void R_Sky(void)
 	matrix4x4_t skymatrix;
 	if (skyrendermasked)
 	{
-		Matrix4x4_CreateTranslate(&skymatrix, r_origin[0], r_origin[1], r_origin[2]);
+		Matrix4x4_CreateTranslate(&skymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2]);
 		R_Mesh_Matrix(&skymatrix);
 		if (skyrendersphere)
 		{

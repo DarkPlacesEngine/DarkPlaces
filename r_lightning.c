@@ -216,7 +216,7 @@ void R_FogLightningBeam_Vertex3f_Color4f(const float *v, float *c, int numverts,
 	float ifog;
 	for (i = 0;i < numverts;i++, v += 3, c += 4)
 	{
-		VectorSubtract(v, r_origin, fogvec);
+		VectorSubtract(v, r_vieworigin, fogvec);
 		ifog = 1 - exp(fogdensity/DotProduct(fogvec,fogvec));
 		c[0] = r * ifog;
 		c[1] = g * ifog;
@@ -248,7 +248,7 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 
 	// calculate up vector such that it points toward viewer, and rotates around the beamdir
 	// get direction from start of beam to viewer
-	VectorSubtract(r_origin, b->start, up);
+	VectorSubtract(r_vieworigin, b->start, up);
 	// remove the portion of the vector that moves along the beam
 	// (this leaves only a vector pointing directly away from the beam)
 	t1 = -DotProduct(up, beamdir);

@@ -146,12 +146,12 @@ void R_DrawCoronas(void)
 	if (!r_coronas.integer)
 		return;
 	R_Mesh_Matrix(&r_identitymatrix);
-	viewdist = DotProduct(r_origin, vpn);
+	viewdist = DotProduct(r_vieworigin, r_viewforward);
 	for (i = 0;i < r_numdlights;i++)
 	{
 		rd = r_dlight + i;
-		dist = (DotProduct(rd->origin, vpn) - viewdist);
-		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+		dist = (DotProduct(rd->origin, r_viewforward) - viewdist);
+		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
 		{
 			cscale = (1.0f / 131072.0f);
 			scale = rd->cullradius * 0.25f;
@@ -160,7 +160,7 @@ void R_DrawCoronas(void)
 				cscale *= 4.0f;
 				scale *= 2.0f;
 			}
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, vright, vup, scale, -scale, -scale, scale, rd->light[0] * cscale, rd->light[1] * cscale, rd->light[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, rd->light[0] * cscale, rd->light[1] * cscale, rd->light[2] * cscale, 1);
 		}
 	}
 }

@@ -42,7 +42,7 @@ CMD_RM=rm -f
 endif
 
 # Objects
-CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
+CLIENTOBJECTS=	cgame.o cgamevm.o cl_collision.o cl_demo.o cl_input.o \
 		cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o \
 		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
 		gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o \

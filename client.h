@@ -636,9 +636,8 @@ typedef struct
 	int x, y, width, height;
 	float fov_x, fov_y;
 
-	// view point
-	vec3_t vieworg;
-	vec3_t viewangles;
+	// view transform
+	matrix4x4_t viewentitymatrix;
 
 	// fullscreen color blend
 	float viewblend[4];

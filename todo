@@ -1,4 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
+-n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
 -n darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
 -n darkplaces: add bullet hole decals to the particlefont (Vermeulen)
 -n darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
@@ -28,8 +29,11 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
-d darkplaces: limit maximum lerp time on animations to .1 seconds (Vermeulen)
--n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
+0 darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
+0 darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
+0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
+0 darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
+0 darkplaces: GAME_FNIGGIUM: startup loading screen (gfx/loadback.tga or whatever)
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
@@ -38,6 +42,7 @@ d darkplaces: limit maximum lerp time on animations to .1 seconds (Vermeulen)
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 0 darkplaces: add a config saving command (Speeds)
+0 darkplaces: add a loading screen before loading commences so that people have something to look at when the engine starts... (SeienAbunae)
 0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
 0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
@@ -296,6 +301,10 @@ d darkplaces: limit maximum lerp time on animations to .1 seconds (Vermeulen)
 ? darkplaces: fix colormapping (Demonix)
 ? darkplaces: fix connecting to proquake servers through routers (Demonix)
 ? dpmod: apparently can't fire in start.bsp? (scar3crow)
+bug darkplaces: Zerstorer: riot shotgun rotates even as a view model: need to ignore that model flag when a view model
+bug darkplaces: collision: 'wall stuttering' collision bugs: getting stuck and nudged out constantly when sliding along certain walls
+bug darkplaces: collision: q3bsp curve problems: comparing nudged impacts causes player to hit edges of triangles in a q3bsp curve closer than the surface
+bug darkplaces: physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
 d darkplaces: 12bit color textures in 16bit mode?? (Tomaz)
@@ -351,6 +360,7 @@ d darkplaces: get rid of stencil options and make 32bit color automatically use 
 d darkplaces: gl_flashblend 1 should disable dlighting of models (Tomaz)
 d darkplaces: have a look at CFQ and figure out why its b0rked (it assumed nq noclip movement)
 d darkplaces: heartbeat should print an error message if used with no server running (yummyluv)
+d darkplaces: limit maximum lerp time on animations to .1 seconds (Vermeulen)
 d darkplaces: loadgame broken (Linny Amore)
 d darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
 d darkplaces: make client load .ent files
@@ -396,4 +406,7 @@ f darkplaces: look at and integrate Vic's updated zone.[ch] (Vic)
 f darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
 f darkplaces: shadows are not working with model tag attachments (Electro)
 f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbunae)
+resolvedbug darkplaces: intermission: origin and angles are wrong: probably not getting them from entity correctly (resolved: rewrote view setup and fixed timerefresh and envmap command bugs in the process, and also fixed listener positioning during intermissions)
+resolvedbug darkplaces: intermission: statusbar disappears (resolved: not fixed, people seem to kind of prefer it this way)
+resolvedbug darkplaces: intermission: view model isn't disappearing (resolved: fixed)
 
