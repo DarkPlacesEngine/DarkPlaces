@@ -80,7 +80,7 @@ char *svc_strings[] =
 	"?", // 47
 	"?", // 48
 	"?", // 49
-	"svc_skyboxsize", // [coord] size
+	"svc_farclip", // [coord] size
 	"svc_fog" // [byte] enable <optional past this point, only included if enable is true> [short * 4096] density [byte] red [byte] green [byte] blue
 };
 
@@ -223,6 +223,7 @@ extern float fog_green;
 extern float fog_blue;
 extern void R_SetSkyBox (char *sky);
 extern void FOG_clear();
+extern cvar_t r_farclip;
 
 void CL_ParseEntityLump(char *entdata)
 {
@@ -232,7 +233,7 @@ void CL_ParseEntityLump(char *entdata)
 	int i, j, k;
 	FOG_clear(); // LordHavoc: no fog until set
 	skyname[0] = 0; // LordHavoc: no enviroment mapped sky until set
-//	r_skyboxsize.value = 4096; // LordHavoc: default skyboxsize
+	r_farclip.value = 6144; // LordHavoc: default farclip distance
 	data = entdata;
 	if (!data)
 		return;
@@ -261,12 +262,12 @@ void CL_ParseEntityLump(char *entdata)
 			R_SetSkyBox(value);
 		else if (!strcmp("qlsky", key)) // non-standard, introduced by QuakeLives (EEK)
 			R_SetSkyBox(value);
-//		else if (!strcmp("skyboxsize", key))
-//		{
-//			r_skyboxsize.value = atof(value);
-//			if (r_skyboxsize.value < 64)
-//				r_skyboxsize.value = 64;
-//		}
+		else if (!strcmp("farclip", key))
+		{
+			r_farclip.value = atof(value);
+			if (r_farclip.value < 64)
+				r_farclip.value = 64;
+		}
 		else if (!strcmp("fog", key))
 		{
 			scanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
@@ -1054,13 +1055,12 @@ void CL_ParseServerMessage (void)
 		case svc_showlmp:
 			SHOWLMP_decodeshow();
 			break;
-	// LordHavoc: extra worldspawn fields (fog, sky, skyboxsize)
+	// LordHavoc: extra worldspawn fields (fog, sky, farclip)
 		case svc_skybox:
 			R_SetSkyBox(MSG_ReadString());
 			break;
-		case svc_skyboxsize:
-			i = MSG_ReadCoord();
-			// r_skyboxsize.value = MSG_ReadCoord();
+		case svc_farclip:
+			r_farclip.value = MSG_ReadCoord();
 			break;
 		case svc_fog:
 			if (MSG_ReadByte())

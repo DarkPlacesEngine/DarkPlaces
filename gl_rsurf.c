@@ -504,7 +504,6 @@ void DrawTextureChains (void)
 		{
 			cl.worldmodel->textures[j]->texturechain = NULL;
 			t = R_TextureAnimation (cl.worldmodel->textures[j]);
-			c_brush_polys++;
 			for (;s;s = s->texturechain)
 			{
 				if (currentwallpoly < MAX_WALLPOLYS && currentwallvert < MAX_WALLVERTS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
@@ -914,7 +913,6 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 				}
 				continue;
 			}
-			c_brush_polys++;
 			t = R_TextureAnimation (s->texinfo->texture);
 			v = s->polys->verts[0];
 			if (vertexlit || s->texinfo->texture->transparent)

@@ -465,14 +465,14 @@ void CL_ParseTEnt (void)
 		pos[2] = MSG_ReadCoord ();
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
-//		R_ParticleExplosion2 (pos, colorStart, colorLength);
+		R_ParticleExplosion2 (pos, colorStart, colorLength);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
 		dl->die = cl.time + 0.5;
 		dl->decay = 700;
 		tempcolor = (byte *)&d_8to24table[(rand()%colorLength) + colorStart];
-		dl->color[0] = tempcolor[0];dl->color[1] = tempcolor[1];dl->color[2] = tempcolor[2];
+		dl->color[0] = tempcolor[0] * (1.0f / 255.0f);dl->color[1] = tempcolor[1] * (1.0f / 255.0f);dl->color[2] = tempcolor[2] * (1.0f / 255.0f);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 		

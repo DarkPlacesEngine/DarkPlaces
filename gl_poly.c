@@ -85,6 +85,9 @@ void transpolyend()
 }
 
 int transpolyindices;
+extern qboolean isG200;
+
+/*
 void transpolyrenderminmax()
 {
 	int i, j, k, lastvert;
@@ -111,6 +114,7 @@ void transpolyrenderminmax()
 		if (max < 4) // free to check here, so skip polys behind the view
 			continue;
 		transpoly[i].distance = average;
+*/
 		/*
 		transpoly[i].mindistance = min;
 		transpoly[i].maxdistance = max;
@@ -164,6 +168,7 @@ skip:
 			;
 		}
 		*/
+/*
 		// sorted insert
 		for (j = 0;j < transpolyindices;j++)
 			if (transpoly[transpolyindex[j]].distance < average)
@@ -174,9 +179,9 @@ skip:
 		transpolyindex[j] = i;
 	}
 }
-
-// LordHavoc: qsort compare function
+*/
 /*
+// LordHavoc: qsort compare function
 int transpolyqsort(const void *ia, const void *ib)
 {
 	transpoly_t *a, *b;
@@ -206,16 +211,46 @@ int transpolyqsort(const void *ia, const void *ib)
 		return -1; // (-1) a is behind b
 	return j == b->verts; // (1) a is infront of b    (0) a and b intersect
 //	return (transpoly[*((unsigned short *)ib)].mindistance + transpoly[*((unsigned short *)ib)].maxdistance) - (transpoly[*((unsigned short *)ia)].mindistance + transpoly[*((unsigned short *)ia)].maxdistance);
+	*/
+/*
+	return ((transpoly_t*)ia)->distance - ((transpoly_t*)ib)->distance;
 }
 */
 
-extern qboolean isG200;
-
-/*
-void transpolysort()
+int transpolyqsort(const void *ia, const void *ib)
 {
+	return (transpoly[*((unsigned short *)ib)].distance - transpoly[*((unsigned short *)ia)].distance);
+}
+
+void transpolyrenderminmax()
+{
+	int i, j, lastvert;
+	vec_t d, max, viewdist, average;
+	transpolyindices = 0;
+	viewdist = DotProduct(r_refdef.vieworg, vpn);
+	for (i = 0;i < currenttranspoly;i++)
+	{
+		if (transpoly[i].verts < 3) // only process valid polygons
+			continue;
+		max = -1000000;
+		lastvert = transpoly[i].firstvert + transpoly[i].verts;
+		average = 0;
+		for (j = transpoly[i].firstvert;j < lastvert;j++)
+		{
+			d = DotProduct(transvert[j].v, vpn)-viewdist;
+			average += d;
+			if (d > max)
+				max = d;
+		}
+		if (max < 4) // free to check here, so skip polys behind the view
+			continue;
+		transpoly[i].distance = average / transpoly[i].verts;
+		transpolyindex[transpolyindices++] = i;
+	}
+	qsort(&transpolyindex[0], transpolyindices, sizeof(unsigned short), transpolyqsort);
+}
+/*
 	int i, j, a;
-//	qsort(&transpolyindex[0], transpolyindices, sizeof(unsigned short), transpolyqsort);
 	a = true;
 	while(a)
 	{
@@ -466,6 +501,7 @@ void wallpolyrender()
 	wallvert_t *vert;
 	if (currentwallpoly < 1)
 		return;
+	c_brush_polys += currentwallpoly;
 	// testing
 	//Con_DPrintf("wallpolyrender: %i polys %i vertices\n", currentwallpoly, currentwallvert);
 	if (!gl_mtexable)

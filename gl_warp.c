@@ -246,7 +246,7 @@ void LoadSky_f (void)
 	}
 }
 
-extern cvar_t r_skyboxsize;
+extern cvar_t r_farclip;
 
 #define R_SkyBoxPolyVec(s,t,x,y,z) \
 	glTexCoord2f((s) * (254.0f/256.0f) + (1.0f/256.0f), (t) * (254.0f/256.0f) + (1.0f/256.0f));\

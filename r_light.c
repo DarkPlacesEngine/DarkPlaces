@@ -363,6 +363,12 @@ void R_DynamicLightPointNoMask(vec3_t color, vec3_t org)
 	}
 }
 
+void R_CompleteLightPoint (vec3_t color, vec3_t p)
+{
+	R_LightPoint(color, p);
+	R_DynamicLightPointNoMask(color, p);
+}
+
 extern float *aliasvert;
 extern float *aliasvertnorm;
 extern byte *aliasvertcolor;
