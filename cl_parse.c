@@ -431,7 +431,7 @@ void CL_ParseServerInfo (void)
 		CL_KeepaliveMessage();
 
 		// Don't lock the sfx here, S_ServerSounds already did that 
-		cl.sound_precache[i] = S_PrecacheSound(parse_sound_precache[i], true, true, false);
+		cl.sound_precache[i] = S_PrecacheSound (parse_sound_precache[i], true, false);
 	}
 
 	// local state
@@ -841,13 +841,13 @@ CL_ParseTEnt
 */
 void CL_InitTEnts (void)
 {
-	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav", false, true, true);
-	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav", false, true, true);
-	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav", false, true, true);
-	cl_sfx_ric1 = S_PrecacheSound ("weapons/ric1.wav", false, true, true);
-	cl_sfx_ric2 = S_PrecacheSound ("weapons/ric2.wav", false, true, true);
-	cl_sfx_ric3 = S_PrecacheSound ("weapons/ric3.wav", false, true, true);
-	cl_sfx_r_exp3 = S_PrecacheSound ("weapons/r_exp3.wav", false, true, true);
+	cl_sfx_wizhit = S_PrecacheSound ("sound/wizard/hit.wav", false, true);
+	cl_sfx_knighthit = S_PrecacheSound ("sound/hknight/hit.wav", false, true);
+	cl_sfx_tink1 = S_PrecacheSound ("sound/weapons/tink1.wav", false, true);
+	cl_sfx_ric1 = S_PrecacheSound ("sound/weapons/ric1.wav", false, true);
+	cl_sfx_ric2 = S_PrecacheSound ("sound/weapons/ric2.wav", false, true);
+	cl_sfx_ric3 = S_PrecacheSound ("sound/weapons/ric3.wav", false, true);
+	cl_sfx_r_exp3 = S_PrecacheSound ("sound/weapons/r_exp3.wav", false, true);
 }
 
 void CL_ParseBeam (model_t *m, int lightning)

@@ -78,7 +78,7 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath, qboolean lock)
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean lock)
 {
 	return NULL;
 }
@@ -99,7 +99,7 @@ void S_ExtraUpdate (void)
 {
 }
 
-qboolean S_LocalSound (const char *s, qboolean stdpath)
+qboolean S_LocalSound (const char *s)
 {
 	return false;
 }

@@ -112,10 +112,10 @@ void CDAudio_Play (qbyte track, qboolean looping)
 	CDAudio_Stop ();
 
 	// Try playing a fake track (sound file) first
-	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, true, false);
+	sfx = S_PrecacheSound (va ("cdtracks/track%02u.wav", track), false, false);
 	// FIXME: perhaps force it to be always %03u (but for compatibility?):
 	if (!sfx)
-		sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, true, false);
+		sfx = S_PrecacheSound (va ("cdtracks/track%03u.wav", track), false, false);
 	if (sfx != NULL)
 	{
 		faketrack = S_StartSound (-1, 0, sfx, vec3_origin, cdvolume, 0);
