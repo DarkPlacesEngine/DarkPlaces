@@ -175,73 +175,75 @@ void R_NewExplosion(vec3_t org)
 
 void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 {
-	int i;
+	int i, numtriangles, numverts;
 	float *c, *v, diff[3], centerdir[3], ifog, alpha, dist;
-	rmeshbufferinfo_t m;
+	rmeshstate_t m;
 	const explosion_t *e;
 	e = calldata1;
 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.numtriangles = EXPLOSIONTRIS;
-	m.numverts = EXPLOSIONVERTS;
+	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(explosiontexture);
 	Matrix4x4_CreateIdentity(&m.matrix);
-	if (R_Mesh_Draw_GetBuffer(&m, false))
+	R_Mesh_State(&m);
+
+	numtriangles = EXPLOSIONTRIS;
+	numverts = EXPLOSIONVERTS;
+	R_Mesh_ResizeCheck(numverts, numtriangles);
+
+	memcpy(varray_element, explosiontris, numtriangles * sizeof(int[3]));
+	for (i = 0, v = varray_vertex;i < numverts;i++, v += 4)
 	{
-		memcpy(m.index, explosiontris, m.numtriangles * sizeof(int[3]));
-		for (i = 0, v = m.vertex;i < m.numverts;i++, v += 4)
+		v[0] = e->vert[i][0];
+		v[1] = e->vert[i][1];
+		v[2] = e->vert[i][2];
+	}
+	memcpy(varray_texcoord[0], explosiontexcoords, numverts * sizeof(float[2]));
+	alpha = e->alpha;
+	VectorSubtract(r_origin, e->origin, centerdir);
+	VectorNormalizeFast(centerdir);
+	if (fogenabled)
+	{
+		for (i = 0, c = varray_color;i < EXPLOSIONVERTS;i++, c += 4)
 		{
-			v[0] = e->vert[i][0];
-			v[1] = e->vert[i][1];
-			v[2] = e->vert[i][2];
-		}
-		memcpy(m.texcoords[0], explosiontexcoords, m.numverts * sizeof(float[2]));
-		alpha = e->alpha;
-		VectorSubtract(r_origin, e->origin, centerdir);
-		VectorNormalizeFast(centerdir);
-		if (fogenabled)
-		{
-			for (i = 0, c = m.color;i < EXPLOSIONVERTS;i++, c += 4)
+			VectorSubtract(e->vert[i], e->origin, diff);
+			VectorNormalizeFast(diff);
+			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
+			if (dist > 0)
 			{
-				VectorSubtract(e->vert[i], e->origin, diff);
-				VectorNormalizeFast(diff);
-				dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
-				if (dist > 0)
-				{
-					// use inverse fog alpha
-					VectorSubtract(e->vert[i], r_origin, diff);
-					ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
-					dist = dist * ifog;
-					if (dist < 0)
-						dist = 0;
-					else
-						dist *= m.colorscale;
-				}
-				else
-					dist = 0;
-				c[0] = c[1] = c[2] = dist;
-				c[3] = 1;
-			}
-		}
-		else
-		{
-			for (i = 0, c = m.color;i < EXPLOSIONVERTS;i++, c += 4)
-			{
-				VectorSubtract(e->vert[i], e->origin, diff);
-				VectorNormalizeFast(diff);
-				dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
+				// use inverse fog alpha
+				VectorSubtract(e->vert[i], r_origin, diff);
+				ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
+				dist = dist * ifog;
 				if (dist < 0)
 					dist = 0;
 				else
-					dist *= m.colorscale;
-				c[0] = c[1] = c[2] = dist;
-				c[3] = 1;
+					dist *= mesh_colorscale;
 			}
+			else
+				dist = 0;
+			c[0] = c[1] = c[2] = dist;
+			c[3] = 1;
 		}
-		R_Mesh_Render();
 	}
+	else
+	{
+		for (i = 0, c = varray_color;i < EXPLOSIONVERTS;i++, c += 4)
+		{
+			VectorSubtract(e->vert[i], e->origin, diff);
+			VectorNormalizeFast(diff);
+			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
+			if (dist < 0)
+				dist = 0;
+			else
+				dist *= mesh_colorscale;
+			c[0] = c[1] = c[2] = dist;
+			c[3] = 1;
+		}
+	}
+	R_Mesh_Draw(numverts, numtriangles);
 }
 
 void R_MoveExplosion(explosion_t *e)

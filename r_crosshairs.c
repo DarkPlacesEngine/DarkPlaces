@@ -156,7 +156,7 @@ void R_Crosshairs_Init(void)
 
 void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca)
 {
-	rmeshbufferinfo_t m;
+	rmeshstate_t m;
 	float diff[3];
 
 	if (fogenabled)
@@ -168,45 +168,43 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
+	m.wantoverbright = false;
 	m.depthdisable = true;
-	m.numtriangles = 2;
-	m.numverts = 4;
 	m.tex[0] = R_GetTexture(texture);
 	Matrix4x4_CreateIdentity(&m.matrix);
-	if (R_Mesh_Draw_GetBuffer(&m, false))
-	{
-		m.index[0] = 0;
-		m.index[1] = 1;
-		m.index[2] = 2;
-		m.index[3] = 0;
-		m.index[4] = 2;
-		m.index[5] = 3;
-		m.color[0] = m.color[4] = m.color[8] = m.color[12] = cr * m.colorscale;
-		m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
-		m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
-		m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca;
-		m.texcoords[0][0] = 0;
-		m.texcoords[0][1] = 0;
-		m.texcoords[0][2] = 0;
-		m.texcoords[0][3] = 1;
-		m.texcoords[0][4] = 1;
-		m.texcoords[0][5] = 1;
-		m.texcoords[0][6] = 1;
-		m.texcoords[0][7] = 0;
-		m.vertex[0] = origin[0] - vright[0] * scale - vup[0] * scale;
-		m.vertex[1] = origin[1] - vright[1] * scale - vup[1] * scale;
-		m.vertex[2] = origin[2] - vright[2] * scale - vup[2] * scale;
-		m.vertex[4] = origin[0] - vright[0] * scale + vup[0] * scale;
-		m.vertex[5] = origin[1] - vright[1] * scale + vup[1] * scale;
-		m.vertex[6] = origin[2] - vright[2] * scale + vup[2] * scale;
-		m.vertex[8] = origin[0] + vright[0] * scale + vup[0] * scale;
-		m.vertex[9] = origin[1] + vright[1] * scale + vup[1] * scale;
-		m.vertex[10] = origin[2] + vright[2] * scale + vup[2] * scale;
-		m.vertex[12] = origin[0] + vright[0] * scale - vup[0] * scale;
-		m.vertex[13] = origin[1] + vright[1] * scale - vup[1] * scale;
-		m.vertex[14] = origin[2] + vright[2] * scale - vup[2] * scale;
-		R_Mesh_Render();
-	}
+	R_Mesh_State(&m);
+
+	varray_element[0] = 0;
+	varray_element[1] = 1;
+	varray_element[2] = 2;
+	varray_element[3] = 0;
+	varray_element[4] = 2;
+	varray_element[5] = 3;
+	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * mesh_colorscale;
+	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * mesh_colorscale;
+	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * mesh_colorscale;
+	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
+	varray_texcoord[0][0] = 0;
+	varray_texcoord[0][1] = 0;
+	varray_texcoord[0][2] = 0;
+	varray_texcoord[0][3] = 1;
+	varray_texcoord[0][4] = 1;
+	varray_texcoord[0][5] = 1;
+	varray_texcoord[0][6] = 1;
+	varray_texcoord[0][7] = 0;
+	varray_vertex[0] = origin[0] - vright[0] * scale - vup[0] * scale;
+	varray_vertex[1] = origin[1] - vright[1] * scale - vup[1] * scale;
+	varray_vertex[2] = origin[2] - vright[2] * scale - vup[2] * scale;
+	varray_vertex[4] = origin[0] - vright[0] * scale + vup[0] * scale;
+	varray_vertex[5] = origin[1] - vright[1] * scale + vup[1] * scale;
+	varray_vertex[6] = origin[2] - vright[2] * scale + vup[2] * scale;
+	varray_vertex[8] = origin[0] + vright[0] * scale + vup[0] * scale;
+	varray_vertex[9] = origin[1] + vright[1] * scale + vup[1] * scale;
+	varray_vertex[10] = origin[2] + vright[2] * scale + vup[2] * scale;
+	varray_vertex[12] = origin[0] + vright[0] * scale - vup[0] * scale;
+	varray_vertex[13] = origin[1] + vright[1] * scale - vup[1] * scale;
+	varray_vertex[14] = origin[2] + vright[2] * scale - vup[2] * scale;
+	R_Mesh_Draw(4, 2);
 }
 
 void R_DrawCrosshair(void)

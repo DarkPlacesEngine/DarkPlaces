@@ -500,7 +500,7 @@ static void R_SetupFrame (void)
 
 static void R_BlendView(void)
 {
-	rmeshbufferinfo_t m;
+	rmeshstate_t m;
 	float r;
 
 	if (r_refdef.viewblend[3] < 0.01f)
@@ -509,32 +509,30 @@ static void R_BlendView(void)
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	m.wantoverbright = false;
 	m.depthdisable = true; // magic
-	m.numtriangles = 1;
-	m.numverts = 3;
 	Matrix4x4_CreateIdentity(&m.matrix);
-	if (R_Mesh_Draw_GetBuffer(&m, false))
-	{
-		m.index[0] = 0;
-		m.index[1] = 1;
-		m.index[2] = 2;
-		m.color[0] = m.color[4] = m.color[8] = r_refdef.viewblend[0];
-		m.color[1] = m.color[5] = m.color[9] = r_refdef.viewblend[1];
-		m.color[2] = m.color[6] = m.color[10] = r_refdef.viewblend[2];
-		m.color[3] = m.color[7] = m.color[11] = r_refdef.viewblend[3];
-		r = 64000;
-		m.vertex[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
-		m.vertex[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
-		m.vertex[2] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r - vup[2] * r;
-		r *= 3;
-		m.vertex[4] = m.vertex[0] + vup[0] * r;
-		m.vertex[5] = m.vertex[1] + vup[1] * r;
-		m.vertex[6] = m.vertex[2] + vup[2] * r;
-		m.vertex[8] = m.vertex[0] + vright[0] * r;
-		m.vertex[9] = m.vertex[1] + vright[1] * r;
-		m.vertex[10] = m.vertex[2] + vright[2] * r;
-		R_Mesh_Render();
-	}
+	R_Mesh_State(&m);
+
+	varray_element[0] = 0;
+	varray_element[1] = 1;
+	varray_element[2] = 2;
+	varray_color[0] = varray_color[4] = varray_color[8] = r_refdef.viewblend[0];
+	varray_color[1] = varray_color[5] = varray_color[9] = r_refdef.viewblend[1];
+	varray_color[2] = varray_color[6] = varray_color[10] = r_refdef.viewblend[2];
+	varray_color[3] = varray_color[7] = varray_color[11] = r_refdef.viewblend[3];
+	r = 64000;
+	varray_vertex[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
+	varray_vertex[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
+	varray_vertex[2] = r_origin[2] + vpn[2] * 1.5 - vright[2] * r - vup[2] * r;
+	r *= 3;
+	varray_vertex[4] = varray_vertex[0] + vup[0] * r;
+	varray_vertex[5] = varray_vertex[1] + vup[1] * r;
+	varray_vertex[6] = varray_vertex[2] + vup[2] * r;
+	varray_vertex[8] = varray_vertex[0] + vright[0] * r;
+	varray_vertex[9] = varray_vertex[1] + vright[1] * r;
+	varray_vertex[10] = varray_vertex[2] + vright[2] * r;
+	R_Mesh_Draw(3, 1);
 }
 
 /*
@@ -575,6 +573,14 @@ void R_RenderView (void)
 	if (R_DrawBrushModelsSky())
 		R_TimeReport("bmodelsky");
 
+	// must occur early because it can draw sky
+	R_DrawWorld(world);
+	R_TimeReport("world");
+
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
+
 	R_DrawModels();
 	R_TimeReport("models");
 
@@ -583,13 +589,6 @@ void R_RenderView (void)
 
 	R_DrawExplosions();
 	R_TimeReport("explosions");
-
-	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
-		S_ExtraUpdate ();
-
-	R_DrawWorld(world);
-	R_TimeReport("world");
 
 	R_MeshQueue_RenderTransparent();
 	R_TimeReport("drawtrans");
@@ -609,53 +608,54 @@ void R_RenderView (void)
 	R_TimeReport("meshfinish");
 }
 
+/*
 void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, float ca)
 {
 	int i;
 	float *v, *c, f1, f2, diff[3];
-	rmeshbufferinfo_t m;
-	m.numtriangles = 12;
-	m.numverts = 8;
+	rmeshstate_t m;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	m.wantoverbright = false;
 	Matrix4x4_CreateIdentity(&m.matrix);
-	if (R_Mesh_Draw_GetBuffer(&m, false))
+	R_Mesh_State(&m);
+
+	varray_element
+	varray_vertex[ 0] = mins[0];varray_vertex[ 1] = mins[1];varray_vertex[ 2] = mins[2];
+	varray_vertex[ 4] = maxs[0];varray_vertex[ 5] = mins[1];varray_vertex[ 6] = mins[2];
+	varray_vertex[ 8] = mins[0];varray_vertex[ 9] = maxs[1];varray_vertex[10] = mins[2];
+	varray_vertex[12] = maxs[0];varray_vertex[13] = maxs[1];varray_vertex[14] = mins[2];
+	varray_vertex[16] = mins[0];varray_vertex[17] = mins[1];varray_vertex[18] = maxs[2];
+	varray_vertex[20] = maxs[0];varray_vertex[21] = mins[1];varray_vertex[22] = maxs[2];
+	varray_vertex[24] = mins[0];varray_vertex[25] = maxs[1];varray_vertex[26] = maxs[2];
+	varray_vertex[28] = maxs[0];varray_vertex[29] = maxs[1];varray_vertex[30] = maxs[2];
+	varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = varray_color[16] = varray_color[20] = varray_color[24] = varray_color[28] = cr * mesh_colorscale;
+	varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = varray_color[17] = varray_color[21] = varray_color[25] = varray_color[29] = cg * mesh_colorscale;
+	varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = varray_color[18] = varray_color[22] = varray_color[26] = varray_color[30] = cb * mesh_colorscale;
+	varray_color[ 3] = varray_color[ 7] = varray_color[11] = varray_color[15] = varray_color[19] = varray_color[23] = varray_color[27] = varray_color[31] = ca;
+	if (fogenabled)
 	{
-		m.vertex[ 0] = mins[0];m.vertex[ 1] = mins[1];m.vertex[ 2] = mins[2];
-		m.vertex[ 4] = maxs[0];m.vertex[ 5] = mins[1];m.vertex[ 6] = mins[2];
-		m.vertex[ 8] = mins[0];m.vertex[ 9] = maxs[1];m.vertex[10] = mins[2];
-		m.vertex[12] = maxs[0];m.vertex[13] = maxs[1];m.vertex[14] = mins[2];
-		m.vertex[16] = mins[0];m.vertex[17] = mins[1];m.vertex[18] = maxs[2];
-		m.vertex[20] = maxs[0];m.vertex[21] = mins[1];m.vertex[22] = maxs[2];
-		m.vertex[24] = mins[0];m.vertex[25] = maxs[1];m.vertex[26] = maxs[2];
-		m.vertex[28] = maxs[0];m.vertex[29] = maxs[1];m.vertex[30] = maxs[2];
-		m.color[ 0] = m.color[ 4] = m.color[ 8] = m.color[12] = m.color[16] = m.color[20] = m.color[24] = m.color[28] = cr * m.colorscale;
-		m.color[ 1] = m.color[ 5] = m.color[ 9] = m.color[13] = m.color[17] = m.color[21] = m.color[25] = m.color[29] = cg * m.colorscale;
-		m.color[ 2] = m.color[ 6] = m.color[10] = m.color[14] = m.color[18] = m.color[22] = m.color[26] = m.color[30] = cb * m.colorscale;
-		m.color[ 3] = m.color[ 7] = m.color[11] = m.color[15] = m.color[19] = m.color[23] = m.color[27] = m.color[31] = ca;
-		if (fogenabled)
+		for (i = 0, v = varray_vertex, c = varray_color;i < 8;i++, v += 4, c += 4)
 		{
-			for (i = 0, v = m.vertex, c = m.color;i < m.numverts;i++, v += 4, c += 4)
-			{
-				VectorSubtract(v, r_origin, diff);
-				f2 = exp(fogdensity/DotProduct(diff, diff));
-				f1 = 1 - f2;
-				f2 *= m.colorscale;
-				c[0] = c[0] * f1 + fogcolor[0] * f2;
-				c[1] = c[1] * f1 + fogcolor[1] * f2;
-				c[2] = c[2] * f1 + fogcolor[2] * f2;
-			}
+			VectorSubtract(v, r_origin, diff);
+			f2 = exp(fogdensity/DotProduct(diff, diff));
+			f1 = 1 - f2;
+			f2 *= mesh_colorscale;
+			c[0] = c[0] * f1 + fogcolor[0] * f2;
+			c[1] = c[1] * f1 + fogcolor[1] * f2;
+			c[2] = c[2] * f1 + fogcolor[2] * f2;
 		}
-		R_Mesh_Render();
 	}
+	R_Mesh_Draw(8, 12);
 }
+*/
 
 void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	int i;
 	float f1, f2, *c, diff[3];
-	rmeshbufferinfo_t m;
+	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	if (ent->flags & EF_ADDITIVE)
 	{
@@ -672,54 +672,52 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.numtriangles = 8;
-	m.numverts = 6;
+	m.wantoverbright = false;
 	m.matrix = ent->matrix;
-	if (R_Mesh_Draw_GetBuffer(&m, false))
+	R_Mesh_State(&m);
+
+	varray_element[ 0] = 5;varray_element[ 1] = 2;varray_element[ 2] = 0;
+	varray_element[ 3] = 5;varray_element[ 4] = 1;varray_element[ 5] = 2;
+	varray_element[ 6] = 5;varray_element[ 7] = 0;varray_element[ 8] = 3;
+	varray_element[ 9] = 5;varray_element[10] = 3;varray_element[11] = 1;
+	varray_element[12] = 0;varray_element[13] = 2;varray_element[14] = 4;
+	varray_element[15] = 2;varray_element[16] = 1;varray_element[17] = 4;
+	varray_element[18] = 3;varray_element[19] = 0;varray_element[20] = 4;
+	varray_element[21] = 1;varray_element[22] = 3;varray_element[23] = 4;
+	varray_vertex[ 0] = -16;varray_vertex[ 1] =   0;varray_vertex[ 2] =   0;
+	varray_vertex[ 4] =  16;varray_vertex[ 5] =   0;varray_vertex[ 6] =   0;
+	varray_vertex[ 8] =   0;varray_vertex[ 9] = -16;varray_vertex[10] =   0;
+	varray_vertex[12] =   0;varray_vertex[13] =  16;varray_vertex[14] =   0;
+	varray_vertex[16] =   0;varray_vertex[17] =   0;varray_vertex[18] = -16;
+	varray_vertex[20] =   0;varray_vertex[21] =   0;varray_vertex[22] =  16;
+	varray_color[ 0] = 0.00f;varray_color[ 1] = 0.00f;varray_color[ 2] = 0.50f;varray_color[ 3] = ent->alpha;
+	varray_color[ 4] = 0.00f;varray_color[ 5] = 0.00f;varray_color[ 6] = 0.50f;varray_color[ 7] = ent->alpha;
+	varray_color[ 8] = 0.00f;varray_color[ 9] = 0.50f;varray_color[10] = 0.00f;varray_color[11] = ent->alpha;
+	varray_color[12] = 0.00f;varray_color[13] = 0.50f;varray_color[14] = 0.00f;varray_color[15] = ent->alpha;
+	varray_color[16] = 0.50f;varray_color[17] = 0.00f;varray_color[18] = 0.00f;varray_color[19] = ent->alpha;
+	varray_color[20] = 0.50f;varray_color[21] = 0.00f;varray_color[22] = 0.00f;varray_color[23] = ent->alpha;
+	if (fogenabled)
 	{
-		m.index[ 0] = 5;m.index[ 1] = 2;m.index[ 2] = 0;
-		m.index[ 3] = 5;m.index[ 4] = 1;m.index[ 5] = 2;
-		m.index[ 6] = 5;m.index[ 7] = 0;m.index[ 8] = 3;
-		m.index[ 9] = 5;m.index[10] = 3;m.index[11] = 1;
-		m.index[12] = 0;m.index[13] = 2;m.index[14] = 4;
-		m.index[15] = 2;m.index[16] = 1;m.index[17] = 4;
-		m.index[18] = 3;m.index[19] = 0;m.index[20] = 4;
-		m.index[21] = 1;m.index[22] = 3;m.index[23] = 4;
-		m.vertex[ 0] = -16;m.vertex[ 1] =   0;m.vertex[ 2] =   0;
-		m.vertex[ 4] =  16;m.vertex[ 5] =   0;m.vertex[ 6] =   0;
-		m.vertex[ 8] =   0;m.vertex[ 9] = -16;m.vertex[10] =   0;
-		m.vertex[12] =   0;m.vertex[13] =  16;m.vertex[14] =   0;
-		m.vertex[16] =   0;m.vertex[17] =   0;m.vertex[18] = -16;
-		m.vertex[20] =   0;m.vertex[21] =   0;m.vertex[22] =  16;
-		m.color[ 0] = 0.00f;m.color[ 1] = 0.00f;m.color[ 2] = 0.50f;m.color[ 3] = ent->alpha;
-		m.color[ 4] = 0.00f;m.color[ 5] = 0.00f;m.color[ 6] = 0.50f;m.color[ 7] = ent->alpha;
-		m.color[ 8] = 0.00f;m.color[ 9] = 0.50f;m.color[10] = 0.00f;m.color[11] = ent->alpha;
-		m.color[12] = 0.00f;m.color[13] = 0.50f;m.color[14] = 0.00f;m.color[15] = ent->alpha;
-		m.color[16] = 0.50f;m.color[17] = 0.00f;m.color[18] = 0.00f;m.color[19] = ent->alpha;
-		m.color[20] = 0.50f;m.color[21] = 0.00f;m.color[22] = 0.00f;m.color[23] = ent->alpha;
-		if (fogenabled)
+		VectorSubtract(ent->origin, r_origin, diff);
+		f2 = exp(fogdensity/DotProduct(diff, diff));
+		f1 = 1 - f2;
+		for (i = 0, c = varray_color;i < 6;i++, c += 4)
 		{
-			VectorSubtract(ent->origin, r_origin, diff);
-			f2 = exp(fogdensity/DotProduct(diff, diff));
-			f1 = 1 - f2;
-			for (i = 0, c = m.color;i < m.numverts;i++, c += 4)
-			{
-				c[0] = (c[0] * f1 + fogcolor[0] * f2) * m.colorscale;
-				c[1] = (c[1] * f1 + fogcolor[1] * f2) * m.colorscale;
-				c[2] = (c[2] * f1 + fogcolor[2] * f2) * m.colorscale;
-			}
+			c[0] = (c[0] * f1 + fogcolor[0] * f2) * mesh_colorscale;
+			c[1] = (c[1] * f1 + fogcolor[1] * f2) * mesh_colorscale;
+			c[2] = (c[2] * f1 + fogcolor[2] * f2) * mesh_colorscale;
 		}
-		else
-		{
-			for (i = 0, c = m.color;i < m.numverts;i++, c += 4)
-			{
-				c[0] *= m.colorscale;
-				c[1] *= m.colorscale;
-				c[2] *= m.colorscale;
-			}
-		}
-		R_Mesh_Render();
 	}
+	else
+	{
+		for (i = 0, c = varray_color;i < 6;i++, c += 4)
+		{
+			c[0] *= mesh_colorscale;
+			c[1] *= mesh_colorscale;
+			c[2] *= mesh_colorscale;
+		}
+	}
+	R_Mesh_Draw(6, 8);
 }
 
 void R_DrawNoModel(entity_render_t *ent)

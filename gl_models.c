@@ -244,7 +244,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	float fog;
 	vec3_t diff;
 	qbyte *bcolor;
-	rmeshbufferinfo_t m;
+	rmeshstate_t m;
 	model_t *model;
 	skinframe_t *skinframe;
 	const entity_render_t *ent = calldata1;
@@ -270,6 +270,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	}
 
 	model = ent->model;
+	R_Mesh_ResizeCheck(model->numverts, model->numtris);
 
 	skinframe = R_FetchSkinFrame(ent);
 
@@ -295,26 +296,21 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = blendfunc1;
 		m.blendfunc2 = blendfunc2;
-		m.numtriangles = model->numtris;
-		m.numverts = model->numverts;
+		m.wantoverbright = true;
 		m.tex[0] = R_GetTexture(r_notexture);
 		m.matrix = ent->matrix;
+		R_Mesh_State(&m);
 
-		c_alias_polys += m.numtriangles;
-		if (R_Mesh_Draw_GetBuffer(&m, true))
-		{
-			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-			for (i = 0;i < m.numverts * 2;i++)
-				m.texcoords[0][i] = model->mdlmd2data_texcoords[i] * 8.0f;
-
-			aliasvert = m.vertex;
-			aliasvertcolor = m.color;
-			R_SetupMDLMD2Frames(ent, m.colorscale, m.colorscale, m.colorscale);
-			aliasvert = aliasvertbuf;
-			aliasvertcolor = aliasvertcolorbuf;
-
-			R_Mesh_Render();
-		}
+		c_alias_polys += model->numtris;
+		memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+		for (i = 0;i < model->numverts * 2;i++)
+			varray_texcoord[0][i] = model->mdlmd2data_texcoords[i] * 8.0f;
+		aliasvert = varray_vertex;
+		aliasvertcolor = varray_color;
+		R_SetupMDLMD2Frames(ent, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+		aliasvert = aliasvertbuf;
+		aliasvertcolor = aliasvertcolorbuf;
+		R_Mesh_Draw(model->numverts, model->numtris);
 		return;
 	}
 
@@ -326,25 +322,20 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = blendfunc1;
 		m.blendfunc2 = blendfunc2;
-		m.numtriangles = model->numtris;
-		m.numverts = model->numverts;
+		m.wantoverbright = true;
 		m.tex[0] = R_GetTexture(skinframe->merged);
 		m.matrix = ent->matrix;
+		R_Mesh_State(&m);
 
-		c_alias_polys += m.numtriangles;
-		if (R_Mesh_Draw_GetBuffer(&m, true))
-		{
-			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
-
-			aliasvert = m.vertex;
-			aliasvertcolor = m.color;
-			R_SetupMDLMD2Frames(ent, m.colorscale, m.colorscale, m.colorscale);
-			aliasvert = aliasvertbuf;
-			aliasvertcolor = aliasvertcolorbuf;
-
-			R_Mesh_Render();
-		}
+		c_alias_polys += model->numtris;
+		memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+		aliasvert = varray_vertex;
+		aliasvertcolor = varray_color;
+		R_SetupMDLMD2Frames(ent, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+		aliasvert = aliasvertbuf;
+		aliasvertcolor = aliasvertcolorbuf;
+		R_Mesh_Draw(model->numverts, model->numtris);
 		return;
 	}
 
@@ -371,20 +362,21 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = blendfunc1;
 	m.blendfunc2 = blendfunc2;
-	m.numtriangles = model->numtris;
-	m.numverts = model->numverts;
+	m.wantoverbright = true;
 	m.matrix = ent->matrix;
 	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
-	if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
+	if (m.tex[0])
 	{
+		R_Mesh_State(&m);
+
 		blendfunc1 = GL_SRC_ALPHA;
 		blendfunc2 = GL_ONE;
-		c_alias_polys += m.numtriangles;
-		R_ModulateColors(aliasvertcolor, m.color, m.numverts, m.colorscale, m.colorscale, m.colorscale);
-		memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-		memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
-		memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
-		R_Mesh_Render();
+		c_alias_polys += model->numtris;
+		R_ModulateColors(aliasvertcolor, varray_color, model->numverts, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+		memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+		memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
+		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+		R_Mesh_Draw(model->numverts, model->numtris);
 	}
 
 	if (colormapped)
@@ -394,23 +386,24 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			memset(&m, 0, sizeof(m));
 			m.blendfunc1 = blendfunc1;
 			m.blendfunc2 = blendfunc2;
-			m.numtriangles = model->numtris;
-			m.numverts = model->numverts;
+			m.wantoverbright = true;
 			m.matrix = ent->matrix;
 			m.tex[0] = R_GetTexture(skinframe->pants);
-			if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
+			if (m.tex[0])
 			{
+				R_Mesh_State(&m);
+
 				blendfunc1 = GL_SRC_ALPHA;
 				blendfunc2 = GL_ONE;
-				c_alias_polys += m.numtriangles;
+				c_alias_polys += model->numtris;
 				if (pantsfullbright)
-					R_FillColors(m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale, ent->alpha);
+					R_FillColors(varray_color, model->numverts, pantscolor[0] * mesh_colorscale, pantscolor[1] * mesh_colorscale, pantscolor[2] * mesh_colorscale, ent->alpha);
 				else
-					R_ModulateColors(aliasvertcolor, m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale);
-				memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-				memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
-				memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
-				R_Mesh_Render();
+					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, pantscolor[0] * mesh_colorscale, pantscolor[1] * mesh_colorscale, pantscolor[2] * mesh_colorscale);
+				memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+				memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+				R_Mesh_Draw(model->numverts, model->numtris);
 			}
 		}
 		if (skinframe->shirt)
@@ -418,23 +411,24 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			memset(&m, 0, sizeof(m));
 			m.blendfunc1 = blendfunc1;
 			m.blendfunc2 = blendfunc2;
-			m.numtriangles = model->numtris;
-			m.numverts = model->numverts;
+			m.wantoverbright = true;
 			m.matrix = ent->matrix;
 			m.tex[0] = R_GetTexture(skinframe->shirt);
-			if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
+			if (m.tex[0])
 			{
+				R_Mesh_State(&m);
+
 				blendfunc1 = GL_SRC_ALPHA;
 				blendfunc2 = GL_ONE;
-				c_alias_polys += m.numtriangles;
+				c_alias_polys += model->numtris;
 				if (shirtfullbright)
-					R_FillColors(m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale, ent->alpha);
+					R_FillColors(varray_color, model->numverts, shirtcolor[0] * mesh_colorscale, shirtcolor[1] * mesh_colorscale, shirtcolor[2] * mesh_colorscale, ent->alpha);
 				else
-					R_ModulateColors(aliasvertcolor, m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale);
-				memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-				memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
-				memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
-				R_Mesh_Render();
+					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, shirtcolor[0] * mesh_colorscale, shirtcolor[1] * mesh_colorscale, shirtcolor[2] * mesh_colorscale);
+				memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+				memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+				R_Mesh_Draw(model->numverts, model->numtris);
 			}
 		}
 	}
@@ -443,20 +437,21 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = blendfunc1;
 		m.blendfunc2 = blendfunc2;
-		m.numtriangles = model->numtris;
-		m.numverts = model->numverts;
+		m.wantoverbright = true;
 		m.matrix = ent->matrix;
 		m.tex[0] = R_GetTexture(skinframe->glow);
-		if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
+		if (m.tex[0])
 		{
+			R_Mesh_State(&m);
+
 			blendfunc1 = GL_SRC_ALPHA;
 			blendfunc2 = GL_ONE;
-			c_alias_polys += m.numtriangles;
-			R_FillColors(m.color, m.numverts, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, ent->alpha);
-			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
-			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
-			R_Mesh_Render();
+			c_alias_polys += model->numtris;
+			R_FillColors(varray_color, model->numverts, (1 - fog) * mesh_colorscale, (1 - fog) * mesh_colorscale, (1 - fog) * mesh_colorscale, ent->alpha);
+			memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+			memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
+			memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+			R_Mesh_Draw(model->numverts, model->numtris);
 		}
 	}
 	if (fog)
@@ -464,19 +459,17 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
-		m.numtriangles = model->numtris;
-		m.numverts = model->numverts;
+		m.wantoverbright = false;
 		m.matrix = ent->matrix;
 		m.tex[0] = R_GetTexture(skinframe->fog);
-		if (R_Mesh_Draw_GetBuffer(&m, true))
-		{
-			c_alias_polys += m.numtriangles;
-			R_FillColors(m.color, m.numverts, fogcolor[0] * fog * m.colorscale, fogcolor[1] * fog * m.colorscale, fogcolor[2] * fog * m.colorscale, ent->alpha);
-			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
-			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
-			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
-			R_Mesh_Render();
-		}
+		R_Mesh_State(&m);
+
+		c_alias_polys += model->numtris;
+		R_FillColors(varray_color, model->numverts, fogcolor[0] * fog * mesh_colorscale, fogcolor[1] * fog * mesh_colorscale, fogcolor[2] * fog * mesh_colorscale, ent->alpha);
+		memcpy(varray_element, model->mdlmd2data_indices, model->numtris * sizeof(int[3]));
+		memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
+		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+		R_Mesh_Draw(model->numverts, model->numtris);
 	}
 }
 
@@ -762,9 +755,10 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	int i, *renderlist;
 	zymtype1header_t *m;
 	rtexture_t *texture;
-	rmeshbufferinfo_t mbuf;
+	rmeshstate_t mstate;
 	const entity_render_t *ent = calldata1;
 	int shadernum = calldata2;
+	int numverts, numtriangles;
 
 	// find the vertex index list and texture
 	m = ent->model->zymdata_header;
@@ -772,6 +766,10 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	for (i = 0;i < shadernum;i++)
 		renderlist += renderlist[0] * 3 + 1;
 	texture = ((rtexture_t **)(m->lump_shaders.start + (int) m))[shadernum];
+
+	numverts = m->numverts;
+	numtriangles = renderlist[0];
+	R_Mesh_ResizeCheck(numverts, numtriangles);
 
 	fog = 0;
 	if (fogenabled)
@@ -791,61 +789,56 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	}
 
 	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), ent->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m));
-	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
-	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
+	ZymoticTransformVerts(numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
+	ZymoticCalcNormals(numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
-	R_LightModel(ent, m->numverts, 1 - fog, 1 - fog, 1 - fog, false);
+	R_LightModel(ent, numverts, 1 - fog, 1 - fog, 1 - fog, false);
 
-	memset(&mbuf, 0, sizeof(mbuf));
-	mbuf.numverts = m->numverts;
-	mbuf.numtriangles = renderlist[0];
+	memset(&mstate, 0, sizeof(mstate));
+	mstate.wantoverbright = true;
 	if (ent->effects & EF_ADDITIVE)
 	{
-		mbuf.blendfunc1 = GL_SRC_ALPHA;
-		mbuf.blendfunc2 = GL_ONE;
+		mstate.blendfunc1 = GL_SRC_ALPHA;
+		mstate.blendfunc2 = GL_ONE;
 	}
 	else if (ent->alpha != 1.0 || R_TextureHasAlpha(texture))
 	{
-		mbuf.blendfunc1 = GL_SRC_ALPHA;
-		mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		mstate.blendfunc1 = GL_SRC_ALPHA;
+		mstate.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	}
 	else
 	{
-		mbuf.blendfunc1 = GL_ONE;
-		mbuf.blendfunc2 = GL_ZERO;
+		mstate.blendfunc1 = GL_ONE;
+		mstate.blendfunc2 = GL_ZERO;
 	}
-	mbuf.tex[0] = R_GetTexture(texture);
-	mbuf.matrix = ent->matrix;
-	if (R_Mesh_Draw_GetBuffer(&mbuf, true))
-	{
-		c_alias_polys += mbuf.numtriangles;
-		memcpy(mbuf.index, renderlist + 1, mbuf.numtriangles * sizeof(int[3]));
-		memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
-		R_ModulateColors(aliasvertcolor, mbuf.color, mbuf.numverts, mbuf.colorscale, mbuf.colorscale, mbuf.colorscale);
-		//memcpy(mbuf.color, aliasvertcolor, mbuf.numverts * sizeof(float[4]));
-		memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
-		R_Mesh_Render();
-	}
+	mstate.tex[0] = R_GetTexture(texture);
+	mstate.matrix = ent->matrix;
+	R_Mesh_State(&mstate);
+
+	c_alias_polys += numtriangles;
+	memcpy(varray_element, renderlist + 1, numtriangles * sizeof(int[3]));
+	memcpy(varray_vertex, aliasvert, numverts * sizeof(float[4]));
+	R_ModulateColors(aliasvertcolor, varray_color, numverts, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+	memcpy(varray_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
+	R_Mesh_Draw(numverts, numtriangles);
 
 	if (fog)
 	{
-		memset(&mbuf, 0, sizeof(mbuf));
-		mbuf.numverts = m->numverts;
-		mbuf.numtriangles = renderlist[0];
-		mbuf.blendfunc1 = GL_SRC_ALPHA;
-		mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		memset(&mstate, 0, sizeof(mstate));
+		mstate.wantoverbright = false;
+		mstate.blendfunc1 = GL_SRC_ALPHA;
+		mstate.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		// FIXME: need alpha mask for fogging...
-		//mbuf.tex[0] = R_GetTexture(texture);
-		mbuf.matrix = ent->matrix;
-		if (R_Mesh_Draw_GetBuffer(&mbuf, false))
-		{
-			c_alias_polys += mbuf.numtriangles;
-			memcpy(mbuf.index, renderlist + 1, mbuf.numtriangles * sizeof(int[3]));
-			memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
-			R_FillColors(mbuf.color, mbuf.numverts, fogcolor[0] * mbuf.colorscale, fogcolor[1] * mbuf.colorscale, fogcolor[2] * mbuf.colorscale, ent->alpha * fog);
-			//memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
-			R_Mesh_Render();
-		}
+		//mstate.tex[0] = R_GetTexture(texture);
+		mstate.matrix = ent->matrix;
+		R_Mesh_State(&mstate);
+
+		c_alias_polys += numtriangles;
+		memcpy(varray_element, renderlist + 1, numtriangles * sizeof(int[3]));
+		memcpy(varray_vertex, aliasvert, numverts * sizeof(float[4]));
+		R_FillColors(varray_color, numverts, fogcolor[0] * mesh_colorscale, fogcolor[1] * mesh_colorscale, fogcolor[2] * mesh_colorscale, ent->alpha * fog);
+		//memcpy(mesh_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
+		R_Mesh_Draw(numverts, numtriangles);
 	}
 }
 
@@ -867,7 +860,7 @@ void R_DrawZymoticModel (entity_render_t *ent)
 		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_TextureHasAlpha(texture))
 			R_MeshQueue_AddTransparent(ent->origin, R_DrawZymoticModelMeshCallback, ent, i);
 		else
-			R_MeshQueue_Add(R_DrawZymoticModelMeshCallback, ent, i);
+			R_DrawZymoticModelMeshCallback(ent, i);
 	}
 }
 
@@ -881,6 +874,6 @@ void R_DrawQ1Q2AliasModel(entity_render_t *ent)
 	if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchSkinFrame(ent)->fog != NULL)
 		R_MeshQueue_AddTransparent(ent->origin, R_DrawQ1Q2AliasModelCallback, ent, 0);
 	else
-		R_MeshQueue_Add(R_DrawQ1Q2AliasModelCallback, ent, 0);
+		R_DrawQ1Q2AliasModelCallback(ent, 0);
 }
 
