@@ -168,7 +168,8 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	// all models use memory, so allocate a memory pool
 	mod->mempool = Mem_AllocPool(mod->name);
 	// all models load textures, so allocate a texture pool
-	mod->texturepool = R_AllocTexturePool();
+	if (cls.state != ca_dedicated)
+		mod->texturepool = R_AllocTexturePool();
 
 	// call the apropriate loader
 	     if (!memcmp(buf, "IDPO"    , 4)) Mod_LoadAliasModel  (mod, buf);
