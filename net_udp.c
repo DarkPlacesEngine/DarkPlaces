@@ -78,10 +78,6 @@ int UDP_Init (void)
 	net_controlsocket = -1;
 	for (j = 0;net_controlsocket == -1;j++)
 	{
-		myAddr.d[0] = 127;
-		myAddr.d[1] = 0;
-		myAddr.d[2] = 0;
-		myAddr.d[3] = 1;
 		switch(j)
 		{
 		case 0:
@@ -98,7 +94,11 @@ int UDP_Init (void)
 				local = gethostbyname(buff);
 				if (local != NULL)
 					myAddr.i = *((int *)local->h_addr_list[0]);
+				else
+					continue;
 			}
+			else
+				continue;
 			break;
 		default:
 			Con_Printf("UDP_Init: Giving up, UDP networking support disabled.\n");
@@ -108,20 +108,19 @@ int UDP_Init (void)
 			return -1;
 		}
 
-		if (myAddr.i != htonl(INADDR_LOOPBACK))
-		{
-			if (myAddr.i == htonl(INADDR_LOOPBACK))
-				sprintf(my_tcpip_address, "INADDR_LOOPBACK");
-			else if (myAddr.i == htonl(INADDR_ANY))
-				sprintf(my_tcpip_address, "INADDR_ANY");
-			else
-				sprintf(my_tcpip_address, "%d.%d.%d.%d", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
-			Con_Printf("UDP_Init: Binding to IP Interface Address of %s...  ", my_tcpip_address);
-			if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
-				Con_Printf("failed\n");
-			else
-				Con_Printf("succeeded\n");
-		}
+		if (myAddr.i == htonl(INADDR_LOOPBACK))
+			sprintf(my_tcpip_address, "INADDR_LOOPBACK");
+		else if (myAddr.i == htonl(INADDR_ANY))
+			sprintf(my_tcpip_address, "INADDR_ANY");
+		else if (myAddr.i == htonl(INADDR_NONE))
+			sprintf(my_tcpip_address, "INADDR_NONE");
+		else
+			sprintf(my_tcpip_address, "%d.%d.%d.%d", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
+		Con_Printf("UDP_Init: Binding to IP Interface Address of %s...  ", my_tcpip_address);
+		if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
+			Con_Printf("failed\n");
+		else
+			Con_Printf("succeeded\n");
 	}
 
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
