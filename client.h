@@ -161,6 +161,7 @@ typedef struct
 	vec3_t		velocity;		// lerped between mvelocity[0] and [1]
 
 	vec3_t		punchangle;		// temporary offset
+	vec3_t		punchvector;	// LordHavoc: origin view kick
 	
 // pitch drifting vars
 	float		idealpitch;
@@ -185,6 +186,8 @@ typedef struct
 								// a lerp point for other data
 	double		oldtime;		// previous cl.time, time-oldtime is used
 								// to decay light values and smooth step ups
+
+	double		frametime;
 	
 
 	float		last_received_message;	// (realtime) for net trouble icon
@@ -249,8 +252,9 @@ extern	cvar_t	m_forward;
 extern	cvar_t	m_side;
 
 
-#define	MAX_TEMP_ENTITIES	64			// lightning bolts, etc
-#define	MAX_STATIC_ENTITIES	128			// torches, etc
+// LordHavoc: raised these from 64 and 128 to 512 and 256
+#define	MAX_TEMP_ENTITIES	512			// lightning bolts, effects, etc
+#define	MAX_STATIC_ENTITIES	256			// torches, etc
 
 extern	client_state_t	cl;
 
@@ -283,7 +287,8 @@ void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 void CL_NextDemo (void);
 
-#define			MAX_VISEDICTS	256
+// LordHavoc: raised this from 256 to the maximum possible number of entities visible
+#define			MAX_VISEDICTS	(MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
 extern	int				cl_numvisedicts;
 extern	entity_t		*cl_visedicts[MAX_VISEDICTS];
 
@@ -306,6 +311,11 @@ void CL_SendMove (usercmd_t *cmd);
 
 void CL_ParseTEnt (void);
 void CL_UpdateTEnts (void);
+void CL_DoEffects (void);
+
+entity_t *CL_NewTempEntity (void);
+
+void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
 
 void CL_ClearState (void);
 

@@ -23,12 +23,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal);
 
 #define MAX_EXPLOSIONS 64
-#define EXPLOSIONBANDS 16
-#define EXPLOSIONSEGMENTS 16
-#define EXPLOSIONVERTS ((EXPLOSIONBANDS+1)*(EXPLOSIONSEGMENTS+1))
+#define EXPLOSIONGRID 16
+#define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONVERTS*2)
 #define EXPLOSIONSTARTRADIUS (0.0f)
-#define EXPLOSIONSTARTVELOCITY (400.0f)
+#define EXPLOSIONSTARTVELOCITY (500.0f)
 #define EXPLOSIONFADESTART (1.5f)
 #define EXPLOSIONFADERATE (6.0f)
 
@@ -36,10 +35,12 @@ vec3_t explosionspherevert[EXPLOSIONVERTS];
 vec3_t explosionspherevertvel[EXPLOSIONVERTS];
 float explosiontexcoords[EXPLOSIONVERTS][2];
 int explosiontris[EXPLOSIONTRIS][3];
+int explosionnoiseindex[EXPLOSIONVERTS];
 vec3_t explosionpoint[EXPLOSIONVERTS];
 
 typedef struct explosion_s
 {
+	float starttime;
 	float alpha;
 	vec3_t vert[EXPLOSIONVERTS];
 	vec3_t vertvel[EXPLOSIONVERTS];
@@ -48,8 +49,8 @@ explosion_t;
 
 explosion_t explosion[128];
 
-int		explosiontexture;
-int		explosiontexturefog;
+rtexture_t	*explosiontexture;
+rtexture_t	*explosiontexturefog;
 
 cvar_t r_explosionclip = {"r_explosionclip", "0"};
 
@@ -57,15 +58,16 @@ int R_ExplosionVert(int column, int row)
 {
 	int i;
 	float a, b, c;
-	i = row * (EXPLOSIONSEGMENTS + 1) + column;
-	a = row * M_PI * 2 / EXPLOSIONBANDS;
-	b = column * M_PI * 2 / EXPLOSIONSEGMENTS;
+	i = row * (EXPLOSIONGRID + 1) + column;
+	a = row * M_PI * 2 / EXPLOSIONGRID;
+	b = column * M_PI * 2 / EXPLOSIONGRID;
 	c = cos(b);
 	explosionpoint[i][0] = cos(a) * c;
 	explosionpoint[i][1] = sin(a) * c;
 	explosionpoint[i][2] = -sin(b);
-	explosiontexcoords[i][0] = (float) column / (float) EXPLOSIONSEGMENTS;
-	explosiontexcoords[i][1] = (float) row / (float) EXPLOSIONBANDS;
+	explosionnoiseindex[i] = (row & (EXPLOSIONGRID - 1)) * EXPLOSIONGRID + (column & (EXPLOSIONGRID - 1));
+	explosiontexcoords[i][0] = (float) column / (float) EXPLOSIONGRID;
+	explosiontexcoords[i][1] = (float) row / (float) EXPLOSIONGRID;
 	return i;
 }
 
@@ -73,8 +75,8 @@ void r_explosion_start()
 {
 	int x, y;
 	byte noise1[128][128], noise2[128][128], data[128][128][4];
-	fractalnoise(&noise1[0][0], 128, 8);
-	fractalnoise(&noise2[0][0], 128, 8);
+	fractalnoise(&noise1[0][0], 128, 2);
+	fractalnoise(&noise2[0][0], 128, 2);
 	for (y = 0;y < 128;y++)
 	{
 		for (x = 0;x < 128;x++)
@@ -91,11 +93,11 @@ void r_explosion_start()
 			data[y][x][3] = bound(0, a, 255);
 		}
 	}
-	explosiontexture = GL_LoadTexture ("explosiontexture", 128, 128, &data[0][0][0], true, true, 4);
+	explosiontexture = R_LoadTexture ("explosiontexture", 128, 128, &data[0][0][0], TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 	for (y = 0;y < 128;y++)
 		for (x = 0;x < 128;x++)
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-	explosiontexturefog = GL_LoadTexture ("explosiontexturefog", 128, 128, &data[0][0][0], true, true, 4);
+	explosiontexturefog = R_LoadTexture ("explosiontexturefog", 128, 128, &data[0][0][0], TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 
 void r_explosion_shutdown()
@@ -106,9 +108,9 @@ void R_Explosion_Init()
 {
 	int i, x, y;
 	i = 0;
-	for (y = 0;y < EXPLOSIONBANDS;y++)
+	for (y = 0;y < EXPLOSIONGRID;y++)
 	{
-		for (x = 0;x < EXPLOSIONSEGMENTS;x++)
+		for (x = 0;x < EXPLOSIONGRID;x++)
 		{
 			explosiontris[i][0] = R_ExplosionVert(x    , y    );
 			explosiontris[i][1] = R_ExplosionVert(x + 1, y    );
@@ -138,6 +140,9 @@ void R_Explosion_Init()
 void R_NewExplosion(vec3_t org)
 {
 	int i, j;
+	float dist;
+	byte noise[EXPLOSIONGRID*EXPLOSIONGRID];
+	fractalnoise(noise, EXPLOSIONGRID, 2);
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
 		if (explosion[i].alpha <= 0.0f)
@@ -145,12 +150,13 @@ void R_NewExplosion(vec3_t org)
 			explosion[i].alpha = EXPLOSIONFADESTART;
 			for (j = 0;j < EXPLOSIONVERTS;j++)
 			{
-				explosion[i].vert[j][0] = explosionspherevert[j][0] + org[0];
-				explosion[i].vert[j][1] = explosionspherevert[j][1] + org[1];
-				explosion[i].vert[j][2] = explosionspherevert[j][2] + org[2];
-				explosion[i].vertvel[j][0] = explosionspherevertvel[j][0];
-				explosion[i].vertvel[j][1] = explosionspherevertvel[j][1];
-				explosion[i].vertvel[j][2] = explosionspherevertvel[j][2];
+				dist = noise[explosionnoiseindex[j]] * (1.0f / 512.0f) + 0.5;
+				explosion[i].vert[j][0] = explosionspherevert[j][0] * dist + org[0];
+				explosion[i].vert[j][1] = explosionspherevert[j][1] * dist + org[1];
+				explosion[i].vert[j][2] = explosionspherevert[j][2] * dist + org[2];
+				explosion[i].vertvel[j][0] = explosionspherevertvel[j][0] * dist;
+				explosion[i].vertvel[j][1] = explosionspherevertvel[j][1] * dist;
+				explosion[i].vertvel[j][2] = explosionspherevertvel[j][2] * dist;
 			}
 			break;
 		}
@@ -159,40 +165,32 @@ void R_NewExplosion(vec3_t org)
 
 void R_DrawExplosion(explosion_t *e)
 {
-	int i, index, *indexlist = &explosiontris[0][0], alpha = bound(0, e->alpha * 255.0f, 255);
-	float s = cl.time * 1, t = cl.time * 0.75;
-	s -= (int) s;
-	t -= (int) t;
+	int i, index, *indexlist = &explosiontris[0][0], alpha = bound(0, e->alpha * 128.0f, 128), texnum, fogtexnum;
+	float s, t;
+//	s = cl.time * 1;
+//	t = cl.time * 0.75;
+//	s -= (int) s;
+//	t -= (int) t;
+	s = 0;
+	t = 0;
 	/*
 	glColor4f(1,1,1,e->alpha);
 	glDisable(GL_TEXTURE_2D);
 //	glBindTexture(GL_TEXTURE_2D, explosiontexture);
-	if (gl_vertexarrays.value)
-	{
-		qglVertexPointer(3, GL_FLOAT, 0, (float *) &e->vert[0][0]);
-//		qglTexCoordPointer(2, GL_FLOAT, 0, (float *) &explosiontexcoords[0][0]);
-		glEnableClientState(GL_VERTEX_ARRAY);
-//		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		qglDrawElements(GL_TRIANGLES, EXPLOSIONTRIS, GL_UNSIGNED_INT, indexlist);
-//		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}
-	else
-	{
-		glBegin(GL_TRIANGLES);
-		for (i = 0;i < EXPLOSIONTRIS * 3;i++)
-		{
-			index = *indexlist++;
-//			glTexCoord2fv(explosiontexcoords[index]);
-			glVertex3fv(e->vert[index]);
-		}
-		glEnd();
-	}
+	glVertexPointer(3, GL_FLOAT, 0, (float *) &e->vert[0][0]);
+//	glTexCoordPointer(2, GL_FLOAT, 0, (float *) &explosiontexcoords[0][0]);
+	glEnableClientState(GL_VERTEX_ARRAY);
+//	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDrawElements(GL_TRIANGLES, EXPLOSIONTRIS, GL_UNSIGNED_INT, indexlist);
+//	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
 	glEnable(GL_TEXTURE_2D);
 	*/
+	texnum = R_GetTexture(explosiontexture);
+	fogtexnum = R_GetTexture(explosiontexturefog);
 	for (i = 0;i < EXPLOSIONTRIS;i++)
 	{
-		transpolybegin(explosiontexture, 0, explosiontexturefog, TPOLYTYPE_ALPHA);
+		transpolybegin(texnum, 0, fogtexnum, TPOLYTYPE_ALPHA);
 		index = *indexlist++;transpolyvert(e->vert[index][0], e->vert[index][1], e->vert[index][2], explosiontexcoords[index][0] + s, explosiontexcoords[index][1] + t, 255, 255, 255, alpha);
 		index = *indexlist++;transpolyvert(e->vert[index][0], e->vert[index][1], e->vert[index][2], explosiontexcoords[index][0] + s, explosiontexcoords[index][1] + t, 255, 255, 255, alpha);
 		index = *indexlist++;transpolyvert(e->vert[index][0], e->vert[index][1], e->vert[index][2], explosiontexcoords[index][0] + s, explosiontexcoords[index][1] + t, 255, 255, 255, alpha);
@@ -244,6 +242,11 @@ void R_MoveExplosions()
 	{
 		if (explosion[i].alpha > 0.0f)
 		{
+			if (explosion[i].starttime > cl.time)
+			{
+				explosion[i].alpha = 0;
+				continue;
+			}
 			R_MoveExplosion(&explosion[i], frametime);
 		}
 	}

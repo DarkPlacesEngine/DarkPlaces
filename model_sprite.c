@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+cvar_t r_mipsprites = {"r_mipsprites", "1", true};
+
 /*
 ===============
 Mod_SpriteInit
@@ -31,6 +33,7 @@ Mod_SpriteInit
 */
 void Mod_SpriteInit (void)
 {
+	Cvar_RegisterVariable(&r_mipsprites);
 }
 
 void Mod_Sprite_StripExtension(char *in, char *out)
@@ -53,7 +56,7 @@ void Mod_Sprite_StripExtension(char *in, char *out)
 Mod_LoadSpriteFrame
 =================
 */
-void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, int bytesperpixel)
+void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t *frame, int framenum, int bytesperpixel)
 {
 	dspriteframe_t		*pinframe;
 	mspriteframe_t		*pspriteframe;
@@ -67,14 +70,12 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 	height = LittleLong (pinframe->height);
 	size = width * height * bytesperpixel;
 
-	pspriteframe = Hunk_AllocName (sizeof (mspriteframe_t), va("%s frames", loadname));
+	pspriteframe = frame;
 
 	memset (pspriteframe, 0, sizeof (mspriteframe_t));
 
-	*ppframe = pspriteframe;
-
-	pspriteframe->width = width;
-	pspriteframe->height = height;
+//	pspriteframe->width = width;
+//	pspriteframe->height = height;
 	origin[0] = LittleLong (pinframe->origin[0]);
 	origin[1] = LittleLong (pinframe->origin[1]);
 
@@ -85,11 +86,11 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 
 	Mod_Sprite_StripExtension(loadmodel->name, tempname);
 	sprintf (name, "%s_%i", tempname, framenum);
-	pspriteframe->gl_texturenum = loadtextureimagewithmask(name, 0, 0, false, true);
-	pspriteframe->gl_fogtexturenum = image_masktexnum;
-	if (pspriteframe->gl_texturenum == 0)
+	pspriteframe->texture = loadtextureimagewithmask(name, 0, 0, false, r_mipsprites.value, true);
+	pspriteframe->fogtexture = image_masktex;
+	if (!pspriteframe->texture)
 	{
-		pspriteframe->gl_texturenum = GL_LoadTexture (name, width, height, (byte *)(pinframe + 1), true, true, bytesperpixel);
+		pspriteframe->texture = R_LoadTexture (name, width, height, (byte *)(pinframe + 1), TEXF_ALPHA | (bytesperpixel > 1 ? TEXF_RGBA : 0) | (r_mipsprites.value ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
 		// make fog version (just alpha)
 		pixbuf = pixel = qmalloc(width*height*4);
 		inpixel = (byte *)(pinframe + 1);
@@ -119,7 +120,7 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 			}
 		}
 		sprintf (name, "%s_%ifog", loadmodel->name, framenum);
-		pspriteframe->gl_fogtexturenum = GL_LoadTexture (name, width, height, pixbuf, true, true, 4);
+		pspriteframe->fogtexture = R_LoadTexture (name, width, height, pixbuf, TEXF_ALPHA | TEXF_RGBA | (r_mipsprites.value ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
 		qfree(pixbuf);
 	}
 
@@ -132,45 +133,15 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 Mod_LoadSpriteGroup
 =================
 */
-void * Mod_LoadSpriteGroup (void * pin, mspriteframe_t **ppframe, int framenum, int bytesperpixel)
+void *Mod_LoadSpriteGroup (void * pin, mspriteframe_t *frame, int numframes, int framenum, int bytesperpixel)
 {
-	dspritegroup_t		*pingroup;
-	mspritegroup_t		*pspritegroup;
-	int					i, numframes;
-	dspriteinterval_t	*pin_intervals;
-	float				*poutintervals;
-	void				*ptemp;
+	int i;
+	void *ptemp;
 
-	pingroup = (dspritegroup_t *)pin;
+	ptemp = (void *)(sizeof(dspriteinterval_t) * numframes + sizeof(dspritegroup_t) + (int) pin);
 
-	numframes = LittleLong (pingroup->numframes);
-
-	pspritegroup = Hunk_AllocName (sizeof (mspritegroup_t) + (numframes - 1) * sizeof (pspritegroup->frames[0]), va("%s frames", loadname));
-
-	pspritegroup->numframes = numframes;
-
-	*ppframe = (mspriteframe_t *)pspritegroup;
-
-	pin_intervals = (dspriteinterval_t *)(pingroup + 1);
-
-	poutintervals = Hunk_AllocName (numframes * sizeof (float), va("%s frames", loadname));
-
-	pspritegroup->intervals = poutintervals;
-
-	for (i=0 ; i<numframes ; i++)
-	{
-		*poutintervals = LittleFloat (pin_intervals->interval);
-		if (*poutintervals <= 0.0)
-			Host_Error ("Mod_LoadSpriteGroup: interval<=0");
-
-		poutintervals++;
-		pin_intervals++;
-	}
-
-	ptemp = (void *)pin_intervals;
-
-	for (i=0 ; i<numframes ; i++)
-		ptemp = Mod_LoadSpriteFrame (ptemp, &pspritegroup->frames[i], framenum * 100 + i, bytesperpixel);
+	for (i = 0;i < numframes;i++)
+		ptemp = Mod_LoadSpriteFrame (ptemp, frame++, framenum * 100 + i, bytesperpixel);
 
 	return ptemp;
 }
@@ -183,15 +154,16 @@ Mod_LoadSpriteModel
 */
 void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 {
-	int					i;
-	int					version;
+	int					i, j, version, numframes, realframes, size, bytesperpixel, start, end, total, maxwidth, maxheight;
 	dsprite_t			*pin;
 	msprite_t			*psprite;
-	int					numframes;
-	int					size;
 	dspriteframetype_t	*pframetype;
-	// LordHavoc: 32bit textures
-	int		bytesperpixel;
+	dspriteframe_t		*pframe;
+	animscene_t			*animscenes;
+	mspriteframe_t		*frames;
+	dspriteframe_t		**framedata;
+
+	start = Hunk_LowMark ();
 
 	mod->flags = EF_FULLBRIGHT;
 	// LordHavoc: hack to allow sprites to be non-fullbright
@@ -204,6 +176,9 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 		}
 	}
 
+	// build a list of frames while parsing
+	framedata = qmalloc(65536*sizeof(dspriteframe_t));
+
 	pin = (dsprite_t *)buffer;
 
 	version = LittleLong (pin->version);
@@ -214,31 +189,28 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	}
 	// LordHavoc: 32bit textures
 	if (version != SPRITE_VERSION && version != SPRITE32_VERSION)
-		Host_Error ("%s has wrong version number "
-				 "(%i should be %i or %i)", mod->name, version, SPRITE_VERSION, SPRITE32_VERSION);
+		Host_Error ("%s has wrong version number (%i should be %i or %i)", mod->name, version, SPRITE_VERSION, SPRITE32_VERSION);
 	bytesperpixel = 1;
 	if (version == SPRITE32_VERSION)
 		bytesperpixel = 4;
 
 	numframes = LittleLong (pin->numframes);
 
-	size = sizeof (msprite_t) +	(numframes - 1) * sizeof (psprite->frames);
+	psprite = Hunk_AllocName (sizeof(msprite_t), va("%s info", loadname));
 
-	psprite = Hunk_AllocName (size, va("%s info", loadname));
-
-	mod->cache.data = psprite;
+//	mod->cache.data = psprite;
 
 	psprite->type = LittleLong (pin->type);
-	psprite->maxwidth = LittleLong (pin->width);
-	psprite->maxheight = LittleLong (pin->height);
-	psprite->beamlength = LittleFloat (pin->beamlength);
+	maxwidth = LittleLong (pin->width);
+	maxheight = LittleLong (pin->height);
+//	psprite->beamlength = LittleFloat (pin->beamlength);
 	mod->synctype = LittleLong (pin->synctype);
-	psprite->numframes = numframes;
+//	psprite->numframes = numframes;
 
-	mod->mins[0] = mod->mins[1] = -psprite->maxwidth/2;
-	mod->maxs[0] = mod->maxs[1] = psprite->maxwidth/2;
-	mod->mins[2] = -psprite->maxheight/2;
-	mod->maxs[2] = psprite->maxheight/2;
+	mod->mins[0] = mod->mins[1] = -maxwidth/2;
+	mod->maxs[0] = mod->maxs[1] = maxwidth/2;
+	mod->mins[2] = -maxheight/2;
+	mod->maxs[2] = maxheight/2;
 	
 //
 // load the frames
@@ -250,18 +222,75 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 
 	pframetype = (dspriteframetype_t *)(pin + 1);
 
-	for (i=0 ; i<numframes ; i++)
+	animscenes = Hunk_AllocName(sizeof(animscene_t) * mod->numframes, va("%s sceneinfo", loadname));
+
+	realframes = 0;
+
+	for (i = 0;i < numframes;i++)
 	{
 		spriteframetype_t	frametype;
 
 		frametype = LittleLong (pframetype->type);
-		psprite->frames[i].type = frametype;
 
+		sprintf(animscenes[i].name, "frame%i", i);
+		animscenes[i].firstframe = realframes;
+		animscenes[i].loop = true;
 		if (frametype == SPR_SINGLE)
-			pframetype = (dspriteframetype_t *) Mod_LoadSpriteFrame (pframetype + 1, &psprite->frames[i].frameptr, i, bytesperpixel);
+		{
+			animscenes[i].framecount = 1;
+			animscenes[i].framerate = 10;
+			pframe = (dspriteframe_t *) (pframetype + 1);
+			framedata[realframes] = pframe;
+			size = LittleLong(pframe->width) * LittleLong(pframe->height) * bytesperpixel;
+			pframetype = (dspriteframetype_t *) (size + sizeof(dspriteframe_t) + (int) pframe);
+			realframes++;
+		}
 		else
-			pframetype = (dspriteframetype_t *) Mod_LoadSpriteGroup (pframetype + 1, &psprite->frames[i].frameptr, i, bytesperpixel);
+		{
+			j = LittleLong(((dspritegroup_t *) (sizeof(dspriteframetype_t) + (int) pframetype))->numframes);
+			animscenes[i].framecount = j;
+			// FIXME: support variable framerate?
+			animscenes[i].framerate = 1.0f / LittleFloat(((dspriteinterval_t *) (sizeof(dspritegroup_t) + sizeof(dspriteframetype_t) + (int) pframetype))->interval);
+			pframe = (dspriteframe_t *) (sizeof(dspriteinterval_t) * j + sizeof(dspritegroup_t) + sizeof(dspriteframetype_t) + (int) pframetype);
+			while (j--)
+			{
+				framedata[realframes] = pframe;
+				size = LittleLong(pframe->width) * LittleLong(pframe->height) * bytesperpixel;
+				pframe = (dspriteframe_t *) (size + sizeof(dspriteframe_t) + (int) pframe);
+				realframes++;
+			}
+			pframetype = (dspriteframetype_t *) pframe;
+		}
 	}
 
+	mod->ofs_scenes = (int) animscenes - (int) psprite;
+
+	frames = Hunk_AllocName(sizeof(mspriteframe_t) * realframes, va("%s frames", loadname));
+
+	realframes = 0;
+	for (i = 0;i < numframes;i++)
+	{
+		for (j = 0;j < animscenes[i].framecount;j++)
+		{
+			Mod_LoadSpriteFrame (framedata[realframes], frames + realframes, i, bytesperpixel);
+			realframes++;
+		}
+	}
+
+	psprite->ofs_frames = (int) frames - (int) psprite;
+
+	qfree(framedata);
+
 	mod->type = mod_sprite;
+
+// move the complete, relocatable sprite model to the cache
+	end = Hunk_LowMark ();
+	mod->cachesize = total = end - start;
+	
+	Cache_Alloc (&mod->cache, total, loadname);
+	if (!mod->cache.data)
+		return;
+	memcpy (mod->cache.data, psprite, total);
+
+	Hunk_FreeToLowMark (start);
 }

@@ -39,6 +39,7 @@ int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *
 ddef_t *ED_FieldAtOfs (int ofs);
 qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s);
 
+cvar_t	pr_checkextension = {"pr_checkextension", "1"};
 cvar_t	nomonsters = {"nomonsters", "0"};
 cvar_t	gamecfg = {"gamecfg", "0"};
 cvar_t	scratch1 = {"scratch1", "0"};
@@ -111,6 +112,7 @@ int eval_colormod;
 int eval_ping;
 int eval_movement;
 int eval_pmodel;
+int eval_punchvector;
 
 dfunction_t *SV_PlayerPhysicsQC;
 dfunction_t *EndFrameQC;
@@ -158,6 +160,7 @@ void FindEdictFieldOffsets()
 	eval_ping = FindFieldOffset("ping");
 	eval_movement = FindFieldOffset("movement");
 	eval_pmodel = FindFieldOffset("pmodel");
+	eval_punchvector = FindFieldOffset("punchvector");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
@@ -1288,6 +1291,7 @@ void PR_Init (void)
 	Cmd_AddCommand ("edicts", ED_PrintEdicts);
 	Cmd_AddCommand ("edictcount", ED_Count);
 	Cmd_AddCommand ("profile", PR_Profile_f);
+	Cvar_RegisterVariable (&pr_checkextension);
 	Cvar_RegisterVariable (&nomonsters);
 	Cvar_RegisterVariable (&gamecfg);
 	Cvar_RegisterVariable (&scratch1);

@@ -41,6 +41,8 @@ cvar_t	v_kicktime = {"v_kicktime", "0.5", false};
 cvar_t	v_kickroll = {"v_kickroll", "0.6", false};
 cvar_t	v_kickpitch = {"v_kickpitch", "0.6", false};
 
+cvar_t	v_punch = {"v_punch", "1", false};
+
 cvar_t	v_iyaw_cycle = {"v_iyaw_cycle", "2", false};
 cvar_t	v_iroll_cycle = {"v_iroll_cycle", "0.5", false};
 cvar_t	v_ipitch_cycle = {"v_ipitch_cycle", "1", false};
@@ -69,15 +71,14 @@ V_CalcRoll
 Used by view and sv_user
 ===============
 */
-vec3_t	forward, right, up;
-
 float V_CalcRoll (vec3_t angles, vec3_t velocity)
 {
+	vec3_t	right;
 	float	sign;
 	float	side;
 	float	value;
 	
-	AngleVectors (angles, forward, right, up);
+	AngleVectors (angles, NULL, right, NULL);
 	side = DotProduct (velocity, right);
 	sign = side < 0 ? -1 : 1;
 	side = fabs(side);
@@ -189,7 +190,7 @@ void V_DriftPitch (void)
 		if ( fabs(cl.cmd.forwardmove) < cl_forwardspeed.value)
 			cl.driftmove = 0;
 		else
-			cl.driftmove += host_frametime;
+			cl.driftmove += cl.frametime;
 	
 		if ( cl.driftmove > v_centermove.value)
 		{
@@ -206,10 +207,10 @@ void V_DriftPitch (void)
 		return;
 	}
 
-	move = host_frametime * cl.pitchvel;
-	cl.pitchvel += host_frametime * v_centerspeed.value;
+	move = cl.frametime * cl.pitchvel;
+	cl.pitchvel += cl.frametime * v_centerspeed.value;
 	
-//Con_Printf ("move: %f (%f)\n", move, host_frametime);
+//Con_Printf ("move: %f (%f)\n", move, cl.frametime);
 
 	if (delta > 0)
 	{
@@ -262,7 +263,7 @@ void V_ParseDamage (void)
 	int		armor, blood;
 	vec3_t	from;
 	int		i;
-	vec3_t	forward, right, up;
+	vec3_t	forward, right;
 	entity_t	*ent;
 	float	side;
 	float	count;
@@ -276,7 +277,7 @@ void V_ParseDamage (void)
 	if (count < 10)
 		count = 10;
 
-	cl.faceanimtime = cl.time + 0.2;		// but sbar face into pain frame
+	cl.faceanimtime = cl.time + 0.2;		// put sbar face into pain frame
 
 	if (gl_polyblend.value)
 	{
@@ -314,7 +315,7 @@ void V_ParseDamage (void)
 	VectorSubtract (from, ent->origin, from);
 	VectorNormalize (from);
 	
-	AngleVectors (ent->angles, forward, right, up);
+	AngleVectors (ent->angles, forward, right, NULL);
 
 	side = DotProduct (from, right);
 	v_dmg_roll = count*side*v_kickroll.value;
@@ -567,6 +568,7 @@ CalcGunAngle
 */
 void CalcGunAngle (void)
 {	
+	/*
 	float	yaw, pitch, move;
 	static float oldyaw = 0;
 	static float oldpitch = 0;
@@ -584,7 +586,7 @@ void CalcGunAngle (void)
 		pitch = 10;
 	if (pitch < -10)
 		pitch = -10;
-	move = host_frametime*20;
+	move = cl.frametime*20;
 	if (yaw > oldyaw)
 	{
 		if (oldyaw + move < yaw)
@@ -612,6 +614,9 @@ void CalcGunAngle (void)
 
 	cl.viewent.angles[YAW] = r_refdef.viewangles[YAW] + yaw;
 	cl.viewent.angles[PITCH] = - (r_refdef.viewangles[PITCH] + pitch);
+	*/
+	cl.viewent.angles[YAW] = r_refdef.viewangles[YAW];
+	cl.viewent.angles[PITCH] = -r_refdef.viewangles[PITCH];
 
 	cl.viewent.angles[ROLL] -= v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
 	cl.viewent.angles[PITCH] -= v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
@@ -679,7 +684,7 @@ void V_CalcViewRoll (void)
 	{
 		r_refdef.viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
 		r_refdef.viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
-		v_dmg_time -= host_frametime;
+		v_dmg_time -= cl.frametime;
 	}
 
 	if (cl.stats[STAT_HEALTH] <= 0)
@@ -711,7 +716,7 @@ void V_CalcIntermissionRefdef (void)
 	VectorCopy (ent->angles, r_refdef.viewangles);
 	view->model = NULL;
 
-// allways idle in intermission
+// always idle in intermission
 	old = v_idlescale.value;
 	v_idlescale.value = 1;
 	V_AddIdle ();
@@ -729,7 +734,7 @@ void V_CalcRefdef (void)
 {
 	entity_t	*ent, *view;
 	int			i;
-	vec3_t		forward, right, up;
+	vec3_t		forward;
 	vec3_t		angles;
 	float		bob;
 	static float oldz = 0;
@@ -777,7 +782,7 @@ void V_CalcRefdef (void)
 	angles[YAW] = ent->angles[YAW];
 	angles[ROLL] = ent->angles[ROLL];
 
-	AngleVectors (angles, forward, right, up);
+	AngleVectors (angles, forward, NULL, NULL);
 
 	V_BoundOffsets ();
 		
@@ -806,6 +811,7 @@ void V_CalcRefdef (void)
 
 // set up the refresh position
 	if (!intimerefresh)
+	if (v_punch.value)
 	{
 		VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
 	}
@@ -830,6 +836,9 @@ if (cl.onground && ent->origin[2] - oldz > 0)
 }
 else
 	oldz = ent->origin[2];
+
+// LordHavoc: origin view kick
+	VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
 
 	if (chase_active.value)
 		Chase_Update ();
@@ -900,6 +909,8 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_kicktime);
 	Cvar_RegisterVariable (&v_kickroll);
 	Cvar_RegisterVariable (&v_kickpitch);	
+
+	Cvar_RegisterVariable (&v_punch);
 }
 
 

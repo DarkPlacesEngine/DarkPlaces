@@ -923,7 +923,7 @@ void Host_Kill_f (void)
 
 	if (sv_player->v.health <= 0)
 	{
-		SV_ClientPrintf ("Can't suicide -- allready dead!\n");
+		SV_ClientPrintf ("Can't suicide -- already dead!\n");
 		return;
 	}
 	
@@ -985,7 +985,7 @@ void Host_PreSpawn_f (void)
 
 	if (host_client->spawned)
 	{
-		Con_Printf ("prespawn not valid -- allready spawned\n");
+		Con_Printf ("prespawn not valid -- already spawned\n");
 		return;
 	}
 	
@@ -1016,7 +1016,7 @@ void Host_Spawn_f (void)
 
 	if (host_client->spawned)
 	{
-		Con_Printf ("Spawn not valid -- allready spawned\n");
+		Con_Printf ("Spawn not valid -- already spawned\n");
 		return;
 	}
 
@@ -1026,7 +1026,7 @@ void Host_Spawn_f (void)
 
 // run the entrance script
 	if (sv.loadgame)
-	{	// loaded games are fully inited allready
+	{	// loaded games are fully inited already
 		// if this is the last client to be connected, unpause
 		sv.paused = false;
 
@@ -1469,59 +1469,12 @@ void Host_Viewframe_f (void)
 
 void PrintFrameName (model_t *m, int frame)
 {
-	if (m->type != mod_alias)
-		return;
-	switch(m->aliastype)
-	{
-	case ALIASTYPE_MDL:
-		{
-			maliashdr_t *mheader;
-			maliasframe_t *frameinfo;
-
-			mheader = (maliashdr_t *)Mod_Extradata (m);
-			if (!mheader)
-				return;
-			if (frame < 0 || frame >= mheader->numframes)
-				frame = 0;
-			frameinfo = &((maliasframe_t *)(mheader->framedata + (int) mheader))[frame];
-			
-			Con_Printf ("frame %i: %s\n", frame, frameinfo->name);
-		}
-		break;
-	case ALIASTYPE_MD2:
-		{
-			md2mem_t *mheader;
-			md2memframe_t *frameinfo;
-
-			mheader = (md2mem_t *)Mod_Extradata (m);
-			if (!mheader)
-				return;
-			if (frame < 0 || frame >= mheader->num_frames)
-				frame = 0;
-			frameinfo = (md2memframe_t *)(mheader->ofs_frames + (int) mheader) + frame;
-			
-			Con_Printf ("frame %i: %s\n", frame, frameinfo->name);
-		}
-		break;
-	case ALIASTYPE_ZYM:
-		{
-			zymtype1header_t *mheader;
-			zymscene_t *scene;
-
-			mheader = (zymtype1header_t *)Mod_Extradata (m);
-			if (!mheader)
-				return;
-			if (frame < 0 || frame >= mheader->numscenes)
-				frame = 0;
-			scene = (zymscene_t *)(mheader->lump_scenes.start + (int) mheader) + frame;
-			
-			Con_Printf ("frame %i: %s\n", frame, scene->name);
-		}
-		break;
-	default:
-		Con_Printf("frame %i: (unknown alias model type)\n", frame);
-		break;
-	}
+	int data;
+	data = (int) Mod_Extradata(m);
+	if (m->ofs_scenes && data)
+		Con_Printf("frame %i: %s\n", frame, ((animscene_t *) (m->ofs_scenes + data))[frame].name);
+	else
+		Con_Printf("frame %i\n", frame);
 }
 
 /*

@@ -46,9 +46,6 @@
 #include <glide/sst1vid.h>
 
 
-unsigned		d_8to24table[256];
-unsigned char	d_15to8table[65536];
-
 cvar_t		vid_mode = {"vid_mode","0",false};
 
 viddef_t	vid;	// global video state
@@ -62,25 +59,12 @@ int	VID_options_items = 0;
 
 /*-----------------------------------------------------------------------*/
 
-int	texture_extension_number = 1;
-
 float		gldepthmin, gldepthmax;
 
 const char *gl_vendor;
 const char *gl_renderer;
 const char *gl_version;
 const char *gl_extensions;
-
-void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-void (*qglSelectTexture) (GLenum);
-
-int gl_mtex_enum = 0;
-
-// LordHavoc: in GLX these are never set, simply provided to make the rest of the code work
-qboolean isG200 = false;
-qboolean isRagePro = false;
-qboolean gl_mtexable = false;
-qboolean gl_arrays = false;
 
 /*-----------------------------------------------------------------------*/
 void D_BeginDirectRect (int x, int y, byte *pbitmap, int width, int height)
@@ -122,11 +106,6 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
-// LordHavoc: FIXME or something?
-void VID_CheckVertexArrays()
-{
-}
-
 /*
 	VID_CheckMultitexture
 
@@ -165,7 +144,34 @@ void VID_CheckMultitexture()
 	else
 		Con_Printf ("none found\n");
 	dlclose(dlhand);
-	dlhand = NULL;		
+	dlhand = NULL;
+}
+
+void VID_CheckCVA(void)
+{
+	qglLockArraysEXT = NULL;
+	qglUnlockArraysEXT = NULL;
+	gl_supportslockarrays = false;
+	if (COM_CheckParm("-nocva"))
+	{
+		Con_Printf("...compiled vertex arrays disabled\n");
+		return;
+	}
+	dlhand = dlopen (NULL, RTLD_LAZY);
+	if (dlhand == NULL)
+	{
+		Con_Printf("Unable to open symbol list for main program.\n");
+		return;
+	}
+	if (strstr(gl_extensions, "GL_EXT_compiled_vertex_array"))
+	{
+		Con_Printf("...using compiled vertex arrays\n");
+		qglLockArraysEXT = (void *) dlsym(dlhand, "glLockArraysEXT");
+		qglUnlockArraysEXT = (void *) dlsym(dlhand, "glUnlockArraysEXT");
+		gl_supportslockarrays = true;
+	}
+	dlclose(dlhand);
+	dlhand = NULL;
 }
 
 

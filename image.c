@@ -490,48 +490,49 @@ byte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, in
 	}
 }
 
-int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
+rtexture_t *loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
-	int texnum;
 	byte *data;
+	rtexture_t *rt;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
-	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
+	rt = R_LoadTexture (filename, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
 	qfree(data);
-	return texnum;
+	return rt;
 }
 
-int loadtextureimagemask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
+rtexture_t *loadtextureimagemask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
-	int texnum;
 	byte *data;
+	rtexture_t *rt;
 	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
 		return 0;
-	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
+	rt = R_LoadTexture (filename, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
 	qfree(data);
-	return texnum;
+	return rt;
 }
 
-int image_masktexnum;
-int loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
+rtexture_t *image_masktex;
+rtexture_t *loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
-	int texnum, count;
+	int count;
 	byte *data;
 	char *filename2;
-	image_masktexnum = 0;
+	rtexture_t *rt;
+	image_masktex = NULL;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
-	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
+	rt = R_LoadTexture (filename, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
 	count = image_makemask(data, data, image_width * image_height);
 	if (count)
 	{
 		filename2 = qmalloc(strlen(filename) + 6);
 		sprintf(filename2, "%s_mask", filename);
-		image_masktexnum = GL_LoadTexture (filename2, image_width, image_height, data, mipmap, true, 4);
+		image_masktex = R_LoadTexture (filename2, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
 		qfree(filename2);
 	}
 	qfree(data);
-	return texnum;
+	return rt;
 }
 
 void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *data)

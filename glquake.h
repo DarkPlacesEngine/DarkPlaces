@@ -37,17 +37,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <GL/gl.h>
 //#include <GL/glu.h>
 
+extern qboolean isG200;
+extern qboolean isRagePro;
+extern qboolean gl_mtexable;
+extern qboolean gl_supportslockarrays;
+
 extern void GL_BeginRendering (int *x, int *y, int *width, int *height);
 extern void GL_EndRendering (void);
 
-extern	int texture_extension_number;
-
 extern	float	gldepthmin, gldepthmax;
-
-extern void GL_Upload32 (void *data, int width, int height,  qboolean mipmap, qboolean alpha);
-extern void GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean alpha);
-extern int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolean mipmap, qboolean alpha, int bytesperpixel);
-extern int GL_FindTexture (char *identifier);
 
 typedef struct
 {
@@ -109,13 +107,10 @@ extern	cvar_t	r_drawentities;
 extern	cvar_t	r_drawviewmodel;
 extern	cvar_t	r_speeds;
 extern	cvar_t	r_fullbright;
-extern	cvar_t	r_shadows;
 extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
 extern	cvar_t	r_novis;
 extern	cvar_t	r_waterripple;
-
-extern	cvar_t	gl_max_size;
 
 extern	float	r_world_matrix[16];
 
@@ -132,8 +127,6 @@ extern	const char *gl_extensions;
 #define APIENTRY /* */
 #endif
 
-extern qboolean gl_mtexable;
-
 // LordHavoc: ARB multitexure support
 extern int		gl_mtex_enum;
 
@@ -142,13 +135,15 @@ extern int		gl_mtex_enum;
 #define GLAPIENTRY APIENTRY
 #endif
 
-// Micro$oft dropped GL support beyond 1.1, so...
-#ifdef WIN32
+// multitexture
+extern void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglSelectTexture) (GLenum);
+extern void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
+extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 
-//#define GL_POLYGON_OFFSET_POINT			0x2A01
-//#define GL_POLYGON_OFFSET_LINE			0x2A02
-//#define GL_POLYGON_OFFSET_FILL			0x8037
 
+#ifndef GL_ACTIVE_TEXTURE_ARB
+// multitexture
 #define GL_ACTIVE_TEXTURE_ARB			0x84E0
 #define GL_CLIENT_ACTIVE_TEXTURE_ARB	0x84E1
 #define GL_MAX_TEXTURES_UNITS_ARB		0x84E2
@@ -157,39 +152,10 @@ extern int		gl_mtex_enum;
 #define GL_TEXTURE2_ARB					0x84C2
 #define GL_TEXTURE3_ARB					0x84C3
 // LordHavoc: ARB supports 32+ texture units, but hey I only use 2 anyway...
+#endif
 
-// LordHavoc: vertex array defines
-#define GL_VERTEX_ARRAY					0x8074
-#define GL_NORMAL_ARRAY					0x8075
-#define GL_COLOR_ARRAY					0x8076
-#define GL_TEXTURE_COORD_ARRAY			0x8078
-
-//extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
-extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (GLAPIENTRY *qglArrayElement)(GLint i);
-//extern void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
-extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-
-extern void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (GLAPIENTRY *qglSelectTexture) (GLenum);
-//extern void (GLAPIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
-
+#ifdef WIN32
 #else
-
-//#define qglPolygonOffset glPolygonOffset
-#define qglVertexPointer glVertexPointer
-//#define qglNormalPointer glNormalPointer
-#define qglColorPointer glColorPointer
-#define qglTexCoordPointer glTexCoordPointer
-#define qglArrayElement glArrayElement
-//#define qglDrawArrays glDrawArrays
-#define qglDrawElements glDrawElements
-
-extern void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (GLAPIENTRY *qglSelectTexture) (GLenum);
 //#ifndef MESA
 //extern void (GLAPIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
 //#endif
@@ -220,10 +186,14 @@ extern vec_t fogdensity;
 
 #include "r_modules.h"
 
-extern cvar_t gl_vertexarrays;
 extern qboolean lighthalf;
 
-extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, vec3_t angles, int effects, int flags, int colormap);
+#include "r_lerpanim.h"
+
+void GL_LockArray(int first, int count);
+void GL_UnlockArray();
+
+void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap);
 
 extern cvar_t r_render;
 extern cvar_t r_upload;

@@ -355,13 +355,14 @@ void IN_Move(usercmd_t *cmd)
 
 	if ((in_mlook.state & 1)) V_StopPitchDrift();
 
+	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
 	if ((in_mlook.state & 1) && !(in_strafe.state & 1)) {
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-		if (cl.viewangles[PITCH] > 80) {
-			cl.viewangles[PITCH] = 80;
+		if (cl.viewangles[PITCH] > 90) {
+			cl.viewangles[PITCH] = 90;
 		}
-		if (cl.viewangles[PITCH] < -70) {
-			cl.viewangles[PITCH] = -70;
+		if (cl.viewangles[PITCH] < -90) {
+			cl.viewangles[PITCH] = -90;
 		}
 	} else {
 		if ((in_strafe.state & 1) && noclip_anglehack) {

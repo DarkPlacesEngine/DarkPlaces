@@ -64,9 +64,6 @@ int			num_sfx;
 
 sfx_t		*ambient_sfx[NUM_AMBIENTS];
 
-int 		desired_speed = 44100; //11025; // LordHavoc: 44.1khz sound
-int 		desired_bits = 16;
-
 int sound_started=0;
 
 cvar_t bgmvolume = {"bgmvolume", "1", true};
@@ -376,7 +373,7 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 		if (entchannel != 0		// channel 0 never overrides
 		&& channels[ch_idx].entnum == entnum
 		&& (channels[ch_idx].entchannel == entchannel || entchannel == -1) )
-		{	// allways override sound from same entity
+		{	// always override sound from same entity
 			first_to_die = ch_idx;
 			break;
 		}
@@ -414,7 +411,7 @@ void SND_Spatialize(channel_t *ch)
     vec3_t source_vec;
 	sfx_t *snd;
 
-// anything coming from the view entity will allways be full volume
+// anything coming from the view entity will always be full volume
 // LordHavoc: make sounds with ATTN_NONE have no spatialization
 	if (ch->entnum == cl.viewentity || ch->dist_mult == 0)
 	{
@@ -517,9 +514,12 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 			continue;
 		if (check->sfx == sfx && !check->pos)
 		{
-			skip = rand () % (int)(0.1*shm->speed);
-			if (skip >= target_chan->end)
-				skip = target_chan->end - 1;
+			// LordHavoc: fixed skip calculations
+			skip = 0.1 * shm->speed;
+			if (skip > sc->length)
+				skip = sc->length;
+			if (skip > 0)
+				skip = rand() % skip;
 			target_chan->pos += skip;
 			target_chan->end -= skip;
 			break;
@@ -707,13 +707,13 @@ void S_UpdateAmbientSounds (void)
 	// don't adjust volume too fast
 		if (chan->master_vol < vol)
 		{
-			chan->master_vol += host_frametime * ambient_fade.value;
+			chan->master_vol += host_realframetime * ambient_fade.value;
 			if (chan->master_vol > vol)
 				chan->master_vol = vol;
 		}
 		else if (chan->master_vol > vol)
 		{
-			chan->master_vol -= host_frametime * ambient_fade.value;
+			chan->master_vol -= host_realframetime * ambient_fade.value;
 			if (chan->master_vol < vol)
 				chan->master_vol = vol;
 		}
@@ -763,7 +763,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	// try to combine static sounds with a previous channel of the same
 	// sound effect so we don't mix five torches every frame
 	
-		if (i >= MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS)
+		if (i > MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS)
 		{
 		// see if it can just use the last one
 			if (combine && combine->sfx == ch->sfx)

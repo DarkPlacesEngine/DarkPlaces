@@ -45,15 +45,10 @@ extern	viddef_t	vid;				// global video state
 extern void (*vid_menudrawfn)(void);
 extern void (*vid_menukeyfn)(int key);
 
-extern qboolean isG200;
-extern qboolean isRagePro;
-extern qboolean gl_mtexable;
-extern qboolean gl_arrays;
-
 void GL_Init (void);
 
 void VID_CheckMultitexture();
-void VID_CheckVertexArrays();
+void VID_CheckCVA();
 
 void	VID_Init ();
 // Called at startup

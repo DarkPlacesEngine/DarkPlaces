@@ -49,9 +49,6 @@ static GLXContext ctx = NULL;
 #define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask )
 
 
-unsigned		d_8to24table[256];
-unsigned char	d_15to8table[65536];
-
 cvar_t vid_mode = {"vid_mode", "0", false};
 cvar_t vid_fullscreen = {"vid_fullscreen", "1"};
 
@@ -83,8 +80,6 @@ static qboolean vidmode_active = false;
 
 /*-----------------------------------------------------------------------*/
 
-int		texture_extension_number = 1;
-
 float		gldepthmin, gldepthmax;
 
 const char *gl_vendor;
@@ -92,19 +87,10 @@ const char *gl_renderer;
 const char *gl_version;
 const char *gl_extensions;
 
-void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-void (*qglSelectTexture) (GLenum);
-
 //static float vid_gamma = 1.0;
 
 // LordHavoc: ARB multitexture support
 int gl_mtex_enum = 0;
-
-// LordHavoc: in GLX these are never set, simply provided to make the rest of the code work
-qboolean isG200 = false;
-qboolean isRagePro = false;
-qboolean gl_mtexable = false;
-qboolean gl_arrays = false;
 
 /*-----------------------------------------------------------------------*/
 static int
@@ -453,55 +439,6 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
-/*
-void (*qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (*qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (*qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (*qglArrayElement)(GLint i);
-void (*qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-void (*qglMTexCoord2f)(GLenum, GLfloat, GLfloat);
-void (*qglSelectTexture)(GLenum);
-
-void VID_CheckVertexArrays (void)
-{
-	void *prjobj;
-	if (COM_CheckParm("-novertex"))
-	{
-		Con_Printf("...vertex array support disabled\n");
-		return;
-	}
-	if ((prjobj = dlopen(NULL, RTLD_LAZY)) == NULL)
-	{
-		Con_Printf("Unable to open symbol list for main program.\n");
-		return;
-	}
-	qglMTexCoord2fSGIS = (void *) dlsym(prjobj, "glMTexCoord2fSGIS");
-	if ((qglArrayElement = (void *) dlsym(prjobj, "glArrayElement"))
-	 && (qglColorPointer = (void *) dlsym(prjobj, "glColorPointer"))
-//	 && (qglDrawArrays = (void *) dlsym(prjobj, "glDrawArrays"))
-	 && (qglDrawElements = (void *) dlsym(prjobj, "glDrawElements"))
-//	 && (qglInterleavedArrays = (void *) dlsym(prjobj, "glInterleavedArrays"))
-	 && (qglTexCoordPointer = (void *) dlsym(prjobj, "glTexCoordPointer"))
-	 && (qglVertexPointer = (void *) dlsym(prjobj, "glVertexPointer"))
-		)
-	{
-		Con_Printf("...vertex array support detected\n");
-		gl_arrays = true;
-		dlclose(prjobj);
-		return;
-	}
-
-	Con_Printf("...vertex array support disabled (not detected - get a better driver)\n");
-	dlclose(prjobj);
-}
-*/
-
-// LordHavoc: require OpenGL 1.2.x
-void VID_CheckVertexArrays (void)
-{
-	gl_arrays = true;
-}
-
 void VID_CheckMultitexture(void) 
 {
 	void *prjobj;
@@ -535,8 +472,34 @@ void VID_CheckMultitexture(void)
 		gl_mtexable = true;
 		gl_mtex_enum = TEXTURE0_SGIS;
 	}
-	if (!gl_mtexable)
+	else
 		Con_Printf("...multitexture disabled (not detected)\n");
+	dlclose(prjobj);
+}
+
+void VID_CheckCVA(void)
+{
+	void *prjobj;
+	qglLockArraysEXT = NULL;
+	qglUnlockArraysEXT = NULL;
+	gl_supportslockarrays = false;
+	if (COM_CheckParm("-nocva"))
+	{
+		Con_Printf("...compiled vertex arrays disabled\n");
+		return;
+	}
+	if ((prjobj = dlopen(NULL, RTLD_LAZY)) == NULL)
+	{
+		Con_Printf("Unable to open symbol list for main program.\n");
+		return;
+	}
+	if (strstr(gl_extensions, "GL_EXT_compiled_vertex_array"))
+	{
+		Con_Printf("...using compiled vertex arrays\n");
+		qglLockArraysEXT = (void *) dlsym(prjobj, "glLockArraysEXT");
+		qglUnlockArraysEXT = (void *) dlsym(prjobj, "glUnlockArraysEXT");
+		gl_supportslockarrays = true;
+	}
 	dlclose(prjobj);
 }
 

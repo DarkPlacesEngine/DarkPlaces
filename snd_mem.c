@@ -30,10 +30,10 @@ byte *S_Alloc (int size);
 ResampleSfx
 ================
 */
-void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
+void ResampleSfx (sfx_t *sfx, int inrate, byte *data, char *name)
 {
 	int		outcount;
-	int		srcsample;
+	int		srcsample, srclength;
 	float	stepscale;
 	int		i;
 	int		samplefrac, fracstep;
@@ -44,6 +44,8 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 		return;
 
 	stepscale = (float)inrate / shm->speed;	// this is usually 0.5, 1, or 2
+
+	srclength = sc->length << sc->stereo;
 
 	outcount = sc->length / stepscale;
 	sc->length = outcount;
@@ -62,6 +64,7 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 	if (stepscale == 1/* && inwidth == 1*/ && sc->width == 1)
 	{
 // fast special case
+		/*
 		// LordHavoc: I do not serve the readability gods...
 		int *indata, *outdata;
 		int count4, count1;
@@ -75,27 +78,18 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 			((short*)outdata)[0] = ((short*)indata)[0] ^ 0x8080;
 		if (count1 & 1)
 			((char*)outdata)[2] = ((char*)indata)[2] ^ 0x80;
-		/*
-		if (sc->stereo) // LordHavoc: stereo sound support
-		{
-			for (i=0 ; i<(outcount<<1) ; i++)
-				((signed char *)sc->data)[i] = (int)( (unsigned char)(data[i]) - 128);
-		}
-		else
-		{
-			for (i=0 ; i<outcount ; i++)
-				((signed char *)sc->data)[i] = (int)( (unsigned char)(data[i]) - 128);
-		}
 		*/
+		if (sc->stereo) // LordHavoc: stereo sound support
+			outcount *= 2;
+		for (i=0 ; i<outcount ; i++)
+			((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
 	}
 	else if (stepscale == 1/* && inwidth == 2*/ && sc->width == 2) // LordHavoc: quick case for 16bit
 	{
 		if (sc->stereo) // LordHavoc: stereo sound support
-			for (i=0 ; i<outcount*2 ;i++)
-				((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
-		else
-			for (i=0 ; i<outcount ;i++)
-				((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
+			outcount *= 2;
+		for (i=0 ; i<outcount ;i++)
+			((short *)sc->data)[i] = LittleShort (((short *)data)[i]);
 	}
 	else
 	{
@@ -113,10 +107,10 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 				if (sc->stereo) // LordHavoc: stereo sound support
 				{
 					fracstep <<= 1;
-					for (i=0 ; i<outcount ;)
+					for (i=0 ; i<outcount ; i++)
 					{
-						*out++ = (short) LittleShort (in[srcsample  ]);
-						*out++ = (short) LittleShort (in[srcsample+1]);
+						*out++ = LittleShort (in[srcsample  ]);
+						*out++ = LittleShort (in[srcsample+1]);
 						srcsample += fracstep;
 					}
 				}
@@ -124,21 +118,22 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 				{
 					for (i=0 ; i<outcount ; i++)
 					{
-						*out++ = (short) LittleShort (in[srcsample  ]);
+						*out++ = LittleShort (in[srcsample  ]);
 						srcsample += fracstep;
 					}
 				}
 			}
 			else
 			{
-				signed char *out = (void *)sc->data, *in = (void *)data;
+				signed char *out = (void *)sc->data;
+				unsigned char *in = (void *)data;
 				if (sc->stereo) // LordHavoc: stereo sound support
 				{
 					fracstep <<= 1;
-					for (i=0 ; i<outcount ;)
+					for (i=0 ; i<outcount ; i++)
 					{
-						*out++ = (signed char) in[srcsample  ] - 128;
-						*out++ = (signed char) in[srcsample+1] - 128;
+						*out++ = in[srcsample  ] - 128;
+						*out++ = in[srcsample+1] - 128;
 						srcsample += fracstep;
 					}
 				}
@@ -146,7 +141,7 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 				{
 					for (i=0 ; i<outcount ; i++)
 					{
-						*out++ = (signed char) in[srcsample  ] - 128;
+						*out++ = in[srcsample  ] - 128;
 						srcsample += fracstep;
 					}
 				}
@@ -155,19 +150,30 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 		else
 		{
 			int sample;
+			int a, b;
 			if (sc->width == 2)
 			{
 				short *out = (void *)sc->data, *in = (void *)data;
 				if (sc->stereo) // LordHavoc: stereo sound support
 				{
-					for (i=0 ; i<outcount ;)
+					for (i=0 ; i<outcount ; i++)
 					{
-						srcsample = (samplefrac >> 7) & ~1;
+						srcsample = (samplefrac >> 8) << 1;
+						a = in[srcsample  ];
+						if (srcsample+2 >= srclength)
+							b = 0;
+						else
+							b = in[srcsample+2];
+						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
+						*out++ = (short) sample;
+						a = in[srcsample+1];
+						if (srcsample+2 >= srclength)
+							b = 0;
+						else
+							b = in[srcsample+3];
+						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
+						*out++ = (short) sample;
 						samplefrac += fracstep;
-						sample = (LittleShort (in[srcsample  ]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+2]) * (samplefrac & 255)) >> 8;
-						*out++ = (short) sample;
-						sample = (LittleShort (in[srcsample+1]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+3]) * (samplefrac & 255)) >> 8;
-						*out++ = (short) sample;
 					}
 				}
 				else
@@ -175,25 +181,41 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 					for (i=0 ; i<outcount ; i++)
 					{
 						srcsample = samplefrac >> 8;
-						samplefrac += fracstep;
-						sample = (LittleShort (in[srcsample  ]) * (256 - (samplefrac & 255)) + LittleShort (in[srcsample+1]) * (samplefrac & 255)) >> 8;
+						a = in[srcsample  ];
+						if (srcsample+1 >= srclength)
+							b = 0;
+						else
+							b = in[srcsample+1];
+						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
 						*out++ = (short) sample;
+						samplefrac += fracstep;
 					}
 				}
 			}
 			else
 			{
-				signed char *out = (void *)sc->data, *in = (void *)data;
+				signed char *out = (void *)sc->data;
+				unsigned char *in = (void *)data;
 				if (sc->stereo) // LordHavoc: stereo sound support
 				{
-					for (i=0 ; i<outcount ;)
+					for (i=0 ; i<outcount ; i++)
 					{
-						srcsample = (samplefrac >> 7) & ~1;
+						srcsample = (samplefrac >> 8) << 1;
+						a = (int) in[srcsample  ] - 128;
+						if (srcsample+2 >= srclength)
+							b = 0;
+						else
+							b = (int) in[srcsample+2] - 128;
+						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
+						*out++ = (signed char) sample;
+						a = (int) in[srcsample+1] - 128;
+						if (srcsample+2 >= srclength)
+							b = 0;
+						else
+							b = (int) in[srcsample+3] - 128;
+						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
+						*out++ = (signed char) sample;
 						samplefrac += fracstep;
-						sample = ((((unsigned char) in[srcsample  ] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+2] - 128) * (samplefrac & 255))) >> 8;
-						*out++ = (signed char) sample;
-						sample = ((((unsigned char) in[srcsample+1] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+3] - 128) * (samplefrac & 255))) >> 8;
-						*out++ = (signed char) sample;
 					}
 				}
 				else
@@ -201,14 +223,24 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data)
 					for (i=0 ; i<outcount ; i++)
 					{
 						srcsample = samplefrac >> 8;
-						samplefrac += fracstep;
-						sample = ((((unsigned char) in[srcsample  ] - 128) * (256 - (samplefrac & 255))) + (((unsigned char) in[srcsample+1] - 128) * (samplefrac & 255))) >> 8;
+						a = (int) in[srcsample  ] - 128;
+						if (srcsample+1 >= srclength)
+							b = 0;
+						else
+							b = (int) in[srcsample+1] - 128;
+						sample = (((b - a) * (samplefrac & 255)) >> 8) + a;
 						*out++ = (signed char) sample;
+						samplefrac += fracstep;
 					}
 				}
 			}
 		}
 	}
+
+	// LordHavoc: use this for testing if it ever becomes useful again
+#if 0
+	COM_WriteFile (va("sound/%s.pcm", name), sc->data, (sc->length << sc->stereo) * sc->width);
+#endif
 }
 
 //=============================================================================
@@ -281,7 +313,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	sc->width = info.width;
 	sc->stereo = info.channels == 2;
 
-	ResampleSfx (s, sc->speed, data + info.dataofs);
+	ResampleSfx (s, sc->speed, data + info.dataofs, s->name);
 
 	qfree(data);
 	return sc;

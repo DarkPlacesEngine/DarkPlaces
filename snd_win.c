@@ -364,7 +364,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	if (snd_firsttime)
 		Con_SafePrintf("   %d channel(s)\n"
 		               "   %d bits/sample\n"
-					   "   %d bytes/sec\n",
+					   "   %d samples/sec\n",
 					   shm->channels, shm->samplebits, shm->speed);
 	
 	gSndBufSize = dsbcaps.dwBufferBytes;

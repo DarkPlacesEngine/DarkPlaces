@@ -25,20 +25,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //#define GL_COLOR_INDEX8_EXT     0x80E5
 
-cvar_t		qsg_version = {"qsg_version", "1"};
 cvar_t		scr_conalpha = {"scr_conalpha", "1"};
 
 byte		*draw_chars;				// 8*8 graphic characters
 qpic_t		*draw_disc;
 
-int			char_texture;
+rtexture_t	*char_texture;
 
 typedef struct
 {
-	int		texnum;
+	rtexture_t	*tex;
 } glpic_t;
 
-int			conbacktexnum;
+rtexture_t	*conbacktex;
 
 //=============================================================================
 /* Support Routines */
@@ -67,7 +66,7 @@ qpic_t *Draw_PicFromWad (char *name)
 	p = W_GetLumpName (name);
 	gl = (glpic_t *)p->data;
 
-	gl->texnum = GL_LoadTexture (name, p->width, p->height, p->data, false, true, 1);
+	gl->tex = R_LoadTexture (name, p->width, p->height, p->data, TEXF_ALPHA | TEXF_PRECACHE);
 	return p;
 }
 
@@ -111,9 +110,9 @@ qpic_t	*Draw_CachePic (char *path)
 	pic->pic.height = dat->height;
 
 	gl = (glpic_t *)pic->pic.data;
-	gl->texnum = loadtextureimage(path, 0, 0, false, false);
-	if (!gl->texnum)
-		gl->texnum = GL_LoadTexture (path, dat->width, dat->height, dat->data, false, true, 1);
+	gl->tex = loadtextureimage(path, 0, 0, false, false, true);
+	if (!gl->tex)
+		gl->tex = R_LoadTexture (path, dat->width, dat->height, dat->data, TEXF_ALPHA | TEXF_PRECACHE);
 
 	qfree(dat);
 
@@ -133,7 +132,7 @@ void gl_draw_start()
 {
 	int		i;
 
-	char_texture = loadtextureimage ("conchars", 0, 0, false, false);
+	char_texture = loadtextureimage ("conchars", 0, 0, false, false, true);
 	if (!char_texture)
 	{
 		draw_chars = W_GetLumpName ("conchars");
@@ -142,10 +141,10 @@ void gl_draw_start()
 				draw_chars[i] = 255;	// proper transparent color
 
 		// now turn them into textures
-		char_texture = GL_LoadTexture ("charset", 128, 128, draw_chars, false, true, 1);
+		char_texture = R_LoadTexture ("charset", 128, 128, draw_chars, TEXF_ALPHA | TEXF_PRECACHE);
 	}
 
-	conbacktexnum = loadtextureimage("gfx/conback", 0, 0, false, false);
+	conbacktex = loadtextureimage("gfx/conback", 0, 0, false, false, true);
 
 	// get the other pics we need
 	draw_disc = Draw_PicFromWad ("disc");
@@ -158,11 +157,10 @@ void gl_draw_shutdown()
 char engineversion[40];
 int engineversionx, engineversiony;
 
-extern void GL_Textures_Init();
+extern void R_Textures_Init();
 void GL_Draw_Init (void)
 {
 	int i;
-	Cvar_RegisterVariable (&qsg_version);
 	Cvar_RegisterVariable (&scr_conalpha);
 
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
@@ -179,7 +177,7 @@ void GL_Draw_Init (void)
 	engineversionx = vid.width - strlen(engineversion) * 8 - 8;
 	engineversiony = vid.height - 8;
 
-	GL_Textures_Init();
+	R_Textures_Init();
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown);
 }
 
@@ -214,12 +212,17 @@ void Draw_Character (int x, int y, int num)
 
 	if (!r_render.value)
 		return;
-	glBindTexture(GL_TEXTURE_2D, char_texture);
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
 	// LordHavoc: NEAREST mode on text if not scaling up
-	if (glwidth < (int) vid.width)
+	if (glwidth <= (int) vid.width)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	else
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	glColor3f(1,1,1);
@@ -235,11 +238,11 @@ void Draw_Character (int x, int y, int num)
 	glEnd ();
 
 	// LordHavoc: revert to LINEAR mode
-	if (glwidth < (int) vid.width)
-	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
+//	if (glwidth < (int) vid.width)
+//	{
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//	}
 }
 
 /*
@@ -260,13 +263,18 @@ void Draw_String (int x, int y, char *str, int maxlen)
 		maxlen = strlen(str);
 	else if (maxlen > (int) strlen(str))
 		maxlen = strlen(str);
-	glBindTexture(GL_TEXTURE_2D, char_texture);
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
 
 	// LordHavoc: NEAREST mode on text if not scaling up
-	if (glwidth < (int) vid.width)
+	if (glwidth <= (int) vid.width)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
+	else
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
 	glColor3f(1,1,1);
@@ -287,19 +295,19 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	glEnd ();
 
 	// LordHavoc: revert to LINEAR mode
-	if (glwidth < (int) vid.width)
-	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
+//	if (glwidth < (int) vid.width)
+//	{
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//	}
 }
 
-void Draw_GenericPic (int texnum, float red, float green, float blue, float alpha, int x, int y, int width, int height)
+void Draw_GenericPic (rtexture_t *tex, float red, float green, float blue, float alpha, int x, int y, int width, int height)
 {
 	if (!r_render.value)
 		return;
 	glColor4f(red,green,blue,alpha);
-	glBindTexture(GL_TEXTURE_2D, texnum);
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(tex));
 	glBegin (GL_QUADS);
 	glTexCoord2f (0, 0);glVertex2f (x, y);
 	glTexCoord2f (1, 0);glVertex2f (x+width, y);
@@ -315,7 +323,7 @@ Draw_AlphaPic
 */
 void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 {
-	Draw_GenericPic(((glpic_t *)pic->data)->texnum, 1,1,1,alpha, x,y,pic->width, pic->height);
+	Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,alpha, x,y,pic->width, pic->height);
 }
 
 
@@ -326,7 +334,7 @@ Draw_Pic
 */
 void Draw_Pic (int x, int y, qpic_t *pic)
 {
-	Draw_GenericPic(((glpic_t *)pic->data)->texnum, 1,1,1,1, x,y,pic->width, pic->height);
+	Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
 }
 
 
@@ -341,6 +349,7 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 {
 	int				i, c;
 	byte			*trans, *src, *dest;
+	rtexture_t		*rt;
 
 	c = pic->width * pic->height;
 	src = menuplyr_pixels;
@@ -348,12 +357,12 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 	for (i = 0;i < c;i++)
 		*dest++ = translation[*src++];
 
-	c = GL_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, false, true, 1);
+	rt = R_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, TEXF_ALPHA | TEXF_PRECACHE);
 	qfree(trans);
 
 	if (!r_render.value)
 		return;
-	Draw_GenericPic (c, 1,1,1,1, x, y, pic->width, pic->height);
+	Draw_GenericPic (rt, 1,1,1,1, x, y, pic->width, pic->height);
 }
 
 
@@ -365,7 +374,7 @@ Draw_ConsoleBackground
 */
 void Draw_ConsoleBackground (int lines)
 {
-	Draw_GenericPic (conbacktexnum, 1,1,1,scr_conalpha.value*lines/vid.height, 0, lines - vid.height, vid.width, vid.height);
+	Draw_GenericPic (conbacktex, 1,1,1,scr_conalpha.value*lines/vid.height, 0, lines - vid.height, vid.width, vid.height);
 	// LordHavoc: draw version
 	Draw_String(engineversionx, lines - vid.height + engineversiony, engineversion, 9999);
 }
@@ -465,8 +474,16 @@ void SHOWLMP_decodeshow()
 	float x, y;
 	strcpy(lmplabel,MSG_ReadString());
 	strcpy(picname, MSG_ReadString());
-	x = MSG_ReadByte();
-	y = MSG_ReadByte();
+	if (nehahra) // LordHavoc: nasty old legacy junk
+	{
+		x = MSG_ReadByte();
+		y = MSG_ReadByte();
+	}
+	else
+	{
+		x = MSG_ReadShort();
+		y = MSG_ReadShort();
+	}
 	k = -1;
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
 		if (showlmp[i].isactive)

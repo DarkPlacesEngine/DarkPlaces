@@ -30,7 +30,8 @@ typedef struct
 	vec_t s, t;
 	byte r,g,b,a;
 	vec3_t v;
-} transvert_t;
+}
+transvert_t;
 
 typedef struct
 {
@@ -44,14 +45,21 @@ typedef struct
 	unsigned short firstvert;
 	unsigned short verts;
 	unsigned short transpolytype;
-} transpoly_t;
+}
+transpoly_t;
+
+// note: must match format of glpoly_t vertices due to a memcpy used in RSurf_DrawWall
+typedef struct
+{
+	vec_t vert[VERTEXSIZE]; // xyz st uv
+}
+wallvert_t;
 
 typedef struct
 {
-	vec3_t vert;
-	vec_t s, t, u, v;
 	byte r,g,b,a;
-} wallvert_t;
+}
+wallvertcolor_t;
 
 typedef struct
 {
@@ -59,33 +67,39 @@ typedef struct
 	unsigned short firstvert;
 	unsigned short numverts;
 	unsigned short lit; // doesn't need to be an unsigned short, but to keep the structure consistent...
-} wallpoly_t;
+}
+wallpoly_t;
 
 typedef struct
 {
+	// the order and type of these is crucial to the vertex array based rendering 
+	vec2_t tex;
 	vec3_t v;
-} skyvert_t;
+}
+skyvert_t;
 
 typedef struct
 {
 	unsigned short firstvert;
 	unsigned short verts;
-} skypoly_t;
+}
+skypoly_t;
 
 extern transvert_t *transvert;
 extern transpoly_t *transpoly;
 extern unsigned short *transpolyindex;
 extern wallvert_t *wallvert;
+extern wallvertcolor_t *wallvertcolor;
 extern wallpoly_t *wallpoly;
 extern skyvert_t *skyvert;
 extern skypoly_t *skypoly;
 
-extern unsigned short currenttranspoly;
-extern unsigned short currenttransvert;
-extern unsigned short currentwallpoly;
-extern unsigned short currentwallvert;
-extern unsigned short currentskypoly;
-extern unsigned short currentskyvert;
+extern int currenttranspoly;
+extern int currenttransvert;
+extern int currentwallpoly;
+extern int currentwallvert;
+extern int currentskypoly;
+extern int currentskyvert;
 
 #define transpolybegin(ttexnum, tglowtexnum, tfogtexnum, ttranspolytype)\
 {\
@@ -119,6 +133,33 @@ extern unsigned short currentskyvert;
 			transvert[currenttransvert].b = (byte) (bound(0, (int) (vb), 255));\
 		}\
 		transvert[currenttransvert].a = (byte) (bound(0, (int) (va), 255));\
+		transvert[currenttransvert].v[0] = (vx);\
+		transvert[currenttransvert].v[1] = (vy);\
+		transvert[currenttransvert].v[2] = (vz);\
+		currenttransvert++;\
+		transpoly[currenttranspoly].verts++;\
+	}\
+}
+
+#define transpolyvertub(vx,vy,vz,vs,vt,vr,vg,vb,va) \
+{\
+	if (currenttranspoly < MAX_TRANSPOLYS && currenttransvert < MAX_TRANSVERTS)\
+	{\
+		transvert[currenttransvert].s = (vs);\
+		transvert[currenttransvert].t = (vt);\
+		if (lighthalf)\
+		{\
+			transvert[currenttransvert].r = (vr) >> 1;\
+			transvert[currenttransvert].g = (vg) >> 1;\
+			transvert[currenttransvert].b = (vb) >> 1;\
+		}\
+		else\
+		{\
+			transvert[currenttransvert].r = (vr);\
+			transvert[currenttransvert].g = (vg);\
+			transvert[currenttransvert].b = (vb);\
+		}\
+		transvert[currenttransvert].a = (va);\
 		transvert[currenttransvert].v[0] = (vx);\
 		transvert[currenttransvert].v[1] = (vy);\
 		transvert[currenttransvert].v[2] = (vz);\

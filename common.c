@@ -1385,6 +1385,30 @@ void COM_Path_f (void)
 
 /*
 ============
+COM_CreatePath
+
+LordHavoc: Previously only used for CopyFile, now also used for COM_WriteFile.
+============
+*/
+void    COM_CreatePath (char *path)
+{
+	char    *ofs, save;
+	
+	for (ofs = path+1 ; *ofs ; ofs++)
+	{
+		if (*ofs == '/' || *ofs == '\\' || *ofs == ':')
+		{       // create the directory
+			save = *ofs;
+			*ofs = 0;
+			Sys_mkdir (path);
+			*ofs = save;
+		}
+	}
+}
+
+
+/*
+============
 COM_WriteFile
 
 The filename will be prefixed by the current game directory
@@ -1397,6 +1421,9 @@ void COM_WriteFile (char *filename, void *data, int len)
 	
 	sprintf (name, "%s/%s", com_gamedir, filename);
 
+	// LordHavoc: added this
+	COM_CreatePath (name); // create directories up to the file
+
 	handle = Sys_FileOpenWrite (name);
 	if (handle == -1)
 	{
@@ -1407,29 +1434,6 @@ void COM_WriteFile (char *filename, void *data, int len)
 	Sys_Printf ("COM_WriteFile: %s\n", name);
 	Sys_FileWrite (handle, data, len);
 	Sys_FileClose (handle);
-}
-
-
-/*
-============
-COM_CreatePath
-
-Only used for CopyFile
-============
-*/
-void    COM_CreatePath (char *path)
-{
-	char    *ofs;
-	
-	for (ofs = path+1 ; *ofs ; ofs++)
-	{
-		if (*ofs == '/')
-		{       // create the directory
-			*ofs = 0;
-			Sys_mkdir (path);
-			*ofs = '/';
-		}
-	}
 }
 
 
@@ -1639,7 +1643,7 @@ void COM_CloseFile (int h)
 COM_LoadFile
 
 Filename are reletive to the quake directory.
-Allways appends a 0 byte.
+Always appends a 0 byte.
 ============
 */
 cache_user_t *loadcache;

@@ -89,6 +89,7 @@ extern int eval_colormod;
 extern int eval_ping;
 extern int eval_movement;
 extern int eval_pmodel;
+extern int eval_punchvector;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t*)((char*)&ed->v + fieldoffset) : NULL)
 

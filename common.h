@@ -146,6 +146,8 @@ float MSG_ReadCoord (void);
 #define MSG_ReadAngle() (MSG_ReadByte() * (360.0f / 256.0f))
 #define MSG_ReadPreciseAngle() (MSG_ReadShort() * (360.0f / 65536.0f))
 
+#define MSG_ReadVector(v) {(v)[0] = MSG_ReadCoord();(v)[1] = MSG_ReadCoord();(v)[2] = MSG_ReadCoord();}
+
 extern qboolean dpprotocol;
 
 //============================================================================

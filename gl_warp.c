@@ -25,8 +25,8 @@ extern	model_t	*loadmodel;
 
 int		skytexturenum;
 
-int		solidskytexture;
-int		alphaskytexture;
+rtexture_t *solidskytexture;
+rtexture_t *alphaskytexture;
 float	speedscale;		// for top sky and bottom sky
 
 msurface_t	*warpface;
@@ -176,7 +176,7 @@ void GL_SubdivideSurface (msurface_t *fa)
 
 
 
-int skyboxside[6];
+rtexture_t *skyboxside[6];
 
 char skyname[256];
 
@@ -211,7 +211,7 @@ void R_LoadSkyBox (void)
 				continue;
 			}
 		}
-		skyboxside[i] = GL_LoadTexture(va("skyboxside%d", i), image_width, image_height, image_rgba, false, false, 4);
+		skyboxside[i] = R_LoadTexture(va("skyboxside%d", i), image_width, image_height, image_rgba, TEXF_RGBA | TEXF_PRECACHE);
 		qfree(image_rgba);
 	}
 }
@@ -257,42 +257,42 @@ void R_SkyBox()
 		glColor3f(0.5,0.5,0.5);
 	else
 		glColor3f(1,1,1);
-	glBindTexture(GL_TEXTURE_2D, skyboxside[3]); // front
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skyboxside[3])); // front
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(0, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(0, 0,  1,  1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, skyboxside[1]); // back
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skyboxside[1])); // back
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0, -1,  1,  1);
 	R_SkyBoxPolyVec(1, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(0, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(0, 0, -1, -1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, skyboxside[0]); // right
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skyboxside[0])); // right
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1,  1,  1);
 	R_SkyBoxPolyVec(1, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(0, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(0, 0, -1,  1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, skyboxside[2]); // left
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skyboxside[2])); // left
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0, -1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(0, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(0, 0,  1, -1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, skyboxside[4]); // up
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skyboxside[4])); // up
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1,  1,  1,  1);
 	R_SkyBoxPolyVec(0, 1, -1,  1,  1);
 	R_SkyBoxPolyVec(0, 0, -1, -1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, skyboxside[5]); // down
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skyboxside[5])); // down
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1,  1, -1);
 	R_SkyBoxPolyVec(1, 1,  1, -1, -1);
@@ -331,7 +331,6 @@ void skydomecalc(float *dome, float dx, float dy, float dz)
 	}
 }
 
-extern cvar_t gl_vertexarrays;
 void skydome(float *source, float s, float texscale)
 {
 	vec_t vert[33*33][3], tex[33*33][2], *v, *t;
@@ -346,33 +345,15 @@ void skydome(float *source, float s, float texscale)
 		*v++ = *source++ + r_refdef.vieworg[1];
 		*v++ = *source++ + r_refdef.vieworg[2];
 	}
-	if (gl_vertexarrays.value)
-	{
-		qglTexCoordPointer(2, GL_FLOAT, 0, tex);
-		qglVertexPointer(3, GL_FLOAT, 0, vert);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glEnableClientState(GL_VERTEX_ARRAY);
-//		qglInterleavedArrays(GL_T2F_V3F, 0, vert);
-		for (i = 0;i < (32*66);i+=66)
-			qglDrawElements(GL_TRIANGLE_STRIP, 66, GL_UNSIGNED_SHORT, &skydomeindices[i]);
-		glDisableClientState(GL_VERTEX_ARRAY);
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	}
-	else
-	{
-		index = skydomeindices;
-		for (i = 0;i < (32*66);i+=66)
-		{
-			glBegin(GL_TRIANGLE_STRIP);
-			for (j = 0;j < 66;j++)
-			{
-				// Matrox G200 (and possibly G400) drivers don't support TexCoord2fv...
-				glTexCoord2f(tex[*index][0], tex[*index][1]);
-				glVertex3fv(&vert[*index++][0]);
-			}
-			glEnd();
-		}
-	}
+	glTexCoordPointer(2, GL_FLOAT, 0, tex);
+	glVertexPointer(3, GL_FLOAT, 0, vert);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	glEnableClientState(GL_VERTEX_ARRAY);
+//	glInterleavedArrays(GL_T2F_V3F, 0, vert);
+	for (i = 0;i < (32*66);i+=66)
+		glDrawElements(GL_TRIANGLE_STRIP, 66, GL_UNSIGNED_SHORT, &skydomeindices[i]);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 void R_SkyDome()
@@ -465,7 +446,7 @@ void R_InitSky (byte *src, int bytesperpixel)
 		((byte *)&transpix)[3] = 0;
 	}
 
-	solidskytexture = GL_LoadTexture ("sky_solidtexture", 128, 128, (byte *) trans, false, false, 4);
+	solidskytexture = R_LoadTexture ("sky_solidtexture", 128, 128, (byte *) trans, TEXF_RGBA | TEXF_PRECACHE);
 
 	if (bytesperpixel == 4)
 	{
@@ -486,6 +467,6 @@ void R_InitSky (byte *src, int bytesperpixel)
 			}
 	}
 
-	alphaskytexture = GL_LoadTexture ("sky_alphatexture", 128, 128, (byte *) trans, false, true, 4);
+	alphaskytexture = R_LoadTexture ("sky_alphatexture", 128, 128, (byte *) trans, TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 

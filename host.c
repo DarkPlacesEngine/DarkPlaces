@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 /*
 
-A server can allways be started, even if the system started out as a client
+A server can always be started, even if the system started out as a client
 to a remote system.
 
 A client can NOT be started if the system started as a dedicated server.
@@ -35,6 +35,7 @@ Memory is cleared / released when a server or client begins, not when they end.
 quakeparms_t host_parms;
 
 qboolean	host_initialized;		// true if into command execution
+qboolean	hostloopactive = 0;		// LordHavoc: used to turn Host_Error into Sys_Error if Host_Frame has not yet run
 
 double		host_frametime;
 double		host_realframetime;		// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
@@ -118,15 +119,26 @@ Host_Error
 This shuts down both the client and server
 ================
 */
-char		hosterrorstring[1024];
+char hosterrorstring[4096];
+extern qboolean hostloopactive;
 void Host_Error (char *error, ...)
 {
 	va_list		argptr;
 	static	qboolean inerror = false;
-	
+
+	// LordHavoc: if host_frame loop has not been run yet, do a Sys_Error instead
+	if (!hostloopactive)
+	{
+		char string[4096];
+		va_start (argptr,error);
+		vsprintf (string,error,argptr);
+		va_end (argptr);
+		Sys_Error ("%s", string);
+	}
+
 	if (inerror)
 	{
-		char string[1024];
+		char string[4096];
 		va_start (argptr,error);
 		vsprintf (string,error,argptr);
 		va_end (argptr);
@@ -538,6 +550,7 @@ qboolean Host_FilterTime (float time)
 	}
 
 	host_frametime *= slowmo.value;
+	cl.frametime = host_frametime;
 	
 	return true;
 }
@@ -570,16 +583,17 @@ Host_ServerFrame
 
 ==================
 */
-double frametimetotal = 0, lastservertime = 0;
 void Host_ServerFrame (void)
 {
+	static double frametimetotal = 0, lastservertime = 0;
 	frametimetotal += host_frametime;
 	// LordHavoc: cap server at sys_ticrate in listen games
 	if (!isDedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 // run the world state
-	sv_frametime = pr_global_struct->frametime = frametimetotal;
+	sv.frametime = pr_global_struct->frametime = frametimetotal;
 	frametimetotal = 0;
+	lastservertime = realtime;
 //	pr_global_struct->frametime = host_frametime;
 
 // set the time and clear the general datagram
@@ -617,6 +631,7 @@ void _Host_Frame (float time)
 
 	if (setjmp (host_abortserver) )
 		return;			// something bad happened, or the server disconnected
+	hostloopactive = 1;
 
 // keep the random time dependent
 	rand ();
@@ -667,9 +682,7 @@ void _Host_Frame (float time)
 
 // fetch results from server
 	if (cls.state == ca_connected)
-	{
 		CL_ReadFromServer ();
-	}
 
 // update video
 	if (host_speeds.value)
@@ -693,11 +706,11 @@ void _Host_Frame (float time)
 
 	if (host_speeds.value)
 	{
-		pass1 = (time1 - time3)*1000;
+		pass1 = (time1 - time3)*1000000;
 		time3 = Sys_FloatTime ();
-		pass2 = (time2 - time1)*1000;
-		pass3 = (time3 - time2)*1000;
-		Con_Printf ("%3i tot %3i server %3i gfx %3i snd\n",
+		pass2 = (time2 - time1)*1000000;
+		pass3 = (time3 - time2)*1000000;
+		Con_Printf ("%6ius total %6ius server %6ius gfx %6ius snd\n",
 					pass1+pass2+pass3, pass1, pass2, pass3);
 	}
 	

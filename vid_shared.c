@@ -1,3 +1,17 @@
 
 #include "quakedef.h"
 
+// LordHavoc: these are only set in wgl
+qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
+qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
+
+// LordHavoc: compiled vertex array support
+qboolean gl_supportslockarrays = false;
+// LordHavoc: ARB multitexture support
+qboolean gl_mtexable = false;
+int gl_mtex_enum = 0;
+
+void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+void (GLAPIENTRY *qglSelectTexture) (GLenum);
+void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
+void (GLAPIENTRY *qglUnlockArraysEXT) (void);

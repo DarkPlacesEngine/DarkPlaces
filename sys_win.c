@@ -187,21 +187,15 @@ int Sys_FileWrite (int handle, void *data, int count)
 int	Sys_FileTime (char *path)
 {
 	FILE	*f;
-	int		retval;
-
+	
 	f = fopen(path, "rb");
-
 	if (f)
 	{
 		fclose(f);
-		retval = 1;
-	}
-	else
-	{
-		retval = -1;
+		return 1;
 	}
 	
-	return retval;
+	return -1;
 }
 
 void Sys_mkdir (char *path)

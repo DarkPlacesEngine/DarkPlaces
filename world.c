@@ -538,7 +538,19 @@ POINT TESTING IN HULLS
 ===============================================================================
 */
 
-// SV_HullPointContents moved to cpu_noasm.c
+/*
+==================
+SV_HullPointContents
+
+==================
+*/
+int SV_HullPointContents (hull_t *hull, int num, vec3_t p)
+{
+	while (num >= 0)
+		num = hull->clipnodes[num].children[(hull->planes[hull->clipnodes[num].planenum].type < 3 ? p[hull->planes[hull->clipnodes[num].planenum].type] : DotProduct (hull->planes[hull->clipnodes[num].planenum].normal, p)) < hull->planes[hull->clipnodes[num].planenum].dist];
+	
+	return num;
+}
 
 /*
 ============

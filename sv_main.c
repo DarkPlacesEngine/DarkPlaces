@@ -104,13 +104,48 @@ void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 
 /*  
 ==================
+SV_StartEffect
+
+Make sure the event gets sent to all clients
+==================
+*/
+void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount, int framerate)
+{
+	if (sv.datagram.cursize > MAX_DATAGRAM-18)
+		return;	
+	if (modelindex >= 256)
+	{
+		MSG_WriteByte (&sv.datagram, svc_effect2);
+		MSG_WriteFloatCoord (&sv.datagram, org[0]);
+		MSG_WriteFloatCoord (&sv.datagram, org[1]);
+		MSG_WriteFloatCoord (&sv.datagram, org[2]);
+		MSG_WriteShort (&sv.datagram, modelindex);
+		MSG_WriteByte (&sv.datagram, startframe);
+		MSG_WriteByte (&sv.datagram, framecount);
+		MSG_WriteByte (&sv.datagram, framerate);
+	}
+	else
+	{
+		MSG_WriteByte (&sv.datagram, svc_effect);
+		MSG_WriteFloatCoord (&sv.datagram, org[0]);
+		MSG_WriteFloatCoord (&sv.datagram, org[1]);
+		MSG_WriteFloatCoord (&sv.datagram, org[2]);
+		MSG_WriteByte (&sv.datagram, modelindex);
+		MSG_WriteByte (&sv.datagram, startframe);
+		MSG_WriteByte (&sv.datagram, framecount);
+		MSG_WriteByte (&sv.datagram, framerate);
+	}
+}           
+
+/*  
+==================
 SV_StartSound
 
 Each entity can have eight independant sound sources, like voice,
 weapon, feet, etc.
 
 Channel 0 is an auto-allocate channel, the others override anything
-allready running on that entity/channel pair.
+already running on that entity/channel pair.
 
 An attenuation of 0 will play full volume everywhere in the level.
 Larger attenuations will drop off.  (max 4 attenuation)
@@ -159,15 +194,21 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
 
-// directed messages go only to the entity the are targeted on
-	MSG_WriteByte (&sv.datagram, svc_sound);
+// directed messages go only to the entity they are targeted on
+	if (sound_num >= 256)
+		MSG_WriteByte (&sv.datagram, svc_sound2);
+	else
+		MSG_WriteByte (&sv.datagram, svc_sound);
 	MSG_WriteByte (&sv.datagram, field_mask);
 	if (field_mask & SND_VOLUME)
 		MSG_WriteByte (&sv.datagram, volume);
 	if (field_mask & SND_ATTENUATION)
 		MSG_WriteByte (&sv.datagram, attenuation*64);
 	MSG_WriteShort (&sv.datagram, channel);
-	MSG_WriteByte (&sv.datagram, sound_num);
+	if (sound_num >= 256)
+		MSG_WriteShort (&sv.datagram, sound_num);
+	else
+		MSG_WriteByte (&sv.datagram, sound_num);
 	for (i=0 ; i<3 ; i++)
 		MSG_WriteFloatCoord (&sv.datagram, entity->v.origin[i]+0.5*(entity->v.mins[i]+entity->v.maxs[i]));
 }           
@@ -547,7 +588,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		dodelta = false;
 		if ((int)ent->v.effects & EF_DELTA)
-			dodelta = sv.time < client->nextfullupdate[e]; // every half second a full update is forced
+			dodelta = realtime < client->nextfullupdate[e]; // every half second a full update is forced
 
 		if (dodelta)
 		{
@@ -556,7 +597,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		}
 		else
 		{
-			client->nextfullupdate[e] = sv.time + 0.5;
+			client->nextfullupdate[e] = realtime + 0.5;
 			baseline = &ent->baseline;
 		}
 
@@ -619,17 +660,20 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		}
 
 		// LordHavoc: old stuff, but rewritten to have more exact tolerances
-		if ((int)(origin[0]*8.0) != (int)(baseline->origin[0]*8.0))						bits |= U_ORIGIN1;
-		if ((int)(origin[1]*8.0) != (int)(baseline->origin[1]*8.0))						bits |= U_ORIGIN2;
-		if ((int)(origin[2]*8.0) != (int)(baseline->origin[2]*8.0))						bits |= U_ORIGIN3;
+//		if ((int)(origin[0]*8.0) != (int)(baseline->origin[0]*8.0))						bits |= U_ORIGIN1;
+//		if ((int)(origin[1]*8.0) != (int)(baseline->origin[1]*8.0))						bits |= U_ORIGIN2;
+//		if ((int)(origin[2]*8.0) != (int)(baseline->origin[2]*8.0))						bits |= U_ORIGIN3;
+		if (origin[0] != baseline->origin[0])											bits |= U_ORIGIN1;
+		if (origin[1] != baseline->origin[1])											bits |= U_ORIGIN2;
+		if (origin[2] != baseline->origin[2])											bits |= U_ORIGIN3;
 		if ((int)(angles[0]*(256.0/360.0)) != (int)(baseline->angles[0]*(256.0/360.0)))	bits |= U_ANGLE1;
 		if ((int)(angles[1]*(256.0/360.0)) != (int)(baseline->angles[1]*(256.0/360.0)))	bits |= U_ANGLE2;
 		if ((int)(angles[2]*(256.0/360.0)) != (int)(baseline->angles[2]*(256.0/360.0)))	bits |= U_ANGLE3;
-		if (baseline->colormap != (int) ent->v.colormap)								bits |= U_COLORMAP;
-		if (baseline->skin != (int) ent->v.skin)										bits |= U_SKIN;
+		if (baseline->colormap != (byte) ent->v.colormap)								bits |= U_COLORMAP;
+		if (baseline->skin != (byte) ent->v.skin)										bits |= U_SKIN;
 		if ((baseline->frame & 0x00FF) != ((int) ent->v.frame & 0x00FF))				bits |= U_FRAME;
 		if ((baseline->effects & 0x00FF) != ((int) ent->v.effects & 0x00FF))			bits |= U_EFFECTS;
-		if (baseline->modelindex != (int) ent->v.modelindex)							bits |= U_MODEL;
+		if (baseline->modelindex != (byte) ent->v.modelindex)							bits |= U_MODEL;
 
 		// LordHavoc: new stuff
 		if (baseline->alpha != alpha)													bits |= U_ALPHA;
@@ -639,6 +683,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (baseline->glowcolor != glowcolor)											bits |= U_GLOWCOLOR;
 		if (baseline->colormod != colormod)												bits |= U_COLORMOD;
 		if (((int) baseline->frame & 0xFF00) != ((int) ent->v.frame & 0xFF00))			bits |= U_FRAME2;
+		if (((int) baseline->frame & 0xFF00) != ((int) ent->v.modelindex & 0xFF00))		bits |= U_MODEL2;
 
 		// update delta baseline
 		VectorCopy(ent->v.origin, ent->deltabaseline.origin);
@@ -697,6 +742,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_GLOWCOLOR)	MSG_WriteByte(msg, glowcolor);
 		if (bits & U_COLORMOD)	MSG_WriteByte(msg, colormod);
 		if (bits & U_FRAME2)	MSG_WriteByte(msg, (int)ent->v.frame >> 8);
+		if (bits & U_MODEL2)	MSG_WriteByte(msg, (int)ent->v.modelindex >> 8);
 	}
 }
 
@@ -732,6 +778,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	edict_t	*other;
 	int		items;
 	eval_t	*val;
+	vec3_t	punchvector;
 
 //
 // send a damage message
@@ -788,10 +835,17 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	if ( ent->v.waterlevel >= 2)
 		bits |= SU_INWATER;
 	
+	// dpprotocol
+	VectorClear(punchvector);
+	if ((val = GETEDICTFIELDVALUE(ent, eval_punchvector)))
+		VectorCopy(val->vector, punchvector);
+
 	for (i=0 ; i<3 ; i++)
 	{
 		if (ent->v.punchangle[i])
 			bits |= (SU_PUNCH1<<i);
+		if (punchvector[i]) // dpprotocol
+			bits |= (SU_PUNCHVEC1<<i); // dpprotocol
 		if (ent->v.velocity[i])
 			bits |= (SU_VELOCITY1<<i);
 	}
@@ -805,10 +859,19 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 //	if (ent->v.weapon)
 		bits |= SU_WEAPON;
 
+	if (bits >= 65536)
+		bits |= SU_EXTEND1;
+	if (bits >= 16777216)
+		bits |= SU_EXTEND2;
+
 // send the data
 
 	MSG_WriteByte (msg, svc_clientdata);
 	MSG_WriteShort (msg, bits);
+	if (bits & SU_EXTEND1)
+		MSG_WriteByte(msg, bits >> 16);
+	if (bits & SU_EXTEND2)
+		MSG_WriteByte(msg, bits >> 24);
 
 	if (bits & SU_VIEWHEIGHT)
 		MSG_WriteChar (msg, ent->v.view_ofs[2]);
@@ -819,7 +882,9 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	for (i=0 ; i<3 ; i++)
 	{
 		if (bits & (SU_PUNCH1<<i))
-			MSG_WriteChar (msg, ent->v.punchangle[i]);
+			MSG_WritePreciseAngle(msg, ent->v.punchangle[i]); // dpprotocol
+		if (bits & (SU_PUNCHVEC1<<i)) // dpprotocol
+			MSG_WriteFloatCoord(msg, punchvector[i]); // dpprotocol
 		if (bits & (SU_VELOCITY1<<i))
 			MSG_WriteChar (msg, ent->v.velocity[i]/16);
 	}
@@ -1324,7 +1389,7 @@ void SV_SpawnServer (char *server)
 	sv.state = ss_active;
 	
 // run two frames to allow everything to settle
-	host_frametime = 0.1;
+	sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
 	SV_Physics ();
 	SV_Physics ();
 

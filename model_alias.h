@@ -61,13 +61,6 @@ typedef struct mtriangle_s {
 } mtriangle_t;
 */
 
-// LordHavoc: new vertex format
-typedef struct {
-	byte v[3]; // location
-	signed char n[3]; // surface normal for lighting *127.0
-} trivert2;
-
-#define	MAX_SKINS	32
 typedef struct {
 	int			ident;
 	int			version;
@@ -88,21 +81,12 @@ typedef struct {
 
 typedef struct
 {
-	char name[16]; // LordHavoc: only kept this for reasons of viewthing support
-	unsigned short start;
-	unsigned short length;
-	float rate; // in poses per second
-} maliasframe_t;
-
-typedef struct
-{
 	vec3_t		scale;
 	vec3_t		scale_origin;
 	int			numverts;
 	int			numtris;
 	int			numframes;
 	int			numposes;
-	int			framedata; // LordHavoc: unsigned short start
 	int			texdata; // LordHavoc: texture coordinate array
 	int			posedata; // LordHavoc: vertex data for all the poses
 	int			tridata; // LordHavoc: vertex indices for the triangles
@@ -129,7 +113,6 @@ typedef struct
 #define	MD2MAX_TRIANGLES	4096
 #define MD2MAX_VERTS		4096
 #define MD2MAX_FRAMES		1024
-#define MD2MAX_SKINS	32
 #define	MD2MAX_SKINNAME	64
 // sanity checking size
 #define MD2MAX_SIZE	(16777216)
@@ -154,21 +137,12 @@ typedef struct
 	trivertx_t	verts[1];	// variable sized
 } md2frame_t;
 
-// LordHavoc: memory representation is different than disk
+// must match md2frame_t, this is just used for sizeof()
 typedef struct
 {
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
-	char		name[16];	// LordHavoc: kept for viewthing
-	trivert2	verts[1];	// variable sized
-} md2memframe_t;
-
-// must match md2memframe_t, this is just used for sizeof()
-typedef struct
-{
-	float		scale[3];	// multiply byte verts by this
-	float		translate[3];	// then add this
-} md2memframesize_t;
+} md2framesize_t;
 
 
 // the glcmd format:

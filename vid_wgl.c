@@ -113,14 +113,6 @@ char *VID_GetModeDescription (int mode);
 void ClearAllStates (void);
 void VID_UpdateWindowStatus (void);
 
-// LordHavoc: ARB multitexture support
-int gl_mtex_enum = 0;
-
-qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
-qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
-qboolean gl_mtexable = false;
-qboolean gl_arrays = false;
-
 //====================================
 
 cvar_t		vid_mode = {"vid_mode","0", false};
@@ -376,44 +368,11 @@ void VID_UpdateWindowStatus (void)
 
 //====================================
 
-void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-void (GLAPIENTRY *qglArrayElement)(GLint i);
-void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-void (GLAPIENTRY *qglMTexCoord2f)(GLenum, GLfloat, GLfloat);
-void (GLAPIENTRY *qglSelectTexture)(GLenum);
-
-void VID_CheckVertexArrays (void)
-{
-	if (COM_CheckParm("-novertex"))
-	{
-		Con_Printf("...vertex array support disabled\n");
-		return;
-	}
-	if ((qglArrayElement = (void *) wglGetProcAddress("glArrayElement"))
-	 && (qglColorPointer = (void *) wglGetProcAddress("glColorPointer"))
-//	 && (qglDrawArrays = (void *) wglGetProcAddress("glDrawArrays"))
-	 && (qglDrawElements = (void *) wglGetProcAddress("glDrawElements"))
-//	 && (qglInterleavedArrays = (void *) wglGetProcAddress("glInterleavedArrays"))
-	 && (qglTexCoordPointer = (void *) wglGetProcAddress("glTexCoordPointer"))
-	 && (qglVertexPointer = (void *) wglGetProcAddress("glVertexPointer"))
-		)
-	{
-		Con_Printf("...vertex array support detected\n");
-		gl_arrays = true;
-		return;
-	}
-
-	Con_Printf("...vertex array support disabled (not detected - get a better driver)\n");
-}
-
-int		texture_extension_number = 1;
-
 void VID_CheckMultitexture(void) 
 {
 	qglMTexCoord2f = NULL;
 	qglSelectTexture = NULL;
+	gl_mtexable = false;
 	// Check to see if multitexture is disabled
 	if (COM_CheckParm("-nomtex"))
 	{
@@ -437,8 +396,27 @@ void VID_CheckMultitexture(void)
 		gl_mtexable = true;
 		gl_mtex_enum = TEXTURE0_SGIS;
 	}
-	if (!gl_mtexable)
+	else
 		Con_Printf("...multitexture disabled (not detected)\n");
+}
+
+void VID_CheckCVA(void)
+{
+	qglLockArraysEXT = NULL;
+	qglUnlockArraysEXT = NULL;
+	gl_supportslockarrays = false;
+	if (COM_CheckParm("-nocva"))
+	{
+		Con_Printf("...compiled vertex arrays disabled\n");
+		return;
+	}
+	if (strstr(gl_extensions, "GL_EXT_compiled_vertex_array"))
+	{
+		Con_Printf("...using compiled vertex arrays\n");
+		qglLockArraysEXT = (void *) wglGetProcAddress("glLockArraysEXT");
+		qglUnlockArraysEXT = (void *) wglGetProcAddress("glUnlockArraysEXT");
+		gl_supportslockarrays = true;
+	}
 }
 
 /*

@@ -53,13 +53,13 @@ float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal)
 
 void Chase_Update (void)
 {
-	vec3_t	forward, up, right, stop, chase_dest, normal;
+	vec3_t	forward, stop, chase_dest, normal;
 	float	dist;
 
 	chase_back.value = bound(0, chase_back.value, 128);
 	chase_up.value = bound(-64, chase_up.value, 64);
 
-	AngleVectors (cl.viewangles, forward, right, up);
+	AngleVectors (cl.viewangles, forward, NULL, NULL);
 
 	dist = -chase_back.value - 8;
 	chase_dest[0] = r_refdef.vieworg[0] + forward[0] * dist;

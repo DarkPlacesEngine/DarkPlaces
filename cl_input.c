@@ -253,9 +253,9 @@ void CL_AdjustAngles (void)
 	float	up, down;
 	
 	if (in_speed.state & 1)
-		speed = host_frametime * cl_anglespeedkey.value;
+		speed = cl.frametime * cl_anglespeedkey.value;
 	else
-		speed = host_frametime;
+		speed = cl.frametime;
 
 	if (!(in_strafe.state & 1))
 	{
@@ -430,8 +430,7 @@ void CL_SendMove (usercmd_t *cmd)
 		return;
 
 //
-// allways dump the first two message, because it may contain leftover inputs
-// from the last level
+// always dump the first two messages, because they may contain leftover inputs from the last level
 //
 	if (++cl.movemessages <= 2)
 		return;

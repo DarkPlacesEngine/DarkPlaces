@@ -4,19 +4,19 @@ transvert_t *transvert;
 transpoly_t *transpoly;
 unsigned short *transpolyindex;
 wallvert_t *wallvert;
+wallvertcolor_t *wallvertcolor;
 wallpoly_t *wallpoly;
 skyvert_t *skyvert;
 skypoly_t *skypoly;
 
-unsigned short currenttranspoly;
-unsigned short currenttransvert;
-unsigned short currentwallpoly;
-unsigned short currentwallvert;
-unsigned short currentskypoly;
-unsigned short currentskyvert;
+int currenttranspoly;
+int currenttransvert;
+int currentwallpoly;
+int currentwallvert;
+int currentskypoly;
+int currentskyvert;
 
 cvar_t gl_multitexture = {"gl_multitexture", "1"};
-cvar_t gl_vertexarrays = {"gl_vertexarrays", "1"};
 
 typedef struct translistitem_s
 {
@@ -41,6 +41,7 @@ void gl_poly_start()
 	transpoly = qmalloc(MAX_TRANSPOLYS * sizeof(transpoly_t));
 	transpolyindex = qmalloc(MAX_TRANSPOLYS * sizeof(unsigned short));
 	wallvert = qmalloc(MAX_WALLVERTS * sizeof(wallvert_t));
+	wallvertcolor = qmalloc(MAX_WALLVERTS * sizeof(wallvertcolor_t));
 	wallpoly = qmalloc(MAX_WALLPOLYS * sizeof(wallpoly_t));
 	skyvert = qmalloc(MAX_SKYVERTS * sizeof(skyvert_t));
 	skypoly = qmalloc(MAX_SKYPOLYS * sizeof(skypoly_t));
@@ -54,6 +55,7 @@ void gl_poly_shutdown()
 	qfree(transpoly);
 	qfree(transpolyindex);
 	qfree(wallvert);
+	qfree(wallvertcolor);
 	qfree(wallpoly);
 	qfree(skyvert);
 	qfree(skypoly);
@@ -62,7 +64,6 @@ void gl_poly_shutdown()
 void GL_Poly_Init()
 {
 	Cvar_RegisterVariable (&gl_multitexture);
-	Cvar_RegisterVariable (&gl_vertexarrays);
 	R_RegisterModule("GL_Poly", gl_poly_start, gl_poly_shutdown);
 }
 
@@ -382,10 +383,7 @@ void transpolyrender()
 	glEnable(GL_BLEND);
 	glShadeModel(GL_SMOOTH);
 	glDepthMask(0); // disable zbuffer updates
-	if (isG200) // Matrox G200 cards can't handle per pixel alpha
-		glEnable(GL_ALPHA_TEST);
-	else
-		glDisable(GL_ALPHA_TEST);
+	glDisable(GL_ALPHA_TEST);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	tpolytype = TPOLYTYPE_ALPHA;
 	texnum = -1;
@@ -393,7 +391,7 @@ void transpolyrender()
 	if (gl_vertexarrays.value)
 	{
 		// set up the vertex array
-		qglInterleavedArrays(GL_T2F_C4UB_V3F, 0, transvert);
+		glInterleavedArrays(GL_T2F_C4UB_V3F, 0, transvert);
 		for (i = 0;i < transpolyindices;i++)
 		{
 			p = &transpoly[transpolyindex[i]];
@@ -413,14 +411,14 @@ void transpolyrender()
 						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 				}
 			}
-			qglDrawArrays(GL_POLYGON, p->firstvert, p->verts);
+			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 			if (p->glowtexnum)
 			{
 				texnum = p->glowtexnum; // highly unlikely to match next poly, but...
 				glBindTexture(GL_TEXTURE_2D, texnum);
 				tpolytype = TPOLYTYPE_ADD; // might match next poly
 				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				qglDrawArrays(GL_POLYGON, p->firstvert, p->verts);
+				glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 			}
 		}
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -445,7 +443,8 @@ void transpolyrender()
 					glEnd();
 					if (isG200)
 					{
-						if (p->fogtexnum) // alpha
+						// LordHavoc: Matrox G200 cards can't handle per pixel alpha
+						if (p->fogtexnum)
 							glEnable(GL_ALPHA_TEST);
 						else
 							glDisable(GL_ALPHA_TEST);
@@ -568,6 +567,7 @@ void wallpolyrender()
 	int i, j, texnum, lighttexnum;
 	wallpoly_t *p;
 	wallvert_t *vert;
+	wallvertcolor_t *vertcolor;
 	if (!r_render.value)
 		return;
 	if (currentwallpoly < 1)
@@ -582,7 +582,7 @@ void wallpolyrender()
 	glShadeModel(GL_FLAT);
 	// make sure zbuffer is enabled
 	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_ALPHA_TEST);
+//	glDisable(GL_ALPHA_TEST);
 	glDepthMask(1);
 	glColor3f(1,1,1);
 	if (r_fullbright.value) // LordHavoc: easy to do fullbright...
@@ -600,7 +600,7 @@ void wallpolyrender()
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
-				glTexCoord2f (vert->s, vert->t);
+				glTexCoord2f (vert->vert[3], vert->vert[4]);
 				glVertex3fv (vert->vert);
 			}
 			glEnd ();
@@ -631,8 +631,8 @@ void wallpolyrender()
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
-				qglMTexCoord2f(gl_mtex_enum, vert->s, vert->t); // texture
-				qglMTexCoord2f((gl_mtex_enum+1), vert->u, vert->v); // lightmap
+				qglMTexCoord2f(gl_mtex_enum, vert->vert[3], vert->vert[4]); // texture
+				qglMTexCoord2f((gl_mtex_enum+1), vert->vert[5], vert->vert[6]); // lightmap
 				glVertex3fv (vert->vert);
 			}
 			glEnd ();
@@ -660,7 +660,7 @@ void wallpolyrender()
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
-				glTexCoord2f (vert->s, vert->t);
+				glTexCoord2f (vert->vert[3], vert->vert[4]);
 				glVertex3fv (vert->vert);
 			}
 			glEnd ();
@@ -681,7 +681,7 @@ void wallpolyrender()
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
-				glTexCoord2f (vert->u, vert->v);
+				glTexCoord2f (vert->vert[5], vert->vert[6]);
 				glVertex3fv (vert->vert);
 			}
 			glEnd ();
@@ -692,7 +692,7 @@ void wallpolyrender()
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glEnable(GL_BLEND);
-	glDisable(GL_ALPHA_TEST);
+//	glDisable(GL_ALPHA_TEST);
 	glShadeModel(GL_SMOOTH);
 	// render vertex lit overlays ontop
 	texnum = -1;
@@ -700,8 +700,8 @@ void wallpolyrender()
 	{
 		if (!p->lit)
 			continue;
-		for (j = 0,vert = &wallvert[p->firstvert];j < p->numverts;j++, vert++)
-			if (vert->r || vert->g || vert->b)
+		for (j = 0,vertcolor = &wallvertcolor[p->firstvert];j < p->numverts;j++, vertcolor++)
+			if (vertcolor->r || vertcolor->g || vertcolor->b)
 				goto lit;
 		continue;
 lit:
@@ -712,12 +712,12 @@ lit:
 			glBindTexture(GL_TEXTURE_2D, texnum);
 		}
 		glBegin(GL_POLYGON);
-		for (j = 0,vert = &wallvert[p->firstvert];j < p->numverts;j++, vert++)
+		for (j = 0,vert = &wallvert[p->firstvert], vertcolor = &wallvertcolor[p->firstvert];j < p->numverts;j++, vert++, vertcolor++)
 		{
 			// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
-			glTexCoord2f(vert->s, vert->t);
+			glTexCoord2f(vert->vert[3], vert->vert[4]);
 			// again, vector version isn't supported I think
-			glColor3ub(vert->r, vert->g, vert->b);
+			glColor3ub(vertcolor->r, vertcolor->g, vertcolor->b);
 			glVertex3fv(vert->vert);
 		}
 		glEnd();
@@ -743,7 +743,7 @@ lit:
 		glBegin(GL_POLYGON);
 		for (j=0 ; j<p->numverts ; j++, vert++)
 		{
-			glTexCoord2f (vert->s, vert->t);
+			glTexCoord2f (vert->vert[3], vert->vert[4]);
 			glVertex3fv (vert->vert);
 		}
 		glEnd();
@@ -771,7 +771,7 @@ lit:
 	}
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDisable(GL_ALPHA_TEST);
+//	glDisable(GL_ALPHA_TEST);
 	glShadeModel(GL_SMOOTH);
 	glDisable(GL_BLEND);
 	glDepthMask(1);
@@ -783,10 +783,10 @@ void skypolyclear()
 }
 
 extern char skyname[];
-extern int solidskytexture, alphaskytexture;
+extern rtexture_t *solidskytexture, *alphaskytexture;
 void skypolyrender()
 {
-	int i, j;
+	int i, j, numskyverts;
 	skypoly_t *p;
 	skyvert_t *vert;
 	float length, speedscale;
@@ -797,13 +797,18 @@ void skypolyrender()
 		return;
 	// testing
 //	Con_DPrintf("skypolyrender: %i polys %i vertices\n", currentskypoly, currentskyvert);
-	glDisable(GL_ALPHA_TEST);
+//	glDisable(GL_ALPHA_TEST);
 	glDisable(GL_BLEND);
 	// make sure zbuffer is enabled
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);
 	if (!fogenabled && !skyname[0]) // normal quake sky
 	{
+		glInterleavedArrays(GL_T2F_V3F, 0, skyvert);
+//		glTexCoordPointer(2, GL_FLOAT, sizeof(skyvert_t) - sizeof(float) * 2, &skyvert[0].tex[0]);
+//		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+//		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t) - sizeof(float) * 3, &skyvert[0].v[0]);
+//		glEnableClientState(GL_VERTEX_ARRAY);
 		if(lighthalf)
 			glColor3f(0.5f, 0.5f, 0.5f);
 		else
@@ -812,14 +817,14 @@ void skypolyrender()
 		glEnable(GL_TEXTURE_2D);
 		glDisable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glBindTexture(GL_TEXTURE_2D, solidskytexture); // upper clouds
+		glBindTexture(GL_TEXTURE_2D, R_GetTexture(solidskytexture)); // upper clouds
 		speedscale = cl.time*8;
 		speedscale -= (int)speedscale & ~127 ;
-		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
+		numskyverts = 0;
+		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 		{
-			vert = &skyvert[p->firstvert];
-			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			vert = skyvert + p->firstvert;
+			for (j = 0;j < p->verts;j++, vert++)
 			{
 				VectorSubtract (vert->v, r_origin, dir);
 				dir[2] *= 3;	// flatten the sphere
@@ -828,21 +833,24 @@ void skypolyrender()
 				length = sqrt (length);
 				length = 6*63/length;
 
-				glTexCoord2f ((speedscale + dir[0] * length) * (1.0/128), (speedscale + dir[1] * length) * (1.0/128));
-				glVertex3fv (vert->v);
+				vert->tex[0] = (speedscale + dir[0] * length) * (1.0/128);
+				vert->tex[1] = (speedscale + dir[1] * length) * (1.0/128);
 			}
-			glEnd ();
+			numskyverts += p->verts;
 		}
+		GL_LockArray(0, numskyverts);
+		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
+			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
+		GL_UnlockArray();
 		glEnable(GL_BLEND);
 		glDepthMask(0);
-		glBindTexture(GL_TEXTURE_2D, alphaskytexture); // lower clouds
+		glBindTexture(GL_TEXTURE_2D, R_GetTexture(alphaskytexture)); // lower clouds
 		speedscale = cl.time*16;
 		speedscale -= (int)speedscale & ~127 ;
-		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
+		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 		{
-			vert = &skyvert[p->firstvert];
-			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			vert = skyvert + p->firstvert;
+			for (j = 0;j < p->verts;j++, vert++)
 			{
 				VectorSubtract (vert->v, r_origin, dir);
 				dir[2] *= 3;	// flatten the sphere
@@ -851,29 +859,36 @@ void skypolyrender()
 				length = sqrt (length);
 				length = 6*63/length;
 
-				glTexCoord2f ((speedscale + dir[0] * length) * (1.0/128), (speedscale + dir[1] * length) * (1.0/128));
-				glVertex3fv (vert->v);
+				vert->tex[0] = (speedscale + dir[0] * length) * (1.0/128);
+				vert->tex[1] = (speedscale + dir[1] * length) * (1.0/128);
 			}
-			glEnd ();
 		}
+		GL_LockArray(0, numskyverts);
+		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
+			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
+		GL_UnlockArray();
 		glDisable(GL_BLEND);
 		glColor3f(1,1,1);
 		glDepthMask(1);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_VERTEX_ARRAY);
 	}
 	else
 	{
+		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t) - sizeof(float) * 3, &skyvert[0].v[0]);
+		glEnableClientState(GL_VERTEX_ARRAY);
 		glDisable(GL_TEXTURE_2D);
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 		glColor3fv(fogcolor); // note: gets rendered over by skybox if fog is not enabled
-		for (i = 0,p = &skypoly[0];i < currentskypoly;i++, p++)
-		{
-			vert = &skyvert[p->firstvert];
-			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
-				glVertex3fv (vert->v);
-			glEnd ();
-		}
+		numskyverts = 0;
+		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
+			numskyverts += p->verts;
+		GL_LockArray(0, numskyverts);
+		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
+			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
+		GL_UnlockArray();
 		glColor3f(1,1,1);
 		glEnable(GL_TEXTURE_2D);
+		glDisableClientState(GL_VERTEX_ARRAY);
 	}
 }

@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+cvar_t r_mipskins = {"r_mipskins", "1", true};
+
 /*
 ===============
 Mod_AliasInit
@@ -27,6 +29,7 @@ Mod_AliasInit
 */
 void Mod_AliasInit (void)
 {
+	Cvar_RegisterVariable(&r_mipskins);
 }
 
 int			posenum;
@@ -40,11 +43,9 @@ int vertonseam[MAXVERTS];
 int vertremap[MAXVERTS];
 unsigned short temptris[MAXVERTS][3];
 
-#define NUMVERTEXNORMALS	162
-extern	float	r_avertexnormals[NUMVERTEXNORMALS][3];
-void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivert2 *out)
+void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
 {
-	int i, j;
+	int i, j, invalidnormals = 0;
 	vec3_t temp;
 	for (i = 0;i < inverts;i++)
 	{
@@ -64,19 +65,27 @@ void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivert
 		if (j >= 0)
 		{
 			VectorCopy(v[i].v, out[j].v);
-			out[j].n[0] = (signed char) (r_avertexnormals[v[i].lightnormalindex][0] * 127.0);
-			out[j].n[1] = (signed char) (r_avertexnormals[v[i].lightnormalindex][1] * 127.0);
-			out[j].n[2] = (signed char) (r_avertexnormals[v[i].lightnormalindex][2] * 127.0);
+			out[j].lightnormalindex = v[i].lightnormalindex;
+			if (out[j].lightnormalindex >= NUMVERTEXNORMALS)
+			{
+				invalidnormals++;
+				out[j].lightnormalindex = 0;
+			}
 		}
 		j = vertremap[i+inverts]; // onseam
 		if (j >= 0)
 		{
 			VectorCopy(v[i].v, out[j].v);
-			out[j].n[0] = (signed char) (r_avertexnormals[v[i].lightnormalindex][0] * 127.0);
-			out[j].n[1] = (signed char) (r_avertexnormals[v[i].lightnormalindex][1] * 127.0);
-			out[j].n[2] = (signed char) (r_avertexnormals[v[i].lightnormalindex][2] * 127.0);
+			out[j].lightnormalindex = v[i].lightnormalindex;
+			if (out[j].lightnormalindex >= NUMVERTEXNORMALS)
+			{
+				invalidnormals++;
+				out[j].lightnormalindex = 0;
+			}
 		}
 	}
+	if (invalidnormals)
+		Con_Printf("Mod_ConvertAliasVerts: %i invalid normal indices found\n", invalidnormals);
 }
 
 /*
@@ -84,17 +93,18 @@ void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivert
 Mod_LoadAliasFrame
 =================
 */
-void * Mod_LoadAliasFrame (void *pin, maliasframe_t *frame, maliashdr_t *mheader, int inverts, int outverts, trivert2 **posevert)
+void * Mod_LoadAliasFrame (void *pin, maliashdr_t *mheader, int inverts, int outverts, trivertx_t **posevert, animscene_t *scene)
 {
 	trivertx_t		*pinframe;
 	daliasframe_t	*pdaliasframe;
 	
 	pdaliasframe = (daliasframe_t *)pin;
 
-	strcpy(frame->name, pdaliasframe->name);
-	frame->start = posenum;
-	frame->length = 1;
-	frame->rate = 10.0f; // unnecessary but...
+	strcpy(scene->name, pdaliasframe->name);
+	scene->firstframe = posenum;
+	scene->framecount = 1;
+	scene->framerate = 10.0f; // unnecessary but...
+	scene->loop = true;
 
 	pinframe = (trivertx_t *)(pdaliasframe + 1);
 
@@ -113,7 +123,7 @@ void * Mod_LoadAliasFrame (void *pin, maliasframe_t *frame, maliashdr_t *mheader
 Mod_LoadAliasGroup
 =================
 */
-void *Mod_LoadAliasGroup (void *pin, maliasframe_t *frame, maliashdr_t *mheader, int inverts, int outverts, trivert2 **posevert)
+void *Mod_LoadAliasGroup (void *pin, maliashdr_t *mheader, int inverts, int outverts, trivertx_t **posevert, animscene_t *scene)
 {
 	int		i, numframes;
 	void	*ptemp;
@@ -121,13 +131,14 @@ void *Mod_LoadAliasGroup (void *pin, maliasframe_t *frame, maliashdr_t *mheader,
 	
 	numframes = LittleLong (((daliasgroup_t *)pin)->numframes);
 
-	strcpy(frame->name, "group");
-	frame->start = posenum;
-	frame->length = numframes;
+	strcpy(scene->name, ((daliasframe_t *) (sizeof(daliasinterval_t) * numframes + sizeof(daliasgroup_t) + (int) pin))->name);
+	scene->firstframe = posenum;
+	scene->framecount = numframes;
 	interval = LittleFloat (((daliasinterval_t *)(((daliasgroup_t *)pin) + 1))->interval); // FIXME: support variable framerate groups?
 	if (interval < 0.01f)
 		Host_Error("Mod_LoadAliasGroup: invalid interval");
-	frame->rate = 1.0f / interval;
+	scene->framerate = 1.0f / interval;
+	scene->loop = true;
 
 	ptemp = (void *)(((daliasinterval_t *)(((daliasgroup_t *)pin) + 1)) + numframes);
 
@@ -219,7 +230,7 @@ void Mod_FloodFillSkin( byte *skin, int skinwidth, int skinheight )
 	}
 }
 
-int GL_SkinSplitShirt(byte *in, byte *out, int width, int height, unsigned short bits, char *name)
+rtexture_t *GL_SkinSplitShirt(byte *in, byte *out, int width, int height, unsigned short bits, char *name, int precache)
 {
 	int i, pixels, passed;
 	byte pixeltest[16];
@@ -244,12 +255,12 @@ int GL_SkinSplitShirt(byte *in, byte *out, int width, int height, unsigned short
 		out++;
 	}
 	if (passed)
-		return GL_LoadTexture (name, width, height, out - width*height, true, false, 1);
+		return R_LoadTexture (name, width, height, out - width*height, (r_mipskins.value ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0));
 	else
-		return 0;
+		return NULL;
 }
 
-int GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned short bits, char *name)
+rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned short bits, char *name, int precache)
 {
 	int i, pixels, passed;
 	byte pixeltest[16];
@@ -270,9 +281,9 @@ int GL_SkinSplit(byte *in, byte *out, int width, int height, unsigned short bits
 		out++;
 	}
 	if (passed)
-		return GL_LoadTexture (name, width, height, out - width*height, true, false, 1);
+		return R_LoadTexture (name, width, height, out - width*height, (r_mipskins.value ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0));
 	else
-		return 0;
+		return NULL;
 }
 
 int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
@@ -292,7 +303,7 @@ int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
 	return false;
 }
 
-void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, int *skintexnum)
+void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, rtexture_t **skintex)
 {
 #if 0
 	int skin_normal, skin_pants, skin_shirt, skin_glow, skin_body, temp;
@@ -341,26 +352,31 @@ void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *s
 		}
 	}
 #else
-	skintexnum[0] = loadtextureimage(va("%s_normal", basename), 0, 0, false, true);
-	skintexnum[1] = 0;
-	skintexnum[2] = 0;
-	skintexnum[3] = loadtextureimage(va("%s_glow"  , basename), 0, 0, false, true);
-	skintexnum[4] = 0;
-	if (skintexnum[0])
+	skintex[0] = loadtextureimage(va("%s_normal", basename), 0, 0, false, r_mipskins.value, true);
+	skintex[1] = NULL;
+	skintex[2] = NULL;
+	skintex[3] = loadtextureimage(va("%s_glow"  , basename), 0, 0, false, r_mipskins.value, true);
+	skintex[4] = NULL;
+	if (skintex[0])
 	{
-		skintexnum[1] = loadtextureimage(va("%s_pants" , basename), 0, 0, false, true);
-		skintexnum[2] = loadtextureimage(va("%s_shirt" , basename), 0, 0, false, true);
+		skintex[1] = loadtextureimage(va("%s_pants" , basename), 0, 0, false, r_mipskins.value, true);
+		skintex[2] = loadtextureimage(va("%s_shirt" , basename), 0, 0, false, r_mipskins.value, true);
 	}
 	else
 	{
-		skintexnum[0] = loadtextureimage(basename, 0, 0, false, true);
-		if (!skintexnum[0])
+		skintex[0] = loadtextureimage(basename, 0, 0, false, true, true);
+		if (!skintex[0])
 		{
-			skintexnum[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FBD, va("&%s_normal", basename)); // normal (no special colors)
-			skintexnum[1] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("&%s_pants", basename)); // pants
-			skintexnum[2] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("&%s_shirt", basename)); // shirt
-			skintexnum[3] = GL_SkinSplit(skindata, skintemp, width, height, 0xC000, va("%s_glow", basename)); // glow
-			skintexnum[4] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename)); // body (normal + pants + shirt, but not glow)
+			skintex[1] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("%s_pants", basename), false); // pants
+			skintex[2] = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("%s_shirt", basename), false); // shirt
+			skintex[3] = GL_SkinSplit(skindata, skintemp, width, height, 0xC000, va("%s_glow", basename), true); // glow
+			if (skintex[1] || skintex[2])
+			{
+				skintex[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FBD, va("%s_normal", basename), false); // normal (no special colors)
+				skintex[4] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename), true); // body (normal + pants + shirt, but not glow)
+			}
+			else
+				skintex[0] = GL_SkinSplit(skindata, skintemp, width, height, 0x3FFF, va("%s_base", basename), true); // no special colors
 		}
 	}
 #endif
@@ -380,7 +396,8 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 	daliasskingroup_t		*pinskingroup;
 	int		groupskins;
 	daliasskininterval_t	*pinskinintervals;
-	int		skinranges, skincount, *skintexnum, *skinrange, skinnum;
+	int		skinranges, skincount, *skinrange, skinnum;
+	rtexture_t **skintex;
 	void	*temp;
 	byte	*skintemp = NULL;
 	
@@ -414,7 +431,7 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 	pskintype = temp;
 
 	skinrange = loadmodel->skinanimrange;
-	skintexnum = loadmodel->skinanim;
+	skintex = loadmodel->skinanim;
 //	skinrange = Hunk_AllocName (sizeof(int) * (skinranges + skincount), loadname);	
 //	skintexnum = skinrange + skinranges * 2;
 //	loadmodel->skinanimrange = (int) skinrange - (int) pheader;
@@ -429,8 +446,8 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 			*skinrange++ = 1; // single skin
 			skinnum++;
 			sprintf (name, "%s_%i", loadmodel->name, i);
-			Mod_LoadSkin(mheader, name, (byte *)pskintype, skintemp, width, height, skintexnum);
-			skintexnum += 5;
+			Mod_LoadSkin(mheader, name, (byte *)pskintype, skintemp, width, height, skintex);
+			skintex += 5;
 			pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
 		}
 		else
@@ -447,8 +464,8 @@ void *Mod_LoadAllSkins (maliashdr_t *mheader, int numskins, daliasskintype_t *ps
 			for (j = 0;j < groupskins;j++)
 			{
 				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
-				Mod_LoadSkin(mheader, name, (byte *)pskintype, skintemp, width, height, skintexnum);
-				skintexnum += 5;
+				Mod_LoadSkin(mheader, name, (byte *)pskintype, skintemp, width, height, skintex);
+				skintex += 5;
 				pskintype = (daliasskintype_t *)((byte *)(pskintype) + s);
 			}
 		}
@@ -482,8 +499,8 @@ void *Mod_SkipAllSkins (int numskins, daliasskintype_t *pskintype, int skinsize)
 Mod_LoadAliasModel
 =================
 */
-#define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid VALUE (%d exceeds %d - %d)\n", mod->name, VALUE, MIN, MAX);
-#define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid VALUE (%f exceeds %f - %f)\n", mod->name, VALUE, MIN, MAX);
+#define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", mod->name, VALUE, MIN, MAX);
+#define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", mod->name, VALUE, MIN, MAX);
 void Mod_LoadAliasModel (model_t *mod, void *buffer)
 {
 	int					i, j, version, numframes, start, end, total, numverts, numtris, numposes, numskins, skinwidth, skinheight, f, totalverts;
@@ -495,8 +512,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	float				*pouttexcoords, scales, scalet;
 	maliashdr_t			*mheader;
 	unsigned short		*pouttris;
-	maliasframe_t		*frame;
-	trivert2			*posevert;
+	trivertx_t			*posevert;
+	animscene_t			*animscenes;
 
 	start = Hunk_LowMark ();
 
@@ -547,7 +564,6 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	// rebuild the model
 	mheader = Hunk_AllocName (sizeof(maliashdr_t), va("%s model header", loadname));
 	mod->flags = LittleLong (pinmodel->flags);
-	mod->type = mod_alias;
 // endian-adjust and copy the data, starting with the alias model header
 	mheader->numverts = numverts;
 	mod->numtris = mheader->numtris = numtris;
@@ -640,9 +656,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 // load the frames
 	posenum = 0;
-	frame = Hunk_AllocName(sizeof(maliasframe_t) * numframes, va("%s frame info", loadname));
-	mheader->framedata = (int) frame - (int) mheader;
-	posevert = Hunk_AllocName(sizeof(trivert2) * numposes * totalverts, va("%s vertex data", loadname));
+	posevert = Hunk_AllocName(sizeof(trivertx_t) * numposes * totalverts, va("%s vertex data", loadname));
 	mheader->posedata = (int) posevert - (int) mheader;
 	pframetype = (daliasframetype_t *)&pintriangles[numtris];
 
@@ -650,13 +664,17 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	aliasbboxmin[0] = aliasbboxmin[1] = aliasbboxmin[2] = 1000000000;
 	aliasbboxmax[0] = aliasbboxmax[1] = aliasbboxmax[2] = -1000000000;
 
-	for (i=0 ; i<numframes ; i++)
+	animscenes = Hunk_AllocName(sizeof(animscene_t) * mod->numframes, va("%s sceneinfo", loadname));
+
+	for (i = 0;i < numframes;i++)
 	{
 		if ((aliasframetype_t) LittleLong (pframetype->type) == ALIAS_SINGLE)
-			pframetype = (daliasframetype_t *) Mod_LoadAliasFrame (pframetype + 1, frame++, mheader, numverts, totalverts, &posevert);
+			pframetype = (daliasframetype_t *) Mod_LoadAliasFrame (pframetype + 1, mheader, numverts, totalverts, &posevert, animscenes + i);
 		else
-			pframetype = (daliasframetype_t *) Mod_LoadAliasGroup (pframetype + 1, frame++, mheader, numverts, totalverts, &posevert);
+			pframetype = (daliasframetype_t *) Mod_LoadAliasGroup (pframetype + 1, mheader, numverts, totalverts, &posevert, animscenes + i);
 	}
+
+	mod->ofs_scenes = (int) animscenes - (int) mheader;
 
 	// LordHavoc: fixed model bbox - was //FIXME: do this right
 	//mod->mins[0] = mod->mins[1] = mod->mins[2] = -16;
@@ -669,8 +687,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
-	total = end - start;
-	
+	mod->cachesize = total = end - start;
+
 	Cache_Alloc (&mod->cache, total, loadname);
 	if (!mod->cache.data)
 		return;
@@ -679,9 +697,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	Hunk_FreeToLowMark (start);
 }
 
-void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivert2 *out)
+void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
 {
-	int i;
+	int i, invalidnormals = 0;
 	vec3_t temp;
 	for (i = 0;i < numverts;i++)
 	{
@@ -696,62 +714,15 @@ void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, triv
 		if (temp[0] > aliasbboxmax[0]) aliasbboxmax[0] = temp[0];
 		if (temp[1] > aliasbboxmax[1]) aliasbboxmax[1] = temp[1];
 		if (temp[2] > aliasbboxmax[2]) aliasbboxmax[2] = temp[2];
-		out[i].n[0] = (signed char) (r_avertexnormals[v[i].lightnormalindex][0] * 127.0);
-		out[i].n[1] = (signed char) (r_avertexnormals[v[i].lightnormalindex][1] * 127.0);
-		out[i].n[2] = (signed char) (r_avertexnormals[v[i].lightnormalindex][2] * 127.0);
-	}		
-	/*
-	int i, j;
-	vec3_t t1, t2;
-	struct
-	{
-		vec3_t v;
-		vec3_t normal;
-		int count;
-	} tempvert[MD2MAX_VERTS];
-	temptris_t *tris;
-	// decompress vertices
-	for (i = 0;i < numverts;i++)
-	{
-		VectorCopy(v[i].v, out[i].v);
-		tempvert[i].v[0] = v[i].v[0] * scale[0] + translate[0];
-		tempvert[i].v[1] = v[i].v[1] * scale[1] + translate[1];
-		tempvert[i].v[2] = v[i].v[2] * scale[2] + translate[2];
-		tempvert[i].normal[0] = tempvert[i].normal[1] = tempvert[i].normal[2] = 0;
-		tempvert[i].count = 0;
-		// update bounding box
-		if (tempvert[i].v[0] < aliasbboxmin[0]) aliasbboxmin[0] = tempvert[i].v[0];
-		if (tempvert[i].v[1] < aliasbboxmin[1]) aliasbboxmin[1] = tempvert[i].v[1];
-		if (tempvert[i].v[2] < aliasbboxmin[2]) aliasbboxmin[2] = tempvert[i].v[2];
-		if (tempvert[i].v[0] > aliasbboxmax[0]) aliasbboxmax[0] = tempvert[i].v[0];
-		if (tempvert[i].v[1] > aliasbboxmax[1]) aliasbboxmax[1] = tempvert[i].v[1];
-		if (tempvert[i].v[2] > aliasbboxmax[2]) aliasbboxmax[2] = tempvert[i].v[2];
-	}
-	// calculate surface normals
-	tris = temptris;
-	for (i = 0;i < numtris;i++)
-	{
-		VectorSubtract(tempvert[tris->v[0]].v, tempvert[tris->v[1]].v, t1);
-		VectorSubtract(tempvert[tris->v[2]].v, tempvert[tris->v[1]].v, t2);
-		CrossProduct(t1, t2, tris->normal);
-		VectorNormalize(tris->normal);
-		// add surface normal to vertices
-		for (j = 0;j < 3;j++)
+		out[i].lightnormalindex = v[i].lightnormalindex;
+		if (out[i].lightnormalindex >= NUMVERTEXNORMALS)
 		{
-			VectorAdd(tris->normal, tempvert[tris->v[j]].normal, tempvert[tris->v[j]].normal);
-			tempvert[tris->v[j]].count++;
+			invalidnormals++;
+			out[i].lightnormalindex = 0;
 		}
-		tris++;
 	}
-	// average normals and write out 1.7bit format
-	for (i = 0;i < pheader->numtris;i++)
-	{
-		VectorNormalize(tempvert[i].normal);
-		out[i].n[0] = (signed char) (tempvert[i].normal[0] * 127.0);
-		out[i].n[1] = (signed char) (tempvert[i].normal[1] * 127.0);
-		out[i].n[2] = (signed char) (tempvert[i].normal[2] * 127.0);
-	}
-	*/
+	if (invalidnormals)
+		Con_Printf("Mod_ConvertQ2AliasVerts: %i invalid normal indices found\n", invalidnormals);
 }
 
 /*
@@ -766,9 +737,10 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	md2mem_t			*pheader;
 	md2triangle_t		*pintriangles, *pouttriangles;
 	md2frame_t			*pinframe;
-	md2memframe_t		*poutframe;
+	md2frame_t			*poutframe;
 	char				*pinskins;
 //	temptris_t			*tris;
+	animscene_t			*animscenes;
 
 	start = Hunk_LowMark ();
 
@@ -785,7 +757,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	mod->type = mod_alias;
 	mod->aliastype = ALIASTYPE_MD2;
 
-	framesize = sizeof(md2memframesize_t) + LittleLong(pinmodel->num_xyz) * sizeof(trivert2);
+	framesize = sizeof(md2framesize_t) + LittleLong(pinmodel->num_xyz) * sizeof(trivertx_t);
 	// LordHavoc: calculate size for in memory version
 	size = sizeof(md2mem_t)
 		 + LittleLong(pinmodel->num_st) * sizeof(md2stvert_t)
@@ -818,7 +790,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		Host_Error ("%s has invalid number of vertices: %i", mod->name, LittleLong(pinmodel->num_xyz));
 	if (LittleLong(pinmodel->num_frames < 1) || LittleLong(pinmodel->num_frames) > MD2MAX_FRAMES)
 		Host_Error ("%s has invalid number of frames: %i", mod->name, LittleLong(pinmodel->num_frames));
-	if (LittleLong(pinmodel->num_skins < 0) || LittleLong(pinmodel->num_skins) > MD2MAX_SKINS)
+	if (LittleLong(pinmodel->num_skins < 0) || LittleLong(pinmodel->num_skins) > MAX_SKINS)
 		Host_Error ("%s has invalid number of skins: %i", mod->name, LittleLong(pinmodel->num_skins));
 
 	pheader->framesize = framesize;
@@ -832,7 +804,8 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 // load the skins
 	if (pheader->num_skins)
 	{
-		int *skin, *skinrange;
+		rtexture_t **skin;
+		int *skinrange;
 		skinrange = loadmodel->skinanimrange;
 		skin = loadmodel->skinanim;
 //		skinrange = Hunk_AllocName (sizeof(int) * (pheader->num_skins * 2), loadname);	
@@ -844,11 +817,11 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		{
 			*skinrange++ = i;
 			*skinrange++ = 1;
-			*skin++ = loadtextureimage (pinskins, 0, 0, true, true);
-			*skin++ = 0; // the extra 4 layers are currently unused
-			*skin++ = 0;
-			*skin++ = 0;
-			*skin++ = 0;
+			*skin++ = loadtextureimage (pinskins, 0, 0, true, r_mipskins.value, true);
+			*skin++ = NULL; // the extra 4 layers are currently unused
+			*skin++ = NULL;
+			*skin++ = NULL;
+			*skin++ = NULL;
 			pinskins += MD2MAX_SKINNAME;
 		}
 	}
@@ -860,9 +833,9 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	pheader->ofs_tris = (int) pouttriangles - (int) pheader;
 //	tris = temptris;
 	// swap the triangle list
-	for (i=0 ; i<pheader->num_tris ; i++)
+	for (i = 0;i < pheader->num_tris;i++)
 	{
-		for (j=0 ; j<3 ; j++)
+		for (j = 0;j < 3;j++)
 		{
 			temptris[i][j] = pouttriangles->index_xyz[j] = LittleShort (pintriangles->index_xyz[j]);
 			pouttriangles->index_st[j] = LittleShort (pintriangles->index_st[j]);
@@ -883,18 +856,30 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	pinframe = (void*) ((int) pinmodel + LittleLong(pinmodel->ofs_frames));
 	poutframe = (void*) pouttriangles;
 	pheader->ofs_frames = (int) poutframe - (int) pheader;
-	for (i=0 ; i<pheader->num_frames ; i++)
+
+	animscenes = Hunk_AllocName(sizeof(animscene_t) * mod->numframes, va("%s sceneinfo", loadname));
+
+	for (i = 0;i < pheader->num_frames;i++)
 	{
+		strcpy(poutframe->name, pinframe->name);
 		for (j = 0;j < 3;j++)
 		{
-			strcpy(poutframe->name, pinframe->name);
 			poutframe->scale[j] = LittleFloat(pinframe->scale[j]);
 			poutframe->translate[j] = LittleFloat(pinframe->translate[j]);
 		}
 		Mod_ConvertQ2AliasVerts (pheader->num_xyz, poutframe->scale, poutframe->translate, &pinframe->verts[0], &poutframe->verts[0]);
+
+		strcpy(animscenes[i].name, poutframe->name);
+		animscenes[i].firstframe = i;
+		animscenes[i].framecount = 1;
+		animscenes[i].framerate = 10;
+		animscenes[i].loop = true;
+
 		pinframe = (void*) &pinframe->verts[j];
 		poutframe = (void*) &poutframe->verts[j];
 	}
+
+	mod->ofs_scenes = (int) animscenes - (int) pheader;
 
 	// LordHavoc: model bbox
 	for (j = 0;j < 3;j++)
@@ -912,7 +897,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
-	total = end - start;
+	mod->cachesize = total = end - start;
 	
 	Cache_Alloc (&mod->cache, total, loadname);
 	if (!mod->cache.data)
@@ -931,11 +916,13 @@ void swapintblock(int *m, int size)
 
 void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 {
-	int i, pbase, start, end, total, *skin, *skinrange, *texturenum;
+	int i, pbase, start, end, total, *skinrange;
+	rtexture_t **texture, **skin;
 	char *shadername;
 	zymtype1header_t *pinmodel, *pheader;
 	zymscene_t *scene;
 	zymbone_t *bone;
+	animscene_t *animscenes;
 
 	start = Hunk_LowMark ();
 
@@ -999,17 +986,18 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 //	loadmodel->skinanim = (int) skin - (int) pheader;
 	*skinrange++ = 0;
 	*skinrange++ = 1;
-	*skin++ = 0;
-	*skin++ = 0;
-	*skin++ = 0;
-	*skin++ = 0;
-	*skin++ = 0;
+	*skin++ = NULL;
+	*skin++ = NULL;
+	*skin++ = NULL;
+	*skin++ = NULL;
+	*skin++ = NULL;
 	loadmodel->numskins = 1;
 
 	// go through the lumps, swapping things
 
 //	zymlump_t lump_scenes; // zymscene_t scene[numscenes]; // name and other information for each scene (see zymscene struct)
 	scene = (void *) (pheader->lump_scenes.start + pbase);
+	animscenes = Hunk_AllocName(sizeof(animscene_t) * mod->numframes, va("%s sceneinfo", loadname));
 	for (i = 0;i < pheader->numscenes;i++)
 	{
 		scene->mins[0] = BigFloat(scene->mins[0]);
@@ -1023,8 +1011,16 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 		scene->flags = BigLong(scene->flags);
 		scene->start = BigLong(scene->start);
 		scene->length = BigLong(scene->length);
+
+		memcpy(animscenes[i].name, scene->name, 32);
+		animscenes[i].firstframe = scene->start;
+		animscenes[i].framecount = scene->length;
+		animscenes[i].framerate = scene->framerate;
+		animscenes[i].loop = (scene->flags & ZYMSCENEFLAG_NOLOOP) == 0;
+
 		scene++;
 	}
+	mod->ofs_scenes = (int) animscenes - pbase;
 
 //	zymlump_t lump_poses; // float pose[numposes][numbones][6]; // animation data
 	swapintblock((void *) (pheader->lump_poses.start + pbase), pheader->lump_poses.length);
@@ -1052,13 +1048,13 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 
 //	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
 	shadername = (void *) (pheader->lump_shaders.start + pbase);
-	texturenum = (void *) shadername;
+	texture = (void *) shadername;
 	for (i = 0;i < pheader->numshaders;i++)
 	{
-		int j;
-		j = loadtextureimage(shadername, 0, 0, true, true);
+		rtexture_t *rt;
+		rt = loadtextureimage(shadername, 0, 0, true, r_mipskins.value, true);
 		shadername += 32;
-		*texturenum++ = j; // reuse shader name list for texture numbers
+		*texture++ = rt; // reuse shader name list for texture pointers
 	}
 
 //	zymlump_t lump_trizone; // byte trizone[numtris]; // see trizone explanation
@@ -1073,7 +1069,7 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 
 // move the complete, relocatable alias model to the cache
 	end = Hunk_LowMark ();
-	total = end - start;
+	mod->cachesize = total = end - start;
 	
 	Cache_Alloc (&mod->cache, total, loadname);
 	if (!mod->cache.data)

@@ -101,12 +101,12 @@ int CL_GetMessage (void)
 			return 0;
 
 	// decide if it is time to grab the next message		
-		if (cls.signon == SIGNONS)	// allways grab until fully connected
+		if (cls.signon == SIGNONS)	// always grab until fully connected
 		{
 			if (cls.timedemo)
 			{
 				if (host_framecount == cls.td_lastframe)
-					return 0;		// allready read this frame's message
+					return 0;		// already read this frame's message
 				cls.td_lastframe = host_framecount;
 			// if this is the second frame, grab the real td_starttime
 			// so the bogus time on the first frame doesn't count
