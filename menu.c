@@ -2550,6 +2550,7 @@ level_t		transfusionlevels[] =
 	{"bb3",			"Bodies"},
 	{"bb4",			"The Tower"},
 	{"bb5",			"Click!"},
+	{"bb6",			"Twin Fortress"},
 	{"bb7",			"Midgard"},
 	{"bb8",			"Fun With Heads"},
 	{"e1m1",		"Cradle to Grave"},
@@ -2570,21 +2571,21 @@ level_t		transfusionlevels[] =
 	{"crypt",		"The Crypt"},
 
 	{"bb3_2k1",		"Bodies Infusion"},
+	{"dranzbb6",	"Black Coffee"},
 	{"qbb1",		"The Confluence"},
 	{"qbb2",		"KathartiK"},
 	{"qbb3",		"Caleb's Woodland Retreat"},
-	{"ded_simp",	"Dead Simple"},
-	{"dranzbb6",	"Black Coffee"},
-	{"qe1m7",		"The House of Chthon"}
+	{"qe1m7",		"The House of Chthon"},
+	{"simple",		"Dead Simple"}
 };
 
 episode_t	transfusionepisodes[] =
 {
-	{"Blood", 0, 9},
-	{"Plasma Pack", 9, 4},
-	{"Cryptic Passage", 13, 2},
-	{"Blood 2", 15, 5},
-	{"Custom", 20, 7}
+	{"Blood", 0, 10},
+	{"Plasma Pack", 10, 4},
+	{"Cryptic Passage", 14, 2},
+	{"Blood 2", 16, 5},
+	{"Custom", 21, 7}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
