@@ -757,7 +757,8 @@ static const gamemode_info_t gamemode_info [] =
 { "neoteric",		"-neoteric",	"Neoteric",				"neobase",	"neo" },
 // GAME_OPENQUARTZ
 { "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		"openquartz"},
-
+// GAME_PRYDON
+{ "prydon",			"-prydon",		"PrydonGate",			"prydon",	"prydon"},
 };
 
 void COM_InitGameType (void)

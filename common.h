@@ -186,6 +186,7 @@ extern	struct cvar_s	cmdline;
 #define GAME_TENEBRAE 13 // full of evil hackery
 #define GAME_NEOTERIC 14
 #define GAME_OPENQUARTZ 15 //this game sucks
+#define GAME_PRYDON 16
 
 extern int gamemode;
 extern const char *gamename;
