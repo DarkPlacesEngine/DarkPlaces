@@ -141,6 +141,8 @@ typedef struct msurface_s
 	int			visframe;
 	// should be drawn if onscreen and not a backface (used for setting visframe)
 	int			pvsframe;
+	// chain of surfaces marked visible by pvs
+	struct msurface_s	*pvschain;
 
 	// the node plane this is on, backwards if SURF_PLANEBACK flag set
 	mplane_t	*plane;
@@ -235,8 +237,6 @@ typedef struct mnode_s
 	vec3_t				mins;
 	vec3_t				maxs;
 
-	int					pvsframe;		// potentially visible if current (r_pvsframecount)
-
 // node specific
 	mplane_t			*plane;
 	struct mnode_s		*children[2];
@@ -258,10 +258,8 @@ typedef struct mleaf_s
 	vec3_t				mins;
 	vec3_t				maxs;
 
-	int					pvsframe;		// potentially visible if current (r_pvsframecount)
-
 // leaf specific
-	int					visframe;		// visible if current (r_framecount)
+	int					pvsframe;		// potentially visible if current (r_pvsframecount)
 	int					worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
 	int					portalmarkid;	// used by polygon-through-portals visibility checker
 

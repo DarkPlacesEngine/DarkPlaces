@@ -121,8 +121,6 @@ static void R_TimeRefresh_f (void)
 	Con_Printf ("%f seconds (%f fps)\n", time, 128/time);
 }
 
-extern cvar_t r_drawportals;
-
 vec3_t fogcolor;
 vec_t fogdensity;
 float fog_density, fog_red, fog_green, fog_blue;
@@ -401,31 +399,6 @@ int R_DrawBrushModelsSky (void)
 	return sky;
 }
 
-void R_DrawNoModel(entity_render_t *ent);
-void R_DrawModels (void)
-{
-	int i;
-	entity_render_t *ent;
-
-	if (!r_drawentities.integer)
-		return;
-
-	for (i = 0;i < r_refdef.numentities;i++)
-	{
-		ent = r_refdef.entities[i];
-		if (ent->visframe == r_framecount)
-		{
-			if (ent->model)
-			{
-				if (ent->model->Draw)
-					ent->model->Draw(ent);
-			}
-			else
-				R_DrawNoModel(ent);
-		}
-	}
-}
-
 /*
 =============
 R_DrawViewModel
@@ -446,6 +419,32 @@ void R_DrawViewModel (void)
 	Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 	R_UpdateEntLights(ent);
 	ent->model->Draw(ent);
+}
+
+void R_DrawNoModel(entity_render_t *ent);
+void R_DrawModels (void)
+{
+	int i;
+	entity_render_t *ent;
+
+	if (!r_drawentities.integer)
+		return;
+
+	R_DrawViewModel();
+	for (i = 0;i < r_refdef.numentities;i++)
+	{
+		ent = r_refdef.entities[i];
+		if (ent->visframe == r_framecount)
+		{
+			if (ent->model)
+			{
+				if (ent->model->Draw)
+					ent->model->Draw(ent);
+			}
+			else
+				R_DrawNoModel(ent);
+		}
+	}
 }
 
 static void R_SetFrustum (void)
@@ -576,35 +575,6 @@ void R_RenderView (void)
 	if (R_DrawBrushModelsSky())
 		R_TimeReport("bmodelsky");
 
-	if (world->model)
-	{
-		R_DrawWorld(world);
-		R_TimeReport("worldnode");
-
-		R_SurfMarkLights(world);
-		R_TimeReport("marklights");
-
-		R_PrepareSurfaces(world);
-		R_TimeReport("surfprep");
-
-		R_DrawSurfaces(world, SHADERSTAGE_SKY);
-		R_DrawSurfaces(world, SHADERSTAGE_NORMAL);
-		R_TimeReport("surfdraw");
-
-		if (r_drawportals.integer)
-		{
-			R_DrawPortals(world);
-			R_TimeReport("portals");
-		}
-	}
-
-	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds.integer)
-		S_ExtraUpdate ();
-
-	R_DrawViewModel();
-	R_TimeReport("viewmodel");
-
 	R_DrawModels();
 	R_TimeReport("models");
 
@@ -614,8 +584,15 @@ void R_RenderView (void)
 	R_DrawExplosions();
 	R_TimeReport("explosions");
 
+	// don't let sound skip if going slow
+	if (!intimerefresh && !r_speeds.integer)
+		S_ExtraUpdate ();
+
+	R_DrawWorld(world);
+	R_TimeReport("world");
+
 	R_MeshQueue_RenderTransparent();
-	R_TimeReport("addtrans");
+	R_TimeReport("drawtrans");
 
 	R_DrawCoronas();
 	R_TimeReport("coronas");
