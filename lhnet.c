@@ -460,7 +460,7 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 #endif
 					{
 #ifdef WIN32
-						size_t namelen;
+						int namelen;
 #else
 						socklen_t namelen;
 #endif
