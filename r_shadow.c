@@ -2251,7 +2251,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 	if (e->meshchain_light)
 		for (mesh = e->meshchain_light;mesh;mesh = mesh->next)
 			l += mesh->numtriangles;
-	Con_Printf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles, %i light triangles\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], k, l);
+	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles, %i light triangles\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], k, l);
 }
 
 void R_Shadow_FreeWorldLight(worldlight_t *light)
