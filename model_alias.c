@@ -215,7 +215,7 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 	}
 	if (skinframe->base != NULL)
 	{
-		layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
+		layer->flags = (skinframe->merged != NULL ? ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED : 0) | ALIASLAYER_DIFFUSE;
 		if (skinframe->glow != NULL)
 			layer->flags |= ALIASLAYER_ADD;
 		layer->texture = skinframe->base;
@@ -256,7 +256,7 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 	}
 	if (skinframe->base != NULL)
 	{
-		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
+		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | (skinframe->merged != NULL ? ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED : 0) | ALIASLAYER_DIFFUSE;
 		layer->texture = skinframe->base;
 		layer->nmap = skinframe->nmap;
 		layer++;
