@@ -405,7 +405,7 @@ char *PR_ValueString (etype_t type, eval_t *val)
 		sprintf (line, "bad type %i", type);
 		break;
 	}
-	
+
 	return line;
 }
 
@@ -685,7 +685,7 @@ void ED_PrintEdicts (void)
 =============
 ED_PrintEdict_f
 
-For debugging, prints a single edicy
+For debugging, prints a single edict
 =============
 */
 void ED_PrintEdict_f (void)
@@ -788,7 +788,7 @@ void ED_ParseGlobals (char *data)
 	ddef_t	*key;
 
 	while (1)
-	{	
+	{
 	// parse key
 		data = COM_Parse (data);
 		if (com_token[0] == '}')
@@ -899,7 +899,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
 	case ev_entity:
 		*(int *)d = EDICT_TO_PROG(EDICT_NUM(atoi (s)));
 		break;
-		
+
 	case ev_field:
 		def = ED_FindField (s);
 		if (!def)
@@ -1053,7 +1053,7 @@ void ED_LoadFromFile (char *data)
 // parse ents
 	while (1)
 	{
-// parse the opening brace	
+// parse the opening brace
 		data = COM_Parse (data);
 		if (!data)
 			break;
@@ -1384,15 +1384,107 @@ void PR_LoadProgs (void)
 
 void PR_Fields_f (void)
 {
-	int i;
+	int i, j, ednum, used, usedamount;
+	int *counts;
+	char tempstring[5000], tempstring2[260], *name;
+	edict_t *ed;
+	ddef_t *d;
+	int *v;
 	if (!sv.active)
 	{
 		Con_Printf("no progs loaded\n");
 		return;
 	}
+	counts = Mem_Alloc(tempmempool, progs->numfielddefs * sizeof(int));
+	for (ednum = 0;ednum < MAX_EDICTS;ednum++)
+	{
+		ed = EDICT_NUM(ednum);
+		if (ed->free)
+			continue;
+		for (i = 1;i < progs->numfielddefs;i++)
+		{
+			d = &pr_fielddefs[i];
+			name = pr_strings + d->s_name;
+			if (name[strlen(name)-2] == '_')
+				continue;	// skip _x, _y, _z vars
+			v = (int *)((char *)&ed->v + d->ofs*4);
+			// if the value is still all 0, skip the field
+			for (j = 0;j < type_size[d->type & ~DEF_SAVEGLOBAL];j++)
+			{
+				if (v[j])
+				{
+					counts[i]++;
+					break;
+				}
+			}
+		}
+	}
+	used = 0;
+	usedamount = 0;
+	tempstring[0] = 0;
 	for (i = 0;i < progs->numfielddefs;i++)
-		Con_Printf("%s\n", (pr_strings + pr_fielddefs[i].s_name));
-	Con_Printf("%i entity fields, totalling %i bytes per edict, %i edicts, %i bytes total spent on edict fields\n", progs->entityfields, progs->entityfields * 4, MAX_EDICTS, progs->entityfields * 4 * MAX_EDICTS);
+	{
+		d = &pr_fielddefs[i];
+		name = pr_strings + d->s_name;
+		if (name[strlen(name)-2] == '_')
+			continue;	// skip _x, _y, _z vars
+		switch(d->type & ~DEF_SAVEGLOBAL)
+		{
+		case ev_string:
+			strcat(tempstring, "string   ");
+			break;
+		case ev_entity:
+			strcat(tempstring, "entity   ");
+			break;
+		case ev_function:
+			strcat(tempstring, "function ");
+			break;
+		case ev_field:
+			strcat(tempstring, "field    ");
+			break;
+		case ev_void:
+			strcat(tempstring, "void     ");
+			break;
+		case ev_float:
+			strcat(tempstring, "float    ");
+			break;
+		case ev_vector:
+			strcat(tempstring, "vector   ");
+			break;
+		case ev_pointer:
+			strcat(tempstring, "pointer  ");
+			break;
+		default:
+			sprintf (tempstring2, "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
+			strcat(tempstring, tempstring2);
+			break;
+		}
+		if (strlen(name) > 256)
+		{
+			strncpy(tempstring2, name, 256);
+			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
+			tempstring2[259] = 0;
+			name = tempstring2;
+		}
+		strcat(tempstring, name);
+		for (j = strlen(name);j < 25;j++)
+			strcat(tempstring, " ");
+		sprintf(tempstring2, "%5d", counts[i]);
+		strcat(tempstring, tempstring2);
+		strcat(tempstring, "\n");
+		if (strlen(tempstring) >= 4096)
+		{
+			Con_Printf("%s", tempstring);
+			tempstring[0] = 0;
+		}
+		if (counts[i])
+		{
+			used++;
+			usedamount += type_size[d->type & ~DEF_SAVEGLOBAL];
+		}
+	}
+	Mem_Free(counts);
+	Con_Printf("%i entity fields (%i in use), totalling %i bytes per edict (%i in use), %i edicts, %i bytes total spent on edict fields (%i needed)\n", progs->entityfields, used, progs->entityfields * 4, usedamount * 4, MAX_EDICTS, progs->entityfields * 4 * MAX_EDICTS, usedamount * 4 * MAX_EDICTS);
 }
 
 void PR_Globals_f (void)
