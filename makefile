@@ -61,7 +61,7 @@ OBJ_DED= vid_null.o cd_null.o snd_null.o
 # Compilation
 CFLAGS_COMMON=-MD -Wall -Werror
 CFLAGS_DEBUG=-ggdb
-CFLAGS_PROFILE=-pg
+CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
 
 OPTIM_DEBUG=
@@ -72,7 +72,10 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 
 # Link
-LDFLAGS=-lm -ldl
+LDFLAGS_COMMON=-lm -ldl
+LDFLAGS_DEBUG=-g -ggdb
+LDFLAGS_PROFILE=-g -pg
+LDFLAGS_RELEASE=
 
 EXE_GLX=darkplaces-glx
 EXE_DED=darkplaces-dedicated
@@ -106,82 +109,85 @@ help:
 	@echo
 
 debug :
-	@$(MAKE) glx-debug ded-debug
+	$(MAKE) glx-debug ded-debug
 
 profile :
-	@$(MAKE) glx-profile ded-profile
+	$(MAKE) glx-profile ded-profile
 
 release :
-	@$(MAKE) glx-release ded-release
+	$(MAKE) glx-release ded-release
 
 glx-debug :
-	@$(MAKE) bin-debug EXE="$(EXE_GLX)"
+	$(MAKE) bin-debug EXE="$(EXE_GLX)"
 
 glx-profile :
-	@$(MAKE) bin-profile EXE="$(EXE_GLX)"
+	$(MAKE) bin-profile EXE="$(EXE_GLX)"
 
 glx-release :
-	@$(MAKE) bin-release EXE="$(EXE_GLX)"
+	$(MAKE) bin-release EXE="$(EXE_GLX)"
 
 ded-debug :
-	@$(MAKE) bin-debug EXE="$(EXE_DED)"
+	$(MAKE) bin-debug EXE="$(EXE_DED)"
 
 ded-profile :
-	@$(MAKE) bin-profile EXE="$(EXE_DED)"
+	$(MAKE) bin-profile EXE="$(EXE_DED)"
 
 ded-release :
-	@$(MAKE) bin-release EXE="$(EXE_DED)"
+	$(MAKE) bin-release EXE="$(EXE_DED)"
 
 bin-debug :
 	@echo
 	@echo "========== $(EXE) (debug) =========="
-	@echo Using compiler $(CC)
-	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_DEBUG) \
-                                    $(OPTIM_DEBUG)
-	@echo
-	@$(MAKE) $(EXE) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"
+#	@echo Using compiler $(CC)
+#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_DEBUG) \
+#                                    $(OPTIM_DEBUG)
+#	@echo
+	$(MAKE) $(EXE) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
+		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_DEBUG)"
 
 bin-profile :
 	@echo
 	@echo "========== $(EXE) (profile) =========="
-	@echo Using compiler $(CC)
-	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_PROFILE) \
-                                    $(OPTIM_RELEASE)
-	@echo
-	@$(MAKE) $(EXE) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"
+#	@echo Using compiler $(CC)
+#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_PROFILE) \
+#                                    $(OPTIM_RELEASE)
+#	@echo
+	$(MAKE) $(EXE) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
+		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_PROFILE)"
 
 bin-release :
 	@echo
 	@echo "========== $(EXE) (release) =========="
-	@echo Using compiler $(CC)
-	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_RELEASE) \
-                                    $(OPTIM_RELEASE)
-	@echo
-	@$(MAKE) $(EXE) \
-		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"
+#	@echo Using compiler $(CC)
+#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_RELEASE) \
+#                                    $(OPTIM_RELEASE)
+#	@echo
+	$(MAKE) $(EXE) \
+		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
+		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_RELEASE)"
 
 builddate:
 	touch builddate.c
 
 vid_glx.o: vid_glx.c
-	@echo "   Compiling" $<
-	@$(DO_CC) -I/usr/X11R6/include
+#	@echo "   Compiling" $<
+	$(DO_CC) -I/usr/X11R6/include
 
 .c.o:
-	@echo "   Compiling" $<
-	@$(DO_CC)
+#	@echo "   Compiling" $<
+	$(DO_CC)
 
 $(EXE_GLX):  $(OBJ_COMMON) $(OBJ_GLX)
-	@echo "   Linking  " $@
-	@$(DO_LD) $(GLX_LIB)
+#	@echo "   Linking  " $@
+	$(DO_LD) $(GLX_LIB)
 
 $(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
-	@echo "   Linking  " $@
-	@$(DO_LD)
+#	@echo "   Linking  " $@
+	$(DO_LD)
 
 clean:
-	@rm -f $(EXE_GLX) $(EXE_DED) *.o *.d
+	rm -f $(EXE_GLX) $(EXE_DED) *.o *.d
 
 -include *.d
