@@ -584,13 +584,13 @@ void M_SinglePlayer_Draw (void)
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
 
-	// BloodBath doesn't have a single player mode
-	if (gamemode == GAME_BLOODBATH)
+	// Transfusion doesn't have a single player mode
+	if (gamemode == GAME_TRANSFUSION)
 	{
 		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
-		M_PrintWhite (102, 10 * 8, "BloodBath is for");
+		M_PrintWhite (95, 10 * 8, "Transfusion is for");
 		M_PrintWhite (83, 11 * 8, "multiplayer play only");
 	}
 	else
@@ -609,7 +609,7 @@ void M_SinglePlayer_Draw (void)
 
 void M_SinglePlayer_Key (int key)
 {
-	if (gamemode == GAME_BLOODBATH)
+	if (gamemode == GAME_TRANSFUSION)
 	{
 		if (key == K_ESCAPE || key == K_ENTER)
 			m_state = m_main;
@@ -1586,7 +1586,7 @@ void M_Options_Effects_Key (int k)
 
 char *bindnames[][2] =
 {
-#ifdef BLOODBATH
+#ifdef TRANSFUSION
 {"+forward", 		"walk forward"},
 {"+back", 			"backpedal"},
 {"+moveleft", 		"step left"},
@@ -1617,7 +1617,7 @@ char *bindnames[][2] =
 {"impulse 141",		"identify player"},
 {"impulse 16",		"next armor type"},
 {"impulse 20",		"observer mode"}
-#else  // not BLOODBATH
+#else  // not TRANSFUSION
 {"+attack", 		"attack"},
 {"impulse 10", 		"next weapon"},
 {"impulse 12", 		"previous weapon"},
@@ -1637,7 +1637,7 @@ char *bindnames[][2] =
 {"+klook", 			"keyboard look"},
 {"+moveup",			"swim up"},
 {"+movedown",		"swim down"}
-#endif  // not BLOODBATH
+#endif  // not TRANSFUSION
 };
 
 #define	NUMCOMMANDS	(sizeof(bindnames)/sizeof(bindnames[0]))
@@ -2486,8 +2486,8 @@ episode_t	nehahraepisodes[] =
 	{"Dimension of the Lost", 17, 2}
 };
 
-// Map list for BloodBath
-level_t		bloodbathlevels[] =
+// Map list for Transfusion
+level_t		transfusionlevels[] =
 {
 	{"bb1",			"The Stronghold"},
 	{"bb2",			"Winter Wonderland"},
@@ -2525,13 +2525,13 @@ level_t		bloodbathlevels[] =
 	{"qe1m7",		"The House of Chthon"}
 };
 
-episode_t	bloodbathepisodes[] =
+episode_t	transfusionepisodes[] =
 {
 	{"Blood", 0, 10},
 	{"Plasma Pack", 10, 4},
 	{"Cryptic Passage", 14, 4},
 	{"Blood 2", 18, 5},
-	{"BloodBath", 23, 7}
+	{"Custom", 23, 7}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
@@ -2539,7 +2539,7 @@ gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
 gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
 gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
-gamelevels_t bloodbathgame = {"BloodBath", bloodbathlevels, bloodbathepisodes, 5};
+gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 5};
 
 typedef struct
 {
@@ -2557,7 +2557,7 @@ gameinfo_t gamelist[] =
 	{GAME_NEHAHRA, &nehahragame, &nehahragame},
 	{GAME_FIENDARENA, &sharewarequakegame, &registeredquakegame},
 	{GAME_ZYMOTIC, &sharewarequakegame, &registeredquakegame},
-	{GAME_BLOODBATH, &bloodbathgame, &bloodbathgame},
+	{GAME_TRANSFUSION, &transfusiongame, &transfusiongame},
 	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
 
@@ -2610,7 +2610,7 @@ void M_GameOptions_Draw (void)
 	M_Print (160, 56, va("%i", maxplayers) );
 
 	M_Print (0, 64, "        Game Type");
-	if (gamemode == GAME_BLOODBATH)
+	if (gamemode == GAME_TRANSFUSION)
 	{
 		if (!deathmatch.integer)
 			Cvar_SetValue("deathmatch", 1);
@@ -2646,7 +2646,7 @@ void M_GameOptions_Draw (void)
 		}
 		M_Print (160, 72, msg);
 	}
-	else if (gamemode == GAME_BLOODBATH)
+	else if (gamemode == GAME_TRANSFUSION)
 	{
 		char *msg;
 
@@ -2745,7 +2745,7 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 2:
-		if (gamemode == GAME_BLOODBATH)
+		if (gamemode == GAME_TRANSFUSION)
 		{
 			if (deathmatch.integer == 2) // changing from CTF to BloodBath
 				Cvar_SetValueQuick (&deathmatch, 0);

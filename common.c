@@ -784,8 +784,8 @@ void COM_InitArgv (int argc, char **argv)
 	largv[com_argc] = argvdummy;
 	com_argv = largv;
 
-#if BLOODBATH
-	gamemode = GAME_BLOODBATH;
+#if TRANSFUSION
+	gamemode = GAME_TRANSFUSION;
 #elif ZYMOTIC
 	gamemode = GAME_ZYMOTIC;
 #elif FIENDARENA
@@ -793,8 +793,8 @@ void COM_InitArgv (int argc, char **argv)
 #elif NEHAHRA
 	gamemode = GAME_NEHAHRA;
 #else
-	if (COM_CheckParm ("-bloodbath"))
-		gamemode = GAME_BLOODBATH;
+	if (COM_CheckParm ("-transfusion"))
+		gamemode = GAME_TRANSFUSION;
 	else if (COM_CheckParm ("-zymotic"))
 		gamemode = GAME_ZYMOTIC;
 	else if (COM_CheckParm ("-fiendarena"))
@@ -826,8 +826,8 @@ void COM_InitArgv (int argc, char **argv)
 	case GAME_ZYMOTIC:
 		gamename = "Zymotic";
 		break;
-	case GAME_BLOODBATH:
-		gamename = "BloodBath";
+	case GAME_TRANSFUSION:
+		gamename = "Transfusion";
 		break;
 	default:
 		Sys_Error("COM_InitArgv: unknown gamemode %i\n", gamemode);
@@ -1470,8 +1470,8 @@ void COM_InitFilesystem (void)
 	case GAME_ZYMOTIC:
 		COM_AddGameDirectory (va("%s/zymotic", basedir) );
 		break;
-	case GAME_BLOODBATH:
-		COM_AddGameDirectory (va("%s/bb", basedir) );
+	case GAME_TRANSFUSION:
+		COM_AddGameDirectory (va("%s/transfusion", basedir) );
 		break;
 	default:
 		Sys_Error("COM_InitFilesystem: unknown gamemode %i\n", gamemode);

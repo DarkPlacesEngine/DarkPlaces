@@ -201,8 +201,8 @@ void	Host_FindMaxClients (void)
 			svs.maxclients = 8;
 	}
 
-	// BloodBath doesn't support single player games
-	if (gamemode == GAME_BLOODBATH && svs.maxclients < 4)
+	// Transfusion doesn't support single player games
+	if (gamemode == GAME_TRANSFUSION && svs.maxclients < 4)
 		svs.maxclients = 4;
 
 	if (svs.maxclients < 1)
