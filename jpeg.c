@@ -468,7 +468,7 @@ static void JPEG_SkipInputData (j_decompress_ptr cinfo, long num_bytes)
     cinfo->src->bytes_in_buffer -= num_bytes;
 }
 
-static void JPEG_MemSrc (j_decompress_ptr cinfo, qbyte *buffer)
+static void JPEG_MemSrc (j_decompress_ptr cinfo, const qbyte *buffer)
 {
 	cinfo->src = cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
 
@@ -496,7 +496,7 @@ JPEG_LoadImage
 Load a JPEG image into a RGBA buffer
 ====================
 */
-qbyte* JPEG_LoadImage (qbyte *f, int matchwidth, int matchheight)
+qbyte* JPEG_LoadImage (const qbyte *f, int matchwidth, int matchheight)
 {
 	struct jpeg_decompress_struct cinfo;
 	struct jpeg_error_mgr jerr;

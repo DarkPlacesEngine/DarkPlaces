@@ -59,7 +59,7 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel);
 
 // only used by menuplyr coloring
-qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight);
+qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight);
 
 void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
