@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -124,13 +124,13 @@ int CL_GetMessage (void)
 {
 	int		r, i;
 	float	f;
-	
+
 	if	(cls.demoplayback)
 	{
 		if (cls.demopaused) // LordHavoc: pausedemo
 			return 0;
 
-	// decide if it is time to grab the next message		
+	// decide if it is time to grab the next message
 		if (cls.signon == SIGNONS)	// always grab until fully connected
 		{
 			if (cls.timedemo)
@@ -148,7 +148,7 @@ int CL_GetMessage (void)
 					return 0;		// don't need another message yet
 			}
 		}
-		
+
 	// get the next message
 		FS_Read (cls.demofile, &net_message.cursize, 4);
 		VectorCopy (cl.mviewangles[0], cl.mviewangles[1]);
@@ -157,7 +157,7 @@ int CL_GetMessage (void)
 			r = FS_Read (cls.demofile, &f, 4);
 			cl.mviewangles[0][i] = LittleFloat (f);
 		}
-		
+
 		net_message.cursize = LittleLong (net_message.cursize);
 		if (net_message.cursize > MAX_DATAGRAM)
 			Host_Error ("Demo message > MAX_DATAGRAM");
@@ -167,17 +167,17 @@ int CL_GetMessage (void)
 			CL_Disconnect ();
 			return 0;
 		}
-	
+
 		return 1;
 	}
 
 	while (1)
 	{
 		r = NET_GetMessage (cls.netcon);
-		
+
 		if (r != 1 && r != 2)
 			return r;
-	
+
 	// discard nop keepalive message
 		if (net_message.cursize == 1 && net_message.data[0] == svc_nop)
 			Con_Printf ("<-- server to client keepalive\n");
@@ -187,7 +187,7 @@ int CL_GetMessage (void)
 
 	if (cls.demorecording)
 		CL_WriteDemoMessage ();
-	
+
 	return r;
 }
 
@@ -231,9 +231,8 @@ record <demoname> <map> [cd track]
 */
 void CL_Record_f (void)
 {
-	int		c;
-	char	name[MAX_OSPATH];
-	int		track;
+	int c, track;
+	char name[MAX_OSPATH];
 
 	if (cmd_source != src_command)
 		return;
@@ -264,17 +263,18 @@ void CL_Record_f (void)
 		Con_Printf ("Forcing CD track to %i\n", cls.forcetrack);
 	}
 	else
-		track = -1;	
-	
-	// start the map up
-	if (c > 2)
-		Cmd_ExecuteString ( va("map %s", Cmd_Argv(2)), src_command);
-	
-	// open the demo file
+		track = -1;
+
+	// get the demo name
 	strncpy (name, Cmd_Argv(1), sizeof (name) - 1);
 	name[sizeof (name) - 1] = '\0';
 	FS_DefaultExtension (name, ".dem");
 
+	// start the map up
+	if (c > 2)
+		Cmd_ExecuteString ( va("map %s", Cmd_Argv(2)), src_command);
+
+	// open the demo file
 	Con_Printf ("recording to %s.\n", name);
 	cls.demofile = FS_Open (name, "wb", false);
 	if (!cls.demofile)
@@ -354,9 +354,9 @@ void CL_FinishTimeDemo (void)
 {
 	int		frames;
 	double	time; // LordHavoc: changed timedemo accuracy to double
-	
+
 	cls.timedemo = false;
-	
+
 // the first frame didn't count
 	frames = (host_framecount - cls.td_startframe) - 1;
 	time = realtime - cls.td_starttime;
