@@ -110,7 +110,7 @@ void Palette_Setup8to24(void)
 	palette_font[255] = 0;
 }
 
-
+#if 0
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, qbyte *out)
 {
 	int i, adjusted;
@@ -137,6 +137,7 @@ void BuildGammaTable8(float prescale, float gamma, float scale, float base, qbyt
 		}
 	}
 }
+#endif
 
 void BuildGammaTable16(float prescale, float gamma, float scale, float base, unsigned short *out)
 {

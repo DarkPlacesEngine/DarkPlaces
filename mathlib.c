@@ -112,6 +112,7 @@ float m_bytenormals[NUMVERTEXNORMALS][3] =
 {-0.587785, -0.425325, -0.688191}, {-0.688191, -0.587785, -0.425325},
 };
 
+#if 0
 qbyte NormalToByte(const vec3_t n)
 {
 	int i, best;
@@ -150,7 +151,6 @@ float Q_RSqrt(float number)
 	*((int *)&y) = 0x5f3759df - ((* (int *) &number) >> 1);
 	return y * (1.5f - (number * 0.5f * y * y));
 }
-
 
 // assumes "src" is normalized
 void PerpendicularVector( vec3_t dst, const vec3_t src )
@@ -202,6 +202,7 @@ void PerpendicularVector( vec3_t dst, const vec3_t src )
 		dst[2] = 0;
 	}
 }
+#endif
 
 
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
@@ -271,19 +272,9 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 /*-----------------------------------------------------------------*/
 
 
-void BoxOnPlaneSideClassify(mplane_t *p)
-{
-	p->signbits = 0;
-	if (p->normal[0] < 0) // 1
-		p->signbits |= 1;
-	if (p->normal[1] < 0) // 2
-		p->signbits |= 2;
-	if (p->normal[2] < 0) // 4
-		p->signbits |= 4;
-}
-
 void PlaneClassify(mplane_t *p)
 {
+	// for optimized plane comparisons
 	if (p->normal[0] == 1)
 		p->type = 0;
 	else if (p->normal[1] == 1)
@@ -292,7 +283,14 @@ void PlaneClassify(mplane_t *p)
 		p->type = 2;
 	else
 		p->type = 3;
-	BoxOnPlaneSideClassify(p);
+	// for BoxOnPlaneSide
+	p->signbits = 0;
+	if (p->normal[0] < 0) // 1
+		p->signbits |= 1;
+	if (p->normal[1] < 0) // 2
+		p->signbits |= 2;
+	if (p->normal[2] < 0) // 4
+		p->signbits |= 4;
 }
 
 int BoxOnPlaneSide (const vec3_t emins, const vec3_t emaxs, const mplane_t *p)
@@ -393,6 +391,7 @@ void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t u
 	}
 }
 
+#if 0
 void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4])
 {
 	double angle, sr, sp, sy, cr, cp, cy;
@@ -419,6 +418,7 @@ void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]
 	matrix[2][2] = cr*cp;
 	matrix[2][3] = translate[2];
 }
+#endif
 
 
 // LordHavoc: renamed this to Length, and made the normal one a #define
