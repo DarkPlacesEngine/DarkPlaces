@@ -126,7 +126,10 @@ void sbar_start(void)
 	sb_disc = Sbar_NewPic("gfx/disc");
 
 	for (i = 0;i < 10;i++)
+	{
 		sb_nums[0][i] = Sbar_NewPic (va("gfx/num_%i",i));
+		sb_nums[1][i] = Sbar_NewPic (va("gfx/anum_%i",i));
+	}
 
 	sb_nums[0][10] = Sbar_NewPic ("gfx/num_minus");
 	sb_nums[1][10] = Sbar_NewPic ("gfx/anum_minus");
@@ -1103,7 +1106,7 @@ void Sbar_MiniDeathmatchOverlay (void)
 	}
 	else
 	{
-		x = 320;
+		x = 324;
 		y = vid.conheight - sb_lines;
 	}
 
