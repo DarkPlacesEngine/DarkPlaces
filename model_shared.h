@@ -306,7 +306,7 @@ model_brushq2_t;
 typedef struct model_brushq3_s
 {
 	int num_models;
-	q3mmodel_t *data_models;
+	q3dmodel_t *data_models;
 
 	// freed after loading!
 	int num_vertices;

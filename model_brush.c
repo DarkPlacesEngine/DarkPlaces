@@ -4413,7 +4413,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 static void Mod_Q3BSP_LoadModels(lump_t *l)
 {
 	q3dmodel_t *in;
-	q3mmodel_t *out;
+	q3dmodel_t *out;
 	int i, j, n, c, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -4436,8 +4436,8 @@ static void Mod_Q3BSP_LoadModels(lump_t *l)
 		c = LittleLong(in->numfaces);
 		if (n < 0 || n + c > loadmodel->brush.num_surfaces)
 			Host_Error("Mod_Q3BSP_LoadModels: invalid face range %i : %i (%i faces)\n", n, n + c, loadmodel->brush.num_surfaces);
-		out->firstsurface = n;
-		out->numsurfaces = c;
+		out->firstface = n;
+		out->numfaces = c;
 		n = LittleLong(in->firstbrush);
 		c = LittleLong(in->numbrushes);
 		if (n < 0 || n + c > loadmodel->brush.num_brushes)
@@ -5593,8 +5593,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->brush.submodel = i;
 
 		// make the model surface list (used by shadowing/lighting)
-		mod->firstmodelsurface = mod->brushq3.data_models[i].firstsurface;
-		mod->nummodelsurfaces = mod->brushq3.data_models[i].numsurfaces;
+		mod->firstmodelsurface = mod->brushq3.data_models[i].firstface;
+		mod->nummodelsurfaces = mod->brushq3.data_models[i].numfaces;
 		mod->firstmodelbrush = mod->brushq3.data_models[i].firstbrush;
 		mod->nummodelbrushes = mod->brushq3.data_models[i].numbrushes;
 		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));

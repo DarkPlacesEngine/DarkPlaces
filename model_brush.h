@@ -761,17 +761,6 @@ q3dpvs_t;
 #define Q3TEXTUREFLAG_AUTOSPRITE2 32
 #define Q3TEXTUREFLAG_ALPHATEST 64
 
-typedef struct q3mmodel_s
-{
-	vec3_t mins;
-	vec3_t maxs;
-	int numsurfaces;
-	int firstsurface;
-	int numbrushes;
-	int firstbrush;
-}
-q3mmodel_t;
-
 typedef struct q3mbrush_s
 {
 	struct colbrushf_s *colbrushf;
