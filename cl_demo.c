@@ -56,6 +56,9 @@ void CL_NextDemo (void)
 		{
 			Con_Print("No demos listed with startdemos\n");
 			cls.demonum = -1;
+			// put up menu instead of staring at console
+			if (key_dest != key_menu)
+				M_ToggleMenu_f();
 			return;
 		}
 	}
