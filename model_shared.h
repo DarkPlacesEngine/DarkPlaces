@@ -154,6 +154,8 @@ typedef struct model_brush_s
 	// number of submodels in this map (just used by server to know how many
 	// submodels to load)
 	int numsubmodels;
+	// pointers to each of the submodels if .isworldmodel is true
+	struct model_s **submodels;
 
 	// pvs
 	int num_pvsclusters;
