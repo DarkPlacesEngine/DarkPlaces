@@ -73,9 +73,13 @@ void Sys_Error (const char *error, ...)
 	if (!in_sys_error0 && cls.state != ca_dedicated)
 	{
 		in_sys_error0 = 1;
-		VID_Shutdown();
+		VID_Shutdown();     
 	}
 	MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+
+	Con_Print ("Quake Error: ");
+	Con_Print (text);
+	Con_Print ("\n");
 
 	if (!in_sys_error1)
 	{
