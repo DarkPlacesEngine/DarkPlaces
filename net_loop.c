@@ -39,7 +39,7 @@ void Loop_Shutdown (void)
 }
 
 
-void Loop_Heartbeat (char *master)
+void Loop_Heartbeat (const char *master)
 {
 }
 
@@ -67,13 +67,13 @@ void Loop_SearchForHosts (qboolean xmit)
 }
 
 
-qboolean Loop_SearchForInetHosts (char *master)
+qboolean Loop_SearchForInetHosts (const char *master)
 {
 	return false;
 }
 
 
-qsocket_t *Loop_Connect (char *host)
+qsocket_t *Loop_Connect (const char *host)
 {
 	if (strcmp(host,"local") != 0)
 		return NULL;

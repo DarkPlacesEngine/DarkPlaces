@@ -39,7 +39,8 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] =
 	Loop_CanSendMessage,
 	Loop_CanSendUnreliableMessage,
 	Loop_Close,
-	Loop_Shutdown
+	Loop_Shutdown,
+	Loop_Heartbeat
 	}
 	,
 	{
@@ -57,7 +58,8 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] =
 	Datagram_CanSendMessage,
 	Datagram_CanSendUnreliableMessage,
 	Datagram_Close,
-	Datagram_Shutdown
+	Datagram_Shutdown,
+	Datagram_Heartbeat
 	}
 };
 

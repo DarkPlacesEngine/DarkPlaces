@@ -24,10 +24,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MASTER_PORT 27950
 
-char* Master_BuildGetServers (void);
-char* Master_BuildHeartbeat (void);
-int Master_HandleMessage (void);
-void Master_Init (void);
-void Master_ParseServerList (net_landriver_t* dfunc);
+qboolean	Master_AllowHeartbeat (int priority);
+const char*	Master_BuildGetServers (void);
+const char*	Master_BuildHeartbeat (void);
+int			Master_HandleMessage (void);
+void		Master_Init (void);
+void		Master_ParseServerList (net_landriver_t* dfunc);
 
 #endif
