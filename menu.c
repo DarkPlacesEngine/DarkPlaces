@@ -607,11 +607,11 @@ void M_Main_Key (int key, char ascii)
 				case 0:
 					M_Menu_Transfusion_Episode_f ();
 					break;
-					
+
 				case 1:
 					M_Menu_MultiPlayer_f ();
 					break;
-					
+
 				case 2:
 					M_Menu_Options_f ();
 					break;
@@ -623,7 +623,7 @@ void M_Main_Key (int key, char ascii)
 				case 4:
 					M_Menu_Help_f ();
 					break;
-					
+
 				case 5:
 					M_Menu_Credits_f ();
 					break;
@@ -640,11 +640,11 @@ void M_Main_Key (int key, char ascii)
 				case 0:
 					M_Menu_Transfusion_Episode_f ();
 					break;
-					
+
 				case 1:
 					M_Menu_MultiPlayer_f ();
 					break;
-					
+
 				case 2:
 					M_Menu_Options_f ();
 					break;
@@ -656,7 +656,7 @@ void M_Main_Key (int key, char ascii)
 				case 4:
 					M_Menu_Load_f ();
 					break;
-					
+
 				case 5:
 					M_Menu_Help_f ();
 					break;
@@ -833,7 +833,7 @@ void M_ScanSaves (void)
 		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
 		loadable[i] = false;
 		sprintf (name, "s%i.sav", i);
-		f = FS_Open (name, "rb", false);
+		f = FS_Open (name, "rb", false, false);
 		if (!f)
 			continue;
 		// read enough to get the comment
@@ -1010,13 +1010,13 @@ void M_Transfusion_Episode_Draw (void)
 	int y;
 	cachepic_t *p;
 	M_Background(640, 480);
-	
+
 	p = Draw_CachePic ("gfx/tb-episodes");
 	M_DrawPic (640/2 - p->width/2, 40, "gfx/tb-episodes");
 	for (y = 0; y < EPISODE_ITEMS; y++){
 		M_DrawPic (0, 160 + y * 40, va("gfx/episode%i", y+1));
 	}
-	
+
 	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va("gfx/episode%iselected", m_episode_cursor + 1));
 }
 

@@ -44,7 +44,7 @@ extern int fs_filesize;  // set by FS_Open (in "read" mode) and FS_LoadFile
 // IMPORTANT: the file path is automatically prefixed by the current game directory for
 // each file created by FS_WriteFile, or opened in "write" or "append" mode by FS_Open
 
-qfile_t *FS_Open (const char* filepath, const char* mode, qboolean quiet);
+qfile_t *FS_Open (const char* filepath, const char* mode, qboolean quiet, qboolean nonblocking);
 int FS_Close (qfile_t* file);
 size_t FS_Write (qfile_t* file, const void* data, size_t datasize);
 size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize);

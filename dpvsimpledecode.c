@@ -37,7 +37,7 @@ hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
 {
 	qfile_t *file;
 	hz_bitstream_read_t *stream;
-	if ((file = FS_Open (filename, "rb", false)))
+	if ((file = FS_Open (filename, "rb", false, false)))
 	{
 		stream = malloc(sizeof(hz_bitstream_read_t));
 		memset(stream, 0, sizeof(*stream));
