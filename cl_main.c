@@ -590,6 +590,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 				e->render.frame = e->render.frame2 = e->state_current.frame;
 				e->render.frame2time = cl.time;
 				e->render.framelerp = 0;
+				// make sure frame lerp won't last longer than 100ms
+				// (this mainly helps with models that use framegroups and
+				// switch between them infrequently)
+				e->render.frame1time = max(e->render.frame1time, e->render.frame2time - 0.1f);
 			}
 		}
 		else
