@@ -9,6 +9,7 @@
 0 darkplaces: crash when changing level while using qe1 textures (Todd)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: default to 32bit color
+0 darkplaces: figure out what is wrong with input in Battlemech in Linux (constantly turning clockwise in Linux but not in windows) (Todd)
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: finish the parital update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers
 0 darkplaces: fix particle trails (I think trail start is identical to trail end)
