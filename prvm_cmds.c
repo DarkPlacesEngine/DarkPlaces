@@ -57,7 +57,7 @@ float	sin(float)
 float	cos(float)
 float	sqrt(float)
 vector	randomvec()
-float	registercvar (string name, string value)
+float	registercvar (string name, string value, float flags)
 float	min(float a, float b, ...[float])
 float	max(float a, float b, ...[float])
 float	bound(float min, float value, float max)
@@ -129,7 +129,7 @@ menu cmd list:
 ===============
 
 		setkeydest(float dest)
-float	getkeydest
+float	getkeydest()
 		setmousetarget(float target)
 float	getmousetarget(void)
 
@@ -139,6 +139,8 @@ float	isfunction(string function_name)
 vector	getresolution(float number)
 string	keynumtostring(float keynum)
 string	findkeysforcommand(string command)
+float	gethostcachevalue(float type)
+string	gethostcachestring(float type, float hostnr)
 
 
 */
@@ -1488,19 +1490,25 @@ void VM_randomvec (void)
 =========
 VM_registercvar
 
-float	registercvar (string name, string value)
+float	registercvar (string name, string value, float flags)
 =========
 */
 void VM_registercvar (void)
 {
 	char *name, *value;
 	cvar_t *variable;
+	int	flags;	
 
-	VM_SAFEPARMCOUNT(2,VM_registercvar);
+	VM_SAFEPARMCOUNT(3,VM_registercvar);
 
 	name = PRVM_G_STRING(OFS_PARM0);
 	value = PRVM_G_STRING(OFS_PARM1);
+	flags = PRVM_G_FLOAT(OFS_PARM2);
 	PRVM_G_FLOAT(OFS_RETURN) = 0;
+
+	if(flags > CVAR_MAXFLAGSVAL)
+		return;
+
 // first check to see if it has already been defined
 	if (Cvar_FindVar (name))
 		return;
@@ -1517,6 +1525,7 @@ void VM_registercvar (void)
 
 // copy the name and value
 	variable = &vm_qc_cvar[vm_currentqc_cvar++];
+	variable->flags = flags;
 	variable->name = Z_Malloc (strlen(name)+1);
 	strcpy (variable->name, name);
 	variable->string = Z_Malloc (strlen(value)+1);
@@ -3118,6 +3127,93 @@ void VM_M_findkeysforcommand(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(ret);
 }
 
+/*
+=========
+VM_M_gethostcachecount
+
+float	gethostcachevalue(float type)
+=========
+*/
+/*
+	type:
+0	hostcachecount
+1	masterquerycount
+2	masterreplycount
+3	serverquerycount
+4	serverreplycount
+*/
+void VM_M_gethostcachevalue( void )
+{
+	int type;
+	VM_SAFEPARMCOUNT ( 1, VM_M_gethostcachevalue );
+
+	PRVM_G_FLOAT( OFS_RETURN ) = 0;
+
+	type = PRVM_G_FLOAT( OFS_PARM0 );
+	if( type < 0 || type > 4 )
+		Con_Printf ( "VM_M_gethostcachevalue: bad type %i!\n", type );
+	else switch(type)
+	{
+	case 0:
+		PRVM_G_FLOAT ( OFS_RETURN ) = hostCacheCount;
+		return;
+	case 1:
+		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
+		return;
+	case 2:
+		PRVM_G_FLOAT ( OFS_RETURN ) = masterreplycount;
+	case 3:
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverquerycount;
+	case 4:
+		PRVM_G_FLOAT ( OFS_RETURN ) = serverreplycount;
+	}
+}
+
+/*
+=========
+VM_M_gethostcachestring
+
+string	gethostcachestring(float type, float hostnr)
+=========
+*/
+/*
+0	Get CName
+1	Get line1
+2	Get line2 
+*/
+void VM_M_gethostcachestring(void)
+{
+	int type;
+	int hostnr;
+
+	VM_SAFEPARMCOUNT(2, VM_M_gethostcachestring);
+
+	PRVM_G_INT(OFS_RETURN) = 0;
+
+	type = PRVM_G_FLOAT(OFS_PARM0);
+	
+	if(type < 0 || type > 2)
+	{
+		Con_Printf("VM_M_gethostcachestring: bad string type requested!\n");
+		return;
+	}
+
+	hostnr = PRVM_G_FLOAT(OFS_PARM1);
+
+	if(hostnr < 0 || hostnr >= hostCacheCount)
+	{
+		Con_Printf("VM_M_gethostcachestring: bad hostnr passed!\n");
+		return;
+	}
+
+	if( type == 0 )
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache[hostnr].cname );
+	else if( type == 1 )
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache[hostnr].line1 );
+	else
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache[hostnr].line2 );
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -3246,7 +3342,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_isfunction,
 	VM_M_getresolution,
 	VM_M_keynumtostring,
-	VM_M_findkeysforcommand// 610
+	VM_M_findkeysforcommand,// 610
+	VM_M_gethostcachevalue,
+	VM_M_gethostcachestring // 612 
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
