@@ -243,7 +243,6 @@ void fractalnoise(unsigned char *noise, int size, int startgrid);
 void fractalnoisequick(unsigned char *noise, int size, int startgrid);
 
 #include "palette.h"
-#include "image.h"
 
 void Sys_Shared_Init(void);
 

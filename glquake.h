@@ -114,6 +114,7 @@ typedef double GLclampd;
 #define GL_TEXTURE_WRAP_S			0x2802
 #define GL_TEXTURE_WRAP_T			0x2803
 #define GL_TEXTURE_WRAP_R			0x8072
+#define GL_TEXTURE_BORDER_COLOR			0x1004
 #define GL_TEXTURE_MAG_FILTER			0x2800
 #define GL_TEXTURE_MIN_FILTER			0x2801
 #define GL_UNPACK_ALIGNMENT			0x0CF5
@@ -410,9 +411,10 @@ extern void (GLAPIENTRY *qglStencilMask)(GLuint mask);
 extern void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
 extern void (GLAPIENTRY *qglClearStencil)(GLint s);
 
-//extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
-//extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
 extern void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);

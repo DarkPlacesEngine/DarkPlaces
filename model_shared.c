@@ -63,7 +63,7 @@ void Mod_SetupNoTexture(void)
 	}
 
 	r_notexturepool = R_AllocTexturePool();
-	r_notexture = R_LoadTexture(r_notexturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP);
+	r_notexture = R_LoadTexture2D(r_notexturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
 }
 
 extern void Mod_BrushStartup (void);

@@ -146,9 +146,10 @@ void (GLAPIENTRY *qglStencilMask)(GLuint mask);
 void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
 void (GLAPIENTRY *qglClearStencil)(GLint s);
 
-//void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
-//void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
 void (GLAPIENTRY *qglGenTextures)(GLsizei n, GLuint *textures);
@@ -281,9 +282,10 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glStencilMask", (void **) &qglStencilMask},
 	{"glStencilOp", (void **) &qglStencilOp},
 	{"glClearStencil", (void **) &qglClearStencil},
-//	{"glTexEnvf", (void **) &qglTexEnvf},
+	{"glTexEnvf", (void **) &qglTexEnvf},
 	{"glTexEnvi", (void **) &qglTexEnvi},
-//	{"glTexParameterf", (void **) &qglTexParameterf},
+	{"glTexParameterf", (void **) &qglTexParameterf},
+	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
 	{"glPixelStoref", (void **) &qglPixelStoref},
 	{"glPixelStorei", (void **) &qglPixelStorei},

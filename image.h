@@ -3,50 +3,54 @@
 #define IMAGE_H
 
 // applies gamma correction to RGB pixels, in can be the same as out
-void Image_GammaRemapRGB(qbyte *in, qbyte *out, int pixels, qbyte *gammar, qbyte *gammag, qbyte *gammab);
+void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *gammar, const qbyte *gammag, const qbyte *gammab);
 
 // converts 8bit image data to RGBA, in can not be the same as out
-void Image_Copy8bitRGBA(qbyte *in, qbyte *out, int pixels, int *pal);
+void Image_Copy8bitRGBA(const qbyte *in, qbyte *out, int pixels, const unsigned int *pal);
 
 // makes a RGBA mask from RGBA input, in can be the same as out
-int image_makemask (qbyte *in, qbyte *out, int size);
+int image_makemask (const qbyte *in, qbyte *out, int size);
 
 // loads a texture, as pixel data
-qbyte *loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight);
+qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight);
 
 // loads a texture, as a texture
-rtexture_t *loadtextureimage (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache);
+rtexture_t *loadtextureimage (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
 
 // loads a texture's alpha mask, as pixel data
-qbyte *loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, int matchheight);
+qbyte *loadimagepixelsmask (const char *filename, qboolean complain, int matchwidth, int matchheight);
 
 // loads a texture's alpha mask, as a texture
-rtexture_t *loadtextureimagemask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache);
+rtexture_t *loadtextureimagemask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
 
 // loads a texture and it's alpha mask at once (NULL if it has no translucent pixels)
 rtexture_t *image_masktex;
-rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache);
+rtexture_t *image_nmaptex;
+rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags);
+rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale);
 
 // writes a RGB TGA that is already upside down (which TGA wants)
-qboolean Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte *data);
+qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data);
 
 // writes a RGB TGA
-void Image_WriteTGARGB (char *filename, int width, int height, qbyte *data);
+void Image_WriteTGARGB (const char *filename, int width, int height, const qbyte *data);
 
 // writes a RGBA TGA
-void Image_WriteTGARGBA (char *filename, int width, int height, qbyte *data);
+void Image_WriteTGARGBA (const char *filename, int width, int height, const qbyte *data);
 
 // returns true if the image has some translucent pixels
-qboolean Image_CheckAlpha(qbyte *data, int size, qboolean rgba);
+qboolean Image_CheckAlpha(const qbyte *data, int size, qboolean rgba);
 
 // resizes the image (in can not be the same as out)
-void Image_Resample (void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality);
+void Image_Resample (const void *indata, int inwidth, int inheight, int indepth, void *outdata, int outwidth, int outheight, int outdepth, int bytesperpixel, int quality);
 
 // scales the image down by a power of 2 (in can be the same as out)
-void Image_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel);
+void Image_MipReduce(const qbyte *in, qbyte *out, int *width, int *height, int *depth, int destwidth, int destheight, int destdepth, int bytesperpixel);
 
 // only used by menuplyr coloring
-qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight);
+qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight);
+
+void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *outpixels, int width, int height, int clamp, float bumpscale);
 
 #endif
 

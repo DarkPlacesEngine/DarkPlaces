@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 #include "quakedef.h"
+#include "image.h"
 
 void (*vid_menudrawfn)(void);
 void (*vid_menukeyfn)(int key);
@@ -971,7 +972,7 @@ void M_MenuPlayerTranslate (qbyte *translation, int top, int bottom)
 	M_BuildTranslationTable (menuplyr_top*16, menuplyr_bottom*16);
 
 	for (i = 0;i < menuplyr_width * menuplyr_height;i++)
-		trans[i] = d_8to24table[translation[pixels[i]]];
+		trans[i] = palette_complete[translation[pixels[i]]];
 
 	Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (qbyte *)trans);
 }

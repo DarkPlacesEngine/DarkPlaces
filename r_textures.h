@@ -18,8 +18,8 @@
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT | TEXF_CLAMP)
 
-// 8bit quake paletted
-#define TEXTYPE_QPALETTE 1
+// 8bit paletted
+#define TEXTYPE_PALETTE 1
 // 24bit RGB
 #define TEXTYPE_RGB 2
 // 32bit RGBA
@@ -52,11 +52,11 @@ int R_CompatibleFragmentWidth(int width, int textype, int flags);
 
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)
-rtexture_t *R_LoadTexture(rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, char *identifier, int width, qbyte *data, int textype, int flags);
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, char *identifier, int width, int height, int depth, qbyte *data, int textype, int flags);
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, char *identifier, int width, qbyte *data, int textype, int flags);
+// (note: palette must not be NULL if using TEXTYPE_PALETTE)
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const qbyte *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const qbyte *data, int textype, int flags, const unsigned int *palette);
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);

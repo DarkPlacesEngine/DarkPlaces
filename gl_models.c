@@ -299,11 +299,11 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	{
 		// 128-224 are backwards ranges
 		c = (ent->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
-		bcolor = (qbyte *) (&d_8to24table[c]);
+		bcolor = (qbyte *) (&palette_complete[c]);
 		pantsfullbright = c >= 224;
 		VectorScale(bcolor, (1.0f / 255.0f), pantscolor);
 		c = (ent->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
-		bcolor = (qbyte *) (&d_8to24table[c]);
+		bcolor = (qbyte *) (&palette_complete[c]);
 		shirtfullbright = c >= 224;
 		VectorScale(bcolor, (1.0f / 255.0f), shirtcolor);
 	}
@@ -589,7 +589,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	R_Mesh_ResizeCheck(ent->model->numverts);
 	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvert_normals);
 	Mod_BuildTextureVectorsAndNormals(ent->model->numverts, ent->model->numtris, varray_vertex, ent->model->mdlmd2data_texcoords, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals);
-	R_Shadow_RenderLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, skinframe->base, r_notexture, NULL, NULL);
+	R_Shadow_RenderLighting(ent->model->numverts, ent->model->numtris, ent->model->mdlmd2data_indices, aliasvert_svectors, aliasvert_tvectors, aliasvert_normals, ent->model->mdlmd2data_texcoords, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, skinframe->base, skinframe->gloss, skinframe->nmap, NULL);
 }
 
 int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)

@@ -292,7 +292,7 @@ float r_shadow_atten1, r_shadow_atten2, r_shadow_atten5;
 static void R_Shadow_Make3DTextures(void)
 {
 	int x, y, z, d;
-	float v[3], intensity, ilen, length;
+	float v[3], intensity, ilen, length, bordercolor[4];
 	qbyte data[ATTEN3DSIZE][ATTEN3DSIZE][ATTEN3DSIZE][4];
 	if (r_light_quality.integer != 1 || !gl_texture3d)
 		return;
@@ -318,7 +318,12 @@ static void R_Shadow_Make3DTextures(void)
 			}
 		}
 	}
-	r_shadow_normalsattenuationtexture = R_LoadTexture3D(r_shadow_texturepool, "normalsattenuation", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP);
+	r_shadow_normalsattenuationtexture = R_LoadTexture3D(r_shadow_texturepool, "normalsattenuation", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+	bordercolor[0] = 0.5f;
+	bordercolor[1] = 0.5f;
+	bordercolor[2] = 0.5f;
+	bordercolor[3] = 1.0f;
+	qglTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, bordercolor);
 }
 
 static void R_Shadow_MakeTextures(void)
@@ -341,7 +346,7 @@ static void R_Shadow_MakeTextures(void)
 			data[0][y][x][3] = 255;
 		}
 	}
-	r_shadow_blankbumptexture = R_LoadTexture(r_shadow_texturepool, "blankbump", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE);
+	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	for (side = 0;side < 6;side++)
 	{
 		for (y = 0;y < 128;y++)
@@ -391,7 +396,7 @@ static void R_Shadow_MakeTextures(void)
 			}
 		}
 	}
-	r_shadow_normalscubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "normalscube", 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP);
+	r_shadow_normalscubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "normalscube", 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 	for (y = 0;y < 128;y++)
 	{
 		for (x = 0;x < 128;x++)
@@ -410,7 +415,7 @@ static void R_Shadow_MakeTextures(void)
 			data[0][y][x][3] = 255;
 		}
 	}
-	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP);
+	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 	R_Shadow_Make3DTextures();
 }
 
@@ -525,9 +530,32 @@ void R_Shadow_GenTexCoords_Diffuse_Attenuation3D(float *out, int numverts, const
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightvec);
-		out[0] = 0.5f + DotProduct(svectors, lightvec) * iradius;
-		out[1] = 0.5f + DotProduct(tvectors, lightvec) * iradius;
-		out[2] = 0.5f + DotProduct(normals, lightvec) * iradius;
+		if (r_shadow6.integer != 0)
+		{
+			VectorClear(lightvec);
+			if (r_shadow6.integer > 0)
+				lightvec[(r_shadow6.integer - 1) % 3] = 64;
+			else
+				lightvec[((-r_shadow6.integer) - 1) % 3] = -64;
+		}
+		if (r_shadow4.integer & 8)
+			lightvec[0] = -lightvec[0];
+		if (r_shadow4.integer & 16)
+			lightvec[1] = -lightvec[1];
+		if (r_shadow4.integer & 32)
+			lightvec[2] = -lightvec[2];
+		if (r_shadow4.integer & 1)
+			out[0] = 0.5f - DotProduct(svectors, lightvec) * iradius;
+		else
+			out[0] = 0.5f + DotProduct(svectors, lightvec) * iradius;
+		if (r_shadow4.integer & 2)
+			out[1] = 0.5f - DotProduct(tvectors, lightvec) * iradius;
+		else
+			out[2] = 0.5f + DotProduct(tvectors, lightvec) * iradius;
+		if (r_shadow4.integer & 4)
+			out[2] = 0.5f - DotProduct(normals, lightvec) * iradius;
+		else
+			out[2] = 0.5f + DotProduct(normals, lightvec) * iradius;
 	}
 }
 
@@ -618,6 +646,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			m.texcombinergb[1] = GL_DOT3_RGB_ARB;
 			m.texcombinergb[2] = GL_MODULATE;
 			m.texcombinergb[3] = GL_MODULATE;
+			m.texrgbscale[2] = 2;
 			R_Mesh_TextureState(&m);
 			R_Shadow_GenTexCoords_Diffuse_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, lightradius);
 			if (m.texcubemap[3])
@@ -634,6 +663,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			m.texcombinergb[1] = GL_DOT3_RGB_ARB;
 			m.texcombinergb[2] = GL_MODULATE;
 			m.texcombinergb[3] = GL_MODULATE;
+			m.texrgbscale[2] = 2;
 			R_Mesh_TextureState(&m);
 			R_Shadow_GenTexCoords_Specular_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin, lightradius);
 			R_Mesh_Draw(numverts, numtriangles, elements);

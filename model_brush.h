@@ -113,6 +113,10 @@ typedef struct texture_s
 	rtexture_t *fogtexture;
 	// detail texture (usually not used if transparent)
 	rtexture_t *detailtexture;
+	// normalmap for bumpmap shading
+	rtexture_t *nmaptexture;
+	// color filtering for glossy surfaces
+	rtexture_t *glosstexture;
 
 	// shader to use for this texture
 	Cshader_t *shader;
@@ -191,7 +195,6 @@ typedef struct msurface_s
 	short extents[2];
 
 	mtexinfo_t *texinfo;
-	texture_t *currenttexture; // updated (animated) during early surface processing each frame
 
 	// index into d_lightstylevalue array, 255 means not used (black)
 	qbyte styles[MAXLIGHTMAPS];

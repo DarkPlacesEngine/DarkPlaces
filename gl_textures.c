@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "image.h"
 
 cvar_t	r_max_size = {CVAR_SAVE, "r_max_size", "2048"};
 cvar_t	r_max_scrapsize = {CVAR_SAVE, "r_max_scrapsize", "256"};
@@ -36,11 +37,11 @@ typedef struct
 }
 textypeinfo_t;
 
-static textypeinfo_t textype_qpalette       = {TEXTYPE_QPALETTE, 1, 4, GL_RGBA, 3};
-static textypeinfo_t textype_rgb            = {TEXTYPE_RGB     , 3, 3, GL_RGB , 3};
-static textypeinfo_t textype_rgba           = {TEXTYPE_RGBA    , 4, 4, GL_RGBA, 3};
-static textypeinfo_t textype_qpalette_alpha = {TEXTYPE_QPALETTE, 1, 4, GL_RGBA, 4};
-static textypeinfo_t textype_rgba_alpha     = {TEXTYPE_RGBA    , 4, 4, GL_RGBA, 4};
+static textypeinfo_t textype_palette       = {TEXTYPE_PALETTE, 1, 4, GL_RGBA, 3};
+static textypeinfo_t textype_rgb           = {TEXTYPE_RGB    , 3, 3, GL_RGB , 3};
+static textypeinfo_t textype_rgba          = {TEXTYPE_RGBA   , 4, 4, GL_RGBA, 3};
+static textypeinfo_t textype_palette_alpha = {TEXTYPE_PALETTE, 1, 4, GL_RGBA, 4};
+static textypeinfo_t textype_rgba_alpha    = {TEXTYPE_RGBA   , 4, 4, GL_RGBA, 4};
 
 // a tiling texture (most common type)
 #define GLIMAGETYPE_TILE 0
@@ -110,6 +111,8 @@ typedef struct gltexture_s
 	textypeinfo_t *textype;
 	// one of the GLTEXTURETYPE_ values
 	int texturetype;
+	// palette if the texture is TEXTYPE_PALETTE
+	const unsigned int *palette;
 }
 gltexture_t;
 
@@ -139,8 +142,8 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 	{
 		switch(textype)
 		{
-		case TEXTYPE_QPALETTE:
-			return &textype_qpalette_alpha;
+		case TEXTYPE_PALETTE:
+			return &textype_palette_alpha;
 		case TEXTYPE_RGB:
 			Host_Error("R_GetTexTypeInfo: RGB format has no alpha, TEXF_ALPHA not allowed\n");
 			return NULL;
@@ -155,8 +158,8 @@ static textypeinfo_t *R_GetTexTypeInfo(int textype, int flags)
 	{
 		switch(textype)
 		{
-		case TEXTYPE_QPALETTE:
-			return &textype_qpalette;
+		case TEXTYPE_PALETTE:
+			return &textype_palette;
 		case TEXTYPE_RGB:
 			return &textype_rgb;
 		case TEXTYPE_RGBA:
@@ -614,12 +617,12 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			memset(resizebuffer, 255, glt->width * glt->height * glt->image->depth * glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 		}
-		else if (glt->textype->textype == TEXTYPE_QPALETTE)
+		else if (glt->textype->textype == TEXTYPE_PALETTE)
 		{
 			// promote paletted to RGBA, so we only have to worry about RGB and
 			// RGBA in the rest of this code
 			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
-			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, d_8to24table);
+			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, glt->palette);
 			prevbuffer = colorconvertbuffer;
 		}
 
@@ -664,11 +667,11 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	}
 	else
 	{
-		if (glt->textype->textype == TEXTYPE_QPALETTE)
+		if (glt->textype->textype == TEXTYPE_PALETTE)
 		{
 			// promote paletted to RGBA, so we only have to worry about RGB and
 			// RGBA in the rest of this code
-			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, d_8to24table);
+			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, glt->palette);
 			prevbuffer = colorconvertbuffer;
 		}
 
@@ -906,7 +909,7 @@ static void R_UploadTexture (gltexture_t *glt)
 		Con_Printf("R_UploadTexture: Texture %s already uploaded and destroyed.  Can not upload original image again.  Uploaded blank texture.\n", glt->identifier);
 }
 
-static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, char *identifier, int width, int height, int depth, int sides, int flags, int textype, int texturetype, qbyte *data)
+static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, int sides, int flags, int textype, int texturetype, const qbyte *data, const unsigned int *palette)
 {
 	int i, size;
 	gltexture_t *glt;
@@ -938,7 +941,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, char *identifier
 	// clear the alpha flag if the texture has no transparent pixels
 	switch(textype)
 	{
-	case TEXTYPE_QPALETTE:
+	case TEXTYPE_PALETTE:
 		if (flags & TEXF_ALPHA)
 		{
 			flags &= ~TEXF_ALPHA;
@@ -946,7 +949,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, char *identifier
 			{
 				for (i = 0;i < size;i++)
 				{
-					if (data[i] == 255)
+					if (((qbyte *)&palette[data[i]])[3] == 255)
 					{
 						flags |= TEXF_ALPHA;
 						break;
@@ -998,6 +1001,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, char *identifier
 	glt->textype = texinfo;
 	glt->texturetype = texturetype;
 	glt->inputdatasize = size;
+	glt->palette = palette;
 
 	if (data)
 	{
@@ -1015,29 +1019,24 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, char *identifier
 	return (rtexture_t *)glt;
 }
 
-rtexture_t *R_LoadTexture(rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags)
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data);
+	return R_SetupTexture(rtexturepool, identifier, width, 1, 1, 1, flags, textype, GLTEXTURETYPE_1D, data, palette);
 }
 
-rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, char *identifier, int width, qbyte *data, int textype, int flags)
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, const qbyte *data, int textype, int flags, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, 1, 1, 1, flags, textype, GLTEXTURETYPE_1D, data);
+	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data, palette);
 }
 
-rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags)
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, const char *identifier, int width, int height, int depth, const qbyte *data, int textype, int flags, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, 1, 1, flags, textype, GLTEXTURETYPE_2D, data);
+	return R_SetupTexture(rtexturepool, identifier, width, height, depth, 1, flags, textype, GLTEXTURETYPE_3D, data, palette);
 }
 
-rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, char *identifier, int width, int height, int depth, qbyte *data, int textype, int flags)
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, const char *identifier, int width, const qbyte *data, int textype, int flags, const unsigned int *palette)
 {
-	return R_SetupTexture(rtexturepool, identifier, width, height, depth, 1, flags, textype, GLTEXTURETYPE_3D, data);
-}
-
-rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, char *identifier, int width, qbyte *data, int textype, int flags)
-{
-	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data);
+	return R_SetupTexture(rtexturepool, identifier, width, width, 1, 6, flags, textype, GLTEXTURETYPE_CUBEMAP, data, palette);
 }
 
 int R_TextureHasAlpha(rtexture_t *rt)
