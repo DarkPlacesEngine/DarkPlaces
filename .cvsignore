@@ -1,5 +1,7 @@
 *.d
 *.o
+*.i
+*.s
 ChangeLog
 darkplaces-glx
 darkplaces-3dfx
