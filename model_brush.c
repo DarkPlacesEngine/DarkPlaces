@@ -122,7 +122,7 @@ byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 	return Mod_DecompressVis (leaf->compressed_vis, model);
 }
 
-byte	*mod_base;
+extern byte	*mod_base;
 
 extern cvar_t r_fullbrights;
 
