@@ -197,10 +197,24 @@ static rtexture_t *draw_generatecrosshair(int num)
 
 static rtexture_t *draw_generateditherpattern(void)
 {
+#if 1
+	int x, y;
+	qbyte data[8*8*4];
+	for (y = 0;y < 8;y++)
+	{
+		for (x = 0;x < 8;x++)
+		{
+			data[(y*8+x)*4+0] = data[(y*8+x)*4+1] = data[(y*8+x)*4+2] = ((x^y) & 4) ? 255 : 0;
+			data[(y*8+x)*4+3] = 255;
+		}
+	}
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 8, 8, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
+#else
 	qbyte data[16];
 	memset(data, 255, sizeof(data));
 	data[0] = data[1] = data[2] = data[12] = data[13] = data[14] = 0;
 	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 2, 2, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
+#endif
 }
 
 /*
