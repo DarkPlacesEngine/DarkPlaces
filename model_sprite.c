@@ -227,7 +227,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 	loadmodel->DrawLight = NULL;
 
 	version = LittleLong(((dsprite_t *)buffer)->version);
-	if (version == SPRITE_VERSION || SPRITE32_VERSION)
+	if (version == SPRITE_VERSION || version == SPRITE32_VERSION)
 	{
 		pinqsprite = (dsprite_t *)datapointer;
 		datapointer += sizeof(dsprite_t);
