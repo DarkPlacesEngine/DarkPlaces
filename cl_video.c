@@ -3,133 +3,283 @@
 #include "cl_video.h"
 #include "dpvsimpledecode.h"
 
-mempool_t *clvideomempool;
+// constants (and semi-constants)
+static int  cl_videormask;
+static int  cl_videobmask;
+static int  cl_videogmask;
+static int	cl_videobytesperpixel;
 
-int cl_videoplaying = false;
-void *cl_videostream;
+static clvideo_t videoarray[ MAXCLVIDEOS ];
+static mempool_t *cl_videomempool;
+static rtexturepool_t *cl_videotexturepool;
 
-double cl_videostarttime;
-int cl_videoframenum;
-double cl_videoframerate;
-
-int cl_videoimagewidth;
-int cl_videoimageheight;
-int cl_videoimagedata_rmask;
-int cl_videoimagedata_gmask;
-int cl_videoimagedata_bmask;
-int cl_videoimagedata_bytesperpixel;
-void *cl_videoimagedata;
-
-rtexture_t *cl_videotexture;
-rtexturepool_t *cl_videotexturepool;
-
-void CL_VideoFrame(void)
+static clvideo_t *FindUnusedVid( void )
 {
-	int frames, framenum;
-	if (!cl_videoplaying)
-		return;
-	framenum = (realtime - cl_videostarttime) * cl_videoframerate;
-	//Con_Printf("frame %i\n", framenum);
-	if (framenum < 0)
-		framenum = 0;
-	frames = 0;
-	while (cl_videoframenum < framenum)
+	int i;
+	for( i = 1 ; i < MAXCLVIDEOS ; i++ )
+		if( videoarray[ i ].state == CLVIDEO_UNUSED )
+			return &videoarray[ i ];
+	return NULL;
+}
+
+static qboolean OpenStream( clvideo_t * video )
+{
+	char *errorstring;
+	video->stream = dpvsimpledecode_open( video->filename, &errorstring);
+	if (!video->stream )
 	{
-		frames++;
-		cl_videoframenum++;
-		if (dpvsimpledecode_video(cl_videostream, cl_videoimagedata, cl_videoimagedata_rmask, cl_videoimagedata_gmask, cl_videoimagedata_bmask, cl_videoimagedata_bytesperpixel, cl_videoimagewidth * cl_videoimagedata_bytesperpixel))
-		{
-			CL_VideoStop();
-			return;
-		}
+		Con_Printf("unable to open \"%s\", error: %s\n", video->filename, errorstring);
+		return false;
 	}
-	if (frames)
-	{
-		R_UpdateTexture(cl_videotexture, cl_videoimagedata);
-		//Draw_NewPic("engine_videoframe", cl_videoimagewidth, cl_videoimageheight, false, cl_videoimagedata);
+	return true;
+}
+
+static void SuspendVideo( clvideo_t * video )
+{
+	if( video->suspended )
+		return;
+	video->suspended = true;
+	// free the texture
+	R_FreeTexture( video->cpif.tex );
+	// free the image data
+	Mem_Free( video->imagedata );
+	// if we are in firstframe mode, also close the stream
+	if( video->state == CLVIDEO_FIRSTFRAME ) 
+		dpvsimpledecode_close( video->stream );	
+}
+
+static qboolean WakeVideo( clvideo_t * video )
+{
+	if( !video->suspended )
+		return true;
+	video->suspended = false;
+	
+	if( video->state == CLVIDEO_FIRSTFRAME )
+		if( !OpenStream( video ) ) {
+			video->state = CLVIDEO_UNUSED;
+			return false;
+		}
+		
+	video->imagedata = Mem_Alloc( cl_videomempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, 
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );    
+
+	// update starttime
+	video->starttime += realtime - video->lasttime;
+	return true;
+}
+
+static clvideo_t* OpenVideo( clvideo_t *video, char *filename, char *name, int owner )
+{
+	strncpy( video->filename, filename, MAX_QPATH );
+	video->ownertag = owner;
+	strncpy( video->cpif.name, CLVIDEOPREFIX, MAX_QPATH );
+	strncat( video->cpif.name, name, MAX_QPATH - sizeof( CLVIDEOPREFIX ) );
+
+	if( !OpenStream( video ) )
+		return NULL;
+
+	video->state = CLVIDEO_FIRSTFRAME;
+	video->framenum = -1;
+	video->framerate = dpvsimpledecode_getframerate( video->stream );
+	video->lasttime = realtime;
+
+	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
+	video->cpif.height = dpvsimpledecode_getheight( video->stream );
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, 
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
+
+    video->imagedata = Mem_Alloc( cl_videomempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+
+	return video;
+}
+
+clvideo_t* CL_OpenVideo( char *filename, char *name, int owner )
+{
+	clvideo_t *video;
+
+	video = FindUnusedVid();
+	if( !video ) {
+		Con_Printf( "unable to open video \"%s\" - video limit reached\n", filename );
+		return NULL;
+	}
+	return OpenVideo( video, filename, name, owner );
+}
+
+clvideo_t* CL_GetVideo( char *name )
+{
+	int i;
+	clvideo_t *video;
+
+	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
+		if( videoarray[ i ].state != CLVIDEO_UNUSED 
+			&&	!strcmp( videoarray[ i ].cpif.name , name ) )
+			break;
+	if( i == MAXCLVIDEOS )
+		return NULL;
+	video = &videoarray[ i ];
+
+	if( video->suspended )
+		if( !WakeVideo( video ) )
+			return NULL;
+	video->lasttime = realtime;
+
+	return video;
+}
+
+void CL_StartVideo( clvideo_t * video )
+{
+	if( !video )
+		return;
+
+	video->starttime = video->lasttime = realtime;
+	video->framenum = -1;
+	video->state = CLVIDEO_PLAY;
+}
+
+void CL_LoopVideo( clvideo_t * video )
+{
+	if( !video )
+		return;
+
+	video->starttime = video->lasttime = realtime;
+	video->framenum = -1;
+	video->state = CLVIDEO_LOOP;
+}
+
+void CL_PauseVideo( clvideo_t * video )
+{
+	if( !video )
+		return;
+
+	video->state = CLVIDEO_PAUSE;
+	video->lasttime = realtime;
+}
+
+void CL_RestartVideo( clvideo_t *video )
+{
+	if( !video )
+		return;
+    
+	video->starttime = video->lasttime = realtime;
+	video->framenum = -1;
+}
+
+void CL_StopVideo( clvideo_t * video )
+{
+	if( !video )
+		return;
+
+	video->lasttime = realtime;
+	video->framenum = -1;
+	video->state = CLVIDEO_FIRSTFRAME;
+}
+
+void CL_CloseVideo( clvideo_t * video )
+{
+	if( !video || video->state == CLVIDEO_UNUSED )
+		return;
+
+	video->state = CLVIDEO_UNUSED;
+	
+	if( !video->suspended || video->state != CLVIDEO_FIRSTFRAME )
+		dpvsimpledecode_close( video->stream );
+	if( !video->suspended ) {
+		Mem_Free( video->imagedata );
+		R_FreeTexture( video->cpif.tex );
 	}
 }
+
+static void VideoFrame( clvideo_t *video )
+{
+	int destframe;
+
+	if( video->state == CLVIDEO_FIRSTFRAME )
+		destframe = 0;
+	else
+		destframe = (realtime - video->starttime) * video->framerate;
+	if( destframe < 0 )
+		destframe = 0;
+	if( video->framenum < destframe ) {
+		do {
+			video->framenum++;
+			if( dpvsimpledecode_video( video->stream, video->imagedata, cl_videormask, 
+				cl_videogmask, cl_videobmask, cl_videobytesperpixel, 
+				cl_videobytesperpixel * video->cpif.width ) 
+				) { // finished?
+				video->framenum = -1;
+				if( video->state == CLVIDEO_LOOP )
+						video->starttime = realtime;
+				else if( video->state == CLVIDEO_PLAY )
+						video->state = CLVIDEO_FIRSTFRAME;
+				return;
+			}
+		} while( video->framenum < destframe );
+		R_UpdateTexture( video->cpif.tex, video->imagedata );
+	}					
+}
+
+void CL_VideoFrame( void ) // update all videos
+{
+	int i;
+	clvideo_t *video;
+
+	for( video = videoarray, i = 0 ; i < MAXCLVIDEOS ; video++, i++ )
+		if( video->state != CLVIDEO_UNUSED && !video->suspended )
+			if( realtime - video->lasttime > CLTHRESHOLD )
+				SuspendVideo( video );
+			else if( video->state == CLVIDEO_PAUSE )
+				video->starttime = realtime + video->framenum * video->framerate;
+			else 
+				VideoFrame( video );
+
+	if( videoarray->state == CLVIDEO_FIRSTFRAME )
+		CL_VideoStop();
+}
+
+void CL_Video_Shutdown( void )
+{
+	int i;
+	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
+		CL_CloseVideo( &videoarray[ i ] );
+
+	R_FreeTexturePool( &cl_videotexturepool );
+	Mem_FreePool( &cl_videomempool );
+}
+
+void CL_PurgeOwner( int owner )
+{
+	int i;
+	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
+		if( videoarray[ i ].ownertag == owner )
+			CL_CloseVideo( &videoarray[ i ] );
+}
+
+int cl_videoplaying = false; // old, but still supported
 
 void CL_DrawVideo(void)
 {
 	if (cl_videoplaying)
-	{
-		drawqueuemesh_t mesh;
-		float vertex3f[12];
-		float texcoord2f[8];
-		float color4f[16];
-		float s1, t1, s2, t2, x1, y1, x2, y2;
-		x1 = 0;
-		y1 = 0;
-		x2 = vid.conwidth;
-		y2 = vid.conheight;
-		R_FragmentLocation(cl_videotexture, NULL, NULL, &s1, &t1, &s2, &t2);
-		texcoord2f[0] = s1;texcoord2f[1] = t1;
-		texcoord2f[2] = s2;texcoord2f[3] = t1;
-		texcoord2f[4] = s2;texcoord2f[5] = t2;
-		texcoord2f[6] = s1;texcoord2f[7] = t2;
-		R_FillColors(color4f, 4, 1, 1, 1, 1);
-		vertex3f[ 0] = x1;vertex3f[ 1] = y1;vertex3f[ 2] = 0;
-		vertex3f[ 3] = x2;vertex3f[ 4] = y1;vertex3f[ 5] = 0;
-		vertex3f[ 6] = x2;vertex3f[ 7] = y2;vertex3f[ 8] = 0;
-		vertex3f[ 9] = x1;vertex3f[10] = y2;vertex3f[11] = 0;
-		mesh.texture = cl_videotexture;
-		mesh.num_triangles = 2;
-		mesh.num_vertices = 4;
-		mesh.data_element3i = polygonelements;
-		mesh.data_vertex3f = vertex3f;
-		mesh.data_texcoord2f = texcoord2f;
-		mesh.data_color4f = color4f;
-		DrawQ_Mesh(&mesh, 0);
-		//DrawQ_Pic(0, 0, "engine_videoframe", vid.conwidth, vid.conheight, 1, 1, 1, 1, 0);
-	}
+		DrawQ_Pic(0, 0, videoarray->cpif.name, vid.conwidth, vid.conheight, 1, 1, 1, 1, 0);
 }
 
 void CL_VideoStart(char *filename)
 {
-	char *errorstring;
-	cl_videostream = dpvsimpledecode_open(filename, &errorstring);
-	if (!cl_videostream)
-	{
-		Con_Printf("unable to open \"%s\", error: %s\n", filename, errorstring);
+	if( videoarray->state != CLVIDEO_UNUSED )
+		CL_CloseVideo( videoarray );
+	if( !OpenVideo( videoarray, filename, filename, 0 ) )
 		return;
-	}
 
 	cl_videoplaying = true;
-	cl_videostarttime = realtime;
-	cl_videoframenum = -1;
-	cl_videoframerate = dpvsimpledecode_getframerate(cl_videostream);
-	cl_videoimagewidth = dpvsimpledecode_getwidth(cl_videostream);
-	cl_videoimageheight = dpvsimpledecode_getheight(cl_videostream);
 
-	// RGBA format
-	cl_videoimagedata_bytesperpixel = 4;
-	cl_videoimagedata_rmask = BigLong(0xFF000000);
-	cl_videoimagedata_gmask = BigLong(0x00FF0000);
-	cl_videoimagedata_bmask = BigLong(0x0000FF00);
-	cl_videoimagedata = Mem_Alloc(clvideomempool, cl_videoimagewidth * cl_videoimageheight * cl_videoimagedata_bytesperpixel);
-	//memset(cl_videoimagedata, 97, cl_videoimagewidth * cl_videoimageheight * cl_videoimagedata_bytesperpixel);
-
-	cl_videotexturepool = R_AllocTexturePool();
-	cl_videotexture = R_LoadTexture2D(cl_videotexturepool, "videotexture", cl_videoimagewidth, cl_videoimageheight, NULL, TEXTYPE_RGBA, TEXF_FRAGMENT, NULL);
+	CL_StartVideo( videoarray );
 }
 
 void CL_VideoStop(void)
 {
 	cl_videoplaying = false;
 
-	if (cl_videostream)
-		dpvsimpledecode_close(cl_videostream);
-	cl_videostream = NULL;
-
-	if (cl_videoimagedata)
-		Mem_Free(cl_videoimagedata);
-	cl_videoimagedata = NULL;
-
-	cl_videotexture = NULL;
-	R_FreeTexturePool(&cl_videotexturepool);
-
-	Draw_FreePic("engine_videoframe");
+	CL_CloseVideo( videoarray );
 }
 
 static void CL_PlayVideo_f(void)
@@ -151,10 +301,16 @@ static void CL_StopVideo_f(void)
 	CL_VideoStop();
 }
 
-void CL_Video_Init(void)
+void CL_Video_Init( void )
 {
-	Cmd_AddCommand("playvideo", CL_PlayVideo_f);
-	Cmd_AddCommand("stopvideo", CL_StopVideo_f);
+	cl_videobytesperpixel = 4;
+	cl_videormask = BigLong(0xFF000000);
+	cl_videogmask = BigLong(0x00FF0000);
+	cl_videobmask = BigLong(0x0000FF00);
 
-	clvideomempool = Mem_AllocPool("CL_Video", 0, NULL);
+	cl_videomempool = Mem_AllocPool( "CL_Video", 0, NULL );
+	cl_videotexturepool = R_AllocTexturePool();
+
+	Cmd_AddCommand( "playvideo", CL_PlayVideo_f );
+	Cmd_AddCommand( "stopvideo", CL_StopVideo_f );
 }

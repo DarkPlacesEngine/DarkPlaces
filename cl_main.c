@@ -1381,8 +1381,6 @@ void CL_Init (void)
 	CL_Particles_Init();
 	CL_Screen_Init();
 	CL_CGVM_Init();
-
-	CL_Video_Init();
 }
 
 
