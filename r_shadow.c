@@ -176,7 +176,6 @@ cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
 cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegeneration", "1"};
 cvar_t r_shadow_worldshadows = {0, "r_shadow_worldshadows", "1"};
 cvar_t r_shadow_dlightshadows = {CVAR_SAVE, "r_shadow_dlightshadows", "1"};
-cvar_t r_shadow_showtris = {0, "r_shadow_showtris", "0"};
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
@@ -306,7 +305,6 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
 	Cvar_RegisterVariable(&r_shadow_worldshadows);
 	Cvar_RegisterVariable(&r_shadow_dlightshadows);
-	Cvar_RegisterVariable(&r_shadow_showtris);
 	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_shadow_cull);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
@@ -2081,34 +2079,6 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		if (r_shadow_staticworldlights.integer && rtlight->compiled)
 		{
 			R_Mesh_Matrix(&ent->matrix);
-			if (r_shadow_showtris.integer)
-			{
-				shadowmesh_t *mesh;
-				rmeshstate_t m;
-				int depthenabled = qglIsEnabled(GL_DEPTH_TEST);
-				int stencilenabled = qglIsEnabled(GL_STENCIL_TEST);
-				qglDisable(GL_DEPTH_TEST);
-				qglDisable(GL_STENCIL_TEST);
-				//qglDisable(GL_CULL_FACE);
-				GL_ColorMask(1,1,1,1);
-				GL_Color(0,0.1,0,1);
-				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-				memset(&m, 0, sizeof(m));
-				for (mesh = rtlight->static_meshchain_shadow;mesh;mesh = mesh->next)
-				{
-					m.pointer_vertex = mesh->vertex3f;
-					R_Mesh_State(&m);
-					R_Mesh_Draw_ShowTris(mesh->numverts, mesh->numtriangles, mesh->element3i);
-				}
-				//qglEnable(GL_CULL_FACE);
-				if (depthenabled)
-					qglEnable(GL_DEPTH_TEST);
-				if (stencilenabled)
-				{
-					qglEnable(GL_STENCIL_TEST);
-					GL_ColorMask(0,0,0,0);
-				}
-			}
 			R_Shadow_RenderShadowMeshVolume(rtlight->static_meshchain_shadow);
 		}
 		else
@@ -2139,29 +2109,6 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				//R_Shadow_DrawStaticWorldLight_Light(rtlight, &ent->matrix, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
 				shadowmesh_t *mesh;
 				R_Mesh_Matrix(&ent->matrix);
-				if (r_shadow_showtris.integer)
-				{
-					rmeshstate_t m;
-					int depthenabled = qglIsEnabled(GL_DEPTH_TEST);
-					int stencilenabled = qglIsEnabled(GL_STENCIL_TEST);
-					qglDisable(GL_DEPTH_TEST);
-					qglDisable(GL_STENCIL_TEST);
-					//qglDisable(GL_CULL_FACE);
-					memset(&m, 0, sizeof(m));
-					GL_Color(0.2,0,0,1);
-					GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-					for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
-					{
-						m.pointer_vertex = mesh->vertex3f;
-						R_Mesh_State(&m);
-						R_Mesh_Draw_ShowTris(mesh->numverts, mesh->numtriangles, mesh->element3i);
-					}
-					//qglEnable(GL_CULL_FACE);
-					if (depthenabled)
-						qglEnable(GL_DEPTH_TEST);
-					if (stencilenabled)
-						qglEnable(GL_STENCIL_TEST);
-				}
 				for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
 				{
 					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, cubemaptexture);
