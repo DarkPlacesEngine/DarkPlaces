@@ -224,12 +224,6 @@ void M_BuildTranslationTable(int top, int bottom)
 }
 
 
-void M_DrawPicTranslate (float cx, float cy, char *picname)
-{
-	DrawQ_PicTranslate (menu_x + cx, menu_y + cy, picname, translationTable);
-}
-
-
 void M_DrawTextBox (float x, float y, float width, float height)
 {
 	int n;
@@ -933,6 +927,28 @@ void M_Menu_Setup_f (void)
 	setup_bottom = setup_oldbottom = cl_color.integer & 15;
 }
 
+// LordHavoc: rewrote this code greatly
+void M_MenuPlayerTranslate (qbyte *translation)
+{
+	int i, c;
+	unsigned int trans[4096];
+	qpic_t *p;
+
+	p = W_GetLumpName ("gfx/menuplyr.lmp");
+	if (!p)
+		return;
+	c = p->width * p->height;
+	if (c > 4096)
+	{
+		Con_Printf("M_MenuPlayerTranslate: image larger than 4096 pixel buffer\n");
+		return;
+	}
+
+	for (i = 0;i < c;i++)
+		trans[i] = d_8to24table[translation[((qbyte *)p->data)[i]]];
+
+	Draw_NewPic("gfx/menuplyr.lmp", p->width, p->height, true, (qbyte *)trans);
+}
 
 void M_Setup_Draw (void)
 {
@@ -957,8 +973,11 @@ void M_Setup_Draw (void)
 	M_Print (72, 140, "Accept Changes");
 
 	M_DrawPic (160, 64, "gfx/bigbox.lmp");
-	M_BuildTranslationTable(setup_top*16, setup_bottom*16);
-	M_DrawPicTranslate (172, 72, "gfx/menuplyr.lmp");
+
+	// LordHavoc: rewrote this code greatly
+	M_BuildTranslationTable (setup_top*16, setup_bottom*16);
+	M_MenuPlayerTranslate (translationTable);
+	M_DrawPic (172, 72, "gfx/menuplyr.lmp");
 
 	M_DrawCharacter (56, setup_cursor_table [setup_cursor], 12+((int)(realtime*4)&1));
 

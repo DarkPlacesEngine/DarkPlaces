@@ -19,8 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // host.c -- coordinates spawning and killing of local servers
 
-#include "quakedef.h"
 #include <time.h>
+#include "quakedef.h"
+#include "cl_video.h"
 
 /*
 
@@ -715,6 +716,8 @@ void _Host_Frame (float time)
 		CL_ReadFromServer ();
 
 	ui_update();
+
+	CL_VideoFrame();
 
 // update video
 	if (host_speeds.integer)

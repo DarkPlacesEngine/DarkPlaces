@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "cl_collision.h"
+#include "cl_video.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -975,5 +976,7 @@ void CL_Init (void)
 	CL_Particles_Init();
 	CL_Screen_Init();
 	CL_CGVM_Init();
+
+	CL_Video_Init();
 }
 

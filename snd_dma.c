@@ -1086,7 +1086,7 @@ void S_RawSamples_Dequeue(int *samples, unsigned int length)
 	if (l < length)
 	{
 		memset(samples + l * 2, 0, (length - l) * sizeof(int[2]));
-		//Con_Printf("S_RawSamples_Dequeue: padding with %i\n", length - l);
+		//Con_Printf("S_RawSamples_Dequeue: padding with %i samples\n", length - l);
 	}
 	s_rawsamplesbuffer_start = (s_rawsamplesbuffer_start + l) % RAWSAMPLESBUFFER;
 	s_rawsamplesbuffer_count -= l;
@@ -1098,3 +1098,40 @@ void S_RawSamples_ClearQueue(void)
 	s_rawsamplesbuffer_start = 0;
 }
 
+int S_RawSamples_QueueWantsMore(void)
+{
+	if (s_rawsamplesbuffer_count < min(shm->speed >> 1, RAWSAMPLESBUFFER >> 1))
+		return RAWSAMPLESBUFFER - s_rawsamplesbuffer_count;
+	else
+		return 0;
+}
+
+void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int outputlength)
+{
+	if (inputlength != outputlength)
+	{
+		int i, position, stopposition, step;
+		short *in, *out;
+		step = (float) inputlength * 256.0f / (float) outputlength;
+		position = 0;
+		stopposition = (inputlength - 1) << 8;
+		out = output;
+		for (i = 0;i < outputlength && position < stopposition;i++, position += step)
+		{
+			in = input + ((position >> 8) << 1);
+			out[0] = (((in[1] - in[0]) * (position & 255)) >> 8) + in[0];
+			out[1] = (((in[3] - in[2]) * (position & 255)) >> 8) + in[2];
+			out += 2;
+		}
+		stopposition = inputlength << 8;
+		for (i = 0;i < outputlength && position < stopposition;i++, position += step)
+		{
+			in = input + ((position >> 8) << 1);
+			out[0] = in[0];
+			out[1] = in[2];
+			out += 2;
+		}
+	}
+	else
+		memcpy(output, input, inputlength * sizeof(short[2]));
+}

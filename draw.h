@@ -40,6 +40,10 @@ cachepic_t;
 
 void Draw_Init (void);
 cachepic_t *Draw_CachePic (char *path);
+// create or update a pic's image
+cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *pixels);
+// free the texture memory used by a pic
+void Draw_FreePic(char *picname);
 
 void R_DrawQueue(void);
 

@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "cl_video.h"
 
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100"};
 cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 10 - 170
@@ -565,33 +566,40 @@ void DrawQ_Fill (float x, float y, float w, float h, float red, float green, flo
 	r_refdef.drawqueuesize += dq->size;
 }
 
-//only used for the player color selection menu
-void DrawQ_PicTranslate (int x, int y, char *picname, qbyte *translation)
+void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 {
-	int i, c;
-	unsigned int trans[4096];
-	cachepic_t *pic;
-
-	pic = Draw_CachePic(picname);
-	if (pic == NULL)
+	int size;
+	void *p;
+	drawqueue_t *dq;
+	drawqueuemesh_t *m;
+	size = sizeof(*dq);
+	size += sizeof(drawqueuemesh_t);
+	size += sizeof(int) * mesh->numindices;
+	size += sizeof(float[3]) * mesh->numvertices;
+	size += sizeof(float[2]) * mesh->numvertices;
+	size += sizeof(float[4]) * mesh->numvertices;
+	if (r_refdef.drawqueuesize + size > MAX_DRAWQUEUE)
 		return;
-
-	c = pic->width * pic->height;
-	if (c > 4096)
-	{
-		Con_Printf("DrawQ_PicTranslate: image larger than 4k buffer\n");
-		return;
-	}
-
-	for (i = 0;i < c;i++)
-		trans[i] = d_8to24table[translation[menuplyr_pixels[i]]];
-
-	// FIXME: this is renderer stuff?
-	R_UpdateTexture (pic->tex, (qbyte *)trans);
-
-	DrawQ_Pic(x, y, picname, 0, 0, 1, 1, 1, 1, 0);
+	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq->size = size;
+	dq->command = DRAWQUEUE_MESH;
+	dq->flags = flags;
+	dq->color = 0;
+	dq->x = 0;
+	dq->y = 0;
+	dq->scalex = 0;
+	dq->scaley = 0;
+	p = (void *)(dq + 1);
+	m = p;p += sizeof(drawqueuemesh_t);
+	m->numindices = mesh->numindices;
+	m->numvertices = mesh->numvertices;
+	m->texture = mesh->texture;
+	m->indices   = p;memcpy(m->indices  , mesh->indices  , m->numindices  * sizeof(int     ));p += m->numindices  * sizeof(int     );
+	m->vertices  = p;memcpy(m->vertices , mesh->vertices , m->numvertices * sizeof(float[3]));p += m->numvertices * sizeof(float[3]);
+	m->texcoords = p;memcpy(m->texcoords, mesh->texcoords, m->numvertices * sizeof(float[2]));p += m->numvertices * sizeof(float[2]);
+	m->colors    = p;memcpy(m->colors   , mesh->colors   , m->numvertices * sizeof(float[4]));p += m->numvertices * sizeof(float[4]);
+	r_refdef.drawqueuesize += dq->size;
 }
-
 
 /*
 ====================
@@ -959,6 +967,8 @@ void CL_UpdateScreen(void)
 		scr_drawloading = false;
 		SCR_DrawLoading();
 	}
+
+	CL_DrawVideo();
 
 	R_TimeReport("2d");
 
