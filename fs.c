@@ -141,10 +141,10 @@ typedef struct
 {
 	z_stream	zstream;
 	size_t		real_length;			// length of the uncompressed file
-	size_t		in_ind, in_max;
-//	size_t		in_position;			// we use "file->position" directly instead
-	size_t		out_ind, out_max;
-	size_t		out_position;			// virtual position in the uncompressed file
+	size_t		in_ind, in_max;			// input buffer index and counter
+	size_t		in_position;			// position in the compressed file
+	size_t		out_ind, out_max;		// output buffer index and counter
+	size_t		out_position;			// how many bytes did we uncompress until now?
 	qbyte		input [ZBUFF_SIZE];
 	qbyte		output [ZBUFF_SIZE];
 } ztoolkit_t;
@@ -153,7 +153,7 @@ struct qfile_s
 {
 	fs_flags_t	flags;
 	FILE*		stream;
-	size_t		length;		// file size (PACKED only)
+	size_t		length;		// file size on disk (PACKED only)
 	size_t		offset;		// offset into a package (PACKED only)
 	size_t		position;	// current position in the file (PACKED only)
 	ztoolkit_t*	z;			// used for inflating (DEFLATED only)
@@ -213,7 +213,7 @@ typedef struct pack_s
 {
 	char filename [MAX_OSPATH];
 	FILE *handle;
-	int ignorecase; // LordHavoc: pk3 ignores case
+	int ignorecase; // PK3 ignores case
 	int numfiles;
 	packfile_t *files;
 	mempool_t *mempool;
@@ -248,8 +248,7 @@ pack_t *packlist = NULL;
 
 searchpath_t *fs_searchpaths;
 
-// LordHavoc: was 2048, increased to 65536 and changed info[MAX_PACK_FILES] to a temporary alloc
-#define MAX_FILES_IN_PACK       65536
+#define MAX_FILES_IN_PACK	65536
 
 char fs_gamedir[MAX_OSPATH];
 char fs_basedir[MAX_OSPATH];
@@ -538,13 +537,16 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	if (eocd.disknum != 0 || eocd.cdir_disknum != 0)
 		Sys_Error ("%s is a multi-volume ZIP archive", packfile);
 
-	// LordHavoc: was always false because nbentries is an unsigned short and MAX_FILES_IN_PACK is 65536
-	//if (eocd.nbentries > (unsigned int) MAX_FILES_IN_PACK)
-	//	Sys_Error ("%s contains too many files (%hu)", packfile, eocd.nbentries);
+	// We only need to do this test if MAX_FILES_IN_PACK is lesser than 65535
+	// since eocd.nbentries is an unsigned 16 bits integer
+	#if MAX_FILES_IN_PACK < 65535
+	if (eocd.nbentries > MAX_FILES_IN_PACK)
+		Sys_Error ("%s contains too many files (%hu)", packfile, eocd.nbentries);
+	#endif
 
 	// Create a package structure in memory
 	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
-	pack->ignorecase = true; // LordHavoc: pk3 ignores case
+	pack->ignorecase = true; // PK3 ignores case
 	strcpy (pack->filename, packfile);
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
@@ -685,7 +687,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 		Sys_Error ("%s has %i files", packfile, numpackfiles);
 
 	pack = Mem_Alloc(pak_mempool, sizeof (pack_t));
-	pack->ignorecase = false; // LordHavoc: pak is case sensitive
+	pack->ignorecase = false; // PAK is case sensitive
 	strcpy (pack->filename, packfile);
 	pack->handle = packhandle;
 	pack->numfiles = numpackfiles;
@@ -1176,9 +1178,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 
 		nb = fread (buffer, 1, buffersize, file->stream);
 
-		// Update the position index if the file is packed
 		file->position += nb;
-
 		return nb;
 	}
 
@@ -1193,6 +1193,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		nb = (buffersize > count) ? count : buffersize;
 		memcpy (buffer, &ztk->output[ztk->out_ind], nb);
 		ztk->out_ind += nb;
+		file->position += nb;
 	}
 	else
 		nb = 0;
@@ -1205,7 +1206,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		// If "input" is also empty, we need to fill it
 		if (ztk->in_ind == ztk->in_max)
 		{
-			size_t remain = file->length - file->position;
+			size_t remain = file->length - ztk->in_position;
 
 			// If we are at the end of the file
 			if (!remain)
@@ -1217,7 +1218,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 			// Update indexes and counters
 			ztk->in_ind = 0;
 			ztk->in_max = count;
-			file->position += count;
+			ztk->in_position += count;
 		}
 
 		// Now that we are sure we have compressed data available, we need to determine
@@ -1240,7 +1241,6 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 				Sys_Error ("Can't inflate file");
 			ztk->in_ind = ztk->in_max - ztk->zstream.avail_in;
 			ztk->out_max = sizeof (ztk->output) - ztk->zstream.avail_out;
-			ztk->out_ind = 0;
 			ztk->out_position += ztk->out_max;
 
 			// Copy the requested data in "buffer" (as much as we can)
@@ -1272,6 +1272,7 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		}
 
 		nb += count;
+		file->position += count;
 	}
 
 	return nb;
@@ -1347,15 +1348,12 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	if (file->flags & FS_FLAG_DEFLATED)
 	{
 		ztoolkit_t *ztk = file->z;
-		size_t crt_offset;
 		qbyte buffer [sizeof (ztk->output)];  // it's big to force inflating into buffer directly
-
-		crt_offset = ztk->out_position - ztk->out_max + ztk->out_ind;
 
 		switch (whence)
 		{
 			case SEEK_CUR:
-				offset += crt_offset;
+				offset += file->position;
 				break;
 
 			case SEEK_SET:
@@ -1368,25 +1366,28 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 			default:
 				return -1;
 		}
+		if (offset < 0 || offset > (long) ztk->real_length)
+			return -1;
 
 		// If we need to go back in the file
-		if (offset <= (long) crt_offset)
+		if (offset <= (long) file->position)
 		{
 			// If we still have the data we need in the output buffer
-			if (crt_offset - offset <= ztk->out_ind)
+			if (file->position - offset <= ztk->out_ind)
 			{
-				ztk->out_ind -= crt_offset - offset;
+				ztk->out_ind -= file->position - offset;
+				file->position = offset;
 				return 0;
 			}
 
 			// Else, we restart from the beginning of the file
-			file->position = 0;
 			ztk->in_ind = 0;
 			ztk->in_max = 0;
+			ztk->in_position = 0;
 			ztk->out_ind = 0;
 			ztk->out_max = 0;
 			ztk->out_position = 0;
-			crt_offset = 0;
+			file->position = 0;
 			fseek (file->stream, file->offset, SEEK_SET);
 
 			// Reset the Zlib stream
@@ -1396,16 +1397,15 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		}
 
 		// Skip all data until we reach the requested offset
-		while ((long) crt_offset < offset)
+		while ((long) file->position < offset)
 		{
-			size_t diff = offset - crt_offset;
+			size_t diff = offset - file->position;
 			size_t count, len;
 
 			count = (diff > sizeof (buffer)) ? sizeof (buffer) : diff;
 			len = FS_Read (file, buffer, count);
 			if (len != count)
 				return -1;
-			crt_offset += len;
 		}
 
 		return 0;
@@ -1449,15 +1449,7 @@ Give the current position in a file
 long FS_Tell (qfile_t* file)
 {
 	if (file->flags & FS_FLAG_PACKED)
-	{
-		if (file->flags & FS_FLAG_DEFLATED)
-		{
-			ztoolkit_t *ztk = file->z;
-			return ztk->out_position - ztk->out_max + ztk->out_ind;
-		}
-
 		return file->position;
-	}
 
 	return ftell (file->stream);
 }
@@ -1559,10 +1551,7 @@ int FS_Eof (qfile_t* file)
 	if (file->flags & FS_FLAG_PACKED)
 	{
 		if (file->flags & FS_FLAG_DEFLATED)
-		{
-			ztoolkit_t *ztk = file->z;
-			return (ztk->out_position - ztk->out_max + ztk->out_ind == ztk->real_length);
-		}
+			return (file->position == file->z->real_length);
 
 		return (file->position == file->length);
 	}
