@@ -679,7 +679,7 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 ============
 FS_CreatePath
 
-Only used for FS_WriteFile.
+Only used for FS_Open.
 ============
 */
 void FS_CreatePath (char *path)
