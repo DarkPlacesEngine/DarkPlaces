@@ -78,7 +78,6 @@
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: clean up Collision_TraceBrushBrush to have another temp variable besides f and clean up the enterfrac2 handling (Vic)
 0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
-0 darkplaces: collision: client getting fraction out of bounds errors when in a map the client does not have
 0 darkplaces: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces: crash when progs/k_spike.mdl isn't found? (CheapAlert)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
@@ -489,6 +488,7 @@ d darkplaces: change R_Shadow_VertexShading functions to use sqrt and VectorLeng
 d darkplaces: change cl_fakelocalping_min and _max to only lag by half each way, as currently it results in 2x ping
 d darkplaces: check if nodrawtoclient works and if not, fix it (Uffe)
 d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
+d darkplaces: collision: client getting fraction out of bounds errors when in a map the client does not have
 d darkplaces: colors of player in demos seems to alter player config (this is clearly a more severe problem than just demos) (tkimmet@ezworks.net)
 d darkplaces: console scrolling should not reset when new messages appear
 d darkplaces: crashes if you type too long a command line in the console (Sajt)
