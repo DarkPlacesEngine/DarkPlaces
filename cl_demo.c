@@ -343,8 +343,6 @@ void CL_PlayDemo_f (void)
 		return;
 	}
 
-	SCR_BeginLoadingPlaque ();
-
 	strlcpy(cls.demoname, name, sizeof(cls.demoname));
 	cls.demoplayback = true;
 	cls.state = ca_connected;
@@ -413,7 +411,6 @@ void CL_TimeDemo_f (void)
 	// instantly hide console and deactivate it
 	key_dest = key_game;
 	key_consoleactive = 0;
-	scr_conlines = 0;
 	scr_con_current = 0;
 
 	cls.timedemo = true;
