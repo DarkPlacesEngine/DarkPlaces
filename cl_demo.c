@@ -143,10 +143,17 @@ void CL_ReadDemoMessage(void)
 				// already read this frame's message
 				return;
 			}
+			if (cls.td_lastframe == -1)
+			{
+				// we start counting on the second frame
+				// (after parsing connection stuff)
+				cls.td_startframe = host_framecount + 1;
+			}
 			cls.td_lastframe = host_framecount;
-			// if this is the second frame, grab the real td_starttime
-			// so the bogus time on the first frame doesn't count
-			if (host_framecount == cls.td_startframe + 1)
+			// if this is the first official frame we can now grab the real
+			// td_starttime so the bogus time on the first frame doesn't
+			// count against the final report
+			if (host_framecount == cls.td_startframe)
 				cls.td_starttime = realtime;
 		}
 		else if (cl.time <= cl.mtime[0])
@@ -382,7 +389,7 @@ void CL_TimeDemo_f (void)
 	scr_con_current = 0;
 
 	cls.timedemo = true;
-	cls.td_startframe = host_framecount;
-	cls.td_lastframe = -1;		// get a new message this frame
+	// get first message this frame
+	cls.td_lastframe = -1;
 }
 
