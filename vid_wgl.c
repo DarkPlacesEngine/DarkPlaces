@@ -992,13 +992,13 @@ void VID_Shutdown (void)
 	GL_CloseLibrary();
 	if (hDC && mainwindow)
 		ReleaseDC(mainwindow, hDC);
-	if (vid_isfullscreen)
-		ChangeDisplaySettings (NULL, 0);
-	vid_isfullscreen = false;
 	AppActivate(false, false);
 	if (mainwindow)
 		DestroyWindow(mainwindow);
 	mainwindow = 0;
+	if (vid_isfullscreen)
+		ChangeDisplaySettings (NULL, 0);
+	vid_isfullscreen = false;
 }
 
 
