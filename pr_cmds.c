@@ -1031,37 +1031,46 @@ findradius (origin, radius)
 void PF_findradius (void)
 {
 	edict_t *ent, *chain;
-	float radius;
-	float radius2;
-	float *org;
-	float eorg[3];
+	vec_t radius, radius2;
+	vec3_t org, eorg, mins, maxs;
 	int i;
+	int numtouchedicts;
+	edict_t *touchedicts[MAX_EDICTS];
 
 	chain = (edict_t *)sv.edicts;
 
-	org = G_VECTOR(OFS_PARM0);
+	VectorCopy(G_VECTOR(OFS_PARM0), org);
 	radius = G_FLOAT(OFS_PARM1);
 	radius2 = radius * radius;
 
-	ent = NEXT_EDICT(sv.edicts);
-	for (i=1 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
+	mins[0] = org[0] - radius;
+	mins[1] = org[1] - radius;
+	mins[2] = org[2] - radius;
+	maxs[0] = org[0] + radius;
+	maxs[1] = org[1] + radius;
+	maxs[2] = org[2] + radius;
+	numtouchedicts = SV_EntitiesInBox(mins, maxs, MAX_EDICTS, touchedicts);
+	if (numtouchedicts > MAX_EDICTS)
 	{
+		// this never happens
+		Con_Printf("SV_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+		numtouchedicts = MAX_EDICTS;
+	}
+	for (i = 0;i < numtouchedicts;i++)
+	{
+		ent = touchedicts[i];
 		pr_xfunction->builtinsprofile++;
-		if (ent->e->free)
-			continue;
-		if (ent->v->solid == SOLID_NOT)
-			continue;
-
-		// LordHavoc: compare against bounding box rather than center,
-		// and use DotProduct instead of Length, major speedup
+		// LordHavoc: compare against bounding box rather than center so it
+		// doesn't miss large objects, and use DotProduct instead of Length
+		// for a major speedup
 		eorg[0] = (org[0] - ent->v->origin[0]) - bound(ent->v->mins[0], (org[0] - ent->v->origin[0]), ent->v->maxs[0]);
 		eorg[1] = (org[1] - ent->v->origin[1]) - bound(ent->v->mins[1], (org[1] - ent->v->origin[1]), ent->v->maxs[1]);
 		eorg[2] = (org[2] - ent->v->origin[2]) - bound(ent->v->mins[2], (org[2] - ent->v->origin[2]), ent->v->maxs[2]);
-		if (DotProduct(eorg, eorg) > radius2)
-			continue;
-
-		ent->v->chain = EDICT_TO_PROG(chain);
-		chain = ent;
+		if (DotProduct(eorg, eorg) < radius2)
+		{
+			ent->v->chain = EDICT_TO_PROG(chain);
+			chain = ent;
+		}
 	}
 
 	RETURN_EDICT(chain);
@@ -1630,7 +1639,10 @@ void PF_aim (void)
 	float	speed;
 
 	// assume failure if it returns early
-	VectorClear(G_VECTOR(OFS_RETURN));
+	VectorCopy(pr_global_struct->v_forward, G_VECTOR(OFS_RETURN));
+	// if sv_aim is so high it can't possibly accept anything, skip out early
+	if (sv_aim.value >= 1)
+		return;
 
 	ent = G_EDICT(OFS_PARM0);
 	if (ent == sv.edicts)

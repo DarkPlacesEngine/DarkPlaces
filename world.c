@@ -42,31 +42,6 @@ void SV_World_Init(void)
 	Collision_Init();
 }
 
-typedef struct
-{
-	// bounding box of entire move area
-	vec3_t boxmins, boxmaxs;
-
-	// size of the moving object
-	vec3_t mins, maxs;
-
-	// size when clipping against monsters
-	vec3_t mins2, maxs2;
-
-	// start and end origin of move
-	vec3_t start, end;
-
-	// trace results
-	trace_t trace;
-
-	// type of move (like ignoring monsters, or similar)
-	int type;
-
-	// the edict that is moving (if any)
-	edict_t *passedict;
-}
-moveclip_t;
-
 //============================================================================
 
 // ClearLink is used for new headnodes
@@ -114,8 +89,7 @@ void SV_AreaStats_f(void)
 
 typedef struct areagrid_s
 {
-	link_t trigger_edicts;
-	link_t solid_edicts;
+	link_t edicts;
 }
 areagrid_t;
 
@@ -129,8 +103,7 @@ static int sv_areagrid_marknumber = 1;
 void SV_CreateAreaGrid (vec3_t mins, vec3_t maxs)
 {
 	int i;
-	ClearLink (&sv_areagrid_outside.trigger_edicts);
-	ClearLink (&sv_areagrid_outside.solid_edicts);
+	ClearLink (&sv_areagrid_outside.edicts);
 	// choose either the world box size, or a larger box to ensure the grid isn't too fine
 	sv_areagrid_size[0] = max(maxs[0] - mins[0], AREA_GRID * sv_areagrid_mingridsize.value);
 	sv_areagrid_size[1] = max(maxs[1] - mins[1], AREA_GRID * sv_areagrid_mingridsize.value);
@@ -149,8 +122,7 @@ void SV_CreateAreaGrid (vec3_t mins, vec3_t maxs)
 	sv_areagrid_scale[2] = AREA_GRID / sv_areagrid_size[2];
 	for (i = 0;i < AREA_GRIDNODES;i++)
 	{
-		ClearLink (&sv_areagrid[i].trigger_edicts);
-		ClearLink (&sv_areagrid[i].solid_edicts);
+		ClearLink (&sv_areagrid[i].edicts);
 	}
 	Con_DPrintf("sv_areagrid settings: divisions %ix%ix1 : box %f %f %f : %f %f %f size %f %f %f grid %f %f %f (mingrid %f)\n", AREA_GRID, AREA_GRID, sv_areagrid_mins[0], sv_areagrid_mins[1], sv_areagrid_mins[2], sv_areagrid_maxs[0], sv_areagrid_maxs[1], sv_areagrid_maxs[2], sv_areagrid_size[0], sv_areagrid_size[1], sv_areagrid_size[2], 1.0f / sv_areagrid_scale[0], 1.0f / sv_areagrid_scale[1], 1.0f / sv_areagrid_scale[2], sv_areagrid_mingridsize.value);
 }
@@ -187,23 +159,22 @@ void SV_UnlinkEdict (edict_t *ent)
 	}
 }
 
-
-void SV_TouchAreaGrid(edict_t *ent)
+int SV_EntitiesInBox(vec3_t mins, vec3_t maxs, int maxlist, edict_t **list)
 {
-	link_t *l;
-	edict_t *touch;
+	int numlist;
 	areagrid_t *grid;
-	int old_self, old_other, igrid[3], igridmins[3], igridmaxs[3];
-	int i, numtouchedicts;
-	unsigned short touchedictnumbers[MAX_EDICTS];
+	link_t *l;
+	edict_t *ent;
+	int igrid[3], igridmins[3], igridmaxs[3];
 
+	sv_areagrid_stats_calls++;
 	sv_areagrid_marknumber++;
-	igridmins[0] = (int) ((ent->v->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
-	igridmins[1] = (int) ((ent->v->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
-	//igridmins[2] = (int) ((ent->v->absmin[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
-	igridmaxs[0] = (int) ((ent->v->absmax[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) ((ent->v->absmax[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
-	//igridmaxs[2] = (int) ((ent->v->absmax[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
+	igridmins[0] = (int) ((mins[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
+	igridmins[1] = (int) ((mins[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
+	//igridmins[2] = (int) ((mins[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
+	igridmaxs[0] = (int) ((maxs[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) ((maxs[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
+	//igridmaxs[2] = (int) ((maxs[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
 	igridmins[0] = max(0, igridmins[0]);
 	igridmins[1] = max(0, igridmins[1]);
 	//igridmins[2] = max(0, igridmins[2]);
@@ -211,40 +182,83 @@ void SV_TouchAreaGrid(edict_t *ent)
 	igridmaxs[1] = min(AREA_GRID, igridmaxs[1]);
 	//igridmaxs[2] = min(AREA_GRID, igridmaxs[2]);
 
-	// build a list of edicts to touch, because the link loop can be corrupted
-	// by SV_IncreaseEdicts called during touch functions
-	numtouchedicts = 0;
-	for (l = sv_areagrid_outside.trigger_edicts.next;l != &sv_areagrid_outside.trigger_edicts;l = l->next)
-		touchedictnumbers[numtouchedicts++] = l->entitynumber;
-
+	numlist = 0;
+	// add entities not linked into areagrid because they are too big or
+	// outside the grid bounds
+	if (sv_areagrid_outside.edicts.next != &sv_areagrid_outside.edicts)
+	{
+		for (l = sv_areagrid_outside.edicts.next;l != &sv_areagrid_outside.edicts;l = l->next)
+		{
+			ent = EDICT_NUM_UNSIGNED(l->entitynumber);
+			if (ent->e->areagridmarknumber != sv_areagrid_marknumber)
+			{
+				ent->e->areagridmarknumber = sv_areagrid_marknumber;
+				if (!ent->e->free && BoxesOverlap(mins, maxs, ent->v->absmin, ent->v->absmax))
+				{
+					if (numlist < maxlist)
+						list[numlist] = ent;
+					numlist++;
+				}
+				sv_areagrid_stats_entitychecks++;
+			}
+		}
+	}
+	// add grid linked entities
 	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
 	{
 		grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
-			for (l = grid->trigger_edicts.next;l != &grid->trigger_edicts;l = l->next)
-				touchedictnumbers[numtouchedicts++] = l->entitynumber;
+		{
+			if (grid->edicts.next != &grid->edicts)
+			{
+				for (l = grid->edicts.next;l != &grid->edicts;l = l->next)
+				{
+					ent = EDICT_NUM_UNSIGNED(l->entitynumber);
+					if (ent->e->areagridmarknumber != sv_areagrid_marknumber)
+					{
+						ent->e->areagridmarknumber = sv_areagrid_marknumber;
+						if (!ent->e->free && BoxesOverlap(mins, maxs, ent->v->absmin, ent->v->absmax))
+						{
+							if (numlist < maxlist)
+								list[numlist] = ent;
+							numlist++;
+						}
+					}
+					sv_areagrid_stats_entitychecks++;
+				}
+			}
+		}
+	}
+	return numlist;
+}
+
+void SV_TouchAreaGrid(edict_t *ent)
+{
+	int i, numtouchedicts, old_self, old_other;
+	edict_t *touch, *touchedicts[MAX_EDICTS];
+
+	// build a list of edicts to touch, because the link loop can be corrupted
+	// by SV_IncreaseEdicts called during touch functions
+	numtouchedicts = SV_EntitiesInBox(ent->v->absmin, ent->v->absmax, MAX_EDICTS, touchedicts);
+	if (numtouchedicts > MAX_EDICTS)
+	{
+		// this never happens
+		Con_Printf("SV_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+		numtouchedicts = MAX_EDICTS;
 	}
 
 	old_self = pr_global_struct->self;
 	old_other = pr_global_struct->other;
-	for (i = 0;i < numtouchedicts && !ent->e->free;i++)
+	for (i = 0;i < numtouchedicts;i++)
 	{
-		touch = EDICT_NUM_UNSIGNED(touchedictnumbers[i]);
-		if (ent->v->absmin[0] > touch->v->absmax[0]
-		 || ent->v->absmax[0] < touch->v->absmin[0]
-		 || ent->v->absmin[1] > touch->v->absmax[1]
-		 || ent->v->absmax[1] < touch->v->absmin[1]
-		 || ent->v->absmin[2] > touch->v->absmax[2]
-		 || ent->v->absmax[2] < touch->v->absmin[2])
-			continue;
-		if (touch == ent)
-			continue;
-		if (!touch->v->touch || touch->v->solid != SOLID_TRIGGER)
-			continue;
-		pr_global_struct->self = EDICT_TO_PROG(touch);
-		pr_global_struct->other = EDICT_TO_PROG(ent);
-		pr_global_struct->time = sv.time;
-		PR_ExecuteProgram (touch->v->touch, "");
+		touch = touchedicts[i];
+		if (touch != ent && (int)touch->v->solid == SOLID_TRIGGER && touch->v->touch)
+		{
+			pr_global_struct->self = EDICT_TO_PROG(touch);
+			pr_global_struct->other = EDICT_TO_PROG(ent);
+			pr_global_struct->time = sv.time;
+			PR_ExecuteProgram (touch->v->touch, "QC function self.touch is missing");
+		}
 	}
 	pr_global_struct->self = old_self;
 	pr_global_struct->other = old_other;
@@ -267,10 +281,7 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 	if (igridmins[0] < 0 || igridmaxs[0] > AREA_GRID || igridmins[1] < 0 || igridmaxs[1] > AREA_GRID || ((igridmaxs[0] - igridmins[0]) * (igridmaxs[1] - igridmins[1])) > ENTITYGRIDAREAS)
 	{
 		// wow, something outside the grid, store it as such
-		if (ent->v->solid == SOLID_TRIGGER)
-			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.trigger_edicts, entitynumber);
-		else
-			InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.solid_edicts, entitynumber);
+		InsertLinkBefore (&ent->e->areagrid[0], &sv_areagrid_outside.edicts, entitynumber);
 		return;
 	}
 
@@ -279,12 +290,7 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 	{
 		grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0];
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++, gridnum++)
-		{
-			if (ent->v->solid == SOLID_TRIGGER)
-				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->trigger_edicts, entitynumber);
-			else
-				InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->solid_edicts, entitynumber);
-		}
+			InsertLinkBefore (&ent->e->areagrid[gridnum], &grid->edicts, entitynumber);
 	}
 }
 
@@ -515,95 +521,6 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 
 //===========================================================================
 
-void SV_ClipToNode(moveclip_t *clip, link_t *list)
-{
-	link_t *l, *next;
-	edict_t *touch;
-	trace_t trace;
-
-	sv_areagrid_stats_nodechecks++;
-	for (l = list->next;l != list;l = next)
-	{
-		next = l->next;
-		touch = EDICT_NUM(l->entitynumber);
-		if (touch->e->areagridmarknumber == sv_areagrid_marknumber)
-			continue;
-		touch->e->areagridmarknumber = sv_areagrid_marknumber;
-		sv_areagrid_stats_entitychecks++;
-
-		// LordHavoc: this box comparison isn't much use with the high resolution areagrid
-		/*
-		if (clip->boxmins[0] > touch->v->absmax[0]
-		 || clip->boxmaxs[0] < touch->v->absmin[0]
-		 || clip->boxmins[1] > touch->v->absmax[1]
-		 || clip->boxmaxs[1] < touch->v->absmin[1]
-		 || clip->boxmins[2] > touch->v->absmax[2]
-		 || clip->boxmaxs[2] < touch->v->absmin[2])
-			continue;
-		*/
-
-		if (clip->type == MOVE_NOMONSTERS && touch->v->solid != SOLID_BSP)
-			continue;
-
-		if (touch->v->solid == SOLID_NOT)
-			continue;
-
-		if (clip->passedict)
-		{
-			if (touch == clip->passedict)
-				continue;
-			if (!clip->passedict->v->size[0] && !touch->v->size[0])
-				continue;	// points never interact
-			if (PROG_TO_EDICT(touch->v->owner) == clip->passedict)
-				continue;	// don't clip against own missiles
-			if (PROG_TO_EDICT(clip->passedict->v->owner) == touch)
-				continue;	// don't clip against owner
-			// LordHavoc: corpse code
-			if (clip->passedict->v->solid == SOLID_CORPSE && (touch->v->solid == SOLID_SLIDEBOX || touch->v->solid == SOLID_CORPSE))
-				continue;
-			if (clip->passedict->v->solid == SOLID_SLIDEBOX && touch->v->solid == SOLID_CORPSE)
-				continue;
-		}
-
-		if (touch->v->solid == SOLID_TRIGGER)
-		{
-			ED_Print(touch);
-			Host_Error ("Trigger in clipping list");
-		}
-
-		// might interact, so do an exact clip
-		if ((int)touch->v->flags & FL_MONSTER)
-			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins2, clip->maxs2, clip->end, clip->type);
-		else
-			trace = SV_ClipMoveToEntity(touch, clip->start, clip->mins, clip->maxs, clip->end, clip->type);
-		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
-		if (trace.allsolid)
-			clip->trace.allsolid = true;
-		if (trace.startsolid)
-		{
-			clip->trace.startsolid = true;
-			if (clip->trace.realfraction == 1)
-				clip->trace.ent = touch;
-		}
-		// don't set this except on the world, because it can easily confuse
-		// monsters underwater if there's a bmodel involved in the trace
-		// (inopen && inwater is how they check water visibility)
-		//if (trace.inopen)
-		//	clip->trace.inopen = true;
-		if (trace.inwater)
-			clip->trace.inwater = true;
-		if (trace.realfraction < clip->trace.realfraction)
-		{
-			clip->trace.fraction = trace.fraction;
-			clip->trace.realfraction = trace.realfraction;
-			VectorCopy(trace.endpos, clip->trace.endpos);
-			clip->trace.plane = trace.plane;
-			clip->trace.ent = touch;
-		}
-		clip->trace.startsupercontents |= trace.startsupercontents;
-	}
-}
-
 /*
 ==================
 SV_Move
@@ -615,94 +532,157 @@ trace_t SV_Move_(const vec3_t start, const vec3_t mins, const vec3_t maxs, const
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
 #endif
 {
-	moveclip_t clip;
 	vec3_t hullmins, hullmaxs;
-	areagrid_t *grid;
-	int i, igrid[3], igridmins[3], igridmaxs[3];
+	int i;
+	int passedictprog;
+	qboolean pointtrace;
+	edict_t *traceowner, *touch;
+	trace_t trace;
+	// bounding box of entire move area
+	vec3_t clipboxmins, clipboxmaxs;
+	// size of the moving object
+	vec3_t clipmins, clipmaxs;
+	// size when clipping against monsters
+	vec3_t clipmins2, clipmaxs2;
+	// start and end origin of move
+	vec3_t clipstart, clipend;
+	// trace results
+	trace_t cliptrace;
+	int numtouchedicts;
+	edict_t *touchedicts[MAX_EDICTS];
 
-	// if the passedict is world, make it NULL (to avoid two checks each time)
-	if (passedict == sv.edicts)
-		passedict = NULL;
-
-	memset(&clip, 0, sizeof(moveclip_t));
-
-	VectorCopy(start, clip.start);
-	VectorCopy(end, clip.end);
-	VectorCopy(mins, clip.mins);
-	VectorCopy(maxs, clip.maxs);
-	VectorCopy(mins, clip.mins2);
-	VectorCopy(maxs, clip.maxs2);
-	clip.type = type;
-	clip.passedict = passedict;
+	VectorCopy(start, clipstart);
+	VectorCopy(end, clipend);
+	VectorCopy(mins, clipmins);
+	VectorCopy(maxs, clipmaxs);
+	VectorCopy(mins, clipmins2);
+	VectorCopy(maxs, clipmaxs2);
 #if COLLISIONPARANOID >= 3
-	Con_Printf("move(%f %f %f,%f %f %f)", clip.start[0], clip.start[1], clip.start[2], clip.end[0], clip.end[1], clip.end[2]);
+	Con_Printf("move(%f %f %f,%f %f %f)", clipstart[0], clipstart[1], clipstart[2], clipend[0], clipend[1], clipend[2]);
 #endif
 
 	// clip to world
-	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.mins, clip.maxs, clip.end, clip.type);
-	if (clip.trace.startsolid || clip.trace.fraction < 1)
-		clip.trace.ent = sv.edicts;
-	if (clip.type == MOVE_WORLDONLY)
-		return clip.trace;
+	cliptrace = SV_ClipMoveToEntity(sv.edicts, clipstart, clipmins, clipmaxs, clipend, type);
+	if (cliptrace.startsolid || cliptrace.fraction < 1)
+		cliptrace.ent = sv.edicts;
+	if (type == MOVE_WORLDONLY)
+		return cliptrace;
 
-	if (clip.type == MOVE_MISSILE)
+	if (type == MOVE_MISSILE)
 	{
 		// LordHavoc: modified this, was = -15, now -= 15
 		for (i = 0;i < 3;i++)
 		{
-			clip.mins2[i] -= 15;
-			clip.maxs2[i] += 15;
+			clipmins2[i] -= 15;
+			clipmaxs2[i] += 15;
 		}
 	}
 
 	// get adjusted box for bmodel collisions if the world is q1bsp or hlbsp
 	if (sv.worldmodel && sv.worldmodel->brush.RoundUpToHullSize)
-		sv.worldmodel->brush.RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, hullmins, hullmaxs);
+		sv.worldmodel->brush.RoundUpToHullSize(sv.worldmodel, clipmins, clipmaxs, hullmins, hullmaxs);
 	else
 	{
-		VectorCopy(clip.mins, hullmins);
-		VectorCopy(clip.maxs, hullmaxs);
+		VectorCopy(clipmins, hullmins);
+		VectorCopy(clipmaxs, hullmaxs);
 	}
 
 	// create the bounding box of the entire move
 	for (i = 0;i < 3;i++)
 	{
-		clip.boxmins[i] = min(clip.start[i], clip.trace.endpos[i]) + min(hullmins[i], clip.mins2[i]) - 1;
-		clip.boxmaxs[i] = max(clip.start[i], clip.trace.endpos[i]) + max(hullmaxs[i], clip.maxs2[i]) + 1;
+		clipboxmins[i] = min(clipstart[i], cliptrace.endpos[i]) + min(hullmins[i], clipmins2[i]) - 1;
+		clipboxmaxs[i] = max(clipstart[i], cliptrace.endpos[i]) + max(hullmaxs[i], clipmaxs2[i]) + 1;
 	}
 
 	// debug override to test against everything
 	if (sv_debugmove.integer)
 	{
-		clip.boxmins[0] = clip.boxmins[1] = clip.boxmins[2] = -999999999;
-		clip.boxmaxs[0] = clip.boxmaxs[1] = clip.boxmaxs[2] =  999999999;
+		clipboxmins[0] = clipboxmins[1] = clipboxmins[2] = -999999999;
+		clipboxmaxs[0] = clipboxmaxs[1] = clipboxmaxs[2] =  999999999;
 	}
 
+	// if the passedict is world, make it NULL (to avoid two checks each time)
+	if (passedict == sv.edicts)
+		passedict = NULL;
+	// precalculate prog value for passedict for comparisons
+	passedictprog = EDICT_TO_PROG(passedict);
+	// figure out whether this is a point trace for comparisons
+	pointtrace = VectorCompare(clipmins, clipmaxs);
+	// precalculate passedict's owner edict pointer for comparisons
+	traceowner = passedict ? PROG_TO_EDICT(passedict->v->owner) : 0;
+
 	// clip to enttiies
-	sv_areagrid_stats_calls++;
-	sv_areagrid_marknumber++;
-	igridmins[0] = (int) ((clip.boxmins[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
-	igridmins[1] = (int) ((clip.boxmins[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
-	//igridmins[2] = (int) ((clip->boxmins[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
-	igridmaxs[0] = (int) ((clip.boxmaxs[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) ((clip.boxmaxs[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
-	//igridmaxs[2] = (int) ((clip->boxmaxs[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
-	igridmins[0] = max(0, igridmins[0]);
-	igridmins[1] = max(0, igridmins[1]);
-	//igridmins[2] = max(0, igridmins[2]);
-	igridmaxs[0] = min(AREA_GRID, igridmaxs[0]);
-	igridmaxs[1] = min(AREA_GRID, igridmaxs[1]);
-	//igridmaxs[2] = min(AREA_GRID, igridmaxs[2]);
+	numtouchedicts = SV_EntitiesInBox(clipboxmins, clipboxmaxs, MAX_EDICTS, touchedicts);
+	if (numtouchedicts > MAX_EDICTS)
+	{
+		// this never happens
+		Con_Printf("SV_EntitiesInBox returned %i edicts, max was %i\n", numtouchedicts, MAX_EDICTS);
+		numtouchedicts = MAX_EDICTS;
+	}
+	for (i = 0;i < numtouchedicts;i++)
+	{
+		touch = touchedicts[i];
 
-	if (sv_areagrid_outside.solid_edicts.next != &sv_areagrid_outside.solid_edicts)
-		SV_ClipToNode(&clip, &sv_areagrid_outside.solid_edicts);
+		if (touch->v->solid < SOLID_BBOX)
+			continue;
+		if (type == MOVE_NOMONSTERS && touch->v->solid != SOLID_BSP)
+			continue;
 
-	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
-		for (grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0], igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
-			if (grid->solid_edicts.next != &grid->solid_edicts)
-				SV_ClipToNode(&clip, &grid->solid_edicts);
+		if (passedict)
+		{
+			// don't clip against self
+			if (passedict == touch)
+				continue;
+			// don't clip owned entities against owner
+			if (traceowner == touch)
+				continue;
+			// don't clip owner against owned entities
+			if (passedictprog == touch->v->owner)
+				continue;
+			// don't clip points against points (they can't collide)
+			if (pointtrace && VectorCompare(touch->v->mins, touch->v->maxs) && (type != MOVE_MISSILE || !((int)touch->v->flags & FL_MONSTER)))
+				continue;
+			// don't clip corpse against character
+			if (passedict->v->solid == SOLID_CORPSE && (touch->v->solid == SOLID_SLIDEBOX || touch->v->solid == SOLID_CORPSE))
+				continue;
+			// don't clip character against corpse
+			if (passedict->v->solid == SOLID_SLIDEBOX && touch->v->solid == SOLID_CORPSE)
+				continue;
+		}
 
-	return clip.trace;
+		// might interact, so do an exact clip
+		if ((int)touch->v->flags & FL_MONSTER)
+			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins2, clipmaxs2, clipend, type);
+		else
+			trace = SV_ClipMoveToEntity(touch, clipstart, clipmins, clipmaxs, clipend, type);
+		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
+		if (trace.allsolid)
+			cliptrace.allsolid = true;
+		if (trace.startsolid)
+		{
+			cliptrace.startsolid = true;
+			if (cliptrace.realfraction == 1)
+				cliptrace.ent = touch;
+		}
+		// don't set this except on the world, because it can easily confuse
+		// monsters underwater if there's a bmodel involved in the trace
+		// (inopen && inwater is how they check water visibility)
+		//if (trace.inopen)
+		//	cliptrace.inopen = true;
+		if (trace.inwater)
+			cliptrace.inwater = true;
+		if (trace.realfraction < cliptrace.realfraction)
+		{
+			cliptrace.fraction = trace.fraction;
+			cliptrace.realfraction = trace.realfraction;
+			VectorCopy(trace.endpos, cliptrace.endpos);
+			cliptrace.plane = trace.plane;
+			cliptrace.ent = touch;
+		}
+		cliptrace.startsupercontents |= trace.startsupercontents;
+	}
+
+	return cliptrace;
 }
 
 #if COLLISIONPARANOID >= 1
