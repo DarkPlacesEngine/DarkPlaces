@@ -316,10 +316,6 @@ SOURCE=.\r_modules.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\r_particles.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\r_sky.c
 # End Source File
 # Begin Source File
