@@ -196,7 +196,7 @@ void R_DrawCoronas(void)
 				tvxyz[3][0] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
 				tvxyz[3][1] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
 				tvxyz[3][2] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
-				R_Mesh_DrawDecal(&m);
+				R_Mesh_Draw(&m);
 			}
 		}
 	}

@@ -107,7 +107,7 @@ void R_ClipSprite (void)
 	R_ClipSpriteImage(org, right, up);
 }
 
-//int spritepolyindex[6] = {0, 1, 2, 0, 2, 3};
+int spritepolyindex[6] = {0, 1, 2, 0, 2, 3};
 
 void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t right, float red, float green, float blue, float alpha)
 {
@@ -123,18 +123,18 @@ void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t ori
 	 || (currentrenderentity->model->flags & EF_ADDITIVE)
 	 || fog)
 		m.blendfunc2 = GL_ONE;
-	//m.numtriangles = 2;
-	//m.index = spritepolyindex;
-	//m.numverts = 4;
+	m.numtriangles = 2;
+	m.index = spritepolyindex;
+	m.numverts = 4;
 	m.vertex = &v[0][0];
-	//m.vertexstep = sizeof(float[4]);
+	m.vertexstep = sizeof(float[4]);
 	m.cr = red;
 	m.cg = green;
 	m.cb = blue;
 	m.ca = alpha;
 	m.tex[0] = texture;
 	m.texcoords[0] = &st[0][0];
-	//m.texcoordstep[0] = sizeof(float[2]);
+	m.texcoordstep[0] = sizeof(float[2]);
 
 	v[0][0] = origin[0] + frame->down * up[0] + frame->left  * right[0];
 	v[0][1] = origin[1] + frame->down * up[1] + frame->left  * right[1];
@@ -157,7 +157,7 @@ void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t ori
 	st[3][0] = 1;
 	st[3][1] = 1;
 
-	R_Mesh_DrawDecal(&m);
+	R_Mesh_Draw(&m);
 }
 
 /*
