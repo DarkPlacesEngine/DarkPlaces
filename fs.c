@@ -218,7 +218,6 @@ typedef struct pack_s
 	int ignorecase;  // PK3 ignores case
 	int numfiles;
 	packfile_t *files;
-	mempool_t *mempool;
 	struct pack_s *next;
 } pack_t;
 
@@ -258,7 +257,6 @@ VARIABLES
 */
 
 mempool_t *fs_mempool;
-mempool_t *pak_mempool;
 
 int fs_filesize;
 
@@ -555,13 +553,12 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 #endif
 
 	// Create a package structure in memory
-	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
+	pack = Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = true; // PK3 ignores case
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
-	pack->mempool = Mem_AllocPool (packfile, 0, NULL);
-	pack->files = Mem_Alloc (pack->mempool, eocd.nbentries * sizeof(packfile_t));
+	pack->files = Mem_Alloc(fs_mempool, eocd.nbentries * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
 
@@ -749,13 +746,12 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	if (numpackfiles > MAX_FILES_IN_PACK)
 		Sys_Error ("%s has %i files", packfile, numpackfiles);
 
-	pack = Mem_Alloc(pak_mempool, sizeof (pack_t));
+	pack = Mem_Alloc(fs_mempool, sizeof (pack_t));
 	pack->ignorecase = false; // PAK is case sensitive
 	strlcpy (pack->filename, packfile, sizeof (pack->filename));
 	pack->handle = packhandle;
 	pack->numfiles = 0;
-	pack->mempool = Mem_AllocPool(packfile, 0, NULL);
-	pack->files = Mem_Alloc(pack->mempool, numpackfiles * sizeof(packfile_t));
+	pack->files = Mem_Alloc(fs_mempool, numpackfiles * sizeof(packfile_t));
 	pack->next = packlist;
 	packlist = pack;
 
@@ -807,7 +803,7 @@ void FS_AddGameDirectory (const char *dir)
 			pak = FS_LoadPackPAK (pakfile);
 			if (pak)
 			{
-				search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
+				search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 				search->pack = pak;
 				search->next = fs_searchpaths;
 				fs_searchpaths = search;
@@ -826,7 +822,7 @@ void FS_AddGameDirectory (const char *dir)
 			pak = FS_LoadPackPK3 (pakfile);
 			if (pak)
 			{
-				search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
+				search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 				search->pack = pak;
 				search->next = fs_searchpaths;
 				fs_searchpaths = search;
@@ -839,7 +835,7 @@ void FS_AddGameDirectory (const char *dir)
 
 	// Add the directory to the search path
 	// (unpacked files have the priority over packed files)
-	search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
+	search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 	strlcpy (search->filename, dir, sizeof (search->filename));
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
@@ -907,7 +903,6 @@ void FS_Init (void)
 	searchpath_t *search;
 
 	fs_mempool = Mem_AllocPool("file management", 0, NULL);
-	pak_mempool = Mem_AllocPool("paks", 0, NULL);
 
 	Cvar_RegisterVariable (&scr_screenshot_name);
 
@@ -944,7 +939,7 @@ void FS_Init (void)
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
 
-			search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
+			search = Mem_Alloc(fs_mempool, sizeof(searchpath_t));
 			if (!strcasecmp (FS_FileExtension(com_argv[i]), "pak"))
 			{
 				search->pack = FS_LoadPackPAK (com_argv[i]);
@@ -1005,7 +1000,6 @@ FS_Shutdown
 */
 void FS_Shutdown (void)
 {
-	Mem_FreePool (&pak_mempool);
 	Mem_FreePool (&fs_mempool);
 }
 

@@ -46,7 +46,7 @@ cvar_t sv_progs = {0, "sv_progs", "progs.dat" };
 server_t sv;
 server_static_t svs;
 
-mempool_t *sv_edicts_mempool = NULL;
+mempool_t *sv_mempool = NULL;
 
 //============================================================================
 
@@ -91,7 +91,7 @@ void SV_Init (void)
 	SV_Phys_Init();
 	SV_World_Init();
 
-	sv_edicts_mempool = Mem_AllocPool("server edicts", 0, NULL);
+	sv_mempool = Mem_AllocPool("server", 0, NULL);
 }
 
 static void SV_SaveEntFile_f(void)
@@ -307,11 +307,11 @@ void SV_SendServerinfo (client_t *client)
 		EntityFrame5_FreeDatabase(client->entitydatabase5);
 
 	if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
-		client->entitydatabase = EntityFrame_AllocDatabase(sv_clients_mempool);
+		client->entitydatabase = EntityFrame_AllocDatabase(sv_mempool);
 	if (sv.protocol == PROTOCOL_DARKPLACES4)
-		client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool);
+		client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_mempool);
 	if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
-		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_clients_mempool);
+		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_mempool);
 
 	MSG_WriteByte (&client->message, svc_print);
 	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
@@ -756,7 +756,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 	sententities[s->number] = sententitiesmark;
 }
 
-entity_state_t sendstates[MAX_EDICTS]; 
+entity_state_t sendstates[MAX_EDICTS];
 
 void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg, int *stats)
 {
@@ -1567,9 +1567,9 @@ void SV_IncreaseEdicts(void)
 	SV_ClearWorld();
 
 	sv.max_edicts   = min(sv.max_edicts + 256, MAX_EDICTS);
-	sv.edictsengineprivate = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_engineprivate_t));
-	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
-	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
+	sv.edictsengineprivate = PR_Alloc(sv.max_edicts * sizeof(edict_engineprivate_t));
+	sv.edictsfields = PR_Alloc(sv.max_edicts * pr_edict_size);
+	sv.moved_edicts = PR_Alloc(sv.max_edicts * sizeof(edict_t *));
 
 	memcpy(sv.edictsengineprivate, oldedictsengineprivate, oldmax_edicts * sizeof(edict_engineprivate_t));
 	memcpy(sv.edictsfields, oldedictsfields, oldmax_edicts * pr_edict_size);
@@ -1583,9 +1583,9 @@ void SV_IncreaseEdicts(void)
 			SV_LinkEdict(ent, false);
 	}
 
-	Mem_Free(oldedictsengineprivate);
-	Mem_Free(oldedictsfields);
-	Mem_Free(oldmoved_edicts);
+	PR_Free(oldedictsengineprivate);
+	PR_Free(oldedictsfields);
+	PR_Free(oldmoved_edicts);
 }
 
 /*
@@ -1690,16 +1690,14 @@ void SV_SpawnServer (const char *server)
 	sv.max_edicts = max(svs.maxclients + 1, 512);
 	sv.max_edicts = min(sv.max_edicts, MAX_EDICTS);
 
-	// clear the edict memory pool
-	Mem_EmptyPool(sv_edicts_mempool);
 	// edict_t structures (hidden from progs)
-	sv.edicts = Mem_Alloc(sv_edicts_mempool, MAX_EDICTS * sizeof(edict_t));
+	sv.edicts = PR_Alloc(MAX_EDICTS * sizeof(edict_t));
 	// engine private structures (hidden from progs)
-	sv.edictsengineprivate = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_engineprivate_t));
+	sv.edictsengineprivate = PR_Alloc(sv.max_edicts * sizeof(edict_engineprivate_t));
 	// progs fields, often accessed by server
-	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
+	sv.edictsfields = PR_Alloc(sv.max_edicts * pr_edict_size);
 	// used by PushMove to move back pushed entities
-	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
+	sv.moved_edicts = PR_Alloc(sv.max_edicts * sizeof(edict_t *));
 	for (i = 0;i < sv.max_edicts;i++)
 	{
 		ent = sv.edicts + i;

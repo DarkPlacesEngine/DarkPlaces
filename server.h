@@ -278,8 +278,7 @@ extern cvar_t sv_gameplayfix_stepwhilejumping;
 extern cvar_t sv_gameplayfix_swiminbmodels;
 extern cvar_t sv_gameplayfix_setmodelrealbox;
 
-extern mempool_t *sv_clients_mempool;
-extern mempool_t *sv_edicts_mempool;
+extern mempool_t *sv_mempool;
 
 // persistant server info
 extern server_static_t svs;

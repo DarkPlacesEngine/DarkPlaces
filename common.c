@@ -491,25 +491,6 @@ float MSG_ReadAngle (int protocol)
 
 //===========================================================================
 
-void SZ_Alloc (sizebuf_t *buf, int startsize, const char *name)
-{
-	if (startsize < 256)
-		startsize = 256;
-	buf->mempool = Mem_AllocPool(name, 0, NULL);
-	buf->data = Mem_Alloc(buf->mempool, startsize);
-	buf->maxsize = startsize;
-	buf->cursize = 0;
-}
-
-
-void SZ_Free (sizebuf_t *buf)
-{
-	Mem_FreePool(&buf->mempool);
-	buf->data = NULL;
-	buf->maxsize = 0;
-	buf->cursize = 0;
-}
-
 void SZ_Clear (sizebuf_t *buf)
 {
 	buf->cursize = 0;

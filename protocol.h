@@ -645,7 +645,7 @@ void EntityFrame4_CL_ReadFrame(void);
 // byte = bound(0, s->scale * 16, 255)
 #define E5_SCALE (1<<10)
 // flag
-#define E5_ORIGIN32 (1<<11) 
+#define E5_ORIGIN32 (1<<11)
 // flag
 #define E5_ANGLES16 (1<<12)
 // flag
@@ -720,21 +720,23 @@ typedef struct entityframe5_database_s
 	// logs of all recently sent messages (between acked and latest)
 	entityframe5_packetlog_t packetlog[ENTITYFRAME5_MAXPACKETLOGS];
 
+	// this goes up as needed and causes all the arrays to be reallocated
+	int maxedicts;
+
 	// which properties of each entity have changed since last send
-	int deltabits[MAX_EDICTS];
+	int *deltabits; // [maxedicts]
 	// priorities of entities (updated whenever deltabits change)
 	// (derived from deltabits)
-	qbyte priorities[MAX_EDICTS];
+	qbyte *priorities; // [maxedicts]
 	// last frame this entity was sent on, for prioritzation
-	int updateframenum[MAX_EDICTS];
+	int *updateframenum; // [maxedicts]
 
 	// database of current status of all entities
-	// (FIXME: this is 2.5mb per client even if most is unused!)
-	entity_state_t states[MAX_EDICTS];
+	entity_state_t *states; // [maxedicts]
 	// which entities are currently active
 	// (duplicate of the active bit of every state in states[])
 	// (derived from states)
-	qbyte visiblebits[(MAX_EDICTS+7)/8];
+	qbyte *visiblebits; // [(maxedicts+7)/8]
 
 	// delta compression of stats
 	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];

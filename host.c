@@ -152,8 +152,6 @@ void Host_Error (const char *error, ...)
 	longjmp (host_abortserver, 1);
 }
 
-mempool_t *sv_clients_mempool = NULL;
-
 void Host_ServerOptions (void)
 {
 	int i, numplayers;
@@ -216,8 +214,7 @@ void Host_ServerOptions (void)
 		Cvar_SetValueQuick(&deathmatch, 1);
 
 	svs.maxclients = numplayers;
-	sv_clients_mempool = Mem_AllocPool("server clients", 0, NULL);
-	svs.clients = Mem_Alloc(sv_clients_mempool, sizeof(client_t) * svs.maxclients);
+	svs.clients = Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 }
 
 /*
@@ -899,18 +896,18 @@ void Host_Init (void)
 
 	Cmd_Init();
 	Memory_Init_Commands();
-	R_Modules_Init();
+	Con_Init();
 	Cbuf_Init();
+	R_Modules_Init();
 	V_Init();
 	COM_Init();
-	Host_InitLocal();
 	Key_Init();
-	Con_Init();
 	PR_Init();
 	PRVM_Init();
 	Mod_Init();
 	NetConn_Init();
 	SV_Init();
+	Host_InitLocal();
 
 	Con_Printf("Builddate: %s\n", buildstring);
 

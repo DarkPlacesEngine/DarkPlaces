@@ -10,7 +10,6 @@ static int  cl_videogmask;
 static int	cl_videobytesperpixel;
 
 static clvideo_t videoarray[ MAXCLVIDEOS ];
-static mempool_t *cl_videomempool;
 static rtexturepool_t *cl_videotexturepool;
 
 static clvideo_t *FindUnusedVid( void )
@@ -44,8 +43,8 @@ static void SuspendVideo( clvideo_t * video )
 	// free the image data
 	Mem_Free( video->imagedata );
 	// if we are in firstframe mode, also close the stream
-	if( video->state == CLVIDEO_FIRSTFRAME ) 
-		dpvsimpledecode_close( video->stream );	
+	if( video->state == CLVIDEO_FIRSTFRAME )
+		dpvsimpledecode_close( video->stream );
 }
 
 static qboolean WakeVideo( clvideo_t * video )
@@ -59,10 +58,10 @@ static qboolean WakeVideo( clvideo_t * video )
 			video->state = CLVIDEO_UNUSED;
 			return false;
 		}
-		
-	video->imagedata = Mem_Alloc( cl_videomempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, 
-		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );    
+
+	video->imagedata = Mem_Alloc( cl_mempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
+		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
 
 	// update starttime
 	video->starttime += realtime - video->lasttime;
@@ -88,10 +87,10 @@ static clvideo_t* OpenVideo( clvideo_t *video, char *filename, char *name, int o
 
 	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
 	video->cpif.height = dpvsimpledecode_getheight( video->stream );
-	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, 
+	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
 		video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
 
-    video->imagedata = Mem_Alloc( cl_videomempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
+    video->imagedata = Mem_Alloc( cl_mempool, video->cpif.width * video->cpif.height * cl_videobytesperpixel );
 
 	return video;
 }
@@ -114,7 +113,7 @@ clvideo_t* CL_GetVideo( char *name )
 	clvideo_t *video;
 
 	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
-		if( videoarray[ i ].state != CLVIDEO_UNUSED 
+		if( videoarray[ i ].state != CLVIDEO_UNUSED
 			&&	!strcmp( videoarray[ i ].cpif.name , name ) )
 			break;
 	if( i == MAXCLVIDEOS )
@@ -125,7 +124,7 @@ clvideo_t* CL_GetVideo( char *name )
 	{
 		if( !WakeVideo( video ) )
 			return NULL;
-		else if( video->state == CLVIDEO_RESETONWAKEUP ) 
+		else if( video->state == CLVIDEO_RESETONWAKEUP )
 			video->framenum = -1;
 	}
 
@@ -149,7 +148,7 @@ void CL_RestartVideo( clvideo_t *video )
 {
 	if( !video )
 		return;
-    
+
 	video->starttime = video->lasttime = realtime;
 	video->framenum = -1;
 
@@ -186,9 +185,9 @@ static void VideoFrame( clvideo_t *video )
 	if( video->framenum < destframe ) {
 		do {
 			video->framenum++;
-			if( dpvsimpledecode_video( video->stream, video->imagedata, cl_videormask, 
-				cl_videogmask, cl_videobmask, cl_videobytesperpixel, 
-				cl_videobytesperpixel * video->cpif.width ) 
+			if( dpvsimpledecode_video( video->stream, video->imagedata, cl_videormask,
+				cl_videogmask, cl_videobmask, cl_videobytesperpixel,
+				cl_videobytesperpixel * video->cpif.width )
 				) { // finished?
 				CL_RestartVideo( video );
 				if( video->state == CLVIDEO_PLAY )
@@ -197,7 +196,7 @@ static void VideoFrame( clvideo_t *video )
 			}
 		} while( video->framenum < destframe );
 		R_UpdateTexture( video->cpif.tex, video->imagedata );
-	}					
+	}
 }
 
 void CL_VideoFrame( void ) // update all videos
@@ -212,7 +211,7 @@ void CL_VideoFrame( void ) // update all videos
 				SuspendVideo( video );
 			else if( video->state == CLVIDEO_PAUSE )
 				video->starttime = realtime - video->framenum * video->framerate;
-			else 
+			else
 				VideoFrame( video );
 		}
 
@@ -225,8 +224,6 @@ void CL_Video_Shutdown( void )
 	int i;
 	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
 		CL_CloseVideo( &videoarray[ i ] );
-
-	Mem_FreePool( &cl_videomempool );
 }
 
 void CL_PurgeOwner( int owner )
@@ -293,7 +290,7 @@ static void cl_video_start( void )
 
 	for( video = videoarray, i = 0 ; i < MAXCLVIDEOS ; i++, video++ )
 		if( video->state != CLVIDEO_UNUSED && !video->suspended )
-			video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, 
+			video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name,
 				video->cpif.width, video->cpif.height, NULL, TEXTYPE_RGBA, 0, NULL );
 }
 
@@ -315,8 +312,6 @@ void CL_Video_Init( void )
 
 	Cmd_AddCommand( "playvideo", CL_PlayVideo_f );
 	Cmd_AddCommand( "stopvideo", CL_StopVideo_f );
-	
-	cl_videomempool = Mem_AllocPool( "CL_Video", 0, NULL );
 
 	R_RegisterModule( "CL_Video", cl_video_start, cl_video_shutdown, cl_video_newmap );
 }

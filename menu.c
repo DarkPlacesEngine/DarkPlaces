@@ -28,8 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TYPE_GAME 2
 #define TYPE_BOTH 3
 
-mempool_t *menu_mempool;
-
 int NehGameType;
 
 enum m_state_e m_state;
@@ -1332,8 +1330,8 @@ void M_Setup_Draw (void)
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);
-			menuplyr_pixels = Mem_Alloc(menu_mempool, menuplyr_width * menuplyr_height);
-			menuplyr_translated = Mem_Alloc(menu_mempool, menuplyr_width * menuplyr_height * 4);
+			menuplyr_pixels = Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height);
+			menuplyr_translated = Mem_Alloc(cl_mempool, menuplyr_width * menuplyr_height * 4);
 			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
 			Mem_Free(data);
 		}
@@ -4253,7 +4251,6 @@ void M_Shutdown(void);
 
 void M_Init (void)
 {
-	menu_mempool = Mem_AllocPool("Menu", 0, NULL);
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
@@ -4579,8 +4576,6 @@ void M_Shutdown(void)
 {
 	// reset key_dest
 	key_dest = key_game;
-
-	Mem_FreePool (&menu_mempool);
 }
 
 void M_Restart(void)
@@ -4717,8 +4712,6 @@ void MP_Init (void)
 	prog->error_cmd = MP_Error;
 
 	// allocate the mempools
-	prog->edicts_mempool = Mem_AllocPool(M_NAME " edicts mempool", 0, NULL);
-	prog->edictstring_mempool = Mem_AllocPool( M_NAME " edict string mempool", 0, NULL);
 	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME, 0, NULL);
 
 	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func);

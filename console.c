@@ -39,7 +39,7 @@ int con_backscroll;
 int con_current;
 // offset in current line for next print
 int con_x;
-char *con_text = 0;
+char con_text[CON_TEXTSIZE];
 
 //seconds
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3"};
@@ -59,8 +59,6 @@ extern int key_insert;
 
 
 qboolean con_initialized;
-
-mempool_t *console_mempool;
 
 
 /*
@@ -403,8 +401,6 @@ Con_Init
 */
 void Con_Init (void)
 {
-	console_mempool = Mem_AllocPool("console", 0, NULL);
-	con_text = Mem_Alloc(console_mempool, CON_TEXTSIZE);
 	memset (con_text, ' ', CON_TEXTSIZE);
 	con_linewidth = -1;
 	Con_CheckResize ();

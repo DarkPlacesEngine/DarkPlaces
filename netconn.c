@@ -44,6 +44,7 @@ static cvar_t sv_masters [] =
 static double nextheartbeattime = 0;
 
 sizebuf_t net_message;
+static qbyte net_message_buf[NET_MAXMESSAGE];
 
 cvar_t net_messagetimeout = {0, "net_messagetimeout","300"};
 cvar_t net_messagerejointimeout = {0, "net_messagerejointimeout","10"};
@@ -193,7 +194,7 @@ static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 }
 
 static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
-{ 
+{
 	// Same here, also using an intermediate & final return would be more appropriate
 	// A info B mask
 	switch( op ) {
@@ -879,7 +880,6 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	cls.demonum = -1;			// not in the demo loop now
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
-	CL_ClearState();
 }
 
 int NetConn_IsLocalGame(void)
@@ -1023,7 +1023,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				if( serverlist_cachecount == SERVERLIST_TOTALSIZE )
 					break;
 				// also ignore it if we have already queried it (other master server response)
-				for( n = 0 ; n < serverlist_cachecount ; n++ ) 
+				for( n = 0 ; n < serverlist_cachecount ; n++ )
 					if( !strcmp( ipstring, serverlist_cache[ n ].info.cname ) )
 						break;
 				if( n >= serverlist_cachecount )
@@ -1794,7 +1794,7 @@ void NetConn_Init(void)
 {
 	int i;
 	lhnetaddress_t tempaddress;
-	netconn_mempool = Mem_AllocPool("Networking", 0, NULL);
+	netconn_mempool = Mem_AllocPool("network connections", 0, NULL);
 	Cmd_AddCommand("net_stats", Net_Stats_f);
 	Cmd_AddCommand("net_slist", Net_Slist_f);
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);
@@ -1838,7 +1838,9 @@ void NetConn_Init(void)
 	}
 	cl_numsockets = 0;
 	sv_numsockets = 0;
-	SZ_Alloc(&net_message, NET_MAXMESSAGE, "net_message");
+	net_message.data = net_message_buf;
+	net_message.maxsize = sizeof(net_message_buf);
+	net_message.cursize = 0;
 	LHNET_Init();
 }
 

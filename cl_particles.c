@@ -324,10 +324,6 @@ cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0"};
 cvar_t cl_decals_time = {CVAR_SAVE, "cl_decals_time", "0"};
 cvar_t cl_decals_fadetime = {CVAR_SAVE, "cl_decals_fadetime", "20"};
 
-#ifndef WORKINGLQUAKE
-static mempool_t *cl_part_mempool;
-#endif
-
 void CL_Particles_Clear(void)
 {
 	cl_numparticles = 0;
@@ -383,8 +379,7 @@ void CL_Particles_Init (void)
 #ifdef WORKINGLQUAKE
 	particles = (particle_t *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t), "particles");
 #else
-	cl_part_mempool = Mem_AllocPool("CL_Part", 0, NULL);
-	particles = (particle_t *) Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(particle_t));
+	particles = (particle_t *) Mem_Alloc(cl_mempool, cl_maxparticles * sizeof(particle_t));
 #endif
 	CL_Particles_Clear();
 }
@@ -393,8 +388,6 @@ void CL_Particles_Shutdown (void)
 {
 #ifdef WORKINGLQUAKE
 	// No clue what to do here...
-#else
-	Mem_FreePool (&cl_part_mempool);
 #endif
 }
 
