@@ -13,7 +13,9 @@ OBJECTS= builddate.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.
 
 #K6/athlon optimizations
 CPUOPTIMIZATIONS=-march=k6
-#athlon optimizations (only for gcc 2.96 and up)
+#note: don't use -march=athlon, every gcc which has it currently (2.95, 3.0)
+#have optimizer bugs (like entities disappearing randomly - a bug with
+#compiling BOX_ON_PLANE_SIDE in mathlib.h)
 #CPUOPTIMIZATIONS=-march=athlon
 #686 optimizations
 #CPUOPTIMIZATIONS=-march=i686
