@@ -48,7 +48,10 @@ cvar_t m_side = {CVAR_SAVE, "m_side","0.8"};
 
 cvar_t freelook = {CVAR_SAVE, "freelook", "1"};
 
-cvar_t cl_draweffects = {0, "cl_draweffects", "1"};
+cvar_t r_draweffects = {0, "r_draweffects", "1"};
+
+cvar_t cl_explosions = {CVAR_SAVE, "cl_explosions", "1"};
+cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 
 mempool_t *cl_scores_mempool;
 mempool_t *cl_refdef_mempool;
@@ -689,7 +692,7 @@ static void CL_RelinkEffects()
 				e->frame2time = cl.time;
 			}
 
-			if ((vis = CL_NewTempEntity()))
+			if (r_draweffects.integer && (vis = CL_NewTempEntity()))
 			{
 				// interpolation stuff
 				vis->render.frame1 = intframe;
@@ -970,7 +973,9 @@ void CL_Init (void)
 	if (gamemode == GAME_NEHAHRA)
 		Cmd_AddCommand ("pmodel", CL_PModel_f);
 
-	Cvar_RegisterVariable(&cl_draweffects);
+	Cvar_RegisterVariable(&r_draweffects);
+	Cvar_RegisterVariable(&cl_explosions);
+	Cvar_RegisterVariable(&cl_stainmaps);
 
 	CL_Parse_Init();
 	CL_Particles_Init();

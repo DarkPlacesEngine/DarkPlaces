@@ -374,6 +374,11 @@ extern cvar_t m_yaw;
 extern cvar_t m_forward;
 extern cvar_t m_side;
 
+extern cvar_t r_draweffects;
+
+extern cvar_t cl_explosions;
+extern cvar_t cl_stainmaps;
+
 
 // LordHavoc: raised these from 64 and 128 to 512 and 256
 #define	MAX_TEMP_ENTITIES	512			// lightning bolts, effects, etc
