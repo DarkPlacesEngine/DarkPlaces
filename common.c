@@ -405,12 +405,12 @@ void MSG_ReadVector (float *v, int protocol)
 // LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
 float MSG_ReadAngle8i (void)
 {
-	return MSG_ReadByte () * (360.0/256.0);
+	return (signed char) MSG_ReadByte () * (360.0/256.0);
 }
 
 float MSG_ReadAngle16i (void)
 {
-	return (unsigned short)MSG_ReadShort () * (360.0/65536.0);
+	return (signed short)MSG_ReadShort () * (360.0/65536.0);
 }
 
 float MSG_ReadAngle32f (void)
