@@ -473,7 +473,7 @@ void CL_ValidateState(entity_state_t *s)
 		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
 
 	// colormap is client index + 1
-	if (s->colormap > cl.maxclients)
+	if ((!s->flags & RENDER_COLORMAPPED) && s->colormap > cl.maxclients)
 	{
 		Con_DPrintf("CL_ValidateState: colormap (%i) > cl.maxclients (%i)\n", s->colormap, cl.maxclients);
 		s->colormap = 0;
