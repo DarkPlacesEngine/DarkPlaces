@@ -1,6 +1,6 @@
 
 #include "quakedef.h"
-#include "winding.h"
+#include "polygon.h"
 
 #define COLLISION_SNAPSCALE (32.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
@@ -402,24 +402,21 @@ float furthestplanedist_float(const float *normal, const colpointf_t *points, in
 }
 
 
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const mplane_t *originalplanes, int supercontents, winding_t *temp1, winding_t *temp2)
+colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const mplane_t *originalplanes, int supercontents)
 {
-	int j, k, m;
-	int numpoints, maxpoints, numplanes, maxplanes, numelements, maxelements, numtriangles, numpolypoints, maxpolypoints;
-	winding_t *w, *temp, *othertemp;
+	int j, k, m, w;
+	int numpoints = 0, maxpoints = 256, numplanes = 0, maxplanes = 256, numelements = 0, maxelements = 256, numtriangles = 0;
 	colbrushf_t *brush;
 	colpointf_t pointsbuf[256];
 	colplanef_t planesbuf[256];
 	int elementsbuf[1024];
 	int polypointbuf[256];
+	int pmaxpoints = 64;
+	int pnumpoints;
+	float p[2][3*64];
 	// construct a collision brush (points, planes, and renderable mesh) from
 	// a set of planes, this also optimizes out any unnecessary planes (ones
 	// whose polygon is clipped away by the other planes)
-	numpoints = 0;maxpoints = 256;
-	numplanes = 0;maxplanes = 256;
-	numelements = 0;maxelements = 1024;
-	numtriangles = 0;
-	maxpolypoints = 256;
 	for (j = 0;j < numoriginalplanes;j++)
 	{
 		// add the plane uniquely (no duplicates)
@@ -430,82 +427,73 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		if (k < numplanes)
 			continue;
 		// check if there are too many and skip the brush
-		if (numplanes >= 256)
+		if (numplanes >= maxplanes)
 		{
 			Con_Print("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
 			return NULL;
 		}
 
 		// create a large polygon from the plane
-		w = temp1;
-		othertemp = temp2;
-		BufWinding_NewFromPlane(w, originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist);
+		w = 0;
+		PolygonF_QuadForPlane(p[w], originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist, 1024.0*1024.0*1024.0);
+		pnumpoints = 4;
 		// clip it by all other planes
-		for (k = 0;k < numoriginalplanes && w->numpoints;k++)
+		for (k = 0;k < numoriginalplanes && pnumpoints && pnumpoints <= pmaxpoints;k++)
 		{
 			if (k != j)
 			{
 				// we want to keep the inside of the brush plane so we flip
 				// the cutting plane
-				BufWinding_Divide(w, -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, othertemp, NULL, NULL, NULL);
-				temp = w;
-				w = othertemp;
-				othertemp = temp;
+				PolygonF_Divide(pnumpoints, p[w], -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, 1.0/32.0, maxpoints, p[!w], &pnumpoints, 0, NULL, NULL);
+				w = !w;
 			}
 		}
 		// if nothing is left, skip it
-		if (!w->numpoints)
+		if (!pnumpoints)
 			continue;
 
-		// copy off the number of points for later when the winding is freed
-		numpolypoints = w->numpoints;
-
 		// check if there are too many polygon vertices for buffer
-		if (numpolypoints > maxpolypoints)
+		if (pnumpoints > pmaxpoints)
 		{
 			Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many points for buffer\n");
 			return NULL;
 		}
 
 		// check if there are too many triangle elements for buffer
-		if (numelements + (w->numpoints - 2) * 3 > maxelements)
+		if (numelements + (pnumpoints - 2) * 3 > maxelements)
 		{
 			Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many triangle elements for buffer\n");
 			return NULL;
 		}
 
-		for (k = 0;k < w->numpoints;k++)
+		for (k = 0;k < pnumpoints;k++)
 		{
 			// check if there is already a matching point (no duplicates)
 			for (m = 0;m < numpoints;m++)
-				if (VectorDistance2(w->points[k], pointsbuf[m].v) < COLLISION_SNAP)
+				if (VectorDistance2(&p[w][k*3], pointsbuf[m].v) < COLLISION_SNAP)
 					break;
 
 			// if there is no match, add a new one
 			if (m == numpoints)
 			{
 				// check if there are too many and skip the brush
-				if (numpoints >= 256)
+				if (numpoints >= maxpoints)
 				{
 					Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many points for buffer\n");
-					Winding_Free(w);
 					return NULL;
 				}
 				// add the new one
-				VectorCopy(w->points[k], pointsbuf[numpoints].v);
+				VectorCopy(&p[w][k*3], pointsbuf[numpoints].v);
 				numpoints++;
 			}
 
 			// store the index into a buffer
 			polypointbuf[k] = m;
 		}
-		w = NULL;
-		othertemp = NULL;
-		temp = NULL;
 
 		// add the triangles for the polygon
 		// (this particular code makes a triangle fan)
-		for (k = 0;k < numpolypoints - 2;k++)
+		for (k = 0;k < pnumpoints - 2;k++)
 		{
 			numtriangles++;
 			elementsbuf[numelements++] = polypointbuf[0];

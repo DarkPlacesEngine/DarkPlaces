@@ -3831,7 +3831,6 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 	q3mbrush_t *out;
 	int i, j, n, c, count, maxplanes;
 	mplane_t *planes;
-	winding_t *temp1, *temp2;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3841,9 +3840,6 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 
 	loadmodel->brushq3.data_brushes = out;
 	loadmodel->brushq3.num_brushes = count;
-
-	temp1 = Winding_New(64);
-	temp2 = Winding_New(64);
 
 	maxplanes = 0;
 	planes = NULL;
@@ -3875,12 +3871,10 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			planes[j].dist = out->firstbrushside[j].plane->dist;
 		}
 		// make the colbrush from the planes
-		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, temp1, temp2);
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
 	}
 	if (planes)
 		Mem_Free(planes);
-	Winding_Free(temp1);
-	Winding_Free(temp2);
 }
 
 static void Mod_Q3BSP_LoadEffects(lump_t *l)

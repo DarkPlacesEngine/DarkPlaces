@@ -1,7 +1,7 @@
 [Project]
 FileName=DARKPL~1.DEV
 Name=DarkPlaces
-UnitCount=158
+UnitCount=162
 Type=0
 Ver=1
 ObjFiles=
@@ -1623,6 +1623,26 @@ BuildCmd=
 FileName=builddate.c
 CompileCpp=0
 Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit161]
+FileName=polygon.c
+CompileCpp=0
+Folder=Source Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
+
+[Unit162]
+FileName=polygon.h
+CompileCpp=0
+Folder=Header Files
 Compile=1
 Link=1
 Priority=1000

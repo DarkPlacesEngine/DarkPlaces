@@ -284,6 +284,10 @@ SOURCE=.\palette.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\polygon.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\portals.c
 # End Source File
 # Begin Source File
@@ -593,6 +597,10 @@ SOURCE=.\netconn.h
 # Begin Source File
 
 SOURCE=.\palette.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\polygon.h
 # End Source File
 # Begin Source File
 
