@@ -868,9 +868,6 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 		return false;
 	}
 
-	if (m->transparent)
-		Con_Printf("R_Mesh_Draw_GetBuffer: m.transparent is no longer supported\n");
-
 	if (currentmesh)
 	{
 		R_Mesh_Render();
