@@ -889,6 +889,9 @@ void CL_RelinkWorld(void)
 	Matrix4x4_CreateIdentity(&ent->render.matrix);
 	Matrix4x4_CreateIdentity(&ent->render.inversematrix);
 	CL_BoundingBoxForEntity(&ent->render);
+	ent->render.flags = RENDER_SHADOW;
+	if (!r_fullbright.integer)
+		ent->render.flags |= RENDER_LIGHT;
 }
 
 static void CL_RelinkStaticEntities(void)

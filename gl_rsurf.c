@@ -1039,7 +1039,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	GL_DepthTest(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	m.tex[0] = R_GetTexture(texture->skin.base);
-	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+	if (ent->flags & RENDER_LIGHT)
+		GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+	else
+		GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
