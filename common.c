@@ -510,8 +510,6 @@ void COM_StripExtension (char *in, char *out)
 	}
 	if (last)
 		*last = 0;
-	else
-		*out = 0;
 }
 
 /*
@@ -1398,7 +1396,7 @@ void COM_InitFilesystem (void)
 	int i;
 	searchpath_t *search;
 
-	strcpy(com_basedir, "");
+	strcpy(com_basedir, ".");
 
 	// -basedir <path>
 	// Overrides the system supplied base directory (under GAMENAME)
