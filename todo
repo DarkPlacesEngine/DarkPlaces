@@ -2,6 +2,7 @@
 -d darkplaces: add DP_EF_NOSHADOW extension (Urre)
 -d darkplaces: add GL_EXT_stencil_two_side support to shadow rendering - note: this got a 77% speedup! (fuh)
 -d darkplaces: add a config saving command (Speeds)
+-d darkplaces: add an extension for EF_RED and EF_BLUE (FrikaC)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
 -d darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
@@ -19,7 +20,6 @@
 -d darkplaces: don't complain if lightning bolt models are missing in client (Electro, Sajt)
 -d darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 -d darkplaces: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
-d darkplaces: figure out what is breaking with rate limited (partial) entity updates that is losing entities (Urre, FrikaC, Harb)
 -d darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
 -d darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d darkplaces: fix a crash when changing level while using qe1 textures (Todd)
@@ -39,7 +39,9 @@ d darkplaces: figure out what is breaking with rate limited (partial) entity upd
 -d darkplaces: make the reply receive code drop packets from servers not in the list (Willis)
 -d darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
 -d darkplaces: prevent player name changes faster than once every 5 seconds (sublim3)
+-d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 -d darkplaces: rename r_shadow_polygonoffset and r_shadow_polygonfactor to r_shadow_shadow_polygonoffset and r_shadow_shadow_polygonfactor (Urre)
+-d darkplaces: restarting server with two people on it, hits the name change timer and thus people rejoin with blank names (romi)
 -d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles (Urre, -Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 -d darkplaces: write a readme (Antti)
 -d dpmod: make grapple off-hand (joe hill)
@@ -59,7 +61,6 @@ d darkplaces: figure out what is breaking with rate limited (partial) entity upd
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 0 darkplaces: add a cvar to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
 0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
--d darkplaces: add an extension for EF_RED and EF_BLUE (FrikaC)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 0 darkplaces: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces: add back r_waterripple (Vermeulen)
@@ -83,7 +84,6 @@ d darkplaces: figure out what is breaking with rate limited (partial) entity upd
 0 darkplaces: add sv_maxrate cvar to server setup menu
 0 darkplaces: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
-d darkplaces: add vid_pixelaspect patch from Grisha Spivak's email
 0 darkplaces: add vid_vsync cvar and also to options menu (metlslime)
 0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
 0 darkplaces: allow typing characters > 128 into console to allow Latin1 fonts to be used properly, already works in text messages (Urre)
@@ -154,14 +154,11 @@ d darkplaces: add vid_pixelaspect patch from Grisha Spivak's email
 0 darkplaces: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
 0 darkplaces: put patches on a delayed queue in q3bsp collision code so the trace is first clipped by brushes
 0 darkplaces: r_shadow should load .ent when importing light entities
--d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: release darkplaces build
 0 darkplaces: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
-d darkplaces: rename cl_fakelocalping_* to cl_netlocalping_* and *_fakepacketloss_* to *_netpacketloss_*
 0 darkplaces: rename everything possible in msurface_t, mleaf_t, and mnode_t to be named like q3mface_t, q3mleaf_t, and q3mnode_t, to make them more similar
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
 0 darkplaces: reset zoom on connect (Rick)
--d darkplaces: restarting server with two people on it, hits the name change timer and thus people rejoin with blank names (romi)
 0 darkplaces: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces: server should send sv_gravity to client somehow (Vermeulen)
 0 darkplaces: split rtlight drawshadows option into drawworldshadows and drawentityshadows options, this allows combinations like no world shadows (for speed) but still having entity shadows (Electro, Mitchell, romi)
@@ -472,6 +469,7 @@ d darkplaces: add skin and pflags support to light entity loader
 d darkplaces: add stats to slist menu displaying how many masters/servers have been queried and replied (tell yummyluv)
 d darkplaces: add sv_freenonclients cvar (Vermeulen)
 d darkplaces: add tenebrae light entity properties, like cubemap and style and such
+d darkplaces: add vid_pixelaspect patch from Grisha Spivak's email
 d darkplaces: add view height to chase_active again (yummyluv)
 d darkplaces: add wgl support for mouse buttons 4 and 5 (Intellimouse Explorer) from Q2 (source supplied in email from joseph caporale@sbcglobal.net)
 d darkplaces: added RENDER_LIGHT flag to entity_render_t to make rtlighting optional per entity
@@ -498,6 +496,7 @@ d darkplaces: figure out and fix vis problems when noclipping out of world in q1
 d darkplaces: figure out and fix win32 networking problems
 d darkplaces: figure out how monster models are disappearing in waistdeep water in e1m3 (scar3crow)
 d darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
+d darkplaces: figure out what is breaking with rate limited (partial) entity updates that is losing entities (Urre, FrikaC, Harb)
 d darkplaces: figure out what is broken about the shadow volumes or stencil comparisons
 d darkplaces: figure out what is causing invalid entity numbers in TouchAreaGrid in world.c - suspicion: problem with reallocation of edicts?
 d darkplaces: figure out what is wrong with loading _glow/_luma textures on md3 models (not bsp textures) (kd23 Nexuiz)
@@ -623,6 +622,7 @@ d darkplaces: release new hqbsp with -wadpath support (also searchs in map's dir
 d darkplaces: remove dead master server from default masters list (yummyluv)
 d darkplaces: remove frags per hour rating from scoreboard because it depends on cl.scores[i]->entertime (which is never set)
 d darkplaces: rename R_Model_Brush_ functions to R_Q1BSP_
+d darkplaces: rename cl_fakelocalping_* to cl_netlocalping_* and *_fakepacketloss_* to *_netpacketloss_*
 d darkplaces: rename r_shadow_shadows to r_shadow_dlightshadows and add r_shadow_worldshadows (mashakos)
 d darkplaces: replace key system with twilight key system, note that this breaks existing mouse4 and mouse5 binds, and adds in_bindmap capability
 d darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
