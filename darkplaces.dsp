@@ -396,10 +396,6 @@ SOURCE=.\sys_win.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\transform.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\ui.c
 # End Source File
 # Begin Source File
@@ -681,10 +677,6 @@ SOURCE=.\spritegn.h
 # Begin Source File
 
 SOURCE=.\sys.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\transform.h
 # End Source File
 # Begin Source File
 
