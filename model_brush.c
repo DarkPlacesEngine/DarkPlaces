@@ -1023,7 +1023,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 		else
 		{
-			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true))
+			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true, true))
 			{
 				// did not find external texture, load it from the bsp or wad3
 				if (loadmodel->brush.ishlbsp)
@@ -1039,7 +1039,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 					{
 						tx->width = image_width;
 						tx->height = image_height;
-						tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
+						tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						if (Image_CheckAlpha(pixels, image_width * image_height, true))
 						{
 							fogpixels = Mem_Alloc(tempmempool, image_width * image_height * 4);
@@ -1050,7 +1050,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 								fogpixels[j + 2] = 255;
 								fogpixels[j + 3] = pixels[j + 3];
 							}
-							tx->skin.fog = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
+							tx->skin.fog = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 							Mem_Free(fogpixels);
 						}
 					}
@@ -1058,7 +1058,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						Mem_Free(freepixels);
 				}
 				else if (mtdata) // texture included
-					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE, false, true, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
+					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, true, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
 			}
 		}
 		if (tx->skin.base == NULL)
@@ -3597,7 +3597,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		out->surfaceflags = LittleLong(in->surfaceflags);
 		out->nativecontents = LittleLong(in->contents);
 		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
-		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
+		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true, true);
 		out->surfaceparms = -1;
 	}
 

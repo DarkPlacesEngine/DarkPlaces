@@ -166,7 +166,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
-				loadmodel->sprite.sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE);
+				loadmodel->sprite.sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP);
 				loadmodel->sprite.sprdata_frames[realframes].fogtexture = image_masktex;
 
 				if (!loadmodel->sprite.sprdata_frames[realframes].texture)
@@ -177,17 +177,17 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
 					if (version == SPRITE32_VERSION)
 					{
-						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
+						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						// make fog version (just alpha)
 						pixbuf = Mem_Alloc(tempmempool, width*height*4);
 						Image_CopyMux(pixbuf, datapointer, width, height, false, false, false, 4, 4, alphaonlytable);
-						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
+						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, NULL);
 						Mem_Free(pixbuf);
 					}
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
 					{
-						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, palette);
-						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, alphapalette);
+						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, palette);
+						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE | TEXF_PICMIP, alphapalette);
 					}
 				}
 			}

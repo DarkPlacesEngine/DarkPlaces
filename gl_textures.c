@@ -382,20 +382,23 @@ static void GL_TextureMode_f (void)
 
 static int R_CalcTexelDataSize (gltexture_t *glt)
 {
-	int width2, height2, depth2, size;
+	int width2, height2, depth2, size, picmip;
 	if (glt->flags & TEXF_FRAGMENT)
 		size = glt->width * glt->height * glt->depth;
 	else
 	{
+		picmip = 0;
+		if (glt->flags & TEXF_PICMIP)
+			picmip = gl_picmip.integer;
 		if (gl_max_size.integer > realmaxsize)
 			Cvar_SetValue("gl_max_size", realmaxsize);
 		// calculate final size
 		for (width2 = 1;width2 < glt->width;width2 <<= 1);
 		for (height2 = 1;height2 < glt->height;height2 <<= 1);
 		for (depth2 = 1;depth2 < glt->depth;depth2 <<= 1);
-		for (width2 >>= gl_picmip.integer;width2 > gl_max_size.integer;width2 >>= 1);
-		for (height2 >>= gl_picmip.integer;height2 > gl_max_size.integer;height2 >>= 1);
-		for (depth2 >>= gl_picmip.integer;depth2 > gl_max_size.integer;depth2 >>= 1);
+		for (width2 >>= picmip;width2 > gl_max_size.integer;width2 >>= 1);
+		for (height2 >>= picmip;height2 > gl_max_size.integer;height2 >>= 1);
+		for (depth2 >>= picmip;depth2 > gl_max_size.integer;depth2 >>= 1);
 		if (width2 < 1) width2 = 1;
 		if (height2 < 1) height2 = 1;
 		if (depth2 < 1) depth2 = 1;
@@ -873,7 +876,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 
 static void R_FindImageForTexture(gltexture_t *glt)
 {
-	int i, j, best, best2, x, y, z, w, h, d;
+	int i, j, best, best2, x, y, z, w, h, d, picmip;
 	textypeinfo_t *texinfo;
 	gltexturepool_t *pool;
 	gltextureimage_t *image, **imagechainpointer;
@@ -968,15 +971,18 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		image->type = GLIMAGETYPE_TILE;
 		image->blockallocation = NULL;
 
+		picmip = 0;
+		if (glt->flags & TEXF_PICMIP)
+			picmip = gl_picmip.integer;
 		// calculate final size
 		if (gl_max_size.integer > realmaxsize)
 			Cvar_SetValue("gl_max_size", realmaxsize);
 		for (image->width = 1;image->width < glt->width;image->width <<= 1);
 		for (image->height = 1;image->height < glt->height;image->height <<= 1);
 		for (image->depth = 1;image->depth < glt->depth;image->depth <<= 1);
-		for (image->width >>= gl_picmip.integer;image->width > gl_max_size.integer;image->width >>= 1);
-		for (image->height >>= gl_picmip.integer;image->height > gl_max_size.integer;image->height >>= 1);
-		for (image->depth >>= gl_picmip.integer;image->depth > gl_max_size.integer;image->depth >>= 1);
+		for (image->width >>= picmip;image->width > gl_max_size.integer;image->width >>= 1);
+		for (image->height >>= picmip;image->height > gl_max_size.integer;image->height >>= 1);
+		for (image->depth >>= picmip;image->depth > gl_max_size.integer;image->depth >>= 1);
 		if (image->width < 1) image->width = 1;
 		if (image->height < 1) image->height = 1;
 		if (image->depth < 1) image->depth = 1;
@@ -984,7 +990,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 	image->texturetype = glt->texturetype;
 	image->glinternalformat = texinfo->glinternalformat;
 	image->glformat = texinfo->glformat;
-	image->flags = (glt->flags & (TEXF_MIPMAP | TEXF_ALPHA | TEXF_CLAMP)) | GLTEXF_UPLOAD;
+	image->flags = (glt->flags & (TEXF_MIPMAP | TEXF_ALPHA | TEXF_CLAMP | TEXF_PICMIP)) | GLTEXF_UPLOAD;
 	image->bytesperpixel = texinfo->internalbytesperpixel;
 	image->sides = image->texturetype == GLTEXTURETYPE_CUBEMAP ? 6 : 1;
 	// get a texture number to use
