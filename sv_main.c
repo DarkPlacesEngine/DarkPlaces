@@ -362,7 +362,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	client->active = true;
 	client->netconnection = netconnection;
 
-	Con_DPrintf("Client %s connected\n", client->netconnection->address);
+	Con_DPrintf("Client %s connected\n", client->netconnection ? client->netconnection->address : "botclient");
 
 	strcpy(client->name, "unconnected");
 	strcpy(client->old_name, "unconnected");
@@ -371,6 +371,12 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	client->message.data = client->msgbuf;
 	client->message.maxsize = sizeof(client->msgbuf);
 	client->message.allowoverflow = true;		// we can catch it
+	// updated by receiving "rate" command from client
+	client->rate = NET_MINRATE;
+	// no limits for local player
+	if (client->netconnection && LHNETADDRESS_GetAddressType(&client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP)
+		client->rate = 1000000000;
+	client->connecttime = realtime;
 
 	if (sv.loadgame)
 		memcpy (client->spawn_parms, spawn_parms, sizeof(spawn_parms));
@@ -1061,8 +1067,8 @@ qboolean SV_SendClientDatagram (client_t *client)
 		if (sv_maxrate.integer != maxrate)
 			Cvar_SetValueQuick(&sv_maxrate, maxrate);
 
-		rate = bound(NET_MINRATE, client->netconnection->rate, maxrate);
-		rate = (int)(client->netconnection->rate * sys_ticrate.value);
+		rate = bound(NET_MINRATE, client->rate, maxrate);
+		rate = (int)(client->rate * sys_ticrate.value);
 		maxsize = bound(100, rate, 1400);
 		maxsize2 = 1400;
 	}

@@ -420,13 +420,7 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn = Mem_Alloc(netconn_mempool, sizeof(*conn));
 	conn->mysocket = mysocket;
 	conn->peeraddress = *peeraddress;
-	// updated by receiving "rate" command from client
-	conn->rate = NET_MINRATE;
-	// no limits for local player
-	if (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP)
-		conn->rate = 1000000000;
 	conn->canSend = true;
-	conn->connecttime = realtime;
 	conn->lastMessageTime = realtime;
 	// LordHavoc: (inspired by ProQuake) use a short connect timeout to
 	// reduce effectiveness of connection request floods
@@ -1074,7 +1068,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							if (clientnum < svs.maxclients)
 							{
 								// duplicate connection request
-								if (realtime - client->netconnection->connecttime < 2.0)
+								if (realtime - client->connecttime < 2.0)
 								{
 									// client is still trying to connect,
 									// so we send a duplicate reply
@@ -1201,7 +1195,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							if (clientnum < svs.maxclients)
 							{
 								// duplicate connection request
-								if (realtime - client->netconnection->connecttime < 2.0)
+								if (realtime - client->connecttime < 2.0)
 								{
 									// client is still trying to connect,
 									// so we send a duplicate reply
@@ -1315,7 +1309,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							MSG_WriteString(&net_message, client->name);
 							MSG_WriteLong(&net_message, client->colors);
 							MSG_WriteLong(&net_message, (int)client->edict->v->frags);
-							MSG_WriteLong(&net_message, (int)(realtime - client->netconnection->connecttime));
+							MSG_WriteLong(&net_message, (int)(realtime - client->connecttime));
 							MSG_WriteString(&net_message, client->netconnection->address);
 							*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 							NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
@@ -1386,7 +1380,7 @@ void NetConn_ServerFrame(void)
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
 		// never timeout loopback connections
-		if (host_client->netconnection && realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(host_client->netconnection->mysocket)) != LHNETADDRESSTYPE_LOOP)
+		if (host_client->netconnection && realtime > host_client->netconnection->timeout && LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
 			sv_player = host_client->edict;

@@ -117,6 +117,12 @@ typedef struct client_s
 	// remove this client immediately
 	qboolean deadsocket;
 
+	// requested rate in bytes per second
+	int rate;
+
+	// realtime this client connected
+	double connecttime;
+
 	// reliable messages must be sent periodically
 	double last_message;
 
