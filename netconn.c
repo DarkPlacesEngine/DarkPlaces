@@ -132,24 +132,38 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 {
 	int result = 0; // > 0 if for numbers A > B and for text if A < B
 
-	if( serverlist_sortbyfield == SLIF_PING )
-		result = A->info.ping - B->info.ping;
-	else if( serverlist_sortbyfield == SLIF_MAXPLAYERS )
-		result = A->info.maxplayers - B->info.maxplayers;
-	else if( serverlist_sortbyfield == SLIF_NUMPLAYERS )
-		result = A->info.numplayers - B->info.numplayers;
-	else if( serverlist_sortbyfield == SLIF_PROTOCOL )
-		result = A->info.protocol - B->info.protocol;
-	else if( serverlist_sortbyfield == SLIF_CNAME )
-		result = strcmp( B->info.cname, A->info.cname );
-	else if( serverlist_sortbyfield == SLIF_GAME )
-		result = strcmp( B->info.game, A->info.game );
-	else if( serverlist_sortbyfield == SLIF_MAP )
-		result = strcmp( B->info.map, A->info.map );
-	else if( serverlist_sortbyfield == SLIF_MOD )
-		result = strcmp( B->info.mod, A->info.mod );
-	else if( serverlist_sortbyfield == SLIF_NAME )
-		result = strcmp( B->info.name, A->info.name );
+	switch( serverlist_sortbyfield ) {
+		case SLIF_PING:
+			result = A->info.ping - B->info.ping;
+			break;
+		case SLIF_MAXPLAYERS:
+			result = A->info.maxplayers - B->info.maxplayers;
+			break;
+		case SLIF_NUMPLAYERS:
+			result = A->info.numplayers - B->info.numplayers;
+			break;
+		case SLIF_PROTOCOL:
+			result = A->info.protocol - B->info.protocol;
+			break;
+		case SLIF_CNAME:
+			result = strcmp( B->info.cname, A->info.cname );
+			break;
+		case SLIF_GAME:
+			result = strcmp( B->info.game, A->info.game );
+			break;
+		case SLIF_MAP:
+			result = strcmp( B->info.map, A->info.map );
+			break;
+		case SLIF_MOD:
+			result = strcmp( B->info.mod, A->info.mod );
+			break;
+		case SLIF_NAME:
+			result = strcmp( B->info.name, A->info.name );
+			break;
+		default:
+			Con_DPrint( "_ServerList_Entry_Compare: Bad serverlist_sortbyfield!\n" );
+			break;
+	}
 
 	if( serverlist_sortdescending )
 		return result > 0;
@@ -158,38 +172,51 @@ static qboolean _ServerList_Entry_Compare( serverlist_entry_t *A, serverlist_ent
 
 static qboolean _ServerList_CompareInt( int A, serverlist_maskop_t op, int B )
 {
-	if( op == SLMO_LESS )
-		return A < B;
-	else if( op == SLMO_LESSEQUAL )
-		return A <= B;
-	else if( op == SLMO_EQUAL )
-		return A == B;
-	else if( op == SLMO_GREATER )
-		return A > B;
-	else if( op == SLMO_NOTEQUAL )
-		return A != B;
-	else // SLMO_GREATEREQUAL
-		return A >= B;
+	// This should actually be done with some intermediate and end-of-function return
+	switch( op ) {
+		case SLMO_LESS:
+			return A < B;
+		case SLMO_LESSEQUAL:
+			return A <= B;
+		case SLMO_EQUAL:
+			return A == B;
+		case SLMO_GREATER:
+			return A > B;
+		case SLMO_NOTEQUAL:
+			return A != B;
+		case SLMO_GREATEREQUAL:
+			return A >= B;
+		default:
+			Con_DPrint( "_ServerList_CompareInt: Bad op!\n" );
+			return false;
+	}
 }
 
 static qboolean _ServerList_CompareStr( const char *A, serverlist_maskop_t op, const char *B )
-{
-	if( op == SLMO_CONTAINS ) // A info B mask
-		return *B && !!strstr( A, B ); // we want a real bool
-	else if( op == SLMO_NOTCONTAIN )
-		return !*B || !strstr( A, B );
-	else if( op == SLMO_LESS )
-		return strcmp( A, B ) < 0;
-	else if( op == SLMO_LESSEQUAL )
-		return strcmp( A, B ) <= 0;
-	else if( op == SLMO_EQUAL )
-		return strcmp( A, B ) == 0;
-	else if( op == SLMO_GREATER )
-		return strcmp( A, B ) > 0;
-	else if( op == SLMO_NOTEQUAL )
-		return strcmp( A, B ) != 0;
-	else // SLMO_GREATEREQUAL
-		return strcmp( A, B ) >= 0;
+{ 
+	// Same here, also using an intermediate & final return would be more appropriate
+	// A info B mask
+	switch( op ) {
+		case SLMO_CONTAINS:
+			return *B && !!strstr( A, B ); // we want a real bool
+		case SLMO_NOTCONTAIN:
+			return !*B || !strstr( A, B );
+		case SLMO_LESS:
+			return strcmp( A, B ) < 0;
+		case SLMO_LESSEQUAL:
+			return strcmp( A, B ) <= 0;
+		case SLMO_EQUAL:
+			return strcmp( A, B ) == 0;
+		case SLMO_GREATER:
+			return strcmp( A, B ) > 0;
+		case SLMO_NOTEQUAL:
+			return strcmp( A, B ) != 0;
+		case SLMO_GREATEREQUAL:
+			return strcmp( A, B ) >= 0;
+		default:
+			Con_DPrint( "_ServerList_CompareStr: Bad op!\n" );
+			return false;
+	}
 }
 
 static qboolean _ServerList_Entry_Mask( serverlist_mask_t *mask, serverlist_info_t *info )

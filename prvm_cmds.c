@@ -2025,6 +2025,8 @@ void VM_strunzone(void)
 	VM_SAFEPARMCOUNT(1,VM_strunzone);
 
 	str = PRVM_G_STRING(OFS_PARM0);
+	if( !str )
+		PRVM_ERROR( "VM_strunzone: s%: Null string passed!", PRVM_NAME );
 	if( developer.integer && !Mem_IsAllocated( VM_STRINGS_MEMPOOL, str ) )
 		PRVM_ERROR( "VM_strunzone: Zone string already freed in %s!", PRVM_NAME );
 	else
