@@ -72,7 +72,9 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
 
 # Link
-LDFLAGS_COMMON=-lm -ldl
+# LordHavoc note: I have been informed that system libraries must come last
+# on the linker line, and that -lm must always be last
+LDFLAGS_COMMON=-ldl -lm
 LDFLAGS_DEBUG=-g -ggdb
 LDFLAGS_PROFILE=-g -pg
 LDFLAGS_RELEASE=
@@ -82,7 +84,7 @@ EXE_DED=darkplaces-dedicated
 
 GLX_LIB=-L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(SOUNDLIB)
 
-DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
+DO_LD=$(CC) $(LDFLAGS) -o $@ $^
 
 
 ##### Commands #####
@@ -144,7 +146,7 @@ bin-debug :
 #	@echo
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
-		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_DEBUG)"
+		LDFLAGS="$(LDFLAGS_DEBUG)"
 
 bin-profile :
 	@echo
@@ -155,7 +157,7 @@ bin-profile :
 #	@echo
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_PROFILE)"
+		LDFLAGS="$(LDFLAGS_PROFILE)"
 
 bin-release :
 	@echo
@@ -166,7 +168,7 @@ bin-release :
 #	@echo
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_RELEASE)"
+		LDFLAGS="$(LDFLAGS_RELEASE)"
 
 builddate:
 	touch builddate.c
@@ -181,11 +183,11 @@ vid_glx.o: vid_glx.c
 
 $(EXE_GLX):  $(OBJ_COMMON) $(OBJ_GLX)
 #	@echo "   Linking  " $@
-	$(DO_LD) $(GLX_LIB)
+	$(DO_LD) $(GLX_LIB) $(LDFLAGS_COMMON)
 
 $(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
 #	@echo "   Linking  " $@
-	$(DO_LD)
+	$(DO_LD) $(LDFLAGS_COMMON)
 
 clean:
 	rm -f $(EXE_GLX) $(EXE_DED) *.o *.d
