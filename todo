@@ -35,6 +35,11 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: r_shadow_showtris messes up r_shadow_visiblevolumes color (jitspoe)
+0 darkplaces: make notify lines show based on cl.time, not realtime, so they last the proper length when using cl_avidemo (Urre)
+0 darkplaces: darkplaces is leaving a dead window button on the taskbar when closed?  this is odd as the window closing code in darkplaces is designed to prevent this (Urre)
+2 darkplaces: make sound engine restart ambients after a restart (RenegadeC)
+0 darkplaces: make blood decals a bit lighter as they're nearly black (ashridah)
 0 darkplaces: add GL_EXT_stencil_two_side support to shadow rendering (fuh)
 0 darkplaces: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases?
 4 darkplaces: add qw protocol support (making darkplaces work as a qwcl client) (tell Fuh)
@@ -401,7 +406,7 @@ d darkplaces: make water scrolling optional
 d darkplaces: may be reading md3 tag matrices wrong (Electro)
 d darkplaces: new dpmaster release (Elric, Vic)
 d darkplaces: playerprethink being called before clientconnect? (Electro)
-d darkplaces: post new darkplaces build.  (email FrikaC at kryten@adelphia.net)
+d darkplaces: post new darkplaces build.  (email FrikaC)
 d darkplaces: post new dpmaster build.
 d darkplaces: put new shell casings in dpmod (Tomaz)
 d darkplaces: release new hmap (fixes compilation of TF entities for one person, adds support for GTKRadiant Q1Pack by adding -wadpath option)
