@@ -678,19 +678,6 @@ void R_LightPoint (vec3_t color, vec3_t p)
 	RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 }
 
-// LordHavoc: added light checking to the server
-void SV_LightPoint (vec3_t color, vec3_t p)
-{
-	if (!sv.worldmodel->lightdata)
-	{
-		color[0] = color[1] = color[2] = 255;
-		return;
-	}
-	
-	color[0] = color[1] = color[2] = 0;
-	RecursiveLightPoint (color, sv.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
-}
-
 // LordHavoc: R_DynamicLightPoint - acumulates the dynamic lighting
 void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits)
 {
