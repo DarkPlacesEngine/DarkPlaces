@@ -133,6 +133,7 @@ char *ENGINE_EXTENSIONS =
 "DP_SND_STEREOWAV "
 "DP_SOLIDCORPSE "
 "DP_SPRITE32 "
+"DP_SV_BOTCLIENT "
 "DP_SV_CLIENTCOLORS "
 "DP_SV_CLIENTNAME "
 "DP_SV_DRAWONLYTOCLIENT "
@@ -3567,6 +3568,40 @@ void PF_dropclient (void)
 	host_client = oldhostclient;
 }
 
+//entity() spawnclient (DP_SV_BOTCLIENT)
+void PF_spawnclient (void)
+{
+	int i;
+	edict_t	*ed;
+	pr_xfunction->builtinsprofile += 2;
+	ed = sv.edicts;
+	for (i = 0;i < svs.maxclients;i++)
+	{
+		if (!svs.clients[i].active)
+		{
+			pr_xfunction->builtinsprofile += 100;
+			SV_ConnectClient (i, NULL);
+			ed = EDICT_NUM(i + 1);
+			break;
+		}
+	}
+	RETURN_EDICT(ed);
+}
+
+//float(entity clent) clienttype (DP_SV_BOTCLIENT)
+void PF_clienttype (void)
+{
+	int clientnum;
+	clientnum = G_EDICTNUM(OFS_PARM0) - 1;
+	if (clientnum < 0 || clientnum >= svs.maxclients)
+		G_FLOAT(OFS_RETURN) = 3;
+	else if (!svs.clients[clientnum].active)
+		G_FLOAT(OFS_RETURN) = 0;
+	else if (svs.clients[clientnum].netconnection)
+		G_FLOAT(OFS_RETURN) = 1;
+	else
+		G_FLOAT(OFS_RETURN) = 2;
+}
 
 builtin_t pr_builtin[] =
 {
@@ -3748,8 +3783,8 @@ PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_
 PF_gettagindex,				// #451 float(entity ent, string tagname) gettagindex (DP_QC_GETTAGINFO)
 PF_gettaginfo,				// #452 vector(entity ent, float tagindex) gettaginfo (DP_QC_GETTAGINFO)
 PF_dropclient,				// #453 void(entity clent) dropclient (DP_SV_DROPCLIENT)
-NULL,						// #454
-NULL,						// #455
+PF_spawnclient,				// #454 entity() spawnclient (DP_SV_BOTCLIENT)
+PF_clienttype,				// #455 float(entity clent) clienttype (DP_SV_BOTCLIENT)
 NULL,						// #456
 NULL,						// #457
 NULL,						// #458
