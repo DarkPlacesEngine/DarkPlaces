@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 #define MAX_LIGHTMAP_SIZE 256
+#define USEMESHBUFFER 1
 
 static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
 static float floatblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
@@ -845,6 +846,7 @@ static int RSurf_Light(int *dlightbits, int numverts)
 	return lit;
 }
 
+#if USEMESHBUFFER
 static int RSurf_LightSeparate(int *dlightbits, int numverts, float *vert, float *color)
 {
 	float f, *v, *c;
@@ -894,6 +896,7 @@ static int RSurf_LightCheck(int *dlightbits, surfmesh_t *mesh)
 	}
 	return false;
 }
+#endif
 
 static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 {
@@ -1190,7 +1193,7 @@ static void RSurfShader_Water(msurface_t *firstsurf)
 
 static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, *outuv, cl, ca, diff[3];
@@ -1391,7 +1394,7 @@ static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_BaseTexture(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, cl, ca;
@@ -1480,7 +1483,7 @@ static void RSurfShader_Wall_Pass_BaseTexture(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_BaseLightmap(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outuv, cl, ca, diff[3];
@@ -1639,7 +1642,7 @@ static void RSurfShader_Wall_Pass_BaseLightmap(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i, size3;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, *outuv, cl, ca, diff[3];
@@ -1879,7 +1882,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, cl, ca, diff[3];
@@ -2041,7 +2044,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_Light(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, *outuv, cl, ca, diff[3], f;
@@ -2170,7 +2173,7 @@ static void RSurfShader_Wall_Pass_Light(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, cl, ca, diff[3];
@@ -2298,7 +2301,7 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 
 static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 {
-#if 1
+#if USEMESHBUFFER
 	int i;
 	surfvertex_t *v;
 	float *outv, *outc, *outst, cl, ca, diff[3], f;
