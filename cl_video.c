@@ -186,12 +186,14 @@ void CL_VideoStart(char *filename)
 	cl_videosoundresampledata = NULL;
 
 	cl_videotexturepool = R_AllocTexturePool();
-	cl_videotexture = R_LoadTexture(cl_videotexturepool, "videotexture", cl_videoimagewidth, cl_videoimageheight, NULL, TEXTYPE_RGBA, 0);
+	cl_videotexture = R_LoadTexture(cl_videotexturepool, "videotexture", cl_videoimagewidth, cl_videoimageheight, NULL, TEXTYPE_RGBA, TEXF_FRAGMENT);
 }
 
 void CL_VideoStop(void)
 {
 	cl_videoplaying = false;
+
+	S_RawSamples_ClearQueue();
 
 	if (cl_videostream)
 		dpvsimpledecode_close(cl_videostream);
