@@ -295,15 +295,42 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 =============================================================
 */
 
-static float *RSurf_GetVertexPointer(const entity_render_t *ent, const msurface_t *surface)
+static void RSurf_DeformVertices(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg)
 {
-	if (surface->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+	int i, j;
+	float center[3], forward[3], right[3], up[3], v[4][3];
+	matrix4x4_t matrix1, imatrix1;
+	if (texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
 	{
-		texture_t *texture = surface->texture;
-		int i, j;
-		float center[3], center2[3], forward[3], right[3], up[3], v[4][3];
-		matrix4x4_t matrix1, imatrix1;
-		R_Mesh_Matrix(&r_identitymatrix);
+		// a single autosprite surface can contain multiple sprites...
+		VectorClear(forward);
+		VectorClear(right);
+		VectorSet(up, 0, 0, 1);
+		for (j = 0;j < surface->mesh.num_vertices - 3;j += 4)
+		{
+			VectorClear(center);
+			for (i = 0;i < 4;i++)
+				VectorAdd(center, surface->mesh.data_vertex3f + (j+i) * 3, center);
+			VectorScale(center, 0.25f, center);
+			// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
+			Matrix4x4_FromVectors(&matrix1, surface->mesh.data_normal3f + j*3, surface->mesh.data_svector3f + j*3, surface->mesh.data_tvector3f + j*3, center);
+			Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
+			for (i = 0;i < 4;i++)
+				Matrix4x4_Transform(&imatrix1, surface->mesh.data_vertex3f + (j+i)*3, v[i]);
+			forward[0] = modelorg[0] - center[0];
+			forward[1] = modelorg[1] - center[1];
+			VectorNormalize(forward);
+			right[0] = forward[1];
+			right[1] = -forward[0];
+			for (i = 0;i < 4;i++)
+				VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (i+j) * 3);
+		}
+	}
+	else if (texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE)
+	{
+		Matrix4x4_Transform(&ent->inversematrix, r_viewforward, forward);
+		Matrix4x4_Transform(&ent->inversematrix, r_viewright, right);
+		Matrix4x4_Transform(&ent->inversematrix, r_viewup, up);
 		// a single autosprite surface can contain multiple sprites...
 		for (j = 0;j < surface->mesh.num_vertices - 3;j += 4)
 		{
@@ -311,39 +338,35 @@ static float *RSurf_GetVertexPointer(const entity_render_t *ent, const msurface_
 			for (i = 0;i < 4;i++)
 				VectorAdd(center, surface->mesh.data_vertex3f + (j+i) * 3, center);
 			VectorScale(center, 0.25f, center);
-			Matrix4x4_Transform(&ent->matrix, center, center2);
 			// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
 			Matrix4x4_FromVectors(&matrix1, surface->mesh.data_normal3f + j*3, surface->mesh.data_svector3f + j*3, surface->mesh.data_tvector3f + j*3, center);
 			Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
 			for (i = 0;i < 4;i++)
 				Matrix4x4_Transform(&imatrix1, surface->mesh.data_vertex3f + (j+i)*3, v[i]);
-			if (texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
-			{
-				forward[0] = r_vieworigin[0] - center2[0];
-				forward[1] = r_vieworigin[1] - center2[1];
-				forward[2] = 0;
-				VectorNormalize(forward);
-				right[0] = forward[1];
-				right[1] = -forward[0];
-				right[2] = 0;
-				up[0] = 0;
-				up[1] = 0;
-				up[2] = 1;
-			}
-			else
-			{
-				VectorCopy(r_viewforward, forward);
-				VectorCopy(r_viewright, right);
-				VectorCopy(r_viewup, up);
-			}
 			for (i = 0;i < 4;i++)
-				VectorMAMAMAM(1, center2, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (i+j) * 3);
+				VectorMAMAMAM(1, center, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (i+j) * 3);
 		}
+	}
+	else
+		memcpy(varray_vertex3f, surface->mesh.data_vertex3f, sizeof(float[3]) * surface->mesh.num_vertices);
+}
+
+// any sort of deformvertices call is *VERY* rare, so this must be optimized
+// to skip deformvertices quickly!
+#if 1
+#define RSurf_GetVertexPointer(ent, texture, surface, modelorg) ((texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2)) ? (RSurf_DeformVertices(ent, texture, surface, modelorg), varray_vertex3f) : surface->mesh.data_vertex3f)
+#else
+static float *RSurf_GetVertexPointer(const entity_render_t *ent, const texture_t *texture, const msurface_t *surface, const vec3_t modelorg)
+{
+	if (texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+	{
+		RSurf_DeformVertices(ent, texture, surface, modelorg);
 		return varray_vertex3f;
 	}
 	else
 		return surface->mesh.data_vertex3f;
 }
+#endif
 
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
@@ -501,7 +524,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
-			R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
+			R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, texture, surface, modelorg));
 			R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 			R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
 			GL_LockArrays(0, surface->mesh.num_vertices);
@@ -544,7 +567,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					vertex3f = RSurf_GetVertexPointer(ent, surface);
+					vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_VertexPointer(vertex3f);
 					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
 					R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
@@ -678,7 +701,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 					{
 						surface = texturesurfacelist[texturesurfaceindex];
-						vertex3f = RSurf_GetVertexPointer(ent, surface);
+						vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 						R_Mesh_VertexPointer(vertex3f);
 						R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 						for (i = 0, v = vertex3f, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
@@ -745,7 +768,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 						{
 							surface = texturesurfacelist[texturesurfaceindex];
-							vertex3f = RSurf_GetVertexPointer(ent, surface);
+							vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 							R_Mesh_VertexPointer(vertex3f);
 							R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
@@ -784,7 +807,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 						{
 							surface = texturesurfacelist[texturesurfaceindex];
-							vertex3f = RSurf_GetVertexPointer(ent, surface);
+							vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 							R_Mesh_VertexPointer(vertex3f);
 							R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
@@ -826,7 +849,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
+					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, texture, surface, modelorg));
 					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 					GL_LockArrays(0, surface->mesh.num_vertices);
 					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
@@ -843,7 +866,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
+					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, texture, surface, modelorg));
 					GL_LockArrays(0, surface->mesh.num_vertices);
 					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 					GL_LockArrays(0, 0);
@@ -865,38 +888,153 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				r = ent->colormod[0] * r_lightmapintensity;
 				g = ent->colormod[1] * r_lightmapintensity;
 				b = ent->colormod[2] * r_lightmapintensity;
-				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				GL_Color(r, g, b, 1);
+				if (texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 				{
-					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
-					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
-					R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
-					if (surface->lightmaptexture)
+					R_Mesh_VertexPointer(varray_vertex3f);
+					if (r == 1 && g == 1 && b == 1)
 					{
-						R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
-						R_Mesh_ColorPointer(NULL);
-						GL_Color(r, g, b, 1);
-					}
-					else if (r == 1 && g == 1 && b == 1)
-					{
-						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-						R_Mesh_ColorPointer(surface->mesh.data_lightmapcolor4f);
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+						{
+							surface = texturesurfacelist[texturesurfaceindex];
+							RSurf_DeformVertices(ent, texture, surface, modelorg);
+							R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
+							R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
+							if (surface->lightmaptexture)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+								R_Mesh_ColorPointer(NULL);
+							}
+							else //if (r == 1 && g == 1 && b == 1)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+								R_Mesh_ColorPointer(surface->mesh.data_lightmapcolor4f);
+							}
+							GL_LockArrays(0, surface->mesh.num_vertices);
+							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+							GL_LockArrays(0, 0);
+						}
 					}
 					else
 					{
-						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
-						R_Mesh_ColorPointer(varray_color4f);
-						for (i = 0;i < surface->mesh.num_vertices;i++)
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 						{
-							varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * r;
-							varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * g;
-							varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * b;
-							varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3];
+							surface = texturesurfacelist[texturesurfaceindex];
+							RSurf_DeformVertices(ent, texture, surface, modelorg);
+							R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
+							R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
+							if (surface->lightmaptexture)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+								R_Mesh_ColorPointer(NULL);
+							}
+							else
+							{
+								R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+								R_Mesh_ColorPointer(varray_color4f);
+								for (i = 0;i < surface->mesh.num_vertices;i++)
+								{
+									varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * r;
+									varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * g;
+									varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * b;
+									varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3];
+								}
+							}
+							GL_LockArrays(0, surface->mesh.num_vertices);
+							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+							GL_LockArrays(0, 0);
 						}
 					}
-					GL_LockArrays(0, surface->mesh.num_vertices);
-					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
-					GL_LockArrays(0, 0);
+				}
+				else
+				{
+					if (r == 1 && g == 1 && b == 1)
+					{
+#if 0
+						// experimental direct state calls for measuring
+						// R_Mesh_ call overhead, do not use!
+						R_Mesh_VertexPointer(varray_vertex3f);
+						R_Mesh_TexCoordPointer(0, 2, varray_texcoord2f[0]);
+						R_Mesh_TexCoordPointer(1, 2, varray_texcoord2f[1]);
+						R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+						R_Mesh_ColorPointer(varray_color4f);
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+						{
+							surface = texturesurfacelist[texturesurfaceindex];
+							qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), surface->mesh.data_vertex3f);
+							qglClientActiveTexture(GL_TEXTURE0_ARB);
+							qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), surface->mesh.data_texcoordlightmap2f);
+							qglClientActiveTexture(GL_TEXTURE1_ARB);
+							qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), surface->mesh.data_texcoordtexture2f);
+							if (surface->lightmaptexture)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+								qglDisableClientState(GL_COLOR_ARRAY);
+								qglColor4f(r, g, b, 1);
+							}
+							else //if (r == 1 && g == 1 && b == 1)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+								qglEnableClientState(GL_COLOR_ARRAY);
+								qglColorPointer(4, GL_FLOAT, sizeof(float[4]), surface->mesh.data_lightmapcolor4f);
+							}
+							qglLockArraysEXT(0, surface->mesh.num_vertices);
+							qglDrawRangeElements(GL_TRIANGLES, 0, surface->mesh.num_vertices, surface->mesh.num_triangles * 3, GL_UNSIGNED_INT, surface->mesh.data_element3i);
+							qglUnlockArraysEXT();
+						}
+#else
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+						{
+							surface = texturesurfacelist[texturesurfaceindex];
+							R_Mesh_VertexPointer(surface->mesh.data_vertex3f);
+							R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
+							R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
+							if (surface->lightmaptexture)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+								R_Mesh_ColorPointer(NULL);
+							}
+							else //if (r == 1 && g == 1 && b == 1)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+								R_Mesh_ColorPointer(surface->mesh.data_lightmapcolor4f);
+							}
+							GL_LockArrays(0, surface->mesh.num_vertices);
+							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+							GL_LockArrays(0, 0);
+						}
+#endif
+					}
+					else
+					{
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+						{
+							surface = texturesurfacelist[texturesurfaceindex];
+							R_Mesh_VertexPointer(surface->mesh.data_vertex3f);
+							R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
+							R_Mesh_TexCoordPointer(1, 2, surface->mesh.data_texcoordtexture2f);
+							if (surface->lightmaptexture)
+							{
+								R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
+								R_Mesh_ColorPointer(NULL);
+							}
+							else
+							{
+								R_Mesh_TexBind(0, R_GetTexture(r_texture_white));
+								R_Mesh_ColorPointer(varray_color4f);
+								for (i = 0;i < surface->mesh.num_vertices;i++)
+								{
+									varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * r;
+									varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * g;
+									varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * b;
+									varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3];
+								}
+							}
+							GL_LockArrays(0, surface->mesh.num_vertices);
+							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+							GL_LockArrays(0, 0);
+						}
+					}
 				}
 			}
 			// single texture
@@ -910,7 +1048,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
+					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, texture, surface, modelorg));
 					R_Mesh_TexBind(0, R_GetTexture(surface->lightmaptexture));
 					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordlightmap2f);
 					R_Mesh_ColorPointer(surface->lightmaptexture ? NULL : surface->mesh.data_lightmapcolor4f);
@@ -932,7 +1070,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
+					R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, texture, surface, modelorg));
 					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 					GL_LockArrays(0, surface->mesh.num_vertices);
 					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
@@ -965,7 +1103,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
-				vertex3f = RSurf_GetVertexPointer(ent, surface);
+				vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_VertexPointer(vertex3f);
 				R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 				for (i = 0, v = vertex3f, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
@@ -1000,7 +1138,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
-				R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, surface));
+				R_Mesh_VertexPointer(RSurf_GetVertexPointer(ent, texture, surface, modelorg));
 				R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoorddetail2f);
 				GL_LockArrays(0, surface->mesh.num_vertices);
 				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
@@ -1028,7 +1166,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					vertex3f = RSurf_GetVertexPointer(ent, surface);
+					vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_VertexPointer(vertex3f);
 					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 					R_Mesh_ColorPointer(varray_color4f);
@@ -1066,7 +1204,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
 					surface = texturesurfacelist[texturesurfaceindex];
-					vertex3f = RSurf_GetVertexPointer(ent, surface);
+					vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_VertexPointer(vertex3f);
 					R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 					if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
@@ -1121,7 +1259,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
-				vertex3f = RSurf_GetVertexPointer(ent, surface);
+				vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 				R_Mesh_VertexPointer(vertex3f);
 				R_Mesh_TexCoordPointer(0, 2, surface->mesh.data_texcoordtexture2f);
 				R_Mesh_ColorPointer(varray_color4f);
@@ -1218,7 +1356,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
 	// update light styles
-	if (!skysurfaces)
+	if (!skysurfaces && model->brushq1.light_styleupdatechains)
 	{
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
@@ -1238,11 +1376,42 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	t = NULL;
 	texture = NULL;
 	numsurfacelist = 0;
-	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
+	if (ent == r_refdef.worldentity)
 	{
-		if (ent != r_refdef.worldentity || r_worldsurfacevisible[j])
+		for (i = 0, j = model->firstmodelsurface, surface = model->brush.data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
 		{
-			surface = model->brush.data_surfaces + j;
+			if (!r_worldsurfacevisible[j])
+				continue;
+			if (t != surface->texture)
+			{
+				if (numsurfacelist)
+				{
+					R_QueueSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+					numsurfacelist = 0;
+				}
+				t = surface->texture;
+				f = t->currentmaterialflags & flagsmask;
+				texture = t->currentframe;
+			}
+			if (f && surface->mesh.num_triangles)
+			{
+				// if lightmap parameters changed, rebuild lightmap texture
+				if (surface->cached_dlight && surface->samples)
+					R_BuildLightMap(ent, surface);
+				// add face to draw list
+				surfacelist[numsurfacelist++] = surface;
+				if (numsurfacelist >= maxsurfacelist)
+				{
+					R_QueueSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
+					numsurfacelist = 0;
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0, j = model->firstmodelsurface, surface = model->brush.data_surfaces + j;i < model->nummodelsurfaces;i++, j++, surface++)
+		{
 			if (t != surface->texture)
 			{
 				if (numsurfacelist)
