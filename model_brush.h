@@ -173,8 +173,24 @@ surfmesh_t;
 
 typedef struct msurface_s
 {
-	// surface number, to avoid having to do a divide to find the number of a surface from it's address
-	int number;
+	// bounding box for onscreen checks
+	vec3_t poly_mins;
+	vec3_t poly_maxs;
+
+	// the node plane this is on, backwards if SURF_PLANEBACK flag set
+	mplane_t *plane;
+	// SURF_ flags
+	int flags;
+	// texture mapping properties used by this surface
+	mtexinfo_t *texinfo;
+
+	// the lightmap texture fragment to use on the rendering mesh
+	rtexture_t *lightmaptexture;
+	// mesh for rendering
+	surfmesh_t *mesh;
+	// if lightmap settings changed, this forces update
+	int cached_dlight;
+
 	// should be drawn if visframe == r_framecount (set by PrepareSurfaces)
 	int visframe;
 	// should be drawn if onscreen and not a backface (used for setting visframe)
@@ -182,19 +198,11 @@ typedef struct msurface_s
 	// chain of surfaces marked visible by pvs
 	//struct msurface_s *pvschain;
 
-	// the node plane this is on, backwards if SURF_PLANEBACK flag set
-	mplane_t *plane;
-	// SURF_ flags
-	int flags;
+	// surface number, to avoid having to do a divide to find the number of a surface from it's address
+	int number;
 
-	// look up in model->surfedges[], negative numbers are backwards edges
-	int firstedge;
-	int numedges;
-
-	short texturemins[2];
-	short extents[2];
-
-	mtexinfo_t *texinfo;
+	// center for sorting transparent meshes
+	vec3_t poly_center;
 
 	// index into d_lightstylevalue array, 255 means not used (black)
 	qbyte styles[MAXLIGHTMAPS];
@@ -202,29 +210,11 @@ typedef struct msurface_s
 	qbyte *samples;
 	// stain to apply on lightmap (soot/dirt/blood/whatever)
 	qbyte *stainsamples;
-
-	// these fields are generated during model loading
-	// the lightmap texture fragment to use on the surface
-	rtexture_t *lightmaptexture;
 	// the stride when building lightmaps to comply with fragment update
 	int lightmaptexturestride;
-	// mesh for rendering
-	surfmesh_t *mesh;
+	int texturemins[2];
+	int extents[2];
 
-	// these are just 3D points defining the outline of the polygon,
-	// no texcoord info (that can be generated from these)
-	int poly_numverts;
-	float *poly_verts;
-	// bounding box for onscreen checks, and center for sorting
-	vec3_t poly_mins, poly_maxs, poly_center;
-
-	// neighboring surfaces (one per poly_numverts)
-	//struct msurface_s **neighborsurfaces;
-	// currently used only for generating static shadow volumes
-	int castshadow;
-
-	// these are regenerated every frame
-	// lighting info
 	// if this == r_framecount there are dynamic lights on the surface
 	int dlightframe;
 	// which dynamic lights are touching this surface
@@ -233,8 +223,15 @@ typedef struct msurface_s
 	// avoid redundent addition of dlights
 	int lightframe;
 
-	// if lightmap settings changed, this forces update
-	int cached_dlight;
+	// these are just 3D points defining the outline of the polygon,
+	// no texcoord info (that can be generated from these)
+	int poly_numverts;
+	float *poly_verts;
+
+	// neighboring surfaces (one per poly_numverts)
+	//struct msurface_s **neighborsurfaces;
+	// currently used only for generating static shadow volumes
+	int castshadow;
 }
 msurface_t;
 
