@@ -1109,6 +1109,8 @@ void Host_Spawn_f (void)
 		return;
 	}
 
+	host_client->nametime = 0;
+
 	// LordHavoc: moved this above the QC calls at FrikaC's request
 	// send all current names, colors, and frag counts
 	SZ_Clear (&host_client->message);
