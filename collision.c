@@ -408,7 +408,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		// check if there are too many and skip the brush
 		if (numplanesbuf >= maxplanesbuf)
 		{
-			Con_Print("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
+			Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many planes for buffer\n");
 			return NULL;
 		}
 
