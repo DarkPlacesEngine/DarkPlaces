@@ -4142,8 +4142,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			//originalneighbor3i = out->data_neighbor3i;
 			*/
 			// convert patch to Q3FACETYPE_MESH
-			xlevel = QuadraticSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value, 10);
-			ylevel = QuadraticSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value, 10);
+			xlevel = QuadraticBSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value, 10);
+			ylevel = QuadraticBSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_tolerance.value, 10);
 			// bound to user settings
 			xlevel = bound(r_subdivisions_minlevel.integer, xlevel, r_subdivisions_maxlevel.integer);
 			ylevel = bound(r_subdivisions_minlevel.integer, ylevel, r_subdivisions_maxlevel.integer);
@@ -4178,10 +4178,10 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->num_triangles = finaltriangles;
 			// generate geometry
 			// (note: normals are skipped because they get recalculated)
-			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_vertex3f);
-			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordtexture2f, out->data_texcoordtexture2f);
-			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordlightmap2f, out->data_texcoordlightmap2f);
-			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 4, originalcolor4f, out->data_color4f);
+			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_vertex3f);
+			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordtexture2f, out->data_texcoordtexture2f);
+			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordlightmap2f, out->data_texcoordlightmap2f);
+			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 4, originalcolor4f, out->data_color4f);
 			// generate elements
 			e = out->data_element3i;
 			for (y = 0;y < finalheight - 1;y++)
@@ -4211,8 +4211,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			// q3map does not put in collision brushes for curves... ugh
 			// build the lower quality collision geometry
 			out->collisions = true;
-			xlevel = QuadraticSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
-			ylevel = QuadraticSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
+			xlevel = QuadraticBSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
+			ylevel = QuadraticBSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
 			// bound to user settings
 			xlevel = bound(r_subdivisions_collision_minlevel.integer, xlevel, r_subdivisions_collision_maxlevel.integer);
 			ylevel = bound(r_subdivisions_collision_minlevel.integer, ylevel, r_subdivisions_collision_maxlevel.integer);
@@ -4235,7 +4235,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->data_collisionelement3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
 			out->num_collisionvertices = finalvertices;
 			out->num_collisiontriangles = finaltriangles;
-			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_collisionvertex3f);
+			QuadraticBSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_collisionvertex3f);
 			// generate elements
 			e = out->data_collisionelement3i;
 			for (y = 0;y < finalheight - 1;y++)

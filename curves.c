@@ -10,7 +10,7 @@
 #include "zone.h"
 
 #if 0
-void QuadraticSplineSubdivideFloat(int inpoints, int components, const float *in, int instride, float *out, int outstride)
+void QuadraticBSplineSubdivideFloat(int inpoints, int components, const float *in, int instride, float *out, int outstride)
 {
 	int s;
 	// the input (control points) is read as a stream of points, and buffered
@@ -59,7 +59,7 @@ void QuadraticSplineSubdivideFloat(int inpoints, int components, const float *in
 		{
 			// more components can be handled, but slowly, by calling self multiple times...
 			for (c = 0;c < components;c++, in++, out++)
-				QuadraticSplineSubdivideFloat(inpoints, 1, in, instride, out, outstride);
+				QuadraticBSplineSubdivideFloat(inpoints, 1, in, instride, out, outstride);
 			return;
 		}
 		for (c = 0;c < components;c++)
@@ -104,7 +104,7 @@ void QuadraticSplineSubdivideFloat(int inpoints, int components, const float *in
 
 // note: out must have enough room!
 // (see finalwidth/finalheight calcs below)
-void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
+void QuadraticBSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
 {
 	int finalwidth, finalheight, xstep, ystep, x, y, c;
 	float *o;
@@ -126,13 +126,13 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 	if (xlevel == 1 && ylevel == 0)
 	{
 		for (y = 0;y < finalheight;y++)
-			QuadraticSplineSubdivideFloat(cpwidth, components, in + y * cpwidth * components, sizeof(float) * components, out + y * finalwidth * components, sizeof(float) * components);
+			QuadraticBSplineSubdivideFloat(cpwidth, components, in + y * cpwidth * components, sizeof(float) * components, out + y * finalwidth * components, sizeof(float) * components);
 		return;
 	}
 	if (xlevel == 0 && ylevel == 1)
 	{
 		for (x = 0;x < finalwidth;x++)
-			QuadraticSplineSubdivideFloat(cpheight, components, in + x * components, sizeof(float) * cpwidth * components, out + x * components, sizeof(float) * finalwidth * components);
+			QuadraticBSplineSubdivideFloat(cpheight, components, in + x * components, sizeof(float) * cpwidth * components, out + x * components, sizeof(float) * finalwidth * components);
 		return;
 	}
 
@@ -149,20 +149,20 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 		{
 			xstep >>= 1;
 			for (y = 0;y < finalheight;y += ystep)
-				QuadraticSplineSubdivideFloat(cpwidth, components, out + y * finalwidth * components, sizeof(float) * xstep * 2 * components, out + y * finalwidth * components, sizeof(float) * xstep * components);
+				QuadraticBSplineSubdivideFloat(cpwidth, components, out + y * finalwidth * components, sizeof(float) * xstep * 2 * components, out + y * finalwidth * components, sizeof(float) * xstep * components);
 			cpwidth = (cpwidth - 1) * 2 + 1;
 		}
 		if (ystep > 1)
 		{
 			ystep >>= 1;
 			for (x = 0;x < finalwidth;x += xstep)
-				QuadraticSplineSubdivideFloat(cpheight, components, out + x * components, sizeof(float) * ystep * 2 * finalwidth * components, out + x * components, sizeof(float) * ystep * finalwidth * components);
+				QuadraticBSplineSubdivideFloat(cpheight, components, out + x * components, sizeof(float) * ystep * 2 * finalwidth * components, out + x * components, sizeof(float) * ystep * finalwidth * components);
 			cpheight = (cpheight - 1) * 2 + 1;
 		}
 	}
 }
 #elif 1
-void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
+void QuadraticBSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
 {
 	int c, x, y, outwidth, outheight, halfstep, xstep, ystep;
 	float prev, curr, next;
@@ -288,7 +288,7 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 }
 #else
 // unfinished code
-void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
+void QuadraticBSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
 {
 	int outwidth, outheight;
 	outwidth = ((cpwidth - 1) << xlevel) + 1;
@@ -321,7 +321,7 @@ void QuadraticSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xle
 0.00000 0.12500 0.21875 0.31250 0.37500 0.43750 0.46875 0.50000 0.50000 0.50000 0.46875 0.43750 0.37500 0.31250 0.21875 0.12500 0.00000 deviation: not available
 */
 
-float QuadraticSplinePatchLargestDeviationOnX(int cpwidth, int cpheight, int components, const float *in)
+float QuadraticBSplinePatchLargestDeviationOnX(int cpwidth, int cpheight, int components, const float *in)
 {
 	int c, x, y;
 	const float *cp;
@@ -344,7 +344,7 @@ float QuadraticSplinePatchLargestDeviationOnX(int cpwidth, int cpheight, int com
 	return (float)sqrt(bestsquareddeviation);
 }
 
-float QuadraticSplinePatchLargestDeviationOnY(int cpwidth, int cpheight, int components, const float *in)
+float QuadraticBSplinePatchLargestDeviationOnY(int cpwidth, int cpheight, int components, const float *in)
 {
 	int c, x, y;
 	const float *cp;
@@ -367,7 +367,7 @@ float QuadraticSplinePatchLargestDeviationOnY(int cpwidth, int cpheight, int com
 	return (float)sqrt(bestsquareddeviation);
 }
 
-int QuadraticSplinePatchSubdivisionLevelForDeviation(float deviation, float level1tolerance, int levellimit)
+int QuadraticBSplinePatchSubdivisionLevelForDeviation(float deviation, float level1tolerance, int levellimit)
 {
 	int level;
 	// count the automatic flatten step which reduces deviation by 50%
@@ -378,14 +378,14 @@ int QuadraticSplinePatchSubdivisionLevelForDeviation(float deviation, float leve
 	return level;
 }
 
-int QuadraticSplinePatchSubdivisionLevelOnX(int cpwidth, int cpheight, int components, const float *in, float level1tolerance, int levellimit)
+int QuadraticBSplinePatchSubdivisionLevelOnX(int cpwidth, int cpheight, int components, const float *in, float level1tolerance, int levellimit)
 {
-	return QuadraticSplinePatchSubdivisionLevelForDeviation(QuadraticSplinePatchLargestDeviationOnX(cpwidth, cpheight, components, in), level1tolerance, levellimit);
+	return QuadraticBSplinePatchSubdivisionLevelForDeviation(QuadraticBSplinePatchLargestDeviationOnX(cpwidth, cpheight, components, in), level1tolerance, levellimit);
 }
 
-int QuadraticSplinePatchSubdivisionLevelOnY(int cpwidth, int cpheight, int components, const float *in, float level1tolerance, int levellimit)
+int QuadraticBSplinePatchSubdivisionLevelOnY(int cpwidth, int cpheight, int components, const float *in, float level1tolerance, int levellimit)
 {
-	return QuadraticSplinePatchSubdivisionLevelForDeviation(QuadraticSplinePatchLargestDeviationOnY(cpwidth, cpheight, components, in), level1tolerance, levellimit);
+	return QuadraticBSplinePatchSubdivisionLevelForDeviation(QuadraticBSplinePatchLargestDeviationOnY(cpwidth, cpheight, components, in), level1tolerance, levellimit);
 }
 
 /*
