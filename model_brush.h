@@ -185,8 +185,7 @@ msurface_t;
 
 #define SHADERSTAGE_SKY 0
 #define SHADERSTAGE_NORMAL 1
-#define SHADERSTAGE_FOG 2
-#define SHADERSTAGE_COUNT 3
+#define SHADERSTAGE_COUNT 2
 
 // change this stuff when real shaders are added
 typedef struct Cshader_s
