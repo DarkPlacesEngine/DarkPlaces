@@ -231,7 +231,7 @@ static void R_FreeTexture(gltexture_t *glt)
 		{
 			texnum = image->texnum;
 			gltexnuminuse[image->texnum] = 0;
-			glDeleteTextures(1, &texnum);
+			qglDeleteTextures(1, &texnum);
 		}
 		if (image->blockallocation)
 			Mem_Free(image->blockallocation);
