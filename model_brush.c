@@ -737,15 +737,19 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 
 	loadmodel->brushq1.textures = NULL;
 
-	if (!l->filelen)
-		return;
-
-	m = (dmiptexlump_t *)(mod_base + l->fileofs);
-
-	m->nummiptex = LittleLong (m->nummiptex);
-
 	// add two slots for notexture walls and notexture liquids
-	loadmodel->brushq1.numtextures = m->nummiptex + 2;
+	if (l->filelen)
+	{
+		m = (dmiptexlump_t *)(mod_base + l->fileofs);
+		m->nummiptex = LittleLong (m->nummiptex);
+		loadmodel->brushq1.numtextures = m->nummiptex + 2;
+	}
+	else
+	{
+		m = NULL;
+		loadmodel->brushq1.numtextures = 2;
+	}
+
 	loadmodel->brushq1.textures = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numtextures * sizeof(texture_t));
 
 	// fill out all slots with notexture
@@ -765,6 +769,9 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 		tx->currentframe = tx;
 	}
+
+	if (!m)
+		return;
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
 	dofs = m->dataofs;
