@@ -334,39 +334,39 @@ typedef struct portalrecursioninfo_s
 }
 portalrecursioninfo_t;
 
-void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark, int numleaffaces, int firstclipplane, int numclipplanes)
+void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark, int numleafsurfaces, int firstclipplane, int numclipplanes)
 {
 	int i, j, *elements;
 	vec3_t trimins, trimaxs;
-	msurface_t *surf;
-	for (i = 0;i < numleaffaces;i++, mark++)
+	msurface_t *surface;
+	for (i = 0;i < numleafsurfaces;i++, mark++)
 	{
 		if (!info->surfacemark[*mark])
 		{
 			// FIXME?  this assumes q1bsp polygon surfaces
-			surf = info->model->brushq1.surfaces + *mark;
-			if (surf->mesh.num_vertices)
+			surface = info->model->brushq1.surfaces + *mark;
+			if (surface->mesh.num_vertices)
 			{
-				if (surf->flags & SURF_PLANEBACK)
+				if (surface->flags & SURF_PLANEBACK)
 				{
-					if (DotProduct(info->eye, surf->plane->normal) > surf->plane->dist)
+					if (DotProduct(info->eye, surface->plane->normal) > surface->plane->dist)
 						continue;
 				}
 				else
 				{
-					if (DotProduct(info->eye, surf->plane->normal) < surf->plane->dist)
+					if (DotProduct(info->eye, surface->plane->normal) < surface->plane->dist)
 						continue;
 				}
-				if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, surf->mesh.data_vertex3f, surf->mesh.num_vertices, &portaltemppoints2[0][0], 256) < 3)
+				if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, surface->mesh.data_vertex3f, surface->mesh.num_vertices, &portaltemppoints2[0][0], 256) < 3)
 					continue;
 			}
 			else
 			{
-				for (j = 0, elements = surf->mesh.data_element3i;j < surf->mesh.num_triangles;j++, elements += 3)
+				for (j = 0, elements = surface->mesh.data_element3i;j < surface->mesh.num_triangles;j++, elements += 3)
 				{
-					VectorCopy((surf->mesh.data_vertex3f + elements[0] * 3), trianglepoints[0]);
-					VectorCopy((surf->mesh.data_vertex3f + elements[1] * 3), trianglepoints[1]);
-					VectorCopy((surf->mesh.data_vertex3f + elements[2] * 3), trianglepoints[2]);
+					VectorCopy((surface->mesh.data_vertex3f + elements[0] * 3), trianglepoints[0]);
+					VectorCopy((surface->mesh.data_vertex3f + elements[1] * 3), trianglepoints[1]);
+					VectorCopy((surface->mesh.data_vertex3f + elements[2] * 3), trianglepoints[2]);
 					if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2]))
 					{
 						trimins[0] = min(trianglepoints[0][0], min(trianglepoints[1][0], trianglepoints[2][0]));
@@ -380,7 +380,7 @@ void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark,
 								break;
 					}
 				}
-				if (j == surf->mesh.num_triangles)
+				if (j == surface->mesh.num_triangles)
 					continue;
 			}
 			info->surfacemark[*mark] = true;
@@ -406,13 +406,13 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 		info->leafmark[leaf - info->model->brush.data_leafs] = true;
 
 	// mark surfaces in leaf that can be seen through portal
-	if (leaf->numleaffaces && info->surfacemark)
+	if (leaf->numleafsurfaces && info->surfacemark)
 	{
 		if (info->exact)
-			Portal_RecursiveFlow_ExactLeafFaces(info, leaf->firstleafface, leaf->numleaffaces, firstclipplane, numclipplanes);
+			Portal_RecursiveFlow_ExactLeafFaces(info, leaf->firstleafsurface, leaf->numleafsurfaces, firstclipplane, numclipplanes);
 		else
-			for (i = 0;i < leaf->numleaffaces;i++)
-				info->surfacemark[leaf->firstleafface[i]] = true;
+			for (i = 0;i < leaf->numleafsurfaces;i++)
+				info->surfacemark[leaf->firstleafsurface[i]] = true;
 	}
 
 	// follow portals into other leafs

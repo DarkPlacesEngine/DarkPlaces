@@ -194,30 +194,30 @@ static void mod_shutdown(void)
 
 static void mod_newmap(void)
 {
-	msurface_t *surf;
-	int i, surfnum, ssize, tsize;
+	msurface_t *surface;
+	int i, surfacenum, ssize, tsize;
 
 	if (!cl_stainmaps_clearonload.integer)
 		return;
 
-	for (i=0; i<MAX_MOD_KNOWN; i++)
+	for (i = 0;i < MAX_MOD_KNOWN;i++)
 	{
 		if (mod_known[i].name[0] && mod_known[i].type == mod_brushq1)
 		{
-			for (surfnum=0, surf=mod_known[i].brushq1.surfaces; surfnum<mod_known[i].brushq1.numsurfaces;surfnum++, surf++)
+			for (surfacenum = 0, surface = mod_known[i].brushq1.surfaces;surfacenum < mod_known[i].brushq1.numsurfaces;surfacenum++, surface++)
 			{
-				if (surf->texinfo->texture->flags & SURF_LIGHTMAP)
+				if (surface->texinfo->texture->flags & SURF_LIGHTMAP)
 				{
-					ssize = (surf->extents[0] >> 4) + 1;
-					tsize = (surf->extents[1] >> 4) + 1;
+					ssize = (surface->extents[0] >> 4) + 1;
+					tsize = (surface->extents[1] >> 4) + 1;
 
 					if (ssize > 256 || tsize > 256)
 						Host_Error("Bad surface extents");
 
-					if (surf->stainsamples)
-						memset(surf->stainsamples, 255, ssize * tsize * 3);
+					if (surface->stainsamples)
+						memset(surface->stainsamples, 255, ssize * tsize * 3);
 
-					surf->cached_dlight = true;
+					surface->cached_dlight = true;
 				}
 			}
 		}

@@ -201,8 +201,8 @@ typedef struct model_brush_s
 	int num_leafbrushes;
 	int *data_leafbrushes;
 
-	int num_leaffaces;
-	int *data_leaffaces;
+	int num_leafsurfaces;
+	int *data_leafsurfaces;
 
 	int num_portals;
 	mportal_t *data_portals;

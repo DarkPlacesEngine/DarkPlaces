@@ -200,23 +200,23 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 	// check if leaf is visible according to pvs
 	leaf = (mleaf_t *)node;
 	i = leaf->clusterindex;
-	if (leaf->numleaffaces && (i >= pvsbits || CHECKPVSBIT(pvs, i)))
+	if (leaf->numleafsurfaces && (i >= pvsbits || CHECKPVSBIT(pvs, i)))
 	{
 		int d, impacts, impactt;
 		float sdist, maxdist, dist2, impact[3];
-		msurface_t *surf;
+		msurface_t *surface;
 		// mark the polygons
 		maxdist = light->rtlight.lightmap_cullradius2;
-		for (i = 0;i < leaf->numleaffaces;i++)
+		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
-			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[leaf->firstleafface[i]])
+			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[leaf->firstleafsurface[i]])
 				continue;
-			surf = ent->model->brushq1.surfaces + leaf->firstleafface[i];
-			dist = sdist = PlaneDiff(lightorigin, surf->plane);
-			if (surf->flags & SURF_PLANEBACK)
+			surface = ent->model->brushq1.surfaces + leaf->firstleafsurface[i];
+			dist = sdist = PlaneDiff(lightorigin, surface->plane);
+			if (surface->flags & SURF_PLANEBACK)
 				dist = -dist;
 
-			if (dist < -0.25f && !(surf->flags & SURF_LIGHTBOTHSIDES))
+			if (dist < -0.25f && !(surface->flags & SURF_LIGHTBOTHSIDES))
 				continue;
 
 			dist2 = dist * dist;
@@ -224,32 +224,32 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 				continue;
 
 			VectorCopy(lightorigin, impact);
-			if (surf->plane->type >= 3)
-				VectorMA(impact, -sdist, surf->plane->normal, impact);
+			if (surface->plane->type >= 3)
+				VectorMA(impact, -sdist, surface->plane->normal, impact);
 			else
-				impact[surf->plane->type] -= sdist;
+				impact[surface->plane->type] -= sdist;
 
-			impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+			impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
 
-			d = bound(0, impacts, surf->extents[0] + 16) - impacts;
+			d = bound(0, impacts, surface->extents[0] + 16) - impacts;
 			dist2 += d * d;
 			if (dist2 > maxdist)
 				continue;
 
-			impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+			impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
 
-			d = bound(0, impactt, surf->extents[1] + 16) - impactt;
+			d = bound(0, impactt, surface->extents[1] + 16) - impactt;
 			dist2 += d * d;
 			if (dist2 > maxdist)
 				continue;
 
-			if (surf->dlightframe != r_framecount) // not dynamic until now
+			if (surface->dlightframe != r_framecount) // not dynamic until now
 			{
-				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-				surf->dlightframe = r_framecount;
-				surf->cached_dlight = true;
+				surface->dlightbits[0] = surface->dlightbits[1] = surface->dlightbits[2] = surface->dlightbits[3] = surface->dlightbits[4] = surface->dlightbits[5] = surface->dlightbits[6] = surface->dlightbits[7] = 0;
+				surface->dlightframe = r_framecount;
+				surface->cached_dlight = true;
 			}
-			surf->dlightbits[bitindex] |= bit;
+			surface->dlightbits[bitindex] |= bit;
 		}
 	}
 }
