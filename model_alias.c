@@ -611,25 +611,25 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 
-	if (LittleLong(pinmodel->num_tris < 1) || LittleLong(pinmodel->num_tris) > (65536 / 3))
+	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > (65536 / 3))
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
-	if (LittleLong(pinmodel->num_xyz < 1) || LittleLong(pinmodel->num_xyz) > 65536)
+	if (LittleLong(pinmodel->num_xyz) < 1 || LittleLong(pinmodel->num_xyz) > 65536)
 		Host_Error ("%s has invalid number of vertices: %i", loadmodel->name, LittleLong(pinmodel->num_xyz));
-	if (LittleLong(pinmodel->num_frames < 1) || LittleLong(pinmodel->num_frames) > 65536)
+	if (LittleLong(pinmodel->num_frames) < 1 || LittleLong(pinmodel->num_frames) > 65536)
 		Host_Error ("%s has invalid number of frames: %i", loadmodel->name, LittleLong(pinmodel->num_frames));
-	if (LittleLong(pinmodel->num_skins < 0) || LittleLong(pinmodel->num_skins) > 256)
+	if (LittleLong(pinmodel->num_skins) < 0 || LittleLong(pinmodel->num_skins) > 256)
 		Host_Error ("%s has invalid number of skins: %i", loadmodel->name, LittleLong(pinmodel->num_skins));
 
 	end = LittleLong(pinmodel->ofs_end);
-	if (LittleLong(pinmodel->num_skins) >= 1 && (LittleLong(pinmodel->ofs_skins <= 0) || LittleLong(pinmodel->ofs_skins) >= end))
+	if (LittleLong(pinmodel->num_skins) >= 1 && (LittleLong(pinmodel->ofs_skins) <= 0 || LittleLong(pinmodel->ofs_skins) >= end))
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(pinmodel->ofs_st <= 0) || LittleLong(pinmodel->ofs_st) >= end)
+	if (LittleLong(pinmodel->ofs_st) <= 0 || LittleLong(pinmodel->ofs_st) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(pinmodel->ofs_tris <= 0) || LittleLong(pinmodel->ofs_tris) >= end)
+	if (LittleLong(pinmodel->ofs_tris) <= 0 || LittleLong(pinmodel->ofs_tris) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(pinmodel->ofs_frames <= 0) || LittleLong(pinmodel->ofs_frames) >= end)
+	if (LittleLong(pinmodel->ofs_frames) <= 0 || LittleLong(pinmodel->ofs_frames) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
-	if (LittleLong(pinmodel->ofs_glcmds <= 0) || LittleLong(pinmodel->ofs_glcmds) >= end)
+	if (LittleLong(pinmodel->ofs_glcmds) <= 0 || LittleLong(pinmodel->ofs_glcmds) >= end)
 		Host_Error ("%s is not a valid model", loadmodel->name);
 
 	loadmodel->alias.aliasnum_meshes = 1;
