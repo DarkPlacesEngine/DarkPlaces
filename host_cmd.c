@@ -1673,6 +1673,7 @@ void Host_Stopdemo_f (void)
 	if (!cls.demoplayback)
 		return;
 	CL_Disconnect ();
+	Host_ShutdownServer (false);
 }
 
 static void MaxPlayers_f(void)

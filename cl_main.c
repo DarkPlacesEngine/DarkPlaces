@@ -159,6 +159,8 @@ void CL_Disconnect(void)
 	if (cls.state == ca_dedicated)
 		return;
 
+	Con_DPrintf("CL_Disconnect\n");
+
 // stop sounds (especially looping!)
 	S_StopAllSounds (true);
 
@@ -184,13 +186,6 @@ void CL_Disconnect(void)
 		SZ_Clear(&cls.message);
 		NetConn_Close(cls.netcon);
 		cls.netcon = NULL;
-		// if running a local server, shut it down
-		if (sv.active)
-		{
-			// prevent this code from executing again during Host_ShutdownServer
-			cls.state = ca_disconnected;
-			Host_ShutdownServer(false);
-		}
 	}
 	cls.state = ca_disconnected;
 

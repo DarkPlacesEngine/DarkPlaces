@@ -465,6 +465,7 @@ void CL_SendMove(usercmd_t *cmd)
 	{
 		Con_Print("CL_SendMove: lost server connection\n");
 		CL_Disconnect();
+		Host_ShutdownServer(false);
 	}
 }
 
