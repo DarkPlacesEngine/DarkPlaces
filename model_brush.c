@@ -586,9 +586,9 @@ void Mod_LoadLightList(void)
 			}
 			e = loadmodel->lights + n;
 			*s = 0;
-			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %d", &e->origin[0], &e->origin[1], &e->origin[2], &e->falloff, &e->light[0], &e->light[1], &e->light[2], &e->subtract, &e->spotdir[0], &e->spotdir[1], &e->spotdir[2], &e->spotcone, &e->style);
+			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %f %d", &e->origin[0], &e->origin[1], &e->origin[2], &e->falloff, &e->light[0], &e->light[1], &e->light[2], &e->subtract, &e->spotdir[0], &e->spotdir[1], &e->spotdir[2], &e->spotcone, &e->distbias, &e->style);
 			*s = '\n';
-			if (a != 13)
+			if (a != 14)
 			{
 				Mem_Free(lightsstring);
 				Host_Error("invalid lights file, found %d parameters on line %i, should be 13 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone style)\n", a, n + 1);
@@ -1028,14 +1028,14 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 	subdivpolytriangles = 0;
 	subdivpolyverts = 0;
 	SubdividePolygon (surf->poly_numverts, surf->poly_verts);
+	if (subdivpolytriangles < 1)
+		Host_Error("Mod_GenerateWarpMesh: no triangles?\n");
 
-	mesh = &surf->mesh;
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + subdivpolytriangles * sizeof(int[3]) + subdivpolyverts * sizeof(surfvertex_t));
 	mesh->numverts = subdivpolyverts;
 	mesh->numtriangles = subdivpolytriangles;
-	if (mesh->numtriangles < 1)
-		Host_Error("Mod_GenerateWarpMesh: no triangles?\n");
-	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)(mesh + 1);
+	mesh->index = (int *)(mesh->vertex + mesh->numverts);
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	for (i = 0;i < mesh->numtriangles;i++)
@@ -1069,11 +1069,11 @@ void Mod_GenerateVertexLitMesh (msurface_t *surf)
 	surf->lightmaptexturestride = 0;
 	surf->lightmaptexture = NULL;
 
-	mesh = &surf->mesh;
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * sizeof(surfvertex_t));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)(mesh + 1);
+	mesh->index = (int *)(mesh->vertex + mesh->numverts);
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	index = mesh->index;
@@ -1136,11 +1136,11 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 	xscale = (xscale - xbase) * 16.0 / ((surf->extents[0] & ~15) + 16);
 	yscale = (yscale - ybase) * 16.0 / ((surf->extents[1] & ~15) + 16);
 
-	mesh = &surf->mesh;
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * sizeof(surfvertex_t));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)(mesh + 1);
+	mesh->index = (int *)(mesh->vertex + mesh->numverts);
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	index = mesh->index;
@@ -1187,11 +1187,11 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	surf->lightmaptexturestride = 0;
 	surf->lightmaptexture = NULL;
 
-	mesh = &surf->mesh;
+	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + (surf->poly_numverts - 2) * sizeof(int[3]) + surf->poly_numverts * sizeof(surfvertex_t));
 	mesh->numverts = surf->poly_numverts;
 	mesh->numtriangles = surf->poly_numverts - 2;
-	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
-	mesh->vertex = (surfvertex_t *)((qbyte *) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	mesh->vertex = (surfvertex_t *)(mesh + 1);
+	mesh->index = (int *)(mesh->vertex + mesh->numverts);
 	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
 
 	index = mesh->index;
@@ -1229,6 +1229,55 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf)
 			vec = loadmodel->vertexes[loadmodel->edges[-lindex].v[1]].position;
 		VectorCopy (vec, vert);
 		vert += 3;
+	}
+}
+
+static void Mod_SplitSurfMeshIfTooBig(msurface_t *s)
+{
+	int j, base, tricount, newvertexcount, *index, *vertexremap;
+	surfmesh_t *newmesh, *oldmesh, *firstmesh;
+	if (s->mesh->numtriangles > 1000)
+	{
+		vertexremap = Mem_Alloc(tempmempool, s->mesh->numverts * sizeof(int));
+		memset(vertexremap, -1, s->mesh->numverts * sizeof(int));
+		base = 0;
+		oldmesh = NULL;
+		firstmesh = NULL;
+		newmesh = NULL;
+		while (base < s->mesh->numtriangles)
+		{
+			tricount = s->mesh->numtriangles - base;
+			if (tricount > 1000)
+				tricount = 1000;
+			index = s->mesh->index + base * 3;
+			base += tricount;
+
+			newvertexcount = 0;
+			for (j = 0;j < tricount * 3;j++)
+				if (vertexremap[index[j]] < 0)
+					vertexremap[index[j]] = newvertexcount++;
+
+			newmesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + newvertexcount * sizeof(surfvertex_t) + tricount * sizeof(int[3]));
+			newmesh->chain = NULL;
+			newmesh->numverts = newvertexcount;
+			newmesh->numtriangles = tricount;
+			newmesh->vertex = (surfvertex_t *)(newmesh + 1);
+			newmesh->index = (int *)(newmesh->vertex + newvertexcount);
+			for (j = 0;j < tricount * 3;j++)
+			{
+				newmesh->index[j] = vertexremap[index[j]];
+				// yes this copies the same vertex multiple times in many cases...  but that's ok...
+				memcpy(&newmesh->vertex[newmesh->index[j]], &s->mesh->vertex[index[j]], sizeof(surfvertex_t));
+			}
+			if (oldmesh)
+				oldmesh->chain = newmesh;
+			else
+				firstmesh = newmesh;
+			oldmesh = newmesh;
+		}
+		Mem_Free(vertexremap);
+		Mem_Free(s->mesh);
+		s->mesh = firstmesh;
 	}
 }
 
@@ -1299,10 +1348,8 @@ static void Mod_LoadFaces (lump_t *l)
 			out->shader = &Cshader_sky;
 			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
-			continue;
 		}
-
-		if (out->texinfo->texture->flags & SURF_DRAWTURB)
+		else if (out->texinfo->texture->flags & SURF_DRAWTURB)
 		{
 			out->shader = &Cshader_water;
 			/*
@@ -1314,43 +1361,45 @@ static void Mod_LoadFaces (lump_t *l)
 			*/
 			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
-			continue;
-		}
-
-		if (!R_TextureHasAlpha(out->texinfo->texture->texture))
-			out->flags |= SURF_CLIPSOLID;
-		if (out->texinfo->flags & TEX_SPECIAL)
-		{
-			// qbsp couldn't find the texture for this surface, but it was either turb or sky...  assume turb
-			out->shader = &Cshader_water;
-			out->shader = &Cshader_water;
-			out->samples = NULL;
-			Mod_GenerateWarpMesh (out);
-		}
-		else if ((out->extents[0]+1) > (256*16) || (out->extents[1]+1) > (256*16))
-		{
-			Con_Printf ("Bad surface extents, converting to fullbright polygon");
-			out->shader = &Cshader_wall_fullbright;
-			out->samples = NULL;
-			Mod_GenerateVertexMesh(out);
 		}
 		else
 		{
-			// stainmap for permanent marks on walls
-			out->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
-			// clear to white
-			memset(out->stainsamples, 255, ssize * tsize * 3);
-			if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
+			if (!R_TextureHasAlpha(out->texinfo->texture->texture))
+				out->flags |= SURF_CLIPSOLID;
+			if (out->texinfo->flags & TEX_SPECIAL)
 			{
-				out->shader = &Cshader_wall_vertex;
-				Mod_GenerateVertexLitMesh(out);
+				// qbsp couldn't find the texture for this surface, but it was either turb or sky...  assume turb
+				out->shader = &Cshader_water;
+				out->shader = &Cshader_water;
+				out->samples = NULL;
+				Mod_GenerateWarpMesh (out);
+			}
+			else if ((out->extents[0]+1) > (256*16) || (out->extents[1]+1) > (256*16))
+			{
+				Con_Printf ("Bad surface extents, converting to fullbright polygon");
+				out->shader = &Cshader_wall_fullbright;
+				out->samples = NULL;
+				Mod_GenerateVertexMesh(out);
 			}
 			else
 			{
-				out->shader = &Cshader_wall_lightmap;
-				Mod_GenerateLightmappedMesh(out);
+				// stainmap for permanent marks on walls
+				out->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+				// clear to white
+				memset(out->stainsamples, 255, ssize * tsize * 3);
+				if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
+				{
+					out->shader = &Cshader_wall_vertex;
+					Mod_GenerateVertexLitMesh(out);
+				}
+				else
+				{
+					out->shader = &Cshader_wall_lightmap;
+					Mod_GenerateLightmappedMesh(out);
+				}
 			}
 		}
+		Mod_SplitSurfMeshIfTooBig(out);
 	}
 }
 

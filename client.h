@@ -29,57 +29,96 @@ frameblend_t;
 // LordHavoc: nothing in this structure is persistant, it may be overwritten by the client every frame, for persistant data use entity_lerp_t.
 typedef struct entity_render_s
 {
-	vec3_t	origin;			// location
-	vec3_t	angles;			// orientation
-	float	alpha;			// opacity (alpha) of the model
-	float	scale;			// size the model is shown
+	// location
+	vec3_t origin;
+	// orientation
+	vec3_t angles;
+	// opacity (alpha) of the model
+	float alpha;
+	// size the model is shown
+	float scale;
 
-	model_t	*model;			// NULL = no model
-	int		frame;			// current uninterpolated animation frame (for things which do not use interpolation)
-	int		colormap;		// entity shirt and pants colors
-	int		effects;		// light, particles, etc
-	int		skinnum;		// for Alias models
-	int		flags;			// render flags
+	// NULL = no model
+	model_t *model;
+	// current uninterpolated animation frame (for things which do not use interpolation)
+	int frame;
+	// entity shirt and pants colors
+	int colormap;
+	// light, particles, etc
+	int effects;
+	// for Alias models
+	int skinnum;
+	// render flags
+	int flags;
 
 	// these are copied from the persistent data
-	int		frame1;			// frame that the model is interpolating from
-	int		frame2;			// frame that the model is interpolating to
-	double	framelerp;		// interpolation factor, usually computed from frame2time
-	double	frame1time;		// time frame1 began playing (for framegroup animations)
-	double	frame2time;		// time frame2 began playing (for framegroup animations)
+
+	// frame that the model is interpolating from
+	int frame1;
+	// frame that the model is interpolating to
+	int frame2;
+	// interpolation factor, usually computed from frame2time
+	double framelerp;
+	// time frame1 began playing (for framegroup animations)
+	double frame1time;
+	// time frame2 began playing (for framegroup animations)
+	double frame2time;
 
 	// calculated by the renderer (but not persistent)
-	int		visframe;		// if visframe == r_framecount, it is visible
-	vec3_t	mins, maxs;		// calculated during R_AddModelEntities
-	frameblend_t	frameblend[4]; // 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
+
+	// if visframe == r_framecount, it is visible
+	int visframe;
+	// calculated during R_AddModelEntities
+	vec3_t mins, maxs;
+	// 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
+	frameblend_t frameblend[4];
 }
 entity_render_t;
 
 typedef struct entity_persistent_s
 {
 	// particles
-	vec3_t	trail_origin;	// trail rendering
-	float	trail_time;		// trail rendering
+
+	// trail rendering
+	vec3_t trail_origin;
+	float trail_time;
+
+	// effects
+
+	// muzzleflash fading
+	float muzzleflash;
 
 	// interpolated animation
-	int		modelindex;		// lerp resets when model changes
-	int		frame1;			// frame that the model is interpolating from
-	int		frame2;			// frame that the model is interpolating to
-	double	framelerp;		// interpolation factor, usually computed from frame2time
-	double	frame1time;		// time frame1 began playing (for framegroup animations)
-	double	frame2time;		// time frame2 began playing (for framegroup animations)
+
+	// lerp resets when model changes
+	int modelindex;
+	// frame that the model is interpolating from
+	int frame1;
+	// frame that the model is interpolating to
+	int frame2;
+	// interpolation factor, usually computed from frame2time
+	double framelerp;
+	// time frame1 began playing (for framegroup animations)
+	double frame1time;
+	// time frame2 began playing (for framegroup animations)
+	double frame2time;
 }
 entity_persistent_t;
 
 typedef struct entity_s
 {
-	entity_state_t state_baseline;	// baseline state (default values)
-	entity_state_t state_previous;	// previous state (interpolating from this)
-	entity_state_t state_current;	// current state (interpolating to this)
+	// baseline state (default values)
+	entity_state_t state_baseline;
+	// previous state (interpolating from this)
+	entity_state_t state_previous;
+	// current state (interpolating to this)
+	entity_state_t state_current;
 
-	entity_persistent_t persistent; // used for regenerating parts of render
+	// used for regenerating parts of render
+	entity_persistent_t persistent;
 
-	entity_render_t render; // the only data the renderer should know about
+	// the only data the renderer should know about
+	entity_render_t render;
 }
 entity_t;
 
