@@ -877,6 +877,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_swap_control", swapcontrolfuncs, "-novideosync", false);
 
 	vid_usingmouse = false;
+	vid_usingvsync = false;
 	ignoremousemove = true;
 	vid_hidden = false;
 	vid_activewindow = true;
