@@ -712,6 +712,7 @@ static entity_state_t *sendentitiesindex[MAX_EDICTS];
 void SV_PrepareEntitiesForSending(void)
 {
 	int e, i;
+	float f;
 	edict_t *ent;
 	entity_state_t cs;
 	// send all entities that touch the pvs
@@ -749,25 +750,33 @@ void SV_PrepareEntitiesForSending(void)
 		if (i >= 1 && i < MAX_MODELS && *PR_GetString(ent->v->model))
 			cs.modelindex = i;
 
-
 		cs.alpha = 255;
-		i = (int)(GETEDICTFIELDVALUE(ent, eval_alpha)->_float * 255.0f);
-		if (i)
+		f = (GETEDICTFIELDVALUE(ent, eval_alpha)->_float * 255.0f);
+		if (f)
+		{
+			i = (int)f;
 			cs.alpha = (qbyte)bound(0, i, 255);
+		}
 		// halflife
-		i = (int)(GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
-		if (i)
+		f = (GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
+		if (f)
+		{
+			i = (int)f;
 			cs.alpha = (qbyte)bound(0, i, 255);
+		}
 
 		cs.scale = 16;
-		i = (int)(GETEDICTFIELDVALUE(ent, eval_scale)->_float * 16.0f);
-		if (i)
+		f = (GETEDICTFIELDVALUE(ent, eval_scale)->_float * 16.0f);
+		if (f)
+		{
+			i = (int)f;
 			cs.scale = (qbyte)bound(0, i, 255);
+		}
 
 		cs.glowcolor = 254;
-		i = (int)(GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
-		if (i)
-			cs.glowcolor = i;
+		f = (GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
+		if (f)
+			cs.glowcolor = (int)f;
 
 		if (GETEDICTFIELDVALUE(ent, eval_fullbright)->_float)
 			cs.effects |= EF_FULLBRIGHT;
