@@ -365,82 +365,76 @@ void CL_ParseServerInfo (void)
 		Con_Printf ("%c%s\n", 2, str);
 	}
 
-//
-// first we go through and touch all of the precache data that still
-// happens to be in the cache, so precaching something else doesn't
-// needlessly purge it
-//
-
+	// check memory integrity
 	Mem_CheckSentinelsGlobal();
-
-	Mod_ClearUsed();
 
 	// disable until we get textures for it
 	R_ResetSkyBox();
 
-// precache models
 	memset (cl.model_precache, 0, sizeof(cl.model_precache));
+	memset (cl.sound_precache, 0, sizeof(cl.sound_precache));
+
+	// touch all of the precached models that are still loaded so we can free
+	// anything that isn't needed
+	Mod_ClearUsed();
 	for (nummodels=1 ; ; nummodels++)
 	{
+		CL_KeepaliveMessage ();
 		str = MSG_ReadString ();
 		if (!str[0])
 			break;
 		if (nummodels==MAX_MODELS)
-		{
 			Host_Error ("Server sent too many model precaches\n");
-			return;
-		}
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strcpy (model_precache[nummodels], str);
 		Mod_TouchModel (str);
 	}
 
-// precache sounds
-	memset (cl.sound_precache, 0, sizeof(cl.sound_precache));
+	// do the same for sounds
 	for (numsounds=1 ; ; numsounds++)
 	{
+		CL_KeepaliveMessage ();
 		str = MSG_ReadString ();
 		if (!str[0])
 			break;
 		if (numsounds==MAX_SOUNDS)
-		{
 			Host_Error ("Server sent too many sound precaches\n");
-			return;
-		}
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strcpy (sound_precache[numsounds], str);
 		S_TouchSound (str);
 	}
 
+	// purge anything that was not touched
 	Mod_PurgeUnused();
 
-//
-// now we try to load everything else until a cache allocation fails
-//
+	// now we try to load everything that is new
 
-	for (i=1 ; i<nummodels ; i++)
+	// world model
+	CL_KeepaliveMessage ();
+	cl.model_precache[1] = Mod_ForName (model_precache[1], false, false, true);
+	if (cl.model_precache[1] == NULL)
+		Con_Printf("Map %s not found\n", model_precache[1]);
+
+	// normal models
+	for (i=2 ; i<nummodels ; i++)
 	{
-		// LordHavoc: i == 1 means the first model is the world model
-		cl.model_precache[i] = Mod_ForName (model_precache[i], false, false, i == 1);
-		if (cl.model_precache[i] == NULL)
-		{
-			Con_Printf("Model %s not found\n", model_precache[i]);
-			//return;
-		}
 		CL_KeepaliveMessage ();
+		if ((cl.model_precache[i] = Mod_ForName (model_precache[i], false, false, false)) == NULL)
+			Con_Printf("Model %s not found\n", model_precache[i]);
 	}
 
+	// sounds
 	S_BeginPrecaching ();
 	for (i=1 ; i<numsounds ; i++)
 	{
-		cl.sound_precache[i] = S_PrecacheSound (sound_precache[i], true);
 		CL_KeepaliveMessage ();
+		cl.sound_precache[i] = S_PrecacheSound (sound_precache[i], true);
 	}
 	S_EndPrecaching ();
 
-// local state
+	// local state
 	ent = &cl_entities[0];
 	// entire entity array was cleared, so just fill in a few fields
 	ent->state_current.active = true;
@@ -456,10 +450,11 @@ void CL_ParseServerInfo (void)
 	R_NewMap ();
 	CL_CGVM_Start();
 
-	noclip_anglehack = false;		// noclip is turned off at start
+	// noclip is turned off at start
+	noclip_anglehack = false;
 
+	// check memory integrity
 	Mem_CheckSentinelsGlobal();
-
 }
 
 void CL_ValidateState(entity_state_t *s)
