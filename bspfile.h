@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19,31 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 
-// upper design bounds
-
 #define	MAX_MAP_HULLS		4
-
-#define	MAX_MAP_MODELS		256
-#define	MAX_MAP_BRUSHES		4096
-#define	MAX_MAP_ENTITIES	1024
-#define	MAX_MAP_ENTSTRING	65536
-
-#define	MAX_MAP_PLANES		32767
-#define	MAX_MAP_NODES		32767		// because negative shorts are contents
-#define	MAX_MAP_CLIPNODES	32767		//
-#define	MAX_MAP_LEAFS		32767		// was 8192
-#define	MAX_MAP_VERTS		65535
-#define	MAX_MAP_FACES		65535
-#define	MAX_MAP_MARKSURFACES 65535
-#define	MAX_MAP_TEXINFO		4096
-#define	MAX_MAP_EDGES		256000
-#define	MAX_MAP_SURFEDGES	512000
-#define	MAX_MAP_TEXTURES	512
-#define	MAX_MAP_MIPTEX		0x200000
-#define	MAX_MAP_LIGHTING	0x100000
-#define	MAX_MAP_VISIBILITY	0x100000
-
-#define	MAX_MAP_PORTALS		65536
+#define	MAX_MAP_LEAFS		65536	// was 8192
 
 // key / value pair sizes
 
@@ -76,7 +53,6 @@ typedef struct
 #define	LUMP_EDGES		12
 #define	LUMP_SURFEDGES	13
 #define	LUMP_MODELS		14
-
 #define	HEADER_LUMPS	15
 
 typedef struct
@@ -90,7 +66,7 @@ typedef struct
 
 typedef struct
 {
-	int			version;	
+	int			version;
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
@@ -171,7 +147,7 @@ typedef struct
 } dclipnode_t;
 
 
-typedef struct texinfo_s
+typedef struct
 {
 	float		vecs[2][4];		// [s/t][xyz offset]
 	int			miptex;
@@ -189,11 +165,12 @@ typedef struct
 #define	MAXLIGHTMAPS	4
 typedef struct
 {
-	short		planenum;
+	// LordHavoc: changed from short to unsigned short for q2 support
+	unsigned short	planenum;
 	short		side;
 
 	int			firstedge;		// we must support > 64k edges
-	short		numedges;	
+	short		numedges;
 	short		texinfo;
 
 // lighting info
@@ -225,102 +202,4 @@ typedef struct
 
 	qbyte		ambient_level[NUM_AMBIENTS];
 } dleaf_t;
-
-
-//============================================================================
-
-#ifndef QUAKE_GAME
-
-#define	ANGLE_UP	-1
-#define	ANGLE_DOWN	-2
-
-
-// the utilities get to be lazy and just use large static arrays
-
-extern	int			nummodels;
-extern	dmodel_t	dmodels[MAX_MAP_MODELS];
-
-extern	int			visdatasize;
-extern	qbyte		dvisdata[MAX_MAP_VISIBILITY];
-
-extern	int			lightdatasize;
-extern	qbyte		dlightdata[MAX_MAP_LIGHTING];
-
-extern	int			texdatasize;
-extern	qbyte		dtexdata[MAX_MAP_MIPTEX]; // (dmiptexlump_t)
-
-extern	int			entdatasize;
-extern	char		dentdata[MAX_MAP_ENTSTRING];
-
-extern	int			numleafs;
-extern	dleaf_t		dleafs[MAX_MAP_LEAFS];
-
-extern	int			numplanes;
-extern	dplane_t	dplanes[MAX_MAP_PLANES];
-
-extern	int			numvertexes;
-extern	dvertex_t	dvertexes[MAX_MAP_VERTS];
-
-extern	int			numnodes;
-extern	dnode_t		dnodes[MAX_MAP_NODES];
-
-extern	int			numtexinfo;
-extern	texinfo_t	texinfo[MAX_MAP_TEXINFO];
-
-extern	int			numfaces;
-extern	dface_t		dfaces[MAX_MAP_FACES];
-
-extern	int			numclipnodes;
-extern	dclipnode_t	dclipnodes[MAX_MAP_CLIPNODES];
-
-extern	int			numedges;
-extern	dedge_t		dedges[MAX_MAP_EDGES];
-
-extern	int			nummarksurfaces;
-extern	unsigned short	dmarksurfaces[MAX_MAP_MARKSURFACES];
-
-extern	int			numsurfedges;
-extern	int			dsurfedges[MAX_MAP_SURFEDGES];
-
-
-void DecompressVis (qbyte *in, qbyte *decompressed);
-int CompressVis (qbyte *vis, qbyte *dest);
-
-void	LoadBSPFile (char *filename);
-void	WriteBSPFile (char *filename);
-void	PrintBSPFileSizes (void);
-
-//===============
-
-
-typedef struct epair_s
-{
-	struct epair_s	*next;
-	char	*key;
-	char	*value;
-} epair_t;
-
-typedef struct
-{
-	vec3_t		origin;
-	int			firstbrush;
-	int			numbrushes;
-	epair_t		*epairs;
-} entity_t;
-
-extern	entity_t	entities[MAX_MAP_ENTITIES];
-
-void	ParseEntities (void);
-void	UnparseEntities (void);
-
-void 	SetKeyValue (entity_t *ent, char *key, char *value);
-char 	*ValueForKey (entity_t *ent, char *key);
-// will return "" if not present
-
-vec_t	FloatForKey (entity_t *ent, char *key);
-void 	GetVectorForKey (entity_t *ent, char *key, vec3_t vec);
-
-epair_t *ParseEpair (void);
-
-#endif
 

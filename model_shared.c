@@ -141,6 +141,7 @@ Mod_Init
 ===============
 */
 static void Mod_Print (void);
+static void Mod_Precache (void);
 void Mod_Init (void)
 {
 	Mod_BrushInit();
@@ -148,6 +149,7 @@ void Mod_Init (void)
 	Mod_SpriteInit();
 
 	Cmd_AddCommand ("modellist", Mod_Print);
+	Cmd_AddCommand ("modelprecache", Mod_Precache);
 }
 
 void Mod_RenderInit(void)
@@ -423,6 +425,19 @@ static void Mod_Print (void)
 	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
 		if (mod->name[0])
 			Con_Printf ("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
+}
+
+/*
+================
+Mod_Precache
+================
+*/
+static void Mod_Precache (void)
+{
+	if (Cmd_Argc() == 2)
+		Mod_ForName(Cmd_Argv(1), false, true, cl.worldmodel && !strcasecmp(Cmd_Argv(1), cl.worldmodel->name));
+	else
+		Con_Printf("usage: modelprecache <filename>\n");
 }
 
 int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end, int ignore)
