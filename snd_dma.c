@@ -1087,7 +1087,13 @@ void S_SoundList(void)
 		{
 			size = sfx->mempool->totalsize;
 			total += size;
-			Con_Printf("%c(%2db) %7i : %s\n", sfx->loopstart >= 0 ? 'L' : ' ', sfx->format.width * 8, size, sfx->name);
+			Con_Printf ("%c%c(%2db, %6s) %8i : %s\n",
+						(sfx->loopstart >= 0) ? 'L' : ' ',
+						(sfx->flags & SFXFLAG_STREAMED) ? 'S' : ' ',
+						sfx->format.width * 8,
+						(sfx->format.channels == 2) ? "stereo" : "mono",
+						size,
+						sfx->name);
 		}
 	}
 	Con_Printf("Total resident: %i\n", total);

@@ -555,6 +555,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->format.width = 2;  // We always work with 16 bits samples
 		s->format.channels = vi->channels;
 		s->loopstart = -1;
+		s->flags |= SFXFLAG_STREAMED;
 		s->total_length = (size_t)len / (vi->channels * 2) * (float)(shm->format.speed / vi->rate);
 	}
 	else
@@ -590,6 +591,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->format.width = 2;  // We always work with 16 bits samples
 		s->format.channels = vi->channels;
 		s->loopstart = -1;
+		s->flags &= ~SFXFLAG_STREAMED;
 
 		sb->length = ResampleSfx (buff, (size_t)done / (vi->channels * 2), &s->format, sb->data, s->name);
 		s->format.speed = shm->format.speed;

@@ -43,6 +43,7 @@ typedef struct
 #define SFXFLAG_NONE			0
 #define SFXFLAG_SILENTLYMISSING	(1 << 0) // if the sfx is missing and loaded with complain = false
 #define SFXFLAG_USED			(1 << 1)
+#define SFXFLAG_STREAMED		(1 << 2) // informative only. You shouldn't need to know that
 
 typedef struct snd_fetcher_s snd_fetcher_t;
 typedef struct sfx_s
