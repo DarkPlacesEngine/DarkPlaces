@@ -7,7 +7,7 @@
 int		image_width;
 int		image_height;
 
-#if 0
+#if 1
 // written by LordHavoc in a readable way, optimized by Vic, further optimized by LordHavoc (the non-special index case), readable version preserved below this
 void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
@@ -32,7 +32,7 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int 
 		else
 		{
 			for (y = 0, line = inpixels + row_ofs; y < inputheight; y++, line += row_inc)
-				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += 3)
+				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += numinputcomponents)
 					for (c = 0; c < numoutputcomponents; c++)
 						outpixels[c] = ((index = outputinputcomponentindices[c]) & 0x80000000) ? index : in[index];
 		}
@@ -50,7 +50,7 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int 
 		else
 		{
 			for (y = 0, line = inpixels + row_ofs; y < inputheight; y++, line += row_inc)
-				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += 3)
+				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += numinputcomponents)
 					for (c = 0; c < numoutputcomponents; c++)
 						outpixels[c] = in[outputinputcomponentindices[c]];
 		}
