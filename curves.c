@@ -340,7 +340,7 @@ float QuadraticSplinePatchLargestDeviationOnX(int cpwidth, int cpheight, int com
 				bestsquareddeviation = squareddeviation;
 		}
 	}
-	return sqrt(bestsquareddeviation);
+	return (float)sqrt(bestsquareddeviation);
 }
 
 float QuadraticSplinePatchLargestDeviationOnY(int cpwidth, int cpheight, int components, const float *in)
@@ -363,7 +363,7 @@ float QuadraticSplinePatchLargestDeviationOnY(int cpwidth, int cpheight, int com
 				bestsquareddeviation = squareddeviation;
 		}
 	}
-	return sqrt(bestsquareddeviation);
+	return (float)sqrt(bestsquareddeviation);
 }
 
 int QuadraticSplinePatchSubdivisionLevelForDeviation(float deviation, float level1tolerance, int levellimit)
