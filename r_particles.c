@@ -232,7 +232,7 @@ void R_Particles_Init (void)
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
 }
 
-//int partindexarray[6] = {0, 1, 2, 0, 2, 3};
+int partindexarray[6] = {0, 1, 2, 0, 2, 3};
 
 void R_DrawParticles (void)
 {
@@ -266,14 +266,14 @@ void R_DrawParticles (void)
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	//m.numtriangles = 2;
-	//m.index = partindexarray;
-	//m.numverts = 4;
+	m.numtriangles = 2;
+	m.index = partindexarray;
+	m.numverts = 4;
 	m.vertex = &tvxyz[0][0];
-	//m.vertexstep = sizeof(float[4]);
+	m.vertexstep = sizeof(float[4]);
 	m.tex[0] = R_GetTexture(particlefonttexture);
 	m.texcoords[0] = &tvst[0][0];
-	//m.texcoordstep[0] = sizeof(float[2]);
+	m.texcoordstep[0] = sizeof(float[2]);
 
 	for (i = 0, r = r_refdef.particles;i < r_refdef.numparticles;i++, r++)
 	{
@@ -365,14 +365,14 @@ void R_DrawParticles (void)
 						m.cr *= ifog;
 						m.cg *= ifog;
 						m.cb *= ifog;
-						R_Mesh_DrawDecal(&m);
+						R_Mesh_Draw(&m);
 					}
 				}
 				else
-					R_Mesh_DrawDecal(&m);
+					R_Mesh_Draw(&m);
 			}
 			else
-				R_Mesh_DrawDecal(&m);
+				R_Mesh_Draw(&m);
 		}
 		else
 		{
@@ -400,7 +400,7 @@ void R_DrawParticles (void)
 						tvst[2][1] = texfog->t2;
 						tvst[3][0] = texfog->s2;
 						tvst[3][1] = texfog->t1;
-						R_Mesh_DrawDecal(&m);
+						R_Mesh_Draw(&m);
 					}
 					else
 					{
@@ -415,12 +415,12 @@ void R_DrawParticles (void)
 							m.cr += fogcolor[0] * fog;
 							m.cg += fogcolor[1] * fog;
 							m.cb += fogcolor[2] * fog;
-							R_Mesh_DrawDecal(&m);
+							R_Mesh_Draw(&m);
 						}
 						else
 						{
 							// render the first pass (alpha), then do additive fog
-							R_Mesh_DrawDecal(&m);
+							R_Mesh_Draw(&m);
 
 							m.blendfunc2 = GL_ONE;
 							m.cr = fogcolor[0];
@@ -435,15 +435,15 @@ void R_DrawParticles (void)
 							tvst[2][1] = texfog->t2;
 							tvst[3][0] = texfog->s2;
 							tvst[3][1] = texfog->t1;
-							R_Mesh_DrawDecal(&m);
+							R_Mesh_Draw(&m);
 						}
 					}
 				}
 				else
-					R_Mesh_DrawDecal(&m);
+					R_Mesh_Draw(&m);
 			}
 			else
-				R_Mesh_DrawDecal(&m);
+				R_Mesh_Draw(&m);
 		}
 	}
 }
