@@ -75,6 +75,7 @@ static void mod_start(void)
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
+	Mod_LoadModels();
 
 	Mod_SetupNoTexture();
 	Mod_BrushStartup();
@@ -270,6 +271,17 @@ void Mod_PurgeUnused(void)
 				Mod_FreeModel(mod);
 }
 
+void Mod_LoadModels(void)
+{
+	int i;
+	model_t *mod;
+
+	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
+		if (mod->name[0])
+			if (mod->used)
+				Mod_CheckLoaded(mod);
+}
+
 /*
 ==================
 Mod_FindName
@@ -368,4 +380,32 @@ static void Mod_Flush (void)
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
+	Mod_LoadModels();
+}
+
+int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end)
+{
+	int i;
+	for (i = 0;i < numtriangles;i++, elements += 3)
+	{
+		if (elements[0] == start && elements[1] == end)
+			return i;
+		if (elements[1] == start && elements[2] == end)
+			return i;
+		if (elements[2] == start && elements[0] == end)
+			return i;
+	}
+	return -1;
+}
+
+int *Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles)
+{
+	int i, *e, *n;
+	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
+	{
+		n[0] = Mod_FindTriangleWithEdge(elements, numtriangles, e[1], e[0]);
+		n[1] = Mod_FindTriangleWithEdge(elements, numtriangles, e[2], e[1]);
+		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2]);
+	}
+	return neighbors;
 }
