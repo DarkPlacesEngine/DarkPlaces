@@ -41,6 +41,11 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	matrix4x4_t matrix, imatrix;
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 
+	memset (&trace, 0 , sizeof(trace_t));
+	trace.fraction = 1;
+	trace.realfraction = 1;
+	VectorCopy (end, trace.endpos);
+
 	if (hitent)
 		*hitent = &cl_entities[0].render;
 	Mod_CheckLoaded(cl.worldmodel);
