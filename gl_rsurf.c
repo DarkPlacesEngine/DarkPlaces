@@ -249,7 +249,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 
 	// set to full bright if no light data
 		bl = intblocklights;
-		if ((ent->effects & EF_FULLBRIGHT) || !ent->model->brushq1.lightdata)
+		if (!ent->model->brushq1.lightdata)
 		{
 			for (i = 0;i < size3;i++)
 				bl[i] = 255*256;
@@ -337,7 +337,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 
 	// set to full bright if no light data
 		bl = floatblocklights;
-		if ((ent->effects & EF_FULLBRIGHT) || !ent->model->brushq1.lightdata)
+		if (!ent->model->brushq1.lightdata)
 			j = 255*256;
 		else
 			j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
@@ -1231,6 +1231,16 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 				R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->brushq1.surfaces);
 			}
 		}
+	}
+	else if (ent->effects & EF_FULLBRIGHT)
+	{
+		RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
+		if (r_detailtextures.integer)
+			RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+		if (texture->skin.glow)
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
 	else if (r_shadow_realtime_world.integer)
 	{

@@ -101,9 +101,9 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 0 darkplaces: make server able to work without models, just for sake of completeness
 0 darkplaces: make server queries use a queue to avoid flooding out queries too fast (Willis)
-0 darkplaces: make sure EF_FULLBRIGHT works on bmodels (FrikaC)
-0 darkplaces: make sure EF_FULLBRIGHT works on models (FrikaC)
-0 darkplaces: make sure EF_FULLBRIGHT works on sprites (FrikaC)
+-n darkplaces: make sure EF_FULLBRIGHT works on bmodels (FrikaC)
+-n darkplaces: make sure EF_FULLBRIGHT works on models (FrikaC)
+-n darkplaces: make sure EF_FULLBRIGHT works on sprites (FrikaC)
 0 darkplaces: make sure PR_SetString points NULL strings at pr_strings (which would be an offset of 0) (Fuh)
 0 darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 0 darkplaces: make sure r_fullbright works
