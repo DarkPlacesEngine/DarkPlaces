@@ -1917,8 +1917,23 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mfac
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(face->texture->skin.base);
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
-	m.texrgbscale[0] = 2;
-	GL_ColorPointer(face->data_color4f);
+	if (gl_combine.integer)
+	{
+		m.texrgbscale[0] = 2;
+		GL_ColorPointer(face->data_color4f);
+	}
+	else
+	{
+		int i;
+		for (i = 0;i < face->num_vertices;i++)
+		{
+			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * 2.0f;
+			varray_color4f[i*4+1] = face->data_color4f[i*4+1] * 2.0f;
+			varray_color4f[i*4+2] = face->data_color4f[i*4+2] * 2.0f;
+			varray_color4f[i*4+3] = face->data_color4f[i*4+3];
+		}
+		GL_ColorPointer(varray_color4f);
+	}
 	R_Mesh_State_Texture(&m);
 	GL_VertexPointer(face->data_vertex3f);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
@@ -1939,6 +1954,68 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
+void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
+{
+	const entity_render_t *ent = voident;
+	q3mface_t *face = ent->model->brushq3.data_faces + facenumber;
+	rmeshstate_t m;
+	R_Mesh_Matrix(&ent->matrix);
+	memset(&m, 0, sizeof(m));
+	if (ent->effects & EF_ADDITIVE)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+	// LordHavoc: quake3 was not able to do this; lit transparent surfaces
+	if (gl_combine.integer)
+	{
+		m.texrgbscale[0] = 2;
+		if (r_textureunits.integer >= 2)
+		{
+			m.tex[1] = R_GetTexture(face->lightmaptexture);
+			m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
+			GL_Color(1, 1, 1, ent->alpha);
+		}
+		else
+		{
+			if (ent->alpha == 1)
+				GL_ColorPointer(face->data_color4f);
+			else
+			{
+				int i;
+				for (i = 0;i < face->num_vertices;i++)
+				{
+					varray_color4f[i*4+0] = face->data_color4f[i*4+0];
+					varray_color4f[i*4+1] = face->data_color4f[i*4+1];
+					varray_color4f[i*4+2] = face->data_color4f[i*4+2];
+					varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
+				}
+				GL_ColorPointer(varray_color4f);
+			}
+		}
+	}
+	else
+	{
+		int i;
+		for (i = 0;i < face->num_vertices;i++)
+		{
+			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * 2.0f;
+			varray_color4f[i*4+1] = face->data_color4f[i*4+1] * 2.0f;
+			varray_color4f[i*4+2] = face->data_color4f[i*4+2] * 2.0f;
+			varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
+		}
+		GL_ColorPointer(varray_color4f);
+	}
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	qglDisable(GL_CULL_FACE);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+	qglEnable(GL_CULL_FACE);
+}
+
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	if (!face->num_triangles)
@@ -1950,10 +2027,18 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW)
 			return;
 	}
-	if (face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT)
-		qglDisable(GL_CULL_FACE);
-	R_Mesh_Matrix(&ent->matrix);
 	face->visframe = r_framecount;
+	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_TRANSPARENT) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
+	{
+		vec3_t facecenter, center;
+		facecenter[0] = (face->mins[0] + face->maxs[0]) * 0.5f;
+		facecenter[1] = (face->mins[1] + face->maxs[1]) * 0.5f;
+		facecenter[2] = (face->mins[2] + face->maxs[2]) * 0.5f;
+		Matrix4x4_Transform(&ent->matrix, facecenter, center);
+		R_MeshQueue_AddTransparent(center, R_Q3BSP_DrawFace_TransparentCallback, ent, face - ent->model->brushq3.data_faces);
+		return;
+	}
+	R_Mesh_Matrix(&ent->matrix);
 	if (r_shadow_realtime_world.integer)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(ent, face);
 	else if ((ent->effects & EF_FULLBRIGHT) || r_fullbright.integer)
@@ -1982,8 +2067,6 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 	}
 	if (r_ambient.value)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(ent, face);
-	if (face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT)
-		qglEnable(GL_CULL_FACE);
 }
 
 void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec3_t modelorg, qbyte *pvs, int markframe)
