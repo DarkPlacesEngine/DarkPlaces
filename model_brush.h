@@ -134,59 +134,48 @@ typedef struct
 }
 mtexinfo_t;
 
+struct q3meffect_s;
 typedef struct msurface_s
 {
 	// bounding box for onscreen checks
 	vec3_t mins;
 	vec3_t maxs;
-
-	// the node plane this is on, backwards if SURF_PLANEBACK flag set
-	mplane_t *plane;
-	// SURF_ flags
-	int flags;
-	// texture mapping properties used by this surface
-	mtexinfo_t *texinfo;
-
+	// the texture to use on the surface
+	texture_t *texture;
 	// the lightmap texture fragment to use on the rendering mesh
 	rtexture_t *lightmaptexture;
 	// mesh for rendering
 	surfmesh_t mesh;
-	// if lightmap settings changed, this forces update
-	int cached_dlight;
-
-	// surface number, to avoid having to do a divide to find the number of a surface from it's address
-	int number;
-
-	// index into d_lightstylevalue array, 255 means not used (black)
-	qbyte styles[MAXLIGHTMAPS];
-	// RGB lighting data [numstyles][height][width][3]
-	qbyte *samples;
-	// stain to apply on lightmap (soot/dirt/blood/whatever)
-	qbyte *stainsamples;
-	// the stride when building lightmaps to comply with fragment update
-	int lightmaptexturestride;
-	int texturemins[2];
-	int extents[2];
-
-	// if this == r_framecount there are dynamic lights on the surface
-	int dlightframe;
-	// which dynamic lights are touching this surface
-	// (only access this if dlightframe is current)
-	int dlightbits[8];
-	// avoid redundent addition of dlights
-	int lightframe;
-
-	// avoid multiple collision traces with a surface polygon
-	int colframe;
-
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
 
-	// currently used only for generating static shadow volumes
-	int lighttemp_castshadow;
+	// the node plane this is on, backwards if SURF_PLANEBACK flag set
+	mplane_t *plane; // q1bsp
+	// SURF_ flags
+	int flags; // q1bsp
+	// texture mapping properties used by this surface
+	mtexinfo_t *texinfo; // q1bsp
+	// if lightmap settings changed, this forces update
+	int cached_dlight; // q1bsp
+	// index into d_lightstylevalue array, 255 means not used (black)
+	qbyte styles[MAXLIGHTMAPS]; // q1bsp
+	// RGB lighting data [numstyles][height][width][3]
+	qbyte *samples; // q1bsp
+	// stain to apply on lightmap (soot/dirt/blood/whatever)
+	qbyte *stainsamples; // q1bsp
+	// the stride when building lightmaps to comply with fragment update
+	int lightmaptexturestride; // q1bsp
+	int texturemins[2]; // q1bsp
+	int extents[2]; // q1bsp
+	// if this == r_framecount there are dynamic lights on the surface
+	int dlightframe; // q1bsp
+	// which dynamic lights are touching this surface
+	// (only access this if dlightframe is current)
+	int dlightbits[8]; // q1bsp
 
-	// avoid redundent surface shadows
-	int shadowmark;
+	struct q3meffect_s *effect; // q3bsp
+	// FIXME: collisionmarkframe should be kept in a separate array
+	int collisionmarkframe; // q3bsp // don't collide twice in one trace
 }
 msurface_t;
 
@@ -772,14 +761,12 @@ q3dpvs_t;
 #define Q3TEXTUREFLAG_AUTOSPRITE2 32
 #define Q3TEXTUREFLAG_ALPHATEST 64
 
-struct q3msurface_s;
-
 typedef struct q3mmodel_s
 {
 	vec3_t mins;
 	vec3_t maxs;
 	int numsurfaces;
-	struct q3msurface_s *firstsurface;
+	struct msurface_s *firstsurface;
 	int numbrushes;
 	struct q3mbrush_s *firstbrush;
 }
@@ -808,30 +795,6 @@ typedef struct q3meffect_s
 	int unknown; // 5 or -1
 }
 q3meffect_t;
-
-typedef struct q3msurface_s
-{
-	// bounding box for culling
-	vec3_t mins;
-	vec3_t maxs;
-
-	// FIXME: collisionmarkframe should be kept in a separate array
-	// FIXME: shadowmark should be kept in a separate array
-
-	struct texture_s *texture;
-	struct q3meffect_s *effect;
-	rtexture_t *lightmaptexture;
-	int collisionmarkframe; // don't collide twice in one trace
-
-	surfmesh_t mesh;
-
-	// index into model->brush.shadowmesh
-	int num_firstshadowmeshtriangle;
-
-	// used for shadow volume generation
-	int shadowmark;
-}
-q3msurface_t;
 
 #define CHECKPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : false)
 #define SETPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : false)

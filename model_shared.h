@@ -213,6 +213,9 @@ typedef struct model_brush_s
 	int num_textures;
 	texture_t *data_textures;
 
+	int num_surfaces;
+	msurface_t *data_surfaces;
+
 	// pvs
 	int num_pvsclusters;
 	int num_pvsclusterbytes;
@@ -258,10 +261,6 @@ typedef struct model_brushq1_s
 
 	int				numtexinfo;
 	mtexinfo_t		*texinfo;
-
-	int				numsurfaces;
-	msurface_t		*surfaces;
-	msurface_t		*surfacepvsnext;
 
 	int				numsurfedges;
 	int				*surfedges;
@@ -322,9 +321,6 @@ typedef struct model_brushq3_s
 
 	int num_effects;
 	q3meffect_t *data_effects;
-
-	int num_faces;
-	q3msurface_t *data_faces;
 
 	// lightmap textures
 	int num_lightmaps;
