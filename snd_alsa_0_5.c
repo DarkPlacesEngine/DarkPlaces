@@ -117,7 +117,7 @@ qboolean SNDDMA_Init(void)
 
 	mask = snd_cards_mask();
 	if (!mask) {
-		Con_Printf("No sound cards detected\n");
+		Con_Print("No sound cards detected\n");
 		return 0;
 	}
 	if ((i=COM_CheckParm("-sndcard"))!=0) {
@@ -193,7 +193,7 @@ qboolean SNDDMA_Init(void)
 		rate=11025;
 		frag_size=128;	/* assuming stereo 8 bit */
 	} else {
-		Con_Printf("ALSA: desired rates not supported\n");
+		Con_Print("ALSA: desired rates not supported\n");
 		goto error_2;
 	}
 	if ((format==-1 || format==SND_PCM_SFMT_S16_LE) && cinfo.formats & SND_PCM_FMT_S16_LE) {
@@ -204,7 +204,7 @@ qboolean SNDDMA_Init(void)
 		format=SND_PCM_SFMT_U8;
 		bps=8;
 	} else {
-		Con_Printf("ALSA: desired formats not supported\n");
+		Con_Print("ALSA: desired formats not supported\n");
 		goto error_2;
 	}
 	if (stereo && cinfo.max_voices>=2) {

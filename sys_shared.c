@@ -49,42 +49,45 @@ static char qfont_table[256] = {
 };
 
 
-#define MAX_PRINT_MSG	16384
-void Sys_Printf (const char *fmt, ...)
+#define MAXPRINTMSG 16384
+
+void Sys_Print(const char *msg)
 {
-	va_list		argptr;
-	char		start[MAX_PRINT_MSG];	// String we started with
-	char		stamp[MAX_PRINT_MSG];	// Time stamp
-	char		final[MAX_PRINT_MSG];	// String we print
-
-	time_t		mytime = 0;
-	struct tm	*local = NULL;
-
-	unsigned char		*p;
-
-	va_start (argptr, fmt);
-	vsnprintf (start, sizeof(start), fmt, argptr);
-	va_end (argptr);
+	unsigned char *p;
+	// Time stamp
+	char stamp[128];
+	// String we print
+	char final[MAXPRINTMSG];
 
 	if (sys_nostdout)
 		return;
 
 	if (timestamps.integer)
 	{
-		mytime = time (NULL);
-		local = localtime (&mytime);
-		strftime (stamp, sizeof (stamp), timeformat.string, local);
-
-		snprintf (final, sizeof (final), "%s%s", stamp, start);
+		time_t mytime = time(NULL);
+		strftime(stamp, sizeof(stamp), timeformat.string, localtime(&mytime));
+		snprintf(final, sizeof(final), "%s%s", stamp, msg);
 	}
 	else
-		snprintf (final, sizeof (final), "%s", start);
+		strncpy(final, msg, sizeof(final));
 
 	// LordHavoc: make sure the string is terminated
-	final[MAX_PRINT_MSG - 1] = 0;
+	final[MAXPRINTMSG-1] = 0;
 	for (p = (unsigned char *) final;*p; p++)
 		*p = qfont_table[*p];
-	Sys_Print(final);
+	Sys_PrintToTerminal(final);
+}
+
+void Sys_Printf(const char *fmt, ...)
+{
+	va_list argptr;
+	char msg[MAXPRINTMSG];	// String we started with
+
+	va_start(argptr,fmt);
+	vsnprintf(msg,sizeof(msg),fmt,argptr);
+	va_end(argptr);
+
+	Sys_Print(msg);
 }
 
 

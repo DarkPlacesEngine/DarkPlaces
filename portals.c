@@ -483,7 +483,7 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	// if there is no model, it can not block visibility
 	if (model == NULL)
 	{
-		Con_Printf("Portal_Visibility: NULL model\n");
+		Con_Print("Portal_Visibility: NULL model\n");
 		return;
 	}
 
@@ -491,7 +491,7 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 
 	if (!model->brushq1.numportals)
 	{
-		Con_Printf("Portal_Visibility: not a brush model\n");
+		Con_Print("Portal_Visibility: not a brush model\n");
 		return;
 	}
 

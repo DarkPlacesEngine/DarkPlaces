@@ -338,11 +338,11 @@ static void GL_TextureMode_f (void)
 		{
 			if (gl_filter_min == modes[i].minification)
 			{
-				Con_Printf ("%s\n", modes[i].name);
+				Con_Printf("%s\n", modes[i].name);
 				return;
 			}
 		}
-		Con_Printf ("current filter is unknown???\n");
+		Con_Print("current filter is unknown???\n");
 		return;
 	}
 
@@ -351,7 +351,7 @@ static void GL_TextureMode_f (void)
 			break;
 	if (i == 6)
 	{
-		Con_Printf ("bad filter name\n");
+		Con_Print("bad filter name\n");
 		return;
 	}
 
@@ -452,7 +452,7 @@ static void R_TextureStats_f(void)
 	int loaded;
 	gltexture_t *glt;
 	gltexturepool_t *pool;
-	Con_Printf("glsize input loaded mip alpha name\n");
+	Con_Print("glsize input loaded mip alpha name\n");
 	for (pool = gltexturepoolchain;pool;pool = pool->next)
 	{
 		for (glt = pool->gltchain;glt;glt = glt->chain)
@@ -631,7 +631,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		if (glt->image->flags & GLTEXF_UPLOAD)
 		{
 			glt->image->flags &= ~GLTEXF_UPLOAD;
-			Con_DPrintf("uploaded new fragments image\n");
+			Con_DPrint("uploaded new fragments image\n");
 			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
 			memset(resizebuffer, 255, glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
 			switch(glt->image->texturetype)

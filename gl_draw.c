@@ -282,7 +282,7 @@ cachepic_t	*Draw_CachePic (char *path)
 		pic->tex = draw_generateditherpattern();
 	if (pic->tex == NULL)
 	{
-		Con_Printf ("Draw_CachePic: failed to load %s\n", path);
+		Con_Printf("Draw_CachePic: failed to load %s\n", path);
 		pic->tex = r_notexture;
 	}
 

@@ -164,7 +164,7 @@ void M_DrawCharacter (float cx, float cy, int num)
 	DrawQ_String(menu_x + cx, menu_y + cy, temp, 1, 8, 8, 1, 1, 1, 1, 0);
 }
 
-void M_Print (float cx, float cy, const char *str)
+void M_Print(float cx, float cy, const char *str)
 {
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 }
@@ -174,7 +174,7 @@ void M_PrintRed (float cx, float cy, const char *str)
 	DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 0, 0, 1, 0);
 }
 
-void M_ItemPrint (float cx, float cy, char *str, int unghosted)
+void M_ItemPrint(float cx, float cy, char *str, int unghosted)
 {
 	if (unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
@@ -294,7 +294,7 @@ void M_Demo_Draw (void)
 	M_Background(320, 200);
 
 	for (i = 0;i < NumberOfNehahraDemos;i++)
-		M_Print (16, 16 + 8*i, NehahraDemos[i].desc);
+		M_Print(16, 16 + 8*i, NehahraDemos[i].desc);
 
 	// line cursor
 	M_DrawCharacter (8, 16 + demo_cursor*8, 12+((int)(realtime*4)&1));
@@ -577,14 +577,14 @@ void M_SinglePlayer_Draw (void)
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
 		if (gamemode == GAME_NEXUIZ)
-			M_Print (95, 10 * 8, "Nexuiz is for");
+			M_Print(95, 10 * 8, "Nexuiz is for");
 		else if (gamemode == GAME_GOODVSBAD2)
-			M_Print (95, 10 * 8, "Good Vs Bad 2 is for");
+			M_Print(95, 10 * 8, "Good Vs Bad 2 is for");
 		else if (gamemode == GAME_BATTLEMECH)
-			M_Print (95, 10 * 8, "Battlemech is for");
+			M_Print(95, 10 * 8, "Battlemech is for");
 		else
-			M_Print (95, 10 * 8, "Transfusion is for");
-		M_Print (83, 11 * 8, "multiplayer play only");
+			M_Print(95, 10 * 8, "Transfusion is for");
+		M_Print(83, 11 * 8, "multiplayer play only");
 	}
 	else
 	{
@@ -730,7 +730,7 @@ void M_Load_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_load.lmp");
 
 	for (i=0 ; i< MAX_SAVEGAMES; i++)
-		M_Print (16, 32 + 8*i, m_filenames[i]);
+		M_Print(16, 32 + 8*i, m_filenames[i]);
 
 // line cursor
 	M_DrawCharacter (8, 32 + load_cursor*8, 12+((int)(realtime*4)&1));
@@ -748,7 +748,7 @@ void M_Save_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_save.lmp");
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
-		M_Print (16, 32 + 8*i, m_filenames[i]);
+		M_Print(16, 32 + 8*i, m_filenames[i]);
 
 // line cursor
 	M_DrawCharacter (8, 32 + load_cursor*8, 12+((int)(realtime*4)&1));
@@ -968,21 +968,21 @@ void M_Setup_Draw (void)
 	p = Draw_CachePic ("gfx/p_multi.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
 
-	M_Print (64, 40, "Your name");
+	M_Print(64, 40, "Your name");
 	M_DrawTextBox (160, 32, 16, 1);
-	M_Print (168, 40, setup_myname);
+	M_Print(168, 40, setup_myname);
 
 	if (gamemode != GAME_GOODVSBAD2)
 	{
-		M_Print (64, 64, "Shirt color");
-		M_Print (64, 88, "Pants color");
+		M_Print(64, 64, "Shirt color");
+		M_Print(64, 88, "Pants color");
 	}
 
-	M_Print (64, 124-8, "Network speed limit");
-	M_Print (168, 124, va("%i (%s)", setup_rate, setup_ratetable[setup_rateindex(setup_rate)].name));
+	M_Print(64, 124-8, "Network speed limit");
+	M_Print(168, 124, va("%i (%s)", setup_rate, setup_ratetable[setup_rateindex(setup_rate)].name));
 
 	M_DrawTextBox (64, 140-8, 14, 1);
-	M_Print (72, 140, "Accept Changes");
+	M_Print(72, 140, "Accept Changes");
 
 	// LordHavoc: rewrote this code greatly
 	if (menuplyr_load)
@@ -1158,9 +1158,9 @@ void M_DrawSlider (int x, int y, float num, float rangemin, float rangemax)
 void M_DrawCheckbox (int x, int y, int on)
 {
 	if (on)
-		M_Print (x, y, "on");
+		M_Print(x, y, "on");
 	else
-		M_Print (x, y, "off");
+		M_Print(x, y, "off");
 }
 
 
@@ -2059,9 +2059,9 @@ void M_Keys_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm.lmp");
 
 	if (bind_grab)
-		M_Print (12, 32, "Press a key or button for this action");
+		M_Print(12, 32, "Press a key or button for this action");
 	else
-		M_Print (18, 32, "Enter to change, backspace to clear");
+		M_Print(18, 32, "Enter to change, backspace to clear");
 
 // search for known bindings
 	for (i=0 ; i<numcommands ; i++)
@@ -2076,7 +2076,7 @@ void M_Keys_Draw (void)
 			continue;
 		}
 		else
-			M_Print (16, y, bindnames[i][1]);
+			M_Print(16, y, bindnames[i][1]);
 
 		M_FindKeysForCommand (bindnames[i][0], keys);
 
@@ -2096,7 +2096,7 @@ void M_Keys_Draw (void)
 				}
 			}
 		}
-		M_Print (150, y, keystring);
+		M_Print(150, y, keystring);
 	}
 
 	if (bind_grab)
@@ -2234,11 +2234,11 @@ void M_Video_Draw (void)
 	// Resolution
 	M_Print(16, video_cursor_table[0], "            Resolution");
 	string = va("%dx%d", video_resolutions[video_resolution][0], video_resolutions[video_resolution][1]);
-	M_Print (220, video_cursor_table[0], string);
+	M_Print(220, video_cursor_table[0], string);
 
 	// Bits per pixel
 	M_Print(16, video_cursor_table[1], "        Bits per pixel");
-	M_Print (220, video_cursor_table[1], (vid_bitsperpixel.integer == 32) ? "32" : "16");
+	M_Print(220, video_cursor_table[1], (vid_bitsperpixel.integer == 32) ? "32" : "16");
 
 	// Fullscreen
 	M_Print(16, video_cursor_table[2], "            Fullscreen");
@@ -2575,24 +2575,24 @@ void M_LanConfig_Draw (void)
 	else
 		startJoin = "Join Game";
 	protocol = "TCP/IP";
-	M_Print (basex, 32, va ("%s - %s", startJoin, protocol));
+	M_Print(basex, 32, va ("%s - %s", startJoin, protocol));
 	basex += 8;
 
-	M_Print (basex, lanConfig_cursor_table[0], "Port");
+	M_Print(basex, lanConfig_cursor_table[0], "Port");
 	M_DrawTextBox (basex+8*8, lanConfig_cursor_table[0]-8, 6, 1);
-	M_Print (basex+9*8, lanConfig_cursor_table[0], lanConfig_portname);
+	M_Print(basex+9*8, lanConfig_cursor_table[0], lanConfig_portname);
 
 	if (JoiningGame)
 	{
-		M_Print (basex, lanConfig_cursor_table[1], "Search for games...");
-		M_Print (basex, lanConfig_cursor_table[2]-16, "Join game at:");
+		M_Print(basex, lanConfig_cursor_table[1], "Search for games...");
+		M_Print(basex, lanConfig_cursor_table[2]-16, "Join game at:");
 		M_DrawTextBox (basex+8, lanConfig_cursor_table[2]-8, 22, 1);
-		M_Print (basex+16, lanConfig_cursor_table[2], lanConfig_joinname);
+		M_Print(basex+16, lanConfig_cursor_table[2], lanConfig_joinname);
 	}
 	else
 	{
 		M_DrawTextBox (basex, lanConfig_cursor_table[1]-8, 2, 1);
-		M_Print (basex+8, lanConfig_cursor_table[1], "OK");
+		M_Print(basex+8, lanConfig_cursor_table[1], "OK");
 	}
 
 	M_DrawCharacter (basex-8, lanConfig_cursor_table [lanConfig_cursor], 12+((int)(realtime*4)&1));
@@ -2604,7 +2604,7 @@ void M_LanConfig_Draw (void)
 		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [2], 10+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
-		M_Print (basex, 168, m_return_reason);
+		M_Print(basex, 168, m_return_reason);
 }
 
 
@@ -3075,43 +3075,43 @@ void M_GameOptions_Draw (void)
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
 
 	M_DrawTextBox (152, 32, 10, 1);
-	M_Print (160, 40, "begin game");
+	M_Print(160, 40, "begin game");
 
-	M_Print (0, 56, "      Max players");
-	M_Print (160, 56, va("%i", maxplayers) );
+	M_Print(0, 56, "      Max players");
+	M_Print(160, 56, va("%i", maxplayers) );
 
 	if (gamemode != GAME_GOODVSBAD2)
 	{
-		M_Print (0, 64, "        Game Type");
+		M_Print(0, 64, "        Game Type");
 		if (gamemode == GAME_TRANSFUSION)
 		{
 			if (!deathmatch.integer)
 				Cvar_SetValue("deathmatch", 1);
 			if (deathmatch.integer == 2)
-				M_Print (160, 64, "Capture the Flag");
+				M_Print(160, 64, "Capture the Flag");
 			else
-				M_Print (160, 64, "Blood Bath");
+				M_Print(160, 64, "Blood Bath");
 		}
 		else if (gamemode == GAME_BATTLEMECH)
 		{
 			if (!deathmatch.integer)
 				Cvar_SetValue("deathmatch", 1);
 			if (deathmatch.integer == 2)
-				M_Print (160, 64, "Rambo Match");
+				M_Print(160, 64, "Rambo Match");
 			else
-				M_Print (160, 64, "Deathmatch");
+				M_Print(160, 64, "Deathmatch");
 		}
 		else
 		{
 			if (!coop.integer && !deathmatch.integer)
 				Cvar_SetValue("deathmatch", 1);
 			if (coop.integer)
-				M_Print (160, 64, "Cooperative");
+				M_Print(160, 64, "Cooperative");
 			else
-				M_Print (160, 64, "Deathmatch");
+				M_Print(160, 64, "Deathmatch");
 		}
 
-		M_Print (0, 72, "        Teamplay");
+		M_Print(0, 72, "        Teamplay");
 		if (gamemode == GAME_ROGUE)
 		{
 			char *msg;
@@ -3126,7 +3126,7 @@ void M_GameOptions_Draw (void)
 				case 6: msg = "Three Team CTF"; break;
 				default: msg = "Off"; break;
 			}
-			M_Print (160, 72, msg);
+			M_Print(160, 72, msg);
 		}
 		else
 		{
@@ -3138,50 +3138,50 @@ void M_GameOptions_Draw (void)
 				case 2: msg = "Friendly Fire"; break;
 				default: msg = "No Friendly Fire"; break;
 			}
-			M_Print (160, 72, msg);
+			M_Print(160, 72, msg);
 		}
 
-		M_Print (0, 80, "            Skill");
+		M_Print(0, 80, "            Skill");
 		if (skill.integer == 0)
-			M_Print (160, 80, "Easy difficulty");
+			M_Print(160, 80, "Easy difficulty");
 		else if (skill.integer == 1)
-			M_Print (160, 80, "Normal difficulty");
+			M_Print(160, 80, "Normal difficulty");
 		else if (skill.integer == 2)
-			M_Print (160, 80, "Hard difficulty");
+			M_Print(160, 80, "Hard difficulty");
 		else
-			M_Print (160, 80, "Nightmare difficulty");
+			M_Print(160, 80, "Nightmare difficulty");
 
-		M_Print (0, 88, "       Frag Limit");
+		M_Print(0, 88, "       Frag Limit");
 		if (fraglimit.integer == 0)
-			M_Print (160, 88, "none");
+			M_Print(160, 88, "none");
 		else
-			M_Print (160, 88, va("%i frags", fraglimit.integer));
+			M_Print(160, 88, va("%i frags", fraglimit.integer));
 
-		M_Print (0, 96, "       Time Limit");
+		M_Print(0, 96, "       Time Limit");
 		if (timelimit.integer == 0)
-			M_Print (160, 96, "none");
+			M_Print(160, 96, "none");
 		else
-			M_Print (160, 96, va("%i minutes", timelimit.integer));
+			M_Print(160, 96, va("%i minutes", timelimit.integer));
 	}
 
-	M_Print (0, 104, "    Public server");
-	M_Print (160, 104, (sv_public.integer == 0) ? "no" : "yes");
+	M_Print(0, 104, "    Public server");
+	M_Print(160, 104, (sv_public.integer == 0) ? "no" : "yes");
 
-	M_Print (0, 120, "      Server name");
+	M_Print(0, 120, "      Server name");
 	M_DrawTextBox (0, 124, 38, 1);
-	M_Print (8, 132, hostname.string);
+	M_Print(8, 132, hostname.string);
 
 	g = lookupgameinfo();
 
 	if (gamemode != GAME_GOODVSBAD2)
 	{
-		M_Print (0, 152, "         Episode");
-		M_Print (160, 152, g->episodes[startepisode].description);
+		M_Print(0, 152, "         Episode");
+		M_Print(160, 152, g->episodes[startepisode].description);
 	}
 
-	M_Print (0, 160, "           Level");
-	M_Print (160, 160, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
-	M_Print (160, 168, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
+	M_Print(0, 160, "           Level");
+	M_Print(160, 160, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
+	M_Print(160, 168, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
 
 // line cursor
 	if (gameoptions_cursor == 8)
@@ -3196,10 +3196,10 @@ void M_GameOptions_Draw (void)
 			x = (320-26*8)/2;
 			M_DrawTextBox (x, 138, 24, 4);
 			x += 8;
-			M_Print (x, 146, " More than 64 players?? ");
-			M_Print (x, 154, "  First, question your  ");
-			M_Print (x, 162, "   sanity, then email   ");
-			M_Print (x, 170, " havoc@telefragged.com  ");
+			M_Print(x, 146, " More than 64 players?? ");
+			M_Print(x, 154, "  First, question your  ");
+			M_Print(x, 162, "   sanity, then email   ");
+			M_Print(x, 170, " havoc@telefragged.com  ");
 		}
 		else
 			m_serverInfoMessage = false;
@@ -3582,12 +3582,12 @@ void M_Init (void)
 		{
 			if (FS_FileExists("hearing.dem"))
 			{
-				Con_Printf("Nehahra movie and game detected.\n");
+				Con_Print("Nehahra movie and game detected.\n");
 				NehGameType = TYPE_BOTH;
 			}
 			else
 			{
-				Con_Printf("Nehahra game detected.\n");
+				Con_Print("Nehahra game detected.\n");
 				NehGameType = TYPE_GAME;
 			}
 		}
@@ -3595,12 +3595,12 @@ void M_Init (void)
 		{
 			if (FS_FileExists("hearing.dem"))
 			{
-				Con_Printf("Nehahra movie detected.\n");
+				Con_Print("Nehahra movie detected.\n");
 				NehGameType = TYPE_DEMO;
 			}
 			else
 			{
-				Con_Printf("Nehahra not found.\n");
+				Con_Print("Nehahra not found.\n");
 				NehGameType = TYPE_GAME; // could just complain, but...
 			}
 		}
@@ -3815,7 +3815,7 @@ void MP_Error(void)
 	// fall back to the normal menu
 
 	// say it
-	Con_Printf("Falling back to normal menu\n");
+	Con_Print("Falling back to normal menu\n");
 
 	key_dest = key_game;
 

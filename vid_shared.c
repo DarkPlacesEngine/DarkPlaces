@@ -243,7 +243,7 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 
 	if (disableparm && (COM_CheckParm(disableparm) || COM_CheckParm("-safe")))
 	{
-		Con_DPrintf("disabled by commandline\n");
+		Con_DPrint("disabled by commandline\n");
 		return false;
 	}
 
@@ -262,12 +262,12 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 		// delay the return so it prints all missing functions
 		if (failed)
 			return false;
-		Con_DPrintf("enabled\n");
+		Con_DPrint("enabled\n");
 		return true;
 	}
 	else
 	{
-		Con_DPrintf("not detected\n");
+		Con_DPrint("not detected\n");
 		return false;
 	}
 }
@@ -430,13 +430,13 @@ void VID_CheckExtensions(void)
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
 
-	Con_DPrintf ("GL_VENDOR: %s\n", gl_vendor);
-	Con_DPrintf ("GL_RENDERER: %s\n", gl_renderer);
-	Con_DPrintf ("GL_VERSION: %s\n", gl_version);
-	Con_DPrintf ("GL_EXTENSIONS: %s\n", gl_extensions);
-	Con_DPrintf ("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
+	Con_DPrintf("GL_VENDOR: %s\n", gl_vendor);
+	Con_DPrintf("GL_RENDERER: %s\n", gl_renderer);
+	Con_DPrintf("GL_VERSION: %s\n", gl_version);
+	Con_DPrintf("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_DPrintf("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
-	Con_DPrintf("Checking OpenGL extensions...\n");
+	Con_DPrint("Checking OpenGL extensions...\n");
 
 	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
 		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
@@ -809,7 +809,7 @@ void VID_Restart_f(void)
 	VID_Close();
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
 	{
-		Con_Printf("Video mode change failed\n");
+		Con_Print("Video mode change failed\n");
 		if (!VID_Mode(current_vid_fullscreen, current_vid_width, current_vid_height, current_vid_bitsperpixel))
 			Sys_Error("Unable to restore to last working video mode\n");
 	}
@@ -845,11 +845,11 @@ void VID_Open(void)
 			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 	}
 
-	Con_DPrintf("Starting video system\n");
+	Con_DPrint("Starting video system\n");
 	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
 	if (!success)
 	{
-		Con_Printf("Desired video mode fail, trying fallbacks...\n");
+		Con_Print("Desired video mode fail, trying fallbacks...\n");
 		if (!success && vid_bitsperpixel.integer > 16)
 			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, 16);
 		if (!success && (vid_width.integer > 640 || vid_height.integer > 480))

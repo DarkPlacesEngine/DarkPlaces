@@ -131,7 +131,7 @@ void Cmd_ForwardToServer (void);
 // things like godmode, noclip, etc, are commands directed to the server,
 // so when they are typed in at the console, they will need to be forwarded.
 
-void Cmd_Print (const char *text);
+void Cmd_Print(const char *text);
 // used by command functions to send output to either the graphics console or
 // passed as a print message to the client
 

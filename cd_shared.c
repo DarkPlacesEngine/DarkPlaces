@@ -217,7 +217,7 @@ static void CD_f (void)
 		CDAudio_GetAudioDiskInfo();
 		if (!cdValid)
 		{
-			Con_Printf("No CD in player.\n");
+			Con_Print("No CD in player.\n");
 			return;
 		}
 	}
@@ -328,13 +328,13 @@ int CDAudio_Startup (void)
 
 	if (CDAudio_GetAudioDiskInfo())
 	{
-		Con_DPrintf("CDAudio_Init: No CD in player.\n");
+		Con_DPrint("CDAudio_Init: No CD in player.\n");
 		cdValid = false;
 	}
 
 	initialized = true;
 
-	Con_DPrintf("CD Audio Initialized\n");
+	Con_DPrint("CD Audio Initialized\n");
 
 	return 0;
 }

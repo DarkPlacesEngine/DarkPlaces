@@ -383,7 +383,7 @@ char *PRVM_ValueString (etype_t type, prvm_eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		sprintf (line, "%s", PRVM_GetString(val->string));
+		strncpy(line, PRVM_GetString(val->string), sizeof(line));
 		break;
 	case ev_entity:
 		n = val->edict;
@@ -470,7 +470,7 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		snprintf (line, sizeof (line), "%s", PRVM_GetString(f->s_name));
+		strncpy(line, PRVM_GetString(f->s_name), sizeof(line));
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( val->_int );
@@ -557,7 +557,7 @@ For debugging
 */
 // LordHavoc: optimized this to print out much more quickly (tempstring)
 // LordHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
-void PRVM_ED_Print (prvm_edict_t *ed)
+void PRVM_ED_Print(prvm_edict_t *ed)
 {
 	int		l;
 	ddef_t	*d;
@@ -569,7 +569,7 @@ void PRVM_ED_Print (prvm_edict_t *ed)
 
 	if (ed->e->free)
 	{
-		Con_Printf ("%s: FREE\n",PRVM_NAME);
+		Con_Printf("%s: FREE\n",PRVM_NAME);
 		return;
 	}
 
@@ -617,12 +617,12 @@ void PRVM_ED_Print (prvm_edict_t *ed)
 		strcat(tempstring, "\n");
 		if (strlen(tempstring) >= 4096)
 		{
-			Con_Printf("%s", tempstring);
+			Con_Print(tempstring);
 			tempstring[0] = 0;
 		}
 	}
 	if (tempstring[0])
-		Con_Printf("%s", tempstring);
+		Con_Print(tempstring);
 }
 
 /*
@@ -640,11 +640,11 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 	char	*name;
 	int		type;
 
-	FS_Printf (f, "{\n");
+	FS_Print(f, "{\n");
 
 	if (ed->e->free)
 	{
-		FS_Printf (f, "}\n");
+		FS_Print(f, "}\n");
 		return;
 	}
 
@@ -665,16 +665,16 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 		if (j == prvm_type_size[type])
 			continue;
 
-		FS_Printf (f,"\"%s\" ",name);
-		FS_Printf (f,"\"%s\"\n", PRVM_UglyValueString(d->type, (prvm_eval_t *)v));
+		FS_Printf(f,"\"%s\" ",name);
+		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(d->type, (prvm_eval_t *)v));
 	}
 
-	FS_Printf (f, "}\n");
+	FS_Print(f, "}\n");
 }
 
 void PRVM_ED_PrintNum (int ent)
 {
-	PRVM_ED_Print (PRVM_EDICT_NUM(ent));
+	PRVM_ED_Print(PRVM_EDICT_NUM(ent));
 }
 
 /*
@@ -690,7 +690,7 @@ void PRVM_ED_PrintEdicts_f (void)
 
 	if(Cmd_Argc() != 2)
 	{
-		Con_Printf("prvm_edicts <program name>\n");
+		Con_Print("prvm_edicts <program name>\n");
 		return;
 	}
 	
@@ -698,7 +698,7 @@ void PRVM_ED_PrintEdicts_f (void)
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
 
-	Con_Printf ("%s: %i entities\n", PRVM_NAME, prog->num_edicts);
+	Con_Printf("%s: %i entities\n", PRVM_NAME, prog->num_edicts);
 	for (i=0 ; i<prog->num_edicts ; i++)
 		PRVM_ED_PrintNum (i);
 
@@ -718,7 +718,7 @@ void PRVM_ED_PrintEdict_f (void)
 
 	if(Cmd_Argc() != 3)
 	{
-		Con_Printf("prvm_edict <program name> <edict number>\n");
+		Con_Print("prvm_edict <program name> <edict number>\n");
 		return;
 	}
 
@@ -729,7 +729,7 @@ void PRVM_ED_PrintEdict_f (void)
 	i = atoi (Cmd_Argv(2));
 	if (i >= prog->num_edicts)
 	{
-		Con_Printf("Bad edict number\n");
+		Con_Print("Bad edict number\n");
 		PRVM_End;
 		return;
 	}
@@ -755,7 +755,7 @@ void PRVM_ED_Count_f (void)
 
 	if(Cmd_Argc() != 2)
 	{
-		Con_Printf("prvm_count <program name>\n");
+		Con_Print("prvm_count <program name>\n");
 		return;
 	}
 
@@ -776,8 +776,8 @@ void PRVM_ED_Count_f (void)
 			active++;
 		}
 		
-		Con_Printf ("num_edicts:%3i\n", prog->num_edicts);
-		Con_Printf ("active    :%3i\n", active);
+		Con_Printf("num_edicts:%3i\n", prog->num_edicts);
+		Con_Printf("active    :%3i\n", active);
 	}
 
 	PRVM_End;
@@ -804,7 +804,7 @@ void PRVM_ED_WriteGlobals (qfile_t *f)
 	char		*name;
 	int			type;
 
-	FS_Printf (f,"{\n");
+	FS_Print(f,"{\n");
 	for (i=0 ; i<prog->progs->numglobaldefs ; i++)
 	{
 		def = &prog->globaldefs[i];
@@ -817,10 +817,10 @@ void PRVM_ED_WriteGlobals (qfile_t *f)
 			continue;
 
 		name = PRVM_GetString(def->s_name);
-		FS_Printf (f,"\"%s\" ", name);
-		FS_Printf (f,"\"%s\"\n", PRVM_UglyValueString(type, (prvm_eval_t *)&prog->globals[def->ofs]));
+		FS_Printf(f,"\"%s\" ", name);
+		FS_Printf(f,"\"%s\"\n", PRVM_UglyValueString(type, (prvm_eval_t *)&prog->globals[def->ofs]));
 	}
-	FS_Printf (f,"}\n");
+	FS_Print(f,"}\n");
 }
 
 /*
@@ -853,7 +853,7 @@ void PRVM_ED_ParseGlobals (const char *data)
 		key = PRVM_ED_FindGlobal (keyname);
 		if (!key)
 		{
-			Con_DPrintf ("'%s' is not a global on %s\n", keyname, PRVM_NAME);
+			Con_DPrintf("'%s' is not a global on %s\n", keyname, PRVM_NAME);
 			continue;
 		}
 
@@ -971,7 +971,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		func = PRVM_ED_FindFunction(s);
 		if (!func)
 		{
-			Con_Printf ("PRVM_ED_ParseEpair: Can't find function %s in %s\n", s, PRVM_NAME);
+			Con_Printf("PRVM_ED_ParseEpair: Can't find function %s in %s\n", s, PRVM_NAME);
 			return false;
 		}
 		val->function = func - prog->functions;
@@ -998,7 +998,7 @@ void PRVM_ED_EdictSet_f(void)
 
 	if(Cmd_Argc() != 5)
 	{
-		Con_Printf("prvm_edictset <program name> <edict number> <field> <value>\n");
+		Con_Print("prvm_edictset <program name> <edict number> <field> <value>\n");
 		return;
 	}
 
@@ -1095,7 +1095,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 		key = PRVM_ED_FindField (keyname);
 		if (!key)
 		{
-			Con_DPrintf ("%s: '%s' is not a field\n", PRVM_NAME, keyname);
+			Con_DPrintf("%s: '%s' is not a field\n", PRVM_NAME, keyname);
 			continue;
 		}
 
@@ -1178,8 +1178,8 @@ void PRVM_ED_LoadFromFile (const char *data)
 			string_t handle =  *(string_t*)&((float*)ent->v)[PRVM_ED_FindFieldOffset("classname")];
 			if (!handle)
 			{
-				Con_Printf ("No classname for:\n");
-				PRVM_ED_Print (ent);
+				Con_Print("No classname for:\n");
+				PRVM_ED_Print(ent);
 				PRVM_ED_Free (ent);
 				continue;
 			}
@@ -1191,8 +1191,8 @@ void PRVM_ED_LoadFromFile (const char *data)
 			{
 				if (developer.integer) // don't confuse non-developers with errors
 				{
-					Con_Printf ("No spawn function for:\n");
-					PRVM_ED_Print (ent);
+					Con_Print("No spawn function for:\n");
+					PRVM_ED_Print(ent);
 				}
 				PRVM_ED_Free (ent);
 				continue;
@@ -1208,7 +1208,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 			died++;
 	}
 
-	Con_DPrintf ("%s: %i new entities parsed, %i new inhibited, %i (%i new) spawned (whereas %i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, prog->num_edicts, spawned, died, spawned - died);
+	Con_DPrintf("%s: %i new entities parsed, %i new inhibited, %i (%i new) spawned (whereas %i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, prog->num_edicts, spawned, died, spawned - died);
 }	
 
 // not used
@@ -1284,7 +1284,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	memcpy(prog->progs, temp, fs_filesize);
 	Mem_Free(temp);
 
-	Con_DPrintf ("%s programs occupy %iK.\n", PRVM_NAME, fs_filesize/1024);
+	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, fs_filesize/1024);
 
 	pr_crc = CRC_Block((qbyte *)prog->progs, fs_filesize);
 
@@ -1522,14 +1522,14 @@ void PRVM_Fields_f (void)
 	/*
 	if (!sv.active)
 	{
-		Con_Printf("no progs loaded\n");
+		Con_Print("no progs loaded\n");
 		return;
 	}
 	*/
 
 	if(Cmd_Argc() != 2)
 	{
-		Con_Printf("prvm_fields <program name>\n");
+		Con_Print("prvm_fields <program name>\n");
 		return;
 	}
 
@@ -1616,7 +1616,7 @@ void PRVM_Fields_f (void)
 		strcat(tempstring, "\n");
 		if (strlen(tempstring) >= 4096)
 		{
-			Con_Printf("%s", tempstring);
+			Con_Print(tempstring);
 			tempstring[0] = 0;
 		}
 		if (counts[i])
@@ -1637,12 +1637,12 @@ void PRVM_Globals_f (void)
 	// TODO
 	/*if (!sv.active)
 	{
-		Con_Printf("no progs loaded\n");
+		Con_Print("no progs loaded\n");
 		return;
 	}*/
 	if(Cmd_Argc () != 2)
 	{
-		Con_Printf("prvm_globals <program name>\n");
+		Con_Print("prvm_globals <program name>\n");
 		return;
 	}
 

@@ -681,7 +681,7 @@ void SV_ReadClientMessage(void)
 
 		if (msg_badread)
 		{
-			Con_Printf ("SV_ReadClientMessage: badread\n");
+			Con_Print("SV_ReadClientMessage: badread\n");
 			SV_DropClient (false);
 			return;
 		}
@@ -696,7 +696,7 @@ void SV_ReadClientMessage(void)
 		switch (cmd)
 		{
 		default:
-			Con_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
+			Con_Printf("SV_ReadClientMessage: unknown command char %i\n", cmd);
 			SV_DropClient (false);
 			return;
 

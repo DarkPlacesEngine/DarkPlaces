@@ -44,7 +44,7 @@ void CDAudio_SysEject (void)
 
 	ioctl(cdfile, CDIOCALLOW);
 	if (ioctl(cdfile, CDIOCEJECT) == -1)
-		Con_DPrintf("ioctl CDIOCEJECT failed\n");
+		Con_DPrint("ioctl CDIOCEJECT failed\n");
 }
 
 
@@ -55,7 +55,7 @@ void CDAudio_SysCloseDoor (void)
 
 	ioctl(cdfile, CDIOCALLOW);
 	if (ioctl(cdfile, CDIOCCLOSE) == -1)
-		Con_DPrintf("ioctl CDIOCCLOSE failed\n");
+		Con_DPrint("ioctl CDIOCCLOSE failed\n");
 }
 
 int CDAudio_SysGetAudioDiskInfo (void)
@@ -64,13 +64,13 @@ int CDAudio_SysGetAudioDiskInfo (void)
 
 	if (ioctl(cdfile, CDIOREADTOCHEADER, &tochdr) == -1)
 	{
-		Con_DPrintf("ioctl CDIOREADTOCHEADER failed\n");
+		Con_DPrint("ioctl CDIOREADTOCHEADER failed\n");
 		return -1;
 	}
 
 	if (tochdr.starting_track < 1)
 	{
-		Con_DPrintf("CDAudio: no music tracks\n");
+		Con_DPrint("CDAudio: no music tracks\n");
 		return -1;
 	}
 
@@ -94,7 +94,7 @@ int CDAudio_SysPlay (qbyte track)
 	rte.data = &entry;
 	if (ioctl(cdfile, CDIOREADTOCENTRYS, &rte) == -1)
 	{
-		Con_DPrintf("ioctl CDIOREADTOCENTRYS failed\n");
+		Con_DPrint("ioctl CDIOREADTOCENTRYS failed\n");
 		return -1;
 	}
 	if (entry.control & 4)  // if it's a data track
@@ -113,13 +113,13 @@ int CDAudio_SysPlay (qbyte track)
 
 	if (ioctl(cdfile, CDIOCPLAYTRACKS, &ti) == -1)
 	{
-		Con_DPrintf("ioctl CDIOCPLAYTRACKS failed\n");
+		Con_DPrint("ioctl CDIOCPLAYTRACKS failed\n");
 		return -1;
 	}
 
 	if (ioctl(cdfile, CDIOCRESUME) == -1)
 	{
-		Con_DPrintf("ioctl CDIOCRESUME failed\n");
+		Con_DPrint("ioctl CDIOCRESUME failed\n");
 		return -1;
 	}
 
@@ -149,7 +149,7 @@ int CDAudio_SysPause (void)
 
 	if (ioctl(cdfile, CDIOCPAUSE) == -1)
 	{
-		Con_DPrintf("ioctl CDIOCPAUSE failed\n");
+		Con_DPrint("ioctl CDIOCPAUSE failed\n");
 		return -1;
 	}
 
@@ -163,7 +163,7 @@ int CDAudio_SysResume (void)
 		return -1;
 
 	if (ioctl(cdfile, CDIOCRESUME) == -1)
-		Con_DPrintf("ioctl CDIOCRESUME failed\n");
+		Con_DPrint("ioctl CDIOCRESUME failed\n");
 
 	return 0;
 }
@@ -186,7 +186,7 @@ int CDAudio_SysUpdate (void)
 
 		if (ioctl(cdfile, CDIOCREADSUBCHANNEL, &subchnl) == -1)
 		{
-			Con_DPrintf("ioctl CDIOCREADSUBCHANNEL failed\n");
+			Con_DPrint("ioctl CDIOCREADSUBCHANNEL failed\n");
 			cdPlaying = false;
 			return -1;
 		}

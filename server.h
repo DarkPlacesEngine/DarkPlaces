@@ -290,8 +290,10 @@ void SV_AddUpdates (void);
 
 void SV_ClientThink (void);
 
-void SV_ClientPrintf (const char *fmt, ...);
-void SV_BroadcastPrintf (const char *fmt, ...);
+void SV_ClientPrint(const char *msg);
+void SV_ClientPrintf(const char *fmt, ...);
+void SV_BroadcastPrint(const char *msg);
+void SV_BroadcastPrintf(const char *fmt, ...);
 
 void SV_Physics (void);
 

@@ -579,7 +579,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	if (real_nb_files <= 0)
 		Sys_Error ("%s is not a valid PK3 file", packfile);
 
-	Con_Printf ("Added packfile %s (%i files)\n", packfile, real_nb_files);
+	Con_Printf("Added packfile %s (%i files)\n", packfile, real_nb_files);
 	return pack;
 }
 
@@ -710,15 +710,15 @@ void FS_Path_f (void)
 {
 	searchpath_t *s;
 
-	Con_Printf ("Current search path:\n");
+	Con_Print("Current search path:\n");
 	for (s=fs_searchpaths ; s ; s=s->next)
 	{
 		if (s->pack)
 		{
-			Con_Printf ("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
+			Con_Printf("%s (%i files)\n", s->pack->filename, s->pack->numfiles);
 		}
 		else
-			Con_Printf ("%s\n", s->filename);
+			Con_Printf("%s\n", s->filename);
 	}
 }
 
@@ -784,7 +784,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 
 	Mem_Free(info);
 
-	Con_Printf ("Added packfile %s (%i files)\n", packfile, numpackfiles);
+	Con_Printf("Added packfile %s (%i files)\n", packfile, numpackfiles);
 	return pack;
 }
 
@@ -1086,7 +1086,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 				if (!diff)
 				{
 					if (!quiet)
-						Sys_Printf ("FS_FindFile: %s in %s\n",
+						Sys_Printf("FS_FindFile: %s in %s\n",
 									pak->files[middle].name, pak->filename);
 
 					if (index != NULL)
@@ -1108,7 +1108,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 			if (FS_SysFileExists (netpath))
 			{
 				if (!quiet)
-					Sys_Printf ("FS_FindFile: %s\n", netpath);
+					Sys_Printf("FS_FindFile: %s\n", netpath);
 
 				if (index != NULL)
 					*index = -1;
@@ -1118,7 +1118,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 	}
 
 	if (!quiet)
-		Sys_Printf ("FS_FindFile: can't find %s\n", name);
+		Sys_Printf("FS_FindFile: can't find %s\n", name);
 
 	if (index != NULL)
 		*index = -1;
@@ -1170,7 +1170,7 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 	// No Zlib DLL = no compressed files
 	if (!zlib_dll && (packfile->flags & FILE_FLAG_DEFLATED))
 	{
-		Con_Printf ("WARNING: can't open the compressed file %s\n"
+		Con_Printf("WARNING: can't open the compressed file %s\n"
 					"You need the Zlib DLL to use compressed files\n",
 					filename);
 		fs_filesize = -1;
@@ -1433,12 +1433,24 @@ int FS_Flush (qfile_t* file)
 
 /*
 ====================
+FS_Print
+
+Print a string into a file
+====================
+*/
+int FS_Print(qfile_t* file, const char *msg)
+{
+	return FS_Write(file, msg, strlen(msg));
+}
+
+/*
+====================
 FS_Printf
 
 Print a string into a file
 ====================
 */
-int FS_Printf (qfile_t* file, const char* format, ...)
+int FS_Printf(qfile_t* file, const char* format, ...)
 {
 	int result;
 	va_list args;
@@ -1744,11 +1756,11 @@ qboolean FS_WriteFile (const char *filename, void *data, int len)
 	handle = FS_Open (filename, "wb", false);
 	if (!handle)
 	{
-		Con_Printf ("FS_WriteFile: failed on %s\n", filename);
+		Con_Printf("FS_WriteFile: failed on %s\n", filename);
 		return false;
 	}
 
-	Con_DPrintf ("FS_WriteFile: %s\n", filename);
+	Con_DPrintf("FS_WriteFile: %s\n", filename);
 	FS_Write (handle, data, len);
 	FS_Close (handle);
 	return true;
@@ -2101,7 +2113,7 @@ static void FS_ListDirectoryCmd (const char* cmdname, int oneperline)
 	else
 		pattern = "*";
 	if (!FS_ListDirectory(pattern, oneperline))
-		Con_Printf("No files found.\n");
+		Con_Print("No files found.\n");
 }
 
 void FS_Dir_f(void)

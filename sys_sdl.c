@@ -52,7 +52,7 @@ void Sys_Error (const char *error, ...)
 	exit (1);
 }
 
-void Sys_Print(const char *text)
+void Sys_PrintToTerminal(const char *text)
 {
 	printf("%s", text);
 }

@@ -483,7 +483,7 @@ static void NetConn_UpdateServerStuff(void)
 		{
 			clientport2 = cl_netport.integer;
 			if (cls.state == ca_connected)
-				Con_Printf("Changing \"cl_port\" will not take effect until you reconnect.\n");
+				Con_Print("Changing \"cl_port\" will not take effect until you reconnect.\n");
 		}
 		if (cls.state == ca_disconnected && clientport != clientport2)
 		{
@@ -498,7 +498,7 @@ static void NetConn_UpdateServerStuff(void)
 	{
 		hostport = sv_netport.integer;
 		if (sv.active)
-			Con_Printf("Changing \"port\" will not take effect until \"map\" command is executed.\n");
+			Con_Print("Changing \"port\" will not take effect until \"map\" command is executed.\n");
 	}
 }
 
@@ -543,7 +543,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 					}
 				}
 				else
-					Con_DPrintf("Got a stale datagram\n");
+					Con_DPrint("Got a stale datagram\n");
 				return 1;
 			}
 			else if (flags & NETFLAG_ACK)
@@ -554,7 +554,7 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 					{
 						conn->ackSequence++;
 						if (conn->ackSequence != conn->sendSequence)
-							Con_DPrintf("ack sequencing error\n");
+							Con_DPrint("ack sequencing error\n");
 						conn->lastMessageTime = realtime;
 						conn->timeout = realtime + net_messagetimeout.value;
 						conn->sendMessageLength -= MAX_PACKETFRAGMENT;
@@ -571,10 +571,10 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 						}
 					}
 					else
-						Con_DPrintf("Duplicate ACK received\n");
+						Con_DPrint("Duplicate ACK received\n");
 				}
 				else
-					Con_DPrintf("Stale ACK received\n");
+					Con_DPrint("Stale ACK received\n");
 				return 1;
 			}
 			else if (flags & NETFLAG_DATA)
@@ -765,7 +765,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			length -= 18;
 			masterreplycount++;
 			if (m_state != m_slist)
-				Con_Printf("received server list...\n");
+				Con_Print("received server list...\n");
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
 				snprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
@@ -800,8 +800,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				hostcache[n].ping = 100000;
 				hostcache[n].querytime = realtime;
 				// build description strings for the things users care about
-				snprintf(hostcache[n].line1, sizeof(hostcache[n].line1), "?");
-				snprintf(hostcache[n].line2, sizeof(hostcache[n].line2), "%s", ipstring);
+				strncpy(hostcache[n].line1, "?", sizeof(hostcache[n].line1));
+				strncpy(hostcache[n].line2, ipstring, sizeof(hostcache[n].line2));
 				// if not in the slist menu we should print the server to console
 				if (m_state != m_slist)
 					Con_Printf("querying %s\n", ipstring);
@@ -947,7 +947,7 @@ void NetConn_ClientFrame(void)
 			if (m_state == m_slist)
 				strcpy (m_return_reason, "Connect: Failed");
 			else
-				Con_Printf("Connect failed\n");
+				Con_Print("Connect failed\n");
 			return;
 		}
 		if (cls.connect_nextsendtime)
@@ -955,14 +955,14 @@ void NetConn_ClientFrame(void)
 			if (m_state == m_slist)
 				strcpy (m_return_reason, "Connect: Still trying");
 			else
-				Con_Printf("Still trying...\n");
+				Con_Print("Still trying...\n");
 		}
 		else
 		{
 			if (m_state == m_slist)
 				strcpy (m_return_reason, "Connect: Trying");
 			else
-				Con_Printf("Trying...\n");
+				Con_Print("Trying...\n");
 		}
 		cls.connect_nextsendtime = realtime + 1;
 		cls.connect_remainingtries--;
@@ -984,7 +984,7 @@ void NetConn_ClientFrame(void)
 			NetConn_ClientParsePacket(cl_sockets[i], readbuffer, length, &peeraddress);
 	if (cls.netcon && realtime > cls.netcon->timeout)
 	{
-		Con_Printf("Connection timed out\n");
+		Con_Print("Connection timed out\n");
 		CL_Disconnect();
 	}
 	for (conn = netconn_list;conn;conn = conn->next)
@@ -1469,7 +1469,7 @@ void NetConn_QueryMasters(void)
 	}
 	if (!masterquerycount)
 	{
-		Con_Printf("Unable to query master servers, no suitable network sockets active.\n");
+		Con_Print("Unable to query master servers, no suitable network sockets active.\n");
 		strcpy(m_return_reason, "No network");
 	}
 }
@@ -1547,7 +1547,7 @@ static void Net_Heartbeat_f(void)
 	if (sv.active)
 		NetConn_Heartbeat(2);
 	else
-		Con_Printf("No server running, can not heartbeat to master server.\n");
+		Con_Print("No server running, can not heartbeat to master server.\n");
 }
 
 void PrintStats(netconn_t *conn)
@@ -1567,7 +1567,7 @@ void Net_Stats_f(void)
 	Con_Printf("packetsReceived            = %i\n", packetsReceived);
 	Con_Printf("receivedDuplicateCount     = %i\n", receivedDuplicateCount);
 	Con_Printf("droppedDatagrams           = %i\n", droppedDatagrams);
-	Con_Printf("connections                =\n");
+	Con_Print("connections                =\n");
 	for (conn = netconn_list;conn;conn = conn->next)
 		PrintStats(conn);
 }
@@ -1582,10 +1582,10 @@ void Net_Slist_f(void)
 	hostCacheCount = 0;
 	memset(&pingcache, 0, sizeof(pingcache));
 	if (m_state != m_slist)
-		Con_Printf("Sending requests to master servers\n");
+		Con_Print("Sending requests to master servers\n");
 	NetConn_QueryMasters();
 	if (m_state != m_slist)
-		Con_Printf("Listening for replies...\n");
+		Con_Print("Listening for replies...\n");
 }
 
 void NetConn_Init(void)

@@ -309,7 +309,7 @@ Key_Console (int key, char ascii)
 	{
 		Cbuf_AddText (key_lines[edit_line]+1);	// skip the ]
 		Cbuf_AddText ("\n");
-		Con_Printf ("%s\n",key_lines[edit_line]);
+		Con_Printf("%s\n",key_lines[edit_line]);
 		edit_line = (edit_line + 1) & 31;
 		history_line = edit_line;
 		key_lines[edit_line][0] = ']';
@@ -619,19 +619,19 @@ Key_In_Unbind_f (void)
 	int         b, m;
 
 	if (Cmd_Argc () != 3) {
-		Con_Printf ("in_unbind <bindmap> <key> : remove commands from a key\n");
+		Con_Print("in_unbind <bindmap> <key> : remove commands from a key\n");
 		return;
 	}
 
 	m = strtol(Cmd_Argv (1), NULL, 0);
 	if ((m < 0) || (m >= 8)) {
-		Con_Printf ("%d isn't a valid bindmap\n", m);
+		Con_Printf("%d isn't a valid bindmap\n", m);
 		return;
 	}
 
 	b = Key_StringToKeynum (Cmd_Argv (2));
 	if (b == -1) {
-		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv (2));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (2));
 		return;
 	}
 
@@ -647,27 +647,27 @@ Key_In_Bind_f (void)
 	c = Cmd_Argc ();
 
 	if (c != 3 && c != 4) {
-		Con_Printf ("in_bind <bindmap> <key> [command] : attach a command to a key\n");
+		Con_Print("in_bind <bindmap> <key> [command] : attach a command to a key\n");
 		return;
 	}
 
 	m = strtol(Cmd_Argv (1), NULL, 0);
 	if ((m < 0) || (m >= 8)) {
-		Con_Printf ("%d isn't a valid bindmap\n", m);
+		Con_Printf("%d isn't a valid bindmap\n", m);
 		return;
 	}
 
 	b = Key_StringToKeynum (Cmd_Argv (2));
 	if (b == -1) {
-		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv (2));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (2));
 		return;
 	}
 
 	if (c == 3) {
 		if (keybindings[m][b])
-			Con_Printf ("\"%s\" = \"%s\"\n", Cmd_Argv (2), keybindings[m][b]);
+			Con_Printf("\"%s\" = \"%s\"\n", Cmd_Argv (2), keybindings[m][b]);
 		else
-			Con_Printf ("\"%s\" is not bound\n", Cmd_Argv (2));
+			Con_Printf("\"%s\" is not bound\n", Cmd_Argv (2));
 		return;
 	}
 // copy the rest of the command line
@@ -689,19 +689,19 @@ Key_In_Bindmap_f (void)
 	c = Cmd_Argc ();
 
 	if (c != 3) {
-		Con_Printf ("in_bindmap <bindmap> <fallback>: set current bindmap and fallback\n");
+		Con_Print("in_bindmap <bindmap> <fallback>: set current bindmap and fallback\n");
 		return;
 	}
 
 	m1 = strtol(Cmd_Argv (1), NULL, 0);
 	if ((m1 < 0) || (m1 >= 8)) {
-		Con_Printf ("%d isn't a valid bindmap\n", m1);
+		Con_Printf("%d isn't a valid bindmap\n", m1);
 		return;
 	}
 
 	m2 = strtol(Cmd_Argv (2), NULL, 0);
 	if ((m2 < 0) || (m2 >= 8)) {
-		Con_Printf ("%d isn't a valid bindmap\n", m2);
+		Con_Printf("%d isn't a valid bindmap\n", m2);
 		return;
 	}
 
@@ -715,13 +715,13 @@ Key_Unbind_f (void)
 	int         b;
 
 	if (Cmd_Argc () != 2) {
-		Con_Printf ("unbind <key> : remove commands from a key\n");
+		Con_Print("unbind <key> : remove commands from a key\n");
 		return;
 	}
 
 	b = Key_StringToKeynum (Cmd_Argv (1));
 	if (b == -1) {
-		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv (1));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (1));
 		return;
 	}
 
@@ -749,20 +749,20 @@ Key_Bind_f (void)
 	c = Cmd_Argc ();
 
 	if (c != 2 && c != 3) {
-		Con_Printf ("bind <key> [command] : attach a command to a key\n");
+		Con_Print("bind <key> [command] : attach a command to a key\n");
 		return;
 	}
 	b = Key_StringToKeynum (Cmd_Argv (1));
 	if (b == -1) {
-		Con_Printf ("\"%s\" isn't a valid key\n", Cmd_Argv (1));
+		Con_Printf("\"%s\" isn't a valid key\n", Cmd_Argv (1));
 		return;
 	}
 
 	if (c == 2) {
 		if (keybindings[0][b])
-			Con_Printf ("\"%s\" = \"%s\"\n", Cmd_Argv (1), keybindings[0][b]);
+			Con_Printf("\"%s\" = \"%s\"\n", Cmd_Argv (1), keybindings[0][b]);
 		else
-			Con_Printf ("\"%s\" is not bound\n", Cmd_Argv (1));
+			Con_Printf("\"%s\" is not bound\n", Cmd_Argv (1));
 		return;
 	}
 // copy the rest of the command line
@@ -788,12 +788,12 @@ Key_WriteBindings (qfile_t *f)
 
 	for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
 		if (keybindings[0][i])
-			FS_Printf (f, "bind %s \"%s\"\n",
+			FS_Printf(f, "bind %s \"%s\"\n",
 					Key_KeynumToString (i), keybindings[0][i]);
 	for (j = 1; j < 8; j++)
 		for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
 			if (keybindings[j][i])
-				FS_Printf (f, "in_bind %d %s \"%s\"\n",
+				FS_Printf(f, "in_bind %d %s \"%s\"\n",
 						j, Key_KeynumToString (i), keybindings[j][i]);
 }
 

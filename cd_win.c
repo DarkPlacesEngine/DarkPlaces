@@ -55,12 +55,12 @@ int CDAudio_SysGetAudioDiskInfo(void)
 	dwReturn = mciSendCommand(wDeviceID, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD) (LPVOID) &mciStatusParms);
 	if (dwReturn)
 	{
-		Con_DPrintf("CDAudio: drive ready test - get status failed\n");
+		Con_DPrint("CDAudio: drive ready test - get status failed\n");
 		return -1;
 	}
 	if (!mciStatusParms.dwReturn)
 	{
-		Con_DPrintf("CDAudio: drive not ready\n");
+		Con_DPrint("CDAudio: drive not ready\n");
 		return -1;
 	}
 
@@ -68,12 +68,12 @@ int CDAudio_SysGetAudioDiskInfo(void)
 	dwReturn = mciSendCommand(wDeviceID, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD) (LPVOID) &mciStatusParms);
 	if (dwReturn)
 	{
-		Con_DPrintf("CDAudio: get tracks - status failed\n");
+		Con_DPrint("CDAudio: get tracks - status failed\n");
 		return -1;
 	}
 	if (mciStatusParms.dwReturn < 1)
 	{
-		Con_DPrintf("CDAudio: no music tracks\n");
+		Con_DPrint("CDAudio: no music tracks\n");
 		return -1;
 	}
 
@@ -135,7 +135,7 @@ int CDAudio_SysStop (void)
 
 	if ((dwReturn = mciSendCommand(wDeviceID, MCI_STOP, 0, (DWORD)NULL)))
 	{
-		Con_DPrintf("MCI_STOP failed (%i)", dwReturn);
+		Con_DPrintf("MCI_STOP failed (%i)\n", dwReturn);
 		return -1;
 	}
 	return 0;
@@ -149,7 +149,7 @@ int CDAudio_SysPause (void)
 	mciGenericParms.dwCallback = (DWORD)mainwindow;
 	if ((dwReturn = mciSendCommand(wDeviceID, MCI_PAUSE, 0, (DWORD)(LPVOID) &mciGenericParms)))
 	{
-		Con_DPrintf("MCI_PAUSE failed (%i)", dwReturn);
+		Con_DPrintf("MCI_PAUSE failed (%i)\n", dwReturn);
 		return -1;
 	}
 	return 0;
@@ -194,7 +194,7 @@ LONG CDAudio_MessageHandler (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case MCI_NOTIFY_FAILURE:
-			Con_DPrintf("MCI_NOTIFY_FAILURE\n");
+			Con_DPrint("MCI_NOTIFY_FAILURE\n");
 			CDAudio_Stop ();
 			cdValid = false;
 			break;
@@ -246,5 +246,5 @@ int CDAudio_SysStartup (void)
 void CDAudio_SysShutdown (void)
 {
 	if (mciSendCommand(wDeviceID, MCI_CLOSE, MCI_WAIT, (DWORD)NULL))
-		Con_DPrintf("CDAudio_Shutdown: MCI_CLOSE failed\n");
+		Con_DPrint("CDAudio_Shutdown: MCI_CLOSE failed\n");
 }

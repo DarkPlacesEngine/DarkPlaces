@@ -312,7 +312,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	{
 		if (modified_name)
 			strcpy (namebuffer + len - 3, "wav");
-		Con_Printf ("Couldn't load %s\n", namebuffer);
+		Con_Printf("Couldn't load %s\n", namebuffer);
 	}
 	return NULL;
 }
@@ -407,7 +407,7 @@ void DumpChunks(void)
 		memcpy (str, data_p, 4);
 		data_p += 4;
 		iff_chunk_len = GetLittleLong();
-		Con_Printf ("0x%x : %s (%d)\n", (int)(data_p - 4), str, iff_chunk_len);
+		Con_Printf("0x%x : %s (%d)\n", (int)(data_p - 4), str, iff_chunk_len);
 		data_p += (iff_chunk_len + 1) & ~1;
 	} while (data_p < iff_end);
 }
@@ -436,7 +436,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	FindChunk("RIFF");
 	if (!(data_p && !strncmp(data_p+8, "WAVE", 4)))
 	{
-		Con_Printf("Missing RIFF/WAVE chunks\n");
+		Con_Print("Missing RIFF/WAVE chunks\n");
 		return info;
 	}
 
@@ -447,14 +447,14 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	FindChunk("fmt ");
 	if (!data_p)
 	{
-		Con_Printf("Missing fmt chunk\n");
+		Con_Print("Missing fmt chunk\n");
 		return info;
 	}
 	data_p += 8;
 	format = GetLittleShort();
 	if (format != 1)
 	{
-		Con_Printf("Microsoft PCM format only\n");
+		Con_Print("Microsoft PCM format only\n");
 		return info;
 	}
 
@@ -489,7 +489,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	FindChunk("data");
 	if (!data_p)
 	{
-		Con_Printf("Missing data chunk\n");
+		Con_Print("Missing data chunk\n");
 		return info;
 	}
 

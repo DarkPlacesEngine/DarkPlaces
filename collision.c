@@ -71,7 +71,7 @@ loc0:
 			if (t->trace->allsolid)
 				t->trace->startsolid = true;
 #if COLLISIONPARANOID >= 3
-			Con_Printf("S");
+			Con_Print("S");
 #endif
 			return HULLCHECKSTATE_SOLID;
 		}
@@ -79,7 +79,7 @@ loc0:
 		{
 			t->trace->allsolid = false;
 #if COLLISIONPARANOID >= 3
-			Con_Printf("E");
+			Con_Print("E");
 #endif
 			return HULLCHECKSTATE_EMPTY;
 		}
@@ -105,7 +105,7 @@ loc0:
 		if (t2 < 0)
 		{
 #if COLLISIONPARANOID >= 3
-			Con_Printf("<");
+			Con_Print("<");
 #endif
 			num = node->children[1];
 			goto loc0;
@@ -117,7 +117,7 @@ loc0:
 		if (t2 >= 0)
 		{
 #if COLLISIONPARANOID >= 3
-			Con_Printf(">");
+			Con_Print(">");
 #endif
 			num = node->children[0];
 			goto loc0;
@@ -128,7 +128,7 @@ loc0:
 	// the line intersects, find intersection point
 	// LordHavoc: this uses the original trace for maximum accuracy
 #if COLLISIONPARANOID >= 3
-	Con_Printf("M");
+	Con_Print("M");
 #endif
 	if (plane->type < 3)
 	{
@@ -179,7 +179,7 @@ loc0:
 	t->trace->fraction = bound(0, midf, 1);
 
 #if COLLISIONPARANOID >= 3
-	Con_Printf("D");
+	Con_Print("D");
 #endif
 	return HULLCHECKSTATE_DONE;
 }
@@ -333,14 +333,14 @@ void Collision_ValidateBrush(colbrushf_t *brush)
 	printbrush = false;
 	if (!brush->numpoints)
 	{
-		Con_Printf("Collision_ValidateBrush: brush with no points!\n");
+		Con_Print("Collision_ValidateBrush: brush with no points!\n");
 		printbrush = true;
 	}
 #if 0
 	// it's ok for a brush to have one point and no planes...
 	if (brush->numplanes == 0 && brush->numpoints != 1)
 	{
-		Con_Printf("Collision_ValidateBrush: brush with no planes and more than one point!\n");
+		Con_Print("Collision_ValidateBrush: brush with no planes and more than one point!\n");
 		printbrush = true;
 	}
 #endif
@@ -365,7 +365,7 @@ void Collision_ValidateBrush(colbrushf_t *brush)
 		}
 		if (pointsoffplanes == 0) // all points are on all planes
 		{
-			Con_Printf("Collision_ValidateBrush: all points lie on all planes (degenerate, no brush volume!)\n");
+			Con_Print("Collision_ValidateBrush: all points lie on all planes (degenerate, no brush volume!)\n");
 			printbrush = true;
 		}
 	}
@@ -432,7 +432,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		// check if there are too many and skip the brush
 		if (numplanes >= 256)
 		{
-			Con_Printf("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
+			Con_Print("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
 			return NULL;
 		}
 
@@ -463,14 +463,14 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		// check if there are too many polygon vertices for buffer
 		if (numpolypoints > maxpolypoints)
 		{
-			Con_Printf("Collision_NewBrushFromPlanes: failed to build collision brush: too many points for buffer\n");
+			Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many points for buffer\n");
 			return NULL;
 		}
 
 		// check if there are too many triangle elements for buffer
 		if (numelements + (w->numpoints - 2) * 3 > maxelements)
 		{
-			Con_Printf("Collision_NewBrushFromPlanes: failed to build collision brush: too many triangle elements for buffer\n");
+			Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many triangle elements for buffer\n");
 			return NULL;
 		}
 
@@ -487,7 +487,7 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 				// check if there are too many and skip the brush
 				if (numpoints >= 256)
 				{
-					Con_Printf("Collision_NewBrushFromPlanes: failed to build collision brush: too many points for buffer\n");
+					Con_Print("Collision_NewBrushFromPlanes: failed to build collision brush: too many points for buffer\n");
 					Winding_Free(w);
 					return NULL;
 				}
@@ -771,7 +771,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 				// any brush with degenerate planes is not worth handling
 				if (DotProduct(startplane->normal, startplane->normal) < 0.9f || DotProduct(endplane->normal, endplane->normal) < 0.9f)
 				{
-					Con_Printf("Collision_TraceBrushBrushFloat: degenerate thisbrush plane!\n");
+					Con_Print("Collision_TraceBrushBrushFloat: degenerate thisbrush plane!\n");
 					return;
 				}
 				f = furthestplanedist_float(startplane->normal, thisbrush_start->points, thisbrush_start->numpoints);
@@ -790,7 +790,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 				// any brush with degenerate planes is not worth handling
 				if (DotProduct(startplane->normal, startplane->normal) < 0.9f || DotProduct(endplane->normal, endplane->normal) < 0.9f)
 				{
-					Con_Printf("Collision_TraceBrushBrushFloat: degenerate thatbrush plane!\n");
+					Con_Print("Collision_TraceBrushBrushFloat: degenerate thatbrush plane!\n");
 					return;
 				}
 				f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
@@ -917,7 +917,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			// any brush with degenerate planes is not worth handling
 			if (DotProduct(startplane->normal, startplane->normal) < 0.9f || DotProduct(endplane->normal, endplane->normal) < 0.9f)
 			{
-				Con_Printf("Collision_TraceLineBrushFloat: degenerate plane!\n");
+				Con_Print("Collision_TraceLineBrushFloat: degenerate plane!\n");
 				return;
 			}
 			if (thatbrush_start->numpoints)
@@ -1045,7 +1045,7 @@ void Collision_TraceBrushPolygonFloat(trace_t *trace, const colbrushf_t *thisbru
 {
 	if (numpoints > 256)
 	{
-		Con_Printf("Polygon with more than 256 points not supported yet (fixme!)\n");
+		Con_Print("Polygon with more than 256 points not supported yet (fixme!)\n");
 		return;
 	}
 	polyf_brush.numpoints = numpoints;
@@ -1094,7 +1094,7 @@ void Collision_TraceLinePolygonFloat(trace_t *trace, const vec3_t linestart, con
 {
 	if (numpoints > 256)
 	{
-		Con_Printf("Polygon with more than 256 points not supported yet (fixme!)\n");
+		Con_Print("Polygon with more than 256 points not supported yet (fixme!)\n");
 		return;
 	}
 	polyf_brush.numpoints = numpoints;
@@ -1155,7 +1155,7 @@ void Collision_TraceBrushPolygonTransformFloat(trace_t *trace, const colbrushf_t
 	int i;
 	if (numpoints > 256)
 	{
-		Con_Printf("Polygon with more than 256 points not supported yet (fixme!)\n");
+		Con_Print("Polygon with more than 256 points not supported yet (fixme!)\n");
 		return;
 	}
 	polyf_brushstart.numpoints = numpoints;

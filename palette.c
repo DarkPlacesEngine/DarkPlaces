@@ -189,7 +189,7 @@ void Palette_Init(void)
 	}
 	else
 	{
-		Con_DPrintf("Couldn't load gfx/palette.lmp, falling back on internal palette\n");
+		Con_DPrint("Couldn't load gfx/palette.lmp, falling back on internal palette\n");
 		memcpy(host_basepal, host_quakepal, 765);
 	}
 	host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black

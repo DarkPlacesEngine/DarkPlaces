@@ -678,7 +678,7 @@ qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height,
 	// No DLL = no JPEGs
 	if (!jpeg_dll)
 	{
-		Con_Printf ("You need the libjpeg library to save JPEG images\n");
+		Con_Print("You need the libjpeg library to save JPEG images\n");
 		return false;
 	}
 

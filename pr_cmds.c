@@ -200,9 +200,9 @@ void PF_error (void)
 	char string[STRINGTEMP_LENGTH];
 
 	PF_VarString(0, string, sizeof(string));
-	Con_Printf ("======SERVER ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), string);
+	Con_Printf("======SERVER ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), string);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
-	ED_Print (ed);
+	ED_Print(ed);
 
 	PF_ERROR("Program error");
 }
@@ -223,9 +223,9 @@ void PF_objerror (void)
 	char string[STRINGTEMP_LENGTH];
 
 	PF_VarString(0, string, sizeof(string));
-	Con_Printf ("======OBJECT ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), string);
+	Con_Printf("======OBJECT ERROR in %s:\n%s\n", PR_GetString(pr_xfunction->s_name), string);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
-	ED_Print (ed);
+	ED_Print(ed);
 	ED_Free (ed);
 }
 
@@ -378,7 +378,7 @@ void PF_bprint (void)
 {
 	char string[STRINGTEMP_LENGTH];
 	PF_VarString(0, string, sizeof(string));
-	SV_BroadcastPrintf("%s", string);
+	SV_BroadcastPrint(string);
 }
 
 /*
@@ -400,7 +400,7 @@ void PF_sprint (void)
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
-		Con_Printf ("tried to sprint to a non-client\n");
+		Con_Print("tried to sprint to a non-client\n");
 		return;
 	}
 
@@ -432,7 +432,7 @@ void PF_centerprint (void)
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
-		Con_Printf ("tried to sprint to a non-client\n");
+		Con_Print("tried to sprint to a non-client\n");
 		return;
 	}
 
@@ -636,7 +636,7 @@ void PF_ambientsound (void)
 
 	if (!*check)
 	{
-		Con_Printf ("no precache: %s\n", samp);
+		Con_Printf("no precache: %s\n", samp);
 		return;
 	}
 
@@ -965,7 +965,7 @@ void PF_stuffcmd (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
-		Con_Printf("Can't stuffcmd to a non-client");
+		Con_Print("Can't stuffcmd to a non-client\n");
 		return;
 	}
 	str = G_STRING(OFS_PARM1);
@@ -1074,7 +1074,7 @@ void PF_dprint (void)
 	if (developer.integer)
 	{
 		PF_VarString(0, string, sizeof(string));
-		Con_Printf("%s",string);
+		Con_Print(string);
 	}
 }
 
@@ -1889,7 +1889,7 @@ void PF_setspawnparms (void)
 	i = NUM_FOR_EDICT(ent);
 	if (i < 1 || i > svs.maxclients || !svs.clients[i-1].active)
 	{
-		Con_Printf("tried to setspawnparms on a non-client\n");
+		Con_Print("tried to setspawnparms on a non-client\n");
 		return;
 	}
 
@@ -1997,7 +1997,7 @@ void PF_registercvar (void)
 // check for overlap with a command
 	if (Cmd_Exists (name))
 	{
-		Con_Printf ("PF_registercvar: %s is a command\n", name);
+		Con_Printf("PF_registercvar: %s is a command\n", name);
 		return;
 	}
 
@@ -2149,7 +2149,7 @@ void PF_setcolor (void)
 
 	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
-		Con_Printf ("tried to setcolor a non-client\n");
+		Con_Print("tried to setcolor a non-client\n");
 		return;
 	}
 
@@ -2958,7 +2958,7 @@ void PF_clientcommand (void)
 	i = (NUM_FOR_EDICT(G_EDICT(OFS_PARM0)) - 1);
 	if (i < 0 || i >= svs.maxclients || !svs.clients[i].active)
 	{
-		Con_Printf("PF_clientcommand: entity is not a client");
+		Con_Print("PF_clientcommand: entity is not a client\n");
 		return;
 	}
 

@@ -59,7 +59,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		drivername = com_argv[i + 1];
 	if (!SDL_GL_LoadLibrary(drivername))
 	{   
-		Con_Printf("Unable to load GL driver \"%s\"\n: ", drivername, SDL_GetError());
+		Con_Printf("Unable to load GL driver \"%s\": ", drivername, SDL_GetError());
 		return false;
 	}
 
@@ -70,7 +70,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	if (qglGetString == NULL)
 	{
 		VID_Shutdown();
-		Con_Printf("Required OpenGL function glGetString not found\n");
+		Con_Print("Required OpenGL function glGetString not found\n");
 		return false;
 	}
 

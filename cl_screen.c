@@ -63,7 +63,7 @@ Called for important messages that should stay in the center of the screen
 for a few moments
 ==============
 */
-void SCR_CenterPrint (char *str)
+void SCR_CenterPrint(char *str)
 {
 	strlcpy (scr_centerstring, str, sizeof (scr_centerstring));
 	scr_centertime_off = scr_centertime.value;
@@ -614,7 +614,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	drawqueue_t * dq;
 	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
 	{
-		Con_DPrintf("DrawQueue full !\n");
+		Con_DPrint("DrawQueue full !\n");
 		return;
 	}
 	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
@@ -635,7 +635,7 @@ void DrawQ_ResetClipArea(void)
 	drawqueue_t *dq;
 	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
 	{
-		Con_DPrintf("DrawQueue full !\n");
+		Con_DPrint("DrawQueue full !\n");
 		return;
 	}
 	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
@@ -673,7 +673,7 @@ void SCR_ScreenShot_f (void)
 			break;
 	if (shotnumber >= 1000000)
 	{
-		Con_Printf("SCR_ScreenShot_f: Couldn't create the image file\n");
+		Con_Print("SCR_ScreenShot_f: Couldn't create the image file\n");
 		return;
  	}
 
@@ -740,7 +740,7 @@ static void R_Envmap_f (void)
 
 	if (Cmd_Argc() != 3)
 	{
-		Con_Printf ("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
+		Con_Print("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
 		return;
 	}
 
@@ -748,12 +748,12 @@ static void R_Envmap_f (void)
 	size = atoi(Cmd_Argv(2));
 	if (size != 128 && size != 256 && size != 512 && size != 1024)
 	{
-		Con_Printf("envmap: size must be one of 128, 256, 512, or 1024\n");
+		Con_Print("envmap: size must be one of 128, 256, 512, or 1024\n");
 		return;
 	}
 	if (size > vid.realwidth || size > vid.realheight)
 	{
-		Con_Printf("envmap: your resolution is not big enough to render that size\n");
+		Con_Print("envmap: your resolution is not big enough to render that size\n");
 		return;
 	}
 

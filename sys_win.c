@@ -109,7 +109,7 @@ void Sys_Quit (void)
 	exit (0);
 }
 
-void Sys_Print(const char *text)
+void Sys_PrintToTerminal(const char *text)
 {
 	DWORD dummy;
 	extern HANDLE houtput;

@@ -546,11 +546,11 @@ void CL_ReadPointFile_f (void)
 #endif
 	if (!pointfile)
 	{
-		Con_Printf ("Could not open %s\n", name);
+		Con_Printf("Could not open %s\n", name);
 		return;
 	}
 
-	Con_Printf ("Reading %s...\n", name);
+	Con_Printf("Reading %s...\n", name);
 	c = 0;
 	s = 0;
 	pointfilepos = pointfile;
@@ -584,7 +584,7 @@ void CL_ReadPointFile_f (void)
 	Mem_Free(pointfile);
 #endif
 	VectorCopy(leakorg, org);
-	Con_Printf ("%i points read (%i particles spawned)\nLeak at %f %f %f\n", c, s, org[0], org[1], org[2]);
+	Con_Printf("%i points read (%i particles spawned)\nLeak at %f %f %f\n", c, s, org[0], org[1], org[2]);
 
 	particle(pt_static, PARTICLE_BEAM, 0xFF0000, 0xFF0000, tex_beam, false, PBLEND_ALPHA, 64, 64, 255, 0, 99999, 0, 0, org[0] - 4096, org[1], org[2], 0, 0, 0, 0, org[0] + 4096, org[1], org[2], 0, 0);
 	particle(pt_static, PARTICLE_BEAM, 0x00FF00, 0x00FF00, tex_beam, false, PBLEND_ALPHA, 64, 64, 255, 0, 99999, 0, 0, org[0], org[1] - 4096, org[2], 0, 0, 0, 0, org[0], org[1] + 4096, org[2], 0, 0);

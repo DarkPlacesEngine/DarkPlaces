@@ -441,7 +441,7 @@ loc0:
 			if (t->trace->allsolid)
 				t->trace->startsolid = true;
 #if COLLISIONPARANOID >= 3
-			Con_Printf("S");
+			Con_Print("S");
 #endif
 			return HULLCHECKSTATE_SOLID;
 		}
@@ -449,7 +449,7 @@ loc0:
 		{
 			t->trace->allsolid = false;
 #if COLLISIONPARANOID >= 3
-			Con_Printf("E");
+			Con_Print("E");
 #endif
 			return HULLCHECKSTATE_EMPTY;
 		}
@@ -475,7 +475,7 @@ loc0:
 		if (t2 < 0)
 		{
 #if COLLISIONPARANOID >= 3
-			Con_Printf("<");
+			Con_Print("<");
 #endif
 			num = node->children[1];
 			goto loc0;
@@ -487,7 +487,7 @@ loc0:
 		if (t2 >= 0)
 		{
 #if COLLISIONPARANOID >= 3
-			Con_Printf(">");
+			Con_Print(">");
 #endif
 			num = node->children[0];
 			goto loc0;
@@ -498,7 +498,7 @@ loc0:
 	// the line intersects, find intersection point
 	// LordHavoc: this uses the original trace for maximum accuracy
 #if COLLISIONPARANOID >= 3
-	Con_Printf("M");
+	Con_Print("M");
 #endif
 	if (plane->type < 3)
 	{
@@ -549,7 +549,7 @@ loc0:
 	t->trace->fraction = bound(0, midf, 1);
 
 #if COLLISIONPARANOID >= 3
-	Con_Printf("D");
+	Con_Print("D");
 #endif
 	return HULLCHECKSTATE_DONE;
 }
@@ -623,7 +623,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 #if COLLISIONPARANOID >= 2
 	Con_Printf("t(%f %f %f,%f %f %f,%i %f %f %f)", rhc.start[0], rhc.start[1], rhc.start[2], rhc.end[0], rhc.end[1], rhc.end[2], rhc.hull - model->brushq1.hulls, rhc.hull->clip_mins[0], rhc.hull->clip_mins[1], rhc.hull->clip_mins[2]);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
-	Con_Printf("\n");
+	Con_Print("\n");
 #else
 	if (DotProduct(rhc.dist, rhc.dist))
 		Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
@@ -983,7 +983,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 
 		if ((mtwidth & 15) || (mtheight & 15))
-			Con_Printf("warning: texture \"%s\" in \"%s\" is not 16 aligned", dmiptex->name, loadmodel->name);
+			Con_Printf("warning: texture \"%s\" in \"%s\" is not 16 aligned\n", dmiptex->name, loadmodel->name);
 
 		// LordHavoc: force all names to lowercase
 		for (j = 0;name[j];j++)
@@ -1247,9 +1247,9 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 			else
 			{
 				if (fs_filesize == 8)
-					Con_Printf("Empty .lit file, ignoring\n");
+					Con_Print("Empty .lit file, ignoring\n");
 				else
-					Con_Printf("Corrupt .lit file (old version?), ignoring\n");
+					Con_Print("Corrupt .lit file (old version?), ignoring\n");
 				Mem_Free(data);
 			}
 		}
@@ -1642,7 +1642,7 @@ static void SubdividePolygon(int numverts, float *verts)
 	{
 		if (subdivpolytriangles >= MAX_SUBDIVPOLYTRIANGLES)
 		{
-			Con_Printf("SubdividePolygon: ran out of triangles in buffer, please increase your r_subdivide_size\n");
+			Con_Print("SubdividePolygon: ran out of triangles in buffer, please increase your r_subdivide_size\n");
 			return;
 		}
 
@@ -2029,7 +2029,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 		if (p >= 0 && out->clusterindex >= 0)
 		{
 			if (p >= loadmodel->brushq1.num_compressedpvs)
-				Con_Printf("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
+				Con_Print("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
 			else
 				Mod_Q1BSP_DecompressVis(loadmodel->brushq1.data_compressedpvs + p, loadmodel->brushq1.data_compressedpvs + loadmodel->brushq1.num_compressedpvs, loadmodel->brush.data_pvsclusters + out->clusterindex * loadmodel->brush.num_pvsclusterbytes, loadmodel->brush.data_pvsclusters + (out->clusterindex + 1) * loadmodel->brush.num_pvsclusterbytes);
 		}
@@ -2522,7 +2522,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		nodeportalwinding = Winding_Clip(nodeportalwinding, clipplane.normal[0], clipplane.normal[1], clipplane.normal[2], clipplane.dist, true);
 		if (!nodeportalwinding)
 		{
-			Con_Printf("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+			Con_Print("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
 			break;
 		}
 	}
@@ -3605,7 +3605,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				text = f;
 				while (COM_ParseToken(&text, false))
 				{
-					snprintf(shadername, sizeof(shadername), "%s", com_token);
+					strncpy(shadername, com_token, sizeof(shadername));
 					flags = 0;
 					sky[0] = 0;
 					if (COM_ParseToken(&text, false) && !strcasecmp(com_token, "{"))
@@ -4279,7 +4279,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				if (out->data_element3i[j] < 0 || out->data_element3i[j] >= out->num_vertices)
 					out->data_element3i[j] = 0;
 			}
-			Con_Printf("\n");
+			Con_Print("\n");
 		}
 		// for shadow volumes
 		Mod_BuildTriangleNeighbors(out->data_neighbor3i, out->data_element3i, out->num_triangles);
