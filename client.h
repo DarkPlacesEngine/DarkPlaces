@@ -575,7 +575,6 @@ void CL_TimeDemo_f (void);
 //
 void CL_Parse_Init(void);
 void CL_ParseServerMessage(void);
-void CL_BitProfile_f(void);
 
 //
 // view

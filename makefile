@@ -22,7 +22,7 @@ SOUNDLIB=
 #if you want no CD audio
 CD=cd_null.o
 
-CLIENTOBJECTS= cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o cl_light.o cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_tent.o cl_video.o console.o dpvsimpledecode.o fractalnoise.o gl_backend.o gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o
+CLIENTOBJECTS= cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o console.o dpvsimpledecode.o fractalnoise.o gl_backend.o gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o
 SERVEROBJECTS= pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o sv_phys.o sv_user.o
 SHAREDOBJECTS= builddate.o cmd.o collision.o common.o crc.o cvar.o filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_dgrm.o net_loop.o net_main.o net_udp.o palette.o portals.o protocol.o quakeio.o sys_linux.o sys_shared.o transform.o world.o wad.o zone.o $(NETOBJECTS) $(SERVEROBJECTS)
 
