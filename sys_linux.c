@@ -43,7 +43,7 @@ void Sys_Error (const char *error, ...)
 #endif
 
 	va_start (argptr,error);
-	vsprintf (string,error,argptr);
+	vsnprintf (string, sizeof (string), error, argptr);
 	va_end (argptr);
 	fprintf(stderr, "Error: %s\n", string);
 

@@ -63,7 +63,7 @@ void Sys_Error (const char *error, ...)
 	static int	in_sys_error2 = 0;
 
 	va_start (argptr, error);
-	vsprintf (text, error, argptr);
+	vsnprintf (text, sizeof (text), error, argptr);
 	va_end (argptr);
 
 	// close video so the message box is visible, unless we already tried that

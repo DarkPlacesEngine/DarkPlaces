@@ -393,40 +393,40 @@ char *PR_ValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		sprintf (line, "%s", PR_GetString(val->string));
+		snprintf (line, sizeof (line), "%s", PR_GetString(val->string));
 		break;
 	case ev_entity:
 		//n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
 		n = val->edict;
 		if (n < 0 || n >= MAX_EDICTS)
-			sprintf (line, "entity %i (invalid!)", n);
+			snprintf (line, sizeof (line), "entity %i (invalid!)", n);
 		else
-			sprintf (line, "entity %i", n);
+			snprintf (line, sizeof (line), "entity %i", n);
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		sprintf (line, "%s()", PR_GetString(f->s_name));
+		snprintf (line, sizeof (line), "%s()", PR_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
-		sprintf (line, ".%s", PR_GetString(def->s_name));
+		snprintf (line, sizeof (line), ".%s", PR_GetString(def->s_name));
 		break;
 	case ev_void:
-		sprintf (line, "void");
+		snprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
 		// LordHavoc: changed from %5.1f to %10.4f
-		sprintf (line, "%10.4f", val->_float);
+		snprintf (line, sizeof (line), "%10.4f", val->_float);
 		break;
 	case ev_vector:
 		// LordHavoc: changed from %5.1f to %10.4f
-		sprintf (line, "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
+		snprintf (line, sizeof (line), "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
-		sprintf (line, "pointer");
+		snprintf (line, sizeof (line), "pointer");
 		break;
 	default:
-		sprintf (line, "bad type %i", type);
+		snprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
 
@@ -454,14 +454,14 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		sprintf (line, "%s", PR_GetString(val->string));
+		snprintf (line, sizeof (line), "%s", PR_GetString(val->string));
 		break;
 	case ev_entity:
-		sprintf (line, "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+		snprintf (line, sizeof (line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		sprintf (line, "%s", PR_GetString(f->s_name));
+		snprintf (line, sizeof (line), "%s", PR_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
@@ -470,7 +470,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		// this fixes saving games from various mods
 		//sprintf (line, "%s", PR_GetString(def->s_name));
 		s = PR_GetString(def->s_name);
-		for (i = 0;i < 4095 && *s;)
+		for (i = 0;i < sizeof (line) - 2 && *s;)
 		{
 			if (*s == '\n')
 			{
@@ -483,22 +483,22 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 				line[i++] = 'r';
 			}
 			else
-				line[i] = *s;
+				line[i++] = *s;
 			s++;
 		}
-		line[i++] = 0;
+		line[i] = '\0';
 		break;
 	case ev_void:
-		sprintf (line, "void");
+		snprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
-		sprintf (line, "%f", val->_float);
+		snprintf (line, sizeof (line), "%f", val->_float);
 		break;
 	case ev_vector:
-		sprintf (line, "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+		snprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	default:
-		sprintf (line, "bad type %i", type);
+		snprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
 
@@ -586,7 +586,7 @@ void ED_Print (edict_t *ed)
 	}
 
 	tempstring[0] = 0;
-	sprintf(tempstring, "\nEDICT %i:\n", NUM_FOR_EDICT(ed));
+	snprintf (tempstring, sizeof (tempstring), "\nEDICT %i:\n", NUM_FOR_EDICT(ed));
 	for (i=1 ; i<progs->numfielddefs ; i++)
 	{
 		d = &pr_fielddefs[i];
@@ -996,19 +996,15 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 
 		// anglehack is to allow QuakeEd to write single scalar angles
 		// and allow them to be turned into vectors. (FIXME...)
-		if (!strcmp(com_token, "angle"))
-		{
-			strcpy (com_token, "angles");
-			anglehack = true;
-		}
-		else
-			anglehack = false;
+		anglehack = !strcmp (com_token, "angle");
+		if (anglehack)
+			strlcpy (com_token, "angles", sizeof (com_token));
 
 		// FIXME: change light to _light to get rid of this hack
 		if (!strcmp(com_token, "light"))
-			strcpy (com_token, "light_lev");	// hack for single light def
+			strlcpy (com_token, "light_lev", sizeof (com_token));	// hack for single light def
 
-		strcpy (keyname, com_token);
+		strlcpy (keyname, com_token, sizeof (keyname));
 
 		// another hack to fix heynames with trailing spaces
 		n = strlen(keyname);
@@ -1042,8 +1038,8 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 		if (anglehack)
 		{
 			char	temp[32];
-			strcpy (temp, com_token);
-			sprintf (com_token, "0 %s 0", temp);
+			strlcpy (temp, com_token, sizeof (temp));
+			snprintf (com_token, sizeof (com_token), "0 %s 0", temp);
 		}
 
 		if (!ED_ParseEpair(ent, key, com_token))
