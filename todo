@@ -1,46 +1,45 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
--n darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
--n darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
--n darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
+d darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
+d darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
+d darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
 -n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
--n darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
--n darkplaces: add bullet hole decals to the particlefont (Vermeulen)
--n darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
--n darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
--n darkplaces: add gl_texture_anisotropy to menu (Static_Fiend)
+d darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
+d darkplaces: add bullet hole decals to the particlefont (Vermeulen)
+d darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
+d darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
+d darkplaces: add gl_texture_anisotropy to menu (Static_Fiend)
 -n darkplaces: add slowmo to options menu (Cristian Beltramo)
 -n darkplaces: add stats to slist menu displaying how many masters/servers have been queried and replied (tell yummyluv)
 -n darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
--n darkplaces: default to sv_cullentities_pvs mode again...  trace is too slow in q3bsp and unreliable by nature anyway
+d darkplaces: default to sv_cullentities_pvs mode again...  trace is too slow in q3bsp and unreliable by nature anyway
 -n darkplaces: display "No servers found" instead of a cursor when there are none (yummyluv)
--n darkplaces: don't accept connect packets after first one (tell Willis)
+d darkplaces: don't accept connect packets after first one (tell Willis)
 -n darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 -n darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
 -n darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -n darkplaces: figure out why -sndspeed 22050, 44100 and 16000 are choppy in windows? (cheapalert)
 -n darkplaces: fix a crash when changing level while using qe1 textures (Todd)
--n darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
--n darkplaces: fix r_shadow_portallight 1 (default) mode (Vermeulen)
--n darkplaces: fix skybox geometry (SeienAbunae)
+d darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
+d darkplaces: fix r_shadow_portallight 1 (default) mode (Vermeulen)
+d darkplaces: fix skybox geometry (SeienAbunae)
 -n darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (NotoriousRay, Uffe)
 -n darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
--n darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
+d darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
 -n darkplaces: make the reply receive code drop packets from servers not in the list (Willis)
 -n darkplaces: net_slist and the server browser should show servers when they are queried, not just when they reply; which would replace the matching entry (yummyluv)
 -n darkplaces: net_slist should print out "No network." if networking is not initialized (yummyluv)
--n darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
+d darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
 -n darkplaces: remove dead master server from default masters list (yummyluv)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
-0 darkplaces: fix view blends, they're not working
 d darkplaces: fixed SV_TouchAreaGrid to not crash if SV_IncreaseEdicts is called during a touch function, by making a list of edicts to touch and then running through the list afterward (KGB|romi)
 d darkplaces: moved R_ShadowVolumeLighting to r_shadow.c
 d darkplaces: added RENDER_LIGHT flag to entity_render_t to make rtlighting optional per entity
 d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
 d darkplaces: safety checked lightmap access in Mod_Q1BSP_RecursiveLightPoint as one map Sajt uses was crashing (Sajt)
--n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (Urre, Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
+-n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (-Urre, -Wazat for Battlemech, FrikaC, -mashakos, RenegadeC, Sajt)
 0 darkplaces: figure out why cubemap upload scaling crashes (Urre)
 0 darkplaces: make screenshots save to screenshots/fniggium%04i.tga in GAME_FNIGGIUM (Sajt)
 0 darkplaces: make screenshots save to screenshots directory (Sajt)
