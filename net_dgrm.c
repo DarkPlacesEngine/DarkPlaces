@@ -1228,7 +1228,7 @@ static qboolean _Datagram_SearchForInetHosts (const char *master)
 				portnum = atoi (port + 1);
 			if (!portnum)
 				portnum = MASTER_PORT;
-			Con_DPrintf("Datagram_SearchForInetHosts: sending %d byte message to master %s\n", net_message.cursize, master);
+			Con_DPrintf("Datagram_SearchForInetHosts: sending %d byte message to master %s port %i\n", net_message.cursize, master, portnum);
 			dfunc.SetSocketPort (&masteraddr, portnum);
 			dfunc.Send (net_message.data, net_message.cursize, &masteraddr);
 		}
