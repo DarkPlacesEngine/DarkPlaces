@@ -2335,17 +2335,44 @@ episode_t	nehahraepisodes[] =
 	{"Dimension of the Lost", 17, 2}
 };
 
-// these are placeholders for bloodbath developers to fill in more correctly
+// Map list for BloodBath
 level_t		bloodbathlevels[] =
 {
-	{"start",	"Welcome to BloodBath"},
-	{"bb1m1",	"Level 1"}
+	{"bb1",		"The Stronghold"},
+	{"bb2",		"Winter Wonderland"},
+	{"bb3",		"Bodies"},
+	{"bb4",		"The Tower"},
+	{"bb5",		"Click!"},
+	{"bb7",		"Midgard"},
+	{"bb8",		"Fun With Heads"},
+
+	{"dm1",		"Monolith Building #11"},
+	{"dm2",		"Power!"},
+	{"dm3",		"Area 15"},
+
+	{"cpbb01",	"Crypt of Despair"},
+	{"cpbb03",	"Unholy Cathedral"},
+
+	{"b2a15",	"A15"},
+	{"barena",	"Blood Arena"},
+	{"bkeep",	"Blood Keep"},
+	{"bstar",	"Brownstar"},
+	{"crypt",	"The Crypt"},
+
+	{"bb3_2k1",	"Bodies Infusion"},
+	{"qbb1",	"The Confluence"},
+	{"qbb2",	"Kathartic"},
+	{"qbb3",	"Caleb's Woodland Retreat"},
+	{"qe1m7",	"The House of Chthon"}
 };
 
 episode_t	bloodbathepisodes[] =
 {
-	{"Welcome to BloodBath", 0, 1},
-	{"BloodBath Episode 1", 1, 1}
+	{"Blood", 0, 7},
+	{"Plasma Pack", 7, 3},
+	{"Cryptic Passage", 10, 2},
+	{"Blood 2", 12, 5},
+	{"BloodBath", 17, 5}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
@@ -2353,7 +2380,7 @@ gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
 gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
 gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
-gamelevels_t bloodbathgame = {"BloodBath", bloodbathlevels, bloodbathepisodes, 2};
+gamelevels_t bloodbathgame = {"BloodBath", bloodbathlevels, bloodbathepisodes, 5};
 
 typedef struct
 {
