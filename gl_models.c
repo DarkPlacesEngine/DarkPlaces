@@ -67,17 +67,8 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	firstpass = true;
 	skin = R_FetchAliasSkin(ent, mesh);
 
-	if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
-	{
-		vertex3f = mesh->data_basevertex3f;
-		normal3f = mesh->data_basenormal3f;
-	}
-	else
-	{
-		vertex3f = varray_vertex3f;
-		Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
-		normal3f = NULL;
-	}
+	vertex3f = NULL;
+	normal3f = NULL;
 	for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 	{
 		if (!(layer->flags & ALIASLAYER_FORCEDRAW_IF_FIRSTPASS) || !firstpass)
@@ -119,6 +110,16 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				m.texrgbscale[0] = 4;
 			}
 		}
+		if (!vertex3f)
+		{
+			if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
+				vertex3f = mesh->data_basevertex3f;
+			else
+			{
+				vertex3f = varray_vertex3f;
+				Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
+			}
+		}
 		m.pointer_vertex = vertex3f;
 
 		c_alias_polys += mesh->num_triangles;
@@ -157,8 +158,13 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				m.pointer_color = varray_color4f;
 				if (normal3f == NULL)
 				{
-					normal3f = varray_normal3f;
-					Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
+					if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
+						normal3f = mesh->data_basenormal3f;
+					else
+					{
+						normal3f = varray_normal3f;
+						Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
+					}
 				}
 				R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
 			}
@@ -235,7 +241,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist)
 {
 	int c, meshnum, layernum;
-	float fog, ifog, lightcolor2[3];
+	float fog, ifog, lightcolor2[3], ambientscale2, diffusescale2, specularscale2;
 	float *vertex3f, *svector3f, *tvector3f, *normal3f;
 	vec3_t diff;
 	qbyte *bcolor;
@@ -269,22 +275,10 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		// FIXME: transparent skins need to be lit during the transparent render
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
-		if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
-		{
-			vertex3f = mesh->data_basevertex3f;
-			svector3f = mesh->data_basesvector3f;
-			tvector3f = mesh->data_basetvector3f;
-			normal3f = mesh->data_basenormal3f;
-		}
-		else
-		{
-			vertex3f = varray_vertex3f;
-			svector3f = varray_svector3f;
-			tvector3f = varray_tvector3f;
-			normal3f = varray_normal3f;
-			Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
-			Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
-		}
+		vertex3f = NULL;
+		svector3f = NULL;
+		tvector3f = NULL;
+		normal3f = NULL;
 		for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 		{
 			if (!(layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))
@@ -294,40 +288,73 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			lightcolor2[0] = lightcolor[0] * ifog;
 			lightcolor2[1] = lightcolor[1] * ifog;
 			lightcolor2[2] = lightcolor[2] * ifog;
+			ambientscale2 = 0;
+			diffusescale2 = 0;
+			specularscale2 = 0;
 			if (layer->flags & ALIASLAYER_SPECULAR)
-			{
-				c_alias_polys += mesh->num_triangles;
-				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, 0, 0, specularscale);
-			}
-			else if (layer->flags & ALIASLAYER_DIFFUSE)
+				specularscale2 = specularscale;
+			if (layer->flags & ALIASLAYER_DIFFUSE)
 			{
 				if (layer->flags & ALIASLAYER_COLORMAP_PANTS)
 				{
 					// 128-224 are backwards ranges
 					c = (ent->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
 					// fullbright passes were already taken care of, so skip them in realtime lighting passes
-					if (c >= 224)
-						continue;
-					bcolor = (qbyte *) (&palette_complete[c]);
-					lightcolor2[0] *= bcolor[0] * (1.0f / 255.0f);
-					lightcolor2[1] *= bcolor[1] * (1.0f / 255.0f);
-					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
+					if (c < 224)
+					{
+						bcolor = (qbyte *) (&palette_complete[c]);
+						lightcolor2[0] *= bcolor[0] * (1.0f / 255.0f);
+						lightcolor2[1] *= bcolor[1] * (1.0f / 255.0f);
+						lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
+						ambientscale2 = ambientscale;
+						diffusescale2 = diffusescale;
+					}
 				}
 				else if (layer->flags & ALIASLAYER_COLORMAP_SHIRT)
 				{
 					// 128-224 are backwards ranges
 					c = (ent->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
 					// fullbright passes were already taken care of, so skip them in realtime lighting passes
-					if (c >= 224)
-						continue;
-					bcolor = (qbyte *) (&palette_complete[c]);
-					lightcolor2[0] *= bcolor[0] * (1.0f / 255.0f);
-					lightcolor2[1] *= bcolor[1] * (1.0f / 255.0f);
-					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
+					if (c < 224)
+					{
+						bcolor = (qbyte *) (&palette_complete[c]);
+						lightcolor2[0] *= bcolor[0] * (1.0f / 255.0f);
+						lightcolor2[1] *= bcolor[1] * (1.0f / 255.0f);
+						lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
+						ambientscale2 = ambientscale;
+						diffusescale2 = diffusescale;
+					}
 				}
-				c_alias_polys += mesh->num_triangles;
-				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, ambientscale, diffusescale, 0);
+				else
+				{
+					ambientscale2 = ambientscale;
+					diffusescale2 = diffusescale;
+				}
 			}
+			if (!(ambientscale2 + diffusescale2 + specularscale2) || VectorLength2(lightcolor2) <= 0.01)
+				continue;
+			c_alias_polys += mesh->num_triangles;
+			if (!vertex3f)
+			{
+				if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
+				{
+					vertex3f = mesh->data_basevertex3f;
+					svector3f = mesh->data_basesvector3f;
+					tvector3f = mesh->data_basetvector3f;
+					normal3f = mesh->data_basenormal3f;
+				}
+				else
+				{
+					vertex3f = varray_vertex3f;
+					svector3f = varray_svector3f;
+					tvector3f = varray_tvector3f;
+					normal3f = varray_normal3f;
+					Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
+					Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
+				}
+			}
+			// TODO: make layer have ->gloss as well as ->texture, and merge specular layer for common non-colormapped case?
+			R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, ambientscale2, diffusescale2, specularscale2);
 		}
 	}
 }
