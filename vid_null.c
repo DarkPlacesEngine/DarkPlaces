@@ -35,6 +35,7 @@ void signal_handler(int sig)
 
 void InitSig(void)
 {
+#ifndef WIN32
 	signal(SIGHUP, signal_handler);
 	signal(SIGINT, signal_handler);
 	signal(SIGQUIT, signal_handler);
@@ -45,6 +46,7 @@ void InitSig(void)
 	signal(SIGFPE, signal_handler);
 	signal(SIGSEGV, signal_handler);
 	signal(SIGTERM, signal_handler);
+#endif
 }
 
 void VID_GetWindowSize (int *x, int *y, int *width, int *height)
