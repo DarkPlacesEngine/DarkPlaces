@@ -1543,7 +1543,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
 	int entnum, style, islight;
 	char key[256], value[1024];
-	float origin[3], radius, color[3], light, scale, originhack[3];
+	float origin[3], radius, color[3], light, scale, originhack[3], overridecolor[3];
 	const char *data;
 
 	data = cl.worldmodel->entities;
@@ -1555,6 +1555,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		origin[0] = origin[1] = origin[2] = 0;
 		originhack[0] = originhack[1] = originhack[2] = 0;
 		color[0] = color[1] = color[2] = 1;
+		overridecolor[0] = overridecolor[1] = overridecolor[2] = 1;
 		scale = 1;
 		style = 0;
 		islight = false;
@@ -1588,29 +1589,68 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				if (!strncmp(value, "light", 5))
 				{
 					islight = true;
+					if (!strcmp(value, "light_fluoro"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 0;
+						overridecolor[0] = 1;
+						overridecolor[1] = 1;
+						overridecolor[2] = 1;
+					}
+					if (!strcmp(value, "light_fluorospark"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 0;
+						overridecolor[0] = 1;
+						overridecolor[1] = 1;
+						overridecolor[2] = 1;
+					}
+					if (!strcmp(value, "light_globe"))
+					{
+						originhack[0] = 0;
+						originhack[1] = 0;
+						originhack[2] = 0;
+						overridecolor[0] = 1;
+						overridecolor[1] = 0.8;
+						overridecolor[2] = 0.4;
+					}
 					if (!strcmp(value, "light_flame_large_yellow"))
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
 						originhack[2] = 48;
+						overridecolor[0] = 1;
+						overridecolor[1] = 0.7;
+						overridecolor[2] = 0.2;
 					}
 					if (!strcmp(value, "light_flame_small_yellow"))
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
 						originhack[2] = 40;
+						overridecolor[0] = 1;
+						overridecolor[1] = 0.7;
+						overridecolor[2] = 0.2;
 					}
 					if (!strcmp(value, "light_torch_small_white"))
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
 						originhack[2] = 40;
+						overridecolor[0] = 1;
+						overridecolor[1] = 0.9;
+						overridecolor[2] = 0.7;
 					}
 					if (!strcmp(value, "light_torch_small_walltorch"))
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
 						originhack[2] = 40;
+						overridecolor[0] = 1;
+						overridecolor[1] = 0.7;
+						overridecolor[2] = 0.2;
 					}
 				}
 			}
@@ -1621,6 +1661,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			light = 300;
 		radius = bound(0, light / scale, 1048576) + 15.0f;
 		light = bound(0, light, 1048576) * (1.0f / 256.0f);
+		if (color[0] == 1 && color[1] == 1 && color[2] == 1)
+			VectorCopy(overridecolor, color);
 		VectorScale(color, light, color);
 		VectorAdd(origin, originhack, origin);
 		if (radius >= 15)
