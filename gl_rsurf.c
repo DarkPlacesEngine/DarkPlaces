@@ -1314,7 +1314,7 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 			}
 		}
 	}
-	else if (r_shadow_lightingmode >= 2)
+	else if (r_shadow_realtime_world.integer)
 	{
 		// opaque base lighting
 		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, surfchain);
@@ -1425,7 +1425,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 
 	R_UpdateTextureInfo(ent);
 
-	if (r_dynamic.integer && r_shadow_lightingmode < 1)
+	if (r_dynamic.integer && !r_shadow_realtime_dlight.integer)
 		R_MarkLights(ent);
 
 	if (model->light_ambient != r_ambient.value || model->light_scalebit != r_lightmapscalebit)
