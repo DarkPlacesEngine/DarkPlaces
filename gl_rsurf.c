@@ -1661,8 +1661,13 @@ void R_DrawWorld(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (!ent->model->brushq1.numleafs && ent->model->Draw)
-		ent->model->Draw(ent);
+	if (!ent->model->brushq1.numleafs)
+	{
+		if (ent->model->DrawSky)
+			ent->model->DrawSky(ent);
+		if (ent->model->Draw)
+			ent->model->Draw(ent);
+	}
 	else
 	{
 		R_PrepareSurfaces(ent);
@@ -1792,6 +1797,45 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
 }
 
+void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	if (!face->num_triangles)
+		return;
+	if (skyrendernow)
+	{
+		skyrendernow = false;
+		if (skyrendermasked)
+			R_Sky();
+	}
+
+	R_Mesh_Matrix(&ent->matrix);
+
+	GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
+	if (skyrendermasked)
+	{
+		// depth-only (masking)
+		qglColorMask(0,0,0,0);
+		// just to make sure that braindead drivers don't draw anything
+		// despite that colormask...
+		GL_BlendFunc(GL_ZERO, GL_ONE);
+	}
+	else
+	{
+		// fog sky
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+	}
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+
+	memset(&m, 0, sizeof(m));
+	R_Mesh_State_Texture(&m);
+
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+	qglColorMask(1,1,1,1);
+}
+
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
@@ -1800,41 +1844,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 	if (face->texture->renderflags)
 	{
 		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY)
-		{
-			if (skyrendernow)
-			{
-				skyrendernow = false;
-				if (skyrendermasked)
-					R_Sky();
-			}
-
-			R_Mesh_Matrix(&ent->matrix);
-
-			GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
-			if (skyrendermasked)
-			{
-				// depth-only (masking)
-				qglColorMask(0,0,0,0);
-				// just to make sure that braindead drivers don't draw anything
-				// despite that colormask...
-				GL_BlendFunc(GL_ZERO, GL_ONE);
-			}
-			else
-			{
-				// fog sky
-				GL_BlendFunc(GL_ONE, GL_ZERO);
-			}
-			GL_DepthMask(true);
-			GL_DepthTest(true);
-
-			memset(&m, 0, sizeof(m));
-			R_Mesh_State_Texture(&m);
-
-			GL_VertexPointer(face->data_vertex3f);
-			R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
-			qglColorMask(1,1,1,1);
 			return;
-		}
 		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW)
 			return;
 	}
@@ -1863,12 +1873,6 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
 
-/*
-void R_Q3BSP_DrawSky(entity_render_t *ent)
-{
-}
-*/
-
 void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec3_t modelorg, qbyte *pvs, int markframe)
 {
 	int i;
@@ -1888,7 +1892,37 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 			leaf->firstleafface[i]->markframe = markframe;
 }
 
+static int r_q3bsp_framecount = -1;
 
+void R_Q3BSP_DrawSky(entity_render_t *ent)
+{
+	int i;
+	q3mface_t *face;
+	vec3_t modelorg;
+	model_t *model;
+	qbyte *pvs;
+	R_Mesh_Matrix(&ent->matrix);
+	model = ent->model;
+	if (r_drawcollisionbrushes.integer < 2)
+	{
+		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		{
+			if (r_q3bsp_framecount != r_framecount)
+			{
+				r_q3bsp_framecount = r_framecount;
+				R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, r_framecount);
+			}
+			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+				if (face->markframe == r_framecount && (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY) && !R_CullBox(face->mins, face->maxs))
+					R_Q3BSP_DrawSkyFace(ent, face);
+		}
+		else
+			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+				if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY))
+					R_Q3BSP_DrawSkyFace(ent, face);
+	}
+}
 
 void R_Q3BSP_Draw(entity_render_t *ent)
 {
@@ -1897,7 +1931,6 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	vec3_t modelorg;
 	model_t *model;
 	qbyte *pvs;
-	static int markframe = 0;
 	R_Mesh_Matrix(&ent->matrix);
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
@@ -1905,9 +1938,13 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		{
-			R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
+			if (r_q3bsp_framecount != r_framecount)
+			{
+				r_q3bsp_framecount = r_framecount;
+				R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, r_framecount);
+			}
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-				if (face->markframe == markframe && !R_CullBox(face->mins, face->maxs))
+				if (face->markframe == r_framecount && !R_CullBox(face->mins, face->maxs))
 					R_Q3BSP_DrawFace(ent, face);
 		}
 		else
