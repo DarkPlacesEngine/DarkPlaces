@@ -1,6 +1,6 @@
 
-#include "matrixlib.h"
 #include <math.h>
+#include "matrixlib.h"
 
 void Matrix4x4_Copy (matrix4x4_t *out, const matrix4x4_t *in)
 {
