@@ -1070,8 +1070,10 @@ void PF_ftos (void)
 	v = G_FLOAT(OFS_PARM0);
 
 	s = PR_GetTempString();
-	// LordHavoc: ftos improvement
-	sprintf (s, "%g", v);
+	if ((float)((int)v) == v)
+		sprintf(s, "%i", (int)v);
+	else
+		sprintf(s, "%f", v);
 	G_INT(OFS_RETURN) = PR_SetString(s);
 }
 

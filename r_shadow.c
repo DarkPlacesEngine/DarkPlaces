@@ -2044,7 +2044,7 @@ void R_Shadow_SaveWorldLights(void)
 	buf = NULL;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		sprintf(line, "%s%g %g %g %g %g %g %g %d %s\n", light->castshadows ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->lightradius / r_editlights_rtlightssizescale.value, light->light[0] / r_editlights_rtlightscolorscale.value, light->light[1] / r_editlights_rtlightscolorscale.value, light->light[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "");
+		sprintf(line, "%s%f %f %f %f %f %f %f %d %s\n", light->castshadows ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->lightradius / r_editlights_rtlightssizescale.value, light->light[0] / r_editlights_rtlightscolorscale.value, light->light[1] / r_editlights_rtlightscolorscale.value, light->light[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "");
 		if (bufchars + (int) strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;

@@ -1095,7 +1095,7 @@ void M_DrawSlider (int x, int y, float num, float rangemin, float rangemax)
 		M_DrawCharacter (x + i*8, y, 129);
 	M_DrawCharacter (x+i*8, y, 130);
 	M_DrawCharacter (x + (SLIDER_RANGE-1)*8 * range, y, 131);
-	sprintf(text, "%g", num);
+	sprintf(text, "%f", num);
 	M_Print(x + (SLIDER_RANGE+2) * 8, y, text);
 }
 

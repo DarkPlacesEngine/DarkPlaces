@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -232,22 +232,26 @@ void Cvar_Set (const char *var_name, const char *value)
 Cvar_SetValue
 ============
 */
-void Cvar_SetValueQuick (cvar_t *var, float value)
+void Cvar_SetValueQuick(cvar_t *var, float value)
 {
-	char	val[32];
+	char val[256];
 
-	// LordHavoc: changed from %f to %g to use shortest representation
-	sprintf (val, "%g",value);
-	Cvar_SetQuick (var, val);
+	if ((float)((int)value) == value)
+		sprintf(val, "%i", (int)value);
+	else
+		sprintf(val, "%f", value);
+	Cvar_SetQuick(var, val);
 }
 
-void Cvar_SetValue (const char *var_name, float value)
+void Cvar_SetValue(const char *var_name, float value)
 {
-	char	val[32];
+	char val[256];
 
-	// LordHavoc: changed from %f to %g to use shortest representation
-	sprintf (val, "%g",value);
-	Cvar_Set (var_name, val);
+	if ((float)((int)value) == value)
+		sprintf(val, "%i", (int)value);
+	else
+		sprintf(val, "%f", value);
+	Cvar_Set(var_name, val);
 }
 
 /*
