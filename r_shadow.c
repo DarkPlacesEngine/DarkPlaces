@@ -2247,7 +2247,7 @@ static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 typedef struct suffixinfo_s
 {
 	char *suffix;
-	int flipx, flipy, flipdiagonal;
+	qboolean flipx, flipy, flipdiagonal;
 }
 suffixinfo_t;
 static suffixinfo_t suffix[3][6] =

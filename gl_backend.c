@@ -1190,24 +1190,29 @@ void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, const int *elements)
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg)
+qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg)
 {
+	int	indices[3] = {0,1,2};
 	qboolean ret;
-	qbyte *buffer;
+	qbyte *buffer1, *buffer2;
 
 	if (!r_render.integer)
 		return false;
 
-	buffer = Mem_Alloc(tempmempool, width*height*3);
-	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+	buffer1 = Mem_Alloc(tempmempool, width*height*3);
+	buffer2 = Mem_Alloc(tempmempool, width*height*3);
+	qglReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer1);
 	CHECKGLERROR
 
-	if (jpeg)
-		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer);
-	else
-		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer);
+	Image_CopyMux (buffer2, buffer1, width, height, flipx, flipy, flipdiagonal, 3, 3, indices);
 
-	Mem_Free(buffer);
+	if (jpeg)
+		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
+	else
+		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer2);
+
+	Mem_Free(buffer1);
+	Mem_Free(buffer2);
 	return ret;
 }
 
