@@ -40,7 +40,7 @@ d darkplaces: added RENDER_LIGHT flag to entity_render_t to make rtlighting opti
 d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
 d darkplaces: safety checked lightmap access in Mod_Q1BSP_RecursiveLightPoint as one map Sajt uses was crashing (Sajt)
 -n darkplaces: upgrade network protocol to send precise angles, and make EF_LOWPRECISION downgrade both origin and angles (-Urre, -Wazat for Battlemech, FrikaC, -mashakos, RenegadeC, Sajt)
-0 darkplaces: figure out why cubemap upload scaling crashes (Urre)
+-n darkplaces: fix cubemap upload scaling crashes (Urre)
 0 darkplaces: make screenshots save to screenshots/fniggium%04i.tga in GAME_FNIGGIUM (Sajt)
 0 darkplaces: make screenshots save to screenshots directory (Sajt)
 2 darkplaces: make corona occlusion testing use GL_ARB_occlusion_query instead of a CL_TraceLine (Riot)

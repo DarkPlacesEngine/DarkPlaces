@@ -786,7 +786,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			for (i = 0;i < 6;i++)
 			{
 				prevbuffer = texturebuffer;
-				texturebuffer += width * height * depth * glt->textype->inputbytesperpixel;
+				texturebuffer += glt->width * glt->height * glt->depth * glt->textype->inputbytesperpixel;
 				if (glt->width != width || glt->height != height || glt->depth != depth)
 				{
 					Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
