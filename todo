@@ -159,7 +159,6 @@
 0 darkplaces: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
 0 darkplaces: put patches on a delayed queue in q3bsp collision code so the trace is first clipped by brushes
 0 darkplaces: r_shadow should load .ent when importing light entities
-0 darkplaces: r_shadow_showtris messes up r_shadow_visiblevolumes color (jitspoe)
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: release darkplaces build
 0 darkplaces: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
@@ -671,6 +670,7 @@ f darkplaces: hack PF_nextent to skip inaccessible client slots depending on max
 f darkplaces: look at and integrate Vic's updated zone.[ch] (Vic)
 f darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
 f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
+f darkplaces: r_shadow_showtris messes up r_shadow_visiblevolumes color (jitspoe)
 f darkplaces: shadows are not working with model tag attachments (Electro)
 f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbunae)
 f hqbsp: CreateBrushFaces should use RadiusFromBounds for its rotation box code, but hmap is obsolete (Vic)
