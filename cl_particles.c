@@ -432,7 +432,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 	if (!cl_particles.integer) return;
 
 	if (cl_stainmaps.integer)
-		R_Stain(org, 32, 96, 96, 96, 2, 128, 128, 128, 2);
+		R_Stain(org, 32, 96, 96, 96, 24, 128, 128, 128, 24);
 
 	if (cl_particles_bulletimpacts.integer)
 	{
@@ -455,7 +455,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 void CL_PlasmaBurn (vec3_t org)
 {
 	if (cl_stainmaps.integer)
-		R_Stain(org, 48, 96, 96, 96, 3, 128, 128, 128, 3);
+		R_Stain(org, 48, 96, 96, 96, 32, 128, 128, 128, 32);
 }
 
 static float bloodcount = 0;
@@ -860,7 +860,7 @@ void CL_MoveParticles (void)
 				{
 					// assume it's blood (lame, but...)
 					if (cl_stainmaps.integer)
-						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 400.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 400.0f));
+						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 40.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
 					continue;

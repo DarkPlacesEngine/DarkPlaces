@@ -46,16 +46,9 @@ int r_pvsviewleafnovis = 0;
 
 static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 {
-	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract;
+	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract, k;
 	unsigned int *bl;
 	float dist, impact[3], local[3];
-
-	// LordHavoc: use 64bit integer...  shame it's not very standardized...
-#if _MSC_VER || __BORLANDC__
-	__int64     k;
-#else
-	long long   k;
-#endif
 
 	lit = false;
 
@@ -108,9 +101,9 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 		maxdist3 = maxdist - dist2;
 
 		// convert to 8.8 blocklights format
-		red = r_dlight[lnum].light[0];
-		green = r_dlight[lnum].light[1];
-		blue = r_dlight[lnum].light[2];
+		red = r_dlight[lnum].light[0] * (1.0f / 128.0f);
+		green = r_dlight[lnum].light[1] * (1.0f / 128.0f);
+		blue = r_dlight[lnum].light[2] * (1.0f / 128.0f);
 		subtract = (int) (r_dlight[lnum].subtract * 4194304.0f);
 		bl = intblocklights;
 
@@ -129,9 +122,9 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 						k = dlightdivtable[(sdtable[s] + td) >> 7] - subtract;
 						if (k > 0)
 						{
-							bl[0] += (red   * k) >> 7;
-							bl[1] += (green * k) >> 7;
-							bl[2] += (blue  * k) >> 7;
+							bl[0] += (red   * k);
+							bl[1] += (green * k);
+							bl[2] += (blue  * k);
 							lit = true;
 						}
 					}
@@ -430,30 +423,16 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 	}
 }
 
-void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, int icolor[8])
+void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, float fcolor[8])
 {
-	float ndist;
+	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
 	msurface_t *surf, *endsurf;
-	int sdtable[256], td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, dist2, impacts, impactt, subtract, a, stained, cr, cg, cb, ca, ratio;
+	int i, s, t, smax, tmax, smax3, impacts, impactt, stained;
 	qbyte *bl;
 	vec3_t impact;
-	// LordHavoc: use 64bit integer...  shame it's not very standardized...
-#if _MSC_VER || __BORLANDC__
-	__int64     k;
-#else
-	long long   k;
-#endif
 
-
-	// for comparisons to minimum acceptable light
-	// compensate for 256 offset
-	maxdist = radius * radius + 256.0f;
-
-	// clamp radius to avoid exceeding 32768 entry division table
-	if (maxdist > 4194304)
-		maxdist = 4194304;
-
-	subtract = (int) ((1.0f / maxdist) * 4194304.0f);
+	maxdist = radius * radius;
+	invradius = 1.0f / radius;
 
 loc0:
 	if (node->contents < 0)
@@ -470,89 +449,78 @@ loc0:
 		goto loc0;
 	}
 
-	dist2 = ndist * ndist + 256.0f;
-	if (dist2 < maxdist)
+	dist2 = ndist * ndist;
+	maxdist3 = maxdist - dist2;
+
+	if (node->plane->type < 3)
 	{
-		maxdist3 = maxdist - dist2;
+		VectorCopy(origin, impact);
+		impact[node->plane->type] -= ndist;
+	}
+	else
+	{
+		impact[0] = origin[0] - node->plane->normal[0] * ndist;
+		impact[1] = origin[1] - node->plane->normal[1] * ndist;
+		impact[2] = origin[2] - node->plane->normal[2] * ndist;
+	}
 
-		if (node->plane->type < 3)
+	for (surf = model->surfaces + node->firstsurface, endsurf = surf + node->numsurfaces;surf < endsurf;surf++)
+	{
+		if (surf->stainsamples)
 		{
-			VectorCopy(origin, impact);
-			impact[node->plane->type] -= ndist;
-		}
-		else
-		{
-			impact[0] = origin[0] - node->plane->normal[0] * ndist;
-			impact[1] = origin[1] - node->plane->normal[1] * ndist;
-			impact[2] = origin[2] - node->plane->normal[2] * ndist;
-		}
+			smax = (surf->extents[0] >> 4) + 1;
+			tmax = (surf->extents[1] >> 4) + 1;
 
-		for (surf = model->surfaces + node->firstsurface, endsurf = surf + node->numsurfaces;surf < endsurf;surf++)
-		{
-			if (surf->stainsamples)
+			impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+			impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+			s = bound(0, impacts, smax * 16) - impacts;
+			t = bound(0, impactt, tmax * 16) - impactt;
+			i = s * s + t * t + dist2;
+			if (i > maxdist)
+				continue;
+
+			// reduce calculations
+			for (s = 0, i = impacts; s < smax; s++, i -= 16)
+				sdtable[s] = i * i + dist2;
+
+			bl = surf->stainsamples;
+			smax3 = smax * 3;
+			stained = false;
+
+			i = impactt;
+			for (t = 0;t < tmax;t++, i -= 16)
 			{
-				smax = (surf->extents[0] >> 4) + 1;
-				tmax = (surf->extents[1] >> 4) + 1;
-
-				impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-				impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-
-				s = bound(0, impacts, smax * 16) - impacts;
-				t = bound(0, impactt, tmax * 16) - impactt;
-				i = s * s + t * t + dist2;
-				if (i > maxdist)
-					continue;
-
-				// reduce calculations
-				for (s = 0, i = impacts; s < smax; s++, i -= 16)
-					sdtable[s] = i * i + dist2;
-
-				// convert to 8.8 blocklights format
-				bl = surf->stainsamples;
-				smax3 = smax * 3;
-				stained = false;
-
-				i = impactt;
-				for (t = 0;t < tmax;t++, i -= 16)
+				td = i * i;
+				// make sure some part of it is visible on this line
+				if (td < maxdist3)
 				{
-					td = i * i;
-					// make sure some part of it is visible on this line
-					if (td < maxdist3)
+					maxdist2 = maxdist - td;
+					for (s = 0;s < smax;s++)
 					{
-						maxdist2 = maxdist - td;
-						for (s = 0;s < smax;s++)
+						if (sdtable[s] < maxdist2)
 						{
-							if (sdtable[s] < maxdist2)
+							ratio = lhrandom(0.0f, 1.0f);
+							a = (fcolor[3] + ratio * fcolor[7]) * (1.0f - sqrt(sdtable[s] + td) * invradius);
+							if (a >= (1.0f / 64.0f))
 							{
-								k = dlightdivtable[(sdtable[s] + td) >> 7] - subtract;
-								if (k > 0)
-								{
-									ratio = rand() & 255;
-									ca = (((icolor[7] - icolor[3]) * ratio) >> 8) + icolor[3];
-									a = (ca * k) >> 8;
-									if (a > 0)
-									{
-										a = bound(0, a, 256);
-										cr = (((icolor[4] - icolor[0]) * ratio) >> 8) + icolor[0];
-										cg = (((icolor[5] - icolor[1]) * ratio) >> 8) + icolor[1];
-										cb = (((icolor[6] - icolor[2]) * ratio) >> 8) + icolor[2];
-										bl[0] = (qbyte) ((((cr - (int) bl[0]) * a) >> 8) + (int) bl[0]);
-										bl[1] = (qbyte) ((((cg - (int) bl[1]) * a) >> 8) + (int) bl[1]);
-										bl[2] = (qbyte) ((((cb - (int) bl[2]) * a) >> 8) + (int) bl[2]);
-										stained = true;
-									}
-								}
+								if (a > 1)
+									a = 1;
+								bl[0] = (qbyte) ((float) bl[0] + a * ((fcolor[0] + ratio * fcolor[4]) - (float) bl[0]));
+								bl[1] = (qbyte) ((float) bl[1] + a * ((fcolor[1] + ratio * fcolor[5]) - (float) bl[1]));
+								bl[2] = (qbyte) ((float) bl[2] + a * ((fcolor[2] + ratio * fcolor[6]) - (float) bl[2]));
+								stained = true;
 							}
-							bl += 3;
 						}
+						bl += 3;
 					}
-					else // skip line
-						bl += smax3;
 				}
-				// force lightmap upload
-				if (stained)
-					surf->cached_dlight = true;
+				else // skip line
+					bl += smax3;
 			}
+			// force lightmap upload
+			if (stained)
+				surf->cached_dlight = true;
 		}
 	}
 
@@ -560,7 +528,7 @@ loc0:
 	{
 		if (node->children[1]->contents >= 0)
 		{
-			R_StainNode(node->children[0], model, origin, radius, icolor);
+			R_StainNode(node->children[0], model, origin, radius, fcolor);
 			node = node->children[1];
 			goto loc0;
 		}
@@ -579,22 +547,23 @@ loc0:
 
 void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
 {
-	int n, icolor[8];
+	int n;
+	float fcolor[8];
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
-	icolor[0] = cr1;
-	icolor[1] = cg1;
-	icolor[2] = cb1;
-	icolor[3] = ca1;
-	icolor[4] = cr2;
-	icolor[5] = cg2;
-	icolor[6] = cb2;
-	icolor[7] = ca2;
+	fcolor[0] = cr1;
+	fcolor[1] = cg1;
+	fcolor[2] = cb1;
+	fcolor[3] = ca1 * (1.0f / 64.0f);
+	fcolor[4] = cr2 - cr1;
+	fcolor[5] = cg2 - cg1;
+	fcolor[6] = cb2 - cb1;
+	fcolor[7] = (ca2 - ca1) * (1.0f / 64.0f);
 
 	model = cl.worldmodel;
 	if (model)
-		R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, icolor);
+		R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, fcolor);
 
 	// look for embedded bmodels
 	for (n = 0;n < cl_num_brushmodel_entities;n++)
@@ -607,7 +576,7 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 			if (model->type == mod_brush)
 			{
 				Matrix4x4_Transform(&ent->inversematrix, origin, org);
-				R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, org, radius, icolor);
+				R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, org, radius, fcolor);
 			}
 		}
 	}
