@@ -372,12 +372,10 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 		if (r_max_size.integer > realmaxsize)
 			Cvar_SetValue("r_max_size", realmaxsize);
 		// calculate final size
-		width2 = 1;while (width2 < glt->width) width2 <<= 1;
-		height2 = 1;while (height2 < glt->height) height2 <<= 1;
-		width2 >>= (int) r_picmip.integer;
-		height2 >>= (int) r_picmip.integer;
-		while (width2 > (int) r_max_size.integer) width2 >>= 1;
-		while (height2 > (int) r_max_size.integer) height2 >>= 1;
+		for (width2 = 1;width2 < glt->width;width2 <<= 1);
+		for (height2 = 1;height2 < glt->height;height2 <<= 1);
+		for (width2 >>= r_picmip.integer;width2 > r_max_size.integer;width2 >>= 1);
+		for (height2 >>= r_picmip.integer;height2 > r_max_size.integer;height2 >>= 1);
 		if (width2 < 1) width2 = 1;
 		if (height2 < 1) height2 = 1;
 
@@ -1041,8 +1039,8 @@ static void R_Upload(gltexture_t *glt, byte *data)
 	glt->image->flags &= ~GLTEXF_UPLOAD;
 
 	// these are rounded up versions of the size to do better resampling
-	width = 1;while(width < glt->width) width *= 2;
-	height = 1;while(height < glt->height) height *= 2;
+	for (width = 1;width < glt->width;width <<= 1);
+	for (height = 1;height < glt->height;height <<= 1);
 
 	if (resizebuffersize < width * height * glt->image->bytesperpixel)
 	{
@@ -1205,10 +1203,10 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		// calculate final size
 		if (r_max_size.integer > realmaxsize)
 			Cvar_SetValue("r_max_size", realmaxsize);
-		image->width = 1;while (image->width < glt->width) image->width <<= 1;
-		image->height = 1;while (image->height < glt->height) image->height <<= 1;
-		image->width >>= r_picmip.integer;while (image->width > r_max_size.integer) image->width >>= 1;
-		image->height >>= r_picmip.integer;while (image->height > r_max_size.integer) image->height >>= 1;
+		for (image->width = 1;image->width < glt->width;image->width <<= 1);
+		for (image->height = 1;image->height < glt->height;image->height <<= 1);
+		for (image->width >>= r_picmip.integer;image->width > r_max_size.integer;image->width >>= 1);
+		for (image->height >>= r_picmip.integer;image->height > r_max_size.integer;image->height >>= 1);
 		if (image->width < 1) image->width = 1;
 		if (image->height < 1) image->height = 1;
 	}
