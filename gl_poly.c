@@ -22,12 +22,12 @@ cvar_t r_multitexture = {0, "r_multitexture", "1"};
 cvar_t r_skyquality = {CVAR_SAVE, "r_skyquality", "2"};
 cvar_t r_mergesky = {CVAR_SAVE, "r_mergesky", "0"};
 
-char skyworldname[1024];
-rtexture_t *mergeskytexture;
-rtexture_t *solidskytexture;
-rtexture_t *alphaskytexture;
-qboolean skyavailable_quake;
-qboolean skyavailable_box;
+static char skyworldname[1024];
+static rtexture_t *mergeskytexture;
+static rtexture_t *solidskytexture, *solidskytexture_half;
+static rtexture_t *alphaskytexture, *alphaskytexture_half;
+static qboolean skyavailable_quake;
+static qboolean skyavailable_box;
 
 void R_BuildSky (int scrollupper, int scrolllower);
 
@@ -422,7 +422,7 @@ void wallpolyrender(void)
 	{
 		if (gl_combine.value)
 		{
-			qglSelectTexture(gl_mtex_enum+0);
+			qglActiveTexture(GL_TEXTURE0_ARB);
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
 			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_REPLACE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
@@ -431,6 +431,7 @@ void wallpolyrender(void)
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_REPLACE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_TEXTURE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_TEXTURE);
@@ -440,7 +441,7 @@ void wallpolyrender(void)
 			glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0);
 			glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0);
 			glEnable(GL_TEXTURE_2D);
-			qglSelectTexture(gl_mtex_enum+1);
+			qglActiveTexture(GL_TEXTURE1_ARB);
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
 			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
@@ -449,6 +450,7 @@ void wallpolyrender(void)
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
 			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_PREVIOUS_ARB);
 			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_TEXTURE);
@@ -461,10 +463,10 @@ void wallpolyrender(void)
 		}
 		else
 		{
-			qglSelectTexture(gl_mtex_enum+0);
+			qglActiveTexture(GL_TEXTURE0_ARB);
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 			glEnable(GL_TEXTURE_2D);
-			qglSelectTexture(gl_mtex_enum+1);
+			qglActiveTexture(GL_TEXTURE1_ARB);
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 			glEnable(GL_TEXTURE_2D);
 		}
@@ -472,30 +474,33 @@ void wallpolyrender(void)
 		lighttexnum = -1;
 		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
 		{
-			if (p->texnum != texnum || p->lighttexnum != lighttexnum)
+			if (p->texnum != texnum)
 			{
 				texnum = p->texnum;
-				lighttexnum = p->lighttexnum;
-				qglSelectTexture(gl_mtex_enum+0);
+				qglActiveTexture(GL_TEXTURE0_ARB);
 				glBindTexture(GL_TEXTURE_2D, texnum);
-				qglSelectTexture(gl_mtex_enum+1);
+				qglActiveTexture(GL_TEXTURE1_ARB);
+			}
+			if (p->lighttexnum != lighttexnum)
+			{
+				lighttexnum = p->lighttexnum;
 				glBindTexture(GL_TEXTURE_2D, lighttexnum);
 			}
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
-				qglMTexCoord2f(gl_mtex_enum, vert->vert[3], vert->vert[4]); // texture
-				qglMTexCoord2f((gl_mtex_enum+1), vert->vert[5], vert->vert[6]); // lightmap
+				qglMultiTexCoord2f(GL_TEXTURE0_ARB, vert->vert[3], vert->vert[4]); // texture
+				qglMultiTexCoord2f(GL_TEXTURE1_ARB, vert->vert[5], vert->vert[6]); // lightmap
 				glVertex3fv (vert->vert);
 			}
 			glEnd ();
 		}
 
-		qglSelectTexture(gl_mtex_enum+1);
+		qglActiveTexture(GL_TEXTURE1_ARB);
 		glDisable(GL_TEXTURE_2D);
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		qglSelectTexture(gl_mtex_enum+0);
+		qglActiveTexture(GL_TEXTURE0_ARB);
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	}
 	else
@@ -631,10 +636,11 @@ lit:
 	glDepthMask(1);
 }
 
-int skyrendersphere;
-int skyrenderbox;
-int skyrenderglquakepolys;
-int skyrendertwolayers;
+static int skyrendersphere;
+static int skyrenderbox;
+static int skyrenderglquakepolys;
+static int skyrendertwolayers;
+static int skyrendercombine;
 
 void skypolyclear(void)
 {
@@ -643,6 +649,7 @@ void skypolyclear(void)
 	skyrenderbox = false;
 	skyrenderglquakepolys = false;
 	skyrendertwolayers = false;
+	skyrendercombine = false;
 	if (r_skyquality.value >= 1 && !fogenabled)
 	{
 		if (skyavailable_box)
@@ -657,6 +664,8 @@ void skypolyclear(void)
 			case 2:
 				skyrenderglquakepolys = true;
 				skyrendertwolayers = true;
+				if (gl_combine.value)
+					skyrendercombine = true;
 				break;
 			case 3:
 				skyrendersphere = true;
@@ -665,6 +674,8 @@ void skypolyclear(void)
 			case 4:
 				skyrendersphere = true;
 				skyrendertwolayers = true;
+				if (gl_combine.value)
+					skyrendercombine = true;
 				break;
 			}
 		}
@@ -672,6 +683,7 @@ void skypolyclear(void)
 	if (r_mergesky.value && (skyrenderglquakepolys || skyrendersphere))
 	{
 		skyrendertwolayers = false;
+		skyrendercombine = false;
 //		R_BuildSky((int) (cl.time * 8.0), (int) (cl.time * 16.0));
 //		R_BuildSky((int) (cl.time * -8.0), 0);
 		R_BuildSky(0, (int) (cl.time * 8.0));
@@ -686,6 +698,7 @@ void skypolyrender(void)
 	skyvert_t *vert;
 	float length, speedscale;
 	vec3_t dir;
+	float y, number;
 	if (!r_render.value)
 		return;
 	if (currentskypoly < 1)
@@ -695,102 +708,157 @@ void skypolyrender(void)
 	// make sure zbuffer is enabled
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(1);
+	glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].v[0]);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	GL_LockArray(0, currentskyvert);
+	speedscale = cl.time * (8.0/128.0);
+	speedscale -= (int)speedscale;
+	for (vert = skyvert, j = 0;j < currentskyvert;j++, vert++)
+	{
+		VectorSubtract (vert->v, r_origin, dir);
+		// flatten the sphere
+		dir[2] *= 3;
+
+		// LordHavoc: fast version
+		number = DotProduct(dir, dir);
+		*((long *)&y) = 0x5f3759df - ((* (long *) &number) >> 1);
+		length = 3.0f * (y * (1.5f - (number * 0.5f * y * y)));
+		// LordHavoc: slow version
+		//length = 3.0f / sqrt(DotProduct(dir, dir));
+
+		vert->tex2[0] = speedscale + (vert->tex[0] = speedscale + dir[0] * length);
+		vert->tex2[1] = speedscale + (vert->tex[1] = speedscale + dir[1] * length);
+	}
+
+	glDisable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	if (skyrenderglquakepolys)
 	{
-		if (r_mergesky.value)
-			glBindTexture(GL_TEXTURE_2D, R_GetTexture(mergeskytexture)); // both layers in one texture
-		else
-			glBindTexture(GL_TEXTURE_2D, R_GetTexture(solidskytexture)); // upper clouds
 		glTexCoordPointer(2, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].tex[0]);
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].v[0]);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		if(lighthalf)
-			glColor3f(0.5f, 0.5f, 0.5f);
-		else
-			glColor3f(1.0f,1.0f,1.0f);
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		glEnable(GL_TEXTURE_2D);
-		glDisable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		if (r_mergesky.value)
-		{
-			speedscale = cl.time * (8.0/128.0);
-			speedscale -= (int)speedscale;
-		}
-		else
-		{
-			speedscale = cl.time * (8.0/128.0);
-			speedscale -= (int)speedscale;
-		}
-		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
-		{
-			vert = skyvert + p->firstvert;
-			for (j = 0;j < p->verts;j++, vert++)
-			{
-				VectorSubtract (vert->v, r_origin, dir);
-				// flatten the sphere
-				dir[2] *= 3;
 
-				length = 3.0f / sqrt(DotProduct(dir, dir));
-
-				vert->tex[0] = speedscale + dir[0] * length;
-				vert->tex[1] = speedscale + dir[1] * length;
-			}
-		}
-		GL_LockArray(0, currentskyvert);
-		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
-			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
-		GL_UnlockArray();
-		if (skyrendertwolayers)
+		if (skyrendercombine)
 		{
-			glEnable(GL_BLEND);
-			glDepthMask(0);
-			glBindTexture(GL_TEXTURE_2D, R_GetTexture(alphaskytexture)); // lower clouds
-			speedscale = cl.time * (16.0 / 128.0);
-			speedscale -= (int)speedscale;
+			// upper clouds
+			glBindTexture(GL_TEXTURE_2D, R_GetTexture(lighthalf ? solidskytexture_half : solidskytexture));
+
+			// set up the second texcoord array
+			// switch texcoord array selector to TMU 1
+			qglClientActiveTexture(GL_TEXTURE1_ARB);
+			glTexCoordPointer(2, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].tex2[0]);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+			// render both layers as one pass using GL_ARB_texture_env_combine
+			// TMU 0 is already selected, the TMU 0 texcoord array is already
+			// set up, the texture is bound, and texturing is already enabled,
+			// so just set up COMBINE
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_REPLACE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_COLOR);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_REPLACE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0);
+			glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0);
+
+			// set up TMU 1
+			qglActiveTexture(GL_TEXTURE1_ARB);
+			// lower clouds
+			glBindTexture(GL_TEXTURE_2D, R_GetTexture(lighthalf ? alphaskytexture_half : alphaskytexture));
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_INTERPOLATE_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_REPLACE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_PREVIOUS_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0);
+			glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0);
+			glEnable(GL_TEXTURE_2D);
+
+			// draw it
 			for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
-			{
-				vert = skyvert + p->firstvert;
-				for (j = 0;j < p->verts;j++, vert++)
-				{
-					VectorSubtract (vert->v, r_origin, dir);
-					// flatten the sphere
-					dir[2] *= 3;
+				glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 
-					length = 3.0f / sqrt(DotProduct(dir, dir));
-
-					vert->tex[0] = speedscale + dir[0] * length;
-					vert->tex[1] = speedscale + dir[1] * length;
-				}
-			}
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+			glDisable(GL_TEXTURE_2D);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			qglActiveTexture(GL_TEXTURE0_ARB);
+			// switch texcoord array selector back to TMU 0
+			qglClientActiveTexture(GL_TEXTURE0_ARB);
+			// the TMU 0 texcoord array is disabled by the code below
+		}
+		else
+		{
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			if (r_mergesky.value)
+				glBindTexture(GL_TEXTURE_2D, R_GetTexture(mergeskytexture)); // both layers in one texture
+			else
+				glBindTexture(GL_TEXTURE_2D, R_GetTexture(solidskytexture)); // upper clouds
+			if(lighthalf)
+				glColor3f(0.5f, 0.5f, 0.5f);
+			else
+				glColor3f(1.0f,1.0f,1.0f);
+			glEnable(GL_TEXTURE_2D);
 			GL_LockArray(0, currentskyvert);
 			for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 				glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
 			GL_UnlockArray();
-			glDisable(GL_BLEND);
+			if (skyrendertwolayers)
+			{
+				glEnable(GL_BLEND);
+				glDepthMask(0);
+				glBindTexture(GL_TEXTURE_2D, R_GetTexture(alphaskytexture)); // lower clouds
+				// switch to lower clouds texcoord array
+				glTexCoordPointer(2, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].tex2[0]);
+				for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
+					glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
+				glDepthMask(1);
+				glDisable(GL_BLEND);
+			}
+			glColor3f(1,1,1);
 		}
-		glColor3f(1,1,1);
-		glDepthMask(1);
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
 	}
 	else
 	{
-		glVertexPointer(3, GL_FLOAT, sizeof(skyvert_t), &skyvert[0].v[0]);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glDisable(GL_TEXTURE_2D);
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glDisable(GL_TEXTURE_2D);
 		// note: this color is not seen if skyrendersphere or skyrenderbox is on
 		glColor3fv(fogcolor);
-		GL_LockArray(0, currentskyvert);
 		for (i = 0, p = &skypoly[0];i < currentskypoly;i++, p++)
 			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
-		GL_UnlockArray();
 		glColor3f(1,1,1);
 		glEnable(GL_TEXTURE_2D);
-		glDisableClientState(GL_VERTEX_ARRAY);
 	}
+	GL_UnlockArray();
+	glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 static char skyname[256];
@@ -938,8 +1006,7 @@ void R_SkyBox(void)
 	glColor3f (1,1,1);
 }
 
-float skysphereouter[33*33*5];
-float skysphereinner[33*33*5];
+float skysphere[33*33*5];
 int skysphereindices[32*32*6];
 void skyspherecalc(float *sphere, float dx, float dy, float dz)
 {
@@ -980,41 +1047,36 @@ void skyspherecalc(float *sphere, float dx, float dy, float dz)
 	}
 }
 
-void skysphere(float *source, float s)
+void skyspherearrays(float *vert, float *tex, float *tex2, float *source, float s, float s2)
 {
-	float vert[33*33][4], tex[33*33][2], *v, *t;
+	float *v, *t, *t2;
 	int i;
-	v = &vert[0][0];
-	t = &tex[0][0];
+	v = vert;
+	t = tex;
+	t2 = tex2;
 	for (i = 0;i < (33*33);i++)
 	{
-		*t++ = *source++ + s;
-		*t++ = *source++ + s;
-		*v++ = *source++ + r_origin[0];
-		*v++ = *source++ + r_origin[1];
-		*v++ = *source++ + r_origin[2];
+		*t++ = source[0] + s;
+		*t++ = source[1] + s;
+		*t2++ = source[0] + s2;
+		*t2++ = source[1] + s2;
+		*v++ = source[2] + r_origin[0];
+		*v++ = source[3] + r_origin[1];
+		*v++ = source[4] + r_origin[2];
 		*v++ = 0;
+		source += 5;
 	}
-	glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 2, tex);
-	glVertexPointer(3, GL_FLOAT, sizeof(float) * 4, vert);
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	GL_LockArray(0, 32*32*6);
-	glDrawElements(GL_TRIANGLES, 32*32*6, GL_UNSIGNED_INT, &skysphereindices[0]);
-	GL_UnlockArray();
-	glDisableClientState(GL_VERTEX_ARRAY);
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
 void R_SkySphere(void)
 {
-	float speedscale;
+	float speedscale, speedscale2;
+	float vert[33*33*4], tex[33*33*2], tex2[33*33*2];
 	static qboolean skysphereinitialized = false;
 	if (!skysphereinitialized)
 	{
 		skysphereinitialized = true;
-		skyspherecalc(skysphereouter, 1024, 1024, 1024 / 3);
-		skyspherecalc(skysphereinner, 1024, 1024, 1024 / 3);
+		skyspherecalc(skysphere, 1024, 1024, 1024 / 3);
 	}
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(0);
@@ -1025,29 +1087,121 @@ void R_SkySphere(void)
 		glColor3f(0.5,0.5,0.5);
 	else
 		glColor3f(1,1,1);
+	speedscale = cl.time*8.0/128.0;
+	speedscale -= (int)speedscale;
+	speedscale2 = cl.time*16.0/128.0;
+	speedscale2 -= (int)speedscale2;
+	skyspherearrays(vert, tex, tex2, skysphere, speedscale, speedscale2);
+	glVertexPointer(3, GL_FLOAT, sizeof(float) * 4, vert);
+	glEnableClientState(GL_VERTEX_ARRAY);
+	// do not lock the texcoord array, because it will be switched
+	GL_LockArray(0, 32*32*6);
+	glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 2, tex);
+	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	if (r_mergesky.value)
 	{
 		glBindTexture(GL_TEXTURE_2D, R_GetTexture(mergeskytexture)); // both layers in one texture
-		speedscale = cl.time*8.0/128.0;
-		speedscale -= (int)speedscale;
-		skysphere(skysphereouter, speedscale);
+		glDrawElements(GL_TRIANGLES, 32*32*6, GL_UNSIGNED_INT, &skysphereindices[0]);
 	}
 	else
 	{
-		glBindTexture(GL_TEXTURE_2D, R_GetTexture(solidskytexture)); // upper clouds
-		speedscale = cl.time*8.0/128.0;
-		speedscale -= (int)speedscale;
-		skysphere(skysphereouter, speedscale);
-		if (skyrendertwolayers)
+		// LordHavoc: note that this combine operation does not use the color,
+		// so it has to use alternate textures in lighthalf mode
+		if (skyrendercombine)
 		{
-			glEnable (GL_BLEND);
-			glBindTexture(GL_TEXTURE_2D, R_GetTexture(alphaskytexture)); // lower clouds
-			speedscale = cl.time*16.0/128.0;
-			speedscale -= (int)speedscale;
-			skysphere(skysphereinner, speedscale);
-			glDisable (GL_BLEND);
+			// upper clouds
+			glBindTexture(GL_TEXTURE_2D, R_GetTexture(lighthalf ? solidskytexture_half : solidskytexture));
+
+			// set up the second texcoord array
+			// switch texcoord array selector to TMU 1
+			qglClientActiveTexture(GL_TEXTURE1_ARB);
+			glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 2, tex2);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+
+			// render both layers as one pass using GL_ARB_texture_env_combine
+			// TMU 0 is already selected, the TMU 0 texcoord array is already
+			// set up, the texture is bound, and texturing is already enabled,
+			// so just set up COMBINE
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_REPLACE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_COLOR);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_REPLACE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0);
+			glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0);
+
+			// set up TMU 1
+			qglActiveTexture(GL_TEXTURE1_ARB);
+			// lower clouds
+			glBindTexture(GL_TEXTURE_2D, R_GetTexture(lighthalf ? alphaskytexture_half : alphaskytexture));
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_INTERPOLATE_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);
+
+			glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_REPLACE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_PREVIOUS_ARB);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_TEXTURE);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);
+			glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);
+
+			glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0);
+			glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0);
+			glEnable(GL_TEXTURE_2D);
+
+			// draw it
+			glDrawElements(GL_TRIANGLES, 32*32*6, GL_UNSIGNED_INT, &skysphereindices[0]);
+
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+			glDisable(GL_TEXTURE_2D);
+			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+			qglActiveTexture(GL_TEXTURE0_ARB);
+			// switch texcoord array selector back to TMU 0
+			qglClientActiveTexture(GL_TEXTURE0_ARB);
+			// the TMU 0 texcoord array is disabled by the code below
+		}
+		else
+		{
+			glBindTexture(GL_TEXTURE_2D, R_GetTexture(solidskytexture)); // upper clouds
+			glDrawElements(GL_TRIANGLES, 32*32*6, GL_UNSIGNED_INT, &skysphereindices[0]);
+
+			if (skyrendertwolayers)
+			{
+				glEnable (GL_BLEND);
+				glBindTexture(GL_TEXTURE_2D, R_GetTexture(alphaskytexture)); // lower clouds
+				glTexCoordPointer(2, GL_FLOAT, sizeof(float) * 2, tex2);
+				glDrawElements(GL_TRIANGLES, 32*32*6, GL_UNSIGNED_INT, &skysphereindices[0]);
+				glDisable (GL_BLEND);
+			}
 		}
 	}
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	GL_UnlockArray();
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glDepthMask(1);
 	glEnable (GL_DEPTH_TEST);
 	glColor3f (1,1,1);
@@ -1163,6 +1317,13 @@ void R_InitSky (byte *src, int bytesperpixel)
 	memcpy(skyupperlayerpixels, trans, 128*128*4);
 
 	solidskytexture = R_LoadTexture ("sky_solidtexture", 128, 128, (byte *) trans, TEXF_RGBA | TEXF_PRECACHE);
+	for (i = 0;i < 128*128;i++)
+	{
+		((byte *)&trans[i])[0] >>= 1;
+		((byte *)&trans[i])[1] >>= 1;
+		((byte *)&trans[i])[2] >>= 1;
+	}
+	solidskytexture_half = R_LoadTexture ("sky_solidtexture_half", 128, 128, (byte *) trans, TEXF_RGBA | TEXF_PRECACHE);
 
 	if (bytesperpixel == 4)
 	{
@@ -1188,4 +1349,11 @@ void R_InitSky (byte *src, int bytesperpixel)
 	memcpy(skylowerlayerpixels, trans, 128*128*4);
 
 	alphaskytexture = R_LoadTexture ("sky_alphatexture", 128, 128, (byte *) trans, TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+	for (i = 0;i < 128*128;i++)
+	{
+		((byte *)&trans[i])[0] >>= 1;
+		((byte *)&trans[i])[1] >>= 1;
+		((byte *)&trans[i])[2] >>= 1;
+	}
+	alphaskytexture_half = R_LoadTexture ("sky_alphatexture_half", 128, 128, (byte *) trans, TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
