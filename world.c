@@ -861,7 +861,7 @@ loc0:
 		|| clip->boxmaxs[2] < touch->v.absmin[2] )
 			continue;
 
-		if (clip->passedict && clip->passedict->v.size[0] && !touch->v.size[0])
+		if (clip->passedict!=0 && clip->passedict->v.size[0] && !touch->v.size[0])
 			continue;	// points never interact
 
 	// might intersect, so do an exact clip

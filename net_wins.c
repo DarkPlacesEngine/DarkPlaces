@@ -398,11 +398,12 @@ int WINS_Read (int socket, byte *buf, int len, struct qsockaddr *addr)
 {
 	int addrlen = sizeof (struct qsockaddr);
 	int ret;
+	int errno;
 
 	ret = precvfrom (socket, buf, len, 0, (struct sockaddr *)addr, &addrlen);
 	if (ret == -1)
 	{
-		int errno = pWSAGetLastError();
+		 errno = pWSAGetLastError();
 
 		if (errno == WSAEWOULDBLOCK || errno == WSAECONNREFUSED)
 			return 0;
