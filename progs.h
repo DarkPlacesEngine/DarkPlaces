@@ -43,17 +43,18 @@ typedef struct link_s
 #define	MAX_ENT_LEAFS	256
 typedef struct edict_s
 {
-	qboolean	free;
-	link_t		area;
+	qboolean free; // true if this edict is unused
+	link_t area; // physics area this edict is linked into
+	int number; // number of this edict
 
 #ifdef QUAKEENTITIES
-	entity_state_t	baseline;
-	entity_state_t	deltabaseline; // LordHavoc: previous frame
+	entity_state_t baseline; // baseline values
+	entity_state_t deltabaseline; // LordHavoc: previous frame
 #endif
 
-	int			suspendedinairflag;	// LordHavoc: gross hack to make floating items still work
-	float		freetime;			// sv.time when the object was freed
-	entvars_t	v;					// C exported fields from progs
+	int suspendedinairflag; // LordHavoc: gross hack to make floating items still work
+	float freetime; // sv.time when the object was freed
+	entvars_t v; // C exported fields from progs
 // other fields from progs come immediately after
 } edict_t;
 
@@ -140,7 +141,7 @@ void ED_ParseGlobals (const char *data);
 void ED_LoadFromFile (const char *data);
 
 edict_t *EDICT_NUM_ERROR(int n);
-#define EDICT_NUM(n) (n >= 0 ? (n < sv.max_edicts ? (edict_t *)((qbyte *)sv.edicts + (n) * pr_edict_size) : EDICT_NUM_ERROR(n)) : EDICT_NUM_ERROR(n))
+#define EDICT_NUM(n) ((n >= 0 && n < sv.max_edicts) ? sv.edictstable[(n)] : EDICT_NUM_ERROR(n))
 
 int NUM_FOR_EDICT(edict_t *e);
 
