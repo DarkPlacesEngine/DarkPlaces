@@ -1296,7 +1296,7 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 	float iwidth, iheight, ibumpscale, n[3];
 	iwidth = 1.0f / width;
 	iheight = 1.0f / height;
-	ibumpscale = (255.0f * 3.0f) / (bumpscale * 16.0f);
+	ibumpscale = (255.0f * 3.0f) / (bumpscale * 8.0f);
 	out = outpixels;
 	for (y = 0;y < height;y++)
 	{

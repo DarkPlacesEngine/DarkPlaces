@@ -55,48 +55,56 @@ void Palette_Setup8to24(void)
 	reversed_start = 128;
 	reversed_end = 224;
 
-	memset(palette_nofullbrights, 0, sizeof(palette_nofullbrights));
 	for (i = 0;i < fullbright_start;i++)
 		palette_nofullbrights[i] = palette_complete[i];
+	for (i = fullbright_start;i < 255;i++)
+		palette_nofullbrights[i] = palette_complete[0];
+	palette_nofullbrights[255] = 0;
 
-	memset(palette_onlyfullbrights, 0, sizeof(palette_onlyfullbrights));
+	for (i = 0;i < 256;i++)
+		palette_onlyfullbrights[i] = palette_complete[0];
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_onlyfullbrights[i] = palette_complete[i];
+	palette_onlyfullbrights[255] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_nocolormapnofullbrights[i] = palette_complete[i];
 	for (i = pants_start;i < pants_end;i++)
-		palette_nocolormapnofullbrights[i] = 0;
+		palette_nocolormapnofullbrights[i] = palette_complete[0];
 	for (i = shirt_start;i < shirt_end;i++)
-		palette_nocolormapnofullbrights[i] = 0;
+		palette_nocolormapnofullbrights[i] = palette_complete[0];
 	for (i = fullbright_start;i < fullbright_end;i++)
-		palette_nocolormapnofullbrights[i] = 0;
+		palette_nocolormapnofullbrights[i] = palette_complete[0];
+	palette_nocolormapnofullbrights[255] = 0;
 
-	memset(palette_pantsaswhite, 0, sizeof(palette_pantsaswhite));
+	for (i = 0;i < 256;i++)
+		palette_pantsaswhite[i] = palette_complete[0];
 	for (i = pants_start;i < pants_end;i++)
 	{
 		if (i >= reversed_start && i < reversed_end)
-			palette_pantsaswhite[i] = 15 - (i - pants_start);
+			palette_pantsaswhite[i] = palette_complete[15 - (i - pants_start)];
 		else
-			palette_pantsaswhite[i] = i - pants_start;
+			palette_pantsaswhite[i] = palette_complete[i - pants_start];
 	}
 
-	memset(palette_shirtaswhite, 0, sizeof(palette_shirtaswhite));
+	for (i = 0;i < 256;i++)
+		palette_shirtaswhite[i] = palette_complete[0];
 	for (i = shirt_start;i < shirt_end;i++)
 	{
 		if (i >= reversed_start && i < reversed_end)
-			palette_shirtaswhite[i] = 15 - (i - shirt_start);
+			palette_shirtaswhite[i] = palette_complete[15 - (i - shirt_start)];
 		else
-			palette_shirtaswhite[i] = i - shirt_start;
+			palette_shirtaswhite[i] = palette_complete[i - shirt_start];
 	}
 
-	memset(palette_alpha, 0, sizeof(palette_alpha));
 	for (i = 0;i < 255;i++)
 		palette_alpha[i] = 0xFFFFFFFF;
+	palette_alpha[255] = 0;
 
-	memset(palette_font, 0, sizeof(palette_font));
+	palette_font[0] = 0;
 	for (i = 1;i < 255;i++)
 		palette_font[i] = palette_complete[i];
+	palette_font[255] = 0;
 }
 
 

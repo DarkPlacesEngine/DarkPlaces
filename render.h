@@ -108,7 +108,7 @@ void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
 
 void R_NewMap (void);
 
-void R_DrawWorld(entity_render_t *ent, int baselighting);
+void R_DrawWorld(entity_render_t *ent);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 
@@ -120,8 +120,10 @@ void R_DrawExplosions(void);
 
 //#define PARANOID 1
 
-int R_CullBox(const vec3_t emins, const vec3_t emaxs);
-int R_NotCulledBox(const vec3_t emins, const vec3_t emaxs);
+int R_CullBox(const vec3_t mins, const vec3_t maxs);
+int PVS_CullBox(const vec3_t mins, const vec3_t maxs);
+int R_CullSphere(const vec3_t origin, vec_t radius);
+int PVS_CullSphere(const vec3_t origin, vec_t radius);
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;
