@@ -1121,7 +1121,7 @@ char *SearchInfostring(const char *infostring, const char *key)
 
 
 // Most (all?) BSDs already have them
-#if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__)
+#if !defined(__OpenBSD__) && !defined(__NetBSD__) && !defined(__FreeBSD__) && !(defined(__APPLE__) && defined(__MACH__))
 
 size_t
 strlcat(char *dst, const char *src, size_t siz)

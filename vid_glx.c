@@ -35,7 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/cursorfont.h>
 
 #include <X11/extensions/XShm.h>
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__MACH__)
 #include <X11/extensions/xf86dga.h>
 #endif
 #include <X11/extensions/xf86vmode.h>
@@ -683,7 +683,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	int MajorVersion, MinorVersion;
 	const char *drivername;
 
-	drivername = "libGL.so.1";
+#if defined(__APPLE__) && defined(__MACH__)
+	drivername = "/usr/X11R6/lib/libGL.1.dylib";
+#else
+	drivername = "libGL.so.1"
+#endif
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
 		drivername = com_argv[i + 1];
