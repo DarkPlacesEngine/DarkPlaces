@@ -50,8 +50,31 @@ byte		*player_8bit_texels;
 
 float		aliasbboxmin[3], aliasbboxmax[3]; // LordHavoc: proper bounding box considerations
 
+// LordHavoc: changed to use the normals from the model data itself
+#define NUMVERTEXNORMALS	162
+extern	float	r_avertexnormals[NUMVERTEXNORMALS][3];
 void Mod_ConvertAliasVerts (int numverts, int numtris, vec3_t scale, vec3_t translate, trivertx_t *v, trivert2 *out)
 {
+	int i;
+	vec3_t temp;
+	for (i = 0;i < numverts;i++)
+	{
+		VectorCopy(v[i].v, out[i].v);
+		temp[0] = v[i].v[0] * scale[0] + translate[0];
+		temp[1] = v[i].v[1] * scale[1] + translate[1];
+		temp[2] = v[i].v[2] * scale[2] + translate[2];
+		// update bounding box
+		if (temp[0] < aliasbboxmin[0]) aliasbboxmin[0] = temp[0];
+		if (temp[1] < aliasbboxmin[1]) aliasbboxmin[1] = temp[1];
+		if (temp[2] < aliasbboxmin[2]) aliasbboxmin[2] = temp[2];
+		if (temp[0] > aliasbboxmax[0]) aliasbboxmax[0] = temp[0];
+		if (temp[1] > aliasbboxmax[1]) aliasbboxmax[1] = temp[1];
+		if (temp[2] > aliasbboxmax[2]) aliasbboxmax[2] = temp[2];
+		out[i].n[0] = (signed char) (r_avertexnormals[v[i].lightnormalindex][0] * 127.0);
+		out[i].n[1] = (signed char) (r_avertexnormals[v[i].lightnormalindex][1] * 127.0);
+		out[i].n[2] = (signed char) (r_avertexnormals[v[i].lightnormalindex][2] * 127.0);
+	}		
+	/*
 	int i, j;
 	vec3_t t1, t2;
 	struct
@@ -102,6 +125,7 @@ void Mod_ConvertAliasVerts (int numverts, int numtris, vec3_t scale, vec3_t tran
 		out[i].n[1] = (signed char) (tempvert[i].normal[1] * 127.0);
 		out[i].n[2] = (signed char) (tempvert[i].normal[2] * 127.0);
 	}
+	*/
 }
 
 /*
