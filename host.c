@@ -942,6 +942,7 @@ void Host_Init (void)
 	if (cls.state != ca_dedicated)
 	{
 		VID_Open();
+		CL_Video_Init();
 		CL_InitTEnts ();  // We must wait after sound startup to load tent sounds
 		SCR_BeginLoadingPlaque();
 		MR_Init();
@@ -1009,6 +1010,7 @@ void Host_Shutdown(void)
 	// AK shutdown PRVM
 	// AK hmm, no PRVM_Shutdown(); yet
 
+	CL_Video_Shutdown();
 
 	Host_SaveConfig_f();
 

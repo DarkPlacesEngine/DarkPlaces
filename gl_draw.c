@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "wad.h"
 
+#include "cl_video.h"
+
 
 static rtexture_t *char_texture;
 
@@ -271,6 +273,14 @@ cachepic_t	*Draw_CachePic (char *path)
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
 			return pic;
+
+	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
+		clvideo_t *video;
+
+		video = CL_GetVideo(path);
+		if( video )
+			return &video->cpif;
+	}
 
 	if (numcachepics == MAX_CACHED_PICS)
 		Sys_Error ("numcachepics == MAX_CACHED_PICS");

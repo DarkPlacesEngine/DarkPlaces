@@ -915,7 +915,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	if (ent)
 		val = (prvm_eval_t *)((int *)ent->v + key->ofs);
 	else
-		val = (prvm_eval_t *)((int *)pr_globals + key->ofs);
+		val = (prvm_eval_t *)((int *)prog->globals + key->ofs);
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
@@ -1013,12 +1013,9 @@ void PRVM_ED_EdictSet_f(void)
 	ed = PRVM_EDICT_NUM(atoi(Cmd_Argv(2)));
 
 	if((key = PRVM_ED_FindField(Cmd_Argv(3))) == 0)
-	{
 		Con_Printf("Key %s not found !\n", Cmd_Argv(3));
-		return;
-	}
-
-	PRVM_ED_ParseEpair(ed, key, Cmd_Argv(4));
+	else
+		PRVM_ED_ParseEpair(ed, key, Cmd_Argv(4));
 
 	PRVM_End;
 }
@@ -1681,6 +1678,31 @@ void PRVM_Global_f(void)
 
 /*
 ===============
+PRVM_GlobalSet
+===============
+*/
+void PRVM_GlobalSet_f(void)
+{
+	ddef_t *global;
+	if( Cmd_Argc() != 4 ) {
+		Con_Printf( "prvm_globalset <program name> <global name> <value>\n" );
+		return;
+	}
+
+	PRVM_Begin;
+	if( !PRVM_SetProgFromString( Cmd_Argv(1) ) )
+		return;
+
+	global = PRVM_ED_FindGlobal( Cmd_Argv(2) );
+	if( !global )
+		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
+	else 
+		PRVM_ED_ParseEpair( NULL, global, Cmd_Argv(3) );
+	PRVM_End;
+}
+
+/*
+===============
 PRVM_Init
 ===============
 */
@@ -1693,6 +1715,7 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_fields", PRVM_Fields_f);
 	Cmd_AddCommand ("prvm_globals", PRVM_Globals_f);
 	Cmd_AddCommand ("prvm_global", PRVM_Global_f);
+	Cmd_AddCommand ("prvm_globalset", PRVM_GlobalSet_f);
 	Cmd_AddCommand ("prvm_edictset", PRVM_ED_EdictSet_f);
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&prvm_boundscheck);

@@ -2,11 +2,61 @@
 #ifndef CL_VIDEO_H
 #define CL_VIDEO_H
 
+#define MAXCLVIDEOS		64 + 1 // 1 video is reserved for the cinematic mode
+#define CLVIDEOPREFIX	"_"
+#define CLTHRESHOLD		2.0
+
+typedef enum clvideostate_s
+{
+	CLVIDEO_UNUSED,
+	CLVIDEO_PLAY,
+	CLVIDEO_LOOP,
+	CLVIDEO_PAUSE,
+	CLVIDEO_FIRSTFRAME,
+} clvideostate_t;
+
+typedef struct clvideo_s
+{
+	int		ownertag;
+	clvideostate_t state;
+
+	// private stuff
+	void	*stream;
+
+	double	starttime;
+	int		framenum;
+	double	framerate;
+
+	void	*imagedata;
+
+	cachepic_t cpif;
+
+	// if a video is suspended, it is automatically paused (else we'd still have to process the frames)
+    double  lasttime; // used to determine whether the video's resources should be freed or not
+	qboolean suspended; // when lasttime - realtime > THRESHOLD, all but the stream is freed
+
+	char	filename[MAX_QPATH];
+} clvideo_t;
+
+clvideo_t*	CL_OpenVideo( char *filename, char *name, int owner );
+clvideo_t*	CL_GetVideo( char *name );
+void		CL_StartVideo( clvideo_t * video );
+void		CL_LoopVideo( clvideo_t * video );
+void		CL_PauseVideo( clvideo_t * video );
+void		CL_StopVideo( clvideo_t * video );
+void		CL_RestartVideo( clvideo_t *video );
+void		CL_CloseVideo( clvideo_t * video );
+void		CL_PurgeOwner( int owner );
+
+void		CL_VideoFrame( void ); // update all videos
+void		CL_Video_Init( void );
+void		CL_Video_Shutdown( void );
+
+// old interface
 extern int cl_videoplaying;
-void CL_VideoFrame(void);
-void CL_DrawVideo(void);
-void CL_VideoStart(char *filename);
-void CL_VideoStop(void);
-void CL_Video_Init(void);
+
+void CL_DrawVideo( void );
+void CL_VideoStart( char *filename );
+void CL_VideoStop( void );
 
 #endif
