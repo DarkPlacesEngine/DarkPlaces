@@ -229,7 +229,7 @@ void Host_SaveConfig_f(void);
 void Host_InitLocal (void)
 {
 	Host_InitCommands ();
-	
+
 	Cmd_AddCommand("saveconfig", Host_SaveConfig_f);
 
 	Cvar_RegisterVariable (&host_framerate);
@@ -280,7 +280,7 @@ void Host_SaveConfig_f(void)
 // config.cfg cvars
 	if (host_initialized && cls.state != ca_dedicated)
 	{
-		f = FS_Open ("config.cfg", "w", false);
+		f = FS_Open ("config.cfg", "wb", false);
 		if (!f)
 		{
 			Con_Print("Couldn't write config.cfg.\n");
@@ -464,13 +464,13 @@ void SV_DropClient(qboolean crash)
 		EntityFrame4_FreeDatabase(host_client->entitydatabase4);
 	if (host_client->entitydatabase5)
 		EntityFrame5_FreeDatabase(host_client->entitydatabase5);
-	
+
 	if (sv.active)
 	{
 		// clear a fields that matter to DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS, and also frags
 		ED_ClearEdict(host_client->edict);
 	}
-	
+
 	// clear the client struct (this sets active to false)
 	memset(host_client, 0, sizeof(*host_client));
 

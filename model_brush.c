@@ -1323,7 +1323,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 static void Mod_Q1BSP_LoadLightList(void)
 {
 	int a, n, numlights;
-	char lightsfilename[1024], *s, *t, *lightsstring;
+	char tempchar, *s, *t, *lightsstring, lightsfilename[1024];
 	mlight_t *e;
 
 	strlcpy (lightsfilename, loadmodel->name, sizeof (lightsfilename));
@@ -1335,12 +1335,13 @@ static void Mod_Q1BSP_LoadLightList(void)
 		numlights = 0;
 		while (*s)
 		{
-			while (*s && *s != '\n')
+			while (*s && *s != '\n' && *s != '\r')
 				s++;
 			if (!*s)
 			{
 				Mem_Free(lightsstring);
-				Host_Error("lights file must end with a newline\n");
+				Con_Printf("lights file must end with a newline\n");
+				return;
 			}
 			s++;
 			numlights++;
@@ -1351,30 +1352,31 @@ static void Mod_Q1BSP_LoadLightList(void)
 		while (*s && n < numlights)
 		{
 			t = s;
-			while (*s && *s != '\n')
+			while (*s && *s != '\n' && *s != '\r')
 				s++;
 			if (!*s)
 			{
-				Mem_Free(lightsstring);
-				Host_Error("misparsed lights file!\n");
+				Con_Printf("misparsed lights file!\n");
+				break;
 			}
 			e = loadmodel->brushq1.lights + n;
+			tempchar = *s;
 			*s = 0;
 			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %f %d", &e->origin[0], &e->origin[1], &e->origin[2], &e->falloff, &e->light[0], &e->light[1], &e->light[2], &e->subtract, &e->spotdir[0], &e->spotdir[1], &e->spotdir[2], &e->spotcone, &e->distbias, &e->style);
-			*s = '\n';
+			*s = tempchar;
 			if (a != 14)
 			{
-				Mem_Free(lightsstring);
-				Host_Error("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
+				Con_Printf("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
+				break;
 			}
-			s++;
+			if (*s == '\r')
+				s++;
+			if (*s == '\n')
+				s++;
 			n++;
 		}
 		if (*s)
-		{
-			Mem_Free(lightsstring);
-			Host_Error("misparsed lights file!\n");
-		}
+			Con_Printf("misparsed lights file!\n");
 		loadmodel->brushq1.numlights = numlights;
 		Mem_Free(lightsstring);
 	}
@@ -2705,7 +2707,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 			RemovePortalFromNodes(portal);
 
 			// cut the portal into two portals, one on each side of the node plane
-			PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints); 
+			PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints);
 
 			if (!numfrontpoints)
 			{
@@ -5156,7 +5158,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 			if (dist1near >= 0 && dist2near >= 0 && dist1far <  0 && dist2far >= 0){node = node->children[0];continue;}
 			if (dist1near >= 0 && dist2near >= 0 && dist1far >= 0 && dist2far <  0){node = node->children[0];continue;}
 			if (dist1near >= 0 && dist2near >= 0 && dist1far >= 0 && dist2far >= 0){node = node->children[0];continue;}
-			{             
+			{
 				if (dist2near < 0) // d1n<0 && d2n<0
 				{
 					if (dist2near < 0) // d1n<0 && d2n<0

@@ -640,7 +640,11 @@ int COM_ParseToken(const char **datapointer, int returnnewline)
 
 // skip whitespace
 skipwhite:
-	for (;*data <= ' ' && (*data != '\n' || !returnnewline);data++)
+	// line endings:
+	// UNIX: \n
+	// Mac: \r
+	// Windows: \r\n
+	for (;*data <= ' ' && ((*data != '\n' && *data != '\r') || !returnnewline);data++)
 	{
 		if (*data == 0)
 		{
@@ -650,10 +654,14 @@ skipwhite:
 		}
 	}
 
+	// handle Windows line ending
+	if (data[0] == '\r' && data[1] == '\n')
+		data++;
+
 	if (data[0] == '/' && data[1] == '/')
 	{
 		// comment
-		while (*data && *data != '\n')
+		while (*data && *data != '\n' && *data != '\r')
 			data++;
 		goto skipwhite;
 	}
@@ -684,7 +692,7 @@ skipwhite:
 		com_token[len] = 0;
 		*datapointer = data+1;
 		return true;
-	} 
+	}
 	else if (*data == '\'')
 	{
 		// quoted string
@@ -703,7 +711,15 @@ skipwhite:
 		com_token[len] = 0;
 		*datapointer = data+1;
 		return true;
-	}	
+	}
+	else if (*data == '\r')
+	{
+		// translate Mac line ending to UNIX
+		com_token[len++] = '\n';
+		com_token[len] = 0;
+		*datapointer = data;
+		return true;
+	}
 	else if (*data == '\n' || *data == '{' || *data == '}' || *data == ')' || *data == '(' || *data == ']' || *data == '[' || *data == '\'' || *data == ':' || *data == ',' || *data == ';')
 	{
 		// single character
@@ -767,7 +783,7 @@ skipwhite:
 	if (*data == '/' && data[1] == '/')
 	{
 		// comment
-		while (*data && *data != '\n')
+		while (*data && *data != '\n' && *data != '\r')
 			data++;
 		goto skipwhite;
 	}
@@ -937,19 +953,19 @@ static const gamemode_info_t gamemode_info [] =
 // COMMANDLINEOPTION: Game: -teu runs The Evil Unleashed (this option is obsolete as they are not using darkplaces)
 { "teu",			"-teu",			"TheEvilUnleashed",		"baseteu",	NULL,			"teu",			"teu" },
 // GAME_BATTLEMECH
-// COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech 
+// COMMANDLINEOPTION: Game: -battlemech runs the multiplayer topdown deathmatch game BattleMech
 { "battlemech",		"-battlemech",	"Battlemech",			"base",		NULL,			"battlemech",	"battlemech" },
 // GAME_ZYMOTIC
 // COMMANDLINEOPTION: Game: -zymotic runs the singleplayer game Zymotic
 { "zymotic",		"-zymotic",		"Zymotic",				"data",		NULL,			"zymotic",		"zymotic" },
 // GAME_FNIGGIUM
-// COMMANDLINEOPTION: Game: -fniggium runs the post apocalyptic melee RPG Fniggium 
+// COMMANDLINEOPTION: Game: -fniggium runs the post apocalyptic melee RPG Fniggium
 { "fniggium",		"-fniggium",	"Fniggium",				"data",		NULL,			"fniggium",		"fniggium" },
 // GAME_SETHERAL
-// COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral 
+// COMMANDLINEOPTION: Game: -setheral runs the multiplayer game Setheral
 { "setheral",		"-setheral",	"Setheral",				"data",		NULL,			"setheral",		"setheral" },
 // GAME_SOM
-// COMMANDLINEOPTION: Game: -som runs the multiplayer game Son Of Man 
+// COMMANDLINEOPTION: Game: -som runs the multiplayer game Son Of Man
 { "som",			"-som",			"Son of Man",			"id1",		"sonofman",		"som",			"darkplaces" },
 // GAME_TENEBRAE
 // COMMANDLINEOPTION: Game: -tenebrae runs the graphics test mod known as Tenebrae (some features not implemented)
@@ -1111,13 +1127,13 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 	commentprefixlength = 0;
 	if (commentprefix)
 		commentprefixlength = strlen(commentprefix);
-	while (*l && *l != '\n')
+	while (*l && *l != '\n' && *l != '\r')
 	{
 		if (*l > ' ')
 		{
 			if (commentprefixlength && !strncmp(l, commentprefix, commentprefixlength))
 			{
-				while (*l && *l != '\n')
+				while (*l && *l != '\n' && *l != '\r')
 					l++;
 				break;
 			}
@@ -1152,6 +1168,12 @@ int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *t
 		else
 			l++;
 	}
+	// line endings:
+	// UNIX: \n
+	// Mac: \r
+	// Windows: \r\n
+	if (*l == '\r')
+		l++;
 	if (*l == '\n')
 		l++;
 	*text = l;

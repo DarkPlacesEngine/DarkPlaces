@@ -138,7 +138,7 @@ void Log_Open (void)
 	if (logfile != NULL || log_file.string[0] == '\0')
 		return;
 
-	logfile = FS_Open (log_file.string, "a", false);
+	logfile = FS_Open (log_file.string, "ab", false);
 	if (logfile != NULL)
 	{
 		strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
@@ -252,7 +252,7 @@ void Log_Printf (const char *logfilename, const char *fmt, ...)
 {
 	qfile_t *file;
 
-	file = FS_Open (logfilename, "a", true);
+	file = FS_Open (logfilename, "ab", true);
 	if (file != NULL)
 	{
 		va_list argptr;
@@ -779,7 +779,7 @@ void Con_DrawNotify (void)
 
 			for (linewidth = con_linewidth; linewidth && text[linewidth-1] == ' '; linewidth--);
 			x = (vid.conwidth - linewidth * 8) / 2;
-		} else 
+		} else
 			x = 0;
 
 		DrawQ_String(x, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);

@@ -528,12 +528,18 @@ static void Cmd_TokenizeString (const char *text)
 	while (1)
 	{
 		// skip whitespace up to a /n
-		while (*text && *text <= ' ' && *text != '\n')
+		while (*text && *text <= ' ' && *text != '\r' && *text != '\n')
 			text++;
 
-		if (*text == '\n')
+		// line endings:
+		// UNIX: \n
+		// Mac: \r
+		// Windows: \r\n
+		if (*text == '\n' || *text == '\r')
 		{
 			// a newline seperates commands in the buffer
+			if (*text == '\r' && text[1] == '\n')
+				text++;
 			text++;
 			break;
 		}

@@ -151,6 +151,7 @@ struct qfile_s
 	size_t			real_length;			// uncompressed file size (for files opened in "read" mode)
 	size_t			position;				// current position in the file
 	size_t			offset;					// offset into the package (0 if external file)
+	int				ungetc;					// single stored character from ungetc, cleared to EOF when read
 
 	// Contents buffer
 	size_t			buff_ind, buff_len;		// buffer current index and length
@@ -1054,6 +1055,7 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode)
 
 	file = Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
+	file->ungetc = EOF;
 
 	file->handle = open (filepath, mod | opt, 0666);
 	if (file->handle < 0)
@@ -1113,6 +1115,7 @@ qfile_t *FS_OpenPackedFile (pack_t* pack, int pack_ind)
 	file->real_length = pfile->realsize;
 	file->offset = pfile->offset;
 	file->position = 0;
+	file->ungetc = EOF;
 
 	if (lseek (file->handle, file->offset, SEEK_SET) == -1)
 		Sys_Error ("FS_OpenPackedFile: can't lseek to %s in %s (offset: %d)",
@@ -1621,17 +1624,35 @@ int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 ====================
 FS_Getc
 
-Get the next character of a file
+Get stored ungetc character or the next character of a file
 ====================
 */
 int FS_Getc (qfile_t* file)
 {
 	char c;
 
-	if (FS_Read (file, &c, 1) != 1)
+	if (file->ungetc != EOF)
+	{
+		c = file->ungetc;
+		file->ungetc = EOF;
+	}
+	else if (FS_Read (file, &c, 1) != 1)
 		return EOF;
 
 	return c;
+}
+
+
+/*
+====================
+FS_UnGetc
+
+Put a character back into the Getc buffer (only supports one character!)
+====================
+*/
+void FS_UnGetc (qfile_t* file, unsigned char c)
+{
+	file->ungetc = c;
 }
 
 
@@ -1742,86 +1763,6 @@ Give the current position in a file
 long FS_Tell (qfile_t* file)
 {
 	return file->position - file->buff_len + file->buff_ind;
-}
-
-
-/*
-====================
-FS_Gets
-
-Extract a line from a file
-====================
-*/
-char* FS_Gets (qfile_t* file, char* buffer, size_t buffersize)
-{
-	size_t ind;
-
-	for (ind = 0; ind < (size_t) buffersize - 1; ind++)
-	{
-		int c = FS_Getc (file);
-		switch (c)
-		{
-			// End of file
-			case EOF:
-				if (!ind)
-					return NULL;
-
-				buffer[ind] = '\0';
-				return buffer;
-
-			// End of line
-			case '\r':
-			case '\n':
-				buffer[ind] = '\n';
-				buffer[ind + 1] = '\0';
-				return buffer;
-
-			default:
-				buffer[ind] = c;
-		}
-
-	}
-
-	buffer[buffersize - 1] = '\0';
-	return buffer;
-}
-
-
-/*
-==========
-FS_Getline
-
-Dynamic length version of fgets. DO NOT free the buffer.
-==========
-*/
-char *FS_Getline (qfile_t *file)
-{
-	static int  size = 256;
-	static char *buf = 0;
-	char        *t;
-	int         len;
-
-	if (!buf)
-		buf = Mem_Alloc (fs_mempool, size);
-
-	if (!FS_Gets (file, buf, size))
-		return 0;
-
-	len = strlen (buf);
-	while (buf[len - 1] != '\n' && buf[len - 1] != '\r')
-	{
-		t = Mem_Alloc (fs_mempool, size + 256);
-		memcpy(t, buf, size);
-		Mem_Free(buf);
-		size += 256;
-		buf = t;
-		if (!FS_Gets (file, buf + len, size - len))
-			break;
-		len = strlen (buf);
-	}
-	while ((len = strlen(buf)) && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
-		buf[len - 1] = 0;
-	return buf;
 }
 
 
