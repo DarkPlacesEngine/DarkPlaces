@@ -57,7 +57,7 @@ darkplaces-3dfx: $(OBJECTS) in_svgalib.o vid_3dfxsvga.o
 
 
 clean:
-	-rm -f darkplaces-glx darkplaces-3dfx vid_glx.o in_svgalib.o vid_3dfxsvga.o $(OBJECTS) *.d
+	-rm -f darkplaces-glx darkplaces-3dfx *.o *.d
 
 .PHONY: clean builddate
 
