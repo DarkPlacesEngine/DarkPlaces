@@ -6,4 +6,4 @@ include/dsound.h (part of DirectX)
 include/wsipx.h (winsock IPX header, needed for net_wipx.c, which can be removed if you edit net_win.c a bit)
 
 Assuming you placed mingw in c:\mingw, you can simply type this to compile:
-make -f makefile.mingw
+make exerelease
