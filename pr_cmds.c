@@ -522,7 +522,7 @@ void PF_vectoyaw (void)
 		yaw = 0;
 	else
 	{
-		yaw = (int) (atan2(value1[1], value1[0]) * 180 / M_PI);
+		yaw = (atan2(value1[1], value1[0]) * 180 / M_PI);
 		if (yaw < 0)
 			yaw += 360;
 	}
