@@ -517,7 +517,6 @@ qsocket_t *NET_Connect (char *host)
 {
 	qsocket_t		*ret;
 	int				n;
-	int				numdrivers = net_numdrivers;
 
 	SetNetTime();
 
@@ -528,8 +527,8 @@ qsocket_t *NET_Connect (char *host)
 	{
 		if (Q_strcasecmp (host, "local") == 0)
 		{
-			numdrivers = 1;
-			goto JustDoIt;
+			net_driverlevel = 0;
+			return dfunc.Connect (host);
 		}
 
 		if (hostCacheCount)
@@ -568,7 +567,7 @@ qsocket_t *NET_Connect (char *host)
 			}
 
 JustDoIt:
-	for (net_driverlevel=0 ; net_driverlevel<numdrivers; net_driverlevel++)
+	for (net_driverlevel = 0;net_driverlevel < net_numdrivers;net_driverlevel++)
 	{
 		if (net_drivers[net_driverlevel].initialized == false)
 			continue;
@@ -584,7 +583,7 @@ JustDoIt:
 		PrintSlist();
 		PrintSlistTrailer();
 	}
-	
+
 	return NULL;
 }
 
