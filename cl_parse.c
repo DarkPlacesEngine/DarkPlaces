@@ -81,7 +81,7 @@ char *svc_strings[128] =
 	"", // 48
 	"", // 49
 	"svc_cgame", //				50		// [short] length [bytes] data
-	"svc_fog", //				51		// unfinished and obsolete
+	"svc_unusedlh1", //			51		// unused
 	"svc_effect", //			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 	"svc_effect2", //			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
 	"svc_sound2", //			54		// short soundindex instead of byte
@@ -216,7 +216,7 @@ void CL_KeepaliveMessage (void)
 		switch (ret)
 		{
 		default:
-			Host_Error ("CL_KeepaliveMessage: CL_GetMessage failed");		
+			Host_Error ("CL_KeepaliveMessage: CL_GetMessage failed");
 		case 0:
 			break;	// nothing waiting
 		case 1:
