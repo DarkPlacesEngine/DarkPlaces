@@ -1550,32 +1550,12 @@ void M_Options_Effects_Key (int k)
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_Main_f ();
+		M_Menu_Options_f ();
 		break;
 
 	case K_ENTER:
-		m_entersound = true;
-		switch (options_effects_cursor)
-		{
-		case 0:
-			M_Menu_Keys_f ();
-			break;
-		case 1:
-			m_state = m_none;
-			Con_ToggleConsole_f ();
-			break;
-		case 2:
-			Cbuf_AddText ("exec default.cfg\n");
-			break;
-		case 3:
-			if (vid_menudrawfn)
-				M_Menu_Video_f ();
-			break;
-		default:
-			M_Menu_Options_Effects_AdjustSliders (1);
-			break;
-		}
-		return;
+		M_Menu_Options_Effects_AdjustSliders (1);
+		break;
 
 	case K_UPARROW:
 		S_LocalSound ("misc/menu1.wav");
