@@ -869,7 +869,7 @@ static void RSurfShader_Water(const entity_render_t *ent, const texture_t *textu
 	vec3_t center;
 	if (texture->rendertype != SURFRENDER_OPAQUE)
 	{
-		for (chain = surfchain;(surf = *chain) != NULL;*chain++)
+		for (chain = surfchain;(surf = *chain) != NULL;chain++)
 		{
 			if (surf->visframe == r_framecount)
 			{
@@ -879,7 +879,7 @@ static void RSurfShader_Water(const entity_render_t *ent, const texture_t *textu
 		}
 	}
 	else
-		for (chain = surfchain;(surf = *chain) != NULL;*chain++)
+		for (chain = surfchain;(surf = *chain) != NULL;chain++)
 			if (surf->visframe == r_framecount)
 				RSurfShader_Water_Callback(ent, surf - ent->model->surfaces);
 }
