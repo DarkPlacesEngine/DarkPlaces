@@ -1985,7 +1985,6 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	model_t *model;
 	qbyte *pvs;
 	static int markframe = 0;
-	qglEnable(GL_POLYGON_OFFSET_FILL);
 	R_Mesh_Matrix(&ent->matrix);
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
@@ -2006,12 +2005,10 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 		GL_DepthMask(false);
 		GL_DepthTest(true);
 		R_Mesh_State_Texture(&m);
-		qglPolygonOffset(1.0f, r_drawcollisionbrushes_polygonoffset.value);
 		for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
 			if (model->brushq3.data_thismodel->firstbrush[i].colbrushf && model->brushq3.data_thismodel->firstbrush[i].colbrushf->numtriangles)
 				R_DrawCollisionBrush(model->brushq3.data_thismodel->firstbrush[i].colbrushf);
 	}
-	qglDisable(GL_POLYGON_OFFSET_FILL);
 }
 
 /*
