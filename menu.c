@@ -2169,7 +2169,7 @@ int		msgNumber;
 int		m_quit_prevstate;
 qboolean	wasInMenus;
 
-char *quitMessage [] = 
+char *quitMessage [] =
 {
 /* .........1.........2.... */
 /*
@@ -2197,12 +2197,12 @@ char *quitMessage [] =
   "   big loser in life.   ",
   "  Press N to stay proud ",
   "    and successful!     ",
- 
+
   "   If you press Y to    ",
   "  quit, I will summon   ",
   "  Satan all over your   ",
   "      hard drive!       ",
- 
+
   "  Um, Asmodeus dislikes ",
   " his children trying to ",
   " quit. Press Y to return",
@@ -2699,12 +2699,14 @@ level_t		transfusionlevels[] =
 	{"e1m1",		"Cradle to Grave"},
 	{"e1m2",		"Wrong Side of the Tracks"},
 	{"e1m7",		"Altar of Stone"},
+	{"e2m8",		"The Lair of Shial"},
 	{"e3m7",		"The Pit of Cerberus"},
 	{"e4m8",		"The Hall of the Epiphany"},
 
 	{"dm1",			"Monolith Building 11"},
 	{"dm2",			"Power!"},
 	{"dm3",			"Area 15"},
+	{"e6m1",		"Welcome to Your Life"},
 	{"e6m8",		"Beauty and the Beast"},
 
 	{"cpbb01",		"Crypt of Despair"},
@@ -2733,12 +2735,12 @@ level_t		transfusionlevels[] =
 episode_t	transfusionepisodes[] =
 {
 	{"Blood", 0, 8},
-	{"Blood Single Player", 8, 5},
-	{"Plasma Pack", 13, 4},
-	{"Cryptic Passage", 17, 2},
-	{"Blood 2", 19, 5},
-	{"Transfusion", 24, 6},
-	{"Conversions", 30, 5}
+	{"Blood Single Player", 8, 6},
+	{"Plasma Pack", 14, 5},
+	{"Cryptic Passage", 19, 2},
+	{"Blood 2", 21, 5},
+	{"Transfusion", 26, 6},
+	{"Conversions", 32, 5}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
