@@ -86,9 +86,6 @@ typedef struct texture_s
 	// SURF_ flags
 	unsigned int flags;
 
-	// position in the model's textures array
-	int number;
-
 	// type of rendering (SURFRENDER_ value)
 	int rendertype;
 
@@ -784,12 +781,7 @@ typedef struct q3mtexture_s
 	int surfaceparms;
 	int textureflags;
 
-	int number;
 	skinframe_t skin;
-
-	int numfaces;
-	struct q3msurface_s **facelist;
-	int *facenumlist;
 }
 q3mtexture_t;
 

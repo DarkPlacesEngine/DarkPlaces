@@ -986,7 +986,6 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	// fill out all slots with notexture
 	for (i = 0, tx = loadmodel->brushq1.textures;i < loadmodel->brushq1.numtextures;i++, tx++)
 	{
-		tx->number = i;
 		strcpy(tx->name, "NO TEXTURE FOUND");
 		tx->width = 16;
 		tx->height = 16;
@@ -3696,7 +3695,6 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
-		out->number = i;
 		strlcpy (out->name, in->name, sizeof (out->name));
 		out->surfaceflags = LittleLong(in->surfaceflags);
 		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in->contents));
