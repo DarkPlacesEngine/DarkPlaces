@@ -25,9 +25,6 @@
 #include "quakedef.h"
 #include "jpeg.h"
 
-// LordHavoc: Elric's jpeg structs conflict with Linux ones (mainly on the definition of boolean being qbyte instead of int)
-#ifdef WIN32
-typedef qbyte boolean;
 /*
 =================================================================
 
@@ -38,6 +35,13 @@ typedef qbyte boolean;
 
 =================================================================
 */
+
+// jboolean is qbyte instead of int on Win32
+#ifdef WIN32
+typedef qbyte jboolean;
+#else
+typedef int jboolean;
+#endif
 
 #define JPEG_LIB_VERSION  62  // Version 6b
 
@@ -106,9 +110,9 @@ struct jpeg_source_mgr
 	size_t bytes_in_buffer;
 
 	void (*init_source) (j_decompress_ptr cinfo);
-	qbyte (*fill_input_buffer) (j_decompress_ptr cinfo);
+	jboolean (*fill_input_buffer) (j_decompress_ptr cinfo);
 	void (*skip_input_data) (j_decompress_ptr cinfo, long num_bytes);
-	qbyte (*resync_to_restart) (j_decompress_ptr cinfo, int desired);
+	jboolean (*resync_to_restart) (j_decompress_ptr cinfo, int desired);
 	void (*term_source) (j_decompress_ptr cinfo);
 };
 
@@ -119,7 +123,7 @@ struct jpeg_decompress_struct
 
 	void *progress;
 	void *client_data;
-	qbyte is_decompressor;
+	jboolean is_decompressor;
 	int global_state;
 
 	struct jpeg_source_mgr *src;	// USED
@@ -131,18 +135,18 @@ struct jpeg_decompress_struct
 	J_COLOR_SPACE out_color_space;
 	unsigned int scale_num, scale_denom;
 	double output_gamma;
-	qbyte buffered_image;
-	qbyte raw_data_out;
+	jboolean buffered_image;
+	jboolean raw_data_out;
 	J_DCT_METHOD dct_method;
-	qbyte do_fancy_upsampling;
-	qbyte do_block_smoothing;
-	qbyte quantize_colors;
+	jboolean do_fancy_upsampling;
+	jboolean do_block_smoothing;
+	jboolean quantize_colors;
 	J_DITHER_MODE dither_mode;
-	qbyte two_pass_quantize;
+	jboolean two_pass_quantize;
 	int desired_number_of_colors;
-	qbyte enable_1pass_quant;
-	qbyte enable_external_quant;
-	qbyte enable_2pass_quant;
+	jboolean enable_1pass_quant;
+	jboolean enable_external_quant;
+	jboolean enable_2pass_quant;
 	JDIMENSION output_width;
 
 	JDIMENSION output_height;	// USED
@@ -167,21 +171,21 @@ struct jpeg_decompress_struct
 	void *ac_huff_tbl_ptrs[NUM_HUFF_TBLS];
 	int data_precision;
 	void *comp_info;
-	qbyte progressive_mode;
-	qbyte arith_code;
+	jboolean progressive_mode;
+	jboolean arith_code;
 	qbyte arith_dc_L[NUM_ARITH_TBLS];
 	qbyte arith_dc_U[NUM_ARITH_TBLS];
 	qbyte arith_ac_K[NUM_ARITH_TBLS];
 	unsigned int restart_interval;
-	qbyte saw_JFIF_marker;
+	jboolean saw_JFIF_marker;
 	qbyte JFIF_major_version;
 	qbyte JFIF_minor_version;
 	qbyte density_unit;
 	unsigned short X_density;
 	unsigned short Y_density;
-	qbyte saw_Adobe_marker;
+	jboolean saw_Adobe_marker;
 	qbyte Adobe_transform;
-	qbyte CCIR601_sampling;
+	jboolean CCIR601_sampling;
 	void *marker_list;
 	int max_h_samp_factor;
 	int max_v_samp_factor;
@@ -208,9 +212,6 @@ struct jpeg_decompress_struct
 	void *cconvert;
 	void *cquantize;
 };
-#else
-#include <jpeglib.h>
-#endif
 
 
 /*
@@ -224,11 +225,11 @@ struct jpeg_decompress_struct
 // Functions exported from libjpeg
 static void (*qjpeg_CreateDecompress) (j_decompress_ptr cinfo, int version, size_t structsize);
 static void (*qjpeg_destroy_decompress) (j_decompress_ptr cinfo);
-static boolean (*qjpeg_finish_decompress) (j_decompress_ptr cinfo);
-static boolean (*qjpeg_resync_to_restart) (j_decompress_ptr cinfo, int desired);
-static int (*qjpeg_read_header) (j_decompress_ptr cinfo, qbyte require_image);
+static jboolean (*qjpeg_finish_decompress) (j_decompress_ptr cinfo);
+static jboolean (*qjpeg_resync_to_restart) (j_decompress_ptr cinfo, int desired);
+static int (*qjpeg_read_header) (j_decompress_ptr cinfo, jboolean require_image);
 static JDIMENSION (*qjpeg_read_scanlines) (j_decompress_ptr cinfo, qbyte** scanlines, JDIMENSION max_lines);
-static boolean (*qjpeg_start_decompress) (j_decompress_ptr cinfo);
+static jboolean (*qjpeg_start_decompress) (j_decompress_ptr cinfo);
 static struct jpeg_error_mgr* (*qjpeg_std_error) (struct jpeg_error_mgr *err);
 
 static dllfunction_t jpegfuncs[] =
@@ -298,6 +299,7 @@ qboolean JPEG_OpenLibrary (void)
 			return false;
 		}
 
+	Con_Printf("%s loaded. JPEG support enabled\n", dllname);
 	return true;
 }
 
@@ -331,7 +333,7 @@ static qbyte jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 
 static void JPEG_Noop (j_decompress_ptr cinfo) {}
 
-static boolean JPEG_FillInputBuffer (j_decompress_ptr cinfo)
+static jboolean JPEG_FillInputBuffer (j_decompress_ptr cinfo)
 {
     // Insert a fake EOI marker
     cinfo->src->next_input_byte = jpeg_eoi_marker;
