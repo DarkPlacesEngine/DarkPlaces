@@ -405,9 +405,9 @@ the given string.  Single ascii characters return themselves, while
 the K_* names are matched up.
 ===================
 */
-int Key_StringToKeynum (char *str)
+int Key_StringToKeynum (const char *str)
 {
-	keyname_t	*kn;
+	keyname_t *kn;
 
 	if (!str || !str[0])
 		return -1;
@@ -415,10 +415,8 @@ int Key_StringToKeynum (char *str)
 		return str[0];
 
 	for (kn=keynames ; kn->name ; kn++)
-	{
 		if (!Q_strcasecmp(str,kn->name))
 			return kn->keynum;
-	}
 	return -1;
 }
 
@@ -433,8 +431,8 @@ FIXME: handle quote special (general escape sequence?)
 */
 char *Key_KeynumToString (int keynum)
 {
-	keyname_t	*kn;
-	static	char	tinystr[2];
+	keyname_t *kn;
+	static char tinystr[2];
 
 	if (keynum == -1)
 		return "<KEY NOT FOUND>";
@@ -444,7 +442,7 @@ char *Key_KeynumToString (int keynum)
 		tinystr[1] = 0;
 		return tinystr;
 	}
-	
+
 	for (kn=keynames ; kn->name ; kn++)
 		if (keynum == kn->keynum)
 			return kn->name;
