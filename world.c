@@ -190,10 +190,12 @@ void SV_UnlinkEdict (edict_t *ent)
 
 void SV_TouchAreaGrid(edict_t *ent)
 {
-	link_t *l, *next;
+	link_t *l;
 	edict_t *touch;
 	areagrid_t *grid;
 	int old_self, old_other, igrid[3], igridmins[3], igridmaxs[3];
+	int i, numtouchedicts;
+	unsigned short touchedictnumbers[MAX_EDICTS];
 
 	sv_areagrid_marknumber++;
 	igridmins[0] = (int) ((ent->v->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
@@ -209,10 +211,25 @@ void SV_TouchAreaGrid(edict_t *ent)
 	igridmaxs[1] = min(AREA_GRID, igridmaxs[1]);
 	//igridmaxs[2] = min(AREA_GRID, igridmaxs[2]);
 
-	for (l = sv_areagrid_outside.trigger_edicts.next;l != &sv_areagrid_outside.trigger_edicts;l = next)
+	// build a list of edicts to touch, because the link loop can be corrupted
+	// by SV_IncreaseEdicts called during touch functions
+	numtouchedicts = 0;
+	for (l = sv_areagrid_outside.trigger_edicts.next;l != &sv_areagrid_outside.trigger_edicts;l = l->next)
+		touchedictnumbers[numtouchedicts++] = l->entitynumber;
+
+	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
 	{
-		next = l->next;
-		touch = EDICT_NUM(l->entitynumber);
+		grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0];
+		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
+			for (l = grid->trigger_edicts.next;l != &grid->trigger_edicts;l = l->next)
+				touchedictnumbers[numtouchedicts++] = l->entitynumber;
+	}
+
+	old_self = pr_global_struct->self;
+	old_other = pr_global_struct->other;
+	for (i = 0;i < numtouchedicts && !ent->e->free;i++)
+	{
+		touch = EDICT_NUM_UNSIGNED(touchedictnumbers[i]);
 		if (ent->v->absmin[0] > touch->v->absmax[0]
 		 || ent->v->absmax[0] < touch->v->absmin[0]
 		 || ent->v->absmin[1] > touch->v->absmax[1]
@@ -224,55 +241,13 @@ void SV_TouchAreaGrid(edict_t *ent)
 			continue;
 		if (!touch->v->touch || touch->v->solid != SOLID_TRIGGER)
 			continue;
-		old_self = pr_global_struct->self;
-		old_other = pr_global_struct->other;
-
 		pr_global_struct->self = EDICT_TO_PROG(touch);
 		pr_global_struct->other = EDICT_TO_PROG(ent);
 		pr_global_struct->time = sv.time;
 		PR_ExecuteProgram (touch->v->touch, "");
-
-		pr_global_struct->self = old_self;
-		pr_global_struct->other = old_other;
 	}
-
-	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
-	{
-		grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0];
-		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
-		{
-			for (l = grid->trigger_edicts.next;l != &grid->trigger_edicts;l = next)
-			{
-				next = l->next;
-				touch = EDICT_NUM(l->entitynumber);
-				if (touch->e->areagridmarknumber == sv_areagrid_marknumber)
-					continue;
-				touch->e->areagridmarknumber = sv_areagrid_marknumber;
-				if (ent->v->absmin[0] > touch->v->absmax[0]
-				 || ent->v->absmax[0] < touch->v->absmin[0]
-				 || ent->v->absmin[1] > touch->v->absmax[1]
-				 || ent->v->absmax[1] < touch->v->absmin[1]
-				 || ent->v->absmin[2] > touch->v->absmax[2]
-				 || ent->v->absmax[2] < touch->v->absmin[2])
-					continue;
-				// LordHavoc: id bug that won't be fixed: triggers do not ignore their owner like solid objects do
-				if (touch == ent)
-					continue;
-				if (!touch->v->touch || touch->v->solid != SOLID_TRIGGER)
-					continue;
-				old_self = pr_global_struct->self;
-				old_other = pr_global_struct->other;
-
-				pr_global_struct->self = EDICT_TO_PROG(touch);
-				pr_global_struct->other = EDICT_TO_PROG(ent);
-				pr_global_struct->time = sv.time;
-				PR_ExecuteProgram (touch->v->touch, "");
-
-				pr_global_struct->self = old_self;
-				pr_global_struct->other = old_other;
-			}
-		}
-	}
+	pr_global_struct->self = old_self;
+	pr_global_struct->other = old_other;
 }
 
 void SV_LinkEdict_AreaGrid(edict_t *ent)
