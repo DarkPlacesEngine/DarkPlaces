@@ -1948,6 +1948,12 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 	face->visframe = r_framecount;
 	if (r_shadow_realtime_world.integer)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(ent, face);
+	else if ((ent->effects & EF_FULLBRIGHT) || r_fullbright.integer)
+	{
+		R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(ent, face);
+		if (face->texture->skin.glow)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
+	}
 	else if (face->lightmaptexture)
 	{
 		if (r_textureunits.integer >= 2 && gl_combine.integer)
