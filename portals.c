@@ -135,12 +135,12 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 				{
 					if (Portal_RecursiveFlowSearch(p->past, eye, firstclipplane + numclipplanes, newpoints))
 						return true;
-    			}
+				}
 				else
 				{
 					if (Portal_RecursiveFlowSearch(p->past, eye, firstclipplane, numclipplanes))
 						return true;
-    			}
+				}
 			}
 		}
 	}
@@ -322,6 +322,7 @@ vec3_t trianglepoints[3];
 typedef struct portalrecursioninfo_s
 {
 	int exact;
+	int numfrustumplanes;
 	float nradius;
 	qbyte *surfacemark;
 	qbyte *leafmark;
@@ -446,6 +447,23 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	}
 }
 
+void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
+{
+	if (node->contents)
+	{
+		if (node->contents != CONTENTS_SKY && node->contents != CONTENTS_SOLID)
+			Portal_RecursiveFlow(info, (mleaf_t *)node, 0, info->numfrustumplanes);
+	}
+	else
+	{
+		float f = DotProduct(info->eye, node->plane->normal) - node->plane->dist;
+		if (f > -0.1)
+			Portal_RecursiveFindLeafForFlow(info, node->children[0]);
+		if (f < 0.1)
+			Portal_RecursiveFindLeafForFlow(info, node->children[1]);
+	}
+}
+
 void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, float radius)
 {
 	int i;
@@ -476,8 +494,9 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	info.leafmark = leafmark;
 	info.model = model;
 	VectorCopy(eye, info.eye);
+	info.numfrustumplanes = numfrustumplanes;
 
-	Portal_RecursiveFlow(&info, Mod_PointInLeaf(eye, model), 0, numfrustumplanes);
+	Portal_RecursiveFindLeafForFlow(&info, model->nodes);
 
 	if (ranoutofportalplanes)
 		Con_Printf("Portal_RecursiveFlow: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);

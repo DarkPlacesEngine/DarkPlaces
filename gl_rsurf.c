@@ -1845,7 +1845,7 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	}
 }
 
-void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, msurface_t **surflist, int numsurfaces)
+void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, msurface_t **surflist, int numsurfaces, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int surfnum;
 	msurface_t *surf;
@@ -1867,35 +1867,37 @@ void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relative
 				{
 					R_Mesh_ResizeCheck(mesh->numverts);
 					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->skin.base, t->skin.nmap, NULL);
-					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->skin.gloss, t->skin.nmap, NULL);
+					R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
+					R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
 				}
 			}
 		}
 	}
 }
 
-void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor)
+void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int surfnum;
 	msurface_t *surf;
 	texture_t *t;
-	float f, lightradius2, temp[3];
+	float f, lightmins[3], lightmaxs[3];
 	surfmesh_t *mesh;
 	if (ent->model == NULL)
 		return;
 	R_Mesh_Matrix(&ent->matrix);
-	lightradius2 = lightradius * lightradius;
+	lightmins[0] = relativelightorigin[0] - lightradius;
+	lightmins[1] = relativelightorigin[1] - lightradius;
+	lightmins[2] = relativelightorigin[2] - lightradius;
+	lightmaxs[0] = relativelightorigin[0] + lightradius;
+	lightmaxs[1] = relativelightorigin[1] + lightradius;
+	lightmaxs[2] = relativelightorigin[2] + lightradius;
 	R_UpdateTextureInfo(ent);
 	if (ent != &cl_entities[0].render)
 	{
 		// bmodel, cull crudely to view and light
 		for (surfnum = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;surfnum < ent->model->nummodelsurfaces;surfnum++, surf++)
 		{
-			temp[0] = bound(surf->poly_mins[0], relativelightorigin[0], surf->poly_maxs[0]) - relativelightorigin[0];
-			temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
-			temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
-			if (DotProduct(temp, temp) < lightradius2)
+			if (BoxesOverlap(surf->poly_mins, surf->poly_maxs, lightmins, lightmaxs))
 			{
 				f = PlaneDiff(relativelightorigin, surf->plane);
 				if (surf->flags & SURF_PLANEBACK)
@@ -1914,8 +1916,8 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 							{
 								R_Mesh_ResizeCheck(mesh->numverts);
 								memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->skin.base, t->skin.nmap, NULL);
-								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->skin.gloss, t->skin.nmap, NULL);
+								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
+								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
 							}
 						}
 					}
@@ -1928,28 +1930,22 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		// world, already culled to view, just cull to light
 		for (surfnum = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;surfnum < ent->model->nummodelsurfaces;surfnum++, surf++)
 		{
-			if (surf->visframe == r_framecount)
+			if (surf->visframe == r_framecount && BoxesOverlap(surf->poly_mins, surf->poly_maxs, lightmins, lightmaxs))
 			{
-				temp[0] = bound(surf->poly_mins[0], relativelightorigin[0], surf->poly_maxs[0]) - relativelightorigin[0];
-				temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
-				temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
-				if (DotProduct(temp, temp) < lightradius2)
+				f = PlaneDiff(relativelightorigin, surf->plane);
+				if (surf->flags & SURF_PLANEBACK)
+					f = -f;
+				if (f >= -0.1 && f < lightradius)
 				{
-					f = PlaneDiff(relativelightorigin, surf->plane);
-					if (surf->flags & SURF_PLANEBACK)
-						f = -f;
-					if (f >= -0.1 && f < lightradius)
+					t = surf->texinfo->texture->currentframe;
+					if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
 					{
-						t = surf->texinfo->texture->currentframe;
-						if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
+						for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 						{
-							for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-							{
-								R_Mesh_ResizeCheck(mesh->numverts);
-								memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-								R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, t->skin.base, t->skin.nmap, NULL);
-								R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->skin.gloss, t->skin.nmap, NULL);
-							}
+							R_Mesh_ResizeCheck(mesh->numverts);
+							memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+							R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
+							R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
 						}
 					}
 				}
