@@ -349,7 +349,6 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		if (numplanes >= 256)
 		{
 			Con_Printf("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
-			Winding_Free(w);
 			return NULL;
 		}
 
