@@ -11,7 +11,6 @@
 -d darkplaces: add slowmo to options menu (Cristian Beltramo)
 -d darkplaces: add sv_maxrate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (protoplasmatic)
 -d darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
--d darkplaces: crashes if you type too long a command line in the console (Sajt)
 -d darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 -d darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 -d darkplaces: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
@@ -23,15 +22,12 @@
 -d darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
 -d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (-metlslime, zinx)
 -d darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
--d darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (Sajt)
 -d darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
 -d darkplaces: prevent player name changes faster than once every 5 seconds (sublim3)
--d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (Sajt)
 -d darkplaces: te_explosion2 builtin needs to be fixed, it is missing the colorlength parameter, update pr_cmds.c and dpextensions.qc (VorteX)
 -d darkplaces: write a readme (Antti)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
--f darkplaces: model interpolation off crashes?  (Sajt)
 0 darkplaces: "loadsky something;r_restart" results in skybox showing random textures from map (Randy)
 0 darkplaces: EF_ADDITIVE alias model entities not appearing in realtime lighting mode? (VorteX)
 0 darkplaces: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
@@ -495,6 +491,7 @@ d darkplaces: check if nodrawtoclient works and if not, fix it (Uffe)
 d darkplaces: cleaned up rtlight handling, merging most code between world rtlights and dlights
 d darkplaces: colors of player in demos seems to alter player config (this is clearly a more severe problem than just demos) (tkimmet@ezworks.net)
 d darkplaces: console scrolling should not reset when new messages appear
+d darkplaces: crashes if you type too long a command line in the console (Sajt)
 d darkplaces: debug server crash
 d darkplaces: dedicated server hosting prydon with multiple players exhibited severe networking bugs in tests, including failure to find acked network frames, and a segfault (Supajoe, Uffe, FrikaC, Harb)
 d darkplaces: dedicated server should error out if it has no sockets (yummyluv)
@@ -619,6 +616,7 @@ d darkplaces: make sure PR_SetString points NULL strings at pr_strings (which wo
 d darkplaces: make sure r_drawportals works
 d darkplaces: make sure r_fullbright works
 d darkplaces: make sure that disappearing entities are removed on the client in quake demos
+d darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (Sajt)
 d darkplaces: make sure that textureless models are white and not invisible, apparently creating a .bmp texture (not supported) made the models black, even more odd... (McKilled, QorpsE)
 d darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
 d darkplaces: make the reply receive code drop packets from servers not in the list (Willis)
@@ -646,6 +644,7 @@ d darkplaces: q1bsp trace bug: bullets don't hit walls at extremely steep angles
 d darkplaces: q1bsp trace bug: movetogoal is broken - monsters are not going around corners, just running into walls (scar3crow)
 d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this needs to be fixed
 d darkplaces: q1bsp: parse submodels before leafs, so that the pvs can be allocated smaller (only enough for the world model's visleafs count) (Vic) 
+d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (Sajt)
 d darkplaces: reduce r_lightningbeam_repeatdistance to 128, 1024 is way too long
 d darkplaces: release new hmap (fixes compilation of TF entities for one person, adds support for GTKRadiant Q1Pack by adding -wadpath option)
 d darkplaces: release new hqbsp with -wadpath support (also searchs in map's directory and map's parent directory)
@@ -714,6 +713,7 @@ f darkplaces: fix connecting to proquake servers through routers (Demonix)
 f darkplaces: hack PF_nextent to skip inaccessible client slots depending on maxplayers - but always report ones that are active at the time (FrikaC)
 f darkplaces: look at and integrate Vic's updated zone.[ch] (Vic)
 f darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
+f darkplaces: model interpolation off crashes?  (Sajt)
 f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 f darkplaces: r_shadow_showtris messes up r_shadow_visiblevolumes color (jitspoe)
 f darkplaces: shadows are not working with model tag attachments (Electro)
