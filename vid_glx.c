@@ -89,9 +89,6 @@ const char *gl_extensions;
 
 //static float vid_gamma = 1.0;
 
-// LordHavoc: ARB multitexture support
-int gl_mtex_enum = 0;
-
 /*-----------------------------------------------------------------------*/
 static int
 XLateKey(XKeyEvent *ev/*, qboolean modified*/)
