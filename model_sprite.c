@@ -35,7 +35,7 @@ void Mod_SpriteInit (void)
 
 void Mod_Sprite_StripExtension(char *in, char *out)
 {
-	byte *end;
+	char *end;
 	end = in + strlen(in);
 	if ((end - in) >= 6)
 		if (strcmp(end - 6, ".spr32") == 0)
@@ -85,7 +85,7 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 
 	Mod_Sprite_StripExtension(loadmodel->name, tempname);
 	sprintf (name, "%s_%i", tempname, framenum);
-	pspriteframe->gl_texturenum = loadtextureimagewithmask(name, 0, 0, true, true);
+	pspriteframe->gl_texturenum = loadtextureimagewithmask(name, 0, 0, false, true);
 	pspriteframe->gl_fogtexturenum = image_masktexnum;
 	if (pspriteframe->gl_texturenum == 0)
 	{
