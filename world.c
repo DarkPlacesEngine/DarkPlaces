@@ -567,6 +567,7 @@ SV_RecursiveHullCheck
 
 ==================
 */
+/*
 qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace)
 {
 	dclipnode_t	*node;
@@ -652,11 +653,12 @@ loc0:
 		return false;
 	}
 #endif
-	
+
 	if (SV_HullPointContents (hull, node->children[side^1], mid) != CONTENTS_SOLID)
 // go past the node
 		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
 	// mid would need to be duplicated during recursion...
+*/
 	/*
 	{
 		p1f = midf;
@@ -665,6 +667,7 @@ loc0:
 		goto loc0;
 	}
 	*/
+/*
 
 	if (trace->allsolid)
 		return false;		// never got out of the solid area
@@ -680,6 +683,138 @@ loc0:
 	else
 	{
 		// LordHavoc: unrolled vector operation because the compiler can't be sure vec3_origin is 0
+//		VectorSubtract (vec3_origin, plane->normal, trace->plane.normal);
+		trace->plane.normal[0] = -plane->normal[0];
+		trace->plane.normal[1] = -plane->normal[1];
+		trace->plane.normal[2] = -plane->normal[2];
+		trace->plane.dist = -plane->dist;
+	}
+
+	while (SV_HullPointContents (hull, hull->firstclipnode, mid) == CONTENTS_SOLID)
+	{ // shouldn't really happen, but does occasionally
+		frac -= 0.1;
+		if (frac < 0)
+		{
+			trace->fraction = midf;
+			VectorCopy (mid, trace->endpos);
+			Con_DPrintf ("backup past 0\n");
+			return false;
+		}
+		midf = p1f + (p2f - p1f)*frac;
+		for (i=0 ; i<3 ; i++)
+			mid[i] = p1[i] + frac*(p2[i] - p1[i]);
+	}
+
+	trace->fraction = midf;
+	VectorCopy (mid, trace->endpos);
+
+	return false;
+}
+*/
+
+// LordHavoc: backported from my optimizations to PM_RecursiveHullCheck in QuakeForge newtree (QW)
+qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace)
+{
+	dclipnode_t	*node;
+	mplane_t	*plane;
+	float		t1, t2;
+	float		frac;
+	int			i;
+	vec3_t		mid;
+	int			side;
+	float		midf;
+
+	// LordHavoc: a goto!  everyone flee in terror... :)
+loc0:
+// check for empty
+	if (num < 0)
+	{
+		if (num != CONTENTS_SOLID)
+		{
+			trace->allsolid = false;
+			if (num == CONTENTS_EMPTY)
+				trace->inopen = true;
+			else
+				trace->inwater = true;
+		}
+		else
+			trace->startsolid = true;
+		return true;		// empty
+	}
+
+	// LordHavoc: this can be eliminated by validating in the loader...  but Mercury told me not to bother
+	if (num < hull->firstclipnode || num > hull->lastclipnode)
+		Sys_Error ("SV_RecursiveHullCheck: bad node number");
+
+// find the point distances
+	node = hull->clipnodes + num;
+	plane = hull->planes + node->planenum;
+
+	if (plane->type < 3)
+	{
+		t1 = p1[plane->type] - plane->dist;
+		t2 = p2[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct (plane->normal, p1) - plane->dist;
+		t2 = DotProduct (plane->normal, p2) - plane->dist;
+	}
+
+	// LordHavoc: recursion optimization
+	if (t1 >= 0 && t2 >= 0)
+	{
+		num = node->children[0];
+		goto loc0;
+	}
+	if (t1 < 0 && t2 < 0)
+	{
+		num = node->children[1];
+		goto loc0;
+	}
+
+// put the crosspoint DIST_EPSILON pixels on the near side
+	side = (t1 < 0);
+	if (side)
+		frac = bound(0, (t1 + DIST_EPSILON) / (t1 - t2), 1);
+	else
+		frac = bound(0, (t1 - DIST_EPSILON) / (t1 - t2), 1);
+		
+	midf = p1f + (p2f - p1f)*frac;
+	for (i=0 ; i<3 ; i++)
+		mid[i] = p1[i] + frac*(p2[i] - p1[i]);
+
+// move up to the node
+	if (!SV_RecursiveHullCheck (hull, node->children[side], p1f, midf, p1, mid, trace) )
+		return false;
+
+#ifdef PARANOID
+	if (SV_HullPointContents (pm_hullmodel, mid, node->children[side]) == CONTENTS_SOLID)
+	{
+		Con_Printf ("mid PointInHullSolid\n");
+		return false;
+	}
+#endif
+
+	// LordHavoc: warning to the clumsy, this recursion can not be optimized because mid would need to be duplicated on a stack
+	if (SV_HullPointContents (hull, node->children[side^1], mid) != CONTENTS_SOLID)
+// go past the node
+		return SV_RecursiveHullCheck (hull, node->children[side^1], midf, p2f, mid, p2, trace);
+	
+	if (trace->allsolid)
+		return false;		// never got out of the solid area
+		
+//==================
+// the other side of the node is solid, this is the impact point
+//==================
+	if (!side)
+	{
+		VectorCopy (plane->normal, trace->plane.normal);
+		trace->plane.dist = plane->dist;
+	}
+	else
+	{
+		// LordHavoc: vec3_origin is evil; the compiler can not rely on it being '0 0 0'
 //		VectorSubtract (vec3_origin, plane->normal, trace->plane.normal);
 		trace->plane.normal[0] = -plane->normal[0];
 		trace->plane.normal[1] = -plane->normal[1];
@@ -761,17 +896,9 @@ loc0:
 		if (node->children[side] == CONTENTS_SOLID)
 			return false;
 		return SV_TestLine(hull, node->children[!side], mid, p2);
-//		num = node->children[!side];
-//		VectorCopy(mid, p1);
-//		goto loc0;
 	}
 	else if (SV_TestLine(hull, node->children[side], p1, mid))
-	{
 		return SV_TestLine(hull, node->children[!side], mid, p2);
-//		num = node->children[!side];
-//		VectorCopy(mid, p1);
-//		goto loc0;
-	}
 	else
 		return false;
 }
