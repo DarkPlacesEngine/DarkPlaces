@@ -1190,7 +1190,7 @@ void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, const int *elements)
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg)
+qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, qbyte *buffer3, int x, int y, int width, int height, qboolean flipx, qboolean flipy, qboolean flipdiagonal, qboolean jpeg)
 {
 	int	indices[3] = {0,1,2};
 	qboolean ret;
@@ -1206,7 +1206,7 @@ qboolean SCR_ScreenShot(char *filename, qbyte *buffer1, qbyte *buffer2, int x, i
 	if (jpeg)
 		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer2);
 	else
-		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer2);
+		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer2, buffer3);
 
 	return ret;
 }

@@ -37,7 +37,7 @@ rtexture_t *loadtextureimagewithmaskandnmap (rtexturepool_t *pool, const char *f
 rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filename, int matchwidth, int matchheight, qboolean complain, int flags, float bumpscale);
 
 // writes a RGB TGA that is already upside down (which TGA wants)
-qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data);
+qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data, qbyte *buffer);
 
 // writes a RGB TGA
 void Image_WriteTGARGB (const char *filename, int width, int height, const qbyte *data);

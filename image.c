@@ -853,13 +853,11 @@ rtexture_t *loadtextureimagebumpasnmap (rtexturepool_t *pool, const char *filena
 	return rt;
 }
 
-qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data)
+qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int height, const qbyte *data, qbyte *buffer)
 {
 	qboolean ret;
-	qbyte *buffer, *out;
+	qbyte *out;
 	const qbyte *in, *end;
-
-	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -881,7 +879,6 @@ qboolean Image_WriteTGARGB_preflipped (const char *filename, int width, int heig
 	}
 	ret = FS_WriteFile (filename, buffer, width*height*3 + 18 );
 
-	Mem_Free(buffer);
 	return ret;
 }
 
