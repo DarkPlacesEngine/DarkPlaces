@@ -14,7 +14,16 @@ did not intersect the visible geometry, suitable as a stencil mask for
 rendering lighting everywhere but shadow.
 
 In our case we use a biased stencil clear of 128 to avoid requiring the
-stencil wrap extension (but probably should support it).
+stencil wrap extension (but probably should support it), and to address
+Creative's patent on this sort of technology we also draw the frontfaces
+first, and backfaces second (decrement, increment).
+
+Patent warning:
+This algorithm may be covered by Creative's patent (US Patent #6384822)
+on Carmack's Reverse paper (which I have not read), however that patent
+seems to be about drawing a stencil shadow from a model in an otherwise
+unshadowed scene, where as realtime lighting technology draws light where
+shadows do not lie.
 
 
 
@@ -626,15 +635,15 @@ void R_Shadow_Volume(int numverts, int numtris, const float *invertex3f, int *el
 		GL_VertexPointer(varray_vertex3f2);
 		if (r_shadowstage == SHADOWSTAGE_STENCIL)
 		{
-			// increment stencil if backface is behind depthbuffer
-			qglCullFace(GL_BACK); // quake is backwards, this culls front faces
-			qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
-			R_Mesh_Draw(outverts, tris, shadowelements);
-			c_rt_shadowmeshes++;
-			c_rt_shadowtris += numtris;
 			// decrement stencil if frontface is behind depthbuffer
 			qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 			qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+			R_Mesh_Draw(outverts, tris, shadowelements);
+			c_rt_shadowmeshes++;
+			c_rt_shadowtris += numtris;
+			// increment stencil if backface is behind depthbuffer
+			qglCullFace(GL_BACK); // quake is backwards, this culls front faces
+			qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 		}
 		R_Mesh_Draw(outverts, tris, shadowelements);
 		c_rt_shadowmeshes++;
@@ -647,9 +656,9 @@ void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
 	shadowmesh_t *mesh;
 	if (r_shadowstage == SHADOWSTAGE_STENCIL)
 	{
-		// increment stencil if backface is behind depthbuffer
-		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
-		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+		// decrement stencil if frontface is behind depthbuffer
+		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 		for (mesh = firstmesh;mesh;mesh = mesh->next)
 		{
 			GL_VertexPointer(mesh->vertex3f);
@@ -657,9 +666,9 @@ void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
 			c_rtcached_shadowmeshes++;
 			c_rtcached_shadowtris += mesh->numtriangles;
 		}
-		// decrement stencil if frontface is behind depthbuffer
-		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		// increment stencil if backface is behind depthbuffer
+		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
+		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 	}
 	for (mesh = firstmesh;mesh;mesh = mesh->next)
 	{
@@ -818,6 +827,7 @@ void R_Shadow_Stage_Begin(void)
 	GL_DepthTest(true);
 	R_Mesh_State_Texture(&m);
 	GL_Color(0, 0, 0, 1);
+	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_SCISSOR_TEST);
 	r_shadowstage = SHADOWSTAGE_NONE;
 
@@ -860,6 +870,7 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	else
 		qglDisable(GL_POLYGON_OFFSET_FILL);
 	qglDepthFunc(GL_LESS);
+	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
@@ -887,6 +898,7 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
 	qglDepthFunc(GL_EQUAL);
+	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_EQUAL, 128, 0xFF);
@@ -906,6 +918,7 @@ void R_Shadow_Stage_LightWithShadows(void)
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
 	qglDepthFunc(GL_EQUAL);
+	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	// only draw light where this geometry was already rendered AND the
@@ -928,6 +941,7 @@ void R_Shadow_Stage_End(void)
 	qglColorMask(1, 1, 1, 1);
 	qglDisable(GL_SCISSOR_TEST);
 	qglDepthFunc(GL_LEQUAL);
+	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
