@@ -276,7 +276,6 @@ void Host_Map_f (void)
 	if (cmd_source != src_command)
 		return;
 
-	SCR_BeginLoadingPlaque ();
 	cls.demonum = -1;		// stop demo loop in case this fails
 
 	CL_Disconnect ();
@@ -323,7 +322,6 @@ void Host_Changelevel_f (void)
 	key_consoleactive = 0;
 
 	SV_SaveSpawnparms ();
-	SCR_BeginLoadingPlaque();
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
@@ -359,7 +357,6 @@ void Host_Restart_f (void)
 	key_dest = key_game;
 	key_consoleactive = 0;
 
-	SCR_BeginLoadingPlaque();
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(mapname, sv.name);
 	SV_SpawnServer(mapname);
@@ -387,7 +384,6 @@ void Host_Reconnect_f (void)
 		//Con_Print("reconnect: no signon, ignoring reconnect\n");
 		return;
 	}
-	SCR_BeginLoadingPlaque();
 	cls.signon = 0;		// need new connection messages
 }
 
@@ -595,8 +591,6 @@ void Host_Loadgame_f (void)
 		Con_Printf("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
 		return;
 	}
-
-	SCR_BeginLoadingPlaque ();
 
 	str = FS_Getline (f);
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
