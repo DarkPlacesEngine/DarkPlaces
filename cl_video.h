@@ -2,7 +2,8 @@
 #ifndef CL_VIDEO_H
 #define CL_VIDEO_H
 
-#define MAXCLVIDEOS		64 + 1 // 1 video is reserved for the cinematic mode
+//#define MAXCLVIDEOS		64 + 1 // 1 video is reserved for the cinematic mode
+#define MAXCLVIDEOS		1
 #define CLVIDEOPREFIX	"_video/"
 #define CLTHRESHOLD		2.0
 
