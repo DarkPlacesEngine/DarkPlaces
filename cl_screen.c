@@ -314,7 +314,7 @@ void SCR_BeginLoadingPlaque (void)
 	if (scr_drawloading)
 		return;
 
-	S_StopAllSounds (true);
+	S_StopAllSounds ();
 
 	scr_drawloading = true;
 	CL_UpdateScreen ();

@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <sys/soundcard.h>
 #include <stdio.h>
 #include "quakedef.h"
+#include "snd_main.h"
 
 int audio_fd;
 int snd_inited;

@@ -23,6 +23,8 @@ extern qboolean cdPlaying;
 extern qboolean cdPlayLooping;
 extern qbyte cdPlayTrack;
 
+extern cvar_t cdaudioinitialized;
+
 int CDAudio_Init(void);
 void CDAudio_Open(void);
 void CDAudio_Close(void);

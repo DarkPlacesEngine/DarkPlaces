@@ -1215,7 +1215,6 @@ void M_Menu_Options_f (void)
 	m_entersound = true;
 }
 
-extern cvar_t snd_staticvolume;
 extern cvar_t slowmo;
 extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;

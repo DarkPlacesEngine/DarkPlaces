@@ -624,14 +624,13 @@ void VM_localsound(void)
 
 	s = PRVM_G_STRING(OFS_PARM0);
 
-	if(!S_GetCached(s, true))
+	if(!S_LocalSound(s, true))
 	{
-		Con_Printf("VM_localsound: %s : %s not cached !\n", PRVM_NAME, s);
+		Con_Printf("VM_localsound: Failed to play %s for %s !\n", s, PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		return;
 	}		
 
-	S_LocalSound(s, true);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
 
@@ -1104,13 +1103,7 @@ void VM_precache_sound (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 	VM_CheckEmptyString (s);
 	
-	if(S_GetCached(s, true))
-	{
-		Con_Printf("VM_precache_sound: %s already cached (%s)\n", s, PRVM_NAME);
-		return;
-	}
-	
-	if(!S_PrecacheSound(s,true, true))
+	if(!S_PrecacheSound(s,true, true, true))
 		Con_Printf("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
 }
 

@@ -23,6 +23,7 @@
 
 
 #include "quakedef.h"
+#include "snd_main.h"
 #include "snd_wav.h"
 
 

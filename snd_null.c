@@ -44,23 +44,15 @@ void S_Shutdown (void)
 {
 }
 
-void S_TouchSound (const char *sample, qboolean stdpath)
+void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 {
 }
 
-void S_ClearUsed (void)
+void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 }
 
-void S_PurgeUnused (void)
-{
-}
-
-void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
-{
-}
-
-int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation)
+int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	return -1;
 }
@@ -69,23 +61,16 @@ void S_StopChannel (unsigned int channel_ind)
 {
 }
 
-void S_PauseChannel (unsigned int channel_ind, qboolean toggle)
+qboolean S_SetChannelFlag (unsigned int ch_ind, unsigned int flag, qboolean value)
 {
-}
-
-void S_LoopChannel (unsigned int channel_ind, qboolean toggle)
-{
+	return false;
 }
 
 void S_StopSound (int entnum, int entchannel)
 {
 }
 
-void S_PauseGameSounds (void)
-{
-}
-
-void S_ResumeGameSounds (void)
+void S_PauseGameSounds (qboolean toggle)
 {
 }
 
@@ -93,21 +78,20 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 {
 }
 
-sfx_t *S_GetCached(const char *name, qboolean stdpath)
+sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath, qboolean lock)
 {
 	return NULL;
 }
 
-sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath)
+void S_UnlockSfx (sfx_t *sfx)
 {
-	return NULL;
 }
 
 void S_Update(const matrix4x4_t *matrix)
 {
 }
 
-void S_StopAllSounds (qboolean clear)
+void S_StopAllSounds (void)
 {
 }
 
@@ -115,6 +99,7 @@ void S_ExtraUpdate (void)
 {
 }
 
-void S_LocalSound (const char *s, qboolean stdpath)
+qboolean S_LocalSound (const char *s, qboolean stdpath)
 {
+	return false;
 }

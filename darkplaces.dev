@@ -1,7 +1,7 @@
 [Project]
 FileName=darkplaces.dev
 Name=DarkPlaces
-UnitCount=160
+UnitCount=161
 Type=0
 Ver=1
 ObjFiles=
@@ -1646,4 +1646,14 @@ OriginalFilename=
 ProductName=DarkPlaces
 ProductVersion=
 AutoIncBuildNr=0
+
+[Unit161]
+FileName=snd_main.h
+CompileCpp=0
+Folder=Header Files
+Compile=1
+Link=1
+Priority=1000
+OverrideBuildCmd=0
+BuildCmd=
 

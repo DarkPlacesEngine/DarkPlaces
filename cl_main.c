@@ -170,7 +170,7 @@ void CL_Disconnect(void)
 	Con_DPrintf("CL_Disconnect\n");
 
 // stop sounds (especially looping!)
-	S_StopAllSounds (true);
+	S_StopAllSounds ();
 
 	// clear contents blends
 	cl.cshifts[0].percent = 0;

@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <unistd.h>
 
 #include "quakedef.h"
+#include "snd_main.h"
 
 
 static const int tryrates[] = {44100, 22050, 11025, 8000};

@@ -152,7 +152,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 
 	MSG_ReadVector(pos, cl.protocol);
 
-	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
+	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0f, attenuation);
 }
 
 /*
@@ -407,13 +407,7 @@ void CL_ParseServerInfo (void)
 	Mod_PurgeUnused();
 
 	// do the same for sounds
-	S_ClearUsed();
-	for (i = 1;i < numsounds;i++)
-	{
-		CL_KeepaliveMessage();
-		S_TouchSound(parse_sound_precache[i], true);
-	}
-	S_PurgeUnused();
+	S_ServerSounds (parse_sound_precache, numsounds);
 
 	// now we try to load everything that is new
 
@@ -435,7 +429,9 @@ void CL_ParseServerInfo (void)
 	for (i=1 ; i<numsounds ; i++)
 	{
 		CL_KeepaliveMessage();
-		cl.sound_precache[i] = S_PrecacheSound(parse_sound_precache[i], true, true);
+
+		// Don't lock the sfx here, S_ServerSounds already did that 
+		cl.sound_precache[i] = S_PrecacheSound(parse_sound_precache[i], true, true, false);
 	}
 
 	// local state
@@ -794,7 +790,7 @@ void CL_ParseStaticSound (int large)
 	vol = MSG_ReadByte ();
 	atten = MSG_ReadByte ();
 
-	S_StaticSound (cl.sound_precache[sound_num], org, vol, atten);
+	S_StaticSound (cl.sound_precache[sound_num], org, vol/255.0f, atten);
 }
 
 void CL_ParseEffect (void)
@@ -845,13 +841,13 @@ CL_ParseTEnt
 */
 void CL_InitTEnts (void)
 {
-	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav", false, true);
-	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav", false, true);
-	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav", false, true);
-	cl_sfx_ric1 = S_PrecacheSound ("weapons/ric1.wav", false, true);
-	cl_sfx_ric2 = S_PrecacheSound ("weapons/ric2.wav", false, true);
-	cl_sfx_ric3 = S_PrecacheSound ("weapons/ric3.wav", false, true);
-	cl_sfx_r_exp3 = S_PrecacheSound ("weapons/r_exp3.wav", false, true);
+	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav", false, true, true);
+	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav", false, true, true);
+	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav", false, true, true);
+	cl_sfx_ric1 = S_PrecacheSound ("weapons/ric1.wav", false, true, true);
+	cl_sfx_ric2 = S_PrecacheSound ("weapons/ric2.wav", false, true, true);
+	cl_sfx_ric3 = S_PrecacheSound ("weapons/ric3.wav", false, true, true);
+	cl_sfx_r_exp3 = S_PrecacheSound ("weapons/r_exp3.wav", false, true, true);
 }
 
 void CL_ParseBeam (model_t *m, int lightning)
@@ -1551,15 +1547,10 @@ void CL_ParseServerMessage(void)
 		case svc_setpause:
 			cl.paused = MSG_ReadByte ();
 			if (cl.paused)
-			{
 				CDAudio_Pause ();
-				S_PauseGameSounds ();
-			}
 			else
-			{
 				CDAudio_Resume ();
-				S_ResumeGameSounds ();
-			}
+			S_PauseGameSounds (cl.paused);
 			break;
 
 		case svc_signonnum:
