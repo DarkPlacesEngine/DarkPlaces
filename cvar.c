@@ -433,7 +433,7 @@ void Cvar_WriteVariables (qfile_t *f)
 
 	for (var = cvar_vars ; var ; var = var->next)
 		if (var->flags & CVAR_SAVE)
-			FS_Printf(f, "seta %s \"%s\"\n", var->name, var->string);
+			FS_Printf(f, "%s \"%s\"\n", var->name, var->string);
 }
 
 
