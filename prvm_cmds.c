@@ -1,7 +1,7 @@
 // AK
 // Basically every vm builtin cmd should be in here.
 // All 3 builtin list and extension lists can be found here
-// cause large (I think they will) are from pr_cmds the same copyright like in pr_cms 
+// cause large (I think they will) are from pr_cmds the same copyright like in pr_cms
 // also applies here
 
 
@@ -73,7 +73,7 @@ float	clientcount()
 float	clientstate()
 		clientcommand(float client, string s) (for client and menu)
 float	tokenize(string s)
-		
+
 */
 
 #include "quakedef.h"
@@ -85,7 +85,7 @@ float	tokenize(string s)
 // nice helper macros
 
 #ifndef VM_NOPARMCHECK
-#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f "wrong parameter count (" #p "expected ) !\n") 
+#define VM_SAFEPARMCOUNT(p,f)	if(prog->argc != p) PRVM_ERROR(#f "wrong parameter count (" #p "expected ) !\n")
 #else
 #define VM_SAFEPARMCOUNT(p,f)
 #endif
@@ -99,7 +99,7 @@ float	tokenize(string s)
 #define e1000 e100,e100,e100,e100,e100,e100,e100,e100,e100,e100
 
 //============================================================================
-// Common 
+// Common
 cvar_t vm_zone_min_strings = {0, "prvm_zone_min_strings", "64"};
 
 mempool_t *vm_strings_mempool[PRVM_MAXPROGS];
@@ -191,7 +191,7 @@ static qboolean checkextension(char *name)
 void VM_checkextension (void)
 {
 	VM_SAFEPARMCOUNT(1,VM_checkextension);
-	
+
 	PRVM_G_FLOAT(OFS_RETURN) = checkextension(PRVM_G_STRING(OFS_PARM0));
 }
 
@@ -214,7 +214,7 @@ void VM_Error (void)
 	Con_Printf ("======%S ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
 	if(prog->self)
 	{
-		ed = PRVM_G_EDICT(prog->self->ofs); 
+		ed = PRVM_G_EDICT(prog->self->ofs);
 		PRVM_ED_Print (ed);
 	}
 
@@ -242,12 +242,11 @@ void VM_objerror (void)
 	{
 		ed = PRVM_G_EDICT (prog->self->ofs);
 		PRVM_ED_Print (ed);
+		PRVM_ED_Free (ed);
 	}
 	else
-		// objerror has to display the object fields -> else call 
+		// objerror has to display the object fields -> else call
 		PRVM_ERROR ("VM_objecterror: self not defined !\n");
-	
-	PRVM_ED_Free (ed);
 }
 
 /*
@@ -380,9 +379,9 @@ void VM_vectoangles (void)
 	float	*value1;
 	float	forward;
 	float	yaw, pitch;
-	
+
 	VM_SAFEPARMCOUNT(1,VM_vectoangles);
-		
+
 	value1 = PRVM_G_VECTOR(OFS_PARM0);
 
 	if (value1[1] == 0 && value1[0] == 0)
@@ -495,7 +494,6 @@ void VM_break (void)
 
 //============================================================================
 
-error();
 int checkpvsbytes;
 qbyte checkpvs[MAX_MAP_LEAFS/8];
 
@@ -542,7 +540,7 @@ void cvar_set (string,string)
 void VM_cvar_set (void)
 {
 	VM_SAFEPARMCOUNT(2,VM_cvar_set);
-	
+
 	Cvar_Set(PRVM_G_STRING(OFS_PARM0), PRVM_G_STRING(OFS_PARM1));
 }
 
@@ -804,7 +802,7 @@ void VM_findchain (void)
 
 	// is the same like !(prog->flag & PRVM_FE_CHAIN) - even if the operator precedence is another
 	if(!prog->flag & PRVM_FE_CHAIN)
-		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME); 
+		PRVM_ERROR("VM_findchain: %s doesnt have a chain field !\n", PRVM_NAME);
 
 	chain_of = PRVM_ED_FindFieldOffset ("chain");
 
@@ -830,7 +828,7 @@ void VM_findchain (void)
 		if (strcmp(t,s))
 			continue;
 
-		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);  
+		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -858,8 +856,8 @@ void VM_findchainfloat (void)
 	VM_SAFEPARMCOUNT(2, VM_findchainfloat);
 
 	if(!prog->flag & PRVM_FE_CHAIN)
-		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !\n", PRVM_NAME); 
-	
+		PRVM_ERROR("VM_findchainfloat: %s doesnt have a chain field !\n", PRVM_NAME);
+
 	chain_of = PRVM_ED_FindFieldOffset ("chain");
 
 	chain = (prvm_edict_t *)prog->edicts;
@@ -875,7 +873,7 @@ void VM_findchainfloat (void)
 			continue;
 		if (E_FLOAT(ent,f) != s)
 			continue;
-		
+
 		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
@@ -907,7 +905,7 @@ used instead of the other VM_precache_* functions in the builtin list
 
 void VM_precache_error (void)
 {
-	PRVM_ERROR ("PF_Precache_*: Precache can only be done in spawn functions");	
+	PRVM_ERROR ("PF_Precache_*: Precache can only be done in spawn functions");
 }
 
 /*
@@ -922,7 +920,7 @@ void VM_precache_sound (void)
 	char	*s;
 	int		i;
 
-	VM_SAFEPARMCOUNT(1, VM_precache_sound); 
+	VM_SAFEPARMCOUNT(1, VM_precache_sound);
 
 	s = PRVM_G_STRING(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
@@ -951,7 +949,7 @@ coredump()
 void VM_coredump (void)
 {
 	VM_SAFEPARMCOUNT(0,VM_coredump);
-	
+
 	PRVM_ED_PrintEdicts_f ();
 }
 
@@ -965,7 +963,7 @@ traceon()
 void VM_traceon (void)
 {
 	VM_SAFEPARMCOUNT(0,VM_traceon);
-	
+
 	prog->trace = true;
 }
 
@@ -1160,7 +1158,7 @@ void VM_randomvec (void)
 	}
 	while (DotProduct(temp, temp) >= 1);
 	VectorCopy (temp, PRVM_G_VECTOR(OFS_RETURN));
-	
+
 	/*
 	temp[0] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
 	temp[1] = (rand()&32767) * (2.0 / 32767.0) - 1.0;
@@ -1168,7 +1166,7 @@ void VM_randomvec (void)
 	// length returned always > 0
 	length = (rand()&32766 + 1) * (1.0 / 32767.0) / VectorLength(temp);
 	VectorScale(temp,length, temp);*/
-	VectorCopy(temp, PRVM_G_VECTOR(OFS_RETURN));	
+	VectorCopy(temp, PRVM_G_VECTOR(OFS_RETURN));
 }
 
 //=============================================================================
@@ -1453,7 +1451,7 @@ fclose(float fhandle)
 void VM_fclose(void)
 {
 	int filenum;
-	
+
 	VM_SAFEPARMCOUNT(1,VM_fclose);
 
 	filenum = PRVM_G_FLOAT(OFS_PARM0);
@@ -1484,7 +1482,7 @@ void VM_fgets(void)
 	int c, end;
 	static char string[STRINGTEMP_LENGTH];
 	int filenum;
-	
+
 	VM_SAFEPARMCOUNT(1,VM_fgets);
 
 	filenum = PRVM_G_FLOAT(OFS_PARM0);
@@ -1532,7 +1530,7 @@ void VM_fputs(void)
 	int stringlength;
 	char string[STRINGTEMP_LENGTH];
 	int filenum;
-	
+
 	VM_SAFEPARMCOUNT(2,VM_fputs);
 
 	filenum = PRVM_G_FLOAT(OFS_PARM0);
@@ -1581,8 +1579,8 @@ VM_strcat
 string strcat(string s1, string s2)
 =========
 */
-//string(string s1, string s2) strcat = #115; 
-// concatenates two strings (for example "abc", "def" would return "abcdef") 
+//string(string s1, string s2) strcat = #115;
+// concatenates two strings (for example "abc", "def" would return "abcdef")
 // and returns as a tempstring
 void VM_strcat(void)
 {
@@ -1608,7 +1606,7 @@ void VM_substring(void)
 {
 	int i, start, length;
 	char *s, *string;
-	
+
 	VM_SAFEPARMCOUNT(3,VM_substring);
 
 	string = VM_GetTempString();
@@ -1757,13 +1755,13 @@ VM_argv
 string argv(float n)
 =========
 */
-//string(float n) argv = #442; 
+//string(float n) argv = #442;
 // returns a word from the tokenized string (returns nothing for an invalid index)
 // this function originally written by KrimZon, made shorter by LordHavoc
 void VM_argv (void)
 {
 	int token_num;
-	
+
 	VM_SAFEPARMCOUNT(1,VM_argv);
 
 	token_num = PRVM_G_FLOAT(OFS_PARM0);
@@ -1867,10 +1865,10 @@ void VM_Cmd_Reset(void)
 }
 
 //============================================================================
-// Server 
+// Server
 
-char *vm_sv_extensions = 
-""; 
+char *vm_sv_extensions =
+"";
 
 prvm_builtin_t vm_sv_builtins[] = {
 0  // to be consistent with the old vm
@@ -1887,9 +1885,9 @@ void VM_SV_Cmd_Reset(void)
 }
 
 //============================================================================
-// Client 
+// Client
 
-char *vm_cl_extensions = 
+char *vm_cl_extensions =
 "";
 
 prvm_builtin_t vm_cl_builtins[] = {
@@ -1907,9 +1905,9 @@ void VM_CL_Cmd_Reset(void)
 }
 
 //============================================================================
-// Menu 
+// Menu
 
-char *vm_m_extensions = 
+char *vm_m_extensions =
 "";
 
 // void setkeydest(float dest)
@@ -1958,7 +1956,7 @@ void VM_M_GetKeyDest(void)
 		// break;
 	default:
 		PRVM_G_FLOAT(OFS_RETURN) = 3;
-	}		
+	}
 }
 
 prvm_builtin_t vm_m_builtins[] = {
