@@ -34,7 +34,6 @@ int jpeg_supported = false;
 qboolean	scr_initialized;		// ready to draw
 
 float		scr_con_current;
-float		scr_conlines;		// lines of console to display
 
 extern int	con_vislines;
 
@@ -234,6 +233,9 @@ SCR_SetUpToDrawConsole
 */
 void SCR_SetUpToDrawConsole (void)
 {
+	// lines of console to display
+	float conlines;
+
 	Con_CheckResize ();
 
 	if (key_dest == key_game && cls.signon != SIGNONS && scr_conforcewhiledisconnected.integer)
@@ -242,31 +244,29 @@ void SCR_SetUpToDrawConsole (void)
 		key_consoleactive &= ~KEY_CONSOLEACTIVE_FORCED;
 
 // decide on the height of the console
-	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
-		scr_conlines = vid.conheight; // full screen
-	else if (key_consoleactive & KEY_CONSOLEACTIVE_USER)
-		scr_conlines = vid.conheight/2;	// half screen
+	if (key_consoleactive & KEY_CONSOLEACTIVE_USER)
+		conlines = vid.conheight/2;	// half screen
 	else
-		scr_conlines = 0;				// none visible
+		conlines = 0;				// none visible
 
 	if (scr_conspeed.value)
 	{
-		if (scr_conlines < scr_con_current)
+		if (scr_con_current > conlines)
 		{
 			scr_con_current -= scr_conspeed.value*host_realframetime;
-			if (scr_conlines > scr_con_current)
-				scr_con_current = scr_conlines;
+			if (scr_con_current < conlines)
+				scr_con_current = conlines;
 
 		}
-		else if (scr_conlines > scr_con_current)
+		else if (scr_con_current < conlines)
 		{
 			scr_con_current += scr_conspeed.value*host_realframetime;
-			if (scr_conlines < scr_con_current)
-				scr_con_current = scr_conlines;
+			if (scr_con_current > conlines)
+				scr_con_current = conlines;
 		}
 	}
 	else
-		scr_con_current = scr_conlines;
+		scr_con_current = conlines;
 }
 
 /*
@@ -276,7 +276,12 @@ SCR_DrawConsole
 */
 void SCR_DrawConsole (void)
 {
-	if (scr_con_current)
+	if (key_consoleactive & KEY_CONSOLEACTIVE_FORCED)
+	{
+		// full screen
+		Con_DrawConsole (vid.conheight);
+	}
+	else if (scr_con_current)
 		Con_DrawConsole (scr_con_current);
 	else
 	{
