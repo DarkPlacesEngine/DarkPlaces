@@ -1842,8 +1842,20 @@ vec3_t r_editlights_cursorlocation;
 
 static int lightpvsbytes;
 static qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
+
+typedef struct cubemapinfo_s
+{
+	char basename[64];
+	rtexture_t *texture;
+}
+cubemapinfo_t;
+
+#define MAX_CUBEMAPS 128
+static int numcubemaps;
+static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
+
 //static char *suffix[6] = {"ft", "bk", "rt", "lf", "up", "dn"};
-typedef struct suffixinfo
+typedef struct suffixinfo_s
 {
 	char *suffix;
 	int flipx, flipy, flipdiagonal;
@@ -1925,8 +1937,23 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 	return cubemaptexture;
 }
 
+rtexture_t *R_Shadow_Cubemap(const char *basename)
+{
+	int i;
+	for (i = 0;i < numcubemaps;i++)
+		if (!strcasecmp(cubemaps[i].basename, basename))
+			return cubemaps[i].texture;
+	if (i >= MAX_CUBEMAPS)
+		return NULL;
+	numcubemaps++;
+	strcpy(cubemaps[i].basename, basename);
+	cubemaps[i].texture = R_Shadow_LoadCubemap(cubemaps[i].basename);
+	return cubemaps[i].texture;
+}
+
 void R_Shadow_FreeCubemaps(void)
 {
+	numcubemaps = 0;
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 }
 
@@ -1968,7 +1995,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	{
 		e->cubemapname = Mem_Alloc(r_shadow_mempool, strlen(cubemapname) + 1);
 		strcpy(e->cubemapname, cubemapname);
-		e->cubemap = R_Shadow_LoadCubemap(e->cubemapname);
+		e->cubemap = R_Shadow_Cubemap(e->cubemapname);
 	}
 	// FIXME: rewrite this to store ALL geometry into a cache in the light
 	if (e->castshadows)
