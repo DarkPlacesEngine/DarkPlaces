@@ -1884,48 +1884,49 @@ void R_DrawSurfaces (int type)
 	}
 }
 
-static float portalpointbuffer[256][3];
-
 void R_DrawPortals(void)
 {
 	int drawportals, i;
+	float *v;
 	mportal_t *portal, *endportal;
-	mvertex_t *point;
-	rmeshinfo_t m;
+	rmeshbufferinfo_t m;
 	drawportals = r_drawportals.integer;
 
 	if (drawportals < 1)
 		return;
 
-	memset(&m, 0, sizeof(m));
-	m.transparent = true;
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.vertex = &portalpointbuffer[0][0];
-	m.vertexstep = sizeof(float[3]);
-	m.ca = 0.125;
 	for (portal = cl.worldmodel->portals, endportal = portal + cl.worldmodel->numportals;portal < endportal;portal++)
 	{
 		if (portal->visframe == r_portalframecount)
 		{
-			if (portal->numpoints <= 256)
+			memset(&m, 0, sizeof(m));
+			m.transparent = true;
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			m.numverts = portal->numpoints;
+			m.numtriangles = portal->numpoints - 2;
+			if (R_Mesh_Draw_GetBuffer(&m, false))
 			{
+				for (i = 0;i < m.numtriangles;i++)
+				{
+					m.index[i * 3 + 0] = 0;
+					m.index[i * 3 + 1] = i + 1;
+					m.index[i * 3 + 2] = i + 2;
+				}
 				i = portal - cl.worldmodel->portals;
-				m.cr = ((i & 0x0007) >> 0) * (1.0f / 7.0f);
-				m.cg = ((i & 0x0038) >> 3) * (1.0f / 7.0f);
-				m.cb = ((i & 0x01C0) >> 6) * (1.0f / 7.0f);
-				point = portal->points;
+				R_FillColors(m.color, m.numverts,
+					((i & 0x0007) >> 0) * (1.0f / 7.0f) * m.colorscale,
+					((i & 0x0038) >> 3) * (1.0f / 7.0f) * m.colorscale,
+					((i & 0x01C0) >> 6) * (1.0f / 7.0f) * m.colorscale,
+					0.125f);
 				if (PlaneDiff(r_origin, (&portal->plane)) > 0)
 				{
-					for (i = portal->numpoints - 1;i >= 0;i--)
-						VectorCopy(point[i].position, portalpointbuffer[i]);
+					for (i = portal->numpoints - 1, v = m.vertex;i >= 0;i--, v += 4)
+						VectorCopy(portal->points[i].position, v);
 				}
 				else
-				{
-					for (i = 0;i < portal->numpoints;i++)
-						VectorCopy(point[i].position, portalpointbuffer[i]);
-				}
-				R_Mesh_DrawPolygon(&m, portal->numpoints);
+					for (i = 0, v = m.vertex;i < portal->numpoints;i++, v += 4)
+						VectorCopy(portal->points[i].position, v);
 				R_Mesh_Render();
 			}
 		}
