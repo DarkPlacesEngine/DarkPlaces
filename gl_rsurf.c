@@ -60,7 +60,7 @@ static int dlightdivtable[32768];
 
 static int R_AddDynamicLights (msurface_t *surf)
 {
-	int         sdtable[18], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract;
+	int         sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract;
 	unsigned int *bl;
 	float       dist;
 	vec3_t      impact, local;
