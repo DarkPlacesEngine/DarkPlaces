@@ -306,7 +306,7 @@ void S_PaintChannels(int endtime)
 				{
 					int loopstart;
 
-					if (ch->forceloop)
+					if (ch->flags & CHANNELFLAG_FORCELOOP)
 						loopstart = 0;
 					else
 						loopstart = -1;
@@ -352,7 +352,7 @@ void S_PaintChannels(int endtime)
 				if (ltime >= ch->end)
 				{
 					// if at end of loop, restart
-					if ((sfx->loopstart >= 0 || ch->forceloop) && !stop_paint)
+					if ((sfx->loopstart >= 0 || (ch->flags & CHANNELFLAG_FORCELOOP)) && !stop_paint)
 					{
 						ch->pos = bound(0, sfx->loopstart, (int)sfx->total_length - 1);
 						ch->end = ltime + sfx->total_length - ch->pos;

@@ -331,7 +331,7 @@ sfx_t *S_FindName (char *name)
 
 	sfx = &known_sfx[num_sfx++];
 	memset(sfx, 0, sizeof(*sfx));
-	strncpy(sfx->name, name, sizeof(sfx->name));
+	strlcpy (sfx->name, name, sizeof (sfx->name));
 	return sfx;
 }
 
@@ -448,7 +448,8 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 			continue;
 
 		// don't override looped sounds
-		if (ch->forceloop || (ch->sfx != NULL && ch->sfx->loopstart >= 0))
+		if ((ch->flags & CHANNELFLAG_FORCELOOP) != 0 ||
+			(ch->sfx != NULL && ch->sfx->loopstart >= 0))
 			continue;
 
 		if (ch->end - paintedtime < life_left)
@@ -564,6 +565,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	}
 
 	target_chan->sfx = sfx;
+	target_chan->flags = CHANNELFLAG_NONE;
 	target_chan->pos = 0.0;
 	target_chan->end = paintedtime + sfx->total_length;
 	target_chan->lastptime = paintedtime;
@@ -708,7 +710,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 
 	ss = &channels[total_channels++];
 	memset(ss, 0, sizeof(*ss));
-	ss->forceloop = true;
+	ss->flags = CHANNELFLAG_FORCELOOP;
 	ss->sfx = sfx;
 	VectorCopy (origin, ss->origin);
 	ss->master_vol = vol;
@@ -750,7 +752,7 @@ void S_UpdateAmbientSounds (void)
 			(ambient_sfx[ambient_channel]->flags & SFXFLAG_SILENTLYMISSING))
 			continue;
 		chan = &channels[ambient_channel];
-		chan->forceloop = true;
+		chan->flags |= CHANNELFLAG_FORCELOOP;
 		chan->sfx = ambient_sfx[ambient_channel];
 
 		vol = ambient_level.value * ambientlevels[ambient_channel];

@@ -383,7 +383,7 @@ char *PRVM_ValueString (etype_t type, prvm_eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		strncpy(line, PRVM_GetString(val->string), sizeof(line));
+		strlcpy (line, PRVM_GetString (val->string), sizeof (line));
 		break;
 	case ev_entity:
 		n = val->edict;
@@ -470,7 +470,7 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		strncpy(line, PRVM_GetString(f->s_name), sizeof(line));
+		strlcpy (line, PRVM_GetString (f->s_name), sizeof (line));
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( val->_int );
@@ -595,7 +595,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 
 		if (strlen(name) > 256)
 		{
-			strncpy(tempstring2, name, 256);
+			memcpy (tempstring2, name, 256);
 			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
 			tempstring2[259] = 0;
 			name = tempstring2;
@@ -608,7 +608,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 		name = PRVM_ValueString(d->type, (prvm_eval_t *)v);
 		if (strlen(name) > 256)
 		{
-			strncpy(tempstring2, name, 256);
+			memcpy (tempstring2, name, 256);
 			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
 			tempstring2[259] = 0;
 			name = tempstring2;
@@ -1597,7 +1597,7 @@ void PRVM_Fields_f (void)
 		}
 		if (strlen(name) > 256)
 		{
-			strncpy(tempstring2, name, 256);
+			memcpy (tempstring2, name, 256);
 			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
 			tempstring2[259] = 0;
 			name = tempstring2;
