@@ -165,7 +165,7 @@ void M_ItemPrint (float cx, float cy, char *str, int unghosted)
 	if (unghosted)
 		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 1, 1, 1, 1, 0);
 	else
-		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.7, 0.7, 0.7, 1, 0);
+		DrawQ_String(menu_x + cx, menu_y + cy, str, 0, 8, 8, 0.4, 0.4, 0.4, 1, 0);
 }
 
 void M_DrawPic (float cx, float cy, char *picname)
@@ -1270,87 +1270,83 @@ void M_AdjustSliders (int dir)
 	switch (options_cursor)
 	{
 	case 4:
-		Cvar_SetValue ("scr_2dresolution", bound(0, scr_2dresolution.value + dir * 0.2, 1));
+		Cvar_SetValueQuick (&scr_2dresolution, bound(0, scr_2dresolution.value + dir * 0.2, 1));
 		break;
 	case 5:
-		Cvar_SetValue ("viewsize", bound(30, scr_viewsize.value + dir * 10, 120));
+		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
 		break;
 	case 6:
-		Cvar_SetValue ("r_skyquality", bound(0, r_skyquality.integer + dir, 2));
+		Cvar_SetValueQuick (&r_skyquality, bound(0, r_skyquality.integer + dir, 2));
 		break;
 	case 7:
-		Cvar_SetValue ("r_ser", !r_ser.integer);
+		Cvar_SetValueQuick (&r_ser, !r_ser.integer);
 		break;
 	case 8:
-		Cvar_SetValue ("v_overbrightbits", bound(0, v_overbrightbits.integer + dir, 4));
+		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
 		break;
 	case 9:
-		Cvar_SetValue ("gl_dither", !gl_dither.integer);
+		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
 		break;
 	case 10:
-		Cvar_SetValue ("v_hwgamma", !v_hwgamma.integer);
+		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
 		break;
 	case 11:
-		Cvar_SetValue ("v_gamma", bound(1, v_gamma.value + dir * 0.25, 5));
+		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.25, 5));
 		break;
 	case 12:
-		Cvar_SetValue ("v_contrast", bound(0.5, v_contrast.value + dir * 0.25, 5));
+		Cvar_SetValueQuick (&v_contrast, bound(0.5, v_contrast.value + dir * 0.25, 5));
 		break;
 	case 13:
-		Cvar_SetValue ("v_brightness", bound(0, v_brightness.value + dir * 0.05, 0.8));
+		Cvar_SetValueQuick (&v_brightness, bound(0, v_brightness.value + dir * 0.05, 0.8));
 		break;
 	case 14: // music volume
-		if (Cvar_FindVar("bgmvolume") != NULL)
-		{
-			#ifdef _WIN32
-			Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 1.0, 1));
-			#else
-			Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 0.1, 1));
-			#endif
-		}
+		#ifdef _WIN32
+		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
+		#else
+		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
+		#endif
 		break;
 	case 15: // sfx volume
-		if (Cvar_FindVar("volume") != NULL)
-			Cvar_SetValue ("volume", bound(0, volume.value + dir * 0.1, 1));
+		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 		break;
 	case 16:
-		Cvar_SetValue ("crosshair", bound(0, crosshair.integer + dir, 5));
+		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
 		break;
 	case 17:
-		Cvar_SetValue ("crosshair_size", bound(1, crosshair_size.value + dir, 5));
+		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 		break;
 	case 18: // show framerate
-		Cvar_SetValue ("showfps", !showfps.integer);
+		Cvar_SetValueQuick (&showfps, !showfps.integer);
 		break;
 	case 19: // always run
 		if (cl_forwardspeed.value > 200)
 		{
-			Cvar_SetValue ("cl_forwardspeed", 200);
-			Cvar_SetValue ("cl_backspeed", 200);
+			Cvar_SetValueQuick (&cl_forwardspeed, 200);
+			Cvar_SetValueQuick (&cl_backspeed, 200);
 		}
 		else
 		{
-			Cvar_SetValue ("cl_forwardspeed", 400);
-			Cvar_SetValue ("cl_backspeed", 400);
+			Cvar_SetValueQuick (&cl_forwardspeed, 400);
+			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 		break;
 	case 20: // lookspring
-		Cvar_SetValue ("lookspring", !lookspring.integer);
+		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
 		break;
 	case 21: // lookstrafe
-		Cvar_SetValue ("lookstrafe", !lookstrafe.integer);
+		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
 		break;
 	case 22: // mouse speed
-		Cvar_SetValue ("sensitivity", bound(1, sensitivity.value + dir * 0.5, 50));
+		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
 	case 23: // mouse look
-		Cvar_SetValue ("freelook", !freelook.integer);
+		Cvar_SetValueQuick (&freelook, !freelook.integer);
 		break;
 	case 24: // invert mouse
-		Cvar_SetValue ("m_pitch", -m_pitch.value);
+		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
 		break;
 	case 25: // windowed mouse
-		Cvar_SetValue ("vid_mouse", !vid_mouse.integer);
+		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 		break;
 	}
 }
@@ -1440,7 +1436,6 @@ void M_Adjust2DResolution(int dir)
 
 void M_Options_Draw (void)
 {
-	int i;
 	float y;
 	cachepic_t	*p;
 
@@ -1463,10 +1458,8 @@ void M_Options_Draw (void)
 	M_ItemPrint(16, y, "                 Gamma", v_hwgamma.integer);M_DrawSlider(220, y, (v_gamma.value - 1) / 4);y += 8;
 	M_Print(16, y, "              Contrast");M_DrawSlider(220, y, (v_contrast.value - 0.5) / (5 - 0.5));y += 8;
 	M_Print(16, y, "            Brightness");M_DrawSlider(220, y, v_brightness.value / 0.8);y += 8;
-	i = Cvar_FindVar("bgmvolume") != NULL;
-	M_ItemPrint(16, y, "       CD Music Volume", i);if (i) M_DrawSlider(220, y, bgmvolume.value);y += 8;
-	i = Cvar_FindVar("volume") != NULL;
-	M_ItemPrint(16, y, "          Sound Volume", i);if (i) M_DrawSlider(220, y, volume.value);y += 8;
+	M_ItemPrint(16, y, "       CD Music Volume", cdaudioinitialized);M_DrawSlider(220, y, bgmvolume.value);y += 8;
+	M_ItemPrint(16, y, "          Sound Volume", snd_initialized);M_DrawSlider(220, y, volume.value);y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
 	M_Print(16, y, "        Crosshair Size");M_DrawSlider(220, y, (crosshair_size.value - 1) / 4);y += 8;
 	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
@@ -2520,13 +2513,13 @@ void M_NetStart_Change (int dir)
 	case 2:
 		if (deathmatch.integer) // changing from deathmatch to coop
 		{
-			Cvar_SetValue ("coop", 1);
-			Cvar_SetValue ("deathmatch", 0);
+			Cvar_SetValueQuick (&coop, 1);
+			Cvar_SetValueQuick (&deathmatch, 0);
 		}
 		else // changing from coop to deathmatch
 		{
-			Cvar_SetValue ("coop", 0);
-			Cvar_SetValue ("deathmatch", 1);
+			Cvar_SetValueQuick (&coop, 0);
+			Cvar_SetValueQuick (&deathmatch, 1);
 		}
 		break;
 
@@ -2536,35 +2529,35 @@ void M_NetStart_Change (int dir)
 		else
 			count = 2;
 
-		Cvar_SetValue ("teamplay", teamplay.integer + dir);
+		Cvar_SetValueQuick (&teamplay, teamplay.integer + dir);
 		if (teamplay.integer > count)
-			Cvar_SetValue ("teamplay", 0);
+			Cvar_SetValueQuick (&teamplay, 0);
 		else if (teamplay.integer < 0)
-			Cvar_SetValue ("teamplay", count);
+			Cvar_SetValueQuick (&teamplay, count);
 		break;
 
 	case 4:
-		Cvar_SetValue ("skill", skill.integer + dir);
+		Cvar_SetValueQuick (&skill, skill.integer + dir);
 		if (skill.integer > 3)
-			Cvar_SetValue ("skill", 0);
+			Cvar_SetValueQuick (&skill, 0);
 		if (skill.integer < 0)
-			Cvar_SetValue ("skill", 3);
+			Cvar_SetValueQuick (&skill, 3);
 		break;
 
 	case 5:
-		Cvar_SetValue ("fraglimit", fraglimit.integer + dir*10);
+		Cvar_SetValueQuick (&fraglimit, fraglimit.integer + dir*10);
 		if (fraglimit.integer > 100)
-			Cvar_SetValue ("fraglimit", 0);
+			Cvar_SetValueQuick (&fraglimit, 0);
 		if (fraglimit.integer < 0)
-			Cvar_SetValue ("fraglimit", 100);
+			Cvar_SetValueQuick (&fraglimit, 100);
 		break;
 
 	case 6:
-		Cvar_SetValue ("timelimit", timelimit.value + dir*5);
+		Cvar_SetValueQuick (&timelimit, timelimit.value + dir*5);
 		if (timelimit.value > 60)
-			Cvar_SetValue ("timelimit", 0);
+			Cvar_SetValueQuick (&timelimit, 0);
 		if (timelimit.value < 0)
-			Cvar_SetValue ("timelimit", 60);
+			Cvar_SetValueQuick (&timelimit, 60);
 		break;
 
 	case 7:
