@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 /*
 // not yet used
@@ -32,7 +33,10 @@ int cl_traceline_endcontents;
 
 float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels, entity_render_t **hitent)
 {
-	double maxfrac;
+	float maxfrac;
+	int n;
+	entity_render_t *ent;
+	float tracemins[3], tracemaxs[3];
 	trace_t trace;
 
 	if (hitent)
@@ -51,9 +55,6 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 
 	if (hitbmodels && cl_num_brushmodel_entities)
 	{
-		int n;
-		entity_render_t *ent;
-		double tracemins[3], tracemaxs[3];
 		tracemins[0] = min(start[0], end[0]);
 		tracemaxs[0] = max(start[0], end[0]);
 		tracemins[1] = min(start[1], end[1]);
@@ -85,6 +86,7 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 			}
 		}
 	}
+	if (maxfrac < 0 || maxfrac > 1) Con_Printf("fraction out of bounds %f %s:%d\n", maxfrac, __LINE__, __FILE__);
 	return maxfrac;
 }
 
