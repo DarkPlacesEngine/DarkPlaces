@@ -1524,9 +1524,6 @@ void SCR_UpdateScreen (void)
 	//Mem_CheckSentinelsGlobal();
 	//R_TimeReport("memtest");
 
-	glFinish ();
-	CHECKGLERROR
-
 	VID_Finish ();
 
 	R_TimeReport("finish");
@@ -1552,4 +1549,8 @@ void SCR_UpdateScreen (void)
 
 	// draw 2D stuff
 	R_DrawQueue();
+
+	// tell driver to commit it's partially full geometry queue to the rendering queue
+	// (this doesn't wait for the commands themselves to complete)
+	glFlush();
 }
