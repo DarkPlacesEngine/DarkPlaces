@@ -435,6 +435,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
 	pvs = SV_FatPVS (org);
+	/*
 	if (dpprotocol)
 	{
 		MSG_WriteByte(msg, svc_playerposition);
@@ -442,6 +443,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		MSG_WriteFloat(msg, org[1]);
 		MSG_WriteFloat(msg, org[2]);
 	}
+	*/
 
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 // send over all entities (except the client) that touch the pvs
