@@ -2605,15 +2605,16 @@ static void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out)
 {
 	int i, j, k;
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
+	const int *e;
 	bestdist = 1000000000;
 	VectorCopy(p, out);
-	for (i = 0;i < surface->num_triangles;i++)
+	for (i = 0, e = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);i < surface->num_triangles;i++, e += 3)
 	{
 		// clip original point to each triangle of the surface and find the
 		// triangle that is closest
-		v[0] = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 0] * 3;
-		v[1] = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 1] * 3;
-		v[2] = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 2] * 3;
+		v[0] = surface->groupmesh->data_vertex3f + e[0] * 3;
+		v[1] = surface->groupmesh->data_vertex3f + e[1] * 3;
+		v[2] = surface->groupmesh->data_vertex3f + e[2] * 3;
 		TriangleNormal(v[0], v[1], v[2], facenormal);
 		VectorNormalize(facenormal);
 		offsetdist = DotProduct(v[0], facenormal) - DotProduct(p, facenormal);

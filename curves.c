@@ -167,13 +167,13 @@ int Q3PatchTesselationOnY(int patchwidth, int patchheight, int components, const
 // (such as those produced by Q3PatchTesselate)
 // (note: width and height are the actual vertex size, this produces
 //  (width-1)*(height-1)*2 triangles, 3 elements each)
-void Q3PatchTriangleElements(int *elements, int width, int height)
+void Q3PatchTriangleElements(int *elements, int width, int height, int firstvertex)
 {
 	int x, y, row0, row1;
 	for (y = 0;y < height - 1;y++)
 	{
-		row0 = (y + 0) * width;
-		row1 = (y + 1) * width;
+		row0 = firstvertex + (y + 0) * width;
+		row1 = firstvertex + (y + 1) * width;
 		for (x = 0;x < width - 1;x++)
 		{
 			*elements++ = row0;

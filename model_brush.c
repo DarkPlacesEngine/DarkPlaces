@@ -223,9 +223,9 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 			for (k = 0;k < surface->num_triangles;k++)
 			{
 				tri = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle) + k * 3;
-				VectorCopy(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + tri[0] * 3), vert[0]);
-				VectorCopy(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + tri[1] * 3), vert[1]);
-				VectorCopy(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + tri[2] * 3), vert[2]);
+				VectorCopy((surface->groupmesh->data_vertex3f + tri[0] * 3), vert[0]);
+				VectorCopy((surface->groupmesh->data_vertex3f + tri[1] * 3), vert[1]);
+				VectorCopy((surface->groupmesh->data_vertex3f + tri[2] * 3), vert[2]);
 				VectorSubtract(vert[1], vert[0], edge[0]);
 				VectorSubtract(vert[2], vert[1], edge[1]);
 				CrossProduct(edge[1], edge[0], facenormal);
@@ -1007,6 +1007,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->width = 16;
 		tx->height = 16;
 		tx->skin.base = r_texture_notexture;
+		tx->basematerialflags = 0;
 		if (i == loadmodel->brush.num_textures - 1)
 		{
 			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
@@ -1017,7 +1018,6 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->basematerialflags |= MATERIALFLAG_WALL;
 			tx->supercontents = SUPERCONTENTS_SOLID;
 		}
-		tx->basematerialflags = 0;
 		tx->currentframe = tx;
 	}
 
@@ -1847,13 +1847,13 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 
 		for (i = 0;i < surface->num_triangles;i++)
 		{
-			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 0] = 0;
-			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 1] = i + 1;
-			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 2] = i + 2;
+			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 0] = 0 + surface->num_firstvertex;
+			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 1] = i + 1 + surface->num_firstvertex;
+			(surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 2] = i + 2 + surface->num_firstvertex;
 		}
 
 		// compile additional data about the surface geometry
-		Mod_BuildTextureVectorsAndNormals(surface->num_vertices, surface->num_triangles, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), (surface->groupmesh->data_texcoordtexture2f + 2 * surface->num_firstvertex), (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), (surface->groupmesh->data_svector3f + 3 * surface->num_firstvertex), (surface->groupmesh->data_tvector3f + 3 * surface->num_firstvertex), (surface->groupmesh->data_normal3f + 3 * surface->num_firstvertex));
+		Mod_BuildTextureVectorsAndNormals(surface->num_firstvertex, surface->num_vertices, surface->num_triangles, surface->groupmesh->data_vertex3f, surface->groupmesh->data_texcoordtexture2f, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle), surface->groupmesh->data_svector3f, surface->groupmesh->data_tvector3f, surface->groupmesh->data_normal3f);
 		BoxFromPoints(surface->mins, surface->maxs, surface->num_vertices, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex));
 
 		// generate surface extents information
@@ -2650,69 +2650,69 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 		Con_Print("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal has too many points\n");
 		nodeportal->numpoints = 0;
 	}
-	else
+
+	AddPortalToNodes(nodeportal, front, back);
+
+	// split the portals of this node along this node's plane and assign them to the children of this node
+	// (migrating the portals downward through the tree)
+	for (portal = (portal_t *)node->portals;portal;portal = nextportal)
 	{
-		AddPortalToNodes(nodeportal, front, back);
+		if (portal->nodes[0] == portal->nodes[1])
+			Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(2)");
+		if (portal->nodes[0] == node)
+			side = 0;
+		else if (portal->nodes[1] == node)
+			side = 1;
+		else
+			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
+		nextportal = portal->next[side];
+		if (!portal->numpoints)
+			continue;
 
-		// split the portals of this node along this node's plane and assign them to the children of this node
-		// (migrating the portals downward through the tree)
-		for (portal = (portal_t *)node->portals;portal;portal = nextportal)
+		other_node = portal->nodes[!side];
+		RemovePortalFromNodes(portal);
+
+		// cut the portal into two portals, one on each side of the node plane
+		PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints);
+
+		if (!numfrontpoints)
 		{
-			if (portal->nodes[0] == portal->nodes[1])
-				Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(2)");
-			if (portal->nodes[0] == node)
-				side = 0;
-			else if (portal->nodes[1] == node)
-				side = 1;
-			else
-				Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
-			nextportal = portal->next[side];
-
-			other_node = portal->nodes[!side];
-			RemovePortalFromNodes(portal);
-
-			// cut the portal into two portals, one on each side of the node plane
-			PolygonD_Divide(portal->numpoints, portal->points, plane->normal[0], plane->normal[1], plane->normal[2], plane->dist, 1.0/32.0, MAX_PORTALPOINTS, frontpoints, &numfrontpoints, MAX_PORTALPOINTS, backpoints, &numbackpoints);
-
-			if (!numfrontpoints)
-			{
-				if (side == 0)
-					AddPortalToNodes(portal, back, other_node);
-				else
-					AddPortalToNodes(portal, other_node, back);
-				continue;
-			}
-			if (!numbackpoints)
-			{
-				if (side == 0)
-					AddPortalToNodes(portal, front, other_node);
-				else
-					AddPortalToNodes(portal, other_node, front);
-				continue;
-			}
-
-			// the portal is split
-			splitportal = AllocPortal();
-			temp = splitportal->chain;
-			*splitportal = *portal;
-			splitportal->chain = temp;
-			for (i = 0;i < numbackpoints*3;i++)
-				splitportal->points[i] = backpoints[i];
-			splitportal->numpoints = numbackpoints;
-			for (i = 0;i < numfrontpoints*3;i++)
-				portal->points[i] = frontpoints[i];
-			portal->numpoints = numfrontpoints;
-
 			if (side == 0)
-			{
-				AddPortalToNodes(portal, front, other_node);
-				AddPortalToNodes(splitportal, back, other_node);
-			}
+				AddPortalToNodes(portal, back, other_node);
 			else
-			{
+				AddPortalToNodes(portal, other_node, back);
+			continue;
+		}
+		if (!numbackpoints)
+		{
+			if (side == 0)
+				AddPortalToNodes(portal, front, other_node);
+			else
 				AddPortalToNodes(portal, other_node, front);
-				AddPortalToNodes(splitportal, other_node, back);
-			}
+			continue;
+		}
+
+		// the portal is split
+		splitportal = AllocPortal();
+		temp = splitportal->chain;
+		*splitportal = *portal;
+		splitportal->chain = temp;
+		for (i = 0;i < numbackpoints*3;i++)
+			splitportal->points[i] = backpoints[i];
+		splitportal->numpoints = numbackpoints;
+		for (i = 0;i < numfrontpoints*3;i++)
+			portal->points[i] = frontpoints[i];
+		portal->numpoints = numfrontpoints;
+
+		if (side == 0)
+		{
+			AddPortalToNodes(portal, front, other_node);
+			AddPortalToNodes(splitportal, back, other_node);
+		}
+		else
+		{
+			AddPortalToNodes(portal, other_node, front);
+			AddPortalToNodes(splitportal, other_node, back);
 		}
 	}
 
@@ -2970,7 +2970,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
 	for (j = 0, surface = loadmodel->brush.data_surfaces;j < loadmodel->brush.num_surfaces;j++, surface++)
-		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 
@@ -4276,7 +4276,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 					(out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex)[j * 4 + 3] = loadmodel->brushq3.data_color4f[(firstvertex + j) * 4 + 3];
 				}
 				for (j = 0;j < out->num_triangles*3;j++)
-					(out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] = loadmodel->brushq3.data_element3i[firstelement + j];
+					(out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] = loadmodel->brushq3.data_element3i[firstelement + j] + out->num_firstvertex;
 				break;
 			case Q3FACETYPE_PATCH:
 				patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
@@ -4313,8 +4313,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				Q3PatchTesselateFloat(2, sizeof(float[2]), (out->groupmesh->data_texcoordtexture2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordtexture2f, xtess, ytess);
 				Q3PatchTesselateFloat(2, sizeof(float[2]), (out->groupmesh->data_texcoordlightmap2f + 2 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[2]), originaltexcoordlightmap2f, xtess, ytess);
 				Q3PatchTesselateFloat(4, sizeof(float[4]), (out->groupmesh->data_lightmapcolor4f + 4 * out->num_firstvertex), patchsize[0], patchsize[1], sizeof(float[4]), originalcolor4f, xtess, ytess);
-				Q3PatchTriangleElements((out->groupmesh->data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight);
-				out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), (out->groupmesh->data_vertex3f + 3 * out->num_firstvertex));
+				Q3PatchTriangleElements((out->groupmesh->data_element3i + 3 * out->num_firsttriangle), finalwidth, finalheight, out->num_firstvertex);
+				out->num_triangles = Mod_RemoveDegenerateTriangles(out->num_triangles, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_vertex3f);
 				if (developer.integer >= 2)
 				{
 					if (out->num_triangles < finaltriangles)
@@ -4350,7 +4350,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				out->num_collisionvertices = finalvertices;
 				out->num_collisiontriangles = finaltriangles;
 				Q3PatchTesselateFloat(3, sizeof(float[3]), out->data_collisionvertex3f, patchsize[0], patchsize[1], sizeof(float[3]), originalvertex3f, xtess, ytess);
-				Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight);
+				Q3PatchTriangleElements(out->data_collisionelement3i, finalwidth, finalheight, 0);
 
 				//Mod_SnapVertices(3, out->num_vertices, (out->groupmesh->data_vertex3f + 3 * out->num_firstvertex), 0.25);
 				Mod_SnapVertices(3, out->num_collisionvertices, out->data_collisionvertex3f, 1);
@@ -4367,21 +4367,21 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			meshvertices += out->num_vertices;
 			meshtriangles += out->num_triangles;
 			for (j = 0, invalidelements = 0;j < out->num_triangles * 3;j++)
-				if ((out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] < 0 || (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_vertices)
+				if ((out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] < out->num_firstvertex || (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_firstvertex + out->num_vertices)
 					invalidelements++;
 			if (invalidelements)
 			{
 				Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
 				for (j = 0;j < out->num_triangles * 3;j++)
 				{
-					Con_Printf(" %i", (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j]);
-					if ((out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] < 0 || (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_vertices)
-						(out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] = 0;
+					Con_Printf(" %i", (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] - out->num_firstvertex);
+					if ((out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] < out->num_firstvertex || (out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] >= out->num_firstvertex + out->num_vertices)
+						(out->groupmesh->data_element3i + 3 * out->num_firsttriangle)[j] = out->num_firstvertex;
 				}
 				Con_Print("\n");
 			}
 			// for per pixel lighting
-			Mod_BuildTextureVectorsAndNormals(out->num_vertices, out->num_triangles, (out->groupmesh->data_vertex3f + 3 * out->num_firstvertex), (out->groupmesh->data_texcoordtexture2f + 2 * out->num_firstvertex), (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), (out->groupmesh->data_svector3f + 3 * out->num_firstvertex), (out->groupmesh->data_tvector3f + 3 * out->num_firstvertex), (out->groupmesh->data_normal3f + 3 * out->num_firstvertex));
+			Mod_BuildTextureVectorsAndNormals(out->num_firstvertex, out->num_vertices, out->num_triangles, out->groupmesh->data_vertex3f, out->groupmesh->data_texcoordtexture2f, (out->groupmesh->data_element3i + 3 * out->num_firsttriangle), out->groupmesh->data_svector3f, out->groupmesh->data_tvector3f, out->groupmesh->data_normal3f);
 			// calculate a bounding box
 			VectorClear(out->mins);
 			VectorClear(out->maxs);
@@ -5446,7 +5446,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	}
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
 	for (j = 0, surface = loadmodel->brush.data_surfaces;j < loadmodel->brush.num_surfaces;j++, surface++)
-		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
+		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surface->groupmesh->data_vertex3f, NULL, NULL, NULL, NULL, surface->num_triangles, (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle));
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 
