@@ -50,7 +50,8 @@ sbarpic_t *sb_scorebar;
 // AK only used by NEX(and only if everybody agrees)
 sbarpic_t *sb_sbar_overlay;
 
-sbarpic_t *sb_weapons[7][8]; // 0 is active, 1 is owned, 2-5 are flashes
+// AK changed the bound to 9
+sbarpic_t *sb_weapons[7][9]; // 0 is active, 1 is owned, 2-5 are flashes
 sbarpic_t *sb_ammo[4];
 sbarpic_t *sb_sigil[4];
 sbarpic_t *sb_armor[3];
@@ -151,6 +152,9 @@ void sbar_start(void)
 
 		sb_sbar = Sbar_NewPic("gfx/sbar");
 		sb_sbar_overlay = Sbar_NewPic("gfx/sbar_overlay");
+
+		for(i = 0; i < 9;i++)
+			sb_weapons[0][i] = Sbar_NewPic(va("gfx/inv_weapon%i",i));
 
 		return;
 	}
@@ -444,6 +448,20 @@ void Sbar_DrawScoreboard (void)
 
 //=============================================================================
 
+// AK to make DrawInventory smaller
+static void Sbar_DrawWeapon(int nr, float fade, int active)
+{
+	// width = 300, height = 100
+	const int w_width = 300, w_height = 100, w_space = 10, font_size = 10;
+	const float w_scale = 0.4;
+
+	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade, DRAWFLAG_ADDITIVE);
+	DrawQ_String(vid.conwidth - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0);
+
+	if (active)
+		DrawQ_Fill(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade, DRAWFLAG_ADDITIVE);
+}
+
 /*
 ===============
 Sbar_DrawInventory
@@ -451,10 +469,34 @@ Sbar_DrawInventory
 */
 void Sbar_DrawInventory (void)
 {
-	int		i;
-	char	num[6];
-	float	time;
-	int		flashon;
+	int i;
+	char num[6];
+	float time;
+	int flashon;
+	// AK 2003
+	float fade;
+
+	if(gamemode == GAME_NEXUIZ)
+	{
+		num[0] = cl.stats[STAT_ACTIVEWEAPON];
+		// we have a max time 2s (min time = 0)
+		if ((time = cl.time - cl.weapontime) > 2)
+			return;
+
+		fade = (1.0 - 0.5 * time);
+		fade *= fade;
+		for (i = 0; i < 8;i++)
+		{
+			if (!(cl.items & (1 << i)))
+				continue;
+			Sbar_DrawWeapon(i + 1, fade, (i == num[0]));
+		}
+
+		if(!(cl.items & (1<<12)))
+			return;
+		Sbar_DrawWeapon(0, fade, (num[0] == 12));
+		return;
+	}
 
 	if (gamemode == GAME_ROGUE)
 	{
@@ -791,16 +833,13 @@ void Sbar_Draw (void)
 		return;
 	}
 
-	if(gamemode == GAME_NEXUIZ)
+	if (gamemode == GAME_NEXUIZ)
 	{
 		sbar_y = vid.conheight - 47;
 		sbar_x = (vid.conwidth - 640)/2;
 
 		if (sb_lines > 24)
-		{
-			if (!cl.islocalgame)
-				Sbar_DrawFrags ();
-		}
+			Sbar_DrawFrags ();
 
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
@@ -838,12 +877,7 @@ void Sbar_Draw (void)
 
 			//Sbar_DrawAlphaPic(0,0,sb_sbar_overlay,0.5);
 			DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
-
 		}
-
-		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
-			Sbar_MiniDeathmatchOverlay ();
-
 	}
 	else
 	{

@@ -328,6 +328,8 @@ typedef struct
 	int items;
 	// cl.time of acquiring item, for blinking
 	float item_gettime[32];
+	// cl.time of changing STAT_ACTIVEWEAPON
+	float weapontime;
 	// use pain anim frame if cl.time < this
 	float faceanimtime;
 
