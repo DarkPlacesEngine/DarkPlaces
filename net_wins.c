@@ -319,7 +319,7 @@ this lets you type only as much of the net address as required, using
 the local network components to fill in the rest
 ============
 */
-static int PartialIPAddress (char *in, struct qsockaddr *hostaddr)
+static int PartialIPAddress (const char *in, struct qsockaddr *hostaddr)
 {
 	char buff[256];
 	char *b;
@@ -462,7 +462,7 @@ int WINS_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 
 //=============================================================================
 
-char *WINS_AddrToString (struct qsockaddr *addr)
+char *WINS_AddrToString (const struct qsockaddr *addr)
 {
 	static char buffer[22];
 	int haddr;
@@ -474,7 +474,7 @@ char *WINS_AddrToString (struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_StringToAddr (char *string, struct qsockaddr *addr)
+int WINS_StringToAddr (const char *string, struct qsockaddr *addr)
 {
 	int ha1, ha2, ha3, ha4, hp;
 	int ipaddr;
@@ -506,7 +506,7 @@ int WINS_GetSocketAddr (int socket, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_GetNameFromAddr (struct qsockaddr *addr, char *name)
+int WINS_GetNameFromAddr (const struct qsockaddr *addr, char *name)
 {
 	struct hostent *hostentry;
 
@@ -523,7 +523,7 @@ int WINS_GetNameFromAddr (struct qsockaddr *addr, char *name)
 
 //=============================================================================
 
-int WINS_GetAddrFromName(char *name, struct qsockaddr *addr)
+int WINS_GetAddrFromName(const char *name, struct qsockaddr *addr)
 {
 	struct hostent *hostentry;
 
@@ -543,7 +543,7 @@ int WINS_GetAddrFromName(char *name, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2)
+int WINS_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2)
 {
 	if (addr1->sa_family != addr2->sa_family)
 		return -1;

@@ -32,12 +32,12 @@ int  WINS_CheckNewConnections (void);
 int  WINS_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 int  WINS_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 int  WINS_Broadcast (int socket, qbyte *buf, int len);
-char *WINS_AddrToString (struct qsockaddr *addr);
-int  WINS_StringToAddr (char *string, struct qsockaddr *addr);
+char *WINS_AddrToString (const struct qsockaddr *addr);
+int  WINS_StringToAddr (const char *string, struct qsockaddr *addr);
 int  WINS_GetSocketAddr (int socket, struct qsockaddr *addr);
-int  WINS_GetNameFromAddr (struct qsockaddr *addr, char *name);
-int  WINS_GetAddrFromName (char *name, struct qsockaddr *addr);
-int  WINS_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2);
+int  WINS_GetNameFromAddr (const struct qsockaddr *addr, char *name);
+int  WINS_GetAddrFromName (const char *name, struct qsockaddr *addr);
+int  WINS_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2);
 int  WINS_GetSocketPort (struct qsockaddr *addr);
 int  WINS_SetSocketPort (struct qsockaddr *addr, int port);
 
