@@ -146,7 +146,7 @@ unsigned int waveread16stereo(wavefile_t *w, short *soundbuffer, unsigned int sa
 		w->bufferlength = length + 100;
 		w->buffer = malloc(w->bufferlength * w->info_bytespersample);
 	}
-	length = FS_Read(w->file, w->buffer, w->info_bytespersample * length);
+	length = FS_Read(w->file, w->buffer, w->info_bytespersample * length) / w->info_bytespersample;
 	w->position += length;
 	if (length > 0)
 	{
