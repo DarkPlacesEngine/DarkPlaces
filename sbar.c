@@ -477,11 +477,13 @@ void Sbar_SoloScoreboard (void)
 	int		minutes, seconds, tens, units;
 	int		l;
 
-	sprintf (str,"Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
-	Sbar_DrawString (8, 4, str);
+	if (gamemode != GAME_NEXUIZ) {
+		sprintf (str,"Monsters:%3i /%3i", cl.stats[STAT_MONSTERS], cl.stats[STAT_TOTALMONSTERS]);
+		Sbar_DrawString (8, 4, str);
 
-	sprintf (str,"Secrets :%3i /%3i", cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]);
-	Sbar_DrawString (8, 12, str);
+		sprintf (str,"Secrets :%3i /%3i", cl.stats[STAT_SECRETS], cl.stats[STAT_TOTALSECRETS]);
+		Sbar_DrawString (8, 12, str);
+	}
 
 // time
 	minutes = cl.time / 60;
@@ -492,8 +494,13 @@ void Sbar_SoloScoreboard (void)
 	Sbar_DrawString (184, 4, str);
 
 // draw level name
-	l = strlen (cl.levelname);
-	Sbar_DrawString (232 - l*4, 12, cl.levelname);
+	if (gamemode == GAME_NEXUIZ) {
+		l = strlen (cl.worldmodel->name);
+		Sbar_DrawString (232 - l*4, 12, cl.worldmodel->name);
+	} else {
+		l = strlen (cl.levelname);
+		Sbar_DrawString (232 - l*4, 12, cl.levelname);
+	}
 }
 
 /*
