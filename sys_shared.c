@@ -253,7 +253,7 @@ void Sys_Shared_EarlyInit(void)
 	if (COM_CheckParm("-nostdout"))
 		sys_nostdout = 1;
 	else
-		printf("%s\n", engineversion);
+		Con_Printf("%s\n", engineversion);
 }
 
 void Sys_Shared_LateInit(void)
