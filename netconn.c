@@ -981,6 +981,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				Con_Print("received server list...\n");
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
+				int n;
+
 				serverquerycount++;
 
 				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
@@ -988,6 +990,12 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					Con_Printf("Requesting info from server %s\n", ipstring);
 				// ignore the rest of the message if the hostcache is full
 				if( hostcache_cachecount == HOSTCACHE_TOTALSIZE )
+					break;
+				// also ignore it if we have already queried it (other master server response)
+				for( n = 0 ; n < hostcache_cachecount ; n++ ) 
+					if( !strcmp( ipstring, hostcache_cache[ n ].info.cname ) )
+						break;
+				if( n < hostcache_cachecount )
 					break;
 
 				LHNETADDRESS_FromString(&svaddress, ipstring, 0);

@@ -456,8 +456,6 @@ void Con_PrintToHistory(const char *txt)
 	if (txt[0] == 1)
 	{
 		mask = 128;		// go to colored text
-		S_LocalSound ("sound/misc/talk.wav");
-	// play talk wav
 		txt++;
 	}
 	else if (txt[0] == 2)
@@ -524,6 +522,11 @@ void Con_PrintToHistory(const char *txt)
 			break;
 		}
 
+	}
+
+	if( txt[0] == 1 ) {
+		// play talk wav
+		S_LocalSound ("sound/misc/talk.wav");
 	}
 }
 
@@ -721,8 +724,8 @@ static void _Con_DrawString( float x, float y, const char *text, int maxlen, flo
 		// iterate until we get the next color tag or reach the end of the text part to draw
 		for( ; len && *last != _con_color_tag ; len--, last++ )
 			;
-		// dont do anything if we havent read anything yet
-		if( last != text ) {
+		// only draw the partial string if we have read anything
+		if( last != first ) {
 			// draw the string
 			DrawQ_String( x, y, first, last - first, scalex, scaley, color[0], color[1], color[2], color[3], flags );
 			// update x to be at the new start position
