@@ -118,7 +118,7 @@ qboolean SNDDMA_Init(void)
 	// Init the SDL Audio subsystem
 	spec.callback = Buffer_Callback;
 	spec.channels = shm->format.channels;
-	spec.format = AUDIO_S16LSB;
+	spec.format = AUDIO_S16SYS;
 	spec.freq = shm->format.speed;
 	spec.userdata = NULL;
 	spec.samples = AUDIO_SDL_SAMPLES; 

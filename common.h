@@ -21,12 +21,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef COMMON_H
 #define COMMON_H
 
+
 // MSVC has a different name for several standard functions
 #ifdef WIN32
 # define snprintf _snprintf
 # define vsnprintf _vsnprintf
 # define strcasecmp stricmp
 # define strncasecmp strnicmp
+#endif
+
+// Create our own define for Mac OS X
+#if defined(__APPLE__) && defined(__MACH__)
+# define MACOSX
 #endif
 
 
@@ -229,7 +235,7 @@ char *SearchInfostring(const char *infostring, const char *key);
 
 // strlcat and strlcpy, from OpenBSD
 // Most (all?) BSDs already have them
-#if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__APPLE__) && defined(__MACH__))
+#if defined(__OpenBSD__) || defined(__NetBSD__) || defined(__FreeBSD__) || defined(MACOSX)
 # define HAVE_STRLCAT 1
 # define HAVE_STRLCPY 1
 #endif

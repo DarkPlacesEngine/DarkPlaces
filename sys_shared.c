@@ -48,6 +48,8 @@ void Sys_Shared_EarlyInit(void)
 	os = "NetBSD";
 #elif defined(__OpenBSD__)
 	os = "OpenBSD";
+#elif defined(MACOSX)
+	os = "Mac OS X";
 #else
 	os = "Unknown";
 #endif

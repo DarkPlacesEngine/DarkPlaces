@@ -1,6 +1,4 @@
 /*
-	$RCSfile$
-
 	Copyright (C) 1996-1997  Id Software, Inc.
 
 	This program is free software; you can redistribute it and/or
@@ -20,10 +18,7 @@
 		Free Software Foundation, Inc.
 		59 Temple Place - Suite 330
 		Boston, MA  02111-1307, USA
-
 */
-static const char rcsid[] =
-    "$Id$";
 
 #include "quakedef.h"
 #include <ctype.h>

@@ -378,7 +378,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 		We cant switch from one OpenGL video mode to another.
 		Thus we first switch to some stupid 2D mode and then back to OpenGL.
 	*/
+#ifndef MACOSX
 	SDL_SetVideoMode( 0, 0, 0, 0 );
+#endif
 
 	// SDL usually knows best
 	drivername = NULL;
@@ -387,9 +389,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
 		drivername = com_argv[i + 1];
-	if (SDL_GL_LoadLibrary(drivername))
+	if (SDL_GL_LoadLibrary(drivername) < 0)
 	{   
-		Con_Printf("Unable to load GL driver \"%s\": ", drivername, SDL_GetError());
+		Con_Printf("Unable to load GL driver \"%s\": %s\n", drivername, SDL_GetError());
 		return false;
 	}
 
