@@ -671,6 +671,7 @@ extern void CL_DecayLights (void);
 // cl_main
 //
 
+void CL_Shutdown (void);
 void CL_Init (void);
 
 void CL_EstablishConnection(const char *host);

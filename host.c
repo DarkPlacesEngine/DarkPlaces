@@ -1023,6 +1023,7 @@ void Host_Shutdown(void)
 	}
 
 	Cmd_Shutdown();
+	CL_Shutdown();
 	Sys_Shutdown();
 	Log_Close ();
 }
