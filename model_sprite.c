@@ -52,20 +52,19 @@ static void Mod_Sprite_StripExtension(char *in, char *out)
 	*out++ = 0;
 }
 
-static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette)
+static int alphaonlytable[4] = {255 | 0x80000000, 255 | 0x80000000, 255 | 0x80000000, 3};
+static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette, int *alphapalette)
 {
-	int					i, j, k, groupframes, realframes, x, y, origin[2], width, height;
+	int					i, j, groupframes, realframes, x, y, origin[2], width, height;
 	dspriteframetype_t	*pinframetype;
 	dspriteframe_t		*pinframe;
 	dspritegroup_t		*pingroup;
 	dspriteinterval_t	*pinintervals;
 	float				modelradius, interval;
-	char				tempname[MAX_QPATH], name[MAX_QPATH];
+	char				name[MAX_QPATH], fogname[MAX_QPATH];
 	qbyte				*pixbuf;
 	void				*startframes;
 	modelradius = 0;
-
-	Mod_Sprite_StripExtension(loadmodel->name, tempname);
 
 	if (loadmodel->numframes < 1)
 		Host_Error ("Mod_Sprite_SharedSetup: Invalid # of frames: %d\n", loadmodel->numframes);
@@ -179,36 +178,32 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 			if (width > 0 && height > 0)
 			{
 				if (groupframes > 1)
-					sprintf (name, "%s_%i_%i", tempname, i, j);
+					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 				else
-					sprintf (name, "%s_%i", tempname, i);
+					sprintf (name, "%s_%i", loadmodel->name, i);
 				loadmodel->sprite.sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE);
 				loadmodel->sprite.sprdata_frames[realframes].fogtexture = image_masktex;
 
 				if (!loadmodel->sprite.sprdata_frames[realframes].texture)
 				{
-					pixbuf = Mem_Alloc(tempmempool, width*height*4);
-					if (version == SPRITE32_VERSION)
-						memcpy(pixbuf, datapointer, width*height*4);
-					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-						Image_Copy8bitRGBA(datapointer, pixbuf, width*height, palette);
-
-					loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
-
-					// make fog version (just alpha)
-					for (k = 0;k < width*height;k++)
-					{
-						pixbuf[k*4+0] = 255;
-						pixbuf[k*4+1] = 255;
-						pixbuf[k*4+2] = 255;
-					}
 					if (groupframes > 1)
-						sprintf (name, "%s_%i_%ifog", tempname, i, j);
+						sprintf (fogname, "%s_%i_%ifog", loadmodel->name, i, j);
 					else
-						sprintf (name, "%s_%ifog", tempname, i);
-					loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
-
-					Mem_Free(pixbuf);
+						sprintf (fogname, "%s_%ifog", loadmodel->name, i);
+					if (version == SPRITE32_VERSION)
+					{
+						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
+						// make fog version (just alpha)
+						pixbuf = Mem_Alloc(tempmempool, width*height*4);
+						Image_CopyMux(pixbuf, datapointer, width, height, false, false, false, 4, 4, alphaonlytable);
+						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, NULL);
+						Mem_Free(pixbuf);
+					}
+					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
+					{
+						loadmodel->sprite.sprdata_frames[realframes].texture = R_LoadTexture2D(loadmodel->texturepool, name, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, palette);
+						loadmodel->sprite.sprdata_frames[realframes].fogtexture = R_LoadTexture2D(loadmodel->texturepool, fogname, width, height, datapointer, TEXTYPE_PALETTE, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_PRECACHE, alphapalette);
+					}
 				}
 			}
 
@@ -234,7 +229,7 @@ extern void R_Model_Sprite_Draw(entity_render_t *ent);
 void Mod_IDSP_Load(model_t *mod, void *buffer)
 {
 	int version, i, rendermode;
-	qbyte palette[256][4], *in;
+	qbyte palette[256][4], alphapalette[256][4], *in;
 	dsprite_t *pinqsprite;
 	dspritehl_t *pinhlsprite;
 	qbyte *datapointer;
@@ -256,7 +251,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 		loadmodel->sprite.sprnum_type = LittleLong (pinqsprite->type);
 		loadmodel->synctype = LittleLong (pinqsprite->synctype);
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), palette_complete);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), palette_complete, palette_alpha);
 	}
 	else if (version == SPRITEHL_VERSION)
 	{
@@ -322,7 +317,15 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 			return;
 		}
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (int *)(&palette[0][0]));
+		for (i = 0;i < 256;i++)
+		{
+			alphapalette[i][0] = 255;
+			alphapalette[i][1] = 255;
+			alphapalette[i][2] = 255;
+			alphapalette[i][3] = palette[i][3];
+		}
+
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinhlsprite->version), (int *)(&palette[0][0]), (int *)(&alphapalette[0][0]));
 	}
 	else
 		Host_Error("Mod_IDSP_Load: %s has wrong version number (%i should be 1 (quake) or 32 (sprite32) or 2 (halflife)", loadmodel->name, version);
