@@ -600,7 +600,7 @@ rtexture_t *R_LoadTexture (char *identifier, int width, int height, byte *data, 
 	gltexture_t		*glt;
 	unsigned short	crc;
 
-	if (isDedicated)
+	if (cls.state == ca_dedicated)
 		return NULL;
 
 	if (!identifier[0])
