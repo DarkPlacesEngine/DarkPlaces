@@ -706,7 +706,9 @@ void GL_BlendView()
 		temptime = currtime;\
 		currtime = Sys_FloatTime();\
 		VAR = (int) ((currtime - temptime) * 1000000.0);\
-	}
+	}\
+	else\
+		VAR = 0;
 
 /*
 ================
@@ -740,6 +742,8 @@ void R_RenderView (void)
 		starttime = currtime = Sys_FloatTime();
 //		Con_Printf("render time: ");
 	}
+	else
+		starttime = currtime = 0;
 	R_Clear();
 	skypolyclear();
 	wallpolyclear();
