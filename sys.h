@@ -80,5 +80,8 @@ void Sys_Shared_EarlyInit (void);
 // called after Host_init
 void Sys_Shared_LateInit (void);
 
+// returns current timestamp
+char *Sys_TimeString(const char *timeformat);
+
 #endif
 
