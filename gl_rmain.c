@@ -865,6 +865,16 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 				if (clipmaxs[2] < leaf->maxs[2]) clipmaxs[2] = leaf->maxs[2];
 			}
 		}
+		if (clipmins[0] < wl->mins[0]) clipmins[0] = wl->mins[0];
+		if (clipmins[1] < wl->mins[1]) clipmins[1] = wl->mins[1];
+		if (clipmins[2] < wl->mins[2]) clipmins[2] = wl->mins[2];
+		if (clipmaxs[0] > wl->maxs[0]) clipmaxs[0] = wl->maxs[0];
+		if (clipmaxs[1] > wl->maxs[1]) clipmaxs[1] = wl->maxs[1];
+		if (clipmaxs[2] > wl->maxs[2]) clipmaxs[2] = wl->maxs[2];
+
+		if (R_Shadow_ScissorForBBoxAndSphere(clipmins, clipmaxs, wl->origin, wl->cullradius))
+			continue;
+
 		// mark the leafs we care about so only things in those leafs will matter
 		for (i = 0;i < wl->numleafs;i++)
 			wl->leafs[i]->worldnodeframe = shadowframecount;
@@ -1046,6 +1056,9 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 		clipmaxs[1] = rd->origin[1] + cullradius;
 		clipmaxs[2] = rd->origin[2] + cullradius;
 
+		if (R_Shadow_ScissorForBBoxAndSphere(clipmins, clipmaxs, rd->origin, rd->cullradius))
+			continue;
+
 		if (!visiblevolumes)
 			R_Shadow_Stage_ShadowVolumes();
 		R_TestAndDrawShadowVolume(&cl_entities[0].render, rd->origin, cullradius, lightradius, clipmins, clipmaxs);
@@ -1102,6 +1115,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 
 	if (!visiblevolumes)
 		R_Shadow_Stage_End();
+	qglDisable(GL_SCISSOR_TEST);
 }
 
 static void R_SetFrustum (void)

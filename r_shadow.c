@@ -37,6 +37,7 @@ cvar_t r_shadow_erasebydrawing = {0, "r_shadow_erasebydrawing", "0"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
+cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 
 void R_Shadow_ClearWorldLights(void);
 void r_shadow_start(void)
@@ -92,6 +93,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_gloss);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_erasebydrawing);
+	Cvar_RegisterVariable(&r_shadow_scissor);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
@@ -532,6 +534,8 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	qglEnable(GL_CULL_FACE);
 	qglEnable(GL_DEPTH_TEST);
 	r_shadowstage = SHADOWSTAGE_STENCIL;
+	if (!r_shadow_erasebydrawing.integer)
+		qglClear(GL_STENCIL_BUFFER_BIT);
 }
 
 void R_Shadow_Stage_Light(void)
@@ -578,10 +582,7 @@ int R_Shadow_Stage_EraseShadowVolumes(void)
 		return true;
 	}
 	else
-	{
-		qglClear(GL_STENCIL_BUFFER_BIT);
 		return false;
-	}
 }
 
 void R_Shadow_Stage_End(void)
@@ -594,6 +595,7 @@ void R_Shadow_Stage_End(void)
 	// now restore the rest of the state to normal
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
+	qglDisable(GL_SCISSOR_TEST);
 	qglDepthFunc(GL_LEQUAL);
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
@@ -609,6 +611,142 @@ void R_Shadow_Stage_End(void)
 	m.blendfunc2 = GL_ZERO;
 	R_Mesh_State(&m);
 	r_shadowstage = SHADOWSTAGE_NONE;
+}
+
+int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const float *origin, float radius)
+{
+	int i, ix1, iy1, ix2, iy2;
+	float x1, y1, x2, y2, x, y;
+	vec3_t smins, smaxs;
+	vec4_t v, v2;
+	if (!r_shadow_scissor.integer)
+		return false;
+	// if view is inside the box, just say yes it's visible
+	if (r_origin[0] >= mins[0] && r_origin[0] <= maxs[0]
+	 && r_origin[1] >= mins[1] && r_origin[1] <= maxs[1]
+	 && r_origin[2] >= mins[2] && r_origin[2] <= maxs[2])
+	{
+		qglDisable(GL_SCISSOR_TEST);
+		return false;
+	}
+	VectorSubtract(r_origin, origin, v);
+	if (DotProduct(v, v) < radius * radius)
+	{
+		qglDisable(GL_SCISSOR_TEST);
+		return false;
+	}
+	// create viewspace bbox
+	for (i = 0;i < 8;i++)
+	{
+		v[0] = ((i & 1) ? mins[0] : maxs[0]) - r_origin[0];
+		v[1] = ((i & 2) ? mins[1] : maxs[1]) - r_origin[1];
+		v[2] = ((i & 4) ? mins[2] : maxs[2]) - r_origin[2];
+		v2[0] = DotProduct(v, vright);
+		v2[1] = DotProduct(v, vup);
+		v2[2] = DotProduct(v, vpn);
+		if (i)
+		{
+			if (smins[0] > v2[0]) smins[0] = v2[0];
+			if (smaxs[0] < v2[0]) smaxs[0] = v2[0];
+			if (smins[1] > v2[1]) smins[1] = v2[1];
+			if (smaxs[1] < v2[1]) smaxs[1] = v2[1];
+			if (smins[2] > v2[2]) smins[2] = v2[2];
+			if (smaxs[2] < v2[2]) smaxs[2] = v2[2];
+		}
+		else
+		{
+			smins[0] = smaxs[0] = v2[0];
+			smins[1] = smaxs[1] = v2[1];
+			smins[2] = smaxs[2] = v2[2];
+		}
+	}
+	// now we have a bbox in viewspace
+	// clip it to the viewspace version of the sphere
+	v[0] = origin[0] - r_origin[0];
+	v[1] = origin[1] - r_origin[1];
+	v[2] = origin[2] - r_origin[2];
+	v2[0] = DotProduct(v, vright);
+	v2[1] = DotProduct(v, vup);
+	v2[2] = DotProduct(v, vpn);
+	if (smins[0] < v2[0] - radius) smins[0] = v2[0] - radius;
+	if (smaxs[0] < v2[0] - radius) smaxs[0] = v2[0] + radius;
+	if (smins[1] < v2[1] - radius) smins[1] = v2[1] - radius;
+	if (smaxs[1] < v2[1] - radius) smaxs[1] = v2[1] + radius;
+	if (smins[2] < v2[2] - radius) smins[2] = v2[2] - radius;
+	if (smaxs[2] < v2[2] - radius) smaxs[2] = v2[2] + radius;
+	// clip it to the view plane
+	if (smins[2] < 1)
+		smins[2] = 1;
+	// return true if that culled the box
+	if (smins[2] >= smaxs[2])
+		return true;
+	// ok some of it is infront of the view, transform each corner back to
+	// worldspace and then to screenspace and make screen rect
+	for (i = 0;i < 8;i++)
+	{
+		v2[0] = (i & 1) ? smins[0] : smaxs[0];
+		v2[1] = (i & 2) ? smins[1] : smaxs[1];
+		v2[2] = (i & 4) ? smins[2] : smaxs[2];
+		v[0] = v2[0] * vright[0] + v2[1] * vup[0] + v2[2] * vpn[0] + r_origin[0];
+		v[1] = v2[0] * vright[1] + v2[1] * vup[1] + v2[2] * vpn[1] + r_origin[1];
+		v[2] = v2[0] * vright[2] + v2[1] * vup[2] + v2[2] * vpn[2] + r_origin[2];
+		v[3] = 1.0f;
+		GL_TransformToScreen(v, v2);
+		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
+		x = v2[0];
+		y = v2[1];
+		if (i)
+		{
+			if (x1 > x) x1 = x;
+			if (x2 < x) x2 = x;
+			if (y1 > y) y1 = y;
+			if (y2 < y) y2 = y;
+		}
+		else
+		{
+			x1 = x2 = x;
+			y1 = y2 = y;
+		}
+	}
+	/*
+	// this code doesn't handle boxes with any points behind view properly
+	x1 = 1000;x2 = -1000;
+	y1 = 1000;y2 = -1000;
+	for (i = 0;i < 8;i++)
+	{
+		v[0] = (i & 1) ? mins[0] : maxs[0];
+		v[1] = (i & 2) ? mins[1] : maxs[1];
+		v[2] = (i & 4) ? mins[2] : maxs[2];
+		v[3] = 1.0f;
+		GL_TransformToScreen(v, v2);
+		//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
+		if (v2[2] > 0)
+		{
+			x = v2[0];
+			y = v2[1];
+
+			if (x1 > x) x1 = x;
+			if (x2 < x) x2 = x;
+			if (y1 > y) y1 = y;
+			if (y2 < y) y2 = y;
+		}
+	}
+	*/
+	ix1 = x1 - 1.0f;
+	iy1 = y1 - 1.0f;
+	ix2 = x2 + 1.0f;
+	iy2 = y2 + 1.0f;
+	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
+	if (ix1 < r_refdef.x) ix1 = r_refdef.x;
+	if (iy1 < r_refdef.y) iy1 = r_refdef.y;
+	if (ix2 > r_refdef.x + r_refdef.width) ix2 = r_refdef.x + r_refdef.width;
+	if (iy2 > r_refdef.y + r_refdef.height) iy2 = r_refdef.y + r_refdef.height;
+	if (ix2 <= ix1 || iy2 <= iy1)
+		return true;
+	// set up the scissor rectangle
+	qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
+	qglEnable(GL_SCISSOR_TEST);
+	return false;
 }
 
 void R_Shadow_GenTexCoords_Attenuation2D1D(float *out2d, float *out1d, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, float lightradius)

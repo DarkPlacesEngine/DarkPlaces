@@ -24,6 +24,7 @@ void R_Shadow_Stage_Light(void);
 // otherwise clears stencil
 int R_Shadow_Stage_EraseShadowVolumes(void);
 void R_Shadow_Stage_End(void);
+int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const float *origin, float radius);
 
 typedef struct worldlight_s
 {

@@ -337,6 +337,12 @@ extern int gl_dot3ext;
 #endif
 */
 
+#ifndef GL_SCISSOR_TEST
+#define GL_SCISSOR_TEST				0x0C11
+#define GL_SCISSOR_BOX				0x0C10
+#endif
+
+extern void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
 
