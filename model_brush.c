@@ -701,7 +701,7 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 	{
 		if (in == inend)
 		{
-			Con_Printf("Mod_Q1BSP_DecompressVis: input underrun\n");
+			Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\"\n", loadmodel->name);
 			return;
 		}
 		c = *in++;
@@ -713,7 +713,7 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 			{
 				if (out == outend)
 				{
-					Con_Printf("Mod_Q1BSP_DecompressVis: output overrun\n");
+					Con_DPrintf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\"\n", loadmodel->name);
 					return;
 				}
 				*out++ = 0;
@@ -3593,6 +3593,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		 && out->type != Q3FACETYPE_FLARE)
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, out->type);
+			out->num_vertices = 0;
+			out->num_triangles = 0;
 			out->type = 0; // error
 			continue;
 		}
@@ -3601,6 +3603,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		if (n < 0 || n >= loadmodel->brushq3.num_textures)
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brushq3.num_textures);
+			out->num_vertices = 0;
+			out->num_triangles = 0;
 			out->type = 0; // error
 			continue;
 			n = 0;
@@ -3634,35 +3638,41 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		if (out->num_triangles * 3 != LittleLong(in->numelements))
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): numelements %i is not a multiple of 3\n", i, out->texture->name, LittleLong(in->numelements));
+			out->num_vertices = 0;
+			out->num_triangles = 0;
 			out->type = 0; // error
 			continue;
 		}
 		if (out->firstvertex < 0 || out->firstvertex + out->num_vertices > loadmodel->brushq3.num_vertices)
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid vertex range %i : %i (%i vertices)\n", i, out->texture->name, out->firstvertex, out->firstvertex + out->num_vertices, loadmodel->brushq3.num_vertices);
+			out->num_vertices = 0;
+			out->num_triangles = 0;
 			out->type = 0; // error
 			continue;
 		}
 		if (out->firstelement < 0 || out->firstelement + out->num_triangles * 3 > loadmodel->brushq3.num_triangles * 3)
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid element range %i : %i (%i elements)\n", i, out->texture->name, out->firstelement, out->firstelement + out->num_triangles * 3, loadmodel->brushq3.num_triangles * 3);
+			out->num_vertices = 0;
+			out->num_triangles = 0;
 			out->type = 0; // error
 			continue;
 		}
-		out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
-		out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
-		out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
-		out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
-		out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
-		out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
-		out->data_color4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
-		out->data_element3i = loadmodel->brushq3.data_element3i + out->firstelement;
-		out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
 		switch(out->type)
 		{
 		case Q3FACETYPE_POLYGON:
 		case Q3FACETYPE_MESH:
 			// no processing necessary
+			out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
+			out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
+			out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
+			out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
+			out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
+			out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
+			out->data_color4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
+			out->data_element3i = loadmodel->brushq3.data_element3i + out->firstelement;
+			out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
 			break;
 		case Q3FACETYPE_PATCH:
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
@@ -3670,6 +3680,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			if (patchsize[0] < 1 || patchsize[1] < 1)
 			{
 				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid patchsize %ix%i\n", i, out->texture->name, patchsize[0], patchsize[1]);
+				out->num_vertices = 0;
+				out->num_triangles = 0;
 				out->type = 0; // error
 				continue;
 			}
@@ -3680,6 +3692,16 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			finalheight = ((patchsize[1] - 1) << ylevel) + 1;
 			finalvertices = finalwidth * finalheight;
 			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+			originalvertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
+			//originalsvector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
+			//originaltvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
+			//originalnormal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
+			originaltexcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
+			originaltexcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
+			originalcolor4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
+			//originalelement3i = loadmodel->brushq3.data_element3i + out->firstelement;
+			//originalneighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
+			/*
 			originalvertex3f = out->data_vertex3f;
 			//originalsvector3f = out->data_svector3f;
 			//originaltvector3f = out->data_tvector3f;
@@ -3689,14 +3711,15 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			originaltexcoordlightmap2f = out->data_texcoordlightmap2f;
 			//originalelement3i = out->data_element3i;
 			//originalneighbor3i = out->data_neighbor3i;
-			out->data_vertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[20]) * finalvertices + sizeof(int[6]) * finaltriangles);
+			*/
+			out->data_vertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[20]) * finalvertices);
 			out->data_svector3f = out->data_vertex3f + finalvertices * 3;
 			out->data_tvector3f = out->data_svector3f + finalvertices * 3;
 			out->data_normal3f = out->data_tvector3f + finalvertices * 3;
 			out->data_color4f = out->data_normal3f + finalvertices * 3;
 			out->data_texcoordtexture2f = out->data_color4f + finalvertices * 4;
 			out->data_texcoordlightmap2f = out->data_texcoordtexture2f + finalvertices * 2;
-			out->data_element3i = (int *)(out->data_texcoordlightmap2f + finalvertices * 2);
+			out->data_element3i = Mem_Alloc(loadmodel->mempool, sizeof(int[6]) * finaltriangles);
 			out->data_neighbor3i = out->data_element3i + finaltriangles * 3;
 			out->type = Q3FACETYPE_MESH;
 			out->firstvertex = -1;
@@ -3741,7 +3764,9 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		case Q3FACETYPE_FLARE:
 			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
 			// don't render it
+			out->num_vertices = 0;
 			out->num_triangles = 0;
+			out->type = 0;
 			break;
 		}
 		for (j = 0, invalidelements = 0;j < out->num_triangles * 3;j++)
@@ -3786,6 +3811,95 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->maxs[2] += 1.0f;
 		}
 	}
+
+	// LordHavoc: experimental array merger (disabled because it wastes time and uses 2x memory while merging)
+	/*
+	{
+	int totalverts, totaltris;
+	int originalnum_vertices;
+	float *originaldata_vertex3f;
+	float *originaldata_texcoordtexture2f;
+	float *originaldata_texcoordlightmap2f;
+	float *originaldata_svector3f;
+	float *originaldata_tvector3f;
+	float *originaldata_normal3f;
+	float *originaldata_color4f;
+	int originalnum_triangles;
+	int *originaldata_element3i;
+	int *originaldata_neighbor3i;
+
+	totalverts = 0;
+	totaltris = 0;
+	for (i = 0, out = loadmodel->brushq3.data_faces;i < count;i++, out++)
+	{
+		if (!out->type)
+			continue;
+		totalverts += out->num_vertices;
+		totaltris += out->num_triangles;
+	}
+
+	originalnum_vertices = loadmodel->brushq3.num_vertices;
+	originaldata_vertex3f = loadmodel->brushq3.data_vertex3f;
+	originaldata_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f;
+	originaldata_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f;
+	originaldata_svector3f = loadmodel->brushq3.data_svector3f;
+	originaldata_tvector3f = loadmodel->brushq3.data_tvector3f;
+	originaldata_normal3f = loadmodel->brushq3.data_normal3f;
+	originaldata_color4f = loadmodel->brushq3.data_color4f;
+	originalnum_triangles = loadmodel->brushq3.num_triangles;
+	originaldata_element3i = loadmodel->brushq3.data_element3i;
+	originaldata_neighbor3i = loadmodel->brushq3.data_neighbor3i;
+	loadmodel->brushq3.num_vertices = totalverts;
+	loadmodel->brushq3.data_vertex3f = Mem_Alloc(loadmodel->mempool, totalverts * (sizeof(float) * (3 + 2 + 2 + 3 + 3 + 3 + 4)) + totaltris * (sizeof(int) * (3 * 2)));
+	loadmodel->brushq3.data_texcoordtexture2f = loadmodel->brushq3.data_vertex3f + totalverts * 3;
+	loadmodel->brushq3.data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordtexture2f + totalverts * 2;
+	loadmodel->brushq3.data_svector3f = loadmodel->brushq3.data_texcoordlightmap2f + totalverts * 2;
+	loadmodel->brushq3.data_tvector3f = loadmodel->brushq3.data_svector3f + totalverts * 3;
+	loadmodel->brushq3.data_normal3f = loadmodel->brushq3.data_tvector3f + totalverts * 3;
+	loadmodel->brushq3.data_color4f = loadmodel->brushq3.data_normal3f + totalverts * 3;
+	loadmodel->brushq3.num_triangles = totaltris;
+	loadmodel->brushq3.data_element3i = (int *)(loadmodel->brushq3.data_color4f + totalverts * 4);
+	loadmodel->brushq3.data_neighbor3i = loadmodel->brushq3.data_element3i + totaltris * 3;
+	totalverts = 0;
+	totaltris = 0;
+	for (i = 0, out = loadmodel->brushq3.data_faces;i < count;i++, out++)
+	{
+		if (!out->type)
+			continue;
+		Con_Printf("totalverts %i, totaltris %i\n", totalverts, totaltris);
+		memcpy(loadmodel->brushq3.data_vertex3f + totalverts * 3, out->data_vertex3f, out->num_vertices * 3 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_texcoordtexture2f + totalverts * 2, out->data_texcoordtexture2f, out->num_vertices * 2 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_texcoordlightmap2f + totalverts * 2, out->data_texcoordlightmap2f, out->num_vertices * 2 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_svector3f + totalverts * 3, out->data_svector3f, out->num_vertices * 3 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_tvector3f + totalverts * 3, out->data_tvector3f, out->num_vertices * 3 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_normal3f + totalverts * 3, out->data_normal3f, out->num_vertices * 3 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_color4f + totalverts * 4, out->data_color4f, out->num_vertices * 4 * sizeof(float));
+		memcpy(loadmodel->brushq3.data_element3i + totaltris * 3, out->data_element3i, out->num_triangles * 3 * sizeof(int));
+		memcpy(loadmodel->brushq3.data_neighbor3i + totaltris * 3, out->data_neighbor3i, out->num_triangles * 3 * sizeof(int));
+		if (out->firstvertex == -1)
+			Mem_Free(out->data_vertex3f);
+		if (out->firstelement == -1)
+			Mem_Free(out->data_element3i);
+		out->firstvertex = totalverts;
+		out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
+		out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
+		out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
+		out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
+		out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
+		out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
+		out->data_color4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
+		out->firstelement = totaltris * 3;
+		out->data_element3i = loadmodel->brushq3.data_element3i + out->firstelement;
+		out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
+		//for (j = 0;j < out->numtriangles * 3;j++)
+		//	out->data_element3i[j] += totalverts - out->firstvertex;
+		totalverts += out->num_vertices;
+		totaltris += out->num_triangles;
+	}
+	Mem_Free(originaldata_vertex3f);
+	Mem_Free(originaldata_element3i);
+	}
+	*/
 }
 
 static void Mod_Q3BSP_LoadModels(lump_t *l)
