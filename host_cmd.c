@@ -963,7 +963,7 @@ void Host_Color_f(void)
 		pr_global_struct->time = sv.time;
 		pr_globals[OFS_PARM0] = playercolor;
 		pr_global_struct->self = EDICT_TO_PROG(sv_player);
-		PR_ExecuteProgram (SV_ChangeTeam, "");
+		PR_ExecuteProgram (SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
@@ -1170,7 +1170,7 @@ void Host_Spawn_f (void)
 			Con_DPrint("Calling RestoreGame\n");
 			pr_global_struct->time = sv.time;
 			pr_global_struct->self = EDICT_TO_PROG(sv_player);
-			PR_ExecuteProgram (RestoreGame, "");
+			PR_ExecuteProgram (RestoreGame, "QC function RestoreGame is missing");
 		}
 	}
 	else

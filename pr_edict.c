@@ -1176,7 +1176,7 @@ void ED_LoadFromFile (const char *data)
 		}
 
 		pr_global_struct->self = EDICT_TO_PROG(ent);
-		PR_ExecuteProgram (func - pr_functions, "");
+		PR_ExecuteProgram (func - pr_functions, "QC function spawn is missing");
 		spawned++;
 		if (ent->e->free)
 			died++;

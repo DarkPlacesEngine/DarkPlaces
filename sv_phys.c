@@ -155,7 +155,7 @@ qboolean SV_RunThink (edict_t *ent)
 	pr_global_struct->time = thinktime;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
 	pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-	PR_ExecuteProgram (ent->v->think, "NULL think function");
+	PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
 	return !ent->e->free;
 }
 
@@ -178,14 +178,14 @@ void SV_Impact (edict_t *e1, edict_t *e2)
 	{
 		pr_global_struct->self = EDICT_TO_PROG(e1);
 		pr_global_struct->other = EDICT_TO_PROG(e2);
-		PR_ExecuteProgram (e1->v->touch, "");
+		PR_ExecuteProgram (e1->v->touch, "QC function self.touch is missing");
 	}
 
 	if (e2->v->touch && e2->v->solid != SOLID_NOT)
 	{
 		pr_global_struct->self = EDICT_TO_PROG(e2);
 		pr_global_struct->other = EDICT_TO_PROG(e1);
-		PR_ExecuteProgram (e2->v->touch, "");
+		PR_ExecuteProgram (e2->v->touch, "QC function self.touch is missing");
 	}
 
 	pr_global_struct->self = old_self;
@@ -769,7 +769,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				{
 					pr_global_struct->self = EDICT_TO_PROG(pusher);
 					pr_global_struct->other = EDICT_TO_PROG(check);
-					PR_ExecuteProgram (pusher->v->blocked, "");
+					PR_ExecuteProgram (pusher->v->blocked, "QC function self.blocked is missing");
 				}
 				break;
 			}
@@ -812,7 +812,7 @@ void SV_Physics_Pusher (edict_t *ent)
 		pr_global_struct->time = sv.time;
 		pr_global_struct->self = EDICT_TO_PROG(ent);
 		pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-		PR_ExecuteProgram (ent->v->think, "NULL think function");
+		PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
 	}
 }
 
@@ -1509,7 +1509,7 @@ void SV_Physics (void)
 		pr_global_struct->self = EDICT_TO_PROG(sv.edicts);
 		pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
 		pr_global_struct->time = sv.time;
-		PR_ExecuteProgram ((func_t)(EndFrameQC - pr_functions), "");
+		PR_ExecuteProgram ((func_t)(EndFrameQC - pr_functions), "QC function EndFrame is missing");
 	}
 
 	if (!sv_freezenonclients.integer)
