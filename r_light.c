@@ -121,12 +121,15 @@ loc0:
 	surf = cl.worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
-		if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+		if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDist(lightorigin, surf->plane)) >= surf->plane->dist))
 		{
-			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-			surf->dlightframe = r_dlightframecount;
+			if (surf->dlightframe != r_dlightframecount) // not dynamic until now
+			{
+				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
+				surf->dlightframe = r_dlightframecount;
+			}
+			surf->dlightbits[bitindex] |= bit;
 		}
-		surf->dlightbits[bitindex] |= bit;
 	}
 
 	if (node->children[0]->contents >= 0)
@@ -220,7 +223,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 								if (surf->visframe != r_framecount || surf->lightframe == lightframe)
 									continue;
 								surf->lightframe = lightframe;
-								//if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDiff(lightorigin, surf->plane)) >= 0))
+								if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDist(lightorigin, surf->plane)) >= surf->plane->dist))
 								{
 									if (surf->dlightframe != r_dlightframecount) // not dynamic until now
 									{
