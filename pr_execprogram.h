@@ -266,8 +266,10 @@
 				startprofile = profile;
 				pr_xstatement = st - pr_statements;
 				pr_argc = st->op - OP_CALL0;
-				if (!OPA->function)
+				if (!OPA->function )
 					Host_Error("NULL function");
+				else if (OPA->function > (unsigned) progs->numfunctions)
+					Host_Error("Bad function number");
 
 				newf = &pr_functions[OPA->function];
 
