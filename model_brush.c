@@ -3524,79 +3524,79 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				{
 					snprintf(shadername, sizeof(shadername), "%s", com_token);
 					flags = 0;
-					if (COM_ParseToken(&text, false) && !strcmp(com_token, "{"))
+					if (COM_ParseToken(&text, false) && !strcasecmp(com_token, "{"))
 					{
 						while (COM_ParseToken(&text, false))
 						{
-							if (!strcmp(com_token, "}"))
+							if (!strcasecmp(com_token, "}"))
 								break;
-							else if (!strcmp(com_token, "{"))
+							else if (!strcasecmp(com_token, "{"))
 							{
 								while (COM_ParseToken(&text, false))
 								{
-									if (!strcmp(com_token, "}"))
+									if (!strcasecmp(com_token, "}"))
 										break;
 								}
 							}
-							else if (!strcmp(com_token, "surfaceparm"))
+							else if (!strcasecmp(com_token, "surfaceparm"))
 							{
-								if (COM_ParseToken(&text, true) && strcmp(com_token, "\n"))
+								if (COM_ParseToken(&text, true) && strcasecmp(com_token, "\n"))
 								{
-									if (!strcmp(com_token, "alphashadow"))
+									if (!strcasecmp(com_token, "alphashadow"))
 										flags |= Q3SURFACEPARM_ALPHASHADOW;
-									else if (!strcmp(com_token, "areaportal"))
+									else if (!strcasecmp(com_token, "areaportal"))
 										flags |= Q3SURFACEPARM_AREAPORTAL;
-									else if (!strcmp(com_token, "clusterportal"))
+									else if (!strcasecmp(com_token, "clusterportal"))
 										flags |= Q3SURFACEPARM_CLUSTERPORTAL;
-									else if (!strcmp(com_token, "detail"))
+									else if (!strcasecmp(com_token, "detail"))
 										flags |= Q3SURFACEPARM_DETAIL;
-									else if (!strcmp(com_token, "donotenter"))
+									else if (!strcasecmp(com_token, "donotenter"))
 										flags |= Q3SURFACEPARM_DONOTENTER;
-									else if (!strcmp(com_token, "fog"))
+									else if (!strcasecmp(com_token, "fog"))
 										flags |= Q3SURFACEPARM_FOG;
-									else if (!strcmp(com_token, "lava"))
+									else if (!strcasecmp(com_token, "lava"))
 										flags |= Q3SURFACEPARM_LAVA;
-									else if (!strcmp(com_token, "lightfilter"))
+									else if (!strcasecmp(com_token, "lightfilter"))
 										flags |= Q3SURFACEPARM_LIGHTFILTER;
-									else if (!strcmp(com_token, "metalsteps"))
+									else if (!strcasecmp(com_token, "metalsteps"))
 										flags |= Q3SURFACEPARM_METALSTEPS;
-									else if (!strcmp(com_token, "nodamage"))
+									else if (!strcasecmp(com_token, "nodamage"))
 										flags |= Q3SURFACEPARM_NODAMAGE;
-									else if (!strcmp(com_token, "nodlight"))
+									else if (!strcasecmp(com_token, "nodlight"))
 										flags |= Q3SURFACEPARM_NODLIGHT;
-									else if (!strcmp(com_token, "nodraw"))
+									else if (!strcasecmp(com_token, "nodraw"))
 										flags |= Q3SURFACEPARM_NODRAW;
-									else if (!strcmp(com_token, "nodrop"))
+									else if (!strcasecmp(com_token, "nodrop"))
 										flags |= Q3SURFACEPARM_NODROP;
-									else if (!strcmp(com_token, "noimpact"))
+									else if (!strcasecmp(com_token, "noimpact"))
 										flags |= Q3SURFACEPARM_NOIMPACT;
-									else if (!strcmp(com_token, "nolightmap"))
+									else if (!strcasecmp(com_token, "nolightmap"))
 										flags |= Q3SURFACEPARM_NOLIGHTMAP;
-									else if (!strcmp(com_token, "nomarks"))
+									else if (!strcasecmp(com_token, "nomarks"))
 										flags |= Q3SURFACEPARM_NOMARKS;
-									else if (!strcmp(com_token, "nomipmaps"))
+									else if (!strcasecmp(com_token, "nomipmaps"))
 										flags |= Q3SURFACEPARM_NOMIPMAPS;
-									else if (!strcmp(com_token, "nonsolid"))
+									else if (!strcasecmp(com_token, "nonsolid"))
 										flags |= Q3SURFACEPARM_NONSOLID;
-									else if (!strcmp(com_token, "origin"))
+									else if (!strcasecmp(com_token, "origin"))
 										flags |= Q3SURFACEPARM_ORIGIN;
-									else if (!strcmp(com_token, "playerclip"))
+									else if (!strcasecmp(com_token, "playerclip"))
 										flags |= Q3SURFACEPARM_PLAYERCLIP;
-									else if (!strcmp(com_token, "sky"))
+									else if (!strcasecmp(com_token, "sky"))
 										flags |= Q3SURFACEPARM_SKY;
-									else if (!strcmp(com_token, "slick"))
+									else if (!strcasecmp(com_token, "slick"))
 										flags |= Q3SURFACEPARM_SLICK;
-									else if (!strcmp(com_token, "slime"))
+									else if (!strcasecmp(com_token, "slime"))
 										flags |= Q3SURFACEPARM_SLIME;
-									else if (!strcmp(com_token, "structural"))
+									else if (!strcasecmp(com_token, "structural"))
 										flags |= Q3SURFACEPARM_STRUCTURAL;
-									else if (!strcmp(com_token, "trans"))
+									else if (!strcasecmp(com_token, "trans"))
 										flags |= Q3SURFACEPARM_TRANS;
-									else if (!strcmp(com_token, "water"))
+									else if (!strcasecmp(com_token, "water"))
 										flags |= Q3SURFACEPARM_WATER;
 									else
 										Con_Printf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[i], com_token);
-									if (!COM_ParseToken(&text, true) || strcmp(com_token, "\n"))
+									if (!COM_ParseToken(&text, true) || strcasecmp(com_token, "\n"))
 									{
 										Con_Printf("%s parsing error: surfaceparm only takes one parameter.\n", search->filenames[i]);
 										goto parseerror;
@@ -3611,16 +3611,16 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 							else
 							{
 								// look for linebreak or }
-								while(COM_ParseToken(&text, true) && strcmp(com_token, "\n") && strcmp(com_token, "}"));
+								while(COM_ParseToken(&text, true) && strcasecmp(com_token, "\n") && strcasecmp(com_token, "}"));
 								// break out to top level if it was }
-								if (!strcmp(com_token, "}"))
+								if (!strcasecmp(com_token, "}"))
 									break;
 							}
 						}
 						// add shader to list (shadername and flags)
 						// actually here we just poke into the texture settings
 						for (j = 0, out = loadmodel->brushq3.data_textures;j < loadmodel->brushq3.num_textures;j++, out++)
-							if (!strcmp(out->name, shadername))
+							if (!strcasecmp(out->name, shadername))
 								out->surfaceparms = flags;
 					}
 					else
@@ -3918,7 +3918,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		 && out->type != Q3FACETYPE_MESH
 		 && out->type != Q3FACETYPE_FLARE)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, out->type);
+			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, out->type);
 			out->num_vertices = 0;
 			out->num_triangles = 0;
 			out->type = 0; // error
@@ -3928,7 +3928,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		n = LittleLong(in->textureindex);
 		if (n < 0 || n >= loadmodel->brushq3.num_textures)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brushq3.num_textures);
+			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brushq3.num_textures);
 			out->num_vertices = 0;
 			out->num_triangles = 0;
 			out->type = 0; // error
@@ -3939,7 +3939,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		n = LittleLong(in->effectindex);
 		if (n < -1 || n >= loadmodel->brushq3.num_effects)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
+			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid effectindex %i (%i effects)\n", i, out->texture->name, n, loadmodel->brushq3.num_effects);
 			n = -1;
 		}
 		if (n == -1)
@@ -3949,7 +3949,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		n = LittleLong(in->lightmapindex);
 		if (n < -1 || n >= loadmodel->brushq3.num_lightmaps)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
+			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid lightmapindex %i (%i lightmaps)\n", i, out->texture->name, n, loadmodel->brushq3.num_lightmaps);
 			n = -1;
 		}
 		if (n == -1)
@@ -4653,7 +4653,8 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 
 static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
-	int i, sides;
+	int i;
+	//int sides;
 	float nodesegmentmins[3], nodesegmentmaxs[3];
 	q3mleaf_t *leaf;
 	colbrushf_t *brush;
@@ -4873,6 +4874,81 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 			}
 		}
 	*/
+#if 1
+	for (;;)
+	{
+		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
+		nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
+		nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
+		nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
+		nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
+		nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
+		if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
+			return;
+		if (!node->plane)
+			break;
+		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+		node = node->children[1];
+	}
+#elif 0
+	// FIXME: could be made faster by copying TraceLine code and making it use
+	// box plane distances...  (variant on the BoxOnPlaneSide code)
+	for (;;)
+	{
+		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
+		nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
+		nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
+		nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
+		nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
+		nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
+		if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
+			return;
+		if (!node->plane)
+			break;
+		if (mod_q3bsp_debugtracebrush.integer == 2)
+		{
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+			node = node->children[1];
+			continue;
+		}
+		else if (mod_q3bsp_debugtracebrush.integer == 1)
+		{
+			// recurse down node sides
+			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
+			if (sides == 3)
+			{
+				// segment box crosses plane
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+				node = node->children[1];
+				continue;
+			}
+			// take whichever side the segment box is on
+			node = node->children[sides - 1];
+			continue;
+		}
+		else
+		{
+			// recurse down node sides
+			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
+			if (sides == 3)
+			{
+				// segment box crosses plane
+				// now check start and end brush boxes to handle a lot of 'diagonal' cases more efficiently...
+				sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, node->plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, node->plane);
+				if (sides == 3)
+				{
+					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+					node = node->children[1];
+					continue;
+				}
+			}
+			// take whichever side the segment box is on
+			node = node->children[sides - 1];
+			continue;
+		}
+		return;
+	}
+#else
 	// FIXME: could be made faster by copying TraceLine code and making it use
 	// box plane distances...  (variant on the BoxOnPlaneSide code)
 	for (;;)
@@ -4895,7 +4971,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 		else if (mod_q3bsp_debugtracebrush.integer == 1)
 		{
 			// recurse down node sides
-			sides = BoxOnPlaneSide(segmentmins, segmentmaxs, node->plane);
+			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
 			if (sides == 3)
 			{
 				// segment box crosses plane
@@ -4911,7 +4987,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 		else
 		{
 			// recurse down node sides
-			sides = BoxOnPlaneSide(segmentmins, segmentmaxs, node->plane);
+			sides = BoxOnPlaneSide(nodesegmentmins, nodesegmentmaxs, node->plane);
 			if (sides == 3)
 			{
 				// segment box crosses plane
@@ -4927,6 +5003,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 			node = node->children[sides - 1];
 		}
 	}
+#endif
 	// hit a leaf
 	leaf = (q3mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
