@@ -1530,7 +1530,9 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_setview:
-			cl.viewentity = MSG_ReadShort ();
+			cl.viewentity = (unsigned short)MSG_ReadShort ();
+			if (cl.viewentity >= MAX_EDICTS)
+				Host_Error("svc_setview >= MAX_EDICTS\n");
 			// LordHavoc: assume first setview recieved is the real player entity
 			if (!cl.playerentity)
 				cl.playerentity = cl.viewentity;
