@@ -709,6 +709,11 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 			*out++ = c;
 		else
 		{
+			if (in == inend)
+			{
+				Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\"\n", loadmodel->name);
+				return;
+			}
 			for (c = *in++;c > 0;c--)
 			{
 				if (out == outend)
