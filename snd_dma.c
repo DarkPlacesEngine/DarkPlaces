@@ -394,8 +394,8 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 	vec3_t source_vec;
 	sfx_t *snd;
 
-// anything coming from the view entity will always be full volume
-// LordHavoc: make sounds with ATTN_NONE have no spatialization
+	// anything coming from the view entity will always be full volume
+	// LordHavoc: make sounds with ATTN_NONE have no spatialization
 	if (ch->entnum == cl.viewentity || ch->dist_mult == 0)
 	{
 		ch->leftvol = ch->master_vol;
@@ -403,6 +403,15 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 	}
 	else
 	{
+		// update sound origin if we know about the entity
+		if (ch->entnum > 0 && cls.state == ca_connected && cl_entities[ch->entnum].state_current.active)
+		{
+			//Con_Printf("-- entnum %i origin %f %f %f neworigin %f %f %f\n", ch->entnum, ch->origin[0], ch->origin[1], ch->origin[2], cl_entities[ch->entnum].state_current.origin[0], cl_entities[ch->entnum].state_current.origin[1], cl_entities[ch->entnum].state_current.origin[2]);
+			VectorCopy(cl_entities[ch->entnum].state_current.origin, ch->origin);
+			if (cl_entities[ch->entnum].state_current.modelindex && cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->type == mod_brush)
+				VectorMAMAM(1.0f, ch->origin, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmins, 0.5f, cl.model_precache[cl_entities[ch->entnum].state_current.modelindex]->normalmaxs, ch->origin);
+		}
+
 		// calculate stereo seperation and distance attenuation
 		snd = ch->sfx;
 		VectorSubtract(ch->origin, listener_origin, source_vec);
@@ -422,7 +431,7 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 			lscale = 1.0 - dot;
 		}
 
-	// add in distance effect
+		// add in distance effect
 		scale = (1.0 - dist) * rscale;
 		ch->rightvol = (int) (ch->master_vol * scale);
 		if (ch->rightvol < 0)
@@ -433,6 +442,7 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 		if (ch->leftvol < 0)
 			ch->leftvol = 0;
 	}
+
 	// LordHavoc: allow adjusting volume of static sounds
 	if (isstatic)
 	{
@@ -472,6 +482,13 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 
 // spatialize
 	memset (target_chan, 0, sizeof(*target_chan));
+	/*
+	if (cls.state == ca_connected && entnum > 0 && cl_entities[entnum].state_current.active)
+	{
+		target_chan.follow = true;
+		VectorSubtract(origin, cl_entities[entnum].state_current.origin, target_chan.followoriginoffset);
+	}
+	*/
 	VectorCopy(origin, target_chan->origin);
 	target_chan->dist_mult = attenuation / sound_nominal_clip_dist;
 	target_chan->master_vol = vol;
@@ -535,17 +552,10 @@ void S_StopSound(int entnum, int entchannel)
 
 void S_StopAllSounds(qboolean clear)
 {
-	int		i;
-
 	if (!sound_started)
 		return;
 
 	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
-
-	for (i=0 ; i<MAX_CHANNELS ; i++)
-		if (channels[i].sfx)
-			channels[i].sfx = NULL;
-
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
 
 	if (clear)
@@ -641,19 +651,16 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 		return;
 	}
 
-	ss = &channels[total_channels];
-	total_channels++;
-
 	sc = S_LoadSound (sfx, true);
 	if (!sc)
 		return;
 
 	if (sc->loopstart == -1)
-	{
-		Con_Printf ("Sound %s not looped\n", sfx->name);
-		return;
-	}
+		Con_DPrintf("Quake compatibility warning: Static sound \"%s\" is not looped\n", sfx->name);
 
+	ss = &channels[total_channels++];
+	memset(ss, 0, sizeof(*ss));
+	ss->forceloop = true;
 	ss->sfx = sfx;
 	VectorCopy (origin, ss->origin);
 	ss->master_vol = vol;
@@ -777,9 +784,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 					break;
 
 			if (j == total_channels)
-			{
 				combine = NULL;
-			}
 			else
 			{
 				if (combine != ch)
@@ -914,7 +919,6 @@ console functions
 
 void S_Play(void)
 {
-	static int hash=345;
 	int 	i;
 	char name[256];
 	sfx_t	*sfx;
@@ -930,14 +934,13 @@ void S_Play(void)
 		else
 			strcpy(name, Cmd_Argv(i));
 		sfx = S_PrecacheSound(name, true);
-		S_StartSound(hash++, 0, sfx, listener_origin, 1.0, 1.0);
+		S_StartSound(-1, 0, sfx, listener_origin, 1.0, 1.0);
 		i++;
 	}
 }
 
 void S_Play2(void)
 {
-	static int hash=345;
 	int 	i;
 	char name[256];
 	sfx_t	*sfx;
@@ -953,14 +956,13 @@ void S_Play2(void)
 		else
 			strcpy(name, Cmd_Argv(i));
 		sfx = S_PrecacheSound(name, true);
-		S_StartSound(hash++, 0, sfx, listener_origin, 1.0, 0.0);
+		S_StartSound(-1, 0, sfx, listener_origin, 1.0, 0.0);
 		i++;
 	}
 }
 
 void S_PlayVol(void)
 {
-	static int hash=543;
 	int i;
 	float vol;
 	char name[256];
@@ -978,7 +980,7 @@ void S_PlayVol(void)
 			strcpy(name, Cmd_Argv(i));
 		sfx = S_PrecacheSound(name, true);
 		vol = atof(Cmd_Argv(i+1));
-		S_StartSound(hash++, 0, sfx, listener_origin, vol, 1.0);
+		S_StartSound(-1, 0, sfx, listener_origin, vol, 1.0);
 		i+=2;
 	}
 }
