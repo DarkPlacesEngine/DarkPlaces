@@ -874,8 +874,28 @@ static int RSurfShader_Water(int stage, msurface_t *s)
 		RSurfShader_Water_Pass_Base(s);
 		return false;
 	case 1:
-		if (s->currenttexture->glowtexture)
-			RSurfShader_Water_Pass_Glow(s);
+		if (fogenabled)
+		{
+			if (currentrenderentity->alpha * (s->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value) >= 1.0f)
+				RSurfShader_Water_Pass_Fog(s);
+			return false;
+		}
+		else
+			return true;
+	default:
+		return true;
+	}
+}
+
+static int RSurfShader_Water_Glow(int stage, msurface_t *s)
+{
+	switch(stage)
+	{
+	case 0:
+		RSurfShader_Water_Pass_Base(s);
+		return false;
+	case 1:
+		RSurfShader_Water_Pass_Glow(s);
 		return false;
 	case 2:
 		if (fogenabled)
@@ -1427,15 +1447,24 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *s)
 static int RSurfShader_Wall_Fullbright(int stage, msurface_t *s)
 {
 	if (stage == 0)
+	{
 		c_brush_polys++;
+		RSurfShader_Wall_Pass_BaseFullbright(s);
+		return false;
+	}
+	return true;
+}
+
+static int RSurfShader_Wall_Fullbright_Glow(int stage, msurface_t *s)
+{
 	switch(stage)
 	{
 	case 0:
+		c_brush_polys++;
 		RSurfShader_Wall_Pass_BaseFullbright(s);
 		return false;
 	case 1:
-		if (s->currenttexture->glowtexture)
-			RSurfShader_Wall_Pass_Glow(s);
+		RSurfShader_Wall_Pass_Glow(s);
 		return false;
 	default:
 		return true;
@@ -1445,15 +1474,24 @@ static int RSurfShader_Wall_Fullbright(int stage, msurface_t *s)
 static int RSurfShader_Wall_Vertex(int stage, msurface_t *s)
 {
 	if (stage == 0)
+	{
 		c_brush_polys++;
+		RSurfShader_Wall_Pass_BaseVertex(s);
+		return false;
+	}
+	return true;
+}
+
+static int RSurfShader_Wall_Vertex_Glow(int stage, msurface_t *s)
+{
 	switch(stage)
 	{
 	case 0:
+		c_brush_polys++;
 		RSurfShader_Wall_Pass_BaseVertex(s);
 		return false;
 	case 1:
-		if (s->currenttexture->glowtexture)
-			RSurfShader_Wall_Pass_Glow(s);
+		RSurfShader_Wall_Pass_Glow(s);
 		return false;
 	default:
 		return true;
@@ -1461,6 +1499,96 @@ static int RSurfShader_Wall_Vertex(int stage, msurface_t *s)
 }
 
 static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
+{
+	if (r_vertexsurfaces.integer)
+	{
+		if (stage == 0)
+		{
+			c_brush_polys++;
+			RSurfShader_Wall_Pass_BaseVertex(s);
+			return false;
+		}
+		return true;
+	}
+	else if (r_multitexture.integer)
+	{
+		if (r_dlightmap.integer)
+		{
+			if (stage == 0)
+			{
+				c_brush_polys++;
+				RSurfShader_Wall_Pass_BaseMTex(s);
+				return false;
+			}
+			return true;
+		}
+		else
+		{
+			switch(stage)
+			{
+			case 0:
+				c_brush_polys++;
+				RSurfShader_Wall_Pass_BaseMTex(s);
+				return false;
+			case 1:
+				if (s->dlightframe == r_framecount)
+					RSurfShader_Wall_Pass_Light(s);
+				return false;
+			default:
+				return true;
+			}
+		}
+	}
+	else if (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1 || currentrenderentity->effects & EF_ADDITIVE)
+	{
+		if (stage == 0)
+		{
+			c_brush_polys++;
+			RSurfShader_Wall_Pass_BaseVertex(s);
+			return false;
+		}
+		return true;
+	}
+	else
+	{
+		if (r_dlightmap.integer)
+		{
+			switch(stage)
+			{
+			case 0:
+				c_brush_polys++;
+				RSurfShader_Wall_Pass_BaseTexture(s);
+				return false;
+			case 1:
+				RSurfShader_Wall_Pass_BaseLightmap(s);
+				return false;
+			default:
+				return true;
+			}
+		}
+		else
+		{
+			switch(stage)
+			{
+			case 0:
+				c_brush_polys++;
+				RSurfShader_Wall_Pass_BaseTexture(s);
+				return false;
+			case 1:
+				RSurfShader_Wall_Pass_BaseLightmap(s);
+				return false;
+			case 2:
+				if (s->dlightframe == r_framecount)
+					RSurfShader_Wall_Pass_Light(s);
+				return false;
+			default:
+				return true;
+			}
+		}
+	}
+}
+
+static int RSurfShader_Wall_Lightmap_Glow(int stage, msurface_t *s)
 {
 	if (stage == 0)
 		c_brush_polys++;
@@ -1472,8 +1600,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 			RSurfShader_Wall_Pass_BaseVertex(s);
 			return false;
 		case 1:
-			if (s->currenttexture->glowtexture)
-				RSurfShader_Wall_Pass_Glow(s);
+			RSurfShader_Wall_Pass_Glow(s);
 			return false;
 		default:
 			return true;
@@ -1489,8 +1616,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 				RSurfShader_Wall_Pass_BaseMTex(s);
 				return false;
 			case 1:
-				if (s->currenttexture->glowtexture)
-					RSurfShader_Wall_Pass_Glow(s);
+				RSurfShader_Wall_Pass_Glow(s);
 				return false;
 			default:
 				return true;
@@ -1508,8 +1634,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 					RSurfShader_Wall_Pass_Light(s);
 				return false;
 			case 2:
-				if (s->currenttexture->glowtexture)
-					RSurfShader_Wall_Pass_Glow(s);
+				RSurfShader_Wall_Pass_Glow(s);
 				return false;
 			default:
 				return true;
@@ -1524,8 +1649,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 			RSurfShader_Wall_Pass_BaseVertex(s);
 			return false;
 		case 1:
-			if (s->currenttexture->glowtexture)
-				RSurfShader_Wall_Pass_Glow(s);
+			RSurfShader_Wall_Pass_Glow(s);
 			return false;
 		default:
 			return true;
@@ -1544,8 +1668,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 				RSurfShader_Wall_Pass_BaseLightmap(s);
 				return false;
 			case 2:
-				if (s->currenttexture->glowtexture)
-					RSurfShader_Wall_Pass_Glow(s);
+				RSurfShader_Wall_Pass_Glow(s);
 				return false;
 			default:
 				return true;
@@ -1566,8 +1689,7 @@ static int RSurfShader_Wall_Lightmap(int stage, msurface_t *s)
 					RSurfShader_Wall_Pass_Light(s);
 				return false;
 			case 3:
-				if (s->currenttexture->glowtexture)
-					RSurfShader_Wall_Pass_Glow(s);
+				RSurfShader_Wall_Pass_Glow(s);
 				return false;
 			default:
 				return true;
@@ -1913,9 +2035,13 @@ loc1:
 }
 
 Cshader_t Cshader_wall_vertex = {{NULL, RSurfShader_Wall_Vertex, RSurfShader_Wall_Fog}, NULL};
+Cshader_t Cshader_wall_vertex_glow = {{NULL, RSurfShader_Wall_Vertex_Glow, RSurfShader_Wall_Fog}, NULL};
 Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap, RSurfShader_Wall_Fog}, NULL};
+Cshader_t Cshader_wall_lightmap_glow = {{NULL, RSurfShader_Wall_Lightmap_Glow, RSurfShader_Wall_Fog}, NULL};
 Cshader_t Cshader_wall_fullbright = {{NULL, RSurfShader_Wall_Fullbright, RSurfShader_Wall_Fog}, NULL};
+Cshader_t Cshader_wall_fullbright_glow = {{NULL, RSurfShader_Wall_Fullbright_Glow, RSurfShader_Wall_Fog}, NULL};
 Cshader_t Cshader_water = {{NULL, RSurfShader_Water, NULL}, NULL};
+Cshader_t Cshader_water_glow = {{NULL, RSurfShader_Water_Glow, NULL}, NULL};
 Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL, NULL}, NULL};
 
 int Cshader_count = 5;
@@ -1975,6 +2101,7 @@ void R_DrawSurfaces (int type)
 	{
 		shader = Cshaders[i];
 		if (shader->chain && shader->shaderfunc[type])
+		//	shader->shaderfunc[type](shader->chain);
 			for (stage = 0;stage < 1000;stage++)
 				for (surf = shader->chain;surf;surf = surf->chain)
 					if (shader->shaderfunc[type](stage, surf))
