@@ -171,7 +171,7 @@ static void R_SkyBox(void)
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
@@ -184,7 +184,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(3, 0, 0,  1,  1,  1);
 	}
 	m.tex[0] = R_GetTexture(skyboxside[1]); // back
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
@@ -197,7 +197,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
 	}
 	m.tex[0] = R_GetTexture(skyboxside[0]); // right
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
@@ -210,7 +210,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(3, 0, 0, -1,  1,  1);
 	}
 	m.tex[0] = R_GetTexture(skyboxside[2]); // left
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
@@ -223,7 +223,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(3, 0, 0,  1, -1,  1);
 	}
 	m.tex[0] = R_GetTexture(skyboxside[4]); // up
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
@@ -236,7 +236,7 @@ static void R_SkyBox(void)
 		R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
 	}
 	m.tex[0] = R_GetTexture(skyboxside[5]); // down
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
@@ -341,7 +341,7 @@ static void R_SkySphere(void)
 	m.numtriangles = skygridx*skygridy*2;
 	m.numverts = skygridx1*skygridy1;
 	m.tex[0] = R_GetTexture(solidskytexture);
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));
 		skyspherearrays(m.vertex, m.texcoords[0], m.color, skysphere, speedscale, m.colorscale);
@@ -349,7 +349,7 @@ static void R_SkySphere(void)
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.tex[0] = R_GetTexture(alphaskytexture);
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));
 		skyspherearrays(m.vertex, m.texcoords[0], m.color, skysphere, speedscale2, m.colorscale);

@@ -83,7 +83,7 @@ void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts);
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
 // (this is used for very high speed rendering, no copying)
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
-int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m);
+int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright);
 
 // saves a section of the rendered frame to a .tga file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);

@@ -746,7 +746,7 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 		// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
 		// feed it manually
 		qglBegin(GL_TRIANGLES);
-		if (r_multitexture.integer)
+		if (mesh_texture[1]) // if the mesh uses multiple textures
 		{
 			// the minigl doesn't have this (because it does not have ARB_multitexture)
 			for (i = 0;i < indexcount;i++)
@@ -1240,7 +1240,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
 // (this is used for very high speed rendering, no copying)
-int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
+int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 {
 	// these are static because gcc runs out of virtual registers otherwise
 	int i, j, overbright;
@@ -1343,7 +1343,7 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
 	{
 		if (m->tex[0])
 		{
-			overbright = gl_combine.integer;
+			overbright = wantoverbright && gl_combine.integer;
 			if (overbright)
 				scaler *= 0.25f;
 		}
@@ -1456,15 +1456,22 @@ void SCR_UpdateScreen (void)
 
 	R_TimeReport("finish");
 
-	if (gl_combine.integer && !gl_combine_extension)
-		Cvar_SetValue("gl_combine", 0);
+	if (r_textureunits.integer > gl_textureunits)
+		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
+	if (r_textureunits.integer < 1)
+		Cvar_SetValueQuick(&r_textureunits, 1);
 
-	lightscalebit = v_overbrightbits.integer;
-	if (gl_combine.integer && r_multitexture.integer)
-		lightscalebit += 2;
+	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
+		Cvar_SetValueQuick(&gl_combine, 0);
 
-	lightscale = 1.0f / (float) (1 << lightscalebit);
+	// lighting scale
 	overbrightscale = 1.0f / (float) (1 << v_overbrightbits.integer);
+
+	// lightmaps only
+	lightscalebit = v_overbrightbits.integer;
+	if (gl_combine.integer && r_textureunits.integer > 1)
+		lightscalebit += 2;
+	lightscale = 1.0f / (float) (1 << lightscalebit);
 
 	R_TimeReport("setup");
 

@@ -66,6 +66,9 @@ void Mod_SetupNoTexture(void)
 	r_notexture = R_LoadTexture(r_notexturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP);
 }
 
+extern void Mod_BrushStartup (void);
+extern void Mod_BrushShutdown (void);
+
 static void mod_start(void)
 {
 	int i;
@@ -74,6 +77,7 @@ static void mod_start(void)
 			Mod_UnloadModel(&mod_known[i]);
 
 	Mod_SetupNoTexture();
+	Mod_BrushStartup();
 }
 
 static void mod_shutdown(void)
@@ -84,6 +88,7 @@ static void mod_shutdown(void)
 			Mod_UnloadModel(&mod_known[i]);
 
 	R_FreeTexturePool(&r_notexturepool);
+	Mod_BrushShutdown();
 }
 
 static void mod_newmap(void)

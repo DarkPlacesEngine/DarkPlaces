@@ -70,6 +70,8 @@ typedef struct texture_s
 	rtexture_t *glowtexture;
 	// alpha texture (used for fogging), NULL if opaque
 	rtexture_t *fogtexture;
+	// detail texture (usually not used if transparent)
+	rtexture_t *detailtexture;
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
@@ -116,6 +118,8 @@ typedef struct surfvertex_s
 	float st[2];
 	// lightmap coordinates
 	float uv[2];
+	// detail texture coordinates
+	float ab[2];
 }
 surfvertex_t;
 

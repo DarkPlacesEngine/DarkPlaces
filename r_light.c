@@ -154,7 +154,7 @@ void R_DrawCoronas(void)
 		{
 			// trace to a point just barely closer to the eye
 			VectorSubtract(rd->origin, vpn, diff);
-			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1 && R_Mesh_Draw_GetBuffer(&m))
+			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1 && R_Mesh_Draw_GetBuffer(&m, false))
 			{
 				scale = m.colorscale * (1.0f / 131072.0f);
 				if (fogenabled)

@@ -186,7 +186,7 @@ void R_DrawExplosion(explosion_t *e)
 	m.numtriangles = EXPLOSIONTRIS;
 	m.numverts = EXPLOSIONVERTS;
 	m.tex[0] = R_GetTexture(explosiontexture);
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, explosiontris, m.numtriangles * sizeof(int[3]));
 		for (i = 0, v = m.vertex;i < m.numverts;i++, v += 4)
