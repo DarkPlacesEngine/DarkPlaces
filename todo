@@ -10,9 +10,7 @@
 0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add color code support to console printing (Vermeulen)
-0 darkplaces client: add coronaonly flag to .rtlights (Vermeulen)
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
-0 darkplaces client: add to .rtlights these fields: flags (ambient, diffuse, specular, normalmode, realtimemode), coronascale (0-1), the normalmode flag allows rtlights to forcibly exist in normal mode which is mainly useful for decorative coronas in nexuiz maps (Vermeulen)
 0 darkplaces client: cl_particles_size isn't working, it should affect rendering (Chillo)
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces client: default to -dinput mode to try to fix the stuttering input problem with gl_finish 0 mode (Kinn, Urre, romi)
@@ -346,6 +344,7 @@ d darkplaces client: add cl_particles_particleffect_bloodhack cvar to enable con
 d darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 d darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
 d darkplaces client: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
+d darkplaces client: add to .rtlights these fields: flags (ambient, diffuse, specular, normalmode, realtimemode), coronascale (0-1), the normalmode flag allows rtlights to forcibly exist in normal mode which is mainly useful for decorative coronas in nexuiz maps (Vermeulen)
 d darkplaces client: add two cvars to replace sbar_alpha, one would control background as 0-1, and one would control everything else as 0-1
 d darkplaces client: all glow trails are bright blue (Kinn)
 d darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
@@ -388,6 +387,7 @@ d darkplaces input: allow typing characters > 128 into console to allow Latin1 f
 d darkplaces input: key repeat should work in menus, for example scrolling quickly through options (Up2nOgOoD)
 d darkplaces loading: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex)
 d darkplaces loading: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
+d darkplaces loading: make files override pak and pk3 archives, as it's really what people expect, hopefully this won't break any broken mods (Stribbs)
 d darkplaces loading: make files override pak and pk3 archives, as it's really what people expect, hopefully this won't break any broken mods (Stribbs)
 d darkplaces loading: make hl map loading halve the lightmap samples, to fit hl's 0-1 range into quake's 0-2 range (KrimZon)
 d darkplaces loading: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
