@@ -1301,6 +1301,17 @@ static void CL_TimeRefresh_f (void)
 }
 
 /*
+===========
+CL_Shutdown
+===========
+*/
+void CL_Shutdown (void)
+{
+	Mem_FreePool (&cl_entities_mempool);
+	Mem_FreePool (&cl_refdef_mempool);
+}
+
+/*
 =================
 CL_Init
 =================
