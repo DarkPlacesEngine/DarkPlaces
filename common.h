@@ -192,6 +192,9 @@ typedef struct stringlist_s
 } stringlist_t;
 
 int matchpattern(char *in, char *pattern, int caseinsensitive);
+stringlist_t *stringlistappend(stringlist_t *current, char *text);
+void stringlistfree(stringlist_t *current);
+stringlist_t *stringlistsort(stringlist_t *start);
 stringlist_t *listdirectory(char *path);
 void freedirectory(stringlist_t *list);
 

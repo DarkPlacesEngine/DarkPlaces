@@ -10,8 +10,10 @@ int matchpattern(char *in, char *pattern, int caseinsensitive)
 	{
 		switch (*pattern)
 		{
+		case 0:
+			return 1; // end of pattern
 		case '?': // match any single character
-			if (!*in)
+			if (*in == 0 || *in == '/' || *in == '\\' || *in == ':')
 				return 0; // no match
 			in++;
 			pattern++;
@@ -19,23 +21,16 @@ int matchpattern(char *in, char *pattern, int caseinsensitive)
 		case '*': // match anything until following string
 			if (!*in)
 				return 1; // match
-			while (*pattern == '*')
-				pattern++;
-			if (*pattern == '?')
+			pattern++;
+			while (*in)
 			{
-				// *? (weird)
-				break;
-			}
-			else if (*pattern)
-			{
-				// *text (typical)
-				while (*in && *in != *pattern)
-					in++;
-			}
-			else
-			{
-				// *null (* at end of pattern)
-				return 1;
+				if (*in == '/' || *in == '\\' || *in == ':')
+					break;
+				// see if pattern matches at this offset
+				if (matchpattern(in, pattern, caseinsensitive))
+					return 1;
+				// nope, advance to next offset
+				in++;
 			}
 			break;
 		default:
