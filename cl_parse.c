@@ -108,22 +108,6 @@ qboolean Nehahrademcompatibility; // LordHavoc: to allow playback of the early N
 int dpprotocol; // LordHavoc: version of network protocol, or 0 if not DarkPlaces
 
 /*
-===============
-CL_EntityNum
-
-This error checks and tracks the total number of entities
-===============
-*/
-entity_t	*CL_EntityNum (int num)
-{
-	if (num >= MAX_EDICTS)
-		Host_Error ("CL_EntityNum: %i is an invalid number",num);
-		
-	return &cl_entities[num];
-}
-
-
-/*
 ==================
 CL_ParseStartSoundPacket
 ==================
@@ -138,7 +122,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
     float 	attenuation;
  	int		i;
 	           
-    field_mask = MSG_ReadByte(); 
+    field_mask = MSG_ReadByte();
 
     if (field_mask & SND_VOLUME)
 		volume = MSG_ReadByte ();
@@ -553,10 +537,7 @@ void CL_ParseUpdate (int bits)
 	if (num < 1)
 		Host_Error("CL_ParseUpdate: invalid entity number (%i)\n", num);
 
-	// mark as visible (no kill this frame)
-	entlife[num] = 2;
-
-	ent = CL_EntityNum (num);
+	ent = cl_entities + num;
 
 	for (i = 0;i < 32;i++)
 		if (bits & (1 << i))
@@ -571,8 +552,8 @@ void CL_ParseUpdate (int bits)
 	else
 		new = ent->state_baseline;
 
+	new.number = num;
 	new.time = cl.mtime[0];
-
 	new.flags = 0;
 	if (bits & U_MODEL)		new.modelindex = (new.modelindex & 0xFF00) | MSG_ReadByte();
 	if (bits & U_FRAME)		new.frame = (new.frame & 0xFF00) | MSG_ReadByte();
@@ -642,6 +623,12 @@ void CL_ParseUpdate (int bits)
 		ent->state_previous = ent->state_current;
 		ent->state_current = new;
 	}
+	if (ent->state_current.active)
+	{
+		cl_entities_active[ent->state_current.number] = true;
+		// mark as visible (no kill this frame)
+		entlife[ent->state_current.number] = 2;
+	}
 }
 
 void CL_ReadEntityFrame(void)
@@ -653,13 +640,14 @@ void CL_ReadEntityFrame(void)
 	EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
 	for (i = 0;i < entityframe.numentities;i++)
 	{
-		// the entity lives again...
-		entlife[entityframe.entitydata[i].number] = 2;
 		// copy the states
 		ent = &cl_entities[entityframe.entitydata[i].number];
 		ent->state_previous = ent->state_current;
 		ent->state_current = entityframe.entitydata[i];
 		ent->state_current.time = cl.mtime[0];
+		// the entity lives again...
+		entlife[ent->state_current.number] = 2;
+		cl_entities_active[ent->state_current.number] = true;
 	}
 	VectorCopy(cl.viewentoriginnew, cl.viewentoriginold);
 	VectorCopy(entityframe.eye, cl.viewentoriginnew);
@@ -1198,13 +1186,15 @@ void CL_ParseServerMessage (void)
 
 		case svc_spawnbaseline:
 			i = MSG_ReadShort ();
-			// must use CL_EntityNum() to force cl.num_entities up
-			CL_ParseBaseline (CL_EntityNum(i), false);
+			if (i < 0 || i >= MAX_EDICTS)
+				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
+			CL_ParseBaseline (cl_entities + i, false);
 			break;
 		case svc_spawnbaseline2:
 			i = MSG_ReadShort ();
-			// must use CL_EntityNum() to force cl.num_entities up
-			CL_ParseBaseline (CL_EntityNum(i), true);
+			if (i < 0 || i >= MAX_EDICTS)
+				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
+			CL_ParseBaseline (cl_entities + i, true);
 			break;
 		case svc_spawnstatic:
 			CL_ParseStatic (false);
