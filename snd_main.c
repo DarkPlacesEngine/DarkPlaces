@@ -24,19 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "snd_main.h"
 #include "snd_ogg.h"
 
-// TODO: find a better solution instead of using a define
-#if defined( _WIN32 ) && !defined( USE_SDL )
-# define USE_DSOUND
-#endif
-
-#ifdef USE_DSOUND
-#include <windows.h>
-#include <dsound.h>
-extern DWORD gSndBufSize;
-extern LPDIRECTSOUND pDS;
-extern LPDIRECTSOUNDBUFFER pDSBuf;
-#endif
-
 
 void S_Play(void);
 void S_PlayVol(void);
@@ -58,7 +45,6 @@ int snd_blocked = 0;
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
 
-// pointer should go away
 volatile dma_t *shm = 0;
 volatile dma_t sn;
 
@@ -679,62 +665,31 @@ void S_SetChannelVolume (unsigned int ch_ind, float fvol)
 
 void S_ClearBuffer(void)
 {
-	int		clear;
+	int	clear;
+	unsigned char *pbuf;
 
 	if (!sound_started || !shm)
 		return;
 
 	if (shm->format.width == 1)
-		clear = 0x80;
+		clear = 0x80;	// 8 bit sound (unsigned)
 	else
-		clear = 0;
+		clear = 0;		// 16 bit sound (signed)
 
-#ifdef USE_DSOUND
-	if (pDSBuf)
-	{
-		DWORD	dwSize;
-		DWORD	*pData;
-		int		reps;
-		HRESULT	hresult;
-
-		reps = 0;
-
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, (LPVOID*)&pData, &dwSize, NULL, NULL, 0)) != DS_OK)
-		{
-			if (hresult != DSERR_BUFFERLOST)
-			{
-				Con_Print("S_ClearBuffer: DS::Lock Sound Buffer Failed\n");
-				S_Shutdown ();
-				return;
-			}
-
-			if (++reps > 10000)
-			{
-				Con_Print("S_ClearBuffer: DS: couldn't restore buffer\n");
-				S_Shutdown ();
-				return;
-			}
-		}
-
-		memset(pData, clear, shm->samples * shm->format.width);
-
-		pDSBuf->lpVtbl->Unlock(pDSBuf, pData, dwSize, NULL, 0);
-
-	}
-	else
-#endif
-	if (shm->buffer)
+	pbuf = S_LockBuffer();
+	if (pbuf != NULL)
 	{
 		int setsize = shm->samples * shm->format.width;
-		unsigned char *buf = shm->buffer;
 
 		while (setsize--)
-			*buf++ = clear;
+			*pbuf++ = clear;
 
 		// on i586/i686 optimized versions of glibc, glibc *wrongly* IMO,
 		// reads the memory area before writing to it causing a seg fault
 		// since the memory is PROT_WRITE only and not PROT_READ|PROT_WRITE
 		//memset(shm->buffer, clear, shm->samples * shm->format.width);
+
+		S_UnlockBuffer ();
 	}
 }
 
@@ -950,37 +905,18 @@ void S_Update_(void)
 	if (!sound_started || (snd_blocked > 0))
 		return;
 
-// Updates DMA time
+	// Updates DMA time
 	GetSoundtime();
 
-// check to make sure that we haven't overshot
+	// check to make sure that we haven't overshot
 	if (paintedtime < soundtime)
 		paintedtime = soundtime;
 
-// mix ahead of current position
+	// mix ahead of current position
 	endtime = soundtime + _snd_mixahead.value * shm->format.speed;
 	samps = shm->samples >> (shm->format.channels - 1);
 	if (endtime > (unsigned int)(soundtime + samps))
 		endtime = soundtime + samps;
-
-#ifdef USE_DSOUND
-// if the buffer was lost or stopped, restore it and/or restart it
-	{
-		DWORD	dwStatus;
-
-		if (pDSBuf)
-		{
-			if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DS_OK)
-				Con_Print("Couldn't get sound buffer status\n");
-
-			if (dwStatus & DSBSTATUS_BUFFERLOST)
-				pDSBuf->lpVtbl->Restore (pDSBuf);
-
-			if (!(dwStatus & DSBSTATUS_PLAYING))
-				pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
-		}
-	}
-#endif
 
 	S_PaintChannels (endtime);
 
