@@ -111,8 +111,7 @@ void Host_EndGame (const char *format, ...)
 	va_end (argptr);
 	Con_DPrintf("Host_EndGame: %s\n",string);
 
-	if (sv.active)
-		Host_ShutdownServer (false);
+	Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_EndGame: %s\n",string);	// dedicated servers exit
@@ -168,8 +167,7 @@ void Host_Error (const char *error, ...)
 
 	PRVM_ProcessError();
 
-	if (sv.active)
-		Host_ShutdownServer (false);
+	Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
 		Sys_Error ("Host_Error: %s\n",hosterrorstring2);	// dedicated servers exit
@@ -507,13 +505,10 @@ void Host_ShutdownServer(qboolean crash)
 	if (!sv.active)
 		return;
 
+	Con_DPrintf("Host_ShutdownServer\n");
+
 	// print out where the crash happened, if it was caused by QC
 	PR_Crash();
-
-	sv.active = false;
-
-// stop all client sounds immediately
-	CL_Disconnect();
 
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
@@ -532,6 +527,8 @@ void Host_ShutdownServer(qboolean crash)
 			SV_DropClient(crash); // server shutdown
 
 	NetConn_CloseServerPorts();
+
+	sv.active = false;
 
 //
 // clear structures

@@ -986,6 +986,7 @@ void NetConn_ClientFrame(void)
 	{
 		Con_Print("Connection timed out\n");
 		CL_Disconnect();
+		Host_ShutdownServer (false);
 	}
 	for (conn = netconn_list;conn;conn = conn->next)
 		NetConn_ReSendMessage(conn);
