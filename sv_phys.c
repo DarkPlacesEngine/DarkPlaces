@@ -1396,7 +1396,6 @@ SV_Physics
 
 ================
 */
-extern dfunction_t *EndFrameQC;
 void SV_Physics (void)
 {
 	int		i;

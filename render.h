@@ -20,6 +20,48 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // refresh.h -- public interface to refresh functions
 
+// sky stuff
+extern char skyname[];
+extern void R_SetSkyBox(char* sky);
+extern void LoadSky_f(void);
+extern rtexture_t *solidskytexture;
+extern rtexture_t *alphaskytexture;
+extern float speedscale; // for top sky and bottom sky
+
+// far clip distance for scene
+extern cvar_t r_farclip;
+
+// fog stuff
+extern void FOG_clear(void);
+extern float fog_density, fog_red, fog_green, fog_blue;
+
+// SHOWLMP stuff (Nehahra)
+extern void SHOWLMP_decodehide(void);
+extern void SHOWLMP_decodeshow(void);
+extern void SHOWLMP_drawall(void);
+extern void SHOWLMP_clear(void);
+
+// render profiling stuff
+extern qboolean intimerefresh;
+extern cvar_t r_speeds2;
+extern char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
+
+// lighting stuff
+extern vec3_t lightspot;
+extern cvar_t r_ambient;
+
+// model rendering stuff
+extern float *aliasvert;
+extern float *aliasvertnorm;
+extern byte *aliasvertcolor;
+extern float modelalpha;
+
+// vis stuff
+extern cvar_t r_novis;
+
+// model transform stuff
+extern cvar_t gl_transform;
+
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
 

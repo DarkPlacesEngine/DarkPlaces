@@ -321,7 +321,7 @@ void Key_Message (int key)
 	}
 
 	// LordHavoc: increased messagemode length (was 31)
-	if (chat_bufferlen == 255)
+	if (chat_bufferlen == 240)
 		return; // all full
 
 	chat_buffer[chat_bufferlen++] = key;

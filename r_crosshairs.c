@@ -109,7 +109,7 @@ void crosshairload(int num, byte *in)
 	crosshairtex[num] = R_LoadTexture(va("crosshair%02d", num), 16, 16, &data[0][0], TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 
-void r_crosshairs_start()
+void r_crosshairs_start(void)
 {
 	int i;
 	for (i = 0;i < NUMCROSSHAIRS;i++)
@@ -117,15 +117,15 @@ void r_crosshairs_start()
 //	crosshairtex[1] = crosshairload(crosshairtex2);
 }
 
-void r_crosshairs_shutdown()
+void r_crosshairs_shutdown(void)
 {
 }
 
-void r_crosshairs_newmap()
+void r_crosshairs_newmap(void)
 {
 }
 
-void R_Crosshairs_Init()
+void R_Crosshairs_Init(void)
 {
 	Cvar_RegisterVariable(&crosshair_brightness);
 	Cvar_RegisterVariable(&crosshair_alpha);

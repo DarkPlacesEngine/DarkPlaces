@@ -80,15 +80,13 @@ void Con_ToggleConsole_f (void)
 	if (key_dest == key_console)
 	{
 		if (cls.state == ca_connected)
-		{
+//		{
 			key_dest = key_game;
-			key_lines[edit_line][1] = 0;	// clear any typing
-			key_linepos = 1;
-		}
+//			key_lines[edit_line][1] = 0;	// clear any typing
+//			key_linepos = 1;
+//		}
 		else
-		{
 			M_Menu_Main_f ();
-		}
 	}
 	else
 		key_dest = key_console;

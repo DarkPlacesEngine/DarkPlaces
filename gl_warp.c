@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-extern	model_t	*loadmodel;
-
 int		skytexturenum;
 
 rtexture_t *solidskytexture;
@@ -30,8 +28,6 @@ rtexture_t *alphaskytexture;
 float	speedscale;		// for top sky and bottom sky
 
 msurface_t	*warpface;
-
-extern cvar_t gl_subdivide_size;
 
 void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
 {
@@ -243,13 +239,11 @@ void LoadSky_f (void)
 	}
 }
 
-extern cvar_t r_farclip;
-
 #define R_SkyBoxPolyVec(s,t,x,y,z) \
 	glTexCoord2f((s) * (254.0f/256.0f) + (1.0f/256.0f), (t) * (254.0f/256.0f) + (1.0f/256.0f));\
 	glVertex3f((x) * 1024.0 + r_origin[0], (y) * 1024.0 + r_origin[1], (z) * 1024.0 + r_origin[2]);
 
-void R_SkyBox()
+void R_SkyBox(void)
 {
 	glDisable (GL_BLEND);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -356,7 +350,7 @@ void skydome(float *source, float s, float texscale)
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 }
 
-void R_SkyDome()
+void R_SkyDome(void)
 {
 	glDisable (GL_BLEND);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
@@ -384,7 +378,7 @@ void R_SkyDome()
 }
 */
 
-void R_Sky()
+void R_Sky(void)
 {
 	if (!r_render.value)
 		return;

@@ -130,12 +130,12 @@ void SNDDMA_Shutdown(void);
 #define	MAX_DYNAMIC_CHANNELS	128
 
 
-extern	channel_t   channels[MAX_CHANNELS];
+extern channel_t channels[MAX_CHANNELS];
 // 0 to MAX_DYNAMIC_CHANNELS-1	= normal entity sounds
 // MAX_DYNAMIC_CHANNELS to MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS -1 = water, etc
 // MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS to total_channels = static sounds
 
-extern	int			total_channels;
+extern int total_channels;
 
 //
 // Fake dma is a synchronous faking of the DMA progress used for
@@ -143,10 +143,10 @@ extern	int			total_channels;
 // number of times S_Update() is called per second.
 //
 
-extern qboolean 		fakedma;
-extern int 			fakedma_updates;
-extern int		paintedtime;
-extern int		soundtime;
+extern qboolean fakedma;
+extern int fakedma_updates;
+extern int paintedtime;
+extern int soundtime;
 extern vec3_t listener_origin;
 extern vec3_t listener_forward;
 extern vec3_t listener_right;
@@ -155,13 +155,14 @@ extern volatile dma_t *shm;
 extern volatile dma_t sn;
 extern vec_t sound_nominal_clip_dist;
 
-extern	cvar_t loadas8bit;
-extern	cvar_t bgmvolume;
-extern	cvar_t volume;
+extern cvar_t loadas8bit;
+extern cvar_t bgmvolume;
+extern cvar_t volume;
+extern cvar_t snd_swapstereo;
 
 extern qboolean	snd_initialized;
 
-extern int		snd_blocked;
+extern int snd_blocked;
 
 void S_LocalSound (char *s);
 sfxcache_t *S_LoadSound (sfx_t *s);

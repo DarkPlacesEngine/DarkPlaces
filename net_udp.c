@@ -40,8 +40,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern int gethostname (char *, int);
 extern int close (int);
 
-extern cvar_t hostname;
-
 static int net_acceptsocket = -1;		// socket for fielding new connections
 static int net_controlsocket;
 static int net_broadcastsocket = 0;

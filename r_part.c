@@ -262,7 +262,7 @@ void R_InitParticleTexture (void)
 	rocketglowparticletexture = R_LoadTexture ("glowparticletexture", 32, 32, &data[0][0][0], TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 
-void r_part_start()
+void r_part_start(void)
 {
 	particles = (particle_t *) qmalloc(r_numparticles * sizeof(particle_t));
 	freeparticles = (void *) qmalloc(r_numparticles * sizeof(particle_t *));
@@ -270,14 +270,14 @@ void r_part_start()
 	R_InitParticleTexture ();
 }
 
-void r_part_shutdown()
+void r_part_shutdown(void)
 {
 	numparticles = 0;
 	qfree(particles);
 	qfree(freeparticles);
 }
 
-void r_part_newmap()
+void r_part_newmap(void)
 {
 	numparticles = 0;
 }
@@ -1013,8 +1013,6 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 R_DrawParticles
 ===============
 */
-extern	cvar_t	sv_gravity;
-
 void R_MoveParticles (void)
 {
 	particle_t		*p;

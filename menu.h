@@ -25,7 +25,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MNET_IPX		1
 #define	MNET_TCP		2
 
-extern	int	m_activenet;
+extern int m_activenet;
+extern int m_return_state;
+extern int m_state;
+extern qboolean m_return_onerror;
+extern char m_return_reason[32];
 
 //
 // menus

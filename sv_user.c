@@ -23,11 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 edict_t	*sv_player;
 
-extern	cvar_t	sv_friction;
 cvar_t	sv_edgefriction = {"edgefriction", "2"};
 cvar_t	sv_predict = {"sv_predict", "1"};
 cvar_t	sv_deltacompress = {"sv_deltacompress", "1"};
-extern	cvar_t	sv_stopspeed;
 
 static	vec3_t		forward, right, up;
 
@@ -628,7 +626,6 @@ nextmsg:
 SV_RunClients
 ==================
 */
-extern dfunction_t *SV_PlayerPhysicsQC;
 void SV_RunClients (void)
 {
 	int				i;

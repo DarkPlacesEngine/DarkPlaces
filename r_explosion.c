@@ -72,7 +72,7 @@ int R_ExplosionVert(int column, int row)
 	return i;
 }
 
-void r_explosion_start()
+void r_explosion_start(void)
 {
 	int x, y;
 	byte noise1[128][128], noise2[128][128], data[128][128][4];
@@ -101,16 +101,16 @@ void r_explosion_start()
 	explosiontexturefog = R_LoadTexture ("explosiontexturefog", 128, 128, &data[0][0][0], TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 
-void r_explosion_shutdown()
+void r_explosion_shutdown(void)
 {
 }
 
-void r_explosion_newmap()
+void r_explosion_newmap(void)
 {
 	memset(explosion, 0, sizeof(explosion));
 }
 
-void R_Explosion_Init()
+void R_Explosion_Init(void)
 {
 	int i, x, y;
 	i = 0;
@@ -240,7 +240,7 @@ void R_MoveExplosion(explosion_t *e, float frametime)
 	}
 }
 
-void R_MoveExplosions()
+void R_MoveExplosions(void)
 {
 	int i;
 	float frametime;
@@ -259,7 +259,7 @@ void R_MoveExplosions()
 	}
 }
 
-void R_DrawExplosions()
+void R_DrawExplosions(void)
 {
 	int i;
 	if (!r_drawexplosions.value)

@@ -183,21 +183,34 @@ typedef struct client_s
 
 //============================================================================
 
-extern	cvar_t	teamplay;
-extern	cvar_t	skill;
-extern	cvar_t	deathmatch;
-extern	cvar_t	coop;
-extern	cvar_t	fraglimit;
-extern	cvar_t	timelimit;
+extern cvar_t teamplay;
+extern cvar_t skill;
+extern cvar_t deathmatch;
+extern cvar_t coop;
+extern cvar_t fraglimit;
+extern cvar_t timelimit;
+extern cvar_t pausable;
+extern cvar_t sv_deltacompress;
+extern cvar_t sv_maxvelocity;
+extern cvar_t sv_gravity;
+extern cvar_t sv_nostep;
+extern cvar_t sv_friction;
+extern cvar_t sv_edgefriction;
+extern cvar_t sv_stopspeed;
+extern cvar_t sv_maxspeed;
+extern cvar_t sv_accelerate;
+extern cvar_t sv_idealpitchscale;
+extern cvar_t sv_aim;
+extern cvar_t sv_predict;
 
-extern	server_static_t	svs;				// persistant server info
-extern	server_t		sv;					// local server
+extern server_static_t svs;				// persistant server info
+extern server_t sv;					// local server
 
-extern	client_t	*host_client;
+extern client_t *host_client;
 
-extern	jmp_buf 	host_abortserver;
+extern jmp_buf host_abortserver;
 
-extern	edict_t		*sv_player;
+extern edict_t *sv_player;
 
 //===========================================================
 
@@ -235,5 +248,5 @@ void SV_MoveToGoal (void);
 
 void SV_CheckForNewClients (void);
 void SV_RunClients (void);
-void SV_SaveSpawnparms ();
+void SV_SaveSpawnparms (void);
 void SV_SpawnServer (char *server);

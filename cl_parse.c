@@ -88,6 +88,16 @@ char *svc_strings[128] =
 
 //=============================================================================
 
+cvar_t demo_nehahra = {"demo_nehahra", "0"};
+
+void CL_Parse_Init(void)
+{
+	// LordHavoc: added demo_nehahra cvar
+	Cvar_RegisterVariable (&demo_nehahra);
+	if (nehahra)
+		Cvar_SetValue("demo_nehahra", 1);
+}
+
 qboolean Nehahrademcompatibility; // LordHavoc: to allow playback of the early Nehahra movie segments
 qboolean dpprotocol; // LordHavoc: whether or not the current network stream is the enhanced DarkPlaces protocol
 
@@ -229,12 +239,6 @@ void CL_KeepaliveMessage (void)
 	SZ_Clear (&cls.message);
 }
 
-extern qboolean isworldmodel;
-extern char skyname[];
-extern void R_SetSkyBox (char *sky);
-extern void FOG_clear();
-extern cvar_t r_farclip;
-
 void CL_ParseEntityLump(char *entdata)
 {
 	char *data;
@@ -329,7 +333,6 @@ void CL_ParseEntityLump(char *entdata)
 CL_ParseServerInfo
 ==================
 */
-extern cvar_t demo_nehahra;
 void CL_ParseServerInfo (void)
 {
 	char	*str;
@@ -669,12 +672,12 @@ void CL_BitProfile_f(void)
 	bitprofilecount = 0;
 }
 
-void CL_EntityUpdateSetup()
+void CL_EntityUpdateSetup(void)
 {
 	memset(entkill, 1, MAX_EDICTS);
 }
 
-void CL_EntityUpdateEnd()
+void CL_EntityUpdateEnd(void)
 {
 	int i;
 	for (i = 1;i < MAX_EDICTS;i++)
@@ -888,11 +891,6 @@ void CL_ParseEffect2 (void)
 
 #define SHOWNET(x) if(cl_shownet.value==2)Con_Printf ("%3i:%s\n", msg_readcount-1, x);
 
-extern void SHOWLMP_decodehide();
-extern void SHOWLMP_decodeshow();
-extern void R_SetSkyBox(char* sky);
-extern int netshown;
-
 /*
 =====================
 CL_ParseServerMessage
@@ -910,15 +908,9 @@ void CL_ParseServerMessage (void)
 // if recording demos, copy the message out
 //
 	if (cl_shownet.value == 1)
-	{
 		Con_Printf ("%i ",net_message.cursize);
-		netshown = true;
-	}
 	else if (cl_shownet.value == 2)
-	{
 		Con_Printf ("------------------\n");
-		netshown = true;
-	}
 	
 	cl.onground = false;	// unless the server says otherwise	
 //

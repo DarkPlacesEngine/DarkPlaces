@@ -27,21 +27,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 model_t	*loadmodel;
 char	loadname[32];	// for hunk tags
 
-extern void Mod_LoadSpriteModel (model_t *mod, void *buffer);
-extern void Mod_LoadBrushModel (model_t *mod, void *buffer);
-extern void Mod_LoadAliasModel (model_t *mod, void *buffer);
-extern void Mod_LoadQ2AliasModel (model_t *mod, void *buffer);
-extern void Mod_LoadZymoticModel (model_t *mod, void *buffer);
-model_t *Mod_LoadModel (model_t *mod, qboolean crash);
-
 // LordHavoc: increased from 512 to 2048
 #define	MAX_MOD_KNOWN	2048
 model_t	mod_known[MAX_MOD_KNOWN];
 int		mod_numknown;
-
-extern void Mod_BrushInit();
-extern void Mod_AliasInit();
-extern void Mod_SpriteInit();
 
 /*
 ===============

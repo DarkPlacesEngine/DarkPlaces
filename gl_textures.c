@@ -157,7 +157,7 @@ void GL_TextureStats_f(void)
 char engineversion[40];
 
 //void GL_UploadTexture (gltexture_t *glt);
-void r_textures_start()
+void r_textures_start(void)
 {
 //	int i;
 //	gltexture_t *glt;
@@ -165,11 +165,11 @@ void r_textures_start()
 //		GL_UploadTexture(glt);
 }
 
-void r_textures_shutdown()
+void r_textures_shutdown(void)
 {
 }
 
-void r_textures_newmap()
+void r_textures_newmap(void)
 {
 }
 

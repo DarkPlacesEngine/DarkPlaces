@@ -119,16 +119,12 @@ qpic_t	*Draw_CachePic (char *path)
 	return &pic->pic;
 }
 
-extern void LoadSky_f(void);
-
 /*
 ===============
 Draw_Init
 ===============
 */
-void rmain_registercvars();
-
-void gl_draw_start()
+void gl_draw_start(void)
 {
 	int		i;
 
@@ -150,11 +146,11 @@ void gl_draw_start()
 	draw_disc = Draw_PicFromWad ("disc");
 }
 
-void gl_draw_shutdown()
+void gl_draw_shutdown(void)
 {
 }
 
-void gl_draw_newmap()
+void gl_draw_newmap(void)
 {
 }
 
@@ -473,7 +469,7 @@ typedef struct showlmp_s
 
 showlmp_t showlmp[SHOWLMP_MAXLABELS];
 
-void SHOWLMP_decodehide()
+void SHOWLMP_decodehide(void)
 {
 	int i;
 	byte *lmplabel;
@@ -486,7 +482,7 @@ void SHOWLMP_decodehide()
 		}
 }
 
-void SHOWLMP_decodeshow()
+void SHOWLMP_decodeshow(void)
 {
 	int i, k;
 	byte lmplabel[256], picname[256];
@@ -525,7 +521,7 @@ void SHOWLMP_decodeshow()
 	showlmp[k].y = y;
 }
 
-void SHOWLMP_drawall()
+void SHOWLMP_drawall(void)
 {
 	int i;
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
@@ -533,7 +529,7 @@ void SHOWLMP_drawall()
 			Draw_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic));
 }
 
-void SHOWLMP_clear()
+void SHOWLMP_clear(void)
 {
 	int i;
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)

@@ -119,7 +119,6 @@ This shuts down both the client and server
 ================
 */
 char hosterrorstring[4096];
-extern qboolean hostloopactive;
 void Host_Error (char *error, ...)
 {
 	va_list		argptr;
@@ -762,14 +761,14 @@ void Host_Frame (float time)
 
 //============================================================================
 
-void Render_Init();
+void Render_Init(void);
 
 /*
 ====================
 Host_Init
 ====================
 */
-void Host_Init ()
+void Host_Init (void)
 {
 	int i;
 	/*

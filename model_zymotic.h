@@ -1,3 +1,4 @@
+
 typedef struct zymlump_s
 {
 	int start;
@@ -59,3 +60,5 @@ typedef struct zymvertex_s
 	float origin[3];
 }
 zymvertex_t;
+
+extern void Mod_LoadZymoticModel (struct model_s *mod, void *buffer);

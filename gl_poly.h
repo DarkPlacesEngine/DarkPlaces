@@ -1,22 +1,20 @@
 
-extern float fog_density, fog_red, fog_green, fog_blue;
-
 #define TPOLYTYPE_ALPHA 0
 #define TPOLYTYPE_ADD 1
 
-extern void transpolyclear();
-extern void transpolyrender();
+extern void transpolyclear(void);
+extern void transpolyrender(void);
 extern void transpolybegin(int texnum, int glowtexnum, int fogtexnum, int transpolytype);
-extern void transpolyend();
+extern void transpolyend(void);
 
-extern void wallpolyclear();
-extern void wallpolyrender();
+extern void wallpolyclear(void);
+extern void wallpolyrender(void);
 
-extern void skypolyclear();
-extern void skypolyrender();
-extern void skypolybegin();
+extern void skypolyclear(void);
+extern void skypolyrender(void);
+extern void skypolybegin(void);
 extern void skypolyvert(float x, float y, float z);
-extern void skypolyend();
+extern void skypolyend(void);
 
 #define MAX_TRANSPOLYS 65536
 #define MAX_TRANSVERTS (MAX_TRANSPOLYS*4)

@@ -479,7 +479,7 @@ void VID_SetDefaultMode (void)
 	IN_DeactivateMouse ();
 }
 
-void VID_RestoreSystemGamma();
+void VID_RestoreSystemGamma(void);
 
 void	VID_Shutdown (void)
 {
@@ -638,7 +638,7 @@ void ClearAllStates (void)
 	IN_ClearStates ();
 }
 
-void VID_RestoreGameGamma();
+void VID_RestoreGameGamma(void);
 
 void AppActivate(BOOL fActive, BOOL minimize)
 /****************************************************************************
@@ -1260,12 +1260,12 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 	return i; // return success or failure
 }
 
-void VID_RestoreGameGamma()
+void VID_RestoreGameGamma(void)
 {
 	VID_UpdateGamma(true);
 }
 
-void VID_GetSystemGamma()
+void VID_GetSystemGamma(void)
 {
 	HDC hdc;
 	hdc = GetDC (NULL);
@@ -1275,7 +1275,7 @@ void VID_GetSystemGamma()
 	ReleaseDC (NULL, hdc);
 }
 
-void VID_RestoreSystemGamma()
+void VID_RestoreSystemGamma(void)
 {
 	HDC hdc;
 	hdc = GetDC (NULL);
@@ -1290,7 +1290,7 @@ void VID_RestoreSystemGamma()
 VID_Init
 ===================
 */
-void	VID_Init ()
+void	VID_Init (void)
 {
 	int		i;
 //	int		existingmode;
@@ -1595,14 +1595,10 @@ void VID_MenuDraw (void)
 		}
 	}
 
-	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*2,
-			 "Video modes must be set from the");
-	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*3,
-			 "command line with -width <width>");
-	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*4,
-			 "and -bpp <bits-per-pixel>");
-	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*6,
-			 "Select windowed mode with -window");
+	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*2, "Video modes must be set from the");
+	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*3, "command line with -width <width>");
+	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*4, "and -bpp <bits-per-pixel>");
+	M_Print (3*8, 36 + MODE_AREA_HEIGHT * 8 + 8*6, "Select windowed mode with -window");
 }
 
 

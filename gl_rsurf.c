@@ -54,19 +54,19 @@ int lightmapbytes;
 
 int wateralpha;
 
-void gl_surf_start()
+void gl_surf_start(void)
 {
 }
 
-void gl_surf_shutdown()
+void gl_surf_shutdown(void)
 {
 }
 
-void gl_surf_newmap()
+void gl_surf_newmap(void)
 {
 }
 
-void GL_Surf_Init()
+void GL_Surf_Init(void)
 {
 	int i;
 	for (i = 0;i < MAX_LIGHTMAPS;i++)
@@ -418,12 +418,6 @@ texture_t *R_TextureAnimation (texture_t *base)
 */
 
 
-extern	int		solidskytexture;
-extern	int		alphaskytexture;
-extern	float	speedscale;		// for top sky and bottom sky
-
-extern char skyname[];
-
 float	turbsin[256] =
 {
 	#include "gl_warp_sin.h"
@@ -431,7 +425,7 @@ float	turbsin[256] =
 #define TURBSCALE (256.0 / (2 * M_PI))
 
 
-void UploadLightmaps()
+void UploadLightmaps(void)
 {
 	int i;
 	if (nosubimage || nosubimagefragments)
@@ -783,8 +777,6 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 }
 
 // LordHavoc: transparent brush models
-extern float modelalpha;
-
 void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmodel)
 {
 	int i, alpha, size3;
@@ -964,7 +956,6 @@ void R_DrawBrushModel (entity_t *e)
 */
 
 static byte *worldvis;
-extern cvar_t r_novis;
 
 void R_MarkLeaves (void)
 {
@@ -978,7 +969,7 @@ void R_MarkLeaves (void)
 	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
 }
 
-void R_SolidWorldNode ()
+void R_SolidWorldNode (void)
 {
 	int l;
 	mleaf_t *leaf;
@@ -1025,7 +1016,7 @@ void R_SolidWorldNode ()
 
 /*
 // experimental and inferior to the other in recursion depth allowances
-void R_PortalWorldNode ()
+void R_PortalWorldNode (void)
 {
 	int i, j;
 	mportal_t *p;
@@ -1098,7 +1089,7 @@ void R_PortalWorldNode ()
 }
 */
 
-void R_PortalWorldNode ()
+void R_PortalWorldNode (void)
 {
 	int portalstack, i;
 	mportal_t *p, *pstack[8192];
@@ -1213,7 +1204,7 @@ void R_DrawSurfaces (void)
 	}
 }
 
-void R_DrawPortals()
+void R_DrawPortals(void)
 {
 	int drawportals, i, r, g, b;
 	mleaf_t *leaf, *endleaf;

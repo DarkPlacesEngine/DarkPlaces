@@ -142,20 +142,31 @@ typedef struct model_s
 
 //============================================================================
 
-void	Mod_Init (void);
-void	Mod_ClearAll (void);
+// used to avoid setting up submodels in non-world bmodels
+extern qboolean isworldmodel;
+// model loading
+extern model_t *loadmodel;
+extern byte	*mod_base;
+// sky/water subdivision
+extern cvar_t gl_subdivide_size;
+// texture fullbrights
+extern cvar_t r_fullbrights;
+
+void Mod_Init (void);
+void Mod_ClearAll (void);
 model_t *Mod_ForName (char *name, qboolean crash);
-void	*Mod_Extradata (model_t *mod);	// handles caching
-void	Mod_TouchModel (char *name);
+void *Mod_Extradata (model_t *mod);	// handles caching
+void Mod_TouchModel (char *name);
 
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
-byte	*Mod_LeafPVS (mleaf_t *leaf, model_t *model);
+byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model);
 
-extern model_t	*loadmodel;
-extern char	loadname[32];	// for hunk tags
+extern model_t *loadmodel;
+extern char loadname[32];	// for hunk tags
 
 extern model_t *Mod_LoadModel (model_t *mod, qboolean crash);
 
 extern float RadiusFromBounds (vec3_t mins, vec3_t maxs);
 extern model_t *Mod_FindName (char *name);
+
 #endif	// __MODEL__

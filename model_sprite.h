@@ -47,3 +47,6 @@ typedef struct
 //	void				*cachespot;		// remove?
 	int					ofs_frames;
 } msprite_t;
+
+extern void Mod_LoadSpriteModel (struct model_s *mod, void *buffer);
+extern void Mod_SpriteInit(void);

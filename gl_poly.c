@@ -34,7 +34,7 @@ float transviewdist; // distance of view origin along the view normal
 
 float transreciptable[256];
 
-void gl_poly_start()
+void gl_poly_start(void)
 {
 	int i;
 	transvert = qmalloc(MAX_TRANSVERTS * sizeof(transvert_t));
@@ -50,7 +50,7 @@ void gl_poly_start()
 		transreciptable[i] = 1.0f / i;
 }
 
-void gl_poly_shutdown()
+void gl_poly_shutdown(void)
 {
 	qfree(transvert);
 	qfree(transpoly);
@@ -62,17 +62,17 @@ void gl_poly_shutdown()
 	qfree(skypoly);
 }
 
-void gl_poly_newmap()
+void gl_poly_newmap(void)
 {
 }
 
-void GL_Poly_Init()
+void GL_Poly_Init(void)
 {
 	Cvar_RegisterVariable (&gl_multitexture);
 	R_RegisterModule("GL_Poly", gl_poly_start, gl_poly_shutdown, gl_poly_newmap);
 }
 
-void transpolyclear()
+void transpolyclear(void)
 {
 	currenttranspoly = currenttransvert = 0;
 	currenttranslist = translist;
@@ -117,7 +117,7 @@ void transpolyvert(float x, float y, float z, float s, float t, int r, int g, in
 }
 */
 
-void transpolyend()
+void transpolyend(void)
 {
 	float center, d, maxdist;
 	int i;
@@ -156,7 +156,7 @@ void transpolyend()
 
 int transpolyindices;
 
-void transpolyrender()
+void transpolyrender(void)
 {
 	int i, j, tpolytype, texnum;
 	transpoly_t *p;
@@ -349,12 +349,12 @@ void transpolyrender()
 	glDisable(GL_ALPHA_TEST);
 }
 
-void wallpolyclear()
+void wallpolyclear(void)
 {
 	currentwallpoly = currentwallvert = 0;
 }
 
-void wallpolyrender()
+void wallpolyrender(void)
 {
 	int i, j, texnum, lighttexnum;
 	wallpoly_t *p;
@@ -569,14 +569,12 @@ lit:
 	glDepthMask(1);
 }
 
-void skypolyclear()
+void skypolyclear(void)
 {
 	currentskypoly = currentskyvert = 0;
 }
 
-extern char skyname[];
-extern rtexture_t *solidskytexture, *alphaskytexture;
-void skypolyrender()
+void skypolyrender(void)
 {
 	int i, j;
 	skypoly_t *p;

@@ -60,8 +60,8 @@ static float	mouse_x, mouse_y;
 static float	old_mouse_x, old_mouse_y;
 static int	mx, my;
 
-static void IN_init_kb();
-static void IN_init_mouse();
+static void IN_init_kb(void);
+static void IN_init_mouse(void);
 
 cvar_t m_filter = {"m_filter","0"};
 
@@ -111,7 +111,7 @@ void IN_Init(void)
 	in_svgalib_inited = 1;
 }
 
-static void IN_init_kb()
+static void IN_init_kb(void)
 {
 	int i;
 
@@ -231,7 +231,7 @@ static void IN_init_kb()
 	keyboard_seteventhandler(keyhandler);
 }
 
-static void IN_init_mouse()
+static void IN_init_mouse(void)
 {
 	int mtype;
 	char *mousedev;

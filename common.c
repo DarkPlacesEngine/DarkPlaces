@@ -1217,7 +1217,7 @@ void qfree(void *mem)
 	free(m);
 }
 
-void GL_TextureStats_PrintTotal(void);
+extern void GL_TextureStats_PrintTotal(void);
 extern int hunk_low_used, hunk_high_used, hunk_size;
 void COM_Memstats_f(void)
 {
