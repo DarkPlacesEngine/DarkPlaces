@@ -307,7 +307,7 @@ const char *builtinshader_light_vert =
 "\n"
 "#ifdef USEOFFSETMAPPING\n"
 "	vec2 OffsetVector = normalize(EyeVector).xy * vec2(-1, 1);\n"
-"	vec2 TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
+"	vec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
