@@ -370,7 +370,7 @@ sndinitstat SNDDMA_InitDirect (void)
 
 	gSndBufSize = dsbcaps.dwBufferBytes;
 
-// initialize the buffer
+	// initialize the buffer
 	reps = 0;
 
 	while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, (LPVOID*)&lpData, &dwSize, NULL, NULL, 0)) != DS_OK)
@@ -433,7 +433,7 @@ qboolean SNDDMA_InitWav (void)
 	shm->format.channels = 2;
 	shm->format.width = 2;
 // COMMANDLINEOPTION: Windows Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
-	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
+	i = COM_CheckParm ("-sndspeed");
 	if (i && i != (com_argc - 1))
 		shm->format.speed = atoi(com_argv[i+1]);
 	else
@@ -734,16 +734,27 @@ void *S_LockBuffer(void)
 {
 	int reps;
 	HRESULT hresult;
+	DWORD	dwStatus;
 
 	if (pDSBuf)
 	{
+		// if the buffer was lost or stopped, restore it and/or restart it
+		if (pDSBuf->lpVtbl->GetStatus (pDSBuf, &dwStatus) != DS_OK)
+			Con_Print("Couldn't get sound buffer status\n");
+
+		if (dwStatus & DSBSTATUS_BUFFERLOST)
+			pDSBuf->lpVtbl->Restore (pDSBuf);
+
+		if (!(dwStatus & DSBSTATUS_PLAYING))
+			pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
+
 		reps = 0;
 
 		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, (LPVOID*)&dsound_pbuf, &dsound_dwSize, (LPVOID*)&dsound_pbuf2, &dsound_dwSize2, 0)) != DS_OK)
 		{
 			if (hresult != DSERR_BUFFERLOST)
 			{
-				Con_Print("S_LockBuffer: DS::Lock Sound Buffer Failed\n");
+				Con_Print("S_LockBuffer: DS: Lock Sound Buffer Failed\n");
 				S_Shutdown ();
 				S_Startup ();
 				return NULL;
