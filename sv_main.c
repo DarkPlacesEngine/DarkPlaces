@@ -287,7 +287,7 @@ void SV_SendServerinfo (client_t *client)
 
 // set view
 	MSG_WriteByte (&client->message, svc_setview);
-	MSG_WriteShort (&client->message, client->edictnumber);
+	MSG_WriteShort (&client->message, NUM_FOR_EDICT(client->edict));
 
 	MSG_WriteByte (&client->message, svc_signonnum);
 	MSG_WriteByte (&client->message, 1);
@@ -306,9 +306,7 @@ once for a player each game, not once for each level change.
 */
 void SV_ConnectClient (int clientnum)
 {
-	edict_t			*ent;
 	client_t		*client;
-	int				edictnum;
 	struct qsocket_s *netconnection;
 	int				i;
 	float			spawn_parms[NUM_SPAWN_PARMS];
@@ -316,10 +314,6 @@ void SV_ConnectClient (int clientnum)
 	client = svs.clients + clientnum;
 
 	Con_DPrintf ("Client %s connected\n", client->netconnection->address);
-
-	edictnum = clientnum+1;
-
-	ent = EDICT_NUM(edictnum);
 
 // set up the client_t
 	netconnection = client->netconnection;
@@ -332,7 +326,7 @@ void SV_ConnectClient (int clientnum)
 	strcpy (client->name, "unconnected");
 	client->active = true;
 	client->spawned = false;
-	client->edictnumber = edictnum;
+	client->edict = EDICT_NUM(clientnum+1);
 	client->message.data = client->msgbuf;
 	client->message.maxsize = sizeof(client->msgbuf);
 	client->message.allowoverflow = true;		// we can catch it
@@ -761,7 +755,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			bits = bits | U_EXTERIORMODEL;
 
 // send an update
-		baseline = &ent->baseline;
+		baseline = &ent->e->baseline;
 
 		if (((int)ent->v->effects & EF_DELTA) && sv_deltacompress.integer)
 		{
@@ -769,7 +763,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			if (realtime < client->nextfullupdate[e])
 			{
 				bits |= U_DELTA;
-				baseline = &ent->deltabaseline;
+				baseline = &ent->e->deltabaseline;
 			}
 			else
 				nextfullupdate = realtime + 0.5f;
@@ -809,17 +803,17 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (((int) baseline->frame & 0xFF00) != ((int) ent->v->modelindex & 0xFF00))		bits |= U_MODEL2;
 
 		// update delta baseline
-		VectorCopy(ent->v->origin, ent->deltabaseline.origin);
-		VectorCopy(ent->v->angles, ent->deltabaseline.angles);
-		ent->deltabaseline.colormap = ent->v->colormap;
-		ent->deltabaseline.skin = ent->v->skin;
-		ent->deltabaseline.frame = ent->v->frame;
-		ent->deltabaseline.effects = ent->v->effects;
-		ent->deltabaseline.modelindex = ent->v->modelindex;
-		ent->deltabaseline.alpha = alpha;
-		ent->deltabaseline.scale = scale;
-		ent->deltabaseline.glowsize = glowsize;
-		ent->deltabaseline.glowcolor = glowcolor;
+		VectorCopy(ent->v->origin, ent->e->deltabaseline.origin);
+		VectorCopy(ent->v->angles, ent->e->deltabaseline.angles);
+		ent->e->deltabaseline.colormap = ent->v->colormap;
+		ent->e->deltabaseline.skin = ent->v->skin;
+		ent->e->deltabaseline.frame = ent->v->frame;
+		ent->e->deltabaseline.effects = ent->v->effects;
+		ent->e->deltabaseline.modelindex = ent->v->modelindex;
+		ent->e->deltabaseline.alpha = alpha;
+		ent->e->deltabaseline.scale = scale;
+		ent->e->deltabaseline.glowsize = glowsize;
+		ent->e->deltabaseline.glowcolor = glowcolor;
 
 		// write the message
 		if (bits >= 16777216)
@@ -915,7 +909,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	ent = NEXT_EDICT(sv.edicts);
 	for (e = 1;e < sv.num_edicts;e++, ent = NEXT_EDICT(ent))
 	{
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 		flags = 0;
 
@@ -1403,9 +1397,9 @@ qboolean SV_SendClientDatagram (client_t *client)
 	if (client->spawned)
 	{
 		// add the client specific data to the datagram
-		SV_WriteClientdataToMessage (EDICT_NUM(client->edictnumber), &msg);
+		SV_WriteClientdataToMessage (client->edict, &msg);
 
-		SV_WriteEntitiesToClient (client, EDICT_NUM(client->edictnumber), &msg);
+		SV_WriteEntitiesToClient (client, client->edict, &msg);
 
 		// copy the server datagram if there is space
 		if (msg.cursize + sv.datagram.cursize < msg.maxsize)
@@ -1429,13 +1423,14 @@ SV_UpdateToReliableMessages
 */
 void SV_UpdateToReliableMessages (void)
 {
-	int			i, j;
+	int i, j;
 	client_t *client;
 
 // check for changes to be sent over the reliable streams
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 	{
-		if (host_client->old_frags != EDICT_NUM(host_client->edictnumber)->v->frags)
+		sv_player = host_client->edict;
+		if (host_client->old_frags != sv_player->v->frags)
 		{
 			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 			{
@@ -1443,18 +1438,18 @@ void SV_UpdateToReliableMessages (void)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatefrags);
 				MSG_WriteByte (&client->message, i);
-				MSG_WriteShort (&client->message, EDICT_NUM(host_client->edictnumber)->v->frags);
+				MSG_WriteShort (&client->message, sv_player->v->frags);
 			}
 
-			host_client->old_frags = EDICT_NUM(host_client->edictnumber)->v->frags;
+			host_client->old_frags = sv_player->v->frags;
 		}
 	}
 
-	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+	for (j=0, host_client = svs.clients ; j<svs.maxclients ; j++, host_client++)
 	{
-		if (!client->active)
+		if (!host_client->active)
 			continue;
-		SZ_Write (&client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
+		SZ_Write (&host_client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 	}
 
 	SZ_Clear (&sv.reliable_datagram);
@@ -1613,31 +1608,31 @@ void SV_CreateBaseline (void)
 		svent = EDICT_NUM(entnum);
 
 		// LordHavoc: always clear state values, whether the entity is in use or not
-		ClearStateToDefault(&svent->baseline);
+		ClearStateToDefault(&svent->e->baseline);
 
-		if (svent->free)
+		if (svent->e->free)
 			continue;
 		if (entnum > svs.maxclients && !svent->v->modelindex)
 			continue;
 
 		// create entity baseline
-		VectorCopy (svent->v->origin, svent->baseline.origin);
-		VectorCopy (svent->v->angles, svent->baseline.angles);
-		svent->baseline.frame = svent->v->frame;
-		svent->baseline.skin = svent->v->skin;
+		VectorCopy (svent->v->origin, svent->e->baseline.origin);
+		VectorCopy (svent->v->angles, svent->e->baseline.angles);
+		svent->e->baseline.frame = svent->v->frame;
+		svent->e->baseline.skin = svent->v->skin;
 		if (entnum > 0 && entnum <= svs.maxclients)
 		{
-			svent->baseline.colormap = entnum;
-			svent->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
+			svent->e->baseline.colormap = entnum;
+			svent->e->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
 		}
 		else
 		{
-			svent->baseline.colormap = 0;
-			svent->baseline.modelindex = svent->v->modelindex;
+			svent->e->baseline.colormap = 0;
+			svent->e->baseline.modelindex = svent->v->modelindex;
 		}
 
 		large = false;
-		if (svent->baseline.modelindex & 0xFF00 || svent->baseline.frame & 0xFF00)
+		if (svent->e->baseline.modelindex & 0xFF00 || svent->e->baseline.frame & 0xFF00)
 			large = true;
 
 		// add to the message
@@ -1649,20 +1644,20 @@ void SV_CreateBaseline (void)
 
 		if (large)
 		{
-			MSG_WriteShort (&sv.signon, svent->baseline.modelindex);
-			MSG_WriteShort (&sv.signon, svent->baseline.frame);
+			MSG_WriteShort (&sv.signon, svent->e->baseline.modelindex);
+			MSG_WriteShort (&sv.signon, svent->e->baseline.frame);
 		}
 		else
 		{
-			MSG_WriteByte (&sv.signon, svent->baseline.modelindex);
-			MSG_WriteByte (&sv.signon, svent->baseline.frame);
+			MSG_WriteByte (&sv.signon, svent->e->baseline.modelindex);
+			MSG_WriteByte (&sv.signon, svent->e->baseline.frame);
 		}
-		MSG_WriteByte (&sv.signon, svent->baseline.colormap);
-		MSG_WriteByte (&sv.signon, svent->baseline.skin);
+		MSG_WriteByte (&sv.signon, svent->e->baseline.colormap);
+		MSG_WriteByte (&sv.signon, svent->e->baseline.skin);
 		for (i=0 ; i<3 ; i++)
 		{
-			MSG_WriteDPCoord(&sv.signon, svent->baseline.origin[i]);
-			MSG_WriteAngle(&sv.signon, svent->baseline.angles[i]);
+			MSG_WriteDPCoord(&sv.signon, svent->e->baseline.origin[i]);
+			MSG_WriteAngle(&sv.signon, svent->e->baseline.angles[i]);
 		}
 	}
 }
@@ -1714,7 +1709,7 @@ void SV_SaveSpawnparms (void)
 			continue;
 
 	// call the progs to get default spawn parms for the new client
-		pr_global_struct->self = EDICT_TO_PROG(EDICT_NUM(host_client->edictnumber));
+		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 		PR_ExecuteProgram (pr_global_struct->SetChangeParms, "QC function SetChangeParms is missing");
 		for (j=0 ; j<NUM_SPAWN_PARMS ; j++)
 			host_client->spawn_parms[j] = (&pr_global_struct->parm1)[j];
@@ -1724,37 +1719,37 @@ void SV_SaveSpawnparms (void)
 void SV_IncreaseEdicts(void)
 {
 	int i;
-	edict_t *e;
+	edict_t *ent;
 	int oldmax_edicts = sv.max_edicts;
-	void *oldedicts = sv.edicts;
+	void *oldedictsengineprivate = sv.edictsengineprivate;
 	void *oldedictsfields = sv.edictsfields;
-	void *oldedictstable = sv.edictstable;
 	void *oldmoved_edicts = sv.moved_edicts;
 
+	// links don't survive the transition, so unlink everything
 	for (i = 0;i < sv.max_edicts;i++)
-		SV_UnlinkEdict (sv.edictstable[i]);
+		SV_UnlinkEdict (sv.edicts + i);
 	SV_ClearWorld();
 
 	sv.max_edicts   = min(sv.max_edicts + 32, MAX_EDICTS);
-	sv.edicts       = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t));
+	sv.edictsengineprivate = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_engineprivate_t));
 	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
-	sv.edictstable  = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
 	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
 
-	memcpy(sv.edicts      , oldedicts      , oldmax_edicts * sizeof(edict_t));
+	memcpy(sv.edictsengineprivate, oldedictsengineprivate, oldmax_edicts * sizeof(edict_engineprivate_t));
 	memcpy(sv.edictsfields, oldedictsfields, oldmax_edicts * pr_edict_size);
 
 	for (i = 0;i < sv.max_edicts;i++)
 	{
-		e = sv.edictstable[i] = sv.edicts + i;
-		e->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
+		ent = sv.edicts + i;
+		ent->e = sv.edictsengineprivate + i;
+		ent->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
+		// link every entity except world
 		if (i > 0)
-			SV_LinkEdict(e, false);
+			SV_LinkEdict(ent, false);
 	}
 
-	Mem_Free(oldedicts);
+	Mem_Free(oldedictsengineprivate);
 	Mem_Free(oldedictsfields);
-	Mem_Free(oldedictstable);
 	Mem_Free(oldmoved_edicts);
 }
 
@@ -1810,23 +1805,24 @@ void SV_SpawnServer (const char *server)
 
 // allocate server memory
 	// start out with just enough room for clients and a reasonable estimate of entities
-	sv.max_edicts = ((svs.maxclients + 1) + 31) & ~31;
-	sv.max_edicts = max(sv.max_edicts, 128);
+	sv.max_edicts = ((svs.maxclients + 128) + 31) & ~31;
+	sv.max_edicts = min(sv.max_edicts, MAX_EDICTS);
 
 	// clear the edict memory pool
 	Mem_EmptyPool(sv_edicts_mempool);
 	// edict_t structures (hidden from progs)
-	sv.edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t));
+	sv.edicts = Mem_Alloc(sv_edicts_mempool, MAX_EDICTS * sizeof(edict_t));
+	// engine private structures (hidden from progs)
+	sv.edictsengineprivate = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_engineprivate_t));
 	// progs fields, often accessed by server
 	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
-	// table of edict pointers, for quick lookup of edicts
-	sv.edictstable = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
 	// used by PushMove to move back pushed entities
 	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
 	for (i = 0;i < sv.max_edicts;i++)
 	{
-		sv.edictstable[i] = sv.edicts + i;
-		sv.edictstable[i]->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
+		ent = sv.edicts + i;
+		ent->e = sv.edictsengineprivate + i;
+		ent->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
 	}
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
@@ -1844,7 +1840,7 @@ void SV_SpawnServer (const char *server)
 // leave slots at start for clients only
 	sv.num_edicts = svs.maxclients+1;
 	for (i=0 ; i<svs.maxclients ; i++)
-		svs.clients[i].edictnumber = i+1;
+		svs.clients[i].edict = EDICT_NUM(i+1);
 
 	sv.state = ss_loading;
 	sv.paused = false;
@@ -1884,7 +1880,7 @@ void SV_SpawnServer (const char *server)
 //
 	ent = EDICT_NUM(0);
 	memset (ent->v, 0, progs->entityfields * 4);
-	ent->free = false;
+	ent->e->free = false;
 	ent->v->model = PR_SetString(sv.modelname);
 	ent->v->modelindex = 1;		// world model
 	ent->v->solid = SOLID_BSP;

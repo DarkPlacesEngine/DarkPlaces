@@ -43,11 +43,14 @@ typedef struct link_s
 
 #define ENTITYGRIDAREAS 16
 
-// the entire server entity structure
-typedef struct edict_s
+typedef struct edict_engineprivate_s
 {
 	// true if this edict is unused
 	qboolean free;
+	// sv.time when the object was freed (to prevent early reuse which could
+	// mess up client interpolation or obscure severe QuakeC bugs)
+	float freetime;
+
 	// physics grid areas this edict is linked into
 	link_t areagrid[ENTITYGRIDAREAS];
 	// since the areagrid can have multiple references to one entity,
@@ -64,16 +67,23 @@ typedef struct edict_s
 
 	// LordHavoc: gross hack to make floating items still work
 	int suspendedinairflag;
-	// sv.time when the object was freed (to prevent early reuse which could
-	// mess up client interpolation or obscure severe QuakeC bugs)
-	float freetime;
 	// used by PushMove to keep track of where objects were before they were
 	// moved, in case they need to be moved back
 	vec3_t moved_from;
 	vec3_t moved_fromangles;
-	// edict fields (stored in another array)
+}
+edict_engineprivate_t;
+
+// the entire server entity structure
+// NOTE: keep this small!  priv and v are dynamic but this struct is not!
+typedef struct edict_s
+{
+	// engine-private fields (stored in dynamically resized array)
+	edict_engineprivate_t *e;
+	// QuakeC fields (stored in dynamically resized array)
 	entvars_t *v;
-} edict_t;
+}
+edict_t;
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.
 extern int eval_gravity;
@@ -144,6 +154,7 @@ void PR_Crash (void);
 
 edict_t *ED_Alloc (void);
 void ED_Free (edict_t *ed);
+void ED_ClearEdict (edict_t *e);
 
 char	*ED_NewString (const char *string);
 // returns a copy of the string allocated from the server's string heap
@@ -158,7 +169,7 @@ void ED_ParseGlobals (const char *data);
 void ED_LoadFromFile (const char *data);
 
 edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline);
-#define EDICT_NUM(n) (((n) >= 0 && (n) < sv.max_edicts) ? sv.edictstable[(n)] : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
+#define EDICT_NUM(n) (((n) >= 0 && (n) < sv.max_edicts) ? sv.edicts + (n) : EDICT_NUM_ERROR(n, __FILE__, __LINE__))
 
 //int NUM_FOR_EDICT_ERROR(edict_t *e);
 #define NUM_FOR_EDICT(e) ((edict_t *)(e) - sv.edicts)

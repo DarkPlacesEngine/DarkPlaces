@@ -89,7 +89,7 @@ void Host_Status_f (void)
 		}
 		else
 			hours = 0;
-		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)EDICT_NUM(client->edictnumber)->v->frags, hours, minutes, seconds);
+		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->v->frags, hours, minutes, seconds);
 		print ("   %s\n", client->netconnection->address);
 	}
 }
@@ -418,7 +418,7 @@ void Host_Savegame_f (void)
 
 	for (i=0 ; i<svs.maxclients ; i++)
 	{
-		if (svs.clients[i].active && (EDICT_NUM(svs.clients[i].edictnumber)->v->health <= 0) )
+		if (svs.clients[i].active && (svs.clients[i].edict->v->health <= 0) )
 		{
 			Con_Printf ("Can't savegame with a dead player\n");
 			return;
@@ -602,11 +602,11 @@ void Host_PerformLoadGame(char *name)
 			// parse an edict
 			ent = EDICT_NUM(entnum);
 			memset (ent->v, 0, progs->entityfields * 4);
-			ent->free = false;
+			ent->e->free = false;
 			ED_ParseEdict (start, ent);
 
 			// link it into the bsp tree
-			if (!ent->free)
+			if (!ent->e->free)
 				SV_LinkEdict (ent, false);
 		}
 
@@ -665,7 +665,7 @@ void Host_Name_f (void)
 		if (strcmp(host_client->name, newName) != 0)
 			Con_Printf ("%s renamed to %s\n", host_client->name, newName);
 	strcpy (host_client->name, newName);
-	EDICT_NUM(host_client->edictnumber)->v->netname = PR_SetString(host_client->name);
+	sv_player->v->netname = PR_SetString(host_client->name);
 
 // send notification to all clients
 
@@ -740,7 +740,7 @@ void Host_Say(qboolean teamonly)
 	{
 		if (!client || !client->active || !client->spawned)
 			continue;
-		if (teamplay.integer && teamonly && EDICT_NUM(client->edictnumber)->v->team != EDICT_NUM(save->edictnumber)->v->team)
+		if (teamplay.integer && teamonly && client->edict->v->team != save->edict->v->team)
 			continue;
 		host_client = client;
 		SV_ClientPrintf("%s", text);
@@ -883,13 +883,13 @@ void Host_Color_f(void)
 		Con_DPrintf("Calling SV_ChangeTeam\n");
 		pr_global_struct->time = sv.time;
 		pr_globals[OFS_PARM0] = playercolor;
-		pr_global_struct->self = EDICT_TO_PROG(EDICT_NUM(host_client->edictnumber));
+		pr_global_struct->self = EDICT_TO_PROG(sv_player);
 		PR_ExecuteProgram (SV_ChangeTeam, "");
 	}
 	else
 	{
 		host_client->colors = playercolor;
-		EDICT_NUM(host_client->edictnumber)->v->team = bottom + 1;
+		sv_player->v->team = bottom + 1;
 
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
@@ -918,7 +918,7 @@ void Host_Kill_f (void)
 	}
 
 	pr_global_struct->time = sv.time;
-	pr_global_struct->self = EDICT_TO_PROG(sv_player);
+	pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 	PR_ExecuteProgram (pr_global_struct->ClientKill, "QC function ClientKill is missing");
 }
 
@@ -1014,6 +1014,8 @@ void Host_Spawn_f (void)
 // send all current names, colors, and frag counts
 	SZ_Clear (&host_client->message);
 
+	ent = sv_player;
+
 // run the entrance script
 	if (sv.loadgame)
 	{
@@ -1034,9 +1036,7 @@ void Host_Spawn_f (void)
 	{
 		eval_t *val;
 		// set up the edict
-		ent = EDICT_NUM(host_client->edictnumber);
-
-		memset (ent->v, 0, progs->entityfields * 4);
+		ED_ClearEdict(ent);
 		ent->v->colormap = NUM_FOR_EDICT(ent);
 		ent->v->team = (host_client->colors & 15) + 1;
 		ent->v->netname = PR_SetString(host_client->name);
@@ -1110,7 +1110,6 @@ void Host_Spawn_f (void)
 // in a state where it is expecting the client to correct the angle
 // and it won't happen if the game was just loaded, so you wind up
 // with a permanent head tilt
-	ent = EDICT_NUM( 1 + (host_client - svs.clients) );
 	MSG_WriteByte (&host_client->message, svc_setangle);
 	for (i=0 ; i < 2 ; i++)
 		MSG_WriteAngle (&host_client->message, ent->v->angles[i] );

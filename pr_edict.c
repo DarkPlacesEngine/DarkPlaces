@@ -185,7 +185,7 @@ Sets everything to NULL
 void ED_ClearEdict (edict_t *e)
 {
 	memset (e->v, 0, progs->entityfields * 4);
-	e->free = false;
+	e->e->free = false;
 }
 
 /*
@@ -210,7 +210,7 @@ edict_t *ED_Alloc (void)
 		e = EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->free && ( e->freetime < 2 || sv.time - e->freetime > 0.5 ) )
+		if (e->e->free && ( e->e->freetime < 2 || sv.time - e->e->freetime > 0.5 ) )
 		{
 			ED_ClearEdict (e);
 			return e;
@@ -241,7 +241,7 @@ void ED_Free (edict_t *ed)
 {
 	SV_UnlinkEdict (ed);		// unlink from world bsp
 
-	ed->free = true;
+	ed->e->free = true;
 	ed->v->model = 0;
 	ed->v->takedamage = 0;
 	ed->v->modelindex = 0;
@@ -253,7 +253,7 @@ void ED_Free (edict_t *ed)
 	ed->v->nextthink = -1;
 	ed->v->solid = 0;
 
-	ed->freetime = sv.time;
+	ed->e->freetime = sv.time;
 }
 
 //===========================================================================
@@ -561,7 +561,7 @@ void ED_Print (edict_t *ed)
 	int		type;
 	char	tempstring[8192], tempstring2[260]; // temporary string buffers
 
-	if (ed->free)
+	if (ed->e->free)
 	{
 		Con_Printf ("FREE\n");
 		return;
@@ -636,7 +636,7 @@ void ED_Write (qfile_t *f, edict_t *ed)
 
 	FS_Printf (f, "{\n");
 
-	if (ed->free)
+	if (ed->e->free)
 	{
 		FS_Printf (f, "}\n");
 		return;
@@ -724,7 +724,7 @@ void ED_Count (void)
 	for (i=0 ; i<sv.num_edicts ; i++)
 	{
 		ent = EDICT_NUM(i);
-		if (ent->free)
+		if (ent->e->free)
 			continue;
 		active++;
 		if (ent->v->solid)
@@ -1021,7 +1021,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 	}
 
 	if (!init)
-		ent->free = true;
+		ent->e->free = true;
 
 	return data;
 }
@@ -1118,7 +1118,7 @@ void ED_LoadFromFile (const char *data)
 		pr_global_struct->self = EDICT_TO_PROG(ent);
 		PR_ExecuteProgram (func - pr_functions, "");
 		spawned++;
-		if (ent->free)
+		if (ent->e->free)
 			died++;
 	}
 
@@ -1413,7 +1413,7 @@ void PR_Fields_f (void)
 	for (ednum = 0;ednum < MAX_EDICTS;ednum++)
 	{
 		ed = EDICT_NUM(ednum);
-		if (ed->free)
+		if (ed->e->free)
 			continue;
 		for (i = 1;i < progs->numfielddefs;i++)
 		{
@@ -1596,7 +1596,7 @@ int NUM_FOR_EDICT(edict_t *e)
 //}
 
 //#define	EDICT_TO_PROG(e) ((qbyte *)(((edict_t *)e)->v) - (qbyte *)(sv.edictsfields))
-//#define PROG_TO_EDICT(e) (sv.edictstable[(e) / (progs->entityfields * 4)])
+//#define PROG_TO_EDICT(e) (sv.edicts + ((e) / (progs->entityfields * 4)))
 int EDICT_TO_PROG(edict_t *e)
 {
 	int n;
@@ -1610,8 +1610,8 @@ edict_t *PROG_TO_EDICT(int n)
 {
 	if ((unsigned int)n >= (unsigned int)sv.max_edicts)
 		Host_Error("PROG_TO_EDICT: invalid edict number %i\n", n);
-	return sv.edictstable[n]; // EXPERIMENTAL
-	//return sv.edictstable[(n) / (progs->entityfields * 4)];
+	return sv.edicts + n; // EXPERIMENTAL
+	//return sv.edicts + ((n) / (progs->entityfields * 4));
 }
 */
 
