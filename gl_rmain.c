@@ -969,7 +969,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			}
 		}
 	}
-	if (r_shadow_realtime_dlight.integer)
+	if (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer)
 	{
 		for (lnum = 0, rd = r_dlight;lnum < r_numdlights;lnum++, rd++)
 		{
