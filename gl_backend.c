@@ -528,35 +528,6 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	}
 }
 
-void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, const int *index)
-{
-	int arraylocked = false;
-	c_meshs++;
-	c_meshelements += indexcount;
-	if (indexcount == 0 || endvert == firstvert)
-	{
-		Con_Printf("GL_DrawRangeElements(%d, %d, %d, %08p);\n", firstvert, endvert, indexcount, index);
-		return;
-	}
-	if (gl_supportslockarrays && gl_lockarrays.integer)
-	{
-		qglLockArraysEXT(firstvert, endvert - firstvert);
-		CHECKGLERROR
-		arraylocked = true;
-	}
-	if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
-		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, (const GLuint *) index);
-	else
-		qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, (const GLuint *) index);
-	CHECKGLERROR
-	if (arraylocked)
-	{
-		qglUnlockArraysEXT();
-		CHECKGLERROR
-		arraylocked = false;
-	}
-}
-
 // enlarges geometry buffers if they are too small
 void _R_Mesh_ResizeCheck(int numverts)
 {
@@ -571,15 +542,36 @@ void _R_Mesh_ResizeCheck(int numverts)
 // renders the mesh
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 {
-	BACKENDACTIVECHECK
-
-	CHECKGLERROR
-
+	int numelements;
+	if (numtriangles == 0 || numverts == 0)
+	{
+		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
+		return;
+	}
+	numelements = numtriangles * 3;
+	c_meshs++;
+	c_meshelements += numelements;
 	if (gl_state.colorarray && !gl_mesh_floatcolors.integer)
 		GL_ConvertColorsFloatToByte(numverts);
 	if (!r_render.integer)
 		return;
-	GL_DrawRangeElements(0, numverts, numtriangles * 3, elements);
+	if (gl_supportslockarrays && gl_lockarrays.integer)
+	{
+		qglLockArraysEXT(0, numverts);
+		CHECKGLERROR
+		if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			qglDrawRangeElements(GL_TRIANGLES, 0, numverts, numelements, GL_UNSIGNED_INT, (const GLuint *) elements);
+		else
+			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) elements);
+		CHECKGLERROR
+		qglUnlockArraysEXT();
+		CHECKGLERROR
+	}
+	else
+	{
+		qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, (const GLuint *) elements);
+		CHECKGLERROR
+	}
 }
 
 // restores backend state, used when done with 3D rendering
