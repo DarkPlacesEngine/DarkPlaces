@@ -38,8 +38,6 @@ float		scr_conlines;		// lines of console to display
 
 extern int	con_vislines;
 
-qboolean	scr_drawloading = false;
-
 void DrawCrosshair(int num);
 static void SCR_ScreenShot_f (void);
 static void R_Envmap_f (void);
@@ -224,19 +222,6 @@ void SCR_DrawPause (void)
 
 
 
-/*
-==============
-SCR_DrawLoading
-==============
-*/
-void SCR_DrawLoading (void)
-{
-	cachepic_t	*pic;
-
-	pic = Draw_CachePic ("gfx/loading.lmp");
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/loading.lmp", 0, 0, 1, 1, 1, 1, 0);
-}
-
 
 
 //=============================================================================
@@ -309,15 +294,8 @@ SCR_BeginLoadingPlaque
 */
 void SCR_BeginLoadingPlaque (void)
 {
-	if (scr_drawloading)
-		return;
-
 	S_StopAllSounds ();
-
-	scr_drawloading = true;
-	CL_UpdateScreen ();
-	scr_drawloading = true;
-	CL_UpdateScreen ();
+	SCR_UpdateLoadingScreen();
 }
 
 //=============================================================================
@@ -1243,35 +1221,28 @@ void CL_UpdateScreen(void)
 	//FIXME: force menu if nothing else to look at?
 	//if (key_dest == key_game && cls.signon != SIGNONS && cls.state == ca_disconnected)
 
-	if (scr_drawloading)
+	if (cls.signon == SIGNONS)
 	{
-		scr_drawloading = false;
-		SCR_DrawLoading();
+		SCR_DrawNet ();
+		SCR_DrawTurtle ();
+		SCR_DrawPause ();
+		if (!r_letterbox.value)
+			Sbar_Draw();
+		SHOWLMP_drawall();
+		SCR_CheckDrawCenterString();
 	}
-	else
+	MR_Draw();
+	UI_Callback_Draw();
+	CL_DrawVideo();
+	//ui_draw();
+	if (cls.signon == SIGNONS)
 	{
-		if (cls.signon == SIGNONS)
-		{
-			SCR_DrawNet ();
-			SCR_DrawTurtle ();
-			SCR_DrawPause ();
-			if (!r_letterbox.value)
-				Sbar_Draw();
-			SHOWLMP_drawall();
-			SCR_CheckDrawCenterString();
-		}
-		MR_Draw();
-		UI_Callback_Draw();
-		CL_DrawVideo();
-		//ui_draw();
-		if (cls.signon == SIGNONS)
-		{
-			R_TimeReport("2d");
-			R_TimeReport_End();
-			R_TimeReport_Start();
-		}
-		R_Shadow_EditLights_DrawSelectedLightProperties();
+		R_TimeReport("2d");
+		R_TimeReport_End();
+		R_TimeReport_Start();
 	}
+	R_Shadow_EditLights_DrawSelectedLightProperties();
+
 	SCR_DrawConsole();
 
 	SCR_UpdateScreen();

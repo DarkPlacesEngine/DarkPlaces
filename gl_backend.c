@@ -1343,6 +1343,59 @@ void SCR_DrawScreen (void)
 
 		R_TimeReport("meshfinish");
 	}
+	r_showtrispass = 0;
+}
+
+void SCR_UpdateLoadingScreen (void)
+{
+	float x, y;
+	cachepic_t *pic;
+	rmeshstate_t m;
+	// don't do anything if not initialized yet
+	if (vid_hidden)
+		return;
+	r_showtrispass = 0;
+	VID_GetWindowSize(&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
+	VID_UpdateGamma(false);
+	qglViewport(0, 0, vid.realwidth, vid.realheight);
+	//qglDisable(GL_SCISSOR_TEST);
+	//qglDepthMask(1);
+	qglColorMask(1,1,1,1);
+	//qglClearColor(0,0,0,0);
+	//qglClear(GL_COLOR_BUFFER_BIT);
+	//qglCullFace(GL_FRONT);
+	//qglDisable(GL_CULL_FACE);
+	//R_ClearScreen();
+	R_Textures_Frame();
+	GL_SetupView_Mode_Ortho(0, 0, vid_conwidth.integer, vid_conheight.integer, -10, 100);
+	R_Mesh_Start();
+	R_Mesh_Matrix(&r_identitymatrix);
+	// draw the loading plaque
+	pic = Draw_CachePic("gfx/loading.lmp");
+	x = (vid_conwidth.integer - pic->width)/2;
+	y = (vid_conheight.integer - pic->height)/2;
+	GL_Color(1,1,1,1);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthTest(false);
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = varray_vertex3f;
+	m.pointer_texcoord[0] = varray_texcoord2f[0];
+	m.tex[0] = R_GetTexture(pic->tex);
+	R_Mesh_State(&m);
+	varray_vertex3f[0] = varray_vertex3f[9] = x;
+	varray_vertex3f[1] = varray_vertex3f[4] = y;
+	varray_vertex3f[3] = varray_vertex3f[6] = x + pic->width;
+	varray_vertex3f[7] = varray_vertex3f[10] = y + pic->height;
+	varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 0;
+	varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
+	varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
+	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
+	GL_LockArrays(0, 4);
+	R_Mesh_Draw(4, 2, polygonelements);
+	GL_LockArrays(0, 0);
+	R_Mesh_Finish();
+	// refresh
+	VID_Finish();
 }
 
 /*
@@ -1355,6 +1408,9 @@ text to the screen.
 */
 void SCR_UpdateScreen (void)
 {
+	if (vid_hidden)
+		return;
+
 	if (r_textureunits.integer > gl_textureunits)
 		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
 	if (r_textureunits.integer < 1)
