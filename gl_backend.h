@@ -20,8 +20,8 @@ void GL_Color(float cr, float cg, float cb, float ca);
 void GL_ShowTrisColor(float cr, float cg, float cb, float ca);
 void GL_TransformToScreen(const vec4_t in, vec4_t out);
 void GL_LockArrays(int first, int count);
-void GL_ActiveTexture(int num);
-void GL_ClientActiveTexture(int num);
+void GL_ActiveTexture(unsigned int num);
+void GL_ClientActiveTexture(unsigned int num);
 void GL_Scissor(int x, int y, int width, int height); // AK for DRAWQUEUE_SETCLIP
 void GL_ScissorTest(int state);	// AK for DRAWQUEUE_(RE)SETCLIP
 void GL_Clear(int mask);

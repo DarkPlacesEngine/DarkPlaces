@@ -559,7 +559,7 @@ void GL_Backend_ResetState(void)
 	GL_SetupTextureState();
 }
 
-void GL_ActiveTexture(int num)
+void GL_ActiveTexture(unsigned int num)
 {
 	if (gl_state.unit != num)
 	{
@@ -572,7 +572,7 @@ void GL_ActiveTexture(int num)
 	}
 }
 
-void GL_ClientActiveTexture(int num)
+void GL_ClientActiveTexture(unsigned int num)
 {
 	if (gl_state.clientunit != num)
 	{
