@@ -226,6 +226,13 @@ Host should be either "local" or a net address to be passed on
 */
 void CL_EstablishConnection (char *host)
 {
+	sizebuf_t	buf;
+	byte	data[128];
+
+	buf.maxsize = 128;
+	buf.cursize = 0;
+	buf.data = data;
+
 	if (cls.state == ca_dedicated)
 		return;
 
@@ -242,6 +249,8 @@ void CL_EstablishConnection (char *host)
 	cls.demonum = -1;			// not in the demo loop now
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
+
+	CL_ClearState ();
 }
 
 /*
@@ -626,8 +635,11 @@ static void CL_RelinkNetworkEntities()
 	}
 }
 
-void CL_LerpPlayerEye(float frac)
+void CL_LerpPlayer(float frac)
 {
+	int i;
+	float d;
+
 	if (cl.entitydatabase.numframes)
 	{
 		cl.viewentorigin[0] = cl.viewentoriginold[0] + frac * (cl.viewentoriginnew[0] - cl.viewentoriginold[0]);
@@ -636,12 +648,8 @@ void CL_LerpPlayerEye(float frac)
 	}
 	else
 		VectorCopy (cl_entities[cl.viewentity].render.origin, cl.viewentorigin);
-}
 
-static void CL_LerpPlayerVelocity (float frac)
-{
-	int i;
-	float d;
+	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
 
 	for (i = 0;i < 3;i++)
 		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
@@ -751,8 +759,7 @@ void CL_RelinkEntities (void)
 	CL_MoveParticles();
 	CL_UpdateTEnts();
 
-	CL_LerpPlayerEye(frac);
-	CL_LerpPlayerVelocity(frac);
+	CL_LerpPlayer(frac);
 }
 
 
@@ -828,6 +835,19 @@ void CL_SendCmd (void)
 
 	// send the unreliable message
 		CL_SendMove (&cmd);
+	}
+	else
+	{
+		// LordHavoc: fix for NAT routing of netquake:
+		// bounce back a clc_nop message to the newly allocated server port,
+		// to establish a routing connection for incoming frames,
+		// the server waits for this before sending anything
+		if (realtime > cl.sendnoptime)
+		{
+			Con_DPrintf("sending clc_nop to get server's attention\n");
+			cl.sendnoptime = realtime + 3;
+			MSG_WriteByte(&cls.message, clc_nop);
+		}
 	}
 
 	if (cls.demoplayback)

@@ -111,7 +111,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define SU_PUNCHVEC1	(1<<16)
 #define SU_PUNCHVEC2	(1<<17)
 #define SU_PUNCHVEC3	(1<<18)
-#define SU_UNUSED19		(1<<19)
+#define SU_VIEWZOOM		(1<<19) // byte factor (0 = 0.0 (not valid), 255 = 1.0)
 #define SU_UNUSED20		(1<<20)
 #define SU_UNUSED21		(1<<21)
 #define SU_UNUSED22		(1<<22)

@@ -198,6 +198,7 @@ typedef struct
 								// throw out the first couple, so the player
 								// doesn't accidentally do something the
 								// first frame
+	float		sendnoptime;	// send a clc_nop periodically until connected
 	usercmd_t	cmd;			// last command sent to the server
 
 // information for local display
@@ -276,6 +277,8 @@ typedef struct
 	scoreboard_t	*scores;		// [cl.maxclients]
 
 	vec3_t		viewentorigin;
+	float		viewzoom;			// LordHavoc: sniping zoom, QC controlled
+	float		viewzoomold, viewzoomnew; // for interpolation
 
 	// entity database stuff
 	vec3_t		viewentoriginold, viewentoriginnew;

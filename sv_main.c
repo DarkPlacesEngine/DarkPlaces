@@ -333,7 +333,10 @@ void SV_ConnectClient (int clientnum)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
 	}
 
-	SV_SendServerinfo (client);
+	// send serverinfo on first nop
+	client->waitingforconnect = true;
+	client->sendsignon = true;
+	client->spawned = false;		// need prespawn, spawn, etc
 }
 
 
@@ -1144,6 +1147,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	int		items;
 	eval_t	*val;
 	vec3_t	punchvector;
+	byte	viewzoom;
 
 //
 // send a damage message
@@ -1204,6 +1208,20 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	VectorClear(punchvector);
 	if ((val = GETEDICTFIELDVALUE(ent, eval_punchvector)))
 		VectorCopy(val->vector, punchvector);
+
+	i = 255;
+	if ((val = GETEDICTFIELDVALUE(ent, eval_viewzoom)))
+	{
+		i = val->_float * 255.0f;
+		if (i == 0)
+			i = 255;
+		else
+			i = bound(0, i, 255);
+	}
+	viewzoom = i;
+
+	if (viewzoom != 255)
+		bits |= SU_VIEWZOOM;
 
 	for (i=0 ; i<3 ; i++)
 	{
@@ -1287,6 +1305,9 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	{
 		MSG_WriteByte (msg, ent->v.weapon);
 	}
+
+	if (bits & SU_VIEWZOOM)
+		MSG_WriteByte (msg, viewzoom);
 }
 
 /*
@@ -1306,14 +1327,17 @@ qboolean SV_SendClientDatagram (client_t *client)
 	MSG_WriteByte (&msg, svc_time);
 	MSG_WriteFloat (&msg, sv.time);
 
-// add the client specific data to the datagram
-	SV_WriteClientdataToMessage (client->edict, &msg);
+	if (!client->waitingforconnect)
+	{
+		// add the client specific data to the datagram
+		SV_WriteClientdataToMessage (client->edict, &msg);
 
-	SV_WriteEntitiesToClient (client, client->edict, &msg);
+		SV_WriteEntitiesToClient (client, client->edict, &msg);
 
-// copy the server datagram if there is space
-	if (msg.cursize + sv.datagram.cursize < msg.maxsize)
-		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
+		// copy the server datagram if there is space
+		if (msg.cursize + sv.datagram.cursize < msg.maxsize)
+			SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
+	}
 
 // send the datagram
 	if (NET_SendUnreliableMessage (client->netconnection, &msg) == -1)
@@ -1342,7 +1366,7 @@ void SV_UpdateToReliableMessages (void)
 		{
 			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 			{
-				if (!client->active)
+				if (!client->active || !client->spawned)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatefrags);
 				MSG_WriteByte (&client->message, i);
@@ -1405,6 +1429,12 @@ void SV_SendClientMessages (void)
 	{
 		if (!host_client->active)
 			continue;
+
+		if (host_client->sendserverinfo)
+		{
+			host_client->sendserverinfo = false;
+			SV_SendServerinfo (host_client);
+		}
 
 		if (host_client->spawned)
 		{

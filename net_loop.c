@@ -195,7 +195,8 @@ int Loop_SendUnreliableMessage (qsocket_t *sock, sizebuf_t *data)
 
 	bufferLength = &((qsocket_t *)sock->driverdata)->receiveMessageLength;
 
-	if ((*bufferLength + data->cursize + sizeof(byte) + sizeof(short)) > NET_MAXMESSAGE)
+	// LordHavoc: added an extra sizeof(byte) to account for alignment
+	if ((*bufferLength + data->cursize + sizeof(byte) + sizeof(short) + sizeof(byte)) > NET_MAXMESSAGE)
 		return 0;
 
 	buffer = ((qsocket_t *)sock->driverdata)->receiveMessage + *bufferLength;

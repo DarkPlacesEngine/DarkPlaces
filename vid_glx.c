@@ -849,8 +849,9 @@ void IN_MouseMove (usercmd_t *cmd)
 		old_mouse_y = mouse_y;
 	}
 
-	mouse_x *= sensitivity.value;
-	mouse_y *= sensitivity.value;
+	// LordHavoc: viewzoom affects mouse sensitivity for sniping
+	mouse_x *= sensitivity.value * cl.viewzoom;
+	mouse_y *= sensitivity.value * cl.viewzoom;
 
 	if (in_strafe.state & 1)
 		cmd->sidemove += m_side.value * mouse_x;

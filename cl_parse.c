@@ -52,7 +52,7 @@ char *svc_strings[128] =
 	"svc_spawnstatic",
 	"OBSOLETE svc_spawnbinary",
 	"svc_spawnbaseline",
-	
+
 	"svc_temp_entity",		// <variable>
 	"svc_setpause",
 	"svc_signonnum",
@@ -80,10 +80,16 @@ char *svc_strings[128] =
 	"", // 47
 	"", // 48
 	"", // 49
-	"", // 50
-	"svc_fog", // 51
-	"svc_effect", // [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
-	"svc_effect2", // [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
+	"svc_cgame", //				50		// [short] length [bytes] data
+	"svc_fog", //				51		// unfinished and obsolete
+	"svc_effect", //			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
+	"svc_effect2", //			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
+	"svc_sound2", //			54		// short soundindex instead of byte
+	"svc_spawnbaseline2", //	55		// short modelindex instead of byte
+	"svc_spawnstatic2", //		56		// short modelindex instead of byte
+	"svc_entities", //			57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
+	"svc_unusedlh3", //			58
+	"svc_spawnstaticsound2", //	59		// [coord3] [short] samp [byte] vol [byte] aten
 };
 
 //=============================================================================
@@ -804,7 +810,7 @@ void CL_ParseClientdata (int bits)
 		cl.idealpitch = MSG_ReadChar ();
 	else
 		cl.idealpitch = 0;
-	
+
 	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
 	for (i=0 ; i<3 ; i++)
 	{
@@ -835,7 +841,7 @@ void CL_ParseClientdata (int bits)
 				cl.item_gettime[j] = cl.time;
 		cl.items = i;
 	}
-		
+
 	cl.onground = (bits & SU_ONGROUND) != 0;
 	cl.inwater = (bits & SU_INWATER) != 0;
 
@@ -856,6 +862,18 @@ void CL_ParseClientdata (int bits)
 		cl.stats[STAT_ACTIVEWEAPON] = (1<<i);
 	else
 		cl.stats[STAT_ACTIVEWEAPON] = i;
+
+	cl.viewzoomold = cl.viewzoomnew; // for interpolation
+	if (bits & SU_VIEWZOOM)
+	{
+		i = MSG_ReadByte();
+		if (i < 2)
+			i = 2;
+		cl.viewzoomnew = (float) i * (1.0f / 255.0f);
+	}
+	else
+		cl.viewzoomnew = 1;
+
 }
 
 /*
@@ -1130,21 +1148,21 @@ void CL_ParseServerMessage (void)
 		case svc_updatename:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatename >= MAX_SCOREBOARD");
+				Host_Error ("CL_ParseServerMessage: svc_updatename >= cl.maxclients");
 			strcpy (cl.scores[i].name, MSG_ReadString ());
 			break;
 
 		case svc_updatefrags:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= MAX_SCOREBOARD");
+				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= cl.maxclients");
 			cl.scores[i].frags = MSG_ReadShort ();
 			break;
 
 		case svc_updatecolors:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatecolors >= MAX_SCOREBOARD");
+				Host_Error ("CL_ParseServerMessage: svc_updatecolors >= cl.maxclients");
 			cl.scores[i].colors = MSG_ReadByte ();
 			break;
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -54,6 +54,8 @@ unsigned long inet_addr(const char *cp);
 
 #include "quakedef.h"
 #include "net_dgrm.h"
+
+cvar_t cl_port = {CVAR_SAVE, "cl_port", "0"};
 
 // these two macros are to make the code more readable
 #define sfunc	net_landrivers[sock->landriver]
@@ -767,6 +769,7 @@ int Datagram_Init (void)
 
 	myDriverLevel = net_driverlevel;
 	Cmd_AddCommand ("net_stats", NET_Stats_f);
+	Cvar_RegisterVariable (&cl_port);
 
 	if (COM_CheckParm("-nolan"))
 		return -1;
@@ -887,7 +890,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 		int			activeNumber;
 		int			clientNumber;
 		client_t	*client;
-		
+
 		playerNumber = MSG_ReadByte();
 		activeNumber = -1;
 		for (clientNumber = 0, client = svs.clients; clientNumber < svs.maxclients; clientNumber++, client++)
@@ -1064,7 +1067,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 		return NULL;
 	}
 
-	// everything is allocated, just fill in the details	
+	// everything is allocated, just fill in the details
 	sock->socket = newsock;
 	sock->landriver = net_landriverlevel;
 	sock->addr = clientaddr;
@@ -1224,7 +1227,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 	if (dfunc.GetAddrFromName(host, &sendaddr) == -1)
 		return NULL;
 
-	newsock = dfunc.OpenSocket (0);
+	newsock = dfunc.OpenSocket (cl_port.integer);
 	if (newsock == -1)
 		return NULL;
 
@@ -1347,7 +1350,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 
 	dfunc.GetNameFromAddr (&sendaddr, sock->address);
 
-	Con_Printf ("Connection accepted\n");
+	Con_Printf ("Connection accepted to %s\n", sock->address);
 	sock->lastMessageTime = SetNetTime();
 
 	// switch the connection to the specified address
