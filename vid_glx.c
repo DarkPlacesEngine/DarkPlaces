@@ -15,8 +15,8 @@ See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
 */
+
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -34,6 +34,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/keysym.h>
 #include <X11/cursorfont.h>
 
+#include <X11/extensions/XShm.h>
 #include <X11/extensions/xf86dga.h>
 #include <X11/extensions/xf86vmode.h>
 
@@ -51,21 +52,24 @@ static GLXContext ctx = NULL;
 unsigned		d_8to24table[256];
 unsigned char	d_15to8table[65536];
 
-cvar_t	vid_mode = {"vid_mode","0",false};
- 
+cvar_t vid_mode = {"vid_mode", "0", false};
+cvar_t vid_fullscreen = {"vid_fullscreen", "1"};
+
 viddef_t	vid;				// global video state
 
-static qboolean        mouse_avail = true;
-static qboolean        mouse_active = false;
-static float   mouse_x, mouse_y;
+static qboolean		mouse_avail = true;
+static qboolean		mouse_active = false;
+// static qboolean		dga_active;
+static float	mouse_x, mouse_y;
 static float	old_mouse_x, old_mouse_y;
 static int p_mouse_x, p_mouse_y;
 
 static cvar_t in_mouse = {"in_mouse", "1", false};
-static cvar_t in_dgamouse = {"in_dgamouse", "1", false};
+static cvar_t in_dga = {"in_dga", "1", false};
+static cvar_t in_dga_mouseaccel = {"in_dga_mouseaccel", "1", false};
 static cvar_t m_filter = {"m_filter", "0"};
+static cvar_t _windowed_mouse = {"_windowed_mouse", "1"};
 
-qboolean dgamouse = false;
 qboolean vidmode_ext = false;
 
 static int win_x, win_y;
@@ -110,11 +114,7 @@ XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 	int key = 0;
 	KeySym keysym;
 
-/*	if (!modified) {*/
-		keysym = XLookupKeysym(ev, 0);
-/*	} else {
-		XLookupString(ev, tmp, 1, &keysym, NULL);
-	}*/
+	keysym = XLookupKeysym(ev, 0);
 
 	switch(keysym) {
 		case XK_KP_Page_Up:	key = KP_PGUP; break;
@@ -249,23 +249,23 @@ static void install_grabs(void)
 	XGrabPointer(dpy, win,  True, 0, GrabModeAsync, GrabModeAsync,
 		     win, None, CurrentTime);
 
-/*	if (in_dgamouse.value) {
+	if (in_dga.value) {
 		int MajorVersion, MinorVersion;
 
 		if (!XF86DGAQueryVersion(dpy, &MajorVersion, &MinorVersion)) { 
 			// unable to query, probalby not supported
 			Con_Printf( "Failed to detect XF86DGA Mouse\n" );
-			in_dgamouse.value = 0;
+			in_dga.value = 0;
 		} else {
-			dgamouse = true;
+			in_dga.value = 1;
 			XF86DGADirectVideo(dpy, DefaultScreen(dpy), XF86DGADirectMouse);
 			XWarpPointer(dpy, None, win, 0, 0, 0, 0, 0, 0);
 		}
-	} else {*/
+	} else {
 		XWarpPointer(dpy, None, win,
 					 0, 0, 0, 0,
 					 vid.width / 2, vid.height / 2);
-/*	}*/
+	}
 
 	XGrabKeyboard(dpy, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -280,10 +280,9 @@ static void uninstall_grabs(void)
 	if (!dpy || !win)
 		return;
 
-/*	if (dgamouse) {
-		dgamouse = false;
+	if (in_dga.value == 1) {
 		XF86DGADirectVideo(dpy, DefaultScreen(dpy), 0);
-	}*/
+	}
 
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
@@ -314,47 +313,30 @@ static void HandleEvents(void)
 			break;
 
 		case MotionNotify:
-        		if (dgamouse) {
-                		mouse_x += event.xmotion.x_root/* * in_dga_mouseaccel.value*/;
-                		mouse_y += event.xmotion.y_root/* * in_dga_mouseaccel.value*/;
-		        } else {
-		                if (!p_mouse_x && !p_mouse_y) {
-		                        Con_Printf("event->xmotion.x: %d\n", event.xmotion.x); 
-		                        Con_Printf("event->xmotion.y: %d\n", event.xmotion.y); 
-		                }
-/*		                if (vid_fullscreen.value || _windowed_mouse.value) {*/
-		                        if (!event.xmotion.send_event) {
-		                                mouse_x += (event.xmotion.x - p_mouse_x);
-		                                mouse_y += (event.xmotion.y - p_mouse_y);
-		                                if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4
-		                                    || abs(vid.height/2 - event.xmotion.y) > vid.height / 4) {
-		                                        dowarp = true;
-		                                }
-		                        }
-/*		                } else {
-		                        mouse_x += (event.xmotion.x - p_mouse_x);
-		                        mouse_y += (event.xmotion.y - p_mouse_y);
-		                }*/
-                		p_mouse_x = event.xmotion.x;
-                		p_mouse_y = event.xmotion.y;
-        		}
-        
-/*			if (mouse_active) {
-				if (dgamouse) {
-					mouse_x += (event.xmotion.x + win_x) * 2;
-					mouse_y += (event.xmotion.y + win_y) * 2;
-				} 
-				else
-				{
-					mouse_x += ((int)event.xmotion.x - mwx) * 2;
-					mouse_y += ((int)event.xmotion.y - mwy) * 2;
-					mwx = event.xmotion.x;
-					mwy = event.xmotion.y;
-
-					if (mouse_x || mouse_y)
-						dowarp = true;
+			if (in_dga.value == 1) {
+				mouse_x += event.xmotion.x_root * in_dga_mouseaccel.value;
+				mouse_y += event.xmotion.y_root * in_dga_mouseaccel.value;
+			} else {
+				if (!p_mouse_x && !p_mouse_y) {
+					Con_Printf("event->xmotion.x: %d\n", event.xmotion.x);
+					Con_Printf("event->xmotion.y: %d\n", event.xmotion.y);
 				}
-			}*/
+				if (vid_fullscreen.value || _windowed_mouse.value) {
+					if (!event.xmotion.send_event) {
+						mouse_x += (event.xmotion.x - p_mouse_x);
+						mouse_y += (event.xmotion.y - p_mouse_y);
+						if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4
+						|| abs(vid.height/2 - event.xmotion.y) > vid.height / 4) {
+							dowarp = true;
+						}
+					}
+				} else {
+					mouse_x += (event.xmotion.x - p_mouse_x);
+					mouse_y += (event.xmotion.y - p_mouse_y);
+				}
+				p_mouse_x = event.xmotion.x;
+				p_mouse_y = event.xmotion.y;
+			}
 			break;
 
 		case ButtonPress:
@@ -434,12 +416,14 @@ void VID_Shutdown(void)
 	if (dpy) {
 		uninstall_grabs();
 
-		if (ctx)
-			glXDestroyContext(dpy, ctx);
-		if (win)
-			XDestroyWindow(dpy, win);
 		if (vidmode_active)
 			XF86VidModeSwitchToMode(dpy, scrnum, vidmodes[0]);
+/* Disabled, causes a segfault during shutdown.
+		if (ctx)
+			glXDestroyContext(dpy, ctx);
+*/
+		if (win)
+			XDestroyWindow(dpy, win);
 		XCloseDisplay(dpy);
 	}
 	vidmode_active = false;
@@ -603,8 +587,10 @@ void VID_Init()
 	int actualWidth, actualHeight;
 
 	Cvar_RegisterVariable (&vid_mode);
+	Cvar_RegisterVariable (&vid_fullscreen);
 	Cvar_RegisterVariable (&in_mouse);
-	Cvar_RegisterVariable (&in_dgamouse);
+	Cvar_RegisterVariable (&in_dga);
+	Cvar_RegisterVariable (&in_dga_mouseaccel);
 	Cvar_RegisterVariable (&m_filter);
 	
 // interpret command-line params
