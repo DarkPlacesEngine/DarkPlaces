@@ -1965,16 +1965,57 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 }
 */
 
+void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec3_t modelorg, qbyte *pvs, int markframe)
+{
+	int i;
+	q3mleaf_t *leaf;
+	while (node->isnode)
+	{
+		if (R_CullBox(node->mins, node->maxs))
+			return;
+		R_Q3BSP_RecursiveWorldNode(ent, node->children[0], modelorg, pvs, markframe);
+		node = node->children[1];
+	}
+	if (R_CullBox(node->mins, node->maxs))
+		return;
+	leaf = (q3mleaf_t *)node;
+	if (pvs[leaf->clusterindex >> 3] & (1 << (leaf->clusterindex & 7)))
+	{
+		for (i = 0;i < leaf->numleaffaces;i++)
+		{
+			if (leaf->firstleafface[i]->markframe != markframe)
+			{
+				leaf->firstleafface[i]->markframe = markframe;
+				R_Q3BSP_DrawFace(ent, leaf->firstleafface[i]);
+			}
+		}
+	}
+}
+
+
+
 void R_Q3BSP_Draw(entity_render_t *ent)
 {
 	int i;
 	q3mface_t *face;
+	vec3_t modelorg;
 	model_t *model;
-	model = ent->model;
+	qbyte *pvs;
+	static int markframe = 0;
 	R_Mesh_Matrix(&ent->matrix);
+	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
-		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-			R_Q3BSP_DrawFace(ent, face);
+	{
+		if (ent == &cl_entities[0].render)
+		{
+			Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+			pvs = model->brush.GetPVS(model, modelorg);
+			R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
+		}
+		else
+			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+				R_Q3BSP_DrawFace(ent, face);
+	}
 	if (r_drawcollisionbrushes.integer >= 1)
 	{
 		rmeshstate_t m;

@@ -610,6 +610,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	VectorCopy(end, clip.end);
 	VectorCopy(mins, clip.mins);
 	VectorCopy(maxs, clip.maxs);
+	VectorCopy(mins, clip.hullmins);
+	VectorCopy(maxs, clip.hullmaxs);
 	clip.type = type;
 	clip.passedict = passedict;
 

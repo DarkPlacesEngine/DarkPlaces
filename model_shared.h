@@ -154,13 +154,14 @@ typedef struct model_brush_s
 	// common functions
 	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
 	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
-	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
+	qbyte *(*GetPVS)(struct model_s *model, const vec3_t p);
 	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength);
 	int (*BoxTouchingPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
 	void (*TraceBox)(struct model_s *model, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
-	// this is actually only found on brushq1, but NULL is handled gracefully
+	// these are actually only found on brushq1, but NULL is handled gracefully
+	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
 }
 model_brush_t;
@@ -284,8 +285,12 @@ q3mtexture_t;
 
 typedef struct q3mnode_s
 {
+	//this part shared between node and leaf
 	int isnode; // true
 	struct q3mnode_s *parent;
+	vec3_t mins;
+	vec3_t maxs;
+	// this part unique to nodes
 	struct mplane_s *plane;
 	struct q3mnode_s *children[2];
 }
@@ -293,16 +298,18 @@ q3mnode_t;
 
 typedef struct q3mleaf_s
 {
+	//this part shared between node and leaf
 	int isnode; // false
 	struct q3mnode_s *parent;
+	vec3_t mins;
+	vec3_t maxs;
+	// this part unique to leafs
 	int clusterindex;
 	int areaindex;
 	int numleaffaces;
 	struct q3mface_s **firstleafface;
 	int numleafbrushes;
 	struct q3mbrush_s **firstleafbrush;
-	vec3_t mins;
-	vec3_t maxs;
 }
 q3mleaf_t;
 
@@ -352,6 +359,7 @@ typedef struct q3mface_s
 	int firstelement;
 	int numelements;
 	int patchsize[2];
+	int markframe;
 
 	float *data_vertex3f;
 	float *data_texcoordtexture2f;
@@ -368,6 +376,10 @@ q3mface_t;
 
 typedef struct model_brushq3_s
 {
+	// if non-zero this is a submodel
+	// (this is the number of the submodel, an index into data_models)
+	int submodel;
+
 	int num_textures;
 	q3mtexture_t *data_textures;
 

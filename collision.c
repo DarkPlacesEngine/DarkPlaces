@@ -637,6 +637,82 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 	}
 }
 
+// NOTE: start and end of brush pair must have same numplanes/numpoints
+void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
+{
+	int nplane, fstartsolid, fendsolid, brushsolid;
+	float enterfrac, leavefrac, d1, d2, f, newimpactnormal[3];
+	const colplanef_t *startplane, *endplane;
+
+	enterfrac = -1;
+	leavefrac = 1;
+	fstartsolid = true;
+	fendsolid = true;
+
+	for (nplane = 0;nplane < thatbrush_start->numplanes;nplane++)
+	{
+		startplane = thatbrush_start->planes + nplane;
+		endplane = thatbrush_end->planes + nplane;
+		d1 = DotProduct(startplane->normal, linestart) - startplane->dist;
+		d2 = DotProduct(endplane->normal, lineend) - endplane->dist;
+
+		f = d1 - d2;
+		if (f >= 0)
+		{
+			// moving into brush
+			if (d2 > 0)
+				return;
+			if (d1 < 0)
+				continue;
+			// enter
+			fstartsolid = false;
+			f = (d1 - COLLISIONEPSILON) / f;
+			f = bound(0, f, 1);
+			if (enterfrac < f)
+			{
+				enterfrac = f;
+				VectorBlend(startplane->normal, endplane->normal, enterfrac, newimpactnormal);
+			}
+		}
+		else if (f < 0)
+		{
+			// moving out of brush
+			if (d1 > 0)
+				return;
+			if (d2 < 0)
+				continue;
+			// leave
+			fendsolid = false;
+			f = (d1 + COLLISIONEPSILON) / f;
+			f = bound(0, f, 1);
+			if (leavefrac > f)
+				leavefrac = f;
+		}
+	}
+
+	brushsolid = trace->hitsupercontentsmask & thatbrush_start->supercontents;
+	if (fstartsolid)
+	{
+		trace->startsupercontents |= thatbrush_start->supercontents;
+		if (brushsolid)
+		{
+			trace->startsolid = true;
+			if (fendsolid)
+				trace->allsolid = true;
+		}
+	}
+
+	// LordHavoc: we need an epsilon nudge here because for a point trace the
+	// penetrating line segment is normally zero length if this brush was
+	// generated from a polygon (infinitely thin), and could even be slightly
+	// positive or negative due to rounding errors in that case.
+	if (brushsolid && enterfrac > -1 && enterfrac < trace->fraction && enterfrac - (1.0f / 1024.0f) <= leavefrac)
+	{
+		trace->fraction = bound(0, enterfrac, 1);
+		VectorCopy(newimpactnormal, trace->plane.normal);
+	}
+}
+
 static colplanef_t polyf_planes[256 + 2];
 static colbrushf_t polyf_brush;
 

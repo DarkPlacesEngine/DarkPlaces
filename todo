@@ -1,10 +1,8 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
+-n darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
+-n darkplaces: fix a crash when changing level while using qe1 textures (Todd)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: dedicated server should error out if it has no sockets (yummyluv)
-0 darkplaces: heartbeat should print an error message if used with no server running (yummyluv)
-0 darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
-0 darkplaces: investigate why server is not automatically sending heartbeats (yummyluv)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension
@@ -24,12 +22,13 @@
 0 darkplaces: bullets don't hit walls at steep angles in id1
 0 darkplaces: can't move when stuck in a monster (SeienAbunae)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
-0 darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: cl_port 26001 causes server browser to read successfully (yummyluv)
 0 darkplaces: client colors being reset to "15 15" each level in prydon gate (FrikaC)
 0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
+0 darkplaces: dedicated server should error out if it has no sockets (yummyluv)
+0 darkplaces: dedicated server should not bother allocating a loopback socket (yummyluv)
 0 darkplaces: default to 32bit color
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document how polygon collision works in the code (KrimZon)
@@ -40,7 +39,6 @@
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: fix 'wall hugging' stuttering (romi)
-0 darkplaces: fix a crash when changing level while using qe1 textures (Todd)
 0 darkplaces: fix con_notify (should control number of lines)
 0 darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
 0 darkplaces: fix key based turning being affected by slowmo - it should not be
@@ -49,8 +47,11 @@
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 0 darkplaces: hack PF_nextent to skip inaccessible client slots depending on maxplayers - but always report ones that are active at the time (FrikaC)
+0 darkplaces: heartbeat should print an error message if used with no server running (yummyluv)
 0 darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (NotoriousRay, Uffe)
+0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
+0 darkplaces: investigate why server is not automatically sending heartbeats (yummyluv)
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
 0 darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
@@ -84,6 +85,7 @@
 0 darkplaces: reset zoom on connect (Rick)
 0 darkplaces: scrags frequently fly through ceilings - this needs to be fixed
 0 darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
+0 darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 0 darkplaces: stuttering movement when walking over steps or monsters (romi)
 0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
@@ -270,6 +272,7 @@
 ? darkplaces: fix colormapping (Demonix)
 ? darkplaces: fix connecting to proquake servers through routers (Demonix)
 ? dpmod: apparently can't fire in start.bsp? (scar3crow)
+d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
 d darkplaces: 12bit color textures in 16bit mode?? (Tomaz)
 d darkplaces: TEXF_CLAMP needs to use GL_CLAMP_TO_EDGE (if not supported just use REPEAT as a fallback, not aware of any cards that lack this)

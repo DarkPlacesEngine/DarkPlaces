@@ -2274,9 +2274,9 @@ void R_Shadow_SetCursorLocationForView(void)
 
 void R_Shadow_UpdateWorldLightSelection(void)
 {
-	R_Shadow_SetCursorLocationForView();
 	if (r_editlights.integer)
 	{
+		R_Shadow_SetCursorLocationForView();
 		R_Shadow_SelectLightInView();
 		R_Shadow_DrawLightSprites();
 	}

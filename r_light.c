@@ -365,7 +365,7 @@ static nearlight_t nearlight[MAX_DLIGHTS];
 int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, const entity_render_t *ent, float colorr, float colorg, float colorb, float colora, int worldcoords)
 {
 	int i, j, maxnearlights;
-	float v[3], f, mscale, stylescale, intensity, ambientcolor[3];
+	float v[3], f, mscale, stylescale, intensity, ambientcolor[3], tempdiffusenormal[3];
 	nearlight_t *nl;
 	mlight_t *sl;
 	rdlight_t *rd;
@@ -386,7 +386,11 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 	else
 	{
 		if (cl.worldmodel && cl.worldmodel->brush.LightPoint)
-			cl.worldmodel->brush.LightPoint(cl.worldmodel, ent->origin, ambient4f, diffusecolor, diffusenormal);
+		{
+			cl.worldmodel->brush.LightPoint(cl.worldmodel, ent->origin, ambient4f, diffusecolor, tempdiffusenormal);
+			Matrix4x4_Transform3x3(&ent->inversematrix, tempdiffusenormal, diffusenormal);
+			VectorNormalize(diffusenormal);
+		}
 		else
 			VectorSet(ambient4f, 1, 1, 1);
 	}
