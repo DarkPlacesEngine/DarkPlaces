@@ -830,15 +830,14 @@ void Sbar_ShowFPS(void)
 			static int framerate = 0, framecount = 0;
 			double newtime;
 			newtime = Sys_DoubleTime();
-			if (newtime < nexttime)
-				framecount++;
-			else
+			if (newtime >= nexttime)
 			{
 				framerate = (int) (framecount / (newtime - lasttime) + 0.5);
 				lasttime = newtime;
-				nexttime = lasttime + 0.2;
-				framecount = 1;
+				nexttime = max(nexttime + 1, lasttime - 1);
+				framecount = 0;
 			}
+			framecount++;
 			calc = framerate;
 		}
 		snprintf(fpsstring, sizeof(fpsstring), "%4i fps", calc);
