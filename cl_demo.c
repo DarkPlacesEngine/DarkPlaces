@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+int old_vsync = 0;
+
 void CL_FinishTimeDemo (void);
 
 /*
@@ -381,6 +383,11 @@ void CL_FinishTimeDemo (void)
 	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps\nmin/avg/max: %5.7f/%5.7f/%5.7f\n", frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
 	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps min/avg/max: %5.7f/%5.7f/%5.7f\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
+	if (gl_videosyncavailable)
+	{
+		Cvar_SetValueQuick (&vid_vsync, old_vsync);
+		qwglSwapIntervalEXT (old_vsync);
+	}
 	if (COM_CheckParm("-benchmark"))
 		Host_Quit_f();
 }
@@ -403,6 +410,13 @@ void CL_TimeDemo_f (void)
 		return;
 	}
 
+	if (gl_videosyncavailable)
+	{
+		old_vsync = vid_vsync.integer;
+		Cvar_SetValueQuick (&vid_vsync, 0);
+		qwglSwapIntervalEXT (0);
+	}
+
 	CL_PlayDemo_f ();
 
 // cls.td_starttime will be grabbed at the second frame of the demo, so
@@ -416,6 +430,6 @@ void CL_TimeDemo_f (void)
 
 	cls.timedemo = true;
 	// get first message this frame
-	cls.td_lastframe = -1;
+	cls.td_lastframe = -1;	
 }
 
