@@ -21,15 +21,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t	*cvar_vars = NULL;
-char	*cvar_null_string = "";
+cvar_t *cvar_vars = NULL;
+char *cvar_null_string = "";
 
 /*
 ============
 Cvar_FindVar
 ============
 */
-cvar_t *Cvar_FindVar (char *var_name)
+cvar_t *Cvar_FindVar (const char *var_name)
 {
 	cvar_t *var;
 
@@ -40,7 +40,7 @@ cvar_t *Cvar_FindVar (char *var_name)
 	return NULL;
 }
 
-cvar_t *Cvar_FindVarAfter (char *prev_var_name, int neededflags)
+cvar_t *Cvar_FindVarAfter (const char *prev_var_name, int neededflags)
 {
 	cvar_t *var;
 
@@ -69,9 +69,9 @@ cvar_t *Cvar_FindVarAfter (char *prev_var_name, int neededflags)
 Cvar_VariableValue
 ============
 */
-float	Cvar_VariableValue (char *var_name)
+float Cvar_VariableValue (const char *var_name)
 {
-	cvar_t	*var;
+	cvar_t *var;
 
 	var = Cvar_FindVar (var_name);
 	if (!var)
@@ -85,7 +85,7 @@ float	Cvar_VariableValue (char *var_name)
 Cvar_VariableString
 ============
 */
-char *Cvar_VariableString (char *var_name)
+const char *Cvar_VariableString (const char *var_name)
 {
 	cvar_t *var;
 
@@ -101,7 +101,7 @@ char *Cvar_VariableString (char *var_name)
 Cvar_CompleteVariable
 ============
 */
-char *Cvar_CompleteVariable (char *partial)
+const char *Cvar_CompleteVariable (const char *partial)
 {
 	cvar_t		*cvar;
 	int			len;
@@ -128,8 +128,7 @@ char *Cvar_CompleteVariable (char *partial)
 	Thanks to Fett erich@heintz.com
 
 */
-int
-Cvar_CompleteCountPossible (char *partial)
+int Cvar_CompleteCountPossible (const char *partial)
 {
 	cvar_t	*cvar;
 	int		len;
@@ -158,17 +157,16 @@ Cvar_CompleteCountPossible (char *partial)
 	Thanks to taniwha
 
 */
-char	**
-Cvar_CompleteBuildList (char *partial)
+const char **Cvar_CompleteBuildList (const char *partial)
 {
-	cvar_t	*cvar;
-	int		len = 0;
-	int		bpos = 0;
-	int		sizeofbuf = (Cvar_CompleteCountPossible (partial) + 1) * sizeof (char *);
-	char	**buf;
+	const cvar_t *cvar;
+	int len = 0;
+	int bpos = 0;
+	int sizeofbuf = (Cvar_CompleteCountPossible (partial) + 1) * sizeof (const char *);
+	const char **buf;
 
 	len = strlen(partial);
-	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (char *));
+	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
@@ -183,7 +181,7 @@ Cvar_CompleteBuildList (char *partial)
 Cvar_Set
 ============
 */
-void Cvar_SetQuick (cvar_t *var, char *value)
+void Cvar_SetQuick (cvar_t *var, const char *value)
 {
 	qboolean changed;
 
@@ -215,7 +213,7 @@ void Cvar_SetQuick (cvar_t *var, char *value)
 	}
 }
 
-void Cvar_Set (char *var_name, char *value)
+void Cvar_Set (const char *var_name, const char *value)
 {
 	cvar_t *var;
 	var = Cvar_FindVar (var_name);
@@ -243,7 +241,7 @@ void Cvar_SetValueQuick (cvar_t *var, float value)
 	Cvar_SetQuick (var, val);
 }
 
-void Cvar_SetValue (char *var_name, float value)
+void Cvar_SetValue (const char *var_name, float value)
 {
 	char	val[32];
 
@@ -344,21 +342,24 @@ Cvar_List
 */
 void Cvar_List_f (void)
 {
-	cvar_t	*cvar;
-	char	*partial;
-	int		len;
-	int		count;
+	cvar_t *cvar;
+	const char *partial;
+	int len, count;
 
-	if (Cmd_Argc() > 1) {
+	if (Cmd_Argc() > 1)
+	{
 		partial = Cmd_Argv (1);
 		len = strlen(partial);
-	} else {
+	}
+	else
+	{
 		partial = NULL;
 		len = 0;
 	}
 
 	count = 0;
-	for (cvar = cvar_vars; cvar; cvar = cvar->next) {
+	for (cvar = cvar_vars; cvar; cvar = cvar->next)
+	{
 		if (partial && strncmp (partial,cvar->name,len))
 			continue;
 

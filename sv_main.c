@@ -1505,9 +1505,9 @@ SV_ModelIndex
 
 ================
 */
-int SV_ModelIndex (char *name)
+int SV_ModelIndex (const char *name)
 {
-	int		i;
+	int i;
 
 	if (!name || !name[0])
 		return 0;
@@ -1656,7 +1656,7 @@ This is called at the start of each level
 */
 extern float		scr_centertime_off;
 
-void SV_SpawnServer (char *server)
+void SV_SpawnServer (const char *server)
 {
 	edict_t		*ent;
 	int			i;

@@ -139,7 +139,7 @@ void Sys_Sleep(void)
 	usleep(1);
 }
 
-int main (int argc, char **argv)
+int main (int argc, const char **argv)
 {
 	double frameoldtime, framenewtime;
 

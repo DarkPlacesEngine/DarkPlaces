@@ -34,65 +34,80 @@ Memory is cleared / released when a server or client begins, not when they end.
 
 */
 
-qboolean	host_initialized;		// true if into command execution
-qboolean	host_loopactive = false;	// LordHavoc: used to turn Host_Error into Sys_Error if starting up or shutting down
-qboolean	host_shuttingdown = false;	// LordHavoc: set when quit is executed
+// true if into command execution
+qboolean host_initialized;
+// LordHavoc: used to turn Host_Error into Sys_Error if starting up or shutting down
+qboolean host_loopactive = false;
+// LordHavoc: set when quit is executed
+qboolean host_shuttingdown = false;
 
-double		host_frametime;
-double		host_realframetime;		// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
-double		realtime;				// without any filtering or bounding
-double		oldrealtime;			// last frame run
-int			host_framecount;
+double host_frametime;
+// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
+double host_realframetime;
+// the real time, without any slowmo or clamping
+double realtime;
+// realtime from previous frame
+double oldrealtime;
+// how many frames have occurred
+int host_framecount;
 
-int			forcedeveloper;			// used for -developer commandline parameter, hacky hacky
+// used for -developer commandline parameter, hacky hacky
+int forcedeveloper;
 
-client_t	*host_client;			// current client
+// current client
+client_t *host_client;
 
-jmp_buf 	host_abortserver;
+jmp_buf host_abortserver;
 
-cvar_t	host_framerate = {0, "host_framerate","0"};	// set for slow motion
-cvar_t	host_speeds = {0, "host_speeds","0"};			// set for running times
-cvar_t	slowmo = {0, "slowmo", "1.0"};					// LordHavoc: framerate independent slowmo
-cvar_t	host_minfps = {CVAR_SAVE, "host_minfps", "10"};		// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
-cvar_t	host_maxfps = {CVAR_SAVE, "host_maxfps", "1000"};		// LordHavoc: framerate upper cap
+// pretend frames take this amount of time (in seconds), 0 = realtime
+cvar_t host_framerate = {0, "host_framerate","0"};
+// shows time used by certain subsystems
+cvar_t host_speeds = {0, "host_speeds","0"};
+// LordHavoc: framerate independent slowmo
+cvar_t slowmo = {0, "slowmo", "1.0"};
+// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
+cvar_t host_minfps = {CVAR_SAVE, "host_minfps", "10"};
+// LordHavoc: framerate upper cap
+cvar_t host_maxfps = {CVAR_SAVE, "host_maxfps", "1000"};
 
-cvar_t	sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1"};	// print broadcast messages in dedicated mode
+// print broadcast messages in dedicated mode
+cvar_t sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1"};
 
-cvar_t	sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05"};
-cvar_t	serverprofile = {0, "serverprofile","0"};
+cvar_t sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05"};
+cvar_t serverprofile = {0, "serverprofile","0"};
 
-cvar_t	fraglimit = {CVAR_NOTIFY, "fraglimit","0"};
-cvar_t	timelimit = {CVAR_NOTIFY, "timelimit","0"};
-cvar_t	teamplay = {CVAR_NOTIFY, "teamplay","0"};
+cvar_t fraglimit = {CVAR_NOTIFY, "fraglimit","0"};
+cvar_t timelimit = {CVAR_NOTIFY, "timelimit","0"};
+cvar_t teamplay = {CVAR_NOTIFY, "teamplay","0"};
 
-cvar_t	samelevel = {0, "samelevel","0"};
-cvar_t	noexit = {CVAR_NOTIFY, "noexit","0"};
+cvar_t samelevel = {0, "samelevel","0"};
+cvar_t noexit = {CVAR_NOTIFY, "noexit","0"};
 
-cvar_t	developer = {0, "developer","0"};
+cvar_t developer = {0, "developer","0"};
 
-cvar_t	skill = {0, "skill","1"};						// 0 - 3
-cvar_t	deathmatch = {0, "deathmatch","0"};			// 0, 1, or 2
-cvar_t	coop = {0, "coop","0"};			// 0 or 1
+cvar_t skill = {0, "skill","1"};
+cvar_t deathmatch = {0, "deathmatch","0"};
+cvar_t coop = {0, "coop","0"};
 
-cvar_t	pausable = {0, "pausable","1"};
+cvar_t pausable = {0, "pausable","1"};
 
-cvar_t	temp1 = {0, "temp1","0"};
+cvar_t temp1 = {0, "temp1","0"};
 
-cvar_t	timestamps = {CVAR_SAVE, "timestamps", "0"};
-cvar_t	timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
+cvar_t timestamps = {CVAR_SAVE, "timestamps", "0"};
+cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
 
 /*
 ================
 Host_EndGame
 ================
 */
-void Host_EndGame (char *message, ...)
+void Host_EndGame (const char *format, ...)
 {
-	va_list		argptr;
-	char		string[1024];
+	va_list argptr;
+	char string[1024];
 
-	va_start (argptr,message);
-	vsprintf (string,message,argptr);
+	va_start (argptr,format);
+	vsprintf (string,format,argptr);
 	va_end (argptr);
 	Con_DPrintf ("Host_EndGame: %s\n",string);
 
@@ -118,10 +133,10 @@ This shuts down both the client and server
 ================
 */
 char hosterrorstring[4096];
-void Host_Error (char *error, ...)
+void Host_Error (const char *error, ...)
 {
-	va_list		argptr;
-	static	qboolean inerror = false;
+	va_list argptr;
+	static qboolean inerror = false;
 
 	// LordHavoc: if first frame has not been shown, or currently shutting
 	// down, do Sys_Error instead
@@ -279,7 +294,7 @@ Writes key bindings and archived cvars to config.cfg
 */
 void Host_WriteConfiguration (void)
 {
-	QFile	*f;
+	QFile *f;
 
 // dedicated servers initialize the host but don't parse and set the
 // config.cfg cvars
@@ -291,7 +306,7 @@ void Host_WriteConfiguration (void)
 			Con_Printf ("Couldn't write config.cfg.\n");
 			return;
 		}
-		
+
 		Key_WriteBindings (f);
 		Cvar_WriteVariables (f);
 
@@ -308,15 +323,15 @@ Sends text across to be displayed
 FIXME: make this just a stuffed echo?
 =================
 */
-void SV_ClientPrintf (char *fmt, ...)
+void SV_ClientPrintf (const char *fmt, ...)
 {
-	va_list		argptr;
-	char		string[1024];
-	
+	va_list argptr;
+	char string[1024];
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	MSG_WriteByte (&host_client->message, svc_print);
 	MSG_WriteString (&host_client->message, string);
 }
@@ -328,16 +343,16 @@ SV_BroadcastPrintf
 Sends text to all active clients
 =================
 */
-void SV_BroadcastPrintf (char *fmt, ...)
+void SV_BroadcastPrintf (const char *fmt, ...)
 {
-	va_list		argptr;
-	char		string[1024];
-	int			i;
-	
+	va_list argptr;
+	char string[1024];
+	int i;
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
-	
+
 	for (i=0 ; i<svs.maxclients ; i++)
 		if (svs.clients[i].active && svs.clients[i].spawned)
 		{
@@ -356,11 +371,11 @@ Host_ClientCommands
 Send text over to the client to be executed
 =================
 */
-void Host_ClientCommands (char *fmt, ...)
+void Host_ClientCommands (const char *fmt, ...)
 {
-	va_list		argptr;
-	char		string[1024];
-	
+	va_list argptr;
+	char string[1024];
+
 	va_start (argptr,fmt);
 	vsprintf (string, fmt,argptr);
 	va_end (argptr);
@@ -379,8 +394,8 @@ if (crash = true), don't bother sending signofs
 */
 void SV_DropClient (qboolean crash)
 {
-	int		saveSelf;
-	int		i;
+	int saveSelf;
+	int i;
 	client_t *client;
 
 	if (!crash)
@@ -391,7 +406,7 @@ void SV_DropClient (qboolean crash)
 			MSG_WriteByte (&host_client->message, svc_disconnect);
 			NET_SendMessage (host_client->netconnection, &host_client->message);
 		}
-	
+
 		if (sv.active && host_client->edict && host_client->spawned) // LordHavoc: don't call QC if server is dead (avoids recursive Host_Error in some mods when they run out of edicts)
 		{
 		// call the prog function for removing a client
@@ -441,11 +456,10 @@ This only happens at the end of a game, not between levels
 */
 void Host_ShutdownServer(qboolean crash)
 {
-	int		i;
-	int		count;
-	sizebuf_t	buf;
-	char		message[4];
-	double	start;
+	int i, count;
+	sizebuf_t buf;
+	char message[4];
+	double start;
 
 	if (!sv.active)
 		return;
@@ -603,7 +617,7 @@ Add them exactly as if they had been typed at the console
 */
 void Host_GetConsoleCommands (void)
 {
-	char	*cmd;
+	char *cmd;
 
 	while (1)
 	{
@@ -664,10 +678,10 @@ Runs all active servers
 */
 void _Host_Frame (float time)
 {
-	static double		time1 = 0;
-	static double		time2 = 0;
-	static double		time3 = 0;
-	int			pass1, pass2, pass3;
+	static double time1 = 0;
+	static double time2 = 0;
+	static double time3 = 0;
+	int pass1, pass2, pass3;
 
 	if (setjmp (host_abortserver) )
 		return;			// something bad happened, or the server disconnected
@@ -767,10 +781,10 @@ void _Host_Frame (float time)
 
 void Host_Frame (float time)
 {
-	double	time1, time2;
-	static double	timetotal;
-	static int		timecount;
-	int		i, c, m;
+	double time1, time2;
+	static double timetotal;
+	static int timecount;
+	int i, c, m;
 
 	if (!serverprofile.integer)
 	{

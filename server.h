@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -24,10 +24,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	int			maxclients;
-	struct client_s	*clients;		// [maxclients]
-	int			serverflags;		// episode completion information
-	qboolean	changelevel_issued;	// cleared when at SV_SpawnServer
+	int maxclients;
+	// [maxclients]
+	struct client_s *clients;
+	// episode completion information
+	int serverflags;
+	// cleared when at SV_SpawnServer
+	qboolean changelevel_issued;
 } server_static_t;
 
 //=============================================================================
@@ -36,96 +39,119 @@ typedef enum {ss_loading, ss_active} server_state_t;
 
 typedef struct
 {
-	qboolean	active;				// false if only a net client
+	// false if only a net client
+	qboolean active;
 
-	qboolean	paused;
-	qboolean	loadgame;			// handle connections specially
+	qboolean paused;
+	// handle connections specially
+	qboolean loadgame;
 
-	double		time;
+	double time;
 
-	double		frametime;
+	double frametime;
 
-	int			lastcheck;			// used by PF_checkclient
-	double		lastchecktime;
+	// used by PF_checkclient
+	int lastcheck;
+	double lastchecktime;
 
-	char		name[64];			// map name
-	char		modelname[64];		// maps/<name>.bsp, for model_precache[0]
-	struct model_s 	*worldmodel;
-	char		*model_precache[MAX_MODELS];	// NULL terminated
-	struct model_s	*models[MAX_MODELS];
-	char		*sound_precache[MAX_SOUNDS];	// NULL terminated
-	char		*lightstyles[MAX_LIGHTSTYLES];
-	int			num_edicts;
-	int			max_edicts;
-	edict_t		*edicts;			// can NOT be array indexed, because
-									// edict_t is variable sized, but can
-									// be used to reference the world ent
-	server_state_t	state;			// some actions are only valid during load
+	// map name
+	char name[64];
+	// maps/<name>.bsp, for model_precache[0]
+	char modelname[64];
+	struct model_s *worldmodel;
+	// NULL terminated
+	char *model_precache[MAX_MODELS];
+	struct model_s *models[MAX_MODELS];
+	// NULL terminated
+	char *sound_precache[MAX_SOUNDS];
+	char *lightstyles[MAX_LIGHTSTYLES];
+	int num_edicts;
+	int max_edicts;
+	// can NOT be array indexed, because edict_t is variable sized, but can be used to reference the world ent
+	edict_t *edicts;
+	// some actions are only valid during load
+	server_state_t state;
 
-	sizebuf_t	datagram;
-	qbyte		datagram_buf[MAX_DATAGRAM];
+	sizebuf_t datagram;
+	qbyte datagram_buf[MAX_DATAGRAM];
 
-	sizebuf_t	reliable_datagram;	// copied to all clients at end of frame
-	qbyte		reliable_datagram_buf[MAX_DATAGRAM];
+	// copied to all clients at end of frame
+	sizebuf_t reliable_datagram;
+	qbyte reliable_datagram_buf[MAX_DATAGRAM];
 
-	sizebuf_t	signon;
-	qbyte		signon_buf[32768]; // LordHavoc: increased signon message buffer from 8192 to 32768
+	sizebuf_t signon;
+	// LordHavoc: increased signon message buffer from 8192 to 32768
+	qbyte signon_buf[32768];
 } server_t;
 
 
-#define	NUM_PING_TIMES		16
-#define	NUM_SPAWN_PARMS		16
+#define NUM_PING_TIMES 16
+#define NUM_SPAWN_PARMS 16
 
 typedef struct client_s
 {
-	qboolean		active;				// false = client is free
-	qboolean		spawned;			// false = don't send datagrams
-	qboolean		dropasap;			// has been told to go to another level
-	qboolean		sendsignon;			// only valid before spawned
+	// false = client is free
+	qboolean active;
+	// false = don't send datagrams
+	qboolean spawned;
+	// has been told to go to another level
+	qboolean dropasap;
+	// only valid before spawned
+	qboolean sendsignon;
 
 #ifndef NOROUTINGFIX
 	// LordHavoc: to make netquake protocol get through NAT routers, have to wait for client to ack
-	qboolean		waitingforconnect;	// waiting for connect from client (stage 1)
-	qboolean		sendserverinfo;		// send server info in next datagram (stage 2)
+	// waiting for connect from client (stage 1)
+	qboolean waitingforconnect;
+	// send server info in next datagram (stage 2)
+	qboolean sendserverinfo;
 #endif
 
-	double			last_message;		// reliable messages must be sent
-										// periodically
+	// reliable messages must be sent periodically
+	double last_message;
 
-	struct qsocket_s *netconnection;	// communications handle
+	// communications handle
+	struct qsocket_s *netconnection;
 
-	usercmd_t		cmd;				// movement
-	vec3_t			wishdir;			// intended motion calced from cmd
+	// movement
+	usercmd_t cmd;
+	// intended motion calced from cmd
+	vec3_t wishdir;
 
-	sizebuf_t		message;			// can be added to at any time,
-										// copied and clear once per frame
-	qbyte			msgbuf[MAX_MSGLEN];
-	edict_t			*edict;				// EDICT_NUM(clientnum+1)
-	char			name[32];			// for printing to other people
-	int				colors;
+	// can be added to at any time, copied and clear once per frame
+	sizebuf_t message;
+	qbyte msgbuf[MAX_MSGLEN];
+	// EDICT_NUM(clientnum+1)
+	edict_t *edict;
+	// for printing to other people
+	char name[32];
+	int colors;
 
-	float			ping_times[NUM_PING_TIMES];
-	int				num_pings;			// ping_times[num_pings%NUM_PING_TIMES]
-	float			ping;				// LordHavoc: can be used for prediction or whatever...
-	float			latency;			// LordHavoc: specifically used for prediction, accounts for sys_ticrate too
+	float ping_times[NUM_PING_TIMES];
+	// ping_times[num_pings%NUM_PING_TIMES]
+	int num_pings;
+	// LordHavoc: can be used for prediction or whatever...
+	float ping;
+	// LordHavoc: specifically used for prediction, accounts for sys_ticrate too
+	float latency;
 
 // spawn parms are carried from level to level
-	float			spawn_parms[NUM_SPAWN_PARMS];
+	float spawn_parms[NUM_SPAWN_PARMS];
 
 // client known data for deltas
-	int				old_frags;
-	int				pmodel;
+	int old_frags;
+	int pmodel;
 
 #ifdef QUAKEENTITIES
 	// delta compression state
-	float			nextfullupdate[MAX_EDICTS];
+	float nextfullupdate[MAX_EDICTS];
 #endif
 	// visibility state
-	float			visibletime[MAX_EDICTS];
+	float visibletime[MAX_EDICTS];
 
 #ifndef QUAKEENTITIES
 	entity_database_t entitydatabase;
-	int				entityframenumber; // incremented each time an entity frame is sent
+	int entityframenumber; // incremented each time an entity frame is sent
 #endif
 } client_t;
 
@@ -221,8 +247,10 @@ extern cvar_t sv_predict;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
 
-extern server_static_t svs;				// persistant server info
-extern server_t sv;					// local server
+// persistant server info
+extern server_static_t svs;
+// local server
+extern server_t sv;
 
 extern client_t *host_client;
 
@@ -243,7 +271,7 @@ void SV_DropClient (qboolean crash);
 void SV_SendClientMessages (void);
 void SV_ClearDatagram (void);
 
-int SV_ModelIndex (char *name);
+int SV_ModelIndex (const char *name);
 
 void SV_SetIdealPitch (void);
 
@@ -252,8 +280,8 @@ void SV_AddUpdates (void);
 void SV_ClientThink (void);
 void SV_AddClientToServer (struct qsocket_s	*ret);
 
-void SV_ClientPrintf (char *fmt, ...);
-void SV_BroadcastPrintf (char *fmt, ...);
+void SV_ClientPrintf (const char *fmt, ...);
+void SV_BroadcastPrintf (const char *fmt, ...);
 
 void SV_Physics (void);
 
@@ -267,7 +295,7 @@ void SV_MoveToGoal (void);
 void SV_CheckForNewClients (void);
 void SV_RunClients (void);
 void SV_SaveSpawnparms (void);
-void SV_SpawnServer (char *server);
+void SV_SpawnServer (const char *server);
 
 void SV_SetMaxClients(int n);
 

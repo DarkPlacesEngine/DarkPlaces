@@ -220,22 +220,20 @@ void CL_KeepaliveMessage (void)
 
 void CL_ParseEntityLump(char *entdata)
 {
-	char *data;
+	const char *data;
 	char key[128], value[4096];
 	FOG_clear(); // LordHavoc: no fog until set
 	R_SetSkyBox(""); // LordHavoc: no environment mapped sky until set
 	data = entdata;
 	if (!data)
 		return;
-	data = COM_Parse(data);
-	if (!data)
+	if (!COM_ParseToken(&data))
 		return; // error
 	if (com_token[0] != '{')
 		return; // error
 	while (1)
 	{
-		data = COM_Parse(data);
-		if (!data)
+		if (!COM_ParseToken(&data))
 			return; // error
 		if (com_token[0] == '}')
 			break; // end of worldspawn
@@ -245,8 +243,7 @@ void CL_ParseEntityLump(char *entdata)
 			strcpy(key, com_token);
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
-		data = COM_Parse(data);
-		if (!data)
+		if (!COM_ParseToken(&data))
 			return; // error
 		strcpy(value, com_token);
 		if (!strcmp("sky", key))

@@ -59,8 +59,8 @@ int			in_impulse;
 
 void KeyDown (kbutton_t *b)
 {
-	int		k;
-	char	*c;
+	int k;
+	const char *c;
 
 	c = Cmd_Argv(1);
 	if (c[0])
@@ -80,7 +80,7 @@ void KeyDown (kbutton_t *b)
 		Con_Printf ("Three keys down for a button!\n");
 		return;
 	}
-	
+
 	if (b->state & 1)
 		return;		// still down
 	b->state |= 1 + 2;	// down + impulse down
@@ -88,9 +88,9 @@ void KeyDown (kbutton_t *b)
 
 void KeyUp (kbutton_t *b)
 {
-	int		k;
-	char	*c;
-	
+	int k;
+	const char *c;
+
 	c = Cmd_Argv(1);
 	if (c[0])
 		k = atoi(c);

@@ -60,6 +60,7 @@ interface from being ambiguous.
 #define CVAR_SAVE 1
 #define CVAR_NOTIFY 2
 
+/*
 // type of a cvar for menu purposes
 #define CVARMENUTYPE_FLOAT 1
 #define CVARMENUTYPE_INTEGER 2
@@ -80,58 +81,61 @@ interface from being ambiguous.
 typedef struct
 {
 	int value;
-	char *name;
+	const char *name;
 }
 cvaroption_t;
 
 typedef struct
 {
-	int				type;
-	float			valuemin, valuemax, valuestep;
-	int				numoptions;
-	cvaroption_t	optionlist[MAX_CVAROPTIONS];
+	int type;
+	float valuemin, valuemax, valuestep;
+	int numoptions;
+	cvaroption_t optionlist[MAX_CVAROPTIONS];
 }
 menucvar_t;
+*/
 
 typedef struct cvar_s
 {
-	int				flags;
-	char			*name;
-	char			*string;
-	int				integer;
-	float			value;
-	float			vector[3];
-	menucvar_t		menuinfo;
-	struct cvar_s	*next;
+	int flags;
+	char *name;
+	char *string;
+	int integer;
+	float value;
+	float vector[3];
+	//menucvar_t menuinfo;
+	struct cvar_s *next;
 } cvar_t;
 
-void	Cvar_MenuSlider(cvar_t *variable, int menu, float slider_min, float slider_max, float slider_step);
-void	Cvar_MenuBool(cvar_t *variable, int menu, char *name_false, char *name_true);
-void	Cvar_MenuFloat(cvar_t *variable, int menu, float range_min, float range_max);
-void	Cvar_MenuInteger(cvar_t *variable, int menu, int range_min, int range_max);
-void	Cvar_MenuString(cvar_t *variable, int menu);
-void	Cvar_MenuOption(cvar_t *variable, int menu, int value[16], char *name[16]);
+/*
+void Cvar_MenuSlider(cvar_t *variable, int menu, float slider_min, float slider_max, float slider_step);
+void Cvar_MenuBool(cvar_t *variable, int menu, const char *name_false, const char *name_true);
+void Cvar_MenuFloat(cvar_t *variable, int menu, float range_min, float range_max);
+void Cvar_MenuInteger(cvar_t *variable, int menu, int range_min, int range_max);
+void Cvar_MenuString(cvar_t *variable, int menu);
+void Cvar_MenuOption(cvar_t *variable, int menu, int value[16], const char *name[16]);
+*/
 
-void	Cvar_RegisterVariable (cvar_t *variable);
+void Cvar_RegisterVariable (cvar_t *variable);
 // registers a cvar that already has the name, string, and optionally the
 // archive elements set.
 
-void	Cvar_Set (char *var_name, char *value);
+void Cvar_Set (const char *var_name, const char *value);
 // equivelant to "<name> <variable>" typed at the console
 
-void	Cvar_SetValue (char *var_name, float value);
+void Cvar_SetValue (const char *var_name, float value);
 // expands value to a string and calls Cvar_Set
 
-void	Cvar_SetQuick (cvar_t *var, char *value);
-void	Cvar_SetValueQuick (cvar_t *var, float value);
+void Cvar_SetQuick (cvar_t *var, const char *value);
+void Cvar_SetValueQuick (cvar_t *var, float value);
 
-float	Cvar_VariableValue (char *var_name);
+float Cvar_VariableValue (const char *var_name);
 // returns 0 if not defined or non numeric
 
-char	*Cvar_VariableString (char *var_name);
+const char *Cvar_VariableString (const char *var_name);
 // returns an empty string if not defined
 
-char 	*Cvar_CompleteVariable (char *partial);
+const char *Cvar_CompleteVariable (const char *partial);
 // attempts to match a partial variable name for command line completion
 // returns NULL if nothing fits
 
@@ -140,20 +144,20 @@ qboolean Cvar_Command (void);
 // command.  Returns true if the command was a variable reference that
 // was handled. (print or change)
 
-void 	Cvar_WriteVariables (QFile *f);
+void Cvar_WriteVariables (QFile *f);
 // Writes lines containing "set variable value" for all variables
 // with the archive flag set to true.
 
-cvar_t *Cvar_FindVar (char *var_name);
-cvar_t *Cvar_FindVarAfter (char *prev_var_name, int neededflags);
+cvar_t *Cvar_FindVar (const char *var_name);
+cvar_t *Cvar_FindVarAfter (const char *prev_var_name, int neededflags);
 
-int		Cvar_CompleteCountPossible (char *partial);
-char	**Cvar_CompleteBuildList (char *partial);
+int Cvar_CompleteCountPossible (const char *partial);
+const char **Cvar_CompleteBuildList (const char *partial);
 // Added by EvilTypeGuy - functions for tab completion system
 // Thanks to Fett erich@heintz.com
 // Thanks to taniwha
 
-void	Cvar_List_f (void);
+void Cvar_List_f (void);
 // Prints a list of Cvars including a count of them to the user console
 // Referenced in cmd.c in Cmd_Init hence it's inclusion here
 // Added by EvilTypeGuy eviltypeguy@qeradiant.com

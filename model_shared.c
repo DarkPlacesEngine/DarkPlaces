@@ -276,7 +276,7 @@ Mod_FindName
 
 ==================
 */
-model_t *Mod_FindName (char *name)
+model_t *Mod_FindName (const char *name)
 {
 	int i;
 	model_t *mod, *freemod;
@@ -319,7 +319,7 @@ Mod_TouchModel
 
 ==================
 */
-void Mod_TouchModel (char *name)
+void Mod_TouchModel (const char *name)
 {
 	model_t	*mod;
 
@@ -334,7 +334,7 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-model_t *Mod_ForName (char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
+model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
 	return Mod_LoadModel (Mod_FindName (name), crash, checkdisk, isworldmodel);
 }

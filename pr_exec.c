@@ -365,7 +365,7 @@ PR_ExecuteProgram
 #define OPB ((eval_t *)&pr_globals[(unsigned short) st->b])
 #define OPC ((eval_t *)&pr_globals[(unsigned short) st->c])
 extern cvar_t pr_boundscheck;
-void PR_ExecuteProgram (func_t fnum, char *errormessage)
+void PR_ExecuteProgram (func_t fnum, const char *errormessage)
 {
 	dstatement_t	*st;
 	dfunction_t	*f, *newf;

@@ -103,7 +103,7 @@ void NET_Ban_f (void)
 {
 	char	addrStr [32];
 	char	maskStr [32];
-	void	(*print) (char *fmt, ...);
+	void	(*print) (const char *fmt, ...);
 
 	if (cmd_source == src_command)
 	{
@@ -568,9 +568,8 @@ static void Test_Poll(void)
 
 static void Test_f (void)
 {
-	char	*host;
-	int		n;
-	int		max = MAX_SCOREBOARD;
+	const char *host;
+	int n, max = MAX_SCOREBOARD;
 	struct qsockaddr sendaddr;
 
 	if (testInProgress)
@@ -699,8 +698,8 @@ Done:
 
 static void Test2_f (void)
 {
-	char	*host;
-	int		n;
+	const char *host;
+	int n;
 	struct qsockaddr sendaddr;
 
 	if (test2InProgress)

@@ -38,13 +38,13 @@ typedef struct sizebuf_s
 	int			cursize;
 } sizebuf_t;
 
-void SZ_Alloc (sizebuf_t *buf, int startsize, char *name);
+void SZ_Alloc (sizebuf_t *buf, int startsize, const char *name);
 void SZ_Free (sizebuf_t *buf);
 void SZ_Clear (sizebuf_t *buf);
 void *SZ_GetSpace (sizebuf_t *buf, int length);
-void SZ_Write (sizebuf_t *buf, void *data, int length);
-void SZ_Print (sizebuf_t *buf, char *data);	// strcats onto the sizebuf
-void SZ_HexDumpToConsole(sizebuf_t *buf);
+void SZ_Write (sizebuf_t *buf, const void *data, int length);
+void SZ_Print (sizebuf_t *buf, const char *data);	// strcats onto the sizebuf
+void SZ_HexDumpToConsole(const sizebuf_t *buf);
 
 //============================================================================
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
@@ -92,7 +92,7 @@ void MSG_WriteByte (sizebuf_t *sb, int c);
 void MSG_WriteShort (sizebuf_t *sb, int c);
 void MSG_WriteLong (sizebuf_t *sb, int c);
 void MSG_WriteFloat (sizebuf_t *sb, float f);
-void MSG_WriteString (sizebuf_t *sb, char *s);
+void MSG_WriteString (sizebuf_t *sb, const char *s);
 void MSG_WriteCoord (sizebuf_t *sb, float f);
 void MSG_WriteAngle (sizebuf_t *sb, float f);
 void MSG_WritePreciseAngle (sizebuf_t *sb, float f);
@@ -123,31 +123,30 @@ extern int dpprotocol;
 
 //============================================================================
 
-int Q_strcasecmp (char *s1, char *s2);
-int Q_strncasecmp (char *s1, char *s2, int n);
+int Q_strcasecmp (const char *s1, const char *s2);
+int Q_strncasecmp (const char *s1, const char *s2, int n);
 
 //============================================================================
 
-extern	char		com_token[1024];
-extern	qboolean	com_eof;
+extern char com_token[1024];
+extern qboolean com_eof;
 
-char *COM_Parse (char *data);
+int COM_ParseToken (const char **data);
 
 extern char com_basedir[MAX_OSPATH];
 extern int com_argc;
-extern char **com_argv;
+extern const char **com_argv;
 
-int COM_CheckParm (char *parm);
+int COM_CheckParm (const char *parm);
 void COM_Init (void);
 void COM_InitArgv (void);
 void COM_InitGameType (void);
 
-char *COM_SkipPath (char *pathname);
-void COM_StripExtension (char *in, char *out);
-void COM_FileBase (char *in, char *out);
-void COM_DefaultExtension (char *path, char *extension);
+void COM_StripExtension (const char *in, char *out);
+void COM_FileBase (const char *in, char *out);
+void COM_DefaultExtension (char *path, const char *extension);
 
-char	*va(char *format, ...);
+char	*va(const char *format, ...);
 // does a varargs printf into a temp buffer
 
 
@@ -157,14 +156,14 @@ extern int com_filesize;
 
 extern	char	com_gamedir[MAX_OSPATH];
 
-qboolean COM_WriteFile (char *filename, void *data, int len);
-int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
+qboolean COM_WriteFile (const char *filename, void *data, int len);
+int COM_FOpenFile (const char *filename, QFile **file, qboolean quiet, qboolean zip);
 
 // set by COM_LoadFile functions
 extern int loadsize;
-qbyte *COM_LoadFile (char *path, qboolean quiet);
+qbyte *COM_LoadFile (const char *path, qboolean quiet);
 
-int COM_FileExists(char *filename);
+int COM_FileExists(const char *filename);
 
 extern	struct cvar_s	registered;
 
@@ -178,8 +177,8 @@ extern int gamemode;
 extern char *gamename;
 
 // LordHavoc: useful...
-void COM_ToLowerString(char *in, char *out);
-void COM_ToUpperString(char *in, char *out);
+void COM_ToLowerString(const char *in, char *out);
+void COM_ToUpperString(const char *in, char *out);
 int COM_StringBeginsWith(const char *s, const char *match);
 
 typedef struct stringlist_s

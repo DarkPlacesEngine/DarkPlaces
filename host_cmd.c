@@ -48,12 +48,9 @@ Host_Status_f
 */
 void Host_Status_f (void)
 {
-	client_t	*client;
-	int			seconds;
-	int			minutes;
-	int			hours = 0;
-	int			j;
-	void		(*print) (char *fmt, ...);
+	client_t *client;
+	int seconds, minutes, hours = 0, j;
+	void (*print) (const char *fmt, ...);
 
 	if (cmd_source == src_command)
 	{
@@ -513,17 +510,18 @@ Host_Loadgame_f
 */
 void Host_Loadgame_f (void)
 {
-	char	name[MAX_OSPATH];
-	QFile	*f;
-	char	mapname[MAX_QPATH];
-	float	time, tfloat;
-	char	buf[32768], *start;
-	char	*str;
-	int		i, r;
-	edict_t	*ent;
-	int		entnum;
-	int		version;
-	float	spawn_parms[NUM_SPAWN_PARMS];
+	char name[MAX_OSPATH];
+	QFile *f;
+	char mapname[MAX_QPATH];
+	float time, tfloat;
+	char buf[32768];
+	const char *start;
+	char *str;
+	int i, r;
+	edict_t *ent;
+	int entnum;
+	int version;
+	float spawn_parms[NUM_SPAWN_PARMS];
 
 	if (cmd_source != src_command)
 		return;
@@ -595,7 +593,8 @@ void Host_Loadgame_f (void)
 	}
 
 // load the edicts out of the savegame file
-	entnum = -1;		// -1 is the globals
+	// -1 is the globals
+	entnum = -1;
 	while (!Qeof(f))
 	{
 		for (i=0 ; i<sizeof(buf)-1 ; i++)
@@ -611,35 +610,38 @@ void Host_Loadgame_f (void)
 			}
 		}
 		if (i == sizeof(buf)-1)
-			Sys_Error ("Loadgame buffer overflow");
+			Host_Error ("Loadgame buffer overflow");
 		buf[i] = 0;
 		start = buf;
-		start = COM_Parse(buf);
-		if (!com_token[0])
-			break;		// end of file
+		if (!COM_ParseToken(&start))
+		{
+			// end of file
+			break;
+		}
 		if (strcmp(com_token,"{"))
-			Sys_Error ("First token isn't a brace");
-			
+			Host_Error ("First token isn't a brace");
+
 		if (entnum == -1)
-		{	// parse the global vars
+		{
+			// parse the global vars
 			ED_ParseGlobals (start);
 		}
 		else
-		{	// parse an edict
-
+		{
+			// parse an edict
 			ent = EDICT_NUM(entnum);
 			memset (&ent->v, 0, progs->entityfields * 4);
 			ent->free = false;
 			ED_ParseEdict (start, ent);
-	
-		// link it into the bsp tree
+
+			// link it into the bsp tree
 			if (!ent->free)
 				SV_LinkEdict (ent, false);
 		}
 
 		entnum++;
 	}
-	
+
 	sv.num_edicts = entnum;
 	sv.time = time;
 
@@ -701,7 +703,7 @@ void Host_Name_f (void)
 	MSG_WriteString (&sv.reliable_datagram, host_client->name);
 }
 
-	
+
 void Host_Version_f (void)
 {
 	Con_Printf ("Version: %s build %s\n", gamename, buildstring);
@@ -711,11 +713,11 @@ void Host_Say(qboolean teamonly)
 {
 	client_t *client;
 	client_t *save;
-	int		j;
-	char	*p;
+	int j;
+	const char *p1, *p2;
 	// LordHavoc: 256 char say messages
-	unsigned char	text[256];
-	qboolean	fromServer = false;
+	unsigned char text[256];
+	qboolean fromServer = false;
 
 	if (cmd_source == src_command)
 	{
@@ -734,28 +736,34 @@ void Host_Say(qboolean teamonly)
 	if (Cmd_Argc () < 2)
 		return;
 
-	save = host_client;
-
-	p = Cmd_Args();
-// remove quotes if present
-	if (*p == '"')
-	{
-		p++;
-		p[strlen(p)-1] = 0;
-	}
-
 // turn on color set 1
 	if (!fromServer)
-		sprintf (text, "%c%s: ", 1, save->name);
+		sprintf (text, "%c%s: ", 1, host_client->name);
 	else
 		sprintf (text, "%c<%s> ", 1, hostname.string);
 
-	j = sizeof(text) - 2 - strlen(text);  // -2 for /n and null terminator
-	if (strlen(p) > j)
-		p[j] = 0;
+	save = host_client;
 
-	strcat (text, p);
-	strcat (text, "\n");
+	p1 = Cmd_Args();
+	p2 = p1 + strlen(p1);
+	// remove trailing newlines
+	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
+		p2--;
+	// remove quotes if present
+	if (*p1 == '"')
+	{
+		p1++;
+		if (p2[-1] == '"')
+			p2--;
+		else
+			Con_Printf("Host_Say: missing end quote\n");
+	}
+	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
+		p2--;
+	for (j = strlen(text);j < (sizeof(text) - 2) && p1 < p2;)
+		text[j++] = *p1++;
+	text[j++] = '\n';
+	text[j++] = 0;
 
 	for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++)
 	{
@@ -788,38 +796,55 @@ void Host_Tell_f(void)
 {
 	client_t *client;
 	client_t *save;
-	int		j;
-	char	*p;
-	char	text[1024]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
+	int j;
+	const char *p1, *p2;
+	char text[1024]; // LordHavoc: FIXME: temporary buffer overflow fix (was 64)
+	qboolean fromServer = false;
 
 	if (cmd_source == src_command)
 	{
-		Cmd_ForwardToServer ();
-		return;
+		if (cls.state == ca_dedicated)
+			fromServer = true;
+		else
+		{
+			Cmd_ForwardToServer ();
+			return;
+		}
 	}
 
 	if (Cmd_Argc () < 3)
 		return;
 
-	strcpy(text, host_client->name);
-	strcat(text, ": ");
+	if (!fromServer)
+		sprintf (text, "%s: ", host_client->name);
+	else
+		sprintf (text, "<%s> ", hostname.string);
 
-	p = Cmd_Args();
-
-// remove quotes if present
-	if (*p == '"')
+	p1 = Cmd_Args();
+	p2 = p1 + strlen(p1);
+	// remove the target name
+	while (p1 < p2 && *p1 != ' ')
+		p1++;
+	while (p1 < p2 && *p1 == ' ')
+		p1++;
+	// remove trailing newlines
+	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
+		p2--;
+	// remove quotes if present
+	if (*p1 == '"')
 	{
-		p++;
-		p[strlen(p)-1] = 0;
+		p1++;
+		if (p2[-1] == '"')
+			p2--;
+		else
+			Con_Printf("Host_Say: missing end quote\n");
 	}
-
-// check length & truncate if necessary
-	j = sizeof(text) - 2 - strlen(text);  // -2 for /n and null terminator
-	if (strlen(p) > j)
-		p[j] = 0;
-
-	strcat (text, p);
-	strcat (text, "\n");
+	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
+		p2--;
+	for (j = strlen(text);j < (sizeof(text) - 2) && p1 < p2;)
+		text[j++] = *p1++;
+	text[j++] = '\n';
+	text[j++] = 0;
 
 	save = host_client;
 	for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++)
@@ -862,7 +887,7 @@ void Host_Color_f(void)
 		top = atoi(Cmd_Argv(1));
 		bottom = atoi(Cmd_Argv(2));
 	}
-	
+
 	top &= 15;
 	// LordHavoc: allow skin colormaps 14 and 15 (was 13)
 	if (top > 15)
@@ -920,7 +945,7 @@ void Host_Kill_f (void)
 		SV_ClientPrintf ("Can't suicide -- already dead!\n");
 		return;
 	}
-	
+
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(sv_player);
 	PR_ExecuteProgram (pr_global_struct->ClientKill, "QC function ClientKill is missing");
@@ -1155,11 +1180,11 @@ Kicks a user off of the server
 */
 void Host_Kick_f (void)
 {
-	char		*who;
-	char		*message = NULL;
-	client_t	*save;
-	int			i;
-	qboolean	byNumber = false;
+	char *who;
+	const char *message = NULL;
+	client_t *save;
+	int i;
+	qboolean byNumber = false;
 
 	if (cmd_source == src_command)
 	{
@@ -1198,10 +1223,12 @@ void Host_Kick_f (void)
 	if (i < svs.maxclients)
 	{
 		if (cmd_source == src_command)
+		{
 			if (cls.state == ca_dedicated)
 				who = "Console";
 			else
 				who = cl_name.string;
+		}
 		else
 			who = save->name;
 
@@ -1211,7 +1238,8 @@ void Host_Kick_f (void)
 
 		if (Cmd_Argc() > 2)
 		{
-			message = COM_Parse(Cmd_Args());
+			message = Cmd_Args();
+			COM_ParseToken(&message);
 			if (byNumber)
 			{
 				message++;							// skip the #
@@ -1247,9 +1275,9 @@ Host_Give_f
 */
 void Host_Give_f (void)
 {
-	char	*t;
-	int		v;
-	eval_t	*val;
+	const char *t;
+	int v;
+	eval_t *val;
 
 	if (cmd_source == src_command)
 	{
