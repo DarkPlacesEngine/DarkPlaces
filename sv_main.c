@@ -1339,7 +1339,7 @@ int SV_ModelIndex(char *s, int precachemode)
 				if (sv.protocol == PROTOCOL_DARKPLACES6)
 				{
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
-					MSG_WriteShort(&sv.reliable_datagram, i + 32768);
+					MSG_WriteShort(&sv.reliable_datagram, i);
 					MSG_WriteString(&sv.reliable_datagram, filename);
 				}
 				return i;
