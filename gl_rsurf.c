@@ -1976,12 +1976,14 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (r_shadow_compilingrtlight)
 			{
 				// if compiling an rtlight, capture the mesh
-				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texinfo->texture->skin.base, surface->texinfo->texture->skin.gloss, surface->texinfo->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				t = surface->texinfo->texture;
+				if (t->shader == &Cshader_wall_lightmap && t->skin.fog == NULL && (t->flags & SURF_SHADOWLIGHT))
+					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texinfo->texture->skin.base, surface->texinfo->texture->skin.gloss, surface->texinfo->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
 			else if (ent != &cl_entities[0].render || surface->visframe == r_framecount)
 			{
 				t = surface->texinfo->texture->currentframe;
-				if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
+				if (t->rendertype == SURFRENDER_OPAQUE && (t->flags & SURF_SHADOWLIGHT))
 						R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, t->skin.gloss, lightcubemap, LIGHTING_DIFFUSE | LIGHTING_SPECULAR);
 			}
 		}
