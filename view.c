@@ -54,7 +54,8 @@ cvar_t	crosshair = {"crosshair", "0", true};
 cvar_t	cl_crossx = {"cl_crossx", "0", false};
 cvar_t	cl_crossy = {"cl_crossy", "0", false};
 
-cvar_t	gl_cshiftpercent = {"gl_cshiftpercent", "100", false};
+//cvar_t	gl_cshiftpercent = {"gl_cshiftpercent", "100", false};
+cvar_t	gl_polyblend = {"gl_polyblend", "1", true};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
@@ -277,29 +278,32 @@ void V_ParseDamage (void)
 
 	cl.faceanimtime = cl.time + 0.2;		// but sbar face into pain frame
 
-	cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 0;
-	if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
-		cl.cshifts[CSHIFT_DAMAGE].percent = 150;
+	if (gl_polyblend.value)
+	{
+		cl.cshifts[CSHIFT_DAMAGE].percent += 3*count;
+		if (cl.cshifts[CSHIFT_DAMAGE].percent < 0)
+			cl.cshifts[CSHIFT_DAMAGE].percent = 0;
+		if (cl.cshifts[CSHIFT_DAMAGE].percent > 150)
+			cl.cshifts[CSHIFT_DAMAGE].percent = 150;
 
-	if (armor > blood)		
-	{
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 200;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 100;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 100;
-	}
-	else if (armor)
-	{
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 220;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 50;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 50;
-	}
-	else
-	{
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 255;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 0;
-		cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
+		if (armor > blood)		
+		{
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 200;
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 100;
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 100;
+		}
+		else if (armor)
+		{
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 220;
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 50;
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 50;
+		}
+		else
+		{
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[0] = 255;
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[1] = 0;
+			cl.cshifts[CSHIFT_DAMAGE].destcolor[2] = 0;
+		}
 	}
 
 //
@@ -345,10 +349,13 @@ When you run over an item, the server sends this command
 */
 void V_BonusFlash_f (void)
 {
-	cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
-	cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
-	cl.cshifts[CSHIFT_BONUS].destcolor[2] = 69;
-	cl.cshifts[CSHIFT_BONUS].percent = 50;
+	if (gl_polyblend.value)
+	{
+		cl.cshifts[CSHIFT_BONUS].destcolor[0] = 215;
+		cl.cshifts[CSHIFT_BONUS].destcolor[1] = 186;
+		cl.cshifts[CSHIFT_BONUS].destcolor[2] = 69;
+		cl.cshifts[CSHIFT_BONUS].percent = 50;
+	}
 }
 
 /*
@@ -362,6 +369,11 @@ void V_SetContentsColor (int contents)
 {
 	cshift_t* c;
 	c = &cl.cshifts[CSHIFT_CONTENTS]; // just to shorten the code below
+	if (!gl_polyblend.value)
+	{
+		c->percent = 0;
+		return;
+	}
 	switch (contents)
 	{
 	case CONTENTS_EMPTY:
@@ -402,6 +414,11 @@ V_CalcPowerupCshift
 */
 void V_CalcPowerupCshift (void)
 {
+	if (!gl_polyblend.value)
+	{
+		cl.cshifts[CSHIFT_POWERUP].percent = 0;
+		return;
+	}
 	if (cl.items & IT_QUAD)
 	{
 		cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
@@ -450,11 +467,12 @@ void V_CalcBlend (void)
 	b = 0;
 	a = 0;
 
-	if (gl_cshiftpercent.value)
-	{
+//	if (gl_cshiftpercent.value)
+//	{
 		for (j=0 ; j<NUM_CSHIFTS ; j++)	
 		{
-			a2 = ((cl.cshifts[j].percent * gl_cshiftpercent.value) / 100.0) / 255.0;
+//			a2 = ((cl.cshifts[j].percent * gl_cshiftpercent.value) / 100.0) / 255.0;
+			a2 = cl.cshifts[j].percent * (1.0f / 255.0f);
 
 			if (!a2)
 				continue;
@@ -473,7 +491,7 @@ void V_CalcBlend (void)
 			g *= a2;
 			b *= a2;
 		}
-	}
+//	}
 
 	v_blend[0] = bound(0, r * (1.0/255.0), 1);
 	v_blend[1] = bound(0, g * (1.0/255.0), 1);
@@ -799,7 +817,7 @@ void V_CalcRefdef (void)
 
 	view->model = cl.model_precache[cl.stats[STAT_WEAPON]];
 	view->frame = cl.stats[STAT_WEAPONFRAME];
-	view->colormap = 0; //vid.colormap;
+	view->colormap = -1; // no special coloring
 
 // set up the refresh position
 	if (!intimerefresh)
@@ -885,7 +903,8 @@ void V_Init (void)
 	Cvar_RegisterVariable (&crosshair);
 	Cvar_RegisterVariable (&cl_crossx);
 	Cvar_RegisterVariable (&cl_crossy);
-	Cvar_RegisterVariable (&gl_cshiftpercent);
+//	Cvar_RegisterVariable (&gl_cshiftpercent);
+	Cvar_RegisterVariable (&gl_polyblend);
 
 	Cvar_RegisterVariable (&cl_rollspeed);
 	Cvar_RegisterVariable (&cl_rollangle);

@@ -53,7 +53,6 @@ client_t	*host_client;			// current client
 jmp_buf 	host_abortserver;
 
 byte		*host_basepal;
-//byte		*host_colormap;
 
 cvar_t	host_framerate = {"host_framerate","0"};	// set for slow motion
 cvar_t	host_speeds = {"host_speeds","0"};			// set for running times
@@ -557,74 +556,6 @@ Host_ServerFrame
 
 ==================
 */
-#ifdef FPS_20
-
-void _Host_ServerFrame (void)
-{
-// run the world state	
-	pr_global_struct->frametime = host_frametime;
-
-// read client messages
-	SV_RunClients ();
-	
-// move things around and think
-// always pause in single player if in console or menus
-	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
-		SV_Physics ();
-}
-
-void Host_ServerFrame (void)
-{
-	float	save_host_frametime;
-	float	temp_host_frametime;
-	static float	host_serverframe_timevalue;
-
-// run the world state	
-	pr_global_struct->frametime = host_frametime;
-
-// set the time and clear the general datagram
-	SV_ClearDatagram ();
-		
-// check for new clients
-	SV_CheckForNewClients ();
-
-	temp_host_frametime = save_host_frametime = host_frametime;
-	// LordHavoc: the results of my attempts to mangle this code to process no more than sys_ticrate, 
-	// when I found that was too choppy, I changed it back to processing at least 20fps,
-	// I consider it a bit of a failure...  because I felt a little out of control in singleplayer
-	// (sliding around)
-	//if (host_serverframe_timevalue < -0.2) // don't let it get way out of range
-	//	host_serverframe_timevalue = -0.2;
-	//host_serverframe_timevalue += host_frametime;
-	// process frames (several if rendering is too slow to run well as a server)
-	while(temp_host_frametime > 0.0)
-	{
-		host_frametime = temp_host_frametime;
-		if (host_frametime > 0.05)
-			host_frametime = 0.05;
-		temp_host_frametime -= host_frametime;
-	//	host_serverframe_timevalue -= host_frametime;
-		_Host_ServerFrame ();
-	}
-	host_frametime = save_host_frametime;
-
-// send all messages to the clients
-	SV_SendClientMessages ();
-// LordHavoc: sadly, this didn't look good to the person running the server in listen mode
-	/*
-// wait until enough time has built up when the framerate exceeds sys_ticrate
-	if (host_serverframe_timevalue >= sys_ticrate.value)
-	//{
-	//	while(host_serverframe_timevalue >= sys_ticrate.value)
-	//		host_serverframe_timevalue -= sys_ticrate.value;
-// send all messages to the clients
-		SV_SendClientMessages ();
-	}
-	*/
-}
-
-#else
-
 double frametimetotal = 0, lastservertime = 0;
 void Host_ServerFrame (void)
 {
@@ -654,8 +585,6 @@ void Host_ServerFrame (void)
 // send all messages to the clients
 	SV_SendClientMessages ();
 }
-
-#endif
 
 
 /*
@@ -862,6 +791,8 @@ void Host_InitVCR (quakeparms_t *parms)
 	
 }
 
+void Render_Init();
+
 /*
 ====================
 Host_Init
@@ -914,18 +845,13 @@ void Host_Init (quakeparms_t *parms)
 		if (!host_basepal)
 			Sys_Error ("Couldn't load gfx/palette.lmp");
 		host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black
-//		host_colormap = (byte *)COM_LoadHunkFile ("gfx/colormap.lmp", false);
-//		if (!host_colormap)
-//			Sys_Error ("Couldn't load gfx/colormap.lmp");
 
 #ifndef _WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();
 #endif
 		VID_Init (host_basepal);
 
-		Draw_Init ();
-		SCR_Init ();
-		R_Init ();
+		Render_Init();
 		S_Init ();
 		CDAudio_Init ();
 		Sbar_Init ();
@@ -977,6 +903,7 @@ void Host_Shutdown(void)
 
 	if (cls.state != ca_dedicated)
 	{
+		R_ShutdownModules();
 		VID_Shutdown();
 	}
 }

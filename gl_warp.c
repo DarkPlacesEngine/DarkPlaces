@@ -178,7 +178,7 @@ void GL_SubdivideSurface (msurface_t *fa)
 
 extern qboolean lighthalf;
 
-#define	SKY_TEX		4000
+int skyboxside[6];
 
 char skyname[256];
 
@@ -201,7 +201,6 @@ void R_LoadSkyBox (void)
 
 	for (i=0 ; i<6 ; i++)
 	{
-		glBindTexture(GL_TEXTURE_2D, SKY_TEX + i);
 		sprintf (name, "env/%s%s", skyname, suf[i]);
 		if (!(image_rgba = loadimagepixels(name, FALSE, 0, 0)))
 		{
@@ -212,10 +211,8 @@ void R_LoadSkyBox (void)
 				continue;
 			}
 		}
-		glTexImage2D (GL_TEXTURE_2D, 0, gl_solid_format, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_rgba);
+		skyboxside[i] = GL_LoadTexture(va("skyboxside%d", i), image_width, image_height, image_rgba, false, false, 4);
 		free (image_rgba);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 }
 
@@ -260,42 +257,42 @@ void R_SkyBox()
 		glColor3f(0.5,0.5,0.5);
 	else
 		glColor3f(1,1,1);
-	glBindTexture(GL_TEXTURE_2D, SKY_TEX + 3); // front
+	glBindTexture(GL_TEXTURE_2D, skyboxside[3]); // front
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(0, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(0, 0,  1,  1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, SKY_TEX + 1); // back
+	glBindTexture(GL_TEXTURE_2D, skyboxside[1]); // back
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0, -1,  1,  1);
 	R_SkyBoxPolyVec(1, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(0, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(0, 0, -1, -1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, SKY_TEX + 0); // right
+	glBindTexture(GL_TEXTURE_2D, skyboxside[0]); // right
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1,  1,  1);
 	R_SkyBoxPolyVec(1, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(0, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(0, 0, -1,  1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, SKY_TEX + 2); // left
+	glBindTexture(GL_TEXTURE_2D, skyboxside[2]); // left
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0, -1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(0, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(0, 0,  1, -1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, SKY_TEX + 4); // up
+	glBindTexture(GL_TEXTURE_2D, skyboxside[4]); // up
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1,  1,  1,  1);
 	R_SkyBoxPolyVec(0, 1, -1,  1,  1);
 	R_SkyBoxPolyVec(0, 0, -1, -1,  1);
 	glEnd();
-	glBindTexture(GL_TEXTURE_2D, SKY_TEX + 5); // down
+	glBindTexture(GL_TEXTURE_2D, skyboxside[5]); // down
 	glBegin(GL_QUADS);
 	R_SkyBoxPolyVec(1, 0,  1,  1, -1);
 	R_SkyBoxPolyVec(1, 1,  1, -1, -1);
@@ -430,17 +427,13 @@ R_InitSky
 A sky texture is 256*128, with the right side being a masked overlay
 ==============
 */
-// LordHavoc: changed this for GLQuake
-void R_InitSky (byte *src, int bytesperpixel) //texture_t *mt)
+void R_InitSky (byte *src, int bytesperpixel)
 {
 	int			i, j, p;
-//	byte		*src;
 	unsigned	trans[128*128];
 	unsigned	transpix;
 	int			r, g, b;
 	unsigned	*rgba;
-
-//	src = (byte *)mt + mt->offsets[0];
 
 	if (bytesperpixel == 4)
 	{
@@ -470,16 +463,7 @@ void R_InitSky (byte *src, int bytesperpixel) //texture_t *mt)
 		((byte *)&transpix)[3] = 0;
 	}
 
-	if (!solidskytexture)
-		solidskytexture = texture_extension_number++;
-	if (!isDedicated)
-	{
-		glBindTexture(GL_TEXTURE_2D, solidskytexture );
-		glTexImage2D (GL_TEXTURE_2D, 0, gl_solid_format, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
-
+	solidskytexture = GL_LoadTexture ("sky_solidtexture", 128, 128, (byte *) trans, false, false, 4);
 
 	if (bytesperpixel == 4)
 	{
@@ -500,14 +484,6 @@ void R_InitSky (byte *src, int bytesperpixel) //texture_t *mt)
 			}
 	}
 
-	if (!alphaskytexture)
-		alphaskytexture = texture_extension_number++;
-	if (!isDedicated)
-	{
-		glBindTexture(GL_TEXTURE_2D, alphaskytexture);
-		glTexImage2D (GL_TEXTURE_2D, 0, gl_alpha_format, 128, 128, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	}
+	alphaskytexture = GL_LoadTexture ("sky_alphatexture", 128, 128, (byte *) trans, false, true, 4);
 }
 

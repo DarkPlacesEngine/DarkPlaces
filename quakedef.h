@@ -19,11 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // quakedef.h -- primary header for client
 
-//#define	GLTEST			// experimental stuff
-
 #define	QUAKE_GAME			// as opposed to utilities
 
-#define	VERSION				1.05
+#define	VERSION				1.50
 
 #ifndef FALSE
 #define FALSE 0
@@ -31,6 +29,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 //define	PARANOID			// speed sapping error checking
+#ifdef _DEBUG
+#define ASSERT(condition) if (!(condition)) Sys_Error("assertion (##condition) failed at " __FILE__ ":" __LINE__ "\n");
+#else
+#define ASSERT(condition)
+#endif
 
 #define	GAMENAME	"id1"
 
@@ -261,7 +264,6 @@ extern	cvar_t		developer;
 extern	qboolean	host_initialized;		// true if into command execution
 extern	double		host_frametime;
 extern	byte		*host_basepal;
-extern	byte		*host_colormap;
 extern	int			host_framecount;	// incremented every frame, never reset
 extern	double		realtime;			// not bounded in any way, changed at
 										// start of every frame, never reset
@@ -298,3 +300,7 @@ extern	cvar_t	chase_active;
 void Chase_Init (void);
 void Chase_Reset (void);
 void Chase_Update (void);
+
+void fractalnoise(unsigned char *noise, int size);
+
+#include "image.h"

@@ -39,7 +39,7 @@ qboolean	envmap;				// true during envmap command capture
 
 // LordHavoc: moved all code related to particles into r_part.c
 //int			particletexture;	// little dot for particles
-int			playertextures;		// up to 16 color translated skins
+//int			playertextures;		// up to 16 color translated skins
 
 extern qboolean isG200, isRagePro; // LordHavoc: special card hacks
 
@@ -82,17 +82,9 @@ cvar_t	r_novis = {"r_novis","0"};
 cvar_t	r_waterripple = {"r_waterripple","0"};
 cvar_t	r_fullbrights = {"r_fullbrights", "1"};
 
-//cvar_t	gl_cull = {"gl_cull","1"};
-//cvar_t	gl_affinemodels = {"gl_affinemodels","0"};
-//cvar_t	gl_polyblend = {"gl_polyblend","1"};
-cvar_t	gl_playermip = {"gl_playermip","0"};
-//cvar_t	gl_nocolors = {"gl_nocolors","0"};
-//cvar_t	gl_keeptjunctions = {"gl_keeptjunctions","1"};
-//cvar_t	gl_reporttjunctions = {"gl_reporttjunctions","0"};
 cvar_t	contrast = {"contrast", "1.0", TRUE}; // LordHavoc: a method of operating system independent color correction
 cvar_t	brightness = {"brightness", "1.0", TRUE}; // LordHavoc: a method of operating system independent color correction
 cvar_t	gl_lightmode = {"gl_lightmode", "1", TRUE}; // LordHavoc: overbright lighting
-//cvar_t	r_dynamicwater = {"r_dynamicwater", "1"};
 //cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 cvar_t	r_farclip = {"r_farclip", "6144"};
 
@@ -104,74 +96,6 @@ cvar_t	gl_fogblue = {"gl_fogblue","0.3"};
 cvar_t	gl_fogstart = {"gl_fogstart", "0"};
 cvar_t	gl_fogend = {"gl_fogend","0"};
 cvar_t	glfog = {"glfog", "0"};
-
-int chrometexture;
-
-void makechrometextures()
-{
-	int x, y, g, g2, amplitude, noise[64][64], min, max;
-	byte data[64][64][4];
-	//
-	// particle texture
-	//
-	chrometexture = texture_extension_number++;
-    glBindTexture(GL_TEXTURE_2D, chrometexture);
-
-#define n(x,y) noise[(y)&63][(x)&63]
-
-	amplitude = 16777215;
-	g2 = 64;
-	noise[0][0] = 0;
-	for (;(g = g2 >> 1) >= 1;g2 >>= 1)
-	{
-		// subdivide, diamond-square algorythm (really this has little to do with squares)
-		// diamond
-		for (y = 0;y < 64;y += g2)
-			for (x = 0;x < 64;x += g2)
-				n(x+g,y+g) = (n(x,y) + n(x+g2,y) + n(x,y+g2) + n(x+g2,y+g2)) >> 2;
-		// square
-		for (y = 0;y < 64;y += g2)
-			for (x = 0;x < 64;x += g2)
-			{
-				n(x+g,y) = (n(x,y) + n(x+g2,y) + n(x+g,y-g) + n(x+g,y+g)) >> 2;
-				n(x,y+g) = (n(x,y) + n(x,y+g2) + n(x-g,y+g) + n(x+g,y+g)) >> 2;
-			}
-		// brownian motion theory
-		amplitude >>= 1;
-		for (y = 0;y < 64;y += g)
-			for (x = 0;x < 64;x += g)
-				noise[y][x] += rand()&amplitude;
-	}
-	// normalize the noise range
-	min = max = 0;
-	for (y = 0;y < 64;y++)
-		for (x = 0;x < 64;x++)
-		{
-			if (n(x,y) < min) min = n(x,y);
-			if (n(x,y) > max) max = n(x,y);
-		}
-	max -= min;
-	for (y = 0;y < 64;y++)
-		for (x = 0;x < 64;x++)
-			n(x,y) = (n(x,y) - min) * 255 / max;
-
-#undef n
-
-	// convert to RGBA data
-	for (y = 0;y < 64;y++)
-		for (x = 0;x < 64;x++)
-		{
-			data[y][x][0] = data[y][x][1] = data[y][x][2] = (byte) noise[y][x];
-			data[y][x][3] = 255;
-		}
-
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-}
 
 extern qboolean isRagePro;
 
@@ -286,22 +210,16 @@ void FOG_registercvars()
 	}
 }
 
-void glpoly_init();
-void glrsurf_init();
-void rlight_init();
-
-// LordHavoc: vertex array
-float *aliasvert;
-float *aliasvertnorm;
-byte *aliasvertcolor;
-
-void rmain_registercvars()
+void glmain_start()
 {
-	// allocate vertex processing arrays
-	aliasvert = malloc(sizeof(float[MD2MAX_VERTS][3]));
-	aliasvertnorm = malloc(sizeof(float[MD2MAX_VERTS][3]));
-	aliasvertcolor = malloc(sizeof(byte[MD2MAX_VERTS][4]));
+}
 
+void glmain_shutdown()
+{
+}
+
+void GL_Main_Init()
+{
 	FOG_registercvars();
 	Cvar_RegisterVariable (&r_speeds2);
 	Cvar_RegisterVariable (&contrast);
@@ -315,10 +233,34 @@ void rmain_registercvars()
 //	if (gl_vendor && strstr(gl_vendor, "3Dfx"))
 //		gl_lightmode.value = 0;
 	Cvar_RegisterVariable (&r_fullbright);
-	makechrometextures();
-	glpoly_init();
-	glrsurf_init();
-	rlight_init();
+	R_RegisterModule("GL_Main", glmain_start, glmain_shutdown);
+}
+
+extern void GL_Draw_Init();
+extern void GL_Main_Init();
+extern void GL_Models_Init();
+extern void GL_Poly_Init();
+extern void GL_Surf_Init();
+extern void GL_Screen_Init();
+extern void GL_Misc_Init();
+extern void R_Crosshairs_Init();
+extern void R_Light_Init();
+extern void R_Particles_Init();
+
+void Render_Init()
+{
+	R_ShutdownModules();
+	GL_Draw_Init();
+	GL_Main_Init();
+	GL_Models_Init();
+	GL_Poly_Init();
+	GL_Surf_Init();
+	GL_Screen_Init();
+	GL_Misc_Init();
+	R_Crosshairs_Init();
+	R_Light_Init();
+	R_Particles_Init();
+	R_StartModules();
 }
 
 /*
@@ -347,32 +289,9 @@ vec3_t	shadecolor;
 
 float	modelalpha;
 
-void R_LightPoint (vec3_t color, vec3_t p);
-void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
-void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
-
-float R_CalcAnimLerp(int pose, float lerpscale)
-{
-	if (currententity->draw_lastmodel == currententity->model && currententity->draw_lerpstart <= cl.time)
-	{
-		if (pose != currententity->draw_pose)
-		{
-			currententity->draw_lastpose = currententity->draw_pose;
-			currententity->draw_pose = pose;
-			currententity->draw_lerpstart = cl.time;
-			return 0;
-		}
-		else
-			return ((cl.time - currententity->draw_lerpstart) * lerpscale);
-	}
-	else // uninitialized
-	{
-		currententity->draw_lastmodel = currententity->model;
-		currententity->draw_lastpose = currententity->draw_pose = pose;
-		currententity->draw_lerpstart = cl.time;
-		return 0;
-	}
-}
+extern void R_LightPoint (vec3_t color, vec3_t p);
+extern void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
+extern void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
 
 /*
 =============================================================
@@ -530,668 +449,6 @@ void R_DrawSpriteModel (entity_t *e)
 		GL_DrawSpriteImage(newframe, org, up, right, shadecolor[0],shadecolor[1],shadecolor[2],e->alpha*255*lerp);
 }
 
-/*
-=============================================================
-
-  ALIAS MODELS
-
-=============================================================
-*/
-
-extern vec3_t softwaretransform_x;
-extern vec3_t softwaretransform_y;
-extern vec3_t softwaretransform_z;
-extern vec_t softwaretransform_scale;
-extern vec3_t softwaretransform_offset;
-void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1, vec3_t translate1, trivert2 *verts2, vec3_t scale2, vec3_t translate2)
-{
-	int i;
-	vec3_t point, matrix_x, matrix_y, matrix_z;
-	float *av, *avn;
-	av = aliasvert;
-	avn = aliasvertnorm;
-	if (lerp < 0) lerp = 0;
-	if (lerp > 1) lerp = 1;
-	if (lerp != 0)
-	{
-		float ilerp, ilerp127, lerp127, scalex1, scalex2, translatex, scaley1, scaley2, translatey, scalez1, scalez2, translatez;
-		if (lerp < 0) lerp = 0;
-		if (lerp > 1) lerp = 1;
-		ilerp = 1 - lerp;
-		ilerp127 = ilerp * (1.0 / 127.0);
-		lerp127 = lerp * (1.0 / 127.0);
-		VectorScale(softwaretransform_x, softwaretransform_scale, matrix_x);
-		VectorScale(softwaretransform_y, softwaretransform_scale, matrix_y);
-		VectorScale(softwaretransform_z, softwaretransform_scale, matrix_z);
-		// calculate combined interpolation variables
-		scalex1 = scale1[0] * ilerp;scalex2 = scale2[0] *  lerp;translatex = translate1[0] * ilerp + translate2[0] *  lerp;
-		scaley1 = scale1[1] * ilerp;scaley2 = scale2[1] *  lerp;translatey = translate1[1] * ilerp + translate2[1] *  lerp;
-		scalez1 = scale1[2] * ilerp;scalez2 = scale2[2] *  lerp;translatez = translate1[2] * ilerp + translate2[2] *  lerp;
-		// generate vertices
-		for (i = 0;i < vertcount;i++)
-		{
-			// rotate, scale, and translate the vertex locations
-			point[0] = verts1->v[0] * scalex1 + verts2->v[0] * scalex2 + translatex;
-			point[1] = verts1->v[1] * scaley1 + verts2->v[1] * scaley2 + translatey;
-			point[2] = verts1->v[2] * scalez1 + verts2->v[2] * scalez2 + translatez;
-			*av++ = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-			*av++ = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-			*av++ = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-			// rotate the normals
-			point[0] = verts1->n[0] * ilerp127 + verts2->n[0] * lerp127;
-			point[1] = verts1->n[1] * ilerp127 + verts2->n[1] * lerp127;
-			point[2] = verts1->n[2] * ilerp127 + verts2->n[2] * lerp127;
-			*avn++ = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-			*avn++ = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-			*avn++ = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
-			verts1++;verts2++;
-		}
-	}
-	else
-	{
-		float i127;
-		i127 = 1.0f / 127.0f;
-		VectorScale(softwaretransform_x, softwaretransform_scale, matrix_x);
-		VectorScale(softwaretransform_y, softwaretransform_scale, matrix_y);
-		VectorScale(softwaretransform_z, softwaretransform_scale, matrix_z);
-		// generate vertices
-		for (i = 0;i < vertcount;i++)
-		{
-			// rotate, scale, and translate the vertex locations
-			point[0] = verts1->v[0] * scale1[0] + translate1[0];
-			point[1] = verts1->v[1] * scale1[1] + translate1[1];
-			point[2] = verts1->v[2] * scale1[2] + translate1[2];
-			*av++ = point[0] * matrix_x[0] + point[1] * matrix_y[0] + point[2] * matrix_z[0] + softwaretransform_offset[0];
-			*av++ = point[0] * matrix_x[1] + point[1] * matrix_y[1] + point[2] * matrix_z[1] + softwaretransform_offset[1];
-			*av++ = point[0] * matrix_x[2] + point[1] * matrix_y[2] + point[2] * matrix_z[2] + softwaretransform_offset[2];
-			// rotate the normals
-			point[0] = verts1->n[0] * i127;
-			point[1] = verts1->n[1] * i127;
-			point[2] = verts1->n[2] * i127;
-			*avn++ = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-			*avn++ = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-			*avn++ = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
-			verts1++;
-		}
-	}
-}
-
-/*
-=================
-R_DrawAliasFrame
-
-=================
-*/
-extern vec3_t lightspot;
-void R_LightModel(int numverts, vec3_t center);
-extern cvar_t gl_vertexarrays;
-void R_DrawAliasFrame (aliashdr_t *paliashdr)
-{
-	int				i, pose, frame = currententity->frame;
-	float			lerpscale, lerp;
-
-	softwaretransformforentity(currententity);
-
-	if ((frame >= paliashdr->numframes) || (frame < 0))
-	{
-		Con_DPrintf ("R_AliasSetupFrame: no such frame %d\n", frame);
-		frame = 0;
-	}
-
-	pose = paliashdr->frames[frame].firstpose;
-
-	if (paliashdr->frames[frame].numposes > 1)
-	{
-		lerpscale = 1.0 / paliashdr->frames[frame].interval;
-		pose += (int)(cl.time * lerpscale) % paliashdr->frames[frame].numposes;
-	}
-	else
-		lerpscale = 10.0;
-
-	lerp = R_CalcAnimLerp(pose, lerpscale);
-
-	R_AliasLerpVerts(paliashdr->numverts, lerp, (trivert2 *)((byte *)paliashdr + paliashdr->posedata) + currententity->draw_lastpose * paliashdr->numverts, paliashdr->scale, paliashdr->scale_origin, (trivert2 *)((byte *)paliashdr + paliashdr->posedata) + currententity->draw_pose * paliashdr->numverts, paliashdr->scale, paliashdr->scale_origin);
-
-	R_LightModel(paliashdr->numverts, currententity->origin);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glShadeModel(GL_SMOOTH);
-	if (currententity->effects & EF_ADDITIVE)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
-		glEnable(GL_BLEND);
-		glDepthMask(0);
-	}
-	else if (modelalpha != 1.0)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_BLEND);
-		glDepthMask(0);
-	}
-	else
-	{
-		glDisable(GL_BLEND);
-		glDepthMask(1);
-	}
-
-	if (gl_vertexarrays.value)
-	{
-		// LordHavoc: I would use InterleavedArrays here,
-		// but the texture coordinates are a seperate array,
-		// and it would be wasteful to copy them into the main array...
-	//	glColor4f(shadecolor[0], shadecolor[1], shadecolor[2], modelalpha);
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		qglColorPointer(4, GL_UNSIGNED_BYTE, 0, aliasvertcolor);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
-
-		// draw the front faces
-		qglTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) paliashdr->texcoords + (int) paliashdr));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		qglDrawElements(GL_TRIANGLES, paliashdr->frontfaces * 3, GL_UNSIGNED_SHORT, (void *)((int) paliashdr->vertindices + (int) paliashdr));
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		// draw the back faces
-		qglTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) paliashdr->texcoords + sizeof(float[2]) * paliashdr->numverts + (int) paliashdr));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		qglDrawElements(GL_TRIANGLES, paliashdr->backfaces * 3, GL_UNSIGNED_SHORT, (void *)((int) paliashdr->vertindices + sizeof(unsigned short[3]) * paliashdr->frontfaces + (int) paliashdr));
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		glDisableClientState(GL_COLOR_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}
-	else
-	{
-		unsigned short *in, index;
-		float *tex;
-		in = (void *)((int) paliashdr->vertindices + (int) paliashdr);
-		glBegin(GL_TRIANGLES);
-		// draw the front faces
-		tex = (void *)((int) paliashdr->texcoords + (int) paliashdr);
-		//if (isG200)
-		//{
-			for (i = 0;i < paliashdr->frontfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				glColor4f(aliasvertcolor[index*4] * (1.0f / 255.0f), aliasvertcolor[index*4+1] * (1.0f / 255.0f), aliasvertcolor[index*4+2] * (1.0f / 255.0f), aliasvertcolor[index*4+3] * (1.0f / 255.0f));
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		/*
-		}
-		else
-		{
-			for (i = 0;i < paliashdr->frontfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				glColor4ub(aliasvertcolor[index*4], aliasvertcolor[index*4+1], aliasvertcolor[index*4+2], aliasvertcolor[index*4+3]);
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		}
-		*/
-		// draw the back faces
-		tex += 2 * paliashdr->numverts;
-		//if (isG200)
-		//{
-			for (i = 0;i < paliashdr->backfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				glColor4f(aliasvertcolor[index*4] * (1.0f / 255.0f), aliasvertcolor[index*4+1] * (1.0f / 255.0f), aliasvertcolor[index*4+2] * (1.0f / 255.0f), aliasvertcolor[index*4+3] * (1.0f / 255.0f));
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		/*
-		}
-		else
-		{
-			for (i = 0;i < paliashdr->backfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				glColor4ub(aliasvertcolor[index*4], aliasvertcolor[index*4+1], aliasvertcolor[index*4+2], aliasvertcolor[index*4+3]);
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		}
-		*/
-		glEnd();
-	}
-
-	if (fogenabled)
-	{
-		vec3_t diff;
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-
-		VectorSubtract(currententity->origin, r_refdef.vieworg, diff);
-		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
-
-		if (gl_vertexarrays.value)
-		{
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-			qglDrawElements(GL_TRIANGLES, paliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) paliashdr->vertindices + (int) paliashdr));
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
-		{
-			unsigned short *in;
-			in = (void *)((int) paliashdr->vertindices + (int) paliashdr);
-			glBegin(GL_TRIANGLES);
-			for (i = 0;i < paliashdr->numtris * 3;i++)
-				glVertex3fv(&aliasvert[*in++ * 3]);
-			glEnd();
-		}
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
-
-	if (!fogenabled && r_shadows.value && !(currententity->effects & EF_ADDITIVE) && currententity != &cl.viewent)
-	{
-		// flatten it to make a shadow
-		float *av = aliasvert + 2, l = lightspot[2] + 0.125;
-		av = aliasvert + 2;
-		for (i = 0;i < paliashdr->numverts;i++, av+=3)
-			if (*av > l)
-				*av = l;
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-		glColor4f (0,0,0,0.5 * modelalpha);
-
-		if (gl_vertexarrays.value)
-		{
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-			qglDrawElements(GL_TRIANGLES, paliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) paliashdr->vertindices + (int) paliashdr));
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
-		{
-			unsigned short *in;
-			in = (void *)((int) paliashdr->vertindices + (int) paliashdr);
-			glBegin(GL_TRIANGLES);
-			for (i = 0;i < paliashdr->numtris * 3;i++)
-				glVertex3fv(&aliasvert[*in++ * 3]);
-			glEnd();
-		}
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(1);
-}
-
-/*
-=================
-R_DrawQ2AliasFrame
-
-=================
-*/
-void R_DrawQ2AliasFrame (md2mem_t *pheader)
-{
-	int *order, count, frame = currententity->frame;
-	float lerp;
-	md2memframe_t *frame1, *frame2;
-
-	softwaretransformforentity(currententity);
-
-	if ((frame >= pheader->num_frames) || (frame < 0))
-	{
-		Con_DPrintf ("R_SetupQ2AliasFrame: no such frame %d\n", frame);
-		frame = 0;
-	}
-
-	lerp = R_CalcAnimLerp(frame, 10);
-
-	frame1 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * currententity->draw_lastpose));
-	frame2 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * currententity->draw_pose));
-	R_AliasLerpVerts(pheader->num_xyz, lerp, frame1->verts, frame1->scale, frame1->translate, frame2->verts, frame2->scale, frame2->translate);
-
-	R_LightModel(pheader->num_xyz, currententity->origin);
-
-	if (gl_vertexarrays.value)
-	{
-		// LordHavoc: big mess...
-		// using arrays only slightly, although it is enough to prevent duplicates
-		// (saving half the transforms)
-		//glColor4f(shadecolor[0], shadecolor[1], shadecolor[2], modelalpha);
-		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-		qglColorPointer(4, GL_UNSIGNED_BYTE, 0, aliasvertcolor);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
-
-		order = (int *)((int)pheader + pheader->ofs_glcmds);
-		while(1)
-		{
-			if (!(count = *order++))
-				break;
-			if (count > 0)
-				glBegin(GL_TRIANGLE_STRIP);
-			else
-			{
-				glBegin(GL_TRIANGLE_FAN);
-				count = -count;
-			}
-			do
-			{
-				glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-				qglArrayElement(order[2]);
-				order += 3;
-			}
-			while (count--);
-		}
-
-		glDisableClientState(GL_COLOR_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}
-	else
-	{
-		order = (int *)((int)pheader + pheader->ofs_glcmds);
-		while(1)
-		{
-			if (!(count = *order++))
-				break;
-			if (count > 0)
-				glBegin(GL_TRIANGLE_STRIP);
-			else
-			{
-				glBegin(GL_TRIANGLE_FAN);
-				count = -count;
-			}
-			//if (isG200)
-			//{
-				do
-				{
-					glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-					glColor4f(aliasvertcolor[order[2] * 4] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 1] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 2] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 3] * (1.0f / 255.0f));
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
-			/*
-			}
-			else
-			{
-				do
-				{
-					glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-					glColor4ub(aliasvertcolor[order[2] * 4], aliasvertcolor[order[2] * 4 + 1], aliasvertcolor[order[2] * 4 + 2], aliasvertcolor[order[2] * 4 + 3]);
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
-			}
-			*/
-		}
-	}
-
-	if (fogenabled)
-	{
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-		{
-			vec3_t diff;
-			VectorSubtract(currententity->origin, r_refdef.vieworg, diff);
-			glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
-		}
-
-		if (gl_vertexarrays.value)
-		{
-			// LordHavoc: big mess...
-			// using arrays only slightly, although it is enough to prevent duplicates
-			// (saving half the transforms)
-			//glColor4f(shadecolor[0], shadecolor[1], shadecolor[2], modelalpha);
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-
-			order = (int *)((int)pheader + pheader->ofs_glcmds);
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					qglArrayElement(order[2]);
-					order += 3;
-				}
-				while (count--);
-			}
-
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
-		{
-			order = (int *)((int)pheader + pheader->ofs_glcmds);
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
-			}
-		}
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
-
-	if (!fogenabled && r_shadows.value && !(currententity->effects & EF_ADDITIVE) && currententity != &cl.viewent)
-	{
-		int i;
-		float *av = aliasvert + 2, l = lightspot[2] + 0.125;
-		av = aliasvert + 2;
-		for (i = 0;i < pheader->num_xyz;i++, av+=3)
-			if (*av > l)
-				*av = l;
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-		glColor4f (0,0,0,0.5 * modelalpha);
-
-		if (gl_vertexarrays.value)
-		{
-			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-			glEnableClientState(GL_VERTEX_ARRAY);
-						
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					qglArrayElement(order[2]);
-					order += 3;
-				}
-				while (count--);
-			}
-
-			glDisableClientState(GL_VERTEX_ARRAY);
-		}
-		else
-		{
-			while(1)
-			{
-				if (!(count = *order++))
-					break;
-				if (count > 0)
-					glBegin(GL_TRIANGLE_STRIP);
-				else
-				{
-					glBegin(GL_TRIANGLE_FAN);
-					count = -count;
-				}
-				do
-				{
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
-			}
-		}
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(1);
-}
-
-int modeldlightbits[8];
-extern int r_dlightframecount;
-
-/*
-=================
-R_DrawAliasModel
-
-=================
-*/
-void R_DrawAliasModel (entity_t *e, int cull)
-{
-	int			i;
-	model_t		*clmodel;
-	vec3_t		mins, maxs;
-	aliashdr_t	*paliashdr = NULL;
-	md2mem_t		*pheader = NULL;
-	int			anim;
-
-	if (modelalpha < (1.0 / 64.0))
-		return; // basically completely transparent
-
-	clmodel = currententity->model;
-
-	VectorAdd (currententity->origin, clmodel->mins, mins);
-	VectorAdd (currententity->origin, clmodel->maxs, maxs);
-
-	if (cull && R_CullBox (mins, maxs))
-		return;
-
-	VectorCopy (currententity->origin, r_entorigin);
-	VectorSubtract (r_origin, r_entorigin, modelorg);
-
-	{
-		mleaf_t *leaf = Mod_PointInLeaf (currententity->origin, cl.worldmodel);
-		if (leaf->dlightframe == r_dlightframecount)
-			for (i = 0;i < 8;i++)
-				modeldlightbits[i] = leaf->dlightbits[i];
-		else
-			for (i = 0;i < 8;i++)
-				modeldlightbits[i] = 0;
-	}
-
-	// get lighting information
-
-	if (currententity->model->flags & EF_FULLBRIGHT || currententity->effects & EF_FULLBRIGHT)
-	{
-		shadecolor[0] = currententity->colormod[0] * 256;
-		shadecolor[1] = currententity->colormod[1] * 256;
-		shadecolor[2] = currententity->colormod[2] * 256;
-	}
-	else
-	{
-		R_LightPoint (shadecolor, currententity->origin);
-
-		// HACK HACK HACK -- no fullbright colors, so make torches full light
-		if (!strcmp (currententity->model->name, "progs/flame2.mdl") || !strcmp (currententity->model->name, "progs/flame.mdl") )
-			shadecolor[0] = shadecolor[1] = shadecolor[2] = 128;
-
-		shadecolor[0] *= currententity->colormod[0];
-		shadecolor[1] *= currententity->colormod[1];
-		shadecolor[2] *= currententity->colormod[2];
-	}
-
-	// locate the proper data
-	if (clmodel->aliastype == ALIASTYPE_MD2)
-	{
-		pheader = (void *)Mod_Extradata (currententity->model);
-		c_alias_polys += pheader->num_tris;
-	}
-	else
-	{
-		paliashdr = (void *)Mod_Extradata (currententity->model);
-		c_alias_polys += paliashdr->numtris;
-	}
-
-	// draw all the triangles
-
-	if (clmodel->aliastype == ALIASTYPE_MD2)
-	{
-		if (currententity->skinnum < 0 || currententity->skinnum >= pheader->num_skins)
-		{
-			currententity->skinnum = 0;
-			Con_DPrintf("invalid skin number %d for model %s\n", currententity->skinnum, clmodel->name);
-		}
-		glBindTexture(GL_TEXTURE_2D, pheader->gl_texturenum[currententity->skinnum]);
-	}
-	else
-	{
-		if (currententity->skinnum < 0 || currententity->skinnum >= paliashdr->numskins)
-		{
-			currententity->skinnum = 0;
-			Con_DPrintf("invalid skin number %d for model %s\n", currententity->skinnum, clmodel->name);
-		}
-		anim = (int)(cl.time*10) & 3;
-	    glBindTexture(GL_TEXTURE_2D, paliashdr->gl_texturenum[currententity->skinnum][anim]);
-	}
-	glDisable(GL_ALPHA_TEST);
-	glEnable (GL_TEXTURE_2D);
-
-	// we can't dynamically colormap textures, so they are cached
-	// seperately for the players.  Heads are just uncolored.
-	if (currententity->colormap != 0 /*vid.colormap*/ /* && !gl_nocolors.value*/)
-	{
-		i = currententity - cl_entities;
-		if (i >= 1 && i<=cl.maxclients /* && !strcmp (currententity->model->name, "progs/player.mdl") */)
-			glBindTexture(GL_TEXTURE_2D, playertextures - 1 + i);
-	}
-
-//	if (gl_affinemodels.value)
-//		glHint (GL_PERSPECTIVE_CORRECTION_HINT, GL_FASTEST);
-	if (clmodel->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasFrame (pheader);
-	else
-		R_DrawAliasFrame (paliashdr);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-}
-
 //==================================================================================
 
 void R_DrawBrushModel (entity_t *e);
@@ -1235,7 +492,7 @@ void R_DrawEntitiesOnList2 (void)
 		switch (currententity->model->type)
 		{
 		case mod_alias:
-			R_DrawAliasModel (currententity, true);
+			R_DrawAliasModel (currententity, true, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->effects, currententity->model->flags, currententity->colormap);
 			break;
 
 		case mod_sprite:
@@ -1266,7 +523,7 @@ void R_DrawViewModel (void)
 
 	// hack the depth range to prevent view model from poking into walls
 	glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-	R_DrawAliasModel (currententity, FALSE);
+	R_DrawAliasModel (currententity, FALSE, modelalpha, currententity->model, currententity->frame, currententity->skinnum, currententity->origin, currententity->effects, currententity->model->flags, currententity->colormap);
 	glDepthRange (gldepthmin, gldepthmax);
 }
 

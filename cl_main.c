@@ -466,8 +466,30 @@ void CL_RelinkEntities (void)
 		if (ent->msgtime != cl.mtime[0])
 		{
 			ent->model = NULL;
+			// LordHavoc: free on the same frame, not the next
+			if (ent->forcelink)
+				R_RemoveEfrags (ent);	// just became empty
 			continue;
 		}
+
+		// LordHavoc: animation interpolation, note: framegroups partially override this in the renderer
+		/*
+		if (ent->model != ent->lerp_model || ent->lerp_time > cl.time)
+		{
+			ent->lerp_frame1 = ent->lerp_frame2 = ent->frame;
+			ent->lerp_time = cl.time;
+			ent->lerp = 0;
+		}
+		else if (ent->frame != ent->lerp_frame2)
+		{
+			ent->lerp_frame1 = ent->lerpframe2;
+			ent->lerp_frame2 = ent->frame;
+			ent->lerp_time = cl.time;
+			ent->lerp = 0;
+		}
+		else
+			ent->lerp = bound(0, (cl.time - ent->lerp_time) * 10.0f, 1);
+		*/
 
 		VectorCopy (ent->origin, oldorg);
 

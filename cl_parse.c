@@ -105,7 +105,7 @@ entity_t	*CL_EntityNum (int num)
 			Host_Error ("CL_EntityNum: %i is an invalid number",num);
 		while (cl.num_entities<=num)
 		{
-			cl_entities[cl.num_entities].colormap = 0; //vid.colormap;
+			cl_entities[cl.num_entities].colormap = -1; // no special coloring
 			cl.num_entities++;
 		}
 	}
@@ -516,8 +516,6 @@ void CL_ParseUpdate (int bits)
 			ent->syncbase = model->synctype == ST_RAND ? (float)(rand()&0x7fff) / 0x7fff : 0.0;
 		else
 			forcelink = true;	// hack to make null model players work
-		if (num > 0 && num <= cl.maxclients)
-			R_TranslatePlayerSkin(num - 1);
 	}
 
 	ent->frame = ((bits & U_FRAME) ? MSG_ReadByte() : (baseline->frame & 0xFF));
@@ -525,20 +523,18 @@ void CL_ParseUpdate (int bits)
 	i = bits & U_COLORMAP ? MSG_ReadByte() : baseline->colormap;
 	ent->deltabaseline.colormap = i;
 	if (!i)
-		ent->colormap = 0; //vid.colormap;
+		ent->colormap = -1; // no special coloring
 	else
 	{
 		if (i > cl.maxclients)
 			Host_Error ("i >= cl.maxclients");
-		ent->colormap = i; //vid.colormap; // cl.scores[i-1].translations;
+		ent->colormap = cl.scores[i-1].colors; // color it
 	}
 
 	skin = bits & U_SKIN ? MSG_ReadByte() : baseline->skin;
 	if (skin != ent->skinnum)
 	{
 		ent->skinnum = skin;
-		if (num > 0 && num <= cl.maxclients)
-			R_TranslatePlayerSkin(num - 1);
 	}
 	ent->deltabaseline.skin = skin;
 
@@ -769,7 +765,7 @@ void CL_ParseStatic (void)
 // copy it to the current state
 	ent->model = cl.model_precache[ent->baseline.modelindex];
 	ent->frame = ent->baseline.frame;
-	ent->colormap = 0; //vid.colormap;
+	ent->colormap = -1; // no special coloring
 	ent->skinnum = ent->baseline.skin;
 	ent->effects = ent->baseline.effects;
 	ent->alpha = 1;
@@ -963,7 +959,6 @@ void CL_ParseServerMessage (void)
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatecolors > MAX_SCOREBOARD");
 			cl.scores[i].colors = MSG_ReadByte ();
-			R_TranslatePlayerSkin(i);
 			break;
 			
 		case svc_particle:

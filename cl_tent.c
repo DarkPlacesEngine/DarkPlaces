@@ -104,6 +104,21 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count);
 void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel);
 void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type);
 
+// attempts to find the nearest non-solid location, used for explosions mainly
+void FindNonSolidLocation(vec3_t pos)
+{
+	if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[0]-=1;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[0]+=2;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[0]-=1;
+	pos[1]-=1;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[1]+=2;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[1]-=1;
+	pos[2]-=1;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[2]+=2;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
+	pos[2]-=1;
+}
+
 /*
 =================
 CL_ParseTEnt
@@ -345,6 +360,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
 		dl = CL_AllocDlight (0);
@@ -360,6 +376,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 480);
 		dl = CL_AllocDlight (0);
@@ -376,6 +393,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, true);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
@@ -391,6 +409,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
 		dl = CL_AllocDlight (0);
@@ -406,6 +425,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
 		dl = CL_AllocDlight (0);
@@ -421,6 +441,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		R_BlobExplosion (pos);
 //		R_BlastParticles (pos, 120, 120);
 
@@ -475,6 +496,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
+		FindNonSolidLocation(pos);
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
 		R_ParticleExplosion2 (pos, colorStart, colorLength);
@@ -514,8 +536,7 @@ entity_t *CL_NewTempEntity (void)
 	cl_visedicts[cl_numvisedicts] = ent;
 	cl_numvisedicts++;
 
-//	ent->colormap = vid.colormap;
-	ent->colormap = 0;
+	ent->colormap = -1; // no special coloring
 	ent->scale = 1;
 	ent->alpha = 1;
 	ent->colormod[0] = ent->colormod[1] = ent->colormod[2] = 1;

@@ -1469,15 +1469,15 @@ void Host_Viewframe_f (void)
 
 void PrintFrameName (model_t *m, int frame)
 {
-	aliashdr_t 			*hdr;
-	maliasframedesc_t	*pframedesc;
+	maliashdr_t 	*mheader;
+	maliasframe_t	*frameinfo;
 
-	hdr = (aliashdr_t *)Mod_Extradata (m);
-	if (!hdr)
+	mheader = (maliashdr_t *)Mod_Extradata (m);
+	if (!mheader)
 		return;
-	pframedesc = &hdr->frames[frame];
+	frameinfo = &((maliasframe_t *)(mheader->framedata + (int) mheader))[frame];
 	
-	Con_Printf ("frame %i: %s\n", frame, pframedesc->name);
+	Con_Printf ("frame %i: %s\n", frame, frameinfo->name);
 }
 
 /*

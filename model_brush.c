@@ -867,29 +867,70 @@ void Mod_LoadClipnodes (lump_t *l)
 	loadmodel->clipnodes = out;
 	loadmodel->numclipnodes = count;
 
-	hull = &loadmodel->hulls[1];
-	hull->clipnodes = out;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count-1;
-	hull->planes = loadmodel->planes;
-	hull->clip_mins[0] = -16;
-	hull->clip_mins[1] = -16;
-	hull->clip_mins[2] = -24;
-	hull->clip_maxs[0] = 16;
-	hull->clip_maxs[1] = 16;
-	hull->clip_maxs[2] = 32;
+	if (hlbsp)
+	{
+		hull = &loadmodel->hulls[1];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->planes;
+		hull->clip_mins[0] = -16;
+		hull->clip_mins[1] = -16;
+		hull->clip_mins[2] = -36;
+		hull->clip_maxs[0] = 16;
+		hull->clip_maxs[1] = 16;
+		hull->clip_maxs[2] = 36;
 
-	hull = &loadmodel->hulls[2];
-	hull->clipnodes = out;
-	hull->firstclipnode = 0;
-	hull->lastclipnode = count-1;
-	hull->planes = loadmodel->planes;
-	hull->clip_mins[0] = -32;
-	hull->clip_mins[1] = -32;
-	hull->clip_mins[2] = -24;
-	hull->clip_maxs[0] = 32;
-	hull->clip_maxs[1] = 32;
-	hull->clip_maxs[2] = 64;
+		hull = &loadmodel->hulls[2];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->planes;
+		hull->clip_mins[0] = -32;
+		hull->clip_mins[1] = -32;
+		hull->clip_mins[2] = -32;
+		hull->clip_maxs[0] = 32;
+		hull->clip_maxs[1] = 32;
+		hull->clip_maxs[2] = 32;
+
+		hull = &loadmodel->hulls[3];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->planes;
+		hull->clip_mins[0] = -16;
+		hull->clip_mins[1] = -16;
+		hull->clip_mins[2] = -18;
+		hull->clip_maxs[0] = 16;
+		hull->clip_maxs[1] = 16;
+		hull->clip_maxs[2] = 18;
+	}
+	else
+	{
+		hull = &loadmodel->hulls[1];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->planes;
+		hull->clip_mins[0] = -16;
+		hull->clip_mins[1] = -16;
+		hull->clip_mins[2] = -24;
+		hull->clip_maxs[0] = 16;
+		hull->clip_maxs[1] = 16;
+		hull->clip_maxs[2] = 32;
+
+		hull = &loadmodel->hulls[2];
+		hull->clipnodes = out;
+		hull->firstclipnode = 0;
+		hull->lastclipnode = count-1;
+		hull->planes = loadmodel->planes;
+		hull->clip_mins[0] = -32;
+		hull->clip_mins[1] = -32;
+		hull->clip_mins[2] = -24;
+		hull->clip_maxs[0] = 32;
+		hull->clip_maxs[1] = 32;
+		hull->clip_maxs[2] = 64;
+	}
 
 	for (i=0 ; i<count ; i++, out++, in++)
 	{

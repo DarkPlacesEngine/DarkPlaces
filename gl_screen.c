@@ -369,12 +369,23 @@ void SCR_SizeDown_f (void)
 
 //============================================================================
 
+void gl_screen_start()
+{
+	scr_ram = Draw_PicFromWad ("ram");
+	scr_net = Draw_PicFromWad ("net");
+	scr_turtle = Draw_PicFromWad ("turtle");
+}
+
+void gl_screen_shutdown()
+{
+}
+
 /*
 ==================
 SCR_Init
 ==================
 */
-void SCR_Init (void)
+void GL_Screen_Init (void)
 {
 
 	Cvar_RegisterVariable (&scr_fov);
@@ -394,11 +405,9 @@ void SCR_Init (void)
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
 
-	scr_ram = Draw_PicFromWad ("ram");
-	scr_net = Draw_PicFromWad ("net");
-	scr_turtle = Draw_PicFromWad ("turtle");
-
 	scr_initialized = true;
+
+	R_RegisterModule("GL_Screen", gl_screen_start, gl_screen_shutdown);
 }
 
 
@@ -780,9 +789,9 @@ void SCR_BringDownConsole (void)
 		SCR_UpdateScreen ();
 
 	cl.cshifts[0].percent = 0;		// no area contents palette on next frame
-	VID_SetPalette (host_basepal);
 }
 
+void DrawCrosshair(int num);
 void GL_Set2D (void);
 
 extern void SHOWLMP_drawall();
@@ -892,7 +901,7 @@ void SCR_UpdateScreen (void)
 	if (vid.recalc_refdef)
 		SCR_CalcRefdef ();
 
-	glClearColor(1,0,0,0);
+	glClearColor(0,0,0,0);
 	glClear (GL_COLOR_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
 
 //
@@ -928,7 +937,7 @@ void SCR_UpdateScreen (void)
 	else
 	{
 		if (crosshair.value)
-			Draw_Character (r_refdef.vrect.x + r_refdef.vrect.width/2, r_refdef.vrect.y + r_refdef.vrect.height/2, '+');
+			DrawCrosshair(crosshair.value);
 		
 		SCR_DrawRam ();
 		SCR_DrawNet ();

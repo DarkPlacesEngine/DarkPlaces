@@ -4,6 +4,59 @@
 int		image_width;
 int		image_height;
 
+// note: pal must be 32bit color
+void Image_Copy8bitRGBA(byte *in, byte *out, int pixels, int *pal)
+{
+	int *iout = (void *)out;
+	while (pixels >= 8)
+	{
+		iout[0] = pal[in[0]];
+		iout[1] = pal[in[1]];
+		iout[2] = pal[in[2]];
+		iout[3] = pal[in[3]];
+		iout[4] = pal[in[4]];
+		iout[5] = pal[in[5]];
+		iout[6] = pal[in[6]];
+		iout[7] = pal[in[7]];
+		in += 8;
+		iout += 8;
+		pixels -= 8;
+	}
+	if (pixels & 4)
+	{
+		iout[0] = pal[in[0]];
+		iout[1] = pal[in[1]];
+		iout[2] = pal[in[2]];
+		iout[3] = pal[in[3]];
+		in += 4;
+		iout += 4;
+	}
+	if (pixels & 2)
+	{
+		iout[0] = pal[in[0]];
+		iout[1] = pal[in[1]];
+		in += 2;
+		iout += 2;
+	}
+	if (pixels & 1)
+		iout[0] = pal[in[0]];
+}
+
+extern byte qgamma[];
+void Image_CopyRGBAGamma(byte *in, byte *out, int pixels)
+{
+	while (pixels--)
+	{
+		out[0] = qgamma[in[0]];
+		out[1] = qgamma[in[1]];
+		out[2] = qgamma[in[2]];
+		out[3] =        in[3] ;
+		in += 4;
+		out += 4;
+	}
+}
+
+
 /*
 =================================================================
 
@@ -101,6 +154,7 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 			}
 		}
 	}
+	fclose(f);
 	image_width = pcx->xmax+1;
 	image_height = pcx->ymax+1;
 	return image_rgba;
@@ -184,7 +238,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 
 	if (targa_header.colormap_type !=0 
 		|| (targa_header.pixel_size!=32 && targa_header.pixel_size!=24))
-		Host_Error ("Texture_LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
+		Host_Error ("LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
 
 	columns = targa_header.width;
 	rows = targa_header.height;
@@ -309,12 +363,50 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 	return image_rgba;
 }
 
+/*
+============
+LoadLMP
+============
+*/
+byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
+{
+	byte	*image_rgba;
+	int		width, height;
+
+	// parse the very complicated header *chuckle*
+	width = fgetLittleLong(f);
+	height = fgetLittleLong(f);
+	if ((unsigned) width > 4096 || (unsigned) height > 4096)
+		Host_Error("LoadLMP: invalid size\n");
+	if (matchwidth && width != matchwidth)
+		return NULL;
+	if (matchheight && height != matchheight)
+		return NULL;
+
+	image_rgba = malloc(width*height*4);
+	fread(image_rgba + width*height*3, 1, width*height, f);
+	fclose(f);
+
+	Image_Copy8bitRGBA(image_rgba + width*height*3, image_rgba, width*height, d_8to24table);
+	image_width = width;
+	image_height = height;
+	return image_rgba;
+}
+
 byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight)
 {
 	FILE	*f;
 	char	basename[128], name[128];
-	byte	*image_rgba;
+	byte	*image_rgba, *c;
 	COM_StripExtension(filename, basename); // strip the extension to allow TGA skins on Q2 models despite the .pcx in the skin name
+	// replace *'s with +, so commandline utils don't get confused when dealing with the external files
+	c = basename;
+	while (*c)
+	{
+		if (*c == '*')
+			*c = '+';
+		c++;
+	}
 	sprintf (name, "textures/%s.tga", basename);
 	COM_FOpenFile (name, &f, true);
 	if (f)
@@ -331,6 +423,13 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	COM_FOpenFile (name, &f, true);
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
+	sprintf (name, "%s.lmp", basename);
+	COM_FOpenFile (name, &f, true);
+	if (f)
+		return LoadLMP (f, matchwidth, matchheight);
+	if ((image_rgba = W_GetTexture(basename, matchwidth, matchheight)))
+		return image_rgba;
+	COM_StripExtension(filename, basename); // do it again with a * this time
 	if ((image_rgba = W_GetTexture(basename, matchwidth, matchheight)))
 		return image_rgba;
 	if (complain)
@@ -338,22 +437,28 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	return NULL;
 }
 
-int loadtextureimage (int texnum, char* filename, qboolean complain, int matchwidth, int matchheight)
+int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
 {
+	int texnum;
 	byte *data;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
+	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
+	free(data);
+	return texnum;
+	/*
 	if (texnum >= 0) // specific texnum, not cached
 	{
 		glBindTexture(GL_TEXTURE_2D, texnum);
-		GL_Upload32 (data, image_width, image_height, true, true);
+		GL_Upload32 (data, image_width, image_height, mipmap, true);
 		free(data);
 		return texnum;
 	}
 	else // any texnum, cached
 	{
-		texnum = GL_LoadTexture (filename, image_width, image_height, data, true, true, 4);
+		texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
 		free(data);
 		return texnum;
 	}
+	*/
 }

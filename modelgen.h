@@ -28,7 +28,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // *********************************************************
 
 #define ALIAS_VERSION	6
-#define ALIAS32_VERSION	7
 
 #define ALIAS_ONSEAM				0x0020
 
