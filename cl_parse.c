@@ -1278,7 +1278,7 @@ void CL_ParseTempEntity (void)
 		// lightning bolts
 		if (!cl_model_bolt3)
 			cl_model_bolt3 = Mod_ForName("progs/bolt3.mdl", true, false, false);
-		CL_ParseBeam (cl_model_bolt3, true);
+		CL_ParseBeam (cl_model_bolt3, false);
 		break;
 
 // PGM 01/21/97
