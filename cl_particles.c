@@ -1499,7 +1499,7 @@ static particletexture_t particletexture[MAX_PARTICLETEXTURES];
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
 
-#define PARTICLETEXTURESIZE 32
+#define PARTICLETEXTURESIZE 64
 #define PARTICLEFONTSIZE (PARTICLETEXTURESIZE*8)
 
 static qbyte shadebubble(float dx, float dy, vec3_t light)
@@ -1761,6 +1761,11 @@ static void R_InitParticleTexture (void)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 #else
+
+#if 0
+	Image_WriteTGARGBA ("particles/particlefont.tga", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata);
+#endif
+
 	particlefonttexture = loadtextureimage(particletexturepool, "particles/particlefont.tga", 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
 	if (!particlefonttexture)
 		particlefonttexture = R_LoadTexture2D(particletexturepool, "particlefont", PARTICLEFONTSIZE, PARTICLEFONTSIZE, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
