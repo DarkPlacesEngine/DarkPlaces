@@ -784,8 +784,6 @@ void _Host_Frame (float time)
 	host_framecount++;
 	host_loopactive = true;
 
-	if(vec3_origin[0] || vec3_origin[1] || vec3_origin[2])
-		Con_Print("vec3_origin modified !\n");
 }
 
 void Host_Frame (float time)
