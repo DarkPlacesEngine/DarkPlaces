@@ -805,7 +805,18 @@ void SV_PrepareEntitiesForSending(void)
 		if (cs.viewmodelforclient)
 			cs.flags |= RENDER_VIEWMODEL; // show relative to the view
 
-		cs.specialvisibilityradius = 0;
+		f = GETEDICTFIELDVALUE(ent, eval_color)->vector[0]*256;
+		cs.light[0] = (unsigned short)bound(0, f, 65535);
+		f = GETEDICTFIELDVALUE(ent, eval_color)->vector[1]*256;
+		cs.light[1] = (unsigned short)bound(0, f, 65535);
+		f = GETEDICTFIELDVALUE(ent, eval_color)->vector[2]*256;
+		cs.light[2] = (unsigned short)bound(0, f, 65535);
+		f = GETEDICTFIELDVALUE(ent, eval_light_lev)->_float;
+		cs.light[3] = (unsigned short)bound(0, f, 65535);
+		cs.lightstyle = (qbyte)GETEDICTFIELDVALUE(ent, eval_style)->_float;
+		cs.lightpflags = (qbyte)GETEDICTFIELDVALUE(ent, eval_pflags)->_float;
+
+		cs.specialvisibilityradius = cs.light[3];
 		if (cs.glowsize)
 			cs.specialvisibilityradius = max(cs.specialvisibilityradius, cs.glowsize * 4);
 		if (cs.flags & RENDER_GLOWTRAIL)

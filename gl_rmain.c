@@ -538,9 +538,8 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	worldlight_t *wl;
 	rdlight_t *rd;
 	rmeshstate_t m;
-	matrix4x4_t matrix;
-	matrix4x4_t matrix_worldtofilter, matrix_worldtoattenuationxyz, matrix_worldtoattenuationz;
-	matrix4x4_t matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
+	rtexture_t *cubemaptexture;
+	matrix4x4_t matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz;
 
 	if (visiblevolumes)
 	{
@@ -571,19 +570,19 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 				continue;
 
 			cullradius = wl->cullradius;
-			lightradius = wl->lightradius;
+			lightradius = wl->radius;
 			VectorCopy(wl->mins, clipmins);
 			VectorCopy(wl->maxs, clipmaxs);
 
 			f = d_lightstylevalue[wl->style] * (1.0f / 256.0f);
-			VectorScale(wl->light, f, lightcolor);
+			VectorScale(wl->color, f, lightcolor);
 			if (wl->selected)
 			{
 				f = 2 + sin(realtime * M_PI * 4.0);
 				VectorScale(lightcolor, f, lightcolor);
 			}
 
-			if (r_shadow_worldshadows.integer && wl->castshadows && (gl_stencil || visiblevolumes))
+			if (r_shadow_worldshadows.integer && wl->drawshadows && (gl_stencil || visiblevolumes))
 			{
 				if (!visiblevolumes)
 					R_Shadow_Stage_ShadowVolumes();
@@ -599,37 +598,23 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 
 			if (!visiblevolumes)
 			{
-				if (r_shadow_worldshadows.integer && wl->castshadows && gl_stencil)
+				if (r_shadow_worldshadows.integer && wl->drawshadows && gl_stencil)
 					R_Shadow_Stage_LightWithShadows();
 				else
 					R_Shadow_Stage_LightWithoutShadows();
-
-				// calculate world to filter matrix
-				//Matrix4x4_CreateFromQuakeEntity(&matrix, wl->origin[0], wl->origin[1], wl->origin[2], wl->angles[0] + cl.time * 12, wl->angles[1] + cl.time * 45, wl->angles[2], lightradius);
-				Matrix4x4_CreateFromQuakeEntity(&matrix, wl->origin[0], wl->origin[1], wl->origin[2], wl->angles[0], wl->angles[1], wl->angles[2], lightradius);
-				Matrix4x4_Invert_Simple(&matrix_worldtofilter, &matrix);
-				// calculate world to attenuationxyz/xy matrix
-				Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5, 0.5, 0.5, 0, 0, 0, 0.5);
-				Matrix4x4_Concat(&matrix_worldtoattenuationxyz, &matrix, &matrix_worldtofilter);
-				// calculate world to attenuationz matrix
-				matrix.m[0][0] = 0;matrix.m[0][1] = 0;matrix.m[0][2] = 0.5;matrix.m[0][3] = 0.5;
-				matrix.m[1][0] = 0;matrix.m[1][1] = 0;matrix.m[1][2] = 0  ;matrix.m[1][3] = 0.5;
-				matrix.m[2][0] = 0;matrix.m[2][1] = 0;matrix.m[2][2] = 0  ;matrix.m[2][3] = 0.5;
-				matrix.m[3][0] = 0;matrix.m[3][1] = 0;matrix.m[3][2] = 0  ;matrix.m[3][3] = 1;
-				Matrix4x4_Concat(&matrix_worldtoattenuationz, &matrix, &matrix_worldtofilter);
 
 				ent = &cl_entities[0].render;
 				if (ent->model && ent->model->DrawLight)
 				{
 					Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
 					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-					Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltolight, &wl->matrix_worldtolight, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &wl->matrix_worldtoattenuationxyz, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltoattenuationz, &wl->matrix_worldtoattenuationz, &ent->matrix);
 					if (r_shadow_staticworldlights.integer)
-						R_Shadow_DrawStaticWorldLight_Light(wl, &ent->matrix, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz);
+						R_Shadow_DrawStaticWorldLight_Light(wl, &ent->matrix, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz);
 					else
-						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, wl->cubemap);
+						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, wl->cubemap);
 				}
 				if (r_drawentities.integer)
 				{
@@ -642,10 +627,10 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 						{
 							Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
 							Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-							Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
-							ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, wl->cubemap);
+							Matrix4x4_Concat(&matrix_modeltolight, &wl->matrix_worldtolight, &ent->matrix);
+							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &wl->matrix_worldtoattenuationxyz, &ent->matrix);
+							Matrix4x4_Concat(&matrix_modeltoattenuationz, &wl->matrix_worldtoattenuationz, &ent->matrix);
+							ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, wl->cubemap);
 						}
 					}
 				}
@@ -656,7 +641,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	{
 		for (lnum = 0, rd = r_dlight;lnum < r_numdlights;lnum++, rd++)
 		{
-			lightradius = rd->cullradius;
+			lightradius = rd->radius;
 			clipmins[0] = rd->origin[0] - lightradius;
 			clipmins[1] = rd->origin[1] - lightradius;
 			clipmins[2] = rd->origin[2] - lightradius;
@@ -667,9 +652,14 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 				continue;
 
 			cullradius = RadiusFromBoundsAndOrigin(clipmins, clipmaxs, rd->origin);
-			VectorScale(rd->light, (1.0f / 4096.0f), lightcolor);
+			VectorCopy(rd->color, lightcolor);
 
-			if (r_shadow_dlightshadows.integer && (gl_stencil || visiblevolumes))
+			if (rd->cubemapnum > 0)
+				cubemaptexture = R_Shadow_Cubemap(va("cubemaps/%i", rd->cubemapnum));
+			else
+				cubemaptexture = NULL;
+
+			if (r_shadow_dlightshadows.integer && rd->shadow && (gl_stencil || visiblevolumes))
 			{
 				if (!visiblevolumes)
 					R_Shadow_Stage_ShadowVolumes();
@@ -688,33 +678,20 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 
 			if (!visiblevolumes)
 			{
-				if (r_shadow_dlightshadows.integer && gl_stencil)
+				if (r_shadow_dlightshadows.integer && gl_stencil && rd->shadow)
 					R_Shadow_Stage_LightWithShadows();
 				else
 					R_Shadow_Stage_LightWithoutShadows();
-
-				// calculate world to filter matrix
-				Matrix4x4_CreateFromQuakeEntity(&matrix, rd->origin[0], rd->origin[1], rd->origin[2], 0, 0, 0, lightradius);
-				Matrix4x4_Invert_Simple(&matrix_worldtofilter, &matrix);
-				// calculate world to attenuationxyz/xy matrix
-				Matrix4x4_CreateFromQuakeEntity(&matrix, 0.5, 0.5, 0.5, 0, 0, 0, 0.5);
-				Matrix4x4_Concat(&matrix_worldtoattenuationxyz, &matrix, &matrix_worldtofilter);
-				// calculate world to attenuationz matrix
-				matrix.m[0][0] = 0;matrix.m[0][1] = 0;matrix.m[0][2] = 0.5;matrix.m[0][3] = 0.5;
-				matrix.m[1][0] = 0;matrix.m[1][1] = 0;matrix.m[1][2] = 0  ;matrix.m[1][3] = 0.5;
-				matrix.m[2][0] = 0;matrix.m[2][1] = 0;matrix.m[2][2] = 0  ;matrix.m[2][3] = 0.5;
-				matrix.m[3][0] = 0;matrix.m[3][1] = 0;matrix.m[3][2] = 0  ;matrix.m[3][3] = 1;
-				Matrix4x4_Concat(&matrix_worldtoattenuationz, &matrix, &matrix_worldtofilter);
 
 				ent = &cl_entities[0].render;
 				if (ent->model && ent->model->DrawLight)
 				{
 					Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
 					Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-					Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
-					Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, NULL);
+					Matrix4x4_Concat(&matrix_modeltolight, &rd->matrix_worldtolight, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rd->matrix_worldtoattenuationxyz, &ent->matrix);
+					Matrix4x4_Concat(&matrix_modeltoattenuationz, &rd->matrix_worldtoattenuationz, &ent->matrix);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
 				}
 				if (r_drawentities.integer)
 				{
@@ -727,10 +704,10 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 						{
 							Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
 							Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, relativeeyeorigin);
-							Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
-							Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
-							ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, NULL);
+							Matrix4x4_Concat(&matrix_modeltolight, &rd->matrix_worldtolight, &ent->matrix);
+							Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rd->matrix_worldtoattenuationxyz, &ent->matrix);
+							Matrix4x4_Concat(&matrix_modeltoattenuationz, &rd->matrix_worldtoattenuationz, &ent->matrix);
+							ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture);
 						}
 					}
 				}

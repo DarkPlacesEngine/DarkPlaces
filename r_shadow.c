@@ -302,6 +302,26 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
+matrix4x4_t matrix_attenuationxyz =
+{
+	{
+		{0.5, 0.0, 0.0, 0.5},
+		{0.0, 0.5, 0.0, 0.5},
+		{0.0, 0.0, 0.5, 0.5},
+		{0.0, 0.0, 0.0, 1.0}
+	}
+};
+
+matrix4x4_t matrix_attenuationz =
+{
+	{
+		{0.0, 0.0, 0.5, 0.5},
+		{0.0, 0.0, 0.0, 0.0},
+		{0.0, 0.0, 0.0, 0.0},
+		{0.0, 0.0, 0.0, 1.0}
+	}
+};
+
 void R_Shadow_ResizeTriangleFacingLight(int numtris)
 {
 	// make sure trianglefacinglight is big enough for this volume
@@ -1259,7 +1279,7 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, co
 	}
 }
 
-void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3], color2[3];
@@ -1302,7 +1322,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			{
 				m.texcubemap[1] = R_GetTexture(lightcubemap);
 				m.pointer_texcoord[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
@@ -1354,7 +1374,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			{
 				m.texcubemap[1] = R_GetTexture(lightcubemap);
 				m.pointer_texcoord[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
@@ -1441,7 +1461,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			{
 				m.texcubemap[1] = R_GetTexture(lightcubemap);
 				m.pointer_texcoord[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
@@ -1496,7 +1516,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			{
 				m.texcubemap[1] = R_GetTexture(lightcubemap);
 				m.pointer_texcoord[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 			}
 			R_Mesh_State_Texture(&m);
 			qglColorMask(1,1,1,0);
@@ -1538,9 +1558,9 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 			color[1] = bound(0, color2[1], 1);
 			color[2] = bound(0, color2[2], 1);
 			if (r_textureunits.integer >= 2)
-				R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color, matrix_modeltofilter);
+				R_Shadow_VertexLightingWithXYAttenuationTexture(numverts, vertex3f, normal3f, color, matrix_modeltolight);
 			else
-				R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, matrix_modeltofilter);
+				R_Shadow_VertexLighting(numverts, vertex3f, normal3f, color, matrix_modeltolight);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1548,7 +1568,7 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 	}
 }
 
-void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3], color2[3], colorscale;
@@ -1615,7 +1635,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			{
 				m.texcubemap[1] = R_GetTexture(lightcubemap);
 				m.pointer_texcoord[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 			}
 			m.pointer_texcoord[0] = texcoord2f;
 			R_Mesh_State_Texture(&m);
@@ -1739,7 +1759,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			{
 				m.texcubemap[1] = R_GetTexture(lightcubemap);
 				m.pointer_texcoord[1] = varray_texcoord3f[1];
-				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltofilter);
+				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
 			}
 			m.pointer_texcoord[0] = texcoord2f;
 			R_Mesh_State_Texture(&m);
@@ -1794,7 +1814,7 @@ void R_Shadow_DrawStaticWorldLight_Shadow(worldlight_t *light, matrix4x4_t *matr
 	R_Shadow_RenderShadowMeshVolume(light->meshchain_shadow);
 }
 
-void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matrix, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
+void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matrix, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	shadowmesh_t *mesh;
 	R_Mesh_Matrix(matrix);
@@ -1823,8 +1843,8 @@ void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matri
 	}
 	for (mesh = light->meshchain_light;mesh;mesh = mesh->next)
 	{
-		R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, light->cubemap);
-		R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_specular, mesh->map_normal, light->cubemap);
+		R_Shadow_DiffuseLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_diffuse, mesh->map_normal, light->cubemap);
+		R_Shadow_SpecularLighting(mesh->numverts, mesh->numtriangles, mesh->element3i, mesh->vertex3f, mesh->svector3f, mesh->tvector3f, mesh->normal3f, mesh->texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, mesh->map_specular, mesh->map_normal, light->cubemap);
 	}
 }
 
@@ -1963,7 +1983,7 @@ void R_Shadow_FreeCubemaps(void)
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 }
 
-void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style, const char *cubemapname, int castshadow)
+void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname)
 {
 	int i, j, k, l, maxverts = 256, tris;
 	float *vertex3f = NULL, mins[3], maxs[3];
@@ -1978,21 +1998,28 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 
 	e = Mem_Alloc(r_shadow_mempool, sizeof(worldlight_t));
 	VectorCopy(origin, e->origin);
-	VectorCopy(color, e->light);
-	e->lightradius = radius;
+	VectorCopy(angles, e->angles);
+	VectorCopy(color, e->color);
+	e->radius = radius;
 	e->style = style;
 	if (e->style < 0 || e->style >= MAX_LIGHTSTYLES)
 	{
 		Con_Printf("R_Shadow_NewWorldLight: invalid light style number %i, must be >= 0 and < %i\n", e->style, MAX_LIGHTSTYLES);
 		e->style = 0;
 	}
-	e->castshadows = castshadow;
+	e->drawshadows = shadowenable;
+	e->corona = corona;
 
-	e->cullradius = e->lightradius;
+	Matrix4x4_CreateFromQuakeEntity(&e->matrix_lighttoworld, e->origin[0], e->origin[1], e->origin[2], e->angles[0], e->angles[1], e->angles[2], e->radius);
+	Matrix4x4_Invert_Simple(&e->matrix_worldtolight, &e->matrix_lighttoworld);
+	Matrix4x4_Concat(&e->matrix_worldtoattenuationxyz, &matrix_attenuationxyz, &e->matrix_worldtolight);
+	Matrix4x4_Concat(&e->matrix_worldtoattenuationz, &matrix_attenuationz, &e->matrix_worldtolight);
+
+	e->cullradius = e->radius;
 	for (k = 0;k < 3;k++)
 	{
-		mins[k] = e->origin[k] - e->lightradius;
-		maxs[k] = e->origin[k] + e->lightradius;
+		mins[k] = e->origin[k] - e->radius;
+		maxs[k] = e->origin[k] + e->radius;
 	}
 
 	e->next = r_shadow_worldlightchain;
@@ -2004,7 +2031,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		e->cubemap = R_Shadow_Cubemap(e->cubemapname);
 	}
 	// FIXME: rewrite this to store ALL geometry into a cache in the light
-	if (e->castshadows)
+	if (e->drawshadows)
 		castmesh = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
 	e->meshchain_light = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, true, false, true);
 	if (cl.worldmodel)
@@ -2044,7 +2071,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 					face->lighttemp_castshadow = false;
 					if (!(face->texture->surfaceflags & (Q3SURFACEFLAG_NODRAW | Q3SURFACEFLAG_SKY)))
 					{
-						if (e->castshadows)
+						if (e->drawshadows)
 							if (!(face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT))
 								Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, face->data_vertex3f, NULL, NULL, NULL, NULL, face->num_triangles, face->data_element3i);
 						if (!(face->texture->surfaceflags & Q3SURFACEFLAG_SKY))
@@ -2121,7 +2148,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 				if (surf->lighttemp_castshadow)
 				{
 					surf->lighttemp_castshadow = false;
-					if (e->castshadows && (surf->flags & SURF_SHADOWCAST))
+					if (e->drawshadows && (surf->flags & SURF_SHADOWCAST))
 						Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, NULL, NULL, NULL, surf->mesh.data_vertex3f, NULL, NULL, NULL, NULL, surf->mesh.num_triangles, surf->mesh.data_element3i);
 					if (!(surf->flags & SURF_DRAWSKY))
 						Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->meshchain_light, surf->texinfo->texture->skin.base, surf->texinfo->texture->skin.gloss, surf->texinfo->texture->skin.nmap, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, surf->mesh.num_triangles, surf->mesh.data_element3i);
@@ -2133,8 +2160,8 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	// limit box to light bounds (in case it grew larger)
 	for (k = 0;k < 3;k++)
 	{
-		if (e->mins[k] < e->origin[k] - e->lightradius) e->mins[k] = e->origin[k] - e->lightradius;
-		if (e->maxs[k] > e->origin[k] + e->lightradius) e->maxs[k] = e->origin[k] + e->lightradius;
+		if (e->mins[k] < e->origin[k] - e->radius) e->mins[k] = e->origin[k] - e->radius;
+		if (e->maxs[k] > e->origin[k] + e->radius) e->maxs[k] = e->origin[k] + e->radius;
 	}
 	e->cullradius = RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin);
 
@@ -2154,7 +2181,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			vertex3f = Mem_Alloc(r_shadow_mempool, maxverts * sizeof(float[3]));
 			// now that we have the buffers big enough, construct and add
 			// the shadow volume mesh
-			if (e->castshadows)
+			if (e->drawshadows)
 				e->meshchain_shadow = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768, 32768, NULL, NULL, NULL, false, false, true);
 			for (mesh = castmesh;mesh;mesh = mesh->next)
 			{
@@ -2282,7 +2309,7 @@ void R_Shadow_LoadWorldLights(void)
 {
 	int n, a, style, shadow;
 	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
-	float origin[3], radius, color[3];
+	float origin[3], radius, color[3], angles[3], corona;
 	if (cl.worldmodel == NULL)
 	{
 		Con_Printf("No map loaded.\n");
@@ -2310,7 +2337,12 @@ void R_Shadow_LoadWorldLights(void)
 				shadow = false;
 				t++;
 			}
-			a = sscanf(t, "%f %f %f %f %f %f %f %d %s", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname);
+			a = sscanf(t, "%f %f %f %f %f %f %f %d %s %f %f %f %f", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname, &corona, &angles[0], &angles[1], &angles[2]);
+			if (a < 13)
+			{
+				corona = 0;
+				VectorClear(angles);
+			}
 			if (a < 9)
 				cubemapname[0] = 0;
 			*s = '\n';
@@ -2321,7 +2353,7 @@ void R_Shadow_LoadWorldLights(void)
 			}
 			VectorScale(color, r_editlights_rtlightscolorscale.value, color);
 			radius *= r_editlights_rtlightssizescale.value;
-			R_Shadow_NewWorldLight(origin, radius, color, style, cubemapname, shadow);
+			R_Shadow_NewWorldLight(origin, angles, color, radius, corona, style, shadow, cubemapname);
 			s++;
 			n++;
 		}
@@ -2351,7 +2383,7 @@ void R_Shadow_SaveWorldLights(void)
 	buf = NULL;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		sprintf(line, "%s%f %f %f %f %f %f %f %d %s\n", light->castshadows ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->lightradius / r_editlights_rtlightssizescale.value, light->light[0] / r_editlights_rtlightscolorscale.value, light->light[1] / r_editlights_rtlightscolorscale.value, light->light[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "");
+		sprintf(line, "%s%f %f %f %f %f %f %f %d %s\n", light->drawshadows ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "");
 		if (bufchars + (int) strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
@@ -2411,7 +2443,7 @@ void R_Shadow_LoadLightsFile(void)
 			radius = sqrt(DotProduct(color, color) / (falloff * falloff * 8192.0f * 8192.0f));
 			radius = bound(15, radius, 4096);
 			VectorScale(color, (2.0f / (8388608.0f)), color);
-			R_Shadow_NewWorldLight(origin, radius, color, style, NULL, true);
+			R_Shadow_NewWorldLight(origin, vec3_origin, color, radius, 0, style, true, NULL);
 			s++;
 			n++;
 		}
@@ -2565,7 +2597,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		VectorScale(color, light, color);
 		VectorAdd(origin, originhack, origin);
 		if (radius >= 15)
-			R_Shadow_NewWorldLight(origin, radius, color, style, NULL, true);
+			R_Shadow_NewWorldLight(origin, vec3_origin, color, radius, 0, style, true, NULL);
 	}
 }
 
@@ -2645,13 +2677,13 @@ void R_Shadow_EditLights_Spawn_f(void)
 		return;
 	}
 	color[0] = color[1] = color[2] = 1;
-	R_Shadow_NewWorldLight(r_editlights_cursorlocation, 200, color, 0, NULL, true);
+	R_Shadow_NewWorldLight(r_editlights_cursorlocation, vec3_origin, color, 200, 0, 0, true, NULL);
 }
 
 void R_Shadow_EditLights_Edit_f(void)
 {
-	vec3_t origin, color;
-	vec_t radius;
+	vec3_t origin, angles, color;
+	vec_t radius, corona;
 	int style, shadows;
 	char cubemapname[1024];
 	if (!r_editlights.integer)
@@ -2665,19 +2697,21 @@ void R_Shadow_EditLights_Edit_f(void)
 		return;
 	}
 	VectorCopy(r_shadow_selectedlight->origin, origin);
-	radius = r_shadow_selectedlight->lightradius;
-	VectorCopy(r_shadow_selectedlight->light, color);
+	VectorCopy(r_shadow_selectedlight->angles, angles);
+	VectorCopy(r_shadow_selectedlight->color, color);
+	radius = r_shadow_selectedlight->radius;
 	style = r_shadow_selectedlight->style;
 	if (r_shadow_selectedlight->cubemapname)
 		strcpy(cubemapname, r_shadow_selectedlight->cubemapname);
 	else
 		cubemapname[0] = 0;
-	shadows = r_shadow_selectedlight->castshadows;
+	shadows = r_shadow_selectedlight->drawshadows;
+	corona = r_shadow_selectedlight->corona;
 	if (!strcmp(Cmd_Argv(1), "origin"))
 	{
 		if (Cmd_Argc() != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
 			return;
 		}
 		origin[0] = atof(Cmd_Argv(2));
@@ -2688,7 +2722,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		origin[0] = atof(Cmd_Argv(2));
@@ -2697,7 +2731,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		origin[1] = atof(Cmd_Argv(2));
@@ -2706,7 +2740,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		origin[2] = atof(Cmd_Argv(2));
@@ -2715,7 +2749,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
 			return;
 		}
 		origin[0] += atof(Cmd_Argv(2));
@@ -2726,7 +2760,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		origin[0] += atof(Cmd_Argv(2));
@@ -2735,7 +2769,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		origin[1] += atof(Cmd_Argv(2));
@@ -2744,16 +2778,54 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		origin[2] += atof(Cmd_Argv(2));
+	}
+	if (!strcmp(Cmd_Argv(1), "angles"))
+	{
+		if (Cmd_Argc() != 5)
+		{
+			Con_Printf("usage: r_editlights_edit %s x y z\n", Cmd_Argv(1));
+			return;
+		}
+		angles[0] = atof(Cmd_Argv(2));
+		angles[1] = atof(Cmd_Argv(3));
+		angles[2] = atof(Cmd_Argv(4));
+	}
+	else if (!strcmp(Cmd_Argv(1), "anglesx"))
+	{
+		if (Cmd_Argc() != 3)
+		{
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			return;
+		}
+		angles[0] = atof(Cmd_Argv(2));
+	}
+	else if (!strcmp(Cmd_Argv(1), "anglesy"))
+	{
+		if (Cmd_Argc() != 3)
+		{
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			return;
+		}
+		angles[1] = atof(Cmd_Argv(2));
+	}
+	else if (!strcmp(Cmd_Argv(1), "anglesz"))
+	{
+		if (Cmd_Argc() != 3)
+		{
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			return;
+		}
+		angles[2] = atof(Cmd_Argv(2));
 	}
 	else if (!strcmp(Cmd_Argv(1), "color"))
 	{
 		if (Cmd_Argc() != 5)
 		{
-			Con_Printf("usage: r_editlights_edit %s red green blue\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s red green blue\n", Cmd_Argv(1));
 			return;
 		}
 		color[0] = atof(Cmd_Argv(2));
@@ -2764,7 +2836,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		radius = atof(Cmd_Argv(2));
@@ -2773,7 +2845,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		style = atoi(Cmd_Argv(2));
@@ -2782,7 +2854,7 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() > 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		if (Cmd_Argc() == 3)
@@ -2794,26 +2866,37 @@ void R_Shadow_EditLights_Edit_f(void)
 	{
 		if (Cmd_Argc() != 3)
 		{
-			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(0));
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
 			return;
 		}
 		shadows = Cmd_Argv(2)[0] == 'y' || Cmd_Argv(2)[0] == 'Y' || Cmd_Argv(2)[0] == 't' || atoi(Cmd_Argv(2));
+	}
+	else if (!strcmp(Cmd_Argv(1), "corona"))
+	{
+		if (Cmd_Argc() != 3)
+		{
+			Con_Printf("usage: r_editlights_edit %s value\n", Cmd_Argv(1));
+			return;
+		}
+		corona = atof(Cmd_Argv(2));
 	}
 	else
 	{
 		Con_Printf("usage: r_editlights_edit [property] [value]\n");
 		Con_Printf("Selected light's properties:\n");
-		Con_Printf("Origin: %f %f %f\n", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);
-		Con_Printf("Radius: %f\n", r_shadow_selectedlight->lightradius);
-		Con_Printf("Color: %f %f %f\n", r_shadow_selectedlight->light[0], r_shadow_selectedlight->light[1], r_shadow_selectedlight->light[2]);
-		Con_Printf("Style: %i\n", r_shadow_selectedlight->style);
+		Con_Printf("Origin : %f %f %f\n", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);
+		Con_Printf("Angles : %f %f %f\n", r_shadow_selectedlight->angles[0], r_shadow_selectedlight->angles[1], r_shadow_selectedlight->angles[2]);
+		Con_Printf("Color  : %f %f %f\n", r_shadow_selectedlight->color[0], r_shadow_selectedlight->color[1], r_shadow_selectedlight->color[2]);
+		Con_Printf("Radius : %f\n", r_shadow_selectedlight->radius);
+		Con_Printf("Corona : %f\n", r_shadow_selectedlight->corona);
+		Con_Printf("Style  : %i\n", r_shadow_selectedlight->style);
+		Con_Printf("Shadows: %s\n", r_shadow_selectedlight->drawshadows ? "yes" : "no");
 		Con_Printf("Cubemap: %s\n", r_shadow_selectedlight->cubemapname);
-		Con_Printf("Shadows: %s\n", r_shadow_selectedlight->castshadows ? "yes" : "no");
 		return;
 	}
 	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
 	r_shadow_selectedlight = NULL;
-	R_Shadow_NewWorldLight(origin, radius, color, style, cubemapname, shadows);
+	R_Shadow_NewWorldLight(origin, angles, color, radius, corona, style, shadows, cubemapname);
 }
 
 extern int con_vislines;
@@ -2826,12 +2909,14 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 	x = 0;
 	y = con_vislines;
 	sprintf(temp, "Light properties");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-	sprintf(temp, "Origin %f %f %f", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-	sprintf(temp, "Radius %f", r_shadow_selectedlight->lightradius);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-	sprintf(temp, "Color %f %f %f", r_shadow_selectedlight->light[0], r_shadow_selectedlight->light[1], r_shadow_selectedlight->light[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-	sprintf(temp, "Style %i", r_shadow_selectedlight->style);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Origin  %f %f %f", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Angles  %f %f %f", r_shadow_selectedlight->angles[0], r_shadow_selectedlight->angles[1], r_shadow_selectedlight->angles[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Color   %f %f %f", r_shadow_selectedlight->color[0], r_shadow_selectedlight->color[1], r_shadow_selectedlight->color[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Radius  %f", r_shadow_selectedlight->radius);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Corona  %f", r_shadow_selectedlight->corona);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Style   %i", r_shadow_selectedlight->style);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Shadows %s", r_shadow_selectedlight->drawshadows ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Cubemap %s", r_shadow_selectedlight->cubemapname);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
-	sprintf(temp, "Shadows %s", r_shadow_selectedlight->castshadows ? "yes" : "no");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 }
 
 void R_Shadow_EditLights_ToggleShadow_f(void)
@@ -2846,7 +2931,24 @@ void R_Shadow_EditLights_ToggleShadow_f(void)
 		Con_Printf("No selected light.\n");
 		return;
 	}
-	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->lightradius, r_shadow_selectedlight->light, r_shadow_selectedlight->style, r_shadow_selectedlight->cubemapname, !r_shadow_selectedlight->castshadows);
+	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->drawshadows, r_shadow_selectedlight->cubemapname);
+	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
+	r_shadow_selectedlight = NULL;
+}
+
+void R_Shadow_EditLights_ToggleCorona_f(void)
+{
+	if (!r_editlights.integer)
+	{
+		Con_Printf("Cannot spawn light when not in editing mode.  Set r_editlights to 1.\n");
+		return;
+	}
+	if (!r_shadow_selectedlight)
+	{
+		Con_Printf("No selected light.\n");
+		return;
+	}
+	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->drawshadows, r_shadow_selectedlight->cubemapname);
 	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
 	r_shadow_selectedlight = NULL;
 }
@@ -2900,11 +3002,16 @@ void R_Shadow_EditLights_Help_f(void)
 "movex x: adjust x component of light location\n"
 "movey y: adjust y component of light location\n"
 "movez z: adjust z component of light location\n"
+"angles x y z : set light angles\n"
+"anglesx x: set x component of light angles\n"
+"anglesy y: set y component of light angles\n"
+"anglesz z: set z component of light angles\n"
 "color r g b : set color of light (can be brighter than 1 1 1)\n"
 "radius radius : set radius (size) of light\n"
 "style style : set lightstyle of light (flickering patterns, switches, etc)\n"
 "cubemap basename : set filter cubemap of light (not yet supported)\n"
 "shadows 1/0 : turn on/off shadows\n"
+"corona n : set corona intensity\n"
 "<nothing> : print light properties to console\n"
 	);
 }
@@ -2927,6 +3034,8 @@ void R_Shadow_EditLights_Init(void)
 	Cmd_AddCommand("r_editlights_edit", R_Shadow_EditLights_Edit_f);
 	Cmd_AddCommand("r_editlights_remove", R_Shadow_EditLights_Remove_f);
 	Cmd_AddCommand("r_editlights_toggleshadow", R_Shadow_EditLights_ToggleShadow_f);
+	Cmd_AddCommand("r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f);
 	Cmd_AddCommand("r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f);
 	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f);
 }
+

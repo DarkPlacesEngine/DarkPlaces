@@ -17,8 +17,8 @@ extern cvar_t r_shadow_dlightshadows;
 
 void R_Shadow_Init(void);
 void R_Shadow_Volume(int numverts, int numtris, const float *invertex3f, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance);
-void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtofilter, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
-void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtofilter, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
+void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtolight, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
+void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtolight, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
 void R_Shadow_ClearStencil(void);
 
 void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *mesh);
@@ -30,14 +30,21 @@ void R_Shadow_Stage_LightWithoutShadows(void);
 void R_Shadow_Stage_End(void);
 int R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 
+// these never change, they are used to create attenuation matrices
+extern matrix4x4_t matrix_attenuationxyz;
+extern matrix4x4_t matrix_attenuationz;
+
+rtexture_t *R_Shadow_Cubemap(const char *basename);
+
 typedef struct worldlight_s
 {
 	// saved properties
 	vec3_t origin;
-	vec_t lightradius;
-	vec3_t light;
 	vec3_t angles;
-	int castshadows;
+	vec3_t color;
+	vec_t radius;
+	vec_t corona;
+	int drawshadows;
 	char *cubemapname;
 
 	// shadow volumes are done entirely in model space, so there are no matrices for dealing with them...
@@ -45,8 +52,8 @@ typedef struct worldlight_s
 	// note that the world to light matrices are inversely scaled (divided) by lightradius
 
 	// matrix for transforming world coordinates to light filter coordinates
-	//matrix4x4_t matrix_worldtofilter;
-	// based on worldtofilter this transforms -1 to +1 to 0 to 1 for purposes
+	//matrix4x4_t matrix_worldtolight;
+	// based on worldtolight this transforms -1 to +1 to 0 to 1 for purposes
 	// of attenuation texturing in full 3D (z result often ignored)
 	//matrix4x4_t matrix_worldtoattenuationxyz;
 	// this transforms only the Z to S, and T is always 0.5
@@ -61,6 +68,11 @@ typedef struct worldlight_s
 	int style;
 	int selected;
 
+	matrix4x4_t matrix_lighttoworld;
+	matrix4x4_t matrix_worldtolight;
+	matrix4x4_t matrix_worldtoattenuationxyz;
+	matrix4x4_t matrix_worldtoattenuationz;
+
 	// premade shadow volumes and lit surfaces to render
 	shadowmesh_t *meshchain_shadow;
 	shadowmesh_t *meshchain_light;
@@ -72,6 +84,6 @@ extern worldlight_t *r_shadow_worldlightchain;
 void R_Shadow_UpdateWorldLightSelection(void);
 
 void R_Shadow_DrawStaticWorldLight_Shadow(worldlight_t *light, matrix4x4_t *matrix);
-void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matrix, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
+void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matrix, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 
 #endif

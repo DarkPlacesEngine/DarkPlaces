@@ -122,6 +122,10 @@ int eval_viewzoom;
 int eval_clientcolors;
 int eval_tag_entity;
 int eval_tag_index;
+int eval_light_lev;
+int eval_color;
+int eval_style;
+int eval_pflags;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -176,6 +180,10 @@ void FindEdictFieldOffsets(void)
 	eval_clientcolors = FindFieldOffset("clientcolors");
 	eval_tag_entity = FindFieldOffset("tag_entity");
 	eval_tag_index = FindFieldOffset("tag_index");
+	eval_light_lev = FindFieldOffset("light_lev");
+	eval_color = FindFieldOffset("color");
+	eval_style = FindFieldOffset("style");
+	eval_pflags = FindFieldOffset("pflags");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
@@ -1225,7 +1233,11 @@ dpfield_t dpfields[] =
 	{ev_vector, "punchvector"},
 	{ev_float, "clientcolors"},
 	{ev_entity, "tag_entity"},
-	{ev_float, "tag_index"}
+	{ev_float, "tag_index"},
+	{ev_float, "light_lev"},
+	{ev_float, "color"},
+	{ev_float, "style"},
+	{ev_float, "pflags"}
 };
 
 /*
@@ -1268,7 +1280,7 @@ void PR_LoadProgs (void)
 
 	if (progs->version != PROG_VERSION)
 		Host_Error ("progs.dat has wrong version number (%i should be %i)", progs->version, PROG_VERSION);
-	if (progs->crc != PROGHEADER_CRC)
+	if (progs->crc != PROGHEADER_CRC && progs->crc != 32401) // tenebrae crc also allowed
 		Host_Error ("progs.dat system vars have been modified, progdefs.h is out of date");
 
 	//pr_functions = (dfunction_t *)((qbyte *)progs + progs->ofs_functions);

@@ -414,7 +414,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	}
 }
 
-void CL_AllocDlight(entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime)
+void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona)
 {
 	int i;
 	dlight_t *dl;
@@ -442,9 +442,15 @@ void CL_AllocDlight(entity_render_t *ent, vec3_t org, float radius, float red, f
 dlightsetup:
 	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
 	memset (dl, 0, sizeof(*dl));
+	dl->matrix = *matrix;
 	dl->ent = ent;
-	CL_FindNonSolidLocation(org, dl->origin, 6);
-	//VectorCopy(org, dl->origin);
+	dl->origin[0] = dl->matrix.m[0][3];
+	dl->origin[1] = dl->matrix.m[1][3];
+	dl->origin[2] = dl->matrix.m[2][3];
+	CL_FindNonSolidLocation(dl->origin, dl->origin, 6);
+	dl->matrix.m[0][3] = dl->origin[0];
+	dl->matrix.m[1][3] = dl->origin[1];
+	dl->matrix.m[2][3] = dl->origin[2];
 	dl->radius = radius;
 	dl->color[0] = red;
 	dl->color[1] = green;
@@ -454,6 +460,10 @@ dlightsetup:
 		dl->die = cl.time + lifetime;
 	else
 		dl->die = 0;
+	dl->cubemapnum = cubemapnum;
+	dl->style = style;
+	dl->shadow = shadowenable;
+	dl->corona = corona;
 }
 
 void CL_DecayLights(void)
@@ -486,9 +496,9 @@ extern void V_CalcRefdef(void);
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
 void CL_LinkNetworkEntity(entity_t *e)
 {
-	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
+	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2, dlightmatrix;
 	int j, k, l, trailtype, temp;
-	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], mins[3], maxs[3], v[3], v2[3], d;
+	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, mins[3], maxs[3], v[3], v2[3], d;
 	entity_t *t;
 	model_t *model;
 	//entity_persistent_t *p = &e->persistent;
@@ -637,6 +647,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		origin[1] = e->render.matrix.m[1][3];
 		origin[2] = e->render.matrix.m[2][3];
 		trailtype = -1;
+		dlightradius = 0;
 		dlightcolor[0] = 0;
 		dlightcolor[1] = 0;
 		dlightcolor[2] = 0;
@@ -647,9 +658,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 			{
 				if (gamemode == GAME_NEXUIZ)
 				{
-					dlightcolor[0] += 100.0f;
-					dlightcolor[1] += 200.0f;
-					dlightcolor[2] += 400.0f;
+					dlightradius = max(dlightradius, 200);
+					dlightcolor[0] += 0.390625f;
+					dlightcolor[1] += 0.781250f;
+					dlightcolor[2] += 1.562500f;
 					trailtype = 8;
 				}
 				else
@@ -659,28 +671,32 @@ void CL_LinkNetworkEntity(entity_t *e)
 				e->persistent.muzzleflash = 100.0f;
 			if (e->render.effects & EF_DIMLIGHT)
 			{
-				dlightcolor[0] += 200.0f;
-				dlightcolor[1] += 200.0f;
-				dlightcolor[2] += 200.0f;
+				dlightradius = max(dlightradius, 200);
+				dlightcolor[0] += 0.781250f;
+				dlightcolor[1] += 0.781250f;
+				dlightcolor[2] += 0.781250f;
 			}
 			if (e->render.effects & EF_BRIGHTLIGHT)
 			{
-				dlightcolor[0] += 400.0f;
-				dlightcolor[1] += 400.0f;
-				dlightcolor[2] += 400.0f;
+				dlightradius = max(dlightradius, 400);
+				dlightcolor[0] += 1.562500f;
+				dlightcolor[1] += 1.562500f;
+				dlightcolor[2] += 1.562500f;
 			}
 			// LordHavoc: more effects
 			if (e->render.effects & EF_RED) // red
 			{
-				dlightcolor[0] += 200.0f;
-				dlightcolor[1] +=  20.0f;
-				dlightcolor[2] +=  20.0f;
+				dlightradius = max(dlightradius, 200);
+				dlightcolor[0] += 0.781250f;
+				dlightcolor[1] += 0.078125f;
+				dlightcolor[2] += 0.078125f;
 			}
 			if (e->render.effects & EF_BLUE) // blue
 			{
-				dlightcolor[0] +=  20.0f;
-				dlightcolor[1] +=  20.0f;
-				dlightcolor[2] += 200.0f;
+				dlightradius = max(dlightradius, 200);
+				dlightcolor[0] += 0.078125f;
+				dlightcolor[1] += 0.078125f;
+				dlightcolor[2] += 0.781250f;
 			}
 			if (e->render.effects & EF_FLAME)
 			{
@@ -693,7 +709,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 				// how many flames to make
 				temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
 				CL_FlameCube(mins, maxs, temp);
-				d = lhrandom(200, 250);
+				d = lhrandom(0.75f, 1);
+				dlightradius = max(dlightradius, 200);
 				dlightcolor[0] += d * 1.0f;
 				dlightcolor[1] += d * 0.7f;
 				dlightcolor[2] += d * 0.3f;
@@ -709,7 +726,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 				// how many particles to make
 				temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
 				CL_Stardust(mins, maxs, temp);
-				d = 100;
+				d = 0.390625f;
+				dlightradius = max(dlightradius, 200);
 				dlightcolor[0] += d * 1.0f;
 				dlightcolor[1] += d * 0.7f;
 				dlightcolor[2] += d * 0.3f;
@@ -720,7 +738,11 @@ void CL_LinkNetworkEntity(entity_t *e)
 		{
 			Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
 			CL_TraceLine(origin, v2, v, NULL, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY);
-			CL_AllocDlight(NULL, v, e->persistent.muzzleflash, 1, 1, 1, 0, 0);
+			tempmatrix = e->render.matrix;
+			tempmatrix.m[0][3] = v[0];
+			tempmatrix.m[1][3] = v[1];
+			tempmatrix.m[2][3] = v[2];
+			CL_AllocDlight(NULL, &tempmatrix, e->persistent.muzzleflash, 1, 1, 1, 0, 0, 0, 0, true, 1);
 			e->persistent.muzzleflash -= cl.frametime * 1000;
 		}
 		// LordHavoc: if the model has no flags, don't check each
@@ -733,23 +755,26 @@ void CL_LinkNetworkEntity(entity_t *e)
 			else if (e->render.model->flags & EF_TRACER)
 			{
 				trailtype = 3;
-				dlightcolor[0] += 0x10;
-				dlightcolor[1] += 0x40;
-				dlightcolor[2] += 0x10;
+				dlightradius = max(dlightradius, 100);
+				dlightcolor[0] += 0.060000f;
+				dlightcolor[1] += 0.250000f;
+				dlightcolor[2] += 0.062500f;
 			}
 			else if (e->render.model->flags & EF_TRACER2)
 			{
 				trailtype = 5;
-				dlightcolor[0] += 0x50;
-				dlightcolor[1] += 0x30;
-				dlightcolor[2] += 0x10;
+				dlightradius = max(dlightradius, 100);
+				dlightcolor[0] += 0.312500f;
+				dlightcolor[1] += 0.187500f;
+				dlightcolor[2] += 0.062500f;
 			}
 			else if (e->render.model->flags & EF_ROCKET)
 			{
 				trailtype = 0;
-				dlightcolor[0] += 200.0f;
-				dlightcolor[1] += 160.0f;
-				dlightcolor[2] +=  80.0f;
+				dlightradius = max(dlightradius, 200);
+				dlightcolor[0] += 0.781250f;
+				dlightcolor[1] += 0.625000f;
+				dlightcolor[2] += 0.312500f;
 			}
 			else if (e->render.model->flags & EF_GRENADE)
 			{
@@ -759,9 +784,10 @@ void CL_LinkNetworkEntity(entity_t *e)
 			else if (e->render.model->flags & EF_TRACER3)
 			{
 				trailtype = 6;
-				dlightcolor[0] += 0x50;
-				dlightcolor[1] += 0x20;
-				dlightcolor[2] += 0x40;
+				dlightradius = max(dlightradius, 200);
+				dlightcolor[0] += 0.312500f;
+				dlightcolor[1] += 0.125000f;
+				dlightcolor[2] += 0.250000f;
 			}
 		}
 		// LordHavoc: customizable glow
@@ -769,16 +795,25 @@ void CL_LinkNetworkEntity(entity_t *e)
 		{
 			// * 4 for the expansion from 0-255 to 0-1023 range,
 			// / 255 to scale down byte colors
-			VectorMA(dlightcolor, e->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+			dlightradius = max(dlightradius, e->state_current.glowsize * 4);
+			VectorMA(dlightcolor, (1.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
+		}
+		if (e->state_current.light[3])
+		{
+			dlightradius = max(dlightradius, e->state_current.light[3]);
+			if (VectorLength2(dlightcolor) == 0)
+				(dlightcolor[0] += 1, dlightcolor[1] += 1, dlightcolor[2] += 1);
+			else
+				VectorMA(dlightcolor, (1.0f/256.0f), e->state_current.light, dlightcolor);
 		}
 		// make the dlight
-		if ((dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && !e->state_current.tagentity)
+		if (dlightradius > 0 && (dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL))
 		{
-			VectorCopy(origin, v);
+			dlightmatrix = e->render.matrix;
 			// hack to make glowing player light shine on their gun
 			if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
-				v[2] += 30;
-			CL_AllocDlight(&e->render, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
+				dlightmatrix.m[2][3] += 30;
+			CL_AllocDlight(&e->render, &dlightmatrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, e->state_current.skin >= 16 ? e->state_current.skin : 0, e->state_current.lightstyle, !(e->state_current.lightpflags & 1), 1);
 		}
 		// trails need the previous frame
 		if (e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
@@ -808,6 +843,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 			r_refdef.entities[r_refdef.numentities++] = &e->render;
 		if (cl_num_entities < e->state_current.number + 1)
 			cl_num_entities = e->state_current.number + 1;
+		//if (cl.viewentity && e - cl_entities == cl.viewentity)
+		//	Matrix4x4_Print(&e->render.matrix);
 	}
 }
 
@@ -939,6 +976,7 @@ void CL_RelinkBeams(void)
 	entity_t *ent;
 	float yaw, pitch;
 	float forward;
+	matrix4x4_t tempmatrix;
 
 	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
 	{
@@ -986,7 +1024,11 @@ void CL_RelinkBeams(void)
 		if (b->lightning)
 		{
 			if (cl_beams_lightatend.integer)
-				CL_AllocDlight (NULL, b->end, 200, 0.3, 0.7, 1, 0, 0);
+			{
+				// FIXME: create a matrix from the beam start/end orientation
+				Matrix4x4_CreateTranslate(&tempmatrix, b->end[0], b->end[1], b->end[2]);
+				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, 0, true, 1);
+			}
 			if (cl_beams_polygons.integer)
 				continue;
 		}

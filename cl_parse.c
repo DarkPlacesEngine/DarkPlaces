@@ -1007,6 +1007,7 @@ void CL_ParseTempEntity(void)
 	int colorStart, colorLength, count;
 	float velspeed, radius;
 	qbyte *tempcolor;
+	matrix4x4_t tempmatrix;
 
 	type = MSG_ReadByte();
 	switch (type)
@@ -1015,7 +1016,8 @@ void CL_ParseTempEntity(void)
 		// spike hitting wall
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		CL_AllocDlight(NULL, pos, 50, 0.25f, 1.00f, 0.25f, 250, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 150, 0.25f, 1.00f, 0.25f, 250, 0.2, 0, 0, false, 1);
 		CL_RunParticleEffect(pos, vec3_origin, 20, 30);
 		S_StartSound(-1, 0, cl_sfx_wizhit, pos, 1, 1);
 		break;
@@ -1024,7 +1026,8 @@ void CL_ParseTempEntity(void)
 		// spike hitting wall
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		CL_AllocDlight(NULL, pos, 50, 1.0f, 0.60f, 0.20f, 250, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 150, 1.0f, 0.60f, 0.20f, 250, 0.2, 0, 0, false, 1);
 		CL_RunParticleEffect(pos, vec3_origin, 226, 20);
 		S_StartSound(-1, 0, cl_sfx_knighthit, pos, 1, 1);
 		break;
@@ -1054,7 +1057,8 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
-		CL_AllocDlight(NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -1094,7 +1098,8 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
-		CL_AllocDlight(NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2, 0, 0, true, 1);
 		if (rand() % 5)
 			S_StartSound(-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -1132,7 +1137,8 @@ void CL_ParseTempEntity(void)
 	case TE_PLASMABURN:
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 4);
-		CL_AllocDlight(NULL, pos, 200, 1, 1, 1, 1000, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, 0, true, 1);
 		CL_PlasmaBurn(pos);
 		break;
 		// LordHavoc: added for improved gore
@@ -1189,7 +1195,8 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 4);
 		CL_SparkShower(pos, vec3_origin, 15);
-		CL_AllocDlight(NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2, 0, 0, true, 1);
 		break;
 
 	case TE_EXPLOSION:
@@ -1198,7 +1205,8 @@ void CL_ParseTempEntity(void)
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
-		CL_AllocDlight(NULL, pos, 350, 1.25f, 1.0f, 0.5f, 700, 0.5);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 350, 1.25f, 1.0f, 0.5f, 700, 0.5, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1207,7 +1215,8 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
-		CL_AllocDlight(NULL, pos, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1216,7 +1225,8 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
-		CL_AllocDlight(NULL, pos, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1228,7 +1238,8 @@ void CL_ParseTempEntity(void)
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
 		color[1] = MSG_ReadByte() * (1.0 / 255.0);
 		color[2] = MSG_ReadByte() * (1.0 / 255.0);
-		CL_AllocDlight(NULL, pos, 350, color[0], color[1], color[2], 700, 0.5);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1240,13 +1251,15 @@ void CL_ParseTempEntity(void)
 
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
-		CL_AllocDlight(NULL, pos, 600, 0.8f, 0.4f, 1.0f, 1200, 0.5);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 600, 0.8f, 0.4f, 1.0f, 1200, 0.5, 0, 0, true, 1);
 		break;
 
 	case TE_SMALLFLASH:
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 10);
-		CL_AllocDlight(NULL, pos, 200, 1, 1, 1, 1000, 0.2);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 200, 1, 1, 1, 1000, 0.2, 0, 0, true, 1);
 		break;
 
 	case TE_CUSTOMFLASH:
@@ -1257,7 +1270,8 @@ void CL_ParseTempEntity(void)
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
 		color[1] = MSG_ReadByte() * (1.0 / 255.0);
 		color[2] = MSG_ReadByte() * (1.0 / 255.0);
-		CL_AllocDlight(NULL, pos, radius, color[0], color[1], color[2], radius / velspeed, velspeed);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, radius, color[0], color[1], color[2], radius / velspeed, velspeed, 0, 0, true, 1);
 		break;
 
 	case TE_FLAMEJET:
@@ -1313,7 +1327,8 @@ void CL_ParseTempEntity(void)
 		pos[0] = MSG_ReadCoord();
 		pos[1] = MSG_ReadCoord();
 		pos[2] = MSG_ReadCoord();
-		CL_AllocDlight(NULL, pos, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f, 0, 0, true, 1);
 //		CL_TeleportSplash(pos);
 		break;
 
@@ -1325,7 +1340,8 @@ void CL_ParseTempEntity(void)
 		colorLength = MSG_ReadByte();
 		CL_ParticleExplosion2(pos, colorStart, colorLength);
 		tempcolor = (qbyte *)&palette_complete[(rand()%colorLength) + colorStart];
-		CL_AllocDlight(NULL, pos, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1349,7 +1365,8 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos);
 		CL_FindNonSolidLocation(pos, pos, 10);
 		CL_ParticleExplosion(pos);
-		CL_AllocDlight(NULL, pos, 500, 1.25f, 1.0f, 0.5f, 500, 9999);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 1.25f, 1.0f, 0.5f, 500, 9999, 0, 0, true, 1);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -1359,7 +1376,8 @@ void CL_ParseTempEntity(void)
 		count = MSG_ReadByte();
 		CL_FindNonSolidLocation(pos, pos, 5);
 		CL_Tei_PlasmaHit(pos, dir, count);
-		CL_AllocDlight(NULL, pos, 500, 0.3, 0.6, 1.0f, 2000, 9999);
+		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
+		CL_AllocDlight(NULL, &tempmatrix, 500, 0.3, 0.6, 1.0f, 2000, 9999, 0, 0, true, 1);
 		break;
 
 	default:
@@ -1693,10 +1711,35 @@ void CL_ParseServerMessage(void)
 			Cmd_ExecuteString ("help", src_command);
 			break;
 		case svc_hidelmp:
-			SHOWLMP_decodehide();
+			if (gamemode == GAME_TENEBRAE)
+			{
+				// repeating particle effect
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadByte();
+				MSG_ReadLong();
+				MSG_ReadLong();
+				MSG_ReadString();
+			}
+			else
+				SHOWLMP_decodehide();
 			break;
 		case svc_showlmp:
-			SHOWLMP_decodeshow();
+			if (gamemode == GAME_TENEBRAE)
+			{
+				// particle effect
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadCoord();
+				MSG_ReadByte();
+				MSG_ReadString();
+			}
+			else
+				SHOWLMP_decodeshow();
 			break;
 		case svc_skybox:
 			R_SetSkyBox(MSG_ReadString());

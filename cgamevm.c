@@ -167,7 +167,9 @@ void CGVM_Draw_Entity(const cgdrawentity_t *e)
 
 void CGVM_Draw_Light(const cgdrawlight_t *l)
 {
-	CL_AllocDlight(NULL, (float *) l->origin, 1, l->light[0], l->light[1], l->light[2], 0, 0);
+	matrix4x4_t matrix;
+	Matrix4x4_CreateTranslate(&matrix, l->origin[0], l->origin[1], l->origin[2]);
+	CL_AllocDlight(NULL, &matrix, l->radius, l->color[0], l->color[1], l->color[2], 0, 0, 0, 0, true, 1);
 }
 
 void *CGVM_Malloc(const int size)

@@ -75,15 +75,25 @@ typedef struct
 	// location
 	vec3_t	origin;
 	// stop lighting after this time
-	float	die;
+	vec_t	die;
 	// color of light
 	vec3_t	color;
 	// brightness (not really radius anymore)
-	float	radius;
+	vec_t	radius;
 	// drop this each second
-	float	decay;
+	vec_t	decay;
 	// the entity that owns this light (can be NULL)
 	struct entity_render_s *ent;
+	// orientation/scaling/location
+	matrix4x4_t matrix;
+	// cubemap number to use on this light
+	int cubemapnum;
+	// light style which controls intensity of this light
+	int style;
+	// cast shadows
+	int shadow;
+	// corona intensity
+	vec_t corona;
 }
 dlight_t;
 
@@ -499,7 +509,7 @@ extern lightstyle_t *cl_lightstyle;
 
 extern client_state_t cl;
 
-extern void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
+extern void CL_AllocDlight (entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona);
 extern void CL_DecayLights (void);
 
 //=============================================================================

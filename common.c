@@ -765,6 +765,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_SETHERAL;
 	else if (strstr(name, "som"))
 		gamemode = GAME_SOM;
+	else if (strstr(name, "tenebrae"))
+		gamemode = GAME_TENEBRAE;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -794,6 +796,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_SETHERAL;
 	else if (COM_CheckParm ("-som"))
 		gamemode = GAME_SOM;
+	else if (COM_CheckParm ("-tenebrae"))
+		gamemode = GAME_TENEBRAE;
 
 	switch(gamemode)
 	{
@@ -848,6 +852,10 @@ void COM_InitGameType (void)
 	case GAME_SOM:
 		gamename = "Son of Man";
 		gamedirname = "data";
+		break;
+	case GAME_TENEBRAE:
+		gamename = "DarkPlaces-Tenebrae";
+		gamedirname = "tenebrae";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);

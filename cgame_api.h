@@ -24,7 +24,8 @@ cgdrawentity_t;
 typedef struct cgdrawlight_s
 {
 	float origin[3];
-	float light[3];
+	float color[3];
+	float radius;
 }
 cgdrawlight_t;
 
