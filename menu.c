@@ -1663,6 +1663,8 @@ char *transfusionbindnames[][2] =
 {
 {"+forward", 		"walk forward"},
 {"+back", 			"backpedal"},
+{"+left", 			"turn left"},
+{"+right", 			"turn right"},
 {"+moveleft", 		"step left"},
 {"+moveright", 		"step right"},
 {"+jump", 			"jump / swim up"},
@@ -2558,6 +2560,7 @@ level_t		transfusionlevels[] =
 	{"e1m1",		"Cradle to Grave"},
 	{"e1m2",		"Wrong Side of the Tracks"},
 	{"e1m7",		"Altar of Stone"},
+	{"e4m8",		"The Hall Of Epiphany"},
 
 	{"dm1",			"Monolith Building 11"},
 	{"dm2",			"Power!"},
@@ -2582,6 +2585,7 @@ level_t		transfusionlevels[] =
 
 	{"dranzbb6",	"Black Coffee"},
 	{"fragm",		"Frag'M"},
+	{"maim",		"Maim"},
 	{"qe1m7",		"The House of Chthon"},
 	{"simple",		"Dead Simple"}
 };
@@ -2589,12 +2593,12 @@ level_t		transfusionlevels[] =
 episode_t	transfusionepisodes[] =
 {
 	{"Blood", 0, 8},
-	{"Blood Single Player", 8, 3},
-	{"Plasma Pack", 11, 4},
-	{"Cryptic Passage", 15, 2},
-	{"Blood 2", 17, 5},
-	{"Transfusion", 22, 6},
-	{"Conversions", 28, 4}
+	{"Blood Single Player", 8, 4},
+	{"Plasma Pack", 12, 4},
+	{"Cryptic Passage", 16, 2},
+	{"Blood 2", 18, 5},
+	{"Transfusion", 23, 6},
+	{"Conversions", 29, 5}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
