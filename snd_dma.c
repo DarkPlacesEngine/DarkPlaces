@@ -488,7 +488,7 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 		// distance
 		scale = ch->master_vol * (1.0 - (dist * ch->dist_mult));
 		// panning
-		pan = scale * source_vec[0];
+		pan = scale * source_vec[1];
 		// calculate the volumes
 		ch->leftvol = (int) (scale + pan);
 		ch->rightvol = (int) (scale - pan);
@@ -851,8 +851,8 @@ void S_Update(const matrix4x4_t *listenermatrix)
 	if (!snd_initialized.integer || (snd_blocked > 0))
 		return;
 
-	listener_matrix = *listenermatrix;
-	Matrix4x4_OriginFromMatrix(&listener_matrix, listener_origin);
+	Matrix4x4_Invert_Simple(&listener_matrix, listenermatrix);
+	Matrix4x4_OriginFromMatrix(listenermatrix, listener_origin);
 
 // update general area ambient sound sources
 	S_UpdateAmbientSounds ();
