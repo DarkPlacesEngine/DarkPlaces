@@ -774,7 +774,7 @@ static void zymswapintblock(int *m, int size)
 
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
-	int i, pbase, *bonecount;
+	int i, pbase, *bonecount, numposes;
 	unsigned int count, a, b, c, *renderlist, *renderlistend;
 	rtexture_t **texture;
 	char *shadername;
@@ -845,6 +845,7 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->skinframes->glow = NULL;
 	loadmodel->skinframes->merged = NULL;
 	loadmodel->numskins = 1;
+	numposes = pheader->lump_poses.length / sizeof(float[3][4]) / pheader->numbones;
 
 	// go through the lumps, swapping things
 
@@ -867,6 +868,12 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		loadmodel->animscenes[i].framerate = scene->framerate;
 		loadmodel->animscenes[i].loop = (scene->flags & ZYMSCENEFLAG_NOLOOP) == 0;
 
+		if ((unsigned int) loadmodel->animscenes[i].firstframe >= numposes)
+			Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
+		if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > numposes)
+			Host_Error("Mod_LoadZymoticModel: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
+		if (loadmodel->animscenes[i].framerate < 0)
+			Host_Error("Mod_LoadZymoticModel: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
 		scene++;
 	}
 
