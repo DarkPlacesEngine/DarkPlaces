@@ -9,6 +9,9 @@ int *shadowelements;
 int maxtrianglefacinglight;
 qbyte *trianglefacinglight;
 
+rtexturepool_t *r_shadow_texturepool;
+rtexture_t *r_shadow_attenuationtexture;
+
 void r_shadow_start(void)
 {
 	// allocate vertex processing arrays
@@ -17,10 +20,14 @@ void r_shadow_start(void)
 	shadowelements = NULL;
 	maxtrianglefacinglight = 0;
 	trianglefacinglight = NULL;
+	r_shadow_attenuationtexture = NULL;
+	r_shadow_texturepool = NULL;
 }
 
 void r_shadow_shutdown(void)
 {
+	r_shadow_attenuationtexture = NULL;
+	R_FreeTexturePool(&r_shadow_texturepool);
 	maxshadowelements = 0;
 	shadowelements = NULL;
 	maxtrianglefacinglight = 0;
@@ -242,9 +249,37 @@ void R_Shadow_RenderVolume(int numverts, int numtris, int *elements, int visible
 	}
 }
 
+static void R_Shadow_MakeTextures(void)
+{
+	int x, y, z, d;
+	float v[3];
+	qbyte data[32][32][32][4];
+	r_shadow_texturepool = R_AllocTexturePool();
+	for (z = 0;z < 32;z++)
+	{
+		v[2] = z - 16.0f;
+		for (y = 0;y < 32;y++)
+		{
+			v[1] = y - 16.0f;
+			for (x = 0;x < 32;x++)
+			{
+				v[0] = x - 16.0f;
+				d = (int) ((1024.0f / (DotProduct(v, v)+1)) - 8.0f);
+				d = bound(0, d, 255);
+				data[z][y][x][0] = data[z][y][x][1] = data[z][y][x][2] = data[z][y][x][3] = d;
+			}
+		}
+	}
+	r_shadow_attenuationtexture = R_LoadTexture3D(r_shadow_texturepool, "attenuation", 32, 32, 32, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_ALPHA);
+}
+
 void R_Shadow_Stage_Depth(void)
 {
 	rmeshstate_t m;
+
+	if (!r_shadow_attenuationtexture)
+		R_Shadow_MakeTextures();
+
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
@@ -328,6 +363,7 @@ void R_Shadow_VertexLight(int numverts, float *vertex, float *normals, vec3_t re
 	float *n, *v, *c, f, dist, temp[3], light[3];
 	// calculate vertex colors
 	VectorCopy(lightcolor, light);
+
 	for (i = 0, v = vertex, c = varray_color, n = normals;i < numverts;i++, v += 4, c += 4, n += 3)
 	{
 		VectorSubtract(relativelightorigin, v, temp);
