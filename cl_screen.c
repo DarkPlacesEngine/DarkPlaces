@@ -972,9 +972,6 @@ void CL_UpdateScreen(void)
 
 	DrawQ_Clear();
 
-	if (!intimerefresh)
-		V_CalcRefdef();
-
 	if (cls.signon == SIGNONS)
 		R_TimeReport("setup");
 

@@ -478,299 +478,344 @@ extern qboolean Nehahrademcompatibility;
 #define MAXVIEWMODELS 32
 entity_t *viewmodels[MAXVIEWMODELS];
 int numviewmodels;
-void CL_RelinkNetworkEntity(entity_t *e)
-{
-	int trailtype, temp;
-	float oldorg[3], delta[3], lerp, dlightcolor[3], mins[3], maxs[3], v[3], v2[3], d;
-	entity_persistent_t *p;
-	entity_render_t *r;
-	p = &e->persistent;
-	r = &e->render;
 
-	if (e->state_previous.active && e->state_current.modelindex == e->state_previous.modelindex)
+matrix4x4_t viewmodelmatrix;
+
+static int entitylinkframenumber;
+
+static const vec3_t muzzleflashorigin = {18, 0, 0};
+
+extern void V_DriftPitch(void);
+extern void V_FadeViewFlashs(void);
+extern void V_CalcViewBlend(void);
+
+extern void V_CalcRefdef(void);
+// note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
+void CL_LinkNetworkEntity(entity_t *e)
+{
+	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
+	int j, k, l, trailtype, temp;
+	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], mins[3], maxs[3], v[3], v2[3], d;
+	entity_t *t;
+	model_t *model;
+	//entity_persistent_t *p = &e->persistent;
+	//entity_render_t *r = &e->render;
+	if (e->persistent.linkframe != entitylinkframenumber)
 	{
-		// movement lerp
-		if (p->lerpdeltatime > 0 && (lerp = (cl.time - p->lerpstarttime) / p->lerpdeltatime) < 1)
+		e->persistent.linkframe = entitylinkframenumber;
+		// skip inactive entities and world
+		if (!e->state_current.active || e == cl_entities)
+			return;
+		if (e->render.flags & RENDER_VIEWMODEL)
 		{
-			// read the old origin
-			VectorCopy(r->origin, oldorg);
-			// interpolate the origin and angles
-			r->origin[0] = p->oldorigin[0] + lerp * (p->neworigin[0] - p->oldorigin[0]);
-			r->origin[1] = p->oldorigin[1] + lerp * (p->neworigin[1] - p->oldorigin[1]);
-			r->origin[2] = p->oldorigin[2] + lerp * (p->neworigin[2] - p->oldorigin[2]);
-			VectorSubtract(p->newangles, p->oldangles, delta);
-			if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
-			if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
-			if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
-			VectorMA(p->oldangles, lerp, delta, r->angles);
+			if (cl.stats[STAT_HEALTH] <= 0 || !r_drawviewmodel.integer || chase_active.integer || envmap || (cl.items & IT_INVISIBILITY))
+				return;
+			if (cl.viewentity)
+				CL_LinkNetworkEntity(cl_entities + cl.viewentity);
+			matrix = &viewmodelmatrix;
+			if (e == &cl.viewent && cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
+			{
+				e->state_current.alpha = cl_entities[cl.viewentity].state_current.alpha;
+				e->state_current.effects = EF_NOSHADOW | (cl_entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT));
+			}
+		}
+		else
+		{
+			t = cl_entities + e->state_current.tagentity;
+			if (!t->state_current.active)
+				return;
+			// note: this can link to world
+			CL_LinkNetworkEntity(t);
+			// make relative to the entity
+			matrix = &t->render.matrix;
+			// if a valid tagindex is used, make it relative to that tag instead
+			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model) && e->state_current.tagindex <= t->render.model->alias.aliasnum_tags)
+			{
+				// blend the matrices
+				R_LerpAnimation(&t->render);
+				memset(&blendmatrix, 0, sizeof(blendmatrix));
+				for (j = 0;j < 4 && t->render.frameblend[j].lerp > 0;j++)
+				{
+					matrix = &t->render.model->alias.aliasdata_tags[t->render.frameblend[j].frame * t->render.model->alias.aliasnum_tags + (e->state_current.tagindex - 1)].matrix;
+					d = t->render.frameblend[j].lerp;
+					for (l = 0;l < 4;l++)
+						for (k = 0;k < 4;k++)
+							blendmatrix.m[l][k] += d * matrix->m[l][k];
+				}
+				// concat the tag matrices onto the entity matrix
+				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
+				// use the constructed tag matrix
+				matrix = &tempmatrix;
+			}
+		}
+		e->render.alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
+		e->render.scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
+		e->render.flags = e->state_current.flags;
+		if (e - cl_entities == cl.viewentity)
+			e->render.flags |= RENDER_EXTERIORMODEL;
+		e->render.effects = e->state_current.effects;
+		if (e->state_current.flags & RENDER_COLORMAPPED)
+			e->render.colormap = e->state_current.colormap;
+		else if (cl.scores != NULL && e->state_current.colormap)
+			e->render.colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
+		else
+			e->render.colormap = -1; // no special coloring
+		e->render.skinnum = e->state_current.skin;
+		// set up the render matrix
+		if (e->state_previous.active && e->state_current.modelindex == e->state_previous.modelindex)
+		{
+			// movement lerp
+			if (e->persistent.lerpdeltatime > 0 && (lerp = (cl.time - e->persistent.lerpstarttime) / e->persistent.lerpdeltatime) < 1)
+			{
+				// interpolate the origin and angles
+				VectorLerp(e->persistent.oldorigin, lerp, e->persistent.neworigin, origin);
+				VectorSubtract(e->persistent.newangles, e->persistent.oldangles, delta);
+				if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+				if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+				if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+				VectorMA(e->persistent.oldangles, lerp, delta, angles);
+			}
+			else
+			{
+				// no interpolation
+				VectorCopy(e->persistent.neworigin, origin);
+				VectorCopy(e->persistent.newangles, angles);
+			}
+			// animation lerp
+			if (e->render.frame2 != e->state_current.frame)
+			{
+				// begin a new frame lerp
+				e->render.frame1 = e->render.frame2;
+				e->render.frame1time = e->render.frame2time;
+				e->render.frame = e->render.frame2 = e->state_current.frame;
+				e->render.frame2time = cl.time;
+				e->render.framelerp = 0;
+			}
+			else
+			{
+				// update frame lerp fraction
+				e->render.framelerp = e->render.frame2time > e->render.frame1time ? ((cl.time - e->render.frame2time) / (e->render.frame2time - e->render.frame1time)) : 1;
+				e->render.framelerp = bound(0, e->render.framelerp, 1);
+			}
 		}
 		else
 		{
 			// no interpolation
-			VectorCopy(p->neworigin, r->origin);
-			VectorCopy(p->neworigin, oldorg);
-			VectorCopy(p->newangles, r->angles);
+			VectorCopy(e->persistent.neworigin, origin);
+			VectorCopy(e->persistent.newangles, angles);
+			e->render.frame = e->render.frame1 = e->render.frame2 = e->state_current.frame;
+			e->render.frame1time = e->render.frame2time = cl.time;
+			e->render.framelerp = 1;
 		}
-		// animation lerp
-		if (r->frame2 != e->state_current.frame)
-		{
-			// begin a new frame lerp
-			r->frame1 = r->frame2;
-			r->frame1time = r->frame2time;
-			r->frame = r->frame2 = e->state_current.frame;
-			r->frame2time = cl.time;
-			r->framelerp = 0;
-		}
-		else
-		{
-			// update frame lerp fraction
-			r->framelerp = r->frame2time > r->frame1time ? ((cl.time - r->frame2time) / (r->frame2time - r->frame1time)) : 1;
-			r->framelerp = bound(0, r->framelerp, 1);
-		}
-	}
-	else
-	{
-		// no interpolation
-		VectorCopy(p->neworigin, r->origin);
-		VectorCopy(p->neworigin, oldorg);
-		VectorCopy(p->newangles, r->angles);
-		r->frame = r->frame1 = r->frame2 = e->state_current.frame;
-		r->frame1time = r->frame2time = cl.time;
-		r->framelerp = 1;
-	}
 
-	r->alpha = e->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
-	r->scale = e->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
-	r->flags = e->state_current.flags;
-	if (e - cl_entities == cl.viewentity)
-		r->flags |= RENDER_EXTERIORMODEL;
-	r->effects = e->state_current.effects;
-	if (e->state_current.flags & RENDER_COLORMAPPED)
-		r->colormap = e->state_current.colormap;
-	else if (cl.scores != NULL && e->state_current.colormap)
-		r->colormap = cl.scores[e->state_current.colormap - 1].colors; // color it
-	else
-		r->colormap = -1; // no special coloring
-	r->skinnum = e->state_current.skin;
-
-	// handle effects now...
-	trailtype = -1;
-	dlightcolor[0] = 0;
-	dlightcolor[1] = 0;
-	dlightcolor[2] = 0;
-
-	// LordHavoc: if the entity has no effects, don't check each
-	if (r->effects)
-	{
-		if (r->effects & EF_BRIGHTFIELD)
+		e->render.model = cl.model_precache[e->state_current.modelindex];
+		if (e->render.model)
 		{
-			if (gamemode == GAME_NEXUIZ)
+			Mod_CheckLoaded(e->render.model);
+			if (e->render.model->type != mod_brush)
+				angles[0] = -angles[0];
+			if (e->render.model->flags & EF_ROTATE)
 			{
-				dlightcolor[0] += 100.0f;
-				dlightcolor[1] += 200.0f;
-				dlightcolor[2] += 400.0f;
-				trailtype = 8;
+				angles[1] = ANGLEMOD(100*cl.time);
+				if (cl_itembobheight.value)
+					origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
 			}
-			else
-				CL_EntityParticles(e);
 		}
-		if (r->effects & EF_MUZZLEFLASH)
-			p->muzzleflash = 100.0f;
-		if (r->effects & EF_DIMLIGHT)
-		{
-			dlightcolor[0] += 200.0f;
-			dlightcolor[1] += 200.0f;
-			dlightcolor[2] += 200.0f;
-		}
-		if (r->effects & EF_BRIGHTLIGHT)
-		{
-			dlightcolor[0] += 400.0f;
-			dlightcolor[1] += 400.0f;
-			dlightcolor[2] += 400.0f;
-		}
-		// LordHavoc: added EF_RED and EF_BLUE
-		if (r->effects & EF_RED) // red
-		{
-			dlightcolor[0] += 200.0f;
-			dlightcolor[1] +=  20.0f;
-			dlightcolor[2] +=  20.0f;
-		}
-		if (r->effects & EF_BLUE) // blue
-		{
-			dlightcolor[0] +=  20.0f;
-			dlightcolor[1] +=  20.0f;
-			dlightcolor[2] += 200.0f;
-		}
-		if (r->effects & EF_FLAME)
-		{
-			mins[0] = r->origin[0] - 16.0f;
-			mins[1] = r->origin[1] - 16.0f;
-			mins[2] = r->origin[2] - 16.0f;
-			maxs[0] = r->origin[0] + 16.0f;
-			maxs[1] = r->origin[1] + 16.0f;
-			maxs[2] = r->origin[2] + 16.0f;
-			// how many flames to make
-			temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
-			CL_FlameCube(mins, maxs, temp);
-			d = lhrandom(200, 250);
-			dlightcolor[0] += d * 1.0f;
-			dlightcolor[1] += d * 0.7f;
-			dlightcolor[2] += d * 0.3f;
-		}
-		if (r->effects & EF_STARDUST)
-		{
-			mins[0] = r->origin[0] - 16.0f;
-			mins[1] = r->origin[1] - 16.0f;
-			mins[2] = r->origin[2] - 16.0f;
-			maxs[0] = r->origin[0] + 16.0f;
-			maxs[1] = r->origin[1] + 16.0f;
-			maxs[2] = r->origin[2] + 16.0f;
-			// how many particles to make
-			temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
-			CL_Stardust(mins, maxs, temp);
-			d = 100;
-			dlightcolor[0] += d * 1.0f;
-			dlightcolor[1] += d * 0.7f;
-			dlightcolor[2] += d * 0.3f;
-		}
-	}
 
-	r->model = cl.model_precache[e->state_current.modelindex];
-	if (r->model)
-	{
-		Mod_CheckLoaded(r->model);
-		if (r->model->type != mod_brush)
-			r->angles[0] = -r->angles[0];
+		// FIXME: e->render.scale should go away
+		Matrix4x4_CreateFromQuakeEntity(&matrix2, origin[0], origin[1], origin[2], angles[0], angles[1], angles[2], e->render.scale);
+		// concat the matrices to make the entity relative to its tag
+		Matrix4x4_Concat(&e->render.matrix, matrix, &matrix2);
+		// make the other useful stuff
+		Matrix4x4_Invert_Simple(&e->render.inversematrix, &e->render.matrix);
+		CL_BoundingBoxForEntity(&e->render);
+
+		// handle effects now that we know where this entity is in the world...
+		origin[0] = e->render.matrix.m[0][3];
+		origin[1] = e->render.matrix.m[1][3];
+		origin[2] = e->render.matrix.m[2][3];
+		trailtype = -1;
+		dlightcolor[0] = 0;
+		dlightcolor[1] = 0;
+		dlightcolor[2] = 0;
+		// LordHavoc: if the entity has no effects, don't check each
+		if (e->render.effects)
+		{
+			if (e->render.effects & EF_BRIGHTFIELD)
+			{
+				if (gamemode == GAME_NEXUIZ)
+				{
+					dlightcolor[0] += 100.0f;
+					dlightcolor[1] += 200.0f;
+					dlightcolor[2] += 400.0f;
+					trailtype = 8;
+				}
+				else
+					CL_EntityParticles(e);
+			}
+			if (e->render.effects & EF_MUZZLEFLASH)
+				e->persistent.muzzleflash = 100.0f;
+			if (e->render.effects & EF_DIMLIGHT)
+			{
+				dlightcolor[0] += 200.0f;
+				dlightcolor[1] += 200.0f;
+				dlightcolor[2] += 200.0f;
+			}
+			if (e->render.effects & EF_BRIGHTLIGHT)
+			{
+				dlightcolor[0] += 400.0f;
+				dlightcolor[1] += 400.0f;
+				dlightcolor[2] += 400.0f;
+			}
+			// LordHavoc: more effects
+			if (e->render.effects & EF_RED) // red
+			{
+				dlightcolor[0] += 200.0f;
+				dlightcolor[1] +=  20.0f;
+				dlightcolor[2] +=  20.0f;
+			}
+			if (e->render.effects & EF_BLUE) // blue
+			{
+				dlightcolor[0] +=  20.0f;
+				dlightcolor[1] +=  20.0f;
+				dlightcolor[2] += 200.0f;
+			}
+			if (e->render.effects & EF_FLAME)
+			{
+				mins[0] = origin[0] - 16.0f;
+				mins[1] = origin[1] - 16.0f;
+				mins[2] = origin[2] - 16.0f;
+				maxs[0] = origin[0] + 16.0f;
+				maxs[1] = origin[1] + 16.0f;
+				maxs[2] = origin[2] + 16.0f;
+				// how many flames to make
+				temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
+				CL_FlameCube(mins, maxs, temp);
+				d = lhrandom(200, 250);
+				dlightcolor[0] += d * 1.0f;
+				dlightcolor[1] += d * 0.7f;
+				dlightcolor[2] += d * 0.3f;
+			}
+			if (e->render.effects & EF_STARDUST)
+			{
+				mins[0] = origin[0] - 16.0f;
+				mins[1] = origin[1] - 16.0f;
+				mins[2] = origin[2] - 16.0f;
+				maxs[0] = origin[0] + 16.0f;
+				maxs[1] = origin[1] + 16.0f;
+				maxs[2] = origin[2] + 16.0f;
+				// how many particles to make
+				temp = (int) (cl.time * 200) - (int) (cl.oldtime * 200);
+				CL_Stardust(mins, maxs, temp);
+				d = 100;
+				dlightcolor[0] += d * 1.0f;
+				dlightcolor[1] += d * 0.7f;
+				dlightcolor[2] += d * 0.3f;
+			}
+		}
+		// muzzleflash fades over time, and is offset a bit
+		if (e->persistent.muzzleflash > 0)
+		{
+			Matrix4x4_Transform(&e->render.matrix, muzzleflashorigin, v2);
+			CL_TraceLine(origin, v2, v, NULL, 0, true, NULL);
+			CL_AllocDlight(NULL, v, e->persistent.muzzleflash, 1, 1, 1, 0, 0);
+			e->persistent.muzzleflash -= cl.frametime * 1000;
+		}
 		// LordHavoc: if the model has no flags, don't check each
-		if (r->model->flags & EF_ROTATE)
+		if (e->render.model && e->render.model->flags)
 		{
-			r->angles[1] = ANGLEMOD(100*cl.time);
-			if (cl_itembobheight.value)
-				r->origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
+			if (e->render.model->flags & EF_GIB)
+				trailtype = 2;
+			else if (e->render.model->flags & EF_ZOMGIB)
+				trailtype = 4;
+			else if (e->render.model->flags & EF_TRACER)
+			{
+				trailtype = 3;
+				dlightcolor[0] += 0x10;
+				dlightcolor[1] += 0x40;
+				dlightcolor[2] += 0x10;
+			}
+			else if (e->render.model->flags & EF_TRACER2)
+			{
+				trailtype = 5;
+				dlightcolor[0] += 0x50;
+				dlightcolor[1] += 0x30;
+				dlightcolor[2] += 0x10;
+			}
+			else if (e->render.model->flags & EF_ROCKET)
+			{
+				trailtype = 0;
+				dlightcolor[0] += 200.0f;
+				dlightcolor[1] += 160.0f;
+				dlightcolor[2] +=  80.0f;
+			}
+			else if (e->render.model->flags & EF_GRENADE)
+			{
+				// LordHavoc: e->render.alpha == -1 is for Nehahra dem compatibility (cigar smoke)
+				trailtype = e->render.alpha == -1 ? 7 : 1;
+			}
+			else if (e->render.model->flags & EF_TRACER3)
+			{
+				trailtype = 6;
+				dlightcolor[0] += 0x50;
+				dlightcolor[1] += 0x20;
+				dlightcolor[2] += 0x40;
+			}
 		}
-	}
-
-	Matrix4x4_CreateFromQuakeEntity(&r->matrix, r->origin[0], r->origin[1], r->origin[2], r->angles[0], r->angles[1], r->angles[2], r->scale);
-	Matrix4x4_Invert_Simple(&r->inversematrix, &r->matrix);
-	CL_BoundingBoxForEntity(&e->render);
-
-	// LordHavoc: if the model has no flags, don't check each
-	if (r->model && r->model->flags)
-	{
-		if (r->model->flags & EF_GIB)
-			trailtype = 2;
-		else if (r->model->flags & EF_ZOMGIB)
-			trailtype = 4;
-		else if (r->model->flags & EF_TRACER)
+		// LordHavoc: customizable glow
+		if (e->state_current.glowsize)
 		{
-			trailtype = 3;
-			dlightcolor[0] += 0x10;
-			dlightcolor[1] += 0x40;
-			dlightcolor[2] += 0x10;
+			// * 4 for the expansion from 0-255 to 0-1023 range,
+			// / 255 to scale down byte colors
+			VectorMA(dlightcolor, e->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
 		}
-		else if (r->model->flags & EF_TRACER2)
+		// make the dlight
+		if ((dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(e->render.flags & RENDER_VIEWMODEL) && !e->state_current.tagentity)
 		{
-			trailtype = 5;
-			dlightcolor[0] += 0x50;
-			dlightcolor[1] += 0x30;
-			dlightcolor[2] += 0x10;
+			VectorCopy(origin, v);
+			// hack to make glowing player light shine on their gun
+			if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
+				v[2] += 30;
+			CL_AllocDlight(&e->render, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}
-		else if (r->model->flags & EF_ROCKET)
+		// trails need the previous frame
+		if (e->state_previous.active && e->state_previous.modelindex == e->state_current.modelindex)
 		{
-			trailtype = 0;
-			dlightcolor[0] += 200.0f;
-			dlightcolor[1] += 160.0f;
-			dlightcolor[2] +=  80.0f;
+			if (e->render.flags & RENDER_GLOWTRAIL)
+				CL_RocketTrail2(e->persistent.trail_origin, origin, e->state_current.glowcolor, e);
+			else if (trailtype >= 0)
+				CL_RocketTrail(e->persistent.trail_origin, origin, trailtype, e);
 		}
-		else if (r->model->flags & EF_GRENADE)
-		{
-			// LordHavoc: r->alpha == -1 is for Nehahra dem compatibility (cigar smoke)
-			trailtype = r->alpha == -1 ? 7 : 1;
-		}
-		else if (r->model->flags & EF_TRACER3)
-		{
-			trailtype = 6;
-			dlightcolor[0] += 0x50;
-			dlightcolor[1] += 0x20;
-			dlightcolor[2] += 0x40;
-		}
-	}
-
-	// LordHavoc: customizable glow
-	if (e->state_current.glowsize)
-	{
-		// * 4 for the expansion from 0-255 to 0-1023 range,
-		// / 255 to scale down byte colors
-		VectorMA(dlightcolor, e->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&palette_complete[e->state_current.glowcolor], dlightcolor);
-	}
-
-	// trails need a previous frame...
-	if (e->state_previous.active)
-	{
-		// LordHavoc: customizable trail
-		if (r->flags & RENDER_GLOWTRAIL)
-			CL_RocketTrail2(oldorg, r->origin, e->state_current.glowcolor, e);
-		else if (trailtype >= 0)
-			CL_RocketTrail(oldorg, r->origin, trailtype, e);
-	}
-
-	if ((dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(r->flags & RENDER_VIEWMODEL))
-	{
-		VectorCopy(r->origin, v);
-		// hack to make glowing player light shine on their gun
-		if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
-			v[2] += 30;
-		CL_AllocDlight(r, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
-	}
-
-	if (p->muzzleflash > 0)
-	{
-		v2[0] = r->matrix.m[0][0] * 18 + r->matrix.m[0][3];
-		v2[1] = r->matrix.m[0][1] * 18 + r->matrix.m[1][3];
-		v2[2] = r->matrix.m[0][2] * 18 + r->matrix.m[2][3];
-		CL_TraceLine(r->origin, v2, v, NULL, 0, true, NULL);
-
-		CL_AllocDlight(NULL, v, p->muzzleflash, 1, 1, 1, 0, 0);
-		p->muzzleflash -= cl.frametime * 1000;
-	}
-
-	// note: the cl.viewentity and intermission check is to hide player
-	// shadow during intermission and during the Nehahra movie and
-	// Nehahra cinematics
-	if (!(r->effects & (EF_NOSHADOW | EF_ADDITIVE))
-	 && (r->alpha == 1)
-	 && !(r->flags & RENDER_VIEWMODEL)
-	 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility && !cl_noplayershadow.integer)))
-		r->flags |= RENDER_SHADOW;
-
-	// don't show entities with no modelindex (note: this still shows
-	// entities which have a modelindex that resolved to a NULL model)
-	if (r->model && !(r->effects & EF_NODRAW))
-	{
-		if (r->flags & RENDER_VIEWMODEL)
-		{
-			// store a list of view-relative entities for later adjustment in view code
-			if (numviewmodels < MAXVIEWMODELS)
-				viewmodels[numviewmodels++] = e;
-		}
-		else
-		{
-			if (r->model->name[0] == '*' && r->model->type == mod_brush)
-				cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
-			if (r_refdef.numentities < r_refdef.maxentities)
-				r_refdef.entities[r_refdef.numentities++] = &e->render;
-			if (cl_num_entities < e->state_current.number + 1)
-				cl_num_entities = e->state_current.number + 1;
-		}
+		VectorCopy(origin, e->persistent.trail_origin);
+		// note: the cl.viewentity and intermission check is to hide player
+		// shadow during intermission and during the Nehahra movie and
+		// Nehahra cinematics
+		if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE))
+		 && (e->render.alpha == 1)
+		 && !(e->render.flags & RENDER_VIEWMODEL)
+		 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility && !cl_noplayershadow.integer)))
+			e->render.flags |= RENDER_SHADOW;
+		// as soon as player is known we can call V_CalcRefDef
+		if ((e - cl_entities) == cl.viewentity)
+			V_CalcRefdef();
+		if (e->render.model && e->render.model->name[0] == '*' && e->render.model->type == mod_brush)
+			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &e->render;
+		// don't show entities with no modelindex (note: this still shows
+		// entities which have a modelindex that resolved to a NULL model)
+		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
+			r_refdef.entities[r_refdef.numentities++] = &e->render;
+		if (cl_num_entities < e->state_current.number + 1)
+			cl_num_entities = e->state_current.number + 1;
 	}
 }
 
-void CL_RelinkWorld (void)
+void CL_RelinkWorld(void)
 {
 	entity_t *ent = &cl_entities[0];
 	if (cl_num_entities < 1)
 		cl_num_entities = 1;
 	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
+	// FIXME: this should be done at load
 	Matrix4x4_CreateIdentity(&ent->render.matrix);
 	Matrix4x4_CreateIdentity(&ent->render.inversematrix);
 	CL_BoundingBoxForEntity(&ent->render);
@@ -796,17 +841,29 @@ static void CL_RelinkNetworkEntities(void)
 	entity_t *ent;
 	int i;
 
+	ent = &cl.viewent;
+	ent->state_previous = ent->state_current;
+	ClearStateToDefault(&ent->state_current);
+	ent->state_current.time = cl.time;
+	ent->state_current.number = -1;
+	ent->state_current.active = true;
+	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
+	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
+	ent->state_current.flags = RENDER_VIEWMODEL;
+
 	// start on the entity after the world
+	entitylinkframenumber++;
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS;i++, ent++)
 	{
 		if (cl_entities_active[i])
 		{
 			if (ent->state_current.active)
-				CL_RelinkNetworkEntity(ent);
+				CL_LinkNetworkEntity(ent);
 			else
 				cl_entities_active[i] = false;
 		}
 	}
+	CL_LinkNetworkEntity(&cl.viewent);
 }
 
 static void CL_RelinkEffects(void)
@@ -973,7 +1030,6 @@ void CL_LerpPlayer(float frac)
 {
 	int i;
 	float d;
-	entity_t *ent;
 
 	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
 
@@ -993,47 +1049,7 @@ void CL_LerpPlayer(float frac)
 			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
 		}
 	}
-
-	// set up gun
-	ent = &cl.viewent;
-	ent->state_previous = ent->state_current;
-	ClearStateToDefault(&ent->state_current);
-	ent->state_current.time = cl.time;
-	ent->state_current.number = -1;
-	ent->state_current.active = true;
-	ent->state_current.modelindex = cl.stats[STAT_WEAPON];
-	ent->state_current.frame = cl.stats[STAT_WEAPONFRAME];
-	if (cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
-	{
-		ent->state_current.alpha = cl_entities[cl.viewentity].state_current.alpha;
-		ent->state_current.effects = cl_entities[cl.viewentity].state_current.effects;
-	}
-	ent->state_current.flags = RENDER_VIEWMODEL;
-	CL_RelinkNetworkEntity(ent);
 }
-
-void CL_RelinkEntities(void)
-{
-	float frac;
-
-	numviewmodels = 0;
-
-	// fraction from previous network update to current
-	frac = CL_LerpPoint();
-
-	CL_ClearTempEntities();
-	CL_DecayLights();
-	CL_RelinkWorld();
-	CL_RelinkStaticEntities();
-	CL_RelinkNetworkEntities();
-	CL_RelinkEffects();
-	CL_MoveParticles();
-
-	CL_LerpPlayer(frac);
-
-	CL_RelinkBeams();
-}
-
 
 /*
 ===============
@@ -1052,10 +1068,30 @@ int CL_ReadFromServer(void)
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
-		CL_RelinkEntities();
+		// prepare for a new frame
+		CL_LerpPlayer(CL_LerpPoint());
+		CL_DecayLights();
+		CL_ClearTempEntities();
+		V_DriftPitch();
+		V_FadeViewFlashs();
+
+		// relink network entities (note: this sets up the view!)
+		CL_RelinkNetworkEntities();
+
+		// move particles
+		CL_MoveParticles();
+
+		// link stuff
+		CL_RelinkWorld();
+		CL_RelinkStaticEntities();
+		CL_RelinkBeams();
+		CL_RelinkEffects();
 
 		// run cgame code (which can add more entities)
 		CL_CGVM_Frame();
+
+		// update view blend
+		V_CalcViewBlend();
 	}
 
 	return 0;

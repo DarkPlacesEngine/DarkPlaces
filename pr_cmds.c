@@ -2949,6 +2949,40 @@ void PF_argv (void)
 		G_INT(OFS_RETURN) = PR_SetString("");
 }
 
+//void(entity e, entity tagentity, string tagname) setattachment = #443; // attachs e to a tag on tagentity (note: use "" to attach to entity origin/angles instead of a tag)
+void PF_setattachment (void)
+{
+	edict_t *e = G_EDICT(OFS_PARM0);
+	edict_t *tagentity = G_EDICT(OFS_PARM1);
+	char *tagname = G_STRING(OFS_PARM2);
+	eval_t *v;
+	int i, modelindex;
+	model_t *model;
+
+	if (tagentity == NULL)
+		tagentity = sv.edicts;
+
+	v = GETEDICTFIELDVALUE(e, eval_tag_entity);
+	if (v)
+		v->edict = EDICT_TO_PROG(tagentity);
+
+	v = GETEDICTFIELDVALUE(e, eval_tag_index);
+	if (v)
+		v->_float = 0;
+	if (tagentity != NULL && tagentity != sv.edicts && tagname && tagname[0])
+	{
+		modelindex = (int)tagentity->v->modelindex;
+		if (modelindex >= 0 && modelindex < MAX_MODELS)
+		{
+			model = sv.models[modelindex];
+			if (model->alias.aliasnum_tags)
+				for (i = 0;i < model->alias.aliasnum_tags;i++)
+					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))
+						v->_float = i;
+		}
+	}
+}
+
 
 builtin_t pr_builtin[] =
 {
@@ -3119,7 +3153,7 @@ PF_getsurfaceclippedpoint,	// #439 vector(entity e, float s, vector p) getsurfac
 PF_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
-NULL,						// #443
+PF_setattachment,			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
 NULL,						// #444
 NULL,						// #445
 NULL,						// #446

@@ -796,147 +796,193 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_portal + culled_trace, culled_pvs, culled_portal, culled_trace);
 }
 #else
-static entity_frame_t sv_writeentitiestoclient_entityframe;
-void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
+static int numsendentities;
+static entity_state_t sendentities[MAX_EDICTS];
+static entity_state_t *sendentitiesindex[MAX_EDICTS];
+
+void SV_PrepareEntitiesForSending(void)
 {
-	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects, modelindex;
-	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
-	float alphaf, lightsize;
-	qbyte *pvs;
-	vec3_t origin, angles, entmins, entmaxs, lightmins, lightmaxs, testorigin, testeye;
+	int e, i;
 	edict_t *ent;
+	entity_state_t cs;
 	eval_t *val;
-	model_t *model;
-	entity_state_t *s;
-
-	Mod_CheckLoaded(sv.worldmodel);
-
-// find the client's PVS
-	// the real place being tested from
-	VectorAdd (clent->v->origin, clent->v->view_ofs, testeye);
-	pvs = SV_FatPVS (testeye);
-
-	// the place being reported (to consider the fact the client still
-	// applies the view_ofs[2], so we have to only send the fractional part
-	// of view_ofs[2], undoing what the client will redo)
-	VectorCopy (testeye, testorigin);
-	e = (int) clent->v->view_ofs[2] & 255;
-	if (e >= 128)
-		e -= 256;
-	testorigin[2] -= (float) e;
-	EntityFrame_Clear(&sv_writeentitiestoclient_entityframe, testorigin);
-
-	culled_pvs = 0;
-	culled_portal = 0;
-	culled_trace = 0;
-	visibleentities = 0;
-	totalentities = 0;
-
-	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 	// send all entities that touch the pvs
-	ent = NEXT_EDICT(sv.edicts);
-	for (e = 1;e < sv.num_edicts;e++, ent = NEXT_EDICT(ent))
+	numsendentities = 0;
+	sendentitiesindex[0] = NULL;
+	for (e = 1, ent = NEXT_EDICT(sv.edicts);e < sv.num_edicts;e++, ent = NEXT_EDICT(ent))
 	{
+		sendentitiesindex[e] = NULL;
 		if (ent->e->free)
 			continue;
-		flags = 0;
 
-		if (ent != clent) // LordHavoc: always send player
+		ClearStateToDefault(&cs);
+		cs.active = true;
+		cs.number = e;
+		VectorCopy(ent->v->origin, cs.origin);
+		VectorCopy(ent->v->angles, cs.angles);
+		cs.flags = 0;
+		cs.effects = (int)ent->v->effects;
+		cs.colormap = (qbyte)ent->v->colormap;
+		cs.skin = (qbyte)ent->v->skin;
+		cs.frame = (qbyte)ent->v->frame;
+		cs.viewmodelforclient = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)->edict;
+		cs.exteriormodelforclient = GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)->edict;
+		cs.nodrawtoclient = GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)->edict;
+		cs.drawonlytoclient = GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)->edict;
+		cs.tagentity = GETEDICTFIELDVALUE(ent, eval_tag_entity)->edict;
+		cs.tagindex = (qbyte)GETEDICTFIELDVALUE(ent, eval_tag_index)->_float;
+		i = (int)(GETEDICTFIELDVALUE(ent, eval_glow_size)->_float * 0.25f);
+		cs.glowsize = (qbyte)bound(0, i, 255);
+		if (GETEDICTFIELDVALUE(ent, eval_glow_trail)->_float)
+			cs.flags |= RENDER_GLOWTRAIL;
+
+		cs.modelindex = 0;
+		i = (int)ent->v->modelindex;
+		if (i >= 1 && i < MAX_MODELS && *PR_GetString(ent->v->model))
+			cs.modelindex = i;
+
+
+		cs.alpha = 255;
+		i = (int)(GETEDICTFIELDVALUE(ent, eval_alpha)->_float * 255.0f);
+		if (i)
+			cs.alpha = (qbyte)bound(0, i, 255);
+		// halflife
+		i = (int)(GETEDICTFIELDVALUE(ent, eval_renderamt)->_float);
+		if (i)
+			cs.alpha = (qbyte)bound(0, i, 255);
+
+		cs.scale = 16;
+		i = (int)(GETEDICTFIELDVALUE(ent, eval_scale)->_float * 16.0f);
+		if (i)
+			cs.scale = (qbyte)bound(0, i, 255);
+
+		cs.glowcolor = 254;
+		i = (int)(GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
+		if (i)
+			cs.glowcolor = (int) val->_float;
+
+		if (GETEDICTFIELDVALUE(ent, eval_fullbright)->_float)
+			cs.effects |= EF_FULLBRIGHT;
+
+		if (ent->v->movetype == MOVETYPE_STEP)
+			cs.flags |= RENDER_STEP;
+		if ((cs.effects & EF_LOWPRECISION) && cs.origin[0] >= -32768 && cs.origin[1] >= -32768 && cs.origin[2] >= -32768 && cs.origin[0] <= 32767 && cs.origin[1] <= 32767 && cs.origin[2] <= 32767)
+			cs.flags |= RENDER_LOWPRECISION;
+		if (ent->v->colormap >= 1024)
+			cs.flags |= RENDER_COLORMAPPED;
+		if (cs.viewmodelforclient)
+			cs.flags |= RENDER_VIEWMODEL; // show relative to the view
+
+		cs.specialvisibilityradius = 0;
+		if (cs.glowsize)
+			cs.specialvisibilityradius = max(cs.specialvisibilityradius, cs.glowsize * 4);
+		if (cs.flags & RENDER_GLOWTRAIL)
+			cs.specialvisibilityradius = max(cs.specialvisibilityradius, 100);
+		if (cs.effects & (EF_BRIGHTFIELD | EF_MUZZLEFLASH | EF_BRIGHTLIGHT | EF_DIMLIGHT | EF_RED | EF_BLUE | EF_FLAME | EF_STARDUST))
 		{
-			if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
-			{
-				if (val->edict == clentnum)
-					flags |= RENDER_VIEWMODEL; // show relative to the view
-				else
-				{
-					// don't show to anyone else
-					continue;
-				}
-			}
-			else
-			{
-				// LordHavoc: never draw something told not to display to this client
-				if ((val = GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)) && val->edict == clentnum)
-					continue;
-				if ((val = GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)) && val->edict && val->edict != clentnum)
-					continue;
-			}
+			if (cs.effects & EF_BRIGHTFIELD)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 80);
+			if (cs.effects & EF_MUZZLEFLASH)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 100);
+			if (cs.effects & EF_BRIGHTLIGHT)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 400);
+			if (cs.effects & EF_DIMLIGHT)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 200);
+			if (cs.effects & EF_RED)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 200);
+			if (cs.effects & EF_BLUE)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 200);
+			if (cs.effects & EF_FLAME)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 250);
+			if (cs.effects & EF_STARDUST)
+				cs.specialvisibilityradius = max(cs.specialvisibilityradius, 100);
 		}
 
-		glowsize = 0;
-		effects = ent->v->effects;
-		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_size)))
-			glowsize = (int) val->_float >> 2;
-		glowsize = bound(0, glowsize, 255);
+		if (numsendentities >= MAX_EDICTS)
+			continue;
+		// we can omit invisible entities with no effects that are not clients
+		// LordHavoc: this could kill tags attached to an invisible entity, I
+		// just hope we never have to support that case
+		if (cs.number > svs.maxclients && ((cs.effects & EF_NODRAW) || (!cs.modelindex && !cs.specialvisibilityradius)))
+			continue;
+		sendentitiesindex[e] = sendentities + numsendentities;
+		sendentities[numsendentities++] = cs;
+	}
+}
 
-		lightsize = 0;
-		if (effects & (EF_BRIGHTFIELD | EF_MUZZLEFLASH | EF_BRIGHTLIGHT | EF_DIMLIGHT | EF_RED | EF_BLUE | EF_FLAME | EF_STARDUST))
+static int sententitiesmark = 0;
+static int sententities[MAX_EDICTS];
+static int sententitiesconsideration[MAX_EDICTS];
+static int sv_writeentitiestoclient_culled_pvs;
+static int sv_writeentitiestoclient_culled_portal;
+static int sv_writeentitiestoclient_culled_trace;
+static int sv_writeentitiestoclient_visibleentities;
+static int sv_writeentitiestoclient_totalentities;
+static entity_frame_t sv_writeentitiestoclient_entityframe;
+static int sv_writeentitiestoclient_clentnum;
+static qbyte *sv_writeentitiestoclient_pvs;
+static vec3_t sv_writeentitiestoclient_testeye;
+static client_t *sv_writeentitiestoclient_client;
+
+void SV_MarkWriteEntityStateToClient(entity_state_t *s)
+{
+	vec3_t entmins, entmaxs, lightmins, lightmaxs, testorigin;
+	model_t *model;
+	trace_t trace;
+	if (sententitiesconsideration[s->number] == sententitiesmark)
+		return;
+	sententitiesconsideration[s->number] = sententitiesmark;
+	// viewmodels don't have visibility checking
+	if (s->viewmodelforclient)
+	{
+		if (s->viewmodelforclient != sv_writeentitiestoclient_clentnum)
+			return;
+	}
+	// never reject player
+	else if (s->number != sv_writeentitiestoclient_clentnum)
+	{
+		// check various rejection conditions
+		if (s->nodrawtoclient == sv_writeentitiestoclient_clentnum)
+			return;
+		if (s->drawonlytoclient && s->drawonlytoclient != sv_writeentitiestoclient_clentnum)
+			return;
+		if (s->effects & EF_NODRAW)
+			return;
+		// LordHavoc: only send entities with a model or important effects
+		if (!s->modelindex && s->specialvisibilityradius == 0)
+			return;
+		if (s->tagentity)
 		{
-			if (effects & EF_BRIGHTFIELD)
-				lightsize = max(lightsize, 80);
-			if (effects & EF_MUZZLEFLASH)
-				lightsize = max(lightsize, 100);
-			if (effects & EF_BRIGHTLIGHT)
-				lightsize = max(lightsize, 400);
-			if (effects & EF_DIMLIGHT)
-				lightsize = max(lightsize, 200);
-			if (effects & EF_RED)
-				lightsize = max(lightsize, 200);
-			if (effects & EF_BLUE)
-				lightsize = max(lightsize, 200);
-			if (effects & EF_FLAME)
-				lightsize = max(lightsize, 250);
-			if (effects & EF_STARDUST)
-				lightsize = max(lightsize, 100);
+			// tag attached entities simply check their parent
+			if (!sendentitiesindex[s->tagentity])
+				return;
+			SV_MarkWriteEntityStateToClient(sendentitiesindex[s->tagentity]);
+			if (sententities[s->tagentity] != sententitiesmark)
+				return;
 		}
-		if (glowsize)
-			lightsize = max(lightsize, glowsize << 2);
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_trail)))
-		if (val->_float != 0)
+		// always send world submodels, they don't generate much traffic
+		else if ((model = sv.models[s->modelindex]) == NULL || model->name[0] != '*')
 		{
-			flags |= RENDER_GLOWTRAIL;
-			lightsize = max(lightsize, 100);
-		}
-
-		modelindex = 0;
-		if (ent->v->modelindex >= 0 && ent->v->modelindex < MAX_MODELS && *PR_GetString(ent->v->model))
-		{
-			modelindex = ent->v->modelindex;
-			model = sv.models[(int)ent->v->modelindex];
 			Mod_CheckLoaded(model);
-		}
-		else
-		{
-			model = NULL;
-			if (ent != clent) // LordHavoc: always send player
-				if (lightsize == 0) // no effects
-					continue;
-		}
-
-		VectorCopy(ent->v->angles, angles);
-		VectorCopy(ent->v->origin, origin);
-
-		// ent has survived every check so far, check if it is visible
-		// always send embedded brush models, they don't generate much traffic
-		if (ent != clent && ((flags & RENDER_VIEWMODEL) == 0) && (model == NULL || model->type != mod_brush || model->name[0] != '*'))
-		{
-			// use the predicted origin
-			entmins[0] = origin[0] - 1.0f;
-			entmins[1] = origin[1] - 1.0f;
-			entmins[2] = origin[2] - 1.0f;
-			entmaxs[0] = origin[0] + 1.0f;
-			entmaxs[1] = origin[1] + 1.0f;
-			entmaxs[2] = origin[2] + 1.0f;
+			// entity has survived every check so far, check if visible
+			// enlarged box to account for prediction (not that there is
+			// any currently, but still helps the 'run into a room and
+			// watch items pop up' problem)
+			entmins[0] = s->origin[0] - 32.0f;
+			entmins[1] = s->origin[1] - 32.0f;
+			entmins[2] = s->origin[2] - 32.0f;
+			entmaxs[0] = s->origin[0] + 32.0f;
+			entmaxs[1] = s->origin[1] + 32.0f;
+			entmaxs[2] = s->origin[2] + 32.0f;
 			// using the model's bounding box to ensure things are visible regardless of their physics box
 			if (model)
 			{
-				if (ent->v->angles[0] || ent->v->angles[2]) // pitch and roll
+				if (s->angles[0] || s->angles[2]) // pitch and roll
 				{
 					VectorAdd(entmins, model->rotatedmins, entmins);
 					VectorAdd(entmaxs, model->rotatedmaxs, entmaxs);
 				}
-				else if (ent->v->angles[1])
+				else if (s->angles[1])
 				{
 					VectorAdd(entmins, model->yawmins, entmins);
 					VectorAdd(entmaxs, model->yawmaxs, entmaxs);
@@ -947,157 +993,130 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					VectorAdd(entmaxs, model->normalmaxs, entmaxs);
 				}
 			}
-			lightmins[0] = min(entmins[0], origin[0] - lightsize);
-			lightmins[1] = min(entmins[1], origin[1] - lightsize);
-			lightmins[2] = min(entmins[2], origin[2] - lightsize);
-			lightmaxs[0] = min(entmaxs[0], origin[0] + lightsize);
-			lightmaxs[1] = min(entmaxs[1], origin[1] + lightsize);
-			lightmaxs[2] = min(entmaxs[2], origin[2] + lightsize);
-
-			totalentities++;
-
+			lightmins[0] = min(entmins[0], s->origin[0] - s->specialvisibilityradius);
+			lightmins[1] = min(entmins[1], s->origin[1] - s->specialvisibilityradius);
+			lightmins[2] = min(entmins[2], s->origin[2] - s->specialvisibilityradius);
+			lightmaxs[0] = min(entmaxs[0], s->origin[0] + s->specialvisibilityradius);
+			lightmaxs[1] = min(entmaxs[1], s->origin[1] + s->specialvisibilityradius);
+			lightmaxs[2] = min(entmaxs[2], s->origin[2] + s->specialvisibilityradius);
+			sv_writeentitiestoclient_totalentities++;
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, lightmins, lightmaxs, sv.worldmodel->brushq1.nodes))
+			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(sv_writeentitiestoclient_pvs, lightmins, lightmaxs, sv.worldmodel->brushq1.nodes))
 			{
-				culled_pvs++;
-				continue;
+				sv_writeentitiestoclient_culled_pvs++;
+				return;
 			}
-
 			// or not visible through the portals
-			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, testeye, lightmins, lightmaxs))
+			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, sv_writeentitiestoclient_testeye, lightmins, lightmaxs))
 			{
-				culled_portal++;
-				continue;
+				sv_writeentitiestoclient_culled_portal++;
+				return;
 			}
-
+			// or not seen by random tracelines
 			if (sv_cullentities_trace.integer)
 			{
 				// LordHavoc: test center first
 				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
 				testorigin[1] = (entmins[1] + entmaxs[1]) * 0.5f;
 				testorigin[2] = (entmins[2] + entmaxs[2]) * 0.5f;
-				if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
-					client->visibletime[e] = realtime + 1;
+				trace = SV_Move(sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL);
+				if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
+					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 				else
 				{
 					// LordHavoc: test random offsets, to maximize chance of detection
 					testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
 					testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 					testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
-					if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
-						client->visibletime[e] = realtime + 1;
+					trace = SV_Move(sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL);
+					if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
+						sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 					else
 					{
-						if (lightsize)
+						if (s->specialvisibilityradius)
 						{
 							// LordHavoc: test random offsets, to maximize chance of detection
 							testorigin[0] = lhrandom(lightmins[0], lightmaxs[0]);
 							testorigin[1] = lhrandom(lightmins[1], lightmaxs[1]);
 							testorigin[2] = lhrandom(lightmins[2], lightmaxs[2]);
-							if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
-								client->visibletime[e] = realtime + 1;
-							else
-							{
-								if (realtime > client->visibletime[e])
-								{
-									culled_trace++;
-									continue;
-								}
-							}
-						}
-						else
-						{
-							if (realtime > client->visibletime[e])
-							{
-								culled_trace++;
-								continue;
-							}
+							trace = SV_Move(sv_writeentitiestoclient_testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL);
+							if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
+								sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 						}
 					}
 				}
-			}
-			visibleentities++;
-		}
-
-		alphaf = 255.0f;
-		scale = 16;
-		glowcolor = 254;
-		effects = ent->v->effects;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
-		if (val->_float != 0)
-			alphaf = val->_float * 255.0;
-
-		// HalfLife support
-		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)))
-		if (val->_float != 0)
-			alphaf = val->_float;
-
-		if (alphaf == 0.0f)
-			alphaf = 255.0f;
-		alpha = bound(0, alphaf, 255);
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
-		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
-		if (scale < 0) scale = 0;
-		if (scale > 255) scale = 255;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_color)))
-		if (val->_float != 0)
-			glowcolor = (int) val->_float;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_fullbright)))
-		if (val->_float != 0)
-			effects |= EF_FULLBRIGHT;
-
-		if (ent != clent)
-		{
-			if (lightsize == 0) // no effects
-			{
-				if (model) // model
+				if (realtime > sv_writeentitiestoclient_client->visibletime[s->number])
 				{
-					// don't send if flagged for NODRAW and there are no effects
-					if (model->flags == 0 && ((effects & EF_NODRAW) || scale <= 0 || alpha <= 0))
-						continue;
+					sv_writeentitiestoclient_culled_trace++;
+					return;
 				}
-				else // no model and no effects
-					continue;
 			}
+			sv_writeentitiestoclient_visibleentities++;
 		}
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)) && val->edict == clentnum)
-			flags |= RENDER_EXTERIORMODEL;
-
-		if (ent->v->movetype == MOVETYPE_STEP)
-			flags |= RENDER_STEP;
-		// don't send an entity if it's coordinates would wrap around
-		if ((effects & EF_LOWPRECISION) && origin[0] >= -32768 && origin[1] >= -32768 && origin[2] >= -32768 && origin[0] <= 32767 && origin[1] <= 32767 && origin[2] <= 32767)
-			flags |= RENDER_LOWPRECISION;
-
-		s = EntityFrame_NewEntity(&sv_writeentitiestoclient_entityframe, e);
-		// if we run out of space, abort
-		if (!s)
-			break;
-		VectorCopy(origin, s->origin);
-		VectorCopy(angles, s->angles);
-		if (ent->v->colormap >= 1024)
-			flags |= RENDER_COLORMAPPED;
-		s->colormap = ent->v->colormap;
-		s->skin = ent->v->skin;
-		s->frame = ent->v->frame;
-		s->modelindex = modelindex;
-		s->effects = effects;
-		s->alpha = alpha;
-		s->scale = scale;
-		s->glowsize = glowsize;
-		s->glowcolor = glowcolor;
-		s->flags = flags;
 	}
-	sv_writeentitiestoclient_entityframe.framenum = ++client->entityframenumber;
+	// this just marks it for sending
+	// FIXME: it would be more efficient to send here, but the entity
+	// compressor isn't that flexible
+	sententities[s->number] = sententitiesmark;
+}
+
+void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
+{
+	int i;
+	vec3_t testorigin;
+	entity_state_t *s;
+
+	sv_writeentitiestoclient_client = client;
+
+	sv_writeentitiestoclient_culled_pvs = 0;
+	sv_writeentitiestoclient_culled_portal = 0;
+	sv_writeentitiestoclient_culled_trace = 0;
+	sv_writeentitiestoclient_visibleentities = 0;
+	sv_writeentitiestoclient_totalentities = 0;
+
+	Mod_CheckLoaded(sv.worldmodel);
+
+// find the client's PVS
+	// the real place being tested from
+	VectorAdd(clent->v->origin, clent->v->view_ofs, sv_writeentitiestoclient_testeye);
+	sv_writeentitiestoclient_pvs = SV_FatPVS(sv_writeentitiestoclient_testeye);
+
+	sv_writeentitiestoclient_clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
+
+	sententitiesmark++;
+
+	// the place being reported (to consider the fact the client still
+	// applies the view_ofs[2], so we have to only send the fractional part
+	// of view_ofs[2], undoing what the client will redo)
+	VectorCopy(sv_writeentitiestoclient_testeye, testorigin);
+	i = (int) clent->v->view_ofs[2] & 255;
+	if (i >= 128)
+		i -= 256;
+	testorigin[2] -= (float) i;
+
+	for (i = 0;i < numsendentities;i++)
+		SV_MarkWriteEntityStateToClient(sendentities + i);
+
+	EntityFrame_Clear(&sv_writeentitiestoclient_entityframe, testorigin, ++client->entityframenumber);
+	for (i = 0;i < numsendentities;i++)
+	{
+		s = sendentities + i;
+		if (sententities[s->number] == sententitiesmark)
+		{
+			if (s->exteriormodelforclient && s->exteriormodelforclient == sv_writeentitiestoclient_clentnum)
+			{
+				s->flags |= RENDER_EXTERIORMODEL;
+				EntityFrame_AddEntity(&sv_writeentitiestoclient_entityframe, s);
+				s->flags &= ~RENDER_EXTERIORMODEL;
+			}
+			else
+				EntityFrame_AddEntity(&sv_writeentitiestoclient_entityframe, s);
+		}
+	}
 	EntityFrame_Write(&client->entitydatabase, &sv_writeentitiestoclient_entityframe, msg);
 
 	if (sv_cullentities_stats.integer)
-		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_portal + culled_trace, culled_pvs, culled_portal, culled_trace);
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_portal + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_portal, sv_writeentitiestoclient_culled_trace);
 }
 #endif
 
@@ -1446,10 +1465,10 @@ SV_SendClientMessages
 */
 void SV_SendClientMessages (void)
 {
-	int			i;
+	int i, prepared = false;
 
 // update frags, names, etc
-	SV_UpdateToReliableMessages ();
+	SV_UpdateToReliableMessages();
 
 // build individual updates
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
@@ -1465,6 +1484,12 @@ void SV_SendClientMessages (void)
 
 		if (host_client->spawned)
 		{
+			if (!prepared)
+			{
+				prepared = true;
+				// only prepare entities once per frame
+				SV_PrepareEntitiesForSending();
+			}
 			if (!SV_SendClientDatagram (host_client))
 				continue;
 		}
@@ -1511,9 +1536,8 @@ void SV_SendClientMessages (void)
 		}
 	}
 
-
 // clear muzzle flashes
-	SV_CleanupEnts ();
+	SV_CleanupEnts();
 }
 
 

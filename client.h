@@ -157,6 +157,10 @@ entity_render_t;
 
 typedef struct entity_persistent_s
 {
+	int linkframe;
+
+	vec3_t trail_origin;
+
 	// particle trail
 	float trail_time;
 
