@@ -714,7 +714,7 @@ void CL_RelinkNetworkEntity(entity_t *e)
 			CL_RocketTrail(oldorg, r->origin, trailtype, e);
 	}
 
-	if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
+	if ((dlightcolor[0] || dlightcolor[1] || dlightcolor[2]) && !(r->flags & RENDER_VIEWMODEL))
 	{
 		VectorCopy(r->origin, v);
 		// hack to make glowing player light shine on their gun
