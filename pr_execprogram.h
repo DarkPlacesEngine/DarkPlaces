@@ -283,6 +283,8 @@
 				}
 				else
 					st = pr_statements + PR_EnterFunction(newf);
+				if (pr_trace != cachedpr_trace)
+					goto chooseexecprogram;
 				break;
 
 			case OP_DONE:
