@@ -28,8 +28,7 @@ void SCR_CenterPrint(char *str);
 
 void SCR_BeginLoadingPlaque (void);
 
-extern float scr_con_current;
-extern float scr_conlines; // lines of console to display
+extern float scr_con_current; // current height of displayed console
 
 extern int sb_lines;
 
