@@ -1874,10 +1874,7 @@ void PF_WriteLong (void)
 
 void PF_WriteAngle (void)
 {
-	if (sv.protocol == PROTOCOL_DARKPLACES5)
-		MSG_WriteAngle16i (WriteDest(), G_FLOAT(OFS_PARM1));
-	else
-		MSG_WriteAngle8i (WriteDest(), G_FLOAT(OFS_PARM1));
+	MSG_WriteAngle (WriteDest(), G_FLOAT(OFS_PARM1), sv.protocol);
 }
 
 void PF_WriteCoord (void)
@@ -1931,7 +1928,7 @@ void PF_makestatic (void)
 	for (i=0 ; i<3 ; i++)
 	{
 		MSG_WriteCoord(&sv.signon, ent->v->origin[i], sv.protocol);
-		MSG_WriteAngle8i(&sv.signon, ent->v->angles[i]);
+		MSG_WriteAngle(&sv.signon, ent->v->angles[i], sv.protocol);
 	}
 
 // throw the entity away now

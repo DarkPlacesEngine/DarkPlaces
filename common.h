@@ -123,6 +123,7 @@ void MSG_WriteCoord16i (sizebuf_t *sb, float f);
 void MSG_WriteCoord32f (sizebuf_t *sb, float f);
 void MSG_WriteCoord (sizebuf_t *sb, float f, int protocol);
 void MSG_WriteVector (sizebuf_t *sb, float *v, int protocol);
+void MSG_WriteAngle (sizebuf_t *sb, float f, int protocol);
 
 extern	int			msg_readcount;
 extern	qboolean	msg_badread;		// set if a read goes beyond end of message
@@ -151,6 +152,7 @@ float MSG_ReadCoord16i (void);
 float MSG_ReadCoord32f (void);
 float MSG_ReadCoord (int protocol);
 void MSG_ReadVector (float *v, int protocol);
+float MSG_ReadAngle (int protocol);
 
 //============================================================================
 

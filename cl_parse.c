@@ -339,6 +339,7 @@ void CL_ParseServerInfo (void)
 		return;
 	}
 	cl.protocol = i;
+	Con_DPrintf("Protocol %i\n", cl.protocol);
 
 // parse maxclients
 	cl.maxclients = MSG_ReadByte ();
@@ -574,7 +575,7 @@ void CL_ParseBaseline (entity_t *ent, int large)
 	for (i = 0;i < 3;i++)
 	{
 		ent->state_baseline.origin[i] = MSG_ReadCoord(cl.protocol);
-		ent->state_baseline.angles[i] = MSG_ReadAngle8i();
+		ent->state_baseline.angles[i] = MSG_ReadAngle(cl.protocol);
 	}
 	CL_ValidateState(&ent->state_baseline);
 	ent->state_previous = ent->state_current = ent->state_baseline;
@@ -1290,7 +1291,7 @@ int parsingerror = false;
 void CL_ParseServerMessage(void)
 {
 	int			cmd;
-	int			i, entitiesupdated;
+	int			i;
 	qbyte		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
@@ -1314,8 +1315,6 @@ void CL_ParseServerMessage(void)
 //
 	//MSG_BeginReading ();
 
-	entitiesupdated = false;
-
 	parsingerror = true;
 
 	while (1)
@@ -1338,7 +1337,6 @@ void CL_ParseServerMessage(void)
 		// if the high bit of the command byte is set, it is a fast update
 		if (cmd & 128)
 		{
-			entitiesupdated = true;
 			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
 			temp = "entity";
 			cmdlogname[cmdindex] = temp;
@@ -1444,12 +1442,7 @@ void CL_ParseServerMessage(void)
 
 		case svc_setangle:
 			for (i=0 ; i<3 ; i++)
-			{
-				if (cl.protocol == PROTOCOL_DARKPLACES5)
-					cl.viewangles[i] = MSG_ReadAngle16i ();
-				else
-					cl.viewangles[i] = MSG_ReadAngle8i ();
-			}
+				cl.viewangles[i] = MSG_ReadAngle (cl.protocol);
 			break;
 
 		case svc_setview:
@@ -1668,8 +1661,7 @@ void CL_ParseServerMessage(void)
 		}
 	}
 
-	if (entitiesupdated)
-		EntityFrameQuake_ISeeDeadEntities();
+	EntityFrameQuake_ISeeDeadEntities();
 
 	parsingerror = false;
 }

@@ -730,12 +730,12 @@ void SV_WriteEntitiesToClient_QUAKE (client_t *client, edict_t *clent, sizebuf_t
 		if (bits & U_COLORMAP)	MSG_WriteByte(msg, ent->v->colormap);
 		if (bits & U_SKIN)		MSG_WriteByte(msg, ent->v->skin);
 		if (bits & U_EFFECTS)	MSG_WriteByte(msg, ent->v->effects);
-		if (bits & U_ORIGIN1)	MSG_WriteCoord13i(msg, origin[0]);
-		if (bits & U_ANGLE1)	MSG_WriteAngle8i(msg, angles[0]);
-		if (bits & U_ORIGIN2)	MSG_WriteCoord13i(msg, origin[1]);
-		if (bits & U_ANGLE2)	MSG_WriteAngle8i(msg, angles[1]);
-		if (bits & U_ORIGIN3)	MSG_WriteCoord13i(msg, origin[2]);
-		if (bits & U_ANGLE3)	MSG_WriteAngle8i(msg, angles[2]);
+		if (bits & U_ORIGIN1)	MSG_WriteCoord(msg, origin[0], sv.protocol);
+		if (bits & U_ANGLE1)	MSG_WriteAngle(msg, angles[0], sv.protocol);
+		if (bits & U_ORIGIN2)	MSG_WriteCoord(msg, origin[1], sv.protocol);
+		if (bits & U_ANGLE2)	MSG_WriteAngle(msg, angles[1], sv.protocol);
+		if (bits & U_ORIGIN3)	MSG_WriteCoord(msg, origin[2], sv.protocol);
+		if (bits & U_ANGLE3)	MSG_WriteAngle(msg, angles[2], sv.protocol);
 
 		// LordHavoc: new stuff
 		if (bits & U_ALPHA)		MSG_WriteByte(msg, alpha);
@@ -1320,12 +1320,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	{
 		MSG_WriteByte (msg, svc_setangle);
 		for (i=0 ; i < 3 ; i++)
-		{
-			if (sv.protocol == PROTOCOL_DARKPLACES5)
-				MSG_WriteAngle16i (msg, ent->v->angles[i] );
-			else
-				MSG_WriteAngle8i (msg, ent->v->angles[i] );
-		}
+			MSG_WriteAngle (msg, ent->v->angles[i], sv.protocol);
 		ent->v->fixangle = 0;
 	}
 
@@ -1880,7 +1875,7 @@ void SV_CreateBaseline (void)
 		for (i=0 ; i<3 ; i++)
 		{
 			MSG_WriteCoord(&sv.signon, svent->e->baseline.origin[i], sv.protocol);
-			MSG_WriteAngle8i(&sv.signon, svent->e->baseline.angles[i]);
+			MSG_WriteAngle(&sv.signon, svent->e->baseline.angles[i], sv.protocol);
 		}
 	}
 }
