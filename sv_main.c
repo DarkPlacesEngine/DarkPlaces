@@ -26,6 +26,7 @@ static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "0"}; // fast but
 static cvar_t sv_cullentities_portal = {0, "sv_cullentities_portal", "0"}; // extremely accurate visibility checking, but too slow
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "1"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
+static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
 
 server_t		sv;
 server_static_t	svs;
@@ -64,6 +65,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_cullentities_portal);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
+	Cvar_RegisterVariable (&sv_entpatch);
 
 	SV_Phys_Init();
 	SV_World_Init();
@@ -1730,8 +1732,9 @@ extern float		scr_centertime_off;
 
 void SV_SpawnServer (const char *server)
 {
-	edict_t		*ent;
-	int			i;
+	edict_t *ent;
+	int i;
+	qbyte *entities;
 
 	// let's not have any servers with no name
 	if (hostname.string[0] == 0)
@@ -1862,7 +1865,20 @@ void SV_SpawnServer (const char *server)
 // serverflags are for cross level information (sigils)
 	pr_global_struct->serverflags = svs.serverflags;
 
-	ED_LoadFromFile (sv.worldmodel->entities);
+	// load replacement entity file if found
+	entities = NULL;
+	if (sv_entpatch.integer)
+		entities = COM_LoadFile(va("maps/%s.ent", sv.name), true);
+	if (entities)
+	{
+		Con_Printf("Loaded maps/%s.ent\n", sv.name);
+		ED_LoadFromFile (entities);
+		Mem_Free(entities);
+	}
+	else
+		ED_LoadFromFile (sv.worldmodel->entities);
+
+
 	// LordHavoc: clear world angles (to fix e3m3.bsp)
 	VectorClear(sv.edicts->v->angles);
 
