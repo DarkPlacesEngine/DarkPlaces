@@ -1015,7 +1015,12 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 				dfunc.GetSocketAddr(s->socket, &newaddr);
 				MSG_WriteLong(&net_message, dfunc.GetSocketPort(&newaddr));
 				*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-				dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
+				// LordHavoc: send from s->socket instead of acceptsock, this
+				// way routers usually identify the connection correctly
+				// (thanks to faded for provoking me to recite a lengthy
+				// explanation of NAT nightmares, and realize this easy
+				// workaround for quake)
+				dfunc.Write (s->socket, net_message.data, net_message.cursize, &clientaddr);
 				SZ_Clear(&net_message);
 				return NULL;
 			}
@@ -1072,7 +1077,11 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	dfunc.GetSocketAddr(newsock, &newaddr);
 	MSG_WriteLong(&net_message, dfunc.GetSocketPort(&newaddr));
 	*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
-	dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
+	// LordHavoc: send from sock->socket instead of acceptsock, this way routers
+	// usually identify the connection correctly (thanks to faded for provoking
+	// me to recite a lengthy explanation of NAT nightmares, and realize this
+	// easy workaround for quake)
+	dfunc.Write (sock->socket, net_message.data, net_message.cursize, &clientaddr);
 	SZ_Clear(&net_message);
 
 	return sock;
