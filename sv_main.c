@@ -32,7 +32,6 @@ server_static_t svs;
 static char localmodels[MAX_MODELS][5];			// inline model names for precache
 
 mempool_t *sv_edicts_mempool = NULL;
-mempool_t *sv_clients_mempool = NULL;
 
 //============================================================================
 
@@ -71,7 +70,6 @@ void SV_Init (void)
 		sprintf (localmodels[i], "*%i", i);
 
 	sv_edicts_mempool = Mem_AllocPool("server edicts");
-	sv_clients_mempool = Mem_AllocPool("server clients");
 }
 
 /*
@@ -261,7 +259,7 @@ void SV_SendServerinfo (client_t *client)
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
 	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION4);
-	MSG_WriteByte (&client->message, MAX_SCOREBOARD);
+	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
 		MSG_WriteByte (&client->message, GAME_DEATHMATCH);
@@ -308,12 +306,13 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	int				i;
 	float			spawn_parms[NUM_SPAWN_PARMS];
 
-	client = svs.connectedclients[clientnum];
+	client = svs.clients + clientnum;
 
 // set up the client_t
 	if (sv.loadgame)
 		memcpy (spawn_parms, client->spawn_parms, sizeof(spawn_parms));
 	memset (client, 0, sizeof(*client));
+	client->active = true;
 	client->netconnection = netconnection;
 
 	Con_DPrintf("Client %s connected\n", client->netconnection->address);
@@ -822,7 +821,7 @@ void SV_PrepareEntitiesForSending(void)
 		// we can omit invisible entities with no effects that are not clients
 		// LordHavoc: this could kill tags attached to an invisible entity, I
 		// just hope we never have to support that case
-		if (cs.number > MAX_SCOREBOARD && ((cs.effects & EF_NODRAW) || (!cs.modelindex && !cs.specialvisibilityradius)))
+		if (cs.number > svs.maxclients && ((cs.effects & EF_NODRAW) || (!cs.modelindex && !cs.specialvisibilityradius)))
 			continue;
 		sendentitiesindex[e] = sendentities + numsendentities;
 		sendentities[numsendentities++] = cs;
@@ -1345,71 +1344,67 @@ void SV_UpdateToReliableMessages (void)
 	char *s;
 
 // check for changes to be sent over the reliable streams
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		// only update the client fields if they've spawned in
-		if ((host_client = svs.connectedclients[i]) && host_client->spawned)
+		// update the host_client fields we care about according to the entity fields
+		sv_player = host_client->edict;
+		s = PR_GetString(sv_player->v->netname);
+		if (s != host_client->name)
 		{
-			// update the host_client fields we care about according to the entity fields
-			sv_player = host_client->edict;
-			s = PR_GetString(sv_player->v->netname);
-			if (s != host_client->name)
-			{
-				if (s == NULL)
-					s = "";
-				// point the string back at host_client->name to keep it safe
-				strncpy(host_client->name, s, sizeof(host_client->name) - 1);
-				sv_player->v->netname = PR_SetString(host_client->name);
-			}
-			if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)
-				host_client->colors = val->_float;
-			host_client->frags = sv_player->v->frags;
-			if (gamemode == GAME_NEHAHRA)
-				if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)) && host_client->pmodel != val->_float)
-					host_client->pmodel = val->_float;
+			if (s == NULL)
+				s = "";
+			// point the string back at host_client->name to keep it safe
+			strncpy(host_client->name, s, sizeof(host_client->name) - 1);
+			sv_player->v->netname = PR_SetString(host_client->name);
+		}
+		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)
+			host_client->colors = val->_float;
+		host_client->frags = sv_player->v->frags;
+		if (gamemode == GAME_NEHAHRA)
+			if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)) && host_client->pmodel != val->_float)
+				host_client->pmodel = val->_float;
 
-			// if the fields changed, send messages about the changes
-			if (strcmp(host_client->old_name, host_client->name))
+		// if the fields changed, send messages about the changes
+		if (strcmp(host_client->old_name, host_client->name))
+		{
+			strcpy(host_client->old_name, host_client->name);
+			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 			{
-				strcpy(host_client->old_name, host_client->name);
-				for (j = 0;j < MAX_SCOREBOARD;j++)
-				{
-					if (!(client = svs.connectedclients[j]) || !client->spawned)
-						continue;
-					MSG_WriteByte (&client->message, svc_updatename);
-					MSG_WriteByte (&client->message, i);
-					MSG_WriteString (&client->message, host_client->name);
-				}
+				if (!client->spawned || !client->netconnection)
+					continue;
+				MSG_WriteByte (&client->message, svc_updatename);
+				MSG_WriteByte (&client->message, i);
+				MSG_WriteString (&client->message, host_client->name);
 			}
-			if (host_client->old_colors != host_client->colors)
+		}
+		if (host_client->old_colors != host_client->colors)
+		{
+			host_client->old_colors = host_client->colors;
+			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 			{
-				host_client->old_colors = host_client->colors;
-				for (j = 0;j < MAX_SCOREBOARD;j++)
-				{
-					if (!(client = svs.connectedclients[j]) || !client->spawned)
-						continue;
-					MSG_WriteByte (&client->message, svc_updatecolors);
-					MSG_WriteByte (&client->message, i);
-					MSG_WriteByte (&client->message, host_client->colors);
-				}
+				if (!client->spawned || !client->netconnection)
+					continue;
+				MSG_WriteByte (&client->message, svc_updatecolors);
+				MSG_WriteByte (&client->message, i);
+				MSG_WriteByte (&client->message, host_client->colors);
 			}
-			if (host_client->old_frags != host_client->frags)
+		}
+		if (host_client->old_frags != host_client->frags)
+		{
+			host_client->old_frags = host_client->frags;
+			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 			{
-				host_client->old_frags = host_client->frags;
-				for (j = 0;j < MAX_SCOREBOARD;j++)
-				{
-					if (!(client = svs.connectedclients[j]) || !client->spawned)
-						continue;
-					MSG_WriteByte (&client->message, svc_updatefrags);
-					MSG_WriteByte (&client->message, i);
-					MSG_WriteShort (&client->message, host_client->frags);
-				}
+				if (!client->spawned || !client->netconnection)
+					continue;
+				MSG_WriteByte (&client->message, svc_updatefrags);
+				MSG_WriteByte (&client->message, i);
+				MSG_WriteShort (&client->message, host_client->frags);
 			}
 		}
 	}
 
-	for (j = 0;j < MAX_SCOREBOARD;j++)
-		if ((client = svs.connectedclients[j]))
+	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
+		if (client->netconnection)
 			SZ_Write (&client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 
 	SZ_Clear (&sv.reliable_datagram);
@@ -1453,12 +1448,17 @@ void SV_SendClientMessages (void)
 	SV_UpdateToReliableMessages();
 
 // build individual updates
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		if (!(host_client = svs.connectedclients[i]))
+		if (!host_client->active)
 			continue;
+		if (!host_client->netconnection)
+		{
+			SZ_Clear(&host_client->message);
+			continue;
+		}
 
-		if (host_client->deadsocket || !host_client->netconnection || host_client->message.overflowed)
+		if (host_client->deadsocket || host_client->message.overflowed)
 		{
 			SV_DropClient (true);	// if the message couldn't send, kick off
 			continue;
@@ -1565,7 +1565,7 @@ void SV_CreateBaseline (void)
 
 		if (svent->e->free)
 			continue;
-		if (entnum > MAX_SCOREBOARD && !svent->v->modelindex)
+		if (entnum > svs.maxclients && !svent->v->modelindex)
 			continue;
 
 		// create entity baseline
@@ -1573,7 +1573,7 @@ void SV_CreateBaseline (void)
 		VectorCopy (svent->v->angles, svent->e->baseline.angles);
 		svent->e->baseline.frame = svent->v->frame;
 		svent->e->baseline.skin = svent->v->skin;
-		if (entnum > 0 && entnum <= MAX_SCOREBOARD)
+		if (entnum > 0 && entnum <= svs.maxclients)
 		{
 			svent->e->baseline.colormap = entnum;
 			svent->e->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
@@ -1656,9 +1656,9 @@ void SV_SaveSpawnparms (void)
 
 	svs.serverflags = pr_global_struct->serverflags;
 
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		if (!(host_client = svs.connectedclients[i]))
+		if (!host_client->active)
 			continue;
 
 	// call the progs to get default spawn parms for the new client
@@ -1766,7 +1766,7 @@ void SV_SpawnServer (const char *server)
 
 // allocate server memory
 	// start out with just enough room for clients and a reasonable estimate of entities
-	sv.max_edicts = max(MAX_SCOREBOARD + 1, 512);
+	sv.max_edicts = max(svs.maxclients + 1, 512);
 	sv.max_edicts = min(sv.max_edicts, MAX_EDICTS);
 
 	// clear the edict memory pool
@@ -1799,7 +1799,7 @@ void SV_SpawnServer (const char *server)
 	sv.signon.data = sv.signon_buf;
 
 // leave slots at start for clients only
-	sv.num_edicts = MAX_SCOREBOARD+1;
+	sv.num_edicts = svs.maxclients+1;
 
 	sv.state = ss_loading;
 	sv.paused = false;
@@ -1892,8 +1892,8 @@ void SV_SpawnServer (const char *server)
 #endif
 
 // send serverinfo to all connected clients
-	for (i = 0;i < MAX_SCOREBOARD;i++)
-		if ((host_client = svs.connectedclients[i]))
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		if (host_client->netconnection)
 			SV_SendServerinfo(host_client);
 
 	Con_DPrintf ("Server spawned.\n");

@@ -2970,7 +2970,7 @@ void M_Menu_GameOptions_f (void)
 	m_state = m_gameoptions;
 	m_entersound = true;
 	if (maxplayers == 0)
-		maxplayers = sv_maxplayers.integer;
+		maxplayers = svs.maxclients;
 	if (maxplayers < 2)
 		maxplayers = min(8, MAX_SCOREBOARD);
 }

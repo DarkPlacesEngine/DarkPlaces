@@ -69,16 +69,16 @@ void Host_Status_f (void)
 	else
 		print = SV_ClientPrintf;
 
-	for (players = 0, j = 0;j < MAX_SCOREBOARD;j++)
-		if (svs.connectedclients[j])
+	for (players = 0, j = 0;j < svs.maxclients;j++)
+		if (svs.clients[j].active)
 			players++;
 	print ("host:    %s\n", Cvar_VariableString ("hostname"));
 	print ("version: %s build %s\n", gamename, buildstring);
 	print ("map:     %s\n", sv.name);
-	print ("players: %i active (%i max)\n\n", players, min(sv_maxplayers.integer, MAX_SCOREBOARD));
-	for (j = 0;j < MAX_SCOREBOARD;j++)
+	print ("players: %i active (%i max)\n\n", players, svs.maxclients);
+	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
 	{
-		if (!(client = svs.connectedclients[j]))
+		if (!client->active)
 			continue;
 		seconds = (int)(realtime - client->netconnection->connecttime);
 		minutes = seconds / 60;
@@ -241,9 +241,9 @@ void Host_Ping_f (void)
 	}
 
 	SV_ClientPrintf ("Client ping times:\n");
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if (!(client = svs.connectedclients[i]))
+		if (!client->active)
 			continue;
 		total = 0;
 		for (j=0 ; j<NUM_PING_TIMES ; j++)
@@ -411,7 +411,7 @@ void Host_Savegame_f (void)
 	if (cmd_source != src_command)
 		return;
 
-	if (!sv.active)
+	if (cls.state != ca_connected || !sv.active)
 	{
 		Con_Printf ("Not playing a local game.\n");
 		return;
@@ -423,16 +423,16 @@ void Host_Savegame_f (void)
 		return;
 	}
 
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0;i < svs.maxclients;i++)
 	{
-		if (svs.connectedclients[i])
+		if (svs.clients[i].active)
 		{
 			if (i > 0)
 			{
 				Con_Printf("Can't save multiplayer games.\n");
 				return;
 			}
-			if (svs.connectedclients[i]->edict->v->deadflag)
+			if (svs.clients[i].edict->v->deadflag)
 			{
 				Con_Printf("Can't savegame with a dead player\n");
 				return;
@@ -468,7 +468,7 @@ void Host_Savegame_f (void)
 	Host_SavegameComment (comment);
 	FS_Printf (f, "%s\n", comment);
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
-		FS_Printf (f, "%f\n", svs.connectedclients[0]->spawn_parms[i]);
+		FS_Printf (f, "%f\n", svs.clients[0].spawn_parms[i]);
 	FS_Printf (f, "%d\n", current_skill);
 	FS_Printf (f, "%s\n", sv.name);
 	FS_Printf (f, "%f\n",sv.time);
@@ -649,7 +649,7 @@ void Host_PerformLoadGame(char *name)
 	FS_Close (f);
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
-		svs.connectedclients[0]->spawn_parms[i] = spawn_parms[i];
+		svs.clients[0].spawn_parms[i] = spawn_parms[i];
 
 	// make sure we're connected to loopback
 	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
@@ -768,8 +768,8 @@ void Host_Say(qboolean teamonly)
 	text[j++] = '\n';
 	text[j++] = 0;
 
-	for (j = 0;j < MAX_SCOREBOARD;j++)
-		if ((host_client = svs.connectedclients[j]) && host_client->spawned && (!teamplay.integer || host_client->edict->v->team == save->edict->v->team))
+	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
+		if (host_client->spawned && (!teamplay.integer || host_client->edict->v->team == save->edict->v->team))
 			SV_ClientPrintf("%s", text);
 	host_client = save;
 
@@ -845,8 +845,8 @@ void Host_Tell_f(void)
 	text[j++] = 0;
 
 	save = host_client;
-	for (j = 0;j < MAX_SCOREBOARD;j++)
-		if ((host_client = svs.connectedclients[j]) && host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
+	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
+		if (host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
 			SV_ClientPrintf("%s", text);
 	host_client = save;
 }
@@ -1115,9 +1115,9 @@ void Host_Spawn_f (void)
 	MSG_WriteByte (&host_client->message, svc_time);
 	MSG_WriteFloat (&host_client->message, sv.time);
 
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if (!(client = svs.connectedclients[i]))
+		if (!client->active)
 			continue;
 		MSG_WriteByte (&host_client->message, svc_updatename);
 		MSG_WriteByte (&host_client->message, i);
@@ -1214,22 +1214,22 @@ void Host_Kick_f (void)
 	if (Cmd_Argc() > 2 && strcmp(Cmd_Argv(1), "#") == 0)
 	{
 		i = atof(Cmd_Argv(2)) - 1;
-		if (i < 0 || i >= MAX_SCOREBOARD || !(host_client = svs.connectedclients[i]))
+		if (i < 0 || i >= svs.maxclients || !(host_client = svs.clients + i)->active)
 			return;
 		byNumber = true;
 	}
 	else
 	{
-		for (i = 0;i < MAX_SCOREBOARD;i++)
+		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		{
-			if (!(host_client = svs.connectedclients[i]))
+			if (!host_client->active)
 				continue;
 			if (strcasecmp(host_client->name, Cmd_Argv(1)) == 0)
 				break;
 		}
 	}
 
-	if (i < MAX_SCOREBOARD)
+	if (i < svs.maxclients)
 	{
 		if (cmd_source == src_command)
 		{
@@ -1659,6 +1659,36 @@ void Host_PerformSpawnServerAndLoadGame(void)
 		Cbuf_AddText ("connect local");
 }
 
+static void MaxPlayers_f(void)
+{
+	int n;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf("\"maxplayers\" is \"%u\"\n", svs.maxclients);
+		return;
+	}
+
+	if (sv.active)
+	{
+		Con_Printf("maxplayers can not be changed while a server is running.\n");
+		return;
+	}
+
+	n = atoi(Cmd_Argv(1));
+	n = bound(1, n, MAX_SCOREBOARD);
+	Con_Printf ("\"maxplayers\" set to \"%u\"\n", n);
+
+	if (svs.clients)
+		Mem_Free(svs.clients);
+	svs.maxclients = n;
+	svs.clients = Mem_Alloc(sv_clients_mempool, sizeof(client_t) * svs.maxclients);
+	if (n == 1)
+		Cvar_Set ("deathmatch", "0");
+	else
+		Cvar_Set ("deathmatch", "1");
+}
+
 //=============================================================================
 
 /*
@@ -1723,6 +1753,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
 	Cmd_AddCommand ("spawn", Host_Spawn_f);
 	Cmd_AddCommand ("begin", Host_Begin_f);
+	Cmd_AddCommand ("maxplayers", MaxPlayers_f);
 
 	Cvar_RegisterVariable(&sv_cheats);
 }

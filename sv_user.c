@@ -665,14 +665,14 @@ SV_ReadClientMessage
 extern void SV_SendServerinfo(client_t *client);
 void SV_ReadClientMessage(void)
 {
-	int cmd, clientnum = host_client->number;
+	int cmd;
 	char *s;
 
 	//MSG_BeginReading ();
 
 	for(;;)
 	{
-		if (!(host_client = svs.connectedclients[clientnum]))
+		if (!host_client->active)
 		{
 			// a command caused an error
 			SV_DropClient (false);
@@ -761,12 +761,10 @@ void SV_RunClients (void)
 {
 	int i;
 
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		if (!(host_client = svs.connectedclients[i]))
+		if (!host_client->active)
 			continue;
-
-		sv_player = host_client->edict;
 
 		if (!host_client->spawned)
 		{
@@ -777,6 +775,8 @@ void SV_RunClients (void)
 
 		if (sv.frametime)
 		{
+			sv_player = host_client->edict;
+
 			// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
 			if (SV_PlayerPhysicsQC)
 			{

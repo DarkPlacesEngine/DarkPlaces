@@ -1314,9 +1314,9 @@ void SV_Physics (void)
 		if (pr_global_struct->force_retouch)
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
 
-		if (i > 0 && i <= MAX_SCOREBOARD)
+		if (i > 0 && i <= svs.maxclients)
 		{
-			if (!svs.connectedclients[i-1] || !svs.connectedclients[i-1]->spawned)
+			if (!svs.clients[i-1].spawned)
 				continue;
 			// connected slot
 			// call standard client pre-think
@@ -1349,7 +1349,7 @@ void SV_Physics (void)
 				VectorMA(ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
 			}
 			// relink normal entities here, players always get relinked so don't relink twice
-			if (!(i > 0 && i <= MAX_SCOREBOARD))
+			if (!(i > 0 && i <= svs.maxclients))
 				SV_LinkEdict(ent, false);
 			break;
 		case MOVETYPE_STEP:
@@ -1372,7 +1372,7 @@ void SV_Physics (void)
 			SV_Physics_Toss (ent);
 			break;
 		case MOVETYPE_FLY:
-			if (i > 0 && i <= MAX_SCOREBOARD)
+			if (i > 0 && i <= svs.maxclients)
 			{
 				if (SV_RunThink (ent))
 				{
@@ -1388,7 +1388,7 @@ void SV_Physics (void)
 			break;
 		}
 
-		if (i > 0 && i <= MAX_SCOREBOARD && !ent->e->free)
+		if (i > 0 && i <= svs.maxclients && !ent->e->free)
 		{
 			SV_CheckVelocity (ent);
 
