@@ -878,7 +878,7 @@ void GL_Backend_RenumberElements(int *out, int count, const int *in, int offset)
 int paranoidblah = 0;
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 {
-	int numelements = numtriangles * 3;
+	unsigned int numelements = numtriangles * 3;
 	if (numverts == 0 || numtriangles == 0)
 	{
 		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
@@ -918,7 +918,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 					paranoidblah += *p;
 			}
 		}
-		for (i = 0;i < numtriangles * 3;i++)
+		for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 		{
 			if (elements[i] < 0 || elements[i] >= numverts)
 			{
@@ -936,7 +936,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 			unsigned int i, j;
 			const GLfloat *p;
 			qglBegin(GL_TRIANGLES);
-			for (i = 0;i < numtriangles * 3;i++)
+			for (i = 0;i < (unsigned int) numtriangles * 3;i++)
 			{
 				for (j = 0;j < backendarrayunits;j++)
 				{
