@@ -841,14 +841,12 @@ loc0:
 		if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP)
 			continue;
 
-		// LordHavoc: only do bbox check if it is a bbox entity
-		if (touch->v.solid != SOLID_BSP
-		 && (clip->boxmins[0] > touch->v.absmax[0]
+		if (clip->boxmins[0] > touch->v.absmax[0]
 		 || clip->boxmaxs[0] < touch->v.absmin[0]
 		 || clip->boxmins[1] > touch->v.absmax[1]
 		 || clip->boxmaxs[1] < touch->v.absmin[1]
 		 || clip->boxmins[2] > touch->v.absmax[2]
-		 || clip->boxmaxs[2] < touch->v.absmin[2]))
+		 || clip->boxmaxs[2] < touch->v.absmin[2])
 			continue;
 
 		if (clip->passedict)
