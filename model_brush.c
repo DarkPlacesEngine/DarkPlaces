@@ -138,12 +138,12 @@ Mod_LoadTextures
 */
 static void Mod_LoadTextures (lump_t *l)
 {
-	int				i, j, k, num, max, altmax, mtwidth, mtheight, *dofs;
-	miptex_t		*dmiptex;
-	texture_t		*tx, *tx2, *anims[10], *altanims[10];
-	dmiptexlump_t	*m;
-	qbyte			*data, *mtdata, *data2;
-	char			name[256];
+	int i, j, k, num, max, altmax, mtwidth, mtheight, *dofs, incomplete;
+	miptex_t *dmiptex;
+	texture_t *tx, *tx2, *anims[10], *altanims[10];
+	dmiptexlump_t *m;
+	qbyte *data, *mtdata, *data2;
+	char name[256];
 
 	loadmodel->textures = NULL;
 
@@ -360,7 +360,7 @@ static void Mod_LoadTextures (lump_t *l)
 		tx = loadmodel->textures[i];
 		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
-		if (tx->anim_total)
+		if (tx->anim_total[0] || tx->anim_total[1])
 			continue;	// already sequenced
 
 		// find the number of frames in the animation
@@ -379,32 +379,52 @@ static void Mod_LoadTextures (lump_t *l)
 			else if (num >= 'a' && num <= 'j')
 				altanims[num - 'a'] = tx2;
 			else
-				Host_Error ("Bad animating texture %s", tx->name);
+				Con_Printf ("Bad animating texture %s\n", tx->name);
 		}
 
 		max = altmax = 0;
 		for (j = 0;j < 10;j++)
 		{
-			if (anims[j] != NULL)
+			if (anims[j])
 				max = j + 1;
-			if (altanims[j] != NULL)
+			if (altanims[j])
 				altmax = j + 1;
 		}
+		//Con_Printf("linking animation %s (%i:%i frames)\n\n", tx->name, max, altmax);
+
+		incomplete = false;
+		for (j = 0;j < max;j++)
+		{
+			if (!anims[j])
+			{
+				Con_Printf ("Missing frame %i of %s\n", j, tx->name);
+				incomplete = true;
+			}
+		}
+		for (j = 0;j < altmax;j++)
+		{
+			if (!altanims[j])
+			{
+				Con_Printf ("Missing altframe %i of %s\n", j, tx->name);
+				incomplete = true;
+			}
+		}
+		if (incomplete)
+			continue;
+
 		if (altmax < 1)
 		{
 			// if there is no alternate animation, duplicate the primary
 			// animation into the alternate
 			altmax = max;
 			for (k = 0;k < 10;k++)
-				anims[k] = altanims[k];
+				altanims[k] = anims[k];
 		}
 
 		// link together the primary animation
 		for (j = 0;j < max;j++)
 		{
 			tx2 = anims[j];
-			if (!tx2)
-				Host_Error ("Missing frame %i of %s", j, tx->name);
 			tx2->animated = true;
 			tx2->anim_total[0] = max;
 			tx2->anim_total[1] = altmax;
@@ -415,20 +435,22 @@ static void Mod_LoadTextures (lump_t *l)
 			}
 		}
 
-		// link together the alternate animation
-		for (j = 0;j < altmax;j++)
+		// if there really is an alternate anim...
+		if (anims[0] != altanims[0])
 		{
-			tx2 = altanims[j];
-			if (!tx2)
-				Host_Error ("Missing frame %i of %s", j, tx->name);
-			tx2->animated = true;
-			// the primary/alternate are reversed here
-			tx2->anim_total[0] = altmax;
-			tx2->anim_total[1] = max;
-			for (k = 0;k < 10;k++)
+			// link together the alternate animation
+			for (j = 0;j < altmax;j++)
 			{
-				tx2->anim_frames[0][k] = altanims[k];
-				tx2->anim_frames[1][k] = anims[k];
+				tx2 = altanims[j];
+				tx2->animated = true;
+				// the primary/alternate are reversed here
+				tx2->anim_total[0] = altmax;
+				tx2->anim_total[1] = max;
+				for (k = 0;k < 10;k++)
+				{
+					tx2->anim_frames[0][k] = altanims[k];
+					tx2->anim_frames[1][k] = anims[k];
+				}
 			}
 		}
 	}
