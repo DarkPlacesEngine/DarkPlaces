@@ -189,7 +189,7 @@
 1 darkplaces server: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
 1 darkplaces server: change host_minfps to not lie about the time but instead control how many times SV_Physics runs per network frame, so if rendering goes slow the game doesn't slow down
 1 darkplaces server: decide on an extension name for .ent loading and report it, also document in dpextensions (tell FrikaC, Gleeb, and add to wiki)
-1 darkplaces video: add r_displayrefresh cvar for windows video refresh settings (Willis)
+1 darkplaces video: add r_displayrefresh cvar for windows video refresh settings (Willis, Judas Judas)
 1 dpmod: add a Treasure Hunt mode (inspired by preview of Will Rock) - a team wins when they hold all the artifacts
 1 dpmod: add func_crate (NotoriousRay)
 1 dpmod: dm 7 monster spawns should occasionally be a crowd of Diablo2 style powered up monsters (Rick)
@@ -199,6 +199,7 @@
 1 dpmod: make a skill 4 mode where monsters are nearly invisible (alpha 0.2?) except when attacking or in pain
 1 dpmod: make ogres start up their chainsaw when first seeing an enemy (scar3crow)
 1 hmap2: add .mip loading support
+1 hmap: qbsp dies from runaway allocations if a duplicate plane is found on a brush (Tomaz)
 1 lhfire: add percentage and estimated time reporting to console output (daniel_hansson@telia.com)
 1 lhfire: get lhfire_gui build from Tomaz.
 1 lhfire: post lhfire_gui build.
@@ -296,6 +297,7 @@
 3 darkplaces server: delay unreliable effects into later packets if they could not send in this packet (romi) 
 3 darkplaces server: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)
 3 darkplaces server: hub save support, one file indicating active map, and then for each map it saves a quake savegame (Sajt)
+3 darkplaces server: make an event message queue for each client, so TE_ effects and sounds and can be stuffed into successive packets if they don't all fit at once, currently a large number of explosions at once are never sent because they don't fit in one size limited packet
 3 darkplaces sound: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
 3 darkplaces sound: add snd_rate cvar and make it changable during game (RenegadeC)
 3 dpmod: code a func_swinging entity which takes a starting angle and swing time and swings back and forth, each time reaching that angle, and swinging through '0 0 0' (Zombie)
