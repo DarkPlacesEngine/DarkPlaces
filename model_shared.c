@@ -260,55 +260,41 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 
 	crc = 0;
 	buf = NULL;
-	if (!mod->needload)
+	if (mod->isworldmodel != isworldmodel)
+		mod->needload = true;
+	if (mod->needload || checkdisk)
 	{
-		if (checkdisk)
+		if (checkdisk && !mod->needload)
+			Con_DPrintf("checking model %s\n", mod->name);
+		buf = FS_LoadFile (mod->name, tempmempool, false);
+		if (buf)
 		{
-			buf = FS_LoadFile (mod->name, tempmempool, false);
-			if (!buf)
-			{
-				if (crash)
-					Host_Error ("Mod_LoadModel: %s not found", mod->name); // LordHavoc: Sys_Error was *ANNOYING*
-				return NULL;
-			}
-
 			crc = CRC_Block(buf, fs_filesize);
-		}
-		else
-			crc = mod->crc;
-
-		if (mod->crc == crc && mod->isworldmodel == isworldmodel)
-		{
-			if (buf)
-				Mem_Free(buf);
-			return mod; // already loaded
+			if (mod->crc != crc)
+				mod->needload = true;
 		}
 	}
+	if (!mod->needload)
+		return mod; // already loaded
 
 	Con_DPrintf("loading model %s\n", mod->name);
-
-	if (!buf)
-	{
-		buf = FS_LoadFile (mod->name, tempmempool, false);
-		if (!buf)
-		{
-			if (crash)
-				Host_Error ("Mod_LoadModel: %s not found", mod->name);
-			return NULL;
-		}
-		crc = CRC_Block(buf, fs_filesize);
-	}
-
-	// allocate a new model
-	loadmodel = mod;
-
 	// LordHavoc: unload the existing model in this slot (if there is one)
 	Mod_UnloadModel(mod);
+	// load the model
 	mod->isworldmodel = isworldmodel;
 	mod->used = true;
 	mod->crc = crc;
 	// errors can prevent the corresponding mod->needload = false;
 	mod->needload = true;
+
+	// default model radius and bounding box (mainly for missing models)
+	mod->radius = 16;
+	VectorSet(mod->normalmins, -mod->radius, -mod->radius, -mod->radius);
+	VectorSet(mod->normalmaxs, mod->radius, mod->radius, mod->radius);
+	VectorSet(mod->yawmins, -mod->radius, -mod->radius, -mod->radius);
+	VectorSet(mod->yawmaxs, mod->radius, mod->radius, mod->radius);
+	VectorSet(mod->rotatedmins, -mod->radius, -mod->radius, -mod->radius);
+	VectorSet(mod->rotatedmaxs, mod->radius, mod->radius, mod->radius);
 
 	// all models use memory, so allocate a memory pool
 	mod->mempool = Mem_AllocPool(mod->name);
@@ -316,19 +302,27 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	if (cls.state != ca_dedicated)
 		mod->texturepool = R_AllocTexturePool();
 
-	// call the apropriate loader
-	num = LittleLong(*((int *)buf));
-	     if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf);
-	else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf);
-	else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf);
-	else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf);
-	else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf);
-	else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf);
-	else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf);
-	else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf);
-	else Host_Error("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
-
-	Mem_Free(buf);
+	if (buf)
+	{
+		num = LittleLong(*((int *)buf));
+		// call the apropriate loader
+		loadmodel = mod;
+		     if (!memcmp(buf, "IDPO", 4)) Mod_IDP0_Load(mod, buf);
+		else if (!memcmp(buf, "IDP2", 4)) Mod_IDP2_Load(mod, buf);
+		else if (!memcmp(buf, "IDP3", 4)) Mod_IDP3_Load(mod, buf);
+		else if (!memcmp(buf, "IDSP", 4)) Mod_IDSP_Load(mod, buf);
+		else if (!memcmp(buf, "IBSP", 4)) Mod_IBSP_Load(mod, buf);
+		else if (!memcmp(buf, "ZYMOTICMODEL", 12)) Mod_ZYMOTICMODEL_Load(mod, buf);
+		else if (strlen(mod->name) >= 4 && !strcmp(mod->name - 4, ".map")) Mod_MAP_Load(mod, buf);
+		else if (num == BSPVERSION || num == 30) Mod_Q1BSP_Load(mod, buf);
+		else Host_Error("Mod_LoadModel: model \"%s\" is of unknown/unsupported type\n", mod->name);
+		Mem_Free(buf);
+	}
+	else if (crash)
+	{
+		// LordHavoc: Sys_Error was *ANNOYING*
+		Con_Printf ("Mod_LoadModel: %s not found", mod->name);
+	}
 
 	// no errors occurred
 	mod->needload = false;
