@@ -130,6 +130,10 @@ void SCR_CheckDrawCenterString (void)
 
 	scr_centertime_off -= host_frametime;
 
+	// don't draw if this is a normal stats-screen intermission,
+	// only if it is not an intermission, or a finale intermission
+	if (cl.intermission == 1)
+		return;
 	if (scr_centertime_off <= 0 && !cl.intermission)
 		return;
 	if (key_dest != key_game)
@@ -348,39 +352,6 @@ void SCR_EndLoadingPlaque (void)
 }
 
 //=============================================================================
-
-char	*scr_notifystring;
-
-void SCR_DrawNotifyString (void)
-{
-	char	*start;
-	int		l;
-	int		x, y;
-
-	start = scr_notifystring;
-
-	y = vid.conheight*0.35;
-
-	do
-	{
-	// scan the width of the line
-		for (l=0 ; l<40 ; l++)
-			if (start[l] == '\n' || !start[l])
-				break;
-		x = (vid.conwidth - l*8)/2;
-		DrawQ_String (x, y, start, l, 8, 8, 1, 1, 1, 1, 0);
-
-		y += 8;
-
-		while (*start && *start != '\n')
-			start++;
-
-		if (!*start)
-			break;
-		start++;		// skip the \n
-	}
-	while (1);
-}
 
 char r_speeds_string[1024];
 int speedstringcount, r_timereport_active;
@@ -1029,12 +1000,14 @@ void CL_UpdateScreen(void)
 
 	R_TimeReport("setup");
 
-	SCR_DrawRam();
-	SCR_DrawNet();
-	SCR_DrawTurtle();
-	SCR_DrawPause();
-	SCR_CheckDrawCenterString();
+	SCR_DrawRam ();
+	SCR_DrawNet ();
+	SCR_DrawTurtle ();
+	SCR_DrawPause ();
+
 	Sbar_Draw();
+
+	SCR_CheckDrawCenterString();
 	SHOWLMP_drawall();
 
 	SCR_DrawConsole();
