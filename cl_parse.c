@@ -803,7 +803,7 @@ void CL_ParseServerMessage (void)
 		// if the high bit of the command byte is set, it is a fast update
 		if (cmd & 128)
 		{
-			cmdlogname[cmdindex] = &("svc_entity");
+			cmdlogname[cmdindex] = "svc_entity";
 			SHOWNET("fast update");
 			CL_ParseUpdate (cmd&127);
 			continue;
@@ -812,7 +812,7 @@ void CL_ParseServerMessage (void)
 		SHOWNET(svc_strings[cmd]);
 		cmdlogname[cmdindex] = svc_strings[cmd];
 		if (!cmdlogname[cmdindex])
-			cmdlogname[cmdindex] = &("<unknown>");
+			cmdlogname[cmdindex] = "<unknown>";
 	
 		// other commands
 		switch (cmd)
