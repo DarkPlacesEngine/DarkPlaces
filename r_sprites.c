@@ -92,7 +92,7 @@ static void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = texture;
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, !(currentrenderentity->model->flags & EF_FULLBRIGHT || currentrenderentity->effects & EF_FULLBRIGHT)))
 	{
 		m.index[0] = 0;
 		m.index[1] = 1;

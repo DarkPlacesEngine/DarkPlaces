@@ -33,6 +33,10 @@ cvar_t r_vertexsurfacesthreshold = {CVAR_SAVE, "r_vertexsurfacesthreshold", "0"}
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
 
+#define NUM_DETAILTEXTURES 1
+static rtexture_t *detailtextures[NUM_DETAILTEXTURES];
+static rtexturepool_t *detailtexturepool;
+
 /*
 ===============
 Mod_BrushInit
@@ -49,6 +53,55 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_sortsurfaces);
 	memset(mod_novis, 0xff, sizeof(mod_novis));
+}
+
+void Mod_BrushStartup (void)
+{
+	int i, x, y, light;
+	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
+#define DETAILRESOLUTION 256
+	qbyte data[DETAILRESOLUTION][DETAILRESOLUTION][4], noise[DETAILRESOLUTION][DETAILRESOLUTION];
+	detailtexturepool = R_AllocTexturePool();
+	lightdir[0] = 0.5;
+	lightdir[1] = 1;
+	lightdir[2] = -0.25;
+	VectorNormalize(lightdir);
+	for (i = 0;i < NUM_DETAILTEXTURES;i++)
+	{
+		fractalnoise(&noise[0][0], DETAILRESOLUTION, DETAILRESOLUTION >> 4);
+		for (y = 0;y < DETAILRESOLUTION;y++)
+		{
+			for (x = 0;x < DETAILRESOLUTION;x++)
+			{
+				vc[0] = x;
+				vc[1] = y;
+				vc[2] = noise[y][x] * (1.0f / 32.0f);
+				vx[0] = x + 1;
+				vx[1] = y;
+				vx[2] = noise[y][(x + 1) % DETAILRESOLUTION] * (1.0f / 32.0f);
+				vy[0] = x;
+				vy[1] = y + 1;
+				vy[2] = noise[(y + 1) % DETAILRESOLUTION][x] * (1.0f / 32.0f);
+				VectorSubtract(vx, vc, vx);
+				VectorSubtract(vy, vc, vy);
+				CrossProduct(vx, vy, vn);
+				VectorNormalize(vn);
+				light = 128 - DotProduct(vn, lightdir) * 128;
+				light = bound(0, light, 255);
+				data[y][x][0] = data[y][x][1] = data[y][x][2] = light;
+				data[y][x][3] = 255;
+			}
+		}
+		detailtextures[i] = R_LoadTexture(detailtexturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE);
+	}
+}
+
+void Mod_BrushShutdown (void)
+{
+	int i;
+	for (i = 0;i < NUM_DETAILTEXTURES;i++)
+		R_FreeTexture(detailtextures[i]);
+	R_FreeTexturePool(&detailtexturepool);
 }
 
 /*
@@ -353,6 +406,8 @@ static void Mod_LoadTextures (lump_t *l)
 			if (!R_TextureHasAlpha(tx->texture))
 				tx->flags |= SURF_CLIPSOLID;
 		}
+
+		tx->detailtexture = detailtextures[i % NUM_DETAILTEXTURES];
 	}
 
 	// sequence the animations
@@ -1064,6 +1119,9 @@ void Mod_GenerateVertexLitMesh (msurface_t *surf)
 		s = DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
 		t = DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
 
+		out->ab[0] = s * (1.0f / 16.0f);
+		out->ab[1] = t * (1.0f / 16.0f);
+
 		out->st[0] = s / surf->texinfo->texture->width;
 		out->st[1] = t / surf->texinfo->texture->height;
 
@@ -1129,6 +1187,9 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 		s = DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
 		t = DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
 
+		out->ab[0] = s * (1.0f / 16.0f);
+		out->ab[1] = t * (1.0f / 16.0f);
+
 		out->st[0] = s / surf->texinfo->texture->width;
 		out->st[1] = t / surf->texinfo->texture->height;
 
@@ -1151,7 +1212,7 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 void Mod_GenerateVertexMesh (msurface_t *surf)
 {
 	int				i, *index;
-	float			*in;
+	float			*in, s, t;
 	surfvertex_t	*out;
 	surfmesh_t		*mesh;
 
@@ -1176,8 +1237,12 @@ void Mod_GenerateVertexMesh (msurface_t *surf)
 	for (i = 0, in = surf->poly_verts, out = mesh->vertex;i < mesh->numverts;i++, in += 3, out++)
 	{
 		VectorCopy (in, out->v);
-		out->st[0] = (DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]) / surf->texinfo->texture->width;
-		out->st[1] = (DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]) / surf->texinfo->texture->height;
+		s = (DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]);
+		t = (DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]);
+		out->st[0] = s / surf->texinfo->texture->width;
+		out->st[1] = t / surf->texinfo->texture->height;
+		out->ab[0] = s * (1.0f / 16.0f);
+		out->ab[1] = t * (1.0f / 16.0f);
 	}
 }
 

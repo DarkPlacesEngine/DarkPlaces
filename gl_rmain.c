@@ -67,7 +67,7 @@ cvar_t gl_fogblue = {0, "gl_fogblue","0.3"};
 cvar_t gl_fogstart = {0, "gl_fogstart", "0"};
 cvar_t gl_fogend = {0, "gl_fogend","0"};
 
-cvar_t r_multitexture = {0, "r_multitexture", "1"};
+cvar_t r_textureunits = {0, "r_textureunits", "32"};
 
 /*
 ====================
@@ -240,7 +240,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_wateralpha);
 	Cvar_RegisterVariable (&r_dynamic);
 	Cvar_RegisterVariable (&r_fullbright);
-	Cvar_RegisterVariable (&r_multitexture);
+	Cvar_RegisterVariable (&r_textureunits);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
@@ -505,8 +505,6 @@ static void R_SetupFrame (void)
 		if (r_ambient.value != 0)
 			Cvar_Set ("r_ambient", "0");
 	}
-	if (r_multitexture.integer && gl_textureunits < 2)
-		Cvar_SetValue("r_multitexture", 0);
 
 	r_framecount++;
 
@@ -538,7 +536,7 @@ static void R_BlendView(void)
 	m.depthdisable = true; // magic
 	m.numtriangles = 1;
 	m.numverts = 3;
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		m.index[0] = 0;
 		m.index[1] = 1;

@@ -173,7 +173,7 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = R_GetTexture(texture);
-	if (R_Mesh_Draw_GetBuffer(&m))
+	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		m.index[0] = 0;
 		m.index[1] = 1;
@@ -184,7 +184,7 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = cr * m.colorscale;
 		m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
 		m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
-		m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca * m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca;
 		m.texcoords[0][0] = 0;
 		m.texcoords[0][1] = 0;
 		m.texcoords[0][2] = 0;

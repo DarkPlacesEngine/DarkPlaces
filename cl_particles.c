@@ -1291,7 +1291,7 @@ void R_DrawParticles (void)
 		m.numtriangles = 2;
 		m.numverts = 4;
 		m.tex[0] = R_GetTexture(particlefonttexture);
-		if (R_Mesh_Draw_GetBuffer(&m))
+		if (R_Mesh_Draw_GetBuffer(&m, false))
 		{
 			m.index[0] = 0;
 			m.index[1] = 1;

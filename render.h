@@ -65,6 +65,9 @@ extern float *aliasvertcolor;
 // vis stuff
 extern cvar_t r_novis;
 
+// detail texture stuff
+extern cvar_t r_detailtextures;
+
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
 
@@ -156,7 +159,7 @@ void R_DrawSpriteModel (void);
 extern cvar_t r_render;
 #include "image.h"
 
-extern cvar_t r_multitexture;
+extern cvar_t r_textureunits;
 extern cvar_t gl_dither;
 
 // FIXME: this should live in the backend only

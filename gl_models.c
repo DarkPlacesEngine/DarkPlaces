@@ -482,7 +482,7 @@ void R_DrawQ1Q2AliasModel (float fog)
 		bufmesh.numverts = model->numverts;
 		bufmesh.tex[0] = R_GetTexture(skinframe->merged);
 
-		R_Mesh_Draw_GetBuffer(&bufmesh);
+		R_Mesh_Draw_GetBuffer(&bufmesh, true);
 
 		aliasvert = bufmesh.vertex;
 		aliasvertcolor = bufmesh.color;
