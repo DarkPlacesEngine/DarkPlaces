@@ -2980,8 +2980,12 @@ void PF_setattachment (void)
 			if (model->alias.aliasnum_tags)
 				for (i = 0;i < model->alias.aliasnum_tags;i++)
 					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))
-						v->_float = i;
+						v->_float = i + 1;
+			if (v->_float == 0)
+				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity), model->name);
 		}
+		else
+			Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i but it has no model\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity));
 	}
 }
 
