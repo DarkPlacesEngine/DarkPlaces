@@ -326,7 +326,7 @@ double Sys_DoubleTime (void)
 	}
 
 	if (newtime < oldtime)
-		Con_Printf("Sys_DoubleTime: time running backwards??\n");
+		Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
 	else
 		curtime += newtime - oldtime;
 	oldtime = newtime;
@@ -465,7 +465,7 @@ static char	*empty_string = "";
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	double			oldtime, newtime;
+	double			frameoldtime, framenewtime;
 	MEMORYSTATUS	lpBuffer;
 	static	char	cwd[1024];
 	int				t;
@@ -568,7 +568,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	Sys_Shared_LateInit();
 
-	oldtime = Sys_DoubleTime ();
+	frameoldtime = Sys_DoubleTime ();
 
 	/* main window message loop */
 	while (1)
@@ -585,9 +585,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 				SleepUntilInput (NOT_FOCUS_SLEEP);
 		}
 
-		newtime = Sys_DoubleTime ();
-		Host_Frame (newtime - oldtime);
-		oldtime = newtime;
+		framenewtime = Sys_DoubleTime ();
+		Host_Frame (framenewtime - frameoldtime);
+		frameoldtime = framenewtime;
 	}
 
 	/* return success of application */
