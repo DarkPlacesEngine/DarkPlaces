@@ -680,7 +680,25 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					client->visibletime[e] = realtime + 1;
 				else
 				{
-					if (realtime > client->visibletime[e])
+					//test nearest point on bbox
+					testorigin[0] = bound(entmins[0], org[0], entmaxs[0]);
+					testorigin[1] = bound(entmins[1], org[1], entmaxs[1]);
+					testorigin[2] = bound(entmins[2], org[2], entmaxs[2]);
+
+					memset (&trace, 0, sizeof(trace_t));
+					trace.fraction = 1;
+					trace.allsolid = true;
+					VectorCopy(testorigin, trace.endpos);
+
+					VectorCopy(org, RecursiveHullCheckInfo.start);
+					VectorSubtract(testorigin, testeye, RecursiveHullCheckInfo.dist);
+					RecursiveHullCheckInfo.hull = sv.worldmodel->hulls;
+					RecursiveHullCheckInfo.trace = &trace;
+					SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, testeye, testorigin);
+
+					if (trace.fraction == 1)
+						client->visibletime[e] = realtime + 1;
+					else if (realtime > client->visibletime[e])
 					{
 						culled_trace++;
 						continue;
