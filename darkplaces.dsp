@@ -124,10 +124,6 @@ SOURCE=.\cl_input.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\cl_light.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\cl_main.c
 # End Source File
 # Begin Source File
@@ -141,10 +137,6 @@ SOURCE=.\cl_particles.c
 # Begin Source File
 
 SOURCE=.\cl_screen.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\cl_tent.c
 # End Source File
 # Begin Source File
 

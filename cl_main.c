@@ -361,6 +361,103 @@ static float CL_LerpPoint (void)
 	return bound(0, f, 1);
 }
 
+void CL_ClearTempEntities (void)
+{
+	cl_num_temp_entities = 0;
+}
+
+entity_t *CL_NewTempEntity (void)
+{
+	entity_t *ent;
+
+	if (r_refdef.numentities >= r_refdef.maxentities)
+		return NULL;
+	if (cl_num_temp_entities >= cl_max_temp_entities)
+		return NULL;
+	ent = &cl_temp_entities[cl_num_temp_entities++];
+	memset (ent, 0, sizeof(*ent));
+	r_refdef.entities[r_refdef.numentities++] = &ent->render;
+
+	ent->render.colormap = -1; // no special coloring
+	ent->render.scale = 1;
+	ent->render.alpha = 1;
+	return ent;
+}
+
+void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime)
+{
+	int i;
+	dlight_t *dl;
+
+	/*
+// first look for an exact key match
+	if (ent)
+	{
+		dl = cl_dlights;
+		for (i = 0;i < MAX_DLIGHTS;i++, dl++)
+			if (dl->ent == ent)
+				goto dlightsetup;
+	}
+	*/
+
+// then look for anything else
+	dl = cl_dlights;
+	for (i = 0;i < MAX_DLIGHTS;i++, dl++)
+		if (!dl->radius)
+			goto dlightsetup;
+
+	// unable to find one
+	return;
+
+dlightsetup:
+	//Con_Printf("dlight %i : %f %f %f : %f %f %f\n", i, org[0], org[1], org[2], red * radius, green * radius, blue * radius);
+	memset (dl, 0, sizeof(*dl));
+	//dl->ent = ent;
+	VectorCopy(org, dl->origin);
+	dl->radius = radius;
+	dl->color[0] = red;
+	dl->color[1] = green;
+	dl->color[2] = blue;
+	dl->decay = decay;
+	if (lifetime)
+		dl->die = cl.time + lifetime;
+	else
+		dl->die = 0;
+}
+
+void CL_DecayLights (void)
+{
+	int i;
+	dlight_t *dl;
+	float time;
+
+	time = cl.time - cl.oldtime;
+
+	dl = cl_dlights;
+	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
+	{
+		if (!dl->radius)
+			continue;
+		if (dl->die < cl.time)
+		{
+			dl->radius = 0;
+			continue;
+		}
+
+		dl->radius -= time*dl->decay;
+		if (dl->radius < 0)
+			dl->radius = 0;
+	}
+}
+
+void CL_RelinkWorld (void)
+{
+	if (cl_num_entities < 1)
+		cl_num_entities = 1;
+	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &cl_entities[0].render;
+	CL_BoundingBoxForEntity(&cl_entities[0].render);
+}
+
 static void CL_RelinkStaticEntities(void)
 {
 	int i;
@@ -655,40 +752,6 @@ static void CL_RelinkNetworkEntities()
 	}
 }
 
-void CL_LerpPlayer(float frac)
-{
-	int i;
-	float d;
-
-	if (cl.entitydatabase.numframes && cl.viewentity == cl.playerentity)
-	{
-		cl.viewentorigin[0] = cl.viewentoriginold[0] + frac * (cl.viewentoriginnew[0] - cl.viewentoriginold[0]);
-		cl.viewentorigin[1] = cl.viewentoriginold[1] + frac * (cl.viewentoriginnew[1] - cl.viewentoriginold[1]);
-		cl.viewentorigin[2] = cl.viewentoriginold[2] + frac * (cl.viewentoriginnew[2] - cl.viewentoriginold[2]);
-	}
-	else
-		VectorCopy (cl_entities[cl.viewentity].render.origin, cl.viewentorigin);
-
-	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
-
-	for (i = 0;i < 3;i++)
-		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
-
-	if (cls.demoplayback)
-	{
-		// interpolate the angles
-		for (i = 0;i < 3;i++)
-		{
-			d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
-			if (d > 180)
-				d -= 360;
-			else if (d < -180)
-				d += 360;
-			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
-		}
-	}
-}
-
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
 {
 	int i;
@@ -768,12 +831,106 @@ static void CL_RelinkEffects()
 	}
 }
 
-void CL_RelinkWorld (void)
+void CL_RelinkBeams (void)
 {
-	if (cl_num_entities < 1)
-		cl_num_entities = 1;
-	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &cl_entities[0].render;
-	CL_BoundingBoxForEntity(&cl_entities[0].render);
+	int i;
+	beam_t *b;
+	vec3_t dist, org;
+	float d;
+	entity_t *ent;
+	float yaw, pitch;
+	float forward;
+
+	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	{
+		if (!b->model || b->endtime < cl.time)
+			continue;
+
+		// if coming from the player, update the start position
+		//if (b->entity == cl.viewentity)
+		//	VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
+		if (b->entity)
+		{
+			VectorCopy (cl_entities[b->entity].render.origin, b->start);
+			b->start[2] += 16;
+		}
+
+		// calculate pitch and yaw
+		VectorSubtract (b->end, b->start, dist);
+
+		if (dist[1] == 0 && dist[0] == 0)
+		{
+			yaw = 0;
+			if (dist[2] > 0)
+				pitch = 90;
+			else
+				pitch = 270;
+		}
+		else
+		{
+			yaw = (int) (atan2(dist[1], dist[0]) * 180 / M_PI);
+			if (yaw < 0)
+				yaw += 360;
+
+			forward = sqrt (dist[0]*dist[0] + dist[1]*dist[1]);
+			pitch = (int) (atan2(dist[2], forward) * 180 / M_PI);
+			if (pitch < 0)
+				pitch += 360;
+		}
+
+		// add new entities for the lightning
+		VectorCopy (b->start, org);
+		d = VectorNormalizeLength(dist);
+		while (d > 0)
+		{
+			ent = CL_NewTempEntity ();
+			if (!ent)
+				return;
+			VectorCopy (org, ent->render.origin);
+			ent->render.model = b->model;
+			ent->render.effects = EF_FULLBRIGHT;
+			ent->render.angles[0] = pitch;
+			ent->render.angles[1] = yaw;
+			ent->render.angles[2] = rand()%360;
+			CL_BoundingBoxForEntity(&ent->render);
+			VectorMA(org, 30, dist, org);
+			d -= 30;
+		}
+	}
+}
+
+void CL_LerpPlayer(float frac)
+{
+	int i;
+	float d;
+
+	if (cl.entitydatabase.numframes && cl.viewentity == cl.playerentity)
+	{
+		cl.viewentorigin[0] = cl.viewentoriginold[0] + frac * (cl.viewentoriginnew[0] - cl.viewentoriginold[0]);
+		cl.viewentorigin[1] = cl.viewentoriginold[1] + frac * (cl.viewentoriginnew[1] - cl.viewentoriginold[1]);
+		cl.viewentorigin[2] = cl.viewentoriginold[2] + frac * (cl.viewentoriginnew[2] - cl.viewentoriginold[2]);
+	}
+	else
+		VectorCopy (cl_entities[cl.viewentity].render.origin, cl.viewentorigin);
+
+	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
+
+	for (i = 0;i < 3;i++)
+		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
+
+	if (cls.demoplayback)
+	{
+		// interpolate the angles
+		for (i = 0;i < 3;i++)
+		{
+			d = cl.mviewangles[0][i] - cl.mviewangles[1][i];
+			if (d > 180)
+				d -= 360;
+			else if (d < -180)
+				d += 360;
+			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
+		}
+	}
 }
 
 void CL_RelinkEntities (void)
@@ -1044,7 +1201,6 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&cl_itembobheight);
 
 	Cmd_AddCommand ("entities", CL_PrintEntities_f);
-	Cmd_AddCommand ("bitprofile", CL_BitProfile_f);
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
 	Cmd_AddCommand ("record", CL_Record_f);
 	Cmd_AddCommand ("stop", CL_Stop_f);
