@@ -1,8 +1,7 @@
 Darkplaces needs these files which do not come in the standard mingw installation, nor are supplied with darkplaces itself:
-include/GL/gl.h (can be obtained in the opengl download hidden away on the microsoft website)
-include/ddraw.h (part of DirectX)
-include/dinput.h (part of DirectX)
-include/dsound.h (part of DirectX)
+include/ddraw.h (part of DirectX, also found in ftp://ftp.idsoftware.com/idstuff/source/q1source.zip)
+include/dinput.h (part of DirectX, also found in ftp://ftp.idsoftware.com/idstuff/source/q1source.zip)
+include/dsound.h (part of DirectX, also found in ftp://ftp.idsoftware.com/idstuff/source/q1source.zip)
 
 Assuming you placed mingw in c:\mingw, you can simply type this to compile:
 make exerelease
