@@ -20,6 +20,7 @@
 -d darkplaces: fix a crash when changing level while using qe1 textures (Todd)
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces: locked console scrollback (sublim3)
+-d darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
 -d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (metlslime, zinx)
 -d darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 -d darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (Sajt)
@@ -113,7 +114,6 @@
 0 darkplaces: key repeat should work in menus, for example scrolling quickly through options (Up2nOgOoD)
 0 darkplaces: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
 0 darkplaces: make S_Update take a matrix4x4_t *
-0 darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
 0 darkplaces: make a DP_EF_NODEPTHTEST extension which causes an entity to show through walls, useful for navigation markers (Urre, CheapAlert, Supajoe)
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe, Urre)
 0 darkplaces: make blood decals a bit lighter as they're nearly black (ashridah)
