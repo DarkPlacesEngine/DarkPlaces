@@ -197,6 +197,7 @@ void CL_Disconnect (void)
 		NET_SendUnreliableMessage (cls.netcon, &cls.message);
 		SZ_Clear (&cls.message);
 		NET_Close (cls.netcon);
+		cls.state = ca_disconnected; // prevent this code from executing again during Host_ShutdownServer
 		// if running a local server, shut it down
 		if (sv.active)
 			Host_ShutdownServer(false);

@@ -79,7 +79,7 @@ cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
 cvar_t	gl_fogend = {0, "gl_fogend","0"};
 
 cvar_t	r_ser = {CVAR_SAVE, "r_ser", "1"};
-cvar_t	gl_viewmodeldepthhack = {0, "gl_viewmodeldepthhack", "1"};
+//cvar_t	gl_viewmodeldepthhack = {0, "gl_viewmodeldepthhack", "1"};
 
 cvar_t r_multitexture = {0, "r_multitexture", "1"};
 
@@ -260,7 +260,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_waterripple);
 	Cvar_RegisterVariable (&r_fullbright);
 	Cvar_RegisterVariable (&r_ser);
-	Cvar_RegisterVariable (&gl_viewmodeldepthhack);
+//	Cvar_RegisterVariable (&gl_viewmodeldepthhack);
 	Cvar_RegisterVariable (&r_multitexture);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("r_fullbrights", 0);
@@ -465,17 +465,17 @@ void R_DrawViewModel (void)
 	R_LerpAnimation(currentrenderentity);
 
 	// hack the depth range to prevent view model from poking into walls
-	if (gl_viewmodeldepthhack.integer)
-	{
-		R_Mesh_Render();
-		glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-	}
+//	if (gl_viewmodeldepthhack.integer)
+//	{
+//		R_Mesh_Render();
+//		glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
+//	}
 	currentrenderentity->model->Draw();
-	if (gl_viewmodeldepthhack.integer)
-	{
-		R_Mesh_Render();
-		glDepthRange (gldepthmin, gldepthmax);
-	}
+//	if (gl_viewmodeldepthhack.integer)
+//	{
+//		R_Mesh_Render();
+//		glDepthRange (gldepthmin, gldepthmax);
+//	}
 }
 
 static void R_SetFrustum (void)

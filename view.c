@@ -558,7 +558,7 @@ void V_CalcRefdef (void)
 		view->render.colormap = -1; // no special coloring
 		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
 		view->render.effects = ent->render.effects;
-		view->render.scale = 1;
+		view->render.scale = 1.0 / 3.0;
 
 		// LordHavoc: origin view kick added
 		if (!intimerefresh)
