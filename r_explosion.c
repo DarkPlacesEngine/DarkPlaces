@@ -52,7 +52,8 @@ explosion_t explosion[128];
 rtexture_t	*explosiontexture;
 rtexture_t	*explosiontexturefog;
 
-cvar_t r_explosionclip = {"r_explosionclip", "0"};
+cvar_t r_explosionclip = {"r_explosionclip", "0", true};
+cvar_t r_drawexplosions = {"r_drawexplosions", "1"};
 
 int R_ExplosionVert(int column, int row)
 {
@@ -104,6 +105,11 @@ void r_explosion_shutdown()
 {
 }
 
+void r_explosion_newmap()
+{
+	memset(explosion, 0, sizeof(explosion));
+}
+
 void R_Explosion_Init()
 {
 	int i, x, y;
@@ -133,8 +139,9 @@ void R_Explosion_Init()
 	}
 
 	Cvar_RegisterVariable(&r_explosionclip);
+	Cvar_RegisterVariable(&r_drawexplosions);
 
-	R_RegisterModule("R_Explosions", r_explosion_start, r_explosion_shutdown);
+	R_RegisterModule("R_Explosions", r_explosion_start, r_explosion_shutdown, r_explosion_newmap);
 }
 
 void R_NewExplosion(vec3_t org)
@@ -255,6 +262,8 @@ void R_MoveExplosions()
 void R_DrawExplosions()
 {
 	int i;
+	if (!r_drawexplosions.value)
+		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
 		if (explosion[i].alpha > 0.0f)

@@ -121,13 +121,17 @@ void r_crosshairs_shutdown()
 {
 }
 
+void r_crosshairs_newmap()
+{
+}
+
 void R_Crosshairs_Init()
 {
 	Cvar_RegisterVariable(&crosshair_brightness);
 	Cvar_RegisterVariable(&crosshair_alpha);
 	Cvar_RegisterVariable(&crosshair_flashspeed);
 	Cvar_RegisterVariable(&crosshair_flashrange);
-	R_RegisterModule("R_Crosshairs", r_crosshairs_start, r_crosshairs_shutdown);
+	R_RegisterModule("R_Crosshairs", r_crosshairs_start, r_crosshairs_shutdown, r_crosshairs_newmap);
 }
 
 void DrawCrosshair(int num)

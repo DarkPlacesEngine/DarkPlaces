@@ -1,46 +1,50 @@
 
 #include "quakedef.h"
 
+#define MAXRENDERMODULES 64
+
 typedef struct rendermodule_s
 {
 	int active; // set by start, cleared by shutdown
 	char *name;
 	void(*start)();
 	void(*shutdown)();
+	void(*newmap)();
 }
 rendermodule_t;
 
-rendermodule_t rendermodule[64];
+rendermodule_t rendermodule[MAXRENDERMODULES];
 
 void R_Modules_Init()
 {
 	int i;
-	for (i = 0;i < 64;i++)
+	for (i = 0;i < MAXRENDERMODULES;i++)
 		rendermodule[i].name = NULL;
 }
 
-void R_RegisterModule(char *name, void(*start)(), void(*shutdown)())
+void R_RegisterModule(char *name, void(*start)(), void(*shutdown)(), void(*newmap)())
 {
 	int i;
-	for (i = 0;i < 64;i++)
+	for (i = 0;i < MAXRENDERMODULES;i++)
 	{
 		if (rendermodule[i].name == NULL)
 			break;
 		if (!strcmp(name, rendermodule[i].name))
 			Sys_Error("R_RegisterModule: module \"%s\" registered twice\n", name);
 	}
-	if (i >= 64)
-		Sys_Error("R_RegisterModule: ran out of renderer module slots (64)\n");
+	if (i >= MAXRENDERMODULES)
+		Sys_Error("R_RegisterModule: ran out of renderer module slots (%i)\n", MAXRENDERMODULES);
 	rendermodule[i].active = 0;
 	rendermodule[i].name = name;
 	rendermodule[i].start = start;
 	rendermodule[i].shutdown = shutdown;
+	rendermodule[i].newmap = newmap;
 }
 
-void R_StartModules ()
+void R_Modules_Start ()
 {
 	int i;
-	for (i = 0;i < 64;i++)
+	for (i = 0;i < MAXRENDERMODULES;i++)
 	{
 		if (rendermodule[i].name == NULL)
 			continue;
@@ -51,10 +55,10 @@ void R_StartModules ()
 	}
 }
 
-void R_ShutdownModules ()
+void R_Modules_Shutdown ()
 {
 	int i;
-	for (i = 0;i < 64;i++)
+	for (i = 0;i < MAXRENDERMODULES;i++)
 	{
 		if (rendermodule[i].name == NULL)
 			continue;
@@ -65,8 +69,21 @@ void R_ShutdownModules ()
 	}
 }
 
-void R_Restart ()
+void R_Modules_Restart ()
 {
-	R_ShutdownModules();
-	R_StartModules();
+	R_Modules_Shutdown();
+	R_Modules_Start();
+}
+
+void R_Modules_NewMap ()
+{
+	int i;
+	for (i = 0;i < MAXRENDERMODULES;i++)
+	{
+		if (rendermodule[i].name == NULL)
+			continue;
+		if (!rendermodule[i].active)
+			continue;
+		rendermodule[i].newmap();
+	}
 }

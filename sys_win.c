@@ -695,25 +695,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if (host_parms.memsize > MAXIMUM_WIN_MEMORY)
 		host_parms.memsize = MAXIMUM_WIN_MEMORY;
 	*/
-	host_parms.memsize = DEFAULTMEM * 1048576;
-
-	if ((t = COM_CheckParm("-heapsize")))
-	{
-		t++;
-		if (t < com_argc)
-			host_parms.memsize = atoi (com_argv[t]) * 1024;
-	}
-	else if ((t = COM_CheckParm("-mem")) || (t = COM_CheckParm("-winmem")))
-	{
-		t++;
-		if (t < com_argc)
-			host_parms.memsize = atoi (com_argv[t]) * 1048576;
-	}
-
-	host_parms.membase = qmalloc(host_parms.memsize);
-
-	if (!host_parms.membase)
-		Sys_Error ("Not enough memory free; check disk space\n");
 
 //	Sys_PageIn (parms.membase, parms.memsize);
 

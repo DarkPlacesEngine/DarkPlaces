@@ -822,6 +822,7 @@ void CL_ParseEffect2 (void)
 extern void SHOWLMP_decodehide();
 extern void SHOWLMP_decodeshow();
 extern void R_SetSkyBox(char* sky);
+extern int netshown;
 
 /*
 =====================
@@ -840,9 +841,15 @@ void CL_ParseServerMessage (void)
 // if recording demos, copy the message out
 //
 	if (cl_shownet.value == 1)
+	{
 		Con_Printf ("%i ",net_message.cursize);
+		netshown = true;
+	}
 	else if (cl_shownet.value == 2)
+	{
 		Con_Printf ("------------------\n");
+		netshown = true;
+	}
 	
 	cl.onground = false;	// unless the server says otherwise	
 //

@@ -211,11 +211,15 @@ void FOG_registercvars()
 	}
 }
 
-void glmain_start()
+void gl_main_start()
 {
 }
 
-void glmain_shutdown()
+void gl_main_shutdown()
+{
+}
+
+void gl_main_newmap()
 {
 }
 
@@ -241,7 +245,7 @@ void GL_Main_Init()
 //	if (gl_vendor && strstr(gl_vendor, "3Dfx"))
 //		gl_lightmode.value = 0;
 	Cvar_RegisterVariable (&r_fullbright);
-	R_RegisterModule("GL_Main", glmain_start, glmain_shutdown);
+	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
 
 extern void GL_Draw_Init();
@@ -259,7 +263,7 @@ extern void CL_Effects_Init();
 
 void Render_Init()
 {
-	R_ShutdownModules();
+	R_Modules_Shutdown();
 	GL_Draw_Init();
 	GL_Main_Init();
 	GL_Models_Init();
@@ -272,7 +276,8 @@ void Render_Init()
 	R_Particles_Init();
 	R_Explosion_Init();
 	CL_Effects_Init();
-	R_StartModules();
+	R_Decals_Init();
+	R_Modules_Start();
 }
 
 /*
@@ -739,16 +744,6 @@ void GL_BlendView()
 	glEnable(GL_TEXTURE_2D);
 }
 
-/*
-#define TIMEREPORT(DESC) \
-	if (r_speeds2.value)\
-	{\
-		temptime = -currtime;\
-		currtime = Sys_FloatTime();\
-		temptime += currtime;\
-		Con_Printf(DESC " %.4fms ", temptime * 1000.0);\
-	}
-*/
 #define TIMEREPORT(VAR) \
 	if (r_speeds2.value)\
 	{\
@@ -770,12 +765,11 @@ extern qboolean intimerefresh;
 extern qboolean skyisvisible;
 extern void R_Sky();
 extern void UploadLightmaps();
-char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81];
+char r_speeds2_string1[81], r_speeds2_string2[81], r_speeds2_string3[81], r_speeds2_string4[81], r_speeds2_string5[81], r_speeds2_string6[81], r_speeds2_string7[81];
 void R_RenderView (void)
 {
 	double starttime, currtime, temptime;
-	int time_clear, time_setup, time_world, time_bmodels, time_upload, time_sky, time_wall, time_models, time_moveparticles, time_drawparticles, time_moveexplosions, time_drawexplosions, time_transpoly, time_blend, time_total;
-//	double currtime, temptime;
+	int time_clear, time_setup, time_world, time_bmodels, time_upload, time_sky, time_wall, time_models, time_moveparticles, time_drawparticles, time_moveexplosions, time_drawexplosions, time_drawdecals, time_transpoly, time_blend, time_total;
 //	if (r_norefresh.value)
 //		return;
 
@@ -789,7 +783,6 @@ void R_RenderView (void)
 	if (r_speeds2.value)
 	{
 		starttime = currtime = Sys_FloatTime();
-//		Con_Printf("render time: ");
 	}
 	else
 		starttime = currtime = 0;
@@ -842,6 +835,8 @@ void R_RenderView (void)
 	TIMEREPORT(time_moveexplosions)
 	R_DrawExplosions();
 	TIMEREPORT(time_drawexplosions)
+	R_DrawDecals();
+	TIMEREPORT(time_drawdecals)
 
 	transpolyrender();
 	TIMEREPORT(time_transpoly)
@@ -853,12 +848,12 @@ void R_RenderView (void)
 	if (r_speeds2.value)
 	{
 		time_total = (int) ((Sys_FloatTime() - starttime) * 1000000.0);
-//		Con_Printf("\n");
 		sprintf(r_speeds2_string1, "%6i walls %6i dlitwalls %7i modeltris %7i transpoly\n", c_brush_polys, c_light_polys, c_alias_polys, currenttranspoly);
 		sprintf(r_speeds2_string2, "BSP: %6i faces %6i nodes %6i leafs\n", c_faces, c_nodes, c_leafs);
 		sprintf(r_speeds2_string3, "%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n", c_models, c_bmodels, c_sprites, c_particles, c_dlights);
 		sprintf(r_speeds2_string4, "%6ius clear  %6ius setup  %6ius world  %6ius bmodel %6ius upload", time_clear, time_setup, time_world, time_bmodels, time_upload);
 		sprintf(r_speeds2_string5, "%6ius sky    %6ius wall   %6ius models %6ius mpart  %6ius dpart ", time_sky, time_wall, time_models, time_moveparticles, time_drawparticles);
-		sprintf(r_speeds2_string6, "%6ius trans  %6ius blend  %6ius total  %6ius permdl", time_transpoly, time_blend, time_total, time_models / max(c_models, 1));
+		sprintf(r_speeds2_string6, "%6ius mexplo %6ius dexplo %6ius decals %6ius trans  %6ius blend ", time_moveexplosions, time_drawexplosions, time_drawdecals, time_transpoly, time_blend);
+		sprintf(r_speeds2_string7, "%6ius permdl %6ius total ", time_models / max(c_models, 1), time_total);
 	}
 }

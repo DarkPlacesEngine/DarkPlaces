@@ -40,8 +40,7 @@ typedef struct
 	char	name[MAX_SCOREBOARDNAME];
 	float	entertime;
 	int		frags;
-	int		colors;			// two 4 bit fields
-//	byte	translations[256]; // LordHavoc: major memory reduction (was VID_GRADES*256, and VID_GRADES is 64), and weirdness cleanup
+	int		colors; // two 4 bit fields
 } scoreboard_t;
 
 typedef struct
@@ -74,7 +73,8 @@ typedef struct
 	struct model_s	*model;
 	float	endtime;
 	vec3_t	start, end;
-} beam_t;
+}
+beam_t;
 
 // LordHavoc: increased MAX_EFRAGS from 640 to 2048
 #define	MAX_EFRAGS		2048
@@ -83,11 +83,13 @@ typedef struct
 #define	MAX_DEMOS		8
 #define	MAX_DEMONAME	16
 
-typedef enum {
-ca_dedicated, 		// a dedicated server with no ability to start a client
-ca_disconnected, 	// full screen console with no connection
-ca_connected		// valid netcon, talking to a server
-} cactive_t;
+typedef enum
+{
+	ca_dedicated, 		// a dedicated server with no ability to start a client
+	ca_disconnected, 	// full screen console with no connection
+	ca_connected		// valid netcon, talking to a server
+}
+cactive_t;
 
 //
 // the client_static_t structure is persistant through an arbitrary number
@@ -122,8 +124,8 @@ typedef struct
 	int			signon;			// 0 to SIGNONS
 	struct qsocket_s	*netcon;
 	sizebuf_t	message;		// writing buffer to send to server
-	
-} client_static_t;
+}
+client_static_t;
 
 extern client_static_t	cls;
 
@@ -162,7 +164,7 @@ typedef struct
 
 	vec3_t		punchangle;		// temporary offset
 	vec3_t		punchvector;	// LordHavoc: origin view kick
-	
+
 // pitch drifting vars
 	float		idealpitch;
 	float		pitchvel;
@@ -176,10 +178,10 @@ typedef struct
 	qboolean	paused;			// send over by server
 	qboolean	onground;
 	qboolean	inwater;
-	
+
 	int			intermission;	// don't change view angle, full screen, etc
 	int			completed_time;	// latched at intermission start
-	
+
 	double		mtime[2];		// the timestamp of last two messages	
 	double		time;			// clients view of time, should be between
 								// servertime and oldservertime to generate
@@ -188,7 +190,7 @@ typedef struct
 								// to decay light values and smooth step ups
 
 	double		frametime;
-	
+
 
 	float		last_received_message;	// (realtime) for net trouble icon
 
@@ -214,7 +216,8 @@ typedef struct
 
 // frag scoreboard
 	scoreboard_t	*scores;		// [cl.maxclients]
-} client_state_t;
+}
+client_state_t;
 
 
 //
@@ -272,8 +275,8 @@ extern	beam_t			cl_beams[MAX_BEAMS];
 //
 // cl_main
 //
-dlight_t *CL_AllocDlight (int key);
-void	CL_DecayLights (void);
+void CL_AllocDlight (entity_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
+void CL_DecayLights (void);
 
 void CL_Init (void);
 
@@ -288,9 +291,9 @@ void CL_Disconnect_f (void);
 void CL_NextDemo (void);
 
 // LordHavoc: raised this from 256 to the maximum possible number of entities visible
-#define			MAX_VISEDICTS	(MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
-extern	int				cl_numvisedicts;
-extern	entity_t		*cl_visedicts[MAX_VISEDICTS];
+#define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
+extern	int			cl_numvisedicts;
+extern	entity_t	*cl_visedicts[MAX_VISEDICTS];
 
 //
 // cl_input
@@ -299,7 +302,8 @@ typedef struct
 {
 	int		down[2];		// key nums holding it down
 	int		state;			// low bit is down state
-} kbutton_t;
+}
+kbutton_t;
 
 extern	kbutton_t	in_mlook, in_klook;
 extern 	kbutton_t 	in_strafe;

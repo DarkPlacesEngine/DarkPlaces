@@ -207,11 +207,9 @@ sndinitstat SNDDMA_InitDirect (void)
     format.nChannels = shm->channels;
     format.wBitsPerSample = shm->samplebits;
     format.nSamplesPerSec = shm->speed;
-    format.nBlockAlign = format.nChannels
-		*format.wBitsPerSample / 8;
+    format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
     format.cbSize = 0;
-    format.nAvgBytesPerSec = format.nSamplesPerSec
-		*format.nBlockAlign; 
+    format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign; 
 
 	if (!hInstDS)
 	{

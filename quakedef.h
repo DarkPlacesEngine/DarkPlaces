@@ -47,7 +47,7 @@ extern int buildnumber;
 
 #define UNUSED(x)	(x = x)	// for pesky compiler / lint warnings
 
-// LordHavoc: default heap size (unless -heapsize (win32 only) or -mem is used), in megabytes
+// LordHavoc: default heap size (unless -heapsize, -mem, or -winmem is used), in megabytes
 #define DEFAULTMEM 24
 //#define	MINIMUM_MEMORY			0x550000
 //#define	MINIMUM_MEMORY_LEVELPAK	(MINIMUM_MEMORY + 0x100000)

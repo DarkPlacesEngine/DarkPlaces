@@ -169,6 +169,10 @@ void r_textures_shutdown()
 {
 }
 
+void r_textures_newmap()
+{
+}
+
 void R_Textures_Init (void)
 {
 	Cmd_AddCommand("r_texturestats", GL_TextureStats_f);
@@ -189,7 +193,7 @@ void R_Textures_Init (void)
 	memset(gltextures, 0, sizeof(gltexture_t) * MAX_GLTEXTURES);
 	Cmd_AddCommand ("gl_texturemode", &Draw_TextureMode_f);
 
-	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown);
+	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
 }
 
 /*
@@ -213,7 +217,7 @@ int R_FindTexture (char *identifier)
 
 void R_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
 {
-	int		j, xi, oldx = 0, f, fstep, l1, l2, endx;
+	int		j, xi, oldx = 0, f, fstep, endx;
 	fstep = (int) (inwidth*65536.0f/outwidth);
 	endx = (inwidth-1);
 	for (j = 0,f = 0;j < outwidth;j++, f += fstep)
@@ -226,12 +230,11 @@ void R_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
 		}
 		if (xi < endx)
 		{
-			l2 = f & 0xFFFF;
-			l1 = 0x10000 - l2;
-			*out++ = (byte) ((in[0] * l1 + in[4] * l2) >> 16);
-			*out++ = (byte) ((in[1] * l1 + in[5] * l2) >> 16);
-			*out++ = (byte) ((in[2] * l1 + in[6] * l2) >> 16);
-			*out++ = (byte) ((in[3] * l1 + in[7] * l2) >> 16);
+			int lerp = f & 0xFFFF;
+			*out++ = (byte) ((((in[4] - in[0]) * lerp) >> 16) + in[0]);
+			*out++ = (byte) ((((in[5] - in[1]) * lerp) >> 16) + in[1]);
+			*out++ = (byte) ((((in[6] - in[2]) * lerp) >> 16) + in[2]);
+			*out++ = (byte) ((((in[7] - in[3]) * lerp) >> 16) + in[3]);
 		}
 		else // last pixel of the line has no pixel to lerp to
 		{
@@ -250,9 +253,12 @@ R_ResampleTexture
 */
 void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,  int outwidth, int outheight)
 {
+	if (outwidth & 3)
+		Sys_Error("R_ResampleTexture: output width must be a multiple of 4");
+
 	if (r_lerpimages.value)
 	{
-		int		i, j, yi, oldy, f, fstep, l1, l2, endy = (inheight-1);
+		int		i, j, yi, oldy, f, fstep, endy = (inheight-1);
 		byte	*inrow, *out, *row1, *row2;
 		out = outdata;
 		fstep = (int) (inheight*65536.0f/outheight);
@@ -266,43 +272,56 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 		for (i = 0, f = 0;i < outheight;i++,f += fstep)
 		{
 			yi = f >> 16;
-			if (yi != oldy)
-			{
-				inrow = (byte *)indata + inwidth*4*yi;
-				if (yi == oldy+1)
-					memcpy(row1, row2, outwidth*4);
-				else
-					R_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
-				if (yi < endy)
-					R_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
-				else
-					memcpy(row2, row1, outwidth*4);
-				oldy = yi;
-			}
 			if (yi < endy)
 			{
-				l2 = f & 0xFFFF;
-				l1 = 0x10000 - l2;
-				for (j = 0;j < outwidth;j++)
+				int lerp = f & 0xFFFF;
+				if (yi != oldy)
 				{
-					*out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
-					*out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
-					*out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
-					*out++ = (byte) ((*row1++ * l1 + *row2++ * l2) >> 16);
+					inrow = (byte *)indata + inwidth*4*yi;
+					if (yi == oldy+1)
+						memcpy(row1, row2, outwidth*4);
+					else
+						R_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
+					R_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
+					oldy = yi;
+				}
+				for (j = 0;j < outwidth;j += 4)
+				{
+					out[ 0] = (byte) ((((row2[ 0] - row1[ 0]) * lerp) >> 16) + row1[ 0]);
+					out[ 1] = (byte) ((((row2[ 1] - row1[ 1]) * lerp) >> 16) + row1[ 1]);
+					out[ 2] = (byte) ((((row2[ 2] - row1[ 2]) * lerp) >> 16) + row1[ 2]);
+					out[ 3] = (byte) ((((row2[ 3] - row1[ 3]) * lerp) >> 16) + row1[ 3]);
+					out[ 4] = (byte) ((((row2[ 4] - row1[ 4]) * lerp) >> 16) + row1[ 4]);
+					out[ 5] = (byte) ((((row2[ 5] - row1[ 5]) * lerp) >> 16) + row1[ 5]);
+					out[ 6] = (byte) ((((row2[ 6] - row1[ 6]) * lerp) >> 16) + row1[ 6]);
+					out[ 7] = (byte) ((((row2[ 7] - row1[ 7]) * lerp) >> 16) + row1[ 7]);
+					out[ 8] = (byte) ((((row2[ 8] - row1[ 8]) * lerp) >> 16) + row1[ 8]);
+					out[ 9] = (byte) ((((row2[ 9] - row1[ 9]) * lerp) >> 16) + row1[ 9]);
+					out[10] = (byte) ((((row2[10] - row1[10]) * lerp) >> 16) + row1[10]);
+					out[11] = (byte) ((((row2[11] - row1[11]) * lerp) >> 16) + row1[11]);
+					out[12] = (byte) ((((row2[12] - row1[12]) * lerp) >> 16) + row1[12]);
+					out[13] = (byte) ((((row2[13] - row1[13]) * lerp) >> 16) + row1[13]);
+					out[14] = (byte) ((((row2[14] - row1[14]) * lerp) >> 16) + row1[14]);
+					out[15] = (byte) ((((row2[15] - row1[15]) * lerp) >> 16) + row1[15]);
+					out += 16;
+					row1 += 16;
+					row2 += 16;
 				}
 				row1 -= outwidth*4;
 				row2 -= outwidth*4;
 			}
-			else // last line has no pixels to lerp to
+			else
 			{
-				for (j = 0;j < outwidth;j++)
+				if (yi != oldy)
 				{
-					*out++ = *row1++;
-					*out++ = *row1++;
-					*out++ = *row1++;
-					*out++ = *row1++;
+					inrow = (byte *)indata + inwidth*4*yi;
+					if (yi == oldy+1)
+						memcpy(row1, row2, outwidth*4);
+					else
+						R_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
+					oldy = yi;
 				}
-				row1 -= outwidth*4;
+				memcpy(out, row1, outwidth * 4);
 			}
 		}
 		qfree(row1);
@@ -310,22 +329,24 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 	}
 	else
 	{
-		int		i, j;
-		unsigned	frac, fracstep;
-		byte	*inrow, *out, *inpix;
+		int i, j;
+		unsigned frac, fracstep;
+		// relies on int being 4 bytes
+		int *inrow, *out;
 		out = outdata;
 
 		fracstep = inwidth*0x10000/outwidth;
-		for (i=0 ; i<outheight ; i++)
+		for (i = 0;i < outheight;i++)
 		{
-			inrow = (byte *)indata + inwidth*(i*inheight/outheight)*4;
+			inrow = (int *)indata + inwidth*(i*inheight/outheight);
 			frac = fracstep >> 1;
-			for (j=0 ; j<outwidth ; j+=4)
+			for (j = 0;j < outwidth;j += 4)
 			{
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
-				inpix = inrow + ((frac >> 14) & ~3);*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ = qgamma[*inpix++];*out++ =       *inpix++ ;frac += fracstep;
+				out[0] = inrow[frac >> 16];frac += fracstep;
+				out[1] = inrow[frac >> 16];frac += fracstep;
+				out[2] = inrow[frac >> 16];frac += fracstep;
+				out[3] = inrow[frac >> 16];frac += fracstep;
+				out += 4;
 			}
 		}
 	}

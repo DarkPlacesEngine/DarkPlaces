@@ -51,11 +51,16 @@ void r_effects_shutdown()
 {
 }
 
+void r_effects_newmap()
+{
+	memset(effect, 0, sizeof(effect));
+}
+
 void CL_Effects_Init()
 {
 	Cvar_RegisterVariable(&r_draweffects);
 
-	R_RegisterModule("R_Effects", r_effects_start, r_effects_shutdown);
+	R_RegisterModule("R_Effects", r_effects_start, r_effects_shutdown, r_effects_newmap);
 }
 
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)

@@ -224,8 +224,8 @@ void Mod_LoadTextures (lump_t *l)
 			{
 				tx->width = mt->width;
 				tx->height = mt->height;
-				tx->transparent = true;
-				tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+				tx->transparent = Image_CheckAlpha(data, image_width * image_height, true);
+				tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
 				tx->glowtexture = NULL;
 			}
 			qfree(data);
@@ -252,8 +252,8 @@ void Mod_LoadTextures (lump_t *l)
 						{
 							tx->width = mt->width;
 							tx->height = mt->height;
-							tx->transparent = true;
-							tx->texture = R_LoadTexture (tx->name, mt->width, mt->height, data, TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+							tx->transparent = Image_CheckAlpha(data, mt->width * mt->height, true);
+							tx->texture = R_LoadTexture (tx->name, mt->width, mt->height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
 							tx->glowtexture = NULL;
 							qfree(data);
 						}
@@ -266,8 +266,8 @@ void Mod_LoadTextures (lump_t *l)
 						{
 							tx->width = image_width;
 							tx->height = image_height;
-							tx->transparent = true;
-							tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+							tx->transparent = Image_CheckAlpha(data, image_width * image_height, true);
+							tx->texture = R_LoadTexture (tx->name, image_width, image_height, data, TEXF_MIPMAP | (tx->transparent ? TEXF_ALPHA : 0) | TEXF_RGBA | TEXF_PRECACHE);
 							tx->glowtexture = NULL;
 							qfree(data);
 						}

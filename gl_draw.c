@@ -154,6 +154,10 @@ void gl_draw_shutdown()
 {
 }
 
+void gl_draw_newmap()
+{
+}
+
 char engineversion[40];
 int engineversionx, engineversiony;
 
@@ -178,7 +182,7 @@ void GL_Draw_Init (void)
 	engineversiony = vid.height - 8;
 
 	R_Textures_Init();
-	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown);
+	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
 /*
