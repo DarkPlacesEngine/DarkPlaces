@@ -167,11 +167,10 @@ double Sys_DoubleTime (void)
 	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
 	struct timeval tp;
-	struct timezone tzp;
 
-	gettimeofday(&tp, &tzp);
+	gettimeofday(&tp, NULL);
 
-	newtime = (double) ((unsigned long) tp.tv_sec) + tp.tv_usec/1000000.0;
+	newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
 
 	if (first)
 	{
@@ -180,7 +179,10 @@ double Sys_DoubleTime (void)
 	}
 
 	if (newtime < oldtime)
-		Con_Printf("Sys_DoubleTime: time running backwards??\n");
+	{
+		if (newtime < oldtime - 0.001)
+			Con_Printf("Sys_DoubleTime: time stepped backwards (went from %f to %f, difference %f)\n", oldtime, newtime, newtime - oldtime);
+	}
 	else
 		curtime += newtime - oldtime;
 	oldtime = newtime;
@@ -237,7 +239,7 @@ void Sys_Sleep(void)
 
 int main (int c, char **v)
 {
-	double oldtime, newtime;
+	double frameoldtime, framenewtime;
 
 	signal(SIGFPE, SIG_IGN);
 
@@ -257,15 +259,15 @@ int main (int c, char **v)
 
 	Sys_Shared_LateInit();
 
-	oldtime = Sys_DoubleTime () - 0.1;
+	frameoldtime = Sys_DoubleTime () - 0.1;
 	while (1)
 	{
 		// find time spent rendering last frame
-		newtime = Sys_DoubleTime ();
+		framenewtime = Sys_DoubleTime ();
 
-		Host_Frame (newtime - oldtime);
+		Host_Frame (framenewtime - frameoldtime);
 
-		oldtime = newtime;
+		frameoldtime = framenewtime;
 	}
 	return 0;
 }
