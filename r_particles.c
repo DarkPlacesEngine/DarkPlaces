@@ -291,13 +291,13 @@ void R_Particles_Init (void)
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
 }
 
-int partindexarray[6] = {0, 1, 2, 0, 2, 3};
+//int partindexarray[6] = {0, 1, 2, 0, 2, 3};
 
 void R_DrawParticles (void)
 {
 	renderparticle_t *r;
 	int i, lighting;
-	float minparticledist, org[3], uprightangles[3], up2[3], right2[3], v[3], right[3], up[3], tv[4][5], fog, diff[3];
+	float minparticledist, org[3], uprightangles[3], up2[3], right2[3], v[3], right[3], up[3], tvxyz[4][4], tvst[4][2], fog, ifog, fogvec[3];
 	mleaf_t *leaf;
 	particletexture_t *tex, *texfog;
 	rmeshinfo_t m;
@@ -319,18 +319,20 @@ void R_DrawParticles (void)
 
 	minparticledist = DotProduct(r_origin, vpn) + 16.0f;
 
+	// LordHavoc: this meshinfo must match up with R_Mesh_DrawDecal
+	// LordHavoc: the commented out lines are hardwired behavior in R_Mesh_DrawDecal
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.numtriangles = 2;
-	m.index = partindexarray;
-	m.numverts = 4;
-	m.vertex = &tv[0][0];
-	m.vertexstep = sizeof(float[5]);
+	//m.numtriangles = 2;
+	//m.index = partindexarray;
+	//m.numverts = 4;
+	m.vertex = &tvxyz[0][0];
+	//m.vertexstep = sizeof(float[4]);
 	m.tex[0] = R_GetTexture(particlefonttexture);
-	m.texcoords[0] = &tv[0][3];
-	m.texcoordstep[0] = sizeof(float[5]);
+	m.texcoords[0] = &tvst[0][0];
+	//m.texcoordstep[0] = sizeof(float[2]);
 
 	for (i = 0, r = r_refdef.particles;i < r_refdef.numparticles;i++, r++)
 	{
@@ -383,93 +385,94 @@ void R_DrawParticles (void)
 		}
 
 		tex = &particletexture[r->tex][0];
-		texfog = &particletexture[r->tex][1];
 
-		tv[0][0] = org[0] - right[0] - up[0];
-		tv[0][1] = org[1] - right[1] - up[1];
-		tv[0][2] = org[2] - right[2] - up[2];
-		tv[0][3] = tex->s1;
-		tv[0][4] = tex->t1;
-		tv[1][0] = org[0] - right[0] + up[0];
-		tv[1][1] = org[1] - right[1] + up[1];
-		tv[1][2] = org[2] - right[2] + up[2];
-		tv[1][3] = tex->s1;
-		tv[1][4] = tex->t2;
-		tv[2][0] = org[0] + right[0] + up[0];
-		tv[2][1] = org[1] + right[1] + up[1];
-		tv[2][2] = org[2] + right[2] + up[2];
-		tv[2][3] = tex->s2;
-		tv[2][4] = tex->t2;
-		tv[3][0] = org[0] + right[0] - up[0];
-		tv[3][1] = org[1] + right[1] - up[1];
-		tv[3][2] = org[2] + right[2] - up[2];
-		tv[3][3] = tex->s2;
-		tv[3][4] = tex->t1;
+		tvxyz[0][0] = org[0] - right[0] - up[0];
+		tvxyz[0][1] = org[1] - right[1] - up[1];
+		tvxyz[0][2] = org[2] - right[2] - up[2];
+		tvxyz[1][0] = org[0] - right[0] + up[0];
+		tvxyz[1][1] = org[1] - right[1] + up[1];
+		tvxyz[1][2] = org[2] - right[2] + up[2];
+		tvxyz[2][0] = org[0] + right[0] + up[0];
+		tvxyz[2][1] = org[1] + right[1] + up[1];
+		tvxyz[2][2] = org[2] + right[2] + up[2];
+		tvxyz[3][0] = org[0] + right[0] - up[0];
+		tvxyz[3][1] = org[1] + right[1] - up[1];
+		tvxyz[3][2] = org[2] + right[2] - up[2];
+		tvst[0][0] = tex->s1;
+		tvst[0][1] = tex->t1;
+		tvst[1][0] = tex->s1;
+		tvst[1][1] = tex->t2;
+		tvst[2][0] = tex->s2;
+		tvst[2][1] = tex->t2;
+		tvst[3][0] = tex->s2;
+		tvst[3][1] = tex->t1;
 
 		fog = 0;
 		if (fogenabled)
 		{
-			VectorSubtract(org, r_origin, diff);
-			fog = exp(fogdensity/DotProduct(diff,diff));
-			if (fog >= 0.01f)
+			texfog = &particletexture[r->tex][1];
+			VectorSubtract(org, r_origin, fogvec);
+			fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+			if (fog >= (1.0f / 64.0f))
 			{
-				if (fog >= 0.99f)
+				if (fog >= (1.0f - (1.0f / 64.0f)))
 				{
 					// fully fogged, just use the fog texture and render as alpha
 					m.cr = fogcolor[0];
 					m.cg = fogcolor[1];
 					m.cb = fogcolor[2];
 					m.ca = r->color[3];
-					tv[0][3] = texfog->s1;
-					tv[0][4] = texfog->t1;
-					tv[1][3] = texfog->s1;
-					tv[1][4] = texfog->t2;
-					tv[2][3] = texfog->s2;
-					tv[2][4] = texfog->t2;
-					tv[3][3] = texfog->s2;
-					tv[3][4] = texfog->t1;
-					R_Mesh_Draw(&m);
+					tvst[0][0] = texfog->s1;
+					tvst[0][1] = texfog->t1;
+					tvst[1][0] = texfog->s1;
+					tvst[1][1] = texfog->t2;
+					tvst[2][0] = texfog->s2;
+					tvst[2][1] = texfog->t2;
+					tvst[3][0] = texfog->s2;
+					tvst[3][1] = texfog->t1;
+					R_Mesh_DrawDecal(&m);
 				}
 				else
 				{
 					// partially fogged, darken the first pass
-					m.cr *= 1 - fog;
-					m.cg *= 1 - fog;
-					m.cb *= 1 - fog;
+					ifog = 1 - fog;
+					m.cr *= ifog;
+					m.cg *= ifog;
+					m.cb *= ifog;
 					if (tex->s1 == texfog->s1 && tex->t1 == texfog->t1)
 					{
 						// fog texture is the same as the base, just change the color
 						m.cr += fogcolor[0] * fog;
 						m.cg += fogcolor[1] * fog;
 						m.cb += fogcolor[2] * fog;
-						R_Mesh_Draw(&m);
+						R_Mesh_DrawDecal(&m);
 					}
 					else
 					{
 						// render the first pass (alpha), then do additive fog
-						R_Mesh_Draw(&m);
+						R_Mesh_DrawDecal(&m);
 						m.blendfunc2 = GL_ONE;
 						m.cr = fogcolor[0];
 						m.cg = fogcolor[1];
 						m.cb = fogcolor[2];
 						m.ca = r->color[3] * fog;
-						tv[0][3] = texfog->s1;
-						tv[0][4] = texfog->t1;
-						tv[1][3] = texfog->s1;
-						tv[1][4] = texfog->t2;
-						tv[2][3] = texfog->s2;
-						tv[2][4] = texfog->t2;
-						tv[3][3] = texfog->s2;
-						tv[3][4] = texfog->t1;
-						R_Mesh_Draw(&m);
+						tvst[0][0] = texfog->s1;
+						tvst[0][1] = texfog->t1;
+						tvst[1][0] = texfog->s1;
+						tvst[1][1] = texfog->t2;
+						tvst[2][0] = texfog->s2;
+						tvst[2][1] = texfog->t2;
+						tvst[3][0] = texfog->s2;
+						tvst[3][1] = texfog->t1;
+						R_Mesh_DrawDecal(&m);
 						m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 					}
 				}
 			}
 			else
-				R_Mesh_Draw(&m);
+				R_Mesh_DrawDecal(&m);
 		}
 		else
-			R_Mesh_Draw(&m);
+			R_Mesh_DrawDecal(&m);
 	}
 }

@@ -284,7 +284,7 @@ void Con_Print (char *txt)
 	int		c, l;
 	static int	cr;
 	int		mask;
-	
+
 	con_backscroll = 0;
 
 	if (txt[0] == 1)
@@ -441,7 +441,7 @@ void Con_DPrintf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-		
+
 	if (!developer.integer)
 		return;			// don't confuse non-developers with techie stuff...
 
@@ -497,16 +497,13 @@ Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 */
 void Con_DrawInput (void)
 {
-	int		y;
-	char	*text;
-	char	editlinecopy[256];
+	char editlinecopy[256], *text;
 
 	if (key_dest != key_console && !con_forcedup)
 		return;		// don't draw anything
 
 	text = strcpy(editlinecopy, key_lines[edit_line]);
-	y = strlen(text);
-	
+
 	// Advanced Console Editing by Radix radix@planetquake.com
 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 	// use strlen of edit_line instead of key_linepos to allow editing
@@ -515,27 +512,15 @@ void Con_DrawInput (void)
 	// add the cursor frame
 	if ((int)(realtime*con_cursorspeed) & 1)		// cursor is visible
 		text[key_linepos] = 11 + 130 * key_insert;	// either solid or triangle facing right
-	
-	text[key_linepos + 1] = 0; // LordHavoc: null terminate, rather than padding with spaces
-	// text[key_linepos] = 10 + ((int)(realtime*con_cursorspeed) & 1);
-	
 
-	// fill out remainder with spaces
-	//	for (i=key_linepos+1 ; i< con_linewidth ; i++)
-	//		text[i] = ' ';
-		
-	//	prestep if horizontally scrolling
+	text[key_linepos + 1] = 0;
+
+	// prestep if horizontally scrolling
 	if (key_linepos >= con_linewidth)
 		text += 1 + key_linepos - con_linewidth;
-		
+
 	// draw it
-	y = con_vislines - 16;
-
-	//	for (i=0 ; i<con_linewidth ; i++)
-	//		Draw_Character ( (i+1)<<3, con_vislines - 16, text[i]);
-
-	// LordHavoc: speedup
-	Draw_String(8, con_vislines - 16, text, con_linewidth);
+	DrawQ_String(8, con_vislines - 16, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 	// remove cursor
 	key_lines[edit_line][key_linepos] = 0;
@@ -570,13 +555,10 @@ void Con_DrawNotify (void)
 		if (time > con_notifytime.value)
 			continue;
 		text = con_text + (i % con_totallines)*con_linewidth;
-		
+
 		clearnotify = 0;
 
-//		for (x = 0 ; x < con_linewidth ; x++)
-//			Draw_Character ( (x+1)<<3, v, text[x]);
-		// LordHavoc: speedup
-		Draw_String(8, v, text, con_linewidth);
+		DrawQ_String(8, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 		v += 8;
 	}
@@ -585,9 +567,9 @@ void Con_DrawNotify (void)
 	if (key_dest == key_message)
 	{
 		clearnotify = 0;
-	
+
 		x = 0;
-		
+
 		// LordHavoc: speedup, and other improvements
 		if (team_message)
 			sprintf(temptext, "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
@@ -595,25 +577,17 @@ void Con_DrawNotify (void)
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		while (strlen(temptext) >= con_linewidth)
 		{
-			Draw_String (8, v, temptext, con_linewidth);
+			DrawQ_String (8, v, temptext, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 			strcpy(temptext, &temptext[con_linewidth]);
 			v += 8;
 		}
 		if (strlen(temptext) > 0)
 		{
-			Draw_String (8, v, temptext, 0);
+			DrawQ_String (8, v, temptext, 0, 8, 8, 1, 1, 1, 1, 0);
 			v += 8;
 		}
-//		Draw_String (8, v, "say:", 0);
-//		while(chat_buffer[x])
-//		{
-//			Draw_Character ( (x+5)<<3, v, chat_buffer[x]);
-//			x++;
-//		}
-//		Draw_Character ( (x+5)<<3, v, 10+((int)(realtime*con_cursorspeed)&1));
-//		v += 8;
 	}
-	
+
 	if (v > con_notifylines)
 		con_notifylines = v;
 }
@@ -626,18 +600,21 @@ Draws the console with the solid background
 The typing input line at the bottom should only be drawn if typing is allowed
 ================
 */
-void Con_DrawConsole (int lines, qboolean drawinput)
+extern cvar_t scr_conalpha;
+extern char engineversion[40];
+void Con_DrawConsole (int lines)
 {
 	int				i, y;
 	int				rows;
 	char			*text;
 	int				j;
-	
+
 	if (lines <= 0)
 		return;
 
 // draw the background
-	Draw_ConsoleBackground (lines);
+	DrawQ_Pic(0, lines - vid.conheight, "gfx/conback", vid.conwidth, vid.conheight, 1, 1, 1, scr_conalpha.value * lines / vid.conheight, 0);
+	DrawQ_String(vid.conwidth - strlen(engineversion) * 8 - 8, lines - 8, engineversion, 0, 8, 8, 1, 0, 0, 1, 0);
 
 // draw the text
 	con_vislines = lines;
@@ -645,22 +622,16 @@ void Con_DrawConsole (int lines, qboolean drawinput)
 	rows = (lines-16)>>3;		// rows of text to draw
 	y = lines - 16 - (rows<<3);	// may start slightly negative
 
-	for (i= con_current - rows + 1 ; i<=con_current ; i++, y+=8 )
+	for (i = con_current - rows + 1;i <= con_current;i++, y += 8)
 	{
-		j = i - con_backscroll;
-		if (j<0)
-			j = 0;
+		j = max(i - con_backscroll, 0);
 		text = con_text + (j % con_totallines)*con_linewidth;
 
-//		for (x=0 ; x<con_linewidth ; x++)
-//			Draw_Character ( (x+1)<<3, y, text[x]);
-		// LordHavoc: speedup
-		Draw_String(8, y, text, con_linewidth);
+		DrawQ_String(8, y, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 	}
 
 // draw the input prompt, user text, and cursor if desired
-	if (drawinput)
-		Con_DrawInput ();
+	Con_DrawInput ();
 }
 
 /*

@@ -1,6 +1,7 @@
 #include "quakedef.h"
 
 cvar_t	r_max_size = {0, "r_max_size", "2048"};
+cvar_t	r_max_scrapsize = {0, "r_max_scrapsize", "1024"};
 cvar_t	r_picmip = {0, "r_picmip", "0"};
 cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
 cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
@@ -22,7 +23,8 @@ static mempool_t *texturemempool;
 #define GLTEXF_DESTROYED 0x00040000
 
 // size of images which hold fragment textures, ignores picmip and max_size
-#define BLOCK_SIZE 256
+//#define BLOCK_SIZE 256
+static int block_size;
 
 // really this number only governs gltexnuminuse
 #define MAX_GLTEXTURES 65536
@@ -455,6 +457,9 @@ static void r_textures_start(void)
 	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &realmaxsize);
 	CHECKGLERROR
 
+	// use the largest scrap texture size we can (not sure if this is really a good idea)
+	for (block_size = 1;block_size < realmaxsize && block_size < r_max_scrapsize.integer;block_size <<= 1);
+
 	texturemempool = Mem_AllocPool("Textures");
 	gltexnuminuse = Mem_Alloc(texturemempool, MAX_GLTEXTURES);
 	//memset(gltexnuminuse, 0, MAX_GLTEXTURES);
@@ -497,6 +502,7 @@ void R_Textures_Init (void)
 {
 	Cmd_AddCommand ("gl_texturemode", &GL_TextureMode_f);
 	Cmd_AddCommand("r_texturestats", R_TextureStats_f);
+	Cvar_RegisterVariable (&r_max_scrapsize);
 	Cvar_RegisterVariable (&r_max_size);
 	Cvar_RegisterVariable (&r_picmip);
 	Cvar_RegisterVariable (&r_lerpimages);
@@ -1139,8 +1145,8 @@ static void R_FindImageForTexture(gltexture_t *glt)
 				continue;
 
 			// got a fragments texture, find a place in it if we can
-			best = BLOCK_SIZE;
-			for (best = BLOCK_SIZE, i = 0;i < BLOCK_SIZE - w;i += texinfo->align)
+			best = block_size;
+			for (best = block_size, i = 0;i < block_size - w;i += texinfo->align)
 			{
 				for (best2 = 0, j = 0;j < w;j++)
 				{
@@ -1157,7 +1163,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 				}
 			}
 
-			if (best + h > BLOCK_SIZE)
+			if (best + h > block_size)
 				continue;
 
 			for (i = 0;i < w;i++)
@@ -1175,10 +1181,10 @@ static void R_FindImageForTexture(gltexture_t *glt)
 			Sys_Error("R_FindImageForTexture: ran out of memory\n");
 		//memset(image, 0, sizeof(*image));
 		image->type = GLIMAGETYPE_FRAGMENTS;
-		image->width = BLOCK_SIZE;
-		image->height = BLOCK_SIZE;
-		image->blockallocation = Mem_Alloc(texturemempool, BLOCK_SIZE * sizeof(short));
-		memset(image->blockallocation, 0, BLOCK_SIZE * sizeof(short));
+		image->width = block_size;
+		image->height = block_size;
+		image->blockallocation = Mem_Alloc(texturemempool, block_size * sizeof(short));
+		memset(image->blockallocation, 0, block_size * sizeof(short));
 
 		x = 0;
 		y = 0;
@@ -1332,8 +1338,8 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 
 	if (flags & TEXF_FRAGMENT)
 	{
-		if (width > BLOCK_SIZE || height > BLOCK_SIZE)
-			Host_Error("R_LoadTexture: fragment too big, must be no more than %dx%d\n", BLOCK_SIZE, BLOCK_SIZE);
+		if (width > block_size || height > block_size)
+			Host_Error("R_LoadTexture: fragment too big, must be no more than %dx%d\n", block_size, block_size);
 		if ((width * texinfo->internalbytesperpixel) & 3)
 			Host_Error("R_LoadTexture: incompatible width for fragment");
 	}
@@ -1411,8 +1417,8 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 //		Host_Error("R_ProceduralTexture: \"%s\" has no generate function\n", identifier);
 	if (flags & TEXF_FRAGMENT)
 	{
-		if (width > BLOCK_SIZE || height > BLOCK_SIZE)
-			Host_Error("R_ProceduralTexture: fragment too big, must be no more than %dx%d\n", BLOCK_SIZE, BLOCK_SIZE);
+		if (width > block_size || height > block_size)
+			Host_Error("R_ProceduralTexture: fragment too big, must be no more than %dx%d\n", block_size, block_size);
 		if ((width * texinfo->internalbytesperpixel) & 3)
 			Host_Error("R_ProceduralTexture: incompatible width for fragment");
 	}

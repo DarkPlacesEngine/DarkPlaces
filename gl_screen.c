@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -82,7 +82,6 @@ cvar_t	scr_showram = {CVAR_SAVE, "showram","1"};
 cvar_t	scr_showturtle = {CVAR_SAVE, "showturtle","0"};
 cvar_t	scr_showpause = {CVAR_SAVE, "showpause","1"};
 cvar_t	scr_printspeed = {0, "scr_printspeed","8"};
-cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
 cvar_t	r_render = {0, "r_render", "1"};
 cvar_t	r_brightness = {CVAR_SAVE, "r_brightness", "1"}; // LordHavoc: a method of operating system independent color correction
 cvar_t	r_contrast = {CVAR_SAVE, "r_contrast", "1"}; // LordHavoc: a method of operating system independent color correction
@@ -170,25 +169,16 @@ void SCR_DrawCenterString (void)
 			if (start[l] == '\n' || !start[l])
 				break;
 		x = (vid.conwidth - l*8)/2;
-		// LordHavoc: speedup
 		if (l > 0)
 		{
 			if (remaining < l)
 				l = remaining;
-			Draw_String(x, y, start, l);
+			DrawQ_String(x, y, start, l, 8, 8, 1, 1, 1, 1, 0);
 			remaining -= l;
 			if (remaining <= 0)
 				return;
 		}
-		/*
-		for (j=0 ; j<l ; j++, x+=8)
-		{
-			Draw_Character (x, y, start[j]);	
-			if (!remaining--)
-				return;
-		}
-		*/
-			
+
 		y += 8;
 
 		while (*start && *start != '\n')
@@ -308,7 +298,6 @@ Keybinding command
 void SCR_SizeUp_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value+10);
-//	vid.recalc_refdef = 1;
 }
 
 
@@ -322,7 +311,6 @@ Keybinding command
 void SCR_SizeDown_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
-//	vid.recalc_refdef = 1;
 }
 
 //============================================================================
@@ -355,7 +343,6 @@ void GL_Screen_Init (void)
 	Cvar_RegisterVariable (&scr_showpause);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
-	Cvar_RegisterVariable (&showfps);
 	Cvar_RegisterVariable (&r_render);
 	Cvar_RegisterVariable (&r_brightness);
 	Cvar_RegisterVariable (&r_contrast);
@@ -388,7 +375,7 @@ void SCR_DrawRam (void)
 {
 //	if (!scr_showram.integer)
 //		return;
-//	Draw_Pic (32, 0, Draw_CachePic("ram"));
+//	DrawQ_Pic (32, 0, "ram", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -399,6 +386,9 @@ SCR_DrawTurtle
 void SCR_DrawTurtle (void)
 {
 	static int	count;
+
+	if (cls.state != ca_connected)
+		return;
 
 	if (!scr_showturtle.integer)
 		return;
@@ -413,7 +403,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	Draw_Pic (0, 0, Draw_CachePic("turtle"));
+	DrawQ_Pic (0, 0, "turtle", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -423,12 +413,14 @@ SCR_DrawNet
 */
 void SCR_DrawNet (void)
 {
+	if (cls.state != ca_connected)
+		return;
 	if (realtime - cl.last_received_message < 0.3)
 		return;
 	if (cls.demoplayback)
 		return;
 
-	Draw_Pic (64, 0, Draw_CachePic("net"));
+	DrawQ_Pic (64, 0, "net", 0, 0, 1, 1, 1, 1, 0);
 }
 
 /*
@@ -438,7 +430,10 @@ DrawPause
 */
 void SCR_DrawPause (void)
 {
-	qpic_t	*pic;
+	cachepic_t	*pic;
+
+	if (cls.state != ca_connected)
+		return;
 
 	if (!scr_showpause.integer)		// turn off for screenshots
 		return;
@@ -447,7 +442,7 @@ void SCR_DrawPause (void)
 		return;
 
 	pic = Draw_CachePic ("gfx/pause.lmp");
-	Draw_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, pic);
+	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/pause.lmp", 0, 0, 1, 1, 1, 1, 0);
 }
 
 
@@ -460,13 +455,13 @@ SCR_DrawLoading
 /*
 void SCR_DrawLoading (void)
 {
-	qpic_t	*pic;
+	cachepic_t	*pic;
 
 	if (!scr_drawloading)
 		return;
-		
+
 	pic = Draw_CachePic ("gfx/loading.lmp");
-	Draw_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, pic);
+	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/loading.lmp", 0, 0, 1, 1, 1, 1, 0);
 }
 */
 
@@ -483,9 +478,6 @@ SCR_SetUpToDrawConsole
 void SCR_SetUpToDrawConsole (void)
 {
 	Con_CheckResize ();
-	
-	//if (scr_drawloading)
-	//	return;		// never a console with loading plaque
 
 // decide on the height of the console
 	con_forcedup = !cl.worldmodel || cls.signon != SIGNONS;
@@ -524,7 +516,7 @@ void SCR_DrawConsole (void)
 {
 	if (scr_con_current)
 	{
-		Con_DrawConsole (scr_con_current, true);
+		Con_DrawConsole (scr_con_current);
 		clearconsole = 0;
 	}
 	else
@@ -536,12 +528,12 @@ void SCR_DrawConsole (void)
 
 
 /*
-============================================================================== 
+==============================================================================
 
-						SCREEN SHOTS 
+						SCREEN SHOTS
 
-============================================================================== 
-*/ 
+==============================================================================
+*/
 
 /*
 ==================
@@ -753,10 +745,7 @@ void SCR_DrawNotifyString (void)
 			if (start[l] == '\n' || !start[l])
 				break;
 		x = (vid.conwidth - l*8)/2;
-		// LordHavoc: speedup
-//		for (j=0 ; j<l ; j++, x+=8)
-//			Draw_Character (x, y, start[j]);
-		Draw_String (x, y, start, l);
+		DrawQ_String (x, y, start, l, 8, 8, 1, 1, 1, 1, 0);
 
 		y += 8;
 
@@ -766,91 +755,15 @@ void SCR_DrawNotifyString (void)
 		if (!*start)
 			break;
 		start++;		// skip the \n
-	} while (1);
+	}
+	while (1);
 }
 
 //=============================================================================
 
 void DrawCrosshair(int num);
-void GL_Set2D (void);
 
-void GL_BrightenScreen(void)
-{
-	float f;
-
-	if (r_brightness.value < 0.1f)
-		Cvar_SetValue("r_brightness", 0.1f);
-	if (r_brightness.value > 5.0f)
-		Cvar_SetValue("r_brightness", 5.0f);
-
-	if (r_contrast.value < 0.2f)
-		Cvar_SetValue("r_contrast", 0.2f);
-	if (r_contrast.value > 1.0f)
-		Cvar_SetValue("r_contrast", 1.0f);
-
-	if (!(lighthalf && !hardwaregammasupported) && r_brightness.value < 1.01f && r_contrast.value > 0.99f)
-		return;
-
-	if (!r_render.integer)
-		return;
-
-	glDisable(GL_TEXTURE_2D);
-	CHECKGLERROR
-	glEnable(GL_BLEND);
-	CHECKGLERROR
-	f = r_brightness.value;
-	// only apply lighthalf using software color correction if hardware is not available (speed reasons)
-	if (lighthalf && !hardwaregammasupported)
-		f *= 2;
-	if (f >= 1.01f)
-	{
-		glBlendFunc (GL_DST_COLOR, GL_ONE);
-		CHECKGLERROR
-		glBegin (GL_TRIANGLES);
-		while (f >= 1.01f)
-		{
-			if (f >= 2)
-				glColor3f (1, 1, 1);
-			else
-				glColor3f (f-1, f-1, f-1);
-			glVertex2f (-5000, -5000);
-			glVertex2f (10000, -5000);
-			glVertex2f (-5000, 10000);
-			f *= 0.5;
-		}
-		glEnd ();
-		CHECKGLERROR
-	}
-	if (r_contrast.value <= 0.99f)
-	{
-		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		CHECKGLERROR
-		if (lighthalf && hardwaregammasupported)
-			glColor4f (0.5, 0.5, 0.5, 1 - r_contrast.value);
-		else
-			glColor4f (1, 1, 1, 1 - r_contrast.value);
-		CHECKGLERROR
-		glBegin (GL_TRIANGLES);
-		glVertex2f (-5000, -5000);
-		glVertex2f (10000, -5000);
-		glVertex2f (-5000, 10000);
-		glEnd ();
-		CHECKGLERROR
-	}
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	CHECKGLERROR
-
-	glEnable (GL_CULL_FACE);
-	CHECKGLERROR
-	glEnable (GL_DEPTH_TEST);
-	CHECKGLERROR
-	glDisable(GL_BLEND);
-	CHECKGLERROR
-	glEnable(GL_TEXTURE_2D);
-	CHECKGLERROR
-}
-
-char r_speeds2_string[1024];
+char r_speeds_string[1024];
 int speedstringcount, r_timereport_active;
 double r_timereport_temp = 0, r_timereport_current = 0, r_timereport_start = 0;
 
@@ -874,33 +787,85 @@ void R_TimeReport(char *desc)
 	tempbuf[length] = 0;
 	if (speedstringcount + length > (vid.conwidth / 8))
 	{
-		strcat(r_speeds2_string, "\n");
+		strcat(r_speeds_string, "\n");
 		speedstringcount = 0;
 	}
 	// skip the space at the beginning if it's the first on the line
 	if (speedstringcount == 0)
 	{
-		strcat(r_speeds2_string, tempbuf + 1);
+		strcat(r_speeds_string, tempbuf + 1);
 		speedstringcount = length - 1;
 	}
 	else
 	{
-		strcat(r_speeds2_string, tempbuf);
+		strcat(r_speeds_string, tempbuf);
 		speedstringcount += length;
 	}
 }
 
 void R_TimeReport_Start(void)
 {
-	r_timereport_active = r_speeds2.integer && cl.worldmodel && cls.state == ca_connected;
+	r_timereport_active = r_speeds.integer && cl.worldmodel && cls.state == ca_connected;
+	r_speeds_string[0] = 0;
 	if (r_timereport_active)
+	{
+		speedstringcount = 0;
+		AngleVectors (r_refdef.viewangles, vpn, NULL, NULL);
+		//sprintf(r_speeds_string, "org:'%c%6.2f %c%6.2f %c%6.2f' ang:'%c%3.0f %c%3.0f %c%3.0f' dir:'%c%2.3f %c%2.3f %c%2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i meshtris\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
+		//	r_refdef.vieworg[0] < 0 ? '-' : ' ', fabs(r_refdef.vieworg[0]), r_refdef.vieworg[1] < 0 ? '-' : ' ', fabs(r_refdef.vieworg[1]), r_refdef.vieworg[2] < 0 ? '-' : ' ', fabs(r_refdef.vieworg[2]),
+		//	r_refdef.viewangles[0] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[0]), r_refdef.viewangles[1] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[1]), r_refdef.viewangles[2] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[2]),
+		//	vpn[0] < 0 ? '-' : ' ', fabs(vpn[0]), vpn[1] < 0 ? '-' : ' ', fabs(vpn[1]), vpn[2] < 0 ? '-' : ' ', fabs(vpn[2]),
+		sprintf(r_speeds_string, "org:'%+8.2f %+8.2f %+8.2f' ang:'%+4.0f %+4.0f %+4.0f' dir:'%+2.3f %+2.3f %+2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i meshtris\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
+			r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2],
+			r_refdef.viewangles[0], r_refdef.viewangles[1], r_refdef.viewangles[2],
+			vpn[0], vpn[1], vpn[2],
+			c_brush_polys, c_light_polys, c_alias_polys, c_meshtris,
+			c_faces, c_nodes, c_leafs,
+			c_models, c_bmodels, c_sprites, c_particles, c_dlights);
+
+		c_brush_polys = 0;
+		c_alias_polys = 0;
+		c_light_polys = 0;
+		c_faces = 0;
+		c_nodes = 0;
+		c_leafs = 0;
+		c_models = 0;
+		c_bmodels = 0;
+		c_sprites = 0;
+		c_particles = 0;
+	//	c_dlights = 0;
+
 		r_timereport_start = Sys_DoubleTime();
+	}
 }
 
 void R_TimeReport_End(void)
 {
 	r_timereport_current = r_timereport_start;
 	R_TimeReport("total");
+
+	if (r_timereport_active)
+	{
+		int i, j, lines, y;
+		lines = 1;
+		for (i = 0;r_speeds_string[i];i++)
+			if (r_speeds_string[i] == '\n')
+				lines++;
+		y = vid.conheight - sb_lines - lines * 8/* - 8*/;
+		i = j = 0;
+		DrawQ_Fill(0, y, vid.conwidth, lines * 8, 0, 0, 0, 0.5, 0);
+		while (r_speeds_string[i])
+		{
+			j = i;
+			while (r_speeds_string[i] && r_speeds_string[i] != '\n')
+				i++;
+			if (i - j > 0)
+				DrawQ_String(0, y, r_speeds_string + j, i - j, 8, 8, 1, 1, 1, 1, 0);
+			if (r_speeds_string[i] == '\n')
+				i++;
+			y += 8;
+		}
+	}
 }
 
 /*
@@ -913,49 +878,24 @@ text to the screen.
 LordHavoc: due to my rewrite of R_WorldNode, it no longer takes 256k of stack space :)
 ==================
 */
-void GL_Finish(void);
-void R_Clip_DisplayBuffer(void);
 void SCR_UpdateScreen (void)
 {
-	double	time1 = 0, time2;
-
-	if (r_speeds.integer)
-		time1 = Sys_DoubleTime ();
-
 	VID_UpdateGamma(false);
 
 	if (scr_disabled_for_loading)
-	{
-		/*
-		if (realtime - scr_disabled_time > 60)
-		{
-			scr_disabled_for_loading = false;
-			Con_Printf ("load failed.\n");
-		}
-		else
-		*/
-			return;
-	}
+		return;
 
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
 
-	r_speeds2_string[0] = 0;
-	if (r_speeds2.integer)
-	{
-		speedstringcount = 0;
-		sprintf(r_speeds2_string, "org:'%c%6.2f %c%6.2f %c%6.2f' ang:'%c%3.0f %c%3.0f %c%3.0f' dir:'%c%2.3f %c%2.3f %c%2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i meshtris\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
-			r_origin[0] < 0 ? '-' : ' ', fabs(r_origin[0]), r_origin[1] < 0 ? '-' : ' ', fabs(r_origin[1]), r_origin[2] < 0 ? '-' : ' ', fabs(r_origin[2]), r_refdef.viewangles[0] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[0]), r_refdef.viewangles[1] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[1]), r_refdef.viewangles[2] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[2]), vpn[0] < 0 ? '-' : ' ', fabs(vpn[0]), vpn[1] < 0 ? '-' : ' ', fabs(vpn[1]), vpn[2] < 0 ? '-' : ' ', fabs(vpn[2]),
-			c_brush_polys, c_light_polys, c_alias_polys, c_meshtris,
-			c_faces, c_nodes, c_leafs,
-			c_models, c_bmodels, c_sprites, c_particles, c_dlights);
-		R_TimeReport_Start();
-	}
+	//Mem_CheckSentinelsGlobal();
+	//R_TimeReport("memtest");
 
-	Mem_CheckSentinelsGlobal();
-	R_TimeReport("memtest");
+	R_TimeReport("other");
 
-	GL_Finish();
+	glFinish ();
+	CHECKGLERROR
+
 	GL_EndRendering ();
 
 	R_TimeReport("finish");
@@ -976,23 +916,10 @@ void SCR_UpdateScreen (void)
 
 	lightscale = 1.0f / (float) (1 << lightscalebit);
 
-	//
+	R_TimeReport("setup");
+
 	// determine size of refresh window
-	//
-	if (oldfov != scr_fov.value)
-	{
-		oldfov = scr_fov.value;
-//		vid.recalc_refdef = true;
-	}
-
-	if (oldscreensize != scr_viewsize.value)
-	{
-		oldscreensize = scr_viewsize.value;
-//		vid.recalc_refdef = true;
-	}
-
-//	if (vid.recalc_refdef)
-		SCR_CalcRefdef();
+	SCR_CalcRefdef();
 
 	R_TimeReport("calcrefdef");
 
@@ -1002,30 +929,19 @@ void SCR_UpdateScreen (void)
 		CHECKGLERROR
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
 		CHECKGLERROR
+		if (gl_dither.integer)
+			glEnable(GL_DITHER);
+		else
+			glDisable(GL_DITHER);
+		CHECKGLERROR
 	}
+
+	SCR_SetUpToDrawConsole();
 
 	R_TimeReport("clear");
 
-	if (gl_dither.integer)
-		glEnable(GL_DITHER);
-	else
-		glDisable(GL_DITHER);
-	CHECKGLERROR
-
-//
-// do 3D refresh drawing, and then update the screen
-//
-	SCR_SetUpToDrawConsole();
-
-	R_TimeReport("setupconsole");
-
-	V_RenderView();
-
-	V_UpdateBlends();
-
-	GL_Set2D();
-
-	R_Clip_DisplayBuffer();
+	if (scr_conlines < vid.conheight)
+		R_RenderView();
 
 	SCR_DrawRam();
 	SCR_DrawNet();
@@ -1035,96 +951,17 @@ void SCR_UpdateScreen (void)
 	Sbar_Draw();
 	SHOWLMP_drawall();
 
-	if (crosshair.integer)
-		DrawCrosshair(crosshair.integer - 1);
-
-	if (cl.intermission == 1)
-		Sbar_IntermissionOverlay();
-	else if (cl.intermission == 2)
-		Sbar_FinaleOverlay();
-
 	SCR_DrawConsole();
 	M_Draw();
 
 	ui_draw();
 
-//	if (scr_drawloading)
-//		SCR_DrawLoading();
-
-	if (showfps.integer)
-	{
-		static double currtime, frametimes[32];
-		double newtime, total;
-		char temp[32];
-		int calc, count, i;
-		static int framecycle = 0;
-		newtime = Sys_DoubleTime();
-		frametimes[framecycle] = newtime - currtime;
-		framecycle++;
-		framecycle &= 31;
-		total = 0;
-		count = 0;
-		for (i = 0;i < 32;i++)
-		{
-			if (frametimes[i])
-			{
-				total += frametimes[i];
-				count++;
-				// limit how far back we look
-				if (total >= 0.25)
-					break;
-			}
-		}
-		if (showfps.integer == 1)
-			calc = (int) ((count / total) + 0.5);
-		else // showfps 2, rapid update
-			calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
-		sprintf(temp, "%4i fps", calc);
-		currtime = newtime;
-		Draw_String(vid.conwidth - (8*8), vid.conheight - sb_lines - 8, temp, 9999);
-	}
-
 	R_TimeReport("2d");
 
 	R_TimeReport_End();
 
-	if (r_speeds2_string[0] && cls.state == ca_connected && cl.worldmodel)
-	{
-		int i, j, lines, y;
-		lines = 1;
-		for (i = 0;r_speeds2_string[i];i++)
-			if (r_speeds2_string[i] == '\n')
-				lines++;
-		y = vid.conheight - sb_lines - lines * 8 - 8;
-		i = j = 0;
-		while (r_speeds2_string[i])
-		{
-			j = i;
-			while (r_speeds2_string[i] && r_speeds2_string[i] != '\n')
-				i++;
-			if (i - j > 0)
-				Draw_String(0, y, r_speeds2_string + j, i - j);
-			if (r_speeds2_string[i] == '\n')
-				i++;
-			y += 8;
-		}
-	}
+	// draw 2D stuff
+	R_DrawQueue();
 
-	GL_BrightenScreen();
-
-	if (r_speeds.integer)
-	{
-		time2 = Sys_DoubleTime ();
-		Con_Printf ("%3i ms  %4i wpoly %4i epoly %6i meshtris %4i lightpoly %4i BSPnodes %4i BSPleafs %4i BSPfaces %4i models %4i bmodels %4i sprites %4i particles %3i dlights\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, c_meshtris, c_light_polys, c_nodes, c_leafs, c_faces, c_models, c_bmodels, c_sprites, c_particles, c_dlights);
-	}
+	R_TimeReport_Start();
 }
-
-// for profiling, this is separated
-void GL_Finish(void)
-{
-	if (!r_render.integer)
-		return;
-	glFinish ();
-	CHECKGLERROR
-}
-

@@ -1096,22 +1096,36 @@ void PF_dprint (void)
 	Con_DPrintf ("%s",PF_VarString(0));
 }
 
-char	pr_string_temp[128];
+// LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
+#define STRINGTEMP_BUFFERS 16
+#define STRINGTEMP_LENGTH 128
+static char pr_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
+static int pr_string_tempindex = 0;
+
+static char *PR_GetTempString(void)
+{
+	char *s;
+	s = pr_string_temp[pr_string_tempindex];
+	pr_string_tempindex = (pr_string_tempindex + 1) % STRINGTEMP_BUFFERS;
+	return s;
+}
 
 void PF_ftos (void)
 {
-	float	v;
+	float v;
+	char *s;
 	v = G_FLOAT(OFS_PARM0);
 
-	// LordHavoc: ftos improvement
-	sprintf (pr_string_temp, "%g", v);
+	s = PR_GetTempString();
 	/*
 	if (v == (int)v)
-		sprintf (pr_string_temp, "%d",(int)v);
+		sprintf (s, "%d",(int)v);
 	else
-		sprintf (pr_string_temp, "%5.1f",v);
+		sprintf (s, "%5.1f",v);
 	*/
-	G_INT(OFS_RETURN) = pr_string_temp - pr_strings;
+	// LordHavoc: ftos improvement
+	sprintf (s, "%g", v);
+	G_INT(OFS_RETURN) = s - pr_strings;
 }
 
 void PF_fabs (void)
@@ -1123,14 +1137,18 @@ void PF_fabs (void)
 
 void PF_vtos (void)
 {
-	sprintf (pr_string_temp, "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0], G_VECTOR(OFS_PARM0)[1], G_VECTOR(OFS_PARM0)[2]);
-	G_INT(OFS_RETURN) = pr_string_temp - pr_strings;
+	char *s;
+	s = PR_GetTempString();
+	sprintf (s, "'%5.1f %5.1f %5.1f'", G_VECTOR(OFS_PARM0)[0], G_VECTOR(OFS_PARM0)[1], G_VECTOR(OFS_PARM0)[2]);
+	G_INT(OFS_RETURN) = s - pr_strings;
 }
 
 void PF_etos (void)
 {
-	sprintf (pr_string_temp, "entity %i", G_EDICTNUM(OFS_PARM0));
-	G_INT(OFS_RETURN) = pr_string_temp - pr_strings;
+	char *s;
+	s = PR_GetTempString();
+	sprintf (s, "entity %i", G_EDICTNUM(OFS_PARM0));
+	G_INT(OFS_RETURN) = s - pr_strings;
 }
 
 void PF_Spawn (void)
@@ -1156,7 +1174,7 @@ void PF_Remove (void)
 // entity (entity start, .string field, string match) find = #5;
 void PF_Find (void)
 {
-	int		e;	
+	int		e;
 	int		f;
 	char	*s, *t;
 	edict_t	*ed;
@@ -1169,7 +1187,7 @@ void PF_Find (void)
 		RETURN_EDICT(sv.edicts);
 		return;
 	}
-		
+
 	for (e++ ; e < sv.num_edicts ; e++)
 	{
 		ed = EDICT_NUM(e);
@@ -1336,7 +1354,7 @@ void PF_precache_model (void)
 		if (!sv.model_precache[i])
 		{
 			sv.model_precache[i] = s;
-			sv.models[i] = Mod_ForName (s, true, true, false);
+			sv.models[i] = Mod_ForName (s, true, false, false);
 			return;
 		}
 		if (!strcmp(sv.model_precache[i], s))

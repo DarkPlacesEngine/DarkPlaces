@@ -184,14 +184,14 @@ void LoadSky_f (void)
 	vert[i][0] = (x) * 1024.0f + r_origin[0];\
 	vert[i][1] = (y) * 1024.0f + r_origin[1];\
 	vert[i][2] = (z) * 1024.0f + r_origin[2];\
-	vert[i][4] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
-	vert[i][5] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
+	st[i][0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
+	st[i][1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
 
 int skyboxindex[6] = {0, 1, 2, 0, 2, 3};
 
 static void R_SkyBox(void)
 {
-	float vert[4][6];
+	float vert[4][4], st[4][2];
 	rmeshinfo_t m;
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
@@ -201,13 +201,13 @@ static void R_SkyBox(void)
 	m.numverts = 4;
 	m.index = skyboxindex;
 	m.vertex = &vert[0][0];
-	m.vertexstep = sizeof(float[6]);
+	m.vertexstep = sizeof(float[4]);
 	m.cr = 1;
 	m.cg = 1;
 	m.cb = 1;
 	m.ca = 1;
-	m.texcoords[0] = &vert[0][4];
-	m.texcoordstep[0] = sizeof(float[6]);
+	m.texcoords[0] = &st[0][0];
+	m.texcoordstep[0] = sizeof(float[2]);
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
 	R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
@@ -441,6 +441,14 @@ void R_InitSky (byte *src, int bytesperpixel)
 	unsigned	*rgba;
 
 	strcpy(skyworldname, loadmodel->name);
+
+	// flush skytexturepool so we won't build up a leak from uploading textures multiple times
+	R_FreeTexturePool(&skytexturepool);
+	skytexturepool = R_AllocTexturePool();
+	mergeskytexture = NULL;
+	solidskytexture = NULL;
+	alphaskytexture = NULL;
+
 	if (bytesperpixel == 4)
 	{
 		for (i = 0;i < 128;i++)

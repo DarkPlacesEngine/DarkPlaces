@@ -11,7 +11,7 @@ typedef struct
 {
 	char name[32];
 	int flags;
-	qpic_t *draw_pic;
+	char *draw_picname;
 	char *draw_string;
 	int draw_x, draw_y;
 	int click_x, click_y, click_x2, click_y2;
@@ -65,7 +65,7 @@ void ui_clear(ui_t *ui);
 void ui_item
 (
 	ui_t *ui, char *basename, int number,
-	float x, float y, qpic_t *pic, char *string,
+	float x, float y, char *picname, char *string,
 	float left, float top, float width, float height,
 	void(*leftkey)(void *nativedata1, void *nativedata2, float data1, float data2),
 	void(*rightkey)(void *nativedata1, void *nativedata2, float data1, float data2),

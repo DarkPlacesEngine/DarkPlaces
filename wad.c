@@ -117,7 +117,7 @@ void *W_GetLumpName (char *name)
 		if (!strcmp(clean, lump->name))
 			return (void *)(wad_base + lump->filepos);
 
-	Sys_Error ("W_GetLumpinfo: %s not found", name);
+	//Sys_Error ("W_GetLumpinfo: %s not found", name);
 	return NULL;
 }
 

@@ -27,7 +27,7 @@ cvar_t halflifebsp = {0, "halflifebsp", "0"};
 cvar_t r_novis = {0, "r_novis", "0"};
 cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
-cvar_t r_vertexsurfacesthreshold = {CVAR_SAVE, "r_vertexsurfacesthreshold", "48"};
+cvar_t r_vertexsurfacesthreshold = {CVAR_SAVE, "r_vertexsurfacesthreshold", "0"};
 
 /*
 ===============
@@ -1806,7 +1806,7 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 	FreeWinding (in);
 
 	// debugging
-	Mem_CheckSentinels(neww);
+	//Mem_CheckSentinels(neww);
 
 	return neww;
 }
@@ -1922,8 +1922,8 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 	}
 
 	// debugging
-	Mem_CheckSentinels(f);
-	Mem_CheckSentinels(b);
+	//Mem_CheckSentinels(f);
+	//Mem_CheckSentinels(b);
 }
 
 typedef struct portal_s

@@ -1414,7 +1414,7 @@ void SV_SpawnServer (char *server)
 	for (i = 1;i < sv.worldmodel->numsubmodels;i++)
 	{
 		sv.model_precache[i+1] = localmodels[i];
-		sv.models[i+1] = Mod_ForName (localmodels[i], false, true, false);
+		sv.models[i+1] = Mod_ForName (localmodels[i], false, false, false);
 	}
 
 //

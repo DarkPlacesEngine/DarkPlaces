@@ -362,7 +362,7 @@ void CL_InitInput (void);
 void CL_SendCmd (void);
 void CL_SendMove (usercmd_t *cmd);
 
-void CL_LerpUpdate(entity_t *e, int frame, int modelindex);
+void CL_LerpUpdate(entity_t *e);
 void CL_ParseTEnt (void);
 void CL_UpdateTEnts (void);
 
@@ -406,11 +406,10 @@ void CL_BitProfile_f(void);
 void V_StartPitchDrift (void);
 void V_StopPitchDrift (void);
 
-void V_RenderView (void);
+void V_Init (void);
+float V_CalcRoll (vec3_t angles, vec3_t velocity);
 void V_UpdateBlends (void);
-void V_Register (void);
 void V_ParseDamage (void);
-void V_SetContentsColor (int contents);
 
 
 //
@@ -490,17 +489,25 @@ void CL_Decal(vec3_t origin, int tex, float scale, float red, float green, float
 extern int traceline_endcontents; // set by TraceLine
 float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents);
 
+#include "cl_screen.h"
+
 #define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
 
 typedef struct
 {
 	// area to render in
-	int		x, y, width, height;
-	float	fov_x, fov_y;
+	int x, y, width, height;
+	float fov_x, fov_y;
 
 	// view point
-	vec3_t	vieworg;
-	vec3_t	viewangles;
+	vec3_t vieworg;
+	vec3_t viewangles;
+
+	// fullscreen color blend
+	float viewblend[4];
+
+	// weapon model
+	entity_render_t viewent;
 
 	int numdecals;
 	renderdecal_t *decals;
@@ -510,6 +517,9 @@ typedef struct
 
 	int numparticles;
 	struct renderparticle_s *particles;
+
+	byte drawqueue[MAX_DRAWQUEUE];
+	int drawqueuesize;
 }
 refdef_t;
 

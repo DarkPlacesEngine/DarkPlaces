@@ -61,7 +61,6 @@ unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 cvar_t	r_drawentities = {0, "r_drawentities","1"};
 cvar_t	r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t	r_speeds = {0, "r_speeds","0"};
-cvar_t	r_speeds2 = {0, "r_speeds2","0"};
 cvar_t	r_fullbright = {0, "r_fullbright","0"};
 //cvar_t	r_lightmap = {0, "r_lightmap","0"};
 cvar_t	r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
@@ -256,7 +255,6 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_speeds);
-	Cvar_RegisterVariable (&r_speeds2);
 	Cvar_RegisterVariable (&gl_lightmode);
 //	Cvar_RegisterVariable (&r_dynamicwater);
 //	Cvar_RegisterVariable (&r_dynamicbothsides);
@@ -541,22 +539,7 @@ static void R_SetupFrame (void)
 	r_oldviewleaf = r_viewleaf;
 	r_viewleaf = Mod_PointInLeaf (r_origin, cl.worldmodel);
 
-	V_SetContentsColor (r_viewleaf->contents);
-	V_CalcBlend ();
-
 //	r_cache_thrash = false;
-
-	c_brush_polys = 0;
-	c_alias_polys = 0;
-	c_light_polys = 0;
-	c_faces = 0;
-	c_nodes = 0;
-	c_leafs = 0;
-	c_models = 0;
-	c_bmodels = 0;
-	c_sprites = 0;
-	c_particles = 0;
-//	c_dlights = 0;
 
 	R_AnimateLight ();
 }
@@ -640,7 +623,7 @@ static void R_BlendView(void)
 	if (!r_render.integer)
 		return;
 
-	if (v_blend[3] < 0.01f)
+	if (r_refdef.viewblend[3] < 0.01f)
 		return;
 
 	glMatrixMode(GL_PROJECTION);
@@ -655,9 +638,9 @@ static void R_BlendView(void)
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBegin (GL_TRIANGLES);
 	if (lighthalf)
-		glColor4f (v_blend[0] * 0.5f, v_blend[1] * 0.5f, v_blend[2] * 0.5f, v_blend[3]);
+		glColor4f (r_refdef.viewblend[0] * 0.5f, r_refdef.viewblend[1] * 0.5f, r_refdef.viewblend[2] * 0.5f, r_refdef.viewblend[3]);
 	else
-		glColor4fv (v_blend);
+		glColor4fv (r_refdef.viewblend);
 	glVertex2f (-5, -5);
 	glVertex2f (10, -5);
 	glVertex2f (-5, 10);
@@ -731,7 +714,7 @@ void R_RenderView (void)
 	}
 
 	// don't let sound skip if going slow
-	if (!intimerefresh && !r_speeds2.integer)
+	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
 	R_DrawViewModel();
@@ -758,6 +741,6 @@ void R_RenderView (void)
 	R_BlendView();
 	R_TimeReport("blendview");
 
-	Mem_CheckSentinelsGlobal();
-	R_TimeReport("memtest");
+	//Mem_CheckSentinelsGlobal();
+	//R_TimeReport("memtest");
 }

@@ -106,6 +106,7 @@ void CL_ClearState (void)
 	memset(cl_beams, 0, sizeof(cl_beams));
 	memset(cl_dlights, 0, sizeof(cl_dlights));
 	memset(cl_effect, 0, sizeof(cl_effect));
+	CL_Screen_NewMap();
 	CL_Particles_Clear();
 	CL_Decals_Clear();
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
@@ -117,27 +118,27 @@ void CL_ClearState (void)
 	}
 }
 
-void CL_LerpUpdate(entity_t *e, int frame, int modelindex)
+void CL_LerpUpdate(entity_t *e)
 {
 	entity_persistent_t *p;
 	entity_render_t *r;
 	p = &e->persistent;
 	r = &e->render;
 
-	if (p->modelindex != modelindex)
+	if (p->modelindex != e->state_current.modelindex)
 	{
 		// reset all interpolation information
-		p->modelindex = modelindex;
-		p->frame1 = p->frame2 = frame;
+		p->modelindex = e->state_current.modelindex;
+		p->frame1 = p->frame2 = e->state_current.frame;
 		p->frame1time = p->frame2time = cl.time;
 		p->framelerp = 1;
 	}
-	else if (p->frame2 != frame)
+	else if (p->frame2 != e->state_current.frame)
 	{
 		// transition to new frame
 		p->frame1 = p->frame2;
 		p->frame1time = p->frame2time;
-		p->frame2 = frame;
+		p->frame2 = e->state_current.frame;
 		p->frame2time = cl.time;
 		p->framelerp = 0;
 	}
@@ -148,6 +149,9 @@ void CL_LerpUpdate(entity_t *e, int frame, int modelindex)
 		p->framelerp = bound(0, p->framelerp, 1);
 	}
 
+	r->model = cl.model_precache[e->state_current.modelindex];
+	Mod_CheckLoaded(r->model);
+	r->frame = e->state_current.frame;
 	r->frame1 = p->frame1;
 	r->frame2 = p->frame2;
 	r->framelerp = p->framelerp;
@@ -430,8 +434,8 @@ static void CL_RelinkNetworkEntities()
 
 			// if the delta is large, assume a teleport and don't lerp
 			VectorSubtract(ent->state_current.origin, ent->state_previous.origin, delta);
-			// LordHavoc: increased tolerance from 100 to 200
-			if ((sv.active && svs.maxclients == 1 && !(ent->state_current.flags & RENDER_STEP)) || cls.timedemo || DotProduct(delta, delta) > 200*200 || cl_nolerp.integer)
+			// LordHavoc: increased tolerance from 100 to 200, and now to 1000
+			if ((sv.active && svs.maxclients == 1 && !(ent->state_current.flags & RENDER_STEP)) || cls.timedemo || DotProduct(delta, delta) > 1000*1000 || cl_nolerp.integer)
 				lerp = 1;
 			else
 			{
@@ -461,15 +465,12 @@ static void CL_RelinkNetworkEntities()
 
 		VectorCopy (neworg, ent->persistent.trail_origin);
 		// persistent.modelindex will be updated by CL_LerpUpdate
-		if (ent->state_current.modelindex != ent->persistent.modelindex || !ent->state_previous.active)
+		if (ent->state_current.modelindex != ent->persistent.modelindex)
 			VectorCopy(neworg, oldorg);
 
 		VectorCopy (neworg, ent->render.origin);
 		ent->render.flags = ent->state_current.flags;
 		ent->render.effects = effects = ent->state_current.effects;
-		ent->render.model = cl.model_precache[ent->state_current.modelindex];
-		Mod_CheckLoaded(ent->render.model);
-		ent->render.frame = ent->state_current.frame;
 		if (cl.scores == NULL || !ent->state_current.colormap)
 			ent->render.colormap = -1; // no special coloring
 		else
@@ -477,11 +478,9 @@ static void CL_RelinkNetworkEntities()
 		ent->render.skinnum = ent->state_current.skin;
 		ent->render.alpha = ent->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
 		ent->render.scale = ent->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
-		glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
-		glowcolor = ent->state_current.glowcolor;
 
 		// update interpolation info
-		CL_LerpUpdate(ent, ent->state_current.frame, ent->state_current.modelindex);
+		CL_LerpUpdate(ent);
 
 		// handle effects now...
 		dlightradius = 0;
@@ -602,6 +601,8 @@ static void CL_RelinkNetworkEntities()
 			}
 		}
 		// LordHavoc: customizable glow
+		glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
+		glowcolor = ent->state_current.glowcolor;
 		if (glowsize)
 		{
 			byte *tempcolor = (byte *)&d_8to24table[glowcolor];
@@ -977,4 +978,5 @@ void CL_Init (void)
 	CL_Parse_Init();
 	CL_Particles_Init();
 	CL_Decals_Init();
+	CL_Screen_Init();
 }
