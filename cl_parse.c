@@ -339,6 +339,7 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 CL_ParseServerInfo
 ==================
 */
+qbyte entlife[MAX_EDICTS];
 void CL_ParseServerInfo (void)
 {
 	char *str;
@@ -468,28 +469,14 @@ void CL_ParseServerInfo (void)
 
 // local state
 	ent = &cl_entities[0];
-	memset(ent, 0, sizeof(entity_t));
+	// entire entity array was cleared, so just fill in a few fields
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
-
-	if (ent->render.angles[0] || ent->render.angles[2])
-	{
-		// pitch or roll
-		VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
-		VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
-	}
-	else if (ent->render.angles[1])
-	{
-		// yaw
-		VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
-		VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
-	}
-	else
-	{
-		VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
-		VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
-	}
+	VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
+	VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
+	// clear entlife array
+	memset(entlife, 0, MAX_EDICTS);
 
 	cl_num_entities = 1;
 
@@ -539,11 +526,10 @@ If an entities model or origin changes from frame to frame, it must be
 relinked.  Other attributes can change without relinking.
 ==================
 */
-qbyte entkill[MAX_EDICTS];
 int bitprofile[32], bitprofilecount = 0;
 void CL_ParseUpdate (int bits)
 {
-	int i, num, deltadie;
+	int i, num;
 	entity_t *ent;
 	entity_state_t new;
 
@@ -566,8 +552,8 @@ void CL_ParseUpdate (int bits)
 	if (num < 1)
 		Host_Error("CL_ParseUpdate: invalid entity number (%i)\n", num);
 
-	// mark as visible (no kill)
-	entkill[num] = 0;
+	// mark as visible (no kill this frame)
+	entlife[num] = 2;
 
 	ent = CL_EntityNum (num);
 
@@ -576,20 +562,17 @@ void CL_ParseUpdate (int bits)
 			bitprofile[i]++;
 	bitprofilecount++;
 
-	deltadie = false;
+	// note: this inherits the 'active' state of the baseline chosen
+	// (state_baseline is always active, state_current may not be active if
+	// the entity was missing in the last frame)
 	if (bits & U_DELTA)
-	{
 		new = ent->state_current;
-		if (!new.active)
-			deltadie = true; // was not present in previous frame, leave hidden until next full update
-	}
 	else
 		new = ent->state_baseline;
 
 	new.time = cl.mtime[0];
 
 	new.flags = 0;
-	new.active = true;
 	if (bits & U_MODEL)		new.modelindex = (new.modelindex & 0xFF00) | MSG_ReadByte();
 	if (bits & U_FRAME)		new.frame = (new.frame & 0xFF00) | MSG_ReadByte();
 	if (bits & U_COLORMAP)	new.colormap = MSG_ReadByte();
@@ -635,12 +618,7 @@ void CL_ParseUpdate (int bits)
 			new.alpha = j;
 	}
 
-	if (deltadie)
-	{
-		// hide the entity
-		new.active = false;
-	}
-	else
+	if (new.active)
 		CL_ValidateState(&new);
 
 	if (new.flags & RENDER_STEP) // FIXME: rename this flag?
@@ -668,18 +646,18 @@ void CL_ParseUpdate (int bits)
 void CL_ReadEntityFrame(void)
 {
 	entity_t *ent;
-	entity_state_t *s;
 	entity_frame_t entityframe;
 	int i;
 	EntityFrame_Read(&cl.entitydatabase);
 	EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
 	for (i = 0;i < entityframe.numentities;i++)
 	{
-		s = &entityframe.entitydata[i];
-		entkill[s->number] = 0;
-		ent = &cl_entities[s->number];
-		memcpy(&ent->state_previous, &ent->state_current, sizeof(*s));
-		memcpy(&ent->state_current, s, sizeof(*s));
+		// the entity lives again...
+		entlife[entityframe.entitydata[i].number] = 2;
+		// copy the states
+		ent = &cl_entities[entityframe.entitydata[i].number];
+		ent->state_previous = ent->state_current;
+		ent->state_current = entityframe.entitydata[i];
 		ent->state_current.time = cl.mtime[0];
 	}
 	VectorCopy(cl.viewentoriginnew, cl.viewentoriginold);
@@ -737,15 +715,24 @@ void CL_BitProfile_f(void)
 
 void CL_EntityUpdateSetup(void)
 {
-	memset(entkill, 1, MAX_EDICTS);
 }
 
 void CL_EntityUpdateEnd(void)
 {
 	int i;
+	// disable entities that disappeared this frame
 	for (i = 1;i < MAX_EDICTS;i++)
-		if (entkill[i])
-			cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
+	{
+		// clear only the entities that were active last frame but not this
+		// frame, don't waste time clearing all entities (which would cause
+		// cache misses)
+		if (entlife[i])
+		{
+			entlife[i]--;
+			if (!entlife[i])
+				cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
+		}
+	}
 }
 
 /*
@@ -1013,7 +1000,6 @@ void CL_ParseServerMessage (void)
 	MSG_BeginReading ();
 
 	entitiesupdated = false;
-	CL_EntityUpdateSetup();
 
 	while (1)
 	{
@@ -1040,7 +1026,8 @@ void CL_ParseServerMessage (void)
 			cmdlogname[cmdindex] = temp;
 			SHOWNET("fast update");
 			if (cls.signon == SIGNONS - 1)
-			{	// first update is the final signon stage
+			{
+				// first update is the final signon stage
 				cls.signon = SIGNONS;
 				CL_SignonReply ();
 			}
@@ -1088,8 +1075,13 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_time:
-			// handle old protocols which do not have entity update ranges
-			entitiesupdated = true;
+			if (!entitiesupdated)
+			{
+				// this is a new frame, we'll be seeing entities,
+				// so prepare for entity updates
+				CL_EntityUpdateSetup();
+				entitiesupdated = true;
+			}
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();
 			break;
@@ -1309,7 +1301,8 @@ void CL_ParseServerMessage (void)
 			break;
 		case svc_entities:
 			if (cls.signon == SIGNONS - 1)
-			{	// first update is the final signon stage
+			{
+				// first update is the final signon stage
 				cls.signon = SIGNONS;
 				CL_SignonReply ();
 			}
