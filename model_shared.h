@@ -515,8 +515,6 @@ typedef struct model_s
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
 	void(*Draw)(struct entity_render_s *ent);
-	// draw a fake shadow for the model
-	void(*DrawFakeShadow)(struct entity_render_s *ent);
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 	// draw the lighting on a model (through stencil)

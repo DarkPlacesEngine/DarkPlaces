@@ -267,7 +267,6 @@ void Mod_BuildAliasSkinsFromSkinFiles(aliasskin_t *skin, skinfile_t *skinfile, c
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
 extern void R_Model_Alias_Draw(entity_render_t *ent);
-extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void Mod_IDP0_Load(model_t *mod, void *buffer)
@@ -304,7 +303,6 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliastype = ALIASTYPE_ALIAS;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 
@@ -607,7 +605,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliastype = ALIASTYPE_ALIAS;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 
@@ -828,7 +825,6 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliastype = ALIASTYPE_ALIAS;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
-	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 	loadmodel->flags = 0;
@@ -926,7 +922,6 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 
 extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
 extern void R_Model_Zymotic_Draw(entity_render_t *ent);
-extern void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
@@ -945,7 +940,6 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliastype = ALIASTYPE_ZYM;
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Zymotic_Draw;
-	loadmodel->DrawFakeShadow = NULL;//R_Model_Zymotic_DrawFakeShadow;
 	loadmodel->DrawShadowVolume = NULL;//R_Model_Zymotic_DrawShadowVolume;
 	loadmodel->DrawLight = NULL;//R_Model_Zymotic_DrawLight;
 

@@ -54,7 +54,6 @@ unsigned short d_lightstylevalue[256];
 
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
-cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "0"};
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
@@ -248,7 +247,6 @@ void GL_Main_Init(void)
 	Cmd_AddCommand("timerefresh", R_TimeRefresh_f);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
-	Cvar_RegisterVariable(&r_shadows);
 	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_speeds);
 	Cvar_RegisterVariable(&r_fullbrights);
@@ -506,25 +504,6 @@ void R_DrawModels(void)
 			else
 				R_DrawNoModel(ent);
 		}
-	}
-}
-
-void R_DrawFakeShadows(void)
-{
-	int i;
-	entity_render_t *ent;
-
-	ent = &cl_entities[0].render;
-	if (ent->model && ent->model->DrawFakeShadow)
-		ent->model->DrawFakeShadow(ent);
-
-	if (!r_drawentities.integer)
-		return;
-	for (i = 0;i < r_refdef.numentities;i++)
-	{
-		ent = r_refdef.entities[i];
-		if ((ent->flags & RENDER_SHADOW) && ent->model && ent->model->DrawFakeShadow)
-			ent->model->DrawFakeShadow(ent);
 	}
 }
 
@@ -922,12 +901,6 @@ void R_RenderView (void)
 
 	R_DrawModels();
 	R_TimeReport("models");
-
-	if (r_shadows.integer == 1 && !r_shadow_realtime_world.integer)
-	{
-		R_DrawFakeShadows();
-		R_TimeReport("fakeshadow");
-	}
 
 	if (r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer)
 	{

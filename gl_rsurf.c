@@ -30,7 +30,6 @@ static float floatblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHav
 static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
 cvar_t r_ambient = {0, "r_ambient", "0"};
-cvar_t r_vertexsurfaces = {0, "r_vertexsurfaces", "0"};
 cvar_t r_dlightmap = {CVAR_SAVE, "r_dlightmap", "1"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
@@ -1357,21 +1356,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 		if (fogenabled)
 			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
-	else if (r_vertexsurfaces.integer)
-	{
-		// opaque vertex shaded from lightmap
-		for (chain = surfchain;(surf = *chain) != NULL;chain++)
-			if (surf->visframe == r_framecount)
-				RSurfShader_Wall_Pass_BaseVertex(ent, surf, texture, texture->rendertype, texture->currentalpha);
-		if (texture->skin.glow)
-			for (chain = surfchain;(surf = *chain) != NULL;chain++)
-				if (surf->visframe == r_framecount)
-					RSurfShader_Wall_Pass_Glow(ent, surf, texture, texture->rendertype, texture->currentalpha);
-		if (fogenabled)
-			for (chain = surfchain;(surf = *chain) != NULL;chain++)
-				if (surf->visframe == r_framecount)
-					RSurfShader_Wall_Pass_Fog(ent, surf, texture, texture->rendertype, texture->currentalpha);
-	}
 	else
 	{
 		// opaque lightmapped
@@ -1502,7 +1486,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 			{
 				c_faces++;
 				surf->visframe = r_framecount;
-				if (surf->cached_dlight && surf->lightmaptexture != NULL && !r_vertexsurfaces.integer)
+				if (surf->cached_dlight && surf->lightmaptexture != NULL)
 					R_BuildLightMap(ent, surf);
 			}
 		}
@@ -2078,12 +2062,6 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	}
 }
 
-/*
-void R_Q3BSP_DrawFakeShadow(entity_render_t *ent)
-{
-}
-*/
-
 void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
 	int i;
@@ -2168,7 +2146,6 @@ void GL_Surf_Init(void)
 		dlightdivtable[i] = 4194304 / (i << 7);
 
 	Cvar_RegisterVariable(&r_ambient);
-	Cvar_RegisterVariable(&r_vertexsurfaces);
 	Cvar_RegisterVariable(&r_dlightmap);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_testvis);
