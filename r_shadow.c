@@ -2,6 +2,13 @@
 #include "quakedef.h"
 #include "r_shadow.h"
 
+#define SHADOWSTAGE_NONE 0
+#define SHADOWSTAGE_STENCIL 1
+#define SHADOWSTAGE_LIGHT 2
+#define SHADOWSTAGE_ERASESTENCIL 3
+
+int r_shadowstage = SHADOWSTAGE_NONE;
+
 mempool_t *r_shadow_mempool;
 
 int maxshadowelements;
@@ -15,12 +22,12 @@ rtexture_t *r_shadow_normalscubetexture;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_blankbumptexture;
 
-cvar_t r_shadow1 = {0, "r_shadow1", "16"};
-cvar_t r_shadow2 = {0, "r_shadow2", "2"};
-cvar_t r_shadow3 = {0, "r_shadow3", "65536"};
-cvar_t r_shadow4 = {0, "r_shadow4", "1"};
+cvar_t r_shadow1 = {0, "r_shadow1", "2"};
+cvar_t r_shadow2 = {0, "r_shadow2", "0"};
+cvar_t r_shadow3 = {0, "r_shadow3", "32768"};
+cvar_t r_shadow4 = {0, "r_shadow4", "0"};
 cvar_t r_shadow5 = {0, "r_shadow5", "0"};
-cvar_t r_shadow6 = {0, "r_shadow6", "1"};
+cvar_t r_shadow6 = {0, "r_shadow6", "0"};
 cvar_t r_light_realtime = {0, "r_light_realtime", "0"};
 cvar_t r_light_quality = {0, "r_light_quality", "1"};
 cvar_t r_light_gloss = {0, "r_light_gloss", "0"};
@@ -74,7 +81,7 @@ void R_Shadow_Init(void)
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
 
-void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance, int visiblevolume)
+void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance)
 {
 	int i, *e, *n, *out, tris;
 	float *v0, *v1, *v2, temp[3], f;
@@ -262,19 +269,15 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 			}
 		}
 	}
-	R_Shadow_RenderVolume(numverts * 2, tris, shadowelements, visiblevolume);
+	R_Shadow_RenderVolume(numverts * 2, tris, shadowelements);
 }
 
-void R_Shadow_RenderVolume(int numverts, int numtris, int *elements, int visiblevolume)
+void R_Shadow_RenderVolume(int numverts, int numtris, int *elements)
 {
+	if (!numverts || !numtris)
+		return;
 	// draw the volume
-	if (visiblevolume)
-	{
-		//qglDisable(GL_CULL_FACE);
-		R_Mesh_Draw(numverts, numtris, elements);
-		//qglEnable(GL_CULL_FACE);
-	}
-	else
+	if (r_shadowstage == SHADOWSTAGE_STENCIL)
 	{
 		// increment stencil if backface is behind depthbuffer
 		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
@@ -285,6 +288,8 @@ void R_Shadow_RenderVolume(int numverts, int numtris, int *elements, int visible
 		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
 		R_Mesh_Draw(numverts, numtris, elements);
 	}
+	else
+		R_Mesh_Draw(numverts, numtris, elements);
 }
 
 float r_shadow_atten1, r_shadow_atten2, r_shadow_atten5;
@@ -305,12 +310,10 @@ static void R_Shadow_Make3DTextures(void)
 				v[0] = (x + 0.5f) * (2.0f / (float) ATTEN3DSIZE) - 1.0f;
 				v[1] = (y + 0.5f) * (2.0f / (float) ATTEN3DSIZE) - 1.0f;
 				v[2] = (z + 0.5f) * (2.0f / (float) ATTEN3DSIZE) - 1.0f;
-				length = sqrt(DotProduct(v, v));
-				if (DotProduct(v, v) < 1)
-					intensity = (((r_shadow_atten1 / (length*length + r_shadow_atten5)) - (r_shadow_atten1 * r_shadow_atten2))) / 256.0f;
-				else
-					intensity = 0;
-				ilen = 127.0f * bound(0, intensity, 1) / length;
+				intensity = 1.0f - sqrt(DotProduct(v, v));
+				if (intensity > 0)
+					intensity *= intensity;
+				ilen = 127.0f * bound(0, intensity * r_shadow_atten1, 1) / sqrt(DotProduct(v, v));
 				data[z][y][x][0] = 128.0f + ilen * v[0];
 				data[z][y][x][1] = 128.0f + ilen * v[1];
 				data[z][y][x][2] = 128.0f + ilen * v[2];
@@ -404,18 +407,18 @@ static void R_Shadow_MakeTextures(void)
 			v[0] = (x + 0.5f) * (2.0f / 128.0f) - 1.0f;
 			v[1] = (y + 0.5f) * (2.0f / 128.0f) - 1.0f;
 			v[2] = 0;
-			if (DotProduct(v, v) < 1)
-				intensity = (((r_shadow_atten1 / (DotProduct(v, v)+r_shadow_atten5)) - (r_shadow_atten1 * r_shadow_atten2))) / 256.0f;
-			else
-				intensity = 0;
-			d = bound(0, intensity, 255) / sqrt(DotProduct(v, v));
+			intensity = 1.0f - sqrt(DotProduct(v, v));
+			if (intensity > 0)
+				intensity *= intensity;
+			intensity = bound(0, intensity * r_shadow_atten1 * 256.0f, 255.0f);
+			d = bound(0, intensity, 255);
 			data[0][y][x][0] = d;
 			data[0][y][x][1] = d;
 			data[0][y][x][2] = d;
-			data[0][y][x][3] = 255;
+			data[0][y][x][3] = d;
 		}
 	}
-	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA | TEXF_MIPMAP, NULL);
 	R_Shadow_Make3DTextures();
 }
 
@@ -441,6 +444,7 @@ void R_Shadow_Stage_Begin(void)
 	m.blendfunc2 = GL_ZERO;
 	R_Mesh_State(&m);
 	GL_Color(0, 0, 0, 1);
+	r_shadowstage = SHADOWSTAGE_NONE;
 }
 
 void R_Shadow_Stage_ShadowVolumes(void)
@@ -458,6 +462,9 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_ALWAYS, 0, 0xFF);
+	qglEnable(GL_CULL_FACE);
+	qglEnable(GL_DEPTH_TEST);
+	r_shadowstage = SHADOWSTAGE_STENCIL;
 }
 
 void R_Shadow_Stage_Light(void)
@@ -478,11 +485,33 @@ void R_Shadow_Stage_Light(void)
 	// only draw light where this geometry was already rendered AND the
 	// stencil is 0 (non-zero means shadow)
 	qglStencilFunc(GL_EQUAL, 0, 0xFF);
+	qglEnable(GL_CULL_FACE);
+	qglEnable(GL_DEPTH_TEST);
+	r_shadowstage = SHADOWSTAGE_LIGHT;
+}
+
+void R_Shadow_Stage_EraseShadowVolumes(void)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	R_Mesh_TextureState(&m);
+	GL_Color(1, 1, 1, 1);
+	qglColorMask(0, 0, 0, 0);
+	qglDisable(GL_BLEND);
+	qglDepthMask(0);
+	qglDepthFunc(GL_LESS);
+	qglClearStencil(0);
+	qglClear(GL_STENCIL_BUFFER_BIT);
+	qglEnable(GL_STENCIL_TEST);
+	qglStencilOp(GL_ZERO, GL_KEEP, GL_KEEP);
+	qglStencilFunc(GL_NOTEQUAL, 0, 0xFF);
+	qglDisable(GL_CULL_FACE);
+	qglDisable(GL_DEPTH_TEST);
+	r_shadowstage = SHADOWSTAGE_ERASESTENCIL;
 }
 
 void R_Shadow_Stage_End(void)
 {
-	rmeshstate_t m;
 	// attempt to restore state to what Mesh_State thinks it is
 	qglDisable(GL_BLEND);
 	qglBlendFunc(GL_ONE, GL_ZERO);
@@ -494,31 +523,25 @@ void R_Shadow_Stage_End(void)
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_ALWAYS, 0, 0xFF);
+	qglEnable(GL_CULL_FACE);
+	qglEnable(GL_DEPTH_TEST);
+	r_shadowstage = SHADOWSTAGE_NONE;
 }
 
-void R_Shadow_GenTexCoords_Attenuation2D(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const vec3_t relativelightorigin, float lightradius)
+void R_Shadow_GenTexCoords_Attenuation2D1D(float *out2d, float *out1d, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, float lightradius)
 {
 	int i;
 	float lightvec[3], iradius;
 	iradius = 0.5f / lightradius;
-	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, out += 4)
+	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out2d += 4, out1d += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightvec);
-		out[0] = 0.5f + DotProduct(svectors, lightvec) * iradius;
-		out[1] = 0.5f + DotProduct(tvectors, lightvec) * iradius;
-	}
-}
-
-void R_Shadow_GenTexCoords_Attenuation1D(float *out, int numverts, const float *vertex, const float *normals, const vec3_t relativelightorigin, float lightradius)
-{
-	int i;
-	float lightvec[3], iradius;
-	iradius = 0.5f / lightradius;
-	for (i = 0;i < numverts;i++, vertex += 4, normals += 4, out += 4)
-	{
-		VectorSubtract(vertex, relativelightorigin, lightvec);
-		out[0] = 0.5f + DotProduct(normals, lightvec) * iradius;
-		out[1] = 0.5f;
+		out2d[0] = 0.5f + DotProduct(svectors, lightvec) * iradius;
+		out2d[1] = 0.5f + DotProduct(tvectors, lightvec) * iradius;
+		out2d[2] = 0;
+		out1d[0] = 0.5f + DotProduct(normals, lightvec) * iradius;
+		out1d[1] = 0.5f;
+		out1d[2] = 0;
 	}
 }
 
@@ -530,40 +553,16 @@ void R_Shadow_GenTexCoords_Diffuse_Attenuation3D(float *out, int numverts, const
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightvec);
-		if (r_shadow6.integer != 0)
-		{
-			VectorClear(lightvec);
-			if (r_shadow6.integer > 0)
-				lightvec[(r_shadow6.integer - 1) % 3] = 64;
-			else
-				lightvec[((-r_shadow6.integer) - 1) % 3] = -64;
-		}
-		if (r_shadow4.integer & 8)
-			lightvec[0] = -lightvec[0];
-		if (r_shadow4.integer & 16)
-			lightvec[1] = -lightvec[1];
-		if (r_shadow4.integer & 32)
-			lightvec[2] = -lightvec[2];
-		if (r_shadow4.integer & 1)
-			out[0] = 0.5f - DotProduct(svectors, lightvec) * iradius;
-		else
-			out[0] = 0.5f + DotProduct(svectors, lightvec) * iradius;
-		if (r_shadow4.integer & 2)
-			out[1] = 0.5f - DotProduct(tvectors, lightvec) * iradius;
-		else
-			out[2] = 0.5f + DotProduct(tvectors, lightvec) * iradius;
-		if (r_shadow4.integer & 4)
-			out[2] = 0.5f - DotProduct(normals, lightvec) * iradius;
-		else
-			out[2] = 0.5f + DotProduct(normals, lightvec) * iradius;
+		out[0] = 0.5f + DotProduct(svectors, lightvec) * iradius;
+		out[1] = 0.5f + DotProduct(tvectors, lightvec) * iradius;
+		out[2] = 0.5f + DotProduct(normals, lightvec) * iradius;
 	}
 }
 
-void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, float lightradius)
+void R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin)
 {
 	int i;
 	float lightdir[3], iradius;
-	iradius = 0.5f / lightradius;
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightdir);
@@ -595,11 +594,10 @@ void R_Shadow_GenTexCoords_Specular_Attenuation3D(float *out, int numverts, cons
 	}
 }
 
-void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin, float lightradius)
+void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out, int numverts, const float *vertex, const float *svectors, const float *tvectors, const float *normals, const vec3_t relativelightorigin, const vec3_t relativeeyeorigin)
 {
 	int i;
 	float lightdir[3], eyedir[3], halfdir[3], lightdirlen, ilen, iradius;
-	iradius = 0.5f / lightradius;
 	for (i = 0;i < numverts;i++, vertex += 4, svectors += 4, tvectors += 4, normals += 4, out += 4)
 	{
 		VectorSubtract(vertex, relativelightorigin, lightdir);
@@ -617,61 +615,155 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out, int numverts, cons
 void R_Shadow_GenTexCoords_LightCubeMap(float *out, int numverts, const float *vertex, const vec3_t relativelightorigin)
 {
 	int i;
+	// FIXME: this needs to be written
+	// this code assumes the vertices are in worldspace (a false assumption)
 	for (i = 0;i < numverts;i++, vertex += 4, out += 4)
 		VectorSubtract(vertex, relativelightorigin, out);
 }
 
 void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, rtexture_t *basetexture, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
-	float f;
+	int mult;
+	float scale, colorscale;
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	if (!bumptexture)
 		bumptexture = r_shadow_blankbumptexture;
-	f = 1.0f / r_shadow3.value;
+	// colorscale accounts for how much we multiply the brightness during combine
 	if (r_light_quality.integer == 1)
 	{
-		// 4 texture 3D path, two pass
-		GL_Color(1,1,1,1);
-		//lightcolor[0] * f, lightcolor[1] * f, lightcolor[2] * f, 1);
-		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-		memcpy(varray_texcoord[2], texcoords, numverts * sizeof(float[4]));
-		if (r_light_gloss.integer != 2)
-		{
-			m.tex[0] = R_GetTexture(bumptexture);
-			m.tex3d[1] = R_GetTexture(r_shadow_normalsattenuationtexture);
-			m.tex[2] = R_GetTexture(basetexture);
-			m.texcubemap[3] = R_GetTexture(lightcubemap);
-			m.texcombinergb[0] = GL_REPLACE;
-			m.texcombinergb[1] = GL_DOT3_RGB_ARB;
-			m.texcombinergb[2] = GL_MODULATE;
-			m.texcombinergb[3] = GL_MODULATE;
-			m.texrgbscale[2] = 2;
-			R_Mesh_TextureState(&m);
-			R_Shadow_GenTexCoords_Diffuse_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, lightradius);
-			if (m.texcubemap[3])
-				R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[3], numverts, varray_vertex, relativelightorigin);
-			R_Mesh_Draw(numverts, numtriangles, elements);
-		}
-		if (r_light_gloss.integer && glosstexture)
-		{
-			m.tex[0] = R_GetTexture(bumptexture);
-			m.tex3d[1] = R_GetTexture(r_shadow_normalsattenuationtexture);
-			m.tex[2] = R_GetTexture(glosstexture);
-			m.texcubemap[3] = R_GetTexture(lightcubemap);
-			m.texcombinergb[0] = GL_REPLACE;
-			m.texcombinergb[1] = GL_DOT3_RGB_ARB;
-			m.texcombinergb[2] = GL_MODULATE;
-			m.texcombinergb[3] = GL_MODULATE;
-			m.texrgbscale[2] = 2;
-			R_Mesh_TextureState(&m);
-			R_Shadow_GenTexCoords_Specular_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin, lightradius);
-			R_Mesh_Draw(numverts, numtriangles, elements);
-		}
+		if (r_textureunits.integer >= 4)
+			colorscale = r_colorscale * 0.125f / r_shadow3.value;
+		else
+			colorscale = r_colorscale * 0.5f / r_shadow3.value;
 	}
 	else
+		colorscale = r_colorscale * 0.5f / r_shadow3.value;
+	// limit mult to 64 for sanity sake
+	for (mult = 1, scale = ixtable[mult];mult < 64 && (lightcolor[0] * scale * colorscale > 1 || lightcolor[1] * scale * colorscale > 1 || lightcolor[2] * scale * colorscale > 1);mult++, scale = ixtable[mult]);
+	colorscale *= scale;
+	for (;mult > 0;mult--)
 	{
-		//R_Mesh_TextureState(&m);
+		if (r_light_quality.integer == 1)
+		{
+			if (r_textureunits.integer >= 4)
+			{
+				// 4 texture 3D path, two pass
+				m.tex[0] = R_GetTexture(bumptexture);
+				m.tex3d[1] = R_GetTexture(r_shadow_normalsattenuationtexture);
+				m.tex[2] = R_GetTexture(basetexture);
+				m.texcubemap[3] = R_GetTexture(lightcubemap);
+				m.tex[3] = R_GetTexture(r_notexture);
+				m.texcombinergb[0] = GL_REPLACE;
+				m.texcombinergb[1] = GL_DOT3_RGB_ARB;
+				m.texcombinergb[2] = GL_MODULATE;
+				m.texcombinergb[3] = GL_MODULATE;
+				m.texrgbscale[1] = 2;
+				m.texrgbscale[3] = 4;
+				R_Mesh_TextureState(&m);
+				GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				memcpy(varray_texcoord[2], texcoords, numverts * sizeof(float[4]));
+				if (lightcubemap)
+					R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[3], numverts, varray_vertex, relativelightorigin);
+				else
+				{
+					qglActiveTexture(GL_TEXTURE3_ARB);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_PRIMARY_COLOR_ARB);
+				}
+				R_Shadow_GenTexCoords_Diffuse_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, lightradius);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				if (!lightcubemap)
+				{
+					qglActiveTexture(GL_TEXTURE3_ARB);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+				}
+				if (r_light_gloss.integer && glosstexture)
+				{
+					m.tex[2] = R_GetTexture(glosstexture);
+					R_Mesh_TextureState(&m);
+					R_Shadow_GenTexCoords_Specular_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, relativeeyeorigin, lightradius);
+					if (!lightcubemap)
+					{
+						qglActiveTexture(GL_TEXTURE3_ARB);
+						qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_PRIMARY_COLOR_ARB);
+					}
+					R_Mesh_Draw(numverts, numtriangles, elements);
+					if (!lightcubemap)
+					{
+						qglActiveTexture(GL_TEXTURE3_ARB);
+						qglTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
+					}
+				}
+			}
+			else
+			{
+				// 2 texture 3D path, four pass
+				m.tex[0] = R_GetTexture(bumptexture);
+				m.tex3d[1] = R_GetTexture(r_shadow_normalsattenuationtexture);
+				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+				m.texalphascale[1] = 2;
+				R_Mesh_TextureState(&m);
+				qglColorMask(0,0,0,1);
+				qglDisable(GL_BLEND);
+				GL_Color(1,1,1,1);
+				memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+				R_Shadow_GenTexCoords_Diffuse_Attenuation3D(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, lightradius);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+
+				m.tex[0] = R_GetTexture(basetexture);
+				m.tex3d[1] = 0;
+				m.texcubemap[1] = R_GetTexture(lightcubemap);
+				m.texcombinergb[1] = GL_MODULATE;
+				m.texrgbscale[1] = 1;
+				m.texalphascale[1] = 1;
+				R_Mesh_TextureState(&m);
+				qglColorMask(1,1,1,1);
+				qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+				qglEnable(GL_BLEND);
+				GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
+				if (lightcubemap)
+					R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[1], numverts, varray_vertex, relativelightorigin);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+			}
+		}
+		else
+		{
+			// 2 texture no3D path, six pass
+			m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
+			m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+			R_Mesh_TextureState(&m);
+			qglColorMask(0,0,0,1);
+			qglDisable(GL_BLEND);
+			GL_Color(1,1,1,1);
+			R_Shadow_GenTexCoords_Attenuation2D1D(varray_texcoord[0], varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin, lightradius);
+			R_Mesh_Draw(numverts, numtriangles, elements);
+
+			m.tex[0] = R_GetTexture(bumptexture);
+			m.tex[1] = 0;
+			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
+			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+			m.texalphascale[1] = 2;
+			R_Mesh_TextureState(&m);
+			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
+			qglEnable(GL_BLEND);
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Mesh_Draw(numverts, numtriangles, elements);
+
+			m.tex[0] = R_GetTexture(basetexture);
+			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			m.texcombinergb[1] = GL_MODULATE;
+			m.texrgbscale[1] = 1;
+			m.texalphascale[1] = 1;
+			R_Mesh_TextureState(&m);
+			qglColorMask(1,1,1,1);
+			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+			GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
+			if (lightcubemap)
+				R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[1], numverts, varray_vertex, relativelightorigin);
+			R_Mesh_Draw(numverts, numtriangles, elements);
+		}
 	}
 }
 

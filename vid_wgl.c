@@ -809,14 +809,21 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
 	HGLRC baseRC;
 	int CenterX, CenterY;
 	const char *gldrivername;
-	
+
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised\n");
 
+	// if stencil is enabled, ask for alpha too
 	if (stencil)
+	{
 		pfd.cStencilBits = 8;
+		pfd.cAlphaBits = 8;
+	}
 	else
+	{
 		pfd.cStencilBits = 0;
+		pfd.cAlphaBits = 0;
+	}
 
 	gldrivername = "opengl32.dll";
 	i = COM_CheckParm("-gl_driver");

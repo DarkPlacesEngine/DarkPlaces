@@ -1304,6 +1304,7 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 		RSurfShader_Wall_Pass_Fog(ent, surf);
 }
 
+extern cvar_t r_shadows;
 static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
 {
 	const msurface_t *surf;
@@ -1319,6 +1320,13 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 				R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->surfaces);
 			}
 		}
+	}
+	else if (r_shadows.integer == 3 && cl.worldmodel->numlights)
+	{
+		// opaque base lighting
+		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, firstsurf);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, firstsurf);
 	}
 	else if (r_vertexsurfaces.integer)
 	{
@@ -1365,53 +1373,9 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 	}
 }
 
-static void RSurfShader_Wall_Lightmap_BaseLighting(const entity_render_t *ent, const texture_t *texture, const msurface_t *firstsurf)
-{
-	const msurface_t *surf;
-	if (cl.worldmodel->numlights)
-		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, firstsurf);
-	else if (r_vertexsurfaces.integer)
-	{
-		// opaque vertex shaded from lightmap
-		for (surf = firstsurf;surf;surf = surf->texturechain)
-			if (surf->visframe == r_framecount)
-				RSurfShader_Wall_Pass_BaseVertex(ent, surf);
-		if (texture->glowtexture)
-			for (surf = firstsurf;surf;surf = surf->texturechain)
-				if (surf->visframe == r_framecount)
-					RSurfShader_Wall_Pass_Glow(ent, surf);
-	}
-	else
-	{
-		// opaque lightmapped
-		if (r_textureunits.integer >= 2)
-		{
-			if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, firstsurf);
-			else
-			{
-				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, firstsurf);
-				if (r_detailtextures.integer)
-					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
-			}
-		}
-		else
-		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, firstsurf);
-			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, firstsurf);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, firstsurf);
-		}
-		if (!r_dlightmap.integer && !(ent->effects & EF_FULLBRIGHT))
-			RSurfShader_OpaqueWall_Pass_Light(ent, texture, firstsurf);
-		if (texture->glowtexture)
-			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, firstsurf);
-	}
-}
-
-Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap, RSurfShader_Wall_Lightmap_BaseLighting}, SHADERFLAGS_NEEDLIGHTMAP};
-Cshader_t Cshader_water = {{NULL, RSurfShader_Water, NULL}, 0};
-Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL, NULL}, 0};
+Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap}, SHADERFLAGS_NEEDLIGHTMAP};
+Cshader_t Cshader_water = {{NULL, RSurfShader_Water}, 0};
+Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL}, 0};
 
 int Cshader_count = 3;
 Cshader_t *Cshaders[3] =
@@ -1421,6 +1385,7 @@ Cshader_t *Cshaders[3] =
 	&Cshader_sky
 };
 
+extern cvar_t r_shadows;
 void R_PrepareSurfaces(entity_render_t *ent)
 {
 	int i, texframe, numsurfaces, *surfacevisframes;
@@ -1455,7 +1420,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 		}
 	}
 
-	if (r_dynamic.integer)
+	if (r_dynamic.integer && r_shadows.integer != 3)
 		R_MarkLights(ent);
 
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
@@ -1636,16 +1601,16 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 #if WORLDNODECULLBACKFACES
 			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 			{
-				if ((surf->flags & SURF_PLANEBACK) && R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+				if ((surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
 					surfacevisframes[i] = r_framecount;
 			}
 			else
 			{
-				if (!(surf->flags & SURF_PLANEBACK) && R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+				if (!(surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
 					surfacevisframes[i] = r_framecount;
 			}
 #else
-			if (R_NotCulledBox (surf->poly_mins, surf->poly_maxs))
+			if (!R_CullBox (surf->poly_mins, surf->poly_maxs))
 				surfacevisframes[i] = r_framecount;
 #endif
 		}
@@ -1697,8 +1662,8 @@ loc0:
 		if (leaf->worldnodeframe != r_framecount)
 		{
 			leaf->worldnodeframe = r_framecount;
-			// FIXME: R_NotCulledBox is absolute, should be done relative
-			if (leaf->pvsframe == ent->model->pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+			// FIXME: R_CullBox is absolute, should be done relative
+			if (leaf->pvsframe == ent->model->pvsframecount && !R_CullBox(leaf->mins, leaf->maxs))
 			{
 				p->visframe = r_framecount;
 				pstack[portalstack++] = p;
@@ -1775,8 +1740,8 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 				if (leaf->worldnodeframe != r_framecount)
 				{
 					leaf->worldnodeframe = r_framecount;
-					// FIXME: R_NotCulledBox is absolute, should be done relative
-					if (leaf->pvsframe == ent->model->pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+					// FIXME: R_CullBox is absolute, should be done relative
+					if (leaf->pvsframe == ent->model->pvsframecount && !R_CullBox(leaf->mins, leaf->maxs))
 						leafstack[leafstackpos++] = leaf;
 				}
 			}
@@ -1833,7 +1798,7 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 R_DrawWorld
 =============
 */
-void R_DrawWorld (entity_render_t *ent, int baselighting)
+void R_DrawWorld (entity_render_t *ent)
 {
 	vec3_t modelorg;
 	mleaf_t *viewleaf;
@@ -1851,10 +1816,7 @@ void R_DrawWorld (entity_render_t *ent, int baselighting)
 		R_PortalWorldNode (ent, viewleaf);
 	R_PrepareSurfaces(ent);
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
-	if (baselighting)
-		R_DrawSurfaces(ent, SHADERSTAGE_BASELIGHTING);
-	else
-		R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
+	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
 }
 
 void R_Model_Brush_DrawSky (entity_render_t *ent)
@@ -1872,28 +1834,7 @@ void R_Model_Brush_Draw (entity_render_t *ent)
 	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
 }
 
-void R_Model_Brush_DrawBaseLighting (entity_render_t *ent)
-{
-	c_bmodels++;
-	if (ent != &cl_entities[0].render)
-		R_PrepareBrushModel(ent);
-	R_DrawSurfaces(ent, SHADERSTAGE_BASELIGHTING);
-	/*
-	shadowmesh_t *mesh;
-	if (!cl.worldmodel->numlights)
-		GL_Color(0.3, 0.3, 0.3, 1);
-	for (mesh = ent->model->shadowmesh;mesh;mesh = mesh->next)
-	{
-		R_Mesh_ResizeCheck(mesh->numverts);
-		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->elements);
-	}
-	if (!cl.worldmodel->numlights)
-		GL_Color(0, 0, 0, 1);
-	*/
-}
-
-void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
+void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
 #if 1
 	float projectdistance, temp[3];
@@ -1907,7 +1848,7 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 		{
 			R_Mesh_ResizeCheck(mesh->numverts * 2);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->elements, mesh->neighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
+			R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->elements, mesh->neighbors, relativelightorigin, lightradius, projectdistance);
 		}
 	}
 #else
@@ -1935,7 +1876,7 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 					{
 						R_Mesh_ResizeCheck(mesh->numverts * 2);
 						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
+						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, lightradius, projectdistance);
 					}
 				}
 			}
@@ -1982,73 +1923,6 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		}
 	}
 }
-
-/*
-extern cvar_t r_shadows;
-void R_DrawBrushModelFakeShadow (entity_render_t *ent)
-{
-	int i;
-	vec3_t relativelightorigin;
-	rmeshstate_t m;
-	mlight_t *sl;
-	rdlight_t *rd;
-	svbspmesh_t *mesh;
-
-	if (r_shadows.integer < 2)
-		return;
-
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_ONE;
-	m.blendfunc2 = GL_ONE;
-	R_Mesh_State(&m);
-	R_Mesh_Matrix(&ent->matrix);
-	GL_Color(0.0125 * r_colorscale, 0.025 * r_colorscale, 0.1 * r_colorscale, 1);
-	if (0)//ent->model == cl.worldmodel)
-	{
-		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
-		{
-			if (d_lightstylevalue[sl->style] > 0 && R_NotCulledBox(sl->shadowvolumemins, sl->shadowvolumemaxs))
-			{
-				for (mesh = sl->shadowvolume;mesh;mesh = mesh->next)
-				{
-					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->elements);
-				}
-			}
-		}
-	}
-	else
-	{
-		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
-		{
-			if (d_lightstylevalue[sl->style] > 0
-			 && ent->maxs[0] >= sl->origin[0] - sl->cullradius
-			 && ent->mins[0] <= sl->origin[0] + sl->cullradius
-			 && ent->maxs[1] >= sl->origin[1] - sl->cullradius
-			 && ent->mins[1] <= sl->origin[1] + sl->cullradius
-			 && ent->maxs[2] >= sl->origin[2] - sl->cullradius
-			 && ent->mins[2] <= sl->origin[2] + sl->cullradius)
-			{
-				Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
-				R_DrawBrushModelShadowVolume (ent, relativelightorigin, sl->cullradius, true);
-			}
-		}
-	}
-	for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
-	{
-		if (ent->maxs[0] >= rd->origin[0] - rd->cullradius
-		 && ent->mins[0] <= rd->origin[0] + rd->cullradius
-		 && ent->maxs[1] >= rd->origin[1] - rd->cullradius
-		 && ent->mins[1] <= rd->origin[1] + rd->cullradius
-		 && ent->maxs[2] >= rd->origin[2] - rd->cullradius
-		 && ent->mins[2] <= rd->origin[2] + rd->cullradius)
-		{
-			Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-			R_DrawBrushModelShadowVolume (ent, relativelightorigin, rd->cullradius, true);
-		}
-	}
-}
-*/
 
 static void gl_surf_start(void)
 {

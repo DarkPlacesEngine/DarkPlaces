@@ -717,7 +717,7 @@ static void CL_RelinkNetworkEntities()
 		{
 			VectorCopy(neworg, v);
 			// hack to make glowing player light shine on their gun
-			if (i == cl.viewentity && !chase_active.integer)
+			if (i == cl.viewentity/* && !chase_active.integer*/)
 				v[2] += 30;
 			CL_AllocDlight (&ent->render, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}

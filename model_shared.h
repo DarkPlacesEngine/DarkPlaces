@@ -245,10 +245,8 @@ typedef struct model_s
 	void(*DrawFakeShadow)(struct entity_render_s *ent);
 
 	// functions used only in shadow volume rendering mode
-	// draw the base lighting for the model (glowing areas, etc)
-	void(*DrawBaseLighting)(struct entity_render_s *ent);
 	// draw a shadow volume for the model based on light source
-	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 	// draw the lighting on a model (through stencil)
 	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor);
 

@@ -35,6 +35,7 @@ typedef struct
 	int tex3d[MAX_TEXTUREUNITS];
 	int texcubemap[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
+	int texalphascale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 	int texcombinergb[MAX_TEXTUREUNITS]; // works with or without combine for some operations
 	int texcombinealpha[MAX_TEXTUREUNITS]; // does nothing without combine
 }

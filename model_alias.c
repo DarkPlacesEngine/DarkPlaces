@@ -211,8 +211,7 @@ static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, int width, int
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
 extern void R_Model_Alias_Draw(entity_render_t *ent);
 extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
-extern void R_Model_Alias_DrawBaseLighting(entity_render_t *ent);
-extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
 void Mod_LoadAliasModel (model_t *mod, void *buffer)
 {
@@ -248,7 +247,6 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
-	loadmodel->DrawBaseLighting = R_Model_Alias_DrawBaseLighting;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 
@@ -572,7 +570,6 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
-	loadmodel->DrawBaseLighting = R_Model_Alias_DrawBaseLighting;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 
@@ -766,8 +763,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
 extern void R_Model_Zymotic_Draw(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent);
-extern void R_Model_Zymotic_DrawBaseLighting(entity_render_t *ent);
-extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
@@ -786,7 +782,6 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Zymotic_Draw;
 	loadmodel->DrawFakeShadow = NULL;//R_Model_Zymotic_DrawFakeShadow;
-	loadmodel->DrawBaseLighting = NULL;//R_Model_Zymotic_DrawBaseLighting;
 	loadmodel->DrawShadowVolume = NULL;//R_Model_Zymotic_DrawShadowVolume;
 	loadmodel->DrawLight = NULL;//R_Model_Zymotic_DrawLight;
 

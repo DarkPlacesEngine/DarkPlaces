@@ -654,9 +654,11 @@ void VID_BuildGLXAttrib(int *attrib, int stencil, int gamma)
 	*attrib++ = GLX_BLUE_SIZE;*attrib++ = 1;
 	*attrib++ = GLX_DOUBLEBUFFER;
 	*attrib++ = GLX_DEPTH_SIZE;*attrib++ = 1;
+	// if stencil is enabled, ask for alpha too
 	if (stencil)
 	{
 		*attrib++ = GLX_STENCIL_SIZE;*attrib++ = 8;
+		*attrib++ = GLX_ALPHA_SIZE;*attrib++ = 1;
 	}
 	if (gamma)
 	{

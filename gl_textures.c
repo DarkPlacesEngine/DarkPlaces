@@ -554,8 +554,7 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 	CHECKGLERROR
 
 	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_S, wrapmode);
-	if (gltexturetypedimensions[texturetype] >= 2)
-		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);
+	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);
 	if (gltexturetypedimensions[texturetype] >= 3)
 		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_R, wrapmode);
 
@@ -621,7 +620,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		{
 			// promote paletted to RGBA, so we only have to worry about RGB and
 			// RGBA in the rest of this code
-			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
+			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->sides * glt->image->bytesperpixel);
 			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, glt->palette);
 			prevbuffer = colorconvertbuffer;
 		}
@@ -655,7 +654,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	for (height = 1;height < glt->height;height <<= 1);
 	for (depth  = 1;depth  < glt->depth ;depth  <<= 1);
 
-	R_MakeResizeBufferBigger(width * height * depth * glt->image->bytesperpixel);
+	R_MakeResizeBufferBigger(width * height * depth * glt->image->sides * glt->image->bytesperpixel);
 
 	if (prevbuffer == NULL)
 	{
@@ -671,21 +670,8 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		{
 			// promote paletted to RGBA, so we only have to worry about RGB and
 			// RGBA in the rest of this code
-			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth, glt->palette);
+			Image_Copy8bitRGBA(prevbuffer, colorconvertbuffer, glt->width * glt->height * glt->depth * glt->image->sides, glt->palette);
 			prevbuffer = colorconvertbuffer;
-		}
-
-		if (glt->width != width || glt->height != height || glt->depth != depth)
-		{
-			Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
-			prevbuffer = resizebuffer;
-		}
-
-		// apply picmip/max_size limitations
-		while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
-		{
-			Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
-			prevbuffer = resizebuffer;
 		}
 	}
 
@@ -694,6 +680,21 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	if (glt->flags & TEXF_ALPHA)
 		internalformat = 4;
 
+	// cubemaps contain multiple images and thus get processed a bit differently
+	if (glt->image->texturetype != GLTEXTURETYPE_CUBEMAP)
+	{
+		if (glt->width != width || glt->height != height || glt->depth != depth)
+		{
+			Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
+			prevbuffer = resizebuffer;
+		}
+		// picmip/max_size
+		while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
+		{
+			Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
+			prevbuffer = resizebuffer;
+		}
+	}
 	mip = 0;
 	switch(glt->image->texturetype)
 	{
@@ -747,6 +748,18 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		{
 			prevbuffer = texturebuffer;
 			texturebuffer += width * height * depth * glt->textype->inputbytesperpixel;
+			if (glt->width != width || glt->height != height || glt->depth != depth)
+			{
+				Image_Resample(prevbuffer, glt->width, glt->height, glt->depth, resizebuffer, width, height, depth, glt->image->bytesperpixel, r_lerpimages.integer);
+				prevbuffer = resizebuffer;
+			}
+			// picmip/max_size
+			while (width > glt->image->width || height > glt->image->height || depth > glt->image->depth)
+			{
+				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, glt->image->width, glt->image->height, glt->image->depth, glt->image->bytesperpixel);
+				prevbuffer = resizebuffer;
+			}
+			mip = 0;
 			qglTexImage2D(cubemapside[i], mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			if (glt->flags & TEXF_MIPMAP)

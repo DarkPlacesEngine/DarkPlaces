@@ -291,7 +291,7 @@ typedef struct gltextureunit_s
 {
 	unsigned int t1d, t2d, t3d, tcubemap;
 	unsigned int arrayenabled;
-	float rgbscale;
+	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
 }
@@ -327,6 +327,7 @@ void GL_SetupTextureState(void)
 		unit->t3d = 0;
 		unit->tcubemap = 0;
 		unit->rgbscale = 1;
+		unit->alphascale = 1;
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
 		unit->arrayenabled = false;
@@ -562,6 +563,7 @@ void R_Mesh_Finish(void)
 		if (gl_combine.integer)
 		{
 			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1);CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
 		}
 	}
 	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
@@ -637,7 +639,7 @@ void R_Mesh_MainState(const rmeshstate_t *m)
 void R_Mesh_TextureState(const rmeshstate_t *m)
 {
 	int i, combinergb, combinealpha;
-	float rgbscale;
+	float scale;
 	gltextureunit_t *unit;
 
 	BACKENDACTIVECHECK
@@ -764,14 +766,23 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, (unit->tcubemap = m->texcubemap[i]));CHECKGLERROR
 			}
 		}
-		rgbscale = max(m->texrgbscale[i], 1);
-		if (gl_state.units[i].rgbscale != rgbscale)
+		scale = max(m->texrgbscale[i], 1);
+		if (gl_state.units[i].rgbscale != scale)
 		{
 			if (gl_state.unit != i)
 			{
 				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
 			}
-			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.units[i].rgbscale = rgbscale));CHECKGLERROR
+			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.units[i].rgbscale = scale));CHECKGLERROR
+		}
+		scale = max(m->texalphascale[i], 1);
+		if (gl_state.units[i].alphascale != scale)
+		{
+			if (gl_state.unit != i)
+			{
+				qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
+			}
+			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (gl_state.units[i].alphascale = scale));CHECKGLERROR
 		}
 	}
 }
@@ -823,7 +834,7 @@ void R_ClearScreen(void)
 		// clear to black
 		qglClearColor(0,0,0,0);CHECKGLERROR
 		// clear the screen
-		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);CHECKGLERROR
+		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));CHECKGLERROR
 		// set dithering mode
 		if (gl_dither.integer)
 		{

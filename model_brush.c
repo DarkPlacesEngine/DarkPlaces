@@ -296,12 +296,12 @@ static void Mod_LoadTextures (lump_t *l)
 			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, tx->name);
 		}
 
-		basepixels = NULL;
-		bumppixels = NULL;
-		nmappixels = NULL;
-		glosspixels = NULL;
-		glowpixels = NULL;
-		maskpixels = NULL;
+		basepixels = NULL;basepixels_width = 0;basepixels_height = 0;
+		bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
+		nmappixels = NULL;nmappixels_width = 0;nmappixels_height = 0;
+		glosspixels = NULL;glosspixels_width = 0;glosspixels_height = 0;
+		glowpixels = NULL;glowpixels_width = 0;glowpixels_height = 0;
+		maskpixels = NULL;maskpixels_width = 0;maskpixels_height = 0;
 		detailtexture = NULL;
 
 		// LordHavoc: HL sky textures are entirely different than quake
@@ -331,14 +331,30 @@ static void Mod_LoadTextures (lump_t *l)
 		}
 		else
 		{
-			basepixels = loadimagepixels(tx->name, false, 0, 0);
-			if (basepixels)
+			if ((basepixels = loadimagepixels(tx->name, false, 0, 0)) != NULL)
 			{
-				strcpy(name, tx->name);
-				strcat(name, "_glow");
-				glowpixels = loadimagepixels(name, false, 0, 0);
+				basepixels_width = image_width;
+				basepixels_height = image_height;
 			}
-			else
+			// _luma is supported for tenebrae compatibility
+			// (I think it's a very stupid name, but oh well)
+			if ((glowpixels = loadimagepixels(va("%s_glow", tx->name), false, 0, 0)) != NULL
+			 || (glowpixels = loadimagepixels(va("%s_luma", tx->name), false, 0, 0)) != NULL)
+			{
+				glowpixels_width = image_width;
+				glowpixels_height = image_height;
+			}
+			if ((bumppixels = loadimagepixels(va("%s_bump", tx->name), false, 0, 0)) != NULL)
+			{
+				bumppixels_width = image_width;
+				bumppixels_height = image_height;
+			}
+			if ((glosspixels = loadimagepixels(va("%s_gloss", tx->name), false, 0, 0)) != NULL)
+			{
+				glosspixels_width = image_width;
+				glosspixels_height = image_height;
+			}
+			if (!basepixels)
 			{
 				if (loadmodel->ishlbsp)
 				{
@@ -365,15 +381,18 @@ static void Mod_LoadTextures (lump_t *l)
 							basepixels_height = tx->height;
 							basepixels = Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
 							Image_Copy8bitRGBA(mtdata, basepixels, basepixels_width * basepixels_height, palette_nofullbrights);
-							for (j = 0;j < tx->width*tx->height;j++)
-								if (((qbyte *)&palette_onlyfullbrights[mtdata[j]])[3] > 0) // fullbright
-									break;
-							if (j < tx->width * tx->height)
+							if (!glowpixels)
 							{
-								glowpixels_width = tx->width;
-								glowpixels_height = tx->height;
-								glowpixels = Mem_Alloc(loadmodel->mempool, glowpixels_width * glowpixels_height * 4);
-								Image_Copy8bitRGBA(mtdata, glowpixels, glowpixels_width * glowpixels_height, palette_onlyfullbrights);
+								for (j = 0;j < tx->width*tx->height;j++)
+									if (((qbyte *)&palette_onlyfullbrights[mtdata[j]])[3] > 0) // fullbright
+										break;
+								if (j < tx->width * tx->height)
+								{
+									glowpixels_width = tx->width;
+									glowpixels_height = tx->height;
+									glowpixels = Mem_Alloc(loadmodel->mempool, glowpixels_width * glowpixels_height * 4);
+									Image_Copy8bitRGBA(mtdata, glowpixels, glowpixels_width * glowpixels_height, palette_onlyfullbrights);
+								}
 							}
 						}
 						else
@@ -431,7 +450,7 @@ static void Mod_LoadTextures (lump_t *l)
 		{
 			tx->texture = R_LoadTexture2D (loadmodel->texturepool, tx->name, basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
 			if (nmappixels)
-				tx->nmaptexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", tx->name), basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
+				tx->nmaptexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", tx->name), basepixels_width, basepixels_height, nmappixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
 			if (glosspixels)
 				tx->glosstexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", tx->name), glosspixels_width, glosspixels_height, glosspixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
 			if (glowpixels)
@@ -3511,9 +3530,7 @@ Mod_LoadBrushModel
 */
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
-//extern void R_Model_Brush_DrawFakeShadow(entity_render_t *ent);
-extern void R_Model_Brush_DrawBaseLighting(entity_render_t *ent);
-extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
@@ -3607,7 +3624,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->DrawSky = NULL;
 		mod->Draw = R_Model_Brush_Draw;
 		mod->DrawFakeShadow = NULL;
-		mod->DrawBaseLighting = R_Model_Brush_DrawBaseLighting;
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
 		mod->texturesurfacechains = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(msurface_t *));
