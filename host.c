@@ -56,6 +56,8 @@ cvar_t	slowmo = {0, "slowmo", "1.0"};					// LordHavoc: framerate independent sl
 cvar_t	host_minfps = {CVAR_SAVE, "host_minfps", "10"};		// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
 cvar_t	host_maxfps = {CVAR_SAVE, "host_maxfps", "1000"};		// LordHavoc: framerate upper cap
 
+cvar_t	sv_echobprint = {CVAR_SAVE, "sv_echobprint", "1"};	// print broadcast messages in dedicated mode
+
 cvar_t	sys_ticrate = {CVAR_SAVE, "sys_ticrate","0.05"};
 cvar_t	serverprofile = {0, "serverprofile","0"};
 
@@ -239,6 +241,8 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&host_minfps);
 	Cvar_RegisterVariable (&host_maxfps);
 
+	Cvar_RegisterVariable (&sv_echobprint);
+
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&serverprofile);
 
@@ -339,6 +343,9 @@ void SV_BroadcastPrintf (char *fmt, ...)
 			MSG_WriteByte (&svs.clients[i].message, svc_print);
 			MSG_WriteString (&svs.clients[i].message, string);
 		}
+
+	if (sv_echobprint.integer && cls.state == ca_dedicated)
+		Sys_Printf ("%s", string);
 }
 
 /*
