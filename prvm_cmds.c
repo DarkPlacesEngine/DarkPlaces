@@ -82,6 +82,10 @@ float	clientstate()
 		changelevel(string map)
 		localsound(string sample)
 vector	getmousepos()
+float	gettime()
+		loadfromdata(string data)
+		loadfromfile(string file)
+float	mod(float val, float m)
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -105,7 +109,10 @@ float	drawcharacter(vector position, float character, vector scale, vector rgb, 
 float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
 float	drawpic(vector position, string pic, vector size, vector rgb, float alpha, float flag)
 float	drawfill(vector position, vector size, vector rgb, float alpha, float flag)
-
+		drawsetcliparea(float x, float y, float width, float height)
+		drawresetcliparea()
+vector	getimagesize(string pic)
+		
 
 ==============================================================================
 menu cmd list:
@@ -859,7 +866,7 @@ void VM_find (void)
 		}
 	}
 
-	VM_RETURN_EDICT(sv.edicts);
+	VM_RETURN_EDICT(prog->edicts);
 }
 
 /*
@@ -1066,7 +1073,9 @@ void VM_coredump (void)
 {
 	VM_SAFEPARMCOUNT(0,VM_coredump);
 
-	PRVM_ED_PrintEdicts_f ();
+	Cbuf_AddText("prvm_edicts ");
+	Cbuf_AddText(PRVM_NAME);
+	Cbuf_AddText("\n");
 }
 
 /*
@@ -1224,8 +1233,8 @@ sizebuf_t *VM_WriteDest (void)
 
 	case MSG_ONE:
 		destclient = (int) PRVM_G_FLOAT(OFS_PARM2);
-		if (!sv.active  || destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
-			PRVM_ERROR("VM_clientcommand: %s: invalid client/server is not active !", PRVM_NAME);
+		if (destclient < 0 || destclient >= svs.maxclients || !svs.clients[destclient].active)
+			PRVM_ERROR("VM_clientcommand: %s: invalid client !\n", PRVM_NAME);
 
 		return &svs.clients[destclient].message;
 
@@ -1638,7 +1647,7 @@ void VM_fopen(void)
 	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
 	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
 	{
-		Con_Printf("VM_fopen: dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", filename);
+		Con_Printf("VM_fopen: %s dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", PRVM_NAME, filename);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		return;
 	}
@@ -2065,6 +2074,105 @@ void VM_clientstate(void)
 	PRVM_G_FLOAT(OFS_RETURN) = cls.state;
 }
 
+/*
+=========
+VM_getmousepos
+
+vector	getmousepos()
+=========
+*/
+void VM_getmousepos(void)
+{
+
+	VM_SAFEPARMCOUNT(0,VM_getmousepos);
+	
+	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y;
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
+}
+
+/*
+=========
+VM_gettime
+
+float	gettime(void)
+=========
+*/
+void VM_gettime(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_gettime);
+
+	PRVM_G_FLOAT(OFS_RETURN) = (float) *prog->time;
+}
+
+/*
+=========
+VM_loadfromdata
+
+loadfromdata(string data)
+=========
+*/
+void VM_loadfromdata(void)
+{
+	VM_SAFEPARMCOUNT(1,VM_loadentsfromfile);
+
+	PRVM_ED_LoadFromFile(PRVM_G_STRING(OFS_PARM0));
+}
+
+/*
+=========
+VM_loadfromfile
+
+loadfromfile(string file)
+=========
+*/
+void VM_loadfromfile(void)
+{
+	char *filename;
+	qbyte *data;
+	
+	VM_SAFEPARMCOUNT(1,VM_loadfromfile);
+	
+	filename = PRVM_G_STRING(OFS_PARM0);
+	// .. is parent directory on many platforms
+	// / is parent directory on Amiga
+	// : is root of drive on Amiga (also used as a directory separator on Mac, but / works there too, so that's a bad idea)
+	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
+	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
+	{
+		Con_Printf("VM_loadfromfile: %s dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", PRVM_NAME, filename);
+		PRVM_G_FLOAT(OFS_RETURN) = -4;
+		return;
+	}
+
+	data = FS_LoadFile(va("data/%s", filename), false);
+	if (data == NULL)
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+	
+	PRVM_ED_LoadFromFile(data);
+
+	Mem_Free(data);
+}
+
+
+/*
+=========
+VM_modulo
+
+float	mod(float val, float m)
+=========
+*/
+void VM_modulo(void)
+{
+	int val, m;
+	VM_SAFEPARMCOUNT(2,VM_module);
+
+	val = (int) PRVM_G_FLOAT(OFS_PARM0);
+	m	= (int) PRVM_G_FLOAT(OFS_PARM1);
+
+	PRVM_G_FLOAT(OFS_RETURN) = (float) (val % m);
+}
+
 //=============================================================================
 // Draw builtins (client & menu)
 
@@ -2100,11 +2208,12 @@ void VM_precache_pic(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 	
 	if(!s)
-		PRVM_ERROR ("VM_precache_pic: %s: NULL\n");
+		PRVM_ERROR ("VM_precache_pic: %s: NULL\n", PRVM_NAME);
 
 	VM_CheckEmptyString (s);
 	
-	Draw_CachePic(s); 
+	if(!Draw_CachePic(s))
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetString(""); 
 }
 
 /*
@@ -2253,7 +2362,7 @@ void VM_drawpic(void)
 
 	VM_CheckEmptyString (pic);
 
-	// is pic cached ?
+	// is pic cached ? no function yet for that
 	if(!1)
 	{
 		Con_Printf("VM_drawpic: %s: %s not cached !\n", PRVM_NAME, pic);
@@ -2316,19 +2425,64 @@ void VM_drawfill(void)
 
 /*
 =========
-VM_getmousepos
+VM_drawsetcliparea
 
-vector	getmousepos()
+drawsetcliparea(float x, float y, float width, float height)
 =========
 */
-void VM_getmousepos(void)
+void VM_drawsetcliparea(void)
 {
+	float x,y,w,h;
+	VM_SAFEPARMCOUNT(4,VM_drawsetcliparea);
 
-	VM_SAFEPARMCOUNT(0,VM_getmousepos);
+	x = bound(0,PRVM_G_FLOAT(OFS_PARM0),vid.conwidth);
+	y = bound(0,PRVM_G_FLOAT(OFS_PARM1),vid.conheight);
+	w = bound(0,PRVM_G_FLOAT(OFS_PARM2),x);
+	h = bound(0,PRVM_G_FLOAT(OFS_PARM3),y); 
+
+	DrawQ_SetClipArea(x,y,w,h);
+}
+
+/*
+=========
+VM_drawresetcliparea
+
+drawresetcliparea()
+=========
+*/
+void VM_drawresetcliparea(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_drawresetcliparea);
+
+	DrawQ_ResetClipArea();
+}
+
+/*
+=========
+VM_getimagesize
+
+vector	getimagesize(string pic)
+=========
+*/
+void VM_getimagesize(void)
+{
+	char *p;
+	cachepic_t *pic;
+
+	VM_SAFEPARMCOUNT(1,VM_getimagesize);
 	
-	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x;
-	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y;
-	PRVM_G_VECTOR(OFS_RETURN)[0] = 0;
+	p = PRVM_G_STRING(OFS_PARM0);
+
+	if(!p)
+		PRVM_ERROR("VM_getimagepos: %s passed null picture name !\n", PRVM_NAME);
+	
+	VM_CheckEmptyString (p);
+
+	pic = Draw_CachePic (p);
+
+	PRVM_G_VECTOR(OFS_RETURN)[0] = pic->width;
+	PRVM_G_VECTOR(OFS_RETURN)[1] = pic->height;
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
 void VM_Cmd_Init(void)
@@ -2560,11 +2714,11 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_clcommand,
 	VM_changelevel,
 	VM_localsound,	
-	VM_getmousepos, // 66
-	0,
-	0,
-	0,
-	0,				// 70
+	VM_getmousepos,
+	VM_gettime,
+	VM_loadfromdata,
+	VM_loadfromfile,
+	VM_modulo,		// 70
 	e10,			// 80
 	e10,			// 90
 	e10,			// 100
@@ -2593,10 +2747,10 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_drawcharacter,
 	VM_drawstring,
 	VM_drawpic,
-	VM_drawfill,	// 457
-	0,
-	0,
-	0,				// 460
+	VM_drawfill,	
+	VM_drawsetcliparea,
+	VM_drawresetcliparea,
+	VM_getimagesize,// 460
 	e10,			// 470
 	e10,			// 480
 	e10,			// 490

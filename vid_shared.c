@@ -519,6 +519,27 @@ void IN_PostMove(void)
 	CL_AdjustAngles();
 }
 
+/*
+===========
+IN_DoMove
+===========
+*/
+void IN_ProcessMove(usercmd_t *cmd)
+{
+	// get basic movement from keyboard
+	CL_BaseMove(cmd);
+	
+	// OS independent code
+	IN_PreMove();
+	
+	// allow mice or other external controllers to add to the move
+	IN_Move(cmd);
+	
+	// OS independent code
+	IN_PostMove();
+}
+
+
 void IN_Mouse(usercmd_t *cmd, float mx, float my)
 {
 	int mouselook = (in_mlook.state & 1) || freelook.integer;

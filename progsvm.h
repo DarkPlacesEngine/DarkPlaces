@@ -209,7 +209,6 @@ typedef struct prvm_builtin_mem_s
 */
 #define PRVM_FE_CLASSNAME   8
 #define PRVM_FE_CHAIN		4
-#define PRVM_GE_TIME		2
 #define PRVM_OP_STATE		1
 
 #define	PRVM_MAX_STACK_DEPTH		256
@@ -243,7 +242,9 @@ typedef struct vm_prog_s
 	mfunction_t			*xfunction;
 	int					xstatement;
 
-	prvm_stack_t		stack[PRVM_MAX_STACK_DEPTH];
+	// stacktrace writes into stack[MAX_STACK_DEPTH]
+	// thus increase the array, so depth wont be overwritten
+	prvm_stack_t		stack[PRVM_MAX_STACK_DEPTH+1];
 	int					depth;
 	
 	int					localstack[PRVM_LOCALSTACK_SIZE];
@@ -269,7 +270,10 @@ typedef struct vm_prog_s
 	mempool_t			*edicts_mempool;
 	
 	// has to be updated every frame - so the vm time is up-to-date
-	double				time;
+	// AK changed so time will point to the time field (if there is one) else it points to _time
+	// actually should be double, but qc doesnt support it
+	float				*time;
+	float				_time;
 
 	// name of the prog, e.g. "Server", "Client" or "Menu" (used in for text output)
 	char				*name;
@@ -423,10 +427,10 @@ void PRVM_ED_PrintNum (int ent);
 //============================================================================
 
 // used as replacement for a prog stack
-#define PRVM_DEBUGPRSTACK
+//#define PRVM_DEBUGPRSTACK
 
 #ifdef PRVM_DEBUGPRSTACK
-#define PRVM_Begin  if(prog != 0) Con_Printf("prog not 0(prog = %i)!\n", PRVM_GetProgNr())
+#define PRVM_Begin  if(prog != 0) Con_Printf("prog not 0(prog = %i) in file: %s line: %i!\n", PRVM_GetProgNr(), __FILE__, __LINE__)
 #define PRVM_End	prog = 0
 #else
 #define PRVM_Begin  
@@ -443,11 +447,6 @@ void PRVM_ED_PrintNum (int ent);
 
 // helper macro to make function pointer calls easier
 #define PRVM_GCALL(func)	if(prog->func) prog->func
-
-/*#define PRVM_ERROR	if(!prog->error_cmd)  \
-						Sys_Error("PRVM: No error_cmd specified !\n"); 	 \
-					else \
-						prog->error_cmd*/
 
 #define PRVM_ERROR		Host_Error
 

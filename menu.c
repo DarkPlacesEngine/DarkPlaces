@@ -3776,6 +3776,9 @@ void MP_Keydown (int key, char ascii)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
+	// set time
+	*prog->time = realtime;
+
 	// pass key
 	prog->globals[OFS_PARM0] = (float) key;
 	prog->globals[OFS_PARM1] = (float) ascii;
@@ -3789,6 +3792,9 @@ void MP_Draw (void)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
+	// set time
+	*prog->time = realtime;
+
 	PRVM_ExecuteProgram(m_draw,"");
 
 	PRVM_End;
@@ -3799,6 +3805,9 @@ void MP_ToggleMenu_f (void)
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
 
+	// set time
+	*prog->time = realtime;
+
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_TOGGLE) - prog->functions),"");
 
 	PRVM_End;
@@ -3808,6 +3817,9 @@ void MP_Shutdown (void)
 {
 	PRVM_Begin;
 	PRVM_SetProg(PRVM_MENUPROG);
+
+	// set time
+	*prog->time = realtime;
 
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_SHUTDOWN) - prog->functions),"");
 
@@ -3851,6 +3863,9 @@ void MP_Init (void)
 	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
 	m_keydown = (func_t) (PRVM_ED_FindFunction(M_F_KEYDOWN) - prog->functions);
 
+	// set time
+	*prog->time = realtime;
+	
 	// call the prog init
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_INIT) - prog->functions),"");
 	
@@ -3917,13 +3932,17 @@ void MR_Init()
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
+	Cmd_AddCommand ("menu_restart",MR_Restart);
 
+	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 	if(COM_CheckParm("-forceqmenu"))
 		Cvar_SetValueQuick(&forceqmenu,1);
-
-	Cmd_AddCommand ("menu_restart",MR_Restart);
-	
-	MR_SetRouting (FALSE);
+	// use -useqmenu for debugging proposes, cause it starts 
+	// the normal quake menu only the first time
+	else if(COM_CheckParm("-useqmenu"))
+		MR_SetRouting (TRUE);
+	else
+		MR_SetRouting (FALSE);	
 }
 
 

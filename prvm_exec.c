@@ -369,9 +369,9 @@ PRVM_ExecuteProgram
 ====================
 */
 // LordHavoc: optimized
-#define OPA ((eval_t *)&prog->globals[(unsigned short) st->a])
-#define OPB ((eval_t *)&prog->globals[(unsigned short) st->b])
-#define OPC ((eval_t *)&prog->globals[(unsigned short) st->c])
+#define OPA ((prvm_eval_t *)&prog->globals[(unsigned short) st->a])
+#define OPB ((prvm_eval_t *)&prog->globals[(unsigned short) st->b])
+#define OPC ((prvm_eval_t *)&prog->globals[(unsigned short) st->c])
 extern cvar_t prvm_boundscheck;
 extern cvar_t prvm_traceqc;
 extern int		PRVM_ED_FindFieldOffset (const char *field);

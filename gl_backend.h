@@ -23,6 +23,9 @@ void GL_TransformToScreen(const vec4_t in, vec4_t out);
 void GL_LockArrays(int first, int count);
 void GL_ActiveTexture(int num);
 void GL_ClientActiveTexture(int num);
+void GL_Scissor(int x, int y, int width, int height); // AK for DRAWQUEUE_SETCLIP
+void GL_ScissorTest(qboolean state);	// AK for DRAWQUEUE_(RE)SETCLIP
+ 
 
 extern cvar_t gl_lockarrays;
 extern cvar_t gl_mesh_copyarrays;
