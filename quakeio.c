@@ -28,6 +28,7 @@
 	$Id$
 */
 
+#include "quakedef.h"
 #include <stdlib.h>
 #include <string.h>
 #ifdef WIN32
@@ -38,18 +39,19 @@
 # include <unistd.h>
 #endif
 
-#define HAVE_ZLIB
-
-#ifdef _MSC_VER
-# define _POSIX_
-#endif
+//#ifdef _MSC_VER
+//# define _POSIX_
+//#endif
 
 #include <stdarg.h>
 #include <stdlib.h>
 #include <limits.h>
 
-#include "QF/quakefs.h"
-#include "QF/quakeio.h"
+#ifndef PATH_MAX
+# define PATH_MAX 512
+#endif
+
+#include "quakeio.h"
 
 #ifdef WIN32
 # ifndef __BORLANDC__

@@ -30,13 +30,20 @@
 #ifndef __quakeio_h
 #define __quakeio_h
 
+#define HAVE_ZLIB
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
 #include <stdio.h>
 
-#include <zlib.h>
+#ifdef HAVE_ZLIB
+# include <zlib.h>
+# ifdef WIN32
+#  undef FAR
+# endif
+#endif
 
 //#include "QF/gcc_attr.h"
 
