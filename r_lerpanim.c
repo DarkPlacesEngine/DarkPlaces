@@ -16,13 +16,13 @@ void R_LerpAnimation(entity_render_t *r)
 
 	if (r->frame1 >= numframes)
 	{
-		Con_Printf ("CL_LerpAnimation: no such frame %d\n", r->frame1);
+		Con_DPrintf ("CL_LerpAnimation: no such frame %d\n", r->frame1);
 		r->frame1 = 0;
 	}
 
 	if (r->frame2 >= numframes)
 	{
-		Con_Printf ("CL_LerpAnimation: no such frame %d\n", r->frame2);
+		Con_DPrintf ("CL_LerpAnimation: no such frame %d\n", r->frame2);
 		r->frame2 = 0;
 	}
 
