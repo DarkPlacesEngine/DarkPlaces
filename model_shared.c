@@ -37,7 +37,7 @@ static model_t mod_known[MAX_MOD_KNOWN];
 rtexturepool_t *mod_shared_texturepool;
 rtexture_t *r_notexture;
 rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
-rtexture_t *mod_shared_distorttexture;
+rtexture_t *mod_shared_distorttexture[64];
 
 void Mod_BuildDetailTextures (void)
 {
@@ -79,21 +79,55 @@ void Mod_BuildDetailTextures (void)
 	}
 }
 
+qbyte Mod_MorphDistortTexture (double y0, double y1, double y2, double y3, double morph)
+{
+	int	value =	(int)(((y1 + y3 - (y0 + y2)) * morph * morph * morph) +
+				((2 * (y0 - y1) + y2 - y3) * morph * morph) +
+				((y2 - y0) * morph) +
+				(y1));
+
+	if (value > 255)
+		value = 255;
+	if (value < 0)
+		value = 0;
+
+	return (qbyte)value;
+}
+
 void Mod_BuildDistortTexture (void)
 {
-	int x, y;
+	int x, y, i, j;
 #define DISTORTRESOLUTION 32
-	qbyte data[DISTORTRESOLUTION][DISTORTRESOLUTION][2];
-	for (y=0; y<DISTORTRESOLUTION; y++)
+	qbyte data[5][DISTORTRESOLUTION][DISTORTRESOLUTION][2];
+
+	for (i=0; i<4; i++)
 	{
-		for (x=0; x<DISTORTRESOLUTION; x++)
+		for (y=0; y<DISTORTRESOLUTION; y++)
 		{
-			data[y][x][0] = rand () & 255;
-			data[y][x][1] = rand () & 255;
+			for (x=0; x<DISTORTRESOLUTION; x++)
+			{
+				data[i][y][x][0] = rand () & 255;
+				data[i][y][x][1] = rand () & 255;
+			}
 		}
 	}
 
-	mod_shared_distorttexture = R_LoadTexture2D(mod_shared_texturepool, "distorttexture", DISTORTRESOLUTION, DISTORTRESOLUTION, &data[0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
+	for (i=0; i<4; i++)
+	{
+		for (j=0; j<16; j++)
+		{
+			for (y=0; y<DISTORTRESOLUTION; y++)
+			{
+				for (x=0; x<DISTORTRESOLUTION; x++)
+				{
+					data[4][y][x][0] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][0], data[i][y][x][0], data[(i+1)&3][y][x][0], data[(i+2)&3][y][x][0], 0.0625*j);
+					data[4][y][x][1] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][1], data[i][y][x][1], data[(i+1)&3][y][x][1], data[(i+2)&3][y][x][1], 0.0625*j);
+				}
+			}
+			mod_shared_distorttexture[i*16+j] = R_LoadTexture2D(mod_shared_texturepool, va("distorttexture%i", i*16+j), DISTORTRESOLUTION, DISTORTRESOLUTION, &data[4][0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
+		}
+	}
+
 	return;
 }
 

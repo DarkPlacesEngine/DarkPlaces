@@ -760,15 +760,17 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	matrix4x4_t tempmatrix;
 	float	args[4] = {0.05f,0,0,0.04f};
 
-	if (r_waterscroll.value)
+	if (gl_textureshader && r_watershader.value && !fogenabled)
+	{
+		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		R_Mesh_TextureMatrix(1, &tempmatrix);
+		Matrix4x4_CreateFromQuakeEntity(&tempmatrix, 0, 0, 0, 0, 0, 0, r_watershader.value);
+		R_Mesh_TextureMatrix(0, &tempmatrix);
+	}
+	else if (r_waterscroll.value)
 	{
 		// scrolling in texture matrix
 		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
-		if (gl_textureshader && r_watershader.integer && !fogenabled)
-		{
-			R_Mesh_TextureMatrix(1, &tempmatrix);
-			Matrix4x4_CreateTranslate(&tempmatrix, -sin(cl.time) * 0.025 * r_waterscroll.value, -sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
-		}
 		R_Mesh_TextureMatrix(0, &tempmatrix);
 	}
 
@@ -793,9 +795,9 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
-	if (gl_textureshader && r_watershader.integer && !fogenabled)
+	if (gl_textureshader && r_watershader.value && !fogenabled)
 	{
-		m.tex[0] = R_GetTexture(mod_shared_distorttexture);
+		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(cl.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 	}
 	else
@@ -805,7 +807,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		GL_ColorPointer(varray_color4f);
 	else
 		GL_Color(1, 1, 1, alpha);
-	if (gl_textureshader && r_watershader.integer && !fogenabled)
+	if (gl_textureshader && r_watershader.value && !fogenabled)
 	{
 		GL_ActiveTexture (0);
 		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
@@ -829,7 +831,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 	R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 
-	if (gl_textureshader && r_watershader.integer && !fogenabled)
+	if (gl_textureshader && r_watershader.value && !fogenabled)
 	{
 		qglDisable (GL_TEXTURE_SHADER_NV);
 		GL_ActiveTexture (0);
@@ -850,7 +852,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 	}
 
-	if (r_waterscroll.value)
+	if ((gl_textureshader && r_watershader.value && !fogenabled) || r_waterscroll.value)
 	{
 		Matrix4x4_CreateIdentity(&tempmatrix);
 		R_Mesh_TextureMatrix(0, &tempmatrix);
