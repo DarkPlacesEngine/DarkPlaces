@@ -547,7 +547,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			vkey = MapKey(lParam, wParam);
 			GetKeyboardState (state);
 			ToAscii (wParam, vkey, state, &ascchar, 0);
-			Key_Event (vkey, ascchar & 0xFF, down);
+			Key_Event (vkey, (char)(ascchar & 0xFF), down);
 			break;
 
 		case WM_SYSCHAR:
