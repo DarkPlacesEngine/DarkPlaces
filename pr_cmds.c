@@ -2968,9 +2968,8 @@ void PF_setattachment (void)
 	if (tagentity != NULL && tagentity != sv.edicts && tagname && tagname[0])
 	{
 		modelindex = (int)tagentity->v->modelindex;
-		if (modelindex >= 0 && modelindex < MAX_MODELS)
+		if (modelindex >= 0 && modelindex < MAX_MODELS && (model = sv.models[modelindex]))
 		{
-			model = sv.models[modelindex];
 			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
 				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
 					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
