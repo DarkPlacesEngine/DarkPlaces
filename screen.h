@@ -33,9 +33,6 @@ extern float scr_conlines; // lines of console to display
 
 extern int sb_lines;
 
-extern qboolean	scr_disabled_for_loading;
-extern qboolean	scr_skipupdate;
-
 extern cvar_t scr_viewsize;
 extern cvar_t scr_fov;
 extern cvar_t showfps;

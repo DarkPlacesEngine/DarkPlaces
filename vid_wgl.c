@@ -73,8 +73,6 @@ static dllfunction_t wglswapintervalfuncs[] =
 	{NULL, NULL}
 };
 
-qboolean scr_skipupdate;
-
 static DEVMODE gdevmode;
 static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
@@ -315,7 +313,7 @@ void VID_Finish (void)
 			qwglSwapIntervalEXT (old_vsync);
 	}
 
-	if (r_render.integer && !scr_skipupdate)
+	if (r_render.integer && !vid_hidden)
 	{
 		if (r_speeds.integer || gl_finish.integer)
 			qglFinish();
@@ -523,9 +521,6 @@ void Sys_SendKeyEvents (void)
 
 	while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
 	{
-	// we always update if there are any event, even if we're paused
-		scr_skipupdate = 0;
-
 		if (!GetMessage (&msg, NULL, 0, 0))
 			Sys_Quit ();
 
