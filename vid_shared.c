@@ -68,7 +68,7 @@ cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "32"};
 
-cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "1"};
+cvar_t vid_vsync = {CVAR_SAVE, "vid_vsync", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
 cvar_t gl_finish = {0, "gl_finish", "0"};
