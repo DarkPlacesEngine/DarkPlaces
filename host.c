@@ -259,9 +259,12 @@ void Host_ServerOptions (void)
 Host_InitLocal
 ======================
 */
+void Host_SaveConfig_f(void);
 void Host_InitLocal (void)
 {
 	Host_InitCommands ();
+	
+	Cmd_AddCommand("saveconfig", Host_SaveConfig_f);
 
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
@@ -299,12 +302,12 @@ void Host_InitLocal (void)
 
 /*
 ===============
-Host_WriteConfiguration
+Host_SaveConfig_f
 
 Writes key bindings and archived cvars to config.cfg
 ===============
 */
-void Host_WriteConfiguration (void)
+void Host_SaveConfig_f(void)
 {
 	qfile_t *f;
 
@@ -926,7 +929,7 @@ void Host_Shutdown(void)
 	// AK hmm, no PRVM_Shutdown(); yet
 
 
-	Host_WriteConfiguration ();
+	Host_SaveConfig_f();
 
 	CDAudio_Shutdown ();
 	NetConn_Shutdown ();
