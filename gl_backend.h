@@ -92,6 +92,8 @@ void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts);
 void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts);
 // copies a color4f array into varray_color4f
 void R_Mesh_CopyColor4f(const float *color4f, int numverts);
+// copies a texcoord2f array into another array, with scrolling
+void R_ScrollTexCoord2f (float *out2f, const float *in2f, int numverts, float s, float t);
 
 // saves a section of the rendered frame to a .tga or .jpg file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg);
