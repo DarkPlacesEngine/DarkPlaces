@@ -39,9 +39,9 @@ SHAREDOBJECTS= builddate.o cmd.o collision.o common.o crc.o cvar.o filematch.o h
 CPUOPTIMIZATIONS=
 
 #use this line for profiling
-PROFILEOPTION=-pg -g
+#PROFILEOPTION=-pg -g
 #use this line for no profiling
-#PROFILEOPTION=
+PROFILEOPTION=
 
 #note:
 #the -Werror can be removed to compile even if there are warnings,
