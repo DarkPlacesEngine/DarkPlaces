@@ -97,16 +97,6 @@ struct snd_fetcher_s
 	snd_fetcher_end_t	end;
 };
 
-typedef struct
-{
-	int		rate;
-	int		width;
-	int		channels;
-	int		loopstart;
-	int		samples;
-	int		dataofs;		// chunk starts this many bytes from file start
-} wavinfo_t;
-
 void S_Init (void);
 void S_Startup (void);
 void S_Shutdown (void);
@@ -125,12 +115,6 @@ void S_ClearUsed (void);
 void S_PurgeUnused (void);
 void S_PaintChannels(int endtime);
 void S_InitPaintChannels (void);
-
-// picks a channel based on priorities, empty slots, number of channels
-channel_t *SND_PickChannel(int entnum, int entchannel);
-
-// spatializes a channel
-void SND_Spatialize(channel_t *ch, int isstatic);
 
 // initializes cycling through a DMA buffer and returns information on it
 qboolean SNDDMA_Init(void);
