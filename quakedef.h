@@ -31,43 +31,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <setjmp.h>
 
+#include "qtypes.h"
+
 extern char *buildstring;
-
-typedef unsigned char qbyte;
-
-#undef true
-#undef false
-
-typedef enum {false, true} qboolean;
-
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#define TRUE 1
-#endif
-
-//define	PARANOID			// speed sapping error checking
-#ifdef _DEBUG
-#define ASSERT(condition) if (!(condition)) Sys_Error("assertion (##condition) failed at " __FILE__ ":" __LINE__ "\n");
-#else
-#define ASSERT(condition)
-#endif
 
 #define GAMENAME "id1"
 
 #define MAX_NUM_ARGVS	50
-
-// up / down
-#define	PITCH	0
-
-// left / right
-#define	YAW		1
-
-// fall over
-#define	ROLL	2
 
 
 #define	MAX_QPATH		128			// max length of a quake game pathname
