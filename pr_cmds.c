@@ -862,7 +862,7 @@ int PF_newcheckclient (int check)
 
 // get the PVS for the entity
 	VectorAdd (ent->v->origin, ent->v->view_ofs, org);
-	memcpy (checkpvs, sv.worldmodel->LeafPVS(sv.worldmodel, sv.worldmodel->PointInLeaf(sv.worldmodel, org)), (sv.worldmodel->numleafs+7)>>3 );
+	memcpy (checkpvs, sv.worldmodel->brushq1.LeafPVS(sv.worldmodel, sv.worldmodel->brushq1.PointInLeaf(sv.worldmodel, org)), (sv.worldmodel->brushq1.numleafs+7)>>3 );
 
 	return i;
 }
@@ -908,10 +908,10 @@ void PF_checkclient (void)
 	// if current entity can't possibly see the check entity, return 0
 	self = PROG_TO_EDICT(pr_global_struct->self);
 	VectorAdd (self->v->origin, self->v->view_ofs, view);
-	leaf = sv.worldmodel->PointInLeaf(sv.worldmodel, view);
+	leaf = sv.worldmodel->brushq1.PointInLeaf(sv.worldmodel, view);
 	if (leaf)
 	{
-		l = (leaf - sv.worldmodel->leafs) - 1;
+		l = (leaf - sv.worldmodel->brushq1.leafs) - 1;
 		if ( (l<0) || !(checkpvs[l>>3] & (1<<(l&7)) ) )
 		{
 			c_notvis++;
@@ -1311,7 +1311,7 @@ void PF_precache_model (void)
 		Host_Error ("PF_Precache_*: Precache can only be done in spawn functions");
 
 	s = G_STRING(OFS_PARM0);
-	if (sv.worldmodel->ishlbsp && ((!s) || (!s[0])))
+	if (sv.worldmodel->brushq1.ishlbsp && ((!s) || (!s[0])))
 		return;
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 	PR_CheckEmptyString (s);
@@ -1497,7 +1497,7 @@ PF_pointcontents
 */
 void PF_pointcontents (void)
 {
-	G_FLOAT(OFS_RETURN) = sv.worldmodel->PointContents(sv.worldmodel, G_VECTOR(OFS_PARM0));
+	G_FLOAT(OFS_RETURN) = sv.worldmodel->brushq1.PointContents(sv.worldmodel, G_VECTOR(OFS_PARM0));
 }
 
 /*
@@ -2555,9 +2555,9 @@ static msurface_t *getsurface(edict_t *ed, int surfnum)
 	model = sv.models[modelindex];
 	if (model->type != mod_brush)
 		return NULL;
-	if (surfnum < 0 || surfnum >= model->nummodelsurfaces)
+	if (surfnum < 0 || surfnum >= model->brushq1.nummodelsurfaces)
 		return NULL;
-	return model->surfaces + surfnum + model->firstmodelsurface;
+	return model->brushq1.surfaces + surfnum + model->brushq1.firstmodelsurface;
 }
 
 
@@ -2641,9 +2641,9 @@ void PF_getsurfacenearpoint(void)
 	VectorSubtract(point, ed->v->origin, p);
 	best = -1;
 	bestdist = 1000000000;
-	for (surfnum = 0;surfnum < model->nummodelsurfaces;surfnum++)
+	for (surfnum = 0;surfnum < model->brushq1.nummodelsurfaces;surfnum++)
 	{
-		surf = model->surfaces + surfnum + model->firstmodelsurface;
+		surf = model->brushq1.surfaces + surfnum + model->brushq1.firstmodelsurface;
 		dist = PlaneDiff(p, surf->plane);
 		dist = dist * dist;
 		if (dist < bestdist)

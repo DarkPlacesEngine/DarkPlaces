@@ -193,9 +193,9 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	portal_markid++;
 
 	Mod_CheckLoaded(model);
-	Portal_PolygonRecursiveMarkLeafs(model->nodes, polypoints, numpoints);
+	Portal_PolygonRecursiveMarkLeafs(model->brushq1.nodes, polypoints, numpoints);
 
-	eyeleaf = model->PointInLeaf(model, eye);
+	eyeleaf = model->brushq1.PointInLeaf(model, eye);
 
 	// find the center by averaging
 	VectorClear(center);
@@ -340,7 +340,7 @@ void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *ma
 	{
 		if (!info->surfacemark[*mark])
 		{
-			surf = info->model->surfaces + *mark;
+			surf = info->model->brushq1.surfaces + *mark;
 			if (surf->poly_numverts)
 			{
 				if (surf->flags & SURF_PLANEBACK)
@@ -389,7 +389,7 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	tinyplane_t *newplanes;
 
 	if (info->leafmark)
-		info->leafmark[leaf - info->model->leafs] = true;
+		info->leafmark[leaf - info->model->brushq1.leafs] = true;
 
 	// mark surfaces in leaf that can be seen through portal
 	if (leaf->nummarksurfaces && info->surfacemark)
@@ -494,7 +494,7 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	VectorCopy(eye, info.eye);
 	info.numfrustumplanes = numfrustumplanes;
 
-	Portal_RecursiveFindLeafForFlow(&info, model->nodes);
+	Portal_RecursiveFindLeafForFlow(&info, model->brushq1.nodes);
 
 	if (ranoutofportalplanes)
 		Con_Printf("Portal_RecursiveFlow: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);

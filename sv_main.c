@@ -385,7 +385,7 @@ void SV_AddToFatPVS (vec3_t org, mnode_t *node)
 		{
 			if (node->contents != CONTENTS_SOLID)
 			{
-				pvs = sv.worldmodel->LeafPVS(sv.worldmodel, (mleaf_t *)node);
+				pvs = sv.worldmodel->brushq1.LeafPVS(sv.worldmodel, (mleaf_t *)node);
 				for (i=0 ; i<fatbytes ; i++)
 					fatpvs[i] |= pvs[i];
 			}
@@ -416,9 +416,9 @@ given point.
 */
 qbyte *SV_FatPVS (vec3_t org)
 {
-	fatbytes = (sv.worldmodel->numleafs+31)>>3;
+	fatbytes = (sv.worldmodel->brushq1.numleafs+31)>>3;
 	memset (fatpvs, 0, fatbytes);
-	SV_AddToFatPVS (org, sv.worldmodel->nodes);
+	SV_AddToFatPVS (org, sv.worldmodel->brushq1.nodes);
 	return fatpvs;
 }
 
@@ -434,7 +434,7 @@ loc0:
 		// leaf
 		if (node->contents == CONTENTS_SOLID)
 			return false;
-		leafnum = (mleaf_t *)node - sv.worldmodel->leafs - 1;
+		leafnum = (mleaf_t *)node - sv.worldmodel->brushq1.leafs - 1;
 		return pvs[leafnum >> 3] & (1 << (leafnum & 7));
 	}
 
@@ -584,7 +584,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			totalentities++;
 
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
+			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->brushq1.nodes))
 			{
 				culled_pvs++;
 				continue;
@@ -963,7 +963,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			totalentities++;
 
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, lightmins, lightmaxs, sv.worldmodel->nodes))
+			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, lightmins, lightmaxs, sv.worldmodel->brushq1.nodes))
 			{
 				culled_pvs++;
 				continue;
@@ -1841,7 +1841,7 @@ void SV_SpawnServer (const char *server)
 
 	sv.model_precache[0] = "";
 	sv.model_precache[1] = sv.modelname;
-	for (i = 1;i < sv.worldmodel->numsubmodels;i++)
+	for (i = 1;i < sv.worldmodel->brushq1.numsubmodels;i++)
 	{
 		sv.model_precache[i+1] = localmodels[i];
 		sv.models[i+1] = Mod_ForName (localmodels[i], false, false, false);
@@ -1879,7 +1879,7 @@ void SV_SpawnServer (const char *server)
 		Mem_Free(entities);
 	}
 	else
-		ED_LoadFromFile (sv.worldmodel->entities);
+		ED_LoadFromFile (sv.worldmodel->brush.entities);
 
 
 	// LordHavoc: clear world angles (to fix e3m3.bsp)

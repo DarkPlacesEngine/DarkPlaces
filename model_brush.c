@@ -57,7 +57,7 @@ static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 
 	// LordHavoc: modified to start at first clip node,
 	// in other words: first node of the (sub)model
-	node = model->nodes + model->hulls[0].firstclipnode;
+	node = model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode;
 	while (node->contents == 0)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 
@@ -75,7 +75,7 @@ static int Mod_Q1BSP_PointContents(model_t *model, const vec3_t p)
 
 	// LordHavoc: modified to start at first clip node,
 	// in other words: first node of the (sub)model
-	node = model->nodes + model->hulls[0].firstclipnode;
+	node = model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode;
 	while (node->contents == 0)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 
@@ -106,7 +106,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 	surfmesh_t *mesh;
 	for (surfnum = 0, mark = leaf->firstmarksurface;surfnum < leaf->nummarksurfaces;surfnum++, mark++)
 	{
-		surf = info->model->surfaces + *mark;
+		surf = info->model->brushq1.surfaces + *mark;
 		if (surf->flags & SURF_SOLIDCLIP)
 		{
 #if 0
@@ -239,7 +239,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, m
 	}
 }
 
-static void Mod_Q1BSP_FindNonSolidLocation(model_t *model, vec3_t in, vec3_t out, float radius)
+static void Mod_Q1BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, float radius)
 {
 	int i;
 	findnonsolidlocationinfo_t info;
@@ -256,7 +256,7 @@ static void Mod_Q1BSP_FindNonSolidLocation(model_t *model, vec3_t in, vec3_t out
 	{
 		VectorClear(info.nudge);
 		info.bestdist = radius;
-		Mod_Q1BSP_FindNonSolidLocation_r(&info, model->nodes + model->hulls[0].firstclipnode);
+		Mod_Q1BSP_FindNonSolidLocation_r(&info, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode);
 		VectorAdd(info.center, info.nudge, info.center);
 	}
 	while (info.bestdist < radius && ++i < 10);
@@ -270,7 +270,7 @@ static qbyte *Mod_Q1BSP_DecompressVis(model_t *model, qbyte *in)
 	qbyte *out;
 	int row;
 
-	row = (model->numleafs+7)>>3;
+	row = (model->brushq1.numleafs+7)>>3;
 	out = decompressed;
 
 	do
@@ -295,7 +295,7 @@ static qbyte *Mod_Q1BSP_DecompressVis(model_t *model, qbyte *in)
 
 static qbyte *Mod_Q1BSP_LeafPVS(model_t *model, mleaf_t *leaf)
 {
-	if (r_novis.integer || leaf == model->leafs || leaf->compressed_vis == NULL)
+	if (r_novis.integer || leaf == model->brushq1.leafs || leaf->compressed_vis == NULL)
 		return mod_q1bsp_novis;
 	return Mod_Q1BSP_DecompressVis(model, leaf->compressed_vis);
 }
@@ -309,7 +309,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	qbyte *data, *mtdata;
 	char name[256];
 
-	loadmodel->textures = NULL;
+	loadmodel->brushq1.textures = NULL;
 
 	if (!l->filelen)
 		return;
@@ -319,11 +319,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	m->nummiptex = LittleLong (m->nummiptex);
 
 	// add two slots for notexture walls and notexture liquids
-	loadmodel->numtextures = m->nummiptex + 2;
-	loadmodel->textures = Mem_Alloc(loadmodel->mempool, loadmodel->numtextures * sizeof(texture_t));
+	loadmodel->brushq1.numtextures = m->nummiptex + 2;
+	loadmodel->brushq1.textures = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numtextures * sizeof(texture_t));
 
 	// fill out all slots with notexture
-	for (i = 0, tx = loadmodel->textures;i < loadmodel->numtextures;i++, tx++)
+	for (i = 0, tx = loadmodel->brushq1.textures;i < loadmodel->brushq1.numtextures;i++, tx++)
 	{
 		tx->number = i;
 		strcpy(tx->name, "NO TEXTURE FOUND");
@@ -332,7 +332,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->skin.base = r_notexture;
 		tx->shader = &Cshader_wall_lightmap;
 		tx->flags = SURF_SOLIDCLIP;
-		if (i == loadmodel->numtextures - 1)
+		if (i == loadmodel->brushq1.numtextures - 1)
 		{
 			tx->flags |= SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 			tx->shader = &Cshader_water;
@@ -378,7 +378,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (name[j] >= 'A' && name[j] <= 'Z')
 				name[j] += 'a' - 'A';
 
-		tx = loadmodel->textures + i;
+		tx = loadmodel->brushq1.textures + i;
 		strcpy(tx->name, name);
 		tx->width = mtwidth;
 		tx->height = mtheight;
@@ -390,7 +390,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 
 		// LordHavoc: HL sky textures are entirely different than quake
-		if (!loadmodel->ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
+		if (!loadmodel->brushq1.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 		{
 			if (loadmodel->isworldmodel)
 			{
@@ -419,7 +419,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true))
 			{
 				// did not find external texture, load it from the bsp or wad3
-				if (loadmodel->ishlbsp)
+				if (loadmodel->brushq1.ishlbsp)
 				{
 					// internal texture overrides wad
 					qbyte *pixels, *freepixels, *fogpixels;
@@ -496,7 +496,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 	// sequence the animations
 	for (i = 0;i < m->nummiptex;i++)
 	{
-		tx = loadmodel->textures + i;
+		tx = loadmodel->brushq1.textures + i;
 		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
 		if (tx->anim_total[0] || tx->anim_total[1])
@@ -508,7 +508,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 
 		for (j = i;j < m->nummiptex;j++)
 		{
-			tx2 = loadmodel->textures + j;
+			tx2 = loadmodel->brushq1.textures + j;
 			if (!tx2 || tx2->name[0] != '+' || strcmp(tx2->name+2, tx->name+2))
 				continue;
 
@@ -600,11 +600,11 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 	int i;
 	qbyte *in, *out, *data, d;
 	char litfilename[1024];
-	loadmodel->lightdata = NULL;
-	if (loadmodel->ishlbsp) // LordHavoc: load the colored lighting data straight
+	loadmodel->brushq1.lightdata = NULL;
+	if (loadmodel->brushq1.ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
-		loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
-		memcpy(loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
+		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
+		memcpy(loadmodel->brushq1.lightdata, mod_base + l->fileofs, l->filelen);
 	}
 	else // LordHavoc: bsp version 29 (normal white lighting)
 	{
@@ -621,8 +621,8 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 				if (i == 1)
 				{
 					Con_DPrintf("loaded %s\n", litfilename);
-					loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, fs_filesize - 8);
-					memcpy(loadmodel->lightdata, data + 8, fs_filesize - 8);
+					loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, fs_filesize - 8);
+					memcpy(loadmodel->brushq1.lightdata, data + 8, fs_filesize - 8);
 					Mem_Free(data);
 					return;
 				}
@@ -644,9 +644,9 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 		// LordHavoc: oh well, expand the white lighting data
 		if (!l->filelen)
 			return;
-		loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, l->filelen*3);
-		in = loadmodel->lightdata + l->filelen*2; // place the file at the end, so it will not be overwritten until the very last write
-		out = loadmodel->lightdata;
+		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen*3);
+		in = loadmodel->brushq1.lightdata + l->filelen*2; // place the file at the end, so it will not be overwritten until the very last write
+		out = loadmodel->brushq1.lightdata;
 		memcpy(in, mod_base + l->fileofs, l->filelen);
 		for (i = 0;i < l->filelen;i++)
 		{
@@ -683,7 +683,7 @@ static void Mod_Q1BSP_LoadLightList(void)
 			s++;
 			numlights++;
 		}
-		loadmodel->lights = Mem_Alloc(loadmodel->mempool, numlights * sizeof(mlight_t));
+		loadmodel->brushq1.lights = Mem_Alloc(loadmodel->mempool, numlights * sizeof(mlight_t));
 		s = lightsstring;
 		n = 0;
 		while (*s && n < numlights)
@@ -696,7 +696,7 @@ static void Mod_Q1BSP_LoadLightList(void)
 				Mem_Free(lightsstring);
 				Host_Error("misparsed lights file!\n");
 			}
-			e = loadmodel->lights + n;
+			e = loadmodel->brushq1.lights + n;
 			*s = 0;
 			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %f %d", &e->origin[0], &e->origin[1], &e->origin[2], &e->falloff, &e->light[0], &e->light[1], &e->light[2], &e->subtract, &e->spotdir[0], &e->spotdir[1], &e->spotdir[2], &e->spotcone, &e->distbias, &e->style);
 			*s = '\n';
@@ -713,7 +713,7 @@ static void Mod_Q1BSP_LoadLightList(void)
 			Mem_Free(lightsstring);
 			Host_Error("misparsed lights file!\n");
 		}
-		loadmodel->numlights = numlights;
+		loadmodel->brushq1.numlights = numlights;
 		Mem_Free(lightsstring);
 	}
 }
@@ -730,7 +730,7 @@ static void Mod_Q1BSP_ProcessLightList(void)
 	qbyte *pvs;
 	vec3_t temp;
 	float *v, radius2;
-	for (lnum = 0, e = loadmodel->lights;lnum < loadmodel->numlights;lnum++, e++)
+	for (lnum = 0, e = loadmodel->brushq1.lights;lnum < loadmodel->brushq1.numlights;lnum++, e++)
 	{
 		e->cullradius2 = DotProduct(e->light, e->light) / (e->falloff * e->falloff * 8192.0f * 8192.0f * 2.0f * 2.0f);// + 4096.0f;
 		if (e->cullradius2 > 4096.0f * 4096.0f)
@@ -741,15 +741,15 @@ static void Mod_Q1BSP_ProcessLightList(void)
 			pvs = Mod_Q1BSP_DecompressVis(leaf->compressed_vis, loadmodel);
 		else
 			pvs = mod_q1bsp_novis;
-		for (j = 0;j < loadmodel->numsurfaces;j++)
-			loadmodel->surfacevisframes[j] = -1;
-		for (j = 0, leaf = loadmodel->leafs + 1;j < loadmodel->numleafs - 1;j++, leaf++)
+		for (j = 0;j < loadmodel->brushq1.numsurfaces;j++)
+			loadmodel->brushq1.surfacevisframes[j] = -1;
+		for (j = 0, leaf = loadmodel->brushq1.leafs + 1;j < loadmodel->brushq1.numleafs - 1;j++, leaf++)
 		{
 			if (pvs[j >> 3] & (1 << (j & 7)))
 			{
 				for (k = 0, mark = leaf->firstmarksurface;k < leaf->nummarksurfaces;k++, mark++)
 				{
-					surf = loadmodel->surfaces + *mark;
+					surf = loadmodel->brushq1.surfaces + *mark;
 					if (surf->number != *mark)
 						Con_Printf("%d != %d\n", surf->number, *mark);
 					dist = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
@@ -761,24 +761,24 @@ static void Mod_Q1BSP_ProcessLightList(void)
 						temp[1] = bound(surf->poly_mins[1], e->origin[1], surf->poly_maxs[1]) - e->origin[1];
 						temp[2] = bound(surf->poly_mins[2], e->origin[2], surf->poly_maxs[2]) - e->origin[2];
 						if (DotProduct(temp, temp) < lightradius2)
-							loadmodel->surfacevisframes[*mark] = -2;
+							loadmodel->brushq1.surfacevisframes[*mark] = -2;
 					}
 				}
 			}
 		}
 		// build list of light receiving surfaces
 		e->numsurfaces = 0;
-		for (j = 0;j < loadmodel->numsurfaces;j++)
-			if (loadmodel->surfacevisframes[j] == -2)
+		for (j = 0;j < loadmodel->brushq1.numsurfaces;j++)
+			if (loadmodel->brushq1.surfacevisframes[j] == -2)
 				e->numsurfaces++;
 		e->surfaces = NULL;
 		if (e->numsurfaces > 0)
 		{
 			e->surfaces = Mem_Alloc(loadmodel->mempool, sizeof(msurface_t *) * e->numsurfaces);
 			e->numsurfaces = 0;
-			for (j = 0;j < loadmodel->numsurfaces;j++)
-				if (loadmodel->surfacevisframes[j] == -2)
-					e->surfaces[e->numsurfaces++] = loadmodel->surfaces + j;
+			for (j = 0;j < loadmodel->brushq1.numsurfaces;j++)
+				if (loadmodel->brushq1.surfacevisframes[j] == -2)
+					e->surfaces[e->numsurfaces++] = loadmodel->brushq1.surfaces + j;
 		}
 		// find bounding box and sphere of lit surfaces
 		// (these will be used for creating a shape to clip the light)
@@ -979,11 +979,11 @@ static void Mod_Q1BSP_ProcessLightList(void)
 
 static void Mod_Q1BSP_LoadVisibility(lump_t *l)
 {
-	loadmodel->visdata = NULL;
+	loadmodel->brushq1.visdata = NULL;
 	if (!l->filelen)
 		return;
-	loadmodel->visdata = Mem_Alloc(loadmodel->mempool, l->filelen);
-	memcpy(loadmodel->visdata, mod_base + l->fileofs, l->filelen);
+	loadmodel->brushq1.visdata = Mem_Alloc(loadmodel->mempool, l->filelen);
+	memcpy(loadmodel->brushq1.visdata, mod_base + l->fileofs, l->filelen);
 }
 
 // used only for HalfLife maps
@@ -1015,7 +1015,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 		strcpy(value, com_token);
 		if (!strcmp("wad", key)) // for HalfLife maps
 		{
-			if (loadmodel->ishlbsp)
+			if (loadmodel->brushq1.ishlbsp)
 			{
 				j = 0;
 				for (i = 0;i < 4096;i++)
@@ -1048,13 +1048,13 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 
 static void Mod_Q1BSP_LoadEntities(lump_t *l)
 {
-	loadmodel->entities = NULL;
+	loadmodel->brush.entities = NULL;
 	if (!l->filelen)
 		return;
-	loadmodel->entities = Mem_Alloc(loadmodel->mempool, l->filelen);
-	memcpy(loadmodel->entities, mod_base + l->fileofs, l->filelen);
-	if (loadmodel->ishlbsp)
-		Mod_Q1BSP_ParseWadsFromEntityLump(loadmodel->entities);
+	loadmodel->brush.entities = Mem_Alloc(loadmodel->mempool, l->filelen);
+	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
+	if (loadmodel->brushq1.ishlbsp)
+		Mod_Q1BSP_ParseWadsFromEntityLump(loadmodel->brush.entities);
 }
 
 
@@ -1070,8 +1070,8 @@ static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
-	loadmodel->vertexes = out;
-	loadmodel->numvertexes = count;
+	loadmodel->brushq1.vertexes = out;
+	loadmodel->brushq1.numvertexes = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -1093,8 +1093,8 @@ static void Mod_Q1BSP_LoadSubmodels(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
-	loadmodel->submodels = out;
-	loadmodel->numsubmodels = count;
+	loadmodel->brushq1.submodels = out;
+	loadmodel->brushq1.numsubmodels = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -1125,8 +1125,8 @@ static void Mod_Q1BSP_LoadEdges(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
-	loadmodel->edges = out;
-	loadmodel->numedges = count;
+	loadmodel->brushq1.edges = out;
+	loadmodel->brushq1.numedges = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -1147,8 +1147,8 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
-	loadmodel->texinfo = out;
-	loadmodel->numtexinfo = count;
+	loadmodel->brushq1.texinfo = out;
+	loadmodel->brushq1.numtexinfo = count;
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
@@ -1160,25 +1160,25 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 		out->flags = LittleLong(in->flags);
 
 		out->texture = NULL;
-		if (loadmodel->textures)
+		if (loadmodel->brushq1.textures)
 		{
-			if ((unsigned int) miptex >= (unsigned int) loadmodel->numtextures)
-				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->numtextures);
+			if ((unsigned int) miptex >= (unsigned int) loadmodel->brushq1.numtextures)
+				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->brushq1.numtextures);
 			else
-				out->texture = loadmodel->textures + miptex;
+				out->texture = loadmodel->brushq1.textures + miptex;
 		}
 		if (out->flags & TEX_SPECIAL)
 		{
 			// if texture chosen is NULL or the shader needs a lightmap,
 			// force to notexture water shader
 			if (out->texture == NULL || out->texture->shader->flags & SHADERFLAGS_NEEDLIGHTMAP)
-				out->texture = loadmodel->textures + (loadmodel->numtextures - 1);
+				out->texture = loadmodel->brushq1.textures + (loadmodel->brushq1.numtextures - 1);
 		}
 		else
 		{
 			// if texture chosen is NULL, force to notexture
 			if (out->texture == NULL)
-				out->texture = loadmodel->textures + (loadmodel->numtextures - 2);
+				out->texture = loadmodel->brushq1.textures + (loadmodel->brushq1.numtextures - 2);
 		}
 	}
 }
@@ -1365,11 +1365,11 @@ static void Mod_Q1BSP_GenerateSurfacePolygon(msurface_t *surf, int firstedge, in
 	vert = surf->poly_verts = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * numedges);
 	for (i = 0;i < numedges;i++)
 	{
-		lindex = loadmodel->surfedges[firstedge + i];
+		lindex = loadmodel->brushq1.surfedges[firstedge + i];
 		if (lindex > 0)
-			vec = loadmodel->vertexes[loadmodel->edges[lindex].v[0]].position;
+			vec = loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[lindex].v[0]].position;
 		else
-			vec = loadmodel->vertexes[loadmodel->edges[-lindex].v[1]].position;
+			vec = loadmodel->brushq1.vertexes[loadmodel->brushq1.edges[-lindex].v[1]].position;
 		VectorCopy(vec, vert);
 		vert += 3;
 	}
@@ -1425,35 +1425,35 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	loadmodel->surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
+	loadmodel->brushq1.surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
 
-	loadmodel->numsurfaces = count;
-	loadmodel->surfacevisframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
-	loadmodel->surfacepvsframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
-	loadmodel->pvssurflist = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
+	loadmodel->brushq1.numsurfaces = count;
+	loadmodel->brushq1.surfacevisframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
+	loadmodel->brushq1.surfacepvsframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
+	loadmodel->brushq1.pvssurflist = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
 
-	for (surfnum = 0, surf = loadmodel->surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, in++, surf++)
+	for (surfnum = 0, surf = loadmodel->brushq1.surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, in++, surf++)
 	{
 		surf->number = surfnum;
 		// FIXME: validate edges, texinfo, etc?
 		firstedge = LittleLong(in->firstedge);
 		numedges = LittleShort(in->numedges);
-		if ((unsigned int) firstedge > (unsigned int) loadmodel->numsurfedges || (unsigned int) numedges > (unsigned int) loadmodel->numsurfedges || (unsigned int) firstedge + (unsigned int) numedges > (unsigned int) loadmodel->numsurfedges)
-			Host_Error("Mod_Q1BSP_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", firstedge, numedges, loadmodel->numsurfedges);
+		if ((unsigned int) firstedge > (unsigned int) loadmodel->brushq1.numsurfedges || (unsigned int) numedges > (unsigned int) loadmodel->brushq1.numsurfedges || (unsigned int) firstedge + (unsigned int) numedges > (unsigned int) loadmodel->brushq1.numsurfedges)
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", firstedge, numedges, loadmodel->brushq1.numsurfedges);
 		i = LittleShort(in->texinfo);
-		if ((unsigned int) i >= (unsigned int) loadmodel->numtexinfo)
-			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)\n", i, loadmodel->numtexinfo);
-		surf->texinfo = loadmodel->texinfo + i;
+		if ((unsigned int) i >= (unsigned int) loadmodel->brushq1.numtexinfo)
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)\n", i, loadmodel->brushq1.numtexinfo);
+		surf->texinfo = loadmodel->brushq1.texinfo + i;
 		surf->flags = surf->texinfo->texture->flags;
 
 		planenum = LittleShort(in->planenum);
-		if ((unsigned int) planenum >= (unsigned int) loadmodel->numplanes)
-			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->numplanes);
+		if ((unsigned int) planenum >= (unsigned int) loadmodel->brushq1.numplanes)
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->brushq1.numplanes);
 
 		if (LittleShort(in->side))
 			surf->flags |= SURF_PLANEBACK;
 
-		surf->plane = loadmodel->planes + planenum;
+		surf->plane = loadmodel->brushq1.planes + planenum;
 
 		// clear lightmap (filled in later)
 		surf->lightmaptexture = NULL;
@@ -1472,10 +1472,10 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		i = LittleLong(in->lightofs);
 		if (i == -1)
 			surf->samples = NULL;
-		else if (loadmodel->ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
-			surf->samples = loadmodel->lightdata + i;
+		else if (loadmodel->brushq1.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
+			surf->samples = loadmodel->brushq1.lightdata + i;
 		else // LordHavoc: white lighting (bsp version 29)
-			surf->samples = loadmodel->lightdata + (i * 3);
+			surf->samples = loadmodel->brushq1.lightdata + (i * 3);
 
 		if (surf->texinfo->texture->shader == &Cshader_wall_lightmap)
 		{
@@ -1488,24 +1488,24 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		}
 	}
 
-	loadmodel->entiremesh = Mod_Q1BSP_AllocSurfMesh(totalverts, totaltris);
-	loadmodel->surfmeshes = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) * totalmeshes);
+	loadmodel->brushq1.entiremesh = Mod_Q1BSP_AllocSurfMesh(totalverts, totaltris);
+	loadmodel->brushq1.surfmeshes = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) * totalmeshes);
 
-	for (surfnum = 0, surf = loadmodel->surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, surf++)
+	for (surfnum = 0, surf = loadmodel->brushq1.surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, surf++)
 	{
-		mesh = surf->mesh = loadmodel->surfmeshes + totalmeshes;
+		mesh = surf->mesh = loadmodel->brushq1.surfmeshes + totalmeshes;
 		mesh->numverts = surf->poly_numverts;
 		mesh->numtriangles = surf->poly_numverts - 2;
-		mesh->vertex3f = loadmodel->entiremesh->vertex3f + totalverts * 3;
-		mesh->texcoordtexture2f = loadmodel->entiremesh->texcoordtexture2f + totalverts * 2;
-		mesh->texcoordlightmap2f = loadmodel->entiremesh->texcoordlightmap2f + totalverts * 2;
-		mesh->texcoorddetail2f = loadmodel->entiremesh->texcoorddetail2f + totalverts * 2;
-		mesh->svector3f = loadmodel->entiremesh->svector3f + totalverts * 3;
-		mesh->tvector3f = loadmodel->entiremesh->tvector3f + totalverts * 3;
-		mesh->normal3f = loadmodel->entiremesh->normal3f + totalverts * 3;
-		mesh->lightmapoffsets = loadmodel->entiremesh->lightmapoffsets + totalverts;
-		mesh->element3i = loadmodel->entiremesh->element3i + totaltris * 3;
-		mesh->neighbor3i = loadmodel->entiremesh->neighbor3i + totaltris * 3;
+		mesh->vertex3f = loadmodel->brushq1.entiremesh->vertex3f + totalverts * 3;
+		mesh->texcoordtexture2f = loadmodel->brushq1.entiremesh->texcoordtexture2f + totalverts * 2;
+		mesh->texcoordlightmap2f = loadmodel->brushq1.entiremesh->texcoordlightmap2f + totalverts * 2;
+		mesh->texcoorddetail2f = loadmodel->brushq1.entiremesh->texcoorddetail2f + totalverts * 2;
+		mesh->svector3f = loadmodel->brushq1.entiremesh->svector3f + totalverts * 3;
+		mesh->tvector3f = loadmodel->brushq1.entiremesh->tvector3f + totalverts * 3;
+		mesh->normal3f = loadmodel->brushq1.entiremesh->normal3f + totalverts * 3;
+		mesh->lightmapoffsets = loadmodel->brushq1.entiremesh->lightmapoffsets + totalverts;
+		mesh->element3i = loadmodel->brushq1.entiremesh->element3i + totaltris * 3;
+		mesh->neighbor3i = loadmodel->brushq1.entiremesh->neighbor3i + totaltris * 3;
 
 		surf->lightmaptexturestride = 0;
 		surf->lightmaptexture = NULL;
@@ -1548,12 +1548,12 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			if (r_miplightmaps.integer)
 			{
 				surf->lightmaptexturestride = smax+1;
-				surf->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				surf->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 			}
 			else
 			{
-				surf->lightmaptexturestride = R_CompatibleFragmentWidth(smax+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
-				surf->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
+				surf->lightmaptexturestride = R_CompatibleFragmentWidth(smax+1, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
+				surf->lightmaptexture = R_LoadTexture2D(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->brushq1.lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_FORCELINEAR | TEXF_PRECACHE, NULL);
 			}
 			R_FragmentLocation(surf->lightmaptexture, NULL, NULL, &ubase, &vbase, &uscale, &vscale);
 			uscale = (uscale - ubase) / (smax + 1);
@@ -1595,8 +1595,8 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
-	loadmodel->nodes = out;
-	loadmodel->numnodes = count;
+	loadmodel->brushq1.nodes = out;
+	loadmodel->brushq1.numnodes = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -1607,7 +1607,7 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 		}
 
 		p = LittleLong(in->planenum);
-		out->plane = loadmodel->planes + p;
+		out->plane = loadmodel->brushq1.planes + p;
 
 		out->firstsurface = LittleShort(in->firstface);
 		out->numsurfaces = LittleShort(in->numfaces);
@@ -1616,13 +1616,13 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 		{
 			p = LittleShort(in->children[j]);
 			if (p >= 0)
-				out->children[j] = loadmodel->nodes + p;
+				out->children[j] = loadmodel->brushq1.nodes + p;
 			else
-				out->children[j] = (mnode_t *)(loadmodel->leafs + (-1 - p));
+				out->children[j] = (mnode_t *)(loadmodel->brushq1.leafs + (-1 - p));
 		}
 	}
 
-	Mod_Q1BSP_SetParent(loadmodel->nodes, NULL);	// sets nodes and leafs
+	Mod_Q1BSP_SetParent(loadmodel->brushq1.nodes, NULL);	// sets nodes and leafs
 }
 
 static void Mod_Q1BSP_LoadLeafs(lump_t *l)
@@ -1637,8 +1637,8 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
-	loadmodel->leafs = out;
-	loadmodel->numleafs = count;
+	loadmodel->brushq1.leafs = out;
+	loadmodel->brushq1.numleafs = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -1651,7 +1651,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 		p = LittleLong(in->contents);
 		out->contents = p;
 
-		out->firstmarksurface = loadmodel->marksurfaces +
+		out->firstmarksurface = loadmodel->brushq1.marksurfaces +
 			LittleShort(in->firstmarksurface);
 		out->nummarksurfaces = LittleShort(in->nummarksurfaces);
 
@@ -1659,7 +1659,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 		if (p == -1)
 			out->compressed_vis = NULL;
 		else
-			out->compressed_vis = loadmodel->visdata + p;
+			out->compressed_vis = loadmodel->brushq1.visdata + p;
 
 		for (j=0 ; j<4 ; j++)
 			out->ambient_sound_level[j] = in->ambient_level[j];
@@ -1680,16 +1680,16 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
-	loadmodel->clipnodes = out;
-	loadmodel->numclipnodes = count;
+	loadmodel->brushq1.clipnodes = out;
+	loadmodel->brushq1.numclipnodes = count;
 
-	if (loadmodel->ishlbsp)
+	if (loadmodel->brushq1.ishlbsp)
 	{
-		hull = &loadmodel->hulls[1];
+		hull = &loadmodel->brushq1.hulls[1];
 		hull->clipnodes = out;
 		hull->firstclipnode = 0;
 		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
+		hull->planes = loadmodel->brushq1.planes;
 		hull->clip_mins[0] = -16;
 		hull->clip_mins[1] = -16;
 		hull->clip_mins[2] = -36;
@@ -1698,11 +1698,11 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 		hull->clip_maxs[2] = 36;
 		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
 
-		hull = &loadmodel->hulls[2];
+		hull = &loadmodel->brushq1.hulls[2];
 		hull->clipnodes = out;
 		hull->firstclipnode = 0;
 		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
+		hull->planes = loadmodel->brushq1.planes;
 		hull->clip_mins[0] = -32;
 		hull->clip_mins[1] = -32;
 		hull->clip_mins[2] = -32;
@@ -1711,11 +1711,11 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 		hull->clip_maxs[2] = 32;
 		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
 
-		hull = &loadmodel->hulls[3];
+		hull = &loadmodel->brushq1.hulls[3];
 		hull->clipnodes = out;
 		hull->firstclipnode = 0;
 		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
+		hull->planes = loadmodel->brushq1.planes;
 		hull->clip_mins[0] = -16;
 		hull->clip_mins[1] = -16;
 		hull->clip_mins[2] = -18;
@@ -1726,11 +1726,11 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 	}
 	else
 	{
-		hull = &loadmodel->hulls[1];
+		hull = &loadmodel->brushq1.hulls[1];
 		hull->clipnodes = out;
 		hull->firstclipnode = 0;
 		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
+		hull->planes = loadmodel->brushq1.planes;
 		hull->clip_mins[0] = -16;
 		hull->clip_mins[1] = -16;
 		hull->clip_mins[2] = -24;
@@ -1739,11 +1739,11 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 		hull->clip_maxs[2] = 32;
 		VectorSubtract(hull->clip_maxs, hull->clip_mins, hull->clip_size);
 
-		hull = &loadmodel->hulls[2];
+		hull = &loadmodel->brushq1.hulls[2];
 		hull->clipnodes = out;
 		hull->firstclipnode = 0;
 		hull->lastclipnode = count-1;
-		hull->planes = loadmodel->planes;
+		hull->planes = loadmodel->brushq1.planes;
 		hull->clip_mins[0] = -32;
 		hull->clip_mins[1] = -32;
 		hull->clip_mins[2] = -24;
@@ -1771,21 +1771,21 @@ static void Mod_Q1BSP_MakeHull0(void)
 	int			i;
 	hull_t		*hull;
 
-	hull = &loadmodel->hulls[0];
+	hull = &loadmodel->brushq1.hulls[0];
 
-	in = loadmodel->nodes;
-	out = Mem_Alloc(loadmodel->mempool, loadmodel->numnodes * sizeof(dclipnode_t));
+	in = loadmodel->brushq1.nodes;
+	out = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numnodes * sizeof(dclipnode_t));
 
 	hull->clipnodes = out;
 	hull->firstclipnode = 0;
-	hull->lastclipnode = loadmodel->numnodes - 1;
-	hull->planes = loadmodel->planes;
+	hull->lastclipnode = loadmodel->brushq1.numnodes - 1;
+	hull->planes = loadmodel->brushq1.planes;
 
-	for (i = 0;i < loadmodel->numnodes;i++, out++, in++)
+	for (i = 0;i < loadmodel->brushq1.numnodes;i++, out++, in++)
 	{
-		out->planenum = in->plane - loadmodel->planes;
-		out->children[0] = in->children[0]->contents < 0 ? in->children[0]->contents : in->children[0] - loadmodel->nodes;
-		out->children[1] = in->children[1]->contents < 0 ? in->children[1]->contents : in->children[1] - loadmodel->nodes;
+		out->planenum = in->plane - loadmodel->brushq1.planes;
+		out->children[0] = in->children[0]->contents < 0 ? in->children[0]->contents : in->children[0] - loadmodel->brushq1.nodes;
+		out->children[1] = in->children[1]->contents < 0 ? in->children[1]->contents : in->children[1] - loadmodel->brushq1.nodes;
 	}
 }
 
@@ -1797,15 +1797,15 @@ static void Mod_Q1BSP_LoadMarksurfaces(lump_t *l)
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadMarksurfaces: funny lump size in %s",loadmodel->name);
-	loadmodel->nummarksurfaces = l->filelen / sizeof(*in);
-	loadmodel->marksurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->nummarksurfaces * sizeof(int));
+	loadmodel->brushq1.nummarksurfaces = l->filelen / sizeof(*in);
+	loadmodel->brushq1.marksurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.nummarksurfaces * sizeof(int));
 
-	for (i = 0;i < loadmodel->nummarksurfaces;i++)
+	for (i = 0;i < loadmodel->brushq1.nummarksurfaces;i++)
 	{
 		j = (unsigned) LittleShort(in[i]);
-		if (j >= loadmodel->numsurfaces)
+		if (j >= loadmodel->brushq1.numsurfaces)
 			Host_Error("Mod_Q1BSP_LoadMarksurfaces: bad surface number");
-		loadmodel->marksurfaces[i] = j;
+		loadmodel->brushq1.marksurfaces[i] = j;
 	}
 }
 
@@ -1817,11 +1817,11 @@ static void Mod_Q1BSP_LoadSurfedges(lump_t *l)
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadSurfedges: funny lump size in %s",loadmodel->name);
-	loadmodel->numsurfedges = l->filelen / sizeof(*in);
-	loadmodel->surfedges = Mem_Alloc(loadmodel->mempool, loadmodel->numsurfedges * sizeof(int));
+	loadmodel->brushq1.numsurfedges = l->filelen / sizeof(*in);
+	loadmodel->brushq1.surfedges = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numsurfedges * sizeof(int));
 
-	for (i = 0;i < loadmodel->numsurfedges;i++)
-		loadmodel->surfedges[i] = LittleLong(in[i]);
+	for (i = 0;i < loadmodel->brushq1.numsurfedges;i++)
+		loadmodel->brushq1.surfedges[i] = LittleLong(in[i]);
 }
 
 
@@ -1835,10 +1835,10 @@ static void Mod_Q1BSP_LoadPlanes(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q1BSP_LoadPlanes: funny lump size in %s", loadmodel->name);
 
-	loadmodel->numplanes = l->filelen / sizeof(*in);
-	loadmodel->planes = out = Mem_Alloc(loadmodel->mempool, loadmodel->numplanes * sizeof(*out));
+	loadmodel->brushq1.numplanes = l->filelen / sizeof(*in);
+	loadmodel->brushq1.planes = out = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numplanes * sizeof(*out));
 
-	for (i = 0;i < loadmodel->numplanes;i++, in++, out++)
+	for (i = 0;i < loadmodel->brushq1.numplanes;i++, in++, out++)
 	{
 		out->normal[0] = LittleFloat(in->normal[0]);
 		out->normal[1] = LittleFloat(in->normal[1]);
@@ -2194,8 +2194,8 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	winding_t *w;
 
 	// recalculate bounding boxes for all leafs(because qbsp is very sloppy)
-	leaf = loadmodel->leafs;
-	endleaf = leaf + loadmodel->numleafs;
+	leaf = loadmodel->brushq1.leafs;
+	endleaf = leaf + loadmodel->brushq1.numleafs;
 	for (;leaf < endleaf;leaf++)
 	{
 		VectorSet(leaf->mins,  2000000000,  2000000000,  2000000000);
@@ -2224,7 +2224,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 		p = p->chain;
 	}
 
-	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->nodes);
+	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->brushq1.nodes);
 
 	// tally up portal and point counts
 	p = portalchain;
@@ -2243,16 +2243,16 @@ static void Mod_Q1BSP_FinalizePortals(void)
 		}
 		p = p->chain;
 	}
-	loadmodel->portals = Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
-	loadmodel->numportals = numportals;
-	loadmodel->portalpoints = (void *)((qbyte *) loadmodel->portals + numportals * sizeof(mportal_t));
-	loadmodel->numportalpoints = numpoints;
+	loadmodel->brushq1.portals = Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
+	loadmodel->brushq1.numportals = numportals;
+	loadmodel->brushq1.portalpoints = (void *)((qbyte *) loadmodel->brushq1.portals + numportals * sizeof(mportal_t));
+	loadmodel->brushq1.numportalpoints = numpoints;
 	// clear all leaf portal chains
-	for (i = 0;i < loadmodel->numleafs;i++)
-		loadmodel->leafs[i].portals = NULL;
+	for (i = 0;i < loadmodel->brushq1.numleafs;i++)
+		loadmodel->brushq1.leafs[i].portals = NULL;
 	// process all portals in the global portal chain, while freeing them
-	portal = loadmodel->portals;
-	point = loadmodel->portalpoints;
+	portal = loadmodel->brushq1.portals;
+	point = loadmodel->brushq1.portalpoints;
 	p = portalchain;
 	portalchain = NULL;
 	while (p)
@@ -2514,7 +2514,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 static void Mod_Q1BSP_MakePortals(void)
 {
 	portalchain = NULL;
-	Mod_Q1BSP_RecursiveNodePortals(loadmodel->nodes);
+	Mod_Q1BSP_RecursiveNodePortals(loadmodel->brushq1.nodes);
 	Mod_Q1BSP_FinalizePortals();
 }
 
@@ -2569,86 +2569,86 @@ static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *mod
 	int i, j, stylecounts[256], totalcount, remapstyles[256];
 	msurface_t *surf;
 	memset(stylecounts, 0, sizeof(stylecounts));
-	for (i = 0;i < model->nummodelsurfaces;i++)
+	for (i = 0;i < model->brushq1.nummodelsurfaces;i++)
 	{
-		surf = model->surfaces + model->firstmodelsurface + i;
+		surf = model->brushq1.surfaces + model->brushq1.firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
 			stylecounts[surf->styles[j]]++;
 	}
 	totalcount = 0;
-	model->light_styles = 0;
+	model->brushq1.light_styles = 0;
 	for (i = 0;i < 255;i++)
 	{
 		if (stylecounts[i])
 		{
-			remapstyles[i] = model->light_styles++;
+			remapstyles[i] = model->brushq1.light_styles++;
 			totalcount += stylecounts[i] + 1;
 		}
 	}
 	if (!totalcount)
 		return;
-	model->light_style = Mem_Alloc(mempool, model->light_styles * sizeof(qbyte));
-	model->light_stylevalue = Mem_Alloc(mempool, model->light_styles * sizeof(int));
-	model->light_styleupdatechains = Mem_Alloc(mempool, model->light_styles * sizeof(msurface_t **));
-	model->light_styleupdatechainsbuffer = Mem_Alloc(mempool, totalcount * sizeof(msurface_t *));
-	model->light_styles = 0;
+	model->brushq1.light_style = Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(qbyte));
+	model->brushq1.light_stylevalue = Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(int));
+	model->brushq1.light_styleupdatechains = Mem_Alloc(mempool, model->brushq1.light_styles * sizeof(msurface_t **));
+	model->brushq1.light_styleupdatechainsbuffer = Mem_Alloc(mempool, totalcount * sizeof(msurface_t *));
+	model->brushq1.light_styles = 0;
 	for (i = 0;i < 255;i++)
 		if (stylecounts[i])
-			model->light_style[model->light_styles++] = i;
+			model->brushq1.light_style[model->brushq1.light_styles++] = i;
 	j = 0;
-	for (i = 0;i < model->light_styles;i++)
+	for (i = 0;i < model->brushq1.light_styles;i++)
 	{
-		model->light_styleupdatechains[i] = model->light_styleupdatechainsbuffer + j;
-		j += stylecounts[model->light_style[i]] + 1;
+		model->brushq1.light_styleupdatechains[i] = model->brushq1.light_styleupdatechainsbuffer + j;
+		j += stylecounts[model->brushq1.light_style[i]] + 1;
 	}
-	for (i = 0;i < model->nummodelsurfaces;i++)
+	for (i = 0;i < model->brushq1.nummodelsurfaces;i++)
 	{
-		surf = model->surfaces + model->firstmodelsurface + i;
+		surf = model->brushq1.surfaces + model->brushq1.firstmodelsurface + i;
 		for (j = 0;j < MAXLIGHTMAPS;j++)
 			if (surf->styles[j] != 255)
-				*model->light_styleupdatechains[remapstyles[surf->styles[j]]]++ = surf;
+				*model->brushq1.light_styleupdatechains[remapstyles[surf->styles[j]]]++ = surf;
 	}
 	j = 0;
-	for (i = 0;i < model->light_styles;i++)
+	for (i = 0;i < model->brushq1.light_styles;i++)
 	{
-		*model->light_styleupdatechains[i] = NULL;
-		model->light_styleupdatechains[i] = model->light_styleupdatechainsbuffer + j;
-		j += stylecounts[model->light_style[i]] + 1;
+		*model->brushq1.light_styleupdatechains[i] = NULL;
+		model->brushq1.light_styleupdatechains[i] = model->brushq1.light_styleupdatechainsbuffer + j;
+		j += stylecounts[model->brushq1.light_style[i]] + 1;
 	}
 }
 
 static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 {
 	int i, j;
-	for (i = 0;i < model->numtextures;i++)
-		model->pvstexturechainslength[i] = 0;
-	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
+	for (i = 0;i < model->brushq1.numtextures;i++)
+		model->brushq1.pvstexturechainslength[i] = 0;
+	for (i = 0, j = model->brushq1.firstmodelsurface;i < model->brushq1.nummodelsurfaces;i++, j++)
 	{
-		if (model->surfacepvsframes[j] == model->pvsframecount)
+		if (model->brushq1.surfacepvsframes[j] == model->brushq1.pvsframecount)
 		{
-			model->pvssurflist[model->pvssurflistlength++] = j;
-			model->pvstexturechainslength[model->surfaces[j].texinfo->texture->number]++;
+			model->brushq1.pvssurflist[model->brushq1.pvssurflistlength++] = j;
+			model->brushq1.pvstexturechainslength[model->brushq1.surfaces[j].texinfo->texture->number]++;
 		}
 	}
-	for (i = 0, j = 0;i < model->numtextures;i++)
+	for (i = 0, j = 0;i < model->brushq1.numtextures;i++)
 	{
-		if (model->pvstexturechainslength[i])
+		if (model->brushq1.pvstexturechainslength[i])
 		{
-			model->pvstexturechains[i] = model->pvstexturechainsbuffer + j;
-			j += model->pvstexturechainslength[i] + 1;
+			model->brushq1.pvstexturechains[i] = model->brushq1.pvstexturechainsbuffer + j;
+			j += model->brushq1.pvstexturechainslength[i] + 1;
 		}
 		else
-			model->pvstexturechains[i] = NULL;
+			model->brushq1.pvstexturechains[i] = NULL;
 	}
-	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
-		if (model->surfacepvsframes[j] == model->pvsframecount)
-			*model->pvstexturechains[model->surfaces[j].texinfo->texture->number]++ = model->surfaces + j;
-	for (i = 0;i < model->numtextures;i++)
+	for (i = 0, j = model->brushq1.firstmodelsurface;i < model->brushq1.nummodelsurfaces;i++, j++)
+		if (model->brushq1.surfacepvsframes[j] == model->brushq1.pvsframecount)
+			*model->brushq1.pvstexturechains[model->brushq1.surfaces[j].texinfo->texture->number]++ = model->brushq1.surfaces + j;
+	for (i = 0;i < model->brushq1.numtextures;i++)
 	{
-		if (model->pvstexturechainslength[i])
+		if (model->brushq1.pvstexturechainslength[i])
 		{
-			*model->pvstexturechains[i] = NULL;
-			model->pvstexturechains[i] -= model->pvstexturechainslength[i];
+			*model->brushq1.pvstexturechains[i] = NULL;
+			model->brushq1.pvstexturechains[i] -= model->brushq1.pvstexturechainslength[i];
 		}
 	}
 }
@@ -2676,17 +2676,17 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	i = LittleLong(header->version);
 	if (i != BSPVERSION && i != 30)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
-	mod->ishlbsp = i == 30;
+	mod->brushq1.ishlbsp = i == 30;
 
-	mod->FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
-	mod->PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	mod->PointContents = Mod_Q1BSP_PointContents;
-	mod->LeafPVS = Mod_Q1BSP_LeafPVS;
-	mod->BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
+	mod->brushq1.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
+	mod->brushq1.PointContents = Mod_Q1BSP_PointContents;
+	mod->brushq1.LeafPVS = Mod_Q1BSP_LeafPVS;
+	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	if (loadmodel->isworldmodel)
 	{
-		Cvar_SetValue("halflifebsp", mod->ishlbsp);
+		Cvar_SetValue("halflifebsp", mod->brushq1.ishlbsp);
 		// until we get a texture for it...
 		R_ResetQuakeSky();
 	}
@@ -2700,7 +2700,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 // load into heap
 
 	// store which lightmap format to use
-	mod->lightmaprgba = r_lightmaprgba.integer;
+	mod->brushq1.lightmaprgba = r_lightmaprgba.integer;
 
 	Mod_Q1BSP_LoadEntities(&header->lumps[LUMP_ENTITIES]);
 	Mod_Q1BSP_LoadVertexes(&header->lumps[LUMP_VERTEXES]);
@@ -2732,19 +2732,19 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 //
 // set up the submodels(FIXME: this is confusing)
 //
-	for (i = 0;i < mod->numsubmodels;i++)
+	for (i = 0;i < mod->brushq1.numsubmodels;i++)
 	{
-		bm = &mod->submodels[i];
+		bm = &mod->brushq1.submodels[i];
 
-		mod->hulls[0].firstclipnode = bm->headnode[0];
+		mod->brushq1.hulls[0].firstclipnode = bm->headnode[0];
 		for (j=1 ; j<MAX_MAP_HULLS ; j++)
 		{
-			mod->hulls[j].firstclipnode = bm->headnode[j];
-			mod->hulls[j].lastclipnode = mod->numclipnodes - 1;
+			mod->brushq1.hulls[j].firstclipnode = bm->headnode[j];
+			mod->brushq1.hulls[j].lastclipnode = mod->brushq1.numclipnodes - 1;
 		}
 
-		mod->firstmodelsurface = bm->firstface;
-		mod->nummodelsurfaces = bm->numfaces;
+		mod->brushq1.firstmodelsurface = bm->firstface;
+		mod->brushq1.nummodelsurfaces = bm->numfaces;
 
 		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
@@ -2752,25 +2752,25 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		mod->DrawFakeShadow = NULL;
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
-		mod->pvstexturechains = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(msurface_t **));
-		mod->pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool,(mod->nummodelsurfaces + mod->numtextures) * sizeof(msurface_t *));
-		mod->pvstexturechainslength = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(int));
+		mod->brushq1.pvstexturechains = Mem_Alloc(originalloadmodel->mempool, mod->brushq1.numtextures * sizeof(msurface_t **));
+		mod->brushq1.pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool,(mod->brushq1.nummodelsurfaces + mod->brushq1.numtextures) * sizeof(msurface_t *));
+		mod->brushq1.pvstexturechainslength = Mem_Alloc(originalloadmodel->mempool, mod->brushq1.numtextures * sizeof(int));
 		Mod_Q1BSP_BuildPVSTextureChains(mod);
 		Mod_Q1BSP_BuildLightmapUpdateChains(originalloadmodel->mempool, mod);
-		if (mod->nummodelsurfaces)
+		if (mod->brushq1.nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
 			mod->normalmins[0] = mod->normalmins[1] = mod->normalmins[2] = 1000000000.0f;
 			mod->normalmaxs[0] = mod->normalmaxs[1] = mod->normalmaxs[2] = -1000000000.0f;
 			modelyawradius = 0;
 			modelradius = 0;
-			for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
+			for (j = 0, surf = &mod->brushq1.surfaces[mod->brushq1.firstmodelsurface];j < mod->brushq1.nummodelsurfaces;j++, surf++)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
 				// LordHavoc: submodels always clip, even if water
-				if (mod->numsubmodels - 1)
+				if (mod->brushq1.numsubmodels - 1)
 					surf->flags |= SURF_SOLIDCLIP;
 				// calculate bounding shapes
 				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -2807,13 +2807,13 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			// LordHavoc: empty submodel(lacrima.bsp has such a glitch)
 			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadname);
 		}
-		Mod_Q1BSP_BuildSurfaceNeighbors(mod->surfaces + mod->firstmodelsurface, mod->nummodelsurfaces, originalloadmodel->mempool);
+		Mod_Q1BSP_BuildSurfaceNeighbors(mod->brushq1.surfaces + mod->brushq1.firstmodelsurface, mod->brushq1.nummodelsurfaces, originalloadmodel->mempool);
 
-		mod->numleafs = bm->visleafs;
+		mod->brushq1.numleafs = bm->visleafs;
 
 		// LordHavoc: only register submodels if it is the world
 		// (prevents bsp models from replacing world submodels)
-		if (loadmodel->isworldmodel && i < (mod->numsubmodels - 1))
+		if (loadmodel->isworldmodel && i < (mod->brushq1.numsubmodels - 1))
 		{
 			char	name[10];
 			// duplicate the basic information
@@ -3215,17 +3215,19 @@ void Mod_Q2BSP_Load(model_t *mod, void *buffer)
 	int i;
 	q2dheader_t *header;
 
+	Host_Error("Mod_Q2BSP_Load: not yet implemented\n");
+
 	mod->type = mod_brushq2;
 
 	header = (q2dheader_t *)buffer;
 
 	i = LittleLong(header->version);
 	if (i != Q2BSPVERSION)
-		Host_Error("Mod_Q2BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, BSPVERSION);
-	mod->ishlbsp = false;
+		Host_Error("Mod_Q2BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q2BSPVERSION);
+	mod->brushq1.ishlbsp = false;
 	if (loadmodel->isworldmodel)
 	{
-		Cvar_SetValue("halflifebsp", mod->ishlbsp);
+		Cvar_SetValue("halflifebsp", mod->brushq1.ishlbsp);
 		// until we get a texture for it...
 		R_ResetQuakeSky();
 	}
@@ -3233,11 +3235,11 @@ void Mod_Q2BSP_Load(model_t *mod, void *buffer)
 	mod_base = (qbyte *)header;
 
 	// swap all the lumps
-	for (i = 0;i < (int) sizeof(dheader_t) / 4;i++)
+	for (i = 0;i < (int) sizeof(*header) / 4;i++)
 		((int *)header)[i] = LittleLong(((int *)header)[i]);
 
 	// store which lightmap format to use
-	mod->lightmaprgba = r_lightmaprgba.integer;
+	mod->brushq1.lightmaprgba = r_lightmaprgba.integer;
 
 	Mod_Q2BSP_LoadEntities(&header->lumps[Q2LUMP_ENTITIES]);
 	Mod_Q2BSP_LoadPlanes(&header->lumps[Q2LUMP_PLANES]);
@@ -3260,17 +3262,417 @@ void Mod_Q2BSP_Load(model_t *mod, void *buffer)
 	Mod_Q2BSP_LoadModels(&header->lumps[Q2LUMP_MODELS]);
 }
 
+static void Mod_Q3BSP_LoadEntities(lump_t *l)
+{
+	if (!l->filelen)
+		return;
+	loadmodel->brush.entities = Mem_Alloc(loadmodel->mempool, l->filelen);
+	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
+}
+
+static void Mod_Q3BSP_LoadTextures(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadTextures: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadPlanes(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadPlanes: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadNodes(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadNodes: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadLeafs(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadLeafFaces: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadLeafBrushes: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadModels(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadModels: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadBrushes(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadBrushes: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadBrushSides(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadBrushSides: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadVertices(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadVertices: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadTriangles(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadTriangles: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadEffects(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadEffects: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadFaces(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadFaces: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadLightmaps: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadLightGrid: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q3BSP_LoadPVS(lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error("Mod_Q3BSP_LoadPVS: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
+	int i;
+	q3dheader_t *header;
 	Host_Error("Mod_Q3BSP_Load: not yet implemented\n");
+
+	mod->type = mod_brushq2;
+
+	header = (q3dheader_t *)buffer;
+
+	i = LittleLong(header->version);
+	if (i != Q3BSPVERSION)
+		Host_Error("Mod_Q3BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q3BSPVERSION);
+	if (loadmodel->isworldmodel)
+	{
+		Cvar_SetValue("halflifebsp", false);
+		// until we get a texture for it...
+		R_ResetQuakeSky();
+	}
+
+	mod_base = (qbyte *)header;
+
+	// swap all the lumps
+	for (i = 0;i < (int) sizeof(*header) / 4;i++)
+		((int *)header)[i] = LittleLong(((int *)header)[i]);
+
+	Mod_Q3BSP_LoadEntities(&header->lumps[Q3LUMP_ENTITIES]);
+	Mod_Q3BSP_LoadTextures(&header->lumps[Q3LUMP_TEXTURES]);
+	Mod_Q3BSP_LoadPlanes(&header->lumps[Q3LUMP_PLANES]);
+	Mod_Q3BSP_LoadNodes(&header->lumps[Q3LUMP_NODES]);
+	Mod_Q3BSP_LoadBrushSides(&header->lumps[Q3LUMP_BRUSHSIDES]);
+	Mod_Q3BSP_LoadBrushes(&header->lumps[Q3LUMP_BRUSHES]);
+	Mod_Q3BSP_LoadEffects(&header->lumps[Q3LUMP_EFFECTS]);
+	Mod_Q3BSP_LoadVertices(&header->lumps[Q3LUMP_VERTICES]);
+	Mod_Q3BSP_LoadTriangles(&header->lumps[Q3LUMP_TRIANGLES]);
+	Mod_Q3BSP_LoadLightmaps(&header->lumps[Q3LUMP_LIGHTMAPS]);
+	Mod_Q3BSP_LoadFaces(&header->lumps[Q3LUMP_FACES]);
+	Mod_Q3BSP_LoadModels(&header->lumps[Q3LUMP_MODELS]);
+	Mod_Q3BSP_LoadLeafBrushes(&header->lumps[Q3LUMP_LEAFBRUSHES]);
+	Mod_Q3BSP_LoadLeafFaces(&header->lumps[Q3LUMP_LEAFFACES]);
+	Mod_Q3BSP_LoadLeafs(&header->lumps[Q3LUMP_LEAFS]);
+	Mod_Q3BSP_LoadLightGrid(&header->lumps[Q3LUMP_LIGHTGRID]);
+	Mod_Q3BSP_LoadPVS(&header->lumps[Q3LUMP_PVS]);
 }
 
 void Mod_IBSP_Load(model_t *mod, void *buffer)
 {
 	int i = LittleLong(* ((int *)buffer));
-	if (i == 46)
+	if (i == Q3BSPVERSION)
 		Mod_Q3BSP_Load(mod,buffer);
-	else if (i == 38)
+	else if (i == Q2BSPVERSION)
 		Mod_Q2BSP_Load(mod,buffer);
 	else
 		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i\n", i);

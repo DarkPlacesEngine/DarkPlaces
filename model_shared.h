@@ -89,55 +89,50 @@ shadowmesh_t;
 
 #include "matrixlib.h"
 
-typedef struct model_s
+typedef struct model_alias_s
 {
-	char			name[MAX_QPATH];
-	// model needs to be loaded if this is true
-	qboolean		needload;
-	// set if the model is used in current map, models which are not, are purged
-	qboolean		used;
-	// CRC of the file this model was loaded from, to reload if changed
-	qboolean		crc;
-	// true if this is the world model (I.E. defines what sky to use, and may contain submodels)
-	qboolean		isworldmodel;
+	// LordHavoc: Q2/ZYM model support
+	int				aliastype;
+
+	// mdl/md2/md3 models are the same after loading
+	int				aliasnum_meshes;
+	aliasmesh_t		*aliasdata_meshes;
+
+	// for Zymotic models
+	int				zymnum_verts;
+	int				zymnum_tris;
+	int				zymnum_shaders;
+	int				zymnum_bones;
+	int				zymnum_scenes;
+	float			*zymdata_texcoords;
+	rtexture_t		**zymdata_textures;
+	qbyte			*zymdata_trizone;
+	zymbone_t		*zymdata_bones;
+	unsigned int	*zymdata_vertbonecounts;
+	zymvertex_t		*zymdata_verts;
+	unsigned int	*zymdata_renderlist;
+	float			*zymdata_poses;
+}
+model_alias_t;
+
+typedef struct model_sprite_s
+{
+	int				sprnum_type;
+	mspriteframe_t	*sprdata_frames;
+}
+model_sprite_t;
+
+typedef struct model_brush_s
+{
+	char			*entities;
+}
+model_brush_t;
+
+typedef struct model_brushq1_s
+{
 	// true if this model is a HalfLife .bsp file
 	qboolean		ishlbsp;
 
-	// mod_brush, mod_alias, mod_sprite
-	modtype_t		type;
-	// LordHavoc: Q2/ZYM model support
-	int				aliastype;
-	// LordHavoc: if true (normally only for sprites) the model/sprite/bmodel is always rendered fullbright
-	int				fullbright;
-	// number of QC accessible frame(group)s in the model
-	int				numframes;
-	// number of QC accessible skin(group)s in the model
-	int				numskins;
-	// whether to randomize animated framegroups
-	synctype_t		synctype;
-
-
-	// flags from the model file
-	int				flags;
-	// engine calculated flags, ones that can not be set in the file
-	int				flags2;
-
-	// all models use textures...
-	rtexturepool_t	*texturepool;
-
-	// volume occupied by the model
-	// bounding box at angles '0 0 0'
-	vec3_t			normalmins, normalmaxs;
-	// bounding box if yaw angle is not 0, but pitch and roll are
-	vec3_t			yawmins, yawmaxs;
-	// bounding box if pitch or roll are used
-	vec3_t			rotatedmins, rotatedmaxs;
-	// sphere radius, usable at any angles
-	float			radius;
-	// squared sphere radius for easier comparisons
-	float			radius2;
-
-	// brush model specific
 	int				firstmodelsurface, nummodelsurfaces;
 
 	// lightmap format, set to r_lightmaprgba when model is loaded
@@ -189,7 +184,6 @@ typedef struct model_s
 
 	qbyte			*visdata;
 	qbyte			*lightdata;
-	char			*entities;
 
 	int				numportals;
 	mportal_t		*portals;
@@ -222,60 +216,231 @@ typedef struct model_s
 	int				light_scalebit;
 	float			light_ambient;
 
-	// skin animation info
-	animscene_t		*skinscenes; // [numskins]
-	// skin frame info
-	skinframe_t		*skinframes;
-
-	animscene_t		*animscenes; // [numframes]
-
-	// mdl/md2/md3 models are the same after loading
-	int				aliasnum_meshes;
-	aliasmesh_t		*aliasdata_meshes;
-
-	// for Zymotic models
-	int				zymnum_verts;
-	int				zymnum_tris;
-	int				zymnum_shaders;
-	int				zymnum_bones;
-	int				zymnum_scenes;
-	float			*zymdata_texcoords;
-	rtexture_t		**zymdata_textures;
-	qbyte			*zymdata_trizone;
-	zymbone_t		*zymdata_bones;
-	unsigned int	*zymdata_vertbonecounts;
-	zymvertex_t		*zymdata_verts;
-	unsigned int	*zymdata_renderlist;
-	float			*zymdata_poses;
-
-	int				sprnum_type;
-	mspriteframe_t	*sprdata_frames;
-
-
-	// functions used in both rendering modes
-	// draw the model's sky polygons (only used by brush models)
-	void(*DrawSky)(struct entity_render_s *ent);
-
-	// functions used only in normal rendering mode
-	// draw the model
-	void(*Draw)(struct entity_render_s *ent);
-	// draw a fake shadow for the model
-	void(*DrawFakeShadow)(struct entity_render_s *ent);
-
-	// functions used only in shadow volume rendering mode
-	// draw a shadow volume for the model based on light source
-	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
-	// draw the lighting on a model (through stencil)
-	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
-
-	void (*FindNonSolidLocation)(struct model_s *model, vec3_t in, vec3_t out, vec_t radius);
+	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
 	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
 	int (*PointContents)(struct model_s *model, const float *p);
 	qbyte *(*LeafPVS)(struct model_s *model, mleaf_t *leaf);
 	void (*BuildPVSTextureChains)(struct model_s *model);
+}
+model_brushq1_t;
 
+typedef struct model_brushq2_s
+{
+}
+model_brushq2_t;
+
+typedef struct q3mtexture_s
+{
+	char name[Q3PATHLENGTH];
+	int surfaceflags;
+	int contents;
+
+	int number;
+	skinframe_t skin;
+}
+q3mtexture_t;
+
+typedef struct q3mnode_s
+{
+	int isnode; // true
+	struct mplane_s *plane;
+	struct q3mnode_s *parent;
+	struct q3mnode_s *children[2];
+}
+q3mnode_t;
+
+typedef struct q3mleaf_s
+{
+	int isnode; // false
+	int clusterindex;
+	int areaindex;
+	vec3_t mins[3];
+	vec3_t maxs[3];
+	int numleaffaces;
+	struct q3mface_s **leaffaces;
+	int numleafbrushes;
+	struct q3mbrush_s **leafbrushes;
+}
+q3mleaf_t;
+
+typedef struct q3mmodel_s
+{
+	vec3_t mins;
+	vec3_t maxs;
+	int numfaces;
+	struct q3mface_s *faces;
+	int numbrushes;
+	struct q3mbrush_s *brushes;
+}
+q3mmodel_t;
+
+typedef struct q3mbrush_s
+{
+	int numsides;
+	struct q3mbrushside_s *sides;
+	struct q3mtexture_s *texture;
+}
+q3mbrush_t;
+
+typedef struct q3mbrushside_s
+{
+	struct mplane_s *plane;
+	struct q3mtexture_s *texture;
+}
+q3mbrushside_t;
+
+typedef struct q3meffect_s
+{
+	char shadername[Q3PATHLENGTH];
+	struct q3mbrush_s *brush;
+	int unknown; // 5 or -1
+}
+q3meffect_t;
+
+typedef struct q3mface_s
+{
+	struct q3mtexture_s *texture;
+	struct q3meffect_s *effect;
+	int type;
+	int firstvertex;
+	int numvertices;
+	int firstelement;
+	int numelements;
+	int patchsize[2];
+
+	float *data_vertex3f;
+	float *data_texturetexcoord2f;
+	float *data_lightmaptexcoord2f;
+	float *data_svector3f;
+	float *data_tvector3f;
+	float *data_normal3f;
+	float *data_color4f;
+}
+q3mface_t;
+
+typedef struct model_brushq3_s
+{
+	int num_textures;
+	q3mtexture_t *data_textures;
+
+	int num_planes;
+	mplane_t *data_planes;
+
+	int num_nodes;
+	q3mnode_t *data_nodes;
+
+	int num_leafs;
+	q3mleaf_t *data_leafs;
+
+	int num_models;
+	q3mmodel_t *data_models;
+	// each submodel gets its own model struct so this is different for each.
+	q3mmodel_t data_thismodel;
+
+	int num_brushes;
+	q3mbrush_t *data_brushes;
+
+	int num_brushsides;
+	q3mbrushside_t *data_brushsides;
+
+	int num_vertices;
+	float *data_vertex3f;
+	float *data_texturetexcoord2f;
+	float *data_lightmaptexcoord2f;
+	float *data_normal3f;
+	float *data_color4f;
+
+	int num_triangles;
+	int *data_element3i;
+	int *data_neighbor3i;
+
+	int num_effects;
+	q3meffect_t data_effects;
+
+	int num_faces;
+	q3mface_t *data_faces;
+
+	// lightmap textures
+	int num_lightmaps;
+	rtexture_t *data_lightmaps;
+
+	// transform world coordinates to lightgrid index
+	matrix4x4_t num_lightgrid_indexfromworld;
+	q3dlightgrid_t *data_lightgrid_cells;
+
+	// pvs
+	int num_pvsclusters;
+	int num_pvschainlength;
+	unsigned char *data_pvschains;
+	// example
+	//pvschain = model->brushq3.data_pvschains + mycluster * model->brushq3.num_pvschainlength;
+	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
+}
+model_brushq3_t;
+
+typedef struct model_s
+{
+	// name and path of model, for example "progs/player.mdl"
+	char			name[MAX_QPATH];
+	// model needs to be loaded if this is true
+	qboolean		needload;
+	// set if the model is used in current map, models which are not, are purged
+	qboolean		used;
+	// true if this is the world model (I.E. defines what sky to use, and may contain submodels)
+	qboolean		isworldmodel;
+	// CRC of the file this model was loaded from, to reload if changed
+	unsigned int	crc;
+	// mod_brush, mod_alias, mod_sprite
+	modtype_t		type;
 	// memory pool for allocations
 	mempool_t		*mempool;
+	// all models use textures...
+	rtexturepool_t	*texturepool;
+	// flags from the model file
+	int				flags;
+	// engine calculated flags, ones that can not be set in the file
+	int				flags2;
+	// LordHavoc: if true (normally only for sprites) the model/sprite/bmodel is always rendered fullbright
+	int				fullbright;
+	// number of QC accessible frame(group)s in the model
+	int				numframes;
+	// number of QC accessible skin(group)s in the model
+	int				numskins;
+	// whether to randomize animated framegroups
+	synctype_t		synctype;
+	// bounding box at angles '0 0 0'
+	vec3_t			normalmins, normalmaxs;
+	// bounding box if yaw angle is not 0, but pitch and roll are
+	vec3_t			yawmins, yawmaxs;
+	// bounding box if pitch or roll are used
+	vec3_t			rotatedmins, rotatedmaxs;
+	// sphere radius, usable at any angles
+	float			radius;
+	// squared sphere radius for easier comparisons
+	float			radius2;
+	// skin animation info
+	animscene_t		*skinscenes; // [numskins]
+	// skin frame info
+	skinframe_t		*skinframes;
+	// skin animation info
+	animscene_t		*animscenes; // [numframes]
+	// draw the model's sky polygons (only used by brush models)
+	void(*DrawSky)(struct entity_render_s *ent);
+	// draw the model using lightmap/dlight shading
+	void(*Draw)(struct entity_render_s *ent);
+	// draw a fake shadow for the model
+	void(*DrawFakeShadow)(struct entity_render_s *ent);
+	// draw a shadow volume for the model based on light source
+	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
+	// draw the lighting on a model (through stencil)
+	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
+	// fields belonging to each type of model
+	model_alias_t	alias;
+	model_sprite_t	sprite;
+	model_brush_t	brush;
+	model_brushq1_t	brushq1;
+	model_brushq2_t	brushq2;
+	model_brushq3_t	brushq3;
 }
 model_t;
 

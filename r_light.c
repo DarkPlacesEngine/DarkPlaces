@@ -192,7 +192,7 @@ static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t
 	// for comparisons to minimum acceptable light
 	maxdist = rd->cullradius2;
 
-	surfacepvsframes = ent->model->surfacepvsframes;
+	surfacepvsframes = ent->model->brushq1.surfacepvsframes;
 loc0:
 	if (node->contents < 0)
 		return;
@@ -211,10 +211,10 @@ loc0:
 	}
 
 // mark the polygons
-	surf = ent->model->surfaces + node->firstsurface;
+	surf = ent->model->brushq1.surfaces + node->firstsurface;
 	for (i = 0;i < node->numsurfaces;i++, surf++)
 	{
-		if (surfacepvsframes[surf->number] != ent->model->pvsframecount)
+		if (surfacepvsframes[surf->number] != ent->model->brushq1.pvsframecount)
 			continue;
 		dist = ndist;
 		if (surf->flags & SURF_PLANEBACK)
@@ -304,7 +304,7 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
 
 	model = ent->model;
-	pvsleaf = model->PointInLeaf(model, lightorigin);
+	pvsleaf = model->brushq1.PointInLeaf(model, lightorigin);
 	if (pvsleaf == NULL)
 		return;
 
@@ -312,7 +312,7 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	if (!r_vismarklights.integer || !in)
 	{
 		// told not to use pvs, or there's no pvs to use
-		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
+		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode);
 		return;
 	}
 
@@ -324,8 +324,8 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 	// for comparisons to minimum acceptable light
 	maxdist = rd->cullradius2;
 
-	row = (model->numleafs+7)>>3;
-	surfacepvsframes = model->surfacepvsframes;
+	row = (model->brushq1.numleafs+7)>>3;
+	surfacepvsframes = model->brushq1.surfacepvsframes;
 
 	k = 0;
 	while (k < row)
@@ -339,9 +339,9 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 				{
 					// warning to the clumsy: numleafs is one less than it should be, it only counts leafs with vis bits (skips leaf 0)
 					leafnum = (k << 3)+i+1;
-					if (leafnum > model->numleafs)
+					if (leafnum > model->brushq1.numleafs)
 						return;
-					leaf = &model->leafs[leafnum];
+					leaf = &model->brushq1.leafs[leafnum];
 					if (leaf->mins[0] > high[0] || leaf->maxs[0] < low[0]
 					 || leaf->mins[1] > high[1] || leaf->maxs[1] < low[1]
 					 || leaf->mins[2] > high[2] || leaf->maxs[2] < low[2])
@@ -351,12 +351,12 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 						mark = leaf->firstmarksurface;
 						do
 						{
-							surf = model->surfaces + *mark++;
+							surf = model->brushq1.surfaces + *mark++;
 							// if not visible in current frame, or already marked because it was in another leaf we passed, skip
 							if (surf->lightframe == lightframe)
 								continue;
 							surf->lightframe = lightframe;
-							if (surfacepvsframes[surf->number] != model->pvsframecount)
+							if (surfacepvsframes[surf->number] != model->brushq1.pvsframecount)
 								continue;
 							dist = PlaneDiff(lightorigin, surf->plane);
 							if (surf->flags & SURF_PLANEBACK)
@@ -486,7 +486,7 @@ loc0:
 			int i, ds, dt;
 			msurface_t *surf;
 
-			surf = cl.worldmodel->surfaces + node->firstsurface;
+			surf = cl.worldmodel->brushq1.surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surf++)
 			{
 				if (!(surf->flags & SURF_LIGHTMAP))
@@ -580,19 +580,19 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 	rdlight_t *rd;
 	mlight_t *sl;
 	if (leaf == NULL && cl.worldmodel != NULL)
-		leaf = cl.worldmodel->PointInLeaf(cl.worldmodel, p);
-	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->lightdata)
+		leaf = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, p);
+	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->brushq1.lightdata)
 	{
 		color[0] = color[1] = color[2] = 1;
 		return;
 	}
 
 	color[0] = color[1] = color[2] = r_ambient.value * (2.0f / 128.0f);
-	if (cl.worldmodel->numlights)
+	if (cl.worldmodel->brushq1.numlights)
 	{
-		for (i = 0;i < cl.worldmodel->numlights;i++)
+		for (i = 0;i < cl.worldmodel->brushq1.numlights;i++)
 		{
-			sl = cl.worldmodel->lights + i;
+			sl = cl.worldmodel->brushq1.lights + i;
 			if (d_lightstylevalue[sl->style] > 0)
 			{
 				VectorSubtract (p, sl->origin, v);
@@ -606,7 +606,7 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 		}
 	}
 	else
-		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+		RecursiveLightPoint (color, cl.worldmodel->brushq1.nodes, p[0], p[1], p[2], p[2] - 65536);
 
 	if (dynamic)
 	{
@@ -681,14 +681,14 @@ int R_LightModel(float *ambient4f, const entity_render_t *ent, float colorr, flo
 		ambient4f[3] = colora;
 		return false;
 	}
-	leaf = cl.worldmodel ? cl.worldmodel->PointInLeaf(cl.worldmodel, ent->origin) : NULL;
-	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->lightdata)
+	leaf = cl.worldmodel ? cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, ent->origin) : NULL;
+	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->brushq1.lightdata)
 		ambient4f[0] = ambient4f[1] = ambient4f[2] = 1;
 	else
 	{
 		ambient4f[0] = ambient4f[1] = ambient4f[2] = r_ambient.value * (2.0f / 128.0f);
-		if (!cl.worldmodel->numlights)
-			RecursiveLightPoint (ambient4f, cl.worldmodel->nodes, ent->origin[0], ent->origin[1], ent->origin[2], ent->origin[2] - 65536);
+		if (!cl.worldmodel->brushq1.numlights)
+			RecursiveLightPoint (ambient4f, cl.worldmodel->brushq1.nodes, ent->origin[0], ent->origin[1], ent->origin[2], ent->origin[2] - 65536);
 	}
 	// scale of the model's coordinate space, to alter light attenuation to match
 	// make the mscale squared so it can scale the squared distance results
@@ -696,7 +696,7 @@ int R_LightModel(float *ambient4f, const entity_render_t *ent, float colorr, flo
 	nl = &nearlight[0];
 	for (i = 0;i < ent->numentlights;i++)
 	{
-		sl = cl.worldmodel->lights + ent->entlights[i];
+		sl = cl.worldmodel->brushq1.lights + ent->entlights[i];
 		stylescale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 		VectorSubtract (ent->origin, sl->origin, v);
 		f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract) * stylescale;
@@ -875,7 +875,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 		VectorCopy(ent->origin, ent->entlightsorigin);
 		ent->numentlights = 0;
 		if (cl.worldmodel)
-			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
+			for (i = 0, sl = cl.worldmodel->brushq1.lights;i < cl.worldmodel->brushq1.numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
 				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false, NULL) == 1)
 					ent->entlights[ent->numentlights++] = i;
 	}

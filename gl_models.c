@@ -166,7 +166,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	qbyte *bcolor;
 	rmeshstate_t m;
 	const entity_render_t *ent = calldata1;
-	aliasmesh_t *mesh = ent->model->aliasdata_meshes + calldata2;
+	aliasmesh_t *mesh = ent->model->alias.aliasdata_meshes + calldata2;
 	aliaslayer_t *layer;
 	aliasskin_t *skin;
 
@@ -294,7 +294,7 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 
 	c_models++;
 
-	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++, mesh++)
+	for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++, mesh++)
 	{
 		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchAliasSkin(ent, mesh)->flags & ALIASSKIN_TRANSPARENT)
 			R_MeshQueue_AddTransparent(ent->origin, R_DrawAliasModelCallback, ent, meshnum);
@@ -348,7 +348,7 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 
 	dist = -1.0f / DotProduct(projection, plane);
 	VectorScale(projection, dist, projection);
-	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++)
+	for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++)
 	{
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
@@ -377,7 +377,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	if (projectdistance > 0.1)
 	{
 		R_Mesh_Matrix(&ent->matrix);
-		for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++, mesh++)
+		for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++, mesh++)
 		{
 			skin = R_FetchAliasSkin(ent, mesh);
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
@@ -421,7 +421,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	}
 	ifog = 1 - fog;
 
-	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++, mesh++)
+	for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++, mesh++)
 	{
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
@@ -752,12 +752,12 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&ent->matrix);
 
 	// find the vertex index list and texture
-	renderlist = ent->model->zymdata_renderlist;
+	renderlist = ent->model->alias.zymdata_renderlist;
 	for (i = 0;i < shadernum;i++)
 		renderlist += renderlist[0] * 3 + 1;
-	texture = ent->model->zymdata_textures[shadernum];
+	texture = ent->model->alias.zymdata_textures[shadernum];
 
-	numverts = ent->model->zymnum_verts;
+	numverts = ent->model->alias.zymnum_verts;
 	numtriangles = *renderlist++;
 	elements = renderlist;
 
@@ -807,13 +807,13 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		colorscale *= 0.25f;
 	}
 	mstate.tex[0] = R_GetTexture(texture);
-	mstate.pointer_texcoord[0] = ent->model->zymdata_texcoords;
+	mstate.pointer_texcoord[0] = ent->model->alias.zymdata_texcoords;
 	R_Mesh_State_Texture(&mstate);
 
-	ZymoticLerpBones(ent->model->zymnum_bones, (zymbonematrix *) ent->model->zymdata_poses, ent->frameblend, ent->model->zymdata_bones);
+	ZymoticLerpBones(ent->model->alias.zymnum_bones, (zymbonematrix *) ent->model->alias.zymdata_poses, ent->frameblend, ent->model->alias.zymdata_bones);
 
-	ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
-	ZymoticCalcNormal3f(numverts, varray_vertex3f, aliasvert_normal3f, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
+	ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->alias.zymdata_vertbonecounts, ent->model->alias.zymdata_verts);
+	ZymoticCalcNormal3f(numverts, varray_vertex3f, aliasvert_normal3f, ent->model->alias.zymnum_shaders, ent->model->alias.zymdata_renderlist);
 	if (R_LightModel(ambientcolor4f, ent, ifog * colorscale, ifog * colorscale, ifog * colorscale, ent->alpha, false))
 	{
 		GL_ColorPointer(varray_color4f);
@@ -834,11 +834,11 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		memset(&mstate, 0, sizeof(mstate));
 		// FIXME: need alpha mask for fogging...
 		//mstate.tex[0] = R_GetTexture(texture);
-		//mstate.pointer_texcoord = ent->model->zymdata_texcoords;
+		//mstate.pointer_texcoord = ent->model->alias.zymdata_texcoords;
 		R_Mesh_State_Texture(&mstate);
 
 		GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
-		ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
+		ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->alias.zymdata_vertbonecounts, ent->model->alias.zymdata_verts);
 		R_Mesh_Draw(numverts, numtriangles, elements);
 		c_alias_polys += numtriangles;
 	}
@@ -853,9 +853,9 @@ void R_Model_Zymotic_Draw(entity_render_t *ent)
 
 	c_models++;
 
-	for (i = 0;i < ent->model->zymnum_shaders;i++)
+	for (i = 0;i < ent->model->alias.zymnum_shaders;i++)
 	{
-		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_TextureHasAlpha(ent->model->zymdata_textures[i]))
+		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_TextureHasAlpha(ent->model->alias.zymdata_textures[i]))
 			R_MeshQueue_AddTransparent(ent->origin, R_DrawZymoticModelMeshCallback, ent, i);
 		else
 			R_DrawZymoticModelMeshCallback(ent, i);

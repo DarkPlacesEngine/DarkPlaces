@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // LordHavoc: I think the 96-99 range was going to run out too soon...
 // so here I jump to 3500
 #define	DPPROTOCOL_VERSION3 3500
+#define DPPROTOCOL_VERSION4 3501
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -358,6 +359,31 @@ if server receives ack message in put packet it performs these steps:
 1. remove all older frames from database.
 */
 
+/*
+DPPROTOCOL_VERSION4
+a frame consists of some visible entities in a range (this is stored as start and end, note that end may be less than start if it wrapped).
+
+these entities are stored in a range (firstentity/endentity) of structs in the entitydata[] buffer.
+
+to make a commit the server performs these steps:
+1. build an entity_frame_t using appropriate functions, containing (some of) the visible entities, this is passed to the Write function to send it.
+
+This documention is unfinished!
+the Write function performs these steps:
+1. check if entity frame is larger than MAX_ENTITYFRAME or is larger than available space in database, if so the baseline is defaults, otherwise it is the current baseline of the database.
+2. write differences of an entity compared to selected baseline.
+3. add entity to entity update in database.
+4. if there are more entities to write and packet is not full, go back to step 2.
+5. write terminator (0xFFFF) as entity number.
+6. return.
+
+
+
+
+
+server updates entities in looping ranges, a frame consists of a range of visible entities (not always all visible entities),
+*/
+
 typedef struct
 {
 	double time;
@@ -398,6 +424,8 @@ typedef struct
 	double time;
 	int framenum;
 	int numentities;
+	int firstentitynum;
+	int lastentitynum;
 	vec3_t eye;
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }

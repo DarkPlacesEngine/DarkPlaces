@@ -544,5 +544,175 @@ typedef struct
 	int		firstareaportal;
 } q2darea_t;
 
+
+//Q3 bsp stuff
+
+#define Q3BSPVERSION	46
+
+#define	Q3LUMP_ENTITIES		0 // entities to spawn (used by server and client)
+#define	Q3LUMP_TEXTURES		1 // textures used (used by faces)
+#define	Q3LUMP_PLANES		2 // planes used (used by bsp nodes)
+#define	Q3LUMP_NODES		3 // bsp nodes (used by bsp nodes, bsp leafs, rendering, collisions)
+#define	Q3LUMP_LEAFS		4 // bsp leafs (used by bsp nodes)
+#define	Q3LUMP_LEAFFACES	5 // array of ints indexing faces (used by leafs)
+#define	Q3LUMP_LEAFBRUSHES	6 // array of ints indexing brushes (used by leafs)
+#define	Q3LUMP_MODELS		7 // models (used by rendering, collisions)
+#define	Q3LUMP_BRUSHES		8 // brushes (used by effects, collisions)
+#define	Q3LUMP_BRUSHSIDES	9 // brush faces (used by brushes)
+#define	Q3LUMP_VERTICES		10 // mesh vertices (used by faces)
+#define	Q3LUMP_TRIANGLES	11 // mesh triangles (used by faces)
+#define	Q3LUMP_EFFECTS		12 // fog (used by faces)
+#define	Q3LUMP_FACES		13 // surfaces (used by leafs)
+#define	Q3LUMP_LIGHTMAPS	14 // lightmap textures (used by faces)
+#define	Q3LUMP_LIGHTGRID	15 // lighting as a voxel grid (used by rendering)
+#define	Q3LUMP_PVS			16 // potentially visible set; bit[clusters][clusters] (used by rendering)
+#define	Q3HEADER_LUMPS		17
+
+#define Q3PATHLENGTH 64
+
+typedef struct
+{
+	int			ident;
+	int			version;
+	lump_t		lumps[HEADER_LUMPS];
+} q3dheader_t;
+
+typedef struct
+{
+	char name[Q3PATHLENGTH];
+	int surfaceflags;
+	int contents;
+}
+q3dtexture_t;
+
+// note: planes are paired, the pair of planes with i and i ^ 1 are opposites.
+typedef struct
+{
+	float normal[3];
+	float dist;
+}
+q3dplane_t;
+
+typedef struct
+{
+	int planeindex;
+	int childrenindex[2];
+	int mins[3];
+	int maxs[3];
+}
+q3dnode_t;
+
+typedef struct
+{
+	int clusterindex; // pvs index
+	int areaindex; // area index
+	int mins[3];
+	int maxs[3];
+	int firstleafface;
+	int numleaffaces;
+	int firstleafbrush;
+	int numleafbrushes;
+}
+q3dleaf_t;
+
+typedef struct
+{
+	float mins[3];
+	float maxs[3];
+	int firstface;
+	int numfaces;
+	int firstbrush;
+	int numbrushes;
+}
+q3dmodel_t;
+
+typedef struct
+{
+	int firstbrushside;
+	int numbrushsides;
+	int textureindex;
+}
+q3dbrush_t;
+
+typedef struct
+{
+	int planeindex;
+	int textureindex;
+}
+q3dbrushside_t;
+
+typedef struct
+{
+	float origin3f[3];
+	float texcoord2f[2];
+	float lightmap2f[2];
+	float normal3f[3];
+	unsigned char color4ub[4];
+}
+q3dvertex_t;
+
+typedef struct
+{
+	int offset; // first vertex index of mesh
+}
+q3dmeshvertex_t;
+
+typedef struct
+{
+	char shadername[Q3PATHLENGTH];
+	int brushindex;
+	int unknown; // I read this is always 5 except in q3dm8 which has one effect with -1
+}
+q3deffect_t;
+
+#define Q3FACETYPE_POLYGON 1 // common
+#define Q3FACETYPE_PATCH 2 // common
+#define Q3FACETYPE_MESH 3 // common
+#define Q3FACETYPE_BILLBOARD 4 // rare (is this ever used?)
+
+typedef struct
+{
+	int textureindex;
+	int effectindex; // -1 if none
+	int type; // Q3FACETYPE
+	int firstvertex;
+	int numvertices;
+	int firstelement;
+	int numelements;
+	int lightmapindex;
+	int lightmap_base[2]; // only needed by lighting util
+	int lightmap_size[2]; // only needed by lighting util
+	float lightmap_origin[3]; // only needed by lighting util
+	float lightmap_vectors[2][3]; // only needed by lighting util
+	float normal[3]; // only needed by lighting util
+	int patchsize[2]; // size for Q3FACETYPE_PATCH
+}
+q3dface_t;
+
+typedef struct
+{
+	unsigned char rgb[128][128][3];
+}
+q3dlightmap_t;
+
+typedef struct
+{
+	unsigned char ambientrgb[3];
+	unsigned char diffusergb[3];
+	unsigned char diffusepitch;
+	unsigned char diffuseyaw;
+}
+q3dlightgrid_t;
+
+typedef struct
+{
+	int numclusters;
+	int chainlength;
+	// unsigned char chains[];
+	// containing bits in 0-7 order (not 7-0 order),
+	// pvschains[mycluster * chainlength + (thatcluster >> 3)] & (1 << (thatcluster & 7))
+}
+q3dpvs_t;
+
 #endif
 

@@ -210,28 +210,28 @@ void Collision_RoundUpToHullSize(const model_t *cmodel, const vec3_t inmins, con
 	const hull_t *hull;
 
 	VectorSubtract(inmaxs, inmins, size);
-	if (cmodel->ishlbsp)
+	if (cmodel->brushq1.ishlbsp)
 	{
 		if (size[0] < 3)
-			hull = &cmodel->hulls[0]; // 0x0x0
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
 		else if (size[0] <= 32)
 		{
 			if (size[2] < 54) // pick the nearest of 36 or 72
-				hull = &cmodel->hulls[3]; // 32x32x36
+				hull = &cmodel->brushq1.hulls[3]; // 32x32x36
 			else
-				hull = &cmodel->hulls[1]; // 32x32x72
+				hull = &cmodel->brushq1.hulls[1]; // 32x32x72
 		}
 		else
-			hull = &cmodel->hulls[2]; // 64x64x64
+			hull = &cmodel->brushq1.hulls[2]; // 64x64x64
 	}
 	else
 	{
 		if (size[0] < 3)
-			hull = &cmodel->hulls[0]; // 0x0x0
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
 		else if (size[0] <= 32)
-			hull = &cmodel->hulls[1]; // 32x32x56
+			hull = &cmodel->brushq1.hulls[1]; // 32x32x56
 		else
-			hull = &cmodel->hulls[2]; // 64x64x88
+			hull = &cmodel->brushq1.hulls[2]; // 64x64x88
 	}
 	VectorCopy(inmins, outmins);
 	VectorAdd(inmins, hull->clip_size, outmaxs);
@@ -301,28 +301,28 @@ static const hull_t *HullForBrushModel (const model_t *cmodel, const vec3_t cori
 	// explicit hulls in the BSP model
 	VectorSubtract (maxs, mins, size);
 	// LordHavoc: FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	if (cmodel->ishlbsp)
+	if (cmodel->brushq1.ishlbsp)
 	{
 		if (size[0] < 3)
-			hull = &cmodel->hulls[0]; // 0x0x0
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
 		else if (size[0] <= 32)
 		{
 			if (size[2] < 54) // pick the nearest of 36 or 72
-				hull = &cmodel->hulls[3]; // 32x32x36
+				hull = &cmodel->brushq1.hulls[3]; // 32x32x36
 			else
-				hull = &cmodel->hulls[1]; // 32x32x72
+				hull = &cmodel->brushq1.hulls[1]; // 32x32x72
 		}
 		else
-			hull = &cmodel->hulls[2]; // 64x64x64
+			hull = &cmodel->brushq1.hulls[2]; // 64x64x64
 	}
 	else
 	{
 		if (size[0] < 3)
-			hull = &cmodel->hulls[0]; // 0x0x0
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
 		else if (size[0] <= 32)
-			hull = &cmodel->hulls[1]; // 32x32x56
+			hull = &cmodel->brushq1.hulls[1]; // 32x32x56
 		else
-			hull = &cmodel->hulls[2]; // 64x64x88
+			hull = &cmodel->brushq1.hulls[2]; // 64x64x88
 	}
 
 	// calculate an offset value to center the origin
@@ -953,7 +953,7 @@ void Collision_RecursiveTraceBrushNode(colbrushbmodelinfo_t *info, mnode_t *node
 		msurface_t *surf;
 		for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
 		{
-			surf = info->model->surfaces + *mark;
+			surf = info->model->brushq1.surfaces + *mark;
 			// don't check a surface twice
 			if (surf->colframe != colframecount)
 			{
@@ -1015,7 +1015,7 @@ float Collision_TraceBrushBModel(const colbrushf_t *thisbrush_start, const colbr
 	info.fraction = 1;
 	info.startsolid = false;
 	info.allsolid = false;
-	Collision_RecursiveTraceBrushNode(&info, model->nodes + model->hulls[0].firstclipnode);
+	Collision_RecursiveTraceBrushNode(&info, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode);
 	if (info.fraction < 1)
 		VectorCopy(info.impactnormal, impactnormal);
 	if (startsolid)
@@ -1037,7 +1037,7 @@ float Collision_TraceBrushBModelTransform(const colbrushf_t *thisbrush_start, co
 	info.fraction = 1;
 	info.startsolid = false;
 	info.allsolid = false;
-	Collision_RecursiveTraceBrushNode(&info, model->nodes);
+	Collision_RecursiveTraceBrushNode(&info, model->brushq1.nodes);
 	if (info.fraction < 1)
 		VectorCopy(info.impactnormal, impactnormal);
 	if (startsolid)

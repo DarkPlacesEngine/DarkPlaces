@@ -62,7 +62,7 @@ loc0:
 		mid = startz + distz * (front - node->plane->dist) / (front - back);
 		break;
 	}
-	
+
 	// go down front side
 	if (node->children[side]->contents >= 0 && SV_RecursiveLightPoint (color, node->children[side], x, y, startz, mid))
 		return true;	// hit something
@@ -74,7 +74,7 @@ loc0:
 			int i, ds, dt;
 			msurface_t *surf;
 
-			surf = sv.worldmodel->surfaces + node->firstsurface;
+			surf = sv.worldmodel->brushq1.surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surf++)
 			{
 				if (!(surf->flags & SURF_LIGHTMAP))
@@ -85,10 +85,10 @@ loc0:
 
 				if (ds < surf->texturemins[0] || dt < surf->texturemins[1])
 					continue;
-				
+
 				ds -= surf->texturemins[0];
 				dt -= surf->texturemins[1];
-				
+
 				if (ds > surf->extents[0] || dt > surf->extents[1])
 					continue;
 
@@ -131,13 +131,13 @@ loc0:
 void SV_LightPoint (vec3_t color, vec3_t p)
 {
 	Mod_CheckLoaded(sv.worldmodel);
-	if (!sv.worldmodel->lightdata)
+	if (!sv.worldmodel->brushq1.lightdata)
 	{
 		color[0] = color[1] = color[2] = 255;
 		return;
 	}
 
 	color[0] = color[1] = color[2] = 0;
-	SV_RecursiveLightPoint (color, sv.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
+	SV_RecursiveLightPoint (color, sv.worldmodel->brushq1.nodes, p[0], p[1], p[2], p[2] - 65536);
 }
 

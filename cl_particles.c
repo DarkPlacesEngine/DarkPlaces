@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 siextern float r_avertexnormals[NUMVERTEXNORMALS][3];
 #define m_bytenormals r_avertexnormals
 #define VectorNormalizeFast VectorNormalize
-#define Mod_PointContents(v,m) (Mod_PointInLeaf(v,m)->contents)
+#define CL_PointContents(v) (Mod_PointInLeaf(v,cl.worldmodel)->contents)
 typedef unsigned char qbyte;
 #define cl_stainmaps.integer 0
 void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
@@ -163,9 +163,9 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 	trace.fraction = 1;
 	VectorCopy (end, trace.endpos);
 #if QW
-	PM_RecursiveHullCheck (cl.model_precache[1]->hulls, 0, 0, 1, start, end, &trace);
+	PM_RecursiveHullCheck (cl.model_precache[1]->brushq1.hulls, 0, 0, 1, start, end, &trace);
 #else
-	RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
+	RecursiveHullCheck (cl.worldmodel->brushq1.hulls, 0, 0, 1, start, end, &trace);
 #endif
 	VectorCopy(trace.endpos, impact);
 	VectorCopy(trace.plane.normal, normal);
@@ -556,7 +556,7 @@ void CL_ParticleExplosion (vec3_t org)
 	if (cl_stainmaps.integer)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 
-	i = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, org) : CONTENTS_EMPTY;
+	i = CL_PointContents(org);
 	if ((i == CONTENTS_SLIME || i == CONTENTS_WATER) && cl_particles.integer && cl_particles_bubbles.integer)
 	{
 		for (i = 0;i < 128;i++)
@@ -1026,7 +1026,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	VectorMA(start, dec, vec, pos);
 	len -= dec;
 
-	contents = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, pos) : CONTENTS_EMPTY;
+	contents = CL_PointContents(pos);
 	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
 		return;
 
@@ -1307,7 +1307,7 @@ void CL_MoveParticles (void)
 		{
 			f = p->friction * frametime;
 			if (!content)
-				content = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, p->org) : CONTENTS_EMPTY;
+				content = CL_PointContents(p->org);
 			if (content != CONTENTS_EMPTY)
 				f *= 4;
 			f = 1.0f - f;
@@ -1320,7 +1320,7 @@ void CL_MoveParticles (void)
 			{
 			case pt_blood:
 				if (!content)
-					content = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, p->org) : CONTENTS_EMPTY;
+					content = CL_PointContents(p->org);
 				a = content;
 				if (a != CONTENTS_EMPTY)
 				{
@@ -1338,7 +1338,7 @@ void CL_MoveParticles (void)
 				break;
 			case pt_bubble:
 				if (!content)
-					content = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, p->org) : CONTENTS_EMPTY;
+					content = CL_PointContents(p->org);
 				if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
 				{
 					p->die = -1;
@@ -1355,7 +1355,7 @@ void CL_MoveParticles (void)
 					p->vel[2] = /*lhrandom(-32, 32) +*/ p->vel2[2];
 				}
 				if (!content)
-					content = cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, p->org) : CONTENTS_EMPTY;
+					content = CL_PointContents(p->org);
 				a = content;
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
 					p->die = -1;
