@@ -632,9 +632,6 @@ typedef struct
 	// fullscreen color blend
 	float viewblend[4];
 
-	// weapon model
-	entity_render_t viewent;
-
 	entity_render_t **entities;
 	int numentities;
 	int maxentities;

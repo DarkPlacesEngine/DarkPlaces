@@ -533,6 +533,7 @@ void V_CalcRefdef (void)
 		r_refdef.vieworg[2] += cl.viewheight + bob;
 
 		// set up gun
+		// (FIXME! this should be in cl_main.c with the other linking code, not view.c!)
 		view->state_current.modelindex = cl.stats[STAT_WEAPON];
 		view->state_current.frame = cl.stats[STAT_WEAPONFRAME];
 		VectorCopy(r_refdef.vieworg, view->render.origin);
@@ -557,8 +558,9 @@ void V_CalcRefdef (void)
 			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
 		}
 
-		// copy to refdef
-		r_refdef.viewent = view->render;
+		// link into render entities list
+		if (r_refdef.numentities < r_refdef.maxentities && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0 && view->render.model != NULL)
+			r_refdef.entities[r_refdef.numentities++] = &view->render;
 	}
 }
 
