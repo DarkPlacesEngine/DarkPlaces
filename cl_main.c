@@ -388,13 +388,13 @@ float	CL_LerpPoint (void)
 		f = 0.1;
 	}
 	frac = (cl.time - cl.mtime[1]) / f;
-//Con_Printf ("frac: %f\n",frac);
+//	Con_Printf ("frac: %f\n",frac);
 	if (frac < 0)
 	{
 		if (frac < -0.01)
 		{
 			cl.time = cl.mtime[1];
-//				Con_Printf ("low frac\n");
+//			Con_Printf ("low frac\n");
 		}
 		frac = 0;
 	}
@@ -403,7 +403,7 @@ float	CL_LerpPoint (void)
 		if (frac > 1.01)
 		{
 			cl.time = cl.mtime[0];
-//				Con_Printf ("high frac\n");
+//			Con_Printf ("high frac\n");
 		}
 		frac = 1;
 	}
@@ -453,11 +453,8 @@ void CL_RelinkEntities (void)
 {
 	entity_t	*ent;
 	int			i, j;
-	float		frac, f, d;
-	vec3_t		delta;
-	float		bobjrotate;
-//	float		bobjoffset;
-	vec3_t		oldorg;
+	float		frac, f, d, bobjrotate/*, bobjoffset*/, dlightradius;
+	vec3_t		oldorg, delta, dlightcolor;
 
 // determine partial update time	
 	frac = CL_LerpPoint ();
@@ -559,6 +556,11 @@ void CL_RelinkEntities (void)
 		ent->render.colormod[1] = (float) ((ent->state_current.colormod >> 2) & 7) * (1.0f / 7.0f);
 		ent->render.colormod[2] = (float) (ent->state_current.colormod & 3) * (1.0f / 3.0f);
 
+		dlightradius = 0;
+		dlightcolor[0] = 0;
+		dlightcolor[1] = 0;
+		dlightcolor[2] = 0;
+
 		// LordHavoc: if the entity has no effects, don't check each
 		if (ent->render.effects)
 		{
@@ -574,22 +576,33 @@ void CL_RelinkEntities (void)
 				v[1] = v[1] * 18 + ent->render.origin[1];
 				v[2] = v[2] * 18 + ent->render.origin[2] + 16;
 
-				CL_AllocDlight (ent, v, 100, 1, 1, 1, 0, 0.1);
+				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0.1);
+			}
+			if (ent->render.effects & EF_DIMLIGHT)
+			{
+				dlightcolor[0] += 200.0f;
+				dlightcolor[1] += 200.0f;
+				dlightcolor[2] += 200.0f;
 			}
 			if (ent->render.effects & EF_BRIGHTLIGHT)
-				CL_AllocDlight (ent, ent->render.origin, 400, 1, 1, 1, 0, 0);
-			if (ent->render.effects & EF_DIMLIGHT)
-				CL_AllocDlight (ent, ent->render.origin, 200, 1, 1, 1, 0, 0);
+			{
+				dlightcolor[0] += 400.0f;
+				dlightcolor[1] += 400.0f;
+				dlightcolor[2] += 400.0f;
+			}
 			// LordHavoc: added EF_RED and EF_BLUE
 			if (ent->render.effects & EF_RED) // red
-			{			
-				if (ent->render.effects & EF_BLUE) // magenta
-					CL_AllocDlight (ent, ent->render.origin, 200, 1.0f, 0.2f, 1.0f, 0, 0);
-				else // red
-					CL_AllocDlight (ent, ent->render.origin, 200, 1.0f, 0.1f, 0.1f, 0, 0);
+			{
+				dlightcolor[0] += 200.0f;
+				dlightcolor[1] +=  20.0f;
+				dlightcolor[2] +=  20.0f;
 			}
-			else if (ent->render.effects & EF_BLUE) // blue
-				CL_AllocDlight (ent, ent->render.origin, 200, 0.1f, 0.1f, 1.0f, 0, 0);
+			if (ent->render.effects & EF_BLUE) // blue
+			{
+				dlightcolor[0] +=  20.0f;
+				dlightcolor[1] +=  20.0f;
+				dlightcolor[2] += 200.0f;
+			}
 			else if (ent->render.effects & EF_FLAME)
 			{
 				if (ent->render.model)
@@ -602,7 +615,10 @@ void CL_RelinkEntities (void)
 					temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
 					R_FlameCube(mins, maxs, temp);
 				}
-				CL_AllocDlight (ent, ent->render.origin, lhrandom(200, 250), 1.0f, 0.7f, 0.3f, 0, 0);
+				d = lhrandom(200, 250);
+				dlightcolor[0] += d * 1.0f;
+				dlightcolor[1] += d * 0.7f;
+				dlightcolor[2] += d * 0.3f;
 			}
 		}
 
@@ -628,7 +644,9 @@ void CL_RelinkEntities (void)
 				else if (ent->render.model->flags & EF_ROCKET)
 				{
 					R_RocketTrail (oldorg, ent->render.origin, 0, ent);
-					CL_AllocDlight (ent, ent->render.origin, 200, 1.0f, 0.8f, 0.4f, 0, 0);
+					dlightcolor[0] += 200.0f;
+					dlightcolor[1] += 160.0f;
+					dlightcolor[2] +=  80.0f;
 				}
 				else if (ent->render.model->flags & EF_GRENADE)
 				{
@@ -641,13 +659,24 @@ void CL_RelinkEntities (void)
 					R_RocketTrail (oldorg, ent->render.origin, 6, ent);
 			}
 		}
-		if (ent->render.glowsize) // LordHavoc: customizable glow
+		// LordHavoc: customizable glow
+		if (ent->render.glowsize)
 		{
 			byte *tempcolor = (byte *)&d_8to24table[ent->render.glowcolor];
-			CL_AllocDlight (ent, ent->render.origin, ent->render.glowsize, tempcolor[0]*(1.0/255.0), tempcolor[1]*(1.0/255.0), tempcolor[2]*(1.0/255.0), 0, 0);
+			dlightcolor[0] += ent->render.glowsize * tempcolor[0] * (1.0f / 255.0f);
+			dlightcolor[1] += ent->render.glowsize * tempcolor[1] * (1.0f / 255.0f);
+			dlightcolor[2] += ent->render.glowsize * tempcolor[2] * (1.0f / 255.0f);
 		}
-		if (ent->render.flags & RENDER_GLOWTRAIL) // LordHavoc: customizable glow and trail
+		// LordHavoc: customizable trail
+		if (ent->render.flags & RENDER_GLOWTRAIL)
 			R_RocketTrail2 (oldorg, ent->render.origin, ent->render.glowcolor, ent);
+
+		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
+		{
+			dlightradius = VectorLength(dlightcolor);
+			d = 1.0f / dlightradius;
+			CL_AllocDlight (ent, ent->render.origin, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
+		}
 
 		if (i == cl.viewentity && !chase_active.value)
 			continue;

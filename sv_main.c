@@ -578,7 +578,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		if (ent != clent)
 		{
-			if (glowsize == 0 && bits == 0) // no effects
+			if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
 			{
 				if (ent->v.modelindex && pr_strings[ent->v.model]) // model
 				{

@@ -140,11 +140,6 @@ typedef struct mnode_s
 {
 // common with leaf
 	int			contents;		// 0, to differentiate from leafs
-	int			vismarkframe;	// node needs to be traversed if current (r_vismarkframecount)
-
-	// for bounding box culling
-	vec3_t		mins;
-	vec3_t		maxs;
 
 	struct mnode_s	*parent;
 	struct mportal_s *portals;
@@ -162,12 +157,7 @@ typedef struct mnode_s
 typedef struct mleaf_s
 {
 // common with node
-	int			contents;		// wil be a negative contents number
-	int			vismarkframe;	// node needs to be traversed if current (r_vismarkframecount)
-
-	// for bounding box culling
-	vec3_t		mins;
-	vec3_t		maxs;
+	int			contents;		// will be a negative contents number
 
 	struct mnode_s	*parent;
 	struct mportal_s *portals;
@@ -175,6 +165,10 @@ typedef struct mleaf_s
 // leaf specific
 	int			visframe;		// visible if current (r_framecount)
 	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
+
+	// for bounding box culling
+	vec3_t		mins;
+	vec3_t		maxs;
 
 	// LordHavoc: leaf based dynamic lighting
 	int			dlightbits[8];

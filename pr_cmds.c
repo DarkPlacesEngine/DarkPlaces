@@ -1298,7 +1298,6 @@ void PF_precache_sound (void)
 	PR_RunError ("PF_precache_sound: overflow");
 }
 
-extern qboolean hlbsp;
 void PF_precache_model (void)
 {
 	char	*s;
