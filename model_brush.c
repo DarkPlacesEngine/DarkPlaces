@@ -1742,25 +1742,6 @@ static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surf)
 }
 #endif
 
-static surfmesh_t *Mod_Q1BSP_AllocSurfMesh(int numverts, int numtriangles)
-{
-	surfmesh_t *mesh;
-	mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + numtriangles * sizeof(int[6]) + numverts * (3 + 2 + 2 + 2 + 3 + 3 + 3 + 1) * sizeof(float));
-	mesh->num_vertices = numverts;
-	mesh->num_triangles = numtriangles;
-	mesh->data_vertex3f = (float *)(mesh + 1);
-	mesh->data_texcoordtexture2f = mesh->data_vertex3f + mesh->num_vertices * 3;
-	mesh->data_texcoordlightmap2f = mesh->data_texcoordtexture2f + mesh->num_vertices * 2;
-	mesh->data_texcoorddetail2f = mesh->data_texcoordlightmap2f + mesh->num_vertices * 2;
-	mesh->data_svector3f = (float *)(mesh->data_texcoorddetail2f + mesh->num_vertices * 2);
-	mesh->data_tvector3f = mesh->data_svector3f + mesh->num_vertices * 3;
-	mesh->data_normal3f = mesh->data_tvector3f + mesh->num_vertices * 3;
-	mesh->data_lightmapoffsets = (int *)(mesh->data_normal3f + mesh->num_vertices * 3);
-	mesh->data_element3i = mesh->data_lightmapoffsets + mesh->num_vertices;
-	mesh->data_neighbor3i = mesh->data_element3i + mesh->num_triangles * 3;
-	return mesh;
-}
-
 static void Mod_Q1BSP_GenerateSurfacePolygon(msurface_t *surf, int firstedge, int numedges)
 {
 	int i, lindex, j;
@@ -1895,23 +1876,23 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		}
 	}
 
-	loadmodel->brushq1.entiremesh = Mod_Q1BSP_AllocSurfMesh(totalverts, totaltris);
+	loadmodel->entiremesh = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, 0, 0, true, true, false);
 
 	for (surfnum = 0, surf = loadmodel->brushq1.surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, surf++)
 	{
 		mesh = &surf->mesh;
 		mesh->num_vertices = surf->poly_numverts;
 		mesh->num_triangles = surf->poly_numverts - 2;
-		mesh->data_vertex3f = loadmodel->brushq1.entiremesh->data_vertex3f + totalverts * 3;
-		mesh->data_texcoordtexture2f = loadmodel->brushq1.entiremesh->data_texcoordtexture2f + totalverts * 2;
-		mesh->data_texcoordlightmap2f = loadmodel->brushq1.entiremesh->data_texcoordlightmap2f + totalverts * 2;
-		mesh->data_texcoorddetail2f = loadmodel->brushq1.entiremesh->data_texcoorddetail2f + totalverts * 2;
-		mesh->data_svector3f = loadmodel->brushq1.entiremesh->data_svector3f + totalverts * 3;
-		mesh->data_tvector3f = loadmodel->brushq1.entiremesh->data_tvector3f + totalverts * 3;
-		mesh->data_normal3f = loadmodel->brushq1.entiremesh->data_normal3f + totalverts * 3;
-		mesh->data_lightmapoffsets = loadmodel->brushq1.entiremesh->data_lightmapoffsets + totalverts;
-		mesh->data_element3i = loadmodel->brushq1.entiremesh->data_element3i + totaltris * 3;
-		mesh->data_neighbor3i = loadmodel->brushq1.entiremesh->data_neighbor3i + totaltris * 3;
+		mesh->data_vertex3f = loadmodel->entiremesh->data_vertex3f + totalverts * 3;
+		mesh->data_texcoordtexture2f = loadmodel->entiremesh->data_texcoordtexture2f + totalverts * 2;
+		mesh->data_texcoordlightmap2f = loadmodel->entiremesh->data_texcoordlightmap2f + totalverts * 2;
+		mesh->data_texcoorddetail2f = loadmodel->entiremesh->data_texcoorddetail2f + totalverts * 2;
+		mesh->data_svector3f = loadmodel->entiremesh->data_svector3f + totalverts * 3;
+		mesh->data_tvector3f = loadmodel->entiremesh->data_tvector3f + totalverts * 3;
+		mesh->data_normal3f = loadmodel->entiremesh->data_normal3f + totalverts * 3;
+		mesh->data_lightmapoffsets = loadmodel->entiremesh->data_lightmapoffsets + totalverts;
+		mesh->data_element3i = loadmodel->entiremesh->data_element3i + totaltris * 3;
+		mesh->data_neighbor3i = loadmodel->entiremesh->data_neighbor3i + totaltris * 3;
 
 		surf->lightmaptexturestride = 0;
 		surf->lightmaptexture = NULL;

@@ -210,7 +210,7 @@ static void mod_newmap(void)
 				{
 					ssize = (surf->extents[0] >> 4) + 1;
 					tsize = (surf->extents[1] >> 4) + 1;
-					
+
 					if (ssize > 256 || tsize > 256)
 						Host_Error("Bad surface extents");
 
@@ -783,6 +783,43 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 	if (normal3f)
 		for (i = 0, v = normal3f;i < numverts;i++, v += 3)
 			VectorNormalize(v);
+}
+
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, int numcollisionvertices, int numcollisiontriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors)
+{
+	surfmesh_t *mesh;
+	qbyte *data;
+	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 1 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numtriangles * sizeof(int) * (3 + 3 + (lightmapoffsets ? 1 : 0)) + numcollisionvertices * sizeof(float[3]) + numcollisiontriangles * sizeof(int[3]));
+	mesh->num_vertices = numvertices;
+	mesh->num_triangles = numtriangles;
+	mesh->num_collisionvertices = numcollisionvertices;
+	mesh->num_collisiontriangles = numcollisiontriangles;
+	data = (qbyte *)(mesh + 1);
+	if (mesh->num_vertices)
+	{
+		mesh->data_vertex3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
+		mesh->data_svector3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
+		mesh->data_tvector3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
+		mesh->data_normal3f = (float *)data, data += sizeof(float[3]) * mesh->num_vertices;
+		mesh->data_texcoordtexture2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
+		mesh->data_texcoordlightmap2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
+		if (detailtexcoords)
+			mesh->data_texcoorddetail2f = (float *)data, data += sizeof(float[2]) * mesh->num_vertices;
+		if (vertexcolors)
+			mesh->data_lightmapcolor4f = (float *)data, data += sizeof(float[4]) * mesh->num_vertices;
+		if (lightmapoffsets)
+			mesh->data_lightmapoffsets = (int *)data, data += sizeof(int) * mesh->num_vertices;
+	}
+	if (mesh->num_triangles)
+	{
+		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_vertices;
+		mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_vertices;
+	}
+	if (mesh->num_collisionvertices)
+		mesh->data_collisionvertex3f = (float *)data, data += sizeof(float[3]) * mesh->num_collisionvertices;
+	if (mesh->num_collisiontriangles)
+		mesh->data_collisionelement3i = (int *)data, data += sizeof(int[3]) * mesh->num_collisiontriangles;
+	return mesh;
 }
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable)
