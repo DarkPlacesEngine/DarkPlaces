@@ -25,13 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // used for dlight push checking and other things
 int r_framecount;
 
-// used for visibility checking
-qbyte r_pvsbits[(MAX_MAP_LEAFS+7)>>3];
-
-// TODO: dynamic resize?  65536 seems enough because q1bsp can't have more
-// than 32768, and q3bsp compilers have more like a 4096 limit
-qbyte r_worldsurfacevisible[MAX_MAP_LEAFS];
-
 mplane_t frustum[4];
 
 matrix4x4_t r_identitymatrix;
@@ -799,8 +792,6 @@ void R_RenderScene(void)
 
 	R_SkyStartFrame();
 
-	if (r_refdef.worldmodel && r_refdef.worldmodel->brush.FatPVS)
-		r_refdef.worldmodel->brush.FatPVS(r_refdef.worldmodel, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
 	R_WorldVisibility();
 	R_TimeReport("worldvis");
 

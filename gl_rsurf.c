@@ -40,6 +40,15 @@ cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygo
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0"};
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
+// flag arrays used for visibility checking on world model
+// (all other entities have no per-surface/per-leaf visibility checks)
+// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_clusters
+qbyte r_pvsbits[(32768+7)>>3];
+// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_leafs
+qbyte r_worldleafvisible[32768];
+// TODO: dynamic resize according to r_refdef.worldmodel->brush.num_surfaces
+qbyte r_worldsurfacevisible[262144];
+
 static int dlightdivtable[32768];
 
 static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface)
@@ -1333,9 +1342,13 @@ void R_WorldVisibility(void)
 
 	// if possible find the leaf the view origin is in
 	viewleaf = model->brushq1.PointInLeaf ? model->brushq1.PointInLeaf(model, r_vieworigin) : NULL;
+	// if possible fetch the visible cluster bits
+	if (model->brush.FatPVS)
+		model->brush.FatPVS(model, r_vieworigin, 2, r_pvsbits, sizeof(r_pvsbits));
 
-	// clear the visible surface flags array
+	// clear the visible surface and leaf flags arrays
 	memset(r_worldsurfacevisible, 0, model->brush.num_surfaces);
+	memset(r_worldleafvisible, 0, model->brush.num_leafs);
 
 	// if the user prefers surfaceworldnode (testing?) or the viewleaf could
 	// not be found, or the viewleaf is not part of the visible world
@@ -1350,6 +1363,7 @@ void R_WorldVisibility(void)
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
 				c_leafs++;
+				r_worldleafvisible[j] = true;
 				if (leaf->numleafsurfaces)
 					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
 						r_worldsurfacevisible[*mark] = true;
@@ -1361,7 +1375,6 @@ void R_WorldVisibility(void)
 		int leafstackpos;
 		mportal_t *p;
 		mleaf_t *leafstack[8192];
-		qbyte leafvisited[32768];
 		// portal method:
 		// follows portals leading outward from viewleaf, does not venture
 		// offscreen or into leafs that are not visible, faster than Quake's
@@ -1369,12 +1382,11 @@ void R_WorldVisibility(void)
 		// lot of surface that pvs alone would miss
 		leafstack[0] = viewleaf;
 		leafstackpos = 1;
-		memset(leafvisited, 0, model->brush.num_leafs);
 		while (leafstackpos)
 		{
 			c_leafs++;
 			leaf = leafstack[--leafstackpos];
-			leafvisited[leaf - model->brush.data_leafs] = 1;
+			r_worldleafvisible[leaf - model->brush.data_leafs] = true;
 			// mark any surfaces bounding this leaf
 			if (leaf->numleafsurfaces)
 				for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
@@ -1387,7 +1399,7 @@ void R_WorldVisibility(void)
 			// and the leaf is visible in the pvs
 			// (the first two checks won't cause as many cache misses as the leaf checks)
 			for (p = leaf->portals;p;p = p->next)
-				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !leafvisited[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex))
+				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !r_worldleafvisible[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex))
 					leafstack[leafstackpos++] = p->past;
 		}
 	}
