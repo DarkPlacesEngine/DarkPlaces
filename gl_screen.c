@@ -65,7 +65,7 @@ console is:
 	notify lines
 	half
 	full
-	
+
 
 */
 
@@ -97,6 +97,9 @@ qpic_t		*scr_turtle;
 
 int			clearconsole;
 int			clearnotify;
+
+int			lightscalebit;
+float		lightscale;
 
 qboolean	scr_disabled_for_loading;
 //qboolean	scr_drawloading;
@@ -226,19 +229,19 @@ CalcFov
 */
 float CalcFov (float fov_x, float width, float height)
 {
-        float   a;
-        float   x;
+	float   a;
+	float   x;
 
-        if (fov_x < 1 || fov_x > 179)
-                Sys_Error ("Bad fov: %f", fov_x);
+	if (fov_x < 1 || fov_x > 179)
+		Sys_Error ("Bad fov: %f", fov_x);
 
-        x = width/tan(fov_x/360*M_PI);
+	x = width/tan(fov_x/360*M_PI);
 
-        a = atan (height/x);
+	a = atan (height/x);
 
-        a = a*360/M_PI;
+	a = a*360/M_PI;
 
-        return a;
+	return a;
 }
 
 /*
@@ -272,7 +275,7 @@ static void SCR_CalcRefdef (void)
 	if (scr_fov.value > 170)
 		Cvar_Set ("fov","170");
 
-// intermission is always full screen	
+// intermission is always full screen
 	if (cl.intermission)
 	{
 		full = true;
@@ -315,7 +318,7 @@ static void SCR_CalcRefdef (void)
 	r_refdef.vrect.x = (vid.width - r_refdef.vrect.width)/2;
 	if (full)
 		r_refdef.vrect.y = 0;
-	else 
+	else
 		r_refdef.vrect.y = (h - r_refdef.vrect.height)/2;
 
 	r_refdef.fov_x = scr_fov.value;
@@ -567,7 +570,7 @@ void SCR_DrawConsole (void)
 }
 
 
-/* 
+/*
 ============================================================================== 
  
 						SCREEN SHOTS 
@@ -600,7 +603,7 @@ void SCR_ScreenShot_f (void)
 		sprintf (checkname, "%s/%s", com_gamedir, filename);
 		if (Sys_FileTime(checkname) == -1)
 			break;	// file doesn't exist
-	} 
+	}
 	if (i==10000)
 	{
 		Con_Printf ("SCR_ScreenShot_f: Couldn't create a TGA file\n"); 
@@ -608,7 +611,7 @@ void SCR_ScreenShot_f (void)
  	}
 
 	buffer = qmalloc(glwidth*glheight*3);
-	glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer); 
+	glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer);
 	Image_WriteTGARGB_preflipped(filename, glwidth, glheight, buffer);
 
 	qfree(buffer);
@@ -686,7 +689,7 @@ void SCR_DrawNotifyString (void)
 		x = (vid.width - l*8)/2;
 		// LordHavoc: speedup
 //		for (j=0 ; j<l ; j++, x+=8)
-//			Draw_Character (x, y, start[j]);	
+//			Draw_Character (x, y, start[j]);
 		Draw_String (x, y, start, l);
 
 		y += 8;
@@ -808,6 +811,20 @@ void SCR_UpdateScreen (void)
 
 
 	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
+
+	if (gl_combine.value && !gl_combine_extension)
+		Cvar_SetValue("gl_combine", false);
+
+	lighthalf = gl_lightmode.value;
+
+	lightscalebit = 0;
+	if (lighthalf)
+		lightscalebit += 1;
+
+	if (gl_combine.value)
+		lightscalebit += 2;
+
+	lightscale = 1.0f / (float) (1 << lightscalebit);
 
 	//
 	// determine size of refresh window

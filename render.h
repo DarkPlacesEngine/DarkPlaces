@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -41,6 +41,8 @@ extern char r_speeds2_string[1024];
 // lighting stuff
 extern vec3_t lightspot;
 extern cvar_t r_ambient;
+extern int lightscalebit;
+extern float lightscale;
 
 // model rendering stuff
 extern float *aliasvert;

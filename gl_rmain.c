@@ -329,6 +329,7 @@ GL_Init
 ===============
 */
 extern char *ENGINE_EXTENSIONS;
+extern void VID_CheckCombine(void);
 void GL_Init (void)
 {
 	gl_vendor = glGetString (GL_VENDOR);
@@ -345,6 +346,7 @@ void GL_Init (void)
 
 	VID_CheckMultitexture();
 	VID_CheckCVA();
+	VID_CheckCombine();
 
 	// LordHavoc: report supported extensions
 	Con_Printf ("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
@@ -939,8 +941,6 @@ void R_RenderView (void)
 
 	R_MoveParticles ();
 	R_MoveExplosions();
-
-	lighthalf = gl_lightmode.value;
 
 	FOG_framebegin();
 
