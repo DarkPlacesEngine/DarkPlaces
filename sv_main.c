@@ -258,7 +258,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION4);
+	MSG_WriteLong (&client->message, PROTOCOL_DARKPLACES4);
 	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
@@ -1191,7 +1191,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	if ( ent->v->waterlevel >= 2)
 		bits |= SU_INWATER;
 
-	// dpprotocol
+	// PROTOCOL_DARKPLACES
 	VectorClear(punchvector);
 	if ((val = GETEDICTFIELDVALUE(ent, eval_punchvector)))
 		VectorCopy(val->vector, punchvector);
@@ -1214,8 +1214,8 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	{
 		if (ent->v->punchangle[i])
 			bits |= (SU_PUNCH1<<i);
-		if (punchvector[i]) // dpprotocol
-			bits |= (SU_PUNCHVEC1<<i); // dpprotocol
+		if (punchvector[i]) // PROTOCOL_DARKPLACES
+			bits |= (SU_PUNCHVEC1<<i); // PROTOCOL_DARKPLACES
 		if (ent->v->velocity[i])
 			bits |= (SU_VELOCITY1<<i);
 	}
@@ -1251,9 +1251,9 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	for (i=0 ; i<3 ; i++)
 	{
 		if (bits & (SU_PUNCH1<<i))
-			MSG_WritePreciseAngle(msg, ent->v->punchangle[i]); // dpprotocol
-		if (bits & (SU_PUNCHVEC1<<i)) // dpprotocol
-			MSG_WriteDPCoord(msg, punchvector[i]); // dpprotocol
+			MSG_WritePreciseAngle(msg, ent->v->punchangle[i]); // PROTOCOL_DARKPLACES
+		if (bits & (SU_PUNCHVEC1<<i)) // PROTOCOL_DARKPLACES
+			MSG_WriteDPCoord(msg, punchvector[i]); // PROTOCOL_DARKPLACES
 		if (bits & (SU_VELOCITY1<<i))
 			MSG_WriteChar (msg, ent->v->velocity[i]/16);
 	}

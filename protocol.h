@@ -22,13 +22,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
-#define	PROTOCOL_VERSION 15
-#define	DPPROTOCOL_VERSION1 96
-#define	DPPROTOCOL_VERSION2 97
+#define	PROTOCOL_QUAKE 15
+#define	PROTOCOL_NEHAHRAMOVIE 250
+#define	PROTOCOL_DARKPLACES1 96
+#define	PROTOCOL_DARKPLACES2 97
 // LordHavoc: I think the 96-99 range was going to run out too soon...
 // so here I jump to 3500
-#define	DPPROTOCOL_VERSION3 3500
-#define DPPROTOCOL_VERSION4 3501
+#define	PROTOCOL_DARKPLACES3 3500
+#define PROTOCOL_DARKPLACES4 3501
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -335,7 +336,7 @@ typedef struct
 entity_state_t;
 
 /*
-DPPROTOCOL_VERSION3
+PROTOCOL_DARKPLACES3
 server updates entities according to some (unmentioned) scheme.
 
 a frame consists of all visible entities, some of which are up to date,
@@ -367,7 +368,7 @@ if server receives ack message in put packet it performs these steps:
 */
 
 /*
-DPPROTOCOL_VERSION4
+PROTOCOL_DARKPLACES4
 a frame consists of some visible entities in a range (this is stored as start and end, note that end may be less than start if it wrapped).
 
 these entities are stored in a range (firstentity/endentity) of structs in the entitydata[] buffer.

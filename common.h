@@ -138,8 +138,6 @@ float MSG_ReadDPCoord (void);
 
 #define MSG_ReadVector(v) {(v)[0] = MSG_ReadCoord();(v)[1] = MSG_ReadCoord();(v)[2] = MSG_ReadCoord();}
 
-extern int dpprotocol;
-
 //============================================================================
 
 extern char com_token[1024];

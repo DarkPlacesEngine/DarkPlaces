@@ -387,12 +387,12 @@ void CL_SendMove(usercmd_t *cmd)
 
 	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 
-	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
+	if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
 	{
 		for (i = 0;i < 3;i++)
 			MSG_WriteFloat (&buf, cl.viewangles[i]);
 	}
-	else if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION4)
+	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4)
 	{
 		for (i=0 ; i<3 ; i++)
 			MSG_WritePreciseAngle (&buf, cl.viewangles[i]);
@@ -431,7 +431,7 @@ void CL_SendMove(usercmd_t *cmd)
 	MSG_WriteByte (&buf, in_impulse);
 	in_impulse = 0;
 
-	if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
+	if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
 	{
 		// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
 		i = EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase);

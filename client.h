@@ -425,6 +425,9 @@ typedef struct
 	// for interpolation
 	float viewzoomold, viewzoomnew;
 
+	// protocol version of the server we're connected to
+	int protocol;
+
 	// entity database stuff
 	entity_database_t entitydatabase;
 	entity_database4_t *entitydatabase4;
