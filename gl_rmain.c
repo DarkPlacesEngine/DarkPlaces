@@ -696,7 +696,7 @@ void R_RenderView (void)
 	R_DrawCoronas();
 	R_TimeReport("coronas");
 
-	R_DrawCrosshair();
+	R_DrawWorldCrosshair();
 	R_TimeReport("crosshair");
 
 	R_BlendView();
