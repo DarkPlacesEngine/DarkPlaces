@@ -58,6 +58,7 @@ void Con_DisplayList(const char **list);
 // log
 //
 void Log_Init (void);
+void Log_Close (void);
 void Log_Start (void);
 // Log_Print and Log_Printf can be used as soon as the FS initialization is done
 void Log_Print(const char *logfilename, const char *msg);

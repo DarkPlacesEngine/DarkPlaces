@@ -949,5 +949,6 @@ void Host_Shutdown(void)
 	}
 
 	Sys_Shutdown();
+	Log_Close ();
 }
 
