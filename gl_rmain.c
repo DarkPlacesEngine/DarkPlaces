@@ -982,20 +982,26 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			VectorScale(lightcolor, f, lightcolor);
 		}
 
-		if (!visiblevolumes)
-			R_Shadow_Stage_ShadowVolumes();
-		ent = &cl_entities[0].render;
-		if (wl->shadowvolume && r_shadow_staticworldlights.integer)
-			R_Shadow_DrawWorldLightShadowVolume(&ent->matrix, wl);
-		else
-			R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
-		if (r_drawentities.integer)
-			for (i = 0;i < r_refdef.numentities;i++)
-				R_TestAndDrawShadowVolume(r_refdef.entities[i], wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
+		if (wl->castshadows)
+		{
+			if (!visiblevolumes)
+				R_Shadow_Stage_ShadowVolumes();
+			ent = &cl_entities[0].render;
+			if (wl->shadowvolume && r_shadow_staticworldlights.integer)
+				R_Shadow_DrawWorldLightShadowVolume(&ent->matrix, wl);
+			else
+				R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
+			if (r_drawentities.integer)
+				for (i = 0;i < r_refdef.numentities;i++)
+					R_TestAndDrawShadowVolume(r_refdef.entities[i], wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs);
+		}
 
 		if (!visiblevolumes)
 		{
-			R_Shadow_Stage_Light();
+			if (wl->castshadows)
+				R_Shadow_Stage_LightWithShadows();
+			else
+				R_Shadow_Stage_LightWithoutShadows();
 			ent = &cl_entities[0].render;
 			if (ent->model && ent->model->DrawLight)
 			{
@@ -1123,7 +1129,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 
 		if (!visiblevolumes)
 		{
-			R_Shadow_Stage_Light();
+			R_Shadow_Stage_LightWithShadows();
 			ent = &cl_entities[0].render;
 			if (ent->model && ent->model->DrawLight)
 			{
@@ -1245,6 +1251,7 @@ R_RenderView
 r_refdef must be set before the first call
 ================
 */
+extern void R_DrawLightningBeams (void);
 void R_RenderView (void)
 {
 	entity_render_t *world;
@@ -1337,6 +1344,9 @@ void R_RenderView (void)
 		R_ShadowVolumeLighting(false);
 		R_TimeReport("dynlight");
 	}
+
+	R_DrawLightningBeams();
+	R_TimeReport("lightning");
 
 	R_DrawParticles();
 	R_TimeReport("particles");

@@ -53,6 +53,8 @@ cvar_t r_draweffects = {0, "r_draweffects", "1"};
 cvar_t cl_explosions = {CVAR_SAVE, "cl_explosions", "1"};
 cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 
+cvar_t cl_beampolygons = {CVAR_SAVE, "cl_beampolygons", "1"};
+
 mempool_t *cl_scores_mempool;
 mempool_t *cl_refdef_mempool;
 mempool_t *cl_entities_mempool;
@@ -872,6 +874,9 @@ void CL_RelinkBeams (void)
 			b->start[2] += 16;
 		}
 
+		if (cl_beampolygons.integer)
+			continue;
+
 		// calculate pitch and yaw
 		VectorSubtract (b->end, b->start, dist);
 
@@ -915,6 +920,176 @@ void CL_RelinkBeams (void)
 		}
 	}
 }
+
+cvar_t r_lightningbeam_thickness = {CVAR_SAVE, "r_lightningbeam_thickness", "4"};
+cvar_t r_lightningbeam_scroll = {CVAR_SAVE, "r_lightningbeam_scroll", "5"};
+cvar_t r_lightningbeam_repeatdistance = {CVAR_SAVE, "r_lightningbeam_repeatdistance", "1024"};
+cvar_t r_lightningbeam_color_red = {CVAR_SAVE, "r_lightningbeam_color_red", "1"};
+cvar_t r_lightningbeam_color_green = {CVAR_SAVE, "r_lightningbeam_color_green", "1"};
+cvar_t r_lightningbeam_color_blue = {CVAR_SAVE, "r_lightningbeam_color_blue", "1"};
+
+rtexture_t *r_lightningbeamtexture;
+rtexturepool_t *r_lightningbeamtexturepool;
+
+int r_lightningbeamelements[18] = {0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 8, 9, 10, 8, 10, 11};
+
+void r_lightningbeams_start(void)
+{
+	float r, g, b, intensity, fx, width, center;
+	int x, y;
+	qbyte *data, *noise1, *noise2;
+	data = Mem_Alloc(tempmempool, 32 * 512 * 4);
+	noise1 = Mem_Alloc(tempmempool, 512 * 512);
+	noise2 = Mem_Alloc(tempmempool, 512 * 512);
+	fractalnoise(noise1, 512, 8);
+	fractalnoise(noise2, 512, 16);
+
+	for (y = 0;y < 512;y++)
+	{
+		width = noise1[y * 512] * (1.0f / 256.0f) * 3.0f + 3.0f;
+		center = (noise1[y * 512 + 64] / 256.0f) * (32.0f - (width + 1.0f) * 2.0f) + (width + 1.0f);
+		for (x = 0;x < 32;x++, fx++)
+		{
+			fx = (x - center) / width;
+			intensity = (1.0f - fx * fx) * (noise2[y*512+x] * (1.0f / 256.0f) * 0.33f + 0.66f);
+			intensity = bound(0, intensity, 1);
+			r = intensity * 2.0f - 1.0f;
+			g = intensity * 3.0f - 1.0f;
+			b = intensity * 3.0f;
+			data[(y * 32 + x) * 4 + 0] = (qbyte)(bound(0, r, 1) * 255.0f);
+			data[(y * 32 + x) * 4 + 1] = (qbyte)(bound(0, g, 1) * 255.0f);
+			data[(y * 32 + x) * 4 + 2] = (qbyte)(bound(0, b, 1) * 255.0f);
+			data[(y * 32 + x) * 4 + 3] = (qbyte)255;
+		}
+	}
+
+	r_lightningbeamtexturepool = R_AllocTexturePool();
+	r_lightningbeamtexture = R_LoadTexture2D(r_lightningbeamtexturepool, "lightningbeam", 32, 512, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	Mem_Free(noise1);
+	Mem_Free(noise2);
+	Mem_Free(data);
+}
+
+void r_lightningbeams_shutdown(void)
+{
+	r_lightningbeamtexture = NULL;
+	R_FreeTexturePool(&r_lightningbeamtexturepool);
+}
+
+void r_lightningbeams_newmap(void)
+{
+}
+
+void R_LightningBeams_Init(void)
+{
+	Cvar_RegisterVariable(&r_lightningbeam_thickness);
+	Cvar_RegisterVariable(&r_lightningbeam_scroll);
+	Cvar_RegisterVariable(&r_lightningbeam_repeatdistance);
+	Cvar_RegisterVariable(&r_lightningbeam_color_red);
+	Cvar_RegisterVariable(&r_lightningbeam_color_green);
+	Cvar_RegisterVariable(&r_lightningbeam_color_blue);
+	R_RegisterModule("R_LightningBeams", r_lightningbeams_start, r_lightningbeams_shutdown, r_lightningbeams_newmap);
+}
+
+void R_CalcLightningBeamPolygonVertices(float *v, float *tc, const float *start, const float *end, const float *offset, float t1, float t2)
+{
+	VectorAdd     (start, offset, (v +  0));tc[ 0] = 0;tc[ 1] = t1;
+	VectorSubtract(start, offset, (v +  4));tc[ 4] = 1;tc[ 5] = t1;
+	VectorSubtract(end  , offset, (v +  8));tc[ 8] = 1;tc[ 9] = t2;
+	VectorAdd     (end  , offset, (v + 12));tc[12] = 0;tc[13] = t2;
+}
+
+void R_FogLightningBeamColors(const float *v, float *c, int numverts, float r, float g, float b, float a)
+{
+	int i;
+	vec3_t fogvec;
+	float ifog;
+	for (i = 0;i < numverts;i++, v += 4, c += 4)
+	{
+		VectorSubtract(v, r_origin, fogvec);
+		ifog = 1 - exp(fogdensity/DotProduct(fogvec,fogvec));
+		c[0] = r * ifog;
+		c[1] = g * ifog;
+		c[2] = b * ifog;
+		c[3] = a;
+	}
+}
+
+float beamrepeatscale;
+
+void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
+{
+	const beam_t *b = calldata1;
+	rmeshstate_t m;
+	vec3_t beamdir, right, up, offset;
+	float length, t1, t2;
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
+	m.tex[0] = R_GetTexture(r_lightningbeamtexture);
+	R_Mesh_State(&m);
+	R_Mesh_Matrix(&r_identitymatrix);
+	VectorSubtract(b->end, b->start, beamdir);
+	length = sqrt(DotProduct(beamdir, beamdir));
+	t1 = 1.0f / length;
+	VectorScale(beamdir, t1, beamdir);
+	VectorSubtract(r_origin, b->start, up);
+	t1 = -DotProduct(up, beamdir);
+	VectorMA(up, t1, beamdir, up);
+	VectorNormalizeFast(up);
+	CrossProduct(beamdir, up, right);
+	//VectorVectors(beamdir, right, up);
+
+	t1 = cl.time * -r_lightningbeam_scroll.value;
+	t1 = t1 - (int) t1;
+	t2 = t1 + beamrepeatscale * length;
+
+	// horizontal
+	VectorScale(right, r_lightningbeam_thickness.value, offset);
+	R_CalcLightningBeamPolygonVertices(varray_vertex, varray_texcoord[0], b->start, b->end, offset, t1, t2);
+	// diagonal up-right/down-left
+	VectorAdd(right, up, offset);
+	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
+	R_CalcLightningBeamPolygonVertices(varray_vertex + 16, varray_texcoord[0] + 16, b->start, b->end, offset, t1 + 0.33, t2 + 0.33);
+	// diagonal down-right/up-left
+	VectorSubtract(right, up, offset);
+	VectorScale(offset, r_lightningbeam_thickness.value * 0.70710681f, offset);
+	R_CalcLightningBeamPolygonVertices(varray_vertex + 32, varray_texcoord[0] + 32, b->start, b->end, offset, t1 + 0.66, t2 + 0.66);
+
+	if (fogenabled)
+	{
+		GL_UseColorArray();
+		R_FogLightningBeamColors(varray_vertex, varray_color, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
+	}
+	else
+		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
+
+	//qglDisable(GL_CULL_FACE);
+	R_Mesh_Draw(12, 6, r_lightningbeamelements);
+	//qglEnable(GL_CULL_FACE);
+}
+
+void R_DrawLightningBeams (void)
+{
+	int i;
+	beam_t *b;
+	vec3_t org;
+
+	if (!cl_beampolygons.integer)
+		return;
+
+	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
+	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
+	{
+		if (b->model && b->endtime >= cl.time)
+		{
+			VectorAdd(b->start, b->end, org);
+			VectorScale(org, 0.5f, org);
+			R_MeshQueue_AddTransparent(org, R_DrawLightningBeamCallback, b, 0);
+		}
+	}
+}
+
 
 void CL_LerpPlayer(float frac)
 {
@@ -1234,6 +1409,9 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions);
 	Cvar_RegisterVariable(&cl_stainmaps);
+	Cvar_RegisterVariable(&cl_beampolygons);
+
+	R_LightningBeams_Init();
 
 	CL_Parse_Init();
 	CL_Particles_Init();

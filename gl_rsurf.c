@@ -1709,8 +1709,6 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 			}
 		}
 	}
-	if (r_drawportals.integer)
-		R_DrawPortals(ent);
 }
 
 void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
@@ -1785,6 +1783,8 @@ void R_DrawWorld (entity_render_t *ent)
 	R_PrepareSurfaces(ent);
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->pvstexturechains);
 	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->pvstexturechains);
+	if (r_drawportals.integer)
+		R_DrawPortals(ent);
 }
 
 void R_Model_Brush_DrawSky (entity_render_t *ent)

@@ -20,17 +20,23 @@ void R_Shadow_RenderVolume(int numverts, int numtris, int *elements);
 void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *mesh);
 void R_Shadow_Stage_Begin(void);
 void R_Shadow_Stage_ShadowVolumes(void);
-void R_Shadow_Stage_Light(void);
+void R_Shadow_Stage_LightWithShadows(void);
+void R_Shadow_Stage_LightWithoutShadows(void);
 void R_Shadow_Stage_End(void);
 int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const float *origin, float radius);
 
 typedef struct worldlight_s
 {
+	// saved properties
 	vec3_t origin;
+	vec_t lightradius;
 	vec3_t light;
+	int castshadows;
+	char *cubemapname;
+
+	// generated properties
 	vec3_t mins;
 	vec3_t maxs;
-	vec_t lightradius;
 	vec_t cullradius;
 	struct worldlight_s *next;
 	msurface_t **surfaces;
@@ -38,7 +44,6 @@ typedef struct worldlight_s
 	mleaf_t **leafs;
 	int numleafs;
 	rtexture_t *cubemap;
-	char *cubemapname;
 	int style;
 	shadowmesh_t *shadowvolume;
 	int selected;
