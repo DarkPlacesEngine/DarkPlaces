@@ -7,19 +7,19 @@
 CFG=darkplaces - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
-!MESSAGE
+!MESSAGE 
 !MESSAGE NMAKE /f "darkplaces.mak".
-!MESSAGE
+!MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
-!MESSAGE
+!MESSAGE 
 !MESSAGE NMAKE /f "darkplaces.mak" CFG="darkplaces - Win32 Debug"
-!MESSAGE
+!MESSAGE 
 !MESSAGE Possible choices for configuration are:
-!MESSAGE
+!MESSAGE 
 !MESSAGE "darkplaces - Win32 Release" (based on "Win32 (x86) Application")
 !MESSAGE "darkplaces - Win32 Debug" (based on "Win32 (x86) Application")
-!MESSAGE
+!MESSAGE 
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -81,7 +81,7 @@ LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
 # ADD LINK32 user32.lib gdi32.lib opengl32.lib wsock32.lib winmm.lib comctl32.lib dxguid.lib /nologo /subsystem:windows /debug /machine:I386 /pdbtype:sept
 
-!ENDIF
+!ENDIF 
 
 # Begin Target
 
@@ -184,6 +184,10 @@ SOURCE=.\fractalnoise.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\fs.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\gl_backend.c
 # End Source File
 # Begin Source File
@@ -228,6 +232,10 @@ SOURCE=.\keys.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\lhnet.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\mathlib.c
 # End Source File
 # Begin Source File
@@ -260,27 +268,7 @@ SOURCE=.\model_sprite.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\net_bsd.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_dgrm.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_loop.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_main.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_master.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_udp.c
+SOURCE=.\netconn.c
 # End Source File
 # Begin Source File
 
@@ -305,10 +293,6 @@ SOURCE=.\pr_exec.c
 # Begin Source File
 
 SOURCE=.\protocol.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\fs.c
 # End Source File
 # Begin Source File
 
@@ -426,278 +410,6 @@ SOURCE=.\zone.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=.\bspfile.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cdaudio.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cg_math.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cgame_api.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cgamevm.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cl_collision.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cl_screen.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cl_video.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\client.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cmd.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\collision.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\common.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\conproc.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\console.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\crc.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\cvar.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\dpvsimpledecode.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\draw.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\gl_backend.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\gl_warp_sin.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\glquake.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\image.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\input.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\jpeg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\keys.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\mathlib.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\menu.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\meshqueue.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\model_alias.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\model_brush.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\model_shared.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\model_sprite.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\model_zymotic.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\modelgen.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\net.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_dgrm.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_loop.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_master.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_udp.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\palette.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\portals.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\pr_comp.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\pr_execprogram.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\progdefs.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\progs.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\protocol.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\qtypes.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\quakedef.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\fs.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_lerpanim.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_light.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_modules.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_textures.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\render.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\resource.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\sbar.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\screen.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\server.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\sound.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\spritegn.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\sys.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\ui.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\vid.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\wad.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\wavefile.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\winquake.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\world.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\zone.h
-# End Source File
 # End Group
 # Begin Group "Resource Files"
 
