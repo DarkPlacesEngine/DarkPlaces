@@ -9,7 +9,6 @@ extern int c_meshtris, c_meshs, c_transtris, c_transmeshs;
 typedef struct
 {
 	//input to R_Mesh_Draw_GetBuffer
-	int transparent;
 	int depthwrite; // force depth writing enabled even if polygon is not opaque
 	int depthdisable; // disable depth read/write entirely
 	int blendfunc1;
@@ -47,10 +46,6 @@ void R_Mesh_ClearDepth(void);
 // renders current batch of meshs
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 void R_Mesh_Render(void);
-
-// renders the queued transparent meshs
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-void R_Mesh_AddTransparent(void);
 
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
 // (it is up to the caller to fill in the geometry data)
