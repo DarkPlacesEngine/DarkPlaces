@@ -686,7 +686,7 @@ void Sbar_DrawFrags (void)
 	Sbar_SortFrags ();
 
 	// draw the text
-	l = scoreboardlines <= 4 ? scoreboardlines : 4;
+	l = min(scoreboardlines, 4);
 
 	x = 23 * 8;
 
@@ -1200,10 +1200,13 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 	int i, numlines;
 
 	// decide where to print
+	if (gamemode == GAME_TRANSFUSION)
+		numlines = (vid.conwidth - x + 127) / 128;
+	else
+		numlines = (vid.conheight - y + 7) / 8;
 
-	numlines = (vid.conheight - y) / 8;
 	// give up if there isn't room
-	if (x + (6 + 15) * 8 > vid.conwidth || numlines < 1)
+	if (x >= vid.conwidth || y >= vid.conheight || numlines < 1)
 		return;
 
 	// scores
@@ -1214,13 +1217,9 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 		if (fragsort[i] == cl.playerentity - 1)
 			break;
 
-	if (i == scoreboardlines) // we're not there
-		i = 0;
-	else // figure out start
-	{
-		i -= numlines/2;
-		i = bound(0, i, scoreboardlines - numlines);
-	}
+	// figure out start
+	i -= numlines/2;
+	i = bound(0, i, scoreboardlines - numlines);
 
 	if (gamemode == GAME_TRANSFUSION)
 	{
