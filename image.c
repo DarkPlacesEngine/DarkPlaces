@@ -565,7 +565,11 @@ void Image_StripImageExtension (const char *in, char *out)
 	if ((end - in) >= 4)
 	{
 		temp = end - 4;
-		if (strcmp(temp, ".tga") == 0 || strcmp(temp, ".pcx") == 0 || strcmp(temp, ".lmp") == 0)
+		if (strcmp(temp, ".tga") == 0
+		 || strcmp(temp, ".pcx") == 0
+		 || strcmp(temp, ".lmp") == 0
+		 || strcmp(temp, ".png") == 0
+		 || strcmp(temp, ".jpg") == 0)
 			end = temp;
 		while (in < end)
 			*out++ = *in++;
@@ -1414,11 +1418,13 @@ void Image_HeightmapToNormalmap(const unsigned char *inpixels, unsigned char *ou
 	}
 }
 
-int image_loadskin(imageskin_t *s, char *name)
+int image_loadskin(imageskin_t *s, char *shadername)
 {
 	int j;
 	qbyte *bumppixels;
 	int bumppixels_width, bumppixels_height;
+	char name[MAX_QPATH];
+	Image_StripImageExtension(shadername, name);
 	memset(s, 0, sizeof(*s));
 	s->basepixels = loadimagepixels(name, false, 0, 0);
 	if (s->basepixels == NULL)
