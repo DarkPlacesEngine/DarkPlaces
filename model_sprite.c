@@ -69,38 +69,43 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 	pspriteframe->right = width + origin[0];
 
 	sprintf (name, "%s_%i", loadmodel->name, framenum);
-	pspriteframe->gl_texturenum = GL_LoadTexture (name, width, height, (byte *)(pinframe + 1), true, true, bytesperpixel);
-	// make fog version (just alpha)
-	pixbuf = pixel = malloc(width*height*4);
-	inpixel = (byte *)(pinframe + 1);
-	if (bytesperpixel == 1)
+	pspriteframe->gl_texturenum = loadtextureimagewithmask(name, 0, 0, false, true);
+	pspriteframe->gl_fogtexturenum = image_masktexnum;
+	if (pspriteframe->gl_texturenum == 0)
 	{
-		for (i = 0;i < width*height;i++)
+		pspriteframe->gl_texturenum = GL_LoadTexture (name, width, height, (byte *)(pinframe + 1), true, true, bytesperpixel);
+		// make fog version (just alpha)
+		pixbuf = pixel = malloc(width*height*4);
+		inpixel = (byte *)(pinframe + 1);
+		if (bytesperpixel == 1)
 		{
-			*pixel++ = 255;
-			*pixel++ = 255;
-			*pixel++ = 255;
-			if (*inpixel++ != 255)
+			for (i = 0;i < width*height;i++)
+			{
 				*pixel++ = 255;
-			else
-				*pixel++ = 0;
+				*pixel++ = 255;
+				*pixel++ = 255;
+				if (*inpixel++ != 255)
+					*pixel++ = 255;
+				else
+					*pixel++ = 0;
+			}
 		}
-	}
-	else
-	{
-		inpixel+=3;
-		for (i = 0;i < width*height;i++)
+		else
 		{
-			*pixel++ = 255;
-			*pixel++ = 255;
-			*pixel++ = 255;
-			*pixel++ = *inpixel;
-			inpixel+=4;
+			inpixel+=3;
+			for (i = 0;i < width*height;i++)
+			{
+				*pixel++ = 255;
+				*pixel++ = 255;
+				*pixel++ = 255;
+				*pixel++ = *inpixel;
+				inpixel+=4;
+			}
 		}
+		sprintf (name, "%s_%ifog", loadmodel->name, framenum);
+		pspriteframe->gl_fogtexturenum = GL_LoadTexture (name, width, height, pixbuf, true, true, 4);
+		free(pixbuf);
 	}
-	sprintf (name, "%s_%ifog", loadmodel->name, framenum);
-	pspriteframe->gl_fogtexturenum = GL_LoadTexture (name, width, height, pixbuf, true, true, 4);
-	free(pixbuf);
 
 	return (void *)((byte *)pinframe + sizeof (dspriteframe_t) + size);
 }
