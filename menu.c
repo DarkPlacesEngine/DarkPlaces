@@ -568,12 +568,15 @@ void M_SinglePlayer_Draw (void)
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
 
 	// Transfusion doesn't have a single player mode
-	if (gamemode == GAME_TRANSFUSION)
+	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ)
 	{
 		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
-		M_PrintWhite (95, 10 * 8, "Transfusion is for");
+		if (gamemode == GAME_NEXUIZ)
+			M_PrintWhite (95, 10 * 8, "Nexuiz is for");
+		else
+			M_PrintWhite (95, 10 * 8, "Transfusion is for");
 		M_PrintWhite (83, 11 * 8, "multiplayer play only");
 	}
 	else
@@ -592,7 +595,7 @@ void M_SinglePlayer_Draw (void)
 
 void M_SinglePlayer_Key (int key)
 {
-	if (gamemode == GAME_TRANSFUSION)
+	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ)
 	{
 		if (key == K_ESCAPE || key == K_ENTER)
 			m_state = m_main;
