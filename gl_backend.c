@@ -861,7 +861,7 @@ void R_Mesh_AddTransparent(void)
 		if (center < 0.0f)
 			center = 0.0f;
 		center += 8388608.0f;
-		i = *((long *)&center) & 0x7FFFFF;
+		i = *((int *)&center) & 0x7FFFFF;
 		i = min(i, (TRANSDEPTHRES - 1));
 #endif
 		tri->next = buf_sorttranstri_list[i];

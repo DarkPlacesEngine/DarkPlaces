@@ -916,7 +916,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						t = 1.0f / sqrt(dist2);
 						#else
 						number = DotProduct(v, v);
-						*((long *)&t) = 0x5f3759df - ((* (long *) &number) >> 1);
+						*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
 						t = t * (1.5f - (number * 0.5f * t * t));
 						#endif
 						// DotProduct(avn,v) * t is dotproduct with a normalized v,

@@ -211,7 +211,7 @@ int R_Clip_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplan
 	number = DotProduct(p->normal, p->normal);
 	if (number >= 0.1f)
 	{
-		*((long *)&y) = 0x5f3759df - ((* (long *) &number) >> 1);
+		*((int *)&y) = 0x5f3759df - ((* (int *) &number) >> 1);
 		y = y * (1.5f - (number * 0.5f * y * y));
 		VectorScale(p->normal, y, p->normal);
 		p->dist = DotProduct(point1, p->normal);

@@ -95,7 +95,7 @@ static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, 
 		Con_Printf("Mod_ConvertAliasVerts: \"%s\", %i invalid normal indices found\n", loadmodel->name, invalidnormals);
 }
 
-static void Mod_MDL_LoadFrames (long datapointer, int inverts, int outverts, vec3_t scale, vec3_t translate)
+static void Mod_MDL_LoadFrames (qbyte * datapointer, int inverts, int outverts, vec3_t scale, vec3_t translate)
 {
 	daliasframetype_t	*pframetype;
 	daliasframe_t		*pinframe;
@@ -265,13 +265,13 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	daliasframetype_t		*pinframetype;
 	daliasgroup_t			*pinframegroup;
 	float					scales, scalet, scale[3], translate[3], interval;
-	long					datapointer, startframes, startskins;
+	qbyte					*datapointer, *startframes, *startskins;
 	char					name[MAX_QPATH];
 	qbyte					*skintemp = NULL;
 	modelyawradius = 0;
 	modelradius = 0;
 
-	datapointer = (long) buffer;
+	datapointer = buffer;
 	pinmodel = (mdl_t *)datapointer;
 	datapointer += sizeof(mdl_t);
 
@@ -548,7 +548,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 {
 	int *vertremap;
 	md2_t *pinmodel;
-	long base;
+	qbyte *base;
 	int version, end;
 	int i, j, k, hashindex, num, numxyz, numst, xyz, st;
 	float *stverts, s, t;
@@ -559,7 +559,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		float st[2];
 	}
 	*hash, **md2verthash, *md2verthashdata;
-	long datapointer;
+	qbyte *datapointer;
 	md2frame_t *pinframe;
 	char *inskin;
 	md2triangle_t *intri;
@@ -567,7 +567,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	int skinwidth, skinheight;
 
 	pinmodel = buffer;
-	base = (long) buffer;
+	base = buffer;
 
 	version = LittleLong (pinmodel->version);
 	if (version != MD2ALIAS_VERSION)

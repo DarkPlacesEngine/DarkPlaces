@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-model_t	*loadmodel;
+model_t *loadmodel;
 
 // LordHavoc: increased from 512 to 2048
 #define	MAX_MOD_KNOWN	2048

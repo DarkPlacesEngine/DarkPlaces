@@ -149,7 +149,7 @@ float Q_RSqrt(float number)
 	if (number == 0.0f)
 		return 0.0f;
 
-	*((long *)&y) = 0x5f3759df - ((* (long *) &number) >> 1);
+	*((int *)&y) = 0x5f3759df - ((* (int *) &number) >> 1);
 	return y * (1.5f - (number * 0.5f * y * y));
 }
 
@@ -161,7 +161,7 @@ void _VectorNormalizeFast(vec3_t v)
 
 	if (number != 0.0)
 	{
-		*((long *)&y) = 0x5f3759df - ((* (long *) &number) >> 1);
+		*((int *)&y) = 0x5f3759df - ((* (int *) &number) >> 1);
 		y = y * (1.5f - (number * 0.5f * y * y));
 
 		VectorScale(v, y, v);
