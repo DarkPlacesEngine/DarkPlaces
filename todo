@@ -1,4 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, n = done but have not notified the people who asked for it, f = failed
+1 dpmod: make a skill 4 mode where monsters are nearly invisible (alpha 0.2?) except when attacking or in pain
+0 darkplaces: make sure that textureless models are white and not invisible (McKilled, QorpsE)
 0 darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 0 darkplaces: add lightning beam settings to menu (romi)
 0 darkplaces: add scr_conbrightness cvar (0-1) to control brightness of conback (0 = black and does not load conback, resets back to 0 if conback fails to load)
