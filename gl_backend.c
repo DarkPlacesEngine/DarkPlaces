@@ -24,7 +24,6 @@ static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
 
 typedef struct buf_mesh_s
 {
-	//struct buf_mesh_s *next;
 	int depthmask;
 	int depthtest;
 	int blendfunc1, blendfunc2;
@@ -36,7 +35,6 @@ typedef struct buf_mesh_s
 	int verts;
 	struct buf_mesh_s *chain;
 	struct buf_transtri_s *transchain;
-	//struct buf_transtri_s **transchainpointer;
 }
 buf_mesh_t;
 
@@ -80,7 +78,7 @@ typedef struct
 buf_texcoord_t;
 
 static float meshfarclip;
-static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive, meshmerge, transranout;
+static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive, transranout;
 static buf_mesh_t *buf_mesh;
 static buf_tri_t *buf_tri;
 static buf_vertex_t *buf_vertex;
@@ -310,7 +308,6 @@ void R_Mesh_Clear(void)
 	currenttranstriangle = 0;
 	currenttransvertex = 0;
 	meshfarclip = 0;
-	meshmerge = gl_mesh_merge.integer;
 	transranout = false;
 	viewdist = DotProduct(r_origin, vpn);
 
@@ -362,7 +359,7 @@ int errornumber = 0;
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, triangles, firstvert, endvert, texture[MAX_TEXTUREUNITS];
+	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, endtriangle, indexcount, firstvert, endvert, texture[MAX_TEXTUREUNITS];
 	float farclip, texturergbscale[MAX_TEXTUREUNITS];
 	buf_mesh_t *mesh;
 	unsigned int *index;
@@ -668,22 +665,23 @@ CHECKGLERROR
 		}
 
 		firsttriangle = mesh->firsttriangle;
-		triangles = mesh->triangles;
 		firstvert = mesh->firstvert;
+		endtriangle = firsttriangle + mesh->triangles;
 		endvert = firstvert + mesh->verts;
-		mesh = &buf_mesh[++k];
 
-		if (meshmerge)
+		mesh = &buf_mesh[++k];
+		if (gl_mesh_merge.integer)
 		{
 			#if MAX_TEXTUREUNITS != 4
 			#error update this code
 			#endif
 			while (k < currentmesh
+				&& mesh->firsttriangle == endtriangle
 				&& mesh->firstvert == endvert
+				&& mesh->depthmask == depthmask
+				&& mesh->depthtest == depthtest
 				&& mesh->blendfunc1 == blendfunc1
 				&& mesh->blendfunc2 == blendfunc2
-				&& mesh->depthtest == depthtest
-				&& mesh->depthmask == depthmask
 				&& mesh->textures[0] == texture[0]
 				&& mesh->textures[1] == texture[1]
 				&& mesh->textures[2] == texture[2]
@@ -693,21 +691,22 @@ CHECKGLERROR
 				&& mesh->texturergbscale[2] == texturergbscale[2]
 				&& mesh->texturergbscale[3] == texturergbscale[3])
 			{
-				triangles += mesh->triangles;
+				endtriangle += mesh->triangles;
 				endvert += mesh->verts;
 				mesh = &buf_mesh[++k];
 			}
 		}
 
+		indexcount = (endtriangle - firsttriangle) * 3;
 		index = (unsigned int *)&buf_tri[firsttriangle].index[0];
-		for (i = 0;i < triangles * 3;i++)
+		for (i = 0;i < indexcount;i++)
 			index[i] += firstvert;
 
 #ifdef WIN32
 		// FIXME: dynamic link to GL so we can get DrawRangeElements on WIN32
-		glDrawElements(GL_TRIANGLES, triangles * 3, GL_UNSIGNED_INT, index);
+		glDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, index);
 #else
-		glDrawRangeElements(GL_TRIANGLES, firstvert, endvert, triangles * 3, GL_UNSIGNED_INT, index);
+		glDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, index);
 #endif
 CHECKGLERROR
 	}
@@ -842,9 +841,6 @@ void R_Mesh_AddTransparent(void)
 		k++;
 	}
 
-	if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
-		R_Mesh_Render();
-
 	for (i = 0;i < currenttransmesh;i++)
 		buf_transmesh[i].transchain = NULL;
 	transmesh = NULL;
@@ -867,18 +863,19 @@ void R_Mesh_AddTransparent(void)
 
 	for (;transmesh;transmesh = transmesh->chain)
 	{
-		//if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + transmesh->verts > max_verts)
-		//	R_Mesh_Render();
+		if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + transmesh->verts > max_verts)
+			R_Mesh_Render();
 
+		mesh = &buf_mesh[currentmesh++];
+		*mesh = *transmesh; // copy mesh properties
+
+		mesh->firstvert = currentvertex;
 		memcpy(&buf_vertex[currentvertex], &buf_transvertex[transmesh->firstvert], transmesh->verts * sizeof(buf_vertex_t));
 		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], transmesh->verts * sizeof(buf_fcolor_t));
 		for (i = 0;i < backendunits && transmesh->textures[i];i++)
 			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][transmesh->firstvert], transmesh->verts * sizeof(buf_texcoord_t));
-
-		mesh = &buf_mesh[currentmesh++];
-		*mesh = *transmesh; // copy mesh properties
-		mesh->firstvert = currentvertex;
 		currentvertex += mesh->verts;
+
 		mesh->firsttriangle = currenttriangle;
 		for (tri = transmesh->transchain;tri;tri = tri->meshsortchain)
 		{
