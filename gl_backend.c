@@ -5,6 +5,7 @@
 cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "1024"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
+cvar_t gl_delayfinish = {CVAR_SAVE, "gl_delayfinish", "0"};
 
 cvar_t r_render = {0, "r_render", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
@@ -51,7 +52,7 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 		break;
 #endif
 #ifdef GL_TABLE_TOO_LARGE
-    case GL_TABLE_TOO_LARGE:
+	case GL_TABLE_TOO_LARGE:
 		Con_Printf("GL_TABLE_TOO_LARGE at %s:%i\n", filename, linenumber);
 		break;
 #endif
@@ -202,6 +203,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
+	Cvar_RegisterVariable(&gl_delayfinish);
 #ifdef NORENDER
 	Cvar_SetValue("r_render", 0);
 #endif
@@ -908,9 +910,12 @@ text to the screen.
 */
 void SCR_UpdateScreen (void)
 {
-	VID_Finish ();
+	if (gl_delayfinish.integer)
+	{
+		VID_Finish ();
 
-	R_TimeReport("finish");
+		R_TimeReport("finish");
+	}
 
 	if (r_textureunits.integer > gl_textureunits)
 		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
@@ -940,8 +945,17 @@ void SCR_UpdateScreen (void)
 	// draw 2D stuff
 	R_DrawQueue();
 
-	// tell driver to commit it's partially full geometry queue to the rendering queue
-	// (this doesn't wait for the commands themselves to complete)
-	qglFlush();
+	if (gl_delayfinish.integer)
+	{
+		// tell driver to commit it's partially full geometry queue to the rendering queue
+		// (this doesn't wait for the commands themselves to complete)
+		qglFlush();
+	}
+	else
+	{
+		VID_Finish ();
+
+		R_TimeReport("finish");
+	}
 }
 
