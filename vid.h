@@ -43,7 +43,6 @@ extern void (*vid_menukeyfn)(int key);
 
 extern int vid_hidden;
 extern int vid_activewindow;
-extern int vid_allowhwgamma;
 extern cvar_t vid_hardwaregammasupported;
 extern int vid_usinghwgamma;
 
