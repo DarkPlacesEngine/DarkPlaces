@@ -35,6 +35,42 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: add lava-steam particle puff effect for bursting lava bubbles (Zombie) 
+0 darkplaces: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
+0 darkplaces: make console editing allow cursoring left/right on the line and insert and delete, etc (Vic)
+0 darkplaces: make gl_texture_anisotropy take effect immediately rather than needing an r_restart (metlslime, zinx)
+2 darkplaces: fix 'fall to death in wedge corner' glitch from quake (Zombie)
+d darkplaces: add sv_freenonclients cvar (Vermeulen)
+5 darkplaces: add decals on models (Urre)
+d darkplaces: fix win32 bug where shift key types a character (Black, Sajt)
+2 darkplaces: add KDE/gnome icon somehow using a png version of the darkplaces.ico (de-we)
+2 darkplaces: add the darkplaces.ico to the executable during compilation, somehow, probably different for msvc and mingw (de-we)
+2 darkplaces: add fs_datapath and fs_userpath cvars to better support Linux, this can be done by making each gamedir add both the basepath and userpath variants of the gamedir, and making sure the userpath one is last so it is used for writing (Mercury)
+3 darkplaces: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
+0 darkplaces: figure out what crashes when this sequence is done: r_speeds 1;map anything, crash (Stribbs)
+0 darkplaces: add vid_pixelaspect patch from Grisha Spivak's email
+0 darkplaces: upgrade punchangle protocol to 16bit angles for smoother motion (Urre)
+1 darkplaces: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
+d darkplaces: optimized ray-triangle collision code
+d darkplaces: don't crash if SOLID_BSP is used with modelindex 0 - TargetQuake does this...
+d darkplaces: reduce r_lightningbeam_repeatdistance to 128, 1024 is way too long
+d darkplaces: make most QC builtin give warnings instead of errors, so broken mods still run 
+-n darkplaces: fix vis decompression underrun/overrun warnings as the problem appears to be more visleafs than the data contains (Vic)
+d darkplaces: improve framerate limiting to sleep until next frame, instead of just sleeping a little 
+d darkplaces: fix the dedicated server timing, seems to be using host_maxfps instead of sys_ticrate
+d darkplaces: fix r_novis
+d darkplaces: figure out and fix vis problems when noclipping out of world in q1bsp and q3bsp
+d darkplaces: figure out and fix win32 networking problems
+2 darkplaces: make light checks use rtlights if in r_shadow_realtime_world 1 mode for consistency reasons on transparent models and such, as well as particles (romi)
+0 darkplaces: add back cl_particles_lighting cvar and add back the particle lighting (romi)
+5 darkplaces: lightshader files (probably loaded by the cubemap field already present in rtlights handling), these would indicate what attenuation textures to use for the light, what cubemap filter, whether to have a corona and so on (romi)
+1 darkplaces: shadow volumes from q3bsp brush models are broken, maybe inverted or something (Vermeulen)
+2 darkplaces: decal clipping (romi)
+7 darkplaces: shadow volume clipping (romi)
+0 dpmod: make run animation play back according to movement speed (along v_forward), instead of just playing a continuous loop based on time (Urre)
+1 darkplaces: q1bsp: parse submodels before leafs, so that the pvs can be allocated smaller (only enough for the world model's visleafs count) (Vic) 
+0 darkplaces: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
+0 darkplaces: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 0 darkplaces: r_shadow_showtris messes up r_shadow_visiblevolumes color (jitspoe)
 0 darkplaces: make notify lines show based on cl.time, not realtime, so they last the proper length when using cl_avidemo (Urre)
 0 darkplaces: darkplaces is leaving a dead window button on the taskbar when closed?  this is odd as the window closing code in darkplaces is designed to prevent this (Urre)
@@ -324,7 +360,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 d darkplaces: Quake3 bsp support (Vermeulen, Mitchell, SeienAbunae)
 7 darkplaces: add DP_ENT_DISTORTIONFIELD which visually pulls things inward/outward around an entity (Supajoe, SeienAbunae)
 7 darkplaces: add clientside quakec (KrimZon, FrikaC, SeienAbunae)
-7 darkplaces: figure out what is causing invalid entity numbers in TouchAreaGrid in world.c - suspicion: problem with reallocation of edicts?
+d darkplaces: figure out what is causing invalid entity numbers in TouchAreaGrid in world.c - suspicion: problem with reallocation of edicts?
 7 darkplaces: make it work on Savage4 again (Ender)
 7 darkplaces: mirrors (SeienAbunae)
 7 darkplaces: should add quake3 shader support even though the language is utterly insane

@@ -344,12 +344,11 @@ q3mtexture_t;
 typedef struct q3mnode_s
 {
 	//this part shared between node and leaf
-	int isnode; // true
+	struct mplane_s *plane; // != NULL
 	struct q3mnode_s *parent;
 	vec3_t mins;
 	vec3_t maxs;
 	// this part unique to nodes
-	struct mplane_s *plane;
 	struct q3mnode_s *children[2];
 }
 q3mnode_t;
@@ -357,7 +356,7 @@ q3mnode_t;
 typedef struct q3mleaf_s
 {
 	//this part shared between node and leaf
-	int isnode; // false
+	struct mplane_s *plane; // == NULL
 	struct q3mnode_s *parent;
 	vec3_t mins;
 	vec3_t maxs;

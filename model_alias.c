@@ -34,6 +34,7 @@ static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, co
 	matrix4x4_t startmatrix, endmatrix;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
+	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	segmentmins[0] = min(boxstartmins[0], boxendmins[0]);
 	segmentmins[1] = min(boxstartmins[1], boxendmins[1]);

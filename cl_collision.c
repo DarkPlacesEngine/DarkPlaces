@@ -33,7 +33,7 @@ int cl_traceline_startsupercontents;
 
 float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int hitbmodels, entity_render_t **hitent, int hitsupercontentsmask)
 {
-	float maxfrac;
+	float maxfrac, maxrealfrac;
 	int n;
 	entity_render_t *ent;
 	float tracemins[3], tracemaxs[3];
@@ -47,12 +47,11 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	if (cl.worldmodel && cl.worldmodel->TraceBox)
 		cl.worldmodel->TraceBox(cl.worldmodel, 0, &trace, start, start, end, end, hitsupercontentsmask);
 
-	if (impact)
-		VectorLerp(start, trace.fraction, end, impact);
 	if (normal)
 		VectorCopy(trace.plane.normal, normal);
 	cl_traceline_startsupercontents = trace.startsupercontents;
 	maxfrac = trace.fraction;
+	maxrealfrac = trace.realfraction;
 
 	if (hitbmodels && cl_num_brushmodel_entities)
 	{
@@ -81,13 +80,12 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 				ent->model->TraceBox(ent->model, 0, &trace, starttransformed, starttransformed, endtransformed, endtransformed, hitsupercontentsmask);
 
 			cl_traceline_startsupercontents |= trace.startsupercontents;
-			if (maxfrac > trace.fraction)
+			if (maxrealfrac > trace.realfraction)
 			{
 				if (hitent)
 					*hitent = ent;
 				maxfrac = trace.fraction;
-				if (impact)
-					VectorLerp(start, trace.fraction, end, impact);
+				maxrealfrac = trace.realfraction;
 				if (normal)
 				{
 					VectorCopy(trace.plane.normal, tempnormal);
@@ -97,6 +95,8 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 		}
 	}
 	if (maxfrac < 0 || maxfrac > 1) Con_Printf("fraction out of bounds %f %s:%d\n", maxfrac, __FILE__, __LINE__);
+	if (impact)
+		VectorLerp(start, maxfrac, end, impact);
 	return maxfrac;
 }
 
