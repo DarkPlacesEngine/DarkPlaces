@@ -225,7 +225,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->e->free && ( e->e->freetime < 2 || *prog->time - e->e->freetime > 0.5 ) )
+		if (e->e->free && ( e->e->freetime < 2 || (*prog->time - e->e->freetime) > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
 			return e;
@@ -255,6 +255,10 @@ FIXME: walk all entities and NULL out references to this entity
 */
 void PRVM_ED_Free (prvm_edict_t *ed)
 {
+	// dont delete the null entity (world)
+	if(PRVM_NUM_FOR_EDICT(ed) == 0)
+		return;
+
 	PRVM_GCALL(free_edict)(ed);
 
 	ed->e->free = true;

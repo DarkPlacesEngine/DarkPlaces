@@ -90,7 +90,7 @@
 				OPC->_float = !OPA->vector[0] && !OPA->vector[1] && !OPA->vector[2];
 				break;
 			case OP_NOT_S:
-				OPC->_float = !OPA->string || !*PR_GetString(OPA->string);
+				OPC->_float = !OPA->string || !*PRVM_GetString(OPA->string);
 				break;
 			case OP_NOT_FNC:
 				OPC->_float = !OPA->function;

@@ -609,7 +609,7 @@ void GL_LockArrays(int first, int count)
 void GL_Scissor (int x, int y, int width, int height)
 {
 	CHECKGLERROR
-	qglScissor(x, vid.realheight - (y + height),width,height);	
+	qglScissor(x, vid.realheight - (y + height),width,height);
 	CHECKGLERROR
 }
 
