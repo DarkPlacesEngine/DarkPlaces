@@ -377,9 +377,9 @@ static void R_MarkEntities (void)
 	if (!r_drawentities.integer)
 		return;
 
-	for (i = 0;i < cl_numvisedicts;i++)
+	for (i = 0;i < r_refdef.numentities;i++)
 	{
-		currentrenderentity = &cl_visedicts[i]->render;
+		currentrenderentity = r_refdef.entities[i];
 		Mod_CheckLoaded(currentrenderentity->model);
 
 		// move view-relative models to where they should be
@@ -430,9 +430,9 @@ int R_DrawBModelSky (void)
 	if (!r_drawentities.integer)
 		return false;
 
-	for (i = 0;i < cl_numvisedicts;i++)
+	for (i = 0;i < r_refdef.numentities;i++)
 	{
-		currentrenderentity = &cl_visedicts[i]->render;
+		currentrenderentity = r_refdef.entities[i];
 		if (currentrenderentity->visframe == r_framecount && currentrenderentity->model->DrawSky)
 		{
 			currentrenderentity->model->DrawSky();
@@ -449,9 +449,9 @@ void R_DrawModels (void)
 	if (!r_drawentities.integer)
 		return;
 
-	for (i = 0;i < cl_numvisedicts;i++)
+	for (i = 0;i < r_refdef.numentities;i++)
 	{
-		currentrenderentity = &cl_visedicts[i]->render;
+		currentrenderentity = r_refdef.entities[i];
 		if (currentrenderentity->visframe == r_framecount && currentrenderentity->model->Draw)
 			currentrenderentity->model->Draw();
 	}

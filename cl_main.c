@@ -49,6 +49,7 @@ cvar_t freelook = {CVAR_SAVE, "freelook", "1"};
 cvar_t cl_draweffects = {0, "cl_draweffects", "1"};
 
 mempool_t *cl_scores_mempool;
+mempool_t *cl_refdef_mempool;
 
 client_static_t	cls;
 client_state_t	cl;
@@ -56,9 +57,6 @@ client_state_t	cl;
 entity_t		cl_entities[MAX_EDICTS];
 entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
-
-int				cl_numvisedicts;
-entity_t		*cl_visedicts[MAX_VISEDICTS];
 
 typedef struct effect_s
 {
@@ -324,10 +322,10 @@ static float CL_LerpPoint (void)
 static void CL_RelinkStaticEntities(void)
 {
 	int i;
-	for (i = 0;i < cl.num_statics && cl_numvisedicts < MAX_VISEDICTS;i++)
+	for (i = 0;i < cl.num_statics && r_refdef.numentities < MAX_VISEDICTS;i++)
 	{
 		Mod_CheckLoaded(cl_static_entities[i].render.model);
-		cl_visedicts[cl_numvisedicts++] = &cl_static_entities[i];
+		r_refdef.entities[r_refdef.numentities++] = &cl_static_entities[i].render;
 	}
 }
 
@@ -639,8 +637,8 @@ static void CL_RelinkNetworkEntities()
 			continue;
 		if (effects & EF_NODRAW)
 			continue;
-		if (cl_numvisedicts < MAX_VISEDICTS)
-			cl_visedicts[cl_numvisedicts++] = ent;
+		if (r_refdef.numentities < MAX_VISEDICTS)
+			r_refdef.entities[r_refdef.numentities++] = &ent->render;
 	}
 }
 
@@ -747,7 +745,7 @@ static void CL_RelinkEffects()
 
 void CL_RelinkEntities (void)
 {
-	cl_numvisedicts = 0;
+	r_refdef.numentities = 0;
 
 	CL_LerpPlayerVelocity();
 	CL_RelinkNetworkEntities();
@@ -915,6 +913,12 @@ CL_Init
 */
 void CL_Init (void)
 {
+	cl_scores_mempool = Mem_AllocPool("client player info");
+
+	cl_refdef_mempool = Mem_AllocPool("refdef");
+	memset(&r_refdef, 0, sizeof(r_refdef));
+	r_refdef.entities = Mem_Alloc(cl_refdef_mempool, sizeof(entity_render_t *) * MAX_VISEDICTS);
+
 	SZ_Alloc (&cls.message, 1024, "cls.message");
 
 	CL_InitInput ();
@@ -964,8 +968,6 @@ void CL_Init (void)
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);
 	if (gamemode == GAME_NEHAHRA)
 		Cmd_AddCommand ("pmodel", CL_PModel_f);
-
-	cl_scores_mempool = Mem_AllocPool("client player info");
 
 	Cvar_RegisterVariable(&cl_draweffects);
 
