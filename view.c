@@ -532,6 +532,13 @@ void V_CalcRefdef (void)
 
 		r_refdef.vieworg[2] += cl.viewheight + bob;
 
+		// LordHavoc: origin view kick added
+		if (!intimerefresh)
+		{
+			VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
+			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
+		}
+
 		// set up gun
 		// (FIXME! this should be in cl_main.c with the other linking code, not view.c!)
 		view->state_current.modelindex = cl.stats[STAT_WEAPON];
@@ -550,13 +557,6 @@ void V_CalcRefdef (void)
 		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
 		view->render.effects = ent->render.effects;
 		view->render.scale = 1.0 / 3.0;
-
-		// LordHavoc: origin view kick added
-		if (!intimerefresh)
-		{
-			VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
-			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
-		}
 
 		// link into render entities list
 		if (r_refdef.numentities < r_refdef.maxentities && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0 && view->render.model != NULL)
