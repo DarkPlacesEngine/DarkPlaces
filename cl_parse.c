@@ -486,7 +486,7 @@ void CL_ValidateState(entity_state_t *s)
 		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
 		s->frame = 0;
 	}
-	if (model && s->skin > 0 && s->skin >= model->numskins)
+	if (model && s->skin > 0 && s->skin >= model->numskins && !(s->lightpflags & PFLAGS_FULLDYNAMIC))
 	{
 		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
 		s->skin = 0;
