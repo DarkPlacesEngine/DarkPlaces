@@ -207,7 +207,7 @@ LoadTGA
 */
 qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 {
-	int columns, rows, row, column;
+	int columns, rows, row, column, row_inc;
 	qbyte *pixbuf, *image_rgba, *fin, *enddata;
 
 	if (loadsize < 18+3)
@@ -258,12 +258,23 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	if (targa_header.id_length != 0)
 		fin += targa_header.id_length;  // skip TARGA image comment
 
+	// If bit 5 of attributes isn't set, the image has been stored from bottom to top
+	if ((targa_header.attributes & 0x20) == 0)
+	{
+		pixbuf = image_rgba + (rows - 1)*columns*4;
+		row_inc = -columns*4*2;
+	}
+	else
+	{
+		pixbuf = image_rgba;
+		row_inc = 0;
+	}
+
 	if (targa_header.image_type == 2)
 	{
 		// Uncompressed, RGB images
-		for(row = rows - 1;row >= 0;row--)
+		for(row = 0;row < rows;row++)
 		{
-			pixbuf = image_rgba + row*columns*4;
 			for(column = 0;column < columns;column++)
 			{
 				switch (targa_header.pixel_size)
@@ -288,15 +299,15 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 					break;
 				}
 			}
+			pixbuf += row_inc;
 		}
 	}
 	else if (targa_header.image_type==10)
 	{
 		// Runlength encoded RGB images
 		unsigned char red = 0, green = 0, blue = 0, alphabyte = 0, packetHeader, packetSize, j;
-		for(row = rows - 1;row >= 0;row--)
+		for(row = 0;row < rows;row++)
 		{
-			pixbuf = image_rgba + row * columns * 4;
 			for(column = 0;column < columns;)
 			{
 				if (fin >= enddata)
@@ -337,11 +348,11 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 						{
 							// run spans across rows
 							column = 0;
-							if (row > 0)
-								row--;
+							if (row < rows - 1)
+								row++;
 							else
 								goto breakOut;
-							pixbuf = image_rgba + row * columns * 4;
+							pixbuf += row_inc;
 						}
 					}
 				}
@@ -376,15 +387,16 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 						{
 							// pixel packet run spans across rows
 							column = 0;
-							if (row > 0)
-								row--;
+							if (row < rows - 1)
+								row++;
 							else
 								goto breakOut;
-							pixbuf = image_rgba + row * columns * 4;
+							pixbuf += row_inc;
 						}
 					}
 				}
 			}
+			pixbuf += row_inc;
 			breakOut:;
 		}
 	}
