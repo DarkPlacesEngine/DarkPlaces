@@ -308,6 +308,8 @@ static void GL_SetupFrame (void)
 	// depth range
 	zNear = 1.0;
 	zFar = r_mesh_farclip;
+	if (zFar < 64)
+		zFar = 64;
 
 	// fov angles
 	fovx = r_refdef.fov_x;
