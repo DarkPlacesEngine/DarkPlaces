@@ -8,7 +8,6 @@
 0 darkplaces: default to 32bit color
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: finish the parital update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers
-0 darkplaces: fix gl_texturemode change errors (Vic)
 0 darkplaces: funky lightmaps in prydon gate and dm1 on TNT1/2, which get worse the more times you reload it?  (NotoriousRay, Uffe)
 0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 0 darkplaces: have a look at CFQ and figure out why its b0rked
@@ -186,6 +185,7 @@ d darkplaces: fix Short format entity origins to fix shell casings sitting in fl
 d darkplaces: fix bounding box bugs with viewmodelforclient (diGGer)
 d darkplaces: fix cursor being flipped in Prydon (FrikaC)
 d darkplaces: fix entity glows to use Mod_FindNonSolidLocation...  maybe all dlights should?  (CTF has this problem with flags)
+d darkplaces: fix gl_texturemode change errors (Vic)
 d darkplaces: fix invisible md3 bug
 d darkplaces: fix invisible md3 models when missing textures (John Truex)
 d darkplaces: fix md3 shadow volumes
