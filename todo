@@ -36,7 +36,6 @@
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
 0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
-0 darkplaces: GAME_FNIGGIUM: startup loading screen (gfx/loadback.tga or whatever)
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 d darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
@@ -44,8 +43,8 @@ d darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add _reflect textures which filter use of skybox as a cubemap reflection (FrikaC)
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
-0 darkplaces: add a config saving command (Speeds)
-0 darkplaces: add a loading screen before loading commences so that people have something to look at when the engine starts... (SeienAbunae)
+-n darkplaces: add a config saving command (Speeds)
+0 darkplaces: add a loading screen (gfx/loadback.tga or the loading plaque if that's not found) before loading commences so that people have something to look at when the engine starts... (SeienAbunae)
 0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
 0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
