@@ -2574,11 +2574,13 @@ level_t		transfusionlevels[] =
 
 	{"bb3_2k1",		"Bodies Infusion"},
 	{"dcamp",		"DeathCamp"},
-	{"dranzbb6",	"Black Coffee"},
 	{"highnoon",	"HighNoon"},
 	{"qbb1",		"The Confluence"},
 	{"qbb2",		"KathartiK"},
 	{"qbb3",		"Caleb's Woodland Retreat"},
+
+	{"dranzbb6",	"Black Coffee"},
+	{"fragm",		"Frag'M"},
 	{"qe1m7",		"The House of Chthon"},
 	{"simple",		"Dead Simple"}
 };
@@ -2590,7 +2592,8 @@ episode_t	transfusionepisodes[] =
 	{"Plasma Pack", 11, 4},
 	{"Cryptic Passage", 15, 2},
 	{"Blood 2", 17, 5},
-	{"Custom", 22, 9}
+	{"Transfusion", 22, 6},
+	{"Conversions", 28, 4}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
@@ -2598,7 +2601,7 @@ gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
 gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
 gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
-gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 6};
+gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 7};
 
 typedef struct
 {
