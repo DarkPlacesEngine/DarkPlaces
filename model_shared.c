@@ -154,7 +154,6 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 	void	*d;
 	unsigned *buf;
 //	byte	stackbuf[1024];		// avoid dirtying the cache heap
-	int		blah = 0;
 
 	if (!mod->needload)
 	{
