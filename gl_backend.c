@@ -3,7 +3,9 @@
 #include "image.h"
 #include "jpeg.h"
 
-cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "21760"};
+// 65536 is the max addressable on a Geforce 256 up until Geforce3
+// (excluding MX), seems a reasonable number...
+cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "65536"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
 cvar_t gl_mesh_vertex_array_range = {0, "gl_mesh_vertex_array_range", "0"};
@@ -133,11 +135,10 @@ void GL_Backend_FreeElementArray(void)
 
 void GL_Backend_CheckCvars(void)
 {
-	// 21760 is (65536 / 3) rounded off to a multiple of 128
 	if (gl_mesh_maxverts.integer < 1024)
 		Cvar_SetValueQuick(&gl_mesh_maxverts, 1024);
-	if (gl_mesh_maxverts.integer > 21760)
-		Cvar_SetValueQuick(&gl_mesh_maxverts, 21760);
+	if (gl_mesh_maxverts.integer > 65536)
+		Cvar_SetValueQuick(&gl_mesh_maxverts, 65536);
 	if (gl_mesh_vertex_array_range.integer && !gl_support_var)
 		Cvar_SetValueQuick(&gl_mesh_vertex_array_range, 0);
 	if (gl_mesh_vertex_array_range_readfrequency.value < 0)
