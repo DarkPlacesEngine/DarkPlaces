@@ -1263,7 +1263,7 @@ typedef struct
 } dpackheader_t;
 
 // LordHavoc: was 2048
-#define MAX_FILES_IN_PACK       16384
+#define MAX_FILES_IN_PACK       4096
 
 char    com_cachedir[MAX_OSPATH];
 char    com_gamedir[MAX_OSPATH];
