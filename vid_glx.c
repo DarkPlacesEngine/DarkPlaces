@@ -79,8 +79,10 @@ Atom wm_delete_window_atom;
 
 #define KEY_MASK (KeyPressMask | KeyReleaseMask)
 #define MOUSE_MASK (ButtonPressMask | ButtonReleaseMask | \
-		    PointerMotionMask | ButtonMotionMask )
-#define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask )
+		    PointerMotionMask | ButtonMotionMask)
+#define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | \
+		StructureNotifyMask | FocusChangeMask | EnterWindowMask | \
+		LeaveWindowMask)
 
 
 static qboolean		mouse_avail = true;
