@@ -220,7 +220,7 @@ void Matrix4x4_CreateRotate (matrix4x4_t *out, float angle, float x, float y, fl
 	y *= len;
 	z *= len;
 
-	angle *= M_PI / 180.0;
+	angle *= -M_PI / 180.0;
 	c = cos(angle);
 	s = sin(angle);
 
@@ -381,7 +381,7 @@ void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float
 void Matrix4x4_ConcatTranslate (matrix4x4_t *out, float x, float y, float z)
 {
 	matrix4x4_t base, temp;
-	Matrix4x4_Copy(out, &base);
+	base = *out;
 	Matrix4x4_CreateTranslate(&temp, x, y, z);
 	Matrix4x4_Concat(out, &base, &temp);
 }
@@ -390,7 +390,7 @@ void Matrix4x4_ConcatTranslate (matrix4x4_t *out, float x, float y, float z)
 void Matrix4x4_ConcatRotate (matrix4x4_t *out, float angle, float x, float y, float z)
 {
 	matrix4x4_t base, temp;
-	Matrix4x4_Copy(out, &base);
+	base = *out;
 	Matrix4x4_CreateRotate(&temp, angle, x, y, z);
 	Matrix4x4_Concat(out, &base, &temp);
 }
@@ -399,7 +399,7 @@ void Matrix4x4_ConcatRotate (matrix4x4_t *out, float angle, float x, float y, fl
 void Matrix4x4_ConcatScale (matrix4x4_t *out, float x)
 {
 	matrix4x4_t base, temp;
-	Matrix4x4_Copy(out, &base);
+	base = *out;
 	Matrix4x4_CreateScale(&temp, x);
 	Matrix4x4_Concat(out, &base, &temp);
 }
@@ -408,11 +408,19 @@ void Matrix4x4_ConcatScale (matrix4x4_t *out, float x)
 void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z)
 {
 	matrix4x4_t base, temp;
-	Matrix4x4_Copy(out, &base);
+	base = *out;
 	Matrix4x4_CreateScale3(&temp, x, y, z);
 	Matrix4x4_Concat(out, &base, &temp);
 }
 
+void Matrix4x4_Print (const matrix4x4_t *in)
+{
+	Con_Printf("%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
+	, in->m[0][0], in->m[0][1], in->m[0][2], in->m[0][3]
+	, in->m[1][0], in->m[1][1], in->m[1][2], in->m[1][3]
+	, in->m[2][0], in->m[2][1], in->m[2][2], in->m[2][3]
+	, in->m[3][0], in->m[3][1], in->m[3][2], in->m[3][3]);
+}
 
 
 
@@ -714,7 +722,7 @@ void Matrix3x4_SimpleUntransform (const matrix3x4_t *in, const float v[3], float
 void Matrix3x4_ConcatTranslate (matrix3x4_t *out, float x, float y, float z)
 {
 	matrix3x4_t base, temp;
-	Matrix3x4_Copy(out, &base);
+	base = *out;
 	Matrix3x4_CreateTranslate(&temp, x, y, z);
 	Matrix3x4_Concat(out, &base, &temp);
 }
@@ -723,7 +731,7 @@ void Matrix3x4_ConcatTranslate (matrix3x4_t *out, float x, float y, float z)
 void Matrix3x4_ConcatRotate (matrix3x4_t *out, float angle, float x, float y, float z)
 {
 	matrix3x4_t base, temp;
-	Matrix3x4_Copy(out, &base);
+	base = *out;
 	Matrix3x4_CreateRotate(&temp, angle, x, y, z);
 	Matrix3x4_Concat(out, &base, &temp);
 }
@@ -732,7 +740,7 @@ void Matrix3x4_ConcatRotate (matrix3x4_t *out, float angle, float x, float y, fl
 void Matrix3x4_ConcatScale (matrix3x4_t *out, float x)
 {
 	matrix3x4_t base, temp;
-	Matrix3x4_Copy(out, &base);
+	base = *out;
 	Matrix3x4_CreateScale(&temp, x);
 	Matrix3x4_Concat(out, &base, &temp);
 }
@@ -741,7 +749,16 @@ void Matrix3x4_ConcatScale (matrix3x4_t *out, float x)
 void Matrix3x4_ConcatScale3 (matrix3x4_t *out, float x, float y, float z)
 {
 	matrix3x4_t base, temp;
-	Matrix3x4_Copy(out, &base);
+	base = *out;
 	Matrix3x4_CreateScale3(&temp, x, y, z);
 	Matrix3x4_Concat(out, &base, &temp);
 }
+
+void Matrix3x4_Print (const matrix3x4_t *in)
+{
+	Con_Printf("%f %f %f %f\n%f %f %f %f\n%f %f %f %f\n"
+	, in->m[0][0], in->m[0][1], in->m[0][2], in->m[0][3]
+	, in->m[1][0], in->m[1][1], in->m[1][2], in->m[1][3]
+	, in->m[2][0], in->m[2][1], in->m[2][2], in->m[2][3]);
+}
+
