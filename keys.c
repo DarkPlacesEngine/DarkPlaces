@@ -21,7 +21,6 @@
 */
 
 #include "quakedef.h"
-#include <ctype.h>
 
 
 /*
