@@ -87,6 +87,7 @@ extern	mplane_t	frustum[4];
 extern	int		c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
 // forces all rendering to draw triangle outlines
+extern cvar_t r_showtris;
 extern int r_showtrispass;
 
 //
