@@ -251,9 +251,14 @@ void Sys_Init (void)
 
 // get 32 out of the 64 time bits such that we have around
 // 1 microsecond resolution
+#ifdef __BORLANDC__
+	lowpart = (unsigned int)PerformanceFreq.u.LowPart;
+	highpart = (unsigned int)PerformanceFreq.u.HighPart;
+#else
 	lowpart = (unsigned int)PerformanceFreq.LowPart;
 	highpart = (unsigned int)PerformanceFreq.HighPart;
-	lowshift = 0;
+#endif	
+        lowshift = 0;
 
 	while (highpart || (lowpart > 2000000.0))
 	{
@@ -412,9 +417,14 @@ double Sys_FloatTime (void)
 
 	QueryPerformanceCounter (&PerformanceCount);
 
+#ifdef __BORLANDC__
+	temp = ((unsigned int)PerformanceCount.u.LowPart >> lowshift) |
+	    ((unsigned int)PerformanceCount.u.HighPart << (32 - lowshift));
+#else
+
 	temp = ((unsigned int)PerformanceCount.LowPart >> lowshift) |
 		   ((unsigned int)PerformanceCount.HighPart << (32 - lowshift));
-
+#endif
 	if (first)
 	{
 		oldtime = temp;
