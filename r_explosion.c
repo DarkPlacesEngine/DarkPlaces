@@ -261,18 +261,19 @@ void R_DrawExplosion(explosion_t *e)
 			//dist = (DotProduct(e->vert[i], centerdir) - centerdist) * scale - 2.0f;
 			VectorSubtract(e->vert[i], e->origin, diff);
 			VectorNormalizeFast(diff);
-			dist = DotProduct(diff, centerdir) * 6.0f - 4.0f;
+			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
 			if (dist > 0)
 			{
-				// use inverse fog alpha as color
+				// use inverse fog alpha
 				VectorSubtract(e->vert[i], r_origin, diff);
 				ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
-				if (ifog < 0)
-					ifog = 0;
-				c[i][0] = c[i][1] = c[i][2] = dist * alpha * ifog;
+				dist = dist * ifog;
+				if (dist < 0)
+					dist = 0;
 			}
 			else
-				c[i][0] = c[i][1] = c[i][2] = 0;
+				dist = 0;
+			c[i][0] = c[i][1] = c[i][2] = dist;
 			c[i][3] = 1;
 		}
 	}
@@ -283,11 +284,10 @@ void R_DrawExplosion(explosion_t *e)
 			//dist = (DotProduct(e->vert[i], centerdir) - centerdist) * scale - 2.0f;
 			VectorSubtract(e->vert[i], e->origin, diff);
 			VectorNormalizeFast(diff);
-			dist = DotProduct(diff, centerdir) * 6.0f - 4.0f;
-			if (dist > 0)
-				c[i][0] = c[i][1] = c[i][2] = dist * alpha;
-			else
-				c[i][0] = c[i][1] = c[i][2] = 0;
+			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
+			if (dist < 0)
+				dist = 0;
+			c[i][0] = c[i][1] = c[i][2] = dist;
 			c[i][3] = 1;
 		}
 	}
