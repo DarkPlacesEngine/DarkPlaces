@@ -2,9 +2,10 @@
 #include "quakedef.h"
 
 //cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
-cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "8192"};
+cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "1024"};
 //cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
 cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "0"};
+cvar_t gl_mesh_transtriangles = {0, "gl_mesh_transtriangles", "16384"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
 cvar_t gl_mesh_drawmode = {CVAR_SAVE, "gl_mesh_drawmode", "3"};
 
@@ -76,8 +77,10 @@ float		overbrightscale;
 void SCR_ScreenShot_f (void);
 
 static int max_meshs;
+static int max_transmeshs;
 static int max_batch;
 static int max_verts; // always max_meshs * 3
+static int max_transverts; // always max_transmeshs * 3
 #define TRANSDEPTHRES 4096
 
 typedef struct buf_mesh_s
@@ -161,38 +164,39 @@ static void gl_backend_start(void)
 	int i;
 
 	max_verts = max_meshs * 3;
+	max_transverts = max_transmeshs * 3;
 
 	if (!gl_backend_mempool)
 		gl_backend_mempool = Mem_AllocPool("GL_Backend");
 
-#define BACKENDALLOC(var, count, sizeofstruct)\
+#define BACKENDALLOC(var, count, sizeofstruct, varname)\
 	{\
 		var = Mem_Alloc(gl_backend_mempool, count * sizeof(sizeofstruct));\
 		if (var == NULL)\
-			Sys_Error("gl_backend_start: unable to allocate memory\n");\
+			Sys_Error("gl_backend_start: unable to allocate memory for %s (%d bytes)\n", (varname), count * sizeof(sizeofstruct));\
 		memset(var, 0, count * sizeof(sizeofstruct));\
 	}
 
-	BACKENDALLOC(buf_mesh, max_meshs, buf_mesh_t)
-	BACKENDALLOC(buf_tri, max_meshs, buf_tri_t)
-	BACKENDALLOC(buf_vertex, max_verts, buf_vertex_t)
-	BACKENDALLOC(buf_fcolor, max_verts, buf_fcolor_t)
-	BACKENDALLOC(buf_bcolor, max_verts, buf_bcolor_t)
+	BACKENDALLOC(buf_mesh, max_meshs, buf_mesh_t, "buf_mesh")
+	BACKENDALLOC(buf_tri, max_meshs, buf_tri_t, "buf_tri")
+	BACKENDALLOC(buf_vertex, max_verts, buf_vertex_t, "buf_vertex")
+	BACKENDALLOC(buf_fcolor, max_verts, buf_fcolor_t, "buf_fcolor")
+	BACKENDALLOC(buf_bcolor, max_verts, buf_bcolor_t, "buf_bcolor")
 
-	BACKENDALLOC(buf_transmesh, max_meshs, buf_mesh_t)
-	BACKENDALLOC(buf_sorttranstri, max_meshs, buf_transtri_t)
-	BACKENDALLOC(buf_sorttranstri_list, TRANSDEPTHRES, buf_transtri_t *)
-	BACKENDALLOC(buf_transtri, max_meshs, buf_tri_t)
-	BACKENDALLOC(buf_transvertex, max_verts, buf_vertex_t)
-	BACKENDALLOC(buf_transfcolor, max_verts, buf_fcolor_t)
+	BACKENDALLOC(buf_transmesh, max_transmeshs, buf_mesh_t, "buf_transmesh")
+	BACKENDALLOC(buf_sorttranstri, max_transmeshs, buf_transtri_t, "buf_sorttranstri")
+	BACKENDALLOC(buf_sorttranstri_list, TRANSDEPTHRES, buf_transtri_t *, "buf_sorttranstri_list")
+	BACKENDALLOC(buf_transtri, max_transmeshs, buf_tri_t, "buf_transtri")
+	BACKENDALLOC(buf_transvertex, max_transverts, buf_vertex_t, "buf_vertex")
+	BACKENDALLOC(buf_transfcolor, max_transverts, buf_fcolor_t, "buf_fcolor")
 
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		// only allocate as many texcoord arrays as we need
 		if (i < gl_textureunits)
 		{
-			BACKENDALLOC(buf_texcoord[i], max_verts, buf_texcoord_t)
-			BACKENDALLOC(buf_transtexcoord[i], max_verts, buf_texcoord_t)
+			BACKENDALLOC(buf_texcoord[i], max_verts, buf_texcoord_t, va("buf_texcoord[%d]", i))
+			BACKENDALLOC(buf_transtexcoord[i], max_transverts, buf_texcoord_t, va("buf_transtexcoord[%d]", i))
 		}
 		else
 		{
@@ -219,20 +223,26 @@ static void gl_backend_bufferchanges(int init)
 {
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
 	if (gl_mesh_maxtriangles.integer < 256)
-		Cvar_SetValue("gl_mesh_maxtriangles", 256);
+		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 256);
 	if (gl_mesh_maxtriangles.integer > 21760)
-		Cvar_SetValue("gl_mesh_maxtriangles", 21760);
+		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 21760);
+
+	if (gl_mesh_transtriangles.integer < 256)
+		Cvar_SetValueQuick(&gl_mesh_transtriangles, 256);
+	if (gl_mesh_transtriangles.integer > 65536)
+		Cvar_SetValueQuick(&gl_mesh_transtriangles, 65536);
 
 	if (gl_mesh_batchtriangles.integer < 0)
-		Cvar_SetValue("gl_mesh_batchtriangles", 0);
+		Cvar_SetValueQuick(&gl_mesh_batchtriangles, 0);
 	if (gl_mesh_batchtriangles.integer > gl_mesh_maxtriangles.integer)
-		Cvar_SetValue("gl_mesh_batchtriangles", gl_mesh_maxtriangles.integer);
+		Cvar_SetValueQuick(&gl_mesh_batchtriangles, gl_mesh_maxtriangles.integer);
 
 	max_batch = gl_mesh_batchtriangles.integer;
 
-	if (max_meshs != gl_mesh_maxtriangles.integer)
+	if (max_meshs != gl_mesh_maxtriangles.integer || max_transmeshs != gl_mesh_transtriangles.integer)
 	{
 		max_meshs = gl_mesh_maxtriangles.integer;
+		max_transmeshs = gl_mesh_transtriangles.integer;
 
 		if (!init)
 		{
@@ -261,6 +271,7 @@ void gl_backend_init(void)
 #endif
 
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
+	Cvar_RegisterVariable(&gl_mesh_transtriangles);
 	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	Cvar_RegisterVariable(&gl_mesh_drawmode);
@@ -989,7 +1000,7 @@ void R_Mesh_AddTransparent(void)
 
 	for (;transmesh;transmesh = transmesh->chain)
 	{
-		if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + transmesh->verts > max_verts)
+		if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currenttriangle + transmesh->triangles > 1024 || currentvertex + transmesh->verts > max_verts)
 			R_Mesh_Render();
 
 		mesh = &buf_mesh[currentmesh++];
@@ -1062,9 +1073,23 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 			Host_Error("R_Mesh_Draw: invalid index (%i of %i verts)\n", m->index, m->numverts);
 #endif
 
+	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
+	if (m->numtriangles > 1024 || m->numverts > 3072)
+	{
+		Con_Printf("R_Mesh_Draw: mesh too big for 3DFX drivers, rejected\n");
+		return;
+	}
+
+	if (m->numtriangles > max_meshs || m->numverts > max_verts)
+	{
+		Con_Printf("R_Mesh_Draw: mesh too big for current gl_mesh_maxtriangles setting, rejected\n");
+		return;
+	}
+
+
 	if (m->transparent)
 	{
-		if (currenttransmesh >= max_meshs || (currenttranstriangle + m->numtriangles) > max_meshs || (currenttransvertex + m->numverts) > max_verts)
+		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
 		{
 			if (!transranout)
 			{
@@ -1093,12 +1118,6 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	}
 	else
 	{
-		if (m->numtriangles > max_meshs || m->numverts > max_verts)
-		{
-			Con_Printf("R_Mesh_Draw: mesh too big for buffers\n");
-			return;
-		}
-
 		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
 			R_Mesh_Render();
 
@@ -1251,9 +1270,23 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 			return;
 	}
 
+	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
+	if (m->numtriangles > 1024 || m->numverts > 3072)
+	{
+		Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for 3DFX drivers, rejected\n");
+		return;
+	}
+
+	if (m->numtriangles > max_meshs || m->numverts > max_verts)
+	{
+		Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for current gl_mesh_maxtriangles setting, rejected\n");
+		return;
+	}
+
+
 	if (m->transparent)
 	{
-		if (currenttransmesh >= max_meshs || (currenttranstriangle + m->numtriangles) > max_meshs || (currenttransvertex + m->numverts) > max_verts)
+		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
 		{
 			if (!transranout)
 			{
@@ -1281,12 +1314,6 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 	}
 	else
 	{
-		if (m->numtriangles > max_meshs || m->numverts > max_verts)
-		{
-			Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for buffers\n");
-			return;
-		}
-
 		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
 			R_Mesh_Render();
 
@@ -1397,9 +1424,23 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
 	 || !m->numverts)
 		Host_Error("R_Mesh_Draw: no triangles or verts\n");
 
+	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
+	if (m->numtriangles > 1024 || m->numverts > 3072)
+	{
+		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for 3DFX drivers, rejected\n");
+		return false;
+	}
+
+	if (m->numtriangles > max_meshs || m->numverts > max_verts)
+	{
+		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for current gl_mesh_maxtriangles setting, rejected\n");
+		return false;
+	}
+
+
 	if (m->transparent)
 	{
-		if (currenttransmesh >= max_meshs || (currenttranstriangle + m->numtriangles) > max_meshs || (currenttransvertex + m->numverts) > max_verts)
+		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
 		{
 			if (!transranout)
 			{
@@ -1427,12 +1468,6 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
 	}
 	else
 	{
-		if (m->numtriangles > max_meshs || m->numverts > max_verts)
-		{
-			Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for buffers\n");
-			return false;
-		}
-
 		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
 			R_Mesh_Render();
 
