@@ -8,7 +8,6 @@
 -(Antti) d darkplaces menu: add graphics options menu and put realtime lighting stuff in it (Antti)
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -(Carni) d darkplaces renderer: make sure r_novis works (Carni)
--(Chillo) d darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
 -(Chris Kemp) d darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
 -(Cristian Beltramo) d darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 -(Hidayat) d darkplaces client bug: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
@@ -339,6 +338,7 @@ d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blu
 d darkplaces client: add two cvars to replace sbar_alpha, one would control background as 0-1, and one would control everything else as 0-1
 d darkplaces client: don't draw entities which are tagged to the camera entity; exterior view models and such
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
+d darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
 d darkplaces client: lerp lightstyles (Mitchell)
 d darkplaces client: locked console scrollback (sublim3)
 d darkplaces client: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
