@@ -353,7 +353,7 @@ void S_PaintChannels(int endtime)
 				continue;
 			if (!ch->leftvol && !ch->rightvol)
 				continue;
-			sc = S_LoadSound (ch->sfx);
+			sc = S_LoadSound (ch->sfx, true);
 			if (!sc)
 				continue;
 

@@ -211,7 +211,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 S_LoadSound
 ==============
 */
-sfxcache_t *S_LoadSound (sfx_t *s)
+sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 {
     char	namebuffer[256];
 	qbyte	*data;
@@ -231,7 +231,8 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 	if (!data)
 	{
-		Con_Printf ("Couldn't load %s\n", namebuffer);
+		if (complain)
+			Con_Printf ("Couldn't load %s\n", namebuffer);
 		return NULL;
 	}
 

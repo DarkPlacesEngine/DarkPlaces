@@ -229,8 +229,8 @@ void S_Init (void)
 
 	// provides a tick sound until washed clean
 
-	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav");
-	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
+	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav", false);
+	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav", false);
 
 	S_StopAllSounds (true);
 }
@@ -268,8 +268,8 @@ S_FindName
 */
 sfx_t *S_FindName (char *name)
 {
-	int		i;
-	sfx_t	*sfx;
+	int i;
+	sfx_t *sfx;
 
 	if (!name)
 		Host_Error ("S_FindName: NULL\n");
@@ -278,20 +278,18 @@ sfx_t *S_FindName (char *name)
 		Host_Error ("Sound name too long: %s", name);
 
 // see if already loaded
-	for (i=0 ; i < num_sfx ; i++)
+	for (i = 0;i < num_sfx;i++)
 		if (!strcmp(known_sfx[i].name, name))
-		{
 			return &known_sfx[i];
-		}
 
 	if (num_sfx == MAX_SFX)
 		Sys_Error ("S_FindName: out of sfx_t");
-	
+
 	sfx = &known_sfx[i];
 	strcpy (sfx->name, name);
 
 	num_sfx++;
-	
+
 	return sfx;
 }
 
@@ -318,9 +316,9 @@ S_PrecacheSound
 
 ==================
 */
-sfx_t *S_PrecacheSound (char *name)
+sfx_t *S_PrecacheSound (char *name, int complain)
 {
-	sfx_t	*sfx;
+	sfx_t *sfx;
 
 	if (!sound_started || nosound.integer)
 		return NULL;
@@ -329,7 +327,7 @@ sfx_t *S_PrecacheSound (char *name)
 
 // cache it in
 	if (precache.integer)
-		S_LoadSound (sfx);
+		S_LoadSound (sfx, complain);
 
 	return sfx;
 }
@@ -477,7 +475,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 		return;		// not audible at all
 
 // new channel
-	sc = S_LoadSound (sfx);
+	sc = S_LoadSound (sfx, true);
 	if (!sc)
 	{
 		target_chan->sfx = NULL;
@@ -638,7 +636,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 	ss = &channels[total_channels];
 	total_channels++;
 
-	sc = S_LoadSound (sfx);
+	sc = S_LoadSound (sfx, true);
 	if (!sc)
 		return;
 
@@ -921,7 +919,7 @@ void S_Play(void)
 		}
 		else
 			strcpy(name, Cmd_Argv(i));
-		sfx = S_PrecacheSound(name);
+		sfx = S_PrecacheSound(name, true);
 		S_StartSound(hash++, 0, sfx, listener_origin, 1.0, 1.0);
 		i++;
 	}
@@ -944,7 +942,7 @@ void S_Play2(void)
 		}
 		else
 			strcpy(name, Cmd_Argv(i));
-		sfx = S_PrecacheSound(name);
+		sfx = S_PrecacheSound(name, true);
 		S_StartSound(hash++, 0, sfx, listener_origin, 1.0, 0.0);
 		i++;
 	}
@@ -968,7 +966,7 @@ void S_PlayVol(void)
 		}
 		else
 			strcpy(name, Cmd_Argv(i));
-		sfx = S_PrecacheSound(name);
+		sfx = S_PrecacheSound(name, true);
 		vol = atof(Cmd_Argv(i+1));
 		S_StartSound(hash++, 0, sfx, listener_origin, vol, 1.0);
 		i+=2;
@@ -1009,7 +1007,7 @@ void S_LocalSound (char *sound)
 	if (!sound_started)
 		return;
 
-	sfx = S_PrecacheSound (sound);
+	sfx = S_PrecacheSound (sound, true);
 	if (!sfx)
 	{
 		Con_Printf ("S_LocalSound: can't precache %s\n", sound);
