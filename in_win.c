@@ -376,7 +376,7 @@ IN_StartupMouse
 */
 void IN_StartupMouse (void)
 {
-	if ( COM_CheckParm ("-nomouse") ) 
+	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe")) 
 		return; 
 
 	mouseinitialized = true;
@@ -704,7 +704,7 @@ void IN_StartupJoystick (void)
 	joy_avail = false; 
 
 	// abort startup if user requests no joystick
-	if ( COM_CheckParm ("-nojoy") ) 
+	if (COM_CheckParm ("-nojoy") || COM_CheckParm("-safe")) 
 		return; 
  
 	// verify joystick driver is present
