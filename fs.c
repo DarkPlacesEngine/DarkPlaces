@@ -1031,6 +1031,10 @@ void FS_Init (void)
 			Cvar_SetQuick (&scr_screenshot_name, com_modname);
 		}
 	}
+
+	// If "-condebug" is in the command line, remove the previous log file
+	if (COM_CheckParm ("-condebug") != 0)
+		unlink (va("%s/qconsole.log", fs_gamedir));
 }
 
 

@@ -992,7 +992,6 @@ void COM_Init (void)
 	Mathlib_Init();
 
 	FS_Init ();
-	Log_Init ();
 	COM_CheckRegistered ();
 }
 

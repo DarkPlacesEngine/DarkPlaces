@@ -1177,7 +1177,7 @@ qboolean IN_InitDInput (void)
 
 		if (hInstDI == NULL)
 		{
-			Con_SafePrint("Couldn't load dinput.dll\n");
+			Con_Print("Couldn't load dinput.dll\n");
 			return false;
 		}
 	}
@@ -1188,7 +1188,7 @@ qboolean IN_InitDInput (void)
 
 		if (!pDirectInputCreate)
 		{
-			Con_SafePrint("Couldn't get DI proc addr\n");
+			Con_Print("Couldn't get DI proc addr\n");
 			return false;
 		}
 	}
@@ -1206,7 +1206,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrint("Couldn't open DI mouse device\n");
+		Con_Print("Couldn't open DI mouse device\n");
 		return false;
 	}
 
@@ -1215,7 +1215,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrint("Couldn't set DI mouse format\n");
+		Con_Print("Couldn't set DI mouse format\n");
 		return false;
 	}
 
@@ -1225,7 +1225,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrint("Couldn't set DI coop level\n");
+		Con_Print("Couldn't set DI coop level\n");
 		return false;
 	}
 
@@ -1236,7 +1236,7 @@ qboolean IN_InitDInput (void)
 
 	if (FAILED(hr))
 	{
-		Con_SafePrint("Couldn't set DI buffersize\n");
+		Con_Print("Couldn't set DI buffersize\n");
 		return false;
 	}
 
@@ -1263,11 +1263,11 @@ void IN_StartupMouse (void)
 
 		if (dinput)
 		{
-			Con_SafePrint("DirectInput initialized\n");
+			Con_Print("DirectInput initialized\n");
 		}
 		else
 		{
-			Con_SafePrint("DirectInput not initialized\n");
+			Con_Print("DirectInput not initialized\n");
 		}
 	}
 

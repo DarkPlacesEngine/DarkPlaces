@@ -87,7 +87,7 @@ qboolean SNDDMA_Init(void)
 
 	// Init the SDL Audio subsystem
 	if( SDL_InitSubSystem( SDL_INIT_AUDIO ) ) {
-		Con_SafePrint( "Initializing the SDL Audio subsystem failed!\n" );
+		Con_Print( "Initializing the SDL Audio subsystem failed!\n" );
 		return false;
 	}
 
@@ -124,7 +124,7 @@ qboolean SNDDMA_Init(void)
 	spec.samples = AUDIO_SDL_SAMPLES; 
 	
 	if( SDL_OpenAudio( &spec, NULL ) ) {
-		Con_SafePrint( "Failed to open the audio device!\n" );
+		Con_Print( "Failed to open the audio device!\n" );
 		Con_DPrintf( 
 			"Audio Specification:\n"
 			"\tChannels  : %i\n"
