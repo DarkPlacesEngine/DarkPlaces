@@ -19,18 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // console.c
 
-#ifdef NeXT
-#include <libc.h>
+#ifndef WIN32
+# include <unistd.h>
 #endif
-#ifndef _MSC_VER
-#ifndef __BORLANDC__
-#include <unistd.h>
-#endif
-#endif
-#ifdef WIN32
-#include <io.h>
-#endif
-#include <fcntl.h>
 #include "quakedef.h"
 
 int con_linewidth;
