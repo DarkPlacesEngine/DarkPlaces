@@ -95,8 +95,23 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 		address->addressdata.loop.port = port;
 		return 1;
 	}
-	// try to parse with gethostbyname first, because it can handle ipv4 and
-	// ipv6 (in various address formats), as well as dns names
+	// try to parse as dotted decimal ipv4 address first
+	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) == 4 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
+	{
+		// parsed a valid ipv4 address
+		address->addresstype = LHNETADDRESSTYPE_INET4;
+		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
+		address->addressdata.inet4.port = htons((unsigned short)port);
+		address->addressdata.inet4.address[0] = (unsigned char)d1;
+		address->addressdata.inet4.address[1] = (unsigned char)d2;
+		address->addressdata.inet4.address[2] = (unsigned char)d3;
+		address->addressdata.inet4.address[3] = (unsigned char)d4;
+#ifdef STANDALONETEST
+		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %d.%d.%d.%d:%d\n", string, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
+#endif
+		return 1;
+	}
+	// try gethostbyname (handles dns and other ip formats)
 	hostentry = gethostbyname(name);
 	if (hostentry)
 	{
@@ -125,25 +140,9 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 			return 1;
 		}
 	}
-	// failed, try to parse as an ipv4 address as a fallback (is this needed?)
 #ifdef STANDALONETEST
-	printf("gethostbyname and gethostbyaddr failed on address \"%s\"\n", name);
+	printf("gethostbyname failed on address \"%s\"\n", name);
 #endif
-	if (sscanf(name, "%d.%d.%d.%d", &d1, &d2, &d3, &d4) == 4 && (unsigned int)d1 < 256 && (unsigned int)d2 < 256 && (unsigned int)d3 < 256 && (unsigned int)d4 < 256)
-	{
-		// parsed a valid ipv4 address
-		address->addresstype = LHNETADDRESSTYPE_INET4;
-		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
-		address->addressdata.inet4.port = htons((unsigned short)port);
-		address->addressdata.inet4.address[0] = (unsigned char)d1;
-		address->addressdata.inet4.address[1] = (unsigned char)d2;
-		address->addressdata.inet4.address[2] = (unsigned char)d3;
-		address->addressdata.inet4.address[3] = (unsigned char)d4;
-#ifdef STANDALONETEST
-		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %d.%d.%d.%d:%d\n", string, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
-#endif
-		return 1;
-	}
 	return 0;
 }
 
@@ -340,6 +339,64 @@ void LHNET_Shutdown(void)
 	lhnet_active = 0;
 }
 
+static const char *LHNETPRIVATE_StrError(void)
+{
+#ifdef WIN32
+	int i = WSAGetLastError();
+	switch (i)
+	{
+		case WSAEINTR:           return "WSAEINTR";                                     
+		case WSAEBADF:           return "WSAEBADF";
+		case WSAEACCES:          return "WSAEACCES";          
+		case WSAEFAULT:          return "WSAEFAULT";
+		case WSAEINVAL:          return "WSAEINVAL";
+		case WSAEMFILE:          return "WSAEMFILE";
+		case WSAEWOULDBLOCK:     return "WSAEWOULDBLOCK";
+		case WSAEINPROGRESS:     return "WSAEINPROGRESS";
+		case WSAEALREADY:        return "WSAEALREADY";
+		case WSAENOTSOCK:        return "WSAENOTSOCK";
+		case WSAEDESTADDRREQ:    return "WSAEDESTADDRREQ";
+		case WSAEMSGSIZE:        return "WSAEMSGSIZE";
+		case WSAEPROTOTYPE:      return "WSAEPROTOTYPE";
+		case WSAENOPROTOOPT:     return "WSAENOPROTOOPT";
+		case WSAEPROTONOSUPPORT: return "WSAEPROTONOSUPPORT";
+		case WSAESOCKTNOSUPPORT: return "WSAESOCKTNOSUPPORT";
+		case WSAEOPNOTSUPP:      return "WSAEOPNOTSUPP";
+		case WSAEPFNOSUPPORT:    return "WSAEPFNOSUPPORT";
+		case WSAEAFNOSUPPORT:    return "WSAEAFNOSUPPORT";
+		case WSAEADDRINUSE:      return "WSAEADDRINUSE";
+		case WSAEADDRNOTAVAIL:   return "WSAEADDRNOTAVAIL";
+		case WSAENETDOWN:        return "WSAENETDOWN";
+		case WSAENETUNREACH:     return "WSAENETUNREACH";
+		case WSAENETRESET:       return "WSAENETRESET";
+		case WSAECONNABORTED:    return "WSAECONNABORTED";
+		case WSAECONNRESET:      return "WSAECONNRESET";
+		case WSAENOBUFS:         return "WSAENOBUFS";
+		case WSAEISCONN:         return "WSAEISCONN";
+		case WSAENOTCONN:        return "WSAENOTCONN";
+		case WSAESHUTDOWN:       return "WSAESHUTDOWN";
+		case WSAETOOMANYREFS:    return "WSAETOOMANYREFS";
+		case WSAETIMEDOUT:       return "WSAETIMEDOUT";
+		case WSAECONNREFUSED:    return "WSAECONNREFUSED";
+		case WSAELOOP:           return "WSAELOOP";
+		case WSAENAMETOOLONG:    return "WSAENAMETOOLONG";
+		case WSAEHOSTDOWN:       return "WSAEHOSTDOWN";
+		case WSAEHOSTUNREACH:    return "WSAEHOSTUNREACH";
+		case WSAENOTEMPTY:       return "WSAENOTEMPTY";
+		case WSAEPROCLIM:        return "WSAEPROCLIM";
+		case WSAEUSERS:          return "WSAEUSERS";
+		case WSAEDQUOT:          return "WSAEDQUOT";
+		case WSAESTALE:          return "WSAESTALE";
+		case WSAEREMOTE:         return "WSAEREMOTE";
+		case WSAEDISCON:         return "WSAEDISCON";
+		case 0:                  return "no error";
+		default:                 return "unknown WSAE error";  
+	}
+#else
+	return strerror(errno);
+#endif
+}
+
 lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 {
 	lhnetsocket_t *lhnetsocket, *s;
@@ -415,13 +472,19 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 							lhnetsocket->prev->next = lhnetsocket;
 							return lhnetsocket;
 						}
+						else
+							Con_Printf("LHNET_OpenSocket_Connectionless: bind returned error: %s\n", LHNETPRIVATE_StrError());
 					}
+					else
+						Con_Printf("LHNET_OpenSocket_Connectionless: ioctlsocket returned error: %s\n", LHNETPRIVATE_StrError());
 #ifdef WIN32
 					closesocket(lhnetsocket->inetsocket);
 #else
 					close(lhnetsocket->inetsocket);
 #endif
 				}
+				else
+					Con_Printf("LHNET_OpenSocket_Connectionless: socket returned error: %s\n", LHNETPRIVATE_StrError());
 			}
 			break;
 		default:

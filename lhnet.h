@@ -16,7 +16,11 @@ typedef struct lhnetaddress_loop_s
 lhnetaddress_loop_t;
 
 #define LHNETADDRESSTYPE_INET4_FAMILY 2
+#ifdef WIN32
+#define LHNETADDRESSTYPE_INET6_FAMILY 23
+#else
 #define LHNETADDRESSTYPE_INET6_FAMILY 10
+#endif
 
 // compatible with sockaddr_in
 typedef struct lhnetaddress_inet4_s
