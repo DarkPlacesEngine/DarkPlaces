@@ -1239,10 +1239,12 @@ static void R_Shadow_VertexShading(int numverts, const float *vertex3f, const fl
 	}
 }
 
-#define USETEXMATRIX 1
+// TODO: use glTexGen instead of feeding vertices to texcoordpointer?
+#define USETEXMATRIX
+
 #ifndef USETEXMATRIX
-// FIXME: this should be done in a texture matrix or vertex program when possible
-// FIXME: if vertex program not available, this would really benefit from 3DNow! or SSE
+// this should be done in a texture matrix or vertex program when possible, but here's code to do it manually
+// if hardware texcoord manipulation is not available (or not suitable, this would really benefit from 3DNow! or SSE
 static void R_Shadow_Transform_Vertex3f_TexCoord3f(float *tc3f, int numverts, const float *vertex3f, const matrix4x4_t *matrix)
 {
 	do
@@ -1338,7 +1340,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				m.tex3d[2] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[2] = vertex3f;
 				m.texmatrix[2] = *matrix_modeltoattenuationxyz;
 #else
@@ -1361,7 +1363,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
 					m.texmatrix[1] = *matrix_modeltolight;
 #else
@@ -1376,7 +1378,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[0] = vertex3f;
 				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
 #else
@@ -1416,7 +1418,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
 					m.texmatrix[1] = *matrix_modeltolight;
 #else
@@ -1451,7 +1453,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.tex[0] = R_GetTexture(basetexture);
 				m.pointer_texcoord[0] = texcoord2f;
 				m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[1] = vertex3f;
 				m.texmatrix[1] = *matrix_modeltoattenuationxyz;
 #else
@@ -1472,7 +1474,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[2] = vertex3f;
 				m.texmatrix[2] = *matrix_modeltoattenuationxyz;
 #else
@@ -1480,7 +1482,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[2], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
 				m.tex[3] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[3] = vertex3f;
 				m.texmatrix[3] = *matrix_modeltoattenuationz;
 #else
@@ -1503,7 +1505,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
 					m.texmatrix[1] = *matrix_modeltolight;
 #else
@@ -1518,7 +1520,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[0] = vertex3f;
 				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
 #else
@@ -1526,7 +1528,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
 				m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[1] = vertex3f;
 				m.texmatrix[1] = *matrix_modeltoattenuationz;
 #else
@@ -1566,7 +1568,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
 					m.texmatrix[1] = *matrix_modeltolight;
 #else
@@ -1641,7 +1643,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[0] = vertex3f;
 					m.texmatrix[0] = *matrix_modeltoattenuationxyz;
 #else
@@ -1663,7 +1665,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					if (lightcubemap)
 					{
 						m.texcubemap[1] = R_GetTexture(lightcubemap);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 						m.pointer_texcoord3f[1] = vertex3f;
 						m.texmatrix[1] = *matrix_modeltolight;
 #else
@@ -1716,7 +1718,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					m.tex[0] = R_GetTexture(glosstexture);
 					m.pointer_texcoord[0] = texcoord2f;
 					m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
 					m.texmatrix[1] = *matrix_modeltoattenuationxyz;
 #else
@@ -1766,7 +1768,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					memset(&m, 0, sizeof(m));
 					m.pointer_vertex = vertex3f;
 					m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[0] = vertex3f;
 					m.texmatrix[0] = *matrix_modeltoattenuationxyz;
 #else
@@ -1774,7 +1776,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
 #endif
 					m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[1] = vertex3f;
 					m.texmatrix[1] = *matrix_modeltoattenuationz;
 #else
@@ -1796,7 +1798,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 					if (lightcubemap)
 					{
 						m.texcubemap[1] = R_GetTexture(lightcubemap);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 						m.pointer_texcoord3f[1] = vertex3f;
 						m.texmatrix[1] = *matrix_modeltolight;
 #else
@@ -1836,7 +1838,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			{
 				// voodoo2
 				m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 				m.pointer_texcoord3f[1] = vertex3f;
 				m.texmatrix[1] = *matrix_modeltoattenuationxyz;
 #else
@@ -1847,7 +1849,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				{
 					// Geforce3/Radeon class but not using dot3
 					m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
-#if USETEXMATRIX
+#ifdef USETEXMATRIX
 					m.pointer_texcoord3f[2] = vertex3f;
 					m.texmatrix[2] = *matrix_modeltoattenuationz;
 #else
@@ -2693,11 +2695,14 @@ void R_Shadow_LoadLightsFile(void)
 	}
 }
 
+// tyrlite/hmap2 light types in the delay field
+typedef enum lighttype_e {LIGHTTYPE_MINUSX, LIGHTTYPE_RECIPX, LIGHTTYPE_RECIPXX, LIGHTTYPE_NONE, LIGHTTYPE_SUN, LIGHTTYPE_MINUSXX} lighttype_t;
+
 void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
-	int entnum, style, islight, skin, pflags, effects;
+	int entnum, style, islight, skin, pflags, effects, type, n;
 	char key[256], value[1024];
-	float origin[3], angles[3], radius, color[3], light, fadescale, lightscale, originhack[3], overridecolor[3];
+	float origin[3], angles[3], radius, color[3], light[4], fadescale, lightscale, originhack[3], overridecolor[3], vec[4];
 	const char *data;
 
 	if (cl.worldmodel == NULL)
@@ -2710,11 +2715,11 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		return;
 	for (entnum = 0;COM_ParseToken(&data, false) && com_token[0] == '{';entnum++)
 	{
-		light = 0;
+		type = LIGHTTYPE_MINUSX;
 		origin[0] = origin[1] = origin[2] = 0;
 		originhack[0] = originhack[1] = originhack[2] = 0;
 		angles[0] = angles[1] = angles[2] = 0;
-		color[0] = color[1] = color[2] = 1;
+		light[0] = light[1] = light[2] = 1;light[3] = 300;
 		overridecolor[0] = overridecolor[1] = overridecolor[2] = 1;
 		fadescale = 1;
 		lightscale = 1;
@@ -2741,7 +2746,27 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 
 			// now that we have the key pair worked out...
 			if (!strcmp("light", key))
-				light = atof(value);
+			{
+				n = sscanf(value, "%f %f %f %f", &vec[0], &vec[1], &vec[2], &vec[3]);
+				if (n == 1)
+				{
+					// quake
+					light[0] = vec[0] * (1.0f / 256.0f);
+					light[1] = vec[0] * (1.0f / 256.0f);
+					light[2] = vec[0] * (1.0f / 256.0f);
+					light[3] = vec[0];
+				}
+				else if (n == 4)
+				{
+					// halflife
+					light[0] = vec[0] * (1.0f / 255.0f);
+					light[1] = vec[1] * (1.0f / 255.0f);
+					light[2] = vec[2] * (1.0f / 255.0f);
+					light[3] = vec[3];
+				}
+			}
+			else if (!strcmp("delay", key))
+				type = atoi(value);
 			else if (!strcmp("origin", key))
 				sscanf(value, "%f %f %f", &origin[0], &origin[1], &origin[2]);
 			else if (!strcmp("angle", key))
@@ -2838,27 +2863,44 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 			else if (!strcmp("effects", key))
 				effects = (int)atof(value);
 		}
-		if (light <= 0 && islight)
-			light = 300;
+		if (!islight)
+			continue;
 		if (lightscale <= 0)
 			lightscale = 1;
 		if (fadescale <= 0)
 			fadescale = 1;
-		if (gamemode == GAME_TENEBRAE)
+		if (color[0] == color[1] && color[0] == color[2])
 		{
-			if (effects & EF_NODRAW)
-			{
-				pflags |= PFLAGS_FULLDYNAMIC;
-				effects &= ~EF_NODRAW;
-			}
+			color[0] *= overridecolor[0];
+			color[1] *= overridecolor[1];
+			color[2] *= overridecolor[2];
 		}
-		radius = min(light * r_editlights_quakelightsizescale.value * lightscale / fadescale, 1048576);
-		light = sqrt(bound(0, light, 1048576)) * (1.0f / 16.0f);
-		if (color[0] == 1 && color[1] == 1 && color[2] == 1)
-			VectorCopy(overridecolor, color);
-		VectorScale(color, light, color);
+		radius = light[3] * r_editlights_quakelightsizescale.value * lightscale / fadescale;
+		color[0] = color[0] * light[0];
+		color[1] = color[1] * light[1];
+		color[2] = color[2] * light[2];
+		switch (type)
+		{
+		case LIGHTTYPE_MINUSX:
+			break;
+		case LIGHTTYPE_RECIPX:
+			radius *= 2;
+			VectorScale(color, (1.0f / 16.0f), color);
+			break;
+		case LIGHTTYPE_RECIPXX:
+			radius *= 2;
+			VectorScale(color, (1.0f / 16.0f), color);
+			break;
+		default:
+		case LIGHTTYPE_NONE:
+			break;
+		case LIGHTTYPE_SUN:
+			break;
+		case LIGHTTYPE_MINUSXX:
+			break;
+		}
 		VectorAdd(origin, originhack, origin);
-		if (radius >= 15 && !(pflags & PFLAGS_FULLDYNAMIC))
+		if (radius >= 1)
 			R_Shadow_NewWorldLight(origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va("cubemaps/%i", skin) : NULL);
 	}
 }
