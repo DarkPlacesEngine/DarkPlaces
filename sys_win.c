@@ -346,7 +346,7 @@ WinMain
 */
 HINSTANCE	global_hInstance;
 int			global_nCmdShow;
-char		*argv[MAX_NUM_ARGVS];
+const char	*argv[MAX_NUM_ARGVS];
 char		program_name[MAX_OSPATH];
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
