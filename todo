@@ -113,6 +113,7 @@
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
 0 darkplaces renderer: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
 0 darkplaces renderer: water shader not working with fog (Tomaz)
+0 darkplaces server: add DP_HALFLIFESPRITE extension (Urre)
 0 darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
 0 darkplaces server: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension (Electro)
 0 darkplaces server: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
@@ -269,7 +270,6 @@
 2 hmap2: add "_minlight" "red green blue" and "_ambientlight" "red green blue" fields to worldspawn parsing (Harb)
 2 hmap2: add hlwad support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd, FrikaC)
 2 hmap2: make water have lightmaps (unless -nowaterlightmaps is specified)
-2 hmap2: tweak the light point generation a bit more to try to solve the 'corner light' glitch (Urre)
 3 LordHavoc: read up on dynamic visibility
 3 darkplaces cleanup: merge model format handling (mdl/md2/md3/zym)
 3 darkplaces loading: support dpm files
@@ -686,6 +686,7 @@ d hmap2: add -minlight option, with warning that it does not produce a .lights f
 d hmap2: add tyrlite compatible "delay" settings, with the interpretation of no specified delay being dependent on a -tyrlite option, and add a new type which is a sun light; light cast in a direction, from sky polygons or the void, these light types would warn that they disable .lights files
 d hmap2: light not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
 d hmap2: report locations of lights which can not be vis optimized (Urre, FrikaC)
+d hmap2: tweak the light point generation a bit more to try to solve the 'corner light' glitch (Urre)
 d hmap2: update .bat files to use hmap2 name and remove -noreuse from revis.bat (Vic)
 d hmap: add support for GTKRadiant stuff
 d lhfire: post lhfire build with example scripts.
