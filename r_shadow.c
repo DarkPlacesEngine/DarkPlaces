@@ -1754,14 +1754,15 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		i = CL_PointQ1Contents(e->origin);
 		if (r_shadow_portallight.integer && i != CONTENTS_SOLID && i != CONTENTS_SKY)
 		{
-			qbyte *byteleafpvs;
+			//qbyte *byteleafpvs;
 			qbyte *bytesurfacepvs;
 
-			byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs);
+			//byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs);
 			bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
 
-			Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin));
+			Portal_Visibility(cl.worldmodel, e->origin, NULL/*byteleafpvs*/, bytesurfacepvs, NULL, 0, true, RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin), e->mins, e->maxs);
 
+			/*
 			for (i = 0, leaf = cl.worldmodel->brushq1.leafs;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
 			{
 				if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, mins, maxs))
@@ -1773,12 +1774,13 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 					}
 				}
 			}
+			*/
 
 			for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
 				if (bytesurfacepvs[i] && BoxesOverlap(surf->poly_mins, surf->poly_maxs, mins, maxs))
 					surf->castshadow = castshadowcount;
 
-			Mem_Free(byteleafpvs);
+			//Mem_Free(byteleafpvs);
 			Mem_Free(bytesurfacepvs);
 		}
 		else

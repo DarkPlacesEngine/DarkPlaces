@@ -328,6 +328,8 @@ typedef struct portalrecursioninfo_s
 	qbyte *leafmark;
 	model_t *model;
 	vec3_t eye;
+	float *updateleafsmins;
+	float *updateleafsmaxs;
 }
 portalrecursioninfo_t;
 
@@ -387,6 +389,12 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	float dist;
 	vec3_t center, v1, v2;
 	tinyplane_t *newplanes;
+
+	for (i = 0;i < 3;i++)
+	{
+		if (info->updateleafsmins && info->updateleafsmins[i] > leaf->mins[i]) info->updateleafsmins[i] = leaf->mins[i];
+		if (info->updateleafsmaxs && info->updateleafsmaxs[i] < leaf->maxs[i]) info->updateleafsmaxs[i] = leaf->maxs[i];
+	}
 
 	if (info->leafmark)
 		info->leafmark[leaf - info->model->brushq1.leafs] = true;
@@ -462,7 +470,7 @@ void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
 	}
 }
 
-void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, float radius)
+void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte *surfacemark, const mplane_t *frustumplanes, int numfrustumplanes, int exact, float radius, float *updateleafsmins, float *updateleafsmaxs)
 {
 	int i;
 	portalrecursioninfo_t info;
@@ -499,6 +507,8 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	info.model = model;
 	VectorCopy(eye, info.eye);
 	info.numfrustumplanes = numfrustumplanes;
+	info.updateleafsmins = updateleafsmins;
+	info.updateleafsmaxs = updateleafsmaxs;
 
 	Portal_RecursiveFindLeafForFlow(&info, model->brushq1.nodes);
 
