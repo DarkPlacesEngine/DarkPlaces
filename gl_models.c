@@ -3,8 +3,6 @@
 
 //cvar_t gl_transform = {0, "gl_transform", "1"};
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
-cvar_t r_zymdebug = {0, "r_zymdebug", "0"};
-cvar_t r_zymdebug_dist = {0, "r_zymdebug_dist", "4"};
 
 typedef struct
 {
@@ -109,8 +107,6 @@ void GL_Models_Init(void)
 {
 //	Cvar_RegisterVariable(&gl_transform);
 	Cvar_RegisterVariable(&gl_lockarrays);
-	Cvar_RegisterVariable(&r_zymdebug);
-	Cvar_RegisterVariable(&r_zymdebug_dist);
 
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
@@ -323,16 +319,6 @@ void R_SetupMDLMD2Frames(skinframe_t **skinframe)
 	frame2verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[1].frame * model->numverts];
 	frame3verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[2].frame * model->numverts];
 	frame4verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[3].frame * model->numverts];
-	/*
-	if (currentrenderentity->frameblend[0].lerp)
-		Con_Printf("frame1: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame1->name, frame1->scale[0], frame1->scale[1], frame1->scale[2], frame1->translate[0], frame1->translate[1], frame1->translate[2]);
-	if (currentrenderentity->frameblend[1].lerp)
-		Con_Printf("frame2: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame2->name, frame2->scale[0], frame2->scale[1], frame2->scale[2], frame2->translate[0], frame2->translate[1], frame2->translate[2]);
-	if (currentrenderentity->frameblend[2].lerp)
-		Con_Printf("frame3: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame3->name, frame3->scale[0], frame3->scale[1], frame3->scale[2], frame3->translate[0], frame3->translate[1], frame3->translate[2]);
-	if (currentrenderentity->frameblend[3].lerp)
-		Con_Printf("frame4: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame4->name, frame4->scale[0], frame4->scale[1], frame4->scale[2], frame4->translate[0], frame4->translate[1], frame4->translate[2]);
-	*/
 	R_AliasLerpVerts(model->numverts,
 		currentrenderentity->frameblend[0].lerp, frame1verts, frame1->scale, frame1->translate,
 		currentrenderentity->frameblend[1].lerp, frame2verts, frame2->scale, frame2->translate,
@@ -593,142 +579,41 @@ void R_DrawQ2AliasModel (void)
 	glDepthMask(1);
 }
 
-static int zymdebug;
-static float bestdist;
-
-int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone/*, float rootorigin[3], float rootangles[3], float rootscale*/)
+int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone)
 {
-	int i/*, j*/;
-	float lerp1, lerp2, lerp3, lerp4/*, ang[3]*/;
-	zymbonematrix *out, modelmatrix, swapmatrix, m, *bone1, *bone2, *bone3, *bone4;
-	//int a, b, c;
-
-	memset(&swapmatrix, 0, sizeof(zymbonematrix));
-
-	//ang[0] = (zymdebug & 3) * 90;zymdebug /= 4;
-	//ang[1] = (zymdebug & 3) * 90;zymdebug /= 4;
-	//ang[2] = (zymdebug & 3) * 90;zymdebug /= 4;
-	/*
-	ang[0] = 0;
-	ang[1] = -90;
-	ang[2] = 0;
-	AngleVectorsFLU(ang, swapmatrix.m[0], swapmatrix.m[1], swapmatrix.m[2]);
-	*/
-	/*
-	i = zymdebug % 3;zymdebug /= 3;
-	j = zymdebug % 3;zymdebug /= 3;
-	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
-	if (swapmatrix.m[i][j])
-		return false;
-	swapmatrix.m[i][j] = lerp1;
-	i = zymdebug % 3;zymdebug /= 3;
-	j = zymdebug % 3;zymdebug /= 3;
-	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
-	if (swapmatrix.m[i][j])
-		return false;
-	swapmatrix.m[i][j] = lerp1;
-	i = zymdebug % 3;zymdebug /= 3;
-	j = zymdebug % 3;zymdebug /= 3;
-	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
-	if (swapmatrix.m[i][j])
-		return false;
-	swapmatrix.m[i][j] = lerp1;
-	*/
-	/*
-	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
-	swapmatrix.m[0][zymdebug % 3] = lerp1;zymdebug /= 3;
-	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
-	swapmatrix.m[1][zymdebug % 3] = lerp1;zymdebug /= 3;
-	lerp1 = (zymdebug & 1) ? -1 : 1;zymdebug /= 2;
-	swapmatrix.m[2][zymdebug % 3] = lerp1;zymdebug /= 3;
-	*/
-	/*
-	for (i = 0;i < 3;i++)
-	{
-		for (j = 0;j < 3;j++)
-		{
-			swapmatrix.m[i][j] = (zymdebug % 3) - 1;
-			zymdebug /= 3;
-		}
-	}
-	*/
-	/*
-	for (i = 0;i < 3;i++)
-	{
-		if (fabs(swapmatrix.m[i][0] * swapmatrix.m[i][0] + swapmatrix.m[i][1] * swapmatrix.m[i][1] + swapmatrix.m[i][2] * swapmatrix.m[i][2] - 1) > 0.01f)
-			return false;
-		if (fabs(swapmatrix.m[0][i] * swapmatrix.m[0][i] + swapmatrix.m[1][i] * swapmatrix.m[1][i] + swapmatrix.m[2][i] * swapmatrix.m[2][i] - 1) > 0.01f)
-			return false;
-	}
-	*/
-	//if (fabs(DotProduct(swapmatrix.m[0], swapmatrix.m[0]) + DotProduct(swapmatrix.m[0], swapmatrix.m[0]) + DotProduct(swapmatrix.m[0], swapmatrix.m[0]) - 3) > 0.01f)
-	//	return false;
-
-	swapmatrix.m[0][1] = -1;
-	swapmatrix.m[1][0] = 1;
-	swapmatrix.m[2][2] = 1;
-
-	memset(&modelmatrix, 0, sizeof(zymbonematrix));
+	int i;
+	float lerp1, lerp2, lerp3, lerp4;
+	zymbonematrix *out, rootmatrix, m, *bone1, *bone2, *bone3, *bone4;
 
 	/*
-	a = b = c = 0;
-	switch (zymdebug % 6)
-	{
-	case 0: a = 0;b = 1;c = 2;break;
-	case 1: a = 1;b = 0;c = 2;break;
-	case 2: a = 2;b = 0;c = 1;break;
-	case 3: a = 0;b = 2;c = 1;break;
-	case 4: a = 1;b = 2;c = 0;break;
-	case 5: a = 2;b = 1;c = 0;break;
-	}
-	zymdebug /= 6;
-	AngleVectors(rootangles, m.m[a], m.m[b], m.m[c]);
-	if (zymdebug & 1)
-		VectorNegate(m.m[0], m.m[0]);
-	zymdebug /= 2;
-	if (zymdebug & 1)
-		VectorNegate(m.m[1], m.m[1]);
-	zymdebug /= 2;
-	if (zymdebug & 1)
-		VectorNegate(m.m[2], m.m[2]);
-	zymdebug /= 2;
-	if (zymdebug & 1)
-	{
-		for (a = 0;a < 3;a++)
-			for (b = 0;b < 3;b++)
-				modelmatrix.m[a][b] = m.m[b][a];
-	}
-	else
-	{
-		for (a = 0;a < 3;a++)
-			for (b = 0;b < 3;b++)
-				modelmatrix.m[a][b] = m.m[a][b];
-	}
-	zymdebug /= 2;
-	VectorScale(modelmatrix.m[0], rootscale, modelmatrix.m[0]);
-	VectorScale(modelmatrix.m[1], rootscale, modelmatrix.m[1]);
-	VectorScale(modelmatrix.m[2], rootscale, modelmatrix.m[2]);
+	m.m[0][0] = 0;
+	m.m[0][1] = -1;
+	m.m[0][2] = 0;
+	m.m[0][3] = 0;
+	m.m[1][0] = 1;
+	m.m[1][1] = 0;
+	m.m[1][2] = 0;
+	m.m[1][3] = 0;
+	m.m[2][0] = 0;
+	m.m[2][1] = 0;
+	m.m[2][2] = 1;
+	m.m[2][3] = 0;
+	R_ConcatTransforms(&softwaretransform_matrix[0], &m.m[0], &rootmatrix.m[0]);
 	*/
 
-	/*
-	AngleVectors(rootangles, modelmatrix.m[0], modelmatrix.m[1], modelmatrix.m[2]);
-	VectorScale(modelmatrix.m[0], rootscale, modelmatrix.m[0]);
-	VectorScale(modelmatrix.m[1], rootscale, modelmatrix.m[1]);
-	VectorScale(modelmatrix.m[2], rootscale, modelmatrix.m[2]);
-	modelmatrix.m[0][3] = rootorigin[0];
-	modelmatrix.m[1][3] = rootorigin[1];
-	modelmatrix.m[2][3] = rootorigin[2];
-
-	memcpy(&m, &swapmatrix, sizeof(zymbonematrix));
-	if (zymdebug & 1)
-		R_ConcatTransforms(&m.m[0], &modelmatrix.m[0], &swapmatrix.m[0]);
-	else
-		R_ConcatTransforms(&modelmatrix.m[0], &m.m[0], &swapmatrix.m[0]);
-	zymdebug /= 2;
-	*/
-
-	memcpy(&m, &swapmatrix, sizeof(zymbonematrix));
-	R_ConcatTransforms(&softwaretransform_matrix[0], &m.m[0], &swapmatrix.m[0]);
+	// LordHavoc: combine transform from zym coordinate space to quake coordinate space with model to world transform matrix
+	rootmatrix.m[0][0] = softwaretransform_matrix[0][1];
+	rootmatrix.m[0][1] = -softwaretransform_matrix[0][0];
+	rootmatrix.m[0][2] = softwaretransform_matrix[0][2];
+	rootmatrix.m[0][3] = softwaretransform_matrix[0][3];
+	rootmatrix.m[1][0] = softwaretransform_matrix[1][1];
+	rootmatrix.m[1][1] = -softwaretransform_matrix[1][0];
+	rootmatrix.m[1][2] = softwaretransform_matrix[1][2];
+	rootmatrix.m[1][3] = softwaretransform_matrix[1][3];
+	rootmatrix.m[2][0] = softwaretransform_matrix[2][1];
+	rootmatrix.m[2][1] = -softwaretransform_matrix[2][0];
+	rootmatrix.m[2][2] = softwaretransform_matrix[2][2];
+	rootmatrix.m[2][3] = softwaretransform_matrix[2][3];
 
 	bone1 = bonebase + blend[0].frame * count;
 	lerp1 = blend[0].lerp;
@@ -763,7 +648,7 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 					if (bone->parent >= 0)
 						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 					else
-						R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
 					bone1++;
 					bone2++;
 					bone3++;
@@ -792,7 +677,7 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 					if (bone->parent >= 0)
 						R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 					else
-						R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
+						R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
 					bone1++;
 					bone2++;
 					bone3++;
@@ -821,7 +706,7 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 				if (bone->parent >= 0)
 					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 				else
-					R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
 				bone1++;
 				bone2++;
 				bone++;
@@ -852,7 +737,7 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 				if (bone->parent >= 0)
 					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &m.m[0], &out->m[0]);
 				else
-					R_ConcatTransforms(&swapmatrix.m[0], &m.m[0], &out->m[0]);
+					R_ConcatTransforms(&rootmatrix.m[0], &m.m[0], &out->m[0]);
 				bone1++;
 				bone++;
 			}
@@ -865,7 +750,7 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 				if (bone->parent >= 0)
 					R_ConcatTransforms(&zymbonepose[bone->parent].m[0], &bone1->m[0], &out->m[0]);
 				else
-					R_ConcatTransforms(&swapmatrix.m[0], &bone1->m[0], &out->m[0]);
+					R_ConcatTransforms(&rootmatrix.m[0], &bone1->m[0], &out->m[0]);
 				bone1++;
 				bone++;
 			}
@@ -878,8 +763,6 @@ void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 {
 	int c;
 	float *out = aliasvert;
-	float v[3];
-	float dist;
 	zymbonematrix *matrix;
 	while(vertcount--)
 	{
@@ -889,28 +772,23 @@ void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 		if (c == 1)
 		{
 			matrix = &zymbonepose[vert->bonenum];
-			v[0] = vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
-			v[1] = vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
-			v[2] = vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
+			out[0] = vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
+			out[1] = vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
+			out[2] = vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
 			vert++;
 		}
 		else
 		{
-			VectorClear(v);
+			VectorClear(out);
 			while(c--)
 			{
 				matrix = &zymbonepose[vert->bonenum];
-				v[0] += vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
-				v[1] += vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
-				v[2] += vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
+				out[0] += vert->origin[0] * matrix->m[0][0] + vert->origin[1] * matrix->m[0][1] + vert->origin[2] * matrix->m[0][2] + matrix->m[0][3];
+				out[1] += vert->origin[0] * matrix->m[1][0] + vert->origin[1] * matrix->m[1][1] + vert->origin[2] * matrix->m[1][2] + matrix->m[1][3];
+				out[2] += vert->origin[0] * matrix->m[2][0] + vert->origin[1] * matrix->m[2][1] + vert->origin[2] * matrix->m[2][2] + matrix->m[2][3];
 				vert++;
 			}
 		}
-		//softwaretransform(v, out);
-		VectorCopy(v, out);
-		dist = DotProduct(out, vpn) - DotProduct(r_origin, vpn);
-		if (dist > bestdist)
-			bestdist = dist;
 		out += 3;
 	}
 }
@@ -918,10 +796,10 @@ void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 {
 	int a, b, c, d;
-	float *out, v1[3], v2[3], normal[3];
+	float *out, v1[3], v2[3], normal[3], s;
 	int *u;
 	// clear normals
-	memset(aliasvertnorm, 0, sizeof(float[3]) * vertcount);
+	memset(aliasvertnorm, 0, sizeof(float) * vertcount * 3);
 	memset(aliasvertusage, 0, sizeof(int) * vertcount);
 	// parse render list and accumulate surface normals
 	while(shadercount--)
@@ -944,15 +822,15 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 			aliasvertnorm[a+0] += normal[0];
 			aliasvertnorm[a+1] += normal[1];
 			aliasvertnorm[a+2] += normal[2];
-			aliasvertusage[a]++;
+			aliasvertusage[renderlist[0]]++;
 			aliasvertnorm[b+0] += normal[0];
 			aliasvertnorm[b+1] += normal[1];
 			aliasvertnorm[b+2] += normal[2];
-			aliasvertusage[b]++;
+			aliasvertusage[renderlist[1]]++;
 			aliasvertnorm[c+0] += normal[0];
 			aliasvertnorm[c+1] += normal[1];
 			aliasvertnorm[c+2] += normal[2];
-			aliasvertusage[c]++;
+			aliasvertusage[renderlist[2]]++;
 			renderlist += 3;
 		}
 	}
@@ -963,10 +841,10 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 	{
 		if (*u > 1)
 		{
-			a = ixtable[*u];
-			out[0] *= a;
-			out[1] *= a;
-			out[2] *= a;
+			s = ixtable[*u];
+			out[0] *= s;
+			out[1] *= s;
+			out[2] *= s;
 		}
 		u++;
 		out += 3;
@@ -1048,72 +926,12 @@ void R_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 
 void R_DrawZymoticModel (void)
 {
-	//int a, b, c;
-	int keeptrying;
 	zymtype1header_t *m;
-	//vec3_t angles;
 
 	// FIXME: do better fog
 	m = currentrenderentity->model->zymdata_header;
-	keeptrying = true;
-	while(keeptrying)
-	{
-		keeptrying = false;
-		zymdebug = r_zymdebug.integer;
-		/*
-		angles[0] = currentrenderentity->angles[1];
-		angles[1] = currentrenderentity->angles[0] + 180;
-		angles[2] = -currentrenderentity->angles[2];
-		*/
-		/*
-		angles[0] = currentrenderentity->angles[0];
-		angles[1] = currentrenderentity->angles[1];
-		angles[2] = currentrenderentity->angles[2];
-		*/
-		/*
-		a = b = c = 0;
-		switch (zymdebug % 6)
-		{
-		case 0: a = 0;b = 1;c = 2;break;
-		case 1: a = 1;b = 0;c = 2;break;
-		case 2: a = 2;b = 0;c = 1;break;
-		case 3: a = 0;b = 2;c = 1;break;
-		case 4: a = 1;b = 2;c = 0;break;
-		case 5: a = 2;b = 1;c = 0;break;
-		}
-		zymdebug /= 6;
-		angles[0] = currentrenderentity->angles[a];
-		angles[1] = currentrenderentity->angles[b];
-		angles[2] = currentrenderentity->angles[c];
-		if (zymdebug & 1)
-			angles[0] = -angles[0];
-		zymdebug /= 2;
-		if (zymdebug & 1)
-			angles[1] = -angles[1];
-		zymdebug /= 2;
-		if (zymdebug & 1)
-			angles[2] = -angles[2];
-		zymdebug /= 2;
-		angles[0] += (zymdebug & 3) * 90;
-		zymdebug /= 4;
-		angles[1] += (zymdebug & 3) * 90;
-		zymdebug /= 4;
-		angles[2] += (zymdebug & 3) * 90;
-		zymdebug /= 4;
-		*/
-		bestdist = -1000;
-		if (ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m)/*, currentrenderentity->origin, angles, currentrenderentity->scale*/))
-			ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
-		if (bestdist < r_zymdebug_dist.value)
-		{
-			Cvar_SetValueQuick(&r_zymdebug, r_zymdebug.integer + 1);
-			if (zymdebug) // if there is some leftover, unclaimed, don't repeat
-				Cvar_SetValueQuick(&r_zymdebug, 0);
-			else
-				keeptrying = true;
-			Con_Printf("trying %i, bestdist was: %f\n", r_zymdebug.integer, bestdist);
-		}
-	}
+	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m));
+	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
 	R_LightModel(m->numverts);
