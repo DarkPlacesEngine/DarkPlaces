@@ -48,8 +48,7 @@
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces protocol: add DP_EF_HIGHPRECISION to send float origins instead of shorts (VorteX)
 0 darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
-0 darkplaces protocol: add DP_TE_BUBBLES extension to spawn a puff of bubbles (shadowalker)
-0 darkplaces protocol: add DP_TE_BUBBLES to make a burst of bubbles underwater (Supa)
+0 darkplaces protocol: add DP_TE_BUBBLES to make a burst of bubbles underwater (Supa, shadowalker)
 0 darkplaces protocol: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
 0 darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
 0 darkplaces protocol: add a .messagemode button so that qc can show a talk bubble (Vermeulen)
@@ -61,7 +60,6 @@
 0 darkplaces protocol: add support for .float corona and corona_radius to control corona intensity and radius on dlights 
 0 darkplaces protocol: document the TEI stuff used in Nexuiz?  check telejano site first (Sajt)
 0 darkplaces protocol: fix signon error when starting prydon without +map curig2 (FrikaC)
-0 darkplaces protocol: makebubble effect, ask DrLabMan for details (shadowalker)
 0 darkplaces protocol: server should send slowmo to client somehow (Vermeulen)
 0 darkplaces protocol: server should send sv_gravity to client somehow (Vermeulen)
 0 darkplaces renderer bug: q3bsp alpha shaders are not being lit?  (Cheapy) 
@@ -92,6 +90,7 @@
 0 darkplaces server: add an extension to check if a file exists outside the data directory, FRIK_FILE can do this but only inside data directory (Error)
 0 darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
 0 darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
+0 darkplaces server: add sv_progs cvar, defaulted to "progs.dat", can be set from console or by menu to choose a mod (Black)
 0 darkplaces server: add te_flamejet builtin and add extension (Supajoe)
 0 darkplaces server: make dedicated server not load images (maybe all fail?)
 0 darkplaces server: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
@@ -289,6 +288,7 @@
 4 darkplaces cleanup: use the memory pool nesting feature ! (Black[,Vicious])
 4 darkplaces client: add decals on models (Urre)
 4 darkplaces client: add qw protocol support (making darkplaces work as a qwcl client) (tell Fuh)
+4 darkplaces client: add video playback handles to the cl_video code so that other systems can use streaming video textures, and allow the menu qc to use these (Black)
 4 darkplaces client: figure out why intermission camera pitch changes after a moment (Tomaz)
 4 darkplaces console: add setlock command which marks a cvar as locked, and sends it over network to connected clients as a setlock command, the clients will not allow the user to modify the cvars while locked (and will only accept setlock commands over the network), and cvars are unlocked when level ends - the server will send the locks again on next level (VorteX)
 4 darkplaces csqc: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
