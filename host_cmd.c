@@ -671,6 +671,7 @@ Host_Name_f
 cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player"};
 void Host_Name_f (void)
 {
+	int i, j;
 	char newName[sizeof(host_client->name)];
 
 	if (Cmd_Argc () == 1)
@@ -683,6 +684,11 @@ void Host_Name_f (void)
 		strlcpy (newName, Cmd_Argv(1), sizeof (newName));
 	else
 		strlcpy (newName, Cmd_Args(), sizeof (newName));
+
+	for (i = 0, j = 0;newName[i];i++)
+		if (newName[i] != '\r' && newName[i] != '\n')
+			newName[j++] = newName[i];
+	newName[j] = 0;
 
 	if (cmd_source == src_command)
 	{
