@@ -131,9 +131,12 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		for (i = 0;i < 4 && ent->frameblend[i].lerp;i++)
 			frame = ent->model->sprite.sprdata_frames + ent->frameblend[i].frame;
 
-		R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
-		if (fog * ent->frameblend[i].lerp >= 0.01f)
-			R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
+		if (frame)
+		{
+			R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
+			if (fog * ent->frameblend[i].lerp >= 0.01f)
+				R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
+		}
 	}
 }
 
