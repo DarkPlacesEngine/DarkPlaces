@@ -572,7 +572,7 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 
 	if (gl_support_anisotropy)
 	{
-		int aniso = bound(1, gl_texture_anisotropy.integer, 128);
+		int aniso = bound(1, gl_texture_anisotropy.integer, gl_max_anisotropy);
 		if (gl_texture_anisotropy.integer != aniso)
 			Cvar_SetValueQuick(&gl_texture_anisotropy, aniso);
 		qglTexParameteri(textureenum, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);CHECKGLERROR
