@@ -10,6 +10,17 @@ typedef struct
 	vec_t cullradius; // only for culling comparisons
 	vec_t subtract; // to avoid sudden brightness change at cullradius, subtract this
 	entity_render_t *ent; // owner of this light
+
+	matrix4x4_t matrix_lighttoworld;
+	matrix4x4_t matrix_worldtolight;
+	matrix4x4_t matrix_worldtoattenuationxyz;
+	matrix4x4_t matrix_worldtoattenuationz;
+
+	vec3_t color;
+	vec_t radius;
+	int cubemapnum;
+	int shadow;
+	vec_t corona;
 }
 rdlight_t;
 

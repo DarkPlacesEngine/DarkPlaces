@@ -126,41 +126,69 @@ void R_BuildLightList(void)
 			continue;
 		rd = &r_dlight[r_numdlights++];
 		VectorCopy(cd->origin, rd->origin);
-		VectorScale(cd->color, cd->radius * 64.0f, rd->light);
+		VectorScale(cd->color, d_lightstylevalue[cd->style] * (1.0f / 256.0f), rd->color);
+		rd->radius = bound(0, cd->radius, 2048.0f);
+		VectorScale(rd->color, rd->radius * 64.0f, rd->light);
+#if 0
 		rd->cullradius2 = DotProduct(rd->light, rd->light) * (0.25f / (64.0f * 64.0f)) + 4096.0f;
 		// clamp radius to avoid overflowing division table in lightmap code
-		if (rd->cullradius2 > (2048.0f * 2048.0f))
-			rd->cullradius2 = (2048.0f * 2048.0f);
+		rd->cullradius2 = bound(0, rd->cullradius2, 2048.0f*2048.0f);
 		rd->cullradius = sqrt(rd->cullradius2);
+#else
+		rd->cullradius = rd->radius;
+		rd->cullradius2 = rd->cullradius * rd->cullradius;
+#endif
 		rd->subtract = 1.0f / rd->cullradius2;
 		rd->ent = cd->ent;
+		rd->cubemapnum = cd->cubemapnum;
+		rd->shadow = cd->shadow;
+		rd->corona = cd->corona;
+
+		rd->matrix_lighttoworld = cd->matrix;
+		Matrix4x4_ConcatScale(&rd->matrix_lighttoworld, rd->cullradius);
+		Matrix4x4_Invert_Simple(&rd->matrix_worldtolight, &rd->matrix_lighttoworld);
+		Matrix4x4_Concat(&rd->matrix_worldtoattenuationxyz, &matrix_attenuationxyz, &rd->matrix_worldtolight);
+		Matrix4x4_Concat(&rd->matrix_worldtoattenuationz, &matrix_attenuationz, &rd->matrix_worldtolight);
+
 		c_dlights++; // count every dlight in use
 	}
 }
 
 void R_DrawCoronas(void)
 {
-	int i;
+	int i, lnum;
 	float cscale, scale, viewdist, dist;
 	rdlight_t *rd;
+	worldlight_t *wl;
 	if (!r_coronas.integer)
 		return;
 	R_Mesh_Matrix(&r_identitymatrix);
 	viewdist = DotProduct(r_vieworigin, r_viewforward);
+	if (r_shadow_realtime_world.integer)
+	{
+		for (lnum = 0, wl = r_shadow_worldlightchain;wl;wl = wl->next, lnum++)
+		{
+			if (wl->corona * r_coronas.value > 0 && (r_shadow_debuglight.integer < 0 || r_shadow_debuglight.integer == lnum) && (dist = (DotProduct(wl->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(wl->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+			{
+				cscale = wl->corona * r_coronas.value * 0.25f;
+				scale = wl->radius * 0.25f;
+				R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, wl->color[0] * cscale, wl->color[1] * cscale, wl->color[2] * cscale, 1);
+			}
+		}
+	}
 	for (i = 0;i < r_numdlights;i++)
 	{
 		rd = r_dlight + i;
-		dist = (DotProduct(rd->origin, r_viewforward) - viewdist);
-		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
+		if (rd->corona * r_coronas.value > 0 && (dist = (DotProduct(rd->origin, r_viewforward) - viewdist)) >= 24.0f && CL_TraceLine(rd->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1)
 		{
-			cscale = (1.0f / 131072.0f);
-			scale = rd->cullradius * 0.25f;
+			cscale = rd->corona * r_coronas.value * 0.25f;
+			scale = rd->radius * 0.25f;
 			if (gl_flashblend.integer)
 			{
 				cscale *= 4.0f;
 				scale *= 2.0f;
 			}
-			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, rd->light[0] * cscale, rd->light[1] * cscale, rd->light[2] * cscale, 1);
+			R_DrawSprite(GL_ONE, GL_ONE, lightcorona, true, rd->origin, r_viewright, r_viewup, scale, -scale, -scale, scale, rd->color[0] * cscale, rd->color[1] * cscale, rd->color[2] * cscale, 1);
 		}
 	}
 }

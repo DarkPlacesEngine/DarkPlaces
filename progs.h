@@ -123,6 +123,10 @@ extern int eval_viewzoom;
 extern int eval_clientcolors;
 extern int eval_tag_entity;
 extern int eval_tag_index;
+extern int eval_light_lev;
+extern int eval_color;
+extern int eval_style;
+extern int eval_pflags;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 

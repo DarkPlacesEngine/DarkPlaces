@@ -1398,50 +1398,28 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	S_LocalSound ("misc/menu3.wav");
 
 	optnum = 0;
-	if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_modellights, bound(0, r_modellights.value + dir, 8));
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_coronas, !r_coronas.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_quality, bound(1, cl_particles_quality.value + dir * 0.5, 4));
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_explosions, !cl_explosions.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_explosionclip, !r_explosionclip.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_decals, !cl_decals.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&cl_particles_blood_bloodhack, !cl_particles_blood_bloodhack.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_lerpmodels, !r_lerpmodels.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_lerpsprites, !r_lerpsprites.integer);
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_wateralpha, bound(0, r_wateralpha.value + dir * 0.1, 1));
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_waterscroll, bound(0, r_waterscroll.value + dir * 0.5, 10));
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_watershader, bound(0, r_watershader.value + dir * 0.25, 10));
+	     if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_modellights, bound(0, r_modellights.value + dir, 8));
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_coronas, bound(0, r_coronas.value + dir * 0.125, 4));
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&gl_flashblend, !gl_flashblend.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_quality, bound(1, cl_particles_quality.value + dir * 0.5, 4));
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_explosions, !cl_explosions.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_explosionclip, !r_explosionclip.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_decals, !cl_decals.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_smoke, !cl_particles_smoke.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_sparks, !cl_particles_sparks.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_bubbles, !cl_particles_bubbles.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood, !cl_particles_blood.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood_alpha, bound(0.2, cl_particles_blood_alpha.value + dir * 0.1, 1));
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_blood_bloodhack, !cl_particles_blood_bloodhack.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lerpmodels, !r_lerpmodels.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_lerpsprites, !r_lerpsprites.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_wateralpha, bound(0, r_wateralpha.value + dir * 0.1, 1));
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_waterscroll, bound(0, r_waterscroll.value + dir * 0.5, 10));
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_watershader, bound(0, r_watershader.value + dir * 0.25, 10));
 }
 
 void M_Options_Effects_Draw (void)
@@ -1461,7 +1439,7 @@ void M_Options_Effects_Draw (void)
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
 	M_Options_PrintSlider(  "      Lights Per Model", true, r_modellights.value, 0, 8);
-	M_Options_PrintCheckbox("               Coronas", true, r_coronas.integer);
+	M_Options_PrintSlider(  "      Corona Intensity", true, r_coronas.value, 0, 4);
 	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
 	M_Options_PrintCheckbox("             Particles", true, cl_particles.integer);
 	M_Options_PrintSlider(  "     Particles Quality", true, cl_particles_quality.value, 1, 4);

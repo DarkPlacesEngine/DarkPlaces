@@ -35,6 +35,18 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: change cl_fakelocalping_min and _max to only lag by half each way, as currently it results in 2x ping
+0 darkplaces: make MAX_PACKETFRAGMENT a property of each net connection, so memory loopbacks could use huge limits (Sajt)
+d darkplaces: add extension for tenebrae dlight entities
+0 darkplaces: fix broken mouse button display in key binding menu, it shows ??? for mouse buttons (Mercury, Tomaz)
+0 darkplaces: fix broken key repeat on backspace key in console (Mercury)
+d darkplaces: add constant insertion capabilities to Image_CopyMux
+1 darkplaces: add palette conversion capabilities to Image_CopyMux
+0 darkplaces: add scaling capabilities to Image_CopyMux
+4 dpmod: figure out why intermission camera pitch changes after a moment (Tomaz)
+0 darkplaces: add -benchmark commandline option which plays a demo, appends the resulting min/max/avg fps to gamedir/benchmark.log with commandline so people know what settings were used, like +exec realtimelow.cfg, +exec realtimemed.cfg, etc (romi)
+0 darkplaces: keep track of min and max fps (based on single frame frametime) during timedemo and print these stats (romi)
+d darkplaces: add tenebrae light entity properties, like cubemap and style and such
 -n darkplaces: implement cubemap support on rtlights (romi, Vermeulen, Mitchell)
 d darkplaces: add r_shadow_realtime_world_lightmaps cvar to control lightmap brightness (Mitchell)
 -n darkplaces: add gl_lightmaps cvar to disable texturing except lightmaps for testing (Vic)

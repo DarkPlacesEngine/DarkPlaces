@@ -703,7 +703,8 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		if (check->v->movetype == MOVETYPE_PUSH
 		 || check->v->movetype == MOVETYPE_NONE
 		 || check->v->movetype == MOVETYPE_FOLLOW
-		 || check->v->movetype == MOVETYPE_NOCLIP)
+		 || check->v->movetype == MOVETYPE_NOCLIP
+		 || check->v->movetype == MOVETYPE_FAKEPUSH)
 			continue;
 
 		// if the entity is standing on the pusher, it will definitely be moved
@@ -1413,6 +1414,7 @@ void SV_Physics (void)
 		switch ((int) ent->v->movetype)
 		{
 		case MOVETYPE_PUSH:
+		case MOVETYPE_FAKEPUSH:
 			SV_Physics_Pusher (ent);
 			break;
 		case MOVETYPE_NONE:

@@ -328,7 +328,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	}
 }
 
-void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
+void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
 {
 	int c, meshnum, layernum;
 	float fog, ifog, lightcolor2[3];
@@ -383,7 +383,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (layer->flags & ALIASLAYER_SPECULAR)
 			{
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, aliasvert_vertex3f, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, lightcubemap);
+				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, aliasvert_vertex3f, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, lightcubemap);
 			}
 			else if (layer->flags & ALIASLAYER_DIFFUSE)
 			{
@@ -412,7 +412,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
 				}
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, aliasvert_vertex3f, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, lightcubemap);
+				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, aliasvert_vertex3f, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, lightradius, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, lightcubemap);
 			}
 		}
 	}
@@ -807,7 +807,7 @@ void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelight
 	// FIXME
 }
 
-void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
+void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
 {
 	// FIXME
 }

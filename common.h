@@ -174,6 +174,7 @@ extern	struct cvar_s	registered;
 #define GAME_FNIGGIUM 10
 #define GAME_SETHERAL 11
 #define GAME_SOM 12
+#define GAME_TENEBRAE 13 // full of evil hackery
 
 extern int gamemode;
 extern char *gamename;

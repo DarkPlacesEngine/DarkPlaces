@@ -17,6 +17,9 @@ entity_state_t defaultstate =
 	0,//unsigned short exteriormodelforclient;
 	0,//unsigned short nodrawtoclient;
 	0,//unsigned short drawonlytoclient;
+	{0,0,0,0},//short light[4];
+	0,//qbyte lightstyle;
+	0,//qbyte lightpflags;
 	0,//qbyte colormap;
 	0,//qbyte skin;
 	255,//qbyte alpha;
@@ -25,6 +28,7 @@ entity_state_t defaultstate =
 	254,//qbyte glowcolor;
 	0,//qbyte flags;
 	0,//qbyte tagindex;
+	{0,0,0,0,0,0}//qbyte unused[6];
 };
 
 void ClearStateToDefault(entity_state_t *s)
@@ -120,6 +124,12 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 			bits |= E_FLAGS;
 		if (ent->tagindex != delta->tagindex || ent->tagentity != delta->tagentity)
 			bits |= E_TAGATTACHMENT;
+		if (ent->light[0] != delta->light[0] || ent->light[1] != delta->light[1] || ent->light[2] != delta->light[2] || ent->light[3] != delta->light[3])
+			bits |= E_LIGHT;
+		if (ent->lightstyle != delta->lightstyle)
+			bits |= E_LIGHTSTYLE;
+		if (ent->lightpflags != delta->lightpflags)
+			bits |= E_LIGHTPFLAGS;
 
 		if (bits) // don't send anything if it hasn't changed
 		{
@@ -198,6 +208,17 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 				MSG_WriteShort(msg, ent->tagentity);
 				MSG_WriteByte(msg, ent->tagindex);
 			}
+			if (bits & E_LIGHT)
+			{
+				MSG_WriteShort(msg, ent->light[0]);
+				MSG_WriteShort(msg, ent->light[1]);
+				MSG_WriteShort(msg, ent->light[2]);
+				MSG_WriteShort(msg, ent->light[3]);
+			}
+			if (bits & E_LIGHTSTYLE)
+				MSG_WriteByte(msg, ent->lightstyle);
+			if (bits & E_LIGHTPFLAGS)
+				MSG_WriteByte(msg, ent->lightpflags);
 		}
 	}
 	else if (delta->active)
@@ -294,6 +315,17 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 		e->tagentity = MSG_ReadShort();
 		e->tagindex = MSG_ReadByte();
 	}
+	if (bits & E_LIGHT)
+	{
+		e->light[0] = MSG_ReadShort();
+		e->light[1] = MSG_ReadShort();
+		e->light[2] = MSG_ReadShort();
+		e->light[3] = MSG_ReadShort();
+	}
+	if (bits & E_LIGHTSTYLE)
+		e->lightstyle = MSG_ReadByte();
+	if (bits & E_LIGHTPFLAGS)
+		e->lightpflags = MSG_ReadByte();
 
 	if (developer_networkentities.integer >= 2)
 	{
@@ -328,12 +360,19 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 			Con_Printf(" E_SKIN %i", e->skin);
 
 		if (bits & E_GLOWSIZE)
-			Con_Printf(" E_GLOWSIZE %i", e->glowsize * 8);
+			Con_Printf(" E_GLOWSIZE %i", e->glowsize * 4);
 		if (bits & E_GLOWCOLOR)
 			Con_Printf(" E_GLOWCOLOR %i", e->glowcolor);
+		
+		if (bits & E_LIGHT)
+			Con_Printf(" E_LIGHT %i:%i:%i:%i", e->light[0], e->light[1], e->light[2], e->light[3]);
+		if (bits & E_LIGHTPFLAGS)			
+			Con_Printf(" E_LIGHTPFLAGS %i", e->lightpflags);
 
 		if (bits & E_TAGATTACHMENT)
 			Con_Printf(" E_TAGATTACHMENT e%i:%i", e->tagentity, e->tagindex);
+		if (bits & E_LIGHTSTYLE)
+			Con_Printf(" E_LIGHTSTYLE %i", e->lightstyle);
 		Con_Printf("\n");
 	}
 }

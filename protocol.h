@@ -87,7 +87,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define U_ALPHA			(1<<17) // 1 byte, 0.0-1.0 maps to 0-255, not sent if exactly 1, and the entity is not sent if <=0 unless it has effects (model effects are checked as well)
 #define U_SCALE			(1<<18) // 1 byte, scale / 16 positive, not sent if 1.0
 #define U_EFFECTS2		(1<<19) // 1 byte, this is .effects & 0xFF00 (second byte)
-#define U_GLOWSIZE		(1<<20) // 1 byte, encoding is float/8.0, signed (negative is darklight), not sent if 0
+#define U_GLOWSIZE		(1<<20) // 1 byte, encoding is float/4.0, unsigned, not sent if 0
 #define U_GLOWCOLOR		(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
 // LordHavoc: colormod feature has been removed, because no one used it
 #define U_COLORMOD		(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
@@ -319,19 +319,24 @@ typedef struct
 	unsigned short frame;
 	unsigned short effects;
 	unsigned short tagentity;
-	unsigned short specialvisibilityradius;
+	unsigned short specialvisibilityradius; // larger if it has effects/light
 	unsigned short viewmodelforclient;
 	unsigned short exteriormodelforclient;
 	unsigned short nodrawtoclient;
 	unsigned short drawonlytoclient;
+	unsigned short light[4]; // color*256 (0.00 to almost 64.00), and radius*1
+	qbyte lightstyle;
+	qbyte lightpflags;
 	qbyte colormap;
-	qbyte skin;
+	qbyte skin; // also chooses cubemap for rtlights if there is no model
 	qbyte alpha;
 	qbyte scale;
 	qbyte glowsize;
 	qbyte glowcolor;
 	qbyte flags;
 	qbyte tagindex;
+	// padding to a multiple of 8 bytes (to align the double time)
+	qbyte unused[6];
 }
 entity_state_t;
 
@@ -471,15 +476,15 @@ entity_frame_t;
 #define E_EFFECTS2		(1<<18)
 #define E_GLOWSIZE		(1<<19)
 #define E_GLOWCOLOR		(1<<20)
-#define E_UNUSED1		(1<<21)
-#define E_UNUSED2		(1<<22)
+#define E_LIGHT			(1<<21)
+#define E_LIGHTPFLAGS	(1<<22)
 #define E_EXTEND3		(1<<23)
 
 #define E_SOUND1		(1<<24)
 #define E_SOUNDVOL		(1<<25)
 #define E_SOUNDATTEN	(1<<26)
 #define E_TAGATTACHMENT	(1<<27)
-#define E_UNUSED5		(1<<28)
+#define E_LIGHTSTYLE	(1<<28)
 #define E_UNUSED6		(1<<29)
 #define E_UNUSED7		(1<<30)
 #define E_EXTEND4		(1<<31)
