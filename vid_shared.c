@@ -50,7 +50,7 @@ int vid_activewindow = true;
 int vid_allowhwgamma = false;
 
 // we don't know until we try it!
-int vid_hardwaregammasupported = true;
+cvar_t vid_hardwaregammasupported = {CVAR_READONLY,"vid_hardwaregammasupported","1"};
 // whether hardware gamma ramps are currently in effect
 int vid_usinghwgamma = false;
 
@@ -626,7 +626,7 @@ void VID_UpdateGamma(qboolean force)
 		if (!vid_usinghwgamma)
 		{
 			vid_usinghwgamma = true;
-			vid_hardwaregammasupported = VID_GetGamma(vid_systemgammaramps);
+			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_GetGamma(vid_systemgammaramps));
 		}
 
 		BOUNDCVAR(v_gamma, 0.1, 5);cachegamma = v_gamma.value;
@@ -657,14 +657,14 @@ void VID_UpdateGamma(qboolean force)
 			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 512);
 		}
 
-		vid_hardwaregammasupported = VID_SetGamma(vid_gammaramps);
+		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps));
 	}
 	else
 	{
 		if (vid_usinghwgamma)
 		{
 			vid_usinghwgamma = false;
-			vid_hardwaregammasupported = VID_SetGamma(vid_systemgammaramps);
+			Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_systemgammaramps));
 		}
 	}
 }
@@ -680,6 +680,7 @@ void VID_RestoreSystemGamma(void)
 
 void VID_Shared_Init(void)
 {
+	Cvar_RegisterVariable(&vid_hardwaregammasupported);
 	Cvar_RegisterVariable(&v_gamma);
 	Cvar_RegisterVariable(&v_brightness);
 	Cvar_RegisterVariable(&v_contrast);
