@@ -565,7 +565,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 				continue;
 			}
 #ifndef STANDALONETEST
-			if (p->sentdoubletime && Sys_DoubleTime() < p->sentdoubletime)
+			if (cl_netlocalping.value && (Sys_DoubleTime() - cl_netlocalping.value * 1000.0) < p->sentdoubletime)
 				continue;
 #endif
 			if (value == 0 && p->destinationport == lhnetsocket->address.addressdata.loop.port)
@@ -681,8 +681,7 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->next->prev = p;
 		p->prev->next = p;
 #ifndef STANDALONETEST
-		if (cl_netlocalping_min.value || cl_netlocalping_max.value)
-			p->sentdoubletime = Sys_DoubleTime() + lhrandom(cl_netlocalping_min.value, cl_netlocalping_max.value) * (0.5 / 1000.0);
+		p->sentdoubletime = Sys_DoubleTime();
 #endif
 		value = contentlength;
 	}
