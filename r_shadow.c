@@ -362,9 +362,9 @@ static void R_Shadow_MakeTextures(void)
 	data[2] = 255;
 	data[3] = 255;
 	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	data[0] = 255;
-	data[1] = 255;
-	data[2] = 255;
+	data[0] = 64;
+	data[1] = 64;
+	data[2] = 64;
 	data[3] = 255;
 	r_shadow_blankglosstexture = R_LoadTexture2D(r_shadow_texturepool, "blankgloss", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	data[0] = 255;
@@ -454,6 +454,7 @@ void R_Shadow_Stage_Begin(void)
 		R_Shadow_MakeTextures();
 	if (r_shadow_reloadlights && cl.worldmodel)
 	{
+		R_Shadow_ClearWorldLights();
 		r_shadow_reloadlights = false;
 		R_Shadow_LoadWorldLights();
 		if (r_shadow_worldlightchain == NULL)
@@ -921,8 +922,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		if (lightcubemap)
 			R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[1], numverts, varray_vertex, relativelightorigin);
 
-		// the 0.25f makes specular lighting much dimmer than diffuse (intentionally)
-		colorscale = r_colorscale * 0.25f * r_shadow_lightintensityscale.value;
+		colorscale = r_colorscale * r_shadow_lightintensityscale.value;
 		for (mult = 1, scale = ixtable[mult];mult < 64 && (lightcolor[0] * scale * colorscale > 1 || lightcolor[1] * scale * colorscale > 1 || lightcolor[2] * scale * colorscale > 1);mult++, scale = ixtable[mult]);
 		colorscale *= scale;
 		GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
@@ -942,6 +942,7 @@ cvar_t r_editlights_cursordistance = {0, "r_editlights_distance", "1024"};
 cvar_t r_editlights_cursorpushback = {0, "r_editlights_pushback", "0"};
 cvar_t r_editlights_cursorpushoff = {0, "r_editlights_pushoff", "4"};
 cvar_t r_editlights_cursorgrid = {0, "r_editlights_grid", "4"};
+cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
 worldlight_t *r_shadow_worldlightchain;
 worldlight_t *r_shadow_selectedlight;
 vec3_t r_editlights_cursorlocation;
@@ -958,6 +959,12 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	msurface_t *surf;
 	qbyte *pvs;
 	surfmesh_t *surfmesh;
+
+	if (radius < 15 || DotProduct(color, color) < 0.03)
+	{
+		Con_Printf("R_Shadow_NewWorldLight: refusing to create a light too small/dim\n");
+		return;
+	}
 
 	e = Mem_Alloc(r_shadow_mempool, sizeof(worldlight_t));
 	VectorCopy(origin, e->origin);
@@ -1167,20 +1174,104 @@ void R_Shadow_FreeSelectedWorldLight(void)
 	}
 }
 
+void R_DrawLightSprite(int texnum, const vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca)
+{
+	rmeshstate_t m;
+	float diff[3];
+
+	if (fogenabled)
+	{
+		VectorSubtract(origin, r_origin, diff);
+		ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
+	}
+
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
+	m.tex[0] = texnum;
+	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_State(&m);
+
+	GL_Color(cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
+	varray_texcoord[0][ 0] = 0;varray_texcoord[0][ 1] = 0;
+	varray_texcoord[0][ 4] = 0;varray_texcoord[0][ 5] = 1;
+	varray_texcoord[0][ 8] = 1;varray_texcoord[0][ 9] = 1;
+	varray_texcoord[0][12] = 1;varray_texcoord[0][13] = 0;
+	varray_vertex[0] = origin[0] - vright[0] * scale - vup[0] * scale;
+	varray_vertex[1] = origin[1] - vright[1] * scale - vup[1] * scale;
+	varray_vertex[2] = origin[2] - vright[2] * scale - vup[2] * scale;
+	varray_vertex[4] = origin[0] - vright[0] * scale + vup[0] * scale;
+	varray_vertex[5] = origin[1] - vright[1] * scale + vup[1] * scale;
+	varray_vertex[6] = origin[2] - vright[2] * scale + vup[2] * scale;
+	varray_vertex[8] = origin[0] + vright[0] * scale + vup[0] * scale;
+	varray_vertex[9] = origin[1] + vright[1] * scale + vup[1] * scale;
+	varray_vertex[10] = origin[2] + vright[2] * scale + vup[2] * scale;
+	varray_vertex[12] = origin[0] + vright[0] * scale - vup[0] * scale;
+	varray_vertex[13] = origin[1] + vright[1] * scale - vup[1] * scale;
+	varray_vertex[14] = origin[2] + vright[2] * scale - vup[2] * scale;
+	R_Mesh_Draw(4, 2, polygonelements);
+}
+
+void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
+{
+	cachepic_t *pic;
+	pic = Draw_CachePic("gfx/crosshair1.tga");
+	if (pic)
+		R_DrawLightSprite(R_GetTexture(pic->tex), r_editlights_cursorlocation, r_editlights_cursorgrid.value * 0.5f, 1, 1, 1, 0.5);
+}
+
+void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
+{
+	float intensity;
+	const worldlight_t *light;
+	light = calldata1;
+	intensity = 0.5;
+	if (light->selected)
+		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
+	if (light->shadowvolume)
+		R_DrawLightSprite(calldata2, light->origin, 8, intensity, intensity, intensity, 0.5);
+	else
+		R_DrawLightSprite(calldata2, light->origin, 8, intensity * 0.5, intensity * 0.5, intensity * 0.5, 0.5);
+}
+
+void R_Shadow_DrawLightSprites(void)
+{
+	int i, texnums[5];
+	cachepic_t *pic;
+	worldlight_t *light;
+
+	for (i = 0;i < 5;i++)
+	{
+		pic = Draw_CachePic(va("gfx/crosshair%i.tga", i + 1));
+		if (pic)
+			texnums[i] = R_GetTexture(pic->tex);
+		else
+			texnums[i] = 0;
+	}
+
+	for (light = r_shadow_worldlightchain;light;light = light->next)
+		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSpriteCallback, light, texnums[((int) light) % 5]);
+	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursorCallback, NULL, 0);
+}
+
 void R_Shadow_SelectLightInView(void)
 {
-	float bestrating, temp[3], dist;
+	float bestrating, rating, temp[3];
 	worldlight_t *best, *light;
 	best = NULL;
-	bestrating = 1e30;
+	bestrating = 0;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
 		VectorSubtract(light->origin, r_refdef.vieworg, temp);
-		dist = sqrt(DotProduct(temp, temp));
-		if (DotProduct(temp, vpn) >= 0.97 * dist && bestrating > dist && CL_TraceLine(light->origin, r_refdef.vieworg, NULL, NULL, 0, true, NULL) == 1.0f)
+		rating = (DotProduct(temp, vpn) / sqrt(DotProduct(temp, temp)));
+		if (rating >= 0.95)
 		{
-			bestrating = dist;
-			best = light;
+			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
+			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.vieworg, NULL, NULL, 0, true, NULL) == 1.0f)
+			{
+				bestrating = rating;
+				best = light;
+			}
 		}
 	}
 	R_Shadow_SelectLight(best);
@@ -1425,8 +1516,8 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		}
 		if (light <= 0 && islight)
 			light = 300;
-		radius = bound(0, light / scale, 1048576) + 15.0f;
-		light = bound(0, light, 1048576) * (1.0f / 256.0f);
+		radius = bound(15, light * r_editlights_quakelightsizescale.value / scale, 1048576);
+		light = sqrt(bound(0, light, 1048576)) * (1.0f / 16.0f);
 		if (color[0] == 1 && color[1] == 1 && color[2] == 1)
 			VectorCopy(overridecolor, color);
 		VectorScale(color, light, color);
@@ -1458,20 +1549,6 @@ void R_Shadow_SetCursorLocationForView(void)
 	r_editlights_cursorlocation[2] = floor(endpos[2] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;
 }
 
-extern void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca);
-void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
-{
-	cachepic_t *pic;
-	pic = Draw_CachePic("gfx/crosshair1.tga");
-	if (pic)
-		R_DrawCrosshairSprite(pic->tex, r_editlights_cursorlocation, r_editlights_cursorgrid.value * 0.5f, 1, 1, 1, 1);
-}
-
-void R_Shadow_DrawCursor(void)
-{
-	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursorCallback, NULL, 0);
-}
-
 void R_Shadow_UpdateLightingMode(void)
 {
 	r_shadow_lightingmode = 0;
@@ -1488,9 +1565,9 @@ void R_Shadow_UpdateWorldLightSelection(void)
 {
 	if (r_editlights.integer)
 	{
-		R_Shadow_SelectLightInView();
 		R_Shadow_SetCursorLocationForView();
-		R_Shadow_DrawCursor();
+		R_Shadow_SelectLightInView();
+		R_Shadow_DrawLightSprites();
 	}
 	else
 		R_Shadow_SelectLight(NULL);
@@ -1503,11 +1580,7 @@ void R_Shadow_EditLights_Clear_f(void)
 
 void R_Shadow_EditLights_Reload_f(void)
 {
-	if (cl.worldmodel)
-	{
-		R_Shadow_ClearWorldLights();
-		R_Shadow_LoadWorldLights();
-	}
+	r_shadow_reloadlights = true;
 }
 
 void R_Shadow_EditLights_Save_f(void)
@@ -1657,6 +1730,7 @@ void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_cursorpushback);
 	Cvar_RegisterVariable(&r_editlights_cursorpushoff);
 	Cvar_RegisterVariable(&r_editlights_cursorgrid);
+	Cvar_RegisterVariable(&r_editlights_quakelightsizescale);
 	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f);
 	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f);
 	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f);
