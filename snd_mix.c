@@ -342,19 +342,19 @@ void S_PaintChannels(int endtime)
 
 void SND_InitScaletable (void)
 {
-	int		i, j;
+	int i, j;
 
-	for (i=0 ; i<32 ; i++)
-		for (j=0 ; j<256 ; j++)
+	for (i = 0;i < 32;i++)
+		for (j = 0;j < 256;j++)
 			snd_scaletable[i][j] = ((signed char)j) * i * 8;
 }
 
 
 void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 {
-	int		*lscale, *rscale;
+	int *lscale, *rscale;
 	unsigned char *sfx;
-	int		i;
+	int i;
 
 	if (ch->leftvol > 255)
 		ch->leftvol = 255;
@@ -393,7 +393,7 @@ void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
 {
 	int leftvol, rightvol;
 	signed short *sfx;
-	int	i;
+	int i;
 
 	leftvol = ch->leftvol;
 	rightvol = ch->rightvol;
