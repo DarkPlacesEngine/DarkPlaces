@@ -1202,7 +1202,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	else
 		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.tex[0] = R_GetTexture(particlefonttexture);
-	Matrix4x4_CreateIdentity(&m.matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
 	varray_element[0] = 0;

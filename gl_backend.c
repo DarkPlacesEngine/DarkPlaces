@@ -606,7 +606,7 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 				qglColor4ub(c[0], c[1], c[2], c[3]);
 				if (gl_state.texture[0])
 				{
-					v = varray_texcoord[j] + in * 2;
+					v = varray_texcoord[0] + in * 2;
 					qglTexCoord2f(v[0], v[1]);
 				}
 				v = varray_vertex + in * 4;
@@ -712,6 +712,17 @@ void R_Mesh_ClearDepth(void)
 	R_Mesh_Start(r_mesh_farclip);
 }
 
+void R_Mesh_Matrix(const matrix4x4_t *matrix)
+{
+	if (memcmp(matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
+	{
+		backend_modelmatrix = *matrix;
+		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewmatrix, matrix);
+		Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_modelviewmatrix);
+		qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);
+	}
+}
+
 // sets up the requested state
 void R_Mesh_State(const rmeshstate_t *m)
 {
@@ -725,15 +736,6 @@ void R_Mesh_State(const rmeshstate_t *m)
 	{
 		gl_backend_rebindtextures = false;
 		GL_SetupTextureState();
-	}
-
-	//backendmatrix = m->matrix; // this copies the struct
-	if (memcmp(&m->matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
-	{
-		backend_modelmatrix = m->matrix;
-		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewmatrix, &m->matrix);
-		Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_modelviewmatrix);
-		qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);
 	}
 
 	overbright = false;

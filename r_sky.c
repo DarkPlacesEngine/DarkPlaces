@@ -134,7 +134,6 @@ static void R_SkyBox(void)
 	m.wantoverbright = false;
 	m.depthdisable = true; // don't modify or read zbuffer
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
-	Matrix4x4_CreateTranslate(&m.matrix, r_origin[0], r_origin[1], r_origin[2]);
 	R_Mesh_State(&m);
 
 	memcpy(varray_element, skyboxindex, sizeof(int[6]));
@@ -304,7 +303,6 @@ static void R_SkySphere(void)
 	m.wantoverbright = false;
 	m.depthdisable = true; // don't modify or read zbuffer
 	m.tex[0] = R_GetTexture(solidskytexture);
-	Matrix4x4_CreateTranslate(&m.matrix, r_origin[0], r_origin[1], r_origin[2]);
 	R_Mesh_State(&m);
 
 	memcpy(varray_element, skysphereindices, numtriangles * sizeof(int[3]));
@@ -323,8 +321,11 @@ static void R_SkySphere(void)
 
 void R_Sky(void)
 {
+	matrix4x4_t skymatrix;
 	if (skyrendermasked)
 	{
+		Matrix4x4_CreateTranslate(&skymatrix, r_origin[0], r_origin[1], r_origin[2]);
+		R_Mesh_Matrix(&skymatrix);
 		if (skyrendersphere)
 		{
 			// this does not modify depth buffer

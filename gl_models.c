@@ -251,6 +251,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	int blendfunc1, blendfunc2;
 
 //	softwaretransformforentity(ent);
+	R_Mesh_Matrix(&ent->matrix);
 
 	fog = 0;
 	if (fogenabled)
@@ -298,7 +299,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.blendfunc2 = blendfunc2;
 		m.wantoverbright = true;
 		m.tex[0] = R_GetTexture(r_notexture);
-		m.matrix = ent->matrix;
 		R_Mesh_State(&m);
 
 		c_alias_polys += model->numtris;
@@ -324,7 +324,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.blendfunc2 = blendfunc2;
 		m.wantoverbright = true;
 		m.tex[0] = R_GetTexture(skinframe->merged);
-		m.matrix = ent->matrix;
 		R_Mesh_State(&m);
 
 		c_alias_polys += model->numtris;
@@ -363,7 +362,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	m.blendfunc1 = blendfunc1;
 	m.blendfunc2 = blendfunc2;
 	m.wantoverbright = true;
-	m.matrix = ent->matrix;
 	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
 	if (m.tex[0])
 	{
@@ -387,7 +385,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			m.blendfunc1 = blendfunc1;
 			m.blendfunc2 = blendfunc2;
 			m.wantoverbright = true;
-			m.matrix = ent->matrix;
 			m.tex[0] = R_GetTexture(skinframe->pants);
 			if (m.tex[0])
 			{
@@ -412,7 +409,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			m.blendfunc1 = blendfunc1;
 			m.blendfunc2 = blendfunc2;
 			m.wantoverbright = true;
-			m.matrix = ent->matrix;
 			m.tex[0] = R_GetTexture(skinframe->shirt);
 			if (m.tex[0])
 			{
@@ -438,7 +434,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.blendfunc1 = blendfunc1;
 		m.blendfunc2 = blendfunc2;
 		m.wantoverbright = true;
-		m.matrix = ent->matrix;
 		m.tex[0] = R_GetTexture(skinframe->glow);
 		if (m.tex[0])
 		{
@@ -460,7 +455,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 		m.wantoverbright = false;
-		m.matrix = ent->matrix;
 		m.tex[0] = R_GetTexture(skinframe->fog);
 		R_Mesh_State(&m);
 
@@ -760,6 +754,8 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	int shadernum = calldata2;
 	int numverts, numtriangles;
 
+	R_Mesh_Matrix(&ent->matrix);
+
 	// find the vertex index list and texture
 	m = ent->model->zymdata_header;
 	renderlist = (int *)(m->lump_render.start + (int) m);
@@ -812,7 +808,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		mstate.blendfunc2 = GL_ZERO;
 	}
 	mstate.tex[0] = R_GetTexture(texture);
-	mstate.matrix = ent->matrix;
 	R_Mesh_State(&mstate);
 
 	c_alias_polys += numtriangles;
@@ -830,7 +825,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		mstate.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		// FIXME: need alpha mask for fogging...
 		//mstate.tex[0] = R_GetTexture(texture);
-		mstate.matrix = ent->matrix;
 		R_Mesh_State(&mstate);
 
 		c_alias_polys += numtriangles;

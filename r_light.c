@@ -151,7 +151,7 @@ void R_DrawCoronas(void)
 	m.wantoverbright = false;
 	m.depthdisable = true; // magic
 	m.tex[0] = R_GetTexture(lightcorona);
-	Matrix4x4_CreateIdentity(&m.matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 	viewdist = DotProduct(r_origin, vpn);
 	for (i = 0;i < r_numdlights;i++)

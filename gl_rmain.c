@@ -26,6 +26,8 @@ int r_framecount;
 
 mplane_t frustum[4];
 
+matrix4x4_t r_identitymatrix;
+
 int c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
 // true during envmap command capture
@@ -210,6 +212,7 @@ void gl_main_newmap(void)
 
 void GL_Main_Init(void)
 {
+	Matrix4x4_CreateIdentity(&r_identitymatrix);
 // FIXME: move this to client?
 	FOG_registercvars();
 	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);
@@ -511,7 +514,7 @@ static void R_BlendView(void)
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.wantoverbright = false;
 	m.depthdisable = true; // magic
-	Matrix4x4_CreateIdentity(&m.matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
 	varray_element[0] = 0;
@@ -617,7 +620,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.wantoverbright = false;
-	Matrix4x4_CreateIdentity(&m.matrix);
+	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
 	varray_element
@@ -673,7 +676,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		m.blendfunc2 = GL_ZERO;
 	}
 	m.wantoverbright = false;
-	m.matrix = ent->matrix;
+	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 
 	varray_element[ 0] = 5;varray_element[ 1] = 2;varray_element[ 2] = 0;
