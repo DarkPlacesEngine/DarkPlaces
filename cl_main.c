@@ -534,7 +534,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (e == &cl.viewent && cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
 			{
 				e->state_current.alpha = cl_entities[cl.viewentity].state_current.alpha;
-				e->state_current.effects = EF_NOSHADOW | (cl_entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT));
+				e->state_current.effects = EF_NOSHADOW | (cl_entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
 			}
 		}
 		else
@@ -853,7 +853,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e - cl_entities == cl.viewentity)
 			e->render.flags |= RENDER_EXTERIORMODEL;
 		// transparent stuff can't be lit during the opaque stage
-		if (e->render.effects & (EF_ADDITIVE) || e->render.alpha < 1)
+		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
 			e->render.flags |= RENDER_TRANSPARENT;
 		// either fullbright or lit
 		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
@@ -903,7 +903,7 @@ static void CL_RelinkStaticEntities(void)
 		Mod_CheckLoaded(e->render.model);
 		e->render.flags = 0;
 		// transparent stuff can't be lit during the opaque stage
-		if (e->render.effects & (EF_ADDITIVE) || e->render.alpha < 1)
+		if (e->render.effects & (EF_ADDITIVE | EF_NODEPTHTEST) || e->render.alpha < 1)
 			e->render.flags |= RENDER_TRANSPARENT;
 		// either fullbright or lit
 		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)

@@ -104,7 +104,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_DepthMask(true);
 		}
-		GL_DepthTest(true);
+		GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
 		firstpass = false;
 		colorscale = 1.0f;
 
@@ -181,7 +181,7 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 	for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++, mesh++)
 	{
 		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_FetchAliasSkin(ent, mesh)->flags & ALIASSKIN_TRANSPARENT)
-			R_MeshQueue_AddTransparent(ent->origin, R_DrawAliasModelCallback, ent, meshnum);
+			R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : ent->origin, R_DrawAliasModelCallback, ent, meshnum);
 		else
 			R_DrawAliasModelCallback(ent, meshnum);
 	}

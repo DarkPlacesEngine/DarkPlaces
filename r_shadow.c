@@ -1290,6 +1290,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		bumptexture = r_shadow_blankbumptexture;
 	if (!glosstexture)
 		glosstexture = r_shadow_blankglosstexture;
+	// FIXME: support EF_NODEPTHTEST
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
