@@ -1999,7 +1999,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 		pvs += pvschainbytes;
 
 		p = LittleLong(in->visofs);
-		if (p >= 0)
+		if (p >= 0 && i > 0) // ignore visofs errors on leaf 0 (solid)
 		{
 			if (p >= loadmodel->brushq1.num_compressedpvs)
 				Con_Printf("Mod_Q1BSP_LoadLeafs: invalid visofs\n");
