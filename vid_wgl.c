@@ -991,7 +991,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	if (qwglGetExtensionsStringARB)
 		gl_platformextensions = qwglGetExtensionsStringARB(hdc);
 
-	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, NULL, false);
+	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
 	ReleaseDC(mainwindow, hdc);
 
 	GL_Init ();
