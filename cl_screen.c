@@ -237,32 +237,33 @@ void SCR_SetUpToDrawConsole (void)
 {
 	Con_CheckResize ();
 
-// decide on the height of the console
-	con_forcedup = !cl.worldmodel || cls.signon != SIGNONS;
+	//if (key_dest == key_game && (!cl.worldmodel || cls.signon != SIGNONS))
+	//	key_dest = key_console;
 
-	if (con_forcedup)
-	{
-		scr_conlines = vid.conheight;		// full screen
-		scr_con_current = scr_conlines;
-	}
-	else if (key_dest == key_console)
+// decide on the height of the console
+	if (key_consoleactive)
 		scr_conlines = vid.conheight/2;	// half screen
 	else
 		scr_conlines = 0;				// none visible
 
-	if (scr_conlines < scr_con_current)
+	if (scr_conspeed.value)
 	{
-		scr_con_current -= scr_conspeed.value*host_realframetime;
-		if (scr_conlines > scr_con_current)
-			scr_con_current = scr_conlines;
-
-	}
-	else if (scr_conlines > scr_con_current)
-	{
-		scr_con_current += scr_conspeed.value*host_realframetime;
 		if (scr_conlines < scr_con_current)
-			scr_con_current = scr_conlines;
+		{
+			scr_con_current -= scr_conspeed.value*host_realframetime;
+			if (scr_conlines > scr_con_current)
+				scr_con_current = scr_conlines;
+
+		}
+		else if (scr_conlines > scr_con_current)
+		{
+			scr_con_current += scr_conspeed.value*host_realframetime;
+			if (scr_conlines < scr_con_current)
+				scr_con_current = scr_conlines;
+		}
 	}
+	else
+		scr_con_current = scr_conlines;
 }
 
 /*
@@ -938,7 +939,8 @@ void CL_UpdateScreen(void)
 	else
 		cl_avidemo_frame = 0;
 
-	R_TimeReport("other");
+	if (cl.worldmodel)
+		R_TimeReport("other");
 
 	CL_SetupScreenSize();
 
@@ -947,39 +949,39 @@ void CL_UpdateScreen(void)
 	V_UpdateBlends();
 	V_CalcRefdef ();
 
-	R_TimeReport("setup");
+	if (cl.worldmodel)
+		R_TimeReport("setup");
 
-	SCR_DrawNet ();
-	SCR_DrawTurtle ();
-	SCR_DrawPause ();
-
-	Sbar_Draw();
-
-	SCR_CheckDrawCenterString();
-	SHOWLMP_drawall();
-
-	SCR_DrawConsole();
-
-	ui_draw();
+	//FIXME: force menu if nothing else to look at?
+	//if (key_dest == key_game && !cl.worldmodel && cls.state == ca_disconnected)
 
 	if (scr_drawloading)
 	{
 		scr_drawloading = false;
 		SCR_DrawLoading();
 	}
-
-	CL_DrawVideo();
-
-	R_TimeReport("2d");
-
-	// add r_speeds text to queue
-	R_TimeReport_End();
-
-	// start a new timing run
-	R_TimeReport_Start();
-
-	// make menu fade everything else on the screen
-	M_Draw();
+	else
+	{
+		if (cl.worldmodel)
+		{
+			SCR_DrawNet ();
+			SCR_DrawTurtle ();
+			SCR_DrawPause ();
+			Sbar_Draw();
+		}
+		SCR_CheckDrawCenterString();
+		SHOWLMP_drawall();
+		ui_draw();
+		CL_DrawVideo();
+		M_Draw();
+		if (cl.worldmodel)
+		{
+			R_TimeReport("2d");
+			R_TimeReport_End();
+			R_TimeReport_Start();
+		}
+	}
+	SCR_DrawConsole();
 
 	SCR_UpdateScreen();
 }

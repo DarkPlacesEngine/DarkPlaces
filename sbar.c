@@ -787,6 +787,17 @@ void Sbar_Draw (void)
 	if (scr_con_current == vid.conheight)
 		return;		// console is full screen
 
+	if (cl.intermission == 1)
+	{
+		Sbar_IntermissionOverlay();
+		return;
+	}
+	else if (cl.intermission == 2)
+	{
+		Sbar_FinaleOverlay();
+		return;
+	}
+
 	sbar_y = vid.conheight - SBAR_HEIGHT;
 	if (cl.gametype == GAME_DEATHMATCH)
 		sbar_x = 0;
@@ -890,15 +901,10 @@ void Sbar_Draw (void)
 	if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
 		Sbar_MiniDeathmatchOverlay ();
 
+	Sbar_ShowFPS();
+
 //	if (crosshair.integer >= 1)
 //		DrawCrosshair(crosshair.integer - 1);
-
-	if (cl.intermission == 1)
-		Sbar_IntermissionOverlay();
-	else if (cl.intermission == 2)
-		Sbar_FinaleOverlay();
-
-	Sbar_ShowFPS();
 }
 
 //=============================================================================

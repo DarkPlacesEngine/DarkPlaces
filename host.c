@@ -625,7 +625,7 @@ void Host_ServerFrame (void)
 	if (cls.state != ca_dedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 // run the world state
-	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
+	if (!sv.paused && (svs.maxclients > 1 || (key_dest == key_game && !key_consoleactive)))
 		sv.frametime = pr_global_struct->frametime = frametimetotal;
 	else
 		sv.frametime = 0;
@@ -643,7 +643,7 @@ void Host_ServerFrame (void)
 
 // move things around and think
 // always pause in single player if in console or menus
-	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
+	if (sv.frametime)
 		SV_Physics ();
 
 // send all messages to the clients
