@@ -131,9 +131,12 @@ mempool_t *r_shadow_mempool;
 
 int maxshadowelements;
 int *shadowelements;
-int maxtrianglefacinglight;
-qbyte *trianglefacinglight;
-int *trianglefacinglightlist;
+
+int maxshadowmark;
+int numshadowmark;
+int *shadowmark;
+int *shadowmarklist;
+int shadowmarkcount;
 
 int maxvertexupdate;
 int *vertexupdate;
@@ -197,9 +200,11 @@ void r_shadow_start(void)
 	vertexupdate = NULL;
 	vertexremap = NULL;
 	vertexupdatenum = 0;
-	maxtrianglefacinglight = 0;
-	trianglefacinglight = NULL;
-	trianglefacinglightlist = NULL;
+	maxshadowmark = 0;
+	numshadowmark = 0;
+	shadowmark = NULL;
+	shadowmarklist = NULL;
+	shadowmarkcount = 0;
 	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
@@ -230,9 +235,11 @@ void r_shadow_shutdown(void)
 	vertexupdate = NULL;
 	vertexremap = NULL;
 	vertexupdatenum = 0;
-	maxtrianglefacinglight = 0;
-	trianglefacinglight = NULL;
-	trianglefacinglightlist = NULL;
+	maxshadowmark = 0;
+	numshadowmark = 0;
+	shadowmark = NULL;
+	shadowmarklist = NULL;
+	shadowmarkcount = 0;
 	Mem_FreePool(&r_shadow_mempool);
 }
 
@@ -331,23 +338,6 @@ matrix4x4_t matrix_attenuationz =
 	}
 };
 
-void R_Shadow_ResizeTriangleFacingLight(int numtris)
-{
-	// make sure trianglefacinglight is big enough for this volume
-	// ameks ru ertaignelaficgnilhg tsib gie ongu hof rhtsiv lomu e
-	// m4k3 5ur3 7r14ng13f4c1n5115h7 15 b15 3n0u5h f0r 7h15 v01um3
-	if (maxtrianglefacinglight < numtris)
-	{
-		maxtrianglefacinglight = numtris;
-		if (trianglefacinglight)
-			Mem_Free(trianglefacinglight);
-		if (trianglefacinglightlist)
-			Mem_Free(trianglefacinglightlist);
-		trianglefacinglight = Mem_Alloc(r_shadow_mempool, maxtrianglefacinglight);
-		trianglefacinglightlist = Mem_Alloc(r_shadow_mempool, sizeof(int) * maxtrianglefacinglight);
-	}
-}
-
 int *R_Shadow_ResizeShadowElements(int numtris)
 {
 	// make sure shadowelements is big enough for this volume
@@ -361,67 +351,35 @@ int *R_Shadow_ResizeShadowElements(int numtris)
 	return shadowelements;
 }
 
-/*
-// readable version of some code found below
-//if ((t >= trianglerange_start && t < trianglerange_end) ? (t < i && !trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-int PointInfrontOfTriangle(const float *p, const float *a, const float *b, const float *c)
+void R_Shadow_PrepareShadowMark(int numtris)
 {
-	float dir0[3], dir1[3], normal[3];
-
-	// calculate two mostly perpendicular edge directions
-	VectorSubtract(a, b, dir0);
-	VectorSubtract(c, b, dir1);
-
-	// we have two edge directions, we can calculate a third vector from
-	// them, which is the direction of the surface normal (it's magnitude
-	// is not 1 however)
-	CrossProduct(dir0, dir1, normal);
-
-	// compare distance of light along normal, with distance of any point
-	// of the triangle along the same normal (the triangle is planar,
-	// I.E. flat, so all points give the same answer)
-	return DotProduct(p, normal) > DotProduct(a, normal);
-}
-int checkcastshadowfromedge(int t, int i)
-{
-	int *te;
-	float *v[3];
-	if (t >= trianglerange_start && t < trianglerange_end)
+	// make sure shadowmark is big enough for this volume
+	if (maxshadowmark < numtris)
 	{
-		if (t < i && !trianglefacinglight[t])
-			return true;
-		else
-			return false;
+		maxshadowmark = numtris;
+		if (shadowmark)
+			Mem_Free(shadowmark);
+		if (shadowmarklist)
+			Mem_Free(shadowmarklist);
+		shadowmark = Mem_Alloc(r_shadow_mempool, maxshadowmark * sizeof(*shadowmark));
+		shadowmarklist = Mem_Alloc(r_shadow_mempool, maxshadowmark * sizeof(*shadowmarklist));
+		shadowmarkcount = 0;
 	}
-	else
+	shadowmarkcount++;
+	// if shadowmarkcount wrapped we clear the array and adjust accordingly
+	if (shadowmarkcount == 0)
 	{
-		if (t < 0)
-			return true;
-		else
-		{
-			te = inelement3i + t * 3;
-			v[0] = invertex3f + te[0] * 3;
-			v[1] = invertex3f + te[1] * 3;
-			v[2] = invertex3f + te[2] * 3;
-			if (!PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-				return true;
-			else
-				return false;
-		}
+		shadowmarkcount = 1;
+		memset(shadowmark, 0, maxshadowmark * sizeof(*shadowmark));
 	}
+	numshadowmark = 0;
 }
-*/
 
-int R_Shadow_ConstructShadowVolume(int innumvertices, int trianglerange_start, int trianglerange_end, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *relativelightorigin, float projectdistance)
+int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
-	int i, j, tris = 0, numfacing = 0, vr[3], t, outvertices = 0;
-	const float *v[3];
-	const int *e, *n, *te;
+	int i, j, tris = 0, vr[3], t, outvertices = 0;
+	const int *e, *n;
 	float f, temp[3];
-
-	// make sure trianglefacinglight is big enough for this volume
-	if (maxtrianglefacinglight < trianglerange_end)
-		R_Shadow_ResizeTriangleFacingLight(trianglerange_end);
 
 	if (maxvertexupdate < innumvertices)
 	{
@@ -432,220 +390,91 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int trianglerange_start, i
 			Mem_Free(vertexremap);
 		vertexupdate = Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
 		vertexremap = Mem_Alloc(r_shadow_mempool, maxvertexupdate * sizeof(int));
+		vertexupdatenum = 0;
 	}
 	vertexupdatenum++;
-
-	if (r_shadow_singlepassvolumegeneration.integer)
+	if (vertexupdatenum == 0)
 	{
-		// one pass approach (identify lit/dark faces and generate sides while doing so)
-		for (i = trianglerange_start, e = inelement3i + i * 3, n = inneighbor3i + i * 3;i < trianglerange_end;i++, e += 3, n += 3)
-		{
-			// calculate triangle facing flag
-			v[0] = invertex3f + e[0] * 3;
-			v[1] = invertex3f + e[1] * 3;
-			v[2] = invertex3f + e[2] * 3;
-			if((trianglefacinglight[i] = PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2])))
-			{
-				// make sure the vertices are created
-				for (j = 0;j < 3;j++)
-				{
-					if (vertexupdate[e[j]] != vertexupdatenum)
-					{
-						vertexupdate[e[j]] = vertexupdatenum;
-						vertexremap[e[j]] = outvertices;
-						VectorCopy(v[j], outvertex3f);
-						VectorSubtract(v[j], relativelightorigin, temp);
-						f = projectdistance / VectorLength(temp);
-						VectorMA(relativelightorigin, f, temp, (outvertex3f + 3));
-						outvertex3f += 6;
-						outvertices += 2;
-					}
-				}
-				// output the front and back triangles
-				vr[0] = vertexremap[e[0]];
-				vr[1] = vertexremap[e[1]];
-				vr[2] = vertexremap[e[2]];
-				outelement3i[0] = vr[0];
-				outelement3i[1] = vr[1];
-				outelement3i[2] = vr[2];
-				outelement3i[3] = vr[2] + 1;
-				outelement3i[4] = vr[1] + 1;
-				outelement3i[5] = vr[0] + 1;
-				outelement3i += 6;
-				tris += 2;
-				// output the sides (facing outward from this triangle)
-				t = n[0];
-				if ((t >= trianglerange_start && t < trianglerange_end) ? (t < i && !trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-				{
-					outelement3i[0] = vr[1];
-					outelement3i[1] = vr[0];
-					outelement3i[2] = vr[0] + 1;
-					outelement3i[3] = vr[1];
-					outelement3i[4] = vr[0] + 1;
-					outelement3i[5] = vr[1] + 1;
-					outelement3i += 6;
-					tris += 2;
-				}
-				t = n[1];
-				if ((t >= trianglerange_start && t < trianglerange_end) ? (t < i && !trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-				{
-					outelement3i[0] = vr[2];
-					outelement3i[1] = vr[1];
-					outelement3i[2] = vr[1] + 1;
-					outelement3i[3] = vr[2];
-					outelement3i[4] = vr[1] + 1;
-					outelement3i[5] = vr[2] + 1;
-					outelement3i += 6;
-					tris += 2;
-				}
-				t = n[2];
-				if ((t >= trianglerange_start && t < trianglerange_end) ? (t < i && !trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-				{
-					outelement3i[0] = vr[0];
-					outelement3i[1] = vr[2];
-					outelement3i[2] = vr[2] + 1;
-					outelement3i[3] = vr[0];
-					outelement3i[4] = vr[2] + 1;
-					outelement3i[5] = vr[0] + 1;
-					outelement3i += 6;
-					tris += 2;
-				}
-			}
-			else
-			{
-				// this triangle is not facing the light
-				// output the sides (facing inward to this triangle)
-				t = n[0];
-				if (t < i && t >= trianglerange_start && t < trianglerange_end && trianglefacinglight[t])
-				{
-					vr[0] = vertexremap[e[0]];
-					vr[1] = vertexremap[e[1]];
-					outelement3i[0] = vr[1];
-					outelement3i[1] = vr[0] + 1;
-					outelement3i[2] = vr[0];
-					outelement3i[3] = vr[1];
-					outelement3i[4] = vr[1] + 1;
-					outelement3i[5] = vr[0] + 1;
-					outelement3i += 6;
-					tris += 2;
-				}
-				t = n[1];
-				if (t < i && t >= trianglerange_start && t < trianglerange_end && trianglefacinglight[t])
-				{
-					vr[1] = vertexremap[e[1]];
-					vr[2] = vertexremap[e[2]];
-					outelement3i[0] = vr[2];
-					outelement3i[1] = vr[1] + 1;
-					outelement3i[2] = vr[1];
-					outelement3i[3] = vr[2];
-					outelement3i[4] = vr[2] + 1;
-					outelement3i[5] = vr[1] + 1;
-					outelement3i += 6;
-					tris += 2;
-				}
-				t = n[2];
-				if (t < i && t >= trianglerange_start && t < trianglerange_end && trianglefacinglight[t])
-				{
-					vr[0] = vertexremap[e[0]];
-					vr[2] = vertexremap[e[2]];
-					outelement3i[0] = vr[0];
-					outelement3i[1] = vr[2] + 1;
-					outelement3i[2] = vr[2];
-					outelement3i[3] = vr[0];
-					outelement3i[4] = vr[0] + 1;
-					outelement3i[5] = vr[2] + 1;
-					outelement3i += 6;
-					tris += 2;
-				}
-			}
-		}
+		vertexupdatenum = 1;
+		memset(vertexupdate, 0, maxvertexupdate * sizeof(int));
+		memset(vertexremap, 0, maxvertexupdate * sizeof(int));
 	}
-	else
+	
+	for (i = 0;i < numshadowmarktris;i++)
 	{
-		// two pass approach (identify lit/dark faces and then generate sides)
-		for (i = trianglerange_start, e = inelement3i + i * 3, numfacing = 0;i < trianglerange_end;i++, e += 3)
+		t = shadowmarktris[i];
+		shadowmark[t] = shadowmarkcount;
+		e = inelement3i + t * 3;
+		// make sure the vertices are created
+		for (j = 0;j < 3;j++)
 		{
-			// calculate triangle facing flag
-			v[0] = invertex3f + e[0] * 3;
-			v[1] = invertex3f + e[1] * 3;
-			v[2] = invertex3f + e[2] * 3;
-			if((trianglefacinglight[i] = PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2])))
+			if (vertexupdate[e[j]] != vertexupdatenum)
 			{
-				trianglefacinglightlist[numfacing++] = i;
-				// make sure the vertices are created
-				for (j = 0;j < 3;j++)
-				{
-					if (vertexupdate[e[j]] != vertexupdatenum)
-					{
-						vertexupdate[e[j]] = vertexupdatenum;
-						vertexremap[e[j]] = outvertices;
-						VectorSubtract(v[j], relativelightorigin, temp);
-						f = projectdistance / VectorLength(temp);
-						VectorCopy(v[j], outvertex3f);
-						VectorMA(relativelightorigin, f, temp, (outvertex3f + 3));
-						outvertex3f += 6;
-						outvertices += 2;
-					}
-				}
-				// output the front and back triangles
-				outelement3i[0] = vertexremap[e[0]];
-				outelement3i[1] = vertexremap[e[1]];
-				outelement3i[2] = vertexremap[e[2]];
-				outelement3i[3] = vertexremap[e[2]] + 1;
-				outelement3i[4] = vertexremap[e[1]] + 1;
-				outelement3i[5] = vertexremap[e[0]] + 1;
-				outelement3i += 6;
-				tris += 2;
+				vertexupdate[e[j]] = vertexupdatenum;
+				vertexremap[e[j]] = outvertices;
+				VectorSubtract(invertex3f + e[j] * 3, projectorigin, temp);
+				f = projectdistance / VectorLength(temp);
+				VectorCopy(invertex3f + e[j] * 3, outvertex3f);
+				VectorMA(projectorigin, f, temp, (outvertex3f + 3));
+				outvertex3f += 6;
+				outvertices += 2;
 			}
 		}
-		for (i = 0;i < numfacing;i++)
+		// output the front and back triangles
+		outelement3i[0] = vertexremap[e[0]];
+		outelement3i[1] = vertexremap[e[1]];
+		outelement3i[2] = vertexremap[e[2]];
+		outelement3i[3] = vertexremap[e[2]] + 1;
+		outelement3i[4] = vertexremap[e[1]] + 1;
+		outelement3i[5] = vertexremap[e[0]] + 1;
+		outelement3i += 6;
+		tris += 2;
+	}
+
+	for (i = 0;i < numshadowmarktris;i++)
+	{
+		t = shadowmarktris[i];
+		e = inelement3i + t * 3;
+		n = inneighbor3i + t * 3;
+		// output the sides (facing outward from this triangle)
+		if (shadowmark[n[0]] != shadowmarkcount)
 		{
-			t = trianglefacinglightlist[i];
-			e = inelement3i + t * 3;
-			n = inneighbor3i + t * 3;
-			// output the sides (facing outward from this triangle)
-			t = n[0];
-			if ((t >= trianglerange_start && t < trianglerange_end) ? (!trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-			{
-				vr[0] = vertexremap[e[0]];
-				vr[1] = vertexremap[e[1]];
-				outelement3i[0] = vr[1];
-				outelement3i[1] = vr[0];
-				outelement3i[2] = vr[0] + 1;
-				outelement3i[3] = vr[1];
-				outelement3i[4] = vr[0] + 1;
-				outelement3i[5] = vr[1] + 1;
-				outelement3i += 6;
-				tris += 2;
-			}
-			t = n[1];
-			if ((t >= trianglerange_start && t < trianglerange_end) ? (!trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-			{
-				vr[1] = vertexremap[e[1]];
-				vr[2] = vertexremap[e[2]];
-				outelement3i[0] = vr[2];
-				outelement3i[1] = vr[1];
-				outelement3i[2] = vr[1] + 1;
-				outelement3i[3] = vr[2];
-				outelement3i[4] = vr[1] + 1;
-				outelement3i[5] = vr[2] + 1;
-				outelement3i += 6;
-				tris += 2;
-			}
-			t = n[2];
-			if ((t >= trianglerange_start && t < trianglerange_end) ? (!trianglefacinglight[t]) : (t < 0 || (te = inelement3i + t * 3, v[0] = invertex3f + te[0] * 3, v[1] = invertex3f + te[1] * 3, v[2] = invertex3f + te[2] * 3, !PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]))))
-			{
-				vr[0] = vertexremap[e[0]];
-				vr[2] = vertexremap[e[2]];
-				outelement3i[0] = vr[0];
-				outelement3i[1] = vr[2];
-				outelement3i[2] = vr[2] + 1;
-				outelement3i[3] = vr[0];
-				outelement3i[4] = vr[2] + 1;
-				outelement3i[5] = vr[0] + 1;
-				outelement3i += 6;
-				tris += 2;
-			}
+			vr[0] = vertexremap[e[0]];
+			vr[1] = vertexremap[e[1]];
+			outelement3i[0] = vr[1];
+			outelement3i[1] = vr[0];
+			outelement3i[2] = vr[0] + 1;
+			outelement3i[3] = vr[1];
+			outelement3i[4] = vr[0] + 1;
+			outelement3i[5] = vr[1] + 1;
+			outelement3i += 6;
+			tris += 2;
+		}
+		if (shadowmark[n[1]] != shadowmarkcount)
+		{
+			vr[1] = vertexremap[e[1]];
+			vr[2] = vertexremap[e[2]];
+			outelement3i[0] = vr[2];
+			outelement3i[1] = vr[1];
+			outelement3i[2] = vr[1] + 1;
+			outelement3i[3] = vr[2];
+			outelement3i[4] = vr[1] + 1;
+			outelement3i[5] = vr[2] + 1;
+			outelement3i += 6;
+			tris += 2;
+		}
+		if (shadowmark[n[2]] != shadowmarkcount)
+		{
+			vr[0] = vertexremap[e[0]];
+			vr[2] = vertexremap[e[2]];
+			outelement3i[0] = vr[0];
+			outelement3i[1] = vr[2];
+			outelement3i[2] = vr[2] + 1;
+			outelement3i[3] = vr[0];
+			outelement3i[4] = vr[2] + 1;
+			outelement3i[5] = vr[0] + 1;
+			outelement3i += 6;
+			tris += 2;
 		}
 	}
 	if (outnumvertices)
@@ -655,7 +484,7 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int trianglerange_start, i
 
 float varray_vertex3f2[65536*3];
 
-void R_Shadow_Volume(int numverts, int numtris, const float *invertex3f, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance)
+void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris)
 {
 	int tris, outverts;
 	if (projectdistance < 0.1)
@@ -663,36 +492,68 @@ void R_Shadow_Volume(int numverts, int numtris, const float *invertex3f, int *el
 		Con_Printf("R_Shadow_Volume: projectdistance %f\n");
 		return;
 	}
-	if (!numverts)
+	if (!numverts || !nummarktris)
 		return;
-
 	// make sure shadowelements is big enough for this volume
-	if (maxshadowelements < numtris * 24)
-		R_Shadow_ResizeShadowElements(numtris);
+	if (maxshadowelements < nummarktris * 24)
+		R_Shadow_ResizeShadowElements((nummarktris + 256) * 24);
+	tris = R_Shadow_ConstructShadowVolume(numverts, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, varray_vertex3f2, projectorigin, projectdistance, nummarktris, marktris);
+	R_Shadow_RenderVolume(outverts, tris, varray_vertex3f2, shadowelements);
+}
 
-	// check which triangles are facing the light, and then output
+void R_Shadow_VolumeFromBox(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, const vec3_t mins, const vec3_t maxs)
+{
+	int i;
+	const float *v[3];
+
+	// check which triangles are facing the , and then output
 	// triangle elements and vertices...  by clever use of elements we
 	// can construct the whole shadow from the unprojected vertices and
 	// the projected vertices
-	if ((tris = R_Shadow_ConstructShadowVolume(numverts, 0, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, varray_vertex3f2, relativelightorigin, r_shadow_projectdistance.value/*projectdistance*/)))
+
+	// identify lit faces within the bounding box
+	R_Shadow_PrepareShadowMark(numtris);
+	for (i = 0;i < numtris;i++)
 	{
-		GL_VertexPointer(varray_vertex3f2);
-		if (r_shadowstage == SHADOWSTAGE_STENCIL)
-		{
-			// decrement stencil if frontface is behind depthbuffer
-			qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-			qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
-			R_Mesh_Draw(outverts, tris, shadowelements);
-			c_rt_shadowmeshes++;
-			c_rt_shadowtris += numtris;
-			// increment stencil if backface is behind depthbuffer
-			qglCullFace(GL_BACK); // quake is backwards, this culls front faces
-			qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
-		}
-		R_Mesh_Draw(outverts, tris, shadowelements);
-		c_rt_shadowmeshes++;
-		c_rt_shadowtris += numtris;
+		v[0] = invertex3f + elements[i*3+0] * 3;
+		v[1] = invertex3f + elements[i*3+1] * 3;
+		v[2] = invertex3f + elements[i*3+2] * 3;
+		if (PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2]) && maxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && mins[0] < max(v[0][0], max(v[1][0], v[2][0])) && maxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && mins[1] < max(v[0][1], max(v[1][1], v[2][1])) && maxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && mins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+			shadowmarklist[numshadowmark++] = i;
 	}
+	R_Shadow_VolumeFromList(numverts, numtris, invertex3f, elements, neighbors, projectorigin, projectdistance, numshadowmark, shadowmarklist);
+}
+
+void R_Shadow_VolumeFromSphere(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, float radius)
+{
+	vec3_t mins, maxs;
+	mins[0] = projectorigin[0] - radius;
+	mins[1] = projectorigin[1] - radius;
+	mins[2] = projectorigin[2] - radius;
+	maxs[0] = projectorigin[0] + radius;
+	maxs[1] = projectorigin[1] + radius;
+	maxs[2] = projectorigin[2] + radius;
+	R_Shadow_VolumeFromBox(numverts, numtris, invertex3f, elements, neighbors, projectorigin, projectdistance, mins, maxs);
+}
+
+void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i)
+{
+	GL_VertexPointer(vertex3f);
+	if (r_shadowstage == SHADOWSTAGE_STENCIL)
+	{
+		// decrement stencil if frontface is behind depthbuffer
+		qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
+		qglStencilOp(GL_KEEP, GL_DECR, GL_KEEP);
+		R_Mesh_Draw(numvertices, numtriangles, element3i);
+		c_rt_shadowmeshes++;
+		c_rt_shadowtris += numtriangles;
+		// increment stencil if backface is behind depthbuffer
+		qglCullFace(GL_BACK); // quake is backwards, this culls front faces
+		qglStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
+	}
+	R_Mesh_Draw(numvertices, numtriangles, element3i);
+	c_rt_shadowmeshes++;
+	c_rt_shadowtris += numtriangles;
 }
 
 void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
@@ -1837,6 +1698,7 @@ void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int i
 // (undone by R_FreeCompiledRTLight, which R_UpdateLight calls)
 void R_RTLight_Compile(rtlight_t *rtlight)
 {
+#if 0
 	int i, j, k, l, maxverts = 256, tris;
 	float *vertex3f = NULL, mins[3], maxs[3];
 	shadowmesh_t *mesh, *castmesh = NULL;
@@ -2068,6 +1930,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
 			l += mesh->numtriangles;
 	Con_DPrintf("static light built: %f %f %f : %f %f %f box, %i shadow volume triangles, %i light triangles\n", rtlight->cullmins[0], rtlight->cullmins[1], rtlight->cullmins[2], rtlight->cullmaxs[0], rtlight->cullmaxs[1], rtlight->cullmaxs[2], k, l);
+#endif
 }
 
 void R_RTLight_Uncompile(rtlight_t *rtlight)

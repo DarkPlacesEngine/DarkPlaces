@@ -220,6 +220,9 @@ typedef struct msurface_s
 	int poly_numverts;
 	float *poly_verts;
 
+	// index into model->brush.shadowmesh
+	int num_firstshadowmeshtriangle;
+
 	// neighboring surfaces (one per poly_numverts)
 	//struct msurface_s **neighborsurfaces;
 	// currently used only for generating static shadow volumes

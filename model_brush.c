@@ -2828,6 +2828,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	model_t *originalloadmodel;
 	float dist, modelyawradius, modelradius, *vec;
 	msurface_t *surf;
+	int numshadowmeshtriangles;
 
 	mod->type = mod_brush;
 
@@ -2903,6 +2904,19 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_LoadLightList();
 	originalloadmodel = loadmodel;
 
+	// make a single combined shadow mesh to allow optimized shadow volume creation
+	numshadowmeshtriangles = 0;
+	for (j = 0, surf = loadmodel->brushq1.surfaces;j < loadmodel->brushq1.numsurfaces;j++, surf++)
+	{
+		surf->num_firstshadowmeshtriangle = numshadowmeshtriangles;
+		numshadowmeshtriangles += surf->mesh.num_triangles;
+	}
+	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
+	for (j = 0, surf = loadmodel->brushq1.surfaces;j < loadmodel->brushq1.numsurfaces;j++, surf++)
+		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surf->mesh.data_vertex3f, NULL, NULL, NULL, NULL, surf->mesh.num_triangles, surf->mesh.data_element3i);
+	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
+	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
+	
 //
 // set up the submodels(FIXME: this is confusing)
 //
@@ -5293,9 +5307,10 @@ extern void R_Q3BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativ
 extern void R_Q3BSP_DrawLight(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap);
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
-	int i, j;
+	int i, j, numshadowmeshtriangles;
 	q3dheader_t *header;
 	float corner[3], yawradius, modelradius;
+	q3mface_t *face;
 
 	mod->type = mod_brushq3;
 	mod->numframes = 1;
@@ -5352,6 +5367,19 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	Mod_Q3BSP_LoadPVS(&header->lumps[Q3LUMP_PVS]);
 	loadmodel->brush.numsubmodels = loadmodel->brushq3.num_models;
 
+	// make a single combined shadow mesh to allow optimized shadow volume creation
+	numshadowmeshtriangles = 0;
+	for (j = 0, face = loadmodel->brushq3.data_faces;j < loadmodel->brushq3.num_faces;j++, face++)
+	{
+		face->num_firstshadowmeshtriangle = numshadowmeshtriangles;
+		numshadowmeshtriangles += face->num_triangles;
+	}
+	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, numshadowmeshtriangles * 3, numshadowmeshtriangles, NULL, NULL, NULL, false, false, true);
+	for (j = 0, face = loadmodel->brushq3.data_faces;j < loadmodel->brushq3.num_faces;j++, face++)
+		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, face->data_vertex3f, NULL, NULL, NULL, NULL, face->num_triangles, face->data_element3i);
+	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
+	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
+	
 	for (i = 0;i < loadmodel->brushq3.num_models;i++)
 	{
 		if (i == 0)
