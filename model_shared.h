@@ -175,6 +175,9 @@ typedef struct model_brush_s
 	//pvschain = model->brush.data_pvsclusters + mycluster * model->brush.num_pvsclusterbytes;
 	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
 
+	// a mesh containing all shadow casting geometry for the whole model (including submodels), portions of this are referenced by each surface's num_firstshadowmeshtriangle 
+	shadowmesh_t *shadowmesh;
+
 	// common functions
 	int (*SuperContentsFromNativeContents)(struct model_s *model, int nativecontents);
 	int (*NativeContentsFromSuperContents)(struct model_s *model, int supercontents);
@@ -444,6 +447,9 @@ typedef struct q3mface_s
 	float *data_color4f;
 	int *data_element3i;
 	int *data_neighbor3i;
+
+	// index into model->brush.shadowmesh
+	int num_firstshadowmeshtriangle;
 
 	// temporary use by light processing
 	int lighttemp_castshadow;

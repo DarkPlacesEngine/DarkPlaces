@@ -308,7 +308,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	float projectdistance;
 	if (ent->effects & EF_ADDITIVE || ent->alpha < 1)
 		return;
-	projectdistance = lightradius + ent->model->radius - sqrt(DotProduct(relativelightorigin, relativelightorigin));
+	projectdistance = lightradius + ent->model->radius;// - sqrt(DotProduct(relativelightorigin, relativelightorigin));
 	if (projectdistance > 0.1)
 	{
 		R_Mesh_Matrix(&ent->matrix);
@@ -318,7 +318,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
 				continue;
 			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
-			R_Shadow_Volume(mesh->num_vertices, mesh->num_triangles, varray_vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, lightradius, projectdistance);
+			R_Shadow_VolumeFromSphere(mesh->num_vertices, mesh->num_triangles, varray_vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, projectdistance, lightradius);
 		}
 	}
 }

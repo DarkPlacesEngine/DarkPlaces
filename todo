@@ -36,6 +36,12 @@ d darkplaces: revert noclip movement to match nq for compatibility with mods tha
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 d darkplaces: make light_lev dlights from qc require PFLAGS_FULLDYNAMIC flag
 d darkplaces: improve tenebrae compatibility by handling EF_FULLDYNAMIC flag in tenebrae mode, also make all sprites render additive
+3 darkplaces: figure out BoxOnPlaneSide crash that happens in dpmod dpdm2 deathmatch 7 occasionally
+2 darkplaces: add q2 sprite support sometime
+0 dpmod: fix tilted corpse bug
+0 dpmod: figure out why the dbsg isn't selectable
+0 dpmod: fix the plasma wave doing excessive damage at low framerates
+0 dpmod: fix the 'shell casing spawning at wrong player' bug somehow
 0 darkplaces: figure out why bmodels aren't receiving lightmap dlights
 d darkplaces: fixed SV_TouchAreaGrid to not crash if SV_IncreaseEdicts is called during a touch function, by making a list of edicts to touch and then running through the list afterward (KGB|romi)
 d darkplaces: moved R_ShadowVolumeLighting to r_shadow.c
@@ -90,7 +96,7 @@ d darkplaces: add tenebrae light entity properties, like cubemap and style and s
 d darkplaces: add r_shadow_realtime_world_lightmaps cvar to control lightmap brightness (Mitchell)
 -n darkplaces: add gl_lightmaps cvar to disable texturing except lightmaps for testing (Vic)
 0 hmap2: release hmap2 (Vic, Supajoe)
-4 darkplaces: add capability for qc entities to act as bones in a model, and send them as compressed origins in the parent entity's updates, with perhaps a limit of 16 bones, this would allow some simple serverside ragdoll (Mitchell)
+4 darkplaces: add capability for qc entities to act as bones in a model, and send them as compressed origins in the parent entity's updates, with perhaps a limit of 16 bones, this would allow some simple serverside ragdoll (Mitchell, Deej)
 d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)
 0 darkplaces: release darkplaces build
 0 darkplaces: fix loadsky;r_restart;r_restart crash, again (sajt)

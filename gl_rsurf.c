@@ -1822,6 +1822,7 @@ void R_Model_Brush_Draw(entity_render_t *ent)
 
 void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
+#if 0
 	int i;
 	msurface_t *surf;
 	float projectdistance, f, temp[3], lightradius2;
@@ -1830,7 +1831,8 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	R_Mesh_Matrix(&ent->matrix);
 	lightradius2 = lightradius * lightradius;
 	R_UpdateTextureInfo(ent);
-	projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
 	for (i = 0, surf = ent->model->brushq1.surfaces + ent->model->brushq1.firstmodelsurface;i < ent->model->brushq1.nummodelsurfaces;i++, surf++)
 	{
 		if (surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && surf->flags & SURF_SHADOWCAST)
@@ -1845,10 +1847,46 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 				temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
 				temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
 				if (DotProduct(temp, temp) < lightradius2)
-					R_Shadow_Volume(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_vertex3f, surf->mesh.data_element3i, surf->mesh.data_neighbor3i, relativelightorigin, lightradius, projectdistance);
+					R_Shadow_VolumeFromSphere(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_vertex3f, surf->mesh.data_element3i, surf->mesh.data_neighbor3i, relativelightorigin, projectdistance, lightradius);
 			}
 		}
 	}
+#else
+	int i, j, t;
+	const int *e;
+	msurface_t *surf;
+	float projectdistance;
+	const float *v[3];
+	vec3_t lightmins, lightmaxs;
+	if (ent->model == NULL)
+		return;
+	R_Mesh_Matrix(&ent->matrix);
+	R_UpdateTextureInfo(ent);
+	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	lightmins[0] = relativelightorigin[0] - lightradius;
+	lightmins[1] = relativelightorigin[1] - lightradius;
+	lightmins[2] = relativelightorigin[2] - lightradius;
+	lightmaxs[0] = relativelightorigin[0] + lightradius;
+	lightmaxs[1] = relativelightorigin[1] + lightradius;
+	lightmaxs[2] = relativelightorigin[2] + lightradius;
+	R_Shadow_PrepareShadowMark(ent->model->brush.shadowmesh->numtriangles);
+	for (i = 0, surf = ent->model->brushq1.surfaces + ent->model->brushq1.firstmodelsurface;i < ent->model->brushq1.nummodelsurfaces;i++, surf++)
+	{
+		if (BoxesOverlap(lightmins, lightmaxs, surf->poly_mins, surf->poly_maxs) && surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && (surf->flags & SURF_SHADOWCAST))
+		{
+			for (j = 0, t = surf->num_firstshadowmeshtriangle, e = ent->model->brush.shadowmesh->element3i + t * 3;j < surf->mesh.num_triangles;j++, t++, e += 3)
+			{
+				v[0] = ent->model->brush.shadowmesh->vertex3f + e[0] * 3;
+				v[1] = ent->model->brush.shadowmesh->vertex3f + e[1] * 3;
+				v[2] = ent->model->brush.shadowmesh->vertex3f + e[2] * 3;
+				if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+					shadowmarklist[numshadowmark++] = t;
+			}
+		}
+	}
+	R_Shadow_VolumeFromList(ent->model->brush.shadowmesh->numverts, ent->model->brush.shadowmesh->numtriangles, ent->model->brush.shadowmesh->vertex3f, ent->model->brush.shadowmesh->element3i, ent->model->brush.shadowmesh->neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
+#endif
 }
 
 void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
@@ -2369,12 +2407,13 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 
 void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
+#if 0
 	int i;
 	q3mface_t *face;
 	vec3_t modelorg, lightmins, lightmaxs;
 	model_t *model;
 	float projectdistance;
-	projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		model = ent->model;
@@ -2391,8 +2430,46 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		//else
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
 				if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
-					R_Shadow_Volume(face->num_vertices, face->num_triangles, face->data_vertex3f, face->data_element3i, face->data_neighbor3i, relativelightorigin, lightradius, projectdistance);
+					R_Shadow_VolumeFromSphere(face->num_vertices, face->num_triangles, face->data_vertex3f, face->data_element3i, face->data_neighbor3i, relativelightorigin, projectdistance, lightradius);
 	}
+#else
+	int i, j, t;
+	const int *e;
+	q3mface_t *face;
+	vec3_t modelorg, lightmins, lightmaxs;
+	model_t *model;
+	float projectdistance;
+	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
+	if (r_drawcollisionbrushes.integer < 2)
+	{
+		model = ent->model;
+		R_Mesh_Matrix(&ent->matrix);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+		lightmins[0] = relativelightorigin[0] - lightradius;
+		lightmins[1] = relativelightorigin[1] - lightradius;
+		lightmins[2] = relativelightorigin[2] - lightradius;
+		lightmaxs[0] = relativelightorigin[0] + lightradius;
+		lightmaxs[1] = relativelightorigin[1] + lightradius;
+		lightmaxs[2] = relativelightorigin[2] + lightradius;
+		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
+		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+		{
+			if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
+			{
+				for (j = 0, t = face->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < face->num_triangles;j++, t++, e += 3)
+				{
+					const float *v[3];
+					v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+					v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+					v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+					if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+						shadowmarklist[numshadowmark++] = t;
+				}
+			}
+		}
+		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
+	}
+#endif
 }
 
 void R_Q3BSP_DrawFaceLight(entity_render_t *ent, q3mface_t *face, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
