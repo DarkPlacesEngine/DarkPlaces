@@ -84,6 +84,7 @@ int hipweapons[4] = {HIT_LASER_CANNON_BIT,HIT_MJOLNIR_BIT,4,HIT_PROXIMITY_GUN_BI
 sbarpic_t *hsb_items[2];
 
 cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
+cvar_t	sbar_alpha = {CVAR_SAVE, "sbar_alpha", "1"};
 
 void Sbar_MiniDeathmatchOverlay (void);
 void Sbar_DeathmatchOverlay (void);
@@ -291,6 +292,7 @@ void Sbar_Init (void)
 	Cmd_AddCommand ("+showscores", Sbar_ShowScores);
 	Cmd_AddCommand ("-showscores", Sbar_DontShowScores);
 	Cvar_RegisterVariable (&showfps);
+	Cvar_RegisterVariable (&sbar_alpha);
 
 	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
 }
@@ -309,12 +311,12 @@ Sbar_DrawPic
 */
 void Sbar_DrawPic (int x, int y, sbarpic_t *sbarpic)
 {
-	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, sbar_alpha.value, 0);
 }
 
 void Sbar_DrawAlphaPic (int x, int y, sbarpic_t *sbarpic, float alpha)
 {
-	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, alpha, 0);
+	DrawQ_Pic (sbar_x + x, sbar_y + y, sbarpic->name, 0, 0, 1, 1, 1, alpha * sbar_alpha.value, 0);
 }
 
 /*
@@ -326,7 +328,7 @@ Draws one solid graphics character
 */
 void Sbar_DrawCharacter (int x, int y, int num)
 {
-	DrawQ_String (sbar_x + x + 4 , sbar_y + y, va("%c", num), 0, 8, 8, 1, 1, 1, 1, 0);
+	DrawQ_String (sbar_x + x + 4 , sbar_y + y, va("%c", num), 0, 8, 8, 1, 1, 1, sbar_alpha.value, 0);
 }
 
 /*
@@ -336,7 +338,7 @@ Sbar_DrawString
 */
 void Sbar_DrawString (int x, int y, char *str)
 {
-	DrawQ_String (sbar_x + x, sbar_y + y, str, 0, 8, 8, 1, 1, 1, 1, 0);
+	DrawQ_String (sbar_x + x, sbar_y + y, str, 0, 8, 8, 1, 1, 1, sbar_alpha.value, 0);
 }
 
 /*
@@ -395,7 +397,7 @@ void Sbar_DrawXNum (int x, int y, int num, int digits, int lettersize, float r, 
 		else
 			frame = *ptr -'0';
 
-		DrawQ_Pic (sbar_x + x, sbar_y + y, sb_nums[0][frame]->name,lettersize,lettersize,r,g,b,a,flags);
+		DrawQ_Pic (sbar_x + x, sbar_y + y, sb_nums[0][frame]->name,lettersize,lettersize,r,g,b,a * sbar_alpha.value,flags);
 		x += lettersize;
 
 		ptr++;
@@ -488,11 +490,11 @@ static void Sbar_DrawWeapon(int nr, float fade, int active)
 	const int w_width = 300, w_height = 100, w_space = 10, font_size = 10;
 	const float w_scale = 0.4;
 
-	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade, DRAWFLAG_ADDITIVE);
+	DrawQ_Pic(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, sb_weapons[0][nr]->name, w_width * w_scale, w_height * w_scale, (active) ? 1 : 0.6, active ? 1 : 0.6, active ? 1 : 1, fade * sbar_alpha.value, DRAWFLAG_ADDITIVE);
 	DrawQ_String(vid.conwidth - (w_space + font_size ), (w_height + w_space) * w_scale * nr + w_space, va("%i",nr+1), 0, font_size, font_size, 1, 0, 0, fade, 0);
 
 	if (active)
-		DrawQ_Fill(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade, DRAWFLAG_ADDITIVE);
+		DrawQ_Fill(vid.conwidth - (w_width + w_space) * w_scale, (w_height + w_space) * w_scale * nr + w_space, w_width * w_scale, w_height * w_scale, 0.3, 0.3, 0.3, fade * sbar_alpha.value, DRAWFLAG_ADDITIVE);
 }
 
 /*
@@ -696,9 +698,9 @@ void Sbar_DrawFrags (void)
 
 		// draw background
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y     - 23, 28, 4, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill (sbar_x + x + 10, sbar_y + 4 - 23, 28, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -741,9 +743,9 @@ void Sbar_DrawFace (void)
 		// draw background
 		Sbar_DrawPic (112, 0, rsb_teambord);
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+3, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill (sbar_x + 113, vid.conheight-SBAR_HEIGHT+12, 22, 9, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
 
 		// draw number
 		f = s->frags;
@@ -840,8 +842,8 @@ void Sbar_ShowFPS(void)
 		fps_y = vid.conheight - sb_lines/* - 8*/; // yes this might draw over the sbar
 		if (fps_y > vid.conheight - fps_scaley)
 			fps_y = vid.conheight - fps_scaley;
-		DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(temp), fps_scaley, 0, 0, 0, 0.5, 0);
-		DrawQ_String(fps_x, fps_y, temp, 0, fps_scalex, fps_scaley, 1, 1, 1, 1, 0);
+		DrawQ_Fill(fps_x, fps_y, fps_scalex * strlen(temp), fps_scaley, 0, 0, 0, 0.5 * sbar_alpha.value, 0);
+		DrawQ_String(fps_x, fps_y, temp, 0, fps_scalex, fps_scaley, 1, 1, 1, 1 * sbar_alpha.value, 0);
 	}
 }
 
@@ -1059,11 +1061,11 @@ float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 	{
 		// draw colors behind score
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
 		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha.value, 0);
 		// print the text
-		DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1, 0);
+		DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha.value, 0);
 		return 8;
 	}
 	else
@@ -1076,7 +1078,7 @@ void Sbar_DeathmatchOverlay (void)
 	cachepic_t *pic;
 
 	pic = Draw_CachePic ("gfx/ranking.lmp");
-	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic ((vid.conwidth - pic->width)/2, 8, "gfx/ranking.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
 
 	// scores
 	Sbar_SortFrags ();
@@ -1155,8 +1157,8 @@ void Sbar_IntermissionOverlay (void)
 	sbar_x = (vid.conwidth - 320) >> 1;
 	sbar_y = (vid.conheight - 200) >> 1;
 
-	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1, 0);
-	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
+	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
 
 // time
 	dig = cl.completed_time/60;
@@ -1188,6 +1190,6 @@ void Sbar_FinaleOverlay (void)
 	cachepic_t	*pic;
 
 	pic = Draw_CachePic ("gfx/finale.lmp");
-	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic((vid.conwidth - pic->width)/2, 16, "gfx/finale.lmp", 0, 0, 1, 1, 1, 1 * sbar_alpha.value, 0);
 }
 
