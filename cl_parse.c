@@ -291,8 +291,6 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		}
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
-		//sprintf (str, "spawn %s", cls.spawnparms);
-		//MSG_WriteString (&cls.message, str);
 		MSG_WriteString (&cls.message, "spawn");
 		break;
 

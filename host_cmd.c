@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -20,7 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-int	current_skill;
+int current_skill;
+char sv_spawnmap[MAX_QPATH];
+char sv_loadgame[MAX_OSPATH];
 
 dfunction_t *ED_FindFunction (char *name);
 
@@ -233,7 +235,6 @@ SERVER TRANSITIONS
 ===============================================================================
 */
 
-
 /*
 ======================
 Host_Map_f
@@ -245,9 +246,6 @@ command from the console.  Active clients are kicked off.
 */
 void Host_Map_f (void)
 {
-	int i;
-	char name[MAX_QPATH];
-
 	if (cmd_source != src_command)
 		return;
 
@@ -260,33 +258,8 @@ void Host_Map_f (void)
 
 	key_dest = key_game;			// remove console or menu
 
-	cls.mapstring[0] = 0;
-	for (i=0 ; i<Cmd_Argc() ; i++)
-	{
-		strcat (cls.mapstring, Cmd_Argv(i));
-		strcat (cls.mapstring, " ");
-	}
-	strcat (cls.mapstring, "\n");
-
 	svs.serverflags = 0;			// haven't completed an episode yet
-	strcpy (name, Cmd_Argv(1));
-	SV_SpawnServer (name);
-	if (!sv.active)
-		return;
-
-	if (cls.state != ca_dedicated)
-	{
-		/*
-		strcpy (cls.spawnparms, "");
-
-		for (i=2 ; i<Cmd_Argc() ; i++)
-		{
-			strcat (cls.spawnparms, Cmd_Argv(i));
-			strcat (cls.spawnparms, " ");
-		}
-		*/
-		Cmd_ExecuteString ("connect local", src_command);
-	}
+	strcpy (sv_spawnmap, Cmd_Argv(1));
 }
 
 /*
@@ -298,8 +271,6 @@ Goes to a new map, taking all clients along
 */
 void Host_Changelevel_f (void)
 {
-	char	level[MAX_QPATH];
-
 	if (Cmd_Argc() != 2)
 	{
 		Con_Printf ("changelevel <levelname> : continue game on a new level\n");
@@ -311,8 +282,7 @@ void Host_Changelevel_f (void)
 		return;
 	}
 	SV_SaveSpawnparms ();
-	strcpy (level, Cmd_Argv(1));
-	SV_SpawnServer (level);
+	strcpy (sv_spawnmap, Cmd_Argv(1));
 }
 
 /*
@@ -324,16 +294,12 @@ Restarts the current server for a dead player
 */
 void Host_Restart_f (void)
 {
-	char	mapname[MAX_QPATH];
-
 	if (cls.demoplayback || !sv.active)
 		return;
 
 	if (cmd_source != src_command)
 		return;
-	strcpy (mapname, sv.name);	// must copy out, because it gets cleared
-								// in sv_spawnserver
-	SV_SpawnServer (mapname);
+	strcpy (sv_spawnmap, sv.name);
 }
 
 /*
@@ -359,8 +325,8 @@ User command to connect to server
 */
 void Host_Connect_f (void)
 {
-	char	name[MAX_QPATH];
-	
+	char name[MAX_QPATH];
+
 	cls.demonum = -1;		// stop demo loop in case this fails
 	if (cls.demoplayback)
 		CL_Disconnect ();
@@ -510,7 +476,23 @@ Host_Loadgame_f
 */
 void Host_Loadgame_f (void)
 {
-	char name[MAX_OSPATH];
+	if (cmd_source != src_command)
+		return;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf ("load <savename> : load a game\n");
+		return;
+	}
+
+	sprintf (sv_loadgame, "%s/%s", com_gamedir, Cmd_Argv(1));
+	COM_DefaultExtension (sv_loadgame, ".sav");
+
+	Con_Printf ("Loading game from %s...\n", sv_loadgame);
+}
+
+void Host_PerformLoadGame(char *name)
+{
 	QFile *f;
 	char mapname[MAX_QPATH];
 	float time, tfloat;
@@ -523,21 +505,8 @@ void Host_Loadgame_f (void)
 	int version;
 	float spawn_parms[NUM_SPAWN_PARMS];
 
-	if (cmd_source != src_command)
-		return;
-
-	if (Cmd_Argc() != 2)
-	{
-		Con_Printf ("load <savename> : load a game\n");
-		return;
-	}
-
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	sprintf (name, "%s/%s", com_gamedir, Cmd_Argv(1));
-	COM_DefaultExtension (name, ".sav");
-
-	Con_Printf ("Loading game from %s...\n", name);
 	f = Qopen (name, "rz");
 	if (!f)
 	{
@@ -557,7 +526,8 @@ void Host_Loadgame_f (void)
 	SCR_BeginLoadingPlaque ();
 
 	str = Qgetline (f);
-	for (i=0 ; i<NUM_SPAWN_PARMS ; i++) {
+	for (i = 0;i < NUM_SPAWN_PARMS;i++)
+	{
 		str = Qgetline (f);
 		sscanf (str, "%f\n", &spawn_parms[i]);
 	}
@@ -585,7 +555,7 @@ void Host_Loadgame_f (void)
 
 // load the light styles
 
-	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
+	for (i = 0;i < MAX_LIGHTSTYLES;i++)
 	{
 		str = Qgetline (f);
 		sv.lightstyles[i] = Mem_Alloc(edictstring_mempool, strlen(str)+1);
@@ -597,7 +567,7 @@ void Host_Loadgame_f (void)
 	entnum = -1;
 	while (!Qeof(f))
 	{
-		for (i=0 ; i<sizeof(buf)-1 ; i++)
+		for (i = 0;i < sizeof(buf) - 1;i++)
 		{
 			r = Qgetc (f);
 			if (r == EOF || !r)
@@ -647,7 +617,7 @@ void Host_Loadgame_f (void)
 
 	Qclose (f);
 
-	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
+	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients->spawn_parms[i] = spawn_parms[i];
 
 	if (cls.state != ca_dedicated)
@@ -695,9 +665,9 @@ void Host_Name_f (void)
 			Con_Printf ("%s renamed to %s\n", host_client->name, newName);
 	strcpy (host_client->name, newName);
 	host_client->edict->v.netname = host_client->name - pr_strings;
-	
+
 // send notification to all clients
-	
+
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
 	MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
 	MSG_WriteString (&sv.reliable_datagram, host_client->name);
@@ -1617,6 +1587,24 @@ void Host_Stopdemo_f (void)
 	if (!cls.demoplayback)
 		return;
 	CL_Disconnect ();
+}
+
+// LordHavoc: because we don't want to load things before the video starts,
+// we have to delay map and game loads until AFTER video is initialized
+void Host_PerformSpawnServerAndLoadGame(void)
+{
+	if (vid_hidden)
+		return;
+	if (sv_loadgame[0])
+		Host_PerformLoadGame(sv_loadgame);
+	else if (sv_spawnmap[0])
+	{
+		SV_SpawnServer(sv_spawnmap);
+		if (sv.active && cls.state != ca_dedicated)
+			Cmd_ExecuteString ("connect local", src_command);
+	}
+	sv_loadgame[0] = 0;
+	sv_spawnmap[0] = 0;
 }
 
 //=============================================================================
