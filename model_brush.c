@@ -185,9 +185,10 @@ static void Mod_LoadTextures (lump_t *l)
 		tx->height = 16;
 		tx->skin.base = r_notexture;
 		tx->shader = &Cshader_wall_lightmap;
+		tx->flags = SURF_SOLIDCLIP;
 		if (i == loadmodel->numtextures - 1)
 		{
-			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
+			tx->flags |= SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 			tx->shader = &Cshader_water;
 		}
 		tx->currentframe = tx;
@@ -304,6 +305,8 @@ static void Mod_LoadTextures (lump_t *l)
 
 		if (tx->name[0] == '*')
 		{
+			// turb does not block movement
+			tx->flags &= ~SURF_SOLIDCLIP;
 			tx->flags |= SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 			// LordHavoc: some turbulent textures should be fullbright and solid
 			if (!strncmp(tx->name,"*lava",5)
@@ -2728,6 +2731,9 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 				// we only need to have a drawsky function if it is used (usually only on world model)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
+				// LordHavoc: submodels always clip, even if water
+				if (mod->numsubmodels - 1)
+					surf->flags |= SURF_SOLIDCLIP;
 				// calculate bounding shapes
 				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 				{
