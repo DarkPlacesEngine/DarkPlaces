@@ -104,18 +104,18 @@ byte shadebubble(float dx, float dy, vec3_t light)
 
 void R_InitParticleTexture (void)
 {
-	int		x,y,d,i;
+	int		x,y,d,i,m;
 	float	dx, dy;
 	byte	data[32][32][4], noise1[32][32], noise2[32][32];
 	vec3_t	light;
 
-	for (x=0 ; x<32 ; x++)
+	for (y = 0;y < 32;y++)
 	{
-		for (y=0 ; y<32 ; y++)
+		dy = y - 16;
+		for (x = 0;x < 32;x++)
 		{
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
 			dx = x - 16;
-			dy = y - 16;
 			d = (255 - (dx*dx+dy*dy));
 			if (d < 0) d = 0;
 			data[y][x][3] = (byte) d;
@@ -125,27 +125,36 @@ void R_InitParticleTexture (void)
 
 	for (i = 0;i < 8;i++)
 	{
-		fractalnoise(&noise1[0][0], 32, 1);
-		fractalnoise(&noise2[0][0], 32, 8);
-		for (y = 0;y < 32;y++)
-			for (x = 0;x < 32;x++)
+		do
+		{
+			fractalnoise(&noise1[0][0], 32, 1);
+			fractalnoise(&noise2[0][0], 32, 8);
+			m = 0;
+			for (y = 0;y < 32;y++)
 			{
-				data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
-				dx = x - 16;
 				dy = y - 16;
-				d = ((noise2[y][x] * 384) >> 8) - 128;
-				if (d > 0)
+				for (x = 0;x < 32;x++)
 				{
-					if (d > 255)
-						d = 255;
-					d = (d * (255 - (int) (dx*dx+dy*dy))) >> 8;
-					if (d < 0) d = 0;
-					if (d > 255) d = 255;
-					data[y][x][3] = (byte) d;
+					data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
+					dx = x - 16;
+					d = ((noise2[y][x] * 384) >> 8) - 128;
+					if (d > 0)
+					{
+						if (d > 255)
+							d = 255;
+						d = (d * (255 - (int) (dx*dx+dy*dy))) >> 7;
+						if (d < 0) d = 0;
+						if (d > 255) d = 255;
+						data[y][x][3] = (byte) d;
+						if (m < d)
+							m = d;
+					}
+					else
+						data[y][x][3] = 0;
 				}
-				else
-					data[y][x][3] = 0;
 			}
+		}
+		while (m < 192);
 
 		smokeparticletexture[i] = GL_LoadTexture (va("smokeparticletexture%d", i), 32, 32, &data[0][0][0], true, true, 4);
 	}
@@ -565,6 +574,8 @@ void R_BloodPuff (vec3_t org)
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	particle(pt_bloodcloud, 68+(rand()&3), smokeparticletexture[rand()&7], 12, 128, 99, org[0], org[1], org[2], 0, 0, 0);
+	particle(pt_bloodcloud, 68+(rand()&3), smokeparticletexture[rand()&7], 10, 128, 99, org[0] + lhrandom(-4, 4), org[1] + lhrandom(-4, 4), org[2] + lhrandom(-4, 4), 0, 0, 0);
+	particle(pt_bloodcloud, 68+(rand()&3), smokeparticletexture[rand()&7], 8, 128, 99, org[0] + lhrandom(-4, 4), org[1] + lhrandom(-4, 4), org[2] + lhrandom(-4, 4), 0, 0, 0);
 }
 
 void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
@@ -590,7 +601,7 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 		ALLOCPARTICLE
 
 		p->texnum = smokeparticletexture[rand()&7];
-		p->scale = lhrandom(6, 8);
+		p->scale = lhrandom(4, 6);
 		p->alpha = 96 + (rand()&63);
 		p->die = cl.time + 2;
 		p->type = pt_bloodcloud;
@@ -864,7 +875,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 4:	// slight blood
 				dec = 0.025f;
 				p->texnum = smokeparticletexture[rand()&7];
-				p->scale = lhrandom(6, 8);
+				p->scale = lhrandom(4, 6);
 				p->alpha = type == 4 ? 192 : 255;
 				p->color = (rand()&3)+68;
 				p->type = pt_bloodcloud;
@@ -1069,8 +1080,8 @@ void R_DrawParticles (void)
 //				p->die = -1;
 //				break;
 //			}
-			p->scale += frametime * 4;
-			p->alpha -= frametime * 64;
+			p->scale += frametime * 16;
+			p->alpha -= frametime * 512;
 			if (p->alpha < 1 || p->scale < 1)
 				p->die = -1;
 			break;
