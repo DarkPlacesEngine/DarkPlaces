@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef WIN32
 # include <unistd.h>
 #endif
+#include <time.h>
 #include "quakedef.h"
 
 int con_linewidth;
@@ -72,11 +73,40 @@ LOGGING
 
 cvar_t log_file = {0, "log_file",""};
 cvar_t log_sync = {0, "log_sync","0"};
+char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
 
 qbyte* logqueue = NULL;
 size_t logq_ind = 0;
 size_t logq_size = 0;
+
+void Log_ConPrint (const char *msg);
+
+/*
+====================
+Log_Timestamp
+====================
+*/
+const char* Log_Timestamp (const char *desc)
+{
+	static char timestamp [128];
+	time_t crt_time;
+	const struct tm *crt_tm;
+	char timestring [64];
+
+	// Build the time stamp (ex: "Wed Jun 30 21:49:08 1993");
+	time (&crt_time);
+	crt_tm = localtime (&crt_time);
+	strftime (timestring, sizeof (timestring), "%a %b %d %T %Y", crt_tm);
+
+	if (desc != NULL)
+		snprintf (timestamp, sizeof (timestamp), "====== %s (%s) ======\n", desc, timestring);
+	else
+		snprintf (timestamp, sizeof (timestamp), "====== %s ======\n", timestring);
+
+	return timestamp;
+}
+
 
 /*
 ====================
@@ -93,12 +123,51 @@ void Log_Init (void)
 	{
 		Cvar_SetQuick (&log_file, "qconsole.log");
 		Cvar_SetValueQuick (&log_sync, 1);
+		unlink (va("%s/qconsole.log", fs_gamedir));
 	}
 
 	// Allocate a log queue
-	logq_size = 256;
+	logq_size = 512;
 	logqueue = Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
+}
+
+
+/*
+====================
+Log_Open
+====================
+*/
+void Log_Open (void)
+{
+	if (logfile != NULL || log_file.string[0] == '\0')
+		return;
+
+	logfile = FS_Open (log_file.string, "at", false);
+	if (logfile != NULL)
+	{
+		strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
+		FS_Print (logfile, Log_Timestamp ("Log started"));
+	}
+}
+
+
+/*
+====================
+Log_Close
+====================
+*/
+void Log_Close (void)
+{
+	if (logfile == NULL)
+		return;
+
+	FS_Print (logfile, Log_Timestamp ("Log stopped"));
+	FS_Print (logfile, "\n");
+	FS_Close (logfile);
+
+	logfile = NULL;
+	crt_log_file[0] = '\0';
 }
 
 
@@ -109,8 +178,7 @@ Log_Start
 */
 void Log_Start (void)
 {
-	if (log_file.string[0] != '\0')
-		logfile = FS_Open (log_file.string, "wt", false);
+	Log_Open ();
 
 	// Dump the contents of the log queue into the log file and free it
 	if (logqueue != NULL)
@@ -132,15 +200,6 @@ Log_ConPrint
 */
 void Log_ConPrint (const char *msg)
 {
-	// Easy case: a log has been started
-	if (logfile != NULL)
-	{
-		FS_Print (logfile, msg);
-		if (log_sync.integer)
-			FS_Flush (logfile);
-		return;
-	}
-
 	// Until the host is completely initialized, we maintain a log queue
 	// to store the messages, since the log can't be started before
 	if (logqueue != NULL)
@@ -163,6 +222,23 @@ void Log_ConPrint (const char *msg)
 		}
 		memcpy (&logqueue[logq_ind], msg, len);
 		logq_ind += len;
+
+		return;
+	}
+
+	// Check if log_file has changed
+	if (strcmp (crt_log_file, log_file.string) != 0)
+	{
+		Log_Close ();
+		Log_Open ();
+	}
+
+	// If a log file is available
+	if (logfile != NULL)
+	{
+		FS_Print (logfile, msg);
+		if (log_sync.integer)
+			FS_Flush (logfile);
 	}
 }
 
