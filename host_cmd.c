@@ -287,7 +287,7 @@ void Host_Map_f (void)
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local");
+		CL_EstablishConnection("local:1");
 }
 
 /*
@@ -316,7 +316,7 @@ void Host_Changelevel_f (void)
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local");
+		CL_EstablishConnection("local:1");
 }
 
 /*
@@ -339,7 +339,7 @@ void Host_Restart_f (void)
 	strcpy(mapname, sv.name);
 	SV_SpawnServer(mapname);
 	if (sv.active && cls.state == ca_disconnected)
-		CL_EstablishConnection("local");
+		CL_EstablishConnection("local:1");
 }
 
 /*
@@ -658,7 +658,7 @@ void Host_Loadgame_f (void)
 
 	// make sure we're connected to loopback
 	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
-		CL_EstablishConnection("local");
+		CL_EstablishConnection("local:1");
 }
 
 //============================================================================

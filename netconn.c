@@ -89,12 +89,9 @@ netconn_t *netconn_list = NULL;
 mempool_t *netconn_mempool = NULL;
 
 cvar_t cl_netport = {0, "cl_port", "0"};
-cvar_t cl_netaddress = {0, "cl_netaddress", "0.0.0.0"};
-//cvar_t cl_netaddress_ipv6 = {0, "cl_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:0"};
-
 cvar_t sv_netport = {0, "port", "26000"};
-cvar_t sv_netaddress = {0, "sv_netaddress", "0.0.0.0"};
-//cvar_t sv_netaddress_ipv6 = {0, "sv_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:26000"};
+cvar_t net_address = {0, "net_address", "0.0.0.0"};
+//cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]"};
 
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress)
 {
@@ -353,9 +350,9 @@ void NetConn_OpenClientPorts(void)
 	if (cl_netport.integer != port)
 		Cvar_SetValueQuick(&cl_netport, port);
 	Con_Printf("Client using port %i\n", port);
-	NetConn_OpenClientPort("local", port);
-	NetConn_OpenClientPort(cl_netaddress.string, port);
-	//NetConn_OpenClientPort(cl_netaddress_ipv6.string, port);
+	NetConn_OpenClientPort("local:2", 0);
+	NetConn_OpenClientPort(net_address.string, port);
+	//NetConn_OpenClientPort(net_address_ipv6.string, port);
 }
 
 void NetConn_CloseServerPorts(void)
@@ -399,11 +396,11 @@ void NetConn_OpenServerPorts(int opennetports)
 	if (sv_netport.integer != port)
 		Cvar_SetValueQuick(&sv_netport, port);
 	if (cls.state != ca_dedicated)
-		NetConn_OpenServerPort("local", port);
+		NetConn_OpenServerPort("local:1", 0);
 	if (opennetports)
 	{
-		NetConn_OpenServerPort(sv_netaddress.string, port);
-		//NetConn_OpenServerPort(sv_netaddress_ipv6.string, port);
+		NetConn_OpenServerPort(net_address.string, port);
+		//NetConn_OpenServerPort(net_address_ipv6.string, port);
 	}
 	if (sv_numsockets == 0)
 		Host_Error("NetConn_OpenServerPorts: unable to open any ports!\n");
@@ -1605,11 +1602,9 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
-	Cvar_RegisterVariable(&cl_netaddress);
-	//Cvar_RegisterVariable(&cl_netaddress_ipv6);
 	Cvar_RegisterVariable(&sv_netport);
-	Cvar_RegisterVariable(&sv_netaddress);
-	//Cvar_RegisterVariable(&sv_netaddress_ipv6);
+	Cvar_RegisterVariable(&net_address);
+	//Cvar_RegisterVariable(&net_address_ipv6);
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (i = 0;sv_masters[i].name;i++)
@@ -1618,9 +1613,8 @@ void NetConn_Init(void)
 	{
 		if (LHNETADDRESS_FromString(&tempaddress, com_argv[i + 1], 0) == 1)
 		{
-			Con_Printf("-ip option used, setting cl_netaddress and sv_netaddress to address \"%s\"\n");
-			Cvar_SetQuick(&cl_netaddress, com_argv[i + 1]);
-			Cvar_SetQuick(&sv_netaddress, com_argv[i + 1]);
+			Con_Printf("-ip option used, setting net_address to \"%s\"\n");
+			Cvar_SetQuick(&net_address, com_argv[i + 1]);
 		}
 		else
 			Con_Printf("-ip option used, but unable to parse the address \"%s\"\n", com_argv[i + 1]);
