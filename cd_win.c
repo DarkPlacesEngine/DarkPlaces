@@ -426,7 +426,7 @@ int CDAudio_Init(void)
 	if (cls.state == ca_dedicated)
 		return -1;
 
-	if (COM_CheckParm("-nocdaudio"))
+	if (COM_CheckParm("-nocdaudio") || COM_CheckParm("-safe"))
 		return -1;
 
 	mciOpenParms.lpstrDeviceType = "cdaudio";
