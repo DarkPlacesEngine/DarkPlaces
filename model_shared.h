@@ -175,6 +175,11 @@ typedef struct model_brush_s
 	qboolean ishlbsp;
 	// string of entity definitions (.map format)
 	char *entities;
+
+	// if non-zero this is a submodel
+	// (this is the number of the submodel, an index into submodels)
+	int submodel;
+
 	// number of submodels in this map (just used by server to know how many
 	// submodels to load)
 	int numsubmodels;
@@ -295,17 +300,11 @@ model_brushq2_t;
 
 typedef struct model_brushq3_s
 {
-	// if non-zero this is a submodel
-	// (this is the number of the submodel, an index into data_models)
-	int submodel;
-
 	int num_textures;
 	q3mtexture_t *data_textures;
 
 	int num_models;
 	q3mmodel_t *data_models;
-	// each submodel gets its own model struct so this is different for each.
-	q3mmodel_t *data_thismodel;
 
 	int num_brushes;
 	q3mbrush_t *data_brushes;
