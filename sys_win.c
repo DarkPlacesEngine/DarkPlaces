@@ -31,14 +31,6 @@ extern void S_BlockSound (void);
 
 cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 
-// # of seconds to wait on Sys_Error running dedicated before exiting
-#define CONSOLE_ERROR_TIMEOUT	60.0
-// sleep time on pause or minimization
-#define PAUSE_SLEEP		50
-// sleep time when not focus
-#define NOT_FOCUS_SLEEP	20
-
-static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
 
 static HANDLE	tevent;
@@ -54,8 +46,6 @@ SYSTEM IO
 
 ===============================================================================
 */
-
-void SleepUntilInput (int time);
 
 void Sys_Error (const char *error, ...)
 {
@@ -242,13 +232,6 @@ char *Sys_ConsoleInput (void)
 							len = 0;
 							return text;
 						}
-						else if (sc_return_on_enter)
-						{
-						// special case to allow exiting from the error handler on Enter
-							text[0] = '\r';
-							len = 0;
-							return text;
-						}
 
 						break;
 
@@ -315,12 +298,6 @@ WINDOWS CRAP
 
 ==============================================================================
 */
-
-
-void SleepUntilInput (int time)
-{
-	MsgWaitForMultipleObjects(1, &tevent, false, time, QS_ALLINPUT);
-}
 
 
 /*
@@ -441,18 +418,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	/* main window message loop */
 	while (1)
 	{
-		if (cls.state != ca_dedicated)
-		{
-		// yield the CPU for a little while when paused, minimized, or not the focus
-			if ((cl.paused && !vid_activewindow) || vid_hidden)
-			{
-				SleepUntilInput (PAUSE_SLEEP);
-				scr_skipupdate = 1;		// no point in bothering to draw
-			}
-			else if (!vid_activewindow)
-				SleepUntilInput (NOT_FOCUS_SLEEP);
-		}
-
 		framenewtime = Sys_DoubleTime ();
 		Host_Frame (framenewtime - frameoldtime);
 		frameoldtime = framenewtime;
