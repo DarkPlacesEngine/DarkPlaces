@@ -50,22 +50,23 @@ extern int nanmask;
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
 #define ANGLEMOD(a) (((int) ((a) * (65536.0f / 360.0f)) & 65535) * (360.0f / 65536.0f))
 
-#define VectorNegate(a,b) {b[0] = -(a[0]);b[1] = -(a[1]);b[2] = -(a[2]);}
-#define VectorSet(a,b,c,d) {d[0]=(a);d[1]=(b);d[2]=(c);}
-#define VectorClear(a) {a[0]=a[1]=a[2]=0;}
-#define DotProduct(x,y) (x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
-#define VectorSubtract(a,b,c) {c[0]=a[0]-b[0];c[1]=a[1]-b[1];c[2]=a[2]-b[2];}
-#define VectorAdd(a,b,c) {c[0]=a[0]+b[0];c[1]=a[1]+b[1];c[2]=a[2]+b[2];}
-#define VectorCopy(a,b) {b[0]=a[0];b[1]=a[1];b[2]=a[2];}
-#define CrossProduct(v1,v2,cross) {cross[0] = v1[1]*v2[2] - v1[2]*v2[1];cross[1] = v1[2]*v2[0] - v1[0]*v2[2];cross[2] = v1[0]*v2[1] - v1[1]*v2[0];}
+#define VectorNegate(a,b) ((b)[0]=-((a)[0]),(b)[1]=-((a)[1]),(b)[2]=-((a)[2]))
+#define VectorSet(a,b,c,d) ((d)[0]=(a),(d)[1]=(b),(d)[2]=(c))
+#define VectorClear(a) ((a)[0]=(a)[1]=(a)[2]=0)
+#define DotProduct(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
+#define VectorSubtract(a,b,c) ((c)[0]=(a)[0]-(b)[0],(c)[1]=(a)[1]-(b)[1],(c)[2]=(a)[2]-(b)[2])
+#define VectorAdd(a,b,c) ((c)[0]=(a)[0]+(b)[0],(c)[1]=(a)[1]+(b)[1],(c)[2]=(a)[2]+(b)[2])
+#define VectorCopy(a,b) ((b)[0]=(a)[0],(b)[1]=(a)[1],(b)[2]=(a)[2])
+#define CrossProduct(a,b,c) ((c)[0]=(a)[1]*(b)[2]-(a)[2]*(b)[1],(c)[1]=(a)[2]*(b)[0]-(a)[0]*(b)[2],(c)[2]=(a)[0]*(b)[1]-(a)[1]*(b)[0])
 #define VectorNormalize(v) {float ilength = 1.0f / (float) sqrt(DotProduct(v,v));v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
 #define VectorNormalize2(v,dest) {float ilength = 1.0f / (float) sqrt(DotProduct(v,v));dest[0] = v[0] * ilength;dest[1] = v[1] * ilength;dest[2] = v[2] * ilength;}
 #define VectorNormalizeDouble(v) {double ilength = 1.0 / (float) sqrt(DotProduct(v,v));v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
-#define VectorDistance2(a, b) ((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]))
+#define VectorDistance2(a, b) (((a)[0] - (b)[0]) * ((a)[0] - (b)[0]) + ((a)[1] - (b)[1]) * ((a)[1] - (b)[1]) + ((a)[2] - (b)[2]) * ((a)[2] - (b)[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
 #define VectorLength(a) sqrt(DotProduct(a, a))
-#define VectorScale(in, scale, out) {(out)[0] = (in)[0] * (scale);(out)[1] = (in)[1] * (scale);(out)[2] = (in)[2] * (scale);}
-#define VectorMA(a, scale, b, c) {(c)[0] = (a)[0] + (scale) * (b)[0];(c)[1] = (a)[1] + (scale) * (b)[1];(c)[2] = (a)[2] + (scale) * (b)[2];}
+#define VectorScale(in, scale, out) ((out)[0] = (in)[0] * (scale),(out)[1] = (in)[1] * (scale),(out)[2] = (in)[2] * (scale))
+#define VectorCompare(a,b) (((a)[0]==(b)[0])&&((a)[1]==(b)[1])&&((a)[2]==(b)[2]))
+#define VectorMA(a, scale, b, c) ((c)[0] = (a)[0] + (scale) * (b)[0],(c)[1] = (a)[1] + (scale) * (b)[1],(c)[2] = (a)[2] + (scale) * (b)[2])
 #define VectorNormalizeFast(_v)\
 {\
 	float _y, _number;\
@@ -83,26 +84,45 @@ extern int nanmask;
 // need to add conversion to/from matrices
 
 // returns length of quaternion
-#define qlen(a) ((float) sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]+a[3]*a[3]))
+#define qlen(a) ((float) sqrt((a)[0]*(a)[0]+(a)[1]*(a)[1]+(a)[2]*(a)[2]+(a)[3]*(a)[3]))
 // returns squared length of quaternion
-#define qlen2(a) (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]+a[3]*a[3])
-// makes a quaternion from x, y, z, and a rotation angle
-#define QuatMake(x,y,z,r,c) {if (r2 == 0) {(c)[0]=(float) ((x)*sin(r2));c[1]=(float) ((y)*sin(r2));c[2]=((float) (z)*sin(r2));c[3]=(float) 1;} else {float r2 = (r) * 0.5 * (M_PI / 180);(c)[0]=(float) ((x)*sin(r2));c[1]=(float) ((y)*sin(r2));c[2]=((float) (z)*sin(r2));c[3]=(float) (cos(r2));}}
-// makes a quaternion from a vector and a rotation angle
+#define qlen2(a) ((a)[0]*(a)[0]+(a)[1]*(a)[1]+(a)[2]*(a)[2]+(a)[3]*(a)[3])
+// makes a quaternion from x, y, z, and a rotation angle (in degrees)
+// FIXME: this is almost definitely broken, need a rewrite
+#define QuatMake(x,y,z,r,c)\
+{\
+r2 = (r) * M_PI / 360;\
+if (r == 0)\
+{\
+(c)[0]=(float) ((x)*sin(r2));\
+(c)[1]=(float) ((y)*sin(r2));\
+(c)[2]=(float) ((z)*sin(r2));\
+(c)[3]=(float) 1;\
+}\
+else\
+{\
+float r2 = (r) * 0.5 * (M_PI / 180);\
+(c)[0]=(float) ((x)*sin(r2));\
+(c)[1]=(float) ((y)*sin(r2));\
+(c)[2]=(float) ((z)*sin(r2));\
+(c)[3]=(float) (cos(r2));\
+}\
+}
+// makes a quaternion from a vector and a rotation angle (in degrees)
 #define QuatFromVec(a,r,c) QuatMake((a)[0],(a)[1],(a)[2],(r))
 // copies a quaternion
-#define QuatCopy(a,c) {c[0]=a[0];c[1]=a[1];c[2]=a[2];c[3]=a[3];}
-#define QuatSubtract(a,b,c) {c[0]=a[0]-b[0];c[1]=a[1]-b[1];c[2]=a[2]-b[2];c[3]=a[3]-b[3];}
-#define QuatAdd(a,b,c) {c[0]=a[0]+b[0];c[1]=a[1]+b[1];c[2]=a[2]+b[2];c[3]=a[3]+b[3];}
-#define QuatScale(a,b,c) {c[0]=a[0]*b;c[1]=a[1]*b;c[2]=a[2]*b;c[3]=a[3]*b;}
+#define QuatCopy(a,c) {(c)[0]=(a)[0];(c)[1]=(a)[1];(c)[2]=(a)[2];(c)[3]=(a)[3];}
+#define QuatSubtract(a,b,c) {(c)[0]=(a)[0]-(b)[0];(c)[1]=(a)[1]-(b)[1];(c)[2]=(a)[2]-(b)[2];(c)[3]=(a)[3]-(b)[3];}
+#define QuatAdd(a,b,c) {(c)[0]=(a)[0]+(b)[0];(c)[1]=(a)[1]+(b)[1];(c)[2]=(a)[2]+(b)[2];(c)[3]=(a)[3]+(b)[3];}
+#define QuatScale(a,b,c) {(c)[0]=(a)[0]*b;(c)[1]=(a)[1]*b;(c)[2]=(a)[2]*b;(c)[3]=(a)[3]*b;}
 // FIXME: this is wrong, do some more research on quaternions
-//#define QuatMultiply(a,b,c) {c[0]=a[0]*b[0];c[1]=a[1]*b[1];c[2]=a[2]*b[2];c[3]=a[3]*b[3];}
+//#define QuatMultiply(a,b,c) {(c)[0]=(a)[0]*(b)[0];(c)[1]=(a)[1]*(b)[1];(c)[2]=(a)[2]*(b)[2];(c)[3]=(a)[3]*(b)[3];}
 // FIXME: this is wrong, do some more research on quaternions
-//#define QuatMultiplyAdd(a,b,d,c) {c[0]=a[0]*b[0]+d[0];c[1]=a[1]*b[1]+d[1];c[2]=a[2]*b[2]+d[2];c[3]=a[3]*b[3]+d[3];}
-#define qdist(a,b) ((float) sqrt((b[0]-a[0])*(b[0]-a[0])+(b[1]-a[1])*(b[1]-a[1])+(b[2]-a[2])*(b[2]-a[2])+(b[3]-a[3])*(b[3]-a[3])))
-#define qdist2(a,b) ((b[0]-a[0])*(b[0]-a[0])+(b[1]-a[1])*(b[1]-a[1])+(b[2]-a[2])*(b[2]-a[2])+(b[3]-a[3])*(b[3]-a[3]))
+//#define QuatMultiplyAdd(a,b,d,c) {(c)[0]=(a)[0]*(b)[0]+d[0];(c)[1]=(a)[1]*(b)[1]+d[1];(c)[2]=(a)[2]*(b)[2]+d[2];(c)[3]=(a)[3]*(b)[3]+d[3];}
+#define qdist(a,b) ((float) sqrt(((b)[0]-(a)[0])*((b)[0]-(a)[0])+((b)[1]-(a)[1])*((b)[1]-(a)[1])+((b)[2]-(a)[2])*((b)[2]-(a)[2])+((b)[3]-(a)[3])*((b)[3]-(a)[3])))
+#define qdist2(a,b) (((b)[0]-(a)[0])*((b)[0]-(a)[0])+((b)[1]-(a)[1])*((b)[1]-(a)[1])+((b)[2]-(a)[2])*((b)[2]-(a)[2])+((b)[3]-(a)[3])*((b)[3]-(a)[3]))
 
-#define VectorCopy4(a,b) {b[0]=a[0];b[1]=a[1];b[2]=a[2];b[3]=a[3];}
+#define VectorCopy4(a,b) {(b)[0]=(a)[0];(b)[1]=(a)[1];(b)[2]=(a)[2];(b)[3]=(a)[3];}
 
 void VectorMASlow (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
 
@@ -111,7 +131,6 @@ void _VectorSubtract (vec3_t veca, vec3_t vecb, vec3_t out);
 void _VectorAdd (vec3_t veca, vec3_t vecb, vec3_t out);
 void _VectorCopy (vec3_t in, vec3_t out);
 
-int VectorCompare (vec3_t v1, vec3_t v2);
 vec_t Length (vec3_t v);
 float VectorNormalizeLength (vec3_t v);		// returns vector length
 float VectorNormalizeLength2 (vec3_t v, vec3_t dest);		// returns vector length
