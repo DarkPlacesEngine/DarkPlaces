@@ -15,7 +15,6 @@
 -(Joseph Caporale) d darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 -(Joseph Caporale) d darkplaces: add wav music playback (Joseph Caporale, Static_Fiend)
 -(Linny Amore) d darkplaces renderer: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
--(Mitchell) f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -(Option42) f darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
 -(QorpsE) d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 -(Speeds) d darkplaces client: add a config saving command (Speeds)
@@ -729,6 +728,7 @@ f darkplaces: add _0.tga support (per texture) to bsp/md2/md3 loaders
 f darkplaces: add a loading screen (gfx/loadback.tga or the loading plaque if that's not found) before loading commences so that people have something to look at when the engine starts... (Sajt)
 f darkplaces: add a new TE_TELEPORTSHELL effect which would take an entity and create a fading plasma shell of its model at the moment of teleportation (tell fuh and Mercury about this)
 f darkplaces: add another TE_TELEPORT effect that spawns particles at a model's vertices (Urre)
+f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 f darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
 f darkplaces: client crashes on +button8? (Static_Fiend)
 f darkplaces: crosshair_size 0 draws incorrectly (Sajt)
