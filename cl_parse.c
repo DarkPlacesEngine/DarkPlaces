@@ -992,7 +992,7 @@ void CL_ParseServerMessage (void)
 					i &= 31;
 				}
 				description[strlen(description)-1] = '\n'; // replace the last space with a newline
-				Con_Printf(description);
+				Con_Printf("%s", description);
 				Host_Error ("CL_ParseServerMessage: Illegible server message\n");
 			}
 			break;
