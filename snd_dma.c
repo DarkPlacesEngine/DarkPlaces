@@ -40,6 +40,9 @@ void S_Update_();
 void S_StopAllSounds(qboolean clear);
 void S_StopAllSoundsC(void);
 
+void S_ClearBuffer (void);
+
+
 // =======================================================================
 // Internal sound data & structures
 // =======================================================================
@@ -48,7 +51,6 @@ channel_t channels[MAX_CHANNELS];
 unsigned int total_channels;
 
 int snd_blocked = 0;
-static qboolean snd_ambient = 1;
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
 
@@ -105,18 +107,6 @@ cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0"};
 
 qboolean fakedma = false;
 int fakedma_updates = 15;
-
-
-void S_AmbientOff (void)
-{
-	snd_ambient = false;
-}
-
-
-void S_AmbientOn (void)
-{
-	snd_ambient = true;
-}
 
 
 void S_SoundInfo_f(void)
@@ -814,7 +804,7 @@ void S_UpdateAmbientSounds (void)
 	for (ambient_channel = 0 ; ambient_channel < NUM_AMBIENTS;ambient_channel++)
 		channels[ambient_channel].sfx = NULL;
 
-	if (!snd_ambient || ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
+	if (ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
 		return;
 
 	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_vieworigin, ambientlevels, sizeof(ambientlevels));

@@ -113,7 +113,6 @@ void S_StopAllSounds(qboolean clear);
 void S_PauseGameSounds (void);
 void S_ResumeGameSounds (void);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
-void S_ClearBuffer (void);
 void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up);
 void S_ExtraUpdate (void);
 
@@ -186,9 +185,6 @@ void S_UnloadSound(sfx_t *s);
 
 void SND_InitScaletable (void);
 void SNDDMA_Submit(void);
-
-void S_AmbientOff (void);
-void S_AmbientOn (void);
 
 void *S_LockBuffer(void);
 void S_UnlockBuffer(void);
