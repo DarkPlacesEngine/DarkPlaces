@@ -29,15 +29,15 @@ rtexture_t *r_shadow_blankbumptexture;
 rtexture_t *r_shadow_blankglosstexture;
 rtexture_t *r_shadow_blankwhitetexture;
 
-cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "2"};
-cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "2"};
+cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
+cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
 cvar_t r_shadow_realtime = {0, "r_shadow_realtime", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
-cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "4"};
+cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
 cvar_t r_shadow_shadownudge = {0, "r_shadow_shadownudge", "1"};
 
 void R_Shadow_ClearWorldLights(void);
@@ -429,8 +429,8 @@ static void R_Shadow_MakeTextures(void)
 	{
 		for (x = 0;x < 128;x++)
 		{
-			v[0] = (x + 0.5f) * (2.0f / 128.0f) - 1.0f;
-			v[1] = (y + 0.5f) * (2.0f / 128.0f) - 1.0f;
+			v[0] = (x + 0.5f) * (2.0f / (128.0f - 8.0f)) - 1.0f;
+			v[1] = (y + 0.5f) * (2.0f / (128.0f - 8.0f)) - 1.0f;
 			v[2] = 0;
 			intensity = 1.0f - sqrt(DotProduct(v, v));
 			if (intensity > 0)
@@ -780,8 +780,8 @@ void R_Shadow_GenTexCoords_LightCubeMap(float *out, int numverts, const float *v
 
 void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
-	int renders, mult;
-	float scale, colorscale;
+	int renders;
+	float color[3];
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	if (!bumptexture)
@@ -815,18 +815,18 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 		m.tex[2] = 0;
 		m.tex[3] = 0;
 		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,1);
+		qglColorMask(1,1,1,0);
 		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 		qglEnable(GL_BLEND);
 		if (lightcubemap)
 			R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[1], numverts, varray_vertex, relativelightorigin);
 
-		colorscale = r_colorscale * r_shadow_lightintensityscale.value;
-		for (mult = 1, scale = ixtable[mult];mult < 64 && (lightcolor[0] * scale * colorscale > 1 || lightcolor[1] * scale * colorscale > 1 || lightcolor[2] * scale * colorscale > 1);mult++, scale = ixtable[mult]);
-		colorscale *= scale;
-		GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
-		for (renders = 0;renders < mult;renders++)
+		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		{
+			GL_Color(color[0], color[1], color[2], 1);
 			R_Mesh_Draw(numverts, numtriangles, elements);
+		}
 	}
 	else
 	{
@@ -857,24 +857,24 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 		m.texcombinergb[0] = GL_MODULATE;
 		m.texcombinergb[1] = GL_MODULATE;
 		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,1);
+		qglColorMask(1,1,1,0);
 		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 		if (lightcubemap)
 			R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[1], numverts, varray_vertex, relativelightorigin);
 
-		colorscale = r_colorscale * r_shadow_lightintensityscale.value;
-		for (mult = 1, scale = ixtable[mult];mult < 64 && (lightcolor[0] * scale * colorscale > 1 || lightcolor[1] * scale * colorscale > 1 || lightcolor[2] * scale * colorscale > 1);mult++, scale = ixtable[mult]);
-		colorscale *= scale;
-		GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
-		for (renders = 0;renders < mult;renders++)
+		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		{
+			GL_Color(color[0], color[1], color[2], 1);
 			R_Mesh_Draw(numverts, numtriangles, elements);
+		}
 	}
 }
 
 void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
-	int renders, mult;
-	float scale, colorscale;
+	int renders;
+	float color[3];
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	if (!bumptexture)
@@ -922,18 +922,18 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		m.tex[0] = R_GetTexture(glosstexture);
 		m.texcubemap[1] = R_GetTexture(lightcubemap);
 		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,1);
+		qglColorMask(1,1,1,0);
 		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
 		if (lightcubemap)
 			R_Shadow_GenTexCoords_LightCubeMap(varray_texcoord[1], numverts, varray_vertex, relativelightorigin);
 
-		colorscale = r_colorscale * r_shadow_lightintensityscale.value;
-		for (mult = 1, scale = ixtable[mult];mult < 64 && (lightcolor[0] * scale * colorscale > 1 || lightcolor[1] * scale * colorscale > 1 || lightcolor[2] * scale * colorscale > 1);mult++, scale = ixtable[mult]);
-		colorscale *= scale;
-		GL_Color(lightcolor[0] * colorscale, lightcolor[1] * colorscale, lightcolor[2] * colorscale, 1);
-		for (renders = 0;renders < mult;renders++)
+		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		{
+			GL_Color(color[0], color[1], color[2], 1);
 			R_Mesh_Draw(numverts, numtriangles, elements);
+		}
 	}
 }
 
@@ -949,6 +949,8 @@ cvar_t r_editlights_cursorpushback = {0, "r_editlights_pushback", "0"};
 cvar_t r_editlights_cursorpushoff = {0, "r_editlights_pushoff", "4"};
 cvar_t r_editlights_cursorgrid = {0, "r_editlights_grid", "4"};
 cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsizescale", "0.8"};
+cvar_t r_editlights_rtlightssizescale = {CVAR_SAVE, "r_editlights_rtlightssizescale", "0.7"};
+cvar_t r_editlights_rtlightscolorscale = {CVAR_SAVE, "r_editlights_rtlightscolorscale", "2"};
 worldlight_t *r_shadow_worldlightchain;
 worldlight_t *r_shadow_selectedlight;
 vec3_t r_editlights_cursorlocation;
@@ -974,11 +976,16 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 
 	e = Mem_Alloc(r_shadow_mempool, sizeof(worldlight_t));
 	VectorCopy(origin, e->origin);
-	VectorCopy(color, e->light);
-	e->lightradius = radius;
-	VectorCopy(origin, e->mins);
-	VectorCopy(origin, e->maxs);
-	e->cullradius = 0;
+	VectorScale(color, r_editlights_rtlightscolorscale.value, e->light);
+	e->lightradius = radius * r_editlights_rtlightssizescale.value;
+	e->cullradius = e->lightradius;
+	e->mins[0] = e->origin[0] - e->lightradius;
+	e->maxs[0] = e->origin[0] + e->lightradius;
+	e->mins[1] = e->origin[1] - e->lightradius;
+	e->maxs[1] = e->origin[1] + e->lightradius;
+	e->mins[2] = e->origin[2] - e->lightradius;
+	e->maxs[2] = e->origin[2] + e->lightradius;
+
 	e->style = style;
 	e->next = r_shadow_worldlightchain;
 	r_shadow_worldlightchain = e;
@@ -1079,9 +1086,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		if (e->maxs[1] > e->origin[1] + e->lightradius) e->maxs[1] = e->origin[1] + e->lightradius;
 		if (e->mins[2] < e->origin[2] - e->lightradius) e->mins[2] = e->origin[2] - e->lightradius;
 		if (e->maxs[2] > e->origin[2] + e->lightradius) e->maxs[2] = e->origin[2] + e->lightradius;
-		Con_Printf("%f %f %f, %f %f %f, %f, %f, %d, %d\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], e->cullradius, e->lightradius, e->numleafs, e->numsurfaces);
-		// clip shadow volumes against eachother to remove unnecessary
-		// polygons (and sections of polygons)
+
 		maxverts = 256;
 		verts = NULL;
 		castshadowcount++;
@@ -1122,7 +1127,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 
 			// now that we have the buffers big enough, construct shadow volume mesh
 			memcpy(verts, castmesh->verts, castmesh->numverts * sizeof(float[4]));
-			R_Shadow_ProjectVertices(verts, castmesh->numverts, e->origin, 1000000.0f);//, e->lightradius);
+			R_Shadow_ProjectVertices(verts, castmesh->numverts, e->origin, 10000000.0f);//, e->lightradius);
 			R_Shadow_MakeTriangleShadowFlags(castmesh->elements, verts, castmesh->numtriangles, trianglefacinglight, e->origin, e->lightradius);
 			tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->elements, castmesh->neighbors, castmesh->numtriangles, castmesh->numverts, trianglefacinglight, shadowelements);
 			// add the constructed shadow volume mesh
@@ -1135,6 +1140,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			l += mesh->numtriangles;
 		Con_Printf("static shadow volume built containing %i triangles\n", l);
 	}
+	Con_Printf("%f %f %f, %f %f %f, %f, %f, %d, %d\n", e->mins[0], e->mins[1], e->mins[2], e->maxs[0], e->maxs[1], e->maxs[2], e->cullradius, e->lightradius, e->numleafs, e->numsurfaces);
 }
 
 void R_Shadow_FreeWorldLight(worldlight_t *light)
@@ -1288,6 +1294,11 @@ void R_Shadow_LoadWorldLights(void)
 	int n, a, style;
 	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
 	float origin[3], radius, color[3];
+	if (cl.worldmodel == NULL)
+	{
+		Con_Printf("No map loaded.\n");
+		return;
+	}
 	COM_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".rtlights");
 	lightsstring = COM_LoadFile(name, false);
@@ -1331,13 +1342,18 @@ void R_Shadow_SaveWorldLights(void)
 	char line[1024];
 	if (!r_shadow_worldlightchain)
 		return;
+	if (cl.worldmodel == NULL)
+	{
+		Con_Printf("No map loaded.\n");
+		return;
+	}
 	COM_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".rtlights");
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		sprintf(line, "%g %g %g %g %g %g %g %d %s\n", light->origin[0], light->origin[1], light->origin[2], light->lightradius, light->light[0], light->light[1], light->light[2], light->style, light->cubemapname ? light->cubemapname : "");
+		sprintf(line, "%g %g %g %g %g %g %g %d %s\n", light->origin[0], light->origin[1], light->origin[2], light->lightradius / r_editlights_rtlightssizescale.value, light->light[0] / r_editlights_rtlightscolorscale.value, light->light[1] / r_editlights_rtlightscolorscale.value, light->light[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "");
 		if (bufchars + strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
@@ -1367,6 +1383,11 @@ void R_Shadow_LoadLightsFile(void)
 	int n, a, style;
 	char name[MAX_QPATH], *lightsstring, *s, *t;
 	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
+	if (cl.worldmodel == NULL)
+	{
+		Con_Printf("No map loaded.\n");
+		return;
+	}
 	COM_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".lights");
 	lightsstring = COM_LoadFile(name, false);
@@ -1409,6 +1430,11 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 	float origin[3], radius, color[3], light, scale, originhack[3], overridecolor[3];
 	const char *data;
 
+	if (cl.worldmodel == NULL)
+	{
+		Con_Printf("No map loaded.\n");
+		return;
+	}
 	data = cl.worldmodel->entities;
 	if (!data)
 		return;
@@ -1569,9 +1595,9 @@ void R_Shadow_UpdateLightingMode(void)
 
 void R_Shadow_UpdateWorldLightSelection(void)
 {
+	R_Shadow_SetCursorLocationForView();
 	if (r_editlights.integer)
 	{
-		R_Shadow_SetCursorLocationForView();
 		R_Shadow_SelectLightInView();
 		R_Shadow_DrawLightSprites();
 	}
@@ -1737,6 +1763,8 @@ void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_cursorpushoff);
 	Cvar_RegisterVariable(&r_editlights_cursorgrid);
 	Cvar_RegisterVariable(&r_editlights_quakelightsizescale);
+	Cvar_RegisterVariable(&r_editlights_rtlightssizescale);
+	Cvar_RegisterVariable(&r_editlights_rtlightscolorscale);
 	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f);
 	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f);
 	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f);
