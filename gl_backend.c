@@ -1293,7 +1293,7 @@ void SCR_DrawScreen (void)
 			if (r_stereo_sidebyside.integer)
 			{
 				r_refdef.width = vid.realwidth * size / 2.5;
-				r_refdef.height = vid.realheight * size / 2.5;
+				r_refdef.height = vid.realheight * size / 2.5 * (1 - bound(0, r_letterbox.value, 100) / 100);
 				r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5;
 				r_refdef.y = (vid.realheight - r_refdef.height)/2;
 				if (r_stereo_side)
@@ -1302,7 +1302,7 @@ void SCR_DrawScreen (void)
 			else
 			{
 				r_refdef.width = vid.realwidth * size;
-				r_refdef.height = vid.realheight * size;
+				r_refdef.height = vid.realheight * size * (1 - bound(0, r_letterbox.value, 100) / 100);
 				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
 				r_refdef.y = (vid.realheight - r_refdef.height)/2;
 			}
