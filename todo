@@ -29,12 +29,10 @@
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
--f darkplaces protocol: add EF_PARTICLESPAWNER extension (FrikaC, [TACO])
 -f darkplaces testing: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
 -f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
 0 darkplaces cleanup: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
-0 darkplaces cleanup: rename QuadraticSpline code in curves.c to QuadraticBSpline
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back r_waterripple (Vermeulen)
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
@@ -370,6 +368,7 @@ d darkplaces cleanup: clean up Collision_TraceBrushBrush to have another temp va
 d darkplaces cleanup: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 d darkplaces cleanup: make sure engine dumps log file to disk if there is a Sys_Error (VorteX)
 d darkplaces cleanup: nodestack[nodestackindex++] = node->children[0]; and similar things should skip the node if stack is full (Vic)
+d darkplaces cleanup: rename QuadraticSpline code in curves.c to QuadraticBSpline
 d darkplaces client: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces client: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
@@ -702,6 +701,7 @@ f darkplaces client: add chase_pitch cvar to control pitch angle of chase camera
 f darkplaces client: figure out why dlights are flashing on/off in TEU, particularly test the flashlight (Electro)
 f darkplaces physics: can't move when stuck in a monster (Sajt)
 f darkplaces physics: walking backward toward the cage in e4m2, it's 'sticky' (MoALTz)
+f darkplaces protocol: add EF_PARTICLESPAWNER extension (FrikaC, [TACO])
 f darkplaces server: Mem_Alloc crash when entities are spawning, sv_main line 1760 (VorteX)
 f darkplaces server: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 f darkplaces testing: figure out BoxOnPlaneSide crash that happens in dpmod dpdm2 deathmatch 7 occasionally
