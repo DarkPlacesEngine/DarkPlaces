@@ -293,27 +293,30 @@ void CL_ParseEntityLump(char *entdata)
 			fog_blue = atof(value);
 		else if (!strcmp("wad", key)) // for HalfLife maps
 		{
-			j = 0;
-			for (i = 0;i < 4096;i++)
-				if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
-					break;
-			if (value[i])
+			if (hlbsp)
 			{
-				for (;i < 4096;i++)
+				j = 0;
+				for (i = 0;i < 4096;i++)
+					if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
+						break;
+				if (value[i])
 				{
-					// ignore path - the \\ check is for HalfLife... stupid windoze 'programmers'...
-					if (value[i] == '\\' || value[i] == '/' || value[i] == ':')
-						j = i+1;
-					else if (value[i] == ';' || value[i] == 0)
+					for (;i < 4096;i++)
 					{
-						k = value[i];
-						value[i] = 0;
-						strcpy(wadname, "textures/");
-						strcat(wadname, &value[j]);
-						W_LoadTextureWadFile (wadname, false);
-						j = i+1;
-						if (!k)
-							break;
+						// ignore path - the \\ check is for HalfLife... stupid windoze 'programmers'...
+						if (value[i] == '\\' || value[i] == '/' || value[i] == ':')
+							j = i+1;
+						else if (value[i] == ';' || value[i] == 0)
+						{
+							k = value[i];
+							value[i] = 0;
+							strcpy(wadname, "textures/");
+							strcat(wadname, &value[j]);
+							W_LoadTextureWadFile (wadname, false);
+							j = i+1;
+							if (!k)
+								break;
+						}
 					}
 				}
 			}
@@ -609,13 +612,17 @@ void CL_ParseUpdate (int bits)
 	}
 }
 
+void CL_EntityUpdateSetup()
+{
+	memset(entkill, 1, MAX_EDICTS);
+}
+
 int entityupdatestart;
 void CL_EntityUpdateBegin(int start)
 {
 	if (start < 0 || start >= MAX_EDICTS)
 		Host_Error("CL_EntityUpdateBegin: start (%i) < 0 or >= MAX_EDICTS (%i)\n", start, MAX_EDICTS);
 	entityupdatestart = start;
-	memset(entkill, 1, MAX_EDICTS);
 }
 
 void CL_EntityUpdateEnd(int end)
@@ -625,7 +632,7 @@ void CL_EntityUpdateEnd(int end)
 		Host_Error("CL_EntityUpdateEnd: end (%i) < 0 or > MAX_EDICTS (%i)\n", end, MAX_EDICTS);
 	for (i = entityupdatestart;i < end;i++)
 		if (entkill[i])
-			cl_entities[i].state_current.active = 0;
+			cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
 }
 
 /*
@@ -866,6 +873,7 @@ void CL_ParseServerMessage (void)
 	MSG_BeginReading ();
 
 	updateend = false;
+	CL_EntityUpdateSetup();
 	
 	while (1)
 	{
@@ -937,7 +945,7 @@ void CL_ParseServerMessage (void)
 			
 		case svc_time:
 			// handle old protocols which do not have entity update ranges
-			CL_EntityUpdateBegin(0);
+			CL_EntityUpdateBegin(1);
 			updateend = true;
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();			
