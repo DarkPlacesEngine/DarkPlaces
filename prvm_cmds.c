@@ -166,6 +166,8 @@ float	stringtokeynum(string key)
 		sethostcachesort(float field, float descending)
 		refreshhostcache()
 float	gethostcachenumber(float fld, float hostnr)
+float	gethostcacheindexforkey(string key)
+		addwantedhostcachekey(string key)
 */
 
 #include "quakedef.h"
@@ -3806,7 +3808,57 @@ refreshhostcache()
 */
 void VM_M_refreshhostcache( void )
 {
+	VM_SAFEPARMCOUNT( 0, VM_M_refreshhostcache );
 	HostCache_QueryList();
+}
+
+/*
+========================
+VM_M_gethostcacheindexforkey
+
+float gethostcacheindexforkey(string key)
+========================
+*/
+void VM_M_gethostcacheindexforkey( void )
+{
+	char *key;
+	VM_SAFEPARMCOUNT( 1, VM_M_gethostcacheindexforkey );
+
+	key = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( key );
+	
+	if( !strcmp( key, "cname" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_CNAME;
+	else if( !strcmp( key, "ping" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_PING;
+	else if( !strcmp( key, "game" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_GAME;
+	else if( !strcmp( key, "mod" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_MOD;
+	else if( !strcmp( key, "map" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_MAP;
+	else if( !strcmp( key, "name" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_NAME;
+	else if( !strcmp( key, "maxplayers" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_MAXPLAYERS;
+	else if( !strcmp( key, "numplayers" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_NUMPLAYERS;
+	else if( !strcmp( key, "protocol" ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_PROTOCOL;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = -1;
+}
+
+/*
+========================
+VM_M_addwantedhostcachekey
+
+addwantedhostcachekey(string key)
+========================
+*/
+void VM_M_addwantedhostcachekey( void )
+{
+	VM_SAFEPARMCOUNT( 1, VM_M_addwantedhostcachekey );
 }
 
 prvm_builtin_t vm_m_builtins[] = {
@@ -3959,7 +4011,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_resorthostcache,
 	VM_M_sethostcachesort,
 	VM_M_refreshhostcache,
-	VM_M_gethostcachenumber // 621
+	VM_M_gethostcachenumber,
+	VM_M_gethostcacheindexforkey, 
+	VM_M_addwantedhostcachekey // 623
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);

@@ -1022,6 +1022,7 @@ void Host_Shutdown(void)
 		VID_Shutdown();
 	}
 
+	Cmd_Shutdown();
 	Sys_Shutdown();
 	Log_Close ();
 }

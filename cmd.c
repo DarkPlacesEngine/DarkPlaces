@@ -461,6 +461,16 @@ void Cmd_Init (void)
 
 /*
 ============
+Cmd_Shutdown
+============
+*/
+void Cmd_Shutdown(void)
+{
+	Mem_FreePool(&cmd_mempool);
+}
+
+/*
+============
 Cmd_Argc
 ============
 */
