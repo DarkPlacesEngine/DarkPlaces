@@ -1014,6 +1014,17 @@ void COM_Init (void)
 	COM_CheckRegistered ();
 }
 
+extern void FS_Shutdown (void);
+
+/*
+================
+COM_Shutdown
+================
+*/
+void COM_Shutdown (void)
+{
+	FS_Shutdown ();
+}
 
 /*
 ============

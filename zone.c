@@ -433,6 +433,12 @@ void Memory_Init (void)
 	poolchain = NULL;
 }
 
+void Memory_Shutdown (void)
+{
+//	Mem_FreePool (&zonemempool);
+//	Mem_FreePool (&tempmempool);
+}
+
 void Memory_Init_Commands (void)
 {
 	Cmd_AddCommand ("memstats", MemStats_f);

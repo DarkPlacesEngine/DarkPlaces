@@ -1758,3 +1758,8 @@ void CL_Parse_Init(void)
 		Cvar_SetValue("demo_nehahra", 1);
 	Cvar_RegisterVariable(&developer_networkentities);
 }
+
+void CL_Parse_Shutdown(void)
+{
+	Mem_FreePool (&cl_scores_mempool);
+}

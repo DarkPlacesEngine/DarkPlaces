@@ -1307,6 +1307,12 @@ CL_Shutdown
 */
 void CL_Shutdown (void)
 {
+	CL_CGVM_Shutdown();
+	CL_Particles_Shutdown();
+	CL_Parse_Shutdown();
+
+	SZ_Free (&cls.message);
+
 	Mem_FreePool (&cl_entities_mempool);
 	Mem_FreePool (&cl_refdef_mempool);
 }

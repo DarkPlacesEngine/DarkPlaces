@@ -26,6 +26,11 @@ void CL_CGVM_Init(void)
 	cgvm_mempool = Mem_AllocPool("CGVM", 0, NULL);
 }
 
+void CL_CGVM_Shutdown(void)
+{
+	Mem_FreePool (&cgvm_mempool);
+}
+
 void CL_CGVM_Clear(void)
 {
 	Mem_EmptyPool(cgvm_mempool);

@@ -138,6 +138,7 @@ qboolean Mem_IsAllocated(mempool_t *pool, void *data);
 mempool_t *tempmempool;
 
 void Memory_Init (void);
+void Memory_Shutdown (void);
 void Memory_Init_Commands (void);
 
 extern mempool_t *zonemempool;

@@ -1041,6 +1041,16 @@ void FS_Init (void)
 		unlink (va("%s/qconsole.log", fs_gamedir));
 }
 
+/*
+================
+FS_Shutdown
+================
+*/
+void FS_Shutdown (void)
+{
+	Mem_FreePool (&pak_mempool);
+	Mem_FreePool (&fs_mempool);
+}
 
 /*
 ====================

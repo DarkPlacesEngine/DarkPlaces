@@ -3742,6 +3742,11 @@ void PR_Cmd_Init(void)
 	PR_Search_Init();
 }
 
+void PR_Cmd_Shutdown(void)
+{
+	Mem_FreePool (&pr_strings_mempool);
+}
+
 void PR_Cmd_Reset(void)
 {
 	Mem_EmptyPool(pr_strings_mempool);
