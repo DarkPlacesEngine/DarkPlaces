@@ -333,9 +333,9 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 
 static gl_extensionfunctionlist_t texture3dfuncs[] =
 {
-	{"glTexImage3D", (void **) &qglTexImage3D},
-	{"glTexSubImage3D", (void **) &qglTexSubImage3D},
-	{"glCopyTexSubImage3D", (void **) &qglCopyTexSubImage3D},
+	{"glTexImage3DEXT", (void **) &qglTexImage3D},
+	{"glTexSubImage3DEXT", (void **) &qglTexSubImage3D},
+	{"glCopyTexSubImage3DEXT", (void **) &qglCopyTexSubImage3D},
 	{NULL, NULL}
 };
 
@@ -369,7 +369,7 @@ void VID_CheckExtensions(void)
 			gl_dot3arb = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
 	}
 
-	gl_texture3d = GL_CheckExtension("glTexImage3D", texture3dfuncs, "-notexture3d", false);
+	gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dfuncs, "-notexture3d", false);
 	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 
