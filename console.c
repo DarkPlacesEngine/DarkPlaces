@@ -701,7 +701,7 @@ static vec4_t _con_colors[] =
 };
 
 #define _con_colors_count	(sizeof(_con_colors) / sizeof(vec3_t))
-#define _con_color_tag		'@'
+#define _con_color_tag		'^'
 
 // color is read and changed in the end
 static void _Con_DrawString( float x, float y, const char *text, int maxlen, float scalex, float scaley, int flags )
