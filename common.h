@@ -173,6 +173,7 @@ extern	struct cvar_s	registered;
 #define GAME_ZYMOTIC 9
 #define GAME_FNIGGIUM 10
 #define GAME_SETHERAL 11
+#define GAME_SOM 12
 
 extern int gamemode;
 extern char *gamename;
