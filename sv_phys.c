@@ -547,6 +547,12 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	int num_moved;
 	model_t *pushermodel;
 
+	if (!pusher->v->velocity[0] && !pusher->v->velocity[1] && !pusher->v->velocity[2] && !pusher->v->avelocity[0] && !pusher->v->avelocity[1] && !pusher->v->avelocity[2])
+	{
+		pusher->v->ltime += movetime;
+		return;
+	}
+
 	switch ((int) pusher->v->solid)
 	{
 	// LordHavoc: valid pusher types
@@ -560,16 +566,14 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	case SOLID_TRIGGER:
 		VectorMA (pusher->v->origin, movetime, pusher->v->velocity, pusher->v->origin);
 		VectorMA (pusher->v->angles, movetime, pusher->v->avelocity, pusher->v->angles);
+		pusher->v->angles[0] -= 360.0 * floor(pusher->v->angles[0] * (1.0 / 360.0));
+		pusher->v->angles[1] -= 360.0 * floor(pusher->v->angles[1] * (1.0 / 360.0));
+		pusher->v->angles[2] -= 360.0 * floor(pusher->v->angles[2] * (1.0 / 360.0));
 		pusher->v->ltime += movetime;
 		SV_LinkEdict (pusher, false);
 		return;
 	default:
 		Host_Error("SV_PushMove: unrecognized solid type %f\n", pusher->v->solid);
-	}
-	if (!pusher->v->velocity[0] && !pusher->v->velocity[1] && !pusher->v->velocity[2] && !pusher->v->avelocity[0] && !pusher->v->avelocity[1] && !pusher->v->avelocity[2])
-	{
-		pusher->v->ltime += movetime;
-		return;
 	}
 	index = (int) pusher->v->modelindex;
 	if (index < 1 || index >= MAX_MODELS)
@@ -741,10 +745,13 @@ void SV_PushMove (edict_t *pusher, float movetime)
 					pr_global_struct->other = EDICT_TO_PROG(check);
 					PR_ExecuteProgram (pusher->v->blocked, "");
 				}
-				return;
+				break;
 			}
 		}
 	}
+	pusher->v->angles[0] -= 360.0 * floor(pusher->v->angles[0] * (1.0 / 360.0));
+	pusher->v->angles[1] -= 360.0 * floor(pusher->v->angles[1] * (1.0 / 360.0));
+	pusher->v->angles[2] -= 360.0 * floor(pusher->v->angles[2] * (1.0 / 360.0));
 }
 
 /*
