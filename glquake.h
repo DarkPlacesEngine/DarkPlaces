@@ -389,6 +389,11 @@ extern int gl_support_var;
 #define GL_VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV 0x8533
 extern int gl_support_var2;
 
+//GL_EXT_stencil_two_side
+#define GL_STENCIL_TEST_TWO_SIDE_EXT      0x8910
+#define GL_ACTIVE_STENCIL_FACE_EXT        0x8911
+extern void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
+extern int gl_support_stenciltwoside;
 
 extern void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
