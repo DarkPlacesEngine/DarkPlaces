@@ -74,7 +74,7 @@
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: fix con_notify (should control number of lines)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
-0 darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
+-n darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
 0 darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
@@ -82,7 +82,7 @@
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
 0 darkplaces: make Com_HexDumpToConsole not use color
-0 darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
+-n darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
 0 darkplaces: make cl_beams_relative only affect view-attached beams
