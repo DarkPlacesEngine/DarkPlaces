@@ -622,7 +622,7 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 			vel[1] = dir[1] + lhrandom(-16, 16);
 			vel[2] = dir[2] + lhrandom(-32, 32);
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_snow, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 2, 2, 255, t, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), z, vel[0], vel[1], vel[2], 0, vel[0], vel[1], vel[2], 0, 0);
+			particle(pt_snow, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 1, 1, lhrandom(64, 128), t, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), z, vel[0], vel[1], vel[2], 0, vel[0], vel[1], vel[2], 0, 0);
 		}
 		break;
 	default:
@@ -1162,7 +1162,7 @@ static rtexture_t *particlefonttexture;
 static particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
-static cvar_t r_particles_lighting = {0, "r_particles_lighting", "1"};
+static cvar_t r_particles_lighting = {0, "r_particles_lighting", "0"};
 
 static qbyte shadebubble(float dx, float dy, vec3_t light)
 {
