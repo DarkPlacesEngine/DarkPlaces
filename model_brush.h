@@ -176,6 +176,8 @@ typedef struct msurface_s
 	// no texcoord info (that can be generated from these)
 	int			poly_numverts;
 	float		*poly_verts;
+	// the center is useful for sorting
+	float		poly_center[3];
 
 	// these are regenerated every frame
 	// lighting info

@@ -613,8 +613,6 @@ void R_RenderView (void)
 	R_SkyStartFrame();
 	R_BuildLightList();
 
-	R_MeshQueue_BeginScene();
-
 	R_FarClip_Start(r_origin, vpn, 768.0f);
 
 	R_TimeReport("setup");
@@ -631,6 +629,8 @@ void R_RenderView (void)
 	r_farclip = R_FarClip_Finish() + 256.0f;
 
 	R_Mesh_Start(r_farclip);
+
+	R_MeshQueue_BeginScene();
 
 
 	if (skyrendermasked)
@@ -677,7 +677,7 @@ void R_RenderView (void)
 	R_DrawExplosions();
 	R_TimeReport("explosions");
 
-	R_MeshQueue_EndScene();
+	R_MeshQueue_RenderTransparent();
 
 	R_Mesh_AddTransparent();
 	R_TimeReport("addtrans");
@@ -690,6 +690,10 @@ void R_RenderView (void)
 
 	R_BlendView();
 	R_TimeReport("blendview");
+
+	R_MeshQueue_Render();
+
+	R_MeshQueue_EndScene();
 
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");
