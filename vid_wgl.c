@@ -539,14 +539,9 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 			break;
 
-		case WM_DESTROY:
-		{
-			if (mainwindow)
-				DestroyWindow (mainwindow);
-
-			PostQuitMessage (0);
-		}
-		break;
+		//case WM_DESTROY:
+		//	PostQuitMessage (0);
+		//	break;
 
 		case MM_MCINOTIFY:
 			lRet = CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
@@ -904,8 +899,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
 	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 	if (!mainwindow)
 	{
+		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %d, %p) failed\n", ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 		VID_Shutdown();
-		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %d, %p) failed\n", ExWindowStyle, gamename, gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
 		return false;
 	}
 
@@ -1031,36 +1026,28 @@ void VID_Shutdown (void)
 	HGLRC hRC = 0;
 	HDC hDC = 0;
 
-	if (vid_initialized)
-	{
-		vid_initialized = false;
-		IN_Shutdown();
-
-		if (qwglGetCurrentContext)
-			hRC = qwglGetCurrentContext();
-
-		if (qwglGetCurrentDC)
-			hDC = qwglGetCurrentDC();
-
-		if (qwglMakeCurrent)
-			qwglMakeCurrent(NULL, NULL);
-
-		if (hRC && qwglDeleteContext)
-			qwglDeleteContext(hRC);
-
-		// close the library before we get rid of the window
-		GL_CloseLibrary();
-
-		if (hDC && mainwindow)
-			ReleaseDC(mainwindow, hDC);
-
-		if (vid_isfullscreen)
-			ChangeDisplaySettings (NULL, 0);
-
-		AppActivate(false, false);
-
-		VID_RestoreSystemGamma();
-	}
+	vid_initialized = false;
+	IN_Shutdown();
+	if (qwglGetCurrentContext)
+		hRC = qwglGetCurrentContext();
+	if (qwglGetCurrentDC)
+		hDC = qwglGetCurrentDC();
+	if (qwglMakeCurrent)
+		qwglMakeCurrent(NULL, NULL);
+	if (hRC && qwglDeleteContext)
+		qwglDeleteContext(hRC);
+	// close the library before we get rid of the window
+	GL_CloseLibrary();
+	if (hDC && mainwindow)
+		ReleaseDC(mainwindow, hDC);
+	if (vid_isfullscreen)
+		ChangeDisplaySettings (NULL, 0);
+	vid_isfullscreen = false;
+	AppActivate(false, false);
+	VID_RestoreSystemGamma();
+	if (mainwindow)
+		DestroyWindow(mainwindow);
+	mainwindow = 0;
 }
 
 
