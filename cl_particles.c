@@ -139,7 +139,7 @@ void CL_Particles_Init (void)
 
 	i = COM_CheckParm ("-particles");
 
-	if (i)
+	if (i && i < com_argc - 1)
 	{
 		cl_maxparticles = (int)(atoi(com_argv[i+1]));
 		if (cl_maxparticles < ABSOLUTE_MIN_PARTICLES)
