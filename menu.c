@@ -25,6 +25,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TYPE_GAME 2
 #define TYPE_BOTH 3
 
+mempool_t *menu_mempool;
+
 int NehGameType;
 
 enum m_state_e m_state;
@@ -913,57 +915,13 @@ void M_Menu_Setup_f (void)
 	setup_bottom = setup_oldbottom = cl_color.integer & 15;
 }
 
-// LordHavoc: rewrote this code greatly
-void M_MenuPlayerTranslate (qbyte *translation, int top, int bottom)
-{
-	int i;
-	unsigned int trans[4096];
-	qbyte *data, *f;
-	static qbyte pixels[4096];
-	static int menuplyr_width, menuplyr_height, menuplyr_top, menuplyr_bottom, menuplyr_load = true, menuplyr_failed = false;
-
-	if (menuplyr_failed)
-		return;
-	if (menuplyr_top == top && menuplyr_bottom == bottom)
-		return;
-
-	menuplyr_top = top;
-	menuplyr_bottom = bottom;
-
-	if (menuplyr_load)
-	{
-		menuplyr_load = false;
-		f = FS_LoadFile("gfx/menuplyr.lmp", true);
-		if (!f)
-		{
-			menuplyr_failed = true;
-			return;
-		}
-		data = LoadLMPAs8Bit (f, 0, 0);
-		Mem_Free(f);
-		if (image_width * image_height > 4096)
-		{
-			Con_Printf("M_MenuPlayerTranslate: image larger than 4096 pixel buffer\n");
-			Mem_Free(data);
-			menuplyr_failed = true;
-			return;
-		}
-		menuplyr_width = image_width;
-		menuplyr_height = image_height;
-		memcpy(pixels, data, menuplyr_width * menuplyr_height);
-		Mem_Free(data);
-	}
-
-	M_BuildTranslationTable (menuplyr_top*16, menuplyr_bottom*16);
-
-	for (i = 0;i < menuplyr_width * menuplyr_height;i++)
-		trans[i] = palette_complete[translation[pixels[i]]];
-
-	Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (qbyte *)trans);
-}
+static int menuplyr_width, menuplyr_height, menuplyr_top, menuplyr_bottom, menuplyr_load;
+static qbyte *menuplyr_pixels;
+static unsigned int *menuplyr_translated;
 
 void M_Setup_Draw (void)
 {
+	int i;
 	cachepic_t	*p;
 
 	M_Background(320, 200);
@@ -989,8 +947,38 @@ void M_Setup_Draw (void)
 	M_DrawPic (160, 64, "gfx/bigbox.lmp");
 
 	// LordHavoc: rewrote this code greatly
-	M_MenuPlayerTranslate (translationTable, setup_top, setup_bottom);
-	M_DrawPic (172, 72, "gfx/menuplyr.lmp");
+	if (menuplyr_load)
+	{
+		qbyte *data, *f;
+		menuplyr_load = false;
+		menuplyr_top = -1;
+		menuplyr_bottom = -1;
+		if ((f = FS_LoadFile("gfx/menuplyr.lmp", true)))
+		{
+			data = LoadLMPAs8Bit (f, 0, 0);
+			menuplyr_width = image_width;
+			menuplyr_height = image_height;
+			Mem_Free(f);
+			menuplyr_pixels = Mem_Alloc(menu_mempool, menuplyr_width * menuplyr_height);
+			menuplyr_translated = Mem_Alloc(menu_mempool, menuplyr_width * menuplyr_height * 4);
+			memcpy(menuplyr_pixels, data, menuplyr_width * menuplyr_height);
+			Mem_Free(data);
+		}
+	}
+
+	if (menuplyr_pixels)
+	{
+		if (menuplyr_top != setup_top || menuplyr_bottom != setup_bottom)
+		{
+			menuplyr_top = setup_top;
+			menuplyr_bottom = setup_bottom;
+			M_BuildTranslationTable(menuplyr_top*16, menuplyr_bottom*16);
+			for (i = 0;i < menuplyr_width * menuplyr_height;i++)
+				menuplyr_translated[i] = palette_complete[translationTable[menuplyr_pixels[i]]];
+			Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (qbyte *)menuplyr_translated);
+		}
+		M_DrawPic(172, 72, "gfx/menuplyr.lmp");
+	}
 
 	M_DrawCharacter (56, setup_cursor_table [setup_cursor], 12+((int)(realtime*4)&1));
 
@@ -3294,6 +3282,10 @@ void M_ServerList_Key(int k)
 
 void M_Init (void)
 {
+	menu_mempool = Mem_AllocPool("Menu");
+	menuplyr_load = true;
+	menuplyr_pixels = NULL;
+
 	Cmd_AddCommand ("togglemenu", M_ToggleMenu_f);
 
 	Cmd_AddCommand ("menu_main", M_Menu_Main_f);
