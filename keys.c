@@ -29,11 +29,12 @@ key up events are sent even if in console mode
 #define		MAXCMDLINE	256
 char	key_lines[32][MAXCMDLINE];
 int		key_linepos;
-int		shift_down=false;
+int		shift_down = false;
 int		key_lastpress;
+int		key_insert;	// insert key toggle (for editing)
 
-int		edit_line=0;
-int		history_line=0;
+int		edit_line = 0;
+int		history_line = 0;
 
 keydest_t	key_dest;
 
@@ -158,8 +159,6 @@ Interactive line editing and console scrollback
 */
 void Key_Console (int key)
 {
-	char	*cmd;
-	
 	if (key == K_ENTER)
 	{
 		Cbuf_AddText (key_lines[edit_line]+1);	// skip the >
@@ -168,35 +167,78 @@ void Key_Console (int key)
 		edit_line = (edit_line + 1) & 31;
 		history_line = edit_line;
 		key_lines[edit_line][0] = ']';
+		key_lines[edit_line][1] = 0;	// EvilTypeGuy: null terminate
 		key_linepos = 1;
 		if (cls.state == ca_disconnected)
 			SCR_UpdateScreen ();	// force an update, because the command
-									// may take some time
+						// may take some time
 		return;
 	}
 
 	if (key == K_TAB)
-	{	// command completion
-		cmd = Cmd_CompleteCommand (key_lines[edit_line]+1);
-		if (!cmd)
-			cmd = Cvar_CompleteVariable (key_lines[edit_line]+1);
-		if (cmd)
-		{
-			strcpy (key_lines[edit_line]+1, cmd);
-			key_linepos = strlen(cmd)+1;
-			key_lines[edit_line][key_linepos] = ' ';
-			key_linepos++;
-			key_lines[edit_line][key_linepos] = 0;
-			return;
-		}
+	{
+		// Enhanced command completion
+		// by EvilTypeGuy eviltypeguy@qeradiant.com
+		// Thanks to Fett, Taniwha
+		Con_CompleteCommandLine();
 	}
 	
-	if (key == K_BACKSPACE || key == K_LEFTARROW)
+	// Advanced Console Editing by Radix radix@planetquake.com
+	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
+
+	// left arrow will just move left one without erasing, backspace will
+	// actually erase charcter
+	if (key == K_LEFTARROW)
 	{
 		if (key_linepos > 1)
 			key_linepos--;
 		return;
 	}
+
+	if (key == K_BACKSPACE)	// delete char before cursor
+	{
+		if (key_linepos > 1)
+		{
+			strcpy(key_lines[edit_line] + key_linepos - 1, key_lines[edit_line] + key_linepos);
+			key_linepos--;
+		}
+		return;
+	}
+
+	if (key == K_DEL)		// delete char on cursor
+	{
+		if (key_linepos < strlen(key_lines[edit_line]))
+			strcpy(key_lines[edit_line] + key_linepos, key_lines[edit_line] + key_linepos + 1);
+		return;
+	}
+
+
+	// if we're at the end, get one character from previous line,
+	// otherwise just go right one
+	if (key == K_RIGHTARROW)
+	{
+		if (strlen(key_lines[edit_line]) == key_linepos)
+		{
+			if (strlen(key_lines[(edit_line + 31) & 31]) <= key_linepos)
+				return; // no character to get
+
+			key_lines[edit_line][key_linepos] = key_lines[(edit_line + 31) & 31][key_linepos];
+			key_linepos++;
+			key_lines[edit_line][key_linepos] = 0;
+		}
+		else
+			key_linepos++;
+
+		return;
+	}
+
+	if (key == K_INS) // toggle insert mode
+	{	
+		key_insert ^= 1;
+		return;
+	}
+
+	// End Advanced Console Editing
 
 	if (key == K_UPARROW)
 	{
@@ -265,13 +307,32 @@ void Key_Console (int key)
 	if (key < 32 || key > 127)
 		return;	// non printable
 		
+
+
 	if (key_linepos < MAXCMDLINE-1)
 	{
+		int i;
+
+		if (key_insert)	// check insert mode
+		{
+			// can't do strcpy to move string to right
+			i = strlen(key_lines[edit_line]) - 1;
+
+			if (i == 254)
+				i--;
+
+			for (; i >= key_linepos; i--)
+				key_lines[edit_line][i + 1] = key_lines[edit_line][i];
+		}
+
+		// only null terminate if at the end
+		i = key_lines[edit_line][key_linepos];
 		key_lines[edit_line][key_linepos] = key;
 		key_linepos++;
-		key_lines[edit_line][key_linepos] = 0;
-	}
 
+		if (!i)
+			key_lines[edit_line][key_linepos] = 0;
+	}
 }
 
 //============================================================================
@@ -542,6 +603,8 @@ void Key_Init (void)
 	consolekeys[K_UPARROW] = true;
 	consolekeys[K_DOWNARROW] = true;
 	consolekeys[K_BACKSPACE] = true;
+	consolekeys[K_DEL] = true;
+	consolekeys[K_INS] = true;
 	consolekeys[K_PGUP] = true;
 	consolekeys[K_PGDN] = true;
 	consolekeys[K_SHIFT] = true;
