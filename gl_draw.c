@@ -308,7 +308,7 @@ void R_DrawQueue(void)
 	cachepic_t *pic;
 	drawqueue_t *dq;
 	char *str, *currentpic;
-	int batch, additive;
+	int batch, batchcount, additive;
 	unsigned int color;
 
 	if (!r_render.integer)
@@ -359,6 +359,7 @@ void R_DrawQueue(void)
 
 	overbright = v_overbrightbits.integer;
 	batch = false;
+	batchcount = 0;
 	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
 	{
 		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
@@ -393,6 +394,11 @@ void R_DrawQueue(void)
 			color = dq->color;
 			glColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
 		}
+		if (batch && batchcount > 128)
+		{
+			batch = false;
+			glEnd();
+		}
 		x = dq->x;
 		y = dq->y;
 		w = dq->scalex;
@@ -422,12 +428,14 @@ void R_DrawQueue(void)
 				{
 					batch = true;
 					glBegin(GL_QUADS);
+					batchcount = 0;
 				}
 				//DrawQuad(dq->x, dq->y, w, h, 0, 0, 1, 1);
 				glTexCoord2f (0, 0);glVertex2f (x  , y  );
 				glTexCoord2f (1, 0);glVertex2f (x+w, y  );
 				glTexCoord2f (1, 1);glVertex2f (x+w, y+h);
 				glTexCoord2f (0, 1);glVertex2f (x  , y+h);
+				batchcount++;
 			}
 			else
 			{
@@ -445,12 +453,14 @@ void R_DrawQueue(void)
 				{
 					batch = true;
 					glBegin(GL_QUADS);
+					batchcount = 0;
 				}
 				//DrawQuad(dq->x, dq->y, dq->scalex, dq->scaley, 0, 0, 1, 1);
 				glTexCoord2f (0, 0);glVertex2f (x  , y  );
 				glTexCoord2f (1, 0);glVertex2f (x+w, y  );
 				glTexCoord2f (1, 1);glVertex2f (x+w, y+h);
 				glTexCoord2f (0, 1);glVertex2f (x  , y+h);
+				batchcount++;
 			}
 			break;
 		case DRAWQUEUE_STRING:
@@ -469,6 +479,7 @@ void R_DrawQueue(void)
 			{
 				batch = true;
 				glBegin(GL_QUADS);
+				batchcount = 0;
 			}
 			while ((num = *str++) && x < vid.conwidth)
 			{
@@ -483,6 +494,7 @@ void R_DrawQueue(void)
 					glTexCoord2f (s+u, t  );glVertex2f (x+w, y  );
 					glTexCoord2f (s+u, t+v);glVertex2f (x+w, y+h);
 					glTexCoord2f (s  , t+v);glVertex2f (x  , y+h);
+					batchcount++;
 				}
 				x += w;
 			}
