@@ -132,14 +132,15 @@ Qopen (const char *path, const char *mode)
 	}
 	*p = 0;
 
-	file = calloc (sizeof (*file), 1);
+	file = qmalloc (sizeof (*file));
+	memset(file, 0, sizeof(*file));
 	if (!file)
 		return 0;
 #ifdef HAVE_ZLIB
 	if (zip) {
 		file->gzfile = gzopen (path, m);
 		if (!file->gzfile) {
-			free (file);
+			qfree (file);
 			return 0;
 		}
 	} else
@@ -147,7 +148,7 @@ Qopen (const char *path, const char *mode)
 	{
 		file->file = fopen (path, m);
 		if (!file->file) {
-			free (file);
+			qfree (file);
 			return 0;
 		}
 	}
@@ -171,14 +172,15 @@ Qdopen (int fd, const char *mode)
 
 	*p = 0;
 
-	file = calloc (sizeof (*file), 1);
+	file = qmalloc (sizeof (*file));
+	memset(file, 0, sizeof(*file));
 	if (!file)
 		return 0;
 #ifdef HAVE_ZLIB
 	if (zip) {
 		file->gzfile = gzdopen (fd, m);
 		if (!file->gzfile) {
-			free (file);
+			qfree (file);
 			return 0;
 		}
 	} else
@@ -186,7 +188,7 @@ Qdopen (int fd, const char *mode)
 	{
 		file->file = fdopen (fd, m);
 		if (!file->file) {
-			free (file);
+			qfree (file);
 			return 0;
 		}
 	}
@@ -206,7 +208,7 @@ Qclose (QFile *file)
 	else
 		gzclose (file->gzfile);
 #endif
-	free (file);
+	qfree (file);
 }
 
 int

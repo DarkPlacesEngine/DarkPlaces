@@ -1199,7 +1199,7 @@ winding_t *NewWinding (int points)
 		Host_Error("NewWinding: too many points\n");
 
 	size = (int)((winding_t *)0)->points[points];
-	w = malloc (size);
+	w = qmalloc (size);
 	memset (w, 0, size);
 
 	return w;
@@ -1207,7 +1207,7 @@ winding_t *NewWinding (int points)
 
 void FreeWinding (winding_t *w)
 {
-	free (w);
+	qfree (w);
 }
 
 /*
@@ -1475,7 +1475,7 @@ AllocPortal
 portal_t *AllocPortal (void)
 {
 	portal_t *p;
-	p = malloc(sizeof(portal_t));
+	p = qmalloc(sizeof(portal_t));
 	memset(p, 0, sizeof(portal_t));
 	p->chain = portalchain;
 	portalchain = p;
@@ -1602,7 +1602,7 @@ void Mod_FinalizePortals(void)
 			}
 			FreeWinding(p->winding);
 		}
-		free(p);
+		qfree(p);
 		p = pnext;
 	}
 }
