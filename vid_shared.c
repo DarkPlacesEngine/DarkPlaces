@@ -818,7 +818,7 @@ void VID_Restart_f(void)
 
 void VID_Open(void)
 {
-	int i, width, height;
+	int i, width, height, success;
 	if (vid_commandlinecheck)
 	{
 		// interpret command-line parameters
@@ -846,17 +846,18 @@ void VID_Open(void)
 	}
 
 	Con_DPrintf("Starting video system\n");
-	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+	success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
+	if (!success)
 	{
 		Con_Printf("Desired video mode fail, trying fallbacks...\n");
-		if (vid_fullscreen.integer)
-		{
-			if (!VID_Mode(true, 640, 480, 16))
-				if (!VID_Mode(false, 640, 480, 16))
-					Sys_Error("Video modes failed\n");
-		}
-		else
-			Sys_Error("Windowed video failed\n");
+		if (!success && vid_bitsperpixel.integer > 16)
+			success = VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, 16);
+		if (!success && (vid_width.integer > 640 || vid_height.integer > 480))
+			success = VID_Mode(vid_fullscreen.integer, 640, 480, 16);
+		if (!success && vid_fullscreen.integer)
+			success = VID_Mode(false, 640, 480, 16);
+		if (!success)
+			Sys_Error("Video modes failed\n");
 	}
 	VID_OpenSystems();
 }
