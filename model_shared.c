@@ -194,6 +194,34 @@ static void mod_shutdown(void)
 
 static void mod_newmap(void)
 {
+	msurface_t *surf;
+	int i, surfnum, ssize, tsize;
+
+	if (!cl_stainmapsclearonload.integer)
+		return;
+
+	for (i=0; i<MAX_MOD_KNOWN; i++)
+	{
+		if (mod_known[i].name[0] && mod_known[i].type == mod_brush)
+		{
+			for (surfnum=0, surf=mod_known[i].brushq1.surfaces; surfnum<mod_known[i].brushq1.numsurfaces;surfnum++, surf++)
+			{
+				if (surf->texinfo->texture->flags & SURF_LIGHTMAP)
+				{
+					ssize = (surf->extents[0] >> 4) + 1;
+					tsize = (surf->extents[1] >> 4) + 1;
+					
+					if (ssize > 256 || tsize > 256)
+						Host_Error("Bad surface extents");
+
+					if (surf->stainsamples)
+						memset(surf->stainsamples, 255, ssize * tsize * 3);
+
+					surf->cached_dlight = true;
+				}
+			}
+		}
+	}
 }
 
 /*

@@ -594,6 +594,7 @@ extern cvar_t cl_explosions_size_start;
 extern cvar_t cl_explosions_size_end;
 extern cvar_t cl_explosions_lifetime;
 extern cvar_t cl_stainmaps;
+extern cvar_t cl_stainmapsclearonload;
 
 // these are updated by CL_ClearState
 extern int cl_num_entities;

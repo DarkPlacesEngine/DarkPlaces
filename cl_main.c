@@ -53,6 +53,7 @@ cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "128"};
 cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "0.5"};
 
 cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
+cvar_t cl_stainmapsclearonload = {CVAR_SAVE, "cl_stainmapsclearonload", "0"};
 
 cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1"};
 cvar_t cl_beams_relative = {CVAR_SAVE, "cl_beams_relative", "1"};
@@ -1325,6 +1326,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&cl_explosions_size_end);
 	Cvar_RegisterVariable(&cl_explosions_lifetime);
 	Cvar_RegisterVariable(&cl_stainmaps);
+	Cvar_RegisterVariable(&cl_stainmapsclearonload);
 	Cvar_RegisterVariable(&cl_beams_polygons);
 	Cvar_RegisterVariable(&cl_beams_relative);
 	Cvar_RegisterVariable(&cl_beams_lightatend);
