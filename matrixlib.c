@@ -2,6 +2,16 @@
 #include <math.h>
 #include "matrixlib.h"
 
+const matrix4x4_t identitymatrix =
+{
+	{
+		{1, 0, 0, 0},
+		{0, 1, 0, 0},
+		{0, 0, 1, 0},
+		{0, 0, 0, 1}
+	}
+};
+
 void Matrix4x4_Copy (matrix4x4_t *out, const matrix4x4_t *in)
 {
 	*out = *in;
