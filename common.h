@@ -187,7 +187,7 @@ typedef struct stringlist_s
 	char *text;
 } stringlist_t;
 
-int matchpattern(char *in, char *pattern);
+int matchpattern(char *in, char *pattern, int caseinsensitive);
 stringlist_t *listdirectory(char *path);
 void freedirectory(stringlist_t *list);
 
