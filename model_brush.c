@@ -2499,6 +2499,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 					VectorCopy(p->points + j*3, point->position);
 					point++;
 				}
+				BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
 				PlaneClassify(&portal->plane);
 
 				// link into leaf's portal chain
@@ -2521,6 +2522,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 					VectorCopy(p->points + j*3, point->position);
 					point++;
 				}
+				BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
 				PlaneClassify(&portal->plane);
 
 				// link into leaf's portal chain

@@ -271,8 +271,9 @@ typedef struct mportal_s
 	struct mportal_s *next; // the next portal on this leaf
 	mleaf_t *here; // the leaf this portal is on
 	mleaf_t *past; // the leaf through this portal (infront)
-	mvertex_t *points;
 	int numpoints;
+	mvertex_t *points;
+	vec3_t mins, maxs; // culling
 	mplane_t plane;
 	int visframe; // is this portal visible this frame?
 }
