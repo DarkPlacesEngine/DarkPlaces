@@ -1598,7 +1598,12 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 			
 			findtime = Sys_FileTime (netpath);
 			if (findtime == -1)
-				continue;
+			{
+				sprintf (netpath, "%s/%s",search->filename, gzfilename);
+				findtime = Sys_FileTime (netpath);
+				if (findtime == -1)
+					continue;
+			}
 				
 #if CACHEENABLE
 			// see if the file needs to be updated in the cache
