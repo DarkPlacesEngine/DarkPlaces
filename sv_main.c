@@ -985,6 +985,16 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	buf.data = data;
 	buf.maxsize = sizeof(data);
 
+	d = client->entitydatabase4;
+
+	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+		if (!d->commit[i].numentities)
+			break;
+	// if commit buffer full, just don't bother writing an update this frame
+	if (i == MAX_ENTITY_HISTORY)
+		return;
+	d->currentcommit = d->commit + i;
+
 	// this state's number gets played around with later
 	ClearStateToDefault(&inactiveentitystate);
 	//inactiveentitystate = defaultstate;
@@ -1021,17 +1031,23 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	for (i = 0;i < numsendentities;i++)
 		SV_MarkWriteEntityStateToClient(sendentities + i);
 
-	d = client->entitydatabase4;
 	// calculate maximum bytes to allow in this packet
 	// deduct 4 to account for the end data
 	maxbytes = min(msg->maxsize, MAX_PACKETFRAGMENT) - 4;
 
-	d->currentcommit = d->commit + EntityFrame4_SV_ChooseCommitToReplace(d);
 	d->currentcommit->numentities = 0;
 	d->currentcommit->framenum = ++client->entityframenumber;
 	MSG_WriteByte(msg, svc_entities);
 	MSG_WriteLong(msg, d->referenceframenum);
 	MSG_WriteLong(msg, d->currentcommit->framenum);
+	if (developer_networkentities.integer >= 1)
+	{
+		Con_Printf("send svc_entities ref:%i num:%i (database: ref:%i commits:", d->referenceframenum, d->currentcommit->framenum, d->referenceframenum);
+		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+			if (d->commit[i].numentities)
+				Con_Printf(" %i", d->commit[i].framenum);
+		Con_Printf(")\n");
+	}
 	if (d->currententitynumber >= sv.max_edicts)
 		startnumber = 1;
 	else

@@ -448,7 +448,7 @@ void CL_SendMove(usercmd_t *cmd)
 			i = cl.entitydatabase4->ackframenum;
 			if (cl_nodelta.integer)
 				i = -1;
-			if (developer_networkentities.integer)
+			if (developer_networkentities.integer >= 1)
 				Con_Printf("send clc_ackentities %i\n", i);
 			MSG_WriteByte(&buf, clc_ackentities);
 			MSG_WriteLong(&buf, i);

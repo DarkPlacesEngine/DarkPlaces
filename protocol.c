@@ -295,7 +295,7 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 		e->tagindex = MSG_ReadByte();
 	}
 
-	if (developer_networkentities.integer)
+	if (developer_networkentities.integer >= 2)
 	{
 		Con_Printf("ReadUpdate e%i", number);
 
@@ -601,24 +601,6 @@ int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d)
 
 
 
-int EntityFrame4_SV_ChooseCommitToReplace(entity_database4_t *d)
-{
-	int i, best, bestframenum;
-	best = 0;
-	bestframenum = d->commit[0].framenum;
-	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
-	{
-		if (!d->commit[i].numentities)
-			return i;
-		if (bestframenum > d->commit[i].framenum)
-		{
-			bestframenum = d->commit[i].framenum;
-			best = i;
-		}
-	}
-	return best;
-}
-
 entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int number)
 {
 	if (d->maxreferenceentities <= number)
@@ -690,60 +672,48 @@ void EntityFrame4_ResetDatabase(entity_database4_t *d)
 		d->referenceentity[i] = defaultstate;
 }
 
-void EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
+int EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 {
-	int i, j;
+	int i, j, found = false;
 	entity_database4_commit_t *commit;
-	// check if the peer is requesting no delta compression
+	if (d->referenceframenum == framenum)
+		return true;
 	if (framenum == -1)
 	{
 		EntityFrame4_ResetDatabase(d);
-		return;
+		return true;
 	}
-	// return early if this is already the reference frame
-	if (d->referenceframenum == framenum)
-		return;
-	// find the frame in the database
 	for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
-		if (commit->numentities && commit->framenum == framenum)
-			break;
-	// check if the frame was found
-	if (i == MAX_ENTITY_HISTORY)
 	{
-		Con_Printf("EntityFrame4_AckFrame: frame %i not found in database, expect glitches!  (VERY BAD ERROR)\n", framenum);
-		d->ackframenum = -1;
-		EntityFrame4_ResetDatabase(d);
-		return;
-	}
-	// apply commit to database
-	d->referenceframenum = framenum;
-	for (j = 0;j < commit->numentities;j++)
-	{
-		//*EntityFrame4_GetReferenceEntity(d, commit->entity[j].number) = commit->entity[j];
-		entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
-		if (developer_networkentities.integer && commit->entity[j].active != s->active)
+		if (commit->numentities && commit->framenum <= framenum)
 		{
-			if (commit->entity[j].active)
-				Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
-			else
-				Con_Printf("commit entity %i has become inactive (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+			if (commit->framenum == framenum)
+			{
+				found = true;
+				d->referenceframenum = framenum;
+				if (developer_networkentities.integer >= 3)
+				{
+					for (j = 0;j < commit->numentities;j++)
+					{
+						entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
+						if (commit->entity[j].active != s->active)
+						{
+							if (commit->entity[j].active)
+								Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+							else
+								Con_Printf("commit entity %i has become inactive (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+						}
+						*s = commit->entity[j];
+					}
+				}
+				else
+					for (j = 0;j < commit->numentities;j++)
+						*EntityFrame4_GetReferenceEntity(d, commit->entity[j].number) = commit->entity[j];
+			}
+			commit->numentities = 0;
 		}
-		*s = commit->entity[j];
 	}
-	// purge the now-obsolete updates
-	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
-		if (d->commit[i].framenum <= framenum)
-			d->commit[i].numentities = 0;
-}
-
-void EntityFrame4_SV_WriteFrame_Begin(entity_database4_t *d, sizebuf_t *msg, int framenum)
-{
-	d->currentcommit = d->commit + EntityFrame4_SV_ChooseCommitToReplace(d);
-	d->currentcommit->numentities = 0;
-	d->currentcommit->framenum = framenum;
-	MSG_WriteByte(msg, svc_entities);
-	MSG_WriteLong(msg, d->referenceframenum);
-	MSG_WriteLong(msg, d->currentcommit->framenum);
+	return found;
 }
 
 int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int maxbytes, entity_state_t *s)
@@ -773,14 +743,6 @@ int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int
 	return true;
 }
 
-void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg)
-{
-	// remove world message (invalid, and thus a good terminator)
-	MSG_WriteShort(msg, 0x8000);
-	// just to be sure
-	d->currentcommit = NULL;
-}
-
 extern void CL_MoveLerpEntityStates(entity_t *ent);
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 {
@@ -791,22 +753,32 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 	framenum = MSG_ReadLong();
 	// read the start number
 	enumber = MSG_ReadShort();
-	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
-		if (!d->commit[i].numentities)
-			break;
-	if (i < MAX_ENTITY_HISTORY)
+	if (developer_networkentities.integer >= 1)
 	{
-		d->currentcommit = d->commit + i;
-		d->currentcommit->framenum = d->ackframenum = framenum;
-		d->currentcommit->numentities = 0;
-		EntityFrame4_AckFrame(d, referenceframenum);
-		if (d->ackframenum == -1)
+		Con_Printf("recv svc_entities ref:%i num:%i (database: ref:%i commits:", referenceframenum, framenum, d->referenceframenum);
+		for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+			if (d->commit[i].numentities)
+				Con_Printf(" %i", d->commit[i].framenum);
+		Con_Printf("\n");
+	}
+	if (!EntityFrame4_AckFrame(d, referenceframenum))
+	{
+		Con_Printf("EntityFrame4_CL_ReadFrame: reference frame invalid (VERY BAD ERROR), this update will be skipped\n");
+		skip = true;
+		d->ackframenum = -1;
+		EntityFrame4_ResetDatabase(d);
+	}
+	d->currentcommit = NULL;
+	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+	{
+		if (!d->commit[i].numentities)
 		{
-			Con_Printf("EntityFrame4_CL_ReadFrame: reference frame invalid, this update will be skipped\n");
-			skip = true;
+			d->currentcommit = d->commit + i;
+			d->currentcommit->framenum = d->ackframenum = framenum;
+			d->currentcommit->numentities = 0;
 		}
 	}
-	else
+	if (d->currentcommit == NULL)
 	{
 		Con_Printf("EntityFrame4_CL_ReadFrame: error while decoding frame %i: database full, reading but not storing this update\n", framenum);
 		skip = true;
@@ -851,20 +823,20 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 				if (n & 0x8000)
 				{
 					// simply removed
-					if (developer_networkentities.integer)
+					if (developer_networkentities.integer >= 2)
 						Con_Printf("entity %i: remove\n", enumber);
 					cl_entities[enumber].state_current = defaultstate;
 				}
 				else
 				{
 					// read the changes
-					if (developer_networkentities.integer)
+					if (developer_networkentities.integer >= 2)
 						Con_Printf("entity %i: update\n", enumber);
 					EntityState_ReadUpdate(&cl_entities[enumber].state_current, enumber);
 				}
 			}
-			//else if (developer_networkentities.integer)
-			//	Con_Printf("entity %i: copy\n", enumber);
+			else if (developer_networkentities.integer >= 4)
+				Con_Printf("entity %i: copy\n", enumber);
 			// fix the number (it gets wiped occasionally by copying from defaultstate)
 			cl_entities[enumber].state_current.number = enumber;
 			// check if we need to update the lerp stuff
@@ -877,7 +849,7 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 			if (d->currentcommit)
 				EntityFrame4_AddCommitEntity(d, &cl_entities[enumber].state_current);
 			// print extra messages if desired
-			if (developer_networkentities.integer && cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+			if (developer_networkentities.integer >= 2 && cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
 			{
 				if (cl_entities[enumber].state_current.active)
 					Con_Printf("entity #%i has become active\n", enumber);
