@@ -55,17 +55,21 @@ typedef struct worldlight_s
 	vec3_t maxs;
 	vec_t cullradius;
 	struct worldlight_s *next;
-	msurface_t **surfaces;
-	int numsurfaces;
 	rtexture_t *cubemap;
 	int style;
-	shadowmesh_t *shadowvolume;
 	int selected;
+
+	// premade shadow volumes and lit surfaces to render
+	shadowmesh_t *meshchain_shadow;
+	shadowmesh_t *meshchain_light;
 }
 worldlight_t;
 
 extern worldlight_t *r_shadow_worldlightchain;
 
 void R_Shadow_UpdateWorldLightSelection(void);
+
+void R_Shadow_DrawStaticWorldLight_Shadow(worldlight_t *light, matrix4x4_t *matrix);
+void R_Shadow_DrawStaticWorldLight_Light(worldlight_t *light, matrix4x4_t *matrix, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 
 #endif

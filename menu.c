@@ -1112,7 +1112,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 32
+#define OPTIONS_ITEMS 33
 
 int options_cursor;
 
@@ -1127,6 +1127,7 @@ extern cvar_t snd_staticvolume;
 extern cvar_t gl_delayfinish;
 extern cvar_t slowmo;
 extern dllhandle_t jpeg_dll;
+extern cvar_t gl_texture_anisotropy;
 
 void M_Menu_Options_AdjustSliders (int dir)
 {
@@ -1156,6 +1157,8 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_delayfinish, !gl_delayfinish.integer);
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(0, gl_texture_anisotropy.value + dir, 8));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&slowmo, bound(0, slowmo.value + dir * 0.25, 5));
 	else if (options_cursor == optnum++)
@@ -1277,6 +1280,7 @@ void M_Options_Draw (void)
 	M_Options_PrintCheckbox("   Texture Combine", true, gl_combine.integer);
 	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
 	M_Options_PrintCheckbox("Delay gfx (faster)", true, gl_delayfinish.integer);
+	M_Options_PrintSlider(  "Anisotropic Filter", gl_support_anisotropy, gl_texture_anisotropy.value, 0, 8);
 	M_Options_PrintSlider(  "        Game Speed", sv.active, slowmo.value, 0, 5);
 	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized, bgmvolume.value, 0, 1);
 	M_Options_PrintSlider(  "      Sound Volume", snd_initialized, volume.value, 0, 1);
@@ -3867,10 +3871,10 @@ void MP_Init (void)
 
 	// set time
 	*prog->time = realtime;
-	
+
 	// call the prog init
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_INIT) - prog->functions),"");
-	
+
 	PRVM_End;
 }
 
@@ -3897,7 +3901,7 @@ void MR_SetRouting(qboolean forceold)
 		MR_Draw = M_Draw;
 		MR_ToggleMenu_f = M_ToggleMenu_f;
 		MR_Shutdown = M_Shutdown;
-		
+
 		// init
 		if(!m_init)
 		{
@@ -3914,7 +3918,7 @@ void MR_SetRouting(qboolean forceold)
 		MR_Draw = MP_Draw;
 		MR_ToggleMenu_f = MP_ToggleMenu_f;
 		MR_Shutdown = MP_Shutdown;
-		
+
 		if(!mp_init)
 		{
 			MP_Init();
@@ -3940,12 +3944,12 @@ void MR_Init()
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 	if(COM_CheckParm("-forceqmenu"))
 		Cvar_SetValueQuick(&forceqmenu,1);
-	// use -useqmenu for debugging proposes, cause it starts 
+	// use -useqmenu for debugging proposes, cause it starts
 	// the normal quake menu only the first time
 	else if(COM_CheckParm("-useqmenu"))
 		MR_SetRouting (TRUE);
 	else
-		MR_SetRouting (FALSE);	
+		MR_SetRouting (FALSE);
 }
 
 

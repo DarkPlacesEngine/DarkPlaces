@@ -1728,30 +1728,6 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	}
 }
 
-void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, msurface_t **surflist, int numsurfaces, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
-{
-	int surfnum;
-	msurface_t *surf;
-	texture_t *t;
-	if (ent->model == NULL)
-		return;
-	R_Mesh_Matrix(&ent->matrix);
-	R_UpdateTextureInfo(ent);
-	for (surfnum = 0;surfnum < numsurfaces;surfnum++)
-	{
-		surf = surflist[surfnum];
-		if (surf->visframe == r_framecount)
-		{
-			t = surf->texinfo->texture->currentframe;
-			if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
-			{
-				R_Shadow_DiffuseLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, NULL);
-				R_Shadow_SpecularLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, NULL);
-			}
-		}
-	}
-}
-
 void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int surfnum;
@@ -1836,9 +1812,112 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 	qglColorMask(1,1,1,1);
 }
 
-void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	if (face->texture->skin.glow)
+	{
+		m.tex[0] = R_GetTexture(face->texture->skin.glow);
+		m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+		GL_Color(1, 1, 1, 1);
+	}
+	else
+		GL_Color(0, 0, 0, 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmap(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+	m.tex[1] = R_GetTexture(face->lightmaptexture);
+	m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
+	m.texrgbscale[1] = 2;
+	GL_Color(1, 1, 1, 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+	GL_Color(1, 1, 1, 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_SRC_COLOR);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->lightmaptexture);
+	m.pointer_texcoord[0] = face->data_texcoordlightmap2f;
+	GL_Color(1, 1, 1, 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	if (face->texture->skin.glow)
+	{
+		m.tex[0] = R_GetTexture(face->texture->skin.glow);
+		m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+		GL_Color(1, 1, 1, 1);
+	}
+	else
+		GL_Color(0, 0, 0, 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+	m.texrgbscale[0] = 2;
+	GL_ColorPointer(face->data_color4f);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
+{
 	if (!face->num_triangles)
 		return;
 	if (face->texture->renderflags)
@@ -1848,29 +1927,32 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW)
 			return;
 	}
+	if (face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT)
+		qglDisable(GL_CULL_FACE);
 	R_Mesh_Matrix(&ent->matrix);
 	face->visframe = r_framecount;
-	memset(&m, 0, sizeof(m));
-	GL_BlendFunc(GL_ONE, GL_ZERO);
-	GL_DepthMask(true);
-	GL_DepthTest(true);
-	m.tex[0] = R_GetTexture(face->texture->skin.base);
-	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
-	if (face->lightmaptexture)
+	if (r_shadow_realtime_world.integer)
+		R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(ent, face);
+	else if (face->lightmaptexture)
 	{
-		m.tex[1] = R_GetTexture(face->lightmaptexture);
-		m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
-		m.texrgbscale[1] = 2;
-		GL_Color(1, 1, 1, 1);
+		if (r_textureunits.integer >= 2)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmap(ent, face);
+		else
+		{
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(ent, face);
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(ent, face);
+		}
+		if (face->texture->skin.glow)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
 	}
 	else
 	{
-		m.texrgbscale[0] = 2;
-		GL_ColorPointer(face->data_color4f);
+		R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(ent, face);
+		if (face->texture->skin.glow)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
 	}
-	R_Mesh_State_Texture(&m);
-	GL_VertexPointer(face->data_vertex3f);
-	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+	if (face->texture->nativecontents & CONTENTSQ3_TRANSLUCENT)
+		qglEnable(GL_CULL_FACE);
 }
 
 void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec3_t modelorg, qbyte *pvs, int markframe)

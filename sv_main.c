@@ -21,8 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "0"}; // fast but loose
-static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "1"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
+static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1"}; // fast but loose
+static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
 
