@@ -867,6 +867,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_portal + culled_trace, culled_pvs, culled_portal, culled_trace);
 }
 #else
+static entity_frame_t sv_writeentitiestoclient_entityframe;
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects, modelindex;
@@ -878,7 +879,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	eval_t *val;
 	trace_t trace;
 	model_t *model;
-	entity_frame_t entityframe;
 	entity_state_t *s;
 
 	if (client->sendsignon)
@@ -899,7 +899,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	if (e >= 128)
 		e -= 256;
 	testorigin[2] -= (float) e;
-	EntityFrame_Clear(&entityframe, testorigin);
+	EntityFrame_Clear(&sv_writeentitiestoclient_entityframe, testorigin);
 
 	culled_pvs = 0;
 	culled_portal = 0;
@@ -1162,7 +1162,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if ((effects & EF_LOWPRECISION) && origin[0] >= -32768 && origin[1] >= -32768 && origin[2] >= -32768 && origin[0] <= 32767 && origin[1] <= 32767 && origin[2] <= 32767)
 			flags |= RENDER_LOWPRECISION;
 
-		s = EntityFrame_NewEntity(&entityframe, e);
+		s = EntityFrame_NewEntity(&sv_writeentitiestoclient_entityframe, e);
 		// if we run out of space, abort
 		if (!s)
 			break;
@@ -1181,8 +1181,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		s->glowcolor = glowcolor;
 		s->flags = flags;
 	}
-	entityframe.framenum = ++client->entityframenumber;
-	EntityFrame_Write(&client->entitydatabase, &entityframe, msg);
+	sv_writeentitiestoclient_entityframe.framenum = ++client->entityframenumber;
+	EntityFrame_Write(&client->entitydatabase, &sv_writeentitiestoclient_entityframe, msg);
 
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_portal + culled_trace, culled_pvs, culled_portal, culled_trace);
