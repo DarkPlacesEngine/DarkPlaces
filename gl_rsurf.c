@@ -333,9 +333,9 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 	R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, icolor);
 
 	// look for embedded bmodels
-	for (n = 1;n < MAX_EDICTS;n++)
+	for (n = 0;n < cl_num_brushmodel_entities;n++)
 	{
-		ent = &cl_entities[n].render;
+		ent = cl_brushmodel_entities[n];
 		model = ent->model;
 		if (model && model->name[0] == '*')
 		{

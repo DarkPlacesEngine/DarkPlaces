@@ -55,34 +55,33 @@ cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 
 mempool_t *cl_scores_mempool;
 mempool_t *cl_refdef_mempool;
+mempool_t *cl_entities_mempool;
 
 client_static_t	cls;
 client_state_t	cl;
-// FIXME: put these on hunk?
-entity_t		cl_entities[MAX_EDICTS];
-entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
-lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 
-typedef struct effect_s
-{
-	int active;
-	vec3_t origin;
-	float starttime;
-	float framerate;
-	int modelindex;
-	int startframe;
-	int endframe;
-	// these are for interpolation
-	int frame;
-	double frame1time;
-	double frame2time;
-}
-cl_effect_t;
+int cl_max_entities;
+int cl_max_static_entities;
+int cl_max_temp_entities;
+int cl_max_effects;
+int cl_max_beams;
+int cl_max_dlights;
+int cl_max_lightstyle;
+int cl_max_brushmodel_entities;
 
-#define MAX_EFFECTS 256
+entity_t *cl_entities;
+entity_t *cl_static_entities;
+entity_t *cl_temp_entities;
+cl_effect_t *cl_effects;
+beam_t *cl_beams;
+dlight_t *cl_dlights;
+lightstyle_t *cl_lightstyle;
+entity_render_t **cl_brushmodel_entities;
 
-static cl_effect_t cl_effect[MAX_EFFECTS];
-
+int cl_num_entities;
+int cl_num_static_entities;
+int cl_num_temp_entities;
+int cl_num_brushmodel_entities;
 
 /*
 =====================
@@ -92,29 +91,49 @@ CL_ClearState
 */
 void CL_ClearState (void)
 {
-	int			i;
+	int i;
 
 	if (!sv.active)
 		Host_ClearMemory ();
 
 	Mem_EmptyPool(cl_scores_mempool);
+	Mem_EmptyPool(cl_entities_mempool);
 
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
 
 	SZ_Clear (&cls.message);
 
-// clear other arrays
-	memset(cl_entities, 0, sizeof(cl_entities));
-	memset(cl_lightstyle, 0, sizeof(cl_lightstyle));
-	memset(cl_temp_entities, 0, sizeof(cl_temp_entities));
-	memset(cl_beams, 0, sizeof(cl_beams));
-	memset(cl_dlights, 0, sizeof(cl_dlights));
-	memset(cl_effect, 0, sizeof(cl_effect));
+	cl_num_entities = 0;
+	cl_num_static_entities = 0;
+	cl_num_temp_entities = 0;
+	cl_num_brushmodel_entities = 0;
+
+	// tweak these if the game runs out
+	cl_max_entities = MAX_EDICTS;
+	cl_max_static_entities = 256;
+	cl_max_temp_entities = 512;
+	cl_max_effects = 256;
+	cl_max_beams = 24;
+	cl_max_dlights = MAX_DLIGHTS;
+	cl_max_lightstyle = MAX_LIGHTSTYLES;
+	cl_max_brushmodel_entities = MAX_EDICTS;
+
+	cl_entities = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(entity_t));
+	cl_static_entities = Mem_Alloc(cl_entities_mempool, cl_max_static_entities * sizeof(entity_t));
+	cl_temp_entities = Mem_Alloc(cl_entities_mempool, cl_max_temp_entities * sizeof(entity_t));
+	cl_effects = Mem_Alloc(cl_entities_mempool, cl_max_effects * sizeof(cl_effect_t));
+	cl_beams = Mem_Alloc(cl_entities_mempool, cl_max_beams * sizeof(beam_t));
+	cl_dlights = Mem_Alloc(cl_entities_mempool, cl_max_dlights * sizeof(dlight_t));
+	cl_lightstyle = Mem_Alloc(cl_entities_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
+	cl_brushmodel_entities = Mem_Alloc(cl_entities_mempool, cl_max_brushmodel_entities * sizeof(entity_render_t *));
+
 	CL_Screen_NewMap();
+
 	CL_Particles_Clear();
+
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
-	for (i = 0;i < MAX_EDICTS;i++)
+	for (i = 0;i < cl_max_entities;i++)
 	{
 		ClearStateToDefault(&cl_entities[i].state_baseline);
 		ClearStateToDefault(&cl_entities[i].state_previous);
@@ -122,47 +141,6 @@ void CL_ClearState (void)
 	}
 
 	CL_CGVM_Clear();
-}
-
-void CL_LerpUpdate(entity_t *e)
-{
-	entity_persistent_t *p;
-	entity_render_t *r;
-	p = &e->persistent;
-	r = &e->render;
-
-	if (p->modelindex != e->state_current.modelindex)
-	{
-		// reset all interpolation information
-		p->modelindex = e->state_current.modelindex;
-		p->frame1 = p->frame2 = e->state_current.frame;
-		p->frame1time = p->frame2time = cl.time;
-		p->framelerp = 1;
-	}
-	else if (p->frame2 != e->state_current.frame)
-	{
-		// transition to new frame
-		p->frame1 = p->frame2;
-		p->frame1time = p->frame2time;
-		p->frame2 = e->state_current.frame;
-		p->frame2time = cl.time;
-		p->framelerp = 0;
-	}
-	else
-	{
-		// update transition
-		p->framelerp = (cl.time - p->frame2time) * 10;
-		p->framelerp = bound(0, p->framelerp, 1);
-	}
-
-	r->model = cl.model_precache[e->state_current.modelindex];
-	Mod_CheckLoaded(r->model);
-	r->frame = e->state_current.frame;
-	r->frame1 = p->frame1;
-	r->frame2 = p->frame2;
-	r->framelerp = p->framelerp;
-	r->frame1time = p->frame1time;
-	r->frame2time = p->frame2time;
 }
 
 /*
@@ -259,31 +237,66 @@ CL_PrintEntities_f
 */
 static void CL_PrintEntities_f (void)
 {
-	entity_t	*ent;
-	int			i, j;
-	char		name[32];
+	entity_t *ent;
+	int i, j;
+	char name[32];
 
-	for (i = 0, ent = cl_entities;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
+	for (i = 0, ent = cl_entities;i < cl_num_entities;i++, ent++)
 	{
 		if (!ent->state_current.active)
 			continue;
-		if (!ent->render.model)
-			continue;
 
-		Con_Printf ("%3i:", i);
-		if (!ent->render.model)
-		{
-			Con_Printf ("EMPTY\n");
-			continue;
-		}
-		strncpy(name, ent->render.model->name, 25);
+		if (ent->render.model)
+			strncpy(name, ent->render.model->name, 25);
+		else
+			strcpy(name, "--no model--");
 		name[25] = 0;
 		for (j = strlen(name);j < 25;j++)
 			name[j] = ' ';
-		Con_Printf ("%s:%04i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
+		Con_Printf ("%3i: %s:%04i (%5i %5i %5i) [%3i %3i %3i] %4.2f %5.3f\n", i, name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360, ent->render.scale, ent->render.alpha);
 	}
 }
 
+void CL_LerpUpdate(entity_t *e)
+{
+	entity_persistent_t *p;
+	entity_render_t *r;
+	p = &e->persistent;
+	r = &e->render;
+
+	if (p->modelindex != e->state_current.modelindex)
+	{
+		// reset all interpolation information
+		p->modelindex = e->state_current.modelindex;
+		p->frame1 = p->frame2 = e->state_current.frame;
+		p->frame1time = p->frame2time = cl.time;
+		p->framelerp = 1;
+	}
+	else if (p->frame2 != e->state_current.frame)
+	{
+		// transition to new frame
+		p->frame1 = p->frame2;
+		p->frame1time = p->frame2time;
+		p->frame2 = e->state_current.frame;
+		p->frame2time = cl.time;
+		p->framelerp = 0;
+	}
+	else
+	{
+		// update transition
+		p->framelerp = (cl.time - p->frame2time) * 10;
+		p->framelerp = bound(0, p->framelerp, 1);
+	}
+
+	r->model = cl.model_precache[e->state_current.modelindex];
+	Mod_CheckLoaded(r->model);
+	r->frame = e->state_current.frame;
+	r->frame1 = p->frame1;
+	r->frame2 = p->frame2;
+	r->framelerp = p->framelerp;
+	r->frame1time = p->frame1time;
+	r->frame2time = p->frame2time;
+}
 
 /*
 ===============
@@ -295,7 +308,7 @@ should be put at.
 */
 static float CL_LerpPoint (void)
 {
-	float	f;
+	float f;
 
 	// dropped packet, or start of demo
 	if (cl.mtime[1] < cl.mtime[0] - 0.1)
@@ -318,7 +331,7 @@ static float CL_LerpPoint (void)
 static void CL_RelinkStaticEntities(void)
 {
 	int i;
-	for (i = 0;i < cl.num_statics && r_refdef.numentities < MAX_VISEDICTS;i++)
+	for (i = 0;i < cl_num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++)
 	{
 		Mod_CheckLoaded(cl_static_entities[i].render.model);
 		r_refdef.entities[r_refdef.numentities++] = &cl_static_entities[i].render;
@@ -332,10 +345,10 @@ CL_RelinkEntities
 */
 static void CL_RelinkNetworkEntities()
 {
-	entity_t	*ent;
-	int			i, glowcolor, effects;
-	float		f, d, bobjrotate, bobjoffset, dlightradius, glowsize, lerp;
-	vec3_t		oldorg, neworg, delta, dlightcolor;
+	entity_t *ent;
+	int i, effects, temp;
+	float f, d, bobjrotate, bobjoffset, dlightradius, lerp;
+	vec3_t oldorg, neworg, delta, dlightcolor, v, v2, mins, maxs;
 
 	bobjrotate = ANGLEMOD(100*cl.time);
 	if (cl_itembobheight.value)
@@ -343,8 +356,8 @@ static void CL_RelinkNetworkEntities()
 	else
 		bobjoffset = 0;
 
-// start on the entity after the world
-	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
+	// start on the entity after the world
+	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS;i++, ent++)
 	{
 		// if the object wasn't included in the latest packet, remove it
 		if (!ent->state_current.active)
@@ -454,8 +467,6 @@ static void CL_RelinkNetworkEntities()
 			{
 				if (ent->render.model)
 				{
-					vec3_t mins, maxs;
-					int temp;
 					mins[0] = neworg[0] - 16.0f;
 					mins[1] = neworg[1] - 16.0f;
 					mins[2] = neworg[2] - 16.0f;
@@ -475,8 +486,6 @@ static void CL_RelinkNetworkEntities()
 			{
 				if (ent->render.model)
 				{
-					vec3_t mins, maxs;
-					int temp;
 					mins[0] = neworg[0] - 16.0f;
 					mins[1] = neworg[1] - 16.0f;
 					mins[2] = neworg[2] - 16.0f;
@@ -496,8 +505,6 @@ static void CL_RelinkNetworkEntities()
 
 		if (ent->persistent.muzzleflash > 0)
 		{
-			vec3_t v, v2;
-
 			AngleVectors (ent->render.angles, v, NULL, NULL);
 
 			v2[0] = v[0] * 18 + neworg[0];
@@ -547,7 +554,7 @@ static void CL_RelinkNetworkEntities()
 				}
 				else if (ent->render.model->flags & EF_GRENADE)
 				{
-					if (ent->render.alpha == -1) // LordHavoc: Nehahra dem compatibility
+					if (ent->render.alpha == -1) // LordHavoc: Nehahra dem compatibility (cigar smoke)
 						CL_RocketTrail (oldorg, neworg, 7, ent);
 					else
 						CL_RocketTrail (oldorg, neworg, 1, ent);
@@ -562,28 +569,23 @@ static void CL_RelinkNetworkEntities()
 			}
 		}
 		// LordHavoc: customizable glow
-		glowsize = ent->state_current.glowsize; // FIXME: interpolate?
-		glowcolor = ent->state_current.glowcolor;
-		if (glowsize)
+		if (ent->state_current.glowsize)
 		{
-			qbyte *tempcolor = (qbyte *)&d_8to24table[glowcolor];
 			// * 4 for the expansion from 0-255 to 0-1023 range,
 			// / 255 to scale down byte colors
-			glowsize *= (4.0f / 255.0f);
-			VectorMA(dlightcolor, glowsize, tempcolor, dlightcolor);
+			VectorMA(dlightcolor, ent->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&d_8to24table[ent->state_current.glowcolor], dlightcolor);
 		}
 		// LordHavoc: customizable trail
 		if (ent->render.flags & RENDER_GLOWTRAIL)
-			CL_RocketTrail2 (oldorg, neworg, glowcolor, ent);
+			CL_RocketTrail2 (oldorg, neworg, ent->state_current.glowcolor, ent);
 
 		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
 		{
-			vec3_t vec;
-			VectorCopy(neworg, vec);
+			VectorCopy(neworg, v);
 			// hack to make glowing player light shine on their gun
 			if (i == cl.viewentity && !chase_active.integer)
-				vec[2] += 30;
-			CL_AllocDlight (NULL, vec, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
+				v[2] += 30;
+			CL_AllocDlight (NULL, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}
 
 		if (chase_active.integer)
@@ -601,8 +603,33 @@ static void CL_RelinkNetworkEntities()
 			continue;
 		if (effects & EF_NODRAW)
 			continue;
-		if (r_refdef.numentities < MAX_VISEDICTS)
+
+		if (ent->render.angles[0] || ent->render.angles[2])
+		{
+			// pitch or roll
+			VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
+			VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
+		}
+		else if (ent->render.angles[1])
+		{
+			// yaw
+			VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
+			VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
+		}
+		else
+		{
+			VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
+			VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
+		}
+
+		if (r_refdef.numentities < r_refdef.maxentities)
 			r_refdef.entities[r_refdef.numentities++] = &ent->render;
+
+		if (ent->render.model->name[0] == '*' && ent->render.model->type == mod_brush)
+			cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
+
+		if (cl_num_entities < i + 1)
+			cl_num_entities = i + 1;
 	}
 }
 
@@ -635,7 +662,7 @@ void CL_LerpPlayer(float frac)
 				d -= 360;
 			else if (d < -180)
 				d += 360;
-			cl.viewangles[i] = cl.mviewangles[1][i] + frac*d;
+			cl.viewangles[i] = cl.mviewangles[1][i] + frac * d;
 		}
 	}
 }
@@ -646,7 +673,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	cl_effect_t *e;
 	if (!modelindex) // sanity check
 		return;
-	for (i = 0, e = cl_effect;i < MAX_EFFECTS;i++, e++)
+	for (i = 0, e = cl_effects;i < cl_max_effects;i++, e++)
 	{
 		if (e->active)
 			continue;
@@ -669,10 +696,10 @@ static void CL_RelinkEffects()
 {
 	int i, intframe;
 	cl_effect_t *e;
-	entity_t *vis;
+	entity_t *ent;
 	float frame;
 
-	for (i = 0, e = cl_effect;i < MAX_EFFECTS;i++, e++)
+	for (i = 0, e = cl_effects;i < cl_max_effects;i++, e++)
 	{
 		if (e->active)
 		{
@@ -692,27 +719,54 @@ static void CL_RelinkEffects()
 				e->frame2time = cl.time;
 			}
 
-			if (r_draweffects.integer && (vis = CL_NewTempEntity()))
+			// if we're drawing effects, get a new temp entity
+			// (NewTempEntity adds it to the render entities list for us)
+			if (r_draweffects.integer && (ent = CL_NewTempEntity()))
 			{
 				// interpolation stuff
-				vis->render.frame1 = intframe;
-				vis->render.frame2 = intframe + 1;
-				if (vis->render.frame2 >= e->endframe)
-					vis->render.frame2 = -1; // disappear
-				vis->render.framelerp = frame - intframe;
-				vis->render.frame1time = e->frame1time;
-				vis->render.frame2time = e->frame2time;
+				ent->render.frame1 = intframe;
+				ent->render.frame2 = intframe + 1;
+				if (ent->render.frame2 >= e->endframe)
+					ent->render.frame2 = -1; // disappear
+				ent->render.framelerp = frame - intframe;
+				ent->render.frame1time = e->frame1time;
+				ent->render.frame2time = e->frame2time;
 
 				// normal stuff
-				VectorCopy(e->origin, vis->render.origin);
-				vis->render.model = cl.model_precache[e->modelindex];
-				vis->render.frame = vis->render.frame2;
-				vis->render.colormap = -1; // no special coloring
-				vis->render.scale = 1;
-				vis->render.alpha = 1;
+				VectorCopy(e->origin, ent->render.origin);
+				ent->render.model = cl.model_precache[e->modelindex];
+				ent->render.frame = ent->render.frame2;
+				ent->render.colormap = -1; // no special coloring
+				ent->render.scale = 1;
+				ent->render.alpha = 1;
+
+				if (ent->render.angles[0] || ent->render.angles[2])
+				{
+					// pitch or roll
+					VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
+					VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
+				}
+				else if (ent->render.angles[1])
+				{
+					// yaw
+					VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
+					VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
+				}
+				else
+				{
+					VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
+					VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
+				}
 			}
 		}
 	}
+}
+
+void CL_RelinkWorld (void)
+{
+	if (cl_num_entities < 1)
+		cl_num_entities = 1;
+	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &cl_entities[0].render;
 }
 
 void CL_RelinkEntities (void)
@@ -720,15 +774,16 @@ void CL_RelinkEntities (void)
 	float frac;
 
 	// fraction from previous network update to current
-	frac = CL_LerpPoint ();
+	frac = CL_LerpPoint();
 
-	CL_DecayLights ();
+	CL_ClearTempEntities();
+	CL_DecayLights();
+	CL_RelinkWorld();
+	CL_RelinkBeams();
 	CL_RelinkStaticEntities();
 	CL_RelinkNetworkEntities();
-	CL_TraceLine_ScanForBModels();
 	CL_RelinkEffects();
 	CL_MoveParticles();
-	CL_UpdateTEnts();
 
 	CL_LerpPlayer(frac);
 }
@@ -770,6 +825,9 @@ int CL_ReadFromServer (void)
 		Con_Printf ("\n");
 
 	r_refdef.numentities = 0;
+	cl_num_entities = 0;
+	cl_num_brushmodel_entities = 0;
+
 	if (cls.state == ca_connected && cl.worldmodel)
 	{
 		CL_RelinkEntities ();
@@ -918,10 +976,16 @@ CL_Init
 void CL_Init (void)
 {
 	cl_scores_mempool = Mem_AllocPool("client player info");
-
+	cl_entities_mempool = Mem_AllocPool("client entities");
 	cl_refdef_mempool = Mem_AllocPool("refdef");
+
 	memset(&r_refdef, 0, sizeof(r_refdef));
-	r_refdef.entities = Mem_Alloc(cl_refdef_mempool, sizeof(entity_render_t *) * MAX_VISEDICTS);
+	// max entities sent to renderer per frame
+	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
+	r_refdef.entities = Mem_Alloc(cl_refdef_mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
+	// 256k drawqueue buffer
+	r_refdef.maxdrawqueuesize = 256 * 1024;
+	r_refdef.drawqueue = Mem_Alloc(cl_refdef_mempool, r_refdef.maxdrawqueuesize);
 
 	SZ_Alloc (&cls.message, 1024, "cls.message");
 

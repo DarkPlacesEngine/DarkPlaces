@@ -1,8 +1,6 @@
 
 #include "quakedef.h"
 
-dlight_t cl_dlights[MAX_DLIGHTS];
-
 /*
 ===============
 CL_AllocDlight
@@ -14,6 +12,7 @@ void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, 
 	int		i;
 	dlight_t	*dl;
 
+	/*
 // first look for an exact key match
 	if (ent)
 	{
@@ -22,6 +21,7 @@ void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, 
 			if (dl->ent == ent)
 				goto dlightsetup;
 	}
+	*/
 
 // then look for anything else
 	dl = cl_dlights;
@@ -34,7 +34,7 @@ void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, 
 
 dlightsetup:
 	memset (dl, 0, sizeof(*dl));
-	dl->ent = ent;
+	//dl->ent = ent;
 	VectorCopy(org, dl->origin);
 	dl->radius = radius;
 	dl->color[0] = red;

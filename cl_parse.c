@@ -293,7 +293,7 @@ An svc_signonnum has been received, perform a client side setup
 */
 static void CL_SignonReply (void)
 {
-	char 	str[8192];
+	//char 	str[8192];
 
 Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 
@@ -318,8 +318,9 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		}
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
-		sprintf (str, "spawn %s", cls.spawnparms);
-		MSG_WriteString (&cls.message, str);
+		//sprintf (str, "spawn %s", cls.spawnparms);
+		//MSG_WriteString (&cls.message, str);
+		MSG_WriteString (&cls.message, "spawn");
 		break;
 
 	case 3:
@@ -340,11 +341,12 @@ CL_ParseServerInfo
 */
 void CL_ParseServerInfo (void)
 {
-	char	*str;
-	int		i;
-	int		nummodels, numsounds;
-	char	model_precache[MAX_MODELS][MAX_QPATH];
-	char	sound_precache[MAX_SOUNDS][MAX_QPATH];
+	char *str;
+	int i;
+	int nummodels, numsounds;
+	char model_precache[MAX_MODELS][MAX_QPATH];
+	char sound_precache[MAX_SOUNDS][MAX_QPATH];
+	entity_t *ent;
 
 	Con_DPrintf ("Serverinfo packet received.\n");
 //
@@ -465,9 +467,31 @@ void CL_ParseServerInfo (void)
 	S_EndPrecaching ();
 
 // local state
-	cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-	cl_entities[0].render.scale = 1;
-	cl_entities[0].render.alpha = 1;
+	ent = &cl_entities[0];
+	memset(ent, 0, sizeof(entity_t));
+	ent->render.model = cl.worldmodel = cl.model_precache[1];
+	ent->render.scale = 1;
+	ent->render.alpha = 1;
+
+	if (ent->render.angles[0] || ent->render.angles[2])
+	{
+		// pitch or roll
+		VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
+		VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
+	}
+	else if (ent->render.angles[1])
+	{
+		// yaw
+		VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
+		VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
+	}
+	else
+	{
+		VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
+		VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
+	}
+
+	cl_num_entities = 1;
 
 	R_NewMap ();
 
@@ -863,9 +887,9 @@ void CL_ParseStatic (int large)
 {
 	entity_t *ent;
 
-	if (cl.num_statics >= MAX_STATIC_ENTITIES)
+	if (cl_num_static_entities >= cl_max_static_entities)
 		Host_Error ("Too many static entities");
-	ent = &cl_static_entities[cl.num_statics++];
+	ent = &cl_static_entities[cl_num_static_entities++];
 	CL_ParseBaseline (ent, large);
 
 // copy it to the current state
@@ -882,11 +906,29 @@ void CL_ParseStatic (int large)
 	ent->render.alpha = 1;
 
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);
-	VectorCopy (ent->state_baseline.angles, ent->render.angles);	
+	VectorCopy (ent->state_baseline.angles, ent->render.angles);
+
+	if (ent->render.angles[0] || ent->render.angles[2])
+	{
+		// pitch or roll
+		VectorAdd(ent->render.origin, ent->render.model->rotatedmins, ent->render.mins);
+		VectorAdd(ent->render.origin, ent->render.model->rotatedmaxs, ent->render.maxs);
+	}
+	else if (ent->render.angles[1])
+	{
+		// yaw
+		VectorAdd(ent->render.origin, ent->render.model->yawmins, ent->render.mins);
+		VectorAdd(ent->render.origin, ent->render.model->yawmaxs, ent->render.maxs);
+	}
+	else
+	{
+		VectorAdd(ent->render.origin, ent->render.model->normalmins, ent->render.mins);
+		VectorAdd(ent->render.origin, ent->render.model->normalmaxs, ent->render.maxs);
+	}
 
 	// This is definitely cheating...
 	if (ent->render.model == NULL)
-		cl.num_statics--;
+		cl_num_static_entities--;
 }
 
 /*
