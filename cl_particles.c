@@ -763,7 +763,6 @@ void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 	center[0] = (mins[0] + maxs[0]) * 0.5;
 	center[1] = (mins[1] + maxs[1]) * 0.5;
 	center[2] = (mins[2] + maxs[2]) * 0.5;
-	// FIXME: change velspeed back to 2.0x after fixing mod
 	velscale[0] = velspeed * 2.0 / diff[0];
 	velscale[1] = velspeed * 2.0 / diff[1];
 	velscale[2] = velspeed * 2.0 / diff[2];
