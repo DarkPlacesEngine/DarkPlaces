@@ -110,16 +110,6 @@ INCLUDES = $(QFINCLUDES);$(SYSINCLUDE);$(MISCINCLUDES)
 
 DEFINES=_WINDOWS=1;_WIN32=1;WINDOWS=1;WIN32=1
 
-
-COMPOPTS = $(DEBUGOPTS) $(OPT) $(WARNS) -R -WM -H-
-#-He- -f -ff -fp-
-
-# for normal releases
-LINKOPTS = -w-dup -w-dpl -Tpe -aa -V4.0 -c -Gn -Gz -x -L$(LIBS)
-# for debugging
-#LINKOPTS = -w -v -w-dup -w-dpl -Tpe -aa -V4.0 -c -Gn -Gz -m -M -s -L$(LIBS)
-# -Gm
-
 # MASM
 ASSEMBLER = ML
 ASMOUT = $(DPROOT)\source
