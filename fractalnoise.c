@@ -3,7 +3,7 @@
 
 void fractalnoise(unsigned char *noise, int size)
 {
-	int x, y, g, g2, amplitude, amplitude2, min, max, size1 = size - 1;
+	int x, y, g, g2, amplitude, min, max, size1 = size - 1;
 	int *noisebuf;
 #define n(x,y) noisebuf[((y)&size1)*size+((x)&size1)]
 	noisebuf = calloc(size*size, sizeof(int));
@@ -27,10 +27,9 @@ void fractalnoise(unsigned char *noise, int size)
 			}
 		// brownian motion theory
 		amplitude >>= 1;
-		amplitude2 = amplitude >> 1;
 		for (y = 0;y < size;y += g)
 			for (x = 0;x < size;x += g)
-				n(x,y) += (rand()&amplitude) - amplitude2;
+				n(x,y) += (rand()&amplitude);
 	}
 	// find range of noise values
 	min = max = 0;
