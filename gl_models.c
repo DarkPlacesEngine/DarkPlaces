@@ -488,30 +488,57 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 	rmeshstate_t m;
 	model_t *model;
 	float *v, planenormal[3], planedist, dist, projection[3], floororigin[3], surfnormal[3], lightdirection[3], v2[3];
+	mlight_t *sl;
+	rdlight_t *rd;
 
 	if (r_shadows.integer > 1)
 	{
-		float f;
+		float f, lightscale, lightcolor[3];
 		vec3_t temp;
-		for (i = 0;i < r_numdlights;i++)
+		memset(&m, 0, sizeof(m));
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ONE;
+		R_Mesh_State(&m);
+		R_Mesh_Matrix(&ent->matrix);
+		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
 		{
-			if (ent != r_dlight[i].ent)
+			if (d_lightstylevalue[sl->style] > 0)
 			{
-				VectorSubtract(ent->origin, r_dlight[i].origin, temp);
+				VectorSubtract(ent->origin, sl->origin, temp);
 				f = DotProduct(temp,temp);
-				if (f < (ent->model->radius2 + r_dlight[i].cullradius2))
+				if (f < (ent->model->radius2 + sl->cullradius2))
 				{
 					model = ent->model;
 					R_Mesh_ResizeCheck(model->numverts * 2);
-					memset(&m, 0, sizeof(m));
-					m.blendfunc1 = GL_ONE;
-					m.blendfunc2 = GL_ONE;
-					R_Mesh_State(&m);
-					R_Mesh_Matrix(&ent->matrix);
 					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+					Matrix4x4_Transform(&ent->inversematrix, sl->origin, temp);
 					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
-					Matrix4x4_Transform(&ent->inversematrix, r_dlight[i].origin, temp);
-					R_ShadowVolume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, r_dlight[i].cullradius + model->radius - sqrt(f), true);
+					R_Shadow_Volume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, sl->cullradius + model->radius - sqrt(f), true);
+					GL_UseColorArray();
+					lightscale = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
+					VectorScale(sl->light, lightscale, lightcolor);
+					R_Shadow_VertexLight(model->numverts, aliasvertnorm, temp, sl->cullradius2, sl->distbias, sl->subtract, lightcolor);
+					R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
+				}
+			}
+		}
+		for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
+		{
+			if (ent != rd->ent)
+			{
+				VectorSubtract(ent->origin, rd->origin, temp);
+				f = DotProduct(temp,temp);
+				if (f < (ent->model->radius2 + rd->cullradius2))
+				{
+					model = ent->model;
+					R_Mesh_ResizeCheck(model->numverts * 2);
+					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+					Matrix4x4_Transform(&ent->inversematrix, rd->origin, temp);
+					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
+					R_Shadow_Volume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, rd->cullradius + model->radius - sqrt(f), true);
+					GL_UseColorArray();
+					R_Shadow_VertexLight(model->numverts, aliasvertnorm, temp, rd->cullradius2, LIGHTOFFSET, rd->subtract, rd->light);
+					R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 				}
 			}
 		}

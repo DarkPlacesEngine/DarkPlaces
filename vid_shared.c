@@ -98,6 +98,7 @@ void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
 void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
 void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
@@ -224,6 +225,7 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glDepthMask", (void **) &qglDepthMask},
 	{"glDepthRange", (void **) &qglDepthRange},
 	{"glDrawElements", (void **) &qglDrawElements},
+	{"glColorMask", (void **) &qglColorMask},
 	{"glVertexPointer", (void **) &qglVertexPointer},
 //	{"glNormalPointer", (void **) &qglNormalPointer},
 	{"glColorPointer", (void **) &qglColorPointer},

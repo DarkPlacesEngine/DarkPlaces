@@ -583,26 +583,6 @@ void R_Mesh_Finish(void)
 	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);CHECKGLERROR
 }
 
-void GL_DepthFunc(int value)
-{
-	if (!r_render.integer)
-		return;
-
-	qglDepthFunc (value);
-	CHECKGLERROR
-}
-
-void GL_ClearDepth(void)
-{
-	BACKENDACTIVECHECK
-
-	if (!r_render.integer)
-		return;
-
-	qglClear(GL_DEPTH_BUFFER_BIT);
-	CHECKGLERROR
-}
-
 void R_Mesh_Matrix(const matrix4x4_t *matrix)
 {
 	if (memcmp(matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))

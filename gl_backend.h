@@ -16,8 +16,6 @@ void GL_SetupView_Mode_Perspective (double aspect, double fovx, double fovy, dou
 void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar);
 void GL_UseColorArray(void);
 void GL_Color(float cr, float cg, float cb, float ca);
-void GL_DepthFunc(int value);
-void GL_ClearDepth(void);
 
 extern cvar_t gl_lockarrays;
 

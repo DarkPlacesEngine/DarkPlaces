@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_surf.c: surface-related refresh code
 
 #include "quakedef.h"
+#include "r_shadow.h"
 
 #define MAX_LIGHTMAP_SIZE 256
 
@@ -774,6 +775,9 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	memset(&m, 0, sizeof(m));
 	if (skyrendermasked)
 	{
+		qglColorMask(0,0,0,0);
+		// just to make sure that braindead drivers don't draw anything
+		// despite that colormask...
 		m.blendfunc1 = GL_ZERO;
 		m.blendfunc2 = GL_ONE;
 	}
@@ -795,6 +799,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
+	qglColorMask(1,1,1,1);
 }
 
 static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
@@ -1823,6 +1828,87 @@ void R_DrawBrushModelNormal (entity_render_t *ent)
 {
 	c_bmodels++;
 	R_DrawBrushModel(ent, false, true);
+}
+
+void R_DrawBrushModelShadowVolumes (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
+{
+	int i, numsurfaces;
+	msurface_t *surf;
+	float projectdistance, f, temp[3], lightradius2;
+	surfmesh_t *mesh;
+	numsurfaces = ent->model->nummodelsurfaces;
+	lightradius2 = lightradius * lightradius;
+	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < numsurfaces;i++, surf++)
+	{
+		VectorSubtract(relativelightorigin, surf->poly_center, temp);
+		if (DotProduct(temp, temp) < (surf->poly_radius2 + lightradius2))
+		{
+			f = PlaneDiff(relativelightorigin, surf->plane);
+			if (surf->flags & SURF_PLANEBACK)
+				f = -f;
+			// draw shadows only for backfaces
+			if (f < 0)
+			{
+				projectdistance = lightradius + f;
+				if (projectdistance > 0)
+				{
+					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+					{
+						R_Mesh_ResizeCheck(mesh->numverts * 2);
+						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, mesh->index, mesh->triangleneighbors, relativelightorigin, projectdistance, visiblevolume);
+					}
+				}
+			}
+		}
+	}
+}
+
+extern cvar_t r_shadows;
+void R_DrawBrushModelFakeShadow (entity_render_t *ent)
+{
+	int i;
+	vec3_t relativelightorigin;
+	rmeshstate_t m;
+	mlight_t *sl;
+	rdlight_t *rd;
+
+	if (r_shadows.integer < 2)
+		return;
+
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_ONE;
+	m.blendfunc2 = GL_ONE;
+	R_Mesh_State(&m);
+	R_Mesh_Matrix(&ent->matrix);
+	GL_Color(0.0125 * r_colorscale, 0.025 * r_colorscale, 0.1 * r_colorscale, 1);
+	for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
+	{
+		if (d_lightstylevalue[sl->style] > 0
+		 && ent->maxs[0] >= sl->origin[0] - sl->cullradius
+		 && ent->mins[0] <= sl->origin[0] + sl->cullradius
+		 && ent->maxs[1] >= sl->origin[1] - sl->cullradius
+		 && ent->mins[1] <= sl->origin[1] + sl->cullradius
+		 && ent->maxs[2] >= sl->origin[2] - sl->cullradius
+		 && ent->mins[2] <= sl->origin[2] + sl->cullradius)
+		{
+			Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
+			R_DrawBrushModelShadowVolumes (ent, relativelightorigin, sl->cullradius, true);
+		}
+	}
+	for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
+	{
+		if (ent->maxs[0] >= rd->origin[0] - rd->cullradius
+		 && ent->mins[0] <= rd->origin[0] + rd->cullradius
+		 && ent->maxs[1] >= rd->origin[1] - rd->cullradius
+		 && ent->mins[1] <= rd->origin[1] + rd->cullradius
+		 && ent->maxs[2] >= rd->origin[2] - rd->cullradius
+		 && ent->mins[2] <= rd->origin[2] + rd->cullradius)
+		{
+			Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
+			R_DrawBrushModelShadowVolumes (ent, relativelightorigin, rd->cullradius, true);
+		}
+	}
 }
 
 static void gl_surf_start(void)
