@@ -153,7 +153,6 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 {
 	void	*d;
 	unsigned *buf;
-//	byte	stackbuf[1024];		// avoid dirtying the cache heap
 
 	if (!mod->needload)
 	{
@@ -171,7 +170,6 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 
 // load the file
 	buf = (unsigned *)COM_LoadMallocFile (mod->name, false);
-//	buf = (unsigned *)COM_LoadStackFile (mod->name, stackbuf, sizeof(stackbuf), false);
 	if (!buf)
 	{
 		if (crash)
@@ -205,7 +203,7 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 		Mod_LoadBrushModel (mod, buf);
 		break;
 	}
-	free(buf);
+	qfree(buf);
 
 	return mod;
 }

@@ -130,7 +130,7 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 	fseek (f, sizeof(pcxbuf) - 4, SEEK_SET);
 
 	count = (pcx->xmax+1) * (pcx->ymax+1);
-	image_rgba = malloc( count * 4);
+	image_rgba = qmalloc( count * 4);
 
 	for (y=0 ; y<=pcx->ymax ; y++)
 	{
@@ -258,7 +258,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 	rows = targa_header.height;
 	numPixels = columns * rows;
 
-	image_rgba = malloc (numPixels*4);
+	image_rgba = qmalloc(numPixels*4);
 	
 	if (targa_header.id_length != 0)
 		fseek(fin, targa_header.id_length, SEEK_CUR);  // skip TARGA image comment
@@ -397,7 +397,7 @@ byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
 	if (matchheight && height != matchheight)
 		return NULL;
 
-	image_rgba = malloc(width*height*4);
+	image_rgba = qmalloc(width*height*4);
 	fread(image_rgba + width*height*3, 1, width*height, f);
 	fclose(f);
 
@@ -490,7 +490,7 @@ byte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, in
 		return data; // some transparency
 	else
 	{
-		free(data);
+		qfree(data);
 		return NULL; // all opaque
 	}
 }
@@ -502,7 +502,7 @@ int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean 
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
 	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
-	free(data);
+	qfree(data);
 	return texnum;
 }
 
@@ -513,7 +513,7 @@ int loadtextureimagemask (char* filename, int matchwidth, int matchheight, qbool
 	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
 		return 0;
 	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
-	free(data);
+	qfree(data);
 	return texnum;
 }
 
@@ -530,12 +530,12 @@ int loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, q
 	count = image_makemask(data, data, image_width * image_height);
 	if (count)
 	{
-		filename2 = malloc(strlen(filename) + 6);
+		filename2 = qmalloc(strlen(filename) + 6);
 		sprintf(filename2, "%s_mask", filename);
 		image_masktexnum = GL_LoadTexture (filename2, image_width, image_height, data, mipmap, true, 4);
-		free(filename2);
+		qfree(filename2);
 	}
-	free(data);
+	qfree(data);
 	return texnum;
 }
 
@@ -543,7 +543,7 @@ void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *
 {
 	byte *buffer, *in, *out, *end;
 
-	buffer = malloc(width*height*3 + 18);
+	buffer = qmalloc(width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -565,7 +565,7 @@ void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *
 	}
 	COM_WriteFile (filename, buffer, width*height*3 + 18 );
 
-	free(buffer);
+	qfree(buffer);
 }
 
 void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
@@ -573,7 +573,7 @@ void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 	int y;
 	byte *buffer, *in, *out, *end;
 
-	buffer = malloc(width*height*3 + 18);
+	buffer = qmalloc(width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -598,7 +598,7 @@ void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 	}
 	COM_WriteFile (filename, buffer, width*height*3 + 18 );
 
-	free(buffer);
+	qfree(buffer);
 }
 
 void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
@@ -606,7 +606,7 @@ void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
 	int y;
 	byte *buffer, *in, *out, *end;
 
-	buffer = malloc(width*height*4 + 18);
+	buffer = qmalloc(width*height*4 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -632,5 +632,5 @@ void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
 	}
 	COM_WriteFile (filename, buffer, width*height*4 + 18 );
 
-	free(buffer);
+	qfree(buffer);
 }

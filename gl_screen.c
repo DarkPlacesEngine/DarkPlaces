@@ -615,11 +615,11 @@ void SCR_ScreenShot_f (void)
 		return;
  	}
 
-	buffer = malloc(glwidth*glheight*3);
+	buffer = qmalloc(glwidth*glheight*3);
 	glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer); 
 	Image_WriteTGARGB_preflipped(filename, glwidth, glheight, buffer);
 
-	free (buffer);
+	qfree(buffer);
 	Con_Printf ("Wrote %s\n", filename);
 }
 

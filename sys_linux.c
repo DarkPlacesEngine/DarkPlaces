@@ -416,7 +416,7 @@ int main (int c, char **v)
 	j = COM_CheckParm("-mem");
 	if (j)
 		host_parms.memsize = (int) (atof(com_argv[j+1]) * 1024 * 1024);
-	host_parms.membase = malloc (host_parms.memsize);
+	host_parms.membase = qmalloc(host_parms.memsize);
 	if (!host_parms.membase)
 	{
 		printf("Unable to allocate heap memory\n");

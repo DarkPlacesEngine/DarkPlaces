@@ -1,5 +1,5 @@
 
-#include <stdlib.h>
+#include "quakedef.h"
 
 void fractalnoise(unsigned char *noise, int size, int startgrid)
 {
@@ -8,7 +8,8 @@ void fractalnoise(unsigned char *noise, int size, int startgrid)
 #define n(x,y) noisebuf[((y)&size1)*size+((x)&size1)]
 	if (startgrid > size)
 		startgrid = size;
-	noisebuf = calloc(size*size, sizeof(int));
+	noisebuf = qmalloc(size*size*sizeof(int));
+	memset(noisebuf, 0, size*size*sizeof(int));
 
 	amplitude = 32767;
 	// quick 1x1 case which the rest of the code can't handle
@@ -56,6 +57,6 @@ void fractalnoise(unsigned char *noise, int size, int startgrid)
 	for (y = 0;y < size;y++)
 		for (x = 0;x < size;x++)
 			*noise++ = (n(x,y) - min) * 255 / max;
-	free(noisebuf);
+	qfree(noisebuf);
 #undef n
 }

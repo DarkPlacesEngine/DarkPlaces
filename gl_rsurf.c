@@ -1082,7 +1082,10 @@ int AllocBlock (int w, int h, short *x, short *y)
 		if (nosubimagefragments || nosubimage)
 		{
 			if (!lightmaps[texnum])
-				lightmaps[texnum] = calloc(BLOCK_WIDTH*BLOCK_HEIGHT*4, 1);
+			{
+				lightmaps[texnum] = qmalloc(BLOCK_WIDTH*BLOCK_HEIGHT*4);
+				memset(lightmaps[texnum], 0, BLOCK_WIDTH*BLOCK_HEIGHT*4);
+			}
 		}
 		// LordHavoc: clear texture to blank image, fragments are uploaded using subimage
 		else if (!allocated[texnum][0])

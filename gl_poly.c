@@ -37,26 +37,26 @@ float transreciptable[256];
 void gl_poly_start()
 {
 	int i;
-	transvert = malloc(MAX_TRANSVERTS * sizeof(transvert_t));
-	transpoly = malloc(MAX_TRANSPOLYS * sizeof(transpoly_t));
-	transpolyindex = malloc(MAX_TRANSPOLYS * sizeof(unsigned short));
-	wallvert = malloc(MAX_WALLVERTS * sizeof(wallvert_t));
-	wallpoly = malloc(MAX_WALLPOLYS * sizeof(wallpoly_t));
-	skyvert = malloc(MAX_SKYVERTS * sizeof(skyvert_t));
-	skypoly = malloc(MAX_SKYPOLYS * sizeof(skypoly_t));
+	transvert = qmalloc(MAX_TRANSVERTS * sizeof(transvert_t));
+	transpoly = qmalloc(MAX_TRANSPOLYS * sizeof(transpoly_t));
+	transpolyindex = qmalloc(MAX_TRANSPOLYS * sizeof(unsigned short));
+	wallvert = qmalloc(MAX_WALLVERTS * sizeof(wallvert_t));
+	wallpoly = qmalloc(MAX_WALLPOLYS * sizeof(wallpoly_t));
+	skyvert = qmalloc(MAX_SKYVERTS * sizeof(skyvert_t));
+	skypoly = qmalloc(MAX_SKYPOLYS * sizeof(skypoly_t));
 	transreciptable[0] = 0.0f;
 	for (i = 1;i < 256;i++)
 		transreciptable[i] = 1.0f / i;
 }
 void gl_poly_shutdown()
 {
-	free(transvert);
-	free(transpoly);
-	free(transpolyindex);
-	free(wallvert);
-	free(wallpoly);
-	free(skyvert);
-	free(skypoly);
+	qfree(transvert);
+	qfree(transpoly);
+	qfree(transpolyindex);
+	qfree(wallvert);
+	qfree(wallpoly);
+	qfree(skyvert);
+	qfree(skypoly);
 }
 
 void GL_Poly_Init()

@@ -91,7 +91,7 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 	{
 		pspriteframe->gl_texturenum = GL_LoadTexture (name, width, height, (byte *)(pinframe + 1), true, true, bytesperpixel);
 		// make fog version (just alpha)
-		pixbuf = pixel = malloc(width*height*4);
+		pixbuf = pixel = qmalloc(width*height*4);
 		inpixel = (byte *)(pinframe + 1);
 		if (bytesperpixel == 1)
 		{
@@ -120,7 +120,7 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 		}
 		sprintf (name, "%s_%ifog", loadmodel->name, framenum);
 		pspriteframe->gl_fogtexturenum = GL_LoadTexture (name, width, height, pixbuf, true, true, 4);
-		free(pixbuf);
+		qfree(pixbuf);
 	}
 
 	return (void *)((byte *)pinframe + sizeof (dspriteframe_t) + size);
