@@ -407,12 +407,28 @@ byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
 	return image_rgba;
 }
 
+void Image_StripImageExtension (char *in, char *out)
+{
+	byte *end;
+	end = in + strlen(in);
+	if ((end - in) >= 4)
+	{
+		if (strcmp(end - 4, ".tga") == 0 || strcmp(end - 4, ".pcx") == 0 || strcmp(end - 4, ".lmp") == 0)
+			end -= 4;
+		while (in < end)
+			*out++ = *in++;
+		*out++ = 0;
+	}
+	else
+		strcpy(out, in);
+}
+
 byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight)
 {
 	FILE	*f;
-	char	basename[128], name[128];
+	char	basename[256], name[256];
 	byte	*image_rgba, *c;
-	COM_StripExtension(filename, basename); // strip the extension to allow TGA skins on Q2 models despite the .pcx in the skin name
+	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
 		if (*c == '*')
@@ -426,9 +442,15 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
 	sprintf (name, "%s.tga", basename);
+	Con_Printf("name = %s : ", name);
 	COM_FOpenFile (name, &f, true);
 	if (f)
+	{
+		Con_Printf("succeeded\n");
 		return LoadTGA (f, matchwidth, matchheight);
+	}
+	else
+		Con_Printf("failed\n");
 	sprintf (name, "%s.pcx", basename);
 	COM_FOpenFile (name, &f, true);
 	if (f)

@@ -33,6 +33,21 @@ void Mod_SpriteInit (void)
 {
 }
 
+void Mod_Sprite_StripExtension(char *in, char *out)
+{
+	byte *end;
+	end = in + strlen(in);
+	if ((end - in) >= 6)
+		if (strcmp(end - 6, ".spr32") == 0)
+			end -= 6;
+	if ((end - in) >= 4)
+		if (strcmp(end - 4, ".spr") == 0)
+			end -= 4;
+	while (in < end)
+		*out++ = *in++;
+	*out++ = 0;
+}
+
 /*
 =================
 Mod_LoadSpriteFrame
@@ -43,7 +58,7 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 	dspriteframe_t		*pinframe;
 	mspriteframe_t		*pspriteframe;
 	int					i, width, height, size, origin[2];
-	char				name[64];
+	char				name[256], tempname[256];
 	byte				*pixbuf, *pixel, *inpixel;
 
 	pinframe = (dspriteframe_t *)pin;
@@ -68,8 +83,9 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe, int framenum, 
 	pspriteframe->left = origin[0];
 	pspriteframe->right = width + origin[0];
 
-	sprintf (name, "%s_%i", loadmodel->name, framenum);
-	pspriteframe->gl_texturenum = loadtextureimagewithmask(name, 0, 0, false, true);
+	Mod_Sprite_StripExtension(loadmodel->name, tempname);
+	sprintf (name, "%s_%i", tempname, framenum);
+	pspriteframe->gl_texturenum = loadtextureimagewithmask(name, 0, 0, true, true);
 	pspriteframe->gl_fogtexturenum = image_masktexnum;
 	if (pspriteframe->gl_texturenum == 0)
 	{
@@ -155,9 +171,7 @@ void * Mod_LoadSpriteGroup (void * pin, mspriteframe_t **ppframe, int framenum, 
 	ptemp = (void *)pin_intervals;
 
 	for (i=0 ; i<numframes ; i++)
-	{
 		ptemp = Mod_LoadSpriteFrame (ptemp, &pspritegroup->frames[i], framenum * 100 + i, bytesperpixel);
-	}
 
 	return ptemp;
 }
