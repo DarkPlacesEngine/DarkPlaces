@@ -485,8 +485,8 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		if (val = GETEDICTFIELDVALUE(ent, eval_alpha))
 		if ((alpha = (int) (val->_float * 255.0)) == 0)
 			alpha = 255;
-		if (val = GETEDICTFIELDVALUE(ent, eval_renderamt)) // HalfLife support
-			alpha -= (int) val->_float;
+		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)) && val->_float != 0) // HalfLife support
+			alpha = (int) val->_float;
 		if (alpha < 0) alpha = 0;
 		if (alpha > 255) alpha = 255;
 
