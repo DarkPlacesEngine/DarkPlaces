@@ -93,12 +93,11 @@ static int explosparkramp[8] = {0x4b0700, 0x6f0f00, 0x931f07, 0xb7330f, 0xcf632b
 
 // these must match r_part.c's textures
 static const int tex_smoke[8] = {0, 1, 2, 3, 4, 5, 6, 7};
-static const int tex_bullethole[8] = {8, 9, 10, 11, 12, 13, 14, 15};
-static const int tex_rainsplash[16] = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
-static const int tex_particle = 32;
-static const int tex_rain = 33;
-static const int tex_bubble = 34;
-static const int tex_rocketglow = 35;
+static const int tex_rainsplash[16] = {8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23};
+static const int tex_particle = 24;
+static const int tex_rain = 25;
+static const int tex_bubble = 26;
+static const int tex_rocketglow = 27;
 
 static int			cl_maxparticles;
 static int			cl_numparticles;
@@ -451,7 +450,6 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 	if (!cl_particles.integer) return;
 
 	R_Stain(org, 32, 96, 96, 96, 32, 128, 128, 128, 32);
-	CL_Decal(org, tex_bullethole[rand()&7], 16 * cl_particles_size.value, 0, 0, 0, 1);
 
 	// smoke puff
 	if (cl_particles_smoke.integer)
@@ -657,8 +655,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	VectorSubtract(end, start, dir);
 	VectorNormalize(dir);
 
-	if (type == 0 && host_frametime != 0) // rocket glow
-		particle(pt_oneframe, PARTICLE_BILLBOARD, 0xFFFFFF, tex_rocketglow, false, true, 24, 24, 255, 9999, 0, end[0] - 12 * dir[0], end[1] - 12 * dir[1], end[2] - 12 * dir[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+	//if (type == 0 && host_frametime != 0) // rocket glow
+	//	particle(pt_oneframe, PARTICLE_BILLBOARD, 0xFFFFFF, tex_rocketglow, false, true, 24, 24, 255, 9999, 0, end[0] - 12 * dir[0], end[1] - 12 * dir[1], end[2] - 12 * dir[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
 	t = ent->persistent.trail_time;
 	if (t >= cl.time)
@@ -863,7 +861,6 @@ void CL_MoveParticles (void)
 				{
 					// assume it's blood (lame, but...)
 					R_Stain(v, 48, 64, 24, 24, 48, 192, 48, 48, 48);
-					CL_Decal(v, p->tex, p->scalex * cl_particles_size.value, p->color[0] * (1.0f / 255.0f), p->color[1] * (1.0f / 255.0f), p->color[2] * (1.0f / 255.0f), p->alpha * (1.0f / 255.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
 					continue;

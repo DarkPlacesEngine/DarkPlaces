@@ -22,10 +22,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static rtexturepool_t *particletexturepool;
 
-// these are used by the decal system so they can't be static
-rtexture_t *particlefonttexture;
+static rtexture_t *particlefonttexture;
 // [0] is normal, [1] is fog, they may be the same
-particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
+static particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
 static cvar_t r_particles_lighting = {0, "r_particles_lighting", "1"};
@@ -123,64 +122,6 @@ static void R_InitParticleTexture (void)
 		setuptex(i + 0, 1, i + 8, &data[0][0][0], particletexturedata);
 	}
 
-	// bullet hole
-	for (i = 0;i < 8;i++)
-	{
-		float p[32][32];
-		fractalnoise(&noise1[0][0], 64, 8);
-		for (y = 0;y < 32;y++)
-			for (x = 0;x < 32;x++)
-				p[y][x] = (noise1[y][x] / 8.0f) - 64.0f;
-		for (m = 0;m < 32;m++)
-		{
-			int j;
-			float fx, fy, f;
-			fx = lhrandom(14, 18);
-			fy = lhrandom(14, 18);
-			do
-			{
-				dx = lhrandom(-1, 1);
-				dy = lhrandom(-1, 1);
-				f = (dx * dx + dy * dy);
-			}
-			while(f < 0.125f || f > 1.0f);
-			f = (m + 1) / 40.0f; //lhrandom(0.0f, 1.0);
-			dx *= 1.0f / 32.0f;
-			dy *= 1.0f / 32.0f;
-			for (j = 0;f > 0 && j < (32 * 14);j++)
-			{
-				y = fy;
-				x = fx;
-				fx += dx;
-				fy += dy;
-				if (x < 1 || y < 1 || x >= 31 || y >= 31)
-					break;
-				p[y - 1][x - 1] += f * 0.125f;
-				p[y - 1][x    ] += f * 0.25f;
-				p[y - 1][x + 1] += f * 0.125f;
-				p[y    ][x - 1] += f * 0.25f;
-				p[y    ][x    ] += f;
-				p[y    ][x + 1] += f * 0.25f;
-				p[y + 1][x - 1] += f * 0.125f;
-				p[y + 1][x    ] += f * 0.25f;
-				p[y + 1][x + 1] += f * 0.125f;
-//				f -= (0.5f / (32 * 16));
-			}
-		}
-		for (y = 0;y < 32;y++)
-		{
-			for (x = 0;x < 32;x++)
-			{
-				m = p[y][x];
-				data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-				data[y][x][3] = (byte) bound(0, m, 255);
-			}
-		}
-
-		setuptex(i + 8, 0, i + 16, &data[0][0][0], particletexturedata);
-		setuptex(i + 8, 1, i + 16, &data[0][0][0], particletexturedata);
-	}
-
 	// rain splash
 	for (i = 0;i < 16;i++)
 	{
@@ -198,8 +139,8 @@ static void R_InitParticleTexture (void)
 				data[y][x][3] = (int) f;
 			}
 		}
-		setuptex(i + 16, 0, i + 24, &data[0][0][0], particletexturedata);
-		setuptex(i + 16, 1, i + 24, &data[0][0][0], particletexturedata);
+		setuptex(i + 8, 0, i + 16, &data[0][0][0], particletexturedata);
+		setuptex(i + 8, 1, i + 16, &data[0][0][0], particletexturedata);
 	}
 
 	// normal particle
@@ -215,8 +156,8 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = (byte) d;
 		}
 	}
-	setuptex(32, 0, 40, &data[0][0][0], particletexturedata);
-	setuptex(32, 1, 40, &data[0][0][0], particletexturedata);
+	setuptex(24, 0, 32, &data[0][0][0], particletexturedata);
+	setuptex(24, 1, 32, &data[0][0][0], particletexturedata);
 
 	// rain
 	light[0] = 1;light[1] = 1;light[2] = 1;
@@ -229,8 +170,8 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = shadebubble((x - 16) * (1.0 / 8.0), y < 24 ? (y - 24) * (1.0 / 24.0) : (y - 24) * (1.0 / 8.0), light);
 		}
 	}
-	setuptex(33, 0, 41, &data[0][0][0], particletexturedata);
-	setuptex(33, 1, 41, &data[0][0][0], particletexturedata);
+	setuptex(25, 0, 33, &data[0][0][0], particletexturedata);
+	setuptex(25, 1, 33, &data[0][0][0], particletexturedata);
 
 	// bubble
 	light[0] = 1;light[1] = 1;light[2] = 1;
@@ -243,8 +184,8 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = shadebubble((x - 16) * (1.0 / 16.0), (y - 16) * (1.0 / 16.0), light);
 		}
 	}
-	setuptex(34, 0, 42, &data[0][0][0], particletexturedata);
-	setuptex(34, 1, 42, &data[0][0][0], particletexturedata);
+	setuptex(26, 0, 34, &data[0][0][0], particletexturedata);
+	setuptex(26, 1, 34, &data[0][0][0], particletexturedata);
 
 	// rocket flare
 	for (y = 0;y < 32;y++)
@@ -260,11 +201,11 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = bound(0, d * 1.0f, 255);
 		}
 	}
-	setuptex(35, 0, 43, &data[0][0][0], particletexturedata);
+	setuptex(27, 0, 35, &data[0][0][0], particletexturedata);
 	for (y = 0;y < 32;y++)
 		for (x = 0;x < 32;x++)
 			data[y][x][0] = data[y][x][1] = data[y][x][2] = 255;
-	setuptex(35, 1, 44, &data[0][0][0], particletexturedata);
+	setuptex(28, 1, 36, &data[0][0][0], particletexturedata);
 
 	particlefonttexture = R_LoadTexture (particletexturepool, "particlefont", 256, 256, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 }

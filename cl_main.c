@@ -108,7 +108,6 @@ void CL_ClearState (void)
 	memset(cl_effect, 0, sizeof(cl_effect));
 	CL_Screen_NewMap();
 	CL_Particles_Clear();
-	CL_Decals_Clear();
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < MAX_EDICTS;i++)
 	{
@@ -758,7 +757,6 @@ void CL_RelinkEntities (void)
 	TraceLine_ScanForBModels();
 	CL_RelinkEffects();
 	CL_MoveParticles();
-	CL_UpdateDecals();
 	CL_UpdateTEnts();
 }
 
@@ -987,7 +985,6 @@ void CL_Init (void)
 
 	CL_Parse_Init();
 	CL_Particles_Init();
-	CL_Decals_Init();
 	CL_Screen_Init();
 	CL_CGVM_Init();
 }

@@ -9,7 +9,7 @@ SOUNDLIB=-lasound
 #SND=snd_oss.o
 #SOUNDLIB=
 
-OBJECTS= builddate.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o r_sky.o gl_rmain.o gl_rsurf.o gl_screen.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_udp.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_particles.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o $(SND) sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o sys_linux.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o r_decals.o protocol.o quakeio.o r_clip.o ui.o portals.o sys_shared.o cl_light.o gl_backend.o cl_particles.o cl_decals.o cl_screen.o cgamevm.o cgame.o
+OBJECTS= builddate.o cd_linux.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o r_sky.o gl_rmain.o gl_rsurf.o gl_screen.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_udp.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_particles.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o $(SND) sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o sys_linux.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o protocol.o quakeio.o r_clip.o ui.o portals.o sys_shared.o cl_light.o gl_backend.o cl_particles.o cl_screen.o cgamevm.o cgame.o
 
 #K6/athlon optimizations
 CPUOPTIMIZATIONS=-march=k6

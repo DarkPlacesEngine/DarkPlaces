@@ -2000,13 +2000,6 @@ done:;
 	}
 }
 
-void R_DrawSurfacesAll (void)
-{
-	R_DrawSurfaces(SHADERSTAGE_SKY);
-	R_DrawSurfaces(SHADERSTAGE_NORMAL);
-	R_DrawSurfaces(SHADERSTAGE_FOG);
-}
-
 static float portalpointbuffer[256][3];
 
 void R_DrawPortals(void)
