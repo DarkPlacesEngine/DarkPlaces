@@ -998,19 +998,19 @@ static void Image_Resample24LerpLine (const qbyte *in, qbyte *out, int inwidth, 
 	}
 }
 
-int resamplerowsize = 0;
-qbyte *resamplerow1 = NULL;
-qbyte *resamplerow2 = NULL;
-mempool_t *resamplemempool = NULL;
-
 #define LERPBYTE(i) r = resamplerow1[i];out[i] = (qbyte) ((((resamplerow2[i] - r) * lerp) >> 16) + r)
 void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
 {
 	int i, j, r, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth4 = inwidth*4, outwidth4 = outwidth*4;
 	qbyte *out;
 	const qbyte *inrow;
+	qbyte *resamplerow1;
+	qbyte *resamplerow2;
 	out = outdata;
 	fstep = (int) (inheight*65536.0f/outheight);
+
+	resamplerow1 = Mem_Alloc(tempmempool, outwidth*4*2);
+	resamplerow2 = resamplerow1 + outwidth*4;
 
 	inrow = indata;
 	oldy = 0;
@@ -1097,9 +1097,13 @@ void Image_Resample32Lerp(const void *indata, int inwidth, int inheight, void *o
 			memcpy(out, resamplerow1, outwidth4);
 		}
 	}
+
+	Mem_Free(resamplerow1);
+	resamplerow1 = NULL;
+	resamplerow2 = NULL;
 }
 
-void Image_Resample32Nearest(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
+void Image_Resample32Nolerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
 {
 	int i, j;
 	unsigned frac, fracstep;
@@ -1141,8 +1145,13 @@ void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *o
 	int i, j, r, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth3 = inwidth * 3, outwidth3 = outwidth * 3;
 	qbyte *out;
 	const qbyte *inrow;
+	qbyte *resamplerow1;
+	qbyte *resamplerow2;
 	out = outdata;
 	fstep = (int) (inheight*65536.0f/outheight);
+
+	resamplerow1 = Mem_Alloc(tempmempool, outwidth*3*2);
+	resamplerow2 = resamplerow1 + outwidth*3;
 
 	inrow = indata;
 	oldy = 0;
@@ -1222,6 +1231,9 @@ void Image_Resample24Lerp(const void *indata, int inwidth, int inheight, void *o
 			memcpy(out, resamplerow1, outwidth3);
 		}
 	}
+	Mem_Free(resamplerow1);
+	resamplerow1 = NULL;
+	resamplerow2 = NULL;
 }
 
 void Image_Resample24Nolerp(const void *indata, int inwidth, int inheight, void *outdata, int outwidth, int outheight)
@@ -1268,22 +1280,12 @@ void Image_Resample (const void *indata, int inwidth, int inheight, int indepth,
 {
 	if (indepth != 1 || outdepth != 1)
 		Sys_Error("Image_Resample: 3D resampling not supported\n");
-	if (resamplerowsize < outwidth*4)
-	{
-		if (resamplerow1)
-			Mem_Free(resamplerow1);
-		resamplerowsize = outwidth*4;
-		if (!resamplemempool)
-			resamplemempool = Mem_AllocPool("Image Scaling Buffer", 0, NULL);
-		resamplerow1 = Mem_Alloc(resamplemempool, resamplerowsize*2);
-		resamplerow2 = resamplerow1 + resamplerowsize;
-	}
 	if (bytesperpixel == 4)
 	{
 		if (quality)
 			Image_Resample32Lerp(indata, inwidth, inheight, outdata, outwidth, outheight);
 		else
-			Image_Resample32Nearest(indata, inwidth, inheight, outdata, outwidth, outheight);
+			Image_Resample32Nolerp(indata, inwidth, inheight, outdata, outwidth, outheight);
 	}
 	else if (bytesperpixel == 3)
 	{

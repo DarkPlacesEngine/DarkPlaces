@@ -170,7 +170,7 @@ typedef struct prvm_edict_s
 {
 	// engine-private fields (stored in dynamically resized array)
 	//edict_engineprivate_t *e;
-	union 
+	union
 	{
 		prvm_edict_private_t *e;
 		void				 *vp;
@@ -195,7 +195,7 @@ typedef struct prvm_edict_s
 	//entvars_t *v;
 	void *v;
 } prvm_edict_t;
-	
+
 #define PRVM_GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (prvm_eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 
 /*// this struct is the basic requirement for a qc prog
@@ -245,19 +245,19 @@ typedef struct vm_prog_s
 	ddef_t				*fielddefs;
 	ddef_t				*globaldefs;
 	dstatement_t		*statements;
-	//prvm_pr_globalvars_t*pr_global_struct; 
+	//prvm_pr_globalvars_t*pr_global_struct;
 	float				*globals;			// same as pr_global_struct
 	int					edict_size;			// in bytes
 	int					edictareasize;		// LordHavoc: in bytes (for bound checking)
-	
+
+	// all memory allocations related to this vm_prog (code, edicts, strings)
 	mempool_t			*progs_mempool;
-	mempool_t			*edictstring_mempool;
 
 	prvm_builtin_t		*builtins;
 	int					numbuiltins;
-	
+
 	int					argc;
-	
+
 	int					trace;
 	mfunction_t			*xfunction;
 	int					xstatement;
@@ -266,11 +266,11 @@ typedef struct vm_prog_s
 	// thus increase the array, so depth wont be overwritten
 	prvm_stack_t		stack[PRVM_MAX_STACK_DEPTH+1];
 	int					depth;
-	
+
 	int					localstack[PRVM_LOCALSTACK_SIZE];
 	int					localstack_used;
 
-	unsigned short		crc;	
+	unsigned short		crc;
 
 	//============================================================================
 	// until this point everything also exists (with the pr_ prefix) in the old vm
@@ -286,9 +286,6 @@ typedef struct vm_prog_s
 	// size of the engine private struct
 	int					edictprivate_size;
 
-	// instead of sv_editcts_mempool
-	mempool_t			*edicts_mempool;
-	
 	// has to be updated every frame - so the vm time is up-to-date
 	// AK changed so time will point to the time field (if there is one) else it points to _time
 	// actually should be double, but qc doesnt support it
@@ -312,19 +309,19 @@ typedef struct vm_prog_s
 //	prvm_builtin_mem_t  *mem_list;
 
 // now passes as parameter of PRVM_LoadProgs
-//	char				**required_func; 
+//	char				**required_func;
 //	int					numrequiredfunc;
 
 	//============================================================================
-	
+
 	ddef_t				*self; // if self != 0 then there is a global self
-	
+
 	//============================================================================
 	// function pointers
-	
+
 	void				(*begin_increase_edicts)(void);  // used by PRVM_MEM_Increase_Edicts
-	void				(*end_increase_edicts)(void); 
-	
+	void				(*end_increase_edicts)(void);
+
 	void				(*init_edict)(int num);		// used by PRVM_ED_ClearEdict
 	void				(*free_edict)(prvm_edict_t *ed); // used by PRVM_ED_Free
 
@@ -352,25 +349,25 @@ extern prvm_prog_t prvm_prog_list[PRVM_MAXPROGS];
 //============================================================================
 // prvm_cmds part
 
-extern prvm_builtin_t vm_sv_builtins[];  
-extern prvm_builtin_t vm_cl_builtins[];  
-extern prvm_builtin_t vm_m_builtins[];  
+extern prvm_builtin_t vm_sv_builtins[];
+extern prvm_builtin_t vm_cl_builtins[];
+extern prvm_builtin_t vm_m_builtins[];
 
 extern const int vm_sv_numbuiltins;
 extern const int vm_cl_numbuiltins;
 extern const int vm_m_numbuiltins;
 
-extern char * vm_sv_extensions; 
-extern char * vm_cl_extensions; 
-extern char * vm_m_extensions; 
+extern char * vm_sv_extensions;
+extern char * vm_cl_extensions;
+extern char * vm_m_extensions;
 
-void VM_SV_Cmd_Init(void); 
-void VM_SV_Cmd_Reset(void); 
+void VM_SV_Cmd_Init(void);
+void VM_SV_Cmd_Reset(void);
 
-void VM_CL_Cmd_Init(void); 
-void VM_CL_Cmd_Reset(void); 
+void VM_CL_Cmd_Init(void);
+void VM_CL_Cmd_Reset(void);
 
-void VM_M_Cmd_Init(void); 
+void VM_M_Cmd_Init(void);
 void VM_M_Cmd_Reset(void);
 
 void VM_Cmd_Init(void);
@@ -454,7 +451,7 @@ void PRVM_ED_PrintNum (int ent);
 #define PRVM_Begin  if(prog != 0) Con_Printf("prog not 0(prog = %i) in file: %s line: %i!\n", PRVM_GetProgNr(), __FILE__, __LINE__)
 #define PRVM_End	prog = 0
 #else
-#define PRVM_Begin  
+#define PRVM_Begin
 #define PRVM_End	prog = 0
 #endif
 
@@ -481,7 +478,7 @@ void	 PRVM_ResetProg(void);
 qboolean PRVM_ProgLoaded(int prognr);
 
 int		 PRVM_GetProgNr(void);
-	
+
 
 // TODO: fill in the params
 //void PRVM_Create();

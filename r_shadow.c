@@ -3248,7 +3248,7 @@ void R_Shadow_SaveWorldLights(void)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
 			oldbuf = buf;
-			buf = Mem_Alloc(r_shadow_mempool, bufmaxchars);
+			buf = Mem_Alloc(tempmempool, bufmaxchars);
 			if (oldbuf)
 			{
 				if (bufchars)

@@ -63,8 +63,7 @@ cvar_t cl_noplayershadow = {CVAR_SAVE, "cl_noplayershadow", "0"};
 
 cvar_t cl_prydoncursor = {0, "cl_prydoncursor", "0"};
 
-mempool_t *cl_refdef_mempool;
-mempool_t *cl_entities_mempool;
+mempool_t *cl_mempool;
 
 client_static_t	cls;
 client_state_t	cl;
@@ -103,11 +102,21 @@ void CL_ClearState(void)
 {
 	int i;
 
+	if (cl_entities) Mem_Free(cl_entities);cl_entities = NULL;
+	if (cl_entities_active) Mem_Free(cl_entities_active);cl_entities_active = NULL;
+	if (cl_static_entities) Mem_Free(cl_static_entities);cl_static_entities = NULL;
+	if (cl_temp_entities) Mem_Free(cl_temp_entities);cl_temp_entities = NULL;
+	if (cl_effects) Mem_Free(cl_effects);cl_effects = NULL;
+	if (cl_beams) Mem_Free(cl_beams);cl_beams = NULL;
+	if (cl_dlights) Mem_Free(cl_dlights);cl_dlights = NULL;
+	if (cl_lightstyle) Mem_Free(cl_lightstyle);cl_lightstyle = NULL;
+	if (cl_brushmodel_entities) Mem_Free(cl_brushmodel_entities);cl_brushmodel_entities = NULL;
+	if (cl.entitydatabase) EntityFrame_FreeDatabase(cl.entitydatabase);cl.entitydatabase = NULL;
+	if (cl.entitydatabase4) EntityFrame4_FreeDatabase(cl.entitydatabase4);cl.entitydatabase4 = NULL;
+	if (cl.scores) Mem_Free(cl.scores);cl.scores = NULL;
+
 	if (!sv.active)
 		Host_ClearMemory ();
-
-	// note: this also gets rid of the entity database
-	Mem_EmptyPool(cl_entities_mempool);
 
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
@@ -131,15 +140,15 @@ void CL_ClearState(void)
 	cl_max_lightstyle = MAX_LIGHTSTYLES;
 	cl_max_brushmodel_entities = MAX_EDICTS;
 
-	cl_entities = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(entity_t));
-	cl_entities_active = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(qbyte));
-	cl_static_entities = Mem_Alloc(cl_entities_mempool, cl_max_static_entities * sizeof(entity_t));
-	cl_temp_entities = Mem_Alloc(cl_entities_mempool, cl_max_temp_entities * sizeof(entity_t));
-	cl_effects = Mem_Alloc(cl_entities_mempool, cl_max_effects * sizeof(cl_effect_t));
-	cl_beams = Mem_Alloc(cl_entities_mempool, cl_max_beams * sizeof(beam_t));
-	cl_dlights = Mem_Alloc(cl_entities_mempool, cl_max_dlights * sizeof(dlight_t));
-	cl_lightstyle = Mem_Alloc(cl_entities_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
-	cl_brushmodel_entities = Mem_Alloc(cl_entities_mempool, cl_max_brushmodel_entities * sizeof(entity_render_t *));
+	cl_entities = Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
+	cl_entities_active = Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(qbyte));
+	cl_static_entities = Mem_Alloc(cl_mempool, cl_max_static_entities * sizeof(entity_t));
+	cl_temp_entities = Mem_Alloc(cl_mempool, cl_max_temp_entities * sizeof(entity_t));
+	cl_effects = Mem_Alloc(cl_mempool, cl_max_effects * sizeof(cl_effect_t));
+	cl_beams = Mem_Alloc(cl_mempool, cl_max_beams * sizeof(beam_t));
+	cl_dlights = Mem_Alloc(cl_mempool, cl_max_dlights * sizeof(dlight_t));
+	cl_lightstyle = Mem_Alloc(cl_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
+	cl_brushmodel_entities = Mem_Alloc(cl_mempool, cl_max_brushmodel_entities * sizeof(entity_render_t *));
 
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl_max_entities;i++)
@@ -165,7 +174,7 @@ void CL_ExpandEntities(int num)
 		oldmaxentities = cl_max_entities;
 		oldentities = cl_entities;
 		cl_max_entities = (num & ~255) + 256;
-		cl_entities = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(entity_t));
+		cl_entities = Mem_Alloc(cl_mempool, cl_max_entities * sizeof(entity_t));
 		memcpy(cl_entities, oldentities, oldmaxentities * sizeof(entity_t));
 		Mem_Free(oldentities);
 		for (i = oldmaxentities;i < cl_max_entities;i++)
@@ -1335,10 +1344,7 @@ void CL_Shutdown (void)
 	CL_Particles_Shutdown();
 	CL_Parse_Shutdown();
 
-	SZ_Free (&cls.message);
-
-	Mem_FreePool (&cl_entities_mempool);
-	Mem_FreePool (&cl_refdef_mempool);
+	Mem_FreePool (&cl_mempool);
 }
 
 /*
@@ -1348,18 +1354,19 @@ CL_Init
 */
 void CL_Init (void)
 {
-	cl_entities_mempool = Mem_AllocPool("client entities", 0, NULL);
-	cl_refdef_mempool = Mem_AllocPool("refdef", 0, NULL);
+	cl_mempool = Mem_AllocPool("client", 0, NULL);
 
 	memset(&r_refdef, 0, sizeof(r_refdef));
 	// max entities sent to renderer per frame
 	r_refdef.maxentities = MAX_EDICTS + 256 + 512;
-	r_refdef.entities = Mem_Alloc(cl_refdef_mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
+	r_refdef.entities = Mem_Alloc(cl_mempool, sizeof(entity_render_t *) * r_refdef.maxentities);
 	// 256k drawqueue buffer
 	r_refdef.maxdrawqueuesize = 256 * 1024;
-	r_refdef.drawqueue = Mem_Alloc(cl_refdef_mempool, r_refdef.maxdrawqueuesize);
+	r_refdef.drawqueue = Mem_Alloc(cl_mempool, r_refdef.maxdrawqueuesize);
 
-	SZ_Alloc (&cls.message, 1024, "cls.message");
+	cls.message.data = cls.message_buf;
+	cls.message.maxsize = sizeof(cls.message_buf);
+	cls.message.cursize = 0;
 
 	CL_InitInput ();
 

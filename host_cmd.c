@@ -533,8 +533,6 @@ void Host_Savegame_f (void)
 }
 
 
-extern mempool_t *edictstring_mempool;
-
 /*
 ===============
 Host_Loadgame_f
@@ -629,8 +627,8 @@ void Host_Loadgame_f (void)
 	{
 		// light style
 		COM_ParseToken(&t, false);
-		sv.lightstyles[i] = Mem_Alloc(edictstring_mempool, strlen(com_token)+1);
-		strcpy (sv.lightstyles[i], com_token);
+		sv.lightstyles[i] = PR_Alloc(strlen(com_token)+1);
+		strcpy(sv.lightstyles[i], com_token);
 	}
 
 // load the edicts out of the savegame file
@@ -1846,7 +1844,7 @@ static void MaxPlayers_f(void)
 	if (svs.clients)
 		Mem_Free(svs.clients);
 	svs.maxclients = n;
-	svs.clients = Mem_Alloc(sv_clients_mempool, sizeof(client_t) * svs.maxclients);
+	svs.clients = Mem_Alloc(sv_mempool, sizeof(client_t) * svs.maxclients);
 	if (n == 1)
 		Cvar_Set ("deathmatch", "0");
 	else

@@ -84,7 +84,6 @@ static matrix4x4_t backend_glmodelviewmatrix;
 static matrix4x4_t backend_projectmatrix;
 
 static unsigned int backendunits, backendimageunits, backendarrayunits, backendactive;
-static mempool_t *gl_backend_mempool;
 
 /*
 note: here's strip order for a terrain row:
@@ -146,15 +145,12 @@ static void R_Mesh_CacheArray_Startup(void);
 static void R_Mesh_CacheArray_Shutdown(void);
 void GL_Backend_AllocArrays(void)
 {
-	if (!gl_backend_mempool)
-		gl_backend_mempool = Mem_AllocPool("GL_Backend", 0, NULL);
 	R_Mesh_CacheArray_Startup();
 }
 
 void GL_Backend_FreeArrays(void)
 {
 	R_Mesh_CacheArray_Shutdown();
-	Mem_FreePool(&gl_backend_mempool);
 }
 
 static void gl_backend_start(void)

@@ -15,8 +15,6 @@ int		gl_filter_mag = GL_LINEAR;
 
 
 static mempool_t *texturemempool;
-static mempool_t *texturedatamempool;
-static mempool_t *textureprocessingmempool;
 
 // note: this must not conflict with TEXF_ flags in r_textures.h
 // cleared when a texture is uploaded
@@ -100,7 +98,7 @@ typedef struct gltexture_s
 	// pointer into gltextureimage array
 	gltextureimage_t *image;
 	// name of the texture (this might be removed someday), no duplicates
-	char *identifier;
+	char identifier[32];
 	// location in the image, and size
 	int x, y, z, width, height, depth;
 	// copy of the original texture(s) supplied to the upload function, for
@@ -247,28 +245,10 @@ void R_FreeTexture(rtexture_t *rt)
 		}
 	}
 
-	if (glt->identifier)
-		Mem_Free(glt->identifier);
 	if (glt->inputtexels)
 		Mem_Free(glt->inputtexels);
 	Mem_Free(glt);
 }
-
-/*
-static gltexture_t *R_FindTexture (gltexturepool_t *pool, char *identifier)
-{
-	gltexture_t	*glt;
-
-	if (!identifier)
-		return NULL;
-
-	for (glt = pool->gltchain;glt;glt = glt->chain)
-		if (glt->identifier && !strcmp (identifier, glt->identifier))
-			return glt;
-
-	return NULL;
-}
-*/
 
 rtexturepool_t *R_AllocTexturePool(void)
 {
@@ -458,7 +438,7 @@ void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean print
 				poolloadedp += glt->inputdatasize;
 			}
 			if (printeach)
-				Con_Printf("%c%4i%c%c%4i%c %s %s %s %s\n", isloaded ? '[' : ' ', (glsize + 1023) / 1024, isloaded ? ']' : ' ', glt->inputtexels ? '[' : ' ', (glt->inputdatasize + 1023) / 1024, glt->inputtexels ? ']' : ' ', isloaded ? "loaded" : "      ", (glt->flags & TEXF_MIPMAP) ? "mip" : "   ", (glt->flags & TEXF_ALPHA) ? "alpha" : "     ", glt->identifier ? glt->identifier : "<unnamed>");
+				Con_Printf("%c%4i%c%c%4i%c %s %s %s %s\n", isloaded ? '[' : ' ', (glsize + 1023) / 1024, isloaded ? ']' : ' ', glt->inputtexels ? '[' : ' ', (glt->inputdatasize + 1023) / 1024, glt->inputtexels ? ']' : ' ', isloaded ? "loaded" : "      ", (glt->flags & TEXF_MIPMAP) ? "mip" : "   ", (glt->flags & TEXF_ALPHA) ? "alpha" : "     ", glt->identifier);
 		}
 		if (printpool)
 			Con_Printf("texturepool %10p total: %i (%.3fMB, %.3fMB original), uploaded %i (%.3fMB, %.3fMB original), upload on demand %i (%.3fMB, %.3fMB original)\n", pool, pooltotal, pooltotalt / 1048576.0, pooltotalp / 1048576.0, poolloaded, poolloadedt / 1048576.0, poolloadedp / 1048576.0, pooltotal - poolloaded, (pooltotalt - poolloadedt) / 1048576.0, (pooltotalp - poolloadedp) / 1048576.0);
@@ -492,9 +472,7 @@ static void r_textures_start(void)
 	// use the largest scrap texture size we can (not sure if this is really a good idea)
 	for (block_size = 1;block_size < realmaxsize && block_size < gl_max_scrapsize.integer;block_size <<= 1);
 
-	texturemempool = Mem_AllocPool("Texture Info", 0, NULL);
-	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)", 0, NULL);
-	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers", 0, NULL);
+	texturemempool = Mem_AllocPool("texture management", 0, NULL);
 
 	// Disable JPEG screenshots if the DLL isn't loaded
 	if (! JPEG_OpenLibrary ())
@@ -519,8 +497,6 @@ static void r_textures_shutdown(void)
 	colorconvertbuffer = NULL;
 	texturebuffer = NULL;
 	Mem_FreePool(&texturemempool);
-	Mem_FreePool(&texturedatamempool);
-	Mem_FreePool(&textureprocessingmempool);
 }
 
 static void r_textures_newmap(void)
@@ -599,8 +575,8 @@ void R_MakeResizeBufferBigger(int size)
 			Mem_Free(resizebuffer);
 		if (colorconvertbuffer)
 			Mem_Free(colorconvertbuffer);
-		resizebuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
-		colorconvertbuffer = Mem_Alloc(textureprocessingmempool, resizebuffersize);
+		resizebuffer = Mem_Alloc(texturemempool, resizebuffersize);
+		colorconvertbuffer = Mem_Alloc(texturemempool, resizebuffersize);
 		if (!resizebuffer || !colorconvertbuffer)
 			Host_Error("R_Upload: out of memory\n");
 	}
@@ -1048,15 +1024,6 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 	if (texturetype == GLTEXTURETYPE_3D && !gl_texture3d)
 		Sys_Error("R_LoadTexture: 3d texture not supported by driver\n");
 
-	/*
-	glt = R_FindTexture (pool, identifier);
-	if (glt)
-	{
-		Con_Printf("R_LoadTexture: replacing existing texture %s\n", identifier);
-		R_FreeTexture((rtexture_t *)glt);
-	}
-	*/
-
 	texinfo = R_GetTexTypeInfo(textype, flags);
 	size = width * height * depth * sides * texinfo->inputbytesperpixel;
 	if (size < 1)
@@ -1111,12 +1078,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 
 	glt = Mem_Alloc(texturemempool, sizeof(gltexture_t));
 	if (identifier)
-	{
-		glt->identifier = Mem_Alloc(texturemempool, strlen(identifier)+1);
-		strcpy (glt->identifier, identifier);
-	}
-	else
-		glt->identifier = NULL;
+		strlcpy (glt->identifier, identifier, sizeof(glt->identifier));
 	glt->pool = pool;
 	glt->chain = pool->gltchain;
 	pool->gltchain = glt;
@@ -1131,7 +1093,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 
 	if (data)
 	{
-		glt->inputtexels = Mem_Alloc(texturedatamempool, size);
+		glt->inputtexels = Mem_Alloc(texturemempool, size);
 		if (glt->inputtexels == NULL)
 			Sys_Error("R_LoadTexture: out of memory\n");
 		memcpy(glt->inputtexels, data, size);

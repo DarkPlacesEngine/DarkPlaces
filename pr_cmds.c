@@ -23,8 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled autoaim by default
 cvar_t pr_zone_min_strings = {0, "pr_zone_min_strings", "64"};
 
-mempool_t *pr_strings_mempool;
-
 // LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
 #define STRINGTEMP_BUFFERS 16
 #define STRINGTEMP_LENGTH 4096
@@ -2984,7 +2982,7 @@ void PF_strzone(void)
 {
 	char *in, *out;
 	in = G_STRING(OFS_PARM0);
-	out = Mem_Alloc(pr_strings_mempool, strlen(in) + 1);
+	out = PR_Alloc(strlen(in) + 1);
 	strcpy(out, in);
 	G_INT(OFS_RETURN) = PR_SetString(out);
 }
@@ -2992,7 +2990,7 @@ void PF_strzone(void)
 //void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
 void PF_strunzone(void)
 {
-	Mem_Free(G_STRING(OFS_PARM0));
+	PR_Free(G_STRING(OFS_PARM0));
 }
 
 //void(entity e, string s) clientcommand = #440; // executes a command string as if it came from the specified client
@@ -3718,19 +3716,16 @@ int pr_numbuiltins = sizeof(pr_builtin)/sizeof(pr_builtin[0]);
 
 void PR_Cmd_Init(void)
 {
-	pr_strings_mempool = Mem_AllocPool("pr_stringszone", 0, NULL);
 	PR_Files_Init();
 	PR_Search_Init();
 }
 
 void PR_Cmd_Shutdown(void)
 {
-	Mem_FreePool (&pr_strings_mempool);
 }
 
 void PR_Cmd_Reset(void)
 {
-	Mem_EmptyPool(pr_strings_mempool);
 	PR_Search_Reset();
 	PR_Files_CloseAll();
 }

@@ -99,8 +99,6 @@ char *svc_strings[128] =
 cvar_t demo_nehahra = {0, "demo_nehahra", "0"};
 cvar_t developer_networkentities = {0, "developer_networkentities", "0"};
 
-mempool_t *cl_scores_mempool;
-
 /*
 ==================
 CL_ParseStartSoundPacket
@@ -337,6 +335,7 @@ void CL_ParseServerInfo (void)
 	entity_t *ent;
 
 	Con_DPrint("Serverinfo packet received.\n");
+
 //
 // wipe the client_state_t struct
 //
@@ -362,8 +361,7 @@ void CL_ParseServerInfo (void)
 		Host_Error("Bad maxclients (%u) from server\n", cl.maxclients);
 		return;
 	}
-	Mem_EmptyPool(cl_scores_mempool);
-	cl.scores = Mem_Alloc(cl_scores_mempool, cl.maxclients*sizeof(*cl.scores));
+	cl.scores = Mem_Alloc(cl_mempool, cl.maxclients*sizeof(*cl.scores));
 
 // parse gametype
 	cl.gametype = MSG_ReadByte ();
@@ -1775,7 +1773,6 @@ void CL_Parse_DumpPacket(void)
 void CL_Parse_Init(void)
 {
 	// LordHavoc: added demo_nehahra cvar
-	cl_scores_mempool = Mem_AllocPool("client player info", 0, NULL);
 	Cvar_RegisterVariable (&demo_nehahra);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);
@@ -1784,5 +1781,4 @@ void CL_Parse_Init(void)
 
 void CL_Parse_Shutdown(void)
 {
-	Mem_FreePool (&cl_scores_mempool);
 }

@@ -17,7 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// AK new vm 
+// AK new vm
 
 #include "quakedef.h"
 #include "progsvm.h"
@@ -54,19 +54,19 @@ void PRVM_MEM_Alloc()
 	// reserve space for the null entity aka world
 	// check bound of max_edicts
 	prog->max_edicts = bound(1, prog->max_edicts, prog->limit_edicts);
-	prog->num_edicts = bound(1, prog->num_edicts, prog->max_edicts);	
+	prog->num_edicts = bound(1, prog->num_edicts, prog->max_edicts);
 
 	// edictprivate_size has to be min as big prvm_edict_private_t
-	prog->edictprivate_size = max(prog->edictprivate_size,(int)sizeof(prvm_edict_private_t)); 
+	prog->edictprivate_size = max(prog->edictprivate_size,(int)sizeof(prvm_edict_private_t));
 
 	// alloc edicts
-	prog->edicts = Mem_Alloc(prog->edicts_mempool,prog->limit_edicts * sizeof(prvm_edict_t));
-	
+	prog->edicts = Mem_Alloc(prog->progs_mempool,prog->limit_edicts * sizeof(prvm_edict_t));
+
 	// alloc edict private space
-	prog->edictprivate = Mem_Alloc(prog->edicts_mempool, prog->max_edicts * prog->edictprivate_size);
-	
+	prog->edictprivate = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edictprivate_size);
+
 	// alloc edict fields
-	prog->edictsfields = Mem_Alloc(prog->edicts_mempool, prog->max_edicts * prog->edict_size);
+	prog->edictsfields = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edict_size);
 
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
@@ -84,20 +84,20 @@ PRVM_MEM_IncreaseEdicts
 void PRVM_MEM_IncreaseEdicts()
 {
 	int		i;
-	int		oldmaxedicts = prog->max_edicts; 
+	int		oldmaxedicts = prog->max_edicts;
 	void	*oldedictsfields = prog->edictsfields;
 	void	*oldedictprivate = prog->edictprivate;
-	
+
 	if(prog->max_edicts >= prog->limit_edicts)
 		return;
-	
+
 	PRVM_GCALL(begin_increase_edicts)();
 
 	// increase edicts
 	prog->max_edicts = min(prog->max_edicts + 256, prog->limit_edicts);
 
-	prog->edictsfields = Mem_Alloc(prog->edicts_mempool, prog->max_edicts * prog->edict_size);
-	prog->edictprivate = Mem_Alloc(prog->edicts_mempool, prog->max_edicts * prog->edictprivate_size);
+	prog->edictsfields = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edict_size);
+	prog->edictprivate = Mem_Alloc(prog->progs_mempool, prog->max_edicts * prog->edictprivate_size);
 
 	memcpy(prog->edictsfields, oldedictsfields, oldmaxedicts * prog->edict_size);
 	memcpy(prog->edictprivate, oldedictprivate, oldmaxedicts * prog->edictprivate_size);
@@ -171,7 +171,7 @@ PRVM_SetProg
 void PRVM_SetProg(int prognr)
 {
 	if(prognr && prognr < PRVM_MAXPROGS)
-	{	
+	{
 		if(prog_list[prognr].loaded)
 			prog = &prog_list[prognr];
 		else
@@ -197,7 +197,7 @@ void PRVM_ED_ClearEdict (prvm_edict_t *e)
 	num = PRVM_NUM_FOR_EDICT(e) - 1;
 
 	// AK: Let the init_edict function determine if something needs to be initialized
-	PRVM_GCALL(init_edict)(num);	
+	PRVM_GCALL(init_edict)(num);
 }
 
 /*
@@ -438,9 +438,9 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 	char *s;
 	ddef_t *def;
 	mfunction_t *f;
-	
+
 	type &= ~DEF_SAVEGLOBAL;
-	
+
 	switch (type)
 	{
 	case ev_string:
@@ -490,7 +490,7 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 		dpsnprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
-	
+
 	return line;
 }
 
@@ -694,7 +694,7 @@ void PRVM_ED_PrintEdicts_f (void)
 		Con_Print("prvm_edicts <program name>\n");
 		return;
 	}
-	
+
 	PRVM_Begin;
 	if(!PRVM_SetProgFromString(Cmd_Argv(1)))
 		return;
@@ -776,7 +776,7 @@ void PRVM_ED_Count_f (void)
 				continue;
 			active++;
 		}
-		
+
 		Con_Printf("num_edicts:%3i\n", prog->num_edicts);
 		Con_Printf("active    :%3i\n", active);
 	}
@@ -877,7 +877,7 @@ char *PRVM_ED_NewString (const char *string)
 	int i,l;
 
 	l = strlen(string) + 1;
-	new = Mem_Alloc(prog->edictstring_mempool, l);
+	new = Mem_Alloc(prog->progs_mempool, l);
 	new_p = new;
 
 	for (i=0 ; i< l ; i++)
@@ -1148,9 +1148,9 @@ void PRVM_ED_LoadFromFile (const char *data)
 			PRVM_ERROR ("PRVM_ED_LoadFromFile: %s: found %s when expecting {", PRVM_NAME, com_token);
 
 		// CHANGED: this is not conform to ED_LoadFromFile
-		if(!prog->num_edicts) 
+		if(!prog->num_edicts)
 			ent = PRVM_EDICT_NUM(0);
-		else 
+		else
 			ent = PRVM_ED_Alloc();
 
 		// clear it
@@ -1181,10 +1181,10 @@ void PRVM_ED_LoadFromFile (const char *data)
 				PRVM_ED_Free (ent);
 				continue;
 			}
-			
+
 			// look for the spawn function
 			func = PRVM_ED_FindFunction (PRVM_GetString(handle));
-			
+
 			if (!func)
 			{
 				if (developer.integer) // don't confuse non-developers with errors
@@ -1195,19 +1195,19 @@ void PRVM_ED_LoadFromFile (const char *data)
 				PRVM_ED_Free (ent);
 				continue;
 			}
-			
+
 			// self = ent
 			PRVM_G_INT(prog->self->ofs) = PRVM_EDICT_TO_PROG(ent);
 			PRVM_ExecuteProgram (func - prog->functions, "");
 		}
-	
+
 		spawned++;
 		if (ent->p.e->free)
 			died++;
 	}
 
 	Con_DPrintf("%s: %i new entities parsed, %i new inhibited, %i (%i new) spawned (whereas %i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, prog->num_edicts, spawned, died, spawned - died);
-}	
+}
 
 // not used
 /*
@@ -1233,26 +1233,18 @@ PRVM_ResetProg
 
 void PRVM_ResetProg()
 {
-	/*mempool_t *t1, *t2, *t3;
+	/*mempool_t *t1;
 
 	t1 = prog->progs_mempool;
-	t2 = prog->edictstring_mempool;
-	t3 = prog->edicts_mempool;
-	
-	Mem_EmptyPool(prog->progs_mempool);
-	Mem_EmptyPool(prog->edictstring_mempool);
-	Mem_EmptyPool(prog->edicts_mempool);*/
+
+	Mem_EmptyPool(prog->progs_mempool);*/
 	Mem_FreePool(&prog->progs_mempool);
-	Mem_FreePool(&prog->edictstring_mempool);
-	Mem_FreePool(&prog->edicts_mempool);
-	
+
 	memset(prog,0,sizeof(prvm_prog_t));
-	
+
 	/*prog->time = &prog->_time;
-	
-	prog->progs_mempool = t1;
-	prog->edictstring_mempool = t2;
-	prog->edicts_mempool = t3;*/
+
+	prog->progs_mempool = t1;*/
 
 	PRVM_GCALL(reset_cmd)();
 }
@@ -1270,7 +1262,6 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	dfunction_t *dfunctions;
 
 	Mem_EmptyPool(prog->progs_mempool);
-	Mem_EmptyPool(prog->edictstring_mempool);
 
 	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false);
 	if (prog->progs == NULL)
@@ -1473,11 +1464,11 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	PRVM_Init_Exec();
 
 	prog->loaded = TRUE;
-	
+
 	// set flags & ddef_ts in prog
-	
+
 	prog->flag = 0;
-	
+
 	prog->self = PRVM_ED_FindGlobal("self");
 
 	if( PRVM_ED_FindGlobal("time") && PRVM_ED_FindGlobal("time")->type & ev_float )
@@ -1487,12 +1478,12 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->flag |= PRVM_FE_CHAIN;
 
 	if(PRVM_ED_FindField ("classname"))
-		prog->flag |= PRVM_FE_CLASSNAME; 
+		prog->flag |= PRVM_FE_CLASSNAME;
 
-	if(PRVM_ED_FindField ("nextthink") && PRVM_ED_FindField ("frame") && PRVM_ED_FindField ("think") 
-		&& prog->flag && prog->self) 
+	if(PRVM_ED_FindField ("nextthink") && PRVM_ED_FindField ("frame") && PRVM_ED_FindField ("think")
+		&& prog->flag && prog->self)
 		prog->flag |= PRVM_OP_STATE;
-	
+
 	PRVM_GCALL(reset_cmd)();
 	PRVM_GCALL(init_cmd)();
 
@@ -1672,7 +1663,7 @@ void PRVM_Global_f(void)
 	if( !global )
 		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
 	else
-		Con_Printf( "%s: %s\n", Cmd_Argv(2), PRVM_ValueString( global->type, (prvm_eval_t *) &prog->globals[ global->ofs ] ) ); 
+		Con_Printf( "%s: %s\n", Cmd_Argv(2), PRVM_ValueString( global->type, (prvm_eval_t *) &prog->globals[ global->ofs ] ) );
 	PRVM_End;
 }
 
@@ -1696,7 +1687,7 @@ void PRVM_GlobalSet_f(void)
 	global = PRVM_ED_FindGlobal( Cmd_Argv(2) );
 	if( !global )
 		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
-	else 
+	else
 		PRVM_ED_ParseEpair( NULL, global, Cmd_Argv(3) );
 	PRVM_End;
 }

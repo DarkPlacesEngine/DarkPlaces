@@ -446,6 +446,7 @@ typedef struct
 	netconn_t *netcon;
 	// writing buffer to send to server
 	sizebuf_t message;
+	qbyte message_buf[1024];
 }
 client_static_t;
 
@@ -581,8 +582,6 @@ typedef struct
 }
 client_state_t;
 
-extern mempool_t *cl_scores_mempool;
-
 //
 // cvars
 //
@@ -640,7 +639,7 @@ extern int cl_num_static_entities;
 extern int cl_num_temp_entities;
 extern int cl_num_brushmodel_entities;
 
-extern mempool_t *cl_entities_mempool;
+extern mempool_t *cl_mempool;
 extern entity_t *cl_entities;
 extern qbyte *cl_entities_active;
 extern entity_t *cl_static_entities;
@@ -860,8 +859,6 @@ typedef struct
 refdef_t;
 
 refdef_t r_refdef;
-
-extern mempool_t *cl_refdef_mempool;
 
 #include "cgamevm.h"
 

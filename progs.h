@@ -164,6 +164,10 @@ void PR_Shutdown (void);
 void PR_ExecuteProgram (func_t fnum, const char *errormessage);
 void PR_LoadProgs (const char *progsname);
 
+void *PR_Alloc (size_t buffersize);
+void PR_Free (void *buffer);
+void PR_FreeAll (void);
+
 void PR_Profile_f (void);
 
 void PR_PrintState(void);
@@ -237,7 +241,7 @@ void PR_Execute_ProgsLoaded(void);
 void ED_PrintEdicts (void);
 void ED_PrintNum (int ent);
 
-#define PR_GetString(num) (pr_strings + num) 
+#define PR_GetString(num) (pr_strings + num)
 #define PR_SetString(s)   ((s) != NULL ? (int) (s - pr_strings) : 0)
 
 #endif

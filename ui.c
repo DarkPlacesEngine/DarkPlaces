@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-// here is the real ui drawing engine 
+// here is the real ui drawing engine
 
 /*
 #define FRAME_THICKNESS	2
@@ -22,14 +22,14 @@ static void UIG_DrawFrame(float x, float y, float w, float h)
 	DrawQ_Fill(x + w, y, FRAME_THICKNESS, h, FRAME_COLOR1);
 	// area
 	DrawQ_Fill(x, y, w, h, FRAME_COLOR2);
-} 
+}
 
 static void UIG_DrawText(const char *text, float x, float y, float w, float h, float r, float g, float b, float a, float f)
 {
 	if(w != 0 && h != 0)
 		DrawQ_SetClipArea(x, y, w, h);
 	DrawQ_String(x, y, text, 0, TEXT_FONTSIZE_X, TEXT_FONTSIZE_Y, r, g, b, a, f);
-	if(w != 0 && h != 0)	
+	if(w != 0 && h != 0)
 		DrawQ_ResetClipArea();
 }
 
@@ -42,17 +42,14 @@ static void UIG_DrawCursor(float x, float y, float r, float g, float b, float a,
 }
 */
 
-static mempool_t *ui_mem;
-
 //#define UI_MEM_SIZE (1 << 10) << 9 // 512 KByte
 #define UI_MEM_SIZE 1
 
 void UI_Init(void)
 {
-	ui_mem = Mem_AllocPool("Intern UI Memory", 0, NULL);
 }
 
-#define UI_Alloc(size)	Mem_Alloc(ui_mem, size)
+#define UI_Alloc(size)	Mem_Alloc(cl_mempool, size)
 #define UI_Free(ptr)	Mem_Free(ptr)
 
 void UI_Event(ui_itemlist_t list, ui_message_t *in)
@@ -65,9 +62,9 @@ void UI_Event(ui_itemlist_t list, ui_message_t *in)
 		for(item = list->list; item != 0 && !processed; item = item->next)
 		{
 			unsigned int i;
-		
+
 			processed = item->eventhandler(list, item, in, &out);
-		
+
 			// process posted messages
 			for(i = 0; i < out.used; i++)
 				list->eventhandler(list, &out.queue[i]);
@@ -77,7 +74,7 @@ void UI_Event(ui_itemlist_t list, ui_message_t *in)
 		}
 
 	if(!processed)
-		list->eventhandler(list, in);		
+		list->eventhandler(list, in);
 }
 
 void UI_Draw(ui_itemlist_t list)
@@ -95,7 +92,7 @@ void UI_Draw(ui_itemlist_t list)
 	{
 		unsigned int depth = 0, nextdepth = ~0;
 
-		while(depth != nextdepth) 
+		while(depth != nextdepth)
 		{
 			for(item = list->list; item != 0; item = item->next)
 			{

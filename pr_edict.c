@@ -34,8 +34,7 @@ int				pr_edictareasize;		// LordHavoc: in bytes
 
 unsigned short	pr_crc;
 
-mempool_t		*progs_mempool;
-mempool_t		*edictstring_mempool;
+mempool_t		*serverprogs_mempool;
 
 int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *)/4};
 
@@ -921,7 +920,7 @@ char *ED_NewString (const char *string)
 	int i,l;
 
 	l = strlen(string) + 1;
-	new = Mem_Alloc(edictstring_mempool, l);
+	new = PR_Alloc(l);
 	new_p = new;
 
 	for (i=0 ; i< l ; i++)
@@ -1307,10 +1306,9 @@ void PR_LoadProgs (const char *progsname)
 	for (i=0 ; i<GEFV_CACHESIZE ; i++)
 		gefvCache[i].field[0] = 0;
 
-	Mem_EmptyPool(progs_mempool);
-	Mem_EmptyPool(edictstring_mempool);
+	PR_FreeAll();
 
-	progs = (dprograms_t *)FS_LoadFile (progsname, progs_mempool, false);
+	progs = (dprograms_t *)FS_LoadFile (progsname, serverprogs_mempool, false);
 	if (!progs)
 		Host_Error ("PR_LoadProgs: couldn't load %s", progsname);
 
@@ -1335,7 +1333,8 @@ void PR_LoadProgs (const char *progsname)
 	// we need to expand the fielddefs list to include all the engine fields,
 	// so allocate a new place for it
 	infielddefs = (ddef_t *)((qbyte *)progs + progs->ofs_fielddefs);
-	pr_fielddefs = Mem_Alloc(progs_mempool, (progs->numfielddefs + DPFIELDS) * sizeof(ddef_t));
+	pr_fielddefs = PR_Alloc((progs->numfielddefs + DPFIELDS) * sizeof(ddef_t));
+	pr_functions = PR_Alloc(sizeof(mfunction_t) * progs->numfunctions);
 
 	pr_statements = (dstatement_t *)((qbyte *)progs + progs->ofs_statements);
 
@@ -1353,7 +1352,6 @@ void PR_LoadProgs (const char *progsname)
 		pr_statements[i].c = LittleShort(pr_statements[i].c);
 	}
 
-	pr_functions = Mem_Alloc(progs_mempool, sizeof(mfunction_t) * progs->numfunctions);
 	for (i = 0;i < progs->numfunctions;i++)
 	{
 		pr_functions[i].first_statement = LittleLong (dfunctions[i].first_statement);
@@ -1674,8 +1672,7 @@ void PR_Init (void)
 	Cvar_RegisterVariable (&pr_boundscheck);
 	Cvar_RegisterVariable (&pr_traceqc);
 
-	progs_mempool = Mem_AllocPool("progs.dat", 0, NULL);
-	edictstring_mempool = Mem_AllocPool("edict strings", 0, NULL);
+	serverprogs_mempool = Mem_AllocPool("server progs", 0, NULL);
 
 	PR_Cmd_Init();
 }
@@ -1690,8 +1687,25 @@ void PR_Shutdown (void)
 {
 	PR_Cmd_Shutdown();
 
-	Mem_FreePool(&edictstring_mempool);
-	Mem_FreePool(&progs_mempool);
+	Mem_FreePool(&serverprogs_mempool);
+}
+
+void *PR_Alloc(size_t buffersize)
+{
+	return Mem_Alloc(serverprogs_mempool, buffersize);
+}
+
+void PR_Free(void *buffer)
+{
+	Mem_Free(buffer);
+}
+
+void PR_FreeAll(void)
+{
+	progs = NULL;
+	pr_fielddefs = NULL;
+	pr_functions = NULL;
+	Mem_EmptyPool(serverprogs_mempool);
 }
 
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
