@@ -345,6 +345,7 @@ static struct
 	int blendfunc2;
 	int blend;
 	GLboolean depthmask;
+	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
 	int scissortest;
 	int unit;
@@ -427,6 +428,7 @@ void GL_Backend_ResetState(void)
 	gl_state.blendfunc2 = GL_ZERO;
 	gl_state.blend = false;
 	gl_state.depthmask = GL_TRUE;
+	gl_state.colormask = 15;
 	gl_state.color4f[0] = gl_state.color4f[1] = gl_state.color4f[2] = gl_state.color4f[3] = 1;
 	gl_state.lockrange_first = 0;
 	gl_state.lockrange_count = 0;
@@ -435,6 +437,7 @@ void GL_Backend_ResetState(void)
 
 	CHECKGLERROR
 
+	qglColorMask(1, 1, 1, 1);
 	qglEnable(GL_CULL_FACE);CHECKGLERROR
 	qglCullFace(GL_FRONT);CHECKGLERROR
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
@@ -545,6 +548,18 @@ void GL_DepthTest(int state)
 	}
 }
 
+void GL_ColorMask(int r, int g, int b, int a)
+{
+	int state = r*8 + g*4 + b*2 + a*1;
+	if (gl_state.colormask != state)
+	{
+		if (r_showtrispass)
+			return;
+		gl_state.colormask = state;
+		qglColorMask(r, g, b, a);CHECKGLERROR
+	}
+}
+
 void GL_VertexPointer(const float *p)
 {
 	if (gl_state.pointer_vertex != p)
@@ -596,6 +611,16 @@ void GL_Color(float cr, float cg, float cb, float ca)
 	}
 }
 
+void GL_ShowTrisColor(float cr, float cg, float cb, float ca)
+{
+	if (!r_showtrispass)
+		return;
+	r_showtrispass = false;
+	GL_Color(cr,cg,cb,ca);
+	r_showtrispass = true;
+}
+
+
 void GL_LockArrays(int first, int count)
 {
 	if (gl_state.lockrange_count != count || gl_state.lockrange_first != first)
@@ -636,6 +661,13 @@ void GL_ScissorTest(int state)
 	else
 		qglDisable(GL_SCISSOR_TEST);
 	CHECKGLERROR
+}
+
+void GL_Clear(int mask)
+{
+	if (r_showtrispass)
+		return;
+	qglClear(mask);CHECKGLERROR
 }
 
 void GL_TransformToScreen(const vec4_t in, vec4_t out)
@@ -1081,7 +1113,7 @@ void R_ClearScreen(void)
 			qglClearStencil(128);CHECKGLERROR
 		}
 		// clear the screen
-		qglClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));CHECKGLERROR
+		GL_Clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | (gl_stencil ? GL_STENCIL_BUFFER_BIT : 0));
 		// set dithering mode
 		if (gl_dither.integer)
 		{
@@ -1117,10 +1149,13 @@ void SCR_UpdateScreen (void)
 {
 	if (gl_delayfinish.integer)
 	{
-		VID_Finish ();
-
+		R_Mesh_Finish();
+		R_TimeReport("meshfinish");
+		VID_Finish();
 		R_TimeReport("finish");
 	}
+
+	R_Mesh_Start();
 
 	if (r_textureunits.integer > gl_textureunits)
 		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
@@ -1130,6 +1165,7 @@ void SCR_UpdateScreen (void)
 	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
 		Cvar_SetValueQuick(&gl_combine, 0);
 
+showtris:
 	R_TimeReport("setup");
 
 	R_ClearScreen();
@@ -1211,6 +1247,21 @@ void SCR_UpdateScreen (void)
 	// draw 2D stuff
 	R_DrawQueue();
 
+	if (r_showtrispass)
+		r_showtrispass = false;
+	else if (r_showtris.integer)
+	{
+		rmeshstate_t m;
+		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_DepthTest(GL_FALSE);
+		GL_DepthMask(GL_FALSE);
+		memset(&m, 0, sizeof(m));
+		R_Mesh_State_Texture(&m);
+		r_showtrispass = true;
+		GL_ShowTrisColor(0.2,0.2,0.2,1);
+		goto showtris;
+	}
+
 	if (gl_delayfinish.integer)
 	{
 		// tell driver to commit it's partially full geometry queue to the rendering queue
@@ -1219,8 +1270,9 @@ void SCR_UpdateScreen (void)
 	}
 	else
 	{
-		VID_Finish ();
-
+		R_Mesh_Finish();
+		R_TimeReport("meshfinish");
+		VID_Finish();
 		R_TimeReport("finish");
 	}
 }

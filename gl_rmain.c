@@ -628,8 +628,6 @@ void R_RenderView(void)
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	GL_ScissorTest(true);
 	R_ClearScreen();
-
-	R_Mesh_Start();
 	R_TimeReport("setup");
 
 	qglDepthFunc(GL_LEQUAL);
@@ -637,19 +635,6 @@ void R_RenderView(void)
 	qglEnable(GL_POLYGON_OFFSET_FILL);
 
 	R_RenderScene();
-	if (r_showtris.integer)
-	{
-		rmeshstate_t m;
-		GL_Color(1,1,1,1);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthTest(GL_FALSE);
-		GL_DepthMask(GL_FALSE);
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State_Texture(&m);
-		r_showtrispass = true;
-		R_RenderScene();
-		r_showtrispass = false;
-	}
 
 	qglPolygonOffset(0, 0);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
@@ -657,9 +642,6 @@ void R_RenderView(void)
 	R_BlendView();
 	R_TimeReport("blendview");
 	
-	R_Mesh_Finish();
-	R_TimeReport("meshfinish");
-
 	GL_Scissor(0, 0, vid.realwidth, vid.realheight);
 	GL_ScissorTest(false);
 }
@@ -674,6 +656,8 @@ void R_RenderScene(void)
 		S_ExtraUpdate ();
 
 	r_framecount++;
+
+	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
 
 	R_SetFrustum();
 
@@ -715,6 +699,8 @@ void R_RenderScene(void)
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
+	GL_ShowTrisColor(0, 0.015, 0, 1);
+
 	R_DrawModels();
 	R_TimeReport("models");
 
@@ -722,12 +708,15 @@ void R_RenderScene(void)
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
+	GL_ShowTrisColor(0, 0, 0.033, 1);
 	R_ShadowVolumeLighting(false);
 	R_TimeReport("rtlights");
 
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
+
+	GL_ShowTrisColor(0.1, 0, 0, 1);
 
 	R_DrawLightningBeams();
 	R_TimeReport("lightning");
@@ -750,11 +739,13 @@ void R_RenderScene(void)
 	R_MeshQueue_Render();
 	R_MeshQueue_EndScene();
 
-	if (r_shadow_visiblevolumes.integer)
+	if (r_shadow_visiblevolumes.integer && !r_showtrispass)
 	{
 		R_ShadowVolumeLighting(true);
 		R_TimeReport("shadowvolume");
 	}
+
+	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
 
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)

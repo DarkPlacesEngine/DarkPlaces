@@ -421,7 +421,6 @@ void R_DrawQueue(void)
 	qglViewport(0, 0, vid.realwidth, vid.realheight);
 	GL_SetupView_Mode_Ortho(0, 0, vid.conwidth, vid.conheight, -10, 100);
 	qglDepthFunc(GL_LEQUAL);
-	R_Mesh_Start();
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	chartexnum = R_GetTexture(char_texture);
@@ -584,6 +583,5 @@ void R_DrawQueue(void)
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 	}
-	R_Mesh_Finish();
 }
 

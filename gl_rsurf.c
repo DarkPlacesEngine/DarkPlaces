@@ -749,7 +749,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	if (skyrendermasked)
 	{
 		// depth-only (masking)
-		qglColorMask(0,0,0,0);
+		GL_ColorMask(0,0,0,0);
 		// just to make sure that braindead drivers don't draw anything
 		// despite that colormask...
 		GL_BlendFunc(GL_ZERO, GL_ONE);
@@ -773,7 +773,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
 	}
-	qglColorMask(1,1,1,1);
+	GL_ColorMask(1,1,1,1);
 }
 
 static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
@@ -2056,7 +2056,7 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 	if (skyrendermasked)
 	{
 		// depth-only (masking)
-		qglColorMask(0,0,0,0);
+		GL_ColorMask(0,0,0,0);
 		// just to make sure that braindead drivers don't draw anything
 		// despite that colormask...
 		GL_BlendFunc(GL_ZERO, GL_ONE);
@@ -2074,7 +2074,7 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 
 	GL_VertexPointer(face->data_vertex3f);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
-	qglColorMask(1,1,1,1);
+	GL_ColorMask(1,1,1,1);
 }
 
 void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3mface_t *face)

@@ -378,7 +378,7 @@ void R_Sky(void)
 			// this modifies the depth buffer so we have to clear it afterward
 			//R_SkyRoom();
 			// clear the depthbuffer that was used while rendering the skyroom
-			//qglClear(GL_DEPTH_BUFFER_BIT);
+			//GL_Clear(GL_DEPTH_BUFFER_BIT);
 		}
 		*/
 	}
