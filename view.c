@@ -313,7 +313,7 @@ void V_CalcRefdef (void)
 {
 	static float oldz;
 	entity_t *ent;
-	float vieworg[3], viewangles[3], newz;
+	float vieworg[3], viewangles[3];
 	Matrix4x4_CreateIdentity(&viewmodelmatrix);
 	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
@@ -334,12 +334,13 @@ void V_CalcRefdef (void)
 			VectorCopy(cl.viewangles, viewangles);
 
 			// stair smoothing
-			newz = vieworg[2];
-			oldz -= newz;
-			oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
-			oldz = bound(-16, oldz, 0);
-			vieworg[2] += oldz;
-			oldz += newz;
+			if (cl.onground && oldz < vieworg[2])
+			{
+				oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+				oldz = vieworg[2] = bound(vieworg[2] - 16, oldz, vieworg[2]);
+			}
+			else
+				oldz = vieworg[2];
 
 			if (chase_active.value)
 			{
