@@ -1096,7 +1096,6 @@ static void Host_PModel_f (void)
 		return;
 	}
 
-	host_client->pmodel = i;
 	if (sv_player && (val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
 		val->_float = i;
 }
