@@ -224,12 +224,12 @@ static int Mod_LoadExternalSkin (char *basename, skinframe_t *skinframe, int pre
 	skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->glow   = loadtextureimage(loadmodel->texturepool, va("%s_glow"  , basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->merged = NULL;
-	return skinframe->base != NULL || skinframe->pants != NULL || skinframe->shirt != NULL || skinframe->glow != NULL || skinframe->merged != NULL || skinframe->fog != NULL;
+	return skinframe->base != NULL || skinframe->pants != NULL || skinframe->shirt != NULL || skinframe->glow != NULL;
 }
 
 static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, qbyte *skintemp, int width, int height, skinframe_t *skinframe, int precache)
 {
-	if (skindata && skintemp)
+	if (!skindata || !skintemp)
 		return false;
 	skinframe->pants  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("%s_pants", basename), false); // pants
 	skinframe->shirt  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("%s_shirt", basename), false); // shirt
