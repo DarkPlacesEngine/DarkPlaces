@@ -692,7 +692,7 @@ Cmd_CompleteBuildList (char *partial)
 	char			**buf;
 
 	len = strlen(partial);
-	buf = malloc(sizeofbuf + sizeof (char *));
+	buf = qmalloc(sizeofbuf + sizeof (char *));
 	// Loop through the alias list and print all matches
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 		if (!strncasecmp(partial, cmd->name, len))
@@ -780,7 +780,7 @@ Cmd_CompleteAliasBuildList (char *partial)
 	char		**buf;
 
 	len = strlen(partial);
-	buf = malloc(sizeofbuf + sizeof (char *));
+	buf = qmalloc(sizeofbuf + sizeof (char *));
 	// Loop through the alias list and print all matches
 	for (alias = cmd_alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
