@@ -308,6 +308,9 @@ extern client_static_t	cls;
 //
 typedef struct
 {
+	// true if playing in a local game and no one else is connected
+	int islocalgame;
+
 	// when connecting to the server throw out the first couple move messages
 	// so the player doesn't accidentally do something the first frame
 	int movemessages;
@@ -424,7 +427,7 @@ typedef struct
 
 	// entity database stuff
 	entity_database_t entitydatabase;
-	entity_database4_t entitydatabase4;
+	entity_database4_t *entitydatabase4;
 }
 client_state_t;
 

@@ -1101,25 +1101,6 @@ void SV_Physics_Follow (edict_t *ent)
 }
 
 /*
-=============
-SV_Physics_Noclip
-
-A moving object that doesn't obey physics
-=============
-*/
-void SV_Physics_Noclip (edict_t *ent)
-{
-	// regular thinking
-	if (!SV_RunThink (ent))
-		return;
-
-	VectorMA (ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
-	VectorMA (ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
-
-	SV_LinkEdict (ent, false);
-}
-
-/*
 ==============================================================================
 
 TOSS / BOUNCE
@@ -1333,9 +1314,9 @@ void SV_Physics (void)
 		if (pr_global_struct->force_retouch)
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
 
-		if (i > 0 && i <= svs.maxclients)
+		if (i > 0 && i <= MAX_SCOREBOARD)
 		{
-			if (!svs.clients[i-1].active)
+			if (!svs.connectedclients[i-1])
 				continue;
 			// connected slot
 			// call standard client pre-think
@@ -1361,17 +1342,15 @@ void SV_Physics (void)
 			SV_Physics_Follow (ent);
 			break;
 		case MOVETYPE_NOCLIP:
-			if (i > 0 && i <= svs.maxclients)
+			if (SV_RunThink(ent))
 			{
-				if (SV_RunThink (ent))
-				{
-					SV_CheckWater (ent);
-					VectorMA (ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
-					VectorMA (ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
-				}
+				SV_CheckWater(ent);
+				VectorMA(ent->v->origin, sv.frametime, ent->v->velocity, ent->v->origin);
+				VectorMA(ent->v->angles, sv.frametime, ent->v->avelocity, ent->v->angles);
 			}
-			else
-				SV_Physics_Noclip (ent);
+			// relink normal entities here, players always get relinked so don't relink twice
+			if (!(i > 0 && i <= MAX_SCOREBOARD))
+				SV_LinkEdict(ent, false);
 			break;
 		case MOVETYPE_STEP:
 			SV_Physics_Step (ent);
@@ -1393,7 +1372,7 @@ void SV_Physics (void)
 			SV_Physics_Toss (ent);
 			break;
 		case MOVETYPE_FLY:
-			if (i > 0 && i <= svs.maxclients)
+			if (i > 0 && i <= MAX_SCOREBOARD)
 			{
 				if (SV_RunThink (ent))
 				{
@@ -1409,7 +1388,7 @@ void SV_Physics (void)
 			break;
 		}
 
-		if (i > 0 && i <= svs.maxclients && !ent->e->free)
+		if (i > 0 && i <= MAX_SCOREBOARD && !ent->e->free)
 		{
 			SV_CheckVelocity (ent);
 

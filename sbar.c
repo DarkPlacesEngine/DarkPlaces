@@ -635,7 +635,7 @@ void Sbar_DrawFace (void)
 
 // PGM 01/19/97 - team color drawing
 // PGM 03/02/97 - fixed so color swatch only appears in CTF modes
-	if (gamemode == GAME_ROGUE && (cl.maxclients != 1) && (teamplay.integer > 3) && (teamplay.integer < 7))
+	if (gamemode == GAME_ROGUE && !cl.islocalgame && (teamplay.integer > 3) && (teamplay.integer < 7))
 	{
 		char num[12];
 		scoreboard_t *s;
@@ -780,7 +780,7 @@ void Sbar_Draw (void)
 	{
 		if (gamemode != GAME_GOODVSBAD2)
 			Sbar_DrawInventory ();
-		if (cl.maxclients != 1)
+		if (!cl.islocalgame)
 			Sbar_DrawFrags ();
 	}
 

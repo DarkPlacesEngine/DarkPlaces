@@ -1,12 +1,41 @@
 
 #include "quakedef.h"
 
+entity_state_t defaultstate =
+{
+	0,//double time; // time this state was built
+	{0,0,0},//vec3_t origin;
+	{0,0,0},//vec3_t angles;
+	0,//int number; // entity number this state is for
+	0,//unsigned short active; // true if a valid state
+	0,//unsigned short modelindex;
+	0,//unsigned short frame;
+	0,//unsigned short effects;
+	0,//unsigned short tagentity;
+	0,//unsigned short specialvisibilityradius;
+	0,//unsigned short viewmodelforclient;
+	0,//unsigned short exteriormodelforclient;
+	0,//unsigned short nodrawtoclient;
+	0,//unsigned short drawonlytoclient;
+	0,//qbyte colormap;
+	0,//qbyte skin;
+	255,//qbyte alpha;
+	16,//qbyte scale;
+	0,//qbyte glowsize;
+	254,//qbyte glowcolor;
+	0,//qbyte flags;
+	0,//qbyte tagindex;
+};
+
 void ClearStateToDefault(entity_state_t *s)
 {
+	*s = defaultstate;
+	/*
 	memset(s, 0, sizeof(*s));
 	s->alpha = 255;
 	s->scale = 16;
 	s->glowcolor = 254;
+	*/
 }
 
 void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta)
@@ -15,6 +44,9 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 	vec3_t org, deltaorg;
 	if (ent->active)
 	{
+		// if not active last frame, delta from defaults
+		if (!delta->active)
+			delta = &defaultstate;
 		bits = 0;
 		VectorCopy(ent->origin, org);
 		VectorCopy(delta->origin, deltaorg);
@@ -168,15 +200,18 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 			}
 		}
 	}
-	else if (!delta->active)
+	else if (delta->active)
 		MSG_WriteShort(msg, ent->number | 0x8000);
 }
 
-void EntityState_Read(entity_state_t *e, entity_state_t *delta, int number)
+void EntityState_ReadUpdate(entity_state_t *e, int number)
 {
 	int bits;
-	memcpy(e, delta, sizeof(*e));
-	e->active = true;
+	if (!e->active)
+	{
+		*e = defaultstate;
+		e->active = true;
+	}
 	e->time = cl.mtime[0];
 	e->number = number;
 
@@ -390,11 +425,10 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 {
 	int i, onum, number;
 	entity_frame_t *o = &deltaframe;
-	entity_state_t *ent, *delta, baseline;
+	entity_state_t *ent, *delta;
 
 	EntityFrame_AddFrame(d, f);
 
-	ClearStateToDefault(&baseline);
 	EntityFrame_FetchFrame(d, d->ackframe > 0 ? d->ackframe : -1, o);
 	MSG_WriteByte (msg, svc_entities);
 	MSG_WriteLong (msg, o->framenum);
@@ -422,8 +456,8 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 		}
 		else
 		{
-			// delta from baseline
-			delta = &baseline;
+			// delta from defaults
+			delta = &defaultstate;
 		}
 		EntityState_Write(ent, msg, delta);
 	}
@@ -441,9 +475,7 @@ void EntityFrame_Read(entity_database_t *d)
 {
 	int number, removed;
 	entity_frame_t *f = &framedata, *delta = &deltaframe;
-	entity_state_t *e, baseline, *old, *oldend, *edelta;
-
-	ClearStateToDefault(&baseline);
+	entity_state_t *e, *old, *oldend;
 
 	EntityFrame_Clear(f, NULL, -1);
 
@@ -496,25 +528,23 @@ void EntityFrame_Read(entity_database_t *d)
 			if (old < oldend && old->number == number)
 			{
 				// delta from old entity
-				edelta = old++;
+				*e = *old++;
 			}
 			else
 			{
-				// delta from baseline
-				edelta = &baseline;
+				// delta from defaults
+				*e = defaultstate;
 			}
 
-			EntityState_Read(e, edelta, number);
+			EntityState_ReadUpdate(e, number);
 		}
 	}
 	while (old < oldend)
 	{
 		if (f->numentities >= MAX_ENTITY_DATABASE)
 			Host_Error("EntityFrame_Read: entity list too big\n");
-		memcpy(f->entitydata + f->numentities, old, sizeof(entity_state_t));
-		f->entitydata[f->numentities].time = cl.mtime[0];
-		old++;
-		f->numentities++;
+		f->entitydata[f->numentities] = *old++;
+		f->entitydata[f->numentities++].time = cl.mtime[0];
 	}
 	EntityFrame_AddFrame(d, f);
 }
@@ -534,7 +564,7 @@ int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d)
 
 
 
-static int EntityFrame4_SV_ChooseCommitToReplace(entity_database4_t *d)
+int EntityFrame4_SV_ChooseCommitToReplace(entity_database4_t *d)
 {
 	int i, best, bestframenum;
 	best = 0;
@@ -552,7 +582,7 @@ static int EntityFrame4_SV_ChooseCommitToReplace(entity_database4_t *d)
 	return best;
 }
 
-static entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int number)
+entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int number)
 {
 	if (d->maxreferenceentities <= number)
 	{
@@ -567,12 +597,12 @@ static entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, in
 		}
 		// clear the newly created entities
 		for (;oldmax < d->maxreferenceentities;oldmax++)
-			ClearStateToDefault(d->referenceentity + oldmax);
+			d->referenceentity[oldmax] = defaultstate;
 	}
 	return d->referenceentity + number;
 }
 
-static void EntityFrame4_AddCommitEntity(entity_database4_t *d, entity_state_t *s)
+void EntityFrame4_AddCommitEntity(entity_database4_t *d, entity_state_t *s)
 {
 	// resize commit's entity list if full
 	if (d->currentcommit->maxentities <= d->currentcommit->numentities)
@@ -594,7 +624,7 @@ entity_database4_t *EntityFrame4_AllocDatabase(mempool_t *pool)
 	entity_database4_t *d;
 	d = Mem_Alloc(pool, sizeof(*d));
 	d->mempool = pool;
-	d->referenceframenum = -1;
+	EntityFrame4_ResetDatabase(d);
 	return d;
 }
 
@@ -613,6 +643,7 @@ void EntityFrame4_ResetDatabase(entity_database4_t *d)
 {
 	int i;
 	d->referenceframenum = -1;
+	d->ackframenum = -1;
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 		d->commit[i].numentities = 0;
 }
@@ -620,6 +651,8 @@ void EntityFrame4_ResetDatabase(entity_database4_t *d)
 void EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 {
 	int i, foundit = false;
+	entity_state_t *s;
+	entity_database4_commit_t *commit;
 	// check if client is requesting no delta compression
 	if (framenum == -1)
 	{
@@ -633,9 +666,13 @@ void EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 			if (d->commit[i].framenum == framenum)
 			{
 				// apply commit to database
-				d->referenceframenum = d->commit[i].framenum;
-				while (d->commit[i].numentities--)
-					*EntityFrame4_GetReferenceEntity(d, d->commit[i].entity[d->commit[i].numentities].number) = d->commit[i].entity[d->commit[i].numentities];
+				commit = d->commit + i;
+				d->referenceframenum = commit->framenum;
+				while (commit->numentities--)
+				{
+					s = commit->entity + commit->numentities;
+					*EntityFrame4_GetReferenceEntity(d, s->number) = *s;
+				}
 				foundit = true;
 			}
 			d->commit[i].numentities = 0;
@@ -667,16 +704,8 @@ int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int
 	buf.maxsize = sizeof(data);
 	// make the message
 	e = EntityFrame4_GetReferenceEntity(d, s->number);
-	if (s->active)
-	{
-		// entity exists, send an update
-		EntityState_Write(s, &buf, e);
-	}
-	else if (e->active)
-	{
-		// entity used to exist but doesn't anymore, send remove
-		MSG_WriteShort(&buf, s->number | 0x8000);
-	}
+	// send an update (may update or remove the entity)
+	EntityState_Write(s, &buf, e);
 	// if the message is empty, skip out now
 	if (!buf.cursize)
 		return true;
@@ -702,9 +731,14 @@ void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg)
 extern void CL_MoveLerpEntityStates(entity_t *ent);
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 {
-	int i, n, number, referenceframenum, framenum;
+	int i, n, cnumber, referenceframenum, framenum, enumber, done, stopnumber;
+	entity_state_t *e;
+	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
+	// read the number of this frame
 	framenum = MSG_ReadLong();
+	// read the start number
+	enumber = MSG_ReadShort();
 	EntityFrame4_AckFrame(d, referenceframenum);
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 		if (!d->commit[i].numentities)
@@ -712,7 +746,7 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 	if (i < MAX_ENTITY_HISTORY)
 	{
 		d->currentcommit = d->commit + i;
-		d->currentcommit->framenum = framenum;
+		d->ackframenum = d->currentcommit->framenum = framenum;
 		d->currentcommit->numentities = 0;
 	}
 	else
@@ -721,23 +755,58 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 		d->currentcommit = NULL;
 		EntityFrame4_ResetDatabase(d);
 	}
-	while((n = MSG_ReadShort()) != 0x8000)
+	done = false;
+	while (!done && !msg_badread)
 	{
-		number = n & 0x7FFF;
-		cl_entities[number].state_previous = cl_entities[number].state_current;
-		if (number & 0x8000)
+		n = (unsigned short)MSG_ReadShort();
+		if (n == 0x8000)
 		{
-			ClearStateToDefault(&cl_entities[number].state_current);
-			cl_entities[number].state_current.active = false;
-			cl_entities[number].state_current.number = number;
+			// no more entities in this update, but we still need to copy the
+			// rest of the reference entities
+			done = true;
+			// read end of range number, then process normally
+			n = (unsigned short)MSG_ReadShort();
 		}
-		else
-			EntityState_Read(&cl_entities[number].state_current, EntityFrame4_GetReferenceEntity(d, number), number);
-		CL_MoveLerpEntityStates(&cl_entities[number]);
-		cl_entities_active[number] = true;
-		if (d->currentcommit)
-			EntityFrame4_AddCommitEntity(d, &cl_entities[number].state_current);
+		// high bit means it's a remove message
+		cnumber = n & 0x7FFF;
+		// add one (the changed one) if not done
+		stopnumber = cnumber + !done;
+		// process entities in range from the last one to the changed one
+		for (;enumber < stopnumber;enumber++)
+		{
+			e = EntityFrame4_GetReferenceEntity(d, enumber);
+			cl_entities[enumber].state_previous = cl_entities[enumber].state_current;
+			// skipped (unchanged), copy from reference database
+			cl_entities[enumber].state_current = *e;
+			if (enumber == cnumber)
+			{
+				// modified
+				if (n & 0x8000)
+				{
+					// simply removed
+					cl_entities[enumber].state_current = defaultstate;
+				}
+				else
+				{
+					// read the changes
+					EntityState_ReadUpdate(&cl_entities[enumber].state_current, enumber);
+				}
+			}
+			cl_entities[enumber].state_current.number = enumber;
+			if (cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+			{
+				if (cl_entities[enumber].state_current.active)
+					Con_Printf("entity #%i has become active\n");
+				else if (cl_entities[enumber].state_current.active)
+					Con_Printf("entity #%i has become inactive\n");
+			}
+			CL_MoveLerpEntityStates(&cl_entities[enumber]);
+			cl_entities_active[enumber] = true;
+			if (d->currentcommit)
+				EntityFrame4_AddCommitEntity(d, &cl_entities[enumber].state_current);
+		}
 	}
 	d->currentcommit = NULL;
 }
+
 

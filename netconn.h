@@ -191,6 +191,7 @@ extern unsigned short ntohs (unsigned short netshort);
 //
 //============================================================================
 
+extern cvar_t sv_maxplayers;
 extern sizebuf_t net_message;
 
 int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data);
@@ -209,6 +210,7 @@ void NetConn_Shutdown(void);
 netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress);
 void NetConn_Close(netconn_t *conn);
 void NetConn_Listen(qboolean state);
+int NetConn_IsLocalGame(void);
 //int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length);
 //int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress);
 //int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress);

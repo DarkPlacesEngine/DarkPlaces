@@ -331,9 +331,9 @@ void CL_ParseServerInfo (void)
 
 // parse protocol version number
 	i = MSG_ReadLong ();
-	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != 250)
+	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != DPPROTOCOL_VERSION4 && i != 250)
 	{
-		Host_Error ("Server is protocol %i, not %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, PROTOCOL_VERSION);
+		Host_Error ("Server is protocol %i, not %i, %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, DPPROTOCOL_VERSION4, PROTOCOL_VERSION);
 		return;
 	}
 	Nehahrademcompatibility = false;
@@ -342,7 +342,7 @@ void CL_ParseServerInfo (void)
 	if (cls.demoplayback && demo_nehahra.integer)
 		Nehahrademcompatibility = true;
 	dpprotocol = i;
-	if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3)
+	if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3 && dpprotocol != DPPROTOCOL_VERSION4)
 		dpprotocol = 0;
 
 // parse maxclients
@@ -532,7 +532,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 		// not a monster
 		ent->persistent.lerpstarttime = cl.mtime[1];
 		// no lerp if it's singleplayer
-		if (sv.active && svs.maxclients == 1)
+		if (cl.islocalgame)
 			ent->persistent.lerpdeltatime = 0;
 		else
 			ent->persistent.lerpdeltatime = cl.mtime[0] - cl.mtime[1];
@@ -653,9 +653,10 @@ void CL_ParseUpdate (int bits)
 }
 
 static entity_frame_t entityframe;
+extern mempool_t *cl_entities_mempool;
 void CL_ReadEntityFrame(void)
 {
-	if (dpprotocol == DPPROTOCOL_VERSION3)
+	if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
 	{
 		int i;
 		entity_t *ent;
@@ -674,7 +675,11 @@ void CL_ReadEntityFrame(void)
 		}
 	}
 	else
-		EntityFrame4_CL_ReadFrame(&cl.entitydatabase4);
+	{
+		if (!cl.entitydatabase4)
+			cl.entitydatabase4 = EntityFrame4_AllocDatabase(cl_entities_mempool);
+		EntityFrame4_CL_ReadFrame(cl.entitydatabase4);
+	}
 }
 
 void CL_EntityUpdateSetup(void)
@@ -683,7 +688,7 @@ void CL_EntityUpdateSetup(void)
 
 void CL_EntityUpdateEnd(void)
 {
-	if (dpprotocol != DPPROTOCOL_VERSION4)
+	if (dpprotocol == PROTOCOL_VERSION || dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
 	{
 		int i;
 		// disable entities that disappeared this frame
@@ -711,7 +716,7 @@ void CL_ParseBaseline (entity_t *ent, int large)
 {
 	int i;
 
-	memset(&ent->state_baseline, 0, sizeof(entity_state_t));
+	ClearStateToDefault(&ent->state_baseline);
 	ent->state_baseline.active = true;
 	if (large)
 	{
@@ -730,13 +735,8 @@ void CL_ParseBaseline (entity_t *ent, int large)
 		ent->state_baseline.origin[i] = MSG_ReadCoord ();
 		ent->state_baseline.angles[i] = MSG_ReadAngle ();
 	}
-	ent->state_baseline.alpha = 255;
-	ent->state_baseline.scale = 16;
-	ent->state_baseline.glowsize = 0;
-	ent->state_baseline.glowcolor = 254;
-	ent->state_previous = ent->state_current = ent->state_baseline;
-
 	CL_ValidateState(&ent->state_baseline);
+	ent->state_previous = ent->state_current = ent->state_baseline;
 }
 
 
@@ -1504,15 +1504,15 @@ void CL_ParseServerMessage(void)
 
 		case svc_version:
 			i = MSG_ReadLong ();
-			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != 250)
-				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, PROTOCOL_VERSION);
+			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != DPPROTOCOL_VERSION4 && i != 250)
+				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i, %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, DPPROTOCOL_VERSION4, PROTOCOL_VERSION);
 			Nehahrademcompatibility = false;
 			if (i == 250)
 				Nehahrademcompatibility = true;
 			if (cls.demoplayback && demo_nehahra.integer)
 				Nehahrademcompatibility = true;
 			dpprotocol = i;
-			if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3)
+			if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3 && dpprotocol != DPPROTOCOL_VERSION4)
 				dpprotocol = 0;
 			break;
 

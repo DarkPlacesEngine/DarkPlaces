@@ -709,7 +709,7 @@ void M_Menu_Save_f (void)
 		return;
 	if (cl.intermission)
 		return;
-	if (svs.maxclients != 1)
+	if (!cl.islocalgame)
 		return;
 	m_entersound = true;
 	m_state = m_save;
@@ -2941,7 +2941,7 @@ void M_Menu_GameOptions_f (void)
 	m_state = m_gameoptions;
 	m_entersound = true;
 	if (maxplayers == 0)
-		maxplayers = svs.maxclients;
+		maxplayers = sv_maxplayers.integer;
 	if (maxplayers < 2)
 		maxplayers = MAX_SCOREBOARD;
 }

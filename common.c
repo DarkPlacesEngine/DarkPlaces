@@ -362,7 +362,7 @@ float MSG_ReadDPCoord (void)
 // used by client
 float MSG_ReadCoord (void)
 {
-	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
+	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3 || dpprotocol == DPPROTOCOL_VERSION4)
 		return (signed short) MSG_ReadLittleShort();
 	else if (dpprotocol == DPPROTOCOL_VERSION1)
 		return MSG_ReadLittleFloat();

@@ -199,11 +199,11 @@ void ED_ClearEdict (edict_t *e)
 	e->e->free = false;
 	// LordHavoc: for consistency set these here
 	num = NUM_FOR_EDICT(e) - 1;
-	if (num >= 0 && num < svs.maxclients)
+	if (num >= 0 && num < MAX_SCOREBOARD && svs.connectedclients[num])
 	{
 		e->v->colormap = num + 1;
-		e->v->team = (svs.clients[num].colors & 15) + 1;
-		e->v->netname = PR_SetString(svs.clients[num].name);
+		e->v->team = (svs.connectedclients[num]->colors & 15) + 1;
+		e->v->netname = PR_SetString(svs.connectedclients[num]->name);
 	}
 }
 
@@ -223,7 +223,7 @@ edict_t *ED_Alloc (void)
 	int			i;
 	edict_t		*e;
 
-	for ( i=svs.maxclients+1 ; i<sv.num_edicts ; i++)
+	for (i = MAX_SCOREBOARD + 1;i < sv.num_edicts;i++)
 	{
 		e = EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of

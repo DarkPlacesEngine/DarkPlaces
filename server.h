@@ -24,9 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	int maxclients;
-	// [maxclients]
-	struct client_s *clients;
+	// NULL pointers are non-existent clients
+	struct client_s *connectedclients[MAX_SCOREBOARD];
 	// episode completion information
 	int serverflags;
 	// cleared when at SV_SpawnServer
@@ -100,8 +99,6 @@ typedef struct
 
 typedef struct client_s
 {
-	// false = client is free
-	qboolean active;
 	// false = don't send datagrams
 	qboolean spawned;
 	// has been told to go to another level
@@ -110,6 +107,8 @@ typedef struct client_s
 	qboolean sendsignon;
 	// remove this client immediately
 	qboolean deadsocket;
+	// index of this client in the svs.connectedclients pointer array
+	int number;
 
 	// reliable messages must be sent periodically
 	double last_message;
@@ -149,8 +148,11 @@ typedef struct client_s
 #ifdef QUAKEENTITIES
 	// delta compression state
 	float nextfullupdate[MAX_EDICTS];
-#else
+#elif 0
 	entity_database_t entitydatabase;
+	int entityframenumber; // incremented each time an entity frame is sent
+#else
+	entity_database4_t *entitydatabase4;
 	int entityframenumber; // incremented each time an entity frame is sent
 #endif
 } client_t;
@@ -246,6 +248,9 @@ extern cvar_t sv_aim;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
 
+extern mempool_t *sv_clients_mempool;
+extern mempool_t *sv_edicts_mempool;
+
 // persistant server info
 extern server_static_t svs;
 // local server
@@ -295,8 +300,6 @@ void SV_MoveToGoal (void);
 void SV_RunClients (void);
 void SV_SaveSpawnparms (void);
 void SV_SpawnServer (const char *server);
-
-void SV_SetMaxClients(int n);
 
 void SV_CheckVelocity (edict_t *ent);
 

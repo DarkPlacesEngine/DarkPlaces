@@ -34,6 +34,7 @@ server_static_t svs;
 static char localmodels[MAX_MODELS][5];			// inline model names for precache
 
 mempool_t *sv_edicts_mempool = NULL;
+mempool_t *sv_clients_mempool = NULL;
 
 //============================================================================
 
@@ -72,7 +73,8 @@ void SV_Init (void)
 	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
 
-	sv_edicts_mempool = Mem_AllocPool("edicts");
+	sv_edicts_mempool = Mem_AllocPool("server edicts");
+	sv_clients_mempool = Mem_AllocPool("server clients");
 }
 
 /*
@@ -248,19 +250,21 @@ void SV_SendServerinfo (client_t *client)
 	char			message[128];
 
 	// edicts get reallocated on level changes, so we need to update it here
-	client->edict = EDICT_NUM((client - svs.clients) + 1);
+	client->edict = EDICT_NUM(client->number + 1);
 
 	// LordHavoc: clear entityframe tracking
 	client->entityframenumber = 0;
-	EntityFrame_ClearDatabase(&client->entitydatabase);
+	if (client->entitydatabase4)
+		EntityFrame4_FreeDatabase(client->entitydatabase4);
+	client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool);
 
 	MSG_WriteByte (&client->message, svc_print);
 	sprintf (message, "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION3);
-	MSG_WriteByte (&client->message, svs.maxclients);
+	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION4);
+	MSG_WriteByte (&client->message, MAX_SCOREBOARD);
 
 	if (!coop.integer && deathmatch.integer)
 		MSG_WriteByte (&client->message, GAME_DEATHMATCH);
@@ -307,7 +311,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	int				i;
 	float			spawn_parms[NUM_SPAWN_PARMS];
 
-	client = svs.clients + clientnum;
+	client = svs.connectedclients[clientnum];
 
 // set up the client_t
 	if (sv.loadgame)
@@ -319,7 +323,7 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 
 	strcpy(client->name, "unconnected");
 	strcpy(client->old_name, "unconnected");
-	client->active = true;
+	client->number = clientnum;
 	client->spawned = false;
 	client->edict = EDICT_NUM(clientnum+1);
 	client->message.data = client->msgbuf;
@@ -904,7 +908,7 @@ void SV_PrepareEntitiesForSending(void)
 		// we can omit invisible entities with no effects that are not clients
 		// LordHavoc: this could kill tags attached to an invisible entity, I
 		// just hope we never have to support that case
-		if (cs.number > svs.maxclients && ((cs.effects & EF_NODRAW) || (!cs.modelindex && !cs.specialvisibilityradius)))
+		if (cs.number > MAX_SCOREBOARD && ((cs.effects & EF_NODRAW) || (!cs.modelindex && !cs.specialvisibilityradius)))
 			continue;
 		sendentitiesindex[e] = sendentities + numsendentities;
 		sendentities[numsendentities++] = cs;
@@ -919,7 +923,7 @@ static int sv_writeentitiestoclient_culled_portal;
 static int sv_writeentitiestoclient_culled_trace;
 static int sv_writeentitiestoclient_visibleentities;
 static int sv_writeentitiestoclient_totalentities;
-static entity_frame_t sv_writeentitiestoclient_entityframe;
+//static entity_frame_t sv_writeentitiestoclient_entityframe;
 static int sv_writeentitiestoclient_clentnum;
 static qbyte *sv_writeentitiestoclient_pvs;
 static vec3_t sv_writeentitiestoclient_testeye;
@@ -1066,6 +1070,19 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	int i;
 	vec3_t testorigin;
 	entity_state_t *s;
+	entity_database4_t *d;
+	int maxbytes, n, startnumber;
+	entity_state_t *e, inactiveentitystate;
+	sizebuf_t buf;
+	qbyte data[128];
+	// prepare the buffer
+	memset(&buf, 0, sizeof(buf));
+	buf.data = data;
+	buf.maxsize = sizeof(data);
+
+	// this state's number gets played around with later
+	ClearStateToDefault(&inactiveentitystate);
+	//inactiveentitystate = defaultstate;
 
 	sv_writeentitiestoclient_client = client;
 
@@ -1098,23 +1115,83 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	for (i = 0;i < numsendentities;i++)
 		SV_MarkWriteEntityStateToClient(sendentities + i);
 
-	EntityFrame_Clear(&sv_writeentitiestoclient_entityframe, testorigin, ++client->entityframenumber);
-	for (i = 0;i < numsendentities;i++)
+	d = client->entitydatabase4;
+	// calculate maximum bytes to allow in this packet
+	// deduct 4 to account for the end data
+	maxbytes = min(msg->maxsize, MAX_PACKETFRAGMENT) - 4;
+
+	d->currentcommit = d->commit + EntityFrame4_SV_ChooseCommitToReplace(d);
+	d->currentcommit->numentities = 0;
+	d->currentcommit->framenum = ++client->entityframenumber;
+	MSG_WriteByte(msg, svc_entities);
+	MSG_WriteLong(msg, d->referenceframenum);
+	MSG_WriteLong(msg, d->currentcommit->framenum);
+	if (d->currententitynumber >= sv.max_edicts)
+		startnumber = 1;
+	else
+		startnumber = bound(1, d->currententitynumber, sv.max_edicts - 1);
+	MSG_WriteShort(msg, startnumber);
+	// reset currententitynumber so if the loop does not break it we will
+	// start at beginning next frame (if it does break, it will set it)
+	d->currententitynumber = 1;
+	for (i = 0, n = startnumber;n < sv.max_edicts;n++)
 	{
-		s = sendentities + i;
-		if (sententities[s->number] == sententitiesmark)
+		// find the old state to delta from
+		e = EntityFrame4_GetReferenceEntity(d, n);
+		// prepare the buffer
+		SZ_Clear(&buf);
+		// make the message
+		if (sententities[n] == sententitiesmark)
 		{
+			// entity exists, build an update (if empty there is no change)
+			// find the state in the list
+			for (;i < numsendentities && sendentities[i].number < n;i++);
+			s = sendentities + i;
+			if (s->number != n)
+				Sys_Error("SV_WriteEntitiesToClient: s->number != n\n");
+			// build the update
 			if (s->exteriormodelforclient && s->exteriormodelforclient == sv_writeentitiestoclient_clentnum)
 			{
 				s->flags |= RENDER_EXTERIORMODEL;
-				EntityFrame_AddEntity(&sv_writeentitiestoclient_entityframe, s);
+				EntityState_Write(s, &buf, e);
 				s->flags &= ~RENDER_EXTERIORMODEL;
 			}
 			else
-				EntityFrame_AddEntity(&sv_writeentitiestoclient_entityframe, s);
+				EntityState_Write(s, &buf, e);
+		}
+		else
+		{
+			s = &inactiveentitystate;
+			s->number = n;
+			if (e->active)
+			{
+				// entity used to exist but doesn't anymore, send remove
+				MSG_WriteShort(&buf, n | 0x8000);
+			}
+		}
+		// if the commit is full, we're done this frame
+		if (msg->cursize + buf.cursize > maxbytes)
+		{
+			// next frame we will continue where we left off
+			break;
+		}
+		// add the entity to the commit
+		EntityFrame4_AddCommitEntity(d, s);
+		// if the message is empty, skip out now
+		if (buf.cursize)
+		{
+			// write the message to the packet
+			SZ_Write(msg, buf.data, buf.cursize);
 		}
 	}
-	EntityFrame_Write(&client->entitydatabase, &sv_writeentitiestoclient_entityframe, msg);
+	d->currententitynumber = n;
+
+	// remove world message (invalid, and thus a good terminator)
+	MSG_WriteShort(msg, 0x8000);
+	// write the number of the end entity
+	MSG_WriteShort(msg, d->currententitynumber);
+	// just to be sure
+	d->currentcommit = NULL;
 
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_portal + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_portal, sv_writeentitiestoclient_culled_trace);
@@ -1361,10 +1438,10 @@ void SV_UpdateToReliableMessages (void)
 	char *s;
 
 // check for changes to be sent over the reliable streams
-	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
 		// only update the client fields if they've spawned in
-		if (host_client->spawned)
+		if ((host_client = svs.connectedclients[i]) && host_client->spawned)
 		{
 			// update the host_client fields we care about according to the entity fields
 			sv_player = host_client->edict;
@@ -1388,9 +1465,9 @@ void SV_UpdateToReliableMessages (void)
 			if (strcmp(host_client->old_name, host_client->name))
 			{
 				strcpy(host_client->old_name, host_client->name);
-				for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+				for (j = 0;j < MAX_SCOREBOARD;j++)
 				{
-					if (!client->active || !client->spawned)
+					if (!(client = svs.connectedclients[j]) || !client->spawned)
 						continue;
 					MSG_WriteByte (&client->message, svc_updatename);
 					MSG_WriteByte (&client->message, i);
@@ -1400,9 +1477,9 @@ void SV_UpdateToReliableMessages (void)
 			if (host_client->old_colors != host_client->colors)
 			{
 				host_client->old_colors = host_client->colors;
-				for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+				for (j = 0;j < MAX_SCOREBOARD;j++)
 				{
-					if (!client->active || !client->spawned)
+					if (!(client = svs.connectedclients[j]) || !client->spawned)
 						continue;
 					MSG_WriteByte (&client->message, svc_updatecolors);
 					MSG_WriteByte (&client->message, i);
@@ -1412,9 +1489,9 @@ void SV_UpdateToReliableMessages (void)
 			if (host_client->old_frags != host_client->frags)
 			{
 				host_client->old_frags = host_client->frags;
-				for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+				for (j = 0;j < MAX_SCOREBOARD;j++)
 				{
-					if (!client->active || !client->spawned)
+					if (!(client = svs.connectedclients[j]) || !client->spawned)
 						continue;
 					MSG_WriteByte (&client->message, svc_updatefrags);
 					MSG_WriteByte (&client->message, i);
@@ -1424,12 +1501,9 @@ void SV_UpdateToReliableMessages (void)
 		}
 	}
 
-	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
-	{
-		if (!client->active)
-			continue;
-		SZ_Write (&client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
-	}
+	for (j = 0;j < MAX_SCOREBOARD;j++)
+		if ((client = svs.connectedclients[j]))
+			SZ_Write (&client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 
 	SZ_Clear (&sv.reliable_datagram);
 }
@@ -1472,12 +1546,12 @@ void SV_SendClientMessages (void)
 	SV_UpdateToReliableMessages();
 
 // build individual updates
-	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		if (!host_client->active)
+		if (!(host_client = svs.connectedclients[i]))
 			continue;
 
-		if (host_client->deadsocket)
+		if (host_client->deadsocket || !host_client->netconnection || host_client->message.overflowed)
 		{
 			SV_DropClient (true);	// if the message couldn't send, kick off
 			continue;
@@ -1507,16 +1581,6 @@ void SV_SendClientMessages (void)
 					SV_SendNop (host_client);
 				continue;	// don't send out non-signon messages
 			}
-		}
-
-		// check for an overflowed message.  Should only happen
-		// on a very fucked up connection that backs up a lot, then
-		// changes level
-		if (host_client->message.overflowed)
-		{
-			SV_DropClient (true); // overflowed
-			host_client->message.overflowed = false;
-			continue;
 		}
 
 		if (host_client->message.cursize || host_client->dropasap)
@@ -1594,7 +1658,7 @@ void SV_CreateBaseline (void)
 
 		if (svent->e->free)
 			continue;
-		if (entnum > svs.maxclients && !svent->v->modelindex)
+		if (entnum > MAX_SCOREBOARD && !svent->v->modelindex)
 			continue;
 
 		// create entity baseline
@@ -1602,7 +1666,7 @@ void SV_CreateBaseline (void)
 		VectorCopy (svent->v->angles, svent->e->baseline.angles);
 		svent->e->baseline.frame = svent->v->frame;
 		svent->e->baseline.skin = svent->v->skin;
-		if (entnum > 0 && entnum <= svs.maxclients)
+		if (entnum > 0 && entnum <= MAX_SCOREBOARD)
 		{
 			svent->e->baseline.colormap = entnum;
 			svent->e->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
@@ -1685,9 +1749,9 @@ void SV_SaveSpawnparms (void)
 
 	svs.serverflags = pr_global_struct->serverflags;
 
-	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		if (!host_client->active)
+		if (!(host_client = svs.connectedclients[i]))
 			continue;
 
 	// call the progs to get default spawn parms for the new client
@@ -1719,7 +1783,7 @@ void SV_IncreaseEdicts(void)
 	}
 	SV_ClearWorld();
 
-	sv.max_edicts   = min(sv.max_edicts + 32, MAX_EDICTS);
+	sv.max_edicts   = min(sv.max_edicts + 256, MAX_EDICTS);
 	sv.edictsengineprivate = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_engineprivate_t));
 	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
 	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
@@ -1768,9 +1832,9 @@ void SV_SpawnServer (const char *server)
 // tell all connected clients that we are going to a new level
 //
 	if (sv.active)
-		SV_SendReconnect ();
+		SV_SendReconnect();
 	else
-		NetConn_OpenServerPorts(svs.maxclients > 1);
+		NetConn_OpenServerPorts(true);
 
 //
 // make cvars consistant
@@ -1795,7 +1859,7 @@ void SV_SpawnServer (const char *server)
 
 // allocate server memory
 	// start out with just enough room for clients and a reasonable estimate of entities
-	sv.max_edicts = ((svs.maxclients + 128) + 31) & ~31;
+	sv.max_edicts = max(MAX_SCOREBOARD + 1, 512);
 	sv.max_edicts = min(sv.max_edicts, MAX_EDICTS);
 
 	// clear the edict memory pool
@@ -1828,7 +1892,7 @@ void SV_SpawnServer (const char *server)
 	sv.signon.data = sv.signon_buf;
 
 // leave slots at start for clients only
-	sv.num_edicts = svs.maxclients+1;
+	sv.num_edicts = MAX_SCOREBOARD+1;
 
 	sv.state = ss_loading;
 	sv.paused = false;
@@ -1921,9 +1985,9 @@ void SV_SpawnServer (const char *server)
 #endif
 
 // send serverinfo to all connected clients
-	for (i=0,host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
-		if (host_client->active)
-			SV_SendServerinfo (host_client);
+	for (i = 0;i < MAX_SCOREBOARD;i++)
+		if ((host_client = svs.connectedclients[i]))
+			SV_SendServerinfo(host_client);
 
 	Con_DPrintf ("Server spawned.\n");
 	NetConn_Heartbeat (2);

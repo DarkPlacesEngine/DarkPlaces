@@ -25,6 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MASTER_PORT 27950
 
+cvar_t sv_maxplayers = {0, "maxplayers", "8"};
 cvar_t sv_public = {0, "sv_public", "0"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
 
@@ -549,6 +550,20 @@ void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peer
 	Host_Reconnect_f();
 }
 
+int NetConn_IsLocalGame(void)
+{
+	int i;
+	if (cls.state == ca_connected && sv.active/* && LHNETADDRESS_GetAddressType(cl.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP*/)
+	{
+		// make sure there are no other connected clients
+		for (i = 1;i < MAX_SCOREBOARD;i++)
+			if (svs.connectedclients[i])
+				return false;
+		return true;
+	}
+	return false;
+}
+
 static struct
 {
 	double senttime;
@@ -973,10 +988,10 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 						else
 						{
 							// see if this is a duplicate connection request
-							for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-								if (client->active && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
+							for (clientnum = 0;clientnum < MAX_SCOREBOARD;clientnum++)
+								if ((client = svs.connectedclients[clientnum]) && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 									break;
-							if (clientnum < svs.maxclients)
+							if (clientnum < MAX_SCOREBOARD)
 							{
 								// duplicate connection request
 								if (realtime - client->netconnection->connecttime < 2.0)
@@ -997,29 +1012,47 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							else
 							{
 								// this is a new client, find a slot
-								for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-									if (!client->active)
+								for (clientcount = 0, clientnum = 0;clientnum < MAX_SCOREBOARD;clientnum++)
+									if (svs.connectedclients[clientnum])
+										clientcount++;
+								for (clientnum = 0;clientnum < MAX_SCOREBOARD;clientnum++)
+									if (!svs.connectedclients[clientnum])
 										break;
-								if (clientnum == svs.maxclients)
+								if (clientcount < max(1, sv_maxplayers.integer) && clientnum < MAX_SCOREBOARD)
+								{
+									// allocate and prepare the client struct
+									if ((client = Mem_Alloc(sv_clients_mempool, sizeof(client_t))))
+									{
+										if ((client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool)))
+										{
+											if ((conn = NetConn_Open(mysocket, peeraddress)))
+											{
+												// allocated connection
+												LHNETADDRESS_ToString(peeraddress, conn->address, sizeof(conn->address), true);
+												if (developer.integer)
+													Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
+												NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+												// now set up the client struct
+												svs.connectedclients[clientnum] = client;
+												SV_ConnectClient(clientnum, conn);
+												NetConn_Heartbeat(1);
+											}
+											else
+											{
+												EntityFrame4_FreeDatabase(client->entitydatabase4);
+												Mem_Free(client);
+											}
+										}
+										else
+											Mem_Free(client);
+									}
+								}
+								else
 								{
 									// server is full
 									if (developer.integer)
 										Con_Printf("Datagram_ParseConnectionless: sending \"reject Server is full.\" to %s.\n", addressstring2);
 									NetConn_WriteString(mysocket, "\377\377\377\377reject Server is full.", peeraddress);
-								}
-								else
-								{
-									if ((conn = NetConn_Open(mysocket, peeraddress)))
-									{
-										// allocated connection
-										LHNETADDRESS_ToString(peeraddress, conn->address, sizeof(conn->address), true);
-										if (developer.integer)
-											Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
-										NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
-										// now set up the client struct
-										SV_ConnectClient(clientnum, conn);
-										NetConn_Heartbeat(1);
-									}
 								}
 							}
 						}
@@ -1033,13 +1066,13 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				// If there was a challenge in the getinfo message
 				if (length > 8 && string[7] == ' ')
 					challenge = string + 8;
-				for (i = 0, n = 0;i < svs.maxclients;i++)
-					if (svs.clients[i].active)
+				for (i = 0, n = 0;i < MAX_SCOREBOARD;i++)
+					if (svs.connectedclients[i])
 						n++;
 				responselength = snprintf(response, sizeof(response), "\377\377\377\377infoResponse\x0A"
 							"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"
 							"\\clients\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d%s%s",
-							gamename, com_modname, svs.maxclients, n,
+							gamename, com_modname, min(sv_maxplayers.integer, MAX_SCOREBOARD), n,
 							sv.name, hostname.string, NET_PROTOCOL_VERSION, challenge ? "\\challenge\\" : "", challenge ? challenge : "");
 				// does it fit in the buffer?
 				if (responselength < (int)sizeof(response))
@@ -1099,10 +1132,10 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 						else
 						{
 							// see if this is a duplicate connection request
-							for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-								if (client->active && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
+							for (clientnum = 0;clientnum < MAX_SCOREBOARD;clientnum++)
+								if ((client = svs.connectedclients[clientnum]) && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 									break;
-							if (clientnum < svs.maxclients)
+							if (clientnum < MAX_SCOREBOARD)
 							{
 								// duplicate connection request
 								if (realtime - client->netconnection->connecttime < 2.0)
@@ -1131,10 +1164,11 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							else
 							{
 								// this is a new client, find a slot
-								for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-									if (!client->active)
+								for (clientnum = 0;clientnum < MAX_SCOREBOARD;clientnum++)
+									if (!(client = svs.connectedclients[clientnum]))
 										break;
-								if (clientnum < svs.maxclients && (client->netconnection = conn = NetConn_Open(mysocket, peeraddress)) != NULL)
+								// WARNING: this is broken code
+								if (clientnum < MAX_SCOREBOARD && (client->netconnection = conn = NetConn_Open(mysocket, peeraddress)) != NULL)
 								{
 									// connect to the client
 									// everything is allocated, just fill in the details
@@ -1189,7 +1223,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 						MSG_WriteString(&net_message, hostname.string);
 						MSG_WriteString(&net_message, sv.name);
 						MSG_WriteByte(&net_message, net_activeconnections);
-						MSG_WriteByte(&net_message, svs.maxclients);
+						MSG_WriteByte(&net_message, min(sv_maxplayers.integer, MAX_SCOREBOARD));
 						MSG_WriteByte(&net_message, NET_PROTOCOL_VERSION);
 						*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 						NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
@@ -1264,14 +1298,25 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			}
 		}
 #endif
-		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		for (i = 0;i < MAX_SCOREBOARD;i++)
 		{
-			if (host_client->active && host_client->netconnection && host_client->netconnection->mysocket == mysocket && !LHNETADDRESS_Compare(&host_client->netconnection->peeraddress, peeraddress))
+			if ((host_client = svs.connectedclients[i]))
 			{
-				sv_player = host_client->edict;
-				if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
-					SV_ReadClientMessage();
-				return ret;
+				if (host_client->netconnection)
+				{
+					if (host_client->netconnection->mysocket == mysocket && !LHNETADDRESS_Compare(&host_client->netconnection->peeraddress, peeraddress))
+					{
+						sv_player = host_client->edict;
+						if ((ret = NetConn_ReceivedMessage(host_client->netconnection, data, length)) == 2)
+							SV_ReadClientMessage();
+						return ret;
+					}
+				}
+				else
+				{
+					Con_Printf("Removing client with no netconnection!\n");
+					SV_DropClient(true);
+				}
 			}
 		}
 	}
@@ -1287,9 +1332,9 @@ void NetConn_ServerFrame(void)
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		if (host_client->active && realtime > host_client->netconnection->timeout)
+		if ((host_client = svs.connectedclients[i]) && realtime > host_client->netconnection->timeout)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
 			sv_player = host_client->edict;
@@ -1364,7 +1409,7 @@ void NetConn_Heartbeat(int priority)
 
 	// make advertising optional and don't advertise singleplayer games, and
 	// only send a heartbeat as often as the admin wants
-	if (sv.active && sv_public.integer && svs.maxclients >= 2 && (priority > 1 || realtime > nextheartbeattime))
+	if (sv.active && sv_public.integer && (!cl.islocalgame || sv_maxplayers.integer >= 2) && (priority > 1 || realtime > nextheartbeattime))
 	{
 		nextheartbeattime = realtime + sv_heartbeatperiod.value;
 		for (masternum = 0;sv_masters[masternum].name;masternum++)
@@ -1391,9 +1436,9 @@ int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 		count = 0;
 		NetConn_ClientFrame();
 		NetConn_ServerFrame();
-		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		for (i = 0;i < MAX_SCOREBOARD;i++)
 		{
-			if (host_client->active)
+			if ((host_client = svs.connectedclients[i]))
 			{
 				if (NetConn_CanSendMessage(host_client->netconnection))
 				{
@@ -1408,30 +1453,6 @@ int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 	}
 	while (count && Sys_DoubleTime() < blocktime);
 	return count;
-}
-
-static void MaxPlayers_f(void)
-{
-	int n;
-
-	if (Cmd_Argc() != 2)
-	{
-		Con_Printf("\"maxplayers\" is \"%u\"\n", svs.maxclients);
-		return;
-	}
-
-	if (sv.active)
-	{
-		Con_Printf("maxplayers can not be changed while a server is running.\n");
-		return;
-	}
-
-	n = atoi(Cmd_Argv(1));
-	n = bound(1, n, MAX_SCOREBOARD);
-	if (svs.maxclients != n)
-		Con_Printf("\"maxplayers\" set to \"%u\"\n", n);
-
-	SV_SetMaxClients(n);
 }
 
 static void Net_Heartbeat_f(void)
@@ -1478,7 +1499,6 @@ void NetConn_Init(void)
 	netconn_mempool = Mem_AllocPool("Networking");
 	Cmd_AddCommand("net_stats", Net_Stats_f);
 	Cmd_AddCommand("net_slist", Net_Slist_f);
-	Cmd_AddCommand("maxplayers", MaxPlayers_f);
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_messagerejointimeout);
@@ -1491,6 +1511,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_netport);
 	Cvar_RegisterVariable(&sv_netaddress);
 	Cvar_RegisterVariable(&sv_netaddress_ipv6);
+	Cvar_RegisterVariable(&sv_maxplayers);
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (masternum = 0;sv_masters[masternum].name;masternum++)
