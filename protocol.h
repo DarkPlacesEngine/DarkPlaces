@@ -209,7 +209,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // LordHavoc: my svc_ range, 50-59
 #define svc_cgame			50		// [short] length [bytes] data
-#define svc_fog				51		// unfinished and obsolete
+#define svc_unusedlh1		51
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 #define svc_effect2			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
 #define	svc_sound2			54		// short soundindex instead of byte
