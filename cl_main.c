@@ -617,8 +617,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (e->render.model)
 		{
 			Mod_CheckLoaded(e->render.model);
-			// if model is alias, sprite, or this is a tenebrae-like dlight, reverse pitch direction
-			if (e->render.model->type == mod_alias || e->render.model->type == mod_sprite || (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC))
+			// if model is alias or this is a tenebrae-like dlight, reverse pitch direction
+			if (e->render.model->type == mod_alias || (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC))
 				angles[0] = -angles[0];
 			if ((e->render.model->flags & EF_ROTATE) && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
 			{
