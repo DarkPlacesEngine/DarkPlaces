@@ -636,7 +636,7 @@ void Host_Loadgame_f (void)
 // load the edicts out of the savegame file
 	// -1 is the globals
 	entnum = -1;
-	while (!FS_Eof (f))
+	for (;;)
 	{
 		for (i = 0;i < (int)sizeof(buf) - 1;i++)
 		{
@@ -650,6 +650,8 @@ void Host_Loadgame_f (void)
 				break;
 			}
 		}
+		if (r == EOF)
+			break;
 		if (i == sizeof(buf)-1)
 			Host_Error ("Loadgame buffer overflow");
 		buf[i] = 0;
