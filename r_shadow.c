@@ -2744,6 +2744,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		style = 0;
 		skin = 0;
 		pflags = 0;
+		effects = 0;
 		islight = false;
 		while (1)
 		{
