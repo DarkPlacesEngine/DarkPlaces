@@ -230,14 +230,14 @@ void CL_ParseEntityLump(char *entdata)
 		if (com_token[0] == '}')
 			break; // end of worldspawn
 		if (com_token[0] == '_')
-			strcpy(key, com_token + 1);
+			strlcpy (key, com_token + 1, sizeof (key));
 		else
-			strcpy(key, com_token);
+			strlcpy (key, com_token, sizeof (key));
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
 		if (!COM_ParseToken(&data, false))
 			return; // error
-		strcpy(value, com_token);
+		strlcpy (value, com_token, sizeof (value));
 		if (!strcmp("sky", key))
 			R_SetSkyBox(value);
 		else if (!strcmp("skyname", key)) // non-standard, introduced by QuakeForge... sigh.
@@ -382,7 +382,7 @@ void CL_ParseServerInfo (void)
 			Host_Error ("Server sent too many model precaches\n");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strcpy(parse_model_precache[nummodels], str);
+		strlcpy (parse_model_precache[nummodels], str, sizeof (parse_model_precache[nummodels]));
 	}
 	// parse sound precache list
 	for (numsounds=1 ; ; numsounds++)
@@ -394,7 +394,7 @@ void CL_ParseServerInfo (void)
 			Host_Error("Server sent too many sound precaches\n");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strcpy(parse_sound_precache[numsounds], str);
+		strlcpy (parse_sound_precache[numsounds], str, sizeof (parse_sound_precache[numsounds]));
 	}
 
 	// touch all of the precached models that are still loaded so we can free
@@ -1457,7 +1457,7 @@ void CL_ParseServerMessage(void)
 			{
 				char description[32*64], temp[64];
 				int count;
-				strcpy(description, "packet dump: ");
+				strcpy (description, "packet dump: ");
 				i = cmdcount - 32;
 				if (i < 0)
 					i = 0;
