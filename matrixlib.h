@@ -59,6 +59,9 @@ void Matrix4x4_ToVectors(const matrix4x4_t *in, float vx[3], float vy[3], float 
 // creates a matrix4x4 from a set of 3D vectors for axial directions, and translate
 void Matrix4x4_FromVectors(matrix4x4_t *out, const float vx[3], const float vy[3], const float vz[3], const float t[3]);
 
+// blends two matrices together, at a given percentage (blend controls percentage of in2)
+void Matrix4x4_Blend (matrix4x4_t *out, const matrix4x4_t *in1, const matrix4x4_t *in2, float blend);
+
 // transforms a 3D vector through a matrix4x4
 void Matrix4x4_Transform (const matrix4x4_t *in, const float v[3], float out[3]);
 // transforms a 4D vector through a matrix4x4

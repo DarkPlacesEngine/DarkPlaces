@@ -87,7 +87,8 @@ extern vec3_t vec3_origin;
 		VectorScale(_v, _y, _v);\
 	}\
 }
-#define VectorRandom(v) {do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1);}
+#define VectorRandom(v) do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1)
+#define VectorBlend(b1, b2, blend, c) do{float iblend = 1 - (blend);VectorMAM(iblend, b1, blend, b2, c);}while(0)
 
 /*
 // LordHavoc: quaternion math, untested, don't know if these are correct,
