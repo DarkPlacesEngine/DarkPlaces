@@ -35,6 +35,18 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+4 darkplaces: add qw protocol support (making darkplaces work as a qwcl client) (tell Fuh)
+0 darkplaces: add some cl_explosions_ cvars to control settings - start alpha, end alpha, start size, end size, life time (Supajoe, Mercury)
+0 darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
+2 darkplaces: add another TE_TELEPORT effect that spawns particles at a model's vertices (Urre)
+0 darkplaces: change sky handling to draw sky even if fog is on (Deej, C0burn)
+3 darkplaces: redesign startup script handling to simply stop execution until video inits, when it encounters certain commands (instead of delaying those commands)
+d darkplaces: physics bug: rotating bmodels stop when the player blocks them instead of pushing the player
+0 darkplaces: physics bug: fiends can leap through the player
+-n darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
+0 darkplaces: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
+0 darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
+d darkplaces: add cvar_string builtin (Paul Timofeyev)
 -n darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 2 darkplaces: add lan searching to the server browser and related code (Vermeulen)
 4 darkplaces: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)  
@@ -246,7 +258,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 3 darkplaces: add anisotropic filtering options (Zombie_13, zinx)
 3 darkplaces: add antialiasing options (Zombie_13)
 3 darkplaces: add back r_waterripple (Vermeulen)
-3 darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend)
+3 darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 3 darkplaces: add stainmaps to realtime lighting mode
 3 darkplaces: add sv_rate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
 3 darkplaces: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
@@ -302,7 +314,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 6 darkplaces: add cubemap reflections like UT2003 somehow (perhaps entities would define the reflection maps for rooms, and a water entity would take care of the rest?) (TEU, Nexuiz, SeienAbunae)
 6 darkplaces: add water refraction like HalfLife2 (Mitchell)
 6 darkplaces: figure out an LOD scheme for really large outdoor environments (Uffe, SeienAbunae)
-7 darkplaces: Quake3 bsp support (Vermeulen, Mitchell, SeienAbunae)
+d darkplaces: Quake3 bsp support (Vermeulen, Mitchell, SeienAbunae)
 7 darkplaces: add DP_ENT_DISTORTIONFIELD which visually pulls things inward/outward around an entity (Supajoe, SeienAbunae)
 7 darkplaces: add clientside quakec (KrimZon, FrikaC, SeienAbunae)
 7 darkplaces: figure out what is causing invalid entity numbers in TouchAreaGrid in world.c - suspicion: problem with reallocation of edicts?
