@@ -41,6 +41,7 @@ cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
 cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
 cvar_t r_shadow_shadownudge = {0, "r_shadow_shadownudge", "1"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
+cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "100000"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
 int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
@@ -106,6 +107,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
 	Cvar_RegisterVariable(&r_shadow_shadownudge);
 	Cvar_RegisterVariable(&r_shadow_portallight);
+	Cvar_RegisterVariable(&r_shadow_projectdistance);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
@@ -1253,7 +1255,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 
 				// now that we have the buffers big enough, construct shadow volume mesh
 				memcpy(verts, castmesh->verts, castmesh->numverts * sizeof(float[4]));
-				R_Shadow_ProjectVertices(verts, castmesh->numverts, e->origin, 10000000.0f);//, e->lightradius);
+				R_Shadow_ProjectVertices(verts, castmesh->numverts, e->origin, r_shadow_projectdistance.value);//, e->lightradius);
 				R_Shadow_MakeTriangleShadowFlags(castmesh->elements, verts, castmesh->numtriangles, trianglefacinglight, e->origin, e->lightradius);
 				tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->elements, castmesh->neighbors, castmesh->numtriangles, castmesh->numverts, trianglefacinglight, shadowelements);
 				// add the constructed shadow volume mesh
