@@ -3,15 +3,17 @@
 # Choose the compiler you want to use
 CC=gcc
 
-# K6/athlon optimizations
-#CPUOPTIMIZATIONS=-march=k6
-# Note: don't use -march=athlon, every gcc which has it currently (2.96-3.1)
-# have optimizer bugs (like entities disappearing randomly - a bug with
-# compiling BOX_ON_PLANE_SIDE in mathlib.h)
+# athlon optimizations
 #CPUOPTIMIZATIONS=-march=athlon
-# 686 optimizations
+# athlon xp optimizations
+#CPUOPTIMIZATIONS=-march=athlon-xp
+# Pentium 3 optimizations
+#CPUOPTIMIZATIONS=-march=pentium3
+# Pentium 4 optimizations
+#CPUOPTIMIZATIONS=-march=pentium4
+# 686 (Pentium Pro/II) optimizations
 #CPUOPTIMIZATIONS=-march=i686
-# No specific CPU
+# No specific CPU (386 compatible)
 CPUOPTIMIZATIONS=
 
 
