@@ -2702,6 +2702,7 @@ level_t		transfusionlevels[] =
 	{"e2m8",		"The Lair of Shial"},
 	{"e3m7",		"The Pit of Cerberus"},
 	{"e4m8",		"The Hall of the Epiphany"},
+	{"e4m9",		"Mall of the Dead"},
 
 	{"dm1",			"Monolith Building 11"},
 	{"dm2",			"Power!"},
@@ -2735,12 +2736,12 @@ level_t		transfusionlevels[] =
 episode_t	transfusionepisodes[] =
 {
 	{"Blood", 0, 8},
-	{"Blood Single Player", 8, 6},
-	{"Plasma Pack", 14, 5},
-	{"Cryptic Passage", 19, 2},
-	{"Blood 2", 21, 5},
-	{"Transfusion", 26, 6},
-	{"Conversions", 32, 5}
+	{"Blood Single Player", 8, 7},
+	{"Plasma Pack", 15, 5},
+	{"Cryptic Passage", 20, 2},
+	{"Blood 2", 22, 5},
+	{"Transfusion", 27, 6},
+	{"Conversions", 33, 5}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
