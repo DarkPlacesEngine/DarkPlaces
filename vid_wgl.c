@@ -249,7 +249,7 @@ qboolean VID_SetFullDIBMode (int modenum)
 
 int VID_SetMode (int modenum)
 {
-	int				original_mode
+	int				original_mode;
 	//int				temp;
 	qboolean		stat = 0;
     MSG				msg;
