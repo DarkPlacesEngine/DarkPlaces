@@ -320,13 +320,14 @@ CL_ParseServerInfo
 ==================
 */
 qbyte entlife[MAX_EDICTS];
+// FIXME: this is a lot of memory to be keeping around, this needs to be dynamically allocated and freed
+static char parse_model_precache[MAX_MODELS][MAX_QPATH];
+static char parse_sound_precache[MAX_SOUNDS][MAX_QPATH];
 void CL_ParseServerInfo (void)
 {
 	char *str;
 	int i;
 	int nummodels, numsounds;
-	char model_precache[MAX_MODELS][MAX_QPATH];
-	char sound_precache[MAX_SOUNDS][MAX_QPATH];
 	entity_t *ent;
 
 	Con_DPrintf ("Serverinfo packet received.\n");
@@ -396,7 +397,7 @@ void CL_ParseServerInfo (void)
 			Host_Error ("Server sent too many model precaches\n");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strcpy (model_precache[nummodels], str);
+		strcpy (parse_model_precache[nummodels], str);
 		Mod_TouchModel (str);
 	}
 
@@ -411,7 +412,7 @@ void CL_ParseServerInfo (void)
 			Host_Error ("Server sent too many sound precaches\n");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strcpy (sound_precache[numsounds], str);
+		strcpy (parse_sound_precache[numsounds], str);
 		S_TouchSound (str);
 	}
 
@@ -422,16 +423,16 @@ void CL_ParseServerInfo (void)
 
 	// world model
 	CL_KeepaliveMessage ();
-	cl.model_precache[1] = Mod_ForName (model_precache[1], false, false, true);
+	cl.model_precache[1] = Mod_ForName (parse_model_precache[1], false, false, true);
 	if (cl.model_precache[1] == NULL)
-		Con_Printf("Map %s not found\n", model_precache[1]);
+		Con_Printf("Map %s not found\n", parse_model_precache[1]);
 
 	// normal models
 	for (i=2 ; i<nummodels ; i++)
 	{
 		CL_KeepaliveMessage ();
-		if ((cl.model_precache[i] = Mod_ForName (model_precache[i], false, false, false)) == NULL)
-			Con_Printf("Model %s not found\n", model_precache[i]);
+		if ((cl.model_precache[i] = Mod_ForName (parse_model_precache[i], false, false, false)) == NULL)
+			Con_Printf("Model %s not found\n", parse_model_precache[i]);
 	}
 
 	// sounds
@@ -439,7 +440,7 @@ void CL_ParseServerInfo (void)
 	for (i=1 ; i<numsounds ; i++)
 	{
 		CL_KeepaliveMessage ();
-		cl.sound_precache[i] = S_PrecacheSound (sound_precache[i], true);
+		cl.sound_precache[i] = S_PrecacheSound (parse_sound_precache[i], true);
 	}
 	S_EndPrecaching ();
 
