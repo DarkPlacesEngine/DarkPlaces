@@ -1856,7 +1856,7 @@ void VM_fgets(void)
 	{
 		c = FS_Getc(VM_FILES[filenum]);
 		if (c != '\n')
-			FS_UnGetc(VM_FILES[filenum], c);
+			FS_UnGetc(VM_FILES[filenum], (unsigned char)c);
 	}
 	if (developer.integer >= 3)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
