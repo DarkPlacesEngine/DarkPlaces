@@ -762,8 +762,6 @@ void Con_DrawNotify (void)
 			continue;
 		text = con_text + (i % con_totallines)*con_linewidth;
 
-		clearnotify = 0;
-
 		DrawQ_String(0, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 
 		v += 8;
@@ -772,8 +770,6 @@ void Con_DrawNotify (void)
 
 	if (key_dest == key_message)
 	{
-		clearnotify = 0;
-
 		x = 0;
 
 		// LordHavoc: speedup, and other improvements
