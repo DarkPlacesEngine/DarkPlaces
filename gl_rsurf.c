@@ -700,27 +700,6 @@ static int RSurf_LightSeparate_Vertex3f_Color4f(const matrix4x4_t *matrix, const
 	return lit;
 }
 
-// note: this untransforms lights to do the checking
-static int RSurf_LightCheck(const matrix4x4_t *matrix, const int *dlightbits, const surfmesh_t *mesh)
-{
-	int i, l;
-	const rdlight_t *rd;
-	vec3_t lightorigin;
-	const float *v;
-	for (l = 0;l < r_numdlights;l++)
-	{
-		if (dlightbits[l >> 5] & (1 << (l & 31)))
-		{
-			rd = &r_dlight[l];
-			Matrix4x4_Transform(matrix, rd->origin, lightorigin);
-			for (i = 0, v = mesh->vertex3f;i < mesh->numverts;i++, v += 3)
-				if (VectorDistance2(v, lightorigin) < rd->cullradius2)
-					return true;
-		}
-	}
-	return false;
-}
-
 static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
