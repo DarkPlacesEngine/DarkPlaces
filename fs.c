@@ -573,6 +573,10 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet)
 
 		// Open the file on disk directly
 		snprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
+
+		// Create directories up to the file
+		FS_CreatePath (real_path);
+
 		return FS_SysOpen (real_path, mode);
 	}
 
