@@ -1,9 +1,6 @@
 
 #include "quakedef.h"
 
-// Tell startup code that we have a client
-int cl_available = true;
-
 // global video state
 viddef_t vid;
 
