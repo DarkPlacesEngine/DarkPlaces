@@ -245,6 +245,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	model_t *model;
 	skinframe_t *skinframe;
 	const entity_render_t *ent = calldata1;
+	int blendfunc1, blendfunc2;
 
 //	softwaretransformforentity(ent);
 
@@ -302,7 +303,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 
 			aliasvert = m.vertex;
 			aliasvertcolor = m.color;
-			R_SetupMDLMD2Frames(ent, m.colorscale * (1 - fog), m.colorscale * (1 - fog), m.colorscale * (1 - fog));
+			R_SetupMDLMD2Frames(ent, m.colorscale, m.colorscale, m.colorscale);
 			aliasvert = aliasvertbuf;
 			aliasvertcolor = aliasvertcolorbuf;
 
@@ -331,28 +332,33 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		pantsfullbright = shirtfullbright = false;
 	}
 
-	memset(&m, 0, sizeof(m));
 	if (ent->effects & EF_ADDITIVE)
 	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE;
+		blendfunc1 = GL_SRC_ALPHA;
+		blendfunc2 = GL_ONE;
 	}
 	else if (ent->alpha != 1.0 || skinframe->fog != NULL)
 	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		blendfunc1 = GL_SRC_ALPHA;
+		blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	}
 	else
 	{
-		m.blendfunc1 = GL_ONE;
-		m.blendfunc2 = GL_ZERO;
+		blendfunc1 = GL_ONE;
+		blendfunc2 = GL_ZERO;
 	}
+
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = blendfunc1;
+	m.blendfunc2 = blendfunc2;
 	m.numtriangles = model->numtris;
 	m.numverts = model->numverts;
-	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
 	m.matrix = ent->matrix;
-	if (R_Mesh_Draw_GetBuffer(&m, true))
+	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
+	if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
 	{
+		blendfunc1 = GL_SRC_ALPHA;
+		blendfunc2 = GL_ONE;
 		c_alias_polys += m.numtriangles;
 		R_ModulateColors(aliasvertcolor, m.color, m.numverts, m.colorscale, m.colorscale, m.colorscale);
 		memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
@@ -366,14 +372,16 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		if (skinframe->pants)
 		{
 			memset(&m, 0, sizeof(m));
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE;
+			m.blendfunc1 = blendfunc1;
+			m.blendfunc2 = blendfunc2;
 			m.numtriangles = model->numtris;
 			m.numverts = model->numverts;
-			m.tex[0] = R_GetTexture(skinframe->pants);
 			m.matrix = ent->matrix;
-			if (R_Mesh_Draw_GetBuffer(&m, true))
+			m.tex[0] = R_GetTexture(skinframe->pants);
+			if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
 			{
+				blendfunc1 = GL_SRC_ALPHA;
+				blendfunc2 = GL_ONE;
 				c_alias_polys += m.numtriangles;
 				if (pantsfullbright)
 					R_FillColors(m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale, ent->alpha);
@@ -388,14 +396,16 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		if (skinframe->shirt)
 		{
 			memset(&m, 0, sizeof(m));
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE;
+			m.blendfunc1 = blendfunc1;
+			m.blendfunc2 = blendfunc2;
 			m.numtriangles = model->numtris;
 			m.numverts = model->numverts;
-			m.tex[0] = R_GetTexture(skinframe->shirt);
 			m.matrix = ent->matrix;
-			if (R_Mesh_Draw_GetBuffer(&m, true))
+			m.tex[0] = R_GetTexture(skinframe->shirt);
+			if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
 			{
+				blendfunc1 = GL_SRC_ALPHA;
+				blendfunc2 = GL_ONE;
 				c_alias_polys += m.numtriangles;
 				if (shirtfullbright)
 					R_FillColors(m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale, ent->alpha);
@@ -411,14 +421,16 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	if (skinframe->glow)
 	{
 		memset(&m, 0, sizeof(m));
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE;
+		m.blendfunc1 = blendfunc1;
+		m.blendfunc2 = blendfunc2;
 		m.numtriangles = model->numtris;
 		m.numverts = model->numverts;
-		m.tex[0] = R_GetTexture(skinframe->glow);
 		m.matrix = ent->matrix;
-		if (R_Mesh_Draw_GetBuffer(&m, true))
+		m.tex[0] = R_GetTexture(skinframe->glow);
+		if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
 		{
+			blendfunc1 = GL_SRC_ALPHA;
+			blendfunc2 = GL_ONE;
 			c_alias_polys += m.numtriangles;
 			R_FillColors(m.color, m.numverts, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, ent->alpha);
 			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
@@ -434,12 +446,12 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.blendfunc2 = GL_ONE;
 		m.numtriangles = model->numtris;
 		m.numverts = model->numverts;
-		m.tex[0] = R_GetTexture(skinframe->fog);
 		m.matrix = ent->matrix;
-		if (R_Mesh_Draw_GetBuffer(&m, false))
+		m.tex[0] = R_GetTexture(skinframe->fog);
+		if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			c_alias_polys += m.numtriangles;
-			R_FillColors(m.color, m.numverts, fog * m.colorscale, fog * m.colorscale, fog * m.colorscale, ent->alpha);
+			R_FillColors(m.color, m.numverts, fogcolor[0] * fog * m.colorscale, fogcolor[1] * fog * m.colorscale, fogcolor[2] * fog * m.colorscale, ent->alpha);
 			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
 			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
 			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
