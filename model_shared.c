@@ -526,22 +526,24 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 		{
 			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
 			VectorNormalize(normal);
-			sdir[0] = (vert[1][3] - vert[0][3]) * (vert[2][0] - vert[0][0]) - (vert[2][3] - vert[0][3]) * (vert[1][0] - vert[0][0]);
-			sdir[1] = (vert[1][3] - vert[0][3]) * (vert[2][1] - vert[0][1]) - (vert[2][3] - vert[0][3]) * (vert[1][1] - vert[0][1]);
-			sdir[2] = (vert[1][3] - vert[0][3]) * (vert[2][2] - vert[0][2]) - (vert[2][3] - vert[0][3]) * (vert[1][2] - vert[0][2]);
-			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-			VectorNormalize(sdir);
-			// 1 assignments, 1 negates, 2 adds, 3 multiplies
-			f = -DotProduct(sdir, normal);
-			// 3 assignments, 3 adds, 3 multiplies
-			VectorMA(sdir, f, normal, sdir);
-			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
-			VectorNormalize(sdir);
-			// 3 assignments, 3 subtracts, 6 multiplies
-			CrossProduct(sdir, normal, tdir);
-			// this is probably not necessary
+			tdir[0] = ((vert[1][3] - vert[0][3]) * (vert[2][0] - vert[0][0]) - (vert[2][3] - vert[0][3]) * (vert[1][0] - vert[0][0]));
+			tdir[1] = ((vert[1][3] - vert[0][3]) * (vert[2][1] - vert[0][1]) - (vert[2][3] - vert[0][3]) * (vert[1][1] - vert[0][1]));
+			tdir[2] = ((vert[1][3] - vert[0][3]) * (vert[2][2] - vert[0][2]) - (vert[2][3] - vert[0][3]) * (vert[1][2] - vert[0][2]));
 			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
 			VectorNormalize(tdir);
+			// 1 assignments, 1 negates, 2 adds, 3 multiplies
+			f = -DotProduct(tdir, normal);
+			// 3 assignments, 3 adds, 3 multiplies
+			VectorMA(tdir, f, normal, tdir);
+			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
+			VectorNormalize(tdir);
+			// 3 assignments, 3 subtracts, 6 multiplies
+			CrossProduct(tdir, normal, sdir);
+			// this is probably not necessary
+			// 4 assignments, 1 rsqrt, 2 adds, 6 multiplies
+			VectorNormalize(sdir);
+			//
+			VectorNegate(sdir, sdir);
 			// accumulate matrix onto verts used by triangle
 			// 30 assignments, 27 adds
 			for (i = 0;i < 3;i++)
