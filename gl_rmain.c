@@ -282,6 +282,7 @@ extern void R_Textures_Init(void);
 extern void Mod_RenderInit(void);
 extern void GL_Draw_Init(void);
 extern void GL_Main_Init(void);
+extern void R_Shadow_Init(void);
 extern void GL_Models_Init(void);
 extern void R_Sky_Init(void);
 extern void GL_Surf_Init(void);
@@ -301,6 +302,7 @@ void Render_Init(void)
 	R_MeshQueue_Init();
 	GL_Draw_Init();
 	GL_Main_Init();
+	R_Shadow_Init();
 	GL_Models_Init();
 	R_Sky_Init();
 	GL_Surf_Init();
@@ -324,9 +326,6 @@ void GL_Init (void)
 
 	// LordHavoc: report supported extensions
 	Con_Printf ("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
-
-	qglCullFace(GL_FRONT);
-	qglEnable(GL_TEXTURE_2D);
 }
 
 int R_CullBox(const vec3_t emins, const vec3_t emaxs)
