@@ -2331,6 +2331,22 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	shadowmesh_t *mesh;
 	rmeshstate_t m;
 
+	// skip lights that don't light (corona only lights)
+	if (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale < 0.01)
+		return;
+
+	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f);
+	VectorScale(rtlight->color, f, lightcolor);
+	if (VectorLength2(lightcolor) < 0.01)
+		return;
+	/*
+	if (rtlight->selected)
+	{
+		f = 2 + sin(realtime * M_PI * 4.0);
+		VectorScale(lightcolor, f, lightcolor);
+	}
+	*/
+
 	// loading is done before visibility checks because loading should happen
 	// all at once at the start of a level, not when it stalls gameplay.
 	// (especially important to benchmarks)
@@ -2393,16 +2409,6 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	// set up a scissor rectangle for this light
 	if (R_Shadow_ScissorForBBox(cullmins, cullmaxs))
 		return;
-
-	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f);
-	VectorScale(rtlight->color, f, lightcolor);
-	/*
-	if (rtlight->selected)
-	{
-		f = 2 + sin(realtime * M_PI * 4.0);
-		VectorScale(lightcolor, f, lightcolor);
-	}
-	*/
 
 	shadow = rtlight->shadow && (rtlight->isstatic ? r_rtworldshadows : r_rtdlightshadows);
 
