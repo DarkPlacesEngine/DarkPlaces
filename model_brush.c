@@ -193,8 +193,11 @@ void Mod_LoadTextures (lump_t *l)
 						out[1] = pal[p+1];
 						out[2] = pal[p+2];
 						out[3] = 255;
-						if (out[0] == 255 && out[1] == 0 && out[2] == 0) // HL transparent color (pure blue)
+						if (out[0] == 0 && out[1] == 0 && out[2] == 255) // HL transparent color (pure blue)
+						{
 							out[0] = out[1] = out[2] = out[3] = 0;
+							transparent = TRUE;
+						}
 						out += 4;
 					}
 				}
