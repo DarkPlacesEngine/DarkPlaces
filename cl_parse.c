@@ -234,6 +234,7 @@ extern char skyname[];
 extern void R_SetSkyBox (char *sky);
 extern void FOG_clear();
 extern cvar_t r_farclip;
+extern qboolean hlbsp;
 
 void CL_ParseEntityLump(char *entdata)
 {
