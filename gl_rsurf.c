@@ -40,24 +40,6 @@ cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygo
 cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0"};
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
-/*
-// FIXME: these arrays are huge!
-int r_q1bsp_maxmarkleafs;
-int r_q1bsp_nummarkleafs;
-mleaf_t *r_q1bsp_maxleaflist[65536];
-int r_q1bsp_maxmarksurfaces;
-int r_q1bsp_nummarksurfaces;
-msurface_t *r_q1bsp_maxsurfacelist[65536];
-
-// FIXME: these arrays are huge!
-int r_q3bsp_maxmarkleafs;
-int r_q3bsp_nummarkleafs;
-q3mleaf_t *r_q3bsp_maxleaflist[65536];
-int r_q3bsp_maxmarksurfaces;
-int r_q3bsp_nummarksurfaces;
-q3msurface_t *r_q3bsp_maxsurfacelist[65536];
-*/
-
 static int dlightdivtable[32768];
 
 static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
@@ -1345,7 +1327,7 @@ void R_WorldVisibility(void)
 	if (model->type == mod_brushq3)
 	{
 		int i, j;
-		q3mleaf_t *leaf;
+		mleaf_t *leaf;
 		memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brushq3.num_faces);
 		for (j = 0, leaf = r_refdef.worldmodel->brushq3.data_leafs;j < r_refdef.worldmodel->brushq3.num_leafs;j++, leaf++)
 		{
@@ -1380,8 +1362,8 @@ void R_WorldVisibility(void)
 				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
 				{
 					c_leafs++;
-					if (leaf->nummarksurfaces)
-						for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
+					if (leaf->numleaffaces)
+						for (i = 0, mark = leaf->firstleafface;i < leaf->numleaffaces;i++, mark++)
 							r_worldsurfacevisible[*mark] = true;
 				}
 			}
@@ -1401,8 +1383,8 @@ void R_WorldVisibility(void)
 				leaf = leafstack[--leafstackpos];
 				leafvisited[leaf - r_refdef.worldmodel->brushq1.data_leafs] = 1;
 				// draw any surfaces bounding this leaf
-				if (leaf->nummarksurfaces)
-					for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
+				if (leaf->numleaffaces)
+					for (i = 0, mark = leaf->firstleafface;i < leaf->numleaffaces;i++, mark++)
 						r_worldsurfacevisible[*mark] = true;
 				// follow portals into other leafs
 				for (p = leaf->portals;p;p = p->next)
@@ -1435,7 +1417,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
-	int t, leafindex, marksurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
+	int t, leafindex, leaffaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
 	const float *v[3];
 	msurface_t *surface;
@@ -1484,9 +1466,9 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			}
 			if (outsurfacepvs)
 			{
-				for (marksurfaceindex = 0;marksurfaceindex < leaf->nummarksurfaces;marksurfaceindex++)
+				for (leaffaceindex = 0;leaffaceindex < leaf->numleaffaces;leaffaceindex++)
 				{
-					surfaceindex = leaf->firstmarksurface[marksurfaceindex];
+					surfaceindex = leaf->firstleafface[leaffaceindex];
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
 						surface = model->brushq1.surfaces + surfaceindex;
@@ -2144,11 +2126,11 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
-	int t, leafindex, marksurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
+	int t, leafindex, leaffaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
 	const float *v[3];
 	q3msurface_t *surface;
-	q3mleaf_t *leaf;
+	mleaf_t *leaf;
 	const qbyte *pvs;
 	lightmins[0] = relativelightorigin[0] - lightradius;
 	lightmins[1] = relativelightorigin[1] - lightradius;
@@ -2193,9 +2175,9 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			}
 			if (outsurfacepvs)
 			{
-				for (marksurfaceindex = 0;marksurfaceindex < leaf->numleaffaces;marksurfaceindex++)
+				for (leaffaceindex = 0;leaffaceindex < leaf->numleaffaces;leaffaceindex++)
 				{
-					surfaceindex = leaf->firstleafface[marksurfaceindex];
+					surfaceindex = leaf->firstleafface[leaffaceindex];
 					surface = model->brushq3.data_faces + surfaceindex;
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{

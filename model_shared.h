@@ -249,8 +249,8 @@ typedef struct model_brushq1_s
 	int				numclipnodes;
 	dclipnode_t		*clipnodes;
 
-	int				nummarksurfaces;
-	int				*marksurfaces;
+	int				numleaffaces;
+	int				*leaffaces;
 
 	hull_t			hulls[MAX_MAP_HULLS];
 
@@ -305,10 +305,10 @@ typedef struct model_brushq3_s
 	mplane_t *data_planes;
 
 	int num_nodes;
-	q3mnode_t *data_nodes;
+	mnode_t *data_nodes;
 
 	int num_leafs;
-	q3mleaf_t *data_leafs;
+	mleaf_t *data_leafs;
 
 	int num_leafbrushes;
 	int *data_leafbrushes;

@@ -202,6 +202,8 @@ typedef struct mnode_s
 
 	// this part unique to node
 	struct mnode_s *children[2];
+
+	// q1bsp specific
 	unsigned short firstsurface;
 	unsigned short numsurfaces;
 }
@@ -218,12 +220,16 @@ typedef struct mleaf_s
 	vec3_t maxs;
 
 	// this part unique to leaf
+	// common
 	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
-	int contents; // TODO: remove (only used temporarily during loading when making collision hull 0)
-	int *firstmarksurface;
-	int nummarksurfaces;
-	qbyte ambient_sound_level[NUM_AMBIENTS];
-	int portalmarkid; // used by see-polygon-through-portals visibility checker
+	int areaindex; // q3bsp
+	int numleaffaces;
+	int *firstleafface;
+	int numleafbrushes; // q3bsp
+	int *firstleafbrush; // q3bsp
+	qbyte ambient_sound_level[NUM_AMBIENTS]; // q1bsp
+	int contents; // q1bsp: // TODO: remove (only used temporarily during loading when making collision hull 0)
+	int portalmarkid; // q1bsp // used by see-polygon-through-portals visibility checker
 }
 mleaf_t;
 
@@ -786,37 +792,6 @@ typedef struct q3mtexture_s
 	int *facenumlist;
 }
 q3mtexture_t;
-
-typedef struct q3mnode_s
-{
-	//this part shared between node and leaf
-	struct mplane_s *plane; // != NULL
-	struct q3mnode_s *parent;
-	vec3_t mins;
-	vec3_t maxs;
-
-	// this part unique to node
-	struct q3mnode_s *children[2];
-}
-q3mnode_t;
-
-typedef struct q3mleaf_s
-{
-	//this part shared between node and leaf
-	struct mplane_s *plane; // == NULL
-	struct q3mnode_s *parent;
-	vec3_t mins;
-	vec3_t maxs;
-
-	// this part unique to leaf
-	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
-	int areaindex;
-	int numleaffaces;
-	int *firstleafface;
-	int numleafbrushes;
-	int *firstleafbrush;
-}
-q3mleaf_t;
 
 typedef struct q3mmodel_s
 {
