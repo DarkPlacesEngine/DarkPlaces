@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 
-static const int tryrates[] = {44100, 22051, 11025, 8000};
+static const int tryrates[] = {44100, 22050, 11025, 8000};
 
 static int audio_fd = -1;
 static qboolean snd_inited = false;
@@ -61,16 +61,16 @@ qboolean SNDDMA_Init (void)
 	// Look for an appropriate sound format
 	// TODO: we should also test mono/stereo and bits
 	// TODO: support "-sndspeed", "-sndbits", "-sndmono" and "-sndstereo"
-	shm->channels = 2;
-	shm->samplebits = 16;
+	shm->format.channels = 2;
+	shm->format.width = 2;
 	for (i = 0; i < sizeof (tryrates) / sizeof (tryrates[0]); i++)
 	{
-		shm->speed = tryrates[i];
+		shm->format.speed = tryrates[i];
 
 		AUDIO_INITINFO (&info);
-		info.play.sample_rate = shm->speed;
-		info.play.channels = shm->channels;
-		info.play.precision = shm->samplebits;
+		info.play.sample_rate = shm->format.speed;
+		info.play.channels = shm->format.channels;
+		info.play.precision = shm->format.width * 8;
 // We only handle sound cards of the same endianess than the CPU
 #if BYTE_ORDER == BIG_ENDIAN
 		info.play.encoding = AUDIO_ENCODING_SLINEAR_BE;
@@ -93,7 +93,7 @@ qboolean SNDDMA_Init (void)
 				(info.play.channels == 2) ? "stereo" : "mono",
 				info.play.sample_rate);
 
-	shm->samples = sizeof (dma_buffer) / (shm->samplebits / 8);
+	shm->samples = sizeof (dma_buffer) / shm->format.width;
 	shm->samplepos = 0;
 	shm->buffer = dma_buffer;
 
@@ -115,7 +115,7 @@ int SNDDMA_GetDMAPos (void)
 		return 0;
 	}
 
-	return ((info.play.samples * shm->channels) % shm->samples);
+	return ((info.play.samples * shm->format.channels) % shm->samples);
 }
 
 void SNDDMA_Shutdown (void)
@@ -150,7 +150,7 @@ void SNDDMA_Submit (void)
 	if (paintedtime < wbufp)
 		wbufp = 0; // reset
 
-	bsize = shm->channels * (shm->samplebits / 8);
+	bsize = shm->format.channels * shm->format.width;
 	bytes = (paintedtime - wbufp) * bsize;
 
 	if (!bytes)

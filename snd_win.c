@@ -194,19 +194,19 @@ sndinitstat SNDDMA_InitDirect (void)
 	int i;
 
 	memset((void *)shm, 0, sizeof(*shm));
-	shm->channels = 2;
-	shm->samplebits = 16;
+	shm->format.channels = 2;
+	shm->format.width = 2;
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
 	if (i && i != (com_argc - 1))
-		shm->speed = atoi(com_argv[i+1]);
+		shm->format.speed = atoi(com_argv[i+1]);
 	else
-		shm->speed = 44100;
+		shm->format.speed = 44100;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
-    format.nChannels = shm->channels;
-    format.wBitsPerSample = shm->samplebits;
-    format.nSamplesPerSec = shm->speed;
+    format.nChannels = shm->format.channels;
+    format.wBitsPerSample = shm->format.width * 8;
+    format.nSamplesPerSec = shm->format.speed;
     format.nBlockAlign = format.nChannels * format.wBitsPerSample / 8;
     format.cbSize = 0;
     format.nAvgBytesPerSec = format.nSamplesPerSec * format.nBlockAlign;
@@ -322,9 +322,9 @@ sndinitstat SNDDMA_InitDirect (void)
 			return SIS_FAILURE;
 		}
 
-		shm->channels = format.nChannels;
-		shm->samplebits = format.wBitsPerSample;
-		shm->speed = format.nSamplesPerSec;
+		shm->format.channels = format.nChannels;
+		shm->format.width = format.wBitsPerSample / 8;
+		shm->format.speed = format.nSamplesPerSec;
 
 		if (DS_OK != pDSBuf->lpVtbl->GetCaps (pDSBuf, &dsbcaps))
 		{
@@ -362,7 +362,7 @@ sndinitstat SNDDMA_InitDirect (void)
 		Con_SafePrintf("   %d channel(s)\n"
 		               "   %d bits/sample\n"
 					   "   %d samples/sec\n",
-					   shm->channels, shm->samplebits, shm->speed);
+					   shm->format.channels, shm->format.width * 8, shm->format.speed);
 
 	gSndBufSize = dsbcaps.dwBufferBytes;
 
@@ -398,10 +398,10 @@ sndinitstat SNDDMA_InitDirect (void)
 	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
 	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
-	shm->samples = gSndBufSize/(shm->samplebits/8);
+	shm->samples = gSndBufSize / shm->format.width;
 	shm->samplepos = 0;
 	shm->buffer = (unsigned char *) lpData;
-	sample16 = (shm->samplebits/8) - 1;
+	sample16 = shm->format.width - 1;
 
 	dsound_init = true;
 
@@ -426,19 +426,19 @@ qboolean SNDDMA_InitWav (void)
 	snd_completed = 0;
 
 	memset((void *)shm, 0, sizeof(*shm));
-	shm->channels = 2;
-	shm->samplebits = 16;
+	shm->format.channels = 2;
+	shm->format.width = 2;
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
 	if (i && i != (com_argc - 1))
-		shm->speed = atoi(com_argv[i+1]);
+		shm->format.speed = atoi(com_argv[i+1]);
 	else
-		shm->speed = 44100;
+		shm->format.speed = 44100;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
-	format.nChannels = shm->channels;
-	format.wBitsPerSample = shm->samplebits;
-	format.nSamplesPerSec = shm->speed;
+	format.nChannels = shm->format.channels;
+	format.wBitsPerSample = shm->format.width * 8;
+	format.nSamplesPerSec = shm->format.speed;
 	format.nBlockAlign = format.nChannels
 		*format.wBitsPerSample / 8;
 	format.cbSize = 0;
@@ -531,10 +531,10 @@ qboolean SNDDMA_InitWav (void)
 		}
 	}
 
-	shm->samples = gSndBufSize/(shm->samplebits/8);
+	shm->samples = gSndBufSize / shm->format.width;
 	shm->samplepos = 0;
 	shm->buffer = (unsigned char *) lpData;
-	sample16 = (shm->samplebits/8) - 1;
+	sample16 = shm->format.width - 1;
 
 	wav_init = true;
 

@@ -45,11 +45,12 @@ void S_StopAllSoundsC(void);
 // =======================================================================
 
 channel_t channels[MAX_CHANNELS];
-int total_channels;
+unsigned int total_channels;
 
 int snd_blocked = 0;
 static qboolean snd_ambient = 1;
 cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
+cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
 
 // pointer should go away
 volatile dma_t *shm = 0;
@@ -126,13 +127,13 @@ void S_SoundInfo_f(void)
 		return;
 	}
 
-	Con_Printf("%5d stereo\n", shm->channels - 1);
+	Con_Printf("%5d stereo\n", shm->format.channels - 1);
 	Con_Printf("%5d samples\n", shm->samples);
 	Con_Printf("%5d samplepos\n", shm->samplepos);
-	Con_Printf("%5d samplebits\n", shm->samplebits);
-	Con_Printf("%5d speed\n", shm->speed);
+	Con_Printf("%5d samplebits\n", shm->format.width * 8);
+	Con_Printf("%5d speed\n", shm->format.speed);
 	Con_Printf("0x%x dma buffer\n", shm->buffer);
-	Con_Printf("%5d total_channels\n", total_channels);
+	Con_Printf("%5u total_channels\n", total_channels);
 }
 
 void S_UnloadSounds(void)
@@ -161,12 +162,12 @@ void S_Startup(void)
 
 	if (fakedma)
 	{
-		shm->samplebits = 16;
-		shm->speed = 22050;
-		shm->channels = 2;
+		shm->format.width = 2;
+		shm->format.speed = 22050;
+		shm->format.channels = 2;
 		shm->samples = 32768;
 		shm->samplepos = 0;
-		shm->buffer = Mem_Alloc(snd_mempool, shm->channels * shm->samples * (shm->samplebits / 8));
+		shm->buffer = Mem_Alloc(snd_mempool, shm->format.channels * shm->samples * shm->format.width);
 	}
 	else
 	{
@@ -181,7 +182,7 @@ void S_Startup(void)
 
 	sound_started = 1;
 
-	Con_DPrintf("Sound sampling rate: %i\n", shm->speed);
+	Con_DPrintf("Sound sampling rate: %i\n", shm->format.speed);
 
 	//S_LoadSounds();
 
@@ -244,6 +245,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
 	Cvar_RegisterVariable(&snd_initialized);
+	Cvar_RegisterVariable(&snd_streaming);
 	Cvar_RegisterVariable(&bgmbuffer);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);
@@ -517,12 +519,11 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	channel_t *target_chan, *check;
-	sfxcache_t	*sc;
 	int		vol;
 	int		ch_idx;
-	int		skip;
+	size_t	skip;
 
-	if (!sound_started || !sfx || !sfx->sfxcache || nosound.integer)
+	if (!sound_started || !sfx || !sfx->fetcher || nosound.integer)
 		return;
 
 	vol = fvol*255;
@@ -545,9 +546,8 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	//if (!target_chan->leftvol && !target_chan->rightvol)
 	//	return;		// not audible at all
 
-// new channel
-	sc = S_LoadSound (sfx, true);
-	if (!sc)
+	// new channel
+	if (!S_LoadSound (sfx, true))
 	{
 		target_chan->sfx = NULL;
 		return;		// couldn't load the sound's data
@@ -555,7 +555,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 
 	target_chan->sfx = sfx;
 	target_chan->pos = 0.0;
-	target_chan->end = paintedtime + sc->length;
+	target_chan->end = paintedtime + sfx->total_length;
 
 // if an identical sound has also been started this frame, offset the pos
 // a bit to keep it from just making the first one louder
@@ -567,9 +567,9 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 		if (check->sfx == sfx && !check->pos)
 		{
 			// LordHavoc: fixed skip calculations
-			skip = 0.1 * sc->speed;
-			if (skip > sc->length)
-				skip = sc->length;
+			skip = 0.1 * sfx->format.speed;
+			if (skip > sfx->total_length)
+				skip = sfx->total_length;
 			if (skip > 0)
 				skip = rand() % skip;
 			target_chan->pos += skip;
@@ -616,7 +616,7 @@ void S_ClearBuffer(void)
 	if (!sound_started || !shm)
 		return;
 
-	if (shm->samplebits == 8)
+	if (shm->format.width == 1)
 		clear = 0x80;
 	else
 		clear = 0;
@@ -648,7 +648,7 @@ void S_ClearBuffer(void)
 			}
 		}
 
-		memset(pData, clear, shm->samples * shm->samplebits/8);
+		memset(pData, clear, shm->samples * shm->format.width);
 
 		pDSBuf->lpVtbl->Unlock(pDSBuf, pData, dwSize, NULL, 0);
 
@@ -657,7 +657,7 @@ void S_ClearBuffer(void)
 #endif
 	if (shm->buffer)
 	{
-		int		setsize = shm->samples * shm->samplebits / 8;
+		int		setsize = shm->samples * shm->format.width;
 		char	*buf = shm->buffer;
 
 		while (setsize--)
@@ -679,7 +679,6 @@ S_StaticSound
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 {
 	channel_t	*ss;
-	sfxcache_t		*sc;
 
 	if (!sfx)
 		return;
@@ -690,11 +689,10 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 		return;
 	}
 
-	sc = S_LoadSound (sfx, true);
-	if (!sc)
+	if (!S_LoadSound (sfx, true))
 		return;
 
-	if (sc->loopstart == -1)
+	if (sfx->loopstart == -1)
 		Con_DPrintf("Quake compatibility warning: Static sound \"%s\" is not looped\n", sfx->name);
 
 	ss = &channels[total_channels++];
@@ -704,7 +702,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 	VectorCopy (origin, ss->origin);
 	ss->master_vol = vol;
 	ss->dist_mult = (attenuation/64) / sound_nominal_clip_dist;
-	ss->end = paintedtime + sc->length;
+	ss->end = paintedtime + sfx->total_length;
 
 	SND_Spatialize (ss, true);
 }
@@ -775,10 +773,8 @@ Called once each time through the main loop
 */
 void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 {
-	int			i, j;
-	int			total;
-	channel_t	*ch;
-	channel_t	*combine;
+	unsigned int i, j, total;
+	channel_t *ch, *combine;
 
 	if (!snd_initialized.integer || (snd_blocked > 0))
 		return;
@@ -848,7 +844,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 			if (ch->sfx && (ch->leftvol || ch->rightvol) )
 				total++;
 
-		Con_Printf("----(%i)----\n", total);
+		Con_Printf("----(%u)----\n", total);
 	}
 
 // mix some sound
@@ -862,7 +858,7 @@ void GetSoundtime(void)
 	static	int		oldsamplepos;
 	int		fullsamples;
 
-	fullsamples = shm->samples / shm->channels;
+	fullsamples = shm->samples / shm->format.channels;
 
 // it is possible to miscount buffers if it has wrapped twice between
 // calls to S_Update.  Oh well.
@@ -881,7 +877,7 @@ void GetSoundtime(void)
 	}
 	oldsamplepos = samplepos;
 
-	soundtime = buffers*fullsamples + samplepos/shm->channels;
+	soundtime = buffers * fullsamples + samplepos / shm->format.channels;
 }
 
 void IN_Accumulate (void);
@@ -914,8 +910,8 @@ void S_Update_(void)
 		paintedtime = soundtime;
 
 // mix ahead of current position
-	endtime = soundtime + _snd_mixahead.value * shm->speed;
-	samps = shm->samples >> (shm->channels-1);
+	endtime = soundtime + _snd_mixahead.value * shm->format.speed;
+	samps = shm->samples >> (shm->format.channels - 1);
 	if (endtime > (unsigned int)(soundtime + samps))
 		endtime = soundtime + samps;
 
@@ -998,18 +994,16 @@ void S_SoundList(void)
 {
 	int		i;
 	sfx_t	*sfx;
-	sfxcache_t	*sc;
 	int		size, total;
 
 	total = 0;
 	for (sfx=known_sfx, i=0 ; i<num_sfx ; i++, sfx++)
 	{
-		sc = sfx->sfxcache;
-		if (sc)
+		if (sfx->fetcher != NULL)
 		{
-			size = sc->length*sc->width*(sc->stereo+1);
+			size = sfx->mempool->totalsize;
 			total += size;
-			Con_Printf("%c(%2db) %6i : %s\n", sc->loopstart >= 0 ? 'L' : ' ',sc->width*8,  size, sfx->name);
+			Con_Printf("%c(%2db) %7i : %s\n", sfx->loopstart >= 0 ? 'L' : ' ', sfx->format.width * 8, size, sfx->name);
 		}
 	}
 	Con_Printf("Total resident: %i\n", total);
@@ -1036,7 +1030,7 @@ void S_LocalSound (char *sound)
 #define RAWSAMPLESBUFFER 32768
 short s_rawsamplesbuffer[RAWSAMPLESBUFFER * 2];
 int s_rawsamplesbuffer_start;
-int s_rawsamplesbuffer_count;
+size_t s_rawsamplesbuffer_count;
 
 void S_RawSamples_Enqueue(short *samples, unsigned int length)
 {
@@ -1058,7 +1052,8 @@ void S_RawSamples_Enqueue(short *samples, unsigned int length)
 
 void S_RawSamples_Dequeue(int *samples, unsigned int length)
 {
-	int b1, b2, l;
+	int b1, b2;
+	size_t l;
 	int i;
 	short *in;
 	int *out;
@@ -1102,7 +1097,7 @@ void S_RawSamples_ClearQueue(void)
 
 int S_RawSamples_QueueWantsMore(void)
 {
-	if (shm != NULL && s_rawsamplesbuffer_count < min(shm->speed >> 1, RAWSAMPLESBUFFER >> 1))
+	if (shm != NULL && s_rawsamplesbuffer_count < min(shm->format.speed >> 1, RAWSAMPLESBUFFER >> 1))
 		return RAWSAMPLESBUFFER - s_rawsamplesbuffer_count;
 	else
 		return 0;
@@ -1140,6 +1135,6 @@ void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int 
 
 int S_RawSamples_SampleRate(void)
 {
-	return shm != NULL ? shm->speed : 0;
+	return shm != NULL ? shm->format.speed : 0;
 }
 

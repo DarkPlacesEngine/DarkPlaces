@@ -29,34 +29,31 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 ResampleSfx
 ================
 */
-void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
+size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* in_format, qbyte *out_data, const char* sfxname)
 {
-	int i, outcount, srcsample, srclength, samplefrac, fracstep;
+	int samplefrac, fracstep;
+	size_t i, srcsample, srclength, outcount;
 
 	// this is usually 0.5 (128), 1 (256), or 2 (512)
-	fracstep = ((double) sc->speed / (double) shm->speed) * 256.0;
+	fracstep = ((double) in_format->speed / (double) shm->format.speed) * 256.0;
 
-	srclength = sc->length << sc->stereo;
+	srclength = in_length * in_format->channels;
 
-	outcount = (double) sc->length * (double) shm->speed / (double) sc->speed;
-	Con_DPrintf("ResampleSfx: resampling sound %s from %dhz to %dhz (%d samples to %d samples)\n", name, sc->speed, shm->speed, sc->length, outcount);
-	sc->length = outcount;
-	if (sc->loopstart != -1)
-		sc->loopstart = (double) sc->loopstart * (double) shm->speed / (double) sc->speed;
-
-	sc->speed = shm->speed;
+	outcount = (double) in_length * (double) shm->format.speed / (double) in_format->speed;
+	Con_DPrintf("ResampleSfx: resampling sound \"%s\" from %dHz to %dHz (%d samples to %d samples)\n",
+				sfxname, in_format->speed, shm->format.speed, in_length, outcount);
 
 // resample / decimate to the current source rate
 
 	if (fracstep == 256)
 	{
 		// fast case for direct transfer
-		if (sc->width == 1) // 8bit
+		if (in_format->width == 1) // 8bit
 			for (i = 0;i < srclength;i++)
-				((signed char *)sc->data)[i] = ((unsigned char *)data)[i] - 128;
-		else //if (sc->width == 2) // 16bit
+				((signed char *)out_data)[i] = ((unsigned char *)in_data)[i] - 128;
+		else //if (sb->width == 2) // 16bit
 			for (i = 0;i < srclength;i++)
-				((short *)sc->data)[i] = ((short *)data)[i];
+				((short *)out_data)[i] = ((short *)in_data)[i];
 	}
 	else
 	{
@@ -66,10 +63,11 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 		{
 			srcsample = 0;
 			fracstep >>= 8;
-			if (sc->width == 2)
+			if (in_format->width == 2)
 			{
-				short *out = (void *)sc->data, *in = (void *)data;
-				if (sc->stereo) // LordHavoc: stereo sound support
+				short *out = (short*)out_data;
+				const short *in = (const short*)in_data;
+				if (in_format->channels == 2) // LordHavoc: stereo sound support
 				{
 					fracstep <<= 1;
 					for (i=0 ; i<outcount ; i++)
@@ -90,9 +88,9 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 			}
 			else
 			{
-				signed char *out = (void *)sc->data;
-				unsigned char *in = (void *)data;
-				if (sc->stereo) // LordHavoc: stereo sound support
+				signed char *out = out_data;
+				const unsigned char *in = in_data;
+				if (in_format->channels == 2)
 				{
 					fracstep <<= 1;
 					for (i=0 ; i<outcount ; i++)
@@ -116,10 +114,11 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 		{
 			int sample;
 			int a, b;
-			if (sc->width == 2)
+			if (in_format->width == 2)
 			{
-				short *out = (void *)sc->data, *in = (void *)data;
-				if (sc->stereo) // LordHavoc: stereo sound support
+				short *out = (short*)out_data;
+				const short *in = (const short*)in_data;
+				if (in_format->channels == 2)
 				{
 					for (i=0 ; i<outcount ; i++)
 					{
@@ -159,9 +158,9 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 			}
 			else
 			{
-				signed char *out = (void *)sc->data;
-				unsigned char *in = (void *)data;
-				if (sc->stereo) // LordHavoc: stereo sound support
+				signed char *out = out_data;
+				const unsigned char *in = in_data;
+				if (in_format->channels == 2)
 				{
 					for (i=0 ; i<outcount ; i++)
 					{
@@ -202,62 +201,89 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 		}
 	}
 
-	// LordHavoc: use this for testing if it ever becomes useful again
-	//COM_WriteFile (va("sound/%s.pcm", name), sc->data, (sc->length << sc->stereo) * sc->width);
+	return outcount;
 }
 
 //=============================================================================
+
+wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength);
+
+/*
+====================
+WAV_FetchSound
+====================
+*/
+static const sfxbuffer_t* WAV_FetchSound (channel_t* ch, unsigned int start, unsigned int nbsamples)
+{
+	return ch->sfx->fetcher_data;
+}
+
+
+snd_fetcher_t wav_fetcher = { WAV_FetchSound, NULL };
+
 
 /*
 ==============
 S_LoadWavFile
 ==============
 */
-sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
+qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 {
 	qbyte *data;
 	wavinfo_t info;
 	int len;
-	sfxcache_t *sc;
+	sfxbuffer_t* sb;
+
+	Mem_FreePool (&s->mempool);
+	s->mempool = Mem_AllocPool(s->name);
 
 	// Load the file
-	data = FS_LoadFile(filename, tempmempool, false);
+	data = FS_LoadFile(filename, s->mempool, false);
 	if (!data)
-		return NULL;
+	{
+		Mem_FreePool (&s->mempool);
+		return false;
+	}
 
 	// Don't try to load it if it's not a WAV file
 	if (memcmp (data, "RIFF", 4) || memcmp (data + 8, "WAVE", 4))
-		return NULL;
+	{
+		Mem_FreePool (&s->mempool);
+		return false;
+	}
+
+	Con_DPrintf ("Loading WAV file \"%s\"\n", filename);
 
 	info = GetWavinfo (s->name, data, fs_filesize);
 	// Stereo sounds are allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
 	{
 		Con_Printf("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
-		Mem_Free(data);
-		return NULL;
+		Mem_FreePool (&s->mempool);
+		return false;
 	}
 
 	// calculate resampled length
-	len = (int) ((double) info.samples * (double) shm->speed / (double) info.rate);
+	len = (int) ((double) info.samples * (double) shm->format.speed / (double) info.rate);
 	len = len * info.width * info.channels;
 
-	Mem_FreePool(&s->mempool);
-	s->mempool = Mem_AllocPool(s->name);
-	sc = s->sfxcache = Mem_Alloc(s->mempool, len + sizeof(sfxcache_t));
-	if (!sc)
+	sb = Mem_Alloc (s->mempool, len + sizeof (*sb) - sizeof (sb->data));
+	if (sb == NULL)
 	{
 		Con_Printf("failed to allocate memory for sound \"%s\"\n", s->name);
 		Mem_FreePool(&s->mempool);
-		Mem_Free(data);
-		return NULL;
+		return false;
 	}
 
-	sc->length = info.samples;
-	sc->loopstart = info.loopstart;
-	sc->speed = info.rate;
-	sc->width = info.width;
-	sc->stereo = info.channels == 2;
+	s->fetcher = &wav_fetcher;
+	s->fetcher_data = sb;
+	s->format.speed = info.rate;
+	s->format.width = info.width;
+	s->format.channels = info.channels;
+	if (info.loopstart < 0)
+		s->loopstart = -1;
+	else
+		s->loopstart = (double) s->loopstart * (double) shm->format.speed / (double) s->format.speed;
 
 #if BYTE_ORDER != LITTLE_ENDIAN
 	// We must convert the WAV data from little endian
@@ -274,10 +300,13 @@ sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 	}
 #endif
 
-	ResampleSfx(sc, data + info.dataofs, s->name);
+	sb->length = ResampleSfx (data + info.dataofs, info.samples, &s->format, sb->data, s->name);
+	s->format.speed = shm->format.speed;
+	s->total_length = sb->length;
+	sb->offset = 0;
 
-	Mem_Free(data);
-	return sc;
+	Mem_Free (data);
+	return true;
 }
 
 
@@ -286,27 +315,29 @@ sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 S_LoadSound
 ==============
 */
-sfxcache_t *S_LoadSound (sfx_t *s, int complain)
+qboolean S_LoadSound (sfx_t *s, int complain)
 {
 	char namebuffer[MAX_QPATH];
 	size_t len;
-	sfxcache_t *sc;
 	qboolean modified_name = false;
 
 	// see if still in memory
-	if (!shm || !shm->speed)
-		return NULL;
-	if (s->sfxcache && (s->sfxcache->speed == shm->speed))
-		return s->sfxcache;
+	if (!shm || !shm->format.speed)
+		return false;
+	if (s->fetcher != NULL)
+	{
+		if (s->format.speed != shm->format.speed)
+			Sys_Error ("S_LoadSound: sound %s hasn't been resampled (%uHz instead of %uHz)", s->name);
+		return true;
+	}
 
 	len = snprintf (namebuffer, sizeof (namebuffer), "sound/%s", s->name);
 	if (len >= sizeof (namebuffer))
-		return NULL;
+		return false;
 
 	// Try to load it as a WAV file
-	sc = S_LoadWavFile (namebuffer, s);
-	if (sc != NULL)
-		return sc;
+	if (S_LoadWavFile (namebuffer, s))
+		return true;
 
 	// Else, try to load it as an Ogg Vorbis file
 	if (!strcasecmp (namebuffer + len - 4, ".wav"))
@@ -314,9 +345,8 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 		strcpy (namebuffer + len - 3, "ogg");
 		modified_name = true;
 	}
-	sc = OGG_LoadVorbisFile (namebuffer, s);
-	if (sc != NULL)
-		return sc;
+	if (OGG_LoadVorbisFile (namebuffer, s))
+		return true;
 
 	// Can't load the sound!
 	if (!complain)
@@ -329,15 +359,24 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 			strcpy (namebuffer + len - 3, "wav");
 		Con_Printf("Couldn't load %s\n", namebuffer);
 	}
-	return NULL;
+	return false;
 }
 
 void S_UnloadSound(sfx_t *s)
 {
-	if (s->sfxcache)
+	if (s->fetcher != NULL)
 	{
-		s->sfxcache = NULL;
+		unsigned int i;
+
+		s->fetcher = NULL;
+		s->fetcher_data = NULL;
 		Mem_FreePool(&s->mempool);
+
+		// At this point, some per-channel data pointers may point to freed zones.
+		// Practically, it shouldn't be a problem; but it's wrong, so we fix that
+		for (i = 0; i < total_channels ; i++)
+			if (channels[i].sfx == s)
+				channels[i].fetcher_data = NULL;
 	}
 }
 
