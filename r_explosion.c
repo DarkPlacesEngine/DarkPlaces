@@ -256,29 +256,31 @@ void R_DrawExplosion(explosion_t *e)
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
 		{
-			dist = DotProduct(e->vert[i], vpn) - centerdist;
-			// use inverse fog alpha as color
-			VectorSubtract(e->vert[i], r_origin, diff);
-			ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
-			if (ifog < 0)
-				ifog = 0;
-			c[i][0] = ifog;
-			c[i][1] = ifog;
-			c[i][2] = ifog;
-			//c[i][3] = min(dist * scale, 1) * alpha;
-			c[i][3] = dist * scale * alpha;
+			dist = (DotProduct(e->vert[i], vpn) - centerdist) * scale;
+			if (dist > 0)
+			{
+				// use inverse fog alpha as color
+				VectorSubtract(e->vert[i], r_origin, diff);
+				ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
+				if (ifog < 0)
+					ifog = 0;
+				c[i][0] = c[i][1] = c[i][2] = dist * alpha * ifog;
+			}
+			else
+				c[i][0] = c[i][1] = c[i][2] = 0;
+			c[i][3] = 1;
 		}
 	}
 	else
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
 		{
-			dist = DotProduct(e->vert[i], vpn) - centerdist;
-			c[i][0] = 1;
-			c[i][1] = 1;
-			c[i][2] = 1;
-			//c[i][3] = min(dist * scale, 1) * alpha;
-			c[i][3] = dist * scale * alpha;
+			dist = (DotProduct(e->vert[i], vpn) - centerdist) * scale;
+			if (dist > 0)
+				c[i][0] = c[i][1] = c[i][2] = dist * alpha;
+			else
+				c[i][0] = c[i][1] = c[i][2] = 0;
+			c[i][3] = 1;
 		}
 	}
 	/*
