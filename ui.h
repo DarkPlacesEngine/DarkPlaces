@@ -1,112 +1,150 @@
 
 #ifndef UI_H
 #define UI_H
-/*
-// these defines and structures are for internal use only
-// (ui_t is passed around by users of the system, but should not be altered)
-#define MAX_UI_COUNT 16
-#define MAX_UI_ITEMS 256
-
-typedef struct
-{
-	char name[32];
-	int flags;
-	char *draw_picname;
-	char *draw_string;
-	int draw_x, draw_y;
-	int click_x, click_y, click_x2, click_y2;
-	void(*leftkey)(void *nativedata1, void *nativedata2, float data1, float data2);
-	void(*rightkey)(void *nativedata1, void *nativedata2, float data1, float data2);
-	void(*enterkey)(void *nativedata1, void *nativedata2, float data1, float data2);
-	void(*mouseclick)(void *nativedata1, void *nativedata2, float data1, float data2, float xfrac, float yfrac);
-	void *nativedata1, *nativedata2;
-	float data1, data2;
-}
-ui_item_t;
-
-typedef struct
-{
-	int item_count;
-	int pad;
-	ui_item_t items[MAX_UI_ITEMS];
-}
-ui_t;
-
-// engine use:
-// initializes the ui system
-void ui_init(void);
-// updates the mouse position, given an absolute loation (some input systems use this)
-void ui_mouseupdate(float x, float y);
-// updates the mouse position, by an offset from the previous location (some input systems use this)
-void ui_mouseupdaterelative(float x, float y);
-// left key update
-void ui_leftkeyupdate(int pressed);
-// right key update
-void ui_rightkeyupdate(int pressed);
-// up key update
-void ui_upkeyupdate(int pressed);
-// down key update
-void ui_downkeyupdate(int pressed);
-// mouse button update (note: 0 = left, 1 = right, 2 = middle, 3+ not supported yet)
-void ui_mousebuttonupdate(int button, int pressed);
-// perform input updates and check for clicks on items (note: calls callbacks)
-void ui_update(void);
-// draw all items of all panels
-void ui_draw(void);
-
-// intentionally public functions:
-// creates a panel
-ui_t *ui_create(void);
-// frees a panel
-void ui_free(ui_t *ui);
-// empties a panel, removing all the items
-void ui_clear(ui_t *ui);
-// sets an item in a panel (adds or replaces the item)
-void ui_item
-(
-	ui_t *ui, char *basename, int number,
-	float x, float y, char *picname, char *string,
-	float left, float top, float width, float height,
-	void(*leftkey)(void *nativedata1, void *nativedata2, float data1, float data2),
-	void(*rightkey)(void *nativedata1, void *nativedata2, float data1, float data2),
-	void(*enterkey)(void *nativedata1, void *nativedata2, float data1, float data2),
-	void(*mouseclick)(void *nativedata1, void *nativedata2, float data1, float data2, float xfrac, float yfrac),
-	void *nativedata1, void *nativedata2, float data1, float data2
-);
-// removes an item from a panel
-void ui_item_remove(ui_t *ui, char *basename, int number);
-// checks if a panel is enabled
-int ui_uiactive(ui_t *ui);
-// enables/disables a panel on the screen
-void ui_activate(ui_t *ui, int yes);*/
 
 // AK: new passive ui (like the menu stuff)
-#define UI_TEXT_DEFAULT_LENGTH 255
-typedef void * ui_item_t;
-typedef void * ui_itemlist_t;
+/* some ideas:
+1. two different structs (one for the ui core code and one for the rest)
+2. each item has a size field
+*/
+
+#define UI_EVENT_QUEUE_SIZE 32
+
+typedef enum { UI_BUTTON, UI_LABEL } ui_control_type;
+
+typedef struct ui_message_s			ui_message_t;
+typedef struct ui_item_s			*ui_item_t;
+typedef struct ui_itemlist_s		*ui_itemlist_t;
+typedef struct ui_message_queue_s	ui_message_queue_t;
+
+struct ui_item_s
+{
+	unsigned int size;
+
+	ui_control_type	type;
+
+	const char *name; // used for debugging purposes and to identify an object
+
+//private:
+	// used to build the item list
+	struct ui_item_s *prev, *next; // items are allowed to be freed everywhere
+
+	// called for system events (true means message processed) 
+	int	(*eventhandler)(ui_itemlist_t list, ui_item_t self, ui_message_t *in, ui_message_queue_t *out);
+
+	// z-order (the higher, the later it is drawn)
+	unsigned int zorder;
+
+	// called to draw the object
+	void (*draw)(ui_itemlist_t list, struct ui_item_s * self);
+
+};
+
+struct ui_message_s;
+
+struct ui_itemlist_s
+{
+	float org_x, org_y;
+
+	ui_item_t selected;
+
+	void (*eventhandler)(struct ui_itemlist_s * list, struct ui_message_s *msg);
+
+// private:
+	ui_item_t	list;
+};
+
+// this is structure contains *all* possible messages
+enum ui_message_type_e { UI_EVENT_FRAME, UI_EVENT_KEY, UI_EVENT_MOUSE, UI_BUTTON_PRESSED };
+
+struct ui_ev_key_s
+{
+	int key, ascii;
+};
+
+// in_mouse_x and in_mouse_y can be also used...
+struct ui_ev_mouse_s
+{
+	float x, y;
+};
+
+union ui_message_data_u
+{
+	unsigned char reserved;
+	struct ui_ev_key_s key;
+	struct ui_ev_mouse_s mouse;
+};
+
+struct ui_message_s
+{
+	// empty for input messages, but contains a valid item for all other events
+	ui_item_t				target;
+
+	// used to determine which data struct was used
+	enum ui_message_type_e	type;
+
+	union ui_message_data_u data;
+};
+
+struct ui_message_queue_s
+{
+	unsigned int used;
+	ui_message_t queue[UI_EVENT_QUEUE_SIZE];
+};
 
 void UI_Init(void);
 
-void UI_Key(ui_itemlist_t, int key, int ascii);
-void UI_Draw(ui_itemlist_t);
+#define UI_MOUSEEVENT	1
+#define UI_KEYEVENT		2
+#define UI_FRAME		4
+void UI_Draw(ui_itemlist_t list);
 
-void UI_SetFocus(ui_itemlist_t, ui_item_t);
-void UI_SetNeighbors(ui_item_t left, ui_item_t right, ui_item_t up, ui_item_t down);
+void UI_Mouse(ui_itemlist_t list, float x, float y);
+void UI_Key(ui_itemlist_t list, int key, int ascii);
 
 // item stuff
-ui_item_t UI_CreateButton(const char *caption, float x, float y, void(*action)(ui_item_t)); 
-ui_item_t UI_CreateLabel(const char *caption, float x, float y);
-ui_item_t UI_CreateText(const char *caption, float x, float y, const char *allowed, int maxlen, int scrolllen);
-void UI_FreeItem(ui_item_t);
+#define UI_ITEM(item)	((ui_item_t*)item)
 
-const char* UI_GetCaption(ui_item_t);
-void UI_SetCaption(ui_item_t, const char *);
+ui_item_t UI_CloneItem(ui_item_t);
+
+ui_item_t UI_FindItemByName(ui_itemlist_t, const char *);
+
+void UI_FreeItem(ui_itemlist_t, ui_item_t);
+void UI_FreeItemByName(ui_itemlist_t, const char *);
 
 // itemlist stuff
-ui_itemlist_t UI_CreateItemList(float x, float y);
+ui_itemlist_t UI_CreateItemList();
+ui_itemlist_t UI_CloneItemList(ui_itemlist_t);
 void UI_FreeItemList(ui_itemlist_t);
 
-void UI_AddItem(ui_itemlist_t, ui_item_t);
+void UI_AddItem(ui_itemlist_t list, ui_item_t item);
+
+// controls
+#define UI_TEXT_DEFAULT_LENGTH 255
+
+typedef struct ui_button_s	*ui_button_t;
+typedef struct ui_label_s	*ui_label_t;
+typedef struct ui_text_s	*ui_text_t;
+
+struct ui_label_t
+{
+	struct ui_item_s item;
+
+	const char *text;
+	float x, y;
+	float r, g, b, a, f;
+};
+
+struct ui_button
+{
+	struct ui_item_s item;
+
+	const char *caption;
+};
+
+ui_item_t UI_CreateButton(void); 
+ui_item_t UI_CreateLabel(void);
+ui_item_t UI_CreateText(void);
 
 // AK: new callback system
 #define UI_MAX_CALLBACK_COUNT 10
