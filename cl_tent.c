@@ -114,7 +114,7 @@ void CL_ParseTEnt (void)
 	int		rnd;
 	int		colorStart, colorLength, count;
 	float	velspeed, radius;
-	byte *tempcolor;
+	qbyte *tempcolor;
 
 	type = MSG_ReadByte ();
 	switch (type)
@@ -429,7 +429,7 @@ void CL_ParseTEnt (void)
 		colorLength = MSG_ReadByte ();
 		CL_ParticleExplosion2 (pos, colorStart, colorLength);
 //		CL_BlastParticles (pos, 80, 80);
-		tempcolor = (byte *)&d_8to24table[(rand()%colorLength) + colorStart];
+		tempcolor = (qbyte *)&d_8to24table[(rand()%colorLength) + colorStart];
 		CL_AllocDlight (NULL, pos, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;

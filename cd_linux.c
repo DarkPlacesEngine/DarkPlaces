@@ -38,15 +38,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // used by menu to ghost CD audio slider
 qboolean cdaudioinitialized = false;
 static qboolean cdValid = false;
-static qboolean	playing = false;
-static qboolean	wasPlaying = false;
-static qboolean	initialized = false;
-static qboolean	enabled = true;
+static qboolean playing = false;
+static qboolean wasPlaying = false;
+static qboolean initialized = false;
+static qboolean enabled = true;
 static qboolean playLooping = false;
-static float	cdvolume;
-static byte 	remap[100];
-static byte		playTrack;
-static byte		maxTrack;
+static float cdvolume;
+static qbyte remap[100];
+static qbyte playTrack;
+static qbyte maxTrack;
 
 static int cdfile = -1;
 static char cd_dev[64] = "/dev/cdrom";
@@ -95,7 +95,7 @@ static int CDAudio_GetAudioDiskInfo(void)
 }
 
 
-void CDAudio_Play(byte track, qboolean looping)
+void CDAudio_Play(qbyte track, qboolean looping)
 {
 	struct cdrom_tocentry entry;
 	struct cdrom_ti ti;
@@ -278,13 +278,13 @@ static void CD_f (void)
 
 	if (Q_strcasecmp(command, "play") == 0)
 	{
-		CDAudio_Play((byte)atoi(Cmd_Argv (2)), false);
+		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), false);
 		return;
 	}
 
 	if (Q_strcasecmp(command, "loop") == 0)
 	{
-		CDAudio_Play((byte)atoi(Cmd_Argv (2)), true);
+		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), true);
 		return;
 	}
 

@@ -163,8 +163,8 @@ typedef struct model_s
 	int				numtextures;
 	texture_t		**textures;
 
-	byte			*visdata;
-	byte			*lightdata;
+	qbyte			*visdata;
+	qbyte			*lightdata;
 	char			*entities;
 
 	int				numportals;
@@ -211,7 +211,7 @@ model_t;
 
 // model loading
 extern model_t *loadmodel;
-extern byte	*mod_base;
+extern qbyte *mod_base;
 // sky/water subdivision
 extern cvar_t gl_subdivide_size;
 // texture fullbrights
@@ -225,7 +225,7 @@ void Mod_TouchModel (char *name);
 void Mod_UnloadModel (model_t *mod);
 
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
-byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model);
+qbyte *Mod_LeafPVS (mleaf_t *leaf, model_t *model);
 
 void Mod_ClearUsed(void);
 void Mod_PurgeUnused(void);

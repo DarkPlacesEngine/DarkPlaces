@@ -60,7 +60,7 @@ void Mod_Sprite_SharedSetup(long datapointer, int version, int *palette)
 	dspriteinterval_t	*pinintervals;
 	float				modelradius, interval;
 	char				tempname[MAX_QPATH], name[MAX_QPATH];
-	byte				*pixbuf;
+	qbyte				*pixbuf;
 	long				startframes;
 	modelradius = 0;
 
@@ -186,9 +186,9 @@ void Mod_Sprite_SharedSetup(long datapointer, int version, int *palette)
 			{
 				pixbuf = Mem_Alloc(tempmempool, width*height*4);
 				if (version == SPRITE32_VERSION)
-					memcpy(pixbuf, (byte *)datapointer, width*height*4);
+					memcpy(pixbuf, (qbyte *)datapointer, width*height*4);
 				else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
-					Image_Copy8bitRGBA((byte *)datapointer, pixbuf, width*height, palette);
+					Image_Copy8bitRGBA((qbyte *)datapointer, pixbuf, width*height, palette);
 
 				loadmodel->sprdata_frames[realframes].texture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
 
@@ -264,7 +264,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	else if (version == SPRITEHL_VERSION)
 	{
 		int					i, rendermode;
-		byte				palette[256][4], *in;
+		qbyte				palette[256][4], *in;
 		dspritehl_t			*pinsprite;
 		long				datapointer;
 
@@ -278,12 +278,12 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 		loadmodel->synctype = LittleLong (pinsprite->synctype);
 		rendermode = pinsprite->rendermode;
 
-		in = (byte *)datapointer;
+		in = (qbyte *)datapointer;
 		datapointer += 2;
 		i = in[0] + in[1] * 256;
 		if (i != 256)
 			Host_Error ("Mod_LoadHLSprite: unexpected number of palette colors %i (should be 256)", i);
-		in = (byte *)datapointer;
+		in = (qbyte *)datapointer;
 		datapointer += 768;
 		switch(rendermode)
 		{

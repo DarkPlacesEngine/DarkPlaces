@@ -106,7 +106,7 @@ void R_Init (void);
 void R_RenderView (void); // must set r_refdef first
 
 
-void R_InitSky (byte *src, int bytesperpixel); // called at level load
+void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
 
 //int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
 
@@ -140,7 +140,7 @@ extern vec3_t fogcolor;
 extern vec_t fogdensity;
 //#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2])*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2]))))
 #define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0])*((v)[0] - r_origin[0])+((v)[1] - r_origin[1])*((v)[1] - r_origin[1])+((v)[2] - r_origin[2])*((v)[2] - r_origin[2])))))
-#define calcfogbyte(v) ((byte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
+#define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
 
 #include "r_modules.h"
 

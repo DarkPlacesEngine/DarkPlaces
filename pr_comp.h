@@ -147,7 +147,7 @@ typedef struct
 	int		s_file;			// source file defined in
 	
 	int		numparms;
-	byte	parm_size[MAX_PARMS];
+	qbyte	parm_size[MAX_PARMS];
 } dfunction_t;
 
 

@@ -30,7 +30,7 @@ typedef struct sizebuf_s
 {
 	qboolean	allowoverflow;	// if false, do a Sys_Error
 	qboolean	overflowed;		// set to true if the buffer size failed
-	byte		*data;
+	qbyte		*data;
 	mempool_t	*mempool;
 	int			maxsize;
 	int			cursize;
@@ -179,7 +179,7 @@ int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
 
 // set by COM_LoadFile functions
 extern int loadsize;
-byte *COM_LoadFile (char *path, qboolean quiet);
+qbyte *COM_LoadFile (char *path, qboolean quiet);
 
 int COM_FileExists(char *filename);
 

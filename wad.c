@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static int			wad_numlumps;
 static lumpinfo_t	*wad_lumps;
-static byte			*wad_base = NULL;
+static qbyte			*wad_base = NULL;
 static mempool_t	*wad_mempool = NULL;
 
 void SwapPic (qpic_t *pic);
@@ -212,7 +212,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 }
 
 /*
-byte hlpalette[768] =
+qbyte hlpalette[768] =
 {
 	0x00,0x00,0x00,0x0F,0x0F,0x0F,0x1F,0x1F,0x1F,0x2F,0x2F,0x2F,0x3F,0x3F,0x3F,0x4B,
 	0x4B,0x4B,0x5B,0x5B,0x5B,0x6B,0x6B,0x6B,0x7B,0x7B,0x7B,0x8B,0x8B,0x8B,0x9B,0x9B,
@@ -265,12 +265,12 @@ byte hlpalette[768] =
 };
 */
 
-byte *W_ConvertWAD3Texture(miptex_t *tex)
+qbyte *W_ConvertWAD3Texture(miptex_t *tex)
 {
-	byte *in, *data, *out, *pal;
+	qbyte *in, *data, *out, *pal;
 //	int palsize;
 	int d, p;
-	in = (byte *)((int) tex + tex->offsets[0]);
+	in = (qbyte *)((int) tex + tex->offsets[0]);
 	data = out = Mem_Alloc(tempmempool, tex->width * tex->height * 4);
 	if (!data)
 		return NULL;
@@ -299,16 +299,16 @@ byte *W_ConvertWAD3Texture(miptex_t *tex)
 	return data;
 }
 
-byte *W_GetTexture(char *name)
+qbyte *W_GetTexture(char *name)
 {
 //	int i, c, datasize;
 //	short colorcount;
-//	byte pal[256][3], *indata, *outdata, *data;
+//	qbyte pal[256][3], *indata, *outdata, *data;
 	char texname[17];
 	int i, j;
 	QFile *file;
 	miptex_t *tex;
-	byte *data;
+	qbyte *data;
 	texname[16] = 0;
 	W_CleanupName (name, texname);
 	for (i = 0;i < TEXWAD_MAXIMAGES;i++)

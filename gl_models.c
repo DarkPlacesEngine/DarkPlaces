@@ -62,8 +62,8 @@ rtexturepool_t *chrometexturepool;
 void makechrometexture(void)
 {
 	int i;
-	byte noise[64*64];
-	byte data[64*64][4];
+	qbyte noise[64*64];
+	qbyte data[64*64][4];
 
 	fractalnoise(noise, 64, 8);
 
@@ -396,13 +396,13 @@ void R_DrawQ1Q2AliasModel (void)
 		if (currentrenderentity->colormap >= 0 && (skinframe->base || skinframe->pants || skinframe->shirt))
 		{
 			int c;
-			byte *color;
+			qbyte *color;
 			if (skinframe->base)
 				R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
 			if (skinframe->pants)
 			{
 				c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-				color = (byte *) (&d_8to24table[c]);
+				color = (qbyte *) (&d_8to24table[c]);
 				if (c >= 224) // fullbright ranges
 					R_DrawModelMesh(skinframe->pants, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
 				else
@@ -414,7 +414,7 @@ void R_DrawQ1Q2AliasModel (void)
 			if (skinframe->shirt)
 			{
 				c = currentrenderentity->colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-				color = (byte *) (&d_8to24table[c]);
+				color = (qbyte *) (&d_8to24table[c]);
 				if (c >= 224) // fullbright ranges
 					R_DrawModelMesh(skinframe->shirt, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
 				else

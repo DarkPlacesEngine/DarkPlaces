@@ -2,9 +2,9 @@
 #include "quakedef.h"
 
 unsigned int d_8to24table[256];
-//byte d_15to8table[32768];
-byte host_basepal[768];
-byte texgamma[256];
+//qbyte d_15to8table[32768];
+qbyte host_basepal[768];
+qbyte texgamma[256];
 
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
 cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
@@ -14,11 +14,11 @@ cvar_t v_hwgamma = {0, "v_hwgamma", "1"};
 
 void Palette_Setup8to24(void)
 {
-	byte *in, *out;
+	qbyte *in, *out;
 	unsigned short i;
 
 	in = host_basepal;
-	out = (byte *) d_8to24table; // d_8to24table is accessed as 32bit for speed reasons, but is created as 8bit bytes
+	out = (qbyte *) d_8to24table; // d_8to24table is accessed as 32bit for speed reasons, but is created as 8bit bytes
 	for (i=0 ; i<255 ; i++)
 	{
 		*out++ = *in++;
@@ -32,7 +32,7 @@ void Palette_Setup8to24(void)
 /*
 void	Palette_Setup15to8(void)
 {
-	byte	*pal;
+	qbyte	*pal;
 	unsigned r,g,b;
 	unsigned v;
 	int     r1,g1,b1;
@@ -62,7 +62,7 @@ void	Palette_Setup15to8(void)
 }
 */
 
-void BuildGammaTable8(float prescale, float gamma, float scale, float base, byte *out)
+void BuildGammaTable8(float prescale, float gamma, float scale, float base, qbyte *out)
 {
 	int i, adjusted;
 	double invgamma, d;
@@ -174,8 +174,8 @@ void Gamma_Init(void)
 
 void Palette_Init(void)
 {
-	byte *pal;
-	pal = (byte *)COM_LoadFile ("gfx/palette.lmp", false);
+	qbyte *pal;
+	pal = (qbyte *)COM_LoadFile ("gfx/palette.lmp", false);
 	if (!pal)
 		Sys_Error ("Couldn't load gfx/palette.lmp");
 	memcpy(host_basepal, pal, 765);

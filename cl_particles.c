@@ -48,7 +48,7 @@ typedef struct particle_s
 	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
 	float		pressure; // if non-zero, apply pressure to other particles
 	int			dynlight; // if set the particle will be dynamically lit (if cl_dynamicparticles is on), used for smoke and blood
-	byte		color[4];
+	qbyte		color[4];
 }
 particle_t;
 
@@ -325,7 +325,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 		int i, j;
 		float f;
 		vec3_t v, end, ang;
-		byte noise1[32*32], noise2[32*32];
+		qbyte noise1[32*32], noise2[32*32];
 
 		VectorClear(end); // hush MSVC
 		i = Mod_PointInLeaf(org, cl.worldmodel)->contents;

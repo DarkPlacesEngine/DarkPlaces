@@ -64,7 +64,9 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 #include <dlfcn.h>
 #endif
 
+#ifndef WIN32
 static void *prjobj = NULL;
+#endif
 
 static void gl_getfuncs_begin(void)
 {

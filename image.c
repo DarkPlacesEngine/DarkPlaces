@@ -4,7 +4,7 @@
 int		image_width;
 int		image_height;
 
-void Image_GammaRemapRGB(byte *in, byte *out, int pixels, byte *gammar, byte *gammag, byte *gammab)
+void Image_GammaRemapRGB(qbyte *in, qbyte *out, int pixels, qbyte *gammar, qbyte *gammag, qbyte *gammab)
 {
 	while (pixels--)
 	{
@@ -17,7 +17,7 @@ void Image_GammaRemapRGB(byte *in, byte *out, int pixels, byte *gammar, byte *ga
 }
 
 // note: pal must be 32bit color
-void Image_Copy8bitRGBA(byte *in, byte *out, int pixels, int *pal)
+void Image_Copy8bitRGBA(qbyte *in, qbyte *out, int pixels, int *pal)
 {
 	int *iout = (void *)out;
 	while (pixels >= 8)
@@ -83,11 +83,11 @@ typedef struct
 LoadPCX
 ============
 */
-byte* LoadPCX (byte *f, int matchwidth, int matchheight)
+qbyte* LoadPCX (qbyte *f, int matchwidth, int matchheight)
 {
-	pcx_t	pcx;
-	byte	*palette, *a, *b, *image_rgba, *fin, *pbuf, *enddata;
-	int		x, y, x2, dataByte;
+	pcx_t pcx;
+	qbyte *palette, *a, *b, *image_rgba, *fin, *pbuf, *enddata;
+	int x, y, x2, dataByte;
 
 	if (loadsize < sizeof(pcx) + 768)
 	{
@@ -204,10 +204,10 @@ TargaHeader		targa_header;
 LoadTGA
 =============
 */
-byte* LoadTGA (byte *f, int matchwidth, int matchheight)
+qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 {
 	int columns, rows, row, column;
-	byte *pixbuf, *image_rgba, *fin, *enddata;
+	qbyte *pixbuf, *image_rgba, *fin, *enddata;
 
 	if (loadsize < 18+3)
 		return NULL;
@@ -399,10 +399,10 @@ outofdata:;
 LoadLMP
 ============
 */
-byte* LoadLMP (byte *f, int matchwidth, int matchheight)
+qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 {
-	byte	*image_rgba;
-	int		width, height;
+	qbyte *image_rgba;
+	int width, height;
 
 	if (loadsize < 9)
 	{
@@ -457,10 +457,10 @@ void Image_StripImageExtension (char *in, char *out)
 		strcpy(out, in);
 }
 
-byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight)
+qbyte *loadimagepixels (char *filename, qboolean complain, int matchwidth, int matchheight)
 {
-	byte	*f, *data;
-	char	basename[256], name[256], *c;
+	qbyte *f, *data;
+	char basename[256], name[256], *c;
 	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
@@ -511,7 +511,7 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	return NULL;
 }
 
-int image_makemask (byte *in, byte *out, int size)
+int image_makemask (qbyte *in, qbyte *out, int size)
 {
 	int		i, count;
 	count = 0;
@@ -527,9 +527,9 @@ int image_makemask (byte *in, byte *out, int size)
 	return count;
 }
 
-byte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, int matchheight)
+qbyte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, int matchheight)
 {
-	byte	*in, *data;
+	qbyte *in, *data;
 	in = data = loadimagepixels(filename, complain, matchwidth, matchheight);
 	if (!data)
 		return NULL;
@@ -544,7 +544,7 @@ byte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, in
 
 rtexture_t *loadtextureimage (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
-	byte *data;
+	qbyte *data;
 	rtexture_t *rt;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
@@ -555,7 +555,7 @@ rtexture_t *loadtextureimage (rtexturepool_t *pool, char* filename, int matchwid
 
 rtexture_t *loadtextureimagemask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
-	byte *data;
+	qbyte *data;
 	rtexture_t *rt;
 	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
 		return 0;
@@ -568,7 +568,7 @@ rtexture_t *image_masktex;
 rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
 	int count;
-	byte *data;
+	qbyte *data;
 	char *filename2;
 	rtexture_t *rt;
 	image_masktex = NULL;
@@ -587,9 +587,9 @@ rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, char* filename, int 
 	return rt;
 }
 
-void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *data)
+void Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte *data)
 {
-	byte *buffer, *in, *out, *end;
+	qbyte *buffer, *in, *out, *end;
 
 	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
 
@@ -616,10 +616,10 @@ void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *
 	Mem_Free(buffer);
 }
 
-void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
+void Image_WriteTGARGB (char *filename, int width, int height, qbyte *data)
 {
 	int y;
-	byte *buffer, *in, *out, *end;
+	qbyte *buffer, *in, *out, *end;
 
 	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
 
@@ -649,10 +649,10 @@ void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 	Mem_Free(buffer);
 }
 
-void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
+void Image_WriteTGARGBA (char *filename, int width, int height, qbyte *data)
 {
 	int y;
-	byte *buffer, *in, *out, *end;
+	qbyte *buffer, *in, *out, *end;
 
 	buffer = Mem_Alloc(tempmempool, width*height*4 + 18);
 
@@ -683,9 +683,9 @@ void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
 	Mem_Free(buffer);
 }
 
-qboolean Image_CheckAlpha(byte *data, int size, qboolean rgba)
+qboolean Image_CheckAlpha(qbyte *data, int size, qboolean rgba)
 {
-	byte *end;
+	qbyte *end;
 	if (rgba)
 	{
 		// check alpha bytes

@@ -108,7 +108,7 @@ void WINS_GetLocalAddress(void)
 	myAddr = *(int *)local->h_addr_list[0];
 
 	addr = ntohl(myAddr);
-	sprintf(my_tcpip_address, "%d.%d.%d.%d", (addr >> 24) & 0xff, (addr >> 16) & 0xff, (addr >> 8) & 0xff, addr & 0xff);
+	sprintf(my_tcpip_address, "%d.%d.%d.%d", (int) ((addr >> 24) & 0xff), (int) ((addr >> 16) & 0xff), (int) ((addr >> 8) & 0xff), (int) (addr & 0xff));
 }
 
 
@@ -392,7 +392,7 @@ int WINS_CheckNewConnections (void)
 
 //=============================================================================
 
-int WINS_Read (int socket, byte *buf, int len, struct qsockaddr *addr)
+int WINS_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int addrlen = sizeof (struct qsockaddr);
 	int ret;
@@ -426,7 +426,7 @@ int WINS_MakeSocketBroadcastCapable (int socket)
 
 //=============================================================================
 
-int WINS_Broadcast (int socket, byte *buf, int len)
+int WINS_Broadcast (int socket, qbyte *buf, int len)
 {
 	int ret;
 
@@ -448,7 +448,7 @@ int WINS_Broadcast (int socket, byte *buf, int len)
 
 //=============================================================================
 
-int WINS_Write (int socket, byte *buf, int len, struct qsockaddr *addr)
+int WINS_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int ret;
 

@@ -409,12 +409,12 @@ crosses a waterline.
 */
 
 int		fatbytes;
-byte	fatpvs[MAX_MAP_LEAFS/8];
+qbyte	fatpvs[MAX_MAP_LEAFS/8];
 
 void SV_AddToFatPVS (vec3_t org, mnode_t *node)
 {
 	int		i;
-	byte	*pvs;
+	qbyte	*pvs;
 	mplane_t	*plane;
 	float	d;
 
@@ -454,7 +454,7 @@ Calculates a PVS that is the inclusive or of all leafs within 8 pixels of the
 given point.
 =============
 */
-byte *SV_FatPVS (vec3_t org)
+qbyte *SV_FatPVS (vec3_t org)
 {
 	fatbytes = (sv.worldmodel->numleafs+31)>>3;
 	memset (fatpvs, 0, fatbytes);
@@ -465,7 +465,7 @@ byte *SV_FatPVS (vec3_t org)
 //=============================================================================
 
 
-int SV_BoxTouchingPVS (byte *pvs, vec3_t mins, vec3_t maxs, mnode_t *node)
+int SV_BoxTouchingPVS (qbyte *pvs, vec3_t mins, vec3_t maxs, mnode_t *node)
 {
 	int leafnum;
 loc0:
@@ -510,7 +510,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
-	byte *pvs;
+	qbyte *pvs;
 	vec3_t org, origin, angles, entmins, entmaxs;
 	float nextfullupdate;
 	edict_t *ent;
@@ -787,8 +787,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (((int)(angles[0]*(256.0/360.0)) & 255) != ((int)(baseline->angles[0]*(256.0/360.0)) & 255))	bits |= U_ANGLE1;
 		if (((int)(angles[1]*(256.0/360.0)) & 255) != ((int)(baseline->angles[1]*(256.0/360.0)) & 255))	bits |= U_ANGLE2;
 		if (((int)(angles[2]*(256.0/360.0)) & 255) != ((int)(baseline->angles[2]*(256.0/360.0)) & 255))	bits |= U_ANGLE3;
-		if (baseline->colormap != (byte) ent->v.colormap)								bits |= U_COLORMAP;
-		if (baseline->skin != (byte) ent->v.skin)										bits |= U_SKIN;
+		if (baseline->colormap != (qbyte) ent->v.colormap)								bits |= U_COLORMAP;
+		if (baseline->skin != (qbyte) ent->v.skin)										bits |= U_SKIN;
 		if ((baseline->frame & 0x00FF) != ((int) ent->v.frame & 0x00FF))				bits |= U_FRAME;
 		if ((baseline->effects & 0x00FF) != ((int) ent->v.effects & 0x00FF))			bits |= U_EFFECTS;
 		if ((baseline->modelindex & 0x00FF) != ((int) ent->v.modelindex & 0x00FF))		bits |= U_MODEL;
@@ -868,7 +868,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
-	byte *pvs;
+	qbyte *pvs;
 	vec3_t org, origin, angles, entmins, entmaxs;
 	edict_t *ent;
 	eval_t *val;
@@ -1147,7 +1147,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	int		items;
 	eval_t	*val;
 	vec3_t	punchvector;
-	byte	viewzoom;
+	qbyte	viewzoom;
 
 //
 // send a damage message
@@ -1317,7 +1317,7 @@ SV_SendClientDatagram
 */
 qboolean SV_SendClientDatagram (client_t *client)
 {
-	byte		buf[MAX_DATAGRAM];
+	qbyte		buf[MAX_DATAGRAM];
 	sizebuf_t	msg;
 
 	msg.data = buf;
@@ -1399,7 +1399,7 @@ message buffer
 void SV_SendNop (client_t *client)
 {
 	sizebuf_t	msg;
-	byte		buf[4];
+	qbyte		buf[4];
 
 	msg.data = buf;
 	msg.maxsize = sizeof(buf);

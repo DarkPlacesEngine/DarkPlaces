@@ -52,7 +52,7 @@ typedef struct edict_s
 	entvars_t	v;					// C exported fields from progs
 // other fields from progs come immediately after
 } edict_t;
-//#define	EDICT_FROM_AREA(l) ((edict_t *)((byte *)l - (int)&(((edict_t *)0)->area)))
+//#define	EDICT_FROM_AREA(l) ((edict_t *)((qbyte *)l - (int)&(((edict_t *)0)->area)))
 //#define	EDICT_FROM_AREA(l) STRUCT_FROM_LINK(l,edict_t,area)
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  see pr_edict.c for the functions which use these.
@@ -136,23 +136,23 @@ void ED_ParseGlobals (char *data);
 void ED_LoadFromFile (char *data);
 
 edict_t *EDICT_NUM_ERROR(int n);
-#define EDICT_NUM(n) (n >= 0 ? (n < sv.max_edicts ? (edict_t *)((byte *)sv.edicts + (n) * pr_edict_size) : EDICT_NUM_ERROR(n)) : EDICT_NUM_ERROR(n))
+#define EDICT_NUM(n) (n >= 0 ? (n < sv.max_edicts ? (edict_t *)((qbyte *)sv.edicts + (n) * pr_edict_size) : EDICT_NUM_ERROR(n)) : EDICT_NUM_ERROR(n))
 //define EDICT_NUM(n) ((edict_t *)(sv.edicts+ (n)*pr_edict_size))
-//define NUM_FOR_EDICT(e) (((byte *)(e) - sv.edicts)/pr_edict_size)
+//define NUM_FOR_EDICT(e) (((qbyte *)(e) - sv.edicts)/pr_edict_size)
 
 //edict_t *EDICT_NUM(int n);
 int NUM_FOR_EDICT(edict_t *e);
 
-#define	NEXT_EDICT(e) ((edict_t *)( (byte *)e + pr_edict_size))
+#define	NEXT_EDICT(e) ((edict_t *)( (qbyte *)e + pr_edict_size))
 
-#define	EDICT_TO_PROG(e) ((byte *)e - (byte *)sv.edicts)
-#define PROG_TO_EDICT(e) ((edict_t *)((byte *)sv.edicts + e))
+#define	EDICT_TO_PROG(e) ((qbyte *)e - (qbyte *)sv.edicts)
+#define PROG_TO_EDICT(e) ((edict_t *)((qbyte *)sv.edicts + e))
 
 //============================================================================
 
 #define	G_FLOAT(o) (pr_globals[o])
 #define	G_INT(o) (*(int *)&pr_globals[o])
-#define	G_EDICT(o) ((edict_t *)((byte *)sv.edicts+ *(int *)&pr_globals[o]))
+#define	G_EDICT(o) ((edict_t *)((qbyte *)sv.edicts+ *(int *)&pr_globals[o]))
 #define G_EDICTNUM(o) NUM_FOR_EDICT(G_EDICT(o))
 #define	G_VECTOR(o) (&pr_globals[o])
 #define	G_STRING(o) (pr_strings + *(string_t *)&pr_globals[o])

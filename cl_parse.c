@@ -198,7 +198,7 @@ void CL_KeepaliveMessage (void)
 	static float lastmsg;
 	int		ret;
 	sizebuf_t	old;
-	byte		olddata[8192];
+	qbyte		olddata[8192];
 	
 	if (sv.active)
 		return;		// no need if server is local
@@ -527,7 +527,7 @@ If an entities model or origin changes from frame to frame, it must be
 relinked.  Other attributes can change without relinking.
 ==================
 */
-byte entkill[MAX_EDICTS];
+qbyte entkill[MAX_EDICTS];
 int bitprofile[32], bitprofilecount = 0;
 void CL_ParseUpdate (int bits)
 {
@@ -953,7 +953,7 @@ void CL_ParseEffect2 (void)
 
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf ("%3i:%s\n", msg_readcount-1, x);
 
-static byte cgamenetbuffer[65536];
+static qbyte cgamenetbuffer[65536];
 
 /*
 =====================
@@ -964,7 +964,7 @@ void CL_ParseServerMessage (void)
 {
 	int			cmd;
 	int			i, entitiesupdated;
-	byte		cmdlog[32];
+	qbyte		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 
@@ -1235,9 +1235,9 @@ void CL_ParseServerMessage (void)
 			cl.cdtrack = MSG_ReadByte ();
 			cl.looptrack = MSG_ReadByte ();
 			if ( (cls.demoplayback || cls.demorecording) && (cls.forcetrack != -1) )
-				CDAudio_Play ((byte)cls.forcetrack, true);
+				CDAudio_Play ((qbyte)cls.forcetrack, true);
 			else
-				CDAudio_Play ((byte)cl.cdtrack, true);
+				CDAudio_Play ((qbyte)cl.cdtrack, true);
 			break;
 
 		case svc_intermission:

@@ -228,7 +228,7 @@ Host should be either "local" or a net address to be passed on
 void CL_EstablishConnection (char *host)
 {
 	sizebuf_t	buf;
-	byte	data[128];
+	qbyte	data[128];
 
 	buf.maxsize = 128;
 	buf.cursize = 0;
@@ -595,7 +595,7 @@ static void CL_RelinkNetworkEntities()
 		glowcolor = ent->state_current.glowcolor;
 		if (glowsize)
 		{
-			byte *tempcolor = (byte *)&d_8to24table[glowcolor];
+			qbyte *tempcolor = (qbyte *)&d_8to24table[glowcolor];
 			dlightcolor[0] += glowsize * tempcolor[0] * (1.0f / 255.0f);
 			dlightcolor[1] += glowsize * tempcolor[1] * (1.0f / 255.0f);
 			dlightcolor[2] += glowsize * tempcolor[2] * (1.0f / 255.0f);

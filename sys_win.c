@@ -39,7 +39,7 @@ qboolean	ActiveApp, Minimized;
 static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
 
-static char			*tracking_tag = "Clams & Mooses";
+//static char			*tracking_tag = "Clams & Mooses";
 
 static HANDLE	tevent;
 static HANDLE	hFile;
@@ -71,10 +71,10 @@ int		findhandle (void)
 
 /*
 ================
-filelength
+Sys_FileLength
 ================
 */
-int filelength (QFile *f)
+int Sys_FileLength (QFile *f)
 {
 	int		pos;
 	int		end;
@@ -105,7 +105,7 @@ int Sys_FileOpenRead (char *path, int *hndl)
 	{
 		sys_handles[i] = f;
 		*hndl = i;
-		retval = filelength(f);
+		retval = Sys_FileLength(f);
 	}
 
 	return retval;
@@ -368,11 +368,11 @@ double Sys_DoubleTime (void)
 
 char *Sys_ConsoleInput (void)
 {
-	static char	text[256];
-	static int		len;
-	INPUT_RECORD	recs[1024];
-	int		dummy;
-	int		ch, numread, numevents;
+	static char text[256];
+	static int len;
+	INPUT_RECORD recs[1024];
+	int ch;
+	DWORD numread, numevents, dummy;
 
 	if (cls.state != ca_dedicated)
 		return NULL;

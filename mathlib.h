@@ -144,8 +144,8 @@ float Q_RSqrt(float number);
 #define NUMVERTEXNORMALS	162
 extern float m_bytenormals[NUMVERTEXNORMALS][3];
 
-byte NormalToByte(vec3_t n);
-void ByteToNormal(byte num, vec3_t n);
+qbyte NormalToByte(vec3_t n);
+void ByteToNormal(qbyte num, vec3_t n);
 
 void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3]);
 void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4]);

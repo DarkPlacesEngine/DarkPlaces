@@ -65,7 +65,7 @@ const char *gl_version;
 const char *gl_extensions;
 
 /*-----------------------------------------------------------------------*/
-void D_BeginDirectRect (int x, int y, byte *pbitmap, int width, int height)
+void D_BeginDirectRect (int x, int y, qbyte *pbitmap, int width, int height)
 {
 }
 

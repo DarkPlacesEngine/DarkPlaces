@@ -288,21 +288,21 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	double	time; // time this state was built
-	vec3_t	origin;
-	vec3_t	angles;
+	double time; // time this state was built
+	vec3_t origin;
+	vec3_t angles;
 	int number; // entity number this state is for
 	unsigned short active; // true if a valid state
 	unsigned short modelindex;
 	unsigned short frame;
 	unsigned short effects;
-	byte	colormap;
-	byte	skin;
-	byte	alpha;
-	byte	scale;
-	byte	glowsize;
-	byte	glowcolor;
-	byte	flags;
+	qbyte colormap;
+	qbyte skin;
+	qbyte alpha;
+	qbyte scale;
+	qbyte glowsize;
+	qbyte glowcolor;
+	qbyte flags;
 }
 entity_state_t;
 

@@ -66,7 +66,7 @@ buf_fcolor_t;
 
 typedef struct
 {
-	byte c[4];
+	qbyte c[4];
 }
 buf_bcolor_t;
 
@@ -364,7 +364,7 @@ void R_Mesh_Render(void)
 	// float to byte color conversion
 	int *icolor;
 	float *fcolor;
-	byte *bcolor;
+	qbyte *bcolor;
 	if (!backendactive)
 		Sys_Error("R_Mesh_Render: called when backend is not active\n");
 	if (!currentmesh)
@@ -1372,7 +1372,7 @@ void R_ClearScreen(void);
 void SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 {
 	int i;
-	byte *buffer;
+	qbyte *buffer;
 
 	buffer = Mem_Alloc(tempmempool, width*height*3);
 	glReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);

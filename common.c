@@ -109,7 +109,7 @@ void Q_memset (void *dest, int fill, int count)
 	}
 	else
 		for (i=0 ; i<count ; i++)
-			((byte *)dest)[i] = fill;
+			((qbyte *)dest)[i] = fill;
 }
 
 void Q_memcpy (void *dest, void *src, int count)
@@ -124,7 +124,7 @@ void Q_memcpy (void *dest, void *src, int count)
 	}
 	else
 		for (i=0 ; i<count ; i++)
-			((byte *)dest)[i] = ((byte *)src)[i];
+			((qbyte *)dest)[i] = ((qbyte *)src)[i];
 }
 
 int Q_memcmp (void *m1, void *m2, int count)
@@ -132,7 +132,7 @@ int Q_memcmp (void *m1, void *m2, int count)
 	while(count)
 	{
 		count--;
-		if (((byte *)m1)[count] != ((byte *)m2)[count])
+		if (((qbyte *)m1)[count] != ((qbyte *)m2)[count])
 			return -1;
 	}
 	return 0;
@@ -404,7 +404,7 @@ float   (*LittleFloat) (float l);
 
 short   ShortSwap (short l)
 {
-	byte    b1,b2;
+	qbyte    b1,b2;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -421,7 +421,7 @@ short   ShortNoSwap (short l)
 
 int    LongSwap (int l)
 {
-	byte    b1,b2,b3,b4;
+	qbyte    b1,b2,b3,b4;
 
 	b1 = l&255;
 	b2 = (l>>8)&255;
@@ -443,7 +443,7 @@ float FloatSwap (float f)
 	union
 	{
 		float   f;
-		byte    b[4];
+		qbyte    b[4];
 	} dat1, dat2;
 
 
@@ -477,7 +477,7 @@ Handles byte ordering and avoids alignment errors
 
 void MSG_WriteChar (sizebuf_t *sb, int c)
 {
-	byte    *buf;
+	qbyte    *buf;
 	
 //#ifdef PARANOID
 //	if (c < -128 || c > 127)
@@ -490,7 +490,7 @@ void MSG_WriteChar (sizebuf_t *sb, int c)
 
 void MSG_WriteByte (sizebuf_t *sb, int c)
 {
-	byte    *buf;
+	qbyte    *buf;
 	
 //#ifdef PARANOID
 //	if (c < 0 || c > 255)
@@ -503,7 +503,7 @@ void MSG_WriteByte (sizebuf_t *sb, int c)
 
 void MSG_WriteShort (sizebuf_t *sb, int c)
 {
-	byte    *buf;
+	qbyte    *buf;
 
 //#ifdef PARANOID
 //	if (c < ((short)0x8000) || c > (short)0x7fff)
@@ -517,7 +517,7 @@ void MSG_WriteShort (sizebuf_t *sb, int c)
 
 void MSG_WriteLong (sizebuf_t *sb, int c)
 {
-	byte    *buf;
+	qbyte    *buf;
 
 	buf = SZ_GetSpace (sb, 4);
 	buf[0] = c&0xff;
@@ -689,7 +689,7 @@ float MSG_ReadFloat (void)
 {
 	union
 	{
-		byte    b[4];
+		qbyte    b[4];
 		float   f;
 		int     l;
 	} dat;
@@ -822,9 +822,9 @@ void SZ_Print (sizebuf_t *buf, char *data)
 
 // byte * cast to keep VC++ happy
 	if (buf->data[buf->cursize-1])
-		memcpy ((byte *)SZ_GetSpace(buf, len),data,len); // no trailing 0
+		memcpy ((qbyte *)SZ_GetSpace(buf, len),data,len); // no trailing 0
 	else
-		memcpy ((byte *)SZ_GetSpace(buf, len-1)-1,data,len); // write over trailing 0
+		memcpy ((qbyte *)SZ_GetSpace(buf, len-1)-1,data,len); // write over trailing 0
 }
 
 
@@ -1202,7 +1202,7 @@ COM_Init
 void COM_Init (void)
 {
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-	byte    swaptest[2] = {1,0};
+	qbyte    swaptest[2] = {1,0};
 
 // set the byte swapping variables in a portable manner
 	if ( *(short *)swaptest == 1)
@@ -1265,7 +1265,7 @@ char    *va(char *format, ...)
 
 
 /// just for debugging
-int     memsearch (byte *start, int count, int search)
+int     memsearch (qbyte *start, int count, int search)
 {
 	int             i;
 
@@ -1630,14 +1630,14 @@ Filename are reletive to the quake directory.
 Always appends a 0 byte.
 ============
 */
-byte			*loadbuf;
-int				loadsize;
-byte *COM_LoadFile (char *path, qboolean quiet)
+qbyte *loadbuf;
+int loadsize;
+qbyte *COM_LoadFile (char *path, qboolean quiet)
 {
-	QFile             *h;
-	byte    *buf;
-	char    base[1024];
-	int             len;
+	QFile *h;
+	qbyte *buf;
+	char base[1024];
+	int len;
 
 	buf = NULL;     // quiet compiler warning
 	loadsize = 0;
@@ -1656,7 +1656,7 @@ byte *COM_LoadFile (char *path, qboolean quiet)
 	if (!buf)
 		Sys_Error ("COM_LoadFile: not enough available memory for %s (size %i)", path, len);
 
-	((byte *)buf)[len] = 0;
+	((qbyte *)buf)[len] = 0;
 
 	Qread (h, buf, len);
 	Qclose (h);

@@ -27,16 +27,16 @@ extern	HWND	mainwindow;
 
 qboolean cdaudioinitialized = false;
 static qboolean cdValid = false;
-static qboolean	playing = false;
-static qboolean	wasPlaying = false;
-static qboolean	initialized = false;
-static qboolean	enabled = false;
+static qboolean playing = false;
+static qboolean wasPlaying = false;
+static qboolean initialized = false;
+static qboolean enabled = false;
 static qboolean playLooping = false;
-static float	cdvolume;
-static byte 	remap[100];
-static byte		cdrom;
-static byte		playTrack;
-static byte		maxTrack;
+static float cdvolume;
+static qbyte remap[100];
+static qbyte cdrom;
+static qbyte playTrack;
+static qbyte maxTrack;
 
 UINT	wDeviceID;
 
@@ -100,7 +100,7 @@ static int CDAudio_GetAudioDiskInfo(void)
 }
 
 
-void CDAudio_Play(byte track, qboolean looping)
+void CDAudio_Play(qbyte track, qboolean looping)
 {
 	DWORD				dwReturn;
     MCI_PLAY_PARMS		mciPlayParms;
@@ -309,13 +309,13 @@ static void CD_f (void)
 
 	if (Q_strcasecmp(command, "play") == 0)
 	{
-		CDAudio_Play((byte)atoi(Cmd_Argv (2)), false);
+		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), false);
 		return;
 	}
 
 	if (Q_strcasecmp(command, "loop") == 0)
 	{
-		CDAudio_Play((byte)atoi(Cmd_Argv (2)), true);
+		CDAudio_Play((qbyte)atoi(Cmd_Argv (2)), true);
 		return;
 	}
 

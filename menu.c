@@ -173,13 +173,13 @@ void M_DrawPic (float cx, float cy, char *picname)
 	DrawQ_Pic (menu_x + cx, menu_y + cy, picname, 0, 0, 1, 1, 1, 1, 0);
 }
 
-byte identityTable[256];
-byte translationTable[256];
+qbyte identityTable[256];
+qbyte translationTable[256];
 
 void M_BuildTranslationTable(int top, int bottom)
 {
-	int		j;
-	byte	*dest, *source;
+	int j;
+	qbyte *dest, *source;
 
 	for (j = 0; j < 256; j++)
 		identityTable[j] = j;

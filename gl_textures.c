@@ -33,7 +33,7 @@ static int block_size;
 
 // since there is only one set of GL texture numbers, we have to track them
 // globally, everything else is per texture pool
-static byte *gltexnuminuse;
+static qbyte *gltexnuminuse;
 
 typedef struct
 {
@@ -86,16 +86,16 @@ typedef struct gltexture_s
 	// location in the image, and size
 	int x, y, width, height;
 	// copy of the original texture supplied to the upload function, for re-uploading or deferred uploads (non-precached)
-	byte *inputtexels;
+	qbyte *inputtexels;
 	// to identify cache mismatchs (this might be removed someday)
 	int crc;
 	// flags supplied to the LoadTexture/ProceduralTexture functions
 	// (might be altered to remove TEXF_ALPHA), and GLTEXF_ private flags
 	int flags;
 	// procedural texture generation function, called once per frame if the texture is used
-	int (*generate)(byte *buffer, int width, int height, void *parameterdata, int parameterdatasize);
+	int (*generate)(qbyte *buffer, int width, int height, void *parameterdata, int parameterdatasize);
 	// data provided to generate, persistent from call to call
-	byte *proceduraldata;
+	qbyte *proceduraldata;
 	// size of data
 	int proceduraldatasize;
 	// used only to avoid updating the texture more than once per frame
@@ -118,11 +118,11 @@ gltexturepool_t;
 
 static gltexturepool_t *gltexturepoolchain = NULL;
 
-static byte *resamplerow1 = NULL, *resamplerow2 = NULL;
+static qbyte *resamplerow1 = NULL, *resamplerow2 = NULL;
 static int resamplerowsize = 0;
-static byte *resizebuffer = NULL, *colorconvertbuffer;
+static qbyte *resizebuffer = NULL, *colorconvertbuffer;
 static int resizebuffersize = 0;
-static byte *texturebuffer;
+static qbyte *texturebuffer;
 static int texturebuffersize = 0;
 
 static int realmaxsize = 0;
@@ -523,7 +523,7 @@ void R_Textures_Init (void)
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
 }
 
-static void R_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth, int bytesperpixel)
+static void R_ResampleTextureLerpLine (qbyte *in, qbyte *out, int inwidth, int outwidth, int bytesperpixel)
 {
 	int		j, xi, oldx = 0, f, fstep, endx, lerp;
 	fstep = (int) (inwidth*65536.0f/outwidth);
@@ -541,10 +541,10 @@ static void R_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int out
 			if (xi < endx)
 			{
 				lerp = f & 0xFFFF;
-				*out++ = (byte) ((((in[4] - in[0]) * lerp) >> 16) + in[0]);
-				*out++ = (byte) ((((in[5] - in[1]) * lerp) >> 16) + in[1]);
-				*out++ = (byte) ((((in[6] - in[2]) * lerp) >> 16) + in[2]);
-				*out++ = (byte) ((((in[7] - in[3]) * lerp) >> 16) + in[3]);
+				*out++ = (qbyte) ((((in[4] - in[0]) * lerp) >> 16) + in[0]);
+				*out++ = (qbyte) ((((in[5] - in[1]) * lerp) >> 16) + in[1]);
+				*out++ = (qbyte) ((((in[6] - in[2]) * lerp) >> 16) + in[2]);
+				*out++ = (qbyte) ((((in[7] - in[3]) * lerp) >> 16) + in[3]);
 			}
 			else // last pixel of the line has no pixel to lerp to
 			{
@@ -568,9 +568,9 @@ static void R_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int out
 			if (xi < endx)
 			{
 				lerp = f & 0xFFFF;
-				*out++ = (byte) ((((in[3] - in[0]) * lerp) >> 16) + in[0]);
-				*out++ = (byte) ((((in[4] - in[1]) * lerp) >> 16) + in[1]);
-				*out++ = (byte) ((((in[5] - in[2]) * lerp) >> 16) + in[2]);
+				*out++ = (qbyte) ((((in[3] - in[0]) * lerp) >> 16) + in[0]);
+				*out++ = (qbyte) ((((in[4] - in[1]) * lerp) >> 16) + in[1]);
+				*out++ = (qbyte) ((((in[5] - in[2]) * lerp) >> 16) + in[2]);
 			}
 			else // last pixel of the line has no pixel to lerp to
 			{
@@ -607,8 +607,8 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 	{
 		if (r_lerpimages.integer)
 		{
-			int		i, j, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth4 = inwidth*4, outwidth4 = outwidth*4;
-			byte	*inrow, *out;
+			int i, j, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth4 = inwidth*4, outwidth4 = outwidth*4;
+			qbyte *inrow, *out;
 			out = outdata;
 			fstep = (int) (inheight*65536.0f/outheight);
 
@@ -624,7 +624,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 					lerp = f & 0xFFFF;
 					if (yi != oldy)
 					{
-						inrow = (byte *)indata + inwidth4*yi;
+						inrow = (qbyte *)indata + inwidth4*yi;
 						if (yi == oldy+1)
 							memcpy(row1, row2, outwidth4);
 						else
@@ -635,7 +635,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 					j = outwidth - 4;
 					while(j >= 0)
 					{
-#define LERPBYTE(i) out[i] = (byte) ((((row2[i] - row1[i]) * lerp) >> 16) + row1[i])
+#define LERPBYTE(i) out[i] = (qbyte) ((((row2[i] - row1[i]) * lerp) >> 16) + row1[i])
 						LERPBYTE( 0);
 						LERPBYTE( 1);
 						LERPBYTE( 2);
@@ -688,7 +688,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 				{
 					if (yi != oldy)
 					{
-						inrow = (byte *)indata + inwidth4*yi;
+						inrow = (qbyte *)indata + inwidth4*yi;
 						if (yi == oldy+1)
 							memcpy(row1, row2, outwidth4);
 						else
@@ -740,8 +740,8 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 	{
 		if (r_lerpimages.integer)
 		{
-			int		i, j, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth3 = inwidth * 3, outwidth3 = outwidth * 3;
-			byte	*inrow, *out;
+			int i, j, yi, oldy, f, fstep, lerp, endy = (inheight-1), inwidth3 = inwidth * 3, outwidth3 = outwidth * 3;
+			qbyte *inrow, *out;
 			out = outdata;
 			fstep = (int) (inheight*65536.0f/outheight);
 
@@ -757,7 +757,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 					lerp = f & 0xFFFF;
 					if (yi != oldy)
 					{
-						inrow = (byte *)indata + inwidth3*yi;
+						inrow = (qbyte *)indata + inwidth3*yi;
 						if (yi == oldy+1)
 							memcpy(row1, row2, outwidth3);
 						else
@@ -768,7 +768,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 					j = outwidth - 4;
 					while(j >= 0)
 					{
-#define LERPBYTE(i) out[i] = (byte) ((((row2[i] - row1[i]) * lerp) >> 16) + row1[i])
+#define LERPBYTE(i) out[i] = (qbyte) ((((row2[i] - row1[i]) * lerp) >> 16) + row1[i])
 						LERPBYTE( 0);
 						LERPBYTE( 1);
 						LERPBYTE( 2);
@@ -814,7 +814,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 				{
 					if (yi != oldy)
 					{
-						inrow = (byte *)indata + inwidth3*yi;
+						inrow = (qbyte *)indata + inwidth3*yi;
 						if (yi == oldy+1)
 							memcpy(row1, row2, outwidth3);
 						else
@@ -829,13 +829,13 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 		{
 			int i, j, f, inwidth3 = inwidth * 3;
 			unsigned frac, fracstep;
-			byte *inrow, *out;
+			qbyte *inrow, *out;
 			out = outdata;
 
 			fracstep = inwidth*0x10000/outwidth;
 			for (i = 0;i < outheight;i++)
 			{
-				inrow = (byte *)indata + inwidth3*(i*inheight/outheight);
+				inrow = (qbyte *)indata + inwidth3*(i*inheight/outheight);
 				frac = fracstep >> 1;
 				j = outwidth - 4;
 				while (j >= 0)
@@ -867,7 +867,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 }
 
 // in can be the same as out
-static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwidth, int destheight, int bytesperpixel)
+static void R_MipReduce(qbyte *in, qbyte *out, int *width, int *height, int destwidth, int destheight, int bytesperpixel)
 {
 	int x, y, nextrow;
 	nextrow = *width * bytesperpixel;
@@ -884,10 +884,10 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (byte) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
-						out[1] = (byte) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
-						out[2] = (byte) ((in[2] + in[6] + in[nextrow+2] + in[nextrow+6]) >> 2);
-						out[3] = (byte) ((in[3] + in[7] + in[nextrow+3] + in[nextrow+7]) >> 2);
+						out[0] = (qbyte) ((in[0] + in[4] + in[nextrow  ] + in[nextrow+4]) >> 2);
+						out[1] = (qbyte) ((in[1] + in[5] + in[nextrow+1] + in[nextrow+5]) >> 2);
+						out[2] = (qbyte) ((in[2] + in[6] + in[nextrow+2] + in[nextrow+6]) >> 2);
+						out[3] = (qbyte) ((in[3] + in[7] + in[nextrow+3] + in[nextrow+7]) >> 2);
 						out += 4;
 						in += 8;
 					}
@@ -900,9 +900,9 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (byte) ((in[0] + in[3] + in[nextrow  ] + in[nextrow+3]) >> 2);
-						out[1] = (byte) ((in[1] + in[4] + in[nextrow+1] + in[nextrow+4]) >> 2);
-						out[2] = (byte) ((in[2] + in[5] + in[nextrow+2] + in[nextrow+5]) >> 2);
+						out[0] = (qbyte) ((in[0] + in[3] + in[nextrow  ] + in[nextrow+3]) >> 2);
+						out[1] = (qbyte) ((in[1] + in[4] + in[nextrow+1] + in[nextrow+4]) >> 2);
+						out[2] = (qbyte) ((in[2] + in[5] + in[nextrow+2] + in[nextrow+5]) >> 2);
 						out += 3;
 						in += 6;
 					}
@@ -921,10 +921,10 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (byte) ((in[0] + in[4]) >> 1);
-						out[1] = (byte) ((in[1] + in[5]) >> 1);
-						out[2] = (byte) ((in[2] + in[6]) >> 1);
-						out[3] = (byte) ((in[3] + in[7]) >> 1);
+						out[0] = (qbyte) ((in[0] + in[4]) >> 1);
+						out[1] = (qbyte) ((in[1] + in[5]) >> 1);
+						out[2] = (qbyte) ((in[2] + in[6]) >> 1);
+						out[3] = (qbyte) ((in[3] + in[7]) >> 1);
 						out += 4;
 						in += 8;
 					}
@@ -936,9 +936,9 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (byte) ((in[0] + in[3]) >> 1);
-						out[1] = (byte) ((in[1] + in[4]) >> 1);
-						out[2] = (byte) ((in[2] + in[5]) >> 1);
+						out[0] = (qbyte) ((in[0] + in[3]) >> 1);
+						out[1] = (qbyte) ((in[1] + in[4]) >> 1);
+						out[2] = (qbyte) ((in[2] + in[5]) >> 1);
 						out += 3;
 						in += 6;
 					}
@@ -960,10 +960,10 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (byte) ((in[0] + in[nextrow  ]) >> 1);
-						out[1] = (byte) ((in[1] + in[nextrow+1]) >> 1);
-						out[2] = (byte) ((in[2] + in[nextrow+2]) >> 1);
-						out[3] = (byte) ((in[3] + in[nextrow+3]) >> 1);
+						out[0] = (qbyte) ((in[0] + in[nextrow  ]) >> 1);
+						out[1] = (qbyte) ((in[1] + in[nextrow+1]) >> 1);
+						out[2] = (qbyte) ((in[2] + in[nextrow+2]) >> 1);
+						out[3] = (qbyte) ((in[3] + in[nextrow+3]) >> 1);
 						out += 4;
 						in += 4;
 					}
@@ -976,9 +976,9 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 				{
 					for (x = 0;x < *width;x++)
 					{
-						out[0] = (byte) ((in[0] + in[nextrow  ]) >> 1);
-						out[1] = (byte) ((in[1] + in[nextrow+1]) >> 1);
-						out[2] = (byte) ((in[2] + in[nextrow+2]) >> 1);
+						out[0] = (qbyte) ((in[0] + in[nextrow  ]) >> 1);
+						out[1] = (qbyte) ((in[1] + in[nextrow+1]) >> 1);
+						out[2] = (qbyte) ((in[2] + in[nextrow+2]) >> 1);
 						out += 3;
 						in += 3;
 					}
@@ -993,10 +993,10 @@ static void R_MipReduce(byte *in, byte *out, int *width, int *height, int destwi
 	}
 }
 
-static void R_Upload(gltexture_t *glt, byte *data)
+static void R_Upload(gltexture_t *glt, qbyte *data)
 {
 	int mip, width, height, internalformat;
-	byte *prevbuffer;
+	qbyte *prevbuffer;
 	prevbuffer = data;
 
 	glBindTexture(GL_TEXTURE_2D, glt->image->texnum);
@@ -1278,7 +1278,7 @@ static void R_UploadTexture (gltexture_t *glt)
 	}
 }
 
-static gltexture_t *R_SetupTexture(gltexturepool_t *pool, char *identifier, int crc, int width, int height, int flags, textypeinfo_t *texinfo, byte *data, int (*generate)(byte *buffer, int width, int height, void *proceduraldata, int proceduraldatasize), void *proceduraldata, int proceduraldatasize)
+static gltexture_t *R_SetupTexture(gltexturepool_t *pool, char *identifier, int crc, int width, int height, int flags, textypeinfo_t *texinfo, qbyte *data, int (*generate)(qbyte *buffer, int width, int height, void *proceduraldata, int proceduraldatasize), void *proceduraldata, int proceduraldatasize)
 {
 	gltexture_t *glt;
 	glt = Mem_Alloc(texturemempool, sizeof(gltexture_t));
@@ -1331,7 +1331,7 @@ static gltexture_t *R_SetupTexture(gltexturepool_t *pool, char *identifier, int 
 R_LoadTexture
 ================
 */
-rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, byte *data, int textype, int flags)
+rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags)
 {
 	int i;
 	gltexture_t *glt;
@@ -1416,7 +1416,7 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 	return (rtexture_t *)R_SetupTexture(pool, identifier, crc, width, height, flags | GLTEXF_UPLOAD, texinfo, data, NULL, NULL, 0);
 }
 
-rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, int textype, int flags, int (*generate)(byte *buffer, int width, int height, void *proceduraldata, int proceduraldatasize), void *proceduraldata, int proceduraldatasize)
+rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, int textype, int flags, int (*generate)(qbyte *buffer, int width, int height, void *proceduraldata, int proceduraldatasize), void *proceduraldata, int proceduraldatasize)
 {
 	gltexture_t		*glt;
 	gltexturepool_t	*pool = (gltexturepool_t *)rtexturepool;
@@ -1550,7 +1550,7 @@ int R_CompatibleFragmentWidth(int width, int textype, int flags)
 	return width;
 }
 
-void R_UpdateTexture(rtexture_t *rt, byte *data)
+void R_UpdateTexture(rtexture_t *rt, qbyte *data)
 {
 	gltexture_t *glt;
 	if (rt == NULL)

@@ -23,10 +23,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 //
 extern int con_totallines;
 extern int con_backscroll;
-extern	qboolean con_forcedup;	// because no entities to refresh
+extern qboolean con_forcedup;	// because no entities to refresh
 extern qboolean con_initialized;
-extern byte *con_chars;
-extern	int	con_notifylines;		// scan lines to clear for notify lines
+extern qbyte *con_chars;
+extern int con_notifylines;		// scan lines to clear for notify lines
 
 void Con_DrawCharacter (int cx, int line, int num);
 

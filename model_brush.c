@@ -20,7 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-byte mod_novis[(MAX_MAP_LEAFS + 7)/ 8];
+qbyte mod_novis[(MAX_MAP_LEAFS + 7)/ 8];
 
 cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
 cvar_t halflifebsp = {0, "halflifebsp", "0"};
@@ -118,12 +118,12 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 Mod_DecompressVis
 ===================
 */
-static byte *Mod_DecompressVis (byte *in, model_t *model)
+static qbyte *Mod_DecompressVis (qbyte *in, model_t *model)
 {
-	static byte	decompressed[MAX_MAP_LEAFS/8];
-	int		c;
-	byte	*out;
-	int		row;
+	static qbyte decompressed[MAX_MAP_LEAFS/8];
+	int c;
+	qbyte *out;
+	int row;
 
 	row = (model->numleafs+7)>>3;
 	out = decompressed;
@@ -160,7 +160,7 @@ static byte *Mod_DecompressVis (byte *in, model_t *model)
 	return decompressed;
 }
 
-byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
+qbyte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 {
 	if (r_novis.integer || leaf == model->leafs || leaf->compressed_vis == NULL)
 		return mod_novis;
@@ -169,8 +169,8 @@ byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 
 void Mod_SetupNoTexture(void)
 {
-	int		x, y;
-	byte	pix[16][16][4];
+	int x, y;
+	qbyte pix[16][16][4];
 
 	for (y = 0;y < 16;y++)
 	{
@@ -212,7 +212,7 @@ static void Mod_LoadTextures (lump_t *l)
 	miptex_t		*dmiptex;
 	texture_t		*tx, *tx2, *anims[10], *altanims[10];
 	dmiptexlump_t	*m;
-	byte			*data, *mtdata, *data2;
+	qbyte			*data, *mtdata, *data2;
 	char			name[256];
 
 	Mod_SetupNoTexture();
@@ -237,7 +237,7 @@ static void Mod_LoadTextures (lump_t *l)
 		dofs[i] = LittleLong(dofs[i]);
 		if (dofs[i] == -1)
 			continue;
-		dmiptex = (miptex_t *)((byte *)m + dofs[i]);
+		dmiptex = (miptex_t *)((qbyte *)m + dofs[i]);
 		mtwidth = LittleLong (dmiptex->width);
 		mtheight = LittleLong (dmiptex->height);
 		mtdata = NULL;
@@ -247,7 +247,7 @@ static void Mod_LoadTextures (lump_t *l)
 			// texture included
 			if (j < 40 || j + mtwidth * mtheight > l->filelen)
 				Host_Error ("Texture %s is corrupt or incomplete\n", dmiptex->name);
-			mtdata = (byte *)dmiptex + j;
+			mtdata = (qbyte *)dmiptex + j;
 		}
 
 		if ((mtwidth & 15) || (mtheight & 15))
@@ -486,8 +486,7 @@ Mod_LoadLighting
 static void Mod_LoadLighting (lump_t *l)
 {
 	int i;
-	byte *in, *out, *data;
-	byte d;
+	qbyte *in, *out, *data, d;
 	char litfilename[1024];
 	loadmodel->lightdata = NULL;
 	if (loadmodel->ishlbsp) // LordHavoc: load the colored lighting data straight
@@ -501,7 +500,7 @@ static void Mod_LoadLighting (lump_t *l)
 		strcpy(litfilename, loadmodel->name);
 		COM_StripExtension(litfilename, litfilename);
 		strcat(litfilename, ".lit");
-		data = (byte*) COM_LoadFile (litfilename, false);
+		data = (qbyte*) COM_LoadFile (litfilename, false);
 		if (data)
 		{
 			if (loadsize > 8 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
@@ -2393,7 +2392,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		Cvar_SetValue("halflifebsp", mod->ishlbsp);
 
 // swap all the lumps
-	mod_base = (byte *)header;
+	mod_base = (qbyte *)header;
 
 	for (i=0 ; i<sizeof(dheader_t)/4 ; i++)
 		((int *)header)[i] = LittleLong ( ((int *)header)[i]);

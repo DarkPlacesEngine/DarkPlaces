@@ -35,7 +35,7 @@ void r_light_start(void)
 {
 	float dx, dy;
 	int x, y, a;
-	byte pixels[32][32][4];
+	qbyte pixels[32][32][4];
 	lighttexturepool = R_AllocTexturePool();
 	for (y = 0;y < 32;y++)
 	{
@@ -395,7 +395,7 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 	int		i, k, m, c, leafnum;
 	msurface_t *surf, **mark;
 	mleaf_t *leaf;
-	byte	*in;
+	qbyte	*in;
 	int		row;
 	float	low[3], high[3], dist, maxdist;
 
@@ -662,7 +662,7 @@ loc0:
 
 				if (surf->samples)
 				{
-					byte *lightmap;
+					qbyte *lightmap;
 					int maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
 					line3 = ((surf->extents[0]>>4)+1)*3;
 					size3 = ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
