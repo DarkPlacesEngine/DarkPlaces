@@ -613,7 +613,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 			else
 			{
-				VectorCopy(ent->v.origin, origin);		
+				VectorCopy(ent->v.origin, origin);
 			}
 			if (ent->v.movetype == MOVETYPE_STEP) // monster, but airborn, update lerp info
 			{
@@ -687,17 +687,17 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		if (ent != clent)
 		{
-//			if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
-//			{
-//				if (ent->v.modelindex && pr_strings[ent->v.model]) // model
-//				{
+			if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
+			{
+				if (ent->v.modelindex && pr_strings[ent->v.model]) // model
+				{
 					// don't send if flagged for NODRAW and there are no effects
 					if (sv.models[(int)ent->v.modelindex]->flags == 0 && ((effects & EF_NODRAW) || scale <= 0 || alpha <= 0))
 						continue;
-//				}
-//				else // no model and no effects
-//					continue;
-//			}
+				}
+				else // no model and no effects
+					continue;
+			}
 		}
 
 		if (msg->maxsize - msg->cursize < 32) // LordHavoc: increased check from 16 to 32
