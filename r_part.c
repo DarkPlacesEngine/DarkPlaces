@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
 typedef enum {
-	pt_static, pt_grav, pt_blob, pt_blob2, pt_smoke, pt_snow, pt_bloodcloud, pt_fallfadespark, pt_bubble, pt_fade, pt_smokecloud
+	pt_static, pt_grav, pt_blob, pt_blob2, pt_smoke, pt_snow, pt_rain, pt_bloodcloud, pt_fallfadespark, pt_bubble, pt_fade, pt_smokecloud, pt_splash
 } ptype_t;
 
 typedef struct particle_s
@@ -35,11 +35,11 @@ typedef struct particle_s
 	vec3_t		vel;
 	float		die;
 	ptype_t		type;
-	// LordHavoc: added for improved particle effects
 	float		scale;
 	short		texnum;
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
+	vec3_t		oldorg;
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
 } particle_t;
 
@@ -682,7 +682,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		{
 			p->scale = 3;
 			p->texnum = rainparticletexture;
-			p->type = pt_static;
+			p->type = pt_rain;
 		}
 		p->color = colorbase + (rand()&3);
 		VectorCopy(org, p->org);
@@ -942,13 +942,15 @@ R_DrawParticles
 extern	cvar_t	sv_gravity;
 void R_CompleteLightPoint (vec3_t color, vec3_t p);
 
+void TraceLine (vec3_t start, vec3_t end, vec3_t impact);
+
 void R_DrawParticles (void)
 {
 	particle_t		*p;
 	int				i, r,g,b,a;
 	float			gravity, dvel, frametime, scale, scale2, minparticledist;
 	byte			*color24;
-	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor;
+	vec3_t			up, right, uprightangles, forward2, up2, right2, tempcolor, v;
 	int				activeparticles, maxparticle, j, k;
 
 	// LordHavoc: early out condition
@@ -1016,6 +1018,7 @@ void R_DrawParticles (void)
 			transpolyend();
 		}
 
+		VectorCopy(p->org, p->oldorg);
 		p->org[0] += p->vel[0]*frametime;
 		p->org[1] += p->vel[1]*frametime;
 		p->org[2] += p->vel[2]*frametime;
@@ -1079,7 +1082,15 @@ void R_DrawParticles (void)
 		case pt_bubble:
 			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
 			if (a != CONTENTS_WATER && a != CONTENTS_SLIME)
-				p->die = -1;
+			{
+				p->texnum = smokeparticletexture[rand()&7];
+				p->type = pt_splash;
+				p->alpha = 96;
+				p->scale = 5;
+				p->vel[0] = p->vel[1] = p->vel[2] = 0;
+				p->die = cl.time + 1000;
+//				p->die = -1;
+			}
 			p->vel[2] += gravity * 0.25;
 			p->vel[0] *= (1 - (frametime * 0.0625));
 			p->vel[1] *= (1 - (frametime * 0.0625));
@@ -1100,6 +1111,51 @@ void R_DrawParticles (void)
 			p->alpha -= frametime * 96;
 			if (p->alpha < 1)
 				p->die = -1;
+			break;
+		case pt_splash:
+			p->scale += frametime * 24;
+			p->alpha -= frametime * 256;
+			if (p->alpha < 1)
+				p->die = -1;
+			break;
+		case pt_rain:
+			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
+			{
+				if (a == CONTENTS_SOLID && Mod_PointInLeaf(p->oldorg, cl.worldmodel)->contents == CONTENTS_SOLID)
+					break; // still in solid
+				p->die = cl.time + 1000;
+				switch (a)
+				{
+				case CONTENTS_LAVA:
+				case CONTENTS_SLIME:
+					p->texnum = smokeparticletexture[rand()&7];
+					p->type = pt_smokecloud;
+					p->alpha = 64;
+					p->vel[2] = 96;
+					break;
+				case CONTENTS_WATER:
+					p->texnum = smokeparticletexture[rand()&7];
+					p->type = pt_splash;
+					p->alpha = 96;
+					p->scale = 5;
+					p->vel[0] = p->vel[1] = p->vel[2] = 0;
+//					p->texnum = bubbleparticletexture;
+//					p->type = pt_bubble;
+//					p->vel[2] *= 0.1;
+					break;
+				default: // CONTENTS_SOLID and any others
+					TraceLine(p->oldorg, p->org, v);
+					VectorCopy(v, p->org);
+					p->texnum = smokeparticletexture[rand()&7];
+					p->type = pt_splash;
+					p->alpha = 96;
+					p->scale = 5;
+					p->vel[0] = p->vel[1] = p->vel[2] = 0;
+					p->die = cl.time + 1000;
+					break;
+				}
+			}
 			break;
 		}
 	}
