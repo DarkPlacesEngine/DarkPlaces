@@ -34,6 +34,7 @@
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
+d darkplaces: PF_traceline/PF_tracebox now work with world as the edict
 d darkplaces: make the static light built messages be developer prints (Tomaz)
 d dpmod: use Tomaz's ammo box models (Tomaz) 
 d darkplaces: make bounce check for fabs(dotproduct)<60 velocity, not dotproduct<60, so now an explosion above gibs will cause them to bounce up into the air 

@@ -640,6 +640,10 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	areagrid_t *grid;
 	int i, igrid[3], igridmins[3], igridmaxs[3];
 
+	// if the passedict is world, make it NULL (to avoid two checks each time)
+	if (passedict == sv.edicts)
+		passedict = NULL;
+
 	memset(&clip, 0, sizeof(moveclip_t));
 
 	VectorCopy(start, clip.start);
