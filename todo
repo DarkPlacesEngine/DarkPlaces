@@ -143,17 +143,13 @@
 0 dpmod: try making ball lightning mortar shamblers (scar3crow)
 0 dpmod: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
 0 dpmod: up nail limit to 500 (scar3crow)
-0 dpzoo.map: colored lighting
 0 dpzoo.map: flame jet
 0 dpzoo.map: func_train with sky brushes
 0 dpzoo.map: particlecube
-0 dpzoo.map: rain
 0 dpzoo.map: rotating fan bmodels
 0 dpzoo.map: rtlights in normal mode (when that extension is made)
 0 dpzoo.map: skybox
-0 dpzoo.map: snow
 0 dpzoo.map: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
-0 dpzoo.map: transparent glass bmodels (DP_ENT_ALPHA)
 0 hmap2 -qbsp: add ORIGIN brush support in bmodel compilation (Carni)
 0 hmap2: add CAULK texture support - delete surfaces using this texture, or at least don't link them (Tomaz)
 0 hmap2: make sure seconds reports in all tools don't print secondssss when they're printing shorter and shorter updates (FrikaC)
@@ -685,6 +681,10 @@ d dpmod: post new dpmod build.
 d dpmod: switch to new Tomaz weapon models
 d dpmod: use Tomaz's ammo box models (Tomaz) 
 d dpmod: why can't I pick up nails when I have no nailguns?  and other similar pickup problems with weapons
+d dpzoo.map: colored lighting
+d dpzoo.map: rain
+d dpzoo.map: snow
+d dpzoo.map: transparent glass bmodels (DP_ENT_ALPHA)
 d hmap2: add -ambientlight option, with warning that it does not produce a .light file (Harb)
 d hmap2: add -minlight option, with warning that it does not produce a .lights file (Harb)
 d hmap2: add tyrlite compatible "delay" settings, with the interpretation of no specified delay being dependent on a -tyrlite option, and add a new type which is a sun light; light cast in a direction, from sky polygons or the void, these light types would warn that they disable .lights files
