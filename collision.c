@@ -380,6 +380,7 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 		else
 			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
+		if (rhc.trace->fraction < 0 || rhc.trace->fraction > 1) Con_Printf("fraction out of bounds %f %s:%d\n", rhc.trace->fraction, __LINE__, __FILE__);
 
 		// if we hit, unrotate endpos and normal, and store the entity we hit
 		if (rhc.trace->fraction != 1)
@@ -422,6 +423,7 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 		else
 			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
+		if (rhc.trace->fraction < 0 || rhc.trace->fraction > 1) Con_Printf("fraction out of bounds %f %s:%d\n", rhc.trace->fraction, __LINE__, __FILE__);
 
 		// if we hit, store the entity we hit
 		if (rhc.trace->fraction != 1)
