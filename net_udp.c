@@ -265,6 +265,12 @@ int UDP_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 		Con_Printf("UDP_Read: errno == %i (%s)\n", errno, strerror(errno));
 #endif
 	}
+	else if (developer_networking.integer)
+	{
+		Con_Printf("UDP_Read(%i, %p, %i, <%s>) = %i\n", socket, buf, len, UDP_AddrToString(addr), ret);
+		Com_HexDumpToConsole(buf, ret);
+	}
+
 	return ret;
 }
 
@@ -309,6 +315,12 @@ int UDP_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int ret;
 
+	if (developer_networking.integer)
+	{
+		Con_Printf("UDP_Write(%i, %p, %i, <%s>)\n", socket, buf, len, UDP_AddrToString(addr));
+		Com_HexDumpToConsole(buf, len);
+	}
+
 	ret = sendto (socket, buf, len, 0, (struct sockaddr *)addr, sizeof(struct qsockaddr));
 	if (ret == -1)
 	{
@@ -340,16 +352,31 @@ char *UDP_AddrToString (const struct qsockaddr *addr)
 
 int UDP_StringToAddr (const char *string, struct qsockaddr *addr)
 {
-	int ha1, ha2, ha3, ha4, hp;
-	int ipaddr;
+	int ha[4], hp, ipaddr, j, numbers;
+	const char *colon;
 
-	sscanf(string, "%d.%d.%d.%d:%d", &ha1, &ha2, &ha3, &ha4, &hp);
-	ipaddr = (ha1 << 24) | (ha2 << 16) | (ha3 << 8) | ha4;
+	hp = net_hostport;
+	colon = strrchr(string, ':');
+	if (colon)
+	{
+		hp = atoi(colon + 1);
+		if (hp == 0)
+			hp = net_hostport;
+	}
+	numbers = sscanf(string, "%d.%d.%d.%d", &ha[0], &ha[1], &ha[2], &ha[3]);
+	for (ipaddr = 0, j = 0;j < numbers;j++)
+		ipaddr = (ipaddr << 8) | ha[j];
+	// if the address is incomplete take most important numbers from myAddr
+	if (numbers < 4)
+		ipaddr |= ntohl(myAddr.i) & (-1 << (numbers * 8));
 
 	addr->sa_family = AF_INET;
 	((struct sockaddr_in *)addr)->sin_addr.s_addr = htonl(ipaddr);
 	((struct sockaddr_in *)addr)->sin_port = htons((unsigned short)hp);
-	return 0;
+	if (ipaddr == INADDR_ANY)
+		return -1;
+	else
+		return 0;
 }
 
 //=============================================================================
