@@ -283,6 +283,7 @@
 2 hmap2: make water have lightmaps (unless -nowaterlightmaps is specified)
 2 hmap2: tweak the light point generation a bit more to try to solve the 'corner light' glitch (Urre)
 3 LordHavoc: read up on dynamic visibility
+3 darkplaces protocol: allow sending of additional precaches during game, this needs to send a reliable message to all connected clients stating the new filename to load, and also to be sent to new connections (VorteX, Vermeulen)
 3 darkplaces: .loc support and other team messaging capabilities (sublim3)
 3 darkplaces: add .psk (ut2003) model support (Kazashi, Mitchell)
 3 darkplaces: add DP_ENT_COLORSHELL which puts a Q2-style colored shell on a model (Supajoe)
@@ -312,7 +313,6 @@
 3 darkplaces: dsound broken, needs to be managed as part of video system (jeremy janzen)
 3 darkplaces: figure out BoxOnPlaneSide crash that happens in dpmod dpdm2 deathmatch 7 occasionally
 3 darkplaces: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
-3 darkplaces: figure out why dlights are apparently disappearing in nexuiz when far away (Vermeulen)
 3 darkplaces: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
 3 darkplaces: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)
 3 darkplaces: hub save support, one file indicating active map, and then for each map it saves a quake savegame (Sajt)
@@ -501,6 +501,7 @@ d darkplaces: figure out what is causing invalid entity numbers in TouchAreaGrid
 d darkplaces: figure out what is wrong with loading _glow/_luma textures on md3 models (not bsp textures) (kd23 Nexuiz)
 d darkplaces: figure out why -sndspeed 22050, 44100 and 16000 are choppy in windows? (cheapalert)
 d darkplaces: figure out why disconnections are showing up as " disconnected"
+d darkplaces: figure out why dlights are apparently disappearing in nexuiz when far away (Vermeulen)
 d darkplaces: figure out why fullbrights are black on models (romi)
 d darkplaces: figure out why quad is creating two coronas, one at player and one at 0 0 0 - answer: viewmodel dlight (Tomaz)
 d darkplaces: finish new udp networking code (yummyluv)
