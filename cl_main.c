@@ -47,6 +47,12 @@ cvar_t freelook = {CVAR_SAVE, "freelook", "1"};
 cvar_t r_draweffects = {0, "r_draweffects", "1"};
 
 cvar_t cl_explosions = {CVAR_SAVE, "cl_explosions", "1"};
+cvar_t cl_explosions_alpha_start = {CVAR_SAVE, "cl_explosions_alpha_start", "1.5"};
+cvar_t cl_explosions_alpha_end = {CVAR_SAVE, "cl_explosions_alpha_end", "0.01"};
+cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "1"};
+cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "1"};
+cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "1"};
+
 cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 
 cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1"};
@@ -1274,6 +1280,11 @@ void CL_Init (void)
 
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions);
+	Cvar_RegisterVariable(&cl_explosions_alpha_start);
+	Cvar_RegisterVariable(&cl_explosions_alpha_end);
+	Cvar_RegisterVariable(&cl_explosions_size_start);
+	Cvar_RegisterVariable(&cl_explosions_size_end);
+	Cvar_RegisterVariable(&cl_explosions_lifetime);
 	Cvar_RegisterVariable(&cl_stainmaps);
 	Cvar_RegisterVariable(&cl_beams_polygons);
 	Cvar_RegisterVariable(&cl_beams_relative);
