@@ -83,5 +83,7 @@ void Sys_Sleep(int milliseconds);
 void Sys_SendKeyEvents (void);
 // Perform Key_Event () callbacks until the input que is empty
 
+char *Sys_GetClipboardData (void);
+
 #endif
 

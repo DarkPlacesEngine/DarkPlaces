@@ -202,6 +202,11 @@ void Sys_Sleep(int milliseconds)
 #endif
 }
 
+char *Sys_GetClipboardData (void)
+{
+	return NULL;
+}
+
 int main (int argc, const char **argv)
 {
 	double frameoldtime, framenewtime;
