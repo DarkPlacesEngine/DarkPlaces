@@ -163,8 +163,6 @@ void GL_Draw_Init (void)
 	int i;
 	Cvar_RegisterVariable (&scr_conalpha);
 
-	Cmd_AddCommand ("loadsky", &LoadSky_f);
-
 #if defined(__linux__)
 	sprintf (engineversion, "DarkPlaces Linux   GL %.2f build %3i", (float) VERSION, buildnumber);
 #elif defined(WIN32)

@@ -21,12 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // refresh.h -- public interface to refresh functions
 
 // sky stuff
-extern char skyname[];
 extern void R_SetSkyBox(char* sky);
-extern void LoadSky_f(void);
-extern rtexture_t *solidskytexture;
-extern rtexture_t *alphaskytexture;
-extern float speedscale; // for top sky and bottom sky
 
 // far clip distance for scene
 extern cvar_t r_farclip;
