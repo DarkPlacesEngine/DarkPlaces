@@ -456,6 +456,7 @@ void Mod_UnloadModel (model_t *mod);
 
 void Mod_ClearUsed(void);
 void Mod_PurgeUnused(void);
+void Mod_RemoveStaleWorldModels(model_t *skip); // only used during loading!
 void Mod_LoadModels(void);
 
 extern model_t *loadmodel;
