@@ -711,7 +711,7 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 void R_Mesh_Render(void)
 {
 	int i, k;
-	float *v, tempv[4];
+	float *v, tempv[4], m[12];
 	buf_mesh_t *mesh;
 
 	if (!backendactive)
@@ -743,10 +743,25 @@ void R_Mesh_Render(void)
 	GL_MeshState(buf_mesh);
 	for (k = 0, mesh = buf_mesh;k < currentmesh;k++, mesh++)
 	{
+		m[0] = mesh->matrix.m[0][0];
+		m[1] = mesh->matrix.m[0][1];
+		m[2] = mesh->matrix.m[0][2];
+		m[3] = mesh->matrix.m[0][3];
+		m[4] = mesh->matrix.m[1][0];
+		m[5] = mesh->matrix.m[1][1];
+		m[6] = mesh->matrix.m[1][2];
+		m[7] = mesh->matrix.m[1][3];
+		m[8] = mesh->matrix.m[2][0];
+		m[9] = mesh->matrix.m[2][1];
+		m[10] = mesh->matrix.m[2][2];
+		m[11] = mesh->matrix.m[2][3];
 		for (i = 0, v = buf_vertex[mesh->firstvert].v;i < mesh->verts;i++, v += 4)
 		{
 			VectorCopy(v, tempv);
-			Matrix4x4_Transform(&mesh->matrix, tempv, v);
+			//Matrix4x4_Transform(&mesh->matrix, tempv, v);
+			v[0] = tempv[0] * m[0] + tempv[1] * m[1] + tempv[2] * m[2] + m[3];
+			v[1] = tempv[0] * m[4] + tempv[1] * m[5] + tempv[2] * m[6] + m[7];
+			v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
 		}
 	}
 	GL_LockArray(0, currentvertex);

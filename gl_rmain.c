@@ -635,7 +635,7 @@ void R_RenderView (void)
 	R_MarkEntities();
 	R_TimeReport("markentity");
 
-	R_MarkWorldLights(world);
+	R_SurfMarkLights(world);
 	R_TimeReport("marklights");
 
 	r_farclip = R_FarClip_Finish() + 256.0f;
@@ -656,7 +656,6 @@ void R_RenderView (void)
 		R_TimeReport("viewmodel");
 	}
 
-	R_SetupForWorldRendering(world);
 	R_PrepareSurfaces(world);
 	R_TimeReport("surfprep");
 

@@ -1919,13 +1919,7 @@ void R_SetupForBModelRendering(entity_render_t *ent)
 	}
 }
 
-void R_SetupForWorldRendering(entity_render_t *ent)
-{
-	// there is only one instance of the world, but it can be rendered in
-	// multiple stages
-}
-
-static void R_SurfMarkLights (entity_render_t *ent)
+void R_SurfMarkLights (entity_render_t *ent)
 {
 	int			i;
 	msurface_t	*surf;
@@ -1959,12 +1953,6 @@ static void R_SurfMarkLights (entity_render_t *ent)
 	}
 }
 
-void R_MarkWorldLights(entity_render_t *ent)
-{
-	R_SetupForWorldRendering(ent);
-	R_SurfMarkLights(ent);
-}
-
 /*
 =============
 R_DrawWorld
@@ -1972,8 +1960,8 @@ R_DrawWorld
 */
 void R_DrawWorld (entity_render_t *ent)
 {
-	R_SetupForWorldRendering(ent);
-
+	// there is only one instance of the world, but it can be rendered in
+	// multiple stages
 	if (r_viewleaf->contents == CONTENTS_SOLID || r_novis.integer || r_viewleaf->compressed_vis == NULL)
 		R_SolidWorldNode (ent);
 	else

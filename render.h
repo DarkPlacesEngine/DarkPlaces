@@ -111,8 +111,7 @@ void R_InitSky (qbyte *src, int bytesperpixel); // called at level load
 void R_NewMap (void);
 
 void R_DrawWorld(entity_render_t *ent);
-void R_SetupForWorldRendering(entity_render_t *ent);
-void R_MarkWorldLights(entity_render_t *ent);
+void R_SurfMarkLights (entity_render_t *ent);
 void R_PrepareSurfaces(entity_render_t *ent);
 void R_DrawSurfaces(entity_render_t *ent, int type);
 void R_DrawPortals(entity_render_t *ent);
