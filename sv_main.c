@@ -889,7 +889,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	// applies the view_ofs[2], so we have to only send the fractional part
 	// of view_ofs[2], undoing what the client will redo)
 	VectorCopy (testeye, testorigin);
-	testorigin[2] -= (float) ((int)(clent->v.view_ofs[2]) & 255);
+	e = (int) clent->v.view_ofs[2] & 255;
+	if (e >= 128)
+		e -= 256;
+	testorigin[2] -= (float) e;
 	EntityFrame_Clear(&entityframe, testorigin);
 
 	culled_pvs = 0;
