@@ -179,6 +179,7 @@ void (GLAPIENTRY *qglTexImage3D)(GLenum target, GLint level, GLenum internalForm
 void (GLAPIENTRY *qglTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 
+void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent)
 {
@@ -303,6 +304,7 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glCopyTexImage2D", (void **) &qglCopyTexImage2D},
 	{"glCopyTexSubImage1D", (void **) &qglCopyTexSubImage1D},
 	{"glCopyTexSubImage2D", (void **) &qglCopyTexSubImage2D},
+	{"glScissor", (void **) &qglScissor},
 	{NULL, NULL}
 };
 

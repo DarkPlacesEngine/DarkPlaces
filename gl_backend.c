@@ -80,6 +80,7 @@ static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
 static matrix4x4_t backend_modelviewmatrix;
 static matrix4x4_t backend_glmodelviewmatrix;
+static matrix4x4_t backend_projectmatrix;
 
 static int backendunits, backendactive;
 static qbyte *varray_bcolor;
@@ -289,6 +290,22 @@ void GL_SetupView_Mode_PerspectiveInfiniteFarClip (double fovx, double fovy, dou
 	qglLoadMatrixd(m);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	GL_SetupView_Orientation_Identity();
+	backend_projectmatrix.m[0][0] = m[0];
+	backend_projectmatrix.m[1][0] = m[1];
+	backend_projectmatrix.m[2][0] = m[2];
+	backend_projectmatrix.m[3][0] = m[3];
+	backend_projectmatrix.m[0][1] = m[4];
+	backend_projectmatrix.m[1][1] = m[5];
+	backend_projectmatrix.m[2][1] = m[6];
+	backend_projectmatrix.m[3][1] = m[7];
+	backend_projectmatrix.m[0][2] = m[8];
+	backend_projectmatrix.m[1][2] = m[9];
+	backend_projectmatrix.m[2][2] = m[10];
+	backend_projectmatrix.m[3][2] = m[11];
+	backend_projectmatrix.m[0][3] = m[12];
+	backend_projectmatrix.m[1][3] = m[13];
+	backend_projectmatrix.m[2][3] = m[14];
+	backend_projectmatrix.m[3][3] = m[15];
 }
 
 void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar)
@@ -445,6 +462,18 @@ void GL_Color(float cr, float cg, float cb, float ca)
 		qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 	}
 	qglColor4f(cr, cg, cb, ca);
+}
+
+void GL_TransformToScreen(const vec4_t in, vec4_t out)
+{
+	vec4_t temp;
+	float iw;
+	Matrix4x4_Transform4 (&backend_viewmatrix, in, temp);
+	Matrix4x4_Transform4 (&backend_projectmatrix, temp, out);
+	iw = 1.0f / out[3];
+	out[0] = r_refdef.x + (out[0] * iw + 1.0f) * r_refdef.width * 0.5f;
+	out[1] = r_refdef.y + (out[1] * iw + 1.0f) * r_refdef.height * 0.5f;
+	out[2] = out[2] * iw;
 }
 
 // called at beginning of frame
