@@ -78,134 +78,56 @@ void GL_Models_Init(void)
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
 }
 
-void R_Model_Alias_GetMesh_Vertex3f(const entity_render_t *ent, aliasmesh_t *mesh, float *vertex3f, float *normal3f, float *svector3f, float *tvector3f)
+#define MODELARRAY_VERTEX 0
+#define MODELARRAY_SVECTOR 1
+#define MODELARRAY_TVECTOR 2
+#define MODELARRAY_NORMAL 3
+
+void R_Model_Alias_GetMesh_Array3f(const entity_render_t *ent, aliasmesh_t *mesh, int whicharray, float *out3f)
 {
 	int i, vertcount;
 	float lerp1, lerp2, lerp3, lerp4;
-	const aliasvertex_t *verts1, *verts2, *verts3, *verts4;
+	const float *vertsbase, *verts1, *verts2, *verts3, *verts4;
 
-	if (vertex3f == NULL)
-	 	Host_Error("R_Model_Alias_GetMesh_Vertex3f: vertices == NULL.\n");
-	if (svector3f != NULL && (tvector3f == NULL || normal3f == NULL))
-	 	Host_Error("R_Model_Alias_GetMesh_Vertex3f: svectors requires tvectors and normals.\n");
-	if (tvector3f != NULL && (svector3f == NULL || normal3f == NULL))
-	 	Host_Error("R_Model_Alias_GetMesh_Vertex3f: tvectors requires svectors and normals.\n");
+	switch(whicharray)
+	{
+	case MODELARRAY_VERTEX:vertsbase = mesh->data_aliasvertex3f;break;
+	case MODELARRAY_SVECTOR:vertsbase = mesh->data_aliassvector3f;break;
+	case MODELARRAY_TVECTOR:vertsbase = mesh->data_aliastvector3f;break;
+	case MODELARRAY_NORMAL:vertsbase = mesh->data_aliasnormal3f;break;
+	default:
+		Host_Error("R_Model_Alias_GetBlendedArray: unknown whicharray %i\n", whicharray);
+		return;
+	}
 
 	vertcount = mesh->num_vertices;
-	verts1 = mesh->data_aliasvertex + ent->frameblend[0].frame * vertcount;
+	verts1 = vertsbase + ent->frameblend[0].frame * vertcount * 3;
 	lerp1 = ent->frameblend[0].lerp;
 	if (ent->frameblend[1].lerp)
 	{
-		verts2 = mesh->data_aliasvertex + ent->frameblend[1].frame * vertcount;
+		verts2 = vertsbase + ent->frameblend[1].frame * vertcount * 3;
 		lerp2 = ent->frameblend[1].lerp;
 		if (ent->frameblend[2].lerp)
 		{
-			verts3 = mesh->data_aliasvertex + ent->frameblend[2].frame * vertcount;
+			verts3 = vertsbase + ent->frameblend[2].frame * vertcount * 3;
 			lerp3 = ent->frameblend[2].lerp;
 			if (ent->frameblend[3].lerp)
 			{
-				verts4 = mesh->data_aliasvertex + ent->frameblend[3].frame * vertcount;
+				verts4 = vertsbase + ent->frameblend[3].frame * vertcount * 3;
 				lerp4 = ent->frameblend[3].lerp;
-				// generate vertices
-				if (svector3f != NULL)
-				{
-					for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3, verts1++, verts2++, verts3++, verts4++)
-					{
-						VectorMAMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, lerp4, verts4->origin, vertex3f);
-						VectorMAMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, lerp4, verts4->normal, normal3f);
-						VectorMAMAMAM(lerp1, verts1->svector, lerp2, verts2->svector, lerp3, verts3->svector, lerp4, verts4->svector, svector3f);
-						CrossProduct(svector3f, normal3f, tvector3f);
-					}
-				}
-				else if (normal3f != NULL)
-				{
-					for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, verts1++, verts2++, verts3++, verts4++)
-					{
-						VectorMAMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, lerp4, verts4->origin, vertex3f);
-						VectorMAMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, lerp4, verts4->normal, normal3f);
-					}
-				}
-				else
-					for (i = 0;i < vertcount;i++, vertex3f += 3, verts1++, verts2++, verts3++, verts4++)
-						VectorMAMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, lerp4, verts4->origin, vertex3f);
+				for (i = 0;i < vertcount * 3;i++)
+					VectorMAMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, lerp4, verts4 + i, out3f + i);
 			}
 			else
-			{
-				// generate vertices
-				if (svector3f != NULL)
-				{
-					for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3, verts1++, verts2++, verts3++)
-					{
-						VectorMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, vertex3f);
-						VectorMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, normal3f);
-						VectorMAMAM(lerp1, verts1->svector, lerp2, verts2->svector, lerp3, verts3->svector, svector3f);
-						CrossProduct(svector3f, normal3f, tvector3f);
-					}
-				}
-				else if (normal3f != NULL)
-				{
-					for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, verts1++, verts2++, verts3++)
-					{
-						VectorMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, vertex3f);
-						VectorMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, normal3f);
-					}
-				}
-				else
-					for (i = 0;i < vertcount;i++, vertex3f += 3, verts1++, verts2++, verts3++)
-						VectorMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, vertex3f);
-			}
+				for (i = 0;i < vertcount * 3;i++)
+					VectorMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, out3f + i);
 		}
 		else
-		{
-			// generate vertices
-			if (svector3f != NULL)
-			{
-				for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3, verts1++, verts2++)
-				{
-					VectorMAM(lerp1, verts1->origin, lerp2, verts2->origin, vertex3f);
-					VectorMAM(lerp1, verts1->normal, lerp2, verts2->normal, normal3f);
-					VectorMAM(lerp1, verts1->svector, lerp2, verts2->svector, svector3f);
-					CrossProduct(svector3f, normal3f, tvector3f);
-				}
-			}
-			else if (normal3f != NULL)
-			{
-				for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, verts1++, verts2++)
-				{
-					VectorMAM(lerp1, verts1->origin, lerp2, verts2->origin, vertex3f);
-					VectorMAM(lerp1, verts1->normal, lerp2, verts2->normal, normal3f);
-				}
-			}
-			else
-				for (i = 0;i < vertcount;i++, vertex3f += 3, verts1++, verts2++)
-					VectorMAM(lerp1, verts1->origin, lerp2, verts2->origin, vertex3f);
-		}
+			for (i = 0;i < vertcount * 3;i++)
+				VectorMAM(lerp1, verts1 + i, lerp2, verts2 + i, out3f + i);
 	}
 	else
-	{
-		// generate vertices
-		if (svector3f != NULL)
-		{
-			for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, svector3f += 3, tvector3f += 3, verts1++)
-			{
-				VectorCopy(verts1->origin, vertex3f);
-				VectorCopy(verts1->normal, normal3f);
-				VectorCopy(verts1->svector, svector3f);
-				CrossProduct(svector3f, normal3f, tvector3f);
-			}
-		}
-		else if (normal3f != NULL)
-		{
-			for (i = 0;i < vertcount;i++, vertex3f += 3, normal3f += 3, verts1++)
-			{
-				VectorCopy(verts1->origin, vertex3f);
-				VectorCopy(verts1->normal, normal3f);
-			}
-		}
-		else
-			for (i = 0;i < vertcount;i++, vertex3f += 3, verts1++)
-				VectorCopy(verts1->origin, vertex3f);
-	}
+		memcpy(out3f, verts1, vertcount * sizeof(float[3]));
 }
 
 aliaslayer_t r_aliasnoskinlayers[2] = {{ALIASLAYER_DIFFUSE, NULL, NULL}, {ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS, NULL, NULL}};
@@ -312,7 +234,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		if (layer->flags & ALIASLAYER_FOG)
 		{
 			colorscale *= fog;
-			R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
+			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 			GL_Color(fogcolor[0] * colorscale, fogcolor[1] * colorscale, fogcolor[2] * colorscale, ent->alpha);
 		}
 		else
@@ -335,20 +257,17 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				fullbright = false;
 			}
 			colorscale *= ifog;
+			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 			if (fullbright || !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT))
-			{
-				R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
-			}
 			else if (r_shadow_realtime_world.integer)
 			{
-				R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
 				colorscale *= r_ambient.value * (2.0f / 128.0f);
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
 			}
 			else
 			{
-				R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, aliasvert_normal3f, NULL, NULL);
+				R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, aliasvert_normal3f);
 				R_LightModel(ent, mesh->num_vertices, varray_vertex3f, aliasvert_normal3f, varray_color4f, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, false);
 			}
 		}
@@ -422,7 +341,7 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
 		R_Mesh_GetSpace(mesh->num_vertices);
-		R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 		for (i = 0, v = varray_vertex3f;i < mesh->num_vertices;i++, v += 3)
 		{
 			dist = DotProduct(v, planenormal) - planedist;
@@ -452,7 +371,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
 				continue;
 			R_Mesh_GetSpace(mesh->num_vertices * 2);
-			R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
+			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 			R_Shadow_Volume(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, lightradius, projectdistance);
 		}
 	}
@@ -498,7 +417,10 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			continue;
 		expandaliasvert(mesh->num_vertices);
 		vertices = R_Shadow_VertexBuffer(mesh->num_vertices);
-		R_Model_Alias_GetMesh_Vertex3f(ent, mesh, vertices, aliasvert_normal3f, aliasvert_svector3f, aliasvert_tvector3f);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, vertices);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_SVECTOR, aliasvert_svector3f);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_TVECTOR, aliasvert_tvector3f);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, aliasvert_normal3f);
 		for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 		{
 			if (!(layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))

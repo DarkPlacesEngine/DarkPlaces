@@ -217,18 +217,6 @@ typedef struct md3modelheader_s
 }
 md3modelheader_t;
 
-// LordHavoc: all quake series 'alias' models (mdl, md2, md3) are converted to this vertex format
-typedef struct aliasvertex_s
-{
-	// location
-	float origin[3];
-	// surface normal
-	float normal[3];
-	// S texture vector
-	float svector[3];
-}
-aliasvertex_t;
-
 // this layer is fog (completely specialized behavior, automatic NODRAW_IF_NOTFOGGED behavior)
 #define ALIASLAYER_FOG 1
 // apply diffuse lighting
@@ -275,7 +263,10 @@ typedef struct aliasmesh_s
 	int *data_element3i;
 	int *data_neighbor3i;
 	float *data_texcoord2f;
-	aliasvertex_t *data_aliasvertex;
+	float *data_aliasvertex3f;
+	float *data_aliassvector3f;
+	float *data_aliastvector3f;
+	float *data_aliasnormal3f;
 }
 aliasmesh_t;
 
