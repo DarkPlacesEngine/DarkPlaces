@@ -72,11 +72,20 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation)
 {
 }
 
-void S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation)
+int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation)
 {
+	return -1;
 }
 
 void S_StopSound (int entnum, int entchannel)
+{
+}
+
+void S_PauseGameSounds (void)
+{
+}
+
+void S_ResumeGameSounds (void)
 {
 }
 

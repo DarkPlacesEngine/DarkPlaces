@@ -69,6 +69,8 @@ typedef struct
 // channel_t flags
 #define CHANNELFLAG_NONE		0
 #define CHANNELFLAG_FORCELOOP	(1 << 0) // force looping even if the sound is not looped
+#define CHANNELFLAG_LOCALSOUND	(1 << 1) // non-game sound (ex: menu sound)
+#define CHANNELFLAG_PAUSED		(1 << 2)
 
 typedef struct
 {
@@ -99,10 +101,12 @@ struct snd_fetcher_s
 void S_Init (void);
 void S_Startup (void);
 void S_Shutdown (void);
-void S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation);
+int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol,  float attenuation);
 void S_StaticSound (sfx_t *sfx, vec3_t origin, float vol, float attenuation);
 void S_StopSound (int entnum, int entchannel);
 void S_StopAllSounds(qboolean clear);
+void S_PauseGameSounds (void);
+void S_ResumeGameSounds (void);
 void S_ClearBuffer (void);
 void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up);
 void S_ExtraUpdate (void);

@@ -1667,9 +1667,15 @@ void CL_ParseServerMessage(void)
 		case svc_setpause:
 			cl.paused = MSG_ReadByte ();
 			if (cl.paused)
+			{
 				CDAudio_Pause ();
+				S_PauseGameSounds ();
+			}
 			else
+			{
 				CDAudio_Resume ();
+				S_ResumeGameSounds ();
+			}
 			break;
 
 		case svc_signonnum:
