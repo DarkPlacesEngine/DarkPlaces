@@ -41,9 +41,9 @@
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
-0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
-0 darkplaces: adaptive patch subdivision levels on X and Y based on r_subdivisions cvar
-0 darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights mode (Electro)  
+-n darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
+d darkplaces: adaptive patch subdivision levels on X and Y based on r_subdivisions cvar
+d darkplaces: add "skin" and "pflags" parsing to light entity loader in rtlights mode (Electro)  
 0 darkplaces: add -benchmark commandline option which plays a demo, appends the resulting min/max/avg fps to gamedir/benchmark.log with commandline so people know what settings were used, like +exec realtimelow.cfg, +exec realtimemed.cfg, etc (romi)
 0 darkplaces: add DP_EF_NOSHADOW extension (Urre)
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
