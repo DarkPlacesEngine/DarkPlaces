@@ -443,7 +443,7 @@ static void R_Shadow_MakeTextures(void)
 			data[((0*128+y)*128+x)*4+3] = d;
 		}
 	}
-	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA | TEXF_MIPMAP, NULL);
+	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA, NULL);
 	Mem_Free(data);
 }
 
