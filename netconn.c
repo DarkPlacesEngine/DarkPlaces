@@ -1310,7 +1310,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 							MSG_WriteLong(&net_message, client->colors);
 							MSG_WriteLong(&net_message, (int)client->edict->v->frags);
 							MSG_WriteLong(&net_message, (int)(realtime - client->connecttime));
-							MSG_WriteString(&net_message, client->netconnection->address);
+							MSG_WriteString(&net_message, client->netconnection ? client->netconnection->address : "botclient");
 							*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 							NetConn_Write(mysocket, net_message.data, net_message.cursize, peeraddress);
 							SZ_Clear(&net_message);

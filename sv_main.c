@@ -1719,7 +1719,7 @@ void SV_SpawnServer (const char *server)
 
 // send serverinfo to all connected clients
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		if (host_client->netconnection)
+		if (host_client->active)
 			SV_SendServerinfo(host_client);
 
 	Con_DPrint("Server spawned.\n");
