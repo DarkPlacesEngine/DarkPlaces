@@ -991,11 +991,18 @@ void CL_MoveParticles (void)
 	}
 }
 
+#define MAX_PARTICLETEXTURES 64
+// particletexture_t is a rectangle in the particlefonttexture
+typedef struct
+{
+	float s1, t1, s2, t2;
+}
+particletexture_t;
+
 static rtexturepool_t *particletexturepool;
 
 static rtexture_t *particlefonttexture;
-// [0] is normal, [1] is fog, they may be the same
-static particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
+static particletexture_t particletexture[MAX_PARTICLETEXTURES];
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
 static cvar_t r_particles_lighting = {0, "r_particles_lighting", "0"};
@@ -1033,15 +1040,15 @@ static qbyte shadebubble(float dx, float dy, vec3_t light)
 		return 0;
 }
 
-static void setuptex(int cltexnum, int fog, int rtexnum, qbyte *data, qbyte *particletexturedata)
+static void setuptex(int cltexnum, int rtexnum, qbyte *data, qbyte *particletexturedata)
 {
 	int basex, basey, y;
 	basex = ((rtexnum >> 0) & 7) * 32;
 	basey = ((rtexnum >> 3) & 7) * 32;
-	particletexture[cltexnum][fog].s1 = (basex + 1) / 256.0f;
-	particletexture[cltexnum][fog].t1 = (basey + 1) / 256.0f;
-	particletexture[cltexnum][fog].s2 = (basex + 31) / 256.0f;
-	particletexture[cltexnum][fog].t2 = (basey + 31) / 256.0f;
+	particletexture[cltexnum].s1 = (basex + 1) / 256.0f;
+	particletexture[cltexnum].t1 = (basey + 1) / 256.0f;
+	particletexture[cltexnum].s2 = (basex + 31) / 256.0f;
+	particletexture[cltexnum].t2 = (basey + 31) / 256.0f;
 	for (y = 0;y < 32;y++)
 		memcpy(particletexturedata + ((basey + y) * 256 + basex) * 4, data + y * 32 * 4, 32 * 4);
 }
@@ -1085,8 +1092,7 @@ static void R_InitParticleTexture (void)
 		}
 		while (m < 224);
 
-		setuptex(i + 0, 0, i + 0, &data[0][0][0], particletexturedata);
-		setuptex(i + 0, 1, i + 0, &data[0][0][0], particletexturedata);
+		setuptex(i + 0, i + 0, &data[0][0][0], particletexturedata);
 	}
 
 	// rain splash
@@ -1106,8 +1112,7 @@ static void R_InitParticleTexture (void)
 				data[y][x][3] = (int) f;
 			}
 		}
-		setuptex(i + 8, 0, i + 16, &data[0][0][0], particletexturedata);
-		setuptex(i + 8, 1, i + 16, &data[0][0][0], particletexturedata);
+		setuptex(i + 8, i + 16, &data[0][0][0], particletexturedata);
 	}
 
 	// normal particle
@@ -1123,8 +1128,7 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = (qbyte) d;
 		}
 	}
-	setuptex(24, 0, 32, &data[0][0][0], particletexturedata);
-	setuptex(24, 1, 32, &data[0][0][0], particletexturedata);
+	setuptex(24, 32, &data[0][0][0], particletexturedata);
 
 	// rain
 	light[0] = 1;light[1] = 1;light[2] = 1;
@@ -1137,8 +1141,7 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = shadebubble((x - 16) * (1.0 / 8.0), y < 24 ? (y - 24) * (1.0 / 24.0) : (y - 24) * (1.0 / 8.0), light);
 		}
 	}
-	setuptex(25, 0, 33, &data[0][0][0], particletexturedata);
-	setuptex(25, 1, 33, &data[0][0][0], particletexturedata);
+	setuptex(25, 33, &data[0][0][0], particletexturedata);
 
 	// bubble
 	light[0] = 1;light[1] = 1;light[2] = 1;
@@ -1151,8 +1154,7 @@ static void R_InitParticleTexture (void)
 			data[y][x][3] = shadebubble((x - 16) * (1.0 / 16.0), (y - 16) * (1.0 / 16.0), light);
 		}
 	}
-	setuptex(26, 0, 34, &data[0][0][0], particletexturedata);
-	setuptex(26, 1, 34, &data[0][0][0], particletexturedata);
+	setuptex(26, 34, &data[0][0][0], particletexturedata);
 
 	particlefonttexture = R_LoadTexture (particletexturepool, "particlefont", 256, 256, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 }
@@ -1184,10 +1186,10 @@ int partindexarray[6] = {0, 1, 2, 0, 2, 3};
 void R_DrawParticles (void)
 {
 	int i, lighting, dynlight, additive, texnum, orientation;
-	float minparticledist, org[3], uprightangles[3], up2[3], right2[3], v[3], right[3], up[3], tvxyz[4][4], tvst[4][2], fog, ifog, fogvec[3];
+	float minparticledist, org[3], uprightangles[3], up2[3], right2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	mleaf_t *leaf;
-	particletexture_t *tex, *texfog;
-	rmeshinfo_t m;
+	particletexture_t *tex;
+	rmeshbufferinfo_t m;
 	particle_t *p;
 
 	// LordHavoc: early out conditions
@@ -1206,21 +1208,6 @@ void R_DrawParticles (void)
 	AngleVectors (uprightangles, NULL, right2, up2);
 
 	minparticledist = DotProduct(r_origin, vpn) + 16.0f;
-
-	// LordHavoc: this meshinfo must match up with R_Mesh_DrawDecal
-	// LordHavoc: the commented out lines are hardwired behavior in R_Mesh_DrawDecal
-	memset(&m, 0, sizeof(m));
-	m.transparent = true;
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.numtriangles = 2;
-	m.index = partindexarray;
-	m.numverts = 4;
-	m.vertex = &tvxyz[0][0];
-	m.vertexstep = sizeof(float[4]);
-	m.tex[0] = R_GetTexture(particlefonttexture);
-	m.texcoords[0] = &tvst[0][0];
-	m.texcoordstep[0] = sizeof(float[2]);
 
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
 	{
@@ -1264,135 +1251,78 @@ void R_DrawParticles (void)
 		else
 			Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
 
-		m.cr = p->color[0] * (1.0f / 255.0f);
-		m.cg = p->color[1] * (1.0f / 255.0f);
-		m.cb = p->color[2] * (1.0f / 255.0f);
-		m.ca = p->alpha * (1.0f / 255.0f);
+		tex = &particletexture[texnum];
+
+		cr = p->color[0] * (1.0f / 255.0f);
+		cg = p->color[1] * (1.0f / 255.0f);
+		cb = p->color[2] * (1.0f / 255.0f);
+		ca = p->alpha * (1.0f / 255.0f);
 		if (lighting >= 1 && (dynlight || lighting >= 2))
 		{
 			R_CompleteLightPoint(v, org, true, leaf);
-			m.cr *= v[0];
-			m.cg *= v[1];
-			m.cb *= v[2];
+			cr *= v[0];
+			cg *= v[1];
+			cb *= v[2];
 		}
 
-		tex = &particletexture[texnum][0];
+		if (fogenabled)
+		{
+			VectorSubtract(org, r_origin, fogvec);
+			fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+			ifog = 1 - fog;
+			cr = cr * ifog;
+			cg = cg * ifog;
+			cb = cb * ifog;
+			if (!additive)
+			{
+				cr += fogcolor[0] * fog;
+				cg += fogcolor[1] * fog;
+				cb += fogcolor[2] * fog;
+			}
+		}
 
-		tvxyz[0][0] = org[0] - right[0] - up[0];
-		tvxyz[0][1] = org[1] - right[1] - up[1];
-		tvxyz[0][2] = org[2] - right[2] - up[2];
-		tvxyz[1][0] = org[0] - right[0] + up[0];
-		tvxyz[1][1] = org[1] - right[1] + up[1];
-		tvxyz[1][2] = org[2] - right[2] + up[2];
-		tvxyz[2][0] = org[0] + right[0] + up[0];
-		tvxyz[2][1] = org[1] + right[1] + up[1];
-		tvxyz[2][2] = org[2] + right[2] + up[2];
-		tvxyz[3][0] = org[0] + right[0] - up[0];
-		tvxyz[3][1] = org[1] + right[1] - up[1];
-		tvxyz[3][2] = org[2] + right[2] - up[2];
-		tvst[0][0] = tex->s1;
-		tvst[0][1] = tex->t1;
-		tvst[1][0] = tex->s1;
-		tvst[1][1] = tex->t2;
-		tvst[2][0] = tex->s2;
-		tvst[2][1] = tex->t2;
-		tvst[3][0] = tex->s2;
-		tvst[3][1] = tex->t1;
-
+		memset(&m, 0, sizeof(m));
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
 		if (additive)
-		{
 			m.blendfunc2 = GL_ONE;
-			fog = 0;
-			if (fogenabled)
-			{
-				texfog = &particletexture[texnum][1];
-				VectorSubtract(org, r_origin, fogvec);
-				ifog = 1 - exp(fogdensity/DotProduct(fogvec,fogvec));
-				if (ifog < (1.0f - (1.0f / 64.0f)))
-				{
-					if (ifog >= (1.0f / 64.0f))
-					{
-						// partially fogged, darken it
-						m.cr *= ifog;
-						m.cg *= ifog;
-						m.cb *= ifog;
-						R_Mesh_Draw(&m);
-					}
-				}
-				else
-					R_Mesh_Draw(&m);
-			}
-			else
-				R_Mesh_Draw(&m);
-		}
 		else
-		{
 			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-			fog = 0;
-			if (fogenabled)
-			{
-				texfog = &particletexture[texnum][1];
-				VectorSubtract(org, r_origin, fogvec);
-				fog = exp(fogdensity/DotProduct(fogvec,fogvec));
-				if (fog >= (1.0f / 64.0f))
-				{
-					if (fog >= (1.0f - (1.0f / 64.0f)))
-					{
-						// fully fogged, just use the fog texture and render as alpha
-						m.cr = fogcolor[0];
-						m.cg = fogcolor[1];
-						m.cb = fogcolor[2];
-						tvst[0][0] = texfog->s1;
-						tvst[0][1] = texfog->t1;
-						tvst[1][0] = texfog->s1;
-						tvst[1][1] = texfog->t2;
-						tvst[2][0] = texfog->s2;
-						tvst[2][1] = texfog->t2;
-						tvst[3][0] = texfog->s2;
-						tvst[3][1] = texfog->t1;
-						R_Mesh_Draw(&m);
-					}
-					else
-					{
-						// partially fogged, darken the first pass
-						ifog = 1 - fog;
-						m.cr *= ifog;
-						m.cg *= ifog;
-						m.cb *= ifog;
-						if (tex->s1 == texfog->s1 && tex->t1 == texfog->t1)
-						{
-							// fog texture is the same as the base, just change the color
-							m.cr += fogcolor[0] * fog;
-							m.cg += fogcolor[1] * fog;
-							m.cb += fogcolor[2] * fog;
-							R_Mesh_Draw(&m);
-						}
-						else
-						{
-							// render the first pass (alpha), then do additive fog
-							R_Mesh_Draw(&m);
-
-							m.blendfunc2 = GL_ONE;
-							m.cr = fogcolor[0] * fog;
-							m.cg = fogcolor[1] * fog;
-							m.cb = fogcolor[2] * fog;
-							tvst[0][0] = texfog->s1;
-							tvst[0][1] = texfog->t1;
-							tvst[1][0] = texfog->s1;
-							tvst[1][1] = texfog->t2;
-							tvst[2][0] = texfog->s2;
-							tvst[2][1] = texfog->t2;
-							tvst[3][0] = texfog->s2;
-							tvst[3][1] = texfog->t1;
-							R_Mesh_Draw(&m);
-						}
-					}
-				}
-				else
-					R_Mesh_Draw(&m);
-			}
-			else
-				R_Mesh_Draw(&m);
+		m.numtriangles = 2;
+		m.numverts = 4;
+		m.tex[0] = R_GetTexture(particlefonttexture);
+		if (R_Mesh_Draw_GetBuffer(&m))
+		{
+			m.index[0] = 0;
+			m.index[1] = 1;
+			m.index[2] = 2;
+			m.index[3] = 0;
+			m.index[4] = 2;
+			m.index[5] = 3;
+			m.vertex[0] = org[0] - right[0] - up[0];
+			m.vertex[1] = org[1] - right[1] - up[1];
+			m.vertex[2] = org[2] - right[2] - up[2];
+			m.vertex[4] = org[0] - right[0] + up[0];
+			m.vertex[5] = org[1] - right[1] + up[1];
+			m.vertex[6] = org[2] - right[2] + up[2];
+			m.vertex[8] = org[0] + right[0] + up[0];
+			m.vertex[9] = org[1] + right[1] + up[1];
+			m.vertex[10] = org[2] + right[2] + up[2];
+			m.vertex[12] = org[0] + right[0] - up[0];
+			m.vertex[13] = org[1] + right[1] - up[1];
+			m.vertex[14] = org[2] + right[2] - up[2];
+			m.texcoords[0][0] = tex->s1;
+			m.texcoords[0][1] = tex->t1;
+			m.texcoords[0][2] = tex->s1;
+			m.texcoords[0][3] = tex->t2;
+			m.texcoords[0][4] = tex->s2;
+			m.texcoords[0][5] = tex->t2;
+			m.texcoords[0][6] = tex->s2;
+			m.texcoords[0][7] = tex->t1;
+			m.color[0] = m.color[4] = m.color[8] = m.color[12] = cr * m.colorscale;
+			m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
+			m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
+			m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca;
 		}
 	}
 }

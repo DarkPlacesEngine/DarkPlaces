@@ -168,19 +168,6 @@ void GL_UnlockArray(void);
 
 #include "r_light.h"
 
-extern rtexture_t *particlefonttexture;
-
-// particletexture_t is a rectangle in the particlefonttexture
-typedef struct
-{
-	float s1, t1, s2, t2;
-}
-particletexture_t;
-
-#define MAX_PARTICLETEXTURES 64
-// [0] is normal, [1] is fog, they may be the same
-extern particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
-
 void R_TimeReport(char *name);
 void R_TimeReport_Start(void);
 void R_TimeReport_End(void);
