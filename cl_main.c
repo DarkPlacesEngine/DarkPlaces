@@ -1004,7 +1004,7 @@ void CL_RelinkBeams (void)
 			//ent->render.angles[0] = pitch;
 			//ent->render.angles[1] = yaw;
 			//ent->render.angles[2] = rand()%360;
-			Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, org[0], org[1], org[2], pitch, yaw, lhrandom(0, 360), 1);
+			Matrix4x4_CreateFromQuakeEntity(&ent->render.matrix, org[0], org[1], org[2], -pitch, yaw, lhrandom(0, 360), 1);
 			Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
 			CL_BoundingBoxForEntity(&ent->render);
 			VectorMA(org, 30, dist, org);
