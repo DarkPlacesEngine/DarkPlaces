@@ -1196,7 +1196,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 					if (gamemode == GAME_GOODVSBAD2)
 						particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0 + (rand()&255)], particlepalette[0 + (rand()&255)], tex_particle, false, PBLEND_ALPHA, 6, 6, qd*255, qd*384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 					else if (gamemode == GAME_PRYDON)
-						particle(pt_static, PARTICLE_BILLBOARD, 0x202040, 0x202040, tex_particle, false, PBLEND_ADD, 6, 6, qd*128, qd*384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+						particle(pt_static, PARTICLE_BILLBOARD, 0x103040, 0x204050, tex_particle, false, PBLEND_ADD, 6, 6, qd*128, qd*384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 					else
 						particle(pt_static, PARTICLE_BILLBOARD, 0x502030, 0x502030, tex_particle, false, PBLEND_ADD, 6, 6, qd*128, qd*384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
 				}
