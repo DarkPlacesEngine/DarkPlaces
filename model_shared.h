@@ -320,7 +320,7 @@ typedef struct model_brushq3_s
 	int *data_element3i;
 
 	int num_effects;
-	q3meffect_t *data_effects;
+	q3deffect_t *data_effects;
 
 	// lightmap textures
 	int num_lightmaps;

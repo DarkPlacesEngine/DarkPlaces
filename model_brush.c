@@ -3963,7 +3963,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 static void Mod_Q3BSP_LoadEffects(lump_t *l)
 {
 	q3deffect_t *in;
-	q3meffect_t *out;
+	q3deffect_t *out;
 	int i, n, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -3981,7 +3981,7 @@ static void Mod_Q3BSP_LoadEffects(lump_t *l)
 		n = LittleLong(in->brushindex);
 		if (n < 0 || n >= loadmodel->brush.num_brushes)
 			Host_Error("Mod_Q3BSP_LoadEffects: invalid brushindex %i (%i brushes)\n", n, loadmodel->brush.num_brushes);
-		out->brush = loadmodel->brush.data_brushes + n;
+		out->brushindex = n;
 		out->unknown = LittleLong(in->unknown);
 	}
 }
