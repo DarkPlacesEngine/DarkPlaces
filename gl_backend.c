@@ -70,8 +70,6 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 float r_mesh_farclip;
 
-int polyindexarray[768];
-
 static float viewdist;
 // sign bits (true if negative) for vpn[] entries, so quick integer compares can be used instead of float compares
 static int vpnbit0, vpnbit1, vpnbit2;
@@ -293,8 +291,6 @@ static void gl_backend_newmap(void)
 
 void gl_backend_init(void)
 {
-	int i;
-
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
@@ -308,12 +304,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_drawmode);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 	gl_backend_bufferchanges(true);
-	for (i = 0;i < 256;i++)
-	{
-		polyindexarray[i*3+0] = 0;
-		polyindexarray[i*3+1] = i + 1;
-		polyindexarray[i*3+2] = i + 2;
-	}
 }
 
 int arraylocked = false;
@@ -1000,219 +990,6 @@ void R_Mesh_AddTransparent(void)
 	currenttransvertex = 0;
 }
 
-void R_Mesh_Draw(const rmeshinfo_t *m)
-{
-	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, overbright, *index;
-	static float *in, scaler;
-	static float cr, cg, cb, ca;
-	static buf_mesh_t *mesh;
-	static buf_vertex_t *vert;
-	static buf_fcolor_t *fcolor;
-	static buf_texcoord_t *texcoord[MAX_TEXTUREUNITS];
-
-	if (!backendactive)
-		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
-
-	if (m->index == NULL
-	 || !m->numtriangles
-	 || m->vertex == NULL
-	 || !m->numverts)
-		Host_Error("R_Mesh_Draw: no triangles or verts\n");
-
-	// ignore meaningless alpha meshs
-	if (!m->depthwrite && m->blendfunc1 == GL_SRC_ALPHA && (m->blendfunc2 == GL_ONE || m->blendfunc2 == GL_ONE_MINUS_SRC_ALPHA))
-	{
-		if (m->color)
-		{
-			for (i = 0, in = m->color + 3;i < m->numverts;i++, (int)in += m->colorstep)
-				if (*in >= 0.01f)
-					break;
-			if (i == m->numverts)
-				return;
-		}
-		else if (m->ca < 0.01f)
-			return;
-	}
-
-	if (!backendactive)
-		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
-
-#ifdef DEBUGGL
-	for (i = 0;i < m->numtriangles * 3;i++)
-		if ((unsigned int) m->index[i] >= (unsigned int) m->numverts)
-			Host_Error("R_Mesh_Draw: invalid index (%i of %i verts)\n", m->index, m->numverts);
-#endif
-
-	// LordHavoc: removed this error condition because with floatcolors 0,
-	// the 3DFX driver works with very large meshs
-	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
-	//if (m->numtriangles > 1024 || m->numverts > 3072)
-	//{
-	//	Con_Printf("R_Mesh_Draw: mesh too big for 3DFX drivers, rejected\n");
-	//	return;
-	//}
-
-	i = max(m->numtriangles * 3, m->numverts);
-	if (overflowedverts < i)
-		overflowedverts = i;
-
-	if (m->numtriangles > max_meshs || m->numverts > max_verts)
-	{
-		Con_Printf("R_Mesh_Draw: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
-		return;
-	}
-
-	if (m->transparent)
-	{
-		overflowedtransverts += max(m->numtriangles * 3, m->numverts);
-		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
-		{
-			if (!transranout)
-			{
-				Con_Printf("R_Mesh_Draw: ran out of room for transparent meshs\n");
-				transranout = true;
-			}
-			return;
-		}
-
-		c_transmeshs++;
-		c_transtris += m->numtriangles;
-		vert = &buf_transvertex[currenttransvertex];
-		fcolor = &buf_transfcolor[currenttransvertex];
-		for (i = 0;i < backendunits;i++)
-			texcoord[i] = &buf_transtexcoord[i][currenttransvertex];
-
-		// transmesh is only for storage of transparent meshs until they
-		// are inserted into the main mesh array
-		mesh = &buf_transmesh[currenttransmesh++];
-		mesh->firsttriangle = currenttranstriangle;
-		mesh->firstvert = currenttransvertex;
-		index = &buf_transtri[currenttranstriangle].index[0];
-
-		currenttranstriangle += m->numtriangles;
-		currenttransvertex += m->numverts;
-	}
-	else
-	{
-		if (currentmesh)
-		{
-			R_Mesh_Render();
-			Con_Printf("mesh queue not empty, flushing.\n");
-		}
-
-		c_meshs++;
-		c_meshtris += m->numtriangles;
-		vert = &buf_vertex[currentvertex];
-		fcolor = &buf_fcolor[currentvertex];
-		for (i = 0;i < backendunits;i++)
-			texcoord[i] = &buf_texcoord[i][currentvertex];
-
-		// opaque meshs are rendered directly
-		mesh = &buf_mesh[currentmesh++];
-		mesh->firsttriangle = currenttriangle;
-		mesh->firstvert = currentvertex;
-		index = &buf_tri[currenttriangle].index[0];
-
-		currenttriangle += m->numtriangles;
-		currentvertex += m->numverts;
-	}
-
-	// code shared for transparent and opaque meshs
-	memcpy(index, m->index, sizeof(int[3]) * m->numtriangles);
-	mesh->blendfunc1 = m->blendfunc1;
-	mesh->blendfunc2 = m->blendfunc2;
-	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
-	mesh->depthtest = !m->depthdisable;
-	mesh->triangles = m->numtriangles;
-	mesh->verts = m->numverts;
-
-	overbright = false;
-	scaler = 1;
-	if (m->blendfunc1 == GL_DST_COLOR)
-	{
-		// check if it is a 2x modulate with framebuffer
-		if (m->blendfunc2 == GL_SRC_COLOR)
-			scaler *= 0.5f;
-	}
-	else if (m->blendfunc2 != GL_SRC_COLOR)
-	{
-		if (m->tex[0])
-		{
-			overbright = gl_combine.integer;
-			if (overbright)
-				scaler *= 0.25f;
-		}
-		scaler *= overbrightscale;
-	}
-
-
-	j = -1;
-	for (i = 0;i < backendunits;i++)
-	{
-		if ((mesh->textures[i] = m->tex[i]))
-			j = i;
-		mesh->texturergbscale[i] = m->texrgbscale[i];
-		if (mesh->texturergbscale[i] != 1 && mesh->texturergbscale[i] != 2 && mesh->texturergbscale[i] != 4)
-			mesh->texturergbscale[i] = 1;
-	}
-	if (overbright && j >= 0)
-		mesh->texturergbscale[j] = 4;
-
-	if (m->vertexstep != sizeof(buf_vertex_t))
-	{
-		for (i = 0, in = m->vertex;i < m->numverts;i++, (int)in += m->vertexstep)
-		{
-			vert[i].v[0] = in[0];
-			vert[i].v[1] = in[1];
-			vert[i].v[2] = in[2];
-		}
-	}
-	else
-		memcpy(vert, m->vertex, m->numverts * sizeof(buf_vertex_t));
-
-	if (m->color)
-	{
-		for (i = 0, in = m->color;i < m->numverts;i++, (int)in += m->colorstep)
-		{
-			fcolor[i].c[0] = in[0] * scaler;
-			fcolor[i].c[1] = in[1] * scaler;
-			fcolor[i].c[2] = in[2] * scaler;
-			fcolor[i].c[3] = in[3];
-		}
-	}
-	else
-	{
-		cr = m->cr * scaler;
-		cg = m->cg * scaler;
-		cb = m->cb * scaler;
-		ca = m->ca;
-		for (i = 0;i < m->numverts;i++)
-		{
-			fcolor[i].c[0] = cr;
-			fcolor[i].c[1] = cg;
-			fcolor[i].c[2] = cb;
-			fcolor[i].c[3] = ca;
-		}
-	}
-
-	for (j = 0;j < MAX_TEXTUREUNITS && m->tex[j];j++)
-	{
-		if (j >= backendunits)
-			Sys_Error("R_Mesh_Draw: texture %i supplied when there are only %i texture units\n", j + 1, backendunits);
-		if (m->texcoordstep[j] != sizeof(buf_texcoord_t))
-		{
-			for (i = 0, in = m->texcoords[j];i < m->numverts;i++, (int)in += m->texcoordstep[j])
-			{
-				texcoord[j][i].t[0] = in[0];
-				texcoord[j][i].t[1] = in[1];
-			}
-		}
-		else
-			memcpy(&texcoord[j][0].t[0], m->texcoords[j], m->numverts * sizeof(buf_texcoord_t));
-	}
-}
-
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
 // (this is used for very high speed rendering, no copying)
 int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
@@ -1223,11 +1000,11 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	buf_mesh_t *mesh;
 
 	if (!backendactive)
-		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
+		Sys_Error("R_Mesh_Draw_GetBuffer: called when backend is not active\n");
 
 	if (!m->numtriangles
 	 || !m->numverts)
-		Host_Error("R_Mesh_Draw: no triangles or verts\n");
+		Host_Error("R_Mesh_Draw_GetBuffer: no triangles or verts\n");
 
 	// LordHavoc: removed this error condition because with floatcolors 0,
 	// the 3DFX driver works with very large meshs
@@ -1255,7 +1032,7 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 		{
 			if (!transranout)
 			{
-				Con_Printf("R_Mesh_Draw: ran out of room for transparent meshs\n");
+				Con_Printf("R_Mesh_Draw_GetBuffer: ran out of room for transparent meshs\n");
 				transranout = true;
 			}
 			return false;
@@ -1346,24 +1123,6 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 		mesh->texturergbscale[j] = 4;
 
 	return true;
-}
-
-void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
-{
-	m->index = polyindexarray;
-	m->numverts = numverts;
-	m->numtriangles = numverts - 2;
-	if (m->numtriangles < 1)
-	{
-		Con_Printf("R_Mesh_DrawPolygon: invalid vertex count\n");
-		return;
-	}
-	if (m->numtriangles >= 256)
-	{
-		Con_Printf("R_Mesh_DrawPolygon: only up to 256 triangles (258 verts) supported\n");
-		return;
-	}
-	R_Mesh_Draw(m);
 }
 
 /*

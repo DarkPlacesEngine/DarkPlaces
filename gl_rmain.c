@@ -69,6 +69,33 @@ cvar_t gl_fogend = {0, "gl_fogend","0"};
 
 cvar_t r_textureunits = {0, "r_textureunits", "32"};
 
+void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
+{
+	int i;
+	for (i = 0;i < verts;i++)
+	{
+		out[0] = in[0] * r;
+		out[1] = in[1] * g;
+		out[2] = in[2] * b;
+		out[3] = in[3];
+		in += 4;
+		out += 4;
+	}
+}
+
+void R_FillColors(float *out, int verts, float r, float g, float b, float a)
+{
+	int i;
+	for (i = 0;i < verts;i++)
+	{
+		out[0] = r;
+		out[1] = g;
+		out[2] = b;
+		out[3] = a;
+		out += 4;
+	}
+}
+
 /*
 ====================
 R_TimeRefresh_f

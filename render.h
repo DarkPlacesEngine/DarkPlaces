@@ -68,6 +68,10 @@ extern cvar_t r_novis;
 // detail texture stuff
 extern cvar_t r_detailtextures;
 
+// useful functions for rendering
+void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b);
+void R_FillColors(float *out, int verts, float r, float g, float b, float a);
+
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
 

@@ -20,8 +20,6 @@ float *aliasvertnorm;
 int *aliasvertusage;
 zymbonematrix *zymbonepose;
 
-rmeshinfo_t aliasmeshinfo;
-
 mempool_t *gl_models_mempool;
 
 void gl_models_start(void)
@@ -200,41 +198,6 @@ void R_AliasLerpVerts(int vertcount,
 	}
 }
 
-void R_DrawModelMesh(rtexture_t *skin, float *colors, float cred, float cgreen, float cblue)
-{
-	aliasmeshinfo.tex[0] = R_GetTexture(skin);
-	aliasmeshinfo.color = colors;
-	if (colors == NULL)
-	{
-		aliasmeshinfo.cr = cred;
-		aliasmeshinfo.cg = cgreen;
-		aliasmeshinfo.cb = cblue;
-		aliasmeshinfo.ca = currentrenderentity->alpha;
-	}
-
-	c_alias_polys += aliasmeshinfo.numtriangles;
-	R_Mesh_Draw(&aliasmeshinfo);
-	R_Mesh_Render();
-
-	// leave it in a state for additional passes
-	aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-	aliasmeshinfo.blendfunc2 = GL_ONE;
-}
-
-void R_TintModel(float *in, float *out, int verts, float r, float g, float b)
-{
-	int i;
-	for (i = 0;i < verts;i++)
-	{
-		out[0] = in[0] * r;
-		out[1] = in[1] * g;
-		out[2] = in[2] * b;
-		out[3] = in[3];
-		in += 4;
-		out += 4;
-	}
-}
-
 skinframe_t *R_FetchSkinFrame(void)
 {
 	model_t *model = currentrenderentity->model;
@@ -272,231 +235,197 @@ void R_SetupMDLMD2Frames(float colorr, float colorg, float colorb)
 
 void R_DrawQ1Q2AliasModel (float fog)
 {
+	int c, pantsfullbright, shirtfullbright, colormapped;
+	float pantscolor[3], shirtcolor[3];
+	qbyte *bcolor;
+	rmeshbufferinfo_t m;
 	model_t *model;
 	skinframe_t *skinframe;
 
 	model = currentrenderentity->model;
 
 	skinframe = R_FetchSkinFrame();
-	if (fog && !(currentrenderentity->effects & EF_ADDITIVE))
+
+	colormapped = !skinframe->merged || (currentrenderentity->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt));
+	if (!colormapped && !fog && !skinframe->glow && !skinframe->fog)
 	{
-		R_SetupMDLMD2Frames(1 - fog, 1 - fog, 1 - fog);
-
-		memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
-
-		aliasmeshinfo.vertex = aliasvert;
-		aliasmeshinfo.vertexstep = sizeof(float[4]);
-		aliasmeshinfo.numverts = model->numverts;
-		aliasmeshinfo.numtriangles = model->numtris;
-		aliasmeshinfo.index = model->mdlmd2data_indices;
-		aliasmeshinfo.colorstep = sizeof(float[4]);
-		aliasmeshinfo.texcoords[0] = model->mdlmd2data_texcoords;
-		aliasmeshinfo.texcoordstep[0] = sizeof(float[2]);
-
+		// fastpath for the normal situation (one texture)
+		memset(&m, 0, sizeof(m));
 		if (currentrenderentity->effects & EF_ADDITIVE)
 		{
-			aliasmeshinfo.transparent = true;
-			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-			aliasmeshinfo.blendfunc2 = GL_ONE;
+			m.transparent = true;
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE;
 		}
 		else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
 		{
-			aliasmeshinfo.transparent = true;
-			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-			aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			m.transparent = true;
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		}
 		else
 		{
-			aliasmeshinfo.transparent = false;
-			aliasmeshinfo.blendfunc1 = GL_ONE;
-			aliasmeshinfo.blendfunc2 = GL_ZERO;
+			m.transparent = false;
+			m.blendfunc1 = GL_ONE;
+			m.blendfunc2 = GL_ZERO;
 		}
+		m.numtriangles = model->numtris;
+		m.numverts = model->numverts;
+		m.tex[0] = R_GetTexture(skinframe->merged);
 
-		if (skinframe->base || skinframe->pants || skinframe->shirt || skinframe->glow || skinframe->merged)
+		c_alias_polys += m.numtriangles;
+		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
-			if (currentrenderentity->colormap >= 0 && (skinframe->base || skinframe->pants || skinframe->shirt))
-			{
-				int c;
-				qbyte *color;
-				if (skinframe->base)
-					R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
-				if (skinframe->pants)
-				{
-					c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-					color = (qbyte *) (&d_8to24table[c]);
-					if (c >= 224) // fullbright ranges
-						R_DrawModelMesh(skinframe->pants, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-					else
-					{
-						R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-						R_DrawModelMesh(skinframe->pants, aliasvertcolor2, 0, 0, 0);
-					}
-				}
-				if (skinframe->shirt)
-				{
-					c = currentrenderentity->colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-					color = (qbyte *) (&d_8to24table[c]);
-					if (c >= 224) // fullbright ranges
-						R_DrawModelMesh(skinframe->shirt, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-					else
-					{
-						R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-						R_DrawModelMesh(skinframe->shirt, aliasvertcolor2, 0, 0, 0);
-					}
-				}
-			}
-			else
-			{
-				if (skinframe->merged)
-					R_DrawModelMesh(skinframe->merged, aliasvertcolor, 0, 0, 0);
-				else
-				{
-					if (skinframe->base) R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
-					if (skinframe->pants) R_DrawModelMesh(skinframe->pants, aliasvertcolor, 0, 0, 0);
-					if (skinframe->shirt) R_DrawModelMesh(skinframe->shirt, aliasvertcolor, 0, 0, 0);
-				}
-			}
-			if (skinframe->glow) R_DrawModelMesh(skinframe->glow, NULL, 1 - fog, 1 - fog, 1 - fog);
+			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
+
+			aliasvert = m.vertex;
+			aliasvertcolor = m.color;
+			R_SetupMDLMD2Frames(m.colorscale * (1 - fog), m.colorscale * (1 - fog), m.colorscale * (1 - fog));
+			aliasvert = aliasvertbuf;
+			aliasvertcolor = aliasvertcolorbuf;
+
+			R_Mesh_Render();
 		}
-		else
-			R_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
-
-		aliasmeshinfo.tex[0] = R_GetTexture(skinframe->fog);
-		aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-		aliasmeshinfo.blendfunc2 = GL_ONE;
-		aliasmeshinfo.color = NULL;
-
-		aliasmeshinfo.cr = fogcolor[0];
-		aliasmeshinfo.cg = fogcolor[1];
-		aliasmeshinfo.cb = fogcolor[2];
-		aliasmeshinfo.ca = currentrenderentity->alpha * fog;
-
-		c_alias_polys += aliasmeshinfo.numtriangles;
-		R_Mesh_Draw(&aliasmeshinfo);
-		R_Mesh_Render();
+		return;
 	}
-	else if (currentrenderentity->colormap >= 0 || !skinframe->merged || skinframe->glow || !r_quickmodels.integer)
+
+	R_SetupMDLMD2Frames(1 - fog, 1 - fog, 1 - fog);
+
+	if (colormapped)
 	{
-		R_SetupMDLMD2Frames(1 - fog, 1 - fog, 1 - fog);
-
-		memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
-
-		aliasmeshinfo.vertex = aliasvert;
-		aliasmeshinfo.vertexstep = sizeof(float[4]);
-		aliasmeshinfo.numverts = model->numverts;
-		aliasmeshinfo.numtriangles = model->numtris;
-		aliasmeshinfo.index = model->mdlmd2data_indices;
-		aliasmeshinfo.colorstep = sizeof(float[4]);
-		aliasmeshinfo.texcoords[0] = model->mdlmd2data_texcoords;
-		aliasmeshinfo.texcoordstep[0] = sizeof(float[2]);
-
-		if (currentrenderentity->effects & EF_ADDITIVE)
-		{
-			aliasmeshinfo.transparent = true;
-			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-			aliasmeshinfo.blendfunc2 = GL_ONE;
-		}
-		else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
-		{
-			aliasmeshinfo.transparent = true;
-			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-			aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		}
-		else
-		{
-			aliasmeshinfo.transparent = false;
-			aliasmeshinfo.blendfunc1 = GL_ONE;
-			aliasmeshinfo.blendfunc2 = GL_ZERO;
-		}
-
-		if (skinframe->base || skinframe->pants || skinframe->shirt || skinframe->glow || skinframe->merged)
-		{
-			if (currentrenderentity->colormap >= 0 && (skinframe->base || skinframe->pants || skinframe->shirt))
-			{
-				int c;
-				qbyte *color;
-				if (skinframe->base)
-					R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
-				if (skinframe->pants)
-				{
-					c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-					color = (qbyte *) (&d_8to24table[c]);
-					if (c >= 224) // fullbright ranges
-						R_DrawModelMesh(skinframe->pants, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-					else
-					{
-						R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-						R_DrawModelMesh(skinframe->pants, aliasvertcolor2, 0, 0, 0);
-					}
-				}
-				if (skinframe->shirt)
-				{
-					c = currentrenderentity->colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-					color = (qbyte *) (&d_8to24table[c]);
-					if (c >= 224) // fullbright ranges
-						R_DrawModelMesh(skinframe->shirt, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-					else
-					{
-						R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
-						R_DrawModelMesh(skinframe->shirt, aliasvertcolor2, 0, 0, 0);
-					}
-				}
-			}
-			else
-			{
-				if (skinframe->merged)
-					R_DrawModelMesh(skinframe->merged, aliasvertcolor, 0, 0, 0);
-				else
-				{
-					if (skinframe->base) R_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
-					if (skinframe->pants) R_DrawModelMesh(skinframe->pants, aliasvertcolor, 0, 0, 0);
-					if (skinframe->shirt) R_DrawModelMesh(skinframe->shirt, aliasvertcolor, 0, 0, 0);
-				}
-			}
-			if (skinframe->glow) R_DrawModelMesh(skinframe->glow, NULL, 1 - fog, 1 - fog, 1 - fog);
-		}
-		else
-			R_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
+		// 128-224 are backwards ranges
+		c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
+		bcolor = (qbyte *) (&d_8to24table[c]);
+		pantsfullbright = c >= 224;
+		VectorScale(bcolor, (1.0f / 255.0f), pantscolor);
+		c = (currentrenderentity->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
+		bcolor = (qbyte *) (&d_8to24table[c]);
+		shirtfullbright = c >= 224;
+		VectorScale(bcolor, (1.0f / 255.0f), shirtcolor);
 	}
 	else
 	{
-		rmeshbufferinfo_t bufmesh;
-		memset(&bufmesh, 0, sizeof(bufmesh));
-		if (currentrenderentity->effects & EF_ADDITIVE)
-		{
-			bufmesh.transparent = true;
-			bufmesh.blendfunc1 = GL_SRC_ALPHA;
-			bufmesh.blendfunc2 = GL_ONE;
-		}
-		else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
-		{
-			bufmesh.transparent = true;
-			bufmesh.blendfunc1 = GL_SRC_ALPHA;
-			bufmesh.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		}
-		else
-		{
-			bufmesh.transparent = false;
-			bufmesh.blendfunc1 = GL_ONE;
-			bufmesh.blendfunc2 = GL_ZERO;
-		}
-		bufmesh.numtriangles = model->numtris;
-		bufmesh.numverts = model->numverts;
-		bufmesh.tex[0] = R_GetTexture(skinframe->merged);
+		pantscolor[0] = pantscolor[1] = pantscolor[2] = shirtcolor[0] = shirtcolor[1] = shirtcolor[2] = 1;
+		pantsfullbright = shirtfullbright = false;
+	}
 
-		R_Mesh_Draw_GetBuffer(&bufmesh, true);
-
-		aliasvert = bufmesh.vertex;
-		aliasvertcolor = bufmesh.color;
-		memcpy(bufmesh.index, model->mdlmd2data_indices, bufmesh.numtriangles * sizeof(int[3]));
-		memcpy(bufmesh.texcoords[0], model->mdlmd2data_texcoords, bufmesh.numverts * sizeof(float[2]));
-
-		fog = bufmesh.colorscale * (1 - fog);
-		R_SetupMDLMD2Frames(fog, fog, fog);
-
-		aliasvert = aliasvertbuf;
-		aliasvertcolor = aliasvertcolorbuf;
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.numtriangles = model->numtris;
+	m.numverts = model->numverts;
+	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
+	if (R_Mesh_Draw_GetBuffer(&m, true))
+	{
+		c_alias_polys += m.numtriangles;
+		R_ModulateColors(aliasvertcolor, m.color, m.numverts, m.colorscale, m.colorscale, m.colorscale);
+		memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+		memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
+		memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
 		R_Mesh_Render();
+	}
+
+	if (colormapped)
+	{
+		if (skinframe->pants)
+		{
+			memset(&m, 0, sizeof(m));
+			m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE;
+			m.numtriangles = model->numtris;
+			m.numverts = model->numverts;
+			m.tex[0] = R_GetTexture(skinframe->pants);
+			if (R_Mesh_Draw_GetBuffer(&m, true))
+			{
+				c_alias_polys += m.numtriangles;
+				if (pantsfullbright)
+					R_FillColors(m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale, currentrenderentity->alpha);
+				else
+					R_ModulateColors(aliasvertcolor, m.color, m.numverts, pantscolor[0] * m.colorscale, pantscolor[1] * m.colorscale, pantscolor[2] * m.colorscale);
+				memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+				memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
+				memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
+				R_Mesh_Render();
+			}
+		}
+		if (skinframe->shirt)
+		{
+			memset(&m, 0, sizeof(m));
+			m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE;
+			m.numtriangles = model->numtris;
+			m.numverts = model->numverts;
+			m.tex[0] = R_GetTexture(skinframe->shirt);
+			if (R_Mesh_Draw_GetBuffer(&m, true))
+			{
+				c_alias_polys += m.numtriangles;
+				if (shirtfullbright)
+					R_FillColors(m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale, currentrenderentity->alpha);
+				else
+					R_ModulateColors(aliasvertcolor, m.color, m.numverts, shirtcolor[0] * m.colorscale, shirtcolor[1] * m.colorscale, shirtcolor[2] * m.colorscale);
+				memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+				memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
+				memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
+				R_Mesh_Render();
+			}
+		}
+	}
+	if (skinframe->glow)
+	{
+		memset(&m, 0, sizeof(m));
+		m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+		m.numtriangles = model->numtris;
+		m.numverts = model->numverts;
+		m.tex[0] = R_GetTexture(skinframe->glow);
+		if (R_Mesh_Draw_GetBuffer(&m, true))
+		{
+			c_alias_polys += m.numtriangles;
+			R_FillColors(m.color, m.numverts, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, (1 - fog) * m.colorscale, currentrenderentity->alpha);
+			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
+			R_Mesh_Render();
+		}
+	}
+	if (fog)
+	{
+		memset(&m, 0, sizeof(m));
+		m.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || skinframe->fog != NULL;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+		m.numtriangles = model->numtris;
+		m.numverts = model->numverts;
+		m.tex[0] = R_GetTexture(skinframe->fog);
+		if (R_Mesh_Draw_GetBuffer(&m, false))
+		{
+			c_alias_polys += m.numtriangles;
+			R_FillColors(m.color, m.numverts, fog * m.colorscale, fog * m.colorscale, fog * m.colorscale, currentrenderentity->alpha);
+			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+			memcpy(m.vertex, aliasvert, m.numverts * sizeof(float[4]));
+			memcpy(m.texcoords[0], model->mdlmd2data_texcoords, m.numverts * sizeof(float[2]));
+			R_Mesh_Render();
+		}
 	}
 }
 
@@ -760,76 +689,76 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 	}
 }
 
-void R_DrawZymoticModelMesh(zymtype1header_t *m)
+void R_DrawZymoticModelMesh(zymtype1header_t *m, float fog)
 {
+	rmeshbufferinfo_t mbuf;
 	int i, *renderlist;
 	rtexture_t **texture;
 
-	// FIXME: do better fog
-	renderlist = (int *)(m->lump_render.start + (int) m);
 	texture = (rtexture_t **)(m->lump_shaders.start + (int) m);
 
-	aliasmeshinfo.vertex = aliasvert;
-	aliasmeshinfo.vertexstep = sizeof(float[4]);
-	aliasmeshinfo.color = aliasvertcolor;
-	aliasmeshinfo.colorstep = sizeof(float[4]);
-	aliasmeshinfo.texcoords[0] = (float *)(m->lump_texcoords.start + (int) m);
-	aliasmeshinfo.texcoordstep[0] = sizeof(float[2]);
-
+	renderlist = (int *)(m->lump_render.start + (int) m);
 	for (i = 0;i < m->numshaders;i++)
 	{
-		aliasmeshinfo.tex[0] = R_GetTexture(texture[i]);
+		memset(&mbuf, 0, sizeof(mbuf));
+		mbuf.numverts = m->numverts;
+		mbuf.numtriangles = *renderlist++;
 		if (currentrenderentity->effects & EF_ADDITIVE)
 		{
-			aliasmeshinfo.transparent = true;
-			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-			aliasmeshinfo.blendfunc2 = GL_ONE;
+			mbuf.transparent = true;
+			mbuf.blendfunc1 = GL_SRC_ALPHA;
+			mbuf.blendfunc2 = GL_ONE;
 		}
 		else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(texture[i]))
 		{
-			aliasmeshinfo.transparent = true;
-			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-			aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			mbuf.transparent = true;
+			mbuf.blendfunc1 = GL_SRC_ALPHA;
+			mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		}
 		else
 		{
-			aliasmeshinfo.transparent = false;
-			aliasmeshinfo.blendfunc1 = GL_ONE;
-			aliasmeshinfo.blendfunc2 = GL_ZERO;
+			mbuf.transparent = false;
+			mbuf.blendfunc1 = GL_ONE;
+			mbuf.blendfunc2 = GL_ZERO;
 		}
-		aliasmeshinfo.numtriangles = *renderlist++;
-		aliasmeshinfo.index = renderlist;
-		c_alias_polys += aliasmeshinfo.numtriangles;
-		R_Mesh_Draw(&aliasmeshinfo);
-		R_Mesh_Render();
-		renderlist += aliasmeshinfo.numtriangles * 3;
+		mbuf.tex[0] = R_GetTexture(texture[i]);
+		if (R_Mesh_Draw_GetBuffer(&mbuf, true))
+		{
+			c_alias_polys += mbuf.numtriangles;
+			memcpy(mbuf.index, renderlist, mbuf.numtriangles * sizeof(int[3]));
+			memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
+			R_ModulateColors(aliasvertcolor, mbuf.color, mbuf.numverts, mbuf.colorscale, mbuf.colorscale, mbuf.colorscale);
+			//memcpy(mbuf.color, aliasvertcolor, mbuf.numverts * sizeof(float[4]));
+			memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
+			R_Mesh_Render();
+		}
+		renderlist += mbuf.numtriangles * 3;
 	}
-}
 
-void R_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m, float fog)
-{
-	int i, *renderlist;
-
-	// FIXME: do better fog
-	renderlist = (int *)(m->lump_render.start + (int) m);
-
-	aliasmeshinfo.tex[0] = 0;
-	aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
-	aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-
-	aliasmeshinfo.cr = fogcolor[0];
-	aliasmeshinfo.cg = fogcolor[1];
-	aliasmeshinfo.cb = fogcolor[2];
-	aliasmeshinfo.ca = currentrenderentity->alpha * fog;
-
-	for (i = 0;i < m->numshaders;i++)
+	if (fog)
 	{
-		aliasmeshinfo.numtriangles = *renderlist++;
-		aliasmeshinfo.index = renderlist;
-		c_alias_polys += aliasmeshinfo.numtriangles;
-		R_Mesh_Draw(&aliasmeshinfo);
-		R_Mesh_Render();
-		renderlist += aliasmeshinfo.numtriangles * 3;
+		renderlist = (int *)(m->lump_render.start + (int) m);
+		for (i = 0;i < m->numshaders;i++)
+		{
+			memset(&mbuf, 0, sizeof(mbuf));
+			mbuf.numverts = m->numverts;
+			mbuf.numtriangles = *renderlist++;
+			mbuf.transparent = currentrenderentity->effects & EF_ADDITIVE || currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(texture[i]);
+			mbuf.blendfunc1 = GL_SRC_ALPHA;
+			mbuf.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			// FIXME: need alpha mask for fogging...
+			//mbuf.tex[0] = R_GetTexture(texture[i]);
+			if (R_Mesh_Draw_GetBuffer(&mbuf, false))
+			{
+				c_alias_polys += mbuf.numtriangles;
+				memcpy(mbuf.index, renderlist, mbuf.numtriangles * sizeof(int[3]));
+				memcpy(mbuf.vertex, aliasvert, mbuf.numverts * sizeof(float[4]));
+				R_FillColors(mbuf.color, mbuf.numverts, fogcolor[0] * mbuf.colorscale, fogcolor[1] * mbuf.colorscale, fogcolor[2] * mbuf.colorscale, currentrenderentity->alpha * fog);
+				//memcpy(mbuf.texcoords[0], (float *)(m->lump_texcoords.start + (int) m), mbuf.numverts * sizeof(float[2]));
+				R_Mesh_Render();
+			}
+			renderlist += mbuf.numtriangles * 3;
+		}
 	}
 }
 
@@ -845,13 +774,7 @@ void R_DrawZymoticModel (float fog)
 
 	R_LightModel(m->numverts, 1 - fog, 1 - fog, 1 - fog, true);
 
-	memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
-	aliasmeshinfo.numverts = m->numverts;
-
-	R_DrawZymoticModelMesh(m);
-
-	if (fog)
-		R_DrawZymoticModelMeshFog(currentrenderentity->origin, m, fog);
+	R_DrawZymoticModelMesh(m, fog);
 }
 
 void R_DrawAliasModel (void)

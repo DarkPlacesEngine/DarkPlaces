@@ -68,20 +68,13 @@ void R_Mesh_ClearDepth(void);
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 void R_Mesh_Render(void);
 
-// queues a mesh to be rendered (invokes Render if queue is full)
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-void R_Mesh_Draw(const rmeshinfo_t *m);
-
 // renders the queued transparent meshs
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 void R_Mesh_AddTransparent(void);
 
-// ease-of-use frontend to R_Mesh_Draw, set up meshinfo, except for index and numtriangles and numverts, then call this
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts);
-
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
-// (this is used for very high speed rendering, no copying)
+// (it is up to the caller to fill in the geometry data)
+// (make sure you scale your colors by the colorscale field)
 // (only valid between R_Mesh_Start and R_Mesh_Finish)
 int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright);
 
