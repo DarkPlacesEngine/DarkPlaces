@@ -723,10 +723,11 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 
 void Mod_IDP3_Load(model_t *mod, void *buffer)
 {
-	int i, j, version;
+	int i, j, k, version;
 	md3modelheader_t *pinmodel;
 	md3frameinfo_t *pinframe;
 	md3mesh_t *pinmesh;
+	md3tag_t *pintag;
 	aliasmesh_t *mesh;
 	skinframe_t tempskinframe;
 
@@ -770,7 +771,21 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		loadmodel->animscenes[i].loop = true;
 	}
 
-	// tags are not loaded yet
+	// load tags
+	loadmodel->alias.aliasnum_tagframes = loadmodel->numframes;
+	loadmodel->alias.aliasnum_tags = LittleLong(pinmodel->num_tags);
+	loadmodel->alias.aliasdata_tags = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasnum_tagframes * loadmodel->alias.aliasnum_tags * sizeof(aliastag_t));
+	for (i = 0, pintag = (md3tag_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_tags));i < loadmodel->alias.aliasnum_tagframes * loadmodel->alias.aliasnum_tags;i++, pinframe++)
+	{
+		strcpy(loadmodel->alias.aliasdata_tags[i].name, pintag->name);
+		Matrix4x4_CreateIdentity(&loadmodel->alias.aliasdata_tags[i].matrix);
+		for (j = 0;j < 3;j++)
+		{
+			for (k = 0;k < 3;k++)
+				loadmodel->alias.aliasdata_tags[i].matrix.m[k][j] = LittleLong(pintag->rotationmatrix[j * 3 + k]);
+			loadmodel->alias.aliasdata_tags[i].matrix.m[j][3] = LittleLong(pintag->origin[j]);
+		}
+	}
 
 	// load meshes
 	loadmodel->alias.aliasdata_meshes = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasnum_meshes * sizeof(aliasmesh_t));

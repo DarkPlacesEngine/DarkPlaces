@@ -83,11 +83,11 @@ typedef struct shadowmesh_s
 shadowmesh_t;
 
 
+#include "matrixlib.h"
+
 #include "model_brush.h"
 #include "model_sprite.h"
 #include "model_alias.h"
-
-#include "matrixlib.h"
 
 typedef struct model_alias_s
 {
@@ -97,6 +97,10 @@ typedef struct model_alias_s
 	// mdl/md2/md3 models are the same after loading
 	int				aliasnum_meshes;
 	aliasmesh_t		*aliasdata_meshes;
+
+	int				aliasnum_tags;
+	int				aliasnum_tagframes;
+	aliastag_t		*aliasdata_tags;
 
 	// for Zymotic models
 	int				zymnum_verts;
