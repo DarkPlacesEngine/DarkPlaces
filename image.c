@@ -437,6 +437,37 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	return NULL;
 }
 
+int image_makemask (byte *in, byte *out, int size)
+{
+	int		i, count;
+	count = 0;
+	for (i = 0;i < size;i++)
+	{
+		out[0] = out[1] = out[2] = 255;
+		out[3] = in[3];
+		if (in[3] != 255)
+			count++;
+		in += 4;
+		out += 4;
+	}
+	return count;
+}
+
+byte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, int matchheight)
+{
+	byte	*in, *data;
+	in = data = loadimagepixels(filename, complain, matchwidth, matchheight);
+	if (!data)
+		return NULL;
+	if (image_makemask(data, data, image_width * image_height))
+		return data; // some transparency
+	else
+	{
+		free(data);
+		return NULL; // all opaque
+	}
+}
+
 int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
 {
 	int texnum;
@@ -446,19 +477,37 @@ int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean 
 	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
 	free(data);
 	return texnum;
-	/*
-	if (texnum >= 0) // specific texnum, not cached
+}
+
+int loadtextureimagemask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
+{
+	int texnum;
+	byte *data;
+	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
+		return 0;
+	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
+	free(data);
+	return texnum;
+}
+
+int image_masktexnum;
+int loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap)
+{
+	int texnum, count;
+	byte *data;
+	char *filename2;
+	image_masktexnum = 0;
+	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
+		return 0;
+	texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
+	count = image_makemask(data, data, image_width * image_height);
+	if (count)
 	{
-		glBindTexture(GL_TEXTURE_2D, texnum);
-		GL_Upload32 (data, image_width, image_height, mipmap, true);
-		free(data);
-		return texnum;
+		filename2 = malloc(strlen(filename) + 6);
+		sprintf(filename2, "%s_mask", filename);
+		image_masktexnum = GL_LoadTexture (filename2, image_width, image_height, data, mipmap, true, 4);
+		free(filename2);
 	}
-	else // any texnum, cached
-	{
-		texnum = GL_LoadTexture (filename, image_width, image_height, data, mipmap, true, 4);
-		free(data);
-		return texnum;
-	}
-	*/
+	free(data);
+	return texnum;
 }
