@@ -389,7 +389,7 @@ f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 4 darkplaces: add qw protocol support (making darkplaces work as a qwcl client) (tell Fuh)
 4 darkplaces: add traceboxwithcontents function (same as tracebox but adds the startcontents parameter) (LTH, SeienAbunae, http://forums.inside3d.com/showflat.pl?Board=Engine&Number=909 )
 4 darkplaces: add wav music playback (tell Joseph Caporale, tell Static_Fiend)
-4 darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
+-n darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
 4 darkplaces: ingame mod switching
 4 darkplaces: make hqbsp save mip textures to bsp if tga textures are found
 4 darkplaces: rewrite sound system! (FrikaC, Static_Fiend, SeienAbunae)
