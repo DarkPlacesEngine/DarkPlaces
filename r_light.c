@@ -636,21 +636,6 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 	}
 }
 
-void R_ModelLightPoint (const entity_render_t *ent, vec3_t color, const vec3_t p)
-{
-	mleaf_t *leaf;
-	leaf = Mod_PointInLeaf(p, cl.worldmodel);
-	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->lightdata)
-	{
-		color[0] = color[1] = color[2] = 1;
-		return;
-	}
-
-	color[0] = color[1] = color[2] = r_ambient.value * (2.0f / 128.0f);
-	if (!cl.worldmodel->numlights)
-		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
-}
-
 void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, float *normals, float *colors, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0, maxnearlights = r_modellights.integer;
@@ -671,6 +656,7 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 	nearlight[MAX_DLIGHTS], *nl;
 	mlight_t *sl;
 	rdlight_t *rd;
+	mleaf_t *leaf;
 	a = ent->alpha;
 	// scale of the model's coordinate space, to alter light attenuation to match
 	// make the mscale squared so it can scale the squared distance results
@@ -683,7 +669,15 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 		R_CompleteLightPoint (basecolor, ent->origin, true, NULL);
 	else
 	{
-		R_ModelLightPoint(ent, basecolor, ent->origin);
+		leaf = Mod_PointInLeaf(ent->origin, cl.worldmodel);
+		if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->lightdata)
+			basecolor[0] = basecolor[1] = basecolor[2] = 1;
+		else
+		{
+			basecolor[0] = basecolor[1] = basecolor[2] = r_ambient.value * (2.0f / 128.0f);
+			if (!cl.worldmodel->numlights)
+				RecursiveLightPoint (basecolor, cl.worldmodel->nodes, ent->origin[0], ent->origin[1], ent->origin[2], ent->origin[2] - 65536);
+		}
 		nl = &nearlight[0];
 		for (i = 0;i < ent->numentlights;i++)
 		{
