@@ -2933,6 +2933,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_LoadNodes(&header->lumps[LUMP_NODES]);
 	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES]);
 
+	if (!mod->brushq1.lightdata)
+		mod->brush.LightPoint = NULL;
+
 	if (mod->brushq1.data_compressedpvs)
 		Mem_Free(mod->brushq1.data_compressedpvs);
 	mod->brushq1.data_compressedpvs = NULL;
