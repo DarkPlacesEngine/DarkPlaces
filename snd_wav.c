@@ -290,6 +290,7 @@ qboolean S_LoadWavFile (const char *filename, sfx_t *s)
 		s->loopstart = -1;
 	else
 		s->loopstart = (double)info.loopstart * (double)shm->format.speed / (double)s->format.speed;
+	s->flags &= ~SFXFLAG_STREAMED;
 
 #if BYTE_ORDER != LITTLE_ENDIAN
 	// We must convert the WAV data from little endian
