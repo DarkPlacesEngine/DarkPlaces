@@ -106,7 +106,7 @@ qboolean gl_arrays = false;
 static int
 XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 {
-	char tmp[2];
+//	char tmp[2];
 	int key = 0;
 	KeySym keysym;
 
