@@ -846,7 +846,6 @@ void Host_Init (void)
 	V_Init();
 	COM_Init();
 	Host_InitLocal();
-	W_LoadWadFile("gfx.wad");
 	Key_Init();
 	Con_Init();
 	Chase_Init();
