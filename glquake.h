@@ -286,7 +286,9 @@ extern void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
 
 extern void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
 extern void (*qglSelectTexture) (GLenum);
+#ifndef MESA
 extern void (*glColorTableEXT)(int, int, int, int, int, const void*);
+#endif
 
 #endif
 
