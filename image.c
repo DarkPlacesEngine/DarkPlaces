@@ -180,11 +180,11 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 
 	if (targa_header.image_type!=2 
 		&& targa_header.image_type!=10) 
-		Sys_Error ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
+		Host_Error ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
 
 	if (targa_header.colormap_type !=0 
 		|| (targa_header.pixel_size!=32 && targa_header.pixel_size!=24))
-		Sys_Error ("Texture_LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
+		Host_Error ("Texture_LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
 
 	columns = targa_header.width;
 	rows = targa_header.height;

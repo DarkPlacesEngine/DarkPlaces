@@ -768,10 +768,10 @@ void *SZ_GetSpace (sizebuf_t *buf, int length)
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
-			Sys_Error ("SZ_GetSpace: overflow without allowoverflow set - use -zone on the commandline for more zone memory, default: 512k (quake original default was 48k)");
+			Host_Error ("SZ_GetSpace: overflow without allowoverflow set - use -zone on the commandline for more zone memory, default: 512k (quake original default was 48k)");
 		
 		if (length > buf->maxsize)
-			Sys_Error ("SZ_GetSpace: %i is > full buffer size", length);
+			Host_Error ("SZ_GetSpace: %i is > full buffer size", length);
 			
 		buf->overflowed = true;
 		Con_Printf ("SZ_GetSpace: overflow");

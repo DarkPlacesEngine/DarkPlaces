@@ -652,13 +652,13 @@ void PF_sound (void)
 	attenuation = G_FLOAT(OFS_PARM4);
 	
 	if (volume < 0 || volume > 255)
-		Sys_Error ("SV_StartSound: volume = %i", volume);
+		Host_Error ("SV_StartSound: volume = %i", volume);
 
 	if (attenuation < 0 || attenuation > 4)
-		Sys_Error ("SV_StartSound: attenuation = %f", attenuation);
+		Host_Error ("SV_StartSound: attenuation = %f", attenuation);
 
 	if (channel < 0 || channel > 7)
-		Sys_Error ("SV_StartSound: channel = %i", channel);
+		Host_Error ("SV_StartSound: channel = %i", channel);
 
 	SV_StartSound (entity, channel, sample, volume, attenuation);
 }

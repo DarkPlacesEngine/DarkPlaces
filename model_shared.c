@@ -71,7 +71,7 @@ void *Mod_Extradata (model_t *mod)
 	Mod_LoadModel (mod, true);
 	
 	if (!mod->cache.data)
-		Sys_Error ("Mod_Extradata: caching failed");
+		Host_Error ("Mod_Extradata: caching failed");
 	return mod->cache.data;
 }
 
@@ -102,7 +102,7 @@ model_t *Mod_FindName (char *name)
 	model_t	*mod;
 	
 	if (!name[0])
-		Sys_Error ("Mod_ForName: NULL name");
+		Host_Error ("Mod_ForName: NULL name");
 		
 //
 // search the currently loaded models
@@ -114,7 +114,7 @@ model_t *Mod_FindName (char *name)
 	if (i == mod_numknown)
 	{
 		if (mod_numknown == MAX_MOD_KNOWN)
-			Sys_Error ("mod_numknown == MAX_MOD_KNOWN");
+			Host_Error ("mod_numknown == MAX_MOD_KNOWN");
 		strcpy (mod->name, name);
 		mod->needload = true;
 		mod_numknown++;

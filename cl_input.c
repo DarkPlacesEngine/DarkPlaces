@@ -343,7 +343,24 @@ void CL_SendMove (usercmd_t *cmd)
 	int		bits;
 	sizebuf_t	buf;
 	byte	data[128];
-	
+	static double lastmovetime;
+	static float forwardmove, sidemove, upmove, total; // accumulation
+
+	forwardmove += cmd->forwardmove;
+	sidemove += cmd->sidemove;
+	upmove += cmd->upmove;
+	total++;
+	// LordHavoc: cap outgoing movement messages to sys_ticrate
+	if (realtime - lastmovetime < sys_ticrate.value)
+		return;
+	lastmovetime = realtime;
+	// average what has happened during this time
+	total = 1.0f / total;
+	forwardmove *= total;
+	sidemove *= total;
+	upmove *= total;
+	total = 0;
+
 	buf.maxsize = 128;
 	buf.cursize = 0;
 	buf.data = data;
@@ -360,9 +377,9 @@ void CL_SendMove (usercmd_t *cmd)
 	for (i=0 ; i<3 ; i++)
 		MSG_WriteAngle (&buf, cl.viewangles[i]);
 	
-    MSG_WriteShort (&buf, cmd->forwardmove);
-    MSG_WriteShort (&buf, cmd->sidemove);
-    MSG_WriteShort (&buf, cmd->upmove);
+    MSG_WriteShort (&buf, forwardmove);
+    MSG_WriteShort (&buf, sidemove);
+    MSG_WriteShort (&buf, upmove);
 
 //
 // send button bits
@@ -401,7 +418,7 @@ void CL_SendMove (usercmd_t *cmd)
 //
 	if (++cl.movemessages <= 2)
 		return;
-	
+
 	if (NET_SendUnreliableMessage (cls.netcon, &buf) == -1)
 	{
 		Con_Printf ("CL_SendMove: lost server connection\n");

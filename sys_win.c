@@ -176,7 +176,7 @@ int Sys_FileOpenWrite (char *path)
 
 	f = fopen(path, "wb");
 	if (!f)
-		Sys_Error ("Error opening %s: %s", path,strerror(errno));
+		Host_Error ("Error opening %s: %s", path,strerror(errno));
 	sys_handles[i] = f;
 	
 	VID_ForceLockState (t);
@@ -270,7 +270,7 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 	DWORD  flOldProtect;
 
 	if (!VirtualProtect((LPVOID)startaddr, length, PAGE_READWRITE, &flOldProtect))
-   		Sys_Error("Protection change failed\n");
+		Sys_Error("Protection change failed\n");
 }
 
 
@@ -680,8 +680,6 @@ void SleepUntilInput (int time)
 }
 
 
-extern cvar_t maxfps;
-
 /*
 ==================
 WinMain
@@ -697,7 +695,7 @@ HWND		hwnd_dialog;
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
 	quakeparms_t	parms;
-	double			time, oldtime, newtime, timediff;
+	double			time, oldtime, newtime/*, timediff*/;
 	MEMORYSTATUS	lpBuffer;
 	static	char	cwd[1024];
 	int				t;
@@ -874,10 +872,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     /* main window message loop */
 	while (1)
 	{
-		if (maxfps.value < 5) // LordHavoc: sanity checking
-			maxfps.value = 5;
-		if (maxfps.value > 1000) // LordHavoc: sanity checking
-			maxfps.value = 1000;
 		if (isDedicated)
 		{
 			newtime = Sys_FloatTime ();
@@ -902,6 +896,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			{
 				SleepUntilInput (NOT_FOCUS_SLEEP);
 			}
+			/*
 			else if (!cls.timedemo && time < (timediff = 1.0 / maxfps.value))
 			{
 				newtime = Sys_FloatTime ();
@@ -914,6 +909,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 					time = newtime - oldtime;
 				}
 			}
+			*/
 
 			newtime = Sys_FloatTime ();
 			time = newtime - oldtime;

@@ -446,7 +446,6 @@ void R_GetSpriteFrame (entity_t *currententity, mspriteframe_t **oldframe, mspri
 void GL_DrawSpriteImage (mspriteframe_t *frame, vec3_t origin, vec3_t up, vec3_t right, int red, int green, int blue, int alpha)
 {
 	// LordHavoc: rewrote this to use the transparent poly system
-	// FIXME: need to use uncolored fog sprite
 	transpolybegin(frame->gl_texturenum, 0, frame->gl_fogtexturenum, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 	transpolyvert(origin[0] + frame->down * up[0] + frame->left * right[0], origin[1] + frame->down * up[1] + frame->left * right[1], origin[2] + frame->down * up[2] + frame->left * right[2], 0, 1, red, green, blue, alpha);
 	transpolyvert(origin[0] + frame->up * up[0] + frame->left * right[0], origin[1] + frame->up * up[1] + frame->left * right[1], origin[2] + frame->up * up[2] + frame->left * right[2], 0, 0, red, green, blue, alpha);
