@@ -875,7 +875,6 @@ void Key_Event (int key, char ascii, qboolean down)
 		if ((key_consoleactive && !consolekeys[key])
 		 || (key_dest == key_menu && menubound[key])
 		 || key_dest == key_game)
-		if (!key_consoleactive && key_dest != key_menu)
 		{
 			kb = keybindings[key];
 			if (kb)
