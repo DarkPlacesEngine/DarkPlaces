@@ -489,7 +489,7 @@ loc0:
 	}
 
 	// node - recurse down the BSP tree
-	switch (BOX_ON_PLANE_SIDE(mins, maxs, node->plane))
+	switch (BoxOnPlaneSide(mins, maxs, node->plane))
 	{
 	case 1: // front
 		node = node->children[0];

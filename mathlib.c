@@ -276,79 +276,15 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 /*-----------------------------------------------------------------*/
 
 
-// LordHavoc note 1:
-// BoxOnPlaneSide did a switch on a 'signbits' value and had optimized
-// assembly in an attempt to accelerate it further, very inefficient
-// considering that signbits of the frustum planes only changed each
-// frame, and the world planes changed only at load time.
-// So, to optimize it further I took the obvious route of storing a function
-// pointer in the plane struct itself, and shrunk each of the individual
-// cases to a single return statement.
-// LordHavoc note 2:
-// realized axial cases would be a nice speedup for world geometry, although
-// never useful for the frustum planes.
-int BoxOnPlaneSideX (vec3_t emins, vec3_t emaxs, mplane_t *p) {return p->dist <= emins[0] ? 1 : (p->dist >= emaxs[0] ? 2 : 3);}
-int BoxOnPlaneSideY (vec3_t emins, vec3_t emaxs, mplane_t *p) {return p->dist <= emins[1] ? 1 : (p->dist >= emaxs[1] ? 2 : 3);}
-int BoxOnPlaneSideZ (vec3_t emins, vec3_t emaxs, mplane_t *p) {return p->dist <= emins[2] ? 1 : (p->dist >= emaxs[2] ? 2 : 3);}
-int BoxOnPlaneSide0 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) < p->dist) << 1));}
-int BoxOnPlaneSide1 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) < p->dist) << 1));}
-int BoxOnPlaneSide2 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) < p->dist) << 1));}
-int BoxOnPlaneSide3 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) < p->dist) << 1));}
-int BoxOnPlaneSide4 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));}
-int BoxOnPlaneSide5 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));}
-int BoxOnPlaneSide6 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));}
-int BoxOnPlaneSide7 (vec3_t emins, vec3_t emaxs, mplane_t *p) {return (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));}
-
 void BoxOnPlaneSideClassify(mplane_t *p)
 {
-	switch(p->type)
-	{
-	case 0: // x axis
-		p->BoxOnPlaneSideFunc = BoxOnPlaneSideX;
-		break;
-	case 1: // y axis
-		p->BoxOnPlaneSideFunc = BoxOnPlaneSideY;
-		break;
-	case 2: // z axis
-		p->BoxOnPlaneSideFunc = BoxOnPlaneSideZ;
-		break;
-	default:
-		if (p->normal[2] < 0) // 4
-		{
-			if (p->normal[1] < 0) // 2
-			{
-				if (p->normal[0] < 0) // 1
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide7;
-				else
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide6;
-			}
-			else
-			{
-				if (p->normal[0] < 0) // 1
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide5;
-				else
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide4;
-			}
-		}
-		else
-		{
-			if (p->normal[1] < 0) // 2
-			{
-				if (p->normal[0] < 0) // 1
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide3;
-				else
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide2;
-			}
-			else
-			{
-				if (p->normal[0] < 0) // 1
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide1;
-				else
-					p->BoxOnPlaneSideFunc = BoxOnPlaneSide0;
-			}
-		}
-		break;
-	}
+	p->signbits = 0;
+	if (p->normal[0] < 0) // 1
+		p->signbits |= 1;
+	if (p->normal[1] < 0) // 2
+		p->signbits |= 2;
+	if (p->normal[2] < 0) // 4
+		p->signbits |= 4;
 }
 
 void PlaneClassify(mplane_t *p)
@@ -362,6 +298,32 @@ void PlaneClassify(mplane_t *p)
 	else
 		p->type = 3;
 	BoxOnPlaneSideClassify(p);
+}
+
+int BoxOnPlaneSide (const vec3_t emins, const vec3_t emaxs, const mplane_t *p)
+{
+	if (p->type < 3)
+		return ((emaxs[p->type] >= p->dist) | ((emins[p->type] < p->dist) << 1));
+	switch(p->signbits)
+	{
+	default:
+	case 0:
+		return (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) < p->dist) << 1));
+	case 1:
+		return (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) < p->dist) << 1));
+	case 2:
+		return (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) < p->dist) << 1));
+	case 3:
+		return (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) < p->dist) << 1));
+	case 4:
+		return (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
+	case 5:
+		return (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
+	case 6:
+		return (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
+	case 7:
+		return (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
+	}
 }
 
 void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
