@@ -406,55 +406,6 @@ loc0:
 
 /*
 ===============
-SV_FindTouchedLeafs
-
-===============
-*/
-void SV_FindTouchedLeafs (edict_t *ent, mnode_t *node)
-{
-loc0:
-	if (node->contents == CONTENTS_SOLID)
-		return;
-
-// add an efrag if the node is a leaf
-
-	if ( node->contents < 0)
-	{
-		if (ent->num_leafs == MAX_ENT_LEAFS)
-		{
-			Con_DPrintf("FindTouchedLeafs overflow\n");
-			return;
-		}
-
-		ent->leafnums[ent->num_leafs++] = (mleaf_t *)node - sv.worldmodel->leafs - 1;
-		return;
-	}
-
-// recurse down the contacted sides
-
-//	sides = BOX_ON_PLANE_SIDE(ent->v.absmin, ent->v.absmax, node->plane);
-//	if (sides & 1) SV_FindTouchedLeafs (ent, node->children[0]);
-//	if (sides & 2) SV_FindTouchedLeafs (ent, node->children[1]);
-
-	// LordHavoc: optimized recursion
-	switch (BOX_ON_PLANE_SIDE(ent->v.absmin, ent->v.absmax, node->plane))
-	{
-	case 1:
-		node = node->children[0];
-		goto loc0;
-	case 2:
-		node = node->children[1];
-		goto loc0;
-	default: // 3
-		if (node->children[0]->contents != CONTENTS_SOLID)
-			SV_FindTouchedLeafs (ent, node->children[0]);
-		node = node->children[1];
-		goto loc0;
-	}
-}
-
-/*
-===============
 SV_LinkEdict
 
 ===============
@@ -533,11 +484,6 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		ent->v.absmax[2] += 1;
 	}
 
-// link to PVS leafs
-	ent->num_leafs = 0;
-	if (ent->v.modelindex)
-		SV_FindTouchedLeafs (ent, sv.worldmodel->nodes);
-
 	if (ent->v.solid == SOLID_NOT)
 		return;
 
@@ -602,7 +548,7 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 {
 	trace_t	trace;
 
-	trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, 0, ent);
+	trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, MOVE_NORMAL, ent);
 
 	if (trace.startsolid)
 		return sv.edicts;
