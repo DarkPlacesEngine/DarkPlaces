@@ -772,8 +772,9 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 			case 0:	// rocket trail
 				if (!cl_particles_smoke.integer)
 					return;
-				dec = 6;
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], true, false, dec, dec, 64, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 64.0f, 0, 0, 0, 0, 0);
+				dec = 3;
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, dec, dec, 32, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 64.0f, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x801010, 0xFFA020, tex_smoke[rand()&7], false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 768.0f, 0, 0, 0, 0, 0);
 				if (bubbles && cl_particles_bubbles.integer)
 				{
 					particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
@@ -784,8 +785,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				// FIXME: make it gradually stop smoking
 				if (!cl_particles_smoke.integer)
 					return;
-				dec = 6;
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x202020, 0x404040, tex_smoke[rand()&7], true, false, dec, dec, 64, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 128.0f, 0, 0, 0, 0, 0);
+				dec = 3;
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, dec, dec, 32, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 96.0f, 0, 0, 0, 0, 0);
 				if (bubbles && cl_particles_bubbles.integer)
 				{
 					particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
