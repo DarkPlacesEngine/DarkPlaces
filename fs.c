@@ -1344,12 +1344,13 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		// If "input" is also empty, we need to fill it
 		if (ztk->in_ind == ztk->in_max)
 		{
-			size_t remain = file->length - ztk->in_position;
+			size_t remain;
 
 			// If we are at the end of the file
-			if (!remain)
+			if (ztk->out_position == ztk->real_length)
 				return nb;
 
+			remain = file->length - ztk->in_position;
 			count = (remain > sizeof (ztk->input)) ? sizeof (ztk->input) : remain;
 			fread (ztk->input, 1, count, file->stream);
 
