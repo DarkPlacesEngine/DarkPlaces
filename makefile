@@ -1,4 +1,5 @@
-
+#choose the compiler you want here
+CC=gcc
 
 #uncomment these according to your sound driver
 
@@ -62,16 +63,16 @@ builddate:
 	touch builddate.c
 
 vid_glx.o: vid_glx.c
-	gcc $(CFLAGS) -c vid_glx.c -I/usr/X11R6/include
+	$(CC) $(CFLAGS) -c vid_glx.c -I/usr/X11R6/include
 
 .c.o:
-	gcc $(CFLAGS) -c $*.c
+	$(CC) $(CFLAGS) -c $*.c
 
 darkplaces-glx:  $(SHAREDOBJECTS) $(CLIENTOBJECTS) $(SERVEROBJECTS) vid_glx.o $(CD) $(SND)
-	gcc -o $@ $^ $(LDFLAGS) -L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(SOUNDLIB)
+	$(CC) -o $@ $^ $(LDFLAGS) -L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(SOUNDLIB)
 
 darkplaces-dedicated: $(SHAREDOBJECTS) $(CLIENTOBJECTS) $(SERVEROBJECTS) vid_null.o cd_null.o snd_null.o
-	gcc -o $@ $^ $(LDFLAGS)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 clean:
 	-rm -f darkplaces-glx darkplaces-dedicated *.o *.d
