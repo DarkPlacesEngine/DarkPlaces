@@ -598,8 +598,13 @@ qboolean Host_FilterTime (double time)
 	if (timeleft > 0)
 	{
 		// don't totally hog the CPU
-		if (timeleft >= 0.03)
-			Sys_Sleep((int)(timeleft * 1000) - 10);
+		int msleft = (int)(timeleft * 1000);
+		// if not dedicated, try to hit exactly a steady framerate by by not
+		// sleeping the full amount
+		if (cls.state != ca_dedicated)
+			msleft -= 1;
+		if (msleft > 0)
+			Sys_Sleep(msleft);
 		return false;
 	}
 
