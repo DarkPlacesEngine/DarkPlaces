@@ -78,7 +78,6 @@ typedef struct
     unsigned short	bytes_per_line;
     unsigned short	palette_type;
     char	filler[58];
-    unsigned 	data;			// unbounded
 } pcx_t;
 
 /*
@@ -86,91 +85,90 @@ typedef struct
 LoadPCX
 ============
 */
-byte* LoadPCX (QFile *f, int matchwidth, int matchheight)
+byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 {
-	pcx_t	*pcx, pcxbuf;
-	byte	palette[768];
-	byte	*pix, *image_rgba;
-	int		x, y;
-	int		dataByte, runLength;
-	int		count;
+	pcx_t	pcx;
+	byte	*palette, *a, *b, *image_rgba, *fin, *pbuf;
+	int		x, y, dataByte, runLength;
 
-//
-// parse the PCX file
-//
-	Qread (f, &pcxbuf, sizeof(pcxbuf));
+	fin = f;
 
-	pcx = &pcxbuf;
+	memcpy(&pcx, fin, sizeof(pcx));
+	fin += sizeof(pcx);
 
 	// LordHavoc: big-endian support ported from QF newtree
-	pcx->xmax = LittleShort (pcx->xmax);
-	pcx->xmin = LittleShort (pcx->xmin);
-	pcx->ymax = LittleShort (pcx->ymax);
-	pcx->ymin = LittleShort (pcx->ymin);
-	pcx->hres = LittleShort (pcx->hres);
-	pcx->vres = LittleShort (pcx->vres);
-	pcx->bytes_per_line = LittleShort (pcx->bytes_per_line);
-	pcx->palette_type = LittleShort (pcx->palette_type);
+	pcx.xmax = LittleShort (pcx.xmax);
+	pcx.xmin = LittleShort (pcx.xmin);
+	pcx.ymax = LittleShort (pcx.ymax);
+	pcx.ymin = LittleShort (pcx.ymin);
+	pcx.hres = LittleShort (pcx.hres);
+	pcx.vres = LittleShort (pcx.vres);
+	pcx.bytes_per_line = LittleShort (pcx.bytes_per_line);
+	pcx.palette_type = LittleShort (pcx.palette_type);
 
-	if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 || pcx->bits_per_pixel != 8 || pcx->xmax > 320 || pcx->ymax > 256)
+	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || pcx.xmax > 320 || pcx.ymax > 256)
 	{
 		Con_Printf ("Bad pcx file\n");
+		qfree(f);
 		return NULL;
 	}
 
-	if (matchwidth && (pcx->xmax+1) != matchwidth)
-		return NULL;
-	if (matchheight && (pcx->ymax+1) != matchheight)
-		return NULL;
-
-	// seek to palette
-	Qseek (f, -768, SEEK_END);
-	Qread (f, palette, 768);
-
-	Qseek (f, sizeof(pcxbuf) - 4, SEEK_SET);
-
-	count = (pcx->xmax+1) * (pcx->ymax+1);
-	image_rgba = qmalloc( count * 4);
-
-	for (y=0 ; y<=pcx->ymax ; y++)
+	if (matchwidth && (pcx.xmax+1) != matchwidth)
 	{
-		pix = image_rgba + 4*y*(pcx->xmax+1);
-		for (x=0 ; x<=pcx->xmax ; )
-		{
-			dataByte = Qgetc(f);
+		qfree(f);
+		return NULL;
+	}
+	if (matchheight && (pcx.ymax+1) != matchheight)
+	{
+		qfree(f);
+		return NULL;
+	}
 
-			if((dataByte & 0xC0) == 0xC0)
+	image_width = pcx.xmax+1;
+	image_height = pcx.ymax+1;
+
+	image_rgba = qmalloc(image_width*image_height*4);
+	pbuf = image_rgba + image_width*image_height*3;
+
+	for (y = 0;y < image_height;y++)
+	{
+		a = pbuf + y * image_width;
+		for (x = 0;x < image_width;)
+		{
+			dataByte = *fin++;
+			if(dataByte >= 0xC0)
 			{
 				runLength = dataByte & 0x3F;
-				dataByte = Qgetc(f);
+				dataByte = *fin++;
 				if (runLength)
 				{
 					x += runLength;
 					while(runLength--)
-					{
-						pix[0] = palette[dataByte*3];
-						pix[1] = palette[dataByte*3+1];
-						pix[2] = palette[dataByte*3+2];
-						pix[3] = 255;
-						pix += 4;
-					}
+						*a++ = dataByte;
 				}
 			}
 			else
 			{
 				x++;
-				pix[0] = palette[dataByte*3];
-				pix[1] = palette[dataByte*3+1];
-				pix[2] = palette[dataByte*3+2];
-				pix[3] = 255;
-				pix += 4;
+				*a++ = dataByte;
 			}
-
 		}
 	}
-	Qclose(f);
-	image_width = pcx->xmax+1;
-	image_height = pcx->ymax+1;
+
+	palette = fin;
+	a = pbuf;
+	b = image_rgba;
+
+	for(x = 0;x < image_width*image_height;x++)
+	{
+		y = *b++ * 3;
+		*a++ = palette[y];
+		*a++ = palette[y+1];
+		*a++ = palette[y+2];
+		*a++ = 255;
+	}
+
+	qfree(f);
 	return image_rgba;
 }
 
@@ -182,38 +180,17 @@ TARGA LOADING
 =========================================================
 */
 
-typedef struct _TargaHeader {
+typedef struct _TargaHeader
+{
 	unsigned char 	id_length, colormap_type, image_type;
 	unsigned short	colormap_index, colormap_length;
 	unsigned char	colormap_size;
 	unsigned short	x_origin, y_origin, width, height;
 	unsigned char	pixel_size, attributes;
-} TargaHeader;
-
+}
+TargaHeader;
 
 TargaHeader		targa_header;
-
-int fgetLittleShort (QFile *f)
-{
-	byte	b1, b2;
-
-	b1 = Qgetc(f);
-	b2 = Qgetc(f);
-
-	return (short)(b1 + b2*256);
-}
-
-int fgetLittleLong (QFile *f)
-{
-	byte	b1, b2, b3, b4;
-
-	b1 = Qgetc(f);
-	b2 = Qgetc(f);
-	b3 = Qgetc(f);
-	b4 = Qgetc(f);
-
-	return b1 + (b2<<8) + (b3<<16) + (b4<<24);
-}
 
 
 /*
@@ -221,37 +198,33 @@ int fgetLittleLong (QFile *f)
 LoadTGA
 =============
 */
-byte* LoadTGA (QFile *fin, int matchwidth, int matchheight)
+byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 {
-	int				columns, rows, numPixels;
-	byte			*pixbuf;
-	int				row, column;
-	byte			*image_rgba;
+	int columns, rows, numPixels, row, column;
+	byte *pixbuf, *image_rgba, *fin;
 
-	targa_header.id_length = Qgetc(fin);
-	targa_header.colormap_type = Qgetc(fin);
-	targa_header.image_type = Qgetc(fin);
+	targa_header.id_length = f[0];
+	targa_header.colormap_type = f[1];
+	targa_header.image_type = f[2];
 	
-	targa_header.colormap_index = fgetLittleShort(fin);
-	targa_header.colormap_length = fgetLittleShort(fin);
-	targa_header.colormap_size = Qgetc(fin);
-	targa_header.x_origin = fgetLittleShort(fin);
-	targa_header.y_origin = fgetLittleShort(fin);
-	targa_header.width = fgetLittleShort(fin);
-	targa_header.height = fgetLittleShort(fin);
+	targa_header.colormap_index = f[3] + f[4] * 256;
+	targa_header.colormap_length = f[5] + f[6] * 256;
+	targa_header.colormap_size = f[7];
+	targa_header.x_origin = f[8] + f[9] * 256;
+	targa_header.y_origin = f[10] + f[11] * 256;
+	targa_header.width = f[12] + f[13] * 256;
+	targa_header.height = f[14] + f[15] * 256;
 	if (matchwidth && targa_header.width != matchwidth)
 		return NULL;
 	if (matchheight && targa_header.height != matchheight)
 		return NULL;
-	targa_header.pixel_size = Qgetc(fin);
-	targa_header.attributes = Qgetc(fin);
+	targa_header.pixel_size = f[16];
+	targa_header.attributes = f[17];
 
-	if (targa_header.image_type!=2 
-		&& targa_header.image_type!=10) 
+	if (targa_header.image_type != 2 && targa_header.image_type != 10)
 		Host_Error ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
 
-	if (targa_header.colormap_type !=0 
-		|| (targa_header.pixel_size!=32 && targa_header.pixel_size!=24))
+	if (targa_header.colormap_type != 0	|| (targa_header.pixel_size != 32 && targa_header.pixel_size != 24))
 		Host_Error ("LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
 
 	columns = targa_header.width;
@@ -259,110 +232,120 @@ byte* LoadTGA (QFile *fin, int matchwidth, int matchheight)
 	numPixels = columns * rows;
 
 	image_rgba = qmalloc(numPixels*4);
-	
+
+	fin = f + 18;
 	if (targa_header.id_length != 0)
-		Qseek(fin, targa_header.id_length, SEEK_CUR);  // skip TARGA image comment
+		fin += targa_header.id_length;  // skip TARGA image comment
 	
-	if (targa_header.image_type==2) {  // Uncompressed, RGB images
-		for(row=rows-1; row>=0; row--) {
+	if (targa_header.image_type == 2)
+	{
+		// Uncompressed, RGB images
+		for(row = rows - 1;row >= 0;row--)
+		{
 			pixbuf = image_rgba + row*columns*4;
-			for(column=0; column<columns; column++) {
-				unsigned char red = 0,green = 0,blue = 0,alphabyte = 0;
-				switch (targa_header.pixel_size) {
-					case 24:
-							
-							blue = Qgetc(fin);
-							green = Qgetc(fin);
-							red = Qgetc(fin);
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = 255;
-							break;
-					case 32:
-							blue = Qgetc(fin);
-							green = Qgetc(fin);
-							red = Qgetc(fin);
-							alphabyte = Qgetc(fin);
-							*pixbuf++ = red;
-							*pixbuf++ = green;
-							*pixbuf++ = blue;
-							*pixbuf++ = alphabyte;
-							break;
+			for(column = 0;column < columns;column++)
+			{
+				switch (targa_header.pixel_size)
+				{
+				case 24:
+					*pixbuf++ = fin[2];
+					*pixbuf++ = fin[1];
+					*pixbuf++ = fin[0];
+					*pixbuf++ = 255;
+					fin += 3;
+					break;
+				case 32:
+					*pixbuf++ = fin[2];
+					*pixbuf++ = fin[1];
+					*pixbuf++ = fin[0];
+					*pixbuf++ = fin[3];
+					fin += 4;
+					break;
 				}
 			}
 		}
 	}
-	else if (targa_header.image_type==10) {   // Runlength encoded RGB images
-		unsigned char red = 0,green = 0,blue = 0,alphabyte = 0,packetHeader,packetSize,j;
-		for(row=rows-1; row>=0; row--) {
-			pixbuf = image_rgba + row*columns*4;
-			for(column=0; column<columns; ) {
-				packetHeader=Qgetc(fin);
+	else if (targa_header.image_type==10)
+	{
+		// Runlength encoded RGB images
+		unsigned char red = 0, green = 0, blue = 0, alphabyte = 0, packetHeader, packetSize, j;
+		for(row = rows - 1;row >= 0;row--)
+		{
+			pixbuf = image_rgba + row * columns * 4;
+			for(column = 0;column < columns;)
+			{
+				packetHeader = *fin++;
 				packetSize = 1 + (packetHeader & 0x7f);
-				if (packetHeader & 0x80) {        // run-length packet
-					switch (targa_header.pixel_size) {
-						case 24:
-								blue = Qgetc(fin);
-								green = Qgetc(fin);
-								red = Qgetc(fin);
-								alphabyte = 255;
-								break;
-						case 32:
-								blue = Qgetc(fin);
-								green = Qgetc(fin);
-								red = Qgetc(fin);
-								alphabyte = Qgetc(fin);
-								break;
+				if (packetHeader & 0x80)
+				{
+					// run-length packet
+					switch (targa_header.pixel_size)
+					{
+					case 24:
+						blue = *fin++;
+						green = *fin++;
+						red = *fin++;
+						alphabyte = 255;
+						break;
+					case 32:
+						blue = *fin++;
+						green = *fin++;
+						red = *fin++;
+						alphabyte = *fin++;
+						break;
 					}
 	
-					for(j=0;j<packetSize;j++) {
-						*pixbuf++=red;
-						*pixbuf++=green;
-						*pixbuf++=blue;
-						*pixbuf++=alphabyte;
+					for(j = 0;j < packetSize;j++)
+					{
+						*pixbuf++ = red;
+						*pixbuf++ = green;
+						*pixbuf++ = blue;
+						*pixbuf++ = alphabyte;
 						column++;
-						if (column==columns) { // run spans across rows
-							column=0;
-							if (row>0)
+						if (column == columns)
+						{
+							// run spans across rows
+							column = 0;
+							if (row > 0)
 								row--;
 							else
 								goto breakOut;
-							pixbuf = image_rgba + row*columns*4;
+							pixbuf = image_rgba + row * columns * 4;
 						}
 					}
 				}
-				else {                            // non run-length packet
-					for(j=0;j<packetSize;j++) {
-						switch (targa_header.pixel_size) {
-							case 24:
-									blue = Qgetc(fin);
-									green = Qgetc(fin);
-									red = Qgetc(fin);
-									*pixbuf++ = red;
-									*pixbuf++ = green;
-									*pixbuf++ = blue;
-									*pixbuf++ = 255;
-									break;
-							case 32:
-									blue = Qgetc(fin);
-									green = Qgetc(fin);
-									red = Qgetc(fin);
-									alphabyte = Qgetc(fin);
-									*pixbuf++ = red;
-									*pixbuf++ = green;
-									*pixbuf++ = blue;
-									*pixbuf++ = alphabyte;
-									break;
+				else
+				{
+					// non run-length packet
+					for(j = 0;j < packetSize;j++)
+					{
+						switch (targa_header.pixel_size)
+						{
+						case 24:
+							*pixbuf++ = fin[2];
+							*pixbuf++ = fin[1];
+							*pixbuf++ = fin[0];
+							*pixbuf++ = 255;
+							fin += 3;
+							break;
+						case 32:
+							*pixbuf++ = fin[2];
+							*pixbuf++ = fin[1];
+							*pixbuf++ = fin[0];
+							*pixbuf++ = fin[3];
+							fin += 4;
+							break;
 						}
 						column++;
-						if (column==columns) { // pixel packet run spans across rows
-							column=0;
-							if (row>0)
+						if (column == columns)
+						{
+							// pixel packet run spans across rows
+							column = 0;
+							if (row > 0)
 								row--;
 							else
 								goto breakOut;
-							pixbuf = image_rgba + row*columns*4;
+							pixbuf = image_rgba + row * columns * 4;
 						}						
 					}
 				}
@@ -371,9 +354,9 @@ byte* LoadTGA (QFile *fin, int matchwidth, int matchheight)
 		}
 	}
 	
-	Qclose(fin);
 	image_width = columns;
 	image_height = rows;
+	free(f);
 	return image_rgba;
 }
 
@@ -382,28 +365,35 @@ byte* LoadTGA (QFile *fin, int matchwidth, int matchheight)
 LoadLMP
 ============
 */
-byte* LoadLMP (QFile *f, int matchwidth, int matchheight)
+byte* LoadLMP (byte *f, int matchwidth, int matchheight)
 {
 	byte	*image_rgba;
 	int		width, height;
 
 	// parse the very complicated header *chuckle*
-	width = fgetLittleLong(f);
-	height = fgetLittleLong(f);
+	width = LittleLong(((int *)f)[0]);
+	height = LittleLong(((int *)f)[1]);
 	if ((unsigned) width > 4096 || (unsigned) height > 4096)
+	{
+		qfree(f);
 		Host_Error("LoadLMP: invalid size\n");
+	}
 	if (matchwidth && width != matchwidth)
+	{
+		qfree(f);
 		return NULL;
+	}
 	if (matchheight && height != matchheight)
+	{
+		qfree(f);
 		return NULL;
+	}
 
 	image_rgba = qmalloc(width*height*4);
-	Qread(f, image_rgba + width*height*3, width*height);
-	Qclose(f);
-
-	Image_Copy8bitRGBA(image_rgba + width*height*3, image_rgba, width*height, d_8to24table);
+	Image_Copy8bitRGBA(f + 8, image_rgba, width*height, d_8to24table);
 	image_width = width;
 	image_height = height;
+	qfree(f);
 	return image_rgba;
 }
 
@@ -426,7 +416,7 @@ void Image_StripImageExtension (char *in, char *out)
 
 byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight)
 {
-	QFile	*f;
+	byte	*f;
 	char	basename[256], name[256];
 	byte	*c;
 	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
@@ -435,27 +425,27 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 		if (*c == '*')
 			*c = '#';
 	sprintf (name, "textures/%s.tga", basename);
-	COM_FOpenFile (name, &f, true, true);
+	f = COM_LoadMallocFile(name, true);
 	if (f)
 		return LoadTGA (f, matchwidth, matchheight);
 	sprintf (name, "textures/%s.pcx", basename);
-	COM_FOpenFile (name, &f, true, true);
+	f = COM_LoadMallocFile(name, true);
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
 	sprintf (name, "%s.tga", basename);
-	COM_FOpenFile (name, &f, true, true);
+	f = COM_LoadMallocFile(name, true);
 	if (f)
 		return LoadTGA (f, matchwidth, matchheight);
 	sprintf (name, "%s.pcx", basename);
-	COM_FOpenFile (name, &f, true, true);
+	f = COM_LoadMallocFile(name, true);
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
 	sprintf (name, "%s.lmp", basename);
-	COM_FOpenFile (name, &f, true, true);
+	f = COM_LoadMallocFile(name, true);
 	if (f)
 		return LoadLMP (f, matchwidth, matchheight);
 	if (complain)
-		Con_Printf ("Couldn't load %s.tga or .pcx\n", filename);
+		Con_Printf ("Couldn't load %s.tga, .pcx, .lmp\n", filename);
 	return NULL;
 }
 
