@@ -317,20 +317,40 @@ void NetConn_CloseClientPorts(void)
 			LHNET_CloseSocket(cl_sockets[cl_numsockets - 1]);
 }
 
+void NetConn_OpenClientPort(const char *addressstring, int defaultport)
+{
+	lhnetaddress_t address;
+	lhnetsocket_t *s;
+	char addressstring2[1024];
+	if (LHNETADDRESS_FromString(&address, addressstring, defaultport))
+	{
+		if ((s = LHNET_OpenSocket_Connectionless(&address)))
+		{
+			cl_sockets[cl_numsockets++] = s;
+			LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
+			Con_Printf("Client opened a socket on address %s\n", addressstring2);
+		}
+		else
+		{
+			LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
+			Con_Printf("Client failed to open a socket on address %s\n", addressstring2);
+		}
+	}
+	else
+		Con_Printf("Client unable to parse address %s\n", addressstring);
+}
+
 void NetConn_OpenClientPorts(void)
 {
 	int port;
-	lhnetaddress_t address;
 	NetConn_CloseClientPorts();
 	port = bound(0, cl_netport.integer, 65535);
 	if (cl_netport.integer != port)
 		Cvar_SetValueQuick(&cl_netport, port);
-	LHNETADDRESS_FromString(&address, "local", port);
-	cl_sockets[cl_numsockets++] = LHNET_OpenSocket_Connectionless(&address);
-	LHNETADDRESS_FromString(&address, cl_netaddress.string, port);
-	cl_sockets[cl_numsockets++] = LHNET_OpenSocket_Connectionless(&address);
-	LHNETADDRESS_FromString(&address, cl_netaddress_ipv6.string, port);
-	cl_sockets[cl_numsockets++] = LHNET_OpenSocket_Connectionless(&address);
+	Con_Printf("Client using port %i\n", port);
+	NetConn_OpenClientPort("local", port);
+	NetConn_OpenClientPort(cl_netaddress.string, port);
+	NetConn_OpenClientPort(cl_netaddress_ipv6.string, port);
 }
 
 void NetConn_CloseServerPorts(void)
@@ -340,25 +360,48 @@ void NetConn_CloseServerPorts(void)
 			LHNET_CloseSocket(sv_sockets[sv_numsockets - 1]);
 }
 
+void NetConn_OpenServerPort(const char *addressstring, int defaultport)
+{
+	lhnetaddress_t address;
+	lhnetsocket_t *s;
+	char addressstring2[1024];
+	if (LHNETADDRESS_FromString(&address, addressstring, defaultport))
+	{
+		if ((s = LHNET_OpenSocket_Connectionless(&address)))
+		{
+			sv_sockets[sv_numsockets++] = s;
+			LHNETADDRESS_ToString(LHNET_AddressFromSocket(s), addressstring2, sizeof(addressstring2), true);
+			Con_Printf("Server listening on address %s\n", addressstring2);
+		}
+		else
+		{
+			LHNETADDRESS_ToString(&address, addressstring2, sizeof(addressstring2), true);
+			Con_Printf("Server failed to open socket on address %s\n", addressstring2);
+		}
+	}
+	else
+		Con_Printf("Server unable to parse address %s\n", addressstring);
+}
+
 void NetConn_OpenServerPorts(int opennetports)
 {
 	int port;
-	lhnetaddress_t address;
 	NetConn_CloseServerPorts();
 	port = bound(0, sv_netport.integer, 65535);
 	if (port == 0)
 		port = 26000;
+	Con_Printf("Server using port %i\n", port);
 	if (sv_netport.integer != port)
 		Cvar_SetValueQuick(&sv_netport, port);
-	LHNETADDRESS_FromString(&address, "local", port);
-	sv_sockets[sv_numsockets++] = LHNET_OpenSocket_Connectionless(&address);
+	if (cls.state != ca_dedicated)
+		NetConn_OpenServerPort("local", port);
 	if (opennetports)
 	{
-		LHNETADDRESS_FromString(&address, sv_netaddress.string, port);
-		sv_sockets[sv_numsockets++] = LHNET_OpenSocket_Connectionless(&address);
-		LHNETADDRESS_FromString(&address, sv_netaddress_ipv6.string, port);
-		sv_sockets[sv_numsockets++] = LHNET_OpenSocket_Connectionless(&address);
+		NetConn_OpenServerPort(sv_netaddress.string, port);
+		NetConn_OpenServerPort(sv_netaddress_ipv6.string, port);
 	}
+	if (sv_numsockets == 0)
+		Host_Error("NetConn_OpenServerPorts: unable to open any ports!\n");
 }
 
 lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address)
@@ -1521,7 +1564,8 @@ void Net_Slist_f(void)
 
 void NetConn_Init(void)
 {
-	int masternum;
+	int i;
+	lhnetaddress_t tempaddress;
 	netconn_mempool = Mem_AllocPool("Networking");
 	Cmd_AddCommand("net_stats", Net_Stats_f);
 	Cmd_AddCommand("net_slist", Net_Slist_f);
@@ -1545,8 +1589,30 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_netaddress_ipv6);
 	Cvar_RegisterVariable(&sv_public);
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
-	for (masternum = 0;sv_masters[masternum].name;masternum++)
-		Cvar_RegisterVariable(&sv_masters[masternum]);
+	for (i = 0;sv_masters[i].name;i++)
+		Cvar_RegisterVariable(&sv_masters[i]);
+	if ((i = COM_CheckParm("-ip")) && i + 1 < com_argc)
+	{
+		if (LHNETADDRESS_FromString(&tempaddress, com_argv[i + 1], 0) == 1)
+		{
+			Con_Printf("-ip option used, setting cl_netaddress and sv_netaddress to address \"%s\"\n");
+			Cvar_SetQuick(&cl_netaddress, com_argv[i + 1]);
+			Cvar_SetQuick(&sv_netaddress, com_argv[i + 1]);
+		}
+		else
+			Con_Printf("-ip option used, but unable to parse the address \"%s\"\n", com_argv[i + 1]);
+	}
+	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < com_argc)
+	{
+		i = atoi(com_argv[i + 1]);
+		if (i >= 0 && i < 65536)
+		{
+			Con_Printf("-port option used, setting port cvar to %i\n", i);
+			Cvar_SetQuick(&sv_netport, i);
+		}
+		else
+			Con_Printf("-port option used, but %i is not a valid port number\n", i);
+	}
 	cl_numsockets = 0;
 	sv_numsockets = 0;
 	memset(&pingcache, 0, sizeof(pingcache));
