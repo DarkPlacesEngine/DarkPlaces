@@ -688,12 +688,22 @@ void R_RenderScene(void)
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
+	GL_ShowTrisColor(0.025, 0.025, 0, 1);
+	if (world->model && world->model->DrawSky)
+	{
+		world->model->DrawSky(world);
+		R_TimeReport("worldsky");
+	}
+
 	if (R_DrawBrushModelsSky())
 		R_TimeReport("bmodelsky");
 
-	// must occur early because it can draw sky
-	R_DrawWorld(world);
-	R_TimeReport("world");
+	GL_ShowTrisColor(0.05, 0.05, 0.05, 1);
+	if (world->model && world->model->Draw)
+	{
+		world->model->Draw(world);
+		R_TimeReport("world");
+	}
 
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
