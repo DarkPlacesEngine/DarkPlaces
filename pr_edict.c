@@ -1289,12 +1289,15 @@ PR_LoadProgs
 ===============
 */
 extern void PR_Cmd_Reset (void);
-void PR_LoadProgs (void)
+void PR_LoadProgs (const char *progsname)
 {
 	int i;
 	dstatement_t *st;
 	ddef_t *infielddefs;
 	dfunction_t *dfunctions;
+
+	if (!progsname || !*progsname) 
+		Host_Error("PR_LoadProgs: passed empty progsname");
 
 // flush the non-C variable lookup cache
 	for (i=0 ; i<GEFV_CACHESIZE ; i++)
@@ -1303,9 +1306,9 @@ void PR_LoadProgs (void)
 	Mem_EmptyPool(progs_mempool);
 	Mem_EmptyPool(edictstring_mempool);
 
-	progs = (dprograms_t *)FS_LoadFile ("progs.dat", progs_mempool, false);
+	progs = (dprograms_t *)FS_LoadFile (progsname, progs_mempool, false);
 	if (!progs)
-		Host_Error ("PR_LoadProgs: couldn't load progs.dat");
+		Host_Error ("PR_LoadProgs: couldn't load %s", progsname);
 
 	Con_DPrintf("Programs occupy %iK.\n", fs_filesize/1024);
 

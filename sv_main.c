@@ -41,6 +41,8 @@ cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", 
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1"};
 cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1"};
 
+cvar_t sv_progs = {0, "sv_progs", "progs.dat" };
+
 server_t sv;
 server_static_t svs;
 
@@ -84,6 +86,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_protocolname);
 	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
 	Cvar_RegisterVariable (&sv_maxrate);
+	Cvar_RegisterVariable (&sv_progs);
 
 	SV_Phys_Init();
 	SV_World_Init();
@@ -1665,7 +1668,7 @@ void SV_SpawnServer (const char *server)
 	}
 
 // load progs to get entity field count
-	PR_LoadProgs ();
+	PR_LoadProgs ( sv_progs.string );
 
 // allocate server memory
 	// start out with just enough room for clients and a reasonable estimate of entities

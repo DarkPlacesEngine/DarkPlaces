@@ -161,7 +161,7 @@ extern	int				pr_edictareasize; // LordHavoc: for bounds checking
 void PR_Init (void);
 
 void PR_ExecuteProgram (func_t fnum, const char *errormessage);
-void PR_LoadProgs (void);
+void PR_LoadProgs (const char *progsname);
 
 void PR_Profile_f (void);
 
