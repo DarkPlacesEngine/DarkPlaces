@@ -202,7 +202,12 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
 void VectorVectorsDouble(const double *forward, double *right, double *up);
 
 void PlaneClassify(struct mplane_s *p);
-int BoxOnPlaneSide (const vec3_t emins, const vec3_t emaxs, const struct mplane_s *p);
+int BoxOnPlaneSide(const vec3_t emins, const vec3_t emaxs, const struct mplane_s *p);
+int BoxOnPlaneSide_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, const vec_t dist);
+void BoxPlaneCorners(const vec3_t emins, const vec3_t emaxs, const struct mplane_s *p, vec3_t outnear, vec3_t outfar);
+void BoxPlaneCorners_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, vec3_t outnear, vec3_t outfar);
+void BoxPlaneCornerDistances(const vec3_t emins, const vec3_t emaxs, const struct mplane_s *p, vec_t *outnear, vec_t *outfar);
+void BoxPlaneCornerDistances_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, vec_t *outnear, vec_t *outfar);
 
 #define PlaneDist(point,plane)  ((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal))
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)

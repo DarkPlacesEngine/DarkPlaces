@@ -289,29 +289,114 @@ void PlaneClassify(mplane_t *p)
 		p->signbits |= 4;
 }
 
-int BoxOnPlaneSide (const vec3_t emins, const vec3_t emaxs, const mplane_t *p)
+int BoxOnPlaneSide(const vec3_t emins, const vec3_t emaxs, const mplane_t *p)
 {
 	if (p->type < 3)
 		return ((emaxs[p->type] >= p->dist) | ((emins[p->type] < p->dist) << 1));
 	switch(p->signbits)
 	{
 	default:
-	case 0:
-		return (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) < p->dist) << 1));
-	case 1:
-		return (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) < p->dist) << 1));
-	case 2:
-		return (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) < p->dist) << 1));
-	case 3:
-		return (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) < p->dist) << 1));
-	case 4:
-		return (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
-	case 5:
-		return (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
-	case 6:
-		return (((p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
-	case 7:
-		return (((p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2]) >= p->dist) | (((p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2]) < p->dist) << 1));
+	case 0: return (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) < p->dist) << 1));
+	case 1: return (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) < p->dist) << 1));
+	case 2: return (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) < p->dist) << 1));
+	case 3: return (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) < p->dist) << 1));
+	case 4: return (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
+	case 5: return (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
+	case 6: return (((p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
+	case 7: return (((p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2]) >= p->dist) | (((p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2]) < p->dist) << 1));
+	}
+}
+
+int BoxOnPlaneSide_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, const vec_t dist)
+{
+	switch((normal[0] < 0) | ((normal[1] < 0) << 1) | ((normal[2] < 0) << 2))
+	{
+	default:
+	case 0: return (((normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2]) >= dist) | (((normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emins[2]) < dist) << 1));
+	case 1: return (((normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2]) >= dist) | (((normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emins[2]) < dist) << 1));
+	case 2: return (((normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emaxs[2]) >= dist) | (((normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emins[2]) < dist) << 1));
+	case 3: return (((normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emaxs[2]) >= dist) | (((normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emins[2]) < dist) << 1));
+	case 4: return (((normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emins[2]) >= dist) | (((normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emaxs[2]) < dist) << 1));
+	case 5: return (((normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emins[2]) >= dist) | (((normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emaxs[2]) < dist) << 1));
+	case 6: return (((normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emins[2]) >= dist) | (((normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2]) < dist) << 1));
+	case 7: return (((normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emins[2]) >= dist) | (((normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2]) < dist) << 1));
+	}
+}
+
+void BoxPlaneCorners(const vec3_t emins, const vec3_t emaxs, const mplane_t *p, vec3_t outnear, vec3_t outfar)
+{
+	if (p->type < 3)
+	{
+		outnear[0] = outnear[1] = outnear[2] = outfar[0] = outfar[1] = outfar[2] = 0;
+		outnear[p->type] = emins[p->type];
+		outfar[p->type] = emaxs[p->type];
+		return;
+	}
+	switch(p->signbits)
+	{
+	default:
+	case 0: outnear[0] = emaxs[0];outnear[1] = emaxs[1];outnear[2] = emaxs[2];outfar[0] = emins[0];outfar[1] = emins[1];outfar[2] = emins[2];break;
+	case 1: outnear[0] = emins[0];outnear[1] = emaxs[1];outnear[2] = emaxs[2];outfar[0] = emaxs[0];outfar[1] = emins[1];outfar[2] = emins[2];break;
+	case 2: outnear[0] = emaxs[0];outnear[1] = emins[1];outnear[2] = emaxs[2];outfar[0] = emins[0];outfar[1] = emaxs[1];outfar[2] = emins[2];break;
+	case 3: outnear[0] = emins[0];outnear[1] = emins[1];outnear[2] = emaxs[2];outfar[0] = emaxs[0];outfar[1] = emaxs[1];outfar[2] = emins[2];break;
+	case 4: outnear[0] = emaxs[0];outnear[1] = emaxs[1];outnear[2] = emins[2];outfar[0] = emins[0];outfar[1] = emins[1];outfar[2] = emaxs[2];break;
+	case 5: outnear[0] = emins[0];outnear[1] = emaxs[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emins[1];outfar[2] = emaxs[2];break;
+	case 6: outnear[0] = emaxs[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emins[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
+	case 7: outnear[0] = emins[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
+	}                                                                                                                      
+}
+
+void BoxPlaneCorners_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, vec3_t outnear, vec3_t outfar)
+{
+	switch((normal[0] < 0) | ((normal[1] < 0) << 1) | ((normal[2] < 0) << 2))
+	{
+	default:
+	case 0: outnear[0] = emaxs[0];outnear[1] = emaxs[1];outnear[2] = emaxs[2];outfar[0] = emins[0];outfar[1] = emins[1];outfar[2] = emins[2];break;
+	case 1: outnear[0] = emins[0];outnear[1] = emaxs[1];outnear[2] = emaxs[2];outfar[0] = emaxs[0];outfar[1] = emins[1];outfar[2] = emins[2];break;
+	case 2: outnear[0] = emaxs[0];outnear[1] = emins[1];outnear[2] = emaxs[2];outfar[0] = emins[0];outfar[1] = emaxs[1];outfar[2] = emins[2];break;
+	case 3: outnear[0] = emins[0];outnear[1] = emins[1];outnear[2] = emaxs[2];outfar[0] = emaxs[0];outfar[1] = emaxs[1];outfar[2] = emins[2];break;
+	case 4: outnear[0] = emaxs[0];outnear[1] = emaxs[1];outnear[2] = emins[2];outfar[0] = emins[0];outfar[1] = emins[1];outfar[2] = emaxs[2];break;
+	case 5: outnear[0] = emins[0];outnear[1] = emaxs[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emins[1];outfar[2] = emaxs[2];break;
+	case 6: outnear[0] = emaxs[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emins[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
+	case 7: outnear[0] = emins[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
+	}                                                                                                                      
+}
+
+void BoxPlaneCornerDistances(const vec3_t emins, const vec3_t emaxs, const mplane_t *p, vec_t *outneardist, vec_t *outfardist)
+{
+	if (p->type < 3)
+	{
+		*outneardist = emins[p->type] - p->dist;
+		*outfardist = emaxs[p->type] - p->dist;
+		return;
+	}
+	switch(p->signbits)
+	{
+	default:
+	case 0: *outneardist = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2] - p->dist;*outfardist = p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2] - p->dist;break;
+	case 1: *outneardist = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2] - p->dist;*outfardist = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2] - p->dist;break;
+	case 2: *outneardist = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2] - p->dist;*outfardist = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2] - p->dist;break;
+	case 3: *outneardist = p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2] - p->dist;*outfardist = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2] - p->dist;break;
+	case 4: *outneardist = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2] - p->dist;*outfardist = p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2] - p->dist;break;
+	case 5: *outneardist = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emins[2] - p->dist;*outfardist = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emaxs[2] - p->dist;break;
+	case 6: *outneardist = p->normal[0] * emaxs[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2] - p->dist;*outfardist = p->normal[0] * emins[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2] - p->dist;break;
+	case 7: *outneardist = p->normal[0] * emins[0] + p->normal[1] * emins[1] + p->normal[2] * emins[2] - p->dist;*outfardist = p->normal[0] * emaxs[0] + p->normal[1] * emaxs[1] + p->normal[2] * emaxs[2] - p->dist;break;
+	}
+}
+
+void BoxPlaneCornerDistances_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, vec_t *outneardist, vec_t *outfardist)
+{
+	switch((normal[0] < 0) | ((normal[1] < 0) << 1) | ((normal[2] < 0) << 2))
+	{
+	default:
+	case 0: *outneardist = normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2];*outfardist = normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emins[2];break;
+	case 1: *outneardist = normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2];*outfardist = normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emins[2];break;
+	case 2: *outneardist = normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emaxs[2];*outfardist = normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emins[2];break;
+	case 3: *outneardist = normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emaxs[2];*outfardist = normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emins[2];break;
+	case 4: *outneardist = normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emins[2];*outfardist = normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emaxs[2];break;
+	case 5: *outneardist = normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emins[2];*outfardist = normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emaxs[2];break;
+	case 6: *outneardist = normal[0] * emaxs[0] + normal[1] * emins[1] + normal[2] * emins[2];*outfardist = normal[0] * emins[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2];break;
+	case 7: *outneardist = normal[0] * emins[0] + normal[1] * emins[1] + normal[2] * emins[2];*outfardist = normal[0] * emaxs[0] + normal[1] * emaxs[1] + normal[2] * emaxs[2];break;
 	}
 }
 
