@@ -351,10 +351,10 @@ static char	*empty_string = "";
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	double			frameoldtime, framenewtime;
-	MEMORYSTATUS	lpBuffer;
-	static	char	cwd[1024];
-	int				t;
+	double frameoldtime, framenewtime;
+	MEMORYSTATUS lpBuffer;
+//	static char cwd[1024];
+	int t;
 
 	/* previous instances do not exist in Win32 */
 	if (hPrevInstance)
@@ -366,28 +366,34 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	lpBuffer.dwLength = sizeof(MEMORYSTATUS);
 	GlobalMemoryStatus (&lpBuffer);
 
+/*
 	if (!GetCurrentDirectory (sizeof(cwd), cwd))
 		Sys_Error ("Couldn't determine current directory");
 
 	if (cwd[strlen(cwd)-1] == '/')
 		cwd[strlen(cwd)-1] = 0;
+*/
 
 	memset(&host_parms, 0, sizeof(host_parms));
 
-	host_parms.basedir = cwd;
+//	host_parms.basedir = cwd;
+	host_parms.basedir = ".";
+#if CACHEENABLE
+	host_parms.cachedir = ".";
+#endif
 
-	host_parms.argc = 1;
+	com_argc = 1;
 	argv[0] = empty_string;
 
-	while (*lpCmdLine && (host_parms.argc < MAX_NUM_ARGVS))
+	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
 	{
 		while (*lpCmdLine && ((*lpCmdLine <= 32) || (*lpCmdLine > 126)))
 			lpCmdLine++;
 
 		if (*lpCmdLine)
 		{
-			argv[host_parms.argc] = lpCmdLine;
-			host_parms.argc++;
+			argv[com_argc] = lpCmdLine;
+			com_argc++;
 
 			while (*lpCmdLine && ((*lpCmdLine > 32) && (*lpCmdLine <= 126)))
 				lpCmdLine++;
@@ -399,7 +405,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			}
 		}
 	}
-	host_parms.argv = argv;
+	com_argv = argv;
 
 	Sys_Shared_EarlyInit();
 

@@ -807,8 +807,6 @@ void Host_Init (void)
 	// LordHavoc: quake never seeded the random number generator before... heh
 	srand(time(NULL));
 
-	com_argc = host_parms.argc;
-	com_argv = host_parms.argv;
 	// FIXME: this is evil, but possibly temporary
 	if (COM_CheckParm("-developer"))
 	{

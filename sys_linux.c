@@ -21,11 +21,6 @@
 
 #include "quakedef.h"
 
-char *basedir = ".";
-#if CACHEENABLE
-char *cachedir = "/tmp";
-#endif
-
 // =======================================================================
 // General routines
 // =======================================================================
@@ -144,7 +139,7 @@ void Sys_Sleep(void)
 	usleep(1);
 }
 
-int main (int c, char **v)
+int main (int argc, char **argv)
 {
 	double frameoldtime, framenewtime;
 
@@ -152,9 +147,12 @@ int main (int c, char **v)
 
 	memset(&host_parms, 0, sizeof(host_parms));
 
-	host_parms.argc = c;
-	host_parms.argv = v;
-	host_parms.basedir = basedir;
+	com_argc = argc;
+	com_argv = argv;
+	host_parms.basedir = ".";
+#if CACHEENABLE
+	host_parms.cachedir = "/tmp";
+#endif
 
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 
