@@ -37,8 +37,11 @@ typedef union eval_s
 
 typedef struct link_s
 {
+	void *entity;
 	struct link_s	*prev, *next;
 } link_t;
+
+#define ENTITYGRIDAREAS 16
 
 // the entire server entity structure
 typedef struct edict_s
@@ -47,6 +50,8 @@ typedef struct edict_s
 	qboolean free;
 	// physics area this edict is linked into
 	link_t area;
+	// physics grid areas this edict is linked into
+	link_t areagrid[ENTITYGRIDAREAS];
 
 	// old entity protocol, not used
 #ifdef QUAKEENTITIES
