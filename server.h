@@ -305,5 +305,7 @@ void SV_SpawnServer (const char *server);
 
 void SV_SetMaxClients(int n);
 
+void SV_CheckVelocity (edict_t *ent);
+
 #endif
 

@@ -665,6 +665,15 @@ void SV_RunClients (void)
 			}
 			else
 				SV_ClientThink ();
+
+			SV_CheckVelocity (sv_player);
+
+			// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
+			// player_run/player_stand1 does not horribly malfunction if the
+			// velocity becomes a number that is both == 0 and != 0
+			// (sounds to me like NaN but to be absolutely safe...)
+			if (DotProduct(sv_player->v->velocity, sv_player->v->velocity) < 0.0001)
+				VectorClear(sv_player->v->velocity);
 		}
 	}
 }

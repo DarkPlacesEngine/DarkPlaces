@@ -1074,6 +1074,8 @@ void SV_Physics_Client (edict_t *ent, int num)
 	if (!svs.clients[num-1].active)
 		return;		// unconnected slot
 
+	SV_CheckVelocity (ent);
+
 	// call standard client pre-think
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
@@ -1124,8 +1126,12 @@ void SV_Physics_Client (edict_t *ent, int num)
 		Host_Error ("SV_Physics_client: bad movetype %i", (int)ent->v->movetype);
 	}
 
+	SV_CheckVelocity (ent);
+
 	// call standard player post-think
 	SV_LinkEdict (ent, true);
+
+	SV_CheckVelocity (ent);
 
 	pr_global_struct->time = sv.time;
 	pr_global_struct->self = EDICT_TO_PROG(ent);
