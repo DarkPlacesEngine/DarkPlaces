@@ -44,19 +44,12 @@ qboolean SNDDMA_Init(void)
 	struct audio_buf_info info;
 	int caps;
 	int format16bit;
-	// LordHavoc: a quick patch to support big endian cpu, I hope
-	union
-	{
-		unsigned char c[2];
-		unsigned short s;
-	}
-	endiantest;
-	endiantest.s = 1;
-	if (endiantest.c[1])
-		format16bit = AFMT_S16_BE;
-	else
-		format16bit = AFMT_S16_LE;
 
+#if BYTE_ORDER == BIG_ENDIAN
+	format16bit = AFMT_S16_BE;
+#else
+	format16bit = AFMT_S16_LE;
+#endif
 	snd_inited = 0;
 
 	// open /dev/dsp, confirm capability to mmap, and get size of dma buffer

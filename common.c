@@ -54,15 +54,6 @@ char com_modname[MAX_OSPATH];
 ============================================================================
 */
 
-#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-short   (*BigShort) (short l);
-short   (*LittleShort) (short l);
-int     (*BigLong) (int l);
-int     (*LittleLong) (int l);
-float   (*BigFloat) (float l);
-float   (*LittleFloat) (float l);
-#endif
-
 short   ShortSwap (short l)
 {
 	qbyte    b1,b2;
@@ -72,13 +63,6 @@ short   ShortSwap (short l)
 
 	return (b1<<8) + b2;
 }
-
-#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-short   ShortNoSwap (short l)
-{
-	return l;
-}
-#endif
 
 int    LongSwap (int l)
 {
@@ -91,13 +75,6 @@ int    LongSwap (int l)
 
 	return ((int)b1<<24) + ((int)b2<<16) + ((int)b3<<8) + b4;
 }
-
-#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-int     LongNoSwap (int l)
-{
-	return l;
-}
-#endif
 
 float FloatSwap (float f)
 {
@@ -115,13 +92,6 @@ float FloatSwap (float f)
 	dat2.b[3] = dat1.b[0];
 	return dat2.f;
 }
-
-#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-float FloatNoSwap (float f)
-{
-	return f;
-}
-#endif
 
 
 // Extract integers from buffers
@@ -868,30 +838,6 @@ COM_Init
 */
 void COM_Init (void)
 {
-#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-	qbyte swaptest[2] = {1,0};
-
-// set the byte swapping variables in a portable manner
-	if ( *(short *)swaptest == 1)
-	{
-		BigShort = ShortSwap;
-		LittleShort = ShortNoSwap;
-		BigLong = LongSwap;
-		LittleLong = LongNoSwap;
-		BigFloat = FloatSwap;
-		LittleFloat = FloatNoSwap;
-	}
-	else
-	{
-		BigShort = ShortNoSwap;
-		LittleShort = ShortSwap;
-		BigLong = LongNoSwap;
-		LittleLong = LongSwap;
-		BigFloat = FloatNoSwap;
-		LittleFloat = FloatSwap;
-	}
-#endif
-
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
 
