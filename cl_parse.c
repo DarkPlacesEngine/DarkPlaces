@@ -1551,7 +1551,12 @@ void CL_ParseServerMessage(void)
 			break;
 
 		case svc_disconnect:
-			Host_EndGame ("Server disconnected\n");
+			Con_Printf ("Server disconnected\n");
+			if (cls.demonum != -1)
+				CL_NextDemo ();
+			else
+				CL_Disconnect ();
+			break;
 
 		case svc_print:
 			Con_Print(MSG_ReadString());
