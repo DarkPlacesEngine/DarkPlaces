@@ -469,10 +469,10 @@ void SV_PrepareEntitiesForSending(void)
 		VectorCopy(ent->v->origin, cs.origin);
 		VectorCopy(ent->v->angles, cs.angles);
 		cs.flags = 0;
-		cs.effects = (int)ent->v->effects;
-		cs.colormap = (qbyte)ent->v->colormap;
-		cs.skin = (qbyte)ent->v->skin;
-		cs.frame = (qbyte)ent->v->frame;
+		cs.effects = (unsigned)ent->v->effects;
+		cs.colormap = (unsigned)ent->v->colormap;
+		cs.skin = (unsigned)ent->v->skin;
+		cs.frame = (unsigned)ent->v->frame;
 		cs.viewmodelforclient = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)->edict;
 		cs.exteriormodelforclient = GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)->edict;
 		cs.nodrawtoclient = GETEDICTFIELDVALUE(ent, eval_nodrawtoclient)->edict;
