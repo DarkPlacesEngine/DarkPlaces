@@ -745,8 +745,8 @@ static void SCR_CalcRefdef (void)
 		contents = Mod_PointInLeaf(r_refdef.vieworg, cl.worldmodel)->contents;
 		if (contents != CONTENTS_EMPTY && contents != CONTENTS_SOLID)
 		{
-			r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.03 + 0.97);
-			r_refdef.fov_y *= (sin(cl.time * 3.0) * 0.03 + 0.97);
+			r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);
+			r_refdef.fov_y *= (sin(cl.time * 3.0) * 0.015 + 0.985);
 		}
 	}
 }
