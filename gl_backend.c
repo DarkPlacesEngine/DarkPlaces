@@ -1292,7 +1292,7 @@ void SCR_DrawScreen (void)
 			r_showtrispass = 1;
 		}
 
-		if (scr_conlines < vid.conheight && cls.signon == SIGNONS)
+		if (cls.signon == SIGNONS)
 		{
 			float size;
 
