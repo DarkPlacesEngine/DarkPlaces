@@ -79,8 +79,8 @@ float overbrightscale;
 
 void SCR_ScreenShot_f (void);
 
-static int max_meshs;
-static int max_verts; // always max_meshs * 3
+static int max_tris;
+static int max_verts; // always max_tris * 3
 
 typedef struct buf_mesh_s
 {
@@ -128,8 +128,8 @@ typedef struct
 }
 buf_texcoord_t;
 
-static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive;
-static buf_mesh_t *buf_mesh;
+static int currenttriangle, currentvertex, backendunits, backendactive;
+static buf_mesh_t buf_mesh;
 static buf_tri_t *buf_tri;
 static buf_vertex_t *buf_vertex;
 static buf_fcolor_t *buf_fcolor;
@@ -156,7 +156,7 @@ static void gl_backend_start(void)
 	}
 	Con_Printf("\n");
 
-	max_verts = max_meshs * 3;
+	max_verts = max_tris * 3;
 
 	if (!gl_backend_mempool)
 		gl_backend_mempool = Mem_AllocPool("GL_Backend");
@@ -169,8 +169,7 @@ static void gl_backend_start(void)
 		memset(var, 0, count * sizeof(sizeofstruct));\
 	}
 
-	BACKENDALLOC(buf_mesh, max_meshs, buf_mesh_t, "buf_mesh")
-	BACKENDALLOC(buf_tri, max_meshs, buf_tri_t, "buf_tri")
+	BACKENDALLOC(buf_tri, max_tris, buf_tri_t, "buf_tri")
 	BACKENDALLOC(buf_vertex, max_verts, buf_vertex_t, "buf_vertex")
 	BACKENDALLOC(buf_fcolor, max_verts, buf_fcolor_t, "buf_fcolor")
 	BACKENDALLOC(buf_bcolor, max_verts, buf_bcolor_t, "buf_bcolor")
@@ -227,9 +226,9 @@ static void gl_backend_bufferchanges(int init)
 	if (gl_mesh_maxtriangles.integer > 21760)
 		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 21760);
 
-	if (max_meshs != gl_mesh_maxtriangles.integer)
+	if (max_tris != gl_mesh_maxtriangles.integer)
 	{
-		max_meshs = gl_mesh_maxtriangles.integer;
+		max_tris = gl_mesh_maxtriangles.integer;
 
 		if (!init)
 		{
@@ -446,7 +445,6 @@ void R_Mesh_Start(float farclip)
 
 	gl_backend_bufferchanges(false);
 
-	currentmesh = 0;
 	currenttriangle = 0;
 	currentvertex = 0;
 	r_mesh_farclip = farclip;
@@ -543,14 +541,14 @@ void GL_ConvertColorsFloatToByte(void)
 	}
 }
 
-void GL_MeshState(buf_mesh_t *mesh)
+void GL_MeshState(void)
 {
 	int i;
 	if (backendunits > 1)
 	{
 		for (i = 0;i < backendunits;i++)
 		{
-			if (gl_state.texture[i] != mesh->textures[i])
+			if (gl_state.texture[i] != buf_mesh.textures[i])
 			{
 				if (gl_state.unit != i)
 				{
@@ -568,7 +566,7 @@ void GL_MeshState(buf_mesh_t *mesh)
 					}
 					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
-				qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[i] = mesh->textures[i]));CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[i] = buf_mesh.textures[i]));CHECKGLERROR
 				if (gl_state.texture[i] == 0)
 				{
 					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
@@ -582,26 +580,26 @@ void GL_MeshState(buf_mesh_t *mesh)
 					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
 			}
-			if (gl_state.texturergbscale[i] != mesh->texturergbscale[i])
+			if (gl_state.texturergbscale[i] != buf_mesh.texturergbscale[i])
 			{
 				if (gl_state.unit != i)
 				{
 					qglActiveTexture(GL_TEXTURE0_ARB + (gl_state.unit = i));CHECKGLERROR
 				}
-				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.texturergbscale[i] = mesh->texturergbscale[i]));CHECKGLERROR
+				qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (gl_state.texturergbscale[i] = buf_mesh.texturergbscale[i]));CHECKGLERROR
 			}
 		}
 	}
 	else
 	{
-		if (gl_state.texture[0] != mesh->textures[0])
+		if (gl_state.texture[0] != buf_mesh.textures[0])
 		{
 			if (gl_state.texture[0] == 0)
 			{
 				qglEnable(GL_TEXTURE_2D);CHECKGLERROR
 				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 			}
-			qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[0] = mesh->textures[0]));CHECKGLERROR
+			qglBindTexture(GL_TEXTURE_2D, (gl_state.texture[0] = buf_mesh.textures[0]));CHECKGLERROR
 			if (gl_state.texture[0] == 0)
 			{
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
@@ -609,9 +607,9 @@ void GL_MeshState(buf_mesh_t *mesh)
 			}
 		}
 	}
-	if (gl_state.blendfunc1 != mesh->blendfunc1 || gl_state.blendfunc2 != mesh->blendfunc2)
+	if (gl_state.blendfunc1 != buf_mesh.blendfunc1 || gl_state.blendfunc2 != buf_mesh.blendfunc2)
 	{
-		qglBlendFunc(gl_state.blendfunc1 = mesh->blendfunc1, gl_state.blendfunc2 = mesh->blendfunc2);CHECKGLERROR
+		qglBlendFunc(gl_state.blendfunc1 = buf_mesh.blendfunc1, gl_state.blendfunc2 = buf_mesh.blendfunc2);CHECKGLERROR
 		if (gl_state.blendfunc2 == GL_ZERO)
 		{
 			if (gl_state.blendfunc1 == GL_ONE)
@@ -640,17 +638,17 @@ void GL_MeshState(buf_mesh_t *mesh)
 			}
 		}
 	}
-	if (gl_state.depthtest != mesh->depthtest)
+	if (gl_state.depthtest != buf_mesh.depthtest)
 	{
-		gl_state.depthtest = mesh->depthtest;
+		gl_state.depthtest = buf_mesh.depthtest;
 		if (gl_state.depthtest)
 			qglEnable(GL_DEPTH_TEST);
 		else
 			qglDisable(GL_DEPTH_TEST);
 	}
-	if (gl_state.depthmask != mesh->depthmask)
+	if (gl_state.depthmask != buf_mesh.depthmask)
 	{
-		qglDepthMask(gl_state.depthmask = mesh->depthmask);CHECKGLERROR
+		qglDepthMask(gl_state.depthmask = buf_mesh.depthmask);CHECKGLERROR
 	}
 }
 
@@ -712,19 +710,14 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i, k;
+	int i;
 	float *v, tempv[4], m[12];
-	buf_mesh_t *mesh;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Render: called when backend is not active\n");
 
-	if (!currentmesh)
-		return;
-
 	if (!r_render.integer)
 	{
-		currentmesh = 0;
 		currenttriangle = 0;
 		currentvertex = 0;
 		return;
@@ -742,43 +735,30 @@ void R_Mesh_Render(void)
 		GL_SetupTextureState();
 	}
 
-	GL_MeshState(buf_mesh);
-	for (k = 0, mesh = buf_mesh;k < currentmesh;k++, mesh++)
+	GL_MeshState();
+	m[0] = buf_mesh.matrix.m[0][0];
+	m[1] = buf_mesh.matrix.m[0][1];
+	m[2] = buf_mesh.matrix.m[0][2];
+	m[3] = buf_mesh.matrix.m[0][3];
+	m[4] = buf_mesh.matrix.m[1][0];
+	m[5] = buf_mesh.matrix.m[1][1];
+	m[6] = buf_mesh.matrix.m[1][2];
+	m[7] = buf_mesh.matrix.m[1][3];
+	m[8] = buf_mesh.matrix.m[2][0];
+	m[9] = buf_mesh.matrix.m[2][1];
+	m[10] = buf_mesh.matrix.m[2][2];
+	m[11] = buf_mesh.matrix.m[2][3];
+	for (i = 0, v = buf_vertex[buf_mesh.firstvert].v;i < buf_mesh.verts;i++, v += 4)
 	{
-		m[0] = mesh->matrix.m[0][0];
-		m[1] = mesh->matrix.m[0][1];
-		m[2] = mesh->matrix.m[0][2];
-		m[3] = mesh->matrix.m[0][3];
-		m[4] = mesh->matrix.m[1][0];
-		m[5] = mesh->matrix.m[1][1];
-		m[6] = mesh->matrix.m[1][2];
-		m[7] = mesh->matrix.m[1][3];
-		m[8] = mesh->matrix.m[2][0];
-		m[9] = mesh->matrix.m[2][1];
-		m[10] = mesh->matrix.m[2][2];
-		m[11] = mesh->matrix.m[2][3];
-		for (i = 0, v = buf_vertex[mesh->firstvert].v;i < mesh->verts;i++, v += 4)
-		{
-			VectorCopy(v, tempv);
-			//Matrix4x4_Transform(&mesh->matrix, tempv, v);
-			v[0] = tempv[0] * m[0] + tempv[1] * m[1] + tempv[2] * m[2] + m[3];
-			v[1] = tempv[0] * m[4] + tempv[1] * m[5] + tempv[2] * m[6] + m[7];
-			v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
-		}
+		VectorCopy(v, tempv);
+		//Matrix4x4_Transform(&buf_mesh.matrix, tempv, v);
+		v[0] = tempv[0] * m[0] + tempv[1] * m[1] + tempv[2] * m[2] + m[3];
+		v[1] = tempv[0] * m[4] + tempv[1] * m[5] + tempv[2] * m[6] + m[7];
+		v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
 	}
 	GL_LockArray(0, currentvertex);
-	GL_DrawRangeElements(buf_mesh->firstvert, buf_mesh->firstvert + buf_mesh->verts, buf_mesh->triangles * 3, (unsigned int *)&buf_tri[buf_mesh->firsttriangle].index[0]);CHECKGLERROR
+	GL_DrawRangeElements(buf_mesh.firstvert, buf_mesh.firstvert + buf_mesh.verts, buf_mesh.triangles * 3, (unsigned int *)&buf_tri[buf_mesh.firsttriangle].index[0]);CHECKGLERROR
 
-	if (currentmesh >= 2)
-	{
-		for (k = 1, mesh = buf_mesh + k;k < currentmesh;k++, mesh++)
-		{
-			GL_MeshState(mesh);
-			GL_DrawRangeElements(mesh->firstvert, mesh->firstvert + mesh->verts, mesh->triangles * 3, buf_tri[mesh->firsttriangle].index);CHECKGLERROR
-		}
-	}
-
-	currentmesh = 0;
 	currenttriangle = 0;
 	currentvertex = 0;
 
@@ -789,10 +769,6 @@ void R_Mesh_Render(void)
 void R_Mesh_Finish(void)
 {
 	int i;
-	// flush any queued meshs
-	if (currentmesh)
-		R_Mesh_Render();
-
 	if (backendunits > 1)
 	{
 		for (i = backendunits - 1;i >= 0;i--)
@@ -843,8 +819,6 @@ void R_Mesh_Finish(void)
 
 void R_Mesh_ClearDepth(void)
 {
-	if (currentmesh)
-		R_Mesh_Render();
 	R_Mesh_Finish();
 	qglClear(GL_DEPTH_BUFFER_BIT);
 	R_Mesh_Start(r_mesh_farclip);
@@ -857,7 +831,6 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	// these are static because gcc runs out of virtual registers otherwise
 	int i, j, overbright;
 	float scaler;
-	buf_mesh_t *mesh;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw_GetBuffer: called when backend is not active\n");
@@ -866,29 +839,14 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	 || !m->numverts)
 		Host_Error("R_Mesh_Draw_GetBuffer: no triangles or verts\n");
 
-	// LordHavoc: removed this error condition because with floatcolors 0,
-	// the 3DFX driver works with very large meshs
-	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
-	//if (m->numtriangles > 1024 || m->numverts > 3072)
-	//{
-	//	Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for 3DFX drivers, rejected\n");
-	//	return false;
-	//}
-
 	i = max(m->numtriangles * 3, m->numverts);
 	if (overflowedverts < i)
 		overflowedverts = i;
 
-	if (m->numtriangles > max_meshs || m->numverts > max_verts)
+	if (m->numtriangles > max_tris || m->numverts > max_verts)
 	{
 		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
 		return false;
-	}
-
-	if (currentmesh)
-	{
-		R_Mesh_Render();
-		Con_Printf("mesh queue not empty, flushing.\n");
 	}
 
 	c_meshs++;
@@ -900,19 +858,18 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 		m->texcoords[i] = &buf_texcoord[i][currentvertex].t[0];
 
 	// opaque meshs are rendered directly
-	mesh = &buf_mesh[currentmesh++];
-	mesh->firsttriangle = currenttriangle;
-	mesh->firstvert = currentvertex;
+	buf_mesh.firsttriangle = currenttriangle;
+	buf_mesh.firstvert = currentvertex;
 	currenttriangle += m->numtriangles;
 	currentvertex += m->numverts;
 
-	mesh->blendfunc1 = m->blendfunc1;
-	mesh->blendfunc2 = m->blendfunc2;
-	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
-	mesh->depthtest = !m->depthdisable;
-	mesh->triangles = m->numtriangles;
-	mesh->verts = m->numverts;
-	mesh->matrix = m->matrix; // this copies the struct
+	buf_mesh.blendfunc1 = m->blendfunc1;
+	buf_mesh.blendfunc2 = m->blendfunc2;
+	buf_mesh.depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
+	buf_mesh.depthtest = !m->depthdisable;
+	buf_mesh.triangles = m->numtriangles;
+	buf_mesh.verts = m->numverts;
+	buf_mesh.matrix = m->matrix; // this copies the struct
 
 	overbright = false;
 	scaler = 1;
@@ -937,18 +894,18 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	j = -1;
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
-		if ((mesh->textures[i] = m->tex[i]))
+		if ((buf_mesh.textures[i] = m->tex[i]))
 		{
 			j = i;
 			if (i >= backendunits)
 				Sys_Error("R_Mesh_Draw_GetBuffer: texture %i supplied when there are only %i texture units\n", j + 1, backendunits);
 		}
-		mesh->texturergbscale[i] = m->texrgbscale[i];
-		if (mesh->texturergbscale[i] != 1 && mesh->texturergbscale[i] != 2 && mesh->texturergbscale[i] != 4)
-			mesh->texturergbscale[i] = 1;
+		buf_mesh.texturergbscale[i] = m->texrgbscale[i];
+		if (buf_mesh.texturergbscale[i] != 1 && buf_mesh.texturergbscale[i] != 2 && buf_mesh.texturergbscale[i] != 4)
+			buf_mesh.texturergbscale[i] = 1;
 	}
 	if (overbright && j >= 0)
-		mesh->texturergbscale[j] = 4;
+		buf_mesh.texturergbscale[j] = 4;
 
 	return true;
 }
