@@ -18,6 +18,7 @@
 -d darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d darkplaces: fix a crash when changing level while using qe1 textures (Todd)
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
+-d darkplaces: lerp lightstyles (Mitchell)
 -d darkplaces: locked console scrollback (sublim3)
 -d darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
 -d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (-metlslime, zinx)
@@ -287,7 +288,6 @@
 2 darkplaces: frikbot scores don't update - discovered this is because of the fact they have no client (Todd)
 2 darkplaces: implement menu_clearkeyconfig and menu_keyconfig and the corresponding menu (diGGer)
 2 darkplaces: implement r_shadow_bumpscale_basetexture support in hl maps (CheapAlert)
-2 darkplaces: lerp lightstyles (Mitchell)
 2 darkplaces: make a DP_SV_PERCLIENTENTITYSEND extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre)
 2 darkplaces: make commandline parsing use COM_ParseToken.
 2 darkplaces: make corona occlusion testing use GL_ARB_occlusion_query instead of a CL_TraceLine (Riot)
