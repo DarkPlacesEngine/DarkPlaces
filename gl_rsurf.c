@@ -1284,109 +1284,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(const entity_render_t *
 	}
 }
 
-static void R_DrawSurfaceChain(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
-{
-	const msurface_t *surf;
-	msurface_t **chain;
-	vec3_t center;
-	if (texture->flags & SURF_LIGHTMAP)
-	{
-		if (gl_lightmaps.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else if (texture->rendertype != SURFRENDER_OPAQUE)
-		{
-			// transparent vertex shaded from lightmap
-			for (chain = surfchain;(surf = *chain) != NULL;chain++)
-			{
-				if (surf->visframe == r_framecount)
-				{
-					Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-					R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->brushq1.surfaces);
-				}
-			}
-		}
-		else if (ent->effects & EF_FULLBRIGHT || r_fullbright.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else if (r_ambient.value > 0)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
-			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
-			RSurfShader_OpaqueWall_Pass_BaseAmbient(ent, texture, surfchain);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else if (r_textureunits.integer >= 4 && gl_combine.integer && r_detailtextures.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else if (r_textureunits.integer >= 2 && gl_combine.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(ent, texture, surfchain);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else
-		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
-			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-	}
-	else if (texture->flags & SURF_DRAWTURB)
-	{
-		for (chain = surfchain;(surf = *chain) != NULL;chain++)
-		{
-			if (surf->visframe == r_framecount)
-			{
-				if (texture->rendertype == SURFRENDER_OPAQUE)
-					RSurfShader_Water_Callback(ent, surf - ent->model->brushq1.surfaces);
-				else
-				{
-					Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-					R_MeshQueue_AddTransparent(center, RSurfShader_Water_Callback, ent, surf - ent->model->brushq1.surfaces);
-				}
-			}
-		}
-	}
-	else if (texture->flags & SURF_DRAWSKY)
-		RSurfShader_Sky(ent, texture, surfchain);
-}
-
 void R_UpdateTextureInfo(entity_render_t *ent)
 {
 	int i, texframe, alttextures;
@@ -1481,17 +1378,94 @@ void R_PrepareSurfaces(entity_render_t *ent)
 
 void R_DrawSurfaces(entity_render_t *ent, int flagsmask)
 {
-	int i, f;
-	texture_t *t;
+	int texturenumber, f;
+	vec3_t center;
+	msurface_t *surf, **chain, **surfchain;
+	texture_t *t, *texture;
 	model_t *model = ent->model;
 	if (model == NULL)
 		return;
 	R_Mesh_Matrix(&ent->matrix);
-	for (i = 0, t = model->brushq1.textures;i < model->brushq1.numtextures;i++, t++)
+	for (texturenumber = 0, t = model->brushq1.textures;texturenumber < model->brushq1.numtextures;texturenumber++, t++)
 	{
-		f = t->flags & flagsmask;
-		if (f && t->currentframe && model->brushq1.pvstexturechains[i] != NULL)
-			R_DrawSurfaceChain(ent, t->currentframe, model->brushq1.pvstexturechains[i]);
+		if ((f = t->flags & flagsmask) && (texture = t->currentframe) && (surfchain = model->brushq1.pvstexturechains[texturenumber]) != NULL)
+		{
+			if (texture->flags & SURF_LIGHTMAP)
+			{
+				if (gl_lightmaps.integer)
+				{
+					RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(ent, texture, surfchain);
+					if (fogenabled)
+						RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+				}
+				else if (texture->rendertype != SURFRENDER_OPAQUE)
+				{
+					// transparent vertex shaded from lightmap
+					for (chain = surfchain;(surf = *chain) != NULL;chain++)
+					{
+						if (surf->visframe == r_framecount)
+						{
+							Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
+							R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->brushq1.surfaces);
+						}
+					}
+				}
+				else
+				{
+					if (ent->effects & EF_FULLBRIGHT || r_fullbright.integer)
+					{
+						RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
+						if (r_detailtextures.integer)
+							RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+						if (texture->skin.glow)
+							RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+					}
+					else if (r_textureunits.integer >= 4 && gl_combine.integer && r_detailtextures.integer && r_ambient.value <= 0)
+						RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(ent, texture, surfchain);
+					else
+					{
+						if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer && r_ambient.value <= 0)
+							RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(ent, texture, surfchain);
+						else
+						{
+							if (r_textureunits.integer >= 2 && gl_combine.integer)
+								RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(ent, texture, surfchain);
+							else
+							{
+								RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
+								RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
+							}
+							if (r_ambient.value > 0)
+								RSurfShader_OpaqueWall_Pass_BaseAmbient(ent, texture, surfchain);
+							if (r_detailtextures.integer)
+								RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+						}
+						if (texture->skin.glow)
+							RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+					}
+					if (fogenabled)
+						RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+				}
+			}
+			else if (texture->flags & SURF_DRAWTURB)
+			{
+				for (chain = surfchain;(surf = *chain) != NULL;chain++)
+				{
+					if (surf->visframe == r_framecount)
+					{
+						if (texture->rendertype == SURFRENDER_OPAQUE)
+							RSurfShader_Water_Callback(ent, surf - ent->model->brushq1.surfaces);
+						else
+						{
+							Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
+							R_MeshQueue_AddTransparent(center, RSurfShader_Water_Callback, ent, surf - ent->model->brushq1.surfaces);
+						}
+					}
+				}
+			}
+			else if (texture->flags & SURF_DRAWSKY)
+				RSurfShader_Sky(ent, texture, surfchain);
+		}
 	}
 }
 
