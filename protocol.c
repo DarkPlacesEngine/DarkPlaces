@@ -148,6 +148,7 @@ static entity_frame_t deltaframe; // FIXME?
 void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 {
 	int i, onum, bits, number;
+	float org[3], deltaorg[3];
 	entity_frame_t *o = &deltaframe;
 	entity_state_t *ent, *delta, baseline;
 
@@ -185,24 +186,44 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			delta = &baseline;
 		}
 		bits = 0;
+		VectorCopy(ent->origin, org);
+		VectorCopy(delta->origin, deltaorg);
 		if (ent->flags & RENDER_LOWPRECISION)
 		{
-			if ((int) ent->origin[0] != (int) delta->origin[0])
-				bits |= E_ORIGIN1;
-			if ((int) ent->origin[1] != (int) delta->origin[1])
-				bits |= E_ORIGIN2;
-			if ((int) ent->origin[2] != (int) delta->origin[2])
-				bits |= E_ORIGIN3;
+			if (org[0] > 0)
+				org[0] = (int) (org[0] + 0.5f);
+			else
+				org[0] = (int) (org[0] - 0.5f);
+			if (org[1] > 0)
+				org[1] = (int) (org[1] + 0.5f);
+			else
+				org[1] = (int) (org[1] - 0.5f);
+			if (org[2] > 0)
+				org[2] = (int) (org[2] + 0.5f);
+			else
+				org[2] = (int) (org[2] - 0.5f);
 		}
-		else
+		if (delta->flags & RENDER_LOWPRECISION)
 		{
-			if (fabs(ent->origin[0] - delta->origin[0]) > 0.01f)
-				bits |= E_ORIGIN1;
-			if (fabs(ent->origin[1] - delta->origin[1]) > 0.01f)
-				bits |= E_ORIGIN2;
-			if (fabs(ent->origin[2] - delta->origin[2]) > 0.01f)
-				bits |= E_ORIGIN3;
+			if (deltaorg[0] > 0)
+				deltaorg[0] = (int) (deltaorg[0] + 0.5f);
+			else
+				deltaorg[0] = (int) (deltaorg[0] - 0.5f);
+			if (deltaorg[1] > 0)
+				deltaorg[1] = (int) (deltaorg[1] + 0.5f);
+			else
+				deltaorg[1] = (int) (deltaorg[1] - 0.5f);
+			if (deltaorg[2] > 0)
+				deltaorg[2] = (int) (deltaorg[2] + 0.5f);
+			else
+				deltaorg[2] = (int) (deltaorg[2] - 0.5f);
 		}
+		if (fabs(org[0] - deltaorg[0]) > 0.01f)
+			bits |= E_ORIGIN1;
+		if (fabs(org[1] - deltaorg[1]) > 0.01f)
+			bits |= E_ORIGIN2;
+		if (fabs(org[2] - deltaorg[2]) > 0.01f)
+			bits |= E_ORIGIN3;
 		if ((qbyte) (ent->angles[0] * (256.0f / 360.0f)) != (qbyte) (delta->angles[0] * (256.0f / 360.0f)))
 			bits |= E_ANGLE1;
 		if ((qbyte) (ent->angles[1] * (256.0f / 360.0f)) != (qbyte) (delta->angles[1] * (256.0f / 360.0f)))
@@ -263,20 +284,20 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			if (ent->flags & RENDER_LOWPRECISION)
 			{
 				if (bits & E_ORIGIN1)
-					MSG_WriteShort(msg, ent->origin[0]);
+					MSG_WriteShort(msg, org[0]);
 				if (bits & E_ORIGIN2)
-					MSG_WriteShort(msg, ent->origin[1]);
+					MSG_WriteShort(msg, org[1]);
 				if (bits & E_ORIGIN3)
-					MSG_WriteShort(msg, ent->origin[2]);
+					MSG_WriteShort(msg, org[2]);
 			}
 			else
 			{
 				if (bits & E_ORIGIN1)
-					MSG_WriteFloat(msg, ent->origin[0]);
+					MSG_WriteFloat(msg, org[0]);
 				if (bits & E_ORIGIN2)
-					MSG_WriteFloat(msg, ent->origin[1]);
+					MSG_WriteFloat(msg, org[1]);
 				if (bits & E_ORIGIN3)
-					MSG_WriteFloat(msg, ent->origin[2]);
+					MSG_WriteFloat(msg, org[2]);
 			}
 			if (bits & E_ANGLE1)
 				MSG_WriteAngle(msg, ent->angles[0]);
