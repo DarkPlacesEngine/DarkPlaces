@@ -23,16 +23,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #ifdef _WIN32
 #include "winquake.h"
-#else
-#define DWORD	unsigned long
 #endif
 
 // LordHavoc: was 512, expanded to 2048
 #define	PAINTBUFFER_SIZE	2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
 int		snd_scaletable[32][256];
-int 	*snd_p, snd_linear_count, snd_vol;
-short	*snd_out;
 
 /*
 // LordHavoc: disabled this because it desyncs with the video too easily
@@ -116,203 +112,145 @@ void S_CaptureAVISound(portable_samplepair_t *buf, int length)
 }
 */
 
-void Snd_WriteLinearBlastStereo16 (void)
-{
-	int		i;
-	int		val;
-
-	if (snd_swapstereo.value)
-	{
-		for (i=0 ; i<snd_linear_count ; i+=2)
-		{
-			val = (snd_p[i+1]*snd_vol)>>8;
-			snd_out[i  ] = bound(-32768, val, 32767);
-			val = (snd_p[i  ]*snd_vol)>>8;
-			snd_out[i+1] = bound(-32768, val, 32767);
-		}
-	}
-	else
-	{
-		for (i=0 ; i<snd_linear_count ; i+=2)
-		{
-			val = (snd_p[i]*snd_vol)>>8;
-			snd_out[i] = bound(-32768, val, 32767);
-			val = (snd_p[i+1]*snd_vol)>>8;
-			snd_out[i+1] = bound(-32768, val, 32767);
-		}
-	}
-}
-
-void S_TransferStereo16 (int endtime)
-{
-	int		lpos;
-	int		lpaintedtime;
-	DWORD	*pbuf;
-#ifdef _WIN32
-	int		reps;
-	DWORD	dwSize,dwSize2;
-	DWORD	*pbuf2;
-	HRESULT	hresult;
-#endif
-	
-	snd_vol = volume.value*256;
-
-	snd_p = (int *) paintbuffer;
-	lpaintedtime = paintedtime;
-
-#ifdef _WIN32
-	if (pDSBuf)
-	{
-		reps = 0;
-
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2, &dwSize2, 0)) != DS_OK)
-		{
-			if (hresult != DSERR_BUFFERLOST)
-			{
-				Con_Printf ("S_TransferStereo16: DS::Lock Sound Buffer Failed\n");
-				S_Shutdown ();
-				S_Startup ();
-				return;
-			}
-
-			if (++reps > 10000)
-			{
-				Con_Printf ("S_TransferStereo16: DS: couldn't restore buffer\n");
-				S_Shutdown ();
-				S_Startup ();
-				return;
-			}
-		}
-	}
-	else
-#endif
-	{
-		pbuf = (DWORD *)shm->buffer;
-	}
-
-	while (lpaintedtime < endtime)
-	{
-	// handle recirculating buffer issues
-		lpos = lpaintedtime & ((shm->samples>>1)-1);
-
-		snd_out = (short *) pbuf + (lpos<<1);
-
-		snd_linear_count = (shm->samples>>1) - lpos;
-		if (lpaintedtime + snd_linear_count > endtime)
-			snd_linear_count = endtime - lpaintedtime;
-
-		snd_linear_count <<= 1;
-
-	// write a linear blast of samples
-		Snd_WriteLinearBlastStereo16 ();
-
-		snd_p += snd_linear_count;
-		lpaintedtime += (snd_linear_count>>1);
-	}
-
-#ifdef _WIN32
-	if (pDSBuf)
-		pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
-#endif
-}
-
 void S_TransferPaintBuffer(int endtime)
 {
-	int 	out_idx;
-	int 	count;
-	int 	out_mask;
-	int 	*p;
-	int 	step;
-	int		val;
-	int		snd_vol;
-	DWORD	*pbuf;
-#ifdef _WIN32
-	int		reps;
-	DWORD	dwSize,dwSize2;
-	DWORD	*pbuf2;
-	HRESULT	hresult;
-#endif
-
-	if (shm->samplebits == 16 && shm->channels == 2)
+	void *pbuf;
+	if ((pbuf = S_LockBuffer()))
 	{
-		S_TransferStereo16 (endtime);
-		return;
-	}
-
-	p = (int *) paintbuffer;
-	count = (endtime - paintedtime) * shm->channels;
-	out_mask = shm->samples - 1;
-	out_idx = paintedtime * shm->channels & out_mask;
-	step = 3 - shm->channels;
-	snd_vol = volume.value*256;
-
-#ifdef _WIN32
-	if (pDSBuf)
-	{
-		reps = 0;
-
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2,&dwSize2, 0)) != DS_OK)
+		int i;
+		int *snd_p;
+		int snd_vol;
+		int lpaintedtime;
+		int snd_linear_count;
+		int val;
+		snd_p = (int *) paintbuffer;
+		snd_vol = volume.value*256;
+		lpaintedtime = paintedtime;
+		if (shm->samplebits == 16)
 		{
-			if (hresult != DSERR_BUFFERLOST)
+			// 16bit
+			short *snd_out;
+			if (shm->channels == 2)
 			{
-				Con_Printf ("S_TransferPaintBuffer: DS::Lock Sound Buffer Failed\n");
-				S_Shutdown ();
-				S_Startup ();
-				return;
+				// 16bit 2 channels (stereo)
+				while (lpaintedtime < endtime)
+				{
+					// handle recirculating buffer issues
+					i = lpaintedtime & ((shm->samples >> 1) - 1);
+					snd_out = (short *) pbuf + (i << 1);
+					snd_linear_count = (shm->samples >> 1) - i;
+					if (snd_linear_count > endtime - lpaintedtime)
+						snd_linear_count = endtime - lpaintedtime;
+					snd_linear_count <<= 1;
+					if (snd_swapstereo.value)
+					{
+						for (i = 0;i < snd_linear_count;i += 2)
+						{
+							val = (snd_p[i + 1] * snd_vol) >> 8;
+							snd_out[i    ] = bound(-32768, val, 32767);
+							val = (snd_p[i    ] * snd_vol) >> 8;
+							snd_out[i + 1] = bound(-32768, val, 32767);
+						}
+					}
+					else
+					{
+						for (i = 0;i < snd_linear_count;i += 2)
+						{
+							val = (snd_p[i    ] * snd_vol) >> 8;
+							snd_out[i    ] = bound(-32768, val, 32767);
+							val = (snd_p[i + 1] * snd_vol) >> 8;
+							snd_out[i + 1] = bound(-32768, val, 32767);
+						}
+					}
+					snd_p += snd_linear_count;
+					lpaintedtime += (snd_linear_count >> 1);
+				}
 			}
-
-			if (++reps > 10000)
+			else
 			{
-				Con_Printf ("S_TransferPaintBuffer: DS: couldn't restore buffer\n");
-				S_Shutdown ();
-				S_Startup ();
-				return;
+				// 16bit 1 channel (mono)
+				while (lpaintedtime < endtime)
+				{
+					// handle recirculating buffer issues
+					i = lpaintedtime & (shm->samples - 1);
+					snd_out = (short *) pbuf + i;
+					snd_linear_count = shm->samples - i;
+					if (snd_linear_count > endtime - lpaintedtime)
+						snd_linear_count = endtime - lpaintedtime;
+					for (i = 0;i < snd_linear_count;i++)
+					{
+						val = ((snd_p[i * 2 + 0] + snd_p[i * 2 + 1]) * snd_vol) >> 9;
+						snd_out[i] = bound(-32768, val, 32767);
+					}
+					snd_p += snd_linear_count << 1;
+					lpaintedtime += snd_linear_count;
+				}
 			}
 		}
-	}
-	else
-#endif
-	{
-		pbuf = (DWORD *)shm->buffer;
-	}
-
-	if (shm->samplebits == 16)
-	{
-		short *out = (short *) pbuf;
-		while (count--)
+		else
 		{
-			val = (*p * snd_vol) >> 8;
-			out[out_idx] = bound(-32768, val, 32767);
-			p+= step;
-			out_idx = (out_idx + 1) & out_mask;
+			// 8bit
+			unsigned char *snd_out;
+			if (shm->channels == 2)
+			{
+				// 8bit 2 channels (stereo)
+				while (lpaintedtime < endtime)
+				{
+					// handle recirculating buffer issues
+					i = lpaintedtime & ((shm->samples >> 1) - 1);
+					snd_out = (unsigned char *) pbuf + (i << 1);
+					snd_linear_count = (shm->samples >> 1) - i;
+					if (snd_linear_count > endtime - lpaintedtime)
+						snd_linear_count = endtime - lpaintedtime;
+					snd_linear_count <<= 1;
+					if (snd_swapstereo.value)
+					{
+						for (i = 0;i < snd_linear_count;i += 2)
+						{
+							val = ((snd_p[i + 1] * snd_vol) >> 16) + 128;
+							snd_out[i    ] = bound(0, val, 255);
+							val = ((snd_p[i    ] * snd_vol) >> 16) + 128;
+							snd_out[i + 1] = bound(0, val, 255);
+						}
+					}
+					else
+					{
+						for (i = 0;i < snd_linear_count;i += 2)
+						{
+							val = ((snd_p[i    ] * snd_vol) >> 16) + 128;
+							snd_out[i    ] = bound(0, val, 255);
+							val = ((snd_p[i + 1] * snd_vol) >> 16) + 128;
+							snd_out[i + 1] = bound(0, val, 255);
+						}
+					}
+					snd_p += snd_linear_count;
+					lpaintedtime += (snd_linear_count >> 1);
+				}
+			}
+			else
+			{
+				// 8bit 1 channel (mono)
+				while (lpaintedtime < endtime)
+				{
+					// handle recirculating buffer issues
+					i = lpaintedtime & (shm->samples - 1);
+					snd_out = (unsigned char *) pbuf + i;
+					snd_linear_count = shm->samples - i;
+					if (snd_linear_count > endtime - lpaintedtime)
+						snd_linear_count = endtime - lpaintedtime;
+					for (i = 0;i < snd_linear_count;i++)
+					{
+						val = (((snd_p[i * 2] + snd_p[i * 2 + 1]) * snd_vol) >> 17) + 128;
+						snd_out[i    ] = bound(0, val, 255);
+					}
+					snd_p += snd_linear_count << 1;
+					lpaintedtime += snd_linear_count;
+				}
+			}
 		}
+
+		S_UnlockBuffer();
 	}
-	else if (shm->samplebits == 8)
-	{
-		unsigned char *out = (unsigned char *) pbuf;
-		while (count--)
-		{
-			val = ((*p * snd_vol) >> 16) + 128;
-			out[out_idx] = bound(0, val, 255);
-			p+= step;
-			out_idx = (out_idx + 1) & out_mask;
-		}
-	}
-
-#ifdef _WIN32
-	if (pDSBuf)
-	{
-		DWORD dwNewpos, dwWrite;
-		int il = paintedtime;
-		int ir = endtime - paintedtime;
-
-		ir += il;
-
-		pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
-
-		pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &dwNewpos, &dwWrite);
-	}
-#endif
 }
 
 

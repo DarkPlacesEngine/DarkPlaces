@@ -177,5 +177,8 @@ void SNDDMA_Submit(void);
 void S_AmbientOff (void);
 void S_AmbientOn (void);
 
+void *S_LockBuffer(void);
+void S_UnlockBuffer(void);
+
 #endif
 
