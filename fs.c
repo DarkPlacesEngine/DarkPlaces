@@ -43,6 +43,9 @@
 
 #include "fs.h"
 
+// use syscalls instead of f* functions
+#define FS_USESYSCALLS
+
 
 /*
 
@@ -150,7 +153,11 @@ typedef struct
 struct qfile_s
 {
 	fs_flags_t	flags;
+#ifdef FS_USESYSCALLS
+	int			stream;
+#else
 	FILE*		stream;
+#endif
 	size_t		length;		// file size on disk (PACKED only)
 	size_t		offset;		// offset into a package (PACKED only)
 	size_t		position;	// current position in the file (PACKED only)
@@ -210,7 +217,11 @@ typedef struct
 typedef struct pack_s
 {
 	char filename [MAX_OSPATH];
+#ifdef FS_USESYSCALLS
+	int handle;
+#else
 	FILE *handle;
+#endif
 	int ignorecase; // PK3 ignores case
 	int numfiles;
 	packfile_t *files;
@@ -359,15 +370,23 @@ PK3_GetEndOfCentralDir
 Extract the end of the central directory from a PK3 package
 ====================
 */
+#ifdef FS_USESYSCALLS
+qboolean PK3_GetEndOfCentralDir (const char *packfile, int packhandle, pk3_endOfCentralDir_t *eocd)
+#else
 qboolean PK3_GetEndOfCentralDir (const char *packfile, FILE *packhandle, pk3_endOfCentralDir_t *eocd)
+#endif
 {
 	long filesize, maxsize;
 	qbyte *buffer, *ptr;
 	int ind;
 
 	// Get the package size
+#ifdef FS_USESYSCALLS
+	filesize = lseek (packhandle, 0, SEEK_END);
+#else
 	fseek (packhandle, 0, SEEK_END);
-	filesize = ftell (packhandle);
+	filesize = ftell(packhandle);
+#endif
 	if (filesize < ZIP_END_CDIR_SIZE)
 		return false;
 
@@ -377,8 +396,13 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, FILE *packhandle, pk3_end
 	else
 		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
 	buffer = Mem_Alloc (tempmempool, maxsize);
+#ifdef FS_USESYSCALLS
+	lseek (packhandle, filesize - maxsize, SEEK_SET);
+	if (read (packhandle, buffer, maxsize) != (unsigned long) maxsize)
+#else
 	fseek (packhandle, filesize - maxsize, SEEK_SET);
 	if (fread (buffer, 1, maxsize, packhandle) != (unsigned long) maxsize)
+#endif
 	{
 		Mem_Free (buffer);
 		return false;
@@ -431,8 +455,13 @@ int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
 
 	// Load the central directory in memory
 	central_dir = Mem_Alloc (tempmempool, eocd->cdir_size);
+#ifdef FS_USESYSCALLS
+	lseek (pack->handle, eocd->cdir_offset, SEEK_SET);
+	read (pack->handle, central_dir, eocd->cdir_size);
+#else
 	fseek (pack->handle, eocd->cdir_offset, SEEK_SET);
 	fread (central_dir, 1, eocd->cdir_size, pack->handle);
+#endif
 
 	// Extract the files properties
 	// The parsing is done "by hand" because some fields have variable sizes and
@@ -521,14 +550,24 @@ Create a package entry associated with a PK3 file
 */
 pack_t *FS_LoadPackPK3 (const char *packfile)
 {
+#ifdef FS_USESYSCALLS
+	int packhandle;
+#else
 	FILE *packhandle;
+#endif
 	pk3_endOfCentralDir_t eocd;
 	pack_t *pack;
 	int real_nb_files;
 
+#ifdef FS_USESYSCALLS
+	packhandle = open (packfile, O_RDONLY);
+	if (packhandle < 0)
+		return NULL;
+#else
 	packhandle = fopen (packfile, "rb");
 	if (!packhandle)
 		return NULL;
+#endif
 
 	if (! PK3_GetEndOfCentralDir (packfile, packhandle, &eocd))
 		Sys_Error ("%s is not a PK3 file", packfile);
@@ -539,10 +578,10 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 
 	// We only need to do this test if MAX_FILES_IN_PACK is lesser than 65535
 	// since eocd.nbentries is an unsigned 16 bits integer
-	#if MAX_FILES_IN_PACK < 65535
+#if MAX_FILES_IN_PACK < 65535
 	if (eocd.nbentries > MAX_FILES_IN_PACK)
 		Sys_Error ("%s contains too many files (%hu)", packfile, eocd.nbentries);
-	#endif
+#endif
 
 	// Create a package structure in memory
 	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
@@ -581,8 +620,13 @@ void PK3_GetTrueFileOffset (packfile_t *file, pack_t *pack)
 		return;
 
 	// Load the local file description
+#ifdef FS_USESYSCALLS
+	lseek (pack->handle, file->offset, SEEK_SET);
+	count = read (pack->handle, buffer, ZIP_LOCAL_CHUNK_BASE_SIZE);
+#else
 	fseek (pack->handle, file->offset, SEEK_SET);
 	count = fread (buffer, 1, ZIP_LOCAL_CHUNK_BASE_SIZE, pack->handle);
+#endif
 	if (count != ZIP_LOCAL_CHUNK_BASE_SIZE || BuffBigLong (buffer) != ZIP_DATA_HEADER)
 		Sys_Error ("Can't retrieve file %s in package %s", file->name, pack->filename);
 
@@ -717,15 +761,25 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 {
 	dpackheader_t header;
 	int i, numpackfiles;
+#ifdef FS_USESYSCALLS
+	int packhandle;
+#else
 	FILE *packhandle;
+#endif
 	pack_t *pack;
 	dpackfile_t *info;	// temporary alloc, allowing huge pack directories
 
+#ifdef FS_USESYSCALLS
+	packhandle = open (packfile, O_RDONLY);
+	if (packhandle < 0)
+		return NULL;
+	read (packhandle, (void *)&header, sizeof(header));
+#else
 	packhandle = fopen (packfile, "rb");
 	if (!packhandle)
 		return NULL;
-
 	fread ((void *)&header, 1, sizeof(header), packhandle);
+#endif
 	if (memcmp(header.id, "PACK", 4))
 		Sys_Error ("%s is not a packfile", packfile);
 	header.dirofs = LittleLong (header.dirofs);
@@ -750,8 +804,13 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	packlist = pack;
 
 	info = Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
+#ifdef FS_USESYSCALLS
+	lseek (packhandle, header.dirofs, SEEK_SET);
+	read (packhandle, (void *)info, header.dirlen);
+#else
 	fseek (packhandle, header.dirofs, SEEK_SET);
 	fread ((void *)info, 1, header.dirlen, packhandle);
+#endif
 
 	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
@@ -981,12 +1040,28 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode)
 	file = Mem_Alloc (fs_mempool, sizeof (*file));
 	memset (file, 0, sizeof (*file));
 
+#ifdef FS_USESYSCALLS
+	if (strchr(mode, 'r'))
+		file->stream = open (filepath, O_RDONLY);
+	else if (strchr(mode, 'w'))
+		file->stream = open (filepath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	else if (strchr(mode, 'a'))
+		file->stream = open (filepath, O_RDWR | O_CREAT | O_APPEND, 0666);
+	else
+		file->stream = -1;
+	if (file->stream < 0)
+	{
+		Mem_Free (file);
+		return NULL;
+	}
+#else
 	file->stream = fopen (filepath, mode);
 	if (!file->stream)
 	{
 		Mem_Free (file);
 		return NULL;
 	}
+#endif
 
 	return file;
 }
@@ -1012,14 +1087,23 @@ qfile_t *FS_OpenRead (const char *path, int offs, int len)
 	if (offs < 0 || len < 0)
 	{
 		// We set fs_filesize here for normal files
+#ifdef FS_USESYSCALLS
+		fs_filesize = lseek (file->stream, 0, SEEK_END);
+		lseek (file->stream, 0, SEEK_SET);
+#else
 		fseek (file->stream, 0, SEEK_END);
 		fs_filesize = ftell (file->stream);
 		fseek (file->stream, 0, SEEK_SET);
+#endif
 	}
 	// Packed file
 	else
 	{
+#ifdef FS_USESYSCALLS
+		lseek (file->stream, offs, SEEK_SET);
+#else
 		fseek (file->stream, offs, SEEK_SET);
+#endif
 
 		file->flags |= FS_FLAG_PACKED;
 		file->length = len;
@@ -1249,7 +1333,11 @@ Close a file
 */
 int FS_Close (qfile_t* file)
 {
+#ifdef FS_USESYSCALLS
+	if (close (file->stream))
+#else
 	if (fclose (file->stream))
+#endif
 		return EOF;
 
 	if (file->z)
@@ -1272,7 +1360,11 @@ Write "datasize" bytes into a file
 */
 size_t FS_Write (qfile_t* file, const void* data, size_t datasize)
 {
+#ifdef FS_USESYSCALLS
+	return write (file->stream, data, datasize);
+#else
 	return fwrite (data, 1, datasize, file->stream);
+#endif
 }
 
 
@@ -1290,7 +1382,11 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 
 	// Quick path for unpacked files
 	if (! (file->flags & FS_FLAG_PACKED))
+#ifdef FS_USESYSCALLS
+		return read (file->stream, buffer, buffersize);
+#else
 		return fread (buffer, 1, buffersize, file->stream);
+#endif
 
 	// If the file isn't compressed
 	if (! (file->flags & FS_FLAG_DEFLATED))
@@ -1300,7 +1396,11 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 		if (buffersize > count)
 			buffersize = count;
 
+#ifdef FS_USESYSCALLS
+		nb = read (file->stream, buffer, buffersize);
+#else
 		nb = fread (buffer, 1, buffersize, file->stream);
+#endif
 
 		file->position += nb;
 		return nb;
@@ -1338,7 +1438,11 @@ size_t FS_Read (qfile_t* file, void* buffer, size_t buffersize)
 
 			remain = file->length - ztk->in_position;
 			count = (remain > sizeof (ztk->input)) ? sizeof (ztk->input) : remain;
+#ifdef FS_USESYSCALLS
+			read (file->stream, ztk->input, count);
+#else
 			fread (ztk->input, 1, count, file->stream);
+#endif
 
 			// Update indexes and counters
 			ztk->in_ind = 0;
@@ -1413,7 +1517,11 @@ Flush the file output stream
 */
 int FS_Flush (qfile_t* file)
 {
+#ifdef FS_USESYSCALLS
+	return 0;
+#else
 	return fflush (file->stream);
+#endif
 }
 
 
@@ -1442,7 +1550,7 @@ int FS_Printf(qfile_t* file, const char* format, ...)
 	va_list args;
 
 	va_start (args, format);
-	result = vfprintf (file->stream, format, args);
+	result = FS_VPrintf(file, format, args);
 	va_end (args);
 
 	return result;
@@ -1458,7 +1566,26 @@ Print a string into a file
 */
 int FS_VPrintf(qfile_t* file, const char* format, va_list ap)
 {
+#ifdef FS_USESYSCALLS
+{
+	int len;
+	char tempstring[1024];
+	len = vsnprintf (tempstring, sizeof(tempstring), format, ap);
+	if (len >= sizeof(tempstring))
+	{
+		int result;
+		char *temp = Mem_Alloc(tempmempool, len + 1);
+		len = vsnprintf (temp, len + 1, format, ap);
+		result = write (file->stream, temp, len);
+		Mem_Free(temp);
+		return result;
+	}
+	else
+		return write (file->stream, tempstring, len);
+}
+#else
 	return vfprintf (file->stream, format, ap);
+#endif
 }
 
 
@@ -1491,7 +1618,11 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 {
 	// Quick path for unpacked files
 	if (! (file->flags & FS_FLAG_PACKED))
+#ifdef FS_USESYSCALLS
+		return lseek (file->stream, offset, whence);
+#else
 		return fseek (file->stream, offset, whence);
+#endif
 
 	// Seeking in compressed files is more a hack than anything else,
 	// but we need to support it, so here it is.
@@ -1538,7 +1669,11 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 			ztk->out_max = 0;
 			ztk->out_position = 0;
 			file->position = 0;
+#ifdef FS_USESYSCALLS
+			lseek (file->stream, file->offset, SEEK_SET);
+#else
 			fseek (file->stream, file->offset, SEEK_SET);
+#endif
 
 			// Reset the Zlib stream
 			ztk->zstream.next_in = ztk->input;
@@ -1582,8 +1717,13 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	if (offset < 0 || offset > (long) file->length)
 		return -1;
 
+#ifdef FS_USESYSCALLS
+	if (lseek (file->stream, file->offset + offset, SEEK_SET) == -1)
+		return -1;
+#else
 	if (fseek (file->stream, file->offset + offset, SEEK_SET) == -1)
 		return -1;
+#endif
 	file->position = offset;
 	return 0;
 }
@@ -1601,7 +1741,11 @@ long FS_Tell (qfile_t* file)
 	if (file->flags & FS_FLAG_PACKED)
 		return file->position;
 
+#ifdef FS_USESYSCALLS
+	return lseek (file->stream, 0, SEEK_CUR);
+#else
 	return ftell (file->stream);
+#endif
 }
 
 
@@ -1617,8 +1761,10 @@ char* FS_Gets (qfile_t* file, char* buffer, int buffersize)
 	size_t ind;
 
 	// Quick path for unpacked files
+#ifndef FS_USESYSCALLS
 	if (! (file->flags & FS_FLAG_PACKED))
 		return fgets (buffer, buffersize, file->stream);
+#endif
 
 	for (ind = 0; ind < (size_t) buffersize - 1; ind++)
 	{
@@ -1696,6 +1842,7 @@ FS_Eof
 Extract a line from a file
 ====================
 */
+// FIXME: remove this function?
 int FS_Eof (qfile_t* file)
 {
 	if (file->flags & FS_FLAG_PACKED)
@@ -1706,7 +1853,12 @@ int FS_Eof (qfile_t* file)
 		return (file->position == file->length);
 	}
 
+#ifdef FS_USESYSCALLS
+	Sys_Error("FS_Eof: not implemented using syscalls\n");
+	return false;
+#else
 	return feof (file->stream);
+#endif
 }
 
 
