@@ -231,7 +231,8 @@ typedef struct
 #define	CSHIFT_DAMAGE	1
 #define	CSHIFT_BONUS	2
 #define	CSHIFT_POWERUP	3
-#define	NUM_CSHIFTS		4
+#define	CSHIFT_VCSHIFT	4
+#define	NUM_CSHIFTS		5
 
 #define	NAME_LENGTH	64
 

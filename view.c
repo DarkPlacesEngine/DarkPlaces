@@ -450,10 +450,10 @@ void V_CalcViewBlend(void)
 		{
 		case CONTENTS_EMPTY:
 		case CONTENTS_SOLID:
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = v_cshift.destcolor[0];
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = v_cshift.destcolor[1];
-			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = v_cshift.destcolor[2];
-			cl.cshifts[CSHIFT_CONTENTS].percent = v_cshift.percent;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 0;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[1] = 0;
+			cl.cshifts[CSHIFT_CONTENTS].destcolor[2] = 0;
+			cl.cshifts[CSHIFT_CONTENTS].percent = 0;
 			break;
 		case CONTENTS_LAVA:
 			cl.cshifts[CSHIFT_CONTENTS].destcolor[0] = 255;
@@ -474,36 +474,44 @@ void V_CalcViewBlend(void)
 			cl.cshifts[CSHIFT_CONTENTS].percent = 128 >> 1;
 		}
 
-		if (cl.items & IT_QUAD)
+		if (gamemode != GAME_TRANSFUSION)
 		{
-			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 0;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 255;
-			cl.cshifts[CSHIFT_POWERUP].percent = 30;
+			if (cl.items & IT_QUAD)
+			{
+				cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 0;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 255;
+				cl.cshifts[CSHIFT_POWERUP].percent = 30;
+			}
+			else if (cl.items & IT_SUIT)
+			{
+				cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
+				cl.cshifts[CSHIFT_POWERUP].percent = 20;
+			}
+			else if (cl.items & IT_INVISIBILITY)
+			{
+				cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 100;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 100;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 100;
+				cl.cshifts[CSHIFT_POWERUP].percent = 100;
+			}
+			else if (cl.items & IT_INVULNERABILITY)
+			{
+				cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 255;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
+				cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
+				cl.cshifts[CSHIFT_POWERUP].percent = 30;
+			}
+			else
+				cl.cshifts[CSHIFT_POWERUP].percent = 0;
 		}
-		else if (cl.items & IT_SUIT)
-		{
-			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 0;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
-			cl.cshifts[CSHIFT_POWERUP].percent = 20;
-		}
-		else if (cl.items & IT_INVISIBILITY)
-		{
-			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 100;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 100;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 100;
-			cl.cshifts[CSHIFT_POWERUP].percent = 100;
-		}
-		else if (cl.items & IT_INVULNERABILITY)
-		{
-			cl.cshifts[CSHIFT_POWERUP].destcolor[0] = 255;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[1] = 255;
-			cl.cshifts[CSHIFT_POWERUP].destcolor[2] = 0;
-			cl.cshifts[CSHIFT_POWERUP].percent = 30;
-		}
-		else
-			cl.cshifts[CSHIFT_POWERUP].percent = 0;
+
+		cl.cshifts[CSHIFT_VCSHIFT].destcolor[0] = v_cshift.destcolor[0];
+		cl.cshifts[CSHIFT_VCSHIFT].destcolor[1] = v_cshift.destcolor[1];
+		cl.cshifts[CSHIFT_VCSHIFT].destcolor[2] = v_cshift.destcolor[2];
+		cl.cshifts[CSHIFT_VCSHIFT].percent = v_cshift.percent;
 
 		// LordHavoc: fixed V_CalcBlend
 		for (j = 0;j < NUM_CSHIFTS;j++)
