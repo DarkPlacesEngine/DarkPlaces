@@ -200,6 +200,11 @@ void	Host_FindMaxClients (void)
 		else
 			svs.maxclients = 8;
 	}
+
+	// BloodBath doesn't support single player games
+	if (gamemode == GAME_BLOODBATH && svs.maxclients < 4)
+		svs.maxclients = 4;
+
 	if (svs.maxclients < 1)
 		svs.maxclients = 8;
 	else if (svs.maxclients > MAX_SCOREBOARD)

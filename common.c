@@ -1835,6 +1835,9 @@ void COM_InitFilesystem (void)
 	case GAME_ZYMOTIC:
 		COM_AddGameDirectory (va("%s/zymotic", basedir) );
 		break;
+	case GAME_BLOODBATH:
+		COM_AddGameDirectory (va("%s/bb", basedir) );
+		break;
 	default:
 		Sys_Error("COM_InitFilesystem: unknown gamemode %i\n", gamemode);
 		break;
