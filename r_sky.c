@@ -317,67 +317,59 @@ static void skyspherecalc(float *sphere, float dx, float dy, float dz)
 	}
 }
 
-static void skyspherearrays(float *vert, float *tex, float *tex2, float *source, float s, float s2)
+static void skyspherearrays(float *v, float *t, float *c, float *source, float s, float colorscale)
 {
-	float *v, *t, *t2, radius;
 	int i;
-	v = vert;
-	t = tex;
-	t2 = tex2;
-	radius = r_farclip - 8;
-	for (i = 0;i < (skygridx1*skygridy1);i++)
+	for (i = 0;i < (skygridx1*skygridy1);i++, c += 4, t += 2, v += 4, source += 5)
 	{
-		*t++ = source[0] + s;
-		*t++ = source[1] + s;
-		*t2++ = source[0] + s2;
-		*t2++ = source[1] + s2;
-		*v++ = source[2] + r_origin[0];
-		*v++ = source[3] + r_origin[1];
-		*v++ = source[4] + r_origin[2];
-		*v++ = 0;
-		source += 5;
+		c[0] = colorscale;
+		c[1] = colorscale;
+		c[2] = colorscale;
+		c[3] = 1;
+		t[0] = source[0] + s;
+		t[1] = source[1] + s;
+		v[0] = source[2] + r_origin[0];
+		v[1] = source[3] + r_origin[1];
+		v[2] = source[4] + r_origin[2];
 	}
 }
 
 static void R_SkySphere(void)
 {
 	float speedscale, speedscale2;
-	float vert[skygridx1*skygridy1*4], tex[skygridx1*skygridy1*2], tex2[skygridx1*skygridy1*2];
 	static qboolean skysphereinitialized = false;
-	rmeshinfo_t m;
+	rmeshbufferinfo_t m;
 	if (!skysphereinitialized)
 	{
 		skysphereinitialized = true;
 		skyspherecalc(skysphere, 16, 16, 16 / 3);
 	}
+
+	speedscale = cl.time*8.0/128.0;
+	speedscale -= (int)speedscale;
+	speedscale2 = cl.time*16.0/128.0;
+	speedscale2 -= (int)speedscale2;
+
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
 	m.numtriangles = skygridx*skygridy*2;
 	m.numverts = skygridx1*skygridy1;
-	m.index = skysphereindices;
-	m.vertex = vert;
-	m.vertexstep = sizeof(float[4]);
-	m.cr = 1;
-	m.cg = 1;
-	m.cb = 1;
-	m.ca = 1;
-	m.texcoords[0] = tex;
-	m.texcoordstep[0] = sizeof(float[2]);
-	speedscale = cl.time*8.0/128.0;
-	speedscale -= (int)speedscale;
-	speedscale2 = cl.time*16.0/128.0;
-	speedscale2 -= (int)speedscale2;
-	skyspherearrays(vert, tex, tex2, skysphere, speedscale, speedscale2);
 	m.tex[0] = R_GetTexture(solidskytexture);
-	R_Mesh_Draw(&m);
-
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));
+		skyspherearrays(m.vertex, m.texcoords[0], m.color, skysphere, speedscale, m.colorscale);
+	}
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.tex[0] = R_GetTexture(alphaskytexture);
-	m.texcoords[0] = tex2;
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));
+		skyspherearrays(m.vertex, m.texcoords[0], m.color, skysphere, speedscale2, m.colorscale);
+	}
 }
 
 void R_Sky(void)
