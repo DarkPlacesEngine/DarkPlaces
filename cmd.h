@@ -126,6 +126,10 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src);
 // Parses a single line of text into arguments and tries to execute it.
 // The text can come from the command buffer, a remote client, or stdin.
 
+void Cmd_ForwardStringToServer (const char *s);
+// adds the string as a clc_stringcmd to the client message.
+// (used when there is no reason to generate a local command to do it)
+
 void Cmd_ForwardToServer (void);
 // adds the current command line as a clc_stringcmd to the client message.
 // things like godmode, noclip, etc, are commands directed to the server,
