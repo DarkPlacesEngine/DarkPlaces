@@ -222,7 +222,9 @@ qpic_t	*Draw_CachePic (char *path)
 	pic->pic.height = dat->height;
 
 	gl = (glpic_t *)pic->pic.data;
-	gl->texnum = GL_LoadPicTexture (dat);
+	gl->texnum = loadtextureimage(path, 0, 0, false, false);
+	if (!gl->texnum)
+		gl->texnum = GL_LoadPicTexture (dat);
 	gl->sl = 0;
 	gl->sh = 1;
 	gl->tl = 0;

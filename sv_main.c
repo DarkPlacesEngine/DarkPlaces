@@ -422,7 +422,7 @@ SV_WriteEntitiesToClient
 
 =============
 */
-void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
+void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int		e, i, clentnum, bits, alpha, glowcolor, glowsize, scale, colormod, modred, modgreen, modblue, dodelta, effects;
 	byte	*pvs;
@@ -549,7 +549,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 
 		dodelta = FALSE;
 		if ((int)ent->v.effects & EF_DELTA)
-			dodelta = cl.time < ent->nextfullupdate; // every half second a full update is forced
+			dodelta = cl.time < client->nextfullupdate[e]; // every half second a full update is forced
 
 		if (dodelta)
 		{
@@ -558,7 +558,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		}
 		else
 		{
-			ent->nextfullupdate = cl.time + 0.5;
+			client->nextfullupdate[e] = cl.time + 0.5;
 			baseline = &ent->baseline;
 		}
 
@@ -880,7 +880,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 // add the client specific data to the datagram
 	SV_WriteClientdataToMessage (client->edict, &msg);
 
-	SV_WriteEntitiesToClient (client->edict, &msg);
+	SV_WriteEntitiesToClient (client, client->edict, &msg);
 
 // copy the server datagram if there is space
 	if (msg.cursize + sv.datagram.cursize < msg.maxsize)

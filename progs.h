@@ -51,8 +51,6 @@ typedef struct edict_s
 	vec3_t		stepoldorigin;
 	vec3_t		stepoldangles;
 	float		steplerptime;
-	// LordHavoc: delta compression
-	float		nextfullupdate; // every second a full update is forced
 	entvars_t	v;					// C exported fields from progs
 // other fields from progs come immediately after
 } edict_t;

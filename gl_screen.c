@@ -270,9 +270,6 @@ static void SCR_CalcRefdef (void)
 	scr_fullupdate = 0;		// force a background redraw
 	vid.recalc_refdef = 0;
 
-// force the status bar to redraw
-//	Sbar_Changed ();
-
 //========================================
 	
 // bound viewsize
@@ -586,15 +583,6 @@ void SCR_DrawConsole (void)
 ============================================================================== 
 */ 
 
-typedef struct _TargaHeader {
-	unsigned char 	id_length, colormap_type, image_type;
-	unsigned short	colormap_index, colormap_length;
-	unsigned char	colormap_size;
-	unsigned short	x_origin, y_origin, width, height;
-	unsigned char	pixel_size, attributes;
-} TargaHeader;
-
-
 /* 
 ================== 
 SCR_ScreenShot_f
@@ -603,21 +591,21 @@ SCR_ScreenShot_f
 void SCR_ScreenShot_f (void) 
 {
 	byte		*buffer;
-	char		pcxname[80]; 
+	char		filename[80]; 
 	char		checkname[MAX_OSPATH];
-	int			i, c, temp;
+	int			i;
 // 
 // find a file name to save it to 
 // 
-	strcpy(pcxname,"dp0000.tga");
+	strcpy(filename,"dp0000.tga");
 		
 	for (i=0 ; i<=9999 ; i++) 
 	{ 
-		pcxname[2] = (i/1000)%10 + '0'; 
-		pcxname[3] = (i/ 100)%10 + '0'; 
-		pcxname[4] = (i/  10)%10 + '0'; 
-		pcxname[5] = (i/   1)%10 + '0'; 
-		sprintf (checkname, "%s/%s", com_gamedir, pcxname);
+		filename[2] = (i/1000)%10 + '0'; 
+		filename[3] = (i/ 100)%10 + '0'; 
+		filename[4] = (i/  10)%10 + '0'; 
+		filename[5] = (i/   1)%10 + '0'; 
+		sprintf (checkname, "%s/%s", com_gamedir, filename);
 		if (Sys_FileTime(checkname) == -1)
 			break;	// file doesn't exist
 	} 
@@ -627,31 +615,12 @@ void SCR_ScreenShot_f (void)
 		return;
  	}
 
-
-	buffer = malloc(glwidth*glheight*3 + 18);
-	memset (buffer, 0, 18);
-	buffer[2] = 2;		// uncompressed type
-	buffer[12] = glwidth&255;
-	buffer[13] = glwidth>>8;
-	buffer[14] = glheight&255;
-	buffer[15] = glheight>>8;
-	buffer[16] = 24;	// pixel size
-
-	if (r_render.value)
-		glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer+18 ); 
-
-	// swap rgb to bgr
-	c = 18+glwidth*glheight*3;
-	for (i=18 ; i<c ; i+=3)
-	{
-		temp = buffer[i];
-		buffer[i] = buffer[i+2];
-		buffer[i+2] = temp;
-	}
-	COM_WriteFile (pcxname, buffer, glwidth*glheight*3 + 18 );
+	buffer = malloc(glwidth*glheight*3);
+	glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer); 
+	Image_WriteTGARGB(filename, glwidth, glheight, buffer);
 
 	free (buffer);
-	Con_Printf ("Wrote %s\n", pcxname);
+	Con_Printf ("Wrote %s\n", filename);
 } 
 
 
@@ -680,7 +649,6 @@ void SCR_BeginLoadingPlaque (void)
 
 	scr_drawloading = true;
 	scr_fullupdate = 0;
-//	Sbar_Changed ();
 	SCR_UpdateScreen ();
 	scr_drawloading = false;
 

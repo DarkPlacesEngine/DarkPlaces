@@ -245,3 +245,4 @@ extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clm
 
 extern cvar_t r_render;
 extern cvar_t r_upload;
+#include "image.h"
