@@ -528,6 +528,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
+
+	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
+	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
 }
 
 static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out, int *vertremap)
@@ -781,6 +784,9 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -(loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelyawradius);
 	loadmodel->yawmins[2] = loadmodel->normalmins[2];
 	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+
+	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
+	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
 }
 
 static void zymswapintblock(int *m, int size)
@@ -989,4 +995,3 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
 }
-
