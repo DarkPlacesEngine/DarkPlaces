@@ -23,19 +23,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	char name[16];
+	char name[32];
 }
 sbarpic_t;
 
 static sbarpic_t sbarpics[256];
 static int numsbarpics;
 
-static sbarpic_t *Sbar_NewPic(char *name)
+static sbarpic_t *Sbar_NewPic(const char *name)
 {
 	strcpy(sbarpics[numsbarpics].name, name);
 	// precache it
 	// FIXME: precache on every renderer restart (or move this to client)
-	Draw_CachePic(name);
+	Draw_CachePic(sbarpics[numsbarpics].name);
 	return sbarpics + (numsbarpics++);
 }
 
@@ -54,9 +54,9 @@ sbarpic_t *sb_sigil[4];
 sbarpic_t *sb_armor[3];
 sbarpic_t *sb_items[32];
 
-// 0 is gibbed, 1 is dead, 2-6 are alive
+// 0-4 are based on health (in 20 increments)
 // 0 is static, 1 is temporary animation
-sbarpic_t *sb_faces[7][2];
+sbarpic_t *sb_faces[5][2];
 
 sbarpic_t *sb_face_invis;
 sbarpic_t *sb_face_quad;
@@ -114,152 +114,160 @@ void Sbar_DontShowScores (void)
 	sb_showscores = false;
 }
 
-/*
-===============
-Sbar_Init
-===============
-*/
-void Sbar_Init (void)
+void sbar_start(void)
 {
 	int i;
 
-	Cmd_AddCommand ("+showscores", Sbar_ShowScores);
-	Cmd_AddCommand ("-showscores", Sbar_DontShowScores);
-	Cvar_RegisterVariable (&showfps);
-
 	numsbarpics = 0;
 
-	sb_disc = Sbar_NewPic("disc");
+	sb_disc = Sbar_NewPic("gfx/disc");
 
-	for (i=0 ; i<10 ; i++)
+	for (i = 0;i < 10;i++)
 	{
-		sb_nums[0][i] = Sbar_NewPic (va("num_%i",i));
-		sb_nums[1][i] = Sbar_NewPic (va("anum_%i",i));
+		sb_nums[0][i] = Sbar_NewPic (va("gfx/num_%i",i));
+		sb_nums[1][i] = Sbar_NewPic (va("gfx/anum_%i",i));
 	}
 
-	sb_nums[0][10] = Sbar_NewPic ("num_minus");
-	sb_nums[1][10] = Sbar_NewPic ("anum_minus");
+	sb_nums[0][10] = Sbar_NewPic ("gfx/num_minus");
+	sb_nums[1][10] = Sbar_NewPic ("gfx/anum_minus");
 
-	sb_colon = Sbar_NewPic ("num_colon");
-	sb_slash = Sbar_NewPic ("num_slash");
+	sb_colon = Sbar_NewPic ("gfx/num_colon");
+	sb_slash = Sbar_NewPic ("gfx/num_slash");
 
-	sb_weapons[0][0] = Sbar_NewPic ("inv_shotgun");
-	sb_weapons[0][1] = Sbar_NewPic ("inv_sshotgun");
-	sb_weapons[0][2] = Sbar_NewPic ("inv_nailgun");
-	sb_weapons[0][3] = Sbar_NewPic ("inv_snailgun");
-	sb_weapons[0][4] = Sbar_NewPic ("inv_rlaunch");
-	sb_weapons[0][5] = Sbar_NewPic ("inv_srlaunch");
-	sb_weapons[0][6] = Sbar_NewPic ("inv_lightng");
+	sb_weapons[0][0] = Sbar_NewPic ("gfx/inv_shotgun");
+	sb_weapons[0][1] = Sbar_NewPic ("gfx/inv_sshotgun");
+	sb_weapons[0][2] = Sbar_NewPic ("gfx/inv_nailgun");
+	sb_weapons[0][3] = Sbar_NewPic ("gfx/inv_snailgun");
+	sb_weapons[0][4] = Sbar_NewPic ("gfx/inv_rlaunch");
+	sb_weapons[0][5] = Sbar_NewPic ("gfx/inv_srlaunch");
+	sb_weapons[0][6] = Sbar_NewPic ("gfx/inv_lightng");
 
-	sb_weapons[1][0] = Sbar_NewPic ("inv2_shotgun");
-	sb_weapons[1][1] = Sbar_NewPic ("inv2_sshotgun");
-	sb_weapons[1][2] = Sbar_NewPic ("inv2_nailgun");
-	sb_weapons[1][3] = Sbar_NewPic ("inv2_snailgun");
-	sb_weapons[1][4] = Sbar_NewPic ("inv2_rlaunch");
-	sb_weapons[1][5] = Sbar_NewPic ("inv2_srlaunch");
-	sb_weapons[1][6] = Sbar_NewPic ("inv2_lightng");
+	sb_weapons[1][0] = Sbar_NewPic ("gfx/inv2_shotgun");
+	sb_weapons[1][1] = Sbar_NewPic ("gfx/inv2_sshotgun");
+	sb_weapons[1][2] = Sbar_NewPic ("gfx/inv2_nailgun");
+	sb_weapons[1][3] = Sbar_NewPic ("gfx/inv2_snailgun");
+	sb_weapons[1][4] = Sbar_NewPic ("gfx/inv2_rlaunch");
+	sb_weapons[1][5] = Sbar_NewPic ("gfx/inv2_srlaunch");
+	sb_weapons[1][6] = Sbar_NewPic ("gfx/inv2_lightng");
 
-	for (i=0 ; i<5 ; i++)
+	for (i = 0;i < 5;i++)
 	{
-		sb_weapons[2+i][0] = Sbar_NewPic (va("inva%i_shotgun",i+1));
-		sb_weapons[2+i][1] = Sbar_NewPic (va("inva%i_sshotgun",i+1));
-		sb_weapons[2+i][2] = Sbar_NewPic (va("inva%i_nailgun",i+1));
-		sb_weapons[2+i][3] = Sbar_NewPic (va("inva%i_snailgun",i+1));
-		sb_weapons[2+i][4] = Sbar_NewPic (va("inva%i_rlaunch",i+1));
-		sb_weapons[2+i][5] = Sbar_NewPic (va("inva%i_srlaunch",i+1));
-		sb_weapons[2+i][6] = Sbar_NewPic (va("inva%i_lightng",i+1));
+		sb_weapons[2+i][0] = Sbar_NewPic (va("gfx/inva%i_shotgun",i+1));
+		sb_weapons[2+i][1] = Sbar_NewPic (va("gfx/inva%i_sshotgun",i+1));
+		sb_weapons[2+i][2] = Sbar_NewPic (va("gfx/inva%i_nailgun",i+1));
+		sb_weapons[2+i][3] = Sbar_NewPic (va("gfx/inva%i_snailgun",i+1));
+		sb_weapons[2+i][4] = Sbar_NewPic (va("gfx/inva%i_rlaunch",i+1));
+		sb_weapons[2+i][5] = Sbar_NewPic (va("gfx/inva%i_srlaunch",i+1));
+		sb_weapons[2+i][6] = Sbar_NewPic (va("gfx/inva%i_lightng",i+1));
 	}
 
-	sb_ammo[0] = Sbar_NewPic ("sb_shells");
-	sb_ammo[1] = Sbar_NewPic ("sb_nails");
-	sb_ammo[2] = Sbar_NewPic ("sb_rocket");
-	sb_ammo[3] = Sbar_NewPic ("sb_cells");
+	sb_ammo[0] = Sbar_NewPic ("gfx/sb_shells");
+	sb_ammo[1] = Sbar_NewPic ("gfx/sb_nails");
+	sb_ammo[2] = Sbar_NewPic ("gfx/sb_rocket");
+	sb_ammo[3] = Sbar_NewPic ("gfx/sb_cells");
 
-	sb_armor[0] = Sbar_NewPic ("sb_armor1");
-	sb_armor[1] = Sbar_NewPic ("sb_armor2");
-	sb_armor[2] = Sbar_NewPic ("sb_armor3");
+	sb_armor[0] = Sbar_NewPic ("gfx/sb_armor1");
+	sb_armor[1] = Sbar_NewPic ("gfx/sb_armor2");
+	sb_armor[2] = Sbar_NewPic ("gfx/sb_armor3");
 
-	sb_items[0] = Sbar_NewPic ("sb_key1");
-	sb_items[1] = Sbar_NewPic ("sb_key2");
-	sb_items[2] = Sbar_NewPic ("sb_invis");
-	sb_items[3] = Sbar_NewPic ("sb_invuln");
-	sb_items[4] = Sbar_NewPic ("sb_suit");
-	sb_items[5] = Sbar_NewPic ("sb_quad");
+	sb_items[0] = Sbar_NewPic ("gfx/sb_key1");
+	sb_items[1] = Sbar_NewPic ("gfx/sb_key2");
+	sb_items[2] = Sbar_NewPic ("gfx/sb_invis");
+	sb_items[3] = Sbar_NewPic ("gfx/sb_invuln");
+	sb_items[4] = Sbar_NewPic ("gfx/sb_suit");
+	sb_items[5] = Sbar_NewPic ("gfx/sb_quad");
 
-	sb_sigil[0] = Sbar_NewPic ("sb_sigil1");
-	sb_sigil[1] = Sbar_NewPic ("sb_sigil2");
-	sb_sigil[2] = Sbar_NewPic ("sb_sigil3");
-	sb_sigil[3] = Sbar_NewPic ("sb_sigil4");
+	sb_sigil[0] = Sbar_NewPic ("gfx/sb_sigil1");
+	sb_sigil[1] = Sbar_NewPic ("gfx/sb_sigil2");
+	sb_sigil[2] = Sbar_NewPic ("gfx/sb_sigil3");
+	sb_sigil[3] = Sbar_NewPic ("gfx/sb_sigil4");
 
-	sb_faces[4][0] = Sbar_NewPic ("face1");
-	sb_faces[4][1] = Sbar_NewPic ("face_p1");
-	sb_faces[3][0] = Sbar_NewPic ("face2");
-	sb_faces[3][1] = Sbar_NewPic ("face_p2");
-	sb_faces[2][0] = Sbar_NewPic ("face3");
-	sb_faces[2][1] = Sbar_NewPic ("face_p3");
-	sb_faces[1][0] = Sbar_NewPic ("face4");
-	sb_faces[1][1] = Sbar_NewPic ("face_p4");
-	sb_faces[0][0] = Sbar_NewPic ("face5");
-	sb_faces[0][1] = Sbar_NewPic ("face_p5");
+	sb_faces[4][0] = Sbar_NewPic ("gfx/face1");
+	sb_faces[4][1] = Sbar_NewPic ("gfx/face_p1");
+	sb_faces[3][0] = Sbar_NewPic ("gfx/face2");
+	sb_faces[3][1] = Sbar_NewPic ("gfx/face_p2");
+	sb_faces[2][0] = Sbar_NewPic ("gfx/face3");
+	sb_faces[2][1] = Sbar_NewPic ("gfx/face_p3");
+	sb_faces[1][0] = Sbar_NewPic ("gfx/face4");
+	sb_faces[1][1] = Sbar_NewPic ("gfx/face_p4");
+	sb_faces[0][0] = Sbar_NewPic ("gfx/face5");
+	sb_faces[0][1] = Sbar_NewPic ("gfx/face_p5");
 
-	sb_face_invis = Sbar_NewPic ("face_invis");
-	sb_face_invuln = Sbar_NewPic ("face_invul2");
-	sb_face_invis_invuln = Sbar_NewPic ("face_inv2");
-	sb_face_quad = Sbar_NewPic ("face_quad");
+	sb_face_invis = Sbar_NewPic ("gfx/face_invis");
+	sb_face_invuln = Sbar_NewPic ("gfx/face_invul2");
+	sb_face_invis_invuln = Sbar_NewPic ("gfx/face_inv2");
+	sb_face_quad = Sbar_NewPic ("gfx/face_quad");
 
-	sb_sbar = Sbar_NewPic ("sbar");
-	sb_ibar = Sbar_NewPic ("ibar");
-	sb_scorebar = Sbar_NewPic ("scorebar");
+	sb_sbar = Sbar_NewPic ("gfx/sbar");
+	sb_ibar = Sbar_NewPic ("gfx/ibar");
+	sb_scorebar = Sbar_NewPic ("gfx/scorebar");
 
 //MED 01/04/97 added new hipnotic weapons
 	if (gamemode == GAME_HIPNOTIC)
 	{
-		hsb_weapons[0][0] = Sbar_NewPic ("inv_laser");
-		hsb_weapons[0][1] = Sbar_NewPic ("inv_mjolnir");
-		hsb_weapons[0][2] = Sbar_NewPic ("inv_gren_prox");
-		hsb_weapons[0][3] = Sbar_NewPic ("inv_prox_gren");
-		hsb_weapons[0][4] = Sbar_NewPic ("inv_prox");
+		hsb_weapons[0][0] = Sbar_NewPic ("gfx/inv_laser");
+		hsb_weapons[0][1] = Sbar_NewPic ("gfx/inv_mjolnir");
+		hsb_weapons[0][2] = Sbar_NewPic ("gfx/inv_gren_prox");
+		hsb_weapons[0][3] = Sbar_NewPic ("gfx/inv_prox_gren");
+		hsb_weapons[0][4] = Sbar_NewPic ("gfx/inv_prox");
 
-		hsb_weapons[1][0] = Sbar_NewPic ("inv2_laser");
-		hsb_weapons[1][1] = Sbar_NewPic ("inv2_mjolnir");
-		hsb_weapons[1][2] = Sbar_NewPic ("inv2_gren_prox");
-		hsb_weapons[1][3] = Sbar_NewPic ("inv2_prox_gren");
-		hsb_weapons[1][4] = Sbar_NewPic ("inv2_prox");
+		hsb_weapons[1][0] = Sbar_NewPic ("gfx/inv2_laser");
+		hsb_weapons[1][1] = Sbar_NewPic ("gfx/inv2_mjolnir");
+		hsb_weapons[1][2] = Sbar_NewPic ("gfx/inv2_gren_prox");
+		hsb_weapons[1][3] = Sbar_NewPic ("gfx/inv2_prox_gren");
+		hsb_weapons[1][4] = Sbar_NewPic ("gfx/inv2_prox");
 
-		for (i=0 ; i<5 ; i++)
+		for (i = 0;i < 5;i++)
 		{
-			hsb_weapons[2+i][0] = Sbar_NewPic (va("inva%i_laser",i+1));
-			hsb_weapons[2+i][1] = Sbar_NewPic (va("inva%i_mjolnir",i+1));
-			hsb_weapons[2+i][2] = Sbar_NewPic (va("inva%i_gren_prox",i+1));
-			hsb_weapons[2+i][3] = Sbar_NewPic (va("inva%i_prox_gren",i+1));
-			hsb_weapons[2+i][4] = Sbar_NewPic (va("inva%i_prox",i+1));
+			hsb_weapons[2+i][0] = Sbar_NewPic (va("gfx/inva%i_laser",i+1));
+			hsb_weapons[2+i][1] = Sbar_NewPic (va("gfx/inva%i_mjolnir",i+1));
+			hsb_weapons[2+i][2] = Sbar_NewPic (va("gfx/inva%i_gren_prox",i+1));
+			hsb_weapons[2+i][3] = Sbar_NewPic (va("gfx/inva%i_prox_gren",i+1));
+			hsb_weapons[2+i][4] = Sbar_NewPic (va("gfx/inva%i_prox",i+1));
 		}
 
-		hsb_items[0] = Sbar_NewPic ("sb_wsuit");
-		hsb_items[1] = Sbar_NewPic ("sb_eshld");
+		hsb_items[0] = Sbar_NewPic ("gfx/sb_wsuit");
+		hsb_items[1] = Sbar_NewPic ("gfx/sb_eshld");
 	}
 	else if (gamemode == GAME_ROGUE)
 	{
-		rsb_invbar[0] = Sbar_NewPic ("r_invbar1");
-		rsb_invbar[1] = Sbar_NewPic ("r_invbar2");
+		rsb_invbar[0] = Sbar_NewPic ("gfx/r_invbar1");
+		rsb_invbar[1] = Sbar_NewPic ("gfx/r_invbar2");
 
-		rsb_weapons[0] = Sbar_NewPic ("r_lava");
-		rsb_weapons[1] = Sbar_NewPic ("r_superlava");
-		rsb_weapons[2] = Sbar_NewPic ("r_gren");
-		rsb_weapons[3] = Sbar_NewPic ("r_multirock");
-		rsb_weapons[4] = Sbar_NewPic ("r_plasma");
+		rsb_weapons[0] = Sbar_NewPic ("gfx/r_lava");
+		rsb_weapons[1] = Sbar_NewPic ("gfx/r_superlava");
+		rsb_weapons[2] = Sbar_NewPic ("gfx/r_gren");
+		rsb_weapons[3] = Sbar_NewPic ("gfx/r_multirock");
+		rsb_weapons[4] = Sbar_NewPic ("gfx/r_plasma");
 
-		rsb_items[0] = Sbar_NewPic ("r_shield1");
-		rsb_items[1] = Sbar_NewPic ("r_agrav1");
+		rsb_items[0] = Sbar_NewPic ("gfx/r_shield1");
+		rsb_items[1] = Sbar_NewPic ("gfx/r_agrav1");
 
 // PGM 01/19/97 - team color border
-		rsb_teambord = Sbar_NewPic ("r_teambord");
+		rsb_teambord = Sbar_NewPic ("gfx/r_teambord");
 // PGM 01/19/97 - team color border
 
-		rsb_ammo[0] = Sbar_NewPic ("r_ammolava");
-		rsb_ammo[1] = Sbar_NewPic ("r_ammomulti");
-		rsb_ammo[2] = Sbar_NewPic ("r_ammoplasma");
+		rsb_ammo[0] = Sbar_NewPic ("gfx/r_ammolava");
+		rsb_ammo[1] = Sbar_NewPic ("gfx/r_ammomulti");
+		rsb_ammo[2] = Sbar_NewPic ("gfx/r_ammoplasma");
 	}
+}
+
+void sbar_shutdown(void)
+{
+}
+
+void sbar_newmap(void)
+{
+}
+
+void Sbar_Init (void)
+{
+	Cmd_AddCommand ("+showscores", Sbar_ShowScores);
+	Cmd_AddCommand ("-showscores", Sbar_DontShowScores);
+	Cvar_RegisterVariable (&showfps);
+
+	R_RegisterModule("sbar", sbar_start, sbar_shutdown, sbar_newmap);
 }
 
 
