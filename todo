@@ -47,7 +47,7 @@ d darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 -n darkplaces: add a config saving command (Speeds)
 0 darkplaces: add a loading screen (gfx/loadback.tga or the loading plaque if that's not found) before loading commences so that people have something to look at when the engine starts... (SeienAbunae)
-0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
+-n darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
 0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 0 darkplaces: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
