@@ -2871,8 +2871,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	dheader_t *header;
 	dmodel_t *bm;
 	mempool_t *mainmempool;
-	char *loadname;
-	model_t *originalloadmodel;
 	float dist, modelyawradius, modelradius, *vec;
 	msurface_t *surf;
 	int numshadowmeshtriangles;
@@ -2946,10 +2944,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->numframes = 2;		// regular and alternate animation
 
 	mainmempool = mod->mempool;
-	loadname = mod->name;
 
 	Mod_Q1BSP_LoadLightList();
-	originalloadmodel = loadmodel;
+	loadmodel = loadmodel;
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
@@ -2964,11 +2961,43 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
 	
-//
-// set up the submodels(FIXME: this is confusing)
-//
+	// LordHavoc: to clear the fog around the original quake submodel code, I
+	// will explain:
+	// first of all, some background info on the submodels:
+	// model 0 is the map model (the world, named maps/e1m1.bsp for example)
+	// model 1 and higher are submodels (doors and the like, named *1, *2, etc)
+	// now the weird for loop itself:
+	// the loop functions in an odd way, on each iteration it sets up the
+	// current 'mod' model (which despite the confusing code IS the model of
+	// the number i), at the end of the loop it duplicates the model to become
+	// the next submodel, and loops back to set up the new submodel.
+
+	// LordHavoc: now the explanation of my sane way (which works identically):
+	// set up the world model, then on each submodel copy from the world model
+	// and set up the submodel with the respective model info.
 	for (i = 0;i < mod->brush.numsubmodels;i++)
 	{
+		// LordHavoc: this code was originally at the end of this loop, but
+		// has been transformed to something more readable at the start here.
+
+		// LordHavoc: only register submodels if it is the world
+		// (prevents external bsp models from replacing world submodels with
+		//  their own)
+		if (loadmodel->isworldmodel && i)
+		{
+			char name[10];
+			// duplicate the basic information
+			sprintf(name, "*%i", i);
+			mod = Mod_FindName(name);
+			// copy the base model to this one
+			*mod = *loadmodel;
+			// rename the clone back to its proper name
+			strcpy(mod->name, name);
+			// textures and memory belong to the main model
+			mod->texturepool = NULL;
+			mod->mempool = NULL;
+		}
+
 		bm = &mod->brushq1.submodels[i];
 
 		mod->brushq1.hulls[0].firstclipnode = bm->headnode[0];
@@ -2983,7 +3012,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 		// make the model surface list (used by shadowing/lighting)
 		mod->numsurfaces = mod->brushq1.nummodelsurfaces;
-		mod->surfacelist = Mem_Alloc(originalloadmodel->mempool, mod->numsurfaces * sizeof(*mod->surfacelist));
+		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->numsurfaces * sizeof(*mod->surfacelist));
 		for (j = 0;j < mod->numsurfaces;j++)
 			mod->surfacelist[j] = mod->brushq1.firstmodelsurface + j;
 
@@ -3001,11 +3030,11 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->brush.LightPoint = NULL;
 			mod->brush.AmbientSoundLevelsForPoint = NULL;
 		}
-		mod->brushq1.pvstexturechains = Mem_Alloc(originalloadmodel->mempool, mod->brushq1.numtextures * sizeof(msurface_t **));
-		mod->brushq1.pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool,(mod->brushq1.nummodelsurfaces + mod->brushq1.numtextures) * sizeof(msurface_t *));
-		mod->brushq1.pvstexturechainslength = Mem_Alloc(originalloadmodel->mempool, mod->brushq1.numtextures * sizeof(int));
+		mod->brushq1.pvstexturechains = Mem_Alloc(loadmodel->mempool, mod->brushq1.numtextures * sizeof(msurface_t **));
+		mod->brushq1.pvstexturechainsbuffer = Mem_Alloc(loadmodel->mempool,(mod->brushq1.nummodelsurfaces + mod->brushq1.numtextures) * sizeof(msurface_t *));
+		mod->brushq1.pvstexturechainslength = Mem_Alloc(loadmodel->mempool, mod->brushq1.numtextures * sizeof(int));
 		Mod_Q1BSP_BuildPVSTextureChains(mod);
-		Mod_Q1BSP_BuildLightmapUpdateChains(originalloadmodel->mempool, mod);
+		Mod_Q1BSP_BuildLightmapUpdateChains(loadmodel->mempool, mod);
 		if (mod->brushq1.nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
@@ -3051,30 +3080,13 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		else
 		{
 			// LordHavoc: empty submodel(lacrima.bsp has such a glitch)
-			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadname);
+			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadmodel->name);
 		}
-		Mod_Q1BSP_BuildSurfaceNeighbors(mod->brushq1.surfaces + mod->brushq1.firstmodelsurface, mod->brushq1.nummodelsurfaces, originalloadmodel->mempool);
+		Mod_Q1BSP_BuildSurfaceNeighbors(mod->brushq1.surfaces + mod->brushq1.firstmodelsurface, mod->brushq1.nummodelsurfaces, loadmodel->mempool);
 
 		mod->brushq1.num_visleafs = bm->visleafs;
-
-		// LordHavoc: only register submodels if it is the world
-		// (prevents bsp models from replacing world submodels)
-		if (loadmodel->isworldmodel && i < (mod->brush.numsubmodels - 1))
-		{
-			char	name[10];
-			// duplicate the basic information
-			sprintf(name, "*%i", i+1);
-			loadmodel = Mod_FindName(name);
-			*loadmodel = *mod;
-			strcpy(loadmodel->name, name);
-			// textures and memory belong to the main model
-			loadmodel->texturepool = NULL;
-			loadmodel->mempool = NULL;
-			mod = loadmodel;
-		}
 	}
 
-	loadmodel = originalloadmodel;
 	//Mod_Q1BSP_ProcessLightList();
 
 	if (developer.integer)
