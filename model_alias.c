@@ -355,15 +355,15 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliasdata_meshes = Mem_Alloc(loadmodel->mempool, sizeof(aliasmesh_t));
 
 	loadmodel->numskins = LittleLong(pinmodel->numskins);
-	BOUNDI(loadmodel->numskins,0,256);
+	BOUNDI(loadmodel->numskins,0,65536);
 	skinwidth = LittleLong (pinmodel->skinwidth);
-	BOUNDI(skinwidth,0,4096);
+	BOUNDI(skinwidth,0,65536);
 	skinheight = LittleLong (pinmodel->skinheight);
-	BOUNDI(skinheight,0,4096);
+	BOUNDI(skinheight,0,65536);
 	numverts = LittleLong(pinmodel->numverts);
 	BOUNDI(numverts,0,65536);
 	loadmodel->alias.aliasdata_meshes->num_triangles = LittleLong(pinmodel->numtris);
-	BOUNDI(loadmodel->alias.aliasdata_meshes->num_triangles,0,65536 / 3); // max elements limit, rather than max triangles limit
+	BOUNDI(loadmodel->alias.aliasdata_meshes->num_triangles,0,65536);
 	loadmodel->numframes = LittleLong(pinmodel->numframes);
 	BOUNDI(loadmodel->numframes,0,65536);
 	loadmodel->synctype = LittleLong (pinmodel->synctype);
@@ -568,7 +568,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 				else
 					sprintf (name, "%s_%i", loadmodel->name, i);
 				if (!Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
-					Mod_LoadSkinFrame_Internal(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true, (qbyte *)datapointer, skinwidth, skinheight);
+					Mod_LoadSkinFrame_Internal(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, r_fullbrights.integer, (qbyte *)datapointer, skinwidth, skinheight);
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + totalskins, &tempskinframe);
 				datapointer += skinwidth * skinheight;
 				totalskins++;
@@ -654,7 +654,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
 	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
-	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > (65536 / 3))
+	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > 65536)
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
 	if (LittleLong(pinmodel->num_xyz) < 1 || LittleLong(pinmodel->num_xyz) > 65536)
 		Host_Error ("%s has invalid number of vertices: %i", loadmodel->name, LittleLong(pinmodel->num_xyz));
