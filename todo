@@ -6,11 +6,10 @@
 -d darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 -d darkplaces: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
 -d darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
--d darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (Transfusion)
+-d darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (protoplasmatic)
 -d darkplaces: add slowmo to options menu (Cristian Beltramo)
 -d darkplaces: add some cl_explosions_ cvars to control settings - start alpha, end alpha, start size, end size, life time (Supajoe, Mercury)
--d darkplaces: add support for multiple -game's (note: this needs an enhanced COM_CheckParm to find the multiple matches) (Static_Fiend)
--d darkplaces: add sv_maxrate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
+-d darkplaces: add sv_maxrate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (protoplasmatic)
 -d darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -d darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 -d darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
@@ -44,7 +43,7 @@
 0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 0 darkplaces: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 darkplaces: add DP_SV_DRAWONLYTOTEAM extension (Supajoe) 
-0 darkplaces: add DP_WEAPONSKIN extension which would add a .float weaponskin field (Transfusion) 
+0 darkplaces: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic) 
 0 darkplaces: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
 0 darkplaces: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension (Electro) 
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
@@ -461,6 +460,7 @@ d darkplaces: add r_showtris cvar (Riot)
 d darkplaces: add scr_conbrightness cvar (0-1) to control brightness of conback (0 = black and does not load conback, resets back to 0 if conback fails to load)
 d darkplaces: add skin and pflags support to light entity loader
 d darkplaces: add stats to slist menu displaying how many masters/servers have been queried and replied (tell yummyluv)
+d darkplaces: add support for multiple -game's (note: this needs an enhanced COM_CheckParm to find the multiple matches) (Static_Fiend)
 d darkplaces: add sv_freenonclients cvar (Vermeulen)
 d darkplaces: add tenebrae light entity properties, like cubemap and style and such
 d darkplaces: add vid_pixelaspect patch from Grisha Spivak's email
