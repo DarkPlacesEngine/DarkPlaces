@@ -959,9 +959,9 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			lightmins[0] = min(entmins[0], s->origin[0] - s->specialvisibilityradius);
 			lightmins[1] = min(entmins[1], s->origin[1] - s->specialvisibilityradius);
 			lightmins[2] = min(entmins[2], s->origin[2] - s->specialvisibilityradius);
-			lightmaxs[0] = min(entmaxs[0], s->origin[0] + s->specialvisibilityradius);
-			lightmaxs[1] = min(entmaxs[1], s->origin[1] + s->specialvisibilityradius);
-			lightmaxs[2] = min(entmaxs[2], s->origin[2] + s->specialvisibilityradius);
+			lightmaxs[0] = max(entmaxs[0], s->origin[0] + s->specialvisibilityradius);
+			lightmaxs[1] = max(entmaxs[1], s->origin[1] + s->specialvisibilityradius);
+			lightmaxs[2] = max(entmaxs[2], s->origin[2] + s->specialvisibilityradius);
 			sv_writeentitiestoclient_totalentities++;
 			// if not touching a visible leaf
 			if (sv_cullentities_pvs.integer && sv_writeentitiestoclient_pvsbytes && sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv_writeentitiestoclient_pvs, lightmins, lightmaxs))
