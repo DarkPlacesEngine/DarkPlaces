@@ -202,7 +202,7 @@ static void mod_newmap(void)
 
 	for (i=0; i<MAX_MOD_KNOWN; i++)
 	{
-		if (mod_known[i].name[0] && mod_known[i].type == mod_brush)
+		if (mod_known[i].name[0] && mod_known[i].type == mod_brushq1)
 		{
 			for (surfnum=0, surf=mod_known[i].brushq1.surfaces; surfnum<mod_known[i].brushq1.numsurfaces;surfnum++, surf++)
 			{
