@@ -32,7 +32,7 @@ typedef enum {false, true}	qboolean;
 #include "quakeio.h"
 
 // LordHavoc: MSVC has a different name for snprintf
-#ifndef snprintf
+#ifdef WIN32
 #define snprintf _snprintf
 #endif
 
