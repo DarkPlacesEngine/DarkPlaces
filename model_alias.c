@@ -427,8 +427,8 @@ void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 			else
 				sprintf (name, "%s_%i", loadmodel->name, i);
-			if (!Mod_LoadSkinFrame(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA, true, false, true))
-				Mod_LoadSkinFrame_Internal(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA, true, false, true, (qbyte *)datapointer, skinwidth, skinheight);
+			if (!Mod_LoadSkinFrame(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
+				Mod_LoadSkinFrame_Internal(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true, (qbyte *)datapointer, skinwidth, skinheight);
 			datapointer += skinwidth * skinheight;
 			totalskins++;
 		}
@@ -438,7 +438,7 @@ void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 	for (;;)
 	{
 		sprintf (name, "%s_%i", loadmodel->name, loadmodel->numskins);
-		if (Mod_LoadSkinFrame (&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA, true, false, true))
+		if (Mod_LoadSkinFrame (&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;
@@ -627,7 +627,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 		// skins found (most likely not a player model)
 		loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, sizeof(skinframe_t) * loadmodel->numskins);
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
-			Mod_LoadSkinFrame (loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE, true, false, true);
+			Mod_LoadSkinFrame (loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
 	}
 	else
 	{
@@ -849,7 +849,7 @@ void Mod_LoadQ3AliasModel(model_t *mod, void *buffer)
 
 		memset(&tempskinframe, 0, sizeof(tempskinframe));
 		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
-			Mod_LoadSkinFrame (&tempskinframe, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE, true, false, true);
+			Mod_LoadSkinFrame (&tempskinframe, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
 		Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins, &tempskinframe);
