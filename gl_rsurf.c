@@ -530,7 +530,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
-	if (r_refdef.worldmodel == NULL || !r_refdef.worldmodel->brushq1.nodes)
+	if (r_refdef.worldmodel == NULL || !r_refdef.worldmodel->brush.data_nodes)
 		return;
 	fcolor[0] = cr1;
 	fcolor[1] = cg1;
@@ -541,7 +541,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	fcolor[6] = cb2 - cb1;
 	fcolor[7] = (ca2 - ca1) * (1.0f / 64.0f);
 
-	R_StainNode(r_refdef.worldmodel->brushq1.nodes + r_refdef.worldmodel->brushq1.hulls[0].firstclipnode, r_refdef.worldmodel, origin, radius, fcolor);
+	R_StainNode(r_refdef.worldmodel->brush.data_nodes + r_refdef.worldmodel->brushq1.hulls[0].firstclipnode, r_refdef.worldmodel, origin, radius, fcolor);
 
 	// look for embedded bmodels
 	for (n = 0;n < cl_num_brushmodel_entities;n++)
@@ -551,10 +551,10 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 		if (model && model->name[0] == '*')
 		{
 			Mod_CheckLoaded(model);
-			if (model->brushq1.nodes)
+			if (model->brush.data_nodes)
 			{
 				Matrix4x4_Transform(&ent->inversematrix, origin, org);
-				R_StainNode(model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode, model, org, radius, fcolor);
+				R_StainNode(model->brush.data_nodes + model->brushq1.hulls[0].firstclipnode, model, org, radius, fcolor);
 			}
 		}
 	}
@@ -1302,7 +1302,7 @@ static void R_DrawPortals(void)
 	model_t *model = r_refdef.worldmodel;
 	if (model == NULL)
 		return;
-	for (portalnum = 0, portal = model->brushq1.portals;portalnum < model->brushq1.numportals;portalnum++, portal++)
+	for (portalnum = 0, portal = model->brush.data_portals;portalnum < model->brush.num_portals;portalnum++, portal++)
 	{
 		if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 		if (!R_CullBox(portal->mins, portal->maxs))
@@ -1329,7 +1329,7 @@ void R_WorldVisibility(void)
 		int i, j;
 		mleaf_t *leaf;
 		memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brushq3.num_faces);
-		for (j = 0, leaf = r_refdef.worldmodel->brushq3.data_leafs;j < r_refdef.worldmodel->brushq3.num_leafs;j++, leaf++)
+		for (j = 0, leaf = r_refdef.worldmodel->brush.data_leafs;j < r_refdef.worldmodel->brush.num_leafs;j++, leaf++)
 		{
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
@@ -1357,7 +1357,7 @@ void R_WorldVisibility(void)
 		if (viewleaf->clusterindex < 0 || r_surfaceworldnode.integer)
 		{
 			// equivilant to quake's RecursiveWorldNode but faster and more effective
-			for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
+			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 			{
 				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
 				{
@@ -1376,19 +1376,19 @@ void R_WorldVisibility(void)
 			// RecursiveWorldNode
 			leafstack[0] = viewleaf;
 			leafstackpos = 1;
-			memset(leafvisited, 0, r_refdef.worldmodel->brushq1.num_leafs);
+			memset(leafvisited, 0, r_refdef.worldmodel->brush.num_leafs);
 			while (leafstackpos)
 			{
 				c_leafs++;
 				leaf = leafstack[--leafstackpos];
-				leafvisited[leaf - r_refdef.worldmodel->brushq1.data_leafs] = 1;
+				leafvisited[leaf - r_refdef.worldmodel->brush.data_leafs] = 1;
 				// draw any surfaces bounding this leaf
 				if (leaf->numleaffaces)
 					for (i = 0, mark = leaf->firstleafface;i < leaf->numleaffaces;i++, mark++)
 						r_worldsurfacevisible[*mark] = true;
 				// follow portals into other leafs
 				for (p = leaf->portals;p;p = p->next)
-					if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !leafvisited[p->past - r_refdef.worldmodel->brushq1.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
+					if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !leafvisited[p->past - r_refdef.worldmodel->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
 						leafstack[leafstackpos++] = p->past;
 			}
 		}
@@ -1446,7 +1446,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	else
 		pvs = NULL;
 	// FIXME: use BSP recursion as lights are often small
-	for (leafindex = 0, leaf = model->brushq1.data_leafs;leafindex < model->brushq1.num_leafs;leafindex++, leaf++)
+	for (leafindex = 0, leaf = model->brush.data_leafs;leafindex < model->brush.num_leafs;leafindex++, leaf++)
 	{
 		if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && (pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
 		{
@@ -2155,7 +2155,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	else
 		pvs = NULL;
 	// FIXME: use BSP recursion as lights are often small
-	for (leafindex = 0, leaf = model->brushq3.data_leafs;leafindex < model->brushq3.num_leafs;leafindex++, leaf++)
+	for (leafindex = 0, leaf = model->brush.data_leafs;leafindex < model->brush.num_leafs;leafindex++, leaf++)
 	{
 		if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && (pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
 		{

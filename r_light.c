@@ -259,7 +259,7 @@ void R_MarkLights(entity_render_t *ent)
 	int i, bit, bitindex;
 	dlight_t *light;
 	vec3_t lightorigin;
-	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brushq1.num_leafs)
+	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brush.num_leafs)
 	{
 		for (i = 0, light = r_dlight;i < r_numdlights;i++, light++)
 		{
@@ -269,7 +269,7 @@ void R_MarkLights(entity_render_t *ent)
 			lightpvsbytes = 0;
 			if (r_vismarklights.integer && ent->model->brush.FatPVS)
 				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
-			R_RecursiveMarkLights(ent, lightorigin, light, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
+			R_RecursiveMarkLights(ent, lightorigin, light, bit, bitindex, ent->model->brush.data_nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
 		}
 	}
 }
