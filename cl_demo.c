@@ -132,56 +132,62 @@ void CL_ReadDemoMessage(void)
 	if (cls.demopaused)
 		return;
 
-	// decide if it is time to grab the next message
-	// always grab until fully connected
-	if (cls.signon == SIGNONS)
+	while (1)
 	{
-		if (cls.timedemo)
+		// decide if it is time to grab the next message
+		// always grab until fully connected
+		if (cls.signon == SIGNONS)
 		{
-			if (host_framecount == cls.td_lastframe)
+			if (cls.timedemo)
 			{
-				// already read this frame's message
+				if (host_framecount == cls.td_lastframe)
+				{
+					// already read this frame's message
+					return;
+				}
+				if (cls.td_lastframe == -1)
+				{
+					// we start counting on the second frame
+					// (after parsing connection stuff)
+					cls.td_startframe = host_framecount + 1;
+				}
+				cls.td_lastframe = host_framecount;
+				// if this is the first official frame we can now grab the real
+				// td_starttime so the bogus time on the first frame doesn't
+				// count against the final report
+				if (host_framecount == cls.td_startframe)
+					cls.td_starttime = realtime;
+			}
+			else if (cl.time <= cl.mtime[0])
+			{
+				// don't need another message yet
 				return;
 			}
-			if (cls.td_lastframe == -1)
-			{
-				// we start counting on the second frame
-				// (after parsing connection stuff)
-				cls.td_startframe = host_framecount + 1;
-			}
-			cls.td_lastframe = host_framecount;
-			// if this is the first official frame we can now grab the real
-			// td_starttime so the bogus time on the first frame doesn't
-			// count against the final report
-			if (host_framecount == cls.td_startframe)
-				cls.td_starttime = realtime;
 		}
-		else if (cl.time <= cl.mtime[0])
+
+		// get the next message
+		FS_Read(cls.demofile, &net_message.cursize, 4);
+		net_message.cursize = LittleLong(net_message.cursize);
+		VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+		for (i = 0;i < 3;i++)
 		{
-			// don't need another message yet
+			r = FS_Read(cls.demofile, &f, 4);
+			cl.mviewangles[0][i] = LittleFloat(f);
+		}
+
+		if (net_message.cursize > NET_MAXMESSAGE)
+			Host_Error("Demo message > NET_MAXMESSAGE");
+		if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == (size_t)net_message.cursize)
+		{
+			MSG_BeginReading();
+			CL_ParseServerMessage();
+		}
+		else
+		{
+			CL_Disconnect();
 			return;
 		}
 	}
-
-	// get the next message
-	FS_Read(cls.demofile, &net_message.cursize, 4);
-	net_message.cursize = LittleLong(net_message.cursize);
-	VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
-	for (i = 0;i < 3;i++)
-	{
-		r = FS_Read(cls.demofile, &f, 4);
-		cl.mviewangles[0][i] = LittleFloat(f);
-	}
-
-	if (net_message.cursize > NET_MAXMESSAGE)
-		Host_Error("Demo message > NET_MAXMESSAGE");
-	if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == (size_t)net_message.cursize)
-	{
-		MSG_BeginReading();
-		CL_ParseServerMessage();
-	}
-	else
-		CL_Disconnect();
 }
 
 
