@@ -13,12 +13,6 @@ unsigned int palette_font[256];
 
 qbyte host_basepal[768];
 
-cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
-cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
-cvar_t v_brightness = {CVAR_SAVE, "v_brightness", "0"};
-cvar_t v_overbrightbits = {CVAR_SAVE, "v_overbrightbits", "0"};
-cvar_t v_hwgamma = {0, "v_hwgamma", "1"};
-
 void Palette_Setup8to24(void)
 {
 	int i;
@@ -169,62 +163,6 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, uns
 			out[i] = bound(0, adjusted, 65535);
 		}
 	}
-}
-
-qboolean hardwaregammasupported = false;
-void VID_UpdateGamma(qboolean force)
-{
-	static float cachegamma = -1, cachebrightness = -1, cachecontrast = -1;
-	static int cacheoverbrightbits = -1, cachehwgamma = -1;
-
-	// LordHavoc: don't mess with gamma tables if running dedicated
-	if (cls.state == ca_dedicated)
-		return;
-
-	if (!force
-	 && v_gamma.value == cachegamma
-	 && v_contrast.value == cachecontrast
-	 && v_brightness.value == cachebrightness
-	 && v_overbrightbits.integer == cacheoverbrightbits
-	 && v_hwgamma.value == cachehwgamma)
-		return;
-
-	if (v_gamma.value < 0.1)
-		Cvar_SetValue("v_gamma", 0.1);
-	if (v_gamma.value > 5.0)
-		Cvar_SetValue("v_gamma", 5.0);
-
-	if (v_contrast.value < 0.5)
-		Cvar_SetValue("v_contrast", 0.5);
-	if (v_contrast.value > 5.0)
-		Cvar_SetValue("v_contrast", 5.0);
-
-	if (v_brightness.value < 0)
-		Cvar_SetValue("v_brightness", 0);
-	if (v_brightness.value > 0.8)
-		Cvar_SetValue("v_brightness", 0.8);
-
-	cachegamma = v_gamma.value;
-	cachecontrast = v_contrast.value;
-	cachebrightness = v_brightness.value;
-	cacheoverbrightbits = v_overbrightbits.integer;
-
-	hardwaregammasupported = VID_SetGamma((float) (1 << cacheoverbrightbits), cachegamma, cachecontrast, cachebrightness);
-	if (!hardwaregammasupported)
-	{
-		Con_Printf("Hardware gamma not supported.\n");
-		Cvar_SetValue("v_hwgamma", 0);
-	}
-	cachehwgamma = v_hwgamma.integer;
-}
-
-void Gamma_Init(void)
-{
-	Cvar_RegisterVariable(&v_gamma);
-	Cvar_RegisterVariable(&v_brightness);
-	Cvar_RegisterVariable(&v_contrast);
-	Cvar_RegisterVariable(&v_hwgamma);
-	Cvar_RegisterVariable(&v_overbrightbits);
 }
 
 void Palette_Init(void)

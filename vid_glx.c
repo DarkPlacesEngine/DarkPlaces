@@ -71,7 +71,7 @@ static dllfunction_t videosyncfuncs[] =
 };
 
 static Display *vidx11_display = NULL;
-static int scrnum;
+static int vidx11_screen;
 static Window win;
 static GLXContext ctx = NULL;
 
@@ -381,7 +381,7 @@ static void HandleEvents(void)
 			case 5:
 				Key_Event(K_MWHEELDOWN, true);
 				break;
-    		default:
+			default:
 				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-5 expected\n", event.xbutton.button);
 				break;
 			}
@@ -406,7 +406,7 @@ static void HandleEvents(void)
 			case 5:
 				Key_Event(K_MWHEELDOWN, false);
 				break;
-    		default:
+			default:
 				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-5 expected\n", event.xbutton.button);
 				break;
 			}
@@ -435,22 +435,31 @@ static void HandleEvents(void)
 		case MapNotify:
 			// window restored
 			vid_hidden = false;
+			vid_allowhwgamma = true;
 			break;
 		case UnmapNotify:
 			// window iconified/rolledup/whatever
 			vid_hidden = true;
+			vid_allowhwgamma = false;
+			VID_RestoreSystemGamma();
 			break;
 		case FocusIn:
 			// window is now the input focus
+			vid_allowhwgamma = true;
 			break;
 		case FocusOut:
 			// window is no longer the input focus
+			vid_allowhwgamma = false;
+			VID_RestoreSystemGamma();
 			break;
 		case EnterNotify:
 			// mouse entered window
+			vid_allowhwgamma = true;
 			break;
 		case LeaveNotify:
 			// mouse left window
+			vid_allowhwgamma = false;
+			VID_RestoreSystemGamma();
 			break;
 		}
 	}
@@ -490,7 +499,6 @@ static void IN_ActivateMouse( void )
 	}
 }
 
-
 void VID_Shutdown(void)
 {
 	if (!ctx || !vidx11_display)
@@ -500,11 +508,12 @@ void VID_Shutdown(void)
 	usingmouse = false;
 	if (vidx11_display)
 	{
+		VID_RestoreSystemGamma();
 		uninstall_grabs();
 
 		// FIXME: glXDestroyContext here?
 		if (vidmode_active)
-			XF86VidModeSwitchToMode(vidx11_display, scrnum, vidmodes[0]);
+			XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[0]);
 		if (win)
 			XDestroyWindow(vidx11_display, win);
 		XCloseDisplay(vidx11_display);
@@ -520,6 +529,7 @@ void VID_Shutdown(void)
 void signal_handler(int sig)
 {
 	printf("Received signal %d, exiting...\n", sig);
+	VID_RestoreSystemGamma();
 	Sys_Quit();
 	exit(0);
 }
@@ -583,80 +593,14 @@ void VID_Finish (void)
 	}
 }
 
-// LordHavoc: ported from SDL 1.2.2, this was far more difficult to port from
-// SDL than to simply use the XFree gamma ramp extension, but that affects the
-// whole screen even when the game window is inactive, this only affects the
-// screen while the window is active, very desirable behavior :)
-int VID_SetGamma(float prescale, float gamma, float scale, float base)
+int VID_SetGamma(unsigned short *ramps)
 {
-// LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
-#if 1
-	return FALSE;
-#else
-	int i, ncolors, c;
-	unsigned int Rmask, Gmask, Bmask, Rloss, Gloss, Bloss, Rshift, Gshift, Bshift, mask;
-	XColor xcmap[256];
-	unsigned short ramp[256];
+	return XF86VidModeSetGammaRamp(vidx11_display, vidx11_screen, 256, ramps, ramps + 256, ramps + 512);
+}
 
-	if (COM_CheckParm("-nogamma"))
-		return FALSE;
-
-	if (vidx11_visual->class != DirectColor)
-	{
-		Con_Printf("X11 Visual class is %d, can only do gamma on %d\n", vidx11_visual->class, DirectColor);
-		return FALSE;
-	}
-
-	Rmask = vidx11_visual->red_mask;
-	Gmask = vidx11_visual->green_mask;
-	Bmask = vidx11_visual->blue_mask;
-
-	Rshift = 0;
-	Rloss = 8;
-	if ((mask = Rmask))
-	{
-		for (;!(mask & 1);mask >>= 1)
-			++Rshift;
-		for (;(mask & 1);mask >>= 1)
-			--Rloss;
-	}
-	Gshift = 0;
-	Gloss = 8;
-	if ((mask = Gmask))
-	{
-		for (;!(mask & 1);mask >>= 1)
-			++Gshift;
-		for (;(mask & 1);mask >>= 1)
-			--Gloss;
-	}
-	Bshift = 0;
-	Bloss = 8;
-	if ((mask = Bmask))
-	{
-		for (;!(mask & 1);mask >>= 1)
-			++Bshift;
-		for (;(mask & 1);mask >>= 1)
-			--Bloss;
-	}
-
-	BuildGammaTable16(prescale, gamma, scale, base, ramp);
-
-	// convert gamma ramp to palette (yes this seems odd)
-	ncolors = vidx11_visual->map_entries;
-	for (i = 0;i < ncolors;i++)
-	{
-		c = (256 * i / ncolors);
-		xcmap[i].pixel = ((c >> Rloss) << Rshift) | ((c >> Gloss) << Gshift) | ((c >> Bloss) << Bshift);
-		xcmap[i].red   = ramp[c];
-		xcmap[i].green = ramp[c];
-		xcmap[i].blue  = ramp[c];
-		xcmap[i].flags = (DoRed|DoGreen|DoBlue);
-	}
-	XStoreColors(vidx11_display, vidx11_colormap, xcmap, ncolors);
-	XSync(vidx11_display, false);
-	// FIXME: should this check for BadAccess/BadColor/BadValue errors produced by XStoreColors before setting this true?
-	return TRUE;
-#endif
+int VID_GetGamma(unsigned short *ramps)
+{
+	return XF86VidModeGetGammaRamp(vidx11_display, vidx11_screen, 256, ramps, ramps + 256, ramps + 512);
 }
 
 void VID_Init(void)
@@ -668,7 +612,7 @@ void VID_Init(void)
 		mouse_avail = false;
 }
 
-void VID_BuildGLXAttrib(int *attrib, int stencil, int gamma)
+void VID_BuildGLXAttrib(int *attrib, int stencil)
 {
 	*attrib++ = GLX_RGBA;
 	*attrib++ = GLX_RED_SIZE;*attrib++ = 1;
@@ -682,10 +626,6 @@ void VID_BuildGLXAttrib(int *attrib, int stencil, int gamma)
 		*attrib++ = GLX_STENCIL_SIZE;*attrib++ = 8;
 		*attrib++ = GLX_ALPHA_SIZE;*attrib++ = 1;
 	}
-	if (gamma)
-	{
-		*attrib++ = GLX_X_VISUAL_TYPE;*attrib++ = GLX_DIRECT_COLOR;
-	};
 	*attrib++ = None;
 }
 
@@ -716,8 +656,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 		return false;
 	}
 
-	scrnum = DefaultScreen(vidx11_display);
-	root = RootWindow(vidx11_display, scrnum);
+	vidx11_screen = DefaultScreen(vidx11_display);
+	root = RootWindow(vidx11_display, vidx11_screen);
 
 	// Get video mode list
 	MajorVersion = MinorVersion = 0;
@@ -739,35 +679,22 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 		return false;
 	}
 
-	visinfo = NULL;
-// LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
-#if 0
-	if (!COM_CheckParm("-nogamma"))
-	{
-		VID_BuildGLXAttrib(attrib, stencil, true);
-		visinfo = qglXChooseVisual(vidx11_display, scrnum, attrib);
-	}
-#endif
+	VID_BuildGLXAttrib(attrib, stencil);
+	visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
 	if (!visinfo)
 	{
-		VID_BuildGLXAttrib(attrib, stencil, false);
-		visinfo = qglXChooseVisual(vidx11_display, scrnum, attrib);
-		if (!visinfo)
-		{
-			Con_Printf("Couldn't get an RGB, Double-buffered, Depth visual\n");
-			return false;
-		}
+		Con_Printf("Couldn't get an RGB, Double-buffered, Depth visual\n");
+		return false;
 	}
 
 	if (vidmode_ext)
 	{
 		int best_fit, best_dist, dist, x, y;
 
-		XF86VidModeGetAllModeLines(vidx11_display, scrnum, &num_vidmodes, &vidmodes);
-
 		// Are we going fullscreen?  If so, let's change video mode
 		if (fullscreen)
 		{
+			XF86VidModeGetAllModeLines(vidx11_display, vidx11_screen, &num_vidmodes, &vidmodes);
 			best_dist = 9999999;
 			best_fit = -1;
 
@@ -795,11 +722,11 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 				height = vidmodes[best_fit]->vdisplay;
 
 				// change to the mode
-				XF86VidModeSwitchToMode(vidx11_display, scrnum, vidmodes[best_fit]);
+				XF86VidModeSwitchToMode(vidx11_display, vidx11_screen, vidmodes[best_fit]);
 				vidmode_active = true;
 
 				// Move the viewport to top left
-				XF86VidModeSetViewPort(vidx11_display, scrnum, 0, 0);
+				XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 			}
 			else
 				fullscreen = 0;
@@ -841,7 +768,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
 		XFlush(vidx11_display);
 		// Move the viewport to top left
-		XF86VidModeSetViewPort(vidx11_display, scrnum, 0, 0);
+		XF86VidModeSetViewPort(vidx11_display, vidx11_screen, 0, 0);
 	}
 
 	//XSync(vidx11_display, False);
@@ -866,13 +793,14 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 	gl_version = qglGetString(GL_VERSION);
 	gl_extensions = qglGetString(GL_EXTENSIONS);
 	gl_platform = "GLX";
-	gl_platformextensions = qglXQueryExtensionsString(vidx11_display, scrnum);
+	gl_platformextensions = qglXQueryExtensionsString(vidx11_display, vidx11_screen);
 
 	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 
 	usingmouse = false;
 	vid_hidden = false;
+	vid_allowhwgamma = true;
 	GL_Init();
 	return true;
 }

@@ -197,6 +197,14 @@ static rtexture_t *draw_generatecrosshair(int num)
 	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
+static rtexture_t *draw_generateditherpattern(void)
+{
+	qbyte data[16];
+	memset(data, 255, sizeof(data));
+	data[0] = data[1] = data[2] = data[12] = data[13] = data[14] = 0;
+	return R_LoadTexture2D(drawtexturepool, "ditherpattern", 2, 2, data, TEXTYPE_RGBA, TEXF_FORCENEAREST | TEXF_PRECACHE, NULL);
+}
+
 /*
 ================
 Draw_CachePic
@@ -258,6 +266,8 @@ cachepic_t	*Draw_CachePic (char *path)
 		pic->tex = draw_generatecrosshair(3);
 	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5.tga"))
 		pic->tex = draw_generatecrosshair(4);
+	if (pic->tex == NULL && !strcmp(path, "gfx/colorcontrol/ditherpattern.tga"))
+		pic->tex = draw_generateditherpattern();
 	if (pic->tex == NULL)
 	{
 		Con_Printf ("Draw_CachePic: failed to load %s\n", path);
@@ -371,7 +381,7 @@ int quadelements[768];
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright, texnum, additive, batch;
-	float x, y, w, h, s, t, u, v, cr, cg, cb, ca, *av, *at;
+	float x, y, w, h, s, t, u, v, *av, *at, c[4];
 	cachepic_t *pic;
 	drawqueue_t *dq;
 	char *str, *currentpic;
@@ -429,10 +439,10 @@ void R_DrawQueue(void)
 		m.depthdisable = true;
 		R_Mesh_MainState(&m);
 
-		cr = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
-		cg = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
-		cb = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
-		ca = (float) ( color        & 0xFF) * (1.0f / 255.0f);
+		c[0] = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		c[1] = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		c[2] = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		c[3] = (float) ( color        & 0xFF) * (1.0f / 255.0f);
 		x = dq->x;
 		y = dq->y;
 		w = dq->scalex;
@@ -469,7 +479,7 @@ void R_DrawQueue(void)
 			varray_vertex[ 4] = x+w;varray_vertex[ 5] = y  ;varray_vertex[ 6] = 10;
 			varray_vertex[ 8] = x+w;varray_vertex[ 9] = y+h;varray_vertex[10] = 10;
 			varray_vertex[12] = x  ;varray_vertex[13] = y+h;varray_vertex[14] = 10;
-			GL_Color(cr, cg, cb, ca);
+			GL_Color(c[0], c[1], c[2], c[3]);
 			R_Mesh_Draw(4, 2, quadelements);
 			break;
 		case DRAWQUEUE_STRING:
@@ -483,7 +493,7 @@ void R_DrawQueue(void)
 			batchcount = 0;
 			at = varray_texcoord[0];
 			av = varray_vertex;
-			GL_Color(cr, cg, cb, ca);
+			GL_Color(c[0], c[1], c[2], c[3]);
 			while ((num = *str++) && x < vid.conwidth)
 			{
 				if (num != ' ')
@@ -531,7 +541,7 @@ void R_DrawQueue(void)
 		}
 	}
 
-	if (!v_hwgamma.integer)
+	if (!vid_usinghwgamma)
 	{
 		// we use one big triangle for all the screen blends
 		varray_texcoord[0][0] = 0;varray_texcoord[0][1] = 0;
@@ -543,36 +553,41 @@ void R_DrawQueue(void)
 		// all the blends ignore depth
 		memset(&m, 0, sizeof(m));
 		m.depthdisable = true;
-		t = v_contrast.value * (float) (1 << v_overbrightbits.integer);
-		if (t >= 1.01f)
+		if (v_color_enable.integer)
+		{
+			c[0] = v_color_white_r.value;
+			c[1] = v_color_white_g.value;
+			c[2] = v_color_white_b.value;
+		}
+		else
+			c[0] = c[1] = c[2] = v_contrast.value;
+		VectorScale(c, (float) (1 << v_overbrightbits.integer), c);
+		if (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 		{
 			m.blendfunc1 = GL_DST_COLOR;
 			m.blendfunc2 = GL_ONE;
 			R_Mesh_State(&m);
-			while (t >= 1.01f)
+			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
-				cr = t - 1.0f;
-				if (cr > 1.0f)
-					cr = 1.0f;
-				GL_Color(cr, cr, cr, 1);
+				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
 				R_Mesh_Draw(3, 1, polygonelements);
-				t *= 0.5;
+				VectorScale(c, 0.5, c);
 			}
 		}
-		else if (t <= 0.99f)
+		if (v_color_enable.integer)
 		{
-			m.blendfunc1 = GL_ZERO;
-			m.blendfunc2 = GL_SRC_COLOR;
-			R_Mesh_State(&m);
-			GL_Color(t, t, t, 1);
-			R_Mesh_Draw(3, 1, polygonelements);
+			c[0] = v_color_black_r.value;
+			c[1] = v_color_black_g.value;
+			c[2] = v_color_black_b.value;
 		}
-		if (v_brightness.value >= 0.01f)
+		else
+			c[0] = c[1] = c[2] = v_brightness.value;
+		if (c[0] >= 0.01f || c[1] >= 0.01f || c[2] >= 0.01f)
 		{
 			m.blendfunc1 = GL_ONE;
 			m.blendfunc2 = GL_ONE;
 			R_Mesh_State(&m);
-			GL_Color(v_brightness.value, v_brightness.value, v_brightness.value, 1);
+			GL_Color(c[0], c[1], c[2], 1);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 	}
