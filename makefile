@@ -50,11 +50,11 @@ NOPROFILEOPTIMIZATIONS=
 #this is used to ensure that all released versions are free of warnings.
 
 #normal compile
-#OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
-#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include $(OPTIMIZATIONS) $(PROFILEOPTION)
+OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include $(OPTIMIZATIONS) $(PROFILEOPTION)
 #debug compile
-OPTIMIZATIONS=
-CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
+#OPTIMIZATIONS=
+#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
 
 LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXxf86dga -lXxf86vm -ldl $(SOUNDLIB) $(PROFILEOPTION)
 
