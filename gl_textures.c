@@ -8,6 +8,7 @@ cvar_t	r_max_scrapsize = {CVAR_SAVE, "r_max_scrapsize", "256"};
 cvar_t	r_picmip = {CVAR_SAVE, "r_picmip", "0"};
 cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
 cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
+cvar_t  gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "0"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
@@ -519,6 +520,7 @@ void R_Textures_Init (void)
 	Cvar_RegisterVariable (&r_picmip);
 	Cvar_RegisterVariable (&r_lerpimages);
 	Cvar_RegisterVariable (&r_precachetextures);
+	Cvar_RegisterVariable (&gl_texture_anisotropy);
 
 	R_RegisterModule("R_Textures", r_textures_start, r_textures_shutdown, r_textures_newmap);
 }
@@ -565,6 +567,8 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 
 	CHECKGLERROR
 
+	if (gl_support_anisotropy)
+		qglTexParameterf(textureenum, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_texture_anisotropy.value);
 	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_S, wrapmode);
 	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);
 	if (gltexturetypedimensions[texturetype] >= 3)
