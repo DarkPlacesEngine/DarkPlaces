@@ -36,6 +36,10 @@ void S_Init (void)
 	Cvar_RegisterVariable(&snd_initialized);
 }
 
+void S_Terminate (void)
+{
+}
+
 void S_Startup (void)
 {
 }

@@ -89,6 +89,9 @@ const char* ambient_names [2] = { "sound/ambience/water1.wav", "sound/ambience/w
 // Functions
 // ====================================================================
 
+void S_FreeSfx (sfx_t *sfx, qboolean force);
+
+
 void S_SoundInfo_f(void)
 {
 	if (!sound_started)
@@ -219,6 +222,27 @@ void S_Init(void)
 }
 
 
+/*
+================
+S_Terminate
+
+Shutdown and free all resources
+================
+*/
+void S_Terminate (void)
+{
+	S_Shutdown ();
+	OGG_CloseLibrary ();
+
+	// Free all SFXs
+	while (known_sfx != NULL)
+		S_FreeSfx (known_sfx, true);
+
+	Cvar_SetValueQuick (&snd_initialized, false);
+	Mem_FreePool (&snd_mempool);
+}
+
+
 // =======================================================================
 // Load a sound
 // =======================================================================
@@ -262,10 +286,10 @@ S_FreeSfx
 
 ==================
 */
-void S_FreeSfx (sfx_t *sfx)
+void S_FreeSfx (sfx_t *sfx, qboolean force)
 {
-	// Never free a locked sfx
-	if (sfx->locks > 0 || (sfx->flags & SFXFLAG_PERMANENTLOCK))
+	// Never free a locked sfx unless forced
+	if (!force && (sfx->locks > 0 || (sfx->flags & SFXFLAG_PERMANENTLOCK)))
 		return;
 
 	Con_DPrintf ("S_FreeSfx: freeing %s\n", sfx->name);
@@ -351,7 +375,7 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 		crtsfx = sfx;
 		sfx = sfx->next;
 
-		S_FreeSfx (crtsfx);
+		S_FreeSfx (crtsfx, false);
 	}
 }
 
@@ -968,7 +992,7 @@ static void S_Play_Common(float fvol, float attenuation)
 
 			// Free the sfx if the file didn't exist
 			if (ch_ind < 0)
-				S_FreeSfx (sfx);
+				S_FreeSfx (sfx, false);
 			else
 				channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 		}

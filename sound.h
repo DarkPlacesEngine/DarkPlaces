@@ -56,6 +56,8 @@ extern cvar_t snd_staticvolume;
 // ====================================================================
 
 void S_Init (void);
+void S_Terminate (void);
+
 void S_Startup (void);
 void S_Shutdown (void);
 

@@ -1014,6 +1014,7 @@ void Host_Shutdown(void)
 	Host_SaveConfig_f();
 
 	CDAudio_Shutdown ();
+	S_Terminate ();
 	NetConn_Shutdown ();
 
 	if (cls.state != ca_dedicated)
