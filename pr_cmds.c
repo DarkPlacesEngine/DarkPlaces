@@ -1497,7 +1497,7 @@ PF_pointcontents
 */
 void PF_pointcontents (void)
 {
-	G_FLOAT(OFS_RETURN) = sv.worldmodel->brushq1.PointContents(sv.worldmodel, G_VECTOR(OFS_PARM0));
+	G_FLOAT(OFS_RETURN) = SV_PointContents(G_VECTOR(OFS_PARM0));
 }
 
 /*

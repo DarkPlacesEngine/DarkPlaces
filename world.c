@@ -479,7 +479,10 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 	}
 
-	if (sv_polygoncollisions.integer && (mins[0] != maxs[0] || mins[1] != maxs[1] || mins[2] != maxs[2]))
+	if (model && model->brush.TraceBox)
+		model->brush.TraceBox(model, ent->v->origin, ent->v->angles, &trace, ent, start, mins, maxs, end);
+	// FIXME: these should go away
+	else if (sv_polygoncollisions.integer && (mins[0] != maxs[0] || mins[1] != maxs[1] || mins[2] != maxs[2]))
 		Collision_PolygonClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
 	else
 		Collision_ClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
@@ -702,5 +705,12 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	SV_ClipToAreaGrid(&clip);
 
 	return clip.trace;
+}
+
+int SV_PointContents(const vec3_t point)
+{
+	if (sv.worldmodel && sv.worldmodel->brush.PointContents)
+		return sv.worldmodel->brush.PointContents(sv.worldmodel, point);
+	return CONTENTS_SOLID;
 }
 

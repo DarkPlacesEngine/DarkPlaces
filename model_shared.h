@@ -124,7 +124,10 @@ model_sprite_t;
 
 typedef struct model_brush_s
 {
-	char			*entities;
+	char *entities;
+	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
+	int (*PointContents)(struct model_s *model, const float *p);
+	void (*TraceBox)(struct model_s *model, const vec3_t corigin, const vec3_t cangles, void *trace, const void *cent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
 }
 model_brush_t;
 
@@ -216,18 +219,18 @@ typedef struct model_brushq1_s
 	int				light_scalebit;
 	float			light_ambient;
 
-	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
 	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
-	int (*PointContents)(struct model_s *model, const float *p);
 	qbyte *(*LeafPVS)(struct model_s *model, mleaf_t *leaf);
 	void (*BuildPVSTextureChains)(struct model_s *model);
 }
 model_brushq1_t;
 
+/* MSVC can't compile empty structs, so this is commented out for now
 typedef struct model_brushq2_s
 {
 }
 model_brushq2_t;
+*/
 
 typedef struct q3mtexture_s
 {
@@ -464,7 +467,9 @@ typedef struct model_s
 	model_sprite_t	sprite;
 	model_brush_t	brush;
 	model_brushq1_t	brushq1;
+	/* MSVC can't handle an empty struct, so this is commented out for now
 	model_brushq2_t	brushq2;
+	*/
 	model_brushq3_t	brushq3;
 }
 model_t;

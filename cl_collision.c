@@ -42,7 +42,10 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 	if (hitent)
 		*hitent = NULL;
 	Mod_CheckLoaded(cl.worldmodel);
-	Collision_ClipTrace(&trace, NULL, cl.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, start, vec3_origin, vec3_origin, end);
+	if (cl.worldmodel && cl.worldmodel->brush.TraceBox)
+		cl.worldmodel->brush.TraceBox(cl.worldmodel, vec3_origin, vec3_origin, &trace, NULL, start, vec3_origin, vec3_origin, end);
+	else
+		Collision_ClipTrace(&trace, NULL, cl.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, start, vec3_origin, vec3_origin, end);
 
 	if (impact)
 		VectorCopy (trace.endpos, impact);
@@ -71,7 +74,10 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 			 || ent->mins[2] > tracemaxs[2] || ent->maxs[2] < tracemins[2])
 			 	continue;
 
-			Collision_ClipTrace(&trace, ent, ent->model, ent->origin, ent->angles, ent->mins, ent->maxs, start, vec3_origin, vec3_origin, end);
+			if (ent->model && ent->model->brush.TraceBox)
+				ent->model->brush.TraceBox(ent->model, ent->origin, ent->angles, &trace, NULL, start, vec3_origin, vec3_origin, end);
+			else
+				Collision_ClipTrace(&trace, ent, ent->model, ent->origin, ent->angles, ent->mins, ent->maxs, start, vec3_origin, vec3_origin, end);
 
 			if (trace.allsolid || trace.startsolid || trace.fraction < maxfrac)
 			{
@@ -93,15 +99,15 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 {
 	// FIXME: check multiple brush models
-	if (cl.worldmodel && cl.worldmodel->brushq1.FindNonSolidLocation)
-		cl.worldmodel->brushq1.FindNonSolidLocation(cl.worldmodel, in, out, radius);
+	if (cl.worldmodel && cl.worldmodel->brush.FindNonSolidLocation)
+		cl.worldmodel->brush.FindNonSolidLocation(cl.worldmodel, in, out, radius);
 }
 
 int CL_PointContents(const vec3_t p)
 {
 	// FIXME: check multiple brush models
-	if (cl.worldmodel && cl.worldmodel->brushq1.PointContents)
-		return cl.worldmodel->brushq1.PointContents(cl.worldmodel, p);
+	if (cl.worldmodel && cl.worldmodel->brush.PointContents)
+		return cl.worldmodel->brush.PointContents(cl.worldmodel, p);
 	return CONTENTS_EMPTY;
 }
 
