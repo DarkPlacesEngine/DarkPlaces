@@ -9,7 +9,7 @@ Polygon clipping routines written by Forest Hale and placed into public domain.
 void PolygonF_QuadForPlane(float *outpoints, float planenormalx, float planenormaly, float planenormalz, float planedist, float quadsize)
 {
 	float d, quadright[3], quadup[3];
-	if (planenormalz > planenormalx && planenormalz > planenormaly)
+	if (fabs(planenormalz) > fabs(planenormalx) && fabs(planenormalz) > fabs(planenormaly))
 	{
 		quadup[0] = 1;
 		quadup[1] = 0;
@@ -25,8 +25,8 @@ void PolygonF_QuadForPlane(float *outpoints, float planenormalx, float planenorm
 	d = -(quadup[0] * planenormalx + quadup[1] * planenormaly + quadup[2] * planenormalz);
 	// VectorMA(quadup, d, planenormal, quadup);
 	quadup[0] += d * planenormalx;
-	quadup[1] += d * planenormalx;
-	quadup[2] += d * planenormalx;
+	quadup[1] += d * planenormaly;
+	quadup[2] += d * planenormalz;
 	// VectorNormalize(quadup);
 	d = 1.0 / sqrt(quadup[0] * quadup[0] + quadup[1] * quadup[1] + quadup[2] * quadup[2]);
 	quadup[0] *= d;
@@ -54,7 +54,7 @@ void PolygonF_QuadForPlane(float *outpoints, float planenormalx, float planenorm
 void PolygonD_QuadForPlane(double *outpoints, double planenormalx, double planenormaly, double planenormalz, double planedist, double quadsize)
 {
 	double d, quadright[3], quadup[3];
-	if (planenormalz > planenormalx && planenormalz > planenormaly)
+	if (fabs(planenormalz) > fabs(planenormalx) && fabs(planenormalz) > fabs(planenormaly))
 	{
 		quadup[0] = 1;
 		quadup[1] = 0;
@@ -70,8 +70,8 @@ void PolygonD_QuadForPlane(double *outpoints, double planenormalx, double planen
 	d = -(quadup[0] * planenormalx + quadup[1] * planenormaly + quadup[2] * planenormalz);
 	// VectorMA(quadup, d, planenormal, quadup);
 	quadup[0] += d * planenormalx;
-	quadup[1] += d * planenormalx;
-	quadup[2] += d * planenormalx;
+	quadup[1] += d * planenormaly;
+	quadup[2] += d * planenormalz;
 	// VectorNormalize(quadup);
 	d = 1.0 / sqrt(quadup[0] * quadup[0] + quadup[1] * quadup[1] + quadup[2] * quadup[2]);
 	quadup[0] *= d;
@@ -103,11 +103,11 @@ void PolygonF_Divide(unsigned int innumpoints, const float *inpoints, float plan
 	float frac, pdist, ndist;
 	frontcount = 0;
 	backcount = 0;
-	p = inpoints + (innumpoints - 1) * 3;
-	n = inpoints;
-	pdist = p[0] * planenormalx + p[1] * planenormaly + p[2] * planenormalz - planedist;
 	for (i = 0;i < innumpoints;i++)
 	{
+		p = inpoints + i * 3;
+		n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
+		pdist = p[0] * planenormalx + p[1] * planenormaly + p[2] * planenormalz - planedist;
 		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
 		if (pdist >= -epsilon)
 		{
@@ -147,9 +147,6 @@ void PolygonF_Divide(unsigned int innumpoints, const float *inpoints, float plan
 			}
 			backcount++;
 		}
-		p = n;
-		n += 3;
-		pdist = ndist;
 	}
 	if (neededfrontpoints)
 		*neededfrontpoints = frontcount;
@@ -164,11 +161,11 @@ void PolygonD_Divide(unsigned int innumpoints, const double *inpoints, double pl
 	double frac, pdist, ndist;
 	frontcount = 0;
 	backcount = 0;
-	p = inpoints + (innumpoints - 1) * 3;
-	n = inpoints;
-	pdist = p[0] * planenormalx + p[1] * planenormaly + p[2] * planenormalz - planedist;
 	for (i = 0;i < innumpoints;i++)
 	{
+		p = inpoints + i * 3;
+		n = inpoints + ((i + 1) < innumpoints ? (i + 1) : 0) * 3;
+		pdist = p[0] * planenormalx + p[1] * planenormaly + p[2] * planenormalz - planedist;
 		ndist = n[0] * planenormalx + n[1] * planenormaly + n[2] * planenormalz - planedist;
 		if (pdist >= -epsilon)
 		{
@@ -208,9 +205,6 @@ void PolygonD_Divide(unsigned int innumpoints, const double *inpoints, double pl
 			}
 			backcount++;
 		}
-		p = n;
-		n += 3;
-		pdist = ndist;
 	}
 	if (neededfrontpoints)
 		*neededfrontpoints = frontcount;
