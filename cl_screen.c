@@ -29,8 +29,6 @@ int			clearnotify;
 
 qboolean	scr_drawloading = false;
 
-static qbyte menuplyr_pixels[4096];
-
 void DrawCrosshair(int num);
 static void SCR_ScreenShot_f (void);
 static void R_Envmap_f (void);
@@ -455,8 +453,6 @@ void SCR_SizeDown_f (void)
 
 void CL_Screen_Init(void)
 {
-	qpic_t *dat;
-
 	Cvar_RegisterVariable (&scr_fov);
 	Cvar_RegisterVariable (&scr_viewsize);
 	Cvar_RegisterVariable (&scr_conspeed);
@@ -478,19 +474,6 @@ void CL_Screen_Init(void)
 	Cmd_AddCommand ("envmap", R_Envmap_f);
 
 	scr_initialized = true;
-
-	// HACK HACK HACK
-	// load the image data for the player image in the config menu
-	dat = (qpic_t *)FS_LoadFile ("gfx/menuplyr.lmp", false);
-	if (!dat)
-		Sys_Error("unable to load gfx/menuplyr.lmp");
-	SwapPic (dat);
-
-	if (dat->width*dat->height <= 4096)
-		memcpy (menuplyr_pixels, dat->data, dat->width * dat->height);
-	else
-		Con_Printf("gfx/menuplyr.lmp larger than 4k buffer");
-	Mem_Free(dat);
 }
 
 void DrawQ_Clear(void)
