@@ -132,43 +132,35 @@ Host_Error
 This shuts down both the client and server
 ================
 */
-char hosterrorstring[4096];
+static char hosterrorstring1[4096];
+static char hosterrorstring2[4096];
+static qboolean hosterror = false;
 extern char sv_spawnmap[MAX_QPATH];
 extern char sv_loadgame[MAX_OSPATH];
 void Host_Error (const char *error, ...)
 {
 	va_list argptr;
-	static qboolean inerror = false;
 
-	// make sure we don't get in a loading loop
-	sv_loadgame[0] = 0;
-	sv_spawnmap[0] = 0;
+	va_start (argptr,error);
+	vsprintf (hosterrorstring1,error,argptr);
+	va_end (argptr);
+
+	Con_Printf ("Host_Error: %s\n", hosterrorstring1);
 
 	// LordHavoc: if first frame has not been shown, or currently shutting
 	// down, do Sys_Error instead
 	if (!host_loopactive || host_shuttingdown)
-	{
-		char string[4096];
-		va_start (argptr,error);
-		vsprintf (string,error,argptr);
-		va_end (argptr);
-		Sys_Error ("%s", string);
-	}
+		Sys_Error ("Host_Error: %s", hosterrorstring1);
 
-	if (inerror)
-	{
-		char string[4096];
-		va_start (argptr,error);
-		vsprintf (string,error,argptr);
-		va_end (argptr);
-		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring, string);
-	}
-	inerror = true;
+	if (hosterror)
+		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring2, hosterrorstring1);
+	hosterror = true;
 
-	va_start (argptr,error);
-	vsprintf (hosterrorstring,error,argptr);
-	va_end (argptr);
-	Con_Printf ("Host_Error: %s\n",hosterrorstring);
+	strcpy(hosterrorstring2, hosterrorstring1);
+
+	// make sure we don't get in a loading loop
+	sv_loadgame[0] = 0;
+	sv_spawnmap[0] = 0;
 
 	CL_Parse_DumpPacket();
 
@@ -178,7 +170,7 @@ void Host_Error (const char *error, ...)
 		Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
-		Sys_Error ("Host_Error: %s\n",hosterrorstring);	// dedicated servers exit
+		Sys_Error ("Host_Error: %s\n",hosterrorstring2);	// dedicated servers exit
 
 	CL_Disconnect ();
 	cls.demonum = -1;
@@ -186,7 +178,7 @@ void Host_Error (const char *error, ...)
 	// unload any partially loaded models
 	Mod_ClearErrorModels();
 
-	inerror = false;
+	hosterror = false;
 
 	longjmp (host_abortserver, 1);
 }
