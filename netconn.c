@@ -989,7 +989,6 @@ static void NetConn_BuildChallengeString(char *buffer, int bufferlength)
 	buffer[i] = 0;
 }
 
-extern void SV_ConnectClient(int clientnum, netconn_t *netconnection);
 int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
 {
 	int i, n, ret, clientnum, responselength, best;
