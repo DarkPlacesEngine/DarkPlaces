@@ -48,14 +48,20 @@ static char qfont_table[256] = {
 	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
 };
 
+static char sys_timestring[128];
+char *Sys_TimeString(const char *timeformat)
+{
+	time_t mytime = time(NULL);
+	strftime(sys_timestring, sizeof(sys_timestring), timeformat, localtime(&mytime));
+	return sys_timestring;
+}
+
 
 #define MAXPRINTMSG 16384
 
 void Sys_Print(const char *msg)
 {
 	unsigned char *p;
-	// Time stamp
-	char stamp[128];
 	// String we print
 	char final[MAXPRINTMSG];
 
@@ -63,11 +69,7 @@ void Sys_Print(const char *msg)
 		return;
 
 	if (timestamps.integer)
-	{
-		time_t mytime = time(NULL);
-		strftime(stamp, sizeof(stamp), timeformat.string, localtime(&mytime));
-		snprintf(final, sizeof(final), "%s%s", stamp, msg);
-	}
+		snprintf(final, sizeof(final), "%s%s", Sys_TimeString(timeformat.string), msg);
 	else
 		strncpy(final, msg, sizeof(final));
 
