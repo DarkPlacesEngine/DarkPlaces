@@ -320,7 +320,9 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	R_Mesh_State(&m);
 
 	// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
+	GL_LockArrays(0, 12);
 	R_Mesh_Draw(12, 6, r_lightningbeamelements);
+	GL_LockArrays(0, 0);
 }
 
 void R_DrawLightningBeams(void)

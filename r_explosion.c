@@ -197,7 +197,9 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 
 	GL_Color(alpha, alpha, alpha, 1);
 
+	GL_LockArrays(0, numverts);
 	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
+	GL_LockArrays(0, 0);
 }
 
 void R_MoveExplosion(explosion_t *e)

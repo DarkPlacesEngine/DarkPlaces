@@ -45,6 +45,7 @@
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
+2 darkplaces: shadow volume rendering should not unlock the arrays between renders (Mercury) 
 3 darkplaces: add Draw2D function to model struct to make it easy to draw models without an entity (Tomaz)
 0 darkplaces: add GL_EXT_stencil_two_side support to shadow rendering (fuh)
 0 darkplaces: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage

@@ -238,12 +238,14 @@ static void R_SkyBox(void)
 	GL_DepthTest(false); // don't modify or read zbuffer
 	m.pointer_vertex = skyboxvertex3f;
 	m.pointer_texcoord[0] = skyboxtexcoord2f;
+	GL_LockArrays(0, 6*4);
 	for (i = 0;i < 6;i++)
 	{
 		m.tex[0] = R_GetTexture(skyboxside[i]);
 		R_Mesh_State(&m);
 		R_Mesh_Draw(6*4, 2, skyboxelements + i * 6);
 	}
+	GL_LockArrays(0, 0);
 }
 
 #define skygridx 32
@@ -343,20 +345,26 @@ static void R_SkySphere(void)
 		m.pointer_texcoord[1] = skysphere_texcoord2f;
 		R_Mesh_State(&m);
 		R_Mesh_TextureMatrix(1, &scroll2matrix);
+		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		GL_LockArrays(0, 0);
 		R_Mesh_TextureMatrix(1, &identitymatrix);
 	}
 	else
 	{
 		// two pass
 		R_Mesh_State(&m);
+		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		GL_LockArrays(0, 0);
 
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		m.tex[0] = R_GetTexture(alphaskytexture);
 		R_Mesh_State(&m);
 		R_Mesh_TextureMatrix(0, &scroll2matrix);
+		GL_LockArrays(0, skysphere_numverts);
 		R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_element3i);
+		GL_LockArrays(0, 0);
 	}
 	R_Mesh_TextureMatrix(0, &identitymatrix);
 }

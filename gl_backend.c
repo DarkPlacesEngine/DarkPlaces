@@ -597,7 +597,7 @@ void GL_LockArrays(int first, int count)
 			qglUnlockArraysEXT();
 			CHECKGLERROR
 		}
-		if (count && gl_supportslockarrays && gl_lockarrays.integer)
+		if (count && gl_supportslockarrays && gl_lockarrays.integer && r_render.integer)
 		{
 			gl_state.lockrange_first = first;
 			gl_state.lockrange_count = count;
@@ -679,6 +679,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
 		return;
 	}
+	CHECKGLERROR
 	if (r_showtrispass)
 	{
 		R_Mesh_Draw_ShowTris(numverts, numtriangles, elements);
@@ -686,48 +687,46 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 	}
 	c_meshs++;
 	c_meshelements += numelements;
-	CHECKGLERROR
-	if (r_render.integer)
+	if (gl_paranoid.integer)
 	{
-		if (gl_paranoid.integer)
+		int i, j, size;
+		const int *p;
+		if (!qglIsEnabled(GL_VERTEX_ARRAY))
+			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
+		for (j = 0, size = numverts * (int)sizeof(float[3]), p = gl_state.pointer_vertex;j < size;j += sizeof(int), p++)
+			paranoidblah += *p;
+		if (gl_state.pointer_color)
 		{
-			int i, j, size;
-			const int *p;
-			if (!qglIsEnabled(GL_VERTEX_ARRAY))
-				Con_Print("R_Mesh_Draw: vertex array not enabled\n");
-			for (j = 0, size = numverts * (int)sizeof(float[3]), p = gl_state.pointer_vertex;j < size;j += sizeof(int), p++)
+			if (!qglIsEnabled(GL_COLOR_ARRAY))
+				Con_Print("R_Mesh_Draw: color array set but not enabled\n");
+			for (j = 0, size = numverts * (int)sizeof(float[4]), p = gl_state.pointer_color;j < size;j += sizeof(int), p++)
 				paranoidblah += *p;
-			if (gl_state.pointer_color)
+		}
+		for (i = 0;i < backendunits;i++)
+		{
+			if (gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap || gl_state.units[i].arrayenabled)
 			{
-				if (!qglIsEnabled(GL_COLOR_ARRAY))
-					Con_Print("R_Mesh_Draw: color array set but not enabled\n");
-				for (j = 0, size = numverts * (int)sizeof(float[4]), p = gl_state.pointer_color;j < size;j += sizeof(int), p++)
+				if (gl_state.units[i].arrayenabled && !(gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap))
+					Con_Print("R_Mesh_Draw: array enabled but no texture bound\n");
+				GL_ActiveTexture(i);
+				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
+					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
+				for (j = 0, size = numverts * ((gl_state.units[i].t3d || gl_state.units[i].tcubemap) ? (int)sizeof(float[3]) : (int)sizeof(float[2])), p = gl_state.units[i].pointer_texcoord;j < size;j += sizeof(int), p++)
 					paranoidblah += *p;
 			}
-			for (i = 0;i < backendunits;i++)
+		}
+		for (i = 0;i < numtriangles * 3;i++)
+		{
+			if (elements[i] < 0 || elements[i] >= numverts)
 			{
-				if (gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap || gl_state.units[i].arrayenabled)
-				{
-					if (gl_state.units[i].arrayenabled && !(gl_state.units[i].t1d || gl_state.units[i].t2d || gl_state.units[i].t3d || gl_state.units[i].tcubemap))
-						Con_Print("R_Mesh_Draw: array enabled but no texture bound\n");
-					GL_ActiveTexture(i);
-					if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
-						Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
-					for (j = 0, size = numverts * ((gl_state.units[i].t3d || gl_state.units[i].tcubemap) ? (int)sizeof(float[3]) : (int)sizeof(float[2])), p = gl_state.units[i].pointer_texcoord;j < size;j += sizeof(int), p++)
-						paranoidblah += *p;
-				}
-			}
-			for (i = 0;i < numtriangles * 3;i++)
-			{
-				if (elements[i] < 0 || elements[i] >= numverts)
-				{
-					Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range 0 - %i) in elements list\n", elements[i], numverts);
-					return;
-				}
+				Con_Printf("R_Mesh_Draw: invalid vertex index %i (outside range 0 - %i) in elements list\n", elements[i], numverts);
+				return;
 			}
 		}
 		CHECKGLERROR
-		GL_LockArrays(0, numverts);
+	}
+	if (r_render.integer)
+	{
 		CHECKGLERROR
 		if (gl_mesh_testmanualfeeding.integer)
 		{
@@ -798,8 +797,6 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		{
 			qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
 		}
-		CHECKGLERROR
-		GL_LockArrays(0, 0);
 		CHECKGLERROR
 	}
 }
