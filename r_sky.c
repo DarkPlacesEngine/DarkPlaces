@@ -172,18 +172,14 @@ int skyboxindex[6] = {0, 1, 2, 0, 2, 3};
 
 static void R_SkyBox(void)
 {
-	float r;
-	float vert[4][4], st[4][2];
-	rmeshinfo_t m;
+	rmeshbufferinfo_t m;
 
 #define R_SkyBoxPolyVec(i,s,t,x,y,z) \
-	vert[i][0] = (x) * r + r_origin[0];\
-	vert[i][1] = (y) * r + r_origin[1];\
-	vert[i][2] = (z) * r + r_origin[2];\
-	st[i][0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
-	st[i][1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
-
-	r = 16.0f;
+	m.vertex[i * 4 + 0] = (x) * 16.0f + r_origin[0];\
+	m.vertex[i * 4 + 1] = (y) * 16.0f + r_origin[1];\
+	m.vertex[i * 4 + 2] = (z) * 16.0f + r_origin[2];\
+	m.texcoords[0][i * 2 + 0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
+	m.texcoords[0][i * 2 + 1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
 
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
@@ -191,51 +187,84 @@ static void R_SkyBox(void)
 	m.blendfunc2 = GL_ZERO;
 	m.numtriangles = 2;
 	m.numverts = 4;
-	m.index = skyboxindex;
-	m.vertex = &vert[0][0];
-	m.vertexstep = sizeof(float[4]);
-	m.cr = 1;
-	m.cg = 1;
-	m.cb = 1;
-	m.ca = 1;
-	m.texcoords[0] = &st[0][0];
-	m.texcoordstep[0] = sizeof(float[2]);
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
-	R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
-	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
-	R_SkyBoxPolyVec(2, 0, 1,  1,  1, -1);
-	R_SkyBoxPolyVec(3, 0, 0,  1,  1,  1);
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skyboxindex, sizeof(int[6]));
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+		R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
+		R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
+		R_SkyBoxPolyVec(2, 0, 1,  1,  1, -1);
+		R_SkyBoxPolyVec(3, 0, 0,  1,  1,  1);
+	}
 	m.tex[0] = R_GetTexture(skyboxside[1]); // back
-	R_SkyBoxPolyVec(0, 1, 0, -1,  1,  1);
-	R_SkyBoxPolyVec(1, 1, 1, -1,  1, -1);
-	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
-	R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skyboxindex, sizeof(int[6]));
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+		R_SkyBoxPolyVec(0, 1, 0, -1,  1,  1);
+		R_SkyBoxPolyVec(1, 1, 1, -1,  1, -1);
+		R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
+		R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
+	}
 	m.tex[0] = R_GetTexture(skyboxside[0]); // right
-	R_SkyBoxPolyVec(0, 1, 0,  1,  1,  1);
-	R_SkyBoxPolyVec(1, 1, 1,  1,  1, -1);
-	R_SkyBoxPolyVec(2, 0, 1, -1,  1, -1);
-	R_SkyBoxPolyVec(3, 0, 0, -1,  1,  1);
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skyboxindex, sizeof(int[6]));
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+		R_SkyBoxPolyVec(0, 1, 0,  1,  1,  1);
+		R_SkyBoxPolyVec(1, 1, 1,  1,  1, -1);
+		R_SkyBoxPolyVec(2, 0, 1, -1,  1, -1);
+		R_SkyBoxPolyVec(3, 0, 0, -1,  1,  1);
+	}
 	m.tex[0] = R_GetTexture(skyboxside[2]); // left
-	R_SkyBoxPolyVec(0, 1, 0, -1, -1,  1);
-	R_SkyBoxPolyVec(1, 1, 1, -1, -1, -1);
-	R_SkyBoxPolyVec(2, 0, 1,  1, -1, -1);
-	R_SkyBoxPolyVec(3, 0, 0,  1, -1,  1);
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skyboxindex, sizeof(int[6]));
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+		R_SkyBoxPolyVec(0, 1, 0, -1, -1,  1);
+		R_SkyBoxPolyVec(1, 1, 1, -1, -1, -1);
+		R_SkyBoxPolyVec(2, 0, 1,  1, -1, -1);
+		R_SkyBoxPolyVec(3, 0, 0,  1, -1,  1);
+	}
 	m.tex[0] = R_GetTexture(skyboxside[4]); // up
-	R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
-	R_SkyBoxPolyVec(1, 1, 1,  1,  1,  1);
-	R_SkyBoxPolyVec(2, 0, 1, -1,  1,  1);
-	R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skyboxindex, sizeof(int[6]));
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+		R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
+		R_SkyBoxPolyVec(1, 1, 1,  1,  1,  1);
+		R_SkyBoxPolyVec(2, 0, 1, -1,  1,  1);
+		R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
+	}
 	m.tex[0] = R_GetTexture(skyboxside[5]); // down
-	R_SkyBoxPolyVec(0, 1, 0,  1,  1, -1);
-	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
-	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
-	R_SkyBoxPolyVec(3, 0, 0, -1,  1, -1);
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		memcpy(m.index, skyboxindex, sizeof(int[6]));
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+		R_SkyBoxPolyVec(0, 1, 0,  1,  1, -1);
+		R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
+		R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
+		R_SkyBoxPolyVec(3, 0, 0, -1,  1, -1);
+	}
 }
 
 #define skygridx 16
