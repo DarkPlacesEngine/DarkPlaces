@@ -146,6 +146,11 @@ qboolean hardwaregammasupported = false;
 void VID_UpdateGamma(qboolean force)
 {
 	static float cachegamma = -1, cachebrightness = -1, cachecontrast = -1, cachelighthalf = -1;
+
+	// LordHavoc: don't mess with gamma tables if running dedicated
+	if (isDedicated)
+		return;
+
 	if (!force && vid_gamma.value == cachegamma && vid_brightness.value == cachebrightness && vid_contrast.value == cachecontrast && lighthalf == cachelighthalf)
 		return;
 
