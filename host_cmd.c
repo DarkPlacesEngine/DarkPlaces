@@ -1225,7 +1225,7 @@ void Host_Kick_f (void)
 			SV_ClientPrintf ("Kicked by %s: %s\n", who, message);
 		else
 			SV_ClientPrintf ("Kicked by %s\n", who);
-		SV_DropClient (false);
+		SV_DropClient (false); // kicked
 	}
 
 	host_client = save;

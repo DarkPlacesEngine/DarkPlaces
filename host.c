@@ -425,21 +425,35 @@ void SV_DropClient (qboolean crash)
 	int i;
 	client_t *client;
 
+	Con_Printf ("Client \"%s\" dropped\n", host_client->name);
+
 	if (!crash)
 	{
 		// send any final messages (don't check for errors)
-#if 1
-		// LordHavoc: no opportunity for resending, so reliable is silly
-		MSG_WriteByte (&host_client->message, svc_disconnect);
-		NET_SendUnreliableMessage (host_client->netconnection, &host_client->message);
-#else
-		if (NET_CanSendMessage (host_client->netconnection))
+		if (host_client->netconnection && !host_client->netconnection->disconnected)
 		{
+#if 1
+			// LordHavoc: no opportunity for resending, so reliable is silly
 			MSG_WriteByte (&host_client->message, svc_disconnect);
-			NET_SendMessage (host_client->netconnection, &host_client->message);
-		}
+			NET_SendUnreliableMessage (host_client->netconnection, &host_client->message);
+#else
+			if (NET_CanSendMessage (host_client->netconnection))
+			{
+				MSG_WriteByte (&host_client->message, svc_disconnect);
+				NET_SendMessage (host_client->netconnection, &host_client->message);
+			}
 #endif
+		}
 	}
+
+// break the net connection
+	NET_Close (host_client->netconnection);
+	host_client->netconnection = NULL;
+
+// free the client (the body stays around)
+	host_client->active = false;
+	// note: don't clear name yet
+	net_activeconnections--;
 
 	if (sv.active && host_client->edict && host_client->spawned) // LordHavoc: don't call QC if server is dead (avoids recursive Host_Error in some mods when they run out of edicts)
 	{
@@ -451,19 +465,11 @@ void SV_DropClient (qboolean crash)
 		pr_global_struct->self = saveSelf;
 	}
 
-	Sys_Printf ("Client %s removed\n",host_client->name);
-
-// break the net connection
-	NET_Close (host_client->netconnection);
-	host_client->netconnection = NULL;
-
-// free the client (the body stays around)
-	host_client->active = false;
+	// now clear name (after ClientDisconnect was called)
 	host_client->name[0] = 0;
 	host_client->old_frags = -999999;
-	net_activeconnections--;
 
-// send notification to all clients
+	// send notification to all clients
 	for (i=0, client = svs.clients ; i<svs.maxclients ; i++, client++)
 	{
 		if (!client->active)
@@ -547,7 +553,7 @@ void Host_ShutdownServer(qboolean crash)
 
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 		if (host_client->active)
-			SV_DropClient(crash);
+			SV_DropClient(crash); // server shutdown
 
 //
 // clear structures
