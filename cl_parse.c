@@ -441,7 +441,7 @@ void CL_ParseServerInfo (void)
 	{
 		CL_KeepaliveMessage();
 
-		// Don't lock the sfx here, S_ServerSounds already did that 
+		// Don't lock the sfx here, S_ServerSounds already did that
 		cl.sound_precache[i] = S_PrecacheSound (parse_sound_precache[i], true, false);
 	}
 
@@ -607,7 +607,10 @@ void CL_ParseClientdata (int bits)
 {
 	int i, j;
 
+	VectorCopy (cl.mpunchangle[0], cl.mpunchangle[1]);
+	VectorCopy (cl.mpunchvector[0], cl.mpunchvector[1]);
 	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
+	cl.mviewzoom[1] = cl.mviewzoom[0];
 
 	if (cl.protocol != PROTOCOL_DARKPLACES6)
 	{
@@ -616,15 +619,16 @@ void CL_ParseClientdata (int bits)
 		cl.stats[STAT_VIEWZOOM] = 255;
 	}
 	cl.idealpitch = 0;
-	cl.punchangle[0] = 0;
-	cl.punchangle[1] = 0;
-	cl.punchangle[2] = 0;
-	cl.punchvector[0] = 0;
-	cl.punchvector[1] = 0;
-	cl.punchvector[2] = 0;
+	cl.mpunchangle[0][0] = 0;
+	cl.mpunchangle[0][1] = 0;
+	cl.mpunchangle[0][2] = 0;
+	cl.mpunchvector[0][0] = 0;
+	cl.mpunchvector[0][1] = 0;
+	cl.mpunchvector[0][2] = 0;
 	cl.mvelocity[0][0] = 0;
 	cl.mvelocity[0][1] = 0;
 	cl.mvelocity[0][2] = 0;
+	cl.mviewzoom[0] = 1;
 
 	bits &= 0xFFFF;
 	if (bits & SU_EXTEND1)
@@ -643,18 +647,18 @@ void CL_ParseClientdata (int bits)
 		if (bits & (SU_PUNCH1<<i) )
 		{
 			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-				cl.punchangle[i] = MSG_ReadAngle16i();
+				cl.mpunchangle[0][i] = MSG_ReadAngle16i();
 			else if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
-				cl.punchangle[i] = MSG_ReadChar();
+				cl.mpunchangle[0][i] = MSG_ReadChar();
 			else
 				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
 		if (bits & (SU_PUNCHVEC1<<i))
 		{
 			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
-				cl.punchvector[i] = MSG_ReadCoord16i();
+				cl.mpunchvector[0][i] = MSG_ReadCoord16i();
 			else if (cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-				cl.punchvector[i] = MSG_ReadCoord32f();
+				cl.mpunchvector[0][i] = MSG_ReadCoord32f();
 			else
 				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
@@ -731,8 +735,7 @@ void CL_ParseClientdata (int bits)
 	cl.activeweapon = cl.stats[STAT_ACTIVEWEAPON];
 
 	// viewzoom interpolation
-	cl.viewzoomold = cl.viewzoomnew;
-	cl.viewzoomnew = (float) max(cl.stats[STAT_VIEWZOOM], 2) * (1.0f / 255.0f);
+	cl.mviewzoom[0] = (float) max(cl.stats[STAT_VIEWZOOM], 2) * (1.0f / 255.0f);
 }
 
 /*
@@ -1156,7 +1159,7 @@ void CL_ParseTempEntity(void)
 		color[0] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		color[1] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
 		color[2] = MSG_ReadCoord(cl.protocol) * (2.0f / 1.0f);
-		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);	
+		CL_AllocDlight(NULL, &tempmatrix, 350, color[0], color[1], color[2], 700, 0.5, 0, -1, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		S_StartSound(-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
