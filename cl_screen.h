@@ -23,7 +23,7 @@ drawqueue_t;
 typedef struct drawqueuemesh_s
 {
 	rtexture_t *texture;
-	int numindices;
+	int numtriangles;
 	int numvertices;
 	int *indices;
 	float *vertices;

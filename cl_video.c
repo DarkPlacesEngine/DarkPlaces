@@ -116,7 +116,7 @@ void CL_DrawVideo(void)
 		vertices[ 8] = x2;vertices[ 9] = y2;vertices[10] = 0;vertices[11] = 0;
 		vertices[12] = x1;vertices[13] = y2;vertices[14] = 0;vertices[15] = 0;
 		mesh.texture = cl_videotexture;
-		mesh.numindices = 6;
+		mesh.numtriangles = 2;
 		mesh.numvertices = 4;
 		mesh.indices = indices;
 		mesh.vertices = vertices;
