@@ -733,13 +733,13 @@ int EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 {
 	int i, j, found = false;
 	entity_database4_commit_t *commit;
-	if (d->referenceframenum == framenum)
-		return true;
 	if (framenum == -1)
 	{
 		EntityFrame4_ResetDatabase(d);
 		return true;
 	}
+	if (d->referenceframenum == framenum)
+		return true;
 	for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
 	{
 		if (commit->numentities && commit->framenum <= framenum)
