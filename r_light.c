@@ -669,7 +669,7 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 				{
 					if (CL_TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
 					{
-						f *= d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
+						f *= d_lightstylevalue[sl->style] * (1.0f / 16384.0f);
 						VectorMA(color, f, sl->light, color);
 					}
 				}
@@ -791,7 +791,9 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						else
 							softwareuntransform(sl->origin, nl->origin);
 						f = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-						VectorScale(sl->light, f, nl->light);
+						nl->light[0] = sl->light[0] * f * colorr;
+						nl->light[1] = sl->light[1] * f * colorg;
+						nl->light[2] = sl->light[2] * f * colorb;
 						//nl->cullradius2 = 99999999;
 						nl->lightsubtract = sl->subtract;
 						nl->offset = sl->distbias;
@@ -814,7 +816,9 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 					else
 						softwareuntransform(sl->origin, nl->origin);
 					f = d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
-					VectorScale(sl->light, f, nl->light);
+					nl->light[0] = sl->light[0] * f * colorr;
+					nl->light[1] = sl->light[1] * f * colorg;
+					nl->light[2] = sl->light[2] * f * colorb;
 					//nl->cullradius2 = 99999999;
 					nl->lightsubtract = sl->subtract;
 					nl->offset = sl->distbias;
@@ -869,25 +873,35 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			VectorCopy(basecolor, color);
 			for (j = 0, nl = &nearlight[0];j < nearlights;j++, nl++)
 			{
-				// distance attenuation
 				VectorSubtract(nl->origin, av, v);
-				dist2 = DotProduct(v,v);
-				f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->lightsubtract;
-				if (f > 0)
+				// directional shading
+				a = DotProduct(avn,v);
+				if (a > 0)
 				{
-					// directional shading
-#if SLOWMATH
-					t = 1.0f / sqrt(dist2);
-#else
-					number = DotProduct(v, v);
-					*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
-					t = t * (1.5f - (number * 0.5f * t * t));
-#endif
-					// DotProduct(avn,v) * t is dotproduct with a normalized v,
-					// the hardness variables are for backlighting/shinyness
-					f *= DotProduct(avn,v) * t * 0.5f + 0.5f;// * hardness + hardnessoffset;
+					// the vertex normal faces the light
+
+					// do the distance attenuation
+					dist2 = DotProduct(v,v);
+					f = (1.0f / (dist2 * nl->falloff + nl->offset)) - nl->lightsubtract;
 					if (f > 0)
+					{
+						#if SLOWMATH
+						t = 1.0f / sqrt(dist2);
+						#else
+						number = DotProduct(v, v);
+						*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
+						t = t * (1.5f - (number * 0.5f * t * t));
+						#endif
+						// a * t is dotproduct with a normalized v.
+						// (the result would be -1 to +1, but we already
+						// eliminated the <= 0 case, so it is 0 to 1)
+
+						// the hardness variables are for backlighting/shinyness
+						// these have been hardwired at * 0.5 + 0.5 to match
+						// the quake map lighting utility's equations
+						f *= a * t * 0.5f + 0.5f;// * hardness + hardnessoffset;
 						VectorMA(color, f, nl->light, color);
+					}
 				}
 			}
 
