@@ -521,9 +521,19 @@ static void CL_RelinkNetworkEntities()
 				else if (ent->render.model->flags & EF_ZOMGIB)
 					CL_RocketTrail (oldorg, neworg, 4, ent);
 				else if (ent->render.model->flags & EF_TRACER)
+				{
 					CL_RocketTrail (oldorg, neworg, 3, ent);
+					dlightcolor[0] += 0x10;
+					dlightcolor[1] += 0x40;
+					dlightcolor[2] += 0x10;
+				}
 				else if (ent->render.model->flags & EF_TRACER2)
+				{
 					CL_RocketTrail (oldorg, neworg, 5, ent);
+					dlightcolor[0] += 0x50;
+					dlightcolor[1] += 0x30;
+					dlightcolor[2] += 0x10;
+				}
 				else if (ent->render.model->flags & EF_ROCKET)
 				{
 					CL_RocketTrail (oldorg, ent->render.origin, 0, ent);
@@ -539,7 +549,12 @@ static void CL_RelinkNetworkEntities()
 						CL_RocketTrail (oldorg, neworg, 1, ent);
 				}
 				else if (ent->render.model->flags & EF_TRACER3)
+				{
 					CL_RocketTrail (oldorg, neworg, 6, ent);
+					dlightcolor[0] += 0x50;
+					dlightcolor[1] += 0x20;
+					dlightcolor[2] += 0x40;
+				}
 			}
 		}
 		// LordHavoc: customizable glow
