@@ -93,8 +93,8 @@ typedef struct
 	int			flags;
 } mtexinfo_t;
 
-// LordHavoc: was 7, I added two more for raw lightmap coordinates, and then 3 more for light accumulation
-#define	VERTEXSIZE	12
+// LordHavoc: was 7, I added two more for raw lightmap coordinates
+#define	VERTEXSIZE	9
 
 typedef struct glpoly_s
 {
@@ -127,7 +127,7 @@ typedef struct msurface_s
 	
 // lighting info
 	int			dlightframe;
-//	int			dlightbits[8];
+	int			dlightbits[8];
 
 	int			lightframe; // avoid redundent addition of dlights
 

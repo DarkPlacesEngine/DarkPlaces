@@ -47,6 +47,7 @@ cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
 cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
+cvar_t gl_vertex = {"gl_vertex", "0"};
 //cvar_t gl_funnywalls = {"gl_funnywalls", "0"}; // LordHavoc: see BuildSurfaceDisplayList
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
@@ -68,6 +69,7 @@ void glrsurf_init()
 	Cvar_RegisterVariable(&gl_nosubimage);
 	Cvar_RegisterVariable(&r_ambient);
 //	Cvar_RegisterVariable(&gl_funnywalls);
+	Cvar_RegisterVariable(&gl_vertex);
 	// check if it's the glquake minigl driver
 	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
@@ -343,52 +345,188 @@ void UploadLightmaps()
 	}
 }
 
-/*
-================
-DrawTextureChains
-================
-*/
-extern qboolean hlbsp;
-extern void R_Sky();
-extern char skyname[];
-//extern qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2);
-void DrawTextureChains (void)
+void R_SkySurf(msurface_t *s, qboolean transform)
 {
-//	int		i, j, l;
-	int		i, j;
-	msurface_t	*s;
-	texture_t	*t;
+	glpoly_t *p;
+	int i;
+	float *v;
+	for (p=s->polys ; p ; p=p->next)
+	{
+		if (currentskypoly < MAX_SKYPOLYS && currentskyvert + p->numverts <= MAX_SKYVERTS)
+		{
+			skypoly[currentskypoly].firstvert = currentskyvert;
+			skypoly[currentskypoly++].verts = p->numverts;
+			if (transform)
+			{
+				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+				{
+					softwaretransform(v, skyvert[currentskyvert].v);
+					currentskyvert++;
+				}
+			}
+			else
+			{
+				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+				{
+					skyvert[currentskyvert].v[0] = v[0];
+					skyvert[currentskyvert].v[1] = v[1];
+					skyvert[currentskyvert++].v[2] = v[2];
+				}
+			}
+		}
+	}
+}
+
+void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
+{
+	int		i, a, b;
+	unsigned int c;
+	float	cr, cg, cb, radius, radius2, f;
+	float	os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
+	glpoly_t *p;
+	float	wvert[64*6], *wv, *v, *lightorigin;
+	dlight_t *light;
+	wv = wvert;
+	for (p = s->polys;p;p = p->next)
+	{
+		for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+		{
+			if (transform)
+				softwaretransform(v, wv);
+			else
+				VectorCopy(v, wv);
+			if (r_waterripple.value)
+				wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
+			wv[3] = wv[4] = wv[5] = 128.0f;
+			wv += 6;
+		}
+	}
+	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+	{
+		for (a = 0;a < 8;a++)
+		{
+			if (c = s->dlightbits[a])
+			{
+				for (b = 0;c && b < 32;b++)
+				{
+					if (c & (1 << b))
+					{
+						c -= (1 << b);
+						light = &cl_dlights[a * 32 + b];
+						lightorigin = light->origin;
+						cr = light->color[0];
+						cg = light->color[1];
+						cb = light->color[2];
+						radius = light->radius*light->radius*16.0f;
+						radius2 = radius * 16.0f;
+						wv = wvert;
+						for (p = s->polys;p;p = p->next)
+						{
+							for (i = 0;i < p->numverts;i++, wv += 6)
+							{
+								f = VectorDistance2(wv, lightorigin);
+								if (f < radius)
+								{
+									f = radius2 / (f + 65536.0f);
+									wv[3] += cr * f;
+									wv[4] += cg * f;
+									wv[5] += cb * f;
+								}
+							}
+						}
+					}
+					c >>= 1;
+					b++;
+				}
+			}
+		}
+	}
+	wv = wvert;
+	// FIXME: make fog texture if water texture is transparent?
+	if (lighthalf)
+	{
+		for (p=s->polys ; p ; p=p->next)
+		{
+			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+				transpolyvert(wv[0], wv[1], wv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) wv[3] >> 1,(int) wv[4] >> 1,(int) wv[5] >> 1,alpha);
+			transpolyend();
+		}
+	}
+	else
+	{
+		for (p=s->polys ; p ; p=p->next)
+		{
+			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+				transpolyvert(wv[0], wv[1], wv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) wv[3],(int) wv[4],(int) wv[5],alpha);
+			transpolyend();
+		}
+	}
+}
+
+void R_WallSurf(msurface_t *s, texture_t *t, qboolean transform)
+{
+	int			i, a, b;
+	unsigned int c;
 	glpoly_t	*p;
-	float		*v, os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
-//	vec3_t shadecolor;
-
-	// first the sky
-	skypolyclear();
-	for (j = 0;j < cl.worldmodel->numtextures;j++)
+	float		wvert[64*6], *wv, *v, cr, cg, cb, radius, radius2, f, *lightorigin;
+	dlight_t	*light;
+	// check for lightmap modification
+	if (r_dynamic.value)
 	{
-		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
-			continue;
-		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
-		if (s->flags & SURF_DRAWSKY)
+		if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
+		|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
+		|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
+		|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
+		|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
+			R_UpdateLightmap(s, s->lightmaptexturenum);
+	}
+	wv = wvert;
+	for (p = s->polys;p;p = p->next)
+	{
+		for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
 		{
-			cl.worldmodel->textures[j]->texturechain = NULL;
-			t = R_TextureAnimation (cl.worldmodel->textures[j]);
-			skyisvisible = true;
-			if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
+			if (transform)
+				softwaretransform(v, wv);
+			else
+				VectorCopy(v, wv);
+			wv[3] = wv[4] = wv[5] = 0.0f;
+			wv += 6;
+		}
+	}
+	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+	{
+		for (a = 0;a < 8;a++)
+		{
+			if (c = s->dlightbits[a])
 			{
-				for (;s;s = s->texturechain)
+				for (b = 0;c && b < 32;b++)
 				{
-					for (p=s->polys ; p ; p=p->next)
+					if (c & (1 << b))
 					{
-						if (currentskypoly < MAX_SKYPOLYS && currentskyvert + p->numverts <= MAX_SKYVERTS)
+						c -= (1 << b);
+						light = &cl_dlights[a * 32 + b];
+						lightorigin = light->origin;
+						cr = light->color[0];
+						cg = light->color[1];
+						cb = light->color[2];
+						radius = light->radius*light->radius*16.0f;
+						radius2 = radius * 16.0f;
+						wv = wvert;
+						for (p = s->polys;p;p = p->next)
 						{
-							skypoly[currentskypoly].firstvert = currentskyvert;
-							skypoly[currentskypoly++].verts = p->numverts;
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
 							{
-								skyvert[currentskyvert].v[0] = v[0];
-								skyvert[currentskyvert].v[1] = v[1];
-								skyvert[currentskyvert++].v[2] = v[2];
+								f = VectorDistance2(wv, lightorigin);
+								if (f < radius)
+								{
+									f = radius2 / (f + 65536.0f);
+									wv[3] += cr * f;
+									wv[4] += cg * f;
+									wv[5] += cb * f;
+								}
+								wv += 6;
 							}
 						}
 					}
@@ -396,404 +534,32 @@ void DrawTextureChains (void)
 			}
 		}
 	}
-	skypolyrender(); // fogged sky polys, affects depth
-
-	if (skyname[0] && skyisvisible && !fogenabled)
-		R_Sky(); // does not affect depth, draws over the sky polys
-
-	// then walls
-	wallpolyclear();
-	for (j = 0;j < cl.worldmodel->numtextures;j++)
+	wv = wvert;
+	for (p = s->polys;p;p = p->next)
 	{
-		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
-			continue;
-		// subdivided water surface warp
-		if (!(s->flags & SURF_DRAWTURB))
+		if (currentwallpoly >= MAX_WALLPOLYS)
+			break;
+		v = p->verts[0];
+		wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
+		wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
+		wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
+		wallpoly[currentwallpoly].firstvert = currentwallvert;
+		wallpoly[currentwallpoly].numverts = p->numverts;
+		wallpoly[currentwallpoly++].lit = true;
+		for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
 		{
-			cl.worldmodel->textures[j]->texturechain = NULL;
-			t = R_TextureAnimation (cl.worldmodel->textures[j]);
-			for (;s;s = s->texturechain)
-			{
-				// check for lightmap modification
-				if (r_dynamic.value)
-				{
-					if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
-					|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
-					|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
-					|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
-					|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
-						R_UpdateLightmap(s, s->lightmaptexturenum);
-				}
-				for (p = s->polys;p;p = p->next)
-				{
-					if (currentwallpoly >= MAX_WALLPOLYS)
-						break;
-					v = &s->polys->verts[0][0];
-					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
-					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
-					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
-					wallpoly[currentwallpoly].firstvert = currentwallvert;
-					wallpoly[currentwallpoly].numverts = p->numverts;
-					if (wallpoly[currentwallpoly++].lit = s->dlightframe == r_dlightframecount && r_dynamic.value)
-					{
-						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
-						{
-							/*
-							int dj;
-							shadecolor[0] = shadecolor[1] = shadecolor[2] = 0;
-							for (dj = 0;dj < (MAX_DLIGHTS >> 5);dj++)
-							{
-								if (s->dlightbits[dj])
-								{
-									int di;
-									for (di=0 ; di<32 ; di++)
-									{
-										if ((1 << (di&31)) & s->dlightbits[di>>5])
-										{
-											vec3_t ddist;
-											dlight_t *dl;
-											float dr;
-											float df;
-											float dt;
-											dl = &cl_dlights[(dj<<5)+di];
-											VectorSubtract(dl->origin, v, ddist);
-											df = DotProduct(ddist, ddist) + 65536.0f;
-											dr = dl->radius * dl->radius * 16.0f;
-											if (df < dr)
-											{
-												VectorNormalize(ddist);
-												dt = DotProduct(ddist, s->plane->normal);
-												if (s->flags & SURF_PLANEBACK)
-													dt = -dt;
-												if (dt > 0.0f)
-												{
-													dr *= (dt * 0.5f + 0.5f);
-													if (df < dr)
-													{
-							*/
-														/*
-														vec3_t v2, v3;
-														VectorSubtract(v, ddist, v3); // pull off surface
-														if (s->flags & SURF_PLANEBACK)
-														{
-															VectorSubtract(dl->origin, s->plane->normal, v2);
-															VectorSubtract(v3, s->plane->normal, v3);
-														}
-														else
-														{
-															VectorAdd(dl->origin, s->plane->normal, v2);
-															VectorAdd(v3, s->plane->normal, v3);
-														}
-														if (SV_TestLine(&cl.worldmodel->hulls[0], 0, v2, v3))
-//														if (SV_TestLine(&cl.worldmodel->hulls[0], 0, dl->origin, v))
-														{
-														*/
-							/*
-															float dbrightness = dr * 16.0f / df;
-															shadecolor[0] += dbrightness * dl->color[0];
-															shadecolor[1] += dbrightness * dl->color[1];
-															shadecolor[2] += dbrightness * dl->color[2];
-														//}
-													}
-												}
-											}
-										}
-									}
-								}
-							}
-							//R_DynamicLightPoint(shadecolor, v, s->dlightbits);
-							if (lighthalf)
-							{
-								shadecolor[0] *= 0.5f;
-								shadecolor[1] *= 0.5f;
-								shadecolor[2] *= 0.5f;
-							}
-							wallvert[currentwallvert].r = (byte) (bound(0, (int) shadecolor[0], 255));
-							wallvert[currentwallvert].g = (byte) (bound(0, (int) shadecolor[1], 255));
-							wallvert[currentwallvert].b = (byte) (bound(0, (int) shadecolor[2], 255));
-							*/
-							wallvert[currentwallvert].r = (byte) (bound(0, (int) v[9], 255));
-							wallvert[currentwallvert].g = (byte) (bound(0, (int) v[10], 255));
-							wallvert[currentwallvert].b = (byte) (bound(0, (int) v[11], 255));
-							wallvert[currentwallvert].a = 255;
-							wallvert[currentwallvert].vert[0] = v[0];
-							wallvert[currentwallvert].vert[1] = v[1];
-							wallvert[currentwallvert].vert[2] = v[2];
-							wallvert[currentwallvert].s = v[3];
-							wallvert[currentwallvert].t = v[4];
-							wallvert[currentwallvert].u = v[5];
-							wallvert[currentwallvert++].v = v[6];
-						}
-					}
-					else
-					{
-						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
-						{
-							wallvert[currentwallvert].vert[0] = v[0];
-							wallvert[currentwallvert].vert[1] = v[1];
-							wallvert[currentwallvert].vert[2] = v[2];
-							wallvert[currentwallvert].s = v[3];
-							wallvert[currentwallvert].t = v[4];
-							wallvert[currentwallvert].u = v[5];
-							wallvert[currentwallvert++].v = v[6];
-						}
-					}
-				}
-			}
-		}
-	}
-	UploadLightmaps();
-	wallpolyrender();
-
-	// then water (water gets diverted to transpoly list)
-	for (j = 0;j < cl.worldmodel->numtextures;j++)
-	{
-		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
-			continue;
-		cl.worldmodel->textures[j]->texturechain = NULL;
-		t = R_TextureAnimation (cl.worldmodel->textures[j]);
-		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
-		// subdivided water surface warp
-		if (s->flags & SURF_DRAWTURB)
-		{
-			int alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
-			// FIXME: make fog texture if water texture is transparent?
-			if (r_waterripple.value)
-			{
-				if (lighthalf)
-				{
-					for (;s;s = s->texturechain)
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								transpolyvert(v[0], v[1], v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
-							transpolyend();
-						}
-					}
-				}
-				else
-				{
-					for (;s;s = s->texturechain)
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								transpolyvert(v[0], v[1], v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
-							transpolyend();
-						}
-					}
-				}
-			}
-			else
-			{
-				if (lighthalf)
-				{
-					for (;s;s = s->texturechain)
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
-							transpolyend();
-						}
-					}
-				}
-				else
-				{
-					for (;s;s = s->texturechain)
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
-							transpolyend();
-						}
-					}
-				}
-			}
-			/*
-			int light, alpha, r = 0, g = 0, b = 0;
-			vec3_t nv, shadecolor;
-			alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
-			light = false;
-			if (s->flags & SURF_DRAWFULLBRIGHT)
-				r = g = b = lighthalf ? 128 : 255;
-			else if (s->dlightframe == r_dlightframecount && r_dynamic.value)
-				light = true;
-			else
-				r = g = b = (lighthalf ? 64 : 128) + (int) (r_ambient.value * 2.0f);
-			if (r_waterripple.value)
-			{
-				if (lighthalf)
-				{
-					if (light)
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									nv[0] = v[0];
-									nv[1] = v[1];
-									nv[2] = v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
-									R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
-									transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) shadecolor[0] >> 1,(int) shadecolor[1] >> 1,(int) shadecolor[2] >> 1,alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-					else
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									nv[0] = v[0];
-									nv[1] = v[1];
-									nv[2] = v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-									transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), r,g,b,alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-				}
-				else
-				{
-					if (light)
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									nv[0] = v[0];
-									nv[1] = v[1];
-									nv[2] = v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
-									R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
-									transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), shadecolor[0],shadecolor[1],shadecolor[2],alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-					else
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									nv[0] = v[0];
-									nv[1] = v[1];
-									nv[2] = v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-									transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), r,g,b,alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-				}
-			}
-			else
-			{
-				if (lighthalf)
-				{
-					if (light)
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
-									R_DynamicLightPoint(shadecolor, v, s->dlightbits);
-									transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) shadecolor[0] >> 1,(int) shadecolor[1] >> 1,(int) shadecolor[2] >> 1,alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-					else
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), r,g,b,alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-				}
-				else
-				{
-					if (light)
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
-									R_DynamicLightPoint(shadecolor, v, s->dlightbits);
-									transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), shadecolor[0],shadecolor[1],shadecolor[2],alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-					else
-					{
-						for (;s;s = s->texturechain)
-						{
-							for (p=s->polys ; p ; p=p->next)
-							{
-								// FIXME: could be a transparent water texture
-								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-								{
-									transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), r,g,b,alpha);
-								}
-								transpolyend();
-							}
-						}
-					}
-				}
-			}
-			*/
+			wallvert[currentwallvert].r = (byte) (bound(0, (int) wv[3], 255));
+			wallvert[currentwallvert].g = (byte) (bound(0, (int) wv[4], 255));
+			wallvert[currentwallvert].b = (byte) (bound(0, (int) wv[5], 255));
+			wallvert[currentwallvert].a = 255;
+			wallvert[currentwallvert].vert[0] = wv[0];
+			wallvert[currentwallvert].vert[1] = wv[1];
+			wallvert[currentwallvert].vert[2] = wv[2];
+			wallvert[currentwallvert].s = v[3];
+			wallvert[currentwallvert].t = v[4];
+			wallvert[currentwallvert].u = v[5];
+			wallvert[currentwallvert++].v = v[6];
+			wv += 6;
 		}
 	}
 }
@@ -801,12 +567,208 @@ void DrawTextureChains (void)
 // LordHavoc: transparent brush models
 extern int r_dlightframecount;
 extern float modelalpha;
-extern vec3_t shadecolor;
+//extern vec3_t shadecolor;
 //qboolean R_CullBox (vec3_t mins, vec3_t maxs);
-void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
-void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
-void EmitWaterPolys (msurface_t *fa);
-void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model);
+//void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
+//void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
+//void EmitWaterPolys (msurface_t *fa);
+
+void R_WallSurfVertex(msurface_t *s, texture_t *t, qboolean transform)
+{
+	int			i, a, b, alpha;
+	unsigned int c;
+	glpoly_t	*p;
+	float		wvert[64*6], *wv, *v, cr, cg, cb, radius, radius2, f, *lightorigin;
+	int			smax, tmax, size3;
+	float		scale;
+	byte		*lm;
+	dlight_t	*light;
+	smax = (s->extents[0]>>4)+1;
+	tmax = (s->extents[1]>>4)+1;
+	size3 = smax*tmax*3; // *3 for colored lighting
+	alpha = (int) (modelalpha * 255.0f);
+	// check for lightmap modification
+	if (r_dynamic.value)
+	{
+		if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
+		|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
+		|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
+		|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
+		|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
+			R_UpdateLightmap(s, s->lightmaptexturenum);
+	}
+	wv = wvert;
+	for (p = s->polys;p;p = p->next)
+	{
+		for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+		{
+			if (transform)
+				softwaretransform(v, wv);
+			else
+				VectorCopy(v, wv);
+			wv[3] = wv[4] = wv[5] = r_ambient.value * 2.0f;
+			if (s->styles[0] != 255)
+			{
+				lm = (byte *)((long) s->samples + ((int) v[8] * smax + (int) v[7]) * 3); // LordHavoc: *3 for colored lighting
+				scale = d_lightstylevalue[s->styles[0]] * (1.0f / 128.0f);wv[3] += lm[size3*0+0] * scale;wv[4] += lm[size3*0+1] * scale;wv[5] += lm[size3*0+2] * scale;
+				if (s->styles[1] != 255)
+				{
+					scale = d_lightstylevalue[s->styles[1]] * (1.0f / 128.0f);wv[3] += lm[size3*1+0] * scale;wv[4] += lm[size3*1+1] * scale;wv[5] += lm[size3*1+2] * scale;
+					if (s->styles[2] != 255)
+					{
+						scale = d_lightstylevalue[s->styles[2]] * (1.0f / 128.0f);wv[3] += lm[size3*2+0] * scale;wv[4] += lm[size3*2+1] * scale;wv[5] += lm[size3*2+2] * scale;
+						if (s->styles[3] != 255)
+						{
+							scale = d_lightstylevalue[s->styles[3]] * (1.0f / 128.0f);wv[3] += lm[size3*3+0] * scale;wv[4] += lm[size3*3+1] * scale;wv[5] += lm[size3*3+2] * scale;
+						}
+					}
+				}
+			}
+			wv += 6;
+		}
+	}
+	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+	{
+		for (a = 0;a < 8;a++)
+		{
+			if (c = s->dlightbits[a])
+			{
+				for (b = 0;c && b < 32;b++)
+				{
+					if (c & (1 << b))
+					{
+						c -= (1 << b);
+						light = &cl_dlights[a * 32 + b];
+						lightorigin = light->origin;
+						cr = light->color[0];
+						cg = light->color[1];
+						cb = light->color[2];
+						radius = light->radius*light->radius*16.0f;
+						radius2 = radius * 16.0f;
+						wv = wvert;
+						for (p = s->polys;p;p = p->next)
+						{
+							for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							{
+								f = VectorDistance2(wv, lightorigin);
+								if (f < radius)
+								{
+									f = radius2 / (f + 65536.0f);
+									wv[3] += cr * f;
+									wv[4] += cg * f;
+									wv[5] += cb * f;
+								}
+								wv += 6;
+							}
+						}
+					}
+					c >>= 1;
+					b++;
+				}
+			}
+		}
+	}
+	wv = wvert;
+	if (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1)
+	{
+		if (lighthalf)
+		{
+			for (p = s->polys;p;p = p->next)
+			{
+				v = p->verts[0];
+				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) (wv[3] * currententity->colormod[0]) >> 1,(int) (wv[4] * currententity->colormod[1]) >> 1,(int) (wv[5] * currententity->colormod[0]) >> 1,alpha);
+				transpolyend();
+			}
+		}
+		else
+		{
+			for (p = s->polys;p;p = p->next)
+			{
+				v = p->verts[0];
+				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) (wv[3] * currententity->colormod[0]),(int) (wv[4] * currententity->colormod[1]),(int) (wv[5] * currententity->colormod[2]),alpha);
+				transpolyend();
+			}
+		}
+	}
+	else
+	{
+		if (lighthalf)
+		{
+			for (p = s->polys;p;p = p->next)
+			{
+				v = p->verts[0];
+				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) wv[3] >> 1,(int) wv[4] >> 1,(int) wv[5] >> 1,alpha);
+				transpolyend();
+			}
+		}
+		else
+		{
+			for (p = s->polys;p;p = p->next)
+			{
+				v = p->verts[0];
+				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) wv[3],(int) wv[4],(int) wv[5],alpha);
+				transpolyend();
+			}
+		}
+	}
+}
+
+/*
+================
+DrawTextureChains
+================
+*/
+extern qboolean hlbsp;
+extern char skyname[];
+//extern qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2);
+void DrawTextureChains (void)
+{
+	int			n;
+	msurface_t	*s;
+	texture_t	*t;
+
+	for (n = 0;n < cl.worldmodel->numtextures;n++)
+	{
+		if (!cl.worldmodel->textures[n] || !(s = cl.worldmodel->textures[n]->texturechain))
+			continue;
+		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
+		cl.worldmodel->textures[n]->texturechain = NULL;
+		t = R_TextureAnimation (cl.worldmodel->textures[n]);
+		// sky
+		if (s->flags & SURF_DRAWSKY)
+		{
+			skyisvisible = true;
+			if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
+				for (;s;s = s->texturechain)
+					R_SkySurf(s, false);
+			continue;
+		}
+		// subdivided water surface warp
+		if (s->flags & SURF_DRAWTURB)
+		{
+			int alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
+			for (;s;s = s->texturechain)
+				R_WaterSurf(s, t, false, alpha);
+			continue;
+		}
+		if (gl_vertex.value)
+			for (;s;s = s->texturechain)
+				R_WallSurfVertex(s, t, false);
+		else
+			for (;s;s = s->texturechain)
+				R_WallSurf(s, t, false);
+	}
+}
+
+void R_NoVisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model);
 
 /*
 =================
@@ -815,17 +777,13 @@ R_DrawBrushModel
 */
 void R_DrawBrushModel (entity_t *e)
 {
-	int			i, j/*, l*/, smax, tmax, size3, maps;
-	vec3_t		mins, maxs, nv;
+	int			i;
+	vec3_t		mins, maxs;
 	msurface_t	*s;
-	mplane_t	*pplane;
 	model_t		*clmodel;
 	qboolean	rotated, vertexlit = false;
-	float		dot, *v, scale;
 	texture_t	*t;
-	byte		*lm;
-	float		os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
-	glpoly_t	*p;
+	vec3_t		org;
 
 	currententity = e;
 
@@ -867,304 +825,40 @@ void R_DrawBrushModel (entity_t *e)
 
 // calculate dynamic lighting for bmodel if it's not an
 // instanced model
-	if (modelalpha == 1 && clmodel->firstmodelsurface != 0 && !(currententity->effects & EF_FULLBRIGHT) && currententity->colormod[0] == 1 && currententity->colormod[2] == 1 && currententity->colormod[2] == 1)
+	for (i = 0;i < MAX_DLIGHTS;i++)
 	{
-		int k;
-		vec3_t org;
-		for (k=0 ; k<MAX_DLIGHTS ; k++)
-		{
-			if ((cl_dlights[k].die < cl.time) || (!cl_dlights[k].radius))
-				continue;
+		if ((cl_dlights[i].die < cl.time) || (!cl_dlights[i].radius))
+			continue;
 
-			VectorSubtract(cl_dlights[k].origin, currententity->origin, org);
-			R_OldMarkLights (org, &cl_dlights[k], 1<<(k&31), k >> 5, clmodel); //, clmodel->nodes + clmodel->hulls[0].firstclipnode);
-		}
+		VectorSubtract(cl_dlights[i].origin, currententity->origin, org);
+		R_NoVisMarkLights (org, &cl_dlights[i], 1<<(i&31), i >> 5, clmodel);
 	}
-	else
-		vertexlit = true;
+	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->effects & EF_FULLBRIGHT) || currententity->colormod[0] != 1 || currententity->colormod[2] != 1 || currententity->colormod[2] != 1;
 
 e->angles[0] = -e->angles[0];	// stupid quake bug
 	softwaretransformforentity (e);
 e->angles[0] = -e->angles[0];	// stupid quake bug
 
 	// draw texture
-	for (j = 0;j < clmodel->nummodelsurfaces;j++, s++)
+	for (i = 0;i < clmodel->nummodelsurfaces;i++, s++)
 	{
-	// find which side of the node we are on
-		pplane = s->plane;
-
-		dot = DotProduct (modelorg, pplane->normal) - pplane->dist;
-
-	// draw the polygon
-		if (((s->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
-			(!(s->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON)))
+		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
 		{
 			if (s->flags & SURF_DRAWSKY)
-				continue;
-			if (s->flags & SURF_DRAWTURB)
 			{
-				int			alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
-				// FIXME: make fog texture if water texture is transparent?
-				if (r_waterripple.value)
-				{
-					if (lighthalf)
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								softwaretransform(v, nv);
-								transpolyvert(nv[0], nv[1], nv[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
-							}
-							transpolyend();
-						}
-					}
-					else
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								softwaretransform(v, nv);
-								transpolyvert(nv[0], nv[1], nv[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
-							}
-							transpolyend();
-						}
-					}
-				}
-				else
-				{
-					if (lighthalf)
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								softwaretransform(v, nv);
-								transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
-							}
-							transpolyend();
-						}
-					}
-					else
-					{
-						for (p=s->polys ; p ; p=p->next)
-						{
-							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								softwaretransform(v, nv);
-								transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
-							}
-							transpolyend();
-						}
-					}
-				}
-				/*
-				glpoly_t	*p;
-				int			light, alpha, r = 0, g = 0, b = 0;
-				vec3_t		shadecolor;
-
-				if (s->flags & SURF_DRAWNOALPHA)
-					alpha = modelalpha*255.0f;
-				else
-					alpha = r_wateralpha.value*modelalpha*255.0f;
-				light = false;
-				if (s->flags & SURF_DRAWFULLBRIGHT || currententity->effects & EF_FULLBRIGHT)
-				{
-					if (lighthalf)
-					{
-						r = 128.0f * currententity->colormod[0];
-						g = 128.0f * currententity->colormod[1];
-						b = 128.0f * currententity->colormod[2];
-					}
-					else
-					{
-						r = 255.0f * currententity->colormod[0];
-						g = 255.0f * currententity->colormod[1];
-						b = 255.0f * currententity->colormod[2];
-					}
-				}
-				else if (s->dlightframe == r_dlightframecount && r_dynamic.value)
-					light = true;
-				else
-				{
-					if (lighthalf)
-					{
-						r = 64.0f * currententity->colormod[0] + (int) r_ambient.value;
-						g = 64.0f * currententity->colormod[1] + (int) r_ambient.value;
-						b = 64.0f * currententity->colormod[2] + (int) r_ambient.value;
-					}
-					else
-					{
-						r = 128.0f * currententity->colormod[0] + (int) (r_ambient.value * 2.0f);
-						g = 128.0f * currententity->colormod[1] + (int) (r_ambient.value * 2.0f);
-						b = 128.0f * currententity->colormod[2] + (int) (r_ambient.value * 2.0f);
-					}
-				}
-				for (p=s->polys ; p ; p=p->next)
-				{
-					// FIXME: could be a transparent water texture
-					transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-					for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-					{
-						softwaretransform(v, nv);
-						if (r_waterripple.value)
-							nv[2] += r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-						if (light)
-						{
-							shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
-							R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
-							if (lighthalf)
-							{
-								r = (int) ((float) (shadecolor[0] * currententity->colormod[0])) >> 1;
-								g = (int) ((float) (shadecolor[1] * currententity->colormod[1])) >> 1;
-								b = (int) ((float) (shadecolor[2] * currententity->colormod[2])) >> 1;
-							}
-							else
-							{
-								r = (int) ((float) (shadecolor[0] * currententity->colormod[0]));
-								g = (int) ((float) (shadecolor[1] * currententity->colormod[1]));
-								b = (int) ((float) (shadecolor[2] * currententity->colormod[2]));
-							}
-						}
-						transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), r,g,b,alpha);
-					}
-					transpolyend();
-				}
-				*/
+				R_SkySurf(s, true);
 				continue;
 			}
 			t = R_TextureAnimation (s->texinfo->texture);
+			if (s->flags & SURF_DRAWTURB)
+			{
+				R_WaterSurf(s, t, true, s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f);
+				continue;
+			}
 			if (vertexlit || s->texinfo->texture->transparent)
-			{
-				// FIXME: could be a transparent water texture
-				if ((currententity->effects & EF_FULLBRIGHT) || !s->samples)
-				{
-					for (p = s->polys;p;p = p->next)
-					{
-						if (currenttranspoly >= MAX_TRANSPOLYS)
-							continue;
-						v = &p->verts[0][0];
-						transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-						for (i = 0;i < p->numverts;i++, v += VERTEXSIZE)
-						{
-							softwaretransform(v, nv);
-							transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], 255,255,255,modelalpha*255.0f);
-						}
-						transpolyend();
-					}
-				}
-				else
-				{
-					smax = (s->extents[0]>>4)+1;
-					tmax = (s->extents[1]>>4)+1;
-					size3 = smax*tmax*3; // *3 for colored lighting
-					for (p = s->polys;p;p = p->next)
-					{
-						if (currenttranspoly >= MAX_TRANSPOLYS)
-							continue;
-						v = &p->verts[0][0];
-						transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-						for (i = 0;i < p->numverts;i++, v += VERTEXSIZE)
-						{
-							shadecolor[0] = shadecolor[1] = shadecolor[2] = r_ambient.value * 2.0f;
-							lm = (byte *)((long) s->samples + ((int) v[8] * smax + (int) v[7]) * 3); // LordHavoc: *3 for colored lighting
-							for (maps = 0;maps < MAXLIGHTMAPS && s->styles[maps] != 255;maps++)
-							{
-								scale = d_lightstylevalue[s->styles[maps]] * (1.0 / 128.0);
-								shadecolor[0] += lm[0] * scale;
-								shadecolor[1] += lm[1] * scale;
-								shadecolor[2] += lm[2] * scale;
-								lm += size3; // LordHavoc: *3 for colored lighting
-							}
-							softwaretransform(v, nv);
-							R_DynamicLightPointNoMask(shadecolor, nv); // LordHavoc: dynamic lighting
-							if (lighthalf)
-							{
-								transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], (int) shadecolor[0] >> 1, (int) shadecolor[1] >> 1, (int) shadecolor[2] >> 1, modelalpha*255.0f);
-							}
-							else
-							{
-								transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], shadecolor[0], shadecolor[1], shadecolor[2], modelalpha*255.0f);
-							}
-						}
-						transpolyend();
-					}
-				}
-			}
+				R_WallSurfVertex(s, t, true);
 			else
-			{
-				// check for lightmap modification
-				if (r_dynamic.value)
-				{
-					if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
-					|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
-					|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
-					|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
-					|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
-						R_UpdateLightmap(s, s->lightmaptexturenum);
-				}
-				for (p = s->polys;p;p = p->next)
-				{
-					if (currentwallpoly >= MAX_WALLPOLYS)
-						break;
-					v = &s->polys->verts[0][0];
-					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
-					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
-					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
-					wallpoly[currentwallpoly].firstvert = currentwallvert;
-					wallpoly[currentwallpoly].numverts = p->numverts;
-					if (wallpoly[currentwallpoly++].lit = s->dlightframe == r_dlightframecount && r_dynamic.value)
-					{
-						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
-						{
-							/*
-							softwaretransform(v, nv);
-							shadecolor[0] = shadecolor[1] = shadecolor[2] = 0;
-//							R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
-							R_DynamicLightPointNoMask(shadecolor, nv);
-							if (lighthalf)
-							{
-								shadecolor[0] *= 0.5f;
-								shadecolor[1] *= 0.5f;
-								shadecolor[2] *= 0.5f;
-							}
-							wallvert[currentwallvert].r = (byte) (bound(0, (int) shadecolor[0], 255));
-							wallvert[currentwallvert].g = (byte) (bound(0, (int) shadecolor[1], 255));
-							wallvert[currentwallvert].b = (byte) (bound(0, (int) shadecolor[2], 255));
-							wallvert[currentwallvert].a = 255;
-							wallvert[currentwallvert].vert[0] = nv[0];
-							wallvert[currentwallvert].vert[1] = nv[1];
-							wallvert[currentwallvert].vert[2] = nv[2];
-							*/
-							softwaretransform(v, wallvert[currentwallvert].vert);
-							wallvert[currentwallvert].r = (byte) (bound(0, (int) v[9], 255));
-							wallvert[currentwallvert].g = (byte) (bound(0, (int) v[10], 255));
-							wallvert[currentwallvert].b = (byte) (bound(0, (int) v[11], 255));
-							wallvert[currentwallvert].a = 255;
-							wallvert[currentwallvert].s = v[3];
-							wallvert[currentwallvert].t = v[4];
-							wallvert[currentwallvert].u = v[5];
-							wallvert[currentwallvert++].v = v[6];
-						}
-					}
-					else
-					{
-						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
-						{
-							softwaretransform(v, wallvert[currentwallvert].vert);
-							wallvert[currentwallvert].s = v[3];
-							wallvert[currentwallvert].t = v[4];
-							wallvert[currentwallvert].u = v[5];
-							wallvert[currentwallvert++].v = v[6];
-						}
-					}
-				}
-			}
+				R_WallSurf(s, t, true);
 		}
 	}
 	UploadLightmaps();
@@ -1319,7 +1013,6 @@ void R_DrawWorld (void)
 	currententity = &ent;
 
 	softwaretransformidentity(); // LordHavoc: clear transform
-	skyisvisible = false;
 
 	if (cl.worldmodel)
 		R_WorldNode ();
