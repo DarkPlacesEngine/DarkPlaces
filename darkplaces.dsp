@@ -276,6 +276,10 @@ SOURCE=.\netconn.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\ogg.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\palette.c
 # End Source File
 # Begin Source File
@@ -581,6 +585,10 @@ SOURCE=.\modelgen.h
 # Begin Source File
 
 SOURCE=.\netconn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\ogg.h
 # End Source File
 # Begin Source File
 

@@ -4,13 +4,13 @@
 CC=gcc
 
 #recommended for: anyone not using ALSA 0.5
-OBJ_LINUXSOUND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o
+OBJ_LINUXSOUND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o ogg.o
 LINUXSOUNDLIB=
 #recommended for: anyone using ALSA 0.5
-#OBJ_LINUXSOUND=snd_alsa_0_5.o snd_dma.o snd_mix.o snd_mem.o
+#OBJ_LINUXSOUND=snd_alsa_0_5.o snd_dma.o snd_mix.o snd_mem.o ogg.o
 #LINUXSOUNDLIB=-lasound
 #recommended for: no one (this driver needs to be updated, it doesn't compile anymore)
-#OBJ_LINUXSOUND=snd_alsa_0_9.o snd_dma.o snd_mix.o snd_mem.o
+#OBJ_LINUXSOUND=snd_alsa_0_9.o snd_dma.o snd_mix.o snd_mem.o ogg.o
 #LINUXSOUNDLIB=-lasound
 #recommended for: anyone who can't use the above drivers
 #OBJ_LINUXSOUND=snd_null.o
