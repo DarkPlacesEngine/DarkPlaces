@@ -2933,7 +2933,7 @@ void PF_fgets(void)
 		c = FS_Getc(pr_files[filenum]);
 	if (developer.integer)
 		Con_Printf("fgets: %s\n", string);
-	if (c >= 0)
+	if (c >= 0 || end)
 		G_INT(OFS_RETURN) = PR_SetString(string);
 	else
 		G_INT(OFS_RETURN) = 0;

@@ -1826,7 +1826,7 @@ void VM_fgets(void)
 		c = FS_Getc(VM_FILES[filenum]);
 	if (developer.integer)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
-	if (c >= 0)
+	if (c >= 0 || end)
 		PRVM_G_INT(OFS_RETURN) = PRVM_SetString(string);
 	else
 		PRVM_G_INT(OFS_RETURN) = 0;
