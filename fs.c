@@ -2090,16 +2090,16 @@ int FS_ListDirectory(const char *pattern, int oneperline)
 
 static void FS_ListDirectoryCmd (const char* cmdname, int oneperline)
 {
-	char pattern[MAX_OSPATH];
+	const char *pattern;
 	if (Cmd_Argc() > 3)
 	{
 		Con_Printf("usage:\n%s [path/pattern]\n", cmdname);
 		return;
 	}
 	if (Cmd_Argc() == 2)
-		snprintf(pattern, sizeof(pattern), "%s", Cmd_Argv(1));
+		pattern = Cmd_Argv(1);
 	else
-		strcpy(pattern, "*");
+		pattern = "*";
 	if (!FS_ListDirectory(pattern, oneperline))
 		Con_Printf("No files found.\n");
 }
