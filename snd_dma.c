@@ -474,7 +474,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	int		ch_idx;
 	int		skip;
 
-	if (!sound_started || !sfx || nosound.integer)
+	if (!sound_started || !sfx || !sfx->sfxcache || nosound.integer)
 		return;
 
 	vol = fvol*255;
