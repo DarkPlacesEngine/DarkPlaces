@@ -701,19 +701,19 @@ void SNDDMA_Submit(void)
 		h = lpWaveHdr + ( snd_sent&WAV_MASK );
 
 		snd_sent++;
-		/* 
-		 * Now the data block can be sent to the output device. The 
-		 * waveOutWrite function returns immediately and waveform 
-		 * data is sent to the output device in the background. 
-		 */ 
-		wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR)); 
+		/*
+		 * Now the data block can be sent to the output device. The
+		 * waveOutWrite function returns immediately and waveform
+		 * data is sent to the output device in the background.
+		 */
+		wResult = waveOutWrite(hWaveOut, h, sizeof(WAVEHDR));
 
 		if (wResult != MMSYSERR_NOERROR)
-		{ 
+		{
 			Con_SafePrintf ("Failed to write block to device\n");
 			FreeSound ();
-			return; 
-		} 
+			return;
+		}
 	}
 }
 
@@ -727,5 +727,47 @@ Reset the sound device for exiting
 void SNDDMA_Shutdown(void)
 {
 	FreeSound ();
+}
+
+
+void *S_LockBuffer(void)
+{
+	int reps;
+	DWORD dwSize,dwSize2;
+	DWORD *pbuf;
+	DWORD *pbuf2;
+	HRESULT hresult;
+
+	if (pDSBuf)
+	{
+		reps = 0;
+
+		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2, &dwSize2, 0)) != DS_OK)
+		{
+			if (hresult != DSERR_BUFFERLOST)
+			{
+				Con_Printf ("S_LockBuffer: DS::Lock Sound Buffer Failed\n");
+				S_Shutdown ();
+				S_Startup ();
+				return NULL;
+			}
+
+			if (++reps > 10000)
+			{
+				Con_Printf ("S_LockBuffer: DS: couldn't restore buffer\n");
+				S_Shutdown ();
+				S_Startup ();
+				return NULL;
+			}
+		}
+	}
+	else
+		return shm->buffer;
+}
+
+void S_UnlockBuffer(void)
+{
+	if (pDSBuf)
+		pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
 }
 

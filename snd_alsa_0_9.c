@@ -305,3 +305,12 @@ void SNDDMA_Submit(void)
 	}
 }
 
+void *S_LockBuffer(void)
+{
+	return shm->buffer;
+}
+
+void S_UnlockBuffer(void)
+{
+}
+
