@@ -3001,12 +3001,14 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		// LordHavoc: this code was originally at the end of this loop, but
 		// has been transformed to something more readable at the start here.
 
-		// LordHavoc: only register submodels if it is the world
-		// (prevents external bsp models from replacing world submodels with
-		//  their own)
-		if (loadmodel->isworldmodel && i)
+		if (i > 0)
 		{
 			char name[10];
+			// LordHavoc: only register submodels if it is the world
+			// (prevents external bsp models from replacing world submodels with
+			//  their own)
+			if (!loadmodel->isworldmodel)
+				continue;
 			// duplicate the basic information
 			sprintf(name, "*%i", i);
 			mod = Mod_FindName(name);
@@ -5538,6 +5540,19 @@ void Mod_Q3BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins,
 }
 */
 
+void Mod_Q3BSP_RecursiveFindNumLeafs(q3mnode_t *node)
+{
+	int numleafs;
+	while (node->plane)
+	{
+		Mod_Q3BSP_RecursiveFindNumLeafs(node->children[0]);
+		node = node->children[1];
+	}
+	numleafs = ((q3mleaf_t *)node - loadmodel->brushq3.data_leafs) + 1;
+	if (loadmodel->brushq3.num_leafs < numleafs)
+		loadmodel->brushq3.num_leafs = numleafs;
+}
+
 extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
 extern void R_Q3BSP_Draw(struct entity_render_s *ent);
 extern void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
@@ -5623,16 +5638,19 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, face->data_vertex3f, NULL, NULL, NULL, NULL, face->num_triangles, face->data_element3i);
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
-	
+
+	loadmodel->brushq3.num_leafs = 0;
+	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brushq3.data_nodes);
+
+	mod = loadmodel;
 	for (i = 0;i < loadmodel->brushq3.num_models;i++)
 	{
-		if (i == 0)
-			mod = loadmodel;
-		else
+		if (i > 0)
 		{
 			char name[10];
 			// LordHavoc: only register submodels if it is the world
-			// (prevents bsp models from replacing world submodels)
+			// (prevents external bsp models from replacing world submodels with
+			//  their own)
 			if (!loadmodel->isworldmodel)
 				continue;
 			// duplicate the basic information
