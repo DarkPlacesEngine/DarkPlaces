@@ -630,8 +630,9 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 
 	// clip to world
 	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.hullmins, clip.hullmaxs, clip.end);
+	if (clip.type == MOVE_WORLDONLY)
 	//if (clip.trace.allsolid)
-	//	return clip.trace;
+		return clip.trace;
 
 	if (clip.type == MOVE_MISSILE)
 	{

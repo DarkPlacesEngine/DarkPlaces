@@ -24,9 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "collision.h"
 
-#define	MOVE_NORMAL		0
-#define	MOVE_NOMONSTERS	1
-#define	MOVE_MISSILE	2
+#define MOVE_NORMAL     0
+#define MOVE_NOMONSTERS 1
+#define MOVE_MISSILE    2
+#define MOVE_WORLDONLY  3
 
 
 // called after the world model has been loaded, before linking any entities
