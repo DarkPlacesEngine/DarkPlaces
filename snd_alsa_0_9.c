@@ -1,7 +1,7 @@
 /*
 	snd_alsa_0_9.c
 
-	(description)
+	Support for ALSA 0.9 sound driver (cvs development version)
 
 	Copyright (C) 1999,2000  contributors of the QuakeForge project
 	Please see the file "AUTHORS" for a list of contributors
@@ -35,9 +35,8 @@
 
 #include <sys/asoundlib.h>
 
-#include "qtypes.h"
+#include "quakedef.h"
 #include "sound.h"
-#include "qargs.h"
 #include "console.h"
 
 static int snd_inited;
