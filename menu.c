@@ -1957,7 +1957,9 @@ void M_Keys_Key (int k)
 
 int video_cursor = 0;
 int video_cursor_table[] = {56, 68, 80, 92, 116};
-unsigned short video_resolutions[][2] = {{512,384}, {640,480}, {800,600}, {1024,768}, {1280,960}};
+// note: if modes are added to the beginning of this list, update the
+// video_resolution = x; in M_Menu_Video_f below
+unsigned short video_resolutions[][2] = {{320,240}, {400,300}, {512,384}, {640,480}, {800,600}, {1024,768}, {1152,864}, {1280,960}, {1280,1024}, {1600,1200}, {1792,1344}, {1920,1440}, {2048,1536}};
 int video_resolution;
 
 extern int current_vid_fullscreen;
@@ -1984,7 +1986,8 @@ void M_Menu_Video_f (void)
 	// Default to 800x600 if we didn't find it
 	if (video_resolution == sizeof (video_resolutions) / sizeof (video_resolutions[0]))
 	{
-		video_resolution = 2;
+		// may need to update this number if mode list changes
+		video_resolution = 4;
 		Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution][0]);
 		Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution][1]);
 	}
