@@ -197,7 +197,8 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 	{
 #endif
 		pool->realsize -= sizeof(memheader_t) + mem->size + sizeof(int);
-		memset(mem, 0xBF, sizeof(memheader_t) + mem->size + sizeof(int));
+		if (developer.integer)
+			memset(mem, 0xBF, sizeof(memheader_t) + mem->size + sizeof(int));
 		free(mem);
 #if MEMCLUMPING
 	}
