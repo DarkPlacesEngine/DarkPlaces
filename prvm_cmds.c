@@ -88,6 +88,7 @@ float	gettime()
 float	mod(float val, float m)
 const string	str_cvar (string)
 		crash()
+		stackdump()
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -127,6 +128,8 @@ float	getmousetarget(void)
 
 		callfunction(...,string function_name)
 		writetofile(float fhandle, entity ent)
+float	isfunction(string function_name)
+vector	getresolution(float number)
 */
 
 #include "quakedef.h"
@@ -1110,6 +1113,21 @@ void VM_coredump (void)
 	Cbuf_AddText("prvm_edicts ");
 	Cbuf_AddText(PRVM_NAME);
 	Cbuf_AddText("\n");
+}
+
+/*
+=========
+VM_stackdump
+
+stackdump()
+=========
+*/
+void PRVM_StackTrace(void);
+void VM_stackdump (void)
+{
+	VM_SAFEPARMCOUNT(0, VM_stackdump);
+
+	PRVM_StackTrace();
 }
 
 /*
@@ -2835,6 +2853,27 @@ void VM_M_writetofile(void)
 	PRVM_ED_Write (VM_FILES[filenum], ent);
 }
 
+/*
+=========
+VM_M_getresolution
+
+vector	getresolution(float number)
+=========
+*/
+extern unsigned short video_resolutions[][2];
+void VM_M_getresolution(void)
+{
+	int nr;
+	VM_SAFEPARMCOUNT(1, VM_getresolution);
+
+	nr = PRVM_G_FLOAT(OFS_PARM0);
+
+
+	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr][0];
+	PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr][1];
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;	
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -2909,8 +2948,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_loadfromfile,
 	VM_modulo,		// 70
 	VM_str_cvar,	
-	VM_crash,		// 72
-	0,0,0,0,0,0,0,0,// 80
+	VM_crash,
+	VM_stackdump,	// 73
+	0,0,0,0,0,0,0,// 80
 	e10,			// 90
 	e10,			// 100
 	e100,			// 200
@@ -2954,7 +2994,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_getmousetarget,
 	VM_M_callfunction,
 	VM_M_writetofile,
-	VM_M_isfunction	// 607
+	VM_M_isfunction,
+	VM_M_getresolution // 608
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
