@@ -232,11 +232,7 @@ SOURCE=.\mathlib.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\matrix3x4.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\matrix4x4.c
+SOURCE=.\matrixlib.c
 # End Source File
 # Begin Source File
 
