@@ -264,10 +264,10 @@ Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels
 Video: -window performs +vid_fullscreen 0
 Windows DirectSound: -primarysound locks the sound hardware for exclusive use
 Windows DirectSound: -snoforceformat uses the format that DirectSound returns, rather than forcing it
-Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (ignored with -dinput, windows only)
-Windows GDI Input: -noforcemparms disables setting of mouse parameters (ignored with -dinput, windows only)
-Windows GDI Input: -noforcemspd disables setting of mouse speed (ignored with -dinput, windows only)
-Windows Input: -dinput uses DirectInput (instead of GDI) for mouse/joystick input, may be more precise or responsive, but probably not
+Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (-nodinput only, windows only)
+Windows GDI Input: -noforcemparms disables setting of mouse parameters (-nodinput only, windows only)
+Windows GDI Input: -noforcemspd disables setting of mouse speed (-nodinput only, windows only)
+Windows Input: -nodinput disables DirectInput for mouse/joystick input, gl_finish 1 mode recommended if this option is used as otherwise it tends to stutter due to input backlog.
 Windows Input: -nojoy disables joystick support, may be a small speed increase
 Windows Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
 Windows Sound: -wavonly uses wave sound instead of DirectSound
