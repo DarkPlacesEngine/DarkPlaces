@@ -409,12 +409,13 @@ byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
 
 void Image_StripImageExtension (char *in, char *out)
 {
-	char *end;
+	char *end, *temp;
 	end = in + strlen(in);
 	if ((end - in) >= 4)
 	{
-		if (strcmp(end - 4, ".tga") == 0 || strcmp(end - 4, ".pcx") == 0 || strcmp(end - 4, ".lmp") == 0)
-			end -= 4;
+		temp = end - 4;
+		if (strcmp(temp, ".tga") == 0 || strcmp(temp, ".pcx") == 0 || strcmp(temp, ".lmp") == 0)
+			end = temp;
 		while (in < end)
 			*out++ = *in++;
 		*out++ = 0;
@@ -442,15 +443,9 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
 	sprintf (name, "%s.tga", basename);
-	Con_Printf("name = %s : ", name);
 	COM_FOpenFile (name, &f, true);
 	if (f)
-	{
-		Con_Printf("succeeded\n");
 		return LoadTGA (f, matchwidth, matchheight);
-	}
-	else
-		Con_Printf("failed\n");
 	sprintf (name, "%s.pcx", basename);
 	COM_FOpenFile (name, &f, true);
 	if (f)
@@ -546,6 +541,7 @@ int loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, q
 
 void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 {
+	int y;
 	byte *buffer, *in, *out, *end;
 
 	buffer = malloc(width*height*3 + 18);
@@ -558,17 +554,54 @@ void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 	buffer[15] = (height >> 8) & 0xFF;
 	buffer[16] = 24;	// pixel size
 
-	// swap rgb to bgr
-	in = data;
-	end = in + width*height*3;
+	// swap rgb to bgr and flip upside down
 	out = buffer + 18;
-	for (;in < end;in += 3)
+	for (y = height - 1;y >= 0;y--)
 	{
-		*out++ = in[2];
-		*out++ = in[1];
-		*out++ = in[0];
+		in = data + y * width * 3;
+		end = in + width * 3;
+		for (;in < end;in += 3)
+		{
+			*out++ = in[2];
+			*out++ = in[1];
+			*out++ = in[0];
+		}
 	}
-	COM_WriteFile (filename, buffer, glwidth*glheight*3 + 18 );
+	COM_WriteFile (filename, buffer, width*height*3 + 18 );
+
+	free(buffer);
+}
+
+void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
+{
+	int y;
+	byte *buffer, *in, *out, *end;
+
+	buffer = malloc(width*height*4 + 18);
+
+	memset (buffer, 0, 18);
+	buffer[2] = 2;		// uncompressed type
+	buffer[12] = (width >> 0) & 0xFF;
+	buffer[13] = (width >> 8) & 0xFF;
+	buffer[14] = (height >> 0) & 0xFF;
+	buffer[15] = (height >> 8) & 0xFF;
+	buffer[16] = 32;	// pixel size
+
+	// swap rgba to bgra and flip upside down
+	out = buffer + 18;
+	for (y = height - 1;y >= 0;y--)
+	{
+		in = data + y * width * 4;
+		end = in + width * 4;
+		for (;in < end;in += 4)
+		{
+			*out++ = in[2];
+			*out++ = in[1];
+			*out++ = in[0];
+			*out++ = in[3];
+		}
+	}
+	COM_WriteFile (filename, buffer, width*height*4 + 18 );
 
 	free(buffer);
 }
