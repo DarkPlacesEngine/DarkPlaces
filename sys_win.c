@@ -484,8 +484,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if (hPrevInstance)
 		return 0;
 
-	Cvar_RegisterVariable(&sys_usetimegettime);
-
 	global_hInstance = hInstance;
 	global_nCmdShow = nCmdShow;
 
@@ -535,6 +533,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	host_parms.argv = com_argv;
 
 	Sys_Shared_EarlyInit();
+
+	Cvar_RegisterVariable(&sys_usetimegettime);
 
 	tevent = CreateEvent(NULL, false, false, NULL);
 
