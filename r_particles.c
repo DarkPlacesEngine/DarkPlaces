@@ -407,55 +407,50 @@ void R_DrawParticles (void)
 		tvst[3][0] = tex->s2;
 		tvst[3][1] = tex->t1;
 
-		fog = 0;
-		if (fogenabled)
+		if (r->additive)
 		{
-			texfog = &particletexture[r->tex][1];
-			VectorSubtract(org, r_origin, fogvec);
-			fog = exp(fogdensity/DotProduct(fogvec,fogvec));
-			if (fog >= (1.0f / 64.0f))
+			m.blendfunc2 = GL_ONE;
+			fog = 0;
+			if (fogenabled)
 			{
-				if (fog >= (1.0f - (1.0f / 64.0f)))
+				texfog = &particletexture[r->tex][1];
+				VectorSubtract(org, r_origin, fogvec);
+				ifog = 1 - exp(fogdensity/DotProduct(fogvec,fogvec));
+				if (ifog < (1.0f - (1.0f / 64.0f)))
 				{
-					// fully fogged, just use the fog texture and render as alpha
-					m.cr = fogcolor[0];
-					m.cg = fogcolor[1];
-					m.cb = fogcolor[2];
-					m.ca = r->color[3];
-					tvst[0][0] = texfog->s1;
-					tvst[0][1] = texfog->t1;
-					tvst[1][0] = texfog->s1;
-					tvst[1][1] = texfog->t2;
-					tvst[2][0] = texfog->s2;
-					tvst[2][1] = texfog->t2;
-					tvst[3][0] = texfog->s2;
-					tvst[3][1] = texfog->t1;
-					R_Mesh_DrawDecal(&m);
-				}
-				else
-				{
-					// partially fogged, darken the first pass
-					ifog = 1 - fog;
-					m.cr *= ifog;
-					m.cg *= ifog;
-					m.cb *= ifog;
-					if (tex->s1 == texfog->s1 && tex->t1 == texfog->t1)
+					if (ifog >= (1.0f / 64.0f))
 					{
-						// fog texture is the same as the base, just change the color
-						m.cr += fogcolor[0] * fog;
-						m.cg += fogcolor[1] * fog;
-						m.cb += fogcolor[2] * fog;
+						// partially fogged, darken it
+						m.cr *= ifog;
+						m.cg *= ifog;
+						m.cb *= ifog;
 						R_Mesh_DrawDecal(&m);
 					}
-					else
+				}
+				else
+					R_Mesh_DrawDecal(&m);
+			}
+			else
+				R_Mesh_DrawDecal(&m);
+		}
+		else
+		{
+			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			fog = 0;
+			if (fogenabled)
+			{
+				texfog = &particletexture[r->tex][1];
+				VectorSubtract(org, r_origin, fogvec);
+				fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+				if (fog >= (1.0f / 64.0f))
+				{
+					if (fog >= (1.0f - (1.0f / 64.0f)))
 					{
-						// render the first pass (alpha), then do additive fog
-						R_Mesh_DrawDecal(&m);
-						m.blendfunc2 = GL_ONE;
+						// fully fogged, just use the fog texture and render as alpha
 						m.cr = fogcolor[0];
 						m.cg = fogcolor[1];
 						m.cb = fogcolor[2];
-						m.ca = r->color[3] * fog;
+						m.ca = r->color[3];
 						tvst[0][0] = texfog->s1;
 						tvst[0][1] = texfog->t1;
 						tvst[1][0] = texfog->s1;
@@ -465,14 +460,49 @@ void R_DrawParticles (void)
 						tvst[3][0] = texfog->s2;
 						tvst[3][1] = texfog->t1;
 						R_Mesh_DrawDecal(&m);
-						m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+					}
+					else
+					{
+						// partially fogged, darken the first pass
+						ifog = 1 - fog;
+						m.cr *= ifog;
+						m.cg *= ifog;
+						m.cb *= ifog;
+						if (tex->s1 == texfog->s1 && tex->t1 == texfog->t1)
+						{
+							// fog texture is the same as the base, just change the color
+							m.cr += fogcolor[0] * fog;
+							m.cg += fogcolor[1] * fog;
+							m.cb += fogcolor[2] * fog;
+							R_Mesh_DrawDecal(&m);
+						}
+						else
+						{
+							// render the first pass (alpha), then do additive fog
+							R_Mesh_DrawDecal(&m);
+
+							m.blendfunc2 = GL_ONE;
+							m.cr = fogcolor[0];
+							m.cg = fogcolor[1];
+							m.cb = fogcolor[2];
+							m.ca = r->color[3] * fog;
+							tvst[0][0] = texfog->s1;
+							tvst[0][1] = texfog->t1;
+							tvst[1][0] = texfog->s1;
+							tvst[1][1] = texfog->t2;
+							tvst[2][0] = texfog->s2;
+							tvst[2][1] = texfog->t2;
+							tvst[3][0] = texfog->s2;
+							tvst[3][1] = texfog->t1;
+							R_Mesh_DrawDecal(&m);
+						}
 					}
 				}
+				else
+					R_Mesh_DrawDecal(&m);
 			}
 			else
 				R_Mesh_DrawDecal(&m);
 		}
-		else
-			R_Mesh_DrawDecal(&m);
 	}
 }

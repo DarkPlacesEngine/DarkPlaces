@@ -428,14 +428,15 @@ void CL_InitTEnts (void);
 
 typedef struct renderparticle_s
 {
-	int			tex;
-	int			orientation;
-	int			dynlight;
-	float		scalex;
-	float		scaley;
-	float		org[3];
-	float		dir[3];
-	float		color[4];
+	int tex;
+	int orientation;
+	int additive;
+	int dynlight;
+	float scalex;
+	float scaley;
+	float org[3];
+	float dir[3];
+	float color[4];
 }
 renderparticle_t;
 
