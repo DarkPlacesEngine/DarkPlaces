@@ -352,10 +352,6 @@ SOURCE=.\snd_win.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\sv_light.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\sv_main.c
 # End Source File
 # Begin Source File
