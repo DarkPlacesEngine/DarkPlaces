@@ -37,21 +37,6 @@ void Mod_SpriteInit (void)
 	Cvar_RegisterVariable(&r_mipsprites);
 }
 
-static void Mod_Sprite_StripExtension(char *in, char *out)
-{
-	char *end;
-	end = in + strlen(in);
-	if ((end - in) >= 6)
-		if (strcmp(end - 6, ".spr32") == 0)
-			end -= 6;
-	if ((end - in) >= 4)
-		if (strcmp(end - 4, ".spr") == 0)
-			end -= 4;
-	while (in < end)
-		*out++ = *in++;
-	*out++ = 0;
-}
-
 static int alphaonlytable[4] = {255 | 0x80000000, 255 | 0x80000000, 255 | 0x80000000, 3};
 static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette, int *alphapalette)
 {
