@@ -26,6 +26,7 @@ qboolean	hlbsp; // LordHavoc: true if it is a HalfLife BSP file (version 30)
 
 cvar_t gl_subdivide_size = {"gl_subdivide_size", "128", true};
 cvar_t halflifebsp = {"halflifebsp", "0"};
+cvar_t r_novis = {"r_novis", "0"};
 
 /*
 ===============
@@ -36,6 +37,7 @@ void Mod_BrushInit (void)
 {
 	Cvar_RegisterVariable (&gl_subdivide_size);
 	Cvar_RegisterVariable (&halflifebsp);
+	Cvar_RegisterVariable (&r_novis);
 	memset (mod_novis, 0xff, sizeof(mod_novis));
 }
 
@@ -52,16 +54,11 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 //		Sys_Error ("Mod_PointInLeaf: bad model");
 
 	node = model->nodes;
-	if (node->contents < 0)
-		return (mleaf_t *)node;
-	while (1)
-	{
+	do
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct (p,node->plane->normal)) < node->plane->dist];
-		if (node->contents < 0)
-			return (mleaf_t *)node;
-	}
-	
-	return NULL;	// never reached
+	while (node->contents == 0);
+
+	return (mleaf_t *)node;
 }
 /*
 mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
@@ -102,9 +99,10 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 	byte	*out;
 	int		row;
 
-	row = (model->numleafs+7)>>3;	
+	row = (model->numleafs+7)>>3;
 	out = decompressed;
 
+	/*
 	if (!in)
 	{	// no vis info, so make all visible
 		while (row)
@@ -114,6 +112,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 		}
 		return decompressed;		
 	}
+	*/
 
 	do
 	{
@@ -137,7 +136,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 
 byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 {
-	if (leaf == model->leafs)
+	if (r_novis.value || leaf == model->leafs || leaf->compressed_vis == NULL)
 		return mod_novis;
 	return Mod_DecompressVis (leaf->compressed_vis, model);
 }
@@ -249,6 +248,12 @@ void Mod_LoadTextures (lump_t *l)
 		}
 		for (;j < 16;j++)
 			tx->name[j] = 0;
+
+		if (!tx->name[0])
+		{
+			Con_Printf("warning: unnamed texture in %s\n", loadname);
+			sprintf(tx->name, "unnamed%i", i);
+		}
 
 		tx->transparent = false;
 		data = loadimagepixels(tx->name, false, 0, 0);
@@ -885,11 +890,11 @@ void Mod_LoadNodes (lump_t *l)
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
-		for (j=0 ; j<3 ; j++)
-		{
-			out->mins[j] = LittleShort (in->mins[j]);
-			out->maxs[j] = LittleShort (in->maxs[j]);
-		}
+//		for (j=0 ; j<3 ; j++)
+//		{
+//			out->mins[j] = LittleShort (in->mins[j]);
+//			out->maxs[j] = LittleShort (in->maxs[j]);
+//		}
 	
 		p = LittleLong(in->planenum);
 		out->plane = loadmodel->planes + p;
@@ -1499,6 +1504,41 @@ void Mod_FinalizePortals()
 	portal_t *p, *pnext;
 	mportal_t *portal;
 	mvertex_t *point;
+	mleaf_t *leaf, *endleaf;
+	winding_t *w;
+
+	// recalculate bounding boxes for all leafs (because qbsp is very sloppy)
+	leaf = loadmodel->leafs;
+	endleaf = leaf + loadmodel->numleafs;
+	for (;leaf < endleaf;leaf++)
+	{
+		VectorSet( 2000000000,  2000000000,  2000000000, leaf->mins);
+		VectorSet(-2000000000, -2000000000, -2000000000, leaf->maxs);
+	}
+	p = portalchain;
+	while(p)
+	{
+		if (p->winding)
+		{
+			for (i = 0;i < 2;i++)
+			{
+				leaf = (mleaf_t *)p->nodes[i];
+				w = p->winding;
+				for (j = 0;j < w->numpoints;j++)
+				{
+					if (leaf->mins[0] > w->points[j][0]) leaf->mins[0] = w->points[j][0];
+					if (leaf->mins[1] > w->points[j][1]) leaf->mins[1] = w->points[j][1];
+					if (leaf->mins[2] > w->points[j][2]) leaf->mins[2] = w->points[j][2];
+					if (leaf->maxs[0] < w->points[j][0]) leaf->maxs[0] = w->points[j][0];
+					if (leaf->maxs[1] < w->points[j][1]) leaf->maxs[1] = w->points[j][1];
+					if (leaf->maxs[2] < w->points[j][2]) leaf->maxs[2] = w->points[j][2];
+				}
+			}
+		}
+		p = p->chain;
+	}
+
+	// tally up portal and point counts
 	p = portalchain;
 	numportals = 0;
 	numpoints = 0;
@@ -1620,7 +1660,7 @@ void RemovePortalFromNodes(portal_t *portal)
 	{
 		node = portal->nodes[i];
 
-		portalpointer = &node->portals;
+		portalpointer = (void **) &node->portals;
 		while (1)
 		{
 			t = *portalpointer;
@@ -1645,9 +1685,9 @@ void RemovePortalFromNodes(portal_t *portal)
 			}
 
 			if (t->nodes[0] == node)
-				portalpointer = &t->next[0];
+				portalpointer = (void **) &t->next[0];
 			else if (t->nodes[1] == node)
-				portalpointer = &t->next[1];
+				portalpointer = (void **) &t->next[1];
 			else
 				Host_Error ("RemovePortalFromNodes: portal not bounding leaf");
 		}

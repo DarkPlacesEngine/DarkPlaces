@@ -147,6 +147,7 @@ typedef struct
 
 extern	refdef_t	r_refdef;
 extern vec3_t	r_origin, vpn, vright, vup;
+extern qboolean hlbsp;
 
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first

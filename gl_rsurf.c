@@ -46,12 +46,8 @@ cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
 cvar_t gl_vertex = {"gl_vertex", "0"};
-cvar_t r_leafworldnode = {"r_leafworldnode", "0"};
-cvar_t r_portalworldnode = {"r_portalworldnode", "0"};
-//cvar_t r_oldclip = {"r_oldclip", "1"};
 cvar_t r_dlightmap = {"r_dlightmap", "1"};
 cvar_t r_drawportals = {"r_drawportals", "0"};
-cvar_t	r_novis = {"r_novis","0"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
@@ -81,12 +77,8 @@ void GL_Surf_Init()
 	Cvar_RegisterVariable(&gl_nosubimage);
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&gl_vertex);
-	Cvar_RegisterVariable(&r_leafworldnode);
-	Cvar_RegisterVariable(&r_portalworldnode);
-//	Cvar_RegisterVariable(&r_oldclip);
 	Cvar_RegisterVariable(&r_dlightmap);
 	Cvar_RegisterVariable(&r_drawportals);
-	Cvar_RegisterVariable(&r_novis);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
@@ -474,8 +466,6 @@ void UploadLightmaps()
 }
 
 float	wvert[1024*6]; // used by the following functions
-
-extern qboolean hlbsp;
 
 void RSurf_DrawSky(msurface_t *s, int transform)
 {
@@ -967,39 +957,22 @@ void R_DrawBrushModel (entity_t *e)
 =============================================================
 */
 
-int r_vismarkframecount; // bumped when going to a new PVS
+static byte *worldvis;
+extern cvar_t r_novis;
 
 void R_MarkLeaves (void)
 {
-	byte	*vis;
-	mnode_t	*node;
-	int		i;
-
-	if (r_oldviewleaf == r_viewleaf)
+	static float noviscache;
+	if (r_oldviewleaf == r_viewleaf && noviscache == r_novis.value)
 		return;
 
-	r_vismarkframecount++;
 	r_oldviewleaf = r_viewleaf;
+	noviscache = r_novis.value;
 
-	vis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
-	
-	for (i = 0;i < cl.worldmodel->numleafs;i++)
-	{
-		if (vis[i>>3] & (1<<(i&7)))
-		{
-			node = (mnode_t *)&cl.worldmodel->leafs[i+1];
-			do
-			{
-				if (node->vismarkframe == r_vismarkframecount)
-					break;
-				node->vismarkframe = r_vismarkframecount;
-				node = node->parent;
-			} while (node);
-		}
-	}
+	worldvis = Mod_LeafPVS (r_viewleaf, cl.worldmodel);
 }
 
-void R_LeafWorldNode ()
+void R_SolidWorldNode ()
 {
 	int l;
 	mleaf_t *leaf;
@@ -1007,7 +980,7 @@ void R_LeafWorldNode ()
 
 	for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
 	{
-		if ((leaf->vismarkframe == r_vismarkframecount) && (/*leaf->efrags || */leaf->nummarksurfaces))
+		if (/*leaf->efrags || */leaf->nummarksurfaces)
 		{
 			if (R_CullBox(leaf->mins, leaf->maxs))
 				continue;
@@ -1048,277 +1021,94 @@ void R_LeafWorldNode ()
 	}
 }
 
-typedef struct nodestack_s
+/*
+// experimental and inferior to the other in recursion depth allowances
+void R_PortalWorldNode ()
 {
-	unsigned short side, clip;
-	mnode_t *node;
-}
-nodestack_t;
+	int i, j;
+	mportal_t *p;
+	msurface_t *surf, **mark, **endmark;
+	mleaf_t *leaf, *llistbuffer[8192], **l, **llist;
 
-void R_NoVisWorldNode ()
-{
-	int side, c, clip;
-	nodestack_t *nstack, nodestack[8192];
-	mnode_t *node;
-	mleaf_t *pleaf;
-	msurface_t *surf, *endsurf, **mark, **endmark;
-	nstack = nodestack;
-
-	node = cl.worldmodel->nodes;
-
-	if (!node)
-		return;
-
-	clip = true;
-	while(1)
+	leaf = r_viewleaf;
+	leaf->worldnodeframe = r_framecount;
+	l = llist = &llistbuffer[0];
+	*llist++ = r_viewleaf;
+	while (l < llist)
 	{
-		if (node->contents < 0)
+		leaf = *l++;
+
+		c_leafs++;
+
+		leaf->visframe = r_framecount;
+
+		// deal with model fragments in this leaf
+	//	if (leaf->efrags)
+	//		R_StoreEfrags (&leaf->efrags);
+
+		if (leaf->nummarksurfaces)
 		{
-			if (node->contents != CONTENTS_SOLID && R_NotCulledBox(node->mins, node->maxs))
+			mark = leaf->firstmarksurface;
+			endmark = mark + leaf->nummarksurfaces;
+			do
 			{
-				// mark surfaces as being visible for processing by code later
-				pleaf = (mleaf_t *)node;
-
-				c_leafs++;
-
-				pleaf->visframe = r_framecount;
-
-				if (pleaf->nummarksurfaces)
+				surf = *mark++;
+				// make sure surfaces are only processed once
+				if (surf->worldnodeframe == r_framecount)
+					continue;
+				surf->worldnodeframe = r_framecount;
+				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 				{
-					mark = pleaf->firstmarksurface;
-					endmark = mark + pleaf->nummarksurfaces;
-					do
-						(*mark++)->visframe = r_framecount;
-					while (mark < endmark);
-				}
-
-				// deal with model fragments in this leaf
-//				if (pleaf->efrags)
-//					R_StoreEfrags (&pleaf->efrags);
-			}
-
-culled:
-			if (nstack <= nodestack)
-				break;
-			nstack--;
-			node = nstack->node;
-			side = nstack->side;
-			clip = nstack->clip;
-			goto loc0;
-		}
-		else if (clip)
-		{
-			// for easier reading, the values are:
-			// 1 = not culled at all (very uncommon in large nodes, uncommon in medium nodes, common   in small nodes)
-			// 2 = completely culled (uncommon      in large nodes, common   in medium nodes, uncommon in small nodes)
-			// 3 = partially culled  (common        in large nodes, common   in medium nodes, uncommon in small nodes)
-			if ((c = frustum[0].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[0])) == 3) goto cull1;else if (c == 2) goto culled;// else 1
-			if ((c = frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1])) == 3) goto cull2;else if (c == 2) goto culled;// else 1
-			if ((c = frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2])) == 3) goto cull3;else if (c == 2) goto culled;// else 1
-			if ((c = frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3])) == 3) goto cull4;else if (c == 2) goto culled;// else 1
-			// completely onscreen, no need to cull children
-			clip = false;
-			goto cull4;
-			// partially clipped node
-cull1:		if (frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1]) == 2) goto culled;// else 1 or 3
-cull2:		if (frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2]) == 2) goto culled;// else 1 or 3
-cull3:		if (frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3]) == 2) goto culled;// else 1 or 3
-cull4:		;
-		}
-
-		c_nodes++;
-
-		// node is just a decision point, so go down the apropriate sides
-
-		// find which side of the node we are on
-		side = PlaneDist(modelorg, node->plane) < node->plane->dist;
-
-		// recurse down the children, front side first
-		nstack->node = node;
-		nstack->side = !side; // go down back side when we come back up
-		nstack->clip = clip;
-		nstack++;
-		node = node->children[side];
-		continue;
-loc0:
-
-		// draw stuff
-		if (node->numsurfaces)
-		{
-			surf = cl.worldmodel->surfaces + node->firstsurface;
-			endsurf = surf + node->numsurfaces;
-
-			if (side)
-			{
-				for (;surf < endsurf;surf++)
 					if (surf->flags & SURF_PLANEBACK)
-						surf->visframe = -1;
-			}
-			else
-			{
-				for (;surf < endsurf;surf++)
+						surf->visframe = r_framecount;
+				}
+				else
+				{
 					if (!(surf->flags & SURF_PLANEBACK))
-						surf->visframe = -1;
+						surf->visframe = r_framecount;
+				}
 			}
+			while (mark < endmark);
 		}
 
-		// recurse down the back side
-		node = node->children[side];
-		continue;
+		// follow portals into other leafs
+		p = leaf->portals;
+		for (;p;p = p->next)
+		{
+			leaf = p->past;
+			if (leaf->worldnodeframe != r_framecount)
+			{
+				leaf->worldnodeframe = r_framecount;
+				i = (leaf - cl.worldmodel->leafs) - 1;
+				if ((worldvis[i>>3] & (1<<(i&7))) && R_NotCulledBox(leaf->mins, leaf->maxs))
+					*llist++ = leaf;
+			}
+		}
 	}
-}
 
-void R_BSPWorldNode ()
-{
-	int side, c, clip/*, oldclip = r_oldclip.value*/;
-	nodestack_t *nstack, nodestack[8192];
-	mnode_t *node;
-	mleaf_t *pleaf;
-	msurface_t *surf, *endsurf, **mark, **endmark;
-	nstack = nodestack;
-
-	node = cl.worldmodel->nodes;
-
-	if (!node)
-		return;
-
-	clip = true;
-	while(1)
+	i = 0;
+	j = 0;
+	p = r_viewleaf->portals;
+	for (;p;p = p->next)
 	{
-		if (node->contents < 0)
-		{
-			if (node->contents != CONTENTS_SOLID && R_NotCulledBox(node->mins, node->maxs))
-			{
-				// mark surfaces as being visible for processing by code later
-				pleaf = (mleaf_t *)node;
-
-				c_leafs++;
-
-				pleaf->visframe = r_framecount;
-
-				if (pleaf->nummarksurfaces)
-				{
-					mark = pleaf->firstmarksurface;
-					endmark = mark + pleaf->nummarksurfaces;
-					do
-						(*mark++)->visframe = r_framecount;
-					while (mark < endmark);
-				}
-
-				// deal with model fragments in this leaf
-//				if (pleaf->efrags)
-//					R_StoreEfrags (&pleaf->efrags);
-			}
-
-culled:
-			if (nstack <= nodestack)
-				break;
-			nstack--;
-			node = nstack->node;
-			side = nstack->side;
-			clip = nstack->clip;
-			goto loc0;
-		}
-		/*
-		else if (oldclip)
-		{
-			if (R_CullBox(node->mins, node->maxs))
-			{
-				if (nstack <= nodestack)
-					break;
-				nstack--;
-				node = nstack->node;
-				side = nstack->side;
-				clip = nstack->clip;
-				goto loc0;
-			}
-		}
-		*/
-		else if (clip)
-		{
-			// for easier reading, the values are:
-			// 1 = not culled at all (very uncommon in large nodes, uncommon in medium nodes, common   in small nodes)
-			// 2 = completely culled (uncommon      in large nodes, common   in medium nodes, uncommon in small nodes)
-			// 3 = partially culled  (common        in large nodes, common   in medium nodes, uncommon in small nodes)
-			if ((c = frustum[0].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[0])) == 3) goto cull1;else if (c == 2) goto culled;// else 1
-			if ((c = frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1])) == 3) goto cull2;else if (c == 2) goto culled;// else 1
-			if ((c = frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2])) == 3) goto cull3;else if (c == 2) goto culled;// else 1
-			if ((c = frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3])) == 3) goto cull4;else if (c == 2) goto culled;// else 1
-			// completely onscreen, no need to cull children
-			clip = false;
-			goto cull4;
-			// partially clipped node
-cull1:		if (frustum[1].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[1]) == 2) goto culled;// else 1 or 3
-cull2:		if (frustum[2].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[2]) == 2) goto culled;// else 1 or 3
-cull3:		if (frustum[3].BoxOnPlaneSideFunc(node->mins, node->maxs, &frustum[3]) == 2) goto culled;// else 1 or 3
-cull4:		;
-		}
-
-		c_nodes++;
-
-		// node is just a decision point, so go down the apropriate sides
-
-		// find which side of the node we are on
-		side = PlaneDist(modelorg, node->plane) < node->plane->dist;
-
-		// recurse down the children, front side first
-		if (node->children[side]->vismarkframe == r_vismarkframecount)
-		{
-			nstack->node = node;
-			nstack->side = !side; // go down back side when we come back up
-			nstack->clip = clip;
-			nstack++;
-			node = node->children[side];
-			continue;
-		}
-		side = !side;
-loc0:
-
-		// draw stuff
-		if (node->numsurfaces)
-		{
-			surf = cl.worldmodel->surfaces + node->firstsurface;
-			endsurf = surf + node->numsurfaces;
-
-			if (side)
-			{
-				for (;surf < endsurf;surf++)
-					if (surf->flags & SURF_PLANEBACK)
-						surf->visframe = -1;
-			}
-			else
-			{
-				for (;surf < endsurf;surf++)
-					if (!(surf->flags & SURF_PLANEBACK))
-						surf->visframe = -1;
-			}
-		}
-
-		// recurse down the back side
-		if (node->children[side]->vismarkframe == r_vismarkframecount)
-		{
-			node = node->children[side];
-			continue;
-		}
-
-		if (nstack <= nodestack)
-			break;
-		nstack--;
-		node = nstack->node;
-		side = nstack->side;
-		clip = nstack->clip;
-		goto loc0;
+		j++;
+		if (p->past->worldnodeframe != r_framecount)
+			i++;
 	}
+	if (i)
+		Con_Printf("%i portals of viewleaf (%i portals) were not checked\n", i, j);
 }
+*/
 
 void R_PortalWorldNode ()
 {
-	int portalstack;
+	int portalstack, i;
 	mportal_t *p, *pstack[8192];
 	msurface_t *surf, **mark, **endmark;
 	mleaf_t *leaf;
 
 	leaf = r_viewleaf;
+	leaf->worldnodeframe = r_framecount;
 	portalstack = 0;
 loc0:
 	c_leafs++;
@@ -1355,26 +1145,45 @@ loc0:
 	}
 
 	// follow portals into other leafs
-	for (p = leaf->portals;p;p = p->next)
+	p = leaf->portals;
+	for (;p;p = p->next)
 	{
-		if (p->past->worldnodeframe != r_framecount)
+		leaf = p->past;
+		if (leaf->worldnodeframe != r_framecount)
 		{
-			leaf = p->past;
 			leaf->worldnodeframe = r_framecount;
-			if (leaf->contents != CONTENTS_SOLID && leaf->vismarkframe == r_vismarkframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+			if (leaf->contents != CONTENTS_SOLID)
 			{
-				pstack[portalstack++] = p;
-				goto loc0;
-loc1:;
+				i = (leaf - cl.worldmodel->leafs) - 1;
+				if (worldvis[i>>3] & (1<<(i&7)))
+				{
+					if (R_NotCulledBox(leaf->mins, leaf->maxs))
+					{
+						pstack[portalstack++] = p;
+						goto loc0;
+
+loc1:
+						p = pstack[--portalstack];
+					}
+				}
 			}
 		}
 	}
 
 	if (portalstack)
-	{
-		p = pstack[--portalstack];
 		goto loc1;
+
+	i = 0;
+	portalstack = 0;
+	p = r_viewleaf->portals;
+	for (;p;p = p->next)
+	{
+		portalstack++;
+		if (p->past->worldnodeframe != r_framecount)
+			i++;
 	}
+	if (i)
+		Con_Printf("%i portals of viewleaf (%i portals) were not checked\n", i, portalstack);
 }
 
 void R_DrawSurfaces (void)
@@ -1469,17 +1278,12 @@ void R_DrawWorld (void)
 
 	if (cl.worldmodel)
 	{
-		if (r_novis.value || !r_viewleaf->compressed_vis)
-			R_NoVisWorldNode ();
+		if (r_viewleaf->contents == CONTENTS_SOLID)
+			R_SolidWorldNode ();
 		else
 		{
 			R_MarkLeaves ();
-			if (r_portalworldnode.value)
-				R_PortalWorldNode ();
-			else if (r_leafworldnode.value)
-				R_LeafWorldNode ();
-			else
-				R_BSPWorldNode ();
+			R_PortalWorldNode ();
 		}
 	}
 
