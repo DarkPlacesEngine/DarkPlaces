@@ -832,7 +832,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 	if (surf->flags & SURF_DRAWTURB)
 		base *= 0.5f;
-	if ((surf->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled)
+	if ((surf->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled && fullbright)
 	{
 		// NVIDIA Geforce3 distortion texture shader on water
 		GL_Color(1, 1, 1, currentalpha);
