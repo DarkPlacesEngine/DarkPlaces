@@ -2,7 +2,7 @@
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
 -n darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
--n darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
+d darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
 -n darkplaces: add -benchmark commandline option which plays a demo, appends the resulting min/max/avg fps to gamedir/benchmark.log with commandline so people know what settings were used, like +exec realtimelow.cfg, +exec realtimemed.cfg, etc (romi)
 -n darkplaces: add DP_EF_NOSHADOW extension (Urre)
 -n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
@@ -45,9 +45,17 @@
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
-2 darkplaces: shadow volume rendering should not unlock the arrays between renders (Mercury) 
+0 darkplaces: fix the weird broken config parsing at startup
+0 darkplaces: make a DP_EF_NODEPTHTEST extension which causes an entity to show through walls, useful for navigation markers (Urre)
+2 darkplaces: make a DP_SV_PERCLIENTENTITYSEND extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre)
+0 darkplaces: rename everything possible in msurface_t, mleaf_t, and mnode_t to be named like q3mface_t, q3mleaf_t, and q3mnode_t, to make them more similar
+0 darkplaces: rename R_Model_Brush_ functions to R_Q1BSP_
+0 darkplaces: add coronascale setting to rtlights (romi)
+0 darkplaces: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
+0 darkplaces: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
+d darkplaces: shadow volume rendering should not unlock the arrays between renders (Mercury) 
 3 darkplaces: add Draw2D function to model struct to make it easy to draw models without an entity (Tomaz)
-0 darkplaces: add GL_EXT_stencil_two_side support to shadow rendering (fuh)
+-n darkplaces: add GL_EXT_stencil_two_side support to shadow rendering - note: this got a 77% speedup! (fuh)
 0 darkplaces: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
 0 darkplaces: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension (Electro) 
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
@@ -310,7 +318,7 @@
 3 darkplaces: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
 3 darkplaces: add anisotropic filtering options (Zombie_13, zinx)
 3 darkplaces: add antialiasing options (Zombie_13)
-3 darkplaces: add back r_waterripple (Vermeulen)
+0 darkplaces: add back r_waterripple (Vermeulen)
 3 darkplaces: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
 3 darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 3 darkplaces: add stainmaps to realtime lighting mode
