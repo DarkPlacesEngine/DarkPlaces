@@ -254,7 +254,7 @@ void SV_SendServerinfo (client_t *client)
 	client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool);
 
 	MSG_WriteByte (&client->message, svc_print);
-	sprintf (message, "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
+	snprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
@@ -1775,7 +1775,7 @@ void SV_SpawnServer (const char *server)
 
 	memset (&sv, 0, sizeof(sv));
 
-	strcpy (sv.name, server);
+	strlcpy (sv.name, server, sizeof (sv.name));
 
 // load progs to get entity field count
 	PR_LoadProgs ();
@@ -1824,8 +1824,8 @@ void SV_SpawnServer (const char *server)
 
 	Mod_ClearUsed();
 
-	strcpy (sv.name, server);
-	sprintf (sv.modelname,"maps/%s.bsp", server);
+	strlcpy (sv.name, server, sizeof (sv.name));
+	snprintf (sv.modelname, sizeof (sv.modelname), "maps/%s.bsp", server);
 	sv.worldmodel = Mod_ForName(sv.modelname, false, true, true);
 	if (!sv.worldmodel)
 	{

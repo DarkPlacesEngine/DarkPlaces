@@ -765,7 +765,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				Con_Printf("received server list...\n");
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
-				sprintf(ipstring, "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
+				snprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
 				if (developer.integer)
 					Con_Printf("Requesting info from server %s\n", ipstring);
 				LHNETADDRESS_FromString(&svaddress, ipstring, 0);
@@ -793,7 +793,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				}
 				memset(&hostcache[n], 0, sizeof(hostcache[n]));
 				// store the data the engine cares about (address and ping)
-				strcpy(hostcache[n].cname, ipstring);
+				strlcpy (hostcache[n].cname, ipstring, sizeof (hostcache[n].cname));
 				hostcache[n].ping = 100000;
 				hostcache[n].querytime = realtime;
 				// build description strings for the things users care about
@@ -891,8 +891,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				{
 					hostCacheCount++;
 					memset(&hostcache[n], 0, sizeof(hostcache[n]));
-					strcpy(hostcache[n].name, MSG_ReadString());
-					strcpy(hostcache[n].map, MSG_ReadString());
+					strlcpy (hostcache[n].name, MSG_ReadString(), sizeof (hostcache[n].name));
+					strlcpy (hostcache[n].map, MSG_ReadString(), sizeof (hostcache[n].map));
 					hostcache[n].users = MSG_ReadByte();
 					hostcache[n].maxusers = MSG_ReadByte();
 					c = MSG_ReadByte();
@@ -902,7 +902,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 						strcpy(hostcache[n].name, "*");
 						strlcat (hostcache[n].name, hostcache[n].cname, sizeof(hostcache[n].name));
 					}
-					strcpy(hostcache[n].cname, cname);
+					strlcpy (hostcache[n].cname, cname, sizeof (hostcache[n].cname));
 				}
 			}
 			break;
@@ -942,7 +942,7 @@ void NetConn_ClientFrame(void)
 		{
 			cls.connect_trying = false;
 			if (m_state == m_slist)
-				strcpy(m_return_reason, "Connect: Failed");
+				strcpy (m_return_reason, "Connect: Failed");
 			else
 				Con_Printf("Connect failed\n");
 			return;
@@ -950,14 +950,14 @@ void NetConn_ClientFrame(void)
 		if (cls.connect_nextsendtime)
 		{
 			if (m_state == m_slist)
-				strcpy(m_return_reason, "Connect: Still trying");
+				strcpy (m_return_reason, "Connect: Still trying");
 			else
 				Con_Printf("Still trying...\n");
 		}
 		else
 		{
 			if (m_state == m_slist)
-				strcpy(m_return_reason, "Connect: Trying");
+				strcpy (m_return_reason, "Connect: Trying");
 			else
 				Con_Printf("Trying...\n");
 		}
@@ -1256,7 +1256,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 								{
 									// connect to the client
 									// everything is allocated, just fill in the details
-									strcpy(conn->address, addressstring2);
+									strlcpy (conn->address, addressstring2, sizeof (conn->address));
 									if (developer.integer)
 										Con_Printf("Datagram_ParseConnectionless: sending CCREP_ACCEPT to %s.\n", addressstring2);
 									// send back the info about the server connection

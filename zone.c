@@ -218,7 +218,7 @@ mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline)
 	pool->chain = NULL;
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
-	strcpy(pool->name, name);
+	strlcpy (pool->name, name, sizeof (pool->name));
 	pool->next = poolchain;
 	poolchain = pool;
 	return pool;
