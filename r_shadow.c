@@ -2501,7 +2501,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 {
 	int entnum, style, islight, skin, pflags;
 	char key[256], value[1024];
-	float origin[3], radius, color[3], light, fadescale, lightscale, originhack[3], overridecolor[3];
+	float origin[3], angles[3], radius, color[3], light, fadescale, lightscale, originhack[3], overridecolor[3];
 	const char *data;
 
 	if (cl.worldmodel == NULL)
@@ -2517,6 +2517,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		light = 0;
 		origin[0] = origin[1] = origin[2] = 0;
 		originhack[0] = originhack[1] = originhack[2] = 0;
+		angles[0] = angles[1] = angles[2] = 0;
 		color[0] = color[1] = color[2] = 1;
 		overridecolor[0] = overridecolor[1] = overridecolor[2] = 1;
 		fadescale = 1;
@@ -2546,6 +2547,10 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 				light = atof(value);
 			else if (!strcmp("origin", key))
 				sscanf(value, "%f %f %f", &origin[0], &origin[1], &origin[2]);
+			else if (!strcmp("angle", key))
+				angles[0] = 0, angles[1] = atof(value), angles[2] = 0;
+			else if (!strcmp("angles", key))
+				sscanf(value, "%f %f %f", &angles[0], &angles[1], &angles[2]);
 			else if (!strcmp("color", key))
 				sscanf(value, "%f %f %f", &color[0], &color[1], &color[2]);
 			else if (!strcmp("wait", key))
@@ -2647,7 +2652,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		VectorScale(color, light, color);
 		VectorAdd(origin, originhack, origin);
 		if (radius >= 15)
-			R_Shadow_NewWorldLight(origin, vec3_origin, color, radius, !!(pflags & 2), style, !(pflags & 1), skin >= 16 ? va("cubemaps/%i", skin) : NULL);
+			R_Shadow_NewWorldLight(origin, angles, color, radius, !!(pflags & 2), style, !(pflags & 1), skin >= 16 ? va("cubemaps/%i", skin) : NULL);
 	}
 }
 
