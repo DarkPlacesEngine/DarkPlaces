@@ -590,7 +590,7 @@ void R_UpdateWorld(void)
 	}
 
 	// don't allow cheats in multiplayer
-	if (!cl.islocalgame)
+	if (!cl.islocalgame && cl.worldmodel)
 	{
 		if (r_fullbright.integer != 0)
 			Cvar_Set ("r_fullbright", "0");
