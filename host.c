@@ -461,6 +461,8 @@ void SV_DropClient (qboolean crash)
 		MSG_WriteByte (&client->message, host_client - svs.clients);
 		MSG_WriteByte (&client->message, 0);
 	}
+
+	NET_Heartbeat ();
 }
 
 /*
@@ -487,6 +489,9 @@ void Host_ShutdownServer(qboolean crash)
 
 // stop all client sounds immediately
 	CL_Disconnect ();
+
+	NET_Heartbeat ();
+	NET_Heartbeat ();
 
 // flush any pending messages - like the score!!!
 	start = Sys_DoubleTime();

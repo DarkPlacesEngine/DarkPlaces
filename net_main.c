@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // net_main.c
 
 #include "quakedef.h"
+#include "net_master.h"
 
 qsocket_t *net_activeSockets = NULL;
 mempool_t *net_mempool;
@@ -45,6 +46,11 @@ static void Slist_Send(void);
 static void Slist_Poll(void);
 PollProcedure	slistSendProcedure = {NULL, 0.0, Slist_Send};
 PollProcedure	slistPollProcedure = {NULL, 0.0, Slist_Poll};
+
+static void InetSlist_Send(void);
+static void InetSlist_Poll(void);
+PollProcedure	inetSlistSendProcedure = {NULL, 0.0, InetSlist_Send};
+PollProcedure	inetSlistPollProcedure = {NULL, 0.0, InetSlist_Poll};
 
 
 sizebuf_t		net_message;
@@ -220,6 +226,12 @@ static void NET_Port_f (void)
 }
 
 
+static void NET_Heartbeat_f (void)
+{
+	NET_Heartbeat ();
+}
+
+
 static void PrintSlistHeader(void)
 {
 	Con_Printf("Server          Map             Users\n");
@@ -273,6 +285,27 @@ void NET_Slist_f (void)
 }
 
 
+void NET_InetSlist_f (void)
+{
+	if (slistInProgress)
+		return;
+
+	if (! slistSilent)
+	{
+		Con_Printf("Looking for Quake servers...\n");
+		PrintSlistHeader();
+	}
+
+	slistInProgress = true;
+	slistStartTime = Sys_DoubleTime();
+
+	SchedulePollProcedure(&inetSlistSendProcedure, 0.0);
+	SchedulePollProcedure(&inetSlistPollProcedure, 0.1);
+
+	hostCacheCount = 0;
+}
+
+
 static void Slist_Send(void)
 {
 	for (net_driverlevel=0; net_driverlevel < net_numdrivers; net_driverlevel++)
@@ -306,6 +339,60 @@ static void Slist_Poll(void)
 	if ((Sys_DoubleTime() - slistStartTime) < 1.5)
 	{
 		SchedulePollProcedure(&slistPollProcedure, 0.1);
+		return;
+	}
+
+	if (! slistSilent)
+		PrintSlistTrailer();
+	slistInProgress = false;
+	slistSilent = false;
+	slistLocal = true;
+}
+
+
+static void InetSlist_Send(void)
+{
+	char* host;
+
+	if (!slistInProgress)
+		return;
+
+	while ((host = Master_BuildGetServers ()) != NULL)
+	{
+		for (net_driverlevel=0; net_driverlevel < net_numdrivers; net_driverlevel++)
+		{
+			if (!slistLocal && net_driverlevel == 0)
+				continue;
+			if (net_drivers[net_driverlevel].initialized == false)
+				continue;
+			dfunc.SearchForInetHosts (host);
+		}
+	}
+
+	if ((Sys_DoubleTime() - slistStartTime) < 3.5)
+		SchedulePollProcedure(&inetSlistSendProcedure, 1.0);
+}
+
+
+static void InetSlist_Poll(void)
+{
+	for (net_driverlevel=0; net_driverlevel < net_numdrivers; net_driverlevel++)
+	{
+		if (!slistLocal && net_driverlevel == 0)
+			continue;
+		if (net_drivers[net_driverlevel].initialized == false)
+			continue;
+		// We stop as soon as we have one answer (FIXME: bad...)
+		if (dfunc.SearchForInetHosts (NULL))
+			slistInProgress = false;
+	}
+
+	if (! slistSilent)
+		PrintSlist();
+
+	if (slistInProgress && (Sys_DoubleTime() - slistStartTime) < 4.0)
+	{
+		SchedulePollProcedure(&inetSlistPollProcedure, 0.1);
 		return;
 	}
 
@@ -589,6 +676,30 @@ qboolean NET_CanSendMessage (qsocket_t *sock)
 }
 
 
+/*
+====================
+NET_Heartbeat
+
+Send an heartbeat to the master server(s)
+====================
+*/
+void NET_Heartbeat (void)
+{
+	char* host;
+	while ((host = Master_BuildHeartbeat ()) != NULL)
+	{
+		for (net_driverlevel=0 ; net_driverlevel<net_numdrivers; net_driverlevel++)
+		{
+			if (net_drivers[net_driverlevel].initialized == false)
+				continue;
+			if (net_driverlevel && listening == false)
+				continue;
+			dfunc.Heartbeat (host);
+		}
+	}
+}
+
+
 int NET_SendToAll(sizebuf_t *data, int blocktime)
 {
 	double		start;
@@ -704,10 +815,12 @@ void NET_Init (void)
 	Cvar_RegisterVariable (&net_messagetimeout);
 	Cvar_RegisterVariable (&hostname);
 
-	Cmd_AddCommand ("slist", NET_Slist_f);
+	Cmd_AddCommand ("net_slist", NET_Slist_f);
+	Cmd_AddCommand ("net_inetslist", NET_InetSlist_f);
 	Cmd_AddCommand ("listen", NET_Listen_f);
 	Cmd_AddCommand ("maxplayers", MaxPlayers_f);
 	Cmd_AddCommand ("port", NET_Port_f);
+	Cmd_AddCommand ("heartbeat", NET_Heartbeat_f);
 
 	// initialize all the drivers
 	for (net_driverlevel=0 ; net_driverlevel<net_numdrivers ; net_driverlevel++)
@@ -725,6 +838,8 @@ void NET_Init (void)
 		Con_DPrintf("IPX address %s\n", my_ipx_address);
 	if (*my_tcpip_address)
 		Con_DPrintf("TCP/IP address %s\n", my_tcpip_address);
+
+	Master_Init ();
 }
 
 /*

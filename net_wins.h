@@ -29,6 +29,8 @@ int  WINS_OpenSocket (int port);
 int  WINS_CloseSocket (int socket);
 int  WINS_Connect (int socket, struct qsockaddr *addr);
 int  WINS_CheckNewConnections (void);
+int  WINS_Recv (qbyte *buf, int len, struct qsockaddr *addr);
+int  WINS_Send (qbyte *buf, int len, struct qsockaddr *addr);
 int  WINS_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 int  WINS_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 int  WINS_Broadcast (int socket, qbyte *buf, int len);

@@ -230,6 +230,20 @@ int WIPX_CheckNewConnections (void)
 
 //=============================================================================
 
+int WIPX_Recv (qbyte *buf, int len, struct qsockaddr *addr)
+{
+	return WIPX_Read (net_acceptsocket, buf, len, addr);
+}
+
+//=============================================================================
+
+int WIPX_Send (qbyte *buf, int len, struct qsockaddr *addr)
+{
+	return WIPX_Write (net_acceptsocket, buf, len, addr);
+}
+
+//=============================================================================
+
 static qbyte packetBuffer[NET_DATAGRAMSIZE + 4];
 
 int WIPX_Read (int handle, qbyte *buf, int len, struct qsockaddr *addr)

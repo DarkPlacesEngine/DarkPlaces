@@ -165,6 +165,8 @@ typedef struct
 	int 		(*CloseSocket) (int socket);
 	int 		(*Connect) (int socket, struct qsockaddr *addr);
 	int 		(*CheckNewConnections) (void);
+	int 		(*Recv) (qbyte *buf, int len, struct qsockaddr *addr);
+	int			(*Send) (qbyte *buf, int len, struct qsockaddr *addr);
 	int 		(*Read) (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 	int 		(*Write) (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 	int 		(*Broadcast) (int socket, qbyte *buf, int len);
@@ -189,6 +191,7 @@ typedef struct
 	int			(*Init) (void);
 	void		(*Listen) (qboolean state);
 	void		(*SearchForHosts) (qboolean xmit);
+	qboolean	(*SearchForInetHosts) (char *master);
 	qsocket_t	*(*Connect) (char *host);
 	qsocket_t 	*(*CheckNewConnections) (void);
 	int			(*QGetMessage) (qsocket_t *sock);
@@ -198,6 +201,7 @@ typedef struct
 	qboolean	(*CanSendUnreliableMessage) (qsocket_t *sock);
 	void		(*Close) (qsocket_t *sock);
 	void		(*Shutdown) (void);
+	void		(*Heartbeat) (char *host);
 	int			controlSock;
 } net_driver_t;
 
@@ -273,6 +277,9 @@ struct qsocket_s	*NET_CheckNewConnections (void);
 struct qsocket_s	*NET_Connect (char *host);
 // called by client to connect to a host.  Returns -1 if not able to
 
+void		NET_Heartbeat (void);
+// Send an heartbeat to the master server(s)
+
 qboolean NET_CanSendMessage (qsocket_t *sock);
 // Returns true or false if the given qsocket can currently accept a
 // message to be transmitted.
@@ -329,6 +336,7 @@ extern	qboolean	slistLocal;
 extern cvar_t hostname;
 
 void NET_Slist_f (void);
+void NET_InetSlist_f (void);
 
 #endif
 

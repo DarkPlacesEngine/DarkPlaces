@@ -54,6 +54,7 @@ unsigned long inet_addr(const char *cp);
 
 #include "quakedef.h"
 #include "net_dgrm.h"
+#include "net_master.h"
 
 cvar_t cl_port = {CVAR_SAVE, "cl_port", "0"};
 
@@ -847,8 +848,18 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	MSG_BeginReading ();
 	control = BigLong(*((int *)net_message.data));
 	MSG_ReadLong();
-	if (control == -1)
+	
+	// Messages starting by 0xFFFFFFFF are master server messages
+	if (control == 0xFFFFFFFF)
+	{
+		int responsesize = Master_HandleMessage();
+		if (responsesize > 0)
+		{
+			dfunc.Write(acceptsock, net_message.data, responsesize, &clientaddr);
+			SZ_Clear(&net_message);
+		}
 		return NULL;
+	}
 	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
 		return NULL;
 	if ((control & NETFLAG_LENGTH_MASK) != len)
@@ -859,6 +870,8 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	{
 		if (strcmp(MSG_ReadString(), "QUAKE") != 0)
 			return NULL;
+
+		Con_DPrintf("Datagram_CheckNewConnections: received CCREQ_SERVERINFO, replying.\n");
 
 		SZ_Clear(&net_message);
 		// save space for the header, filled in later
@@ -1077,17 +1090,95 @@ qsocket_t *Datagram_CheckNewConnections (void)
 }
 
 
+static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
+{
+	struct qsockaddr myaddr;
+	int control;
+	int c, n, i;
+
+	if (net_message.cursize < sizeof(int))
+		return false;
+
+	// don't answer our own query
+	dfunc.GetSocketAddr (dfunc.controlSock, &myaddr);
+	//if (dfunc.AddrCompare(readaddr, &myaddr) >= 0)
+	//	return false;
+
+	// is the cache full?
+	if (hostCacheCount == HOSTCACHESIZE)
+		return false;
+
+	MSG_BeginReading ();
+	control = BigLong(*((int *)net_message.data));
+	MSG_ReadLong();
+	if (control == -1)
+		return false;
+	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+		return false;
+	if ((control & NETFLAG_LENGTH_MASK) != net_message.cursize)
+		return false;
+
+	c = MSG_ReadByte();
+	if (c != CCREP_SERVER_INFO)
+		return false;
+
+	dfunc.GetAddrFromName(MSG_ReadString(), readaddr);
+	// search the cache for this server
+	for (n = 0; n < hostCacheCount; n++)
+		if (dfunc.AddrCompare(readaddr, &hostcache[n].addr) == 0)
+			break;
+
+	// is it already there?
+	if (n < hostCacheCount)
+		return false;;
+
+	// add it
+	hostCacheCount++;
+	strcpy(hostcache[n].name, MSG_ReadString());
+	strcpy(hostcache[n].map, MSG_ReadString());
+	hostcache[n].users = MSG_ReadByte();
+	hostcache[n].maxusers = MSG_ReadByte();
+	c = MSG_ReadByte();
+	if (c != NET_PROTOCOL_VERSION)
+	{
+		strcpy(hostcache[n].cname, hostcache[n].name);
+		hostcache[n].cname[14] = 0;
+		strcpy(hostcache[n].name, "*");
+		strcat(hostcache[n].name, hostcache[n].cname);
+	}
+	memcpy(&hostcache[n].addr, readaddr, sizeof(struct qsockaddr));
+	hostcache[n].driver = net_driverlevel;
+	hostcache[n].ldriver = net_landriverlevel;
+	strcpy(hostcache[n].cname, dfunc.AddrToString(readaddr));
+
+	// check for a name conflict
+	for (i = 0; i < hostCacheCount; i++)
+	{
+		if (i == n)
+			continue;
+		if (Q_strcasecmp (hostcache[n].name, hostcache[i].name) == 0)
+		{
+			i = strlen(hostcache[n].name);
+			if (i < 15 && hostcache[n].name[i-1] > '8')
+			{
+				hostcache[n].name[i] = '0';
+				hostcache[n].name[i+1] = 0;
+			}
+			else
+				hostcache[n].name[i-1]++;
+			i = -1;
+		}
+	}
+
+	return true;
+}
+
+
 static void _Datagram_SearchForHosts (qboolean xmit)
 {
 	int		ret;
-	int		n;
-	int		i;
 	struct qsockaddr readaddr;
-	struct qsockaddr myaddr;
-	int		control;
-	int		c;
 
-	dfunc.GetSocketAddr (dfunc.controlSock, &myaddr);
 	if (xmit)
 	{
 		SZ_Clear(&net_message);
@@ -1103,79 +1194,8 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 
 	while ((ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr)) > 0)
 	{
-		if (ret < sizeof(int))
-			continue;
 		net_message.cursize = ret;
-
-		// don't answer our own query
-		if (dfunc.AddrCompare(&readaddr, &myaddr) >= 0)
-			continue;
-
-		// is the cache full?
-		if (hostCacheCount == HOSTCACHESIZE)
-			continue;
-
-		MSG_BeginReading ();
-		control = BigLong(*((int *)net_message.data));
-		MSG_ReadLong();
-		if (control == -1)
-			continue;
-		if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
-			continue;
-		if ((control & NETFLAG_LENGTH_MASK) != ret)
-			continue;
-
-		c = MSG_ReadByte();
-		if (c != CCREP_SERVER_INFO)
-			continue;
-
-		dfunc.GetAddrFromName(MSG_ReadString(), &readaddr);
-		// search the cache for this server
-		for (n = 0; n < hostCacheCount; n++)
-			if (dfunc.AddrCompare(&readaddr, &hostcache[n].addr) == 0)
-				break;
-
-		// is it already there?
-		if (n < hostCacheCount)
-			continue;
-
-		// add it
-		hostCacheCount++;
-		strcpy(hostcache[n].name, MSG_ReadString());
-		strcpy(hostcache[n].map, MSG_ReadString());
-		hostcache[n].users = MSG_ReadByte();
-		hostcache[n].maxusers = MSG_ReadByte();
-		c = MSG_ReadByte();
-		if (c != NET_PROTOCOL_VERSION)
-		{
-			strcpy(hostcache[n].cname, hostcache[n].name);
-			hostcache[n].cname[14] = 0;
-			strcpy(hostcache[n].name, "*");
-			strcat(hostcache[n].name, hostcache[n].cname);
-		}
-		memcpy(&hostcache[n].addr, &readaddr, sizeof(struct qsockaddr));
-		hostcache[n].driver = net_driverlevel;
-		hostcache[n].ldriver = net_landriverlevel;
-		strcpy(hostcache[n].cname, dfunc.AddrToString(&readaddr));
-
-		// check for a name conflict
-		for (i = 0; i < hostCacheCount; i++)
-		{
-			if (i == n)
-				continue;
-			if (Q_strcasecmp (hostcache[n].name, hostcache[i].name) == 0)
-			{
-				i = strlen(hostcache[n].name);
-				if (i < 15 && hostcache[n].name[i-1] > '8')
-				{
-					hostcache[n].name[i] = '0';
-					hostcache[n].name[i+1] = 0;
-				}
-				else
-					hostcache[n].name[i-1]++;
-				i = -1;
-			}
-		}
+		Datagram_HandleServerInfo (&readaddr);
 	}
 }
 
@@ -1188,6 +1208,64 @@ void Datagram_SearchForHosts (qboolean xmit)
 		if (net_landrivers[net_landriverlevel].initialized)
 			_Datagram_SearchForHosts (xmit);
 	}
+}
+
+
+static qboolean _Datagram_SearchForInetHosts (char *master)
+{
+	qboolean result = false;
+	struct qsockaddr masteraddr;
+	struct qsockaddr readaddr;
+	int ret;
+
+	if (master)
+	{
+		if (dfunc.GetAddrFromName(master, &masteraddr) != -1)
+		{
+			int portnum = 0;
+			const char* port = strrchr (master, ':');
+			if (port)
+				portnum = atoi (port + 1);
+			if (!portnum)
+				portnum = MASTER_PORT;
+			Con_DPrintf("Datagram_SearchForInetHosts: sending %d byte message to master %s\n", net_message.cursize, master);
+			dfunc.SetSocketPort (&masteraddr, portnum);
+			dfunc.Send (net_message.data, net_message.cursize, &masteraddr);
+		}
+	}
+
+	while ((ret = dfunc.Recv (net_message.data, net_message.maxsize, &readaddr)) > 0)
+	{
+		net_message.cursize = ret;
+		Con_DPrintf("Datagram_SearchForInetHosts: Recv received %d byte message\n", net_message.cursize);
+		Master_ParseServerList (&dfunc);
+	}
+	
+	while ((ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr)) > 0)
+	{
+		net_message.cursize = ret;
+		Con_DPrintf("Datagram_SearchForInetHosts: Read received %d byte message\n", net_message.cursize);
+		if (Datagram_HandleServerInfo (&readaddr))
+			result = true;
+	}
+
+	return result;
+}
+
+
+qboolean Datagram_SearchForInetHosts (char *master)
+{
+	qboolean result = false;
+	for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++)
+	{
+		if (hostCacheCount == HOSTCACHESIZE)
+			break;
+		if (net_landrivers[net_landriverlevel].initialized)
+			if (_Datagram_SearchForInetHosts (master))
+				result = true;
+	}
+	
+	return result;
 }
 
 
@@ -1367,3 +1445,29 @@ qsocket_t *Datagram_Connect (char *host)
 	return ret;
 }
 
+static void _Datagram_Heartbeat (char *master)
+{
+	struct qsockaddr masteraddr;
+	int portnum;
+	const char* port;
+
+	if (dfunc.GetAddrFromName(master, &masteraddr) == -1)
+		return;
+
+	portnum = 0;
+	port = strrchr (master, ':');
+	if (port)
+		portnum = atoi (port + 1);
+	if (!portnum)
+		portnum = MASTER_PORT;
+	dfunc.SetSocketPort (&masteraddr, portnum);
+
+	dfunc.Send (net_message.data, net_message.cursize, &masteraddr);
+}
+
+void Datagram_Heartbeat (char *master)
+{
+	for (net_landriverlevel = 0; net_landriverlevel < net_numlandrivers; net_landriverlevel++)
+		if (net_landrivers[net_landriverlevel].initialized)
+			_Datagram_Heartbeat (master);
+}

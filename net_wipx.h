@@ -29,6 +29,8 @@ int  WIPX_OpenSocket (int port);
 int  WIPX_CloseSocket (int socket);
 int  WIPX_Connect (int socket, struct qsockaddr *addr);
 int  WIPX_CheckNewConnections (void);
+int  WIPX_Recv (qbyte *buf, int len, struct qsockaddr *addr);
+int  WIPX_Send (qbyte *buf, int len, struct qsockaddr *addr);
 int  WIPX_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 int  WIPX_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 int  WIPX_Broadcast (int socket, qbyte *buf, int len);

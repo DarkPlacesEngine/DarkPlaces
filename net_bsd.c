@@ -30,6 +30,7 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] =
 	Loop_Init,
 	Loop_Listen,
 	Loop_SearchForHosts,
+	Loop_SearchForInetHosts,
 	Loop_Connect,
 	Loop_CheckNewConnections,
 	Loop_GetMessage,
@@ -38,7 +39,8 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] =
 	Loop_CanSendMessage,
 	Loop_CanSendUnreliableMessage,
 	Loop_Close,
-	Loop_Shutdown
+	Loop_Shutdown,
+	Loop_Heartbeat
 	}
 	,
 	{
@@ -47,6 +49,7 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] =
 	Datagram_Init,
 	Datagram_Listen,
 	Datagram_SearchForHosts,
+	Datagram_SearchForInetHosts,
 	Datagram_Connect,
 	Datagram_CheckNewConnections,
 	Datagram_GetMessage,
@@ -55,7 +58,8 @@ net_driver_t net_drivers[MAX_NET_DRIVERS] =
 	Datagram_CanSendMessage,
 	Datagram_CanSendUnreliableMessage,
 	Datagram_Close,
-	Datagram_Shutdown
+	Datagram_Shutdown,
+	Datagram_Heartbeat
 	}
 };
 
@@ -76,6 +80,8 @@ net_landriver_t	net_landrivers[MAX_NET_DRIVERS] =
 	UDP_CloseSocket,
 	UDP_Connect,
 	UDP_CheckNewConnections,
+	UDP_Recv,
+	UDP_Send,
 	UDP_Read,
 	UDP_Write,
 	UDP_Broadcast,

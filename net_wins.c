@@ -392,6 +392,20 @@ int WINS_CheckNewConnections (void)
 
 //=============================================================================
 
+int WINS_Recv (qbyte *buf, int len, struct qsockaddr *addr)
+{
+	return WINS_Read (net_acceptsocket, buf, len, addr);
+}
+
+//=============================================================================
+
+int WINS_Send (qbyte *buf, int len, struct qsockaddr *addr)
+{
+	return WINS_Write (net_acceptsocket, buf, len, addr);
+}
+
+//=============================================================================
+
 int WINS_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int addrlen = sizeof (struct qsockaddr);
