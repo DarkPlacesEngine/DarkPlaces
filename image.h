@@ -4,9 +4,9 @@
 
 // swizzle components (even converting number of components) and flip images
 // (warning: input must be different than output due to non-linear read/write)
-// (tip: inputcomponentindices can contain values | 0x80000000 to tell it to
+// (tip: component indices can contain values | 0x80000000 to tell it to
 // store them directly into output, so 255 | 0x80000000 would write 255)
-void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int height, int flipx, int flipy, int flipdiagonal, int numincomponents, int numoutcomponents, int *inputcomponentindices);
+void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices);
 
 // applies gamma correction to RGB pixels, in can be the same as out
 void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *gammar, const qbyte *gammag, const qbyte *gammab);
