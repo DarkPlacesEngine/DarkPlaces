@@ -180,7 +180,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 
 typedef enum
 {
-	pt_dead, pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_decalfade
+	pt_dead, pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_decalfade, pt_ember
 }
 ptype_t;
 
@@ -684,6 +684,23 @@ void CL_ParticleExplosion (vec3_t org)
 		}
 		*/
 
+#if 1
+		if (cl_particles.integer && cl_particles_sparks.integer)
+			for (i = 0;i < 128 * cl_particles_quality.value;i++)
+				particle(pt_static, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.0f, 0.02f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-256, 256), lhrandom(-256, 256), lhrandom(-256, 256) + 80, 0, 0, 0, 0, 0.2, 0);
+	}
+
+	//if (cl_explosions.integer)
+	//	R_NewExplosion(org);
+#elif 1
+		if (cl_particles.integer && cl_particles_sparks.integer)
+			for (i = 0;i < 64 * cl_particles_quality.value;i++)
+				particle(pt_ember, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.0f, 0.01f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 256, 9999, 0.7, 0, org[0], org[1], org[2], lhrandom(-256, 256), lhrandom(-256, 256), lhrandom(-256, 256) + 80, cl.time, 0, 0, 0, 0, 0);
+	}
+
+	//if (cl_explosions.integer)
+	//	R_NewExplosion(org);
+#else
 		if (cl_particles.integer && cl_particles_sparks.integer)
 		{
 			// sparks
@@ -697,6 +714,7 @@ void CL_ParticleExplosion (vec3_t org)
 
 	if (cl_explosions.integer)
 		R_NewExplosion(org);
+#endif
 }
 
 /*
@@ -1290,11 +1308,12 @@ void CL_MoveParticles (void)
 	entity_render_t *hitent;
 #endif
 
-	cl_freeparticle = 0;
-
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
+	{
+		cl_freeparticle = 0;
 		return;
+	}
 
 #ifdef WORKINGLQUAKE
 	frametime = cl.frametime;
@@ -1465,6 +1484,13 @@ void CL_MoveParticles (void)
 					p->type = pt_dead;
 #endif
 				break;
+			case pt_ember:
+				while (cl.time > p->time2)
+				{
+					p->time2 += 0.025;
+					particle(pt_static, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, p->scalex * 0.75, p->scaley * 0.75, p->alpha, p->alphafade, 9999, 0.5, 0, p->org[0], p->org[1], p->org[2], p->vel[0] * lhrandom(0.4, 0.6), p->vel[1] * lhrandom(0.4, 0.6), p->vel[2] * lhrandom(0.4, 0.6), 0, 0, 0, 0, 0, 0);
+				}
+				break;
 			default:
 				Con_Printf("unknown particle type %i\n", p->type);
 				p->type = pt_dead;
@@ -1473,6 +1499,7 @@ void CL_MoveParticles (void)
 		}
 	}
 	cl_numparticles = maxparticle + 1;
+	cl_freeparticle = 0;
 }
 
 #define MAX_PARTICLETEXTURES 64
