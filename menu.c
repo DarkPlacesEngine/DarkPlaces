@@ -1439,6 +1439,7 @@ void M_Options_Key (int k)
 			break;
 		case 1:
 			m_state = m_none;
+			key_dest = key_game;
 			Con_ToggleConsole_f ();
 			break;
 		case 2:
