@@ -99,6 +99,7 @@ extern	cvar_t	r_speeds;
 extern	cvar_t	r_fullbright;
 extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
+extern	cvar_t	r_dlightmap;
 
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first

@@ -186,8 +186,6 @@ typedef struct msurface_s
 	mplane_t *plane;
 	// SURF_ flags
 	int flags;
-	// rendering chain
-	struct msurface_s *texturechain;
 
 	// look up in model->surfedges[], negative numbers are backwards edges
 	int firstedge;
@@ -221,13 +219,16 @@ typedef struct msurface_s
 	vec3_t poly_mins, poly_maxs, poly_center;
 
 	// neighboring surfaces (one per poly_numverts)
-	struct msurface_s **neighborsurfaces;
+	//struct msurface_s **neighborsurfaces;
 	// currently used only for generating static shadow volumes
 	int castshadow;
 
 	// these are regenerated every frame
 	// lighting info
+	// if this == r_framecount there are dynamic lights on the surface
 	int dlightframe;
+	// which dynamic lights are touching this surface
+	// (only access this if dlightframe is current)
 	int dlightbits[8];
 	// avoid redundent addition of dlights
 	int lightframe;

@@ -1430,7 +1430,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 {
 	int i, numsurfaces, *surfacevisframes;
 	model_t *model;
-	msurface_t *surf, *surfaces;
+	msurface_t *surf, *surfaces, **surfchain;
 	vec3_t modelorg;
 
 	if (!ent->model)
@@ -1446,6 +1446,26 @@ void R_PrepareSurfaces(entity_render_t *ent)
 
 	if (r_dynamic.integer && r_shadow_lightingmode < 1)
 		R_MarkLights(ent);
+
+	if (model->light_ambient != r_ambient.value || model->light_scalebit != r_lightmapscalebit)
+	{
+		model->light_ambient = r_ambient.value;
+		model->light_scalebit = r_lightmapscalebit;
+		for (i = 0;i < model->nummodelsurfaces;i++)
+			model->surfaces[i + model->firstmodelsurface].cached_dlight = true;
+	}
+	else
+	{
+		for (i = 0;i < model->light_styles;i++)
+		{
+			if (model->light_stylevalue[i] != d_lightstylevalue[model->light_style[i]])
+			{
+				model->light_stylevalue[i] = d_lightstylevalue[model->light_style[i]];
+				for (surfchain = model->light_styleupdatechains[i];*surfchain;surfchain++)
+					(**surfchain).cached_dlight = true;
+			}
+		}
+	}
 
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
 	{
@@ -1468,6 +1488,10 @@ void R_PrepareSurfaces(entity_render_t *ent)
 			{
 				c_faces++;
 				surf->visframe = r_framecount;
+#if 1
+				if (surf->cached_dlight && surf->lightmaptexture != NULL && !r_vertexsurfaces.integer)
+					R_BuildLightMap(ent, surf, false); // base lighting changed
+#else
 				if (!r_vertexsurfaces.integer && surf->lightmaptexture != NULL)
 				{
 					if (surf->cached_dlight
@@ -1485,6 +1509,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 							R_BuildLightMap(ent, surf, true); // only dlights
 					}
 				}
+#endif
 			}
 		}
 	}

@@ -285,6 +285,8 @@ loc0:
 		{
 			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
 			surf->dlightframe = r_framecount;
+			if (r_dlightmap.integer)
+				surf->cached_dlight = true;
 		}
 		surf->dlightbits[bitindex] |= bit;
 	}
@@ -424,6 +426,8 @@ static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int b
 								{
 									surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
 									surf->dlightframe = r_framecount;
+									if (r_dlightmap.integer)
+										surf->cached_dlight = true;
 								}
 								surf->dlightbits[bitindex] |= bit;
 							}
