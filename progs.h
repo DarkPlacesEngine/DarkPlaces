@@ -72,6 +72,8 @@ extern int eval_glow_color;
 extern int eval_items2;
 extern int eval_scale;
 extern int eval_alpha;
+extern int eval_renderamt; // HalfLife support
+extern int eval_rendertype; // HalfLife support
 extern int eval_fullbright;
 extern int eval_ammo_shells1;
 extern int eval_ammo_nails1;
