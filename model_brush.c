@@ -3996,7 +3996,7 @@ static void Mod_Q3BSP_LoadLightmaps(lump_t *l)
 static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in;
-	q3mface_t *out;
+	q3msurface_t *out;
 	int i, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xlevel, ylevel, row0, row1, x, y, *e, finalvertices, finaltriangles;
 	//int *originalelement3i;
 	//int *originalneighbor3i;
@@ -4467,7 +4467,7 @@ static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
 static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 {
 	int *in;
-	q3mface_t **out;
+	q3msurface_t **out;
 	int i, n, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -4780,7 +4780,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 	int i, startside, endside;
 	float dist1, dist2, midfrac, mid[3], nodesegmentmins[3], nodesegmentmaxs[3];
 	q3mleaf_t *leaf;
-	q3mface_t *face;
+	q3msurface_t *face;
 	colbrushf_t *brush;
 	if (startfrac > trace->realfraction)
 		return;
@@ -4864,7 +4864,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 	float nodesegmentmins[3], nodesegmentmaxs[3];
 	q3mleaf_t *leaf;
 	colbrushf_t *brush;
-	q3mface_t *face;
+	q3msurface_t *face;
 	/*
 		// find which nodes the line is in and recurse for them
 		while (node->plane)
@@ -5242,7 +5242,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	colbrushf_t *thisbrush_start, *thisbrush_end;
 	matrix4x4_t startmatrix, endmatrix;
 	static int markframe = 0;
-	q3mface_t *face;
+	q3msurface_t *face;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
 	trace->realfraction = 1;
@@ -5473,7 +5473,7 @@ void Mod_Q3BSP_RecursiveGetVisible(q3mnode_t *node, model_t *model, const vec3_t
 	if ((pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
 	{
 		int marksurfacenum;
-		q3mface_t *surf;
+		q3msurface_t *surf;
 		if (maxleafs && *numleafs < maxleafs)
 			leaflist[(*numleaf)++] = leaf;
 		if (maxsurfaces)
@@ -5529,7 +5529,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	int i, j, numshadowmeshtriangles;
 	q3dheader_t *header;
 	float corner[3], yawradius, modelradius;
-	q3mface_t *face;
+	q3msurface_t *face;
 
 	mod->type = mod_brushq3;
 	mod->numframes = 1;

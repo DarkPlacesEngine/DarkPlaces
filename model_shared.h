@@ -462,7 +462,7 @@ typedef struct q3mface_s
 	// temporary use by light processing
 	int lighttemp_castshadow;
 }
-q3mface_t;
+q3msurface_t;
 
 typedef struct model_brushq3_s
 {
@@ -486,7 +486,7 @@ typedef struct model_brushq3_s
 	q3mbrush_t **data_leafbrushes;
 
 	int num_leaffaces;
-	q3mface_t **data_leaffaces;
+	q3msurface_t **data_leaffaces;
 
 	int num_models;
 	q3mmodel_t *data_models;
@@ -516,7 +516,7 @@ typedef struct model_brushq3_s
 	q3meffect_t *data_effects;
 
 	int num_faces;
-	q3mface_t *data_faces;
+	q3msurface_t *data_faces;
 
 	// lightmap textures
 	int num_lightmaps;

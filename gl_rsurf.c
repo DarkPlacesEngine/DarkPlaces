@@ -54,7 +54,7 @@ int r_q3bsp_nummarkleafs;
 q3mleaf_t *r_q3bsp_maxleaflist[65536];
 int r_q3bsp_maxmarksurfaces;
 int r_q3bsp_nummarksurfaces;
-q3mface_t *r_q3bsp_maxsurfacelist[65536];
+q3msurface_t *r_q3bsp_maxsurfacelist[65536];
 */
 
 static int dlightdivtable[32768];
@@ -1948,7 +1948,7 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3msurface_t *face)
 {
 	int i;
 	rmeshstate_t m;
@@ -1957,14 +1957,14 @@ void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3mface_t *face)
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = face->data_collisionvertex3f;
 	R_Mesh_State(&m);
-	i = ((int)face) / sizeof(q3mface_t);
+	i = ((int)face) / sizeof(q3msurface_t);
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
 	GL_LockArrays(0, face->num_collisionvertices);
 	R_Mesh_Draw(face->num_collisionvertices, face->num_collisiontriangles, face->data_collisionelement3i);
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	if (!face->num_triangles)
@@ -2006,7 +2006,7 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 	GL_ColorMask(1,1,1,1);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2028,7 +2028,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3mface_t
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2048,7 +2048,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(entity_render_t *en
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2065,7 +2065,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(entity_render_t *ent, q3mface_t *f
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2082,7 +2082,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(entity_render_t *ent, q3mface_t *
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2102,7 +2102,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(entity_render_t *ent, q3mface
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2124,7 +2124,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3mface_t *face
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3msurface_t *face)
 {
 	int i;
 	float mul;
@@ -2163,7 +2163,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mfac
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3msurface_t *face)
 {
 	int i;
 	float mul;
@@ -2195,7 +2195,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3mface_t
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3msurface_t *face)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -2215,7 +2215,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(entity_render_t *ent, q3
 void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 {
 	const entity_render_t *ent = voident;
-	q3mface_t *face = ent->model->brushq3.data_faces + facenumber;
+	q3msurface_t *face = ent->model->brushq3.data_faces + facenumber;
 	rmeshstate_t m;
 	R_Mesh_Matrix(&ent->matrix);
 	memset(&m, 0, sizeof(m));
@@ -2276,7 +2276,7 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 	qglEnable(GL_CULL_FACE);
 }
 
-void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
+void R_Q3BSP_DrawFace(entity_render_t *ent, q3msurface_t *face)
 {
 	if (!face->num_triangles)
 		return;
@@ -2381,7 +2381,7 @@ static int r_q3bsp_framecount = -1;
 void R_Q3BSP_DrawSky(entity_render_t *ent)
 {
 	int i;
-	q3mface_t *face;
+	q3msurface_t *face;
 	vec3_t modelorg;
 	model_t *model;
 	R_Mesh_Matrix(&ent->matrix);
@@ -2411,7 +2411,7 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 void R_Q3BSP_Draw(entity_render_t *ent)
 {
 	int i;
-	q3mface_t *face;
+	q3msurface_t *face;
 	vec3_t modelorg;
 	model_t *model;
 	qbyte *pvs;
@@ -2460,7 +2460,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	int t, leafindex, marksurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
 	const float *v[3];
-	q3mface_t *surface;
+	q3msurface_t *surface;
 	q3mleaf_t *leaf;
 	const qbyte *pvs;
 	lightmins[0] = relativelightorigin[0] - lightradius;
@@ -2543,7 +2543,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
-	q3mface_t *surface;
+	q3msurface_t *surface;
 	int surfacelistindex, j, t;
 	const int *e;
 	const float *v[3];
@@ -2581,7 +2581,7 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs, modelorg;
-	q3mface_t *surface;
+	q3msurface_t *surface;
 	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
