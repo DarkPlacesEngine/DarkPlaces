@@ -208,11 +208,14 @@ static void R_FreeTexture(gltexture_t *glt)
 	gltextureimage_t *image, **gltimagepointer;
 	GLuint texnum;
 
+	if (glt == NULL)
+		Host_Error("R_FreeTexture: texture == NULL\n");
+
 	for (gltpointer = &glt->pool->gltchain;*gltpointer && *gltpointer != glt;gltpointer = &(*gltpointer)->chain);
 	if (*gltpointer == glt)
 		*gltpointer = glt->chain;
 	else
-		Host_Error("R_FreeTexture: texture not linked in pool\n");
+		Host_Error("R_FreeTexture: texture \"%s\" not linked in pool\n", glt->identifier);
 
 	// note: if freeing a fragment texture, this will not make the claimed
 	// space available for new textures unless all other fragments in the
@@ -1443,7 +1446,7 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 			Con_Printf("R_LoadTexture: exact match with existing texture %s\n", identifier);
 			return (rtexture_t *)glt; // exact match, use existing
 		}
-		Con_DPrintf("R_LoadTexture: cache mismatch, replacing old texture\n");
+		Con_Printf("R_LoadTexture: cache mismatch, replacing old texture\n");
 		R_FreeTexture(glt);
 	}
 
