@@ -263,6 +263,15 @@ void Sbar_DrawPic (int x, int y, qpic_t *pic)
 		Draw_Pic (x + ((vid.width - 320)>>1), y + (vid.height-SBAR_HEIGHT), pic);
 }
 
+void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha);
+void Sbar_DrawAlphaPic (int x, int y, qpic_t *pic, float alpha)
+{
+	if (cl.gametype == GAME_DEATHMATCH)
+		Draw_AlphaPic (x /* + ((vid.width - 320)>>1)*/, y + (vid.height-SBAR_HEIGHT), pic, alpha);
+	else
+		Draw_AlphaPic (x + ((vid.width - 320)>>1), y + (vid.height-SBAR_HEIGHT), pic, alpha);
+}
+
 /*
 =============
 Sbar_DrawTransPic
@@ -551,13 +560,13 @@ void Sbar_DrawInventory (void)
 	if (rogue)
 	{
 		if ( cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN )
-			Sbar_DrawPic (0, -24, rsb_invbar[0]);
+			Sbar_DrawAlphaPic (0, -24, rsb_invbar[0], 0.4);
 		else
-			Sbar_DrawPic (0, -24, rsb_invbar[1]);
+			Sbar_DrawAlphaPic (0, -24, rsb_invbar[1], 0.4);
 	}
 	else
 	{
-		Sbar_DrawPic (0, -24, sb_ibar);
+		Sbar_DrawAlphaPic (0, -24, sb_ibar, 0.4);
 	}
 
 // weapons
@@ -577,7 +586,7 @@ void Sbar_DrawInventory (void)
 			else
 				flashon = (flashon%5) + 2;
 
-         Sbar_DrawPic (i*24, -16, sb_weapons[flashon][i]);
+         Sbar_DrawAlphaPic (i*24, -16, sb_weapons[flashon][i], 0.4);
 
 //			if (flashon > 1)
 //				sb_updates = 0;		// force update to remove flash
@@ -939,13 +948,13 @@ void Sbar_Draw (void)
 
 	if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 	{
-		Sbar_DrawPic (0, 0, sb_scorebar);
+		Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
 		Sbar_DrawScoreboard ();
 //		sb_updates = 0;
 	}
 	else if (sb_lines)
 	{
-		Sbar_DrawPic (0, 0, sb_sbar);
+		Sbar_DrawAlphaPic (0, 0, sb_sbar, 0.4);
 
    // keys (hipnotic only)
       //MED 01/04/97 moved keys here so they would not be overwritten
