@@ -1277,7 +1277,7 @@ void SV_Physics_Step (edict_t *ent)
 		SV_AddGravity(ent);
 		SV_CheckVelocity(ent);
 		SV_FlyMove(ent, sv.frametime, NULL);
-		SV_LinkEdict(ent, false);
+		SV_LinkEdict(ent, true);
 
 		// just hit ground
 		if (hitsound && (int)ent->v->flags & FL_ONGROUND)
@@ -1369,7 +1369,9 @@ void SV_Physics (void)
 					SV_AddGravity (ent);
 				SV_CheckStuck (ent);
 				SV_WalkMove (ent);
-				SV_LinkEdict (ent, true);
+				// relink normal entities here, players always get relinked so don't relink twice
+				if (!(i > 0 && i <= svs.maxclients))
+					SV_LinkEdict (ent, true);
 			}
 			break;
 		case MOVETYPE_TOSS:
