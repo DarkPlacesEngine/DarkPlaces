@@ -117,22 +117,23 @@ extern char *buildstring;
 //===========================================
 // AK nexuiz changed and added defines
 
-#define NEX_IT_UZI					1
-#define NEX_IT_SHOTGUN				2
-#define NEX_IT_ELECTRO				8
-#define NEX_IT_CRYLINK				16
-#define NEX_IT_NEX					32
-#define NEX_IT_HAGAR				64
-#define NEX_IT_ROCKET_LAUNCHER		128
-#define NEX_IT_SHELLS				256
-#define NEX_IT_BULLETS				512
-#define NEX_IT_ROCKETS				1024
-#define NEX_IT_CELLS				2048
-#define NEX_IT_LASER				4094
-#define NEX_IT_STRENGTH			8192
-#define NEX_IT_INVINCIBLE			16384
-#define NEX_IT_SPEED				32767
-#define NEX_IT_SLOWMO				65536
+#define NEX_IT_UZI              1
+#define NEX_IT_SHOTGUN          2
+#define NEX_IT_GRENADE_LAUNCHER 4
+#define NEX_IT_ELECTRO          8
+#define NEX_IT_CRYLINK          16
+#define NEX_IT_NEX              32
+#define NEX_IT_HAGAR            64
+#define NEX_IT_ROCKET_LAUNCHER  128
+#define NEX_IT_SHELLS           256
+#define NEX_IT_BULLETS          512
+#define NEX_IT_ROCKETS          1024
+#define NEX_IT_CELLS            2048
+#define NEX_IT_LASER            4094
+#define NEX_IT_STRENGTH         8192
+#define NEX_IT_INVINCIBLE       16384
+#define NEX_IT_SPEED            32768
+#define NEX_IT_SLOWMO           65536
 
 //===========================================
 //rogue changed and added defines

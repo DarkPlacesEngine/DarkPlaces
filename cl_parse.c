@@ -807,11 +807,12 @@ void CL_ParseClientdata (int bits)
 	cl.stats[STAT_CELLS] = MSG_ReadByte();
 
 	i = MSG_ReadByte ();
-
-	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
-		cl.stats[STAT_ACTIVEWEAPON] = (1<<i);
-	else
-		cl.stats[STAT_ACTIVEWEAPON] = i;
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
+		i = (1<<i);
+	// GAME_NEXUIZ hud needs weapon change time
+	if (cl.stats[STAT_ACTIVEWEAPON] != i)
+		cl.weapontime = cl.time;
+	cl.stats[STAT_ACTIVEWEAPON] = i;
 
 	cl.viewzoomold = cl.viewzoomnew; // for interpolation
 	if (bits & SU_VIEWZOOM)

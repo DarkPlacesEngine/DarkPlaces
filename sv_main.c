@@ -1275,7 +1275,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	MSG_WriteByte (msg, ent->v->ammo_rockets);
 	MSG_WriteByte (msg, ent->v->ammo_cells);
 
-	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
 	{
 		for(i=0;i<32;i++)
 		{
