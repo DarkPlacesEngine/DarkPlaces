@@ -401,6 +401,9 @@ void VID_Shutdown (void)
 		if (hRC)
 			wglDeleteContext(hRC);
 
+		// close the library before we get rid of the window
+		GL_CloseLibrary();
+
 		if (hDC && mainwindow)
 			ReleaseDC(mainwindow, hDC);
 
@@ -414,8 +417,6 @@ void VID_Shutdown (void)
 
 		VID_RestoreSystemGamma();
 	}
-
-	GL_CloseLibrary();
 }
 
 
