@@ -343,6 +343,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		model = sv.models[(int) ent->v->modelindex];
 		if (model != NULL)
 		{
+			Mod_CheckLoaded(model);
 			if (model->type != mod_brush)
 				Host_Error("SOLID_BSP with non-BSP model\n");
 
