@@ -349,7 +349,7 @@ static void CL_RelinkNetworkEntities()
 {
 	entity_t *ent;
 	int i, effects, temp;
-	float d, bobjrotate, bobjoffset, dlightradius, lerp;
+	float d, bobjrotate, bobjoffset, lerp;
 	vec3_t oldorg, neworg, delta, dlightcolor, v, v2, mins, maxs;
 
 	bobjrotate = ANGLEMOD(100*cl.time);
@@ -433,7 +433,6 @@ static void CL_RelinkNetworkEntities()
 		CL_LerpUpdate(ent);
 
 		// handle effects now...
-		dlightradius = 0;
 		dlightcolor[0] = 0;
 		dlightcolor[1] = 0;
 		dlightcolor[2] = 0;
