@@ -789,7 +789,7 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 {
 	surfmesh_t *mesh;
 	qbyte *data;
-	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 1 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numtriangles * sizeof(int) * (3 + 3 + (lightmapoffsets ? 1 : 0)) + numcollisionvertices * sizeof(float[3]) + numcollisiontriangles * sizeof(int[3]));
+	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3) * sizeof(int) + numcollisionvertices * sizeof(float[3]) + numcollisiontriangles * sizeof(int[3]));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
 	mesh->num_collisionvertices = numcollisionvertices;
@@ -812,8 +812,8 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 	}
 	if (mesh->num_triangles)
 	{
-		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_vertices;
-		mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_vertices;
+		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
+		mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 	}
 	if (mesh->num_collisionvertices)
 		mesh->data_collisionvertex3f = (float *)data, data += sizeof(float[3]) * mesh->num_collisionvertices;
