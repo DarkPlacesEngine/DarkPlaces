@@ -1149,7 +1149,7 @@ void SV_CheckWaterTransition (edict_t *ent)
 
 	if (cont <= CONTENTS_WATER)
 	{
-		if (ent->v.watertype == CONTENTS_EMPTY)
+		if (ent->v.watertype == CONTENTS_EMPTY && cont != CONTENTS_LAVA)
 			// just crossed into water
 			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
 
@@ -1158,7 +1158,7 @@ void SV_CheckWaterTransition (edict_t *ent)
 	}
 	else
 	{
-		if (ent->v.watertype != CONTENTS_EMPTY)
+		if (ent->v.watertype != CONTENTS_EMPTY && ent->v.watertype != CONTENTS_LAVA)
 			// just crossed into water
 			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
 
