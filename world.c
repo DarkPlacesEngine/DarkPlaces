@@ -283,7 +283,10 @@ void SV_TouchAreaGrid(edict_t *ent)
 void SV_LinkEdict_AreaGrid(edict_t *ent)
 {
 	areagrid_t *grid;
-	int igrid[3], igridmins[3], igridmaxs[3], gridnum;
+	int igrid[3], igridmins[3], igridmaxs[3], gridnum, entitynumber = NUM_FOR_EDICT(ent);
+
+	if (entitynumber <= 0 || entitynumber >= sv.max_edicts || EDICT_NUM(entitynumber) != ent)
+		Host_Error("SV_LinkEdict_AreaGrid: invalid edict %p (sv.edicts is %p, edict compared to sv.edicts is %i)\n", ent, sv.edicts, entitynumber);
 
 	igridmins[0] = (int) ((ent->v->absmin[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
 	igridmins[1] = (int) ((ent->v->absmin[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
