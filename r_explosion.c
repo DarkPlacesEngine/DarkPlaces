@@ -176,66 +176,69 @@ void R_NewExplosion(vec3_t org)
 void R_DrawExplosion(explosion_t *e)
 {
 	int i;
-	float c[EXPLOSIONVERTS][4], diff[3], centerdir[3], ifog, alpha, dist;
-	rmeshinfo_t m;
+	float *c, *v, diff[3], centerdir[3], ifog, alpha, dist;
+	rmeshbufferinfo_t m;
+
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
 	m.numtriangles = EXPLOSIONTRIS;
-	m.index = &explosiontris[0][0];
 	m.numverts = EXPLOSIONVERTS;
-	m.vertex = &e->vert[0][0];
-	m.vertexstep = sizeof(float[3]);
-	alpha = e->alpha;
-	m.cr = 1;
-	m.cg = 1;
-	m.cb = 1;
-	m.ca = 1; //alpha;
-	m.color = &c[0][0];
-	m.colorstep = sizeof(float[4]);
-	VectorSubtract(r_origin, e->origin, centerdir);
-	VectorNormalizeFast(centerdir);
-	if (fogenabled)
+	m.tex[0] = R_GetTexture(explosiontexture);
+	if (R_Mesh_Draw_GetBuffer(&m))
 	{
-		for (i = 0;i < EXPLOSIONVERTS;i++)
+		memcpy(m.index, explosiontris, m.numtriangles * sizeof(int[3]));
+		for (i = 0, v = m.vertex;i < m.numverts;i++, v += 4)
 		{
-			VectorSubtract(e->vert[i], e->origin, diff);
-			VectorNormalizeFast(diff);
-			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
-			if (dist > 0)
+			v[0] = e->vert[i][0];
+			v[1] = e->vert[i][1];
+			v[2] = e->vert[i][2];
+		}
+		memcpy(m.texcoords[0], explosiontexcoords, m.numverts * sizeof(float[2]));
+		alpha = e->alpha;
+		VectorSubtract(r_origin, e->origin, centerdir);
+		VectorNormalizeFast(centerdir);
+		if (fogenabled)
+		{
+			for (i = 0, c = m.color;i < EXPLOSIONVERTS;i++, c += 4)
 			{
-				// use inverse fog alpha
-				VectorSubtract(e->vert[i], r_origin, diff);
-				ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
-				dist = dist * ifog;
+				VectorSubtract(e->vert[i], e->origin, diff);
+				VectorNormalizeFast(diff);
+				dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
+				if (dist > 0)
+				{
+					// use inverse fog alpha
+					VectorSubtract(e->vert[i], r_origin, diff);
+					ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
+					dist = dist * ifog;
+					if (dist < 0)
+						dist = 0;
+					else
+						dist *= m.colorscale;
+				}
+				else
+					dist = 0;
+				c[0] = c[1] = c[2] = dist;
+				c[3] = 1;
+			}
+		}
+		else
+		{
+			for (i = 0, c = m.color;i < EXPLOSIONVERTS;i++, c += 4)
+			{
+				VectorSubtract(e->vert[i], e->origin, diff);
+				VectorNormalizeFast(diff);
+				dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
 				if (dist < 0)
 					dist = 0;
+				else
+					dist *= m.colorscale;
+				c[0] = c[1] = c[2] = dist;
+				c[3] = 1;
 			}
-			else
-				dist = 0;
-			c[i][0] = c[i][1] = c[i][2] = dist;
-			c[i][3] = 1;
 		}
 	}
-	else
-	{
-		for (i = 0;i < EXPLOSIONVERTS;i++)
-		{
-			VectorSubtract(e->vert[i], e->origin, diff);
-			VectorNormalizeFast(diff);
-			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
-			if (dist < 0)
-				dist = 0;
-			c[i][0] = c[i][1] = c[i][2] = dist;
-			c[i][3] = 1;
-		}
-	}
-	m.tex[0] = R_GetTexture(explosiontexture);
-	m.texcoords[0] = &explosiontexcoords[0][0];
-	m.texcoordstep[0] = sizeof(float[2]);
-
-	R_Mesh_Draw(&m);
 }
 
 void R_MoveExplosion(explosion_t *e)
