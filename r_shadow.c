@@ -908,7 +908,7 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	// optimize for them as noted above
 }
 
-void R_Shadow_Stage_LightWithoutShadows(void)
+void R_Shadow_Stage_Light(int shadowtest)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -923,31 +923,10 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 	qglDepthFunc(GL_EQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_CULL_FACE);
-	qglDisable(GL_STENCIL_TEST);
-	if (gl_support_stenciltwoside)
-		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
-	qglStencilMask(~0);
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-	qglStencilFunc(GL_EQUAL, 128, ~0);
-	r_shadowstage = SHADOWSTAGE_LIGHT;
-	c_rt_lights++;
-}
-
-void R_Shadow_Stage_LightWithShadows(void)
-{
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
-	R_Mesh_State(&m);
-	GL_BlendFunc(GL_ONE, GL_ONE);
-	GL_DepthMask(false);
-	GL_DepthTest(true);
-	qglPolygonOffset(0, 0);
-	//qglDisable(GL_POLYGON_OFFSET_FILL);
-	GL_Color(1, 1, 1, 1);
-	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
-	qglDepthFunc(GL_EQUAL);
-	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-	qglEnable(GL_STENCIL_TEST);
+	if (shadowtest)
+		qglDisable(GL_STENCIL_TEST);
+	else
+		qglEnable(GL_STENCIL_TEST);
 	if (gl_support_stenciltwoside)
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 	qglStencilMask(~0);
@@ -2206,10 +2185,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 
 	if (!visiblevolumes)
 	{
-		if (shadow && gl_stencil)
-			R_Shadow_Stage_LightWithShadows();
-		else
-			R_Shadow_Stage_LightWithoutShadows();
+		R_Shadow_Stage_Light(shadow && gl_stencil);
 
 		ent = &cl_entities[0].render;
 		if (ent->model && ent->model->DrawLight)

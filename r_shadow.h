@@ -41,12 +41,6 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 void R_Shadow_ClearStencil(void);
 
 void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i);
-void R_Shadow_Stage_Begin(void);
-void R_Shadow_LoadWorldLightsIfNeeded(void);
-void R_Shadow_Stage_ShadowVolumes(void);
-void R_Shadow_Stage_LightWithShadows(void);
-void R_Shadow_Stage_LightWithoutShadows(void);
-void R_Shadow_Stage_End(void);
 int R_Shadow_ScissorForBBox(const float *mins, const float *maxs);
 
 // these never change, they are used to create attenuation matrices
