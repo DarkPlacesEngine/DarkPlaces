@@ -12,6 +12,9 @@ int gl_combine_extension = false;
 // LordHavoc: GL_EXT_compiled_vertex_array support
 int gl_supportslockarrays = false;
 
+int gl_maxdrawrangeelementsvertices;
+int gl_maxdrawrangeelementsindices;
+
 cvar_t vid_mode = {0, "vid_mode", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
@@ -112,11 +115,27 @@ void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 //void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
-void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-
 void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
-
+void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+
+void (GLAPIENTRY *qglDrawRangeElementsEXT)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
+
+//void (GLAPIENTRY *qglColorTableEXT)(int, int, int, int, int, const void *);
+
+#if WIN32
+int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
+int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
+//int (WINAPI *qwglGetPixelFormat)(HDC);
+BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
+BOOL (WINAPI *qwglSwapBuffers)(HDC);
+HGLRC (WINAPI *qwglCreateContext)(HDC);
+BOOL (WINAPI *qwglDeleteContext)(HGLRC);
+PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
+BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
+//BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
+#endif
 
 
 typedef struct
@@ -134,6 +153,30 @@ typedef struct
 	char *disableparm;
 }
 gl_extensioninfo_t;
+
+#if WIN32
+static gl_extensionfunctionlist_t wglfuncs[] =
+{
+	{"wglChoosePixelFormat", (void **) &qwglChoosePixelFormat},
+	{"wglDescribePixelFormat", (void **) &qwglDescribePixelFormat},
+//	{"wglGetPixelFormat", (void **) &qwglGetPixelFormat},
+	{"wglSetPixelFormat", (void **) &qwglSetPixelFormat},
+	{"wglSwapBuffers", (void **) &qwglSwapBuffers},
+	{"wglCreateContext", (void **) &qwglCreateContext},
+	{"wglDeleteContext", (void **) &qwglDeleteContext},
+	{"wglGetProcAddress", (void **) &qwglGetProcAddress},
+	{"wglMakeCurrent", (void **) &qwglMakeCurrent},
+	{NULL, NULL}
+};
+
+/*
+static gl_extensionfunctionlist_t wglswapintervalfuncs[] =
+{
+	{"wglSwapIntervalEXT", (void **) &qwglSwapIntervalEXT},
+	{NULL, NULL}
+};
+*/
+#endif
 
 static gl_extensionfunctionlist_t opengl110funcs[] =
 {
@@ -199,15 +242,22 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glTexEnvi", (void **) &qglTexEnvi},
 //	{"glTexParameterf", (void **) &qglTexParameterf},
 	{"glTexParameteri", (void **) &qglTexParameteri},
-	{"glTexImage2D", (void **) &qglTexImage2D},
 	{"glBindTexture", (void **) &qglBindTexture},
+	{"glTexImage2D", (void **) &qglTexImage2D},
 	{"glTexSubImage2D", (void **) &qglTexSubImage2D},
+	{"glDeleteTextures", (void **) &qglDeleteTextures},
 	{NULL, NULL}
 };
 
 static gl_extensionfunctionlist_t drawrangeelementsfuncs[] =
 {
 	{"glDrawRangeElements", (void **) &qglDrawRangeElements},
+	{NULL, NULL}
+};
+
+static gl_extensionfunctionlist_t drawrangeelementsextfuncs[] =
+{
+	{"glDrawRangeElementsEXT", (void **) &qglDrawRangeElementsEXT},
 	{NULL, NULL}
 };
 
@@ -266,15 +316,19 @@ static void gl_getfuncs_end(void)
 
 static void *gl_getfuncaddress(char *name)
 {
+	void *p = NULL;
 #ifdef WIN32
-//	return (void *) wglGetProcAddress(name);
-	return (void *) GetProcAddress(gldll, name);
+	if (qwglGetProcAddress != NULL)
+		p = (void *) qwglGetProcAddress(name);
+	if (p == NULL)
+		p = (void *) GetProcAddress(gldll, name);
 #else
-	return (void *) dlsym(prjobj, name);
+	p = (void *) dlsym(prjobj, name);
 #endif
+	return p;
 }
 
-static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char *disableparm)
+static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char *disableparm, int silent)
 {
 	int failed = false;
 	gl_extensionfunctionlist_t *func;
@@ -290,13 +344,15 @@ static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char
 		return false;
 	}
 
-	if (!strstr(name, "GL_") || strstr(gl_extensions, name))
+	if (strncmp(name, "GL_", 3) || strstr(gl_extensions, name))
 	{
 		for (func = funcs;func && func->name != NULL;func++)
 		{
+			// functions are cleared before all the extensions are evaluated
 			if (!(*func->funcvariable = (void *) gl_getfuncaddress(func->name)))
 			{
-				Con_Printf("missing function \"%s\"!\n", func->name);
+				if (!silent)
+					Con_Printf("missing function \"%s\" - broken driver!\n", func->name);
 				failed = true;
 			}
 		}
@@ -323,23 +379,47 @@ void VID_CheckExtensions(void)
 	gl_supportslockarrays = false;
 	gl_textureunits = 1;
 
-	if (!gl_checkextension("OpenGL 1.1.0 or above", opengl110funcs, NULL))
+#if WIN32
+	if (!gl_checkextension("wgl", wglfuncs, NULL, false))
+		Sys_Error("wgl functions not found\n");
+	//gl_checkextension("wglSwapIntervalEXT", wglswapintervalfuncs, NULL, false);
+#endif
+
+	if (!gl_checkextension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
 
-	gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements");
+	if (gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true)
+	 || gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", true))
+	{
+		qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
+		qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
 
-	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex"))
+		if (gl_maxdrawrangeelementsvertices < 1 || gl_maxdrawrangeelementsindices < 1)
+		{
+			Con_Printf("invalid GL_MAX_ELEMENTS_VERTICES (%i) and/or GL_MAX_ELEMENTS_INDICES (%i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
+			qglDrawRangeElements = qglDrawRangeElementsEXT = NULL;
+		}
+	}
+
+	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
 		if (gl_textureunits > 1)
-			gl_combine_extension = gl_checkextension("GL_ARB_texture_env_combine", NULL, "-nocombine") || gl_checkextension("GL_EXT_texture_env_combine", NULL, "-nocombine");
+			gl_combine_extension = gl_checkextension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || gl_checkextension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
 		else
+		{
+			Con_Printf("GL_ARB_multitexture with less than 2 units? - BROKEN DRIVER!\n");
 			gl_textureunits = 1; // for sanity sake, make sure it's not 0
+		}
 	}
 
-	gl_supportslockarrays = gl_checkextension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva");
+	gl_supportslockarrays = gl_checkextension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 
 	gl_getfuncs_end();
+
+	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
+	if (qglDrawRangeElements == NULL)
+		qglDrawRangeElements = qglDrawRangeElementsEXT;
 }
 
 void Force_CenterView_f (void)
