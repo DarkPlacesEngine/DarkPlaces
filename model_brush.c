@@ -2922,8 +2922,12 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 // swap all the lumps
 	mod_base = (qbyte *)header;
 
-	for (i = 0;i < (int) sizeof(dheader_t) / 4;i++)
-		((int *)header)[i] = LittleLong(((int *)header)[i]);
+	header->version = LittleLong(header->version);
+	for (i = 0;i < HEADER_LUMPS;i++)
+	{
+		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
+		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+	}
 
 // load into heap
 
@@ -5580,8 +5584,13 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod_base = (qbyte *)header;
 
 	// swap all the lumps
-	for (i = 0;i < (int) sizeof(*header) / 4;i++)
-		((int *)header)[i] = LittleLong(((int *)header)[i]);
+	header->ident = LittleLong(header->ident);
+	header->version = LittleLong(header->version);
+	for (i = 0;i < Q3HEADER_LUMPS;i++)
+	{
+		header->lumps[i].fileofs = LittleLong(header->lumps[i].fileofs);
+		header->lumps[i].filelen = LittleLong(header->lumps[i].filelen);
+	}
 
 	Mod_Q3BSP_LoadEntities(&header->lumps[Q3LUMP_ENTITIES]);
 	Mod_Q3BSP_LoadTextures(&header->lumps[Q3LUMP_TEXTURES]);
