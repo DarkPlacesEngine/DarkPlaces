@@ -818,6 +818,7 @@ void PF_checkpos (void)
 
 //============================================================================
 
+int checkpvsbytes;
 qbyte checkpvs[MAX_MAP_LEAFS/8];
 
 int PF_newcheckclient (int check)
@@ -851,8 +852,10 @@ int PF_newcheckclient (int check)
 	}
 
 // get the PVS for the entity
-	VectorAdd (ent->v->origin, ent->v->view_ofs, org);
-	memcpy (checkpvs, sv.worldmodel->brushq1.LeafPVS(sv.worldmodel, sv.worldmodel->brushq1.PointInLeaf(sv.worldmodel, org)), (sv.worldmodel->brushq1.numleafs+7)>>3 );
+	VectorAdd(ent->v->origin, ent->v->view_ofs, org);
+	checkpvsbytes = 0;
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		checkpvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, org, 0, checkpvs, sizeof(checkpvs));
 
 	return i;
 }
@@ -876,8 +879,6 @@ int c_invis, c_notvis;
 void PF_checkclient (void)
 {
 	edict_t	*ent, *self;
-	mleaf_t	*leaf;
-	int		l;
 	vec3_t	view;
 
 	// find a new check if on a new frame
@@ -897,17 +898,12 @@ void PF_checkclient (void)
 
 	// if current entity can't possibly see the check entity, return 0
 	self = PROG_TO_EDICT(pr_global_struct->self);
-	VectorAdd (self->v->origin, self->v->view_ofs, view);
-	leaf = sv.worldmodel->brushq1.PointInLeaf(sv.worldmodel, view);
-	if (leaf)
+	VectorAdd(self->v->origin, self->v->view_ofs, view);
+	if (sv.worldmodel && checkpvsbytes && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, checkpvs, view, view))
 	{
-		l = (leaf - sv.worldmodel->brushq1.leafs) - 1;
-		if ( (l<0) || !(checkpvs[l>>3] & (1<<(l&7)) ) )
-		{
-			c_notvis++;
-			RETURN_EDICT(sv.edicts);
-			return;
-		}
+		c_notvis++;
+		RETURN_EDICT(sv.edicts);
+		return;
 	}
 
 	// might be able to see it

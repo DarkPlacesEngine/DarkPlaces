@@ -1713,9 +1713,9 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 
 void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 {
-	int i, j, l, c, bits, *surfacepvsframes, *mark;
+	int j, c, *surfacepvsframes, *mark;
 	mleaf_t *leaf;
-	qbyte *vis;
+	qbyte *pvs;
 	model_t *model;
 
 	model = ent->model;
@@ -1728,29 +1728,19 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 		model->brushq1.pvssurflistlength = 0;
 		if (viewleaf)
 		{
+			pvs = viewleaf->pvsdata;
 			surfacepvsframes = model->brushq1.surfacepvsframes;
-			vis = model->brushq1.LeafPVS(model, viewleaf);
-			for (j = 0;j < model->brushq1.numleafs;j += 8)
+			for (j = 0;j < model->brushq1.numleafs-1;j++)
 			{
-				bits = *vis++;
-				if (bits)
+				if (pvs[j >> 3] & (1 << (j & 7)))
 				{
-					l = model->brushq1.numleafs - j;
-					if (l > 8)
-						l = 8;
-					for (i = 0;i < l;i++)
-					{
-						if (bits & (1 << i))
-						{
-							leaf = &model->brushq1.leafs[j + i + 1];
-							leaf->pvschain = model->brushq1.pvsleafchain;
-							model->brushq1.pvsleafchain = leaf;
-							leaf->pvsframe = model->brushq1.pvsframecount;
-							// mark surfaces bounding this leaf as visible
-							for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--, mark++)
-								surfacepvsframes[*mark] = model->brushq1.pvsframecount;
-						}
-					}
+					leaf = model->brushq1.leafs + j + 1;
+					leaf->pvsframe = model->brushq1.pvsframecount;
+					leaf->pvschain = model->brushq1.pvsleafchain;
+					model->brushq1.pvsleafchain = leaf;
+					// mark surfaces bounding this leaf as visible
+					for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--, mark++)
+						surfacepvsframes[*mark] = model->brushq1.pvsframecount;
 				}
 			}
 			model->brushq1.BuildPVSTextureChains(model);

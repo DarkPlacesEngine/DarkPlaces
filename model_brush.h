@@ -276,7 +276,9 @@ typedef struct mleaf_s
 	// used by polygon-through-portals visibility checker
 	int portalmarkid;
 
-	qbyte *compressed_vis;
+	// decompressed pvs bits (potentially visible set)
+	// note: never NULL, always present, may be full of 0xFF though
+	qbyte *pvsdata;
 
 	int *firstmarksurface;
 	int nummarksurfaces;

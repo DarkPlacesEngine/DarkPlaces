@@ -173,255 +173,111 @@ DYNAMIC LIGHTS
 =============================================================================
 */
 
+static int lightpvsbytes;
+static qbyte lightpvs[(MAX_MAP_LEAFS+7)>>3];
+
 /*
 =============
 R_MarkLights
 =============
 */
-static void R_OldMarkLights (entity_render_t *ent, vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node)
+static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdlight_t *rd, int bit, int bitindex, mnode_t *node, qbyte *pvs, int pvsbits)
 {
-	float ndist, maxdist;
-	msurface_t *surf;
-	int i, *surfacepvsframes;
-	int d, impacts, impactt;
-	float dist, dist2, impact[3];
-
-	if (!r_dynamic.integer)
-		return;
-
-	// for comparisons to minimum acceptable light
-	maxdist = rd->cullradius2;
-
-	surfacepvsframes = ent->model->brushq1.surfacepvsframes;
-loc0:
-	if (node->contents < 0)
-		return;
-
-	ndist = PlaneDiff(lightorigin, node->plane);
-
-	if (ndist > rd->cullradius)
-	{
-		node = node->children[0];
-		goto loc0;
-	}
-	if (ndist < -rd->cullradius)
-	{
-		node = node->children[1];
-		goto loc0;
-	}
-
-// mark the polygons
-	surf = ent->model->brushq1.surfaces + node->firstsurface;
-	for (i = 0;i < node->numsurfaces;i++, surf++)
-	{
-		if (surfacepvsframes[surf->number] != ent->model->brushq1.pvsframecount)
-			continue;
-		dist = ndist;
-		if (surf->flags & SURF_PLANEBACK)
-			dist = -dist;
-
-		if (dist < -0.25f && !(surf->flags & SURF_LIGHTBOTHSIDES))
-			continue;
-
-		dist2 = dist * dist;
-		if (dist2 >= maxdist)
-			continue;
-
-		if (node->plane->type < 3)
-		{
-			VectorCopy(lightorigin, impact);
-			impact[node->plane->type] -= dist;
-		}
-		else
-		{
-			impact[0] = lightorigin[0] - surf->plane->normal[0] * dist;
-			impact[1] = lightorigin[1] - surf->plane->normal[1] * dist;
-			impact[2] = lightorigin[2] - surf->plane->normal[2] * dist;
-		}
-
-		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-
-		d = bound(0, impacts, surf->extents[0] + 16) - impacts;
-		dist2 += d * d;
-		if (dist2 > maxdist)
-			continue;
-
-		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-
-		d = bound(0, impactt, surf->extents[1] + 16) - impactt;
-		dist2 += d * d;
-		if (dist2 > maxdist)
-			continue;
-
-		if (surf->dlightframe != r_framecount) // not dynamic until now
-		{
-			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-			surf->dlightframe = r_framecount;
-			if (r_dlightmap.integer)
-				surf->cached_dlight = true;
-		}
-		surf->dlightbits[bitindex] |= bit;
-	}
-
-	if (node->children[0]->contents >= 0)
-	{
-		if (node->children[1]->contents >= 0)
-		{
-			R_OldMarkLights (ent, lightorigin, rd, bit, bitindex, node->children[0]);
-			node = node->children[1];
-			goto loc0;
-		}
-		else
-		{
-			node = node->children[0];
-			goto loc0;
-		}
-	}
-	else if (node->children[1]->contents >= 0)
-	{
-		node = node->children[1];
-		goto loc0;
-	}
-}
-
-
-static void R_VisMarkLights (entity_render_t *ent, rdlight_t *rd, int bit, int bitindex)
-{
-	static int lightframe = 0;
-	mleaf_t *pvsleaf;
-	vec3_t lightorigin;
-	model_t *model;
-	int i, k, m, c, leafnum, *surfacepvsframes, *mark;
-	msurface_t *surf;
+	int i;
 	mleaf_t *leaf;
-	qbyte *in;
-	int row;
-	float low[3], high[3], dist, maxdist;
-
-	if (!r_dynamic.integer || !ent->model)
-		return;
-
-	Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
-
-	model = ent->model;
-	pvsleaf = model->brushq1.PointInLeaf(model, lightorigin);
-	if (pvsleaf == NULL)
-		return;
-
-	in = pvsleaf->compressed_vis;
-	if (!r_vismarklights.integer || !in)
-	{
-		// told not to use pvs, or there's no pvs to use
-		R_OldMarkLights(ent, lightorigin, rd, bit, bitindex, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode);
-		return;
-	}
-
-	lightframe++;
-
-	low[0] = lightorigin[0] - rd->cullradius;low[1] = lightorigin[1] - rd->cullradius;low[2] = lightorigin[2] - rd->cullradius;
-	high[0] = lightorigin[0] + rd->cullradius;high[1] = lightorigin[1] + rd->cullradius;high[2] = lightorigin[2] + rd->cullradius;
+	float dist;
 
 	// for comparisons to minimum acceptable light
-	maxdist = rd->cullradius2;
-
-	row = (model->brushq1.numleafs+7)>>3;
-	surfacepvsframes = model->brushq1.surfacepvsframes;
-
-	k = 0;
-	while (k < row)
+	while(node->contents >= 0)
 	{
-		c = *in++;
-		if (c)
+		dist = PlaneDiff(lightorigin, node->plane);
+		if (dist > rd->cullradius)
+			node = node->children[0];
+		else
 		{
-			for (i = 0;i < 8;i++)
-			{
-				if (c & (1<<i))
-				{
-					// warning to the clumsy: numleafs is one less than it should be, it only counts leafs with vis bits (skips leaf 0)
-					leafnum = (k << 3)+i+1;
-					if (leafnum > model->brushq1.numleafs)
-						return;
-					leaf = &model->brushq1.leafs[leafnum];
-					if (leaf->mins[0] > high[0] || leaf->maxs[0] < low[0]
-					 || leaf->mins[1] > high[1] || leaf->maxs[1] < low[1]
-					 || leaf->mins[2] > high[2] || leaf->maxs[2] < low[2])
-						continue;
-					if ((m = leaf->nummarksurfaces))
-					{
-						mark = leaf->firstmarksurface;
-						do
-						{
-							surf = model->brushq1.surfaces + *mark++;
-							// if not visible in current frame, or already marked because it was in another leaf we passed, skip
-							if (surf->lightframe == lightframe)
-								continue;
-							surf->lightframe = lightframe;
-							if (surfacepvsframes[surf->number] != model->brushq1.pvsframecount)
-								continue;
-							dist = PlaneDiff(lightorigin, surf->plane);
-							if (surf->flags & SURF_PLANEBACK)
-								dist = -dist;
-							// LordHavoc: make sure it is infront of the surface and not too far away
-							if (dist < rd->cullradius && (dist > -0.25f || ((surf->flags & SURF_LIGHTBOTHSIDES) && dist > -rd->cullradius)))
-							{
-								int d;
-								int impacts, impactt;
-								float dist2, impact[3];
-
-								dist2 = dist * dist;
-
-								if (surf->plane->type < 3)
-								{
-									VectorCopy(lightorigin, impact);
-									impact[surf->plane->type] -= dist;
-								}
-								else
-								{
-									impact[0] = lightorigin[0] - surf->plane->normal[0] * dist;
-									impact[1] = lightorigin[1] - surf->plane->normal[1] * dist;
-									impact[2] = lightorigin[2] - surf->plane->normal[2] * dist;
-								}
-
-								impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-								d = bound(0, impacts, surf->extents[0] + 16) - impacts;
-								dist2 += d * d;
-								if (dist2 > maxdist)
-									continue;
-
-								impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-								d = bound(0, impactt, surf->extents[1] + 16) - impactt;
-								dist2 += d * d;
-								if (dist2 > maxdist)
-									continue;
-
-								if (surf->dlightframe != r_framecount) // not dynamic until now
-								{
-									surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-									surf->dlightframe = r_framecount;
-									if (r_dlightmap.integer)
-										surf->cached_dlight = true;
-								}
-								surf->dlightbits[bitindex] |= bit;
-							}
-						}
-						while (--m);
-					}
-				}
-			}
-			k++;
-			continue;
+			if (dist >= -rd->cullradius)
+				R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, node->children[0], pvs, pvsbits);
+			node = node->children[1];
 		}
+	}
 
-		k += *in++;
+	// check if leaf is visible according to pvs
+	leaf = (mleaf_t *)node;
+	i = (leaf - ent->model->brushq1.leafs) - 1;
+	if (leaf->nummarksurfaces && (i >= pvsbits || pvs[i >> 3] & (1 << (i & 7))))
+	{
+		int *surfacepvsframes, d, impacts, impactt;
+		float sdist, maxdist, dist2, impact[3];
+		msurface_t *surf;
+		// mark the polygons
+		maxdist = rd->cullradius2;
+		surfacepvsframes = ent->model->brushq1.surfacepvsframes;
+		for (i = 0;i < leaf->nummarksurfaces;i++)
+		{
+			if (surfacepvsframes[leaf->firstmarksurface[i]] != ent->model->brushq1.pvsframecount)
+				continue;
+			surf = ent->model->brushq1.surfaces + leaf->firstmarksurface[i];
+			dist = sdist = PlaneDiff(lightorigin, surf->plane);
+			if (surf->flags & SURF_PLANEBACK)
+				dist = -dist;
+
+			if (dist < -0.25f && !(surf->flags & SURF_LIGHTBOTHSIDES))
+				continue;
+
+			dist2 = dist * dist;
+			if (dist2 >= maxdist)
+				continue;
+
+			VectorCopy(lightorigin, impact);
+			if (surf->plane->type >= 3)
+				VectorMA(impact, -sdist, surf->plane->normal, impact);
+			else
+				impact[surf->plane->type] -= sdist;
+
+			impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+
+			d = bound(0, impacts, surf->extents[0] + 16) - impacts;
+			dist2 += d * d;
+			if (dist2 > maxdist)
+				continue;
+
+			impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+			d = bound(0, impactt, surf->extents[1] + 16) - impactt;
+			dist2 += d * d;
+			if (dist2 > maxdist)
+				continue;
+
+			if (surf->dlightframe != r_framecount) // not dynamic until now
+			{
+				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
+				surf->dlightframe = r_framecount;
+				if (r_dlightmap.integer)
+					surf->cached_dlight = true;
+			}
+			surf->dlightbits[bitindex] |= bit;
+		}
 	}
 }
 
 void R_MarkLights(entity_render_t *ent)
 {
-	int i;
-	if (!gl_flashblend.integer)
-		for (i = 0;i < r_numdlights;i++)
-			R_VisMarkLights (ent, r_dlight + i, 1 << (i & 31), i >> 5);
+	int i, bit, bitindex;
+	rdlight_t *rd;
+	vec3_t lightorigin;
+	if (!gl_flashblend.integer && r_dynamic.integer && ent->model)
+	{
+		for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
+		{
+			bit = 1 << (i & 31);
+			bitindex = i >> 5;
+			Matrix4x4_Transform(&ent->inversematrix, rd->origin, lightorigin);
+			lightpvsbytes = 0;
+			if (r_vismarklights.integer && ent->model->brush.FatPVS)
+				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
+			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brushq1.num_leafs - 1));
+		}
+	}
 }
 
 /*

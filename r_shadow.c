@@ -1841,6 +1841,9 @@ worldlight_t *r_shadow_worldlightchain;
 worldlight_t *r_shadow_selectedlight;
 vec3_t r_editlights_cursorlocation;
 
+static int lightpvsbytes;
+static qbyte lightpvs[(MAX_MAP_LEAFS + 7)/ 8];
+
 static int castshadowcount = 1;
 void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style, const char *cubemapname, int castshadow)
 {
@@ -1850,7 +1853,6 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 	shadowmesh_t *mesh, *castmesh;
 	mleaf_t *leaf;
 	msurface_t *surf;
-	qbyte *pvs;
 	surfmesh_t *surfmesh;
 
 	if (radius < 15 || DotProduct(color, color) < 0.03)
@@ -1895,13 +1897,13 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			qbyte *byteleafpvs;
 			qbyte *bytesurfacepvs;
 
-			byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs + 1);
+			byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs);
 			bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
 
 			Portal_Visibility(cl.worldmodel, e->origin, byteleafpvs, bytesurfacepvs, NULL, 0, true, RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin));
 
-			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
-				if (byteleafpvs[i+1] && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
+			for (i = 0, leaf = cl.worldmodel->brushq1.leafs;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
+				if (byteleafpvs[i] && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
 					leaf->worldnodeframe = castshadowcount;
 
 			for (i = 0, surf = cl.worldmodel->brushq1.surfaces;i < cl.worldmodel->brushq1.numsurfaces;i++, surf++)
@@ -1913,11 +1915,10 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		}
 		else
 		{
-			leaf = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, origin);
-			pvs = cl.worldmodel->brushq1.LeafPVS(cl.worldmodel, leaf);
-			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
+			lightpvsbytes = cl.worldmodel->brush.FatPVS(cl.worldmodel, origin, 0, lightpvs, sizeof(lightpvs));
+			for (i = 0, leaf = cl.worldmodel->brushq1.leafs + 1;i < cl.worldmodel->brushq1.numleafs - 1;i++, leaf++)
 			{
-				if (pvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
+				if (lightpvs[i >> 3] & (1 << (i & 7)) && BoxesOverlap(leaf->mins, leaf->maxs, e->mins, e->maxs))
 				{
 					leaf->worldnodeframe = castshadowcount;
 					for (j = 0, mark = leaf->firstmarksurface;j < leaf->nummarksurfaces;j++, mark++)

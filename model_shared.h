@@ -207,7 +207,11 @@ typedef struct model_brushq1_s
 	int				numtextures;
 	texture_t		*textures;
 
-	qbyte			*visdata;
+	int				num_compressedpvs;
+	qbyte			*data_compressedpvs;
+	qbyte			*data_decompressedpvs;
+
+	int				num_lightdata;
 	qbyte			*lightdata;
 
 	int				numportals;
@@ -242,7 +246,6 @@ typedef struct model_brushq1_s
 	float			light_ambient;
 
 	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
-	qbyte *(*LeafPVS)(struct model_s *model, mleaf_t *leaf);
 	void (*BuildPVSTextureChains)(struct model_s *model);
 }
 model_brushq1_t;
