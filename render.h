@@ -37,6 +37,8 @@ extern float fog_density, fog_red, fog_green, fog_blue;
 
 // sky stuff
 extern cvar_t r_sky;
+extern cvar_t r_skyscroll1;
+extern cvar_t r_skyscroll2;
 extern int skyrendernow, skyrendermasked;
 extern int R_SetSkyBox(const char *sky);
 extern void R_SkyStartFrame(void);

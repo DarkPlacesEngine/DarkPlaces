@@ -4,6 +4,8 @@
 
 // FIXME: fix skybox after vid_restart
 cvar_t r_sky = {CVAR_SAVE, "r_sky", "1"};
+cvar_t r_skyscroll1 = {CVAR_SAVE, "r_skyscroll1", "1"};
+cvar_t r_skyscroll2 = {CVAR_SAVE, "r_skyscroll2", "2"};
 qboolean skyavailable_quake;
 qboolean skyavailable_box;
 int skyrendernow;
@@ -378,8 +380,8 @@ static void R_SkySphere(void)
 	speedscale -= (int)speedscale;
 
 	// scroll the lower cloud layer twice as fast (just like quake did)
-	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale, speedscale, 0);
-	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale * 2, speedscale * 2, 0);
+	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale * r_skyscroll1.value, speedscale * r_skyscroll1.value, 0);
+	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale * r_skyscroll2.value, speedscale * r_skyscroll2.value, 0);
 
 	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -558,6 +560,8 @@ void R_Sky_Init(void)
 {
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
 	Cvar_RegisterVariable (&r_sky);
+	Cvar_RegisterVariable (&r_skyscroll1);
+	Cvar_RegisterVariable (&r_skyscroll2);
 	R_ResetSkyBox();
 	R_ResetQuakeSky();
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
