@@ -89,7 +89,7 @@ Atom wm_delete_window_atom;
 
 
 static qboolean		mouse_avail = true;
-static qboolean		mouse_active = false, usingmouse = false;
+static qboolean		mouse_active = false, usingmouse = false, ignoremousemove = false;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
@@ -285,6 +285,7 @@ static void install_grabs(void)
 
 	mouse_active = true;
 	mouse_x = mouse_y = 0;
+	ignoremousemove = true;
 }
 
 static void uninstall_grabs(void)
@@ -304,6 +305,7 @@ static void uninstall_grabs(void)
 	XUndefineCursor(vidx11_display, win);
 
 	mouse_active = false;
+	ignoremousemove = true;
 }
 
 static void HandleEvents(void)
@@ -513,6 +515,13 @@ static void HandleEvents(void)
 		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
 	}
 
+	// if told to ignore one mouse move, do so
+	if (ignoremousemove)
+	{
+		ignoremousemove = false;
+		mouse_x = 0;
+		mouse_y = 0;
+	}
 }
 
 static void IN_DeactivateMouse( void )
@@ -534,7 +543,6 @@ static void IN_ActivateMouse( void )
 
 	if (!mouse_active)
 	{
-		mouse_x = mouse_y = 0; // don't spazz
 		install_grabs();
 		mouse_active = true;
 	}
@@ -860,6 +868,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 
 	usingmouse = false;
+	ignoremousemove = true;
 	vid_hidden = false;
 	vid_activewindow = true;
 	GL_Init();
