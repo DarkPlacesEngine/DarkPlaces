@@ -1131,21 +1131,17 @@ void SV_CheckWaterTransition (edict_t *ent)
 		return;
 	}
 
+	// check if the entity crossed into or out of water
+	if ((ent->v->watertype == CONTENTS_WATER || ent->v->watertype == CONTENTS_SLIME) != (cont == CONTENTS_WATER || cont == CONTENTS_SLIME))
+		SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
+
 	if (cont <= CONTENTS_WATER)
 	{
-		if (ent->v->watertype == CONTENTS_EMPTY && cont != CONTENTS_LAVA)
-			// just crossed into water
-			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
-
 		ent->v->watertype = cont;
 		ent->v->waterlevel = 1;
 	}
 	else
 	{
-		if (ent->v->watertype != CONTENTS_EMPTY && ent->v->watertype != CONTENTS_LAVA)
-			// just crossed into water
-			SV_StartSound (ent, 0, "misc/h2ohit1.wav", 255, 1);
-
 		ent->v->watertype = CONTENTS_EMPTY;
 		ent->v->waterlevel = 0;
 	}
