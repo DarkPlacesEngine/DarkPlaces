@@ -1,6 +1,6 @@
 
 // drawqueue stuff for use by client to feed 2D art to renderer
-#define MAX_DRAWQUEUE 1048576
+#define MAX_DRAWQUEUE 262144
 
 #define DRAWQUEUE_PIC 0
 #define DRAWQUEUE_STRING 1
