@@ -21,8 +21,8 @@
 
 */
 
-#ifndef OGG_H
-#define OGG_H
+#ifndef SND_OGG_H
+#define SND_OGG_H
 
 
 qboolean OGG_OpenLibrary (void);

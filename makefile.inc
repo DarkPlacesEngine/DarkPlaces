@@ -18,7 +18,7 @@ CPUOPTIMIZATIONS=
 ##### Variables that you shouldn't care about #####
 
 # Sound objects
-OBJ_COMMONSOUND=ogg.o snd_dma.o snd_mem.o snd_mix.o
+OBJ_COMMONSOUND=snd_dma.o snd_mem.o snd_mix.o snd_ogg.o
 OBJ_NOSOUND=snd_null.o
 
 # CD objects

@@ -29,7 +29,7 @@ extern LPDIRECTSOUND pDS;
 extern LPDIRECTSOUNDBUFFER pDSBuf;
 #endif
 
-#include "ogg.h"
+#include "snd_ogg.h"
 
 
 void S_Play(void);
