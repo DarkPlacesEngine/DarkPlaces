@@ -95,8 +95,8 @@ void R_BuildLightList(void)
 			continue;
 		rd = &r_dlight[r_numdlights++];
 		VectorCopy(cd->origin, rd->origin);
-		VectorScale(cd->color, cd->radius * 256.0f, rd->light);
-		rd->cullradius = (1.0f / 256.0f) * sqrt(DotProduct(rd->light, rd->light));
+		VectorScale(cd->color, cd->radius * 128.0f, rd->light);
+		rd->cullradius = (1.0f / 128.0f) * sqrt(DotProduct(rd->light, rd->light));
 		// clamp radius to avoid overflowing division table in lightmap code
 		if (rd->cullradius > 2048.0f)
 			rd->cullradius = 2048.0f;
