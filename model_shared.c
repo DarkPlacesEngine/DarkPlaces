@@ -384,19 +384,30 @@ static void Mod_Print (void)
 			Con_Printf ("%4iK %s\n", mod->mempool ? (mod->mempool->totalsize + 1023) / 1024 : 0, mod->name);
 }
 
-int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end)
+int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end, int ignore)
 {
-	int i;
+	int i, match, count;
+	count = 0;
+	match = -1;
 	for (i = 0;i < numtriangles;i++, elements += 3)
 	{
-		if (elements[0] == start && elements[1] == end)
-			return i;
-		if (elements[1] == start && elements[2] == end)
-			return i;
-		if (elements[2] == start && elements[0] == end)
-			return i;
+		     if ((elements[0] == start && elements[1] == end)
+		      || (elements[1] == start && elements[2] == end)
+		      || (elements[2] == start && elements[0] == end))
+		{
+			if (i != ignore)
+				match = i;
+			count++;
+		}
+		else if ((elements[1] == start && elements[0] == end)
+		      || (elements[2] == start && elements[1] == end)
+		      || (elements[0] == start && elements[2] == end))
+			count++;
 	}
-	return -1;
+	// detect edges shared by three triangles and make them seams
+	if (count > 2)
+		match = -1;
+	return match;
 }
 
 void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles)
@@ -405,9 +416,9 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 	const int *e;
 	for (i = 0, e = elements, n = neighbors;i < numtriangles;i++, e += 3, n += 3)
 	{
-		n[0] = Mod_FindTriangleWithEdge(elements, numtriangles, e[1], e[0]);
-		n[1] = Mod_FindTriangleWithEdge(elements, numtriangles, e[2], e[1]);
-		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2]);
+		n[0] = Mod_FindTriangleWithEdge(elements, numtriangles, e[1], e[0], i);
+		n[1] = Mod_FindTriangleWithEdge(elements, numtriangles, e[2], e[1], i);
+		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2], i);
 	}
 }
 
