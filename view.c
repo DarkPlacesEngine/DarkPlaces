@@ -334,10 +334,16 @@ void V_CalcRefdef (void)
 			VectorCopy(cl.viewangles, viewangles);
 
 			// stair smoothing
+			//Con_Printf("cl.onground %i oldz %f newz %f\n", cl.onground, oldz, vieworg[2]);
 			if (cl.onground && oldz < vieworg[2])
 			{
 				oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
 				oldz = vieworg[2] = bound(vieworg[2] - 16, oldz, vieworg[2]);
+			}
+			else if (cl.onground && oldz > vieworg[2])
+			{
+				oldz -= (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+				oldz = vieworg[2] = bound(vieworg[2], oldz, vieworg[2] + 16);
 			}
 			else
 				oldz = vieworg[2];

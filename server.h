@@ -259,6 +259,7 @@ extern cvar_t sv_jumpstep;
 
 extern cvar_t sv_gameplayfix_grenadebouncedownslopes;
 extern cvar_t sv_gameplayfix_noairborncorpse;
+extern cvar_t sv_gameplayfix_stepdown;
 extern cvar_t sv_gameplayfix_stepwhilejumping;
 extern cvar_t sv_gameplayfix_swiminbmodels;
 
@@ -306,6 +307,7 @@ void SV_BroadcastPrintf(const char *fmt, ...);
 
 void SV_Physics (void);
 
+qboolean SV_PlayerCheckGround (edict_t *ent);
 qboolean SV_CheckBottom (edict_t *ent);
 qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink);
 

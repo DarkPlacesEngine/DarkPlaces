@@ -28,6 +28,7 @@ static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
 
 cvar_t sv_gameplayfix_grenadebouncedownslopes = {0, "sv_gameplayfix_grenadebouncedownslopes", "1"};
 cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1"};
+cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "1"};
 cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1"};
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1"};
 
@@ -71,6 +72,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_entpatch);
 	Cvar_RegisterVariable (&sv_gameplayfix_grenadebouncedownslopes);
 	Cvar_RegisterVariable (&sv_gameplayfix_noairborncorpse);
+	Cvar_RegisterVariable (&sv_gameplayfix_stepdown);
 	Cvar_RegisterVariable (&sv_gameplayfix_stepwhilejumping);
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
 
