@@ -43,6 +43,7 @@ typedef struct
 #define SFXFLAG_FILEMISSING		(1 << 0) // wasn't able to load the associated sound file
 #define SFXFLAG_SERVERSOUND		(1 << 1) // the sfx is part of the server precache list
 #define SFXFLAG_STREAMED		(1 << 2) // informative only. You shouldn't need to know that
+#define SFXFLAG_PERMANENT		(1 << 3) // the sfx is used by the client code and should not be purged (even if it is also in the server precache list)
 
 typedef struct snd_fetcher_s snd_fetcher_t;
 struct sfx_s

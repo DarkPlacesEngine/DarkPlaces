@@ -320,7 +320,7 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 	for (i = 1; i < numsounds; i++)
 	{
 		sfx = S_FindName (serversound[i]);
-		if (sfx != NULL)
+		if (sfx != NULL && !(sfx->flags & SFXFLAG_SERVERSOUND))
 		{
 			sfx->locks++;
 			sfx->flags |= SFXFLAG_SERVERSOUND;
@@ -359,8 +359,11 @@ sfx_t *S_PrecacheSound (const char *name, qboolean complain, qboolean lock)
 	if (sfx == NULL)
 		return NULL;
 
-	if (lock)
+	if (lock && !(sfx->flags & SFXFLAG_PERMANENT))
+	{
+		sfx->flags |= SFXFLAG_PERMANENT;
 		sfx->locks++;
+	}
 
 	if (!nosound.integer && snd_precache.integer)
 		S_LoadSound(sfx, complain);
@@ -934,20 +937,26 @@ static void S_Play_Common(float fvol, float attenuation)
 	i = 1;
 	while (i<Cmd_Argc())
 	{
-		if (!strrchr(Cmd_Argv(i), '.'))
-			snprintf(name, sizeof(name), "%s.wav", Cmd_Argv(i));
-		else
-			strlcpy(name, Cmd_Argv(i), sizeof(name));
+		strlcpy(name, Cmd_Argv(i), sizeof(name));
+		if (!strrchr(name, '.'))
+			strlcat(name, ".wav", sizeof(name));
+		i++;
 		sfx = S_PrecacheSound (name, true, false);
+		// add a lock and the serversound flag to the sfx so it will be kept
+		// until level change
+		if (sfx && !(sfx->flags & SFXFLAG_SERVERSOUND))
+		{
+			sfx->flags |= SFXFLAG_SERVERSOUND;
+			sfx->locks++;
+		}
+
 
 		// If we need to get the volume from the command line
 		if (fvol == -1.0f)
 		{
-			fvol = atof(Cmd_Argv(i+1));
-			i += 2;
-		}
-		else
+			fvol = atof(Cmd_Argv(i));
 			i++;
+		}
 
 		ch_ind = S_StartSound(-1, 0, sfx, listener_origin, fvol, attenuation);
 
@@ -1008,7 +1017,7 @@ qboolean S_LocalSound (const char *sound)
 	if (!snd_initialized.integer || nosound.integer)
 		return true;
 
-	sfx = S_PrecacheSound (sound, true, false);
+	sfx = S_PrecacheSound (sound, true, true);
 	if (!sfx)
 	{
 		Con_Printf("S_LocalSound: can't precache %s\n", sound);
