@@ -45,14 +45,47 @@ d darkplaces: typing ip in join game menu should show 'trying' and 'no response'
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
+f hqbsp: CreateBrushFaces should use RadiusFromBounds for its rotation box code, but hmap is obsolete (Vic)
+d darkplaces: fix up comments on USETEXMATRIX stuff a little in r_shadow.c (Vic)
+d hmap2: update .bat files to use hmap2 name and remove -noreuse from revis.bat (Vic)
+3 darkplaces: fix skybox orientation to match glquake/quake2/quake3, it needs to be rotated 90 degrees; +X should be rt (metlslime)
+0 darkplaces: fix signon error when starting prydon without +map curig2 (FrikaC)
+2 darkplaces: modify Collision_ClipTrace_Line_Sphere to have a slight backoff on impact, like all other collision functions (tell TheBurningRed)
+0 darkplaces: fix vis problems when outside the level in q1bsp
+2 hmap2: add "_minlight" "red green blue" and "_ambientlight" "red green blue" fields to worldspawn parsing (Harb)
+d zmodel: fix scale and origin commands (Vermeulen)
+d darkplaces: change R_Shadow_VertexShading functions to use sqrt and VectorLength2 instead of two VectorLength calls (Vic)
+2 hmap2: make all polygons have lightmaps (unless -onlylightwalls is specified)
+3 darkplaces: support water lightmaps for use with hmap2 water lighting
+5 darkplaces: add some kind of sun flare support, possibly stored in a file alongside each skybox (CheapAlert)
+0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
+0 darkplaces: add an extension for EF_RED and EF_BLUE (FrikaC)
+d darkplaces: fix logging, setting log_file during the game doesn't open a log apparently (FrikaC)
+0 darkplaces: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
+0 darkplaces: don't draw entities which are tagged to the camera entity; exterior view models and such
+0 hmap2: report locations of lights which can not be vis optimized (Urre)
+1 darkplaces: add cl_particles_blood_color_r and g and b cvars to control blood color (Asaki)
+3 darkplaces: add DP_REMOTECAMERA extension which adds a .cameraentity field on clients, this causes svc_setview to be sent by the server, and makes it use the specified entity for pvs culling as well (taco)
+0 darkplaces: add DP_WEAPONSKIN extension which would add a .float weaponskin field (Transfusion) 
+2 hmap2: tweak the light point generation a bit more to try to solve the 'corner light' glitch (Urre)
+d hmap2: add -ambientlight option, with warning that it does not produce a .light file (Harb)
+d hmap2: add tyrlite compatible "delay" settings, with the interpretation of no specified delay being dependent on a -tyrlite option, and add a new type which is a sun light; light cast in a direction, from sky polygons or the void, these light types would warn that they disable .lights files
+d hmap2: add -minlight option, with warning that it does not produce a .lights file (Harb)
+0 hmap2: add CAULK texture support - delete surfaces using this texture, or at least don't link them (Tomaz)
+3 hmap2: add support for shadow casting bmodels (Urre)
+5 darkplaces: add GAME_PRYDON mode which would have clientside mouse highlighting of objects for objects with the EF_SELECTABLE flag, and qc fields on the client entity on the server would indicate which entity the cursor is highlighting as well as where it is, and also make vore spike trails blue as they're used for ice (Urre, Harb, FrikaC) 
+3 darkplaces: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
+0 darkplaces: figure out what is breaking with rate limited (partial) entity updates that is losing entities (Urre, FrikaC, Harb)
+0 darkplaces: fix sound resampling to not assume sound ends with value 0, and add support for passing in start and end times, as doubles, so that it can handle arbitrary mixing alignments
+0 darkplaces: add sv_maxrate cvar to server setup menu
 d darkplaces: make LHNET_OpenSocket_Connectionless call getsockname to find out the address/port of the socket
 d darkplaces: add a newline to map name printing
 d darkplaces: tenebrae dlights have reversed pitch (like v_angle, not model angles), make DP match this
 1 darkplaces: change host_minfps to not lie about the time but instead control how many times SV_Physics runs per network frame, so if rendering goes slow the game doesn't slow down
--n darkplaces: make 22khz ogg files not crash (CheapAlert)
--n darkplaces: make 48khz ogg files load (CheapAlert)
+d darkplaces: make 22khz ogg files not crash (CheapAlert)
+d darkplaces: make 48khz ogg files load (CheapAlert)
 2 darkplaces: implement r_shadow_bumpscale_basetexture support in hl maps (CheapAlert)
-4 darkplaces: add DP_QC_MODELINFO extension to allow QC to ask about the range of frames owned by an animation base name, and other things like how many skins it has (Vermeulen)
+4 darkplaces: add DP_QC_MODELINFO extension to allow QC to ask about the range of frames owned by an animation base name, and other things like how many skins it has (Vermeulen, Supajoe)
 0 darkplaces: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
 0 darkplaces: fix black models bug with unlit maps (CheapAlert)
 2 darkplaces: protocol upgrade: rename PreciseAngle stuff to Angle16, add Angle8 functions (for EF_LOWPRECISION code), upgrade Angle functions to use Angle16 or Angle8 depending on protocol version, upgrade ammo/armor stats to 16bit (Urre, FrikaC, Sajt, mashakos, RenegadeC) 
@@ -121,7 +154,7 @@ d darkplaces: shadow volume rendering should not unlock the arrays between rende
 0 darkplaces: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
 0 darkplaces: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
 0 darkplaces: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
-0 darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
+-n darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
 0 darkplaces: add scaling capabilities to Image_CopyMux
 0 darkplaces: add some cl_explosions_ cvars to control settings - start alpha, end alpha, start size, end size, life time (Supajoe, Mercury)
 0 darkplaces: add support for .float corona and corona_radius to control corona intensity and radius on dlights (Electro) 
@@ -255,7 +288,7 @@ f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 0 dpzoo: snow
 0 dpzoo: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
 0 dpzoo: transparent glass bmodels (DP_ENT_ALPHA)
-0 hmap2: release hmap2 (Vic, Supajoe)
+0 hmap2: release hmap2 (Vic, Supajoe, Urre)
 0 hmap: add space to seconds reports in all utilities so it doesn't say secondssss (FrikaC)
 0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
 0 litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
@@ -279,7 +312,6 @@ f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 1 darkplaces: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
 1 darkplaces: add palette conversion capabilities to Image_CopyMux
 1 darkplaces: add r_displayrefresh cvar for windows video refresh settings (Willis)
-1 darkplaces: add r_waterwarp to allow disabling view squishing underwater
 1 darkplaces: add some particles to teleportsplash (Uffe)
 1 darkplaces: check out QMB lightning and lava effects (jeremy janzen)
 1 darkplaces: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex, Electro)
@@ -346,7 +378,7 @@ f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 2 darkplaces: should support corona-model shaders somehow (equation: pow(normalizationcubemap(transform(eye, vertexmatrix)) dot3 '0 0 1', 8)), which are normally used around unusually shaped lights instead of flat coronas (Mitchell)
 2 darkplaces: upgrade protocol to have shorts for stats (scar3crow)
 2 darkplaces: use model box size for SOLID_BSP objects in areagrid linking and such, just for optimal consistency.
-2 darkplaces: zym shadows
+2 darkplaces: zym model rtlight support (Vermeulen)
 2 dpzoo: swinging doors
 2 hmap: add hlwad support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd)
 2 hmap: hlight is not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
