@@ -668,13 +668,7 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 	if ((flags & EF_FULLBRIGHT) || (effects & EF_FULLBRIGHT))
 		color[0] = color[1] = color[2] = 256;
 	else
-	{
-		// HACK HACK HACK -- no fullbright colors, so make torches full light
-		if (!strcmp (clmodel->name, "progs/flame2.mdl") || !strcmp (clmodel->name, "progs/flame.mdl") )
-			color[0] = color[1] = color[2] = 128;
-		else
-			R_LightPoint (color, org);
-	}
+		R_LightPoint (color, org);
 
 	if (r_render.value)
 		glDisable(GL_ALPHA_TEST);
