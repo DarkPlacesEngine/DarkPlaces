@@ -1054,7 +1054,7 @@ void R_Mesh_Finish(void)
 	}
 	for (i = 0;i < backendunits;i++)
 	{
-		GL_ActiveTexture(backendarrayunits - 1 - i);
+		GL_ActiveTexture(backendunits - 1 - i);
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
