@@ -112,7 +112,6 @@ void CL_WriteDemoMessage (void)
 		FS_Write (cls.demofile, &f, 4);
 	}
 	FS_Write (cls.demofile, net_message.data, net_message.cursize);
-	FS_Flush (cls.demofile);
 }
 
 /*

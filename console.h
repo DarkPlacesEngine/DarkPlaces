@@ -58,7 +58,6 @@ void Log_Init (void);
 void Log_Close (void);
 void Log_Start (void);
 
-void Log_Print(const char *logfilename, const char *msg);
 void Log_Printf(const char *logfilename, const char *fmt, ...);
 
 #endif

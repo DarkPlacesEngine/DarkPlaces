@@ -72,7 +72,6 @@ LOGGING
 */
 
 cvar_t log_file = {0, "log_file",""};
-cvar_t log_sync = {0, "log_sync","0"};
 char crt_log_file [MAX_OSPATH] = "";
 qfile_t* logfile = NULL;
 
@@ -121,15 +120,11 @@ void Log_Init (void)
 	logq_ind = 0;
 
 	Cvar_RegisterVariable (&log_file);
-	Cvar_RegisterVariable (&log_sync);
 
 	// support for the classic Quake option
-// COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log with sync on (so it keeps every message up to a crash), see also log_file and log_sync
+// COMMANDLINEOPTION: Console: -condebug logs console messages to qconsole.log, see also log_file
 	if (COM_CheckParm ("-condebug") != 0)
-	{
 		Cvar_SetQuick (&log_file, "qconsole.log");
-		Cvar_SetValueQuick (&log_sync, 1);
-	}
 }
 
 
@@ -143,7 +138,7 @@ void Log_Open (void)
 	if (logfile != NULL || log_file.string[0] == '\0')
 		return;
 
-	logfile = FS_Open (log_file.string, "at", false);
+	logfile = FS_Open (log_file.string, "a", false);
 	if (logfile != NULL)
 	{
 		strlcpy (crt_log_file, log_file.string, sizeof (crt_log_file));
@@ -201,10 +196,12 @@ Log_ConPrint
 void Log_ConPrint (const char *msg)
 {
 	static qboolean inprogress = false;
+
 	// don't allow feedback loops with memory error reports
 	if (inprogress)
 		return;
 	inprogress = true;
+
 	// Until the host is completely initialized, we maintain a log queue
 	// to store the messages, since the log can't be started before
 	if (logqueue != NULL)
@@ -241,30 +238,10 @@ void Log_ConPrint (const char *msg)
 
 	// If a log file is available
 	if (logfile != NULL)
-	{
 		FS_Print (logfile, msg);
-		if (log_sync.integer)
-			FS_Flush (logfile);
-	}
 	inprogress = false;
 }
 
-
-/*
-================
-Log_Print
-================
-*/
-void Log_Print (const char *logfilename, const char *msg)
-{
-	qfile_t *file;
-	file = FS_Open(logfilename, "at", true);
-	if (file)
-	{
-		FS_Print(file, msg);
-		FS_Close(file);
-	}
-}
 
 /*
 ================
@@ -275,7 +252,7 @@ void Log_Printf (const char *logfilename, const char *fmt, ...)
 {
 	qfile_t *file;
 
-	file = FS_Open (logfilename, "at", true);
+	file = FS_Open (logfilename, "a", true);
 	if (file != NULL)
 	{
 		va_list argptr;
