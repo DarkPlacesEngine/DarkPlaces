@@ -43,7 +43,7 @@ void r_light_start(void)
 		for (x = 0;x < 32;x++)
 		{
 			dx = (x - 15.5f) * (1.0f / 16.0f);
-			a = ((1.0f / (dx * dx + dy * dy + 0.2f)) - (1.0f / (1.0f + 0.2))) * 8.0f / (1.0f / (1.0f + 0.2));
+			a = ((1.0f / (dx * dx + dy * dy + 0.2f)) - (1.0f / (1.0f + 0.2))) * 64.0f / (1.0f / (1.0f + 0.2));
 			a = bound(0, a, 255);
 			pixels[y][x][0] = 255;
 			pixels[y][x][1] = 255;
@@ -172,7 +172,8 @@ void R_DrawCoronas(void)
 			VectorSubtract(rd->origin, vpn, diff);
 			if (TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
-				scale = 1.0f / 4096.0f;
+				scale = 1.0f / 262144.0f;
+				//scale = 64.0f / (DotProduct(diff,diff) + 1024.0f);
 				m.cr = rd->light[0] * scale;
 				m.cg = rd->light[1] * scale;
 				m.cb = rd->light[2] * scale;
