@@ -273,8 +273,8 @@ static void gl_backend_bufferchanges(int init)
 	if (gl_mesh_transtriangles.integer > 65536)
 		Cvar_SetValueQuick(&gl_mesh_transtriangles, 65536);
 
-	if (gl_mesh_batchtriangles.integer < 0)
-		Cvar_SetValueQuick(&gl_mesh_batchtriangles, 0);
+	if (gl_mesh_batchtriangles.integer < 1)
+		Cvar_SetValueQuick(&gl_mesh_batchtriangles, 1);
 	if (gl_mesh_batchtriangles.integer > gl_mesh_maxtriangles.integer)
 		Cvar_SetValueQuick(&gl_mesh_batchtriangles, gl_mesh_maxtriangles.integer);
 
@@ -868,7 +868,8 @@ void R_Mesh_Finish(void)
 {
 	int i;
 	// flush any queued meshs
-	R_Mesh_Render();
+	if (currentmesh)
+		R_Mesh_Render();
 
 	if (backendunits > 1)
 	{
