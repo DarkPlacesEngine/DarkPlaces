@@ -427,12 +427,14 @@ void R_DrawQueue(void)
 				if (!batch)
 				{
 					batch = true;
-					qglBegin(GL_QUADS);
+					qglBegin(GL_TRIANGLES);
 					batchcount = 0;
 				}
 				//DrawQuad(dq->x, dq->y, w, h, 0, 0, 1, 1);
 				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
 				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
 				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
 				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
 				batchcount++;
@@ -452,12 +454,14 @@ void R_DrawQueue(void)
 				if (!batch)
 				{
 					batch = true;
-					qglBegin(GL_QUADS);
+					qglBegin(GL_TRIANGLES);
 					batchcount = 0;
 				}
 				//DrawQuad(dq->x, dq->y, dq->scalex, dq->scaley, 0, 0, 1, 1);
 				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
 				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
 				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
 				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
 				batchcount++;
@@ -478,7 +482,7 @@ void R_DrawQueue(void)
 			if (!batch)
 			{
 				batch = true;
-				qglBegin(GL_QUADS);
+				qglBegin(GL_TRIANGLES);
 				batchcount = 0;
 			}
 			while ((num = *str++) && x < vid.conwidth)
@@ -492,6 +496,8 @@ void R_DrawQueue(void)
 					//DrawQuad(x, y, w, h, (num & 15)*0.0625f + (0.5f / 256.0f), (num >> 4)*0.0625f + (0.5f / 256.0f), 0.0625f - (1.0f / 256.0f), 0.0625f - (1.0f / 256.0f));
 					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
 					qglTexCoord2f (s+u, t  );qglVertex2f (x+w, y  );
+					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
+					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
 					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
 					qglTexCoord2f (s  , t+v);qglVertex2f (x  , y+h);
 					batchcount++;
