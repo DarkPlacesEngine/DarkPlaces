@@ -96,7 +96,7 @@ qboolean SNDDMA_Init(void)
 	shm->format.channels = 2; //stereo
 	shm->format.width = 2;
 
-// COMMANDLINEOPTION: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+// COMMANDLINEOPTION: SDL Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
 	i = COM_CheckParm( "-sndspeed" );
 	if( i && i != ( com_argc - 1 ) )
 		shm->format.speed = atoi( com_argv[ i+1 ] );

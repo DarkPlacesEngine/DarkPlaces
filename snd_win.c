@@ -196,7 +196,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	memset((void *)shm, 0, sizeof(*shm));
 	shm->format.channels = 2;
 	shm->format.width = 2;
-// COMMANDLINEOPTION: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+// COMMANDLINEOPTION: Windows Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
 	i = COM_CheckParm ("-sndspeed");
 	if (i && i != (com_argc - 1))
 		shm->format.speed = atoi(com_argv[i+1]);
@@ -283,7 +283,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	dsbcaps.dwSize = sizeof(dsbcaps);
 	primary_format_set = false;
 
-// COMMANDLINEOPTION: -snoforceformat uses the format that DirectSound returns, rather than forcing it (DirectSound sound driver)
+// COMMANDLINEOPTION: Windows DirectSound: -snoforceformat uses the format that DirectSound returns, rather than forcing it
 	if (!COM_CheckParm ("-snoforceformat"))
 	{
 		if (DS_OK == pDS->lpVtbl->CreateSoundBuffer(pDS, &dsbuf, &pDSPBuf, NULL))
@@ -305,7 +305,7 @@ sndinitstat SNDDMA_InitDirect (void)
 		}
 	}
 
-// COMMANDLINEOPTION: -primarysound locks the sound hardware for exclusive use (DirectSound sound driver)
+// COMMANDLINEOPTION: Windows DirectSound: -primarysound locks the sound hardware for exclusive use
 	if (!primary_format_set || !COM_CheckParm ("-primarysound"))
 	{
 	// create the secondary buffer we'll actually work with
@@ -431,7 +431,7 @@ qboolean SNDDMA_InitWav (void)
 	memset((void *)shm, 0, sizeof(*shm));
 	shm->format.channels = 2;
 	shm->format.width = 2;
-// COMMANDLINEOPTION: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+// COMMANDLINEOPTION: Windows Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
 	if (i && i != (com_argc - 1))
 		shm->format.speed = atoi(com_argv[i+1]);
@@ -558,7 +558,7 @@ qboolean SNDDMA_Init(void)
 {
 	sndinitstat	stat;
 
-// COMMANDLINEOPTION: -wavonly uses wave sound instead of DirectSound (wave sound driver)
+// COMMANDLINEOPTION: Windows Sound: -wavonly uses wave sound instead of DirectSound
 	if (COM_CheckParm ("-wavonly"))
 		wavonly = true;
 

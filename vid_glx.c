@@ -653,7 +653,7 @@ void VID_Init(void)
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 #endif
 	InitSig(); // trap evil signals
-// COMMANDLINEOPTION: -nomouse disables mouse support (see also vid_mouse cvar)
+// COMMANDLINEOPTION: Input: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		mouse_avail = false;
 }
@@ -691,7 +691,9 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 #else
 	drivername = "libGL.so.1";
 #endif
-// COMMANDLINEOPTION: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1 (Linux/BSD) or opengl32.dll (windows) or /usr/X11R6/lib/libGL.1.dylib (MacOSX), if you don't know what this is for, you don't need it
+// COMMANDLINEOPTION: Linux GLX: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1, useful only for using fxmesa or similar, if you don't know what this is for, you don't need it
+// COMMANDLINEOPTION: BSD GLX: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1, useful only for using fxmesa or similar, if you don't know what this is for, you don't need it
+// LordHavoc: although this works on MacOSX, it's useless there (as there is only one system libGL)
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
 		drivername = com_argv[i + 1];
@@ -848,9 +850,13 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 
 	gl_videosyncavailable = false;
 
-// COMMANDLINEOPTION: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
+// COMMANDLINEOPTION: Linux GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
+// COMMANDLINEOPTION: BSD GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
+// COMMANDLINEOPTION: MacOSX GLX: -nogetprocaddress disables GLX_ARB_get_proc_address (not required, more formal method of getting extension functions)
 	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
-// COMMANDLINEOPTION: -novideosync disables GLX_SGI_video_sync (required for video sync control on GLX)
+// COMMANDLINEOPTION: Linux GLX: -novideosync disables GLX_SGI_video_sync
+// COMMANDLINEOPTION: BSD GLX: -novideosync disables GLX_SGI_video_sync
+// COMMANDLINEOPTION: MacOSX GLX: -novideosync disables GLX_SGI_video_sync
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 
 	usingmouse = false;

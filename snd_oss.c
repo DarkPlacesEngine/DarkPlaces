@@ -96,7 +96,7 @@ qboolean SNDDMA_Init(void)
 	s = getenv("QUAKE_SOUND_SAMPLEBITS");
 	if (s)
 		shm->format.width = atoi(s) / 8;
-// COMMANDLINEOPTION: -sndbits <bits> chooses 8 bit or 16 bit sound output
+// COMMANDLINEOPTION: Linux OSS Sound: -sndbits <bits> chooses 8 bit or 16 bit sound output
 	else if ((i = COM_CheckParm("-sndbits")) != 0)
 		shm->format.width = atoi(com_argv[i+1]) / 8;
 
@@ -112,7 +112,7 @@ qboolean SNDDMA_Init(void)
 	s = getenv("QUAKE_SOUND_SPEED");
 	if (s)
 		shm->format.speed = atoi(s);
-// COMMANDLINEOPTION: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
+// COMMANDLINEOPTION: Linux OSS Sound: -sndspeed <hz> chooses 44100 hz, 22100 hz, or 11025 hz sound output rate
 	else if ((i = COM_CheckParm("-sndspeed")) != 0)
 		shm->format.speed = atoi(com_argv[i+1]);
 	else
@@ -127,10 +127,10 @@ qboolean SNDDMA_Init(void)
 	s = getenv("QUAKE_SOUND_CHANNELS");
 	if (s)
 		shm->format.channels = atoi(s);
-// COMMANDLINEOPTION: -sndmono sets sound output to mono
+// COMMANDLINEOPTION: Linux OSS Sound: -sndmono sets sound output to mono
 	else if ((i = COM_CheckParm("-sndmono")) != 0)
 		shm->format.channels = 1;
-// COMMANDLINEOPTION: -sndstereo sets sound output to stereo
+// COMMANDLINEOPTION: Linux OSS Sound: -sndstereo sets sound output to stereo
 	else if ((i = COM_CheckParm("-sndstereo")) != 0)
 		shm->format.channels = 2;
 	else
