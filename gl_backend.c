@@ -16,15 +16,11 @@ static int max_batch;
 static int max_verts; // always max_meshs * 3
 #define TRANSDEPTHRES 4096
 
-//#define FLOATCOLORS
-
 //static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
 static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "8192"};
 static cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
 static cvar_t gl_mesh_merge = {0, "gl_mesh_merge", "1"};
-#if FLOATCOLORS
-static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
-#endif
+static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
 static cvar_t gl_mesh_dupetransverts = {0, "gl_mesh_dupetransverts", "0"};
 static cvar_t gl_mesh_sorttransbymesh = {0, "gl_mesh_sorttransbymesh", "1"};
 
@@ -67,13 +63,11 @@ typedef struct
 }
 buf_vertex_t;
 
-#if FLOATCOLORS
 typedef struct
 {
 	float c[4];
 }
 buf_fcolor_t;
-#endif
 
 typedef struct
 {
@@ -89,15 +83,10 @@ buf_texcoord_t;
 
 static float meshfarclip;
 static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive, meshmerge, transranout;
-#if FLOATCOLORS
-static int floatcolors;
-#endif
 static buf_mesh_t *buf_mesh;
 static buf_tri_t *buf_tri;
 static buf_vertex_t *buf_vertex;
-#if FLOATCOLORS
 static buf_fcolor_t *buf_fcolor;
-#endif
 static buf_bcolor_t *buf_bcolor;
 static buf_texcoord_t *buf_texcoord[MAX_TEXTUREUNITS];
 
@@ -106,10 +95,7 @@ static buf_mesh_t *buf_transmesh;
 static buf_transtri_t *buf_transtri;
 static buf_transtri_t **buf_transtri_list;
 static buf_vertex_t *buf_transvertex;
-#if FLOATCOLORS
 static buf_fcolor_t *buf_transfcolor;
-#endif
-static buf_bcolor_t *buf_transbcolor;
 static buf_texcoord_t *buf_transtexcoord[MAX_TEXTUREUNITS];
 
 static mempool_t *gl_backend_mempool;
@@ -135,19 +121,14 @@ static void gl_backend_start(void)
 	BACKENDALLOC(buf_mesh, max_meshs, buf_mesh_t)
 	BACKENDALLOC(buf_tri, max_meshs, buf_tri_t)
 	BACKENDALLOC(buf_vertex, max_verts, buf_vertex_t)
-#if FLOATCOLORS
 	BACKENDALLOC(buf_fcolor, max_verts, buf_fcolor_t)
-#endif
 	BACKENDALLOC(buf_bcolor, max_verts, buf_bcolor_t)
 
 	BACKENDALLOC(buf_transmesh, max_meshs, buf_mesh_t)
 	BACKENDALLOC(buf_transtri, max_meshs, buf_transtri_t)
 	BACKENDALLOC(buf_transtri_list, TRANSDEPTHRES, buf_transtri_t *)
 	BACKENDALLOC(buf_transvertex, max_verts, buf_vertex_t)
-#if FLOATCOLORS
 	BACKENDALLOC(buf_transfcolor, max_verts, buf_fcolor_t)
-#endif
-	BACKENDALLOC(buf_transbcolor, max_verts, buf_bcolor_t)
 
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
@@ -184,19 +165,14 @@ static void gl_backend_shutdown(void)
 	BACKENDFREE(buf_mesh)
 	BACKENDFREE(buf_tri)
 	BACKENDFREE(buf_vertex)
-#if FLOATCOLORS
 	BACKENDFREE(buf_fcolor)
-#endif
 	BACKENDFREE(buf_bcolor)
 
 	BACKENDFREE(buf_transmesh)
 	BACKENDFREE(buf_transtri)
 	BACKENDFREE(buf_transtri_list)
 	BACKENDFREE(buf_transvertex)
-#if FLOATCOLORS
 	BACKENDFREE(buf_transfcolor)
-#endif
-	BACKENDFREE(buf_transbcolor)
 
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
@@ -268,9 +244,7 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
 	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
 	Cvar_RegisterVariable(&gl_mesh_merge);
-#if FLOATCOLORS
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
-#endif
 	Cvar_RegisterVariable(&gl_mesh_dupetransverts);
 	Cvar_RegisterVariable(&gl_mesh_sorttransbymesh);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
@@ -370,9 +344,6 @@ void R_Mesh_Clear(void)
 	currenttransvertex = 0;
 	meshfarclip = 0;
 	meshmerge = gl_mesh_merge.integer;
-#if FLOATCOLORS
-	floatcolors = gl_mesh_floatcolors.integer;
-#endif
 	transranout = false;
 	viewdist = DotProduct(r_origin, vpn);
 
@@ -427,6 +398,10 @@ void R_Mesh_Render(void)
 	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, triangles, firstvert, lastvert, texture[MAX_TEXTUREUNITS];
 	float farclip, texturergbscale[MAX_TEXTUREUNITS];
 	buf_mesh_t *mesh;
+	// float to byte color conversion
+	int *icolor;
+	float *fcolor;
+	byte *bcolor;
 	if (!backendactive)
 		Sys_Error("R_Mesh_Render: called when backend is not active\n");
 	if (!currentmesh)
@@ -473,20 +448,32 @@ CHECKGLERROR
 CHECKGLERROR
 	glEnableClientState(GL_VERTEX_ARRAY);
 CHECKGLERROR
-#if FLOATCOLORS
-	if (floatcolors)
+	if (gl_mesh_floatcolors.integer)
 	{
 		glColorPointer(4, GL_FLOAT, sizeof(buf_fcolor_t), buf_fcolor);
 CHECKGLERROR
 	}
 	else
 	{
-#endif
+		// shift float to have 8bit fraction at base of number
+		for (i = 0, fcolor = &buf_fcolor->c[0];i < currentvertex;i++)
+		{
+			*fcolor++ += 32768.0f;
+			*fcolor++ += 32768.0f;
+			*fcolor++ += 32768.0f;
+			*fcolor++ += 32768.0f;
+		}
+		// then read as integer and kill float bits...
+		for (i = 0, icolor = (int *)&buf_fcolor->c[0], bcolor = &buf_bcolor->c[0];i < currentvertex;i++)
+		{
+			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
+			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
+			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
+			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
+		}
 		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(buf_bcolor_t), buf_bcolor);
 CHECKGLERROR
-#if FLOATCOLORS
 	}
-#endif
 	glEnableClientState(GL_COLOR_ARRAY);
 CHECKGLERROR
 
@@ -878,12 +865,7 @@ void R_Mesh_AddTransparent(void)
 		// note: can't batch these because they can be rendered in any order
 		// there can never be more transparent triangles than fit in main buffers
 		memcpy(&buf_vertex[currentvertex], &buf_transvertex[0], currenttransvertex * sizeof(buf_vertex_t));
-#if FLOATCOLORS
-		if (floatcolors)
-			memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[0], currenttransvertex * sizeof(buf_fcolor_t));
-		else
-#endif
-			memcpy(&buf_bcolor[currentvertex], &buf_transbcolor[0], currenttransvertex * sizeof(buf_bcolor_t));
+		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[0], currenttransvertex * sizeof(buf_fcolor_t));
 		for (i = 0;i < backendunits;i++)
 			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][0], currenttransvertex * sizeof(buf_texcoord_t));
 		#endif
@@ -927,12 +909,7 @@ void R_Mesh_AddTransparent(void)
 				R_Mesh_Render();
 
 			memcpy(&buf_vertex[currentvertex], &buf_transvertex[transmesh->firstvert], numverts * sizeof(buf_vertex_t));
-#if FLOATCOLORS
-			if (floatcolors)
-				memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], numverts * sizeof(buf_fcolor_t));
-			else
-#endif
-				memcpy(&buf_bcolor[currentvertex], &buf_transbcolor[transmesh->firstvert], numverts * sizeof(buf_bcolor_t));
+			memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], numverts * sizeof(buf_fcolor_t));
 			for (i = 0;i < backendunits && transmesh->textures[i];i++)
 				memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][transmesh->firstvert], numverts * sizeof(buf_texcoord_t));
 
@@ -1082,12 +1059,7 @@ void R_Mesh_AddTransparent(void)
 						index = tri->index[k];
 						buf_tri[currenttriangle].index[k] = currentvertex;
 						memcpy(buf_vertex[currentvertex].v, buf_transvertex[index].v, sizeof(buf_vertex_t));
-#if FLOATCOLORS
-						if (floatcolors)
-							memcpy(buf_fcolor[currentvertex].c, buf_transfcolor[index].c, sizeof(buf_fcolor_t));
-						else
-#endif
-							memcpy(buf_bcolor[currentvertex].c, buf_transbcolor[index].c, sizeof(buf_bcolor_t));
+						memcpy(buf_fcolor[currentvertex].c, buf_transfcolor[index].c, sizeof(buf_fcolor_t));
 						for (i = 0;i < backendunits && tri->mesh->textures[i];i++)
 							memcpy(buf_texcoord[i][currentvertex].t, buf_transtexcoord[i][index].t, sizeof(buf_texcoord_t));
 						currentvertex++;
@@ -1156,12 +1128,7 @@ void R_Mesh_AddTransparent(void)
 		// note: can't batch these because they can be rendered in any order
 		// there can never be more transparent triangles than fit in main buffers
 		memcpy(&buf_vertex[currentvertex], &buf_transvertex[0], currenttransvertex * sizeof(buf_vertex_t));
-#if FLOATCOLORS
-		if (floatcolors)
-			memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[0], currenttransvertex * sizeof(buf_fcolor_t));
-		else
-#endif
-			memcpy(&buf_bcolor[currentvertex], &buf_transbcolor[0], currenttransvertex * sizeof(buf_bcolor_t));
+		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[0], currenttransvertex * sizeof(buf_fcolor_t));
 		for (i = 0;i < backendunits;i++)
 			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][0], currenttransvertex * sizeof(buf_texcoord_t));
 
@@ -1195,19 +1162,13 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
 	static int i, j, *index, overbright;
-	static float c, *in, scaler;
-#if FLOATCOLORS
+	static float *in, scaler;
 	static float cr, cg, cb, ca;
-#endif
 	static buf_mesh_t *mesh;
 	static buf_vertex_t *vert;
-#if FLOATCOLORS
 	static buf_fcolor_t *fcolor;
-#endif
-	static buf_bcolor_t *bcolor;
 	static buf_texcoord_t *texcoord[MAX_TEXTUREUNITS];
 	static buf_transtri_t *tri;
-	static buf_bcolor_t flatbcolor;
 
 	if (m->index == NULL
 	 || !m->numtriangles
@@ -1264,10 +1225,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		c_transmeshs++;
 		c_transtris += m->numtriangles;
 		vert = &buf_transvertex[currenttransvertex];
-#if FLOATCOLORS
 		fcolor = &buf_transfcolor[currenttransvertex];
-#endif
-		bcolor = &buf_transbcolor[currenttransvertex];
 		for (i = 0;i < backendunits;i++)
 			texcoord[i] = &buf_transtexcoord[i][currenttransvertex];
 
@@ -1305,10 +1263,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		c_meshs++;
 		c_meshtris += m->numtriangles;
 		vert = &buf_vertex[currentvertex];
-#if FLOATCOLORS
 		fcolor = &buf_fcolor[currentvertex];
-#endif
-		bcolor = &buf_bcolor[currentvertex];
 		for (i = 0;i < backendunits;i++)
 			texcoord[i] = &buf_texcoord[i][currentvertex];
 
@@ -1355,61 +1310,30 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	else
 		memcpy(vert, m->vertex, m->numverts * sizeof(buf_vertex_t));
 
-#if FLOATCOLORS
-	if (floatcolors)
+	if (m->color)
 	{
-		if (m->color)
+		for (i = 0, in = m->color;i < m->numverts;i++, (int)in += m->colorstep)
 		{
-			for (i = 0, in = m->color;i < m->numverts;i++, (int)in += m->colorstep)
-			{
-				fcolor[i].c[0] = in[0] * scaler;
-				fcolor[i].c[1] = in[1] * scaler;
-				fcolor[i].c[2] = in[2] * scaler;
-				fcolor[i].c[3] = in[3];
-			}
-		}
-		else
-		{
-			cr = m->cr * scaler;
-			cg = m->cg * scaler;
-			cb = m->cb * scaler;
-			ca = m->ca;
-			for (i = 0;i < m->numverts;i++)
-			{
-				fcolor[i].c[0] = cr;
-				fcolor[i].c[1] = cg;
-				fcolor[i].c[2] = cb;
-				fcolor[i].c[3] = ca;
-			}
+			fcolor[i].c[0] = in[0] * scaler;
+			fcolor[i].c[1] = in[1] * scaler;
+			fcolor[i].c[2] = in[2] * scaler;
+			fcolor[i].c[3] = in[3];
 		}
 	}
 	else
 	{
-#endif
-		if (m->color)
+		cr = m->cr * scaler;
+		cg = m->cg * scaler;
+		cb = m->cb * scaler;
+		ca = m->ca;
+		for (i = 0;i < m->numverts;i++)
 		{
-			for (i = 0, in = m->color;i < m->numverts;i++, (int)in += m->colorstep)
-			{
-				// shift float to have 8bit fraction at base of number,
-				// then read as integer and kill float bits...
-				c = in[0] * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;bcolor[i].c[0] = (byte) j;
-				c = in[1] * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;bcolor[i].c[1] = (byte) j;
-				c = in[2] * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;bcolor[i].c[2] = (byte) j;
-				c = in[3]          + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;bcolor[i].c[3] = (byte) j;
-			}
+			fcolor[i].c[0] = cr;
+			fcolor[i].c[1] = cg;
+			fcolor[i].c[2] = cb;
+			fcolor[i].c[3] = ca;
 		}
-		else
-		{
-			c = m->cr * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[0] = (byte) j;
-			c = m->cg * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[1] = (byte) j;
-			c = m->cb * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[2] = (byte) j;
-			c = m->ca          + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[3] = (byte) j;
-			for (i = 0;i < m->numverts;i++)
-				bcolor[i] = flatbcolor;
-		}
-#if FLOATCOLORS
 	}
-#endif
 
 	for (j = 0;j < MAX_TEXTUREUNITS && m->tex[j];j++)
 	{
@@ -1454,20 +1378,14 @@ void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
 void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, *index, overbright;
-	static float c, scaler;
-#if FLOATCOLORS
+	static int i, *index, overbright;
+	static float scaler;
 	static float cr, cg, cb, ca;
-#endif
 	static buf_mesh_t *mesh;
 	static buf_vertex_t *vert;
-#if FLOATCOLORS
 	static buf_fcolor_t *fcolor;
-#endif
-	static buf_bcolor_t *bcolor;
 	static buf_texcoord_t *texcoord;
 	static buf_transtri_t *tri;
-	static buf_bcolor_t flatbcolor;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
@@ -1496,10 +1414,7 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 		c_transmeshs++;
 		c_transtris += 2;
 		vert = &buf_transvertex[currenttransvertex];
-#if FLOATCOLORS
 		fcolor = &buf_transfcolor[currenttransvertex];
-#endif
-		bcolor = &buf_transbcolor[currenttransvertex];
 		texcoord = &buf_transtexcoord[0][currenttransvertex];
 
 		// transmesh is only for storage of transparent meshs until they
@@ -1551,10 +1466,7 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 		c_meshs++;
 		c_meshtris += 2;
 		vert = &buf_vertex[currentvertex];
-#if FLOATCOLORS
 		fcolor = &buf_fcolor[currentvertex];
-#endif
-		bcolor = &buf_bcolor[currentvertex];
 		texcoord = &buf_texcoord[0][currentvertex];
 
 		mesh = &buf_mesh[currentmesh++];
@@ -1589,44 +1501,26 @@ void R_Mesh_DrawDecal(const rmeshinfo_t *m)
 	// buf_vertex_t must match the size of the decal vertex array (or vice versa)
 	memcpy(vert, m->vertex, 4 * sizeof(buf_vertex_t));
 
-#if FLOATCOLORS
-	if (floatcolors)
-	{
-		cr = m->cr * scaler;
-		cg = m->cg * scaler;
-		cb = m->cb * scaler;
-		ca = m->ca;
-		fcolor[0].c[0] = cr;
-		fcolor[0].c[1] = cg;
-		fcolor[0].c[2] = cb;
-		fcolor[0].c[3] = ca;
-		fcolor[1].c[0] = cr;
-		fcolor[1].c[1] = cg;
-		fcolor[1].c[2] = cb;
-		fcolor[1].c[3] = ca;
-		fcolor[2].c[0] = cr;
-		fcolor[2].c[1] = cg;
-		fcolor[2].c[2] = cb;
-		fcolor[2].c[3] = ca;
-		fcolor[3].c[0] = cr;
-		fcolor[3].c[1] = cg;
-		fcolor[3].c[2] = cb;
-		fcolor[3].c[3] = ca;
-	}
-	else
-	{
-#endif
-		c = m->cr * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[0] = (byte) j;
-		c = m->cg * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[1] = (byte) j;
-		c = m->cb * scaler + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[2] = (byte) j;
-		c = m->ca          + 32768.0f;j = (*((long *)&c) & 0x7FFFFF);if (j > 255) j = 255;flatbcolor.c[3] = (byte) j;
-		bcolor[0] = flatbcolor;
-		bcolor[1] = flatbcolor;
-		bcolor[2] = flatbcolor;
-		bcolor[3] = flatbcolor;
-#if FLOATCOLORS
-	}
-#endif
+	cr = m->cr * scaler;
+	cg = m->cg * scaler;
+	cb = m->cb * scaler;
+	ca = m->ca;
+	fcolor[0].c[0] = cr;
+	fcolor[0].c[1] = cg;
+	fcolor[0].c[2] = cb;
+	fcolor[0].c[3] = ca;
+	fcolor[1].c[0] = cr;
+	fcolor[1].c[1] = cg;
+	fcolor[1].c[2] = cb;
+	fcolor[1].c[3] = ca;
+	fcolor[2].c[0] = cr;
+	fcolor[2].c[1] = cg;
+	fcolor[2].c[2] = cb;
+	fcolor[2].c[3] = ca;
+	fcolor[3].c[0] = cr;
+	fcolor[3].c[1] = cg;
+	fcolor[3].c[2] = cb;
+	fcolor[3].c[3] = ca;
 
 	// buf_texcoord_t must be the same size as the decal texcoord array (or vice versa)
 	memcpy(&texcoord[0].t[0], m->texcoords[0], 4 * sizeof(buf_texcoord_t));
