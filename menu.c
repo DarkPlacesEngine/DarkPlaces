@@ -362,6 +362,8 @@ void M_Menu_Main_f (void)
 		else
 			MAIN_ITEMS = 6;
 	}
+	else if (gamemode == GAME_NETHERWORLD)//VORTEX: menu restarting item
+		MAIN_ITEMS = 6;
 	else
 		MAIN_ITEMS = 5;
 
@@ -518,6 +520,34 @@ void M_Main_Key (int key, char ascii)
 					M_Menu_Quit_f ();
 					break;
 				}
+				break;
+			}
+		}
+		else if (gamemode == GAME_NETHERWORLD)//VORTEX: menu restarting item
+		{
+			switch (m_main_cursor)
+			{
+			case 0:
+				M_Menu_SinglePlayer_f ();
+				break;
+
+			case 1:
+				M_Menu_MultiPlayer_f ();
+				break;
+
+			case 2:
+				M_Menu_Options_f ();
+				break;
+
+			case 3:
+				M_Menu_Help_f ();
+				break;
+
+			case 4:
+				M_Menu_Quit_f ();
+				break;
+			case 5:
+				MR_Restart();
 				break;
 			}
 		}
@@ -4223,6 +4253,8 @@ void MR_Init()
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
+	if (gamemode == GAME_NETHERWORLD)
+		Cmd_AddCommand ("menu_fallback", MP_Error); //Force to old-style menu
 	Cmd_AddCommand ("menu_restart",MR_Restart);
 	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f);
 
