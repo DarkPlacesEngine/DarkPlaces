@@ -380,15 +380,10 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	*/
 	SDL_SetVideoMode( 0, 0, 0, 0 );
 
-#ifdef WIN32
-	drivername = "opengl32.dll";
-#elif defined(__APPLE__) && defined(__MACH__)
-	drivername = "OpenGL.framework";
-#else
-	drivername = "libGL.so.1";
-#endif
+	// SDL usually knows best
+	drivername = NULL;
 
-// COMMANDLINEOPTION: SDL GL: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1 (Linux/BSD) or opengl32.dll (windows) or OpenGL.framework (MacOSX), useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
+// COMMANDLINEOPTION: SDL GL: -gl_driver <drivername> selects a GL driver library, default is whatever SDL recommends, useful only for 3dfxogl.dll/3dfxvgl.dll or fxmesa or similar, if you don't know what this is for, you don't need it
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
 		drivername = com_argv[i + 1];
