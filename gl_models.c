@@ -727,7 +727,7 @@ void ZymoticTransformVerts(int vertcount, float *vertex, int *bonecounts, zymver
 				vert++;
 			}
 		}
-		out += 4;
+		out += 3;
 	}
 }
 
