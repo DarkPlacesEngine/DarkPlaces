@@ -598,6 +598,81 @@ skipwhite:
 	return true;
 }
 
+/*
+==============
+COM_ParseTokenConsole
+
+Parse a token out of a string, behaving like the qwcl console
+==============
+*/
+int COM_ParseTokenConsole(const char **datapointer)
+{
+	int c;
+	int len;
+	const char *data = *datapointer;
+
+	len = 0;
+	com_token[0] = 0;
+
+	if (!data)
+	{
+		*datapointer = NULL;
+		return false;
+	}
+
+// skip whitespace
+skipwhite:
+	while ((c = *data) <= ' ')
+	{
+		if (c == 0)
+		{
+			// end of file
+			*datapointer = NULL;
+			return false;
+		}
+		data++;
+	}
+
+	// skip // comments
+	if (c == '/' && data[1] == '/')
+	{
+		while (*data && *data != '\n')
+			data++;
+		goto skipwhite;
+	}
+
+// handle quoted strings specially
+	if (c == '\"')
+	{
+		data++;
+		while (1)
+		{
+			c = *data++;
+			if (c == '\"' || !c)
+			{
+				com_token[len] = 0;
+				*datapointer = data;
+				return true;
+			}
+			com_token[len] = c;
+			len++;
+		}
+	}
+
+// parse a regular word
+	do
+	{
+		com_token[len] = c;
+		data++;
+		len++;
+		c = *data;
+	} while (c>32);
+
+	com_token[len] = 0;
+	*datapointer = data;
+	return true;
+}
+
 
 /*
 ================

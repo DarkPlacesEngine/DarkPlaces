@@ -143,6 +143,7 @@ float MSG_ReadDPCoord (void);
 extern char com_token[1024];
 
 int COM_ParseToken(const char **datapointer, int returnnewline);
+int COM_ParseTokenConsole(const char **datapointer);
 
 extern int com_argc;
 extern const char **com_argv;
