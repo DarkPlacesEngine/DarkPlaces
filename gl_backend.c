@@ -85,7 +85,7 @@ typedef struct buf_mesh_s
 	int depthtest;
 	int blendfunc1, blendfunc2;
 	int textures[MAX_TEXTUREUNITS];
-	float texturergbscale[MAX_TEXTUREUNITS];
+	int texturergbscale[MAX_TEXTUREUNITS];
 	int firsttriangle;
 	int triangles;
 	int firstvert;
@@ -384,7 +384,7 @@ static int mesh_depthtest;
 static int mesh_unit;
 static int mesh_clientunit;
 static int mesh_texture[MAX_TEXTUREUNITS];
-static float mesh_texturergbscale[MAX_TEXTUREUNITS];
+static int mesh_texturergbscale[MAX_TEXTUREUNITS];
 
 void GL_SetupTextureState(void)
 {
@@ -412,8 +412,8 @@ void GL_SetupTextureState(void)
 				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
 				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
 				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
-				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, mesh_texturergbscale[i]);CHECKGLERROR
-				glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0f);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, mesh_texturergbscale[i]);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1);CHECKGLERROR
 			}
 			else
 			{
@@ -611,7 +611,7 @@ void GL_MeshState(buf_mesh_t *mesh)
 				{
 					qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
 				}
-				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (mesh_texturergbscale[i] = mesh->texturergbscale[i]));CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (mesh_texturergbscale[i] = mesh->texturergbscale[i]));CHECKGLERROR
 			}
 		}
 	}
@@ -763,7 +763,7 @@ void R_Mesh_Finish(void)
 			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 			if (gl_combine.integer)
 			{
-				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0f);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0f);CHECKGLERROR
 			}
 			if (i > 0)
 			{
