@@ -766,22 +766,29 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	GL_ColorMask(1,1,1,1);
 }
 
-static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
+static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->brushq1.surfaces + calldata2;
 	rmeshstate_t m;
 	float currentalpha;
-	float modelorg[3];
+	float base, colorscale;
+	vec3_t modelorg;
 	texture_t *texture;
 	float args[4] = {0.05f,0,0,0.04f};
-	int rendertype;
+	int rendertype, turb, fullbright;
 
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
-	texture = surf->texinfo->texture->currentframe;
-	currentalpha = texture->currentalpha;
+	texture = surf->texinfo->texture;
+	if (texture->animated)
+		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (cl.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
+	currentalpha = ent->alpha;
+	if (surf->flags & SURF_WATERALPHA)
+		currentalpha *= r_wateralpha.value;
+
+	GL_DepthTest(true);
 	if (ent->effects & EF_ADDITIVE)
 	{
 		rendertype = SURFRENDER_ADD;
@@ -800,12 +807,18 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
-	GL_DepthTest(true);
-	GL_Color(1, 1, 1, currentalpha);
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = surf->mesh.data_vertex3f;
-	if (gl_textureshader && r_watershader.value && !fogenabled)
+
+	turb = (surf->flags & SURF_DRAWTURB) && r_waterscroll.value;
+	fullbright = (ent->effects & EF_FULLBRIGHT) || (surf->flags & SURF_DRAWFULLBRIGHT) || !surf->samples;
+	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
+	if (surf->flags & SURF_DRAWTURB)
+		base *= 0.5f;
+	if ((surf->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled)
 	{
+		// NVIDIA Geforce3 distortion texture shader on water
+		GL_Color(1, 1, 1, currentalpha);
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = surf->mesh.data_vertex3f;
 		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(cl.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 		m.texcombinergb[0] = GL_REPLACE;
@@ -834,129 +847,81 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 	else
 	{
-		RSurf_FoggedColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surf->mesh.num_vertices, modelorg);
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = surf->mesh.data_vertex3f;
 		m.pointer_color = varray_color4f;
-		m.tex[0] = R_GetTexture(texture->skin.base);
 		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-		if (r_waterscroll.value)
+		m.tex[0] = R_GetTexture(texture->skin.base);
+		if (turb)
 		{
 			// scrolling in texture matrix
 			Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 		}
-		R_Mesh_State(&m);
-		GL_LockArrays(0, surf->mesh.num_vertices);
-		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
-		GL_LockArrays(0, 0);
-		if (fogenabled && rendertype != SURFRENDER_ADD)
-		{
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-			GL_DepthMask(false);
-			RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surf->mesh.num_vertices, modelorg);
-			m.tex[0] = R_GetTexture(texture->skin.fog);
-			R_Mesh_State(&m);
-			GL_LockArrays(0, surf->mesh.num_vertices);
-			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
-			GL_LockArrays(0, 0);
-		}
-	}
-}
-
-static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata2)
-{
-	const entity_render_t *ent = calldata1;
-	const msurface_t *surf = ent->model->brushq1.surfaces + calldata2;
-	int rendertype;
-	float currentalpha;
-	texture_t *texture;
-	float base, colorscale;
-	rmeshstate_t m;
-	vec3_t modelorg;
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-	R_Mesh_Matrix(&ent->matrix);
-
-	texture = surf->texinfo->texture;
-	if (texture->animated)
-		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (cl.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
-
-	currentalpha = ent->alpha;
-	base = ent->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
-	GL_DepthTest(true);
-	if (ent->effects & EF_ADDITIVE)
-	{
-		rendertype = SURFRENDER_ADD;
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-	}
-	else if (currentalpha < 1 || texture->skin.fog != NULL)
-	{
-		rendertype = SURFRENDER_ALPHA;
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_DepthMask(false);
-	}
-	else
-	{
-		rendertype = SURFRENDER_OPAQUE;
-		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(true);
-	}
-
-	{
-		memset(&m, 0, sizeof(m));
-		m.tex[0] = R_GetTexture(texture->skin.base);
 		colorscale = 1;
 		if (gl_combine.integer)
 		{
 			m.texrgbscale[0] = 4;
 			colorscale *= 0.25f;
 		}
-		m.pointer_color = varray_color4f;
-		m.pointer_vertex = surf->mesh.data_vertex3f;
-		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-		R_Mesh_State(&m);
 		R_FillColors(varray_color4f, surf->mesh.num_vertices, base, base, base, currentalpha);
-		if (!(ent->effects & EF_FULLBRIGHT))
+		if (!fullbright)
 		{
 			if (surf->dlightframe == r_framecount)
 				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, surf->mesh.num_vertices, surf->mesh.data_vertex3f, varray_color4f, 1);
-			if (surf->flags & SURF_LIGHTMAP)
+			if (surf->samples)
 				RSurf_AddLightmapToVertexColors_Color4f(surf->mesh.data_lightmapoffsets, varray_color4f,surf->mesh.num_vertices, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
 		}
 		RSurf_FogColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, colorscale, surf->mesh.num_vertices, modelorg);
-		GL_LockArrays(0, surf->mesh.num_vertices);
-		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
-		GL_LockArrays(0, 0);
-	}
-	if (texture->skin.glow)
-	{
-		memset(&m, 0, sizeof(m));
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-		m.pointer_color = varray_color4f;
-		m.tex[0] = R_GetTexture(texture->skin.glow);
-		m.pointer_vertex = surf->mesh.data_vertex3f;
-		if (m.tex[0])
-			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
 		R_Mesh_State(&m);
-		RSurf_FoggedColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surf->mesh.num_vertices, modelorg);
 		GL_LockArrays(0, surf->mesh.num_vertices);
 		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		GL_LockArrays(0, 0);
-	}
-	if (fogenabled && rendertype != SURFRENDER_ADD)
-	{
-		memset(&m, 0, sizeof(m));
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-		m.pointer_color = varray_color4f;
-		m.tex[0] = R_GetTexture(texture->skin.fog);
-		m.pointer_vertex = surf->mesh.data_vertex3f;
-		if (m.tex[0])
-			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-		R_Mesh_State(&m);
-		RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surf->mesh.num_vertices, modelorg);
-		GL_LockArrays(0, surf->mesh.num_vertices);
-		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
-		GL_LockArrays(0, 0);
+		if (texture->skin.glow)
+		{
+			memset(&m, 0, sizeof(m));
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+			m.pointer_color = varray_color4f;
+			m.tex[0] = R_GetTexture(texture->skin.glow);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
+			if (m.tex[0])
+			{
+				m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+				if (turb)
+				{
+					// scrolling in texture matrix
+					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+				}
+			}
+			R_Mesh_State(&m);
+			RSurf_FoggedColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surf->mesh.num_vertices, modelorg);
+			GL_LockArrays(0, surf->mesh.num_vertices);
+			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+		if (fogenabled && rendertype != SURFRENDER_ADD)
+		{
+			memset(&m, 0, sizeof(m));
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+			m.pointer_color = varray_color4f;
+			m.tex[0] = R_GetTexture(texture->skin.fog);
+			m.pointer_vertex = surf->mesh.data_vertex3f;
+			if (m.tex[0])
+			{
+				m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+				if (turb)
+				{
+					// scrolling in texture matrix
+					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+				}
+			}
+			R_Mesh_State(&m);
+			RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surf->mesh.num_vertices, modelorg);
+			GL_LockArrays(0, surf->mesh.num_vertices);
+			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
 	}
 }
 
@@ -1406,7 +1371,7 @@ void R_DrawSurfaces(entity_render_t *ent, int flagsmask)
 						if (surf->visframe == r_framecount)
 						{
 							Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-							R_MeshQueue_AddTransparent(center, RSurfShader_Wall_Vertex_Callback, ent, surf - ent->model->brushq1.surfaces);
+							R_MeshQueue_AddTransparent(center, RSurfShader_Transparent_Callback, ent, surf - ent->model->brushq1.surfaces);
 						}
 					}
 				}
@@ -1454,11 +1419,11 @@ void R_DrawSurfaces(entity_render_t *ent, int flagsmask)
 					if (surf->visframe == r_framecount)
 					{
 						if (texture->rendertype == SURFRENDER_OPAQUE)
-							RSurfShader_Water_Callback(ent, surf - ent->model->brushq1.surfaces);
+							RSurfShader_Transparent_Callback(ent, surf - ent->model->brushq1.surfaces);
 						else
 						{
 							Matrix4x4_Transform(&ent->matrix, surf->poly_center, center);
-							R_MeshQueue_AddTransparent(center, RSurfShader_Water_Callback, ent, surf - ent->model->brushq1.surfaces);
+							R_MeshQueue_AddTransparent(center, RSurfShader_Transparent_Callback, ent, surf - ent->model->brushq1.surfaces);
 						}
 					}
 				}
