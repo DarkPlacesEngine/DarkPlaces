@@ -807,9 +807,11 @@ void CL_ParseClientdata (int bits)
 	cl.stats[STAT_CELLS] = MSG_ReadByte();
 
 	i = MSG_ReadByte ();
-	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
+	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 		i = (1<<i);
 	// GAME_NEXUIZ hud needs weapon change time
+	// GAME_NEXUIZ uses a bit number as it's STAT_ACTIVEWEAPON, not a bitfield
+	// like other modes
 	if (cl.stats[STAT_ACTIVEWEAPON] != i)
 		cl.weapontime = cl.time;
 	cl.stats[STAT_ACTIVEWEAPON] = i;
