@@ -244,8 +244,6 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150"};
 
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5"};
 
-cvar_t cl_nodelta = {0, "cl_nodelta", "0"};
-
 /*
 ================
 CL_AdjustAngles
@@ -427,13 +425,10 @@ void CL_SendMove(usercmd_t *cmd)
 	// FIXME: should ack latest 3 frames perhaps?
 	if (cl.latestframenum > 0)
 	{
-		i = cl.latestframenum;
-		if (cl_nodelta.integer)
-			i = -1;
 		if (developer_networkentities.integer >= 1)
-			Con_Printf("send clc_ackentities %i\n", i);
+			Con_Printf("send clc_ackentities %i\n", cl.latestframenum);
 		MSG_WriteByte(&buf, clc_ackentities);
-		MSG_WriteLong(&buf, i);
+		MSG_WriteLong(&buf, cl.latestframenum);
 	}
 
 	// deliver the message
@@ -506,7 +501,5 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-button7", IN_Button7Up);
 	Cmd_AddCommand ("+button8", IN_Button8Down);
 	Cmd_AddCommand ("-button8", IN_Button8Up);
-
-	Cvar_RegisterVariable(&cl_nodelta);
 }
 

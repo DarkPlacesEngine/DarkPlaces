@@ -682,8 +682,7 @@ void EntityFrame_ClearDatabase(entityframe_database_t *d)
 void EntityFrame_AckFrame(entityframe_database_t *d, int frame)
 {
 	int i;
-	if (d->ackframenum < frame)
-		d->ackframenum = frame;
+	d->ackframenum = frame;
 	for (i = 0;i < d->numframes && d->frames[i].framenum < frame;i++);
 	// ignore outdated frame acks (out of order packets)
 	if (i == 0)
@@ -801,7 +800,7 @@ void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numst
 
 	EntityFrame_AddFrame(d, eye, d->latestframenum, numstates, states);
 
-	EntityFrame_FetchFrame(d, d->ackframenum > 0 ? d->ackframenum : -1, o);
+	EntityFrame_FetchFrame(d, d->ackframenum, o);
 
 	MSG_WriteByte (msg, svc_entities);
 	MSG_WriteLong (msg, o->framenum);
@@ -1020,7 +1019,6 @@ entityframe4_database_t *EntityFrame4_AllocDatabase(mempool_t *pool)
 	d = Mem_Alloc(pool, sizeof(*d));
 	d->mempool = pool;
 	EntityFrame4_ResetDatabase(d);
-	d->ackframenum = -1;
 	return d;
 }
 
@@ -1038,7 +1036,6 @@ void EntityFrame4_FreeDatabase(entityframe4_database_t *d)
 void EntityFrame4_ResetDatabase(entityframe4_database_t *d)
 {
 	int i;
-	d->ackframenum = -1;
 	d->referenceframenum = -1;
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 		d->commit[i].numentities = 0;
@@ -1141,7 +1138,7 @@ void EntityFrame4_CL_ReadFrame(void)
 		if (!d->commit[i].numentities)
 		{
 			d->currentcommit = d->commit + i;
-			d->currentcommit->framenum = d->ackframenum = framenum;
+			d->currentcommit->framenum = framenum;
 			d->currentcommit->numentities = 0;
 		}
 	}
@@ -1356,7 +1353,6 @@ void EntityFrame5_ResetDatabase(entityframe5_database_t *d)
 	int i;
 	memset(d, 0, sizeof(*d));
 	d->latestframenum = 0;
-	d->ackframenum = -1;
 	for (i = 0;i < MAX_EDICTS;i++)
 		d->states[i] = defaultstate;
 }
@@ -1773,9 +1769,6 @@ void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum, int viewent
 	int i, j, k, l, bits;
 	entityframe5_changestate_t *s, *s2;
 	entityframe5_packetlog_t *p, *p2;
-	if (framenum <= d->ackframenum)
-		return;
-	d->ackframenum = framenum;
 	// scan for packets made obsolete by this ack
 	for (i = 0, p = d->packetlog;i < ENTITYFRAME5_MAXPACKETLOGS;i++, p++)
 	{

@@ -592,9 +592,6 @@ typedef struct entity_database4_s
 	int currententitynumber;
 	// (server only)
 	int latestframenumber;
-	// (client only) most recently received frame number to be sent in next
-	// input update
-	int ackframenum;
 }
 entityframe4_database_t;
 
@@ -716,8 +713,6 @@ typedef struct entityframe5_database_s
 {
 	// number of the latest message sent to client
 	int latestframenum;
-	// number of the latest message acknowledged by client
-	int ackframenum;
 
 	// logs of all recently sent messages (between acked and latest)
 	entityframe5_packetlog_t packetlog[ENTITYFRAME5_MAXPACKETLOGS];

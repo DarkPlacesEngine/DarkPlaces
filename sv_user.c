@@ -768,7 +768,7 @@ void SV_ReadClientMessage(void)
 			if (host_client->entitydatabase)
 				EntityFrame_AckFrame(host_client->entitydatabase, num);
 			else if (host_client->entitydatabase4)
-				EntityFrame4_AckFrame(host_client->entitydatabase4, host_client->entitydatabase4->ackframenum, true);
+				EntityFrame4_AckFrame(host_client->entitydatabase4, num, true);
 			else if (host_client->entitydatabase5)
 				EntityFrame5_AckFrame(host_client->entitydatabase5, num, host_client - svs.clients + 1);
 			break;
