@@ -906,7 +906,7 @@ void VM_find (void)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->e->free)
+		if (ed->p.e->free)
 			continue;
 		t = PRVM_E_STRING(ed,f);
 		if (!t)
@@ -947,7 +947,7 @@ void VM_findfloat (void)
 	{
 		prog->xfunction->builtinsprofile++;
 		ed = PRVM_EDICT_NUM(e);
-		if (ed->e->free)
+		if (ed->p.e->free)
 			continue;
 		if (PRVM_E_FLOAT(ed,f) == s)
 		{
@@ -999,7 +999,7 @@ void VM_findchain (void)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->e->free)
+		if (ent->p.e->free)
 			continue;
 		t = PRVM_E_STRING(ent,f);
 		if (!t)
@@ -1048,7 +1048,7 @@ void VM_findchainfloat (void)
 	for (i = 1;i < prog->num_edicts;i++, ent = PRVM_NEXT_EDICT(ent))
 	{
 		prog->xfunction->builtinsprofile++;
-		if (ent->e->free)
+		if (ent->p.e->free)
 			continue;
 		if (E_FLOAT(ent,f) != s)
 			continue;
@@ -1274,7 +1274,7 @@ void VM_nextent (void)
 			return;
 		}
 		ent = PRVM_EDICT_NUM(i);
-		if (!ent->e->free)
+		if (!ent->p.e->free)
 		{
 			VM_RETURN_EDICT(ent);
 			return;
@@ -3028,7 +3028,7 @@ void VM_M_writetofile(void)
 	}
 
 	ent = PRVM_G_EDICT(OFS_PARM1); 	
-	if(ent->e->free)
+	if(ent->p.e->free)
 	{
 		Con_Printf("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
 		return;

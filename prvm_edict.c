@@ -70,7 +70,7 @@ void PRVM_MEM_Alloc()
 	// set edict pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
-		prog->edicts[i].e = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
+		prog->edicts[i].p.e = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
 		prog->edicts[i].v = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
 	}
 }
@@ -104,7 +104,7 @@ void PRVM_MEM_IncreaseEdicts()
 	//set e and v pointers
 	for(i = 0; i < prog->max_edicts; i++)
 	{
-		prog->edicts[i].e = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
+		prog->edicts[i].p.e = (prvm_edict_private_t *)((qbyte  *)prog->edictprivate + i * prog->edictprivate_size);
 		prog->edicts[i].v = (void*)((qbyte *)prog->edictsfields + i * prog->edict_size);
 	}
 
@@ -191,7 +191,7 @@ void PRVM_ED_ClearEdict (prvm_edict_t *e)
 {
 	int num;
 	memset (e->v, 0, prog->progs->entityfields * 4);
-	e->e->free = false;
+	e->p.e->free = false;
 	// LordHavoc: for consistency set these here
 	num = PRVM_NUM_FOR_EDICT(e) - 1;
 
@@ -225,7 +225,7 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->e->free && ( e->e->freetime < 2 || (*prog->time - e->e->freetime) > 0.5 ) )
+		if (e->p.e->free && ( e->p.e->freetime < 2 || (*prog->time - e->p.e->freetime) > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
 			return e;
@@ -261,8 +261,8 @@ void PRVM_ED_Free (prvm_edict_t *ed)
 
 	PRVM_GCALL(free_edict)(ed);
 
-	ed->e->free = true;
-	ed->e->freetime = *prog->time;
+	ed->p.e->free = true;
+	ed->p.e->freetime = *prog->time;
 }
 
 //===========================================================================
@@ -567,7 +567,7 @@ void PRVM_ED_Print(prvm_edict_t *ed)
 	int		type;
 	char	tempstring[8192], tempstring2[260]; // temporary string buffers
 
-	if (ed->e->free)
+	if (ed->p.e->free)
 	{
 		Con_Printf("%s: FREE\n",PRVM_NAME);
 		return;
@@ -642,7 +642,7 @@ void PRVM_ED_Write (qfile_t *f, prvm_edict_t *ed)
 
 	FS_Print(f, "{\n");
 
-	if (ed->e->free)
+	if (ed->p.e->free)
 	{
 		FS_Print(f, "}\n");
 		return;
@@ -771,7 +771,7 @@ void PRVM_ED_Count_f (void)
 		for (i=0 ; i<prog->num_edicts ; i++)
 		{
 			ent = PRVM_EDICT_NUM(i);
-			if (ent->e->free)
+			if (ent->p.e->free)
 				continue;
 			active++;
 		}
@@ -1111,7 +1111,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 	}
 
 	if (!init)
-		ent->e->free = true;
+		ent->p.e->free = true;
 
 	return data;
 }
@@ -1204,7 +1204,7 @@ void PRVM_ED_LoadFromFile (const char *data)
 		}
 	
 		spawned++;
-		if (ent->e->free)
+		if (ent->p.e->free)
 			died++;
 	}
 
@@ -1535,7 +1535,7 @@ void PRVM_Fields_f (void)
 	for (ednum = 0;ednum < prog->max_edicts;ednum++)
 	{
 		ed = PRVM_EDICT_NUM(ednum);
-		if (ed->e->free)
+		if (ed->p.e->free)
 			continue;
 		for (i = 1;i < prog->progs->numfielddefs;i++)
 		{
