@@ -648,18 +648,53 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 			Con_Printf("Mod_ValidateElements: out of bounds element detected at %s:%d\n", filename, fileline);
 }
 
+// warning: this is an expensive function!
+void Mod_BuildNormals(int numverts, int numtriangles, const float *vertex3f, const int *elements, float *normal3f)
+{
+	int i, tnum;
+	float normal[3], *v;
+	const int *e;
+	// clear the vectors
+	memset(normal3f, 0, numverts * sizeof(float[3]));
+	// process each vertex of each triangle and accumulate the results
+	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
+	{
+		TriangleNormal(vertex3f + e[0] * 3, vertex3f + e[1] * 3, vertex3f + e[2] * 3, normal);
+		VectorNormalize(normal);
+		v = normal3f + e[0] * 3;
+		v[0] += normal[0];
+		v[1] += normal[1];
+		v[2] += normal[2];
+		v = normal3f + e[1] * 3;
+		v[0] += normal[0];
+		v[1] += normal[1];
+		v[2] += normal[2];
+		v = normal3f + e[2] * 3;
+		v[0] += normal[0];
+		v[1] += normal[1];
+		v[2] += normal[2];
+	}
+	// now we could divide the vectors by the number of averaged values on
+	// each vertex...  but instead normalize them
+	for (i = 0, v = normal3f;i < numverts;i++, v += 3)
+		VectorNormalize(v);
+}
+
 void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
 {
 	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
 	// 103 add/sub/negate/multiply (1 cycle), 3 divide (20 cycle), 3 sqrt (22 cycle), 4 compare (3 cycle?), total cycles not counting load/store/exchange roughly 241 cycles
 	// 12 add, 28 subtract, 57 multiply, 3 divide, 3 sqrt, 4 compare, 50% chance of 6 negates
 
-	// 18 multiply, 19 subtract
+	// 6 multiply, 9 subtract
 	VectorSubtract(v1, v0, v10);
 	VectorSubtract(v2, v0, v20);
 	normal3f[0] = v10[1] * v20[2] - v10[2] * v20[1];
 	normal3f[1] = v10[2] * v20[0] - v10[0] * v20[2];
 	normal3f[2] = v10[0] * v20[1] - v10[1] * v20[0];
+	// 1 sqrt, 1 divide, 6 multiply, 2 add, 1 compare
+	VectorNormalize(normal3f);
+	// 12 multiply, 10 subtract
 	tc10[1] = tc1[1] - tc0[1];
 	tc20[1] = tc2[1] - tc0[1];
 	svector3f[0] = tc10[1] * v20[0] - tc20[1] * v10[0];
@@ -670,8 +705,6 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	tvector3f[0] = tc10[0] * v20[0] - tc20[0] * v10[0];
 	tvector3f[1] = tc10[0] * v20[1] - tc20[0] * v10[1];
 	tvector3f[2] = tc10[0] * v20[2] - tc20[0] * v10[2];
-	// 1 sqrt, 1 divide, 6 multiply, 2 add, 1 compare
-	VectorNormalize(normal3f);
 	// 12 multiply, 4 add, 6 subtract
 	f = DotProduct(svector3f, normal3f);
 	svector3f[0] -= f * normal3f[0];
@@ -696,7 +729,7 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	}
 }
 
-// warning: this is an expensive function!
+// warning: this is a very expensive function!
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f)
 {
 	int i, tnum;

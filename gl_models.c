@@ -6,82 +6,6 @@ void GL_Models_Init(void)
 {
 }
 
-void R_Model_Alias_GetMesh_Vertex3f(const entity_render_t *ent, const aliasmesh_t *mesh, float *out3f)
-{
-	if (mesh->num_vertexboneweights)
-	{
-		int i, k, blends;
-		aliasvertexboneweight_t *v;
-		float *out, *matrix, m[12], bonepose[256][12];
-		// vertex weighted skeletal
-		// interpolate matrices and concatenate them to their parents
-		for (i = 0;i < ent->model->alias.aliasnum_bones;i++)
-		{
-			for (k = 0;k < 12;k++)
-				m[k] = 0;
-			for (blends = 0;blends < 4 && ent->frameblend[blends].lerp > 0;blends++)
-			{
-				matrix = ent->model->alias.aliasdata_poses + (ent->frameblend[blends].frame * ent->model->alias.aliasnum_bones + i) * 12;
-				for (k = 0;k < 12;k++)
-					m[k] += matrix[k] * ent->frameblend[blends].lerp;
-			}
-			if (ent->model->alias.aliasdata_bones[i].parent >= 0)
-				R_ConcatTransforms(bonepose[ent->model->alias.aliasdata_bones[i].parent], m, bonepose[i]);
-			else
-				for (k = 0;k < 12;k++)
-					bonepose[i][k] = m[k];
-		}
-		// blend the vertex bone weights
-		memset(out3f, 0, mesh->num_vertices * sizeof(float[3]));
-		v = mesh->data_vertexboneweights;
-		for (i = 0;i < mesh->num_vertexboneweights;i++, v++)
-		{
-			out = out3f + v->vertexindex * 3;
-			matrix = bonepose[v->boneindex];
-			// FIXME: this can very easily be optimized with SSE or 3DNow
-			out[0] += v->origin[0] * matrix[0] + v->origin[1] * matrix[1] + v->origin[2] * matrix[ 2] + v->origin[3] * matrix[ 3];
-			out[1] += v->origin[0] * matrix[4] + v->origin[1] * matrix[5] + v->origin[2] * matrix[ 6] + v->origin[3] * matrix[ 7];
-			out[2] += v->origin[0] * matrix[8] + v->origin[1] * matrix[9] + v->origin[2] * matrix[10] + v->origin[3] * matrix[11];
-		}                                                                                                              
-	}
-	else
-	{
-		int i, vertcount;
-		float lerp1, lerp2, lerp3, lerp4;
-		const float *vertsbase, *verts1, *verts2, *verts3, *verts4;
-		// vertex morph
-		vertsbase = mesh->data_morphvertex3f;
-		vertcount = mesh->num_vertices;
-		verts1 = vertsbase + ent->frameblend[0].frame * vertcount * 3;
-		lerp1 = ent->frameblend[0].lerp;
-		if (ent->frameblend[1].lerp)
-		{
-			verts2 = vertsbase + ent->frameblend[1].frame * vertcount * 3;
-			lerp2 = ent->frameblend[1].lerp;
-			if (ent->frameblend[2].lerp)
-			{
-				verts3 = vertsbase + ent->frameblend[2].frame * vertcount * 3;
-				lerp3 = ent->frameblend[2].lerp;
-				if (ent->frameblend[3].lerp)
-				{
-					verts4 = vertsbase + ent->frameblend[3].frame * vertcount * 3;
-					lerp4 = ent->frameblend[3].lerp;
-					for (i = 0;i < vertcount * 3;i++)
-						VectorMAMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, lerp4, verts4 + i, out3f + i);
-				}
-				else
-					for (i = 0;i < vertcount * 3;i++)
-						VectorMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, out3f + i);
-			}
-			else
-				for (i = 0;i < vertcount * 3;i++)
-					VectorMAM(lerp1, verts1 + i, lerp2, verts2 + i, out3f + i);
-		}
-		else
-			memcpy(out3f, verts1, vertcount * sizeof(float[3]));
-	}
-}
-
 aliaslayer_t r_aliasnoskinlayers[2] = {{ALIASLAYER_DIFFUSE, NULL, NULL}, {ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS, NULL, NULL}};
 aliasskin_t r_aliasnoskin = {0, 2, r_aliasnoskinlayers};
 aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mesh)
@@ -111,6 +35,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
 	int c, fullbright, layernum, firstpass, generatenormals = true;
 	float tint[3], fog, ifog, colorscale, ambientcolor4f[4], diffusecolor[3], diffusenormal[3];
+	float *vertex3f, *normal3f;
 	vec3_t diff;
 	qbyte *bcolor;
 	rmeshstate_t m;
@@ -141,7 +66,18 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 
 	firstpass = true;
 	skin = R_FetchAliasSkin(ent, mesh);
-	R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f);
+
+	if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
+	{
+		vertex3f = mesh->data_basevertex3f;
+		normal3f = mesh->data_basenormal3f;
+	}
+	else
+	{
+		vertex3f = varray_vertex3f;
+		Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
+		normal3f = NULL;
+	}
 	for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 	{
 		if (!(layer->flags & ALIASLAYER_FORCEDRAW_IF_FIRSTPASS) || !firstpass)
@@ -183,7 +119,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				m.texrgbscale[0] = 4;
 			}
 		}
-		m.pointer_vertex = varray_vertex3f;
+		m.pointer_vertex = vertex3f;
 
 		c_alias_polys += mesh->num_triangles;
 		if (layer->flags & ALIASLAYER_FOG)
@@ -218,12 +154,12 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 				if (R_LightModel(ambientcolor4f, diffusecolor, diffusenormal, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
 				{
 					m.pointer_color = varray_color4f;
-					if (generatenormals)
+					if (normal3f == NULL)
 					{
-						generatenormals = false;
-						Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, varray_vertex3f, mesh->data_texcoord2f, mesh->data_element3i, NULL, NULL, varray_normal3f);
+						normal3f = varray_normal3f;
+						Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
 					}
-					R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, varray_vertex3f, varray_normal3f, varray_color4f);
+					R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
 				}
 				else
 					GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
@@ -259,7 +195,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 	int meshnum;
 	aliasmesh_t *mesh;
 	aliasskin_t *skin;
-	float projectdistance;
+	float projectdistance, *vertex3f;
 	if (ent->effects & EF_ADDITIVE || ent->alpha < 1)
 		return;
 	projectdistance = lightradius + ent->model->radius;// - sqrt(DotProduct(relativelightorigin, relativelightorigin));
@@ -271,8 +207,14 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 			skin = R_FetchAliasSkin(ent, mesh);
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
 				continue;
-			R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f);
-			R_Shadow_VolumeFromSphere(mesh->num_vertices, mesh->num_triangles, varray_vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, projectdistance, lightradius);
+			if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
+				vertex3f = mesh->data_basevertex3f;
+			else
+			{
+				vertex3f = varray_vertex3f;
+				Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
+			}
+			R_Shadow_VolumeFromSphere(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, projectdistance, lightradius);
 		}
 	}
 }
@@ -281,6 +223,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 {
 	int c, meshnum, layernum;
 	float fog, ifog, lightcolor2[3];
+	float *vertex3f, *svector3f, *tvector3f, *normal3f;
 	vec3_t diff;
 	qbyte *bcolor;
 	aliasmesh_t *mesh;
@@ -315,8 +258,22 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
-		R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f);
-		Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, varray_vertex3f, mesh->data_texcoord2f, mesh->data_element3i, varray_svector3f, varray_tvector3f, varray_normal3f);
+		if (ent->frameblend[0].frame == 0 && ent->frameblend[0].lerp == 1)
+		{
+			vertex3f = mesh->data_basevertex3f;
+			svector3f = mesh->data_basesvector3f;
+			tvector3f = mesh->data_basetvector3f;
+			normal3f = mesh->data_basenormal3f;
+		}
+		else
+		{
+			vertex3f = varray_vertex3f;
+			svector3f = varray_svector3f;
+			tvector3f = varray_tvector3f;
+			normal3f = varray_normal3f;
+			Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
+			Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
+		}
 		for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 		{
 			if (!(layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))
@@ -329,7 +286,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (layer->flags & ALIASLAYER_SPECULAR)
 			{
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, varray_svector3f, varray_tvector3f, varray_normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, LIGHTING_SPECULAR);
+				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, LIGHTING_SPECULAR);
 			}
 			else if (layer->flags & ALIASLAYER_DIFFUSE)
 			{
@@ -358,7 +315,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
 				}
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, varray_vertex3f, varray_svector3f, varray_tvector3f, varray_normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, LIGHTING_DIFFUSE);
+				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolor2, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, layer->texture, lightcubemap, LIGHTING_DIFFUSE);
 			}
 		}
 	}
