@@ -1864,21 +1864,24 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	lightradius2 = lightradius * lightradius;
 	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 	{
-		f = PlaneDiff(relativelightorigin, surf->plane);
-		if (surf->flags & SURF_PLANEBACK)
-			f = -f;
-		// draw shadows only for backfaces
-		projectdistance = lightradius + f;
-		if (projectdistance >= 0.1 && projectdistance < lightradius)
+		if (surf->flags & SURF_SHADOWCAST)
 		{
-			VectorSubtract(relativelightorigin, surf->poly_center, temp);
-			if (DotProduct(temp, temp) < (surf->poly_radius2 + lightradius2))
+			f = PlaneDiff(relativelightorigin, surf->plane);
+			if (surf->flags & SURF_PLANEBACK)
+				f = -f;
+			// draw shadows only for backfaces
+			projectdistance = lightradius + f;
+			if (projectdistance >= 0.1 && projectdistance < lightradius)
 			{
-				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+				VectorSubtract(relativelightorigin, surf->poly_center, temp);
+				if (DotProduct(temp, temp) < (surf->poly_radius2 + lightradius2))
 				{
-					R_Mesh_ResizeCheck(mesh->numverts * 2);
-					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
+					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+					{
+						R_Mesh_ResizeCheck(mesh->numverts * 2);
+						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
+					}
 				}
 			}
 		}
@@ -1898,22 +1901,25 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, f
 	GL_UseColorArray();
 	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 	{
-		f = PlaneDiff(relativelightorigin, surf->plane);
-		if (surf->flags & SURF_PLANEBACK)
-			f = -f;
-		if (f >= -0.1 && f < lightradius)
+		if (surf->flags & SURF_SHADOWLIGHT)
 		{
-			f = PlaneDiff(modelorg, surf->plane);
+			f = PlaneDiff(relativelightorigin, surf->plane);
 			if (surf->flags & SURF_PLANEBACK)
 				f = -f;
-			if (f > 0)
+			if (f >= -0.1 && f < lightradius)
 			{
-				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+				f = PlaneDiff(modelorg, surf->plane);
+				if (surf->flags & SURF_PLANEBACK)
+					f = -f;
+				if (f > 0)
 				{
-					R_Mesh_ResizeCheck(mesh->numverts);
-					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Shadow_Light(mesh->numverts, mesh->normals, relativelightorigin, lightradius, lightdistbias, lightsubtract, lightcolor);
-					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+					{
+						R_Mesh_ResizeCheck(mesh->numverts);
+						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+						R_Shadow_Light(mesh->numverts, mesh->normals, relativelightorigin, lightradius, lightdistbias, lightsubtract, lightcolor);
+						R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+					}
 				}
 			}
 		}

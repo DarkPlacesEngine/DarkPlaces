@@ -13,10 +13,10 @@ rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_attenuationtexture;
 
 cvar_t r_shadow1 = {0, "r_shadow1", "16"};
-cvar_t r_shadow2 = {0, "r_shadow2", "2"};
+cvar_t r_shadow2 = {0, "r_shadow2", "4"};
 cvar_t r_shadow3 = {0, "r_shadow3", "65536"};
 cvar_t r_shadow4 = {0, "r_shadow4", "1"};
-cvar_t r_shadow5 = {0, "r_shadow5", "0.05"};
+cvar_t r_shadow5 = {0, "r_shadow5", "0"};
 cvar_t r_shadow6 = {0, "r_shadow6", "1"};
 
 void r_shadow_start(void)
@@ -318,7 +318,7 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	qglColorMask(0, 0, 0, 0);
 	qglDisable(GL_BLEND);
 	qglDepthMask(0);
-	qglDepthFunc(GL_LEQUAL);
+	qglDepthFunc(GL_LESS);
 	qglClearStencil(0);
 	qglClear(GL_STENCIL_BUFFER_BIT);
 	qglEnable(GL_STENCIL_TEST);
