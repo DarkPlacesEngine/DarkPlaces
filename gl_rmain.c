@@ -625,6 +625,7 @@ void R_RenderView(void)
 		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
 
 	GL_SetupView_Orientation_FromEntity(&r_refdef.viewentitymatrix);
+	R_Mesh_Start();
 	R_TimeReport("setup");
 
 	R_RenderScene();
@@ -632,6 +633,9 @@ void R_RenderView(void)
 	R_BlendView();
 	R_TimeReport("blendview");
 	
+	R_Mesh_Finish();
+	R_TimeReport("meshfinish");
+
 	GL_Scissor(0, 0, vid.realwidth, vid.realheight);
 	GL_ScissorTest(false);
 }
@@ -662,7 +666,6 @@ void R_RenderScene(void)
 	qglPolygonOffset(0, 0);
 	qglEnable(GL_POLYGON_OFFSET_FILL);
 
-	R_Mesh_Start();
 	R_MeshQueue_BeginScene();
 
 	R_Shadow_UpdateWorldLightSelection();
@@ -722,9 +725,6 @@ void R_RenderScene(void)
 		R_ShadowVolumeLighting(true);
 		R_TimeReport("shadowvolume");
 	}
-
-	R_Mesh_Finish();
-	R_TimeReport("meshfinish");
 
 	qglPolygonOffset(0, 0);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
