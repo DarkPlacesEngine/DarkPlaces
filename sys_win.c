@@ -353,7 +353,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 {
 	double frameoldtime, framenewtime;
 	MEMORYSTATUS lpBuffer;
-//	static char cwd[1024];
 	int t;
 
 	/* previous instances do not exist in Win32 */
@@ -365,22 +364,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	lpBuffer.dwLength = sizeof(MEMORYSTATUS);
 	GlobalMemoryStatus (&lpBuffer);
-
-/*
-	if (!GetCurrentDirectory (sizeof(cwd), cwd))
-		Sys_Error ("Couldn't determine current directory");
-
-	if (cwd[strlen(cwd)-1] == '/')
-		cwd[strlen(cwd)-1] = 0;
-*/
-
-	memset(&host_parms, 0, sizeof(host_parms));
-
-//	host_parms.basedir = cwd;
-	host_parms.basedir = ".";
-#if CACHEENABLE
-	host_parms.cachedir = ".";
-#endif
 
 	com_argc = 1;
 	argv[0] = empty_string;

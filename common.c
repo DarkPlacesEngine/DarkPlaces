@@ -41,6 +41,7 @@ qboolean msg_suppress_1 = 0;
 void COM_InitFilesystem (void);
 
 char com_token[1024];
+char com_basedir[MAX_OSPATH];
 int com_argc;
 char **com_argv;
 
@@ -50,6 +51,7 @@ char com_cmdline[CMDLINE_LENGTH];
 
 int gamemode;
 char *gamename;
+char *gamedirname;
 
 /*
 
@@ -616,7 +618,7 @@ skipwhite:
 			return NULL;                    // end of file;
 		data++;
 	}
-	
+
 // skip // comments
 	if (c=='/' && data[1] == '/')
 	{
@@ -788,24 +790,31 @@ void COM_InitGameType (void)
 			gamename = "DarkPlaces-Quake";
 		else
 			gamename = "DarkPlaces-SharewareQuake";
+		gamedirname = "";
 		break;
 	case GAME_HIPNOTIC:
 		gamename = "Darkplaces-Hipnotic";
+		gamedirname = "hipnotic";
 		break;
 	case GAME_ROGUE:
 		gamename = "Darkplaces-Rogue";
+		gamedirname = "rogue";
 		break;
 	case GAME_NEHAHRA:
 		gamename = "DarkPlaces-Nehahra";
+		gamedirname = "nehahra";
 		break;
 	case GAME_FIENDARENA:
 		gamename = "FiendArena";
+		gamedirname = "fiendarena";
 		break;
 	case GAME_ZYMOTIC:
 		gamename = "Zymotic";
+		gamedirname = "zymotic";
 		break;
 	case GAME_TRANSFUSION:
 		gamename = "Transfusion";
+		gamedirname = "transfusion";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
@@ -1185,7 +1194,7 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 #endif
 
 				cachetime = Sys_FileTime (cachepath);
-			
+
 				if (cachetime < findtime)
 					COM_CopyFile (netpath, cachepath);
 				strcpy (netpath, cachepath);
@@ -1384,93 +1393,40 @@ COM_InitFilesystem
 */
 void COM_InitFilesystem (void)
 {
-	int             i, j;
-	char    basedir[MAX_OSPATH];
-	searchpath_t    *search;
+	int i;
+	searchpath_t *search;
 
-//
-// -basedir <path>
-// Overrides the system supplied base directory (under GAMENAME)
-//
+	strcpy(com_basedir, "");
+
+	// -basedir <path>
+	// Overrides the system supplied base directory (under GAMENAME)
 	i = COM_CheckParm ("-basedir");
 	if (i && i < com_argc-1)
-		strcpy (basedir, com_argv[i+1]);
-	else
-		strcpy (basedir, host_parms.basedir);
+		strcpy (com_basedir, com_argv[i+1]);
 
-	j = strlen (basedir);
-
-	if (j > 0)
-	{
-		if ((basedir[j-1] == '\\') || (basedir[j-1] == '/'))
-			basedir[j-1] = 0;
-	}
-
-#if CACHEENABLE
-//
-// -cachedir <path>
-// Overrides the system supplied cache directory (NULL or /qcache)
-// -cachedir - will disable caching.
-//
-	i = COM_CheckParm ("-cachedir");
-	if (i && i < com_argc-1)
-	{
-		if (com_argv[i+1][0] == '-')
-			com_cachedir[0] = 0;
-		else
-			strcpy (com_cachedir, com_argv[i+1]);
-	}
-	else if (host_parms.cachedir)
-		strcpy (com_cachedir, host_parms.cachedir);
-	else
-		com_cachedir[0] = 0;
-#endif
+	i = strlen (com_basedir);
+	if (i > 0 && (com_basedir[i-1] == '\\' || com_basedir[i-1] == '/'))
+		com_basedir[i-1] = 0;
 
 // start up with GAMENAME by default (id1)
-	COM_AddGameDirectory (va("%s/"GAMENAME, basedir) );
-
-	switch(gamemode)
+	COM_AddGameDirectory (va("%s/"GAMENAME, com_basedir));
+	if (gamedirname[0])
 	{
-	case GAME_NORMAL:
-		break;
-	case GAME_HIPNOTIC:
-		COM_AddGameDirectory (va("%s/hipnotic", basedir) );
-		break;
-	case GAME_ROGUE:
-		COM_AddGameDirectory (va("%s/rogue", basedir) );
-		break;
-	case GAME_NEHAHRA:
-		COM_AddGameDirectory (va("%s/nehahra", basedir) );
-		break;
-	case GAME_FIENDARENA:
-		COM_AddGameDirectory (va("%s/fiendarena", basedir) );
-		break;
-	case GAME_ZYMOTIC:
-		COM_AddGameDirectory (va("%s/zymotic", basedir) );
-		break;
-	case GAME_TRANSFUSION:
-		COM_AddGameDirectory (va("%s/transfusion", basedir) );
-		break;
-	default:
-		Sys_Error("COM_InitFilesystem: unknown gamemode %i\n", gamemode);
-		break;
+		com_modified = true;
+		COM_AddGameDirectory (va("%s/%s", com_basedir, gamedirname));
 	}
 
-//
-// -game <gamedir>
-// Adds basedir/gamedir as an override game
-//
+	// -game <gamedir>
+	// Adds basedir/gamedir as an override game
 	i = COM_CheckParm ("-game");
 	if (i && i < com_argc-1)
 	{
 		com_modified = true;
-		COM_AddGameDirectory (va("%s/%s", basedir, com_argv[i+1]));
+		COM_AddGameDirectory (va("%s/%s", com_basedir, com_argv[i+1]));
 	}
 
-//
-// -path <dir or packfile> [<dir or packfile>] ...
-// Fully specifies the exact search path, overriding the generated one
-//
+	// -path <dir or packfile> [<dir or packfile>] ...
+	// Fully specifies the exact search path, overriding the generated one
 	i = COM_CheckParm ("-path");
 	if (i)
 	{

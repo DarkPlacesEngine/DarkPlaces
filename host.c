@@ -34,8 +34,6 @@ Memory is cleared / released when a server or client begins, not when they end.
 
 */
 
-quakeparms_t host_parms;
-
 qboolean	host_initialized;		// true if into command execution
 qboolean	host_loopactive = false;	// LordHavoc: used to turn Host_Error into Sys_Error if starting up or shutting down
 qboolean	host_shuttingdown = false;	// LordHavoc: set when quit is executed
