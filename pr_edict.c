@@ -1676,6 +1676,20 @@ void PR_Init (void)
 	PR_Cmd_Init();
 }
 
+/*
+===============
+PR_Shutdown
+===============
+*/
+extern void PR_Cmd_Shutdown(void);
+void PR_Shutdown (void)
+{
+	PR_Cmd_Shutdown();
+
+	Mem_FreePool(&edictstring_mempool);
+	Mem_FreePool(&progs_mempool);
+}
+
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
 edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {

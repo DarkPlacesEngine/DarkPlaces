@@ -743,6 +743,7 @@ void CL_TimeDemo_f(void);
 // cl_parse.c
 //
 void CL_Parse_Init(void);
+void CL_Parse_Shutdown(void);
 void CL_ParseServerMessage(void);
 void CL_Parse_DumpPacket(void);
 
@@ -790,6 +791,7 @@ extern cvar_t cl_decals_fadetime;
 
 void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
+void CL_Particles_Shutdown(void);
 
 void CL_ParseParticleEffect (void);
 void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);

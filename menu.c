@@ -4174,6 +4174,8 @@ void M_Shutdown(void)
 {
 	// reset key_dest
 	key_dest = key_game;
+
+	Mem_FreePool (&menu_mempool);
 }
 
 void M_Restart(void)

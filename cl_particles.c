@@ -371,6 +371,15 @@ void CL_Particles_Init (void)
 	CL_Particles_Clear();
 }
 
+void CL_Particles_Shutdown (void)
+{
+#ifdef WORKINGLQUAKE
+	// No clue what to do here...
+#else
+	Mem_FreePool (&cl_part_mempool);
+#endif
+}
+
 // list of all 26 parameters:
 // ptype - any of the pt_ enum values (pt_static, pt_blood, etc), see ptype_t near the top of this file
 // porientation - PARTICLE_ enum values (PARTICLE_BILLBOARD, PARTICLE_SPARK, etc)

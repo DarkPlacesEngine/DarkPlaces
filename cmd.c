@@ -77,6 +77,15 @@ void Cbuf_Init (void)
 	SZ_Alloc (&cmd_text, 32768, "command buffer"); // space for commands and script files
 }
 
+/*
+============
+Cbuf_Shutdown
+============
+*/
+void Cbuf_Shutdown (void)
+{
+	SZ_Free (&cmd_text);
+}
 
 /*
 ============
