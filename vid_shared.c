@@ -15,7 +15,7 @@ int gl_supportslockarrays = false;
 cvar_t vid_mode = {0, "vid_mode", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
-cvar_t gl_combine = {0, "gl_combine", "0"};
+cvar_t gl_combine = {0, "gl_combine", "1"};
 
 // GL_ARB_multitexture
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
@@ -121,27 +121,6 @@ void VID_CheckExtensions(void)
 	dlclose(prjobj);
 #endif
 }
-
-/*
-void VID_CheckCombine(void)
-{
-	// LordHavoc: although texture_env_combine doesn't require multiple TMUs
-	// (it does require the multitexture extension however), it is useless to
-	// darkplaces without multiple TMUs...
-	if (gl_mtexable && strstr(gl_extensions, "GL_ARB_texture_env_combine "))
-	{
-		gl_combine_extension = true;
-		Cvar_SetValue("gl_combine", true);
-		Con_Printf("GL_ARB_texture_env_combine detected\n");
-	}
-	else
-	{
-		gl_combine_extension = false;
-		Cvar_SetValue("gl_combine", false);
-		Con_Printf("GL_ARB_texture_env_combine not detected\n");
-	}
-}
-*/
 
 void Force_CenterView_f (void)
 {
