@@ -73,9 +73,6 @@ qboolean con_initialized;
 
 mempool_t *console_mempool;
 
-// scan lines to clear for notify lines
-int con_notifylines;
-
 extern void M_Menu_Main_f (void);
 
 /*
@@ -322,7 +319,7 @@ void Con_Print (const char *txt)
 			{
 				if (con_notify.integer < 0)
 					Cvar_SetValueQuick(&con_notify, 0);
-				if (con_notifylines > MAX_NOTIFYLINES)
+				if (con_notify.integer > MAX_NOTIFYLINES)
 					Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
 				if (con_notify.integer > 0)
 					con_times[con_current % con_notify.integer] = realtime;
@@ -518,7 +515,7 @@ void Con_DrawNotify (void)
 
 	if (con_notify.integer < 0)
 		Cvar_SetValueQuick(&con_notify, 0);
-	if (con_notifylines > MAX_NOTIFYLINES)
+	if (con_notify.integer > MAX_NOTIFYLINES)
 		Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
 	v = 0;
 	for (i= con_current-con_notify.integer+1 ; i<=con_current ; i++)
@@ -564,9 +561,6 @@ void Con_DrawNotify (void)
 			v += 8;
 		}
 	}
-
-	if (con_notifylines < v)
-		con_notifylines = v;
 }
 
 /*
