@@ -44,6 +44,10 @@ void Sys_Error (const char *error, ...)
 	va_end (argptr);
 	fprintf(stderr, "Error: %s\n", string);
 
+	Con_Print ("Quake Error: ");
+	Con_Print (string);
+	Con_Print ("\n");
+
 	Host_Shutdown ();
 	exit (1);
 }
