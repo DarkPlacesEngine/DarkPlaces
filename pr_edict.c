@@ -1167,24 +1167,26 @@ void ED_LoadFromFile (const char *data)
 		parsed++;
 
 // remove things from different skill levels or deathmatch
-		if (deathmatch.integer)
+		if (gamemode != GAME_TRANSFUSION) //Transfusion does this in QC
 		{
-			if (((int)ent->v->spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
+			if (deathmatch.integer)
+			{
+				if (((int)ent->v->spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
+				{
+					ED_Free (ent);
+					inhibited++;
+					continue;
+				}
+			}
+			else if ((current_skill <= 0 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_EASY  ))
+				|| (current_skill == 1 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_MEDIUM))
+				|| (current_skill >= 2 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_HARD  )))
 			{
 				ED_Free (ent);
 				inhibited++;
 				continue;
 			}
 		}
-		else if ((current_skill <= 0 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_EASY  ))
-			  || (current_skill == 1 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_MEDIUM))
-			  || (current_skill >= 2 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_HARD  )))
-		{
-			ED_Free (ent);
-			inhibited++;
-			continue;
-		}
-
 //
 // immediately call spawn function
 //
