@@ -193,17 +193,17 @@ void MSG_WriteString (sizebuf_t *sb, const char *s)
 void MSG_WriteCoord13i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
-		MSG_WriteShort (sb, (int)(f * 8.0f + 0.5f));
+		MSG_WriteShort (sb, (int)(f * 8.0 + 0.5));
 	else
-		MSG_WriteShort (sb, (int)(f * 8.0f - 0.5f));
+		MSG_WriteShort (sb, (int)(f * 8.0 - 0.5));
 }
 
 void MSG_WriteCoord16i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
-		MSG_WriteShort (sb, (int)(f + 0.5f));
+		MSG_WriteShort (sb, (int)(f + 0.5));
 	else
-		MSG_WriteShort (sb, (int)(f - 0.5f));
+		MSG_WriteShort (sb, (int)(f - 0.5));
 }
 
 void MSG_WriteCoord32f (sizebuf_t *sb, float f)
@@ -234,17 +234,17 @@ void MSG_WriteVector (sizebuf_t *sb, float *v, int protocol)
 void MSG_WriteAngle8i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
-		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) + 0.5f) & 255);
+		MSG_WriteByte (sb, (int)(f*(256.0/360.0) + 0.5) & 255);
 	else
-		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) - 0.5f) & 255);
+		MSG_WriteByte (sb, (int)(f*(256.0/360.0) - 0.5) & 255);
 }
 
 void MSG_WriteAngle16i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
-		MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) + 0.5f) & 65535);
+		MSG_WriteShort (sb, (int)(f*(65536.0/360.0) + 0.5) & 65535);
 	else
-		MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) - 0.5f) & 65535);
+		MSG_WriteShort (sb, (int)(f*(65536.0/360.0) - 0.5) & 65535);
 }
 
 void MSG_WriteAngle32f (sizebuf_t *sb, float f)
@@ -363,7 +363,7 @@ int MSG_ReadBytes (int numbytes, unsigned char *out)
 
 float MSG_ReadCoord13i (void)
 {
-	return MSG_ReadLittleShort() * (1.0f/8.0f);
+	return MSG_ReadLittleShort() * (1.0/8.0);
 }
 
 float MSG_ReadCoord16i (void)
@@ -398,12 +398,12 @@ void MSG_ReadVector (float *v, int protocol)
 // LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
 float MSG_ReadAngle8i (void)
 {
-	return MSG_ReadByte () * (360.0f/256.0f);
+	return MSG_ReadByte () * (360.0/256.0);
 }
 
 float MSG_ReadAngle16i (void)
 {
-	return MSG_ReadShort () * (360.0f/65536.0f);
+	return MSG_ReadShort () * (360.0/65536.0);
 }
 
 float MSG_ReadAngle32f (void)
