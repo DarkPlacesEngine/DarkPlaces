@@ -219,12 +219,13 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	sfxcache_t *sc;
 
 	// see if still in memory
-	if (s->sfxcache)
+	if (!shm || !shm->speed)
+		return NULL;
+	if (s->sfxcache && s->sfxcache->speed == shm->speed)
 		return s->sfxcache;
 
 	// load it in
-	strcpy(namebuffer, "sound/");
-	strcat(namebuffer, s->name);
+	snprintf(namebuffer, sizeof(namebuffer), "sound/%s", s->name);
 
 	data = FS_LoadFile(namebuffer, false);
 
@@ -273,6 +274,14 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	return sc;
 }
 
+void S_UnloadSound(sfx_t *s)
+{
+	if (s->sfxcache)
+	{
+		s->sfxcache = NULL;
+		Mem_FreePool(&s->mempool);
+	}
+}
 
 
 /*

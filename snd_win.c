@@ -190,10 +190,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	int				reps;
 	int i;
 
-	memset ((void *)&sn, 0, sizeof (sn));
-
-	shm = &sn;
-
+	memset(shm, 0, sizeof(*shm));
 	shm->channels = 2;
 	shm->samplebits = 16;
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
@@ -399,11 +396,8 @@ sndinitstat SNDDMA_InitDirect (void)
 	pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &mmstarttime.u.sample, &dwWrite);
 	pDSBuf->lpVtbl->Play(pDSBuf, 0, 0, DSBPLAY_LOOPING);
 
-	shm->soundalive = true;
-	shm->splitbuffer = false;
 	shm->samples = gSndBufSize/(shm->samplebits/8);
 	shm->samplepos = 0;
-	shm->submission_chunk = 1;
 	shm->buffer = (unsigned char *) lpData;
 	sample16 = (shm->samplebits/8) - 1;
 
@@ -429,8 +423,7 @@ qboolean SNDDMA_InitWav (void)
 	snd_sent = 0;
 	snd_completed = 0;
 
-	shm = &sn;
-
+	memset(shm, 0, sizeof(*shm));
 	shm->channels = 2;
 	shm->samplebits = 16;
 	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
@@ -537,11 +530,8 @@ qboolean SNDDMA_InitWav (void)
 		}
 	}
 
-	shm->soundalive = true;
-	shm->splitbuffer = false;
 	shm->samples = gSndBufSize/(shm->samplebits/8);
 	shm->samplepos = 0;
-	shm->submission_chunk = 1;
 	shm->buffer = (unsigned char *) lpData;
 	sample16 = (shm->samplebits/8) - 1;
 
@@ -683,7 +673,7 @@ void SNDDMA_Submit(void)
 		{
 #ifndef AKVERSION
 			Con_DPrintf ("Sound overrun\n");
-#endif 
+#endif
 			break;
 		}
 
@@ -774,10 +764,3 @@ void S_UnlockBuffer(void)
 		pDSBuf->lpVtbl->Unlock(pDSBuf, dsound_pbuf, dsound_dwSize, dsound_pbuf2, dsound_dwSize2);
 }
 
-void S_Open(void)
-{
-}
-
-void S_Close(void)
-{
-}

@@ -923,7 +923,6 @@ void Host_Shutdown(void)
 
 	CDAudio_Shutdown ();
 	NetConn_Shutdown ();
-	S_Shutdown();
 
 	if (cls.state != ca_dedicated)
 	{

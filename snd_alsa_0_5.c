@@ -248,11 +248,8 @@ qboolean SNDDMA_Init(void)
 	if ((rc=snd_pcm_channel_setup(pcm_handle, &setup))<0)
 		goto error;
 
-	shm=&sn;
 	memset((dma_t*)shm,0,sizeof(*shm));
-    shm->splitbuffer = 0;
 	shm->channels=setup.format.voices;
-	shm->submission_chunk=128;					// don't mix less than this #
 	shm->samplepos=0;							// in mono samples
 	shm->samplebits=setup.format.format==SND_PCM_SFMT_S16_LE?16:8;
 	shm->samples=setup.buf.block.frags*setup.buf.block.frag_size/(shm->samplebits/8);	// mono samples in buffer
@@ -262,7 +259,6 @@ qboolean SNDDMA_Init(void)
     Con_Printf("%5d samples\n", shm->samples);
     Con_Printf("%5d samplepos\n", shm->samplepos);
     Con_Printf("%5d samplebits\n", shm->samplebits);
-    Con_Printf("%5d submission_chunk\n", shm->submission_chunk);
     Con_Printf("%5d speed\n", shm->speed);
     Con_Printf("0x%x dma buffer\n", (int)shm->buffer);
 	Con_Printf("%5d total_channels\n", total_channels);
@@ -342,10 +338,3 @@ void S_UnlockBuffer(void)
 {
 }
 
-void S_Open(void)
-{
-}
-
-void S_Close(void)
-{
-}

@@ -383,17 +383,23 @@ int CDAudio_Init(void)
 		cd_dev[sizeof(cd_dev) - 1] = 0;
 	}
 
+	Cmd_AddCommand("cd", CD_f);
+
+	for (i = 0; i < 100; i++)
+		remap[i] = i;
+	cdaudioinitialized = true;
+	enabled = true;
+
+	return 0;
+}
+
+int CDAudio_Startup(void)
+{
 	if ((cdfile = open(cd_dev, O_RDONLY)) == -1) {
 		Con_DPrintf("CDAudio_Init: open of \"%s\" failed (%i)\n", cd_dev, errno);
 		cdfile = -1;
 		return -1;
 	}
-
-	for (i = 0; i < 100; i++)
-		remap[i] = i;
-	cdaudioinitialized = true;
-	initialized = true;
-	enabled = true;
 
 	if (CDAudio_GetAudioDiskInfo())
 	{
@@ -401,13 +407,12 @@ int CDAudio_Init(void)
 		cdValid = false;
 	}
 
-	Cmd_AddCommand ("cd", CD_f);
+	initialized = true;
 
-	Con_DPrintf("CD Audio Initialized\n");
+	Con_DPrintf("CD Audio Started\n");
 
 	return 0;
 }
-
 
 void CDAudio_Shutdown(void)
 {
@@ -416,12 +421,6 @@ void CDAudio_Shutdown(void)
 	CDAudio_Stop();
 	close(cdfile);
 	cdfile = -1;
+	initialized = false;
 }
 
-void CDAudio_Open(void)
-{
-}
-
-void CDAudio_Close(void)
-{
-}
