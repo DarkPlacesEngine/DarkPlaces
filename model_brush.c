@@ -939,13 +939,10 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->width = 16;
 		tx->height = 16;
 		tx->skin.base = r_notexture;
-		tx->shader = &Cshader_wall_lightmap;
-		tx->flags = SURF_SOLIDCLIP;
 		if (i == loadmodel->brushq1.numtextures - 1)
-		{
-			tx->flags |= SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
-			tx->shader = &Cshader_water;
-		}
+			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
+		else
+			tx->flags = SURF_LIGHTMAP | SURF_SOLIDCLIP;
 		tx->currentframe = tx;
 	}
 
@@ -1077,8 +1074,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		if (tx->name[0] == '*')
 		{
 			// turb does not block movement
-			tx->flags &= ~SURF_SOLIDCLIP;
-			tx->flags |= SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
+			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
 			// LordHavoc: some turbulent textures should be fullbright and solid
 			if (!strncmp(tx->name,"*lava",5)
 			 || !strncmp(tx->name,"*teleport",9)
@@ -1086,20 +1082,11 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 				tx->flags |= SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA;
 			else
 				tx->flags |= SURF_WATERALPHA;
-			tx->shader = &Cshader_water;
 		}
 		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
-		{
-			tx->flags |= SURF_DRAWSKY;
-			tx->shader = &Cshader_sky;
-		}
+			tx->flags = SURF_DRAWSKY | SURF_SOLIDCLIP;
 		else
-		{
-			tx->flags |= SURF_LIGHTMAP;
-			if (!tx->skin.fog)
-				tx->flags |= SURF_SHADOWCAST | SURF_SHADOWLIGHT;
-			tx->shader = &Cshader_wall_lightmap;
-		}
+			tx->flags = SURF_LIGHTMAP | SURF_SOLIDCLIP;
 
 		// start out with no animation
 		tx->currentframe = tx;
@@ -1526,7 +1513,7 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 		{
 			// if texture chosen is NULL or the shader needs a lightmap,
 			// force to notexture water shader
-			if (out->texture == NULL || out->texture->shader->flags & SHADERFLAGS_NEEDLIGHTMAP)
+			if (out->texture == NULL || out->texture->flags & SURF_LIGHTMAP)
 				out->texture = loadmodel->brushq1.textures + (loadmodel->brushq1.numtextures - 1);
 		}
 		else
@@ -1832,7 +1819,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		else // LordHavoc: white lighting (bsp version 29)
 			surf->samples = loadmodel->brushq1.lightdata + (i * 3);
 
-		if (surf->texinfo->texture->shader == &Cshader_wall_lightmap)
+		if (surf->texinfo->texture->flags & SURF_LIGHTMAP)
 		{
 			if ((surf->extents[0] >> 4) + 1 > (256) || (surf->extents[1] >> 4) + 1 > (256))
 				Host_Error("Bad surface extents");
@@ -1890,7 +1877,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
 		Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, mesh->data_vertex3f, mesh->data_texcoordtexture2f, mesh->data_element3i, mesh->data_svector3f, mesh->data_tvector3f, mesh->data_normal3f);
 
-		if (surf->texinfo->texture->shader == &Cshader_wall_lightmap)
+		if (surf->texinfo->texture->flags & SURF_LIGHTMAP)
 		{
 			int i, iu, iv, smax, tmax;
 			float u, v, ubase, vbase, uscale, vscale;
@@ -1898,7 +1885,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			smax = surf->extents[0] >> 4;
 			tmax = surf->extents[1] >> 4;
 
-			surf->flags |= SURF_LIGHTMAP;
 			if (r_miplightmaps.integer)
 			{
 				surf->lightmaptexturestride = smax+1;
@@ -3032,7 +3018,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			for (j = 0, surf = &mod->brushq1.surfaces[mod->brushq1.firstmodelsurface];j < mod->brushq1.nummodelsurfaces;j++, surf++)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
-				if (surf->texinfo->texture->shader == &Cshader_sky)
+				if (surf->texinfo->texture->flags & SURF_DRAWSKY)
 					mod->DrawSky = R_Model_Brush_DrawSky;
 				// LordHavoc: submodels always clip, even if water
 				if (mod->brush.numsubmodels - 1)

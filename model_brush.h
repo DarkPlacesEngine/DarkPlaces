@@ -59,8 +59,6 @@ mplane_t;
 #define SHADERSTAGE_NORMAL 1
 #define SHADERSTAGE_COUNT 2
 
-#define SHADERFLAGS_NEEDLIGHTMAP 1
-
 #define SURF_PLANEBACK 2
 #define SURF_DRAWSKY 4
 #define SURF_DRAWTURB 0x10
@@ -68,8 +66,6 @@ mplane_t;
 #define SURF_DRAWNOALPHA 0x100
 #define SURF_DRAWFULLBRIGHT 0x200
 #define SURF_LIGHTBOTHSIDES 0x400
-#define SURF_SHADOWCAST 0x1000 // this polygon can cast stencil shadows
-#define SURF_SHADOWLIGHT 0x2000 // this polygon can be lit by stencil shadowing
 #define SURF_WATERALPHA 0x4000 // this polygon's alpha is modulated by r_wateralpha
 #define SURF_SOLIDCLIP 0x8000 // this polygon blocks movement
 
@@ -80,17 +76,6 @@ mplane_t;
 struct entity_render_s;
 struct texture_s;
 struct msurface_s;
-// change this stuff when real shaders are added
-typedef struct Cshader_s
-{
-	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const struct texture_s *texture, struct msurface_s **surfchain);
-	int flags;
-}
-Cshader_t;
-
-extern Cshader_t Cshader_wall_lightmap;
-extern Cshader_t Cshader_water;
-extern Cshader_t Cshader_sky;
 
 typedef struct texture_s
 {
@@ -109,9 +94,6 @@ typedef struct texture_s
 
 	// loaded the same as model skins
 	skinframe_t skin;
-
-	// shader to use for this texture
-	Cshader_t *shader;
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
