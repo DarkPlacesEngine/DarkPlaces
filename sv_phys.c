@@ -1030,7 +1030,8 @@ void SV_Physics_Client (edict_t	*ent, int num)
 		if (!SV_RunThink (ent))
 			return;
 		SV_CheckWater (ent);
-		SV_FlyMove (ent, sv.frametime, NULL);
+		//SV_FlyMove (ent, sv.frametime, NULL);
+		SV_WalkMove (ent);
 		break;
 
 	case MOVETYPE_NOCLIP:
