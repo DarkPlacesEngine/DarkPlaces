@@ -913,7 +913,8 @@ void CL_ParseServerMessage (void)
 			i = MSG_ReadByte ();
 			if (i >= MAX_LIGHTSTYLES)
 				Host_Error ("svc_lightstyle > MAX_LIGHTSTYLES");
-			strcpy (cl_lightstyle[i].map,  MSG_ReadString());
+			strncpy (cl_lightstyle[i].map,  MSG_ReadString(), MAX_STYLESTRING - 1);
+			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 			cl_lightstyle[i].length = strlen(cl_lightstyle[i].map);
 			break;
 			
@@ -929,21 +930,21 @@ void CL_ParseServerMessage (void)
 		case svc_updatename:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatename > MAX_SCOREBOARD");
+				Host_Error ("CL_ParseServerMessage: svc_updatename >= MAX_SCOREBOARD");
 			strcpy (cl.scores[i].name, MSG_ReadString ());
 			break;
 			
 		case svc_updatefrags:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatefrags > MAX_SCOREBOARD");
+				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= MAX_SCOREBOARD");
 			cl.scores[i].frags = MSG_ReadShort ();
 			break;			
 
 		case svc_updatecolors:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
-				Host_Error ("CL_ParseServerMessage: svc_updatecolors > MAX_SCOREBOARD");
+				Host_Error ("CL_ParseServerMessage: svc_updatecolors >= MAX_SCOREBOARD");
 			cl.scores[i].colors = MSG_ReadByte ();
 			break;
 			
@@ -991,7 +992,7 @@ void CL_ParseServerMessage (void)
 			i = MSG_ReadByte ();
 			if (i < 0 || i >= MAX_CL_STATS)
 				Host_Error ("svc_updatestat: %i is invalid", i);
-			cl.stats[i] = MSG_ReadLong ();;
+			cl.stats[i] = MSG_ReadLong ();
 			break;
 			
 		case svc_spawnstaticsound:
