@@ -768,6 +768,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_FNIGGIUM;
 	else if (strstr(name, "setheral"))
 		gamemode = GAME_SETHERAL;
+	else if (strstr(name, "som"))
+		gamemode = GAME_SOM;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -795,6 +797,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_FNIGGIUM;
 	else if (COM_CheckParm ("-setheral"))
 		gamemode = GAME_SETHERAL;
+	else if (COM_CheckParm ("-som"))
+		gamemode = GAME_SOM;
 
 	switch(gamemode)
 	{
@@ -844,6 +848,10 @@ void COM_InitGameType (void)
 		break;
 	case GAME_SETHERAL:
 		gamename = "Setheral";
+		gamedirname = "data";
+		break;
+	case GAME_SOM:
+		gamename = "Son of Man";
 		gamedirname = "data";
 		break;
 	default:
