@@ -472,20 +472,38 @@ void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t u
 	}
 	if (left || up)
 	{
-		angle = angles[ROLL] * (M_PI*2 / 360);
-		sr = sin(angle);
-		cr = cos(angle);
-		if (left)
+		if (angles[ROLL])
 		{
-			left[0] = sr*sp*cy+cr*-sy;
-			left[1] = sr*sp*sy+cr*cy;
-			left[2] = sr*cp;
+			angle = angles[ROLL] * (M_PI*2 / 360);
+			sr = sin(angle);
+			cr = cos(angle);
+			if (left)
+			{
+				left[0] = sr*sp*cy+cr*-sy;
+				left[1] = sr*sp*sy+cr*cy;
+				left[2] = sr*cp;
+			}
+			if (up)
+			{
+				up[0] = cr*sp*cy+-sr*-sy;
+				up[1] = cr*sp*sy+-sr*cy;
+				up[2] = cr*cp;
+			}
 		}
-		if (up)
+		else
 		{
-			up[0] = cr*sp*cy+-sr*-sy;
-			up[1] = cr*sp*sy+-sr*cy;
-			up[2] = cr*cp;
+			if (left)
+			{
+				left[0] = -sy;
+				left[1] = cy;
+				left[2] = 0;
+			}
+			if (up)
+			{
+				up[0] = sp*cy;
+				up[1] = sp*sy;
+				up[2] = cp;
+			}
 		}
 	}
 }
