@@ -104,9 +104,9 @@ typedef struct rtlight_s
 	vec3_t cullmins;
 	vec3_t cullmaxs;
 	// culling
-	vec_t cullradius;
+	//vec_t cullradius;
 	// squared cullradius
-	vec_t cullradius2;
+	//vec_t cullradius2;
 
 	// lightmap renderer stuff (remove someday!)
 	// the size of the light
@@ -128,7 +128,9 @@ typedef struct rtlight_s
 	shadowmesh_t *static_meshchain_light;
 	// used for visibility testing (more exact than bbox)
 	int static_numclusters;
-	int *static_clusterindices;
+	int static_numclusterpvsbytes;
+	int *static_clusterlist;
+	qbyte *static_clusterpvs;
 }
 rtlight_t;
 
