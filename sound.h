@@ -113,7 +113,7 @@ void S_InitPaintChannels (void);
 channel_t *SND_PickChannel(int entnum, int entchannel);
 
 // spatializes a channel
-void SND_Spatialize(channel_t *ch);
+void SND_Spatialize(channel_t *ch, int isstatic);
 
 // initializes cycling through a DMA buffer and returns information on it
 qboolean SNDDMA_Init(void);
