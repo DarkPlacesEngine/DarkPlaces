@@ -37,13 +37,11 @@ cvar_t	sv_aim = {CVAR_SAVE, "sv_aim", "2"}; //"0.93"}; // LordHavoc: disabled au
 char *PF_VarString (int	first)
 {
 	int		i;
-	static char out[256];
+	static char out[4096]; // FIXME: buffer overflow potential
 
 	out[0] = 0;
-	for (i=first ; i<pr_argc ; i++)
-	{
+	for (i = first;i < pr_argc;i++)
 		strcat (out, G_STRING((OFS_PARM0+i*3)));
-	}
 	return out;
 }
 
