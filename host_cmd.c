@@ -109,7 +109,7 @@ void Host_God_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch)
+	if (pr_global_struct->deathmatch || !sv_player)
 		return;
 
 	sv_player->v->flags = (int)sv_player->v->flags ^ FL_GODMODE;
@@ -127,7 +127,7 @@ void Host_Notarget_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch)
+	if (pr_global_struct->deathmatch || !sv_player)
 		return;
 
 	sv_player->v->flags = (int)sv_player->v->flags ^ FL_NOTARGET;
@@ -147,7 +147,7 @@ void Host_Noclip_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch)
+	if (pr_global_struct->deathmatch || !sv_player)
 		return;
 
 	if (sv_player->v->movetype != MOVETYPE_NOCLIP)
@@ -179,7 +179,7 @@ void Host_Fly_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch)
+	if (pr_global_struct->deathmatch || !sv_player)
 		return;
 
 	if (sv_player->v->movetype != MOVETYPE_FLY)
@@ -250,12 +250,12 @@ void Host_Map_f (void)
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	SCR_BeginLoadingPlaque ();
-
 	CL_Disconnect ();
 	Host_ShutdownServer(false);
 
 	key_dest = key_game;			// remove console or menu
+	SCR_BeginLoadingPlaque ();
+
 
 	svs.serverflags = 0;			// haven't completed an episode yet
 	strcpy (sv_spawnmap, Cmd_Argv(1));
@@ -654,18 +654,19 @@ void Host_Name_f (void)
 		return;
 	}
 
-	if (host_client->name[0] && strcmp(host_client->name, "unconnected") )
-		if (strcmp(host_client->name, newName) != 0)
-			Con_Printf ("%s renamed to %s\n", host_client->name, newName);
-	strcpy (host_client->name, newName);
-	strcpy (host_client->old_name, newName);
-	sv_player->v->netname = PR_SetString(host_client->name);
+	if (strcmp(host_client->name, newName) && host_client->name[0] && strcmp(host_client->name, "unconnected"))
+		SV_BroadcastPrintf("%s changed name to %s\n", host_client->name, newName);
+	strcpy(host_client->name, newName);
+	strcpy(host_client->old_name, newName);
+	if (sv_player)
+		sv_player->v->netname = PR_SetString(host_client->name);
+	//Con_Printf("Host_Name_f: host_client->edict->netname = %s, sv_player->netname = %s, host_client->name = %s\n", PR_GetString(host_client->edict->v->netname), PR_GetString(sv_player->v->netname), host_client->name);
 
 // send notification to all clients
 
-	MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
-	MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
-	MSG_WriteString (&sv.reliable_datagram, host_client->name);
+	MSG_WriteByte(&sv.reliable_datagram, svc_updatename);
+	MSG_WriteByte(&sv.reliable_datagram, host_client - svs.clients);
+	MSG_WriteString(&sv.reliable_datagram, host_client->name);
 }
 
 
@@ -676,7 +677,6 @@ void Host_Version_f (void)
 
 void Host_Say(qboolean teamonly)
 {
-	client_t *client;
 	client_t *save;
 	int j;
 	const char *p1, *p2;
@@ -701,13 +701,13 @@ void Host_Say(qboolean teamonly)
 	if (Cmd_Argc () < 2)
 		return;
 
+	save = host_client;
+
 // turn on color set 1
 	if (!fromServer)
 		sprintf (text, "%c%s: ", 1, host_client->name);
 	else
 		sprintf (text, "%c<%s> ", 1, hostname.string);
-
-	save = host_client;
 
 	p1 = Cmd_Args();
 	p2 = p1 + strlen(p1);
@@ -720,8 +720,10 @@ void Host_Say(qboolean teamonly)
 		p1++;
 		if (p2[-1] == '"')
 			p2--;
-		else
+		else if (fromServer)
 			Con_Printf("Host_Say: missing end quote\n");
+		else
+			SV_ClientPrintf("Host_Say: missing end quote\n");
 	}
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
@@ -730,15 +732,9 @@ void Host_Say(qboolean teamonly)
 	text[j++] = '\n';
 	text[j++] = 0;
 
-	for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++)
-	{
-		if (!client || !client->active || !client->spawned)
-			continue;
-		if (teamplay.integer && teamonly && client->edict->v->team != save->edict->v->team)
-			continue;
-		host_client = client;
-		SV_ClientPrintf("%s", text);
-	}
+	for (j = 0, host_client = svs.clients; j < svs.maxclients; j++, host_client++)
+		if (host_client && host_client->active && host_client->spawned && (!teamplay.integer || host_client->edict->v->team == save->edict->v->team))
+			SV_ClientPrintf("%s", text);
 	host_client = save;
 
 	Sys_Printf("%s", &text[1]);
@@ -759,7 +755,6 @@ void Host_Say_Team_f(void)
 
 void Host_Tell_f(void)
 {
-	client_t *client;
 	client_t *save;
 	int j;
 	const char *p1, *p2;
@@ -801,8 +796,10 @@ void Host_Tell_f(void)
 		p1++;
 		if (p2[-1] == '"')
 			p2--;
+		else if (fromServer)
+			Con_Printf("Host_Tell: missing end quote\n");
 		else
-			Con_Printf("Host_Say: missing end quote\n");
+			SV_ClientPrintf("Host_Tell: missing end quote\n");
 	}
 	while (p2 > p1 && (p2[-1] == '\n' || p2[-1] == '\r'))
 		p2--;
@@ -812,15 +809,13 @@ void Host_Tell_f(void)
 	text[j++] = 0;
 
 	save = host_client;
-	for (j = 0, client = svs.clients; j < svs.maxclients; j++, client++)
+	for (j = 0, host_client = svs.clients; j < svs.maxclients; j++, host_client++)
 	{
-		if (!client->active || !client->spawned)
-			continue;
-		if (strcasecmp(client->name, Cmd_Argv(1)))
-			continue;
-		host_client = client;
-		SV_ClientPrintf("%s", text);
-		break;
+		if (host_client->active && host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
+		{
+			SV_ClientPrintf("%s", text);
+			break;
+		}
 	}
 	host_client = save;
 }
@@ -873,7 +868,7 @@ void Host_Color_f(void)
 		return;
 	}
 
-	if ((f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
+	if (sv_player && (f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
 	{
 		Con_DPrintf("Calling SV_ChangeTeam\n");
 		pr_global_struct->time = sv.time;
@@ -884,11 +879,14 @@ void Host_Color_f(void)
 	else
 	{
 		eval_t *val;
-		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)))
-			val->_float = playercolor;
+		if (sv_player)
+		{
+			if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)))
+				val->_float = playercolor;
+			sv_player->v->team = bottom + 1;
+		}
 		host_client->colors = playercolor;
 		host_client->old_colors = playercolor;
-		sv_player->v->team = bottom + 1;
 
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
@@ -910,7 +908,7 @@ void Host_Kill_f (void)
 		return;
 	}
 
-	if (sv_player->v->health <= 0)
+	if (!sv_player || sv_player->v->health <= 0)
 	{
 		SV_ClientPrintf ("Can't suicide -- already dead!\n");
 		return;
@@ -940,17 +938,8 @@ void Host_Pause_f (void)
 	else
 	{
 		sv.paused ^= 1;
-
-		if (sv.paused)
-		{
-			SV_BroadcastPrintf ("%s paused the game\n", PR_GetString(sv_player->v->netname));
-		}
-		else
-		{
-			SV_BroadcastPrintf ("%s unpaused the game\n", PR_GetString(sv_player->v->netname));
-		}
-
-	// send notification to all clients
+		SV_BroadcastPrintf ("%s %spaused the game\n", host_client->name, sv.paused ? "" : "un");
+		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_setpause);
 		MSG_WriteByte (&sv.reliable_datagram, sv.paused);
 	}
@@ -986,7 +975,7 @@ static void Host_PModel_f (void)
 	}
 
 	host_client->pmodel = i;
-	if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
+	if (sv_player && (val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
 		val->_float = i;
 }
 
@@ -1027,27 +1016,30 @@ void Host_Spawn_f (void)
 {
 	int i;
 	client_t *client;
-	edict_t *ent;
 	func_t RestoreGame;
 	mfunction_t *f;
 
 	if (cmd_source == src_command)
 	{
-		Con_Printf ("spawn is not valid from the console\n");
+		Con_Printf("spawn is not valid from the console\n");
 		return;
 	}
 
 	if (host_client->spawned)
 	{
-		Con_Printf ("Spawn not valid -- already spawned\n");
+		Con_Printf("Spawn not valid -- already spawned\n");
+		return;
+	}
+
+	if (!sv_player)
+	{
+		Con_Printf("Host_Spawn: no edict??\n");
 		return;
 	}
 
 	// LordHavoc: moved this above the QC calls at FrikaC's request
 	// send all current names, colors, and frag counts
 	SZ_Clear (&host_client->message);
-
-	ent = sv_player;
 
 	// run the entrance script
 	if (sv.loadgame)
@@ -1067,6 +1059,11 @@ void Host_Spawn_f (void)
 	}
 	else
 	{
+		// set up the edict
+		ED_ClearEdict(sv_player);
+
+		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, sv_player->netname = %s, host_client->name = %s\n", PR_GetString(host_client->edict->v->netname), PR_GetString(sv_player->v->netname), host_client->name);
+
 		// copy spawn parms out of the client_t
 		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
 			(&pr_global_struct->parm1)[i] = host_client->spawn_parms[i];
@@ -1132,7 +1129,7 @@ void Host_Spawn_f (void)
 	// with a permanent head tilt
 	MSG_WriteByte (&host_client->message, svc_setangle);
 	for (i=0 ; i < 2 ; i++)
-		MSG_WriteAngle (&host_client->message, ent->v->angles[i] );
+		MSG_WriteAngle (&host_client->message, sv_player->v->angles[i] );
 	MSG_WriteAngle (&host_client->message, 0 );
 
 	SV_WriteClientdataToMessage (sv_player, &host_client->message);
@@ -1275,7 +1272,7 @@ void Host_Give_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch)
+	if (pr_global_struct->deathmatch || !sv_player)
 		return;
 
 	t = Cmd_Argv(1);
@@ -1299,9 +1296,9 @@ void Host_Give_f (void)
 			if (t[0] == '6')
 			{
 				if (t[1] == 'a')
-				sv_player->v->items = (int)sv_player->v->items | HIT_PROXIMITY_GUN;
+					sv_player->v->items = (int)sv_player->v->items | HIT_PROXIMITY_GUN;
 				else
-				sv_player->v->items = (int)sv_player->v->items | IT_GRENADE_LAUNCHER;
+					sv_player->v->items = (int)sv_player->v->items | IT_GRENADE_LAUNCHER;
 			}
 			else if (t[0] == '9')
 				sv_player->v->items = (int)sv_player->v->items | HIT_LASER_CANNON;
@@ -1318,11 +1315,8 @@ void Host_Give_f (void)
 		break;
 
 	case 's':
-		if (gamemode == GAME_ROGUE)
-		{
-			if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1)))
-				val->_float = v;
-		}
+		if (gamemode == GAME_ROGUE && (val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1)))
+			val->_float = v;
 
 		sv_player->v->ammo_shells = v;
 		break;
