@@ -72,9 +72,6 @@ int c_meshs, c_meshelements;
 
 void SCR_ScreenShot_f (void);
 
-// these are externally accessible
-int r_lightmapscalebit;
-
 static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
 static matrix4x4_t backend_modelviewmatrix;
@@ -1099,11 +1096,6 @@ void SCR_UpdateScreen (void)
 
 	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
 		Cvar_SetValueQuick(&gl_combine, 0);
-
-	// lightmaps only
-	r_lightmapscalebit = 0;
-	if (gl_combine.integer && r_textureunits.integer > 1)
-		r_lightmapscalebit += 2;
 
 	R_TimeReport("setup");
 

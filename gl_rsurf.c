@@ -234,7 +234,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 {
 	if (!r_floatbuildlightmap.integer)
 	{
-		int smax, tmax, i, j, size, size3, shift, maps, stride, l;
+		int smax, tmax, i, j, size, size3, maps, stride, l;
 		unsigned int *bl, scale;
 		qbyte *lightmap, *out, *stain;
 
@@ -286,8 +286,10 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		stain = surf->stainsamples;
 		bl = intblocklights;
 		out = templight;
-		// deal with lightmap brightness scale
-		shift = 7 + r_lightmapscalebit + 8;
+		// the >> 16 shift adjusts down 8 bits to account for the stainmap
+		// scaling, and remaps the 0-65536 (2x overbright) to 0-256, it will
+		// be doubled during rendering to achieve 2x overbright
+		// (0 = 0.0, 128 = 1.0, 256 = 2.0)
 		if (ent->model->brushq1.lightmaprgba)
 		{
 			stride = (surf->lightmaptexturestride - smax) * 4;
@@ -295,9 +297,9 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			{
 				for (j = 0;j < smax;j++)
 				{
-					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
 					*out++ = 255;
 				}
 			}
@@ -309,9 +311,9 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			{
 				for (j = 0;j < smax;j++)
 				{
-					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
 				}
 			}
 		}
@@ -368,8 +370,11 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		stain = surf->stainsamples;
 		bl = floatblocklights;
 		out = templight;
-		// deal with lightmap brightness scale
-		scale = 1.0f / (1 << (7 + r_lightmapscalebit + 8));
+		// this scaling adjusts down 8 bits to account for the stainmap
+		// scaling, and remaps the 0.0-2.0 (2x overbright) to 0-256, it will
+		// be doubled during rendering to achieve 2x overbright
+		// (0 = 0.0, 128 = 1.0, 256 = 2.0)
+		scale = 1.0f / (1 << 16);
 		if (ent->model->brushq1.lightmaprgba)
 		{
 			stride = (surf->lightmaptexturestride - smax) * 4;
@@ -975,19 +980,16 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	const msurface_t *surf;
 	rmeshstate_t m;
 	int lightmaptexturenum;
-	float cl;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
+	m.texrgbscale[1] = 2;
 	m.tex[2] = R_GetTexture(texture->skin.detail);
-	m.texrgbscale[0] = 1;
-	m.texrgbscale[1] = 4;
 	m.texrgbscale[2] = 2;
-	cl = (float) (1 << r_lightmapscalebit);
-	GL_Color(cl, cl, cl, 1);
+	GL_Color(1, 1, 1, 1);
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1009,7 +1011,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
+static void RSurfShader_OpaqueWall_Pass_BaseDoubleTexCombine(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	rmeshstate_t m;
@@ -1020,8 +1022,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
-	if (gl_combine.integer)
-		m.texrgbscale[1] = 4;
+	m.texrgbscale[1] = 2;
 	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1070,12 +1071,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	rmeshstate_t m;
 	int lightmaptexturenum;
 	memset(&m, 0, sizeof(m));
-	GL_BlendFunc(GL_ZERO, GL_SRC_COLOR);
+	GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture((**surfchain).lightmaptexture);
-	if (gl_combine.integer)
-		m.texrgbscale[0] = 4;
 	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1244,12 +1243,22 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 	{
 		// opaque lightmapped
 		if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-			RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, surfchain);
-		else if (r_textureunits.integer >= 2)
 		{
-			RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, surfchain);
+			RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, surfchain);
+			if (texture->skin.glow)
+				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+			if (fogenabled)
+				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+		}
+		else if (r_textureunits.integer >= 2 && gl_combine.integer)
+		{
+			RSurfShader_OpaqueWall_Pass_BaseDoubleTexCombine(ent, texture, surfchain);
 			if (r_detailtextures.integer)
 				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+			if (texture->skin.glow)
+				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+			if (fogenabled)
+				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 		}
 		else
 		{
@@ -1257,11 +1266,11 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
 			if (r_detailtextures.integer)
 				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+			if (texture->skin.glow)
+				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+			if (fogenabled)
+				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 		}
-		if (texture->skin.glow)
-			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-		if (fogenabled)
-			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
 }
 
@@ -1327,10 +1336,9 @@ void R_PrepareSurfaces(entity_render_t *ent)
 	if (r_dynamic.integer && !r_shadow_realtime_dlight.integer)
 		R_MarkLights(ent);
 
-	if (model->brushq1.light_ambient != r_ambient.value || model->brushq1.light_scalebit != r_lightmapscalebit)
+	if (model->brushq1.light_ambient != r_ambient.value)
 	{
 		model->brushq1.light_ambient = r_ambient.value;
-		model->brushq1.light_scalebit = r_lightmapscalebit;
 		for (i = 0;i < model->brushq1.nummodelsurfaces;i++)
 			model->brushq1.surfaces[i + model->brushq1.firstmodelsurface].cached_dlight = true;
 	}
