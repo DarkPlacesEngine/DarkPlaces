@@ -28,9 +28,9 @@ model_t	*loadmodel;
 
 // LordHavoc: increased from 512 to 2048
 #define	MAX_MOD_KNOWN	2048
-model_t	mod_known[MAX_MOD_KNOWN];
+static model_t mod_known[MAX_MOD_KNOWN];
 
-void mod_start()
+static void mod_start(void)
 {
 	int i;
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
@@ -38,7 +38,7 @@ void mod_start()
 			Mod_UnloadModel(&mod_known[i]);
 }
 
-void mod_shutdown()
+static void mod_shutdown(void)
 {
 	int i;
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
@@ -46,7 +46,7 @@ void mod_shutdown()
 			Mod_UnloadModel(&mod_known[i]);
 }
 
-void mod_newmap()
+static void mod_newmap(void)
 {
 }
 

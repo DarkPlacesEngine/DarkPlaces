@@ -320,6 +320,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 	vec3_t v, end, ang;
 	byte noise1[32*32], noise2[32*32];
 
+	VectorClear(end); // hush MSVC
 	if (cl_particles.integer && cl_particles_explosions.integer)
 	{
 		i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
