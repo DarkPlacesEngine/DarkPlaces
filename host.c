@@ -1017,7 +1017,6 @@ void Host_Shutdown(void)
 	S_Terminate ();
 	NetConn_Shutdown ();
 	PR_Shutdown ();
-	COM_Shutdown ();
 	Cbuf_Shutdown ();
 
 	if (cls.state != ca_dedicated)
@@ -1030,6 +1029,7 @@ void Host_Shutdown(void)
 	CL_Shutdown();
 	Sys_Shutdown();
 	Log_Close ();
+	COM_Shutdown ();
 	Memory_Shutdown();
 }
 

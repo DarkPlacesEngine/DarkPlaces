@@ -294,7 +294,30 @@ Try to load the VorbisFile DLL
 */
 qboolean OGG_OpenLibrary (void)
 {
-	const char *dllname_vo, *dllname_vf;
+	const char* dllnames_vo [] =
+	{
+#ifdef WIN32
+		"vorbis.dll",
+#elif defined(MACOSX)
+		"libvorbis.dylib",
+#else
+		"libvorbis.so.0",
+		"libvorbis.so",
+#endif
+		NULL
+	};
+	const char* dllnames_vf [] =
+	{
+#ifdef WIN32
+		"vorbisfile.dll",
+#elif defined(MACOSX)
+		"libvorbisfile.dylib",
+#else
+		"libvorbisfile.so.3",
+		"libvorbisfile.so",
+#endif
+		NULL
+	};
 
 	// Already loaded?
 	if (vf_dll)
@@ -304,22 +327,11 @@ qboolean OGG_OpenLibrary (void)
 	if (COM_CheckParm("-novorbis"))
 		return false;
 
-#ifdef WIN32
-	dllname_vo = "vorbis.dll";
-	dllname_vf = "vorbisfile.dll";
-#elif defined(MACOSX)
-	dllname_vo = "libvorbis.dylib";
-	dllname_vf = "libvorbisfile.dylib";
-#else
-	dllname_vo = "libvorbis.so.0";
-	dllname_vf = "libvorbisfile.so.3";
-#endif
-
 	// Load the DLLs
 	// We need to load both by hand because some OSes seem to not load
 	// the vorbis DLL automatically when loading the VorbisFile DLL
-	if (! Sys_LoadLibrary (dllname_vo, &vo_dll, NULL) ||
-		! Sys_LoadLibrary (dllname_vf, &vf_dll, oggvorbisfuncs))
+	if (! Sys_LoadLibrary (dllnames_vo, &vo_dll, NULL) ||
+		! Sys_LoadLibrary (dllnames_vf, &vf_dll, oggvorbisfuncs))
 	{
 		Sys_UnloadLibrary (&vo_dll);
 		Con_Printf ("Ogg Vorbis support disabled\n");

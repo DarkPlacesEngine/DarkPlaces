@@ -74,10 +74,11 @@ DLL MANAGEMENT
 ===============================================================================
 */
 
-qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfunction_t *fcts)
+qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts)
 {
 	const dllfunction_t *func;
-	dllhandle_t dllhandle;
+	dllhandle_t dllhandle = 0;
+	unsigned int i;
 
 	if (handle == NULL)
 		return false;
@@ -86,17 +87,25 @@ qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfun
 	for (func = fcts; func && func->name != NULL; func++)
 		*func->funcvariable = NULL;
 
-	// Load the DLL
-#ifdef WIN32
-	dllhandle = LoadLibrary (dllname);
-#else
-	dllhandle = dlopen (dllname, RTLD_LAZY);
-#endif
-	if (! dllhandle)
+	// Try every possible name
+	for (i = 0; dllnames[i] != NULL; i++)
 	{
-		Con_Printf ("Can't load \"%s\".\n", dllname);
-		return false;
+#ifdef WIN32
+		dllhandle = LoadLibrary (dllnames[i]);
+#else
+		dllhandle = dlopen (dllnames[i], RTLD_LAZY);
+#endif
+		if (dllhandle)
+			break;
+
+		Con_Printf ("Can't load \"%s\".\n", dllnames[i]);
 	}
+
+	// No DLL found
+	if (! dllhandle)
+		return false;
+
+	Con_Printf("\"%s\" loaded.\n", dllnames[i]);
 
 	// Get the function adresses
 	for (func = fcts; func && func->name != NULL; func++)
@@ -108,7 +117,6 @@ qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfun
 		}
 
 	*handle = dllhandle;
-	Con_Printf("\"%s\" loaded.\n", dllname);
 	return true;
 }
 

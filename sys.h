@@ -44,7 +44,8 @@ typedef struct
 }
 dllfunction_t;
 
-qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfunction_t *fcts);
+// "dllnames" is an NULL terminated array of possible names for the DLL you want to load
+qboolean Sys_LoadLibrary (const char** dllnames, dllhandle_t* handle, const dllfunction_t *fcts);
 void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 

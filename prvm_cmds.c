@@ -3106,7 +3106,7 @@ void VM_altstr_set( void )
 	for( ; *str; *out++ = *str++ );
 	// now jump over the old contents
 	for( ; *in ; in++ )
-		if( *in == '\'' || *in == '\\' && !*++in )
+		if( *in == '\'' || (*in == '\\' && !*++in) )
 			break;
 	
 	if( !in ) {

@@ -395,25 +395,25 @@ Try to load the JPEG DLL
 */
 qboolean JPEG_OpenLibrary (void)
 {
-	const char* dllname;
+	const char* dllnames [] =
+	{
+#ifdef WIN32
+		"libjpeg.dll",
+#elif defined(MACOSX)
+		"libjpeg.62.dylib",
+#else
+		"libjpeg.so.62",
+		"libjpeg.so",
+#endif
+		NULL
+	};
 
 	// Already loaded?
 	if (jpeg_dll)
 		return true;
 
-// TODO: make Sys_LoadLibrary support multiple names
-#ifdef WIN32
-	dllname = "libjpeg.dll";
-#elif defined(__FreeBSD__)
-	dllname = "libjpeg.so";
-#elif defined(MACOSX)
-	dllname = "libjpeg.62.dylib";
-#else
-	dllname = "libjpeg.so.62";
-#endif
-
 	// Load the DLL
-	if (! Sys_LoadLibrary (dllname, &jpeg_dll, jpegfuncs))
+	if (! Sys_LoadLibrary (dllnames, &jpeg_dll, jpegfuncs))
 	{
 		Con_Printf ("JPEG support disabled\n");
 		return false;

@@ -118,7 +118,7 @@ stringlist_t *stringlistsort(stringlist_t *start)
 // operating system specific code
 #ifdef WIN32
 #include <io.h>
-stringlist_t *listdirectory(char *path)
+stringlist_t *listdirectory(const char *path)
 {
 	char pattern[4096], *c;
 	struct _finddata_t n_file;
@@ -152,7 +152,7 @@ stringlist_t *listdirectory(char *path)
 }
 #else
 #include <dirent.h>
-stringlist_t *listdirectory(char *path)
+stringlist_t *listdirectory(const char *path)
 {
 	DIR *dir;
 	struct dirent *ent;
