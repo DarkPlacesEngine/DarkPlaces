@@ -379,6 +379,10 @@ void GL_Init (void)
 
 	// LordHavoc: report supported extensions
 	Con_DPrintf("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
+
+	// clear to black (loading plaque will be seen over this)
+	qglClearColor(0,0,0,1);
+	qglClear(GL_COLOR_BUFFER_BIT);
 }
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs)
