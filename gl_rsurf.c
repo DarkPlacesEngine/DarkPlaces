@@ -1929,9 +1929,8 @@ void R_SurfMarkLights (entity_render_t *ent)
 
 	if (!r_vertexsurfaces.integer)
 	{
-		for (i = 0;i < ent->model->nummodelsurfaces;i++)
+		for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 		{
-			surf = ent->model->modelsortedsurfaces[i];
 			if (surf->visframe == r_framecount && surf->lightmaptexture != NULL)
 			{
 				if (surf->cached_dlight
