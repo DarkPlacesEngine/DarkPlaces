@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -27,6 +27,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 void S_Play(void);
 void S_PlayVol(void);
+void S_Play2(void);
 void S_SoundList(void);
 void S_Update_();
 void S_StopAllSounds(qboolean clear);
@@ -36,33 +37,35 @@ void S_StopAllSoundsC(void);
 // Internal sound data & structures
 // =======================================================================
 
-channel_t   channels[MAX_CHANNELS];
-int			total_channels;
+channel_t channels[MAX_CHANNELS];
+int total_channels;
 
-int				snd_blocked = 0;
-static qboolean	snd_ambient = 1;
-qboolean		snd_initialized = false;
+int snd_blocked = 0;
+static qboolean snd_ambient = 1;
+qboolean snd_initialized = false;
 
 // pointer should go away
-volatile dma_t  *shm = 0;
+volatile dma_t *shm = 0;
 volatile dma_t sn;
 
-vec3_t		listener_origin;
-vec3_t		listener_forward;
-vec3_t		listener_right;
-vec3_t		listener_up;
-vec_t		sound_nominal_clip_dist=1000.0;
+vec3_t listener_origin;
+vec3_t listener_forward;
+vec3_t listener_right;
+vec3_t listener_up;
+vec_t sound_nominal_clip_dist=1000.0;
+mempool_t *snd_mempool;
 
-int			soundtime;		// sample PAIRS
-int   		paintedtime; 	// sample PAIRS
+// sample PAIRS
+int soundtime;
+int paintedtime;
 
 
 //LordHavoc: increased the client sound limit from 512 to 4096 for the Nehahra movie
-#define	MAX_SFX		4096
-sfx_t		*known_sfx;		// hunk allocated [MAX_SFX]
-int			num_sfx;
+#define MAX_SFX 4096
+sfx_t *known_sfx; // allocated [MAX_SFX]
+int num_sfx;
 
-sfx_t		*ambient_sfx[NUM_AMBIENTS];
+sfx_t *ambient_sfx[NUM_AMBIENTS];
 
 int sound_started = 0;
 
@@ -114,14 +117,14 @@ void S_SoundInfo_f(void)
 		Con_Printf ("sound system not started\n");
 		return;
 	}
-	
-    Con_Printf("%5d stereo\n", shm->channels - 1);
-    Con_Printf("%5d samples\n", shm->samples);
-    Con_Printf("%5d samplepos\n", shm->samplepos);
-    Con_Printf("%5d samplebits\n", shm->samplebits);
-    Con_Printf("%5d submission_chunk\n", shm->submission_chunk);
-    Con_Printf("%5d speed\n", shm->speed);
-    Con_Printf("0x%x dma buffer\n", shm->buffer);
+
+	Con_Printf("%5d stereo\n", shm->channels - 1);
+	Con_Printf("%5d samples\n", shm->samples);
+	Con_Printf("%5d samplepos\n", shm->samplepos);
+	Con_Printf("%5d samplebits\n", shm->samplebits);
+	Con_Printf("%5d submission_chunk\n", shm->submission_chunk);
+	Con_Printf("%5d speed\n", shm->speed);
+	Con_Printf("0x%x dma buffer\n", shm->buffer);
 	Con_Printf("%5d total_channels\n", total_channels);
 }
 
@@ -131,10 +134,9 @@ void S_SoundInfo_f(void)
 S_Startup
 ================
 */
-
 void S_Startup (void)
 {
-	int		rc;
+	int rc;
 
 	if (!snd_initialized)
 		return;
@@ -154,11 +156,6 @@ void S_Startup (void)
 	sound_started = 1;
 }
 
-
-void S_Play2(void);
-
-mempool_t *snd_mempool;
-
 /*
 ================
 S_Init
@@ -167,6 +164,8 @@ S_Init
 void S_Init (void)
 {
 	Con_Printf("\nSound Initialization\n");
+
+	S_RawSamples_ClearQueue();
 
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&bgmvolume);
@@ -1029,5 +1028,73 @@ void S_BeginPrecaching (void)
 
 void S_EndPrecaching (void)
 {
+}
+
+
+#define RAWSAMPLESBUFFER 32768
+short s_rawsamplesbuffer[RAWSAMPLESBUFFER * 2];
+int s_rawsamplesbuffer_start;
+int s_rawsamplesbuffer_count;
+
+void S_RawSamples_Enqueue(short *samples, unsigned int length)
+{
+	int b2, b3;
+	//Con_Printf("S_RawSamples_Enqueue: %i samples\n", length);
+	if (s_rawsamplesbuffer_count + length > RAWSAMPLESBUFFER)
+		return;
+	b2 = (s_rawsamplesbuffer_start + s_rawsamplesbuffer_count) % RAWSAMPLESBUFFER;
+	b3 = (s_rawsamplesbuffer_start + s_rawsamplesbuffer_count + length) % RAWSAMPLESBUFFER;
+	if (b3 < b2)
+	{
+		memcpy(s_rawsamplesbuffer + b2 * 2, samples, (RAWSAMPLESBUFFER - b2) * sizeof(short[2]));
+		memcpy(s_rawsamplesbuffer, samples + (RAWSAMPLESBUFFER - b2) * 2, b3 * sizeof(short[2]));
+	}
+	else
+		memcpy(s_rawsamplesbuffer + b2 * 2, samples, length * sizeof(short[2]));
+	s_rawsamplesbuffer_count += length;
+}
+
+void S_RawSamples_Dequeue(int *samples, unsigned int length)
+{
+	int b1, b2, l;
+	int i;
+	short *in;
+	int *out;
+	int count;
+	l = length;
+	if (l > s_rawsamplesbuffer_count)
+		l = s_rawsamplesbuffer_count;
+	b1 = (s_rawsamplesbuffer_start) % RAWSAMPLESBUFFER;
+	b2 = (s_rawsamplesbuffer_start + l) % RAWSAMPLESBUFFER;
+	if (b2 < b1)
+	{
+		//memcpy(samples, s_rawsamplesbuffer + b1 * 2, (RAWSAMPLESBUFFER - b1) * sizeof(short[2]));
+		//memcpy(samples + (RAWSAMPLESBUFFER - b1) * 2, s_rawsamplesbuffer, b2 * sizeof(short[2]));
+		for (out = samples, in = s_rawsamplesbuffer + b1 * 2, count = (RAWSAMPLESBUFFER - b1) * 2, i = 0;i < count;i++)
+			out[i] = in[i];
+		for (out = samples + (RAWSAMPLESBUFFER - b1) * 2, in = s_rawsamplesbuffer, count = b2 * 2, i = 0;i < count;i++)
+			out[i] = in[i];
+		//Con_Printf("S_RawSamples_Dequeue: buffer wrap %i %i\n", (RAWSAMPLESBUFFER - b1), b2);
+	}
+	else
+	{
+		//memcpy(samples, s_rawsamplesbuffer + b1 * 2, l * sizeof(short[2]));
+		for (out = samples, in = s_rawsamplesbuffer + b1 * 2, count = l * 2, i = 0;i < count;i++)
+			out[i] = in[i];
+		//Con_Printf("S_RawSamples_Dequeue: normal      %i\n", l);
+	}
+	if (l < length)
+	{
+		memset(samples + l * 2, 0, (length - l) * sizeof(int[2]));
+		//Con_Printf("S_RawSamples_Dequeue: padding with %i\n", length - l);
+	}
+	s_rawsamplesbuffer_start = (s_rawsamplesbuffer_start + l) % RAWSAMPLESBUFFER;
+	s_rawsamplesbuffer_count -= l;
+}
+
+void S_RawSamples_ClearQueue(void)
+{
+	s_rawsamplesbuffer_count = 0;
+	s_rawsamplesbuffer_start = 0;
 }
 

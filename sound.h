@@ -180,5 +180,12 @@ void S_AmbientOn (void);
 void *S_LockBuffer(void);
 void S_UnlockBuffer(void);
 
+// add some data to the tail of the rawsamples queue
+void S_RawSamples_Enqueue(short *samples, unsigned int length);
+// read and remove some data from the head of the rawsamples queue
+void S_RawSamples_Dequeue(int *samples, unsigned int length);
+// empty the rawsamples queue
+void S_RawSamples_ClearQueue(void);
+
 #endif
 
