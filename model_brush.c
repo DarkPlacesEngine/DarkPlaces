@@ -1731,9 +1731,6 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 	winding_t	*neww;
 	int		maxpts;
 
-	// debugging
-	Mem_CheckSentinels(in);
-
 	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
 
 	// determine sides for each point
@@ -1773,15 +1770,12 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 		if (neww->numpoints >= maxpts)
 			Sys_Error ("ClipWinding: points exceeded estimate");
 
-		Mem_CheckSentinels(neww);
-
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
 		{
 			VectorCopy (p1, neww->points[neww->numpoints]);
 			neww->numpoints++;
-			Mem_CheckSentinels(neww);
 			continue;
 		}
 
@@ -1789,7 +1783,6 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 		{
 			VectorCopy (p1, neww->points[neww->numpoints]);
 			neww->numpoints++;
-			Mem_CheckSentinels(neww);
 		}
 
 		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
@@ -1811,7 +1804,6 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 
 		VectorCopy (mid, neww->points[neww->numpoints]);
 		neww->numpoints++;
-		Mem_CheckSentinels(neww);
 	}
 
 	// free the original winding
@@ -1845,9 +1837,6 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 	double	mid[3];
 	winding_t	*f, *b;
 	int		maxpts;
-
-	// debugging
-	Mem_CheckSentinels(in);
 
 	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
 
@@ -1897,10 +1886,8 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		{
 			VectorCopy (p1, f->points[f->numpoints]);
 			f->numpoints++;
-			Mem_CheckSentinels(f);
 			VectorCopy (p1, b->points[b->numpoints]);
 			b->numpoints++;
-			Mem_CheckSentinels(b);
 			continue;
 		}
 
@@ -1908,13 +1895,11 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		{
 			VectorCopy (p1, f->points[f->numpoints]);
 			f->numpoints++;
-			Mem_CheckSentinels(f);
 		}
 		else if (sides[i] == SIDE_BACK)
 		{
 			VectorCopy (p1, b->points[b->numpoints]);
 			b->numpoints++;
-			Mem_CheckSentinels(b);
 		}
 
 		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
@@ -1936,10 +1921,8 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 
 		VectorCopy (mid, f->points[f->numpoints]);
 		f->numpoints++;
-		Mem_CheckSentinels(f);
 		VectorCopy (mid, b->points[b->numpoints]);
 		b->numpoints++;
-		Mem_CheckSentinels(b);
 	}
 
 	// debugging
@@ -2005,7 +1988,7 @@ static void Mod_FinalizePortals(void)
 	mleaf_t *leaf, *endleaf;
 	winding_t *w;
 
-	Mem_CheckSentinelsGlobal();
+	//Mem_CheckSentinelsGlobal();
 
 	// recalculate bounding boxes for all leafs (because qbsp is very sloppy)
 	leaf = loadmodel->leafs;
@@ -2040,7 +2023,7 @@ static void Mod_FinalizePortals(void)
 
 	Mod_RecursiveRecalcNodeBBox(loadmodel->nodes);
 
-	Mem_CheckSentinelsGlobal();
+	//Mem_CheckSentinelsGlobal();
 
 	// tally up portal and point counts
 	p = portalchain;
@@ -2133,7 +2116,7 @@ static void Mod_FinalizePortals(void)
 		p = pnext;
 	}
 
-	Mem_CheckSentinelsGlobal();
+	//Mem_CheckSentinelsGlobal();
 }
 
 /*
@@ -2236,7 +2219,7 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	nodeportal->plane = *node->plane;
 
 	nodeportalwinding = BaseWindingForPlane (node->plane);
-	Mem_CheckSentinels(nodeportalwinding);
+	//Mem_CheckSentinels(nodeportalwinding);
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
