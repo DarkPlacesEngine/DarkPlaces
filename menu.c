@@ -1150,7 +1150,7 @@ void M_Menu_Options_AdjustSliders (int dir)
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
 	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_screenshot_jpeg, bound(0, scr_screenshot_jpeg_quality.value + dir * 0.1, 1));
+		Cvar_SetValueQuick (&scr_screenshot_jpeg_quality, bound(0, scr_screenshot_jpeg_quality.value + dir * 0.1, 1));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
 	else if (options_cursor == optnum++)

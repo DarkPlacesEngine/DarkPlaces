@@ -469,6 +469,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&vid_conwidth);
 	Cvar_RegisterVariable (&vid_conheight);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
+	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&cl_avidemo);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
