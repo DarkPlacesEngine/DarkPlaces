@@ -41,7 +41,9 @@ CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATI
 #OPTIMIZATIONS=
 #CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
 
-LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl $(SOUNDLIB) $(PROFILEOPTION)
+#LordHavoc: what is XIE?  XFree 4.1.0 doesn't need it and 4.2.0 seems to be missing it entirely
+#LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl $(SOUNDLIB) $(PROFILEOPTION)
+LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXxf86dga -lXxf86vm -lGL -ldl $(SOUNDLIB) $(PROFILEOPTION)
 
 #if you don't need the -3dfx version, use this line
 all: builddate darkplaces-glx
