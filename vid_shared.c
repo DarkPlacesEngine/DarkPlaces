@@ -11,6 +11,8 @@ int gl_textureunits;
 int gl_combine_extension = false;
 // LordHavoc: GL_EXT_compiled_vertex_array support
 int gl_supportslockarrays = false;
+// LordHavoc: GLX_SGI_video_sync and WGL_EXT_swap_control
+int gl_videosyncavailable = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = false;
@@ -18,9 +20,12 @@ int vid_hidden = false;
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 int vid_activewindow = true;
 
-cvar_t vid_mode = {0, "vid_mode", "0"};
-cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
+cvar_t vid_width = {0, "vid_width", "640"};
+cvar_t vid_height = {0, "vid_height", "480"};
+cvar_t vid_bitsperpixel = {0, "vid_bitsperpixel", "15"};
+
+cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
 
 cvar_t in_pitch_min = {0, "in_pitch_min", "-90"};
@@ -28,10 +33,21 @@ cvar_t in_pitch_max = {0, "in_pitch_max", "90"};
 
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
 
+// brand of graphics chip
 const char *gl_vendor;
+// graphics chip model and other information
 const char *gl_renderer;
+// begins with 1.0.0, 1.1.0, 1.2.0, 1.2.1, 1.3.0, 1.3.1, or 1.4.0
 const char *gl_version;
+// extensions list, space separated
 const char *gl_extensions;
+// WGL, GLX, or AGL
+const char *gl_platform;
+// another extensions list, containing platform-specific extensions that are
+// not in the main list
+const char *gl_platformextensions;
+// name of driver library (opengl32.dll, libGL.so.1, or whatever)
+char gl_driver[256];
 
 // GL_ARB_multitexture
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
@@ -132,59 +148,46 @@ void (GLAPIENTRY *qglDrawRangeElementsEXT)(GLenum mode, GLuint start, GLuint end
 
 //void (GLAPIENTRY *qglColorTableEXT)(int, int, int, int, int, const void *);
 
-#if WIN32
-int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
-int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
-//int (WINAPI *qwglGetPixelFormat)(HDC);
-BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
-BOOL (WINAPI *qwglSwapBuffers)(HDC);
-HGLRC (WINAPI *qwglCreateContext)(HDC);
-BOOL (WINAPI *qwglDeleteContext)(HGLRC);
-PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
-BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
-//BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
-#endif
-
-
-typedef struct
+int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent)
 {
-	char *name;
-	void **funcvariable;
+	int failed = false;
+	const gl_extensionfunctionlist_t *func;
+
+	Con_Printf("checking for %s...  ", name);
+
+	for (func = funcs;func && func->name;func++)
+		*func->funcvariable = NULL;
+
+	if (disableparm && COM_CheckParm(disableparm))
+	{
+		Con_Printf("disabled by commandline\n");
+		return false;
+	}
+
+	if (strstr(gl_extensions, name) || strstr(gl_platformextensions, name) || (strncmp(name, "GL_", 3) && strncmp(name, "WGL_", 4) && strncmp(name, "GLX_", 4) && strncmp(name, "AGL_", 4)))
+	{
+		for (func = funcs;func && func->name != NULL;func++)
+		{
+			// functions are cleared before all the extensions are evaluated
+			if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
+			{
+				if (!silent)
+					Con_Printf("missing function \"%s\" - broken driver!\n", func->name);
+				failed = true;
+			}
+		}
+		// delay the return so it prints all missing functions
+		if (failed)
+			return false;
+		Con_Printf("enabled\n");
+		return true;
+	}
+	else
+	{
+		Con_Printf("not detected\n");
+		return false;
+	}
 }
-gl_extensionfunctionlist_t;
-
-typedef struct
-{
-	char *name;
-	gl_extensionfunctionlist_t *funcs;
-	int *enablevariable;
-	char *disableparm;
-}
-gl_extensioninfo_t;
-
-#if WIN32
-static gl_extensionfunctionlist_t wglfuncs[] =
-{
-	{"wglChoosePixelFormat", (void **) &qwglChoosePixelFormat},
-	{"wglDescribePixelFormat", (void **) &qwglDescribePixelFormat},
-//	{"wglGetPixelFormat", (void **) &qwglGetPixelFormat},
-	{"wglSetPixelFormat", (void **) &qwglSetPixelFormat},
-	{"wglSwapBuffers", (void **) &qwglSwapBuffers},
-	{"wglCreateContext", (void **) &qwglCreateContext},
-	{"wglDeleteContext", (void **) &qwglDeleteContext},
-	{"wglGetProcAddress", (void **) &qwglGetProcAddress},
-	{"wglMakeCurrent", (void **) &qwglMakeCurrent},
-	{NULL, NULL}
-};
-
-/*
-static gl_extensionfunctionlist_t wglswapintervalfuncs[] =
-{
-	{"wglSwapIntervalEXT", (void **) &qwglSwapIntervalEXT},
-	{NULL, NULL}
-};
-*/
-#endif
 
 static gl_extensionfunctionlist_t opengl110funcs[] =
 {
@@ -284,140 +287,31 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 	{NULL, NULL}
 };
 
-#ifndef WIN32
-#include <dlfcn.h>
-#endif
-
-#ifdef WIN32
-static HINSTANCE gldll;
-#else
-static void *prjobj = NULL;
-#endif
-
-void GL_OpenLibrary(void)
-{
-#ifdef WIN32
-	if (gldll)
-		FreeLibrary(gldll);
-	if (!(gldll = LoadLibrary("opengl32.dll")))
-		Sys_Error("Unable to LoadLibrary opengl32.dll\n");
-#else
-	if (prjobj)
-		dlclose(prjobj);
-	if (!(prjobj = dlopen("libGL.so.1", RTLD_LAZY)))
-		Sys_Error("Unable to open symbol list for libGL.so.1\n");
-#endif
-}
-
-void GL_CloseLibrary(void)
-{
-#ifdef WIN32
-	FreeLibrary(gldll);
-	gldll = 0;
-#else
-	if (prjobj)
-		dlclose(prjobj);
-	prjobj = NULL;
-#endif
-}
-
-void *GL_GetProcAddress(char *name)
-{
-	void *p = NULL;
-#ifdef WIN32
-	if (qwglGetProcAddress != NULL)
-		p = (void *) qwglGetProcAddress(name);
-	if (p == NULL)
-		p = (void *) GetProcAddress(gldll, name);
-#else
-	p = (void *) dlsym(prjobj, name);
-#endif
-	return p;
-}
-
-static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char *disableparm, int silent)
-{
-	int failed = false;
-	gl_extensionfunctionlist_t *func;
-
-	Con_Printf("checking for %s...  ", name);
-
-	for (func = funcs;func && func->name;func++)
-		*func->funcvariable = NULL;
-
-	if (disableparm && COM_CheckParm(disableparm))
-	{
-		Con_Printf("disabled by commandline\n");
-		return false;
-	}
-
-	if (strncmp(name, "GL_", 3) || strstr(gl_extensions, name))
-	{
-		for (func = funcs;func && func->name != NULL;func++)
-		{
-			// functions are cleared before all the extensions are evaluated
-			if (!(*func->funcvariable = (void *) GL_GetProcAddress(func->name)))
-			{
-				if (!silent)
-					Con_Printf("missing function \"%s\" - broken driver!\n", func->name);
-				failed = true;
-			}
-		}
-		// delay the return so it prints all missing functions
-		if (failed)
-			return false;
-		Con_Printf("enabled\n");
-		return true;
-	}
-	else
-	{
-		Con_Printf("not detected\n");
-		return false;
-	}
-}
-
 void VID_CheckExtensions(void)
 {
-	gl_vendor = NULL;
-	gl_renderer = NULL;
-	gl_version = NULL;
-	gl_extensions = NULL;
-
-	Con_Printf("Opening OpenGL library to retrieve functions\n");
-
 	gl_combine_extension = false;
 	gl_supportslockarrays = false;
 	gl_textureunits = 1;
 
-#if WIN32
-	if (!gl_checkextension("wgl", wglfuncs, NULL, false))
-		Sys_Error("wgl functions not found\n");
-	//gl_checkextension("wglSwapIntervalEXT", wglswapintervalfuncs, NULL, false);
-#endif
-
-	if (!gl_checkextension("OpenGL 1.1.0", opengl110funcs, NULL, false))
+	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
-
-	gl_vendor = qglGetString (GL_VENDOR);
-	gl_renderer = qglGetString (GL_RENDERER);
-	gl_version = qglGetString (GL_VERSION);
-	gl_extensions = qglGetString (GL_EXTENSIONS);
 
 	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
 	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
 	Con_Printf ("GL_VERSION: %s\n", gl_version);
 	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
+	Con_Printf ("%s_EXTENSIONS: %s\n", gl_platform, gl_platformextensions);
 
 	Con_Printf("Checking OpenGL extensions...\n");
 
-	if (!gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
-		gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
+	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
+		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
 
-	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
+	if (GL_CheckExtension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
 		if (gl_textureunits > 1)
-			gl_combine_extension = gl_checkextension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || gl_checkextension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
+			gl_combine_extension = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
 		else
 		{
 			Con_Printf("GL_ARB_multitexture with less than 2 units? - BROKEN DRIVER!\n");
@@ -425,11 +319,20 @@ void VID_CheckExtensions(void)
 		}
 	}
 
-	gl_supportslockarrays = gl_checkextension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
+	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
+}
+
+double VID_CompareMode(int width1, int height1, int bpp1, int width2, int height2, int bpp2)
+{
+	double dw, dh, db;
+	dw = ((width2 - width1) / 2048) * 16;
+	dh = ((height2 - height1) / 1536) * 4;
+	db = (bpp2 - bpp1) / 32;
+	return dw * dw + dh * dh + db * db;
 }
 
 void Force_CenterView_f (void)
@@ -494,13 +397,29 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 
 void VID_InitCvars(void)
 {
-	Cvar_RegisterVariable(&vid_mode);
-	Cvar_RegisterVariable(&vid_mouse);
+	int i;
+
 	Cvar_RegisterVariable(&vid_fullscreen);
+	Cvar_RegisterVariable(&vid_width);
+	Cvar_RegisterVariable(&vid_height);
+	Cvar_RegisterVariable(&vid_bitsperpixel);
+	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&in_pitch_min);
 	Cvar_RegisterVariable(&in_pitch_max);
 	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
+
+// interpret command-line parameters
+	if ((i = COM_CheckParm("-window")) != 0)
+		Cvar_SetValueQuick(&vid_fullscreen, false);
+	if ((i = COM_CheckParm("-fullscreen")) != 0)
+		Cvar_SetValueQuick(&vid_fullscreen, true);
+	if ((i = COM_CheckParm("-width")) != 0)
+		Cvar_SetQuick(&vid_width, com_argv[i+1]);
+	if ((i = COM_CheckParm("-height")) != 0)
+		Cvar_SetQuick(&vid_height, com_argv[i+1]);
+	if ((i = COM_CheckParm("-bpp")) != 0)
+		Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 }
 
