@@ -161,8 +161,6 @@ void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
 	}
 	if (gl_vertexarrays.value)
 	{
-//		qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-//		glEnableClientState(GL_VERTEX_ARRAY);
 		if (colors)
 		{
 			qglColorPointer(4, GL_UNSIGNED_BYTE, 0, colors);
@@ -175,23 +173,9 @@ void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
 		qglDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
 
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		/*
-		// draw the front faces
-		qglTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) paliashdr->texcoords + (int) paliashdr));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		qglDrawElements(GL_TRIANGLES, paliashdr->frontfaces * 3, GL_UNSIGNED_SHORT, (void *)((int) paliashdr->vertindices + (int) paliashdr));
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-		// draw the back faces
-		qglTexCoordPointer(2, GL_FLOAT, 0, (void *)((int) paliashdr->texcoords + sizeof(float[2]) * paliashdr->numverts + (int) paliashdr));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		qglDrawElements(GL_TRIANGLES, paliashdr->backfaces * 3, GL_UNSIGNED_SHORT, (void *)((int) paliashdr->vertindices + sizeof(unsigned short[3]) * paliashdr->frontfaces + (int) paliashdr));
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		*/
 
 		if (colors)
 			glDisableClientState(GL_COLOR_ARRAY);
-//		glDisableClientState(GL_VERTEX_ARRAY);
 	}
 	else
 	{
@@ -209,65 +193,6 @@ void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
 			glVertex3fv(&aliasvert[index*3]);
 		}
 		glEnd();
-		/*
-		in = (void *)((int) paliashdr->vertindices + (int) paliashdr);
-		glBegin(GL_TRIANGLES);
-		// draw the front faces
-		tex = (void *)((int) paliashdr->texcoords + (int) paliashdr);
-		//if (isG200)
-		//{
-			for (i = 0;i < paliashdr->frontfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				if (colors)
-					glColor4f(colors[index*4] * (1.0f / 255.0f), colors[index*4+1] * (1.0f / 255.0f), colors[index*4+2] * (1.0f / 255.0f), colors[index*4+3] * (1.0f / 255.0f));
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		*/
-		/*
-		}
-		else
-		{
-			for (i = 0;i < paliashdr->frontfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				glColor4ub(colors[index*4], colors[index*4+1], colors[index*4+2], colors[index*4+3]);
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		}
-		*/
-		/*
-		// draw the back faces
-		tex += 2 * paliashdr->numverts;
-		//if (isG200)
-		//{
-			for (i = 0;i < paliashdr->backfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				if (colors)
-					glColor4f(colors[index*4] * (1.0f / 255.0f), colors[index*4+1] * (1.0f / 255.0f), colors[index*4+2] * (1.0f / 255.0f), colors[index*4+3] * (1.0f / 255.0f));
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		*/
-		/*
-		}
-		else
-		{
-			for (i = 0;i < paliashdr->backfaces * 3;i++)
-			{
-				index = *in++;
-				glTexCoord2f(tex[index*2], tex[index*2+1]);
-				glColor4ub(colors[index*4], colors[index*4+1], colors[index*4+2], colors[index*4+3]);
-				glVertex3fv(&aliasvert[index*3]);
-			}
-		}
-		*/
-		/*
-		glEnd();
-		*/
 	}
 	// leave it in a state for additional passes
 	glDepthMask(0);
@@ -406,10 +331,7 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 
 		if (gl_vertexarrays.value)
 		{
-//			qglVertexPointer(3, GL_FLOAT, 0, aliasvert);
-//			glEnableClientState(GL_VERTEX_ARRAY);
 			qglDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
-//			glDisableClientState(GL_VERTEX_ARRAY);
 		}
 		else
 		{
@@ -545,30 +467,14 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 				glBegin(GL_TRIANGLE_FAN);
 				count = -count;
 			}
-			//if (isG200)
-			//{
-				do
-				{
-					glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-					glColor4f(aliasvertcolor[order[2] * 4] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 1] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 2] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 3] * (1.0f / 255.0f));
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
-			/*
-			}
-			else
+			do
 			{
-				do
-				{
-					glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-					glColor4ub(aliasvertcolor[order[2] * 4], aliasvertcolor[order[2] * 4 + 1], aliasvertcolor[order[2] * 4 + 2], aliasvertcolor[order[2] * 4 + 3]);
-					glVertex3fv(&aliasvert[order[2] * 3]);
-					order += 3;
-				}
-				while (count--);
+				glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
+				glColor4f(aliasvertcolor[order[2] * 4] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 1] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 2] * (1.0f / 255.0f), aliasvertcolor[order[2] * 4 + 3] * (1.0f / 255.0f));
+				glVertex3fv(&aliasvert[order[2] * 3]);
+				order += 3;
 			}
-			*/
+			while (count--);
 		}
 	}
 
@@ -726,8 +632,6 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, i
 {
 	int			i;
 	vec3_t		mins, maxs, color;
-//	aliashdr_t	*paliashdr = NULL;
-//	md2mem_t	*pheader = NULL;
 	mleaf_t		*leaf;
 	void		*modelheader;
 	int			*skinset;
