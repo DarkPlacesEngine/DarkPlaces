@@ -64,6 +64,13 @@ void EntityFrameQuake_ReadEntity(int bits)
 	if (num < 1)
 		Host_Error("EntityFrameQuake_ReadEntity: invalid entity number (%i)\n", num);
 
+	if (cl_num_entities <= num)
+	{
+		cl_num_entities = num + 1;
+		if (num >= cl_max_entities)
+			CL_ExpandEntities(num);
+	}
+
 	ent = cl_entities + num;
 
 	// note: this inherits the 'active' state of the baseline chosen
@@ -648,10 +655,10 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 			Con_Printf(" E_GLOWSIZE %i", e->glowsize * 4);
 		if (bits & E_GLOWCOLOR)
 			Con_Printf(" E_GLOWCOLOR %i", e->glowcolor);
-		
+
 		if (bits & E_LIGHT)
 			Con_Printf(" E_LIGHT %i:%i:%i:%i", e->light[0], e->light[1], e->light[2], e->light[3]);
-		if (bits & E_LIGHTPFLAGS)			
+		if (bits & E_LIGHTPFLAGS)
 			Con_Printf(" E_LIGHTPFLAGS %i", e->lightpflags);
 
 		if (bits & E_TAGATTACHMENT)
@@ -915,6 +922,12 @@ void EntityFrame_CL_ReadFrame(void)
 				*e = defaultstate;
 			}
 
+			if (cl_num_entities <= number)
+			{
+				cl_num_entities = number + 1;
+				if (number >= cl_max_entities)
+					CL_ExpandEntities(number);
+			}
 			cl_entities_active[number] = true;
 			e->active = true;
 			e->time = cl.mtime[0];
@@ -931,11 +944,11 @@ void EntityFrame_CL_ReadFrame(void)
 	}
 	EntityFrame_AddFrame(d, f->eye, f->framenum, f->numentities, f->entitydata);
 
-	memset(cl_entities_active, 0, cl_max_entities * sizeof(qbyte));
+	memset(cl_entities_active, 0, cl_num_entities * sizeof(qbyte));
 	number = 1;
 	for (i = 0;i < f->numentities;i++)
 	{
-		for (;number < f->entitydata[i].number;number++)
+		for (;number < f->entitydata[i].number && number < cl_num_entities;number++)
 		{
 			if (cl_entities_active[number])
 			{
@@ -943,6 +956,8 @@ void EntityFrame_CL_ReadFrame(void)
 				cl_entities[number].state_current.active = false;
 			}
 		}
+		if (number >= cl_num_entities)
+			break;
 		// update the entity
 		ent = &cl_entities[number];
 		ent->state_previous = ent->state_current;
@@ -952,7 +967,7 @@ void EntityFrame_CL_ReadFrame(void)
 		cl_entities_active[number] = true;
 		number++;
 	}
-	for (;number < cl_max_entities;number++)
+	for (;number < cl_num_entities;number++)
 	{
 		if (cl_entities_active[number])
 		{
@@ -1169,12 +1184,19 @@ void EntityFrame4_CL_ReadFrame(void)
 		}
 		// high bit means it's a remove message
 		cnumber = n & 0x7FFF;
+		// if this is a live entity we may need to expand the array
+		if (cl_num_entities <= cnumber && !(n & 0x8000))
+		{
+			cl_num_entities = cnumber + 1;
+			if (cnumber >= cl_max_entities)
+				CL_ExpandEntities(cnumber);
+		}
 		// add one (the changed one) if not done
 		stopnumber = cnumber + !done;
 		// process entities in range from the last one to the changed one
 		for (;enumber < stopnumber;enumber++)
 		{
-			if (skip)
+			if (skip || enumber >= cl_num_entities)
 			{
 				if (enumber == cnumber && (n & 0x8000) == 0)
 				{
@@ -1572,15 +1594,15 @@ void EntityState5_ReadUpdate(entity_state_t *s)
 	{
 		if (bits & E5_ANGLES16)
 		{
-			s->angles[0] = MSG_ReadAngle16i(); 
-			s->angles[1] = MSG_ReadAngle16i(); 
-			s->angles[2] = MSG_ReadAngle16i(); 
+			s->angles[0] = MSG_ReadAngle16i();
+			s->angles[1] = MSG_ReadAngle16i();
+			s->angles[2] = MSG_ReadAngle16i();
 		}
 		else
 		{
-			s->angles[0] = MSG_ReadAngle8i(); 
-			s->angles[1] = MSG_ReadAngle8i(); 
-			s->angles[2] = MSG_ReadAngle8i(); 
+			s->angles[0] = MSG_ReadAngle8i();
+			s->angles[1] = MSG_ReadAngle8i();
+			s->angles[2] = MSG_ReadAngle8i();
 		}
 	}
 	if (bits & E5_MODEL)
@@ -1751,8 +1773,16 @@ void EntityFrame5_CL_ReadFrame(void)
 	// (which would be remove world entity, but is actually a terminator)
 	while ((n = (unsigned short)MSG_ReadShort()) != 0x8000 && !msg_badread)
 	{
-		// get the entity number and look it up
+		// get the entity number
 		enumber = n & 0x7FFF;
+		// we may need to expand the array
+		if (cl_num_entities <= enumber)
+		{
+			cl_num_entities = enumber + 1;
+			if (enumber >= cl_max_entities)
+				CL_ExpandEntities(enumber);
+		}
+		// look up the entity
 		ent = cl_entities + enumber;
 		// slide the current into the previous slot
 		ent->state_previous = ent->state_current;
@@ -1793,7 +1823,7 @@ void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum, int viewen
 	int i, j, k, l, bits;
 	entityframe5_changestate_t *s, *s2;
 	entityframe5_packetlog_t *p, *p2;
-	qbyte statsdeltabits[(MAX_CL_STATS+7)/8]; 
+	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];
 	// scan for packets that were lost
 	for (i = 0, p = d->packetlog;i < ENTITYFRAME5_MAXPACKETLOGS;i++, p++)
 	{
@@ -1929,7 +1959,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 		num++;
 	}
 	// all remaining entities are dead
-	for (;num < MAX_EDICTS;num++)
+	for (;num < sv.num_edicts;num++)
 	{
 		if (CHECKPVSBIT(d->visiblebits, num))
 		{
@@ -1944,7 +1974,7 @@ void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int num
 	// build lists of entities by priority level
 	memset(entityframe5_prioritychaincounts, 0, sizeof(entityframe5_prioritychaincounts));
 	l = 0;
-	for (num = 0;num < MAX_EDICTS;num++)
+	for (num = 0;num < sv.num_edicts;num++)
 	{
 		if (d->priorities[num])
 		{

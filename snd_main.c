@@ -574,6 +574,9 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 		return -1;
 	}
 
+	if (entnum >= cl_max_entities)
+		CL_ExpandEntities(entnum);
+
 	// Pick a channel to play on
 	target_chan = SND_PickChannel(entnum, entchannel);
 	if (!target_chan)

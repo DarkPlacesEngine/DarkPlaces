@@ -811,7 +811,7 @@ void _Host_Frame (float time)
 		time2 = Sys_DoubleTime();
 
 	// update audio
-	if (cls.signon == SIGNONS && cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
+	if (cls.signon == SIGNONS && cl_entities[cl.viewentity].state_current.active)
 	{
 		// LordHavoc: this used to use renderer variables (eww)
 		S_Update(&cl_entities[cl.viewentity].render.matrix);
