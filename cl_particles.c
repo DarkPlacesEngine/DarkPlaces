@@ -1849,7 +1849,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	const particle_t *p = calldata1;
 	rmeshstate_t m;
 #endif
-	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
+	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca, scalex, scaley;
 	particletexture_t *tex;
 
 	VectorCopy(p->org, org);
@@ -1906,6 +1906,8 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 #endif
+	scalex = p->scalex * cl_particles_size.value;
+	scaley = p->scaley * cl_particles_size.value;
 	if (p->orientation == PARTICLE_BILLBOARD || p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 	{
 		if (p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
@@ -1918,13 +1920,13 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 			}
 			else
 				VectorVectors(p->vel2, right, up);
-			VectorScale(right, p->scalex, right);
-			VectorScale(up, p->scaley, up);
+			VectorScale(right, scalex, right);
+			VectorScale(up, scaley, up);
 		}
 		else
 		{
-			VectorScale(r_viewleft, -p->scalex, right);
-			VectorScale(r_viewup, p->scaley, up);
+			VectorScale(r_viewleft, -scalex, right);
+			VectorScale(r_viewup, scaley, up);
 		}
 		particle_vertex3f[ 0] = org[0] - right[0] - up[0];
 		particle_vertex3f[ 1] = org[1] - right[1] - up[1];
@@ -1945,9 +1947,9 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	}
 	else if (p->orientation == PARTICLE_SPARK)
 	{
-		VectorMA(p->org, -p->scaley, p->vel, v);
-		VectorMA(p->org, p->scaley, p->vel, up2);
-		R_CalcBeam_Vertex3f(particle_vertex3f, v, up2, p->scalex);
+		VectorMA(p->org, -scaley, p->vel, v);
+		VectorMA(p->org, scaley, p->vel, up2);
+		R_CalcBeam_Vertex3f(particle_vertex3f, v, up2, scalex);
 		particle_texcoord2f[0] = tex->s1;particle_texcoord2f[1] = tex->t2;
 		particle_texcoord2f[2] = tex->s1;particle_texcoord2f[3] = tex->t1;
 		particle_texcoord2f[4] = tex->s2;particle_texcoord2f[5] = tex->t1;
@@ -1955,7 +1957,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	}
 	else if (p->orientation == PARTICLE_BEAM)
 	{
-		R_CalcBeam_Vertex3f(particle_vertex3f, p->org, p->vel2, p->scalex);
+		R_CalcBeam_Vertex3f(particle_vertex3f, p->org, p->vel2, scalex);
 		VectorSubtract(p->vel2, p->org, up);
 		VectorNormalizeFast(up);
 		v[0] = DotProduct(p->org, up) * (1.0f / 64.0f);
