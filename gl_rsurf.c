@@ -29,10 +29,6 @@ static float floatblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHav
 
 static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
-static mempool_t *r_surf_mempool = NULL;
-static int r_surf_surfacevisiblelimit = 0;
-static qbyte *r_surf_surfacevisible = NULL;
-
 cvar_t r_ambient = {0, "r_ambient", "0"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
@@ -61,17 +57,6 @@ int r_q3bsp_maxmarksurfaces;
 int r_q3bsp_nummarksurfaces;
 q3msurface_t *r_q3bsp_maxsurfacelist[65536];
 */
-
-void R_Surf_ClearSurfaceVisible(int num)
-{
-	if (r_surf_surfacevisiblelimit < num)
-	{
-		Mem_Free(r_surf_surfacevisible);
-		r_surf_surfacevisiblelimit = num;
-		r_surf_surfacevisible = Mem_Alloc(r_surf_mempool, r_surf_surfacevisiblelimit);
-	}
-	memset(r_surf_surfacevisible, 0, num);
-}
 
 static int dlightdivtable[32768];
 
@@ -1352,64 +1337,83 @@ static void R_DrawPortals(void)
 
 void R_WorldVisibility(void)
 {
-	int i, j, *mark;
-	mleaf_t *leaf;
-	mleaf_t *viewleaf;
 	model_t *model = r_refdef.worldmodel;
-	int leafstackpos;
-	mportal_t *p;
-	mleaf_t *leafstack[8192];
-	qbyte leafvisited[32768];
 
-	if (!model || !model->brushq1.PointInLeaf)
+	if (!model)
 		return;
 
-	viewleaf = model->brushq1.PointInLeaf(model, r_vieworigin);
-	if (!viewleaf)
-		return;
-
-	memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brushq1.numsurfaces);
-	if (viewleaf->clusterindex < 0 || r_surfaceworldnode.integer)
+	if (model->type == mod_brushq3)
 	{
-		// equivilant to quake's RecursiveWorldNode but faster and more effective
-		for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
+		int i, j;
+		q3mleaf_t *leaf;
+		memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brushq3.num_faces);
+		for (j = 0, leaf = r_refdef.worldmodel->brushq3.data_leafs;j < r_refdef.worldmodel->brushq3.num_leafs;j++, leaf++)
 		{
-			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
+			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
 				c_leafs++;
-				if (leaf->nummarksurfaces)
-					for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
-						r_worldsurfacevisible[*mark] = true;
+				for (i = 0;i < leaf->numleaffaces;i++)
+					r_worldsurfacevisible[leaf->firstleafface[i]] = 1;
 			}
 		}
 	}
-	else
+	else if (model->type == mod_brushq1)
 	{
-		// LordHavoc: portal-passage worldnode with PVS;
-		// follows portals leading outward from viewleaf, does not venture
-		// offscreen or into leafs that are not visible, faster than Quake's
-		// RecursiveWorldNode
-		leafstack[0] = viewleaf;
-		leafstackpos = 1;
-		memset(leafvisited, 0, r_refdef.worldmodel->brushq1.num_leafs);
-		while (leafstackpos)
-		{
-			c_leafs++;
-			leaf = leafstack[--leafstackpos];
-			leafvisited[leaf - r_refdef.worldmodel->brushq1.data_leafs] = 1;
-			// draw any surfaces bounding this leaf
-			if (leaf->nummarksurfaces)
-				for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
-					r_worldsurfacevisible[*mark] = true;
-			// follow portals into other leafs
-			for (p = leaf->portals;p;p = p->next)
-				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !leafvisited[p->past - r_refdef.worldmodel->brushq1.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
-					leafstack[leafstackpos++] = p->past;
-		}
-	}
+		int i, j, *mark;
+		mleaf_t *leaf;
+		mleaf_t *viewleaf;
+		int leafstackpos;
+		mportal_t *p;
+		mleaf_t *leafstack[8192];
+		qbyte leafvisited[32768];
 
-	if (r_drawportals.integer)
-		R_DrawPortals();
+		viewleaf = model->brushq1.PointInLeaf(model, r_vieworigin);
+		if (!viewleaf)
+			return;
+
+		memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brushq1.numsurfaces);
+		if (viewleaf->clusterindex < 0 || r_surfaceworldnode.integer)
+		{
+			// equivilant to quake's RecursiveWorldNode but faster and more effective
+			for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
+			{
+				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
+				{
+					c_leafs++;
+					if (leaf->nummarksurfaces)
+						for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
+							r_worldsurfacevisible[*mark] = true;
+				}
+			}
+		}
+		else
+		{
+			// LordHavoc: portal-passage worldnode with PVS;
+			// follows portals leading outward from viewleaf, does not venture
+			// offscreen or into leafs that are not visible, faster than Quake's
+			// RecursiveWorldNode
+			leafstack[0] = viewleaf;
+			leafstackpos = 1;
+			memset(leafvisited, 0, r_refdef.worldmodel->brushq1.num_leafs);
+			while (leafstackpos)
+			{
+				c_leafs++;
+				leaf = leafstack[--leafstackpos];
+				leafvisited[leaf - r_refdef.worldmodel->brushq1.data_leafs] = 1;
+				// draw any surfaces bounding this leaf
+				if (leaf->nummarksurfaces)
+					for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
+						r_worldsurfacevisible[*mark] = true;
+				// follow portals into other leafs
+				for (p = leaf->portals;p;p = p->next)
+					if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !leafvisited[p->past - r_refdef.worldmodel->brushq1.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
+						leafstack[leafstackpos++] = p->past;
+			}
+		}
+
+		if (r_drawportals.integer)
+			R_DrawPortals();
+	}
 }
 
 void R_Q1BSP_DrawSky(entity_render_t *ent)
@@ -2059,83 +2063,52 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 
 void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 {
-	int i, ti, flagsmask, flags;
+	int i, j, f, flagsmask, flags;
 	q3msurface_t *face;
-	model_t *model;
+	model_t *model = ent->model;
 	q3mtexture_t *t;
 	const int maxfaces = 1024;
 	int numfaces = 0;
 	q3msurface_t *facelist[1024];
 	R_Mesh_Matrix(&ent->matrix);
-	model = ent->model;
 	flagsmask = Q3SURFACEFLAG_NODRAW | Q3SURFACEFLAG_SKY;
 	if (skyfaces)
 		flags = Q3SURFACEFLAG_SKY;
 	else
 		flags = 0;
-	if (ent == r_refdef.worldentity)
+	t = NULL;
+	f = 0;
+	numfaces = 0;
+	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 	{
-		int j;
-		q3mleaf_t *leaf;
-		R_Surf_ClearSurfaceVisible(r_refdef.worldmodel->brushq3.num_faces);
-		for (j = 0, leaf = r_refdef.worldmodel->brushq3.data_leafs;j < r_refdef.worldmodel->brushq3.num_leafs;j++, leaf++)
+		if (ent != r_refdef.worldentity || r_worldsurfacevisible[j])
 		{
-			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
+			face = model->brushq3.data_faces + j;
+			if (t != face->texture)
 			{
-				c_leafs++;
-				for (i = 0;i < leaf->numleaffaces;i++)
-					r_surf_surfacevisible[leaf->firstleafface[i]] = 1;
-			}
-		}
-		for (ti = 0, t = model->brushq3.data_textures;ti < model->brushq3.num_textures;ti++, t++)
-		{
-			if ((t->surfaceflags & flagsmask) == flags)
-			{
-				numfaces = 0;
-				for (i = 0;i < t->numfaces;i++)
-				{
-					if (r_surf_surfacevisible[t->facenumlist[i]])
-					{
-						face = t->facelist[i];
-						//if (!R_CullBox(face->mins, face->maxs))
-						if (face->mesh.num_triangles)
-						{
-							if (numfaces >= maxfaces)
-							{
-								if (numfaces)
-									R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
-								numfaces = 0;
-							}
-							facelist[numfaces++] = face;
-						}
-					}
-				}
 				if (numfaces)
-					R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
-			}
-		}
-	}
-	else
-	{
-		t = NULL;
-		numfaces = 0;
-		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-		{
-			if ((face->texture->surfaceflags & flagsmask) == flags && face->mesh.num_triangles)
-			{
-				if (t != face->texture || numfaces >= maxfaces)
 				{
-					if (numfaces)
-						R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
+					R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
 					numfaces = 0;
-					t = face->texture;
 				}
+				t = face->texture;
+				f = t->surfaceflags & flagsmask;
+			}
+			if (f == flags)
+			{
+				if (!face->mesh.num_triangles)
+					continue;
 				facelist[numfaces++] = face;
+				if (numfaces >= maxfaces)
+				{
+					R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
+					numfaces = 0;
+				}
 			}
 		}
-		if (numfaces)
-			R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
 	}
+	if (numfaces)
+		R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
 }
 
 void R_Q3BSP_DrawSky(entity_render_t *ent)
@@ -2340,23 +2313,19 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 	}
 }
 
+#if 0
 static void gl_surf_start(void)
 {
-	r_surf_mempool = Mem_AllocPool("gl_rsurf", 0, NULL);
-	r_surf_surfacevisiblelimit = 65536;
-	r_surf_surfacevisible = Mem_Alloc(r_surf_mempool, r_surf_surfacevisiblelimit);
 }
 
 static void gl_surf_shutdown(void)
 {
-	r_surf_surfacevisiblelimit = 0;
-	r_surf_surfacevisible = NULL;
-	Mem_FreePool(&r_surf_mempool);
 }
 
 static void gl_surf_newmap(void)
 {
 }
+#endif
 
 void GL_Surf_Init(void)
 {
@@ -2376,6 +2345,6 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 	Cvar_RegisterVariable(&gl_lightmaps);
 
-	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
+	//R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
 
