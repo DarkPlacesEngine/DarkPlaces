@@ -1042,10 +1042,6 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 
 	init = false;
 
-// clear it
-	if (ent != prog->edicts)	// hack
-		memset (ent->v, 0, prog->progs->entityfields * 4);
-
 // go through all the dictionary pairs
 	while (1)
 	{
@@ -1159,6 +1155,10 @@ void PRVM_ED_LoadFromFile (const char *data)
 			ent = PRVM_EDICT_NUM(0);
 		else 
 			ent = PRVM_ED_Alloc();
+
+		// clear it
+		if (ent != prog->edicts)	// hack
+			memset (ent->v, 0, prog->progs->entityfields * 4);
 
 		data = PRVM_ED_ParseEdict (data, ent);
 		parsed++;
