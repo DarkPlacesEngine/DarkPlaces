@@ -954,9 +954,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 					{
 						ent = r_refdef.entities[i];
 						if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
-						 && ent->maxs[0] >= clipmins[0] && ent->mins[0] <= clipmaxs[0]
-						 && ent->maxs[1] >= clipmins[1] && ent->mins[1] <= clipmaxs[1]
-						 && ent->maxs[2] >= clipmins[2] && ent->mins[2] <= clipmaxs[2]
+						 && BoxesOverlap(ent->mins, ent->maxs, clipmins, clipmaxs)
 						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
 						{
 							Matrix4x4_Transform(&ent->inversematrix, wl->origin, relativelightorigin);
@@ -982,11 +980,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 			clipmaxs[0] = rd->origin[0] + lightradius;
 			clipmaxs[1] = rd->origin[1] + lightradius;
 			clipmaxs[2] = rd->origin[2] + lightradius;
-			if (VIS_CullBox(clipmins, clipmaxs))
-				continue;
-
-			//if (R_Shadow_ScissorForBBoxAndSphere(clipmins, clipmaxs, rd->origin, cullradius))
-			if (R_Shadow_ScissorForBBox(clipmins, clipmaxs))
+			if (VIS_CullBox(clipmins, clipmaxs) || R_Shadow_ScissorForBBox(clipmins, clipmaxs))
 				continue;
 
 			cullradius = RadiusFromBoundsAndOrigin(clipmins, clipmaxs, rd->origin);
@@ -1045,9 +1039,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 					{
 						ent = r_refdef.entities[i];
 						if (ent->visframe == r_framecount && ent->model && ent->model->DrawLight
-						 && ent->maxs[0] >= clipmins[0] && ent->mins[0] <= clipmaxs[0]
-						 && ent->maxs[1] >= clipmins[1] && ent->mins[1] <= clipmaxs[1]
-						 && ent->maxs[2] >= clipmins[2] && ent->mins[2] <= clipmaxs[2]
+						 && BoxesOverlap(ent->mins, ent->maxs, clipmins, clipmaxs)
 						 && !(ent->effects & EF_ADDITIVE) && ent->alpha == 1)
 						{
 							Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);

@@ -838,8 +838,7 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	if (DotProduct(vpn, v2) <= f)
 	{
 		// entirely behind nearclip plane
-		qglDisable(GL_SCISSOR_TEST);
-		return false;
+		return true;
 	}
 	if (DotProduct(vpn, v) >= f)
 	{
