@@ -1378,6 +1378,7 @@ void PR_LoadProgs (void)
 	}
 
 	FindEdictFieldOffsets(); // LordHavoc: update field offset list
+	PR_Execute_ProgsLoaded();
 }
 
 
