@@ -2269,12 +2269,12 @@ static suffixinfo_t suffix[3][6] =
 		{"nz", false, false, false}
 	},
 	{
-		{"ft", true, false, true},
-		{"bk", false, true, true},
-		{"lf", true, true, false},
-		{"rt", false, false, false},
-		{"up", false, false, false},
-		{"dn", false, false, false}
+		{"rt",  true, false,  true},
+		{"lf", false,  true,  true},
+		{"ft",  true,  true, false},
+		{"bk", false, false, false},
+		{"up",  true, false,  true},
+		{"dn",  true, false,  true}
 	}
 };
 
