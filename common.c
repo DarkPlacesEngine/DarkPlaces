@@ -339,7 +339,7 @@ char *MSG_ReadString (void)
 {
 	static char string[2048];
 	int l,c;
-	for (l = 0;l < sizeof(string) - 1 && (c = MSG_ReadChar()) != -1 && c != 0;l++)
+	for (l = 0;l < (int) sizeof(string) - 1 && (c = MSG_ReadChar()) != -1 && c != 0;l++)
 		string[l] = c;
 	string[l] = 0;
 	return string;
