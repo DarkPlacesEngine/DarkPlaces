@@ -29,6 +29,13 @@ line of sight checks trace->crosscontent, but bullets don't
 
 */
 
+cvar_t sv_useareanodes = {CVAR_NOTIFY, "sv_useareanodes", "1"};
+
+void SV_World_Init(void)
+{
+	Cvar_RegisterVariable(&sv_useareanodes);
+}
+
 
 void ClearLink (link_t *l);
 void RemoveLink (link_t *l);
@@ -500,10 +507,10 @@ loc0:
 		}
 
 		// might interact, so do an exact clip
-		if ((int)touch->v.flags & FL_MONSTER)
-			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
-		else if (touch->v.solid == SOLID_BSP)
+		if (touch->v.solid == SOLID_BSP)
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->hullmins, clip->hullmaxs, clip->end);
+		else if ((int)touch->v.flags & FL_MONSTER)
+			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
 		// LordHavoc: take the 'best' answers from the new trace and combine with existing data
@@ -555,27 +562,30 @@ SV_MoveBounds
 */
 void SV_MoveBounds (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, vec3_t boxmins, vec3_t boxmaxs)
 {
-#if 0
-// debug to test against everything
-boxmins[0] = boxmins[1] = boxmins[2] = -999999999;
-boxmaxs[0] = boxmaxs[1] = boxmaxs[2] =  999999999;
-#else
-	int		i;
-
-	for (i=0 ; i<3 ; i++)
+	if (sv_useareanodes.integer)
 	{
-		if (end[i] > start[i])
+		int i;
+
+		for (i=0 ; i<3 ; i++)
 		{
-			boxmins[i] = start[i] + mins[i] - 1;
-			boxmaxs[i] = end[i] + maxs[i] + 1;
-		}
-		else
-		{
-			boxmins[i] = end[i] + mins[i] - 1;
-			boxmaxs[i] = start[i] + maxs[i] + 1;
+			if (end[i] > start[i])
+			{
+				boxmins[i] = start[i] + mins[i] - 1;
+				boxmaxs[i] = end[i] + maxs[i] + 1;
+			}
+			else
+			{
+				boxmins[i] = end[i] + mins[i] - 1;
+				boxmaxs[i] = start[i] + maxs[i] + 1;
+			}
 		}
 	}
-#endif
+	else
+	{
+		// debug to test against everything
+		boxmins[0] = boxmins[1] = boxmins[2] = -999999999;
+		boxmaxs[0] = boxmaxs[1] = boxmaxs[2] =  999999999;
+	}
 }
 
 /*
