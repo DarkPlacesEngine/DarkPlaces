@@ -83,31 +83,33 @@ extern vec3_t vec3_origin;
 }
 #define VectorRandom(v) {do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1);}
 
+/*
 // LordHavoc: quaternion math, untested, don't know if these are correct,
 // need to add conversion to/from matrices
+// LordHavoc: later note: the matrix faq is useful: http://skal.planet-d.net/demo/matrixfaq.htm
+// LordHavoc: these are probably very wrong and I'm not sure I care, not used by anything
 
 // returns length of quaternion
 #define qlen(a) ((float) sqrt((a)[0]*(a)[0]+(a)[1]*(a)[1]+(a)[2]*(a)[2]+(a)[3]*(a)[3]))
 // returns squared length of quaternion
 #define qlen2(a) ((a)[0]*(a)[0]+(a)[1]*(a)[1]+(a)[2]*(a)[2]+(a)[3]*(a)[3])
 // makes a quaternion from x, y, z, and a rotation angle (in degrees)
-// FIXME: this is almost definitely broken, need a rewrite
 #define QuatMake(x,y,z,r,c)\
 {\
-r2 = (r) * M_PI / 360;\
 if (r == 0)\
 {\
-(c)[0]=(float) ((x)*sin(r2));\
-(c)[1]=(float) ((y)*sin(r2));\
-(c)[2]=(float) ((z)*sin(r2));\
-(c)[3]=(float) 1;\
+(c)[0]=(float) ((x) * (1.0f / 0.0f));\
+(c)[1]=(float) ((y) * (1.0f / 0.0f));\
+(c)[2]=(float) ((z) * (1.0f / 0.0f));\
+(c)[3]=(float) 1.0f;\
 }\
 else\
 {\
 float r2 = (r) * 0.5 * (M_PI / 180);\
-(c)[0]=(float) ((x)*sin(r2));\
-(c)[1]=(float) ((y)*sin(r2));\
-(c)[2]=(float) ((z)*sin(r2));\
+float r2is = 1.0f / sin(r2);\
+(c)[0]=(float) ((x)/r2is);\
+(c)[1]=(float) ((y)/r2is);\
+(c)[2]=(float) ((z)/r2is);\
 (c)[3]=(float) (cos(r2));\
 }\
 }
@@ -124,6 +126,7 @@ float r2 = (r) * 0.5 * (M_PI / 180);\
 //#define QuatMultiplyAdd(a,b,d,c) {(c)[0]=(a)[0]*(b)[0]+d[0];(c)[1]=(a)[1]*(b)[1]+d[1];(c)[2]=(a)[2]*(b)[2]+d[2];(c)[3]=(a)[3]*(b)[3]+d[3];}
 #define qdist(a,b) ((float) sqrt(((b)[0]-(a)[0])*((b)[0]-(a)[0])+((b)[1]-(a)[1])*((b)[1]-(a)[1])+((b)[2]-(a)[2])*((b)[2]-(a)[2])+((b)[3]-(a)[3])*((b)[3]-(a)[3])))
 #define qdist2(a,b) (((b)[0]-(a)[0])*((b)[0]-(a)[0])+((b)[1]-(a)[1])*((b)[1]-(a)[1])+((b)[2]-(a)[2])*((b)[2]-(a)[2])+((b)[3]-(a)[3])*((b)[3]-(a)[3]))
+*/
 
 #define VectorCopy4(a,b) {(b)[0]=(a)[0];(b)[1]=(a)[1];(b)[2]=(a)[2];(b)[3]=(a)[3];}
 
