@@ -268,6 +268,12 @@ typedef struct model_s
 	// draw the lighting on a model (through stencil)
 	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 
+	void (*FindNonSolidLocation)(struct model_s *model, vec3_t in, vec3_t out, vec_t radius);
+	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
+	int (*PointContents)(struct model_s *model, const float *p);
+	qbyte *(*LeafPVS)(struct model_s *model, mleaf_t *leaf);
+	void (*BuildPVSTextureChains)(struct model_s *model);
+
 	// memory pool for allocations
 	mempool_t		*mempool;
 }
@@ -321,8 +327,8 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 
-int Mod_LoadSkinFrame (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
-int Mod_LoadSkinFrame_Internal (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
+int Mod_LoadSkinFrame(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
+int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
 
 #endif	// __MODEL__
 

@@ -1723,7 +1723,7 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 		if (viewleaf)
 		{
 			surfacepvsframes = model->surfacepvsframes;
-			vis = Mod_LeafPVS (viewleaf, model);
+			vis = model->LeafPVS(model, viewleaf);
 			for (j = 0;j < model->numleafs;j += 8)
 			{
 				bits = *vis++;
@@ -1747,7 +1747,7 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 					}
 				}
 			}
-			Mod_BuildPVSTextureChains(model);
+			model->BuildPVSTextureChains(model);
 		}
 	}
 }
@@ -1758,7 +1758,7 @@ void R_WorldVisibility (entity_render_t *ent)
 	mleaf_t *viewleaf;
 
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
-	viewleaf = Mod_PointInLeaf (modelorg, ent->model);
+	viewleaf = ent->model->PointInLeaf(ent->model, modelorg);
 	R_PVSUpdate(ent, viewleaf);
 
 	if (!viewleaf)

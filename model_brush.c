@@ -24,7 +24,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // note: model_shared.c sets up r_notexture, and r_surf_notexture
 
-qbyte mod_novis[(MAX_MAP_LEAFS + 7)/ 8];
+qbyte mod_q1bsp_novis[(MAX_MAP_LEAFS + 7)/ 8];
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
 cvar_t halflifebsp = {0, "halflifebsp", "0"};
@@ -34,12 +34,7 @@ cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
 
-/*
-===============
-Mod_BrushInit
-===============
-*/
-void Mod_BrushInit (void)
+void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
 	Cvar_RegisterVariable(&halflifebsp);
@@ -48,15 +43,10 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_sortsurfaces);
-	memset(mod_novis, 0xff, sizeof(mod_novis));
+	memset(mod_q1bsp_novis, 0xff, sizeof(mod_q1bsp_novis));
 }
 
-/*
-===============
-Mod_PointInLeaf
-===============
-*/
-mleaf_t *Mod_PointInLeaf (const vec3_t p, model_t *model)
+static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 {
 	mnode_t *node;
 
@@ -69,12 +59,12 @@ mleaf_t *Mod_PointInLeaf (const vec3_t p, model_t *model)
 	// in other words: first node of the (sub)model
 	node = model->nodes + model->hulls[0].firstclipnode;
 	while (node->contents == 0)
-		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct (p,node->plane->normal)) < node->plane->dist];
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 
 	return (mleaf_t *)node;
 }
 
-int Mod_PointContents (const vec3_t p, model_t *model)
+static int Mod_Q1BSP_PointContents(model_t *model, const vec3_t p)
 {
 	mnode_t *node;
 
@@ -87,7 +77,7 @@ int Mod_PointContents (const vec3_t p, model_t *model)
 	// in other words: first node of the (sub)model
 	node = model->nodes + model->hulls[0].firstclipnode;
 	while (node->contents == 0)
-		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct (p,node->plane->normal)) < node->plane->dist];
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 
 	return ((mleaf_t *)node)->contents;
 }
@@ -105,7 +95,7 @@ findnonsolidlocationinfo_t;
 #if 0
 extern cvar_t samelevel;
 #endif
-void Mod_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
+static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
 {
 	int i, surfnum, k, *tri, *mark;
 	float dist, f, vert[3][3], edge[3][3], facenormal[3], edgenormal[3][3], point[3];
@@ -232,24 +222,24 @@ void Mod_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *
 	}
 }
 
-void Mod_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, mnode_t *node)
+static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, mnode_t *node)
 {
 	if (node->contents)
 	{
 		if (((mleaf_t *)node)->nummarksurfaces)
-			Mod_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
+			Mod_Q1BSP_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
 	}
 	else
 	{
 		float f = PlaneDiff(info->center, node->plane);
 		if (f >= -info->bestdist)
-			Mod_FindNonSolidLocation_r(info, node->children[0]);
+			Mod_Q1BSP_FindNonSolidLocation_r(info, node->children[0]);
 		if (f <= info->bestdist)
-			Mod_FindNonSolidLocation_r(info, node->children[1]);
+			Mod_Q1BSP_FindNonSolidLocation_r(info, node->children[1]);
 	}
 }
 
-void Mod_FindNonSolidLocation(vec3_t in, vec3_t out, model_t *model, float radius)
+static void Mod_Q1BSP_FindNonSolidLocation(model_t *model, vec3_t in, vec3_t out, float radius)
 {
 	int i;
 	findnonsolidlocationinfo_t info;
@@ -266,19 +256,14 @@ void Mod_FindNonSolidLocation(vec3_t in, vec3_t out, model_t *model, float radiu
 	{
 		VectorClear(info.nudge);
 		info.bestdist = radius;
-		Mod_FindNonSolidLocation_r(&info, model->nodes + model->hulls[0].firstclipnode);
+		Mod_Q1BSP_FindNonSolidLocation_r(&info, model->nodes + model->hulls[0].firstclipnode);
 		VectorAdd(info.center, info.nudge, info.center);
 	}
-	while(info.bestdist < radius && ++i < 10);
+	while (info.bestdist < radius && ++i < 10);
 	VectorCopy(info.center, out);
 }
 
-/*
-===================
-Mod_DecompressVis
-===================
-*/
-static qbyte *Mod_DecompressVis (qbyte *in, model_t *model)
+static qbyte *Mod_Q1BSP_DecompressVis(model_t *model, qbyte *in)
 {
 	static qbyte decompressed[MAX_MAP_LEAFS/8];
 	int c;
@@ -308,19 +293,14 @@ static qbyte *Mod_DecompressVis (qbyte *in, model_t *model)
 	return decompressed;
 }
 
-qbyte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
+static qbyte *Mod_Q1BSP_LeafPVS(model_t *model, mleaf_t *leaf)
 {
 	if (r_novis.integer || leaf == model->leafs || leaf->compressed_vis == NULL)
-		return mod_novis;
-	return Mod_DecompressVis (leaf->compressed_vis, model);
+		return mod_q1bsp_novis;
+	return Mod_Q1BSP_DecompressVis(model, leaf->compressed_vis);
 }
 
-/*
-=================
-Mod_LoadTextures
-=================
-*/
-static void Mod_LoadTextures (lump_t *l)
+static void Mod_Q1BSP_LoadTextures(lump_t *l)
 {
 	int i, j, k, num, max, altmax, mtwidth, mtheight, *dofs, incomplete;
 	miptex_t *dmiptex;
@@ -375,23 +355,23 @@ static void Mod_LoadTextures (lump_t *l)
 			name[j] = dmiptex->name[j];
 		name[j] = 0;
 
-		mtwidth = LittleLong (dmiptex->width);
-		mtheight = LittleLong (dmiptex->height);
+		mtwidth = LittleLong(dmiptex->width);
+		mtheight = LittleLong(dmiptex->height);
 		mtdata = NULL;
-		j = LittleLong (dmiptex->offsets[0]);
+		j = LittleLong(dmiptex->offsets[0]);
 		if (j)
 		{
 			// texture included
 			if (j < 40 || j + mtwidth * mtheight > l->filelen)
 			{
-				Con_Printf ("Texture \"%s\" in \"%s\"is corrupt or incomplete\n", dmiptex->name, loadmodel->name);
+				Con_Printf("Texture \"%s\" in \"%s\"is corrupt or incomplete\n", dmiptex->name, loadmodel->name);
 				continue;
 			}
 			mtdata = (qbyte *)dmiptex + j;
 		}
 
 		if ((mtwidth & 15) || (mtheight & 15))
-			Con_Printf ("warning: texture \"%s\" in \"%s\" is not 16 aligned", dmiptex->name, loadmodel->name);
+			Con_Printf("warning: texture \"%s\" in \"%s\" is not 16 aligned", dmiptex->name, loadmodel->name);
 
 		// LordHavoc: force all names to lowercase
 		for (j = 0;name[j];j++)
@@ -419,19 +399,19 @@ static void Mod_LoadTextures (lump_t *l)
 				{
 					if (image_width == 256 && image_height == 128)
 					{
-						R_InitSky (data, 4);
+						R_InitSky(data, 4);
 						Mem_Free(data);
 					}
 					else
 					{
 						Mem_Free(data);
-						Con_Printf ("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
+						Con_Printf("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
 						if (mtdata != NULL)
-							R_InitSky (mtdata, 1);
+							R_InitSky(mtdata, 1);
 					}
 				}
 				else if (mtdata != NULL)
-					R_InitSky (mtdata, 1);
+					R_InitSky(mtdata, 1);
 			}
 		}
 		else
@@ -523,13 +503,13 @@ static void Mod_LoadTextures (lump_t *l)
 			continue;	// already sequenced
 
 		// find the number of frames in the animation
-		memset (anims, 0, sizeof(anims));
-		memset (altanims, 0, sizeof(altanims));
+		memset(anims, 0, sizeof(anims));
+		memset(altanims, 0, sizeof(altanims));
 
 		for (j = i;j < m->nummiptex;j++)
 		{
 			tx2 = loadmodel->textures + j;
-			if (!tx2 || tx2->name[0] != '+' || strcmp (tx2->name+2, tx->name+2))
+			if (!tx2 || tx2->name[0] != '+' || strcmp(tx2->name+2, tx->name+2))
 				continue;
 
 			num = tx2->name[1];
@@ -538,7 +518,7 @@ static void Mod_LoadTextures (lump_t *l)
 			else if (num >= 'a' && num <= 'j')
 				altanims[num - 'a'] = tx2;
 			else
-				Con_Printf ("Bad animating texture %s\n", tx->name);
+				Con_Printf("Bad animating texture %s\n", tx->name);
 		}
 
 		max = altmax = 0;
@@ -556,7 +536,7 @@ static void Mod_LoadTextures (lump_t *l)
 		{
 			if (!anims[j])
 			{
-				Con_Printf ("Missing frame %i of %s\n", j, tx->name);
+				Con_Printf("Missing frame %i of %s\n", j, tx->name);
 				incomplete = true;
 			}
 		}
@@ -564,7 +544,7 @@ static void Mod_LoadTextures (lump_t *l)
 		{
 			if (!altanims[j])
 			{
-				Con_Printf ("Missing altframe %i of %s\n", j, tx->name);
+				Con_Printf("Missing altframe %i of %s\n", j, tx->name);
 				incomplete = true;
 			}
 		}
@@ -615,12 +595,7 @@ static void Mod_LoadTextures (lump_t *l)
 	}
 }
 
-/*
-=================
-Mod_LoadLighting
-=================
-*/
-static void Mod_LoadLighting (lump_t *l)
+static void Mod_Q1BSP_LoadLighting(lump_t *l)
 {
 	int i;
 	qbyte *in, *out, *data, d;
@@ -629,7 +604,7 @@ static void Mod_LoadLighting (lump_t *l)
 	if (loadmodel->ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
 		loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
-		memcpy (loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
+		memcpy(loadmodel->lightdata, mod_base + l->fileofs, l->filelen);
 	}
 	else // LordHavoc: bsp version 29 (normal white lighting)
 	{
@@ -637,7 +612,7 @@ static void Mod_LoadLighting (lump_t *l)
 		strcpy(litfilename, loadmodel->name);
 		FS_StripExtension(litfilename, litfilename);
 		strcat(litfilename, ".lit");
-		data = (qbyte*) FS_LoadFile (litfilename, false);
+		data = (qbyte*) FS_LoadFile(litfilename, false);
 		if (data)
 		{
 			if (fs_filesize > 8 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
@@ -672,7 +647,7 @@ static void Mod_LoadLighting (lump_t *l)
 		loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, l->filelen*3);
 		in = loadmodel->lightdata + l->filelen*2; // place the file at the end, so it will not be overwritten until the very last write
 		out = loadmodel->lightdata;
-		memcpy (in, mod_base + l->fileofs, l->filelen);
+		memcpy(in, mod_base + l->fileofs, l->filelen);
 		for (i = 0;i < l->filelen;i++)
 		{
 			d = *in++;
@@ -683,7 +658,7 @@ static void Mod_LoadLighting (lump_t *l)
 	}
 }
 
-void Mod_LoadLightList(void)
+static void Mod_Q1BSP_LoadLightList(void)
 {
 	int a, n, numlights;
 	char lightsfilename[1024], *s, *t, *lightsstring;
@@ -692,7 +667,7 @@ void Mod_LoadLightList(void)
 	strcpy(lightsfilename, loadmodel->name);
 	FS_StripExtension(lightsfilename, lightsfilename);
 	strcat(lightsfilename, ".lights");
-	s = lightsstring = (char *) FS_LoadFile (lightsfilename, false);
+	s = lightsstring = (char *) FS_LoadFile(lightsfilename, false);
 	if (s)
 	{
 		numlights = 0;
@@ -745,7 +720,7 @@ void Mod_LoadLightList(void)
 
 /*
 static int castshadowcount = 0;
-void Mod_ProcessLightList(void)
+static void Mod_Q1BSP_ProcessLightList(void)
 {
 	int j, k, l, *mark, lnum;
 	mlight_t *e;
@@ -761,11 +736,11 @@ void Mod_ProcessLightList(void)
 		if (e->cullradius2 > 4096.0f * 4096.0f)
 			e->cullradius2 = 4096.0f * 4096.0f;
 		e->cullradius = e->lightradius = sqrt(e->cullradius2);
-		leaf = Mod_PointInLeaf(e->origin, loadmodel);
+		leaf = Mod_Q1BSP_PointInLeaf(e->origin, loadmodel);
 		if (leaf->compressed_vis)
-			pvs = Mod_DecompressVis (leaf->compressed_vis, loadmodel);
+			pvs = Mod_Q1BSP_DecompressVis(leaf->compressed_vis, loadmodel);
 		else
-			pvs = mod_novis;
+			pvs = mod_q1bsp_novis;
 		for (j = 0;j < loadmodel->numsurfaces;j++)
 			loadmodel->surfacevisframes[j] = -1;
 		for (j = 0, leaf = loadmodel->leafs + 1;j < loadmodel->numleafs - 1;j++, leaf++)
@@ -839,7 +814,7 @@ void Mod_ProcessLightList(void)
 		if (e->mins[2] < e->origin[2] - e->lightradius) e->mins[2] = e->origin[2] - e->lightradius;
 		if (e->maxs[2] > e->origin[2] + e->lightradius) e->maxs[2] = e->origin[2] + e->lightradius;
 		// clip shadow volumes against eachother to remove unnecessary
-		// polygons (and sections of polygons)
+		// polygons(and sections of polygons)
 		{
 			//vec3_t polymins, polymaxs;
 			int maxverts = 4;
@@ -1002,22 +977,17 @@ void Mod_ProcessLightList(void)
 */
 
 
-/*
-=================
-Mod_LoadVisibility
-=================
-*/
-static void Mod_LoadVisibility (lump_t *l)
+static void Mod_Q1BSP_LoadVisibility(lump_t *l)
 {
 	loadmodel->visdata = NULL;
 	if (!l->filelen)
 		return;
 	loadmodel->visdata = Mem_Alloc(loadmodel->mempool, l->filelen);
-	memcpy (loadmodel->visdata, mod_base + l->fileofs, l->filelen);
+	memcpy(loadmodel->visdata, mod_base + l->fileofs, l->filelen);
 }
 
 // used only for HalfLife maps
-void Mod_ParseWadsFromEntityLump(const char *data)
+static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 {
 	char key[128], value[4096];
 	char wadname[128];
@@ -1064,7 +1034,7 @@ void Mod_ParseWadsFromEntityLump(const char *data)
 							value[i] = 0;
 							strcpy(wadname, "textures/");
 							strcat(wadname, &value[j]);
-							W_LoadTextureWadFile (wadname, false);
+							W_LoadTextureWadFile(wadname, false);
 							j = i+1;
 							if (!k)
 								break;
@@ -1076,29 +1046,19 @@ void Mod_ParseWadsFromEntityLump(const char *data)
 	}
 }
 
-/*
-=================
-Mod_LoadEntities
-=================
-*/
-static void Mod_LoadEntities (lump_t *l)
+static void Mod_Q1BSP_LoadEntities(lump_t *l)
 {
 	loadmodel->entities = NULL;
 	if (!l->filelen)
 		return;
 	loadmodel->entities = Mem_Alloc(loadmodel->mempool, l->filelen);
-	memcpy (loadmodel->entities, mod_base + l->fileofs, l->filelen);
+	memcpy(loadmodel->entities, mod_base + l->fileofs, l->filelen);
 	if (loadmodel->ishlbsp)
-		Mod_ParseWadsFromEntityLump(loadmodel->entities);
+		Mod_Q1BSP_ParseWadsFromEntityLump(loadmodel->entities);
 }
 
 
-/*
-=================
-Mod_LoadVertexes
-=================
-*/
-static void Mod_LoadVertexes (lump_t *l)
+static void Mod_Q1BSP_LoadVertexes(lump_t *l)
 {
 	dvertex_t	*in;
 	mvertex_t	*out;
@@ -1106,7 +1066,7 @@ static void Mod_LoadVertexes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadVertexes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
@@ -1115,18 +1075,13 @@ static void Mod_LoadVertexes (lump_t *l)
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
-		out->position[0] = LittleFloat (in->point[0]);
-		out->position[1] = LittleFloat (in->point[1]);
-		out->position[2] = LittleFloat (in->point[2]);
+		out->position[0] = LittleFloat(in->point[0]);
+		out->position[1] = LittleFloat(in->point[1]);
+		out->position[2] = LittleFloat(in->point[2]);
 	}
 }
 
-/*
-=================
-Mod_LoadSubmodels
-=================
-*/
-static void Mod_LoadSubmodels (lump_t *l)
+static void Mod_Q1BSP_LoadSubmodels(lump_t *l)
 {
 	dmodel_t	*in;
 	dmodel_t	*out;
@@ -1134,7 +1089,7 @@ static void Mod_LoadSubmodels (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadSubmodels: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
@@ -1146,24 +1101,19 @@ static void Mod_LoadSubmodels (lump_t *l)
 		for (j=0 ; j<3 ; j++)
 		{
 			// spread the mins / maxs by a pixel
-			out->mins[j] = LittleFloat (in->mins[j]) - 1;
-			out->maxs[j] = LittleFloat (in->maxs[j]) + 1;
-			out->origin[j] = LittleFloat (in->origin[j]);
+			out->mins[j] = LittleFloat(in->mins[j]) - 1;
+			out->maxs[j] = LittleFloat(in->maxs[j]) + 1;
+			out->origin[j] = LittleFloat(in->origin[j]);
 		}
 		for (j=0 ; j<MAX_MAP_HULLS ; j++)
-			out->headnode[j] = LittleLong (in->headnode[j]);
-		out->visleafs = LittleLong (in->visleafs);
-		out->firstface = LittleLong (in->firstface);
-		out->numfaces = LittleLong (in->numfaces);
+			out->headnode[j] = LittleLong(in->headnode[j]);
+		out->visleafs = LittleLong(in->visleafs);
+		out->firstface = LittleLong(in->firstface);
+		out->numfaces = LittleLong(in->numfaces);
 	}
 }
 
-/*
-=================
-Mod_LoadEdges
-=================
-*/
-static void Mod_LoadEdges (lump_t *l)
+static void Mod_Q1BSP_LoadEdges(lump_t *l)
 {
 	dedge_t *in;
 	medge_t *out;
@@ -1171,7 +1121,7 @@ static void Mod_LoadEdges (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadEdges: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -1185,12 +1135,7 @@ static void Mod_LoadEdges (lump_t *l)
 	}
 }
 
-/*
-=================
-Mod_LoadTexinfo
-=================
-*/
-static void Mod_LoadTexinfo (lump_t *l)
+static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 {
 	texinfo_t *in;
 	mtexinfo_t *out;
@@ -1198,7 +1143,7 @@ static void Mod_LoadTexinfo (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadTexinfo: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -1209,16 +1154,16 @@ static void Mod_LoadTexinfo (lump_t *l)
 	{
 		for (k = 0;k < 2;k++)
 			for (j = 0;j < 4;j++)
-				out->vecs[k][j] = LittleFloat (in->vecs[k][j]);
+				out->vecs[k][j] = LittleFloat(in->vecs[k][j]);
 
-		miptex = LittleLong (in->miptex);
-		out->flags = LittleLong (in->flags);
+		miptex = LittleLong(in->miptex);
+		out->flags = LittleLong(in->flags);
 
 		out->texture = NULL;
 		if (loadmodel->textures)
 		{
 			if ((unsigned int) miptex >= (unsigned int) loadmodel->numtextures)
-				Con_Printf ("error in model \"%s\": invalid miptex index %i (of %i)\n", loadmodel->name, miptex, loadmodel->numtextures);
+				Con_Printf("error in model \"%s\": invalid miptex index %i(of %i)\n", loadmodel->name, miptex, loadmodel->numtextures);
 			else
 				out->texture = loadmodel->textures + miptex;
 		}
@@ -1238,7 +1183,7 @@ static void Mod_LoadTexinfo (lump_t *l)
 	}
 }
 
-void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
+void BoundPoly(int numverts, float *verts, vec3_t mins, vec3_t maxs)
 {
 	int		i, j;
 	float	*v;
@@ -1260,7 +1205,7 @@ void BoundPoly (int numverts, float *verts, vec3_t mins, vec3_t maxs)
 
 #if 0
 #define MAX_SUBDIVPOLYTRIANGLES 4096
-#define MAX_SUBDIVPOLYVERTS (MAX_SUBDIVPOLYTRIANGLES * 3)
+#define MAX_SUBDIVPOLYVERTS(MAX_SUBDIVPOLYTRIANGLES * 3)
 
 static int subdivpolyverts, subdivpolytriangles;
 static int subdivpolyindex[MAX_SUBDIVPOLYTRIANGLES][3];
@@ -1280,21 +1225,21 @@ static int subdivpolylookupvert(vec3_t v)
 	return subdivpolyverts++;
 }
 
-static void SubdividePolygon (int numverts, float *verts)
+static void SubdividePolygon(int numverts, float *verts)
 {
 	int		i, i1, i2, i3, f, b, c, p;
 	vec3_t	mins, maxs, front[256], back[256];
 	float	m, *pv, *cv, dist[256], frac;
 
 	if (numverts > 250)
-		Host_Error ("SubdividePolygon: ran out of verts in buffer");
+		Host_Error("SubdividePolygon: ran out of verts in buffer");
 
-	BoundPoly (numverts, verts, mins, maxs);
+	BoundPoly(numverts, verts, mins, maxs);
 
 	for (i = 0;i < 3;i++)
 	{
 		m = (mins[i] + maxs[i]) * 0.5;
-		m = r_subdivide_size.value * floor (m/r_subdivide_size.value + 0.5);
+		m = r_subdivide_size.value * floor(m/r_subdivide_size.value + 0.5);
 		if (maxs[i] - m < 8)
 			continue;
 		if (m - mins[i] < 8)
@@ -1309,17 +1254,17 @@ static void SubdividePolygon (int numverts, float *verts)
 		{
 			if (dist[p] >= 0)
 			{
-				VectorCopy (pv, front[f]);
+				VectorCopy(pv, front[f]);
 				f++;
 			}
 			if (dist[p] <= 0)
 			{
-				VectorCopy (pv, back[b]);
+				VectorCopy(pv, back[b]);
 				b++;
 			}
 			if (dist[p] == 0 || dist[c] == 0)
 				continue;
-			if ( (dist[p] > 0) != (dist[c] > 0) )
+			if ((dist[p] > 0) != (dist[c] > 0) )
 			{
 				// clip point
 				frac = dist[p] / (dist[p] - dist[c]);
@@ -1331,8 +1276,8 @@ static void SubdividePolygon (int numverts, float *verts)
 			}
 		}
 
-		SubdividePolygon (f, front[0]);
-		SubdividePolygon (b, back[0]);
+		SubdividePolygon(f, front[0]);
+		SubdividePolygon(b, back[0]);
 		return;
 	}
 
@@ -1355,16 +1300,10 @@ static void SubdividePolygon (int numverts, float *verts)
 	}
 }
 
-/*
-================
-Mod_GenerateWarpMesh
-
-Breaks a polygon up along axial 64 unit
-boundaries so that turbulent and sky warps
-can be done reasonably.
-================
-*/
-void Mod_GenerateWarpMesh (msurface_t *surf)
+//Breaks a polygon up along axial 64 unit
+//boundaries so that turbulent and sky warps
+//can be done reasonably.
+static void Mod_Q1BSP_GenerateWarpMesh(msurface_t *surf)
 {
 	int i, j;
 	surfvertex_t *v;
@@ -1372,9 +1311,9 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 
 	subdivpolytriangles = 0;
 	subdivpolyverts = 0;
-	SubdividePolygon (surf->poly_numverts, surf->poly_verts);
+	SubdividePolygon(surf->poly_numverts, surf->poly_verts);
 	if (subdivpolytriangles < 1)
-		Host_Error("Mod_GenerateWarpMesh: no triangles?\n");
+		Host_Error("Mod_Q1BSP_GenerateWarpMesh: no triangles?\n");
 
 	surf->mesh = mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + subdivpolytriangles * sizeof(int[3]) + subdivpolyverts * sizeof(surfvertex_t));
 	mesh->numverts = subdivpolyverts;
@@ -1390,13 +1329,13 @@ void Mod_GenerateWarpMesh (msurface_t *surf)
 	for (i = 0, v = mesh->vertex;i < subdivpolyverts;i++, v++)
 	{
 		VectorCopy(subdivpolyvert[i], v->v);
-		v->st[0] = DotProduct (v->v, surf->texinfo->vecs[0]);
-		v->st[1] = DotProduct (v->v, surf->texinfo->vecs[1]);
+		v->st[0] = DotProduct(v->v, surf->texinfo->vecs[0]);
+		v->st[1] = DotProduct(v->v, surf->texinfo->vecs[1]);
 	}
 }
 #endif
 
-surfmesh_t *Mod_AllocSurfMesh(int numverts, int numtriangles)
+static surfmesh_t *Mod_Q1BSP_AllocSurfMesh(int numverts, int numtriangles)
 {
 	surfmesh_t *mesh;
 	mesh = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) + numtriangles * sizeof(int[6]) + numverts * (3 + 2 + 2 + 2 + 3 + 3 + 3 + 1) * sizeof(float));
@@ -1415,7 +1354,7 @@ surfmesh_t *Mod_AllocSurfMesh(int numverts, int numtriangles)
 	return mesh;
 }
 
-void Mod_GenerateSurfacePolygon (msurface_t *surf, int firstedge, int numedges)
+static void Mod_Q1BSP_GenerateSurfacePolygon(msurface_t *surf, int firstedge, int numedges)
 {
 	int i, lindex, j;
 	float *vec, *vert, mins[3], maxs[3], val, *v;
@@ -1431,7 +1370,7 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf, int firstedge, int numedges)
 			vec = loadmodel->vertexes[loadmodel->edges[lindex].v[0]].position;
 		else
 			vec = loadmodel->vertexes[loadmodel->edges[-lindex].v[1]].position;
-		VectorCopy (vec, vert);
+		VectorCopy(vec, vert);
 		vert += 3;
 	}
 
@@ -1474,12 +1413,7 @@ void Mod_GenerateSurfacePolygon (msurface_t *surf, int firstedge, int numedges)
 	}
 }
 
-/*
-=================
-Mod_LoadFaces
-=================
-*/
-static void Mod_LoadFaces (lump_t *l)
+static void Mod_Q1BSP_LoadFaces(lump_t *l)
 {
 	dface_t *in;
 	msurface_t *surf;
@@ -1489,7 +1423,7 @@ static void Mod_LoadFaces (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	loadmodel->surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
 
@@ -1505,16 +1439,16 @@ static void Mod_LoadFaces (lump_t *l)
 		firstedge = LittleLong(in->firstedge);
 		numedges = LittleShort(in->numedges);
 		if ((unsigned int) firstedge > (unsigned int) loadmodel->numsurfedges || (unsigned int) numedges > (unsigned int) loadmodel->numsurfedges || (unsigned int) firstedge + (unsigned int) numedges > (unsigned int) loadmodel->numsurfedges)
-			Host_Error("Mod_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", firstedge, numedges, loadmodel->numsurfedges);
-		i = LittleShort (in->texinfo);
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", firstedge, numedges, loadmodel->numsurfedges);
+		i = LittleShort(in->texinfo);
 		if ((unsigned int) i >= (unsigned int) loadmodel->numtexinfo)
-			Host_Error("Mod_LoadFaces: invalid texinfo index %i (model has %i texinfos)\n", i, loadmodel->numtexinfo);
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)\n", i, loadmodel->numtexinfo);
 		surf->texinfo = loadmodel->texinfo + i;
 		surf->flags = surf->texinfo->texture->flags;
 
 		planenum = LittleShort(in->planenum);
 		if ((unsigned int) planenum >= (unsigned int) loadmodel->numplanes)
-			Host_Error("Mod_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->numplanes);
+			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->numplanes);
 
 		if (LittleShort(in->side))
 			surf->flags |= SURF_PLANEBACK;
@@ -1527,7 +1461,7 @@ static void Mod_LoadFaces (lump_t *l)
 		// force lightmap upload on first time seeing the surface
 		surf->cached_dlight = true;
 
-		Mod_GenerateSurfacePolygon(surf, firstedge, numedges);
+		Mod_Q1BSP_GenerateSurfacePolygon(surf, firstedge, numedges);
 
 		ssize = (surf->extents[0] >> 4) + 1;
 		tsize = (surf->extents[1] >> 4) + 1;
@@ -1546,7 +1480,7 @@ static void Mod_LoadFaces (lump_t *l)
 		if (surf->texinfo->texture->shader == &Cshader_wall_lightmap)
 		{
 			if ((surf->extents[0] >> 4) + 1 > (256) || (surf->extents[1] >> 4) + 1 > (256))
-				Host_Error ("Bad surface extents");
+				Host_Error("Bad surface extents");
 			// stainmap for permanent marks on walls
 			surf->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 			// clear to white
@@ -1554,7 +1488,7 @@ static void Mod_LoadFaces (lump_t *l)
 		}
 	}
 
-	loadmodel->entiremesh = Mod_AllocSurfMesh(totalverts, totaltris);
+	loadmodel->entiremesh = Mod_Q1BSP_AllocSurfMesh(totalverts, totaltris);
 	loadmodel->surfmeshes = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t) * totalmeshes);
 
 	for (surfnum = 0, surf = loadmodel->surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, surf++)
@@ -1581,8 +1515,8 @@ static void Mod_LoadFaces (lump_t *l)
 			mesh->vertex3f[i * 3 + 0] = surf->poly_verts[i * 3 + 0];
 			mesh->vertex3f[i * 3 + 1] = surf->poly_verts[i * 3 + 1];
 			mesh->vertex3f[i * 3 + 2] = surf->poly_verts[i * 3 + 2];
-			s = DotProduct ((mesh->vertex3f + i * 3), surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
-			t = DotProduct ((mesh->vertex3f + i * 3), surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
+			s = DotProduct((mesh->vertex3f + i * 3), surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3];
+			t = DotProduct((mesh->vertex3f + i * 3), surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3];
 			mesh->texcoordtexture2f[i * 2 + 0] = s / surf->texinfo->texture->width;
 			mesh->texcoordtexture2f[i * 2 + 1] = t / surf->texinfo->texture->height;
 			mesh->texcoorddetail2f[i * 2 + 0] = s * (1.0f / 16.0f);
@@ -1627,8 +1561,8 @@ static void Mod_LoadFaces (lump_t *l)
 
 			for (i = 0;i < mesh->numverts;i++)
 			{
-				u = ((DotProduct ((mesh->vertex3f + i * 3), surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]) + 8 - surf->texturemins[0]) * (1.0 / 16.0);
-				v = ((DotProduct ((mesh->vertex3f + i * 3), surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]) + 8 - surf->texturemins[1]) * (1.0 / 16.0);
+				u = ((DotProduct((mesh->vertex3f + i * 3), surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]) + 8 - surf->texturemins[0]) * (1.0 / 16.0);
+				v = ((DotProduct((mesh->vertex3f + i * 3), surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]) + 8 - surf->texturemins[1]) * (1.0 / 16.0);
 				mesh->texcoordlightmap2f[i * 2 + 0] = u * uscale + ubase;
 				mesh->texcoordlightmap2f[i * 2 + 1] = v * vscale + vbase;
 				// LordHavoc: calc lightmap data offset for vertex lighting to use
@@ -1640,26 +1574,16 @@ static void Mod_LoadFaces (lump_t *l)
 	}
 }
 
-/*
-=================
-Mod_SetParent
-=================
-*/
-static void Mod_SetParent (mnode_t *node, mnode_t *parent)
+static void Mod_Q1BSP_SetParent(mnode_t *node, mnode_t *parent)
 {
 	node->parent = parent;
 	if (node->contents < 0)
 		return;
-	Mod_SetParent (node->children[0], node);
-	Mod_SetParent (node->children[1], node);
+	Mod_Q1BSP_SetParent(node->children[0], node);
+	Mod_Q1BSP_SetParent(node->children[1], node);
 }
 
-/*
-=================
-Mod_LoadNodes
-=================
-*/
-static void Mod_LoadNodes (lump_t *l)
+static void Mod_Q1BSP_LoadNodes(lump_t *l)
 {
 	int			i, j, count, p;
 	dnode_t		*in;
@@ -1667,7 +1591,7 @@ static void Mod_LoadNodes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadNodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
@@ -1678,19 +1602,19 @@ static void Mod_LoadNodes (lump_t *l)
 	{
 		for (j=0 ; j<3 ; j++)
 		{
-			out->mins[j] = LittleShort (in->mins[j]);
-			out->maxs[j] = LittleShort (in->maxs[j]);
+			out->mins[j] = LittleShort(in->mins[j]);
+			out->maxs[j] = LittleShort(in->maxs[j]);
 		}
 
 		p = LittleLong(in->planenum);
 		out->plane = loadmodel->planes + p;
 
-		out->firstsurface = LittleShort (in->firstface);
-		out->numsurfaces = LittleShort (in->numfaces);
+		out->firstsurface = LittleShort(in->firstface);
+		out->numsurfaces = LittleShort(in->numfaces);
 
 		for (j=0 ; j<2 ; j++)
 		{
-			p = LittleShort (in->children[j]);
+			p = LittleShort(in->children[j]);
 			if (p >= 0)
 				out->children[j] = loadmodel->nodes + p;
 			else
@@ -1698,15 +1622,10 @@ static void Mod_LoadNodes (lump_t *l)
 		}
 	}
 
-	Mod_SetParent (loadmodel->nodes, NULL);	// sets nodes and leafs
+	Mod_Q1BSP_SetParent(loadmodel->nodes, NULL);	// sets nodes and leafs
 }
 
-/*
-=================
-Mod_LoadLeafs
-=================
-*/
-static void Mod_LoadLeafs (lump_t *l)
+static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 {
 	dleaf_t 	*in;
 	mleaf_t 	*out;
@@ -1714,7 +1633,7 @@ static void Mod_LoadLeafs (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
@@ -1725,8 +1644,8 @@ static void Mod_LoadLeafs (lump_t *l)
 	{
 		for (j=0 ; j<3 ; j++)
 		{
-			out->mins[j] = LittleShort (in->mins[j]);
-			out->maxs[j] = LittleShort (in->maxs[j]);
+			out->mins[j] = LittleShort(in->mins[j]);
+			out->maxs[j] = LittleShort(in->maxs[j]);
 		}
 
 		p = LittleLong(in->contents);
@@ -1749,12 +1668,7 @@ static void Mod_LoadLeafs (lump_t *l)
 	}
 }
 
-/*
-=================
-Mod_LoadClipnodes
-=================
-*/
-static void Mod_LoadClipnodes (lump_t *l)
+static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 {
 	dclipnode_t *in, *out;
 	int			i, count;
@@ -1762,7 +1676,7 @@ static void Mod_LoadClipnodes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadClipnodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
@@ -1845,18 +1759,12 @@ static void Mod_LoadClipnodes (lump_t *l)
 		out->children[0] = LittleShort(in->children[0]);
 		out->children[1] = LittleShort(in->children[1]);
 		if (out->children[0] >= count || out->children[1] >= count)
-			Host_Error("Corrupt clipping hull (out of range child)\n");
+			Host_Error("Corrupt clipping hull(out of range child)\n");
 	}
 }
 
-/*
-=================
-Mod_MakeHull0
-
-Duplicate the drawing hull structure as a clipping hull
-=================
-*/
-static void Mod_MakeHull0 (void)
+//Duplicate the drawing hull structure as a clipping hull
+static void Mod_Q1BSP_MakeHull0(void)
 {
 	mnode_t		*in;
 	dclipnode_t *out;
@@ -1881,19 +1789,14 @@ static void Mod_MakeHull0 (void)
 	}
 }
 
-/*
-=================
-Mod_LoadMarksurfaces
-=================
-*/
-static void Mod_LoadMarksurfaces (lump_t *l)
+static void Mod_Q1BSP_LoadMarksurfaces(lump_t *l)
 {
 	int i, j;
 	short *in;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadMarksurfaces: funny lump size in %s",loadmodel->name);
 	loadmodel->nummarksurfaces = l->filelen / sizeof(*in);
 	loadmodel->marksurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->nummarksurfaces * sizeof(int));
 
@@ -1901,38 +1804,28 @@ static void Mod_LoadMarksurfaces (lump_t *l)
 	{
 		j = (unsigned) LittleShort(in[i]);
 		if (j >= loadmodel->numsurfaces)
-			Host_Error ("Mod_ParseMarksurfaces: bad surface number");
+			Host_Error("Mod_Q1BSP_LoadMarksurfaces: bad surface number");
 		loadmodel->marksurfaces[i] = j;
 	}
 }
 
-/*
-=================
-Mod_LoadSurfedges
-=================
-*/
-static void Mod_LoadSurfedges (lump_t *l)
+static void Mod_Q1BSP_LoadSurfedges(lump_t *l)
 {
 	int		i;
 	int		*in;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadSurfedges: funny lump size in %s",loadmodel->name);
 	loadmodel->numsurfedges = l->filelen / sizeof(*in);
 	loadmodel->surfedges = Mem_Alloc(loadmodel->mempool, loadmodel->numsurfedges * sizeof(int));
 
 	for (i = 0;i < loadmodel->numsurfedges;i++)
-		loadmodel->surfedges[i] = LittleLong (in[i]);
+		loadmodel->surfedges[i] = LittleLong(in[i]);
 }
 
 
-/*
-=================
-Mod_LoadPlanes
-=================
-*/
-static void Mod_LoadPlanes (lump_t *l)
+static void Mod_Q1BSP_LoadPlanes(lump_t *l)
 {
 	int			i;
 	mplane_t	*out;
@@ -1940,17 +1833,17 @@ static void Mod_LoadPlanes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
+		Host_Error("Mod_Q1BSP_LoadPlanes: funny lump size in %s", loadmodel->name);
 
 	loadmodel->numplanes = l->filelen / sizeof(*in);
 	loadmodel->planes = out = Mem_Alloc(loadmodel->mempool, loadmodel->numplanes * sizeof(*out));
 
 	for (i = 0;i < loadmodel->numplanes;i++, in++, out++)
 	{
-		out->normal[0] = LittleFloat (in->normal[0]);
-		out->normal[1] = LittleFloat (in->normal[1]);
-		out->normal[2] = LittleFloat (in->normal[2]);
-		out->dist = LittleFloat (in->dist);
+		out->normal[0] = LittleFloat(in->normal[0]);
+		out->normal[1] = LittleFloat(in->normal[1]);
+		out->normal[2] = LittleFloat(in->normal[2]);
+		out->dist = LittleFloat(in->dist);
 
 		PlaneClassify(out);
 	}
@@ -1971,7 +1864,7 @@ winding_t;
 NewWinding
 ==================
 */
-static winding_t *NewWinding (int points)
+static winding_t *NewWinding(int points)
 {
 	winding_t *w;
 	int size;
@@ -1981,12 +1874,12 @@ static winding_t *NewWinding (int points)
 
 	size = sizeof(winding_t) + sizeof(double[3]) * (points - 8);
 	w = Mem_Alloc(loadmodel->mempool, size);
-	memset (w, 0, size);
+	memset(w, 0, size);
 
 	return w;
 }
 
-static void FreeWinding (winding_t *w)
+static void FreeWinding(winding_t *w)
 {
 	Mem_Free(w);
 }
@@ -1996,7 +1889,7 @@ static void FreeWinding (winding_t *w)
 BaseWindingForPlane
 =================
 */
-static winding_t *BaseWindingForPlane (mplane_t *p)
+static winding_t *BaseWindingForPlane(mplane_t *p)
 {
 	double org[3], vright[3], vup[3], normal[3];
 	winding_t *w;
@@ -2004,25 +1897,25 @@ static winding_t *BaseWindingForPlane (mplane_t *p)
 	VectorCopy(p->normal, normal);
 	VectorVectorsDouble(normal, vright, vup);
 
-	VectorScale (vup, 1024.0*1024.0*1024.0, vup);
-	VectorScale (vright, 1024.0*1024.0*1024.0, vright);
+	VectorScale(vup, 1024.0*1024.0*1024.0, vup);
+	VectorScale(vright, 1024.0*1024.0*1024.0, vright);
 
 	// project a really big	axis aligned box onto the plane
-	w = NewWinding (4);
+	w = NewWinding(4);
 
-	VectorScale (p->normal, p->dist, org);
+	VectorScale(p->normal, p->dist, org);
 
-	VectorSubtract (org, vright, w->points[0]);
-	VectorAdd (w->points[0], vup, w->points[0]);
+	VectorSubtract(org, vright, w->points[0]);
+	VectorAdd(w->points[0], vup, w->points[0]);
 
-	VectorAdd (org, vright, w->points[1]);
-	VectorAdd (w->points[1], vup, w->points[1]);
+	VectorAdd(org, vright, w->points[1]);
+	VectorAdd(w->points[1], vup, w->points[1]);
 
-	VectorAdd (org, vright, w->points[2]);
-	VectorSubtract (w->points[2], vup, w->points[2]);
+	VectorAdd(org, vright, w->points[2]);
+	VectorSubtract(w->points[2], vup, w->points[2]);
 
-	VectorSubtract (org, vright, w->points[3]);
-	VectorSubtract (w->points[3], vup, w->points[3]);
+	VectorSubtract(org, vright, w->points[3]);
+	VectorSubtract(w->points[3], vup, w->points[3]);
 
 	w->numpoints = 4;
 
@@ -2039,7 +1932,7 @@ If keepon is true, an exactly on-plane winding will be saved, otherwise
 it will be clipped away.
 ==================
 */
-static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
+static winding_t *ClipWinding(winding_t *in, mplane_t *split, int keepon)
 {
 	double	dists[MAX_POINTS_ON_WINDING + 1];
 	int		sides[MAX_POINTS_ON_WINDING + 1];
@@ -2056,7 +1949,7 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 	// determine sides for each point
 	for (i = 0;i < in->numpoints;i++)
 	{
-		dists[i] = dot = DotProduct (in->points[i], split->normal) - split->dist;
+		dists[i] = dot = DotProduct(in->points[i], split->normal) - split->dist;
 		if (dot > ON_EPSILON)
 			sides[i] = SIDE_FRONT;
 		else if (dot < -ON_EPSILON)
@@ -2073,7 +1966,7 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 
 	if (!counts[0])
 	{
-		FreeWinding (in);
+		FreeWinding(in);
 		return NULL;
 	}
 	if (!counts[1])
@@ -2081,27 +1974,27 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 
 	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
 	if (maxpts > MAX_POINTS_ON_WINDING)
-		Sys_Error ("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
+		Sys_Error("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
 
-	neww = NewWinding (maxpts);
+	neww = NewWinding(maxpts);
 
 	for (i = 0;i < in->numpoints;i++)
 	{
 		if (neww->numpoints >= maxpts)
-			Sys_Error ("ClipWinding: points exceeded estimate");
+			Sys_Error("ClipWinding: points exceeded estimate");
 
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
 		{
-			VectorCopy (p1, neww->points[neww->numpoints]);
+			VectorCopy(p1, neww->points[neww->numpoints]);
 			neww->numpoints++;
 			continue;
 		}
 
 		if (sides[i] == SIDE_FRONT)
 		{
-			VectorCopy (p1, neww->points[neww->numpoints]);
+			VectorCopy(p1, neww->points[neww->numpoints]);
 			neww->numpoints++;
 		}
 
@@ -2119,15 +2012,15 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 			else if (split->normal[j] == -1)
 				mid[j] = -split->dist;
 			else
-				mid[j] = p1[j] + dot*(p2[j]-p1[j]);
+				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
 		}
 
-		VectorCopy (mid, neww->points[neww->numpoints]);
+		VectorCopy(mid, neww->points[neww->numpoints]);
 		neww->numpoints++;
 	}
 
 	// free the original winding
-	FreeWinding (in);
+	FreeWinding(in);
 
 	return neww;
 }
@@ -2143,7 +2036,7 @@ returned winding will be the input winding.  If on both sides, two
 new windings will be created.
 ==================
 */
-static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, winding_t **back)
+static void DivideWinding(winding_t *in, mplane_t *split, winding_t **front, winding_t **back)
 {
 	double	dists[MAX_POINTS_ON_WINDING + 1];
 	int		sides[MAX_POINTS_ON_WINDING + 1];
@@ -2160,7 +2053,7 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 	// determine sides for each point
 	for (i = 0;i < in->numpoints;i++)
 	{
-		dot = DotProduct (in->points[i], split->normal);
+		dot = DotProduct(in->points[i], split->normal);
 		dot -= split->dist;
 		dists[i] = dot;
 		if (dot > ON_EPSILON) sides[i] = SIDE_FRONT;
@@ -2187,35 +2080,35 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
 
 	if (maxpts > MAX_POINTS_ON_WINDING)
-		Sys_Error ("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
+		Sys_Error("ClipWinding: maxpts > MAX_POINTS_ON_WINDING");
 
-	*front = f = NewWinding (maxpts);
-	*back = b = NewWinding (maxpts);
+	*front = f = NewWinding(maxpts);
+	*back = b = NewWinding(maxpts);
 
 	for (i = 0;i < in->numpoints;i++)
 	{
 		if (f->numpoints >= maxpts || b->numpoints >= maxpts)
-			Sys_Error ("DivideWinding: points exceeded estimate");
+			Sys_Error("DivideWinding: points exceeded estimate");
 
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
 		{
-			VectorCopy (p1, f->points[f->numpoints]);
+			VectorCopy(p1, f->points[f->numpoints]);
 			f->numpoints++;
-			VectorCopy (p1, b->points[b->numpoints]);
+			VectorCopy(p1, b->points[b->numpoints]);
 			b->numpoints++;
 			continue;
 		}
 
 		if (sides[i] == SIDE_FRONT)
 		{
-			VectorCopy (p1, f->points[f->numpoints]);
+			VectorCopy(p1, f->points[f->numpoints]);
 			f->numpoints++;
 		}
 		else if (sides[i] == SIDE_BACK)
 		{
-			VectorCopy (p1, b->points[b->numpoints]);
+			VectorCopy(p1, b->points[b->numpoints]);
 			b->numpoints++;
 		}
 
@@ -2233,12 +2126,12 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 			else if (split->normal[j] == -1)
 				mid[j] = -split->dist;
 			else
-				mid[j] = p1[j] + dot*(p2[j]-p1[j]);
+				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
 		}
 
-		VectorCopy (mid, f->points[f->numpoints]);
+		VectorCopy(mid, f->points[f->numpoints]);
 		f->numpoints++;
-		VectorCopy (mid, b->points[b->numpoints]);
+		VectorCopy(mid, b->points[b->numpoints]);
 		b->numpoints++;
 	}
 }
@@ -2260,7 +2153,7 @@ static portal_t *portalchain;
 AllocPortal
 ===========
 */
-static portal_t *AllocPortal (void)
+static portal_t *AllocPortal(void)
 {
 	portal_t *p;
 	p = Mem_Alloc(loadmodel->mempool, sizeof(portal_t));
@@ -2274,13 +2167,13 @@ static void FreePortal(portal_t *p)
 	Mem_Free(p);
 }
 
-static void Mod_RecursiveRecalcNodeBBox(mnode_t *node)
+static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 {
 	// calculate children first
 	if (node->children[0]->contents >= 0)
-		Mod_RecursiveRecalcNodeBBox(node->children[0]);
+		Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[0]);
 	if (node->children[1]->contents >= 0)
-		Mod_RecursiveRecalcNodeBBox(node->children[1]);
+		Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[1]);
 
 	// make combined bounding box from children
 	node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
@@ -2291,7 +2184,7 @@ static void Mod_RecursiveRecalcNodeBBox(mnode_t *node)
 	node->maxs[2] = max(node->children[0]->maxs[2], node->children[1]->maxs[2]);
 }
 
-static void Mod_FinalizePortals(void)
+static void Mod_Q1BSP_FinalizePortals(void)
 {
 	int i, j, numportals, numpoints;
 	portal_t *p, *pnext;
@@ -2300,7 +2193,7 @@ static void Mod_FinalizePortals(void)
 	mleaf_t *leaf, *endleaf;
 	winding_t *w;
 
-	// recalculate bounding boxes for all leafs (because qbsp is very sloppy)
+	// recalculate bounding boxes for all leafs(because qbsp is very sloppy)
 	leaf = loadmodel->leafs;
 	endleaf = leaf + loadmodel->numleafs;
 	for (;leaf < endleaf;leaf++)
@@ -2309,7 +2202,7 @@ static void Mod_FinalizePortals(void)
 		VectorSet(leaf->maxs, -2000000000, -2000000000, -2000000000);
 	}
 	p = portalchain;
-	while(p)
+	while (p)
 	{
 		if (p->winding)
 		{
@@ -2331,13 +2224,13 @@ static void Mod_FinalizePortals(void)
 		p = p->chain;
 	}
 
-	Mod_RecursiveRecalcNodeBBox(loadmodel->nodes);
+	Mod_Q1BSP_RecursiveRecalcNodeBBox(loadmodel->nodes);
 
 	// tally up portal and point counts
 	p = portalchain;
 	numportals = 0;
 	numpoints = 0;
-	while(p)
+	while (p)
 	{
 		// note: this check must match the one below or it will usually corrupt memory
 		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
@@ -2352,7 +2245,7 @@ static void Mod_FinalizePortals(void)
 	}
 	loadmodel->portals = Mem_Alloc(loadmodel->mempool, numportals * sizeof(mportal_t) + numpoints * sizeof(mvertex_t));
 	loadmodel->numportals = numportals;
-	loadmodel->portalpoints = (void *) ((qbyte *) loadmodel->portals + numportals * sizeof(mportal_t));
+	loadmodel->portalpoints = (void *)((qbyte *) loadmodel->portals + numportals * sizeof(mportal_t));
 	loadmodel->numportalpoints = numpoints;
 	// clear all leaf portal chains
 	for (i = 0;i < loadmodel->numleafs;i++)
@@ -2374,7 +2267,7 @@ static void Mod_FinalizePortals(void)
 			 && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID
 			 && p->nodes[0]->contents != CONTENTS_SKY && p->nodes[1]->contents != CONTENTS_SKY)
 			{
-				// first make the back to front portal (forward portal)
+				// first make the back to front portal(forward portal)
 				portal->points = point;
 				portal->numpoints = p->winding->numpoints;
 				portal->plane.dist = p->plane.dist;
@@ -2396,7 +2289,7 @@ static void Mod_FinalizePortals(void)
 				// advance to next portal
 				portal++;
 
-				// then make the front to back portal (backward portal)
+				// then make the front to back portal(backward portal)
 				portal->points = point;
 				portal->numpoints = p->winding->numpoints;
 				portal->plane.dist = -p->plane.dist;
@@ -2430,14 +2323,14 @@ static void Mod_FinalizePortals(void)
 AddPortalToNodes
 =============
 */
-static void AddPortalToNodes (portal_t *p, mnode_t *front, mnode_t *back)
+static void AddPortalToNodes(portal_t *p, mnode_t *front, mnode_t *back)
 {
 	if (!front)
-		Host_Error ("AddPortalToNodes: NULL front node");
+		Host_Error("AddPortalToNodes: NULL front node");
 	if (!back)
-		Host_Error ("AddPortalToNodes: NULL back node");
+		Host_Error("AddPortalToNodes: NULL back node");
 	if (p->nodes[0] || p->nodes[1])
-		Host_Error ("AddPortalToNodes: already included");
+		Host_Error("AddPortalToNodes: already included");
 	// note: front == back is handled gracefully, because leaf 0 is the shared solid leaf, it can often have portals with the same leaf on both sides
 
 	p->nodes[0] = front;
@@ -2469,7 +2362,7 @@ static void RemovePortalFromNodes(portal_t *portal)
 		{
 			t = *portalpointer;
 			if (!t)
-				Host_Error ("RemovePortalFromNodes: portal not in leaf");
+				Host_Error("RemovePortalFromNodes: portal not in leaf");
 
 			if (t == portal)
 			{
@@ -2484,7 +2377,7 @@ static void RemovePortalFromNodes(portal_t *portal)
 					portal->nodes[1] = NULL;
 				}
 				else
-					Host_Error ("RemovePortalFromNodes: portal not bounding leaf");
+					Host_Error("RemovePortalFromNodes: portal not bounding leaf");
 				break;
 			}
 
@@ -2493,12 +2386,12 @@ static void RemovePortalFromNodes(portal_t *portal)
 			else if (t->nodes[1] == node)
 				portalpointer = (void **) &t->next[1];
 			else
-				Host_Error ("RemovePortalFromNodes: portal not bounding leaf");
+				Host_Error("RemovePortalFromNodes: portal not bounding leaf");
 		}
 	}
 }
 
-static void Mod_RecursiveNodePortals (mnode_t *node)
+static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 {
 	int side;
 	mnode_t *front, *back, *other_node;
@@ -2515,35 +2408,35 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	front = node->children[0];
 	back = node->children[1];
 	if (front == back)
-		Host_Error("Mod_RecursiveNodePortals: corrupt node hierarchy");
+		Host_Error("Mod_Q1BSP_RecursiveNodePortals: corrupt node hierarchy");
 
 	// create the new portal by generating a polygon for the node plane,
-	// and clipping it by all of the other portals (which came from nodes above this one)
-	nodeportal = AllocPortal ();
+	// and clipping it by all of the other portals(which came from nodes above this one)
+	nodeportal = AllocPortal();
 	nodeportal->plane = *node->plane;
 
-	nodeportalwinding = BaseWindingForPlane (node->plane);
+	nodeportalwinding = BaseWindingForPlane(node->plane);
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
 		clipplane = portal->plane;
 		if (portal->nodes[0] == portal->nodes[1])
-			Host_Error("Mod_RecursiveNodePortals: portal has same node on both sides (1)");
+			Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(1)");
 		if (portal->nodes[0] == node)
 			side = 0;
 		else if (portal->nodes[1] == node)
 		{
 			clipplane.dist = -clipplane.dist;
-			VectorNegate (clipplane.normal, clipplane.normal);
+			VectorNegate(clipplane.normal, clipplane.normal);
 			side = 1;
 		}
 		else
-			Host_Error ("Mod_RecursiveNodePortals: mislinked portal");
+			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
 
-		nodeportalwinding = ClipWinding (nodeportalwinding, &clipplane, true);
+		nodeportalwinding = ClipWinding(nodeportalwinding, &clipplane, true);
 		if (!nodeportalwinding)
 		{
-			Con_Printf ("Mod_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+			Con_Printf("Mod_Q1BSP_RecursiveNodePortals: WARNING: new portal was clipped away\n");
 			break;
 		}
 	}
@@ -2552,7 +2445,7 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	{
 		// if the plane was not clipped on all sides, there was an error
 		nodeportal->winding = nodeportalwinding;
-		AddPortalToNodes (nodeportal, front, back);
+		AddPortalToNodes(nodeportal, front, back);
 	}
 
 	// split the portals of this node along this node's plane and assign them to the children of this node
@@ -2560,72 +2453,72 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	for (portal = (portal_t *)node->portals;portal;portal = nextportal)
 	{
 		if (portal->nodes[0] == portal->nodes[1])
-			Host_Error("Mod_RecursiveNodePortals: portal has same node on both sides (2)");
+			Host_Error("Mod_Q1BSP_RecursiveNodePortals: portal has same node on both sides(2)");
 		if (portal->nodes[0] == node)
 			side = 0;
 		else if (portal->nodes[1] == node)
 			side = 1;
 		else
-			Host_Error ("Mod_RecursiveNodePortals: mislinked portal");
+			Host_Error("Mod_Q1BSP_RecursiveNodePortals: mislinked portal");
 		nextportal = portal->next[side];
 
 		other_node = portal->nodes[!side];
-		RemovePortalFromNodes (portal);
+		RemovePortalFromNodes(portal);
 
 		// cut the portal into two portals, one on each side of the node plane
-		DivideWinding (portal->winding, plane, &frontwinding, &backwinding);
+		DivideWinding(portal->winding, plane, &frontwinding, &backwinding);
 
 		if (!frontwinding)
 		{
 			if (side == 0)
-				AddPortalToNodes (portal, back, other_node);
+				AddPortalToNodes(portal, back, other_node);
 			else
-				AddPortalToNodes (portal, other_node, back);
+				AddPortalToNodes(portal, other_node, back);
 			continue;
 		}
 		if (!backwinding)
 		{
 			if (side == 0)
-				AddPortalToNodes (portal, front, other_node);
+				AddPortalToNodes(portal, front, other_node);
 			else
-				AddPortalToNodes (portal, other_node, front);
+				AddPortalToNodes(portal, other_node, front);
 			continue;
 		}
 
 		// the winding is split
-		splitportal = AllocPortal ();
+		splitportal = AllocPortal();
 		temp = splitportal->chain;
 		*splitportal = *portal;
 		splitportal->chain = temp;
 		splitportal->winding = backwinding;
-		FreeWinding (portal->winding);
+		FreeWinding(portal->winding);
 		portal->winding = frontwinding;
 
 		if (side == 0)
 		{
-			AddPortalToNodes (portal, front, other_node);
-			AddPortalToNodes (splitportal, back, other_node);
+			AddPortalToNodes(portal, front, other_node);
+			AddPortalToNodes(splitportal, back, other_node);
 		}
 		else
 		{
-			AddPortalToNodes (portal, other_node, front);
-			AddPortalToNodes (splitportal, other_node, back);
+			AddPortalToNodes(portal, other_node, front);
+			AddPortalToNodes(splitportal, other_node, back);
 		}
 	}
 
-	Mod_RecursiveNodePortals(front);
-	Mod_RecursiveNodePortals(back);
+	Mod_Q1BSP_RecursiveNodePortals(front);
+	Mod_Q1BSP_RecursiveNodePortals(back);
 }
 
 
-static void Mod_MakePortals(void)
+static void Mod_Q1BSP_MakePortals(void)
 {
 	portalchain = NULL;
-	Mod_RecursiveNodePortals (loadmodel->nodes);
-	Mod_FinalizePortals();
+	Mod_Q1BSP_RecursiveNodePortals(loadmodel->nodes);
+	Mod_Q1BSP_FinalizePortals();
 }
 
-static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, mempool_t *mempool)
+static void Mod_Q1BSP_BuildSurfaceNeighbors(msurface_t *surfaces, int numsurfaces, mempool_t *mempool)
 {
 #if 0
 	int surfnum, vertnum, vertnum2, snum, vnum, vnum2;
@@ -2671,7 +2564,7 @@ static void Mod_BuildSurfaceNeighbors (msurface_t *surfaces, int numsurfaces, me
 #endif
 }
 
-void Mod_BuildLightmapUpdateChains(mempool_t *mempool, model_t *model)
+static void Mod_Q1BSP_BuildLightmapUpdateChains(mempool_t *mempool, model_t *model)
 {
 	int i, j, stylecounts[256], totalcount, remapstyles[256];
 	msurface_t *surf;
@@ -2724,7 +2617,7 @@ void Mod_BuildLightmapUpdateChains(mempool_t *mempool, model_t *model)
 	}
 }
 
-void Mod_BuildPVSTextureChains(model_t *model)
+static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 {
 	int i, j;
 	for (i = 0;i < model->numtextures;i++)
@@ -2760,16 +2653,11 @@ void Mod_BuildPVSTextureChains(model_t *model)
 	}
 }
 
-/*
-=================
-Mod_LoadBrushModel
-=================
-*/
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
 extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
-void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
+void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 {
 	int i, j, k;
 	dheader_t *header;
@@ -2785,10 +2673,17 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 
 	header = (dheader_t *)buffer;
 
-	i = LittleLong (header->version);
+	i = LittleLong(header->version);
 	if (i != BSPVERSION && i != 30)
-		Host_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i (Quake) or 30 (HalfLife))", mod->name, i, BSPVERSION);
+		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
 	mod->ishlbsp = i == 30;
+
+	mod->FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
+	mod->PointInLeaf = Mod_Q1BSP_PointInLeaf;
+	mod->PointContents = Mod_Q1BSP_PointContents;
+	mod->LeafPVS = Mod_Q1BSP_LeafPVS;
+	mod->BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
+
 	if (loadmodel->isworldmodel)
 	{
 		Cvar_SetValue("halflifebsp", mod->ishlbsp);
@@ -2800,42 +2695,42 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 	mod_base = (qbyte *)header;
 
 	for (i = 0;i < (int) sizeof(dheader_t) / 4;i++)
-		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
+		((int *)header)[i] = LittleLong(((int *)header)[i]);
 
 // load into heap
 
 	// store which lightmap format to use
 	mod->lightmaprgba = r_lightmaprgba.integer;
 
-	Mod_LoadEntities (&header->lumps[LUMP_ENTITIES]);
-	Mod_LoadVertexes (&header->lumps[LUMP_VERTEXES]);
-	Mod_LoadEdges (&header->lumps[LUMP_EDGES]);
-	Mod_LoadSurfedges (&header->lumps[LUMP_SURFEDGES]);
-	Mod_LoadTextures (&header->lumps[LUMP_TEXTURES]);
-	Mod_LoadLighting (&header->lumps[LUMP_LIGHTING]);
-	Mod_LoadPlanes (&header->lumps[LUMP_PLANES]);
-	Mod_LoadTexinfo (&header->lumps[LUMP_TEXINFO]);
-	Mod_LoadFaces (&header->lumps[LUMP_FACES]);
-	Mod_LoadMarksurfaces (&header->lumps[LUMP_MARKSURFACES]);
-	Mod_LoadVisibility (&header->lumps[LUMP_VISIBILITY]);
-	Mod_LoadLeafs (&header->lumps[LUMP_LEAFS]);
-	Mod_LoadNodes (&header->lumps[LUMP_NODES]);
-	Mod_LoadClipnodes (&header->lumps[LUMP_CLIPNODES]);
-	Mod_LoadSubmodels (&header->lumps[LUMP_MODELS]);
+	Mod_Q1BSP_LoadEntities(&header->lumps[LUMP_ENTITIES]);
+	Mod_Q1BSP_LoadVertexes(&header->lumps[LUMP_VERTEXES]);
+	Mod_Q1BSP_LoadEdges(&header->lumps[LUMP_EDGES]);
+	Mod_Q1BSP_LoadSurfedges(&header->lumps[LUMP_SURFEDGES]);
+	Mod_Q1BSP_LoadTextures(&header->lumps[LUMP_TEXTURES]);
+	Mod_Q1BSP_LoadLighting(&header->lumps[LUMP_LIGHTING]);
+	Mod_Q1BSP_LoadPlanes(&header->lumps[LUMP_PLANES]);
+	Mod_Q1BSP_LoadTexinfo(&header->lumps[LUMP_TEXINFO]);
+	Mod_Q1BSP_LoadFaces(&header->lumps[LUMP_FACES]);
+	Mod_Q1BSP_LoadMarksurfaces(&header->lumps[LUMP_MARKSURFACES]);
+	Mod_Q1BSP_LoadVisibility(&header->lumps[LUMP_VISIBILITY]);
+	Mod_Q1BSP_LoadLeafs(&header->lumps[LUMP_LEAFS]);
+	Mod_Q1BSP_LoadNodes(&header->lumps[LUMP_NODES]);
+	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES]);
+	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS]);
 
-	Mod_MakeHull0 ();
-	Mod_MakePortals();
+	Mod_Q1BSP_MakeHull0();
+	Mod_Q1BSP_MakePortals();
 
 	mod->numframes = 2;		// regular and alternate animation
 
 	mainmempool = mod->mempool;
 	loadname = mod->name;
 
-	Mod_LoadLightList ();
+	Mod_Q1BSP_LoadLightList();
 	originalloadmodel = loadmodel;
 
 //
-// set up the submodels (FIXME: this is confusing)
+// set up the submodels(FIXME: this is confusing)
 //
 	for (i = 0;i < mod->numsubmodels;i++)
 	{
@@ -2858,10 +2753,10 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
 		mod->pvstexturechains = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(msurface_t **));
-		mod->pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool, (mod->nummodelsurfaces + mod->numtextures) * sizeof(msurface_t *));
+		mod->pvstexturechainsbuffer = Mem_Alloc(originalloadmodel->mempool,(mod->nummodelsurfaces + mod->numtextures) * sizeof(msurface_t *));
 		mod->pvstexturechainslength = Mem_Alloc(originalloadmodel->mempool, mod->numtextures * sizeof(int));
-		Mod_BuildPVSTextureChains(mod);
-		Mod_BuildLightmapUpdateChains(originalloadmodel->mempool, mod);
+		Mod_Q1BSP_BuildPVSTextureChains(mod);
+		Mod_Q1BSP_BuildLightmapUpdateChains(originalloadmodel->mempool, mod);
 		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
@@ -2871,7 +2766,7 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 			modelradius = 0;
 			for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
 			{
-				// we only need to have a drawsky function if it is used (usually only on world model)
+				// we only need to have a drawsky function if it is used(usually only on world model)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
 				// LordHavoc: submodels always clip, even if water
@@ -2899,7 +2794,7 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 			}
 			modelyawradius = sqrt(modelyawradius);
 			modelradius = sqrt(modelradius);
-			mod->yawmins[0] = mod->yawmins[1] = -(mod->yawmaxs[0] = mod->yawmaxs[1] = modelyawradius);
+			mod->yawmins[0] = mod->yawmins[1] = - (mod->yawmaxs[0] = mod->yawmaxs[1] = modelyawradius);
 			mod->yawmins[2] = mod->normalmins[2];
 			mod->yawmaxs[2] = mod->normalmaxs[2];
 			mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
@@ -2909,10 +2804,10 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 		}
 		else
 		{
-			// LordHavoc: empty submodel (lacrima.bsp has such a glitch)
+			// LordHavoc: empty submodel(lacrima.bsp has such a glitch)
 			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadname);
 		}
-		Mod_BuildSurfaceNeighbors(mod->surfaces + mod->firstmodelsurface, mod->nummodelsurfaces, originalloadmodel->mempool);
+		Mod_Q1BSP_BuildSurfaceNeighbors(mod->surfaces + mod->firstmodelsurface, mod->nummodelsurfaces, originalloadmodel->mempool);
 
 		mod->numleafs = bm->visleafs;
 
@@ -2922,10 +2817,10 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 		{
 			char	name[10];
 			// duplicate the basic information
-			sprintf (name, "*%i", i+1);
-			loadmodel = Mod_FindName (name);
+			sprintf(name, "*%i", i+1);
+			loadmodel = Mod_FindName(name);
 			*loadmodel = *mod;
-			strcpy (loadmodel->name, name);
+			strcpy(loadmodel->name, name);
 			// textures and memory belong to the main model
 			loadmodel->texturepool = NULL;
 			loadmodel->mempool = NULL;
@@ -2934,14 +2829,14 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 	}
 
 	loadmodel = originalloadmodel;
-	//Mod_ProcessLightList ();
+	//Mod_Q1BSP_ProcessLightList();
 }
 
-static void Mod_Q2LoadEntities (lump_t *l)
+static void Mod_Q2BSP_LoadEntities(lump_t *l)
 {
 }
 
-static void Mod_Q2LoadPlanes (lump_t *l)
+static void Mod_Q2BSP_LoadPlanes(lump_t *l)
 {
 /*
 	d_t *in;
@@ -2950,7 +2845,7 @@ static void Mod_Q2LoadPlanes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadPlanes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -2963,7 +2858,7 @@ static void Mod_Q2LoadPlanes (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadVertices (lump_t *l)
+static void Mod_Q2BSP_LoadVertices(lump_t *l)
 {
 /*
 	d_t *in;
@@ -2972,7 +2867,7 @@ static void Mod_Q2LoadVertices (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadVertices: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -2985,7 +2880,7 @@ static void Mod_Q2LoadVertices (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadVisibility (lump_t *l)
+static void Mod_Q2BSP_LoadVisibility(lump_t *l)
 {
 /*
 	d_t *in;
@@ -2994,7 +2889,7 @@ static void Mod_Q2LoadVisibility (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadVisibility: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3007,7 +2902,7 @@ static void Mod_Q2LoadVisibility (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadNodes (lump_t *l)
+static void Mod_Q2BSP_LoadNodes(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3016,7 +2911,7 @@ static void Mod_Q2LoadNodes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadNodes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3029,7 +2924,7 @@ static void Mod_Q2LoadNodes (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadTexInfo (lump_t *l)
+static void Mod_Q2BSP_LoadTexInfo(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3038,7 +2933,7 @@ static void Mod_Q2LoadTexInfo (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadTexInfo: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3051,7 +2946,7 @@ static void Mod_Q2LoadTexInfo (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadFaces (lump_t *l)
+static void Mod_Q2BSP_LoadFaces(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3060,7 +2955,7 @@ static void Mod_Q2LoadFaces (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3073,7 +2968,7 @@ static void Mod_Q2LoadFaces (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadLighting (lump_t *l)
+static void Mod_Q2BSP_LoadLighting(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3082,7 +2977,7 @@ static void Mod_Q2LoadLighting (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadLighting: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3095,7 +2990,7 @@ static void Mod_Q2LoadLighting (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadLeafs (lump_t *l)
+static void Mod_Q2BSP_LoadLeafs(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3104,7 +2999,7 @@ static void Mod_Q2LoadLeafs (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadLeafs: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3117,7 +3012,7 @@ static void Mod_Q2LoadLeafs (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadLeafFaces (lump_t *l)
+static void Mod_Q2BSP_LoadLeafFaces(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3126,7 +3021,7 @@ static void Mod_Q2LoadLeafFaces (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadLeafFaces: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3139,7 +3034,7 @@ static void Mod_Q2LoadLeafFaces (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadLeafBrushes (lump_t *l)
+static void Mod_Q2BSP_LoadLeafBrushes(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3148,7 +3043,7 @@ static void Mod_Q2LoadLeafBrushes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadLeafBrushes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3161,7 +3056,7 @@ static void Mod_Q2LoadLeafBrushes (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadEdges (lump_t *l)
+static void Mod_Q2BSP_LoadEdges(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3170,7 +3065,7 @@ static void Mod_Q2LoadEdges (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadEdges: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3183,7 +3078,7 @@ static void Mod_Q2LoadEdges (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadSurfEdges (lump_t *l)
+static void Mod_Q2BSP_LoadSurfEdges(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3192,7 +3087,7 @@ static void Mod_Q2LoadSurfEdges (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadSurfEdges: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3205,7 +3100,7 @@ static void Mod_Q2LoadSurfEdges (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadBrushes (lump_t *l)
+static void Mod_Q2BSP_LoadBrushes(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3214,7 +3109,7 @@ static void Mod_Q2LoadBrushes (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadBrushes: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3227,7 +3122,7 @@ static void Mod_Q2LoadBrushes (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadBrushSides (lump_t *l)
+static void Mod_Q2BSP_LoadBrushSides(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3236,7 +3131,7 @@ static void Mod_Q2LoadBrushSides (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadBrushSides: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3249,7 +3144,7 @@ static void Mod_Q2LoadBrushSides (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadAreas (lump_t *l)
+static void Mod_Q2BSP_LoadAreas(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3258,7 +3153,7 @@ static void Mod_Q2LoadAreas (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadAreas: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3271,7 +3166,7 @@ static void Mod_Q2LoadAreas (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadAreaPortals (lump_t *l)
+static void Mod_Q2BSP_LoadAreaPortals(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3280,7 +3175,7 @@ static void Mod_Q2LoadAreaPortals (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadAreaPortals: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3293,7 +3188,7 @@ static void Mod_Q2LoadAreaPortals (lump_t *l)
 */
 }
 
-static void Mod_Q2LoadModels (lump_t *l)
+static void Mod_Q2BSP_LoadModels(lump_t *l)
 {
 /*
 	d_t *in;
@@ -3302,7 +3197,7 @@ static void Mod_Q2LoadModels (lump_t *l)
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+		Host_Error("Mod_Q2BSP_LoadModels: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
 	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
 
@@ -3315,7 +3210,7 @@ static void Mod_Q2LoadModels (lump_t *l)
 */
 }
 
-void Mod_LoadBrushModelQ2 (model_t *mod, void *buffer)
+void Mod_Q2BSP_Load(model_t *mod, void *buffer)
 {
 	int i;
 	q2dheader_t *header;
@@ -3324,9 +3219,9 @@ void Mod_LoadBrushModelQ2 (model_t *mod, void *buffer)
 
 	header = (q2dheader_t *)buffer;
 
-	i = LittleLong (header->version);
+	i = LittleLong(header->version);
 	if (i != Q2BSPVERSION)
-		Host_Error ("Mod_LoadBrushModelQ2: %s has wrong version number (%i should be %i)", mod->name, i, BSPVERSION);
+		Host_Error("Mod_Q2BSP_Load: %s has wrong version number(%i should be %i)", mod->name, i, BSPVERSION);
 	mod->ishlbsp = false;
 	if (loadmodel->isworldmodel)
 	{
@@ -3339,45 +3234,50 @@ void Mod_LoadBrushModelQ2 (model_t *mod, void *buffer)
 
 	// swap all the lumps
 	for (i = 0;i < (int) sizeof(dheader_t) / 4;i++)
-		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
+		((int *)header)[i] = LittleLong(((int *)header)[i]);
 
 	// store which lightmap format to use
 	mod->lightmaprgba = r_lightmaprgba.integer;
 
-	Mod_Q2LoadEntities(&header->lumps[Q2LUMP_ENTITIES]);
-	Mod_Q2LoadPlanes(&header->lumps[Q2LUMP_PLANES]);
-	Mod_Q2LoadVertices(&header->lumps[Q2LUMP_VERTEXES]);
-	Mod_Q2LoadVisibility(&header->lumps[Q2LUMP_VISIBILITY]);
-	Mod_Q2LoadNodes(&header->lumps[Q2LUMP_NODES]);
-	Mod_Q2LoadTexInfo(&header->lumps[Q2LUMP_TEXINFO]);
-	Mod_Q2LoadFaces(&header->lumps[Q2LUMP_FACES]);
-	Mod_Q2LoadLighting(&header->lumps[Q2LUMP_LIGHTING]);
-	Mod_Q2LoadLeafs(&header->lumps[Q2LUMP_LEAFS]);
-	Mod_Q2LoadLeafFaces(&header->lumps[Q2LUMP_LEAFFACES]);
-	Mod_Q2LoadLeafBrushes(&header->lumps[Q2LUMP_LEAFBRUSHES]);
-	Mod_Q2LoadEdges(&header->lumps[Q2LUMP_EDGES]);
-	Mod_Q2LoadSurfEdges(&header->lumps[Q2LUMP_SURFEDGES]);
-	Mod_Q2LoadBrushes(&header->lumps[Q2LUMP_BRUSHES]);
-	Mod_Q2LoadBrushSides(&header->lumps[Q2LUMP_BRUSHSIDES]);
-	Mod_Q2LoadAreas(&header->lumps[Q2LUMP_AREAS]);
-	Mod_Q2LoadAreaPortals(&header->lumps[Q2LUMP_AREAPORTALS]);
+	Mod_Q2BSP_LoadEntities(&header->lumps[Q2LUMP_ENTITIES]);
+	Mod_Q2BSP_LoadPlanes(&header->lumps[Q2LUMP_PLANES]);
+	Mod_Q2BSP_LoadVertices(&header->lumps[Q2LUMP_VERTEXES]);
+	Mod_Q2BSP_LoadVisibility(&header->lumps[Q2LUMP_VISIBILITY]);
+	Mod_Q2BSP_LoadNodes(&header->lumps[Q2LUMP_NODES]);
+	Mod_Q2BSP_LoadTexInfo(&header->lumps[Q2LUMP_TEXINFO]);
+	Mod_Q2BSP_LoadFaces(&header->lumps[Q2LUMP_FACES]);
+	Mod_Q2BSP_LoadLighting(&header->lumps[Q2LUMP_LIGHTING]);
+	Mod_Q2BSP_LoadLeafs(&header->lumps[Q2LUMP_LEAFS]);
+	Mod_Q2BSP_LoadLeafFaces(&header->lumps[Q2LUMP_LEAFFACES]);
+	Mod_Q2BSP_LoadLeafBrushes(&header->lumps[Q2LUMP_LEAFBRUSHES]);
+	Mod_Q2BSP_LoadEdges(&header->lumps[Q2LUMP_EDGES]);
+	Mod_Q2BSP_LoadSurfEdges(&header->lumps[Q2LUMP_SURFEDGES]);
+	Mod_Q2BSP_LoadBrushes(&header->lumps[Q2LUMP_BRUSHES]);
+	Mod_Q2BSP_LoadBrushSides(&header->lumps[Q2LUMP_BRUSHSIDES]);
+	Mod_Q2BSP_LoadAreas(&header->lumps[Q2LUMP_AREAS]);
+	Mod_Q2BSP_LoadAreaPortals(&header->lumps[Q2LUMP_AREAPORTALS]);
 	// LordHavoc: must go last because this makes the submodels
-	Mod_Q2LoadModels(&header->lumps[Q2LUMP_MODELS]);
+	Mod_Q2BSP_LoadModels(&header->lumps[Q2LUMP_MODELS]);
 }
 
-void Mod_LoadBrushModelQ3 (model_t *mod, void *buffer)
+void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
-	Host_Error("Mod_LoadBrushModelQ3: not yet implemented\n");
+	Host_Error("Mod_Q3BSP_Load: not yet implemented\n");
 }
 
-void Mod_LoadBrushModelIBSP (model_t *mod, void *buffer)
+void Mod_IBSP_Load(model_t *mod, void *buffer)
 {
-	int i = LittleLong(*((int *)buffer));
+	int i = LittleLong(* ((int *)buffer));
 	if (i == 46)
-		Mod_LoadBrushModelQ3 (mod,buffer);
+		Mod_Q3BSP_Load(mod,buffer);
 	else if (i == 38)
-		Mod_LoadBrushModelQ2 (mod,buffer);
+		Mod_Q2BSP_Load(mod,buffer);
 	else
-		Host_Error("Mod_LoadBrushModelIBSP: unknown/unsupported version %i\n", i);
+		Host_Error("Mod_IBSP_Load: unknown/unsupported version %i\n", i);
+}
+
+void Mod_MAP_Load(model_t *mod, void *buffer)
+{
+	Host_Error("Mod_MAP_Load: not yet implemented\n");
 }
 

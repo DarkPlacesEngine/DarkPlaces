@@ -995,7 +995,7 @@ void CL_ParseTempEntity (void)
 	case TE_WIZSPIKE:
 		// spike hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		CL_AllocDlight (NULL, pos, 50, 0.25f, 1.00f, 0.25f, 250, 0.2);
 		CL_RunParticleEffect (pos, vec3_origin, 20, 30);
 		S_StartSound (-1, 0, cl_sfx_wizhit, pos, 1, 1);
@@ -1004,7 +1004,7 @@ void CL_ParseTempEntity (void)
 	case TE_KNIGHTSPIKE:
 		// spike hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		CL_AllocDlight (NULL, pos, 50, 1.0f, 0.60f, 0.20f, 250, 0.2);
 		CL_RunParticleEffect (pos, vec3_origin, 226, 20);
 		S_StartSound (-1, 0, cl_sfx_knighthit, pos, 1, 1);
@@ -1013,7 +1013,7 @@ void CL_ParseTempEntity (void)
 	case TE_SPIKE:
 		// spike hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
 		if ( rand() % 5 )
@@ -1032,7 +1032,7 @@ void CL_ParseTempEntity (void)
 	case TE_SPIKEQUAD:
 		// quad spike hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		// LordHavoc: changed to spark shower
 		CL_SparkShower(pos, vec3_origin, 15);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
@@ -1053,7 +1053,7 @@ void CL_ParseTempEntity (void)
 	case TE_SUPERSPIKE:
 		// super spike hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
 		if ( rand() % 5 )
@@ -1072,7 +1072,7 @@ void CL_ParseTempEntity (void)
 	case TE_SUPERSPIKEQUAD:
 		// quad super spike hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 30);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
@@ -1093,7 +1093,7 @@ void CL_ParseTempEntity (void)
 	case TE_BLOOD:
 		// blood puff
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		dir[0] = MSG_ReadChar ();
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
@@ -1103,13 +1103,13 @@ void CL_ParseTempEntity (void)
 	case TE_BLOOD2:
 		// blood puff
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		CL_BloodPuff(pos, vec3_origin, 10);
 		break;
 	case TE_SPARK:
 		// spark shower
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		dir[0] = MSG_ReadChar ();
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
@@ -1118,8 +1118,8 @@ void CL_ParseTempEntity (void)
 		break;
 	case TE_PLASMABURN:
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
-		CL_AllocDlight (NULL, pos, 200, 1, 1, 1, 1000, 0.2);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
+		CL_AllocDlight(NULL, pos, 200, 1, 1, 1, 1000, 0.2);
 		CL_PlasmaBurn(pos);
 		break;
 		// LordHavoc: added for improved gore
@@ -1166,7 +1166,7 @@ void CL_ParseTempEntity (void)
 	case TE_GUNSHOT:
 		// bullet hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		// LordHavoc: changed to dust shower
 		CL_SparkShower(pos, vec3_origin, 15);
 		break;
@@ -1174,7 +1174,7 @@ void CL_ParseTempEntity (void)
 	case TE_GUNSHOTQUAD:
 		// quad bullet hitting wall
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		CL_SparkShower(pos, vec3_origin, 15);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		break;
@@ -1182,7 +1182,7 @@ void CL_ParseTempEntity (void)
 	case TE_EXPLOSION:
 		// rocket explosion
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_ParticleExplosion (pos);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 		CL_AllocDlight (NULL, pos, 350, 1.25f, 1.0f, 0.5f, 700, 0.5);
@@ -1192,7 +1192,7 @@ void CL_ParseTempEntity (void)
 	case TE_EXPLOSIONQUAD:
 		// quad rocket explosion
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_ParticleExplosion (pos);
 		CL_AllocDlight (NULL, pos, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -1201,7 +1201,7 @@ void CL_ParseTempEntity (void)
 	case TE_EXPLOSION3:
 		// Nehahra movie colored lighting explosion
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_ParticleExplosion (pos);
 		CL_AllocDlight (NULL, pos, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -1210,7 +1210,7 @@ void CL_ParseTempEntity (void)
 	case TE_EXPLOSIONRGB:
 		// colored lighting explosion
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_ParticleExplosion (pos);
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
 		color[1] = MSG_ReadByte() * (1.0 / 255.0);
@@ -1222,7 +1222,7 @@ void CL_ParseTempEntity (void)
 	case TE_TAREXPLOSION:
 		// tarbaby explosion
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_BlobExplosion (pos);
 
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -1232,13 +1232,13 @@ void CL_ParseTempEntity (void)
 
 	case TE_SMALLFLASH:
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_AllocDlight (NULL, pos, 200, 1, 1, 1, 1000, 0.2);
 		break;
 
 	case TE_CUSTOMFLASH:
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		radius = MSG_ReadByte() * 8;
 		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
@@ -1307,7 +1307,7 @@ void CL_ParseTempEntity (void)
 	case TE_EXPLOSION2:
 		// color mapped explosion
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
 		CL_ParticleExplosion2 (pos, colorStart, colorLength);
@@ -1328,13 +1328,13 @@ void CL_ParseTempEntity (void)
 		MSG_ReadVector(pos);
 		MSG_ReadVector(dir);
 		count = MSG_ReadByte ();
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 4);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 4);
 		CL_Tei_Smoke(pos, dir, count);
 		break;
 
 	case TE_TEI_BIGEXPLOSION:
 		MSG_ReadVector(pos);
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 10);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 10);
 		CL_ParticleExplosion (pos);
 		CL_AllocDlight (NULL, pos, 500, 1.25f, 1.0f, 0.5f, 500, 9999);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -1344,7 +1344,7 @@ void CL_ParseTempEntity (void)
 		MSG_ReadVector(pos);
 		MSG_ReadVector(dir);
 		count = MSG_ReadByte ();
-		Mod_FindNonSolidLocation(pos, pos, cl.worldmodel, 5);
+		if (cl.worldmodel) cl.worldmodel->FindNonSolidLocation(cl.worldmodel, pos, pos, 5);
 		CL_Tei_PlasmaHit(pos, dir, count);
 		CL_AllocDlight (NULL, pos, 500, 0.3, 0.6, 1.0f, 2000, 9999);
 		break;

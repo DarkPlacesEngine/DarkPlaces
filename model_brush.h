@@ -359,15 +359,10 @@ extern rtexture_t *r_notexture;
 extern texture_t r_notexture_mip;
 
 struct model_s;
-void Mod_LoadBrushModelQ1orHL (struct model_s *mod, void *buffer);
-void Mod_LoadBrushModelIBSP (struct model_s *mod, void *buffer);
+void Mod_Q1BSP_Load(struct model_s *mod, void *buffer);
+void Mod_IBSP_Load(struct model_s *mod, void *buffer);
+void Mod_MAP_Load(struct model_s *mod, void *buffer);
 void Mod_BrushInit(void);
-
-void Mod_FindNonSolidLocation(vec3_t in, vec3_t out, struct model_s *mod, vec_t radius);
-mleaf_t *Mod_PointInLeaf (const float *p, struct model_s *model);
-int Mod_PointContents (const float *p, struct model_s *model);
-qbyte *Mod_LeafPVS (mleaf_t *leaf, struct model_s *model);
-void Mod_BuildPVSTextureChains(struct model_s *model);
 
 // Q2 bsp stuff
 

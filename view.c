@@ -356,7 +356,7 @@ void V_UpdateBlends (void)
 		cl.cshifts[CSHIFT_BONUS].percent = 0;
 
 	// set contents color
-	switch (Mod_PointContents (r_refdef.vieworg, cl.worldmodel))
+	switch (cl.worldmodel ? cl.worldmodel->PointContents(cl.worldmodel, r_refdef.vieworg) : CONTENTS_EMPTY)
 	{
 	case CONTENTS_EMPTY:
 	case CONTENTS_SOLID:

@@ -120,9 +120,9 @@ typedef struct
 #define ALIASTYPE_ALIAS 1
 #define ALIASTYPE_ZYM 2
 
-extern void Mod_LoadQ1AliasModel (struct model_s *mod, void *buffer);
-extern void Mod_LoadQ2AliasModel (struct model_s *mod, void *buffer);
-extern void Mod_LoadQ3AliasModel (struct model_s *mod, void *buffer);
+extern void Mod_IDP0_Load(struct model_s *mod, void *buffer);
+extern void Mod_IDP2_Load(struct model_s *mod, void *buffer);
+extern void Mod_IDP3_Load(struct model_s *mod, void *buffer);
 
 extern void Mod_AliasInit(void);
 

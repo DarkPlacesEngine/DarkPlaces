@@ -677,7 +677,7 @@ void S_UpdateAmbientSounds (void)
 	if (!snd_ambient || !cl.worldmodel || ambient_level.value <= 0)
 		return;
 
-	l = Mod_PointInLeaf (listener_origin, cl.worldmodel);
+	l = cl.worldmodel->PointInLeaf(cl.worldmodel, listener_origin);
 	if (!l)
 		return;
 
