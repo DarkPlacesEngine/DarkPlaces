@@ -1530,20 +1530,13 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	*outnumsurfacespointer = outnumsurfaces;
 }
 
-void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
+void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
-	vec3_t lightmins, lightmaxs;
 	msurface_t *surface;
 	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		lightmins[0] = relativelightorigin[0] - lightradius;
-		lightmins[1] = relativelightorigin[1] - lightradius;
-		lightmins[2] = relativelightorigin[2] - lightradius;
-		lightmaxs[0] = relativelightorigin[0] + lightradius;
-		lightmaxs[1] = relativelightorigin[1] + lightradius;
-		lightmaxs[2] = relativelightorigin[2] + lightradius;
 		R_Mesh_Matrix(&ent->matrix);
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
@@ -1558,20 +1551,12 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist)
 {
 	model_t *model = ent->model;
-	vec3_t lightmins, lightmaxs, modelorg;
 	msurface_t *surface;
 	texture_t *t;
 	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		lightmins[0] = relativelightorigin[0] - lightradius;
-		lightmins[1] = relativelightorigin[1] - lightradius;
-		lightmins[2] = relativelightorigin[2] - lightradius;
-		lightmaxs[0] = relativelightorigin[0] + lightradius;
-		lightmaxs[1] = relativelightorigin[1] + lightradius;
-		lightmaxs[2] = relativelightorigin[2] + lightradius;
 		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		R_UpdateTextureInfo(ent);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
@@ -2259,20 +2244,13 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	*outnumsurfacespointer = outnumsurfaces;
 }
 
-void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
+void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	model_t *model = ent->model;
-	vec3_t lightmins, lightmaxs;
 	msurface_t *surface;
 	int surfacelistindex;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		lightmins[0] = relativelightorigin[0] - lightradius;
-		lightmins[1] = relativelightorigin[1] - lightradius;
-		lightmins[2] = relativelightorigin[2] - lightradius;
-		lightmaxs[0] = relativelightorigin[0] + lightradius;
-		lightmaxs[1] = relativelightorigin[1] + lightradius;
-		lightmaxs[2] = relativelightorigin[2] + lightradius;
 		R_Mesh_Matrix(&ent->matrix);
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)

@@ -196,21 +196,14 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 	}
 }
 
-void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
+void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
 {
 	int meshnum;
-	vec3_t lightmins, lightmaxs;
 	aliasmesh_t *mesh;
 	aliasskin_t *skin;
 	float projectdistance, *vertex3f;
 	if (!(ent->flags & RENDER_SHADOW))
 		return;
-	lightmins[0] = relativelightorigin[0] - lightradius;
-	lightmins[1] = relativelightorigin[1] - lightradius;
-	lightmins[2] = relativelightorigin[2] - lightradius;
-	lightmaxs[0] = relativelightorigin[0] + lightradius;
-	lightmaxs[1] = relativelightorigin[1] + lightradius;
-	lightmaxs[2] = relativelightorigin[2] + lightradius;
 	// check the box in modelspace, it was already checked in worldspace
 	if (!BoxesOverlap(ent->model->normalmins, ent->model->normalmaxs, lightmins, lightmaxs))
 		return;
