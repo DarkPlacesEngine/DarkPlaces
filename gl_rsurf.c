@@ -1796,6 +1796,7 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 	rmeshstate_t m;
 	if (!face->num_triangles)
 		return;
+	c_faces++;
 	if (skyrendernow)
 	{
 		skyrendernow = false;
@@ -2035,6 +2036,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		if (face->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW))
 			return;
 	}
+	c_faces++;
 	face->visframe = r_framecount;
 	if ((face->texture->surfaceparms & Q3SURFACEPARM_TRANS) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
 	{
@@ -2085,11 +2087,13 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 	{
 		if (R_CullBox(node->mins, node->maxs))
 			return;
+		c_nodes++;
 		R_Q3BSP_RecursiveWorldNode(ent, node->children[0], modelorg, pvs, markframe);
 		node = node->children[1];
 	}
 	if (R_CullBox(node->mins, node->maxs))
 		return;
+	c_leafs++;
 	leaf = (q3mleaf_t *)node;
 	if (pvs[leaf->clusterindex >> 3] & (1 << (leaf->clusterindex & 7)))
 		for (i = 0;i < leaf->numleaffaces;i++)
