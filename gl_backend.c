@@ -1257,7 +1257,7 @@ CalcFov
 float CalcFov (float fov_x, float width, float height)
 {
 	// calculate vision size and alter by aspect, then convert back to angle
-	return atan (((height/width)/vid_pixelaspect.value)*tan(fov_x/360.*M_PI))*360./M_PI; 
+	return atan (((height/width)/vid_pixelaspect.value)*tan(fov_x/360.0*M_PI))*360.0/M_PI; 
 }
 
 int r_stereo_side;
