@@ -69,17 +69,19 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 }
 #endif
 
-float r_farclip, r_newfarclip;
+float r_mesh_farclip;
 
 int polyindexarray[768];
 
 static float viewdist;
+// sign bits (true if negative) for vpn[] entries, so quick integer compares can be used instead of float compares
+static int vpnbit0, vpnbit1, vpnbit2;
 
 int c_meshs, c_meshtris, c_transmeshs, c_transtris;
 
-int			lightscalebit;
-float		lightscale;
-float		overbrightscale;
+int lightscalebit;
+float lightscale;
+float overbrightscale;
 
 void SCR_ScreenShot_f (void);
 
@@ -145,7 +147,6 @@ typedef struct
 }
 buf_texcoord_t;
 
-static float meshfarclip;
 static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive, transranout;
 static buf_mesh_t *buf_mesh;
 static buf_tri_t *buf_tri;
@@ -297,7 +298,6 @@ static void gl_backend_bufferchanges(int init)
 
 static void gl_backend_newmap(void)
 {
-	r_farclip = r_newfarclip = 2048.0f;
 }
 
 void gl_backend_init(void)
@@ -358,9 +358,6 @@ static void GL_SetupFrame (void)
 	double xmax, ymax;
 	double fovx, fovy, zNear, zFar, aspect;
 
-	// update farclip based on previous frame
-	r_farclip = r_newfarclip;
-
 	if (!r_render.integer)
 		return;
 
@@ -375,7 +372,7 @@ static void GL_SetupFrame (void)
 
 	// depth range
 	zNear = 1.0;
-	zFar = r_farclip;
+	zFar = r_mesh_farclip;
 
 	// fov angles
 	fovx = r_refdef.fov_x;
@@ -498,7 +495,7 @@ void GL_SetupTextureState(void)
 
 // called at beginning of frame
 int usedarrays;
-void R_Mesh_Start(void)
+void R_Mesh_Start(float farclip)
 {
 	int i;
 	if (!backendactive)
@@ -514,9 +511,12 @@ void R_Mesh_Start(void)
 	currenttransmesh = 0;
 	currenttranstriangle = 0;
 	currenttransvertex = 0;
-	meshfarclip = 0;
 	transranout = false;
+	r_mesh_farclip = farclip;
 	viewdist = DotProduct(r_origin, vpn);
+	vpnbit0 = vpn[0] < 0;
+	vpnbit1 = vpn[1] < 0;
+	vpnbit2 = vpn[2] < 0;
 
 	c_meshs = 0;
 	c_meshtris = 0;
@@ -571,27 +571,6 @@ void R_Mesh_Start(void)
 }
 
 int gl_backend_rebindtextures;
-
-void GL_UpdateFarclip(void)
-{
-	int i;
-	float farclip;
-
-	// push out farclip based on vertices
-	// FIXME: wouldn't this be slow when using matrix transforms?
-	for (i = 0;i < currentvertex;i++)
-	{
-		farclip = DotProduct(buf_vertex[i].v, vpn);
-		if (meshfarclip < farclip)
-			meshfarclip = farclip;
-	}
-
-	farclip = meshfarclip + 256.0f - viewdist; // + 256 just to be safe
-
-	// push out farclip for next frame
-	if (farclip > r_newfarclip)
-		r_newfarclip = ceil((farclip + 255) / 256) * 256 + 256;
-}
 
 void GL_ConvertColorsFloatToByte(void)
 {
@@ -821,8 +800,6 @@ void R_Mesh_Render(void)
 
 	CHECKGLERROR
 
-	GL_UpdateFarclip();
-
 	// drawmode 0 always uses byte colors
 	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer <= 0)
 		GL_ConvertColorsFloatToByte();
@@ -921,10 +898,13 @@ void R_Mesh_Finish(void)
 
 void R_Mesh_ClearDepth(void)
 {
-	R_Mesh_AddTransparent();
+	if (currenttransmesh)
+		R_Mesh_AddTransparent();
+	if (currentmesh)
+		R_Mesh_Render();
 	R_Mesh_Finish();
 	qglClear(GL_DEPTH_BUFFER_BIT);
-	R_Mesh_Start();
+	R_Mesh_Start(r_mesh_farclip);
 }
 
 void R_Mesh_AddTransparent(void)
@@ -955,7 +935,7 @@ void R_Mesh_AddTransparent(void)
 	}
 
 	// map farclip to 0-4095 list range
-	centerscaler = (TRANSDEPTHRES / r_farclip) * (1.0f / 3.0f);
+	centerscaler = (TRANSDEPTHRES / r_mesh_farclip) * (1.0f / 3.0f);
 	viewdistcompare = viewdist + 4.0f;
 
 	memset(buf_sorttranstri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));

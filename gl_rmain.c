@@ -21,49 +21,52 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-entity_render_t	*currentrenderentity;
+entity_render_t *currentrenderentity;
 
-int			r_framecount;		// used for dlight push checking
+// used for dlight push checking and other things
+int r_framecount;
 
-mplane_t	frustum[4];
+mplane_t frustum[4];
 
-int			c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
+int c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
-qboolean	envmap;				// true during envmap command capture
+// true during envmap command capture
+qboolean envmap;
 
-//
+float r_farclip;
+
 // view origin
-//
-vec3_t	vup;
-vec3_t	vpn;
-vec3_t	vright;
-vec3_t	r_origin;
+vec3_t r_origin;
+vec3_t vpn;
+vec3_t vright;
+vec3_t vup;
 
 //
 // screen size info
 //
-refdef_t	r_refdef;
+refdef_t r_refdef;
 
-mleaf_t		*r_viewleaf, *r_oldviewleaf;
+mleaf_t *r_viewleaf, *r_oldviewleaf;
 
-unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
+// 8.8 fraction of base light value
+unsigned short d_lightstylevalue[256];
 
-cvar_t	r_drawentities = {0, "r_drawentities","1"};
-cvar_t	r_drawviewmodel = {0, "r_drawviewmodel","1"};
-cvar_t	r_speeds = {0, "r_speeds","0"};
-cvar_t	r_fullbright = {0, "r_fullbright","0"};
-cvar_t	r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
-cvar_t	r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
-cvar_t	r_waterripple = {CVAR_SAVE, "r_waterripple","0"};
-cvar_t	r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
+cvar_t r_drawentities = {0, "r_drawentities","1"};
+cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
+cvar_t r_speeds = {0, "r_speeds","0"};
+cvar_t r_fullbright = {0, "r_fullbright","0"};
+cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
+cvar_t r_dynamic = {CVAR_SAVE, "r_dynamic","1"};
+cvar_t r_waterripple = {CVAR_SAVE, "r_waterripple","0"};
+cvar_t r_fullbrights = {CVAR_SAVE, "r_fullbrights", "1"};
 
-cvar_t	gl_fogenable = {0, "gl_fogenable", "0"};
-cvar_t	gl_fogdensity = {0, "gl_fogdensity", "0.25"};
-cvar_t	gl_fogred = {0, "gl_fogred","0.3"};
-cvar_t	gl_foggreen = {0, "gl_foggreen","0.3"};
-cvar_t	gl_fogblue = {0, "gl_fogblue","0.3"};
-cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
-cvar_t	gl_fogend = {0, "gl_fogend","0"};
+cvar_t gl_fogenable = {0, "gl_fogenable", "0"};
+cvar_t gl_fogdensity = {0, "gl_fogdensity", "0.25"};
+cvar_t gl_fogred = {0, "gl_fogred","0.3"};
+cvar_t gl_foggreen = {0, "gl_foggreen","0.3"};
+cvar_t gl_fogblue = {0, "gl_fogblue","0.3"};
+cvar_t gl_fogstart = {0, "gl_fogstart", "0"};
+cvar_t gl_fogend = {0, "gl_fogend","0"};
 
 cvar_t r_multitexture = {0, "r_multitexture", "1"};
 
@@ -77,8 +80,8 @@ For program optimization
 qboolean intimerefresh = 0;
 static void R_TimeRefresh_f (void)
 {
-	int			i;
-	float		start, stop, time;
+	int i;
+	float start, stop, time;
 
 	intimerefresh = 1;
 	start = Sys_DoubleTime ();
@@ -245,6 +248,43 @@ void GL_Main_Init(void)
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
 
+vec3_t r_farclip_origin;
+vec3_t r_farclip_direction;
+vec_t r_farclip_directiondist;
+vec_t r_farclip_meshfarclip;
+int r_farclip_directionbit0;
+int r_farclip_directionbit1;
+int r_farclip_directionbit2;
+
+// start a farclip measuring session
+void R_FarClip_Start(vec3_t origin, vec3_t direction, vec_t startfarclip)
+{
+	VectorCopy(origin, r_farclip_origin);
+	VectorCopy(direction, r_farclip_direction);
+	r_farclip_directiondist = DotProduct(r_farclip_origin, r_farclip_direction);
+	r_farclip_directionbit0 = r_farclip_direction[0] < 0;
+	r_farclip_directionbit1 = r_farclip_direction[1] < 0;
+	r_farclip_directionbit2 = r_farclip_direction[2] < 0;
+	r_farclip_meshfarclip = r_farclip_directiondist + startfarclip;
+}
+
+// enlarge farclip to accomodate box
+void R_FarClip_Box(vec3_t mins, vec3_t maxs)
+{
+	float d;
+	d = (r_farclip_directionbit0 ? mins[0] : maxs[0]) * r_farclip_direction[0]
+	  + (r_farclip_directionbit1 ? mins[1] : maxs[1]) * r_farclip_direction[1]
+	  + (r_farclip_directionbit2 ? mins[2] : maxs[2]) * r_farclip_direction[2];
+	if (r_farclip_meshfarclip < d)
+		r_farclip_meshfarclip = d;
+}
+
+// return farclip value
+float R_FarClip_Finish(void)
+{
+	return r_farclip_meshfarclip - r_farclip_directiondist;
+}
+
 /*
 ===============
 R_NewMap
@@ -253,15 +293,17 @@ R_NewMap
 void CL_ParseEntityLump(char *entitystring);
 void R_NewMap (void)
 {
-	int		i;
+	int i;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0;i < 256;i++)
 		d_lightstylevalue[i] = 264;		// normal light value
 
 	r_viewleaf = NULL;
 	if (cl.worldmodel->entities)
 		CL_ParseEntityLump(cl.worldmodel->entities);
 	R_Modules_NewMap();
+
+	r_farclip = 64.0f;
 }
 
 extern void R_Textures_Init(void);
@@ -317,18 +359,15 @@ void GL_Init (void)
 
 //==================================================================================
 
-void R_Entity_Callback(void *data, void *junk)
-{
-	((entity_render_t *)data)->visframe = r_framecount;
-}
-
 static void R_MarkEntities (void)
 {
-	int		i;
-	vec3_t	v;
+	int i;
+	vec3_t v;
 
 	if (!r_drawentities.integer)
 		return;
+
+	R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
@@ -369,17 +408,20 @@ static void R_MarkEntities (void)
 
 		R_LerpAnimation(currentrenderentity);
 		currentrenderentity->visframe = r_framecount;
+
+		R_FarClip_Box(currentrenderentity->mins, currentrenderentity->maxs);
 	}
 }
 
 // only used if skyrendermasked, and normally returns false
 int R_DrawBModelSky (void)
 {
-	int		i, sky = false;
+	int i, sky;
 
 	if (!r_drawentities.integer)
 		return false;
 
+	sky = false;
 	for (i = 0;i < r_refdef.numentities;i++)
 	{
 		currentrenderentity = r_refdef.entities[i];
@@ -394,7 +436,7 @@ int R_DrawBModelSky (void)
 
 void R_DrawModels (void)
 {
-	int		i;
+	int i;
 
 	if (!r_drawentities.integer)
 		return;
@@ -428,7 +470,7 @@ void R_DrawViewModel (void)
 
 static void R_SetFrustum (void)
 {
-	int		i;
+	int i;
 
 	// LordHavoc: note to all quake engine coders, the special case for 90
 	// degrees assumed a square view (wrong), so I removed it, Quake2 has it
@@ -442,8 +484,7 @@ static void R_SetFrustum (void)
 	// rotate VPN down by FOV_X/2 degrees
 	RotatePointAroundVector( frustum[3].normal, vright, vpn, -( 90 - r_refdef.fov_y / 2 ) );
 
-
-	for (i=0 ; i<4 ; i++)
+	for (i = 0;i < 4;i++)
 	{
 		frustum[i].type = PLANE_ANYZ;
 		frustum[i].dist = DotProduct (r_origin, frustum[i].normal);
@@ -544,7 +585,7 @@ void R_RenderView (void)
 	R_SkyStartFrame();
 	R_BuildLightList();
 
-	R_Mesh_Start();
+	R_FarClip_Start(r_origin, vpn, 768.0f);
 
 	R_TimeReport("setup");
 
@@ -556,6 +597,10 @@ void R_RenderView (void)
 
 	R_MarkWorldLights();
 	R_TimeReport("marklights");
+
+	r_farclip = R_FarClip_Finish() + 256.0f;
+
+	R_Mesh_Start(r_farclip);
 
 	if (skyrendermasked)
 	{
