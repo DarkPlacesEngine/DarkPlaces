@@ -45,12 +45,17 @@ static qbyte writebuf [SND_BUFF_SIZE];
 qboolean SNDDMA_Init (void)
 {
 	unsigned int i;
-	const char *snddev = _PATH_SOUND;
+	const char *snddev;
 	audio_info_t info;
 
 	memset ((void*)shm, 0, sizeof (*shm));
 
 	// Open the audio device
+#ifdef _PATH_SOUND
+	snddev = _PATH_SOUND;
+#else
+	snddev = "/dev/sound";
+#endif
 	audio_fd = open (snddev, O_WRONLY | O_NDELAY | O_NONBLOCK);
 	if (audio_fd < 0)
 	{
