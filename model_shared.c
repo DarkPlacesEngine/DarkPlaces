@@ -265,7 +265,7 @@ void Mod_UnloadModel (model_t *mod)
 	Mod_FreeModel(mod);
 	strcpy(mod->name, name);
 	mod->isworldmodel = isworldmodel;
-	mod->needload = true;
+	mod->loaded = false;
 }
 
 /*
@@ -289,31 +289,32 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	crc = 0;
 	buf = NULL;
 	if (mod->isworldmodel != isworldmodel)
-		mod->needload = true;
-	if (mod->needload || checkdisk)
+		mod->loaded = false;
+	if (!mod->loaded || checkdisk)
 	{
-		if (checkdisk && !mod->needload)
+		if (checkdisk && mod->loaded)
 			Con_DPrintf("checking model %s\n", mod->name);
 		buf = FS_LoadFile (mod->name, tempmempool, false);
 		if (buf)
 		{
 			crc = CRC_Block(buf, fs_filesize);
 			if (mod->crc != crc)
-				mod->needload = true;
+				mod->loaded = false;
 		}
 	}
-	if (!mod->needload)
+	if (mod->loaded)
 		return mod; // already loaded
 
 	Con_DPrintf("loading model %s\n", mod->name);
 	// LordHavoc: unload the existing model in this slot (if there is one)
 	Mod_UnloadModel(mod);
+
 	// load the model
 	mod->isworldmodel = isworldmodel;
 	mod->used = true;
 	mod->crc = crc;
-	// errors can prevent the corresponding mod->needload = false;
-	mod->needload = true;
+	// errors can prevent the corresponding mod->loaded = true;
+	mod->loaded = false;
 
 	// default model radius and bounding box (mainly for missing models)
 	mod->radius = 16;
@@ -353,7 +354,7 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	}
 
 	// no errors occurred
-	mod->needload = false;
+	mod->loaded = true;
 	return mod;
 }
 
@@ -361,7 +362,7 @@ void Mod_CheckLoaded(model_t *mod)
 {
 	if (mod)
 	{
-		if (mod->needload)
+		if (!mod->loaded)
 			Mod_LoadModel(mod, true, true, mod->isworldmodel);
 		else
 		{
@@ -448,27 +449,13 @@ model_t *Mod_FindName(const char *name)
 	{
 		mod = freemod;
 		strcpy (mod->name, name);
-		mod->needload = true;
+		mod->loaded = false;
 		mod->used = true;
 		return mod;
 	}
 
 	Host_Error ("Mod_FindName: ran out of models\n");
 	return NULL;
-}
-
-/*
-==================
-Mod_TouchModel
-
-==================
-*/
-void Mod_TouchModel(const char *name)
-{
-	model_t	*mod;
-
-	mod = Mod_FindName(name);
-	mod->used = true;
 }
 
 /*
