@@ -73,6 +73,30 @@ typedef struct overridetagnameset_s
 }
 overridetagnameset_t;
 
+// LordHavoc: replaces glpoly, triangle mesh
+typedef struct surfmesh_s
+{
+	int num_vertices; // number of vertices in the mesh
+	int num_triangles; // number of triangles in the mesh
+	float *data_vertex3f; // float[verts*3] vertex locations
+	float *data_svector3f; // float[verts*3] direction of 'S' (right) texture axis for each vertex
+	float *data_tvector3f; // float[verts*3] direction of 'T' (down) texture axis for each vertex
+	float *data_normal3f; // float[verts*3] direction of 'R' (out) texture axis for each vertex
+	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
+	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
+	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
+	float *data_texcoorddetail2f; // float[verts*2] texcoords for detail texture
+	float *data_lightmapcolor4f;
+	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
+	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
+
+	int num_collisionvertices;
+	int num_collisiontriangles;
+	float *data_collisionvertex3f;
+	int *data_collisionelement3i;
+}
+surfmesh_t;
+
 #define SHADOWMESHVERTEXHASH 1024
 typedef struct shadowmeshvertexhash_s
 {
@@ -165,7 +189,7 @@ typedef struct model_brush_s
 	//pvschain = model->brush.data_pvsclusters + mycluster * model->brush.num_pvsclusterbytes;
 	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
 
-	// a mesh containing all shadow casting geometry for the whole model (including submodels), portions of this are referenced by each surface's num_firstshadowmeshtriangle 
+	// a mesh containing all shadow casting geometry for the whole model (including submodels), portions of this are referenced by each surface's num_firstshadowmeshtriangle
 	shadowmesh_t *shadowmesh;
 
 	// common functions
@@ -220,7 +244,6 @@ typedef struct model_brushq1_s
 	int				*surfacevisframes;
 	int				*surfacepvsframes;
 	msurface_t		*surfacepvsnext;
-	surfmesh_t		*entiremesh;
 
 	int				numsurfedges;
 	int				*surfedges;
@@ -445,11 +468,11 @@ typedef struct q3msurface_s
 	int num_vertices;
 	int num_triangles;
 	float *data_vertex3f;
-	float *data_texcoordtexture2f;
-	float *data_texcoordlightmap2f;
 	float *data_svector3f;
 	float *data_tvector3f;
 	float *data_normal3f;
+	float *data_texcoordtexture2f;
+	float *data_texcoordlightmap2f;
 	float *data_color4f;
 	int *data_element3i;
 	int *data_neighbor3i;
@@ -593,6 +616,9 @@ typedef struct model_s
 	int				nummodelsurfaces;
 	// list of surface numbers in this (sub)model
 	int				*surfacelist;
+	// entire static model in one set of arrays
+	// (portions referenced by each surface)
+	surfmesh_t		*entiremesh;
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
@@ -659,6 +685,8 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline);
 void Mod_BuildNormals(int numverts, int numtriangles, const float *vertex3f, const int *elements, float *normal3f);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
+
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, int numcollisionvertices, int numcollisiontriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
