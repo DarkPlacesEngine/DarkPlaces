@@ -195,7 +195,7 @@ void PRVM_Profile_f (void)
 	//	howmany = atoi(Cmd_Argv(1));
 	if(Cmd_Argc() != 2)
 	{
-		Con_Print("prvm_profile <program name>\n");
+		Con_Printf("prvm_profile <program name>\n");
 		return;
 	}
 
