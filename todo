@@ -50,6 +50,7 @@
 0 darkplaces image: add scaling capabilities to Image_CopyMux
 0 darkplaces input: centerview command isn't doing anything until console is activated, it should begin the pitch drift immediately as in quake (Sajt)
 0 darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
+0 darkplaces loading: add hud_clearprecache and hud_precachepic commands to preload pics by name, these get reloaded by r_restart as well, mods can put a lot of these commands in their default.cfg to precache needed hud art (Tomaz)
 0 darkplaces loading: check for out of bounds lump data ranges in maps (FrikaC)
 0 darkplaces loading: check for truncated sound files (FrikaC)
 0 darkplaces loading: make sky work without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
@@ -57,6 +58,7 @@
 0 darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
 0 darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
+0 darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt
 0 darkplaces optimize: Collision_TraceBrushBrush should compare enterfrac changes to realfraction and skip out if further, also leavefrac (Vic)
 0 darkplaces optimize: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
 0 darkplaces optimize: R_Q3BSP_RecursiveWorldNode should take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)
@@ -117,6 +119,7 @@
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 0 dpmod: add q3bsp teleport target entity
+0 dpmod: change kill awards to use DP_SV_CLIENTFLASHPIC (Tomaz)
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
 0 dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
 0 dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
@@ -161,6 +164,7 @@
 1 darkplaces menu: add in_bindmap support to bind menu; a selector for which bindmap is actively being shown and bound in the menu, and add bind entries for some bindmap commands (sajt)
 1 darkplaces protocol: add "sendcvar <cvarname>" command which executes on clients and forwards a "sentcvar <cvarname> <cvarvalue>" to the server, which the qc can catch (Urre)
 1 darkplaces protocol: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech, Sajt)
+1 darkplaces protocol: add DP_SV_CLIENTFLASHPIC extension: a function void svc_clientflashpic(entity cl, float alpha, float fadetime, string picname), to flash a pic in the center of the client's screen, useful for 'Double Kill' awards and such (Tomaz)
 1 darkplaces protocol: add a .modelflags variable which if non-zero overrides model flags (Arwing, frightfan)
 1 darkplaces protocol: add buttons 9-16 (yummyluv)
 1 darkplaces renderer: add r_shadow_light_polygonoffset and r_shadow_light_polygonfactor variables to work around multitexture depth issues on TNT cards (Urre)
