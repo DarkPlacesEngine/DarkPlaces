@@ -3230,6 +3230,8 @@ void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 {
 	float x, y;
 	char temp[256];
+	if (!r_editlights.integer)
+		return;
 	x = 0;
 	y = con_vislines;
 	sprintf(temp, "Cursor  %f %f %f", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
