@@ -385,7 +385,7 @@ void CL_SendMove(usercmd_t *cmd)
 
 	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 
-	if (cl.protocol == PROTOCOL_QUAKE)
+	if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
 	{
 		for (i = 0;i < 3;i++)
 			MSG_WriteAngle8i (&buf, cl.viewangles[i]);
@@ -400,6 +400,8 @@ void CL_SendMove(usercmd_t *cmd)
 		for (i = 0;i < 3;i++)
 			MSG_WriteAngle16i (&buf, cl.viewangles[i]);
 	}
+	else
+		Host_Error("CL_SendMove: unknown cl.protocol %i\n", cl.protocol);
 
 	MSG_WriteCoord16i (&buf, forwardmove);
 	MSG_WriteCoord16i (&buf, sidemove);

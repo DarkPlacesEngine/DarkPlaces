@@ -552,16 +552,6 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	}
 }
 
-void CL_ReadEntityFrame(void)
-{
-	if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-		EntityFrame_CL_ReadFrame();
-	else if (cl.protocol == PROTOCOL_DARKPLACES4)
-		EntityFrame4_CL_ReadFrame();
-	else if (cl.protocol == PROTOCOL_DARKPLACES5)
-		EntityFrame5_CL_ReadFrame();
-}
-
 /*
 ==================
 CL_ParseBaseline
@@ -630,10 +620,10 @@ void CL_ParseClientdata (int bits)
 		{
 			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
 				cl.punchangle[i] = MSG_ReadAngle16i();
-			else if (cl.protocol == PROTOCOL_QUAKE)
+			else if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
 				cl.punchangle[i] = MSG_ReadChar();
 			else
-				Host_Error("CL_ParseClientData: unknown cl.protocol\n");
+				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
 		else
 			cl.punchangle[i] = 0;
@@ -644,18 +634,18 @@ void CL_ParseClientdata (int bits)
 			else if (cl.protocol == PROTOCOL_DARKPLACES5)
 				cl.punchvector[i] = MSG_ReadCoord32f();
 			else
-				Host_Error("CL_ParseClientData: unknown cl.protocol\n");
+				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
 		else
 			cl.punchvector[i] = 0;
 		if (bits & (SU_VELOCITY1<<i) )
 		{
-			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
+			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.mvelocity[0][i] = MSG_ReadChar()*16;
 			else if (cl.protocol == PROTOCOL_DARKPLACES5)
 				cl.mvelocity[0][i] = MSG_ReadCoord32f();
 			else
-				Host_Error("CL_ParseClientData: unknown cl.protocol\n");
+				Host_Error("CL_ParseClientData: unknown cl.protocol %i\n", cl.protocol);
 		}
 		else
 			cl.mvelocity[0][i] = 0;
@@ -1687,7 +1677,14 @@ void CL_ParseServerMessage(void)
 				cls.signon = SIGNONS;
 				CL_SignonReply ();
 			}
-			CL_ReadEntityFrame();
+			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+				EntityFrame_CL_ReadFrame();
+			else if (cl.protocol == PROTOCOL_DARKPLACES4)
+				EntityFrame4_CL_ReadFrame();
+			else if (cl.protocol == PROTOCOL_DARKPLACES5)
+				EntityFrame5_CL_ReadFrame();
+			else
+				Host_Error("CL_ParseServerMessage: svc_entities: unknown cl.protocol %i\n", cl.protocol);
 			break;
 		}
 	}

@@ -548,6 +548,8 @@ void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
 				e->origin[2] = MSG_ReadCoord32f();
 		}
 	}
+	else
+		Host_Error("EntityState_ReadFields: unknown cl.protocol %i\n", cl.protocol);
 	if (cl.protocol == PROTOCOL_DARKPLACES5 && !(e->flags & RENDER_LOWPRECISION))
 	{
 		if (bits & E_ANGLE1)
