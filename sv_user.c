@@ -29,19 +29,7 @@ cvar_t sv_idealpitchscale = {0, "sv_idealpitchscale","0.8"};
 cvar_t sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320"};
 cvar_t sv_accelerate = {0, "sv_accelerate", "10"};
 
-static vec3_t forward, right, up;
-
-vec3_t wishdir;
-float wishspeed;
-
-// world
-float *angles;
-float *origin;
-float *velocity;
-
-qboolean onground;
-
-usercmd_t cmd;
+static usercmd_t cmd;
 
 
 /*
@@ -115,6 +103,11 @@ void SV_SetIdealPitch (void)
 	sv_player->v->idealpitch = -dir * sv_idealpitchscale.value;
 }
 
+#if 0
+static vec3_t wishdir;
+static float wishspeed;
+
+static qboolean onground;
 
 /*
 ==================
@@ -124,20 +117,18 @@ SV_UserFriction
 */
 void SV_UserFriction (void)
 {
-	float *vel, speed, newspeed, control, friction;
+	float speed, newspeed, control, friction;
 	vec3_t start, stop;
 	trace_t trace;
 
-	vel = velocity;
-
-	speed = sqrt(vel[0]*vel[0] +vel[1]*vel[1]);
+	speed = sqrt(sv_player->v->velocity[0]*sv_player->v->velocity[0]+sv_player->v->velocity[1]*sv_player->v->velocity[1]);
 	if (!speed)
 		return;
 
 	// if the leading edge is over a dropoff, increase friction
-	start[0] = stop[0] = origin[0] + vel[0]/speed*16;
-	start[1] = stop[1] = origin[1] + vel[1]/speed*16;
-	start[2] = origin[2] + sv_player->v->mins[2];
+	start[0] = stop[0] = sv_player->v->origin[0] + sv_player->v->velocity[0]/speed*16;
+	start[1] = stop[1] = sv_player->v->origin[1] + sv_player->v->velocity[1]/speed*16;
+	start[2] = sv_player->v->origin[2] + sv_player->v->mins[2];
 	stop[2] = start[2] - 34;
 
 	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, sv_player);
@@ -156,9 +147,7 @@ void SV_UserFriction (void)
 	else
 		newspeed /= speed;
 
-	vel[0] = vel[0] * newspeed;
-	vel[1] = vel[1] * newspeed;
-	vel[2] = vel[2] * newspeed;
+	VectorScale(sv_player->v->velocity, newspeed, sv_player->v->velocity);
 }
 
 /*
@@ -171,7 +160,7 @@ void SV_Accelerate (void)
 	int i;
 	float addspeed, accelspeed, currentspeed;
 
-	currentspeed = DotProduct (velocity, wishdir);
+	currentspeed = DotProduct (sv_player->v->velocity, wishdir);
 	addspeed = wishspeed - currentspeed;
 	if (addspeed <= 0)
 		return;
@@ -180,7 +169,7 @@ void SV_Accelerate (void)
 		accelspeed = addspeed;
 
 	for (i=0 ; i<3 ; i++)
-		velocity[i] += accelspeed*wishdir[i];
+		sv_player->v->velocity[i] += accelspeed*wishdir[i];
 }
 
 void SV_AirAccelerate (vec3_t wishveloc)
@@ -191,7 +180,7 @@ void SV_AirAccelerate (vec3_t wishveloc)
 	wishspd = VectorNormalizeLength (wishveloc);
 	if (wishspd > 30)
 		wishspd = 30;
-	currentspeed = DotProduct (velocity, wishveloc);
+	currentspeed = DotProduct (sv_player->v->velocity, wishveloc);
 	addspeed = wishspd - currentspeed;
 	if (addspeed <= 0)
 		return;
@@ -200,7 +189,7 @@ void SV_AirAccelerate (vec3_t wishveloc)
 		accelspeed = addspeed;
 
 	for (i=0 ; i<3 ; i++)
-		velocity[i] += accelspeed*wishveloc[i];
+		sv_player->v->velocity[i] += accelspeed*wishveloc[i];
 }
 
 
@@ -240,16 +229,13 @@ void SV_FreeMove (void)
 	AngleVectors (sv_player->v->v_angle, forward, right, up);
 
 	for (i = 0; i < 3; i++)
-		velocity[i] = forward[i] * cmd.forwardmove + right[i] * cmd.sidemove;
+		sv_player->v->velocity[i] = forward[i] * cmd.forwardmove + right[i] * cmd.sidemove;
 
-	velocity[2] += cmd.upmove;
+	sv_player->v->velocity[2] += cmd.upmove;
 
-	wishspeed = VectorLength (velocity);
+	wishspeed = VectorLength(sv_player->v->velocity);
 	if (wishspeed > sv_maxspeed.value)
-	{
-		VectorScale (velocity, sv_maxspeed.value / wishspeed, velocity);
-		wishspeed = sv_maxspeed.value;
-	}
+		VectorScale(sv_player->v->velocity, sv_maxspeed.value / wishspeed, sv_player->v->velocity);
 }
 
 /*
@@ -285,14 +271,14 @@ void SV_WaterMove (void)
 	wishspeed *= 0.7;
 
 	// water friction
-	speed = VectorLength (velocity);
+	speed = VectorLength(sv_player->v->velocity);
 	if (speed)
 	{
 		newspeed = speed - sv.frametime * speed * sv_friction.value;
 		if (newspeed < 0)
 			newspeed = 0;
 		temp = newspeed/speed;
-		VectorScale (velocity, temp, velocity);
+		VectorScale(sv_player->v->velocity, temp, sv_player->v->velocity);
 	}
 	else
 		newspeed = 0;
@@ -311,7 +297,7 @@ void SV_WaterMove (void)
 		accelspeed = addspeed;
 
 	for (i=0 ; i<3 ; i++)
-		velocity[i] += accelspeed * wishvel[i];
+		sv_player->v->velocity[i] += accelspeed * wishvel[i];
 }
 
 void SV_WaterJump (void)
@@ -368,7 +354,7 @@ void SV_AirMove (void)
 	if (sv_player->v->movetype == MOVETYPE_NOCLIP)
 	{
 		// noclip
-		VectorCopy (wishvel, velocity);
+		VectorCopy (wishvel, sv_player->v->velocity);
 	}
 	else if ( onground )
 	{
@@ -399,30 +385,22 @@ void SV_ClientThink (void)
 
 	onground = (int)sv_player->v->flags & FL_ONGROUND;
 
-	origin = sv_player->v->origin;
-	velocity = sv_player->v->velocity;
-
 	DropPunchAngle ();
 
 	// if dead, behave differently
 	if (sv_player->v->health <= 0)
 		return;
 
+	cmd = host_client->cmd;
+
 	// angles
 	// show 1/3 the pitch angle and all the roll angle
-	cmd = host_client->cmd;
-	angles = sv_player->v->angles;
-
 	VectorAdd (sv_player->v->v_angle, sv_player->v->punchangle, v_angle);
-	angles[ROLL] = V_CalcRoll (sv_player->v->angles, sv_player->v->velocity)*4;
+	sv_player->v->angles[ROLL] = V_CalcRoll (sv_player->v->angles, sv_player->v->velocity)*4;
 	if (!sv_player->v->fixangle)
 	{
-		// LordHavoc: pitch was ugly to begin with...  removed except in water
-		if (sv_player->v->waterlevel >= 2)
-			angles[PITCH] = -v_angle[PITCH]/3;
-		else
-			angles[PITCH] = 0;
-		angles[YAW] = v_angle[YAW];
+		sv_player->v->angles[PITCH] = -v_angle[PITCH]/3;
+		sv_player->v->angles[YAW] = v_angle[YAW];
 	}
 
 	if ( (int)sv_player->v->flags & FL_WATERJUMP )
@@ -431,14 +409,15 @@ void SV_ClientThink (void)
 		return;
 	}
 
+	/*
 	// Player is (somehow) outside of the map, or flying, or noclipping
-	if (SV_TestEntityPosition (sv_player)
-	 || sv_player->v->movetype == MOVETYPE_FLY
-	 || sv_player->v->movetype == MOVETYPE_NOCLIP)
+	if (sv_player->v->movetype != MOVETYPE_NOCLIP && (sv_player->v->movetype == MOVETYPE_FLY || SV_TestEntityPosition (sv_player)))
+	//if (sv_player->v->movetype == MOVETYPE_NOCLIP || sv_player->v->movetype == MOVETYPE_FLY || SV_TestEntityPosition (sv_player))
 	{
 		SV_FreeMove ();
 		return;
 	}
+	*/
 
 	// walk
 	if ((sv_player->v->waterlevel >= 2) && (sv_player->v->movetype != MOVETYPE_NOCLIP))
@@ -450,6 +429,175 @@ void SV_ClientThink (void)
 	SV_AirMove ();
 }
 
+#else
+
+extern cvar_t cl_rollspeed;
+extern cvar_t cl_rollangle;
+void SV_ClientThink(void)
+{
+	int j;
+	vec3_t wishvel, wishdir, v, v_forward, v_right, v_up, start, stop;
+	float wishspeed, f, limit;
+	trace_t trace;
+
+	if (sv_player->v->movetype == MOVETYPE_NONE)
+		return;
+
+	f = DotProduct(sv_player->v->punchangle, sv_player->v->punchangle);
+	if (f)
+	{
+		limit = sqrt(f);
+		f = (limit - 10 * sv.frametime);
+		f /= limit;
+		f = max(0, f);
+		VectorScale(sv_player->v->punchangle, f, sv_player->v->punchangle);
+	}
+
+	// if dead, behave differently
+	if (sv_player->v->health <= 0)
+		return;
+
+	AngleVectors(sv_player->v->v_angle, v_forward, v_right, v_up);
+	// show 1/3 the pitch angle and all the roll angle
+	f = DotProduct(sv_player->v->velocity, v_right) * (1.0 / cl_rollspeed.value);
+	sv_player->v->angles[2] = bound(-1, f, 1) * cl_rollangle.value * 4;
+	if (!sv_player->v->fixangle)
+	{
+		sv_player->v->angles[0] = (sv_player->v->v_angle[0] + sv_player->v->punchangle[0]) * -0.333;
+		sv_player->v->angles[1] = sv_player->v->v_angle[1] + sv_player->v->punchangle[1];
+	}
+
+	if ((int)sv_player->v->flags & FL_WATERJUMP)
+	{
+		sv_player->v->velocity[0] = sv_player->v->movedir[0];
+		sv_player->v->velocity[1] = sv_player->v->movedir[1];
+		if (sv.time > sv_player->v->teleport_time || sv_player->v->waterlevel == 0)
+		{
+			sv_player->v->flags = (int)sv_player->v->flags - ((int)sv_player->v->flags & FL_WATERJUMP);
+			sv_player->v->teleport_time = 0;
+		}
+		return;
+	}
+
+	// swim
+	if (sv_player->v->waterlevel >= 2)
+	if (sv_player->v->movetype != MOVETYPE_NOCLIP)
+	{
+		if (host_client->cmd.forwardmove == 0 && host_client->cmd.sidemove == 0 && host_client->cmd.upmove == 0)
+		{
+			// drift towards bottom
+			wishvel[0] = 0;
+			wishvel[1] = 0;
+			wishvel[2] = -60;
+		}
+		else
+		{
+			for (j = 0;j < 3;j++)
+				wishvel[j] = v_forward[j] * host_client->cmd.forwardmove + v_right[j] * host_client->cmd.sidemove;
+			wishvel[2] += host_client->cmd.upmove;
+		}
+
+		wishspeed = VectorLength(wishvel);
+		wishspeed = min(wishspeed, sv_maxspeed.value) * 0.7;
+
+		// water friction
+		f = VectorLength(sv_player->v->velocity) * (1 - sv.frametime * sv_friction.value);
+		if (f > 0)
+			f /= VectorLength(sv_player->v->velocity);
+		else
+			f = 0;
+		VectorScale(sv_player->v->velocity, f, sv_player->v->velocity);
+
+		// water acceleration
+		if (wishspeed <= f)
+			return;
+
+		f = wishspeed - f;
+		limit = sv_accelerate.value * wishspeed * sv.frametime;
+		if (f > limit)
+			f = limit;
+		limit = VectorLength(wishvel);
+		if (limit)
+			f /= limit;
+		VectorMA(sv_player->v->velocity, f, wishvel, sv_player->v->velocity);
+		return;
+	}
+
+	// if not flying, move horizontally only
+	if (sv_player->v->movetype != MOVETYPE_FLY)
+	{
+		VectorClear(wishvel);
+		wishvel[1] = sv_player->v->v_angle[1];
+		AngleVectors(wishvel, v_forward, v_right, v_up);
+	}
+
+	// hack to not let you back into teleporter
+	VectorScale(v_right, host_client->cmd.sidemove, wishvel);
+	if (sv.time >= sv_player->v->teleport_time || host_client->cmd.forwardmove > 0)
+		VectorMA(wishvel, host_client->cmd.forwardmove, v_forward, wishvel);
+	if (sv_player->v->movetype != MOVETYPE_WALK)
+		wishvel[2] += cmd.upmove;
+
+	VectorCopy(wishvel, wishdir);
+	VectorNormalize(wishdir);
+	wishspeed = VectorLength(wishvel);
+	if (wishspeed > sv_maxspeed.value)
+		wishspeed = sv_maxspeed.value;
+
+	if (sv_player->v->movetype == MOVETYPE_NOCLIP || sv_player->v->movetype == MOVETYPE_FLY)
+	{
+		VectorScale(wishdir, wishspeed, sv_player->v->velocity);
+		return;
+	}
+
+	if ((int)sv_player->v->flags & FL_ONGROUND) // walking
+	{
+		// friction
+		f = sv_player->v->velocity[0] * sv_player->v->velocity[0] + sv_player->v->velocity[1] * sv_player->v->velocity[1];
+		if (f)
+		{
+			f = sqrt(f);
+			VectorCopy(sv_player->v->velocity, v);
+			v[2] = 0;
+
+			// if the leading edge is over a dropoff, increase friction
+			limit = 16.0f / f;
+			VectorMA(sv_player->v->origin, limit, v, v);
+			v[2] += sv_player->v->mins[2];
+
+			VectorCopy(v, start);
+			VectorCopy(v, stop);
+			stop[2] -= 34;
+			trace = SV_Move(start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, sv_player);
+
+			// apply friction
+			if (f < sv_stopspeed.value)
+				f = sv_stopspeed.value / f;
+			else
+				f = 1;
+			if (trace.fraction == 1)
+				f *= sv_edgefriction.value;
+			f = 1 - sv.frametime * f * sv_friction.value;
+
+			if (f < 0)
+				f = 0;
+			VectorScale(sv_player->v->velocity, f, sv_player->v->velocity);
+		}
+	}
+	else // airborn
+		wishspeed = min(wishspeed, 30);
+
+	// ground or air acceleration
+	f = wishspeed - DotProduct(sv_player->v->velocity, wishdir);
+	if (f > 0)
+	{
+		limit = sv_accelerate.value * sv.frametime * wishspeed;
+		if (f > limit)
+			f = limit;
+		VectorMA(sv_player->v->velocity, f, wishdir, sv_player->v->velocity);
+	}
+}
+#endif
 
 /*
 ===================
@@ -639,7 +787,7 @@ void SV_RunClients (void)
 			else
 				SV_ClientThink ();
 
-			SV_CheckVelocity (sv_player);
+			SV_CheckVelocity(sv_player);
 
 			// LordHavoc: a hack to ensure that the (rather silly) id1 quakec
 			// player_run/player_stand1 does not horribly malfunction if the
