@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -38,16 +38,26 @@ void Chase_Reset (void)
 //	start position 12 units behind head
 }
 
-float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal)
+int traceline_endcontents;
+
+float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents)
 {
-	trace_t	trace;
+	trace_t trace;
 
 	memset (&trace, 0, sizeof(trace));
 	VectorCopy (end, trace.endpos);
 	trace.fraction = 1;
-	SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
-	VectorCopy (trace.endpos, impact);
-	VectorCopy (trace.plane.normal, normal);
+	trace.startcontents = contents;
+	VectorCopy(start, RecursiveHullCheckInfo.start);
+	VectorSubtract(end, start, RecursiveHullCheckInfo.dist);
+	RecursiveHullCheckInfo.hull = cl.worldmodel->hulls;
+	RecursiveHullCheckInfo.trace = &trace;
+	SV_RecursiveHullCheck (0, 0, 1, start, end);
+	if (impact)
+		VectorCopy (trace.endpos, impact);
+	if (normal)
+		VectorCopy (trace.plane.normal, normal);
+	traceline_endcontents = trace.endcontents;
 	return trace.fraction;
 }
 
@@ -66,7 +76,7 @@ void Chase_Update (void)
 	chase_dest[1] = r_refdef.vieworg[1] + forward[1] * dist;
 	chase_dest[2] = r_refdef.vieworg[2] + forward[2] * dist + chase_up.value;
 
-	TraceLine (r_refdef.vieworg, chase_dest, stop, normal);
+	TraceLine (r_refdef.vieworg, chase_dest, stop, normal, 0);
 	chase_dest[0] = stop[0] + forward[0] * 8 + normal[0] * 4;
 	chase_dest[1] = stop[1] + forward[1] * 8 + normal[1] * 4;
 	chase_dest[2] = stop[2] + forward[2] * 8 + normal[2] * 4;

@@ -54,57 +54,7 @@ typedef struct
 
 extern glvert_t glv;
 
-extern	int glx, gly, glwidth, glheight;
-
-// r_local.h -- private refresh defs
-
-#define ALIAS_BASE_SIZE_RATIO		(1.0 / 11.0)
-					// normalizing factor so player model works out to about
-					//  1 pixel per triangle
-#define	MAX_LBM_HEIGHT		480
-
-#define BACKFACE_EPSILON	0.01
-
-
-extern void R_TimeRefresh_f (void);
-
 //====================================================
-
-
-extern	qboolean	r_cache_thrash;		// compatability
-extern	vec3_t		modelorg, r_entorigin;
-extern	entity_t	*currententity;
-extern	int			r_framecount;
-extern	mplane_t	frustum[4];
-extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
-
-
-//
-// view origin
-//
-extern	vec3_t	vup;
-extern	vec3_t	vpn;
-extern	vec3_t	vright;
-extern	vec3_t	r_origin;
-
-//
-// screen size info
-//
-extern	refdef_t	r_refdef;
-extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
-extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
-
-extern	qboolean	envmap;
-
-extern	cvar_t	r_drawentities;
-extern	cvar_t	r_drawviewmodel;
-extern	cvar_t	r_speeds;
-extern	cvar_t	r_fullbright;
-extern	cvar_t	r_wateralpha;
-extern	cvar_t	r_dynamic;
-extern	cvar_t	r_waterripple;
-
-extern	float	r_world_matrix[16];
 
 extern	const char *gl_vendor;
 extern	const char *gl_renderer;

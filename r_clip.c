@@ -100,8 +100,8 @@ void R_Clip_StartFrame(void)
 {
 	int i;
 	int newwidth, newheight, newmaxedges, newmaxsurfs;
-	newwidth = bound(80, (int) r_clipwidth.value, vid.width * 2);
-	newheight = bound(60, (int) r_clipheight.value, vid.height * 2);
+	newwidth = bound(80, (int) r_clipwidth.value, vid.realwidth * 2);
+	newheight = bound(60, (int) r_clipheight.value, vid.realheight * 2);
 	newmaxedges = bound(128, (int) r_clipedges.value, 262144);
 	newmaxsurfs = bound(32, (int) r_clipsurfaces.value, 65536);
 	if (newwidth != clipwidth || newheight != clipheight || maxclipedges != newmaxedges || maxclipsurfs != newmaxsurfs)
@@ -910,10 +910,10 @@ void R_Clip_DisplayBuffer(void)
 	}
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, clipwidth, clipheight, GL_LUMINANCE, GL_UNSIGNED_BYTE, clipbuffertex);
 	glBegin (GL_QUADS);
-	glTexCoord2f (0                 , 0                  );glVertex2f (0        , 0         );
-	glTexCoord2f (clipwidth / 256.0f, 0                  );glVertex2f (vid.width, 0         );
-	glTexCoord2f (clipwidth / 256.0f, clipheight / 256.0f);glVertex2f (vid.width, vid.height);
-	glTexCoord2f (0                 , clipheight / 256.0f);glVertex2f (0        , vid.height);
+	glTexCoord2f (0                 , 0                  );glVertex2f (0           , 0            );
+	glTexCoord2f (clipwidth / 256.0f, 0                  );glVertex2f (vid.conwidth, 0            );
+	glTexCoord2f (clipwidth / 256.0f, clipheight / 256.0f);glVertex2f (vid.conwidth, vid.conheight);
+	glTexCoord2f (0                 , clipheight / 256.0f);glVertex2f (0           , vid.conheight);
 	glEnd ();
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 //	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

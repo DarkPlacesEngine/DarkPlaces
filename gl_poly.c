@@ -1,8 +1,18 @@
 #include "quakedef.h"
 
+typedef struct
+{
+	unsigned short tex;
+	unsigned short type;
+	int indices;
+}
+rendertranspoly_t;
+
 transvert_t *transvert;
 transpoly_t *transpoly;
-unsigned short *transpolyindex;
+rendertranspoly_t *rendertranspoly;
+int *transpolyindex;
+int *transvertindex;
 wallvert_t *wallvert;
 wallvertcolor_t *wallvertcolor;
 wallpoly_t *wallpoly;
@@ -16,11 +26,13 @@ int currentwallvert;
 int currentskypoly;
 int currentskyvert;
 
+
 void LoadSky_f(void);
 
 cvar_t r_multitexture = {0, "r_multitexture", "1"};
 cvar_t r_skyquality = {CVAR_SAVE, "r_skyquality", "2"};
 cvar_t r_mergesky = {CVAR_SAVE, "r_mergesky", "0"};
+cvar_t gl_transpolytris = {0, "gl_transpolytris", "0"};
 
 static char skyworldname[1024];
 static rtexture_t *mergeskytexture;
@@ -29,7 +41,7 @@ static rtexture_t *alphaskytexture, *alphaskytexture_half;
 static qboolean skyavailable_quake;
 static qboolean skyavailable_box;
 
-void R_BuildSky (int scrollupper, int scrolllower);
+static void R_BuildSky (int scrollupper, int scrolllower);
 
 typedef struct translistitem_s
 {
@@ -47,12 +59,14 @@ float transviewdist; // distance of view origin along the view normal
 
 float transreciptable[256];
 
-void gl_poly_start(void)
+static void gl_poly_start(void)
 {
 	int i;
 	transvert = qmalloc(MAX_TRANSVERTS * sizeof(transvert_t));
 	transpoly = qmalloc(MAX_TRANSPOLYS * sizeof(transpoly_t));
-	transpolyindex = qmalloc(MAX_TRANSPOLYS * sizeof(unsigned short));
+	rendertranspoly = qmalloc(MAX_TRANSPOLYS * sizeof(rendertranspoly_t));
+	transpolyindex = qmalloc(MAX_TRANSPOLYS * sizeof(int));
+	transvertindex = qmalloc(MAX_TRANSVERTS * sizeof(int));
 	wallvert = qmalloc(MAX_WALLVERTS * sizeof(wallvert_t));
 	wallvertcolor = qmalloc(MAX_WALLVERTS * sizeof(wallvertcolor_t));
 	wallpoly = qmalloc(MAX_WALLPOLYS * sizeof(wallpoly_t));
@@ -63,11 +77,13 @@ void gl_poly_start(void)
 		transreciptable[i] = 1.0f / i;
 }
 
-void gl_poly_shutdown(void)
+static void gl_poly_shutdown(void)
 {
 	qfree(transvert);
 	qfree(transpoly);
+	qfree(rendertranspoly);
 	qfree(transpolyindex);
+	qfree(transvertindex);
 	qfree(wallvert);
 	qfree(wallvertcolor);
 	qfree(wallpoly);
@@ -75,7 +91,7 @@ void gl_poly_shutdown(void)
 	qfree(skypoly);
 }
 
-void gl_poly_newmap(void)
+static void gl_poly_newmap(void)
 {
 	skyavailable_box = false;
 	skyavailable_quake = false;
@@ -89,6 +105,7 @@ void GL_Poly_Init(void)
 	Cvar_RegisterVariable (&r_multitexture);
 	Cvar_RegisterVariable (&r_skyquality);
 	Cvar_RegisterVariable (&r_mergesky);
+	Cvar_RegisterVariable (&gl_transpolytris);
 	R_RegisterModule("GL_Poly", gl_poly_start, gl_poly_shutdown, gl_poly_newmap);
 }
 
@@ -100,42 +117,7 @@ void transpolyclear(void)
 	transviewdist = DotProduct(r_origin, vpn);
 }
 
-// turned into a #define
-/*
-void transpolybegin(int texnum, int glowtexnum, int fogtexnum, int transpolytype)
-{
-	if (currenttranspoly >= MAX_TRANSPOLYS || currenttransvert >= MAX_TRANSVERTS)
-		return;
-	transpoly[currenttranspoly].texnum = (unsigned short) texnum;
-	transpoly[currenttranspoly].glowtexnum = (unsigned short) glowtexnum;
-	transpoly[currenttranspoly].fogtexnum = (unsigned short) fogtexnum;
-	transpoly[currenttranspoly].transpolytype = (unsigned short) transpolytype;
-	transpoly[currenttranspoly].firstvert = currenttransvert;
-	transpoly[currenttranspoly].verts = 0;
-//	transpoly[currenttranspoly].ndist = 0; // clear the normal
-}
-*/
-
-// turned into a #define
-/*
-void transpolyvert(float x, float y, float z, float s, float t, int r, int g, int b, int a)
-{
-	int i;
-	if (currenttranspoly >= MAX_TRANSPOLYS || currenttransvert >= MAX_TRANSVERTS)
-		return;
-	transvert[currenttransvert].s = s;
-	transvert[currenttransvert].t = t;
-	transvert[currenttransvert].r = bound(0, r, 255);
-	transvert[currenttransvert].g = bound(0, g, 255);
-	transvert[currenttransvert].b = bound(0, b, 255);
-	transvert[currenttransvert].a = bound(0, a, 255);
-	transvert[currenttransvert].v[0] = x;
-	transvert[currenttransvert].v[1] = y;
-	transvert[currenttransvert].v[2] = z;
-	currenttransvert++;
-	transpoly[currenttranspoly].verts++;
-}
-*/
+// transpolybegin and transpolyvert are #define macros
 
 void transpolyend(void)
 {
@@ -174,207 +156,367 @@ void transpolyend(void)
 	currenttranspoly++;
 }
 
-int transpolyindices;
+void transpolyparticle(vec3_t org, vec3_t right, vec3_t up, vec_t scale, unsigned short texnum, unsigned short transpolytype, int ir, int ig, int ib, float alphaf, float s1, float t1, float s2, float t2)
+{
+	float center, scale2;
+	int i;
+	vec3_t corner;
+	byte br, bg, bb, ba;
+	transpoly_t *p;
+	transvert_t *v;
+	center = DotProduct(org, vpn) - transviewdist;
+	if (center < 4.0f || currenttranspoly >= MAX_TRANSPOLYS || (currenttransvert + 4) > MAX_TRANSVERTS)
+		return;
+
+	p = transpoly + (currenttranspoly++);
+	v = transvert + currenttransvert;
+
+	if (lighthalf)
+	{
+		ir >>= 1;
+		ig >>= 1;
+		ib >>= 1;
+	}
+	ir = bound(0, ir, 255);
+	ig = bound(0, ig, 255);
+	ib = bound(0, ib, 255);
+	br = (byte) ir;
+	bg = (byte) ig;
+	bb = (byte) ib;
+
+#if SLOWMATH
+	i = (int) alphaf;
+	if (i > 255)
+		i = 255;
+	ba = (byte) i;
+
+	i = (int) center;
+#else
+	alphaf += 8388608.0f;
+	i = *((long *)&alphaf) & 0x007FFFFF;
+	if (i > 255)
+		i = 255;
+	ba = (byte) i;
+
+	center += 8388608.0f;
+	i = *((long *)&center) & 0x007FFFFF;
+#endif
+	i = bound(0, i, 4095);
+	currenttranslist->next = translisthash[i];
+	currenttranslist->poly = p;
+	translisthash[i] = currenttranslist++;
+
+	p->texnum = p->fogtexnum = texnum;
+	p->glowtexnum = 0;
+	p->transpolytype = transpolytype;
+	p->firstvert = currenttransvert;
+	p->verts = 4;
+	currenttransvert += 4;
+
+	scale2 = scale * -0.5f;
+	corner[0] = org[0] + (up[0] + right[0]) * scale2;
+	corner[1] = org[1] + (up[1] + right[1]) * scale2;
+	corner[2] = org[2] + (up[2] + right[2]) * scale2;
+	v->s = s1;
+	v->t = t1;
+	v->r = br;
+	v->g = bg;
+	v->b = bb;
+	v->a = ba;
+	v->v[0] = corner[0];
+	v->v[1] = corner[1];
+	v->v[2] = corner[2];
+	v++;
+	v->s = s1;
+	v->t = t2;
+	v->r = br;
+	v->g = bg;
+	v->b = bb;
+	v->a = ba;
+	v->v[0] = corner[0] + up[0] * scale;
+	v->v[1] = corner[1] + up[1] * scale;
+	v->v[2] = corner[2] + up[2] * scale;
+	v++;
+	v->s = s2;
+	v->t = t2;
+	v->r = br;
+	v->g = bg;
+	v->b = bb;
+	v->a = ba;
+	v->v[0] = corner[0] + (up[0] + right[0]) * scale;
+	v->v[1] = corner[1] + (up[1] + right[1]) * scale;
+	v->v[2] = corner[2] + (up[2] + right[2]) * scale;
+	v++;
+	v->s = s2;
+	v->t = t1;
+	v->r = br;
+	v->g = bg;
+	v->b = bb;
+	v->a = ba;
+	v->v[0] = corner[0] + right[0] * scale;
+	v->v[1] = corner[1] + right[1] * scale;
+	v->v[2] = corner[2] + right[2] * scale;
+	v++;
+}
 
 void transpolyrender(void)
 {
-	int i, j, tpolytype, texnum;
-	transpoly_t *p;
+	int				i, j, k, l, tpolytype, texnum, transvertindices, alpha, currentrendertranspoly;
+	byte			fogr, fogg, fogb;
+	vec3_t			diff;
+	transpoly_t		*p;
+	rendertranspoly_t *r, *rend;
+	translistitem	*item;
+
 	if (!r_render.value)
 		return;
 	if (currenttranspoly < 1)
 		return;
-//	transpolyrenderminmax();
-//	if (transpolyindices < 1)
-//		return;
-	// testing
-//	Con_DPrintf("transpolyrender: %i polys %i infront %i vertices\n", currenttranspoly, transpolyindices, currenttransvert);
-//	if (transpolyindices >= 2)
-//		transpolysort();
+
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glEnable(GL_BLEND);
-	glShadeModel(GL_SMOOTH);
+//	glShadeModel(GL_SMOOTH);
 	glDepthMask(0); // disable zbuffer updates
-	glDisable(GL_ALPHA_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	tpolytype = TPOLYTYPE_ALPHA;
-	texnum = -1;
-	/*
-	if (gl_vertexarrays.value)
+
+	// set up the vertex array
+	glInterleavedArrays(GL_T2F_C4UB_V3F, sizeof(transvert[0]), transvert);
+
+	currentrendertranspoly = 0;
+	transvertindices = 0;
+	fogr = (byte) bound(0, (int) (fogcolor[0] * 255.0f), 255);
+	fogg = (byte) bound(0, (int) (fogcolor[1] * 255.0f), 255);
+	fogb = (byte) bound(0, (int) (fogcolor[2] * 255.0f), 255);
+	if (gl_transpolytris.value)
 	{
-		// set up the vertex array
-		glInterleavedArrays(GL_T2F_C4UB_V3F, 0, transvert);
-		for (i = 0;i < transpolyindices;i++)
-		{
-			p = &transpoly[transpolyindex[i]];
-			if (p->texnum != texnum || p->transpolytype != tpolytype)
-			{
-				if (p->texnum != texnum)
-				{
-					texnum = p->texnum;
-					glBindTexture(GL_TEXTURE_2D, texnum);
-				}
-				if (p->transpolytype != tpolytype)
-				{
-					tpolytype = p->transpolytype;
-					if (tpolytype == TPOLYTYPE_ADD) // additive
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-					else // alpha
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				}
-			}
-			glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
-			if (p->glowtexnum)
-			{
-				texnum = p->glowtexnum; // highly unlikely to match next poly, but...
-				glBindTexture(GL_TEXTURE_2D, texnum);
-				tpolytype = TPOLYTYPE_ADD; // might match next poly
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				glDrawArrays(GL_POLYGON, p->firstvert, p->verts);
-			}
-		}
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		glDisableClientState(GL_COLOR_ARRAY);
-		glDisableClientState(GL_VERTEX_ARRAY);
-	}
-	else
-	*/
-	{
-		int points = -1;
-		translistitem *item;
-		transvert_t *vert;
+		int glowtexnum, fogtexnum;
 		for (i = 4095;i >= 0;i--)
 		{
 			item = translisthash[i];
-			while (item)
+			while(item)
 			{
 				p = item->poly;
 				item = item->next;
-				if (p->texnum != texnum || p->verts != points || p->transpolytype != tpolytype)
-				{
-					glEnd();
-					if (isG200)
-					{
-						// LordHavoc: Matrox G200 cards can't handle per pixel alpha
-						if (p->fogtexnum)
-							glEnable(GL_ALPHA_TEST);
-						else
-							glDisable(GL_ALPHA_TEST);
-					}
-					if (p->texnum != texnum)
-					{
-						texnum = p->texnum;
-						glBindTexture(GL_TEXTURE_2D, texnum);
-					}
-					if (p->transpolytype != tpolytype)
-					{
-						tpolytype = p->transpolytype;
-						if (tpolytype == TPOLYTYPE_ADD) // additive
-							glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-						else // alpha
-							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					}
-					points = p->verts;
-					switch (points)
-					{
-					case 3:
-						glBegin(GL_TRIANGLES);
-						break;
-					case 4:
-						glBegin(GL_QUADS);
-						break;
-					default:
-						glBegin(GL_POLYGON);
-						points = -1; // to force a reinit on the next poly
-						break;
-					}
+				glowtexnum = p->glowtexnum;
+				fogtexnum = p->fogtexnum;
+
+#define POLYTOTRI(pfirstvert, ptexnum, ptranspolytype) \
+				l = pfirstvert;\
+				r = &rendertranspoly[currentrendertranspoly++];\
+				r->tex = ptexnum;\
+				r->type = ptranspolytype;\
+				if (p->verts == 4)\
+				{\
+					transvertindex[transvertindices] = l;\
+					transvertindex[transvertindices + 1] = l + 1;\
+					transvertindex[transvertindices + 2] = l + 2;\
+					transvertindex[transvertindices + 3] = l;\
+					transvertindex[transvertindices + 4] = l + 2;\
+					transvertindex[transvertindices + 5] = l + 3;\
+					transvertindices += 6;\
+					r->indices = 6;\
+				}\
+				else if (p->verts == 3)\
+				{\
+					transvertindex[transvertindices] = l;\
+					transvertindex[transvertindices + 1] = l + 1;\
+					transvertindex[transvertindices + 2] = l + 2;\
+					transvertindices += 3;\
+					r->indices = 3;\
+				}\
+				else\
+				{\
+					for (j = l + p->verts, k = l + 2;k < j;k++)\
+					{\
+						transvertindex[transvertindices] = l;\
+						transvertindex[transvertindices + 1] = k - 1;\
+						transvertindex[transvertindices + 2] = k;\
+						transvertindices += 3;\
+					}\
+					r->indices = (p->verts - 2) * 3;\
 				}
-				for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
-				{
-					// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
-					glTexCoord2f(vert->s, vert->t);
-					// again, vector version isn't supported I think
-					glColor4ub(vert->r, vert->g, vert->b, vert->a);
-					glVertex3fv(vert->v);
-				}
+
+				POLYTOTRI(p->firstvert, p->texnum, p->transpolytype)
+
 				if (p->glowtexnum)
 				{
-					glEnd();
-					texnum = p->glowtexnum; // highly unlikely to match next poly, but...
-					glBindTexture(GL_TEXTURE_2D, texnum);
-					if (tpolytype != TPOLYTYPE_ADD)
+					// make another poly for glow effect
+					if (currenttranspoly < MAX_TRANSPOLYS && currenttransvert + p->verts <= MAX_TRANSVERTS)
 					{
-						tpolytype = TPOLYTYPE_ADD; // might match next poly
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+						memcpy(&transvert[currenttransvert], &transvert[p->firstvert], sizeof(transvert_t) * p->verts);
+						POLYTOTRI(currenttransvert, p->glowtexnum, TPOLYTYPE_ADD)
+						for (j = 0;j < p->verts;j++)
+						{
+							transvert[currenttransvert].r = transvert[currenttransvert].g = transvert[currenttransvert].b = 255;
+							currenttransvert++;
+						}
 					}
-					points = -1;
-					glBegin(GL_POLYGON);
-					for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
-					{
-						glColor4ub(255,255,255,vert->a);
-						// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
-						glTexCoord2f(vert->s, vert->t);
-						glVertex3fv(vert->v);
-					}
-					glEnd();
 				}
-				if (fogenabled && p->transpolytype == TPOLYTYPE_ALPHA)
+
+				if (fogenabled)
 				{
-					vec3_t diff;
-					glEnd();
-					points = -1; // to force a reinit on the next poly
-					if (tpolytype != TPOLYTYPE_ALPHA)
+					// make another poly for fog
+					if (currenttranspoly < MAX_TRANSPOLYS && currenttransvert + p->verts <= MAX_TRANSVERTS)
 					{
-						tpolytype = TPOLYTYPE_ALPHA; // probably matchs next poly
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-					}
-					if (p->fogtexnum)
-					{
-						if (texnum != p->fogtexnum) // highly unlikely to match next poly, but...
+						memcpy(&transvert[currenttransvert], &transvert[p->firstvert], sizeof(transvert_t) * p->verts);
+						POLYTOTRI(currenttransvert, p->fogtexnum, TPOLYTYPE_ALPHA)
+						for (j = 0, k = p->firstvert;j < p->verts;j++, k++)
 						{
-							texnum = p->fogtexnum;
-							glBindTexture(GL_TEXTURE_2D, texnum);
+							transvert[currenttransvert].r = fogr;
+							transvert[currenttransvert].g = fogg;
+							transvert[currenttransvert].b = fogb;
+							VectorSubtract(transvert[currenttransvert].v, r_origin, diff);
+							alpha = transvert[currenttransvert].a * exp(fogdensity / DotProduct(diff, diff));
+							transvert[currenttransvert].a = (byte) bound(0, alpha, 255);
+							currenttransvert++;
 						}
-						glBegin(GL_POLYGON);
-						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
-						{
-							VectorSubtract(vert->v, r_origin, diff);
-							glTexCoord2f(vert->s, vert->t);
-							glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
-							glVertex3fv(vert->v);
-						}
-						glEnd ();
-					}
-					else
-					{
-						glDisable(GL_TEXTURE_2D);
-						glBegin(GL_POLYGON);
-						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
-						{
-							VectorSubtract(vert->v, r_origin, diff);
-							glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
-							glVertex3fv(vert->v);
-						}
-						glEnd ();
-						glEnable(GL_TEXTURE_2D);
 					}
 				}
 			}
 		}
-		glEnd();
 	}
+	else
+	{
+		for (i = 4095;i >= 0;i--)
+		{
+			item = translisthash[i];
+			while(item)
+			{
+				p = item->poly;
+				item = item->next;
+
+				l = p->firstvert;
+				r = &rendertranspoly[currentrendertranspoly++];
+				r->tex = p->texnum;
+				r->type = p->transpolytype;
+				r->indices = p->verts;
+
+				for (j = l + p->verts, k = l;k < j;k++)
+					transvertindex[transvertindices++] = k;
+
+				if (p->glowtexnum)
+				{
+					// make another poly for glow effect
+					if (currentrendertranspoly < MAX_TRANSPOLYS && currenttransvert + p->verts <= MAX_TRANSVERTS)
+					{
+						l = currenttransvert;
+						r = &rendertranspoly[currentrendertranspoly++];
+						r->tex = p->glowtexnum;
+						r->type = TPOLYTYPE_ADD;
+						r->indices = p->verts;
+
+						memcpy(&transvert[currenttransvert], &transvert[p->firstvert], sizeof(transvert_t) * p->verts);
+						for (j = 0;j < p->verts;j++)
+						{
+							transvert[currenttransvert].r = transvert[currenttransvert].g = transvert[currenttransvert].b = 255;
+							transvertindex[transvertindices++] = currenttransvert++;
+						}
+					}
+				}
+				if (fogenabled)
+				{
+					// make another poly for fog
+					if (currentrendertranspoly < MAX_TRANSPOLYS && currenttransvert + p->verts <= MAX_TRANSVERTS)
+					{
+						l = currenttransvert;
+						r = &rendertranspoly[currentrendertranspoly++];
+						r->tex = p->fogtexnum;
+						r->type = TPOLYTYPE_ALPHA;
+						r->indices = p->verts;
+
+						memcpy(&transvert[currenttransvert], &transvert[p->firstvert], sizeof(transvert_t) * p->verts);
+						for (j = 0;j < p->verts;j++)
+						{
+							transvert[currenttransvert].r = fogr;
+							transvert[currenttransvert].g = fogg;
+							transvert[currenttransvert].b = fogb;
+							VectorSubtract(transvert[currenttransvert].v, r_origin, diff);
+							alpha = transvert[currenttransvert].a * exp(fogdensity / DotProduct(diff, diff));
+							transvert[currenttransvert].a = (byte) bound(0, alpha, 255);
+							transvertindex[transvertindices++] = currenttransvert++;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	GL_LockArray(0, currenttransvert);
+
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	tpolytype = TPOLYTYPE_ALPHA;
+	texnum = -1;
+	transvertindices = 0;
+	r = rendertranspoly;
+	rend = r + currentrendertranspoly;
+	while(r < rend)
+	{
+		if (texnum != r->tex)
+		{
+			texnum = r->tex;
+			glBindTexture(GL_TEXTURE_2D, texnum);
+		}
+		if (tpolytype != r->type)
+		{
+			tpolytype = r->type;
+			if (tpolytype == TPOLYTYPE_ADD) // additive
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			else // alpha
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+		k = transvertindices;
+		if (gl_transpolytris.value)
+		{
+			do
+				transvertindices += r->indices, r++;
+			while (r < rend && r->tex == texnum && r->type == tpolytype);
+			glDrawElements(GL_TRIANGLES, transvertindices - k, GL_UNSIGNED_INT, &transvertindex[k]);
+		}
+		else
+		{
+			if (r->indices == 4)
+			{
+				do
+					transvertindices += 4, r++;
+				while (r < rend && r->indices == 4 && r->tex == texnum && r->type == tpolytype);
+				glDrawElements(GL_QUADS, transvertindices - k, GL_UNSIGNED_INT, &transvertindex[k]);
+			}
+			else if (r->indices == 3)
+			{
+				do
+					transvertindices += 3, r++;
+				while (r < rend && r->indices == 3 && r->tex == texnum && r->type == tpolytype);
+				glDrawElements(GL_TRIANGLES, transvertindices - k, GL_UNSIGNED_INT, &transvertindex[k]);
+			}
+			else
+			{
+				transvertindices += r->indices, r++;
+				glDrawElements(GL_POLYGON, transvertindices - k, GL_UNSIGNED_INT, &transvertindex[k]);
+			}
+		}
+	}
+
+	GL_UnlockArray();
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDepthMask(1); // enable zbuffer updates
-	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_BLEND);
+	glColor3f(1,1,1);
+
+	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	glDisableClientState(GL_COLOR_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+
 }
 
 void wallpolyclear(void)
 {
+	if (!gl_mtexable)
+		r_multitexture.value = 0;
 	currentwallpoly = currentwallvert = 0;
 }
 
-void wallpolyrender(void)
+// render walls and fullbrights, but not fog
+void wallpolyrender1(void)
 {
 	int i, j, texnum, lighttexnum;
 	wallpoly_t *p;
@@ -387,11 +529,9 @@ void wallpolyrender(void)
 	c_brush_polys += currentwallpoly;
 	// testing
 	//Con_DPrintf("wallpolyrender: %i polys %i vertices\n", currentwallpoly, currentwallvert);
-	if (!gl_mtexable)
-		r_multitexture.value = 0;
 	glDisable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glShadeModel(GL_FLAT);
+//	glShadeModel(GL_FLAT);
 	// make sure zbuffer is enabled
 	glEnable(GL_DEPTH_TEST);
 //	glDisable(GL_ALPHA_TEST);
@@ -401,7 +541,7 @@ void wallpolyrender(void)
 	{
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 		texnum = -1;
-		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
+		for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			if (p->texnum != texnum)
 			{
@@ -472,7 +612,7 @@ void wallpolyrender(void)
 		}
 		texnum = -1;
 		lighttexnum = -1;
-		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
+		for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			if (p->texnum != texnum)
 			{
@@ -508,7 +648,7 @@ void wallpolyrender(void)
 		// first do the textures
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 		texnum = -1;
-		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
+		for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			if (p->texnum != texnum)
 			{
@@ -549,10 +689,10 @@ void wallpolyrender(void)
 	// switch to additive mode settings
 	glDepthMask(0);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glBlendFunc(GL_ONE, GL_ONE);
 	glEnable(GL_BLEND);
 //	glDisable(GL_ALPHA_TEST);
-	glShadeModel(GL_SMOOTH);
+//	glShadeModel(GL_SMOOTH);
 	// render vertex lit overlays ontop
 	texnum = -1;
 	for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
@@ -582,14 +722,13 @@ lit:
 		glEnd();
 	}
 	// render glow textures
-	glShadeModel(GL_FLAT);
-	glBlendFunc(GL_ONE, GL_ONE);
+//	glShadeModel(GL_FLAT);
 	if (lighthalf)
 		glColor3f(0.5,0.5,0.5);
 	else
 		glColor3f(1,1,1);
 	texnum = -1;
-	for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
+	for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
 	{
 		if (!p->glowtexnum)
 			continue;
@@ -609,31 +748,54 @@ lit:
 	}
 	glColor3f(1,1,1);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glShadeModel(GL_SMOOTH);
+//	glDisable(GL_ALPHA_TEST);
+//	glShadeModel(GL_SMOOTH);
+	glDisable(GL_BLEND);
+	glDepthMask(1);
+}
+
+// render fog
+void wallpolyrender2(void)
+{
+	if (!r_render.value)
+		return;
+	if (currentwallpoly < 1)
+		return;
 	if (fogenabled)
 	{
+		int i, j, alpha, fogr, fogg, fogb;
+		wallpoly_t *p;
+		wallvert_t *vert;
 		vec3_t diff;
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(0);
+		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+//		glShadeModel(GL_SMOOTH);
 		glDisable(GL_TEXTURE_2D);
-		for (i = 0,p = &wallpoly[0];i < currentwallpoly;i++, p++)
+		fogr = (byte) bound(0, (int) (fogcolor[0] * 255.0f), 255);
+		fogg = (byte) bound(0, (int) (fogcolor[1] * 255.0f), 255);
+		fogb = (byte) bound(0, (int) (fogcolor[2] * 255.0f), 255);
+		for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
 				VectorSubtract(vert->vert, r_origin, diff);
-				glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
+				alpha = 255.0f * exp(fogdensity/DotProduct(diff,diff));
+				alpha = bound(0, alpha, 255);
+				glColor4ub(fogr, fogg, fogb, (byte) alpha);
 				glVertex3fv (vert->vert);
 			}
 			glEnd ();
 		}
 		glEnable(GL_TEXTURE_2D);
+		glColor3f(1,1,1);
+		glDisable(GL_BLEND);
+		glDepthMask(1);
 	}
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glDisable(GL_ALPHA_TEST);
-	glShadeModel(GL_SMOOTH);
-	glDisable(GL_BLEND);
-	glDepthMask(1);
 }
 
 static int skyrendersphere;
@@ -690,6 +852,8 @@ void skypolyclear(void)
 	}
 
 }
+
+static void R_Sky(void);
 
 void skypolyrender(void)
 {
@@ -859,6 +1023,8 @@ void skypolyrender(void)
 	}
 	GL_UnlockArray();
 	glDisableClientState(GL_VERTEX_ARRAY);
+
+	R_Sky();
 }
 
 static char skyname[256];
@@ -868,8 +1034,8 @@ static char skyname[256];
 R_SetSkyBox
 ==================
 */
-char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
-rtexture_t *skyboxside[6];
+static char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
+static rtexture_t *skyboxside[6];
 int R_SetSkyBox(char *sky)
 {
 	int		i;
@@ -900,7 +1066,7 @@ int R_SetSkyBox(char *sky)
 			sprintf (name, "gfx/env/%s%s", sky, suf[i]);
 			if (!(image_rgba = loadimagepixels(name, false, 0, 0)))
 			{
-				Con_Printf ("Couldn't load %s\n", name);
+				Con_Printf ("Couldn't load env/%s%s or gfx/env/%s%s\n", sky, suf[i], sky, suf[i]);
 				continue;
 			}
 		}
@@ -949,7 +1115,7 @@ void LoadSky_f (void)
 	glTexCoord2f((s) * (254.0f/256.0f) + (1.0f/256.0f), (t) * (254.0f/256.0f) + (1.0f/256.0f));\
 	glVertex3f((x) * 1024.0 + r_origin[0], (y) * 1024.0 + r_origin[1], (z) * 1024.0 + r_origin[2]);
 
-void R_SkyBox(void)
+static void R_SkyBox(void)
 {
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(0);
@@ -1006,9 +1172,9 @@ void R_SkyBox(void)
 	glColor3f (1,1,1);
 }
 
-float skysphere[33*33*5];
-int skysphereindices[32*32*6];
-void skyspherecalc(float *sphere, float dx, float dy, float dz)
+static float skysphere[33*33*5];
+static int skysphereindices[32*32*6];
+static void skyspherecalc(float *sphere, float dx, float dy, float dz)
 {
 	float a, b, x, ax, ay, v[3], length;
 	int i, j, *index;
@@ -1047,7 +1213,7 @@ void skyspherecalc(float *sphere, float dx, float dy, float dz)
 	}
 }
 
-void skyspherearrays(float *vert, float *tex, float *tex2, float *source, float s, float s2)
+static void skyspherearrays(float *vert, float *tex, float *tex2, float *source, float s, float s2)
 {
 	float *v, *t, *t2;
 	int i;
@@ -1068,7 +1234,7 @@ void skyspherearrays(float *vert, float *tex, float *tex2, float *source, float 
 	}
 }
 
-void R_SkySphere(void)
+static void R_SkySphere(void)
 {
 	float speedscale, speedscale2;
 	float vert[33*33*4], tex[33*33*2], tex2[33*33*2];
@@ -1207,7 +1373,7 @@ void R_SkySphere(void)
 	glColor3f (1,1,1);
 }
 
-void R_Sky(void)
+static void R_Sky(void)
 {
 	if (!r_render.value)
 		return;
@@ -1219,11 +1385,11 @@ void R_Sky(void)
 
 //===============================================================
 
-byte skyupperlayerpixels[128*128*4];
-byte skylowerlayerpixels[128*128*4];
-byte skymergedpixels[128*128*4];
+static byte skyupperlayerpixels[128*128*4];
+static byte skylowerlayerpixels[128*128*4];
+static byte skymergedpixels[128*128*4];
 
-void R_BuildSky (int scrollupper, int scrolllower)
+static void R_BuildSky (int scrollupper, int scrolllower)
 {
 	int x, y, ux, uy, lx, ly;
 	byte *m, *u, *l;

@@ -163,7 +163,7 @@ qboolean VID_SetWindowedMode (int modenum)
 	height = rect.bottom - rect.top;
 
 	// Create the DIB window
-	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlaces", "DarkPlacesGL", WindowStyle, rect.left, rect.top, width, height, NULL, NULL, global_hInstance, NULL);
+	mainwindow = CreateWindowEx (ExWindowStyle, gamename, gamename, WindowStyle, rect.left, rect.top, width, height, NULL, NULL, global_hInstance, NULL);
 
 	if (!mainwindow)
 		Sys_Error ("Couldn't create DIB window");
@@ -180,8 +180,6 @@ qboolean VID_SetWindowedMode (int modenum)
 		vid.conheight = modelist[modenum].height;
 	if (vid.conwidth > modelist[modenum].width)
 		vid.conwidth = modelist[modenum].width;
-	vid.width = vid.conwidth;
-	vid.height = vid.conheight;
 
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
@@ -229,7 +227,7 @@ qboolean VID_SetFullDIBMode (int modenum)
 	height = rect.bottom - rect.top;
 
 	// Create the DIB window
-	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlaces", "DarkPlacesGL", WindowStyle, rect.left, rect.top, width, height, NULL, NULL, global_hInstance, NULL);
+	mainwindow = CreateWindowEx (ExWindowStyle, gamename, gamename, WindowStyle, rect.left, rect.top, width, height, NULL, NULL, global_hInstance, NULL);
 
 	if (!mainwindow)
 		Sys_Error ("Couldn't create DIB window");
@@ -241,8 +239,6 @@ qboolean VID_SetFullDIBMode (int modenum)
 		vid.conheight = modelist[modenum].height;
 	if (vid.conwidth > modelist[modenum].width)
 		vid.conwidth = modelist[modenum].width;
-	vid.width = vid.conwidth;
-	vid.height = vid.conheight;
 
 // needed because we're not getting WM_MOVE messages fullscreen on NT
 	window_x = 0;
@@ -342,7 +338,7 @@ int VID_SetMode (int modenum)
 	if (!msg_suppress_1)
 		Con_SafePrintf ("Video mode %s initialized.\n", VID_GetModeDescription (vid_modenum));
 
-	vid.recalc_refdef = 1;
+//	vid.recalc_refdef = 1;
 
 	return true;
 }
@@ -587,6 +583,7 @@ void ClearAllStates (void)
 }
 
 void VID_RestoreGameGamma(void);
+extern qboolean hostloopactive;
 
 void AppActivate(BOOL fActive, BOOL minimize)
 /****************************************************************************
@@ -640,7 +637,8 @@ void AppActivate(BOOL fActive, BOOL minimize)
 //			IN_ActivateMouse ();
 //			IN_HideMouse ();
 //		}
-		VID_RestoreGameGamma();
+		if (hostloopactive)
+			VID_RestoreGameGamma();
 	}
 
 	if (!fActive)
@@ -988,7 +986,7 @@ void VID_InitDIB (HINSTANCE hInstance)
     wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
 	wc.hbrBackground = NULL;
     wc.lpszMenuName  = 0;
-    wc.lpszClassName = "DarkPlaces";
+    wc.lpszClassName = gamename;
 
     if (!RegisterClass (&wc) )
 		Sys_Error ("Couldn't register window class");

@@ -39,7 +39,7 @@ static byte pointerimage[256] =
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
-	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
+	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
@@ -49,8 +49,8 @@ void ui_start(void)
 {
 //	ui_mousepointer = Draw_CachePic("ui/mousepointer.lmp");
 	ui_mousepointertexture = R_LoadTexture("mousepointer", 16, 16, pointerimage, TEXF_ALPHA | TEXF_PRECACHE);
-	ui_mouse_x = vid.width * 0.5;
-	ui_mouse_y = vid.height * 0.5;
+	ui_mouse_x = vid.conwidth * 0.5;
+	ui_mouse_y = vid.conheight * 0.5;
 	ui_alive = true;
 }
 
@@ -75,8 +75,8 @@ void ui_mouseupdate(float x, float y)
 {
 	if (ui_alive)
 	{
-		ui_mouse_x = bound(0, x, vid.width);
-		ui_mouse_y = bound(0, y, vid.height);
+		ui_mouse_x = bound(0, x, vid.conwidth);
+		ui_mouse_y = bound(0, y, vid.conheight);
 	}
 }
 
@@ -86,8 +86,8 @@ void ui_mouseupdaterelative(float x, float y)
 	{
 		ui_mouse_x += x;
 		ui_mouse_y += y;
-		ui_mouse_x = bound(0, ui_mouse_x, vid.width);
-		ui_mouse_y = bound(0, ui_mouse_y, vid.height);
+		ui_mouse_x = bound(0, ui_mouse_x, vid.conwidth);
+		ui_mouse_y = bound(0, ui_mouse_y, vid.conheight);
 	}
 }
 
@@ -115,7 +115,7 @@ void ui_clear(ui_t *ui)
 void ui_item
 (
 	ui_t *ui, char *basename, int number,
-	float x, float y, qpic_t *pic,
+	float x, float y, qpic_t *pic, char *string,
 	float left, float top, float width, float height,
 	void(*leftkey)(void *nativedata1, void *nativedata2, float data1, float data2),
 	void(*rightkey)(void *nativedata1, void *nativedata2, float data1, float data2),
@@ -140,30 +140,37 @@ void ui_item
  		}
 		ui->item_count++;
 	}
+	memset(it, 0, sizeof(ui_item_t));
 	strncpy(it->name, itemname, 32);
 	it->flags = 0;
-	if (leftkey || rightkey || enterkey || mouseclick)
-		it->flags |= ITEM_CLICKABLE;
-	if (pic)
+	if (pic || string)
+	{
 		it->flags |= ITEM_DRAWABLE;
-	it->draw_x = x;
-	it->draw_y = y;
-	it->click_x = x + left;
-	it->click_y = y + top;
-	it->click_x2 = it->click_x + width;
-	it->click_y2 = it->click_y + height;
-	it->leftkey = leftkey;
-	it->rightkey = rightkey;
-	it->enterkey = enterkey;
-	it->mouseclick = mouseclick;
-	if (it->mouseclick == NULL)
-		it->mouseclick = (void *)it->enterkey;
-	if (it->leftkey == NULL)
-		it->leftkey = it->enterkey;
-	if (it->rightkey == NULL)
-		it->rightkey = it->enterkey;
-	it->nativedata1 = nativedata1;
-	it->nativedata2 = nativedata2;
+		it->draw_pic = pic;
+		it->draw_string = string;
+		it->draw_x = x;
+		it->draw_y = y;
+	}
+	if (leftkey || rightkey || enterkey || mouseclick)
+	{
+		it->flags |= ITEM_CLICKABLE;
+		it->click_x = x + left;
+		it->click_y = y + top;
+		it->click_x2 = it->click_x + width;
+		it->click_y2 = it->click_y + height;
+		it->leftkey = leftkey;
+		it->rightkey = rightkey;
+		it->enterkey = enterkey;
+		it->mouseclick = mouseclick;
+		if (it->mouseclick == NULL)
+			it->mouseclick = (void *)it->enterkey;
+		if (it->leftkey == NULL)
+			it->leftkey = it->enterkey;
+		if (it->rightkey == NULL)
+			it->rightkey = it->enterkey;
+		it->nativedata1 = nativedata1;
+		it->nativedata2 = nativedata2;
+	}
 }
 
 void ui_item_remove(ui_t *ui, char *basename, int number)
@@ -298,8 +305,8 @@ void ui_update(void)
 	ui_item_t *startitem, *it;
 	if (ui_alive)
 	{
-		ui_mouse_x = bound(0, ui_mouse_x, vid.width);
-		ui_mouse_y = bound(0, ui_mouse_y, vid.height);
+		ui_mouse_x = bound(0, ui_mouse_x, vid.conwidth);
+		ui_mouse_y = bound(0, ui_mouse_y, vid.conheight);
 
 		if ((ui_active = ui_isactive()))
 		{
@@ -397,17 +404,28 @@ void ui_draw(void)
 				if (ui->item_count)
 					for (i = 0, it = ui->items;i < ui->item_count;i++, it++)
 						if (it->flags & ITEM_DRAWABLE)
-							Draw_Pic(it->draw_x, it->draw_y, it->draw_pic);
+						{
+							if (it->draw_pic)
+								Draw_Pic(it->draw_x, it->draw_y, it->draw_pic);
+							if (it->draw_string)
+								Draw_String(it->draw_x, it->draw_y, it->draw_string, 9999);
+						}
 
 		if ((it = ui_hititem(ui_mouse_x, ui_mouse_y)))
 		{
-			Draw_AdditivePic(it->draw_x, it->draw_y, it->draw_pic);
+			if (it->draw_pic)
+				Draw_AdditivePic(it->draw_x, it->draw_y, it->draw_pic);
+			if (it->draw_string)
+				Draw_AdditiveString(it->draw_x, it->draw_y, it->draw_string, 9999);
 			if (ui_showname.value)
 				Draw_String(ui_mouse_x, ui_mouse_y + 16, it->name, 9999);
     	}
 
 		it = ui_keyrealitem;
-		Draw_AdditivePic(it->draw_x, it->draw_y, it->draw_pic);
+		if (it->draw_pic)
+			Draw_AdditivePic(it->draw_x, it->draw_y, it->draw_pic);
+		if (it->draw_string)
+			Draw_AdditiveString(it->draw_x, it->draw_y, it->draw_string, 9999);
 
 //		Draw_Pic(ui_mouse_x, ui_mouse_y, ui_mousepointer);
 		Draw_GenericPic(ui_mousepointertexture, 1, 1, 1, 1, ui_mouse_x, ui_mouse_y, 16, 16);

@@ -182,34 +182,34 @@ void Sbar_Init (void)
 	sb_scorebar = Draw_PicFromWad ("scorebar");
 
 //MED 01/04/97 added new hipnotic weapons
-	if (hipnotic)
+	if (gamemode == GAME_HIPNOTIC)
 	{
-	  hsb_weapons[0][0] = Draw_PicFromWad ("inv_laser");
-	  hsb_weapons[0][1] = Draw_PicFromWad ("inv_mjolnir");
-	  hsb_weapons[0][2] = Draw_PicFromWad ("inv_gren_prox");
-	  hsb_weapons[0][3] = Draw_PicFromWad ("inv_prox_gren");
-	  hsb_weapons[0][4] = Draw_PicFromWad ("inv_prox");
+		hsb_weapons[0][0] = Draw_PicFromWad ("inv_laser");
+		hsb_weapons[0][1] = Draw_PicFromWad ("inv_mjolnir");
+		hsb_weapons[0][2] = Draw_PicFromWad ("inv_gren_prox");
+		hsb_weapons[0][3] = Draw_PicFromWad ("inv_prox_gren");
+		hsb_weapons[0][4] = Draw_PicFromWad ("inv_prox");
 
-	  hsb_weapons[1][0] = Draw_PicFromWad ("inv2_laser");
-	  hsb_weapons[1][1] = Draw_PicFromWad ("inv2_mjolnir");
-	  hsb_weapons[1][2] = Draw_PicFromWad ("inv2_gren_prox");
-	  hsb_weapons[1][3] = Draw_PicFromWad ("inv2_prox_gren");
-	  hsb_weapons[1][4] = Draw_PicFromWad ("inv2_prox");
+		hsb_weapons[1][0] = Draw_PicFromWad ("inv2_laser");
+		hsb_weapons[1][1] = Draw_PicFromWad ("inv2_mjolnir");
+		hsb_weapons[1][2] = Draw_PicFromWad ("inv2_gren_prox");
+		hsb_weapons[1][3] = Draw_PicFromWad ("inv2_prox_gren");
+		hsb_weapons[1][4] = Draw_PicFromWad ("inv2_prox");
 
-	  for (i=0 ; i<5 ; i++)
-	  {
-		 hsb_weapons[2+i][0] = Draw_PicFromWad (va("inva%i_laser",i+1));
-		 hsb_weapons[2+i][1] = Draw_PicFromWad (va("inva%i_mjolnir",i+1));
-		 hsb_weapons[2+i][2] = Draw_PicFromWad (va("inva%i_gren_prox",i+1));
-		 hsb_weapons[2+i][3] = Draw_PicFromWad (va("inva%i_prox_gren",i+1));
-		 hsb_weapons[2+i][4] = Draw_PicFromWad (va("inva%i_prox",i+1));
-	  }
+		for (i=0 ; i<5 ; i++)
+		{
+			hsb_weapons[2+i][0] = Draw_PicFromWad (va("inva%i_laser",i+1));
+			hsb_weapons[2+i][1] = Draw_PicFromWad (va("inva%i_mjolnir",i+1));
+			hsb_weapons[2+i][2] = Draw_PicFromWad (va("inva%i_gren_prox",i+1));
+			hsb_weapons[2+i][3] = Draw_PicFromWad (va("inva%i_prox_gren",i+1));
+			hsb_weapons[2+i][4] = Draw_PicFromWad (va("inva%i_prox",i+1));
+		}
 
-	  hsb_items[0] = Draw_PicFromWad ("sb_wsuit");
-	  hsb_items[1] = Draw_PicFromWad ("sb_eshld");
+		hsb_items[0] = Draw_PicFromWad ("sb_wsuit");
+		hsb_items[1] = Draw_PicFromWad ("sb_eshld");
 	}
 
-	if (rogue)
+	else if (gamemode == GAME_ROGUE)
 	{
 		rsb_invbar[0] = Draw_PicFromWad ("r_invbar1");
 		rsb_invbar[1] = Draw_PicFromWad ("r_invbar2");
@@ -221,10 +221,10 @@ void Sbar_Init (void)
 		rsb_weapons[4] = Draw_PicFromWad ("r_plasma");
 
 		rsb_items[0] = Draw_PicFromWad ("r_shield1");
-        rsb_items[1] = Draw_PicFromWad ("r_agrav1");
+		rsb_items[1] = Draw_PicFromWad ("r_agrav1");
 
 // PGM 01/19/97 - team color border
-        rsb_teambord = Draw_PicFromWad ("r_teambord");
+		rsb_teambord = Draw_PicFromWad ("r_teambord");
 // PGM 01/19/97 - team color border
 
 		rsb_ammo[0] = Draw_PicFromWad ("r_ammolava");
@@ -246,18 +246,18 @@ Sbar_DrawPic
 void Sbar_DrawPic (int x, int y, qpic_t *pic)
 {
 	if (cl.gametype == GAME_DEATHMATCH)
-		Draw_Pic (x /* + ((vid.width - 320)>>1)*/, y + (vid.height-SBAR_HEIGHT), pic);
+		Draw_Pic (x, y + (vid.conheight-SBAR_HEIGHT), pic);
 	else
-		Draw_Pic (x + ((vid.width - 320)>>1), y + (vid.height-SBAR_HEIGHT), pic);
+		Draw_Pic (x + ((vid.conwidth - 320)>>1), y + (vid.conheight-SBAR_HEIGHT), pic);
 }
 
 void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha);
 void Sbar_DrawAlphaPic (int x, int y, qpic_t *pic, float alpha)
 {
 	if (cl.gametype == GAME_DEATHMATCH)
-		Draw_AlphaPic (x /* + ((vid.width - 320)>>1)*/, y + (vid.height-SBAR_HEIGHT), pic, alpha);
+		Draw_AlphaPic (x, y + (vid.conheight-SBAR_HEIGHT), pic, alpha);
 	else
-		Draw_AlphaPic (x + ((vid.width - 320)>>1), y + (vid.height-SBAR_HEIGHT), pic, alpha);
+		Draw_AlphaPic (x + ((vid.conwidth - 320)>>1), y + (vid.conheight-SBAR_HEIGHT), pic, alpha);
 }
 
 /*
@@ -270,9 +270,9 @@ Draws one solid graphics character
 void Sbar_DrawCharacter (int x, int y, int num)
 {
 	if (cl.gametype == GAME_DEATHMATCH)
-		Draw_Character ( x /*+ ((vid.width - 320)>>1) */ + 4 , y + vid.height-SBAR_HEIGHT, num);
+		Draw_Character ( x + 4 , y + vid.conheight-SBAR_HEIGHT, num);
 	else
-		Draw_Character ( x + ((vid.width - 320)>>1) + 4 , y + vid.height-SBAR_HEIGHT, num);
+		Draw_Character ( x + ((vid.conwidth - 320)>>1) + 4 , y + vid.conheight-SBAR_HEIGHT, num);
 }
 
 /*
@@ -283,9 +283,9 @@ Sbar_DrawString
 void Sbar_DrawString (int x, int y, char *str)
 {
 	if (cl.gametype == GAME_DEATHMATCH)
-		Draw_String (x /*+ ((vid.width - 320)>>1)*/, y+ vid.height-SBAR_HEIGHT, str, 0);
+		Draw_String (x, y+ vid.conheight-SBAR_HEIGHT, str, 0);
 	else
-		Draw_String (x + ((vid.width - 320)>>1), y+ vid.height-SBAR_HEIGHT, str, 0);
+		Draw_String (x + ((vid.conwidth - 320)>>1), y+ vid.conheight-SBAR_HEIGHT, str, 0);
 }
 
 /*
@@ -482,7 +482,7 @@ void Sbar_DrawInventory (void)
 	float	time;
 	int		flashon;
 
-	if (rogue)
+	if (gamemode == GAME_ROGUE)
 	{
 		if ( cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN )
 			Sbar_DrawAlphaPic (0, -24, rsb_invbar[0], 0.4);
@@ -515,7 +515,7 @@ void Sbar_DrawInventory (void)
 
 	// MED 01/04/97
 	// hipnotic weapons
-	if (hipnotic)
+	if (gamemode == GAME_HIPNOTIC)
 	{
 		int grenadeflashing=0;
 		for (i=0 ; i<4 ; i++)
@@ -562,7 +562,7 @@ void Sbar_DrawInventory (void)
 		}
 	}
 
-	if (rogue)
+	if (gamemode == GAME_ROGUE)
 	{
 		// check for powered up weapon.
 		if ( cl.stats[STAT_ACTIVEWEAPON] >= RIT_LAVA_NAILGUN )
@@ -583,56 +583,37 @@ void Sbar_DrawInventory (void)
 			Sbar_DrawCharacter ( (6*i+3)*8 - 2, -24, 18 + num[2] - '0');
 	}
 
-	flashon = 0;
 	// items
 	for (i=0 ; i<6 ; i++)
 		if (cl.items & (1<<(17+i)))
 		{
-			time = cl.item_gettime[17+i];
-			if (time && time > cl.time - 2 && flashon )
-			{  // flash frame
-			}
-			else
 			//MED 01/04/97 changed keys
-				if (!hipnotic || (i>1))
-					Sbar_DrawPic (192 + i*16, -16, sb_items[i]);
+			if (gamemode != GAME_HIPNOTIC || (i>1))
+				Sbar_DrawPic (192 + i*16, -16, sb_items[i]);
 		}
+
 	//MED 01/04/97 added hipnotic items
 	// hipnotic items
-	if (hipnotic)
+	if (gamemode == GAME_HIPNOTIC)
 	{
 		for (i=0 ; i<2 ; i++)
 			if (cl.items & (1<<(24+i)))
-			{
-				time = cl.item_gettime[24+i];
-				if (!time || time <= cl.time - 2 || !flashon)
-					Sbar_DrawPic (288 + i*16, -16, hsb_items[i]);
-			}
+				Sbar_DrawPic (288 + i*16, -16, hsb_items[i]);
 	}
 
-	if (rogue)
+	if (gamemode == GAME_ROGUE)
 	{
 		// new rogue items
 		for (i=0 ; i<2 ; i++)
 			if (cl.items & (1<<(29+i)))
-			{
-				time = cl.item_gettime[29+i];
-				if (!time || time <= cl.time - 2 || !flashon)
-					Sbar_DrawPic (288 + i*16, -16, rsb_items[i]);
-			}
+				Sbar_DrawPic (288 + i*16, -16, rsb_items[i]);
 	}
 	else
 	{
 		// sigils
 		for (i=0 ; i<4 ; i++)
-		{
 			if (cl.items & (1<<(28+i)))
-			{
-				time = cl.item_gettime[28+i];
-				if (!time || time <= cl.time - 2 || !flashon)
-					Sbar_DrawPic (320-32 + i*8, -16, sb_sigil[i]);
-			}
-		}
+				Sbar_DrawPic (320-32 + i*8, -16, sb_sigil[i]);
 	}
 }
 
@@ -661,8 +642,8 @@ void Sbar_DrawFrags (void)
 	if (cl.gametype == GAME_DEATHMATCH)
 		xofs = 0;
 	else
-		xofs = (vid.width - 320)>>1;
-	y = vid.height - SBAR_HEIGHT - 23;
+		xofs = (vid.conwidth - 320)>>1;
+	y = vid.conheight - SBAR_HEIGHT - 23;
 
 	for (i=0 ; i<l ; i++)
 	{
@@ -705,20 +686,17 @@ Sbar_DrawFace
 */
 void Sbar_DrawFace (void)
 {
-	int		f, anim;
+	int f;
 
 // PGM 01/19/97 - team color drawing
 // PGM 03/02/97 - fixed so color swatch only appears in CTF modes
-	if (rogue &&
-        (cl.maxclients != 1) &&
-        (teamplay.value>3) &&
-        (teamplay.value<7))
+	if (gamemode == GAME_ROGUE && (cl.maxclients != 1) && (teamplay.value > 3) && (teamplay.value < 7))
 	{
 		int				top, bottom;
 		int				xofs;
 		char			num[12];
 		scoreboard_t	*s;
-		
+
 		s = &cl.scores[cl.viewentity - 1];
 		// draw background
 		top = (s->colors & 0xf0) + 8;
@@ -727,11 +705,11 @@ void Sbar_DrawFace (void)
 		if (cl.gametype == GAME_DEATHMATCH)
 			xofs = 113;
 		else
-			xofs = ((vid.width - 320)>>1) + 113;
+			xofs = ((vid.conwidth - 320)>>1) + 113;
 
 		Sbar_DrawPic (112, 0, rsb_teambord);
-		Draw_Fill (xofs, vid.height-SBAR_HEIGHT+3, 22, 9, top);
-		Draw_Fill (xofs, vid.height-SBAR_HEIGHT+12, 22, 9, bottom);
+		Draw_Fill (xofs, vid.conheight-SBAR_HEIGHT+3, 22, 9, top);
+		Draw_Fill (xofs, vid.conheight-SBAR_HEIGHT+12, 22, 9, bottom);
 
 		// draw number
 		f = s->frags;
@@ -752,49 +730,25 @@ void Sbar_DrawFace (void)
 			Sbar_DrawCharacter ( 116, 3, num[1]);
 			Sbar_DrawCharacter ( 123, 3, num[2]);
 		}
-		
+
 		return;
 	}
 // PGM 01/19/97 - team color drawing
 
-	if ( (cl.items & (IT_INVISIBILITY | IT_INVULNERABILITY) )
-	== (IT_INVISIBILITY | IT_INVULNERABILITY) )
-	{
+	if ( (cl.items & (IT_INVISIBILITY | IT_INVULNERABILITY) ) == (IT_INVISIBILITY | IT_INVULNERABILITY) )
 		Sbar_DrawPic (112, 0, sb_face_invis_invuln);
-		return;
-	}
-	if (cl.items & IT_QUAD)
-	{
+	else if (cl.items & IT_QUAD)
 		Sbar_DrawPic (112, 0, sb_face_quad );
-		return;
-	}
-	if (cl.items & IT_INVISIBILITY)
-	{
+	else if (cl.items & IT_INVISIBILITY)
 		Sbar_DrawPic (112, 0, sb_face_invis );
-		return;
-	}
-	if (cl.items & IT_INVULNERABILITY)
-	{
+	else if (cl.items & IT_INVULNERABILITY)
 		Sbar_DrawPic (112, 0, sb_face_invuln);
-		return;
-	}
-
-	if (cl.stats[STAT_HEALTH] >= 100)
-		f = 4;
 	else
-		f = cl.stats[STAT_HEALTH] / 20;
-	// LordHavoc: I don't even know how the game didn't crash without this
-	if (f < 0)
-		f = 0;
-
-	if (cl.time <= cl.faceanimtime)
 	{
-		anim = 1;
-//		sb_updates = 0;		// make sure the anim gets drawn over
+		f = cl.stats[STAT_HEALTH] / 20;
+		f = bound(0, f, 4);
+		Sbar_DrawPic (112, 0, sb_faces[f][cl.time <= cl.faceanimtime]);
 	}
-	else
-		anim = 0;
-	Sbar_DrawPic (112, 0, sb_faces[f][anim]);
 }
 
 /*
@@ -804,10 +758,8 @@ Sbar_Draw
 */
 void Sbar_Draw (void)
 {
-	if (scr_con_current == vid.height)
+	if (scr_con_current == vid.conheight)
 		return;		// console is full screen
-
-//	sb_updates++;
 
 	if (sb_lines > 24)
 	{
@@ -820,22 +772,21 @@ void Sbar_Draw (void)
 	{
 		Sbar_DrawAlphaPic (0, 0, sb_scorebar, 0.4);
 		Sbar_DrawScoreboard ();
-//		sb_updates = 0;
 	}
 	else if (sb_lines)
 	{
 		Sbar_DrawAlphaPic (0, 0, sb_sbar, 0.4);
 
-   // keys (hipnotic only)
-      //MED 01/04/97 moved keys here so they would not be overwritten
-      if (hipnotic)
-      {
-         if (cl.items & IT_KEY1)
-            Sbar_DrawPic (209, 3, sb_items[0]);
-         if (cl.items & IT_KEY2)
-            Sbar_DrawPic (209, 12, sb_items[1]);
-      }
-   // armor
+// keys (hipnotic only)
+		//MED 01/04/97 moved keys here so they would not be overwritten
+		if (gamemode == GAME_HIPNOTIC)
+		{
+			if (cl.items & IT_KEY1)
+				Sbar_DrawPic (209, 3, sb_items[0]);
+			if (cl.items & IT_KEY2)
+				Sbar_DrawPic (209, 12, sb_items[1]);
+		}
+// armor
 		if (cl.items & IT_INVULNERABILITY)
 		{
 			Sbar_DrawNum (24, 0, 666, 3, 1);
@@ -843,10 +794,9 @@ void Sbar_Draw (void)
 		}
 		else
 		{
-			if (rogue)
+			if (gamemode == GAME_ROGUE)
 			{
-				Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3,
-								cl.stats[STAT_ARMOR] <= 25);
+				Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
 				if (cl.items & RIT_ARMOR3)
 					Sbar_DrawPic (0, 0, sb_armor[2]);
 				else if (cl.items & RIT_ARMOR2)
@@ -856,8 +806,7 @@ void Sbar_Draw (void)
 			}
 			else
 			{
-				Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3
-				, cl.stats[STAT_ARMOR] <= 25);
+				Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
 				if (cl.items & IT_ARMOR3)
 					Sbar_DrawPic (0, 0, sb_armor[2]);
 				else if (cl.items & IT_ARMOR2)
@@ -871,11 +820,10 @@ void Sbar_Draw (void)
 		Sbar_DrawFace ();
 
 	// health
-		Sbar_DrawNum (136, 0, cl.stats[STAT_HEALTH], 3
-		, cl.stats[STAT_HEALTH] <= 25);
+		Sbar_DrawNum (136, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
 
 	// ammo icon
-		if (rogue)
+		if (gamemode == GAME_ROGUE)
 		{
 			if (cl.items & RIT_SHELLS)
 				Sbar_DrawPic (224, 0, sb_ammo[0]);
@@ -904,14 +852,11 @@ void Sbar_Draw (void)
 				Sbar_DrawPic (224, 0, sb_ammo[3]);
 		}
 
-		Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3,
-					  cl.stats[STAT_AMMO] <= 10);
+		Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
 	}
 
-	if (vid.width > 320) {
-		if (cl.gametype == GAME_DEATHMATCH)
-			Sbar_MiniDeathmatchOverlay ();
-	}
+	if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
+		Sbar_MiniDeathmatchOverlay ();
 }
 
 //=============================================================================
@@ -970,7 +915,7 @@ void Sbar_DeathmatchOverlay (void)
 // draw the text
 	l = scoreboardlines;
 
-	x = ((vid.width - 320)>>1) - 140;
+	x = ((vid.conwidth - 320)>>1) - 140;
 	y = 40;
 	for (i = 0;i < l;i++)
 	{
@@ -1016,7 +961,7 @@ void Sbar_MiniDeathmatchOverlay (void)
 	char			num[128];
 	scoreboard_t	*s;
 
-	if (vid.width < 512 || !sb_lines)
+	if (vid.conwidth < 512 || !sb_lines)
 		return;
 
 // scores
@@ -1024,7 +969,7 @@ void Sbar_MiniDeathmatchOverlay (void)
 
 // draw the text
 	l = scoreboardlines;
-	y = vid.height - sb_lines;
+	y = vid.conheight - sb_lines;
 	numlines = sb_lines/8;
 	if (numlines < 3)
 		return;
@@ -1045,7 +990,7 @@ void Sbar_MiniDeathmatchOverlay (void)
             i = 0;
 
 	x = 324;
-	for (;i < scoreboardlines && y < vid.height - 8;i++)
+	for (;i < scoreboardlines && y < vid.conheight - 8;i++)
 	{
 		k = fragsort[i];
 		s = &cl.scores[k];
@@ -1125,5 +1070,5 @@ void Sbar_FinaleOverlay (void)
 	qpic_t	*pic;
 
 	pic = Draw_CachePic ("gfx/finale.lmp");
-	Draw_Pic ( (vid.width-pic->width)/2, 16, pic);
+	Draw_Pic ( (vid.conwidth-pic->width)/2, 16, pic);
 }

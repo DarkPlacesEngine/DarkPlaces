@@ -102,7 +102,6 @@ typedef struct glpolysizeof_s
 {
 	struct	glpoly_s	*next;
 	int		numverts;
-	int		flags;			// for SURF_UNDERWATER
 } glpolysizeof_t;
 
 typedef struct msurface_s

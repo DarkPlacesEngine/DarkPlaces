@@ -63,7 +63,7 @@ extern	int nanmask;
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
 #define VectorLength(a) sqrt(DotProduct(a, a))
 #define VectorScale(in, scale, out) {(out)[0] = (in)[0] * (scale);(out)[1] = (in)[1] * (scale);(out)[2] = (in)[2] * (scale);}
-#define VectorMAQuick(a, scale, b, c) {(c)[0] = (a)[0] + (scale) * (b)[0];(c)[1] = (a)[1] + (scale) * (b)[1];(c)[2] = (a)[2] + (scale) * (b)[2];}
+#define VectorMA(a, scale, b, c) {(c)[0] = (a)[0] + (scale) * (b)[0];(c)[1] = (a)[1] + (scale) * (b)[1];(c)[2] = (a)[2] + (scale) * (b)[2];}
 #define VectorNormalizeFast(_v)\
 {\
 	float _y, _number;\
@@ -74,10 +74,11 @@ extern	int nanmask;
 		_y = _y * (1.5f - (_number * 0.5f * _y * _y));\
 		VectorScale(_v, _y, _v);\
 	}\
-}\
+}
+#define VectorRandom(v) {do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1);}
 
 
-void VectorMA (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
+void VectorMASlow (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
 
 vec_t _DotProduct (vec3_t v1, vec3_t v2);
 void _VectorSubtract (vec3_t veca, vec3_t vecb, vec3_t out);
@@ -152,3 +153,5 @@ typedef struct
 {
 	double	normal[3], dist;
 } tinydoubleplane_t;
+
+void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );

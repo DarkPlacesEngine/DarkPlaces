@@ -291,8 +291,6 @@ void VID_Init(void)
 		vid.conheight = height;
 	if (vid.conwidth > width)
 		vid.conwidth = width;
-	vid.width = vid.conwidth;
-	vid.height = vid.conheight;
 
 	InitSig(); // trap evil signals
 
@@ -302,7 +300,7 @@ void VID_Init(void)
 
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
 
-	vid.recalc_refdef = 1;				// force a surface cache flush
+//	vid.recalc_refdef = 1;				// force a surface cache flush
 }
 
 void VID_ExtraOptionDraw(unsigned int options_draw_cursor)

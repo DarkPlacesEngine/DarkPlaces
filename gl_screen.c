@@ -70,8 +70,6 @@ console is:
 */
 
 
-int		glx, gly, glwidth, glheight;
-
 float	scr_con_current;
 float	scr_conlines;		// lines of console to display
 
@@ -164,7 +162,7 @@ void SCR_DrawCenterString (void)
 	start = scr_centerstring;
 
 	if (scr_center_lines <= 4)
-		y = vid.height*0.35;
+		y = vid.conheight*0.35;
 	else
 		y = 48;
 
@@ -174,7 +172,7 @@ void SCR_DrawCenterString (void)
 		for (l=0 ; l<40 ; l++)
 			if (start[l] == '\n' || !start[l])
 				break;
-		x = (vid.width - l*8)/2;
+		x = (vid.conwidth - l*8)/2;
 		// LordHavoc: speedup
 		if (l > 0)
 		{
@@ -229,19 +227,8 @@ CalcFov
 */
 float CalcFov (float fov_x, float width, float height)
 {
-	float   a;
-	float   x;
-
-	if (fov_x < 1 || fov_x > 179)
-		Sys_Error ("Bad fov: %f", fov_x);
-
-	x = width/tan(fov_x/360*M_PI);
-
-	a = atan (height/x);
-
-	a = a*360/M_PI;
-
-	return a;
+	// calculate vision size and alter by aspect, then convert back to angle
+	return atan (height / (width / tan(fov_x/360*M_PI))) * 360 / M_PI;
 }
 
 /*
@@ -254,15 +241,12 @@ Internal use only
 */
 static void SCR_CalcRefdef (void)
 {
-	float		size;
-	int		h;
-	qboolean		full = false;
+	float size;
 
-
-	vid.recalc_refdef = 0;
+//	vid.recalc_refdef = 0;
 
 //========================================
-	
+
 // bound viewsize
 	if (scr_viewsize.value < 30)
 		Cvar_Set ("viewsize","30");
@@ -278,7 +262,6 @@ static void SCR_CalcRefdef (void)
 // intermission is always full screen
 	if (cl.intermission)
 	{
-		full = true;
 		size = 1;
 		sb_lines = 0;
 	}
@@ -290,39 +273,31 @@ static void SCR_CalcRefdef (void)
 			sb_lines = 24;		// no inventory
 		else
 			sb_lines = 24+16+8;
-
-		if (scr_viewsize.value >= 100.0)
-		{
-			full = true;
-			size = 1.0f;
-		}
-		else
-			size = scr_viewsize.value * (1.0f / 100.0f);
+		size = scr_viewsize.value * (1.0 / 100.0);
 	}
 
-	// LordHavoc: always fullscreen rendering
-	h = vid.height/* - sb_lines*/;
-
-	r_refdef.vrect.width = vid.width * size;
-	if (r_refdef.vrect.width < 96)
+	if (size >= 1)
 	{
-		size = 96.0 / r_refdef.vrect.width;
-		r_refdef.vrect.width = 96;	// min for icons
+		r_refdef.width = vid.realwidth;
+		r_refdef.height = vid.realheight;
+		r_refdef.x = 0;
+		r_refdef.y = 0;
 	}
-
-	r_refdef.vrect.height = vid.height * size;
-	//if (r_refdef.vrect.height > vid.height - sb_lines)
-	//	r_refdef.vrect.height = vid.height - sb_lines;
-	if (r_refdef.vrect.height > (int) vid.height)
-			r_refdef.vrect.height = vid.height;
-	r_refdef.vrect.x = (vid.width - r_refdef.vrect.width)/2;
-	if (full)
-		r_refdef.vrect.y = 0;
 	else
-		r_refdef.vrect.y = (h - r_refdef.vrect.height)/2;
+	{
+		r_refdef.width = vid.realwidth * size;
+		r_refdef.height = vid.realheight * size;
+		r_refdef.x = (vid.realwidth - r_refdef.width)/2;
+		r_refdef.y = (vid.realheight - r_refdef.height)/2;
+	}
 
 	r_refdef.fov_x = scr_fov.value;
-	r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.vrect.width, r_refdef.vrect.height);
+	r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
+
+	r_refdef.width = bound(0, r_refdef.width, vid.realwidth);
+	r_refdef.height = bound(0, r_refdef.height, vid.realheight);
+	r_refdef.x = bound(0, r_refdef.x, vid.realwidth) + vid.realx;
+	r_refdef.y = bound(0, r_refdef.y, vid.realheight) + vid.realy;
 }
 
 
@@ -336,7 +311,7 @@ Keybinding command
 void SCR_SizeUp_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value+10);
-	vid.recalc_refdef = 1;
+//	vid.recalc_refdef = 1;
 }
 
 
@@ -350,7 +325,7 @@ Keybinding command
 void SCR_SizeDown_f (void)
 {
 	Cvar_SetValue ("viewsize",scr_viewsize.value-10);
-	vid.recalc_refdef = 1;
+//	vid.recalc_refdef = 1;
 }
 
 //============================================================================
@@ -415,13 +390,9 @@ SCR_DrawRam
 */
 void SCR_DrawRam (void)
 {
-	if (!scr_showram.value)
-		return;
-
-	if (!r_cache_thrash)
-		return;
-
-	Draw_Pic (32, 0, scr_ram);
+//	if (!scr_showram.value)
+//		return;
+//	Draw_Pic (32, 0, scr_ram);
 }
 
 /*
@@ -480,8 +451,7 @@ void SCR_DrawPause (void)
 		return;
 
 	pic = Draw_CachePic ("gfx/pause.lmp");
-	Draw_Pic ( (vid.width - pic->width)/2, 
-		(vid.height - 48 - pic->height)/2, pic);
+	Draw_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, pic);
 }
 
 
@@ -500,8 +470,7 @@ void SCR_DrawLoading (void)
 		return;
 		
 	pic = Draw_CachePic ("gfx/loading.lmp");
-	Draw_Pic ( (vid.width - pic->width)/2, 
-		(vid.height - 48 - pic->height)/2, pic);
+	Draw_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, pic);
 }
 */
 
@@ -527,14 +496,14 @@ void SCR_SetUpToDrawConsole (void)
 
 	if (con_forcedup)
 	{
-		scr_conlines = vid.height;		// full screen
+		scr_conlines = vid.conheight;		// full screen
 		scr_con_current = scr_conlines;
 	}
 	else if (key_dest == key_console)
-		scr_conlines = vid.height/2;	// half screen
+		scr_conlines = vid.conheight/2;	// half screen
 	else
 		scr_conlines = 0;				// none visible
-	
+
 	if (scr_conlines < scr_con_current)
 	{
 		scr_con_current -= scr_conspeed.value*host_realframetime;
@@ -549,7 +518,7 @@ void SCR_SetUpToDrawConsole (void)
 			scr_con_current = scr_conlines;
 	}
 }
-	
+
 /*
 ==================
 SCR_DrawConsole
@@ -572,33 +541,33 @@ void SCR_DrawConsole (void)
 
 /*
 ============================================================================== 
- 
+
 						SCREEN SHOTS 
  
 ============================================================================== 
 */ 
 
 /*
-================== 
+==================
 SCR_ScreenShot_f
-================== 
+==================
 */
-void SCR_ScreenShot_f (void) 
+void SCR_ScreenShot_f (void)
 {
-	byte		*buffer;
-	char		filename[80]; 
+	byte		*buffer, gamma[256];
+	char		filename[80];
 	char		checkname[MAX_OSPATH];
 	int			i;
 //
-// find a file name to save it to 
-// 
+// find a file name to save it to
+//
 	strcpy(filename,"dp0000.tga");
-		
-	for (i=0 ; i<=9999 ; i++) 
-	{ 
-		filename[2] = (i/1000)%10 + '0'; 
-		filename[3] = (i/ 100)%10 + '0'; 
-		filename[4] = (i/  10)%10 + '0'; 
+
+	for (i=0 ; i<=9999 ; i++)
+	{
+		filename[2] = (i/1000)%10 + '0';
+		filename[3] = (i/ 100)%10 + '0';
+		filename[4] = (i/  10)%10 + '0';
 		filename[5] = (i/   1)%10 + '0';
 		sprintf (checkname, "%s/%s", com_gamedir, filename);
 		if (Sys_FileTime(checkname) == -1)
@@ -606,13 +575,18 @@ void SCR_ScreenShot_f (void)
 	}
 	if (i==10000)
 	{
-		Con_Printf ("SCR_ScreenShot_f: Couldn't create a TGA file\n"); 
+		Con_Printf ("SCR_ScreenShot_f: Couldn't create a TGA file\n");
 		return;
  	}
 
-	buffer = qmalloc(glwidth*glheight*3);
-	glReadPixels (glx, gly, glwidth, glheight, GL_RGB, GL_UNSIGNED_BYTE, buffer);
-	Image_WriteTGARGB_preflipped(filename, glwidth, glheight, buffer);
+	buffer = qmalloc(vid.realwidth*vid.realheight*3);
+	glReadPixels (vid.realx, vid.realy, vid.realwidth, vid.realheight, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+
+	// apply hardware gamma to the image
+	BuildGammaTable8((lighthalf && hardwaregammasupported) ? 2.0f : 1.0f, 1, 1, 0, gamma);
+	Image_GammaRemapRGB(buffer, buffer, vid.realwidth*vid.realheight, gamma, gamma, gamma);
+
+	Image_WriteTGARGB_preflipped(filename, vid.realwidth, vid.realheight, buffer);
 
 	qfree(buffer);
 	Con_Printf ("Wrote %s\n", filename);
@@ -637,7 +611,7 @@ void SCR_BeginLoadingPlaque (void)
 //		return;
 //	if (cls.signon != SIGNONS)
 //		return;
-	
+
 // redraw with no console and the loading plaque
 //	Con_ClearNotify ();
 //	scr_centertime_off = 0;
@@ -678,7 +652,7 @@ void SCR_DrawNotifyString (void)
 
 	start = scr_notifystring;
 
-	y = vid.height*0.35;
+	y = vid.conheight*0.35;
 
 	do	
 	{
@@ -686,7 +660,7 @@ void SCR_DrawNotifyString (void)
 		for (l=0 ; l<40 ; l++)
 			if (start[l] == '\n' || !start[l])
 				break;
-		x = (vid.width - l*8)/2;
+		x = (vid.conwidth - l*8)/2;
 		// LordHavoc: speedup
 //		for (j=0 ; j<l ; j++, x+=8)
 //			Draw_Character (x, y, start[j]);
@@ -810,7 +784,7 @@ void SCR_UpdateScreen (void)
 		return;				// not initialized yet
 
 
-	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
+	GL_BeginRendering (&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
 
 	if (gl_combine.value && !gl_combine_extension)
 		Cvar_SetValue("gl_combine", false);
@@ -832,16 +806,16 @@ void SCR_UpdateScreen (void)
 	if (oldfov != scr_fov.value)
 	{
 		oldfov = scr_fov.value;
-		vid.recalc_refdef = true;
+//		vid.recalc_refdef = true;
 	}
 
 	if (oldscreensize != scr_viewsize.value)
 	{
 		oldscreensize = scr_viewsize.value;
-		vid.recalc_refdef = true;
+//		vid.recalc_refdef = true;
 	}
 
-	if (vid.recalc_refdef)
+//	if (vid.recalc_refdef)
 		SCR_CalcRefdef();
 
 	if (r_render.value)
@@ -895,18 +869,17 @@ void SCR_UpdateScreen (void)
 		calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
 		sprintf(temp, "%4i fps", calc);
 		currtime = newtime;
-		Draw_String(vid.width - (8*8), vid.height - sb_lines - 8, temp, 9999);
+		Draw_String(vid.conwidth - (8*8), vid.conheight - sb_lines - 8, temp, 9999);
 	}
 
-	// LordHavoc: only print info if renderer is being used
-	if (r_speeds2.value && !con_forcedup)
+	if (r_speeds2.value && r_speeds2_string[0])
 	{
 		int i, j, lines, y;
 		lines = 1;
 		for (i = 0;r_speeds2_string[i];i++)
 			if (r_speeds2_string[i] == '\n')
 				lines++;
-		y = vid.height - sb_lines - lines * 8 - 8;
+		y = vid.conheight - sb_lines - lines * 8 - 8;
 		i = j = 0;
 		while (r_speeds2_string[i])
 		{
@@ -919,6 +892,8 @@ void SCR_UpdateScreen (void)
 				i++;
 			y += 8;
 		}
+		// clear so it won't reprint without renderer being called again
+		r_speeds2_string[0] = 0;
 	}
 
 	V_UpdateBlends();

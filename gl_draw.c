@@ -154,7 +154,7 @@ void gl_draw_newmap(void)
 {
 }
 
-char engineversion[40];
+extern char engineversion[40];
 int engineversionx, engineversiony;
 
 extern void R_Textures_Init();
@@ -163,17 +163,10 @@ void GL_Draw_Init (void)
 	int i;
 	Cvar_RegisterVariable (&scr_conalpha);
 
-#if defined(__linux__)
-	sprintf (engineversion, "DarkPlaces Linux   GL %.2f build %3i", (float) VERSION, buildnumber);
-#elif defined(WIN32)
-	sprintf (engineversion, "DarkPlaces Windows GL %.2f build %3i", (float) VERSION, buildnumber);
-#else
-	sprintf (engineversion, "DarkPlaces Unknown GL %.2f build %3i", (float) VERSION, buildnumber);
-#endif
 	for (i = 0;i < 40 && engineversion[i];i++)
 		engineversion[i] += 0x80; // shift to orange
-	engineversionx = vid.width - strlen(engineversion) * 8 - 8;
-	engineversiony = vid.height - 8;
+	engineversionx = vid.conwidth - strlen(engineversion) * 8 - 8;
+	engineversiony = vid.conheight - 8;
 
 	R_Textures_Init();
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
@@ -212,7 +205,7 @@ void Draw_Character (int x, int y, int num)
 		return;
 	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
 	// LordHavoc: NEAREST mode on text if not scaling up
-	if (glwidth <= (int) vid.width)
+	if (vid.realwidth <= (int) vid.conwidth)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -239,7 +232,7 @@ void Draw_Character (int x, int y, int num)
 	glEnd ();
 
 	// LordHavoc: revert to LINEAR mode
-//	if (glwidth < (int) vid.width)
+//	if (vid.realwidth <= (int) vid.conwidth)
 //	{
 //		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 //		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -258,7 +251,7 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	float frow, fcol;
 	if (!r_render.value)
 		return;
-	if (y <= -8 || y >= (int) vid.height || x >= (int) vid.width || *str == 0) // completely offscreen or no text to print
+	if (y <= -8 || y >= (int) vid.conheight || x >= (int) vid.conwidth || *str == 0) // completely offscreen or no text to print
 		return;
 	if (maxlen < 1)
 		maxlen = strlen(str);
@@ -267,7 +260,7 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
 
 	// LordHavoc: NEAREST mode on text if not scaling up
-	if (glwidth <= (int) vid.width)
+	if (vid.realwidth <= (int) vid.conwidth)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -283,7 +276,7 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	else
 		glColor3f(1.0f,1.0f,1.0f);
 	glBegin (GL_QUADS);
-	while (maxlen-- && x < (int) vid.width) // stop rendering when out of characters or room
+	while (maxlen-- && x < (int) vid.conwidth) // stop rendering when out of characters or room
 	{
 		if ((num = *str++) != 32) // skip spaces
 		{
@@ -299,11 +292,20 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	glEnd ();
 
 	// LordHavoc: revert to LINEAR mode
-//	if (glwidth < (int) vid.width)
+//	if (vid.realwidth < (int) vid.conwidth)
 //	{
 //		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 //		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 //	}
+}
+
+void Draw_AdditiveString (int x, int y, char *str, int maxlen)
+{
+	if (!r_render.value)
+		return;
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	Draw_String(x, y, str, maxlen);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Draw_GenericPic (rtexture_t *tex, float red, float green, float blue, float alpha, int x, int y, int width, int height)
@@ -397,9 +399,9 @@ Draw_ConsoleBackground
 */
 void Draw_ConsoleBackground (int lines)
 {
-	Draw_GenericPic (conbacktex, 1,1,1,scr_conalpha.value*lines/vid.height, 0, lines - vid.height, vid.width, vid.height);
+	Draw_GenericPic (conbacktex, 1,1,1,scr_conalpha.value * lines / vid.conheight, 0, lines - vid.conheight, vid.conwidth, vid.conheight);
 	// LordHavoc: draw version
-	Draw_String(engineversionx, lines - vid.height + engineversiony, engineversion, 9999);
+	Draw_String(engineversionx, lines - vid.conheight + engineversiony, engineversion, 9999);
 }
 
 /*
@@ -448,11 +450,11 @@ void GL_Set2D (void)
 {
 	if (!r_render.value)
 		return;
-	glViewport (glx, gly, glwidth, glheight);
+	glViewport (vid.realx, vid.realy, vid.realwidth, vid.realheight);
 
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity ();
-	glOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
+	glOrtho  (0, vid.conwidth, vid.conheight, 0, -99999, 99999);
 
 	glMatrixMode(GL_MODELVIEW);
     glLoadIdentity ();
@@ -503,7 +505,7 @@ void SHOWLMP_decodeshow(void)
 	float x, y;
 	strcpy(lmplabel,MSG_ReadString());
 	strcpy(picname, MSG_ReadString());
-	if (nehahra) // LordHavoc: nasty old legacy junk
+	if (gamemode == GAME_NEHAHRA) // LordHavoc: nasty old legacy junk
 	{
 		x = MSG_ReadByte();
 		y = MSG_ReadByte();

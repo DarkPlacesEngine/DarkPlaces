@@ -1,4 +1,5 @@
 
+void Image_GammaRemapRGB(byte *in, byte *out, int pixels, byte *gammar, byte *gammag, byte *gammab);
 void Image_Copy8bitRGBA(byte *in, byte *out, int pixels, int *pal);
 void Image_CopyRGBAGamma(byte *in, byte *out, int pixels);
 int image_makemask (byte *in, byte *out, int size);

@@ -266,7 +266,7 @@ void R_AliasLerpVerts(int vertcount,
 	}
 }
 
-void GL_DrawModelMesh(rtexture_t *skin, byte *colors, maliashdr_t *maliashdr)
+void GL_DrawModelMesh(rtexture_t *skin, byte *colors, maliashdr_t *m)
 {
 	if (!r_render.value)
 		return;
@@ -284,7 +284,7 @@ void GL_DrawModelMesh(rtexture_t *skin, byte *colors, maliashdr_t *maliashdr)
 		glEnableClientState(GL_COLOR_ARRAY);
 	}
 
-	glDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
+	glDrawElements(GL_TRIANGLES, m->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) m + m->tridata));
 
 	if (colors)
 		glDisableClientState(GL_COLOR_ARRAY);
@@ -317,51 +317,65 @@ R_DrawAliasFrame
 
 =================
 */
-void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor);
-void R_DrawAliasFrame (model_t *model, maliashdr_t *maliashdr, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t **skin, int colormap, int effects, int flags)
+void R_DrawAliasFrame (void)
 {
+	maliashdr_t *m = Mod_Extradata(currentrenderentity->model);
+//	int *skinanimrange = (int *) (currentrenderentity->model->skinanimrange + (int) modelheader) + skin * 2;
+//	int *skinanim = (int *) (currentrenderentity->model->skinanim + (int) modelheader);
+	int *skinanimrange = currentrenderentity->model->skinanimrange;
+	int skin;
+	rtexture_t **skinanim = currentrenderentity->model->skinanim;
+	rtexture_t **skinset;
+
+	skinanimrange += currentrenderentity->skinnum * 2;
+	skin = skinanimrange[0];
+	if (skinanimrange[1] > 1) // animated
+		skin += (int) (cl.time * 10) % skinanimrange[1];
+	skinset = skinanim + skin * 5;
+
 	if (gl_transform.value)
 	{
 		if (r_render.value)
 		{
 			glPushMatrix();
-			GL_SetupModelTransform(org, angles, scale);
+			GL_SetupModelTransform(currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
 		}
 	}
 	// always needed, for model lighting
-	softwaretransformforentity(ent);
+	softwaretransformforentity(currentrenderentity);
 
-	R_AliasLerpVerts(maliashdr->numverts,
-		blend[0].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[0].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin,
-		blend[1].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[1].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin,
-		blend[2].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[2].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin,
-		blend[3].lerp, ((trivertx_t *)((int) maliashdr + maliashdr->posedata)) + blend[3].frame * maliashdr->numverts, maliashdr->scale, maliashdr->scale_origin);
+	R_AliasLerpVerts(m->numverts,
+		currentrenderentity->frameblend[0].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[0].frame * m->numverts, m->scale, m->scale_origin,
+		currentrenderentity->frameblend[1].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[1].frame * m->numverts, m->scale, m->scale_origin,
+		currentrenderentity->frameblend[2].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[2].frame * m->numverts, m->scale, m->scale_origin,
+		currentrenderentity->frameblend[3].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[3].frame * m->numverts, m->scale, m->scale_origin);
+
 	if (!gl_transform.value)
-		R_AliasTransformVerts(maliashdr->numverts);
+		R_AliasTransformVerts(m->numverts);
 
 	// prep the vertex array as early as possible
 	if (r_render.value)
 	{
 		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 		glEnableClientState(GL_VERTEX_ARRAY);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (void *)((int) maliashdr->texdata + (int) maliashdr));
+		glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (void *)((int) m->texdata + (int) m));
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		GL_LockArray(0, maliashdr->numverts);
+		GL_LockArray(0, m->numverts);
 	}
 
-	R_LightModel(ent, maliashdr->numverts, org, color);
+	R_LightModel(m->numverts);
 
 	if (!r_render.value)
 		return;
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glShadeModel(GL_SMOOTH);
-	if (effects & EF_ADDITIVE)
+//	glShadeModel(GL_SMOOTH);
+	if (currentrenderentity->effects & EF_ADDITIVE)
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
 		glEnable(GL_BLEND);
 		glDepthMask(0);
 	}
-	else if (alpha != 1.0 || (model->flags2 & MODF_TRANSPARENT))
+	else if (currentrenderentity->alpha != 1.0 || (currentrenderentity->model->flags2 & MODF_TRANSPARENT))
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_BLEND);
@@ -373,40 +387,41 @@ void R_DrawAliasFrame (model_t *model, maliashdr_t *maliashdr, float alpha, vec3
 		glDepthMask(1);
 	}
 
-	if (skin[0] || skin[1] || skin[2] || skin[3] || skin[4])
+	if (skinset[0] || skinset[1] || skinset[2] || skinset[3] || skinset[4])
 	{
-		if (colormap >= 0 && (skin[0] || skin[1] || skin[2]))
+		if (currentrenderentity->colormap >= 0 && (skinset[0] || skinset[1] || skinset[2]))
 		{
 			int c;
-			if (skin[0])
-				GL_DrawModelMesh(skin[0], aliasvertcolor, maliashdr);
-			if (skin[1])
+			if (skinset[0])
+				GL_DrawModelMesh(skinset[0], aliasvertcolor, m);
+			if (skinset[1])
 			{
-				c = (colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-				R_TintModel(aliasvertcolor, aliasvertcolor2, maliashdr->numverts, (byte *) (&d_8to24table[c]));
-				GL_DrawModelMesh(skin[1], aliasvertcolor2, maliashdr);
+				c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
+				R_TintModel(aliasvertcolor, aliasvertcolor2, m->numverts, (byte *) (&d_8to24table[c]));
+				GL_DrawModelMesh(skinset[1], aliasvertcolor2, m);
 			}
-			if (skin[2])
+			if (skinset[2])
 			{
-				c = colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-				R_TintModel(aliasvertcolor, aliasvertcolor2, maliashdr->numverts, (byte *) (&d_8to24table[c]));
-				GL_DrawModelMesh(skin[2], aliasvertcolor2, maliashdr);
+				c = currentrenderentity->colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
+				R_TintModel(aliasvertcolor, aliasvertcolor2, m->numverts, (byte *) (&d_8to24table[c]));
+				GL_DrawModelMesh(skinset[2], aliasvertcolor2, m);
 			}
 		}
 		else
 		{
-			if (skin[4]) GL_DrawModelMesh(skin[4], aliasvertcolor, maliashdr);
+			if (skinset[4])
+				GL_DrawModelMesh(skinset[4], aliasvertcolor, m);
 			else
 			{
-				if (skin[0]) GL_DrawModelMesh(skin[0], aliasvertcolor, maliashdr);
-				if (skin[1]) GL_DrawModelMesh(skin[1], aliasvertcolor, maliashdr);
-				if (skin[2]) GL_DrawModelMesh(skin[2], aliasvertcolor, maliashdr);
+				if (skinset[0]) GL_DrawModelMesh(skinset[0], aliasvertcolor, m);
+				if (skinset[1]) GL_DrawModelMesh(skinset[1], aliasvertcolor, m);
+				if (skinset[2]) GL_DrawModelMesh(skinset[2], aliasvertcolor, m);
 			}
 		}
-		if (skin[3]) GL_DrawModelMesh(skin[3], NULL, maliashdr);
+		if (skinset[3]) GL_DrawModelMesh(skinset[3], NULL, m);
 	}
 	else
-		GL_DrawModelMesh(0, NULL, maliashdr);
+		GL_DrawModelMesh(0, NULL, m);
 
 	if (fogenabled)
 	{
@@ -416,14 +431,15 @@ void R_DrawAliasFrame (model_t *model, maliashdr_t *maliashdr, float alpha, vec3
 		glEnable (GL_BLEND);
 		glDepthMask(0); // disable zbuffer updates
 
-		VectorSubtract(org, r_origin, diff);
+		VectorSubtract(currentrenderentity->origin, r_origin, diff);
 		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 
-		glDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
+		glDrawElements(GL_TRIANGLES, m->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) m + m->tridata));
 
 		glEnable (GL_TEXTURE_2D);
 		glColor3f (1,1,1);
 	}
+
 	GL_UnlockArray();
 	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
@@ -441,41 +457,74 @@ R_DrawQ2AliasFrame
 
 =================
 */
-void R_DrawQ2AliasFrame (model_t *model, md2mem_t *pheader, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, rtexture_t *skin, int effects, int flags)
+void R_DrawQ2AliasFrame (void)
 {
 	int *order, count;
 	md2frame_t *frame1, *frame2, *frame3, *frame4;
+	vec3_t diff;
+	md2mem_t *m = Mod_Extradata(currentrenderentity->model);
+//	int *skinanimrange = (int *) (currentrenderentity->model->skinanimrange + (int) modelheader) + skin * 2;
+//	int *skinanim = (int *) (currentrenderentity->model->skinanim + (int) modelheader);
+	int *skinanimrange = currentrenderentity->model->skinanimrange;
+	int skin;
+	rtexture_t **skinanim = currentrenderentity->model->skinanim;
+	rtexture_t **skinset;
+
+	skinanimrange += currentrenderentity->skinnum * 2;
+	skin = skinanimrange[0];
+	if (skinanimrange[1] > 1) // animated
+		skin += (int) (cl.time * 10) % skinanimrange[1];
+	skinset = skinanim + skin * 5;
 
 	if (r_render.value)
-		glBindTexture(GL_TEXTURE_2D, R_GetTexture(skin));
+		glBindTexture(GL_TEXTURE_2D, R_GetTexture(skinset[0]));
 
 	if (gl_transform.value)
 	{
 		if (r_render.value)
 		{
 			glPushMatrix();
-			GL_SetupModelTransform(org, angles, scale);
+			GL_SetupModelTransform(currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
 		}
 	}
 	// always needed, for model lighting
-	softwaretransformforentity(ent);
+	softwaretransformforentity(currentrenderentity);
 
-	frame1 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[0].frame));
-	frame2 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[1].frame));
-	frame3 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[2].frame));
-	frame4 = (void *)((int) pheader + pheader->ofs_frames + (pheader->framesize * blend[3].frame));
-	R_AliasLerpVerts(pheader->num_xyz,
-		blend[0].lerp, frame1->verts, frame1->scale, frame1->translate,
-		blend[1].lerp, frame2->verts, frame2->scale, frame2->translate,
-		blend[2].lerp, frame3->verts, frame3->scale, frame3->translate,
-		blend[3].lerp, frame4->verts, frame4->scale, frame4->translate);
+	frame1 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[0].frame));
+	frame2 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[1].frame));
+	frame3 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[2].frame));
+	frame4 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[3].frame));
+	R_AliasLerpVerts(m->num_xyz,
+		currentrenderentity->frameblend[0].lerp, frame1->verts, frame1->scale, frame1->translate,
+		currentrenderentity->frameblend[1].lerp, frame2->verts, frame2->scale, frame2->translate,
+		currentrenderentity->frameblend[2].lerp, frame3->verts, frame3->scale, frame3->translate,
+		currentrenderentity->frameblend[3].lerp, frame4->verts, frame4->scale, frame4->translate);
 	if (!gl_transform.value)
-		R_AliasTransformVerts(pheader->num_xyz);
+		R_AliasTransformVerts(m->num_xyz);
 
-	R_LightModel(ent, pheader->num_xyz, org, color);
+	R_LightModel(m->num_xyz);
 
 	if (!r_render.value)
 		return;
+
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
+		glEnable(GL_BLEND);
+		glDepthMask(0);
+	}
+	else if (currentrenderentity->alpha != 1.0 || (currentrenderentity->model->flags2 & MODF_TRANSPARENT))
+	{
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glDepthMask(0);
+	}
+	else
+	{
+		glDisable(GL_BLEND);
+		glDepthMask(1);
+	}
+
 	// LordHavoc: big mess...
 	// using vertex arrays only slightly, although it is enough to prevent duplicates
 	// (saving half the transforms)
@@ -484,7 +533,7 @@ void R_DrawQ2AliasFrame (model_t *model, md2mem_t *pheader, float alpha, vec3_t 
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
-	order = (int *)((int)pheader + pheader->ofs_glcmds);
+	order = (int *)((int)m + m->ofs_glcmds);
 	while(1)
 	{
 		if (!(count = *order++))
@@ -514,11 +563,9 @@ void R_DrawQ2AliasFrame (model_t *model, md2mem_t *pheader, float alpha, vec3_t 
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable (GL_BLEND);
 		glDepthMask(0); // disable zbuffer updates
-		{
-			vec3_t diff;
-			VectorSubtract(org, r_origin, diff);
-			glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
-		}
+
+		VectorSubtract(currentrenderentity->origin, r_origin, diff);
+		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 
 		// LordHavoc: big mess...
 		// using vertex arrays only slightly, although it is enough to prevent duplicates
@@ -526,7 +573,7 @@ void R_DrawQ2AliasFrame (model_t *model, md2mem_t *pheader, float alpha, vec3_t 
 		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 		glEnableClientState(GL_VERTEX_ARRAY);
 
-		order = (int *)((int)pheader + pheader->ofs_glcmds);
+		order = (int *)((int)m + m->ofs_glcmds);
 		while(1)
 		{
 			if (!(count = *order++))
@@ -880,25 +927,26 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 R_DrawZymoticFrame
 =================
 */
-void R_DrawZymoticFrame (model_t *model, zymtype1header_t *m, float alpha, vec3_t color, entity_t *ent, int shadow, vec3_t org, vec3_t angles, vec_t scale, frameblend_t *blend, int skinblah, int effects, int flags)
+void R_DrawZymoticFrame (void)
 {
-	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), blend, (zymbone_t *)(m->lump_bones.start + (int) m), org, angles, scale);
+	zymtype1header_t *m = Mod_Extradata(currentrenderentity->model);
+	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m), currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
 	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
-	R_LightModel(ent, m->numverts, org, color);
+	R_LightModel(m->numverts);
 
 	if (!r_render.value)
 		return;
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glShadeModel(GL_SMOOTH);
-	if (effects & EF_ADDITIVE)
+//	glShadeModel(GL_SMOOTH);
+	if (currentrenderentity->effects & EF_ADDITIVE)
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
 		glEnable(GL_BLEND);
 		glDepthMask(0);
 	}
-	else if (alpha != 1.0)
+	else if (currentrenderentity->alpha != 1.0)
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_BLEND);
@@ -913,7 +961,7 @@ void R_DrawZymoticFrame (model_t *model, zymtype1header_t *m, float alpha, vec3_
 	GL_DrawZymoticModelMesh(aliasvertcolor, m);
 
 	if (fogenabled)
-		GL_DrawZymoticModelMeshFog(org, m);
+		GL_DrawZymoticModelMeshFog(currentrenderentity->origin, m);
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
@@ -926,51 +974,21 @@ R_DrawAliasModel
 
 =================
 */
-void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap)
+void R_DrawAliasModel (void)
 {
-	int			i;
-	vec3_t		mins, maxs, color;
-	void		*modelheader;
-	rtexture_t	**skinset;
-
-	if (alpha < (1.0 / 64.0))
+	if (currentrenderentity->alpha < (1.0 / 64.0))
 		return; // basically completely transparent
 
-	VectorAdd (org, clmodel->mins, mins);
-	VectorAdd (org, clmodel->maxs, maxs);
-
-//	if (cull && R_CullBox (mins, maxs))
-//		return;
-
 	c_models++;
-
-	if (skin < 0 || skin >= clmodel->numskins)
-	{
-		skin = 0;
-		Con_DPrintf("invalid skin number %d for model %s\n", skin, clmodel->name);
-	}
-
-	modelheader = Mod_Extradata (clmodel);
-
-	{
-//		int *skinanimrange = (int *) (clmodel->skinanimrange + (int) modelheader) + skin * 2;
-//		int *skinanim = (int *) (clmodel->skinanim + (int) modelheader);
-		int *skinanimrange = clmodel->skinanimrange + skin * 2;
-		rtexture_t **skinanim = clmodel->skinanim;
-		i = skinanimrange[0];
-		if (skinanimrange[1] > 1) // animated
-			i += ((int) (cl.time * 10) % skinanimrange[1]);
-		skinset = skinanim + i*5;
-	}
 
 	if (r_render.value)
 		glEnable (GL_TEXTURE_2D);
 
-	c_alias_polys += clmodel->numtris;
-	if (clmodel->aliastype == ALIASTYPE_ZYM)
-		R_DrawZymoticFrame (clmodel, modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, 0                   , effects, flags);
-	else if (clmodel->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasFrame (clmodel, modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset[0]          , effects, flags);
+	c_alias_polys += currentrenderentity->model->numtris;
+	if (currentrenderentity->model->aliastype == ALIASTYPE_ZYM)
+		R_DrawZymoticFrame ();
+	else if (currentrenderentity->model->aliastype == ALIASTYPE_MD2)
+		R_DrawQ2AliasFrame ();
 	else
-		R_DrawAliasFrame   (clmodel, modelheader, alpha, color, ent, ent != &cl.viewent, org, angles, scale, blend, skinset   , colormap, effects, flags);
+		R_DrawAliasFrame   ();
 }

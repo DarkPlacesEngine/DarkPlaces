@@ -274,9 +274,11 @@ int main (int c, char **v)
 
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 
+	Sys_Shared_EarlyInit();
+
 	Host_Init();
 
-	Sys_Shared_Init();
+	Sys_Shared_LateInit();
 
 	oldtime = Sys_DoubleTime () - 0.1;
 	while (1)

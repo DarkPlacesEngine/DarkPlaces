@@ -45,7 +45,7 @@ void Host_Quit_f (void)
 	}
 	*/
 	CL_Disconnect ();
-	Host_ShutdownServer(false);		
+	Host_ShutdownServer(false);
 
 	Sys_Quit ();
 }
@@ -64,7 +64,7 @@ void Host_Status_f (void)
 	int			hours = 0;
 	int			j;
 	void		(*print) (char *fmt, ...);
-	
+
 	if (cmd_source == src_command)
 	{
 		if (!sv.active)
@@ -78,7 +78,7 @@ void Host_Status_f (void)
 		print = SV_ClientPrintf;
 
 	print ("host:    %s\n", Cvar_VariableString ("hostname"));
-	print ("version: %4.2f (build %i)\n", VERSION, buildnumber);
+	print ("version: %s build %i\n", gamename, buildnumber);
 	if (tcpipAvailable)
 		print ("tcp/ip:  %s\n", my_tcpip_address);
 	if (ipxAvailable)
@@ -715,7 +715,7 @@ void Host_Name_f (void)
 	
 void Host_Version_f (void)
 {
-	Con_Printf ("Version %4.2f (build %i)\n", VERSION, buildnumber);
+	Con_Printf ("Version: %s build %i\n", gamename, buildnumber);
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
 }
 
@@ -1275,58 +1275,58 @@ void Host_Give_f (void)
 
 	t = Cmd_Argv(1);
 	v = atoi (Cmd_Argv(2));
-	
+
 	switch (t[0])
 	{
-   case '0':
-   case '1':
-   case '2':
-   case '3':
-   case '4':
-   case '5':
-   case '6':
-   case '7':
-   case '8':
-   case '9':
-      // MED 01/04/97 added hipnotic give stuff
-      if (hipnotic)
-      {
-         if (t[0] == '6')
-         {
-            if (t[1] == 'a')
-               sv_player->v.items = (int)sv_player->v.items | HIT_PROXIMITY_GUN;
-            else
-               sv_player->v.items = (int)sv_player->v.items | IT_GRENADE_LAUNCHER;
-         }
-         else if (t[0] == '9')
-            sv_player->v.items = (int)sv_player->v.items | HIT_LASER_CANNON;
-         else if (t[0] == '0')
-            sv_player->v.items = (int)sv_player->v.items | HIT_MJOLNIR;
-         else if (t[0] >= '2')
-            sv_player->v.items = (int)sv_player->v.items | (IT_SHOTGUN << (t[0] - '2'));
-      }
-      else
-      {
-         if (t[0] >= '2')
-            sv_player->v.items = (int)sv_player->v.items | (IT_SHOTGUN << (t[0] - '2'));
-      }
-		break;
-	
-    case 's':
-		if (rogue)
+	case '0':
+	case '1':
+	case '2':
+	case '3':
+	case '4':
+	case '5':
+	case '6':
+	case '7':
+	case '8':
+	case '9':
+		// MED 01/04/97 added hipnotic give stuff
+		if (gamemode == GAME_HIPNOTIC)
 		{
-		    if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1)))
-			    val->_float = v;
+			if (t[0] == '6')
+			{
+				if (t[1] == 'a')
+				sv_player->v.items = (int)sv_player->v.items | HIT_PROXIMITY_GUN;
+				else
+				sv_player->v.items = (int)sv_player->v.items | IT_GRENADE_LAUNCHER;
+			}
+			else if (t[0] == '9')
+				sv_player->v.items = (int)sv_player->v.items | HIT_LASER_CANNON;
+			else if (t[0] == '0')
+				sv_player->v.items = (int)sv_player->v.items | HIT_MJOLNIR;
+			else if (t[0] >= '2')
+				sv_player->v.items = (int)sv_player->v.items | (IT_SHOTGUN << (t[0] - '2'));
+		}
+		else
+		{
+			if (t[0] >= '2')
+				sv_player->v.items = (int)sv_player->v.items | (IT_SHOTGUN << (t[0] - '2'));
+		}
+		break;
+
+	case 's':
+		if (gamemode == GAME_ROGUE)
+		{
+			if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1)))
+				val->_float = v;
 		}
 
-        sv_player->v.ammo_shells = v;
-        break;		
-    case 'n':
-		if (rogue)
+		sv_player->v.ammo_shells = v;
+		break;
+	case 'n':
+		if (gamemode == GAME_ROGUE)
 		{
-		    if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_nails1)))
+			if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_nails1)))
 			{
-			    val->_float = v;
+				val->_float = v;
 				if (sv_player->v.weapon <= IT_LIGHTNING)
 					sv_player->v.ammo_nails = v;
 			}
@@ -1335,9 +1335,9 @@ void Host_Give_f (void)
 		{
 			sv_player->v.ammo_nails = v;
 		}
-        break;		
-    case 'l':
-		if (rogue)
+		break;
+	case 'l':
+		if (gamemode == GAME_ROGUE)
 		{
 			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_lava_nails);
 			if (val)
@@ -1347,9 +1347,9 @@ void Host_Give_f (void)
 					sv_player->v.ammo_nails = v;
 			}
 		}
-        break;
-    case 'r':
-		if (rogue)
+		break;
+	case 'r':
+		if (gamemode == GAME_ROGUE)
 		{
 			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_rockets1);
 			if (val)
@@ -1363,9 +1363,9 @@ void Host_Give_f (void)
 		{
 			sv_player->v.ammo_rockets = v;
 		}
-        break;		
-    case 'm':
-		if (rogue)
+		break;
+	case 'm':
+		if (gamemode == GAME_ROGUE)
 		{
 			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_multi_rockets);
 			if (val)
@@ -1375,12 +1375,12 @@ void Host_Give_f (void)
 					sv_player->v.ammo_rockets = v;
 			}
 		}
-        break;		
-    case 'h':
-        sv_player->v.health = v;
-        break;		
-    case 'c':
-		if (rogue)
+		break;
+	case 'h':
+		sv_player->v.health = v;
+		break;
+	case 'c':
+		if (gamemode == GAME_ROGUE)
 		{
 			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_cells1);
 			if (val)
@@ -1394,9 +1394,9 @@ void Host_Give_f (void)
 		{
 			sv_player->v.ammo_cells = v;
 		}
-        break;		
-    case 'p':
-		if (rogue)
+		break;
+	case 'p':
+		if (gamemode == GAME_ROGUE)
 		{
 			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_plasma);
 			if (val)
@@ -1406,15 +1406,15 @@ void Host_Give_f (void)
 					sv_player->v.ammo_cells = v;
 			}
 		}
-        break;		
-    }
+		break;
+	}
 }
 
 edict_t	*FindViewthing (void)
 {
 	int		i;
 	edict_t	*e;
-	
+
 	for (i=0 ; i<sv.num_edicts ; i++)
 	{
 		e = EDICT_NUM(i);
@@ -1477,8 +1477,7 @@ void Host_Viewframe_f (void)
 void PrintFrameName (model_t *m, int frame)
 {
 	int data;
-	data = (int) Mod_Extradata(m);
-	if (m->ofs_scenes && data)
+	if (m->ofs_scenes && (data = (int) Mod_Extradata(m)))
 		Con_Printf("frame %i: %s\n", frame, ((animscene_t *) (m->ofs_scenes + data))[frame].name);
 	else
 		Con_Printf("frame %i\n", frame);
@@ -1620,7 +1619,7 @@ void Host_InitCommands (void)
 {
 	Cmd_AddCommand ("status", Host_Status_f);
 	Cmd_AddCommand ("quit", Host_Quit_f);
-	if (nehahra)
+	if (gamemode == GAME_NEHAHRA)
 	{
 		Cmd_AddCommand ("max", Host_God_f);
 		Cmd_AddCommand ("monster", Host_Notarget_f);

@@ -365,10 +365,15 @@ void CL_TimeDemo_f (void)
 	}
 
 	CL_PlayDemo_f ();
-	
+
 // cls.td_starttime will be grabbed at the second frame of the demo, so
 // all the loading time doesn't get counted
-	
+
+	// instantly hide console and deactivate it
+	key_dest = key_game;
+	scr_conlines = 0;
+	scr_con_current = 0;
+
 	cls.timedemo = true;
 	cls.td_startframe = host_framecount;
 	cls.td_lastframe = -1;		// get a new message this frame

@@ -58,7 +58,8 @@ char	**com_argv;
 #define CMDLINE_LENGTH	1024
 char	com_cmdline[CMDLINE_LENGTH];
 
-qboolean		standard_quake = true, rogue = false, hipnotic = false, nehahra = false;
+int gamemode;
+char *gamename;
 
 /*
 
@@ -1120,28 +1121,48 @@ void COM_InitArgv (int argc, char **argv)
 	largv[com_argc] = argvdummy;
 	com_argv = largv;
 
-#ifdef NEHAHRA
-	nehahra = true;
-	standard_quake = false;
+#if ZYMOTIC
+	gamemode = GAME_ZYMOTIC;
+#elif FIENDARENA
+	gamemode = GAME_FIENDARENA;
+#elif NEHAHRA
+	gamemode = GAME_NEHAHRA;
 #else
-	if (COM_CheckParm ("-rogue"))
-	{
-		rogue = true;
-		standard_quake = false;
-	}
-
-	if (COM_CheckParm ("-hipnotic"))
-	{
-		hipnotic = true;
-		standard_quake = false;
-	}
-
-	if (COM_CheckParm ("-nehahra"))
-	{
-		nehahra = true;
-		standard_quake = false;
-	}
+	if (COM_CheckParm ("-zymotic"))
+		gamemode = GAME_ZYMOTIC;
+	else if (COM_CheckParm ("-fiendarena"))
+		gamemode = GAME_FIENDARENA;
+	else if (COM_CheckParm ("-nehahra"))
+		gamemode = GAME_NEHAHRA;
+	else if (COM_CheckParm ("-hipnotic"))
+		gamemode = GAME_HIPNOTIC;
+	else if (COM_CheckParm ("-rogue"))
+		gamemode = GAME_ROGUE;
 #endif
+	switch(gamemode)
+	{
+	case GAME_NORMAL:
+		gamename = "DarkPlaces";
+		break;
+	case GAME_HIPNOTIC:
+		gamename = "Darkplaces-Hipnotic";
+		break;
+	case GAME_ROGUE:
+		gamename = "Darkplaces-Rogue";
+		break;
+	case GAME_NEHAHRA:
+		gamename = "DarkPlaces-Nehahra";
+		break;
+	case GAME_FIENDARENA:
+		gamename = "FiendArena";
+		break;
+	case GAME_ZYMOTIC:
+		gamename = "Zymotic";
+		break;
+	default:
+		Sys_Error("COM_InitArgv: unknown gamemode %i\n", gamemode);
+		break;
+	}
 }
 
 
@@ -1378,7 +1399,7 @@ void COM_WriteFile (char *filename, void *data, int len)
 {
 	int             handle;
 	char    name[MAX_OSPATH];
-	
+
 	sprintf (name, "%s/%s", com_gamedir, filename);
 
 	// LordHavoc: added this
@@ -1390,8 +1411,8 @@ void COM_WriteFile (char *filename, void *data, int len)
 		Sys_Printf ("COM_WriteFile: failed on %s\n", name);
 		return;
 	}
-	
-	Sys_Printf ("COM_WriteFile: %s\n", name);
+
+	Con_Printf ("COM_WriteFile: %s\n", name);
 	Sys_FileWrite (handle, data, len);
 	Sys_FileClose (handle);
 }
@@ -1846,21 +1867,32 @@ void COM_InitFilesystem (void)
 		com_cachedir[0] = 0;
 #endif
 
-//
 // start up with GAMENAME by default (id1)
-//
 	COM_AddGameDirectory (va("%s/"GAMENAME, basedir) );
 
-#ifdef NEHAHRA
-	COM_AddGameDirectory (va("%s/nehahra", basedir) );
-#else
-	if (COM_CheckParm ("-rogue"))
-		COM_AddGameDirectory (va("%s/rogue", basedir) );
-	if (COM_CheckParm ("-hipnotic"))
+	switch(gamemode)
+	{
+	case GAME_NORMAL:
+		break;
+	case GAME_HIPNOTIC:
 		COM_AddGameDirectory (va("%s/hipnotic", basedir) );
-	if (COM_CheckParm ("-nehahra"))
+		break;
+	case GAME_ROGUE:
+		COM_AddGameDirectory (va("%s/rogue", basedir) );
+		break;
+	case GAME_NEHAHRA:
 		COM_AddGameDirectory (va("%s/nehahra", basedir) );
-#endif
+		break;
+	case GAME_FIENDARENA:
+		COM_AddGameDirectory (va("%s/fiendarena", basedir) );
+		break;
+	case GAME_ZYMOTIC:
+		COM_AddGameDirectory (va("%s/zymotic", basedir) );
+		break;
+	default:
+		Sys_Error("COM_InitFilesystem: unknown gamemode %i\n", gamemode);
+		break;
+	}
 
 //
 // -game <gamedir>
@@ -1886,7 +1918,7 @@ void COM_InitFilesystem (void)
 		{
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
-			
+
 			search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
 			if ( !strcmp(COM_FileExtension(com_argv[i]), "pak") )
 			{
@@ -1924,7 +1956,7 @@ int COM_FileExists(char *filename)
 		}
 		else
 		{
-			sprintf (netpath, "%s/%s",search->filename, filename);               
+			sprintf (netpath, "%s/%s",search->filename, filename);
 			findtime = Sys_FileTime (netpath);
 			if (findtime != -1)
 				return true;

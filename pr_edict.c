@@ -454,7 +454,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 	case ev_string:
 		sprintf (line, "%s", pr_strings + val->string);
 		break;
-	case ev_entity:	
+	case ev_entity:
 		sprintf (line, "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
 		break;
 	case ev_function:
@@ -501,7 +501,7 @@ char *PR_GlobalString (int ofs)
 	val = (void *)&pr_globals[ofs];
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(??\?)", ofs); // LordHavoc: escaping the third ? so it is not a trigraph
+		sprintf (line,"%i(\?\?\?)", ofs); // LordHavoc: escaping the ?s so it is not a trigraph
 	else
 	{
 		s = PR_ValueString (def->type, val);
@@ -524,7 +524,7 @@ char *PR_GlobalStringNoContents (int ofs)
 
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(??\?)", ofs); // LordHavoc: escaping the third ? so it is not a trigraph
+		sprintf (line,"%i(\?\?\?)", ofs); // LordHavoc: escaping the ?s so it is not a trigraph
 	else
 		sprintf (line,"%i(%s)", ofs, pr_strings + def->s_name);
 
@@ -849,7 +849,7 @@ char *ED_NewString (char *string)
 		else
 			*new_p++ = string[i];
 	}
-	
+
 	return new;
 }
 
@@ -870,9 +870,9 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
 	char	*v, *w;
 	void	*d;
 	dfunction_t	*func;
-	
+
 	d = (void *)((int *)base + key->ofs);
-	
+
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
@@ -986,7 +986,7 @@ if (!strcmp(com_token, "light"))
 			n--;
 		}
 
-	// parse value	
+	// parse value
 		data = COM_Parse (data);
 		if (!data)
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
@@ -1113,11 +1113,58 @@ void ED_LoadFromFile (char *data)
 
 		pr_global_struct->self = EDICT_TO_PROG(ent);
 		PR_ExecuteProgram (func - pr_functions, "");
-	}	
+	}
 
 	Con_DPrintf ("%i entities inhibited\n", inhibit);
 }
 
+
+typedef struct dpfield_s
+{
+	int type;
+	char *string;
+}
+dpfield_t;
+
+#define DPFIELDS (sizeof(dpfields) / sizeof(dpfield_t))
+
+dpfield_t dpfields[] =
+{
+	{ev_float, "gravity"},
+	{ev_float, "button3"},
+	{ev_float, "button4"},
+	{ev_float, "button5"},
+	{ev_float, "button6"},
+	{ev_float, "button7"},
+	{ev_float, "button8"},
+	{ev_float, "glow_size"},
+	{ev_float, "glow_trail"},
+	{ev_float, "glow_color"},
+	{ev_float, "items2"},
+	{ev_float, "scale"},
+	{ev_float, "alpha"},
+	{ev_float, "renderamt"},
+	{ev_float, "rendermode"},
+	{ev_float, "fullbright"},
+	{ev_float, "ammo_shells1"},
+	{ev_float, "ammo_nails1"},
+	{ev_float, "ammo_lava_nails"},
+	{ev_float, "ammo_rockets1"},
+	{ev_float, "ammo_multi_rockets"},
+	{ev_float, "ammo_cells1"},
+	{ev_float, "ammo_plasma"},
+	{ev_float, "idealpitch"},
+	{ev_float, "pitch_speed"},
+	{ev_entity, "viewmodelforclient"},
+	{ev_entity, "nodrawtoclient"},
+	{ev_entity, "exteriormodeltoclient"},
+	{ev_entity, "drawonlytoclient"},
+	{ev_vector, "colormod"},
+	{ev_float, "ping"},
+	{ev_vector, "movement"},
+	{ev_float, "pmodel"},
+	{ev_vector, "punchvector"}
+};
 
 /*
 ===============
@@ -1126,8 +1173,9 @@ PR_LoadProgs
 */
 void PR_LoadProgs (void)
 {
-	int		i;
+	int i;
 	dstatement_t *st;
+	ddef_t *infielddefs;
 
 // flush the non-C variable lookup cache
 	for (i=0 ; i<GEFV_CACHESIZE ; i++)
@@ -1142,7 +1190,7 @@ void PR_LoadProgs (void)
 
 // byte swap the header
 	for (i=0 ; i<sizeof(*progs)/4 ; i++)
-		((int *)progs)[i] = LittleLong ( ((int *)progs)[i] );		
+		((int *)progs)[i] = LittleLong ( ((int *)progs)[i] );
 
 	if (progs->version != PROG_VERSION)
 		Host_Error ("progs.dat has wrong version number (%i should be %i)", progs->version, PROG_VERSION);
@@ -1152,15 +1200,18 @@ void PR_LoadProgs (void)
 	pr_functions = (dfunction_t *)((byte *)progs + progs->ofs_functions);
 	pr_strings = (char *)progs + progs->ofs_strings;
 	pr_globaldefs = (ddef_t *)((byte *)progs + progs->ofs_globaldefs);
-	pr_fielddefs = (ddef_t *)((byte *)progs + progs->ofs_fielddefs);
+
+	// we need to expand the fielddefs list to include all the engine fields,
+	// so allocate a new place for it
+	infielddefs = (ddef_t *)((byte *)progs + progs->ofs_fielddefs);
+	pr_fielddefs = Hunk_AllocName((progs->numfielddefs + DPFIELDS) * sizeof(ddef_t), "progs fields\n");
+
 	pr_statements = (dstatement_t *)((byte *)progs + progs->ofs_statements);
+
+	// moved edict_size calculation down below field adding code
 
 	pr_global_struct = (globalvars_t *)((byte *)progs + progs->ofs_globals);
 	pr_globals = (float *)pr_global_struct;
-	
-	pr_edict_size = progs->entityfields * 4 + sizeof (edict_t) - sizeof(entvars_t);
-
-	pr_edictareasize = pr_edict_size * MAX_EDICTS;
 
 // byte swap the lumps
 	for (i=0 ; i<progs->numstatements ; i++)
@@ -1179,7 +1230,7 @@ void PR_LoadProgs (void)
 		pr_functions[i].s_file = LittleLong (pr_functions[i].s_file);
 		pr_functions[i].numparms = LittleLong (pr_functions[i].numparms);
 		pr_functions[i].locals = LittleLong (pr_functions[i].locals);
-	}	
+	}
 
 	for (i=0 ; i<progs->numglobaldefs ; i++)
 	{
@@ -1188,17 +1239,36 @@ void PR_LoadProgs (void)
 		pr_globaldefs[i].s_name = LittleLong (pr_globaldefs[i].s_name);
 	}
 
-	for (i=0 ; i<progs->numfielddefs ; i++)
+	// copy the progs fields to the new fields list
+	for (i = 0;i < progs->numfielddefs;i++)
 	{
-		pr_fielddefs[i].type = LittleShort (pr_fielddefs[i].type);
+		pr_fielddefs[i].type = LittleShort (infielddefs[i].type);
 		if (pr_fielddefs[i].type & DEF_SAVEGLOBAL)
 			Host_Error ("PR_LoadProgs: pr_fielddefs[i].type & DEF_SAVEGLOBAL");
-		pr_fielddefs[i].ofs = LittleShort (pr_fielddefs[i].ofs);
-		pr_fielddefs[i].s_name = LittleLong (pr_fielddefs[i].s_name);
+		pr_fielddefs[i].ofs = LittleShort (infielddefs[i].ofs);
+		pr_fielddefs[i].s_name = LittleLong (infielddefs[i].s_name);
+	}
+
+	// append the darkplaces fields
+	for (i = 0;i < DPFIELDS;i++)
+	{
+		pr_fielddefs[progs->numfielddefs].type = dpfields[i].type;
+		pr_fielddefs[progs->numfielddefs].ofs = progs->entityfields;
+		pr_fielddefs[progs->numfielddefs].s_name = dpfields[i].string - pr_strings;
+		if (pr_fielddefs[progs->numfielddefs].type == ev_vector)
+			progs->entityfields += 3;
+		else
+			progs->entityfields++;
+		progs->numfielddefs++;
 	}
 
 	for (i=0 ; i<progs->numglobals ; i++)
 		((int *)pr_globals)[i] = LittleLong (((int *)pr_globals)[i]);
+
+	// moved edict_size calculation down here, below field adding code
+	pr_edict_size = progs->entityfields * 4 + sizeof (edict_t) - sizeof(entvars_t);
+
+	pr_edictareasize = pr_edict_size * MAX_EDICTS;
 
 	// LordHavoc: bounds check anything static
 	for (i = 0,st = pr_statements;i < progs->numstatements;i++,st++)
@@ -1357,7 +1427,7 @@ void PR_Init (void)
 	// LordHavoc: for DarkPlaces, this overrides the number of decors (shell casings, gibs, etc)
 	Cvar_RegisterVariable (&decors);
 	// LordHavoc: Nehahra uses these to pass data around cutscene demos
-	if (nehahra)
+	if (gamemode == GAME_NEHAHRA)
 	{
 		Cvar_RegisterVariable (&nehx00);Cvar_RegisterVariable (&nehx01);
 		Cvar_RegisterVariable (&nehx02);Cvar_RegisterVariable (&nehx03);

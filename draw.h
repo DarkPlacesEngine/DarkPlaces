@@ -32,5 +32,6 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation);
 void Draw_ConsoleBackground (int lines);
 void Draw_Fill (int x, int y, int w, int h, int c);
 void Draw_String (int x, int y, char *str, int maxlen); // LordHavoc: added maxlen
+void Draw_AdditiveString (int x, int y, char *str, int maxlen);
 qpic_t *Draw_PicFromWad (char *name);
 qpic_t *Draw_CachePic (char *path);
