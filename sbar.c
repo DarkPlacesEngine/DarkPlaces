@@ -261,19 +261,6 @@ void Sbar_DrawAlphaPic (int x, int y, qpic_t *pic, float alpha)
 }
 
 /*
-=============
-Sbar_DrawTransPic
-=============
-*/
-void Sbar_DrawTransPic (int x, int y, qpic_t *pic)
-{
-	if (cl.gametype == GAME_DEATHMATCH)
-		Draw_TransPic (x /*+ ((vid.width - 320)>>1)*/, y + (vid.height-SBAR_HEIGHT), pic);
-	else
-		Draw_TransPic (x + ((vid.width - 320)>>1), y + (vid.height-SBAR_HEIGHT), pic);
-}
-
-/*
 ================
 Sbar_DrawCharacter
 
@@ -362,7 +349,7 @@ void Sbar_DrawNum (int x, int y, int num, int digits, int color)
 		else
 			frame = *ptr -'0';
 
-		Sbar_DrawTransPic (x,y,sb_nums[color][frame]);
+		Sbar_DrawPic (x,y,sb_nums[color][frame]);
 		x += 24;
 		ptr++;
 	}
@@ -954,7 +941,7 @@ void Sbar_IntermissionNumber (int x, int y, int num, int digits, int color)
 		else
 			frame = *ptr -'0';
 
-		Draw_TransPic (x,y,sb_nums[color][frame]);
+		Draw_Pic (x,y,sb_nums[color][frame]);
 		x += 24;
 		ptr++;
 	}
@@ -1114,22 +1101,22 @@ void Sbar_IntermissionOverlay (void)
 	Draw_Pic (64, 24, pic);
 
 	pic = Draw_CachePic ("gfx/inter.lmp");
-	Draw_TransPic (0, 56, pic);
+	Draw_Pic (0, 56, pic);
 
 // time
 	dig = cl.completed_time/60;
 	Sbar_IntermissionNumber (160, 64, dig, 3, 0);
 	num = cl.completed_time - dig*60;
-	Draw_TransPic (234,64,sb_colon);
-	Draw_TransPic (246,64,sb_nums[0][num/10]);
-	Draw_TransPic (266,64,sb_nums[0][num%10]);
+	Draw_Pic (234,64,sb_colon);
+	Draw_Pic (246,64,sb_nums[0][num/10]);
+	Draw_Pic (266,64,sb_nums[0][num%10]);
 
 	Sbar_IntermissionNumber (160, 104, cl.stats[STAT_SECRETS], 3, 0);
-	Draw_TransPic (232,104,sb_slash);
+	Draw_Pic (232,104,sb_slash);
 	Sbar_IntermissionNumber (240, 104, cl.stats[STAT_TOTALSECRETS], 3, 0);
 
 	Sbar_IntermissionNumber (160, 144, cl.stats[STAT_MONSTERS], 3, 0);
-	Draw_TransPic (232,144,sb_slash);
+	Draw_Pic (232,144,sb_slash);
 	Sbar_IntermissionNumber (240, 144, cl.stats[STAT_TOTALMONSTERS], 3, 0);
 
 }
@@ -1148,5 +1135,5 @@ void Sbar_FinaleOverlay (void)
 	scr_copyeverything = 1;
 
 	pic = Draw_CachePic ("gfx/finale.lmp");
-	Draw_TransPic ( (vid.width-pic->width)/2, 16, pic);
+	Draw_Pic ( (vid.width-pic->width)/2, 16, pic);
 }
