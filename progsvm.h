@@ -430,7 +430,7 @@ prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline);
 
 // FIXME: make these go away?
 #define	PRVM_E_FLOAT(e,o) (((float*)e->v)[o])
-//#define	PRVM_E_INT(e,o) (((int*)e->v)[o])
+#define	PRVM_E_INT(e,o) (((int*)e->v)[o])
 //#define	PRVM_E_VECTOR(e,o) (&((float*)e->v)[o])
 #define	PRVM_E_STRING(e,o) (PRVM_GetString(*(string_t *)&((float*)e->v)[o]))
 
