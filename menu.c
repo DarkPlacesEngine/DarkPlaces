@@ -2583,8 +2583,6 @@ gameinfo_t gamelist[] =
 	{GAME_HIPNOTIC, &hipnoticgame, &hipnoticgame},
 	{GAME_ROGUE, &roguegame, &roguegame},
 	{GAME_NEHAHRA, &nehahragame, &nehahragame},
-	{GAME_FIENDARENA, &sharewarequakegame, &registeredquakegame},
-	{GAME_ZYMOTIC, &sharewarequakegame, &registeredquakegame},
 	{GAME_TRANSFUSION, &transfusiongame, &transfusiongame},
 	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
 };
