@@ -286,6 +286,8 @@ void Host_Map_f (void)
 
 	svs.serverflags = 0;			// haven't completed an episode yet
 	strcpy (sv_spawnmap, Cmd_Argv(1));
+	if (host_initialized)
+		Host_PerformSpawnServerAndLoadGame();
 }
 
 /*
@@ -309,6 +311,8 @@ void Host_Changelevel_f (void)
 	}
 	SV_SaveSpawnparms ();
 	strcpy (sv_spawnmap, Cmd_Argv(1));
+	if (host_initialized)
+		Host_PerformSpawnServerAndLoadGame();
 }
 
 /*
@@ -326,6 +330,8 @@ void Host_Restart_f (void)
 	if (cmd_source != src_command)
 		return;
 	strcpy (sv_spawnmap, sv.name);
+	if (host_initialized)
+		Host_PerformSpawnServerAndLoadGame();
 }
 
 /*
@@ -1650,7 +1656,7 @@ void Host_PerformSpawnServerAndLoadGame(void)
 	sv_loadgame[0] = 0;
 	sv_spawnmap[0] = 0;
 	if (sv.active && cls.state == ca_disconnected)
-		Cmd_ExecuteString ("connect local", src_command);
+		Cbuf_AddText ("connect local");
 }
 
 //=============================================================================
