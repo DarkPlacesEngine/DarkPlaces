@@ -2445,7 +2445,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(ent, face);
 }
 
-void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec3_t modelorg, qbyte *pvs, int markframe)
+void R_Q3BSP_RecursiveWorldNode(q3mnode_t *node)
 {
 	int i;
 	q3mleaf_t *leaf;
@@ -2456,15 +2456,15 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 		if (!node->plane)
 			break;
 		c_nodes++;
-		R_Q3BSP_RecursiveWorldNode(ent, node->children[0], modelorg, pvs, markframe);
+		R_Q3BSP_RecursiveWorldNode(node->children[0]);
 		node = node->children[1];
 	}
 	leaf = (q3mleaf_t *)node;
-	if (CHECKPVSBIT(pvs, leaf->clusterindex))
+	if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex))
 	{
 		c_leafs++;
 		for (i = 0;i < leaf->numleaffaces;i++)
-			leaf->firstleafface[i]->markframe = markframe;
+			leaf->firstleafface[i]->visframe = r_framecount;
 	}
 }
 
@@ -2472,17 +2472,17 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 // node-referenced leafs, as some maps are incorrectly compiled with leafs for
 // the submodels (which would render the submodels occasionally, as part of
 // the world - not good)
-void R_Q3BSP_MarkLeafPVS(entity_render_t *ent, qbyte *pvs, int markframe)
+void R_Q3BSP_MarkLeafPVS(void)
 {
 	int i, j;
 	q3mleaf_t *leaf;
-	for (j = 0, leaf = ent->model->brushq3.data_leafs;j < ent->model->brushq3.num_leafs;j++, leaf++)
+	for (j = 0, leaf = cl.worldmodel->brushq3.data_leafs;j < cl.worldmodel->brushq3.num_leafs;j++, leaf++)
 	{
-		if (CHECKPVSBIT(pvs, leaf->clusterindex))
+		if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex))
 		{
 			c_leafs++;
 			for (i = 0;i < leaf->numleaffaces;i++)
-				leaf->firstleafface[i]->markframe = markframe;
+				leaf->firstleafface[i]->visframe = r_framecount;
 		}
 	}
 }
@@ -2506,11 +2506,11 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 			if (r_q3bsp_framecount != r_framecount)
 			{
 				r_q3bsp_framecount = r_framecount;
-				R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, r_framecount);
-				//R_Q3BSP_MarkLeafPVS(ent, pvs, r_framecount);
+				R_Q3BSP_RecursiveWorldNode(model->brushq3.data_nodes);
+				//R_Q3BSP_MarkLeafPVS();
 			}
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-				if (face->markframe == r_framecount && (face->texture->surfaceflags & Q3SURFACEFLAG_SKY) && !R_CullBox(face->mins, face->maxs))
+				if (face->visframe == r_framecount && (face->texture->surfaceflags & Q3SURFACEFLAG_SKY) && !R_CullBox(face->mins, face->maxs))
 					R_Q3BSP_DrawSkyFace(ent, face);
 		}
 		else
@@ -2537,11 +2537,11 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 			if (r_q3bsp_framecount != r_framecount)
 			{
 				r_q3bsp_framecount = r_framecount;
-				R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, r_framecount);
-				//R_Q3BSP_MarkLeafPVS(ent, pvs, r_framecount);
+				R_Q3BSP_RecursiveWorldNode(model->brushq3.data_nodes);
+				//R_Q3BSP_MarkLeafPVS();
 			}
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-				if (face->markframe == r_framecount && !R_CullBox(face->mins, face->maxs))
+				if (face->visframe == r_framecount && !R_CullBox(face->mins, face->maxs))
 					R_Q3BSP_DrawFace(ent, face);
 		}
 		else
@@ -2566,32 +2566,6 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 
 void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
-#if 0
-	int i;
-	q3mface_t *face;
-	vec3_t modelorg, lightmins, lightmaxs;
-	model_t *model;
-	float projectdistance;
-	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
-	if (r_drawcollisionbrushes.integer < 2)
-	{
-		model = ent->model;
-		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		lightmins[0] = relativelightorigin[0] - lightradius;
-		lightmins[1] = relativelightorigin[1] - lightradius;
-		lightmins[2] = relativelightorigin[2] - lightradius;
-		lightmaxs[0] = relativelightorigin[0] + lightradius;
-		lightmaxs[1] = relativelightorigin[1] + lightradius;
-		lightmaxs[2] = relativelightorigin[2] + lightradius;
-		//if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
-		//	R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
-		//else
-			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-				if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
-					R_Shadow_VolumeFromSphere(face->num_vertices, face->num_triangles, face->data_vertex3f, face->data_element3i, face->data_neighbor3i, relativelightorigin, projectdistance, lightradius);
-	}
-#else
 	int j, t, leafnum, marksurfnum;
 	const int *e;
 	const qbyte *pvs;
@@ -2661,7 +2635,6 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 	}
-#endif
 }
 
 void R_Q3BSP_DrawFaceLight(entity_render_t *ent, q3mface_t *face, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
@@ -2680,8 +2653,6 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 	q3mleaf_t *leaf;
 	vec3_t modelorg, lightmins, lightmaxs;
 	model_t *model;
-	//qbyte *pvs;
-	//static int markframe = 0;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		model = ent->model;
