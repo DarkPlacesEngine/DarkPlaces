@@ -193,6 +193,9 @@ extern unsigned short ntohs (unsigned short netshort);
 
 extern sizebuf_t net_message;
 
+extern cvar_t cl_fakelocalping_min;
+extern cvar_t cl_fakelocalping_max;
+
 int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data);
 //void NetConn_SendMessageNext(netconn_t *conn);
 //void NetConn_ReSendMessage(netconn_t *conn);

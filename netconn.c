@@ -49,6 +49,14 @@ cvar_t net_connecttimeout = {0, "net_connecttimeout","10"};
 cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED"};
 cvar_t developer_networking = {0, "developer_networking", "0"};
 
+cvar_t cl_fakelocalping_min = {0, "cl_fakelocalping_min","0"};
+cvar_t cl_fakelocalping_max = {0, "cl_fakelocalping_max","0"};
+static cvar_t cl_fakepacketloss_receive = {0, "cl_fakepacketloss_receive","0"};
+static cvar_t cl_fakepacketloss_send = {0, "cl_fakepacketloss_send","0"};
+static cvar_t sv_fakepacketloss_receive = {0, "sv_fakepacketloss_receive","0"};
+static cvar_t sv_fakepacketloss_send = {0, "sv_fakepacketloss_send","0"};
+
+
 /* statistic counters */
 static int packetsSent = 0;
 static int packetsReSent = 0;
@@ -86,6 +94,15 @@ cvar_t sv_netaddress_ipv6 = {0, "sv_netaddress_ipv6", "[0:0:0:0:0:0:0:0]:26000"}
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress)
 {
 	int length = LHNET_Read(mysocket, data, maxlength, peeraddress);
+	int i;
+	if (cl_fakepacketloss_receive.integer)
+		for (i = 0;i < cl_numsockets;i++)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_fakepacketloss_receive.integer)
+				return 0;
+	if (sv_fakepacketloss_receive.integer)
+		for (i = 0;i < cl_numsockets;i++)
+			if (sv_sockets[i] == mysocket && (rand() % 100) < sv_fakepacketloss_receive.integer)
+				return 0;
 	if (developer_networking.integer && length != 0)
 	{
 		char addressstring[128], addressstring2[128];
@@ -104,7 +121,17 @@ int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddres
 
 int NetConn_Write(lhnetsocket_t *mysocket, const void *data, int length, const lhnetaddress_t *peeraddress)
 {
-	int ret = LHNET_Write(mysocket, data, length, peeraddress);
+	int ret;
+	int i;
+	if (cl_fakepacketloss_send.integer)
+		for (i = 0;i < cl_numsockets;i++)
+			if (cl_sockets[i] == mysocket && (rand() % 100) < cl_fakepacketloss_send.integer)
+				return length;
+	if (sv_fakepacketloss_send.integer)
+		for (i = 0;i < cl_numsockets;i++)
+			if (sv_sockets[i] == mysocket && (rand() % 100) < sv_fakepacketloss_send.integer)
+				return length;
+	ret = LHNET_Write(mysocket, data, length, peeraddress);
 	if (developer_networking.integer)
 	{
 		char addressstring[128], addressstring2[128];
@@ -1502,6 +1529,12 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&net_messagetimeout);
 	Cvar_RegisterVariable(&net_messagerejointimeout);
 	Cvar_RegisterVariable(&net_connecttimeout);
+	Cvar_RegisterVariable(&cl_fakelocalping_min);
+	Cvar_RegisterVariable(&cl_fakelocalping_max);
+	Cvar_RegisterVariable(&cl_fakepacketloss_receive);
+	Cvar_RegisterVariable(&cl_fakepacketloss_send);
+	Cvar_RegisterVariable(&sv_fakepacketloss_receive);
+	Cvar_RegisterVariable(&sv_fakepacketloss_send);
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
