@@ -349,40 +349,43 @@ void V_CalcRefdef (void)
 			// origin
 			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
 			r_refdef.vieworg[2] += cl.viewheight;
-			if (cl_bob.value && cl_bobcycle.value)
+			if (cl.stats[STAT_HEALTH] > 0)
 			{
-				double bob, cycle;
-				// LordHavoc: this code is *weird*, but not replacable (I think it
-				// should be done in QC on the server, but oh well, quake is quake)
-				// LordHavoc: figured out bobup: the time at which the sin is at 180
-				// degrees (which allows lengthening or squishing the peak or valley)
-				cycle = cl.time / cl_bobcycle.value;
-				cycle -= (int) cycle;
-				if (cycle < cl_bobup.value)
-					cycle = sin(M_PI * cycle / cl_bobup.value);
-				else
-					cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-				// bob is proportional to velocity in the xy plane
-				// (don't count Z, or jumping messes it up)
-				bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
-				bob = bob*0.3 + bob*0.7*cycle;
-				r_refdef.vieworg[2] += bound(-7, bob, 4);
-			}
-			// link the delayed viewmodel entities
-			if (numviewmodels > 0 && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY) && cl.stats[STAT_HEALTH] > 0)
-			{
-				int i;
-				entity_t *ent;
-				matrix4x4_t matrix, matrix2;
-				Matrix4x4_CreateFromQuakeEntity(&matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[1] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[2] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
-				for (i = 0;i < numviewmodels && r_refdef.numentities < r_refdef.maxentities;i++)
+				if (cl_bob.value && cl_bobcycle.value)
 				{
-					ent = viewmodels[i];
-					r_refdef.entities[r_refdef.numentities++] = &ent->render;
-					matrix2 = ent->render.matrix;
-					Matrix4x4_Concat(&ent->render.matrix, &matrix, &matrix2);
-					Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
-					CL_BoundingBoxForEntity(&ent->render);
+					double bob, cycle;
+					// LordHavoc: this code is *weird*, but not replacable (I think it
+					// should be done in QC on the server, but oh well, quake is quake)
+					// LordHavoc: figured out bobup: the time at which the sin is at 180
+					// degrees (which allows lengthening or squishing the peak or valley)
+					cycle = cl.time / cl_bobcycle.value;
+					cycle -= (int) cycle;
+					if (cycle < cl_bobup.value)
+						cycle = sin(M_PI * cycle / cl_bobup.value);
+					else
+						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+					// bob is proportional to velocity in the xy plane
+					// (don't count Z, or jumping messes it up)
+					bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
+					bob = bob*0.3 + bob*0.7*cycle;
+					r_refdef.vieworg[2] += bound(-7, bob, 4);
+				}
+				// link the delayed viewmodel entities
+				if (numviewmodels > 0 && r_drawviewmodel.integer && !chase_active.integer && !envmap && r_drawentities.integer && !(cl.items & IT_INVISIBILITY))
+				{
+					int i;
+					entity_t *ent;
+					matrix4x4_t matrix, matrix2;
+					Matrix4x4_CreateFromQuakeEntity(&matrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[1] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[2] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
+					for (i = 0;i < numviewmodels && r_refdef.numentities < r_refdef.maxentities;i++)
+					{
+						ent = viewmodels[i];
+						r_refdef.entities[r_refdef.numentities++] = &ent->render;
+						matrix2 = ent->render.matrix;
+						Matrix4x4_Concat(&ent->render.matrix, &matrix, &matrix2);
+						Matrix4x4_Invert_Simple(&ent->render.inversematrix, &ent->render.matrix);
+						CL_BoundingBoxForEntity(&ent->render);
+					}
 				}
 			}
 		}
