@@ -209,14 +209,14 @@ char *Sys_GetClipboardData (void)
 #endif
 }
 
-int main (int argc, const char *argv[])
+int main (int argc, char *argv[])
 {
 	double frameoldtime, framenewtime;
 
 	signal(SIGFPE, SIG_IGN);
 
 	com_argc = argc;
-	com_argv = argv;
+	com_argv = (const char **)argv;
 
 #ifndef WIN32
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
