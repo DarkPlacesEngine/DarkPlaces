@@ -371,7 +371,6 @@ void R_DrawQueue(void)
 	int batch, batchcount, additive;
 	unsigned int color;
 	drawqueuemesh_t *mesh;
-	int arraylocked = false;
 
 	if (!r_render.integer)
 		return;
