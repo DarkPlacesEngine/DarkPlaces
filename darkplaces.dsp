@@ -417,3 +417,264 @@ SOURCE=.\zone.c
 # End Group
 # End Target
 # End Project
+udio.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cg_math.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cgame_api.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cgamevm.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_collision.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_screen.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_video.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\client.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cmd.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\collision.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\common.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\conproc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\console.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\crc.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cvar.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\dpvsimpledecode.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\draw.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\fs.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\gl_backend.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\glquake.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\image.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\input.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\jpeg.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\keys.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\lhnet.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\mathlib.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\matrixlib.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\menu.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\meshqueue.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_alias.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_brush.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_shared.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_sprite.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\model_zymotic.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\modelgen.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\netconn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\palette.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\portals.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\pr_comp.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\pr_execprogram.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\progdefs.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\progs.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\protocol.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\qtypes.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\quakedef.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\r_lerpanim.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\r_light.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\r_modules.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\r_shadow.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\r_textures.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\render.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\sbar.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\screen.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\server.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\sound.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\spritegn.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\sys.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\ui.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\vid.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\wad.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\wavefile.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\winquake.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\world.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\zone.h
+# End Source File
+# End Group
+# Begin Group "Resource Files"
+
+# PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+# End Group
+# End Target
+# End Project
