@@ -788,6 +788,8 @@ void SV_ReadClientMessage(void)
 			 || strncasecmp(s, "ban", 3) == 0
 			 || strncasecmp(s, "pmodel", 6) == 0
 			 || strncasecmp(s, "rate", 4) == 0
+			 || strncasecmp(s, "playermodel", 11) == 0
+			 || strncasecmp(s, "playerskin", 10) == 00
 			 || (gamemode == GAME_NEHAHRA && (strncasecmp(s, "max", 3) == 0 || strncasecmp(s, "monster", 7) == 0 || strncasecmp(s, "scrag", 5) == 0 || strncasecmp(s, "gimme", 5) == 0 || strncasecmp(s, "wraith", 6) == 0))
 			 || (gamemode != GAME_NEHAHRA && (strncasecmp(s, "god", 3) == 0 || strncasecmp(s, "notarget", 8) == 0 || strncasecmp(s, "fly", 3) == 0 || strncasecmp(s, "give", 4) == 0 || strncasecmp(s, "noclip", 6) == 0)))
 				Cmd_ExecuteString (s, src_client);

@@ -682,7 +682,26 @@ skipwhite:
 		com_token[len] = 0;
 		*datapointer = data+1;
 		return true;
-	}
+	} 
+	else if (*data == '\'')
+	{
+		// quoted string
+		for (data++;*data != '\'';data++)
+		{
+			if (*data == '\\' && data[1] == '\'' )
+				data++;
+			if (!*data || len >= (int)sizeof(com_token) - 1)
+			{
+				com_token[0] = 0;
+				*datapointer = NULL;
+				return false;
+			}
+			com_token[len++] = *data;
+		}
+		com_token[len] = 0;
+		*datapointer = data+1;
+		return true;
+	}	
 	else if (*data == '\n' || *data == '{' || *data == '}' || *data == ')' || *data == '(' || *data == ']' || *data == '[' || *data == '\'' || *data == ':' || *data == ',' || *data == ';')
 	{
 		// single character
@@ -694,7 +713,7 @@ skipwhite:
 	else
 	{
 		// regular word
-		for (;*data > ' ' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != '\'' && *data != ':' && *data != ',' && *data != ';';data++)
+		for (;*data > ' ' && *data != '{' && *data != '}' && *data != ')' && *data != '(' && *data != ']' && *data != '[' && *data != '\'' && *data != ':' && *data != ',' && *data != ';' && *data != '\'' && *data != '"';data++)
 		{
 			if (len >= (int)sizeof(com_token) - 1)
 			{

@@ -235,6 +235,9 @@ void ED_ClearEdict (edict_t *e)
 		e->v->netname = PR_SetString(svs.clients[num].name);
 		if ((val = GETEDICTFIELDVALUE(e, eval_clientcolors)))
 			val->_float = svs.clients[num].colors;
+		// NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN
+		e->v->playermodel = PR_SetString(svs.clients[num].playermodel);
+		e->v->playerskin = PR_SetString(svs.clients[num].playerskin);
 	}
 }
 
@@ -1269,7 +1272,9 @@ dpfield_t dpfields[] =
 	{ev_vector, "cursor_trace_endpos"},
 	{ev_vector, "cursor_trace_start"},
 	{ev_vector, "movement"},
-	{ev_vector, "punchvector"}
+	{ev_vector, "punchvector"},
+	{ev_string, "playermodel"},
+	{ev_string, "playerskin"}
 };
 
 /*

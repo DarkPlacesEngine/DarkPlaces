@@ -160,6 +160,8 @@ typedef struct client_s
 	char name[64], old_name[64];
 	int colors, old_colors;
 	int frags, old_frags;
+	char playermodel[MAX_QPATH], old_model[MAX_QPATH];
+	char playerskin[MAX_QPATH], old_skin[MAX_QPATH];
 
 	// visibility state
 	float visibletime[MAX_EDICTS];

@@ -1119,6 +1119,8 @@ void SV_UpdateToReliableMessages (void)
 	client_t *client;
 	eval_t *val;
 	char *name;
+	char *model;
+	char *skin;
 
 // check for changes to be sent over the reliable streams
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
@@ -1156,6 +1158,22 @@ void SV_UpdateToReliableMessages (void)
 			MSG_WriteByte (&sv.reliable_datagram, i);
 			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 		}
+
+		// NEXUIZ_PLAYERMODEL
+		model = PR_GetString(host_client->edict->v->playermodel);
+		if (model == NULL)
+			model = "";
+		// always point the string back at host_client->name to keep it safe
+		strlcpy (host_client->playermodel, model, sizeof (host_client->playermodel));
+		host_client->edict->v->playermodel = PR_SetString(host_client->playermodel);
+
+		// NEXUIZ_PLAYERSKIN
+		skin = PR_GetString(host_client->edict->v->playerskin);
+		if (skin == NULL)
+			skin = "";
+		// always point the string back at host_client->name to keep it safe
+		strlcpy (host_client->playerskin, skin, sizeof (host_client->playerskin));
+		host_client->edict->v->playerskin = PR_SetString(host_client->playerskin);
 
 		// frags
 		host_client->frags = (int)host_client->edict->v->frags;
