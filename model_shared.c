@@ -197,7 +197,7 @@ static void mod_newmap(void)
 	msurface_t *surf;
 	int i, surfnum, ssize, tsize;
 
-	if (!cl_stainmapsclearonload.integer)
+	if (!cl_stainmaps_clearonload.integer)
 		return;
 
 	for (i=0; i<MAX_MOD_KNOWN; i++)
