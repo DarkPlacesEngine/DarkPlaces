@@ -857,7 +857,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		if (gl_textureshader && r_watershader.integer)
 		{
 			GL_ActiveTexture (0);
-			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);	
+			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
 			GL_ActiveTexture (1);
 			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
 			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
@@ -1549,7 +1549,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_colorscale,
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_colorscale,
 			 0.125f);
-	if (PlaneDiff(r_origin, (&portal->plane)) > 0)
+	if (PlaneDiff(r_origin, (&portal->plane)) < 0)
 	{
 		for (i = portal->numpoints - 1, v = varray_vertex3f;i >= 0;i--, v += 3)
 			VectorCopy(portal->points[i].position, v);

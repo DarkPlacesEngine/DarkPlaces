@@ -94,6 +94,16 @@ winding_t *Winding_NewFromPlane(double normalx, double normaly, double normalz, 
 	VectorSubtract(org, vright, w->points[3]);
 	VectorSubtract(w->points[3], vup, w->points[3]);
 
+#if 0
+	{
+		double n[3];
+		TriangleNormal(w->points[0], w->points[1], w->points[2], n);
+		VectorNormalize(n);
+		if (fabs(DotProduct(n, normal) - 1) > 0.01f)
+			Con_Printf("%.0f %.0f %.0f (%.0f %.0f %.0f, %.0f %.0f %.0f) != %.0f %.0f %.0f (%.0f %.0f %.0f, %.0f %.0f %.0f, %.0f %.0f %.0f, %.0f %.0f %.0f)\n", normal[0], normal[1], normal[2], vright[0], vright[1], vright[2], vup[0], vup[1], vup[2], n[0], n[1], n[2], w->points[0][0], w->points[0][1], w->points[0][2], w->points[1][0], w->points[1][1], w->points[1][2], w->points[2][0], w->points[2][1], w->points[2][2], w->points[3][0], w->points[3][1], w->points[3][2]);
+	}
+#endif
+
 	w->numpoints = 4;
 
 	return w;

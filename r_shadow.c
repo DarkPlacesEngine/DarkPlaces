@@ -1760,7 +1760,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			//byteleafpvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numleafs);
 			bytesurfacepvs = Mem_Alloc(tempmempool, cl.worldmodel->brushq1.numsurfaces);
 
-			Portal_Visibility(cl.worldmodel, e->origin, NULL/*byteleafpvs*/, bytesurfacepvs, NULL, 0, true, RadiusFromBoundsAndOrigin(e->mins, e->maxs, e->origin), e->mins, e->maxs);
+			Portal_Visibility(cl.worldmodel, e->origin, NULL/*byteleafpvs*/, bytesurfacepvs, NULL, 0, true, mins, maxs, e->mins, e->maxs);
 
 			/*
 			for (i = 0, leaf = cl.worldmodel->brushq1.leafs;i < cl.worldmodel->brushq1.numleafs;i++, leaf++)
