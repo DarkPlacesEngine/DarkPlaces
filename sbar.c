@@ -22,8 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 
-//int			sb_updates;		// if >= vid.numpages, no update needed
-
 #define STAT_MINUS		10	// num frame for '-' stats digit
 qpic_t		*sb_nums[2][11];
 qpic_t		*sb_colon, *sb_slash;
@@ -928,10 +926,6 @@ void Sbar_Draw (void)
 	if (scr_con_current == vid.height)
 		return;		// console is full screen
 
-	// LordHavoc: always redraw
-	//if (sb_updates >= vid.numpages)
-	//	return;
-
 	scr_copyeverything = 1;
 
 //	sb_updates++;
@@ -1127,7 +1121,7 @@ void Sbar_DeathmatchOverlay (void)
 		fph = total ? (int) ((float) s->frags * 3600.0 / total) : 0;
 		if (fph < -999) fph = -999;
 		if (fph > 9999) fph = 9999;
-		
+
 		// put it together
 		sprintf (num, "%c %4i:%4i  %3i:%i%i %s", k == cl.viewentity - 1 ? 12 : ' ', (int) s->frags, fph, minutes, tens, units, s->name);
 		Draw_String(x - 8, y, num, 0);

@@ -510,8 +510,8 @@ void DrawTextureChains (void)
 				if (currentwallpoly < MAX_WALLPOLYS && currentwallvert < MAX_WALLVERTS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
 				{
 					// check for lightmap modification
-//					if (r_dynamic.value)
-//					{
+					if (r_dynamic.value)
+					{
 						if (s->dlightframe == r_framecount || s->cached_dlight || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
 							R_UpdateLightmap(s, s->lightmaptexturenum);
 						else
@@ -521,7 +521,7 @@ void DrawTextureChains (void)
 									R_UpdateLightmap(s, s->lightmaptexturenum);
 									break;
 								}
-//					}
+					}
 					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
 					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
 					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
@@ -561,7 +561,7 @@ void DrawTextureChains (void)
 			light = false;
 			if (s->flags & SURF_DRAWFULLBRIGHT)
 				r = g = b = lighthalf ? 128 : 255;
-			else if (s->dlightframe == r_dlightframecount/* && r_dynamicwater.value*/)
+			else if (s->dlightframe == r_dlightframecount && r_dynamic.value)
 				light = true;
 			else
 				r = g = b = lighthalf ? 64 : 128;
@@ -865,7 +865,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 						b = 255.0f * currententity->colormod[2];
 					}
 				}
-				else if (s->dlightframe == r_dlightframecount/* && r_dynamicwater.value*/)
+				else if (s->dlightframe == r_dlightframecount && r_dynamic.value)
 					light = true;
 				else
 				{
@@ -963,8 +963,8 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 			else
 			{
 				// check for lightmap modification
-//				if (r_dynamic.value)
-//				{
+				if (r_dynamic.value)
+				{
 					if (s->dlightframe == r_framecount || s->cached_dlight || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
 						R_UpdateLightmap(s, s->lightmaptexturenum);
 					else
@@ -974,7 +974,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 								R_UpdateLightmap(s, s->lightmaptexturenum);
 								break;
 							}
-//				}
+				}
 				if (currentwallpoly < MAX_WALLPOLYS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
 				{
 					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;

@@ -237,8 +237,6 @@ qboolean VID_SetWindowedMode (int modenum)
 	vid.width = vid.conwidth;
 	vid.height = vid.conheight;
 
-	vid.numpages = 2;
-
 	mainwindow = dibwindow;
 
 	SendMessage (mainwindow, WM_SETICON, (WPARAM)TRUE, (LPARAM)hIcon);
@@ -328,8 +326,6 @@ qboolean VID_SetFullDIBMode (int modenum)
 		vid.conwidth = modelist[modenum].width;
 	vid.width = vid.conwidth;
 	vid.height = vid.conheight;
-
-	vid.numpages = 2;
 
 // needed because we're not getting WM_MOVE messages fullscreen on NT
 	window_x = 0;
@@ -1649,11 +1645,6 @@ void	VID_Init (unsigned char *palette)
 		vid.conheight = atoi(com_argv[i+1]);
 	if (vid.conheight < 200)
 		vid.conheight = 200;
-
-	vid.maxwarpwidth = WARP_WIDTH;
-	vid.maxwarpheight = WARP_HEIGHT;
-	vid.colormap = host_colormap;
-	vid.fullbright = 256 - LittleLong (*((int *)vid.colormap + 2048));
 
 	DestroyWindow (hwnd_dialog);
 

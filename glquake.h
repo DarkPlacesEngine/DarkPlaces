@@ -102,7 +102,7 @@ typedef struct
 
 // LordHavoc: added dust, smoke, snow, bloodcloud, and many others
 typedef enum {
-	pt_static, pt_grav, pt_slowgrav, pt_fire, pt_explode, pt_explode2, pt_blob, pt_blob2, pt_dust, pt_smoke, pt_snow, pt_bulletpuff, pt_bloodcloud, pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble
+	pt_static, pt_grav, pt_slowgrav, pt_fire, pt_explode, pt_explode2, pt_blob, pt_blob2, pt_dust, pt_smoke, pt_snow, pt_bulletpuff, pt_bloodcloud, pt_fadespark, pt_fadespark2, pt_fallfadespark, pt_fallfadespark2, pt_bubble, pt_fade
 } ptype_t;
 
 // !!! if this is changed, it must be changed in d_ifacea.h too !!!
@@ -120,7 +120,6 @@ typedef struct particle_s
 	// LordHavoc: added for improved particle effects
 	float		scale;
 	short		texnum;
-	short		contents; // if non-zero, particles will die outside of this content type
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
@@ -172,9 +171,9 @@ extern	cvar_t	r_speeds;
 //extern	cvar_t	r_waterwarp;
 extern	cvar_t	r_fullbright;
 //extern	cvar_t	r_lightmap;
-//extern	cvar_t	r_shadows;
+extern	cvar_t	r_shadows;
 extern	cvar_t	r_wateralpha;
-//extern	cvar_t	r_dynamic;
+extern	cvar_t	r_dynamic;
 extern	cvar_t	r_novis;
 extern	cvar_t	r_waterripple;
 

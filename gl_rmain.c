@@ -75,9 +75,9 @@ cvar_t	r_speeds = {"r_speeds","0"};
 cvar_t	r_speeds2 = {"r_speeds2","0"};
 cvar_t	r_fullbright = {"r_fullbright","0"};
 //cvar_t	r_lightmap = {"r_lightmap","0"};
-//cvar_t	r_shadows = {"r_shadows","0"};
+cvar_t	r_shadows = {"r_shadows","0"};
 cvar_t	r_wateralpha = {"r_wateralpha","1"};
-//cvar_t	r_dynamic = {"r_dynamic","1"};
+cvar_t	r_dynamic = {"r_dynamic","1"};
 cvar_t	r_novis = {"r_novis","0"};
 cvar_t	r_waterripple = {"r_waterripple","0"};
 cvar_t	r_fullbrights = {"r_fullbrights", "1"};
@@ -804,8 +804,7 @@ void R_DrawAliasFrame (aliashdr_t *paliashdr)
 		glColor3f (1,1,1);
 	}
 
-	/*
-	if (r_shadows.value && !(currententity->effects & EF_ADDITIVE) && currententity != &cl.viewent)
+	if (!fogenabled && r_shadows.value && !(currententity->effects & EF_ADDITIVE) && currententity != &cl.viewent)
 	{
 		// flatten it to make a shadow
 		float *av = aliasvert + 2, l = lightspot[2] + 0.125;
@@ -839,7 +838,6 @@ void R_DrawAliasFrame (aliashdr_t *paliashdr)
 		glEnable (GL_TEXTURE_2D);
 		glColor3f (1,1,1);
 	}
-	*/
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
@@ -1020,8 +1018,7 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader)
 		glColor3f (1,1,1);
 	}
 
-	/*
-	if (r_shadows.value && !(currententity->effects & EF_ADDITIVE) && currententity != &cl.viewent)
+	if (!fogenabled && r_shadows.value && !(currententity->effects & EF_ADDITIVE) && currententity != &cl.viewent)
 	{
 		int i;
 		float *av = aliasvert + 2, l = lightspot[2] + 0.125;
@@ -1086,7 +1083,6 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader)
 		glEnable (GL_TEXTURE_2D);
 		glColor3f (1,1,1);
 	}
-	*/
 
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
@@ -1181,11 +1177,11 @@ void R_DrawAliasModel (entity_t *e, int cull)
 
 	// we can't dynamically colormap textures, so they are cached
 	// seperately for the players.  Heads are just uncolored.
-	if (currententity->colormap != vid.colormap/* && !gl_nocolors.value*/)
+	if (currententity->colormap != 0 /*vid.colormap*/ /* && !gl_nocolors.value*/)
 	{
 		i = currententity - cl_entities;
 		if (i >= 1 && i<=cl.maxclients /* && !strcmp (currententity->model->name, "progs/player.mdl") */)
-		    glBindTexture(GL_TEXTURE_2D, playertextures - 1 + i);
+			glBindTexture(GL_TEXTURE_2D, playertextures - 1 + i);
 	}
 
 //	if (gl_affinemodels.value)
