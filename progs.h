@@ -47,12 +47,6 @@ typedef struct edict_s
 	entity_state_t	deltabaseline; // LordHavoc: previous frame
 
 	float		freetime;			// sv.time when the object was freed
-	// LordHavoc: for MOVETYPE_STEP interpolation
-	vec3_t		steporigin;
-	vec3_t		stepangles;
-	vec3_t		stepoldorigin;
-	vec3_t		stepoldangles;
-	float		steplerptime;
 	entvars_t	v;					// C exported fields from progs
 // other fields from progs come immediately after
 } edict_t;
