@@ -1,4 +1,5 @@
 
+#include "quakedef.h"
 #include "matrixlib.h"
 #include <math.h>
 
