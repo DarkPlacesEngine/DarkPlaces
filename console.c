@@ -201,6 +201,11 @@ Log_ConPrint
 */
 void Log_ConPrint (const char *msg)
 {
+	static qboolean inprogress = false;
+	// don't allow feedback loops with memory error reports
+	if (inprogress)
+		return;
+	inprogress = true;
 	// Until the host is completely initialized, we maintain a log queue
 	// to store the messages, since the log can't be started before
 	if (logqueue != NULL)
@@ -224,6 +229,7 @@ void Log_ConPrint (const char *msg)
 		memcpy (&logqueue[logq_ind], msg, len);
 		logq_ind += len;
 
+		inprogress = false;
 		return;
 	}
 
@@ -241,6 +247,7 @@ void Log_ConPrint (const char *msg)
 		if (log_sync.integer)
 			FS_Flush (logfile);
 	}
+	inprogress = false;
 }
 
 
