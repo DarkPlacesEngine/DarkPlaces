@@ -946,6 +946,39 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	return false;
 }
 
+void R_Shadow_VertexLighting(float *color, int numverts, const float *vertex, const float *normal, const float *lightcolor, const float *relativelightorigin, float lightradius)
+{
+	float dist, dot, intensity, iradius = 1.0f / lightradius, radius2 = lightradius * lightradius, v[3];
+	for (;numverts > 0;numverts--, vertex += 4, color += 4, normal += 4)
+	{
+		VectorSubtract(vertex, relativelightorigin, v);
+		if ((dot = DotProduct(normal, v)) > 0 && (dist = DotProduct(v, v)) < radius2)
+		{
+			dist = sqrt(dist);
+			intensity = pow(1 - (dist * iradius), r_shadow_attenpower) * r_shadow_attenscale * dot / dist;
+			VectorScale(lightcolor, intensity, color);
+		}
+		else
+			VectorClear(color);
+	}
+}
+
+void R_Shadow_VertexLightingWithXYAttenuationTexture(float *color, int numverts, const float *vertex, const float *normal, const float *lightcolor, const float *relativelightorigin, float lightradius, const float *zdir)
+{
+	float dist, dot, intensity, iradius = 1.0f / lightradius, v[3];
+	for (;numverts > 0;numverts--, vertex += 4, color += 4, normal += 4)
+	{
+		VectorSubtract(vertex, relativelightorigin, v);
+		if ((dot = DotProduct(normal, v)) > 0 && (dist = fabs(DotProduct(zdir, v))) < lightradius)
+		{
+			intensity = pow(1 - (dist * iradius), r_shadow_attenpower) * r_shadow_attenscale * dot / sqrt(DotProduct(v,v));
+			VectorScale(lightcolor, intensity, color);
+		}
+		else
+			VectorClear(color);
+	}
+}
+
 // FIXME: this should be done in a vertex program when possible
 // FIXME: if vertex program not available, this would really benefit from 3DNow! or SSE
 void R_Shadow_TransformVertices(float *out, int numverts, const float *vertex, const matrix4x4_t *matrix)
@@ -991,240 +1024,291 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out, int numverts, cons
 	}
 }
 
-void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtofilter, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3];
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
-	if (!bumptexture)
-		bumptexture = r_shadow_blankbumptexture;
-	// colorscale accounts for how much we multiply the brightness during combine
-	// mult is how many times the final pass of the lighting will be
-	// performed to get more brightness than otherwise possible
-	// limit mult to 64 for sanity sake
-	if (r_shadow_texture3d.integer && r_textureunits.integer >= 4)
+	if (gl_dot3arb)
 	{
-		// 3/2 3D combine path
-		m.tex[0] = R_GetTexture(bumptexture);
-		m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
-		m.tex3d[2] = R_GetTexture(r_shadow_attenuation3dtexture);
-		m.texcombinergb[0] = GL_REPLACE;
-		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-		R_Mesh_TextureState(&m);
-		qglColorMask(0,0,0,1);
-		qglDisable(GL_BLEND);
-		GL_Color(1,1,1,1);
-		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-		R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-		R_Shadow_TransformVertices(varray_texcoord[2], numverts, varray_vertex, matrix_worldtoattenuationxyz);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(basetexture);
-		m.tex[1] = 0;
-		m.texcubemap[1] = R_GetTexture(lightcubemap);
-		m.tex3d[2] = 0;
-		m.texcombinergb[0] = GL_MODULATE;
-		m.texcombinergb[1] = GL_MODULATE;
-		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,0);
-		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-		qglEnable(GL_BLEND);
-		if (lightcubemap)
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
-
-		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		if (!bumptexture)
+			bumptexture = r_shadow_blankbumptexture;
+		// colorscale accounts for how much we multiply the brightness during combine
+		// mult is how many times the final pass of the lighting will be
+		// performed to get more brightness than otherwise possible
+		// limit mult to 64 for sanity sake
+		if (r_shadow_texture3d.integer && r_textureunits.integer >= 4)
 		{
-			GL_Color(color[0], color[1], color[2], 1);
+			// 3/2 3D combine path
+			m.tex[0] = R_GetTexture(bumptexture);
+			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
+			m.tex3d[2] = R_GetTexture(r_shadow_attenuation3dtexture);
+			m.texcombinergb[0] = GL_REPLACE;
+			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+			R_Mesh_TextureState(&m);
+			qglColorMask(0,0,0,1);
+			qglDisable(GL_BLEND);
+			GL_Color(1,1,1,1);
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_TransformVertices(varray_texcoord[2], numverts, varray_vertex, matrix_modeltoattenuationxyz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(basetexture);
+			m.tex[1] = 0;
+			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			m.tex3d[2] = 0;
+			m.texcombinergb[0] = GL_MODULATE;
+			m.texcombinergb[1] = GL_MODULATE;
+			R_Mesh_TextureState(&m);
+			qglColorMask(1,1,1,0);
+			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+			qglEnable(GL_BLEND);
+			if (lightcubemap)
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
+
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+			{
+				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
+			}
 		}
-	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap)
-	{
-		// 1/2/2 3D combine path
-		m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
-		R_Mesh_TextureState(&m);
-		qglColorMask(0,0,0,1);
-		qglDisable(GL_BLEND);
-		GL_Color(1,1,1,1);
-		R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_worldtoattenuationxyz);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(bumptexture);
-		m.tex3d[0] = 0;
-		m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
-		m.texcombinergb[0] = GL_REPLACE;
-		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-		R_Mesh_TextureState(&m);
-		qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
-		qglEnable(GL_BLEND);
-		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-		R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(basetexture);
-		m.texcubemap[1] = R_GetTexture(lightcubemap);
-		m.texcombinergb[0] = GL_MODULATE;
-		m.texcombinergb[1] = GL_MODULATE;
-		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,0);
-		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-		if (lightcubemap)
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
-
-		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap)
 		{
-			GL_Color(color[0], color[1], color[2], 1);
+			// 1/2/2 3D combine path
+			m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
+			R_Mesh_TextureState(&m);
+			qglColorMask(0,0,0,1);
+			qglDisable(GL_BLEND);
+			GL_Color(1,1,1,1);
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(bumptexture);
+			m.tex3d[0] = 0;
+			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
+			m.texcombinergb[0] = GL_REPLACE;
+			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+			R_Mesh_TextureState(&m);
+			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
+			qglEnable(GL_BLEND);
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Mesh_Draw(numverts, numtriangles, elements);
+			c_rt_lightmeshes++;
+			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(basetexture);
+			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			m.texcombinergb[0] = GL_MODULATE;
+			m.texcombinergb[1] = GL_MODULATE;
+			R_Mesh_TextureState(&m);
+			qglColorMask(1,1,1,0);
+			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+			if (lightcubemap)
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
+
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+			{
+				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
+			}
 		}
-	}
-	else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap)
-	{
-		// 2/2 3D combine path
-		m.tex[0] = R_GetTexture(bumptexture);
-		m.tex3d[0] = 0;
-		m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
-		m.texcombinergb[0] = GL_REPLACE;
-		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-		R_Mesh_TextureState(&m);
-		GL_Color(1,1,1,1);
-		qglColorMask(0,0,0,1);
-		qglDisable(GL_BLEND);
-		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-		R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(basetexture);
-		m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
-		m.texcombinergb[0] = GL_MODULATE;
-		m.texcombinergb[1] = GL_MODULATE;
-		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,0);
-		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-		qglEnable(GL_BLEND);
-		R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtoattenuationxyz);
-
-		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap)
 		{
-			GL_Color(color[0], color[1], color[2], 1);
+			// 2/2 3D combine path
+			m.tex[0] = R_GetTexture(bumptexture);
+			m.tex3d[0] = 0;
+			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
+			m.texcombinergb[0] = GL_REPLACE;
+			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+			R_Mesh_TextureState(&m);
+			GL_Color(1,1,1,1);
+			qglColorMask(0,0,0,1);
+			qglDisable(GL_BLEND);
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(basetexture);
+			m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
+			m.texcombinergb[0] = GL_MODULATE;
+			m.texcombinergb[1] = GL_MODULATE;
+			R_Mesh_TextureState(&m);
+			qglColorMask(1,1,1,0);
+			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+			qglEnable(GL_BLEND);
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+			{
+				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
+			}
 		}
-	}
-	else if (r_textureunits.integer >= 4)
-	{
-		// 4/2 2D combine path
-		m.tex[0] = R_GetTexture(bumptexture);
-		m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
-		m.texcombinergb[0] = GL_REPLACE;
-		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-		m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
-		m.tex[3] = R_GetTexture(r_shadow_attenuation2dtexture);
-		R_Mesh_TextureState(&m);
-		qglColorMask(0,0,0,1);
-		qglDisable(GL_BLEND);
-		GL_Color(1,1,1,1);
-		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-		R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-		R_Shadow_TransformVertices(varray_texcoord[2], numverts, varray_vertex, matrix_worldtoattenuationxyz);
-		R_Shadow_TransformVertices(varray_texcoord[3], numverts, varray_vertex, matrix_worldtoattenuationz);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(basetexture);
-		m.texcubemap[1] = R_GetTexture(lightcubemap);
-		m.texcombinergb[0] = GL_MODULATE;
-		m.texcombinergb[1] = GL_MODULATE;
-		m.tex[2] = 0;
-		m.tex[3] = 0;
-		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,0);
-		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-		qglEnable(GL_BLEND);
-		if (lightcubemap)
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
-
-		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		else if (r_textureunits.integer >= 4)
 		{
-			GL_Color(color[0], color[1], color[2], 1);
+			// 4/2 2D combine path
+			m.tex[0] = R_GetTexture(bumptexture);
+			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
+			m.texcombinergb[0] = GL_REPLACE;
+			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+			m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
+			m.tex[3] = R_GetTexture(r_shadow_attenuation2dtexture);
+			R_Mesh_TextureState(&m);
+			qglColorMask(0,0,0,1);
+			qglDisable(GL_BLEND);
+			GL_Color(1,1,1,1);
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Shadow_TransformVertices(varray_texcoord[2], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[3], numverts, varray_vertex, matrix_modeltoattenuationz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(basetexture);
+			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			m.texcombinergb[0] = GL_MODULATE;
+			m.texcombinergb[1] = GL_MODULATE;
+			m.tex[2] = 0;
+			m.tex[3] = 0;
+			R_Mesh_TextureState(&m);
+			qglColorMask(1,1,1,0);
+			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+			qglEnable(GL_BLEND);
+			if (lightcubemap)
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
+
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+			{
+				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
+			}
+		}
+		else
+		{
+			// 2/2/2 2D combine path
+			m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
+			m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+			R_Mesh_TextureState(&m);
+			qglColorMask(0,0,0,1);
+			qglDisable(GL_BLEND);
+			GL_Color(1,1,1,1);
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationz);
+			R_Mesh_Draw(numverts, numtriangles, elements);
+			c_rt_lightmeshes++;
+			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(bumptexture);
+			m.tex[1] = 0;
+			m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
+			m.texcombinergb[0] = GL_REPLACE;
+			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
+			R_Mesh_TextureState(&m);
+			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
+			qglEnable(GL_BLEND);
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
+			R_Mesh_Draw(numverts, numtriangles, elements);
+			c_rt_lightmeshes++;
+			c_rt_lighttris += numtriangles;
+
+			m.tex[0] = R_GetTexture(basetexture);
+			m.texcubemap[1] = R_GetTexture(lightcubemap);
+			m.texcombinergb[0] = GL_MODULATE;
+			m.texcombinergb[1] = GL_MODULATE;
+			R_Mesh_TextureState(&m);
+			qglColorMask(1,1,1,0);
+			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
+			if (lightcubemap)
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
+
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+			{
+				GL_Color(color[0], color[1], color[2], 1);
+				R_Mesh_Draw(numverts, numtriangles, elements);
+				c_rt_lightmeshes++;
+				c_rt_lighttris += numtriangles;
+			}
 		}
 	}
 	else
 	{
-		// 2/2/2 2D combine path
-		m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
-		m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
-		R_Mesh_TextureState(&m);
-		qglColorMask(0,0,0,1);
-		qglDisable(GL_BLEND);
-		GL_Color(1,1,1,1);
-		R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_worldtoattenuationxyz);
-		R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtoattenuationz);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(bumptexture);
-		m.tex[1] = 0;
-		m.texcubemap[1] = R_GetTexture(r_shadow_normalscubetexture);
-		m.texcombinergb[0] = GL_REPLACE;
-		m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-		R_Mesh_TextureState(&m);
-		qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
-		qglEnable(GL_BLEND);
-		memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
-		R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord[1], numverts, varray_vertex, svectors, tvectors, normals, relativelightorigin);
-		R_Mesh_Draw(numverts, numtriangles, elements);
-		c_rt_lightmeshes++;
-		c_rt_lighttris += numtriangles;
-
-		m.tex[0] = R_GetTexture(basetexture);
-		m.texcubemap[1] = R_GetTexture(lightcubemap);
-		m.texcombinergb[0] = GL_MODULATE;
-		m.texcombinergb[1] = GL_MODULATE;
-		R_Mesh_TextureState(&m);
-		qglColorMask(1,1,1,0);
-		qglBlendFunc(GL_DST_ALPHA, GL_ONE);
-		if (lightcubemap)
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
-
-		VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
-		for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
+		if (r_textureunits.integer >= 2)
 		{
-			GL_Color(color[0], color[1], color[2], 1);
+			// voodoo2
+#if 1
+			m.tex[0] = R_GetTexture(basetexture);
+			m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+			R_Mesh_TextureState(&m);
+			qglBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			qglEnable(GL_BLEND);
+#else
+			m.tex[0] = R_GetTexture(basetexture);
+			m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE;
+			R_Mesh_State(&m);
+#endif
+			GL_UseColorArray();
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			R_Shadow_VertexLightingWithXYAttenuationTexture(varray_color, numverts, varray_vertex, normals, color, relativelightorigin, lightradius, matrix_modeltofilter->m[2]);
 			R_Mesh_Draw(numverts, numtriangles, elements);
-			c_rt_lightmeshes++;
-			c_rt_lighttris += numtriangles;
+		}
+		else
+		{
+			// voodoo1
+#if 1
+			m.tex[0] = R_GetTexture(basetexture);
+			R_Mesh_TextureState(&m);
+			qglBlendFunc(GL_SRC_ALPHA, GL_ONE);
+			qglEnable(GL_BLEND);
+#else
+			m.tex[0] = R_GetTexture(basetexture);
+			m.blendfunc1 = GL_SRC_ALPHA;
+			m.blendfunc2 = GL_ONE;
+			R_Mesh_State(&m);
+#endif
+			GL_UseColorArray();
+			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
+			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value, color);
+			R_Shadow_VertexLighting(varray_color, numverts, varray_vertex, normals, color, relativelightorigin, lightradius);
+			R_Mesh_Draw(numverts, numtriangles, elements);
 		}
 	}
 }
 
-void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtofilter, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
+void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap)
 {
 	int renders;
 	float color[3];
 	rmeshstate_t m;
+	if (!gl_dot3arb)
+		return;
 	memset(&m, 0, sizeof(m));
 	if (!bumptexture)
 		bumptexture = r_shadow_blankbumptexture;
@@ -1272,7 +1356,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
 			R_Mesh_TextureState(&m);
 			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_worldtoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1285,7 +1369,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
 			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
@@ -1336,7 +1420,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
 			m.tex[1] = R_GetTexture(glosstexture);
 			R_Mesh_TextureState(&m);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_worldtoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
 			memcpy(varray_texcoord[1], texcoords, numverts * sizeof(float[4]));
 			qglColorMask(1,1,1,0);
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
@@ -1394,8 +1478,8 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
 			R_Mesh_TextureState(&m);
 			qglBlendFunc(GL_DST_ALPHA, GL_ZERO);
-			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_worldtoattenuationxyz);
-			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtoattenuationz);
+			R_Shadow_TransformVertices(varray_texcoord[0], numverts, varray_vertex, matrix_modeltoattenuationxyz);
+			R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltoattenuationz);
 			R_Mesh_Draw(numverts, numtriangles, elements);
 			c_rt_lightmeshes++;
 			c_rt_lighttris += numtriangles;
@@ -1407,7 +1491,7 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			qglBlendFunc(GL_DST_ALPHA, GL_ONE);
 			memcpy(varray_texcoord[0], texcoords, numverts * sizeof(float[4]));
 			if (lightcubemap)
-				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_worldtofilter);
+				R_Shadow_TransformVertices(varray_texcoord[1], numverts, varray_vertex, matrix_modeltofilter);
 
 			VectorScale(lightcolor, r_colorscale * r_shadow_lightintensityscale.value * 0.25f, color);
 			for (renders = 0;renders < 64 && (color[0] > 0 || color[1] > 0 || color[2] > 0);renders++, color[0] = max(0, color[0] - 1.0f), color[1] = max(0, color[1] - 1.0f), color[2] = max(0, color[2] - 1.0f))
