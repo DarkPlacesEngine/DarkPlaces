@@ -337,8 +337,8 @@ void Mod_CheckLoaded(model_t *mod)
 			Mod_LoadModel(mod, true, true, mod->isworldmodel);
 		else
 		{
-			if (mod->type == mod_invalid)
-				Host_Error("Mod_CheckLoaded: invalid model\n");
+			//if (mod->type == mod_invalid)
+			//	Host_Error("Mod_CheckLoaded: invalid model\n");
 			mod->used = true;
 			return;
 		}
