@@ -505,17 +505,20 @@ int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
 // (server and client) clears the database to contain blank entities and no
 // commits (thus delta compression compresses against nothing)
 void EntityFrame4_ClearDatabase(entity_database4_t *d);
-// (server) applies commit to database and removes it (and older)
-void EntityFrame4_AckFrame(entity_database4_t *d, int frame);
-// (server) prepares for sending entities (maxbytes = bandwidth limit)
-void EntityFrame4_Commit_Begin(entity_database4_t *d, int frame, sizebuf_t *msg, int maxbytes);
+// (server and client) applies commit to database and removes it (and older)
+void EntityFrame4_Commit_Ack(entity_database4_t *d, int frame);
+// (server) prepares for sending entities
+void EntityFrame4_Commit_Write_Begin(entity_database4_t *d, int frame, sizebuf_t *msg);
 // (server) sends an entity and adds to current commit (may delete old
-// commits to make room), returns success (if false stop sending)
-int EntityFrame4_Commit_Entity(entity_database4_t *d, entity_state_t *s, sizebuf_t *msg);
+// commits to make room), returns success if there is room left in the packet
+// (according to maxbytes), otherwise false (end commit)
+int EntityFrame4_Commit_Write_Entity(entity_database4_t *d, entity_state_t *s, sizebuf_t *msg, int maxbytes);
 // (server) ends commit
-void EntityFrame4_Commit_End(entity_database4_t *d, sizebuf_t *msg);
-// (client) parses a commit from the network stream
-void EntityFrame4_ParseCommit(entity_database4_t *d);
+void EntityFrame4_Commit_Write_End(entity_database4_t *d, sizebuf_t *msg);
+// (client) begins parsing of a commit from the network stream
+void EntityFrame4_Commit_Read_Begin(entity_database4_t *d);
+// (client) parses a commit entity from the network stream (NULL == end)
+entity_state_t *EntityFrame4_Commit_Read_Entity(entity_database4_t *d);
 
 #endif
 
