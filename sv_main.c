@@ -506,7 +506,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 
 			// don't try to cull embedded brush models with this, they're sometimes huge (spanning several rooms)
-			if (sv_cullentities_trace.integer && (model == NULL || model->type != mod_brush || model->name[0] != '*'))
+			if (sv_cullentities_trace.integer && (model == NULL || model->brush.TraceBox == NULL || model->name[0] != '*'))
 			{
 				// LordHavoc: test random offsets, to maximize chance of detection
 				testorigin[0] = lhrandom(entmins[0], entmaxs[0]);

@@ -265,7 +265,7 @@ void R_MarkLights(entity_render_t *ent)
 	int i, bit, bitindex;
 	rdlight_t *rd;
 	vec3_t lightorigin;
-	if (!gl_flashblend.integer && r_dynamic.integer && ent->model)
+	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brushq1.numleafs)
 	{
 		for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
 		{

@@ -532,7 +532,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 	entity_render_t *ent;
 	model_t *model;
 	vec3_t org;
-	if (cl.worldmodel == NULL)
+	if (cl.worldmodel == NULL || !cl.worldmodel->brushq1.nodes)
 		return;
 	fcolor[0] = cr1;
 	fcolor[1] = cg1;
@@ -553,7 +553,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 		if (model && model->name[0] == '*')
 		{
 			Mod_CheckLoaded(model);
-			if (model->type == mod_brush)
+			if (model->brushq1.nodes)
 			{
 				Matrix4x4_Transform(&ent->inversematrix, origin, org);
 				R_StainNode(model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode, model, org, radius, fcolor);
@@ -1748,13 +1748,13 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 	}
 }
 
-void R_WorldVisibility (entity_render_t *ent)
+void R_WorldVisibility(entity_render_t *ent)
 {
 	vec3_t modelorg;
 	mleaf_t *viewleaf;
 
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
-	viewleaf = ent->model ? ent->model->brushq1.PointInLeaf(ent->model, modelorg) : NULL;
+	viewleaf = (ent->model && ent->model->brushq1.PointInLeaf) ? ent->model->brushq1.PointInLeaf(ent->model, modelorg) : NULL;
 	R_PVSUpdate(ent, viewleaf);
 
 	if (!viewleaf)
@@ -1766,18 +1766,23 @@ void R_WorldVisibility (entity_render_t *ent)
 		R_PortalWorldNode (ent, viewleaf);
 }
 
-void R_DrawWorld (entity_render_t *ent)
+void R_DrawWorld(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	R_PrepareSurfaces(ent);
-	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->brushq1.pvstexturechains);
-	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->brushq1.pvstexturechains);
-	if (r_drawportals.integer)
-		R_DrawPortals(ent);
+	if (!ent->model->brushq1.numleafs && ent->model->Draw)
+		ent->model->Draw(ent);
+	else
+	{
+		R_PrepareSurfaces(ent);
+		R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->brushq1.pvstexturechains);
+		R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->brushq1.pvstexturechains);
+		if (r_drawportals.integer)
+			R_DrawPortals(ent);
+	}
 }
 
-void R_Model_Brush_DrawSky (entity_render_t *ent)
+void R_Model_Brush_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
@@ -1786,7 +1791,7 @@ void R_Model_Brush_DrawSky (entity_render_t *ent)
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY, ent->model->brushq1.pvstexturechains);
 }
 
-void R_Model_Brush_Draw (entity_render_t *ent)
+void R_Model_Brush_Draw(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
@@ -1897,6 +1902,53 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	}
 }
 
+void R_Q3BSP_DrawFace_Mesh(entity_render_t *ent, q3mface_t *face)
+{
+	const surfmesh_t *mesh;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->texture->skin.base);
+	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
+	if (face->lightmaptexture)
+	{
+		m.tex[1] = R_GetTexture(face->lightmaptexture);
+		m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
+		m.texrgbscale[1] = 2;
+		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	}
+	else
+	{
+		m.texrgbscale[0] = 2;
+		GL_ColorPointer(face->data_color4f);
+	}
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
+}
+
+void R_Q3BSP_DrawFace_Patch(entity_render_t *ent, q3mface_t *face)
+{
+}
+
+void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
+{
+	switch(face->type)
+	{
+		case Q3FACETYPE_POLYGON:
+		case Q3FACETYPE_MESH:
+			R_Q3BSP_DrawFace_Mesh(ent, face);
+			break;
+		case Q3FACETYPE_PATCH:
+			R_Q3BSP_DrawFace_Patch(ent, face);
+			break;
+		case Q3FACETYPE_FLARE:
+			break;
+	}
+}
+
 /*
 void R_Q3BSP_DrawSky(entity_render_t *ent)
 {
@@ -1905,6 +1957,12 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 
 void R_Q3BSP_Draw(entity_render_t *ent)
 {
+	int i;
+	q3mface_t *face;
+	model_t *model;
+	model = ent->model;
+	for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+		R_Q3BSP_DrawFace(ent, face);
 }
 
 /*

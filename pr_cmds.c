@@ -2542,8 +2542,6 @@ static msurface_t *getsurface(edict_t *ed, int surfnum)
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
 		return NULL;
 	model = sv.models[modelindex];
-	if (model->type != mod_brush)
-		return NULL;
 	if (surfnum < 0 || surfnum >= model->brushq1.nummodelsurfaces)
 		return NULL;
 	return model->brushq1.surfaces + surfnum + model->brushq1.firstmodelsurface;
@@ -2623,7 +2621,7 @@ void PF_getsurfacenearpoint(void)
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
 		return;
 	model = sv.models[modelindex];
-	if (model->type != mod_brush)
+	if (!model->brushq1.numsurfaces)
 		return;
 
 	// FIXME: implement rotation/scaling
