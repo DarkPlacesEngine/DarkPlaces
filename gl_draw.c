@@ -415,14 +415,14 @@ void Draw_String (int x, int y, char *str, int maxlen)
 {
 	int num;
 	float frow, fcol;
+	if (!r_render.value)
+		return;
 	if (y <= -8 || y >= (int) vid.height || x >= (int) vid.width || *str == 0) // completely offscreen or no text to print
 		return;
 	if (maxlen < 1)
 		maxlen = strlen(str);
 	else if (maxlen > (int) strlen(str))
 		maxlen = strlen(str);
-	if (!r_render.value)
-		return;
 	glBindTexture(GL_TEXTURE_2D, char_texture);
 
 	// LordHavoc: NEAREST mode on text if not scaling up
