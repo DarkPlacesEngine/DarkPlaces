@@ -105,7 +105,7 @@ extern enum {
 
 	// mouse buttons generate virtual keys
 
-	K_MOUSE1,
+	K_MOUSE1 = 512,
 	K_MOUSE2,
 	K_MOUSE3,
 	K_MOUSE4,
@@ -127,7 +127,7 @@ extern enum {
 //
 // joystick buttons
 //
-	K_JOY1,
+	K_JOY1 = 1024,
 	K_JOY2,
 	K_JOY3,
 	K_JOY4,
