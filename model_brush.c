@@ -36,8 +36,12 @@ cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_subdivisions_tolerance = {0, "r_subdivisions_tolerance", "4"};
 cvar_t r_subdivisions_minlevel = {0, "r_subdivisions_minlevel", "0"};
-cvar_t r_subdivisions_maxlevel = {0, "r_subdivisions_maxlevel", "4"};
+cvar_t r_subdivisions_maxlevel = {0, "r_subdivisions_maxlevel", "10"};
 cvar_t r_subdivisions_maxvertices = {0, "r_subdivisions_maxvertices", "65536"};
+cvar_t r_subdivisions_collision_tolerance = {0, "r_subdivisions_collision_tolerance", "15"};
+cvar_t r_subdivisions_collision_minlevel = {0, "r_subdivisions_collision_minlevel", "0"};
+cvar_t r_subdivisions_collision_maxlevel = {0, "r_subdivisions_collision_maxlevel", "10"};
+cvar_t r_subdivisions_collision_maxvertices = {0, "r_subdivisions_collision_maxvertices", "4225"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
 cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0"};
@@ -55,6 +59,10 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_subdivisions_minlevel);
 	Cvar_RegisterVariable(&r_subdivisions_maxlevel);
 	Cvar_RegisterVariable(&r_subdivisions_maxvertices);
+	Cvar_RegisterVariable(&r_subdivisions_collision_tolerance);
+	Cvar_RegisterVariable(&r_subdivisions_collision_minlevel);
+	Cvar_RegisterVariable(&r_subdivisions_collision_maxlevel);
+	Cvar_RegisterVariable(&r_subdivisions_collision_maxvertices);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
@@ -4173,7 +4181,59 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided to %i vertices / %i triangles\n", patchsize[0], patchsize[1], out->num_vertices, out->num_triangles);
 			}
 			// q3map does not put in collision brushes for curves... ugh
+			// build the lower quality collision geometry
 			out->collisions = true;
+			xlevel = QuadraticSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
+			ylevel = QuadraticSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
+			// bound to user settings
+			xlevel = bound(r_subdivisions_collision_minlevel.integer, xlevel, r_subdivisions_collision_maxlevel.integer);
+			ylevel = bound(r_subdivisions_collision_minlevel.integer, ylevel, r_subdivisions_collision_maxlevel.integer);
+			// bound to sanity settings
+			xlevel = bound(0, xlevel, 10);
+			ylevel = bound(0, ylevel, 10);
+			// bound to user limit on vertices
+			while ((xlevel > 0 || ylevel > 0) && (((patchsize[0] - 1) << xlevel) + 1) * (((patchsize[1] - 1) << ylevel) + 1) > min(r_subdivisions_collision_maxvertices.integer, 262144))
+			{
+				if (xlevel > ylevel)
+					xlevel--;
+				else
+					ylevel--;
+			}
+			finalwidth = ((patchsize[0] - 1) << xlevel) + 1;
+			finalheight = ((patchsize[1] - 1) << ylevel) + 1;
+			finalvertices = finalwidth * finalheight;
+			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+			out->data_collisionvertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[3]) * finalvertices);
+			out->data_collisionelement3i = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * finaltriangles);
+			out->num_collisionvertices = finalvertices;
+			out->num_collisiontriangles = finaltriangles;
+			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_collisionvertex3f);
+			// generate elements
+			e = out->data_collisionelement3i;
+			for (y = 0;y < finalheight - 1;y++)
+			{
+				row0 = (y + 0) * finalwidth;
+				row1 = (y + 1) * finalwidth;
+				for (x = 0;x < finalwidth - 1;x++)
+				{
+					*e++ = row0;
+					*e++ = row1;
+					*e++ = row0 + 1;
+					*e++ = row1;
+					*e++ = row1 + 1;
+					*e++ = row0 + 1;
+					row0++;
+					row1++;
+				}
+			}
+			out->num_collisiontriangles = Mod_RemoveDegenerateTriangles(out->num_collisiontriangles, out->data_collisionelement3i, out->data_collisionelement3i, out->data_collisionvertex3f);
+			if (developer.integer)
+			{
+				if (out->num_collisiontriangles < finaltriangles)
+					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided for collisions to %i vertices / %i triangles, %i degenerate triangles removed (leaving %i)\n", patchsize[0], patchsize[1], out->num_collisionvertices, finaltriangles, finaltriangles - out->num_collisiontriangles, out->num_collisiontriangles);
+				else
+					Con_Printf("Mod_Q3BSP_LoadFaces: %ix%i curve subdivided for collisions to %i vertices / %i triangles\n", patchsize[0], patchsize[1], out->num_collisionvertices, out->num_collisiontriangles);
+			}
 			break;
 		case Q3FACETYPE_FLARE:
 			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
@@ -4762,7 +4822,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 			if (face->collisions && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
 				face->collisionmarkframe = markframe;
-				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 				if (startfrac > trace->realfraction)
 					return;
 			}
@@ -5142,7 +5202,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 			if (face->collisions && face->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
 				face->markframe = markframe;
-				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -5196,7 +5256,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 					{
 						face = model->brushq3.data_thismodel->firstface + i;
 						if (face->collisions)
-							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 					}
 				}
 			}
@@ -5220,7 +5280,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 				{
 					face = model->brushq3.data_thismodel->firstface + i;
 					if (face->collisions)
-						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 				}
 			}
 		}
