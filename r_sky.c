@@ -41,20 +41,43 @@ void R_SkyStartFrame(void)
 R_SetSkyBox
 ==================
 */
-int R_SetSkyBox(const char *sky)
+void R_UnloadSkyBox(void)
+{
+	int i;
+	for (i = 0;i < 6;i++)
+	{
+		if (skyboxside[i])
+			R_FreeTexture(skyboxside[i]);
+		skyboxside[i] = NULL;;
+	}
+}
+
+void R_LoadSkyBox(void)
 {
 	int i;
 	char name[1024];
 	qbyte *image_rgba;
+	R_UnloadSkyBox();
+	if (!skyname[0])
+		return;
+	for (i = 0;i < 6;i++)
+	{
+		if (snprintf(name, sizeof(name), "env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+		{
+			if (snprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+			{
+				Con_Printf ("Couldn't load env/%s%s or gfx/env/%s%s\n", skyname, suf[i], skyname, suf[i]);
+				continue;
+			}
+		}
+		skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, image_rgba, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
+		Mem_Free(image_rgba);
+	}
+}
 
+int R_SetSkyBox(const char *sky)
+{
 	if (strcmp(sky, skyname) == 0) // no change
-		return true;
-
-	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
-	skyavailable_box = false;
-	skyname[0] = 0;
-
-	if (!sky[0])
 		return true;
 
 	if (strlen(sky) > 1000)
@@ -63,26 +86,18 @@ int R_SetSkyBox(const char *sky)
 		return false;
 	}
 
-	for (i = 0;i < 6;i++)
-	{
-		sprintf (name, "env/%s%s", sky, suf[i]);
-		if (!(image_rgba = loadimagepixels(name, false, 0, 0)))
-		{
-			sprintf (name, "gfx/env/%s%s", sky, suf[i]);
-			if (!(image_rgba = loadimagepixels(name, false, 0, 0)))
-			{
-				Con_Printf ("Couldn't load env/%s%s or gfx/env/%s%s\n", sky, suf[i], sky, suf[i]);
-				continue;
-			}
-		}
-		skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, image_rgba, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
-		Mem_Free(image_rgba);
-	}
+	skyavailable_box = false;
+	strcpy(skyname, sky);
+
+	R_UnloadSkyBox();
+	R_LoadSkyBox();
+
+	if (!skyname[0])
+		return true;
 
 	if (skyboxside[0] || skyboxside[1] || skyboxside[2] || skyboxside[3] || skyboxside[4] || skyboxside[5])
 	{
 		skyavailable_box = true;
-		strcpy(skyname, sky);
 		return true;
 	}
 	return false;
@@ -480,10 +495,12 @@ static void r_sky_start(void)
 	skytexturepool = R_AllocTexturePool();
 	solidskytexture = NULL;
 	alphaskytexture = NULL;
+	R_LoadSkyBox();
 }
 
 static void r_sky_shutdown(void)
 {
+	R_UnloadSkyBox();
 	R_FreeTexturePool(&skytexturepool);
 	solidskytexture = NULL;
 	alphaskytexture = NULL;
