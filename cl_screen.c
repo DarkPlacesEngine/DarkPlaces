@@ -17,6 +17,7 @@ cvar_t scr_showpause = {CVAR_SAVE, "showpause","1"};
 cvar_t scr_printspeed = {0, "scr_printspeed","8"};
 cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
 cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
+cvar_t vid_pixelaspect = {CVAR_SAVE, "vid_pixelaspect", "1"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
@@ -471,6 +472,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&vid_conwidth);
 	Cvar_RegisterVariable (&vid_conheight);
+	Cvar_RegisterVariable (&vid_pixelaspect);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&cl_avidemo);
