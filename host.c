@@ -879,7 +879,10 @@ void Host_Init (void)
 	}
 
 	// only cvars are executed when host_initialized == false
-	Cbuf_InsertText("exec quake.rc\n");
+	if (gamemode == GAME_TEU)
+		Cbuf_InsertText("exec teu.rc\n");
+	else
+		Cbuf_InsertText("exec quake.rc\n");
 	Cbuf_Execute();
 
 	host_initialized = true;
@@ -895,7 +898,10 @@ void Host_Init (void)
 
 	// stuff it again so the first host frame will execute it again, this time
 	// in its entirety
-	Cbuf_InsertText("exec quake.rc\n");
+	if (gamemode == GAME_TEU)
+		Cbuf_InsertText("exec teu.rc\n");
+	else
+		Cbuf_InsertText("exec quake.rc\n");
 	Cbuf_Execute();
 }
 
