@@ -78,13 +78,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define K_PAUSE			255
 
 //
-// mouse buttons generate virtual keys
-//
-#define	K_MOUSE1		200
-#define	K_MOUSE2		201
-#define	K_MOUSE3		202
-
-//
 // joystick buttons
 //
 #define	K_JOY1			203
@@ -131,6 +124,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define K_MWHEELDOWN	239
 #define K_MWHEELUP		240
+
+//
+// mouse buttons generate virtual keys
+//
+#define	K_MOUSE1		241
+#define	K_MOUSE2		242
+#define	K_MOUSE3		243
+// LordHavoc: thanks to backslash for this MOUSE4 and MOUSE5 code,
+// LordHavoc: however I renumbered it differently and added MOUSE6 through MOUSE10
+/* backslash :: imouse explorer buttons */
+#define K_MOUSE4		244
+#define K_MOUSE5		245
+/* backslash :: renumber everything that follows so that the mouse4/5 buttons can be squeezed in */
+// LordHavoc: added these for completeness
+#define	K_MOUSE6		246
+#define	K_MOUSE7		247
+#define	K_MOUSE8		248
+#define	K_MOUSE9		249
+#define	K_MOUSE10		250
+
 
 extern char *keybindings[256];
 extern int key_repeats[256];
