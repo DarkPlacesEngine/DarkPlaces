@@ -626,7 +626,7 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	f = -DotProduct(svector3f, normal3f);
 	VectorMA(svector3f, f, normal3f, svector3f);
 	VectorNormalize(svector3f);
-	CrossProduct(svector3f, tvector3f, tangentcross);
+	CrossProduct(tvector3f, svector3f, tangentcross);
 	// if texture is mapped the wrong way (counterclockwise), the tangents have to be flipped, this is detected by calculating a normal from the two tangents, and seeing if it is opposite the surface normal
 	if (DotProduct(tangentcross, normal3f) < 0)
 	{
