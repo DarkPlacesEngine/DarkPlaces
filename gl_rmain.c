@@ -588,9 +588,9 @@ void R_RenderView(void)
 	r_view_matrix = r_refdef.viewentitymatrix;
 	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 	r_rtworld = r_shadow_realtime_world.integer;
-	r_rtworldshadows = r_rtworld && r_shadow_realtime_world_shadows.integer;
+	r_rtworldshadows = r_rtworld && r_shadow_realtime_world_shadows.integer && gl_stencil;
 	r_rtdlight = r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer;
-	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer);
+	r_rtdlightshadows = r_rtdlight && (r_rtworld ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer) && gl_stencil;
 	r_lightmapintensity = r_rtworld ? r_shadow_realtime_world_lightmaps.value : 1;
 
 	// GL is weird because it's bottom to top, r_view_y is top to bottom
@@ -638,7 +638,7 @@ void R_RenderScene(void)
 	R_SetFrustum();
 
 	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
-	if (gl_stencil && (r_rtworldshadows || r_rtdlightshadows))
+	if (r_rtworldshadows || r_rtdlightshadows)
 		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view_fov_x, r_view_fov_y, 1.0f);
 	else
 		GL_SetupView_Mode_Perspective(r_view_fov_x, r_view_fov_y, 1.0f, r_farclip);
