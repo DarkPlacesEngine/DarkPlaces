@@ -216,9 +216,9 @@ quake -nosound +cmd amlev1
 */
 void Cmd_StuffCmds_f (void)
 {
-	int		i, j;
-	int		s;
-	char	*text, *build, c;
+	int		i, j, l;
+	// this is per command, and bounds checked (no buffer overflows)
+	char	build[2048];
 
 	if (Cmd_Argc () != 1)
 	{
@@ -226,56 +226,34 @@ void Cmd_StuffCmds_f (void)
 		return;
 	}
 
-// build the combined string to parse from
-	s = 0;
-	for (i=1 ; i<com_argc ; i++)
+	for (i = 0;i < com_argc;i++)
 	{
-		if (!com_argv[i])
-			continue;		// NEXTSTEP nulls out -NXHost
-		s += strlen (com_argv[i]) + 1;
-	}
-	if (!s)
-		return;
-
-	text = Mem_Alloc (tempmempool, s + 1);
-	text[0] = 0;
-	for (i=1 ; i<com_argc ; i++)
-	{
-		if (!com_argv[i])
-			continue;		// NEXTSTEP nulls out -NXHost
-		strcat (text,com_argv[i]);
-		if (i != com_argc-1)
-			strcat (text, " ");
-	}
-
-	// pull out the commands
-	build = Mem_Alloc (tempmempool, s + 1);
-	build[0] = 0;
-
-	for (i=0 ; i<s-1 ; i++)
-	{
-		if (text[i] == '+')
+		if (com_argv[i] && com_argv[i][0] == '+' && (com_argv[i][1] < '0' || com_argv[i][1] > '9'))
 		{
+			l = 0;
+			j = 1;
+			while (com_argv[i][j])
+				build[l++] = com_argv[i][j++];
 			i++;
-
-			for (j=i ; (text[j] != '+') && (text[j] != '-') && (text[j] != 0) ; j++)
-				;
-
-			c = text[j];
-			text[j] = 0;
-
-			strcat (build, text+i);
-			strcat (build, "\n");
-			text[j] = c;
-			i = j-1;
+			for (;i < com_argc;i++)
+			{
+				if (!com_argv[i])
+					continue;
+				if ((com_argv[i][0] == '+' || com_argv[i][0] == '-') && (com_argv[i][1] < '0' || com_argv[i][1] > '9'))
+					break;
+				if (l + strlen(com_argv[i]) + 5 > sizeof(build))
+					break;
+				build[l++] = ' ';
+				build[l++] = '\"';
+				for (j = 0;com_argv[i][j];j++)
+					build[l++] = com_argv[i][j];
+				build[l++] = '\"';
+			}
+			build[l++] = '\n';
+			build[l++] = 0;
+			Cbuf_InsertText (build);
 		}
 	}
-
-	if (build[0])
-		Cbuf_InsertText (build);
-
-	Mem_Free (text);
-	Mem_Free (build);
 }
 
 
