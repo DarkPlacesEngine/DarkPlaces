@@ -1467,7 +1467,7 @@ void M_Menu_Options_Effects_f (void)
 extern cvar_t cl_particles;
 extern cvar_t cl_explosions;
 extern cvar_t cl_stainmaps;
-extern cvar_t r_lightmodels;
+extern cvar_t r_modellights;
 extern cvar_t cl_particles_bulletimpacts;
 extern cvar_t cl_particles_smoke;
 extern cvar_t cl_particles_sparks;
@@ -1483,7 +1483,7 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	switch (options_effects_cursor)
 	{
 	case 0:
-		Cvar_SetValueQuick (&r_lightmodels, !r_lightmodels.integer);
+		Cvar_SetValueQuick (&r_modellights, bound(0, r_modellights.value + dir, 8));
 		break;
 	case 1:
 		Cvar_SetValueQuick (&cl_particles, !cl_particles.integer);
@@ -1528,7 +1528,7 @@ void M_Options_Effects_Draw (void)
 	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
 
 	y = 32;
-	M_Print(16, y, "        Model Lighting");M_DrawCheckbox(220, y, r_lightmodels.integer);y += 8;
+	M_Print(16, y, "      Lights Per Model");M_DrawSlider(220, y, r_modellights.value / 8);y += 8;
 	M_Print(16, y, "             Particles");M_DrawCheckbox(220, y, cl_particles.integer);y += 8;
 	M_Print(16, y, "            Explosions");M_DrawCheckbox(220, y, cl_explosions.integer);y += 8;
 	M_Print(16, y, "             Stainmaps");M_DrawCheckbox(220, y, cl_stainmaps.integer);y += 8;
