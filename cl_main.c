@@ -613,8 +613,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 					origin[2] += (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
 			}
 			// transfer certain model flags to effects
-			if (e->render.model->flags2 & EF_FULLBRIGHT)
-				e->render.effects |= EF_FULLBRIGHT;
+			e->render.effects |= e->render.model->flags2 & (EF_FULLBRIGHT | EF_ADDITIVE);
 			if (cl_prydoncursor.integer && (e->render.effects & EF_SELECTABLE) && cl.cmd.cursor_entitynumber == e - cl_entities)
 				VectorScale(e->render.colormod, 2, e->render.colormod);
 		}
