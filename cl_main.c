@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // cl_main.c  -- client main loop
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 // we need to declare some mouse variables here, because the menu system
 // references them even when on a unix system.
@@ -589,7 +590,7 @@ static void CL_RelinkNetworkEntities()
 			v2[0] = v[0] * 18 + neworg[0];
 			v2[1] = v[1] * 18 + neworg[1];
 			v2[2] = v[2] * 18 + neworg[2] + 16;
-			TraceLine(neworg, v2, v, NULL, 0, true);
+			CL_TraceLine(neworg, v2, v, NULL, 0, true);
 
 			CL_AllocDlight (NULL, v, ent->persistent.muzzleflash, 1, 1, 1, 0, 0);
 			ent->persistent.muzzleflash -= cl.frametime * 1000;
@@ -796,7 +797,7 @@ void CL_RelinkEntities (void)
 	CL_DecayLights ();
 	CL_RelinkStaticEntities();
 	CL_RelinkNetworkEntities();
-	TraceLine_ScanForBModels();
+	CL_TraceLine_ScanForBModels();
 	CL_RelinkEffects();
 	CL_MoveParticles();
 	CL_UpdateTEnts();

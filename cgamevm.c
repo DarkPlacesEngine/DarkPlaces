@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "cgame_api.h"
+#include "cl_collision.h"
 
 #define CGVM_RENDERENTITIES 1024
 
@@ -202,7 +203,7 @@ float CGVM_TracePhysics(const float *start, const float *end, const float *world
 	middle[2] = (worldmins[2] + worldmaxs[2]) * 0.5f;
 	VectorAdd(start, middle, start2);
 	VectorAdd(end, middle, end2);
-	frac = TraceLine((float *)start2, (float *)end2, impactpos, impactnormal, 0, true);
+	frac = CL_TraceLine((float *)start2, (float *)end2, impactpos, impactnormal, 0, true);
 	VectorSubtract(impactpos, middle, impactpos);
 	//VectorCopy(end, impactpos);
 	//VectorClear(impactnormal);

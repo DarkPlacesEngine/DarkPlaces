@@ -519,28 +519,25 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	qbyte *pvs;
-	vec3_t org, origin, angles, entmins, entmaxs;
+	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
 	float nextfullupdate;
 	edict_t *ent;
 	eval_t *val;
 	entity_state_t *baseline; // LordHavoc: delta or startup baseline
 	trace_t trace;
 	model_t *model;
-	double testeye[3];
-	double testorigin[3];
 
 	Mod_CheckLoaded(sv.worldmodel);
 
 // find the client's PVS
-	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
-	VectorCopy (org, testeye);
-	pvs = SV_FatPVS (org);
+	VectorAdd (clent->v.origin, clent->v.view_ofs, testeye);
+	pvs = SV_FatPVS (testeye);
 	/*
 	// dp protocol
 	MSG_WriteByte(msg, svc_playerposition);
-	MSG_WriteFloat(msg, org[0]);
-	MSG_WriteFloat(msg, org[1]);
-	MSG_WriteFloat(msg, org[2]);
+	MSG_WriteFloat(msg, testeye[0]);
+	MSG_WriteFloat(msg, testeye[1]);
+	MSG_WriteFloat(msg, testeye[2]);
 	*/
 
 	culled_pvs = 0;
@@ -659,7 +656,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 
 			// or not visible through the portals
-			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
+			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, testeye, entmins, entmaxs))
 			{
 				culled_portal++;
 				continue;
@@ -673,36 +670,18 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
 
-				memset (&trace, 0, sizeof(trace_t));
-				trace.fraction = 1;
-				trace.allsolid = true;
-				VectorCopy(testorigin, trace.endpos);
-
-				VectorCopy(org, RecursiveHullCheckInfo.start);
-				VectorSubtract(testorigin, testeye, RecursiveHullCheckInfo.dist);
-				RecursiveHullCheckInfo.hull = sv.worldmodel->hulls;
-				RecursiveHullCheckInfo.trace = &trace;
-				SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, testeye, testorigin);
+				Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 
 				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
 				{
 					//test nearest point on bbox
-					testorigin[0] = bound(entmins[0], org[0], entmaxs[0]);
-					testorigin[1] = bound(entmins[1], org[1], entmaxs[1]);
-					testorigin[2] = bound(entmins[2], org[2], entmaxs[2]);
+					testorigin[0] = bound(entmins[0], testeye[0], entmaxs[0]);
+					testorigin[1] = bound(entmins[1], testeye[1], entmaxs[1]);
+					testorigin[2] = bound(entmins[2], testeye[2], entmaxs[2]);
 
-					memset (&trace, 0, sizeof(trace_t));
-					trace.fraction = 1;
-					trace.allsolid = true;
-					VectorCopy(testorigin, trace.endpos);
-
-					VectorCopy(org, RecursiveHullCheckInfo.start);
-					VectorSubtract(testorigin, testeye, RecursiveHullCheckInfo.dist);
-					RecursiveHullCheckInfo.hull = sv.worldmodel->hulls;
-					RecursiveHullCheckInfo.trace = &trace;
-					SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, testeye, testorigin);
+					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 
 					if (trace.fraction == 1)
 						client->visibletime[e] = realtime + 1;
@@ -895,13 +874,11 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	qbyte *pvs;
-	vec3_t org, origin, angles, entmins, entmaxs;
+	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
 	edict_t *ent;
 	eval_t *val;
 	trace_t trace;
 	model_t *model;
-	double testeye[3];
-	double testorigin[3];
 	entity_frame_t entityframe;
 	entity_state_t *s;
 
@@ -912,9 +889,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, testeye);
-	VectorCopy (testeye, org);
-	pvs = SV_FatPVS (org);
-	EntityFrame_Clear(&entityframe, org);
+	pvs = SV_FatPVS (testeye);
+	EntityFrame_Clear(&entityframe, testeye);
 
 	culled_pvs = 0;
 	culled_portal = 0;
@@ -1028,7 +1004,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 
 			// or not visible through the portals
-			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
+			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, testeye, entmins, entmaxs))
 			{
 				culled_portal++;
 				continue;
@@ -1041,16 +1017,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
 
-				memset (&trace, 0, sizeof(trace_t));
-				trace.fraction = 1;
-				trace.allsolid = true;
-				VectorCopy(testorigin, trace.endpos);
-
-				VectorCopy(org, RecursiveHullCheckInfo.start);
-				VectorSubtract(testorigin, testeye, RecursiveHullCheckInfo.dist);
-				RecursiveHullCheckInfo.hull = sv.worldmodel->hulls;
-				RecursiveHullCheckInfo.trace = &trace;
-				SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, testeye, testorigin);
+				Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
 
 				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // r_light.c
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 rdlight_t r_dlight[MAX_DLIGHTS];
 int r_numdlights = 0;
@@ -170,7 +171,7 @@ void R_DrawCoronas(void)
 		{
 			// trace to a point just barely closer to the eye
 			VectorSubtract(rd->origin, vpn, diff);
-			if (TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
+			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
 				scale = 1.0f / 262144.0f;
 				//scale = 64.0f / (DotProduct(diff,diff) + 1024.0f);
@@ -759,7 +760,7 @@ void R_CompleteLightPoint (vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf)
 				f = (1.0f / f) - sl->subtract;
 				if (f > 0)
 				{
-					if (TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
+					if (CL_TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
 					{
 						f *= d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
 						VectorMA(color, f, sl->light, color);
@@ -885,7 +886,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			// this code is unused for now
 			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && nearlights < MAX_DLIGHTS;i++, sl++)
 			{
-				if (TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
+				if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
 				{
 					nl->falloff = sl->falloff;
 					// transform the light into the model's coordinate system
