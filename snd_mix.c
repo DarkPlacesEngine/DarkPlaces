@@ -344,6 +344,11 @@ void S_PaintChannels(int endtime)
 
 				if (count > 0)
 				{
+					if (ch->leftvol > 255)
+						ch->leftvol = 255;
+					if (ch->rightvol > 255)
+						ch->rightvol = 255;
+
 					if (sfx->format.width == 1)
 						stop_paint = !SND_PaintChannelFrom8(ch, count);
 					else
@@ -402,11 +407,6 @@ qboolean SND_PaintChannelFrom8 (channel_t *ch, int count)
 	unsigned char *sfx;
 	const sfxbuffer_t *sb;
 	int i, n;
-
-	if (ch->leftvol > 255)
-		ch->leftvol = 255;
-	if (ch->rightvol > 255)
-		ch->rightvol = 255;
 
 	lscale = snd_scaletable[ch->leftvol >> 3];
 	rscale = snd_scaletable[ch->rightvol >> 3];
