@@ -526,10 +526,13 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 	}
 	
 	for (i = 0;i < numshadowmarktris;i++)
+		shadowmark[shadowmarktris[i]] = shadowmarkcount;
+
+	for (i = 0;i < numshadowmarktris;i++)
 	{
 		t = shadowmarktris[i];
-		shadowmark[t] = shadowmarkcount;
 		e = inelement3i + t * 3;
+		n = inneighbor3i + t * 3;
 		// make sure the vertices are created
 		for (j = 0;j < 3;j++)
 		{
@@ -554,13 +557,6 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 		outelement3i[5] = vertexremap[e[0]] + 1;
 		outelement3i += 6;
 		tris += 2;
-	}
-
-	for (i = 0;i < numshadowmarktris;i++)
-	{
-		t = shadowmarktris[i];
-		e = inelement3i + t * 3;
-		n = inneighbor3i + t * 3;
 		// output the sides (facing outward from this triangle)
 		if (shadowmark[n[0]] != shadowmarkcount)
 		{
@@ -624,39 +620,41 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 	R_Shadow_RenderVolume(outverts, tris, varray_vertex3f2, shadowelements);
 }
 
-void R_Shadow_VolumeFromBox(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, const vec3_t mins, const vec3_t maxs)
+void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, vec3_t lightmins, vec3_t lightmaxs, vec3_t surfacemins, vec3_t surfacemaxs)
 {
-	int i;
+	int j, t, tend;
+	const int *e;
 	const float *v[3];
-
-	// check which triangles are facing the , and then output
-	// triangle elements and vertices...  by clever use of elements we
-	// can construct the whole shadow from the unprojected vertices and
-	// the projected vertices
-
-	// identify lit faces within the bounding box
-	R_Shadow_PrepareShadowMark(numtris);
-	for (i = 0;i < numtris;i++)
+	if (!BoxesOverlap(lightmins, lightmaxs, surfacemins, surfacemaxs))
+		return;
+	tend = firsttriangle + numtris;
+	if (surfacemins[0] >= lightmins[0] && surfacemaxs[0] <= lightmaxs[0]
+	 && surfacemins[1] >= lightmins[1] && surfacemaxs[1] <= lightmaxs[1]
+	 && surfacemins[2] >= lightmins[2] && surfacemaxs[2] <= lightmaxs[2])
 	{
-		v[0] = invertex3f + elements[i*3+0] * 3;
-		v[1] = invertex3f + elements[i*3+1] * 3;
-		v[2] = invertex3f + elements[i*3+2] * 3;
-		if (PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2]) && maxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && mins[0] < max(v[0][0], max(v[1][0], v[2][0])) && maxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && mins[1] < max(v[0][1], max(v[1][1], v[2][1])) && maxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && mins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-			shadowmarklist[numshadowmark++] = i;
+		// surface box entirely inside light box, no box cull
+		for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+			if (PointInfrontOfTriangle(projectorigin, invertex3f + e[0] * 3, invertex3f + e[1] * 3, invertex3f + e[2] * 3))
+				shadowmarklist[numshadowmark++] = t;
 	}
-	R_Shadow_VolumeFromList(numverts, numtris, invertex3f, elements, neighbors, projectorigin, projectdistance, numshadowmark, shadowmarklist);
-}
-
-void R_Shadow_VolumeFromSphere(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, float radius)
-{
-	vec3_t mins, maxs;
-	mins[0] = projectorigin[0] - radius;
-	mins[1] = projectorigin[1] - radius;
-	mins[2] = projectorigin[2] - radius;
-	maxs[0] = projectorigin[0] + radius;
-	maxs[1] = projectorigin[1] + radius;
-	maxs[2] = projectorigin[2] + radius;
-	R_Shadow_VolumeFromBox(numverts, numtris, invertex3f, elements, neighbors, projectorigin, projectdistance, mins, maxs);
+	else
+	{
+		// surface box not entirely inside light box, cull each triangle
+		for (t = firsttriangle, e = elements + t * 3;t < tend;t++, e += 3)
+		{
+			v[0] = invertex3f + e[0] * 3;
+			v[1] = invertex3f + e[1] * 3;
+			v[2] = invertex3f + e[2] * 3;
+			if (PointInfrontOfTriangle(projectorigin, v[0], v[1], v[2])
+			 && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0]))
+			 && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0]))
+			 && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1]))
+			 && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1]))
+			 && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2]))
+			 && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+				shadowmarklist[numshadowmark++] = t;
+		}
+	}
 }
 
 void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i)
