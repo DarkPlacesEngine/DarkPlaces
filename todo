@@ -1,16 +1,29 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
--n darkplaces: finish the partial update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers (yummyluv notified, Vermeulen notified, Elric needs to be notified)
+d darkplaces: finish the partial update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers (yummyluv, Vermeulen, Elric)
 d darkplaces: fix server crashing from client timeouts (Moz)
 d darkplaces: fix server list only querying the master to reply (Rick)
 d darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 -n dpmod: make grapple off-hand (joe hill)
+0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
+0 dpmod: identify what could cause huge angles values (1187488512.0000) on a dog entity, may be related to anglemod, FacingIdeal, ai_run, or dog_run2 (Zombie13)
+0 dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
+0 darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
+0 dpmod: find a way to make deathmatch 7 get more difficulty as kills increase?  (Zombie13)
+0 darkplaces: can't move when stuck in a monster (SeienAbunae)
+0 dpmod: monsters falling out of level? (SeienAbunae)
+0 dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (SeienAbunae)
+0 dpmod: add combo kill detection; rapid burst of kills (SeienAbunae)
+0 darkplaces: may be reading md3 tag matrices wrong (Electro)
+d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge to 50 cells
+0 darkplaces: make sure that disappearing entities are removed on the client in quake demos, they aren't currently
+0 darkplaces: scrags frequently fly through ceilings - this needs to be fixed
 0 dpmod: set oldorigin when spawning to prevent being stuck at the spawn from causing an instant teleport back to where you died (SeienAbunae)
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
 0 dpmod: impulse 102 isn't removing the bots (SeienAbunae)
-0 dpmod: make enforcers drop more cells for plasma gun (SeienAbunae)
-0 dpmod: make tarbabies easier to kill?  (SeienAbunae)
-0 dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbunae)
-0 dpmod: make tarbabies explode larger (SeienAbunae)
+d dpmod: make enforcers drop more cells for plasma gun (SeienAbunae)
+d dpmod: make tarbabies easier to kill?  (SeienAbunae)
+f dpmod: make tarbabies have a self.resist_explosive = 3; like zombies (SeienAbunae)
+d dpmod: make tarbabies explode larger (SeienAbunae)
 0 darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range (SeienAbunae)
 0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 0 darkplaces: fix 'wall hugging' stuttering (romi)
@@ -50,7 +63,7 @@ d darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 0 darkplaces: fix skybox geometry (SeienAbunae)
 0 darkplaces: fix the fact singleplayer is using maxplayers 8
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
-0 darkplaces: frikbot scores don't update (Todd)
+2 darkplaces: frikbot scores don't update - discovered this is because of the fact they have no client (Todd)
 0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 0 darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (NotoriousRay, Uffe)
 0 darkplaces: make Com_HexDumpToConsole not use color
