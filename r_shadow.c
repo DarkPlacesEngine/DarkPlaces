@@ -1412,13 +1412,15 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 	{
 		if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
-			// 2/0/0/0/1/2 3D combine blendsquare path
+			// 2/0/0/1/2 3D combine blendsquare path
 			m.tex[0] = R_GetTexture(bumptexture);
 			m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 			R_Mesh_TextureState(&m);
 			qglColorMask(0,0,0,1);
-			qglDisable(GL_BLEND);
+			// this squares the result
+			qglEnable(GL_BLEND);
+			qglBlendFunc(GL_SRC_ALPHA, GL_ZERO);
 			GL_Color(1,1,1,1);
 			R_Mesh_GetSpace(numverts);
 			R_Mesh_CopyVertex3f(vertex3f, numverts);
@@ -1434,12 +1436,11 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			R_Mesh_TextureState(&m);
 			// square alpha in framebuffer a few times to make it shiny
 			qglBlendFunc(GL_ZERO, GL_DST_ALPHA);
-			qglEnable(GL_BLEND);
 			// these comments are a test run through this math for intensity 0.5
-			// 0.5 * 0.5 = 0.25
-			// 0.25 * 0.25 = 0.0625
-			// 0.0625 * 0.0625 = 0.00390625
-			for (renders = 0;renders < 3;renders++)
+			// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
+			// 0.25 * 0.25 = 0.0625 (this is another pass)
+			// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
+			for (renders = 0;renders < 2;renders++)
 			{
 				R_Mesh_GetSpace(numverts);
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
@@ -1484,13 +1485,15 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		}
 		else if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && !lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
-			// 2/0/0/0/2 3D combine blendsquare path
+			// 2/0/0/2 3D combine blendsquare path
 			m.tex[0] = R_GetTexture(bumptexture);
 			m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 			R_Mesh_TextureState(&m);
 			qglColorMask(0,0,0,1);
-			qglDisable(GL_BLEND);
+			// this squares the result
+			qglEnable(GL_BLEND);
+			qglBlendFunc(GL_SRC_ALPHA, GL_ZERO);
 			GL_Color(1,1,1,1);
 			R_Mesh_GetSpace(numverts);
 			R_Mesh_CopyVertex3f(vertex3f, numverts);
@@ -1506,12 +1509,11 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			R_Mesh_TextureState(&m);
 			// square alpha in framebuffer a few times to make it shiny
 			qglBlendFunc(GL_ZERO, GL_DST_ALPHA);
-			qglEnable(GL_BLEND);
 			// these comments are a test run through this math for intensity 0.5
-			// 0.5 * 0.5 = 0.25
-			// 0.25 * 0.25 = 0.0625
-			// 0.0625 * 0.0625 = 0.00390625
-			for (renders = 0;renders < 3;renders++)
+			// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
+			// 0.25 * 0.25 = 0.0625 (this is another pass)
+			// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
+			for (renders = 0;renders < 2;renders++)
 			{
 				R_Mesh_GetSpace(numverts);
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
@@ -1548,13 +1550,15 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 		}
 		else if (r_textureunits.integer >= 2 /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
-			// 2/0/0/0/2/2 2D combine blendsquare path
+			// 2/0/0/2/2 2D combine blendsquare path
 			m.tex[0] = R_GetTexture(bumptexture);
 			m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 			m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
 			R_Mesh_TextureState(&m);
 			qglColorMask(0,0,0,1);
-			qglDisable(GL_BLEND);
+			// this squares the result
+			qglEnable(GL_BLEND);
+			qglBlendFunc(GL_SRC_ALPHA, GL_ZERO);
 			GL_Color(1,1,1,1);
 			R_Mesh_GetSpace(numverts);
 			R_Mesh_CopyVertex3f(vertex3f, numverts);
@@ -1570,12 +1574,11 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			R_Mesh_TextureState(&m);
 			// square alpha in framebuffer a few times to make it shiny
 			qglBlendFunc(GL_ZERO, GL_DST_ALPHA);
-			qglEnable(GL_BLEND);
 			// these comments are a test run through this math for intensity 0.5
-			// 0.5 * 0.5 = 0.25
-			// 0.25 * 0.25 = 0.0625
-			// 0.0625 * 0.0625 = 0.00390625
-			for (renders = 0;renders < 3;renders++)
+			// 0.5 * 0.5 = 0.25 (done by the BlendFunc earlier)
+			// 0.25 * 0.25 = 0.0625 (this is another pass)
+			// 0.0625 * 0.0625 = 0.00390625 (this is another pass)
+			for (renders = 0;renders < 2;renders++)
 			{
 				R_Mesh_GetSpace(numverts);
 				R_Mesh_CopyVertex3f(vertex3f, numverts);
