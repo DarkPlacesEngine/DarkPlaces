@@ -45,6 +45,9 @@ d darkplaces: typing ip in join game menu should show 'trying' and 'no response'
 -n darkplaces: write a readme (Antti)
 -n dpmod: make grapple off-hand (joe hill)
 -n darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
+d darkplaces: fix 2D attenuation texturing which is all black
+0 darkplaces: allow typing characters > 128 to allow Latin1 fonts to be used properly (Urre)
+0 darkplaces: make sure the engine uses only the first 32 special chars, so the high set can be replaced (Urre)
 0 dpmod: make spawning use viewzoom to start zoomed out 2.0 and then zoom in to 1.0 (Urre)
 0 darkplaces: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
 0 darkplaces: bump protocol number again and expand viewzoom to two bytes (8bit.8bit fixedpoint instead of 0.8bit like it is now) (Urre)
