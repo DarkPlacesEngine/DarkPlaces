@@ -18,7 +18,7 @@ void CL_Screen_Init(void)
 		memcpy (menuplyr_pixels, dat->data, dat->width * dat->height);
 	else
 		Con_Printf("gfx/menuplyr.lmp larger than 4k buffer");
-	free(dat);
+	Mem_Free(dat);
 }
 
 void DrawQ_Clear(void)
