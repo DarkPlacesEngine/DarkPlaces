@@ -64,22 +64,26 @@ void Sys_Error (const char *error, ...)
 	static int	in_sys_error0 = 0;
 	static int	in_sys_error1 = 0;
 	static int	in_sys_error2 = 0;
+	static int	in_sys_error3 = 0;
 
 	va_start (argptr, error);
 	vsnprintf (text, sizeof (text), error, argptr);
 	va_end (argptr);
 
+	Con_Printf ("Quake Error: %s\n", text);
+
 	// close video so the message box is visible, unless we already tried that
 	if (!in_sys_error0 && cls.state != ca_dedicated)
 	{
 		in_sys_error0 = 1;
-		VID_Shutdown();     
+		VID_Shutdown();
 	}
-	MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 
-	Con_Print ("Quake Error: ");
-	Con_Print (text);
-	Con_Print ("\n");
+	if (!in_sys_error3 && cls.state != ca_dedicated)
+	{
+		in_sys_error3 = true;
+		MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+	}
 
 	if (!in_sys_error1)
 	{
@@ -91,7 +95,7 @@ void Sys_Error (const char *error, ...)
 	if (!in_sys_error2)
 	{
 		in_sys_error2 = 1;
-		DeinitConProc ();
+		Sys_Shutdown ();
 	}
 
 	exit (1);
