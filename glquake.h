@@ -139,7 +139,8 @@ typedef struct particle_s
 	ptype_t		type;
 	// LordHavoc: added for improved particle effects
 	float		scale;
-	int			texnum;
+	short		texnum;
+	short		contents; // if non-zero, particles will die outside of this content type
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
@@ -228,9 +229,6 @@ void R_TranslatePlayerSkin (int playernum);
 #define APIENTRY /* */
 #endif
 
-extern void (APIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (APIENTRY *qglSelectTexture) (GLenum);
-
 extern qboolean gl_mtexable;
 
 // LordHavoc: ARB multitexure support
@@ -275,18 +273,18 @@ extern int		gl_mtex_enum;
 #define GL_T4F_C4F_N3F_V4F				0x2A2D
 */
 
-//void (APIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
-void (APIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//void (APIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-void (APIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//void (APIENTRY *qglIndexPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-void (APIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//void (APIENTRY *qglEdgeFlagPointer)(GLsizei stride, const GLvoid *ptr);
-//void (APIENTRY *qglGetPointerv)(GLenum pname, void **params);
-void (APIENTRY *qglArrayElement)(GLint i);
-//void (APIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
-void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-//void (APIENTRY *qglInterleavedArrays)(GLenum format, GLsizei stride, const GLvoid *pointer);
+//extern void (APIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
+extern void (APIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+//extern void (APIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (APIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+//extern void (APIENTRY *qglIndexPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (APIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+//extern void (APIENTRY *qglEdgeFlagPointer)(GLsizei stride, const GLvoid *ptr);
+//extern void (APIENTRY *qglGetPointerv)(GLenum pname, void **params);
+extern void (APIENTRY *qglArrayElement)(GLint i);
+//extern void (APIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
+extern void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+//extern void (APIENTRY *qglInterleavedArrays)(GLenum format, GLsizei stride, const GLvoid *pointer);
 
 #else
 
@@ -305,11 +303,9 @@ void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const 
 
 #endif
 
-void (APIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-void (APIENTRY *qglSelectTexture) (GLenum);
-
-void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
-
+extern void (APIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (APIENTRY *qglSelectTexture) (GLenum);
+extern void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
 
 // LordHavoc: vertex transform
 #include "transform.h"

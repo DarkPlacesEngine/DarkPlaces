@@ -30,10 +30,6 @@ when crossing a water boudnary.
 
 */
 
-cvar_t	scr_ofsx = {"scr_ofsx","0", false};
-cvar_t	scr_ofsy = {"scr_ofsy","0", false};
-cvar_t	scr_ofsz = {"scr_ofsz","0", false};
-
 cvar_t	cl_rollspeed = {"cl_rollspeed", "200"};
 cvar_t	cl_rollangle = {"cl_rollangle", "2.0"};
 
@@ -758,12 +754,6 @@ void V_CalcRefdef (void)
 
 	AngleVectors (angles, forward, right, up);
 
-	for (i=0 ; i<3 ; i++)
-		r_refdef.vieworg[i] += scr_ofsx.value*forward[i]
-			+ scr_ofsy.value*right[i]
-			+ scr_ofsz.value*up[i];
-	
-	
 	V_BoundOffsets ();
 		
 // set up gun position
@@ -847,14 +837,6 @@ void V_RenderView (void)
 	if (con_forcedup)
 		return;
 
-// don't allow cheats in multiplayer
-	if (cl.maxclients > 1)
-	{
-		Cvar_Set ("scr_ofsx", "0");
-		Cvar_Set ("scr_ofsy", "0");
-		Cvar_Set ("scr_ofsz", "0");
-	}
-
 	if (cl.intermission)
 	{	// intermission / finale rendering
 		V_CalcIntermissionRefdef ();	
@@ -899,9 +881,6 @@ void V_Init (void)
 	Cvar_RegisterVariable (&cl_crossy);
 	Cvar_RegisterVariable (&gl_cshiftpercent);
 
-	Cvar_RegisterVariable (&scr_ofsx);
-	Cvar_RegisterVariable (&scr_ofsy);
-	Cvar_RegisterVariable (&scr_ofsz);
 	Cvar_RegisterVariable (&cl_rollspeed);
 	Cvar_RegisterVariable (&cl_rollangle);
 	Cvar_RegisterVariable (&cl_bob);
