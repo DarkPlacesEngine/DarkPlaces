@@ -793,7 +793,7 @@ void *SZ_GetSpace (sizebuf_t *buf, int length)
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
-			Host_Error ("SZ_GetSpace: overflow without allowoverflow set - use -zone on the commandline for more zone memory, default: 128k (quake original default was 48k)");
+			Host_Error ("SZ_GetSpace: overflow without allowoverflow set");
 
 		if (length > buf->maxsize)
 			Host_Error ("SZ_GetSpace: %i is > full buffer size", length);
