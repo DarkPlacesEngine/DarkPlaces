@@ -243,7 +243,7 @@ void PR_Profile_f (void)
 void PR_Crash(void)
 {
 	int i;
-	if (!pr_depth)
+	if (pr_depth < 1)
 	{
 		// kill the stack just to be sure
 		pr_depth = 0;
