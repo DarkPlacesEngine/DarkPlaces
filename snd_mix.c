@@ -45,11 +45,11 @@ void S_CaptureAVISound(portable_samplepair_t *buf, size_t length)
 	// write the sound buffer as little endian 16bit interleaved stereo
 	for(i = 0;i < length;i++)
 	{
-		n = buf[i].left >> 2; // quiet enough to prevent clipping most of the time
+		n = buf[i].left;
 		n = bound(-32768, n, 32767);
 		out[i*4+0] = n & 0xFF;
 		out[i*4+1] = (n >> 8) & 0xFF;
-		n = buf[i].right >> 2; // quiet enough to prevent clipping most of the time
+		n = buf[i].right;
 		n = bound(-32768, n, 32767);
 		out[i*4+2] = n & 0xFF;
 		out[i*4+3] = (n >> 8) & 0xFF;
