@@ -985,6 +985,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	rmeshstate_t m;
 	int lightmaptexturenum;
 	float cl;
+	/*
+	rcachearrayrequest_t request;
+	memset(&request, 0, sizeof(request));
+	*/
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
@@ -1013,13 +1017,21 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 			}
 			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 			{
-				if (gl_mesh_copyarrays.integer)
+				if (!gl_mesh_copyarrays.integer)
 				{
 					m.pointervertexcount = mesh->numverts;
 					m.pointer_vertex = mesh->vertex3f;
 					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 					m.pointer_texcoord[1] = mesh->texcoordlightmap2f;
 					m.pointer_texcoord[2] = mesh->texcoorddetail2f;
+					/*
+					request.id_pointer1 = ent->model;
+					request.id_pointer2 = mesh->texcoorddetail2f;
+					request.data_size = sizeof(float[2]) * mesh->numverts;
+					if (R_Mesh_CacheArray(&request))
+						memcpy(request.data, mesh->texcoorddetail2f, request.data_size);
+					m.pointer_texcoord[2] = request.data;
+					*/
 					R_Mesh_State(&m);
 				}
 				else
