@@ -78,20 +78,10 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 	return false;
 }
 
-static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
+static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, rtexture_t *texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
 {
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	if (additive)
-		m.blendfunc2 = GL_ONE;
-	m.tex[0] = texture;
-	R_Mesh_State(&m);
-
-	GL_Color(red * r_colorscale, green * r_colorscale, blue * r_colorscale, alpha);
 	// FIXME: negate left and right in loader
-	R_DrawSpriteMesh(origin, left, up, frame->left, frame->right, frame->down, frame->up);
+	R_DrawSprite(GL_SRC_ALPHA, additive ? GL_ONE : GL_ONE_MINUS_SRC_ALPHA, texture, false, origin, left, up, frame->left, frame->right, frame->down, frame->up, red, green, blue, alpha);
 }
 
 void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
@@ -131,9 +121,9 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
 			frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
-			R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, R_GetTexture(frame->texture), org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
+			R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
 			if (fog * ent->frameblend[i].lerp >= 0.01f)
-				R_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
+				R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 #else
@@ -142,9 +132,9 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 	for (i = 0;i < 4 && ent->frameblend[i].lerp;i++)
 		frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
 
-	R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, R_GetTexture(frame->texture), org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
+	R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, frame->texture, org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
 	if (fog * ent->frameblend[i].lerp >= 0.01f)
-		R_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
+		R_DrawSpriteImage(true, frame, frame->fogtexture, org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
 #endif
 }
 

@@ -94,7 +94,8 @@ const char *gl_platformextensions;
 char gl_driver[256];
 
 // GL_ARB_multitexture
-//void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
 void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 
@@ -122,7 +123,7 @@ void (GLAPIENTRY *qglCullFace)(GLenum mode);
 //void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
 void (GLAPIENTRY *qglEnable)(GLenum cap);
 void (GLAPIENTRY *qglDisable)(GLenum cap);
-//GLboolean GLAPIENTRY *qglIsEnabled)(GLenum cap);
+GLboolean (GLAPIENTRY *qglIsEnabled)(GLenum cap);
 
 void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
 void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
@@ -140,23 +141,25 @@ void (GLAPIENTRY *qglFlush)(void);
 void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
 void (GLAPIENTRY *qglDepthFunc)(GLenum func);
 void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
-//void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
 void (GLAPIENTRY *qglColorMask)(GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
 
 void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
+void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//void (GLAPIENTRY *qglArrayElement)(GLint i);
+void (GLAPIENTRY *qglArrayElement)(GLint i);
 
 void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-//void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
-//void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
-//void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
-//void (GLAPIENTRY *qglBegin)(GLenum mode);
-//void (GLAPIENTRY *qglEnd)(void);
+void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
+void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
+void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
+void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
+void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
+void (GLAPIENTRY *qglBegin)(GLenum mode);
+void (GLAPIENTRY *qglEnd)(void);
 
 void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
 void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
@@ -272,7 +275,7 @@ static dllfunction_t opengl110funcs[] =
 //	{"glReadBuffer", (void **) &qglReadBuffer},
 	{"glEnable", (void **) &qglEnable},
 	{"glDisable", (void **) &qglDisable},
-//	{"glIsEnabled", (void **) &qglIsEnabled},
+	{"glIsEnabled", (void **) &qglIsEnabled},
 	{"glEnableClientState", (void **) &qglEnableClientState},
 	{"glDisableClientState", (void **) &qglDisableClientState},
 //	{"glGetBooleanv", (void **) &qglGetBooleanv},
@@ -286,20 +289,21 @@ static dllfunction_t opengl110funcs[] =
 	{"glClearDepth", (void **) &qglClearDepth},
 	{"glDepthFunc", (void **) &qglDepthFunc},
 	{"glDepthMask", (void **) &qglDepthMask},
-//	{"glDepthRange", (void **) &qglDepthRange},
+	{"glDepthRange", (void **) &qglDepthRange},
 	{"glDrawElements", (void **) &qglDrawElements},
 	{"glColorMask", (void **) &qglColorMask},
 	{"glVertexPointer", (void **) &qglVertexPointer},
-//	{"glNormalPointer", (void **) &qglNormalPointer},
+	{"glNormalPointer", (void **) &qglNormalPointer},
 	{"glColorPointer", (void **) &qglColorPointer},
 	{"glTexCoordPointer", (void **) &qglTexCoordPointer},
-//	{"glArrayElement", (void **) &qglArrayElement},
+	{"glArrayElement", (void **) &qglArrayElement},
 	{"glColor4f", (void **) &qglColor4f},
-//	{"glTexCoord2f", (void **) &qglTexCoord2f},
-//	{"glVertex2f", (void **) &qglVertex2f},
-//	{"glVertex3f", (void **) &qglVertex3f},
-//	{"glBegin", (void **) &qglBegin},
-//	{"glEnd", (void **) &qglEnd},
+	{"glTexCoord2f", (void **) &qglTexCoord2f},
+	{"glTexCoord3f", (void **) &qglTexCoord3f},
+	{"glVertex2f", (void **) &qglVertex2f},
+	{"glVertex3f", (void **) &qglVertex3f},
+	{"glBegin", (void **) &qglBegin},
+	{"glEnd", (void **) &qglEnd},
 	{"glMatrixMode", (void **) &qglMatrixMode},
 	{"glOrtho", (void **) &qglOrtho},
 	{"glFrustum", (void **) &qglFrustum},
@@ -362,7 +366,8 @@ static dllfunction_t drawrangeelementsextfuncs[] =
 
 static dllfunction_t multitexturefuncs[] =
 {
-	//{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
+	{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
+	{"glMultiTexCoord3fARB", (void **) &qglMultiTexCoord3f},
 	{"glActiveTextureARB", (void **) &qglActiveTexture},
 	{"glClientActiveTextureARB", (void **) &qglClientActiveTexture},
 	{NULL, NULL}

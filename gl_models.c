@@ -86,7 +86,7 @@ void GL_Models_Init(void)
 #define MODELARRAY_TVECTOR 2
 #define MODELARRAY_NORMAL 3
 
-void R_Model_Alias_GetMesh_Array3f(const entity_render_t *ent, aliasmesh_t *mesh, int whicharray, float *out3f)
+void R_Model_Alias_GetMesh_Array3f(const entity_render_t *ent, const aliasmesh_t *mesh, int whicharray, float *out3f)
 {
 	int i, vertcount;
 	float lerp1, lerp2, lerp3, lerp4;
@@ -161,7 +161,7 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
 	int c, fullbright, layernum, firstpass;
-	float tint[3], fog, ifog, colorscale, ambientcolor4f[4], *fcolor;
+	float tint[3], fog, ifog, colorscale, ambientcolor4f[4];
 	vec3_t diff;
 	qbyte *bcolor;
 	rmeshstate_t m;
@@ -169,7 +169,6 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	aliasmesh_t *mesh = ent->model->aliasdata_meshes + calldata2;
 	aliaslayer_t *layer;
 	aliasskin_t *skin;
-	rcachearrayrequest_t request;
 
 	R_Mesh_Matrix(&ent->matrix);
 
@@ -204,55 +203,42 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			 || ((layer->flags & ALIASLAYER_DIFFUSE) && (r_shadow_realtime_world.integer && r_ambient.integer <= 0 && r_fullbright.integer == 0 && !(ent->effects & EF_FULLBRIGHT))))
 				continue;
 		}
-		memset(&m, 0, sizeof(m));
 		if (!firstpass || (ent->effects & EF_ADDITIVE))
 		{
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE;
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
 		}
 		else if ((skin->flags & ALIASSKIN_TRANSPARENT) || ent->alpha != 1.0)
 		{
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			GL_DepthMask(false);
 		}
 		else
 		{
-			m.blendfunc1 = GL_ONE;
-			m.blendfunc2 = GL_ZERO;
+			GL_BlendFunc(GL_ONE, GL_ZERO);
+			GL_DepthMask(true);
 		}
+		GL_DepthTest(true);
 		firstpass = false;
 		expandaliasvert(mesh->num_vertices);
 		colorscale = r_colorscale;
-		m.texrgbscale[0] = 1;
-		m.tex[0] = R_GetTexture(layer->texture);
-		if (gl_combine.integer && layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))
+
+		memset(&m, 0, sizeof(m));
+		if (layer->texture != NULL)
 		{
-			colorscale *= 0.25f;
-			m.texrgbscale[0] = 4;
+			m.tex[0] = R_GetTexture(layer->texture);
+			m.pointer_texcoord[0] = mesh->data_texcoord2f;
+			if (gl_combine.integer && layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))
+			{
+				colorscale *= 0.25f;
+				m.texrgbscale[0] = 4;
+			}
 		}
+		R_Mesh_State_Texture(&m);
+
 		c_alias_polys += mesh->num_triangles;
-		if (gl_mesh_copyarrays.integer)
-		{
-			R_Mesh_State(&m);
-			R_Mesh_GetSpace(mesh->num_vertices);
-			if (layer->texture != NULL)
-				R_Mesh_CopyTexCoord2f(0, mesh->data_texcoord2f, mesh->num_vertices);
-			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
-		}
-		else
-		{
-			m.pointervertexcount = mesh->num_vertices;
-			memset(&request, 0, sizeof(request));
-			request.data_size = mesh->num_vertices * sizeof(float[3]);
-			request.id_pointer2 = mesh->data_aliasvertex3f;
-			request.id_number1 = layernum;
-			request.id_number2 = 0;
-			request.id_number3 = CRC_Block((void *)ent->frameblend, sizeof(ent->frameblend));
-			if (R_Mesh_CacheArray(&request))
-				R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, request.data);
-			m.pointer_vertex = request.data;
-			m.pointer_texcoord[0] = layer->texture != NULL ? mesh->data_texcoord2f : NULL;
-		}
+		GL_VertexPointer(varray_vertex3f);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
 		if (layer->flags & ALIASLAYER_FOG)
 		{
 			colorscale *= fog;
@@ -260,6 +246,12 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		}
 		else
 		{
+			fullbright = !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT);
+			if (r_shadow_realtime_world.integer && !fullbright)
+			{
+				colorscale *= r_ambient.value * (2.0f / 128.0f);
+				fullbright = true;
+			}
 			if (layer->flags & (ALIASLAYER_COLORMAP_PANTS | ALIASLAYER_COLORMAP_SHIRT))
 			{
 				// 128-224 are backwards ranges
@@ -269,63 +261,26 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 					c = (ent->colormap & 0xF0);
 				c += (c >= 128 && c < 224) ? 4 : 12;
 				bcolor = (qbyte *) (&palette_complete[c]);
-				fullbright = c >= 224;
+				fullbright = fullbright || c >= 224;
 				VectorScale(bcolor, (1.0f / 255.0f), tint);
 			}
 			else
-			{
 				tint[0] = tint[1] = tint[2] = 1;
-				fullbright = false;
-			}
 			colorscale *= ifog;
-			if (fullbright || !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT))
+			if (fullbright)
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
-			else if (r_shadow_realtime_world.integer)
-			{
-				colorscale *= r_ambient.value * (2.0f / 128.0f);
-				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
-			}
 			else
 			{
 				if (R_LightModel(ambientcolor4f, ent, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha, false))
 				{
-					GL_UseColorArray();
-					if (gl_mesh_copyarrays.integer)
-					{
-						R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, aliasvert_normal3f);
-						R_LightModel_CalcVertexColors(ambientcolor4f, mesh->num_vertices, varray_vertex3f, aliasvert_normal3f, varray_color4f);
-					}
-					else
-					{
-						// request color4f cache
-						request.data_size = mesh->num_vertices * sizeof(float[4]);
-						request.id_pointer1 = ent;
-						request.id_number2 = 2;
-						request.id_number3 = CRC_Block((void *)ent->frameblend, sizeof(ent->frameblend)) + CRC_Block((void *)&ent->entlightstime, sizeof(ent->entlightstime));
-						if (R_Mesh_CacheArray(&request))
-						{
-							// save off the color pointer before we blow away the request
-							fcolor = request.data;
-							m.pointer_color = fcolor;
-							// request normal3f cache
-							request.data_size = mesh->num_vertices * sizeof(float[3]);
-							request.id_pointer1 = NULL;
-							request.id_number2 = 3;
-							request.id_number3 = CRC_Block((void *)ent->frameblend, sizeof(ent->frameblend));
-							if (R_Mesh_CacheArray(&request))
-								R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, request.data);
-							R_LightModel_CalcVertexColors(ambientcolor4f, mesh->num_vertices, m.pointer_vertex, request.data, fcolor);
-						}
-						else
-							m.pointer_color = request.data;
-					}
+					GL_ColorPointer(varray_color4f);
+					R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, varray_normal3f);
+					R_LightModel_CalcVertexColors(ambientcolor4f, mesh->num_vertices, varray_vertex3f, varray_normal3f, varray_color4f);
 				}
 				else
 					GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
 			}
 		}
-		if (!gl_mesh_copyarrays.integer)
-			R_Mesh_State(&m);
 		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 	}
 }
@@ -355,7 +310,6 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 	aliasskin_t *skin;
 	rmeshstate_t m;
 	float *v, plane[4], dist, projection[3], floororigin[3], surfnormal[3], lightdirection[3], v2[3];
-	rcachearrayrequest_t request;
 
 	if ((ent->effects & EF_ADDITIVE) || ent->alpha < 1)
 		return;
@@ -372,10 +326,12 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 	R_Mesh_Matrix(&ent->matrix);
 
 	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	if (gl_mesh_copyarrays.integer)
-		R_Mesh_State(&m);
+	R_Mesh_State_Texture(&m);
+
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
+	GL_VertexPointer(varray_vertex3f);
 	GL_Color(0, 0, 0, 0.5);
 
 	// put a light direction in the entity's coordinate space
@@ -392,43 +348,17 @@ void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
 
 	dist = -1.0f / DotProduct(projection, plane);
 	VectorScale(projection, dist, projection);
-	memset(&request, 0, sizeof(request));
 	for (meshnum = 0, mesh = ent->model->aliasdata_meshes;meshnum < ent->model->aliasnum_meshes;meshnum++)
 	{
 		skin = R_FetchAliasSkin(ent, mesh);
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
-		if (gl_mesh_copyarrays.integer)
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
+		for (i = 0, v = varray_vertex3f;i < mesh->num_vertices;i++, v += 3)
 		{
-			R_Mesh_GetSpace(mesh->num_vertices);
-			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
-			for (i = 0, v = varray_vertex3f;i < mesh->num_vertices;i++, v += 3)
-			{
-				dist = DotProduct(v, plane) - plane[3];
-				if (dist > 0)
-					VectorMA(v, dist, projection, v);
-			}
-		}
-		else
-		{
-			request.data_size = mesh->num_vertices * sizeof(float[3]);
-			request.id_pointer1 = mesh;
-			request.id_number1 = CRC_Block((void *)&ent->matrix, sizeof(ent->matrix));
-			request.id_number2 = CRC_Block((void *)&plane, sizeof(plane));
-			request.id_number3 = CRC_Block((void *)&ent->frameblend, sizeof(ent->frameblend));
-			m.pointervertexcount = mesh->num_vertices;
-			if (R_Mesh_CacheArray(&request))
-			{
-				R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, request.data);
-				for (i = 0, v = request.data;i < mesh->num_vertices;i++, v += 3)
-				{
-					dist = DotProduct(v, plane) - plane[3];
-					if (dist > 0)
-						VectorMA(v, dist, projection, v);
-				}
-			}
-			m.pointer_vertex = request.data;
-			R_Mesh_State(&m);
+			dist = DotProduct(v, plane) - plane[3];
+			if (dist > 0)
+				VectorMA(v, dist, projection, v);
 		}
 		c_alias_polys += mesh->num_triangles;
 		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
@@ -452,9 +382,8 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 			skin = R_FetchAliasSkin(ent, mesh);
 			if (skin->flags & ALIASSKIN_TRANSPARENT)
 				continue;
-			R_Mesh_GetSpace(mesh->num_vertices * 2);
 			R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
-			R_Shadow_Volume(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, lightradius, projectdistance);
+			R_Shadow_Volume(mesh->num_vertices, mesh->num_triangles, varray_vertex3f, mesh->data_element3i, mesh->data_neighbor3i, relativelightorigin, lightradius, projectdistance);
 		}
 	}
 }
@@ -852,22 +781,25 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	}
 	ifog = 1 - fog;
 
-	memset(&mstate, 0, sizeof(mstate));
 	if (ent->effects & EF_ADDITIVE)
 	{
-		mstate.blendfunc1 = GL_SRC_ALPHA;
-		mstate.blendfunc2 = GL_ONE;
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_DepthMask(false);
 	}
 	else if (ent->alpha != 1.0 || R_TextureHasAlpha(texture))
 	{
-		mstate.blendfunc1 = GL_SRC_ALPHA;
-		mstate.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GL_DepthMask(false);
 	}
 	else
 	{
-		mstate.blendfunc1 = GL_ONE;
-		mstate.blendfunc2 = GL_ZERO;
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthMask(true);
 	}
+	GL_DepthTest(true);
+	GL_VertexPointer(varray_vertex3f);
+
+	memset(&mstate, 0, sizeof(mstate));
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -875,16 +807,16 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		colorscale *= 0.25f;
 	}
 	mstate.tex[0] = R_GetTexture(texture);
-	R_Mesh_State(&mstate);
+	mstate.pointer_texcoord[0] = ent->model->zymdata_texcoords;
+	R_Mesh_State_Texture(&mstate);
+
 	ZymoticLerpBones(ent->model->zymnum_bones, (zymbonematrix *) ent->model->zymdata_poses, ent->frameblend, ent->model->zymdata_bones);
 
-	R_Mesh_GetSpace(numverts);
 	ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
-	R_Mesh_CopyTexCoord2f(0, ent->model->zymdata_texcoords, ent->model->zymnum_verts);
 	ZymoticCalcNormal3f(numverts, varray_vertex3f, aliasvert_normal3f, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
 	if (R_LightModel(ambientcolor4f, ent, ifog * colorscale, ifog * colorscale, ifog * colorscale, ent->alpha, false))
 	{
-		GL_UseColorArray();
+		GL_ColorPointer(varray_color4f);
 		R_LightModel_CalcVertexColors(ambientcolor4f, numverts, varray_vertex3f, aliasvert_normal3f, varray_color4f);
 	}
 	else
@@ -894,14 +826,18 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 
 	if (fog)
 	{
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		GL_DepthMask(false);
+		GL_DepthTest(true);
+		GL_VertexPointer(varray_vertex3f);
+
 		memset(&mstate, 0, sizeof(mstate));
-		mstate.blendfunc1 = GL_SRC_ALPHA;
-		mstate.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		// FIXME: need alpha mask for fogging...
 		//mstate.tex[0] = R_GetTexture(texture);
-		R_Mesh_State(&mstate);
+		//mstate.pointer_texcoord = ent->model->zymdata_texcoords;
+		R_Mesh_State_Texture(&mstate);
+
 		GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
-		R_Mesh_GetSpace(numverts);
 		ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
 		R_Mesh_Draw(numverts, numtriangles, elements);
 		c_alias_polys += numtriangles;

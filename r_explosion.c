@@ -181,30 +181,22 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	const explosion_t *e;
 	e = calldata1;
 
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(explosiontexture);
+	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	GL_DepthMask(false);
+	GL_DepthTest(true);
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	numtriangles = EXPLOSIONTRIS;
 	numverts = EXPLOSIONVERTS;
 	alpha = e->alpha * r_colorscale;
 	GL_Color(alpha, alpha, alpha, 1);
-	if (gl_mesh_copyarrays.integer)
-	{
-		R_Mesh_State(&m);
-		R_Mesh_GetSpace(numverts);
-		R_Mesh_CopyVertex3f(e->vert[0], numverts);
-		R_Mesh_CopyTexCoord2f(0, explosiontexcoord2f[0], numverts);
-	}
-	else
-	{
-		m.pointervertexcount = numverts;
-		m.pointer_vertex = e->vert[0];
-		m.pointer_texcoord[0] = explosiontexcoord2f[0];
-		R_Mesh_State(&m);
-	}
+	GL_VertexPointer(e->vert[0]);
+
+	memset(&m, 0, sizeof(m));
+	m.tex[0] = R_GetTexture(explosiontexture);
+	m.pointer_texcoord[0] = explosiontexcoord2f[0];
+	R_Mesh_State_Texture(&m);
+
 	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
 }
 

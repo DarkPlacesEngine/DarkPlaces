@@ -676,7 +676,7 @@ void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numve
 	*/
 }
 
-void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts, int numtris, int *elements)
+void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, float *verts, int numtris, int *elements)
 {
 	int i;
 	for (i = 0;i < numtris;i++, elements += 3)

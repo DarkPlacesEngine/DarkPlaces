@@ -22,29 +22,6 @@ void R_Crosshairs_Init(void)
 	Cvar_RegisterVariable(&crosshair_static);
 }
 
-void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca)
-{
-	rmeshstate_t m;
-	float diff[3];
-
-	if (fogenabled)
-	{
-		VectorSubtract(origin, r_origin, diff);
-		ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
-	}
-
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE;
-	m.depthdisable = true;
-	m.tex[0] = R_GetTexture(texture);
-	R_Mesh_Matrix(&r_identitymatrix);
-	R_Mesh_State(&m);
-
-	GL_Color(cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
-	R_DrawSpriteMesh(origin, vright, vup, scale, -scale, -scale, scale);
-}
-
 void R_GetCrosshairColor(float *out)
 {
 	int i;
@@ -108,7 +85,7 @@ void R_DrawWorldCrosshair(void)
 	spritescale = CL_TraceLine(v1, v2, spriteorigin, NULL, 0, true, NULL) * (8192.0f / 40.0f) * crosshair_size.value;
 
 	// draw the sprite
-	R_DrawCrosshairSprite(pic->tex, spriteorigin, spritescale, color[0], color[1], color[2], color[3]);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, pic->tex, true, spriteorigin, vright, vup, spritescale, -spritescale, -spritescale, spritescale, color[0], color[1], color[2], color[3]);
 }
 
 void R_Draw2DCrosshair(void)
