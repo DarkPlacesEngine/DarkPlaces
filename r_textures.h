@@ -3,6 +3,7 @@
 #define TEXF_MIPMAP 2 // mipmapped
 #define TEXF_RGBA 4 // 32bit RGBA, as opposed to 8bit paletted
 #define TEXF_PRECACHE 8 // upload immediately, otherwise defer loading until it is used (r_textureprecache can override this)
+#define TEXF_ALWAYSPRECACHE 16 // upload immediately, never defer (ignore r_textureprecache)
 
 // contents of this structure are private to gl_textures.c
 typedef struct rtexture_s
