@@ -2805,6 +2805,10 @@ void PF_fopen(void)
 		return;
 	}
 	pr_files[filenum] = FS_Open(va("data/%s", filename), modestring, false);
+
+	if (pr_files[filenum] == NULL && modestring == "rb")
+		pr_files[filenum] = FS_Open(filename, modestring, false);
+
 	if (pr_files[filenum] == NULL)
 		G_FLOAT(OFS_RETURN) = -1;
 	else
