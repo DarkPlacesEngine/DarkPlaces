@@ -9,7 +9,7 @@ int		image_height;
 
 void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int height, int flipx, int flipy, int flipdiagonal, int numincomponents, int numoutcomponents, int *inputcomponentindices)
 {
-	int c, x, y;
+	int index, c, x, y;
 	const qbyte *in, *inrow, *incolumn;
 	if (flipdiagonal)
 	{
@@ -20,7 +20,10 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int heigh
 			{
 				in = incolumn + (flipy ? height - 1 - x : x) * width * numincomponents;
 				for (c = 0;c < numoutcomponents;c++)
-					*outpixels++ = in[inputcomponentindices[c]];
+				{
+					index = inputcomponentindices[c];
+					*outpixels++ = (index & 0x80000000) ? (index - 0x8000000) : in[index];
+				}
 			}
 		}
 	}
@@ -33,7 +36,10 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int width, int heigh
 			{
 				in = inrow + (flipx ? width - 1 - x : x) * numincomponents;
 				for (c = 0;c < numoutcomponents;c++)
-					*outpixels++ = in[inputcomponentindices[c]];
+				{
+					index = inputcomponentindices[c];
+					*outpixels++ = (index & 0x80000000) ? (index - 0x8000000) : in[index];
+				}
 			}
 		}
 	}
