@@ -1113,12 +1113,6 @@ void CL_ParseTempEntity(void)
 		count = MSG_ReadByte();
 		CL_BloodPuff(pos, dir, count);
 		break;
-	case TE_BLOOD2:
-		// blood puff
-		MSG_ReadVector(pos);
-		CL_FindNonSolidLocation(pos, pos, 4);
-		CL_BloodPuff(pos, vec3_origin, 10);
-		break;
 	case TE_SPARK:
 		// spark shower
 		MSG_ReadVector(pos);
