@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "image.h"
+#include "r_shadow.h"
 
 static cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0"};
 
@@ -175,72 +176,6 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, int outverts, v
 		}
 	}
 	Mem_Free(vertexbuffer);
-}
-
-static rtexture_t *GL_TextureForSkinLayer(const qbyte *in, int width, int height, const char *name, const unsigned int *palette, int precache)
-{
-	int i;
-	for (i = 0;i < width*height;i++)
-		if (((qbyte *)&palette[in[i]])[3] > 0)
-			return R_LoadTexture2D (loadmodel->texturepool, name, width, height, in, TEXTYPE_PALETTE, (r_mipskins.integer ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0), palette);
-	return NULL;
-}
-
-static int Mod_LoadExternalSkin (char *basename, skinframe_t *skinframe, int precache)
-{
-	skinframe->nmap   = loadtextureimage(loadmodel->texturepool, va("%s_nmap" , basename), 0, 0, false, (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	if (skinframe->nmap == NULL)
-		skinframe->nmap   = loadtextureimagebumpasnmap(loadmodel->texturepool, va("%s_bump" , basename), 0, 0, false, (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
-	if (skinframe->nmap != NULL)
-	{
-		skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-		if (skinframe->base == NULL)
-			skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, basename, 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-		skinframe->fog    = image_masktex;
-	}
-	else
-	{
-		skinframe->base   = loadtextureimagewithmaskandnmap(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
-		if (skinframe->base == NULL)
-			skinframe->base   = loadtextureimagewithmaskandnmap(loadmodel->texturepool, basename, 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
-		skinframe->fog    = image_masktex;
-		skinframe->nmap   = image_nmaptex;
-	}
-	skinframe->gloss  = loadtextureimage(loadmodel->texturepool, va("%s_gloss" , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	skinframe->pants  = loadtextureimage(loadmodel->texturepool, va("%s_pants" , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	skinframe->glow   = loadtextureimage(loadmodel->texturepool, va("%s_glow"  , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	if (skinframe->glow == NULL)
-		skinframe->glow = loadtextureimage(loadmodel->texturepool, va("%s_luma"  , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	skinframe->merged = skinframe->base;
-	return skinframe->base != NULL || skinframe->pants != NULL || skinframe->shirt != NULL || skinframe->glow != NULL;
-}
-
-static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, int width, int height, skinframe_t *skinframe, int precache)
-{
-	qbyte *temp1, *temp2;
-	if (!skindata)
-		return false;
-	temp1 = Mem_Alloc(loadmodel->mempool, width * height * 8);
-	temp2 = temp1 + width * height * 4;
-	Image_Copy8bitRGBA(skindata, temp1, width * height, palette_nofullbrights);
-	Image_HeightmapToNormalmap(temp1, temp2, width, height, false, 1);
-	skinframe->nmap   = R_LoadTexture2D(loadmodel->texturepool, va("%s_nmap", basename), width, height, temp2, TEXTYPE_RGBA, (r_mipskins.integer ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0), NULL);
-	Mem_Free(temp1);
-	skinframe->gloss  = NULL;
-	skinframe->pants  = GL_TextureForSkinLayer(skindata, width, height, va("%s_pants", basename), palette_pantsaswhite, false); // pants
-	skinframe->shirt  = GL_TextureForSkinLayer(skindata, width, height, va("%s_shirt", basename), palette_shirtaswhite, false); // shirt
-	skinframe->glow   = GL_TextureForSkinLayer(skindata, width, height, va("%s_glow", basename), palette_onlyfullbrights, precache); // glow
-	if (skinframe->pants || skinframe->shirt)
-	{
-		skinframe->base   = GL_TextureForSkinLayer(skindata, width, height, va("%s_normal", basename), palette_nocolormapnofullbrights, false); // normal (no special colors)
-		skinframe->merged = GL_TextureForSkinLayer(skindata, width, height, va("%s_body", basename), palette_nofullbrights, precache); // body (normal + pants + shirt, but not glow)
-	}
-	else
-		skinframe->base   = GL_TextureForSkinLayer(skindata, width, height, va("%s_base", basename), palette_nofullbrights, precache); // no special colors
-	// quake model skins don't have alpha
-	skinframe->fog = NULL;
-	return true;
 }
 
 void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
@@ -528,8 +463,8 @@ void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 			else
 				sprintf (name, "%s_%i", loadmodel->name, i);
-			if (!Mod_LoadExternalSkin(name, loadmodel->skinframes + totalskins, i == 0))
-				Mod_LoadInternalSkin(name, (qbyte *)datapointer, skinwidth, skinheight, loadmodel->skinframes + totalskins, i == 0);
+			if (!Mod_LoadSkinFrame(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA, true, false, true))
+				Mod_LoadSkinFrame_Internal(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA, true, false, true, (qbyte *)datapointer, skinwidth, skinheight);
 			datapointer += skinwidth * skinheight;
 			totalskins++;
 		}
@@ -539,7 +474,7 @@ void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 	for (;;)
 	{
 		sprintf (name, "%s_%i", loadmodel->name, loadmodel->numskins);
-		if (Mod_LoadExternalSkin(name, &tempskinframe, loadmodel->numskins == 0))
+		if (Mod_LoadSkinFrame (&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA, true, false, true))
 		{
 			// expand the arrays to make room
 			tempskinscenes = loadmodel->skinscenes;
@@ -725,7 +660,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 			loadmodel->skinscenes[i].framecount = 1;
 			loadmodel->skinscenes[i].loop = true;
 			loadmodel->skinscenes[i].framerate = 10;
-			Mod_LoadExternalSkin (inskin, loadmodel->skinframes + i, true);
+			Mod_LoadSkinFrame (loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE, true, false, true);
 			inskin += MD2MAX_SKINNAME;
 		}
 	}
@@ -934,7 +869,7 @@ void Mod_LoadQ3AliasModel(model_t *mod, void *buffer)
 
 		memset(&tempskinframe, 0, sizeof(tempskinframe));
 		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
-			Mod_LoadExternalSkin (((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, &tempskinframe, true);
+			Mod_LoadSkinFrame (&tempskinframe, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE, true, false, true);
 		Mod_ValidateElements(mesh->data_elements, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbors, mesh->data_elements, mesh->num_triangles);
 		Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins, &tempskinframe);
@@ -1040,12 +975,6 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 		loadmodel->skinscenes[0].loop = true;
 		loadmodel->skinscenes[0].framerate = 10;
 		loadmodel->skinframes = (void *)(loadmodel->skinscenes + 1);
-		loadmodel->skinframes->base = NULL;
-		loadmodel->skinframes->fog = NULL;
-		loadmodel->skinframes->pants = NULL;
-		loadmodel->skinframes->shirt = NULL;
-		loadmodel->skinframes->glow = NULL;
-		loadmodel->skinframes->merged = NULL;
 		loadmodel->numskins = 1;
 	}
 

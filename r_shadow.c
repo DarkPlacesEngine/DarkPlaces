@@ -29,13 +29,15 @@ rtexture_t *r_shadow_blankbumptexture;
 rtexture_t *r_shadow_blankglosstexture;
 rtexture_t *r_shadow_blankwhitetexture;
 
+cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "2"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "2"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
 cvar_t r_shadow_realtime = {0, "r_shadow_realtime", "0"};
 cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
-cvar_t r_shadow_bumpscale = {0, "r_shadow_bumpscale", "4"};
+cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
+cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "4"};
 cvar_t r_shadow_shadownudge = {0, "r_shadow_shadownudge", "1"};
 
 void R_Shadow_ClearWorldLights(void);
@@ -87,13 +89,15 @@ void r_shadow_newmap(void)
 
 void R_Shadow_Init(void)
 {
+	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
 	Cvar_RegisterVariable(&r_shadow_realtime);
 	Cvar_RegisterVariable(&r_shadow_gloss);
 	Cvar_RegisterVariable(&r_shadow_debuglight);
 	Cvar_RegisterVariable(&r_shadow_scissor);
-	Cvar_RegisterVariable(&r_shadow_bumpscale);
+	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
+	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
 	Cvar_RegisterVariable(&r_shadow_shadownudge);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
@@ -345,7 +349,7 @@ void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
 	}
 }
 
-float r_shadow_atten1;
+float r_shadow_attenpower, r_shadow_attenscale;
 static void R_Shadow_MakeTextures(void)
 {
 	int x, y, d, side;
@@ -353,7 +357,8 @@ static void R_Shadow_MakeTextures(void)
 	qbyte *data;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	r_shadow_texturepool = R_AllocTexturePool();
-	r_shadow_atten1 = r_shadow_lightattenuationscale.value;
+	r_shadow_attenpower = r_shadow_lightattenuationpower.value;
+	r_shadow_attenscale = r_shadow_lightattenuationscale.value;
 	data = Mem_Alloc(tempmempool, 6*128*128*4);
 	data[0] = 128;
 	data[1] = 128;
@@ -429,8 +434,8 @@ static void R_Shadow_MakeTextures(void)
 			v[2] = 0;
 			intensity = 1.0f - sqrt(DotProduct(v, v));
 			if (intensity > 0)
-				intensity *= intensity;
-			intensity = bound(0, intensity * r_shadow_atten1 * 256.0f, 255.0f);
+				intensity = pow(intensity, r_shadow_attenpower);
+			intensity = bound(0, intensity * r_shadow_attenscale * 256.0f, 255.0f);
 			d = bound(0, intensity, 255);
 			data[((0*128+y)*128+x)*4+0] = d;
 			data[((0*128+y)*128+x)*4+1] = d;
@@ -448,7 +453,8 @@ void R_Shadow_Stage_Begin(void)
 
 	//cl.worldmodel->numlights = min(cl.worldmodel->numlights, 1);
 	if (!r_shadow_attenuation2dtexture
-	 || r_shadow_lightattenuationscale.value != r_shadow_atten1)
+	 || r_shadow_lightattenuationpower.value != r_shadow_attenpower
+	 || r_shadow_lightattenuationscale.value != r_shadow_attenscale)
 		R_Shadow_MakeTextures();
 	if (r_shadow_reloadlights && cl.worldmodel)
 	{

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "image.h"
+#include "r_shadow.h"
 
 // note: model_shared.c sets up r_notexture, and r_surf_notexture
 
@@ -32,10 +33,6 @@ cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
-
-#define NUM_DETAILTEXTURES 1
-static rtexture_t *detailtextures[NUM_DETAILTEXTURES];
-static rtexturepool_t *detailtexturepool;
 
 /*
 ===============
@@ -52,55 +49,6 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_sortsurfaces);
 	memset(mod_novis, 0xff, sizeof(mod_novis));
-}
-
-void Mod_BrushStartup (void)
-{
-	int i, x, y, light;
-	float vc[3], vx[3], vy[3], vn[3], lightdir[3];
-#define DETAILRESOLUTION 256
-	qbyte data[DETAILRESOLUTION][DETAILRESOLUTION][4], noise[DETAILRESOLUTION][DETAILRESOLUTION];
-	detailtexturepool = R_AllocTexturePool();
-	lightdir[0] = 0.5;
-	lightdir[1] = 1;
-	lightdir[2] = -0.25;
-	VectorNormalize(lightdir);
-	for (i = 0;i < NUM_DETAILTEXTURES;i++)
-	{
-		fractalnoise(&noise[0][0], DETAILRESOLUTION, DETAILRESOLUTION >> 4);
-		for (y = 0;y < DETAILRESOLUTION;y++)
-		{
-			for (x = 0;x < DETAILRESOLUTION;x++)
-			{
-				vc[0] = x;
-				vc[1] = y;
-				vc[2] = noise[y][x] * (1.0f / 32.0f);
-				vx[0] = x + 1;
-				vx[1] = y;
-				vx[2] = noise[y][(x + 1) % DETAILRESOLUTION] * (1.0f / 32.0f);
-				vy[0] = x;
-				vy[1] = y + 1;
-				vy[2] = noise[(y + 1) % DETAILRESOLUTION][x] * (1.0f / 32.0f);
-				VectorSubtract(vx, vc, vx);
-				VectorSubtract(vy, vc, vy);
-				CrossProduct(vx, vy, vn);
-				VectorNormalize(vn);
-				light = 128 - DotProduct(vn, lightdir) * 128;
-				light = bound(0, light, 255);
-				data[y][x][0] = data[y][x][1] = data[y][x][2] = light;
-				data[y][x][3] = 255;
-			}
-		}
-		detailtextures[i] = R_LoadTexture2D(detailtexturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
-	}
-}
-
-void Mod_BrushShutdown (void)
-{
-	int i;
-	for (i = 0;i < NUM_DETAILTEXTURES;i++)
-		R_FreeTexture(detailtextures[i]);
-	R_FreeTexturePool(&detailtexturepool);
 }
 
 /*
@@ -214,11 +162,6 @@ static void Mod_LoadTextures (lump_t *l)
 	dmiptexlump_t *m;
 	qbyte *data, *mtdata;
 	char name[256];
-	qbyte *basepixels, *bumppixels, *nmappixels, *glosspixels, *glowpixels, *maskpixels;
-	int basepixels_width, basepixels_height, bumppixels_width, bumppixels_height;
-	int nmappixels_width, nmappixels_height, glosspixels_width, glosspixels_height;
-	int glowpixels_width, glowpixels_height, maskpixels_width, maskpixels_height;
-	rtexture_t *detailtexture;
 
 	loadmodel->textures = NULL;
 
@@ -237,9 +180,10 @@ static void Mod_LoadTextures (lump_t *l)
 	for (i = 0, tx = loadmodel->textures;i < loadmodel->numtextures;i++, tx++)
 	{
 		tx->number = i;
+		strcpy(tx->name, "NO TEXTURE FOUND");
 		tx->width = 16;
 		tx->height = 16;
-		tx->texture = r_notexture;
+		tx->skin.base = r_notexture;
 		tx->shader = &Cshader_wall_lightmap;
 		if (i == loadmodel->numtextures - 1)
 		{
@@ -298,14 +242,6 @@ static void Mod_LoadTextures (lump_t *l)
 			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, tx->name);
 		}
 
-		basepixels = NULL;basepixels_width = 0;basepixels_height = 0;
-		bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
-		nmappixels = NULL;nmappixels_width = 0;nmappixels_height = 0;
-		glosspixels = NULL;glosspixels_width = 0;glosspixels_height = 0;
-		glowpixels = NULL;glowpixels_width = 0;glowpixels_height = 0;
-		maskpixels = NULL;maskpixels_width = 0;maskpixels_height = 0;
-		detailtexture = NULL;
-
 		// LordHavoc: HL sky textures are entirely different than quake
 		if (!loadmodel->ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 		{
@@ -333,159 +269,38 @@ static void Mod_LoadTextures (lump_t *l)
 		}
 		else
 		{
-			if ((basepixels = loadimagepixels(tx->name, false, 0, 0)) != NULL)
+			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true))
 			{
-				basepixels_width = image_width;
-				basepixels_height = image_height;
-			}
-			// _luma is supported for tenebrae compatibility
-			// (I think it's a very stupid name, but oh well)
-			if ((glowpixels = loadimagepixels(va("%s_glow", tx->name), false, 0, 0)) != NULL
-			 || (glowpixels = loadimagepixels(va("%s_luma", tx->name), false, 0, 0)) != NULL)
-			{
-				glowpixels_width = image_width;
-				glowpixels_height = image_height;
-			}
-			if ((bumppixels = loadimagepixels(va("%s_bump", tx->name), false, 0, 0)) != NULL)
-			{
-				bumppixels_width = image_width;
-				bumppixels_height = image_height;
-			}
-			if ((glosspixels = loadimagepixels(va("%s_gloss", tx->name), false, 0, 0)) != NULL)
-			{
-				glosspixels_width = image_width;
-				glosspixels_height = image_height;
-			}
-			if (!basepixels)
-			{
+				// did not find external texture, load it from the bsp or wad3
 				if (loadmodel->ishlbsp)
 				{
 					// internal texture overrides wad
-					if (mtdata && (basepixels = W_ConvertWAD3Texture(dmiptex)) != NULL)
+					qbyte *pixels, *freepixels;
+					pixels = freepixels = NULL;
+					if (mtdata)
+						pixels = W_ConvertWAD3Texture(dmiptex);
+					if (pixels == NULL)
+						pixels = freepixels = W_GetTexture(tx->name);
+					if (pixels != NULL)
 					{
-						basepixels_width = image_width;
-						basepixels_height = image_height;
+						tx->width = image_width;
+						tx->height = image_height;
+						tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
 					}
-					else if ((basepixels = W_GetTexture(tx->name)) != NULL)
-					{
-						// get the size from the wad texture
-						tx->width = basepixels_width = image_width;
-						tx->height = basepixels_height = image_height;
-					}
+					if (freepixels)
+						Mem_Free(freepixels);
 				}
-				else
-				{
-					if (mtdata) // texture included
-					{
-						if (r_fullbrights.integer && tx->name[0] != '*')
-						{
-							basepixels_width = tx->width;
-							basepixels_height = tx->height;
-							basepixels = Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
-							Image_Copy8bitRGBA(mtdata, basepixels, basepixels_width * basepixels_height, palette_nofullbrights);
-							if (!glowpixels)
-							{
-								for (j = 0;j < (int)(tx->width*tx->height);j++)
-									if (((qbyte *)&palette_onlyfullbrights[mtdata[j]])[3] > 0) // fullbright
-										break;
-								if (j < (int)(tx->width * tx->height))
-								{
-									glowpixels_width = tx->width;
-									glowpixels_height = tx->height;
-									glowpixels = Mem_Alloc(loadmodel->mempool, glowpixels_width * glowpixels_height * 4);
-									Image_Copy8bitRGBA(mtdata, glowpixels, glowpixels_width * glowpixels_height, palette_onlyfullbrights);
-								}
-							}
-						}
-						else
-						{
-							basepixels_width = tx->width;
-							basepixels_height = tx->height;
-							basepixels = Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
-							Image_Copy8bitRGBA(mtdata, basepixels, tx->width * tx->height, palette_complete);
-						}
-					}
-				}
+				else if (mtdata) // texture included
+					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
 			}
 		}
-
-		if (basepixels)
-		{
-			for (j = 3;j < basepixels_width * basepixels_height * 4;j += 4)
-				if (basepixels[j] < 255)
-					break;
-			if (j < basepixels_width * basepixels_height * 4)
-			{
-				maskpixels = Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
-				maskpixels_width = basepixels_width;
-				maskpixels_height = basepixels_height;
-				for (j = 0;j < basepixels_width * basepixels_height * 4;j += 4)
-				{
-					maskpixels[j+0] = 255;
-					maskpixels[j+1] = 255;
-					maskpixels[j+2] = 255;
-					maskpixels[j+3] = basepixels[j+3];
-				}
-			}
-
-			if (!bumppixels)
-			{
-				bumppixels = Mem_Alloc(loadmodel->mempool, basepixels_width * basepixels_height * 4);
-				bumppixels_width = basepixels_width;
-				bumppixels_height = basepixels_height;
-				memcpy(bumppixels, basepixels, bumppixels_width * bumppixels_height * 4);
-			}
-
-			if (!nmappixels && bumppixels)
-			{
-				nmappixels = Mem_Alloc(loadmodel->mempool, bumppixels_width * bumppixels_height * 4);
-				nmappixels_width = bumppixels_width;
-				nmappixels_height = bumppixels_height;
-				Image_HeightmapToNormalmap(bumppixels, nmappixels, nmappixels_width, nmappixels_height, false, 1);
-			}
-		}
-
-		if (!detailtexture)
-			detailtexture = detailtextures[i % NUM_DETAILTEXTURES];
-
-		if (basepixels)
-		{
-			tx->texture = R_LoadTexture2D (loadmodel->texturepool, tx->name, basepixels_width, basepixels_height, basepixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
-			if (nmappixels)
-				tx->nmaptexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_nmap", tx->name), basepixels_width, basepixels_height, nmappixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
-			if (glosspixels)
-				tx->glosstexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_gloss", tx->name), glosspixels_width, glosspixels_height, glosspixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
-			if (glowpixels)
-				tx->glowtexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_glow", tx->name), glowpixels_width, glowpixels_height, glowpixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
-			if (maskpixels)
-				tx->fogtexture = R_LoadTexture2D (loadmodel->texturepool, va("%s_mask", tx->name), maskpixels_width, maskpixels_height, maskpixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
-			tx->detailtexture = detailtexture;
-		}
-		else
+		if (tx->skin.base == NULL)
 		{
 			// no texture found
 			tx->width = 16;
 			tx->height = 16;
-			tx->texture = r_notexture;
-			tx->nmaptexture = NULL;
-			tx->glosstexture = NULL;
-			tx->glowtexture = NULL;
-			tx->fogtexture = NULL;
-			tx->detailtexture = NULL;
+			tx->skin.base = r_notexture;
 		}
-
-		if (basepixels)
-			Mem_Free(basepixels);
-		if (bumppixels)
-			Mem_Free(bumppixels);
-		if (nmappixels)
-			Mem_Free(nmappixels);
-		if (glosspixels)
-			Mem_Free(glosspixels);
-		if (glowpixels)
-			Mem_Free(glowpixels);
-		if (maskpixels)
-			Mem_Free(maskpixels);
 
 		if (tx->name[0] == '*')
 		{
@@ -507,7 +322,7 @@ static void Mod_LoadTextures (lump_t *l)
 		else
 		{
 			tx->flags |= SURF_LIGHTMAP;
-			if (!tx->fogtexture)
+			if (!tx->skin.fog)
 				tx->flags |= SURF_SHADOWCAST | SURF_SHADOWLIGHT;
 			tx->shader = &Cshader_wall_lightmap;
 		}

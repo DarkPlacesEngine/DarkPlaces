@@ -7,6 +7,8 @@ extern cvar_t r_shadow_lightintensityscale;
 extern cvar_t r_shadow_realtime;
 extern cvar_t r_shadow_gloss;
 extern cvar_t r_shadow_debuglight;
+extern cvar_t r_shadow_bumpscale_bumpmap;
+extern cvar_t r_shadow_bumpscale_basetexture;
 
 void R_Shadow_Init(void);
 void R_Shadow_Volume(int numverts, int numtris, int *elements, int *neighbors, vec3_t relativelightorigin, float lightradius, float projectdistance);

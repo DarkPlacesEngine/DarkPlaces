@@ -5,6 +5,7 @@ unsigned int palette_complete[256];
 unsigned int palette_nofullbrights[256];
 unsigned int palette_onlyfullbrights[256];
 unsigned int palette_nocolormapnofullbrights[256];
+unsigned int palette_nocolormap[256];
 unsigned int palette_pantsaswhite[256];
 unsigned int palette_shirtaswhite[256];
 unsigned int palette_alpha[256];
@@ -76,6 +77,14 @@ void Palette_Setup8to24(void)
 	for (i = fullbright_start;i < fullbright_end;i++)
 		palette_nocolormapnofullbrights[i] = palette_complete[0];
 	palette_nocolormapnofullbrights[255] = 0;
+
+	for (i = 0;i < 256;i++)
+		palette_nocolormap[i] = palette_complete[i];
+	for (i = pants_start;i < pants_end;i++)
+		palette_nocolormap[i] = palette_complete[0];
+	for (i = shirt_start;i < shirt_end;i++)
+		palette_nocolormap[i] = palette_complete[0];
+	palette_nocolormap[255] = 0;
 
 	for (i = 0;i < 256;i++)
 		palette_pantsaswhite[i] = palette_complete[0];

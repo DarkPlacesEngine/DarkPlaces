@@ -47,14 +47,15 @@ animscene_t;
 
 typedef struct skinframe_s
 {
-	rtexture_t *base; // original texture minus pants/shirt/glow
+	rtexture_t *base; // original texture without pants/shirt/glow
 	rtexture_t *pants; // pants only (in greyscale)
 	rtexture_t *shirt; // shirt only (in greyscale)
-	rtexture_t *glow; // glow only
-	rtexture_t *merged; // original texture minus glow
-	rtexture_t *fog; // white texture with alpha of the base texture, NULL if not transparent
+	rtexture_t *glow; // glow only (fullbrights)
+	rtexture_t *merged; // original texture without glow
+	rtexture_t *fog; // alpha of the base texture (if not opaque)
 	rtexture_t *nmap; // normalmap (bumpmap for dot3)
 	rtexture_t *gloss; // glossmap (for dot3)
+	rtexture_t *detail; // detail texture (silly bumps for non-dot3)
 }
 skinframe_t;
 
@@ -274,8 +275,10 @@ model_t;
 
 // this can be used for anything without a valid texture
 extern rtexture_t *r_notexture;
+#define NUM_DETAILTEXTURES 1
+extern rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
 // every texture must be in a pool...
-extern rtexturepool_t *r_notexturepool;
+extern rtexturepool_t *mod_shared_texturepool;
 
 // model loading
 extern model_t *loadmodel;
@@ -316,6 +319,9 @@ shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int initialnumtriangles);
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
+
+int Mod_LoadSkinFrame (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture);
+int Mod_LoadSkinFrame_Internal (skinframe_t *skinframe, char *basename, int textureflags, int loadpantsandshirt, int usedetailtexture, int loadglowtexture, qbyte *skindata, int width, int height);
 
 #endif	// __MODEL__
 
