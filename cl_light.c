@@ -40,7 +40,10 @@ dlightsetup:
 	dl->color[1] = green;
 	dl->color[2] = blue;
 	dl->decay = decay;
-	dl->die = cl.time + lifetime;
+	if (lifetime)
+		dl->die = cl.time + lifetime;
+	else
+		dl->die = 0;
 }
 
 
