@@ -531,9 +531,9 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 			if (tvector3f || svector3f)
 			{
 				// 3 assignments, 15 subtracts, 6 multiplies
-				tdir[0] = ((texcoord2f[e[1] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[2]*3+0] - vertex3f[e[0]*3+0]) - (texcoord2f[e[2] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[1]*3+0] - vertex3f[e[0]*3+0]));
-				tdir[1] = ((texcoord2f[e[1] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[2]*3+1] - vertex3f[e[0]*3+1]) - (texcoord2f[e[2] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[1]*3+1] - vertex3f[e[0]*3+1]));
-				tdir[2] = ((texcoord2f[e[1] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[2]*3+2] - vertex3f[e[0]*3+2]) - (texcoord2f[e[2] * 3] - texcoord2f[e[0] * 3]) * (vertex3f[e[1]*3+2] - vertex3f[e[0]*3+2]));
+				tdir[0] = ((texcoord2f[e[1] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[2]*3+0] - vertex3f[e[0]*3+0]) - (texcoord2f[e[2] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[1]*3+0] - vertex3f[e[0]*3+0]));
+				tdir[1] = ((texcoord2f[e[1] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[2]*3+1] - vertex3f[e[0]*3+1]) - (texcoord2f[e[2] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[1]*3+1] - vertex3f[e[0]*3+1]));
+				tdir[2] = ((texcoord2f[e[1] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[2]*3+2] - vertex3f[e[0]*3+2]) - (texcoord2f[e[2] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[1]*3+2] - vertex3f[e[0]*3+2]));
 				// 1 assignments, 1 negates, 2 adds, 3 multiplies
 				f = -DotProduct(tdir, normal);
 				// 3 assignments, 3 adds, 3 multiplies
