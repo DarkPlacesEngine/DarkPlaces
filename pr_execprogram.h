@@ -82,7 +82,7 @@
 				OPC->_float = !OPA->vector[0] && !OPA->vector[1] && !OPA->vector[2];
 				break;
 			case OP_NOT_S:
-				OPC->_float = !OPA->string || !pr_strings[OPA->string];
+				OPC->_float = !OPA->string || !*PR_GetString(OPA->string);
 				break;
 			case OP_NOT_FNC:
 				OPC->_float = !OPA->function;
@@ -97,7 +97,7 @@
 				OPC->_float = (OPA->vector[0] == OPB->vector[0]) && (OPA->vector[1] == OPB->vector[1]) && (OPA->vector[2] == OPB->vector[2]);
 				break;
 			case OP_EQ_S:
-				OPC->_float = !strcmp(pr_strings+OPA->string,pr_strings+OPB->string);
+				OPC->_float = !strcmp(PR_GetString(OPA->string),PR_GetString(OPB->string));
 				break;
 			case OP_EQ_E:
 				OPC->_float = OPA->_int == OPB->_int;
@@ -112,7 +112,7 @@
 				OPC->_float = (OPA->vector[0] != OPB->vector[0]) || (OPA->vector[1] != OPB->vector[1]) || (OPA->vector[2] != OPB->vector[2]);
 				break;
 			case OP_NE_S:
-				OPC->_float = strcmp(pr_strings+OPA->string,pr_strings+OPB->string);
+				OPC->_float = strcmp(PR_GetString(OPA->string),PR_GetString(OPB->string));
 				break;
 			case OP_NE_E:
 				OPC->_float = OPA->_int != OPB->_int;

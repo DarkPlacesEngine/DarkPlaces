@@ -306,7 +306,7 @@ ddef_t *ED_FindField (const char *name)
 	for (i=0 ; i<progs->numfielddefs ; i++)
 	{
 		def = &pr_fielddefs[i];
-		if (!strcmp(pr_strings + def->s_name,name) )
+		if (!strcmp(PR_GetString(def->s_name), name))
 			return def;
 	}
 	return NULL;
@@ -325,7 +325,7 @@ ddef_t *ED_FindGlobal (const char *name)
 	for (i=0 ; i<progs->numglobaldefs ; i++)
 	{
 		def = &pr_globaldefs[i];
-		if (!strcmp(pr_strings + def->s_name,name) )
+		if (!strcmp(PR_GetString(def->s_name), name))
 			return def;
 	}
 	return NULL;
@@ -345,7 +345,7 @@ dfunction_t *ED_FindFunction (const char *name)
 	for (i=0 ; i<progs->numfunctions ; i++)
 	{
 		func = &pr_functions[i];
-		if (!strcmp(pr_strings + func->s_name,name) )
+		if (!strcmp(PR_GetString(func->s_name), name))
 			return func;
 	}
 	return NULL;
@@ -372,7 +372,7 @@ char *PR_ValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		sprintf (line, "%s", pr_strings + val->string);
+		sprintf (line, "%s", PR_GetString(val->string));
 		break;
 	case ev_entity:
 		n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
@@ -383,11 +383,11 @@ char *PR_ValueString (etype_t type, eval_t *val)
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		sprintf (line, "%s()", pr_strings + f->s_name);
+		sprintf (line, "%s()", PR_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
-		sprintf (line, ".%s", pr_strings + def->s_name);
+		sprintf (line, ".%s", PR_GetString(def->s_name));
 		break;
 	case ev_void:
 		sprintf (line, "void");
@@ -432,22 +432,22 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 	switch (type)
 	{
 	case ev_string:
-		sprintf (line, "%s", pr_strings + val->string);
+		sprintf (line, "%s", PR_GetString(val->string));
 		break;
 	case ev_entity:
 		sprintf (line, "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		sprintf (line, "%s", pr_strings + f->s_name);
+		sprintf (line, "%s", PR_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
 		// LordHavoc: parse the string a bit to turn special characters
 		// (like newline, specifically) into escape codes,
 		// this fixes saving games from various mods
-		//sprintf (line, "%s", pr_strings + def->s_name);
-		s = pr_strings + def->s_name;
+		//sprintf (line, "%s", PR_GetString(def->s_name));
+		s = PR_GetString(def->s_name);
 		for (i = 0;i < 4095 && *s;)
 		{
 			if (*s == '\n')
@@ -506,7 +506,7 @@ char *PR_GlobalString (int ofs)
 	else
 	{
 		s = PR_ValueString (def->type, val);
-		sprintf (line,"%i(%s)%s", ofs, pr_strings + def->s_name, s);
+		sprintf (line,"%i(%s)%s", ofs, PR_GetString(def->s_name), s);
 	}
 
 	i = strlen(line);
@@ -527,7 +527,7 @@ char *PR_GlobalStringNoContents (int ofs)
 	if (!def)
 		sprintf (line,"%i(?)", ofs);
 	else
-		sprintf (line,"%i(%s)", ofs, pr_strings + def->s_name);
+		sprintf (line,"%i(%s)", ofs, PR_GetString(def->s_name));
 
 	i = strlen(line);
 	for ( ; i<20 ; i++)
@@ -568,7 +568,7 @@ void ED_Print (edict_t *ed)
 	for (i=1 ; i<progs->numfielddefs ; i++)
 	{
 		d = &pr_fielddefs[i];
-		name = pr_strings + d->s_name;
+		name = PR_GetString(d->s_name);
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
@@ -641,7 +641,7 @@ void ED_Write (QFile *f, edict_t *ed)
 	for (i=1 ; i<progs->numfielddefs ; i++)
 	{
 		d = &pr_fielddefs[i];
-		name = pr_strings + d->s_name;
+		name = PR_GetString(d->s_name);
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 
@@ -772,7 +772,7 @@ void ED_WriteGlobals (QFile *f)
 		if (type != ev_string && type != ev_float && type != ev_entity)
 			continue;
 
-		name = pr_strings + def->s_name;		
+		name = PR_GetString(def->s_name);
 		Qprintf (f,"\"%s\" ", name);
 		Qprintf (f,"\"%s\"\n", PR_UglyValueString(type, (eval_t *)&pr_globals[def->ofs]));		
 	}
@@ -875,7 +875,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
-		*(string_t *)d = ED_NewString (s) - pr_strings;
+		*(string_t *)d = PR_SetString(ED_NewString(s));
 		break;
 		
 	case ev_float:
@@ -1094,7 +1094,7 @@ void ED_LoadFromFile (const char *data)
 		}
 
 	// look for the spawn function
-		func = ED_FindFunction ( pr_strings + ent->v->classname );
+		func = ED_FindFunction (PR_GetString(ent->v->classname));
 
 		if (!func)
 		{
@@ -1259,7 +1259,7 @@ void PR_LoadProgs (void)
 	{
 		pr_fielddefs[progs->numfielddefs].type = dpfields[i].type;
 		pr_fielddefs[progs->numfielddefs].ofs = progs->entityfields;
-		pr_fielddefs[progs->numfielddefs].s_name = dpfields[i].string - pr_strings;
+		pr_fielddefs[progs->numfielddefs].s_name = PR_SetString(dpfields[i].string);
 		if (pr_fielddefs[progs->numfielddefs].type == ev_vector)
 			progs->entityfields += 3;
 		else
@@ -1401,7 +1401,7 @@ void PR_Fields_f (void)
 		for (i = 1;i < progs->numfielddefs;i++)
 		{
 			d = &pr_fielddefs[i];
-			name = pr_strings + d->s_name;
+			name = PR_GetString(d->s_name);
 			if (name[strlen(name)-2] == '_')
 				continue;	// skip _x, _y, _z vars
 			v = (int *)((char *)ed->v + d->ofs*4);
@@ -1422,7 +1422,7 @@ void PR_Fields_f (void)
 	for (i = 0;i < progs->numfielddefs;i++)
 	{
 		d = &pr_fielddefs[i];
-		name = pr_strings + d->s_name;
+		name = PR_GetString(d->s_name);
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
 		switch(d->type & ~DEF_SAVEGLOBAL)
@@ -1493,7 +1493,7 @@ void PR_Globals_f (void)
 		return;
 	}
 	for (i = 0;i < progs->numglobaldefs;i++)
-		Con_Printf("%s\n", (pr_strings + pr_globaldefs[i].s_name));
+		Con_Printf("%s\n", PR_GetString(pr_globaldefs[i].s_name));
 	Con_Printf("%i global variables, totalling %i bytes\n", progs->numglobals, progs->numglobals * 4);
 }
 

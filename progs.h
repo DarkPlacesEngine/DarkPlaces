@@ -155,14 +155,14 @@ edict_t *PROG_TO_EDICT(int n);
 #define	G_EDICT(o) (PROG_TO_EDICT(*(int *)&pr_globals[o]))
 #define G_EDICTNUM(o) NUM_FOR_EDICT(G_EDICT(o))
 #define	G_VECTOR(o) (&pr_globals[o])
-#define	G_STRING(o) (pr_strings + *(string_t *)&pr_globals[o])
+#define	G_STRING(o) (PR_GetString(*(string_t *)&pr_globals[o]))
 //#define	G_FUNCTION(o) (*(func_t *)&pr_globals[o])
 
 // FIXME: make these go away?
 #define	E_FLOAT(e,o) (((float*)e->v)[o])
 //#define	E_INT(e,o) (((int*)e->v)[o])
 //#define	E_VECTOR(e,o) (&((float*)e->v)[o])
-#define	E_STRING(e,o) (pr_strings + *(string_t *)&((float*)e->v)[o])
+#define	E_STRING(e,o) (PR_GetString(*(string_t *)&((float*)e->v)[o]))
 
 extern	int		type_size[8];
 
@@ -182,6 +182,9 @@ void PR_Execute_ProgsLoaded(void);
 
 void ED_PrintEdicts (void);
 void ED_PrintNum (int ent);
+
+char *PR_GetString (int num);
+int PR_SetString (char *s);
 
 #endif
 
