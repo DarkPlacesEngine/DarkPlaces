@@ -465,7 +465,7 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 void Mod_BuildNormals(int numverts, int numtriangles, const float *vertex3f, const int *elements, float *normal3f);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors);
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);

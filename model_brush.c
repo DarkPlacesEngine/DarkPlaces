@@ -1789,7 +1789,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	// vertex limit
 	loadmodel->nummeshes = 1;
 	loadmodel->meshlist = Mem_Alloc(loadmodel->mempool, sizeof(surfmesh_t *));
-	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, true, false);
+	loadmodel->meshlist[0] = Mod_AllocSurfMesh(loadmodel->mempool, totalverts, totaltris, true, true, false, false);
 
 	totalverts = 0;
 	totaltris = 0;
@@ -4242,7 +4242,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		i = oldi;
 		in = oldin;
 		out = oldout;
-		mesh = tempmeshlist[meshnum] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, false, true);
+		mesh = tempmeshlist[meshnum] = Mod_AllocSurfMesh(loadmodel->mempool, meshvertices, meshtriangles, false, false, true, false);
 		meshvertices = 0;
 		meshtriangles = 0;
 		for (;i < count && meshvertices + out->num_vertices <= mesh->num_vertices;i++, in++, out++)
