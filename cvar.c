@@ -159,15 +159,13 @@ Cvar_CompleteBuildList (char *partial)
 Cvar_Set
 ============
 */
-void Cvar_Set (char *var_name, char *value)
+void Cvar_SetQuick (cvar_t *var, char *value)
 {
-	cvar_t	*var;
 	qboolean changed;
 
-	var = Cvar_FindVar (var_name);
-	if (!var)
-	{	// there is an error in C code if this happens
-		Con_Printf ("Cvar_Set: variable %s not found\n", var_name);
+	if (var == NULL)
+	{
+		Con_Printf("Cvar_SetQuick: var == NULL\n");
 		return;
 	}
 
@@ -193,11 +191,34 @@ void Cvar_Set (char *var_name, char *value)
 	}
 }
 
+void Cvar_Set (char *var_name, char *value)
+{
+	cvar_t *var;
+	var = Cvar_FindVar (var_name);
+	if (var == NULL)
+	{
+		// there is an error in C code if this happens
+		Con_Printf ("Cvar_Set: variable %s not found\n", var_name);
+		return;
+	}
+
+	Cvar_SetQuick(var, value);
+}
+
 /*
 ============
 Cvar_SetValue
 ============
 */
+void Cvar_SetValueQuick (cvar_t *var, float value)
+{
+	char	val[32];
+
+	// LordHavoc: changed from %f to %g to use shortest representation
+	sprintf (val, "%g",value);
+	Cvar_SetQuick (var, val);
+}
+
 void Cvar_SetValue (char *var_name, float value)
 {
 	char	val[32];
