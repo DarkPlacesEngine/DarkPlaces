@@ -467,7 +467,7 @@ Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 */
 void Con_DrawInput (void)
 {
-	char editlinecopy[256], *text;
+	char editlinecopy[257], *text;
 
 	if (!key_consoleactive)
 		return;		// don't draw anything
