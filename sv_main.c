@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_main.c -- server main program
 
 #include "quakedef.h"
+#include "portals.h"
 
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "0"}; // fast but loose
 static cvar_t sv_cullentities_portal = {0, "sv_cullentities_portal", "0"}; // extremely accurate visibility checking, but too slow
