@@ -426,46 +426,56 @@ static int R_CalcTexelDataSize (gltexture_t *glt)
 	return size;
 }
 
-void R_TextureStats_PrintTotal(void)
+void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal)
 {
-	int glsize, total = 0, totalt = 0, totalp = 0, loaded = 0, loadedt = 0, loadedp = 0;
+	int glsize;
+	int isloaded;
+	int pooltotal = 0, pooltotalt = 0, pooltotalp = 0, poolloaded = 0, poolloadedt = 0, poolloadedp = 0;
+	int sumtotal = 0, sumtotalt = 0, sumtotalp = 0, sumloaded = 0, sumloadedt = 0, sumloadedp = 0;
 	gltexture_t *glt;
 	gltexturepool_t *pool;
+	if (printeach)
+		Con_Print("glsize input loaded mip alpha name\n");
 	for (pool = gltexturepoolchain;pool;pool = pool->next)
 	{
+		pooltotal = 0;
+		pooltotalt = 0;
+		pooltotalp = 0;
+		poolloaded = 0;
+		poolloadedt = 0;
+		poolloadedp = 0;
 		for (glt = pool->gltchain;glt;glt = glt->chain)
 		{
 			glsize = R_CalcTexelDataSize(glt);
-			total++;
-			totalt += glsize;
-			totalp += glt->inputdatasize;
-			if (!(glt->flags & GLTEXF_UPLOAD))
+			isloaded = !(glt->flags & GLTEXF_UPLOAD);
+			pooltotal++;
+			pooltotalt += glsize;
+			pooltotalp += glt->inputdatasize;
+			if (isloaded)
 			{
-				loaded++;
-				loadedt += glsize;
-				loadedp += glt->inputdatasize;
+				poolloaded++;
+				poolloadedt += glsize;
+				poolloadedp += glt->inputdatasize;
 			}
+			if (printeach)
+				Con_Printf("%c%4i%c%c%4i%c %s %s %s %s\n", isloaded ? '[' : ' ', (glsize + 1023) / 1024, isloaded ? ']' : ' ', glt->inputtexels ? '[' : ' ', (glt->inputdatasize + 1023) / 1024, glt->inputtexels ? ']' : ' ', isloaded ? "loaded" : "      ", (glt->flags & TEXF_MIPMAP) ? "mip" : "   ", (glt->flags & TEXF_ALPHA) ? "alpha" : "     ", glt->identifier ? glt->identifier : "<unnamed>");
 		}
+		if (printpool)
+			Con_Printf("texturepool %10p total: %i (%.3fMB, %.3fMB original), uploaded %i (%.3fMB, %.3fMB original), upload on demand %i (%.3fMB, %.3fMB original)\n", pool, pooltotal, pooltotalt / 1048576.0, pooltotalp / 1048576.0, poolloaded, poolloadedt / 1048576.0, poolloadedp / 1048576.0, pooltotal - poolloaded, (pooltotalt - poolloadedt) / 1048576.0, (pooltotalp - poolloadedp) / 1048576.0);
+		sumtotal += pooltotal;
+		sumtotalt += pooltotalt;
+		sumtotalp += pooltotalp;
+		sumloaded += poolloaded;
+		sumloadedt += poolloadedt;
+		sumloadedp += poolloadedp;
 	}
-	Con_Printf("total: %i (%.3fMB, %.3fMB original), uploaded %i (%.3fMB, %.3fMB original), upload on demand %i (%.3fMB, %.3fMB original)\n", total, totalt / 1048576.0, totalp / 1048576.0, loaded, loadedt / 1048576.0, loadedp / 1048576.0, total - loaded, (totalt - loadedt) / 1048576.0, (totalp - loadedp) / 1048576.0);
+	if (printtotal)
+		Con_Printf("textures total: %i (%.3fMB, %.3fMB original), uploaded %i (%.3fMB, %.3fMB original), upload on demand %i (%.3fMB, %.3fMB original)\n", sumtotal, sumtotalt / 1048576.0, sumtotalp / 1048576.0, sumloaded, sumloadedt / 1048576.0, sumloadedp / 1048576.0, sumtotal - sumloaded, (sumtotalt - sumloadedt) / 1048576.0, (sumtotalp - sumloadedp) / 1048576.0);
 }
 
 static void R_TextureStats_f(void)
 {
-	int loaded;
-	gltexture_t *glt;
-	gltexturepool_t *pool;
-	Con_Print("glsize input loaded mip alpha name\n");
-	for (pool = gltexturepoolchain;pool;pool = pool->next)
-	{
-		for (glt = pool->gltchain;glt;glt = glt->chain)
-		{
-			loaded = !(glt->flags & GLTEXF_UPLOAD);
-			Con_Printf("%c%4i%c%c%4i%c %s %s %s %s\n", loaded ? '[' : ' ', (R_CalcTexelDataSize(glt) + 1023) / 1024, loaded ? ']' : ' ', glt->inputtexels ? '[' : ' ', (glt->inputdatasize + 1023) / 1024, glt->inputtexels ? ']' : ' ', loaded ? "loaded" : "      ", (glt->flags & TEXF_MIPMAP) ? "mip" : "   ", (glt->flags & TEXF_ALPHA) ? "alpha" : "     ", glt->identifier ? glt->identifier : "<unnamed>");
-		}
-		Con_Printf("pool %10p\n", pool);
-	}
-	R_TextureStats_PrintTotal();
+	R_TextureStats_Print(true, true, true);
 }
 
 char engineversion[40];
@@ -558,7 +568,7 @@ void R_Textures_Frame (void)
 		GLint oldbindtexnum;
 
 		old_aniso = bound(1, gl_texture_anisotropy.integer, gl_max_anisotropy);
-		
+
 		Cvar_SetValueQuick(&gl_texture_anisotropy, old_aniso);
 
 		for (pool = gltexturepoolchain;pool;pool = pool->next)

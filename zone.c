@@ -230,7 +230,7 @@ mempool_t *_Mem_AllocPool(const char *name, int flags, mempool_t *parent, const 
 void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 {
 	mempool_t **chainaddress, *iter, *temp;
-	
+
 	if (*pool)
 	{
 		if ((*pool)->sentinel1 != MEMHEADER_SENTINEL1)
@@ -251,7 +251,7 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 		for(iter = poolchain; iter; temp = iter = iter->next)
 			if(iter->parent == *pool)
 				_Mem_FreePool(&temp, filename, fileline);
-		
+
 		// free the pool itself
 		memset(*pool, 0xBF, sizeof(mempool_t));
 		free(*pool);
@@ -262,7 +262,7 @@ void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 {
 	mempool_t *chainaddress;
-	
+
 	if (pool == NULL)
 		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
 	if (pool->sentinel1 != MEMHEADER_SENTINEL1)
@@ -412,11 +412,11 @@ void MemList_f(void)
 	}
 }
 
-extern void R_TextureStats_PrintTotal(void);
+extern void R_TextureStats_Print(qboolean printeach, qboolean printpool, qboolean printtotal);
 void MemStats_f(void)
 {
 	Mem_CheckSentinelsGlobal();
-	R_TextureStats_PrintTotal();
+	R_TextureStats_Print(false, false, true);
 	Mem_PrintStats();
 }
 
