@@ -24,8 +24,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct
 {
-	// NULL pointers are non-existent clients
-	struct client_s *connectedclients[MAX_SCOREBOARD];
+	// number of svs.clients slots (updated by maxplayers command)
+	int maxclients;
+	// client slots
+	struct client_s *clients;
 	// episode completion information
 	int serverflags;
 	// cleared when at SV_SpawnServer
@@ -99,6 +101,8 @@ typedef struct
 
 typedef struct client_s
 {
+	// false = empty client slot
+	qboolean active;
 	// false = don't send datagrams
 	qboolean spawned;
 	// has been told to go to another level
@@ -107,7 +111,7 @@ typedef struct client_s
 	qboolean sendsignon;
 	// remove this client immediately
 	qboolean deadsocket;
-	// index of this client in the svs.connectedclients pointer array
+	// index of this client in the svs.clients array
 	int number;
 
 	// reliable messages must be sent periodically
@@ -247,7 +251,6 @@ extern cvar_t sv_idealpitchscale;
 extern cvar_t sv_aim;
 extern cvar_t sv_stepheight;
 extern cvar_t sv_jumpstep;
-extern cvar_t sv_maxplayers;
 
 extern mempool_t *sv_clients_mempool;
 extern mempool_t *sv_edicts_mempool;

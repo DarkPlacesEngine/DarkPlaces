@@ -372,13 +372,15 @@ void PF_sprint (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	s = PF_VarString(1);
 
-	if (entnum < 1 || entnum > MAX_SCOREBOARD || !svs.connectedclients[entnum-1])
+	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
 		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
 
-	client = svs.connectedclients[entnum-1];
+	client = svs.clients + entnum-1;
+	if (!client->netconnection)
+		return;
 	MSG_WriteChar(&client->message,svc_print);
 	MSG_WriteString(&client->message, s );
 }
@@ -402,13 +404,15 @@ void PF_centerprint (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	s = PF_VarString(1);
 
-	if (entnum < 1 || entnum > MAX_SCOREBOARD || !svs.connectedclients[entnum-1])
+	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
 		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
 
-	client = svs.connectedclients[entnum-1];
+	client = svs.clients + entnum-1;
+	if (!client->netconnection)
+		return;
 	MSG_WriteChar(&client->message,svc_centerprint);
 	MSG_WriteString(&client->message, s );
 }
@@ -829,8 +833,8 @@ int PF_newcheckclient (int check)
 
 // cycle to the next one
 
-	check = bound(1, check, MAX_SCOREBOARD);
-	if (check == MAX_SCOREBOARD)
+	check = bound(1, check, svs.maxclients);
+	if (check == svs.maxclients)
 		i = 1;
 	else
 		i = check + 1;
@@ -840,7 +844,7 @@ int PF_newcheckclient (int check)
 		// count the cost
 		pr_xfunction->builtinsprofile++;
 		// wrap around
-		if (i == MAX_SCOREBOARD+1)
+		if (i == svs.maxclients+1)
 			i = 1;
 		// look up the client's edict
 		ent = EDICT_NUM(i);
@@ -930,12 +934,15 @@ void PF_stuffcmd (void)
 	client_t	*old;
 
 	entnum = G_EDICTNUM(OFS_PARM0);
-	if (entnum < 1 || entnum > MAX_SCOREBOARD)
-		Host_Error ("Parm 0 not a client");
+	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
+	{
+		Con_Printf("Can't stuffcmd to a non-client");
+		return;
+	}
 	str = G_STRING(OFS_PARM1);
 
 	old = host_client;
-	if ((host_client = svs.connectedclients[entnum-1]))
+	if ((host_client = svs.clients + entnum-1) && host_client->netconnection)
 		Host_ClientCommands ("%s", str);
 	host_client = old;
 }
@@ -951,10 +958,7 @@ localcmd (string)
 */
 void PF_localcmd (void)
 {
-	char	*str;
-
-	str = G_STRING(OFS_PARM0);
-	Cbuf_AddText (str);
+	Cbuf_AddText(G_STRING(OFS_PARM0));
 }
 
 /*
@@ -966,11 +970,7 @@ float cvar (string)
 */
 void PF_cvar (void)
 {
-	char	*str;
-
-	str = G_STRING(OFS_PARM0);
-
-	G_FLOAT(OFS_RETURN) = Cvar_VariableValue (str);
+	G_FLOAT(OFS_RETURN) = Cvar_VariableValue(G_STRING(OFS_PARM0));
 }
 
 /*
@@ -982,12 +982,7 @@ float cvar (string)
 */
 void PF_cvar_set (void)
 {
-	char	*var, *val;
-
-	var = G_STRING(OFS_PARM0);
-	val = G_STRING(OFS_PARM1);
-
-	Cvar_Set (var, val);
+	Cvar_Set(G_STRING(OFS_PARM0), G_STRING(OFS_PARM1));
 }
 
 /*
@@ -1116,7 +1111,7 @@ void PF_Remove (void)
 	ed = G_EDICT(OFS_PARM0);
 	if (ed == sv.edicts)
 		Host_Error("remove: tried to remove world\n");
-	if (NUM_FOR_EDICT(ed) <= MAX_SCOREBOARD)
+	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
 		Host_Error("remove: tried to remove a client\n");
 	ED_Free (ed);
 }
@@ -1440,9 +1435,9 @@ void PF_lightstyle (void)
 	if (sv.state != ss_active)
 		return;
 
-	for (j = 0;j < MAX_SCOREBOARD;j++)
+	for (j = 0, host_client = svs.clients;j < svs.maxclients;j++, host_client++)
 	{
-		if ((client = svs.connectedclients[j]))
+		if (client->netconnection)
 		{
 			MSG_WriteChar (&client->message, svc_lightstyle);
 			MSG_WriteChar (&client->message,style);
@@ -1729,9 +1724,9 @@ sizebuf_t *WriteDest (void)
 	case MSG_ONE:
 		ent = PROG_TO_EDICT(pr_global_struct->msg_entity);
 		entnum = NUM_FOR_EDICT(ent);
-		if (entnum < 1 || entnum > MAX_SCOREBOARD || svs.connectedclients[entnum-1] == NULL)
-			Host_Error("WriteDest: not a client");
-		return &svs.connectedclients[entnum-1]->message;
+		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
+			Con_Printf("WriteDest: tried to write to non-client\n");
+		return &svs.clients[entnum-1].message;
 
 	case MSG_ALL:
 		return &sv.reliable_datagram;
@@ -1841,11 +1836,14 @@ void PF_setspawnparms (void)
 
 	ent = G_EDICT(OFS_PARM0);
 	i = NUM_FOR_EDICT(ent);
-	if (i < 1 || i > MAX_SCOREBOARD || !svs.connectedclients[i-1])
-		Host_Error ("Entity is not a client");
+	if (i < 1 || i > svs.maxclients || !svs.clients[i-1].active)
+	{
+		Con_Printf("tried to setspawnparms on a non-client\n");
+		return;
+	}
 
 	// copy spawn parms out of the client_t
-	client = svs.connectedclients[i-1];
+	client = svs.clients + i-1;
 	for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
 		(&pr_global_struct->parm1)[i] = client->spawn_parms[i];
 }
@@ -2084,12 +2082,13 @@ void PF_setcolor (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	i = G_FLOAT(OFS_PARM1);
 
-	if (entnum < 1 || entnum > MAX_SCOREBOARD || !(client = svs.connectedclients[entnum-1]))
+	if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
 	{
 		Con_Printf ("tried to setcolor a non-client\n");
 		return;
 	}
 
+	client = svs.clients + entnum-1;
 	if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
 		val->_float = i;
 	client->colors = i;
@@ -2887,11 +2886,14 @@ void PF_clientcommand (void)
 
 	//find client for this entity
 	i = (NUM_FOR_EDICT(G_EDICT(OFS_PARM0)) - 1);
-	if (i < 0 || i >= MAX_SCOREBOARD || !svs.connectedclients[i])
-		Host_Error("PF_clientcommand: entity is not a client");
+	if (i < 0 || i >= svs.maxclients || !svs.clients[i].active)
+	{
+		Con_Printf("PF_clientcommand: entity is not a client");
+		return;
+	}
 
 	temp_client = host_client;
-	host_client = svs.connectedclients[i];
+	host_client = svs.clients + i;
 	Cmd_ExecuteString (G_STRING(OFS_PARM1), src_client);
 	host_client = temp_client;
 }

@@ -96,8 +96,6 @@ cvar_t temp1 = {0, "temp1","0"};
 cvar_t timestamps = {CVAR_SAVE, "timestamps", "0"};
 cvar_t timeformat = {CVAR_SAVE, "timeformat", "[%b %e %X] "};
 
-cvar_t sv_maxplayers = {0, "maxplayers", "8"};
-
 /*
 ================
 Host_EndGame
@@ -182,6 +180,8 @@ void Host_Error (const char *error, ...)
 	longjmp (host_abortserver, 1);
 }
 
+mempool_t *sv_clients_mempool = NULL;
+
 void Host_ServerOptions (void)
 {
 	int i, numplayers;
@@ -241,7 +241,9 @@ void Host_ServerOptions (void)
 	if (numplayers > 1 && !deathmatch.integer)
 		Cvar_SetValueQuick(&deathmatch, 1);
 
-	Cvar_SetValueQuick(&sv_maxplayers, numplayers);
+	svs.maxclients = numplayers;
+	sv_clients_mempool = Mem_AllocPool("server clients");
+	svs.clients = Mem_Alloc(sv_clients_mempool, sizeof(client_t) * svs.maxclients);
 }
 
 /*
@@ -282,8 +284,6 @@ void Host_InitLocal (void)
 
 	Cvar_RegisterVariable (&timestamps);
 	Cvar_RegisterVariable (&timeformat);
-
-	Cvar_RegisterVariable(&sv_maxplayers);
 
 	Host_ServerOptions ();
 }
@@ -358,9 +358,9 @@ void SV_BroadcastPrintf(const char *fmt, ...)
 	vsnprintf(string, sizeof(string), fmt,argptr);
 	va_end(argptr);
 
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if ((client = svs.connectedclients[i]) && client->spawned)
+		if (client->spawned)
 		{
 			MSG_WriteByte(&client->message, svc_print);
 			MSG_WriteString(&client->message, string);
@@ -436,9 +436,9 @@ void SV_DropClient(qboolean crash)
 	}
 
 	// send notification to all clients
-	for (i = 0;i < MAX_SCOREBOARD;i++)
+	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
 	{
-		if (!(client = svs.connectedclients[i]))
+		if (!client->active)
 			continue;
 		MSG_WriteByte(&client->message, svc_updatename);
 		MSG_WriteByte(&client->message, host_client->number);
@@ -456,9 +456,8 @@ void SV_DropClient(qboolean crash)
 	// free the client now
 	if (host_client->entitydatabase4)
 		EntityFrame4_FreeDatabase(host_client->entitydatabase4);
-	// remove the index reference
-	svs.connectedclients[host_client->number] = NULL;
-	Mem_Free(host_client);
+	// clear the client struct (this sets active to false)
+	memset(host_client, 0, sizeof(*host_client));
 }
 
 /*
@@ -473,7 +472,6 @@ void Host_ShutdownServer(qboolean crash)
 	int i, count;
 	sizebuf_t buf;
 	char message[4];
-	double start;
 
 	if (!sv.active)
 		return;
@@ -489,32 +487,6 @@ void Host_ShutdownServer(qboolean crash)
 	NetConn_Heartbeat(2);
 	NetConn_Heartbeat(2);
 
-// flush any pending messages - like the score!!!
-	start = Sys_DoubleTime();
-	do
-	{
-		count = 0;
-		NetConn_ClientFrame();
-		NetConn_ServerFrame();
-		for (i = 0;i < MAX_SCOREBOARD;i++)
-		{
-			host_client = svs.connectedclients[i];
-			if (host_client && host_client->message.cursize)
-			{
-				if (NetConn_CanSendMessage(host_client->netconnection))
-				{
-					NetConn_SendReliableMessage(host_client->netconnection, &host_client->message);
-					SZ_Clear(&host_client->message);
-				}
-				else
-					count++;
-			}
-		}
-		if ((Sys_DoubleTime() - start) > 3.0)
-			break;
-	}
-	while(count);
-
 // make sure all the clients know we're disconnecting
 	buf.data = message;
 	buf.maxsize = 4;
@@ -524,8 +496,8 @@ void Host_ShutdownServer(qboolean crash)
 	if (count)
 		Con_Printf("Host_ShutdownServer: NetConn_SendToAll failed for %u clients\n", count);
 
-	for (i = 0;i < MAX_SCOREBOARD;i++)
-		if ((host_client = svs.connectedclients[i]))
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
+		if (host_client->active)
 			SV_DropClient(crash); // server shutdown
 
 	NetConn_CloseServerPorts();
@@ -534,6 +506,7 @@ void Host_ShutdownServer(qboolean crash)
 // clear structures
 //
 	memset(&sv, 0, sizeof(sv));
+	memset(svs.clients, 0, svs.maxclients*sizeof(client_t));
 }
 
 
@@ -835,9 +808,11 @@ void Host_Frame (float time)
 	timecount = 0;
 	timetotal = 0;
 	c = 0;
-	for (i = 0;i < MAX_SCOREBOARD;i++)
-		if (svs.connectedclients[i])
+	for (i=0 ; i<svs.maxclients ; i++)
+	{
+		if (svs.clients[i].active)
 			c++;
+	}
 
 	Con_Printf ("serverprofile: %2i clients %2i msec\n",  c,  m);
 }
