@@ -893,13 +893,15 @@ void COM_FileBase (char *in, char *out)
 	while (s != in && *s != '.')
 		s--;
 	
-	for (s2 = s ; *s2 && *s2 != '/' ; s2--)
+	// LordHavoc: EWW bug bug bug bug bug... added previously missing s2 != in (yes, could go hunting through mem for /)
+	for (s2 = s ; s2 != in && *s2 && *s2 != '/' ; s2--)
 	;
 	
 	if (s-s2 < 2)
 		strcpy (out,"?model?");
 	else
 	{
+		// LordHavoc: FIXME: examine this
 		s--;
 		strncpy (out,s2+1, s-s2);
 		out[s-s2] = 0;
