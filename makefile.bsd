@@ -5,7 +5,8 @@ CC=gcc
 
 MAKE:=$(MAKE) -f makefile.bsd
 
-OBJ_BSDSOUND=snd_null.o
+OBJ_BSDSOUND=snd_bsd.o snd_dma.o snd_mix.o snd_mem.o ogg.o
+#OBJ_BSDSOUND=snd_null.o
 BSDSOUNDLIB=
 
 #if you want CD sound in BSD
