@@ -132,7 +132,6 @@
 0 darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh) 
 0 darkplaces sound: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
-0 dpmaster: add a commandline option to dpmaster that remaps a server ip to another ip, so LordHavoc can make his server show up on his dpmaster
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 dpmod: add back nails in walls, even if only in singleplayer (Zenex)
 0 dpmod: add combo kill detection; rapid burst of kills (Sajt)
@@ -668,6 +667,7 @@ d darkplaces: update darkplaces readme
 d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles, note this does not cover svc_setangle (Urre, Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 d darkplaces: upgrade punchangle protocol to 16bit angles for smoother motion (Urre)
 d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)
+d dpmaster: add a commandline option to dpmaster that remaps a server ip to another ip, so LordHavoc can make his server show up on his dpmaster
 d dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge to 50 cells
 d dpmod: add back tarbaby gibs (scar3crow)
