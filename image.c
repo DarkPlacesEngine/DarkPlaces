@@ -207,7 +207,8 @@ LoadTGA
 */
 qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 {
-	int columns, rows, row, column, row_inc;
+	int x, y, row_inc;
+	unsigned char red, green, blue, alpha, run, runlen;
 	qbyte *pixbuf, *image_rgba, *fin, *enddata;
 
 	if (loadsize < 18+3)
@@ -244,13 +245,13 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 
 	enddata = f + loadsize;
 
-	columns = targa_header.width;
-	rows = targa_header.height;
+	image_width = targa_header.width;
+	image_height = targa_header.height;
 
-	image_rgba = Mem_Alloc(tempmempool, columns * rows * 4);
+	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
-		Con_Printf ("LoadTGA: not enough memory for %i by %i image\n", columns, rows);
+		Con_Printf ("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
 		return NULL;
 	}
 
@@ -261,8 +262,8 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	// If bit 5 of attributes isn't set, the image has been stored from bottom to top
 	if ((targa_header.attributes & 0x20) == 0)
 	{
-		pixbuf = image_rgba + (rows - 1)*columns*4;
-		row_inc = -columns*4*2;
+		pixbuf = image_rgba + (image_height - 1)*image_width*4;
+		row_inc = -image_width*4*2;
 	}
 	else
 	{
@@ -273,137 +274,145 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 	if (targa_header.image_type == 2)
 	{
 		// Uncompressed, RGB images
-		for(row = 0;row < rows;row++)
+		if (targa_header.pixel_size == 24)
 		{
-			for(column = 0;column < columns;column++)
+			if (fin + image_width * image_height * 3 <= enddata)
 			{
-				switch (targa_header.pixel_size)
+				for(y = 0;y < image_height;y++)
 				{
-				case 24:
-					if (fin + 3 > enddata)
-						break;
-					*pixbuf++ = fin[2];
-					*pixbuf++ = fin[1];
-					*pixbuf++ = fin[0];
-					*pixbuf++ = 255;
-					fin += 3;
-					break;
-				case 32:
-					if (fin + 4 > enddata)
-						break;
-					*pixbuf++ = fin[2];
-					*pixbuf++ = fin[1];
-					*pixbuf++ = fin[0];
-					*pixbuf++ = fin[3];
-					fin += 4;
-					break;
+					for(x = 0;x < image_width;x++)
+					{
+						*pixbuf++ = fin[2];
+						*pixbuf++ = fin[1];
+						*pixbuf++ = fin[0];
+						*pixbuf++ = 255;
+						fin += 3;
+					}
+					pixbuf += row_inc;
 				}
 			}
-			pixbuf += row_inc;
+		}
+		else
+		{
+			if (fin + image_width * image_height * 4 <= enddata)
+			{
+				for(y = 0;y < image_height;y++)
+				{
+					for(x = 0;x < image_width;x++)
+					{
+						*pixbuf++ = fin[2];
+						*pixbuf++ = fin[1];
+						*pixbuf++ = fin[0];
+						*pixbuf++ = fin[3];
+						fin += 4;
+					}
+					pixbuf += row_inc;
+				}
+			}
 		}
 	}
 	else if (targa_header.image_type==10)
 	{
 		// Runlength encoded RGB images
-		unsigned char red = 0, green = 0, blue = 0, alphabyte = 0, packetHeader, packetSize, j;
-		for(row = 0;row < rows;row++)
+		x = 0;
+		y = 0;
+		while (y < image_height && fin < enddata)
 		{
-			for(column = 0;column < columns;)
+			runlen = *fin++;
+			if (runlen & 0x80)
 			{
-				if (fin >= enddata)
-					goto outofdata;
-				packetHeader = *fin++;
-				packetSize = 1 + (packetHeader & 0x7f);
-				if (packetHeader & 0x80)
+				// RLE compressed run
+				runlen = 1 + (runlen & 0x7f);
+				if (targa_header.pixel_size == 24)
 				{
-					// run-length packet
-					switch (targa_header.pixel_size)
-					{
-					case 24:
-						if (fin + 3 > enddata)
-							goto outofdata;
-						blue = *fin++;
-						green = *fin++;
-						red = *fin++;
-						alphabyte = 255;
+					if (fin + 3 > enddata)
 						break;
-					case 32:
-						if (fin + 4 > enddata)
-							goto outofdata;
-						blue = *fin++;
-						green = *fin++;
-						red = *fin++;
-						alphabyte = *fin++;
+					blue = *fin++;
+					green = *fin++;
+					red = *fin++;
+					alpha = 255;
+				}
+				else
+				{
+					if (fin + 4 > enddata)
 						break;
-					}
+					blue = *fin++;
+					green = *fin++;
+					red = *fin++;
+					alpha = *fin++;
+				}
 
-					for(j = 0;j < packetSize;j++)
+				while (runlen && y < image_height)
+				{
+					run = runlen;
+					if (run > image_width - x)
+						run = image_width - x;
+					x += run;
+					runlen -= run;
+					while(run--)
 					{
 						*pixbuf++ = red;
 						*pixbuf++ = green;
 						*pixbuf++ = blue;
-						*pixbuf++ = alphabyte;
-						column++;
-						if (column == columns)
-						{
-							// run spans across rows
-							column = 0;
-							if (row < rows - 1)
-								row++;
-							else
-								goto breakOut;
-							pixbuf += row_inc;
-						}
+						*pixbuf++ = alpha;
+					}
+					if (x == image_width)
+					{
+						// end of line, advance to next
+						x = 0;
+						y++;
+						pixbuf += row_inc;
 					}
 				}
-				else
+			}
+			else
+			{
+				// RLE uncompressed run
+				runlen = 1 + (runlen & 0x7f);
+				while (runlen && y < image_height)
 				{
-					// non run-length packet
-					for(j = 0;j < packetSize;j++)
+					run = runlen;
+					if (run > image_width - x)
+						run = image_width - x;
+					x += run;
+					runlen -= run;
+					if (targa_header.pixel_size == 24)
 					{
-						switch (targa_header.pixel_size)
+						if (fin + run * 3 > enddata)
+							break;
+						while(run--)
 						{
-						case 24:
-							if (fin + 3 > enddata)
-								goto outofdata;
 							*pixbuf++ = fin[2];
 							*pixbuf++ = fin[1];
 							*pixbuf++ = fin[0];
 							*pixbuf++ = 255;
 							fin += 3;
+						}
+					}
+					else
+					{
+						if (fin + run * 4 > enddata)
 							break;
-						case 32:
-							if (fin + 4 > enddata)
-								goto outofdata;
+						while(run--)
+						{
 							*pixbuf++ = fin[2];
 							*pixbuf++ = fin[1];
 							*pixbuf++ = fin[0];
 							*pixbuf++ = fin[3];
 							fin += 4;
-							break;
 						}
-						column++;
-						if (column == columns)
-						{
-							// pixel packet run spans across rows
-							column = 0;
-							if (row < rows - 1)
-								row++;
-							else
-								goto breakOut;
-							pixbuf += row_inc;
-						}
+					}
+					if (x == image_width)
+					{
+						// end of line, advance to next
+						x = 0;
+						y++;
+						pixbuf += row_inc;
 					}
 				}
 			}
-			pixbuf += row_inc;
-			breakOut:;
 		}
 	}
-outofdata:;
-
-	image_width = columns;
-	image_height = rows;
 	return image_rgba;
 }
 
