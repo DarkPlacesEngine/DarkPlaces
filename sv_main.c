@@ -86,9 +86,9 @@ void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 	if (sv.datagram.cursize > MAX_DATAGRAM-16)
 		return;	
 	MSG_WriteByte (&sv.datagram, svc_particle);
-	MSG_WriteCoord (&sv.datagram, org[0]);
-	MSG_WriteCoord (&sv.datagram, org[1]);
-	MSG_WriteCoord (&sv.datagram, org[2]);
+	MSG_WriteFloatCoord (&sv.datagram, org[0]);
+	MSG_WriteFloatCoord (&sv.datagram, org[1]);
+	MSG_WriteFloatCoord (&sv.datagram, org[2]);
 	for (i=0 ; i<3 ; i++)
 	{
 		v = dir[i]*16;
@@ -169,7 +169,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
 	MSG_WriteShort (&sv.datagram, channel);
 	MSG_WriteByte (&sv.datagram, sound_num);
 	for (i=0 ; i<3 ; i++)
-		MSG_WriteCoord (&sv.datagram, entity->v.origin[i]+0.5*(entity->v.mins[i]+entity->v.maxs[i]));
+		MSG_WriteFloatCoord (&sv.datagram, entity->v.origin[i]+0.5*(entity->v.mins[i]+entity->v.maxs[i]));
 }           
 
 /*
@@ -198,7 +198,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, PROTOCOL_VERSION);
+	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION);
 	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.value && deathmatch.value)
@@ -682,11 +682,11 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_COLORMAP)	MSG_WriteByte (msg, ent->v.colormap);
 		if (bits & U_SKIN)		MSG_WriteByte (msg, ent->v.skin);
 		if (bits & U_EFFECTS)	MSG_WriteByte (msg, ent->v.effects);
-		if (bits & U_ORIGIN1)	MSG_WriteCoord (msg, origin[0]);
+		if (bits & U_ORIGIN1)	MSG_WriteFloatCoord (msg, origin[0]);
 		if (bits & U_ANGLE1)	MSG_WriteAngle(msg, angles[0]);
-		if (bits & U_ORIGIN2)	MSG_WriteCoord (msg, origin[1]);
+		if (bits & U_ORIGIN2)	MSG_WriteFloatCoord (msg, origin[1]);
 		if (bits & U_ANGLE2)	MSG_WriteAngle(msg, angles[1]);
-		if (bits & U_ORIGIN3)	MSG_WriteCoord (msg, origin[2]);
+		if (bits & U_ORIGIN3)	MSG_WriteFloatCoord (msg, origin[2]);
 		if (bits & U_ANGLE3)	MSG_WriteAngle(msg, angles[2]);
 
 		// LordHavoc: new stuff
@@ -743,7 +743,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte (msg, ent->v.dmg_save);
 		MSG_WriteByte (msg, ent->v.dmg_take);
 		for (i=0 ; i<3 ; i++)
-			MSG_WriteCoord (msg, other->v.origin[i] + 0.5*(other->v.mins[i] + other->v.maxs[i]));
+			MSG_WriteFloatCoord (msg, other->v.origin[i] + 0.5*(other->v.mins[i] + other->v.maxs[i]));
 	
 		ent->v.dmg_take = 0;
 		ent->v.dmg_save = 0;
@@ -1118,7 +1118,7 @@ void SV_CreateBaseline (void)
 		MSG_WriteByte (&sv.signon, svent->baseline.skin);
 		for (i=0 ; i<3 ; i++)
 		{
-			MSG_WriteCoord(&sv.signon, svent->baseline.origin[i]);
+			MSG_WriteFloatCoord(&sv.signon, svent->baseline.origin[i]);
 			MSG_WriteAngle(&sv.signon, svent->baseline.angles[i]);
 		}
 	}

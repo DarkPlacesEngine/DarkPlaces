@@ -234,7 +234,11 @@ Returns the clipflags if the velocity was modified (hit something solid)
 If steptrace is not NULL, the trace of any vertical wall hit will be stored
 ============
 */
-#define	MAX_CLIP_PLANES	5
+// LordHavoc: increased from 5 to 20, to partially fix angled corner sticking
+// (example - start.bsp hall to e1m4, leading to the pool there are two
+//  angled corners, which you could get stuck on, now they are just a one
+//  frame hiccup)
+#define	MAX_CLIP_PLANES	20
 int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 {
 	int			bumpcount, numbumps;
@@ -1165,7 +1169,7 @@ Entities that are "stuck" to another entity
 */
 void SV_Physics_Follow (edict_t *ent)
 {
-	vec3_t vf, vr, vu, angles;
+	vec3_t vf, vr, vu, angles, v;
 	edict_t *e;
 // regular thinking
 	if (!SV_RunThink (ent))
@@ -1179,13 +1183,20 @@ void SV_Physics_Follow (edict_t *ent)
 	}
 	else
 	{
-		angles[0] = -(e->v.angles[0] - ent->v.punchangle[0]);
-		angles[1] = e->v.angles[1] - ent->v.punchangle[1];
-		angles[2] = e->v.angles[2] - ent->v.punchangle[2];
+		angles[0] = -ent->v.punchangle[0];
+		angles[1] =  ent->v.punchangle[1];
+		angles[2] =  ent->v.punchangle[2];
 		AngleVectors (angles, vf, vr, vu);
-		ent->v.origin[0] = ent->v.view_ofs[0] * vf[0] + ent->v.view_ofs[1] * vr[0] + ent->v.view_ofs[2] * vu[0] + e->v.origin[0];
-		ent->v.origin[1] = ent->v.view_ofs[0] * vf[1] + ent->v.view_ofs[1] * vr[1] + ent->v.view_ofs[2] * vu[1] + e->v.origin[1];
-		ent->v.origin[2] = ent->v.view_ofs[0] * vf[2] + ent->v.view_ofs[1] * vr[2] + ent->v.view_ofs[2] * vu[2] + e->v.origin[2];
+		v[0] = ent->v.view_ofs[0] * vf[0] + ent->v.view_ofs[1] * vr[0] + ent->v.view_ofs[2] * vu[0];
+		v[1] = ent->v.view_ofs[0] * vf[1] + ent->v.view_ofs[1] * vr[1] + ent->v.view_ofs[2] * vu[1];
+		v[2] = ent->v.view_ofs[0] * vf[2] + ent->v.view_ofs[1] * vr[2] + ent->v.view_ofs[2] * vu[2];
+		angles[0] = -e->v.angles[0];
+		angles[1] =  e->v.angles[1];
+		angles[2] =  e->v.angles[2];
+		AngleVectors (angles, vf, vr, vu);
+		ent->v.origin[0] = v[0] * vf[0] + v[1] * vf[1] + v[2] * vf[2] + e->v.origin[0];
+		ent->v.origin[1] = v[0] * vr[0] + v[1] * vr[1] + v[2] * vr[2] + e->v.origin[1];
+		ent->v.origin[2] = v[0] * vu[0] + v[1] * vu[1] + v[2] * vu[2] + e->v.origin[2];
 		/*
 		ent->v.origin[0] = ent->v.view_ofs[0] * vf[0] + ent->v.view_ofs[0] * vf[1] + ent->v.view_ofs[0] * vf[2] + e->v.origin[0];
 		ent->v.origin[1] = ent->v.view_ofs[1] * vr[0] + ent->v.view_ofs[1] * vr[1] + ent->v.view_ofs[1] * vr[2] + e->v.origin[1];

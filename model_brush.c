@@ -170,17 +170,44 @@ void Mod_LoadTextures (lump_t *l)
 			freeimage = FALSE;
 			transparent = FALSE;
 			bytesperpixel = 1;
-			if (!hlbsp && mt->offsets[0]) // texture included
+			if (mt->offsets[0]) // texture included
 			{
 				data = (byte *)((int) mt + mt->offsets[0]);
-				if (r_fullbrights.value && tx->name[0] != '*')
+				if (hlbsp)
+				{
+					byte *in, *out, *pal;
+					int palsize, d, p;
+					bytesperpixel = 4;
+					freeimage = TRUE;
+					in = data;
+					data = out = qmalloc(mt->width * mt->height * 4);
+					pal = in + (((mt->width * mt->height) * 85) >> 6);
+					palsize = pal[1] * 0x100 + pal[0];
+					if (palsize >= 256)
+						palsize = 255;
+					pal += 2;
+					for (d = 0;d < mt->width * mt->height;d++)
+					{
+						p = (*in++) * 3;
+						out[0] = pal[p];
+						out[1] = pal[p+1];
+						out[2] = pal[p+2];
+						out[3] = 255;
+						if (out[0] == 255 && out[1] == 0 && out[2] == 0) // HL transparent color (pure blue)
+							out[0] = out[1] = out[2] = out[3] = 0;
+						out += 4;
+					}
+				}
+				else if (r_fullbrights.value && tx->name[0] != '*')
 				{
 					for (j = 0;j < tx->width*tx->height;j++)
+					{
 						if (data[j] >= 224) // fullbright
 						{
 							fullbrights = TRUE;
 							break;
 						}
+					}
 				}
 			}
 			else // no texture, and no external replacement texture was found
@@ -201,24 +228,25 @@ void Mod_LoadTextures (lump_t *l)
 		}
 		else
 		{
-			tx->transparent = transparent;
 			if (fullbrights)
 			{
 				char name[64];
 				byte *data2;
+				tx->transparent = false;
 				data2 = qmalloc(tx->width*tx->height);
 				for (j = 0;j < tx->width*tx->height;j++)
 					data2[j] = data[j] >= 224 ? 0 : data[j]; // no fullbrights
-				tx->gl_texturenum = GL_LoadTexture (tx->name, tx->width, tx->height, data2, true, transparent, 1);
+				tx->gl_texturenum = GL_LoadTexture (tx->name, tx->width, tx->height, data2, true, false, 1);
 				strcpy(name, tx->name);
 				strcat(name, "_glow");
 				for (j = 0;j < tx->width*tx->height;j++)
 					data2[j] = data[j] >= 224 ? data[j] : 0; // only fullbrights
-				tx->gl_glowtexturenum = GL_LoadTexture (name, tx->width, tx->height, data2, true, transparent, 1);
+				tx->gl_glowtexturenum = GL_LoadTexture (name, tx->width, tx->height, data2, true, false, 1);
 				qfree(data2);
 			}
 			else
 			{
+				tx->transparent = transparent;
 				tx->gl_texturenum = GL_LoadTexture (tx->name, tx->width, tx->height, data, true, transparent, bytesperpixel);
 				tx->gl_glowtexturenum = 0;
 			}

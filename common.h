@@ -120,6 +120,8 @@ void MSG_WriteCoord (sizebuf_t *sb, float f);
 void MSG_WriteAngle (sizebuf_t *sb, float f);
 void MSG_WritePreciseAngle (sizebuf_t *sb, float f);
 
+#define MSG_WriteFloatCoord MSG_WriteFloat
+
 extern	int			msg_readcount;
 extern	qboolean	msg_badread;		// set if a read goes beyond end of message
 
@@ -138,6 +140,8 @@ char *MSG_ReadString (void);
 
 float MSG_ReadCoord (void);
 //float MSG_ReadAngle (void);
+
+#define MSG_ReadFloatCoord MSG_ReadFloat
 
 #define MSG_ReadAngle() (MSG_ReadByte() * (360.0f / 256.0f))
 #define MSG_ReadPreciseAngle() (MSG_ReadShort() * (360.0f / 65536.0f))

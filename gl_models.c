@@ -362,11 +362,9 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 		glDepthMask(1);
 	}
 
-	if (colormap >= 0)
+	if (skin[0] || skin[1] || skin[2] || skin[3] || skin[4])
 	{
-		if (!skin[0] && !skin[1] && !skin[2] && !skin[3])
-			GL_DrawModelMesh(0, NULL, maliashdr);
-		else
+		if (colormap >= 0 && (skin[0] || skin[1] || skin[2]))
 		{
 			int c;
 			if (skin[0])
@@ -383,19 +381,21 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 				R_TintModel(aliasvertcolor, aliasvertcolor2, maliashdr->numverts, (byte *) (&d_8to24table[c]));
 				GL_DrawModelMesh(skin[2], aliasvertcolor2, maliashdr);
 			}
-			if (skin[3]) GL_DrawModelMesh(skin[3], NULL, maliashdr);
 		}
-	}
-	else
-	{
-		if (!skin[3] && !skin[4])
-			GL_DrawModelMesh(0, NULL, maliashdr);
 		else
 		{
 			if (skin[4]) GL_DrawModelMesh(skin[4], aliasvertcolor, maliashdr);
-			if (skin[3]) GL_DrawModelMesh(skin[3], NULL, maliashdr);
+			else
+			{
+				if (skin[0]) GL_DrawModelMesh(skin[0], aliasvertcolor, maliashdr);
+				if (skin[1]) GL_DrawModelMesh(skin[1], aliasvertcolor, maliashdr);
+				if (skin[2]) GL_DrawModelMesh(skin[2], aliasvertcolor, maliashdr);
+			}
 		}
+		if (skin[3]) GL_DrawModelMesh(skin[3], NULL, maliashdr);
 	}
+	else
+		GL_DrawModelMesh(0, NULL, maliashdr);
 
 	if (fogenabled)
 	{

@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-char *svc_strings[] =
+char *svc_strings[128] =
 {
 	"svc_bad",
 	"svc_nop",
@@ -331,9 +331,9 @@ void CL_ParseServerInfo (void)
 
 // parse protocol version number
 	i = MSG_ReadLong ();
-	if (i != PROTOCOL_VERSION && i != 250)
+	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION && i != 250)
 	{
-		Con_Printf ("Server returned version %i, not %i", i, PROTOCOL_VERSION);
+		Con_Printf ("Server returned version %i, not %i or %i", i, DPPROTOCOL_VERSION, PROTOCOL_VERSION);
 		return;
 	}
 	Nehahrademcompatibility = false;
@@ -765,6 +765,9 @@ void CL_ParseServerMessage (void)
 {
 	int			cmd;
 	int			i;
+	byte		cmdlog[32];
+	char		*cmdlogname[32];
+	int			cmdindex, cmdcount = 0;
 	
 //
 // if recording demos, copy the message out
@@ -793,21 +796,49 @@ void CL_ParseServerMessage (void)
 			return;		// end of message
 		}
 
-	// if the high bit of the command byte is set, it is a fast update
+		cmdindex = cmdcount & 31;
+		cmdcount++;
+		cmdlog[cmdindex] = cmd;
+
+		// if the high bit of the command byte is set, it is a fast update
 		if (cmd & 128)
 		{
+			cmdlogname[cmdindex] = &("svc_entity");
 			SHOWNET("fast update");
 			CL_ParseUpdate (cmd&127);
 			continue;
 		}
 
 		SHOWNET(svc_strings[cmd]);
+		cmdlogname[cmdindex] = svc_strings[cmd];
+		if (!cmdlogname[cmdindex])
+			cmdlogname[cmdindex] = &("<unknown>");
 	
-	// other commands
+		// other commands
 		switch (cmd)
 		{
 		default:
-			Host_Error ("CL_ParseServerMessage: Illegible server message\n");
+			{
+				char description[32*64], temp[64];
+				int count;
+				strcpy(description, "packet dump: ");
+				i = cmdcount - 32;
+				if (i < 0)
+					i = 0;
+				count = cmdcount - i;
+				i &= 31;
+				while(count > 0)
+				{
+					sprintf(temp, "%3i:%s ", cmdlog[i], cmdlogname[i]);
+					strcat(description, temp);
+					count--;
+					i++;
+					i &= 31;
+				}
+				description[strlen(description)-1] = '\n'; // replace the last space with a newline
+				Con_Printf(description);
+				Host_Error ("CL_ParseServerMessage: Illegible server message\n");
+			}
 			break;
 			
 		case svc_nop:
@@ -919,14 +950,11 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_setpause:
-			{
-				cl.paused = MSG_ReadByte ();
-
-				if (cl.paused)
-					CDAudio_Pause ();
-				else
-					CDAudio_Resume ();
-			}
+			cl.paused = MSG_ReadByte ();
+			if (cl.paused)
+				CDAudio_Pause ();
+			else
+				CDAudio_Resume ();
 			break;
 			
 		case svc_signonnum:

@@ -583,6 +583,16 @@ void MSG_WriteString (sizebuf_t *sb, char *s)
 		SZ_Write (sb, s, strlen(s)+1);
 }
 
+// used by server (always dpprotocol)
+// moved to common.h as #define
+/*
+void MSG_WriteFloatCoord (sizebuf_t *sb, float f)
+{
+	MSG_WriteFloat(sb, f);
+}
+*/
+
+// used by client
 void MSG_WriteCoord (sizebuf_t *sb, float f)
 {
 	if (dpprotocol)
@@ -731,6 +741,16 @@ char *MSG_ReadString (void)
 	return string;
 }
 
+// used by server (always dpprotocol)
+// moved to common.h as #define
+/*
+float MSG_ReadFloatCoord (void)
+{
+	return MSG_ReadFloat();
+}
+*/
+
+// used by client
 float MSG_ReadCoord (void)
 {
 	if (dpprotocol)
@@ -886,25 +906,29 @@ COM_FileBase
 */
 void COM_FileBase (char *in, char *out)
 {
-	char *s, *s2;
-	
-	s = in + strlen(in) - 1;
-	
-	while (s != in && *s != '.')
-		s--;
-	
-	// LordHavoc: EWW bug bug bug bug bug... added previously missing s2 != in (yes, could go hunting through mem for /)
-	for (s2 = s ; s2 != in && *s2 && *s2 != '/' ; s2--)
-	;
-	
-	if (s-s2 < 2)
+	char *slash, *dot;
+	char *s;
+
+	slash = in;
+	dot = NULL;
+	s = in;
+	while(*s)
+	{
+		if (*s == '/')
+			slash = s + 1;
+		if (*s == '.')
+			dot = s;
+		s++;
+	}
+	if (dot == NULL)
+		dot = s;
+	if (dot - slash < 2)
 		strcpy (out,"?model?");
 	else
 	{
-		// LordHavoc: FIXME: examine this
-		s--;
-		strncpy (out,s2+1, s-s2);
-		out[s-s2] = 0;
+		while (slash < dot)
+			*out++ = *slash++;
+		*out++ = 0;
 	}
 }
 

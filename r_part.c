@@ -76,7 +76,7 @@ particle_t	**freeparticles; // list used only in compacting particles array
 
 cvar_t r_particles = {"r_particles", "1"};
 cvar_t r_drawparticles = {"r_drawparticles", "1"};
-cvar_t r_dynamicparticles = {"r_dynamicparticles", "0", TRUE};
+cvar_t r_dynamicparticles = {"r_dynamicparticles", "1", TRUE};
 
 byte shadebubble(float dx, float dy, vec3_t light)
 {
