@@ -897,16 +897,17 @@ void M_MultiPlayer_Key (int key, char ascii)
 //=============================================================================
 /* SETUP MENU */
 
-int		setup_cursor = 3;
-int		setup_cursor_table[] = {40, 64, 88, 124};
+int		setup_cursor = 4;
+int		setup_cursor_table[] = {40, 64, 88, 124, 140};
 
 char	setup_myname[32];
 int		setup_oldtop;
 int		setup_oldbottom;
 int		setup_top;
 int		setup_bottom;
+int		setup_rate;
 
-#define	NUM_SETUP_CMDS	4
+#define	NUM_SETUP_CMDS	5
 
 void M_Menu_Setup_f (void)
 {
@@ -916,11 +917,45 @@ void M_Menu_Setup_f (void)
 	strcpy(setup_myname, cl_name.string);
 	setup_top = setup_oldtop = cl_color.integer >> 4;
 	setup_bottom = setup_oldbottom = cl_color.integer & 15;
+	setup_rate = cl_rate.integer;
 }
 
 static int menuplyr_width, menuplyr_height, menuplyr_top, menuplyr_bottom, menuplyr_load;
 static qbyte *menuplyr_pixels;
 static unsigned int *menuplyr_translated;
+
+typedef struct ratetable_s
+{
+	int rate;
+	char *name;
+}
+ratetable_t;
+
+#define RATES ((int)(sizeof(setup_ratetable)/sizeof(setup_ratetable[0])))
+static ratetable_t setup_ratetable[] =
+{
+	{1000, "28.8 bad"},
+	{1500, "28.8 mediocre"},
+	{2000, "28.8 good"},
+	{2500, "33.6 mediocre"},
+	{3000, "33.6 good"},
+	{3500, "56k bad"},
+	{4000, "56k mediocre"},
+	{4500, "56k adequate"},
+	{5000, "56k good"},
+	{7000, "64k ISDN"},
+	{15000, "128k ISDN"},
+	{25000, "broadband"}
+};
+
+static int setup_rateindex(int rate)
+{
+	int i;
+	for (i = 0;i < RATES;i++)
+		if (setup_ratetable[i].rate > setup_rate)
+			break;
+	return bound(1, i, RATES) - 1;
+}
 
 void M_Setup_Draw (void)
 {
@@ -943,8 +978,11 @@ void M_Setup_Draw (void)
 		M_Print (64, 88, "Pants color");
 	}
 
-	M_DrawTextBox (64, 124-8, 14, 1);
-	M_Print (72, 124, "Accept Changes");
+	M_Print (64, 124-8, "Network speed limit");
+	M_Print (168, 124, va("%i (%s)", setup_rate, setup_ratetable[setup_rateindex(setup_rate)].name));
+
+	M_DrawTextBox (64, 140-8, 14, 1);
+	M_Print (72, 140, "Accept Changes");
 
 	// LordHavoc: rewrote this code greatly
 	if (menuplyr_load)
@@ -1020,6 +1058,13 @@ void M_Setup_Key (int k, char ascii)
 			setup_top = setup_top - 1;
 		if (setup_cursor == 2)
 			setup_bottom = setup_bottom - 1;
+		if (setup_cursor == 3)
+		{
+			l = setup_rateindex(setup_rate) - 1;
+			if (l < 0)
+				l = RATES - 1;
+			setup_rate = setup_ratetable[l].rate;
+		}
 		break;
 	case K_RIGHTARROW:
 		if (setup_cursor < 1)
@@ -1030,16 +1075,23 @@ forward:
 			setup_top = setup_top + 1;
 		if (setup_cursor == 2)
 			setup_bottom = setup_bottom + 1;
+		if (setup_cursor == 3)
+		{
+			l = setup_rateindex(setup_rate) + 1;
+			if (l >= RATES)
+				l = 0;
+			setup_rate = setup_ratetable[l].rate;
+		}
 		break;
 
 	case K_ENTER:
 		if (setup_cursor == 0)
 			return;
 
-		if (setup_cursor == 1 || setup_cursor == 2)
+		if (setup_cursor == 1 || setup_cursor == 2 || setup_cursor == 3)
 			goto forward;
 
-		// setup_cursor == 3 (Accept changes)
+		// setup_cursor == 4 (Accept changes)
 		if (strcmp(cl_name.string, setup_myname) != 0)
 			Cbuf_AddText ( va ("name \"%s\"\n", setup_myname) );
 		if (setup_top != setup_oldtop || setup_bottom != setup_oldbottom)
