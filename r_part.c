@@ -472,8 +472,16 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 
 	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
 	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
+	{
 		for (i=0 ; i<128 ; i++)
 			particle2(pt_bubble, (rand()&3) + 12, bubbleparticletexture, lhrandom(1, 2), 255, 2, org, 16, 96);
+	}
+	else
+	{
+		for (i = 0;i < 256;i++)
+			particle(pt_fallfadespark, ramp3[rand()%6], particletexture, 1.5, lhrandom(0, 255), 5, lhrandom(-16, 16) + org[0], lhrandom(-16, 16) + org[1], lhrandom(-16, 16) + org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 192);
+	}
+
 }
 
 /*
@@ -548,7 +556,8 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count)
 	particle(pt_smokecloud, 12+(rand()&3), smokeparticletexture[rand()&7], 8, 64, 99, org[0], org[1], org[2], 0, 0, 0);
 	// sparks
 	while(count--)
-		particle2(pt_fallfadespark, ramp3[rand()%6], particletexture, 1, lhrandom(0, 255), 5, org, 4, 96);
+//		particle2(pt_fallfadespark, ramp3[rand()%6], particletexture, 1, lhrandom(0, 255), 5, org, 4, 96);
+		particle(pt_fallfadespark, ramp3[rand()%6], particletexture, 1, lhrandom(0, 255), 5, lhrandom(-4, 4) + org[0], lhrandom(-4, 4) + org[1], lhrandom(-4, 4) + org[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64) + 64);
 }
 
 void R_BloodPuff (vec3_t org)
