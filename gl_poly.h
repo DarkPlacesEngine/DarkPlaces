@@ -74,6 +74,7 @@ wallpoly_t;
 typedef struct
 {
 	float tex[2];
+	float tex2[2];
 	float v[4]; // 4th item is only for padding
 }
 skyvert_t;
