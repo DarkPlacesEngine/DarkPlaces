@@ -15,8 +15,12 @@
 #define TEXF_FRAGMENT 0x00000010
 // indicates texture coordinates should be clamped rather than wrapping
 #define TEXF_CLAMP 0x00000020
+// indicates texture should be uploaded using GL_NEAREST or GL_NEAREST_MIPMAP_NEAREST mode
+#define TEXF_FORCENEAREST 0x00000040
+// indicates texture should be uploaded using GL_LINEAR or GL_LINEAR_MIPMAP_NEAREST or GL_LINEAR_MIPMAP_LINEAR mode
+#define TEXF_FORCELINEAR 0x00000080
 // used for checking if textures mismatch
-#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT | TEXF_CLAMP)
+#define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT | TEXF_CLAMP | TEXF_FORCENEAREST | TEXF_FORCELINEAR)
 
 // 8bit paletted
 #define TEXTYPE_PALETTE 1
