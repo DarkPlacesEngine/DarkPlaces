@@ -695,7 +695,7 @@ void NET_Init (void)
 	}
 	net_hostport = DEFAULTnet_hostport;
 
-	if (COM_CheckParm("-listen") || cls.state == ca_dedicated || gamemode == GAME_BLOODBATH)
+	if (COM_CheckParm("-listen") || cls.state == ca_dedicated || gamemode == GAME_TRANSFUSION)
 		listening = true;
 
 	SetNetTime();
