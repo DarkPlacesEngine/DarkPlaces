@@ -22,8 +22,8 @@
 		Boston, MA  02111-1307, USA
 */
 
-#ifndef QUAKEIO_H
-#define QUAKEIO_H
+#ifndef FS_H
+#define FS_H
 
 
 // ------ Types ------ //
