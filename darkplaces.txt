@@ -41,6 +41,7 @@ Thanks to:
 Tomaz for adding features, fixing many bugs, and being generally helpful.
 Andreas 'Black' Kirsch for much work on the QuakeC VM (menu.dat, someday clprogs.dat) and other contributions.
 Mathieu 'Elric' Olivier for much work on the sound engine (especially the Ogg vorbis support)
+MoALTz for some bugfixes and cleanups
 Joseph Caporale for adding 5 mouse button support.
 KGB|romi for his contributions to the Quake community, including his rtlights project and many suggestions.
 Zombie for making great levels and general DarkPlaces publicity.
