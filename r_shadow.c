@@ -297,6 +297,11 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_worldshadows);
 	Cvar_RegisterVariable(&r_shadow_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_showtris);
+	if (gamemode == GAME_TENEBRAE)
+	{
+		Cvar_SetValue("r_shadow_gloss", 2);
+		Cvar_SetValue("r_shadow_bumpscale_basetexture", 4);
+	}
 	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
