@@ -1,6 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--(Elric) d darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 -(Kinn) d darkplaces client: all glow trails are bright blue (Kinn)
 -(Kinn) d darkplaces renderer: fix the sometimes non-animating framegroups on sprites (Kinn) 
 -(RenegadeC) d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
@@ -329,6 +328,7 @@ d darkplaces client: add DP_LITSPRITES extension to document the fact that any s
 d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, Harb, FrikaC)
 d darkplaces client: add a config saving command (Speeds)
 d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
+d darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 d darkplaces client: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 d darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 d darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
