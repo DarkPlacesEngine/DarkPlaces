@@ -551,6 +551,43 @@ static void IN_ActivateMouse( void )
 	}
 }
 
+static void *prjobj = NULL;
+
+static void GL_CloseLibrary(void)
+{
+	if (prjobj)
+		dlclose(prjobj);
+	prjobj = NULL;
+	gl_driver[0] = 0;
+	qglXGetProcAddressARB = NULL;
+	gl_extensions = "";
+	gl_platform = "";
+	gl_platformextensions = "";
+}
+
+static int GL_OpenLibrary(const char *name)
+{
+	Con_Printf("Loading OpenGL driver %s\n", name);
+	GL_CloseLibrary();
+	if (!(prjobj = dlopen(name, RTLD_LAZY)))
+	{
+		Con_Printf("Unable to open symbol list for %s\n", name);
+		return false;
+	}
+	strcpy(gl_driver, name);
+	return true;
+}
+
+void *GL_GetProcAddress(const char *name)
+{
+	void *p = NULL;
+	if (qglXGetProcAddressARB != NULL)
+		p = (void *) qglXGetProcAddressARB(name);
+	if (p == NULL)
+		p = (void *) dlsym(prjobj, name);
+	return p;
+}
+
 void VID_Shutdown(void)
 {
 	if (!ctx || !vidx11_display)
@@ -907,41 +944,3 @@ void IN_Move (void)
 	mouse_x = 0;
 	mouse_y = 0;
 }
-
-static void *prjobj = NULL;
-
-int GL_OpenLibrary(const char *name)
-{
-	Con_Printf("Loading OpenGL driver %s\n", name);
-	GL_CloseLibrary();
-	if (!(prjobj = dlopen(name, RTLD_LAZY)))
-	{
-		Con_Printf("Unable to open symbol list for %s\n", name);
-		return false;
-	}
-	strcpy(gl_driver, name);
-	return true;
-}
-
-void GL_CloseLibrary(void)
-{
-	if (prjobj)
-		dlclose(prjobj);
-	prjobj = NULL;
-	gl_driver[0] = 0;
-	qglXGetProcAddressARB = NULL;
-	gl_extensions = "";
-	gl_platform = "";
-	gl_platformextensions = "";
-}
-
-void *GL_GetProcAddress(const char *name)
-{
-	void *p = NULL;
-	if (qglXGetProcAddressARB != NULL)
-		p = (void *) qglXGetProcAddressARB(name);
-	if (p == NULL)
-		p = (void *) dlsym(prjobj, name);
-	return p;
-}
-

@@ -693,7 +693,18 @@ int VID_GetGamma(unsigned short *ramps)
 
 static HINSTANCE gldll;
 
-int GL_OpenLibrary(const char *name)
+static void GL_CloseLibrary(void)
+{
+	FreeLibrary(gldll);
+	gldll = 0;
+	gl_driver[0] = 0;
+	qwglGetProcAddress = NULL;
+	gl_extensions = "";
+	gl_platform = "";
+	gl_platformextensions = "";
+}
+
+static int GL_OpenLibrary(const char *name)
 {
 	Con_Printf("Loading OpenGL driver %s\n", name);
 	GL_CloseLibrary();
@@ -704,17 +715,6 @@ int GL_OpenLibrary(const char *name)
 	}
 	strcpy(gl_driver, name);
 	return true;
-}
-
-void GL_CloseLibrary(void)
-{
-	FreeLibrary(gldll);
-	gldll = 0;
-	gl_driver[0] = 0;
-	qwglGetProcAddress = NULL;
-	gl_extensions = "";
-	gl_platform = "";
-	gl_platformextensions = "";
 }
 
 void *GL_GetProcAddress(const char *name)
