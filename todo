@@ -2,6 +2,7 @@
 -d darkplaces cleanup: make sure engine dumps log file to disk if there is a Sys_Error (VorteX)
 -d darkplaces client bug: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
+-d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, -Harb, FrikaC)
 -d darkplaces client: add a config saving command (Speeds)
 -d darkplaces client: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 -d darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
@@ -38,7 +39,6 @@
 0 darkplaces cleanup: merge msurface_t/q3mface_t, mleaf_t/q3mleaf_t, and mnode_t/q3mnode_t
 0 darkplaces cleanup: nodestack[nodestackindex++] = node->children[0]; and similar things should skip the node if stack is full (Vic)
 0 darkplaces cleanup: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
-0 darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, Harb, FrikaC) 
 0 darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back r_waterripple (Vermeulen)
