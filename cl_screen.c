@@ -882,7 +882,7 @@ void SCR_CaptureVideo_SoundFrame(qbyte *bufstereo16le, size_t length, int rate)
 
 void SCR_CaptureVideo(void)
 {
-	int newframenum;
+	int newframenum, c;
 	if (cl_capturevideo.integer)
 	{
 		if (!cl_capturevideo_active)
@@ -893,14 +893,18 @@ void SCR_CaptureVideo(void)
 			Cvar_SetValueQuick(&cl_capturevideo_fps, cl_capturevideo_framerate);
 		}
 		newframenum = (Sys_DoubleTime() - cl_capturevideo_starttime) * cl_capturevideo_framerate;
+		c = (int)ceil(cl_capturevideo_framerate);
 		while (cl_capturevideo_frame < newframenum)
 		{
-			if (SCR_CaptureVideo_VideoFrame())
+			if ((c--) && SCR_CaptureVideo_VideoFrame())
 				cl_capturevideo_frame++;
 			else
 			{
 				Cvar_SetValueQuick(&cl_capturevideo, 0);
-				Con_Printf("video saving failed on frame %i, out of disk space? stopping avi demo capture.\n", cl_capturevideo_frame);
+				if (c == 0)
+					Con_Printf("video saving failed on frame %i, your machine is too slow for this capture speed.\n", cl_capturevideo_frame);
+				else
+					Con_Printf("video saving failed on frame %i, out of disk space? stopping video capture.\n", cl_capturevideo_frame);
 				SCR_CaptureVideo_EndVideo();
 				break;
 			}
