@@ -29,7 +29,6 @@ key up events are sent even if in console mode
 #define MAXCMDLINE 256
 char key_lines[32][MAXCMDLINE];
 int key_linepos;
-int shift_down = false;
 int key_insert;	// insert key toggle (for editing)
 
 int edit_line = 0;
@@ -41,7 +40,6 @@ keydest_t key_dest;
 char *keybindings[256];
 qboolean consolekeys[256];	// if true, can't be rebound while in console
 qboolean menubound[256];	// if true, can't be rebound while in menu
-int keyshift[256];		// key to map to if shift held down in console
 int key_repeats[256];	// if > 1, it is autorepeating
 qboolean keydown[256];
 
@@ -182,7 +180,7 @@ Key_Console
 Interactive line editing and console scrollback
 ====================
 */
-void Key_Console (int key)
+void Key_Console (int key, char ascii)
 {
 	// LordHavoc: copied most of this from Q2 to improve keyboard handling
 	switch (key)
@@ -416,7 +414,7 @@ void Key_Console (int key)
 	}
 
 	// non printable
-	if (key < 32 || key > 127)
+	if (ascii < 32 || ascii > 126)
 		return;
 
 	if (key_linepos < MAXCMDLINE-1)
@@ -437,7 +435,7 @@ void Key_Console (int key)
 
 		// only null terminate if at the end
 		i = key_lines[edit_line][key_linepos];
-		key_lines[edit_line][key_linepos] = key;
+		key_lines[edit_line][key_linepos] = ascii;
 		key_linepos++;
 
 		if (!i)
@@ -452,7 +450,7 @@ qboolean chat_team = false;
 char chat_buffer[256];
 int chat_bufferlen = 0;
 
-void Key_Message (int key)
+void Key_Message (int key, char ascii)
 {
 	if (key == K_ENTER || key == K_KP_ENTER)
 	{
@@ -477,10 +475,6 @@ void Key_Message (int key)
 		return;
 	}
 
-	// non printable
-	if (key < 32 || key > 127)
-		return;
-
 	if (key == K_BACKSPACE)
 	{
 		if (chat_bufferlen)
@@ -491,10 +485,14 @@ void Key_Message (int key)
 		return;
 	}
 
+	// non printable
+	if (ascii < 32 || ascii > 126)
+		return;
+
 	if (chat_bufferlen == sizeof(chat_buffer) - 1)
 		return; // all full
 
-	chat_buffer[chat_bufferlen++] = key;
+	chat_buffer[chat_bufferlen++] = ascii;
 	chat_buffer[chat_bufferlen] = 0;
 }
 
@@ -747,32 +745,6 @@ void Key_Init (void)
 	consolekeys['`'] = false;
 	consolekeys['~'] = false;
 
-	for (i = 0;i < 256;i++)
-		keyshift[i] = i;
-	for (i = 'a';i <= 'z';i++)
-		keyshift[i] = i - 'a' + 'A';
-	keyshift['1'] = '!';
-	keyshift['2'] = '@';
-	keyshift['3'] = '#';
-	keyshift['4'] = '$';
-	keyshift['5'] = '%';
-	keyshift['6'] = '^';
-	keyshift['7'] = '&';
-	keyshift['8'] = '*';
-	keyshift['9'] = '(';
-	keyshift['0'] = ')';
-	keyshift['-'] = '_';
-	keyshift['='] = '+';
-	keyshift[','] = '<';
-	keyshift['.'] = '>';
-	keyshift['/'] = '?';
-	keyshift[';'] = ':';
-	keyshift['\''] = '"';
-	keyshift['['] = '{';
-	keyshift[']'] = '}';
-	keyshift['`'] = '~';
-	keyshift['\\'] = '|';
-
 	menubound[K_ESCAPE] = true;
 	for (i=0 ; i<12 ; i++)
 		menubound[K_F1+i] = true;
@@ -794,7 +766,7 @@ Called by the system between frames for both key up and key down events
 Should NOT be called during an interrupt!
 ===================
 */
-void Key_Event (int key, qboolean down)
+void Key_Event (int key, char ascii, qboolean down)
 {
 	char	*kb;
 	char	cmd[1024];
@@ -820,9 +792,6 @@ void Key_Event (int key, qboolean down)
 	else
 		key_repeats[key] = 0;
 
-	if (key == K_SHIFT)
-		shift_down = down;
-
 //
 // handle escape specialy, so the user can never unbind it
 //
@@ -833,10 +802,10 @@ void Key_Event (int key, qboolean down)
 		switch (key_dest)
 		{
 		case key_message:
-			Key_Message (key);
+			Key_Message (key, 0);
 			break;
 		case key_menu:
-			MR_Keydown (key);
+			MR_Keydown (key, 0);
 			break;
 		case key_game:
 			MR_ToggleMenu_f ();
@@ -876,11 +845,7 @@ void Key_Event (int key, qboolean down)
 		//if (!down)
 		//	return;
 
-		// FIXME: this does not support non-QWERTY keyboards
-		if (shift_down)
-			key = keyshift[key];
-
-		Key_Console (key);
+		Key_Console (key, ascii);
 	}
 	else
 	{
@@ -898,15 +863,6 @@ void Key_Event (int key, qboolean down)
 			{
 				sprintf (cmd, "-%s %i\n", kb+1, key);
 				Cbuf_AddText (cmd);
-			}
-			if (keyshift[key] != key)
-			{
-				kb = keybindings[keyshift[key]];
-				if (kb && kb[0] == '+')
-				{
-					sprintf (cmd, "-%s %i\n", kb+1, key);
-					Cbuf_AddText (cmd);
-				}
 			}
 			return;
 		}
@@ -945,22 +901,18 @@ void Key_Event (int key, qboolean down)
 		if (!down)
 			return;		// other systems only care about key down events
 
-		// FIXME: this does not support non-QWERTY keyboards
-		if (shift_down)
-			key = keyshift[key];
-
 		switch (key_dest)
 		{
 		case key_message:
-			Key_Message (key);
+			Key_Message (key, ascii);
 			break;
 		case key_menu:
-			MR_Keydown (key);
+			MR_Keydown (key, ascii);
 			break;
 
 		case key_game:
 		//case key_console:
-			Key_Console (key);
+			Key_Console (key, ascii);
 			break;
 		default:
 			Sys_Error ("Bad key_dest");

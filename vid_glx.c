@@ -108,7 +108,7 @@ static Colormap vidx11_colormap;
 
 /*-----------------------------------------------------------------------*/
 
-static int XLateKey(XKeyEvent *ev)
+static int XLateKey(XKeyEvent *ev, char *ascii)
 {
 	int key = 0;
 	char buf[64];
@@ -116,6 +116,7 @@ static int XLateKey(XKeyEvent *ev)
 
 	keysym = XLookupKeysym (ev, 0);
 	XLookupString(ev, buf, sizeof buf, &shifted, 0);
+	*ascii = buf[0];
 
 	switch(keysym)
 	{
@@ -203,33 +204,7 @@ static int XLateKey(XKeyEvent *ev)
 		case XK_KP_Subtract: key = K_KP_MINUS; break;
 		case XK_KP_Divide: key = K_KP_SLASH; break;
 
-#if 0
-		case 0x021: key = '1';break;/* [!] */
-		case 0x040: key = '2';break;/* [@] */
-		case 0x023: key = '3';break;/* [#] */
-		case 0x024: key = '4';break;/* [$] */
-		case 0x025: key = '5';break;/* [%] */
-		case 0x05e: key = '6';break;/* [^] */
-		case 0x026: key = '7';break;/* [&] */
-		case 0x02a: key = '8';break;/* [*] */
-		case 0x028: key = '9';;break;/* [(] */
-		case 0x029: key = '0';break;/* [)] */
-		case 0x05f: key = '-';break;/* [_] */
-		case 0x02b: key = '=';break;/* [+] */
-		case 0x07c: key = '\'';break;/* [|] */
-		case 0x07d: key = '[';break;/* [}] */
-		case 0x07b: key = ']';break;/* [{] */
-		case 0x022: key = '\'';break;/* ["] */
-		case 0x03a: key = ';';break;/* [:] */
-		case 0x03f: key = '/';break;/* [?] */
-		case 0x03e: key = '.';break;/* [>] */
-		case 0x03c: key = ',';break;/* [<] */
-#endif
-
 		default:
-			key = buf[0];
-			if (key >= 'A' && key <= 'Z')
-				key = key - 'A' + 'a';
 			break;
 	}
 
@@ -317,6 +292,8 @@ static void uninstall_grabs(void)
 static void HandleEvents(void)
 {
 	XEvent event;
+	int key;
+	char ascii;
 	qboolean dowarp = false;
 
 	if (!vidx11_display)
@@ -330,12 +307,14 @@ static void HandleEvents(void)
 		{
 		case KeyPress:
 			// key pressed
-			Key_Event(XLateKey(&event.xkey), true);
+			key = XLateKey (&event.xkey, &ascii);
+			Key_Event(key, ascii, true);
 			break;
 
 		case KeyRelease:
 			// key released
-			Key_Event(XLateKey(&event.xkey), false);
+			key = XLateKey (&event.xkey, &ascii);
+			Key_Event(key, ascii, false);
 			break;
 
 		case MotionNotify:
@@ -370,40 +349,40 @@ static void HandleEvents(void)
 			switch(event.xbutton.button)
 			{
 			case 1:
-				Key_Event(K_MOUSE1, true);
+				Key_Event(K_MOUSE1, 0, true);
 				break;
 			case 2:
-				Key_Event(K_MOUSE3, true);
+				Key_Event(K_MOUSE3, 0, true);
 				break;
 			case 3:
-				Key_Event(K_MOUSE2, true);
+				Key_Event(K_MOUSE2, 0, true);
 				break;
 			case 4:
-				Key_Event(K_MWHEELUP, true);
+				Key_Event(K_MWHEELUP, 0, true);
 				break;
 			case 5:
-				Key_Event(K_MWHEELDOWN, true);
+				Key_Event(K_MWHEELDOWN, 0, true);
 				break;
 			case 6:
-				Key_Event(K_MOUSE4, true);
+				Key_Event(K_MOUSE4, 0, true);
 				break;
 			case 7:
-				Key_Event(K_MOUSE5, true);
+				Key_Event(K_MOUSE5, 0, true);
 				break;
 			case 8:
-				Key_Event(K_MOUSE6, true);
+				Key_Event(K_MOUSE6, 0, true);
 				break;
 			case 9:
-				Key_Event(K_MOUSE7, true);
+				Key_Event(K_MOUSE7, 0, true);
 				break;
 			case 10:
-				Key_Event(K_MOUSE8, true);
+				Key_Event(K_MOUSE8, 0, true);
 				break;
 			case 11:
-				Key_Event(K_MOUSE9, true);
+				Key_Event(K_MOUSE9, 0, true);
 				break;
 			case 12:
-				Key_Event(K_MOUSE10, true);
+				Key_Event(K_MOUSE10, 0, true);
 				break;
 			default:
 				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-12 expected\n", event.xbutton.button);
@@ -416,40 +395,40 @@ static void HandleEvents(void)
 			switch(event.xbutton.button)
 			{
 			case 1:
-				Key_Event(K_MOUSE1, false);
+				Key_Event(K_MOUSE1, 0, false);
 				break;
 			case 2:
-				Key_Event(K_MOUSE3, false);
+				Key_Event(K_MOUSE3, 0, false);
 				break;
 			case 3:
-				Key_Event(K_MOUSE2, false);
+				Key_Event(K_MOUSE2, 0, false);
 				break;
 			case 4:
-				Key_Event(K_MWHEELUP, false);
+				Key_Event(K_MWHEELUP, 0, false);
 				break;
 			case 5:
-				Key_Event(K_MWHEELDOWN, false);
+				Key_Event(K_MWHEELDOWN, 0, false);
 				break;
 			case 6:
-				Key_Event(K_MOUSE4, false);
+				Key_Event(K_MOUSE4, 0, false);
 				break;
 			case 7:
-				Key_Event(K_MOUSE5, false);
+				Key_Event(K_MOUSE5, 0, false);
 				break;
 			case 8:
-				Key_Event(K_MOUSE6, false);
+				Key_Event(K_MOUSE6, 0, false);
 				break;
 			case 9:
-				Key_Event(K_MOUSE7, false);
+				Key_Event(K_MOUSE7, 0, false);
 				break;
 			case 10:
-				Key_Event(K_MOUSE8, false);
+				Key_Event(K_MOUSE8, 0, false);
 				break;
 			case 11:
-				Key_Event(K_MOUSE9, false);
+				Key_Event(K_MOUSE9, 0, false);
 				break;
 			case 12:
-				Key_Event(K_MOUSE10, false);
+				Key_Event(K_MOUSE10, 0, false);
 				break;
 			default:
 				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-12 expected\n", event.xbutton.button);
