@@ -96,7 +96,7 @@ void Host_Status_f (void)
 		else
 			hours = 0;
 		print ("#%-2u %-16.16s  %3i  %2i:%02i:%02i\n", j+1, client->name, (int)client->edict->v->frags, hours, minutes, seconds);
-		print ("   %s\n", client->netconnection->address);
+		print ("   %s\n", client->netconnection ? client->netconnection->address : "botclient");
 	}
 }
 
