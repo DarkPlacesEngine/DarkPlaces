@@ -106,7 +106,7 @@ void R_InitParticleTexture (void)
 {
 	int		x,y,d,i,m;
 	float	dx, dy;
-	byte	data[32][32][4], noise1[32][32], noise2[32][32];
+	byte	data[32][32][4], noise1[128][128], noise2[128][128];
 	vec3_t	light;
 
 	for (y = 0;y < 32;y++)
@@ -127,30 +127,40 @@ void R_InitParticleTexture (void)
 	{
 		do
 		{
-			fractalnoise(&noise1[0][0], 32, 1);
-			fractalnoise(&noise2[0][0], 32, 8);
+			fractalnoise(&noise1[0][0], 128, 8);
+			//memset(noise1, 255, 32*32);
+			fractalnoise(&noise2[0][0], 128, 16);
 			m = 0;
 			for (y = 0;y < 32;y++)
 			{
 				dy = y - 16;
 				for (x = 0;x < 32;x++)
 				{
-					data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
+					int j, k;
+//					k = noise1[y][x];
+					k = (noise1[y][x] >> 1) + 128;
+//					data[y][x][0] = data[y][x][1] = data[y][x][2] = (noise1[y][x] >> 1) + 128;
+//					data[y][x][3] = 0;
+					data[y][x][0] = data[y][x][1] = data[y][x][2] = data[y][x][3] = 0;
 					dx = x - 16;
-					d = ((noise2[y][x] * 384) >> 8) - 128;
+					d = ((noise2[y][x] * 448) >> 8) - 128;
+//					d = ((noise2[y][x] * 384) >> 8) - 128;
+//					d = noise2[y][x];
 					if (d > 0)
 					{
 						if (d > 255)
 							d = 255;
-						d = (d * (255 - (int) (dx*dx+dy*dy))) >> 7;
+						//d = (d * (255 - (int) (dx*dx+dy*dy))) >> 7;
+						j = (sqrt(dx*dx+dy*dy) * 2.0f - 16.0f);
+						if (j > 0)
+							d = (d * (255 - j*j)) >> 8;
 						if (d < 0) d = 0;
 						if (d > 255) d = 255;
 						data[y][x][3] = (byte) d;
 						if (m < d)
 							m = d;
+						data[y][x][0] = data[y][x][1] = data[y][x][2] = ((k * d) >> 8);
 					}
-					else
-						data[y][x][3] = 0;
 				}
 			}
 		}
@@ -477,7 +487,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 	int			i;
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
-	particle(pt_smokecloud, (rand()&7) + 8, smokeparticletexture[rand()&7], 30, 160, 2, org[0], org[1], org[2], 0, 0, 0);
+	particle(pt_smokecloud, (rand()&7) + 8, smokeparticletexture[rand()&7], 30, 255, 2, org[0], org[1], org[2], 0, 0, 0);
 
 	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
 	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
@@ -488,7 +498,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 	else
 	{
 		for (i = 0;i < 256;i++)
-			particle(pt_fallfadespark, ramp3[rand()%6], particletexture, 1.5, lhrandom(0, 255), 5, lhrandom(-16, 16) + org[0], lhrandom(-16, 16) + org[1], lhrandom(-16, 16) + org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 192);
+			particle(pt_fallfadespark, ramp3[rand()%6], particletexture, 1.5, lhrandom(128, 255), 5, lhrandom(-16, 16) + org[0], lhrandom(-16, 16) + org[1], lhrandom(-16, 16) + org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 192);
 	}
 
 }
@@ -562,7 +572,7 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count)
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	// smoke puff
-	particle(pt_smokecloud, 12+(rand()&3), smokeparticletexture[rand()&7], 8, 64, 99, org[0], org[1], org[2], 0, 0, 0);
+	particle(pt_smoke, 12+(rand()&3), smokeparticletexture[rand()&7], 8, 160, 99, org[0], org[1], org[2], 0, 0, 0);
 	// sparks
 	while(count--)
 //		particle2(pt_fallfadespark, ramp3[rand()%6], particletexture, 1, lhrandom(0, 255), 5, org, 4, 96);
@@ -833,7 +843,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 					p->texnum = bubbleparticletexture;
 					p->scale = lhrandom(1,2);
 					p->alpha = 255;
-					p->color = (rand()&3)+12;
+					p->color = 254;
 					p->type = pt_bubble;
 					p->die = cl.time + 2;
 					for (j=0 ; j<3 ; j++)
@@ -846,12 +856,16 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				{
 					dec = 0.02f;
 					p->texnum = smokeparticletexture[rand()&7];
-					p->scale = lhrandom(8, 12);
-					p->alpha = 64 + (rand()&31);
-					p->color = (rand()&3)+12;
+					p->scale = lhrandom(4, 8);
+					p->alpha = 255; //128 + (rand()&63);
+					p->color = 254;
 					p->type = pt_smoke;
 					p->die = cl.time + 10000;
 					VectorCopy(start, p->org);
+					particle(pt_fallfadespark, 0x68 + (rand() & 7), particletexture, 1, lhrandom(64, 128), 5, start[0], start[1], start[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64));
+					particle(pt_fallfadespark, 0x68 + (rand() & 7), particletexture, 1, lhrandom(64, 128), 5, start[0], start[1], start[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64));
+					particle(pt_fallfadespark, 0x68 + (rand() & 7), particletexture, 1, lhrandom(64, 128), 5, start[0], start[1], start[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64));
+					particle(pt_fallfadespark, 0x68 + (rand() & 7), particletexture, 1, lhrandom(64, 128), 5, start[0], start[1], start[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64));
 				}
 				break;
 
@@ -1058,13 +1072,6 @@ void R_DrawParticles (void)
 		case pt_grav:
 			p->vel[2] -= gravity;
 			break;
-// LordHavoc: for smoke trails
-		case pt_smoke:
-			p->scale += frametime * 6;
-			p->alpha -= frametime * 128;
-			if (p->alpha < 1)
-				p->die = -1;
-			break;
 		case pt_snow:
 			if (cl.time > p->time2)
 			{
@@ -1123,15 +1130,23 @@ void R_DrawParticles (void)
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
+// LordHavoc: for smoke trails
+		case pt_smoke:
+			p->vel[2] += gravity * 0.08f;
+			p->scale += frametime * 16;
+			p->alpha -= frametime * 384;
+			if (p->alpha < 16)
+				p->die = -1;
+			break;
 		case pt_smokecloud:
-			p->scale += frametime * 60;
-			p->alpha -= frametime * 96;
-			if (p->alpha < 1)
+			p->scale += frametime * 64;
+			p->alpha -= frametime * 384;
+			if (p->alpha < 16)
 				p->die = -1;
 			break;
 		case pt_splash:
 			p->scale += frametime * 24;
-			p->alpha -= frametime * 256;
+			p->alpha -= frametime * 512;
 			if (p->alpha < 1)
 				p->die = -1;
 			break;
