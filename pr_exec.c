@@ -27,7 +27,7 @@ typedef struct
 	dfunction_t		*f;
 } prstack_t;
 
-#define	MAX_STACK_DEPTH		32
+#define	MAX_STACK_DEPTH		256
 prstack_t	pr_stack[MAX_STACK_DEPTH];
 int			pr_depth = 0;
 
