@@ -570,6 +570,7 @@ nextmsg:
 				 || Q_strncasecmp(s, "kick", 4) == 0
 				 || Q_strncasecmp(s, "ping", 4) == 0
 				 || Q_strncasecmp(s, "ban", 3) == 0
+				 || Q_strncasecmp(s, "pmodel", 6) == 0
 				 || (nehahra && (Q_strncasecmp(s, "max", 3) == 0 || Q_strncasecmp(s, "monster", 7) == 0 || Q_strncasecmp(s, "scrag", 5) == 0 || Q_strncasecmp(s, "gimme", 5) == 0 || Q_strncasecmp(s, "wraith", 6) == 0))
 				 || (!nehahra && (Q_strncasecmp(s, "god", 3) == 0 || Q_strncasecmp(s, "notarget", 8) == 0 || Q_strncasecmp(s, "fly", 3) == 0 || Q_strncasecmp(s, "give", 4) == 0 || Q_strncasecmp(s, "noclip", 6) == 0)))
 					ret = 1;

@@ -108,6 +108,7 @@ int eval_drawonlytoclient;
 int eval_colormod;
 int eval_ping;
 int eval_movement;
+int eval_pmodel;
 
 dfunction_t *SV_PlayerPhysicsQC;
 dfunction_t *EndFrameQC;
@@ -152,6 +153,7 @@ void FindEdictFieldOffsets()
 	eval_colormod = FindFieldOffset("colormod");
 	eval_ping = FindFieldOffset("ping");
 	eval_movement = FindFieldOffset("movement");
+	eval_pmodel = FindFieldOffset("pmodel");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
