@@ -320,8 +320,9 @@ void SCR_BeginLoadingPlaque (void)
 
 	scr_drawloading = true;
 	CL_UpdateScreen ();
+	scr_drawloading = true;
 	CL_UpdateScreen ();
-	scr_drawloading = false;
+	//scr_drawloading = false;
 
 //	scr_disabled_for_loading = true;
 //	scr_disabled_time = realtime;
@@ -1004,6 +1005,7 @@ void CL_UpdateScreen(void)
 
 	if (scr_drawloading)
 	{
+		scr_drawloading = false;
 		scr_con_current = vid.conheight;
 		DrawQ_Clear();
 		SCR_DrawLoading();
