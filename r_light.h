@@ -2,30 +2,8 @@
 #ifndef R_LIGHT_H
 #define R_LIGHT_H
 
-typedef struct
-{
-	vec3_t origin;
-	vec_t cullradius2; // only for culling comparisons, squared version
-	vec3_t light; // the brightness of the light
-	vec_t cullradius; // only for culling comparisons
-	vec_t subtract; // to avoid sudden brightness change at cullradius, subtract this
-	entity_render_t *ent; // owner of this light
-
-	matrix4x4_t matrix_lighttoworld;
-	matrix4x4_t matrix_worldtolight;
-	matrix4x4_t matrix_worldtoattenuationxyz;
-	matrix4x4_t matrix_worldtoattenuationz;
-
-	vec3_t color;
-	vec_t radius;
-	int cubemapnum;
-	int shadow;
-	vec_t corona;
-}
-rdlight_t;
-
 extern int r_numdlights;
-extern rdlight_t r_dlight[MAX_DLIGHTS];
+extern dlight_t r_dlight[MAX_DLIGHTS];
 
 void R_UpdateLights(void);
 void R_MarkLights(entity_render_t *ent);

@@ -70,30 +70,120 @@ typedef struct
 }
 beam_t;
 
-typedef struct
+typedef struct rtlight_s
 {
-	// location
-	vec3_t	origin;
-	// stop lighting after this time
-	vec_t	die;
-	// color of light
-	vec3_t	color;
-	// brightness (not really radius anymore)
-	vec_t	radius;
-	// drop this each second
-	vec_t	decay;
+	// shadow volumes are done entirely in model space, so there are no matrices for dealing with them...  they just use the origin 
+
+	// note that the world to light matrices are inversely scaled (divided) by lightradius
+
+	// core properties
+	// matrix for transforming world coordinates to light filter coordinates
+	matrix4x4_t matrix_worldtolight;
+	// based on worldtolight this transforms -1 to +1 to 0 to 1 for purposes
+	// of attenuation texturing in full 3D (Z result often ignored)
+	matrix4x4_t matrix_worldtoattenuationxyz;
+	// this transforms only the Z to S, and T is always 0.5
+	matrix4x4_t matrix_worldtoattenuationz;
+	// typically 1 1 1, can be lower (dim) or higher (overbright)
+	vec3_t color;
+	// size of the light (remove?)
+	vec_t radius;
+	// light filter
+	char cubemapname[64];
+	// whether light should render shadows
+	int shadow;
+	// intensity of corona to render
+	vec_t corona;
+	// light style to monitor for brightness
+	int style;
+	
+	// generated properties
+	// used only for shadow volumes
+	vec3_t shadoworigin;
+	// culling
+	vec3_t cullmins;
+	vec3_t cullmaxs;
+	// culling
+	vec_t cullradius;
+	// squared cullradius
+	vec_t cullradius2;
+
+	// lightmap renderer stuff (remove someday!)
+	// the size of the light
+	vec_t lightmap_cullradius;
+	// the size of the light, squared
+	vec_t lightmap_cullradius2;
+	// the brightness of the light
+	vec3_t lightmap_light;
+	// to avoid sudden brightness change at cullradius, subtract this
+	vec_t lightmap_subtract;
+
+	// static light info
+	// true if this light should be compiled as a static light
+	int isstatic;
+	// true if this is a compiled world light, cleared if the light changes
+	int compiled;
+	// premade shadow volumes and lit surfaces to render for world entity
+	shadowmesh_t *static_meshchain_shadow;
+	shadowmesh_t *static_meshchain_light;
+	// used for visibility testing (more exact than bbox)
+	int static_numclusters;
+	int *static_clusterindices;
+}
+rtlight_t;
+
+typedef struct dlight_s
+{
+	// destroy light after this time
+	// (dlight only)
+	vec_t die;
 	// the entity that owns this light (can be NULL)
+	// (dlight only)
 	struct entity_render_s *ent;
-	// orientation/scaling/location
+	// location
+	// (worldlight: saved to .rtlights file)
+	vec3_t origin;
+	// worldlight orientation
+	// (worldlight only)
+	// (worldlight: saved to .rtlights file)
+	vec3_t angles;
+	// dlight orientation/scaling/location
+	// (dlight only)
 	matrix4x4_t matrix;
+	// color of light
+	// (worldlight: saved to .rtlights file)
+	vec3_t color;
 	// cubemap number to use on this light
+	// (dlight only)
 	int cubemapnum;
+	// cubemap name to use on this light
+	// (worldlight only)
+	// (worldlight: saved to .rtlights file)
+	char cubemapname[64];
+	// make light flash while selected
+	// (worldlight only)
+	int selected;
+	// brightness (not really radius anymore)
+	// (worldlight: saved to .rtlights file)
+	vec_t radius;
+	// drop radius this much each second
+	// (dlight only)
+	vec_t decay;
 	// light style which controls intensity of this light
+	// (worldlight: saved to .rtlights file)
 	int style;
 	// cast shadows
+	// (worldlight: saved to .rtlights file)
 	int shadow;
 	// corona intensity
+	// (worldlight: saved to .rtlights file)
 	vec_t corona;
+	// linked list of world lights
+	// (worldlight only)
+	struct dlight_s *next;
+	// embedded rtlight struct for renderer
+	// (renderer only)	
+	rtlight_t rtlight;
 }
 dlight_t;
 
