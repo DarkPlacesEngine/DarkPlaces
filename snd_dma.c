@@ -305,6 +305,9 @@ sfx_t *S_FindName (const char *name, qboolean stdpath)
 {
 	sfx_t *sfx;
 
+	if (!snd_initialized.integer)
+		return NULL;
+
 	sfx = S_GetCached (name, stdpath);
 
 	// If we haven't allocated a sfx_t struct for it yet
