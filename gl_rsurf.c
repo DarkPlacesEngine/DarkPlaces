@@ -1162,7 +1162,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 						f = 1 - exp(fogdensity/DotProduct(diff, diff));
 						VectorScale(c, f, c);
 					}
-					if (!surface->lightmaptexture && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+					if (!surface->lightmaptexture && surface->groupmesh->data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 						c[3] = (surface->groupmesh->data_lightmapcolor4f + 4 * surface->num_firstvertex)[i*4+3] * a;
 					else
 						c[3] = a;
@@ -1215,7 +1215,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 					R_Mesh_VertexPointer(vertex3f);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
 					R_Mesh_ColorPointer(varray_color4f);
-					if (!surface->lightmaptexture && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+					if (!surface->lightmaptexture && surface->groupmesh->data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 					{
 						for (i = 0, v = (vertex3f + 3 * surface->num_firstvertex), c = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 						{
@@ -1252,7 +1252,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 					vertex3f = RSurf_GetVertexPointer(ent, texture, surface, modelorg);
 					R_Mesh_VertexPointer(vertex3f);
 					R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
-					if (!surface->lightmaptexture && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+					if (!surface->lightmaptexture && surface->groupmesh->data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 					{
 						R_Mesh_ColorPointer(varray_color4f);
 						for (i = 0, v = (vertex3f + 3 * surface->num_firstvertex), c = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
@@ -1309,7 +1309,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				R_Mesh_TexCoordPointer(0, 2, surface->groupmesh->data_texcoordtexture2f);
 				R_Mesh_ColorPointer(varray_color4f);
 				//RSurf_FogPassColors_Vertex3f_Color4f((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], texture->currentalpha, 1, surface->num_vertices, modelorg);
-				if (surface->lightmaptexture && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				if (!surface->lightmaptexture && surface->groupmesh->data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
 				{
 					for (i = 0, v = (vertex3f + 3 * surface->num_firstvertex), c = (varray_color4f + 4 * surface->num_firstvertex);i < surface->num_vertices;i++, v += 3, c += 4)
 					{
