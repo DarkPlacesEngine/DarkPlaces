@@ -222,20 +222,23 @@ void R_FreeTexture(rtexture_t *rt)
 	// note: if freeing a fragment texture, this will not make the claimed
 	// space available for new textures unless all other fragments in the
 	// image are also freed
-	image = glt->image;
-	image->texturecount--;
-	if (image->texturecount < 1)
+	if (glt->image)
 	{
-		for (gltimagepointer = &glt->pool->imagechain;*gltimagepointer && *gltimagepointer != image;gltimagepointer = &(*gltimagepointer)->imagechain);
-		if (*gltimagepointer == image)
-			*gltimagepointer = image->imagechain;
-		else
-			Host_Error("R_FreeTexture: image not linked in pool\n");
-		if (image->texnum)
-			qglDeleteTextures(1, &image->texnum);
-		if (image->blockallocation)
-			Mem_Free(image->blockallocation);
-		Mem_Free(image);
+		image = glt->image;
+		image->texturecount--;
+		if (image->texturecount < 1)
+		{
+			for (gltimagepointer = &glt->pool->imagechain;*gltimagepointer && *gltimagepointer != image;gltimagepointer = &(*gltimagepointer)->imagechain);
+			if (*gltimagepointer == image)
+				*gltimagepointer = image->imagechain;
+			else
+				Host_Error("R_FreeTexture: image not linked in pool\n");
+			if (image->texnum)
+				qglDeleteTextures(1, &image->texnum);
+			if (image->blockallocation)
+				Mem_Free(image->blockallocation);
+			Mem_Free(image);
+		}
 	}
 
 	if (glt->identifier)
