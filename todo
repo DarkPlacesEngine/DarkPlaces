@@ -30,7 +30,6 @@
 -d darkplaces: prevent player name changes faster than once every 5 seconds (sublim3)
 -d darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 -d darkplaces: write a readme (Antti)
--d dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
@@ -656,6 +655,7 @@ d darkplaces: update darkplaces readme
 d darkplaces: upgrade network protocol to send precise angles for entities, and make EF_LOWPRECISION downgrade both origin and angles, note this does not cover svc_setangle (Urre, Wazat for Battlemech, FrikaC, mashakos, RenegadeC, Sajt)
 d darkplaces: upgrade punchangle protocol to 16bit angles for smoother motion (Urre)
 d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)
+d dpmaster: rename 'interface' variable so it compiles in MSVC, interface is a compiler keyword (Vic)
 d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge to 50 cells
 d dpmod: add back tarbaby gibs (scar3crow)
 d dpmod: add frags for killing monsters in dpmod (scar3crow)
