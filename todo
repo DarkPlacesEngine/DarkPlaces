@@ -1,17 +1,16 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
--(mashakos) d darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
--(scar3crow) d dpmod: add flame thrower enforcers back (scar3crow)
--(scar3crow) d dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
+-d (Baalz) darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d (FrikaC, Uffe, Gilgamesh, Wazat) darkplaces protocol: add back colormod extension (FrikaC, Uffe, Gilgamesh, Wazat)
 -d (Mabus) darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
+-d (Randy) darkplaces client: disable vsync when doing a timedemo (Randy)
 -d (Urre, Harb, FrikaC) darkplaces protocol: add PRYDON_CLIENTCURSOR extension - clientside mouse with highlighting of selected entities with the EF_SELECTABLE flag, and qc fields on the client entity on the server would indicate which entity the cursor is highlighting as well as where it is (Urre, Harb, FrikaC) 
--d (Vermeulen) darkplaces protocol: add DP_SV_BUTTONCHAT extension to document the addition of .buttonchat to indicate if someone is not in key_game mode, so mods can show a talk bubble if they wish (Vermeulen)
 -d (Wazat, Kinn, Urre, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
+-d (mashakos) darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (ryan[sg]) darkplaces loader: halflife wad loading is unable to seek to lump table (ryan[sg], Elric)
--f (Tomaz, sublim3) darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
+-d (scar3crow) dpmod: add flame thrower enforcers back (scar3crow)
+-d (scar3crow) dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 -f (VorteX) darkplaces protocol: add DP_EF_HIGHPRECISION to send float origins instead of shorts (VorteX)
+-f (sublim3) darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
 -f (yummyluv) darkplaces protocol: add buttons 9-16 (yummyluv)
 0 darkplaces SDL client: add key emulated repeat
 0 darkplaces WGL client: figure out why GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
@@ -27,7 +26,6 @@
 0 darkplaces client: cl_particles_size isn't working, it should affect rendering (Chillo)
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces client: detect 5x4 video aspect ratio modes (such as 1280x1024) and set a 0.9375 pixel aspect (which is (1280/1024)/(1280/960)) when these modes are active?
-0 darkplaces client: disable vsync when doing a timedemo (Randy)
 0 darkplaces client: figure out why r_editlights_edit cubemap is not setting the light's cubemap name
 0 darkplaces client: fix 'no such frame 0' warnings in prydon when examining wands in stores
 0 darkplaces client: fix gl_flashblend, it's still drawing rtdlights even when gl_flashblend is on (Toddd)
@@ -66,9 +64,9 @@
 0 darkplaces protocol: add DP_TE_BUBBLES to make a burst of bubbles underwater (Supa, shadowalker)
 0 darkplaces protocol: add DP_WEAPONSKIN extension which would add a .float weaponskin field (protoplasmatic, Kazashi)
 0 darkplaces protocol: add EF_DOUBLESIDED for double sided entity rendering (disable cull face for this entity) (yummyluv)
+0 darkplaces protocol: add a TE_LASER effect with start, end, owner, holdtime, fadetime, skin index (looking up a gfx/particles/beam%03i.tga), (Wazat)
 0 darkplaces protocol: add a couple beams for Nexuiz (Vermeulen)
 0 darkplaces protocol: add a new TE_ explosion effect with RGB color choice for particle color and another choice for light color (VorteX)
-0 darkplaces protocol: add a te_laser effect with start, end, owner, holdtime, fadetime, skin index (looking up a gfx/particles/beam%03i.tga), (Wazat)
 0 darkplaces protocol: add an EF_BULLETTRACER trail effect which can be used to make an invisible entity into a tracer, a bright streak leaving a faint smoke trail (Carni)
 0 darkplaces protocol: add lava-steam particle puff effect for bursting lava bubbles (Zombie)
 0 darkplaces protocol: add support for .float corona and corona_radius to control corona intensity and radius on dlights 
@@ -99,6 +97,7 @@
 0 darkplaces server: add DP_QC_WRITESTRING2 extension, same as writestring but does not write trailing 0 (shadowalker)
 0 darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
 0 darkplaces server: add PF_tokenizeseparator function and DP_QC_TOKENIZESEPARATOR extension
+0 darkplaces server: add TE_FLAMEJET builtin and add extension (Supajoe)
 0 darkplaces server: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces server: add a DP_QC_WARNING extension which has a "warning" builtin that does a PF_WARNING just to print the requested message, opcode dump, and stack trace (FrikaC)
 0 darkplaces server: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
@@ -106,8 +105,6 @@
 0 darkplaces server: add filename/line number reporting to progs stack and opcode printouts (Spike)
 0 darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 0 darkplaces server: add sv_progs cvar, defaulted to "progs.dat", can be set from console or by menu to choose a mod (Black)
-0 darkplaces server: add te_flamejet builtin and add extension (Supajoe)
-0 darkplaces server: fix the sys_ticrate bounds checking, it's constantly setting it to 0.1 when it is already 0.1, don't set it if the change is insignificant
 0 darkplaces server: make dedicated server not load images (maybe all fail?)
 0 darkplaces server: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
@@ -431,6 +428,7 @@ d darkplaces protocol bug: model colormap is showing white on client, is it even
 d darkplaces protocol: GAME_NEXUIZ: add a NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN extension which would add playermodel and playerskin commands and set them up like the Host_Name_f stuff works, this means a command for each, saved _cl_playermodel and _cl_playerskin cvars, playermodel and playerskin fields in the client_t struct, and quakec fields to allow access to these similarly to .clientcolors (Vermeulen, Black, VorteX)
 d darkplaces protocol: MSG_ReadAngle functions should return +-180 range, not 0-360 (Carni)
 d darkplaces protocol: PROTOCOL_DARKPLACES4 malfunctioning after a few seconds, probably not acknowledging packets properly (Sajt)
+d darkplaces protocol: add DP_SV_BUTTONCHAT extension to document the addition of .buttonchat to indicate if someone is not in key_game mode, so mods can show a talk bubble if they wish (Vermeulen)
 d darkplaces protocol: add DP_SV_BUTTONUSE extension to document the addition of .buttonuse and +use/-use commands (Kazashi)
 d darkplaces protocol: add rate command and sv_maxrate cvar (and _cl_rate cvar to save to config) to control client rate (rate is sent to server on connect as a command, like other properties) (protoplasmatic)
 d darkplaces protocol: expand viewzoom to two bytes (8bit.8bit fixedpoint instead of 0.8bit like it is now) (Urre)
@@ -466,6 +464,7 @@ d darkplaces server: figure out what is wrong with dedicated server console on w
 d darkplaces server: figure out what's making monsters act like notarget is on while underwater (romi)
 d darkplaces server: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
 d darkplaces server: fix SV_SoundIndex warnings in sv_protocolname DARKPLACES5 (Spike)
+d darkplaces server: fix the sys_ticrate bounds checking, it's constantly setting it to 0.1 when it is already 0.1, don't set it if the change is insignificant
 d darkplaces server: for some clients PROTOCOL_DARKPLACES5 stops updating after a short while after a reconnect... why?
 d darkplaces server: make a getattachmentvectors qc builtin (Supajoe, Urre)
 d darkplaces server: make findradius use areagrid scans to speed up searching (Urre, Sajt)
@@ -479,6 +478,7 @@ d darkplaces sound: add a sound unloader of some sort, to allow music and other 
 d darkplaces sound: clear sound buffer at startup so it doesn't play static during startup on windows (FrikaC)
 d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 d darkplaces sound: make sound loader check both sound/%s and %s, incase a sound (like music/something.wav in q3 maps) is not in the sound directory (Static_Fiend)
+d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
 d darkplaces sound: non-cd music tracks should not be affected by sound volume setting (Urre)
 d darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
 d darkplaces: Host_Name_f validate player names, stripping \r and \n
