@@ -785,27 +785,11 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	float alpha;
 	float modelorg[3];
 	texture_t *texture;
-	matrix4x4_t tempmatrix;
-	float	args[4] = {0.05f,0,0,0.04f};
-
-	if (gl_textureshader && r_watershader.value && !fogenabled)
-	{
-		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
-		R_Mesh_TextureMatrix(1, &tempmatrix);
-		Matrix4x4_CreateFromQuakeEntity(&tempmatrix, 0, 0, 0, 0, 0, 0, r_watershader.value);
-		R_Mesh_TextureMatrix(0, &tempmatrix);
-	}
-	else if (r_waterscroll.value)
-	{
-		// scrolling in texture matrix
-		Matrix4x4_CreateTranslate(&tempmatrix, sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
-		R_Mesh_TextureMatrix(0, &tempmatrix);
-	}
+	float args[4] = {0.05f,0,0,0.04f};
 
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
-	memset(&m, 0, sizeof(m));
 	texture = surf->texinfo->texture->currentframe;
 	alpha = texture->currentalpha;
 	if (texture->rendertype == SURFRENDER_ADD)
@@ -823,72 +807,70 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 	}
+	GL_DepthTest(true);
+	GL_Color(1, 1, 1, alpha);
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = surf->mesh.data_vertex3f;
 	if (gl_textureshader && r_watershader.value && !fogenabled)
 	{
 		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(cl.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
-	}
-	else
-		m.tex[0] = R_GetTexture(texture->skin.base);
-	GL_DepthTest(true);
-	if (fogenabled)
-		m.pointer_color = varray_color4f;
-	else
-		GL_Color(1, 1, 1, alpha);
-	if (gl_textureshader && r_watershader.value && !fogenabled)
-	{
-		GL_ActiveTexture (0);
-		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
-		GL_ActiveTexture (1);
-		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
-		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
-		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
-		qglTexEnvfv (GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
-		qglEnable (GL_TEXTURE_SHADER_NV);
-	}
-
-	if (fogenabled)
-	{
-		R_FillColors(varray_color4f, surf->mesh.num_vertices, 1, 1, 1, alpha);
-		RSurf_FogColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, surf->mesh.num_vertices, modelorg);
-	}
-	m.pointer_vertex = surf->mesh.data_vertex3f;
-	m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-	m.pointer_texcoord[1] = surf->mesh.data_texcoordtexture2f;
-	m.texcombinergb[1] = GL_REPLACE;
-	R_Mesh_State(&m);
-	GL_LockArrays(0, surf->mesh.num_vertices);
-	R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
-	GL_LockArrays(0, 0);
-
-	if (gl_textureshader && r_watershader.value && !fogenabled)
-	{
-		qglDisable (GL_TEXTURE_SHADER_NV);
-		GL_ActiveTexture (0);
-	}
-
-	if (fogenabled)
-	{
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = surf->mesh.data_vertex3f;
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-		GL_DepthTest(true);
-		m.tex[0] = R_GetTexture(texture->skin.fog);
+		m.texcombinergb[0] = GL_REPLACE;
+		m.texcombinergb[1] = GL_REPLACE;
 		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-		m.pointer_color = varray_color4f;
+		m.pointer_texcoord[1] = surf->mesh.data_texcoordtexture2f;
+		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
+		Matrix4x4_CreateTranslate(&m.texmatrix[1], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 		R_Mesh_State(&m);
-		RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], alpha, 1, surf->mesh.num_vertices, modelorg);
+
+		GL_ActiveTexture(0);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+		GL_ActiveTexture(1);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
+		qglTexEnvfv(GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
+		qglEnable(GL_TEXTURE_SHADER_NV);
+
 		GL_LockArrays(0, surf->mesh.num_vertices);
 		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		GL_LockArrays(0, 0);
-	}
 
-	if ((gl_textureshader && r_watershader.value && !fogenabled) || r_waterscroll.value)
+		qglDisable(GL_TEXTURE_SHADER_NV);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+		GL_ActiveTexture(0);
+	}
+	else
 	{
-		Matrix4x4_CreateIdentity(&tempmatrix);
-		R_Mesh_TextureMatrix(0, &tempmatrix);
-		R_Mesh_TextureMatrix(1, &tempmatrix);
+		if (fogenabled)
+		{
+			R_FillColors(varray_color4f, surf->mesh.num_vertices, 1, 1, 1, alpha);
+			RSurf_FogColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, surf->mesh.num_vertices, modelorg);
+			m.pointer_color = varray_color4f;
+		}
+		m.tex[0] = R_GetTexture(texture->skin.base);
+		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+		if (r_waterscroll.value)
+		{
+			// scrolling in texture matrix
+			Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(cl.time) * 0.025 * r_waterscroll.value, sin(cl.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		}
+		R_Mesh_State(&m);
+
+		GL_LockArrays(0, surf->mesh.num_vertices);
+		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+		GL_LockArrays(0, 0);
+
+		if (fogenabled && texture->rendertype != SURFRENDER_ADD)
+		{
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+			RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], alpha, 1, surf->mesh.num_vertices, modelorg);
+			m.tex[0] = R_GetTexture(texture->skin.fog);
+			R_Mesh_State(&m);
+			GL_LockArrays(0, surf->mesh.num_vertices);
+			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
 	}
 }
 
