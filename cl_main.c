@@ -258,17 +258,27 @@ CL_PrintEntities_f
 void CL_PrintEntities_f (void)
 {
 	entity_t	*ent;
-	int			i;
+	int			i, j;
+	char		name[32];
 	
 	for (i = 0, ent = cl_entities;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
 	{
+		if (!ent->state_current.active)
+			continue;
+		if (!ent->render.model)
+			continue;
+
 		Con_Printf ("%3i:", i);
 		if (!ent->render.model)
 		{
 			Con_Printf ("EMPTY\n");
 			continue;
 		}
-		Con_Printf ("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->render.model->name, ent->render.frame, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2]);
+		strncpy(name, ent->render.model->name, 30);
+		name[30] = 0;
+		for (j = strlen(name);j < 30;j++)
+			name[j] = ' ';
+		Con_Printf ("%s:%04i (%5i %5i %5i) [%3i %3i %3i]\n", name, ent->render.frame, (int) ent->render.origin[0], (int) ent->render.origin[1], (int) ent->render.origin[2], (int) ent->render.angles[0] % 360, (int) ent->render.angles[1] % 360, (int) ent->render.angles[2] % 360);
 	}
 }
 
