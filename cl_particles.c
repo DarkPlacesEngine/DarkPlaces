@@ -215,6 +215,12 @@ typedef struct particle_s
 	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
 	float		pressure; // if non-zero, apply pressure to other particles
 	qbyte		color[4];
+#ifndef WORKINGLQUAKE
+	entity_render_t	*owner; // decal stuck to this entity
+	model_t		*ownermodel; // model the decal is stuck to (used to make sure the entity is still alive)
+	vec3_t		relativeorigin; // decal at this location in entity's coordinate space
+	vec3_t		relativedirection; // decal oriented this way relative to entity's coordinate space
+#endif
 }
 particle_t;
 
@@ -278,6 +284,9 @@ cvar_t cl_particles_blood_size = {CVAR_SAVE, "cl_particles_blood_size", "8"};
 cvar_t cl_particles_blood_alpha = {CVAR_SAVE, "cl_particles_blood_alpha", "0.5"};
 cvar_t cl_particles_bulletimpacts = {CVAR_SAVE, "cl_particles_bulletimpacts", "1"};
 cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1"};
+cvar_t cl_particles_smoke_size = {CVAR_SAVE, "cl_particles_smoke_size", "7"};
+cvar_t cl_particles_smoke_alpha = {CVAR_SAVE, "cl_particles_smoke_alpha", "0.5"};
+cvar_t cl_particles_smoke_alphafade = {CVAR_SAVE, "cl_particles_smoke_alphafade", "0.55"};
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1"};
 cvar_t cl_decals = {CVAR_SAVE, "cl_decals", "0"};
@@ -324,6 +333,9 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_blood_alpha);
 	Cvar_RegisterVariable (&cl_particles_bulletimpacts);
 	Cvar_RegisterVariable (&cl_particles_smoke);
+	Cvar_RegisterVariable (&cl_particles_smoke_size);
+	Cvar_RegisterVariable (&cl_particles_smoke_alpha);
+	Cvar_RegisterVariable (&cl_particles_smoke_alphafade);
 	Cvar_RegisterVariable (&cl_particles_sparks);
 	Cvar_RegisterVariable (&cl_particles_bubbles);
 	Cvar_RegisterVariable (&cl_decals);
@@ -363,6 +375,7 @@ void CL_Particles_Init (void)
 			pcb2 = (((pcb2 - pcb1) * ptempcolor) >> 8) + pcb1;\
 		}\
 		part = &particles[cl_numparticles++];\
+		memset(part, 0, sizeof(*part));\
 		part->type = (ptype);\
 		part->color[0] = pcr2;\
 		part->color[1] = pcg2;\
@@ -943,6 +956,9 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	float len, dec, speed, r;
 	int contents, smoke, blood, bubbles;
 
+	if (end[0] == start[0] && end[1] == start[1] && end[2] == start[2])
+		return;
+
 	VectorSubtract(end, start, dir);
 	VectorNormalize(dir);
 
@@ -987,8 +1003,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 3;
 				if (smoke)
 				{
-					particle(pt_grow,   PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, 32, 64, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 6, 0, 0, 0, 0, 0);
-					particle(pt_static, PARTICLE_BILLBOARD, 0x801010, 0xFFA020, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, 128, 768, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0, 0, 0, 0, 0, 0);
+					particle(pt_grow,   PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, cl_particles_smoke_alpha.value*125, cl_particles_smoke_alphafade.value*125, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), cl_particles_smoke_size.value, 0, 0, 0, 0, 0);
+					particle(pt_static, PARTICLE_BILLBOARD, 0x801010, 0xFFA020, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, cl_particles_smoke_alpha.value*288, cl_particles_smoke_alphafade.value*1400, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0, 0, 0, 0, 0, 0);
 				}
 				if (bubbles)
 				{
@@ -1002,7 +1018,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 3;
 				if (cl_particles.integer && cl_particles_smoke.integer)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, 32, 96, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0, 0, 0, 0, 0, 0);
+					particle(pt_grow, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, PBLEND_ADD, dec, dec, cl_particles_smoke_alpha.value*100, cl_particles_smoke_alphafade.value*100, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), cl_particles_smoke_size.value, 0, 0, 0, 0, 0);
 				}
 				break;
 
@@ -1153,6 +1169,11 @@ void CL_MoveParticles (void)
 	particle_t *p;
 	int i, activeparticles, maxparticle, j, a, pressureused = false, content;
 	float gravity, dvel, bloodwaterfade, frametime, f, dist, normal[3], v[3], org[3];
+#ifdef WORKINGLQUAKE
+	void *hitent;
+#else
+	entity_render_t *hitent;
+#endif
 
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
@@ -1178,7 +1199,7 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, org);
 		if (p->bounce)
 		{
-			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true, NULL) < 1)
+			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true, &hitent) < 1)
 			{
 				VectorCopy(v, p->org);
 				if (p->bounce < 0)
@@ -1192,6 +1213,13 @@ void CL_MoveParticles (void)
 					{
 						p->type = pt_decal;
 						p->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
+#ifndef WORKINGLQUAKE
+						p->owner = hitent;
+						p->ownermodel = hitent->model;
+						Matrix4x4_Transform(&hitent->inversematrix, v, p->relativeorigin);
+						Matrix4x4_Transform3x3(&hitent->inversematrix, normal, p->relativedirection);
+						VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
+#endif
 						p->time2 = cl.time + cl_decals_time.value;
 						p->die = p->time2 + cl_decals_fadetime.value;
 						p->alphafade = 0;
@@ -1284,6 +1312,15 @@ void CL_MoveParticles (void)
 				p->scaley += frametime * p->time2;
 				break;
 			case pt_decal:
+#ifndef WORKINGLQUAKE
+				if (p->owner->model == p->ownermodel)
+				{
+					Matrix4x4_Transform(&p->owner->matrix, p->relativeorigin, p->org);
+					Matrix4x4_Transform3x3(&p->owner->matrix, p->relativedirection, p->vel2);
+				}
+				else
+					p->die = -1;
+#endif
 				if (cl.time > p->time2)
 				{
 					p->alphafade = p->alpha / (p->die - cl.time);
