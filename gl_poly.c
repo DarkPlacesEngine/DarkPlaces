@@ -751,7 +751,7 @@ void skypolyrender(void)
 	}
 }
 
-char skyname[256];
+static char skyname[256];
 
 /*
 ==================
@@ -760,19 +760,19 @@ R_SetSkyBox
 */
 char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 rtexture_t *skyboxside[6];
-void R_SetSkyBox(char *sky)
+int R_SetSkyBox(char *sky)
 {
 	int		i;
 	char	name[1024];
 	byte*	image_rgba;
 
 	if (strcmp(sky, skyname) == 0) // no change
-		return;
+		return true;
 
 	if (strlen(sky) > 1000)
 	{
 		Con_Printf ("sky name too long (%i, max is 1000)\n", strlen(sky));
-		return;
+		return false;
 	}
 
 	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
@@ -780,7 +780,7 @@ void R_SetSkyBox(char *sky)
 	skyname[0] = 0;
 
 	if (!sky[0])
-		return;
+		return true;
 
 	for (i = 0;i < 6;i++)
 	{
@@ -802,7 +802,9 @@ void R_SetSkyBox(char *sky)
 	{
 		skyavailable_box = true;
 		strcpy(skyname, sky);
+		return true;
 	}
+	return false;
 }
 
 // LordHavoc: added LoadSky console command
@@ -814,11 +816,18 @@ void LoadSky_f (void)
 		if (skyname[0])
 			Con_Printf("current sky: %s\n", skyname);
 		else
-			Con_Printf("no skybox has been set\n", skyname);
+			Con_Printf("no skybox has been set\n");
 		break;
 	case 2:
-		R_SetSkyBox(Cmd_Argv(1));
-		Con_Printf("skybox set to %s\n", skyname);
+		if (R_SetSkyBox(Cmd_Argv(1)))
+		{
+			if (skyname[0])
+				Con_Printf("skybox set to %s\n", skyname);
+			else
+				Con_Printf("skybox disabled\n");
+		}
+		else
+			Con_Printf("failed to load skybox %s\n", Cmd_Argv(1));
 		break;
 	default:
 		Con_Printf("usage: loadsky skyname\n");
