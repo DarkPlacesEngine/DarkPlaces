@@ -137,7 +137,7 @@ void CDAudio_Play (qbyte track, qboolean looping)
 
 		if (track > maxTrack)
 		{
-			Con_DPrintf("CDAudio: Bad track number %u.\n", track);
+			Con_Printf("CDAudio: Bad track number %u.\n", track);
 			return;
 		}
 
@@ -380,7 +380,12 @@ int CDAudio_Startup (void)
 
 	saved_vol = CDAudio_SysGetVolume ();
 	if (saved_vol < 0.0f)
+	{
+		Con_DPrint ("Can't get initial CD volume\n");
 		saved_vol = 1.0f;
+	}
+	else
+		Con_DPrintf ("Initial CD volume: %g\n", saved_vol);
 
 	initialized = true;
 

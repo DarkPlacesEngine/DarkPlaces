@@ -83,14 +83,33 @@ int CDAudio_SysGetAudioDiskInfo (void)
 
 float CDAudio_SysGetVolume (void)
 {
-	// IMPLEMENTME
-	return -1.0f;
+	struct ioc_vol vol;
+
+	if (cdfile == -1)
+		return -1.0f;
+
+	if (ioctl (cdfile, CDIOCGETVOL, &vol) == -1)
+	{
+		Con_DPrint("ioctl CDIOCGETVOL failed\n");
+		return -1.0f;
+	}
+
+	return (vol.vol[0] + vol.vol[1]) / 2.0f / 255.0f;
 }
 
 
 void CDAudio_SysSetVolume (float volume)
 {
-	// IMPLEMENTME
+	struct ioc_vol vol;
+
+	if (cdfile == -1)
+		return;
+
+	vol.vol[0] = vol.vol[1] = volume * 255;
+	vol.vol[2] = vol.vol[3] = 0;
+
+	if (ioctl (cdfile, CDIOCSETVOL, &vol) == -1)
+		Con_DPrintf ("ioctl CDIOCSETVOL failed\n");
 }
 
 
