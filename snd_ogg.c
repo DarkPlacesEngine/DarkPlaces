@@ -337,12 +337,11 @@ void OGG_CloseLibrary (void)
 =================================================================
 */
 
-#define STREAM_BUFFER_SIZE (128 * 1024)
+#define STREAM_BUFFER_DURATION 1.5f	// 1.5 sec
 
-// Note: it must be able to contain enough samples at 48 KHz (max speed)
-//       to fill STREAM_BUFFER_SIZE bytes of samples at 8 KHz (min speed)
-// TODO: dynamically allocate this buffer depending on the shm and min sound speeds
-static qbyte resampling_buffer [STREAM_BUFFER_SIZE * (48000 / 8000)];
+// We work with 1 sec sequences, so this buffer must be able to contain
+// 1 sec of sound of the highest quality (48 KHz, 16 bit samples, stereo)
+static qbyte resampling_buffer [48000 * 2 * 2];
 
 
 // Per-sfx data structure
@@ -374,20 +373,22 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 {
 	ogg_stream_perchannel_t* per_ch;
 	sfxbuffer_t* sb;
+	sfx_t* sfx;
 	int newlength, done, ret, bigendian;
 	unsigned int factor;
+	size_t buff_len;
 
 	per_ch = ch->fetcher_data;
+	sfx = ch->sfx;
+	buff_len = ceil (STREAM_BUFFER_DURATION * (sfx->format.speed * sfx->format.width * sfx->format.channels));
 
 	// If there's no fetcher structure attached to the channel yet
 	if (per_ch == NULL)
 	{
-		sfx_t* sfx;
 		vorbis_info *vi;
 		ogg_stream_persfx_t* per_sfx;
 
-		sfx = ch->sfx;
-		per_ch = Mem_Alloc (sfx->mempool, sizeof (*per_ch) - sizeof (per_ch->sb.data) + STREAM_BUFFER_SIZE);
+		per_ch = Mem_Alloc (sfx->mempool, sizeof (*per_ch) - sizeof (per_ch->sb.data) + buff_len);
 		per_sfx = sfx->fetcher_data;
 
 		// Open it with the VorbisFile API
@@ -406,7 +407,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		per_ch->format.speed = vi->rate;
 		per_ch->format.width = sfx->format.width;
 		per_ch->format.channels = sfx->format.channels;
-		
+
 		per_ch->sb.offset = 0;
 		per_ch->sb.length = 0;
 		per_ch->bs = 0;
@@ -418,7 +419,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	factor = per_ch->format.width * per_ch->format.channels;
 
 	// If the stream buffer can't contain that much samples anyway
-	if (nbsamples * factor > STREAM_BUFFER_SIZE)
+	if (nbsamples * factor > buff_len)
 	{
 		Con_Printf ("OGG_FetchSound: stream buffer too small (%u bytes required)\n", nbsamples * factor);
 		return NULL;
@@ -448,10 +449,18 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		sb->length = newlength;
 	}
 
-	// How many free bytes do we have in the sfxbuffer now?
-	newlength = STREAM_BUFFER_SIZE - (newlength * factor);
+	// We add exactly "per_ch->format.speed" samples per channel to the buffer (i.e. 1 sec of sound):
+	// 1- to ensure we won't lose any sample during the resampling process
+	// 2- to force one call to OGG_FetchSound per second to regulate the workload
+	newlength = per_ch->format.speed * factor;
+	if (newlength + sb->length * factor > buff_len)
+	{
+		Con_Printf ("OGG_FetchSound: stream buffer overflow (%u bytes / %u)\n",
+					newlength + sb->length * factor, buff_len);
+		return NULL;
+	}
 
-	// Decompress in the resampling_buffer to get STREAM_BUFFER_SIZE samples after resampling
+	// Decompress in the resampling_buffer
 #if BYTE_ORDER == LITTLE_ENDIAN
 	bigendian = 0;
 #else
@@ -462,7 +471,7 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 		done += ret;
 
 	// Resample in the sfxbuffer
-	newlength = ResampleSfx (resampling_buffer, (size_t)done / factor, &per_ch->format, sb->data + sb->length * factor, ch->sfx->name);
+	newlength = ResampleSfx (resampling_buffer, (size_t)done / factor, &per_ch->format, sb->data + sb->length * factor, sfx->name);
  	sb->length += newlength;
 
 	return sb;
@@ -505,7 +514,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	ov_decode_t ov_decode;
 	OggVorbis_File vf;
 	vorbis_info *vi;
-	ogg_int64_t len;
+	ogg_int64_t len, buff_len;
 
 	if (!vf_dll)
 		return false;
@@ -548,7 +557,8 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 	len = qov_pcm_total (&vf, -1) * vi->channels * 2;  // 16 bits => "* 2"
 
 	// Decide if we go for a stream or a simple PCM cache
-	if (snd_streaming.integer && len > fs_filesize + 3 * STREAM_BUFFER_SIZE)
+	buff_len = ceil (STREAM_BUFFER_DURATION * (shm->format.speed * 2 * vi->channels));
+	if (snd_streaming.integer && len > fs_filesize + 3 * buff_len)
 	{
 		ogg_stream_persfx_t* per_sfx;
 
@@ -563,7 +573,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		s->format.channels = vi->channels;
 		s->loopstart = -1;
 		s->flags |= SFXFLAG_STREAMED;
-		s->total_length = (size_t)len / (vi->channels * 2) * (float)(shm->format.speed / vi->rate);
+		s->total_length = (size_t)len / (vi->channels * 2) * ((float)shm->format.speed / vi->rate);
 	}
 	else
 	{
