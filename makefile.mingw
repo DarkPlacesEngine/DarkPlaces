@@ -16,8 +16,9 @@ OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops -fomit-frame-
 # -Werror
 # -D WIN32 -D NDEBUG -D _WINDOWS -D _M_IX86
 
-CFLAGS= -I/usr/local/mingw/include -MD -Wall $(OPTIMIZATIONS)
-LDFLAGS= -mwindows -L/msdev/lib -L/usr/local/mingw/lib -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lopengl32 -lcomctl32 -lwsock32
+CFLAGS= -MD -Wall $(OPTIMIZATIONS)
+LDFLAGS= -mwindows -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lopengl32 -lcomctl32 -lwsock32
+
 
 all: builddate darkplaces
 
