@@ -267,3 +267,8 @@ int CGVM_Model(const char *name)
 	cgvm_model[i] = model;
 	return i;
 }
+
+void CGVM_Stain(const float *origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
+{
+	R_Stain((float *)origin, radius, cr1, cg1, cb1, ca1, cr2, cg2, cb2, ca2);
+}
