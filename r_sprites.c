@@ -72,7 +72,7 @@ void GL_DrawSpriteImage (mspriteframe_t *frame, vec3_t origin, vec3_t up, vec3_t
 {
 	byte alphaub;
 	alphaub = bound(0, alpha, 255);
-	transpolybegin(R_GetTexture(frame->texture), 0, R_GetTexture(frame->fogtexture), currententity->render.effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+	transpolybegin(R_GetTexture(frame->texture), 0, R_GetTexture(frame->fogtexture), ((currententity->render.effects & EF_ADDITIVE) || (currententity->render.model->flags & EF_ADDITIVE)) ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 	transpolyvertub(origin[0] + frame->down * up[0] + frame->left  * right[0], origin[1] + frame->down * up[1] + frame->left  * right[1], origin[2] + frame->down * up[2] + frame->left  * right[2], 0, 1, red, green, blue, alphaub);
 	transpolyvertub(origin[0] + frame->up   * up[0] + frame->left  * right[0], origin[1] + frame->up   * up[1] + frame->left  * right[1], origin[2] + frame->up   * up[2] + frame->left  * right[2], 0, 0, red, green, blue, alphaub);
 	transpolyvertub(origin[0] + frame->up   * up[0] + frame->right * right[0], origin[1] + frame->up   * up[1] + frame->right * right[1], origin[2] + frame->up   * up[2] + frame->right * right[2], 1, 0, red, green, blue, alphaub);

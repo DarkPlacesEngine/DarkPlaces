@@ -170,6 +170,7 @@ typedef struct mleaf_s
 // leaf specific
 //	int			visframe;		// visible if current (r_framecount)
 //	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
+	int			portalmarkid;	// used by polygon-through-portals visibility checker
 
 	// for bounding box culling
 	vec3_t		mins;

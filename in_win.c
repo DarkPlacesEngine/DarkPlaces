@@ -33,7 +33,7 @@ HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
 	LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
 
 // mouse variables
-cvar_t	m_filter = {"m_filter","0"};
+cvar_t	m_filter = {CVAR_SAVE, "m_filter","0"};
 
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
@@ -540,7 +540,11 @@ void IN_MouseMove (usercmd_t *cmd)
 	HRESULT				hr;
 
 	if (!mouseactive)
+	{
+		GetCursorPos (&current_pos);
+		ui_updatemouse(current_pos.x - window_x, current_pos.y - window_y);
 		return;
+	}
 
 	if (dinput)
 	{
@@ -592,7 +596,7 @@ void IN_MouseMove (usercmd_t *cmd)
 					else
 						mstate_di &= ~(1<<1);
 					break;
-					
+
 				case DIMOFS_BUTTON2:
 					if (od.dwData & 0x80)
 						mstate_di |= (1<<2);
@@ -616,8 +620,8 @@ void IN_MouseMove (usercmd_t *cmd)
 			{
 				Key_Event (K_MOUSE1 + i, false);
 			}
-		}	
-			
+		}
+
 		mouse_oldbuttonstate = mstate_di;
 	}
 	else

@@ -58,12 +58,12 @@ static int	mouse_buttonstate;
 static int	mouse_oldbuttonstate;
 static float	mouse_x, mouse_y;
 static float	old_mouse_x, old_mouse_y;
-static int	mx, my;
+static int	mx, my, uimx, uimy;
 
 static void IN_init_kb(void);
 static void IN_init_mouse(void);
 
-cvar_t m_filter = {"m_filter","0"};
+cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
 
 static void keyhandler(int scancode, int state)
 {
@@ -80,6 +80,8 @@ static void keyhandler(int scancode, int state)
 static void mousehandler(int buttonstate, int dx, int dy, int dz, int drx, int dry, int drz)
 {
 	mouse_buttonstate = buttonstate;
+	uimx += dx;
+	uimy += dy;
 	mx += dx;
 	my += dy;
 	if (drx > 0) {
@@ -97,6 +99,7 @@ void IN_Init(void)
 	if (COM_CheckParm("-nokbd")) UseKeyboard = 0;
 	if (COM_CheckParm("-nomouse")) UseMouse = 0;
 
+	uimx = uimy = 0;
 	if (UseKeyboard)
 		IN_init_kb();
 	if (UseMouse)
@@ -264,8 +267,10 @@ void IN_Shutdown(void)
 {
 	Con_Printf("IN_Shutdown\n");
 
-	if (UseMouse) mouse_close();
-	if (UseKeyboard) keyboard_close();
+	if (UseMouse)
+		mouse_close();
+	if (UseKeyboard)
+		keyboard_close();
 	in_svgalib_inited = 0;
 }
 
@@ -318,11 +323,20 @@ void IN_Commands(void)
 void IN_Move(usercmd_t *cmd)
 {
 	int mouselook = (in_mlook.state & 1) || freelook.value;
-	if (!UseMouse) return;
+	if (!UseMouse)
+		return;
 
 	/* Poll mouse values */
 	while (mouse_update())
 		;
+
+	if (key_dest != key_game)
+	{
+		ui_mouseupdaterelative(uimx, uimy);
+		uimx = uimy = 0;
+		return;
+	}
+	uimx = uimy = 0;
 
 	if (m_filter.value)
 	{
@@ -348,7 +362,8 @@ void IN_Move(usercmd_t *cmd)
 	else
 		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
 
-	if (mouselook) V_StopPitchDrift();
+	if (mouselook)
+		V_StopPitchDrift();
 
 	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
 	if (mouselook && !(in_strafe.state & 1))

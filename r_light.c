@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t r_lightmodels = {"r_lightmodels", "1"};
+cvar_t r_lightmodels = {0, "r_lightmodels", "1"};
 
 void r_light_start(void)
 {

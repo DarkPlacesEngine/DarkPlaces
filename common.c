@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19,13 +19,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // common.c -- misc functions used in client and server
 
+#include <stdlib.h>
 #include <fcntl.h>
 #ifdef WIN32
 #include <io.h>
 #else
 #include <unistd.h>
 #endif
-#include <stdlib.h>
 
 #include "quakedef.h"
 
@@ -37,14 +37,14 @@ static char     *argvdummy = " ";
 static char     *safeargvs[NUM_SAFE_ARGVS] =
 	{"-stdvid", "-nolan", "-nosound", "-nocdaudio", "-nojoy", "-nomouse", "-dibonly"};
 
-cvar_t  registered = {"registered","0"};
-cvar_t  cmdline = {"cmdline","0", false, true};
+cvar_t registered = {0, "registered","0"};
+cvar_t cmdline = {0, "cmdline","0"};
 
 qboolean        com_modified;   // set true if using non-id files
 
-qboolean		proghack;
+//qboolean		proghack;
 
-int             static_registered = 1;  // only for startup check, then set
+//int             static_registered = 1;  // only for startup check, then set
 
 qboolean		msg_suppress_1 = 0;
 
@@ -54,7 +54,8 @@ char	com_token[1024];
 int		com_argc;
 char	**com_argv;
 
-#define CMDLINE_LENGTH	256
+// LordHavoc: made commandline 1024 characters instead of 256
+#define CMDLINE_LENGTH	1024
 char	com_cmdline[CMDLINE_LENGTH];
 
 qboolean		standard_quake = true, rogue = false, hipnotic = false, nehahra = false;
@@ -251,7 +252,7 @@ int Q_atoi (char *str)
 	int             val;
 	int             sign;
 	int             c;
-	
+
 	if (*str == '-')
 	{
 		sign = -1;
@@ -1038,7 +1039,7 @@ void COM_CheckRegistered (void)
 {
 	Cvar_Set ("cmdline", com_cmdline);
 
-	static_registered = 0;
+//	static_registered = 0;
 
 	if (!Sys_FileTime("gfx/pop.lmp"))
 	{
@@ -1057,7 +1058,7 @@ void COM_CheckRegistered (void)
 	
 //	Cvar_Set ("cmdline", com_cmdline);
 	Cvar_Set ("registered", "1");
-	static_registered = 1;
+//	static_registered = 1;
 	Con_Printf ("Playing registered version.\n");
 }
 
@@ -1506,11 +1507,11 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 // search through the path, one element at a time
 //
 	search = com_searchpaths;
-	if (proghack)
-	{	// gross hack to use quake 1 progs with quake 2 maps
-		if (!strcmp(filename, "progs.dat"))
-			search = search->next;
-	}
+//	if (proghack)
+//	{	// gross hack to use quake 1 progs with quake 2 maps
+//		if (!strcmp(filename, "progs.dat"))
+//			search = search->next;
+//	}
 
 	for ( ; search ; search = search->next)
 	{
@@ -1896,8 +1897,8 @@ void COM_InitFilesystem (void)
 		}
 	}
 
-	if (COM_CheckParm ("-proghack"))
-		proghack = true;
+//	if (COM_CheckParm ("-proghack"))
+//		proghack = true;
 }
 
 int COM_FileExists(char *filename)

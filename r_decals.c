@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -38,8 +38,8 @@ decal_t;
 decal_t *decals;
 int currentdecal; // wraps around in decal array, replacing old ones when a new one is needed
 
-cvar_t r_drawdecals = {"r_drawdecals", "1"};
-cvar_t r_decals_lighting = {"r_decals_lighting", "1"};
+cvar_t r_drawdecals = {0, "r_drawdecals", "1"};
+cvar_t r_decals_lighting = {0, "r_decals_lighting", "1"};
 
 void r_decals_start(void)
 {

@@ -39,16 +39,16 @@ short lightmapupdate[MAX_LIGHTMAPS][2];
 signed int blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3]; // LordHavoc: *3 for colored lighting
 
 int lightmapalign, lightmapalignmask; // LordHavoc: NVIDIA's broken subimage fix, see BuildLightmaps for notes
-cvar_t gl_lightmapalign = {"gl_lightmapalign", "4"};
-cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
-cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
-cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
-cvar_t r_ambient = {"r_ambient", "0"};
-cvar_t gl_vertex = {"gl_vertex", "0"};
-cvar_t r_dlightmap = {"r_dlightmap", "1"};
-cvar_t r_drawportals = {"r_drawportals", "0"};
-cvar_t r_testvis = {"r_testvis", "0"};
-cvar_t r_solidworldnode = {"r_solidworldnode", "1"};
+cvar_t gl_lightmapalign = {0, "gl_lightmapalign", "4"};
+cvar_t gl_lightmaprgba = {0, "gl_lightmaprgba", "1"};
+cvar_t gl_nosubimagefragments = {0, "gl_nosubimagefragments", "0"};
+cvar_t gl_nosubimage = {0, "gl_nosubimage", "0"};
+cvar_t r_ambient = {0, "r_ambient", "0"};
+cvar_t gl_vertex = {0, "gl_vertex", "0"};
+cvar_t r_dlightmap = {CVAR_SAVE, "r_dlightmap", "1"};
+cvar_t r_drawportals = {0, "r_drawportals", "0"};
+cvar_t r_testvis = {0, "r_testvis", "0"};
+cvar_t r_solidworldnode = {0, "r_solidworldnode", "1"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
@@ -1469,248 +1469,6 @@ void R_PortalWorldNode (void)
 }
 */
 
-/*
-#define MAXRECURSIVEPORTALPLANES 1024
-#define MAXRECURSIVEPORTALS 256
-
-tinyplane_t portalplanes[MAXRECURSIVEPORTALPLANES];
-int portalplanestack[MAXRECURSIVEPORTALS];
-int portalplanecount;
-int ranoutofportalplanes;
-int ranoutofportals;
-int ranoutofleafs;
-int portalcantseeself;
-int portalrecursion;
-
-int R_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
-{
-	int i, outpoints, prevside, side;
-	float *prevpoint, prevdist, dist, dot;
-
-	if (inpoints < 3)
-		return inpoints;
-	// begin with the last point, then enter the loop with the first point as current
-	prevpoint = in + 3 * (inpoints - 1);
-	prevdist = DotProduct(prevpoint, p->normal) - p->dist;
-	prevside = prevdist >= 0 ? SIDE_FRONT : SIDE_BACK;
-	i = 0;
-	outpoints = 0;
-	goto begin;
-	for (;i < inpoints;i++)
-	{
-		prevpoint = in;
-		prevdist = dist;
-		prevside = side;
-		in += 3;
-
-begin:
-		dist = DotProduct(in, p->normal) - p->dist;
-		side = dist >= 0 ? SIDE_FRONT : SIDE_BACK;
-
-		if (prevside == SIDE_FRONT)
-		{
-			if (outpoints >= maxoutpoints)
-				return -1;
-			VectorCopy(prevpoint, out);
-			out += 3;
-			outpoints++;
-			if (side == SIDE_FRONT)
-				continue;
-		}
-		else if (side == SIDE_BACK)
-			continue;
-
-		// generate a split point
-		if (outpoints >= maxoutpoints)
-			return -1;
-		dot = prevdist / (prevdist - dist);
-		out[0] = prevpoint[0] + dot * (in[0] - prevpoint[0]);
-		out[1] = prevpoint[1] + dot * (in[1] - prevpoint[1]);
-		out[2] = prevpoint[2] + dot * (in[2] - prevpoint[2]);
-		out += 3;
-		outpoints++;
-	}
-
-	return outpoints;
-}
-
-float portaltemppoints[2][256][3];
-float portaltemppoints2[256][3];
-
-int R_FrustumTestPolygon(float *points, int numpoints, int stride)
-{
-	int i;
-	float *out;
-	if (numpoints < 3)
-		return numpoints;
-	out = &portaltemppoints[0][0][0];
-	for (i = 0;i < numpoints;i++)
-	{
-		VectorCopy(points, portaltemppoints[0][i]);
-		(byte *)points += stride;
-	}
-	numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, (tinyplane_t *)&frustum[0]);
-	if (numpoints < 3)
-		return numpoints;
-	numpoints = R_ClipPolygonToPlane(&portaltemppoints[1][0][0], &portaltemppoints[0][0][0], numpoints, 256, (tinyplane_t *)&frustum[1]);
-	if (numpoints < 3)
-		return numpoints;
-	numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, (tinyplane_t *)&frustum[2]);
-	if (numpoints < 3)
-		return numpoints;
-	return      R_ClipPolygonToPlane(&portaltemppoints[1][0][0], &portaltemppoints[0][0][0], numpoints, 256, (tinyplane_t *)&frustum[3]);
-}
-
-void R_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t *p)
-{
-	vec3_t v1, v2;
-	VectorSubtract(point1, point2, v1);
-	VectorSubtract(point3, point2, v2);
-	CrossProduct(v1, v2, p->normal);
-//	VectorNormalize(p->normal);
-	VectorNormalizeFast(p->normal);
-	p->dist = DotProduct(point1, p->normal);
-}
-
-int R_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
-{
-	int numpoints, i;
-	if (targnumpoints < 3)
-		return targnumpoints;
-	if (maxpoints < 3)
-		return -1;
-	numpoints = targnumpoints;
-	memcpy(&portaltemppoints[0][0][0], targpoints, numpoints * 3 * sizeof(float));
-	for (i = 0;i < clipnumplanes;i++)
-	{
-		numpoints = R_ClipPolygonToPlane(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints, 256, clipplanes + i);
-		if (numpoints < 3)
-			return numpoints;
-		memcpy(&portaltemppoints[0][0][0], &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
-	}
-	if (numpoints > maxpoints)
-		return -1;
-	memcpy(out, &portaltemppoints[1][0][0], numpoints * 3 * sizeof(float));
-	return numpoints;
-}
-
-#define MAXRECURSIVEPORTALLEAFS 256
-
-//mleaf_t *leafstack[MAXRECURSIVEPORTALLEAFS];
-//int leafstackpos;
-int r_portalframecount;
-
-void R_RecursivePortalWorldNode (mleaf_t *leaf, int firstclipplane, int numclipplanes)
-{
-	mportal_t *p;
-
-//	if (leafstackpos >= MAXRECURSIVEPORTALLEAFS)
-//	{
-//		ranoutofleafs = true;
-//		return;
-//	}
-
-//	leafstack[leafstackpos++] = leaf;
-
-	if (leaf->visframe != r_framecount)
-	{
-		c_leafs++;
-		leaf->visframe = r_framecount;
-		if (leaf->nummarksurfaces)
-		{
-			msurface_t *surf, **mark, **endmark;
-			mark = leaf->firstmarksurface;
-			endmark = mark + leaf->nummarksurfaces;
-			do
-			{
-				surf = *mark++;
-				// make sure surfaces are only processed once
-				if (surf->worldnodeframe == r_framecount)
-					continue;
-				surf->worldnodeframe = r_framecount;
-				if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
-				{
-					if (surf->flags & SURF_PLANEBACK)
-						RSurf_DoVisible(surf);
-				}
-				else
-				{
-					if (!(surf->flags & SURF_PLANEBACK))
-						RSurf_DoVisible(surf);
-				}
-			}
-			while (mark < endmark);
-		}
-	}
-
-	// follow portals into other leafs
-	for (p = leaf->portals;p;p = p->next)
-	{
-		int newpoints, i, prev;
-		vec3_t center;
-		vec3_t v1, v2;
-		tinyplane_t *newplanes;
-		// only flow through portals facing away from the viewer
-		if (PlaneDiff(r_origin, (&p->plane)) < 0)
-		{
-*/
-			/*
-			for (i = 0;i < leafstackpos;i++)
-				if (leafstack[i] == p->past)
-					break;
-			if (i < leafstackpos)
-			{
-				portalrecursion = true;
-				continue;
-			}
-			*/
-/*
-			newpoints = R_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, (float *) p->points, p->numpoints, &portaltemppoints2[0][0], 256);
-			if (newpoints < 3)
-				continue;
-			else if (firstclipplane + numclipplanes + newpoints > MAXRECURSIVEPORTALPLANES)
-				ranoutofportalplanes = true;
-			else
-			{
-				// go ahead and mark the leaf early, nothing can abort here
-				if (!r_testvis.value)
-					p->visframe = r_portalframecount;
-
-				// find the center by averaging
-				VectorClear(center);
-				for (i = 0;i < newpoints;i++)
-					VectorAdd(center, portaltemppoints2[i], center);
-				// ixtable is a 1.0f / N table
-				VectorScale(center, ixtable[newpoints], center);
-				// calculate the planes, and make sure the polygon can see it's own center
-				newplanes = &portalplanes[firstclipplane + numclipplanes];
-				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
-				{
-//					R_TriangleToPlane(r_origin, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
-					VectorSubtract(r_origin, portaltemppoints2[i], v1);
-					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
-					CrossProduct(v1, v2, newplanes[i].normal);
-					VectorNormalizeFast(newplanes[i].normal);
-					newplanes[i].dist = DotProduct(r_origin, newplanes[i].normal);
-					if (DotProduct(newplanes[i].normal, center) <= newplanes[i].dist)
-					{
-						// polygon can't see it's own center, discard and use parent portal
-						break;
-					}
-				}
-				if (i == newpoints)
-					R_RecursivePortalWorldNode(p->past, firstclipplane + numclipplanes, newpoints);
-				else
-					R_RecursivePortalWorldNode(p->past, firstclipplane, numclipplanes);
-			}
-		}
-	}
-//	leafstackpos--;
-}
-
-//float viewportalpoints[16*3];
-
-*/
 
 int r_portalframecount = 0;
 
@@ -1809,33 +1567,6 @@ void R_PVSWorldNode()
 			k += *in++;
 	}
 }
-
-	/*
-	if (!r_testvis.value)
-		r_portalframecount = r_framecount;
-	portalplanecount = 0;
-//	leafstackpos = 0;
-	ranoutofportalplanes = false;
-	ranoutofportals = false;
-	ranoutofleafs = false;
-	portalcantseeself = 0;
-	portalrecursion = false;
-	memcpy(&portalplanes[0], &frustum[0], sizeof(tinyplane_t));
-	memcpy(&portalplanes[1], &frustum[1], sizeof(tinyplane_t));
-	memcpy(&portalplanes[2], &frustum[2], sizeof(tinyplane_t));
-	memcpy(&portalplanes[3], &frustum[3], sizeof(tinyplane_t));
-	R_RecursivePortalWorldNode(r_viewleaf, 0, 4);
-	if (ranoutofportalplanes)
-		Con_Printf("R_RecursivePortalWorldNode: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);
-	if (ranoutofportals)
-		Con_Printf("R_RecursivePortalWorldNode: ran out of %d portal stack when recursing through portals\n", MAXRECURSIVEPORTALS);
-	if (ranoutofleafs)
-		Con_Printf("R_RecursivePortalWorldNode: ran out of %d leaf stack when recursing through portals\n", MAXRECURSIVEPORTALLEAFS);
-//	if (portalcantseeself)
-//		Con_Printf("R_RecursivePortalWorldNode: %d portals could not see themself during clipping\n", portalcantseeself);
-	if (portalrecursion)
-		Con_Printf("R_RecursivePortalWorldNode: portal saw into previously encountered leaf??\n");
-	*/
 
 /*
 void R_OldPortalWorldNode (void)

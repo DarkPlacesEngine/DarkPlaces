@@ -39,32 +39,32 @@ int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *
 ddef_t *ED_FieldAtOfs (int ofs);
 qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s);
 
-cvar_t	pr_checkextension = {"pr_checkextension", "1"};
-cvar_t	nomonsters = {"nomonsters", "0"};
-cvar_t	gamecfg = {"gamecfg", "0"};
-cvar_t	scratch1 = {"scratch1", "0"};
-cvar_t	scratch2 = {"scratch2", "0"};
-cvar_t	scratch3 = {"scratch3", "0"};
-cvar_t	scratch4 = {"scratch4", "0"};
-cvar_t	savedgamecfg = {"savedgamecfg", "0", true};
-cvar_t	saved1 = {"saved1", "0", true};
-cvar_t	saved2 = {"saved2", "0", true};
-cvar_t	saved3 = {"saved3", "0", true};
-cvar_t	saved4 = {"saved4", "0", true};
-cvar_t	decors = {"decors", "0"};
-cvar_t	nehx00 = {"nehx00", "0"};cvar_t	nehx01 = {"nehx01", "0"};
-cvar_t	nehx02 = {"nehx02", "0"};cvar_t	nehx03 = {"nehx03", "0"};
-cvar_t	nehx04 = {"nehx04", "0"};cvar_t	nehx05 = {"nehx05", "0"};
-cvar_t	nehx06 = {"nehx06", "0"};cvar_t	nehx07 = {"nehx07", "0"};
-cvar_t	nehx08 = {"nehx08", "0"};cvar_t	nehx09 = {"nehx09", "0"};
-cvar_t	nehx10 = {"nehx10", "0"};cvar_t	nehx11 = {"nehx11", "0"};
-cvar_t	nehx12 = {"nehx12", "0"};cvar_t	nehx13 = {"nehx13", "0"};
-cvar_t	nehx14 = {"nehx14", "0"};cvar_t	nehx15 = {"nehx15", "0"};
-cvar_t	nehx16 = {"nehx16", "0"};cvar_t	nehx17 = {"nehx17", "0"};
-cvar_t	nehx18 = {"nehx18", "0"};cvar_t	nehx19 = {"nehx19", "0"};
-cvar_t	cutscene = {"cutscene", "1"};
+cvar_t	pr_checkextension = {0, "pr_checkextension", "1"};
+cvar_t	nomonsters = {0, "nomonsters", "0"};
+cvar_t	gamecfg = {0, "gamecfg", "0"};
+cvar_t	scratch1 = {0, "scratch1", "0"};
+cvar_t	scratch2 = {0,"scratch2", "0"};
+cvar_t	scratch3 = {0, "scratch3", "0"};
+cvar_t	scratch4 = {0, "scratch4", "0"};
+cvar_t	savedgamecfg = {CVAR_SAVE, "savedgamecfg", "0"};
+cvar_t	saved1 = {CVAR_SAVE, "saved1", "0"};
+cvar_t	saved2 = {CVAR_SAVE, "saved2", "0"};
+cvar_t	saved3 = {CVAR_SAVE, "saved3", "0"};
+cvar_t	saved4 = {CVAR_SAVE, "saved4", "0"};
+cvar_t	decors = {0, "decors", "0"};
+cvar_t	nehx00 = {0, "nehx00", "0"};cvar_t	nehx01 = {0, "nehx01", "0"};
+cvar_t	nehx02 = {0, "nehx02", "0"};cvar_t	nehx03 = {0, "nehx03", "0"};
+cvar_t	nehx04 = {0, "nehx04", "0"};cvar_t	nehx05 = {0, "nehx05", "0"};
+cvar_t	nehx06 = {0, "nehx06", "0"};cvar_t	nehx07 = {0, "nehx07", "0"};
+cvar_t	nehx08 = {0, "nehx08", "0"};cvar_t	nehx09 = {0, "nehx09", "0"};
+cvar_t	nehx10 = {0, "nehx10", "0"};cvar_t	nehx11 = {0, "nehx11", "0"};
+cvar_t	nehx12 = {0, "nehx12", "0"};cvar_t	nehx13 = {0, "nehx13", "0"};
+cvar_t	nehx14 = {0, "nehx14", "0"};cvar_t	nehx15 = {0, "nehx15", "0"};
+cvar_t	nehx16 = {0, "nehx16", "0"};cvar_t	nehx17 = {0, "nehx17", "0"};
+cvar_t	nehx18 = {0, "nehx18", "0"};cvar_t	nehx19 = {0, "nehx19", "0"};
+cvar_t	cutscene = {0, "cutscene", "1"};
 // LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
-cvar_t	pr_boundscheck = {"pr_boundscheck", "1"};
+cvar_t	pr_boundscheck = {0, "pr_boundscheck", "1"};
 
 #define	MAX_FIELD_LEN	64
 #define GEFV_CACHESIZE	2

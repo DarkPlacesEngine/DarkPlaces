@@ -70,7 +70,7 @@ void KeyDown (kbutton_t *b)
 
 	if (k == b->down[0] || k == b->down[1])
 		return;		// repeating key
-	
+
 	if (!b->down[0])
 		b->down[0] = k;
 	else if (!b->down[1])
@@ -227,17 +227,17 @@ float CL_KeyState (kbutton_t *key)
 
 //==========================================================================
 
-cvar_t cl_upspeed = {"cl_upspeed","400"};
-cvar_t cl_forwardspeed = {"cl_forwardspeed","400", true};
-cvar_t cl_backspeed = {"cl_backspeed","400", true};
-cvar_t cl_sidespeed = {"cl_sidespeed","350", true};
+cvar_t cl_upspeed = {CVAR_SAVE, "cl_upspeed","400"};
+cvar_t cl_forwardspeed = {CVAR_SAVE, "cl_forwardspeed","400"};
+cvar_t cl_backspeed = {CVAR_SAVE, "cl_backspeed","400"};
+cvar_t cl_sidespeed = {CVAR_SAVE, "cl_sidespeed","350"};
 
-cvar_t cl_movespeedkey = {"cl_movespeedkey","2.0"};
+cvar_t cl_movespeedkey = {CVAR_SAVE, "cl_movespeedkey","2.0"};
 
-cvar_t cl_yawspeed = {"cl_yawspeed","140"};
-cvar_t cl_pitchspeed = {"cl_pitchspeed","150"};
+cvar_t cl_yawspeed = {CVAR_SAVE, "cl_yawspeed","140"};
+cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150"};
 
-cvar_t cl_anglespeedkey = {"cl_anglespeedkey","1.5"};
+cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5"};
 
 
 /*
@@ -251,7 +251,7 @@ void CL_AdjustAngles (void)
 {
 	float	speed;
 	float	up, down;
-	
+
 	if (in_speed.state & 1)
 		speed = cl.frametime * cl_anglespeedkey.value;
 	else
@@ -269,10 +269,10 @@ void CL_AdjustAngles (void)
 		cl.viewangles[PITCH] -= speed*cl_pitchspeed.value * CL_KeyState (&in_forward);
 		cl.viewangles[PITCH] += speed*cl_pitchspeed.value * CL_KeyState (&in_back);
 	}
-	
+
 	up = CL_KeyState (&in_lookup);
 	down = CL_KeyState(&in_lookdown);
-	
+
 	cl.viewangles[PITCH] -= speed*cl_pitchspeed.value * up;
 	cl.viewangles[PITCH] += speed*cl_pitchspeed.value * down;
 

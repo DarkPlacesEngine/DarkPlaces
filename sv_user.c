@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -23,9 +23,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 edict_t	*sv_player;
 
-cvar_t	sv_edgefriction = {"edgefriction", "2"};
-cvar_t	sv_predict = {"sv_predict", "1"};
-cvar_t	sv_deltacompress = {"sv_deltacompress", "1"};
+cvar_t	sv_edgefriction = {0, "edgefriction", "2"};
+cvar_t	sv_predict = {0, "sv_predict", "1"};
+cvar_t	sv_deltacompress = {0, "sv_deltacompress", "1"};
+cvar_t	sv_idealpitchscale = {0, "sv_idealpitchscale","0.8"};
+cvar_t	sv_maxspeed = {CVAR_NOTIFY, "sv_maxspeed", "320"};
+cvar_t	sv_accelerate = {0, "sv_accelerate", "10"};
 
 static	vec3_t		forward, right, up;
 
@@ -40,8 +43,6 @@ float	*velocity;
 qboolean	onground;
 
 usercmd_t	cmd;
-
-cvar_t	sv_idealpitchscale = {"sv_idealpitchscale","0.8"};
 
 
 /*
@@ -165,8 +166,6 @@ void SV_UserFriction (void)
 SV_Accelerate
 ==============
 */
-cvar_t	sv_maxspeed = {"sv_maxspeed", "320", false, true};
-cvar_t	sv_accelerate = {"sv_accelerate", "10"};
 #if 0
 void SV_Accelerate (vec3_t wishvel)
 {

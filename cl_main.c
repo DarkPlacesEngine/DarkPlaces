@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25,23 +25,23 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // references them even when on a unix system.
 
 // these two are not intended to be set directly
-cvar_t	cl_name = {"_cl_name", "player", true};
-cvar_t	cl_color = {"_cl_color", "0", true};
-cvar_t	cl_pmodel = {"_cl_pmodel", "0", true};
+cvar_t	cl_name = {CVAR_SAVE, "_cl_name", "player"};
+cvar_t	cl_color = {CVAR_SAVE, "_cl_color", "0"};
+cvar_t	cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
 
-cvar_t	cl_shownet = {"cl_shownet","0"};	// can be 0, 1, or 2
-cvar_t	cl_nolerp = {"cl_nolerp","0"};
+cvar_t	cl_shownet = {0, "cl_shownet","0"};
+cvar_t	cl_nolerp = {0, "cl_nolerp", "0"};
 
-cvar_t	lookspring = {"lookspring","0", true};
-cvar_t	lookstrafe = {"lookstrafe","0", true};
-cvar_t	sensitivity = {"sensitivity","3", true};
+cvar_t	lookspring = {CVAR_SAVE, "lookspring","0"};
+cvar_t	lookstrafe = {CVAR_SAVE, "lookstrafe","0"};
+cvar_t	sensitivity = {CVAR_SAVE, "sensitivity","3", 1, 30};
 
-cvar_t	m_pitch = {"m_pitch","0.022", true};
-cvar_t	m_yaw = {"m_yaw","0.022", true};
-cvar_t	m_forward = {"m_forward","1", true};
-cvar_t	m_side = {"m_side","0.8", true};
+cvar_t	m_pitch = {CVAR_SAVE, "m_pitch","0.022"};
+cvar_t	m_yaw = {CVAR_SAVE, "m_yaw","0.022"};
+cvar_t	m_forward = {CVAR_SAVE, "m_forward","1"};
+cvar_t	m_side = {CVAR_SAVE, "m_side","0.8"};
 
-cvar_t freelook = {"freelook", "1", true};
+cvar_t freelook = {CVAR_SAVE, "freelook", "1"};
 
 client_static_t	cls;
 client_state_t	cl;
@@ -460,7 +460,7 @@ void CL_RelinkEntities (void)
 
 	if (cls.demoplayback)
 	{
-	// interpolate the angles	
+	// interpolate the angles
 		for (j = 0;j < 3;j++)
 		{
 			d = cl.mviewangles[0][j] - cl.mviewangles[1][j];
@@ -754,7 +754,7 @@ void CL_SendCmd (void)
 	{
 	// get basic movement from keyboard
 		CL_BaseMove (&cmd);
-	
+
 	// allow mice or other external controllers to add to the move
 		IN_Move (&cmd);
 	
@@ -902,4 +902,3 @@ void CL_Init (void)
 
 	CL_Parse_Init();
 }
-

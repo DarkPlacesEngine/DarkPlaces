@@ -30,34 +30,35 @@ when crossing a water boudnary.
 
 */
 
-cvar_t	cl_rollspeed = {"cl_rollspeed", "200"};
-cvar_t	cl_rollangle = {"cl_rollangle", "2.0"};
+cvar_t	cl_rollspeed = {0, "cl_rollspeed", "200"};
+cvar_t	cl_rollangle = {0, "cl_rollangle", "2.0"};
 
-cvar_t	cl_bob = {"cl_bob","0.02", false};
-cvar_t	cl_bobcycle = {"cl_bobcycle","0.6", false};
-cvar_t	cl_bobup = {"cl_bobup","0.5", false};
+cvar_t	cl_bob = {0, "cl_bob","0.02"};
+cvar_t	cl_bobcycle = {0, "cl_bobcycle","0.6"};
+cvar_t	cl_bobup = {0, "cl_bobup","0.5"};
 
-cvar_t	v_kicktime = {"v_kicktime", "0.5", false};
-cvar_t	v_kickroll = {"v_kickroll", "0.6", false};
-cvar_t	v_kickpitch = {"v_kickpitch", "0.6", false};
+cvar_t	v_kicktime = {0, "v_kicktime", "0.5"};
+cvar_t	v_kickroll = {0, "v_kickroll", "0.6"};
+cvar_t	v_kickpitch = {0, "v_kickpitch", "0.6"};
 
-cvar_t	v_punch = {"v_punch", "1", false};
+cvar_t	v_punch = {0, "v_punch", "1"};
 
-cvar_t	v_iyaw_cycle = {"v_iyaw_cycle", "2", false};
-cvar_t	v_iroll_cycle = {"v_iroll_cycle", "0.5", false};
-cvar_t	v_ipitch_cycle = {"v_ipitch_cycle", "1", false};
-cvar_t	v_iyaw_level = {"v_iyaw_level", "0.3", false};
-cvar_t	v_iroll_level = {"v_iroll_level", "0.1", false};
-cvar_t	v_ipitch_level = {"v_ipitch_level", "0.3", false};
+cvar_t	v_iyaw_cycle = {0, "v_iyaw_cycle", "2"};
+cvar_t	v_iroll_cycle = {0, "v_iroll_cycle", "0.5"};
+cvar_t	v_ipitch_cycle = {0, "v_ipitch_cycle", "1"};
+cvar_t	v_iyaw_level = {0, "v_iyaw_level", "0.3"};
+cvar_t	v_iroll_level = {0, "v_iroll_level", "0.1"};
+cvar_t	v_ipitch_level = {0, "v_ipitch_level", "0.3"};
 
-cvar_t	v_idlescale = {"v_idlescale", "0", false};
+cvar_t	v_idlescale = {0, "v_idlescale", "0"};
 
-cvar_t	crosshair = {"crosshair", "0", true};
-cvar_t	cl_crossx = {"cl_crossx", "0", false};
-cvar_t	cl_crossy = {"cl_crossy", "0", false};
+cvar_t	crosshair = {CVAR_SAVE, "crosshair", "0"};
 
-//cvar_t	gl_cshiftpercent = {"gl_cshiftpercent", "100", false};
-cvar_t	gl_polyblend = {"gl_polyblend", "1", true};
+//cvar_t	gl_cshiftpercent = {0, "gl_cshiftpercent", "100"};
+cvar_t	gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1"};
+
+cvar_t	v_centermove = {0, "v_centermove", "0.15"};
+cvar_t	v_centerspeed = {0, "v_centerspeed","500"};
 
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
@@ -89,9 +90,9 @@ float V_CalcRoll (vec3_t angles, vec3_t velocity)
 		side = side * value / cl_rollspeed.value;
 	else
 		side = value;
-	
+
 	return side*sign;
-	
+
 }
 
 
@@ -131,10 +132,6 @@ float V_CalcBob (void)
 //=============================================================================
 
 
-cvar_t	v_centermove = {"v_centermove", "0.15", false};
-cvar_t	v_centerspeed = {"v_centerspeed","500"};
-
-
 void V_StartPitchDrift (void)
 {
 #if 1
@@ -168,7 +165,7 @@ If the user is adjusting pitch manually, either with lookup/lookdown,
 mlook and mouse, or klook and keyboard, pitch drifting is constantly stopped.
 
 Drifting is enabled when the center view key is hit, mlook is released and
-lookspring is non 0, or when 
+lookspring is non 0, or when
 ===============
 */
 void V_DriftPitch (void)
@@ -511,7 +508,7 @@ void V_UpdateBlends (void)
 	V_CalcPowerupCshift ();
 	
 	new = false;
-	
+
 	for (i=0 ; i<NUM_CSHIFTS ; i++)
 	{
 		if (cl.cshifts[i].percent != cl.prev_cshifts[i].percent)
@@ -595,7 +592,7 @@ void CalcGunAngle (void)
 		if (oldyaw - move > yaw)
 			yaw = oldyaw - move;
 	}
-	
+
 	if (pitch > oldpitch)
 	{
 		if (oldpitch + move < pitch)
@@ -889,8 +886,6 @@ void V_Init (void)
 
 	Cvar_RegisterVariable (&v_idlescale);
 	Cvar_RegisterVariable (&crosshair);
-	Cvar_RegisterVariable (&cl_crossx);
-	Cvar_RegisterVariable (&cl_crossy);
 //	Cvar_RegisterVariable (&gl_cshiftpercent);
 	Cvar_RegisterVariable (&gl_polyblend);
 

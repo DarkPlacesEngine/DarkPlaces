@@ -58,9 +58,9 @@ static float	mouse_x, mouse_y;
 static float	old_mouse_x, old_mouse_y;
 static int p_mouse_x, p_mouse_y;
 
-cvar_t vid_dga = {"vid_dga", "1", true};
-cvar_t vid_dga_mouseaccel = {"vid_dga_mouseaccel", "1", false};
-cvar_t m_filter = {"m_filter", "0"};
+cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1"};
+cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1"};
+cvar_t m_filter = {0, "m_filter", "0"};
 
 qboolean vidmode_ext = false;
 
@@ -310,8 +310,8 @@ static void HandleEvents(void)
 					{
 						if (!event.xmotion.send_event)
 						{
-							mouse_x += (event.xmotion.x - p_mouse_x);
-							mouse_y += (event.xmotion.y - p_mouse_y);
+							mouse_x += event.xmotion.x - p_mouse_x;
+							mouse_y += event.xmotion.y - p_mouse_y;
 							if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4 || abs(vid.height/2 - event.xmotion.y) > vid.height / 4)
 								dowarp = true;
 						}
@@ -327,6 +327,8 @@ static void HandleEvents(void)
 					p_mouse_y = event.xmotion.y;
 				}
 			}
+			else
+				ui_mouseupdate(event.xmotion.x, event.xmotion.y);
 			break;
 
 		case ButtonPress:
@@ -493,18 +495,38 @@ void VID_CheckMultitexture(void)
 		Con_Printf("...using GL_ARB_multitexture\n");
 		qglMTexCoord2f = (void *) dlsym(prjobj, "glMultiTexCoord2fARB");
 		qglSelectTexture = (void *) dlsym(prjobj, "glActiveTextureARB");
-		gl_mtexable = true;
-		gl_mtex_enum = GL_TEXTURE0_ARB;
+		if (qglMTexCoord2f != NULL && qglSelectTexture != NULL)
+		{
+			gl_mtexable = true;
+			gl_mtex_enum = GL_TEXTURE0_ARB;
+		}
+		else
+		{
+			if (qglMTexCoord2f == NULL)
+				Con_Printf("dlsym(prjobj, \"glMultiTexCoord2fARB\") == NULL!\n");
+			if (qglSelectTexture == NULL)
+				Con_Printf("dlsym(prjobj, \"glActiveTextureARB\") == NULL!\n");
+    	}
 	}
-	else if (strstr(gl_extensions, "GL_SGIS_multitexture ")) // Test for SGIS_multitexture (if ARB_multitexture not found)
+	if (!gl_mtexable && strstr(gl_extensions, "GL_SGIS_multitexture ")) // Test for SGIS_multitexture (if ARB_multitexture not found)
 	{
 		Con_Printf("...using GL_SGIS_multitexture\n");
 		qglMTexCoord2f = (void *) dlsym(prjobj, "glMTexCoord2fSGIS");
 		qglSelectTexture = (void *) dlsym(prjobj, "glSelectTextureSGIS");
-		gl_mtexable = true;
-		gl_mtex_enum = TEXTURE0_SGIS;
+		if (qglMTexCoord2f != NULL && qglSelectTexture != NULL)
+		{
+			gl_mtexable = true;
+			gl_mtex_enum = TEXTURE0_SGIS;
+		}
+		else
+		{
+			if (qglMTexCoord2f == NULL)
+				Con_Printf("dlsym(prjobj, \"glMTexCoord2fSGIS\") == NULL!\n");
+			if (qglSelectTexture == NULL)
+				Con_Printf("dlsym(prjobj, \"glSelectTextureSGIS\") == NULL!\n");
+    	}
 	}
-	else
+	if (!gl_mtexable)
 		Con_Printf("...multitexture disabled (not detected)\n");
 	dlclose(prjobj);
 }
@@ -530,7 +552,16 @@ void VID_CheckCVA(void)
 		Con_Printf("...using compiled vertex arrays\n");
 		qglLockArraysEXT = (void *) dlsym(prjobj, "glLockArraysEXT");
 		qglUnlockArraysEXT = (void *) dlsym(prjobj, "glUnlockArraysEXT");
-		gl_supportslockarrays = true;
+		if (qglLockArraysEXT != NULL && qglUnlockArraysEXT != NULL)
+			gl_supportslockarrays = true;
+		else
+		{
+			if (qglLockArraysEXT == NULL)
+				Con_Printf("dlsym(prjobj, \"glLockArraysEXT\") == NULL!\n");
+			if (qglUnlockArraysEXT == NULL)
+				Con_Printf("dlsym(prjobj, \"glUnlockArraysEXT\") == NULL!\n");
+			Con_Printf("...compiled vertex arrays disabled\n");
+    	}
 	}
 	dlclose(prjobj);
 }

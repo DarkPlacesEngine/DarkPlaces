@@ -1,10 +1,10 @@
 #include "quakedef.h"
 
-cvar_t		r_max_size = {"r_max_size", "2048"};
-cvar_t		r_picmip = {"r_picmip", "0"};
-cvar_t		r_lerpimages = {"r_lerpimages", "1"};
-cvar_t		r_upload = {"r_upload", "1"};
-cvar_t		r_precachetextures = {"r_precachetextures", "1", true};
+cvar_t		r_max_size = {0, "r_max_size", "2048"};
+cvar_t		r_picmip = {0, "r_picmip", "0"};
+cvar_t		r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
+cvar_t		r_upload = {0, "r_upload", "1"};
+cvar_t		r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR; //NEAREST;
 int		gl_filter_max = GL_LINEAR;

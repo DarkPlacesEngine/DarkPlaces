@@ -66,19 +66,20 @@ sfx_t		*ambient_sfx[NUM_AMBIENTS];
 
 int sound_started=0;
 
-cvar_t bgmvolume = {"bgmvolume", "1", true};
-cvar_t volume = {"volume", "0.7", true};
+// FIXME: make bgmvolume/volume always be registered for sake of config saving, and add check for whether sound is enabled to menu
+cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
+cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
 
-cvar_t nosound = {"nosound", "0"};
-cvar_t precache = {"precache", "1"};
-//cvar_t loadas8bit = {"loadas8bit", "0"};
-cvar_t bgmbuffer = {"bgmbuffer", "4096"};
-cvar_t ambient_level = {"ambient_level", "0.3"};
-cvar_t ambient_fade = {"ambient_fade", "100"};
-cvar_t snd_noextraupdate = {"snd_noextraupdate", "0"};
-cvar_t snd_show = {"snd_show", "0"};
-cvar_t _snd_mixahead = {"_snd_mixahead", "0.1", true};
-cvar_t snd_swapstereo = {"snd_swapstereo", "0", true};
+cvar_t nosound = {0, "nosound", "0"};
+cvar_t precache = {0, "precache", "1"};
+//cvar_t loadas8bit = {0, "loadas8bit", "0"};
+cvar_t bgmbuffer = {0, "bgmbuffer", "4096"};
+cvar_t ambient_level = {0, "ambient_level", "0.3"};
+cvar_t ambient_fade = {0, "ambient_fade", "100"};
+cvar_t snd_noextraupdate = {0, "snd_noextraupdate", "0"};
+cvar_t snd_show = {0, "snd_show", "0"};
+cvar_t _snd_mixahead = {CVAR_SAVE, "_snd_mixahead", "0.1"};
+cvar_t snd_swapstereo = {CVAR_SAVE, "snd_swapstereo", "0"};
 
 
 // ====================================================================

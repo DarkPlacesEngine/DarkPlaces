@@ -88,7 +88,7 @@ char *svc_strings[128] =
 
 //=============================================================================
 
-cvar_t demo_nehahra = {"demo_nehahra", "0"};
+cvar_t demo_nehahra = {0, "demo_nehahra", "0"};
 
 void CL_Parse_Init(void)
 {

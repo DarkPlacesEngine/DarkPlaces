@@ -40,10 +40,10 @@ clipsurf_t surfstack;
 clipedge_t edgehead, edgetail;
 clipedge_t maxedge = {2000000000.0f};
 
-cvar_t r_clipwidth = {"r_clipwidth", "800"};
-cvar_t r_clipheight = {"r_clipheight", "600"};
-cvar_t r_clipedges = {"r_clipedges", "32768", true};
-cvar_t r_clipsurfaces = {"r_clipsurfaces", "8192", true};
+cvar_t r_clipwidth = {0, "r_clipwidth", "800"};
+cvar_t r_clipheight = {0, "r_clipheight", "600"};
+cvar_t r_clipedges = {CVAR_SAVE, "r_clipedges", "32768"};
+cvar_t r_clipsurfaces = {CVAR_SAVE, "r_clipsurfaces", "8192"};
 
 int clipwidth = 0, clipheight = 0;
 int maxclipsurfs = 0, maxclipedges = 0;
