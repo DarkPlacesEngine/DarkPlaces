@@ -20,44 +20,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // refresh.h -- public interface to refresh functions
 
-#define	MAXCLIPPLANES	11
-
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
 
 //=============================================================================
-
-typedef struct efrag_s
-{
-	struct mleaf_s		*leaf;
-	struct efrag_s		*leafnext;
-	struct entity_s		*entity;
-	struct efrag_s		*entnext;
-} efrag_t;
-
-#define RENDER_STEP 1
-#define RENDER_GLOWTRAIL 2
-#define RENDER_VIEWMODEL 4
-
-// LordHavoc: made this more compact, and added some more fields
-typedef struct
-{
-	double	time; // time this state was updated
-	vec3_t	origin;
-	vec3_t	angles;
-	int		effects;
-	unsigned short modelindex;
-	unsigned short frame;
-	byte	colormap;
-	byte	skin;
-	byte	alpha;
-	byte	scale;
-	byte	glowsize;
-	byte	glowcolor;
-	byte	colormod;
-	byte	flags;
-	byte	active;
-} entity_state_t;
 
 typedef struct entity_s
 {
@@ -80,7 +46,6 @@ typedef struct entity_s
 
 		struct model_s			*model;			// NULL = no model
 		int						frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
-//		struct efrag_s			*efrag;			// linked list of efrags
 		int						colormap;
 		int						effects;		// light, particles, etc
 		int						skinnum;		// for Alias models
@@ -88,21 +53,17 @@ typedef struct entity_s
 		int						visframe;		// last frame this entity was found in an active leaf
 
 		struct model_s			*lerp_model;	// lerp resets when model changes
-		float					lerp_starttime;	// start of this transition
+		double					lerp_starttime;	// start of this transition
 		int						frame1;			// frame that the model is interpolating from
 		int						frame2;			// frame that the model is interpolating to
 		double					framelerp;		// interpolation factor, usually computed from lerp_starttime
 		double					frame1start;	// time frame1 began playing (for framegroup animations)
 		double					frame2start;	// time frame2 began playing (for framegroup animations)
-//		float					syncbase;		// for client-side animations
 
 		int						dlightframe;	// dynamic lighting
 		int						dlightbits[8];
 		
 		float					trail_time;
-	// FIXME: could turn these into a union
-//		int						trivial_accept;
-//		struct mnode_s			*topnode;		// for bmodels, first world node that splits bmodel, or NULL if not split
 	}
 	render;
 } entity_t;
@@ -155,11 +116,6 @@ void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect); // called whene
 
 // LordHavoc: changed this for sake of GLQuake
 void R_InitSky (byte *src, int bytesperpixel); // called at level load
-
-//void R_InitEfrags (void);
-//void R_AddEfrags (entity_t *ent);
-//void R_RemoveEfrags (entity_t *ent);
-//void R_StoreEfrags (efrag_t **ppefrag);
 
 int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
 

@@ -26,6 +26,8 @@ server_static_t	svs;
 
 char	localmodels[MAX_MODELS][5];			// inline model names for precache
 
+extern	cvar_t	sv_deltacompress;
+
 //============================================================================
 
 /*
@@ -59,6 +61,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&sv_predict);
+	Cvar_RegisterVariable (&sv_deltacompress);
 
 	for (i=0 ; i<MAX_MODELS ; i++)
 		sprintf (localmodels[i], "*%i", i);
@@ -113,14 +116,14 @@ void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount,
 {
 	if (sv.datagram.cursize > MAX_DATAGRAM-18)
 		return;	
-	if (modelindex >= 256)
+	if (modelindex >= 256 || startframe >= 256)
 	{
 		MSG_WriteByte (&sv.datagram, svc_effect2);
 		MSG_WriteFloatCoord (&sv.datagram, org[0]);
 		MSG_WriteFloatCoord (&sv.datagram, org[1]);
 		MSG_WriteFloatCoord (&sv.datagram, org[2]);
 		MSG_WriteShort (&sv.datagram, modelindex);
-		MSG_WriteByte (&sv.datagram, startframe);
+		MSG_WriteShort (&sv.datagram, startframe);
 		MSG_WriteByte (&sv.datagram, framecount);
 		MSG_WriteByte (&sv.datagram, framerate);
 	}
@@ -463,7 +466,7 @@ SV_WriteEntitiesToClient
 */
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
-	int		e, i, clentnum, bits, alpha, glowcolor, glowsize, scale, colormod, modred, modgreen, modblue, effects;
+	int		e, i, clentnum, bits, alpha, glowcolor, glowsize, scale, colormod, effects;
 	byte	*pvs;
 	vec3_t	org, origin, angles;
 	float	movelerp, moveilerp, nextfullupdate;
@@ -483,8 +486,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		MSG_WriteFloat(msg, org[2]);
 	}
 	*/
-	MSG_WriteByte(msg, svc_entitiesbegin);
-	MSG_WriteShort(msg, 1);
 
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 // send over all entities (except the client) that touch the pvs
@@ -529,6 +530,9 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 		}
 
+		if ((val = GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)) && val->edict == clentnum)
+			bits = bits | U_EXTERIORMODEL;
+
 		// don't send if flagged for NODRAW and there are no effects
 		alpha = 255;
 		scale = 16;
@@ -538,12 +542,17 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		effects = ent->v.effects;
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
-		if ((alpha = (int) (val->_float * 255.0)) == 0)
-			alpha = 255;
-		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)) && val->_float != 0) // HalfLife support
+		if (val->_float != 0)
+			alpha = (int) (val->_float * 255.0);
+
+		// HalfLife support
+		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)))
+		if (val->_float != 0)
 			alpha = (int) val->_float;
-		if (alpha < 0) alpha = 0;
-		if (alpha > 255) alpha = 255;
+
+		if (alpha == 0)
+			alpha = 255;
+		alpha = bound(0, alpha, 255);
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_size)))
 			glowsize = (int) val->_float >> 2;
@@ -569,12 +578,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_colormod)))
 		if (val->vector[0] != 0 || val->vector[1] != 0 || val->vector[2] != 0)
-		{
-			modred = val->vector[0] * 8.0;if (modred < 0) modred = 0;if (modred > 7) modred = 7;
-			modgreen = val->vector[1] * 8.0;if (modgreen < 0) modgreen = 0;if (modgreen > 7) modgreen = 7;
-			modblue = val->vector[2] * 4.0;if (modblue < 0) modblue = 0;if (modblue > 3) modblue = 3;
-			colormod = (modred << 5) | (modgreen << 2) | modblue;
-		}
+			colormod = (bound(0, (int) (val->vector[0] * 8.0), 7) << 5) | (bound(0, (int) (val->vector[1] * 8.0), 7) << 2) | bound(0, (int) (val->vector[2] * 4.0), 3);
 
 		if (ent != clent)
 		{
@@ -602,7 +606,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 // send an update
 		baseline = &ent->baseline;
 
-		if ((int)ent->v.effects & EF_DELTA)
+		if (((int)ent->v.effects & EF_DELTA) && sv_deltacompress.value)
 		{
 			// every half second a full update is forced
 			if (realtime < client->nextfullupdate[e])
@@ -692,7 +696,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (baseline->skin != (byte) ent->v.skin)										bits |= U_SKIN;
 		if ((baseline->frame & 0x00FF) != ((int) ent->v.frame & 0x00FF))				bits |= U_FRAME;
 		if ((baseline->effects & 0x00FF) != ((int) ent->v.effects & 0x00FF))			bits |= U_EFFECTS;
-		if (baseline->modelindex != (byte) ent->v.modelindex)							bits |= U_MODEL;
+		if ((baseline->modelindex & 0x00FF) != ((int) ent->v.modelindex & 0x00FF))		bits |= U_MODEL;
 
 		// LordHavoc: new stuff
 		if (baseline->alpha != alpha)													bits |= U_ALPHA;
@@ -717,6 +721,9 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		ent->deltabaseline.glowsize = glowsize;
 		ent->deltabaseline.glowcolor = glowcolor;
 		ent->deltabaseline.colormod = colormod;
+
+		if (bits & (U_ALPHA | U_SCALE | U_EFFECTS2 | U_GLOWSIZE | U_GLOWCOLOR | U_COLORMOD | U_FRAME2 | U_MODEL2))
+			i = -1;
 
 		// write the message
 		if (bits >= 16777216)
@@ -763,9 +770,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_FRAME2)	MSG_WriteByte(msg, (int)ent->v.frame >> 8);
 		if (bits & U_MODEL2)	MSG_WriteByte(msg, (int)ent->v.modelindex >> 8);
 	}
-
-	MSG_WriteByte(msg, svc_entitiesend);
-	MSG_WriteShort(msg, MAX_EDICTS);
 }
 
 /*
@@ -1156,21 +1160,25 @@ SV_CreateBaseline
 */
 void SV_CreateBaseline (void)
 {
-	int			i;
-	edict_t			*svent;
-	int				entnum;	
-		
-	for (entnum = 0; entnum < sv.num_edicts ; entnum++)
+	int i, entnum, large;
+	edict_t *svent;
+
+	// LordHavoc: clear *all* states (note just active ones)
+	for (entnum = 0; entnum < MAX_EDICTS ; entnum++)
 	{
-	// get the current server version
+		// get the current server version
 		svent = EDICT_NUM(entnum);
+
+		// LordHavoc: always clear state values, whether the entity is in use or not
+		ClearStateToDefault(&svent->baseline);
+
 		if (svent->free)
 			continue;
 		if (entnum > svs.maxclients && !svent->v.modelindex)
 			continue;
 
 	//
-	// create entity baseline
+		// create entity baseline
 	//
 		VectorCopy (svent->v.origin, svent->baseline.origin);
 		VectorCopy (svent->v.angles, svent->baseline.angles);
@@ -1184,23 +1192,31 @@ void SV_CreateBaseline (void)
 		else
 		{
 			svent->baseline.colormap = 0;
-			svent->baseline.modelindex =
-				SV_ModelIndex(pr_strings + svent->v.model);
+			svent->baseline.modelindex = svent->v.modelindex; //SV_ModelIndex(pr_strings + svent->v.model);
 		}
-		svent->baseline.alpha = 255;
-		svent->baseline.scale = 16;
-		svent->baseline.glowsize = 0;
-		svent->baseline.glowcolor = 254;
-		svent->baseline.colormod = 255;
-		
-	//
-	// add to the message
-	//
-		MSG_WriteByte (&sv.signon,svc_spawnbaseline);		
-		MSG_WriteShort (&sv.signon,entnum);
 
-		MSG_WriteByte (&sv.signon, svent->baseline.modelindex);
-		MSG_WriteByte (&sv.signon, svent->baseline.frame);
+		large = false;
+		if (svent->baseline.modelindex & 0xFF00 || svent->baseline.frame & 0xFF00)
+			large = true;
+	//
+		// add to the message
+	//
+		if (large)
+			MSG_WriteByte (&sv.signon, svc_spawnbaseline2);
+		else
+			MSG_WriteByte (&sv.signon, svc_spawnbaseline);
+		MSG_WriteShort (&sv.signon, entnum);
+
+		if (large)
+		{
+			MSG_WriteShort (&sv.signon, svent->baseline.modelindex);
+			MSG_WriteShort (&sv.signon, svent->baseline.frame);
+		}
+		else
+		{
+			MSG_WriteByte (&sv.signon, svent->baseline.modelindex);
+			MSG_WriteByte (&sv.signon, svent->baseline.frame);
+		}
 		MSG_WriteByte (&sv.signon, svent->baseline.colormap);
 		MSG_WriteByte (&sv.signon, svent->baseline.skin);
 		for (i=0 ; i<3 ; i++)

@@ -49,46 +49,45 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 
 // if the high bit of the servercmd is set, the low bits are fast update flags:
-#define	U_MOREBITS	(1<<0)
-#define	U_ORIGIN1	(1<<1)
-#define	U_ORIGIN2	(1<<2)
-#define	U_ORIGIN3	(1<<3)
-#define	U_ANGLE2	(1<<4)
+#define U_MOREBITS		(1<<0)
+#define U_ORIGIN1		(1<<1)
+#define U_ORIGIN2		(1<<2)
+#define U_ORIGIN3		(1<<3)
+#define U_ANGLE2		(1<<4)
 // LordHavoc: U_NOLERP was only ever used for monsters, so I renamed it U_STEP
-#define	U_STEP		(1<<5)
-#define	U_FRAME		(1<<6)
+#define U_STEP			(1<<5)
+#define U_FRAME			(1<<6)
 // just differentiates from other updates
-#define U_SIGNAL	(1<<7)
+#define U_SIGNAL		(1<<7)
 
-// svc_update can pass all of the fast update bits, plus more
-#define	U_ANGLE1	(1<<8)
-#define	U_ANGLE3	(1<<9)
-#define	U_MODEL		(1<<10)
-#define	U_COLORMAP	(1<<11)
-#define	U_SKIN		(1<<12)
-#define	U_EFFECTS	(1<<13)
-#define	U_LONGENTITY	(1<<14)
+#define U_ANGLE1		(1<<8)
+#define U_ANGLE3		(1<<9)
+#define U_MODEL			(1<<10)
+#define U_COLORMAP		(1<<11)
+#define U_SKIN			(1<<12)
+#define U_EFFECTS		(1<<13)
+#define U_LONGENTITY	(1<<14)
 
 // LordHavoc: protocol extension
-#define	U_EXTEND1	(1<<15)
+#define U_EXTEND1		(1<<15)
 // LordHavoc: first extend byte
-#define	U_DELTA		(1<<16) // no data, while this is set the entity is delta compressed (uses previous frame as a baseline, meaning only things that have changed from the previous frame are sent, except for the forced full update every half second)
-#define U_ALPHA		(1<<17) // 1 byte, 0.0-1.0 maps to 0-255, not sent if exactly 1, and the entity is not sent if <=0 unless it has effects (model effects are checked as well)
-#define	U_SCALE		(1<<18) // 1 byte, scale / 16 positive, not sent if 1.0
-#define	U_EFFECTS2	(1<<19) // 1 byte, this is .effects & 0xFF00 (second byte)
-#define U_GLOWSIZE	(1<<20) // 1 byte, encoding is float/8.0, signed (negative is darklight), not sent if 0
-#define	U_GLOWCOLOR	(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
-#define U_COLORMOD	(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
-#define	U_EXTEND2	(1<<23) // another byte to follow
+#define U_DELTA			(1<<16) // no data, while this is set the entity is delta compressed (uses previous frame as a baseline, meaning only things that have changed from the previous frame are sent, except for the forced full update every half second)
+#define U_ALPHA			(1<<17) // 1 byte, 0.0-1.0 maps to 0-255, not sent if exactly 1, and the entity is not sent if <=0 unless it has effects (model effects are checked as well)
+#define U_SCALE			(1<<18) // 1 byte, scale / 16 positive, not sent if 1.0
+#define U_EFFECTS2		(1<<19) // 1 byte, this is .effects & 0xFF00 (second byte)
+#define U_GLOWSIZE		(1<<20) // 1 byte, encoding is float/8.0, signed (negative is darklight), not sent if 0
+#define U_GLOWCOLOR		(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
+#define U_COLORMOD		(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
+#define U_EXTEND2		(1<<23) // another byte to follow
 // LordHavoc: second extend byte
-#define U_GLOWTRAIL	(1<<24) // leaves a trail of particles (of color .glowcolor, or black if it is a negative glowsize)
-#define U_VIEWMODEL	(1<<25) // attachs the model to the view (origin and angles become relative to it), only shown to owner, a more powerful alternative to .weaponmodel and such
-#define U_FRAME2	(1<<26) // 1 byte, this is .frame & 0xFF00 (second byte)
-#define U_MODEL2	(1<<27) // 1 byte, this is .modelindex & 0xFF00 (second byte)
-#define U_UNUSED28	(1<<28) // future expansion
-#define U_UNUSED29	(1<<29) // future expansion
-#define U_UNUSED30	(1<<30) // future expansion
-#define U_EXTEND3	(1<<31) // another byte to follow, future expansion
+#define U_GLOWTRAIL		(1<<24) // leaves a trail of particles (of color .glowcolor, or black if it is a negative glowsize)
+#define U_VIEWMODEL		(1<<25) // attachs the model to the view (origin and angles become relative to it), only shown to owner, a more powerful alternative to .weaponmodel and such
+#define U_FRAME2		(1<<26) // 1 byte, this is .frame & 0xFF00 (second byte)
+#define U_MODEL2		(1<<27) // 1 byte, this is .modelindex & 0xFF00 (second byte)
+#define U_EXTERIORMODEL	(1<<28) // causes this model to not be drawn when using a first person view (third person will draw it, first person will not)
+#define U_UNUSED29		(1<<29) // future expansion
+#define U_UNUSED30		(1<<30) // future expansion
+#define U_EXTEND3		(1<<31) // another byte to follow, future expansion
 
 #define	SU_VIEWHEIGHT	(1<<0)
 #define	SU_IDEALPITCH	(1<<1)
@@ -201,15 +200,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_showlmp			35		// [string] slotname [string] lmpfilename [short] x [short] y
 #define	svc_hidelmp			36		// [string] slotname
 
-#define svc_unused1
+#define svc_unusedlh1
 #define svc_fog				51		// unfinished
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
-#define svc_effect2			53		// [vector] org [short] modelindex [byte] startframe [byte] framecount [byte] framerate
+#define svc_effect2			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
 #define	svc_sound2			54		// short soundindex instead of byte
 #define	svc_spawnbaseline2	55		// short modelindex instead of byte
 #define svc_spawnstatic2	56		// short modelindex instead of byte
-#define svc_entitiesbegin	57		// [short] entitynum
-#define svc_entitiesend		58		// [short] entitynum
+#define svc_unusedlh2			57
+#define svc_unusedlh3			58
+#define	svc_spawnstaticsound2	59	// [coord3] [short] samp [byte] vol [byte] aten
 
 //
 // client to server
@@ -263,3 +263,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TE_SMALLFLASH		72 // [vector] origin
 #define TE_CUSTOMFLASH		73 // [vector] origin [byte] radius / 8 - 1 [byte] lifetime / 256 - 1 [byte] red [byte] green [byte] blue
 #define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count
+
+#define RENDER_STEP 1
+#define RENDER_GLOWTRAIL 2
+#define RENDER_VIEWMODEL 4
+#define RENDER_EXTERIORMODEL 8
+
+// LordHavoc: made this more compact, and added some more fields
+typedef struct
+{
+	double	time; // time this state was updated
+	vec3_t	origin;
+	vec3_t	angles;
+	int		effects;
+	unsigned short modelindex;
+	unsigned short frame;
+	byte	colormap;
+	byte	skin;
+	byte	alpha;
+	byte	scale;
+	byte	glowsize;
+	byte	glowcolor;
+	byte	colormod;
+	byte	flags;
+	byte	active;
+} entity_state_t;
+
+void ClearStateToDefault(entity_state_t *s);

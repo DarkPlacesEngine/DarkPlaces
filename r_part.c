@@ -32,20 +32,19 @@ ptype_t;
 
 typedef struct particle_s
 {
-	vec3_t		org;
-	float		color;
-	vec3_t		vel;
-	float		die;
 	ptype_t		type;
-	float		scale;
+	vec3_t		org;
+	vec3_t		vel;
 	rtexture_t	*tex;
 	byte		dynlight; // if set the particle will be dynamically lit (if r_dynamicparticles is on), used for smoke and blood
 	byte		rendermode; // a TPOLYTYPE_ value
-	byte		pad1;
+	byte		color;
 	byte		pad2;
+	float		die;
+	float		scale;
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
-	float		bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical of bouncing particles)
+	float		bounce; // how much bounce-back from a surface the particle hits (0 = no physics, 1 = stop and slide, 2 = keep bouncing forever, 1.5 is typical)
 	vec3_t		oldorg;
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
 //	vec3_t		direction; // used by decals
@@ -853,7 +852,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	VectorSubtract(end, start, dir);
 	VectorNormalize(dir);
 
-	if (type == 0) // rocket glow
+	if (type == 0 && host_frametime != 0) // rocket glow
 		particle(pt_oneframe, 254, rocketglowparticletexture, TPOLYTYPE_ADD, false, 24, 255, 9999, 0, end[0] - 12 * dir[0], end[1] - 12 * dir[1], end[2] - 12 * dir[2], 0, 0, 0);
 
 	t = ent->render.trail_time;
@@ -1366,7 +1365,7 @@ void R_DrawParticles (void)
 	uprightangles[2] = 0;
 	AngleVectors (uprightangles, NULL, right2, up2);
 
-	minparticledist = DotProduct(r_refdef.vieworg, vpn) + 16.0f;
+	minparticledist = DotProduct(r_origin, vpn) + 16.0f;
 
 	for (i = 0, p = particles;i < numparticles;i++, p++)
 	{
@@ -1386,7 +1385,7 @@ void R_DrawParticles (void)
 		/*
 		if (p->type == pt_decal)
 		{
-			VectorSubtract(p->org, r_refdef.vieworg, v);
+			VectorSubtract(p->org, r_origin, v);
 			if (DotProduct(p->direction, v) < 0)
 				continue;
 		}

@@ -1021,7 +1021,7 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 	}
 	mod->ofs_scenes = (int) animscenes - pbase;
 
-//	zymlump_t lump_poses; // float pose[numposes][numbones][6]; // animation data
+//	zymlump_t lump_poses; // float pose[numposes][numbones][3][4]; // animation data
 	swapintblock((void *) (pheader->lump_poses.start + pbase), pheader->lump_poses.length);
 
 //	zymlump_t lump_bones; // zymbone_t bone[numbones];
@@ -1042,7 +1042,7 @@ void Mod_LoadZymoticModel (model_t *mod, void *buffer)
 //	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
 	swapintblock((void *) (pheader->lump_texcoords.start + pbase), pheader->lump_texcoords.length);
 
-//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int shader, count), each run can be used with glDrawElements (each triangle is 3 int indices)
+//	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
 	swapintblock((void *) (pheader->lump_render.start + pbase), pheader->lump_render.length);
 
 //	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model

@@ -30,10 +30,6 @@ char *basedir = ".";
 char *cachedir = "/tmp";
 #endif
 
-#if NOTUSED
-cvar_t  sys_linerefresh = {"sys_linerefresh","0"};// set for entity display
-#endif
-
 extern cvar_t	timestamps;
 extern cvar_t	timeformat;
 
@@ -188,10 +184,6 @@ void Sys_Quit (void)
 	exit(0);
 }
 
-void Sys_Init(void)
-{
-}
-
 void Sys_Error (char *error, ...)
 { 
     va_list     argptr;
@@ -311,45 +303,31 @@ void Sys_DebugLog(char *file, char *fmt, ...)
     close(fd);
 }
 
-#if NOTUSED
-void Sys_EditFile(char *filename)
+double Sys_DoubleTime (void)
 {
+	static int first = true;
+	static double oldtime = 0.0, basetime = 0.0;
+	double newtime;
+	struct timeval tp;
+	struct timezone tzp; 
 
-	char cmd[256];
-	char *term;
-	char *editor;
+	gettimeofday(&tp, &tzp);
 
-	term = getenv("TERM");
-	if (term && !strcmp(term, "xterm"))
+	newtime = (double) ((unsigned long) tp.tv_sec) + tp.tv_usec/1000000.0 - basetime;
+
+	if (first)
 	{
-		editor = getenv("VISUAL");
-		if (!editor)
-			editor = getenv("EDITOR");
-		if (!editor)
-			editor = getenv("EDIT");
-		if (!editor)
-			editor = "vi";
-		sprintf(cmd, "xterm -e %s %s", editor, filename);
-		system(cmd);
+		first = false;
+		basetime = newtime;
+		newtime = 0.0;
 	}
-}
-#endif
 
-double Sys_FloatTime (void)
-{
-    struct timeval tp;
-    struct timezone tzp; 
-    static int      secbase; 
-    
-    gettimeofday(&tp, &tzp);  
+	if (newtime < oldtime)
+		Sys_Error("Sys_DoubleTime: time running backwards??\n");
 
-    if (!secbase)
-    {
-        secbase = tp.tv_sec;
-        return tp.tv_usec/1000000.0;
-    }
+	oldtime = newtime;
 
-    return (tp.tv_sec - secbase) + tp.tv_usec/1000000.0;
+	return newtime;
 }
 
 // =======================================================================
@@ -362,12 +340,6 @@ void alarm_handler(int x)
 {
 	oktogo=1;
 }
-
-#if NOTUSED
-void Sys_LineRefresh(void)
-{
-}
-#endif
 
 void floating_point_exception_handler(int whatever)
 {
@@ -408,7 +380,7 @@ void Sys_Sleep(void)
 int main (int c, char **v)
 {
 
-	double		time, oldtime, newtime;
+	double oldtime, newtime;
 
 //	static char cwd[1024];
 
@@ -429,8 +401,6 @@ int main (int c, char **v)
 
 	Host_Init();
 
-	Sys_Init();
-
 	if (COM_CheckParm("-nostdout"))
 		nostdout = 1;
 	else
@@ -439,63 +409,15 @@ int main (int c, char **v)
 		printf ("Linux DarkPlaces -- Version %0.3f (build %i)\n", VERSION, buildnumber);
 	}
 
-	oldtime = Sys_FloatTime () - 0.1;
+	oldtime = Sys_DoubleTime () - 0.1;
 	while (1)
 	{
 		// find time spent rendering last frame
-		newtime = Sys_FloatTime ();
-		time = newtime - oldtime;
+		newtime = Sys_DoubleTime ();
 
-		if (cls.state == ca_dedicated)
-		{
-			if (time < sys_ticrate.value)
-			{
-				usleep(1);
-				continue;       // not time to run a server only tic yet
-			}
-			time = sys_ticrate.value;
-		}
+		Host_Frame (newtime - oldtime);
 
-		if (time > sys_ticrate.value*2)
-			oldtime = newtime;
-		else
-			oldtime += time;
-
-		Host_Frame (time);
-
-#if NOTUSED
-		// graphic debugging aids
-		if (sys_linerefresh.value)
-			Sys_LineRefresh ();
-#endif
+		oldtime = newtime;
 	}
 	return 0;
 }
-
-
-#if NOTUSED
-/*
-================
-Sys_MakeCodeWriteable
-================
-*/
-void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
-{
-
-	int r;
-	unsigned long addr;
-	int psize = getpagesize();
-
-	addr = (startaddr & ~(psize-1)) - psize;
-
-//	fprintf(stderr, "writable code %lx(%lx)-%lx, length=%lx\n", startaddr,
-//			addr, startaddr+length, length);
-
-	r = mprotect((char*)addr, length + startaddr - addr + psize, 7);
-
-	if (r < 0)
-    		Sys_Error("Protection change failed\n");
-
-}
-#endif
-

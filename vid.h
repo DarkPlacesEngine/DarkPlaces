@@ -45,6 +45,12 @@ extern	viddef_t	vid;				// global video state
 extern void (*vid_menudrawfn)(void);
 extern void (*vid_menukeyfn)(int key);
 
+extern cvar_t vid_mode;
+extern cvar_t vid_mouse;
+extern cvar_t vid_fullscreen;
+
+void VID_InitCvars();
+
 void GL_Init (void);
 
 void VID_CheckMultitexture();
@@ -59,3 +65,6 @@ void	VID_Shutdown (void);
 int VID_SetMode (int modenum);
 // sets the mode; only used by the Quake engine for resetting to mode 0 (the
 // base mode) on memory allocation failures
+
+// sets hardware gamma correction, returns false if the device does not support gamma control
+int VID_SetGamma (float prescale, float gamma, float scale, float base);

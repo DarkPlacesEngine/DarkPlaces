@@ -955,7 +955,6 @@ void Mod_LoadLeafs (lump_t *l)
 			out->compressed_vis = NULL;
 		else
 			out->compressed_vis = loadmodel->visdata + p;
-//		out->efrags = NULL;
 		
 		for (j=0 ; j<4 ; j++)
 			out->ambient_sound_level[j] = in->ambient_level[j];

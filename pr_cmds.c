@@ -62,6 +62,7 @@ DP_REGISTERCVAR \
 DP_SPRITE32 \
 DP_SV_DRAWONLYTOCLIENT \
 DP_SV_NODRAWTOCLIENT \
+DP_SV_EXTERIORMODELTOCLIENT \
 DP_SV_SETCOLOR \
 DP_SV_EFFECT \
 DP_TE_BLOOD \
@@ -632,7 +633,7 @@ void PF_ambientsound (void)
 	char		*samp;
 	float		*pos;
 	float 		vol, attenuation;
-	int			i, soundnum;
+	int			i, soundnum, large;
 
 	pos = G_VECTOR (OFS_PARM0);			
 	samp = G_STRING(OFS_PARM1);
@@ -650,13 +651,24 @@ void PF_ambientsound (void)
 		return;
 	}
 
-// add an svc_spawnambient command to the level signon packet
+	large = false;
+	if (soundnum >= 256)
+		large = true;
 
-	MSG_WriteByte (&sv.signon,svc_spawnstaticsound);
+	// add an svc_spawnambient command to the level signon packet
+
+	if (large)
+		MSG_WriteByte (&sv.signon, svc_spawnstaticsound2);
+	else
+		MSG_WriteByte (&sv.signon, svc_spawnstaticsound);
+
 	for (i=0 ; i<3 ; i++)
 		MSG_WriteFloatCoord(&sv.signon, pos[i]);
 
-	MSG_WriteByte (&sv.signon, soundnum);
+	if (large)
+		MSG_WriteShort (&sv.signon, soundnum);
+	else
+		MSG_WriteByte (&sv.signon, soundnum);
 
 	MSG_WriteByte (&sv.signon, vol*255);
 	MSG_WriteByte (&sv.signon, attenuation*64);
@@ -1128,8 +1140,12 @@ void PF_Spawn (void)
 void PF_Remove (void)
 {
 	edict_t	*ed;
-	
+
 	ed = G_EDICT(OFS_PARM0);
+	if (ed == sv.edicts)
+		PR_RunError("remove: tried to remove world\n");
+	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
+		PR_RunError("remove: tried to remove a client\n");
 	ED_Free (ed);
 }
 
@@ -1798,23 +1814,27 @@ int SV_ModelIndex (char *name);
 void PF_makestatic (void)
 {
 	edict_t	*ent;
-	int		i;
+	int		i, large;
 	
 	ent = G_EDICT(OFS_PARM0);
 
-	i = SV_ModelIndex(pr_strings + ent->v.model);
-	if (i >= 256)
+	large = false;
+	if (ent->v.modelindex >= 256 || ent->v.frame >= 256)
+		large = true;
+
+	if (large)
 	{
 		MSG_WriteByte (&sv.signon,svc_spawnstatic2);
-		MSG_WriteShort (&sv.signon, i);
+		MSG_WriteShort (&sv.signon, ent->v.modelindex);
+		MSG_WriteShort (&sv.signon, ent->v.frame);
 	}
 	else
 	{
 		MSG_WriteByte (&sv.signon,svc_spawnstatic);
-		MSG_WriteByte (&sv.signon, i);
+		MSG_WriteByte (&sv.signon, ent->v.modelindex);
+		MSG_WriteByte (&sv.signon, ent->v.frame);
 	}
 
-	MSG_WriteByte (&sv.signon, ent->v.frame);
 	MSG_WriteByte (&sv.signon, ent->v.colormap);
 	MSG_WriteByte (&sv.signon, ent->v.skin);
 	for (i=0 ; i<3 ; i++)

@@ -421,7 +421,7 @@ void R_DrawAliasFrame (maliashdr_t *maliashdr, float alpha, vec3_t color, entity
 		glEnable (GL_BLEND);
 		glDepthMask(0); // disable zbuffer updates
 
-		VectorSubtract(org, r_refdef.vieworg, diff);
+		VectorSubtract(org, r_origin, diff);
 		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 
 		glDrawElements(GL_TRIANGLES, maliashdr->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) maliashdr + maliashdr->tridata));
@@ -521,7 +521,7 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 		glDepthMask(0); // disable zbuffer updates
 		{
 			vec3_t diff;
-			VectorSubtract(org, r_refdef.vieworg, diff);
+			VectorSubtract(org, r_origin, diff);
 			glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 		}
 
@@ -734,6 +734,7 @@ void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 	while(vertcount--)
 	{
 		c = *bonecounts++;
+		// FIXME: validate bonecounts at load time (must be >= 1)
 		if (c == 1)
 		{
 			matrix = &zymbonepose[vert->bonenum];
@@ -869,7 +870,7 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 	glEnable (GL_BLEND);
 	glDepthMask(0); // disable zbuffer updates
 
-	VectorSubtract(org, r_refdef.vieworg, diff);
+	VectorSubtract(org, r_origin, diff);
 	glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 
 	glVertexPointer(3, GL_FLOAT, 0, aliasvert);

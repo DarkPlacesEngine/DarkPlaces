@@ -76,9 +76,6 @@ typedef struct
 }
 beam_t;
 
-// LordHavoc: increased MAX_EFRAGS from 640 to 2048
-//#define	MAX_EFRAGS		2048
-
 #define	MAX_MAPSTRING	2048
 #define	MAX_DEMOS		8
 #define	MAX_DEMONAME	16
@@ -207,7 +204,6 @@ typedef struct
 
 // refresh related state
 	struct model_s	*worldmodel;	// cl_entitites[0].model
-//	struct efrag_s	*free_efrags;
 //	int			num_entities;	// held in cl_entities array
 	int			num_statics;	// held in cl_staticentities array
 	entity_t	viewent;			// the gun model
@@ -223,46 +219,47 @@ client_state_t;
 //
 // cvars
 //
-extern	cvar_t	cl_name;
-extern	cvar_t	cl_color;
-extern	cvar_t	cl_pmodel;
+extern cvar_t cl_name;
+extern cvar_t cl_color;
+extern cvar_t cl_pmodel;
 
-extern	cvar_t	cl_upspeed;
-extern	cvar_t	cl_forwardspeed;
-extern	cvar_t	cl_backspeed;
-extern	cvar_t	cl_sidespeed;
+extern cvar_t cl_upspeed;
+extern cvar_t cl_forwardspeed;
+extern cvar_t cl_backspeed;
+extern cvar_t cl_sidespeed;
 
-extern	cvar_t	cl_movespeedkey;
+extern cvar_t cl_movespeedkey;
 
-extern	cvar_t	cl_yawspeed;
-extern	cvar_t	cl_pitchspeed;
+extern cvar_t cl_yawspeed;
+extern cvar_t cl_pitchspeed;
 
-extern	cvar_t	cl_anglespeedkey;
+extern cvar_t cl_anglespeedkey;
 
-extern	cvar_t	cl_autofire;
+extern cvar_t cl_autofire;
 
-extern	cvar_t	cl_shownet;
-extern	cvar_t	cl_nolerp;
+extern cvar_t cl_shownet;
+extern cvar_t cl_nolerp;
 
-extern	cvar_t	cl_pitchdriftspeed;
-extern	cvar_t	lookspring;
-extern	cvar_t	lookstrafe;
-extern	cvar_t	sensitivity;
+extern cvar_t cl_pitchdriftspeed;
+extern cvar_t lookspring;
+extern cvar_t lookstrafe;
+extern cvar_t sensitivity;
 
-extern	cvar_t	m_pitch;
-extern	cvar_t	m_yaw;
-extern	cvar_t	m_forward;
-extern	cvar_t	m_side;
+extern cvar_t freelook;
+
+extern cvar_t m_pitch;
+extern cvar_t m_yaw;
+extern cvar_t m_forward;
+extern cvar_t m_side;
 
 
 // LordHavoc: raised these from 64 and 128 to 512 and 256
 #define	MAX_TEMP_ENTITIES	512			// lightning bolts, effects, etc
 #define	MAX_STATIC_ENTITIES	256			// torches, etc
 
-extern	client_state_t	cl;
+extern client_state_t cl;
 
 // FIXME, allocate dynamically
-//extern	efrag_t			cl_efrags[MAX_EFRAGS];
 extern	entity_t		cl_entities[MAX_EDICTS];
 extern	entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 extern	lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
@@ -347,6 +344,7 @@ void CL_TimeDemo_f (void);
 // cl_parse.c
 //
 void CL_ParseServerMessage (void);
+void CL_BitProfile_f(void);
 
 //
 // view

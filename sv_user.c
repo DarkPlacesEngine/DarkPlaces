@@ -26,6 +26,7 @@ edict_t	*sv_player;
 extern	cvar_t	sv_friction;
 cvar_t	sv_edgefriction = {"edgefriction", "2"};
 cvar_t	sv_predict = {"sv_predict", "1"};
+cvar_t	sv_deltacompress = {"sv_deltacompress", "1"};
 extern	cvar_t	sv_stopspeed;
 
 static	vec3_t		forward, right, up;
@@ -530,7 +531,7 @@ qboolean SV_ReadClientMessage (void)
 	int		ret;
 	int		cmd;
 	char		*s;
-	
+
 	do
 	{
 nextmsg:
@@ -542,9 +543,9 @@ nextmsg:
 		}
 		if (!ret)
 			return true;
-					
+
 		MSG_BeginReading ();
-		
+
 		while (1)
 		{
 			if (!host_client->active)
@@ -606,18 +607,18 @@ nextmsg:
 					Con_DPrintf("%s tried to %s\n", host_client->name, s);
 				*/
 				break;
-				
+
 			case clc_disconnect:
 //				Sys_Printf ("SV_ReadClientMessage: client disconnected\n");
 				return false;
-			
+
 			case clc_move:
 				SV_ReadClientMove (&host_client->cmd);
 				break;
 			}
 		}
 	} while (ret == 1);
-	
+
 	return true;
 }
 

@@ -84,6 +84,7 @@ extern int eval_idealpitch;
 extern int eval_pitch_speed;
 extern int eval_viewmodelforclient;
 extern int eval_nodrawtoclient;
+extern int eval_exteriormodeltoclient;
 extern int eval_drawonlytoclient;
 extern int eval_colormod;
 extern int eval_ping;

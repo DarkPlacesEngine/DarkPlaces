@@ -11,7 +11,18 @@ qboolean gl_supportslockarrays = false;
 qboolean gl_mtexable = false;
 int gl_mtex_enum = 0;
 
+cvar_t vid_mode = {"vid_mode", "0", false};
+cvar_t vid_mouse = {"vid_mouse", "1", true};
+cvar_t vid_fullscreen = {"vid_fullscreen", "1"};
+
 void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglSelectTexture) (GLenum);
 void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
 void (GLAPIENTRY *qglUnlockArraysEXT) (void);
+
+void VID_InitCvars()
+{
+	Cvar_RegisterVariable(&vid_mode);
+	Cvar_RegisterVariable(&vid_mouse);
+	Cvar_RegisterVariable(&vid_fullscreen);
+}

@@ -49,9 +49,6 @@ static GLXContext ctx = NULL;
 #define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask )
 
 
-cvar_t vid_mode = {"vid_mode", "0", false};
-cvar_t vid_fullscreen = {"vid_fullscreen", "1"};
-
 viddef_t	vid;				// global video state
 
 static qboolean		mouse_avail = true;
@@ -65,7 +62,6 @@ static cvar_t in_mouse = {"in_mouse", "1", false};
 static cvar_t in_dga = {"in_dga", "1", false};
 static cvar_t in_dga_mouseaccel = {"in_dga_mouseaccel", "1", false};
 static cvar_t m_filter = {"m_filter", "0"};
-static cvar_t _windowed_mouse = {"_windowed_mouse", "1"};
 
 qboolean vidmode_ext = false;
 
@@ -86,8 +82,6 @@ const char *gl_vendor;
 const char *gl_renderer;
 const char *gl_version;
 const char *gl_extensions;
-
-//static float vid_gamma = 1.0;
 
 /*-----------------------------------------------------------------------*/
 static int
@@ -304,7 +298,7 @@ static void HandleEvents(void)
 					Con_Printf("event->xmotion.x: %d\n", event.xmotion.x);
 					Con_Printf("event->xmotion.y: %d\n", event.xmotion.y);
 				}
-				if (vid_fullscreen.value || _windowed_mouse.value) {
+				if (vid_fullscreen.value || vid_mouse.value) {
 					if (!event.xmotion.send_event) {
 						mouse_x += (event.xmotion.x - p_mouse_x);
 						mouse_y += (event.xmotion.y - p_mouse_y);
@@ -524,6 +518,11 @@ void GL_EndRendering (void)
 	glXSwapBuffers(dpy, win);
 }
 
+int VID_SetGamma(float prescale, float gamma, float scale, float base)
+{
+	return FALSE;
+}
+
 void VID_Init()
 {
 	int i;
@@ -546,8 +545,6 @@ void VID_Init()
 	int MajorVersion, MinorVersion;
 	int actualWidth, actualHeight;
 
-	Cvar_RegisterVariable (&vid_mode);
-	Cvar_RegisterVariable (&vid_fullscreen);
 	Cvar_RegisterVariable (&in_mouse);
 	Cvar_RegisterVariable (&in_dga);
 	Cvar_RegisterVariable (&in_dga_mouseaccel);

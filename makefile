@@ -16,6 +16,7 @@ CFLAGS= -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS)
 #LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl
 LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl -lasound
 
+#most people can't build the -3dfx version (-3dfx version needs some updates for new mesa)
 all: darkplaces-glx
 #all: darkplaces-glx darkplaces-3dfx
 

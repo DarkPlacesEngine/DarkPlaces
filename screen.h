@@ -31,15 +31,18 @@ void SCR_CenterPrint (char *str);
 //void SCR_BeginLoadingPlaque (void);
 //void SCR_EndLoadingPlaque (void);
 
-extern	float		scr_con_current;
-extern	float		scr_conlines;		// lines of console to display
+extern float scr_con_current;
+extern float scr_conlines; // lines of console to display
 
-extern	int			sb_lines;
+extern int sb_lines;
 
-extern	int			clearnotify;	// set to 0 whenever notify text is drawn
-extern	qboolean	scr_disabled_for_loading;
-extern	qboolean	scr_skipupdate;
-
-extern	cvar_t		scr_viewsize;
+extern int clearnotify; // set to 0 whenever notify text is drawn
+extern qboolean	scr_disabled_for_loading;
+extern qboolean	scr_skipupdate;
 
 extern cvar_t scr_viewsize;
+extern cvar_t r_brightness;
+extern cvar_t r_contrast;
+extern cvar_t gl_lightmode;
+extern cvar_t scr_viewsize;
+extern cvar_t crosshair;

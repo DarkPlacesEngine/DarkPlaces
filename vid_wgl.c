@@ -75,7 +75,7 @@ static qboolean	vid_initialized = false;
 static qboolean	windowed, leavecurrentmode;
 static qboolean vid_canalttab = false;
 static qboolean vid_wassuspended = false;
-static int		windowed_mouse;
+static int		usingmouse;
 extern qboolean	mouseactive;  // from in_win.c
 static HICON	hIcon;
 
@@ -115,12 +115,10 @@ void VID_UpdateWindowStatus (void);
 
 //====================================
 
-cvar_t		vid_mode = {"vid_mode","0", false};
 // Note that 0 is MODE_WINDOWED
 //cvar_t		_vid_default_mode = {"_vid_default_mode","0", true};
 // Note that 3 is MODE_FULLSCREEN_DEFAULT
 //cvar_t		_vid_default_mode_win = {"_vid_default_mode_win","3", true};
-cvar_t		_windowed_mouse = {"_windowed_mouse","1", true};
 
 int			window_center_x, window_center_y, window_x, window_y, window_width, window_height;
 RECT		window_rect;
@@ -281,24 +279,28 @@ int VID_SetMode (int modenum)
 	// Set either the fullscreen or windowed mode
 	if (modelist[modenum].type == MS_WINDOWED)
 	{
-		if (_windowed_mouse.value && key_dest == key_game)
-		{
-			stat = VID_SetWindowedMode(modenum);
-			IN_ActivateMouse ();
-			IN_HideMouse ();
-		}
-		else
-		{
-			IN_DeactivateMouse ();
-			IN_ShowMouse ();
-			stat = VID_SetWindowedMode(modenum);
-		}
+//		if (vid_mouse.value && key_dest == key_game)
+//		{
+//			stat = VID_SetWindowedMode(modenum);
+//			usingmouse = true;
+//			IN_ActivateMouse ();
+//			IN_HideMouse ();
+//		}
+//		else
+//		{
+//			usingmouse = false;
+//			IN_DeactivateMouse ();
+//			IN_ShowMouse ();
+//			stat = VID_SetWindowedMode(modenum);
+//		}
+		stat = VID_SetWindowedMode(modenum);
 	}
 	else if (modelist[modenum].type == MS_FULLDIB)
 	{
 		stat = VID_SetFullDIBMode(modenum);
-		IN_ActivateMouse ();
-		IN_HideMouse ();
+//		usingmouse = true;
+//		IN_ActivateMouse ();
+//		IN_HideMouse ();
 	}
 	else
 		Sys_Error ("VID_SetMode: Bad mode type in modelist");
@@ -440,34 +442,34 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 
 void GL_EndRendering (void)
 {
+	int usemouse;
 	if (r_render.value && !scr_skipupdate)
 		SwapBuffers(maindc);
 
 // handle the mouse state when windowed if that's changed
-	if (modestate == MS_WINDOWED)
+	usemouse = false;
+	if (vid_mouse.value && key_dest == key_game)
+		usemouse = true;
+	if (modestate == MS_FULLDIB)
+		usemouse = true;
+	if (!ActiveApp)
+		usemouse = false;
+	if (usemouse)
 	{
-		if (!_windowed_mouse.value)
+		if (!usingmouse)
 		{
-			if (windowed_mouse)
-			{
-				IN_DeactivateMouse ();
-				IN_ShowMouse ();
-				windowed_mouse = false;
-			}
+			usingmouse = true;
+			IN_ActivateMouse ();
+			IN_HideMouse();
 		}
-		else
+	}
+	else
+	{
+		if (usingmouse)
 		{
-			windowed_mouse = true;
-			if (key_dest == key_game && !mouseactive && ActiveApp)
-			{
-				IN_ActivateMouse ();
-				IN_HideMouse ();
-			}
-			else if (mouseactive && key_dest != key_game)
-			{
-				IN_DeactivateMouse ();
-				IN_ShowMouse ();
-			}
+			usingmouse = false;
+			IN_DeactivateMouse ();
+			IN_ShowMouse();
 		}
 	}
 }
@@ -477,6 +479,7 @@ void VID_SetDefaultMode (void)
 	IN_DeactivateMouse ();
 }
 
+void VID_RestoreSystemGamma();
 
 void	VID_Shutdown (void)
 {
@@ -494,7 +497,8 @@ void	VID_Shutdown (void)
     	wglMakeCurrent(NULL, NULL);
 
 		// LordHavoc: free textures before closing (may help NVIDIA)
-		for (i = 0;i < 8192;i++) temp[i] = i+1;
+		for (i = 0;i < 8192;i++)
+			temp[i] = i+1;
 		glDeleteTextures(8192, temp);
 
     	if (hRC)
@@ -510,6 +514,8 @@ void	VID_Shutdown (void)
 			ReleaseDC (mainwindow, maindc);
 
 		AppActivate(false, false);
+
+		VID_RestoreSystemGamma();
 	}
 }
 
@@ -632,6 +638,8 @@ void ClearAllStates (void)
 	IN_ClearStates ();
 }
 
+void VID_RestoreGameGamma();
+
 void AppActivate(BOOL fActive, BOOL minimize)
 /****************************************************************************
 *
@@ -665,9 +673,11 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	{
 		if (modestate == MS_FULLDIB)
 		{
-			IN_ActivateMouse ();
-			IN_HideMouse ();
-			if (vid_canalttab && vid_wassuspended) {
+//			usingmouse = true;
+//			IN_ActivateMouse ();
+//			IN_HideMouse ();
+			if (vid_canalttab && vid_wassuspended)
+			{
 				vid_wassuspended = false;
 				ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN);
 				ShowWindow(mainwindow, SW_SHOWNORMAL);
@@ -676,29 +686,38 @@ void AppActivate(BOOL fActive, BOOL minimize)
 			// LordHavoc: from dabb, fix for alt-tab bug in NVidia drivers
 			MoveWindow(mainwindow,0,0,gdevmode.dmPelsWidth,gdevmode.dmPelsHeight,false);
 		}
-		else if ((modestate == MS_WINDOWED) && _windowed_mouse.value && key_dest == key_game)
-		{
-			IN_ActivateMouse ();
-			IN_HideMouse ();
-		}
+//		else if ((modestate == MS_WINDOWED) && vid_mouse.value && key_dest == key_game)
+//		{
+//			usingmouse = true;
+//			IN_ActivateMouse ();
+//			IN_HideMouse ();
+//		}
+		VID_RestoreGameGamma();
 	}
 
 	if (!fActive)
 	{
+		usingmouse = false;
+		IN_DeactivateMouse ();
+		IN_ShowMouse ();
 		if (modestate == MS_FULLDIB)
 		{
-			IN_DeactivateMouse ();
-			IN_ShowMouse ();
-			if (vid_canalttab) { 
+//			usingmouse = false;
+//			IN_DeactivateMouse ();
+//			IN_ShowMouse ();
+			if (vid_canalttab)
+			{ 
 				ChangeDisplaySettings (NULL, 0);
 				vid_wassuspended = true;
 			}
 		}
-		else if ((modestate == MS_WINDOWED) && _windowed_mouse.value)
-		{
-			IN_DeactivateMouse ();
-			IN_ShowMouse ();
-		}
+//		else if ((modestate == MS_WINDOWED) && vid_mouse.value)
+//		{
+//			usingmouse = false;
+//			IN_DeactivateMouse ();
+//			IN_ShowMouse ();
+//		}
+		VID_RestoreSystemGamma();
 	}
 }
 
@@ -1222,6 +1241,50 @@ void VID_InitFullDIB (HINSTANCE hInstance)
 		Con_SafePrintf ("No fullscreen DIB modes found\n");
 }
 
+static int grabsysgamma = true;
+WORD systemgammaramps[3][256], currentgammaramps[3][256];
+
+int VID_SetGamma(float prescale, float gamma, float scale, float base)
+{
+	int i;
+	HDC hdc;
+	hdc = GetDC (NULL);
+
+	BuildGammaTable16(prescale, gamma, scale, base, &currentgammaramps[0][0]);
+	for (i = 0;i < 256;i++)
+		currentgammaramps[1][i] = currentgammaramps[2][i] = currentgammaramps[0][i];
+
+	i = SetDeviceGammaRamp(hdc, &currentgammaramps[0][0]);
+
+	ReleaseDC (NULL, hdc);
+	return i; // return success or failure
+}
+
+void VID_RestoreGameGamma()
+{
+	VID_UpdateGamma(true);
+}
+
+void VID_GetSystemGamma()
+{
+	HDC hdc;
+	hdc = GetDC (NULL);
+
+	GetDeviceGammaRamp(hdc, &systemgammaramps[0][0]);
+
+	ReleaseDC (NULL, hdc);
+}
+
+void VID_RestoreSystemGamma()
+{
+	HDC hdc;
+	hdc = GetDC (NULL);
+
+	SetDeviceGammaRamp(hdc, &systemgammaramps[0][0]);
+
+	ReleaseDC (NULL, hdc);
+}
+
 /*
 ===================
 VID_Init
@@ -1237,15 +1300,15 @@ void	VID_Init ()
 
 	memset(&devmode, 0, sizeof(devmode));
 
-	Cvar_RegisterVariable (&vid_mode);
 //	Cvar_RegisterVariable (&_vid_default_mode);
 //	Cvar_RegisterVariable (&_vid_default_mode_win);
-	Cvar_RegisterVariable (&_windowed_mouse);
 
 	Cmd_AddCommand ("vid_nummodes", VID_NumModes_f);
 	Cmd_AddCommand ("vid_describecurrentmode", VID_DescribeCurrentMode_f);
 	Cmd_AddCommand ("vid_describemode", VID_DescribeMode_f);
 	Cmd_AddCommand ("vid_describemodes", VID_DescribeModes_f);
+
+	VID_GetSystemGamma();
 
 	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON2));
 

@@ -46,10 +46,10 @@ void Image_CopyRGBAGamma(byte *in, byte *out, int pixels)
 {
 	while (pixels--)
 	{
-		out[0] = qgamma[in[0]];
-		out[1] = qgamma[in[1]];
-		out[2] = qgamma[in[2]];
-		out[3] =        in[3] ;
+		out[0] = texgamma[in[0]];
+		out[1] = texgamma[in[1]];
+		out[2] = texgamma[in[2]];
+		out[3] =          in[3] ;
 		in += 4;
 		out += 4;
 	}

@@ -77,7 +77,7 @@ void transpolyclear()
 	currenttranspoly = currenttransvert = 0;
 	currenttranslist = translist;
 	memset(translisthash, 0, sizeof(translisthash));
-	transviewdist = DotProduct(r_refdef.vieworg, vpn);
+	transviewdist = DotProduct(r_origin, vpn);
 }
 
 // turned into a #define
@@ -155,219 +155,6 @@ void transpolyend()
 }
 
 int transpolyindices;
-
-/*
-void transpolyrenderminmax()
-{
-	int i, j, k, lastvert;
-	vec_t d, min, max, viewdist, s, average;
-	//vec_t ndist;
-	//vec3_t v1, v2, n;
-	transpolyindices = 0;
-	viewdist = DotProduct(r_refdef.vieworg, vpn);
-	for (i = 0;i < currenttranspoly;i++)
-	{
-		if (transpoly[i].verts < 3) // only process valid polygons
-			continue;
-		min = 1000000;max = -1000000;
-		s = 1.0f / transpoly[i].verts;
-		lastvert = transpoly[i].firstvert + transpoly[i].verts;
-		average = 0;
-		for (j = transpoly[i].firstvert;j < lastvert;j++)
-		{
-			d = DotProduct(transvert[j].v, vpn)-viewdist;
-			if (d < min) min = d;
-			if (d > max) max = d;
-			average += d * s;
-		}
-		if (max < 4) // free to check here, so skip polys behind the view
-			continue;
-		transpoly[i].distance = average;
-*/
-		/*
-		transpoly[i].mindistance = min;
-		transpoly[i].maxdistance = max;
-		// calculate normal (eek)
-		VectorSubtract(transvert[transpoly[i].firstvert  ].v, transvert[transpoly[i].firstvert+1].v, v1);
-		VectorSubtract(transvert[transpoly[i].firstvert+2].v, transvert[transpoly[i].firstvert+1].v, v2);
-		VectorNormalize(v1);
-		VectorNormalize(v2);
-		if (transpoly[i].verts > 3 && fabs(DotProduct(v1, v2)) >= (1.0f - (1.0f / 256.0f))) // colinear edges, find a better triple
-		{
-			VectorSubtract(transvert[transpoly[i].firstvert + transpoly[i].verts - 1].v, transvert[transpoly[i].firstvert].v, v1);
-			VectorSubtract(transvert[transpoly[i].firstvert + 1].v, transvert[transpoly[i].firstvert].v, v2);
-			VectorNormalize(v1);
-			VectorNormalize(v2);
-			if (fabs(DotProduct(v1, v2)) < (1.0f - (1.0f / 256.0f))) // found a good triple
-				goto foundtriple;
-			for (k = transpoly[i].firstvert + 2;k < (transpoly[i].firstvert + transpoly[i].verts - 1);k++)
-			{
-				VectorSubtract(transvert[k-1].v, transvert[k].v, v1);
-				VectorSubtract(transvert[k+1].v, transvert[k].v, v2);
-				VectorNormalize(v1);
-				VectorNormalize(v2);
-				if (fabs(DotProduct(v1, v2)) < (1.0f - (1.0f / 256.0f))) // found a good triple
-					goto foundtriple;
-			}
-			VectorSubtract(transvert[k-1].v, transvert[k].v, v1);
-			VectorSubtract(transvert[transpoly[i].firstvert].v, transvert[k].v, v2);
-			VectorNormalize(v1);
-			VectorNormalize(v2);
-			if (fabs(DotProduct(v1, v2)) >= (1.0f - (1.0f / 256.0f))) // no good triples; the polygon is a line, skip it
-				continue;
-		}
-foundtriple:
-		CrossProduct(v1, v2, n);
-		VectorNormalize(n);
-		ndist = DotProduct(transvert[transpoly[i].firstvert+1].v, n);
-		// sorted insert
-		for (j = 0;j < transpolyindices;j++)
-		{
-			// easy cases
-			if (transpoly[transpolyindex[j]].mindistance > max)
-				continue;
-			if (transpoly[transpolyindex[j]].maxdistance < min)
-				break;
-			// hard case, check side
-			for (k = transpoly[transpolyindex[j]].firstvert;k < (transpoly[transpolyindex[j]].firstvert + transpoly[transpolyindex[j]].verts);k++)
-				if (DotProduct(transvert[k].v, n) < ndist)
-					goto skip;
-			break;
-skip:
-			;
-		}
-		*/
-/*
-		// sorted insert
-		for (j = 0;j < transpolyindices;j++)
-			if (transpoly[transpolyindex[j]].distance < average)
-				break;
-		for (k = transpolyindices;k > j;k--)
-			transpolyindex[k] = transpolyindex[k-1];
-		transpolyindices++;
-		transpolyindex[j] = i;
-	}
-}
-*/
-/*
-// LordHavoc: qsort compare function
-int transpolyqsort(const void *ia, const void *ib)
-{
-	transpoly_t *a, *b;
-	int i, j;
-	a = &transpoly[*((unsigned short *)ia)];
-	b = &transpoly[*((unsigned short *)ib)];
-	// easy cases
-	if (a->mindistance > b->mindistance && a->maxdistance > b->maxdistance)
-		return -1; // behind
-	if (a->mindistance < b->mindistance && a->maxdistance < b->maxdistance)
-		return 1; // infront
-	// hard case
-	if (!a->ndist)
-	{
-		// calculate normal (eek)
-		vec3_t v1, v2;
-		VectorSubtract(transvert[a->firstvert  ].v, transvert[a->firstvert+1].v, v1);
-		VectorSubtract(transvert[a->firstvert+2].v, transvert[a->firstvert+1].v, v2);
-		CrossProduct(v1, v2, a->n);
-		VectorNormalize(a->n);
-		a->ndist = DotProduct(transvert[a->firstvert  ].v, a->n);
-	}
-	// check side
-	for (i = b->firstvert, j = 0;i < (b->firstvert + b->verts);i++)
-		j += DotProduct(transvert[i].v, a->n) < a->ndist; // (1) b is infront of a
-	if (j == 0)
-		return -1; // (-1) a is behind b
-	return j == b->verts; // (1) a is infront of b    (0) a and b intersect
-//	return (transpoly[*((unsigned short *)ib)].mindistance + transpoly[*((unsigned short *)ib)].maxdistance) - (transpoly[*((unsigned short *)ia)].mindistance + transpoly[*((unsigned short *)ia)].maxdistance);
-	*/
-/*
-	return ((transpoly_t*)ia)->distance - ((transpoly_t*)ib)->distance;
-}
-*/
-
-/*
-int transpolyqsort(const void *ia, const void *ib)
-{
-	return (transpoly[*((unsigned short *)ib)].distance - transpoly[*((unsigned short *)ia)].distance);
-}
-*/
-
-/*
-void transpolyrenderminmax()
-{
-	int i, j, lastvert;
-	vec_t d, max, viewdist, average;
-	transpolyindices = 0;
-	viewdist = DotProduct(r_refdef.vieworg, vpn);
-	for (i = 0;i < currenttranspoly;i++)
-	{
-		if (transpoly[i].verts < 3) // only process valid polygons
-			continue;
-		max = -1000000;
-		lastvert = transpoly[i].firstvert + transpoly[i].verts;
-		average = 0;
-		for (j = transpoly[i].firstvert;j < lastvert;j++)
-		{
-			d = DotProduct(transvert[j].v, vpn)-viewdist;
-			average += d;
-			if (d > max)
-				max = d;
-		}
-		if (max < 4) // free to check here, so skip polys behind the view
-			continue;
-		transpoly[i].distance = average / transpoly[i].verts;
-		transpolyindex[transpolyindices++] = i;
-	}
-	qsort(&transpolyindex[0], transpolyindices, sizeof(unsigned short), transpolyqsort);
-}
-*/
-/*
-	int i, j, a;
-	a = true;
-	while(a)
-	{
-		a = false;
-		for (i = 1;i < transpolyindices;i++)
-		{
-			// easy cases
-			if (transpoly[transpolyindex[i - 1]].mindistance > transpoly[transpolyindex[i]].mindistance && transpoly[transpolyindex[i - 1]].maxdistance > transpoly[transpolyindex[i]].maxdistance)
-				continue; // previous is behind (no swap)
-			if (transpoly[transpolyindex[i - 1]].mindistance < transpoly[transpolyindex[i]].mindistance && transpoly[transpolyindex[i - 1]].maxdistance < transpoly[transpolyindex[i]].maxdistance)
-				goto swap; // previous is infront (swap)
-			// hard case
-*/
-			/*
-			if (!transpoly[transpolyindex[i - 1]].ndist)
-			{
-				// calculate normal (eek)
-				vec3_t v1, v2;
-				VectorSubtract(transvert[transpoly[transpolyindex[i - 1]].firstvert  ].v, transvert[transpoly[transpolyindex[i - 1]].firstvert+1].v, v1);
-				VectorSubtract(transvert[transpoly[transpolyindex[i - 1]].firstvert+2].v, transvert[transpoly[transpolyindex[i - 1]].firstvert+1].v, v2);
-				CrossProduct(v1, v2, transpoly[transpolyindex[i - 1]].n);
-				VectorNormalize(transpoly[transpolyindex[i - 1]].n);
-				transpoly[transpolyindex[i - 1]].ndist = DotProduct(transvert[transpoly[transpolyindex[i - 1]].firstvert  ].v, transpoly[transpolyindex[i - 1]].n);
-			}
-			if (DotProduct(transpoly[transpolyindex[i - 1]].n, vpn) >= 0.0f) // backface
-				continue;
-			*/
-/*
-			// check side
-			for (i = transpoly[transpolyindex[i]].firstvert;i < (transpoly[transpolyindex[i]].firstvert + transpoly[transpolyindex[i]].verts);i++)
-				if (DotProduct(transvert[i].v, transpoly[transpolyindex[i - 1]].n) >= transpoly[transpolyindex[i - 1]].ndist)
-					goto noswap; // previous is behind or they intersect
-swap:
-			// previous is infront (swap)
-			j = transpolyindex[i];
-			transpolyindex[i] = transpolyindex[i - 1];
-			transpolyindex[i - 1] = j;
-			a = true;
-noswap:
-			;
-		}
-	}
-}
-*/
 
 void transpolyrender()
 {
@@ -531,7 +318,7 @@ void transpolyrender()
 						glBegin(GL_POLYGON);
 						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 						{
-							VectorSubtract(vert->v, r_refdef.vieworg,diff);
+							VectorSubtract(vert->v, r_origin, diff);
 							glTexCoord2f(vert->s, vert->t);
 							glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
 							glVertex3fv(vert->v);
@@ -544,7 +331,7 @@ void transpolyrender()
 						glBegin(GL_POLYGON);
 						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 						{
-							VectorSubtract(vert->v, r_refdef.vieworg,diff);
+							VectorSubtract(vert->v, r_origin, diff);
 							glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
 							glVertex3fv(vert->v);
 						}
@@ -766,7 +553,7 @@ lit:
 			glBegin(GL_POLYGON);
 			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
-				VectorSubtract(vert->vert, r_refdef.vieworg,diff);
+				VectorSubtract(vert->vert, r_origin, diff);
 				glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
 				glVertex3fv (vert->vert);
 			}

@@ -181,6 +181,7 @@ extern int buildnumber;
 #define	SOUND_CHANNELS		8
 
 #include "common.h"
+#include "cvar.h"
 #include "bspfile.h"
 #include "vid.h"
 #include "sys.h"
@@ -191,7 +192,6 @@ extern int buildnumber;
 
 #include "wad.h"
 #include "draw.h"
-#include "cvar.h"
 #include "screen.h"
 #include "net.h"
 #include "protocol.h"
