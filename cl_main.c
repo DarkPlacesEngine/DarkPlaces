@@ -1008,7 +1008,7 @@ void CL_RelinkBeams(void)
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)
 		//	VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
-		if (cl_beams_relative.integer && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
+		if (cl_beams_relative.integer && b->entity == cl.viewentity && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
 		{
 			entity_state_t *p = &cl_entities[b->entity].state_previous;
 			//entity_state_t *c = &cl_entities[b->entity].state_current;
