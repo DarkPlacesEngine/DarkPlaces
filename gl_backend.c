@@ -852,16 +852,6 @@ void R_Mesh_GetSpace(int numverts)
 		}
 	}
 
-/*
-#ifdef MESH_BATCH
-	if (gl_mesh_batching.integer)
-	{
-		if (gl_batchvertexcount == 0)
-			gl_batchvertexfirst = varray_offset;
-		gl_batchvertexcount += numverts;
-	}
-#endif
-*/
 	varray_vertex3f = varray_buf_vertex3f + varray_offset * 3;
 	varray_color4f = varray_buf_color4f + varray_offset * 4;
 	for (i = 0;i < backendunits;i++)
@@ -933,6 +923,54 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		//{int i;for (i = 0;i < gl_batchelementcount;i++) if (varray_buf_elements3i[i] < gl_batchvertexfirst || varray_buf_elements3i[i] >= (gl_batchvertexfirst + gl_batchvertexcount)) Host_Error("R_Mesh_EndBatch: invalid element #%i (value %i) outside range %i-%i, there were previously %i elements and there are now %i elements, varray_offset is %i\n", i, varray_buf_elements3i[i], gl_batchvertexfirst, gl_batchvertexfirst + gl_batchvertexcount, gl_batchelementcount - numelements, gl_batchelementcount, varray_offset);}
 	}
 #endif
+	else
+	{
+		GL_Backend_RenumberElements(varray_buf_elements3i, numelements, elements, varray_offset);
+		if (r_render.integer)
+		{
+			GL_LockArrays(varray_offset, numverts);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, varray_offset, varray_offset + numverts, numelements, GL_UNSIGNED_INT, varray_buf_elements3i);CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, varray_buf_elements3i);CHECKGLERROR
+			}
+			GL_LockArrays(0, 0);
+		}
+	}
+}
+
+// renders triangles using vertices from the most recent GetSpace call
+// (can be multiple Draw calls per GetSpace)
+void R_Mesh_Draw_NoBatching(int numverts, int numtriangles, const int *elements)
+{
+	int numelements = numtriangles * 3;
+	if (numtriangles == 0 || numverts == 0)
+	{
+		Con_Printf("R_Mesh_Draw_NoBatching(%d, %d, %08p);\n", numverts, numtriangles, elements);
+		return;
+	}
+	c_meshs++;
+	c_meshelements += numelements;
+	CHECKGLERROR
+	if (gl_state.pointervertexcount)
+	{
+		if (r_render.integer)
+		{
+			GL_LockArrays(0, gl_state.pointervertexcount);
+			if (gl_mesh_drawrangeelements.integer && qglDrawRangeElements != NULL)
+			{
+				qglDrawRangeElements(GL_TRIANGLES, 0, gl_state.pointervertexcount, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
+			}
+			else
+			{
+				qglDrawElements(GL_TRIANGLES, numelements, GL_UNSIGNED_INT, elements);CHECKGLERROR
+			}
+			GL_LockArrays(0, 0);
+		}
+	}
 	else
 	{
 		GL_Backend_RenumberElements(varray_buf_elements3i, numelements, elements, varray_offset);

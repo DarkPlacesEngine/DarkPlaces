@@ -18,9 +18,6 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, float lightradius, const float *lightcolor, const matrix4x4_t *matrix_worldtofilter, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
 void R_Shadow_ClearStencil(void);
 
-// buffer space for the requested number of vertices, for processing
-float *R_Shadow_VertexBuffer(int numvertices);
-
 void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *mesh);
 void R_Shadow_Stage_Begin(void);
 void R_Shadow_LoadWorldLightsIfNeeded(void);
