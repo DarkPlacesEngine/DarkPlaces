@@ -231,7 +231,7 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int dlightchanged)
+static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 {
 	if (!r_floatbuildlightmap.integer)
 	{
@@ -241,12 +241,6 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 
 		// update cached lighting info
 		surf->cached_dlight = 0;
-		surf->cached_lightmapscalebit = r_lightmapscalebit;
-		surf->cached_ambient = r_ambient.value;
-		surf->cached_light[0] = d_lightstylevalue[surf->styles[0]];
-		surf->cached_light[1] = d_lightstylevalue[surf->styles[1]];
-		surf->cached_light[2] = d_lightstylevalue[surf->styles[2]];
-		surf->cached_light[3] = d_lightstylevalue[surf->styles[3]];
 
 		smax = (surf->extents[0]>>4)+1;
 		tmax = (surf->extents[1]>>4)+1;
@@ -278,8 +272,6 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 				surf->cached_dlight = R_IntAddDynamicLights(&ent->inversematrix, surf);
 				if (surf->cached_dlight)
 					c_light_polys++;
-				else if (dlightchanged)
-					return; // don't upload if only updating dlights and none mattered
 			}
 
 	// add all the lightmaps
@@ -335,12 +327,6 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 
 		// update cached lighting info
 		surf->cached_dlight = 0;
-		surf->cached_lightmapscalebit = r_lightmapscalebit;
-		surf->cached_ambient = r_ambient.value;
-		surf->cached_light[0] = d_lightstylevalue[surf->styles[0]];
-		surf->cached_light[1] = d_lightstylevalue[surf->styles[1]];
-		surf->cached_light[2] = d_lightstylevalue[surf->styles[2]];
-		surf->cached_light[3] = d_lightstylevalue[surf->styles[3]];
 
 		smax = (surf->extents[0]>>4)+1;
 		tmax = (surf->extents[1]>>4)+1;
@@ -369,8 +355,6 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf, int d
 			surf->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surf);
 			if (surf->cached_dlight)
 				c_light_polys++;
-			else if (dlightchanged)
-				return; // don't upload if only updating dlights and none mattered
 		}
 
 		// add all the lightmaps
@@ -1488,28 +1472,8 @@ void R_PrepareSurfaces(entity_render_t *ent)
 			{
 				c_faces++;
 				surf->visframe = r_framecount;
-#if 1
 				if (surf->cached_dlight && surf->lightmaptexture != NULL && !r_vertexsurfaces.integer)
-					R_BuildLightMap(ent, surf, false); // base lighting changed
-#else
-				if (!r_vertexsurfaces.integer && surf->lightmaptexture != NULL)
-				{
-					if (surf->cached_dlight
-					 || surf->cached_ambient != r_ambient.value
-					 || surf->cached_lightmapscalebit != r_lightmapscalebit)
-						R_BuildLightMap(ent, surf, false); // base lighting changed
-					else if (r_dynamic.integer)
-					{
-						if  (surf->styles[0] != 255 && (d_lightstylevalue[surf->styles[0]] != surf->cached_light[0]
-						 || (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
-						 || (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
-						 || (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
-							R_BuildLightMap(ent, surf, false); // base lighting changed
-						else if (surf->dlightframe == r_framecount && r_dlightmap.integer)
-							R_BuildLightMap(ent, surf, true); // only dlights
-					}
-				}
-#endif
+					R_BuildLightMap(ent, surf);
 			}
 		}
 	}
