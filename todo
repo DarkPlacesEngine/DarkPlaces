@@ -14,11 +14,13 @@
 0 darkplaces: add bullet hole decals to the particlefont (Vermeulen)
 0 darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
 0 darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
+0 darkplaces: add cvars to control lighting quality to allow performance tradeoffs
 0 darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
 0 darkplaces: add lightning beam settings to menu (romi)
 0 darkplaces: add svc_setanglefloat and DP_SVC_SETANGLEFLOAT extension (FrikaC, SeienAbunae)
 0 darkplaces: add te_flamejet builtin and add extension (Supajoe)
 0 darkplaces: add view height to chase_active again (yummyluv)
+0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
 0 darkplaces: bullets don't hit walls at steep angles in id1
 0 darkplaces: can't move when stuck in a monster (SeienAbunae)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
@@ -77,6 +79,7 @@
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
 0 darkplaces: net_slist and the server browser should show servers when they are queried, not just when they reply; which would replace the matching entry (yummyluv)
 0 darkplaces: net_slist should print out "No network." if networking is not initialized (yummyluv)
+0 darkplaces: playerprethink being called before clientconnect? (Electro)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 0 darkplaces: r_shadow should load .ent when importing light entities
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
@@ -216,6 +219,7 @@
 3 darkplaces: add stainmaps to realtime lighting mode
 3 darkplaces: add sv_rate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
 3 darkplaces: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
+3 darkplaces: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Electro)
 3 darkplaces: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
 3 darkplaces: dsound broken, needs to be managed as part of video system (jeremy janzen)
 3 darkplaces: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)
