@@ -473,6 +473,7 @@ void r_shadow_start(void)
 				qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_FogMask"), 4);CHECKGLERROR
 			}
 		}
+		qglUseProgramObjectARB(0);
 		if (fragstring)
 			Mem_Free(fragstring);
 		if (vertstring)
