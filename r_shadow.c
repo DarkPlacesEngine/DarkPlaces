@@ -1214,6 +1214,7 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, co
 	}
 }
 
+#define USETEXMATRIX 0 // broken
 void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, int lighting)
 {
 	int renders;
@@ -1240,15 +1241,20 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(bumptexture);
-				m.pointer_texcoord[0] = texcoord2f;
 				m.texcombinergb[0] = GL_REPLACE;
+				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				m.tex3d[2] = R_GetTexture(r_shadow_attenuation3dtexture);
-				m.pointer_texcoord[2] = varray_texcoord3f[2];
+#if USETEXMATRIX
+				m.pointer_texcoord3f[2] = vertex3f;
+				m.texmatrix[2] = *matrix_modeltoattenuationxyz;
+#else
+				m.pointer_texcoord3f[2] = varray_texcoord3f[2];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[2], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1257,7 +1263,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1265,8 +1271,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-					m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+					m.pointer_texcoord3f[1] = vertex3f;
+					m.texmatrix[1] = *matrix_modeltolight;
+#else
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
 				}
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
@@ -1291,8 +1302,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
-				m.pointer_texcoord[0] = varray_texcoord3f[0];
+#if USETEXMATRIX
+				m.pointer_texcoord3f[0] = vertex3f;
+				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
+#else
+				m.pointer_texcoord3f[0] = varray_texcoord3f[0];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1301,7 +1317,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(bumptexture);
@@ -1309,7 +1325,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				R_Mesh_State(&m);
 				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
@@ -1318,7 +1334,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1326,8 +1342,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-					m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+					m.pointer_texcoord3f[1] = vertex3f;
+					m.texmatrix[1] = *matrix_modeltolight;
+#else
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
 				}
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
@@ -1356,7 +1377,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
@@ -1366,14 +1387,19 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
 				m.pointer_texcoord[0] = texcoord2f;
 				m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+				m.pointer_texcoord3f[1] = vertex3f;
+				m.texmatrix[1] = *matrix_modeltoattenuationxyz;
+#else
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
 				GL_ColorMask(1,1,1,0);
@@ -1401,14 +1427,24 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				m.tex[2] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[2] = vertex3f;
+				m.texmatrix[2] = *matrix_modeltoattenuationxyz;
+#else
 				m.pointer_texcoord[2] = varray_texcoord2f[2];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[2], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				m.tex[3] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[3] = vertex3f;
+				m.texmatrix[3] = *matrix_modeltoattenuationz;
+#else
 				m.pointer_texcoord[3] = varray_texcoord2f[3];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[3], numverts, vertex3f, matrix_modeltoattenuationz);
+#endif
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1417,7 +1453,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1425,8 +1461,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-					m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+					m.pointer_texcoord3f[1] = vertex3f;
+					m.texmatrix[1] = *matrix_modeltolight;
+#else
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
 				}
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
@@ -1451,11 +1492,21 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[0] = vertex3f;
+				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
+#else
 				m.pointer_texcoord[0] = varray_texcoord2f[0];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[1] = vertex3f;
+				m.texmatrix[1] = *matrix_modeltoattenuationz;
+#else
 				m.pointer_texcoord[1] = varray_texcoord2f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationz);
+#endif
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
 				GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1464,7 +1515,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(bumptexture);
@@ -1472,7 +1523,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Diffuse_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin);
 				R_Mesh_State(&m);
 				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
@@ -1481,7 +1532,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(basetexture);
@@ -1489,8 +1540,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-					m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+					m.pointer_texcoord3f[1] = vertex3f;
+					m.texmatrix[1] = *matrix_modeltolight;
+#else
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
 				}
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
@@ -1525,7 +1581,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
@@ -1536,7 +1592,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				R_Mesh_State(&m);
@@ -1554,12 +1610,17 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 				GL_LockArrays(0, 0);
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex3d[0] = R_GetTexture(r_shadow_attenuation3dtexture);
-				m.pointer_texcoord[0] = varray_texcoord3f[0];
+#if USETEXMATRIX
+				m.pointer_texcoord3f[0] = vertex3f;
+				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
+#else
+				m.pointer_texcoord3f[0] = varray_texcoord3f[0];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				R_Mesh_State(&m);
 				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 				GL_LockArrays(0, numverts);
@@ -1567,7 +1628,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(glosstexture);
@@ -1575,8 +1636,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-					m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+					m.pointer_texcoord3f[1] = vertex3f;
+					m.texmatrix[1] = *matrix_modeltolight;
+#else
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
 				}
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
@@ -1604,7 +1670,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
@@ -1615,7 +1681,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				R_Mesh_State(&m);
@@ -1633,14 +1699,19 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 				GL_LockArrays(0, 0);
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(glosstexture);
 				m.pointer_texcoord[0] = texcoord2f;
 				m.tex3d[1] = R_GetTexture(r_shadow_attenuation3dtexture);
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+				m.pointer_texcoord3f[1] = vertex3f;
+				m.texmatrix[1] = *matrix_modeltoattenuationxyz;
+#else
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
 				GL_ColorMask(1,1,1,0);
@@ -1667,7 +1738,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				m.pointer_texcoord[0] = texcoord2f;
 				m.texcubemap[1] = R_GetTexture(r_shadow_normalcubetexture);
 				m.texcombinergb[1] = GL_DOT3_RGBA_ARB;
-				m.pointer_texcoord[1] = varray_texcoord3f[1];
+				m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 				R_Shadow_GenTexCoords_Specular_NormalCubeMap(varray_texcoord3f[1], numverts, vertex3f, svector3f, tvector3f, normal3f, relativelightorigin, relativeeyeorigin);
 				R_Mesh_State(&m);
 				GL_ColorMask(0,0,0,1);
@@ -1678,7 +1749,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				R_Mesh_State(&m);
@@ -1696,15 +1767,25 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
 				GL_LockArrays(0, 0);
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[0] = vertex3f;
+				m.texmatrix[0] = *matrix_modeltoattenuationxyz;
+#else
 				m.pointer_texcoord[0] = varray_texcoord2f[0];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[0], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 				m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[1] = vertex3f;
+				m.texmatrix[1] = *matrix_modeltoattenuationz;
+#else
 				m.pointer_texcoord[1] = varray_texcoord2f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationz);
+#endif
 				R_Mesh_State(&m);
 				GL_BlendFunc(GL_DST_ALPHA, GL_ZERO);
 				GL_LockArrays(0, numverts);
@@ -1712,7 +1793,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				GL_LockArrays(0, 0);
 				c_rt_lightmeshes++;
 				c_rt_lighttris += numtriangles;
-
+	
 				memset(&m, 0, sizeof(m));
 				m.pointer_vertex = vertex3f;
 				m.tex[0] = R_GetTexture(glosstexture);
@@ -1720,8 +1801,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 				if (lightcubemap)
 				{
 					m.texcubemap[1] = R_GetTexture(lightcubemap);
-					m.pointer_texcoord[1] = varray_texcoord3f[1];
+#if USETEXMATRIX
+					m.pointer_texcoord3f[1] = vertex3f;
+					m.texmatrix[1] = *matrix_modeltolight;
+#else
+					m.pointer_texcoord3f[1] = varray_texcoord3f[1];
 					R_Shadow_Transform_Vertex3f_TexCoord3f(varray_texcoord3f[1], numverts, vertex3f, matrix_modeltolight);
+#endif
 				}
 				R_Mesh_State(&m);
 				GL_LockArrays(0, numverts);
@@ -1757,8 +1843,13 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			{
 				// voodoo2
 				m.tex[1] = R_GetTexture(r_shadow_attenuation2dtexture);
+#if USETEXMATRIX
+				m.pointer_texcoord3f[1] = vertex3f;
+				m.texmatrix[1] = *matrix_modeltoattenuationxyz;
+#else
 				m.pointer_texcoord[1] = varray_texcoord2f[1];
 				R_Shadow_Transform_Vertex3f_TexCoord2f(varray_texcoord2f[1], numverts, vertex3f, matrix_modeltoattenuationxyz);
+#endif
 			}
 			R_Mesh_State(&m);
 			for (renders = 0;renders < 64 && (color2[0] > 0 || color2[1] > 0 || color2[2] > 0);renders++, color2[0]--, color2[1]--, color2[2]--)

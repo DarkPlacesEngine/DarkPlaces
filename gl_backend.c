@@ -1009,8 +1009,16 @@ void R_Mesh_State(const rmeshstate_t *m)
 			GL_ActiveTexture(i);
 			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (unit->alphascale = scale));CHECKGLERROR
 		}
-		arrayis3d = unit->t3d || unit->tcubemap;
-		texcoords = m->pointer_texcoord[i];
+		if (m->pointer_texcoord3f[i])
+		{
+			arrayis3d = true;
+			texcoords = m->pointer_texcoord3f[i];
+		}
+		else
+		{
+			arrayis3d = false;
+			texcoords = m->pointer_texcoord[i];
+		}
 		if (texcoords && !unit->t1d && !unit->t2d && !unit->t3d && !unit->tcubemap)
 			texcoords = NULL;
 		if (unit->pointer_texcoord != texcoords || unit->arrayis3d != arrayis3d)
