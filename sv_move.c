@@ -161,14 +161,11 @@ qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink)
 
 	trace = SV_Move (neworg, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 
-	if (trace.allsolid)
-		return false;
-
 	if (trace.startsolid)
 	{
 		neworg[2] -= sv_stepheight.value;
 		trace = SV_Move (neworg, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
-		if (trace.allsolid || trace.startsolid)
+		if (trace.startsolid)
 			return false;
 	}
 	if (trace.fraction == 1)
