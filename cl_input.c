@@ -49,7 +49,7 @@ state bit 2 is edge triggered on the down to up transition
 kbutton_t	in_mlook, in_klook;
 kbutton_t	in_left, in_right, in_forward, in_back;
 kbutton_t	in_lookup, in_lookdown, in_moveleft, in_moveright;
-kbutton_t	in_strafe, in_speed, in_use, in_jump, in_attack;
+kbutton_t	in_strafe, in_speed, in_jump, in_attack;
 kbutton_t	in_up, in_down;
 // LordHavoc: added 6 new buttons
 kbutton_t	in_button3, in_button4, in_button5, in_button6, in_button7, in_button8;
@@ -168,8 +168,6 @@ void IN_Button7Up(void) {KeyUp(&in_button7);}
 void IN_Button8Down(void) {KeyDown(&in_button8);}
 void IN_Button8Up(void) {KeyUp(&in_button8);}
 
-void IN_UseDown (void) {KeyDown(&in_use);}
-void IN_UseUp (void) {KeyUp(&in_use);}
 void IN_JumpDown (void) {KeyDown(&in_jump);}
 void IN_JumpUp (void) {KeyUp(&in_jump);}
 
@@ -503,8 +501,6 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-speed", IN_SpeedUp);
 	Cmd_AddCommand ("+attack", IN_AttackDown);
 	Cmd_AddCommand ("-attack", IN_AttackUp);
-	Cmd_AddCommand ("+use", IN_UseDown);
-	Cmd_AddCommand ("-use", IN_UseUp);
 	Cmd_AddCommand ("+jump", IN_JumpDown);
 	Cmd_AddCommand ("-jump", IN_JumpUp);
 	Cmd_AddCommand ("impulse", IN_Impulse);
