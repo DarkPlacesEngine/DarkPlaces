@@ -26,7 +26,6 @@
 -d (jeremy janzen) darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 -d (joe hill) dpmod: make grapple off-hand (joe hill)
 -d (mashakos) darkplaces editlights: add r_editlights_editall command, same as _edit but affects all lights (mashakos)
--d (metlslime) darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
 -f (Mitchell) darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f (Option42) darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
@@ -400,6 +399,7 @@ d darkplaces server: figure out what's making monsters act like notarget is on w
 d darkplaces server: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
 d darkplaces server: make qc profile command post an error message instead of crashing when used during demo playback (Sajt)
 d darkplaces server: prevent player name changes faster than once every 5 seconds (sublim3)
+d darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
 d darkplaces: Host_Name_f validate player names, stripping \r and \n
 d darkplaces: PF_traceline/PF_tracebox now work with world as the edict
 d darkplaces: Quake3 bsp support (Vermeulen, Mitchell, Sajt)
