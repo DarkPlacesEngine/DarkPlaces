@@ -162,30 +162,31 @@ rtexture_t *r_shadow_blankwhitetexture;
 // used only for light filters (cubemaps)
 rtexturepool_t *r_shadow_filters_texturepool;
 
-cvar_t r_shadow_realtime_world_lightmaps = {0, "r_shadow_realtime_world_lightmaps", "0"};
+cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
+cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
+cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
+cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
+cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
+cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25"};
+cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1"};
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
-cvar_t r_shadow_realtime_world = {0, "r_shadow_realtime_world", "0"};
-cvar_t r_shadow_realtime_dlight = {0, "r_shadow_realtime_dlight", "1"};
-cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
-cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
-cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1"};
-cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25"};
-cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
-cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
-cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
-cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
 cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0"};
 cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000"};
-cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
+cvar_t r_shadow_realtime_dlight = {0, "r_shadow_realtime_dlight", "1"};
+cvar_t r_shadow_realtime_dlight_shadows = {0, "r_shadow_realtime_dlight_shadows", "0"};
+cvar_t r_shadow_realtime_world = {0, "r_shadow_realtime_world", "0"};
+cvar_t r_shadow_realtime_world_dlightshadows = {0, "r_shadow_realtime_world_dlightshadows", "1"};
+cvar_t r_shadow_realtime_world_lightmaps = {0, "r_shadow_realtime_world_lightmaps", "0"};
+cvar_t r_shadow_realtime_world_shadows = {0, "r_shadow_realtime_world_shadows", "1"};
+cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegeneration", "1"};
-cvar_t r_shadow_worldshadows = {0, "r_shadow_worldshadows", "1"};
-cvar_t r_shadow_dlightshadows = {CVAR_SAVE, "r_shadow_dlightshadows", "1"};
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
-cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
+cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
+cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
 
 int c_rt_lights, c_rt_clears, c_rt_scissored;
@@ -274,28 +275,29 @@ void R_Shadow_Help_f(void)
 	Con_Printf(
 "Documentation on r_shadow system:\n"
 "Settings:\n"
+"r_shadow_bumpscale_basetexture : base texture as bumpmap with this scale\n"
+"r_shadow_bumpscale_bumpmap : depth scale for bumpmap conversion\n"
+"r_shadow_debuglight : render only this light number (-1 = all)\n"
+"r_shadow_gloss 0/1/2 : no gloss, gloss textures only, force gloss\n"
+"r_shadow_gloss2intensity : brightness of forced gloss\n"
+"r_shadow_glossintensity : brightness of textured gloss\n"
 "r_shadow_lightattenuationpower : used to generate attenuation texture\n"
 "r_shadow_lightattenuationscale : used to generate attenuation texture\n"
 "r_shadow_lightintensityscale : scale rendering brightness of all lights\n"
-"r_shadow_realtime_world : use realtime world light rendering\n"
-"r_shadow_realtime_dlight : use high quality dlight rendering\n"
-"r_shadow_realtime_world_lightmaps : use lightmaps in addition to rtlights\n"
-"r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
-"r_shadow_gloss 0/1/2 : no gloss, gloss textures only, force gloss\n"
-"r_shadow_glossintensity : brightness of textured gloss\n"
-"r_shadow_gloss2intensity : brightness of forced gloss\n"
-"r_shadow_debuglight : render only this light number (-1 = all)\n"
-"r_shadow_scissor : use scissor optimization\n"
-"r_shadow_bumpscale_bumpmap : depth scale for bumpmap conversion\n"
-"r_shadow_bumpscale_basetexture : base texture as bumpmap with this scale\n"
 "r_shadow_polygonfactor : nudge shadow volumes closer/further\n"
 "r_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_portallight : use portal visibility for static light precomputation\n"
 "r_shadow_projectdistance : shadow volume projection distance\n"
-"r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
+"r_shadow_realtime_dlight : use high quality dynamic lights in normal mode\n"
+"r_shadow_realtime_dlight_shadows : cast shadows from dlights\n"
+"r_shadow_realtime_world : use high quality world lighting mode\n"
+"r_shadow_realtime_world_dlightshadows : cast shadows from dlights\n"
+"r_shadow_realtime_world_lightmaps : use lightmaps in addition to lights\n"
+"r_shadow_realtime_world_shadows : cast shadows from world lights\n"
+"r_shadow_scissor : use scissor optimization\n"
 "r_shadow_singlepassvolumegeneration : selects shadow volume algorithm\n"
-"r_shadow_worldshadows : enable world shadows\n"
-"r_shadow_dlightshadows : enable dlight shadows\n"
+"r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
+"r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
 "Commands:\n"
 "r_shadow_help : this help\n"
 	);
@@ -303,30 +305,31 @@ void R_Shadow_Help_f(void)
 
 void R_Shadow_Init(void)
 {
+	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
+	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
+	Cvar_RegisterVariable(&r_shadow_cull);
+	Cvar_RegisterVariable(&r_shadow_debuglight);
+	Cvar_RegisterVariable(&r_shadow_gloss);
+	Cvar_RegisterVariable(&r_shadow_gloss2intensity);
+	Cvar_RegisterVariable(&r_shadow_glossintensity);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
-	Cvar_RegisterVariable(&r_shadow_realtime_world);
-	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
-	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
-	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
-	Cvar_RegisterVariable(&r_shadow_gloss);
-	Cvar_RegisterVariable(&r_shadow_glossintensity);
-	Cvar_RegisterVariable(&r_shadow_gloss2intensity);
-	Cvar_RegisterVariable(&r_shadow_debuglight);
-	Cvar_RegisterVariable(&r_shadow_scissor);
-	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
-	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
 	Cvar_RegisterVariable(&r_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_portallight);
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
-	Cvar_RegisterVariable(&r_shadow_texture3d);
+	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
+	Cvar_RegisterVariable(&r_shadow_realtime_dlight_shadows);
+	Cvar_RegisterVariable(&r_shadow_realtime_world);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_dlightshadows);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_shadows);
+	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
-	Cvar_RegisterVariable(&r_shadow_worldshadows);
-	Cvar_RegisterVariable(&r_shadow_dlightshadows);
 	Cvar_RegisterVariable(&r_shadow_staticworldlights);
-	Cvar_RegisterVariable(&r_shadow_cull);
+	Cvar_RegisterVariable(&r_shadow_texture3d);
+	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -2049,7 +2052,24 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	else
 		cubemaptexture = NULL;
 
-	shadow = rtlight->shadow && (rtlight->isstatic ? r_shadow_worldshadows.integer : r_shadow_dlightshadows.integer);
+#if 1
+	shadow = rtlight->shadow && (rtlight->isstatic ? r_shadow_realtime_world_shadows.integer : (r_shadow_realtime_world.integer ? r_shadow_realtime_world_dlightshadows.integer : r_shadow_realtime_dlight_shadows.integer));
+#else
+	shadow = false;
+	if (rtlight->shadow)
+	{
+		if (rtlight->isstatic)
+			shadow = r_shadow_realtime_world_shadows.integer;
+		else
+		{
+			if (r_shadow_realtime_world.integer)
+				shadow = r_shadow_realtime_world_dlightshadows.integer;
+			else
+				shadow = r_shadow_realtime_dlight_shadows.integer;
+		}
+	}
+#endif
+
 	if (shadow && (gl_stencil || visiblevolumes))
 	{
 		if (!visiblevolumes)
