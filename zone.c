@@ -21,8 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-// LordHavoc: everyone used a -zone 512 anyway, so...
-#define	DYNAMIC_SIZE	0x80000
+// LordHavoc: everyone used a -zone 512, but 128k is sufficient usually, I think...
+#define	DYNAMIC_SIZE	0x20000
 //#define	DYNAMIC_SIZE	0xc000
 
 #define	ZONEID	0x1d4a11
