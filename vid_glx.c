@@ -60,7 +60,6 @@ static int p_mouse_x, p_mouse_y;
 
 cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1"};
 cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1"};
-cvar_t m_filter = {0, "m_filter", "0"};
 
 qboolean vidmode_ext = false;
 
@@ -635,7 +634,6 @@ void VID_Init(void)
 
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
-	Cvar_RegisterVariable (&m_filter);
 
 // interpret command-line params
 
@@ -830,53 +828,12 @@ void IN_Commands (void)
 {
 }
 
-/*
-===========
-IN_Move
-===========
-*/
-void IN_MouseMove (usercmd_t *cmd)
-{
-	if (!mouse_avail)
-		return;
-
-	if (m_filter.integer)
-	{
-		mouse_x = (mouse_x + old_mouse_x) * 0.5;
-		mouse_y = (mouse_y + old_mouse_y) * 0.5;
-
-		old_mouse_x = mouse_x;
-		old_mouse_y = mouse_y;
-	}
-
-	// LordHavoc: viewzoom affects mouse sensitivity for sniping
-	mouse_x *= sensitivity.value * cl.viewzoom;
-	mouse_y *= sensitivity.value * cl.viewzoom;
-
-	if (in_strafe.state & 1)
-		cmd->sidemove += m_side.value * mouse_x;
-	else
-		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
-
-	//if (freelook)
-		V_StopPitchDrift ();
-
-	if (/*freelook && */!(in_strafe.state & 1))
-		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-	else
-	{
-		if ((in_strafe.state & 1) && noclip_anglehack)
-			cmd->upmove -= m_forward.value * mouse_y;
-		else
-			cmd->forwardmove -= m_forward.value * mouse_y;
-	}
-	mouse_x = mouse_y = 0.0;
-}
-
 void IN_Move (usercmd_t *cmd)
 {
-	IN_MouseMove(cmd);
-	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
+	if (mouseavail)
+		In_Mouse(cmd, mouse_x, mouse_y);
+	mouse_x = 0;
+	mouse_y = 0;
 }
 
 

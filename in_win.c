@@ -33,8 +33,6 @@ HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
 	LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
 
 // mouse variables
-cvar_t	m_filter = {CVAR_SAVE, "m_filter","0"};
-
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
 POINT		current_pos;
@@ -438,9 +436,6 @@ IN_Init
 */
 void IN_Init (void)
 {
-	// mouse variables
-	Cvar_RegisterVariable (&m_filter);
-
 	// joystick variables
 	Cvar_RegisterVariable (&in_joystick);
 	Cvar_RegisterVariable (&joy_name);
@@ -633,52 +628,11 @@ void IN_MouseMove (usercmd_t *cmd)
 		my_accum = 0;
 	}
 
-//if (mx ||  my)
-//	Con_DPrintf("mx=%d, my=%d\n", mx, my);
+	IN_Mouse(cmd, mx, my);
 
-	if (m_filter.integer)
-	{
-		mouse_x = (mx + old_mouse_x) * 0.5;
-		mouse_y = (my + old_mouse_y) * 0.5;
-	}
-	else
-	{
-		mouse_x = mx;
-		mouse_y = my;
-	}
-
-	old_mouse_x = mx;
-	old_mouse_y = my;
-
-	// LordHavoc: viewzoom affects mouse sensitivity for sniping
-	mouse_x *= sensitivity.value * cl.viewzoom;
-	mouse_y *= sensitivity.value * cl.viewzoom;
-
-// add mouse X/Y movement to cmd
-	if ( (in_strafe.state & 1) || (lookstrafe.integer && mouselook))
-		cmd->sidemove += m_side.value * mouse_x;
-	else
-		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
-
-	if (mouselook)
-		V_StopPitchDrift ();
-	
-	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
-	if (mouselook && !(in_strafe.state & 1))
-		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-	else
-	{
-		if ((in_strafe.state & 1) && noclip_anglehack)
-			cmd->upmove -= m_forward.value * mouse_y;
-		else
-			cmd->forwardmove -= m_forward.value * mouse_y;
-	}
-
-// if the mouse has moved, force it to the center, so there's room to move
-	if (mx || my)
-	{
+	// if the mouse has moved, force it to the center, so there's room to move
+	if (!dinput && (mx || my))
 		SetCursorPos (window_center_x, window_center_y);
-	}
 }
 
 
@@ -1182,10 +1136,4 @@ void IN_JoyMove (usercmd_t *cmd)
 			break;
 		}
 	}
-
-	// bounds check pitch
-	if (cl.viewangles[PITCH] > 80.0)
-		cl.viewangles[PITCH] = 80.0;
-	if (cl.viewangles[PITCH] < -70.0)
-		cl.viewangles[PITCH] = -70.0;
 }
