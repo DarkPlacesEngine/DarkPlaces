@@ -82,6 +82,8 @@ static int vid_usingmouse;
 static HICON hIcon;
 
 HWND mainwindow;
+static HDC	 baseDC;
+static HGLRC baseRC;
 
 //HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
@@ -302,7 +304,6 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 
 void VID_Finish (void)
 {
-	HDC hdc;
 	int vid_usemouse;
 	static int	old_vsync	= -1;
 
@@ -318,13 +319,7 @@ void VID_Finish (void)
 	{
 		if (r_speeds.integer || gl_finish.integer)
 			qglFinish();
-		if (qwglGetCurrentDC) 
-			SwapBuffers(qwglGetCurrentDC());
-		else {
-			hdc = GetDC(mainwindow);
-			SwapBuffers(hdc);
-			ReleaseDC(mainwindow, hdc);
-		}
+		SwapBuffers(baseDC);
 	}
 
 // handle the mouse state when windowed if that's changed
@@ -793,7 +788,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	};
 	int pixelformat;
 	DWORD WindowStyle, ExWindowStyle;
-	HGLRC baseRC;
 	int CenterX, CenterY;
 	const char *gldrivername;
 	int depth;
@@ -938,19 +932,19 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	// fix the leftover Alt from any Alt-Tab or the like that switched us away
 	ClearAllStates ();
 
-	hdc = GetDC(mainwindow);
+	baseDC = GetDC(mainwindow);
 
-	if ((pixelformat = ChoosePixelFormat(hdc, &pfd)) == 0)
+	if ((pixelformat = ChoosePixelFormat(baseDC, &pfd)) == 0)
 	{
 		VID_Shutdown();
-		Con_Printf("ChoosePixelFormat(%d, %p) failed\n", hdc, &pfd);
+		Con_Printf("ChoosePixelFormat(%d, %p) failed\n", baseDC, &pfd);
 		return false;
 	}
 
-	if (SetPixelFormat(hdc, pixelformat, &pfd) == false)
+	if (SetPixelFormat(baseDC, pixelformat, &pfd) == false)
 	{
 		VID_Shutdown();
-		Con_Printf("SetPixelFormat(%d, %d, %p) failed\n", hdc, pixelformat, &pfd);
+		Con_Printf("SetPixelFormat(%d, %d, %p) failed\n", baseDC, pixelformat, &pfd);
 		return false;
 	}
 
@@ -961,17 +955,17 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 		return false;
 	}
 
-	baseRC = qwglCreateContext(hdc);
+	baseRC = qwglCreateContext(baseDC);
 	if (!baseRC)
 	{
 		VID_Shutdown();
 		Con_Print("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.\n");
 		return false;
 	}
-	if (!qwglMakeCurrent(hdc, baseRC))
+	if (!qwglMakeCurrent(baseDC, baseRC))
 	{
 		VID_Shutdown();
-		Con_Printf("wglMakeCurrent(%d, %d) failed\n", hdc, baseRC);
+		Con_Printf("wglMakeCurrent(%d, %d) failed\n", baseDC, baseRC);
 		return false;
 	}
 
@@ -993,7 +987,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	gl_videosyncavailable = false;
 
 	if (qwglGetExtensionsStringARB)
-		gl_platformextensions = qwglGetExtensionsStringARB(hdc);
+		gl_platformextensions = qwglGetExtensionsStringARB(baseDC);
 
 // COMMANDLINEOPTION: Windows WGL: -novideosync disables WGL_EXT_swap_control
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
@@ -1024,9 +1018,6 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 static void IN_Shutdown(void);
 void VID_Shutdown (void)
 {
-	HGLRC hRC = 0;
-	HDC hDC = 0;
-
 	if(vid_initialized == false)
 		return;
 
@@ -1034,18 +1025,14 @@ void VID_Shutdown (void)
 
 	vid_initialized = false;
 	IN_Shutdown();
-	if (qwglGetCurrentContext)
-		hRC = qwglGetCurrentContext();
-	if (qwglGetCurrentDC)
-		hDC = qwglGetCurrentDC();
 	if (qwglMakeCurrent)
 		qwglMakeCurrent(NULL, NULL);
-	if (hRC && qwglDeleteContext)
-		qwglDeleteContext(hRC);
+	if (baseRC && qwglDeleteContext)
+		qwglDeleteContext(baseRC);
 	// close the library before we get rid of the window
 	GL_CloseLibrary();
-	if (hDC && mainwindow)
-		ReleaseDC(mainwindow, hDC);
+	if (baseDC && mainwindow)
+		ReleaseDC(mainwindow, baseDC);
 	AppActivate(false, false);
 	if (mainwindow)
 		DestroyWindow(mainwindow);
