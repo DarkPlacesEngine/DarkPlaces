@@ -943,13 +943,11 @@ void SV_WalkMove (edict_t *ent)
 
 	// check for stuckness, possibly due to the limited precision of floats
 	// in the clipping hulls
-	/*
 	if (clip
 	 && fabs(oldorg[1] - ent->v.origin[1]) < 0.03125
 	 && fabs(oldorg[0] - ent->v.origin[0]) < 0.03125)
 		// stepping up didn't make any progress
 		clip = SV_TryUnstick (ent, oldvel);
-	*/
 
 	// extra friction based on view angle
 	if (clip & 2 && sv_wallfriction.integer)
@@ -961,7 +959,7 @@ void SV_WalkMove (edict_t *ent)
 
 	if (downtrace.plane.normal[2] > 0.7)
 	{
-		if (ent->v.solid == SOLID_BSP)
+		//if (ent->v.solid == SOLID_BSP)
 		{
 			ent->v.flags =	(int)ent->v.flags | FL_ONGROUND;
 			ent->v.groundentity = EDICT_TO_PROG(downtrace.ent);
