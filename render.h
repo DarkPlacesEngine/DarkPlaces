@@ -67,79 +67,52 @@ extern cvar_t gl_transform;
 
 //=============================================================================
 
+typedef struct entity_render_s
+{
+	vec3_t	origin;
+	vec3_t	angles;
+
+	int		visframe;		// last frame this entity was found in an active leaf
+
+	model_t	*model;			// NULL = no model
+	int		frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
+	int		colormap;		// entity shirt and pants colors
+	int		effects;		// light, particles, etc
+	int		skinnum;		// for Alias models
+	int		flags;			// render flags
+
+	float	alpha;			// opacity (alpha) of the model
+	float	scale;			// size the model is shown
+	float	trail_time;		// last time for trail rendering
+	float	colormod[3];	// color tint for model
+
+	model_t	*lerp_model;	// lerp resets when model changes
+	int		frame1;			// frame that the model is interpolating from
+	int		frame2;			// frame that the model is interpolating to
+	double	lerp_starttime;	// start of this transition
+	double	framelerp;		// interpolation factor, usually computed from lerp_starttime
+	double	frame1start;	// time frame1 began playing (for framegroup animations)
+	double	frame2start;	// time frame2 began playing (for framegroup animations)
+}
+entity_render_t;
+
 typedef struct entity_s
 {
-	entity_state_t			state_baseline;	// baseline for entity
-	entity_state_t			state_previous;	// previous state (interpolating from this)
-	entity_state_t			state_current;	// current state (interpolating to this)
+	entity_state_t state_baseline;	// baseline for entity
+	entity_state_t state_previous;	// previous state (interpolating from this)
+	entity_state_t state_current;	// current state (interpolating to this)
 
-	struct
-	{
-		vec3_t					origin;
-		vec3_t					angles;	
-
-		// LordHavoc: added support for alpha transprency and other effects
-		float					alpha;			// opacity (alpha) of the model
-		float					colormod[3];	// color tint for model
-		float					scale;			// size the model is shown
-		float					glowsize;		// how big the glow is
-		byte					glowcolor;		// color of glow and particle trail (paletted)
-		byte					flags;			// render flags
-
-		struct model_s			*model;			// NULL = no model
-		int						frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
-		int						colormap;
-		int						effects;		// light, particles, etc
-		int						skinnum;		// for Alias models
-
-		int						visframe;		// last frame this entity was found in an active leaf
-
-		struct model_s			*lerp_model;	// lerp resets when model changes
-		double					lerp_starttime;	// start of this transition
-		int						frame1;			// frame that the model is interpolating from
-		int						frame2;			// frame that the model is interpolating to
-		double					framelerp;		// interpolation factor, usually computed from lerp_starttime
-		double					frame1start;	// time frame1 began playing (for framegroup animations)
-		double					frame2start;	// time frame2 began playing (for framegroup animations)
-
-		int						dlightframe;	// dynamic lighting
-		int						dlightbits[8];
-		
-		float					trail_time;
-	}
-	render;
+	entity_render_t render;
 } entity_t;
 
 typedef struct
 {
 	vrect_t		vrect;				// subwindow in video for refresh
-									// FIXME: not need vrect next field here?
-	/*
-	vrect_t		aliasvrect;			// scaled Alias version
-	int			vrectright, vrectbottom;	// right & bottom screen coords
-	int			aliasvrectright, aliasvrectbottom;	// scaled Alias versions
-	float		vrectrightedge;			// rightmost right edge we care about,
-										//  for use in edge list
-	float		fvrectx, fvrecty;		// for floating-point compares
-	float		fvrectx_adj, fvrecty_adj; // left and top edges, for clamping
-	int			vrect_x_adj_shift20;	// (vrect.x + 0.5 - epsilon) << 20
-	int			vrectright_adj_shift20;	// (vrectright + 0.5 - epsilon) << 20
-	float		fvrectright_adj, fvrectbottom_adj;
-										// right and bottom edges, for clamping
-	float		fvrectright;			// rightmost edge, for Alias clamping
-	float		fvrectbottom;			// bottommost edge, for Alias clamping
-	float		horizontalFieldOfView;	// at Z = 1.0, this many X is visible 
-										// 2.0 = 90 degrees
-	float		xOrigin;			// should probably always be 0.5
-	float		yOrigin;			// between be around 0.3 to 0.5
-	*/
 
 	vec3_t		vieworg;
 	vec3_t		viewangles;
-	
-	float		fov_x, fov_y;
 
-//	int			ambientlight;
+	float		fov_x, fov_y;
 } refdef_t;
 
 

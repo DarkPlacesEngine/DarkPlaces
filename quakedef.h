@@ -198,12 +198,11 @@ extern int buildnumber;
 #include "cmd.h"
 #include "sbar.h"
 #include "sound.h"
+#include "model_shared.h"
 #include "render.h"
 #include "client.h"
 #include "progs.h"
 #include "server.h"
-
-#include "model_shared.h"
 
 #include "input.h"
 #include "world.h"

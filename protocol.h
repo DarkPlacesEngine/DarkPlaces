@@ -273,11 +273,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 typedef struct
 {
 	double	time; // time this state was updated
-	vec3_t	origin;
-	vec3_t	angles;
-	int		effects;
+	unsigned short active;
 	unsigned short modelindex;
 	unsigned short frame;
+	unsigned short effects;
+	vec3_t	origin;
+	vec3_t	angles;
 	byte	colormap;
 	byte	skin;
 	byte	alpha;
@@ -286,7 +287,6 @@ typedef struct
 	byte	glowcolor;
 	byte	colormod;
 	byte	flags;
-	byte	active;
 } entity_state_t;
 
 void ClearStateToDefault(entity_state_t *s);
