@@ -121,7 +121,7 @@ int R_AddDynamicLights (msurface_t *surf)
 		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
-		VectorSubtract (cl_dlights[lnum].origin, currententity->origin, local);
+		VectorSubtract (cl_dlights[lnum].origin, currententity->render.origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
@@ -280,7 +280,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	lightmap = surf->samples;
 
 // set to full bright if no light data
-	if ((currententity && (currententity->effects & EF_FULLBRIGHT)) || !cl.worldmodel->lightdata)
+	if ((currententity && (currententity->render.effects & EF_FULLBRIGHT)) || !cl.worldmodel->lightdata)
 	{
 		bl = blocklights;
 		for (i=0 ; i<size ; i++)
@@ -374,7 +374,7 @@ texture_t *R_TextureAnimation (texture_t *base)
 	int		relative;
 	int		count;
 
-	if (currententity->frame)
+	if (currententity->render.frame)
 	{
 		if (base->alternate_anims)
 			base = base->alternate_anims;
@@ -819,14 +819,14 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 	if (s->dlightframe == r_dlightframecount)
 		RSurf_Light(s->dlightbits, s->polys);
 	wv = wvert;
-	if (isbmodel && (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1))
+	if (isbmodel && (currententity->render.colormod[0] != 1 || currententity->render.colormod[1] != 1 || currententity->render.colormod[2] != 1))
 	{
 		for (p = s->polys;p;p = p->next)
 		{
 			v = p->verts[0];
-			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currententity->render.effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currententity->colormod[0], wv[4] * currententity->colormod[1], wv[5] * currententity->colormod[2], alpha);
+				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currententity->render.colormod[0], wv[4] * currententity->render.colormod[1], wv[5] * currententity->render.colormod[2], alpha);
 			transpolyend();
 		}
 	}
@@ -835,7 +835,7 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 		for (p = s->polys;p;p = p->next)
 		{
 			v = p->verts[0];
-			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			transpolybegin(R_GetTexture(t->texture), R_GetTexture(t->glowtexture), 0, currententity->render.effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
 				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3], wv[4], wv[5], alpha);
 			transpolyend();
@@ -932,22 +932,22 @@ void R_DrawBrushModel (entity_t *e)
 
 	currententity = e;
 
-	clmodel = e->model;
+	clmodel = e->render.model;
 
-	if (e->angles[0] || e->angles[1] || e->angles[2])
+	if (e->render.angles[0] || e->render.angles[1] || e->render.angles[2])
 	{
 		rotated = true;
 		for (i=0 ; i<3 ; i++)
 		{
-			mins[i] = e->origin[i] - clmodel->radius;
-			maxs[i] = e->origin[i] + clmodel->radius;
+			mins[i] = e->render.origin[i] - clmodel->radius;
+			maxs[i] = e->render.origin[i] + clmodel->radius;
 		}
 	}
 	else
 	{
 		rotated = false;
-		VectorAdd (e->origin, clmodel->mins, mins);
-		VectorAdd (e->origin, clmodel->maxs, maxs);
+		VectorAdd (e->render.origin, clmodel->mins, mins);
+		VectorAdd (e->render.origin, clmodel->maxs, maxs);
 	}
 
 	if (R_CullBox (mins, maxs))
@@ -955,14 +955,14 @@ void R_DrawBrushModel (entity_t *e)
 
 	c_bmodels++;
 
-	VectorSubtract (r_refdef.vieworg, e->origin, modelorg);
+	VectorSubtract (r_refdef.vieworg, e->render.origin, modelorg);
 	if (rotated)
 	{
 		vec3_t	temp;
 		vec3_t	forward, right, up;
 
 		VectorCopy (modelorg, temp);
-		AngleVectors (e->angles, forward, right, up);
+		AngleVectors (e->render.angles, forward, right, up);
 		modelorg[0] = DotProduct (temp, forward);
 		modelorg[1] = -DotProduct (temp, right);
 		modelorg[2] = DotProduct (temp, up);
@@ -977,14 +977,14 @@ void R_DrawBrushModel (entity_t *e)
 		if (!cl_dlights[i].radius)
 			continue;
 
-		VectorSubtract(cl_dlights[i].origin, currententity->origin, org);
+		VectorSubtract(cl_dlights[i].origin, currententity->render.origin, org);
 		R_NoVisMarkLights (org, &cl_dlights[i], 1<<(i&31), i >> 5, clmodel);
 	}
-	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->effects & EF_FULLBRIGHT) || currententity->colormod[0] != 1 || currententity->colormod[2] != 1 || currententity->colormod[2] != 1;
+	vertexlit = modelalpha != 1 || clmodel->firstmodelsurface == 0 || (currententity->render.effects & EF_FULLBRIGHT) || currententity->render.colormod[0] != 1 || currententity->render.colormod[2] != 1 || currententity->render.colormod[2] != 1;
 
-e->angles[0] = -e->angles[0];	// stupid quake bug
+e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 	softwaretransformforentity (e);
-e->angles[0] = -e->angles[0];	// stupid quake bug
+e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 
 	// draw texture
 	for (i = 0;i < clmodel->nummodelsurfaces;i++, s++)
@@ -1298,10 +1298,10 @@ void R_DrawWorld (void)
 	entity_t	ent;
 
 	memset (&ent, 0, sizeof(ent));
-	ent.model = cl.worldmodel;
-	ent.colormod[0] = ent.colormod[1] = ent.colormod[2] = 1;
-	modelalpha = ent.alpha = 1;
-	ent.scale = 1;
+	ent.render.model = cl.worldmodel;
+	ent.render.colormod[0] = ent.render.colormod[1] = ent.render.colormod[2] = 1;
+	modelalpha = ent.render.alpha = 1;
+	ent.render.scale = 1;
 
 	VectorCopy (r_refdef.vieworg, modelorg);
 

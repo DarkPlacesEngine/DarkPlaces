@@ -1619,7 +1619,7 @@ void PF_changeyaw (void)
 	float		ideal, current, move, speed;
 	
 	ent = PROG_TO_EDICT(pr_global_struct->self);
-	current = anglemod( ent->v.angles[1] );
+	current = ANGLEMOD(ent->v.angles[1]);
 	ideal = ent->v.ideal_yaw;
 	speed = ent->v.yaw_speed;
 	
@@ -1647,7 +1647,7 @@ void PF_changeyaw (void)
 			move = -speed;
 	}
 	
-	ent->v.angles[1] = anglemod (current + move);
+	ent->v.angles[1] = ANGLEMOD (current + move);
 }
 
 /*
@@ -1662,7 +1662,7 @@ void PF_changepitch (void)
 	eval_t		*val;
 	
 	ent = G_EDICT(OFS_PARM0);
-	current = anglemod( ent->v.angles[0] );
+	current = ANGLEMOD( ent->v.angles[0] );
 	if ((val = GETEDICTFIELDVALUE(ent, eval_idealpitch)))
 		ideal = val->_float;
 	else
@@ -1702,7 +1702,7 @@ void PF_changepitch (void)
 			move = -speed;
 	}
 	
-	ent->v.angles[0] = anglemod (current + move);
+	ent->v.angles[0] = ANGLEMOD (current + move);
 }
 
 /*

@@ -36,6 +36,10 @@ typedef	int	fixed16_t;
 #define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
 #endif
 
+#define DEG2RAD(a) ((a) * ((float) M_PI / 180.0f))
+#define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
+#define ANGLEMOD(a) (((int) ((a) * (65536.0f / 360.0f)) & 65535) * (360.0f / 65536.0f))
+
 struct mplane_s;
 
 extern vec3_t vec3_origin;
@@ -90,7 +94,6 @@ void FloorDivMod (double numer, double denom, int *quotient, int *rem);
 int GreatestCommonDivisor (int i1, int i2);
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
-float	anglemod(float a);
 
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);

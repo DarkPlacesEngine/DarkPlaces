@@ -36,12 +36,11 @@ int			posenum;
 
 float		aliasbboxmin[3], aliasbboxmax[3]; // LordHavoc: proper bounding box considerations
 
-#define MAXVERTS 8192
-float vertst[MAXVERTS][2];
-int vertusage[MAXVERTS];
-int vertonseam[MAXVERTS];
-int vertremap[MAXVERTS];
-unsigned short temptris[MAXVERTS][3];
+float vertst[MAXALIASVERTS][2];
+int vertusage[MAXALIASVERTS];
+int vertonseam[MAXALIASVERTS];
+int vertremap[MAXALIASVERTS];
+unsigned short temptris[MAXALIASTRIS][3];
 
 void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, trivertx_t *out)
 {
@@ -85,7 +84,7 @@ void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivert
 		}
 	}
 	if (invalidnormals)
-		Con_Printf("Mod_ConvertAliasVerts: %i invalid normal indices found\n", invalidnormals);
+		Con_Printf("Mod_ConvertAliasVerts: \"%s\", %i invalid normal indices found\n", loadname, invalidnormals);
 }
 
 /*
@@ -532,7 +531,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	numverts = LittleLong(pinmodel->numverts);
 	BOUNDI(numverts,0,MAXALIASVERTS);
 	numtris = LittleLong(pinmodel->numtris);
-	BOUNDI(numtris,0,65536);
+	BOUNDI(numtris,0,MAXALIASTRIS);
 	numskins = LittleLong(pinmodel->numskins);
 	BOUNDI(numskins,0,256);
 	skinwidth = LittleLong (pinmodel->skinwidth);
@@ -722,7 +721,7 @@ void Mod_ConvertQ2AliasVerts (int numverts, vec3_t scale, vec3_t translate, triv
 		}
 	}
 	if (invalidnormals)
-		Con_Printf("Mod_ConvertQ2AliasVerts: %i invalid normal indices found\n", invalidnormals);
+		Con_Printf("Mod_ConvertQ2AliasVerts: \"%s\", %i invalid normal indices found\n", loadname, invalidnormals);
 }
 
 /*

@@ -82,11 +82,11 @@ void CL_ClearState (void)
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < MAX_EDICTS;i++)
 	{
-		cl_entities[i].baseline.alpha = 255;
-		cl_entities[i].baseline.scale = 16;
-		cl_entities[i].baseline.glowsize = 0;
-		cl_entities[i].baseline.glowcolor = 254;
-		cl_entities[i].baseline.colormod = 255;
+		cl_entities[i].state_baseline.alpha = 255;
+		cl_entities[i].state_baseline.scale = 16;
+		cl_entities[i].state_baseline.glowsize = 0;
+		cl_entities[i].state_baseline.glowcolor = 254;
+		cl_entities[i].state_baseline.colormod = 255;
 	}
 
 //
@@ -267,15 +267,15 @@ void CL_PrintEntities_f (void)
 	entity_t	*ent;
 	int			i;
 	
-	for (i=0,ent=cl_entities ; i<cl.num_entities ; i++,ent++)
+	for (i = 0, ent = cl_entities;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
 	{
-		Con_Printf ("%3i:",i);
-		if (!ent->model)
+		Con_Printf ("%3i:", i);
+		if (!ent->render.model)
 		{
 			Con_Printf ("EMPTY\n");
 			continue;
 		}
-		Con_Printf ("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->model->name, ent->frame, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2]);
+		Con_Printf ("%s:%2i  (%5.1f,%5.1f,%5.1f) [%5.1f %5.1f %5.1f]\n", ent->render.model->name, ent->render.frame, ent->render.origin[0], ent->render.origin[1], ent->render.origin[2], ent->render.angles[0], ent->render.angles[1], ent->render.angles[2]);
 	}
 }
 
@@ -407,6 +407,26 @@ float	CL_LerpPoint (void)
 	return frac;
 }
 
+float CL_EntityLerpPoint (entity_t *ent)
+{
+	float	f;
+
+	if (cl_nolerp.value || cls.timedemo || (sv.active && svs.maxclients == 1))
+		return 1;
+
+	f = ent->state_current.time - ent->state_previous.time;
+//	Con_Printf(" %g-%g=%g", ent->state_current.time, ent->state_previous.time, f);
+
+	if (f <= 0)
+		return 1;
+	if (f >= 0.1)
+		f = 0.1;
+
+//	Con_Printf(" %g-%g/%g=%f", cl.time, ent->state_previous.time, f, (cl.time - ent->state_previous.time) / f);
+	f = (cl.time - ent->state_previous.time) / f;
+	return bound(0, f, 1);
+}
+
 
 /*
 ===============
@@ -421,6 +441,7 @@ void CL_RelinkEntities (void)
 	float		frac, f, d;
 	vec3_t		delta;
 	float		bobjrotate;
+//	float		bobjoffset;
 	vec3_t		oldorg;
 
 // determine partial update time	
@@ -431,13 +452,13 @@ void CL_RelinkEntities (void)
 //
 // interpolate player info
 //
-	for (i=0 ; i<3 ; i++)
+	for (i = 0;i < 3;i++)
 		cl.velocity[i] = cl.mvelocity[1][i] + frac * (cl.mvelocity[0][i] - cl.mvelocity[1][i]);
 
 	if (cls.demoplayback)
 	{
 	// interpolate the angles	
-		for (j=0 ; j<3 ; j++)
+		for (j = 0;j < 3;j++)
 		{
 			d = cl.mviewangles[0][j] - cl.mviewangles[1][j];
 			if (d > 180)
@@ -448,152 +469,180 @@ void CL_RelinkEntities (void)
 		}
 	}
 	
-	bobjrotate = anglemod(100*cl.time);
+	bobjrotate = ANGLEMOD(100*cl.time);
+//	bobjoffset = cos(180 * cl.time * M_PI / 180) * 4.0f + 4.0f;
 	
 // start on the entity after the world
-	for (i=1,ent=cl_entities+1 ; i<cl.num_entities ; i++,ent++)
+	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
 	{
-		if (!ent->model)
-		{	// empty slot
-//			if (ent->forcelink)
-//				R_RemoveEfrags (ent);	// just became empty
+		// if the object wasn't included in the latest packet, remove it
+		if (!ent->state_current.modelindex)
 			continue;
-		}
 
-// if the object wasn't included in the last packet, remove it
-		if (ent->msgtime != cl.mtime[0])
+		VectorCopy (ent->render.origin, oldorg);
+
+		if (!ent->state_previous.modelindex)
 		{
-			ent->model = NULL;
-			// LordHavoc: free on the same frame, not the next
-//			if (ent->forcelink)
-//				R_RemoveEfrags (ent);	// just became empty
-			continue;
-		}
-
-		VectorCopy (ent->origin, oldorg);
-
-		if (ent->forcelink)
-		{	// the entity was not updated in the last message
-			// so move to the final spot
-			VectorCopy (ent->msg_origins[0], ent->origin);
-			VectorCopy (ent->msg_angles[0], ent->angles);
+			// only one state available
+			VectorCopy (ent->state_current.origin, ent->render.origin);
+			VectorCopy (ent->state_current.angles, ent->render.angles);
+//			Con_Printf(" %i", i);
 		}
 		else
-		{	// if the delta is large, assume a teleport and don't lerp
-			f = frac;
-			for (j = 0;j < 3;j++)
-			{
-				delta[j] = ent->msg_origins[0][j] - ent->msg_origins[1][j];
-				// LordHavoc: increased lerp tolerance from 100 to 200
-				if (delta[j] > 200 || delta[j] < -200)
-					f = 1;		// assume a teleportation, not a motion
-			}
-
-		// interpolate the origin and angles
-			for (j = 0;j < 3;j++)
-			{
-				ent->origin[j] = ent->msg_origins[1][j] + f*delta[j];
-
-				d = ent->msg_angles[0][j] - ent->msg_angles[1][j];
-				if (d > 180)
-					d -= 360;
-				else if (d < -180)
-					d += 360;
-				ent->angles[j] = ent->msg_angles[1][j] + f*d;
-			}
-			
-		}
-
-		if (ent->effects & EF_BRIGHTFIELD)
-			R_EntityParticles (ent);
-		if (ent->effects & EF_MUZZLEFLASH)
 		{
-			vec3_t v;
-
-			AngleVectors (ent->angles, v, NULL, NULL);
-
-			v[0] = v[0] * 18 + ent->origin[0];
-			v[1] = v[1] * 18 + ent->origin[1];
-			v[2] = v[2] * 18 + ent->origin[2] + 16;
-
-			CL_AllocDlight (ent, v, 100, 1, 1, 1, 0, 0.1);
-		}
-		if (ent->effects & EF_BRIGHTLIGHT)
-			CL_AllocDlight (ent, ent->origin, 400, 1, 1, 1, 0, 0);
-		if (ent->effects & EF_DIMLIGHT)
-			CL_AllocDlight (ent, ent->origin, 200, 1, 1, 1, 0, 0);
-		// LordHavoc: added EF_RED and EF_BLUE
-		if (ent->effects & EF_RED) // red
-		{			
-			if (ent->effects & EF_BLUE) // magenta
-				CL_AllocDlight (ent, ent->origin, 200, 1.0f, 0.2f, 1.0f, 0, 0);
-			else // red
-				CL_AllocDlight (ent, ent->origin, 200, 1.0f, 0.1f, 0.1f, 0, 0);
-		}
-		else if (ent->effects & EF_BLUE) // blue
-			CL_AllocDlight (ent, ent->origin, 200, 0.1f, 0.1f, 1.0f, 0, 0);
-		else if (ent->effects & EF_FLAME)
-		{
-			if (ent->model)
+			// if the delta is large, assume a teleport and don't lerp
+			f = CL_EntityLerpPoint(ent);
+			if (f < 1)
 			{
-				vec3_t mins, maxs;
-				int temp;
-				VectorAdd(ent->origin, ent->model->mins, mins);
-				VectorAdd(ent->origin, ent->model->maxs, maxs);
-				// how many flames to make
-				temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
-				R_FlameCube(mins, maxs, temp);
+				for (j = 0;j < 3;j++)
+				{
+					delta[j] = ent->state_current.origin[j] - ent->state_previous.origin[j];
+					// LordHavoc: increased lerp tolerance from 100 to 200
+					if (delta[j] > 200 || delta[j] < -200)
+						f = 1;
+				}
 			}
-			CL_AllocDlight (ent, ent->origin, lhrandom(200, 250), 1.0f, 0.7f, 0.3f, 0, 0);
+			if (f >= 1)
+			{
+				// no interpolation
+				VectorCopy (ent->state_current.origin, ent->render.origin);
+				VectorCopy (ent->state_current.angles, ent->render.angles);
+			}
+			else
+			{
+				// interpolate the origin and angles
+				for (j = 0;j < 3;j++)
+				{
+					ent->render.origin[j] = ent->state_previous.origin[j] + f*delta[j];
+
+					d = ent->state_current.angles[j] - ent->state_previous.angles[j];
+					if (d > 180)
+						d -= 360;
+					else if (d < -180)
+						d += 360;
+					ent->render.angles[j] = ent->state_previous.angles[j] + f*d;
+				}
+			}
 		}
 
-		if (ent->model->flags) // LordHavoc: if the model has no flags, don't check each
-		{
-		// rotate binary objects locally
-			if (ent->model->flags & EF_ROTATE)
-				ent->angles[1] = bobjrotate;
-			if (ent->model->flags & EF_GIB)
-				R_RocketTrail (oldorg, ent->origin, 2, ent);
-			else if (ent->model->flags & EF_ZOMGIB)
-				R_RocketTrail (oldorg, ent->origin, 4, ent);
-			else if (ent->model->flags & EF_TRACER)
-				R_RocketTrail (oldorg, ent->origin, 3, ent);
-			else if (ent->model->flags & EF_TRACER2)
-				R_RocketTrail (oldorg, ent->origin, 5, ent);
-			else if (ent->model->flags & EF_ROCKET)
-			{
-				R_RocketTrail (oldorg, ent->origin, 0, ent);
-				CL_AllocDlight (ent, ent->origin, 200, 1.0f, 0.8f, 0.4f, 0, 0);
-			}
-			else if (ent->model->flags & EF_GRENADE)
-			{
-				if (ent->alpha == -1) // LordHavoc: Nehahra dem compatibility
-					R_RocketTrail (oldorg, ent->origin, 7, ent);
-				else
-					R_RocketTrail (oldorg, ent->origin, 1, ent);
-			}
-			else if (ent->model->flags & EF_TRACER3)
-				R_RocketTrail (oldorg, ent->origin, 6, ent);
-		}
-		if (ent->glowsize) // LordHavoc: customizable glow
-		{
-			byte *tempcolor = (byte *)&d_8to24table[ent->glowcolor];
-			CL_AllocDlight (ent, ent->origin, ent->glowsize, tempcolor[0]*(1.0/255.0), tempcolor[1]*(1.0/255.0), tempcolor[2]*(1.0/255.0), 0, 0);
-		}
-		if (ent->glowtrail) // LordHavoc: customizable glow and trail
-			R_RocketTrail2 (oldorg, ent->origin, ent->glowcolor, ent);
+		ent->render.flags = ent->state_current.flags;
+		ent->render.effects = ent->state_current.effects;
+		ent->render.model = cl.model_precache[ent->state_current.modelindex];
+		ent->render.frame = ent->state_current.frame;
+		if (cl.scores == NULL || !ent->state_current.colormap)
+			ent->render.colormap = -1; // no special coloring
+		else
+			ent->render.colormap = cl.scores[ent->state_current.colormap - 1].colors; // color it
+		ent->render.skinnum = ent->state_current.skin;
+		ent->render.alpha = ent->state_current.alpha * (1.0f / 255.0f); // FIXME: interpolate?
+		ent->render.scale = ent->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
+		ent->render.glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
+		ent->render.glowcolor = ent->state_current.glowcolor;
+		ent->render.colormod[0] = (float) ((ent->state_current.colormod >> 5) & 7) * (1.0f / 7.0f);
+		ent->render.colormod[1] = (float) ((ent->state_current.colormod >> 2) & 7) * (1.0f / 7.0f);
+		ent->render.colormod[2] = (float) (ent->state_current.colormod & 3) * (1.0f / 3.0f);
 
-		ent->forcelink = false;
+		// LordHavoc: if the entity has no effects, don't check each
+		if (ent->render.effects)
+		{
+			if (ent->render.effects & EF_BRIGHTFIELD)
+				R_EntityParticles (ent);
+			if (ent->render.effects & EF_MUZZLEFLASH)
+			{
+				vec3_t v;
+
+				AngleVectors (ent->render.angles, v, NULL, NULL);
+
+				v[0] = v[0] * 18 + ent->render.origin[0];
+				v[1] = v[1] * 18 + ent->render.origin[1];
+				v[2] = v[2] * 18 + ent->render.origin[2] + 16;
+
+				CL_AllocDlight (ent, v, 100, 1, 1, 1, 0, 0.1);
+			}
+			if (ent->render.effects & EF_BRIGHTLIGHT)
+				CL_AllocDlight (ent, ent->render.origin, 400, 1, 1, 1, 0, 0);
+			if (ent->render.effects & EF_DIMLIGHT)
+				CL_AllocDlight (ent, ent->render.origin, 200, 1, 1, 1, 0, 0);
+			// LordHavoc: added EF_RED and EF_BLUE
+			if (ent->render.effects & EF_RED) // red
+			{			
+				if (ent->render.effects & EF_BLUE) // magenta
+					CL_AllocDlight (ent, ent->render.origin, 200, 1.0f, 0.2f, 1.0f, 0, 0);
+				else // red
+					CL_AllocDlight (ent, ent->render.origin, 200, 1.0f, 0.1f, 0.1f, 0, 0);
+			}
+			else if (ent->render.effects & EF_BLUE) // blue
+				CL_AllocDlight (ent, ent->render.origin, 200, 0.1f, 0.1f, 1.0f, 0, 0);
+			else if (ent->render.effects & EF_FLAME)
+			{
+				if (ent->render.model)
+				{
+					vec3_t mins, maxs;
+					int temp;
+					VectorAdd(ent->render.origin, ent->render.model->mins, mins);
+					VectorAdd(ent->render.origin, ent->render.model->maxs, maxs);
+					// how many flames to make
+					temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
+					R_FlameCube(mins, maxs, temp);
+				}
+				CL_AllocDlight (ent, ent->render.origin, lhrandom(200, 250), 1.0f, 0.7f, 0.3f, 0, 0);
+			}
+		}
+
+		// LordHavoc: if the model has no flags, don't check each
+		if (ent->render.model && ent->render.model->flags)
+		{
+			if (ent->render.model->flags & EF_ROTATE)
+			{
+				ent->render.angles[1] = bobjrotate;
+//				ent->render.origin[2] += bobjoffset;
+			}
+			// only do trails if present in the previous frame as well
+			if (ent->state_previous.modelindex)
+			{
+				if (ent->render.model->flags & EF_GIB)
+					R_RocketTrail (oldorg, ent->render.origin, 2, ent);
+				else if (ent->render.model->flags & EF_ZOMGIB)
+					R_RocketTrail (oldorg, ent->render.origin, 4, ent);
+				else if (ent->render.model->flags & EF_TRACER)
+					R_RocketTrail (oldorg, ent->render.origin, 3, ent);
+				else if (ent->render.model->flags & EF_TRACER2)
+					R_RocketTrail (oldorg, ent->render.origin, 5, ent);
+				else if (ent->render.model->flags & EF_ROCKET)
+				{
+					R_RocketTrail (oldorg, ent->render.origin, 0, ent);
+					CL_AllocDlight (ent, ent->render.origin, 200, 1.0f, 0.8f, 0.4f, 0, 0);
+				}
+				else if (ent->render.model->flags & EF_GRENADE)
+				{
+					if (ent->render.alpha == -1) // LordHavoc: Nehahra dem compatibility
+						R_RocketTrail (oldorg, ent->render.origin, 7, ent);
+					else
+						R_RocketTrail (oldorg, ent->render.origin, 1, ent);
+				}
+				else if (ent->render.model->flags & EF_TRACER3)
+					R_RocketTrail (oldorg, ent->render.origin, 6, ent);
+			}
+		}
+		if (ent->render.glowsize) // LordHavoc: customizable glow
+		{
+			byte *tempcolor = (byte *)&d_8to24table[ent->render.glowcolor];
+			CL_AllocDlight (ent, ent->render.origin, ent->render.glowsize, tempcolor[0]*(1.0/255.0), tempcolor[1]*(1.0/255.0), tempcolor[2]*(1.0/255.0), 0, 0);
+		}
+		if (ent->render.flags & RENDER_GLOWTRAIL) // LordHavoc: customizable glow and trail
+			R_RocketTrail2 (oldorg, ent->render.origin, ent->render.glowcolor, ent);
 
 		if (i == cl.viewentity && !chase_active.value)
 			continue;
 
-// LordHavoc: enabled EF_NODRAW
-		if (!ent->model || ent->effects & EF_NODRAW)
+		if (ent->render.model == NULL)
+			continue;
+		if (ent->render.effects & EF_NODRAW)
 			continue;
 		if (cl_numvisedicts < MAX_VISEDICTS)
 			cl_visedicts[cl_numvisedicts++] = ent;
 	}
+//	Con_Printf("\n");
 }
 
 

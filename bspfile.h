@@ -308,7 +308,7 @@ typedef struct
 	epair_t		*epairs;
 } entity_t;
 
-extern	int			num_entities;
+//extern	int			num_entities;
 extern	entity_t	entities[MAX_MAP_ENTITIES];
 
 void	ParseEntities (void);

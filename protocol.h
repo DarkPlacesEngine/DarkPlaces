@@ -46,6 +46,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EF_FULLBRIGHT			512		// LordHavoc: fullbright
 #define EF_FLAME				1024	// LordHavoc: on fire
 
+#define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
+
 // if the high bit of the servercmd is set, the low bits are fast update flags:
 #define	U_MOREBITS	(1<<0)
 #define	U_ORIGIN1	(1<<1)
@@ -206,6 +208,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_sound2			54		// short soundindex instead of byte
 #define	svc_spawnbaseline2	55		// short modelindex instead of byte
 #define svc_spawnstatic2	56		// short modelindex instead of byte
+#define svc_entitiesbegin	57		// [short] entitynum
+#define svc_entitiesend		58		// [short] entitynum
 
 //
 // client to server

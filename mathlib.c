@@ -29,8 +29,6 @@ int nanmask = 255<<23;
 
 /*-----------------------------------------------------------------*/
 
-#define DEG2RAD( a ) ( a * M_PI ) / 180.0F
-
 float m_bytenormals[NUMVERTEXNORMALS][3] =
 {
 {-0.525731, 0.000000, 0.850651}, {-0.442863, 0.238856, 0.864188}, 
@@ -464,18 +462,6 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 
 /*-----------------------------------------------------------------*/
 
-
-float	anglemod(float a)
-{
-#if 0
-	if (a >= 0)
-		a -= 360*(int)(a/360);
-	else
-		a += 360*( 1 + (int)(-a/360) );
-#endif
-	a = (360.0/65536) * ((int)(a*(65536/360.0)) & 65535);
-	return a;
-}
 
 // LordHavoc note 1:
 // BoxOnPlaneSide did a switch on a 'signbits' value and had optimized

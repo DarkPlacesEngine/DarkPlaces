@@ -35,57 +35,77 @@ typedef struct efrag_s
 	struct efrag_s		*entnext;
 } efrag_t;
 
+#define RENDER_STEP 1
+#define RENDER_GLOWTRAIL 2
+#define RENDER_VIEWMODEL 4
+
+// LordHavoc: made this more compact, and added some more fields
+typedef struct
+{
+	double	time; // time this state was updated
+	vec3_t	origin;
+	vec3_t	angles;
+	int		effects;
+	unsigned short modelindex;
+	unsigned short frame;
+	byte	colormap;
+	byte	skin;
+	byte	alpha;
+	byte	scale;
+	byte	glowsize;
+	byte	glowcolor;
+	byte	colormod;
+	byte	flags;
+} entity_state_t;
 
 typedef struct entity_s
 {
-	qboolean				forcelink;		// model changed
+	entity_state_t			state_baseline;	// baseline for entity
+	entity_state_t			state_previous;	// previous state (interpolating from this)
+	entity_state_t			state_current;	// current state (interpolating to this)
 
-	int						update_type;
+	struct
+	{
+		vec3_t					origin;
+		vec3_t					angles;	
 
-	entity_state_t			baseline;		// to fill in defaults in updates
-	entity_state_t			deltabaseline;	// LordHavoc: previous frame
+		// LordHavoc: added support for alpha transprency and other effects
+		float					alpha;			// opacity (alpha) of the model
+		float					colormod[3];	// color tint for model
+		float					scale;			// size the model is shown
+		float					glowsize;		// how big the glow is
+		byte					glowcolor;		// color of glow and particle trail (paletted)
+		byte					flags;			// render flags
 
-	double					msgtime;		// time of last update
-	vec3_t					msg_origins[2];	// last two updates (0 is newest)	
-	vec3_t					origin;
-	vec3_t					msg_angles[2];	// last two updates (0 is newest)
-	vec3_t					angles;	
+		struct model_s			*model;			// NULL = no model
+		int						frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
+		struct efrag_s			*efrag;			// linked list of efrags
+		int						colormap;
+		int						effects;		// light, particles, etc
+		int						skinnum;		// for Alias models
 
-	// LordHavoc: added support for alpha transprency and other effects
-	float					alpha;			// opacity (alpha) of the model
-	float					colormod[3];	// color tint for model
-	float					scale;			// size the model is shown
-	float					trail_time;
-	float					glowsize;		// how big the glow is
-	byte					glowcolor;		// color of glow and particle trail (paletted)
-	byte					glowtrail;		// leaves a trail of particles
-	byte					isviewmodel;	// attached to view
+		int						visframe;		// last frame this entity was found in an active leaf
 
-	struct model_s			*model;			// NULL = no model
-	struct efrag_s			*efrag;			// linked list of efrags
-	int						frame;			// current desired frame (usually identical to frame2, but frame2 is not always used)
-	struct model_s			*lerp_model;	// lerp resets when model changes
-	float					lerp_starttime;	// start of this transition
-	int						frame1;			// frame that the model is interpolating from
-	int						frame2;			// frame that the model is interpolating to
-	double					framelerp;		// interpolation factor, usually computed from lerp_starttime
-	double					frame1start;	// time frame1 began playing (for framegroup animations)
-	double					frame2start;	// time frame2 began playing (for framegroup animations)
-	float					syncbase;		// for client-side animations
-	int						colormap;
-	int						effects;		// light, particles, etc
-	int						skinnum;		// for Alias models
-	int						visframe;		// last frame this entity was
-											//  found in an active leaf
-											
-	int						dlightframe;	// dynamic lighting
-	int						dlightbits[8];
-	
-// FIXME: could turn these into a union
-	int						trivial_accept;
-	struct mnode_s			*topnode;		// for bmodels, first world node
-											//  that splits bmodel, or NULL if
-											//  not split
+		struct model_s			*lerp_model;	// lerp resets when model changes
+		float					lerp_starttime;	// start of this transition
+		int						frame1;			// frame that the model is interpolating from
+		int						frame2;			// frame that the model is interpolating to
+		double					framelerp;		// interpolation factor, usually computed from lerp_starttime
+		double					frame1start;	// time frame1 began playing (for framegroup animations)
+		double					frame2start;	// time frame2 began playing (for framegroup animations)
+//		float					syncbase;		// for client-side animations
+
+		int						dlightframe;	// dynamic lighting
+		int						dlightbits[8];
+		
+		float					trail_time;
+	// FIXME: could turn these into a union
+//		int						trivial_accept;
+		struct mnode_s			*topnode;		// for bmodels, first world node
+												//  that splits bmodel, or NULL if
+												//  not split
+	}
+	render;
 } entity_t;
 
 // !!! if this is changed, it must be changed in asm_draw.h too !!!

@@ -817,17 +817,17 @@ void R_LightModel(entity_t *ent, int numverts, vec3_t center, vec3_t basecolor)
 	a = (byte) bound((int) 0, (int) (modelalpha * 255.0f), (int) 255);
 	if (lighthalf)
 	{
-		mod[0] = ent->colormod[0] * 0.5f;
-		mod[1] = ent->colormod[1] * 0.5f;
-		mod[2] = ent->colormod[2] * 0.5f;
+		mod[0] = ent->render.colormod[0] * 0.5f;
+		mod[1] = ent->render.colormod[1] * 0.5f;
+		mod[2] = ent->render.colormod[2] * 0.5f;
 	}
 	else
 	{
-		mod[0] = ent->colormod[0];
-		mod[1] = ent->colormod[1];
-		mod[2] = ent->colormod[2];
+		mod[0] = ent->render.colormod[0];
+		mod[1] = ent->render.colormod[1];
+		mod[2] = ent->render.colormod[2];
 	}
-	if (ent->effects & EF_FULLBRIGHT)
+	if (ent->render.effects & EF_FULLBRIGHT)
 	{
 		((byte *)&color)[0] = (byte) (255.0f * mod[0]);
 		((byte *)&color)[1] = (byte) (255.0f * mod[1]);
