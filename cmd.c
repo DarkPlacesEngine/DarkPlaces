@@ -809,30 +809,36 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 		return;		// no tokens
 	}
 
-// check functions
-	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+// check functions (only after host_initialized)
+	if (host_initialized || !strcasecmp(cmd_argv[0], "exec"))
 	{
-		if (!strcasecmp (cmd_argv[0],cmd->name))
+		for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
 		{
-			cmd->function ();
-			cmd_tokenizebufferpos = oldpos;
-			return;
+			if (!strcasecmp (cmd_argv[0],cmd->name))
+			{
+				cmd->function ();
+				cmd_tokenizebufferpos = oldpos;
+				return;
+			}
 		}
 	}
 
-// check alias
-	for (a=cmd_alias ; a ; a=a->next)
+// check alias (only after host_initialized)
+	if (host_initialized)
 	{
-		if (!strcasecmp (cmd_argv[0], a->name))
+		for (a=cmd_alias ; a ; a=a->next)
 		{
-			Cbuf_InsertText (a->value);
-			cmd_tokenizebufferpos = oldpos;
-			return;
+			if (!strcasecmp (cmd_argv[0], a->name))
+			{
+				Cbuf_InsertText (a->value);
+				cmd_tokenizebufferpos = oldpos;
+				return;
+			}
 		}
 	}
 
-// check cvars
-	if (!Cvar_Command ())
+// check cvars (always)
+	if (!Cvar_Command () && host_initialized)
 		Con_Printf ("Unknown command \"%s\"\n", Cmd_Argv(0));
 
 	cmd_tokenizebufferpos = oldpos;

@@ -21,9 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 int current_skill;
-char sv_spawnmap[MAX_QPATH];
-char sv_loadgame[MAX_OSPATH];
-
 cvar_t sv_cheats = {0, "sv_cheats", "0"};
 qboolean allowcheats = false;
 
@@ -272,6 +269,8 @@ command from the console.  Active clients are kicked off.
 */
 void Host_Map_f (void)
 {
+	char level[MAX_QPATH];
+
 	if (cmd_source != src_command)
 		return;
 
@@ -283,11 +282,12 @@ void Host_Map_f (void)
 	key_dest = key_game;			// remove console or menu
 	SCR_BeginLoadingPlaque ();
 
-
 	svs.serverflags = 0;			// haven't completed an episode yet
-	strcpy (sv_spawnmap, Cmd_Argv(1));
-	if (host_initialized)
-		Host_PerformSpawnServerAndLoadGame();
+	allowcheats = sv_cheats.integer != 0;
+	strcpy(level, Cmd_Argv(1));
+	SV_SpawnServer(level);
+	if (sv.active && cls.state == ca_disconnected)
+		CL_EstablishConnection("local");
 }
 
 /*
@@ -299,6 +299,8 @@ Goes to a new map, taking all clients along
 */
 void Host_Changelevel_f (void)
 {
+	char level[MAX_QPATH];
+	
 	if (Cmd_Argc() != 2)
 	{
 		Con_Printf ("changelevel <levelname> : continue game on a new level\n");
@@ -310,9 +312,11 @@ void Host_Changelevel_f (void)
 		return;
 	}
 	SV_SaveSpawnparms ();
-	strcpy (sv_spawnmap, Cmd_Argv(1));
-	if (host_initialized)
-		Host_PerformSpawnServerAndLoadGame();
+	allowcheats = sv_cheats.integer != 0;
+	strcpy(level, Cmd_Argv(1));
+	SV_SpawnServer(level);
+	if (sv.active && cls.state == ca_disconnected)
+		CL_EstablishConnection("local");
 }
 
 /*
@@ -324,14 +328,18 @@ Restarts the current server for a dead player
 */
 void Host_Restart_f (void)
 {
+	char mapname[MAX_QPATH];
+	
 	if (cls.demoplayback || !sv.active)
 		return;
 
 	if (cmd_source != src_command)
 		return;
-	strcpy (sv_spawnmap, sv.name);
-	if (host_initialized)
-		Host_PerformSpawnServerAndLoadGame();
+	allowcheats = sv_cheats.integer != 0;
+	strcpy(mapname, sv.name);
+	SV_SpawnServer(mapname);
+	if (sv.active && cls.state == ca_disconnected)
+		CL_EstablishConnection("local");
 }
 
 /*
@@ -503,24 +511,8 @@ Host_Loadgame_f
 */
 void Host_Loadgame_f (void)
 {
-	if (cmd_source != src_command)
-		return;
-
-	if (Cmd_Argc() != 2)
-	{
-		Con_Printf ("load <savename> : load a game\n");
-		return;
-	}
-
-	strcpy (sv_loadgame, Cmd_Argv(1));
-	FS_DefaultExtension (sv_loadgame, ".sav", sizeof (sv_loadgame));
-
-	Con_Printf ("Loading game from %s...\n", sv_loadgame);
-}
-
-void Host_PerformLoadGame(char *name)
-{
 	qfile_t *f;
+	char filename[MAX_QPATH];
 	char mapname[MAX_QPATH];
 	float time, tfloat;
 	char buf[32768];
@@ -532,9 +524,23 @@ void Host_PerformLoadGame(char *name)
 	int version;
 	float spawn_parms[NUM_SPAWN_PARMS];
 
+	if (cmd_source != src_command)
+		return;
+
+	if (Cmd_Argc() != 2)
+	{
+		Con_Printf ("load <savename> : load a game\n");
+		return;
+	}
+
+	strcpy (filename, Cmd_Argv(1));
+	FS_DefaultExtension (filename, ".sav", sizeof (filename));
+
+	Con_Printf ("Loading game from %s...\n", filename);
+
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	f = FS_Open (name, "r", false);
+	f = FS_Open (filename, "r", false);
 	if (!f)
 	{
 		Con_Printf ("ERROR: couldn't open.\n");
@@ -1572,7 +1578,7 @@ void Host_Startdemos_f (void)
 
 	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
 	{
-		if (!sv.active && !sv_spawnmap[0])
+		if (!sv.active)
 		{
 			if (gamemode == GAME_TRANSFUSION)
 				Cbuf_AddText ("map bb1\n");
@@ -1636,25 +1642,6 @@ void Host_Stopdemo_f (void)
 	if (!cls.demoplayback)
 		return;
 	CL_Disconnect ();
-}
-
-// LordHavoc: because we don't want to load things before the video starts,
-// we have to delay map and game loads until AFTER video is initialized
-void Host_PerformSpawnServerAndLoadGame(void)
-{
-	if (vid_hidden && cls.state != ca_dedicated)
-		return;
-	if (sv_loadgame[0])
-		Host_PerformLoadGame(sv_loadgame);
-	else if (sv_spawnmap[0])
-	{
-		allowcheats = sv_cheats.integer != 0;
-		SV_SpawnServer(sv_spawnmap);
-	}
-	sv_loadgame[0] = 0;
-	sv_spawnmap[0] = 0;
-	if (sv.active && cls.state == ca_disconnected)
-		Cbuf_AddText ("connect local");
 }
 
 static void MaxPlayers_f(void)
