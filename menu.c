@@ -1095,7 +1095,10 @@ void M_DrawSlider (int x, int y, float num, float rangemin, float rangemax)
 		M_DrawCharacter (x + i*8, y, 129);
 	M_DrawCharacter (x+i*8, y, 130);
 	M_DrawCharacter (x + (SLIDER_RANGE-1)*8 * range, y, 131);
-	sprintf(text, "%f", num);
+	if (fabs((int)num - num) < 0.01)
+		sprintf(text, "%i", (int)num);
+	else
+		sprintf(text, "%.2f", num);
 	M_Print(x + (SLIDER_RANGE+2) * 8, y, text);
 }
 
@@ -1108,7 +1111,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 32
+#define OPTIONS_ITEMS 33
 
 int options_cursor;
 
@@ -1131,7 +1134,9 @@ void M_Menu_Options_AdjustSliders (int dir)
 
 	optnum = 6;
 	if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&scr_2dresolution, bound(0, scr_2dresolution.value + dir * 0.2, 1));
+		Cvar_SetValueQuick (&vid_conwidth, bound(320, vid_conwidth.value + dir * 64, 2048));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&vid_conheight, bound(240, vid_conheight.value + dir * 48, 1536));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&scr_conspeed, bound(0, scr_conspeed.value + dir * 100, 1000));
 	else if (options_cursor == optnum++)
@@ -1199,9 +1204,48 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 }
 
+int optnum;
+int opty;
+int optcursor;
+
+void M_Options_PrintCommand(char *s, int enabled)
+{
+	if (opty >= 32)
+	{
+		DrawQ_Fill(menu_x, menu_y + opty, 640, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		M_ItemPrint(0, opty, s, enabled);
+	}
+	opty += 8;
+	optnum++;
+}
+
+void M_Options_PrintCheckbox(char *s, int enabled, int yes)
+{
+	if (opty >= 32)
+	{
+		DrawQ_Fill(menu_x, menu_y + opty, 640, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		M_ItemPrint(0, opty, s, enabled);
+		M_DrawCheckbox(0 + strlen(s) * 8 + 8, opty, yes);
+	}
+	opty += 8;
+	optnum++;
+}
+
+void M_Options_PrintSlider(char *s, int enabled, float value, float minvalue, float maxvalue)
+{
+	if (opty >= 32)
+	{
+		DrawQ_Fill(menu_x, menu_y + opty, 640, 8, optnum == optcursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
+		M_ItemPrint(0, opty, s, enabled);
+		M_DrawSlider(0 + strlen(s) * 8 + 8, opty, value, minvalue, maxvalue);
+	}
+	opty += 8;
+	optnum++;
+}
+
 void M_Options_Draw (void)
 {
-	float y;
+	int visible;
 	cachepic_t	*p;
 
 	M_Background(320, 240);
@@ -1210,49 +1254,46 @@ void M_Options_Draw (void)
 	p = Draw_CachePic("gfx/p_option.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
 
-	y = 32;
-	M_Print(16, y, "    Customize controls");y += 8;
-	M_Print(16, y, "         Go to console");y += 8;
-	M_Print(16, y, "     Reset to defaults");y += 8;
-	M_Print(16, y, "         Video Options");y += 8;
-	M_Print(16, y, "       Effects Options");y += 8;
-	M_Print(16, y, " Color Control Options");y += 8;
-	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value, 0, 1);y += 8;
-	M_Print(16, y, "         Console Speed");M_DrawSlider(220, y, scr_conspeed.value, 0, 1000);y += 8;
-	M_Print(16, y, "         Console Alpha");M_DrawSlider(220, y, scr_conalpha.value, 0, 1);y += 8;
-	M_Print(16, y, "    Conback Brightness");M_DrawSlider(220, y, scr_conbrightness.value, 0, 1);y += 8;
-	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, scr_viewsize.value, 30, 120);y += 8;
-	M_ItemPrint(16, y, "      JPEG screenshots", jpeg_dll != NULL);M_DrawCheckbox(220, y, scr_screenshot_jpeg.integer);y += 8;
-	M_Print(16, y, "                   Sky");M_DrawCheckbox(220, y, r_sky.integer);y += 8;
 	// LordHavoc: FIXME: overbright needs to be disabled in GAME_GOODVSBAD2 but combine should not be disabled
 	// LordHavoc: perhaps it's time for Overbright Bits to die, and a r_lightmapintensity option to be added?
-	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, v_overbrightbits.value, 0, 4);y += 8;
-	M_Print(16, y, "       Texture Combine");M_DrawCheckbox(220, y, gl_combine.integer);y += 8;
-	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;
-	M_Print(16, y, "Delay refresh (faster)");M_DrawCheckbox(220, y, gl_delayfinish.integer);y += 8;
-	M_ItemPrint(16, y, "        Game Speed", sv.active);M_DrawSlider(220, y, slowmo.value, 0, 5);y += 8;
-	M_ItemPrint(16, y, "       CD Music Volume", cdaudioinitialized);M_DrawSlider(220, y, bgmvolume.value, 0, 1);y += 8;
-	M_ItemPrint(16, y, "          Sound Volume", snd_initialized);M_DrawSlider(220, y, volume.value, 0, 1);y += 8;
-	if (gamemode == GAME_GOODVSBAD2)
-		M_ItemPrint(16, y, "          Music Volume", snd_initialized);
-	else
-		M_ItemPrint(16, y, "  Ambient Sound Volume", snd_initialized);
-	M_DrawSlider(220, y, snd_staticvolume.value, 0, 1);
-	y += 8;
-	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value, 0, 5);y += 8;
-	M_Print(16, y, "        Crosshair Size");M_DrawSlider(220, y, crosshair_size.value, 1, 5);y += 8;
-	M_Print(16, y, "      Static Crosshair");M_DrawCheckbox(220, y, crosshair_static.integer);y += 8;
-	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
-	M_Print(16, y, "            Always Run");M_DrawCheckbox(220, y, cl_forwardspeed.value > 200);y += 8;
-	M_Print(16, y, "            Lookspring");M_DrawCheckbox(220, y, lookspring.integer);y += 8;
-	M_Print(16, y, "            Lookstrafe");M_DrawCheckbox(220, y, lookstrafe.integer);y += 8;
-	M_Print(16, y, "           Mouse Speed");M_DrawSlider(220, y, sensitivity.value, 1, 50);y += 8;
-	M_Print(16, y, "            Mouse Look");M_DrawCheckbox(220, y, freelook.integer);y += 8;
-	M_Print(16, y, "          Invert Mouse");M_DrawCheckbox(220, y, m_pitch.value < 0);y += 8;
-	M_Print(16, y, "             Use Mouse");M_DrawCheckbox(220, y, vid_mouse.integer);y += 8;
+	optnum = 0;
+	optcursor = options_cursor;
+	visible = (vid.conheight - 32) / 8;
+	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_ITEMS - visible)) * 8;
 
-	// cursor
-	M_DrawCharacter(200, 32 + options_cursor*8, 12+((int)(realtime*4)&1));
+	M_Options_PrintCommand( "Customize controls", true);
+	M_Options_PrintCommand( "     Go to console", true);
+	M_Options_PrintCommand( " Reset to defaults", true);
+	M_Options_PrintCommand( "             Video", true);
+	M_Options_PrintCommand( "           Effects", true);
+	M_Options_PrintCommand( "     Color Control", true);
+	M_Options_PrintSlider(  "  2D Screen Width ", true, vid_conwidth.value, 320, 2048);
+	M_Options_PrintSlider(  "  2D Screen Height", true, vid_conheight.value, 240, 1536);
+	M_Options_PrintSlider(  "     Console Speed", true, scr_conspeed.value, 0, 1000);
+	M_Options_PrintSlider(  "     Console Alpha", true, scr_conalpha.value, 0, 1);
+	M_Options_PrintSlider(  "Conback Brightness", true, scr_conbrightness.value, 0, 1);
+	M_Options_PrintSlider(  "       Screen size", true, scr_viewsize.value, 30, 120);
+	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);
+	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
+	M_Options_PrintSlider(  "   Overbright Bits", true, v_overbrightbits.value, 0, 4);
+	M_Options_PrintCheckbox("   Texture Combine", true, gl_combine.integer);
+	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
+	M_Options_PrintCheckbox("Delay gfx (faster)", true, gl_delayfinish.integer);
+	M_Options_PrintSlider(  "        Game Speed", sv.active, slowmo.value, 0, 5);
+	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized, bgmvolume.value, 0, 1);
+	M_Options_PrintSlider(  "      Sound Volume", snd_initialized, volume.value, 0, 1);
+	M_Options_PrintSlider(gamemode == GAME_GOODVSBAD2 ? "      Music Volume" : "    Ambient Volume", snd_initialized, snd_staticvolume.value, 0, 1);
+	M_Options_PrintSlider(  "         Crosshair", true, crosshair.value, 0, 5);
+	M_Options_PrintSlider(  "    Crosshair Size", true, crosshair_size.value, 1, 5);
+	M_Options_PrintCheckbox("  Static Crosshair", true, crosshair_static.integer);
+	M_Options_PrintCheckbox("    Show Framerate", true, showfps.integer);
+	M_Options_PrintCheckbox("        Always Run", true, cl_forwardspeed.value > 200);
+	M_Options_PrintCheckbox("        Lookspring", true, lookspring.integer);
+	M_Options_PrintCheckbox("        Lookstrafe", true, lookstrafe.integer);
+	M_Options_PrintSlider(  "       Mouse Speed", true, sensitivity.value, 1, 50);
+	M_Options_PrintCheckbox("        Mouse Look", true, freelook.integer);
+	M_Options_PrintCheckbox("      Invert Mouse", true, m_pitch.value < 0);
+	M_Options_PrintCheckbox("         Use Mouse", true, vid_mouse.integer);
 }
 
 
@@ -1398,7 +1439,7 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 
 void M_Options_Effects_Draw (void)
 {
-	float y;
+	int visible;
 	cachepic_t	*p;
 
 	M_Background(320, 200);
@@ -1407,30 +1448,31 @@ void M_Options_Effects_Draw (void)
 	p = Draw_CachePic("gfx/p_option.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
 
-	y = 32;
-	M_Print(16, y, "      Lights Per Model");M_DrawSlider(220, y, r_modellights.value, 0, 8);y += 8;
-	M_Print(16, y, " Fast Dynamic Lighting");M_DrawCheckbox(220, y, !r_dlightmap.integer);y += 8;
-	M_Print(16, y, "               Coronas");M_DrawCheckbox(220, y, r_coronas.integer);y += 8;
-	M_Print(16, y, "      Use Only Coronas");M_DrawCheckbox(220, y, gl_flashblend.integer);y += 8;
-	M_Print(16, y, "             Particles");M_DrawCheckbox(220, y, cl_particles.integer);y += 8;
-	M_Print(16, y, "     Particles Quality");M_DrawSlider(220, y, cl_particles_quality.value, 1, 4);y += 8;
-	M_Print(16, y, "            Explosions");M_DrawCheckbox(220, y, cl_explosions.integer);y += 8;
-	M_Print(16, y, "    Explosion Clipping");M_DrawCheckbox(220, y, r_explosionclip.integer);y += 8;
-	M_Print(16, y, "             Stainmaps");M_DrawCheckbox(220, y, cl_stainmaps.integer);y += 8;
-	M_Print(16, y, "                Decals");M_DrawCheckbox(220, y, cl_decals.integer);y += 8;
-	M_Print(16, y, "      Detail Texturing");M_DrawCheckbox(220, y, r_detailtextures.integer);y += 8;
-	M_Print(16, y, "        Bullet Impacts");M_DrawCheckbox(220, y, cl_particles_bulletimpacts.integer);y += 8;
-	M_Print(16, y, "                 Smoke");M_DrawCheckbox(220, y, cl_particles_smoke.integer);y += 8;
-	M_Print(16, y, "                Sparks");M_DrawCheckbox(220, y, cl_particles_sparks.integer);y += 8;
-	M_Print(16, y, "               Bubbles");M_DrawCheckbox(220, y, cl_particles_bubbles.integer);y += 8;
-	M_Print(16, y, "                 Blood");M_DrawCheckbox(220, y, cl_particles_blood.integer);y += 8;
-	M_Print(16, y, "         Blood Opacity");M_DrawSlider(220, y, cl_particles_blood_alpha.value, 0.2, 1);y += 8;
-	M_Print(16, y, "   Model Interpolation");M_DrawCheckbox(220, y, r_lerpmodels.integer);y += 8;
-	M_Print(16, y, "  Sprite Interpolation");M_DrawCheckbox(220, y, r_lerpsprites.integer);y += 8;
-	M_Print(16, y, "        Water Movement");M_DrawSlider(220, y, r_waterscroll.value, 0, 10);y += 8;
+	optcursor = options_effects_cursor;
+	optnum = 0;
+	visible = (vid.conheight - 32) / 8;
+	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
-	// cursor
-	M_DrawCharacter(200, 32 + options_effects_cursor*8, 12+((int)(realtime*4)&1));
+	M_Options_PrintSlider(  "      Lights Per Model", true, r_modellights.value, 0, 8);
+	M_Options_PrintCheckbox(" Fast Dynamic Lighting", true, !r_dlightmap.integer);
+	M_Options_PrintCheckbox("               Coronas", true, r_coronas.integer);
+	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
+	M_Options_PrintCheckbox("             Particles", true, cl_particles.integer);
+	M_Options_PrintSlider(  "     Particles Quality", true, cl_particles_quality.value, 1, 4);
+	M_Options_PrintCheckbox("            Explosions", true, cl_explosions.integer);
+	M_Options_PrintCheckbox("    Explosion Clipping", true, r_explosionclip.integer);
+	M_Options_PrintCheckbox("             Stainmaps", true, cl_stainmaps.integer);
+	M_Options_PrintCheckbox("                Decals", true, cl_decals.integer);
+	M_Options_PrintCheckbox("      Detail Texturing", true, r_detailtextures.integer);
+	M_Options_PrintCheckbox("        Bullet Impacts", true, cl_particles_bulletimpacts.integer);
+	M_Options_PrintCheckbox("                 Smoke", true, cl_particles_smoke.integer);
+	M_Options_PrintCheckbox("                Sparks", true, cl_particles_sparks.integer);
+	M_Options_PrintCheckbox("               Bubbles", true, cl_particles_bubbles.integer);
+	M_Options_PrintCheckbox("                 Blood", true, cl_particles_blood.integer);
+	M_Options_PrintSlider(  "         Blood Opacity", true, cl_particles_blood_alpha.value, 0.2, 1);
+	M_Options_PrintCheckbox("   Model Interpolation", true, r_lerpmodels.integer);
+	M_Options_PrintCheckbox("  Sprite Interpolation", true, r_lerpsprites.integer);
+	M_Options_PrintSlider(  "        Water Movement", true, r_waterscroll.value, 0, 10);
 }
 
 
@@ -1590,7 +1632,8 @@ void M_Menu_Options_ColorControl_AdjustSliders (int dir)
 
 void M_Options_ColorControl_Draw (void)
 {
-	float x, y, c, s, t, u, v;
+	int visible;
+	float x, c, s, t, u, v;
 	cachepic_t	*p;
 
 	M_Background(320, 256);
@@ -1599,64 +1642,65 @@ void M_Options_ColorControl_Draw (void)
 	p = Draw_CachePic("gfx/p_option.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
 
-	y = 32;
-	M_Print(16, y, "     Reset to defaults");y += 8;
-	M_ItemPrint(16, y, "Hardware Gamma Control", vid_hardwaregammasupported);M_DrawCheckbox(220, y, v_hwgamma.integer);y += 8;
-	M_ItemPrint(16, y, "                 Gamma", !v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer);M_DrawSlider(220, y, v_gamma.value, 1, 5);y += 8;
-	M_ItemPrint(16, y, "              Contrast", !v_color_enable.integer);M_DrawSlider(220, y, v_contrast.value, 1, 5);y += 8;
-	M_ItemPrint(16, y, "            Brightness", !v_color_enable.integer);M_DrawSlider(220, y, v_brightness.value, 0, 0.8);y += 8;
-	M_Print(16, y, "  Color Level Controls");M_DrawCheckbox(220, y, v_color_enable.integer);y += 8;
-	M_ItemPrint(16, y, "          Black: Red  ", v_color_enable.integer);M_DrawSlider(220, y, v_color_black_r.value, 0, 0.8);y += 8;
-	M_ItemPrint(16, y, "          Black: Green", v_color_enable.integer);M_DrawSlider(220, y, v_color_black_g.value, 0, 0.8);y += 8;
-	M_ItemPrint(16, y, "          Black: Blue ", v_color_enable.integer);M_DrawSlider(220, y, v_color_black_b.value, 0, 0.8);y += 8;
-	M_ItemPrint(16, y, "          Black: Grey ", v_color_enable.integer);M_DrawSlider(220, y, (v_color_black_r.value + v_color_black_g.value + v_color_black_b.value) / 3, 0, 0.8);y += 8;
-	M_ItemPrint(16, y, "           Grey: Red  ", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer);M_DrawSlider(220, y, v_color_grey_r.value, 0, 0.95);y += 8;
-	M_ItemPrint(16, y, "           Grey: Green", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer);M_DrawSlider(220, y, v_color_grey_g.value, 0, 0.95);y += 8;
-	M_ItemPrint(16, y, "           Grey: Blue ", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer);M_DrawSlider(220, y, v_color_grey_b.value, 0, 0.95);y += 8;
-	M_ItemPrint(16, y, "           Grey: Grey ", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer);M_DrawSlider(220, y, (v_color_grey_r.value + v_color_grey_g.value + v_color_grey_b.value) / 3, 0, 0.95);y += 8;
-	M_ItemPrint(16, y, "          White: Red  ", v_color_enable.integer);M_DrawSlider(220, y, v_color_white_r.value, 1, 5);y += 8;
-	M_ItemPrint(16, y, "          White: Green", v_color_enable.integer);M_DrawSlider(220, y, v_color_white_g.value, 1, 5);y += 8;
-	M_ItemPrint(16, y, "          White: Blue ", v_color_enable.integer);M_DrawSlider(220, y, v_color_white_b.value, 1, 5);y += 8;
-	M_ItemPrint(16, y, "          White: Grey ", v_color_enable.integer);M_DrawSlider(220, y, (v_color_white_r.value + v_color_white_g.value + v_color_white_b.value) / 3, 1, 5);y += 8;
+	optcursor = options_colorcontrol_cursor;
+	optnum = 0;
+	visible = (vid.conheight - 32) / 8;
+	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_COLORCONTROL_ITEMS - visible)) * 8;
 
-	y += 4;
-	DrawQ_Fill(menu_x, menu_y + y, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);y += 4;
+	M_Options_PrintCommand( "     Reset to defaults", true);
+	M_Options_PrintCheckbox("Hardware Gamma Control", vid_hardwaregammasupported, v_hwgamma.integer);
+	M_Options_PrintSlider(  "                 Gamma", !v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer, v_gamma.value, 1, 5);
+	M_Options_PrintSlider(  "              Contrast", !v_color_enable.integer, v_contrast.value, 1, 5);
+	M_Options_PrintSlider(  "            Brightness", !v_color_enable.integer, v_brightness.value, 0, 0.8);
+	M_Options_PrintCheckbox("  Color Level Controls", true, v_color_enable.integer);
+	M_Options_PrintSlider(  "          Black: Red  ", v_color_enable.integer, v_color_black_r.value, 0, 0.8);
+	M_Options_PrintSlider(  "          Black: Green", v_color_enable.integer, v_color_black_g.value, 0, 0.8);
+	M_Options_PrintSlider(  "          Black: Blue ", v_color_enable.integer, v_color_black_b.value, 0, 0.8);
+	M_Options_PrintSlider(  "          Black: Grey ", v_color_enable.integer, (v_color_black_r.value + v_color_black_g.value + v_color_black_b.value) / 3, 0, 0.8);
+	M_Options_PrintSlider(  "           Grey: Red  ", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer, v_color_grey_r.value, 0, 0.95);
+	M_Options_PrintSlider(  "           Grey: Green", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer, v_color_grey_g.value, 0, 0.95);
+	M_Options_PrintSlider(  "           Grey: Blue ", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer, v_color_grey_b.value, 0, 0.95);
+	M_Options_PrintSlider(  "           Grey: Grey ", v_color_enable.integer && vid_hardwaregammasupported && v_hwgamma.integer, (v_color_grey_r.value + v_color_grey_g.value + v_color_grey_b.value) / 3, 0, 0.95);
+	M_Options_PrintSlider(  "          White: Red  ", v_color_enable.integer, v_color_white_r.value, 1, 5);
+	M_Options_PrintSlider(  "          White: Green", v_color_enable.integer, v_color_white_g.value, 1, 5);
+	M_Options_PrintSlider(  "          White: Blue ", v_color_enable.integer, v_color_white_b.value, 1, 5);
+	M_Options_PrintSlider(  "          White: Grey ", v_color_enable.integer, (v_color_white_r.value + v_color_white_g.value + v_color_white_b.value) / 3, 1, 5);
+
+	opty += 4;
+	DrawQ_Fill(menu_x, menu_y + opty, 320, 4 + 64 + 8 + 64 + 4, 0, 0, 0, 1, 0);opty += 4;
 	s = (float) 312 / 2 * vid.realwidth / vid.conwidth;
 	t = (float) 4 / 2 * vid.realheight / vid.conheight;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,0,0,1, 0,1, 0,0,0,1, 1,1, 1,0,0,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 0,1,0,1, 0,1, 0,0,0,1, 1,1, 0,1,0,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 0,0,1,1, 0,1, 0,0,0,1, 1,1, 0,0,1,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);y += 4;
-	DrawQ_SuperPic(menu_x + 4, menu_y + y, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,1,1,1, 0,1, 0,0,0,1, 1,1, 1,1,1,1, 0);y += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,0,0,1, 0,1, 0,0,0,1, 1,1, 1,0,0,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 0,1,0,1, 0,1, 0,0,0,1, 1,1, 0,1,0,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 0,0,1,1, 0,1, 0,0,0,1, 1,1, 0,0,1,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, "gfx/colorcontrol/ditherpattern.tga", 312, 4, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);opty += 4;
+	DrawQ_SuperPic(menu_x + 4, menu_y + opty, NULL                                , 312, 4, 0,0, 0,0,0,1, 1,0, 1,1,1,1, 0,1, 0,0,0,1, 1,1, 1,1,1,1, 0);opty += 4;
 
 	c = menu_options_colorcontrol_correctionvalue.value; // intensity value that should be matched up to a 50% dither to 'correct' quake
 	s = (float) 48 / 2 * vid.realwidth / vid.conwidth;
 	t = (float) 48 / 2 * vid.realheight / vid.conheight;
 	u = s * 0.5;
 	v = t * 0.5;
-	y += 8;
+	opty += 8;
 	x = 4;
-	DrawQ_Fill(menu_x + x, menu_y + y, 64, 48, c, 0, 0, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,0,0,1, u,0, 1,0,0,1, 0,v, 1,0,0,1, u,v, 1,0,0,1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, c, 0, 0, 1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,0,0,1, s,0, 1,0,0,1, 0,t, 1,0,0,1, s,t, 1,0,0,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,0,0,1, u,0, 1,0,0,1, 0,v, 1,0,0,1, u,v, 1,0,0,1, 0);
 	x += 80;
-	DrawQ_Fill(menu_x + x, menu_y + y, 64, 48, 0, c, 0, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,1,0,1, u,0, 0,1,0,1, 0,v, 0,1,0,1, u,v, 0,1,0,1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, 0, c, 0, 1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,1,0,1, s,0, 0,1,0,1, 0,t, 0,1,0,1, s,t, 0,1,0,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,1,0,1, u,0, 0,1,0,1, 0,v, 0,1,0,1, u,v, 0,1,0,1, 0);
 	x += 80;
-	DrawQ_Fill(menu_x + x, menu_y + y, 64, 48, 0, 0, c, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,0,1,1, u,0, 0,0,1,1, 0,v, 0,0,1,1, u,v, 0,0,1,1, 0);
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, 0, 0, c, 1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,0,1,1, s,0, 0,0,1,1, 0,t, 0,0,1,1, s,t, 0,0,1,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 0,0,1,1, u,0, 0,0,1,1, 0,v, 0,0,1,1, u,v, 0,0,1,1, 0);
 	x += 80;
-	DrawQ_Fill(menu_x + x, menu_y + y, 64, 48, c, c, c, 1, 0);
-	DrawQ_SuperPic(menu_x + x + 16, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);
-	DrawQ_SuperPic(menu_x + x + 32, menu_y + y + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,1,1,1, u,0, 1,1,1,1, 0,v, 1,1,1,1, u,v, 1,1,1,1, 0);
-
-	// cursor
-	M_DrawCharacter(200, 32 + options_colorcontrol_cursor*8, 12+((int)(realtime*4)&1));
+	DrawQ_Fill(menu_x + x, menu_y + opty, 64, 48, c, c, c, 1, 0);
+	DrawQ_SuperPic(menu_x + x + 16, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,1,1,1, s,0, 1,1,1,1, 0,t, 1,1,1,1, s,t, 1,1,1,1, 0);
+	DrawQ_SuperPic(menu_x + x + 32, menu_y + opty + 16, "gfx/colorcontrol/ditherpattern.tga", 16, 16, 0,0, 1,1,1,1, u,0, 1,1,1,1, 0,v, 1,1,1,1, u,v, 1,1,1,1, 0);
 }
 
 

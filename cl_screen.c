@@ -14,7 +14,8 @@ cvar_t scr_showram = {CVAR_SAVE, "showram","1"};
 cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1"};
 cvar_t scr_printspeed = {0, "scr_printspeed","8"};
-cvar_t scr_2dresolution = {CVAR_SAVE, "scr_2dresolution", "1"};
+cvar_t vid_conwidth = {CVAR_SAVE, "vid_conwidth", "640"};
+cvar_t vid_conheight = {CVAR_SAVE, "vid_conheight", "480"};
 cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
 
@@ -468,7 +469,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_showpause);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
-	Cvar_RegisterVariable (&scr_2dresolution);
+	Cvar_RegisterVariable (&vid_conwidth);
+	Cvar_RegisterVariable (&vid_conheight);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&cl_avidemo);
 
@@ -920,33 +922,21 @@ void SHOWLMP_clear(void)
 
 void CL_SetupScreenSize(void)
 {
-	static float old2dresolution = -1;
+	float conwidth, conheight;
 
 	VID_GetWindowSize (&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
 
 	VID_UpdateGamma(false);
 
-	if (scr_2dresolution.value != old2dresolution)
-	{
-		Cvar_SetValue("scr_2dresolution", bound(0.0f, scr_2dresolution.value, 1.0f));
-		old2dresolution = scr_2dresolution.value;
-	}
+	conwidth = bound(320, vid_conwidth.value, 2048);
+	conheight = bound(200, vid_conheight.value, 1536);
+	if (vid_conwidth.value != conwidth)
+		Cvar_SetValue("vid_conwidth", conwidth);
+	if (vid_conheight.value != conheight)
+		Cvar_SetValue("vid_conheight", conheight);
 
-	if (vid.realwidth > 320)
-	{
-		vid.conwidth = (vid.realwidth - 320) * scr_2dresolution.value + 320;
-		vid.conwidth = bound(320, vid.conwidth, vid.realwidth);
-	}
-	else
-		vid.conwidth = 320;
-
-	if (vid.realheight > 240)
-	{
-		vid.conheight = (vid.realheight - 240) * scr_2dresolution.value + 240;
-		vid.conheight = bound(240, vid.conheight, vid.realheight);
-	}
-	else
-		vid.conheight = 240;
+	vid.conwidth = vid_conwidth.integer;
+	vid.conheight = vid_conheight.integer;
 
 	SCR_SetUpToDrawConsole();
 
