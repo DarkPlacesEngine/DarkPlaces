@@ -42,11 +42,11 @@ extern vec3_t vec3_origin;
 #define nanmask (255<<23)
 #define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
-#define bound(min,num,max) (num >= min ? (num < max ? num : max) : min)
+#define bound(min,num,max) ((num) >= (min) ? ((num) < (max) ? (num) : (max)) : (min))
 
 #ifndef min
-#define min(A,B) (A < B ? A : B)
-#define max(A,B) (A > B ? A : B)
+#define min(A,B) ((A) < (B) ? (A) : (B))
+#define max(A,B) ((A) > (B) ? (A) : (B))
 #endif
 
 #define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
