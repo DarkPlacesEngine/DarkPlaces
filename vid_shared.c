@@ -528,13 +528,13 @@ void IN_ProcessMove(usercmd_t *cmd)
 {
 	// get basic movement from keyboard
 	CL_BaseMove(cmd);
-	
+
 	// OS independent code
 	IN_PreMove();
-	
+
 	// allow mice or other external controllers to add to the move
 	IN_Move(cmd);
-	
+
 	// OS independent code
 	IN_PostMove();
 }
@@ -563,9 +563,9 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 	in_mouse_x = (float) mouse_x * vid.conwidth / vid.realwidth;
 	in_mouse_y = (float) mouse_y * vid.conheight / vid.realheight;
 
-	// AK: eveything else is client stuff 
+	// AK: eveything else is client stuff
 	// BTW, this should be seperated somewhen
-	if(!in_client_mouse) 
+	if(!in_client_mouse)
 		return;
 
 	// LordHavoc: viewzoom affects mouse sensitivity for sniping
@@ -750,8 +750,14 @@ static void VID_CloseSystems(void)
 	R_Modules_Shutdown();
 }
 
+int vid_commandlinecheck = true;
+
 void VID_Restart_f(void)
 {
+	// don't crash if video hasn't started yet
+	if (vid_commandlinecheck)
+		return;
+
 	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp, to %s %dx%dx%dbpp.\n",
 		current_vid_fullscreen ? "fullscreen" : "window", current_vid_width, current_vid_height, current_vid_bitsperpixel,
 		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
@@ -765,7 +771,6 @@ void VID_Restart_f(void)
 	VID_OpenSystems();
 }
 
-int vid_commandlinecheck = true;
 void VID_Open(void)
 {
 	int i, width, height;
