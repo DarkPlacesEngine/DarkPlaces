@@ -890,7 +890,7 @@ void R_UpdateTextureInfo(entity_render_t *ent)
 void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
-	vec3_t center, modelorg;
+	vec3_t tempcenter, center, modelorg;
 	msurface_t *surface;
 	rmeshstate_t m;
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
@@ -919,7 +919,6 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
-			vec3_t tempcenter;
 			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
 			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
 			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
