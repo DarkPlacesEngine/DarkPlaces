@@ -976,6 +976,9 @@ void VID_Shutdown (void)
 	HGLRC hRC = 0;
 	HDC hDC = 0;
 
+	if(vid_initialized == false)
+		return;
+
 	VID_RestoreSystemGamma();
 
 	vid_initialized = false;

@@ -166,6 +166,11 @@ void Host_Error (const char *error, ...)
 
 	PR_Crash();
 
+	//PRVM_Crash(); // crash current prog
+
+	// crash all prvm progs
+	PRVM_CrashAll();
+
 	if (sv.active)
 		Host_ShutdownServer (false);
 
@@ -819,6 +824,7 @@ void Host_Frame (float time)
 //============================================================================
 
 void Render_Init(void);
+void M_Scipt_Init ();
 
 /*
 ====================
@@ -848,8 +854,9 @@ void Host_Init (void)
 	Key_Init();
 	Con_Init();
 	Chase_Init();
-	M_Init();
 	PR_Init();
+	PRVM_Init();
+	MR_Init();
 	Mod_Init();
 	NetConn_Init();
 	SV_Init();
@@ -904,6 +911,13 @@ void Host_Shutdown(void)
 		return;
 	}
 	isdown = true;
+
+	// Shutdown menu
+	MR_Shutdown;
+
+	// AK shutdown PRVM
+	// AK hmm, no PRVM_Shutdown(); yet
+	
 
 	Host_WriteConfiguration ();
 

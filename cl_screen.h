@@ -33,6 +33,7 @@ drawqueuemesh_t;
 
 #define DRAWFLAG_ADDITIVE 1
 #define DRAWFLAG_MODULATE 2
+#define DRAWFLAG_2XMODULATE 3
 
 // clear the draw queue
 void DrawQ_Clear(void);

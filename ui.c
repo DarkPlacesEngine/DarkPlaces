@@ -23,7 +23,7 @@ static ui_item_t *ui_keyrealitem;
 static ui_t *ui_list[MAX_UI_COUNT];
 
 static void ui_start(void)
-{
+{	
 	ui_mouse_x = vid.conwidth * 0.5;
 	ui_mouse_y = vid.conheight * 0.5;
 	ui_alive = true;
@@ -45,6 +45,7 @@ void ui_init(void)
 	uimempool = Mem_AllocPool("UI");
 
 	Cvar_RegisterVariable(&ui_showname);
+
 	R_RegisterModule("UI", ui_start, ui_shutdown, ui_newmap);
 }
 

@@ -380,7 +380,7 @@ PR_ValueString
 Returns a string describing *data in a type specific manner
 =============
 */
-int NoCrash_NUM_FOR_EDICT(edict_t *e);
+//int NoCrash_NUM_FOR_EDICT(edict_t *e);
 char *PR_ValueString (etype_t type, eval_t *val)
 {
 	static char line[1024]; // LordHavoc: enlarged a bit (was 256)

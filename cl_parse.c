@@ -807,6 +807,7 @@ void CL_ParseClientdata (int bits)
 	cl.stats[STAT_CELLS] = MSG_ReadByte();
 
 	i = MSG_ReadByte ();
+
 	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE)
 		i = (1<<i);
 	// GAME_NEXUIZ hud needs weapon change time

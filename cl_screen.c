@@ -938,6 +938,14 @@ void CL_SetupScreenSize(void)
 	vid.conwidth = vid_conwidth.integer;
 	vid.conheight = vid_conheight.integer;
 
+/*	if (vid.realheight > 240)
+	{
+		vid.conheight = (vid.realheight - 240) * scr_2dresolution.value + 240;
+		vid.conheight = bound(240, vid.conheight, vid.realheight);
+	}
+	else
+		vid.conheight = 240;*/
+
 	SCR_SetUpToDrawConsole();
 
 	// determine size of refresh window
@@ -984,9 +992,9 @@ void CL_UpdateScreen(void)
 			SHOWLMP_drawall();
 			SCR_CheckDrawCenterString();
 		}
-		ui_draw();
+		MR_Draw();
 		CL_DrawVideo();
-		M_Draw();
+		ui_draw();
 		if (cls.signon == SIGNONS)
 		{
 			R_TimeReport("2d");
