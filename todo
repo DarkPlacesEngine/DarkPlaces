@@ -35,6 +35,7 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+-n darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 2 darkplaces: add lan searching to the server browser and related code (Vermeulen)
 4 darkplaces: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)  
 2 darkplaces: use model box size for SOLID_BSP objects in areagrid linking and such, just for optimal consistency.
@@ -74,7 +75,6 @@ f darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) t
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: clean up the DrawQ_ blendfunc handling, instead of taking DRAWFLAG_ADDITIVE they should take blendfunc values (Black)
 0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
-0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
