@@ -81,8 +81,10 @@ void R_Mesh_TextureState(const rmeshstate_t *m);
 void R_Mesh_EndBatch(void);
 // prepares varray_* buffers for rendering a mesh
 void R_Mesh_GetSpace(int numverts);
-// renders the mesh in the varray_* buffers
+// renders a mesh (optionally with batching)
 void R_Mesh_Draw(int numverts, int numtriangles, const int *elements);
+// renders a mesh without affecting batching
+void R_Mesh_Draw_NoBatching(int numverts, int numtriangles, const int *elements);
 
 // copies a vertex3f array into varray_vertex3f
 void R_Mesh_CopyVertex3f(const float *vertex3f, int numverts);
