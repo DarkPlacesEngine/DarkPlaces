@@ -45,13 +45,13 @@ CL_ParseTEnt
 */
 void CL_InitTEnts (void)
 {
-	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav");
-	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav");
-	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav");
-	cl_sfx_ric1 = S_PrecacheSound ("weapons/ric1.wav");
-	cl_sfx_ric2 = S_PrecacheSound ("weapons/ric2.wav");
-	cl_sfx_ric3 = S_PrecacheSound ("weapons/ric3.wav");
-	cl_sfx_r_exp3 = S_PrecacheSound ("weapons/r_exp3.wav");
+	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav", false);
+	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav", false);
+	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav", false);
+	cl_sfx_ric1 = S_PrecacheSound ("weapons/ric1.wav", false);
+	cl_sfx_ric2 = S_PrecacheSound ("weapons/ric2.wav", false);
+	cl_sfx_ric3 = S_PrecacheSound ("weapons/ric3.wav", false);
+	cl_sfx_r_exp3 = S_PrecacheSound ("weapons/r_exp3.wav", false);
 }
 
 /*
