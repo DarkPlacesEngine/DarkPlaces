@@ -75,21 +75,11 @@ void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 	float		dist;
 	msurface_t	*surf;
 	int			i;
-//	float		l, maxdist;
-//	int			j, s, t;
-//	vec3_t		impact;
-	float cr = light->color[0];
-	float cg = light->color[1];
-	float cb = light->color[2];
-	float radius = light->radius*light->radius*16.0f;
-	float radius2 = radius * 16.0f;
-	radius -= 65536.0f; // for comparisons
 
 loc0:
 	if (node->contents < 0)
 		return;
 
-//	dist = DotProduct (lightorigin, node->plane->normal) - node->plane->dist;
 	dist = PlaneDiff(lightorigin, node->plane);
 	
 	if (dist > light->radius)
@@ -118,94 +108,16 @@ loc0:
 	}
 	node->dlightbits[bitindex] |= bit;
 
-//	maxdist = light->radius*light->radius;
-
 // mark the polygons
 	surf = cl.worldmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
-		glpoly_t *p;
-		float f;
-		int j;
-		float *v;
 		if (surf->dlightframe != r_dlightframecount) // not dynamic until now
 		{
-//			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-//			surf->dlightframe = r_dlightframecount;
-//			surf->dlightbits[bitindex] = bit;
-			for (p = surf->polys;p;p = p->next)
-			{
-				for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
-				{
-					f = VectorDistance2(v, lightorigin);
-					if (f < radius)
-					{
-						surf->dlightframe = r_dlightframecount;
-						f = radius2 / (f + 65536.0f);
-						v[ 9] = cr * f;
-						v[10] = cg * f;
-						v[11] = cb * f;
-					}
-					else
-						v[9] = v[10] = v[11] = 0;
-				}
-			}
+			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
+			surf->dlightframe = r_dlightframecount;
 		}
-		else
-		{
-//			surf->dlightbits[bitindex] |= bit;
-			for (p = surf->polys;p;p = p->next)
-			{
-				for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
-				{
-					f = VectorDistance2(v, lightorigin);
-					if (f < radius)
-					{
-						f = radius2 / (f + 65536.0f);
-						v[ 9] += cr * f;
-						v[10] += cg * f;
-						v[11] += cb * f;
-					}
-				}
-			}
-		}
-/*
-		if (surf->flags & SURF_DRAWTURB) // water
-		{
-			if (surf->dlightframe != r_dlightframecount) // not dynamic until now
-			{
-				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-				surf->dlightframe = r_dlightframecount;
-			}
-			surf->dlightbits[bitindex] |= bit;
-		}
-		// LordHavoc: MAJOR dynamic light speedup here, eliminates marking of surfaces that are too far away from light, thus preventing unnecessary uploads
-//		else if (r_dynamicbothsides.value || (((surf->flags & SURF_PLANEBACK) && (dist < -BACKFACE_EPSILON)) || (!(surf->flags & SURF_PLANEBACK) && (dist > BACKFACE_EPSILON))))
-		else if (((surf->flags & SURF_PLANEBACK) != 0) != (dist >= 0))
-		{
-			// passed the plane side check
-			for (j=0 ; j<3 ; j++)
-				impact[j] = lightorigin[j] - surf->plane->normal[j]*dist;
-
-			// clamp center of light to corner and check brightness
-			l = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-			s = l+0.5;if (s < 0) s = 0;else if (s > surf->extents[0]) s = surf->extents[0];
-			s = l - s;
-			l = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-			t = l+0.5;if (t < 0) t = 0;else if (t > surf->extents[1]) t = surf->extents[1];
-			t = l - t;
-			// compare to minimum light
-			if ((s*s+t*t+dist*dist) < maxdist)
-			{
-				if (surf->dlightframe != r_dlightframecount) // not dynamic until now
-				{
-					surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-					surf->dlightframe = r_dlightframecount;
-				}
-				surf->dlightbits[bitindex] |= bit;
-			}
-		}
-*/
+		surf->dlightbits[bitindex] |= bit;
 	}
 
 	if (node->children[0]->contents >= 0)
@@ -229,6 +141,11 @@ loc0:
 	}
 }
 
+void R_NoVisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model)
+{
+	R_OldMarkLights(lightorigin, light, bit, bitindex, model->nodes + model->hulls[0].firstclipnode);
+}
+
 void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model)
 {
 	mleaf_t *pvsleaf = Mod_PointInLeaf (lightorigin, model);
@@ -240,20 +157,17 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 	}
 	else
 	{
-		int		i, j, k, l, m, c;
+		int		i, k, l, m, c;
 		msurface_t *surf, **mark;
 		mleaf_t *leaf;
 		static int lightframe = 0;
 		byte	*in = pvsleaf->compressed_vis;
 		int		row = (model->numleafs+7)>>3;
-		float	cr = light->color[0];
-		float	cg = light->color[1];
-		float	cb = light->color[2];
-		float	radius = light->radius*light->radius*16.0f;
-		float	radius2 = radius * 16.0f;
-		glpoly_t *p;
-		float f;
-		float *v;
+		float	low[3], high[3], radius;
+
+		radius = light->radius * 4.0f;
+		low[0] = lightorigin[0] - radius;low[1] = lightorigin[1] - radius;low[2] = lightorigin[2] - radius;
+		high[0] = lightorigin[0] + radius;high[1] = lightorigin[1] + radius;high[2] = lightorigin[2] + radius;
 
 		lightframe++;
 		k = 0;
@@ -270,11 +184,16 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 					if (c & (1<<i))
 					{
 						leaf = &model->leafs[(k << 3)+i+1];
+						leaf->lightframe = lightframe;
 						if (leaf->visframe != r_visframecount)
 							continue;
 						if (leaf->contents == CONTENTS_SOLID)
 							continue;
-						leaf->lightframe = lightframe;
+						// if out of the light radius, skip
+						if (leaf->minmaxs[0] > high[0] || leaf->minmaxs[3] < low[0]
+						 || leaf->minmaxs[1] > high[1] || leaf->minmaxs[4] < low[1]
+						 || leaf->minmaxs[2] > high[2] || leaf->minmaxs[5] < low[2])
+							continue;
 						if (leaf->dlightframe != r_dlightframecount) // not dynamic until now
 						{
 							leaf->dlightbits[0] = leaf->dlightbits[1] = leaf->dlightbits[2] = leaf->dlightbits[3] = leaf->dlightbits[4] = leaf->dlightbits[5] = leaf->dlightbits[6] = leaf->dlightbits[7] = 0;
@@ -290,50 +209,15 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 								if (surf->visframe != r_framecount || surf->lightframe == lightframe)
 									continue;
 								surf->lightframe = lightframe;
-//								if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDiff(lightorigin, surf->plane)) >= 0))
-//								{
+								if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDiff(lightorigin, surf->plane)) >= 0))
+								{
 									if (surf->dlightframe != r_dlightframecount) // not dynamic until now
 									{
-//										surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-//										surf->dlightframe = r_dlightframecount;
-//										surf->dlightbits[bitindex] = bit;
-										for (p = surf->polys;p;p = p->next)
-										{
-											for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
-											{
-												f = VectorDistance2(v, lightorigin);
-												if (f < radius)
-												{
-													surf->dlightframe = r_dlightframecount;
-													f = radius2 / (f + 65536.0f);
-													v[ 9] = cr * f;
-													v[10] = cg * f;
-													v[11] = cb * f;
-												}
-												else
-													v[9] = v[10] = v[11] = 0;
-											}
-										}
+										surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
+										surf->dlightframe = r_dlightframecount;
 									}
-									else
-									{
-//										surf->dlightbits[bitindex] |= bit;
-										for (p = surf->polys;p;p = p->next)
-										{
-											for (j = 0, v = p->verts[0];j < p->numverts;j++, v += VERTEXSIZE)
-											{
-												f = VectorDistance2(v, lightorigin);
-												if (f < radius)
-												{
-													f = radius2 / (f + 65536.0f);
-													v[ 9] += cr * f;
-													v[10] += cg * f;
-													v[11] += cb * f;
-												}
-											}
-										}
-									}
-//								}
+									surf->dlightbits[bitindex] |= bit;
+								}
 							}
 							while (--m);
 						}

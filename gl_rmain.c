@@ -1567,6 +1567,9 @@ r_refdef must be set before the first call
 ================
 */
 extern qboolean intimerefresh;
+extern qboolean skyisvisible;
+extern void R_Sky();
+extern void UploadLightmaps();
 void R_RenderView (void)
 {
 //	double currtime, temptime;
@@ -1579,7 +1582,10 @@ void R_RenderView (void)
 	lighthalf = gl_lightmode.value;
 
 	FOG_framebegin();
+	skypolyclear();
+	wallpolyclear();
 	transpolyclear();
+	skyisvisible = false;
 
 //	if (r_speeds2.value)
 //	{
@@ -1598,13 +1604,19 @@ void R_RenderView (void)
 	R_DrawWorld ();		// adds static entities to the list
 	if (!intimerefresh)
 		S_ExtraUpdate ();	// don't let sound get messed up if going slow
-	wallpolyclear();
 	R_DrawEntitiesOnList1 (); // BSP models
-	wallpolyrender();
+
+	skypolyrender(); // fogged sky polys, affects depth
+	if (skyname[0] && skyisvisible && !fogenabled)
+		R_Sky(); // does not affect depth, draws over the sky polys
+
 	R_DrawEntitiesOnList2 (); // other models
 //	R_RenderDlights ();
 	R_DrawViewModel ();
 	R_DrawParticles ();
+
+	UploadLightmaps();
+	wallpolyrender();
 	transpolyrender();
 
 	FOG_frameend();
