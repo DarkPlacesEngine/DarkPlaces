@@ -2,6 +2,7 @@
 #include "quakedef.h"
 #include "image.h"
 #include "jpeg.h"
+#include "cl_collision.h"
 
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
 cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0"};
@@ -186,6 +187,11 @@ static void gl_backend_newmap(void)
 {
 }
 
+cvar_t scr_zoomwindow = {CVAR_SAVE, "scr_zoomwindow", "0"};
+cvar_t scr_zoomwindow_viewsizex = {CVAR_SAVE, "scr_zoomwindow_viewsizex", "20"};
+cvar_t scr_zoomwindow_viewsizey = {CVAR_SAVE, "scr_zoomwindow_viewsizey", "20"};
+cvar_t scr_zoomwindow_fov = {CVAR_SAVE, "scr_zoomwindow_fov", "20"};
+
 void gl_backend_init(void)
 {
 	int i;
@@ -210,17 +216,13 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_mesh_drawrangeelements);
 	Cvar_RegisterVariable(&gl_mesh_testarrayelement);
 	Cvar_RegisterVariable(&gl_mesh_testmanualfeeding);
+
+	Cvar_RegisterVariable(&scr_zoomwindow);
+	Cvar_RegisterVariable(&scr_zoomwindow_viewsizex);
+	Cvar_RegisterVariable(&scr_zoomwindow_viewsizey);
+	Cvar_RegisterVariable(&scr_zoomwindow_fov);
+
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
-}
-
-void GL_SetupView_ViewPort (int x, int y, int width, int height)
-{
-	if (!r_render.integer)
-		return;
-
-	// y is weird beause OpenGL is bottom to top, we use top to bottom
-	qglViewport(x, vid.realheight - (y + height), width, height);
-	CHECKGLERROR
 }
 
 void GL_SetupView_Orientation_Identity (void)
@@ -1076,6 +1078,17 @@ void R_ClearScreen(void)
 }
 
 /*
+====================
+CalcFov
+====================
+*/
+float CalcFov (float fov_x, float width, float height)
+{
+	// calculate vision size and alter by aspect, then convert back to angle
+	return atan (height / (width / tan(fov_x/360*M_PI))) * 360 / M_PI;
+}
+
+/*
 ==================
 SCR_UpdateScreen
 
@@ -1107,7 +1120,76 @@ void SCR_UpdateScreen (void)
 	R_TimeReport("clear");
 
 	if (scr_conlines < vid.conheight && cls.signon == SIGNONS)
+	{
+		float size;
+		int contents;
+
+		// bound viewsize
+		if (scr_viewsize.value < 30)
+			Cvar_Set ("viewsize","30");
+		if (scr_viewsize.value > 120)
+			Cvar_Set ("viewsize","120");
+		
+		// bound field of view
+		if (scr_fov.value < 1)
+			Cvar_Set ("fov","1");
+		if (scr_fov.value > 170)
+			Cvar_Set ("fov","170");
+	
+		// intermission is always full screen
+		if (cl.intermission)
+		{
+			size = 1;
+			sb_lines = 0;
+		}
+		else
+		{
+			if (scr_viewsize.value >= 120)
+				sb_lines = 0;		// no status bar at all
+			else if (scr_viewsize.value >= 110)
+				sb_lines = 24;		// no inventory
+			else
+				sb_lines = 24+16+8;
+			size = scr_viewsize.value * (1.0 / 100.0);
+			size = min(size, 1);
+		}
+	
+		r_refdef.width = vid.realwidth * size;
+		r_refdef.height = vid.realheight * size;
+		r_refdef.x = (vid.realwidth - r_refdef.width)/2;
+		r_refdef.y = (vid.realheight - r_refdef.height)/2;
+	
+		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
+		r_refdef.fov_x = scr_fov.value * cl.viewzoom;
+		r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
+	
+		if (cl.worldmodel)
+		{
+			Mod_CheckLoaded(cl.worldmodel);
+			contents = CL_PointSuperContents(r_vieworigin);
+			if (contents & SUPERCONTENTS_LIQUIDSMASK)
+			{
+				r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);
+				r_refdef.fov_y *= (sin(cl.time * 3.0) * 0.015 + 0.985);
+			}
+		}
+
 		R_RenderView();
+
+		if (scr_zoomwindow.integer)
+		{
+			float sizex = bound(10, scr_zoomwindow_viewsizex.value, 100) / 100.0;
+			float sizey = bound(10, scr_zoomwindow_viewsizey.value, 100) / 100.0;
+			r_refdef.width = vid.realwidth * sizex;
+			r_refdef.height = vid.realheight * sizey;
+			r_refdef.x = (vid.realwidth - r_refdef.width)/2;
+			r_refdef.y = 0;
+			r_refdef.fov_x = scr_zoomwindow_fov.value;
+			r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.width, r_refdef.height);
+
+			R_RenderView();
+		}
+	}
 
 	// draw 2D stuff
 	R_DrawQueue();

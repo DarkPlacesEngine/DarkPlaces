@@ -5,7 +5,7 @@
 #include "cl_collision.h"
 
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100"};
-cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 10 - 170
+cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 1 - 170
 cvar_t scr_conspeed = {CVAR_SAVE, "scr_conspeed","900"}; // LordHavoc: quake used 300
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
 cvar_t scr_conbrightness = {CVAR_SAVE, "scr_conbrightness", "0.2"};
@@ -646,97 +646,6 @@ void DrawQ_ResetClipArea(void)
 }
 
 /*
-====================
-CalcFov
-====================
-*/
-float CalcFov (float fov_x, float width, float height)
-{
-	// calculate vision size and alter by aspect, then convert back to angle
-	return atan (height / (width / tan(fov_x/360*M_PI))) * 360 / M_PI;
-}
-
-/*
-=================
-SCR_CalcRefdef
-
-Must be called whenever vid changes
-Internal use only
-=================
-*/
-static void SCR_CalcRefdef (void)
-{
-	float size;
-	int contents;
-
-//========================================
-
-// bound viewsize
-	if (scr_viewsize.value < 30)
-		Cvar_Set ("viewsize","30");
-	if (scr_viewsize.value > 120)
-		Cvar_Set ("viewsize","120");
-
-// bound field of view
-	if (scr_fov.value < 10)
-		Cvar_Set ("fov","10");
-	if (scr_fov.value > 170)
-		Cvar_Set ("fov","170");
-
-// intermission is always full screen
-	if (cl.intermission)
-	{
-		size = 1;
-		sb_lines = 0;
-	}
-	else
-	{
-		if (scr_viewsize.value >= 120)
-			sb_lines = 0;		// no status bar at all
-		else if (scr_viewsize.value >= 110)
-			sb_lines = 24;		// no inventory
-		else
-			sb_lines = 24+16+8;
-		size = scr_viewsize.value * (1.0 / 100.0);
-	}
-
-	if (size >= 1)
-	{
-		r_refdef.width = vid.realwidth;
-		r_refdef.height = vid.realheight;
-		r_refdef.x = 0;
-		r_refdef.y = 0;
-	}
-	else
-	{
-		r_refdef.width = vid.realwidth * size;
-		r_refdef.height = vid.realheight * size;
-		r_refdef.x = (vid.realwidth - r_refdef.width)/2;
-		r_refdef.y = (vid.realheight - r_refdef.height)/2;
-	}
-
-	r_refdef.width = bound(0, r_refdef.width, vid.realwidth);
-	r_refdef.height = bound(0, r_refdef.height, vid.realheight);
-	r_refdef.x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width) + vid.realx;
-	r_refdef.y = bound(0, r_refdef.y, vid.realheight - r_refdef.height) + vid.realy;
-
-	// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-	r_refdef.fov_x = scr_fov.value * cl.viewzoom;
-	r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
-
-	if (cl.worldmodel)
-	{
-		Mod_CheckLoaded(cl.worldmodel);
-		contents = CL_PointSuperContents(r_vieworigin);
-		if (contents & SUPERCONTENTS_LIQUIDSMASK)
-		{
-			r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);
-			r_refdef.fov_y *= (sin(cl.time * 3.0) * 0.015 + 0.985);
-		}
-	}
-}
-
-/*
 ==================
 SCR_ScreenShot_f
 ==================
@@ -974,9 +883,6 @@ void CL_SetupScreenSize(void)
 		vid.conheight = 240;*/
 
 	SCR_SetUpToDrawConsole();
-
-	// determine size of refresh window
-	SCR_CalcRefdef();
 }
 
 extern void R_Shadow_EditLights_DrawSelectedLightProperties(void);

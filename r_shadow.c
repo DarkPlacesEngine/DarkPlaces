@@ -863,7 +863,7 @@ void R_Shadow_Stage_Begin(void)
 	R_Mesh_State_Texture(&m);
 	GL_Color(0, 0, 0, 1);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-	qglDisable(GL_SCISSOR_TEST);
+	GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
 	r_shadowstage = SHADOWSTAGE_NONE;
 
 	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
@@ -978,7 +978,7 @@ void R_Shadow_Stage_End(void)
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
-	qglDisable(GL_SCISSOR_TEST);
+	GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
 	qglDepthFunc(GL_LEQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_STENCIL_TEST);
@@ -1000,7 +1000,7 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	// (?!?  seems like a driver bug) so abort if gl_stencil is false
 	if (!gl_stencil || BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
 	{
-		qglDisable(GL_SCISSOR_TEST);
+		GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
 		return false;
 	}
 	for (i = 0;i < 3;i++)
@@ -1153,8 +1153,9 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	if (ix2 <= ix1 || iy2 <= iy1)
 		return true;
 	// set up the scissor rectangle
-	qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
-	qglEnable(GL_SCISSOR_TEST);
+	GL_Scissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
+	//qglScissor(ix1, iy1, ix2 - ix1, iy2 - iy1);
+	//qglEnable(GL_SCISSOR_TEST);
 	c_rt_scissored++;
 	return false;
 }

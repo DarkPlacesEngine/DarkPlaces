@@ -38,6 +38,7 @@ extern qboolean	scr_disabled_for_loading;
 extern qboolean	scr_skipupdate;
 
 extern cvar_t scr_viewsize;
+extern cvar_t scr_fov;
 extern cvar_t showfps;
 
 extern cvar_t crosshair;
