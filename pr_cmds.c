@@ -1055,16 +1055,18 @@ findradius (origin, radius)
 */
 void PF_findradius (void)
 {
-	edict_t	*ent, *chain;
-	float	rad;
-	float	*org;
-	vec3_t	eorg;
-	int		i, j;
+	edict_t *ent, *chain;
+	float radius;
+	float radius2;
+	float *org;
+	float eorg[3];
+	int i;
 
 	chain = (edict_t *)sv.edicts;
 	
 	org = G_VECTOR(OFS_PARM0);
-	rad = G_FLOAT(OFS_PARM1);
+	radius = G_FLOAT(OFS_PARM1);
+	radius2 = radius * radius;
 
 	ent = NEXT_EDICT(sv.edicts);
 	for (i=1 ; i<sv.num_edicts ; i++, ent = NEXT_EDICT(ent))
@@ -1073,9 +1075,13 @@ void PF_findradius (void)
 			continue;
 		if (ent->v.solid == SOLID_NOT)
 			continue;
-		for (j=0 ; j<3 ; j++)
-			eorg[j] = org[j] - (ent->v.origin[j] + (ent->v.mins[j] + ent->v.maxs[j])*0.5);			
-		if (Length(eorg) > rad)
+
+		// LordHavoc: compare against bounding box rather than center,
+		// and use DotProduct instead of Length, major speedup
+		eorg[0] = (org[0] - ent->v.origin[0]) - bound(ent->v.mins[0], (org[0] - ent->v.origin[0]), ent->v.maxs[0]);
+		eorg[1] = (org[1] - ent->v.origin[1]) - bound(ent->v.mins[1], (org[1] - ent->v.origin[1]), ent->v.maxs[1]);
+		eorg[2] = (org[2] - ent->v.origin[2]) - bound(ent->v.mins[2], (org[2] - ent->v.origin[2]), ent->v.maxs[2]);
+		if (DotProduct(eorg, eorg) > radius2)
 			continue;
 			
 		ent->v.chain = EDICT_TO_PROG(chain);
@@ -1590,8 +1596,8 @@ void PF_aim (void)
 	VectorCopy (pr_global_struct->v_forward, dir);
 	VectorMA (start, 2048, dir, end);
 	tr = SV_Move (start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent);
-	if (tr.ent && tr.ent->v.takedamage == DAMAGE_AIM
-	&& (!teamplay.integer || ent->v.team <=0 || ent->v.team != tr.ent->v.team) )
+	if (tr.ent && ((edict_t *)tr.ent)->v.takedamage == DAMAGE_AIM
+	&& (!teamplay.integer || ent->v.team <=0 || ent->v.team != ((edict_t *)tr.ent)->v.team) )
 	{
 		VectorCopy (pr_global_struct->v_forward, G_VECTOR(OFS_RETURN));
 		return;
