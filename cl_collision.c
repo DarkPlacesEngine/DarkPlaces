@@ -69,7 +69,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 		// look for embedded bmodels
 		for (n = 0;n < cl_num_brushmodel_entities;n++)
 		{
-			ent = cl_brushmodel_entities[n];
+			ent = &cl_entities[cl_brushmodel_entities[n]].render;
 			if (!BoxesOverlap(tracemins, tracemaxs, ent->mins, ent->maxs))
 				continue;
 
