@@ -103,6 +103,8 @@ void Sys_Shared_EarlyInit(void)
 	os = "Linux";
 #elif defined(WIN32)
 	os = "Windows";
+#elif defined(__NetBSD__)
+	os = "NetBSD";
 #else
 	os = "Unknown";
 #endif
