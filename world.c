@@ -311,14 +311,18 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 
 	if (ent->v->solid == SOLID_BSP)
 	{
-		if (ent->v->modelindex < 0 || ent->v->modelindex > MAX_MODELS)
-			Host_Error("SOLID_BSP with invalid modelindex!\n");
-		model = sv.models[(int) ent->v->modelindex];
+		int modelindex = ent->v->modelindex;
+		if (modelindex < 0 || modelindex > MAX_MODELS)
+		{
+			Con_DPrintf("edict %i: SOLID_BSP with invalid modelindex!\n", NUM_FOR_EDICT(ent));
+			modelindex = 0;
+		}
+		model = sv.models[modelindex];
 		if (model != NULL)
 		{
 			Mod_CheckLoaded(model);
 			if (!model->TraceBox)
-				Host_Error("SOLID_BSP with non-collidable model\n");
+				Con_DPrintf("edict %i: SOLID_BSP with non-collidable model\n", NUM_FOR_EDICT(ent));
 
 			if (ent->v->angles[0] || ent->v->angles[2] || ent->v->avelocity[0] || ent->v->avelocity[2])
 			{
@@ -425,34 +429,34 @@ eventually rotation) of the end points
 */
 trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int movetype)
 {
-	int i;
 	trace_t trace;
 	model_t *model = NULL;
 	matrix4x4_t matrix, imatrix;
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 	float starttransformedmins[3], starttransformedmaxs[3], endtransformedmins[3], endtransformedmaxs[3];
 
+	memset(&trace, 0, sizeof(trace));
+	trace.fraction = trace.realfraction = 1;
+	VectorCopy(end, trace.endpos);
+
 	if ((int) ent->v->solid == SOLID_BSP || movetype == MOVE_HITMODEL)
 	{
-		i = ent->v->modelindex;
+		unsigned int modelindex = ent->v->modelindex;
 		// if the modelindex is 0, it shouldn't be SOLID_BSP!
-		if (i == 0)
+		if (modelindex == 0)
 		{
-			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", NUM_FOR_EDICT(ent));
-			memset(&trace, 0, sizeof(trace));
+			Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", NUM_FOR_EDICT(ent));
 			return trace;
 		}
-		if ((unsigned int) i >= MAX_MODELS)
+		if (modelindex >= MAX_MODELS)
 		{
-			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
-			memset(&trace, 0, sizeof(trace));
+			Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
 			return trace;
 		}
-		model = sv.models[i];
-		if (i != 0 && model == NULL)
+		model = sv.models[modelindex];
+		if (modelindex != 0 && model == NULL)
 		{
-			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
-			memset(&trace, 0, sizeof(trace));
+			Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
 			return trace;
 		}
 
@@ -461,16 +465,14 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 		{
 			if (!model->TraceBox)
 			{
-				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", NUM_FOR_EDICT(ent));
-				memset(&trace, 0, sizeof(trace));
+				Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", NUM_FOR_EDICT(ent));
 				return trace;
 			}
-			if (ent->v->movetype != MOVETYPE_PUSH)
-			{
-				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", NUM_FOR_EDICT(ent));
-				memset(&trace, 0, sizeof(trace));
-				return trace;
-			}
+			//if (ent->v->movetype != MOVETYPE_PUSH)
+			//{
+			//	Con_DPrintf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", NUM_FOR_EDICT(ent));
+			//	return trace;
+			//}
 		}
 		Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
 	}
