@@ -902,7 +902,7 @@ void FS_Init (void)
 
 	// -basedir <path>
 	// Overrides the system supplied base directory (under GAMENAME)
-// COMMANDLINEOPTION: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
+// COMMANDLINEOPTION: Filesystem: -basedir <path> chooses what base directory the game data is in, inside this there should be a data directory for the game (for example id1)
 	i = COM_CheckParm ("-basedir");
 	if (i && i < com_argc-1)
 	{
@@ -914,7 +914,7 @@ void FS_Init (void)
 
 	// -path <dir or packfile> [<dir or packfile>] ...
 	// Fully specifies the exact search path, overriding the generated one
-// COMMANDLINEOPTION: -path <path ..> specifies the full search path manually, overriding the generated one, example: -path c:\quake\id1 c:\quake\pak0.pak c:\quake\pak1.pak (not recommended)
+// COMMANDLINEOPTION: Filesystem: -path <path ..> specifies the full search path manually, overriding the generated one, example: -path c:\quake\id1 c:\quake\pak0.pak c:\quake\pak1.pak (not recommended)
 	i = COM_CheckParm ("-path");
 	if (i)
 	{

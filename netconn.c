@@ -1611,7 +1611,7 @@ void NetConn_Init(void)
 	Cvar_RegisterVariable(&sv_heartbeatperiod);
 	for (i = 0;sv_masters[i].name;i++)
 		Cvar_RegisterVariable(&sv_masters[i]);
-// COMMANDLINEOPTION: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
+// COMMANDLINEOPTION: Server: -ip <ipaddress> sets the ip address of this machine for purposes of networking (default 0.0.0.0 also known as INADDR_ANY), use only if you have multiple network adapters and need to choose one specifically.
 	if ((i = COM_CheckParm("-ip")) && i + 1 < com_argc)
 	{
 		if (LHNETADDRESS_FromString(&tempaddress, com_argv[i + 1], 0) == 1)
@@ -1622,7 +1622,7 @@ void NetConn_Init(void)
 		else
 			Con_Printf("-ip option used, but unable to parse the address \"%s\"\n", com_argv[i + 1]);
 	}
-// COMMANDLINEOPTION: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
+// COMMANDLINEOPTION: Server: -port <portnumber> sets the port to use for a server (default 26000, the same port as QUAKE itself), useful if you host multiple servers on your machine
 	if (((i = COM_CheckParm("-port")) || (i = COM_CheckParm("-ipport")) || (i = COM_CheckParm("-udpport"))) && i + 1 < com_argc)
 	{
 		i = atoi(com_argv[i + 1]);

@@ -811,7 +811,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	}
 
 	gldrivername = "opengl32.dll";
-// COMMANDLINEOPTION: -gl_driver <drivername> selects a GL driver library, default is libGL.so.1 (Linux/BSD) or opengl32.dll (windows) or /usr/X11R6/lib/libGL.1.dylib (MacOSX), if you don't know what this is for, you don't need it
+// COMMANDLINEOPTION: Windows WGL: -gl_driver <drivername> selects a GL driver library, default is opengl32.dll, useful only for 3dfxogl.dll or 3dfxvgl.dll, if you don't know what this is for, you don't need it
 	i = COM_CheckParm("-gl_driver");
 	if (i && i < com_argc - 1)
 		gldrivername = com_argv[i + 1];
@@ -992,7 +992,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	if (qwglGetExtensionsStringARB)
 		gl_platformextensions = qwglGetExtensionsStringARB(hdc);
 
-// COMMANDLINEOPTION: -novideosync disables WGL_EXT_swap_control (required for video sync control on WGL)
+// COMMANDLINEOPTION: Windows WGL: -novideosync disables WGL_EXT_swap_control
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
 	ReleaseDC(mainwindow, hdc);
 
@@ -1266,13 +1266,12 @@ IN_StartupMouse
 */
 void IN_StartupMouse (void)
 {
-// COMMANDLINEOPTION: -nomouse disables mouse support (see also vid_mouse cvar)
 	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		return;
 
 	mouseinitialized = true;
 
-// COMMANDLINEOPTION: -dinput uses DirectInput for mouse/joystick input, may be more precise or responsive, but probably not (windows only)
+// COMMANDLINEOPTION: Windows Input: -dinput uses DirectInput (instead of GDI) for mouse/joystick input, may be more precise or responsive, but probably not
 	if (COM_CheckParm ("-dinput"))
 	{
 		dinput = IN_InitDInput ();
@@ -1293,18 +1292,18 @@ void IN_StartupMouse (void)
 
 		if (mouseparmsvalid)
 		{
-// COMMANDLINEOPTION: -noforcemspd disables setting of mouse speed (ignored with -dinput, windows only)
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemspd disables setting of mouse speed (ignored with -dinput, windows only)
 			if ( COM_CheckParm ("-noforcemspd") )
 				newmouseparms[2] = originalmouseparms[2];
 
-// COMMANDLINEOPTION: -noforcemaccel disables setting of mouse acceleration (ignored with -dinput, windows only)
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (ignored with -dinput, windows only)
 			if ( COM_CheckParm ("-noforcemaccel") )
 			{
 				newmouseparms[0] = originalmouseparms[0];
 				newmouseparms[1] = originalmouseparms[1];
 			}
 
-// COMMANDLINEOPTION: -noforcemparms disables setting of mouse parameters (ignored with -dinput, windows only)
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemparms disables setting of mouse parameters (ignored with -dinput, windows only)
 			if ( COM_CheckParm ("-noforcemparms") )
 			{
 				newmouseparms[0] = originalmouseparms[0];
@@ -1538,7 +1537,7 @@ void IN_StartupJoystick (void)
 	joy_avail = false;
 
 	// abort startup if user requests no joystick
-// COMMANDLINEOPTION: -nojoy disables joystick support, may be a small speed increase
+// COMMANDLINEOPTION: Windows Input: -nojoy disables joystick support, may be a small speed increase
 	if (COM_CheckParm ("-nojoy") || COM_CheckParm("-safe"))
 		return;
 

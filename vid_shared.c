@@ -630,48 +630,48 @@ void VID_CheckExtensions(void)
 
 	Con_DPrint("Checking OpenGL extensions...\n");
 
-// COMMANDLINEOPTION: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
+// COMMANDLINEOPTION: GL: -nodrawrangeelements disables GL_EXT_draw_range_elements (renders faster)
 	if (!GL_CheckExtension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
 		GL_CheckExtension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", false);
 
-// COMMANDLINEOPTION: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
+// COMMANDLINEOPTION: GL: -nomtex disables GL_ARB_multitexture (required for faster map rendering)
 	if (GL_CheckExtension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
 	{
 		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
-// COMMANDLINEOPTION: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
+// COMMANDLINEOPTION: GL: -nocombine disables GL_ARB_texture_env_combine or GL_EXT_texture_env_combine (required for bumpmapping and faster map rendering)
 		gl_combine_extension = GL_CheckExtension("GL_ARB_texture_env_combine", NULL, "-nocombine", false) || GL_CheckExtension("GL_EXT_texture_env_combine", NULL, "-nocombine", false);
-// COMMANDLINEOPTION: -nodot3 disables GL_ARB_texture_env_dot3 (required for bumpmapping)
+// COMMANDLINEOPTION: GL: -nodot3 disables GL_ARB_texture_env_dot3 (required for bumpmapping)
 		if (gl_combine_extension)
 			gl_dot3arb = GL_CheckExtension("GL_ARB_texture_env_dot3", NULL, "-nodot3", false);
 	}
 
-// COMMANDLINEOPTION: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
+// COMMANDLINEOPTION: GL: -notexture3d disables GL_EXT_texture3D (required for spherical lights, otherwise they render as a column)
 	gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
-// COMMANDLINEOPTION: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
+// COMMANDLINEOPTION: GL: -nocubemap disables GL_ARB_texture_cube_map (required for bumpmapping)
 	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
-// COMMANDLINEOPTION: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
+// COMMANDLINEOPTION: GL: -nocva disables GL_EXT_compiled_vertex_array (renders faster)
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
-// COMMANDLINEOPTION: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
+// COMMANDLINEOPTION: GL: -noedgeclamp disables GL_EXT_texture_edge_clamp or GL_SGIS_texture_edge_clamp (recommended, some cards do not support the other texture clamp method)
 	gl_support_clamptoedge = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 
-// COMMANDLINEOPTION: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
+// COMMANDLINEOPTION: GL: -noanisotropy disables GL_EXT_texture_filter_anisotropic (allows higher quality texturing)
 	if ((gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false)))
 		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
 
-// COMMANDLINEOPTION: -notextureshader disables GL_NV_texture_shader (required for the Geforce3 water shader, NVIDIA only)
+// COMMANDLINEOPTION: GL: -notextureshader disables GL_NV_texture_shader (required for the Geforce3 water shader, NVIDIA only)
 	gl_textureshader = GL_CheckExtension("GL_NV_texture_shader", NULL, "-notextureshader", false);
 
-// COMMANDLINEOPTION: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rendering)
+// COMMANDLINEOPTION: GL: -nostenciltwoside disables GL_EXT_stencil_two_side (accelerates shadow rendering)
 	gl_support_stenciltwoside = GL_CheckExtension("GL_EXT_stencil_two_side", stenciltwosidefuncs, "-nostenciltwoside", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
 
-// COMMANDLINEOPTION: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
-// COMMANDLINEOPTION: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)
-// COMMANDLINEOPTION: -novertexshader disables GL_ARB_vertex_shader (currently unused, allows vertex shader effects)
-// COMMANDLINEOPTION: -nofragmentshader disables GL_ARB_fragment_shader (currently unused, allows pixel shader effects)
+// COMMANDLINEOPTION: GL: -noshaderobjects disables GL_ARB_shader_objects (required for vertex shader and fragment shader)
+// COMMANDLINEOPTION: GL: -noshadinglanguage100 disables GL_ARB_shading_language_100 (required for vertex shader and fragment shader)
+// COMMANDLINEOPTION: GL: -novertexshader disables GL_ARB_vertex_shader (currently unused, allows vertex shader effects)
+// COMMANDLINEOPTION: GL: -nofragmentshader disables GL_ARB_fragment_shader (currently unused, allows pixel shader effects)
 	if ((gl_support_shader_objects = GL_CheckExtension("GL_ARB_shader_objects", shaderobjectsfuncs, "-noshaderobjects", false)))
 		if ((gl_support_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false)))
 			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
@@ -1033,18 +1033,18 @@ void VID_Open(void)
 	{
 		// interpret command-line parameters
 		vid_commandlinecheck = false;
-// COMMANDLINEOPTION: -window performs +vid_fullscreen 0
+// COMMANDLINEOPTION: Video: -window performs +vid_fullscreen 0
 		if (COM_CheckParm("-window") || COM_CheckParm("-safe"))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
-// COMMANDLINEOPTION: -fullscreen performs +vid_fullscreen 1
+// COMMANDLINEOPTION: Video: -fullscreen performs +vid_fullscreen 1
 		if (COM_CheckParm("-fullscreen"))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
 		width = 0;
 		height = 0;
-// COMMANDLINEOPTION: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
+// COMMANDLINEOPTION: Video: -width <pixels> performs +vid_width <pixels> and also +vid_height <pixels*3/4> if only -width is specified (example: -width 1024 sets 1024x768 mode)
 		if ((i = COM_CheckParm("-width")) != 0)
 			width = atoi(com_argv[i+1]);
-// COMMANDLINEOPTION: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
+// COMMANDLINEOPTION: Video: -height <pixels> performs +vid_height <pixels> and also +vid_width <pixels*4/3> if only -height is specified (example: -height 768 sets 1024x768 mode)
 		if ((i = COM_CheckParm("-height")) != 0)
 			height = atoi(com_argv[i+1]);
 		if (width == 0)
@@ -1055,7 +1055,7 @@ void VID_Open(void)
 			Cvar_SetValueQuick(&vid_width, width);
 		if (height)
 			Cvar_SetValueQuick(&vid_height, height);
-// COMMANDLINEOPTION: -bpp <bits> performs +vid_bitsperpixel <bits> (example -bpp 32 or -bpp 16)
+// COMMANDLINEOPTION: Video: -bpp <bits> performs +vid_bitsperpixel <bits> (example -bpp 32 or -bpp 16)
 		if ((i = COM_CheckParm("-bpp")) != 0)
 			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 	}
