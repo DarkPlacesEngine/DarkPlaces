@@ -902,7 +902,7 @@ void SCR_UpdateScreen (void)
 		SCR_CalcRefdef ();
 
 	glClearColor(0,0,0,0);
-	glClear (GL_COLOR_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
 
 //
 // do 3D refresh drawing, and then update the screen

@@ -1001,14 +1001,9 @@ void R_DrawWorld (void)
 	if (cl.worldmodel)
 		R_WorldNode ();
 
-	glClear (GL_DEPTH_BUFFER_BIT);
-
 	R_PushDlights (); // now mark the lit surfaces
 
 	DrawTextureChains ();
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 
