@@ -33,7 +33,7 @@ typedef struct buf_mesh_s
 	int firsttriangle;
 	int triangles;
 	int firstvert;
-	int lastvert;
+	int verts;
 	struct buf_mesh_s *chain;
 	struct buf_transtri_s *transchain;
 	//struct buf_transtri_s **transchainpointer;
@@ -262,7 +262,7 @@ static void GL_SetupFrame (void)
 	// y is weird beause OpenGL is bottom to top, we use top to bottom
 	glViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);
 //	yfov = 2*atan((float)r_refdef.height/r_refdef.width)*180/M_PI;
-	MYgluPerspective (r_refdef.fov_x, r_refdef.fov_y, r_refdef.width/r_refdef.height, 4, r_farclip);
+	MYgluPerspective (r_refdef.fov_x, r_refdef.fov_y, r_refdef.width/r_refdef.height, 4.0 / 3.0, r_farclip);
 
 	glCullFace(GL_FRONT);
 
@@ -362,7 +362,7 @@ int errornumber = 0;
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, triangles, firstvert, lastvert, texture[MAX_TEXTUREUNITS];
+	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, triangles, firstvert, endvert, texture[MAX_TEXTUREUNITS];
 	float farclip, texturergbscale[MAX_TEXTUREUNITS];
 	buf_mesh_t *mesh;
 	unsigned int *index;
@@ -412,13 +412,13 @@ CHECKGLERROR
 	glDepthMask((GLboolean) depthmask);
 CHECKGLERROR
 
-	glVertexPointer(3, GL_FLOAT, sizeof(buf_vertex_t), buf_vertex);
+	glVertexPointer(3, GL_FLOAT, sizeof(buf_vertex_t), &buf_vertex[0].v[0]);
 CHECKGLERROR
 	glEnableClientState(GL_VERTEX_ARRAY);
 CHECKGLERROR
 	if (gl_mesh_floatcolors.integer)
 	{
-		glColorPointer(4, GL_FLOAT, sizeof(buf_fcolor_t), buf_fcolor);
+		glColorPointer(4, GL_FLOAT, sizeof(buf_fcolor_t), &buf_fcolor[0].c[0]);
 CHECKGLERROR
 	}
 	else
@@ -439,7 +439,7 @@ CHECKGLERROR
 			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
 			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
 		}
-		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(buf_bcolor_t), buf_bcolor);
+		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(buf_bcolor_t), &buf_bcolor[0].c[0]);
 CHECKGLERROR
 	}
 	glEnableClientState(GL_COLOR_ARRAY);
@@ -670,7 +670,7 @@ CHECKGLERROR
 		firsttriangle = mesh->firsttriangle;
 		triangles = mesh->triangles;
 		firstvert = mesh->firstvert;
-		lastvert = mesh->lastvert;
+		endvert = firstvert + mesh->verts;
 		mesh = &buf_mesh[++k];
 
 		if (meshmerge)
@@ -679,6 +679,7 @@ CHECKGLERROR
 			#error update this code
 			#endif
 			while (k < currentmesh
+				&& mesh->firstvert == endvert
 				&& mesh->blendfunc1 == blendfunc1
 				&& mesh->blendfunc2 == blendfunc2
 				&& mesh->depthtest == depthtest
@@ -693,10 +694,7 @@ CHECKGLERROR
 				&& mesh->texturergbscale[3] == texturergbscale[3])
 			{
 				triangles += mesh->triangles;
-				if (firstvert > mesh->firstvert)
-					firstvert = mesh->firstvert;
-				if (lastvert < mesh->lastvert)
-					lastvert = mesh->lastvert;
+				endvert += mesh->verts;
 				mesh = &buf_mesh[++k];
 			}
 		}
@@ -709,7 +707,7 @@ CHECKGLERROR
 		// FIXME: dynamic link to GL so we can get DrawRangeElements on WIN32
 		glDrawElements(GL_TRIANGLES, triangles * 3, GL_UNSIGNED_INT, index);
 #else
-		glDrawRangeElements(GL_TRIANGLES, firstvert, lastvert + 1, triangles * 3, GL_UNSIGNED_INT, index);
+		glDrawRangeElements(GL_TRIANGLES, firstvert, endvert, triangles * 3, GL_UNSIGNED_INT, index);
 #endif
 CHECKGLERROR
 	}
@@ -844,8 +842,8 @@ void R_Mesh_AddTransparent(void)
 		k++;
 	}
 
-	//if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
-	//	R_Mesh_Render();
+	if (currentmesh + k > max_meshs || currenttriangle + k > max_batch || currentvertex + currenttransvertex > max_verts)
+		R_Mesh_Render();
 
 	for (i = 0;i < currenttransmesh;i++)
 		buf_transmesh[i].transchain = NULL;
@@ -869,20 +867,18 @@ void R_Mesh_AddTransparent(void)
 
 	for (;transmesh;transmesh = transmesh->chain)
 	{
-		int numverts = transmesh->lastvert - transmesh->firstvert + 1;
-		if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + numverts > max_verts)
-			R_Mesh_Render();
+		//if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currentvertex + transmesh->verts > max_verts)
+		//	R_Mesh_Render();
 
-		memcpy(&buf_vertex[currentvertex], &buf_transvertex[transmesh->firstvert], numverts * sizeof(buf_vertex_t));
-		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], numverts * sizeof(buf_fcolor_t));
+		memcpy(&buf_vertex[currentvertex], &buf_transvertex[transmesh->firstvert], transmesh->verts * sizeof(buf_vertex_t));
+		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], transmesh->verts * sizeof(buf_fcolor_t));
 		for (i = 0;i < backendunits && transmesh->textures[i];i++)
-			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][transmesh->firstvert], numverts * sizeof(buf_texcoord_t));
+			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][transmesh->firstvert], transmesh->verts * sizeof(buf_texcoord_t));
 
 		mesh = &buf_mesh[currentmesh++];
 		*mesh = *transmesh; // copy mesh properties
 		mesh->firstvert = currentvertex;
-		mesh->lastvert = currentvertex + numverts - 1;
-		currentvertex += numverts;
+		currentvertex += mesh->verts;
 		mesh->firsttriangle = currenttriangle;
 		for (tri = transmesh->transchain;tri;tri = tri->meshsortchain)
 		{
@@ -937,22 +933,11 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
 
-	scaler = 1;
-	if (m->blendfunc2 == GL_SRC_COLOR)
-	{
-		if (m->blendfunc1 == GL_DST_COLOR) // 2x modulate with framebuffer
-			scaler *= 0.5f;
-	}
-	else
-	{
-		if (m->tex[0])
-		{
-			overbright = gl_combine.integer;
-			if (overbright)
-				scaler *= 0.25f;
-		}
-		scaler *= overbrightscale;
-	}
+#ifdef DEBUGGL
+	for (i = 0;i < m->numtriangles * 3;i++)
+		if ((unsigned int) m->index[i] >= (unsigned int) m->numverts)
+			Host_Error("R_Mesh_Draw: invalid index (%i of %i verts)\n", m->index, m->numverts);
+#endif
 
 	if (m->transparent)
 	{
@@ -977,11 +962,10 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		// are inserted into the main mesh array
 		mesh = &buf_transmesh[currenttransmesh++];
 		mesh->firsttriangle = currenttranstriangle;
-		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
-		currenttranstriangle += m->numtriangles;
-
 		mesh->firstvert = currenttransvertex;
-		mesh->lastvert = currenttransvertex + m->numverts - 1;
+		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+
+		currenttranstriangle += m->numtriangles;
 		currenttransvertex += m->numverts;
 	}
 	else
@@ -1005,11 +989,9 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		// opaque meshs are rendered directly
 		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
+		mesh->firstvert = currentvertex;
 		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttriangle += m->numtriangles;
-
-		mesh->firstvert = currentvertex;
-		mesh->lastvert = currentvertex + m->numverts - 1;
 		currentvertex += m->numverts;
 	}
 
@@ -1019,6 +1001,27 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
 	mesh->depthtest = !m->depthdisable;
 	mesh->triangles = m->numtriangles;
+	mesh->verts = m->numverts;
+
+	overbright = false;
+	scaler = 1;
+	if (m->blendfunc2 == GL_SRC_COLOR)
+	{
+		if (m->blendfunc1 == GL_DST_COLOR) // 2x modulate with framebuffer
+			scaler *= 0.5f;
+	}
+	else
+	{
+		if (m->tex[0])
+		{
+			overbright = gl_combine.integer;
+			if (overbright)
+				scaler *= 0.25f;
+		}
+		scaler *= overbrightscale;
+	}
+
+
 	j = -1;
 	for (i = 0;i < backendunits;i++)
 	{
@@ -1087,9 +1090,6 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	for (;j < backendunits;j++)
 		memset(&texcoord[j][0].t[0], 0, m->numverts * sizeof(buf_texcoord_t));
 	#endif
-
-	if (currenttriangle >= max_batch)
-		R_Mesh_Render();
 }
 
 void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
@@ -1126,23 +1126,6 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 			return;
 	}
 
-	scaler = 1;
-	if (m->blendfunc2 == GL_SRC_COLOR)
-	{
-		if (m->blendfunc1 == GL_DST_COLOR) // 2x modulate with framebuffer
-			scaler *= 0.5f;
-	}
-	else
-	{
-		if (m->tex[0])
-		{
-			overbright = gl_combine.integer;
-			if (overbright)
-				scaler *= 0.25f;
-		}
-		scaler *= overbrightscale;
-	}
-
 	if (m->transparent)
 	{
 		if (currenttransmesh >= max_meshs || (currenttranstriangle + m->numtriangles) > max_meshs || (currenttransvertex + m->numverts) > max_verts)
@@ -1166,11 +1149,9 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 		// are inserted into the main mesh array
 		mesh = &buf_transmesh[currenttransmesh++];
 		mesh->firsttriangle = currenttranstriangle;
+		mesh->firstvert = currenttransvertex;
 		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttranstriangle += m->numtriangles;
-
-		mesh->firstvert = currenttransvertex;
-		mesh->lastvert = currenttransvertex + m->numverts - 1;
 		currenttransvertex += m->numverts;
 	}
 	else
@@ -1191,14 +1172,12 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 		for (i = 0;i < backendunits;i++)
 			texcoord[i] = &buf_texcoord[i][currentvertex];
 
-		mesh = &buf_mesh[currentmesh++];
 		// opaque meshs are rendered directly
+		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
+		mesh->firstvert = currentvertex;
 		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttriangle += m->numtriangles;
-
-		mesh->firstvert = currentvertex;
-		mesh->lastvert = currentvertex + m->numverts - 1;
 		currentvertex += m->numverts;
 	}
 
@@ -1208,6 +1187,26 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
 	mesh->depthtest = !m->depthdisable;
 	mesh->triangles = m->numtriangles;
+	mesh->verts = m->numverts;
+
+	overbright = false;
+	scaler = 1;
+	if (m->blendfunc2 == GL_SRC_COLOR)
+	{
+		if (m->blendfunc1 == GL_DST_COLOR) // 2x modulate with framebuffer
+			scaler *= 0.5f;
+	}
+	else
+	{
+		if (m->tex[0])
+		{
+			overbright = gl_combine.integer;
+			if (overbright)
+				scaler *= 0.25f;
+		}
+		scaler *= overbrightscale;
+	}
+
 	j = -1;
 	for (i = 0;i < backendunits;i++)
 	{
@@ -1254,9 +1253,6 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 			fcolor[i].c[2] *= scaler;
 		}
 	}
-
-	if (currenttriangle >= max_batch)
-		R_Mesh_Render();
 }
 
 /*
@@ -1313,11 +1309,9 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 		// are inserted into the main mesh array
 		mesh = &buf_transmesh[currenttransmesh++];
 		mesh->firsttriangle = currenttranstriangle;
+		mesh->firstvert = currenttransvertex;
 		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttranstriangle += m->numtriangles;
-
-		mesh->firstvert = currenttransvertex;
-		mesh->lastvert = currenttransvertex + m->numverts - 1;
 		currenttransvertex += m->numverts;
 	}
 	else
@@ -1341,11 +1335,9 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 		// opaque meshs are rendered directly
 		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
+		mesh->firstvert = currentvertex;
 		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
 		currenttriangle += m->numtriangles;
-
-		mesh->firstvert = currentvertex;
-		mesh->lastvert = currentvertex + m->numverts - 1;
 		currentvertex += m->numverts;
 	}
 
@@ -1355,6 +1347,7 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
 	mesh->depthtest = !m->depthdisable;
 	mesh->triangles = m->numtriangles;
+	mesh->verts = m->numverts;
 	j = -1;
 	for (i = 0;i < backendunits;i++)
 	{
@@ -1401,9 +1394,6 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 			fcolor[i].c[2] *= scaler;
 		}
 	}
-
-	if (currenttriangle >= max_batch)
-		R_Mesh_Render();
 }
 */
 
@@ -1424,153 +1414,6 @@ void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
 	}
 	R_Mesh_Draw(m);
 }
-
-/*
-// LordHavoc: this thing is evil, but necessary because decals account for so much overhead
-void R_Mesh_DrawDecal(const rmeshinfo_t *m)
-{
-	// these are static because gcc runs out of virtual registers otherwise
-	static int i, *index, overbright;
-	static float scaler;
-	static float cr, cg, cb, ca;
-	static buf_mesh_t *mesh;
-	static buf_vertex_t *vert;
-	static buf_fcolor_t *fcolor;
-	static buf_texcoord_t *texcoord;
-	static buf_transtri_t *tri;
-
-	if (!backendactive)
-		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
-
-	scaler = 1;
-	if (m->tex[0])
-	{
-		overbright = gl_combine.integer;
-		if (overbright)
-			scaler *= 0.25f;
-	}
-	scaler *= overbrightscale;
-
-	if (m->transparent)
-	{
-		if (currenttransmesh >= max_meshs || (currenttranstriangle + 2) > max_meshs || (currenttransvertex + 4) > max_verts)
-		{
-			if (!transranout)
-			{
-				Con_Printf("R_Mesh_Draw: ran out of room for transparent meshs\n");
-				transranout = true;
-			}
-			return;
-		}
-
-		c_transmeshs++;
-		c_transtris += 2;
-		vert = &buf_transvertex[currenttransvertex];
-		fcolor = &buf_transfcolor[currenttransvertex];
-		texcoord = &buf_transtexcoord[0][currenttransvertex];
-
-		// transmesh is only for storage of transparent meshs until they
-		// are inserted into the main mesh array
-		mesh = &buf_transmesh[currenttransmesh++];
-		mesh->blendfunc1 = m->blendfunc1;
-		mesh->blendfunc2 = m->blendfunc2;
-		mesh->depthmask = false;
-		mesh->depthtest = true;
-		mesh->firsttriangle = currenttranstriangle;
-		mesh->triangles = 2;
-		mesh->textures[0] = m->tex[0];
-		mesh->texturergbscale[0] = overbright ? 4 : 1;
-		for (i = 1;i < backendunits;i++)
-		{
-			mesh->textures[i] = 0;
-			mesh->texturergbscale[i] = 1;
-		}
-		mesh->chain = NULL;
-
-		index = &buf_transtri[currenttranstriangle].index[0];
-		mesh->firstvert = currenttransvertex;
-		mesh->lastvert = currenttransvertex + 3;
-		currenttranstriangle += 2;
-		currenttransvertex += 4;
-	}
-	else
-	{
-		if (2 > max_meshs || 4 > max_verts)
-		{
-			Con_Printf("R_Mesh_Draw: mesh too big for buffers\n");
-			return;
-		}
-
-		if (currentmesh >= max_meshs || (currenttriangle + 2) > max_batch || (currentvertex + 4) > max_verts)
-			R_Mesh_Render();
-
-		c_meshs++;
-		c_meshtris += 2;
-		vert = &buf_vertex[currentvertex];
-		fcolor = &buf_fcolor[currentvertex];
-		texcoord = &buf_texcoord[0][currentvertex];
-
-		mesh = &buf_mesh[currentmesh++];
-		mesh->blendfunc1 = m->blendfunc1;
-		mesh->blendfunc2 = m->blendfunc2;
-		mesh->depthmask = false;
-		mesh->depthtest = !m->depthdisable;
-		mesh->firsttriangle = currenttriangle;
-		mesh->triangles = 2;
-		mesh->textures[0] = m->tex[0];
-		mesh->texturergbscale[0] = overbright ? 4 : 1;
-		for (i = 1;i < backendunits;i++)
-		{
-			mesh->textures[i] = 0;
-			mesh->texturergbscale[i] = 1;
-		}
-
-		// opaque meshs are rendered directly
-		index = &buf_tri[currenttriangle].index[0];
-		mesh->firstvert = currentvertex;
-		mesh->lastvert = currentvertex + 3;
-		currenttriangle += 2;
-		currentvertex += 4;
-	}
-
-	index[0] = 0;
-	index[1] = 1;
-	index[2] = 2;
-	index[3] = 0;
-	index[4] = 2;
-	index[5] = 3;
-
-	// buf_vertex_t must match the size of the decal vertex array (or vice versa)
-	memcpy(vert, m->vertex, 4 * sizeof(buf_vertex_t));
-
-	cr = m->cr * scaler;
-	cg = m->cg * scaler;
-	cb = m->cb * scaler;
-	ca = m->ca;
-	fcolor[0].c[0] = cr;
-	fcolor[0].c[1] = cg;
-	fcolor[0].c[2] = cb;
-	fcolor[0].c[3] = ca;
-	fcolor[1].c[0] = cr;
-	fcolor[1].c[1] = cg;
-	fcolor[1].c[2] = cb;
-	fcolor[1].c[3] = ca;
-	fcolor[2].c[0] = cr;
-	fcolor[2].c[1] = cg;
-	fcolor[2].c[2] = cb;
-	fcolor[2].c[3] = ca;
-	fcolor[3].c[0] = cr;
-	fcolor[3].c[1] = cg;
-	fcolor[3].c[2] = cb;
-	fcolor[3].c[3] = ca;
-
-	// buf_texcoord_t must be the same size as the decal texcoord array (or vice versa)
-	memcpy(&texcoord[0].t[0], m->texcoords[0], 4 * sizeof(buf_texcoord_t));
-
-	if (currenttriangle >= max_batch)
-		R_Mesh_Render();
-}
-*/
 
 /*
 ==============================================================================
