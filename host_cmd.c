@@ -116,17 +116,14 @@ void Host_God_f (void)
 		return;
 	}
 
-	if (!sv_player)
-		return;
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
 		return;
 	}
 
-	sv_player->v->flags = (int)sv_player->v->flags ^ FL_GODMODE;
-	if (!((int)sv_player->v->flags & FL_GODMODE) )
+	host_client->edict->v->flags = (int)host_client->edict->v->flags ^ FL_GODMODE;
+	if (!((int)host_client->edict->v->flags & FL_GODMODE) )
 		SV_ClientPrint("godmode OFF\n");
 	else
 		SV_ClientPrint("godmode ON\n");
@@ -140,17 +137,14 @@ void Host_Notarget_f (void)
 		return;
 	}
 
-	if (!sv_player)
-		return;
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
 		return;
 	}
 
-	sv_player->v->flags = (int)sv_player->v->flags ^ FL_NOTARGET;
-	if (!((int)sv_player->v->flags & FL_NOTARGET) )
+	host_client->edict->v->flags = (int)host_client->edict->v->flags ^ FL_NOTARGET;
+	if (!((int)host_client->edict->v->flags & FL_NOTARGET) )
 		SV_ClientPrint("notarget OFF\n");
 	else
 		SV_ClientPrint("notarget ON\n");
@@ -166,25 +160,22 @@ void Host_Noclip_f (void)
 		return;
 	}
 
-	if (!sv_player)
-		return;
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
 		return;
 	}
 
-	if (sv_player->v->movetype != MOVETYPE_NOCLIP)
+	if (host_client->edict->v->movetype != MOVETYPE_NOCLIP)
 	{
 		noclip_anglehack = true;
-		sv_player->v->movetype = MOVETYPE_NOCLIP;
+		host_client->edict->v->movetype = MOVETYPE_NOCLIP;
 		SV_ClientPrint("noclip ON\n");
 	}
 	else
 	{
 		noclip_anglehack = false;
-		sv_player->v->movetype = MOVETYPE_WALK;
+		host_client->edict->v->movetype = MOVETYPE_WALK;
 		SV_ClientPrint("noclip OFF\n");
 	}
 }
@@ -204,23 +195,20 @@ void Host_Fly_f (void)
 		return;
 	}
 
-	if (!sv_player)
-		return;
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
 		return;
 	}
 
-	if (sv_player->v->movetype != MOVETYPE_FLY)
+	if (host_client->edict->v->movetype != MOVETYPE_FLY)
 	{
-		sv_player->v->movetype = MOVETYPE_FLY;
+		host_client->edict->v->movetype = MOVETYPE_FLY;
 		SV_ClientPrint("flymode ON\n");
 	}
 	else
 	{
-		sv_player->v->movetype = MOVETYPE_WALK;
+		host_client->edict->v->movetype = MOVETYPE_WALK;
 		SV_ClientPrint("flymode OFF\n");
 	}
 }
@@ -963,22 +951,22 @@ void Host_Color_f(void)
 		return;
 	}
 
-	if (sv_player && (f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
+	if (host_client->edict && (f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
 	{
 		Con_DPrint("Calling SV_ChangeTeam\n");
 		pr_global_struct->time = sv.time;
 		pr_globals[OFS_PARM0] = playercolor;
-		pr_global_struct->self = EDICT_TO_PROG(sv_player);
+		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 		PR_ExecuteProgram (SV_ChangeTeam, "QC function SV_ChangeTeam is missing");
 	}
 	else
 	{
 		eval_t *val;
-		if (sv_player)
+		if (host_client->edict)
 		{
-			if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)))
+			if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
 				val->_float = playercolor;
-			sv_player->v->team = bottom + 1;
+			host_client->edict->v->team = bottom + 1;
 		}
 		host_client->colors = playercolor;
 		if (host_client->old_colors != host_client->colors)
@@ -1030,7 +1018,7 @@ void Host_Kill_f (void)
 		return;
 	}
 
-	if (!sv_player || sv_player->v->health <= 0)
+	if (host_client->edict->v->health <= 0)
 	{
 		SV_ClientPrint("Can't suicide -- already dead!\n");
 		return;
@@ -1096,7 +1084,7 @@ static void Host_PModel_f (void)
 		return;
 	}
 
-	if (sv_player && (val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)))
+	if (host_client->edict && (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 		val->_float = i;
 }
 
@@ -1155,12 +1143,6 @@ void Host_Spawn_f (void)
 		return;
 	}
 
-	if (!sv_player)
-	{
-		Con_Print("Host_Spawn: no edict??\n");
-		return;
-	}
-
 	// reset name change timer again because they might want to change name
 	// again in the first 5 seconds after connecting
 	host_client->nametime = 0;
@@ -1181,16 +1163,16 @@ void Host_Spawn_f (void)
 		{
 			Con_DPrint("Calling RestoreGame\n");
 			pr_global_struct->time = sv.time;
-			pr_global_struct->self = EDICT_TO_PROG(sv_player);
+			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 			PR_ExecuteProgram (RestoreGame, "QC function RestoreGame is missing");
 		}
 	}
 	else
 	{
 		// set up the edict
-		ED_ClearEdict(sv_player);
+		ED_ClearEdict(host_client->edict);
 
-		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, sv_player->netname = %s, host_client->name = %s\n", PR_GetString(host_client->edict->v->netname), PR_GetString(sv_player->v->netname), host_client->name);
+		//Con_Printf("Host_Spawn_f: host_client->edict->netname = %s, host_client->edict->netname = %s, host_client->name = %s\n", PR_GetString(host_client->edict->v->netname), PR_GetString(host_client->edict->v->netname), host_client->name);
 
 		// copy spawn parms out of the client_t
 		for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
@@ -1198,7 +1180,7 @@ void Host_Spawn_f (void)
 
 		// call the spawn function
 		pr_global_struct->time = sv.time;
-		pr_global_struct->self = EDICT_TO_PROG(sv_player);
+		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
 
 		if ((Sys_DoubleTime() - host_client->connecttime) <= sv.time)
@@ -1258,11 +1240,11 @@ void Host_Spawn_f (void)
 	// and it won't happen if the game was just loaded, so you wind up
 	// with a permanent head tilt
 	MSG_WriteByte (&host_client->message, svc_setangle);
-	MSG_WriteAngle (&host_client->message, sv_player->v->angles[0], sv.protocol);
-	MSG_WriteAngle (&host_client->message, sv_player->v->angles[1], sv.protocol);
+	MSG_WriteAngle (&host_client->message, host_client->edict->v->angles[0], sv.protocol);
+	MSG_WriteAngle (&host_client->message, host_client->edict->v->angles[1], sv.protocol);
 	MSG_WriteAngle (&host_client->message, 0, sv.protocol);
 
-	SV_WriteClientdataToMessage (sv_player, &host_client->message);
+	SV_WriteClientdataToMessage (host_client->edict, &host_client->message);
 
 	MSG_WriteByte (&host_client->message, svc_signonnum);
 	MSG_WriteByte (&host_client->message, 3);
@@ -1391,9 +1373,6 @@ void Host_Give_f (void)
 		return;
 	}
 
-	if (!sv_player)
-		return;
-
 	if (!allowcheats)
 	{
 		SV_ClientPrint("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
@@ -1421,113 +1400,113 @@ void Host_Give_f (void)
 			if (t[0] == '6')
 			{
 				if (t[1] == 'a')
-					sv_player->v->items = (int)sv_player->v->items | HIT_PROXIMITY_GUN;
+					host_client->edict->v->items = (int)host_client->edict->v->items | HIT_PROXIMITY_GUN;
 				else
-					sv_player->v->items = (int)sv_player->v->items | IT_GRENADE_LAUNCHER;
+					host_client->edict->v->items = (int)host_client->edict->v->items | IT_GRENADE_LAUNCHER;
 			}
 			else if (t[0] == '9')
-				sv_player->v->items = (int)sv_player->v->items | HIT_LASER_CANNON;
+				host_client->edict->v->items = (int)host_client->edict->v->items | HIT_LASER_CANNON;
 			else if (t[0] == '0')
-				sv_player->v->items = (int)sv_player->v->items | HIT_MJOLNIR;
+				host_client->edict->v->items = (int)host_client->edict->v->items | HIT_MJOLNIR;
 			else if (t[0] >= '2')
-				sv_player->v->items = (int)sv_player->v->items | (IT_SHOTGUN << (t[0] - '2'));
+				host_client->edict->v->items = (int)host_client->edict->v->items | (IT_SHOTGUN << (t[0] - '2'));
 		}
 		else
 		{
 			if (t[0] >= '2')
-				sv_player->v->items = (int)sv_player->v->items | (IT_SHOTGUN << (t[0] - '2'));
+				host_client->edict->v->items = (int)host_client->edict->v->items | (IT_SHOTGUN << (t[0] - '2'));
 		}
 		break;
 
 	case 's':
-		if (gamemode == GAME_ROGUE && (val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1)))
+		if (gamemode == GAME_ROGUE && (val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_shells1)))
 			val->_float = v;
 
-		sv_player->v->ammo_shells = v;
+		host_client->edict->v->ammo_shells = v;
 		break;
 	case 'n':
 		if (gamemode == GAME_ROGUE)
 		{
-			if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_nails1)))
+			if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_nails1)))
 			{
 				val->_float = v;
-				if (sv_player->v->weapon <= IT_LIGHTNING)
-					sv_player->v->ammo_nails = v;
+				if (host_client->edict->v->weapon <= IT_LIGHTNING)
+					host_client->edict->v->ammo_nails = v;
 			}
 		}
 		else
 		{
-			sv_player->v->ammo_nails = v;
+			host_client->edict->v->ammo_nails = v;
 		}
 		break;
 	case 'l':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_lava_nails);
+			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_lava_nails);
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v->weapon > IT_LIGHTNING)
-					sv_player->v->ammo_nails = v;
+				if (host_client->edict->v->weapon > IT_LIGHTNING)
+					host_client->edict->v->ammo_nails = v;
 			}
 		}
 		break;
 	case 'r':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_rockets1);
+			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_rockets1);
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v->weapon <= IT_LIGHTNING)
-					sv_player->v->ammo_rockets = v;
+				if (host_client->edict->v->weapon <= IT_LIGHTNING)
+					host_client->edict->v->ammo_rockets = v;
 			}
 		}
 		else
 		{
-			sv_player->v->ammo_rockets = v;
+			host_client->edict->v->ammo_rockets = v;
 		}
 		break;
 	case 'm':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_multi_rockets);
+			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_multi_rockets);
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v->weapon > IT_LIGHTNING)
-					sv_player->v->ammo_rockets = v;
+				if (host_client->edict->v->weapon > IT_LIGHTNING)
+					host_client->edict->v->ammo_rockets = v;
 			}
 		}
 		break;
 	case 'h':
-		sv_player->v->health = v;
+		host_client->edict->v->health = v;
 		break;
 	case 'c':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_cells1);
+			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_cells1);
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v->weapon <= IT_LIGHTNING)
-					sv_player->v->ammo_cells = v;
+				if (host_client->edict->v->weapon <= IT_LIGHTNING)
+					host_client->edict->v->ammo_cells = v;
 			}
 		}
 		else
 		{
-			sv_player->v->ammo_cells = v;
+			host_client->edict->v->ammo_cells = v;
 		}
 		break;
 	case 'p':
 		if (gamemode == GAME_ROGUE)
 		{
-			val = GETEDICTFIELDVALUE(sv_player, eval_ammo_plasma);
+			val = GETEDICTFIELDVALUE(host_client->edict, eval_ammo_plasma);
 			if (val)
 			{
 				val->_float = v;
-				if (sv_player->v->weapon > IT_LIGHTNING)
-					sv_player->v->ammo_cells = v;
+				if (host_client->edict->v->weapon > IT_LIGHTNING)
+					host_client->edict->v->ammo_cells = v;
 			}
 		}
 		break;

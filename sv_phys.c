@@ -1092,7 +1092,8 @@ void SV_WalkMove (edict_t *ent)
 		if (clip & 2 && sv_wallfriction.integer)
 			SV_WallFriction (ent, stepnormal);
 	}
-	else if (!sv_gameplayfix_stepdown.integer || !oldonground || start_velocity[2] > 0 || ((int)ent->v->flags & FL_ONGROUND) || ent->v->waterlevel >= 2)
+	// skip out if stepdown is enabled, moving downward, not in water, and the move started onground and ended offground
+	else if (!(sv_gameplayfix_stepdown.integer && ent->v->waterlevel < 2 && start_velocity[2] < (1.0 / 32.0) && oldonground && !((int)ent->v->flags & FL_ONGROUND)))
 		return;
 
 	// move down
@@ -1233,6 +1234,10 @@ void SV_Physics_Toss (edict_t *ent)
 	if (!SV_RunThink (ent))
 		return;
 
+	// don't stick to ground if onground and moving upward
+	if (ent->v->velocity[2] >= (1.0 / 32.0) && ((int)ent->v->flags & FL_ONGROUND))
+		ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
+
 // if onground, return without moving
 	if ((int)ent->v->flags & FL_ONGROUND)
 	{
@@ -1351,6 +1356,10 @@ will fall if the floor is pulled out from under them.
 */
 void SV_Physics_Step (edict_t *ent)
 {
+	// don't stick to ground if onground and moving upward
+	if (ent->v->velocity[2] >= (1.0 / 32.0) && ((int)ent->v->flags & FL_ONGROUND))
+		ent->v->flags = (int)ent->v->flags & ~FL_ONGROUND;
+
 	// freefall if not onground/fly/swim
 	if (!((int)ent->v->flags & (FL_ONGROUND | FL_FLY | FL_SWIM)))
 	{
@@ -1407,8 +1416,6 @@ void SV_Physics (void)
 		{
 			if (i > 0)
 			{
-				if (!svs.clients[i-1].spawned)
-					continue;
 				// connected slot
 				// call standard client pre-think
 				SV_CheckVelocity (ent);

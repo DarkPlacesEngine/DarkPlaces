@@ -406,6 +406,9 @@ void SV_DropClient(qboolean crash)
 	int i;
 	Con_Printf("Client \"%s\" dropped\n", host_client->name);
 
+	// make sure edict is not corrupt (from a level change for example)
+	host_client->edict = EDICT_NUM(host_client - svs.clients + 1);
+
 	if (host_client->netconnection)
 	{
 		// free the client (the body stays around)
@@ -434,8 +437,6 @@ void SV_DropClient(qboolean crash)
 	}
 
 	// remove leaving player from scoreboard
-	// clear a fields that matter to DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS, and also frags
-	ED_ClearEdict(host_client->edict);
 	//host_client->edict->v->netname = PR_SetString(host_client->name);
 	//if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
 	//	val->_float = 0;
@@ -463,6 +464,13 @@ void SV_DropClient(qboolean crash)
 		EntityFrame4_FreeDatabase(host_client->entitydatabase4);
 	if (host_client->entitydatabase5)
 		EntityFrame5_FreeDatabase(host_client->entitydatabase5);
+	
+	if (sv.active)
+	{
+		// clear a fields that matter to DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS, and also frags
+		ED_ClearEdict(host_client->edict);
+	}
+	
 	// clear the client struct (this sets active to false)
 	memset(host_client, 0, sizeof(*host_client));
 
