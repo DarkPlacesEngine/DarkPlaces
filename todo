@@ -1,15 +1,16 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
-0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon (Joel Murdoch)
+0 darkplaces client: add DP_LITSPRITES extension to document the fact that any sprite with a ! in its filename is lit rather than fullbright
+0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
-0 darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
 0 darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
 0 darkplaces client: interpolate punchangle and punchvector from network (Sajt)
 0 darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces client: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases, fix this!
+0 darkplaces client: rain drops should splash when they hit (Tomaz, Carni)
 0 darkplaces client: skybox should not be reset by r_restart (Stribbs)
 0 darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
@@ -323,6 +324,7 @@ d darkplaces client: add cvars for sbar alpha (background and foreground) (Throv
 d darkplaces client: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
 d darkplaces client: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
 d darkplaces client: add two cvars to replace sbar_alpha, one would control background as 0-1, and one would control everything else as 0-1
+d darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
 d darkplaces client: don't draw entities which are tagged to the camera entity; exterior view models and such
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 d darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
@@ -369,6 +371,7 @@ d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 d darkplaces physics: make players step down stairs rather than just flying off (Riot) 
 d darkplaces physics: repeatedly jumping against a wall can cause a fall to your death (MoALTz)
 d darkplaces physics: standing on a slope that slopes into an obstacle causes a 'falling' condition, velocity keeps increasing (VorteX)
+d darkplaces protocol: MSG_ReadAngle functions should return +-180 range, not 0-360 (Carni)
 d darkplaces protocol: PROTOCOL_DARKPLACES4 malfunctioning after a few seconds, probably not acknowledging packets properly (Sajt)
 d darkplaces protocol: add rate command and sv_maxrate cvar (and _cl_rate cvar to save to config) to control client rate (rate is sent to server on connect as a command, like other properties) (protoplasmatic)
 d darkplaces protocol: expand viewzoom to two bytes (8bit.8bit fixedpoint instead of 0.8bit like it is now) (Urre)
@@ -399,6 +402,7 @@ d darkplaces server: figure out what's making monsters act like notarget is on w
 d darkplaces server: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
 d darkplaces server: make qc profile command post an error message instead of crashing when used during demo playback (Sajt)
 d darkplaces server: prevent player name changes faster than once every 5 seconds (sublim3)
+d darkplaces server: stop sound before loading a level to get rid of looping noise (Edward Holness)
 d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 d darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
 d darkplaces: Host_Name_f validate player names, stripping \r and \n
