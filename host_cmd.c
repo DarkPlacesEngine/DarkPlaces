@@ -26,6 +26,8 @@ int	current_skill;
 
 void Mod_Print (void);
 
+dfunction_t *ED_FindFunction (char *name);
+
 /*
 ==================
 Host_Quit_f
@@ -848,6 +850,8 @@ void Host_Color_f(void)
 {
 	int		top, bottom;
 	int		playercolor;
+	dfunction_t *f;
+	func_t	SV_ChangeTeam;
 	
 	if (Cmd_Argc() == 1)
 	{
@@ -883,13 +887,25 @@ void Host_Color_f(void)
 		return;
 	}
 
-	host_client->colors = playercolor;
-	host_client->edict->v.team = bottom + 1;
+	// void(float color) SV_ChangeTeam;
+	if ((f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
+	{
+		Con_DPrintf("Calling SV_ChangeTeam\n");
+		pr_global_struct->time = sv.time;
+		pr_globals[0] = playercolor;
+		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+		PR_ExecuteProgram (SV_ChangeTeam);
+	}
+	else
+	{
+		host_client->colors = playercolor;
+		host_client->edict->v.team = bottom + 1;
 
-// send notification to all clients
-	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-	MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
-	MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+		// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+	}
 }
 
 /*
@@ -978,8 +994,6 @@ void Host_PreSpawn_f (void)
 	MSG_WriteByte (&host_client->message, 2);
 	host_client->sendsignon = true;
 }
-
-dfunction_t *ED_FindFunction (char *name);
 
 /*
 ==================

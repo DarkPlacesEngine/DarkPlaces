@@ -59,6 +59,8 @@ void transpolyclear()
 	transviewdist = DotProduct(r_refdef.vieworg, vpn);
 }
 
+// turned into a #define
+/*
 void transpolybegin(int texnum, int glowtexnum, int fogtexnum, int transpolytype)
 {
 	if (currenttranspoly >= MAX_TRANSPOLYS || currenttransvert >= MAX_TRANSVERTS)
@@ -71,6 +73,7 @@ void transpolybegin(int texnum, int glowtexnum, int fogtexnum, int transpolytype
 	transpoly[currenttranspoly].verts = 0;
 //	transpoly[currenttranspoly].ndist = 0; // clear the normal
 }
+*/
 
 // turned into a #define
 /*
@@ -367,10 +370,6 @@ void transpolyrender()
 		glEnable(GL_ALPHA_TEST);
 	else
 		glDisable(GL_ALPHA_TEST);
-	// later note: wasn't working on my TNT drivers...  strangely...  used a cheaper hack in transpolyvert
-	//// offset by 16 depth units so decal sprites appear infront of walls
-	//glPolygonOffset(1, -16);
-	//glEnable(GL_POLYGON_OFFSET_FILL);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	tpolytype = TPOLYTYPE_ALPHA;
 	texnum = -1;
@@ -538,38 +537,10 @@ void transpolyrender()
 		glEnd();
 	}
 
-	//glDisable(GL_POLYGON_OFFSET_FILL);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDepthMask(1); // enable zbuffer updates
 	glDisable(GL_ALPHA_TEST);
 }
-
-/*
-void lightpolybegin(int texnum)
-{
-	if (currentlightpoly >= MAX_LIGHTPOLYS || currentlightvert >= MAX_LIGHTVERTS)
-		return;
-	lightpoly[currentlightpoly].texnum = (unsigned short) texnum;
-	lightpoly[currentlightpoly].firstvert = currentlightvert;
-	lightpoly[currentlightpoly].verts = 0;
-}
-
-// lightpolyvert is a #define
-
-void lightpolyend()
-{
-	if (currentlightpoly >= MAX_LIGHTPOLYS)
-		return;
-	if (lightpoly[currentlightpoly].verts < 3) // skip invalid polygons
-	{
-		currentlightvert = lightpoly[currentlightpoly].firstvert; // reset vert pointer
-		return;
-	}
-	if (currentlightvert >= MAX_LIGHTVERTS)
-		return;
-	currentlightpoly++;
-}
-*/
 
 extern qboolean isG200;
 
