@@ -88,8 +88,15 @@ LoadPCX
 byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 {
 	pcx_t	pcx;
-	byte	*palette, *a, *b, *image_rgba, *fin, *pbuf;
-	int		x, y, dataByte, runLength;
+	byte	*palette, *a, *b, *image_rgba, *fin, *pbuf, *enddata;
+	int		x, y, x2, dataByte;
+
+	if (loadsize < sizeof(pcx) + 768)
+	{
+		Con_Printf ("Bad pcx file\n");
+		qfree(f);
+		return NULL;
+	}
 
 	fin = f;
 
@@ -127,35 +134,42 @@ byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 	image_width = pcx.xmax+1;
 	image_height = pcx.ymax+1;
 
-	image_rgba = qmalloc(image_width*image_height*4);
-	pbuf = image_rgba + image_width*image_height*3;
+	palette = f + loadsize - 768;
 
-	for (y = 0;y < image_height;y++)
+	image_rgba = qmalloc(image_width*image_height*4);
+	if (!image_rgba)
+	{
+		Con_Printf("LoadPCX: not enough memory for %i by %i image\n", image_width, image_height);
+		qfree(f);
+		return NULL;
+	}
+	pbuf = image_rgba + image_width*image_height*3;
+	enddata = palette;
+
+	for (y = 0;y < image_height && fin < enddata;y++)
 	{
 		a = pbuf + y * image_width;
-		for (x = 0;x < image_width;)
+		for (x = 0;x < image_width && fin < enddata;)
 		{
 			dataByte = *fin++;
 			if(dataByte >= 0xC0)
 			{
-				runLength = dataByte & 0x3F;
+				if (fin >= enddata)
+					break;
+				x2 = x + (dataByte & 0x3F);
 				dataByte = *fin++;
-				if (runLength)
-				{
-					x += runLength;
-					while(runLength--)
-						*a++ = dataByte;
-				}
+				if (x2 > image_width)
+					x2 = image_width; // technically an error
+				while(x < x2)
+					a[x++] = dataByte;
 			}
 			else
-			{
-				x++;
-				*a++ = dataByte;
-			}
+				a[x++] = dataByte;
 		}
+		while(x < image_width)
+			a[x++] = 0;
 	}
 
-	palette = fin;
 	a = image_rgba;
 	b = pbuf;
 
@@ -200,9 +214,14 @@ LoadTGA
 */
 byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 {
-	int columns, rows, numPixels, row, column;
-	byte *pixbuf, *image_rgba, *fin;
+	int columns, rows, row, column;
+	byte *pixbuf, *image_rgba, *fin, *enddata;
 
+	if (loadsize < 18+3)
+	{
+		qfree(f);
+		return NULL;
+	}
 	targa_header.id_length = f[0];
 	targa_header.colormap_type = f[1];
 	targa_header.image_type = f[2];
@@ -215,28 +234,49 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 	targa_header.width = f[12] + f[13] * 256;
 	targa_header.height = f[14] + f[15] * 256;
 	if (matchwidth && targa_header.width != matchwidth)
+	{
+		qfree(f);
 		return NULL;
+	}
 	if (matchheight && targa_header.height != matchheight)
+	{
+		qfree(f);
 		return NULL;
+	}
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
 
 	if (targa_header.image_type != 2 && targa_header.image_type != 10)
-		Host_Error ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
+	{
+		Con_Printf ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
+		qfree(f);
+		return NULL;
+	}
 
 	if (targa_header.colormap_type != 0	|| (targa_header.pixel_size != 32 && targa_header.pixel_size != 24))
-		Host_Error ("LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
+	{
+		Con_Printf ("LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
+		qfree(f);
+		return NULL;
+	}
+
+	enddata = f + loadsize;
 
 	columns = targa_header.width;
 	rows = targa_header.height;
-	numPixels = columns * rows;
 
-	image_rgba = qmalloc(numPixels*4);
+	image_rgba = qmalloc(columns * rows * 4);
+	if (!image_rgba)
+	{
+		Con_Printf ("LoadTGA: not enough memory for %i by %i image\n", columns, rows);
+		qfree(f);
+		return NULL;
+	}
 
 	fin = f + 18;
 	if (targa_header.id_length != 0)
 		fin += targa_header.id_length;  // skip TARGA image comment
-	
+
 	if (targa_header.image_type == 2)
 	{
 		// Uncompressed, RGB images
@@ -248,6 +288,8 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 				switch (targa_header.pixel_size)
 				{
 				case 24:
+					if (fin + 3 > enddata)
+						break;
 					*pixbuf++ = fin[2];
 					*pixbuf++ = fin[1];
 					*pixbuf++ = fin[0];
@@ -255,6 +297,8 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 					fin += 3;
 					break;
 				case 32:
+					if (fin + 4 > enddata)
+						break;
 					*pixbuf++ = fin[2];
 					*pixbuf++ = fin[1];
 					*pixbuf++ = fin[0];
@@ -274,6 +318,8 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 			pixbuf = image_rgba + row * columns * 4;
 			for(column = 0;column < columns;)
 			{
+				if (fin >= enddata)
+					goto outofdata;
 				packetHeader = *fin++;
 				packetSize = 1 + (packetHeader & 0x7f);
 				if (packetHeader & 0x80)
@@ -282,12 +328,16 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 					switch (targa_header.pixel_size)
 					{
 					case 24:
+						if (fin + 3 > enddata)
+							goto outofdata;
 						blue = *fin++;
 						green = *fin++;
 						red = *fin++;
 						alphabyte = 255;
 						break;
 					case 32:
+						if (fin + 4 > enddata)
+							goto outofdata;
 						blue = *fin++;
 						green = *fin++;
 						red = *fin++;
@@ -322,6 +372,8 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 						switch (targa_header.pixel_size)
 						{
 						case 24:
+							if (fin + 3 > enddata)
+								goto outofdata;
 							*pixbuf++ = fin[2];
 							*pixbuf++ = fin[1];
 							*pixbuf++ = fin[0];
@@ -329,6 +381,8 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 							fin += 3;
 							break;
 						case 32:
+							if (fin + 4 > enddata)
+								goto outofdata;
 							*pixbuf++ = fin[2];
 							*pixbuf++ = fin[1];
 							*pixbuf++ = fin[0];
@@ -353,6 +407,7 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 			breakOut:;
 		}
 	}
+outofdata:;
 	
 	image_width = columns;
 	image_height = rows;
@@ -369,14 +424,22 @@ byte* LoadLMP (byte *f, int matchwidth, int matchheight)
 {
 	byte	*image_rgba;
 	int		width, height;
+		
+	if (loadsize < 9)
+	{
+		Con_Printf("LoadLMP: invalid LMP file\n");
+		qfree(f);
+		return NULL;
+	}
 
 	// parse the very complicated header *chuckle*
-	width = LittleLong(((int *)f)[0]);
-	height = LittleLong(((int *)f)[1]);
+	width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
+	height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
 	if ((unsigned) width > 4096 || (unsigned) height > 4096)
 	{
+		Con_Printf("LoadLMP: invalid size\n");
 		qfree(f);
-		Host_Error("LoadLMP: invalid size\n");
+		return NULL;
 	}
 	if (matchwidth && width != matchwidth)
 	{
@@ -389,10 +452,24 @@ byte* LoadLMP (byte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = qmalloc(width*height*4);
-	Image_Copy8bitRGBA(f + 8, image_rgba, width*height, d_8to24table);
+	if (loadsize < 8 + width * height)
+	{
+		Con_Printf("LoadLMP: invalid LMP file\n");
+		qfree(f);
+		return NULL;
+	}
+
 	image_width = width;
 	image_height = height;
+
+	image_rgba = qmalloc(image_width * image_height * 4);
+	if (!image_rgba)
+	{
+		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
+		qfree(f);
+		return NULL;
+	}
+	Image_Copy8bitRGBA(f + 8, image_rgba, image_width * image_height, d_8to24table);
 	qfree(f);
 	return image_rgba;
 }
