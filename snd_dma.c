@@ -170,7 +170,7 @@ void S_Init (void)
 	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&bgmvolume);
 
-	if (COM_CheckParm("-nosound"))
+	if (COM_CheckParm("-nosound") || COM_CheckParm("-safe"))
 		return;
 
 	snd_mempool = Mem_AllocPool("sound");
