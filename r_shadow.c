@@ -460,7 +460,7 @@ void r_shadow_start(void)
 			r_shadow_program_light[i] = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
 			if (!r_shadow_program_light[i])
 			{
-				Con_Printf("permutation %s %s %s %s failed for shader %s, some features may not work properly!\n", i & 1 ? "specular" : "", i & 1 ? "fog" : "", i & 1 ? "cubefilter" : "", i & 1 ? "offsetmapping" : "");
+				Con_Printf("permutation %s %s %s %s failed for shader %s, some features may not work properly!\n", i & 1 ? "specular" : "", i & 1 ? "fog" : "", i & 1 ? "cubefilter" : "", i & 1 ? "offsetmapping" : "", "glsl/light");
 				continue;
 			}
 			qglUseProgramObjectARB(r_shadow_program_light[i]);
