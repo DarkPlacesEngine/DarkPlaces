@@ -173,8 +173,11 @@ void IN_PreMove(void)
 {
 }
 
+void CL_AdjustAngles(void);
 void IN_PostMove(void)
 {
+	// clamp after the move as well to prevent messed up rendering angles
+	CL_AdjustAngles();
 }
 
 void IN_Mouse(usercmd_t *cmd, float mx, float my)
