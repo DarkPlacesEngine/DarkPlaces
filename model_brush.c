@@ -3663,10 +3663,13 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 										if (!COM_ParseToken(&text, true))
 											break;
 									}
-									Con_Printf("%s %i: ", shadername, passnumber);
-									for (j = 0;j < numparameters;j++)
-										Con_Printf(" %s", parameter[j]);
-									Con_Print("\n");
+									if (developer.integer >= 2)
+									{
+										Con_Printf("%s %i: ", shadername, passnumber);
+										for (j = 0;j < numparameters;j++)
+											Con_Printf(" %s", parameter[j]);
+										Con_Print("\n");
+									}
 									if (passnumber == 0 && numparameters >= 1)
 									{
 										if (!strcasecmp(parameter[0], "blendfunc"))
@@ -3704,10 +3707,13 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 							}
 							if (i == 0 && !strcasecmp(com_token, "}"))
 								break;
-							Con_Printf("%s: ", shadername);
-							for (j = 0;j < numparameters;j++)
-								Con_Printf(" %s", parameter[j]);
-							Con_Print("\n");
+							if (developer.integer >= 2)
+							{
+								Con_Printf("%s: ", shadername);
+								for (j = 0;j < numparameters;j++)
+									Con_Printf(" %s", parameter[j]);
+								Con_Print("\n");
+							}
 							if (numparameters < 1)
 								continue;
 							if (!strcasecmp(parameter[0], "surfaceparm") && numparameters >= 2)
