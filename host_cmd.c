@@ -871,7 +871,7 @@ void Host_Color_f(void)
 	// LordHavoc: allow skin colormaps 14 and 15 (was 13)
 	if (bottom > 15)
 		bottom = 15;
-	
+
 	playercolor = top*16 + bottom;
 
 	if (cmd_source == src_command)
@@ -886,7 +886,7 @@ void Host_Color_f(void)
 	{
 		Con_DPrintf("Calling SV_ChangeTeam\n");
 		pr_global_struct->time = sv.time;
-		pr_globals[0] = playercolor;
+		pr_globals[OFS_PARM0] = playercolor;
 		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 		PR_ExecuteProgram (SV_ChangeTeam, "");
 	}
