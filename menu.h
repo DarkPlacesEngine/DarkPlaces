@@ -70,7 +70,7 @@ void MP_Shutdown (void);*/
 // menu router
 //
 void MR_Init (void);
-void MR_Restart_f (void);
+void MR_Restart (void);
 void (*MR_Keydown) (int key);
 void (*MR_Draw) (void);
 void (*MR_ToggleMenu_f) (void);

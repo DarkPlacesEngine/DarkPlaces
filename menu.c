@@ -3479,13 +3479,6 @@ void M_Shutdown(void);
 
 void M_Init (void)
 {
-	// set menu router function pointer
-	MR_Keydown = M_Keydown;
-	MR_Draw = M_Draw;
-	MR_ToggleMenu_f = M_ToggleMenu_f;
-	MR_Shutdown = M_Shutdown;
-
-	// init
 	menu_mempool = Mem_AllocPool("Menu");
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
@@ -3739,6 +3732,10 @@ void M_Shutdown(void)
 {
 }
 
+void M_Restart(void)
+{
+}
+
 //============================================================================
 // Menu prog handling
 mfunction_t *PRVM_ED_FindFunction(const char *);
@@ -3761,6 +3758,8 @@ static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
 
 static func_t m_draw,m_keydown;
 
+void MR_SetRouting (qboolean forceold);
+
 void MP_Error(void)
 {
 	// fall back to the normal menu
@@ -3769,7 +3768,7 @@ void MP_Error(void)
 	Con_Printf("Falling back to normal menu.\n Error :");
 
 	// init the normal menu now -> this will also correct the menu router pointers
-	M_Init();
+	MR_SetRouting (TRUE);
 }
 
 void MP_Keydown (int key)
@@ -3825,11 +3824,6 @@ void MP_Shutdown (void)
 
 void MP_Init (void)
 {
-	MR_Keydown = MP_Keydown;
-	MR_Draw = MP_Draw;
-	MR_ToggleMenu_f = MP_ToggleMenu_f;
-	MR_Shutdown = MP_Shutdown;
-
 	PRVM_Begin;
 	PRVM_InitProg(PRVM_MENUPROG);
 
@@ -3857,8 +3851,13 @@ void MP_Init (void)
 
 	// call the prog init
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_INIT) - prog->functions),"");
-
+	
 	PRVM_End;
+}
+
+void MP_Restart(void)
+{
+	MP_Init();
 }
 
 //============================================================================
@@ -3866,27 +3865,59 @@ void MP_Init (void)
 
 static cvar_t forceqmenu = { 0, "forceqmenu", "0" };
 
-void MR_ChooseInit(void)
+void MR_SetRouting(qboolean forceold)
 {
-	if(!FS_FileExists(M_PROG_FILENAME) || forceqmenu.integer)
-		M_Init();
+	static qboolean m_init = FALSE, mp_init = FALSE;
+
+	// if the menu prog isnt available or forceqmenu ist set, use the old menu
+	if(!FS_FileExists(M_PROG_FILENAME) || forceqmenu.integer || forceold)
+	{
+		// set menu router function pointers
+		MR_Keydown = M_Keydown;
+		MR_Draw = M_Draw;
+		MR_ToggleMenu_f = M_ToggleMenu_f;
+		MR_Shutdown = M_Shutdown;
+		
+		// init
+		if(!m_init)
+		{
+			M_Init();
+			m_init = TRUE;
+		}
+		else
+			M_Restart();
+	}
 	else
-		MP_Init();
+	{
+		// set menu router function pointers
+		MR_Keydown = MP_Keydown;
+		MR_Draw = MP_Draw;
+		MR_ToggleMenu_f = MP_ToggleMenu_f;
+		MR_Shutdown = MP_Shutdown;
+		
+		if(!mp_init)
+		{
+			MP_Init();
+			mp_init = TRUE;
+		}
+		else
+			MP_Restart();
+	}
 }
 
-void MR_Restart_f(void)
+void MR_Restart(void)
 {
 	MR_Shutdown ();
-	MR_ChooseInit ();
+	MR_SetRouting (FALSE);
 }
 
 void MR_Init()
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
-	Cmd_AddCommand ("menu_restart",MR_Restart_f);
-
-	MR_ChooseInit ();
+	Cmd_AddCommand ("menu_restart",MR_Restart);
+	
+	MR_SetRouting (FALSE);
 }
 
 

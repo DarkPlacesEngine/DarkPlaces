@@ -207,8 +207,9 @@ typedef struct prvm_builtin_mem_s
 #define PRVM_FE_THINK		4
 #define PRVM_FE_FRAME		8
 */
-#define PRVM_FE_CLASSNAME   32
-#define PRVM_GE_TIME		16
+#define PRVM_FE_CLASSNAME   8
+#define PRVM_FE_CHAIN		4
+#define PRVM_GE_TIME		2
 #define PRVM_OP_STATE		1
 
 #define	PRVM_MAX_STACK_DEPTH		256
@@ -413,7 +414,7 @@ extern	int		prvm_type_size[8]; // for consistency : I think a goal of this sub-p
 
 void PRVM_Init_Exec(void);
 
-void PRVM_ED_PrintEdicts (void);
+void PRVM_ED_PrintEdicts_f (void);
 void PRVM_ED_PrintNum (int ent);
 
 #define PRVM_GetString(num) (prog->strings + num)
@@ -430,7 +431,11 @@ void PRVM_ED_PrintNum (int ent);
 	#define PRVM_End	if(_oldprog_ != 0) Con_Print("Stack used !\n"); prog = _oldprog_;}
 #endif 
 
-#define PRVM_NAME	(prog->name ? prog->name : "Unknown prog name")
+#if 1
+	#define PRVM_NAME	(prog->name)
+#else
+	#define PRVM_NAME	(prog->name ? prog->name : "Unknown prog name")
+#endif
 
 // helper macro to make function pointer calls easier
 #define PRVM_GCALL(func)	if(prog->func) prog->func
