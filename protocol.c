@@ -1,6 +1,8 @@
 
 #include "quakedef.h"
 
+extern cvar_t developer_networkentities;
+
 entity_state_t defaultstate =
 {
 	0,//double time; // time this state was built
@@ -207,11 +209,8 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 void EntityState_ReadUpdate(entity_state_t *e, int number)
 {
 	int bits;
-	if (!e->active)
-	{
-		*e = defaultstate;
-		e->active = true;
-	}
+	cl_entities_active[number] = true;
+	e->active = true;
 	e->time = cl.mtime[0];
 	e->number = number;
 
@@ -227,7 +226,7 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 		}
 	}
 
-	if (dpprotocol == DPPROTOCOL_VERSION2)
+	if (cl.protocol == PROTOCOL_DARKPLACES2)
 	{
 		if (bits & E_ORIGIN1)
 			e->origin[0] = (signed short) MSG_ReadShort();
@@ -240,7 +239,7 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 	{
 		if (bits & E_FLAGS)
 			e->flags = MSG_ReadByte();
-		if (e->flags & RENDER_LOWPRECISION || dpprotocol == DPPROTOCOL_VERSION2)
+		if (e->flags & RENDER_LOWPRECISION || cl.protocol == PROTOCOL_DARKPLACES2)
 		{
 			if (bits & E_ORIGIN1)
 				e->origin[0] = (signed short) MSG_ReadShort();
@@ -289,13 +288,55 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 		e->glowsize = MSG_ReadByte();
 	if (bits & E_GLOWCOLOR)
 		e->glowcolor = MSG_ReadByte();
-	if (dpprotocol == DPPROTOCOL_VERSION2)
+	if (cl.protocol == PROTOCOL_DARKPLACES2)
 		if (bits & E_FLAGS)
 			e->flags = MSG_ReadByte();
 	if (bits & E_TAGATTACHMENT)
 	{
 		e->tagentity = MSG_ReadShort();
 		e->tagindex = MSG_ReadByte();
+	}
+
+	if (developer_networkentities.integer)
+	{
+		Con_Printf("ReadUpdate e%i", number);
+
+		if (bits & E_ORIGIN1)
+			Con_Printf(" E_ORIGIN1 %f", e->origin[0]);
+		if (bits & E_ORIGIN2)
+			Con_Printf(" E_ORIGIN2 %f", e->origin[1]);
+		if (bits & E_ORIGIN3)
+			Con_Printf(" E_ORIGIN3 %f", e->origin[2]);
+		if (bits & E_ANGLE1)
+			Con_Printf(" E_ANGLE1 %f", e->angles[0]);
+		if (bits & E_ANGLE2)
+			Con_Printf(" E_ANGLE2 %f", e->angles[1]);
+		if (bits & E_ANGLE3)
+			Con_Printf(" E_ANGLE3 %f", e->angles[2]);
+		if (bits & (E_MODEL1 | E_MODEL2))
+			Con_Printf(" E_MODEL %i", e->modelindex);
+
+		if (bits & (E_FRAME1 | E_FRAME2))
+			Con_Printf(" E_FRAME %i", e->frame);
+		if (bits & (E_EFFECTS1 | E_EFFECTS2))
+			Con_Printf(" E_EFFECTS %i", e->effects);
+		if (bits & E_ALPHA)
+			Con_Printf(" E_ALPHA %f", e->alpha / 255.0f);
+		if (bits & E_SCALE)
+			Con_Printf(" E_SCALE %f", e->scale / 16.0f);
+		if (bits & E_COLORMAP)
+			Con_Printf(" E_COLORMAP %i", e->colormap);
+		if (bits & E_SKIN)
+			Con_Printf(" E_SKIN %i", e->skin);
+
+		if (bits & E_GLOWSIZE)
+			Con_Printf(" E_GLOWSIZE %i", e->glowsize * 8);
+		if (bits & E_GLOWCOLOR)
+			Con_Printf(" E_GLOWCOLOR %i", e->glowcolor);
+
+		if (bits & E_TAGATTACHMENT)
+			Con_Printf(" E_TAGATTACHMENT e%i:%i", e->tagentity, e->tagindex);
+		Con_Printf("\n");
 	}
 }
 
@@ -505,10 +546,8 @@ void EntityFrame_Read(entity_database_t *d)
 		{
 			if (f->numentities >= MAX_ENTITY_DATABASE)
 				Host_Error("EntityFrame_Read: entity list too big\n");
-			memcpy(f->entitydata + f->numentities, old, sizeof(entity_state_t));
-			f->entitydata[f->numentities].time = cl.mtime[0];
-			old++;
-			f->numentities++;
+			f->entitydata[f->numentities] = *old++;
+			f->entitydata[f->numentities++].time = cl.mtime[0];
 		}
 		if (removed)
 		{
@@ -597,7 +636,10 @@ entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int numbe
 		}
 		// clear the newly created entities
 		for (;oldmax < d->maxreferenceentities;oldmax++)
+		{
 			d->referenceentity[oldmax] = defaultstate;
+			d->referenceentity[oldmax].number = oldmax;
+		}
 	}
 	return d->referenceentity + number;
 }
@@ -625,6 +667,7 @@ entity_database4_t *EntityFrame4_AllocDatabase(mempool_t *pool)
 	d = Mem_Alloc(pool, sizeof(*d));
 	d->mempool = pool;
 	EntityFrame4_ResetDatabase(d);
+	d->ackframenum = -1;
 	return d;
 }
 
@@ -643,44 +686,56 @@ void EntityFrame4_ResetDatabase(entity_database4_t *d)
 {
 	int i;
 	d->referenceframenum = -1;
-	d->ackframenum = -1;
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 		d->commit[i].numentities = 0;
+	for (i = 0;i < d->maxreferenceentities;i++)
+		d->referenceentity[i] = defaultstate;
 }
 
 void EntityFrame4_AckFrame(entity_database4_t *d, int framenum)
 {
-	int i, foundit = false;
-	entity_state_t *s;
+	int i, j;
 	entity_database4_commit_t *commit;
-	// check if client is requesting no delta compression
+	// check if the peer is requesting no delta compression
 	if (framenum == -1)
 	{
 		EntityFrame4_ResetDatabase(d);
 		return;
 	}
-	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+	// return early if this is already the reference frame
+	if (d->referenceframenum == framenum)
+		return;
+	// find the frame in the database
+	for (i = 0, commit = d->commit;i < MAX_ENTITY_HISTORY;i++, commit++)
+		if (commit->numentities && commit->framenum == framenum)
+			break;
+	// check if the frame was found
+	if (i == MAX_ENTITY_HISTORY)
 	{
-		if (d->commit[i].numentities && d->commit[i].framenum <= framenum)
-		{
-			if (d->commit[i].framenum == framenum)
-			{
-				// apply commit to database
-				commit = d->commit + i;
-				d->referenceframenum = commit->framenum;
-				while (commit->numentities--)
-				{
-					s = commit->entity + commit->numentities;
-					*EntityFrame4_GetReferenceEntity(d, s->number) = *s;
-				}
-				foundit = true;
-			}
-			d->commit[i].numentities = 0;
-			d->commit[i].framenum = -1;
-		}
+		Con_Printf("EntityFrame4_AckFrame: frame %i not found in database, expect glitches!  (VERY BAD ERROR)\n", framenum);
+		d->ackframenum = -1;
+		EntityFrame4_ResetDatabase(d);
+		return;
 	}
-	if (!foundit)
-		Con_DPrintf("EntityFrame4_AckFrame: frame %i not found in database, expect glitches!\n", framenum);
+	// apply commit to database
+	d->referenceframenum = framenum;
+	for (j = 0;j < commit->numentities;j++)
+	{
+		//*EntityFrame4_GetReferenceEntity(d, commit->entity[j].number) = commit->entity[j];
+		entity_state_t *s = EntityFrame4_GetReferenceEntity(d, commit->entity[j].number);
+		if (commit->entity[j].active != s->active)
+		{
+			if (commit->entity[j].active)
+				Con_Printf("commit entity %i has become active (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+			else
+				Con_Printf("commit entity %i has become inactive (modelindex %i)\n", commit->entity[j].number, commit->entity[j].modelindex);
+		}
+		*s = commit->entity[j];
+	}
+	// purge the now-obsolete updates
+	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
+		if (d->commit[i].framenum <= framenum)
+			d->commit[i].numentities = 0;
 }
 
 void EntityFrame4_SV_WriteFrame_Begin(entity_database4_t *d, sizebuf_t *msg, int framenum)
@@ -731,38 +786,43 @@ void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg)
 extern void CL_MoveLerpEntityStates(entity_t *ent);
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 {
-	int i, n, cnumber, referenceframenum, framenum, enumber, done, stopnumber;
-	entity_state_t *e;
+	int i, n, cnumber, referenceframenum, framenum, enumber, done, stopnumber, skip = false;
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
 	// read the number of this frame
 	framenum = MSG_ReadLong();
 	// read the start number
 	enumber = MSG_ReadShort();
-	EntityFrame4_AckFrame(d, referenceframenum);
 	for (i = 0;i < MAX_ENTITY_HISTORY;i++)
 		if (!d->commit[i].numentities)
 			break;
 	if (i < MAX_ENTITY_HISTORY)
 	{
 		d->currentcommit = d->commit + i;
-		d->ackframenum = d->currentcommit->framenum = framenum;
+		d->currentcommit->framenum = d->ackframenum = framenum;
 		d->currentcommit->numentities = 0;
+		EntityFrame4_AckFrame(d, referenceframenum);
+		if (d->ackframenum == -1)
+		{
+			Con_Printf("EntityFrame4_CL_ReadFrame: reference frame invalid, this update will be skipped\n");
+			skip = true;
+		}
 	}
 	else
 	{
-		Con_Printf("EntityFrame4_CL_ReadFrame: error while decoding frame %i: database full, resetting, expect glitches!!\n", framenum);
-		d->currentcommit = NULL;
-		EntityFrame4_ResetDatabase(d);
+		Con_Printf("EntityFrame4_CL_ReadFrame: error while decoding frame %i: database full, reading but not storing this update\n", framenum);
+		skip = true;
 	}
 	done = false;
 	while (!done && !msg_badread)
 	{
+		// read the number of the modified entity
+		// (gaps will be copied unmodified)
 		n = (unsigned short)MSG_ReadShort();
 		if (n == 0x8000)
 		{
 			// no more entities in this update, but we still need to copy the
-			// rest of the reference entities
+			// rest of the reference entities (final gap)
 			done = true;
 			// read end of range number, then process normally
 			n = (unsigned short)MSG_ReadShort();
@@ -774,39 +834,58 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 		// process entities in range from the last one to the changed one
 		for (;enumber < stopnumber;enumber++)
 		{
-			e = EntityFrame4_GetReferenceEntity(d, enumber);
+			if (skip)
+			{
+				if (enumber == cnumber && (n & 0x8000) == 0)
+				{
+					entity_state_t tempstate;
+					EntityState_ReadUpdate(&tempstate, enumber);
+				}
+				continue;
+			}
+			// slide the current into the previous slot
 			cl_entities[enumber].state_previous = cl_entities[enumber].state_current;
-			// skipped (unchanged), copy from reference database
-			cl_entities[enumber].state_current = *e;
+			// copy a new current from reference database
+			cl_entities[enumber].state_current = *EntityFrame4_GetReferenceEntity(d, enumber);
+			// if this is the one to modify, read more data...
 			if (enumber == cnumber)
 			{
-				// modified
 				if (n & 0x8000)
 				{
 					// simply removed
+					if (developer_networkentities.integer)
+						Con_Printf("entity %i: remove\n", enumber);
 					cl_entities[enumber].state_current = defaultstate;
 				}
 				else
 				{
 					// read the changes
+					if (developer_networkentities.integer)
+						Con_Printf("entity %i: update\n", enumber);
 					EntityState_ReadUpdate(&cl_entities[enumber].state_current, enumber);
 				}
 			}
+			//else if (developer_networkentities.integer)
+			//	Con_Printf("entity %i: copy\n", enumber);
+			// fix the number (it gets wiped occasionally by copying from defaultstate)
 			cl_entities[enumber].state_current.number = enumber;
-#if 0
-			// debugging code
-			if (cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+			// check if we need to update the lerp stuff
+			if (cl_entities[enumber].state_current.active)
 			{
-				if (cl_entities[enumber].state_current.active)
-					Con_Printf("entity #%i has become active\n");
-				else if (cl_entities[enumber].state_current.active)
-					Con_Printf("entity #%i has become inactive\n");
+				CL_MoveLerpEntityStates(&cl_entities[enumber]);
+				cl_entities_active[enumber] = true;
 			}
-#endif
-			CL_MoveLerpEntityStates(&cl_entities[enumber]);
-			cl_entities_active[enumber] = true;
+			// add this to the commit entry whether it is modified or not
 			if (d->currentcommit)
 				EntityFrame4_AddCommitEntity(d, &cl_entities[enumber].state_current);
+			// print extra messages if desired
+			if (developer_networkentities.integer && cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+			{
+				if (cl_entities[enumber].state_current.active)
+					Con_Printf("entity #%i has become active\n", enumber);
+				else if (cl_entities[enumber].state_previous.active)
+					Con_Printf("entity #%i has become inactive\n", enumber);
+			}
 		}
 	}
 	d->currentcommit = NULL;

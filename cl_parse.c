@@ -96,9 +96,7 @@ char *svc_strings[128] =
 //=============================================================================
 
 cvar_t demo_nehahra = {0, "demo_nehahra", "0"};
-
-qboolean Nehahrademcompatibility; // LordHavoc: to allow playback of the early Nehahra movie segments
-int dpprotocol; // LordHavoc: version of network protocol, or 0 if not DarkPlaces
+cvar_t developer_networkentities = {0, "developer_networkentities", "0"};
 
 mempool_t *cl_scores_mempool;
 
@@ -331,19 +329,15 @@ void CL_ParseServerInfo (void)
 
 // parse protocol version number
 	i = MSG_ReadLong ();
-	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != DPPROTOCOL_VERSION4 && i != 250)
+	// hack for unmarked Nehahra movie demos which had a custom protocol
+	if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
+		i = PROTOCOL_NEHAHRAMOVIE;
+	if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_NEHAHRAMOVIE)
 	{
-		Host_Error ("Server is protocol %i, not %i, %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, DPPROTOCOL_VERSION4, PROTOCOL_VERSION);
+		Host_Error("CL_ParseServerInfo: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_NEHAHRAMOVIE);
 		return;
 	}
-	Nehahrademcompatibility = false;
-	if (i == 250)
-		Nehahrademcompatibility = true;
-	if (cls.demoplayback && demo_nehahra.integer)
-		Nehahrademcompatibility = true;
-	dpprotocol = i;
-	if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3 && dpprotocol != DPPROTOCOL_VERSION4)
-		dpprotocol = 0;
+	cl.protocol = i;
 
 // parse maxclients
 	cl.maxclients = MSG_ReadByte ();
@@ -363,10 +357,10 @@ void CL_ParseServerInfo (void)
 	strncpy (cl.levelname, str, sizeof(cl.levelname)-1);
 
 // seperate the printfs so the server message can have a color
-	if (!Nehahrademcompatibility) // no messages when playing the Nehahra movie
+	if (cl.protocol != PROTOCOL_NEHAHRAMOVIE) // no messages when playing the Nehahra movie
 	{
 		Con_Printf("\n\n\35\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\36\37\n\n");
-		Con_Printf ("%c%s\n", 2, str);
+		Con_Printf("%c%s\n", 2, str);
 	}
 
 	// check memory integrity
@@ -560,7 +554,7 @@ void CL_ParseUpdate (int bits)
 
 	if (bits & U_MOREBITS)
 		bits |= (MSG_ReadByte()<<8);
-	if ((bits & U_EXTEND1) && (!Nehahrademcompatibility))
+	if ((bits & U_EXTEND1) && cl.protocol != PROTOCOL_NEHAHRAMOVIE)
 	{
 		bits |= MSG_ReadByte() << 16;
 		if (bits & U_EXTEND2)
@@ -619,7 +613,7 @@ void CL_ParseUpdate (int bits)
 	if (bits & U_EXTERIORMODEL)	new.flags |= RENDER_EXTERIORMODEL;
 
 	// LordHavoc: to allow playback of the Nehahra movie
-	if (Nehahrademcompatibility && (bits & U_EXTEND1))
+	if (cl.protocol == PROTOCOL_NEHAHRAMOVIE && (bits & U_EXTEND1))
 	{
 		// LordHavoc: evil format
 		int i = MSG_ReadFloat();
@@ -656,7 +650,7 @@ static entity_frame_t entityframe;
 extern mempool_t *cl_entities_mempool;
 void CL_ReadEntityFrame(void)
 {
-	if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
+	if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
 	{
 		int i;
 		entity_t *ent;
@@ -688,7 +682,7 @@ void CL_EntityUpdateSetup(void)
 
 void CL_EntityUpdateEnd(void)
 {
-	if (dpprotocol == PROTOCOL_VERSION || dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
+	if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE || cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
 	{
 		int i;
 		// disable entities that disappeared this frame
@@ -772,7 +766,7 @@ void CL_ParseClientdata (int bits)
 	{
 		if (bits & (SU_PUNCH1<<i) )
 		{
-			if (dpprotocol)
+			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
 				cl.punchangle[i] = MSG_ReadPreciseAngle();
 			else
 				cl.punchangle[i] = MSG_ReadChar();
@@ -1504,16 +1498,12 @@ void CL_ParseServerMessage(void)
 
 		case svc_version:
 			i = MSG_ReadLong ();
-			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != DPPROTOCOL_VERSION4 && i != 250)
-				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i, %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, DPPROTOCOL_VERSION4, PROTOCOL_VERSION);
-			Nehahrademcompatibility = false;
-			if (i == 250)
-				Nehahrademcompatibility = true;
-			if (cls.demoplayback && demo_nehahra.integer)
-				Nehahrademcompatibility = true;
-			dpprotocol = i;
-			if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3 && dpprotocol != DPPROTOCOL_VERSION4)
-				dpprotocol = 0;
+			// hack for unmarked Nehahra movie demos which had a custom protocol
+			if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
+				i = PROTOCOL_NEHAHRAMOVIE;
+			if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_NEHAHRAMOVIE)
+				Host_Error("CL_ParseServerMessage: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_NEHAHRAMOVIE);
+			cl.protocol = i;
 			break;
 
 		case svc_disconnect:
@@ -1751,4 +1741,5 @@ void CL_Parse_Init(void)
 	Cvar_RegisterVariable (&demo_nehahra);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);
+	Cvar_RegisterVariable(&developer_networkentities);
 }

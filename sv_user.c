@@ -623,7 +623,7 @@ void SV_ReadClientMove (usercmd_t *move)
 		val->_float = host_client->ping * 1000.0;
 
 	// read current angles
-	// DPPROTOCOL_VERSION4
+	// PROTOCOL_DARKPLACES4
 	for (i = 0;i < 3;i++)
 		angle[i] = MSG_ReadPreciseAngle();
 
@@ -743,10 +743,7 @@ void SV_ReadClientMessage(void)
 			break;
 
 		case clc_ackentities:
-			//if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
-			//	EntityFrame_AckFrame(&host_client->entitydatabase, MSG_ReadLong());
-			//else
-				EntityFrame4_AckFrame(host_client->entitydatabase4, MSG_ReadLong());
+			EntityFrame4_AckFrame(host_client->entitydatabase4, host_client->entitydatabase4->ackframenum = MSG_ReadLong());
 			break;
 		}
 	}

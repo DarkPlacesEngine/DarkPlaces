@@ -462,7 +462,6 @@ void CL_DecayLights(void)
 			dl->radius = (cl.time < dl->die) ? max(0, dl->radius - time * dl->decay) : 0;
 }
 
-extern qboolean Nehahrademcompatibility;
 #define MAXVIEWMODELS 32
 entity_t *viewmodels[MAXVIEWMODELS];
 int numviewmodels;
@@ -786,7 +785,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 		if (!(e->render.effects & (EF_NOSHADOW | EF_ADDITIVE))
 		 && (e->render.alpha == 1)
 		 && !(e->render.flags & RENDER_VIEWMODEL)
-		 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && !Nehahrademcompatibility && !cl_noplayershadow.integer)))
+		 && ((e - cl_entities) != cl.viewentity || (!cl.intermission && cl.protocol != PROTOCOL_NEHAHRAMOVIE && !cl_noplayershadow.integer)))
 			e->render.flags |= RENDER_SHADOW;
 		// as soon as player is known we can call V_CalcRefDef
 		if ((e - cl_entities) == cl.viewentity)
