@@ -566,33 +566,6 @@ static void R_BlendView(void)
 	R_Mesh_Draw(3, 1, polygonelements);
 }
 
-void R_UpdateWorld(void)
-{
-	if (!r_refdef.entities/* || !cl.worldmodel*/)
-		return; //Host_Error ("R_RenderView: NULL worldmodel");
-
-	/*
-	if (r_shadow_realtime_world.integer && !gl_stencil)
-	{
-		Con_Print("Realtime world lighting requires 32bit color; turning off r_shadow_realtime_world, please type vid_bitsperpixel 32;vid_restart and try again\n");
-		Cvar_SetValueQuick(&r_shadow_realtime_world, 0);
-	}
-	*/
-
-	// don't allow cheats in multiplayer
-	if (!cl.islocalgame && cl.worldmodel)
-	{
-		if (r_fullbright.integer != 0)
-			Cvar_Set ("r_fullbright", "0");
-		if (r_ambient.value != 0)
-			Cvar_Set ("r_ambient", "0");
-	}
-
-	R_Textures_Frame();
-	R_UpdateFog();
-	R_UpdateLights();
-}
-
 void R_RenderScene(void);
 
 /*
@@ -604,7 +577,7 @@ void R_RenderView(void)
 {
 	if (!r_refdef.entities/* || !cl.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
-	
+
 	r_view_width = bound(0, r_refdef.width, vid.realwidth);
 	r_view_height = bound(0, r_refdef.height, vid.realheight);
 	r_view_depth = 1;
@@ -627,6 +600,9 @@ void R_RenderView(void)
 	GL_ScissorTest(true);
 	GL_DepthMask(true);
 	R_ClearScreen();
+	R_Textures_Frame();
+	R_UpdateFog();
+	R_UpdateLights();
 	R_TimeReport("setup");
 
 	qglDepthFunc(GL_LEQUAL);

@@ -756,7 +756,6 @@ void _Host_Frame (float time)
 	if (host_speeds.integer)
 		time1 = Sys_DoubleTime();
 
-	R_UpdateWorld();
 	CL_UpdateScreen();
 
 	if (host_speeds.integer)
