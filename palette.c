@@ -4,7 +4,6 @@
 unsigned int d_8to24table[256];
 //qbyte d_15to8table[32768];
 qbyte host_basepal[768];
-qbyte texgamma[256];
 
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
 cvar_t v_contrast = {CVAR_SAVE, "v_contrast", "1"};
@@ -174,13 +173,37 @@ void Gamma_Init(void)
 
 void Palette_Init(void)
 {
+	int i;
+	float gamma, scale, base;
 	qbyte *pal;
+	qbyte temp[256];
 	pal = (qbyte *)COM_LoadFile ("gfx/palette.lmp", false);
 	if (!pal)
 		Sys_Error ("Couldn't load gfx/palette.lmp");
 	memcpy(host_basepal, pal, 765);
 	Mem_Free(pal);
 	host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black
+
+	gamma = 1;
+	scale = 1;
+	base = 0;
+	i = COM_CheckParm("-texgamma");
+	if (i)
+		gamma = atof(com_argv[i + 1]);
+	i = COM_CheckParm("-texcontrast");
+	if (i)
+		scale = atof(com_argv[i + 1]);
+	i = COM_CheckParm("-texbrightness");
+	if (i)
+		base = atof(com_argv[i + 1]);
+	gamma = bound(0.01, gamma, 10.0);
+	scale = bound(0.01, scale, 10.0);
+	base = bound(0, base, 0.95);
+
+	BuildGammaTable8(1.0f, gamma, scale, base, temp);
+	for (i = 3;i < 765;i++)
+		host_basepal[i] = temp[host_basepal[i]];
+
 	Palette_Setup8to24();
 //	Palette_Setup15to8();
 }
