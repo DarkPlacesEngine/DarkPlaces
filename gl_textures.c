@@ -1456,6 +1456,25 @@ void R_GetFragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy
 {
 	gltexture_t *glt;
 	float iwidth, iheight;
+	if (cls.state == ca_dedicated)
+	{
+		if (x)
+			*x = 0;
+		if (y)
+			*y = 0;
+		if (fx1 || fy1 || fx2 || fy2)
+		{
+			if (fx1)
+				*fx1 = 0;
+			if (fy1)
+				*fy1 = 0;
+			if (fx2)
+				*fx2 = 1;
+			if (fy2)
+				*fy2 = 1;
+		}
+		return;
+	}
 	if (!rt)
 		Host_Error("R_GetFragmentLocation: no texture supplied\n");
 	glt = (gltexture_t *)rt;
