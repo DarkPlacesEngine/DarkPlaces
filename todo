@@ -18,9 +18,9 @@
 -d (Mitchell) darkplaces client: lerp lightstyles (Mitchell)
 -d (Mitchell) darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
 -d (QorpsE) darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
+-d (Sajt) darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt)
 -d (Speeds) darkplaces client: add a config saving command (Speeds)
 -d (Throvold@uboot.com) darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
--d (Vic) darkplaces client: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
 -d (Zombie) darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
 -d (avirox) darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 -d (de-we) darkplaces docs: add de-we to credits page for the great icons (de-we)
@@ -29,7 +29,6 @@
 -d (joe hill) dpmod: make grapple off-hand (joe hill)
 -d (mashakos) darkplaces editlights: add r_editlights_editall command, same as _edit but affects all lights (mashakos)
 -d (metlslime) darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
--d (scar3crow) dpmod: up nail limit to 500 (scar3crow)
 -f (Mitchell) darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f (Option42) darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
@@ -59,7 +58,6 @@
 0 darkplaces loading: make sure startup script code executes aliases when doing the cvar scan
 0 darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
-0 darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt
 0 darkplaces optimize: Collision_TraceBrushBrush should compare enterfrac changes to realfraction and skip out if further, also leavefrac (Vic)
 0 darkplaces optimize: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
 0 darkplaces optimize: R_Q3BSP_RecursiveWorldNode should take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)
@@ -355,6 +353,7 @@ d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blu
 d darkplaces client: add two cvars to replace sbar_alpha, one would control background as 0-1, and one would control everything else as 0-1
 d darkplaces client: fix disappearing decals bug, it seems that when the smoke disappears so do the decals (Urre)
 d darkplaces client: locked console scrollback (sublim3)
+d darkplaces client: make CL_RocketTrail2 use the entity to keep track of trail spacing like CL_RocketTrail does (Vic)
 d darkplaces client: make cl_beams_relative only affect view-attached beams
 d darkplaces client: make colormap > cl.maxclients error be only a warning, to play QDDQ demo of end map (Stribbs)
 d darkplaces client: reset cl.viewzoom on connect (Rick)
@@ -684,6 +683,7 @@ d dpmod: make the in-wall spikeballs only appear in developer 1 mode (Tomaz)
 d dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 d dpmod: post new dpmod build.
 d dpmod: switch to new Tomaz weapon models
+d dpmod: up nail limit to 500 (scar3crow)
 d dpmod: use Tomaz's ammo box models (Tomaz) 
 d dpmod: why can't I pick up nails when I have no nailguns?  and other similar pickup problems with weapons
 d dpzoo.map: colored lighting
