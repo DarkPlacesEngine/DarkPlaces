@@ -70,7 +70,8 @@ OBJ_DED_EXE= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJ
 
 
 # Compilation
-CFLAGS_COMMON=-MD -Wall -Werror
+CFLAGS_NONEXECOMMON=-MD -Wall -Werror
+CFLAGS_EXECOMMON=-MD -Wall
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
@@ -154,40 +155,40 @@ exerelease :
 	$(MAKE) wglexe-release dedexe-release
 
 glx-debug :
-	$(MAKE) bin-debug EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)"
+	$(MAKE) bin-debug EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
 glx-profile :
-	$(MAKE) bin-profile EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)"
+	$(MAKE) bin-profile EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
 glx-release :
-	$(MAKE) bin-release EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)"
+	$(MAKE) bin-release EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
 ded-debug :
-	$(MAKE) bin-debug EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
+	$(MAKE) bin-debug EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
 ded-profile :
-	$(MAKE) bin-profile EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
+	$(MAKE) bin-profile EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
 ded-release :
-	$(MAKE) bin-release EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
+	$(MAKE) bin-release EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)" CFLAGS_COMMON="$(CFLAGS_NONEXECOMMON)"
 
 wglexe-debug :
-	$(MAKE) bin-debug EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)"
+	$(MAKE) bin-debug EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
 wglexe-profile :
-	$(MAKE) bin-profile EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)"
+	$(MAKE) bin-profile EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
 wglexe-release :
-	$(MAKE) bin-release EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)"
+	$(MAKE) bin-release EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
 dedexe-debug :
-	$(MAKE) bin-debug EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)"
+	$(MAKE) bin-debug EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
 dedexe-profile :
-	$(MAKE) bin-profile EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)"
+	$(MAKE) bin-profile EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
 dedexe-release :
-	$(MAKE) bin-release EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)"
+	$(MAKE) bin-release EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)" CFLAGS_COMMON="$(CFLAGS_EXECOMMON)"
 
 bin-debug :
 	@echo
