@@ -2532,7 +2532,7 @@ void VM_iscachedpic(void)
 	VM_SAFEPARMCOUNT(1,VM_iscachedpic);
 
 	// drawq hasnt such a function, thus always return true 
-	PRVM_G_FLOAT(OFS_RETURN) = TRUE;
+	PRVM_G_FLOAT(OFS_RETURN) = false;
 }
 
 /*
