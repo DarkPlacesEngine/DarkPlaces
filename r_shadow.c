@@ -1906,7 +1906,7 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 		for (i = 0;i < 6;i++)
 		{
 			snprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
-			if ((image_rgba = loadimagepixels(name, true, cubemapsize, cubemapsize)))
+			if ((image_rgba = loadimagepixels(name, false, cubemapsize, cubemapsize)))
 			{
 				if (image_width == image_height)
 				{
@@ -1933,7 +1933,13 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 		Mem_Free(cubemappixels);
 	}
 	else
-		Con_Printf("Failed to load Cubemap \"%s\"\n", basename);
+	{
+		Con_Printf("Failed to load Cubemap \"%s\", tried ", basename);
+		for (j = 0;j < 3;j++)
+			for (i = 0;i < 6;i++)
+				Con_Printf("%s\"%s%s.tga\"", j + i > 0 ? ", " : "", basename, suffix[j][i].suffix);
+		Con_Printf(" and was unable to find any of them.\n");
+	}
 	return cubemaptexture;
 }
 
