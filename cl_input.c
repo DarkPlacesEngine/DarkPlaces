@@ -381,7 +381,7 @@ void CL_SendMove (usercmd_t *cmd)
 
 	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 
-	if (dpprotocol == DPPROTOCOL_VERSION2)
+	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
 	{
 		for (i = 0;i < 3;i++)
 			MSG_WriteFloat (&buf, cl.viewangles[i]);

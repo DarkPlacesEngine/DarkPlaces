@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	PROTOCOL_VERSION	15
 #define	DPPROTOCOL_VERSION1	96
 #define	DPPROTOCOL_VERSION2	97
+// LordHavoc: I think the 96-99 range was going to run out too soon...  so here I jump to 3500
+#define	DPPROTOCOL_VERSION3	3500
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -41,9 +43,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EF_ADDITIVE				32
 #define EF_BLUE					64
 #define EF_RED					128
-#define EF_DELTA				8388608	// LordHavoc: entity is delta compressed to save network bandwidth
+#define EF_DELTA				8388608	// LordHavoc: (obsolete) entity is delta compressed to save network bandwidth  (no longer used)
+#define EF_LOWPRECISION			4194304 // LordHavoc: entity is low precision (integer coordinates) to save network bandwidth
 // effects/model (can be used as model flags or entity effects)
-#define	EF_REFLECTIVE			256		// LordHavoc: shiny metal objects :)
+#define	EF_REFLECTIVE			256		// LordHavoc: shiny metal objects :)  (not currently supported)
 #define EF_FULLBRIGHT			512		// LordHavoc: fullbright
 #define EF_FLAME				1024	// LordHavoc: on fire
 
@@ -255,7 +258,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // PGM 01/21/97
 #define TE_BEAM				13 // [entity] entity [vector] start [vector] end
-// PGM 01/21/97 
+// PGM 01/21/97
 
 // Nehahra effects used in the movie (TE_EXPLOSION3 also got written up in a QSG tutorial, hence it's not marked NEH)
 #define	TE_EXPLOSION3		16 // [vector] origin [coord] red [coord] green [coord] blue
@@ -285,6 +288,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_GLOWTRAIL 2
 #define RENDER_VIEWMODEL 4
 #define RENDER_EXTERIORMODEL 8
+#define RENDER_LOWPRECISION 16 // send as low precision coordinates to save bandwidth
 
 typedef struct
 {

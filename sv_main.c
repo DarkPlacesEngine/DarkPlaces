@@ -246,7 +246,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION2);
+	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION3);
 	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
@@ -979,10 +979,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			VectorCopy(ent->v.origin, origin);
 		}
 
-		// don't send an entity if it's coordinates would wrap around
-		if (origin[0] < -32768 || origin[1] < -32768 || origin[2] < -32768 || origin[0] > 32767 || origin[1] > 32767 || origin[2] > 32767)
-			continue;
-
 		// ent has survived every check so far, check if it is visible
 		// always send embedded brush models, they don't generate much traffic
 		if (ent != clent && ((flags & RENDER_VIEWMODEL) == 0) && (model == NULL || model->type != mod_brush || model->name[0] != '*'))
@@ -1113,6 +1109,9 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 		if (ent->v.movetype == MOVETYPE_STEP)
 			flags |= RENDER_STEP;
+		// don't send an entity if it's coordinates would wrap around
+		if ((effects & EF_LOWPRECISION) && origin[0] >= -32768 && origin[1] >= -32768 && origin[2] >= -32768 && origin[0] <= 32767 && origin[1] <= 32767 && origin[2] <= 32767)
+			flags |= RENDER_LOWPRECISION;
 
 		s = EntityFrame_NewEntity(&entityframe, e);
 		// if we run out of space, abort

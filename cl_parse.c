@@ -366,9 +366,9 @@ void CL_ParseServerInfo (void)
 
 // parse protocol version number
 	i = MSG_ReadLong ();
-	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != 250)
+	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != 250)
 	{
-		Con_Printf ("Server is protocol %i, not %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, PROTOCOL_VERSION);
+		Con_Printf ("Server is protocol %i, not %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, PROTOCOL_VERSION);
 		return;
 	}
 	Nehahrademcompatibility = false;
@@ -377,7 +377,7 @@ void CL_ParseServerInfo (void)
 	if (cls.demoplayback && demo_nehahra.integer)
 		Nehahrademcompatibility = true;
 	dpprotocol = i;
-	if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2)
+	if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3)
 		dpprotocol = 0;
 
 // parse maxclients
@@ -508,12 +508,12 @@ void CL_ValidateState(entity_state_t *s)
 	Mod_CheckLoaded(model);
 	if (model && s->frame >= model->numframes)
 	{
-		Con_Printf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
+		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
 		s->frame = 0;
 	}
 	if (model && s->skin > 0 && s->skin >= model->numskins)
 	{
-		Con_Printf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
+		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
 		s->skin = 0;
 	}
 }
@@ -1072,15 +1072,15 @@ void CL_ParseServerMessage (void)
 
 		case svc_version:
 			i = MSG_ReadLong ();
-			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != 250)
-				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, PROTOCOL_VERSION);
+			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != DPPROTOCOL_VERSION3 && i != 250)
+				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i, %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, DPPROTOCOL_VERSION3, PROTOCOL_VERSION);
 			Nehahrademcompatibility = false;
 			if (i == 250)
 				Nehahrademcompatibility = true;
 			if (cls.demoplayback && demo_nehahra.integer)
 				Nehahrademcompatibility = true;
 			dpprotocol = i;
-			if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2)
+			if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2 && dpprotocol != DPPROTOCOL_VERSION3)
 				dpprotocol = 0;
 			break;
 
