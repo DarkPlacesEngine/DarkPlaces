@@ -820,7 +820,7 @@ static void R_BlendView(void)
 	GL_DepthTest(false); // magic
 	GL_VertexPointer(vertex3f);
 	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
-	r = 64000;
+	r = 64;
 	vertex3f[0] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r - r_viewup[0] * r;
 	vertex3f[1] = r_vieworigin[1] + r_viewforward[1] * 1.5 + r_viewleft[1] * r - r_viewup[1] * r;
 	vertex3f[2] = r_vieworigin[2] + r_viewforward[2] * 1.5 + r_viewleft[2] * r - r_viewup[2] * r;
