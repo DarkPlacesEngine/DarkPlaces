@@ -498,7 +498,9 @@ void R_DrawQueue(void)
 					batchcount++;
 					if (batchcount >= 128)
 					{
+						GL_LockArrays(0, batchcount * 4);
 						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
+						GL_LockArrays(0, 0);
 						batchcount = 0;
 						at = varray_texcoord2f[0];
 						av = varray_vertex3f;
@@ -507,7 +509,11 @@ void R_DrawQueue(void)
 				x += w;
 			}
 			if (batchcount > 0)
+			{
+				GL_LockArrays(0, batchcount * 4);
 				R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
+				GL_LockArrays(0, 0);
+			}
 			break;
 		case DRAWQUEUE_MESH:
 			mesh = (void *)(dq + 1);
@@ -516,7 +522,9 @@ void R_DrawQueue(void)
 			m.tex[0] = R_GetTexture(mesh->texture);
 			m.pointer_texcoord[0] = mesh->data_texcoord2f;
 			R_Mesh_State(&m);
+			GL_LockArrays(0, mesh->num_vertices);
 			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+			GL_LockArrays(0, 0);
 			m.pointer_color = NULL;
 			currentpic = "\0";
 			break;

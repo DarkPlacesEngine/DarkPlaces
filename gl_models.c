@@ -278,7 +278,9 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			}
 		}
 		R_Mesh_State(&m);
+		GL_LockArrays(0, mesh->num_vertices);
 		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
+		GL_LockArrays(0, 0);
 	}
 }
 
@@ -756,7 +758,9 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	else
 		GL_Color(ambientcolor4f[0], ambientcolor4f[1], ambientcolor4f[2], ambientcolor4f[3]);
 	R_Mesh_State(&mstate);
+	GL_LockArrays(0, numverts);
 	R_Mesh_Draw(numverts, numtriangles, elements);
+	GL_LockArrays(0, 0);
 	c_alias_polys += numtriangles;
 
 	if (fog)
@@ -775,7 +779,9 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], ent->alpha * fog);
 		ZymoticTransformVerts(numverts, varray_vertex3f, ent->model->alias.zymdata_vertbonecounts, ent->model->alias.zymdata_verts);
 		R_Mesh_State(&mstate);
+		GL_LockArrays(0, numverts);
 		R_Mesh_Draw(numverts, numtriangles, elements);
+		GL_LockArrays(0, 0);
 		c_alias_polys += numtriangles;
 	}
 }
