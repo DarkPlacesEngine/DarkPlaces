@@ -230,5 +230,14 @@ typedef struct md3modelheader_s
 }
 md3modelheader_t;
 
+// LordHavoc: all quake series 'alias' models (mdl, md2, md3) are converted to this vertex format
+typedef struct aliasvertex_s
+{
+	short origin[3];
+	signed char normal[3];
+	signed char svector[3];
+}
+aliasvertex_t;
+
 #endif
 

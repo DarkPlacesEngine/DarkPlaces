@@ -234,7 +234,7 @@ typedef struct model_s
 	int				*mdlmd2data_indices;
 	float			*mdlmd2data_texcoords;
 	md2frame_t		*mdlmd2data_frames;
-	trivertx_t		*mdlmd2data_pose;
+	aliasvertex_t	*mdlmd2data_pose;
 	int				*mdlmd2data_triangleneighbors;
 
 	// for Zymotic models
