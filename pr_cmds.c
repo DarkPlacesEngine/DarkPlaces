@@ -3240,26 +3240,22 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 	Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], scale);
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 	// True origin for rotation (Matrix4x4_Concat creates wrong), this is done using all rotation matrix
-	out->m[0][3] = entitymatrix.m[0][3] + scale*tagmatrix.m[0][3]*(entitymatrix.m[0][0] + entitymatrix.m[0][1] + entitymatrix.m[0][2]);
-	out->m[1][3] = entitymatrix.m[1][3] + scale*tagmatrix.m[1][3]*(entitymatrix.m[1][0] + entitymatrix.m[1][1] + entitymatrix.m[1][2]);
-	out->m[2][3] = entitymatrix.m[2][3] + scale*tagmatrix.m[2][3]*(entitymatrix.m[2][0] + entitymatrix.m[2][1] + entitymatrix.m[2][2]);
-	/* Optimised variant with only v_forward using
-	out->m[0][3] = entitymatrix.m[0][3] + scale*entitymatrix.m[0][0]*tagmatrix.m[0][3];
-	out->m[1][3] = entitymatrix.m[1][3] + scale*entitymatrix.m[1][0]*tagmatrix.m[1][3];
-	out->m[2][3] = entitymatrix.m[2][3] + scale*entitymatrix.m[2][0]*tagmatrix.m[2][3];
-	*/
+	out->m[0][3] = entitymatrix.m[0][3] + entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3];
+	out->m[1][3] = entitymatrix.m[1][3] + entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3];
+	out->m[2][3] = entitymatrix.m[2][3] + entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3];		
 
 	// additional actions for render-view entities
 	if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
 	{// RENDER_VIEWMODEL
+		Matrix4x4_Copy(&tagmatrix, out);
 		ent = EDICT_NUM(val->edict);
-		// FIXME: "circle" bug, add bobbing (cl_bob), add scale parameter
+		// FIXME: add bobbing (cl_bob), add scale parameter
 		scale = 1;
 		Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2] + ent->v->view_ofs[2], ent->v->v_angle[0], ent->v->v_angle[1], ent->v->v_angle[2], scale);
-		Matrix4x4_Concat(out, &entitymatrix, out);
-		out->m[0][3] = entitymatrix.m[0][3] + scale*entitymatrix.m[0][0]*out->m[0][3];
-		out->m[1][3] = entitymatrix.m[1][3] + scale*entitymatrix.m[1][0]*out->m[1][3];
-		out->m[2][3] = entitymatrix.m[2][3] + scale*entitymatrix.m[2][0]*out->m[2][3];
+		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
+		out->m[0][3] = entitymatrix.m[0][3] + entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3];
+		out->m[1][3] = entitymatrix.m[1][3] + entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3];
+		out->m[2][3] = entitymatrix.m[2][3] + entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3];		
 		Con_DPrintf("SV_GetTagMatrix: returned origin is %f %f %f\n", out->m[0][3], out->m[1][3], out->m[2][3]);
 		return 0;
 	}
@@ -3274,9 +3270,10 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 			Matrix4x4_CreateFromQuakeEntity(&entitymatrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], -ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], scale);
 			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 			// True origin for rotation (Matrix4x4_Concat creates wrong), this is done using all rotation matrix
-			out->m[0][3] = entitymatrix.m[0][3] + scale*tagmatrix.m[0][3]*(entitymatrix.m[0][0] + entitymatrix.m[0][1] + entitymatrix.m[0][2]);
-			out->m[1][3] = entitymatrix.m[1][3] + scale*tagmatrix.m[1][3]*(entitymatrix.m[1][0] + entitymatrix.m[1][1] + entitymatrix.m[1][2]);
-			out->m[2][3] = entitymatrix.m[2][3] + scale*tagmatrix.m[2][3]*(entitymatrix.m[2][0] + entitymatrix.m[2][1] + entitymatrix.m[2][2]);
+			out->m[0][3] = entitymatrix.m[0][3] + entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3];
+			out->m[1][3] = entitymatrix.m[1][3] + entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3];
+			out->m[2][3] = entitymatrix.m[2][3] + entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3];		
+		
 		}
 		while ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict);
 	}
