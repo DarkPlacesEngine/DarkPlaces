@@ -11,3 +11,6 @@ gmon.out
 *.opt
 *.plg
 *.exe
+darkplaces_private.h
+darkplaces_private.rc
+Makefile.win

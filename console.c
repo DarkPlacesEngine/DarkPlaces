@@ -19,7 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // console.c
 
-#ifndef WIN32
+#if !defined(WIN32) || defined(__MINGW32__)
 # include <unistd.h>
 #endif
 #include <time.h>
