@@ -295,14 +295,18 @@ void GL_SetupTextureState(void)
 		unit->arrayenabled = false;
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		if (gl_texture3d)
+		{
 			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
+		}
 		else
+		{
 			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
+		}
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
 		{
-			qglDisable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+			qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 		}
 		if (gl_texturecubemap)
 		{
@@ -506,7 +510,7 @@ void R_Mesh_Finish(void)
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
 		{
-			qglDisable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+			qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 		}
 		if (gl_texturecubemap)
 		{
@@ -668,14 +672,14 @@ void R_Mesh_TextureState(const rmeshstate_t *m)
 				if (m->tex3d[i])
 				{
 					if (unit->t3d == 0)
-						qglEnable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+						qglEnable(GL_TEXTURE_3D);CHECKGLERROR
 				}
 				else
 				{
 					if (unit->t3d)
-						qglDisable(GL_TEXTURE_3D_EXT);CHECKGLERROR
+						qglDisable(GL_TEXTURE_3D);CHECKGLERROR
 				}
-				qglBindTexture(GL_TEXTURE_3D_EXT, (unit->t3d = m->tex3d[i]));CHECKGLERROR
+				qglBindTexture(GL_TEXTURE_3D, (unit->t3d = m->tex3d[i]));CHECKGLERROR
 			}
 			if (unit->tcubemap != m->texcubemap[i])
 			{

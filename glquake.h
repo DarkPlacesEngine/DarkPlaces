@@ -113,6 +113,7 @@ typedef double GLclampd;
 #define GL_TEXTURE_2D				0x0DE1
 #define GL_TEXTURE_WRAP_S			0x2802
 #define GL_TEXTURE_WRAP_T			0x2803
+#define GL_TEXTURE_WRAP_R			0x8072
 #define GL_TEXTURE_MAG_FILTER			0x2800
 #define GL_TEXTURE_MIN_FILTER			0x2801
 #define GL_UNPACK_ALIGNMENT			0x0CF5
@@ -288,20 +289,20 @@ extern int gl_combine_extension;
 extern cvar_t gl_combine;
 
 extern int gl_texture3d;
-#ifndef GL_TEXTURE_3D_EXT
-#define GL_PACK_SKIP_IMAGES_EXT			0x806B
-#define GL_PACK_IMAGE_HEIGHT_EXT		0x806C
-#define GL_UNPACK_SKIP_IMAGES_EXT		0x806D
-#define GL_UNPACK_IMAGE_HEIGHT_EXT		0x806E
-#define GL_TEXTURE_3D_EXT			0x806F
-#define GL_PROXY_TEXTURE_3D_EXT			0x8070
-#define GL_TEXTURE_DEPTH_EXT			0x8071
-#define GL_TEXTURE_WRAP_R_EXT			0x8072
-#define GL_MAX_3D_TEXTURE_SIZE_EXT		0x8073
-#define GL_TEXTURE_3D_BINDING_EXT		0x806A
-extern void (GLAPIENTRY *qglTexImage3DEXT)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
-extern void (GLAPIENTRY *qglTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
-extern void (GLAPIENTRY *qglCopyTexSubImage3DEXT)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
+#ifndef GL_TEXTURE_3D
+#define GL_PACK_SKIP_IMAGES			0x806B
+#define GL_PACK_IMAGE_HEIGHT			0x806C
+#define GL_UNPACK_SKIP_IMAGES			0x806D
+#define GL_UNPACK_IMAGE_HEIGHT			0x806E
+#define GL_TEXTURE_3D				0x806F
+#define GL_PROXY_TEXTURE_3D			0x8070
+#define GL_TEXTURE_DEPTH			0x8071
+#define GL_TEXTURE_WRAP_R			0x8072
+#define GL_MAX_3D_TEXTURE_SIZE			0x8073
+#define GL_TEXTURE_BINDING_3D			0x806A
+extern void (GLAPIENTRY *qglTexImage3D)(GLenum target, GLint level, GLenum internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLint x, GLint y, GLsizei width, GLsizei height);
 #endif
 
 extern int gl_texturecubemap;

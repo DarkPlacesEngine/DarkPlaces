@@ -1912,7 +1912,7 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, f
 				{
 					R_Mesh_ResizeCheck(mesh->numverts);
 					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-					R_Shadow_VertexLight(mesh->numverts, varray_vertex, mesh->normals, relativelightorigin, lightradius2, lightdistbias, lightsubtract, lightcolor);
+					R_Shadow_Light(mesh->numverts, mesh->normals, relativelightorigin, lightradius, lightdistbias, lightsubtract, lightcolor);
 					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 				}
 			}

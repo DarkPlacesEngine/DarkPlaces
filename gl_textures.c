@@ -548,8 +548,25 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	prevbuffer = data;
 
 	glt->texnum = glt->image->texnum;
-	qglBindTexture(GL_TEXTURE_2D, glt->image->texnum);
-	CHECKGLERROR
+	switch(glt->image->texturetype)
+	{
+	case GLTEXTURETYPE_1D:
+		qglBindTexture(GL_TEXTURE_1D, glt->image->texnum);
+		CHECKGLERROR
+		break;
+	case GLTEXTURETYPE_2D:
+		qglBindTexture(GL_TEXTURE_2D, glt->image->texnum);
+		CHECKGLERROR
+		break;
+	case GLTEXTURETYPE_3D:
+		qglBindTexture(GL_TEXTURE_3D, glt->image->texnum);
+		CHECKGLERROR
+		break;
+	case GLTEXTURETYPE_CUBEMAP:
+		qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, glt->image->texnum);
+		CHECKGLERROR
+		break;
+	}
 	glt->flags &= ~GLTEXF_UPLOAD;
 	gl_backend_rebindtextures = true;
 
@@ -580,11 +597,11 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 				CHECKGLERROR
 				break;
 			case GLTEXTURETYPE_3D:
-				qglTexImage3DEXT(GL_TEXTURE_3D_EXT, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, glt->image->depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
+				qglTexImage3D(GL_TEXTURE_3D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, glt->image->depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
 				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_3D_EXT, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+				qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
 				CHECKGLERROR
-				qglTexParameteri(GL_TEXTURE_3D_EXT, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+				qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 				CHECKGLERROR
 				break;
 			default:
@@ -619,7 +636,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			CHECKGLERROR
 			break;
 		case GLTEXTURETYPE_3D:
-			qglTexSubImage3DEXT(GL_TEXTURE_3D_EXT, 0, glt->x, glt->y, glt->z, glt->width, glt->height, glt->depth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexSubImage3D(GL_TEXTURE_3D, 0, glt->x, glt->y, glt->z, glt->width, glt->height, glt->depth, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 			break;
 		default:
@@ -730,7 +747,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		}
 		break;
 	case GLTEXTURETYPE_3D:
-		qglTexImage3DEXT(GL_TEXTURE_3D_EXT, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+		qglTexImage3D(GL_TEXTURE_3D, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 		CHECKGLERROR
 		if (glt->flags & TEXF_MIPMAP)
 		{
@@ -738,19 +755,19 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			{
 				Image_MipReduce(prevbuffer, resizebuffer, &width, &height, &depth, 1, 1, 1, glt->image->bytesperpixel);
 				prevbuffer = resizebuffer;
-				qglTexImage3DEXT(GL_TEXTURE_3D_EXT, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+				qglTexImage3D(GL_TEXTURE_3D, mip++, internalformat, width, height, depth, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 				CHECKGLERROR
 			}
-			qglTexParameteri(GL_TEXTURE_3D_EXT, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_3D_EXT, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 			CHECKGLERROR
 		}
 		else
 		{
-			qglTexParameteri(GL_TEXTURE_3D_EXT, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
 			CHECKGLERROR
-			qglTexParameteri(GL_TEXTURE_3D_EXT, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+			qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 			CHECKGLERROR
 		}
 		break;
