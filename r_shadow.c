@@ -924,9 +924,9 @@ void R_Shadow_Stage_Light(int shadowtest)
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_CULL_FACE);
 	if (shadowtest)
-		qglDisable(GL_STENCIL_TEST);
-	else
 		qglEnable(GL_STENCIL_TEST);
+	else
+		qglDisable(GL_STENCIL_TEST);
 	if (gl_support_stenciltwoside)
 		qglDisable(GL_STENCIL_TEST_TWO_SIDE_EXT);
 	qglStencilMask(~0);
