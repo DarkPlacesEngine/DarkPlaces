@@ -1943,8 +1943,8 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 	}
 
 	// debugging
-	Mem_CheckSentinels(front);
-	Mem_CheckSentinels(back);
+	Mem_CheckSentinels(f);
+	Mem_CheckSentinels(b);
 }
 
 typedef struct portal_s
