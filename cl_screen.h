@@ -18,8 +18,8 @@ drawqueue_t;
 
 // a triangle mesh... embedded in the drawqueue
 // each vertex is 4 floats (3 are used)
-// each texcoord pair is 2 floats
-// each color is 4 floats
+// each texcoord is 4 floats (3 are used)
+// each color is 4 floats (4 are used)
 typedef struct drawqueuemesh_s
 {
 	rtexture_t *texture;

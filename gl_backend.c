@@ -104,7 +104,7 @@ void GL_Backend_AllocArrays(void)
 	varray_color = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
 	varray_bcolor = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(qbyte[4]));
 	for (i = 0;i < backendunits;i++)
-		varray_texcoord[i] = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[2]));
+		varray_texcoord[i] = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
 	for (;i < MAX_TEXTUREUNITS;i++)
 		varray_texcoord[i] = NULL;
 }
@@ -310,7 +310,10 @@ void GL_SetupTextureState(void)
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 			}
 			qglClientActiveTexture(GL_TEXTURE0_ARB + (gl_state.clientunit = i));CHECKGLERROR
-			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_texcoord[i]);CHECKGLERROR
+			if (gl_texture3d)
+				qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
+			else
+				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
 			if (gl_state.texture[i])
 			{
 				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
@@ -333,7 +336,10 @@ void GL_SetupTextureState(void)
 		{
 			qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		}
-		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), varray_texcoord[0]);CHECKGLERROR
+		if (gl_texture3d)
+			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[0]);CHECKGLERROR
+		else
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[4]), varray_texcoord[0]);CHECKGLERROR
 		if (gl_state.texture[0])
 		{
 			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR

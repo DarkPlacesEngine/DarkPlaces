@@ -122,8 +122,8 @@ static void R_SkyBox(void)
 	varray_vertex[i * 4 + 0] = (x) * 16.0f;\
 	varray_vertex[i * 4 + 1] = (y) * 16.0f;\
 	varray_vertex[i * 4 + 2] = (z) * 16.0f;\
-	varray_texcoord[0][i * 2 + 0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
-	varray_texcoord[0][i * 2 + 1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
+	varray_texcoord[0][i * 4 + 0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
+	varray_texcoord[0][i * 4 + 1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
@@ -182,13 +182,22 @@ static void R_SkyBox(void)
 #define skygridy 32
 #define skygridy1 (skygridy + 1)
 #define skygridyrecip (1.0f / (skygridy))
+#define skysphere_numverts (skygridx1 * skygridy1)
+#define skysphere_numtriangles (skygridx * skygridy * 2)
+static float skysphere_vertex[skysphere_numverts * 4];
+static float skysphere_texcoord[skysphere_numverts * 4];
+static int skysphere_elements[skysphere_numtriangles * 3];
 
-static float skysphere[skygridx1*skygridy1*5];
-static int skysphereindices[skygridx*skygridy*6];
-static void skyspherecalc(float *sphere, float dx, float dy, float dz)
+static void skyspherecalc(void)
 {
-	float a, b, x, ax, ay, v[3], length;
-	int i, j, *index;
+	int i, j, *e;
+	float a, b, x, ax, ay, v[3], length, *vertex, *texcoord;
+	float dx, dy, dz;
+	dx = 16;
+	dy = 16;
+	dz = 16 / 3;
+	vertex = skysphere_vertex;
+	texcoord = skysphere_texcoord;
 	for (j = 0;j <= skygridy;j++)
 	{
 		a = j * skygridyrecip;
@@ -202,64 +211,51 @@ static void skyspherecalc(float *sphere, float dx, float dy, float dz)
 			v[1] = ay*x * dy;
 			v[2] = -sin(b * M_PI * 2) * dz;
 			length = 3.0f / sqrt(v[0]*v[0]+v[1]*v[1]+(v[2]*v[2]*9));
-			*sphere++ = v[0] * length;
-			*sphere++ = v[1] * length;
-			*sphere++ = v[0];
-			*sphere++ = v[1];
-			*sphere++ = v[2];
+			*texcoord++ = v[0] * length;
+			*texcoord++ = v[1] * length;
+			*texcoord++ = 0;
+			*texcoord++ = 0;
+			*vertex++ = v[0];
+			*vertex++ = v[1];
+			*vertex++ = v[2];
+			*vertex++ = 1;
 		}
 	}
-	index = skysphereindices;
+	e = skysphere_elements;
 	for (j = 0;j < skygridy;j++)
 	{
 		for (i = 0;i < skygridx;i++)
 		{
-			*index++ =  j      * skygridx1 + i;
-			*index++ =  j      * skygridx1 + i + 1;
-			*index++ = (j + 1) * skygridx1 + i;
+			*e++ =  j      * skygridx1 + i;
+			*e++ =  j      * skygridx1 + i + 1;
+			*e++ = (j + 1) * skygridx1 + i;
 
-			*index++ =  j      * skygridx1 + i + 1;
-			*index++ = (j + 1) * skygridx1 + i + 1;
-			*index++ = (j + 1) * skygridx1 + i;
+			*e++ =  j      * skygridx1 + i + 1;
+			*e++ = (j + 1) * skygridx1 + i + 1;
+			*e++ = (j + 1) * skygridx1 + i;
 		}
 		i++;
 	}
 }
 
-static void skyspherearrays(float *v, float *t, float *source, float s)
-{
-	int i;
-	for (i = 0;i < (skygridx1*skygridy1);i++, t += 2, v += 4, source += 5)
-	{
-		t[0] = source[0] + s;
-		t[1] = source[1] + s;
-		v[0] = source[2];
-		v[1] = source[3];
-		v[2] = source[4];
-	}
-}
-
 static void R_SkySphere(void)
 {
-	int numverts, numtriangles;
-	float speedscale, speedscale2;
+	int i;
+	float speedscale, *t;
 	static qboolean skysphereinitialized = false;
 	rmeshstate_t m;
 	if (!skysphereinitialized)
 	{
 		skysphereinitialized = true;
-		skyspherecalc(skysphere, 16, 16, 16 / 3);
+		skyspherecalc();
 	}
 
+	// scroll speed for upper layer
 	speedscale = cl.time*8.0/128.0;
+	// wrap the scroll just to be extra kind to float accuracy
 	speedscale -= (int)speedscale;
-	speedscale2 = cl.time*16.0/128.0;
-	speedscale2 -= (int)speedscale2;
 
-	numverts = skygridx1*skygridy1;
-	numtriangles = skygridx*skygridy*2;
-
-	R_Mesh_ResizeCheck(numverts);
+	R_Mesh_ResizeCheck(skysphere_numverts);
 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
@@ -270,16 +266,27 @@ static void R_SkySphere(void)
 
 	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 
-	skyspherearrays(varray_vertex, varray_texcoord[0], skysphere, speedscale);
-	R_Mesh_Draw(numverts, numtriangles, skysphereindices);
+	memcpy(varray_vertex, skysphere_vertex, skysphere_numverts * sizeof(float[4]));
+	memcpy(varray_texcoord[0], skysphere_texcoord, skysphere_numverts * sizeof(float[4]));
+	for (i = 0, t = varray_texcoord[0];i < skysphere_numverts;i++, t += 4)
+	{
+		t[0] += speedscale;
+		t[1] += speedscale;
+	}
+	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_elements);
 
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.tex[0] = R_GetTexture(alphaskytexture);
 	R_Mesh_State(&m);
 
-	skyspherearrays(varray_vertex, varray_texcoord[0], skysphere, speedscale2);
-	R_Mesh_Draw(numverts, numtriangles, skysphereindices);
+	// scroll it again, this makes the lower cloud layer scroll twice as fast (just like quake did)
+	for (i = 0, t = varray_texcoord[0];i < skysphere_numverts;i++, t += 4)
+	{
+		t[0] += speedscale;
+		t[1] += speedscale;
+	}
+	R_Mesh_Draw(skysphere_numverts, skysphere_numtriangles, skysphere_elements);
 }
 
 void R_Sky(void)

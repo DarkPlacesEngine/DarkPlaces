@@ -265,6 +265,8 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		blendfunc2 = GL_ZERO;
 	}
 
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[4]));
 	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
 	{
 		// untextured
@@ -280,9 +282,11 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.tex[0] = R_GetTexture(r_notexture);
 		R_Mesh_State(&m);
 		c_alias_polys += model->numtris;
-		for (i = 0;i < model->numverts * 2;i++)
-			varray_texcoord[0][i] = model->mdlmd2data_texcoords[i] * 8.0f;
-		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+		for (i = 0;i < model->numverts * 4;i += 4)
+		{
+			varray_texcoord[0][i + 0] *= 8.0f;
+			varray_texcoord[0][i + 1] *= 8.0f;
+		}
 		R_LightModel(ent, model->numverts, varray_vertex, aliasvertnorm, varray_color, colorscale, colorscale, colorscale, false);
 		GL_UseColorArray();
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -322,8 +326,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		}
 		m.tex[0] = tex;
 		R_Mesh_State(&m);
-		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		if (fullbright)
 			GL_Color(colorscale * ifog, colorscale * ifog, colorscale * ifog, ent->alpha);
 		else
@@ -355,8 +357,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 				}
 				m.tex[0] = tex;
 				R_Mesh_State(&m);
-				R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 				if (pantsfullbright)
 					GL_Color(pantscolor[0] * colorscale * ifog, pantscolor[1] * colorscale * ifog, pantscolor[2] * colorscale * ifog, ent->alpha);
 				else
@@ -386,8 +386,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 				}
 				m.tex[0] = tex;
 				R_Mesh_State(&m);
-				R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 				if (shirtfullbright)
 					GL_Color(shirtcolor[0] * colorscale * ifog, shirtcolor[1] * colorscale * ifog, shirtcolor[2] * colorscale * ifog, ent->alpha);
 				else
@@ -416,8 +414,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			blendfunc1 = GL_SRC_ALPHA;
 			blendfunc2 = GL_ONE;
 			c_alias_polys += model->numtris;
-			R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-			memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 			GL_Color(ifog * r_colorscale, ifog * r_colorscale, ifog * r_colorscale, ent->alpha);
 			R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		}
@@ -431,8 +427,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 
 		c_alias_polys += model->numtris;
-		R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		GL_Color(fogcolor[0] * fog * r_colorscale, fogcolor[1] * fog * r_colorscale, fogcolor[2] * fog * r_colorscale, ent->alpha);
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 	}
@@ -862,7 +856,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	float fog, ifog, colorscale;
 	vec3_t diff;
 	int i, *renderlist, *elements;
-	zymtype1header_t *m;
 	rtexture_t *texture;
 	rmeshstate_t mstate;
 	const entity_render_t *ent = calldata1;
@@ -872,13 +865,12 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&ent->matrix);
 
 	// find the vertex index list and texture
-	m = ent->model->zymdata_header;
-	renderlist = (int *)(m->lump_render.start + (int) m);
+	renderlist = ent->model->zymdata_renderlist;
 	for (i = 0;i < shadernum;i++)
 		renderlist += renderlist[0] * 3 + 1;
-	texture = ((rtexture_t **)(m->lump_shaders.start + (int) m))[shadernum];
+	texture = ent->model->zymdata_textures[shadernum];
 
-	numverts = m->numverts;
+	numverts = ent->model->zymnum_verts;
 	numtriangles = *renderlist++;
 	elements = renderlist;
 	R_Mesh_ResizeCheck(numverts);
@@ -925,10 +917,10 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	}
 	mstate.tex[0] = R_GetTexture(texture);
 	R_Mesh_State(&mstate);
-	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), ent->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m));
-	ZymoticTransformVerts(numverts, varray_vertex, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
-	ZymoticCalcNormals(numverts, varray_vertex, aliasvertnorm, m->numshaders, (int *)(m->lump_render.start + (int) m));
-	memcpy(varray_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
+	ZymoticLerpBones(ent->model->zymnum_bones, (zymbonematrix *) ent->model->zymdata_poses, ent->frameblend, ent->model->zymdata_bones);
+	ZymoticTransformVerts(numverts, varray_vertex, ent->model->zymdata_vertbonecounts, ent->model->zymdata_verts);
+	ZymoticCalcNormals(numverts, varray_vertex, aliasvertnorm, ent->model->zymnum_shaders, ent->model->zymdata_renderlist);
+	memcpy(varray_texcoord[0], ent->model->zymdata_texcoords, ent->model->zymnum_verts * sizeof(float[4]));
 	GL_UseColorArray();
 	R_LightModel(ent, numverts, varray_vertex, aliasvertnorm, varray_color, ifog * colorscale, ifog * colorscale, ifog * colorscale, false);
 	R_Mesh_Draw(numverts, numtriangles, elements);
@@ -951,19 +943,15 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 void R_Model_Zymotic_Draw(entity_render_t *ent)
 {
 	int i;
-	zymtype1header_t *m;
-	rtexture_t *texture;
 
 	if (ent->alpha < (1.0f / 64.0f))
 		return; // basically completely transparent
 
 	c_models++;
 
-	m = ent->model->zymdata_header;
-	for (i = 0;i < m->numshaders;i++)
+	for (i = 0;i < ent->model->zymnum_shaders;i++)
 	{
-		texture = ((rtexture_t **)(m->lump_shaders.start + (int) m))[i];
-		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_TextureHasAlpha(texture))
+		if (ent->effects & EF_ADDITIVE || ent->alpha != 1.0 || R_TextureHasAlpha(ent->model->zymdata_textures[i]))
 			R_MeshQueue_AddTransparent(ent->origin, R_DrawZymoticModelMeshCallback, ent, i);
 		else
 			R_DrawZymoticModelMeshCallback(ent, i);

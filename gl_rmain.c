@@ -52,7 +52,7 @@ unsigned short d_lightstylevalue[256];
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "1"};
-cvar_t r_staticworldlights = {0, "r_staticworldlights", "1"};
+cvar_t r_staticworldlights = {0, "r_staticworldlights", "0"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};

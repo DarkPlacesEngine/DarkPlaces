@@ -602,7 +602,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	m->texture = mesh->texture;
 	m->indices   = p;memcpy(m->indices  , mesh->indices  , m->numtriangles * sizeof(int[3]));(qbyte *)p += m->numtriangles * sizeof(int[3]);
 	m->vertices  = p;memcpy(m->vertices , mesh->vertices , m->numvertices * sizeof(float[4]));(qbyte *)p += m->numvertices * sizeof(float[4]);
-	m->texcoords = p;memcpy(m->texcoords, mesh->texcoords, m->numvertices * sizeof(float[2]));(qbyte *)p += m->numvertices * sizeof(float[2]);
+	m->texcoords = p;memcpy(m->texcoords, mesh->texcoords, m->numvertices * sizeof(float[4]));(qbyte *)p += m->numvertices * sizeof(float[4]);
 	m->colors    = p;memcpy(m->colors   , mesh->colors   , m->numvertices * sizeof(float[4]));(qbyte *)p += m->numvertices * sizeof(float[4]);
 	r_refdef.drawqueuesize += dq->size;
 }

@@ -1505,9 +1505,9 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	cb *= r_colorscale;
 
 	varray_texcoord[0][0] = tex->s2;varray_texcoord[0][1] = tex->t1;
-	varray_texcoord[0][2] = tex->s1;varray_texcoord[0][3] = tex->t1;
-	varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t2;
-	varray_texcoord[0][6] = tex->s2;varray_texcoord[0][7] = tex->t2;
+	varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t1;
+	varray_texcoord[0][8] = tex->s1;varray_texcoord[0][9] = tex->t2;
+	varray_texcoord[0][12] = tex->s2;varray_texcoord[0][13] = tex->t2;
 #endif
 
 	if (orientation == PARTICLE_BEAM)
