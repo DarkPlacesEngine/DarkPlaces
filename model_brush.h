@@ -709,6 +709,173 @@ typedef struct
 }
 q3dpvs_t;
 
+// surfaceflags from bsp
+#define Q3SURFACEFLAG_NODAMAGE 1
+#define Q3SURFACEFLAG_SLICK 2
+#define Q3SURFACEFLAG_SKY 4
+#define Q3SURFACEFLAG_LADDER 8
+#define Q3SURFACEFLAG_NOIMPACT 16
+#define Q3SURFACEFLAG_NOMARKS 32
+#define Q3SURFACEFLAG_FLESH 64
+#define Q3SURFACEFLAG_NODRAW 128
+#define Q3SURFACEFLAG_HINT 256
+#define Q3SURFACEFLAG_SKIP 512
+#define Q3SURFACEFLAG_NOLIGHTMAP 1024
+#define Q3SURFACEFLAG_POINTLIGHT 2048
+#define Q3SURFACEFLAG_METALSTEPS 4096
+#define Q3SURFACEFLAG_NOSTEPS 8192
+#define Q3SURFACEFLAG_NONSOLID 16384
+#define Q3SURFACEFLAG_LIGHTFILTER 32768
+#define Q3SURFACEFLAG_ALPHASHADOW 65536
+#define Q3SURFACEFLAG_NODLIGHT 131072
+#define Q3SURFACEFLAG_DUST 262144
+
+// surfaceparms from shaders
+#define Q3SURFACEPARM_ALPHASHADOW 1
+#define Q3SURFACEPARM_AREAPORTAL 2
+#define Q3SURFACEPARM_CLUSTERPORTAL 4
+#define Q3SURFACEPARM_DETAIL 8
+#define Q3SURFACEPARM_DONOTENTER 16
+#define Q3SURFACEPARM_FOG 32
+#define Q3SURFACEPARM_LAVA 64
+#define Q3SURFACEPARM_LIGHTFILTER 128
+#define Q3SURFACEPARM_METALSTEPS 256
+#define Q3SURFACEPARM_NODAMAGE 512
+#define Q3SURFACEPARM_NODLIGHT 1024
+#define Q3SURFACEPARM_NODRAW 2048
+#define Q3SURFACEPARM_NODROP 4096
+#define Q3SURFACEPARM_NOIMPACT 8192
+#define Q3SURFACEPARM_NOLIGHTMAP 16384
+#define Q3SURFACEPARM_NOMARKS 32768
+#define Q3SURFACEPARM_NOMIPMAPS 65536
+#define Q3SURFACEPARM_NONSOLID 131072
+#define Q3SURFACEPARM_ORIGIN 262144
+#define Q3SURFACEPARM_PLAYERCLIP 524288
+#define Q3SURFACEPARM_SKY 1048576
+#define Q3SURFACEPARM_SLICK 2197152
+#define Q3SURFACEPARM_SLIME 4194304
+#define Q3SURFACEPARM_STRUCTURAL 8388608
+#define Q3SURFACEPARM_TRANS 16777216
+#define Q3SURFACEPARM_WATER 33554432
+#define Q3SURFACEPARM_POINTLIGHT 67108864
+
+// various flags from shaders
+#define Q3TEXTUREFLAG_TWOSIDED 1
+#define Q3TEXTUREFLAG_ADDITIVE 2
+#define Q3TEXTUREFLAG_NOMIPMAPS 4
+#define Q3TEXTUREFLAG_NOPICMIP 8
+#define Q3TEXTUREFLAG_AUTOSPRITE 16
+#define Q3TEXTUREFLAG_AUTOSPRITE2 32
+#define Q3TEXTUREFLAG_ALPHATEST 64
+
+struct q3msurface_s;
+typedef struct q3mtexture_s
+{
+	char name[Q3PATHLENGTH];
+	char firstpasstexturename[Q3PATHLENGTH];
+	int surfaceflags;
+	int supercontents;
+	int surfaceparms;
+	int textureflags;
+
+	int number;
+	skinframe_t skin;
+
+	int numfaces;
+	struct q3msurface_s **facelist;
+	int *facenumlist;
+}
+q3mtexture_t;
+
+typedef struct q3mnode_s
+{
+	//this part shared between node and leaf
+	struct mplane_s *plane; // != NULL
+	struct q3mnode_s *parent;
+	vec3_t mins;
+	vec3_t maxs;
+
+	// this part unique to node
+	struct q3mnode_s *children[2];
+}
+q3mnode_t;
+
+typedef struct q3mleaf_s
+{
+	//this part shared between node and leaf
+	struct mplane_s *plane; // == NULL
+	struct q3mnode_s *parent;
+	vec3_t mins;
+	vec3_t maxs;
+
+	// this part unique to leaf
+	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
+	int areaindex;
+	int numleaffaces;
+	int *firstleafface;
+	int numleafbrushes;
+	int *firstleafbrush;
+}
+q3mleaf_t;
+
+typedef struct q3mmodel_s
+{
+	vec3_t mins;
+	vec3_t maxs;
+	int numfaces;
+	struct q3msurface_s *firstface;
+	int numbrushes;
+	struct q3mbrush_s *firstbrush;
+}
+q3mmodel_t;
+
+typedef struct q3mbrush_s
+{
+	struct colbrushf_s *colbrushf;
+	int numbrushsides;
+	struct q3mbrushside_s *firstbrushside;
+	struct q3mtexture_s *texture;
+}
+q3mbrush_t;
+
+typedef struct q3mbrushside_s
+{
+	struct mplane_s *plane;
+	struct q3mtexture_s *texture;
+}
+q3mbrushside_t;
+
+typedef struct q3meffect_s
+{
+	char shadername[Q3PATHLENGTH];
+	struct q3mbrush_s *brush;
+	int unknown; // 5 or -1
+}
+q3meffect_t;
+
+typedef struct q3msurface_s
+{
+	// FIXME: collisionmarkframe should be kept in a separate array
+	// FIXME: shadowmark should be kept in a separate array
+
+	struct q3mtexture_s *texture;
+	struct q3meffect_s *effect;
+	rtexture_t *lightmaptexture;
+	int collisionmarkframe; // don't collide twice in one trace
+	// bounding box for culling
+	float mins[3];
+	float maxs[3];
+
+	surfmesh_t mesh;
+
+	// index into model->brush.shadowmesh
+	int num_firstshadowmeshtriangle;
+
+	// used for shadow volume generation
+	int shadowmark;
+}
+q3msurface_t;
+
 #define CHECKPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : false)
 #define SETPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : false)
 #define CLEARPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] &= ~(1 << ((b) & 7))) : false)
