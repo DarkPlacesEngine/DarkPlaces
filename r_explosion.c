@@ -238,6 +238,7 @@ void R_DrawExplosion(explosion_t *e)
 				c[3] = 1;
 			}
 		}
+		R_Mesh_Render();
 	}
 }
 

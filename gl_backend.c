@@ -2,7 +2,6 @@
 #include "quakedef.h"
 
 cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "1024"};
-cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "0"};
 cvar_t gl_mesh_transtriangles = {0, "gl_mesh_transtriangles", "16384"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawmode = {CVAR_SAVE, "gl_mesh_drawmode", "3"};
@@ -87,7 +86,6 @@ void SCR_ScreenShot_f (void);
 
 static int max_meshs;
 static int max_transmeshs;
-static int max_batch;
 static int max_verts; // always max_meshs * 3
 static int max_transverts; // always max_transmeshs * 3
 #define TRANSDEPTHRES 4096
@@ -274,13 +272,6 @@ static void gl_backend_bufferchanges(int init)
 	if (gl_mesh_transtriangles.integer > 65536)
 		Cvar_SetValueQuick(&gl_mesh_transtriangles, 65536);
 
-	if (gl_mesh_batchtriangles.integer < 1)
-		Cvar_SetValueQuick(&gl_mesh_batchtriangles, 1);
-	if (gl_mesh_batchtriangles.integer > gl_mesh_maxtriangles.integer)
-		Cvar_SetValueQuick(&gl_mesh_batchtriangles, gl_mesh_maxtriangles.integer);
-
-	max_batch = gl_mesh_batchtriangles.integer;
-
 	if (max_meshs != gl_mesh_maxtriangles.integer || max_transmeshs != gl_mesh_transtriangles.integer)
 	{
 		max_meshs = gl_mesh_maxtriangles.integer;
@@ -313,7 +304,6 @@ void gl_backend_init(void)
 
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
 	Cvar_RegisterVariable(&gl_mesh_transtriangles);
-	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	Cvar_RegisterVariable(&gl_mesh_drawmode);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
@@ -777,12 +767,8 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i;
 	int k;
-	int indexcount;
-	int firstvert;
 	buf_mesh_t *mesh;
-	unsigned int *index;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Render: called when backend is not active\n");
@@ -819,17 +805,7 @@ void R_Mesh_Render(void)
 		for (k = 1, mesh = buf_mesh + k;k < currentmesh;k++, mesh++)
 		{
 			GL_MeshState(mesh);
-
-			firstvert = mesh->firstvert;
-			indexcount = mesh->triangles * 3;
-			index = (unsigned int *)&buf_tri[mesh->firsttriangle].index[0];
-
-			// if not using batching, skip the index adjustment
-			if (firstvert != 0)
-				for (i = 0;i < indexcount;i++)
-					index[i] += firstvert;
-
-			GL_DrawRangeElements(firstvert, firstvert + mesh->verts, indexcount, index);CHECKGLERROR
+			GL_DrawRangeElements(mesh->firstvert, mesh->firstvert + mesh->verts, mesh->triangles * 3, buf_tri[mesh->firsttriangle].index);CHECKGLERROR
 		}
 	}
 
@@ -994,11 +970,9 @@ void R_Mesh_AddTransparent(void)
 		}
 	}
 
+	R_Mesh_Render();
 	for (;transmesh;transmesh = transmesh->chain)
 	{
-		if (currentmesh >= max_meshs || currenttriangle + transmesh->triangles > max_batch || currenttriangle + transmesh->triangles > 1024 || currentvertex + transmesh->verts > max_verts)
-			R_Mesh_Render();
-
 		mesh = &buf_mesh[currentmesh++];
 		*mesh = *transmesh; // copy mesh properties
 
@@ -1018,6 +992,7 @@ void R_Mesh_AddTransparent(void)
 			currenttriangle++;
 		}
 		mesh->triangles = currenttriangle - mesh->firsttriangle;
+		R_Mesh_Render();
 	}
 
 	currenttransmesh = 0;
@@ -1120,8 +1095,11 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	}
 	else
 	{
-		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
+		if (currentmesh)
+		{
 			R_Mesh_Render();
+			Con_Printf("mesh queue not empty, flushing.\n");
+		}
 
 		c_meshs++;
 		c_meshtris += m->numtriangles;
@@ -1233,9 +1211,6 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		else
 			memcpy(&texcoord[j][0].t[0], m->texcoords[j], m->numverts * sizeof(buf_texcoord_t));
 	}
-
-	if (currenttriangle >= max_batch)
-		R_Mesh_Render();
 }
 
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
@@ -1304,8 +1279,11 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	}
 	else
 	{
-		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
+		if (currentmesh)
+		{
 			R_Mesh_Render();
+			Con_Printf("mesh queue not empty, flushing.\n");
+		}
 
 		c_meshs++;
 		c_meshtris += m->numtriangles;

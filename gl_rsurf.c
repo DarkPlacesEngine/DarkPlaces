@@ -676,6 +676,7 @@ static void RSurfShader_Sky(msurface_t *firstsurf)
 					outc[2] = cb;
 					outc[3] = ca;
 				}
+				R_Mesh_Render();
 			}
 		}
 	}
@@ -788,6 +789,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 						VectorScale(outc, f, outc);
 					}
 				}
+				R_Mesh_Render();
 			}
 		}
 	}
@@ -850,6 +852,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *surf)
 					else
 						VectorScale(outc, cl, outc);
 				}
+				R_Mesh_Render();
 			}
 		}
 	}
@@ -896,6 +899,7 @@ static void RSurfShader_Water_Pass_Fog(msurface_t *surf)
 					outst[1] = v->st[1];
 				}
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1021,6 +1025,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *surf)
 						VectorScale(outc, cl, outc);
 				}
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1079,6 +1084,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *surf)
 				outst[0] = v->st[0];
 				outst[1] = v->st[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1120,6 +1126,7 @@ static void RSurfShader_Wall_Pass_Glow(msurface_t *surf)
 				outst[0] = v->st[0];
 				outst[1] = v->st[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1156,6 +1163,7 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *surf)
 				outst[0] = v->st[0];
 				outst[1] = v->st[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1201,6 +1209,7 @@ static void RSurfShader_OpaqueWall_Pass_TripleTexCombine(msurface_t *surf)
 				outab[0] = v->ab[0];
 				outab[1] = v->ab[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1240,6 +1249,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseMTex(msurface_t *surf)
 				outuv[0] = v->uv[0];
 				outuv[1] = v->uv[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1276,6 +1286,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(msurface_t *surf)
 				outst[0] = v->st[0];
 				outst[1] = v->st[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1312,6 +1323,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(msurface_t *surf)
 				outuv[0] = v->uv[0];
 				outuv[1] = v->uv[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1360,6 +1372,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(msurface_t *surf)
 				if (cl != 1)
 					for (i = 0, outc = m.color;i < m.numverts;i++, outc += 4)
 						VectorScale(outc, cl, outc);
+				R_Mesh_Render();
 			}
 		}
 	}
@@ -1394,6 +1407,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(msurface_t *surf)
 				VectorSubtract(outv, r_origin, diff);
 				outc[3] = exp(fogdensity/DotProduct(diff, diff));
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1428,6 +1442,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(msurface_t *surf)
 				outst[0] = v->ab[0];
 				outst[1] = v->ab[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1462,6 +1477,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(msurface_t *surf)
 				outst[0] = v->st[0];
 				outst[1] = v->st[1];
 			}
+			R_Mesh_Render();
 		}
 	}
 }
@@ -1910,6 +1926,7 @@ void R_DrawPortals(void)
 						VectorCopy(point[i].position, portalpointbuffer[i]);
 				}
 				R_Mesh_DrawPolygon(&m, portal->numpoints);
+				R_Mesh_Render();
 			}
 		}
 	}

@@ -1323,6 +1323,7 @@ void R_DrawParticles (void)
 			m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
 			m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
 			m.color[3] = m.color[7] = m.color[11] = m.color[15] = ca;
+			R_Mesh_Render();
 		}
 	}
 }
