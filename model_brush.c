@@ -31,6 +31,7 @@ cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_vertexsurfacesthreshold = {CVAR_SAVE, "r_vertexsurfacesthreshold", "0"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
+cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
 
 /*
 ===============
@@ -46,6 +47,7 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_vertexsurfacesthreshold);
 	Cvar_RegisterVariable(&r_nosurftextures);
+	Cvar_RegisterVariable(&r_sortsurfaces);
 	memset(mod_novis, 0xff, sizeof(mod_novis));
 }
 
@@ -1392,7 +1394,8 @@ static void Mod_BrushSortedSurfaces(model_t *model, mempool_t *pool)
 	for (surfnum = 0;surfnum < sortmodel->nummodelsurfaces;surfnum++)
 		sortmodel->modelsortedsurfaces[surfnum] = &sortmodel->surfaces[surfnum + sortmodel->firstmodelsurface];
 
-	qsort(sortmodel->modelsortedsurfaces, sortmodel->nummodelsurfaces, sizeof(msurface_t *), Mod_SurfaceQSortCompare);
+	if (r_sortsurfaces.integer)
+		qsort(sortmodel->modelsortedsurfaces, sortmodel->nummodelsurfaces, sizeof(msurface_t *), Mod_SurfaceQSortCompare);
 }
 
 
