@@ -315,7 +315,9 @@ qboolean	Cvar_Command (void)
 // perform a variable print or set
 	if (Cmd_Argc() == 1)
 	{
-		Con_Printf ("\"%s\" is \"%s\"\n", v->name, v->string);
+		// only print if host_initialized (otherwise it could print twice if this is in a script)
+		if (host_initialized)
+			Con_Printf ("\"%s\" is \"%s\"\n", v->name, v->string);
 		return true;
 	}
 

@@ -1771,7 +1771,11 @@ void SV_SpawnServer (const char *server)
 	if (sv.active)
 		SV_SendReconnect();
 	else
+	{
+		// make sure cvars have been checked before opening the ports
+		NetConn_ServerFrame();
 		NetConn_OpenServerPorts(true);
+	}
 
 //
 // make cvars consistant

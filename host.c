@@ -136,8 +136,6 @@ void PRVM_ProcessError(void);
 static char hosterrorstring1[4096];
 static char hosterrorstring2[4096];
 static qboolean hosterror = false;
-extern char sv_spawnmap[MAX_QPATH];
-extern char sv_loadgame[MAX_OSPATH];
 void Host_Error (const char *error, ...)
 {
 	va_list argptr;
@@ -158,10 +156,6 @@ void Host_Error (const char *error, ...)
 	hosterror = true;
 
 	strcpy(hosterrorstring2, hosterrorstring1);
-
-	// make sure we don't get in a loading loop
-	sv_loadgame[0] = 0;
-	sv_spawnmap[0] = 0;
 
 	CL_Parse_DumpPacket();
 
@@ -716,9 +710,6 @@ void _Host_Frame (float time)
 	// process console commands
 	Cbuf_Execute();
 
-	// LordHavoc: map and load are delayed until video is initialized
-	Host_PerformSpawnServerAndLoadGame();
-
 	// if running the server locally, make intentions now
 	if (cls.state == ca_connected && sv.active)
 		CL_SendCmd(&cmd);
@@ -883,10 +874,8 @@ void Host_Init (void)
 		CL_Init();
 	}
 
-	Cbuf_InsertText ("exec quake.rc\n");
-	Cbuf_Execute();
-	Cbuf_Execute();
-	Cbuf_Execute();
+	// only cvars are executed when host_initialized == false
+	Cbuf_InsertText("exec quake.rc\n");
 	Cbuf_Execute();
 
 	host_initialized = true;
@@ -899,6 +888,11 @@ void Host_Init (void)
 		SCR_BeginLoadingPlaque();
 		MR_Init();
 	}
+
+	// stuff it again so the first host frame will execute it again, this time
+	// in its entirety
+	Cbuf_InsertText("exec quake.rc\n");
+	Cbuf_Execute();
 }
 
 

@@ -659,7 +659,5 @@ extern mempool_t *cl_refdef_mempool;
 
 #include "cgamevm.h"
 
-void Host_PerformSpawnServerAndLoadGame(void);
-
 #endif
 
