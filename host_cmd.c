@@ -1073,6 +1073,7 @@ void Host_Spawn_f (void)
 	}
 	else
 	{
+		eval_t *val;
 		// set up the edict
 		ent = host_client->edict;
 
@@ -1080,6 +1081,8 @@ void Host_Spawn_f (void)
 		ent->v.colormap = NUM_FOR_EDICT(ent);
 		ent->v.team = (host_client->colors & 15) + 1;
 		ent->v.netname = host_client->name - pr_strings;
+		if (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel))
+			val->_float = host_client->pmodel;
 
 		// copy spawn parms out of the client_t
 
@@ -1637,38 +1640,6 @@ void Host_Stopdemo_f (void)
 	CL_Disconnect ();
 }
 
-/*
-======================
-Host_PModel_f
-LordHavoc: Intended for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
-======================
-*/
-void Host_PModel_f (void)
-{
-	int i;
-	eval_t *val;
-
-	if (Cmd_Argc () == 1)
-	{
-		Con_Printf ("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
-		return;
-	}
-	i = atoi(Cmd_Argv(1));
-
-	if (cmd_source == src_command)
-	{
-		if (cl_pmodel.value == i)
-			return;
-		Cvar_SetValue ("_cl_pmodel", i);
-		if (cls.state == ca_connected)
-			Cmd_ForwardToServer ();
-		return;
-	}
-
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel))
-		val->_float = i;
-}
-
 //=============================================================================
 
 /*
@@ -1719,7 +1690,6 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("ping", Host_Ping_f);
 	Cmd_AddCommand ("load", Host_Loadgame_f);
 	Cmd_AddCommand ("save", Host_Savegame_f);
-	Cmd_AddCommand ("pmodel", Host_PModel_f);
 
 	Cmd_AddCommand ("startdemos", Host_Startdemos_f);
 	Cmd_AddCommand ("demos", Host_Demos_f);

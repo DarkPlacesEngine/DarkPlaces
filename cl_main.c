@@ -199,18 +199,18 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		break;
 		
 	case 2:
-		if (cl_pmodel.value)
-		{
-			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("pmodel %f\n", cl_pmodel.value));
-		}
-
 		MSG_WriteByte (&cls.message, clc_stringcmd);
 		MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
 
 		MSG_WriteByte (&cls.message, clc_stringcmd);
 		MSG_WriteString (&cls.message, va("color %i %i\n", ((int)cl_color.value)>>4, ((int)cl_color.value)&15));
 	
+		if (cl_pmodel.value)
+		{
+			MSG_WriteByte (&cls.message, clc_stringcmd);
+			MSG_WriteString (&cls.message, va("pmodel %f\n", cl_pmodel.value));
+		}
+
 		MSG_WriteByte (&cls.message, clc_stringcmd);
 		sprintf (str, "spawn %s", cls.spawnparms);
 		MSG_WriteString (&cls.message, str);
@@ -779,6 +779,39 @@ void CL_PauseDemo_f (void)
 		Con_Printf("Demo unpaused\n");
 }
 
+/*
+======================
+CL_PModel_f
+LordHavoc: Intended for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
+======================
+*/
+void CL_PModel_f (void)
+{
+	int i;
+	eval_t *val;
+
+	if (Cmd_Argc () == 1)
+	{
+		Con_Printf ("\"pmodel\" is \"%s\"\n", cl_pmodel.string);
+		return;
+	}
+	i = atoi(Cmd_Argv(1));
+
+	if (cmd_source == src_command)
+	{
+		if (cl_pmodel.value == i)
+			return;
+		Cvar_SetValue ("_cl_pmodel", i);
+		if (cls.state == ca_connected)
+			Cmd_ForwardToServer ();
+		return;
+	}
+
+	host_client->pmodel = i;
+	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel))
+		val->_float = i;
+}
+
 cvar_t demo_nehahra = {"demo_nehahra", "0"};
 
 /*
@@ -829,6 +862,8 @@ void CL_Init (void)
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);
+	// LordHavoc: added pmodel command (like name, etc, only intended for Nehahra)
+	Cmd_AddCommand ("pmodel", CL_PModel_f);
 	// LordHavoc: added demo_nehahra cvar
 	Cvar_RegisterVariable (&demo_nehahra);
 	if (nehahra)

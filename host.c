@@ -618,7 +618,7 @@ void Host_ServerFrame (void)
 {
 	frametimetotal += host_frametime;
 	// LordHavoc: cap server at sys_ticrate in listen games
-	if (!isDedicated && ((realtime - lastservertime) < sys_ticrate.value))
+	if (!isDedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 // run the world state
 	pr_global_struct->frametime = frametimetotal;
