@@ -414,6 +414,7 @@ void ui_draw(void)
 #define FRAME_COLOR2	0, 0, 0, 0.6, 0
 #define TEXT_FONTSIZE	10, 10
 
+#if 0
 static void UIG_DrawFrame(float x, float y, float w, float h)
 {
 	// bottom
@@ -436,6 +437,7 @@ static void UIG_DrawText(const char *text, float x, float y, float w, float h, f
 	if(w != 0 && h != 0)	
 		DrawQ_ResetClipArea();
 }
+#endif
 
 void UI_Init(void)
 {
@@ -479,6 +481,7 @@ void UI_FreeItem(ui_item_t item)
 
 const char* UI_GetCaption(ui_item_t item)
 {
+	return NULL;
 }
 
 void UI_SetCaption(ui_item_t item, const char * caption)
