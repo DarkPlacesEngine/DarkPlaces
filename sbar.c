@@ -47,7 +47,7 @@ sbarpic_t *sb_colon, *sb_slash;
 sbarpic_t *sb_ibar;
 sbarpic_t *sb_sbar;
 sbarpic_t *sb_scorebar;
-// AK only used by NX(and only if everybody agrees)
+// AK only used by NEX(and only if everybody agrees)
 sbarpic_t *sb_sbar_overlay;
 
 sbarpic_t *sb_weapons[7][8]; // 0 is active, 1 is owned, 2-5 are flashes
@@ -121,7 +121,7 @@ void sbar_start(void)
 	int i;
 
 	numsbarpics = 0;
-		
+
 	sb_disc = Sbar_NewPic("gfx/disc");
 
 	for (i = 0;i < 10;i++)
@@ -136,24 +136,24 @@ void sbar_start(void)
 	sb_colon = Sbar_NewPic ("gfx/num_colon");
 	sb_slash = Sbar_NewPic ("gfx/num_slash");
 
-	//AK NX uses his own hud
-	if(gamemode = GAME_NEXUIZ)
+	//AK NEX uses its own hud
+	if(gamemode == GAME_NEXUIZ)
 	{
 		sb_ammo[0] = Sbar_NewPic ("gfx/sb_shells");
 		sb_ammo[1] = Sbar_NewPic ("gfx/sb_bullets");
 		sb_ammo[2] = Sbar_NewPic ("gfx/sb_rocket");
 		sb_ammo[3] = Sbar_NewPic ("gfx/sb_cells");
-		
+
 		sb_items[2] = Sbar_NewPic ("gfx/sb_slowmo");
 		sb_items[3] = Sbar_NewPic ("gfx/sb_invinc");
 		sb_items[4] = Sbar_NewPic ("gfx/sb_energy");
 		sb_items[5] = Sbar_NewPic ("gfx/sb_str");
-		
+
 		sb_sbar = Sbar_NewPic("gfx/sbar");
 		sb_sbar_overlay = Sbar_NewPic("gfx/sbar_overlay");
-		
+
 		return;
-	}	
+	}
 
 	sb_weapons[0][0] = Sbar_NewPic ("gfx/inv_shotgun");
 	sb_weapons[0][1] = Sbar_NewPic ("gfx/inv_sshotgun");
@@ -779,7 +779,7 @@ void Sbar_Draw (void)
 {
 	if (scr_con_current == vid.conheight)
 		return;		// console is full screen
-	
+
 	if (cl.intermission == 1)
 	{
 		Sbar_IntermissionOverlay();
@@ -792,16 +792,16 @@ void Sbar_Draw (void)
 	}
 
 	if(gamemode == GAME_NEXUIZ)
-	{		
+	{
 		sbar_y = vid.conheight - 47;
 		sbar_x = (vid.conwidth - 640)/2;
-		
+
 		if (sb_lines > 24)
 		{
 			if (!cl.islocalgame)
 				Sbar_DrawFrags ();
 		}
-		
+
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
 			if (gamemode != GAME_GOODVSBAD2)
@@ -811,20 +811,20 @@ void Sbar_Draw (void)
 		else if (sb_lines)
 		{
 			Sbar_DrawPic (0, 0, sb_sbar);
-			
+
 			// special items
 			if (cl.items & IT_INVULNERABILITY)
 			{
 				Sbar_DrawNum (24, 0, 666, 3, 1);
 				Sbar_DrawPic (0, 0, sb_disc);
 			}
-			
+
 			// armor
 			Sbar_DrawNum ((340-3*24), 12, cl.stats[STAT_ARMOR], 3, cl.stats[STAT_ARMOR] <= 25);
-			
+
 			// health
 			Sbar_DrawNum ((154-3*24), 12, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
-			
+
 			if (cl.items & NEX_IT_SHELLS)
 				Sbar_DrawPic (519, 0, sb_ammo[0]);
 			else if (cl.items & NEX_IT_BULLETS)
@@ -833,17 +833,17 @@ void Sbar_Draw (void)
 				Sbar_DrawPic (519, 0, sb_ammo[2]);
 			else if (cl.items & NEX_IT_CELLS)
 				Sbar_DrawPic (519, 0, sb_ammo[3]);
-			
+
 			Sbar_DrawNum ((519-3*24), 12, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
-			
+
 			//Sbar_DrawAlphaPic(0,0,sb_sbar_overlay,0.5);
-			DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE); 
-			
+			DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
+
 		}
-		
+
 		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
 			Sbar_MiniDeathmatchOverlay ();
-		
+
 	}
 	else
 	{
@@ -852,7 +852,7 @@ void Sbar_Draw (void)
 			sbar_x = 0;
 		else
 			sbar_x = (vid.conwidth - 320)/2;
-		
+
 		if (sb_lines > 24)
 		{
 			if (gamemode != GAME_GOODVSBAD2)
@@ -860,7 +860,7 @@ void Sbar_Draw (void)
 			if (!cl.islocalgame)
 				Sbar_DrawFrags ();
 		}
-		
+
 		if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
 		{
 			if (gamemode != GAME_GOODVSBAD2)
@@ -870,7 +870,7 @@ void Sbar_Draw (void)
 		else if (sb_lines)
 		{
 			Sbar_DrawAlphaPic (0, 0, sb_sbar, 0.4);
-			
+
 			// keys (hipnotic only)
 			//MED 01/04/97 moved keys here so they would not be overwritten
 			if (gamemode == GAME_HIPNOTIC)
@@ -912,13 +912,13 @@ void Sbar_Draw (void)
 					}
 				}
 			}
-			
+
 			// face
 			Sbar_DrawFace ();
-			
+
 			// health
 			Sbar_DrawNum (154, 0, cl.stats[STAT_HEALTH], 3, cl.stats[STAT_HEALTH] <= 25);
-			
+
 			// ammo icon
 			if (gamemode == GAME_ROGUE)
 			{
@@ -948,12 +948,12 @@ void Sbar_Draw (void)
 				else if (cl.items & IT_CELLS)
 					Sbar_DrawPic (224, 0, sb_ammo[3]);
 			}
-			
+
 			Sbar_DrawNum (248, 0, cl.stats[STAT_AMMO], 3, cl.stats[STAT_AMMO] <= 10);
-			
+
 		}
 	}
-	
+
 
 	if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
 		Sbar_MiniDeathmatchOverlay ();
