@@ -2,3 +2,7 @@
 *.o
 ChangeLog
 darkplaces-glx
+*.ncb
+*.opt
+*.plg
+*.exe
