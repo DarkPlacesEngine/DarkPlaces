@@ -327,6 +327,7 @@ model_brushq2_t;
 #define Q3SURFACEPARM_TRANS 16777216
 #define Q3SURFACEPARM_WATER 33554432
 
+struct q3msurface_s;
 typedef struct q3mtexture_s
 {
 	char name[Q3PATHLENGTH];
@@ -337,6 +338,10 @@ typedef struct q3mtexture_s
 
 	int number;
 	skinframe_t skin;
+
+	int numfaces;
+	struct q3msurface_s **facelist;
+	int *facenumlist;
 }
 q3mtexture_t;
 
@@ -363,7 +368,8 @@ typedef struct q3mleaf_s
 	int clusterindex;
 	int areaindex;
 	int numleaffaces;
-	struct q3mface_s **firstleafface;
+	struct q3msurface_s **firstleafface;
+	int *firstleaffacenum;
 	int numleafbrushes;
 	struct q3mbrush_s **firstleafbrush;
 }
@@ -374,7 +380,7 @@ typedef struct q3mmodel_s
 	vec3_t mins;
 	vec3_t maxs;
 	int numfaces;
-	struct q3mface_s *firstface;
+	struct q3msurface_s *firstface;
 	int numbrushes;
 	struct q3mbrush_s *firstbrush;
 }
@@ -404,21 +410,17 @@ typedef struct q3meffect_s
 }
 q3meffect_t;
 
-typedef struct q3mface_s
+typedef struct q3msurface_s
 {
+	// FIXME: collisionmarkframe should be kept in a separate array
+	// FIXME: visframe should be kept in a separate array
+	// FIXME: shadowmark should be kept in a separate array
+
 	struct q3mtexture_s *texture;
 	struct q3meffect_s *effect;
 	rtexture_t *lightmaptexture;
-	int collisions; // performs per triangle collisions on this surface
 	int collisionmarkframe; // don't collide twice in one trace
-	int type;
-	int firstvertex;
-	int firstelement;
-	int patchsize[2];
-	// used for processing
-	int markframe;
-	// (world only) visframe == r_framecount means it is visible this frame
-	int visframe;
+	int visframe; // visframe == r_framecount means it is visible this frame
 	// bounding box for culling
 	float mins[3];
 	float maxs[3];
@@ -442,12 +444,9 @@ typedef struct q3mface_s
 
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
-	
+
 	// used for shadow volume generation
 	int shadowmark;
-
-	// temporary use by light processing
-	int lighttemp_castshadow;
 }
 q3msurface_t;
 
@@ -459,6 +458,8 @@ typedef struct model_brushq3_s
 
 	int num_textures;
 	q3mtexture_t *data_textures;
+	q3msurface_t **data_texturefaces;
+	int *data_texturefacenums;
 
 	int num_planes;
 	mplane_t *data_planes;
@@ -474,6 +475,7 @@ typedef struct model_brushq3_s
 
 	int num_leaffaces;
 	q3msurface_t **data_leaffaces;
+	int *data_leaffacenums;
 
 	int num_models;
 	q3mmodel_t *data_models;

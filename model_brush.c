@@ -4017,7 +4017,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in;
 	q3msurface_t *out;
-	int i, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xlevel, ylevel, row0, row1, x, y, *e, finalvertices, finaltriangles;
+	int i, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xlevel, ylevel, row0, row1, x, y, *e, finalvertices, finaltriangles, firstvertex, firstelement, type;
 	//int *originalelement3i;
 	//int *originalneighbor3i;
 	float *originalvertex3f;
@@ -4041,16 +4041,16 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		// check face type first
-		out->type = LittleLong(in->type);
-		if (out->type != Q3FACETYPE_POLYGON
-		 && out->type != Q3FACETYPE_PATCH
-		 && out->type != Q3FACETYPE_MESH
-		 && out->type != Q3FACETYPE_FLARE)
+		type = LittleLong(in->type);
+		if (type != Q3FACETYPE_POLYGON
+		 && type != Q3FACETYPE_PATCH
+		 && type != Q3FACETYPE_MESH
+		 && type != Q3FACETYPE_FLARE)
 		{
-			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, out->type);
+			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: unknown face type %i\n", i, type);
 			out->num_vertices = 0;
 			out->num_triangles = 0;
-			out->type = 0; // error
+			type = 0; // error
 			continue;
 		}
 
@@ -4060,7 +4060,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i: invalid textureindex %i (%i textures)\n", i, n, loadmodel->brushq3.num_textures);
 			out->num_vertices = 0;
 			out->num_triangles = 0;
-			out->type = 0; // error
+			type = 0; // error
 			continue;
 			n = 0;
 		}
@@ -4086,48 +4086,48 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		else
 			out->lightmaptexture = loadmodel->brushq3.data_lightmaps[n];
 
-		out->firstvertex = LittleLong(in->firstvertex);
+		firstvertex = LittleLong(in->firstvertex);
 		out->num_vertices = LittleLong(in->numvertices);
-		out->firstelement = LittleLong(in->firstelement);
+		firstelement = LittleLong(in->firstelement);
 		out->num_triangles = LittleLong(in->numelements) / 3;
 		if (out->num_triangles * 3 != LittleLong(in->numelements))
 		{
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): numelements %i is not a multiple of 3\n", i, out->texture->name, LittleLong(in->numelements));
 			out->num_vertices = 0;
 			out->num_triangles = 0;
-			out->type = 0; // error
+			type = 0; // error
 			continue;
 		}
-		if (out->firstvertex < 0 || out->firstvertex + out->num_vertices > loadmodel->brushq3.num_vertices)
+		if (firstvertex < 0 || firstvertex + out->num_vertices > loadmodel->brushq3.num_vertices)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid vertex range %i : %i (%i vertices)\n", i, out->texture->name, out->firstvertex, out->firstvertex + out->num_vertices, loadmodel->brushq3.num_vertices);
+			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid vertex range %i : %i (%i vertices)\n", i, out->texture->name, firstvertex, firstvertex + out->num_vertices, loadmodel->brushq3.num_vertices);
 			out->num_vertices = 0;
 			out->num_triangles = 0;
-			out->type = 0; // error
+			type = 0; // error
 			continue;
 		}
-		if (out->firstelement < 0 || out->firstelement + out->num_triangles * 3 > loadmodel->brushq3.num_triangles * 3)
+		if (firstelement < 0 || firstelement + out->num_triangles * 3 > loadmodel->brushq3.num_triangles * 3)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid element range %i : %i (%i elements)\n", i, out->texture->name, out->firstelement, out->firstelement + out->num_triangles * 3, loadmodel->brushq3.num_triangles * 3);
+			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid element range %i : %i (%i elements)\n", i, out->texture->name, firstelement, firstelement + out->num_triangles * 3, loadmodel->brushq3.num_triangles * 3);
 			out->num_vertices = 0;
 			out->num_triangles = 0;
-			out->type = 0; // error
+			type = 0; // error
 			continue;
 		}
-		switch(out->type)
+		switch(type)
 		{
 		case Q3FACETYPE_POLYGON:
 		case Q3FACETYPE_MESH:
 			// no processing necessary
-			out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
-			out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
-			out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
-			out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
-			out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
-			out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
-			out->data_color4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
-			out->data_element3i = loadmodel->brushq3.data_element3i + out->firstelement;
-			out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
+			out->data_vertex3f = loadmodel->brushq3.data_vertex3f + firstvertex * 3;
+			out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + firstvertex * 2;
+			out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + firstvertex * 2;
+			out->data_svector3f = loadmodel->brushq3.data_svector3f + firstvertex * 3;
+			out->data_tvector3f = loadmodel->brushq3.data_tvector3f + firstvertex * 3;
+			out->data_normal3f = loadmodel->brushq3.data_normal3f + firstvertex * 3;
+			out->data_color4f = loadmodel->brushq3.data_color4f + firstvertex * 4;
+			out->data_element3i = loadmodel->brushq3.data_element3i + firstelement;
+			out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + firstelement;
 			break;
 		case Q3FACETYPE_PATCH:
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
@@ -4137,18 +4137,18 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): invalid patchsize %ix%i\n", i, out->texture->name, patchsize[0], patchsize[1]);
 				out->num_vertices = 0;
 				out->num_triangles = 0;
-				out->type = 0; // error
+				type = 0; // error
 				continue;
 			}
-			originalvertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
-			//originalsvector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
-			//originaltvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
-			//originalnormal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
-			originaltexcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
-			originaltexcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
-			originalcolor4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
-			//originalelement3i = loadmodel->brushq3.data_element3i + out->firstelement;
-			//originalneighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
+			originalvertex3f = loadmodel->brushq3.data_vertex3f + firstvertex * 3;
+			//originalsvector3f = loadmodel->brushq3.data_svector3f + firstvertex * 3;
+			//originaltvector3f = loadmodel->brushq3.data_tvector3f + firstvertex * 3;
+			//originalnormal3f = loadmodel->brushq3.data_normal3f + firstvertex * 3;
+			originaltexcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + firstvertex * 2;
+			originaltexcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + firstvertex * 2;
+			originalcolor4f = loadmodel->brushq3.data_color4f + firstvertex * 4;
+			//originalelement3i = loadmodel->brushq3.data_element3i + firstelement;
+			//originalneighbor3i = loadmodel->brushq3.data_neighbor3i + firstelement;
 			/*
 			originalvertex3f = out->data_vertex3f;
 			//originalsvector3f = out->data_svector3f;
@@ -4190,10 +4190,10 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->data_texcoordlightmap2f = out->data_texcoordtexture2f + finalvertices * 2;
 			out->data_element3i = Mem_Alloc(loadmodel->mempool, sizeof(int[6]) * finaltriangles);
 			out->data_neighbor3i = out->data_element3i + finaltriangles * 3;
-			out->type = Q3FACETYPE_MESH;
-			out->firstvertex = -1;
+			type = Q3FACETYPE_MESH;
+			firstvertex = -1;
 			out->num_vertices = finalvertices;
-			out->firstelement = -1;
+			firstelement = -1;
 			out->num_triangles = finaltriangles;
 			// generate geometry
 			// (note: normals are skipped because they get recalculated)
@@ -4229,7 +4229,6 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			// q3map does not put in collision brushes for curves... ugh
 			// build the lower quality collision geometry
-			out->collisions = true;
 			xlevel = QuadraticBSplinePatchSubdivisionLevelOnX(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
 			ylevel = QuadraticBSplinePatchSubdivisionLevelOnY(patchsize[0], patchsize[1], 3, originalvertex3f, r_subdivisions_collision_tolerance.value, 10);
 			// bound to user settings
@@ -4287,7 +4286,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			// don't render it
 			out->num_vertices = 0;
 			out->num_triangles = 0;
-			out->type = 0;
+			type = 0;
 			break;
 		}
 		for (j = 0, invalidelements = 0;j < out->num_triangles * 3;j++)
@@ -4295,7 +4294,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				invalidelements++;
 		if (invalidelements)
 		{
-			Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, texture->nativecontents = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, out->type, out->texture->name, out->texture->surfaceflags, out->texture->nativecontents, out->firstvertex, out->num_vertices, out->firstelement, out->num_triangles * 3);
+			Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, texture->nativecontents = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, out->texture->nativecontents, firstvertex, out->num_vertices, firstelement, out->num_triangles * 3);
 			for (j = 0;j < out->num_triangles * 3;j++)
 			{
 				Con_Printf(" %i", out->data_element3i[j]);
@@ -4499,12 +4498,15 @@ static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 	loadmodel->brushq3.data_leaffaces = out;
 	loadmodel->brushq3.num_leaffaces = count;
 
+	loadmodel->brushq3.data_leaffacenums = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
+
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		n = LittleLong(*in);
 		if (n < 0 || n >= loadmodel->brushq3.num_faces)
 			Host_Error("Mod_Q3BSP_LoadLeafFaces: invalid face index %i (%i faces)\n", n, loadmodel->brushq3.num_faces);
 		*out = loadmodel->brushq3.data_faces + n;
+		loadmodel->brushq3.data_leaffacenums[i] = n;
 	}
 }
 
@@ -4540,6 +4542,7 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 		if (n < 0 || n + c > loadmodel->brushq3.num_leaffaces)
 			Host_Error("Mod_Q3BSP_LoadLeafs: invalid leafface range %i : %i (%i leaffaces)\n", n, n + c, loadmodel->brushq3.num_leaffaces);
 		out->firstleafface = loadmodel->brushq3.data_leaffaces + n;
+		out->firstleaffacenum = loadmodel->brushq3.data_leaffacenums + n;
 		out->numleaffaces = c;
 		n = LittleLong(in->firstleafbrush);
 		c = LittleLong(in->numleafbrushes);
@@ -4866,7 +4869,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 		for (i = 0;i < leaf->numleaffaces;i++)
 		{
 			face = leaf->firstleafface[i];
-			if (face->collisions && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
+			if (face->num_collisiontriangles && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
 				face->collisionmarkframe = markframe;
 				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
@@ -5246,9 +5249,9 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 		for (i = 0;i < leaf->numleaffaces;i++)
 		{
 			face = leaf->firstleafface[i];
-			if (face->collisions && face->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
+			if (face->num_collisiontriangles && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
-				face->markframe = markframe;
+				face->collisionmarkframe = markframe;
 				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 			}
 		}
@@ -5302,7 +5305,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 					for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
 					{
 						face = model->brushq3.data_thismodel->firstface + i;
-						if (face->collisions)
+						if (face->num_collisiontriangles)
 							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 					}
 				}
@@ -5326,7 +5329,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 				for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
 				{
 					face = model->brushq3.data_thismodel->firstface + i;
-					if (face->collisions)
+					if (face->num_collisiontriangles)
 						Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_collisiontriangles, face->data_collisionelement3i, face->data_collisionvertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 				}
 			}
@@ -5540,6 +5543,30 @@ void Mod_Q3BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins,
 }
 */
 
+void Mod_Q3BSP_BuildTextureFaceLists(void)
+{
+	int i, j;
+	loadmodel->brushq3.data_texturefaces = Mem_Alloc(loadmodel->mempool, loadmodel->nummodelsurfaces * sizeof(q3msurface_t *));
+	loadmodel->brushq3.data_texturefacenums = Mem_Alloc(loadmodel->mempool, loadmodel->nummodelsurfaces * sizeof(int));
+	for (i = 0;i < loadmodel->brushq3.num_textures;i++)
+		loadmodel->brushq3.data_textures[i].numfaces = 0;
+	for (i = 0;i < loadmodel->nummodelsurfaces;i++)
+		loadmodel->brushq3.data_faces[loadmodel->surfacelist[i]].texture->numfaces++;
+	j = 0;
+	for (i = 0;i < loadmodel->brushq3.num_textures;i++)
+	{
+		loadmodel->brushq3.data_textures[i].facelist = loadmodel->brushq3.data_texturefaces + j;
+		loadmodel->brushq3.data_textures[i].facenumlist = loadmodel->brushq3.data_texturefacenums + j;
+		j += loadmodel->brushq3.data_textures[i].numfaces;
+		loadmodel->brushq3.data_textures[i].numfaces = 0;
+	}
+	for (i = 0;i < loadmodel->nummodelsurfaces;i++)
+	{
+		loadmodel->brushq3.data_faces[loadmodel->surfacelist[i]].texture->facenumlist[loadmodel->brushq3.data_faces[loadmodel->surfacelist[i]].texture->numfaces] = loadmodel->surfacelist[i];
+		loadmodel->brushq3.data_faces[loadmodel->surfacelist[i]].texture->facelist[loadmodel->brushq3.data_faces[loadmodel->surfacelist[i]].texture->numfaces++] = loadmodel->brushq3.data_faces + loadmodel->surfacelist[i];
+	}
+}
+
 void Mod_Q3BSP_RecursiveFindNumLeafs(q3mnode_t *node)
 {
 	int numleafs;
@@ -5698,6 +5725,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		if (j < mod->brushq3.data_thismodel->numfaces)
 			mod->DrawSky = R_Q3BSP_DrawSky;
 	}
+
+	Mod_Q3BSP_BuildTextureFaceLists();
 }
 
 void Mod_IBSP_Load(model_t *mod, void *buffer)
