@@ -400,7 +400,7 @@ typedef struct gltextureunit_s
 {
 	int t1d, t2d, t3d, tcubemap;
 	int arrayenabled;
-	int arraycomponents;
+	unsigned int arraycomponents;
 	const void *pointer_texcoord;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
@@ -420,8 +420,8 @@ static struct
 	int colormask; // stored as bottom 4 bits: r g b a (3 2 1 0 order)
 	int depthtest;
 	int scissortest;
-	int unit;
-	int clientunit;
+	unsigned int unit;
+	unsigned int clientunit;
 	gltextureunit_t units[MAX_TEXTUREUNITS];
 	float color4f[4];
 	int lockrange_first;
