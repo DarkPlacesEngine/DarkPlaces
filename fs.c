@@ -1126,6 +1126,39 @@ qfile_t *FS_OpenRead (const char *path, int offs, int len)
 	return file;
 }
 
+/*
+====================
+FS_CheckNastyPath
+
+Return true if the path should be rejected due to one of the following:
+1: path elements that are non-portable
+2: path elements that would allow access to files outside the game directory,
+   or are just not a good idea for a mod to be using.
+====================
+*/
+int FS_CheckNastyPath (const char *path)
+{
+	// Windows: don't allow \ in filenames (windows-only), period.
+	// (on Windows \ is a directory separator, but / is also supported)
+	if (strstr(path, "\\"))
+		return 1; // non-portable
+	// Mac: don't allow Mac-only filenames - : is a directory separator
+	// instead of /, but we rely on / working already, so there's no reason to
+	// support a Mac-only path
+	// Amiga and Windows: : tries to go to root of drive
+	if (strstr(path, ":"))
+		return 1; // non-portable attempt to go to root of drive
+	// Amiga: // is parent directory
+	if (strstr(path, "//"))
+		return 1; // non-portable attempt to go to parent directory
+	// all: don't allow going to current directory (./) or parent directory (../ or /../)
+	if (strstr(path, "./"))
+		return 2; // attempt to go to parent directory
+	// after all these checks we're pretty sure it's a / separated filename
+	// and won't do much if any harm
+	return false;
+}
+
 
 /*
 ====================
@@ -1317,6 +1350,12 @@ Open a file. The syntax is the same as fopen
 */
 qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet)
 {
+	if (FS_CheckNastyPath(filepath))
+	{
+		Con_Printf("FS_Open(\"%s\", \"%s\", %s): nasty filename rejected\n", filepath, mode, quiet ? "true" : "false");
+		return NULL;
+	}
+
 	// If the file is opened in "write" or "append" mode
 	if (strchr (mode, 'w') || strchr (mode, 'a'))
 	{
