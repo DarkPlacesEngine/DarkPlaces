@@ -357,7 +357,7 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
-extern cvar_t gl_mesh_drawmode;
+extern cvar_t gl_mesh_drawrangeelements;
 extern int gl_maxdrawrangeelementsvertices;
 extern int gl_maxdrawrangeelementsindices;
 
@@ -552,83 +552,20 @@ void R_DrawQueue(void)
 				batch = false;
 				qglEnd();
 			}
+			
 			mesh = (void *)(dq + 1);
 			qglBindTexture(GL_TEXTURE_2D, R_GetTexture(mesh->texture));
+			qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), mesh->texcoords);CHECKGLERROR
+			qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), mesh->colors);CHECKGLERROR
+			qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+			GL_DrawRangeElements(0, mesh->numvertices, mesh->numindices, mesh->indices);
+			qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 
-			if (gl_mesh_drawmode.integer < 0)
-				Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
-			if (gl_mesh_drawmode.integer > 3)
-				Cvar_SetValueQuick(&gl_mesh_drawmode, 3);
-			if (gl_mesh_drawmode.integer >= 3 && qglDrawRangeElements == NULL)
-				Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
-
-			if (gl_mesh_drawmode.integer > 0)
-			{
-				qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
-				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), mesh->texcoords);CHECKGLERROR
-				qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), mesh->colors);CHECKGLERROR
-				qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-				qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-			}
-
-			if (gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer > 0)
-			{
-				qglLockArraysEXT(0, mesh->numvertices);
-				CHECKGLERROR
-				arraylocked = true;
-			}
-			if (gl_mesh_drawmode.integer >= 3/* && (mesh->numvertices) <= gl_maxdrawrangeelementsvertices && (mesh->numindices) <= gl_maxdrawrangeelementsindices*/)
-			{
-				// GL 1.2 or GL 1.1 with extension
-				qglDrawRangeElements(GL_TRIANGLES, 0, mesh->numvertices, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
-				CHECKGLERROR
-			}
-			else if (gl_mesh_drawmode.integer >= 2)
-			{
-				// GL 1.1
-				qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
-				CHECKGLERROR
-			}
-			else if (gl_mesh_drawmode.integer >= 1)
-			{
-				int i;
-				// GL 1.1
-				// feed it manually using glArrayElement
-				qglBegin(GL_TRIANGLES);
-				for (i = 0;i < mesh->numindices;i++)
-					qglArrayElement(mesh->indices[i]);
-				qglEnd();
-				CHECKGLERROR
-			}
-			else
-			{
-				int i, in;
-				// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
-				// feed it manually
-				qglBegin(GL_TRIANGLES);
-				for (i = 0;i < mesh->numindices;i++)
-				{
-					in = mesh->indices[i];
-					qglColor4ub(mesh->colors[in * 4], mesh->colors[in * 4 + 1], mesh->colors[in * 4 + 2], mesh->colors[in * 4 + 3]);
-					qglTexCoord2f(mesh->texcoords[in * 2], mesh->texcoords[in * 2 + 1]);
-					qglVertex3f(mesh->vertices[in * 3], mesh->vertices[in * 3 + 1], mesh->vertices[in * 3 + 2]);
-				}
-				qglEnd();
-				CHECKGLERROR
-			}
-			if (arraylocked)
-			{
-				qglUnlockArraysEXT();
-				CHECKGLERROR
-				arraylocked = false;
-			}
-			if (gl_mesh_drawmode.integer > 0)
-			{
-				qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-				qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-			}
 			// restore color, since it got trashed by using color array
 			qglColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
 			CHECKGLERROR
