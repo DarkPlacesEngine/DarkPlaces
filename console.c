@@ -23,7 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <libc.h>
 #endif
 #ifndef _MSC_VER
+#ifndef __BORLANDC__
 #include <unistd.h>
+#endif
 #endif
 #ifdef WIN32
 #include <io.h>
