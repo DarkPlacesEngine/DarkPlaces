@@ -488,6 +488,15 @@ void VID_UpdateWindowStatus (void)
 
 //====================================
 
+void (APIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+void (APIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+void (APIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+void (APIENTRY *qglArrayElement)(GLint i);
+void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+void (APIENTRY *qglMTexCoord2f)(GLenum, GLfloat, GLfloat);
+void (APIENTRY *qglSelectTexture)(GLenum);
+void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
+
 void CheckVertexArrays (void)
 {
 	if (COM_CheckParm("-novertex"))
