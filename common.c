@@ -678,6 +678,10 @@ void COM_InitGameType (void)
 		gamemode = GAME_HIPNOTIC;
 	else if (strstr(name, "rogue"))
 		gamemode = GAME_ROGUE;
+	else if (strstr(name, "goodvsbad2"))
+		gamemode = GAME_GOODVSBAD2;
+	else if (strstr(name, "teu"))
+		gamemode = GAME_TEU;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -693,6 +697,10 @@ void COM_InitGameType (void)
 		gamemode = GAME_ROGUE;
 	else if (COM_CheckParm ("-quake"))
 		gamemode = GAME_NORMAL;
+	else if (COM_CheckParm ("-goodvsbad2"))
+		gamemode = GAME_GOODVSBAD2;
+	else if (COM_CheckParm ("-teu"))
+		gamemode = GAME_TEU;
 
 	switch(gamemode)
 	{
@@ -719,6 +727,14 @@ void COM_InitGameType (void)
 	case GAME_TRANSFUSION:
 		gamename = "Transfusion";
 		gamedirname = "transfusion";
+		break;
+	case GAME_GOODVSBAD2:
+		gamename = "GoodVs.Bad2";
+		gamedirname = "rts";
+		break;
+	case GAME_TEU:
+		gamename = "TheEvilUnleashed";
+		gamedirname = "teu";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
