@@ -28,8 +28,8 @@ static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "1"}; // tend
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
 
-server_t		sv;
-server_static_t	svs;
+server_t sv;
+server_static_t svs;
 
 static char localmodels[MAX_MODELS][5];			// inline model names for precache
 
@@ -163,13 +163,9 @@ Larger attenuations will drop off.  (max 4 attenuation)
 
 ==================
 */
-void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
-    float attenuation)
+void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, float attenuation)
 {
-    int         sound_num;
-    int field_mask;
-    int			i;
-	int			ent;
+	int sound_num, field_mask, i, ent;
 
 	if (volume < 0 || volume > 255)
 		Host_Error ("SV_StartSound: volume = %i", volume);
@@ -184,16 +180,15 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
 		return;
 
 // find precache number for sound
-    for (sound_num=1 ; sound_num<MAX_SOUNDS
-        && sv.sound_precache[sound_num] ; sound_num++)
-        if (!strcmp(sample, sv.sound_precache[sound_num]))
-            break;
+	for (sound_num=1 ; sound_num<MAX_SOUNDS && sv.sound_precache[sound_num] ; sound_num++)
+		if (!strcmp(sample, sv.sound_precache[sound_num]))
+			break;
 
-    if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
-    {
-        Con_Printf ("SV_StartSound: %s not precached\n", sample);
-        return;
-    }
+	if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
+	{
+		Con_Printf ("SV_StartSound: %s not precached\n", sample);
+		return;
+	}
 
 	ent = NUM_FOR_EDICT(entity);
 
@@ -249,6 +244,9 @@ void SV_SendServerinfo (client_t *client)
 {
 	char			**s;
 	char			message[128];
+
+	// edicts get reallocated on level changes, so we need to update it here
+	client->edict = EDICT_NUM((client - svs.clients) + 1);
 
 	// LordHavoc: clear entityframe tracking
 	client->entityframenumber = 0;
@@ -315,9 +313,10 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 	memset (client, 0, sizeof(*client));
 	client->netconnection = netconnection;
 
-	Con_DPrintf ("Client %s connected\n", client->netconnection->address);
+	Con_DPrintf("Client %s connected\n", client->netconnection->address);
 
-	strcpy (client->name, "unconnected");
+	strcpy(client->name, "unconnected");
+	strcpy(client->old_name, "unconnected");
 	client->active = true;
 	client->spawned = false;
 	client->edict = EDICT_NUM(clientnum+1);
@@ -333,10 +332,6 @@ void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 		PR_ExecuteProgram (pr_global_struct->SetNewParms, "QC function SetNewParms is missing");
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
-		// set up the edict a bit
-		ED_ClearEdict(client->edict);
-		client->edict->v->colormap = NUM_FOR_EDICT(client->edict);
-		client->edict->v->netname = PR_SetString(client->name);
 	}
 
 	SV_SendServerinfo (client);
@@ -1357,59 +1352,63 @@ void SV_UpdateToReliableMessages (void)
 // check for changes to be sent over the reliable streams
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 	{
-		// update the host_client fields we care about according to the entity fields
-		sv_player = host_client->edict;
-		s = PR_GetString(sv_player->v->netname);
-		if (s != host_client->name)
+		// only update the client fields if they've spawned in
+		if (host_client->spawned)
 		{
-			if (s == NULL)
-				s = "";
-			// point the string back at host_client->name to keep it safe
-			strncpy(host_client->name, s, sizeof(host_client->name) - 1);
-			sv_player->v->netname = PR_SetString(host_client->name);
-		}
-		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)
-			host_client->colors = val->_float;
-		host_client->frags = sv_player->v->frags;
-		if (gamemode == GAME_NEHAHRA)
-			if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)) && host_client->pmodel != val->_float)
-				host_client->pmodel = val->_float;
+			// update the host_client fields we care about according to the entity fields
+			sv_player = host_client->edict;
+			s = PR_GetString(sv_player->v->netname);
+			if (s != host_client->name)
+			{
+				if (s == NULL)
+					s = "";
+				// point the string back at host_client->name to keep it safe
+				strncpy(host_client->name, s, sizeof(host_client->name) - 1);
+				sv_player->v->netname = PR_SetString(host_client->name);
+			}
+			if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)
+				host_client->colors = val->_float;
+			host_client->frags = sv_player->v->frags;
+			if (gamemode == GAME_NEHAHRA)
+				if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)) && host_client->pmodel != val->_float)
+					host_client->pmodel = val->_float;
 
-		// if the fields changed, send messages about the changes
-		if (strcmp(host_client->old_name, host_client->name))
-		{
-			strcpy(host_client->old_name, host_client->name);
-			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+			// if the fields changed, send messages about the changes
+			if (strcmp(host_client->old_name, host_client->name))
 			{
-				if (!client->active || !client->spawned)
-					continue;
-				MSG_WriteByte (&client->message, svc_updatename);
-				MSG_WriteByte (&client->message, i);
-				MSG_WriteString (&client->message, host_client->name);
+				strcpy(host_client->old_name, host_client->name);
+				for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+				{
+					if (!client->active || !client->spawned)
+						continue;
+					MSG_WriteByte (&client->message, svc_updatename);
+					MSG_WriteByte (&client->message, i);
+					MSG_WriteString (&client->message, host_client->name);
+				}
 			}
-		}
-		if (host_client->old_colors != host_client->colors)
-		{
-			host_client->old_colors = host_client->colors;
-			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+			if (host_client->old_colors != host_client->colors)
 			{
-				if (!client->active || !client->spawned)
-					continue;
-				MSG_WriteByte (&client->message, svc_updatecolors);
-				MSG_WriteByte (&client->message, i);
-				MSG_WriteByte (&client->message, host_client->colors);
+				host_client->old_colors = host_client->colors;
+				for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+				{
+					if (!client->active || !client->spawned)
+						continue;
+					MSG_WriteByte (&client->message, svc_updatecolors);
+					MSG_WriteByte (&client->message, i);
+					MSG_WriteByte (&client->message, host_client->colors);
+				}
 			}
-		}
-		if (host_client->old_frags != host_client->frags)
-		{
-			host_client->old_frags = host_client->frags;
-			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+			if (host_client->old_frags != host_client->frags)
 			{
-				if (!client->active || !client->spawned)
-					continue;
-				MSG_WriteByte (&client->message, svc_updatefrags);
-				MSG_WriteByte (&client->message, i);
-				MSG_WriteShort (&client->message, host_client->frags);
+				host_client->old_frags = host_client->frags;
+				for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+				{
+					if (!client->active || !client->spawned)
+						continue;
+					MSG_WriteByte (&client->message, svc_updatefrags);
+					MSG_WriteByte (&client->message, i);
+					MSG_WriteShort (&client->message, host_client->frags);
+				}
 			}
 		}
 	}
@@ -1692,9 +1691,16 @@ void SV_IncreaseEdicts(void)
 	void *oldedictsfields = sv.edictsfields;
 	void *oldmoved_edicts = sv.moved_edicts;
 
+	if (sv.max_edicts >= MAX_EDICTS)
+		return;
+
 	// links don't survive the transition, so unlink everything
-	for (i = 0;i < sv.max_edicts;i++)
-		SV_UnlinkEdict (sv.edicts + i);
+	for (i = 0, ent = sv.edicts;i < sv.max_edicts;i++, ent++)
+	{
+		if (!ent->e->free)
+			SV_UnlinkEdict(sv.edicts + i);
+		memset(&ent->e->areagrid, 0, sizeof(ent->e->areagrid));
+	}
 	SV_ClearWorld();
 
 	sv.max_edicts   = min(sv.max_edicts + 32, MAX_EDICTS);
@@ -1705,13 +1711,12 @@ void SV_IncreaseEdicts(void)
 	memcpy(sv.edictsengineprivate, oldedictsengineprivate, oldmax_edicts * sizeof(edict_engineprivate_t));
 	memcpy(sv.edictsfields, oldedictsfields, oldmax_edicts * pr_edict_size);
 
-	for (i = 0;i < sv.max_edicts;i++)
+	for (i = 0, ent = sv.edicts;i < sv.max_edicts;i++, ent++)
 	{
-		ent = sv.edicts + i;
 		ent->e = sv.edictsengineprivate + i;
 		ent->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
 		// link every entity except world
-		if (i > 0)
+		if (!ent->e->free)
 			SV_LinkEdict(ent, false);
 	}
 
@@ -1808,8 +1813,6 @@ void SV_SpawnServer (const char *server)
 
 // leave slots at start for clients only
 	sv.num_edicts = svs.maxclients+1;
-	for (i=0 ; i<svs.maxclients ; i++)
-		svs.clients[i].edict = EDICT_NUM(i+1);
 
 	sv.state = ss_loading;
 	sv.paused = false;
@@ -1888,10 +1891,11 @@ void SV_SpawnServer (const char *server)
 	sv.state = ss_active;
 
 // run two frames to allow everything to settle
-	sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
-	SV_Physics ();
-	sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
-	SV_Physics ();
+	for (i = 0;i < 2;i++)
+	{
+		sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
+		SV_Physics ();
+	}
 
 	Mod_PurgeUnused();
 

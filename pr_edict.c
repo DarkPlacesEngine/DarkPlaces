@@ -190,8 +190,17 @@ Sets everything to NULL
 */
 void ED_ClearEdict (edict_t *e)
 {
+	int num;
 	memset (e->v, 0, progs->entityfields * 4);
 	e->e->free = false;
+	// LordHavoc: for consistency set these here
+	num = NUM_FOR_EDICT(e) - 1;
+	if (num >= 0 && num < svs.maxclients)
+	{
+		e->v->colormap = num + 1;
+		e->v->team = (svs.clients[num].colors & 15) + 1;
+		e->v->netname = PR_SetString(svs.clients[num].name);
+	}
 }
 
 /*
