@@ -57,7 +57,7 @@ de-we for the great icons.
 VorteX for the DP_QC_GETTAGINFO extension.
 
 Questions/comments/bugreports/suggestions?
-Send email to havoc@telefragged.com.
+Send email to lordhavoc@ghdigital.com.
 
 
 
