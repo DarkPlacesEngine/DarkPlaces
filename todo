@@ -22,6 +22,7 @@
 -(ashridah) d darkplaces client: make blood decals a bit lighter as they're nearly black (ashridah)
 -(avirox) d darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 -(de-we) d darkplaces docs: add de-we to credits page for the great icons (de-we)
+-(de-we) d darkplaces release: add windres stuff to makefile to compile darkplaces.rc into win32 builds (tell de-we)
 -(frightfan) d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 -(jeremy janzen) d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 -(joe hill) d dpmod: make grapple off-hand (joe hill)
@@ -80,7 +81,6 @@
 0 darkplaces renderer: change sky handling to draw sky even if fog is on, and fog intensity should be cvar controlled (Deej, C0burn)
 0 darkplaces renderer: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
 0 darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
-0 darkplaces renderer: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 0 darkplaces renderer: fix q3bsp fogging (Sajt)
 0 darkplaces renderer: fix q3bsp map disappearing when noclipping outside it, and the entities still show up
 0 darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
@@ -212,7 +212,6 @@
 2 darkplaces protocol: rename PreciseAngle stuff to Angle16, add Angle8 functions (for EF_LOWPRECISION code), upgrade Angle functions to use Angle16 or Angle8 depending on protocol version, upgrade ammo/armor stats to 16bit (Urre, FrikaC, Sajt, mashakos, RenegadeC, scar3crow) 
 2 darkplaces protocol: svc_spawnstatic should use a delta from defaultstate, instead of its outdated custom protocol (SpikeI)
 2 darkplaces release: add KDE/gnome icons somehow using darkplaces72x72.png (de-we)
-2 darkplaces release: add windres stuff to makefile to compile darkplaces.rc into win32 builds (tell de-we)
 2 darkplaces renderer: add q3bsp water rendering, both scrolling and watershader (Zombie)
 2 darkplaces renderer: dpshader should support corona-model shaders somehow (equation: pow(normalizationcubemap(transform(eye, vertexmatrix)) dot3 '0 0 1', 8)), which are normally used around unusually shaped lights instead of flat coronas (Mitchell)
 2 darkplaces renderer: fix fogging in realtime lighting mode, need to split the shaders into two stages, this will also fix decal bugs with fog (Mitchell)
@@ -241,11 +240,10 @@
 3 darkplaces docs: write a documentation string in engine, and a command to dump documentation to a darkplaces.txt file (QorpsE)
 3 darkplaces editlights: add a custom light style string to rtlights, if empty it uses a normal server controlled light style (Stribbs)
 3 darkplaces host: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
-3 darkplaces loader: add .psk (ut2003) model support (Kazashi, Mitchell)
 3 darkplaces loader: add _diffuse.tga support (realtime lighting would use this instead of the .tga for diffuse layer if available)
 3 darkplaces loader: make q1bsp surfaces have vertex color arrays like q3bsp to make things more consistent, note these need light styles
 3 darkplaces loader: support dpm models (Vermeulen)
-3 darkplaces loader: support md5mesh/md5anim model files (Supa)
+3 darkplaces loader: support md5mesh/md5anim model files (Supa, Kazashi)
 3 darkplaces menu: add OpenGL Extensions menu to enable/disable various features (zombie_13)
 3 darkplaces menu: rearrange menus - make Graphics Options submenu and move video and renderer stuff there, add Apply button to video section (tell Elric)
 3 darkplaces physics: DP_SV_TRACEMOVE extension, adds a qc builtin which traces an entity through the world (using origin/angles/mins/maxs/velocity/avelocity) for a specified amount of time (frametime typically), and sets trace results accordingly, this would greatly help out QC physics (Urre)
@@ -259,6 +257,7 @@
 3 darkplaces renderer: add a command to replace a texture in the running map, should only work in singleplayer; for testing only (Randi)
 3 darkplaces renderer: add antialiasing options (Zombie_13)
 3 darkplaces renderer: add stainmaps to realtime lighting mode
+3 darkplaces renderer: bloom effect (Vermeulen)
 3 darkplaces renderer: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Vermeulen)
 3 darkplaces renderer: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
 3 darkplaces renderer: need to make a standalone minimod to test darkplaces rtlights code, which Diablo-D3 can throw at the ATI driver team to test with, 3D txtures with GL_CLAMP_TO_EDGE wrapping are broken (Diablo-D3)
@@ -380,6 +379,7 @@ d darkplaces renderer: examine the surface rendering code to make sure it has no
 d darkplaces renderer: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
 d darkplaces renderer: fix EF_ADDITIVE alias model entities not appearing in realtime lighting mode (VorteX)
 d darkplaces renderer: fix a crash when changing level while using qe1 textures (Todd)
+d darkplaces renderer: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 d darkplaces renderer: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 d darkplaces renderer: implement PXQ_GFX_LETTERBOX extension (RenegadeC)
 d darkplaces renderer: make gl_picmip affect only maps, models, and sprites by setting their TEXF_PICMIP flag (Zenex, Urre)
