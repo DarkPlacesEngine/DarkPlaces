@@ -26,6 +26,93 @@ void Mod_AliasInit (void)
 {
 }
 
+void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameblend, const aliasmesh_t *mesh, float *out3f)
+{
+	if (mesh->num_vertexboneweights)
+	{
+		int i, k, blends;
+		aliasvertexboneweight_t *v;
+		float *out, *matrix, m[12], bonepose[256][12];
+		// vertex weighted skeletal
+		// interpolate matrices and concatenate them to their parents
+		for (i = 0;i < model->alias.aliasnum_bones;i++)
+		{
+			for (k = 0;k < 12;k++)
+				m[k] = 0;
+			for (blends = 0;blends < 4 && frameblend[blends].lerp > 0;blends++)
+			{
+				matrix = model->alias.aliasdata_poses + (frameblend[blends].frame * model->alias.aliasnum_bones + i) * 12;
+				for (k = 0;k < 12;k++)
+					m[k] += matrix[k] * frameblend[blends].lerp;
+			}
+			if (model->alias.aliasdata_bones[i].parent >= 0)
+				R_ConcatTransforms(bonepose[model->alias.aliasdata_bones[i].parent], m, bonepose[i]);
+			else
+				for (k = 0;k < 12;k++)
+					bonepose[i][k] = m[k];
+		}
+		// blend the vertex bone weights
+		memset(out3f, 0, mesh->num_vertices * sizeof(float[3]));
+		v = mesh->data_vertexboneweights;
+		for (i = 0;i < mesh->num_vertexboneweights;i++, v++)
+		{
+			out = out3f + v->vertexindex * 3;
+			matrix = bonepose[v->boneindex];
+			// FIXME: this can very easily be optimized with SSE or 3DNow
+			out[0] += v->origin[0] * matrix[0] + v->origin[1] * matrix[1] + v->origin[2] * matrix[ 2] + v->origin[3] * matrix[ 3];
+			out[1] += v->origin[0] * matrix[4] + v->origin[1] * matrix[5] + v->origin[2] * matrix[ 6] + v->origin[3] * matrix[ 7];
+			out[2] += v->origin[0] * matrix[8] + v->origin[1] * matrix[9] + v->origin[2] * matrix[10] + v->origin[3] * matrix[11];
+		}                                                                                                              
+	}
+	else
+	{
+		int i, vertcount;
+		float lerp1, lerp2, lerp3, lerp4;
+		const float *vertsbase, *verts1, *verts2, *verts3, *verts4;
+		// vertex morph
+		vertsbase = mesh->data_morphvertex3f;
+		vertcount = mesh->num_vertices;
+		verts1 = vertsbase + frameblend[0].frame * vertcount * 3;
+		lerp1 = frameblend[0].lerp;
+		if (frameblend[1].lerp)
+		{
+			verts2 = vertsbase + frameblend[1].frame * vertcount * 3;
+			lerp2 = frameblend[1].lerp;
+			if (frameblend[2].lerp)
+			{
+				verts3 = vertsbase + frameblend[2].frame * vertcount * 3;
+				lerp3 = frameblend[2].lerp;
+				if (frameblend[3].lerp)
+				{
+					verts4 = vertsbase + frameblend[3].frame * vertcount * 3;
+					lerp4 = frameblend[3].lerp;
+					for (i = 0;i < vertcount * 3;i++)
+						VectorMAMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, lerp4, verts4 + i, out3f + i);
+				}
+				else
+					for (i = 0;i < vertcount * 3;i++)
+						VectorMAMAM(lerp1, verts1 + i, lerp2, verts2 + i, lerp3, verts3 + i, out3f + i);
+			}
+			else
+				for (i = 0;i < vertcount * 3;i++)
+					VectorMAM(lerp1, verts1 + i, lerp2, verts2 + i, out3f + i);
+		}
+		else
+			memcpy(out3f, verts1, vertcount * sizeof(float[3]));
+	}
+}
+
+static void Mod_Alias_Mesh_CompileFrameZero(aliasmesh_t *mesh)
+{
+	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};
+	mesh->data_basevertex3f = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[3][4]));
+	mesh->data_basesvector3f = mesh->data_basevertex3f + mesh->num_vertices * 3;
+	mesh->data_basetvector3f = mesh->data_basevertex3f + mesh->num_vertices * 6;
+	mesh->data_basenormal3f = mesh->data_basevertex3f + mesh->num_vertices * 9;
+	Mod_Alias_GetMesh_Vertex3f(loadmodel, frameblend, mesh, mesh->data_basevertex3f);
+	Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, mesh->data_basevertex3f, mesh->data_texcoord2f, mesh->data_element3i, mesh->data_basesvector3f, mesh->data_basetvector3f, mesh->data_basenormal3f);
+}
+
 static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
 	int i, framenum;
@@ -507,6 +594,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	Mod_MDL_LoadFrames (startframes, numverts, scale, translate, vertremap);
 	Mod_BuildTriangleNeighbors(loadmodel->alias.aliasdata_meshes->data_neighbor3i, loadmodel->alias.aliasdata_meshes->data_element3i, loadmodel->alias.aliasdata_meshes->num_triangles);
 	Mod_CalcAliasModelBBoxes();
+	Mod_Alias_Mesh_CompileFrameZero(loadmodel->alias.aliasdata_meshes);
 
 	Mem_Free(vertst);
 	Mem_Free(vertremap);
@@ -845,6 +933,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	loadmodel->alias.aliasdata_meshes->data_neighbor3i = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_triangles * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->alias.aliasdata_meshes->data_neighbor3i, loadmodel->alias.aliasdata_meshes->data_element3i, loadmodel->alias.aliasdata_meshes->num_triangles);
 	Mod_CalcAliasModelBBoxes();
+	Mod_Alias_Mesh_CompileFrameZero(loadmodel->alias.aliasdata_meshes);
 }
 
 void Mod_IDP3_Load(model_t *mod, void *buffer)
@@ -953,6 +1042,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
+		Mod_Alias_Mesh_CompileFrameZero(mesh);
 
 		if (LittleLong(pinmesh->num_shaders) >= 1)
 			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name);
@@ -1223,6 +1313,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
+		Mod_Alias_Mesh_CompileFrameZero(mesh);
 
 		// since zym models do not have named sections, reuse their shader
 		// name as the section name

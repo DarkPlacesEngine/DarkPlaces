@@ -277,6 +277,13 @@ typedef struct aliasmesh_s
 	int num_morphframes;
 	float *data_morphvertex3f;
 
+	// base frame (frame zero typically)
+	// since most models do not animate, caching the base frame helps
+	float *data_basevertex3f;
+	float *data_basesvector3f;
+	float *data_basetvector3f;
+	float *data_basenormal3f;
+
 	// skeletal blending, these are zero if model is morph
 	int num_vertexboneweights;
 	aliasvertexboneweight_t *data_vertexboneweights;
@@ -297,6 +304,9 @@ typedef struct aliasbone_s
 	int parent; // -1 for no parent
 }
 aliasbone_t;
+
+struct frameblend_s;
+void Mod_Alias_GetMesh_Vertex3f(const struct model_s *model, const struct frameblend_s *frameblend, const struct aliasmesh_s *mesh, float *out3f);
 
 #endif
 
