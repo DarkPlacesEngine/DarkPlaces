@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 #include "winding.h"
+#include "curves.h"
 
 // note: model_shared.c sets up r_notexture, and r_surf_notexture
 
@@ -34,6 +35,7 @@ cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t r_sortsurfaces = {0, "r_sortsurfaces", "0"};
+cvar_t r_curves_subdivide_level = {0, "r_curves_subdivide_level", "2"};
 
 void Mod_BrushInit(void)
 {
@@ -44,6 +46,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_nosurftextures);
 	Cvar_RegisterVariable(&r_sortsurfaces);
+	Cvar_RegisterVariable(&r_curves_subdivide_level);
 	memset(mod_q1bsp_novis, 0xff, sizeof(mod_q1bsp_novis));
 }
 
@@ -3540,7 +3543,16 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 {
 	q3dface_t *in;
 	q3mface_t *out;
-	int i, j, n, count, invalidelements, patchsize[2];
+	int i, j, n, count, invalidelements, patchsize[2], finalwidth, finalheight, xlevel, ylevel, row0, row1, x, y, *e, finalvertices, finaltriangles;
+	//int *originalelement3i;
+	//int *originalneighbor3i;
+	float *originalvertex3f;
+	//float *originalsvector3f;
+	//float *originaltvector3f;
+	//float *originalnormal3f;
+	float *originalcolor4f;
+	float *originaltexcoordtexture2f;
+	float *originaltexcoordlightmap2f;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3631,6 +3643,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		{
 		case Q3FACETYPE_POLYGON:
 		case Q3FACETYPE_MESH:
+			// no processing necessary
 			break;
 		case Q3FACETYPE_PATCH:
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
@@ -3641,18 +3654,66 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				out->type = 0; // error
 				continue;
 			}
-			out->patchsize[0] = patchsize[0];
-			out->patchsize[1] = patchsize[1];
-			out->numelements = out->numtriangles = 0;
-			// FIXME: convert patch to triangles here!
-			//Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_PATCH not supported (yet)\n", i, out->texture->name);
-			//out->type = 0;
-			//continue;
+			// convert patch to Q3FACETYPE_MESH
+			xlevel = r_curves_subdivide_level.integer;
+			ylevel = r_curves_subdivide_level.integer;
+			finalwidth = ((patchsize[0] - 1) << xlevel) + 1;
+			finalheight = ((patchsize[1] - 1) << ylevel) + 1;
+			finalvertices = finalwidth * finalheight;
+			finaltriangles = (finalwidth - 1) * (finalheight - 1) * 2;
+			originalvertex3f = out->data_vertex3f;
+			//originalsvector3f = out->data_svector3f;
+			//originaltvector3f = out->data_tvector3f;
+			//originalnormal3f = out->data_normal3f;
+			originalcolor4f = out->data_color4f;
+			originaltexcoordtexture2f = out->data_texcoordtexture2f;
+			originaltexcoordlightmap2f = out->data_texcoordlightmap2f;
+			//originalelement3i = out->data_element3i;
+			//originalneighbor3i = out->data_neighbor3i;
+			out->data_vertex3f = Mem_Alloc(loadmodel->mempool, sizeof(float[20]) * finalvertices + sizeof(int[6]) * finaltriangles);
+			out->data_svector3f = out->data_vertex3f + finalvertices * 3;
+			out->data_tvector3f = out->data_svector3f + finalvertices * 3;
+			out->data_normal3f = out->data_tvector3f + finalvertices * 3;
+			out->data_color4f = out->data_normal3f + finalvertices * 3;
+			out->data_texcoordtexture2f = out->data_color4f + finalvertices * 4;
+			out->data_texcoordlightmap2f = out->data_texcoordtexture2f + finalvertices * 2;
+			out->data_element3i = (int *)(out->data_texcoordlightmap2f + finalvertices * 2);
+			out->data_neighbor3i = out->data_element3i + finaltriangles * 3;
+			out->type = Q3FACETYPE_MESH;
+			out->firstvertex = -1;
+			out->numvertices = finalvertices;
+			out->firstelement = -1;
+			out->numtriangles = finaltriangles;
+			out->numelements = finaltriangles * 3;
+			// generate geometry
+			// (note: normals are skipped because they get recalculated)
+			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 3, originalvertex3f, out->data_vertex3f);
+			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordtexture2f, out->data_texcoordtexture2f);
+			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 2, originaltexcoordlightmap2f, out->data_texcoordlightmap2f);
+			QuadraticSplinePatchSubdivideFloatBuffer(patchsize[0], patchsize[1], xlevel, ylevel, 4, originalcolor4f, out->data_color4f);
+			// generate elements
+			e = out->data_element3i;
+			for (y = 0;y < finalheight - 1;y++)
+			{
+				row0 = (y + 0) * finalwidth;
+				row1 = (y + 1) * finalwidth;
+				for (x = 0;x < finalwidth - 1;x++)
+				{
+					*e++ = row0;
+					*e++ = row1;
+					*e++ = row0 + 1;
+					*e++ = row1;
+					*e++ = row1 + 1;
+					*e++ = row0 + 1;
+					row0++;
+					row1++;
+				}
+			}
 			break;
 		case Q3FACETYPE_FLARE:
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
-			//out->type = 0;
-			//continue;
+			Con_DPrintf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
+			// don't render it
+			out->numtriangles = 0;
 			break;
 		}
 		for (j = 0, invalidelements = 0;j < out->numelements;j++)
@@ -3669,6 +3730,10 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			}
 			Con_Printf("\n");
 		}
+		// for shadow volumes
+		Mod_BuildTriangleNeighbors(out->data_neighbor3i, out->data_element3i, out->numtriangles);
+		// for per pixel lighting
+		Mod_BuildTextureVectorsAndNormals(out->numvertices, out->numtriangles, out->data_vertex3f, out->data_texcoordtexture2f, out->data_element3i, out->data_svector3f, out->data_tvector3f, out->data_normal3f);
 	}
 }
 
