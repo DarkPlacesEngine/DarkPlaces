@@ -1901,7 +1901,7 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = brush->points->v;
 	R_Mesh_State(&m);
-	i = ((int)brush) / sizeof(colbrushf_t);
+	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
 	GL_LockArrays(0, brush->numpoints);
 	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
@@ -1917,7 +1917,7 @@ void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3msurface_t *face)
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = face->data_collisionvertex3f;
 	R_Mesh_State(&m);
-	i = ((int)face) / sizeof(q3msurface_t);
+	i = (int)(((size_t)face) / sizeof(q3msurface_t));
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
 	GL_LockArrays(0, face->num_collisionvertices);
 	R_Mesh_Draw(face->num_collisionvertices, face->num_collisiontriangles, face->data_collisionelement3i);

@@ -281,10 +281,12 @@ void Sys_SendKeyEvents( void )
 				break;
 			case SDL_ACTIVEEVENT:
 				if( event.active.state == SDL_APPACTIVE ) 
+				{
 					if( event.active.gain )
 						vid_hidden = false;
 					else
 						vid_hidden = true;
+				}
 				break;
 			case SDL_MOUSEBUTTONDOWN:
 				if( event.button.button == SDL_BUTTON_MIDDLE ) 

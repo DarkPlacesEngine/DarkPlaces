@@ -2487,8 +2487,8 @@ void R_Shadow_DrawLightSprites(void)
 			lighttextures[i] = pic->tex;
 	}
 
-	for (light = r_shadow_worldlightchain;light;light = light->next)
-		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSpriteCallback, light, ((int) light) % 5);
+	for (i = 0, light = r_shadow_worldlightchain;light;i++, light = light->next)
+		R_MeshQueue_AddTransparent(light->origin, R_Shadow_DrawLightSpriteCallback, light, i % 5);
 	R_MeshQueue_AddTransparent(r_editlights_cursorlocation, R_Shadow_DrawCursorCallback, NULL, 0);
 }
 

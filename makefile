@@ -28,6 +28,14 @@ else
 endif
 
 
+DP_MACHINE:=$(shell uname -m)
+ifeq ($(DP_MACHINE),x86_64)
+	UNIX_X11LIBPATH:=-L/usr/X11R6/lib64
+else
+	UNIX_X11LIBPATH:=-L/usr/X11R6/lib
+endif
+
+
 # Linux configuration
 ifeq ($(DP_MAKE_TARGET), linux)
 	OBJ_SOUND=$(OBJ_LINUXSOUND)

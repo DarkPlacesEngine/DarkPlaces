@@ -388,7 +388,7 @@ prvm_edict_t *PRVM_EDICT_NUM_ERROR(int n, char *filename, int fileline);
 #define	PRVM_EDICT_NUM(n) (((n) >= 0 && (n) < prog->max_edicts) ? prog->edicts + (n) : PRVM_EDICT_NUM_ERROR(n, __FILE__, __LINE__))
 
 //int NUM_FOR_EDICT_ERROR(edict_t *e);
-#define PRVM_NUM_FOR_EDICT(e) ((prvm_edict_t *)(e) - prog->edicts)
+#define PRVM_NUM_FOR_EDICT(e) ((int)((prvm_edict_t *)(e) - prog->edicts))
 //int NUM_FOR_EDICT(edict_t *e);
 
 #define	PRVM_NEXT_EDICT(e) ((e) + 1)
@@ -423,7 +423,7 @@ void PRVM_ED_PrintEdicts_f (void);
 void PRVM_ED_PrintNum (int ent);
 
 #define PRVM_GetString(num) (prog->strings + num)
-#define PRVM_SetString(s)   ((int) (s) ? (s - prog->strings) : 0)
+#define PRVM_SetString(s)   ((s) != NULL ? (int) (s - prog->strings) : 0)
 
 //============================================================================
 

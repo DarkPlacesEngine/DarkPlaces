@@ -10,6 +10,8 @@ DP_MAKE_TARGET=bsd
 # Command used to delete files
 CMD_RM=$(CMD_UNIXRM)
 
+# FIXME: should support lib64 based on uname -m output
+UNIX_X11LIBPATH=-L/usr/X11R6/lib
 
 # BSD configuration
 .if $(DP_MAKE_TARGET) == "bsd"
