@@ -236,5 +236,7 @@ struct matrix4x4_s;
 void Matrix4x4_Print(const struct matrix4x4_s *in);
 int Math_atov(const char *s, vec3_t out);
 
+void BoxFromPoints(vec3_t mins, vec3_t maxs, int numpoints, vec_t *point3f);
+
 #endif
 

@@ -343,7 +343,7 @@ void BoxPlaneCorners(const vec3_t emins, const vec3_t emaxs, const mplane_t *p, 
 	case 5: outnear[0] = emins[0];outnear[1] = emaxs[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emins[1];outfar[2] = emaxs[2];break;
 	case 6: outnear[0] = emaxs[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emins[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
 	case 7: outnear[0] = emins[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
-	}                                                                                                                      
+	}
 }
 
 void BoxPlaneCorners_Separate(const vec3_t emins, const vec3_t emaxs, const vec3_t normal, vec3_t outnear, vec3_t outfar)
@@ -359,7 +359,7 @@ void BoxPlaneCorners_Separate(const vec3_t emins, const vec3_t emaxs, const vec3
 	case 5: outnear[0] = emins[0];outnear[1] = emaxs[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emins[1];outfar[2] = emaxs[2];break;
 	case 6: outnear[0] = emaxs[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emins[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
 	case 7: outnear[0] = emins[0];outnear[1] = emins[1];outnear[2] = emins[2];outfar[0] = emaxs[0];outfar[1] = emaxs[1];outfar[2] = emaxs[2];break;
-	}                                                                                                                      
+	}
 }
 
 void BoxPlaneCornerDistances(const vec3_t emins, const vec3_t emaxs, const mplane_t *p, vec_t *outneardist, vec_t *outfardist)
@@ -655,5 +655,18 @@ int Math_atov(const char *s, vec3_t out)
 			break;
 	}
 	return i;
+}
+
+void BoxFromPoints(vec3_t mins, vec3_t maxs, int numpoints, vec_t *point3f)
+{
+	int i;
+	VectorCopy(point3f, mins);
+	VectorCopy(point3f, maxs);
+	for (i = 1, point3f += 3;i < numpoints;i++, point3f += 3)
+	{
+		mins[0] = min(mins[0], point3f[0]);maxs[0] = max(maxs[0], point3f[0]);
+		mins[1] = min(mins[1], point3f[1]);maxs[1] = max(maxs[1], point3f[1]);
+		mins[2] = min(mins[2], point3f[2]);maxs[2] = max(maxs[2], point3f[2]);
+	}
 }
 
