@@ -9,6 +9,14 @@ extern int polygonelements[768];
 
 void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, int *index);
 
+void GL_SetupView_ViewPort (int x, int y, int width, int height);
+void GL_SetupView_Orientation_Identity (void);
+void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles);
+void GL_SetupView_Mode_Perspective (double aspect, double fovx, double fovy, double zNear, double zFar);
+void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar);
+void GL_DepthFunc(int value);
+void GL_ClearDepth(void);
+
 extern cvar_t gl_lockarrays;
 
 extern int c_meshelements, c_meshs;
@@ -37,15 +45,11 @@ extern int mesh_maxverts;
 void gl_backend_init(void);
 
 // starts mesh rendering for the frame
-void R_Mesh_Start(float farclip);
+void R_Mesh_Start(void);
 
 // ends mesh rendering for the frame
 // (only valid after R_Mesh_Start)
 void R_Mesh_Finish(void);
-
-// clears depth buffer, used for masked sky rendering
-// (only valid between R_Mesh_Start and R_Mesh_Finish)
-void R_Mesh_ClearDepth(void);
 
 // sets up the requested transform matrix
 void R_Mesh_Matrix(const matrix4x4_t *matrix);
