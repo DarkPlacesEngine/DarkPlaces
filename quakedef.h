@@ -46,7 +46,8 @@ extern char *buildstring;
 #define	ON_EPSILON		0.1			// point on plane side epsilon
 
 // LordHavoc: this was 1024, now 65536
-#define	MAX_DATAGRAM	65536		// max length of message
+#define	MAX_DATAGRAM	65536		// max length of unreliable
+#define	MAX_NETRELIABLE	65536		// max length of reliable message (fragments into unreliable packets)
 
 //
 // per-level limits
