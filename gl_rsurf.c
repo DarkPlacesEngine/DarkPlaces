@@ -524,7 +524,7 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 		dobase = true;
 		dolightmap = !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
 		doambient = r_ambient.value >= (1/64.0f);
-		dodetail = texture->skin.detail != NULL && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
+		dodetail = r_detailtextures.integer && texture->skin.detail != NULL && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
 		doglow = texture->skin.glow != NULL;
 		dofogpass = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD);
 		fogallpasses = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
