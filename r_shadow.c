@@ -2146,7 +2146,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				GL_LockArrays(0, 0);
 			}
 		}
-		else
+		else if (numsurfaces)
 		{
 			Matrix4x4_Transform(&ent->inversematrix, rtlight->shadoworigin, relativelightorigin);
 			ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, numsurfaces, surfacelist);
