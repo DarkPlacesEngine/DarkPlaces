@@ -41,9 +41,9 @@ const char **com_argv;
 char com_cmdline[CMDLINE_LENGTH];
 
 int gamemode;
-char *gamename;
-char *gamedirname;
-char *gamescreenshotname;
+const char *gamename;
+const char *gamedirname;
+const char *gamescreenshotname;
 char com_modname[MAX_OSPATH] = "";
 
 
@@ -708,164 +708,86 @@ void COM_InitArgv (void)
 	com_cmdline[n] = 0;
 }
 
+
+//===========================================================================
+
+// Game mods
+
+typedef struct
+{
+	const char* prog_name;
+	const char* cmdline;
+	const char* gamename;
+	const char* gamedirname;
+	const char* gamescreenshotname;
+} gamemode_info_t;
+
+static const gamemode_info_t gamemode_info [] =
+{// prog_name		cmdline			gamename				gamedirname	gamescreenshotname
+
+// GAME_NORMAL
+{ "",				"-quake",		"DarkPlaces-Quake",		"",			"dp" },
+// GAME_HIPNOTIC
+{ "hipnotic",		"-hipnotic",	"Darkplaces-Hipnotic",	"hipnotic",	"dp" },
+// GAME_ROGUE
+{ "rogue",			"-rogue",		"Darkplaces-Rogue",		"rogue",	"dp" },
+// GAME_NEHAHRA
+{ "nehahra",		"-nehahra",		"DarkPlaces-Nehahra",	"nehahra",	"dp" },
+// GAME_NEXUIZ
+{ "nexuiz",			"-nexuiz",		"Nexuiz",				"data",		"nexuiz" },
+// GAME_TRANSFUSION
+{ "transfusion",	"-transfusion",	"Transfusion",			"basetf",	"transfusion" },
+// GAME_GOODVSBAD2
+{ "gvb2",			"-goodvsbad2",	"GoodVs.Bad2",			"rts",		"gvb2" },
+// GAME_TEU
+{ "teu",			"-teu",			"TheEvilUnleashed",		"baseteu",	"teu" },
+// GAME_BATTLEMECH
+{ "battlemech",		"-battlemech",	"Battlemech",			"base",		"battlemech" },
+// GAME_ZYMOTIC
+{ "zymotic",		"-zymotic",		"Zymotic",				"data",		"zymotic" },
+// GAME_FNIGGIUM
+{ "fniggium",		"-fniggium",	"Fniggium",				"data",		"fniggium" },
+// GAME_SETHERAL
+{ "setheral",		"-setheral",	"Setheral",				"data",		"setheral" },
+// GAME_SOM
+{ "som",			"-som",			"Son of Man",			"sonofman",	"som" },
+// GAME_TENEBRAE
+{ "tenebrae",		"-tenebrae",	"DarkPlaces-Tenebrae",	"tenebrae",	"dp" },
+// GAME_NEOTERIC
+{ "neoteric",		"-neoteric",	"Neoteric",				"neobase",	"neo" },
+// GAME_OPENQUARTZ
+{ "openquartz",		"-openquartz",	"OpenQuartz",			"id1",		"openquartz"},
+
+};
+
 void COM_InitGameType (void)
 {
-	char name[MAX_OSPATH];
+	char name [MAX_OSPATH];
+	unsigned int i;
+
 	FS_StripExtension (com_argv[0], name, sizeof (name));
 	COM_ToLowerString (name, name, sizeof (name));
 
-	if (strstr(name, "transfusion"))
-		gamemode = GAME_TRANSFUSION;
-	else if (strstr(name, "nexuiz"))
-		gamemode = GAME_NEXUIZ;
-	else if (strstr(name, "nehahra"))
-		gamemode = GAME_NEHAHRA;
-	else if (strstr(name, "hipnotic"))
-		gamemode = GAME_HIPNOTIC;
-	else if (strstr(name, "rogue"))
-		gamemode = GAME_ROGUE;
-	else if (strstr(name, "gvb2"))
-		gamemode = GAME_GOODVSBAD2;
-	else if (strstr(name, "teu"))
-		gamemode = GAME_TEU;
-	else if (strstr(name, "battlemech"))
-		gamemode = GAME_BATTLEMECH;
-	else if (strstr(name, "zymotic"))
-		gamemode = GAME_ZYMOTIC;
-	else if (strstr(name, "fniggium"))
-		gamemode = GAME_FNIGGIUM;
-	else if (strstr(name, "setheral"))
-		gamemode = GAME_SETHERAL;
-	else if (strstr(name, "som"))
-		gamemode = GAME_SOM;
-	else if (strstr(name, "tenebrae"))
-		gamemode = GAME_TENEBRAE;
-	else if (strstr(name, "neoteric"))
-		gamemode = GAME_NEOTERIC;
-	else if (strstr(name, "openquartz"))
-		gamemode = GAME_OPENQUARTZ;
-	else
-		gamemode = GAME_NORMAL;
+	// Check the binary name; default to GAME_NORMAL (0)
+	gamemode = GAME_NORMAL;
+	for (i = 1; i < sizeof (gamemode_info) / sizeof (gamemode_info[0]); i++)
+		if (strstr (name, gamemode_info[i].prog_name))
+		{
+			gamemode = i;
+			break;
+		}
 
-	if (COM_CheckParm ("-transfusion"))
-		gamemode = GAME_TRANSFUSION;
-	else if (COM_CheckParm ("-nexuiz"))
-		gamemode = GAME_NEXUIZ;
-	else if (COM_CheckParm ("-nehahra"))
-		gamemode = GAME_NEHAHRA;
-	else if (COM_CheckParm ("-hipnotic"))
-		gamemode = GAME_HIPNOTIC;
-	else if (COM_CheckParm ("-rogue"))
-		gamemode = GAME_ROGUE;
-	else if (COM_CheckParm ("-quake"))
-		gamemode = GAME_NORMAL;
-	else if (COM_CheckParm ("-goodvsbad2"))
-		gamemode = GAME_GOODVSBAD2;
-	else if (COM_CheckParm ("-teu"))
-		gamemode = GAME_TEU;
-	else if (COM_CheckParm ("-battlemech"))
-		gamemode = GAME_BATTLEMECH;
-	else if (COM_CheckParm ("-zymotic"))
-		gamemode = GAME_ZYMOTIC;
-	else if (COM_CheckParm ("-fniggium"))
-		gamemode = GAME_FNIGGIUM;
-	else if (COM_CheckParm ("-setheral"))
-		gamemode = GAME_SETHERAL;
-	else if (COM_CheckParm ("-som"))
-		gamemode = GAME_SOM;
-	else if (COM_CheckParm ("-tenebrae"))
-		gamemode = GAME_TENEBRAE;
-	else if (COM_CheckParm ("-neoteric"))
-		gamemode = GAME_NEOTERIC;
-	else if (COM_CheckParm ("-openquartz"))
-		gamemode = GAME_OPENQUARTZ;
+	// Look for a command-line option
+	for (i = 0; i < sizeof (gamemode_info) / sizeof (gamemode_info[0]); i++)
+		if (COM_CheckParm (gamemode_info[i].cmdline))
+		{
+			gamemode = i;
+			break;
+		}
 
-	switch(gamemode)
-	{
-	case GAME_NORMAL:
-		gamename = "DarkPlaces-Quake";
-		gamedirname = "";
-		gamescreenshotname = "dp";
-		break;
-	case GAME_HIPNOTIC:
-		gamename = "Darkplaces-Hipnotic";
-		gamedirname = "hipnotic";
-		gamescreenshotname = "dp";
-		break;
-	case GAME_ROGUE:
-		gamename = "Darkplaces-Rogue";
-		gamedirname = "rogue";
-		gamescreenshotname = "dp";
-		break;
-	case GAME_NEHAHRA:
-		gamename = "DarkPlaces-Nehahra";
-		gamedirname = "nehahra";
-		gamescreenshotname = "dp";
-		break;
-	case GAME_NEXUIZ:
-		gamename = "Nexuiz";
-		gamedirname = "data";
-		gamescreenshotname = "nexuiz";
-		break;
-	case GAME_TRANSFUSION:
-		gamename = "Transfusion";
-		gamedirname = "basetf";
-		gamescreenshotname = "transfusion";
-		break;
-	case GAME_GOODVSBAD2:
-		gamename = "GoodVs.Bad2";
-		gamedirname = "rts";
-		gamescreenshotname = "gvb2";
-		break;
-	case GAME_TEU:
-		gamename = "TheEvilUnleashed";
-		gamedirname = "baseteu";
-		gamescreenshotname = "teu";
-		break;
-	case GAME_BATTLEMECH:
-		gamename = "Battlemech";
-		gamedirname = "base";
-		gamescreenshotname = "battlemech";
-		break;
-	case GAME_ZYMOTIC:
-		gamename = "Zymotic";
-		gamedirname = "data";
-		gamescreenshotname = "zymotic";
-		break;
-	case GAME_FNIGGIUM:
-		gamename = "Fniggium";
-		gamedirname = "data";
-		gamescreenshotname = "fniggium";
-		break;
-	case GAME_SETHERAL:
-		gamename = "Setheral";
-		gamedirname = "data";
-		gamescreenshotname = "setheral";
-		break;
-	case GAME_SOM:
-		gamename = "Son of Man";
-		gamedirname = "sonofman";
-		gamescreenshotname = "som";
-		break;
-	case GAME_TENEBRAE:
-		gamename = "DarkPlaces-Tenebrae";
-		gamedirname = "tenebrae";
-		gamescreenshotname = "dp";
-		break;
-	case GAME_NEOTERIC:
-		gamename = "Neoteric";
-		gamedirname = "neobase";
-		gamescreenshotname = "neo";
-		break;
-	case GAME_OPENQUARTZ:
-		gamename = "OpenQuartz";
-		gamedirname = "id1";
-		gamescreenshotname = "openquartz";
-		break;
-	default:
-		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
-		break;
-	}
+	gamename = gamemode_info[gamemode].gamename;
+	gamedirname = gamemode_info[gamemode].gamedirname;
+	gamescreenshotname = gamemode_info[gamemode].gamescreenshotname;
 }
 
 

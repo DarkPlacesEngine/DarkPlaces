@@ -188,9 +188,9 @@ extern	struct cvar_s	cmdline;
 #define GAME_OPENQUARTZ 15 //this game sucks
 
 extern int gamemode;
-extern char *gamename;
-extern char *gamedirname;
-extern char *gamescreenshotname;
+extern const char *gamename;
+extern const char *gamedirname;
+extern const char *gamescreenshotname;
 extern char com_modname[MAX_OSPATH];
 
 void COM_ToLowerString (const char *in, char *out, size_t size_out);
