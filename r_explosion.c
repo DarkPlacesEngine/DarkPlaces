@@ -243,15 +243,11 @@ void R_DrawExplosion(explosion_t *e)
 	size = 0;
 	for (i = 0;i < EXPLOSIONVERTS;i++)
 	{
-		//VectorSubtract(e->vert[i], e->origin, diff);
-		//dist = DotProduct(diff, diff);
 		dist = DotProduct(e->vert[i], vpn) - centerdist;
-		if (size < dist)
+		if (size > dist)
 			size = dist;
 	}
-	//scale = -1.0f / sqrt(size / EXPLOSIONVERTS);
-	//scale = -1.0f / sqrt(size);
-	scale = -1.0f / size;
+	scale = 1.0f / size;
 	if (fogenabled)
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
