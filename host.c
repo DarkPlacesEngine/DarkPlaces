@@ -667,33 +667,39 @@ Host_ServerFrame
 */
 void Host_ServerFrame (void)
 {
-	// never run more than 20 frames at a time as a sanity limit
-	int framecount, framelimit = 20;
-	double advancetime;
-	static double frametimetotal = 0, lastservertime = 0;
-	frametimetotal += host_frametime;
-	// LordHavoc: cap server at sys_ticrate in networked games
-	if (frametimetotal < 0.001 || (!cl.islocalgame && cls.state == ca_connected && sv.active && ((realtime - lastservertime) < sys_ticrate.value)))
+	// never run more than 5 frames at a time as a sanity limit
+	int framecount, framelimit = 5;
+	double advancetime, newtime;
+	if (!sv.active)
 		return;
-	lastservertime = realtime;
-
-	// set the time and clear the general datagram
-	SV_ClearDatagram();
-
+	newtime = Sys_DoubleTime();
+	// if this is the first frame of a new server, ignore the huge time difference
+	if (!sv.timer)
+		sv.timer = newtime;
+	// if we're already past the new time, don't run a frame
+	// (does not happen if cl.islocalgame)
+	if (sv.timer > newtime)
+		return;
 	// run the world state
 	// don't allow simulation to run too fast or too slow or logic glitches can occur
-	for (framecount = 0;framecount < framelimit && frametimetotal > 0;framecount++, frametimetotal -= advancetime)
+	for (framecount = 0;framecount < framelimit && sv.timer < newtime;framecount++)
 	{
-		advancetime = min(frametimetotal, sys_ticrate.value);
+		if (cl.islocalgame)
+			advancetime = min(newtime - sv.timer, sys_ticrate.value);
+		else
+			advancetime = sys_ticrate.value;
+		sv.timer += advancetime;
 
 		// only advance time if not paused
 		// the game also pauses in singleplayer when menu or console is used
-		if (!sv.paused && (!cl.islocalgame || (key_dest == key_game && !key_consoleactive)))
-			sv.frametime = advancetime;
-		else
+		sv.frametime = advancetime * slowmo.value;
+		if (sv.paused || (cl.islocalgame && (key_dest != key_game || key_consoleactive)))
 			sv.frametime = 0;
 
 		pr_global_struct->frametime = sv.frametime;
+
+		// set the time and clear the general datagram
+		SV_ClearDatagram();
 
 		// check for network packets to the server each world step incase they
 		// come in midframe (particularly if host is running really slow)
@@ -705,13 +711,16 @@ void Host_ServerFrame (void)
 		// move things around and think unless paused
 		if (sv.frametime)
 			SV_Physics();
+
+		// send all messages to the clients
+		SV_SendClientMessages();
+
+		// send an heartbeat if enough time has passed since the last one
+		NetConn_Heartbeat(0);
 	}
-
-	// send all messages to the clients
-	SV_SendClientMessages();
-
-	// send an heartbeat if enough time has passed since the last one
-	NetConn_Heartbeat(0);
+	// if we fell behind too many frames just don't worry about it
+	if (sv.timer < newtime)
+		sv.timer = newtime;
 }
 
 
