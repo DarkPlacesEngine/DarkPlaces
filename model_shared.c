@@ -104,46 +104,48 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 {
 	int crc;
 	void *buf;
-	char tempname[MAX_QPATH];
 
 	mod->used = true;
 
 	if (mod->name[0] == '*') // submodel
 		return mod;
 
-	if (checkdisk)
+	crc = 0;
+	buf = NULL;
+	if (!mod->needload)
 	{
-		// load the file
-		buf = COM_LoadFile (mod->name, false);
-		if (!buf)
+		if (checkdisk)
 		{
-			if (crash)
-				Host_Error ("Mod_LoadModel: %s not found", mod->name); // LordHavoc: Sys_Error was *ANNOYING*
-			return NULL;
+			buf = COM_LoadFile (mod->name, false);
+			if (!buf)
+			{
+				if (crash)
+					Host_Error ("Mod_LoadModel: %s not found", mod->name); // LordHavoc: Sys_Error was *ANNOYING*
+				return NULL;
+			}
+
+			crc = CRC_Block(buf, com_filesize);
 		}
+		else
+			crc = mod->crc;
 
-		crc = CRC_Block(buf, com_filesize);
-
-		if (!mod->needload && mod->crc == crc && mod->isworldmodel == isworldmodel)
+		if (mod->crc == crc && mod->isworldmodel == isworldmodel)
 		{
-			Mem_Free(buf);
+			if (buf)
+				Mem_Free(buf);
 			return mod; // already loaded
 		}
-
-		Con_DPrintf("loading model %s\n", mod->name);
 	}
-	else
+
+	Con_DPrintf("loading model %s\n", mod->name);
+
+	if (!buf)
 	{
-		if (!mod->needload && mod->isworldmodel == isworldmodel)
-			return mod; // already loaded
-
-		Con_DPrintf("loading model %s\n", mod->name);
-
 		buf = COM_LoadFile (mod->name, false);
 		if (!buf)
 		{
 			if (crash)
-				Host_Error ("Mod_LoadModel: %s not found", mod->name); // LordHavoc: Sys_Error was *ANNOYING*
+				Host_Error ("Mod_LoadModel: %s not found", mod->name);
 			return NULL;
 		}
 		crc = CRC_Block(buf, com_filesize);
@@ -155,11 +157,8 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	// allocate a new model
 	loadmodel = mod;
 
-	// LordHavoc: clear the model struct
-	strcpy(tempname, mod->name);
-	Mod_FreeModel(mod);
-
-	strcpy(mod->name, tempname);
+	// LordHavoc: unload the existing model in this slot (if there is one)
+	Mod_UnloadModel(mod);
 	mod->isworldmodel = isworldmodel;
 	mod->needload = false;
 	mod->used = true;
@@ -190,15 +189,15 @@ void Mod_CheckLoaded (model_t *mod)
 {
 	if (mod)
 	{
-		if (!mod->needload)
+		if (mod->needload)
+			Mod_LoadModel(mod, true, true, mod->isworldmodel);
+		else
 		{
 			if (mod->type == mod_invalid)
 				Host_Error("Mod_CheckLoaded: invalid model\n");
 			mod->used = true;
 			return;
 		}
-
-		Mod_LoadModel(mod, true, true, mod->isworldmodel);
 	}
 }
 
@@ -307,12 +306,7 @@ Loads in a model for the given name
 */
 model_t *Mod_ForName (char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
-	model_t	*mod;
-
-	mod = Mod_FindName (name);
-	mod->used = true;
-
-	return Mod_LoadModel (mod, crash, checkdisk, isworldmodel);
+	return Mod_LoadModel (Mod_FindName (name), crash, checkdisk, isworldmodel);
 }
 
 byte	*mod_base;

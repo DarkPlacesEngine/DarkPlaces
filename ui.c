@@ -14,63 +14,16 @@ cvar_t ui_showname = {0, "ui_showname", "0"};
 
 #define UI_MOUSEBUTTONS 3
 
-static int			ui_alive, ui_active;
-static float		ui_mouse_x, ui_mouse_y;
-static int			ui_mousebutton[UI_MOUSEBUTTONS], ui_mouseclick;
-static int			ui_keyui, ui_keyitem;
-static ui_item_t	*ui_keyrealitem;
+static int ui_alive, ui_active;
+static float ui_mouse_x, ui_mouse_y;
+static int ui_mousebutton[UI_MOUSEBUTTONS], ui_mouseclick;
+static int ui_keyui, ui_keyitem;
+static ui_item_t *ui_keyrealitem;
 
 static ui_t *ui_list[MAX_UI_COUNT];
 
-//static qpic_t *ui_mousepointer;
-static rtexture_t *ui_mousepointertexture;
-
-static byte pointerimage[256] =
-{
-	"333333332......."
-	"26777761........"
-	"2655541........."
-	"265541.........."
-	"2654561........."
-	"26414561........"
-	"251.14561......."
-	"21...14561......"
-	"1.....141......."
-	".......1........"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-	"................"
-};
-
-static rtexturepool_t *uitexturepool;
-
 static void ui_start(void)
 {
-	int i;
-	byte buffer[256][4];
-	uitexturepool = R_AllocTexturePool();
-//	ui_mousepointer = Draw_CachePic("ui/mousepointer.lmp");
-	for (i = 0;i < 256;i++)
-	{
-		if (pointerimage[i] == '.')
-		{
-			buffer[i][0] = 0;
-			buffer[i][1] = 0;
-			buffer[i][2] = 0;
-			buffer[i][3] = 0;
-		}
-		else
-		{
-			buffer[i][0] = (pointerimage[i] - '0') * 16;
-			buffer[i][1] = (pointerimage[i] - '0') * 16;
-			buffer[i][2] = (pointerimage[i] - '0') * 16;
-			buffer[i][3] = 255;
-		}
-	}
-	ui_mousepointertexture = R_LoadTexture(uitexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 	ui_mouse_x = vid.conwidth * 0.5;
 	ui_mouse_y = vid.conheight * 0.5;
 	ui_alive = true;
@@ -78,10 +31,7 @@ static void ui_start(void)
 
 static void ui_shutdown(void)
 {
-//	ui_mousepointer = NULL;
-	ui_mousepointertexture = NULL;
 	ui_alive = false;
-	R_FreeTexturePool(&uitexturepool);
 }
 
 static void ui_newmap(void)
@@ -142,7 +92,7 @@ void ui_clear(ui_t *ui)
 void ui_item
 (
 	ui_t *ui, char *basename, int number,
-	float x, float y, qpic_t *pic, char *string,
+	float x, float y, char *picname, char *string,
 	float left, float top, float width, float height,
 	void(*leftkey)(void *nativedata1, void *nativedata2, float data1, float data2),
 	void(*rightkey)(void *nativedata1, void *nativedata2, float data1, float data2),
@@ -170,10 +120,10 @@ void ui_item
 	memset(it, 0, sizeof(ui_item_t));
 	strncpy(it->name, itemname, 32);
 	it->flags = 0;
-	if (pic || string)
+	if (picname || string)
 	{
 		it->flags |= ITEM_DRAWABLE;
-		it->draw_pic = pic;
+		it->draw_picname = picname;
 		it->draw_string = string;
 		it->draw_x = x;
 		it->draw_y = y;
@@ -432,29 +382,29 @@ void ui_draw(void)
 					for (i = 0, it = ui->items;i < ui->item_count;i++, it++)
 						if (it->flags & ITEM_DRAWABLE)
 						{
-							if (it->draw_pic)
-								Draw_Pic(it->draw_x, it->draw_y, it->draw_pic);
+							if (it->draw_picname)
+								DrawQ_Pic(it->draw_x, it->draw_y, it->draw_picname, 0, 0, 1, 1, 1, 1, 0);
 							if (it->draw_string)
-								Draw_String(it->draw_x, it->draw_y, it->draw_string, 9999);
+								DrawQ_String(it->draw_x, it->draw_y, it->draw_string, 0, 8, 8, 1, 1, 1, 1, 0);
 						}
 
 		if ((it = ui_hititem(ui_mouse_x, ui_mouse_y)))
 		{
-			if (it->draw_pic)
-				Draw_AdditivePic(it->draw_x, it->draw_y, it->draw_pic);
+			if (it->draw_picname)
+				DrawQ_Pic(it->draw_x, it->draw_y, it->draw_picname, 0, 0, 1, 1, 1, 1, DRAWFLAG_ADDITIVE);
 			if (it->draw_string)
-				Draw_AdditiveString(it->draw_x, it->draw_y, it->draw_string, 9999);
+				DrawQ_String(it->draw_x, it->draw_y, it->draw_string, 0, 8, 8, 1, 1, 1, 1, DRAWFLAG_ADDITIVE);
 			if (ui_showname.integer)
-				Draw_String(ui_mouse_x, ui_mouse_y + 16, it->name, 9999);
+				DrawQ_String(ui_mouse_x, ui_mouse_y + 16, it->name, 0, 8, 8, 1, 1, 1, 1, 0);
     	}
 
 		it = ui_keyrealitem;
-		if (it->draw_pic)
-			Draw_AdditivePic(it->draw_x, it->draw_y, it->draw_pic);
+		if (it->draw_picname)
+			DrawQ_Pic(it->draw_x, it->draw_y, it->draw_picname, 0, 0, 1, 1, 1, 1, DRAWFLAG_ADDITIVE);
 		if (it->draw_string)
-			Draw_AdditiveString(it->draw_x, it->draw_y, it->draw_string, 9999);
+			DrawQ_String(it->draw_x, it->draw_y, it->draw_string, 0, 8, 8, 1, 1, 1, 1, DRAWFLAG_ADDITIVE);
 
-//		Draw_Pic(ui_mouse_x, ui_mouse_y, ui_mousepointer);
-		Draw_GenericPic(ui_mousepointertexture, 1, 1, 1, 1, ui_mouse_x, ui_mouse_y, 16, 16);
+		DrawQ_Pic(ui_mouse_x, ui_mouse_y, "ui/mousepointer.tga", 0, 0, 1, 1, 1, 1, 0);
+		//Draw_GenericPic(ui_mousepointertexture, 1, 1, 1, 1, ui_mouse_x, ui_mouse_y, 16, 16);
 	}
 }

@@ -50,8 +50,7 @@ extern void SHOWLMP_clear(void);
 
 // render profiling stuff
 extern qboolean intimerefresh;
-extern cvar_t r_speeds2;
-extern char r_speeds2_string[1024];
+extern char r_speeds_string[1024];
 
 // lighting stuff
 extern vec3_t lightspot;

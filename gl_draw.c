@@ -22,100 +22,246 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 //#define GL_COLOR_INDEX8_EXT     0x80E5
 
-cvar_t		scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
+cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
 
-rtexture_t	*char_texture;
-
-typedef struct
-{
-	rtexture_t	*tex;
-} glpic_t;
-
-rtexture_t	*conbacktex;
+static rtexture_t *char_texture;
 
 //=============================================================================
 /* Support Routines */
 
-typedef struct cachepic_s
+#define MAX_CACHED_PICS 256
+#define CACHEPICHASHSIZE 256
+static cachepic_t *cachepichash[CACHEPICHASHSIZE];
+static cachepic_t cachepics[MAX_CACHED_PICS];
+static int numcachepics;
+
+static rtexturepool_t *drawtexturepool;
+
+static byte pointerimage[256] =
 {
-	char		name[MAX_QPATH];
-	// FIXME: qpic is evil
-	qpic_t		pic;
-	byte		padding[32];	// for appended glpic
+	"333333332......."
+	"26777761........"
+	"2655541........."
+	"265541.........."
+	"2654561........."
+	"26414561........"
+	"251.14561......."
+	"21...14561......"
+	"1.....141......."
+	".......1........"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+};
+
+static rtexture_t *draw_generatemousepointer(void)
+{
+	int i;
+	byte buffer[256][4];
+	for (i = 0;i < 256;i++)
+	{
+		if (pointerimage[i] == '.')
+		{
+			buffer[i][0] = 0;
+			buffer[i][1] = 0;
+			buffer[i][2] = 0;
+			buffer[i][3] = 0;
+		}
+		else
+		{
+			buffer[i][0] = (pointerimage[i] - '0') * 16;
+			buffer[i][1] = (pointerimage[i] - '0') * 16;
+			buffer[i][2] = (pointerimage[i] - '0') * 16;
+			buffer[i][3] = 255;
+		}
+	}
+	return R_LoadTexture(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 }
-cachepic_t;
 
-#define	MAX_CACHED_PICS		256
-cachepic_t	menu_cachepics[MAX_CACHED_PICS];
-int			menu_numcachepics;
+// must match NUMCROSSHAIRS in r_crosshairs.c
+#define NUMCROSSHAIRS 5
 
-byte		menuplyr_pixels[4096];
+static byte *crosshairtexdata[NUMCROSSHAIRS] =
+{
+	"................"
+	"................"
+	"................"
+	"...33......33..."
+	"...355....553..."
+	"....577..775...."
+	".....77..77....."
+	"................"
+	"................"
+	".....77..77....."
+	"....577..775...."
+	"...355....553..."
+	"...33......33..."
+	"................"
+	"................"
+	"................"
+	,
+	"................"
+	"................"
+	"................"
+	"...3........3..."
+	"....5......5...."
+	".....7....7....."
+	"......7..7......"
+	"................"
+	"................"
+	"......7..7......"
+	".....7....7....."
+	"....5......5...."
+	"...3........3..."
+	"................"
+	"................"
+	"................"
+	,
+	"................"
+	".......77......."
+	".......77......."
+	"................"
+	"................"
+	".......44......."
+	".......44......."
+	".77..44..44..77."
+	".77..44..44..77."
+	".......44......."
+	".......44......."
+	"................"
+	".......77......."
+	".......77......."
+	"................"
+	"................"
+	,
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"........7777777."
+	"........752....."
+	"........72......"
+	"........7......."
+	"........7......."
+	"........7......."
+	"................"
+	"................"
+	,
+	"................"
+	"................"
+	"................"
+	"................"
+	"................"
+	"........7......."
+	"................"
+	"........4......."
+	".....7.4.4.7...."
+	"........4......."
+	"................"
+	"........7......."
+	"................"
+	"................"
+	"................"
+	"................"
+};
 
-int			pic_texels;
-int			pic_count;
-
-rtexturepool_t *drawtexturepool;
+static rtexture_t *draw_generatecrosshair(int num)
+{
+	int i;
+	char *in;
+	byte data[16*16][4];
+	in = crosshairtexdata[num];
+	for (i = 0;i < 16*16;i++)
+	{
+		if (in[i] == '.')
+		{
+			data[i][0] = 255;
+			data[i][1] = 255;
+			data[i][2] = 255;
+			data[i][3] = 0;
+		}
+		else
+		{
+			data[i][0] = 255;
+			data[i][1] = 255;
+			data[i][2] = 255;
+			data[i][3] = (byte) ((int) (in[i] - '0') * 255 / 7);
+		}
+	}
+	return R_LoadTexture(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+}
 
 /*
 ================
 Draw_CachePic
 ================
 */
-// FIXME: qpic is evil
-qpic_t	*Draw_CachePic (char *path)
+// FIXME: move this to client somehow
+cachepic_t	*Draw_CachePic (char *path)
 {
-	cachepic_t	*pic;
-	int			i;
-	qpic_t		*dat;
-	glpic_t		*gl;
-	rtexture_t	*tex;
+	int i, crc, hashkey;
+	cachepic_t *pic;
+	qpic_t *p;
 
-	for (pic = menu_cachepics, i = 0;i < menu_numcachepics;pic++, i++)
+	crc = CRC_Block(path, strlen(path));
+	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
+	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
-			return &pic->pic;
+			return pic;
+	//for (pic = cachepics, i = 0;i < numcachepics;pic++, i++)
+	//	if (!strcmp (path, pic->name))
+	//		return pic;
 
-	if (menu_numcachepics == MAX_CACHED_PICS)
-		Sys_Error ("menu_numcachepics == MAX_CACHED_PICS");
-	menu_numcachepics++;
+	if (numcachepics == MAX_CACHED_PICS)
+		Sys_Error ("numcachepics == MAX_CACHED_PICS");
+	pic = cachepics + (numcachepics++);
 	strcpy (pic->name, path);
-
-	// FIXME: move this to menu code
-	// HACK HACK HACK --- we need to keep the bytes for
-	// the translatable player picture just for the menu
-	// configuration dialog
-	if (!strcmp (path, "gfx/menuplyr.lmp"))
-	{
-		dat = (qpic_t *)COM_LoadFile (path, false);
-		if (!dat)
-			Sys_Error("unable to load gfx/menuplyr.lmp");
-		SwapPic (dat);
-
-		memcpy (menuplyr_pixels, dat->data, dat->width*dat->height);
-	}
+	// link into list
+	pic->chain = cachepichash[hashkey];
+	cachepichash[hashkey] = pic;
 
 	// load the pic from disk
-	if ((tex = loadtextureimage(drawtexturepool, path, 0, 0, false, false, true)))
+	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, false, true);
+	if (pic->tex == NULL && (p = W_GetLumpName (path)))
 	{
-		// load the pic from an image file
-		pic->pic.width = image_width;
-		pic->pic.height = image_height;
-		gl = (glpic_t *)pic->pic.data;
-		gl->tex = tex;
-		return &pic->pic;
+		if (!strcmp(path, "conchars"))
+		{
+			byte *pix;
+			// conchars is a raw image and with the wrong transparent color
+			pix = (byte *)p;
+			for (i = 0;i < 128 * 128;i++)
+				if (pix[i] == 0)
+					pix[i] = 255;
+			pic->tex = R_LoadTexture (drawtexturepool, path, 128, 128, pix, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+		}
+		else
+			pic->tex = R_LoadTexture (drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
 	}
-	else
-	{
-		qpic_t *p;
-		// load the pic from gfx.wad
-		p = W_GetLumpName (path);
-		if (!p)
-			Sys_Error ("Draw_CachePic: failed to load %s", path);
-		pic->pic.width = p->width;
-		pic->pic.height = p->height;
-		gl = (glpic_t *)pic->pic.data;
-		gl->tex = R_LoadTexture (drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
-		return &pic->pic;
-	}
+	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer.tga"))
+		pic->tex = draw_generatemousepointer();
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair1.tga"))
+		pic->tex = draw_generatecrosshair(0);
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair2.tga"))
+		pic->tex = draw_generatecrosshair(1);
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair3.tga"))
+		pic->tex = draw_generatecrosshair(2);
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair4.tga"))
+		pic->tex = draw_generatecrosshair(3);
+	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5.tga"))
+		pic->tex = draw_generatecrosshair(4);
+	if (pic->tex == NULL)
+		Sys_Error ("Draw_CachePic: failed to load %s", path);
+
+	pic->width = R_TextureWidth(pic->tex);
+	pic->height = R_TextureHeight(pic->tex);
+	return pic;
 }
 
 /*
@@ -125,472 +271,311 @@ Draw_Init
 */
 static void gl_draw_start(void)
 {
-	int i;
-	byte *draw_chars;
-
-	menu_numcachepics = 0;
-
 	drawtexturepool = R_AllocTexturePool();
-	char_texture = loadtextureimage (drawtexturepool, "conchars", 0, 0, false, false, true);
-	if (!char_texture)
-	{
-		draw_chars = W_GetLumpName ("conchars");
-		// convert font to proper transparent color
-		for (i = 0;i < 128 * 128;i++)
-			if (draw_chars[i] == 0)
-				draw_chars[i] = 255;
 
-		// now turn into texture
-		char_texture = R_LoadTexture (drawtexturepool, "charset", 128, 128, draw_chars, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
-	}
+	numcachepics = 0;
+	memset(cachepichash, 0, sizeof(cachepichash));
 
-	conbacktex = loadtextureimage(drawtexturepool, "gfx/conback", 0, 0, false, false, true);
+	char_texture = Draw_CachePic("conchars")->tex;
 }
 
 static void gl_draw_shutdown(void)
 {
 	R_FreeTexturePool(&drawtexturepool);
 
-	menu_numcachepics = 0;
+	numcachepics = 0;
+	memset(cachepichash, 0, sizeof(cachepichash));
 }
 
-void SHOWLMP_clear(void);
 static void gl_draw_newmap(void)
 {
-	SHOWLMP_clear();
 }
-
-extern char engineversion[40];
-int engineversionx, engineversiony;
 
 void GL_Draw_Init (void)
 {
-	int i;
 	Cvar_RegisterVariable (&scr_conalpha);
 
-	for (i = 0;i < 40 && engineversion[i];i++)
-		engineversion[i] |= 0x80; // shift to orange
-	engineversionx = vid.conwidth - strlen(engineversion) * 8 - 8;
-	engineversiony = vid.conheight - 8;
-
-	menu_numcachepics = 0;
+	numcachepics = 0;
+	memset(cachepichash, 0, sizeof(cachepichash));
 
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
-/*
-================
-Draw_Character
-
-Draws one 8*8 graphics character with 0 being transparent.
-It can be clipped to the top of the screen to allow the console to be
-smoothly scrolled off.
-================
-*/
-void Draw_Character (int x, int y, int num)
+void GL_BrightenScreen(void)
 {
-	int				row, col;
-	float			frow, fcol, size;
+	float f;
 
-	if (num == 32)
-		return;		// space
+	if (r_brightness.value < 0.1f)
+		Cvar_SetValue("r_brightness", 0.1f);
+	if (r_brightness.value > 5.0f)
+		Cvar_SetValue("r_brightness", 5.0f);
 
-	num &= 255;
-	
-	if (y <= -8)
-		return;			// totally off screen
+	if (r_contrast.value < 0.2f)
+		Cvar_SetValue("r_contrast", 0.2f);
+	if (r_contrast.value > 1.0f)
+		Cvar_SetValue("r_contrast", 1.0f);
 
-	row = num>>4;
-	col = num&15;
-
-	frow = row*0.0625;
-	fcol = col*0.0625;
-	size = 0.0625;
+	if (!(lighthalf && !hardwaregammasupported) && r_brightness.value < 1.01f && r_contrast.value > 0.99f)
+		return;
 
 	if (!r_render.integer)
 		return;
-	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
+
+	glDisable(GL_TEXTURE_2D);
 	CHECKGLERROR
-	// LordHavoc: NEAREST mode on text if not scaling up
-	if (vid.realwidth <= (int) vid.conwidth)
-	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		CHECKGLERROR
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		CHECKGLERROR
-	}
-	else
-	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		CHECKGLERROR
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CHECKGLERROR
-	}
-
-	if (lighthalf)
-		glColor3f(0.5f,0.5f,0.5f);
-	else
-		glColor3f(1.0f,1.0f,1.0f);
+	glEnable(GL_BLEND);
 	CHECKGLERROR
-	glBegin (GL_QUADS);
-	glTexCoord2f (fcol, frow);
-	glVertex2f (x, y);
-	glTexCoord2f (fcol + size, frow);
-	glVertex2f (x+8, y);
-	glTexCoord2f (fcol + size, frow + size);
-	glVertex2f (x+8, y+8);
-	glTexCoord2f (fcol, frow + size);
-	glVertex2f (x, y+8);
-	glEnd ();
-	CHECKGLERROR
-
-	// LordHavoc: revert to LINEAR mode
-//	if (vid.realwidth <= (int) vid.conwidth)
-//	{
-//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//	}
-}
-
-/*
-================
-Draw_String
-================
-*/
-// LordHavoc: sped this up a lot, and added maxlen
-void Draw_String (int x, int y, char *str, int maxlen)
-{
-	int num;
-	float frow, fcol;
-	if (!r_render.integer)
-		return;
-	if (y <= -8 || y >= (int) vid.conheight || x >= (int) vid.conwidth || *str == 0) // completely offscreen or no text to print
-		return;
-	if (maxlen < 1)
-		maxlen = strlen(str);
-	else if (maxlen > (int) strlen(str))
-		maxlen = strlen(str);
-	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
-
-	// LordHavoc: NEAREST mode on text if not scaling up
-	if (vid.realwidth <= (int) vid.conwidth)
+	f = r_brightness.value;
+	// only apply lighthalf using software color correction if hardware is not available (speed reasons)
+	if (lighthalf && !hardwaregammasupported)
+		f *= 2;
+	if (f >= 1.01f)
 	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glBlendFunc (GL_DST_COLOR, GL_ONE);
 		CHECKGLERROR
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		CHECKGLERROR
-	}
-	else
-	{
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		CHECKGLERROR
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CHECKGLERROR
-	}
-
-	if (lighthalf)
-		glColor3f(0.5f,0.5f,0.5f);
-	else
-		glColor3f(1.0f,1.0f,1.0f);
-	CHECKGLERROR
-	glBegin (GL_QUADS);
-	while (maxlen-- && x < (int) vid.conwidth) // stop rendering when out of characters or room
-	{
-		if ((num = *str++) != 32) // skip spaces
+		glBegin (GL_TRIANGLES);
+		while (f >= 1.01f)
 		{
-			frow = (float) ((int) num >> 4)*0.0625;
-			fcol = (float) ((int) num & 15)*0.0625;
-			glTexCoord2f (fcol         , frow         );glVertex2f (x, y);
-			glTexCoord2f (fcol + 0.0625, frow         );glVertex2f (x+8, y);
-			glTexCoord2f (fcol + 0.0625, frow + 0.0625);glVertex2f (x+8, y+8);
-			glTexCoord2f (fcol         , frow + 0.0625);glVertex2f (x, y+8);
+			if (f >= 2)
+				glColor3f (1, 1, 1);
+			else
+				glColor3f (f-1, f-1, f-1);
+			glVertex2f (-5000, -5000);
+			glVertex2f (10000, -5000);
+			glVertex2f (-5000, 10000);
+			f *= 0.5;
 		}
-		x += 8;
-	}
-	glEnd ();
-	CHECKGLERROR
-
-	// LordHavoc: revert to LINEAR mode
-//	if (vid.realwidth < (int) vid.conwidth)
-//	{
-//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//	}
-}
-
-void Draw_AdditiveString (int x, int y, char *str, int maxlen)
-{
-	if (!r_render.integer)
-		return;
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	CHECKGLERROR
-	Draw_String(x, y, str, maxlen);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	CHECKGLERROR
-}
-
-void Draw_GenericPic (rtexture_t *tex, float red, float green, float blue, float alpha, int x, int y, int width, int height)
-{
-	if (!r_render.integer)
-		return;
-	if (lighthalf)
-		glColor4f(red * 0.5f, green * 0.5f, blue * 0.5f, alpha);
-	else
-		glColor4f(red, green, blue, alpha);
-	CHECKGLERROR
-	glBindTexture(GL_TEXTURE_2D, R_GetTexture(tex));
-	CHECKGLERROR
-	glBegin (GL_QUADS);
-	glTexCoord2f (0, 0);glVertex2f (x, y);
-	glTexCoord2f (1, 0);glVertex2f (x+width, y);
-	glTexCoord2f (1, 1);glVertex2f (x+width, y+height);
-	glTexCoord2f (0, 1);glVertex2f (x, y+height);
-	glEnd ();
-	CHECKGLERROR
-}
-
-/*
-=============
-Draw_AlphaPic
-=============
-*/
-void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
-{
-	if (pic)
-		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,alpha, x,y,pic->width, pic->height);
-}
-
-
-/*
-=============
-Draw_Pic
-=============
-*/
-void Draw_Pic (int x, int y, qpic_t *pic)
-{
-	if (pic)
-		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
-}
-
-
-void Draw_AdditivePic (int x, int y, qpic_t *pic)
-{
-	if (pic)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		CHECKGLERROR
-		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnd ();
 		CHECKGLERROR
 	}
-}
-
-
-/*
-=============
-Draw_PicTranslate
-
-Only used for the player color selection menu
-=============
-*/
-void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
-{
-	int				i, c;
-	byte			*trans, *src, *dest;
-	rtexture_t		*rt;
-
-	if (pic == NULL)
-		return;
-
-	c = pic->width * pic->height;
-	src = menuplyr_pixels;
-	dest = trans = Mem_Alloc(tempmempool, c);
-	for (i = 0;i < c;i++)
-		*dest++ = translation[*src++];
-
-	rt = R_LoadTexture (drawtexturepool, "translatedplayerpic", pic->width, pic->height, trans, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
-	Mem_Free(trans);
-
-	if (!r_render.integer)
-		return;
-	Draw_GenericPic (rt, 1,1,1,1, x, y, pic->width, pic->height);
-}
-
-
-/*
-================
-Draw_ConsoleBackground
-
-================
-*/
-void Draw_ConsoleBackground (int lines)
-{
-	Draw_GenericPic (conbacktex, 1,1,1,scr_conalpha.value * lines / vid.conheight, 0, lines - vid.conheight, vid.conwidth, vid.conheight);
-	// LordHavoc: draw version
-	Draw_String(engineversionx, lines - vid.conheight + engineversiony, engineversion, 9999);
-}
-
-/*
-=============
-Draw_Fill
-
-Fills a box of pixels with a single color
-=============
-*/
-void Draw_Fill (int x, int y, int w, int h, int c)
-{
-	if (!r_render.integer)
-		return;
-	glDisable (GL_TEXTURE_2D);
-	CHECKGLERROR
-	if (lighthalf)
+	if (r_contrast.value <= 0.99f)
 	{
-		byte *tempcolor = (byte *)&d_8to24table[c];
-		glColor4ub ((byte) (tempcolor[0] >> 1), (byte) (tempcolor[1] >> 1), (byte) (tempcolor[2] >> 1), tempcolor[3]);
+		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		CHECKGLERROR
+		if (lighthalf && hardwaregammasupported)
+			glColor4f (0.5, 0.5, 0.5, 1 - r_contrast.value);
+		else
+			glColor4f (1, 1, 1, 1 - r_contrast.value);
+		CHECKGLERROR
+		glBegin (GL_TRIANGLES);
+		glVertex2f (-5000, -5000);
+		glVertex2f (10000, -5000);
+		glVertex2f (-5000, 10000);
+		glEnd ();
+		CHECKGLERROR
 	}
-	else
-		glColor4ubv ((byte *)&d_8to24table[c]);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	CHECKGLERROR
 
-	glBegin (GL_QUADS);
-
-	glVertex2f (x,y);
-	glVertex2f (x+w, y);
-	glVertex2f (x+w, y+h);
-	glVertex2f (x, y+h);
-
-	glEnd ();
+	glEnable (GL_CULL_FACE);
 	CHECKGLERROR
-	glColor3f(1,1,1);
+	glEnable (GL_DEPTH_TEST);
 	CHECKGLERROR
-	glEnable (GL_TEXTURE_2D);
-	CHECKGLERROR
-}
-//=============================================================================
-
-//=============================================================================
-
-/*
-================
-GL_Set2D
-
-Setup as if the screen was 320*200
-================
-*/
-void GL_Set2D (void)
-{
-	if (!r_render.integer)
-		return;
-	glViewport (vid.realx, vid.realy, vid.realwidth, vid.realheight);
-	CHECKGLERROR
-
-	glMatrixMode(GL_PROJECTION);
-	CHECKGLERROR
-    glLoadIdentity ();
-	CHECKGLERROR
-	glOrtho  (0, vid.conwidth, vid.conheight, 0, -99999, 99999);
-	CHECKGLERROR
-
-	glMatrixMode(GL_MODELVIEW);
-	CHECKGLERROR
-    glLoadIdentity ();
-	CHECKGLERROR
-
-	glDisable (GL_DEPTH_TEST);
-	CHECKGLERROR
-	glDisable (GL_CULL_FACE);
-	CHECKGLERROR
-	glEnable (GL_BLEND);
+	glDisable(GL_BLEND);
 	CHECKGLERROR
 	glEnable(GL_TEXTURE_2D);
 	CHECKGLERROR
+}
 
-	// LordHavoc: added this
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	CHECKGLERROR
+void R_DrawQueue(void)
+{
+	int pos, num, chartexnum;
+	float x, y, w, h, s, t, u, v;
+	cachepic_t *pic;
+	drawqueue_t *dq;
+	char *str, *currentpic;
+	int batch, additive;
+	unsigned int color;
+
+	if (!r_render.integer)
+		return;
+
+	glViewport(vid.realx, vid.realy, vid.realwidth, vid.realheight);
+
+	glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+	glOrtho(0, vid.conwidth, vid.conheight, 0, -99999, 99999);
+
+	glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glDisable(GL_ALPHA_TEST);
+	glEnable(GL_BLEND);
+	glEnable(GL_TEXTURE_2D);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	CHECKGLERROR
 
-	glColor3f(1,1,1);
-	CHECKGLERROR
-}
+	chartexnum = R_GetTexture(char_texture);
 
-// LordHavoc: SHOWLMP stuff
-#define SHOWLMP_MAXLABELS 256
-typedef struct showlmp_s
-{
-	qboolean	isactive;
-	float		x;
-	float		y;
-	char		label[32];
-	char		pic[128];
-} showlmp_t;
+	additive = false;
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	currentpic = "";
+	pic = NULL;
+	glBindTexture(GL_TEXTURE_2D, 0);
+	color = 0;
+	glColor4ub(0,0,0,0);
 
-showlmp_t showlmp[SHOWLMP_MAXLABELS];
-
-void SHOWLMP_decodehide(void)
-{
-	int i;
-	byte *lmplabel;
-	lmplabel = MSG_ReadString();
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		if (showlmp[i].isactive && strcmp(showlmp[i].label, lmplabel) == 0)
-		{
-			showlmp[i].isactive = false;
-			return;
-		}
-}
-
-void SHOWLMP_decodeshow(void)
-{
-	int i, k;
-	byte lmplabel[256], picname[256];
-	float x, y;
-	strcpy(lmplabel,MSG_ReadString());
-	strcpy(picname, MSG_ReadString());
-	if (gamemode == GAME_NEHAHRA) // LordHavoc: nasty old legacy junk
+	// LordHavoc: NEAREST mode on text if not scaling up
+	/*
+	if (vid.realwidth <= (int) vid.conwidth)
 	{
-		x = MSG_ReadByte();
-		y = MSG_ReadByte();
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		CHECKGLERROR
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		CHECKGLERROR
 	}
 	else
 	{
-		x = MSG_ReadShort();
-		y = MSG_ReadShort();
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		CHECKGLERROR
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		CHECKGLERROR
 	}
-	k = -1;
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		if (showlmp[i].isactive)
+	*/
+
+	batch = false;
+	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
+	{
+		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
+		if (dq->flags & DRAWFLAG_ADDITIVE)
 		{
-			if (strcmp(showlmp[i].label, lmplabel) == 0)
+			if (!additive)
 			{
-				k = i;
-				break; // drop out to replace it
+				if (batch)
+				{
+					batch = false;
+					glEnd();
+				}
+				additive = true;
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			}
 		}
-		else if (k < 0) // find first empty one to replace
-			k = i;
-	if (k < 0)
-		return; // none found to replace
-	// change existing one
-	showlmp[k].isactive = true;
-	strcpy(showlmp[k].label, lmplabel);
-	strcpy(showlmp[k].pic, picname);
-	showlmp[k].x = x;
-	showlmp[k].y = y;
-}
+		else
+		{
+			if (additive)
+			{
+				if (batch)
+				{
+					batch = false;
+					glEnd();
+				}
+				additive = false;
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			}
+		}
+		if (color != dq->color)
+		{
+			color = dq->color;
+			if (lighthalf)
+				glColor4ub((color >> 25) & 0x7F, (color >> 17) & 0x7F, (color >> 9) & 0x7F, color & 0xFF);
+			else
+				glColor4ub((color >> 24) & 0xFF, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+		}
+		x = dq->x;
+		y = dq->y;
+		w = dq->scalex;
+		h = dq->scaley;
+		switch(dq->command)
+		{
+		case DRAWQUEUE_PIC:
+			str = (char *)(dq + 1);
+			if (*str)
+			{
+				if (strcmp(str, currentpic))
+				{
+					if (batch)
+					{
+						batch = false;
+						glEnd();
+					}
+					currentpic = str;
+					pic = Draw_CachePic(str);
+					glBindTexture(GL_TEXTURE_2D, R_GetTexture(pic->tex));
+				}
+				if (w == 0)
+					w = pic->width;
+				if (h == 0)
+					h = pic->height;
+				if (!batch)
+				{
+					batch = true;
+					glBegin(GL_QUADS);
+				}
+				//DrawQuad(dq->x, dq->y, w, h, 0, 0, 1, 1);
+				glTexCoord2f (0, 0);glVertex2f (x  , y  );
+				glTexCoord2f (1, 0);glVertex2f (x+w, y  );
+				glTexCoord2f (1, 1);glVertex2f (x+w, y+h);
+				glTexCoord2f (0, 1);glVertex2f (x  , y+h);
+			}
+			else
+			{
+				if (currentpic[0])
+				{
+					if (batch)
+					{
+						batch = false;
+						glEnd();
+					}
+					currentpic = "";
+					glBindTexture(GL_TEXTURE_2D, 0);
+				}
+				if (!batch)
+				{
+					batch = true;
+					glBegin(GL_QUADS);
+				}
+				//DrawQuad(dq->x, dq->y, dq->scalex, dq->scaley, 0, 0, 1, 1);
+				glTexCoord2f (0, 0);glVertex2f (x  , y  );
+				glTexCoord2f (1, 0);glVertex2f (x+w, y  );
+				glTexCoord2f (1, 1);glVertex2f (x+w, y+h);
+				glTexCoord2f (0, 1);glVertex2f (x  , y+h);
+			}
+			break;
+		case DRAWQUEUE_STRING:
+			str = (char *)(dq + 1);
+			if (strcmp("conchars", currentpic))
+			{
+				if (batch)
+				{
+					batch = false;
+					glEnd();
+				}
+				currentpic = "conchars";
+				glBindTexture(GL_TEXTURE_2D, chartexnum);
+			}
+			if (!batch)
+			{
+				batch = true;
+				glBegin(GL_QUADS);
+			}
+			while ((num = *str++) && x < vid.conwidth)
+			{
+				if (num != ' ')
+				{
+					s = (num & 15)*0.0625f + (0.5f / 256.0f);
+					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
+					u = 0.0625f - (1.0f / 256.0f);
+					v = 0.0625f - (1.0f / 256.0f);
+					//DrawQuad(x, y, w, h, (num & 15)*0.0625f + (0.5f / 256.0f), (num >> 4)*0.0625f + (0.5f / 256.0f), 0.0625f - (1.0f / 256.0f), 0.0625f - (1.0f / 256.0f));
+					glTexCoord2f (s  , t  );glVertex2f (x  , y  );
+					glTexCoord2f (s+u, t  );glVertex2f (x+w, y  );
+					glTexCoord2f (s+u, t+v);glVertex2f (x+w, y+h);
+					glTexCoord2f (s  , t+v);glVertex2f (x  , y+h);
+				}
+				x += w;
+			}
+			break;
+		}
+	}
+	if (batch)
+		glEnd();
+	CHECKGLERROR
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	CHECKGLERROR
 
-void SHOWLMP_drawall(void)
-{
-	int i;
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		if (showlmp[i].isactive)
-			Draw_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic));
-}
+	GL_BrightenScreen();
 
-void SHOWLMP_clear(void)
-{
-	int i;
-	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
-		showlmp[i].isactive = false;
+	glColor3f(1,1,1);
+	CHECKGLERROR
 }

@@ -38,5 +38,5 @@ void R_Mesh_Draw(const rmeshinfo_t *m);
 void R_Mesh_AddTransparent(void);
 // ease-of-use frontend to R_Mesh_Draw, set up meshinfo, except for index and numtriangles and numverts, then call this
 void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts);
-// ease-of-use frontend to R_Mesh_Draw for particles, no speed gain
-void R_Mesh_DrawParticle(vec3_t org, vec3_t right, vec3_t up, vec_t scale, int texnum, float cr, float cg, float cb, float ca, float s1, float t1, float s2, float t2, float fs1, float ft1, float fs2, float ft2);
+// faster hardwired version of R_Mesh_Draw specifically for decals (has close ties to decal code)
+void R_Mesh_DrawDecal(const rmeshinfo_t *m);

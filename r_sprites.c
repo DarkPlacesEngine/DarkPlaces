@@ -107,10 +107,14 @@ void R_ClipSprite (void)
 	R_ClipSpriteImage(org, right, up);
 }
 
+//int spritepolyindex[6] = {0, 1, 2, 0, 2, 3};
+
 void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t right, float red, float green, float blue, float alpha)
 {
 	rmeshinfo_t m;
-	float v[4][5];
+	float v[4][4], st[4][2];
+	// LordHavoc: this meshinfo must match up with R_Mesh_DrawDecal
+	// LordHavoc: the commented out lines are hardwired behavior in R_Mesh_DrawDecal
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -119,38 +123,41 @@ void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t ori
 	 || (currentrenderentity->model->flags & EF_ADDITIVE)
 	 || fog)
 		m.blendfunc2 = GL_ONE;
+	//m.numtriangles = 2;
+	//m.index = spritepolyindex;
+	//m.numverts = 4;
 	m.vertex = &v[0][0];
-	m.vertexstep = sizeof(float[5]);
+	//m.vertexstep = sizeof(float[4]);
 	m.cr = red;
 	m.cg = green;
 	m.cb = blue;
 	m.ca = alpha;
 	m.tex[0] = texture;
-	m.texcoords[0] = &v[0][3];
-	m.texcoordstep[0] = sizeof(float[5]);
+	m.texcoords[0] = &st[0][0];
+	//m.texcoordstep[0] = sizeof(float[2]);
 
 	v[0][0] = origin[0] + frame->down * up[0] + frame->left  * right[0];
 	v[0][1] = origin[1] + frame->down * up[1] + frame->left  * right[1];
 	v[0][2] = origin[2] + frame->down * up[2] + frame->left  * right[2];
-	v[0][3] = 0;
-	v[0][4] = 1;
 	v[1][0] = origin[0] + frame->up   * up[0] + frame->left  * right[0];
 	v[1][1] = origin[1] + frame->up   * up[1] + frame->left  * right[1];
 	v[1][2] = origin[2] + frame->up   * up[2] + frame->left  * right[2];
-	v[1][3] = 0;
-	v[1][4] = 0;
 	v[2][0] = origin[0] + frame->up   * up[0] + frame->right * right[0];
 	v[2][1] = origin[1] + frame->up   * up[1] + frame->right * right[1];
 	v[2][2] = origin[2] + frame->up   * up[2] + frame->right * right[2];
-	v[2][3] = 1;
-	v[2][4] = 0;
 	v[3][0] = origin[0] + frame->down * up[0] + frame->right * right[0];
 	v[3][1] = origin[1] + frame->down * up[1] + frame->right * right[1];
 	v[3][2] = origin[2] + frame->down * up[2] + frame->right * right[2];
-	v[3][3] = 1;
-	v[3][4] = 1;
+	st[0][0] = 0;
+	st[0][1] = 1;
+	st[1][0] = 0;
+	st[1][1] = 0;
+	st[2][0] = 1;
+	st[2][1] = 0;
+	st[3][0] = 1;
+	st[3][1] = 1;
 
-	R_Mesh_DrawPolygon(&m, 4);
+	R_Mesh_DrawDecal(&m);
 }
 
 /*

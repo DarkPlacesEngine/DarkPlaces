@@ -703,7 +703,7 @@ void _Host_Frame (float time)
 	if (host_speeds.integer)
 		time1 = Sys_DoubleTime ();
 
-	SCR_UpdateScreen ();
+	CL_UpdateScreen ();
 
 	if (host_speeds.integer)
 		time2 = Sys_DoubleTime ();

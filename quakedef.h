@@ -215,7 +215,6 @@ typedef enum {false, true} qboolean;
 #include "world.h"
 #include "keys.h"
 #include "console.h"
-#include "view.h"
 #include "menu.h"
 #include "crc.h"
 #include "cdaudio.h"

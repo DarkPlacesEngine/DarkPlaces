@@ -32,7 +32,7 @@ void Con_DrawCharacter (int cx, int line, int num);
 
 void Con_CheckResize (void);
 void Con_Init (void);
-void Con_DrawConsole (int lines, qboolean drawinput);
+void Con_DrawConsole (int lines);
 void Con_Print (char *txt);
 void Con_Printf (char *fmt, ...);
 void Con_DPrintf (char *fmt, ...);

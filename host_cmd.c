@@ -548,11 +548,6 @@ void Host_Loadgame_f (void)
 	sprintf (name, "%s/%s", com_gamedir, Cmd_Argv(1));
 	COM_DefaultExtension (name, ".sav");
 
-	// LordHavoc: made SCR_UpdateScreen use a great deal less stack space, no longer an issue
-	//// we can't call SCR_BeginLoadingPlaque, because too much stack space has
-	//// been used.  The menu calls it before stuffing loadgame command
-//	SCR_BeginLoadingPlaque ();
-
 	Con_Printf ("Loading game from %s...\n", name);
 	f = Qopen (name, "rz");
 	if (!f)

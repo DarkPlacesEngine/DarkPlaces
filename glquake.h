@@ -146,7 +146,7 @@ extern cvar_t gl_combine;
 
 #endif
 
-//#define DEBUGGL
+#define DEBUGGL
 
 #ifdef DEBUGGL
 #define CHECKGLERROR if ((errornumber = glGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);

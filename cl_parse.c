@@ -405,8 +405,6 @@ void CL_ParseServerInfo (void)
 
 	Mod_ClearUsed();
 
-	Mem_CheckSentinelsGlobal();
-
 // precache models
 	memset (cl.model_precache, 0, sizeof(cl.model_precache));
 	for (nummodels=1 ; ; nummodels++)
@@ -416,7 +414,7 @@ void CL_ParseServerInfo (void)
 			break;
 		if (nummodels==MAX_MODELS)
 		{
-			Con_Printf ("Server sent too many model precaches\n");
+			Host_Error ("Server sent too many model precaches\n");
 			return;
 		}
 		if (strlen(str) >= MAX_QPATH)
@@ -434,7 +432,7 @@ void CL_ParseServerInfo (void)
 			break;
 		if (numsounds==MAX_SOUNDS)
 		{
-			Con_Printf ("Server sent too many sound precaches\n");
+			Host_Error ("Server sent too many sound precaches\n");
 			return;
 		}
 		if (strlen(str) >= MAX_QPATH)
@@ -442,8 +440,6 @@ void CL_ParseServerInfo (void)
 		strcpy (sound_precache[numsounds], str);
 		S_TouchSound (str);
 	}
-
-	Mem_CheckSentinelsGlobal();
 
 	Mod_PurgeUnused();
 
@@ -456,11 +452,11 @@ void CL_ParseServerInfo (void)
 	for (i=1 ; i<nummodels ; i++)
 	{
 		// LordHavoc: i == 1 means the first model is the world model
-		cl.model_precache[i] = Mod_ForName (model_precache[i], false, true, i == 1);
+		cl.model_precache[i] = Mod_ForName (model_precache[i], false, false, i == 1);
 
 		if (cl.model_precache[i] == NULL)
 		{
-			Con_Printf("Model %s not found\n", model_precache[i]);
+			Host_Error("Model %s not found\n", model_precache[i]);
 			return;
 		}
 		CL_KeepaliveMessage ();

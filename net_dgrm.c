@@ -1237,7 +1237,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 		goto ErrorReturn;
 
 	// send the connection request
-	Con_Printf("trying...\n"); SCR_UpdateScreen ();
+	Con_Printf("trying...\n"); CL_UpdateScreen ();
 	start_time = net_time;
 
 	for (reps = 0; reps < 3; reps++)
@@ -1264,7 +1264,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 					Con_DPrintf("wrong reply address\n");
 					Con_DPrintf("Expected: %s\n", StrAddr (&sendaddr));
 					Con_DPrintf("Received: %s\n", StrAddr (&readaddr));
-					SCR_UpdateScreen ();
+					CL_UpdateScreen ();
 //#endif
 					ret = 0;
 					continue;
@@ -1301,7 +1301,7 @@ static qsocket_t *_Datagram_Connect (char *host)
 		while (ret == 0 && (SetNetTime() - start_time) < 2.5);
 		if (ret)
 			break;
-		Con_Printf("still trying...\n"); SCR_UpdateScreen ();
+		Con_Printf("still trying...\n"); CL_UpdateScreen ();
 		start_time = SetNetTime();
 	}
 

@@ -277,6 +277,7 @@ void GL_DrawModelMesh(rtexture_t *skin, float *colors, float cred, float cgreen,
 		aliasmeshinfo.ca = currentrenderentity->alpha;
 	}
 
+	c_alias_polys += aliasmeshinfo.numtriangles;
 	R_Mesh_Draw(&aliasmeshinfo);
 
 	// leave it in a state for additional passes
@@ -463,6 +464,7 @@ void R_DrawQ1AliasModel (void)
 		aliasmeshinfo.cb = fogcolor[2];
 		aliasmeshinfo.ca = currentrenderentity->alpha * fog;
 
+		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
 	}
 }
@@ -880,6 +882,7 @@ void GL_DrawZymoticModelMesh(zymtype1header_t *m)
 		}
 		aliasmeshinfo.numtriangles = *renderlist++;
 		aliasmeshinfo.index = renderlist;
+		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
 		renderlist += aliasmeshinfo.numtriangles * 3;
 	}
@@ -907,6 +910,7 @@ void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 	{
 		aliasmeshinfo.numtriangles = *renderlist++;
 		aliasmeshinfo.index = renderlist;
+		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
 		renderlist += aliasmeshinfo.numtriangles * 3;
 	}
@@ -940,7 +944,6 @@ void R_DrawAliasModel (void)
 
 	c_models++;
 
-	c_alias_polys += currentrenderentity->model->numtris;
 	if (currentrenderentity->model->aliastype == ALIASTYPE_ZYM)
 		R_DrawZymoticModel ();
 	else if (currentrenderentity->model->aliastype == ALIASTYPE_MD2)
