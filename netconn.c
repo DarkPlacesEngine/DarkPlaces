@@ -338,7 +338,7 @@ lhnetsocket_t *NetConn_ChooseClientSocketForAddress(lhnetaddress_t *address)
 {
 	int i, a = LHNETADDRESS_GetAddressType(address);
 	for (i = 0;i < cl_numsockets;i++)
-		if (LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])) == a)
+		if (cl_sockets[i] && LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(cl_sockets[i])) == a)
 			return cl_sockets[i];
 	return NULL;
 }
@@ -347,7 +347,7 @@ lhnetsocket_t *NetConn_ChooseServerSocketForAddress(lhnetaddress_t *address)
 {
 	int i, a = LHNETADDRESS_GetAddressType(address);
 	for (i = 0;i < sv_numsockets;i++)
-		if (LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(sv_sockets[i])) == a)
+		if (sv_sockets[i] && LHNETADDRESS_GetAddressType(LHNET_AddressFromSocket(sv_sockets[i])) == a)
 			return sv_sockets[i];
 	return NULL;
 }
