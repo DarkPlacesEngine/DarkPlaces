@@ -1214,7 +1214,7 @@ void R_Shadow_GenTexCoords_Specular_NormalCubeMap(float *out3f, int numverts, co
 	}
 }
 
-#define USETEXMATRIX 0 // broken
+#define USETEXMATRIX 1
 void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements, const float *vertex3f, const float *svector3f, const float *tvector3f, const float *normal3f, const float *texcoord2f, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, int lighting)
 {
 	int renders;
