@@ -126,7 +126,7 @@ typedef struct qsocket_s
 	qboolean		disconnected;
 	qboolean		canSend;
 	qboolean		sendNext;
-	
+
 	int				driver;
 	int				landriver;
 	int				socket;
@@ -149,8 +149,10 @@ typedef struct qsocket_s
 } qsocket_t;
 
 extern qsocket_t	*net_activeSockets;
-extern qsocket_t	*net_freeSockets;
-extern int			net_numsockets;
+// LordHavoc: sockets are dynamically allocated now
+//extern qsocket_t	*net_freeSockets;
+//extern int			net_numsockets;
+extern mempool_t *net_mempool;
 
 typedef struct
 {
