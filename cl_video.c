@@ -159,7 +159,7 @@ void CL_VideoStart(char *filename)
 	cl_videosoundresampledata = NULL;
 
 	cl_videotexturepool = R_AllocTexturePool();
-	cl_videotexture = R_LoadTexture(cl_videotexturepool, "videotexture", cl_videoimagewidth, cl_videoimageheight, NULL, TEXTYPE_RGBA, TEXF_FRAGMENT);
+	cl_videotexture = R_LoadTexture2D(cl_videotexturepool, "videotexture", cl_videoimagewidth, cl_videoimageheight, NULL, TEXTYPE_RGBA, TEXF_FRAGMENT, NULL);
 }
 
 void CL_VideoStop(void)

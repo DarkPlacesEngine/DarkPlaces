@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // on the same machine.
 
 #include "quakedef.h"
+#include "image.h"
 
 cvar_t r_mipsprites = {CVAR_SAVE, "r_mipsprites", "1"};
 
@@ -181,7 +182,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 					sprintf (name, "%s_%i_%i", tempname, i, j);
 				else
 					sprintf (name, "%s_%i", tempname, i);
-				loadmodel->sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, r_mipsprites.integer, true);
+				loadmodel->sprdata_frames[realframes].texture = loadtextureimagewithmask(loadmodel->texturepool, name, 0, 0, false, (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE);
 				loadmodel->sprdata_frames[realframes].fogtexture = image_masktex;
 
 				if (!loadmodel->sprdata_frames[realframes].texture)
@@ -192,7 +193,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 					else //if (version == SPRITE_VERSION || version == SPRITEHL_VERSION)
 						Image_Copy8bitRGBA(datapointer, pixbuf, width*height, palette);
 
-					loadmodel->sprdata_frames[realframes].texture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
+					loadmodel->sprdata_frames[realframes].texture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE, NULL);
 
 					// make fog version (just alpha)
 					for (k = 0;k < width*height;k++)
@@ -205,7 +206,7 @@ static void Mod_Sprite_SharedSetup(qbyte *datapointer, int version, int *palette
 						sprintf (name, "%s_%i_%ifog", tempname, i, j);
 					else
 						sprintf (name, "%s_%ifog", tempname, i);
-					loadmodel->sprdata_frames[realframes].fogtexture = R_LoadTexture (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE);
+					loadmodel->sprdata_frames[realframes].fogtexture = R_LoadTexture2D (loadmodel->texturepool, name, width, height, pixbuf, TEXTYPE_RGBA, TEXF_ALPHA | (r_mipsprites.integer ? TEXF_MIPMAP : 0) | TEXF_PRECACHE, NULL);
 
 					Mem_Free(pixbuf);
 				}
@@ -262,7 +263,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 		loadmodel->sprnum_type = LittleLong (pinqsprite->type);
 		loadmodel->synctype = LittleLong (pinqsprite->synctype);
 
-		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), d_8to24table);
+		Mod_Sprite_SharedSetup(datapointer, LittleLong (pinqsprite->version), palette_complete);
 	}
 	else if (version == SPRITEHL_VERSION)
 	{

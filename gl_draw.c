@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+#include "image.h"
 
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
 
@@ -76,7 +77,7 @@ static rtexture_t *draw_generatemousepointer(void)
 			buffer[i][3] = 255;
 		}
 	}
-	return R_LoadTexture(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+	return R_LoadTexture2D(drawtexturepool, "mousepointer", 16, 16, &buffer[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 // must match NUMCROSSHAIRS in r_crosshairs.c
@@ -193,7 +194,7 @@ static rtexture_t *draw_generatecrosshair(int num)
 			data[i][3] = (qbyte) ((int) (in[i] - '0') * 255 / 7);
 		}
 	}
-	return R_LoadTexture(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+	return R_LoadTexture2D(drawtexturepool, va("crosshair%i", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 /*
@@ -223,11 +224,11 @@ cachepic_t	*Draw_CachePic (char *path)
 	cachepichash[hashkey] = pic;
 
 	// load the pic from disk
-	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, false, true);
+	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
 	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
 		// compatibility with older versions
-		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, false, true);
+		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, TEXF_ALPHA | TEXF_PRECACHE);
 		// failed to find gfx/whatever.tga or similar, try the wad
 		if (pic->tex == NULL && (p = W_GetLumpName (path + 4)))
 		{
@@ -239,10 +240,10 @@ cachepic_t	*Draw_CachePic (char *path)
 				for (i = 0;i < 128 * 128;i++)
 					if (pix[i] == 0)
 						pix[i] = 255;
-				pic->tex = R_LoadTexture (drawtexturepool, path, 128, 128, pix, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, 128, 128, pix, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_complete);
 			}
 			else
-				pic->tex = R_LoadTexture (drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+				pic->tex = R_LoadTexture2D(drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_PALETTE, TEXF_ALPHA | TEXF_PRECACHE, palette_complete);
 		}
 	}
 	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer.tga"))
@@ -305,7 +306,7 @@ cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *
 	pic->height = height;
 	if (pic->tex)
 		R_FreeTexture(pic->tex);
-	pic->tex = R_LoadTexture (drawtexturepool, picname, width, height, pixels, TEXTYPE_RGBA, alpha ? TEXF_ALPHA : 0);
+	pic->tex = R_LoadTexture2D(drawtexturepool, picname, width, height, pixels, TEXTYPE_RGBA, alpha ? TEXF_ALPHA : 0, NULL);
 	return pic;
 }
 

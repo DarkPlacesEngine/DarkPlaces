@@ -707,7 +707,7 @@ static void CL_RelinkNetworkEntities()
 		{
 			// * 4 for the expansion from 0-255 to 0-1023 range,
 			// / 255 to scale down byte colors
-			VectorMA(dlightcolor, ent->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&d_8to24table[ent->state_current.glowcolor], dlightcolor);
+			VectorMA(dlightcolor, ent->state_current.glowsize * (4.0f / 255.0f), (qbyte *)&palette_complete[ent->state_current.glowcolor], dlightcolor);
 		}
 		// LordHavoc: customizable trail
 		if (ent->render.flags & RENDER_GLOWTRAIL)

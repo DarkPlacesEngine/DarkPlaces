@@ -76,7 +76,7 @@ void R_GetCrosshairColor(float *out)
 	}
 	else
 		i = 15;
-	color = (qbyte *) &d_8to24table[i];
+	color = (qbyte *) &palette_complete[i];
 	if (crosshair_flashspeed.value >= 0.01f)
 		base = (sin(realtime * crosshair_flashspeed.value * (M_PI*2.0f)) * crosshair_flashrange.value);
 	else

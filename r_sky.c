@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "image.h"
 
 cvar_t r_sky = {CVAR_SAVE, "r_sky", "1"};
 qboolean skyavailable_quake;
@@ -73,7 +74,7 @@ int R_SetSkyBox(const char *sky)
 				continue;
 			}
 		}
-		skyboxside[i] = R_LoadTexture(skytexturepool, va("skyboxside%d", i), image_width, image_height, image_rgba, TEXTYPE_RGBA, TEXF_PRECACHE);
+		skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, image_rgba, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
 		Mem_Free(image_rgba);
 	}
 
@@ -122,8 +123,8 @@ static void R_SkyBox(void)
 	varray_vertex[i * 4 + 0] = (x) * 16.0f;\
 	varray_vertex[i * 4 + 1] = (y) * 16.0f;\
 	varray_vertex[i * 4 + 2] = (z) * 16.0f;\
-	varray_texcoord[0][i * 4 + 0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
-	varray_texcoord[0][i * 4 + 1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
+	varray_texcoord[0][i * 4 + 0] = (s);\
+	varray_texcoord[0][i * 4 + 1] = (t);
 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
@@ -357,7 +358,7 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 			for (j=0 ; j<128 ; j++)
 			{
 				p = src[i*256 + j + 128];
-				rgba = &d_8to24table[p];
+				rgba = &palette_complete[p];
 				trans[(i*128) + j] = *rgba;
 				r += ((qbyte *)rgba)[0];
 				g += ((qbyte *)rgba)[1];
@@ -373,7 +374,7 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 
 	memcpy(skyupperlayerpixels, trans, 128*128*4);
 
-	solidskytexture = R_LoadTexture (skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE);
+	solidskytexture = R_LoadTexture2D(skytexturepool, "sky_solidtexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 
 	if (bytesperpixel == 4)
 	{
@@ -391,14 +392,14 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 				if (p == 0)
 					trans[(i*128) + j] = transpix;
 				else
-					trans[(i*128) + j] = d_8to24table[p];
+					trans[(i*128) + j] = palette_complete[p];
 			}
 		}
 	}
 
 	memcpy(skylowerlayerpixels, trans, 128*128*4);
 
-	alphaskytexture = R_LoadTexture (skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+	alphaskytexture = R_LoadTexture2D(skytexturepool, "sky_alphatexture", 128, 128, (qbyte *) trans, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE, NULL);
 }
 
 void R_ResetQuakeSky(void)

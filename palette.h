@@ -8,8 +8,14 @@ extern cvar_t v_brightness;
 extern cvar_t v_overbrightbits;
 extern cvar_t v_hwgamma;
 
-extern unsigned int d_8to24table[256];
-//extern qbyte d_15to8table[32768];
+extern unsigned int palette_complete[256];
+extern unsigned int palette_nofullbrights[256];
+extern unsigned int palette_onlyfullbrights[256];
+extern unsigned int palette_nocolormapnofullbrights[256];
+extern unsigned int palette_pantsaswhite[256];
+extern unsigned int palette_shirtaswhite[256];
+extern unsigned int palette_alpha[256];
+extern unsigned int palette_font[256];
 
 extern qboolean hardwaregammasupported;
 

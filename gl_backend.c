@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "image.h"
 
 cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "1024"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};

@@ -149,7 +149,6 @@ extern float overbrightscale;
 #include "r_lerpanim.h"
 
 extern cvar_t r_render;
-#include "image.h"
 
 extern cvar_t r_textureunits;
 extern cvar_t gl_dither;

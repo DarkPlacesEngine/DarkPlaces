@@ -807,19 +807,21 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	float f, colorscale;
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
-	float alpha = ent->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value);
+	float alpha = ent->alpha * (surf->flags & SURF_WATERALPHA ? r_wateralpha.value : 1);
 	float modelorg[3];
+	texture_t *texture;
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 
 	R_Mesh_Matrix(&ent->matrix);
 
 	memset(&m, 0, sizeof(m));
-	if (ent->effects & EF_ADDITIVE)
+	texture = surf->texinfo->texture->currentframe[ent->frame != 0];
+	if (texture->rendertype == SURFRENDER_ADD)
 	{
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (surf->currenttexture->fogtexture != NULL || alpha < 1)
+	else if (texture->rendertype == SURFRENDER_ALPHA)
 	{
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
@@ -829,7 +831,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	m.tex[0] = R_GetTexture(texture->texture);
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -861,7 +863,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
-		m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
+		m.tex[0] = R_GetTexture(texture->fogtexture);
 		R_Mesh_State(&m);
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 		{
@@ -879,7 +881,7 @@ static void RSurfShader_Water(const entity_render_t *ent, const texture_t *textu
 {
 	const msurface_t *surf;
 	vec3_t center;
-	if ((r_wateralpha.value < 1 && !(texture->flags & SURF_DRAWNOALPHA)) || ent->effects & EF_ADDITIVE || texture->fogtexture)
+	if (texture->rendertype != SURFRENDER_OPAQUE)
 	{
 		for (surf = firstsurf;surf;surf = surf->texturechain)
 		{
@@ -902,14 +904,16 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	float modelorg[3];
+	texture_t *texture;
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	memset(&m, 0, sizeof(m));
-	if (ent->effects & EF_ADDITIVE)
+	texture = surf->texinfo->texture->currentframe[ent->frame != 0];
+	if (texture->rendertype == SURFRENDER_ADD)
 	{
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
 	}
-	else if (surf->currenttexture->fogtexture != NULL || ent->alpha < 1)
+	else if (texture->rendertype == SURFRENDER_ALPHA)
 	{
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
@@ -919,7 +923,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
+	m.tex[0] = R_GetTexture(texture->texture);
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 	{
@@ -952,11 +956,13 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	float modelorg[3];
+	texture_t *texture;
+	texture = surf->texinfo->texture->currentframe[ent->frame != 0];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
+	m.tex[0] = R_GetTexture(texture->glowtexture);
 	R_Mesh_State(&m);
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -974,11 +980,13 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	float modelorg[3];
+	texture_t *texture;
+	texture = surf->texinfo->texture->currentframe[ent->frame != 0];
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
+	m.tex[0] = R_GetTexture(texture->fogtexture);
 	R_Mesh_State(&m);
 	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1286,9 +1294,11 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->surfaces + calldata2;
+	texture_t *texture;
+	texture = surf->texinfo->texture->currentframe[ent->frame != 0];
 	R_Mesh_Matrix(&ent->matrix);
 	RSurfShader_Wall_Pass_BaseVertex(ent, surf);
-	if (surf->currenttexture->glowtexture)
+	if (texture->glowtexture)
 		RSurfShader_Wall_Pass_Glow(ent, surf);
 	if (fogenabled)
 		RSurfShader_Wall_Pass_Fog(ent, surf);
@@ -1434,7 +1444,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 		t = model->textures + i;
 		if (ent->effects & EF_ADDITIVE)
 			t->rendertype = SURFRENDER_ADD;
-		else if (ent->alpha < 1 || t->flags & SURF_WATERALPHA || t->fogtexture != NULL)
+		else if (ent->alpha < 1 || (t->flags & SURF_WATERALPHA && r_wateralpha.value < 1) || t->fogtexture != NULL)
 			t->rendertype = SURFRENDER_ALPHA;
 		else
 			t->rendertype = SURFRENDER_OPAQUE;
@@ -1964,7 +1974,7 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 						{
 							R_Mesh_ResizeCheck(mesh->numverts);
 							memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-							R_Shadow_RenderLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->texture, r_notexture, NULL, NULL);
+							R_Shadow_RenderLighting(mesh->numverts, mesh->numtriangles, mesh->index, mesh->svectors, mesh->tvectors, mesh->normals, mesh->str, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, t->texture, t->glosstexture, t->nmaptexture, NULL);
 						}
 					}
 				}

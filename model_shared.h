@@ -53,6 +53,8 @@ typedef struct skinframe_s
 	rtexture_t *glow; // glow only
 	rtexture_t *merged; // original texture minus glow
 	rtexture_t *fog; // white texture with alpha of the base texture, NULL if not transparent
+	rtexture_t *nmap; // normalmap (bumpmap for dot3)
+	rtexture_t *gloss; // glossmap (for dot3)
 }
 skinframe_t;
 
