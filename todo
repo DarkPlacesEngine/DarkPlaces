@@ -32,7 +32,6 @@
 -f darkplaces testing: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
 -f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
-0 darkplaces cleanup: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
 0 darkplaces client: add back r_waterripple (Vermeulen)
 0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
@@ -113,7 +112,6 @@
 0 darkplaces renderer: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
 0 darkplaces renderer: make sure r_novis works (Carni)
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
-0 darkplaces renderer: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
 0 darkplaces renderer: water shader not working with fog (Tomaz)
 0 darkplaces server: add DP_HALFLIFESPRITE extension (Urre)
 0 darkplaces server: add DP_SV_DRAWONLYTOTEAM extension (Supajoe)
@@ -254,6 +252,7 @@
 2 darkplaces protocol: add rcon_password system similar to quakeworld server
 2 darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
 2 darkplaces protocol: rename PreciseAngle stuff to Angle16, add Angle8 functions (for EF_LOWPRECISION code), upgrade Angle functions to use Angle16 or Angle8 depending on protocol version, upgrade ammo/armor stats to 16bit (Urre, FrikaC, Sajt, mashakos, RenegadeC, scar3crow) 
+2 darkplaces protocol: svc_spawnstatic should use a delta from defaultstate, instead of its outdated custom protocol (SpikeI)
 2 darkplaces release: add KDE/gnome icons somehow using darkplaces72x72.png (de-we)
 2 darkplaces release: add windres stuff to makefile to compile darkplaces.rc into win32 builds (tell de-we)
 2 darkplaces renderer: add q3bsp water rendering, both scrolling and watershader (Zombie)
@@ -262,7 +261,6 @@
 2 darkplaces renderer: make corona occlusion testing use GL_ARB_occlusion_query instead of a CL_TraceLine (Riot)
 2 darkplaces renderer: make light checks use rtlights if in r_shadow_realtime_world 1 mode for consistency reasons on transparent models and such, as well as particles (romi)
 2 darkplaces renderer: move skybox/skysphere render to after sky polygons, so that they can do a depth comparison to draw only on the sky polygons, using DepthRange(1,1) and DepthFunc(GL_GREATER), note though that portal renders will need half depth range (Mercury)
-2 darkplaces renderer: zym model rtlight support (Vermeulen)
 2 darkplaces server: make a DP_SV_PERCLIENTENTITYSEND extension which calls a .float customizeentityforclient() function for each client that may see the entity, the function returns TRUE if it should send, FALSE if it should not, and is fully capable of editing the entity's fields, this allows cloaked players to appear less transparent to their teammates, navigation markers to only show to their team, etc (Urre)
 2 darkplaces sound: add mapmusic command (<maps/mapname.bsp> <music/whatever.ogg> perhaps, with a blank music name it would simply remove the map from the list of overrides) to manipulate a list of per-map music overrides, mapmusic alone should print the list (Joseph Caporale, tell Static_Fiend)
 2 darkplaces sound: make sound engine restart ambients after a restart (RenegadeC)
@@ -273,7 +271,6 @@
 2 hmap2: add hlwad support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd, FrikaC)
 2 hmap2: make water have lightmaps (unless -nowaterlightmaps is specified)
 3 LordHavoc: read up on dynamic visibility
-3 darkplaces cleanup: merge model format handling (mdl/md2/md3/zym)
 3 darkplaces client: .loc support and other team messaging capabilities (sublim3)
 3 darkplaces client: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 darkplaces client: figure out why multimap demos are skipping the later portions, it's probably related to the time seeking, probably not being reset (Urre)
@@ -370,7 +367,9 @@
 d darkplaces cleanup: clean up Collision_TraceBrushBrush to have another temp variable besides f and clean up the enterfrac2 handling (Vic)
 d darkplaces cleanup: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 d darkplaces cleanup: make sure engine dumps log file to disk if there is a Sys_Error (VorteX)
+d darkplaces cleanup: merge model format handling (mdl/md2/md3/zym)
 d darkplaces cleanup: nodestack[nodestackindex++] = node->children[0]; and similar things should skip the node if stack is full (Vic)
+d darkplaces cleanup: port DarkWar polygon.c to darkplaces, as it is more optimized than winding.c
 d darkplaces cleanup: rename QuadraticSpline code in curves.c to QuadraticBSpline
 d darkplaces client: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces client: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
@@ -398,6 +397,8 @@ d darkplaces renderer: examine the surface rendering code to make sure it has no
 d darkplaces renderer: figure out the 'inverted bumps' bug on some texture orientations (see crate tops at end of e1m1, tenebrae1 does not suffer this problem somehow) (U8Poo) 
 d darkplaces renderer: fix a crash when changing level while using qe1 textures (Todd)
 d darkplaces renderer: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (metlslime, zinx)
+d darkplaces renderer: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
+d darkplaces renderer: zym model rtlight support (Vermeulen)
 d darkplaces server: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces server: figure out what is wrong with dedicated server console on win32 and fix it (and tell Willis)
 d darkplaces server: figure out what's making monsters act like notarget is on while underwater (romi)
