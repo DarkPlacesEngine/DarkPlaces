@@ -725,3 +725,12 @@ int R_GetTextureSlots(int count)
 	gl_texture_number += count;
 	return i;
 }
+
+int R_TextureHasAlpha(rtexture_t *rt)
+{
+	gltexture_t *glt;
+	if (!rt)
+		return false;
+	glt = (gltexture_t *)rt;
+	return (glt->flags & TEXF_ALPHA) != 0;
+}

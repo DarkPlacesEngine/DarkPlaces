@@ -18,3 +18,4 @@ extern rtexture_t *R_LoadTexture (char *identifier, int width, int height, byte 
 extern int R_GetTexture (rtexture_t *rt);
 // returns a GL texture slot (only used for lightmaps)
 extern int R_GetTextureSlots(int count);
+extern int R_TextureHasAlpha(rtexture_t *rt);
