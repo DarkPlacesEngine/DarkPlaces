@@ -1179,8 +1179,6 @@ void R_Particles_Init (void)
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
 }
 
-int partindexarray[6] = {0, 1, 2, 0, 2, 3};
-
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
 	int additive, texnum, orientation;
@@ -1205,12 +1203,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	varray_element[0] = 0;
-	varray_element[1] = 1;
-	varray_element[2] = 2;
-	varray_element[3] = 0;
-	varray_element[4] = 2;
-	varray_element[5] = 3;
 	if (orientation == PARTICLE_BILLBOARD)
 	{
 		VectorScale(vright, p->scalex, right);
@@ -1285,7 +1277,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * mesh_colorscale;
 	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 }
 
 void R_DrawParticles (void)

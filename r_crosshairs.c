@@ -174,12 +174,6 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	varray_element[0] = 0;
-	varray_element[1] = 1;
-	varray_element[2] = 2;
-	varray_element[3] = 0;
-	varray_element[4] = 2;
-	varray_element[5] = 3;
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * mesh_colorscale;
@@ -204,7 +198,7 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	varray_vertex[12] = origin[0] + vright[0] * scale - vup[0] * scale;
 	varray_vertex[13] = origin[1] + vright[1] * scale - vup[1] * scale;
 	varray_vertex[14] = origin[2] + vright[2] * scale - vup[2] * scale;
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 }
 
 void R_DrawCrosshair(void)

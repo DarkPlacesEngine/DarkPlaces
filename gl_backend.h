@@ -4,13 +4,16 @@
 
 #define MAX_TEXTUREUNITS 8
 
+#define POLYGONELEMENTS_MAXPOINTS 258
+extern int polygonelements[768];
+
 extern cvar_t gl_lockarrays;
 
 extern int c_meshtris, c_meshs;
 
+//input to R_Mesh_State
 typedef struct
 {
-	//input to R_Mesh_Draw_GetBuffer
 	int depthwrite; // force depth writing enabled even if polygon is not opaque
 	int depthdisable; // disable depth read/write entirely
 	int blendfunc1;
@@ -23,12 +26,10 @@ rmeshstate_t;
 
 // overbright rendering scale for the current state
 extern float mesh_colorscale;
-extern int *varray_element;
 extern float *varray_vertex;
 extern float *varray_color;
 extern float *varray_texcoord[MAX_TEXTUREUNITS];
 extern int mesh_maxverts;
-extern int mesh_maxtris;
 
 // adds console variables and registers the render module (only call from GL_Init)
 void gl_backend_init(void);
@@ -50,12 +51,12 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix);
 // sets up the requested state
 void R_Mesh_State(const rmeshstate_t *m);
 
-// enlarges geometry buffers if they are too small
-#define R_Mesh_ResizeCheck(numverts, numtriangles) if ((numverts) > mesh_maxverts || (numtriangles) > mesh_maxtris) _R_Mesh_ResizeCheck(numverts, numtriangles);
-void _R_Mesh_ResizeCheck(int numverts, int numtriangles);
+// enlarges vertex arrays if they are too small
+#define R_Mesh_ResizeCheck(numverts) if ((numverts) > mesh_maxverts) _R_Mesh_ResizeCheck(numverts);
+void _R_Mesh_ResizeCheck(int numverts);
 
 // renders the mesh in the varray_* buffers
-void R_Mesh_Draw(int numverts, int numtriangles);
+void R_Mesh_Draw(int numverts, int numtriangles, int *elements);
 
 // saves a section of the rendered frame to a .tga file
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);

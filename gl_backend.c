@@ -1,17 +1,13 @@
 
 #include "quakedef.h"
 
-cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "1024"};
+cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "1024"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawmode = {CVAR_SAVE, "gl_mesh_drawmode", "3"};
 
 cvar_t r_render = {0, "r_render", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
-
-// this is used to increase gl_mesh_maxtriangles automatically if a mesh was
-// too large for the buffers in the previous frame
-int overflowedverts = 0;
 
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
@@ -83,12 +79,10 @@ void SCR_ScreenShot_f (void);
 
 // these are externally accessible
 float mesh_colorscale;
-int *varray_element;
 float *varray_vertex;
 float *varray_color;
 float *varray_texcoord[MAX_TEXTUREUNITS];
-int mesh_maxtris;
-int mesh_maxverts; // always mesh_maxtris * 3
+int mesh_maxverts;
 
 static matrix4x4_t backend_viewmatrix;
 static matrix4x4_t backend_modelmatrix;
@@ -99,16 +93,22 @@ static int backendunits, backendactive;
 static qbyte *varray_bcolor;
 static mempool_t *gl_backend_mempool;
 
+int polygonelements[768];
+
 void GL_Backend_AllocArrays(void)
 {
 	int i;
 
+	for (i = 0;i < POLYGONELEMENTS_MAXPOINTS - 2;i++)
+	{
+		polygonelements[i * 3 + 0] = 0;
+		polygonelements[i * 3 + 1] = i + 1;
+		polygonelements[i * 3 + 2] = i + 2;
+	}
+
 	if (!gl_backend_mempool)
 		gl_backend_mempool = Mem_AllocPool("GL_Backend");
 
-	mesh_maxverts = mesh_maxtris * 3;
-
-	varray_element = Mem_Alloc(gl_backend_mempool, mesh_maxtris * sizeof(int[3]));
 	varray_vertex = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
 	varray_color = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(float[4]));
 	varray_bcolor = Mem_Alloc(gl_backend_mempool, mesh_maxverts * sizeof(qbyte[4]));
@@ -125,7 +125,6 @@ void GL_Backend_FreeArrays(int resizingbuffers)
 		Mem_EmptyPool(gl_backend_mempool);
 	else
 		Mem_FreePool(&gl_backend_mempool);
-	varray_element = NULL;
 	varray_vertex = NULL;
 	varray_color = NULL;
 	varray_bcolor = NULL;
@@ -135,7 +134,7 @@ void GL_Backend_FreeArrays(int resizingbuffers)
 
 static void gl_backend_start(void)
 {
-	Con_Printf("OpenGL Backend started with gl_mesh_maxtriangles %i\n", gl_mesh_maxtriangles.integer);
+	Con_Printf("OpenGL Backend started with gl_mesh_maxverts %i\n", gl_mesh_maxverts.integer);
 	if (qglDrawRangeElements != NULL)
 	{
 		qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
@@ -178,17 +177,17 @@ void GL_Backend_CheckCvars(void)
 		Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
 
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
-	if (gl_mesh_maxtriangles.integer < 1024)
-		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 1024);
-	if (gl_mesh_maxtriangles.integer > 21760)
-		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 21760);
+	if (gl_mesh_maxverts.integer < 1024)
+		Cvar_SetValueQuick(&gl_mesh_maxverts, 1024);
+	if (gl_mesh_maxverts.integer > 21760)
+		Cvar_SetValueQuick(&gl_mesh_maxverts, 21760);
 }
 
 void GL_Backend_ResizeArrays(int numtriangles)
 {
-	Cvar_SetValueQuick(&gl_mesh_maxtriangles, numtriangles);
+	Cvar_SetValueQuick(&gl_mesh_maxverts, numtriangles);
 	GL_Backend_CheckCvars();
-	mesh_maxtris = gl_mesh_maxtriangles.integer;
+	mesh_maxverts = gl_mesh_maxverts.integer;
 	GL_Backend_FreeArrays(true);
 	GL_Backend_AllocArrays();
 }
@@ -206,7 +205,7 @@ void gl_backend_init(void)
 	Cvar_SetValue("r_render", 0);
 #endif
 
-	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
+	Cvar_RegisterVariable(&gl_mesh_maxverts);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	Cvar_RegisterVariable(&gl_mesh_drawmode);
 	GL_Backend_CheckCvars();
@@ -449,8 +448,8 @@ void R_Mesh_Start(float farclip)
 	c_meshtris = 0;
 
 	GL_Backend_CheckCvars();
-	if (mesh_maxtris != gl_mesh_maxtriangles.integer)
-		GL_Backend_ResizeArrays(gl_mesh_maxtriangles.integer);
+	if (mesh_maxverts != gl_mesh_maxverts.integer)
+		GL_Backend_ResizeArrays(gl_mesh_maxverts.integer);
 
 	GL_SetupFrame();
 
@@ -609,18 +608,18 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 }
 
 // enlarges geometry buffers if they are too small
-void _R_Mesh_ResizeCheck(int numverts, int numtriangles)
+void _R_Mesh_ResizeCheck(int numverts)
 {
-	if (numtriangles > mesh_maxtris || numverts > mesh_maxverts)
+	if (numverts > mesh_maxverts)
 	{
 		BACKENDACTIVECHECK
-		GL_Backend_ResizeArrays(max(numtriangles, (numverts + 2) / 3) + 100);
+		GL_Backend_ResizeArrays(numverts + 100);
 		GL_Backend_ResetState();
 	}
 }
 
 // renders the mesh
-void R_Mesh_Draw(int numverts, int numtriangles)
+void R_Mesh_Draw(int numverts, int numtriangles, int *elements)
 {
 	BACKENDACTIVECHECK
 
@@ -635,7 +634,7 @@ void R_Mesh_Draw(int numverts, int numtriangles)
 	//GL_TransformVertices(numverts);
 	if (!r_render.integer)
 		return;
-	GL_DrawRangeElements(0, numverts, numtriangles * 3, varray_element);
+	GL_DrawRangeElements(0, numverts, numtriangles * 3, elements);
 }
 
 // restores backend state, used when done with 3D rendering

@@ -114,8 +114,6 @@ void LoadSky_f (void)
 	}
 }
 
-int skyboxindex[6] = {0, 1, 2, 0, 2, 3};
-
 static void R_SkyBox(void)
 {
 	rmeshstate_t m;
@@ -135,7 +133,6 @@ static void R_SkyBox(void)
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
 	R_Mesh_State(&m);
 
-	memcpy(varray_element, skyboxindex, sizeof(int[6]));
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = mesh_colorscale;
@@ -144,10 +141,9 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(2, 0, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(3, 0, 0,  1,  1,  1);
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 	m.tex[0] = R_GetTexture(skyboxside[1]); // back
 	R_Mesh_State(&m);
-	memcpy(varray_element, skyboxindex, sizeof(int[6]));
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = mesh_colorscale;
@@ -156,10 +152,9 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(1, 1, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 	m.tex[0] = R_GetTexture(skyboxside[0]); // right
 	R_Mesh_State(&m);
-	memcpy(varray_element, skyboxindex, sizeof(int[6]));
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = mesh_colorscale;
@@ -168,10 +163,9 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(1, 1, 1,  1,  1, -1);
 	R_SkyBoxPolyVec(2, 0, 1, -1,  1, -1);
 	R_SkyBoxPolyVec(3, 0, 0, -1,  1,  1);
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 	m.tex[0] = R_GetTexture(skyboxside[2]); // left
 	R_Mesh_State(&m);
-	memcpy(varray_element, skyboxindex, sizeof(int[6]));
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = mesh_colorscale;
@@ -180,10 +174,9 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(1, 1, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(2, 0, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(3, 0, 0,  1, -1,  1);
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 	m.tex[0] = R_GetTexture(skyboxside[4]); // up
 	R_Mesh_State(&m);
-	memcpy(varray_element, skyboxindex, sizeof(int[6]));
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = mesh_colorscale;
@@ -192,10 +185,9 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(1, 1, 1,  1,  1,  1);
 	R_SkyBoxPolyVec(2, 0, 1, -1,  1,  1);
 	R_SkyBoxPolyVec(3, 0, 0, -1, -1,  1);
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 	m.tex[0] = R_GetTexture(skyboxside[5]); // down
 	R_Mesh_State(&m);
-	memcpy(varray_element, skyboxindex, sizeof(int[6]));
 	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = mesh_colorscale;
 	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = mesh_colorscale;
 	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = mesh_colorscale;
@@ -204,7 +196,7 @@ static void R_SkyBox(void)
 	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
 	R_SkyBoxPolyVec(2, 0, 1, -1, -1, -1);
 	R_SkyBoxPolyVec(3, 0, 0, -1,  1, -1);
-	R_Mesh_Draw(4, 2);
+	R_Mesh_Draw(4, 2, polygonelements);
 }
 
 #define skygridx 32
@@ -294,7 +286,7 @@ static void R_SkySphere(void)
 	numverts = skygridx1*skygridy1;
 	numtriangles = skygridx*skygridy*2;
 
-	R_Mesh_ResizeCheck(numverts, numtriangles);
+	R_Mesh_ResizeCheck(numverts);
 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
@@ -304,18 +296,16 @@ static void R_SkySphere(void)
 	m.tex[0] = R_GetTexture(solidskytexture);
 	R_Mesh_State(&m);
 
-	memcpy(varray_element, skysphereindices, numtriangles * sizeof(int[3]));
 	skyspherearrays(varray_vertex, varray_texcoord[0], varray_color, skysphere, speedscale, mesh_colorscale);
-	R_Mesh_Draw(numverts, numtriangles);
+	R_Mesh_Draw(numverts, numtriangles, skysphereindices);
 
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	m.tex[0] = R_GetTexture(alphaskytexture);
 	R_Mesh_State(&m);
 
-	memcpy(varray_element, skysphereindices, numtriangles * sizeof(int[3]));
 	skyspherearrays(varray_vertex, varray_texcoord[0], varray_color, skysphere, speedscale2, mesh_colorscale);
-	R_Mesh_Draw(numverts, numtriangles);
+	R_Mesh_Draw(numverts, numtriangles, skysphereindices);
 }
 
 void R_Sky(void)

@@ -611,9 +611,6 @@ static void R_BlendView(void)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	varray_element[0] = 0;
-	varray_element[1] = 1;
-	varray_element[2] = 2;
 	varray_color[0] = varray_color[4] = varray_color[8] = r_refdef.viewblend[0];
 	varray_color[1] = varray_color[5] = varray_color[9] = r_refdef.viewblend[1];
 	varray_color[2] = varray_color[6] = varray_color[10] = r_refdef.viewblend[2];
@@ -629,7 +626,7 @@ static void R_BlendView(void)
 	varray_vertex[8] = varray_vertex[0] + vright[0] * r;
 	varray_vertex[9] = varray_vertex[1] + vright[1] * r;
 	varray_vertex[10] = varray_vertex[2] + vright[2] * r;
-	R_Mesh_Draw(3, 1);
+	R_Mesh_Draw(3, 1, polygonelements);
 }
 
 /*
@@ -717,7 +714,6 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	varray_element
 	varray_vertex[ 0] = mins[0];varray_vertex[ 1] = mins[1];varray_vertex[ 2] = mins[2];
 	varray_vertex[ 4] = maxs[0];varray_vertex[ 5] = mins[1];varray_vertex[ 6] = mins[2];
 	varray_vertex[ 8] = mins[0];varray_vertex[ 9] = maxs[1];varray_vertex[10] = mins[2];
@@ -750,7 +746,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
-	int i;
+	int i, element[24];
 	float f1, f2, *c, diff[3];
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -773,14 +769,14 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 
-	varray_element[ 0] = 5;varray_element[ 1] = 2;varray_element[ 2] = 0;
-	varray_element[ 3] = 5;varray_element[ 4] = 1;varray_element[ 5] = 2;
-	varray_element[ 6] = 5;varray_element[ 7] = 0;varray_element[ 8] = 3;
-	varray_element[ 9] = 5;varray_element[10] = 3;varray_element[11] = 1;
-	varray_element[12] = 0;varray_element[13] = 2;varray_element[14] = 4;
-	varray_element[15] = 2;varray_element[16] = 1;varray_element[17] = 4;
-	varray_element[18] = 3;varray_element[19] = 0;varray_element[20] = 4;
-	varray_element[21] = 1;varray_element[22] = 3;varray_element[23] = 4;
+	element[ 0] = 5;element[ 1] = 2;element[ 2] = 0;
+	element[ 3] = 5;element[ 4] = 1;element[ 5] = 2;
+	element[ 6] = 5;element[ 7] = 0;element[ 8] = 3;
+	element[ 9] = 5;element[10] = 3;element[11] = 1;
+	element[12] = 0;element[13] = 2;element[14] = 4;
+	element[15] = 2;element[16] = 1;element[17] = 4;
+	element[18] = 3;element[19] = 0;element[20] = 4;
+	element[21] = 1;element[22] = 3;element[23] = 4;
 	varray_vertex[ 0] = -16;varray_vertex[ 1] =   0;varray_vertex[ 2] =   0;
 	varray_vertex[ 4] =  16;varray_vertex[ 5] =   0;varray_vertex[ 6] =   0;
 	varray_vertex[ 8] =   0;varray_vertex[ 9] = -16;varray_vertex[10] =   0;
@@ -814,7 +810,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 			c[2] *= mesh_colorscale;
 		}
 	}
-	R_Mesh_Draw(6, 8);
+	R_Mesh_Draw(6, 8, element);
 }
 
 void R_DrawNoModel(entity_render_t *ent)

@@ -168,12 +168,6 @@ void R_DrawCoronas(void)
 				VectorSubtract(rd->origin, r_origin, diff);
 				scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
 			}
-			varray_element[0] = 0;
-			varray_element[1] = 1;
-			varray_element[2] = 2;
-			varray_element[3] = 0;
-			varray_element[4] = 2;
-			varray_element[5] = 3;
 			varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = rd->light[0] * scale;
 			varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = rd->light[1] * scale;
 			varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = rd->light[2] * scale;
@@ -201,7 +195,7 @@ void R_DrawCoronas(void)
 			varray_vertex[12] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
 			varray_vertex[13] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
 			varray_vertex[14] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
-			R_Mesh_Draw(4, 2);
+			R_Mesh_Draw(4, 2, polygonelements);
 		}
 	}
 }
