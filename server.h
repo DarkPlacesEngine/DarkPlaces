@@ -73,6 +73,8 @@ typedef struct
 	edict_t **edictstable;
 	// array of QC edict field variables
 	void *edictsfields;
+	// PushMove sometimes has to move entities back from a failed move
+	edict_t **moved_edicts;
 	// some actions are only valid during load
 	server_state_t state;
 
@@ -124,7 +126,7 @@ typedef struct client_s
 
 	// can be added to at any time, copied and clear once per frame
 	sizebuf_t message;
-	qbyte msgbuf[MAX_MSGLEN];
+	qbyte msgbuf[MAX_DATAGRAM];
 	// EDICT_NUM(clientnum+1)
 	edict_t *edict;
 	// for printing to other people

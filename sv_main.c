@@ -195,30 +195,35 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
 
 	ent = NUM_FOR_EDICT(entity);
 
-	channel = (ent<<3) | channel;
-
 	field_mask = 0;
 	if (volume != DEFAULT_SOUND_PACKET_VOLUME)
 		field_mask |= SND_VOLUME;
 	if (attenuation != DEFAULT_SOUND_PACKET_ATTENUATION)
 		field_mask |= SND_ATTENUATION;
+	if (ent >= 8192)
+		field_mask |= SND_LARGEENTITY;
+	if (sound_num >= 256 || channel >= 8)
+		field_mask |= SND_LARGESOUND;
 
 // directed messages go only to the entity they are targeted on
-	if (sound_num >= 256)
-		MSG_WriteByte (&sv.datagram, svc_sound2);
-	else
-		MSG_WriteByte (&sv.datagram, svc_sound);
+	MSG_WriteByte (&sv.datagram, svc_sound);
 	MSG_WriteByte (&sv.datagram, field_mask);
 	if (field_mask & SND_VOLUME)
 		MSG_WriteByte (&sv.datagram, volume);
 	if (field_mask & SND_ATTENUATION)
 		MSG_WriteByte (&sv.datagram, attenuation*64);
-	MSG_WriteShort (&sv.datagram, channel);
-	if (sound_num >= 256)
+	if (field_mask & SND_LARGEENTITY)
+	{
+		MSG_WriteShort (&sv.datagram, ent);
+		MSG_WriteByte (&sv.datagram, channel);
+	}
+	else
+		MSG_WriteShort (&sv.datagram, (ent<<3) | channel);
+	if (field_mask & SND_LARGESOUND)
 		MSG_WriteShort (&sv.datagram, sound_num);
 	else
 		MSG_WriteByte (&sv.datagram, sound_num);
-	for (i=0 ; i<3 ; i++)
+	for (i = 0;i < 3;i++)
 		MSG_WriteDPCoord (&sv.datagram, entity->v->origin[i]+0.5*(entity->v->mins[i]+entity->v->maxs[i]));
 }
 
@@ -1599,7 +1604,7 @@ void SV_CreateBaseline (void)
 	edict_t *svent;
 
 	// LordHavoc: clear *all* states (note just active ones)
-	for (entnum = 0; entnum < MAX_EDICTS ; entnum++)
+	for (entnum = 0;entnum < sv.max_edicts;entnum++)
 	{
 		// get the current server version
 		svent = EDICT_NUM(entnum);

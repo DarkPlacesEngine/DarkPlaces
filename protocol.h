@@ -138,6 +138,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	SND_VOLUME		(1<<0)		// a byte
 #define	SND_ATTENUATION	(1<<1)		// a byte
 #define	SND_LOOPING		(1<<2)		// a long
+#define	SND_LARGEENTITY	(1<<3)		// a short and a byte (instead of a short)
+#define	SND_LARGESOUND	(1<<4)		// a short (instead of a byte)
 
 
 // defaults for clientinfo messages
@@ -333,7 +335,7 @@ typedef struct
 entity_frameinfo_t;
 
 #define MAX_ENTITY_HISTORY 64
-#define MAX_ENTITY_DATABASE 4096
+#define MAX_ENTITY_DATABASE (MAX_EDICTS * 2)
 
 typedef struct
 {
