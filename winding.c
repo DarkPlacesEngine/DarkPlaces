@@ -9,16 +9,8 @@
 winding_t *Winding_New(int points)
 {
 	winding_t *w;
-	int size;
-
-	if (points > MAX_POINTS_ON_WINDING)
-		Sys_Error("Winding_New: too many points\n");
-
-	size = sizeof(winding_t) + sizeof(double[3]) * (points - 8);
-	w = Mem_Alloc(loadmodel->mempool, size);
-	//Mem_Alloc clears
-	//memset(w, 0, size);
-
+	w = Mem_Alloc(loadmodel->mempool, sizeof(winding_t) + sizeof(double[3]) * (points - 8));
+	w->maxpoints = points;
 	return w;
 }
 
@@ -29,83 +21,9 @@ void Winding_Free(winding_t *w)
 
 winding_t *Winding_NewFromPlane(double normalx, double normaly, double normalz, double dist)
 {
-	int x;
-	double max, v, org[3], vright[3], vup[3], normal[3];
 	winding_t *w;
-
-	normal[0] = normalx;
-	normal[1] = normaly;
-	normal[2] = normalz;
-#if 0
-	VectorVectorsDouble(normal, vright, vup);
-#else
-	// find the major axis
-	x = 0;
-	max = fabs(normal[0]);
-	v = fabs(normal[1]);
-	if(v > max)
-	{
-		x = 1;
-		max = v;
-	}
-	v = fabs(normal[2]);
-	if(v > max)
-	{
-		x = 2;
-		max = v;
-	}
-
-	VectorClear(vup);
-	switch(x)
-	{
-	case 0:
-	case 1:
-		vup[2] = 1;
-		break;
-	case 2:
-		vup[0] = 1;
-		break;
-	}
-
-	v = DotProduct(vup, normal);
-	VectorMA(vup, -v, normal, vup);
-	VectorNormalize(vup);
-#endif
-
-	VectorScale(normal, dist, org);
-
-	CrossProduct(vup, normal, vright);
-
-	VectorScale(vup, 1024.0*1024.0*1024.0, vup);
-	VectorScale(vright, 1024.0*1024.0*1024.0, vright);
-
-	// project a really big axis aligned box onto the plane
 	w = Winding_New(4);
-
-	VectorSubtract(org, vright, w->points[0]);
-	VectorAdd(w->points[0], vup, w->points[0]);
-
-	VectorAdd(org, vright, w->points[1]);
-	VectorAdd(w->points[1], vup, w->points[1]);
-
-	VectorAdd(org, vright, w->points[2]);
-	VectorSubtract(w->points[2], vup, w->points[2]);
-
-	VectorSubtract(org, vright, w->points[3]);
-	VectorSubtract(w->points[3], vup, w->points[3]);
-
-#if 0
-	{
-		double n[3];
-		TriangleNormal(w->points[0], w->points[1], w->points[2], n);
-		VectorNormalize(n);
-		if (fabs(DotProduct(n, normal) - 1) > 0.01f)
-			Con_Printf("%.0f %.0f %.0f (%.0f %.0f %.0f, %.0f %.0f %.0f) != %.0f %.0f %.0f (%.0f %.0f %.0f, %.0f %.0f %.0f, %.0f %.0f %.0f, %.0f %.0f %.0f)\n", normal[0], normal[1], normal[2], vright[0], vright[1], vright[2], vup[0], vup[1], vup[2], n[0], n[1], n[2], w->points[0][0], w->points[0][1], w->points[0][2], w->points[1][0], w->points[1][1], w->points[1][2], w->points[2][0], w->points[2][1], w->points[2][2], w->points[3][0], w->points[3][1], w->points[3][2]);
-	}
-#endif
-
-	w->numpoints = 4;
-
+	BufWinding_NewFromPlane(w, normalx, normaly, normalz, dist);
 	return w;
 }
 
@@ -150,7 +68,21 @@ winding_t *Winding_Clip(winding_t *in, double splitnormalx, double splitnormaly,
 	if (!counts[1])
 		return in;
 
-	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
+	maxpts = 0;
+	for (i = 0;i < in->numpoints;i++)
+	{
+		if (sides[i] == SIDE_ON)
+		{
+			maxpts++;
+			continue;
+		}
+		if (sides[i] == SIDE_FRONT)
+			maxpts++;
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+		maxpts++;
+	}
+
 	if (maxpts > MAX_POINTS_ON_WINDING)
 		Sys_Error("Winding_Clip: maxpts > MAX_POINTS_ON_WINDING");
 
@@ -158,9 +90,6 @@ winding_t *Winding_Clip(winding_t *in, double splitnormalx, double splitnormaly,
 
 	for (i = 0;i < in->numpoints;i++)
 	{
-		if (neww->numpoints >= maxpts)
-			Sys_Error("Winding_Clip: points exceeded estimate");
-
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
@@ -212,7 +141,7 @@ void Winding_Divide(winding_t *in, double splitnormalx, double splitnormaly, dou
 {
 	winding_t *f, *b;
 	double dot, *p1, *p2, mid[3], splitnormal[3], dists[MAX_POINTS_ON_WINDING + 1];
-	int i, j, maxpts, counts[3], sides[MAX_POINTS_ON_WINDING + 1];
+	int i, j, frontpts, backpts, counts[3], sides[MAX_POINTS_ON_WINDING + 1];
 
 	splitnormal[0] = splitnormalx;
 	splitnormal[1] = splitnormaly;
@@ -247,19 +176,37 @@ void Winding_Divide(winding_t *in, double splitnormalx, double splitnormaly, dou
 		return;
 	}
 
-	maxpts = in->numpoints+4;	// can't use counts[0]+2 because of fp grouping errors
-
-	if (maxpts > MAX_POINTS_ON_WINDING)
-		Sys_Error("Winding_Clip: maxpts > MAX_POINTS_ON_WINDING");
-
-	*front = f = Winding_New(maxpts);
-	*back = b = Winding_New(maxpts);
+	frontpts = 0;
+	backpts = 0;
 
 	for (i = 0;i < in->numpoints;i++)
 	{
-		if (f->numpoints >= maxpts || b->numpoints >= maxpts)
-			Sys_Error("Winding_Divide: points exceeded estimate");
+		if (sides[i] == SIDE_ON)
+		{
+			frontpts++;
+			backpts++;
+			continue;
+		}
+		if (sides[i] == SIDE_FRONT)
+			frontpts++;
+		else if (sides[i] == SIDE_BACK)
+			backpts++;
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+		frontpts++;
+		backpts++;
+	}
 
+	if (frontpts > MAX_POINTS_ON_WINDING)
+		Sys_Error("Winding_Clip: frontpts > MAX_POINTS_ON_WINDING");
+	if (backpts > MAX_POINTS_ON_WINDING)
+		Sys_Error("Winding_Clip: backpts > MAX_POINTS_ON_WINDING");
+
+	*front = f = Winding_New(frontpts);
+	*back = b = Winding_New(backpts);
+
+	for (i = 0;i < in->numpoints;i++)
+	{
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
@@ -306,4 +253,215 @@ void Winding_Divide(winding_t *in, double splitnormalx, double splitnormaly, dou
 	}
 }
 
+// LordHavoc: these functions are more efficient by not allocating/freeing memory all the time
+
+void BufWinding_NewFromPlane(winding_t *w, double normalx, double normaly, double normalz, double dist)
+{
+	int x;
+	double max, v, org[3], vright[3], vup[3], normal[3];
+
+	w->numpoints = 0;
+	if (w->maxpoints < 4)
+		return;
+
+	w->numpoints = 4;
+
+	normal[0] = normalx;
+	normal[1] = normaly;
+	normal[2] = normalz;
+#if 0
+	VectorVectorsDouble(normal, vright, vup);
+#else
+	// find the major axis
+	x = 0;
+	max = fabs(normal[0]);
+	v = fabs(normal[1]);
+	if(v > max)
+	{
+		x = 1;
+		max = v;
+	}
+	v = fabs(normal[2]);
+	if(v > max)
+	{
+		x = 2;
+		max = v;
+	}
+
+	VectorClear(vup);
+	switch(x)
+	{
+	case 0:
+	case 1:
+		vup[2] = 1;
+		break;
+	case 2:
+		vup[0] = 1;
+		break;
+	}
+
+	v = DotProduct(vup, normal);
+	VectorMA(vup, -v, normal, vup);
+	VectorNormalize(vup);
+#endif
+
+	VectorScale(normal, dist, org);
+
+	CrossProduct(vup, normal, vright);
+
+	VectorScale(vup, 1024.0*1024.0*1024.0, vup);
+	VectorScale(vright, 1024.0*1024.0*1024.0, vright);
+
+	// project a really big axis aligned box onto the plane
+	VectorSubtract(org, vright, w->points[0]);
+	VectorAdd(w->points[0], vup, w->points[0]);
+
+	VectorAdd(org, vright, w->points[1]);
+	VectorAdd(w->points[1], vup, w->points[1]);
+
+	VectorAdd(org, vright, w->points[2]);
+	VectorSubtract(w->points[2], vup, w->points[2]);
+
+	VectorSubtract(org, vright, w->points[3]);
+	VectorSubtract(w->points[3], vup, w->points[3]);
+
+#if 0
+	{
+		double n[3];
+		TriangleNormal(w->points[0], w->points[1], w->points[2], n);
+		VectorNormalize(n);
+		if (fabs(DotProduct(n, normal) - 1) > 0.01f)
+			Con_Printf("%.0f %.0f %.0f (%.0f %.0f %.0f, %.0f %.0f %.0f) != %.0f %.0f %.0f (%.0f %.0f %.0f, %.0f %.0f %.0f, %.0f %.0f %.0f, %.0f %.0f %.0f)\n", normal[0], normal[1], normal[2], vright[0], vright[1], vright[2], vup[0], vup[1], vup[2], n[0], n[1], n[2], w->points[0][0], w->points[0][1], w->points[0][2], w->points[1][0], w->points[1][1], w->points[1][2], w->points[2][0], w->points[2][1], w->points[2][2], w->points[3][0], w->points[3][1], w->points[3][2]);
+	}
+#endif
+}
+
+void BufWinding_Divide(winding_t *in, double splitnormalx, double splitnormaly, double splitnormalz, double splitdist, winding_t *outfront, int *neededfrontpoints, winding_t *outback, int *neededbackpoints)
+{
+	double dot, *p1, *p2, mid[3], splitnormal[3], dists[MAX_POINTS_ON_WINDING + 1];
+	int i, j, frontpts, backpts, counts[3], sides[MAX_POINTS_ON_WINDING + 1];
+
+	if (outfront)
+		outfront->numpoints = 0;
+	if (outback)
+		outback->numpoints = 0;
+
+	if (in->numpoints > MAX_POINTS_ON_WINDING || (!outfront && !outback))
+	{
+		if (neededfrontpoints)
+			*neededfrontpoints = 0;
+		if (neededbackpoints)
+			*neededbackpoints = 0;
+		return;
+	}
+
+	splitnormal[0] = splitnormalx;
+	splitnormal[1] = splitnormaly;
+	splitnormal[2] = splitnormalz;
+
+	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
+
+	// determine sides for each point
+	for (i = 0;i < in->numpoints;i++)
+	{
+		dot = DotProduct(in->points[i], splitnormal);
+		dot -= splitdist;
+		dists[i] = dot;
+		if (dot > ON_EPSILON) sides[i] = SIDE_FRONT;
+		else if (dot < -ON_EPSILON) sides[i] = SIDE_BACK;
+		else sides[i] = SIDE_ON;
+		counts[sides[i]]++;
+	}
+	sides[i] = sides[0];
+	dists[i] = dists[0];
+
+	frontpts = 0;
+	backpts = 0;
+	for (i = 0;i < in->numpoints;i++)
+	{
+		if (sides[i] != SIDE_ON)
+		{
+			if (sides[i] == SIDE_FRONT)
+				frontpts++;
+			else if (sides[i] == SIDE_BACK)
+				backpts++;
+			if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+				continue;
+		}
+		frontpts++;
+		backpts++;
+	}
+
+	if (neededfrontpoints)
+		*neededfrontpoints = frontpts;
+	if (neededbackpoints)
+		*neededbackpoints = backpts;
+	if ((outfront && outfront->maxpoints < frontpts) || (outback && outback->maxpoints < backpts))
+		return;
+
+	for (i = 0;i < in->numpoints;i++)
+	{
+		p1 = in->points[i];
+
+		if (sides[i] == SIDE_ON)
+		{
+			if (outfront)
+			{
+				VectorCopy(p1, outfront->points[outfront->numpoints]);
+				outfront->numpoints++;
+			}
+			if (outback)
+			{
+				VectorCopy(p1, outback->points[outback->numpoints]);
+				outback->numpoints++;
+			}
+			continue;
+		}
+
+		if (sides[i] == SIDE_FRONT)
+		{
+			if (outfront)
+			{
+				VectorCopy(p1, outfront->points[outfront->numpoints]);
+				outfront->numpoints++;
+			}
+		}
+		else if (sides[i] == SIDE_BACK)
+		{
+			if (outback)
+			{
+				VectorCopy(p1, outback->points[outback->numpoints]);
+				outback->numpoints++;
+			}
+		}
+
+		if (sides[i+1] == SIDE_ON || sides[i+1] == sides[i])
+			continue;
+
+		// generate a split point
+		p2 = in->points[(i+1)%in->numpoints];
+
+		dot = dists[i] / (dists[i]-dists[i+1]);
+		for (j = 0;j < 3;j++)
+		{	// avoid round off error when possible
+			if (splitnormal[j] == 1)
+				mid[j] = splitdist;
+			else if (splitnormal[j] == -1)
+				mid[j] = -splitdist;
+			else
+				mid[j] = p1[j] + dot* (p2[j]-p1[j]);
+		}
+
+		if (outfront)
+		{
+			VectorCopy(mid, outfront->points[outfront->numpoints]);
+			outfront->numpoints++;
+		}
+		if (outback)
+		{
+			VectorCopy(mid, outback->points[outback->numpoints]);
+			outback->numpoints++;
+		}
+	}
+}
 

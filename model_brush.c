@@ -3389,6 +3389,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 	q3mbrush_t *out;
 	int i, j, n, c, count, maxplanes;
 	mplane_t *planes;
+	winding_t *temp1, *temp2;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3398,6 +3399,9 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 
 	loadmodel->brushq3.data_brushes = out;
 	loadmodel->brushq3.num_brushes = count;
+
+	temp1 = Winding_New(64);
+	temp2 = Winding_New(64);
 
 	maxplanes = 0;
 	planes = NULL;
@@ -3429,10 +3433,12 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			planes[j].dist = out->firstbrushside[j].plane->dist;
 		}
 		// make the colbrush from the planes
-		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents);
+		out->colbrushf = Collision_NewBrushFromPlanes(loadmodel->mempool, out->numbrushsides, planes, out->texture->supercontents, temp1, temp2);
 	}
 	if (planes)
 		Mem_Free(planes);
+	Winding_Free(temp1);
+	Winding_Free(temp2);
 }
 
 static void Mod_Q3BSP_LoadEffects(lump_t *l)
@@ -3470,13 +3476,13 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 	if (l->filelen % sizeof(*in))
 		Host_Error("Mod_Q3BSP_LoadVertices: funny lump size in %s",loadmodel->name);
 	loadmodel->brushq3.num_vertices = count = l->filelen / sizeof(*in);
-	loadmodel->brushq3.data_vertex3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
-	loadmodel->brushq3.data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[2]));
-	loadmodel->brushq3.data_texcoordlightmap2f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[2]));
-	loadmodel->brushq3.data_svector3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
-	loadmodel->brushq3.data_tvector3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
-	loadmodel->brushq3.data_normal3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
-	loadmodel->brushq3.data_color4f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[4]));
+	loadmodel->brushq3.data_vertex3f = Mem_Alloc(loadmodel->mempool, count * (sizeof(float) * (3 + 2 + 2 + 3 + 3 + 3 + 4)));
+	loadmodel->brushq3.data_texcoordtexture2f = loadmodel->brushq3.data_vertex3f + count * 3;
+	loadmodel->brushq3.data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordtexture2f + count * 2;
+	loadmodel->brushq3.data_svector3f = loadmodel->brushq3.data_texcoordlightmap2f + count * 2;
+	loadmodel->brushq3.data_tvector3f = loadmodel->brushq3.data_svector3f + count * 3;
+	loadmodel->brushq3.data_normal3f = loadmodel->brushq3.data_tvector3f + count * 3;
+	loadmodel->brushq3.data_color4f = loadmodel->brushq3.data_normal3f + count * 3;
 
 	for (i = 0;i < count;i++, in++)
 	{
@@ -3514,11 +3520,11 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 	if (l->filelen % sizeof(int[3]))
 		Host_Error("Mod_Q3BSP_LoadTriangles: funny lump size in %s",loadmodel->name);
 	count = l->filelen / sizeof(*in);
-	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out) * 2);
 
 	loadmodel->brushq3.num_triangles = count / 3;
 	loadmodel->brushq3.data_element3i = out;
-	loadmodel->brushq3.data_neighbor3i = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+	loadmodel->brushq3.data_neighbor3i = out + count;
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
