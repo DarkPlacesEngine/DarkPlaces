@@ -1273,9 +1273,9 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 			cb += fogcolor[2] * fog;
 		}
 	}
-	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * mesh_colorscale;
-	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * mesh_colorscale;
-	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * mesh_colorscale;
+	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * r_colorscale;
+	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * r_colorscale;
+	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * r_colorscale;
 	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
 	R_Mesh_Draw(4, 2, polygonelements);
 }

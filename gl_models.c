@@ -239,9 +239,9 @@ void R_SetupMDLMD2Frames(const entity_render_t *ent, float colorr, float colorg,
 
 void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 {
-	int i, c, pantsfullbright, shirtfullbright, colormapped;
+	int i, c, pantsfullbright, shirtfullbright, colormapped, tex;
 	float pantscolor[3], shirtcolor[3];
-	float fog;
+	float fog, colorscale;
 	vec3_t diff;
 	qbyte *bcolor;
 	rmeshstate_t m;
@@ -291,13 +291,18 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		blendfunc2 = GL_ZERO;
 	}
 
+	colorscale = r_colorscale;
+	if (gl_combine.integer)
+		colorscale *= 0.25f;
+	
 	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
 	{
 		// untextured
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = blendfunc1;
 		m.blendfunc2 = blendfunc2;
-		m.wantoverbright = true;
+		if (gl_combine.integer)
+			m.texrgbscale[0] = 4;
 		m.tex[0] = R_GetTexture(r_notexture);
 		R_Mesh_State(&m);
 
@@ -306,7 +311,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			varray_texcoord[0][i] = model->mdlmd2data_texcoords[i] * 8.0f;
 		aliasvert = varray_vertex;
 		aliasvertcolor = varray_color;
-		R_SetupMDLMD2Frames(ent, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+		R_SetupMDLMD2Frames(ent, colorscale, colorscale, colorscale);
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -321,7 +326,8 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = blendfunc1;
 		m.blendfunc2 = blendfunc2;
-		m.wantoverbright = true;
+		if (gl_combine.integer)
+			m.texrgbscale[0] = 4;
 		m.tex[0] = R_GetTexture(skinframe->merged);
 		R_Mesh_State(&m);
 
@@ -329,7 +335,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		aliasvert = varray_vertex;
 		aliasvertcolor = varray_color;
-		R_SetupMDLMD2Frames(ent, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+		R_SetupMDLMD2Frames(ent, colorscale, colorscale, colorscale);
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -356,19 +362,21 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		pantsfullbright = shirtfullbright = false;
 	}
 
-	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = blendfunc1;
-	m.blendfunc2 = blendfunc2;
-	m.wantoverbright = true;
-	m.tex[0] = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
-	if (m.tex[0])
+	tex = colormapped ? R_GetTexture(skinframe->base) : R_GetTexture(skinframe->merged);
+	if (tex)
 	{
+		memset(&m, 0, sizeof(m));
+		m.blendfunc1 = blendfunc1;
+		m.blendfunc2 = blendfunc2;
+		if (gl_combine.integer)
+			m.texrgbscale[0] = 4;
+		m.tex[0] = tex;
 		R_Mesh_State(&m);
 
 		blendfunc1 = GL_SRC_ALPHA;
 		blendfunc2 = GL_ONE;
 		c_alias_polys += model->numtris;
-		R_ModulateColors(aliasvertcolor, varray_color, model->numverts, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+		R_ModulateColors(aliasvertcolor, varray_color, model->numverts, colorscale, colorscale, colorscale);
 		memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -378,22 +386,24 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	{
 		if (skinframe->pants)
 		{
-			memset(&m, 0, sizeof(m));
-			m.blendfunc1 = blendfunc1;
-			m.blendfunc2 = blendfunc2;
-			m.wantoverbright = true;
-			m.tex[0] = R_GetTexture(skinframe->pants);
-			if (m.tex[0])
+			tex = R_GetTexture(skinframe->pants);
+			if (tex)
 			{
+				memset(&m, 0, sizeof(m));
+				m.blendfunc1 = blendfunc1;
+				m.blendfunc2 = blendfunc2;
+				if (gl_combine.integer)
+					m.texrgbscale[0] = 4;
+				m.tex[0] = tex;
 				R_Mesh_State(&m);
 
 				blendfunc1 = GL_SRC_ALPHA;
 				blendfunc2 = GL_ONE;
 				c_alias_polys += model->numtris;
 				if (pantsfullbright)
-					R_FillColors(varray_color, model->numverts, pantscolor[0] * mesh_colorscale, pantscolor[1] * mesh_colorscale, pantscolor[2] * mesh_colorscale, ent->alpha);
+					R_FillColors(varray_color, model->numverts, pantscolor[0] * colorscale, pantscolor[1] * colorscale, pantscolor[2] * colorscale, ent->alpha);
 				else
-					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, pantscolor[0] * mesh_colorscale, pantscolor[1] * mesh_colorscale, pantscolor[2] * mesh_colorscale);
+					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, pantscolor[0] * colorscale, pantscolor[1] * colorscale, pantscolor[2] * colorscale);
 				memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 				R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -401,22 +411,24 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		}
 		if (skinframe->shirt)
 		{
-			memset(&m, 0, sizeof(m));
-			m.blendfunc1 = blendfunc1;
-			m.blendfunc2 = blendfunc2;
-			m.wantoverbright = true;
-			m.tex[0] = R_GetTexture(skinframe->shirt);
-			if (m.tex[0])
+			tex = R_GetTexture(skinframe->shirt);
+			if (tex)
 			{
+				memset(&m, 0, sizeof(m));
+				m.blendfunc1 = blendfunc1;
+				m.blendfunc2 = blendfunc2;
+				if (gl_combine.integer)
+					m.texrgbscale[0] = 4;
+				m.tex[0] = tex;
 				R_Mesh_State(&m);
 
 				blendfunc1 = GL_SRC_ALPHA;
 				blendfunc2 = GL_ONE;
 				c_alias_polys += model->numtris;
 				if (shirtfullbright)
-					R_FillColors(varray_color, model->numverts, shirtcolor[0] * mesh_colorscale, shirtcolor[1] * mesh_colorscale, shirtcolor[2] * mesh_colorscale, ent->alpha);
+					R_FillColors(varray_color, model->numverts, shirtcolor[0] * colorscale, shirtcolor[1] * colorscale, shirtcolor[2] * colorscale, ent->alpha);
 				else
-					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, shirtcolor[0] * mesh_colorscale, shirtcolor[1] * mesh_colorscale, shirtcolor[2] * mesh_colorscale);
+					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, shirtcolor[0] * colorscale, shirtcolor[1] * colorscale, shirtcolor[2] * colorscale);
 				memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 				R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -425,19 +437,19 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	}
 	if (skinframe->glow)
 	{
-		memset(&m, 0, sizeof(m));
-		m.blendfunc1 = blendfunc1;
-		m.blendfunc2 = blendfunc2;
-		m.wantoverbright = true;
-		m.tex[0] = R_GetTexture(skinframe->glow);
-		if (m.tex[0])
+		tex = R_GetTexture(skinframe->glow);
+		if (tex)
 		{
+			memset(&m, 0, sizeof(m));
+			m.blendfunc1 = blendfunc1;
+			m.blendfunc2 = blendfunc2;
+			m.tex[0] = tex;
 			R_Mesh_State(&m);
 
 			blendfunc1 = GL_SRC_ALPHA;
 			blendfunc2 = GL_ONE;
 			c_alias_polys += model->numtris;
-			R_FillColors(varray_color, model->numverts, (1 - fog) * mesh_colorscale, (1 - fog) * mesh_colorscale, (1 - fog) * mesh_colorscale, ent->alpha);
+			R_FillColors(varray_color, model->numverts, (1 - fog) * r_colorscale, (1 - fog) * r_colorscale, (1 - fog) * r_colorscale, ent->alpha);
 			memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 			R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -448,12 +460,11 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memset(&m, 0, sizeof(m));
 		m.blendfunc1 = GL_SRC_ALPHA;
 		m.blendfunc2 = GL_ONE;
-		m.wantoverbright = false;
 		m.tex[0] = R_GetTexture(skinframe->fog);
 		R_Mesh_State(&m);
 
 		c_alias_polys += model->numtris;
-		R_FillColors(varray_color, model->numverts, fogcolor[0] * fog * mesh_colorscale, fogcolor[1] * fog * mesh_colorscale, fogcolor[2] * fog * mesh_colorscale, ent->alpha);
+		R_FillColors(varray_color, model->numverts, fogcolor[0] * fog * r_colorscale, fogcolor[1] * fog * r_colorscale, fogcolor[2] * fog * r_colorscale, ent->alpha);
 		memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -737,7 +748,7 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 
 void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 {
-	float fog;
+	float fog, colorscale;
 	vec3_t diff;
 	int i, *renderlist, *elements;
 	zymtype1header_t *m;
@@ -785,7 +796,6 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	R_LightModel(ent, numverts, 1 - fog, 1 - fog, 1 - fog, false);
 
 	memset(&mstate, 0, sizeof(mstate));
-	mstate.wantoverbright = true;
 	if (ent->effects & EF_ADDITIVE)
 	{
 		mstate.blendfunc1 = GL_SRC_ALPHA;
@@ -801,19 +811,24 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 		mstate.blendfunc1 = GL_ONE;
 		mstate.blendfunc2 = GL_ZERO;
 	}
+	colorscale = r_colorscale;
+	if (gl_combine.integer)
+	{
+		mstate.texrgbscale[0] = 4;
+		colorscale *= 0.25f;
+	}
 	mstate.tex[0] = R_GetTexture(texture);
 	R_Mesh_State(&mstate);
 
 	c_alias_polys += numtriangles;
 	memcpy(varray_vertex, aliasvert, numverts * sizeof(float[4]));
-	R_ModulateColors(aliasvertcolor, varray_color, numverts, mesh_colorscale, mesh_colorscale, mesh_colorscale);
+	R_ModulateColors(aliasvertcolor, varray_color, numverts, colorscale, colorscale, colorscale);
 	memcpy(varray_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
 	R_Mesh_Draw(numverts, numtriangles, elements);
 
 	if (fog)
 	{
 		memset(&mstate, 0, sizeof(mstate));
-		mstate.wantoverbright = false;
 		mstate.blendfunc1 = GL_SRC_ALPHA;
 		mstate.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		// FIXME: need alpha mask for fogging...
@@ -822,7 +837,7 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 
 		c_alias_polys += numtriangles;
 		memcpy(varray_vertex, aliasvert, numverts * sizeof(float[4]));
-		R_FillColors(varray_color, numverts, fogcolor[0] * mesh_colorscale, fogcolor[1] * mesh_colorscale, fogcolor[2] * mesh_colorscale, ent->alpha * fog);
+		R_FillColors(varray_color, numverts, fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
 		//memcpy(mesh_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
 		R_Mesh_Draw(numverts, numtriangles, elements);
 	}

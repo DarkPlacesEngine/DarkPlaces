@@ -148,7 +148,6 @@ void R_DrawCoronas(void)
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ONE;
-	m.wantoverbright = false;
 	m.depthdisable = true; // magic
 	m.tex[0] = R_GetTexture(lightcorona);
 	R_Mesh_Matrix(&r_identitymatrix);
@@ -160,7 +159,7 @@ void R_DrawCoronas(void)
 		dist = (DotProduct(rd->origin, vpn) - viewdist);
 		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, 0, true) == 1)
 		{
-			scale = mesh_colorscale * (1.0f / 131072.0f);
+			scale = r_colorscale * (1.0f / 131072.0f);
 			if (gl_flashblend.integer)
 				scale *= 4.0f;
 			if (fogenabled)

@@ -53,10 +53,7 @@ extern qboolean intimerefresh;
 extern char r_speeds_string[1024];
 
 // lighting stuff
-extern vec3_t lightspot;
 extern cvar_t r_ambient;
-extern int lightscalebit;
-extern float lightscale;
 
 // model rendering stuff
 extern float *aliasvert;

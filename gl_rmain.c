@@ -606,7 +606,6 @@ static void R_BlendView(void)
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.wantoverbright = false;
 	m.depthdisable = true; // magic
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
@@ -715,7 +714,6 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	rmeshstate_t m;
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.wantoverbright = false;
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
@@ -727,9 +725,9 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	varray_vertex[20] = maxs[0];varray_vertex[21] = mins[1];varray_vertex[22] = maxs[2];
 	varray_vertex[24] = mins[0];varray_vertex[25] = maxs[1];varray_vertex[26] = maxs[2];
 	varray_vertex[28] = maxs[0];varray_vertex[29] = maxs[1];varray_vertex[30] = maxs[2];
-	varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = varray_color[16] = varray_color[20] = varray_color[24] = varray_color[28] = cr * mesh_colorscale;
-	varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = varray_color[17] = varray_color[21] = varray_color[25] = varray_color[29] = cg * mesh_colorscale;
-	varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = varray_color[18] = varray_color[22] = varray_color[26] = varray_color[30] = cb * mesh_colorscale;
+	varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = varray_color[16] = varray_color[20] = varray_color[24] = varray_color[28] = cr * r_colorscale;
+	varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = varray_color[17] = varray_color[21] = varray_color[25] = varray_color[29] = cg * r_colorscale;
+	varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = varray_color[18] = varray_color[22] = varray_color[26] = varray_color[30] = cb * r_colorscale;
 	varray_color[ 3] = varray_color[ 7] = varray_color[11] = varray_color[15] = varray_color[19] = varray_color[23] = varray_color[27] = varray_color[31] = ca;
 	if (fogenabled)
 	{
@@ -738,7 +736,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 			VectorSubtract(v, r_origin, diff);
 			f2 = exp(fogdensity/DotProduct(diff, diff));
 			f1 = 1 - f2;
-			f2 *= mesh_colorscale;
+			f2 *= r_colorscale;
 			c[0] = c[0] * f1 + fogcolor[0] * f2;
 			c[1] = c[1] * f1 + fogcolor[1] * f2;
 			c[2] = c[2] * f1 + fogcolor[2] * f2;
@@ -770,7 +768,6 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
-	m.wantoverbright = false;
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 
@@ -801,18 +798,18 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		f1 = 1 - f2;
 		for (i = 0, c = varray_color;i < 6;i++, c += 4)
 		{
-			c[0] = (c[0] * f1 + fogcolor[0] * f2) * mesh_colorscale;
-			c[1] = (c[1] * f1 + fogcolor[1] * f2) * mesh_colorscale;
-			c[2] = (c[2] * f1 + fogcolor[2] * f2) * mesh_colorscale;
+			c[0] = (c[0] * f1 + fogcolor[0] * f2) * r_colorscale;
+			c[1] = (c[1] * f1 + fogcolor[1] * f2) * r_colorscale;
+			c[2] = (c[2] * f1 + fogcolor[2] * f2) * r_colorscale;
 		}
 	}
 	else
 	{
 		for (i = 0, c = varray_color;i < 6;i++, c += 4)
 		{
-			c[0] *= mesh_colorscale;
-			c[1] *= mesh_colorscale;
-			c[2] *= mesh_colorscale;
+			c[0] *= r_colorscale;
+			c[1] *= r_colorscale;
+			c[2] *= r_colorscale;
 		}
 	}
 	R_Mesh_Draw(6, 8, element);
