@@ -556,7 +556,7 @@ void GL_ColorMask(int r, int g, int b, int a)
 		if (r_showtrispass)
 			return;
 		gl_state.colormask = state;
-		qglColorMask(r, g, b, a);CHECKGLERROR
+		qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
 	}
 }
 
