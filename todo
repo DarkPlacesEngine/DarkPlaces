@@ -179,7 +179,6 @@
 0 hmap2: release hmap2 (Vic, Supajoe, Urre)
 0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
 0 revelation: change the wabbit kill message to " was hunting wabbit but shot " " instead"
-0 sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
 1 darkplaces : still says " disconnected" in dpmod, figure out why and fix it
 1 darkplaces cleanup: add palette conversion capabilities to Image_CopyMux
 1 darkplaces cleanup: make Host_Error call error reset functions on renderer subsystems?  (models are already flushed)
@@ -695,6 +694,7 @@ d lmp2pcx: post new lmp2pcx build.
 d revelation: fix bodies, they're standing due to invalid frame mappings (romi)
 d revelation: fix lingering glow on lightning deaths (romi)
 d revelation: reduce damage from weapons (romi)
+d sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
 d zmodel: fix scale and origin commands (Vermeulen)
 f LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
 f darkplaces client: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
