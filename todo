@@ -216,7 +216,6 @@
 2 darkplaces console: figure out how to prevent "alias a a" - infinite loop when executed, this should be detected when executing it (Vicious)
 2 darkplaces console: review the whole set of console commands and cvars carefully and identify interactions, known interactions include sequences such as +sv_cheats 1 +map e1m1, or +maxplayers 8 +deathmatch 7 +map dpdm2, but for some reason this works with the cvar after the map command, and also if you do -window it does not affect the value saved to config, because the configs are executed again after the -window, perhaps it is not executing the commandline a second time?  apparently also -dedicated without +map does not load a map automatically in transfusion (Wazat, Willis)
 2 darkplaces image: add scaling capabilities to Image_CopyMux
-2 darkplaces loader: add q2 sprite support sometime
 2 darkplaces loader: add support for fuhquake naming of map textures (textures/start/quake.tga style)
 2 darkplaces loader: implement r_shadow_bumpscale_basetexture support in hl maps (CheapAlert)
 2 darkplaces menu: add lan searching to the server browser and related code (Vermeulen)
@@ -418,6 +417,7 @@ d darkplaces input: add more joystick buttons, 3 isn't enough (Static_Fiend)
 d darkplaces input: allow typing characters > 128 into console to allow Latin1 fonts to be used properly, already works in text messages (Urre)
 d darkplaces input: key repeat should work in menus, for example scrolling quickly through options (Up2nOgOoD)
 d darkplaces loader q3bsp: remove snapping to integer on patch vertices (HReaper)
+d darkplaces loader: add q2 sprite support sometime
 d darkplaces loading: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex)
 d darkplaces loading: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
 d darkplaces loading: make files override pak and pk3 archives, as it's really what people expect, hopefully this won't break any broken mods (Stribbs)
