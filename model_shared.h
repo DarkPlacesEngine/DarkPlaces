@@ -348,8 +348,8 @@ typedef struct q3mface_s
 	int patchsize[2];
 
 	float *data_vertex3f;
-	float *data_texturetexcoord2f;
-	float *data_lightmaptexcoord2f;
+	float *data_texcoordtexture2f;
+	float *data_texcoordlightmap2f;
 	float *data_svector3f;
 	float *data_tvector3f;
 	float *data_normal3f;
@@ -383,7 +383,7 @@ typedef struct model_brushq3_s
 	int num_models;
 	q3mmodel_t *data_models;
 	// each submodel gets its own model struct so this is different for each.
-	q3mmodel_t data_thismodel;
+	q3mmodel_t *data_thismodel;
 
 	int num_brushes;
 	q3mbrush_t *data_brushes;
@@ -393,8 +393,8 @@ typedef struct model_brushq3_s
 
 	int num_vertices;
 	float *data_vertex3f;
-	float *data_texturetexcoord2f;
-	float *data_lightmaptexcoord2f;
+	float *data_texcoordtexture2f;
+	float *data_texcoordlightmap2f;
 	float *data_svector3f;
 	float *data_tvector3f;
 	float *data_normal3f;

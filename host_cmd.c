@@ -24,6 +24,9 @@ int current_skill;
 char sv_spawnmap[MAX_QPATH];
 char sv_loadgame[MAX_OSPATH];
 
+cvar_t sv_cheats = {0, "sv_cheats", "0"};
+qboolean allowcheats = false;
+
 mfunction_t *ED_FindFunction (char *name);
 
 /*
@@ -109,8 +112,14 @@ void Host_God_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch || !sv_player)
+	if (!sv_player)
 		return;
+
+	if (!allowcheats)
+	{
+		SV_ClientPrintf("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		return;
+	}
 
 	sv_player->v->flags = (int)sv_player->v->flags ^ FL_GODMODE;
 	if (!((int)sv_player->v->flags & FL_GODMODE) )
@@ -127,8 +136,14 @@ void Host_Notarget_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch || !sv_player)
+	if (!sv_player)
 		return;
+
+	if (!allowcheats)
+	{
+		SV_ClientPrintf("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		return;
+	}
 
 	sv_player->v->flags = (int)sv_player->v->flags ^ FL_NOTARGET;
 	if (!((int)sv_player->v->flags & FL_NOTARGET) )
@@ -147,8 +162,14 @@ void Host_Noclip_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch || !sv_player)
+	if (!sv_player)
 		return;
+
+	if (!allowcheats)
+	{
+		SV_ClientPrintf("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		return;
+	}
 
 	if (sv_player->v->movetype != MOVETYPE_NOCLIP)
 	{
@@ -179,8 +200,14 @@ void Host_Fly_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch || !sv_player)
+	if (!sv_player)
 		return;
+
+	if (!allowcheats)
+	{
+		SV_ClientPrintf("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		return;
+	}
 
 	if (sv_player->v->movetype != MOVETYPE_FLY)
 	{
@@ -537,6 +564,7 @@ void Host_PerformLoadGame(char *name)
 	str = FS_Getline (f);
 	sscanf (str, "%f\n",&time);
 
+	allowcheats = sv_cheats.integer != 0;
 	SV_SpawnServer (mapname);
 	if (!sv.active)
 	{
@@ -1172,15 +1200,7 @@ void Host_Kick_f (void)
 	int i;
 	qboolean byNumber = false;
 
-	if (cmd_source == src_command)
-	{
-		if (!sv.active)
-		{
-			Cmd_ForwardToServer ();
-			return;
-		}
-	}
-	else if (pr_global_struct->deathmatch)
+	if (cmd_source != src_command || !sv.active)
 		return;
 
 	save = host_client;
@@ -1268,8 +1288,14 @@ void Host_Give_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch || !sv_player)
+	if (!sv_player)
 		return;
+
+	if (!allowcheats)
+	{
+		SV_ClientPrintf("No cheats allowed, use sv_cheats 1 and restart level to enable.\n");
+		return;
+	}
 
 	t = Cmd_Argv(1);
 	v = atoi (Cmd_Argv(2));
@@ -1617,7 +1643,10 @@ void Host_PerformSpawnServerAndLoadGame(void)
 	if (sv_loadgame[0])
 		Host_PerformLoadGame(sv_loadgame);
 	else if (sv_spawnmap[0])
+	{
+		allowcheats = sv_cheats.integer != 0;
 		SV_SpawnServer(sv_spawnmap);
+	}
 	sv_loadgame[0] = 0;
 	sv_spawnmap[0] = 0;
 	if (sv.active && cls.state == ca_disconnected)
@@ -1688,5 +1717,7 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
 	Cmd_AddCommand ("spawn", Host_Spawn_f);
 	Cmd_AddCommand ("begin", Host_Begin_f);
+
+	Cvar_RegisterVariable(&sv_cheats);
 }
 

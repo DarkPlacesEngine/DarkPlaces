@@ -3619,6 +3619,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 	q3mbrush_t *out;
 	int i, j, k, m, n, c, count, numpoints, numplanes;
 	winding_t *w;
+	mplane_t plane;
 	colpointf_t pointsbuf[256*3];
 	colplanef_t planesbuf[256], colplanef;
 
@@ -3651,12 +3652,23 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		numplanes = 0;
 		for (j = 0;j < out->numbrushsides;j++)
 		{
+			// for some reason the planes are all flipped compared to what I
+			// would expect, so this has to negate them...
+
 			// create a huge polygon for the plane
-			w = BaseWindingForPlane(out->firstbrushside[j].plane);
+			VectorNegate(out->firstbrushside[j].plane->normal, plane.normal);
+			plane.dist = -out->firstbrushside[j].plane->dist;
+			w = BaseWindingForPlane(&plane);
 			// clip it by all other planes
 			for (k = 0;k < out->numbrushsides && w;k++)
+			{
 				if (k != j)
-					w = ClipWinding(w, out->firstbrushside[k].plane, true);
+				{
+					VectorNegate(out->firstbrushside[k].plane->normal, plane.normal);
+					plane.dist = -out->firstbrushside[k].plane->dist;
+					w = ClipWinding(w, &plane, true);
+				}
+			}
 			// if nothing is left, skip it
 			// FIXME: should keep count of how many were skipped and report
 			// it, just for sake of statistics
@@ -3666,7 +3678,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 			for (k = 0;k < w->numpoints;k++)
 			{
 				for (m = 0;m < numpoints;m++)
-					if (VectorDistance2(w->points[k * 3], pointsbuf[m * 3].v) < DIST_EPSILON)
+					if (VectorDistance2(w->points[k], pointsbuf[m].v) < DIST_EPSILON)
 						break;
 				if (m == numpoints)
 				{
@@ -3678,7 +3690,7 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 						goto failedtomakecolbrush;
 					}
 					// add the new one
-					VectorCopy(w->points[k * 3], pointsbuf[numpoints * 3].v);
+					VectorCopy(w->points[k], pointsbuf[numpoints].v);
 					numpoints++;
 				}
 			}
@@ -3707,8 +3719,8 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		if (numplanes && numpoints)
 		{
 			out->colbrushf = Collision_AllocBrushFloat(loadmodel->mempool, numpoints, numplanes);
-			memcpy(out->colbrushf->points, pointsbuf, numpoints * sizeof(float[3]));
-			memcpy(out->colbrushf->planes, planesbuf, numplanes * sizeof(mplane_t));
+			memcpy(out->colbrushf->points, pointsbuf, numpoints * sizeof(colpointf_t));
+			memcpy(out->colbrushf->planes, planesbuf, numplanes * sizeof(colplanef_t));
 		}
 		// return from errors to here
 		failedtomakecolbrush:;
@@ -3751,8 +3763,8 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		Host_Error("Mod_Q3BSP_LoadVertices: funny lump size in %s",loadmodel->name);
 	loadmodel->brushq3.num_vertices = count = l->filelen / sizeof(*in);
 	loadmodel->brushq3.data_vertex3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
-	loadmodel->brushq3.data_texturetexcoord2f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[2]));
-	loadmodel->brushq3.data_lightmaptexcoord2f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[2]));
+	loadmodel->brushq3.data_texcoordtexture2f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[2]));
+	loadmodel->brushq3.data_texcoordlightmap2f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[2]));
 	loadmodel->brushq3.data_svector3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
 	loadmodel->brushq3.data_tvector3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
 	loadmodel->brushq3.data_normal3f = Mem_Alloc(loadmodel->mempool, count * sizeof(float[3]));
@@ -3763,10 +3775,10 @@ static void Mod_Q3BSP_LoadVertices(lump_t *l)
 		loadmodel->brushq3.data_vertex3f[i * 3 + 0] = LittleFloat(in->origin3f[0]);
 		loadmodel->brushq3.data_vertex3f[i * 3 + 1] = LittleFloat(in->origin3f[1]);
 		loadmodel->brushq3.data_vertex3f[i * 3 + 2] = LittleFloat(in->origin3f[2]);
-		loadmodel->brushq3.data_texturetexcoord2f[i * 2 + 0] = LittleFloat(in->texcoord2f[0]);
-		loadmodel->brushq3.data_texturetexcoord2f[i * 2 + 1] = LittleFloat(in->texcoord2f[1]);
-		loadmodel->brushq3.data_lightmaptexcoord2f[i * 2 + 0] = LittleFloat(in->lightmap2f[0]);
-		loadmodel->brushq3.data_lightmaptexcoord2f[i * 2 + 1] = LittleFloat(in->lightmap2f[1]);
+		loadmodel->brushq3.data_texcoordtexture2f[i * 2 + 0] = LittleFloat(in->texcoord2f[0]);
+		loadmodel->brushq3.data_texcoordtexture2f[i * 2 + 1] = LittleFloat(in->texcoord2f[1]);
+		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 0] = LittleFloat(in->lightmap2f[0]);
+		loadmodel->brushq3.data_texcoordlightmap2f[i * 2 + 1] = LittleFloat(in->lightmap2f[1]);
 		// svector/tvector are calculated later in face loading
 		loadmodel->brushq3.data_svector3f[i * 3 + 0] = 0;
 		loadmodel->brushq3.data_svector3f[i * 3 + 1] = 0;
@@ -3914,8 +3926,8 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 		case Q3FACETYPE_POLYGON:
 		case Q3FACETYPE_MESH:
 			out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
-			out->data_texturetexcoord2f = loadmodel->brushq3.data_texturetexcoord2f + out->firstvertex * 2;
-			out->data_lightmaptexcoord2f = loadmodel->brushq3.data_lightmaptexcoord2f + out->firstvertex * 2;
+			out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
+			out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
 			out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
 			out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
 			out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
@@ -4253,7 +4265,8 @@ void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, cons
 		q3mleaf_t *leaf;
 		leaf = (q3mleaf_t *)node;
 		for (i = 0;i < leaf->numleafbrushes;i++)
-			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			if (leaf->firstleafbrush[i]->colbrushf)
+				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
 	}
 }
 
@@ -4281,7 +4294,8 @@ void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmin
 		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end);
 	else
 		for (i = 0;i < model->brushq3.num_brushes;i++)
-			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_brushes[i].colbrushf, model->brushq3.data_brushes[i].colbrushf);
+			if (model->brushq3.data_brushes[i].colbrushf)
+				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_brushes[i].colbrushf, model->brushq3.data_brushes[i].colbrushf);
 }
 
 
@@ -4337,7 +4351,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	int i;
 	q3dheader_t *header;
 
-	mod->type = mod_brushq2;
+	mod->type = mod_brushq3;
 
 	header = (q3dheader_t *)buffer;
 
@@ -4385,6 +4399,30 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	Mod_Q3BSP_LoadNodes(&header->lumps[Q3LUMP_NODES]);
 	Mod_Q3BSP_LoadLightGrid(&header->lumps[Q3LUMP_LIGHTGRID]);
 	Mod_Q3BSP_LoadPVS(&header->lumps[Q3LUMP_PVS]);
+	loadmodel->brush.numsubmodels = loadmodel->brushq3.num_models;
+
+	for (i = 0;i < loadmodel->brushq3.num_models;i++)
+	{
+		if (i == 0)
+			mod = loadmodel;
+		else
+		{
+			char name[10];
+			// LordHavoc: only register submodels if it is the world
+			// (prevents bsp models from replacing world submodels)
+			if (!loadmodel->isworldmodel)
+				continue;
+			// duplicate the basic information
+			sprintf(name, "*%i", i);
+			mod = Mod_FindName(name);
+			*mod = *loadmodel;
+			strcpy(mod->name, name);
+			// textures and memory belong to the main model
+			mod->texturepool = NULL;
+			mod->mempool = NULL;
+		}
+		mod->brushq3.data_thismodel = loadmodel->brushq3.data_models + i;
+	}
 }
 
 void Mod_IBSP_Load(model_t *mod, void *buffer)

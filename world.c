@@ -345,7 +345,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		if (model != NULL)
 		{
 			Mod_CheckLoaded(model);
-			if (model->type != mod_brush)
+			if (!model->brush.TraceBox)
 				Host_Error("SOLID_BSP with non-BSP model\n");
 
 			if (ent->v->angles[0] || ent->v->angles[2] || ent->v->avelocity[0] || ent->v->avelocity[2])
@@ -470,7 +470,7 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 			Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
 
 		Mod_CheckLoaded(model);
-		if (model->type != mod_brush)
+		if (!model->brush.TraceBox)
 		{
 			Con_Printf ("SV_ClipMoveToEntity: SOLID_BSP with a non bsp model, entity dump:\n");
 			ED_Print (ent);
