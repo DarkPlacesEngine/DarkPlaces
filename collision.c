@@ -620,6 +620,7 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 	float edge0[3], edge1[3], edge2[3], normal[3], dist, bestdist;
 	colpointf_t *p, *p2;
 
+	// FIXME: these probably don't actually need to be normalized if the collision code does not care
 	if (brush->numpoints == 3)
 	{
 		// optimized triangle case
@@ -1260,6 +1261,7 @@ colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins,
 	colbrushf_t *brush;
 	if (brushforbox_brush[0].numpoints == 0)
 		Collision_InitBrushForBox();
+	// FIXME: these probably don't actually need to be normalized if the collision code does not care
 	if (VectorCompare(mins, maxs))
 	{
 		// point brush
@@ -1404,6 +1406,116 @@ float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double
 
 void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const float *point0, const float *point1, const float *point2)
 {
+#if 1
+	// more optimized
+	float d1, d2, d, f, impact[3], edgenormal[3], faceplanenormal[3], faceplanedist, faceplanenormallength2, edge01[3], edge21[3], edge02[3];
+
+	// this function executes:
+	// 32 ops when line starts behind triangle
+	// 38 ops when line ends infront of triangle
+	// 43 ops when line fraction is already closer than this triangle
+	// 72 ops when line is outside edge 01
+	// 92 ops when line is outside edge 21
+	// 115 ops when line is outside edge 02
+	// 123 ops when line impacts triangle and updates trace results
+
+	// this code is designed for clockwise triangles, conversion to
+	// counterclockwise would require swapping some things around...
+	// it is easier to simply swap the point0 and point2 parameters to this
+	// function when calling it than it is to rewire the internals.
+
+	// calculate the faceplanenormal of the triangle, this represents the front side
+	// 15 ops
+	VectorSubtract(point0, point1, edge01);
+	VectorSubtract(point2, point1, edge21);
+	CrossProduct(edge01, edge21, faceplanenormal);
+	// there's no point in processing a degenerate triangle (GIGO - Garbage In, Garbage Out)
+	// 6 ops
+	faceplanenormallength2 = DotProduct(faceplanenormal, faceplanenormal);
+	if (faceplanenormallength2 < 0.0001f)
+		return;
+	// calculate the distance
+	// 5 ops
+	faceplanedist = DotProduct(point0, faceplanenormal);
+
+	// if start point is on the back side there is no collision
+	// (we don't care about traces going through the triangle the wrong way)
+
+	// calculate the start distance
+	// 6 ops
+	d1 = DotProduct(faceplanenormal, linestart);
+	if (d1 <= faceplanedist)
+		return;
+
+	// calculate the end distance
+	// 6 ops
+	d2 = DotProduct(faceplanenormal, lineend);
+	// if both are in front, there is no collision
+	if (d2 >= faceplanedist)
+		return;
+
+	// from here on we know d1 is >= 0 and d2 is < 0
+	// this means the line starts infront and ends behind, passing through it
+
+	// calculate the recipricol of the distance delta,
+	// so we can use it multiple times cheaply (instead of division)
+	// 2 ops
+	d = 1.0f / (d1 - d2);
+	// calculate the impact fraction by taking the start distance (> 0)
+	// and subtracting the face plane distance (this is the distance of the
+	// triangle along that same normal)
+	// then multiply by the recipricol distance delta
+	// 2 ops
+	f = (d1 - faceplanedist) * d;
+	// skip out if this impact is further away than previous ones
+	// 1 ops
+	if (f > trace->realfraction)
+		return;
+	// calculate the perfect impact point for classification of insidedness
+	// 9 ops
+	impact[0] = linestart[0] + f * (lineend[0] - linestart[0]);
+	impact[1] = linestart[1] + f * (lineend[1] - linestart[1]);
+	impact[2] = linestart[2] + f * (lineend[2] - linestart[2]);
+
+	// calculate the edge normal and reject if impact is outside triangle
+	// (an edge normal faces away from the triangle, to get the desired normal
+	//  a crossproduct with the faceplanenormal is used, and because of the way
+	// the insidedness comparison is written it does not need to be normalized)
+
+	// first use the two edges from the triangle plane math
+	// the other edge only gets calculated if the point survives that long
+
+	// 20 ops
+	CrossProduct(edge01, faceplanenormal, edgenormal);
+	if (DotProduct(impact, edgenormal) > DotProduct(point1, edgenormal))
+		return;
+
+	// 20 ops
+	CrossProduct(faceplanenormal, edge21, edgenormal);
+	if (DotProduct(impact, edgenormal) > DotProduct(point2, edgenormal))
+		return;
+
+	// 23 ops
+	VectorSubtract(point0, point2, edge02);
+	CrossProduct(faceplanenormal, edge02, edgenormal);
+	if (DotProduct(impact, edgenormal) > DotProduct(point0, edgenormal))
+		return;
+
+	// 8 ops (rare)
+
+	// store the new trace fraction
+	trace->realfraction = f;
+
+	// calculate a nudged fraction to keep it out of the surface
+	// (the main fraction remains perfect)
+	trace->fraction = f - collision_impactnudge.value * d;
+
+	// store the new trace plane (because collisions only happen from
+	// the front this is always simply the triangle normal, never flipped)
+	d = 1.0 / sqrt(faceplanenormallength2);
+	VectorScale(faceplanenormal, d, trace->plane.normal);
+	trace->plane.dist = faceplanedist * d;
+#else
 	float d1, d2, d, f, fnudged, impact[3], edgenormal[3], faceplanenormal[3], faceplanedist, edge[3];
 
 	// this code is designed for clockwise triangles, conversion to
@@ -1425,7 +1537,7 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	d1 = DotProduct(faceplanenormal, linestart) - faceplanedist;
 	// if start point is on the back side there is no collision
 	// (we don't care about traces going through the triangle the wrong way)
-	if (d1 < 0)
+	if (d1 <= 0)
 		return;
 
 	// calculate the unnormalized end distance
@@ -1457,7 +1569,7 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	// (an edge normal faces away from the triangle, to get the desired normal
 	//  a crossproduct with the faceplanenormal is used, and because of the way
 	// the insidedness comparison is written it does not need to be normalized)
-	
+
 	VectorSubtract(point2, point0, edge);
 	CrossProduct(edge, faceplanenormal, edgenormal);
 	if (DotProduct(impact, edgenormal) > DotProduct(point0, edgenormal))
@@ -1496,6 +1608,7 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	//trace->endpos[0] = linestart[0] + fnudged * (lineend[0] - linestart[0]);
 	//trace->endpos[1] = linestart[1] + fnudged * (lineend[1] - linestart[1]);
 	//trace->endpos[2] = linestart[2] + fnudged * (lineend[2] - linestart[2]);
+#endif
 }
 
 typedef struct colbspnode_s
