@@ -130,9 +130,9 @@
 				OPB->_int = OPA->_int;
 				break;
 			case OP_STORE_V:
-				OPB->vector[0] = OPA->vector[0];
-				OPB->vector[1] = OPA->vector[1];
-				OPB->vector[2] = OPA->vector[2];
+				OPB->ivector[0] = OPA->ivector[0];
+				OPB->ivector[1] = OPA->ivector[1];
+				OPB->ivector[2] = OPA->ivector[2];
 				break;
 
 			case OP_STOREP_F:
