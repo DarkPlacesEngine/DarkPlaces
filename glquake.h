@@ -92,6 +92,10 @@ typedef double GLclampd;
 #define GL_MODELVIEW				0x1700
 #define GL_PROJECTION				0x1701
 #define GL_TEXTURE				0x1702
+#define GL_MATRIX_MODE				0x0BA0
+#define GL_MODELVIEW_MATRIX			0x0BA6
+#define GL_PROJECTION_MATRIX			0x0BA7
+#define GL_TEXTURE_MATRIX			0x0BA8
 
 #define GL_DEPTH_TEST				0x0B71
 
@@ -305,9 +309,9 @@ extern void (GLAPIENTRY *qglDisable)(GLenum cap);
 extern void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
 extern void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
 
-//extern void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
-//extern void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
-//extern void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
+extern void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
+extern void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
+extern void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
 extern void (GLAPIENTRY *qglGetIntegerv)(GLenum pname, GLint *params);
 
 extern GLenum (GLAPIENTRY *qglGetError)(void);
@@ -342,8 +346,8 @@ extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei h
 //extern void (GLAPIENTRY *qglPushMatrix)(void);
 //extern void (GLAPIENTRY *qglPopMatrix)(void);
 extern void (GLAPIENTRY *qglLoadIdentity)(void);
-//extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
-//extern void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
+extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
+extern void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
 //extern void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
 //extern void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
 //extern void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);

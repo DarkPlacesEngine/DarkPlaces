@@ -65,7 +65,7 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 }
 #endif
 
-#define BACKENDACTIVECHECK if (!backendactive) Sys_Error(__func__ " called when backend is not active\n");
+#define BACKENDACTIVECHECK if (!backendactive) Sys_Error("GL backend function called when backend is not active\n");
 
 float r_mesh_farclip;
 
@@ -90,7 +90,10 @@ float *varray_texcoord[MAX_TEXTUREUNITS];
 int mesh_maxtris;
 int mesh_maxverts; // always mesh_maxtris * 3
 
-static matrix4x4_t backendmatrix;
+static matrix4x4_t backend_viewmatrix;
+static matrix4x4_t backend_modelmatrix;
+static matrix4x4_t backend_modelviewmatrix;
+static matrix4x4_t backend_glmodelviewmatrix;
 
 static int backendunits, backendactive;
 static qbyte *varray_bcolor;
@@ -273,9 +276,23 @@ static void GL_SetupFrame (void)
 	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
 
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
-	qglLoadIdentity ();CHECKGLERROR
 
+	Matrix4x4_CreateRotate(&backend_viewmatrix, -90, 1, 0, 0);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, 90, 0, 0, 1);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, -r_refdef.viewangles[2], 1, 0, 0);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, -r_refdef.viewangles[0], 0, 1, 0);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, -r_refdef.viewangles[1], 0, 0, 1);
+	Matrix4x4_ConcatTranslate(&backend_viewmatrix, -r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);
+	//Con_Printf("Our Matrix:\n");
+	//Matrix4x4_Print(&backend_viewmatrix);
+
+	//Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_viewmatrix);
+	//qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);CHECKGLERROR
+	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
+
+	/*
 	// put Z going up
+	qglLoadIdentity ();CHECKGLERROR
 	qglRotatef (-90,  1, 0, 0);CHECKGLERROR
 	qglRotatef (90,  0, 0, 1);CHECKGLERROR
 	// camera rotation
@@ -284,6 +301,11 @@ static void GL_SetupFrame (void)
 	qglRotatef (-r_refdef.viewangles[1],  0, 0, 1);CHECKGLERROR
 	// camera location
 	qglTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);CHECKGLERROR
+	qglGetFloatv (GL_MODELVIEW_MATRIX, &gl_viewmatrix.m[0][0]);
+	Matrix4x4_Transpose(&backend_viewmatrix, &gl_viewmatrix);
+	Con_Printf("GL Matrix:\n");
+	Matrix4x4_Print(&backend_viewmatrix);
+	*/
 }
 
 static struct
@@ -495,6 +517,7 @@ void GL_ConvertColorsFloatToByte(int numverts)
 	}
 }
 
+/*
 void GL_TransformVertices(int numverts)
 {
 	int i;
@@ -519,6 +542,7 @@ void GL_TransformVertices(int numverts)
 		v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
 	}
 }
+*/
 
 void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *index)
 {
@@ -619,7 +643,7 @@ void R_Mesh_Draw(int numverts, int numtriangles)
 	// drawmode 0 always uses byte colors
 	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer <= 0)
 		GL_ConvertColorsFloatToByte(numverts);
-	GL_TransformVertices(numverts);
+	//GL_TransformVertices(numverts);
 	if (!r_render.integer)
 		return;
 	GL_DrawRangeElements(0, numverts, numtriangles * 3, varray_element);
@@ -703,7 +727,14 @@ void R_Mesh_State(const rmeshstate_t *m)
 		GL_SetupTextureState();
 	}
 
-	backendmatrix = m->matrix; // this copies the struct
+	//backendmatrix = m->matrix; // this copies the struct
+	if (memcmp(&m->matrix, &backend_modelmatrix, sizeof(matrix4x4_t)))
+	{
+		backend_modelmatrix = m->matrix;
+		Matrix4x4_Concat(&backend_modelviewmatrix, &backend_viewmatrix, &m->matrix);
+		Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_modelviewmatrix);
+		qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);
+	}
 
 	overbright = false;
 	scaler = 1;

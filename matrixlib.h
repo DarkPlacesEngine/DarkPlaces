@@ -84,6 +84,8 @@ void Matrix4x4_ConcatScale (matrix4x4_t *out, float x);
 // immediately applies a Scale3 to the matrix
 void Matrix4x4_ConcatScale3 (matrix4x4_t *out, float x, float y, float z);
 
+// print a matrix to the console
+void Matrix4x4_Print(const matrix4x4_t *in);
 
 
 // functions for manipulating 3x4 matrices
@@ -148,5 +150,8 @@ void Matrix3x4_ConcatRotate (matrix3x4_t *out, float angle, float x, float y, fl
 void Matrix3x4_ConcatScale (matrix3x4_t *out, float x);
 // immediately applies a Scale3 to the matrix
 void Matrix3x4_ConcatScale3 (matrix3x4_t *out, float x, float y, float z);
+
+// print a matrix to the console
+void Matrix3x4_Print(const matrix3x4_t *in);
 
 #endif

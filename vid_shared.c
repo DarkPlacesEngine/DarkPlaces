@@ -62,9 +62,9 @@ void (GLAPIENTRY *qglDisable)(GLenum cap);
 void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
 void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
 
-//void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
-//void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
-//void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
+void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
+void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
+void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglGetIntegerv)(GLenum pname, GLint *params);
 
 GLenum (GLAPIENTRY *qglGetError)(void);
@@ -99,8 +99,8 @@ void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
 //void (GLAPIENTRY *qglPushMatrix)(void);
 //void (GLAPIENTRY *qglPopMatrix)(void);
 void (GLAPIENTRY *qglLoadIdentity)(void);
-//void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
-//void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
+void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
+void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
 //void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
 //void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
 //void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
@@ -200,9 +200,9 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 //	{"glIsEnabled", (void **) &qglIsEnabled},
 	{"glEnableClientState", (void **) &qglEnableClientState},
 	{"glDisableClientState", (void **) &qglDisableClientState},
-//	{"glGetBooleanv", (void **) &qglGetBooleanv},
-//	{"glGetDoublev", (void **) &qglGetDoublev},
-//	{"glGetFloatv", (void **) &qglGetFloatv},
+	{"glGetBooleanv", (void **) &qglGetBooleanv},
+	{"glGetDoublev", (void **) &qglGetDoublev},
+	{"glGetFloatv", (void **) &qglGetFloatv},
 	{"glGetIntegerv", (void **) &qglGetIntegerv},
 	{"glGetError", (void **) &qglGetError},
 	{"glGetString", (void **) &qglGetString},
@@ -231,8 +231,8 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 //	{"glPushMatrix", (void **) &qglPushMatrix},
 //	{"glPopMatrix", (void **) &qglPopMatrix},
 	{"glLoadIdentity", (void **) &qglLoadIdentity},
-//	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
-//	{"glLoadMatrixf", (void **) &qglLoadMatrixf},
+	{"glLoadMatrixd", (void **) &qglLoadMatrixd},
+	{"glLoadMatrixf", (void **) &qglLoadMatrixf},
 //	{"glMultMatrixd", (void **) &qglMultMatrixd},
 //	{"glMultMatrixf", (void **) &qglMultMatrixf},
 //	{"glRotated", (void **) &qglRotated},
