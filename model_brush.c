@@ -109,7 +109,7 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p,
 		memset(out, 0, outsize);
 }
 
-static int Mod_Brush_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int clusterindex, side, nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -157,7 +157,7 @@ static int Mod_Brush_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	return false;
 }
 
-static int Mod_Brush_BoxTouchingVisibleLeafs(model_t *model, const qbyte *visibleleafs, const vec3_t mins, const vec3_t maxs)
+static int Mod_Q1BSP_BoxTouchingVisibleLeafs(model_t *model, const qbyte *visibleleafs, const vec3_t mins, const vec3_t maxs)
 {
 	int side, nodestackindex = 0;
 	mnode_t *node, *nodestack[1024];
@@ -212,27 +212,16 @@ typedef struct findnonsolidlocationinfo_s
 }
 findnonsolidlocationinfo_t;
 
-#if 0
-extern cvar_t samelevel;
-#endif
 static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *info, mleaf_t *leaf)
 {
 	int i, surfacenum, k, *tri, *mark;
 	float dist, f, vert[3][3], edge[3][3], facenormal[3], edgenormal[3][3], point[3];
-#if 0
-	float surfnormal[3];
-#endif
 	msurface_t *surface;
 	for (surfacenum = 0, mark = leaf->firstleafsurface;surfacenum < leaf->numleafsurfaces;surfacenum++, mark++)
 	{
 		surface = info->model->brush.data_surfaces + *mark;
 		if (surface->flags & SURF_SOLIDCLIP)
 		{
-#if 0
-			VectorCopy(surface->plane->normal, surfnormal);
-			if (surface->flags & SURF_PLANEBACK)
-				VectorNegate(surfnormal, surfnormal);
-#endif
 			for (k = 0;k < surface->mesh.num_triangles;k++)
 			{
 				tri = surface->mesh.data_element3i + k * 3;
@@ -245,10 +234,6 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 				if (facenormal[0] || facenormal[1] || facenormal[2])
 				{
 					VectorNormalize(facenormal);
-#if 0
-					if (VectorDistance(facenormal, surfnormal) > 0.01f)
-						Con_Printf("a2! %f %f %f != %f %f %f\n", facenormal[0], facenormal[1], facenormal[2], surfnormal[0], surfnormal[1], surfnormal[2]);
-#endif
 					f = DotProduct(info->center, facenormal) - DotProduct(vert[0], facenormal);
 					if (f <= info->bestdist && f >= -info->bestdist)
 					{
@@ -259,19 +244,6 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 						CrossProduct(facenormal, edge[0], edgenormal[0]);
 						CrossProduct(facenormal, edge[1], edgenormal[1]);
 						CrossProduct(facenormal, edge[2], edgenormal[2]);
-#if 0
-						if (samelevel.integer & 1)
-							VectorNegate(edgenormal[0], edgenormal[0]);
-						if (samelevel.integer & 2)
-							VectorNegate(edgenormal[1], edgenormal[1]);
-						if (samelevel.integer & 4)
-							VectorNegate(edgenormal[2], edgenormal[2]);
-						for (i = 0;i < 3;i++)
-							if (DotProduct(vert[0], edgenormal[i]) > DotProduct(vert[i], edgenormal[i]) + 0.1f
-							 || DotProduct(vert[1], edgenormal[i]) > DotProduct(vert[i], edgenormal[i]) + 0.1f
-							 || DotProduct(vert[2], edgenormal[i]) > DotProduct(vert[i], edgenormal[i]) + 0.1f)
-								Con_Printf("a! %i : %f %f %f (%f %f %f)\n", i, edgenormal[i][0], edgenormal[i][1], edgenormal[i][2], facenormal[0], facenormal[1], facenormal[2]);
-#endif
 						// face distance
 						if (DotProduct(info->center, edgenormal[0]) < DotProduct(vert[0], edgenormal[0])
 						 && DotProduct(info->center, edgenormal[1]) < DotProduct(vert[1], edgenormal[1])
@@ -1952,13 +1924,15 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	}
 }
 
-static void Mod_Q1BSP_SetParent(mnode_t *node, mnode_t *parent)
+static void Mod_Q1BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
 {
+	//if (node->parent)
+	//	Host_Error("Mod_Q1BSP_LoadNodes_RecursiveSetParent: runaway recursion\n");
 	node->parent = parent;
 	if (node->plane)
 	{
-		Mod_Q1BSP_SetParent(node->children[0], node);
-		Mod_Q1BSP_SetParent(node->children[1], node);
+		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
+		Mod_Q1BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
 	}
 }
 
@@ -2001,7 +1975,7 @@ static void Mod_Q1BSP_LoadNodes(lump_t *l)
 		}
 	}
 
-	Mod_Q1BSP_SetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
+	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);	// sets nodes and leafs
 }
 
 static void Mod_Q1BSP_LoadLeafs(lump_t *l)
@@ -2831,9 +2805,9 @@ static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 //of the given point.
 static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
-	int bytes = ((model->brush.num_leafs - 1) + 7) >> 3;
+	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || !Mod_Q1BSP_GetPVS(model, org))
+	if (r_novis.integer || !model->brush.num_pvsclusters || !Mod_Q1BSP_GetPVS(model, org))
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
@@ -2876,54 +2850,6 @@ static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, co
 	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
-/*
-void Mod_Q1BSP_RecursiveGetVisible(mnode_t *node, model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, mleaf_t *leaflist, int *numleafs, int maxsurfaces, msurface_t *surfacelist, int *numsurfaces, const qbyte *pvs)
-{
-	mleaf_t *leaf;
-	for (;;)
-	{
-		if (!BoxesOverlap(node->mins, node->maxs, mins, maxs))
-			return;
-		if (!node->plane)
-			break;
-		Mod_Q1BSP_RecursiveGetVisible(node->children[0], model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces, pvs);
-		node = node->children[1];
-	}
-	leaf = (mleaf_t *)node;
-	if ((pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
-	{
-		int leafsurfacenum;
-		msurface_t *surface;
-		if (maxleafs && *numleafs < maxleafs)
-			leaflist[(*numleafs)++] = leaf;
-		if (maxsurfaces)
-		{
-			for (leafsurfacenum = 0;leafsurfacenum < leaf->numleafsurfaces;leafsurfacenum++)
-			{
-				surface = model->brush.data_surfaces + leaf->firstleafsurface[leafsurfacenum];
-				if (surface->shadowmark != shadowmarkcount)
-				{
-					surface->shadowmark = shadowmarkcount;
-					if (BoxesOverlap(mins, maxs, surface->mins, surface->maxs) && ((surface->flags & SURF_PLANEBACK) ? PlaneDiff(point, surface->plane) < 0 : PlaneDiff(point, surface->plane) > 0) && *numsurfaces < maxsurfaces)
-						surfacelist[(*numsurfaces)++] = surface;
-				}
-			}
-		}
-	}
-}
-
-void Mod_Q1BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, mleaf_t *leaflist, int *numleafs, int maxsurfaces, msurface_t *surfacelist, int *numsurfaces)
-{
-	// FIXME: support portals
-	if (maxsurfaces)
-		*numsurfaces = 0;
-	if (maxleafs)
-		*numleafs = 0;
-	pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
-	Mod_Q1BSP_RecursiveGetVisible(ent->model->brush.data_nodes + ent->model->brushq1.firstclipnode, model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces);
-}
-*/
-
 extern void R_Q1BSP_DrawSky(entity_render_t *ent);
 extern void R_Q1BSP_Draw(entity_render_t *ent);
 extern void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
@@ -2954,8 +2880,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
 	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Brush_BoxTouchingPVS;
-	mod->brush.BoxTouchingVisibleLeafs = Mod_Brush_BoxTouchingVisibleLeafs;
+	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
@@ -4586,18 +4512,6 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 	}
 }
 
-static void Mod_Q3BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
-{
-	if (node->parent)
-		Host_Error("Mod_Q3BSP_LoadNodes_RecursiveSetParent: runaway recursion\n");
-	node->parent = parent;
-	if (node->plane)
-	{
-		Mod_Q3BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
-		Mod_Q3BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
-	}
-}
-
 static void Mod_Q3BSP_LoadNodes(lump_t *l)
 {
 	q3dnode_t *in;
@@ -4646,7 +4560,7 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 	}
 
 	// set the parent pointers
-	Mod_Q3BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);
+	Mod_Q1BSP_LoadNodes_RecursiveSetParent(loadmodel->brush.data_nodes, NULL);
 }
 
 static void Mod_Q3BSP_LoadLightGrid(lump_t *l)
@@ -4743,12 +4657,6 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 
 	loadmodel->brush.data_pvsclusters = Mem_Alloc(loadmodel->mempool, totalchains);
 	memcpy(loadmodel->brush.data_pvsclusters, (qbyte *)(in + 1), totalchains);
-}
-
-static void Mod_Q3BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, vec_t radius)
-{
-	// FIXME: finish this code
-	VectorCopy(in, out);
 }
 
 static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal)
@@ -5363,64 +5271,6 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	}
 }
 
-//Returns PVS data for a given point
-//(note: can return NULL)
-static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
-{
-	mnode_t *node;
-	Mod_CheckLoaded(model);
-	node = model->brush.data_nodes;
-	while (node->plane)
-		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
-	if (((mleaf_t *)node)->clusterindex >= 0)
-		return model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
-	else
-		return NULL;
-}
-
-static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
-{
-	while (node->plane)
-	{
-		float d = PlaneDiff(org, node->plane);
-		if (d > radius)
-			node = node->children[0];
-		else if (d < -radius)
-			node = node->children[1];
-		else
-		{
-			// go down both sides
-			Mod_Q3BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, pvsbytes, node->children[0]);
-			node = node->children[1];
-		}
-	}
-	// if this leaf is in a cluster, accumulate the pvs bits
-	if (((mleaf_t *)node)->clusterindex >= 0)
-	{
-		int i;
-		qbyte *pvs = model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
-		for (i = 0;i < pvsbytes;i++)
-			pvsbuffer[i] |= pvs[i];
-	}
-}
-
-//Calculates a PVS that is the inclusive or of all leafs within radius pixels
-//of the given point.
-static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
-{
-	int bytes = model->brush.num_pvsclusterbytes;
-	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || !model->brush.num_pvsclusters || !Mod_Q3BSP_GetPVS(model, org))
-	{
-		memset(pvsbuffer, 0xFF, bytes);
-		return bytes;
-	}
-	memset(pvsbuffer, 0, bytes);
-	Mod_Q3BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brush.data_nodes);
-	return bytes;
-}
-
-
 static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents)
 {
 	int supercontents = 0;
@@ -5502,12 +5352,12 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->TraceBox = Mod_Q3BSP_TraceBox;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
-	mod->brush.GetPVS = Mod_Q3BSP_GetPVS;
-	mod->brush.FatPVS = Mod_Q3BSP_FatPVS;
-	mod->brush.BoxTouchingPVS = Mod_Brush_BoxTouchingPVS;
-	mod->brush.BoxTouchingVisibleLeafs = Mod_Brush_BoxTouchingVisibleLeafs;
+	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
+	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
+	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
+	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
-	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
+	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	//mod->DrawSky = R_Q3BSP_DrawSky;
 	mod->Draw = R_Q3BSP_Draw;
 	mod->GetLightInfo = R_Q3BSP_GetLightInfo;
@@ -5584,7 +5434,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 			mod->brush.BoxTouchingPVS = NULL;
 			mod->brush.BoxTouchingVisibleLeafs = NULL;
 			mod->brush.LightPoint = NULL;
-			mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
+			mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 		}
 		mod->brush.submodel = i;
 
