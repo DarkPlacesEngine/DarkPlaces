@@ -96,7 +96,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 			}
 		}
 	}
-	if (maxfrac < 0 || maxfrac > 1) Con_Printf("fraction out of bounds %f %s:%d\n", maxfrac, __LINE__, __FILE__);
+	if (maxfrac < 0 || maxfrac > 1) Con_Printf("fraction out of bounds %f %s:%d\n", maxfrac, __FILE__, __LINE__);
 	return maxfrac;
 }
 
