@@ -71,6 +71,7 @@ void VID_Init(void)
 
 int VID_InitMode(int fullscreen, int width, int height, int bpp)
 {
+	return false;
 }
 
 int GL_OpenLibrary(const char *name)
