@@ -258,7 +258,8 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	else if (!memcmp(buf, "IDP3"    , 4)) Mod_LoadQ3AliasModel(mod, buf);
 	else if (!memcmp(buf, "ZYMOTIC" , 7)) Mod_LoadZymoticModel(mod, buf);
 	else if (!memcmp(buf, "IDSP"    , 4)) Mod_LoadSpriteModel (mod, buf);
-	else                                  Mod_LoadBrushModel  (mod, buf);
+	else if (!memcmp(buf, "IBSP"    , 4)) Mod_LoadBrushModelIBSP (mod, buf);
+	else                                  Mod_LoadBrushModelQ1orHL (mod, buf);
 
 	Mem_Free(buf);
 

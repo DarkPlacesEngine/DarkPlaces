@@ -2769,7 +2769,7 @@ extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
 extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
-void Mod_LoadBrushModel (model_t *mod, void *buffer)
+void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 {
 	int i, j, k;
 	dheader_t *header;
@@ -2935,5 +2935,26 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 	loadmodel = originalloadmodel;
 	//Mod_ProcessLightList ();
+}
+
+void Mod_LoadBrushModelQ2 (model_t *mod, void *buffer)
+{
+	Host_Error("Mod_LoadBrushModelQ2: not yet implemented\n");
+}
+
+void Mod_LoadBrushModelQ3 (model_t *mod, void *buffer)
+{
+	Host_Error("Mod_LoadBrushModelQ3: not yet implemented\n");
+}
+
+void Mod_LoadBrushModelIBSP (model_t *mod, void *buffer)
+{
+	int i = LittleLong(*((int *)buffer));
+	if (i == 46)
+		Mod_LoadBrushModelQ3 (mod,buffer);
+	else if (i == 38)
+		Mod_LoadBrushModelQ2 (mod,buffer);
+	else
+		Host_Error("Mod_LoadBrushModelIBSP: unknown/unsupported version %i\n", i);
 }
 
