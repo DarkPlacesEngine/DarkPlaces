@@ -2642,7 +2642,7 @@ void VM_drawstring(void)
 		return;
 	}
 	
-	VM_CheckEmptyString(string);
+	//VM_CheckEmptyString(string); Why should it be checked - perhaps the menu wants to the precolored letters, too?
 	
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
