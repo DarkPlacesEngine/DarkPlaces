@@ -1107,7 +1107,7 @@ void S_LocalSound (const char *sound, qboolean stdpath)
 		return;
 	}
 
-	ch_ind = S_StartSound (cl.viewentity, -1, sfx, vec3_origin, 1, 1);
+	ch_ind = S_StartSound (cl.viewentity, 0, sfx, vec3_origin, 1, 1);
 	if (ch_ind >= 0)
 		channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 }
