@@ -59,7 +59,7 @@ void CL_VideoFrame(void)
 		Con_Printf("%i = S_RawSamples_QueueWantsMore()\n", samples);
 
 		// calculate how much source data we need to fill the output...
-		s = samples * cl_videosoundrate / shm->speed;
+		s = samples * cl_videosoundrate / S_RawSamples_SampleRate();
 
 		// reallocate processing buffer if needed
 		if (cl_videosoundresamplelength < samples)

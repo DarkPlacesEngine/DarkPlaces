@@ -192,5 +192,8 @@ int S_RawSamples_QueueWantsMore(void);
 // resamples one sound buffer into another, while changing the length
 void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int outputlength);
 
+// returns the rate that the rawsamples system is running at
+int S_RawSamples_SampleRate(void);
+
 #endif
 

@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef VID_H
 #define VID_H
 
+extern int cl_available;
+
 typedef struct
 {
 	// these are set with VID_GetWindowSize and can change from frame to frame

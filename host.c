@@ -184,26 +184,42 @@ void Host_ServerOptions (void)
 {
 	int i, numplayers;
 
-	numplayers = 1;
-
-	i = COM_CheckParm ("-dedicated");
-	if (i)
+	if (cl_available)
 	{
-		cls.state = ca_dedicated;
-		numplayers = 0;
-		if (i != (com_argc - 1))
-			numplayers = atoi (com_argv[i+1]);
+		// client exists, check what mode the user wants
+		i = COM_CheckParm ("-dedicated");
+		if (i)
+		{
+			cls.state = ca_dedicated;
+			numplayers = 8;
+			if (i != (com_argc - 1))
+				numplayers = atoi (com_argv[i+1]);
+			if (COM_CheckParm ("-listen"))
+				Sys_Error ("Only one of -dedicated or -listen can be specified");
+		}
+		else
+		{
+			numplayers = 1;
+			cls.state = ca_disconnected;
+			i = COM_CheckParm ("-listen");
+			if (i)
+			{
+				numplayers = 8;
+				if (i != (com_argc - 1))
+					numplayers = atoi (com_argv[i+1]);
+			}
+		}
 	}
 	else
-		cls.state = ca_disconnected;
-
-	i = COM_CheckParm ("-listen");
-	if (i)
 	{
-		if (cls.state == ca_dedicated)
-			Sys_Error ("Only one of -dedicated or -listen can be specified");
-		numplayers = 0;
-		if (i != (com_argc - 1))
+		// no client in the executable, start dedicated server
+		if (COM_CheckParm ("-listen"))
+			Sys_Error ("-listen not available in a dedicated server executable");
+		numplayers = 8;
+		cls.state = ca_dedicated;
+		// check for -dedicated specifying how many players
+		i = COM_CheckParm ("-dedicated");
+		if (i && i != (com_argc - 1))
 			numplayers = atoi (com_argv[i+1]);
 	}
 

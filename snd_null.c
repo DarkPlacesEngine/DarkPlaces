@@ -98,3 +98,28 @@ void S_LocalSound (char *s)
 {
 }
 
+void S_RawSamples_Enqueue(short *samples, unsigned int length)
+{
+}
+
+void S_RawSamples_Dequeue(int *samples, unsigned int length)
+{
+}
+
+void S_RawSamples_ClearQueue(void)
+{
+}
+
+int S_RawSamples_QueueWantsMore(void)
+{
+	return 0;
+}
+
+void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int outputlength)
+{
+}
+
+int S_RawSamples_SampleRate(void)
+{
+	return 0;
+}

@@ -1135,3 +1135,8 @@ void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int 
 	else
 		memcpy(output, input, inputlength * sizeof(short[2]));
 }
+
+int S_RawSamples_SampleRate(void)
+{
+	return shm != NULL ? shm->speed : 0;
+}
