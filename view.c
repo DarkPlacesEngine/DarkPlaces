@@ -97,6 +97,8 @@ static float V_CalcBob (void)
 	// LordHavoc: easy case
 	if (cl_bob.value == 0)
 		return 0;
+	if (cl_bobcycle.value == 0)
+		return 0;
 
 	// LordHavoc: FIXME: this code is *weird*, redesign it sometime
 	cycle = cl.time  / cl_bobcycle.value;
