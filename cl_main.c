@@ -53,7 +53,8 @@ cvar_t r_draweffects = {0, "r_draweffects", "1"};
 cvar_t cl_explosions = {CVAR_SAVE, "cl_explosions", "1"};
 cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 
-cvar_t cl_beampolygons = {CVAR_SAVE, "cl_beampolygons", "1"};
+cvar_t cl_beams_polygons = {CVAR_SAVE, "cl_beams_polygons", "1"};
+cvar_t cl_beams_relative = {CVAR_SAVE, "cl_beams_relative", "1"};
 
 mempool_t *cl_scores_mempool;
 mempool_t *cl_refdef_mempool;
@@ -868,13 +869,42 @@ void CL_RelinkBeams (void)
 		// if coming from the player, update the start position
 		//if (b->entity == cl.viewentity)
 		//	VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
-		if (b->entity && cl_entities[b->entity].state_current.active)
+		if (cl_beams_relative.integer && b->entity && cl_entities[b->entity].state_current.active && b->relativestartvalid)
 		{
-			VectorCopy (cl_entities[b->entity].render.origin, b->start);
-			b->start[2] += 16;
+			entity_state_t *p = &cl_entities[b->entity].state_previous;
+			//entity_state_t *c = &cl_entities[b->entity].state_current;
+			entity_render_t *r = &cl_entities[b->entity].render;
+			matrix4x4_t matrix, imatrix;
+			if (b->relativestartvalid == 2)
+			{
+				// not really valid yet, we need to get the orientation now
+				// (ParseBeam flagged this because it is received before
+				//  entities are received, by now they have been received)
+				// note: because players create lightning in their think
+				// function (which occurs before movement), they actually
+				// have some lag in it's location, so compare to the
+				// previous player state, not the latest
+				if (b->entity == cl.viewentity)
+					Matrix4x4_CreateFromQuakeEntity(&matrix, cl.viewentoriginold[0], cl.viewentoriginold[1], cl.viewentoriginold[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
+				else
+					Matrix4x4_CreateFromQuakeEntity(&matrix, p->origin[0], p->origin[1], p->origin[2] + 16, p->angles[0], p->angles[1], p->angles[2], 1);
+				Matrix4x4_Invert_Simple(&imatrix, &matrix);
+				Matrix4x4_Transform(&imatrix, b->start, b->relativestart);
+				Matrix4x4_Transform(&imatrix, b->end, b->relativeend);
+				b->relativestartvalid = 1;
+			}
+			else
+			{
+				if (b->entity == cl.viewentity)
+					Matrix4x4_CreateFromQuakeEntity(&matrix, cl.viewentorigin[0], cl.viewentorigin[1], cl.viewentorigin[2] + 16, cl.viewangles[0], cl.viewangles[1], cl.viewangles[2], 1);
+				else
+					Matrix4x4_CreateFromQuakeEntity(&matrix, r->origin[0], r->origin[1], r->origin[2] + 16, r->angles[0], r->angles[1], r->angles[2], 1);
+				Matrix4x4_Transform(&matrix, b->relativestart, b->start);
+				Matrix4x4_Transform(&matrix, b->relativeend, b->end);
+			}
 		}
 
-		if (cl_beampolygons.integer)
+		if (b->lightning && cl_beams_polygons.integer)
 			continue;
 
 		// calculate pitch and yaw
@@ -1058,7 +1088,7 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	CrossProduct(beamdir, up, right);
 
 	// calculate T coordinate scrolling (start and end texcoord along the beam)
-	t1 = cl.time * -r_lightningbeam_scroll.value;
+	t1 = cl.time * -r_lightningbeam_scroll.value + beamrepeatscale * DotProduct(b->start, beamdir);
 	t1 = t1 - (int) t1;
 	t2 = t1 + beamrepeatscale * length;
 
@@ -1109,13 +1139,13 @@ void R_DrawLightningBeams (void)
 	beam_t *b;
 	vec3_t org;
 
-	if (!cl_beampolygons.integer)
+	if (!cl_beams_polygons.integer)
 		return;
 
 	beamrepeatscale = 1.0f / r_lightningbeam_repeatdistance.value;
 	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
 	{
-		if (b->model && b->endtime >= cl.time)
+		if (b->model && b->endtime >= cl.time && b->lightning)
 		{
 			VectorAdd(b->start, b->end, org);
 			VectorScale(org, 0.5f, org);
@@ -1137,7 +1167,11 @@ void CL_LerpPlayer(float frac)
 		cl.viewentorigin[2] = cl.viewentoriginold[2] + frac * (cl.viewentoriginnew[2] - cl.viewentoriginold[2]);
 	}
 	else
+	{
+		VectorCopy (cl_entities[cl.viewentity].state_previous.origin, cl.viewentoriginold);
+		VectorCopy (cl_entities[cl.viewentity].state_current.origin, cl.viewentoriginnew);
 		VectorCopy (cl_entities[cl.viewentity].render.origin, cl.viewentorigin);
+	}
 
 	cl.viewzoom = cl.viewzoomold + frac * (cl.viewzoomnew - cl.viewzoomold);
 
@@ -1172,10 +1206,11 @@ void CL_RelinkEntities (void)
 	CL_RelinkStaticEntities();
 	CL_RelinkNetworkEntities();
 	CL_RelinkEffects();
-	CL_RelinkBeams();
 	CL_MoveParticles();
 
 	CL_LerpPlayer(frac);
+
+	CL_RelinkBeams();
 }
 
 
@@ -1443,7 +1478,8 @@ void CL_Init (void)
 	Cvar_RegisterVariable(&r_draweffects);
 	Cvar_RegisterVariable(&cl_explosions);
 	Cvar_RegisterVariable(&cl_stainmaps);
-	Cvar_RegisterVariable(&cl_beampolygons);
+	Cvar_RegisterVariable(&cl_beams_polygons);
+	Cvar_RegisterVariable(&cl_beams_relative);
 
 	R_LightningBeams_Init();
 
