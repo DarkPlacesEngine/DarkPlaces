@@ -3118,6 +3118,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_MakePortals();
 
 	mod->numframes = 2;		// regular and alternate animation
+	mod->numskins = 1;
 
 	mainmempool = mod->mempool;
 
@@ -5789,7 +5790,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	q3msurface_t *face;
 
 	mod->type = mod_brushq3;
-	mod->numframes = 1;
+	mod->numframes = 2; // although alternate textures are not supported it is annoying to complain about no such frame 1
 	mod->numskins = 1;
 
 	header = (q3dheader_t *)buffer;
