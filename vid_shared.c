@@ -541,6 +541,12 @@ void VID_Open(void)
 			Cvar_SetValueQuick(&vid_stencil, 1);
 	}
 
+	if (vid_stencil.integer && vid_bitsperpixel.integer != 32)
+	{
+		Con_Printf("vid_stencil not allowed without vid_bitsperpixel 32, turning off vid_stencil\n");
+		Cvar_SetValueQuick(&vid_stencil, 0);
+	}
+
 	Con_Printf("Starting video system\n");
 	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_stencil.integer))
 	{
