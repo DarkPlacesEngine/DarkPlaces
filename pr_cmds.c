@@ -362,7 +362,7 @@ void PF_setmodel (void)
 			break;
 
 	if (!*check)
-		PF_WARNING("setmodel: no precache\n");
+		PF_WARNING(va("setmodel: no precache for model \"%s\"\n", m));
 
 
 	e->v->model = PR_SetString(*check);
