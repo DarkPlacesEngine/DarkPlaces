@@ -22,7 +22,10 @@ SOUNDLIB=
 #if you want no CD audio
 CD=cd_null.o
 
-OBJECTS= builddate.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o r_sky.o gl_rmain.o gl_rsurf.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_udp.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_explosion.o sbar.o sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o sys_linux.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o protocol.o quakeio.o ui.o portals.o sys_shared.o cl_light.o gl_backend.o cl_particles.o cl_screen.o cgamevm.o cgame.o filematch.o collision.o cl_collision.o matrixlib.o cl_video.o dpvsimpledecode.o wavefile.o meshqueue.o
+CLIENTOBJECTS= cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o cl_light.o cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_tent.o cl_video.o console.o dpvsimpledecode.o fractalnoise.o gl_backend.o gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o
+SERVEROBJECTS= pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o sv_phys.o sv_user.o
+SHAREDOBJECTS= builddate.o cmd.o collision.o common.o crc.o cvar.o filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o model_alias.o model_brush.o model_shared.o model_sprite.o net_bsd.o net_dgrm.o net_loop.o net_main.o net_udp.o palette.o portals.o protocol.o quakeio.o sys_linux.o sys_shared.o transform.o world.o wad.o zone.o $(NETOBJECTS) $(SERVEROBJECTS)
+
 
 #K6/athlon optimizations
 #CPUOPTIMIZATIONS=-march=k6
@@ -37,40 +40,41 @@ CPUOPTIMIZATIONS=
 
 #use this line for profiling
 PROFILEOPTION=-pg -g
-NOPROFILEOPTIMIZATIONS=
 #use this line for no profiling
 #PROFILEOPTION=
-#NOPROFILEOPTIMIZATIONS=-fomit-frame-pointer
-#use these lines for debugging without profiling
-#PROFILEOPTION=
-#NOPROFILEOPTIMIZATIONS=
 
 #note:
 #the -Werror can be removed to compile even if there are warnings,
 #this is used to ensure that all released versions are free of warnings.
 
 #normal compile
-OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
-CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include $(OPTIMIZATIONS) $(PROFILEOPTION)
+OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+CFLAGS= -MD -Wall -Werror $(OPTIMIZATIONS) $(PROFILEOPTION)
 #debug compile
 #OPTIMIZATIONS=
-#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
+#CFLAGS= -MD -Wall -Werror -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
 
-LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXxf86dga -lXxf86vm -ldl $(SOUNDLIB) $(PROFILEOPTION)
+LDFLAGS= $(PROFILEOPTION) -lm -ldl
 
-all: builddate darkplaces-glx
+all: builddate darkplaces-dedicated darkplaces-glx
 
 builddate:
 	touch builddate.c
 
+vid_glx.o: vid_glx.c
+	gcc $(CFLAGS) -c vid_glx.c -I/usr/X11R6/include
+
 .c.o:
 	gcc $(CFLAGS) -c $*.c
 
-darkplaces-glx: vid_glx.o $(CD) $(SND) $(OBJECTS)
+darkplaces-glx:  $(SHAREDOBJECTS) $(CLIENTOBJECTS) $(SERVEROBJECTS) vid_glx.o $(CD) $(SND)
+	gcc -o $@ $^ $(LDFLAGS) -L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(SOUNDLIB)
+
+darkplaces-dedicated: $(SHAREDOBJECTS) $(CLIENTOBJECTS) $(SERVEROBJECTS) vid_null.o cd_null.o snd_null.o
 	gcc -o $@ $^ $(LDFLAGS)
 
 clean:
-	-rm -f darkplaces-glx *.o *.d
+	-rm -f darkplaces-glx darkplaces-dedicated *.o *.d
 
 .PHONY: clean builddate
 
