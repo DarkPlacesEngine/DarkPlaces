@@ -946,8 +946,6 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 		// multitexture cases
 		if (r_textureunits.integer >= 2 && gl_combine.integer && dobase && dolightmap)
 		{
-			dobase = false;
-			dolightmap = false;
 			GL_BlendFunc(GL_ONE, GL_ZERO);
 			GL_DepthMask(true);
 			GL_DepthTest(true);
@@ -955,47 +953,49 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 			GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 			memset(&m, 0, sizeof(m));
 			m.tex[0] = R_GetTexture(texture->skin.base);
+			dobase = false;
 			m.texrgbscale[1] = 2;
-			if (r_textureunits.integer >= 3 && !doambient && dodetail)
+			dolightmap = false;
+			if (r_textureunits.integer >= 4 && !doambient && dodetail && doglow)
 			{
 				m.tex[2] = R_GetTexture(texture->skin.detail);
 				m.texrgbscale[2] = 2;
 				dodetail = false;
-				if (r_textureunits.integer >= 3 && texture->skin.glow)
+				m.tex[3] = R_GetTexture(texture->skin.glow);
+				m.texcombinergb[3] = GL_ADD;
+				doglow = false;
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
-					m.tex[3] = R_GetTexture(texture->skin.glow);
-					m.texcombinergb[3] = GL_ADD;
-					doglow = false;
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						surface = texturesurfacelist[texturesurfaceindex];
-						m.tex[1] = R_GetTexture(surface->lightmaptexture);
-						m.pointer_vertex = surface->mesh.data_vertex3f;
-						m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
-						m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
-						m.pointer_texcoord[2] = surface->mesh.data_texcoorddetail2f;
-						m.pointer_texcoord[3] = surface->mesh.data_texcoordtexture2f;
-						R_Mesh_State(&m);
-						GL_LockArrays(0, surface->mesh.num_vertices);
-						R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
-						GL_LockArrays(0, 0);
-					}
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.tex[1] = R_GetTexture(surface->lightmaptexture);
+					m.pointer_vertex = surface->mesh.data_vertex3f;
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
+					m.pointer_texcoord[2] = surface->mesh.data_texcoorddetail2f;
+					m.pointer_texcoord[3] = surface->mesh.data_texcoordtexture2f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
 				}
-				else
+			}
+			else if (r_textureunits.integer >= 3 && !doambient && dodetail)
+			{
+				m.tex[2] = R_GetTexture(texture->skin.detail);
+				m.texrgbscale[2] = 2;
+				dodetail = false;
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 				{
-					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-					{
-						surface = texturesurfacelist[texturesurfaceindex];
-						m.tex[1] = R_GetTexture(surface->lightmaptexture);
-						m.pointer_vertex = surface->mesh.data_vertex3f;
-						m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
-						m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
-						m.pointer_texcoord[2] = surface->mesh.data_texcoorddetail2f;
-						R_Mesh_State(&m);
-						GL_LockArrays(0, surface->mesh.num_vertices);
-						R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
-						GL_LockArrays(0, 0);
-					}
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.tex[1] = R_GetTexture(surface->lightmaptexture);
+					m.pointer_vertex = surface->mesh.data_vertex3f;
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
+					m.pointer_texcoord[2] = surface->mesh.data_texcoorddetail2f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
 				}
 			}
 			else if (r_textureunits.integer >= 3 && !doambient && !dodetail && doglow)
@@ -1011,6 +1011,21 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 					m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
 					m.pointer_texcoord[2] = surface->mesh.data_texcoordtexture2f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			else
+			{
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.tex[1] = R_GetTexture(surface->lightmaptexture);
+					m.pointer_vertex = surface->mesh.data_vertex3f;
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
 					R_Mesh_State(&m);
 					GL_LockArrays(0, surface->mesh.num_vertices);
 					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
@@ -1094,7 +1109,7 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 			{
 				surface = texturesurfacelist[texturesurfaceindex];
 				m.pointer_vertex = surface->mesh.data_vertex3f;
-				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[0] = surface->mesh.data_texcoorddetail2f;
 				R_Mesh_State(&m);
 				GL_LockArrays(0, surface->mesh.num_vertices);
 				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
