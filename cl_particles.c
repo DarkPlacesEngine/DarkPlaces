@@ -349,7 +349,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 {
 	int i;
 	if (cl_stainmaps.integer)
-		R_Stain(org, 96, 80, 80, 80, 128, 176, 176, 176, 128);
+		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 
 	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
 	if ((i == CONTENTS_SLIME || i == CONTENTS_WATER) && cl_particles.integer && cl_particles_bubbles.integer)
@@ -391,7 +391,7 @@ CL_BlobExplosion
 void CL_BlobExplosion (vec3_t org)
 {
 	if (cl_stainmaps.integer)
-		R_Stain(org, 96, 80, 80, 80, 128, 176, 176, 176, 128);
+		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 
 	if (cl_explosions.integer)
 		R_NewExplosion(org);
@@ -432,7 +432,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 	if (!cl_particles.integer) return;
 
 	if (cl_stainmaps.integer)
-		R_Stain(org, 32, 96, 96, 96, 32, 128, 128, 128, 32);
+		R_Stain(org, 32, 96, 96, 96, 2, 128, 128, 128, 2);
 
 	if (cl_particles_bulletimpacts.integer)
 	{
@@ -455,7 +455,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 void CL_PlasmaBurn (vec3_t org)
 {
 	if (cl_stainmaps.integer)
-		R_Stain(org, 48, 96, 96, 96, 48, 128, 128, 128, 48);
+		R_Stain(org, 48, 96, 96, 96, 3, 128, 128, 128, 3);
 }
 
 static float bloodcount = 0;
@@ -860,7 +860,7 @@ void CL_MoveParticles (void)
 				{
 					// assume it's blood (lame, but...)
 					if (cl_stainmaps.integer)
-						R_Stain(v, 64, 32, 16, 16, p->alpha * p->scalex * (1.0f / 100.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 100.0f));
+						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 400.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 400.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
 					continue;

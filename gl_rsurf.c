@@ -439,8 +439,8 @@ void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, in
 
 
 	// for comparisons to minimum acceptable light
-	// compensate for 4096 offset
-	maxdist = radius * radius + 4096;
+	// compensate for 256 offset
+	maxdist = radius * radius + 256.0f;
 
 	// clamp radius to avoid exceeding 32768 entry division table
 	if (maxdist > 4194304)
@@ -463,8 +463,7 @@ loc0:
 		goto loc0;
 	}
 
-	dist2 = ndist * ndist;
-	dist2 += 4096.0f;
+	dist2 = ndist * ndist + 256.0f;
 	if (dist2 < maxdist)
 	{
 		maxdist3 = maxdist - dist2;
