@@ -608,7 +608,7 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 
 void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
 {
-	float f;
+	float f, tangentcross[3];
 	normal3f[0] = (v1[1] - v0[1]) * (v2[2] - v0[2]) - (v1[2] - v0[2]) * (v2[1] - v0[1]);
 	normal3f[1] = (v1[2] - v0[2]) * (v2[0] - v0[0]) - (v1[0] - v0[0]) * (v2[2] - v0[2]);
 	normal3f[2] = (v1[0] - v0[0]) * (v2[1] - v0[1]) - (v1[1] - v0[1]) * (v2[0] - v0[0]);
@@ -626,6 +626,13 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 	f = -DotProduct(svector3f, normal3f);
 	VectorMA(svector3f, f, normal3f, svector3f);
 	VectorNormalize(svector3f);
+	CrossProduct(svector3f, tvector3f, tangentcross);
+	// if texture is mapped the wrong way (counterclockwise), the tangents have to be flipped, this is detected by calculating a normal from the two tangents, and seeing if it is opposite the surface normal
+	if (DotProduct(tangentcross, normal3f) < 0)
+	{
+		VectorNegate(svector3f, svector3f);
+		VectorNegate(tvector3f, tvector3f);
+	}
 }
 
 // warning: this is an expensive function!
