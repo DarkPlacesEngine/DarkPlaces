@@ -36,7 +36,7 @@ cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
-cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
+cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "1"};
 
 static int dlightdivtable[32768];
 
