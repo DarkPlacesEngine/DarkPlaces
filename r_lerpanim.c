@@ -34,11 +34,13 @@ void R_LerpAnimation(entity_render_t *r)
 	if (r->frame1 < 0)
 		Host_Error ("CL_LerpAnimation: frame1 is NULL\n");
 
-	// round off very close blend percentages
-	if (r->framelerp < (1.0f / 65536.0f))
-		r->framelerp = 0;
-	if (r->framelerp >= (65535.0f / 65536.0f))
+	// check r_lerpmodels and round off very close blend percentages
+	if (!r_lerpmodels.integer)
 		r->framelerp = 1;
+	else if (r->framelerp >= (65535.0f / 65536.0f))
+		r->framelerp = 1;
+	else if (r->framelerp < (1.0f / 65536.0f))
+		r->framelerp = 0;
 
 	blend[0].frame = blend[1].frame = blend[2].frame = blend[3].frame = 0;
 	blend[0].lerp = blend[1].lerp = blend[2].lerp = blend[3].lerp = 0;
@@ -55,10 +57,12 @@ void R_LerpAnimation(entity_render_t *r)
 				sub1 = (int) (sublerp);
 				sub2 = sub1 + 1;
 				sublerp -= sub1;
-				if (sublerp < (1.0f / 65536.0f))
-					sublerp = 0;
-				if (sublerp >= (65535.0f / 65536.0f))
+				if (!r_lerpmodels.integer)
 					sublerp = 1;
+				else if (sublerp >= (65535.0f / 65536.0f))
+					sublerp = 1;
+				else if (sublerp < (1.0f / 65536.0f))
+					sublerp = 0;
 				if (scene->loop)
 				{
 					sub1 = (sub1 % scene->framecount);
@@ -113,10 +117,12 @@ void R_LerpAnimation(entity_render_t *r)
 				sub1 = (int) (sublerp);
 				sub2 = sub1 + 1;
 				sublerp -= sub1;
-				if (sublerp < (1.0f / 65536.0f))
-					sublerp = 0;
-				if (sublerp >= (65535.0f / 65536.0f))
+				if (!r_lerpmodels.integer)
 					sublerp = 1;
+				else if (sublerp >= (65535.0f / 65536.0f))
+					sublerp = 1;
+				else if (sublerp < (1.0f / 65536.0f))
+					sublerp = 0;
 				if (scene->loop)
 				{
 					sub1 = (sub1 % scene->framecount);
