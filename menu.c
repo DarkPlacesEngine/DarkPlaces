@@ -613,8 +613,8 @@ void M_SinglePlayer_Draw (void)
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
 
-	// Transfusion doesn't have a single player mode
-	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
+	// Some mods don't have a single player mode
+	if (gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
 		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
 
@@ -623,10 +623,8 @@ void M_SinglePlayer_Draw (void)
 			M_Print(95, 10 * 8, "Nexuiz is for");
 		else if (gamemode == GAME_GOODVSBAD2)
 			M_Print(95, 10 * 8, "Good Vs Bad 2 is for");
-		else if (gamemode == GAME_BATTLEMECH)
+		else  // if (gamemode == GAME_BATTLEMECH)
 			M_Print(95, 10 * 8, "Battlemech is for");
-		else
-			M_Print(95, 10 * 8, "Transfusion is for");
 		M_Print(83, 11 * 8, "multiplayer play only");
 	}
 	else
@@ -645,7 +643,7 @@ void M_SinglePlayer_Draw (void)
 
 void M_SinglePlayer_Key (int key, char ascii)
 {
-	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
+	if (gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2 || gamemode == GAME_BATTLEMECH)
 	{
 		if (key == K_ESCAPE || key == K_ENTER)
 			m_state = m_main;
@@ -684,6 +682,8 @@ void M_SinglePlayer_Key (int key, char ascii)
 			Cbuf_AddText ("coop 0\n");
 			if (gamemode == GAME_NEHAHRA)
 				Cbuf_AddText ("map nehstart\n");
+			else if (gamemode == GAME_TRANSFUSION)
+				Cbuf_AddText ("map e1m1\n");
 			else
 				Cbuf_AddText ("map start\n");
 			break;
@@ -3374,9 +3374,11 @@ void M_GameOptions_Draw (void)
 		M_Print(0, 64, "        Game Type");
 		if (gamemode == GAME_TRANSFUSION)
 		{
-			if (!deathmatch.integer)
+			if (!coop.integer && !deathmatch.integer)
 				Cvar_SetValue("deathmatch", 1);
-			if (deathmatch.integer == 2)
+			if (deathmatch.integer == 0)
+				M_Print(160, 64, "Cooperative");
+			else if (deathmatch.integer == 2)
 				M_Print(160, 64, "Capture the Flag");
 			else
 				M_Print(160, 64, "Blood Bath");
@@ -3523,10 +3525,26 @@ void M_NetStart_Change (int dir)
 			break;
 		if (gamemode == GAME_TRANSFUSION)
 		{
-			if (deathmatch.integer == 2) // changing from CTF to BloodBath
-				Cvar_SetValueQuick (&deathmatch, 0);
-			else // changing from BloodBath to CTF
-				Cvar_SetValueQuick (&deathmatch, 2);
+			switch (deathmatch.integer)
+			{
+				// From Cooperative to BloodBath
+				case 0:
+					Cvar_SetValueQuick (&coop, 0);
+					Cvar_SetValueQuick (&deathmatch, 1);
+					break;
+
+				// From BloodBath to CTF
+				case 1:
+					Cvar_SetValueQuick (&coop, 0);
+					Cvar_SetValueQuick (&deathmatch, 2);
+					break;
+
+				// From CTF to Cooperative
+				//case 2:
+				default:
+					Cvar_SetValueQuick (&coop, 1);
+					Cvar_SetValueQuick (&deathmatch, 0);
+			}
 		}
 		else if (gamemode == GAME_BATTLEMECH)
 		{
