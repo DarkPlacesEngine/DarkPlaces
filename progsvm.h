@@ -170,7 +170,12 @@ typedef struct prvm_edict_s
 {
 	// engine-private fields (stored in dynamically resized array)
 	//edict_engineprivate_t *e;
-	prvm_edict_private_t *e;
+	union 
+	{
+		prvm_edict_private_t *e;
+		void				 *vp;
+		//add other types as you desire
+	} p;
 	// QuakeC fields (stored in dynamically resized array)
 	//entvars_t *v;
 	void *v;
