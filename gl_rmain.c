@@ -98,7 +98,7 @@ static void R_TimeRefresh_f (void)
 
 	intimerefresh = 1;
 	start = Sys_DoubleTime ();
-	//glDrawBuffer (GL_FRONT);
+	//qglDrawBuffer (GL_FRONT);
 	for (i = 0;i < 128;i++)
 	{
 		r_refdef.viewangles[0] = 0;
@@ -107,7 +107,7 @@ static void R_TimeRefresh_f (void)
 		CL_UpdateScreen();
 		//R_RenderView();
 	}
-	//glDrawBuffer  (GL_BACK);
+	//qglDrawBuffer  (GL_BACK);
 
 	stop = Sys_DoubleTime ();
 	intimerefresh = 0;
@@ -347,10 +347,10 @@ void GL_Init (void)
 	// LordHavoc: report supported extensions
 	Con_Printf ("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
 
-	glCullFace(GL_FRONT);
-	glEnable(GL_TEXTURE_2D);
+	qglCullFace(GL_FRONT);
+	qglEnable(GL_TEXTURE_2D);
 
-//	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
+//	qglPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
 }
 
 
@@ -469,13 +469,13 @@ void R_DrawViewModel (void)
 //	if (gl_viewmodeldepthhack.integer)
 //	{
 //		R_Mesh_Render();
-//		glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
+//		qglDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
 //	}
 	currentrenderentity->model->Draw();
 //	if (gl_viewmodeldepthhack.integer)
 //	{
 //		R_Mesh_Render();
-//		glDepthRange (gldepthmin, gldepthmax);
+//		qglDepthRange (gldepthmin, gldepthmax);
 //	}
 }
 
@@ -580,27 +580,27 @@ static void R_BlendView(void)
 	R_Mesh_Draw(&m);
 
 	/*
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity ();
-	glOrtho  (0, 1, 1, 0, -99999, 99999);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity ();
-	glDisable (GL_DEPTH_TEST);
-	glDisable (GL_CULL_FACE);
-	glDisable(GL_TEXTURE_2D);
-	glEnable(GL_BLEND);
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glBegin (GL_TRIANGLES);
-	glColor4f (r_refdef.viewblend[0] * overbrightscale, r_refdef.viewblend[1] * overbrightscale, r_refdef.viewblend[2] * overbrightscale, r_refdef.viewblend[3]);
-	glVertex2f (-5, -5);
-	glVertex2f (10, -5);
-	glVertex2f (-5, 10);
-	glEnd ();
+	qglMatrixMode(GL_PROJECTION);
+	qglLoadIdentity ();
+	qglOrtho  (0, 1, 1, 0, -99999, 99999);
+	qglMatrixMode(GL_MODELVIEW);
+	qglLoadIdentity ();
+	qglDisable (GL_DEPTH_TEST);
+	qglDisable (GL_CULL_FACE);
+	qglDisable(GL_TEXTURE_2D);
+	qglEnable(GL_BLEND);
+	qglBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	qglBegin (GL_TRIANGLES);
+	qglColor4f (r_refdef.viewblend[0] * overbrightscale, r_refdef.viewblend[1] * overbrightscale, r_refdef.viewblend[2] * overbrightscale, r_refdef.viewblend[3]);
+	qglVertex2f (-5, -5);
+	qglVertex2f (10, -5);
+	qglVertex2f (-5, 10);
+	qglEnd ();
 
-	glEnable (GL_CULL_FACE);
-	glEnable (GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
+	qglEnable (GL_CULL_FACE);
+	qglEnable (GL_DEPTH_TEST);
+	qglDisable(GL_BLEND);
+	qglEnable(GL_TEXTURE_2D);
 	*/
 }
 
