@@ -66,7 +66,7 @@ void IN_MouseEvent (int mstate);
 
 extern qboolean	winsock_lib_initialized;
 
-extern int		window_center_x, window_center_y;
+extern int		window_center_x, window_center_y, window_x, window_y;
 extern RECT		window_rect;
 
 extern qboolean	mouseinitialized;
