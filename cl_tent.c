@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+cvar_t r_glowinglightning = {"r_glowinglightning", "1", true};
+
 int			num_temp_entities;
 entity_t	cl_temp_entities[MAX_TEMP_ENTITIES];
 beam_t		cl_beams[MAX_BEAMS];
@@ -40,6 +42,7 @@ CL_ParseTEnt
 */
 void CL_InitTEnts (void)
 {
+	Cvar_RegisterVariable(&r_glowinglightning);
 	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav");
 	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav");
 	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav");
@@ -612,11 +615,14 @@ void CL_UpdateTEnts (void)
 			ent->angles[1] = yaw;
 			ent->angles[2] = rand()%360;
 
-			dl = CL_AllocDlight (0);
-			VectorCopy (ent->origin,  dl->origin);
-			dl->radius = 100 + (rand()&31);
-			dl->die = cl.time + 0.001;
-			dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 1;
+			if (r_glowinglightning.value)
+			{
+				dl = CL_AllocDlight (0);
+				VectorCopy (ent->origin,  dl->origin);
+				dl->radius = 100 + (rand()&31);
+				dl->die = cl.time + 0.001;
+				dl->color[0] = 1;dl->color[1] = 1;dl->color[2] = 1;
+			}
 
 			VectorMA(org, 30, dist, org);
 			d -= 30;
