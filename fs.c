@@ -317,11 +317,7 @@ Unload the Zlib DLL
 */
 void PK3_CloseLibrary (void)
 {
-	if (!zlib_dll)
-		return;
-
-	Sys_UnloadLibrary (zlib_dll);
-	zlib_dll = NULL;
+	Sys_UnloadLibrary (&zlib_dll);
 }
 
 
@@ -335,7 +331,6 @@ Try to load the Zlib DLL
 qboolean PK3_OpenLibrary (void)
 {
 	const char* dllname;
-	const dllfunction_t *func;
 
 	// Already loaded?
 	if (zlib_dll)
@@ -347,27 +342,14 @@ qboolean PK3_OpenLibrary (void)
 	dllname = "libz.so";
 #endif
 
-	// Initializations
-	for (func = zlibfuncs; func && func->name != NULL; func++)
-		*func->funcvariable = NULL;
-
 	// Load the DLL
-	if (! (zlib_dll = Sys_LoadLibrary (dllname)))
+	if (! Sys_LoadLibrary (dllname, &zlib_dll, zlibfuncs))
 	{
-		Con_Printf("Can't find %s. Compressed files support disabled\n", dllname);
+		Con_Printf ("Compressed files support disabled\n");
 		return false;
 	}
 
-	// Get the function adresses
-	for (func = zlibfuncs; func && func->name != NULL; func++)
-		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (zlib_dll, func->name)))
-		{
-			Con_Printf("missing function \"%s\" - broken Zlib library!\n", func->name);
-			PK3_CloseLibrary ();
-			return false;
-		}
-
-	Con_Printf("%s loaded. Compressed files support enabled\n", dllname);
+	Con_Printf ("Compressed files support enabled\n");
 	return true;
 }
 

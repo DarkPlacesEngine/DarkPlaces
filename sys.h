@@ -44,8 +44,8 @@ typedef struct
 }
 dllfunction_t;
 
-dllhandle_t Sys_LoadLibrary (const char* name);
-void Sys_UnloadLibrary (dllhandle_t handle);
+qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfunction_t *fcts);
+void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
 
