@@ -157,9 +157,9 @@ static void R_SkyBox(void)
 	rmeshbufferinfo_t m;
 
 #define R_SkyBoxPolyVec(i,s,t,x,y,z) \
-	m.vertex[i * 4 + 0] = (x) * 16.0f + r_origin[0];\
-	m.vertex[i * 4 + 1] = (y) * 16.0f + r_origin[1];\
-	m.vertex[i * 4 + 2] = (z) * 16.0f + r_origin[2];\
+	m.vertex[i * 4 + 0] = (x) * 16.0f;\
+	m.vertex[i * 4 + 1] = (y) * 16.0f;\
+	m.vertex[i * 4 + 2] = (z) * 16.0f;\
 	m.texcoords[0][i * 2 + 0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
 	m.texcoords[0][i * 2 + 1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
 
@@ -170,6 +170,7 @@ static void R_SkyBox(void)
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
+	Matrix4x4_CreateTranslate(&m.matrix, r_origin[0], r_origin[1], r_origin[2]);
 	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skyboxindex, sizeof(int[6]));
@@ -316,9 +317,9 @@ static void skyspherearrays(float *v, float *t, float *c, float *source, float s
 		c[3] = 1;
 		t[0] = source[0] + s;
 		t[1] = source[1] + s;
-		v[0] = source[2] + r_origin[0];
-		v[1] = source[3] + r_origin[1];
-		v[2] = source[4] + r_origin[2];
+		v[0] = source[2];
+		v[1] = source[3];
+		v[2] = source[4];
 	}
 }
 
@@ -345,6 +346,7 @@ static void R_SkySphere(void)
 	m.numtriangles = skygridx*skygridy*2;
 	m.numverts = skygridx1*skygridy1;
 	m.tex[0] = R_GetTexture(solidskytexture);
+	Matrix4x4_CreateTranslate(&m.matrix, r_origin[0], r_origin[1], r_origin[2]);
 	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		memcpy(m.index, skysphereindices, m.numtriangles * sizeof(int[3]));

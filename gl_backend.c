@@ -2,7 +2,6 @@
 #include "quakedef.h"
 
 cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "1024"};
-cvar_t gl_mesh_transtriangles = {0, "gl_mesh_transtriangles", "16384"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
 cvar_t gl_mesh_drawmode = {CVAR_SAVE, "gl_mesh_drawmode", "3"};
 
@@ -13,8 +12,6 @@ cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 // this is used to increase gl_mesh_maxtriangles automatically if a mesh was
 // too large for the buffers in the previous frame
 int overflowedverts = 0;
-// increase transtriangles automatically too
-int overflowedtransverts = 0;
 
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
@@ -74,7 +71,7 @@ static float viewdist;
 // sign bits (true if negative) for vpn[] entries, so quick integer compares can be used instead of float compares
 static int vpnbit0, vpnbit1, vpnbit2;
 
-int c_meshs, c_meshtris, c_transmeshs, c_transtris;
+int c_meshs, c_meshtris;
 
 int lightscalebit;
 float lightscale;
@@ -83,10 +80,7 @@ float overbrightscale;
 void SCR_ScreenShot_f (void);
 
 static int max_meshs;
-static int max_transmeshs;
 static int max_verts; // always max_meshs * 3
-static int max_transverts; // always max_transmeshs * 3
-#define TRANSDEPTHRES 4096
 
 typedef struct buf_mesh_s
 {
@@ -99,19 +93,10 @@ typedef struct buf_mesh_s
 	int triangles;
 	int firstvert;
 	int verts;
+	matrix4x4_t matrix;
 	struct buf_mesh_s *chain;
-	struct buf_transtri_s *transchain;
 }
 buf_mesh_t;
-
-typedef struct buf_transtri_s
-{
-	struct buf_transtri_s *next;
-	struct buf_transtri_s *meshsortchain;
-	buf_mesh_t *mesh;
-	int index[3];
-}
-buf_transtri_t;
 
 typedef struct buf_tri_s
 {
@@ -143,22 +128,13 @@ typedef struct
 }
 buf_texcoord_t;
 
-static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive, transranout;
+static int currentmesh, currenttriangle, currentvertex, backendunits, backendactive;
 static buf_mesh_t *buf_mesh;
 static buf_tri_t *buf_tri;
 static buf_vertex_t *buf_vertex;
 static buf_fcolor_t *buf_fcolor;
 static buf_bcolor_t *buf_bcolor;
 static buf_texcoord_t *buf_texcoord[MAX_TEXTUREUNITS];
-
-static int currenttransmesh, currenttransvertex, currenttranstriangle;
-static buf_mesh_t *buf_transmesh;
-static buf_transtri_t *buf_sorttranstri;
-static buf_transtri_t **buf_sorttranstri_list;
-static buf_tri_t *buf_transtri;
-static buf_vertex_t *buf_transvertex;
-static buf_fcolor_t *buf_transfcolor;
-static buf_texcoord_t *buf_transtexcoord[MAX_TEXTUREUNITS];
 
 static mempool_t *gl_backend_mempool;
 static int resizingbuffers = false;
@@ -170,7 +146,7 @@ static void gl_backend_start(void)
 	qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
 	qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
 
-	Con_Printf("OpenGL Backend started with gl_mesh_maxtriangles %i, gl_mesh_transtriangles %i\n", gl_mesh_maxtriangles.integer, gl_mesh_transtriangles.integer);
+	Con_Printf("OpenGL Backend started with gl_mesh_maxtriangles %i\n", gl_mesh_maxtriangles.integer);
 	if (qglDrawRangeElements != NULL)
 		Con_Printf("glDrawRangeElements detected (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
 	if (strstr(gl_renderer, "3Dfx"))
@@ -181,7 +157,6 @@ static void gl_backend_start(void)
 	Con_Printf("\n");
 
 	max_verts = max_meshs * 3;
-	max_transverts = max_transmeshs * 3;
 
 	if (!gl_backend_mempool)
 		gl_backend_mempool = Mem_AllocPool("GL_Backend");
@@ -200,25 +175,16 @@ static void gl_backend_start(void)
 	BACKENDALLOC(buf_fcolor, max_verts, buf_fcolor_t, "buf_fcolor")
 	BACKENDALLOC(buf_bcolor, max_verts, buf_bcolor_t, "buf_bcolor")
 
-	BACKENDALLOC(buf_transmesh, max_transmeshs, buf_mesh_t, "buf_transmesh")
-	BACKENDALLOC(buf_sorttranstri, max_transmeshs, buf_transtri_t, "buf_sorttranstri")
-	BACKENDALLOC(buf_sorttranstri_list, TRANSDEPTHRES, buf_transtri_t *, "buf_sorttranstri_list")
-	BACKENDALLOC(buf_transtri, max_transmeshs, buf_tri_t, "buf_transtri")
-	BACKENDALLOC(buf_transvertex, max_transverts, buf_vertex_t, "buf_vertex")
-	BACKENDALLOC(buf_transfcolor, max_transverts, buf_fcolor_t, "buf_fcolor")
-
 	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		// only allocate as many texcoord arrays as we need
 		if (i < gl_textureunits)
 		{
 			BACKENDALLOC(buf_texcoord[i], max_verts, buf_texcoord_t, va("buf_texcoord[%d]", i))
-			BACKENDALLOC(buf_transtexcoord[i], max_transverts, buf_texcoord_t, va("buf_transtexcoord[%d]", i))
 		}
 		else
 		{
 			buf_texcoord[i] = NULL;
-			buf_transtexcoord[i] = NULL;
 		}
 	}
 	backendunits = min(MAX_TEXTUREUNITS, gl_textureunits);
@@ -244,10 +210,6 @@ static void gl_backend_bufferchanges(int init)
 		Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) ((overflowedverts + 2) / 3));
 	overflowedverts = 0;
 
-	if (overflowedtransverts > gl_mesh_transtriangles.integer * 3)
-		Cvar_SetValueQuick(&gl_mesh_transtriangles, (int) ((overflowedtransverts + 2) / 3));
-	overflowedtransverts = 0;
-
 	if (gl_mesh_drawmode.integer < 0)
 		Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
 	if (gl_mesh_drawmode.integer > 3)
@@ -265,15 +227,9 @@ static void gl_backend_bufferchanges(int init)
 	if (gl_mesh_maxtriangles.integer > 21760)
 		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 21760);
 
-	if (gl_mesh_transtriangles.integer < 1024)
-		Cvar_SetValueQuick(&gl_mesh_transtriangles, 1024);
-	if (gl_mesh_transtriangles.integer > 65536)
-		Cvar_SetValueQuick(&gl_mesh_transtriangles, 65536);
-
-	if (max_meshs != gl_mesh_maxtriangles.integer || max_transmeshs != gl_mesh_transtriangles.integer)
+	if (max_meshs != gl_mesh_maxtriangles.integer)
 	{
 		max_meshs = gl_mesh_maxtriangles.integer;
-		max_transmeshs = gl_mesh_transtriangles.integer;
 
 		if (!init)
 		{
@@ -299,7 +255,6 @@ void gl_backend_init(void)
 #endif
 
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
-	Cvar_RegisterVariable(&gl_mesh_transtriangles);
 	Cvar_RegisterVariable(&gl_mesh_floatcolors);
 	Cvar_RegisterVariable(&gl_mesh_drawmode);
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
@@ -492,10 +447,6 @@ void R_Mesh_Start(float farclip)
 	currentmesh = 0;
 	currenttriangle = 0;
 	currentvertex = 0;
-	currenttransmesh = 0;
-	currenttranstriangle = 0;
-	currenttransvertex = 0;
-	transranout = false;
 	r_mesh_farclip = farclip;
 	viewdist = DotProduct(r_origin, vpn);
 	vpnbit0 = vpn[0] < 0;
@@ -504,8 +455,6 @@ void R_Mesh_Start(float farclip)
 
 	c_meshs = 0;
 	c_meshtris = 0;
-	c_transmeshs = 0;
-	c_transtris = 0;
 
 	GL_SetupFrame();
 
@@ -761,7 +710,8 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int k;
+	int i, k;
+	float *v, tempv[4];
 	buf_mesh_t *mesh;
 
 	if (!backendactive)
@@ -791,6 +741,14 @@ void R_Mesh_Render(void)
 	}
 
 	GL_MeshState(buf_mesh);
+	for (k = 0, mesh = buf_mesh;k < currentmesh;k++, mesh++)
+	{
+		for (i = 0, v = buf_vertex[mesh->firstvert].v;i < mesh->verts;i++, v += 4)
+		{
+			VectorCopy(v, tempv);
+			Matrix4x4_Transform(&mesh->matrix, tempv, v);
+		}
+	}
 	GL_LockArray(0, currentvertex);
 	GL_DrawRangeElements(buf_mesh->firstvert, buf_mesh->firstvert + buf_mesh->verts, buf_mesh->triangles * 3, (unsigned int *)&buf_tri[buf_mesh->firsttriangle].index[0]);CHECKGLERROR
 
@@ -868,130 +826,11 @@ void R_Mesh_Finish(void)
 
 void R_Mesh_ClearDepth(void)
 {
-	if (currenttransmesh)
-		R_Mesh_AddTransparent();
 	if (currentmesh)
 		R_Mesh_Render();
 	R_Mesh_Finish();
 	qglClear(GL_DEPTH_BUFFER_BIT);
 	R_Mesh_Start(r_mesh_farclip);
-}
-
-void R_Mesh_AddTransparent(void)
-{
-	int i, j, k, *index;
-	float viewdistcompare, centerscaler, dist1, dist2, dist3, center, maxdist;
-	buf_vertex_t *vert1, *vert2, *vert3;
-	buf_transtri_t *tri;
-	buf_mesh_t *mesh, *transmesh;
-
-	if (!currenttransmesh)
-		return;
-
-	// convert index data to transtris for sorting
-	for (j = 0;j < currenttransmesh;j++)
-	{
-		mesh = buf_transmesh + j;
-		k = mesh->firsttriangle;
-		index = &buf_transtri[k].index[0];
-		for (i = 0;i < mesh->triangles;i++)
-		{
-			tri = &buf_sorttranstri[k++];
-			tri->mesh = mesh;
-			tri->index[0] = *index++;
-			tri->index[1] = *index++;
-			tri->index[2] = *index++;
-		}
-	}
-
-	// map farclip to 0-4095 list range
-	centerscaler = (TRANSDEPTHRES / r_mesh_farclip) * (1.0f / 3.0f);
-	viewdistcompare = viewdist + 4.0f;
-
-	memset(buf_sorttranstri_list, 0, TRANSDEPTHRES * sizeof(buf_transtri_t *));
-
-	k = 0;
-	for (j = 0;j < currenttranstriangle;j++)
-	{
-		tri = &buf_sorttranstri[j];
-		i = tri->mesh->firstvert;
-
-		vert1 = &buf_transvertex[tri->index[0] + i];
-		vert2 = &buf_transvertex[tri->index[1] + i];
-		vert3 = &buf_transvertex[tri->index[2] + i];
-
-		dist1 = DotProduct(vert1->v, vpn);
-		dist2 = DotProduct(vert2->v, vpn);
-		dist3 = DotProduct(vert3->v, vpn);
-
-		maxdist = max(dist1, max(dist2, dist3));
-		if (maxdist < viewdistcompare)
-			continue;
-
-		center = (dist1 + dist2 + dist3) * centerscaler - viewdist;
-#if SLOWMATH
-		i = (int) center;
-		i = bound(0, i, (TRANSDEPTHRES - 1));
-#else
-		if (center < 0.0f)
-			center = 0.0f;
-		center += 8388608.0f;
-		i = *((int *)&center) & 0x7FFFFF;
-		i = min(i, (TRANSDEPTHRES - 1));
-#endif
-		tri->next = buf_sorttranstri_list[i];
-		buf_sorttranstri_list[i] = tri;
-		k++;
-	}
-
-	for (i = 0;i < currenttransmesh;i++)
-		buf_transmesh[i].transchain = NULL;
-	transmesh = NULL;
-	for (j = 0;j < TRANSDEPTHRES;j++)
-	{
-		if ((tri = buf_sorttranstri_list[j]))
-		{
-			for (;tri;tri = tri->next)
-			{
-				if (!tri->mesh->transchain)
-				{
-					tri->mesh->chain = transmesh;
-					transmesh = tri->mesh;
-				}
-				tri->meshsortchain = tri->mesh->transchain;
-				tri->mesh->transchain = tri;
-			}
-		}
-	}
-
-	R_Mesh_Render();
-	for (;transmesh;transmesh = transmesh->chain)
-	{
-		mesh = &buf_mesh[currentmesh++];
-		*mesh = *transmesh; // copy mesh properties
-
-		mesh->firstvert = currentvertex;
-		memcpy(&buf_vertex[currentvertex], &buf_transvertex[transmesh->firstvert], transmesh->verts * sizeof(buf_vertex_t));
-		memcpy(&buf_fcolor[currentvertex], &buf_transfcolor[transmesh->firstvert], transmesh->verts * sizeof(buf_fcolor_t));
-		for (i = 0;i < backendunits && transmesh->textures[i];i++)
-			memcpy(&buf_texcoord[i][currentvertex], &buf_transtexcoord[i][transmesh->firstvert], transmesh->verts * sizeof(buf_texcoord_t));
-		currentvertex += mesh->verts;
-
-		mesh->firsttriangle = currenttriangle;
-		for (tri = transmesh->transchain;tri;tri = tri->meshsortchain)
-		{
-			buf_tri[currenttriangle].index[0] = tri->index[0];
-			buf_tri[currenttriangle].index[1] = tri->index[1];
-			buf_tri[currenttriangle].index[2] = tri->index[2];
-			currenttriangle++;
-		}
-		mesh->triangles = currenttriangle - mesh->firsttriangle;
-		R_Mesh_Render();
-	}
-
-	currenttransmesh = 0;
-	currenttranstriangle = 0;
-	currenttransvertex = 0;
 }
 
 // allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
@@ -1030,65 +869,36 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	}
 
 	if (m->transparent)
+		Con_Printf("R_Mesh_Draw_GetBuffer: m.transparent is no longer supported\n");
+
+	if (currentmesh)
 	{
-		overflowedtransverts += max(m->numtriangles * 3, m->numverts);
-		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
-		{
-			if (!transranout)
-			{
-				Con_Printf("R_Mesh_Draw_GetBuffer: ran out of room for transparent meshs\n");
-				transranout = true;
-			}
-			return false;
-		}
-
-		c_transmeshs++;
-		c_transtris += m->numtriangles;
-		m->index = &buf_transtri[currenttranstriangle].index[0];
-		m->vertex = &buf_transvertex[currenttransvertex].v[0];
-		m->color = &buf_transfcolor[currenttransvertex].c[0];
-		for (i = 0;i < backendunits;i++)
-			m->texcoords[i] = &buf_transtexcoord[i][currenttransvertex].t[0];
-
-		// transmesh is only for storage of transparent meshs until they
-		// are inserted into the main mesh array
-		mesh = &buf_transmesh[currenttransmesh++];
-		mesh->firsttriangle = currenttranstriangle;
-		mesh->firstvert = currenttransvertex;
-		currenttranstriangle += m->numtriangles;
-		currenttransvertex += m->numverts;
-	}
-	else
-	{
-		if (currentmesh)
-		{
-			R_Mesh_Render();
-			Con_Printf("mesh queue not empty, flushing.\n");
-		}
-
-		c_meshs++;
-		c_meshtris += m->numtriangles;
-		m->index = &buf_tri[currenttriangle].index[0];
-		m->vertex = &buf_vertex[currentvertex].v[0];
-		m->color = &buf_fcolor[currentvertex].c[0];
-		for (i = 0;i < backendunits;i++)
-			m->texcoords[i] = &buf_texcoord[i][currentvertex].t[0];
-
-		// opaque meshs are rendered directly
-		mesh = &buf_mesh[currentmesh++];
-		mesh->firsttriangle = currenttriangle;
-		mesh->firstvert = currentvertex;
-		currenttriangle += m->numtriangles;
-		currentvertex += m->numverts;
+		R_Mesh_Render();
+		Con_Printf("mesh queue not empty, flushing.\n");
 	}
 
-	// code shared for transparent and opaque meshs
+	c_meshs++;
+	c_meshtris += m->numtriangles;
+	m->index = &buf_tri[currenttriangle].index[0];
+	m->vertex = &buf_vertex[currentvertex].v[0];
+	m->color = &buf_fcolor[currentvertex].c[0];
+	for (i = 0;i < backendunits;i++)
+		m->texcoords[i] = &buf_texcoord[i][currentvertex].t[0];
+
+	// opaque meshs are rendered directly
+	mesh = &buf_mesh[currentmesh++];
+	mesh->firsttriangle = currenttriangle;
+	mesh->firstvert = currentvertex;
+	currenttriangle += m->numtriangles;
+	currentvertex += m->numverts;
+
 	mesh->blendfunc1 = m->blendfunc1;
 	mesh->blendfunc2 = m->blendfunc2;
 	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
 	mesh->depthtest = !m->depthdisable;
 	mesh->triangles = m->numtriangles;
 	mesh->verts = m->numverts;
+	mesh->matrix = m->matrix; // this copies the struct
 
 	overbright = false;
 	scaler = 1;

@@ -20,8 +20,9 @@ void R_BuildLightList(void);
 void R_AnimateLight(void);
 void R_MarkLights(entity_render_t *ent);
 void R_DrawCoronas(void);
-void R_CompleteLightPoint(vec3_t color, vec3_t p, int dynamic, mleaf_t *leaf);
-void R_LightModel(entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords);
+void R_CompleteLightPoint(vec3_t color, const vec3_t p, int dynamic, const mleaf_t *leaf);
+void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords);
+void R_UpdateEntLights(entity_render_t *ent);
 
 #endif
 

@@ -389,6 +389,10 @@ static void R_MarkEntities (void)
 	vec3_t v;
 	entity_render_t *ent;
 
+	ent = &cl_entities[0].render;
+	Matrix4x4_CreateIdentity(&ent->matrix);
+	Matrix4x4_CreateIdentity(&ent->inversematrix);
+
 	R_FarClip_Box(cl.worldmodel->normalmins, cl.worldmodel->normalmaxs);
 
 	if (!r_drawentities.integer)
@@ -431,10 +435,17 @@ static void R_MarkEntities (void)
 		if (R_VisibleCullBox(ent->mins, ent->maxs))
 			continue;
 
+		VectorCopy(ent->angles, v);
+		if (ent->model->type != mod_brush)
+			v[0] = -v[0];
+		Matrix4x4_CreateFromQuakeEntity(&ent->matrix, ent->origin[0], ent->origin[1], ent->origin[2], v[0], v[1], v[2], ent->scale);
+		Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 		R_LerpAnimation(ent);
 		ent->visframe = r_framecount;
 
 		R_FarClip_Box(ent->mins, ent->maxs);
+
+		R_UpdateEntLights(ent);
 	}
 }
 
@@ -566,6 +577,7 @@ static void R_BlendView(void)
 	m.depthdisable = true; // magic
 	m.numtriangles = 1;
 	m.numverts = 3;
+	Matrix4x4_CreateIdentity(&m.matrix);
 	if (R_Mesh_Draw_GetBuffer(&m, false))
 	{
 		m.index[0] = 0;
@@ -678,8 +690,6 @@ void R_RenderView (void)
 	R_TimeReport("explosions");
 
 	R_MeshQueue_RenderTransparent();
-
-	R_Mesh_AddTransparent();
 	R_TimeReport("addtrans");
 
 	R_DrawCoronas();
