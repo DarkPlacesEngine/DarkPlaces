@@ -1481,12 +1481,16 @@ void SCR_UpdateScreen (void)
 // dynamic vertex array buffer subsystem
 //===========================================================================
 
+// FIXME: someday this should be dynamically allocated and resized?
 float varray_vertex3f[65536*3];
+float varray_svector3f[65536*3];
+float varray_tvector3f[65536*3];
+float varray_normal3f[65536*3];
 float varray_color4f[65536*4];
 float varray_texcoord2f[4][65536*2];
 float varray_texcoord3f[4][65536*3];
-float varray_normal3f[65536*3];
 int earray_element3i[65536];
+float varray_vertex3f2[65536*3];
 
 //===========================================================================
 // vertex array caching subsystem
