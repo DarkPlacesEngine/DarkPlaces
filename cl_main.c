@@ -49,7 +49,7 @@ cvar_t r_draweffects = {0, "r_draweffects", "1"};
 cvar_t cl_explosions = {CVAR_SAVE, "cl_explosions", "1"};
 cvar_t cl_explosions_alpha_start = {CVAR_SAVE, "cl_explosions_alpha_start", "1.5"};
 cvar_t cl_explosions_alpha_end = {CVAR_SAVE, "cl_explosions_alpha_end", "0"};
-cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "64"};
+cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "16"};
 cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "128"};
 cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "0.5"};
 
