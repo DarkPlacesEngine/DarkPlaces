@@ -178,7 +178,7 @@ static void MaxPlayers_f (void)
 
 	n = atoi(Cmd_Argv(1));
 	n = bound(1, n, MAX_SCOREBOARD);
-	if (svs.maxclients 1= n)
+	if (svs.maxclients != n)
 		Con_Printf ("\"maxplayers\" set to \"%u\"\n", n);
 
 	if ((n == 1) && listening)
