@@ -19,39 +19,26 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // disable data conversion warnings
 
-#pragma warning(disable : 4244)     // MIPS
-#pragma warning(disable : 4136)     // X86
-#pragma warning(disable : 4051)     // ALPHA
+#ifdef _MSC_VER
+//#pragma warning(disable : 4244)     // MIPS
+//#pragma warning(disable : 4136)     // X86
+//#pragma warning(disable : 4051)     // ALPHA
+#pragma warning(disable : 4244)     // LordHavoc: MSVC++ 4 x86, double/float
 #pragma warning(disable : 4305)		// LordHavoc: MSVC++ 6 x86, double/float
-#pragma warning(disable : 4018)		// LordHavoc: MSVC++ 4, signed/unsigned mismatch
+#pragma warning(disable : 4018)		// LordHavoc: MSVC++ 4 x86, signed/unsigned mismatch
+#endif
 
 #ifdef _WIN32
 #include <windows.h>
+#define strcasecmp stricmp
+#define strncasecmp strnicmp
 #endif
 
 #include <GL/gl.h>
-#include <GL/glu.h>
+//#include <GL/glu.h>
 
 void GL_BeginRendering (int *x, int *y, int *width, int *height);
 void GL_EndRendering (void);
-
-
-#ifdef _WIN32
-// Function prototypes for the Texture Object Extension routines
-typedef GLboolean (APIENTRY *ARETEXRESFUNCPTR)(GLsizei, const GLuint *,
-                    const GLboolean *);
-typedef void (APIENTRY *BINDTEXFUNCPTR)(GLenum, GLuint);
-typedef void (APIENTRY *DELTEXFUNCPTR)(GLsizei, const GLuint *);
-typedef void (APIENTRY *GENTEXFUNCPTR)(GLsizei, GLuint *);
-typedef GLboolean (APIENTRY *ISTEXFUNCPTR)(GLuint);
-typedef void (APIENTRY *PRIORTEXFUNCPTR)(GLsizei, const GLuint *,
-                    const GLclampf *);
-typedef void (APIENTRY *TEXSUBIMAGEPTR)(int, int, int, int, int, int, int, int, void *);
-
-extern	BINDTEXFUNCPTR bindTexFunc;
-extern	DELTEXFUNCPTR delTexFunc;
-extern	TEXSUBIMAGEPTR TexSubImage2DFunc;
-#endif
 
 extern	int texture_extension_number;
 
@@ -72,13 +59,6 @@ typedef struct
 extern glvert_t glv;
 
 extern	int glx, gly, glwidth, glheight;
-
-#ifdef _WIN32
-extern	PROC glArrayElementEXT;
-extern	PROC glColorPointerEXT;
-extern	PROC glTexturePointerEXT;
-extern	PROC glVertexPointerEXT;
-#endif
 
 // r_local.h -- private refresh defs
 
@@ -286,6 +266,10 @@ extern void (APIENTRY *qglArrayElement)(GLint i);
 extern void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 //extern void (APIENTRY *qglInterleavedArrays)(GLenum format, GLsizei stride, const GLvoid *pointer);
 
+extern void (APIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (APIENTRY *qglSelectTexture) (GLenum);
+extern void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
+
 #else
 
 //#define qglPolygonOffset glPolygonOffset
@@ -301,11 +285,11 @@ extern void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type,
 #define qglDrawElements glDrawElements
 //#define qglInterleavedArrays glInterleavedArrays
 
-#endif
+extern void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (*qglSelectTexture) (GLenum);
+extern void (*glColorTableEXT)(int, int, int, int, int, const void*);
 
-extern void (APIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (APIENTRY *qglSelectTexture) (GLenum);
-extern void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
+#endif
 
 // LordHavoc: vertex transform
 #include "transform.h"

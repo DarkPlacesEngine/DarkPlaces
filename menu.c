@@ -2216,16 +2216,20 @@ forward:
 	}
 
 	if (DirectConfig && (serialConfig_cursor == 3 || serialConfig_cursor == 4))
+	{
 		if (key == K_UPARROW)
 			serialConfig_cursor = 2;
 		else
 			serialConfig_cursor = 5;
+	}
 
 	if (SerialConfig && StartingGame && serialConfig_cursor == 4)
+	{
 		if (key == K_UPARROW)
 			serialConfig_cursor = 3;
 		else
 			serialConfig_cursor = 5;
+	}
 }
 
 //=============================================================================
@@ -2589,10 +2593,12 @@ void M_LanConfig_Key (int key)
 	}
 
 	if (StartingGame && lanConfig_cursor == 2)
+	{
 		if (key == K_UPARROW)
 			lanConfig_cursor = 1;
 		else
 			lanConfig_cursor = 0;
+	}
 
 	l =  atoi(lanConfig_portname);
 	if (l > 65535)
@@ -3347,9 +3353,7 @@ void M_Draw (void)
 		if (scr_con_current)
 		{
 			Draw_ConsoleBackground (vid.height);
-			VID_UnlockBuffer ();
 			S_ExtraUpdate ();
-			VID_LockBuffer ();
 		}
 //		else
 //			Draw_FadeScreen ();
@@ -3449,9 +3453,7 @@ void M_Draw (void)
 		m_entersound = false;
 	}
 
-	VID_UnlockBuffer ();
 	S_ExtraUpdate ();
-	VID_LockBuffer ();
 }
 
 

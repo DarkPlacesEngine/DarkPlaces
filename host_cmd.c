@@ -121,7 +121,7 @@ void Host_God_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch && !host_client->privileged)
+	if (pr_global_struct->deathmatch)
 		return;
 
 	sv_player->v.flags = (int)sv_player->v.flags ^ FL_GODMODE;
@@ -139,7 +139,7 @@ void Host_Notarget_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch && !host_client->privileged)
+	if (pr_global_struct->deathmatch)
 		return;
 
 	sv_player->v.flags = (int)sv_player->v.flags ^ FL_NOTARGET;
@@ -159,7 +159,7 @@ void Host_Noclip_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch && !host_client->privileged)
+	if (pr_global_struct->deathmatch)
 		return;
 
 	if (sv_player->v.movetype != MOVETYPE_NOCLIP)
@@ -191,7 +191,7 @@ void Host_Fly_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch && !host_client->privileged)
+	if (pr_global_struct->deathmatch)
 		return;
 
 	if (sv_player->v.movetype != MOVETYPE_FLY)
@@ -710,59 +710,6 @@ void Host_Version_f (void)
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
 }
 
-#ifdef IDGODS
-void Host_Please_f (void)
-{
-	client_t *cl;
-	int			j;
-	
-	if (cmd_source != src_command)
-		return;
-
-	if ((Cmd_Argc () == 3) && strcmp(Cmd_Argv(1), "#") == 0)
-	{
-		j = atof(Cmd_Argv(2)) - 1;
-		if (j < 0 || j >= svs.maxclients)
-			return;
-		if (!svs.clients[j].active)
-			return;
-		cl = &svs.clients[j];
-		if (cl->privileged)
-		{
-			cl->privileged = false;
-			cl->edict->v.flags = (int)cl->edict->v.flags & ~(FL_GODMODE|FL_NOTARGET);
-			cl->edict->v.movetype = MOVETYPE_WALK;
-			noclip_anglehack = false;
-		}
-		else
-			cl->privileged = true;
-	}
-
-	if (Cmd_Argc () != 2)
-		return;
-
-	for (j=0, cl = svs.clients ; j<svs.maxclients ; j++, cl++)
-	{
-		if (!cl->active)
-			continue;
-		if (strcasecmp(cl->name, Cmd_Argv(1)) == 0)
-		{
-			if (cl->privileged)
-			{
-				cl->privileged = false;
-				cl->edict->v.flags = (int)cl->edict->v.flags & ~(FL_GODMODE|FL_NOTARGET);
-				cl->edict->v.movetype = MOVETYPE_WALK;
-				noclip_anglehack = false;
-			}
-			else
-				cl->privileged = true;
-			break;
-		}
-	}
-}
-#endif
-
-
 void Host_Say(qboolean teamonly)
 {
 	client_t *client;
@@ -1065,8 +1012,8 @@ void Host_Spawn_f (void)
 		// if this is the last client to be connected, unpause
 		sv.paused = false;
 
-		if (f = ED_FindFunction ("RestoreGame"))
-		if (RestoreGame = (func_t)(f - pr_functions))
+		if ((f = ED_FindFunction ("RestoreGame")))
+		if ((RestoreGame = (func_t)(f - pr_functions)))
 		{
 			Con_DPrintf("Calling RestoreGame\n");
 			pr_global_struct->time = sv.time;
@@ -1084,7 +1031,7 @@ void Host_Spawn_f (void)
 		ent->v.colormap = NUM_FOR_EDICT(ent);
 		ent->v.team = (host_client->colors & 15) + 1;
 		ent->v.netname = host_client->name - pr_strings;
-		if (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel))
+		if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 			val->_float = host_client->pmodel;
 
 		// copy spawn parms out of the client_t
@@ -1213,7 +1160,7 @@ void Host_Kick_f (void)
 			return;
 		}
 	}
-	else if (pr_global_struct->deathmatch && !host_client->privileged)
+	else if (pr_global_struct->deathmatch)
 		return;
 
 	save = host_client;
@@ -1301,7 +1248,7 @@ void Host_Give_f (void)
 		return;
 	}
 
-	if (pr_global_struct->deathmatch && !host_client->privileged)
+	if (pr_global_struct->deathmatch)
 		return;
 
 	t = Cmd_Argv(1);
@@ -1346,7 +1293,7 @@ void Host_Give_f (void)
     case 's':
 		if (rogue)
 		{
-		    if (val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1))
+		    if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_shells1)))
 			    val->_float = v;
 		}
 
@@ -1355,7 +1302,7 @@ void Host_Give_f (void)
     case 'n':
 		if (rogue)
 		{
-		    if (val = GETEDICTFIELDVALUE(sv_player, eval_ammo_nails1))
+		    if ((val = GETEDICTFIELDVALUE(sv_player, eval_ammo_nails1)))
 			{
 			    val->_float = v;
 				if (sv_player->v.weapon <= IT_LIGHTNING)
@@ -1677,9 +1624,6 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("reconnect", Host_Reconnect_f);
 	Cmd_AddCommand ("name", Host_Name_f);
 	Cmd_AddCommand ("version", Host_Version_f);
-#ifdef IDGODS
-	Cmd_AddCommand ("please", Host_Please_f);
-#endif
 	Cmd_AddCommand ("say", Host_Say_f);
 	Cmd_AddCommand ("say_team", Host_Say_Team_f);
 	Cmd_AddCommand ("tell", Host_Tell_f);

@@ -193,9 +193,9 @@ void SV_SendServerinfo (client_t *client)
 
 	MSG_WriteByte (&client->message, svc_print);
 #ifdef NEHAHRA
-	sprintf (message, "%c\nDPNEHAHRA VERSION %4.2f SERVER (%i CRC)", 2, DP_VERSION, pr_crc);
+	sprintf (message, "%c\nDPNEHAHRA VERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
 #else
-	sprintf (message, "%c\nDARKPLACES VERSION %4.2f SERVER (%i CRC)", 2, DP_VERSION, pr_crc);
+	sprintf (message, "%c\nDARKPLACES VERSION %4.2f SERVER (%i CRC)", 2, VERSION, pr_crc);
 #endif
 	MSG_WriteString (&client->message,message);
 
@@ -276,12 +276,6 @@ void SV_ConnectClient (int clientnum)
 	client->message.data = client->msgbuf;
 	client->message.maxsize = sizeof(client->msgbuf);
 	client->message.allowoverflow = true;		// we can catch it
-
-#ifdef IDGODS
-	client->privileged = IsID(&client->netconnection->addr);
-#else	
-	client->privileged = false;				
-#endif
 
 	if (sv.loadgame)
 		memcpy (client->spawn_parms, spawn_parms, sizeof(spawn_parms));
@@ -482,7 +476,7 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		colormod = 255;
 		effects = ent->v.effects;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_alpha))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
 		if ((alpha = (int) (val->_float * 255.0)) == 0)
 			alpha = 255;
 		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)) && val->_float != 0) // HalfLife support
@@ -490,29 +484,29 @@ void SV_WriteEntitiesToClient (edict_t	*clent, sizebuf_t *msg)
 		if (alpha < 0) alpha = 0;
 		if (alpha > 255) alpha = 255;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_glow_size))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_size)))
 			glowsize = (int) val->_float >> 3;
 		if (glowsize > 127) glowsize = 127;
 		if (glowsize < -128) glowsize = -128;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_scale))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
 		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
 		if (scale < 0) scale = 0;
 		if (scale > 255) scale = 255;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_glow_trail))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_trail)))
 		if (val->_float != 0)
 			bits |= U_GLOWTRAIL;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_glow_color))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_color)))
 		if (val->_float != 0)
 			glowcolor = (int) val->_float;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_fullbright))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_fullbright)))
 		if (val->_float != 0)
 			effects |= EF_FULLBRIGHT;
 
-		if (val = GETEDICTFIELDVALUE(ent, eval_colormod))
+		if ((val = GETEDICTFIELDVALUE(ent, eval_colormod)))
 		if (val->vector[0] != 0 || val->vector[1] != 0 || val->vector[2] != 0)
 		{
 			modred = val->vector[0] * 8.0;if (modred < 0) modred = 0;if (modred > 7) modred = 7;

@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-unsigned	d_8to24table[256];
+unsigned d_8to24table[256];
 unsigned char d_15to8table[32768]; // LordHavoc: was 64k elements, now 32k like it should be
 
 void	VID_SetPalette (unsigned char *palette)
@@ -60,7 +60,7 @@ void	VID_Setup15to8Palette ()
 }
 
 // LordHavoc: gamma correction does not belong in gl_vidnt.c
-byte gamma[256];
+byte qgamma[256];
 static float vid_gamma = 1.0;
 
 void Check_Gamma (unsigned char *pal)
@@ -68,7 +68,7 @@ void Check_Gamma (unsigned char *pal)
 	float	inf;
 	int		i;
 
-	if (i = COM_CheckParm("-gamma"))
+	if ((i = COM_CheckParm("-gamma")))
 		vid_gamma = atof(com_argv[i+1]);
 	else
 	{
@@ -84,7 +84,7 @@ void Check_Gamma (unsigned char *pal)
 	if (vid_gamma == 1) // LordHavoc: dodge the math
 	{
 		for (i = 0;i < 256;i++)
-			gamma[i] = i;
+			qgamma[i] = i;
 	}
 	else
 	{
@@ -93,12 +93,12 @@ void Check_Gamma (unsigned char *pal)
 			inf = pow((i+1)/256.0, vid_gamma)*255 + 0.5;
 			if (inf < 0) inf = 0;
 			if (inf > 255) inf = 255;
-			gamma[i] = inf;
+			qgamma[i] = inf;
 		}
 	}
 
 	// gamma correct the palette
 	for (i=0 ; i<768 ; i++)
-		pal[i] = gamma[pal[i]];
+		pal[i] = qgamma[pal[i]];
 	// note: 32bit uploads are corrected by the upload functions
 }

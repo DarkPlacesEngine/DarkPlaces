@@ -808,7 +808,7 @@ void CL_PModel_f (void)
 	}
 
 	host_client->pmodel = i;
-	if (val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel))
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_pmodel)))
 		val->_float = i;
 }
 

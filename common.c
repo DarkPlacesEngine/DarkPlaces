@@ -1592,6 +1592,8 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 		else
 			buf = loadbuf;
 	}
+	else if (usehunk == 5)
+		buf = malloc (len+1);
 	else
 		Sys_Error ("COM_LoadFile: bad usehunk");
 
@@ -1614,6 +1616,12 @@ byte *COM_LoadHunkFile (char *path, qboolean quiet)
 byte *COM_LoadTempFile (char *path, qboolean quiet)
 {
 	return COM_LoadFile (path, 2, quiet);
+}
+
+// LordHavoc: returns malloc'd memory
+byte *COM_LoadMallocFile (char *path, qboolean quiet)
+{
+	return COM_LoadFile (path, 5, quiet);
 }
 
 void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet)

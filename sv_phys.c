@@ -45,8 +45,6 @@ cvar_t	sv_gravity = {"sv_gravity","800",false,true};
 cvar_t	sv_maxvelocity = {"sv_maxvelocity","2000"};
 cvar_t	sv_nostep = {"sv_nostep","0"};
 
-static	vec3_t	vec_origin = {0.0, 0.0, 0.0};
-
 #define	MOVE_EPSILON	0.01
 
 void SV_Physics_Toss (edict_t *ent);
@@ -443,7 +441,7 @@ SV_PushMove
 void SV_PushMove (edict_t *pusher, float movetime)
 {
 	int			i, e;
-	edict_t		*check, *block;
+	edict_t		*check;
 	vec3_t		mins, maxs, move;
 	vec3_t		entorig, pushorig;
 	int			num_moved;
@@ -521,7 +519,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 			pusher->v.solid = savesolid; // was SOLID_BSP
 
 			// if it is still inside the pusher, block
-			if (block = SV_TestEntityPosition (check))
+			if (SV_TestEntityPosition (check))
 			{	// fail the move
 				if (check->v.mins[0] == check->v.maxs[0])
 					continue;
@@ -571,7 +569,7 @@ SV_PushRotate
 void SV_PushRotate (edict_t *pusher, float movetime)
 {
 	int			i, e;
-	edict_t		*check, *block;
+	edict_t		*check;
 	vec3_t		move, a, amove;
 	vec3_t		entorig, pushorig;
 	int			num_moved;
@@ -655,8 +653,7 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 		pusher->v.solid = savesolid; // LordHavoc: restore to correct solid type
 
 	// if it is still inside the pusher, block
-		block = SV_TestEntityPosition (check);
-		if (block)
+		if (SV_TestEntityPosition (check))
 		{	// fail the move
 			if (check->v.mins[0] == check->v.maxs[0])
 				continue;

@@ -1104,8 +1104,8 @@ void R_DrawAliasModel (entity_t *e, int cull)
 	int			i;
 	model_t		*clmodel;
 	vec3_t		mins, maxs;
-	aliashdr_t	*paliashdr;
-	md2mem_t		*pheader;
+	aliashdr_t	*paliashdr = NULL;
+	md2mem_t		*pheader = NULL;
 	int			anim;
 
 	if (modelalpha < (1.0 / 64.0))

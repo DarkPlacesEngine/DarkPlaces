@@ -460,6 +460,7 @@ R_ParticleExplosion
 
 ===============
 */
+/*
 void R_ParticleExplosion (vec3_t org, int smoke)
 {
 	int			i, j;
@@ -482,12 +483,10 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		p->die = cl.time + 5;
 		p->color = ramp1[0];
 		p->ramp = rand()&3;
-		/*
-		if (i & 1)
-			p->type = pt_explode;
-		else
-			p->type = pt_explode2;
-		*/
+//		if (i & 1)
+//			p->type = pt_explode;
+//		else
+//			p->type = pt_explode2;
 		p->color = ramp1[rand()&7];
 		p->type = pt_fallfadespark;
 		for (j=0 ; j<3 ; j++)
@@ -524,6 +523,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		}
 	}
 }
+*/
 
 /*
 ===============
@@ -531,6 +531,7 @@ R_ParticleExplosion2
 
 ===============
 */
+/*
 void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 {
 	int			i, j;
@@ -563,6 +564,7 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 		}
 	}
 }
+*/
 
 /*
 ===============
@@ -570,6 +572,7 @@ R_BlobExplosion
 
 ===============
 */
+/*
 void R_BlobExplosion (vec3_t org)
 {
 	int			i, j;
@@ -613,6 +616,7 @@ void R_BlobExplosion (vec3_t org)
 		}
 	}
 }
+*/
 
 /*
 ===============
@@ -1024,7 +1028,7 @@ void R_TeleportSplash (vec3_t org)
 				p->contents = 0;
 				p->texnum = flareparticletexture;
 				p->scale = 4;
-				p->alpha = (1 + rand()&7) * 32;
+				p->alpha = lhrandom(32,256);
 				p->die = cl.time + 5;
 				p->color = 254; //8 + (rand()&7);
 				p->type = pt_fadespark;
@@ -1042,7 +1046,7 @@ void R_TeleportSplash (vec3_t org)
 void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 {
 	vec3_t		vec;
-	float		len, dec, t, nt, speed;
+	float		len, dec = 0, t, nt, speed;
 	int			j, contents, bubbles;
 	particle_t	*p;
 	static int	tracercount;
@@ -1229,7 +1233,6 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 	vec3_t		vec;
 	float		len;
 	particle_t	*p;
-	static int	tracercount;
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	VectorSubtract (end, start, vec);
@@ -1331,7 +1334,7 @@ void R_DrawParticles (void)
 			break;
 
 		a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
-		if (a == CONTENTS_SOLID || p->contents && p->contents != a)
+		if (a == CONTENTS_SOLID || (p->contents && p->contents != a))
 		{
 			p->die = -1;
 			continue;
@@ -1496,12 +1499,12 @@ void R_DrawParticles (void)
 		case pt_bubble:
 			p->vel[2] += grav1 * 2;
 			if (p->vel[2] >= 200)
-				p->vel[2] = 136+rand()&63;
+				p->vel[2] = lhrandom(130, 200);
 			if (cl.time > p->time2)
 			{
-				p->time2 = cl.time + (rand()&7)*0.0625;
-				p->vel[0] = (rand()&63)-32;
-				p->vel[1] = (rand()&63)-32;
+				p->time2 = cl.time + lhrandom(0, 0.5);
+				p->vel[0] = lhrandom(-32,32);
+				p->vel[1] = lhrandom(-32,32);
 			}
 			p->alpha -= frametime * 64;
 			if (p->alpha < 1)

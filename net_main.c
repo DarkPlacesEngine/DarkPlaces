@@ -76,10 +76,6 @@ cvar_t	config_modem_clear = {"_config_modem_clear", "ATZ", true};
 cvar_t	config_modem_init = {"_config_modem_init", "", true};
 cvar_t	config_modem_hangup = {"_config_modem_hangup", "AT H", true};
 
-#ifdef IDGODS
-cvar_t	idgods = {"idgods", "0"};
-#endif
-
 int	vcrFile = -1;
 qboolean recording = false;
 
@@ -863,9 +859,6 @@ void NET_Init (void)
 	Cvar_RegisterVariable (&config_modem_clear);
 	Cvar_RegisterVariable (&config_modem_init);
 	Cvar_RegisterVariable (&config_modem_hangup);
-#ifdef IDGODS
-	Cvar_RegisterVariable (&idgods);
-#endif
 
 	Cmd_AddCommand ("slist", NET_Slist_f);
 	Cmd_AddCommand ("listen", NET_Listen_f);
@@ -980,21 +973,3 @@ void SchedulePollProcedure(PollProcedure *proc, double timeOffset)
 	proc->next = pp;
 	prev->next = proc;
 }
-
-
-#ifdef IDGODS
-#define IDNET	0xc0f62800
-
-qboolean IsID(struct qsockaddr *addr)
-{
-	if (idgods.value == 0.0)
-		return false;
-
-	if (addr->sa_family != 2)
-		return false;
-
-	if ((BigLong(*(int *)&addr->sa_data[2]) & 0xffffff00) == IDNET)
-		return true;
-	return false;
-}
-#endif

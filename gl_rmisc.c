@@ -132,7 +132,6 @@ R_Init
 */
 void R_Init (void)
 {	
-	extern byte *hunk_base;
 //	extern cvar_t gl_finish;
 
 	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);	
@@ -190,7 +189,6 @@ void R_TranslatePlayerSkin (int playernum)
 	int			inwidth, inheight;
 	byte		*inrow;
 	unsigned	frac, fracstep;
-	extern	byte		**player_8bit_texels_tbl;
 
 	top = cl.scores[playernum].colors & 0xf0;
 	bottom = (cl.scores[playernum].colors &15)<<4;

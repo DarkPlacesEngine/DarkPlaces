@@ -199,7 +199,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 		for(row=rows-1; row>=0; row--) {
 			pixbuf = image_rgba + row*columns*4;
 			for(column=0; column<columns; column++) {
-				unsigned char red,green,blue,alphabyte;
+				unsigned char red = 0,green = 0,blue = 0,alphabyte = 0;
 				switch (targa_header.pixel_size) {
 					case 24:
 							
@@ -226,7 +226,7 @@ byte* LoadTGA (FILE *fin, int matchwidth, int matchheight)
 		}
 	}
 	else if (targa_header.image_type==10) {   // Runlength encoded RGB images
-		unsigned char red,green,blue,alphabyte,packetHeader,packetSize,j;
+		unsigned char red = 0,green = 0,blue = 0,alphabyte = 0,packetHeader,packetSize,j;
 		for(row=rows-1; row>=0; row--) {
 			pixbuf = image_rgba + row*columns*4;
 			for(column=0; column<columns; ) {
@@ -331,7 +331,7 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	COM_FOpenFile (name, &f, true);
 	if (f)
 		return LoadPCX (f, matchwidth, matchheight);
-	if (image_rgba = W_GetTexture(basename, matchwidth, matchheight))
+	if ((image_rgba = W_GetTexture(basename, matchwidth, matchheight)))
 		return image_rgba;
 	if (complain)
 		Con_Printf ("Couldn't load %s.tga or .pcx\n", filename);

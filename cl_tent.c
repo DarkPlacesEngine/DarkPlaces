@@ -338,7 +338,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_ParticleExplosion (pos, false);
+//		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -352,7 +352,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_ParticleExplosion (pos, false);
+//		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 600;
@@ -382,7 +382,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_ParticleExplosion (pos, false);
+//		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -396,7 +396,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_ParticleExplosion (pos, false);
+//		R_ParticleExplosion (pos, false);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -410,8 +410,15 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_BlobExplosion (pos);
+//		R_BlobExplosion (pos);
 
+		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
+		dl = CL_AllocDlight (0);
+		VectorCopy (pos, dl->origin);
+		dl->radius = 600;
+		dl->die = cl.time + 0.5;
+		dl->decay = 1200;
+		dl->color[0] = 0.8;dl->color[1] = 0.4;dl->color[2] = 1.0;
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -458,13 +465,13 @@ void CL_ParseTEnt (void)
 		pos[2] = MSG_ReadCoord ();
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
-		R_ParticleExplosion2 (pos, colorStart, colorLength);
+//		R_ParticleExplosion2 (pos, colorStart, colorLength);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
 		dl->die = cl.time + 0.5;
 		dl->decay = 700;
-		tempcolor = (byte *)&d_8to24table[colorStart+(colorLength >> 1)];
+		tempcolor = (byte *)&d_8to24table[(rand()%colorLength) + colorStart];
 		dl->color[0] = tempcolor[0];dl->color[1] = tempcolor[1];dl->color[2] = tempcolor[2];
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;

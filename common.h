@@ -196,6 +196,7 @@ void COM_CloseFile (int h);
 byte *COM_LoadStackFile (char *path, void *buffer, int bufsize, qboolean quiet);
 byte *COM_LoadTempFile (char *path, qboolean quiet);
 byte *COM_LoadHunkFile (char *path, qboolean quiet);
+byte *COM_LoadMallocFile (char *path, qboolean quiet);
 void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet);
 
 byte *COM_LoadFile (char *path, int usehunk, qboolean quiet);

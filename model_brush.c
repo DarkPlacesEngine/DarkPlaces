@@ -39,36 +39,7 @@ void Mod_BrushInit (void)
 	memset (mod_novis, 0xff, sizeof(mod_novis));
 }
 
-/*
-===============
-Mod_PointInLeaf
-===============
-*/
-mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
-{
-	mnode_t		*node;
-	float		d;
-	mplane_t	*plane;
-	
-	if (!model || !model->nodes)
-		Sys_Error ("Mod_PointInLeaf: bad model");
-
-	node = model->nodes;
-	while (1)
-	{
-		if (node->contents < 0)
-			return (mleaf_t *)node;
-		plane = node->plane;
-		d = DotProduct (p,plane->normal) - plane->dist;
-		if (d > 0)
-			node = node->children[0];
-		else
-			node = node->children[1];
-	}
-	
-	return NULL;	// never reached
-}
-
+// Mod_PointInLeaf moved to cpu_noasm.c
 
 /*
 ===================
@@ -924,6 +895,8 @@ void Mod_LoadClipnodes (lump_t *l)
 		out->planenum = LittleLong(in->planenum);
 		out->children[0] = LittleShort(in->children[0]);
 		out->children[1] = LittleShort(in->children[1]);
+		if (out->children[0] >= count || out->children[1] >= count)
+			Host_Error("Corrupt clipping hull (out of range child)\n");
 	}
 }
 
@@ -1074,7 +1047,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	header = (dheader_t *)buffer;
 
 	i = LittleLong (header->version);
-	if (i != BSPVERSION & i != 30)
+	if (i != BSPVERSION && i != 30)
 		Host_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i or 30 (HalfLife))", mod->name, i, BSPVERSION);
 	hlbsp = i == 30;
 	halflifebsp.value = hlbsp;

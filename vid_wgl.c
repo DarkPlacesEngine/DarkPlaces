@@ -149,27 +149,6 @@ RECT		window_rect;
 
 // direct draw software compatability stuff
 
-void VID_HandlePause (qboolean pause)
-{
-}
-
-void VID_ForceLockState (int lk)
-{
-}
-
-void VID_LockBuffer (void)
-{
-}
-
-void VID_UnlockBuffer (void)
-{
-}
-
-int VID_ForceUnlockedAndReturnState (void)
-{
-	return 0;
-}
-
 void CenterWindow(HWND hWndCenter, int width, int height, BOOL lefttopjustify)
 {
     int     CenterX, CenterY;
@@ -574,17 +553,17 @@ void GL_Init (void)
 
 //	Con_Printf ("%s %s\n", gl_renderer, gl_version);
 
-    if (strnicmp(gl_renderer,"Permedia",8)==0)
-         isPermedia = true;
+	if (strncasecmp(gl_renderer,"Permedia",8)==0)
+		isPermedia = true;
 
 	// LordHavoc: special differences for ATI (broken 8bit color when also using 32bit? weird!)
-    if (strnicmp(gl_vendor,"ATI",3)==0)
+	if (strncasecmp(gl_vendor,"ATI",3)==0)
 	{
 		isATI = true;
-		if (strnicmp(gl_renderer,"Rage Pro",8)==0)
+		if (strncasecmp(gl_renderer,"Rage Pro",8)==0)
 			isRagePro = true;
 	}
-	if (strnicmp(gl_renderer,"Matrox G200 Direct3D",20)==0) // a D3D driver for GL? sigh...
+	if (strncasecmp(gl_renderer,"Matrox G200 Direct3D",20)==0) // a D3D driver for GL? sigh...
 		isG200 = true;
 
 	CheckMultiTexture ();
@@ -1423,15 +1402,15 @@ void VID_Init8bitPalette()
 	char thePalette[256*3];
 	char *oldPalette, *newPalette;
 	// LordHavoc: 8bit texture support broke many things...  it now must be specifically stated on the commandline (-no8bit became -8bit)
-    if (!COM_CheckParm("-8bit"))
+	if (!COM_CheckParm("-8bit"))
 		return;
-    if (strstr(gl_extensions, "GL_EXT_shared_texture_palette"))
+	if (strstr(gl_extensions, "GL_EXT_shared_texture_palette"))
 		return;
-    if (!(glColorTableEXT = (void *)wglGetProcAddress("glColorTableEXT")))
+	if (!(glColorTableEXT = (void *)wglGetProcAddress("glColorTableEXT")))
 		return;
 
 	Con_SafePrintf("8-bit GL extensions enabled.\n");
-    glEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
+	glEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
 	oldPalette = (char *) d_8to24table;
 	newPalette = thePalette;
 	for (i=0;i<256;i++)
@@ -1684,13 +1663,13 @@ void	VID_Init (unsigned char *palette)
 
 	VID_SetMode (vid_default, palette);
 
-    maindc = GetDC(mainwindow);
+	maindc = GetDC(mainwindow);
 	bSetupPixelFormat(maindc);
 
-    baseRC = wglCreateContext( maindc );
+	baseRC = wglCreateContext( maindc );
 	if (!baseRC)
 		Sys_Error ("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.");
-    if (!wglMakeCurrent( maindc, baseRC ))
+	if (!wglMakeCurrent( maindc, baseRC ))
 		Sys_Error ("wglMakeCurrent failed");
 
 	GL_Init ();
