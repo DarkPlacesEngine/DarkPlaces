@@ -38,7 +38,7 @@ either set sv_public 1 in the console, or use the multiplayer new game menu
 and check the Public server checkbox.
 
 Thanks to:
-Tomaz for adding the Geforce3 water shader, bugtesting and many suggestions.
+Tomaz for adding features, fixing many bugs, and being generally helpful.
 Andreas 'Black' Kirsch for much work on the QuakeC VM (menu.dat, someday clprogs.dat) and other contributions.
 Mathieu 'Elric' Olivier for much work on the sound engine (especially the Ogg vorbis support)
 Joseph Caporale for adding 5 mouse button support.
