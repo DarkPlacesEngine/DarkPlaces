@@ -274,6 +274,9 @@ sfx_t *S_FindName (char *name)
 	int i;
 	sfx_t *sfx;
 
+	if (!snd_initialized)
+		return NULL;
+
 	if (!name)
 		Host_Error("S_FindName: NULL\n");
 
@@ -316,9 +319,12 @@ sfx_t *S_PrecacheSound (char *name, int complain)
 {
 	sfx_t *sfx;
 
+	if (!snd_initialized)
+		return NULL;
+
 	sfx = S_FindName(name);
 
-	if (snd_initialized && !nosound.integer && snd_precache.integer)
+	if (!nosound.integer && snd_precache.integer)
 		S_LoadSound(sfx, complain);
 
 	return sfx;
