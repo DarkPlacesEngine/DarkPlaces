@@ -2294,7 +2294,7 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 					if (r_surf_surfacevisible[t->facenumlist[i]])
 					{
 						face = t->facelist[i];
-						if (!R_CullBox(face->mins, face->maxs) && face->numtriangles)
+						if (!R_CullBox(face->mins, face->maxs) && face->num_triangles)
 						{
 							if (numfaces >= maxfaces)
 							{
@@ -2317,7 +2317,7 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 		numfaces = 0;
 		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
 		{
-			if ((face->texture->surfaceflags & flagsmask) == flags && face->numtriangles)
+			if ((face->texture->surfaceflags & flagsmask) == flags && face->num_triangles)
 			{                                                     
 				if (t != face->texture || numfaces >= maxfaces)
 				{
@@ -2422,7 +2422,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 					surfaceindex = surface - model->brushq3.data_faces;
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
-						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)) && surface->numtriangles)
+						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)) && surface->num_triangles)
 						{
 							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 							{
