@@ -1275,7 +1275,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define	OPTIONS_ITEMS	27
+#define	OPTIONS_ITEMS	28
 
 int		options_cursor;
 
@@ -1339,10 +1339,13 @@ void M_Menu_Options_AdjustSliders (int dir)
 	case 18:
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 		break;
-	case 19: // show framerate
+	case 19: // static crosshair
+		Cvar_SetValueQuick (&crosshair_static, !crosshair_static.integer);
+		break;
+	case 20: // show framerate
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
 		break;
-	case 20: // always run
+	case 21: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValueQuick (&cl_forwardspeed, 200);
@@ -1354,22 +1357,22 @@ void M_Menu_Options_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 		break;
-	case 21: // lookspring
+	case 22: // lookspring
 		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
 		break;
-	case 22: // lookstrafe
+	case 23: // lookstrafe
 		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
 		break;
-	case 23: // mouse speed
+	case 24: // mouse speed
 		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
-	case 24: // mouse look
+	case 25: // mouse look
 		Cvar_SetValueQuick (&freelook, !freelook.integer);
 		break;
-	case 25: // invert mouse
+	case 26: // invert mouse
 		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
 		break;
-	case 26: // windowed mouse
+	case 27: // windowed mouse
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 		break;
 	}
@@ -1404,6 +1407,7 @@ void M_Options_Draw (void)
 	M_ItemPrint(16, y, "          Sound Volume", snd_initialized);M_DrawSlider(220, y, volume.value);y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
 	M_Print(16, y, "        Crosshair Size");M_DrawSlider(220, y, (crosshair_size.value - 1) / 4);y += 8;
+	M_Print(16, y, "      Static Crosshair");M_DrawCheckbox(220, y, crosshair_static.integer);y += 8;
 	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
 	M_Print(16, y, "            Always Run");M_DrawCheckbox(220, y, cl_forwardspeed.value > 200);y += 8;
 	M_Print(16, y, "            Lookspring");M_DrawCheckbox(220, y, lookspring.integer);y += 8;

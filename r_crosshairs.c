@@ -7,6 +7,7 @@ cvar_t crosshair_alpha = {CVAR_SAVE, "crosshair_alpha", "1"};
 cvar_t crosshair_flashspeed = {CVAR_SAVE, "crosshair_flashspeed", "2"};
 cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1"};
 cvar_t crosshair_size = {CVAR_SAVE, "crosshair_size", "1"};
+cvar_t crosshair_static = {CVAR_SAVE, "crosshair_static", "0"};
 
 // must match NUMCROSSHAIRS in gl_draw.c
 #define NUMCROSSHAIRS 5
@@ -149,41 +150,9 @@ void R_Crosshairs_Init(void)
 	Cvar_RegisterVariable(&crosshair_flashspeed);
 	Cvar_RegisterVariable(&crosshair_flashrange);
 	Cvar_RegisterVariable(&crosshair_size);
+	Cvar_RegisterVariable(&crosshair_static);
 	R_RegisterModule("R_Crosshair", r_crosshairs_start, r_crosshairs_shutdown, r_crosshairs_newmap);
 }
-
-/*
-void DrawCrosshair(int num)
-{
-	int i;
-	qbyte *color;
-	float scale, base;
-	char *picname;
-	cachepic_t *pic;
-	if (num < 0 || num >= NUMCROSSHAIRS)
-		num = 0;
-	if (cl.viewentity >= 1 && cl.viewentity <= cl.maxclients)
-	{
-		i = (cl.scores[cl.viewentity-1].colors & 0xF) << 4;
-		if (i >= 208 && i < 224) // blue
-			i += 8;
-		else if (i < 128 || i >= 224) // 128-224 are backwards ranges (bright to dark, rather than dark to bright)
-			i += 15;
-	}
-	else
-		i = 15;
-	color = (qbyte *) &d_8to24table[i];
-	if (crosshair_flashspeed.value >= 0.01f)
-		base = (sin(realtime * crosshair_flashspeed.value * (M_PI*2.0f)) * crosshair_flashrange.value);
-	else
-		base = 0.0f;
-	scale = crosshair_brightness.value * (1.0f / 255.0f);
-	picname = va("gfx/crosshair%i.tga", num + 1);
-	pic = Draw_CachePic(picname);
-	if (pic)
-		DrawQ_Pic((vid.conwidth - pic->width * crosshair_size.value) * 0.5f, (vid.conheight - pic->height * crosshair_size.value) * 0.5f, picname, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value, 0);
-}
-*/
 
 void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, float cr, float cg, float cb, float ca)
 {
@@ -268,10 +237,18 @@ void R_DrawCrosshair(void)
 	else
 		base = 0.0f;
 	scale = crosshair_brightness.value * (1.0f / 255.0f);
-	//picname = va("gfx/crosshair%i.tga", num + 1);
-	//pic = Draw_CachePic(picname);
-	//if (pic)
-	//	DrawQ_Pic((vid.conwidth - pic->width * crosshair_size.value) * 0.5f, (vid.conheight - pic->height * crosshair_size.value) * 0.5f, picname, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value, 0);
+
+	if (crosshair_static.integer)
+	{
+		char *picname;
+		cachepic_t *pic;
+
+		picname = va("gfx/crosshair%i.tga", num + 1);
+		pic = Draw_CachePic(picname);
+		if (pic)
+			DrawQ_Pic((vid.conwidth - pic->width * crosshair_size.value) * 0.5f, (vid.conheight - pic->height * crosshair_size.value) * 0.5f, picname, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value, 0);
+	}
+	else
 	{
 		// trace the shot path up to a certain distance
 		VectorCopy(cl_entities[cl.viewentity].render.origin, v1);
