@@ -112,19 +112,24 @@ void Mod_BuildDistortTexture (void)
 		}
 	}
 
+
 	for (i=0; i<4; i++)
 	{
 		for (j=0; j<16; j++)
 		{
-			for (y=0; y<DISTORTRESOLUTION; y++)
+			mod_shared_distorttexture[i*16+j] = NULL;
+			if (gl_textureshader)
 			{
-				for (x=0; x<DISTORTRESOLUTION; x++)
+				for (y=0; y<DISTORTRESOLUTION; y++)
 				{
-					data[4][y][x][0] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][0], data[i][y][x][0], data[(i+1)&3][y][x][0], data[(i+2)&3][y][x][0], 0.0625*j);
-					data[4][y][x][1] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][1], data[i][y][x][1], data[(i+1)&3][y][x][1], data[(i+2)&3][y][x][1], 0.0625*j);
+					for (x=0; x<DISTORTRESOLUTION; x++)
+					{
+						data[4][y][x][0] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][0], data[i][y][x][0], data[(i+1)&3][y][x][0], data[(i+2)&3][y][x][0], 0.0625*j);
+						data[4][y][x][1] = Mod_MorphDistortTexture (data[(i-1)&3][y][x][1], data[i][y][x][1], data[(i+1)&3][y][x][1], data[(i+2)&3][y][x][1], 0.0625*j);
+					}
 				}
+				mod_shared_distorttexture[i*16+j] = R_LoadTexture2D(mod_shared_texturepool, va("distorttexture%i", i*16+j), DISTORTRESOLUTION, DISTORTRESOLUTION, &data[4][0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
 			}
-			mod_shared_distorttexture[i*16+j] = R_LoadTexture2D(mod_shared_texturepool, va("distorttexture%i", i*16+j), DISTORTRESOLUTION, DISTORTRESOLUTION, &data[4][0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
 		}
 	}
 
