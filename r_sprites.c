@@ -28,7 +28,7 @@ void R_ClipSpriteImage (entity_t *e, msprite_t *psprite, frameblend_t *blend, ve
 
 void R_ClipSprite (entity_t *e, frameblend_t *blend)
 {
-	vec3_t right, up, org;
+	vec3_t forward, right, up, org;
 	msprite_t *psprite;
 
 	if (!blend[0].lerp)
@@ -39,12 +39,11 @@ void R_ClipSprite (entity_t *e, frameblend_t *blend)
 	if (psprite->type == SPR_ORIENTED)
 	{
 		// bullet marks on walls
-		vec3_t forward;
 		AngleVectors (e->render.angles, forward, right, up);
 		// nudge it toward the view, so it will be infront of the wall
 		VectorSubtract(e->render.origin, vpn, org);
 		// don't draw if it's a backface
-		if (DotProduct(r_origin, forward) < (DotProduct(org, forward) + 1.0f))
+		if (DotProduct(r_origin, forward) > (DotProduct(org, forward) - 1.0f))
 			return;
 	}
 	else
@@ -88,7 +87,7 @@ R_DrawSpriteModel
 */
 void R_DrawSpriteModel (entity_t *e, frameblend_t *blend)
 {
-	vec3_t		right, up, org, color, mins, maxs;
+	vec3_t		forward, right, up, org, color, mins, maxs;
 	byte		colorub[4];
 	msprite_t	*psprite;
 
@@ -107,15 +106,14 @@ void R_DrawSpriteModel (entity_t *e, frameblend_t *blend)
 	//psprite = e->model->cache.data;
 
 	if (psprite->type == SPR_ORIENTED)
-	{	// bullet marks on walls
-		vec3_t forward;
+	{
+		// bullet marks on walls
 		AngleVectors (e->render.angles, forward, right, up);
 		VectorSubtract(e->render.origin, vpn, org);
-		if (DotProduct(r_origin, forward) < DotProduct(e->render.origin, forward))
-			return; // backface
 	}
 	else
-	{	// normal sprite
+	{
+		// normal sprite
 		VectorCopy(vup, up);
 		VectorCopy(vright, right);
 		VectorCopy(e->render.origin, org);
