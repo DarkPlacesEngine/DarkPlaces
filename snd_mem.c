@@ -36,7 +36,7 @@ void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, byte *data)
 	int		srcsample;
 	float	stepscale;
 	int		i;
-	int		sample, samplefrac, fracstep;
+	int		samplefrac, fracstep;
 	sfxcache_t	*sc;
 	
 	sc = Cache_Check (&sfx->cache);
@@ -96,46 +96,48 @@ void ResampleSfx (sfx_t *sfx, int inrate, int inwidth, byte *data)
 		fracstep = stepscale*256;
 		if (sc->stereo) // LordHavoc: stereo sound support
 		{
-			for (i=0 ; i<outcount ; i+=2)
+			if (sc->width == 2)
 			{
-				srcsample = samplefrac >> 8;
-				samplefrac += fracstep;
-				srcsample <<= 1;
-				// left
-				if (inwidth == 2)
-					sample = LittleShort ( ((short *)data)[srcsample] );
-				else
-					sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
-				if (sc->width == 2)
-					((short *)sc->data)[i] = sample;
-				else
-					((signed char *)sc->data)[i] = sample >> 8;
-				// right
-				srcsample++;
-				if (inwidth == 2)
-					sample = LittleShort ( ((short *)data)[srcsample] );
-				else
-					sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
-				if (sc->width == 2)
-					((short *)sc->data)[i+1] = sample;
-				else
-					((signed char *)sc->data)[i+1] = sample >> 8;
+				for (i=0 ; i<outcount*2 ;)
+				{
+					srcsample = samplefrac >> 8;
+					samplefrac += fracstep;
+					srcsample <<= 1;
+					((short *)sc->data)[i++] = LittleShort ( ((short *)data)[srcsample++] ); // left
+					((short *)sc->data)[i++] = LittleShort ( ((short *)data)[srcsample  ] ); // right
+				}
+			}
+			else
+			{
+				for (i=0 ; i<outcount*2 ;)
+				{
+					srcsample = samplefrac >> 8;
+					samplefrac += fracstep;
+					srcsample <<= 1;
+					((signed char *)sc->data)[i++] = ((int)( (unsigned char)(data[srcsample++]) - 128) << 8) >> 8; // left
+					((signed char *)sc->data)[i++] = ((int)( (unsigned char)(data[srcsample  ]) - 128) << 8) >> 8; // right
+				}
 			}
 		}
 		else
 		{
-			for (i=0 ; i<outcount ; i++)
+			if (sc->width == 2)
 			{
-				srcsample = samplefrac >> 8;
-				samplefrac += fracstep;
-				if (inwidth == 2)
-					sample = LittleShort ( ((short *)data)[srcsample] );
-				else
-					sample = (int)( (unsigned char)(data[srcsample]) - 128) << 8;
-				if (sc->width == 2)
-					((short *)sc->data)[i] = sample;
-				else
-					((signed char *)sc->data)[i] = sample >> 8;
+				for (i=0 ; i<outcount ; i++)
+				{
+					srcsample = samplefrac >> 8;
+					samplefrac += fracstep;
+					((short *)sc->data)[i] = LittleShort ( ((short *)data)[srcsample] );
+				}
+			}
+			else
+			{
+				for (i=0 ; i<outcount ; i++)
+				{
+					srcsample = samplefrac >> 8;
+					samplefrac += fracstep;
+					((signed char *)sc->data)[i] = ((int)( (unsigned char)(data[srcsample]) - 128) << 8) >> 8;
+				}
 			}
 		}
 	}
