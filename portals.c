@@ -4,11 +4,16 @@
 #define MAXRECURSIVEPORTALPLANES 1024
 #define MAXRECURSIVEPORTALS 256
 
-tinyplane_t portalplanes[MAXRECURSIVEPORTALPLANES];
-int portalplanestack[MAXRECURSIVEPORTALS];
-int portalplanecount;
-int ranoutofportalplanes;
-int ranoutofportals;
+static tinyplane_t portalplanes[MAXRECURSIVEPORTALPLANES];
+static int portalplanestack[MAXRECURSIVEPORTALS];
+static int portalplanecount;
+static int ranoutofportalplanes;
+static int ranoutofportals;
+static float portaltemppoints[2][256][3];
+static float portaltemppoints2[256][3];
+static int portal_markid = 0;
+//float viewportalpoints[16*3];
+static float boxpoints[4*3];
 
 int R_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
 {
@@ -62,9 +67,6 @@ begin:
 	return outpoints;
 }
 
-float portaltemppoints[2][256][3];
-float portaltemppoints2[256][3];
-
 /*
 void R_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t *p)
 {
@@ -100,11 +102,12 @@ int R_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, floa
 	return numpoints;
 }
 
-static int portal_markid = 0;
-
 int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, int numclipplanes)
 {
 	mportal_t *p;
+	int newpoints, i, prev;
+	vec3_t center, v1, v2;
+	tinyplane_t *newplanes;
 
 	if (leaf->portalmarkid == portal_markid)
 		return true;
@@ -112,10 +115,6 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 	// follow portals into other leafs
 	for (p = leaf->portals;p;p = p->next)
 	{
-		int newpoints, i, prev;
-		vec3_t center;
-		vec3_t v1, v2;
-		tinyplane_t *newplanes;
 		// only flow through portals facing away from the viewer
 		if (PlaneDiff(eye, (&p->plane)) < 0)
 		{
@@ -164,8 +163,6 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 
 	return false;
 }
-
-//float viewportalpoints[16*3];
 
 void Portal_PolygonRecursiveMarkLeafs(mnode_t *node, float *polypoints, int numpoints)
 {
@@ -248,8 +245,6 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	return returnvalue;
 }
 
-float boxpoints[4*3];
-
 #define Portal_MinsBoxPolygon(axis, axisvalue, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4) \
 {\
 	if (eye[(axis)] < ((axisvalue) - 0.5f))\
@@ -281,9 +276,7 @@ int Portal_CheckBox(model_t *model, vec3_t eye, vec3_t a, vec3_t b)
 	if (eye[0] >= (a[0] - 1.0f) && eye[0] < (b[0] + 1.0f)
 	 && eye[1] >= (a[1] - 1.0f) && eye[1] < (b[1] + 1.0f)
 	 && eye[2] >= (a[2] - 1.0f) && eye[2] < (b[2] + 1.0f))
-	{
 		return true;
-	}
 
 	Portal_MinsBoxPolygon
 	(
