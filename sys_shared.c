@@ -1,7 +1,9 @@
 
 #include "quakedef.h"
 #include <time.h>
-#ifndef WIN32
+#ifdef WIN32
+#include <direct.h>
+#else
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -45,7 +47,7 @@ static char qfont_table[256] = {
 	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
 	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
 	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
-	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o', 
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
 	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
 	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
 };
@@ -236,6 +238,9 @@ char engineversion[128];
 void Sys_Shared_EarlyInit(void)
 {
 	Memory_Init ();
+
+	COM_InitArgv();
+	COM_InitGameType();
 
 #if defined(__linux__)
 	sprintf (engineversion, "%s Linux %s", gamename, buildstring);

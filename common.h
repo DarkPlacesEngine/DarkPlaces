@@ -138,7 +138,8 @@ extern	char	**com_argv;
 
 int COM_CheckParm (char *parm);
 void COM_Init (void);
-void COM_InitArgv (int argc, char **argv);
+void COM_InitArgv (void);
+void COM_InitGameType (void);
 
 char *COM_SkipPath (char *pathname);
 void COM_StripExtension (char *in, char *out);
@@ -178,8 +179,9 @@ extern int gamemode;
 extern char *gamename;
 
 // LordHavoc: useful...
-extern void COM_ToLowerString(char *in, char *out);
-extern void COM_ToUpperString(char *in, char *out);
+void COM_ToLowerString(char *in, char *out);
+void COM_ToUpperString(char *in, char *out);
+int COM_StringBeginsWith(const char *s, const char *match);
 
 typedef struct stringlist_s
 {

@@ -29,14 +29,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define NUM_SAFE_ARGVS  7
-
-static char *largv[MAX_NUM_ARGVS + NUM_SAFE_ARGVS + 1];
-static char *argvdummy = " ";
-
-static char *safeargvs[NUM_SAFE_ARGVS] =
-	{"-stdvid", "-nolan", "-nosound", "-nocdaudio", "-nojoy", "-nomouse", "-window"};
-
 cvar_t registered = {0, "registered","0"};
 cvar_t cmdline = {0, "cmdline","0"};
 
@@ -735,64 +727,45 @@ void COM_Path_f (void);
 COM_InitArgv
 ================
 */
-void COM_InitArgv (int argc, char **argv)
+void COM_InitArgv (void)
 {
-	qboolean        safe;
-	int             i, j, n;
-
-// reconstitute the command line for the cmdline externally visible cvar
+	int i, j, n;
+	// reconstitute the command line for the cmdline externally visible cvar
 	n = 0;
-
-	for (j=0 ; (j<MAX_NUM_ARGVS) && (j< argc) ; j++)
+	for (j = 0;(j < MAX_NUM_ARGVS) && (j < com_argc);j++)
 	{
 		i = 0;
-
-		while ((n < (CMDLINE_LENGTH - 1)) && argv[j][i])
-		{
-			com_cmdline[n++] = argv[j][i++];
-		}
-
+		while ((n < (CMDLINE_LENGTH - 1)) && com_argv[j][i])
+			com_cmdline[n++] = com_argv[j][i++];
 		if (n < (CMDLINE_LENGTH - 1))
 			com_cmdline[n++] = ' ';
 		else
 			break;
 	}
-
 	com_cmdline[n] = 0;
+}
 
-	safe = false;
+void COM_InitGameType (void)
+{
+	char name[128];
+	COM_StripExtension(com_argv[0], name);
+	COM_ToLowerString(name, name);
 
-	for (com_argc=0 ; (com_argc<MAX_NUM_ARGVS) && (com_argc < argc) ;
-		 com_argc++)
-	{
-		largv[com_argc] = argv[com_argc];
-		if (!strcmp ("-safe", argv[com_argc]))
-			safe = true;
-	}
+	if (strstr(name, "transfusion"))
+		gamemode = GAME_TRANSFUSION;
+	else if (strstr(name, "zymotic"))
+		gamemode = GAME_ZYMOTIC;
+	else if (strstr(name, "fiendarena"))
+		gamemode = GAME_FIENDARENA;
+	else if (strstr(name, "nehahra"))
+		gamemode = GAME_NEHAHRA;
+	else if (strstr(name, "hipnotic"))
+		gamemode = GAME_HIPNOTIC;
+	else if (strstr(name, "rogue"))
+		gamemode = GAME_ROGUE;
+	else
+		gamemode = GAME_NORMAL;
 
-	if (safe)
-	{
-	// force all the safe-mode switches. Note that we reserved extra space in
-	// case we need to add these, so we don't need an overflow check
-		for (i=0 ; i<NUM_SAFE_ARGVS ; i++)
-		{
-			largv[com_argc] = safeargvs[i];
-			com_argc++;
-		}
-	}
-
-	largv[com_argc] = argvdummy;
-	com_argv = largv;
-
-#if TRANSFUSION
-	gamemode = GAME_TRANSFUSION;
-#elif ZYMOTIC
-	gamemode = GAME_ZYMOTIC;
-#elif FIENDARENA
-	gamemode = GAME_FIENDARENA;
-#elif NEHAHRA
-	gamemode = GAME_NEHAHRA;
-#else
 	if (COM_CheckParm ("-transfusion"))
 		gamemode = GAME_TRANSFUSION;
 	else if (COM_CheckParm ("-zymotic"))
@@ -805,11 +778,16 @@ void COM_InitArgv (int argc, char **argv)
 		gamemode = GAME_HIPNOTIC;
 	else if (COM_CheckParm ("-rogue"))
 		gamemode = GAME_ROGUE;
-#endif
+	else if (COM_CheckParm ("-quake"))
+		gamemode = GAME_NORMAL;
+
 	switch(gamemode)
 	{
 	case GAME_NORMAL:
-		gamename = "DarkPlaces";
+		if (registered.integer)
+			gamename = "DarkPlaces-Quake";
+		else
+			gamename = "DarkPlaces-SharewareQuake";
 		break;
 	case GAME_HIPNOTIC:
 		gamename = "Darkplaces-Hipnotic";
@@ -830,7 +808,7 @@ void COM_InitArgv (int argc, char **argv)
 		gamename = "Transfusion";
 		break;
 	default:
-		Sys_Error("COM_InitArgv: unknown gamemode %i\n", gamemode);
+		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
 		break;
 	}
 }
@@ -1571,5 +1549,13 @@ void COM_ToUpperString(char *in, char *out)
 		else
 			*out++ = *in++;
 	}
+}
+
+int COM_StringBeginsWith(const char *s, const char *match)
+{
+	for (;*s && *match;s++, match++)
+		if (*s != *match)
+			return false;
+	return true;
 }
 

@@ -197,9 +197,7 @@ extern char *buildstring;
 
 //=============================================================================
 
-// the host system specifies the base of the directory tree, the
-// command line parms passed to the program, and the amount of memory
-// available for the program to use
+// the host system specifies the base of the directory tree
 
 typedef struct
 {
@@ -207,8 +205,6 @@ typedef struct
 #if CACHEENABLE
 	char	*cachedir;		// for development over ISDN lines
 #endif
-	int		argc;
-	char	**argv;
 } quakeparms_t;
 
 
