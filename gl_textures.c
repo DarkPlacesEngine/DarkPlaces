@@ -997,7 +997,7 @@ static rtexture_t *R_SetupTexture(rtexturepool_t *rtexturepool, const char *iden
 			{
 				for (i = 0;i < size;i++)
 				{
-					if (((qbyte *)&palette[data[i]])[3] == 255)
+					if (((qbyte *)&palette[data[i]])[3] < 255)
 					{
 						flags |= TEXF_ALPHA;
 						break;
