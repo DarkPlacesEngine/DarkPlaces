@@ -28,6 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define MOVE_NOMONSTERS 1
 #define MOVE_MISSILE    2
 #define MOVE_WORLDONLY  3
+#define MOVE_HITMODEL   4
 
 
 // called after the world model has been loaded, before linking any entities

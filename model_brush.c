@@ -509,7 +509,7 @@ loc0:
 	return HULLCHECKSTATE_DONE;
 }
 
-static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
+static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
 	// this function currently only supports same size start and end
 	double boxsize[3];
@@ -2660,6 +2660,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
 	mod->brush.ishlbsp = i == 30;
 
+	mod->soundfromcenter = true;
+	mod->TraceBox = Mod_Q1BSP_TraceBox;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q1BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q1BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q1BSP_GetPVS;
@@ -2667,7 +2669,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
-	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
 	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
@@ -4377,7 +4378,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 	}
 }
 
-static void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
+static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
 	int i;
 	float segmentmins[3], segmentmaxs[3];
@@ -4589,6 +4590,8 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		R_ResetQuakeSky();
 	}
 
+	mod->soundfromcenter = true;
+	mod->TraceBox = Mod_Q3BSP_TraceBox;
 	mod->brush.SuperContentsFromNativeContents = Mod_Q3BSP_SuperContentsFromNativeContents;
 	mod->brush.NativeContentsFromSuperContents = Mod_Q3BSP_NativeContentsFromSuperContents;
 	mod->brush.GetPVS = Mod_Q3BSP_GetPVS;
@@ -4596,7 +4599,6 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.BoxTouchingPVS = Mod_Q3BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
-	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
 	//mod->DrawSky = R_Q3BSP_DrawSky;
 	mod->Draw = R_Q3BSP_Draw;
 	mod->DrawShadowVolume = R_Q3BSP_DrawShadowVolume;

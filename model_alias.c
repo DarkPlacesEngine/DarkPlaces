@@ -26,6 +26,49 @@ void Mod_AliasInit (void)
 {
 }
 
+static void Mod_MDLMD2MD3_TraceBox(model_t *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
+{
+	int i, framenum;
+	float segmentmins[3], segmentmaxs[3];
+	colbrushf_t *thisbrush_start, *thisbrush_end;
+	matrix4x4_t startmatrix, endmatrix;
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+	segmentmins[0] = min(boxstartmins[0], boxendmins[0]);
+	segmentmins[1] = min(boxstartmins[1], boxendmins[1]);
+	segmentmins[2] = min(boxstartmins[2], boxendmins[2]);
+	segmentmaxs[0] = max(boxstartmaxs[0], boxendmaxs[0]);
+	segmentmaxs[1] = max(boxstartmaxs[1], boxendmaxs[1]);
+	segmentmaxs[2] = max(boxstartmaxs[2], boxendmaxs[2]);
+	if (VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs))
+	{
+		// line trace
+		for (i = 0;i < model->alias.aliasnum_meshes;i++)
+		{
+			framenum = frame;
+			if (framenum < 0 || framenum > model->alias.aliasdata_meshes[i].num_frames)
+				framenum = 0;
+			Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, model->alias.aliasdata_meshes[i].num_triangles, model->alias.aliasdata_meshes[i].data_element3i, model->alias.aliasdata_meshes[i].data_aliasvertex3f + framenum * model->alias.aliasdata_meshes[i].num_vertices * 3, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+		}
+	}
+	else
+	{
+		// box trace, performed as brush trace
+		Matrix4x4_CreateIdentity(&startmatrix);
+		Matrix4x4_CreateIdentity(&endmatrix);
+		thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
+		thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
+		for (i = 0;i < model->alias.aliasnum_meshes;i++)
+		{
+			framenum = frame;
+			if (framenum < 0 || framenum > model->alias.aliasdata_meshes[i].num_frames)
+				framenum = 0;
+			Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, model->alias.aliasdata_meshes[i].num_triangles, model->alias.aliasdata_meshes[i].data_element3i, model->alias.aliasdata_meshes[i].data_aliasvertex3f + framenum * model->alias.aliasdata_meshes[i].num_vertices * 3, SUPERCONTENTS_SOLID, segmentmins, segmentmaxs);
+		}
+	}
+}
+
 static void Mod_CalcAliasModelBBoxes (void)
 {
 	int vnum, meshnum;
@@ -305,6 +348,7 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
 	loadmodel->alias.aliasnum_meshes = 1;
 	loadmodel->alias.aliasdata_meshes = Mem_Alloc(loadmodel->mempool, sizeof(aliasmesh_t));
@@ -607,6 +651,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 
 	if (LittleLong(pinmodel->num_tris) < 1 || LittleLong(pinmodel->num_tris) > (65536 / 3))
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
@@ -827,6 +872,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	loadmodel->Draw = R_Model_Alias_Draw;
 	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
 	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->TraceBox = Mod_MDLMD2MD3_TraceBox;
 	loadmodel->flags = LittleLong(pinmodel->flags);
 	loadmodel->synctype = ST_RAND;
 

@@ -505,14 +505,14 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 
 			// don't try to cull embedded brush models with this, they're sometimes huge (spanning several rooms)
-			if (sv_cullentities_trace.integer && (model == NULL || model->brush.TraceBox == NULL || model->name[0] != '*'))
+			if (sv_cullentities_trace.integer && (model == NULL || model->name[0] != '*'))
 			{
 				// LordHavoc: test random offsets, to maximize chance of detection
 				testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
 				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
 
-				sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, testeye, testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+				sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, testeye, testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
@@ -522,7 +522,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					testorigin[1] = bound(entmins[1], testeye[1], entmaxs[1]);
 					testorigin[2] = bound(entmins[2], testeye[2], entmaxs[2]);
 
-					sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, testeye, testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+					sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, testeye, testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 					if (trace.fraction == 1)
 						client->visibletime[e] = realtime + 1;
 					else if (realtime > client->visibletime[e])
@@ -929,7 +929,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
 				testorigin[1] = (entmins[1] + entmaxs[1]) * 0.5f;
 				testorigin[2] = (entmins[2] + entmaxs[2]) * 0.5f;
-				sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+				sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 				if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
 					sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 				else
@@ -938,7 +938,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 					testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
 					testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 					testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
-					sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+					sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 					if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
 						sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 					else
@@ -949,7 +949,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 							testorigin[0] = lhrandom(lightmins[0], lightmaxs[0]);
 							testorigin[1] = lhrandom(lightmins[1], lightmaxs[1]);
 							testorigin[2] = lhrandom(lightmins[2], lightmaxs[2]);
-							sv.worldmodel->brush.TraceBox(sv.worldmodel, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
+							sv.worldmodel->TraceBox(sv.worldmodel, 0, &trace, sv_writeentitiestoclient_testeye, sv_writeentitiestoclient_testeye, testorigin, testorigin, SUPERCONTENTS_SOLID);
 							if (trace.fraction == 1 || BoxesOverlap(trace.endpos, trace.endpos, entmins, entmaxs))
 								sv_writeentitiestoclient_client->visibletime[s->number] = realtime + 1;
 						}

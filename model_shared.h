@@ -159,7 +159,6 @@ typedef struct model_brush_s
 	int (*BoxTouchingPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
-	void (*TraceBox)(struct model_s *model, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
 	// these are actually only found on brushq1, but NULL is handled gracefully
 	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
@@ -517,6 +516,8 @@ typedef struct model_s
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 	// draw the lighting on a model (through stencil)
 	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
+	// trace a box against this model
+	void (*TraceBox)(struct model_s *model, int frame, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask);
 	// fields belonging to each type of model
 	model_alias_t	alias;
 	model_sprite_t	sprite;
@@ -528,6 +529,8 @@ typedef struct model_s
 	model_brushq3_t	brushq3;
 	// skin files can have different tags for each skin
 	overridetagnameset_t	*data_overridetagnamesforskin;
+	// flags this model for offseting sounds to the model center (used by brush models)
+	int soundfromcenter;
 }
 model_t;
 
