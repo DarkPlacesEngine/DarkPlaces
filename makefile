@@ -42,6 +42,7 @@ CMD_RM=rm -f
 endif
 
 # Objects
+# AK added the new prvm stuff - LordHavoc please correct it !
 CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o \
 		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
@@ -49,7 +50,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
 		r_lerpanim.o r_light.o r_lightning.o r_modules.o r_sky.o \
 		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
-		r_shadow.o
+		r_shadow.o prvm_exec.o prvm_edict.o prvm_cms.o
 SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_main.o sv_move.o \
 		sv_phys.o sv_user.o
 SHAREDOBJECTS=	cmd.o collision.o common.o crc.o cvar.o \
