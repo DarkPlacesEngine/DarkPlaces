@@ -259,7 +259,7 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 	VectorCopy (ent->v.velocity, original_velocity);
 	VectorCopy (ent->v.velocity, primal_velocity);
 	numplanes = 0;
-	
+
 	time_left = time;
 
 	for (bumpcount=0 ; bumpcount<numbumps ; bumpcount++)
@@ -754,7 +754,7 @@ void SV_Physics_Pusher (edict_t *ent)
 	float	movetime;
 
 	oldltime = ent->v.ltime;
-	
+
 	thinktime = ent->v.nextthink;
 	if (thinktime < ent->v.ltime + sv.frametime)
 	{
@@ -898,7 +898,7 @@ void SV_WallFriction (edict_t *ent, trace_t *trace)
 	d += 0.5;
 	if (d >= 0)
 		return;
-		
+
 // cut the tangential velocity
 	i = DotProduct (trace->plane.normal, ent->v.velocity);
 	VectorScale (trace->plane.normal, i, into);
@@ -994,7 +994,7 @@ void SV_WalkMove (edict_t *ent)
 	
 	VectorCopy (ent->v.origin, oldorg);
 	VectorCopy (ent->v.velocity, oldvel);
-	
+
 	clip = SV_FlyMove (ent, sv.frametime, &steptrace);
 
 	if ( !(clip & 2) )
@@ -1064,7 +1064,7 @@ void SV_WalkMove (edict_t *ent)
 	{
 // if the push down didn't end up on good ground, use the move without
 // the step up.  This happens near wall / slope combinations, and can
-// cause the player to hop up higher on a slope too steep to climb	
+// cause the player to hop up higher on a slope too steep to climb
 		VectorCopy (nosteporg, ent->v.origin);
 		VectorCopy (nostepvel, ent->v.velocity);
 	}
@@ -1402,7 +1402,7 @@ void SV_Physics_Step (edict_t *ent)
 
 // regular thinking
 	SV_RunThink (ent);
-	
+
 	SV_CheckWaterTransition (ent);
 }
 
@@ -1505,31 +1505,44 @@ void SV_Physics (void)
 }
 
 
-trace_t SV_Trace_Toss (edict_t *ent, edict_t *ignore)
+trace_t SV_Trace_Toss (edict_t *tossent, edict_t *ignore)
 {
 	int i;
 	edict_t	tempent, *tent;
 	trace_t	trace;
 	vec3_t	move;
 	vec3_t	end;
+	float	gravity, savesolid;
+	eval_t	*val;
 
-	memcpy(&tempent, ent, sizeof(edict_t));
+	memcpy(&tempent, tossent, sizeof(edict_t));
 	tent = &tempent;
+	savesolid = tossent->v.solid;
+	tossent->v.solid = SOLID_NOT;
+
+	// this has to fetch the field from the original edict, since our copy is truncated
+	val = GETEDICTFIELDVALUE(tossent, eval_gravity);
+	if (val != NULL && val->_float != 0)
+		gravity = val->_float;
+	else
+		gravity = 1.0;
+	gravity *= sv_gravity.value * 0.05;
 
 	for (i = 0;i < 200;i++) // LordHavoc: sanity check; never trace more than 10 seconds
 	{
 		SV_CheckVelocity (tent);
-		SV_AddGravity (tent);
+		tent->v.velocity[2] -= gravity;
 		VectorMA (tent->v.angles, 0.05, tent->v.avelocity, tent->v.angles);
 		VectorScale (tent->v.velocity, 0.05, move);
 		VectorAdd (tent->v.origin, move, end);
-		trace = SV_Move (tent->v.origin, tent->v.mins, tent->v.maxs, end, MOVE_NORMAL, tent);	
+		trace = SV_Move (tent->v.origin, tent->v.mins, tent->v.maxs, end, MOVE_NORMAL, tent);
 		VectorCopy (trace.endpos, tent->v.origin);
 
-		if (trace.ent)
+		if (trace.fraction < 1 && trace.ent)
 			if (trace.ent != ignore)
 				break;
 	}
+	tossent->v.solid = savesolid;
 	trace.fraction = 0; // not relevant
 	return trace;
 }
