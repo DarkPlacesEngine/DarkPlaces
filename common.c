@@ -163,7 +163,7 @@ Handles byte ordering and avoids alignment errors
 void MSG_WriteChar (sizebuf_t *sb, int c)
 {
 	qbyte    *buf;
-	
+
 	buf = SZ_GetSpace (sb, 1);
 	buf[0] = c;
 }
@@ -171,7 +171,7 @@ void MSG_WriteChar (sizebuf_t *sb, int c)
 void MSG_WriteByte (sizebuf_t *sb, int c)
 {
 	qbyte    *buf;
-	
+
 	buf = SZ_GetSpace (sb, 1);
 	buf[0] = c;
 }
@@ -257,61 +257,81 @@ void MSG_BeginReading (void)
 	msg_badread = false;
 }
 
-int MSG_ReadShort (void)
+int MSG_ReadLittleShort (void)
 {
-	int c;
-
 	if (msg_readcount+2 > net_message.cursize)
 	{
 		msg_badread = true;
 		return -1;
 	}
-
-	c = (short)(net_message.data[msg_readcount]
-	+ (net_message.data[msg_readcount+1]<<8));
-
 	msg_readcount += 2;
-
-	return c;
+	return (short)(net_message.data[msg_readcount-2] | (net_message.data[msg_readcount-1]<<8));
 }
 
-int MSG_ReadLong (void)
+int MSG_ReadBigShort (void)
 {
-	int c;
+	if (msg_readcount+2 > net_message.cursize)
+	{
+		msg_badread = true;
+		return -1;
+	}
+	msg_readcount += 2;
+	return (short)((net_message.data[msg_readcount-2]<<8) + net_message.data[msg_readcount-1]);
+}
 
+int MSG_ReadLittleLong (void)
+{
 	if (msg_readcount+4 > net_message.cursize)
 	{
 		msg_badread = true;
 		return -1;
 	}
-
-	c = net_message.data[msg_readcount]
-	+ (net_message.data[msg_readcount+1]<<8)
-	+ (net_message.data[msg_readcount+2]<<16)
-	+ (net_message.data[msg_readcount+3]<<24);
-
 	msg_readcount += 4;
-
-	return c;
+	return net_message.data[msg_readcount-4] | (net_message.data[msg_readcount-3]<<8) | (net_message.data[msg_readcount-2]<<16) | (net_message.data[msg_readcount-1]<<24);
 }
 
-float MSG_ReadFloat (void)
+int MSG_ReadBigLong (void)
+{
+	if (msg_readcount+4 > net_message.cursize)
+	{
+		msg_badread = true;
+		return -1;
+	}
+	msg_readcount += 4;
+	return (net_message.data[msg_readcount-4]<<24) + (net_message.data[msg_readcount-3]<<16) + (net_message.data[msg_readcount-2]<<8) + net_message.data[msg_readcount-1];
+}
+
+float MSG_ReadLittleFloat (void)
 {
 	union
 	{
-		qbyte b[4];
 		float f;
 		int l;
 	} dat;
-
-	dat.b[0] =      net_message.data[msg_readcount];
-	dat.b[1] =      net_message.data[msg_readcount+1];
-	dat.b[2] =      net_message.data[msg_readcount+2];
-	dat.b[3] =      net_message.data[msg_readcount+3];
+	if (msg_readcount+4 > net_message.cursize)
+	{
+		msg_badread = true;
+		return -1;
+	}
 	msg_readcount += 4;
+	dat.l = net_message.data[msg_readcount-4] | (net_message.data[msg_readcount-3]<<8) | (net_message.data[msg_readcount-2]<<16) | (net_message.data[msg_readcount-1]<<24);
+	return dat.f;
+}
 
-	dat.l = LittleLong (dat.l);
-
+float MSG_ReadBigFloat (void)
+{
+	union
+	{
+		float f;
+		int l;
+	} dat;
+	if (msg_readcount+4 > net_message.cursize)
+	{
+		msg_badread = true;
+		return -1;
+	}
+	msg_readcount += 4;
+	dat.l = (net_message.data[msg_readcount-4]<<24) | (net_message.data[msg_readcount-3]<<16) | (net_message.data[msg_readcount-2]<<8) | net_message.data[msg_readcount-1];
 	return dat.f;
 }
 
@@ -319,37 +339,35 @@ char *MSG_ReadString (void)
 {
 	static char string[2048];
 	int l,c;
-
-	l = 0;
-	do
-	{
-		c = MSG_ReadChar ();
-		if (c == -1 || c == 0)
-			break;
+	for (l = 0;l < sizeof(string) - 1 && (c = MSG_ReadChar()) != -1 && c != 0;l++)
 		string[l] = c;
-		l++;
-	} while (l < (int)sizeof(string)-1);
-
 	string[l] = 0;
-
 	return string;
+}
+
+int MSG_ReadBytes (int numbytes, unsigned char *out)
+{
+	int l, c;
+	for (l = 0;l < numbytes && (c = MSG_ReadChar()) != -1;l++)
+		out[l] = c;
+	return l;
 }
 
 // used by server (always latest dpprotocol)
 float MSG_ReadDPCoord (void)
 {
-	return (signed short) MSG_ReadShort();
+	return (signed short) MSG_ReadLittleShort();
 }
 
 // used by client
 float MSG_ReadCoord (void)
 {
 	if (dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
-		return (signed short) MSG_ReadShort();
+		return (signed short) MSG_ReadLittleShort();
 	else if (dpprotocol == DPPROTOCOL_VERSION1)
-		return MSG_ReadFloat();
+		return MSG_ReadLittleFloat();
 	else
-		return MSG_ReadShort() * (1.0f/8.0f);
+		return MSG_ReadLittleShort() * (1.0f/8.0f);
 }
 
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -114,13 +114,20 @@ extern	int			msg_readcount;
 extern	qboolean	msg_badread;		// set if a read goes beyond end of message
 
 void MSG_BeginReading (void);
-int MSG_ReadShort (void);
-int MSG_ReadLong (void);
-float MSG_ReadFloat (void);
+int MSG_ReadLittleShort (void);
+int MSG_ReadBigShort (void);
+int MSG_ReadLittleLong (void);
+int MSG_ReadBigLong (void);
+float MSG_ReadLittleFloat (void);
+float MSG_ReadBigFloat (void);
 char *MSG_ReadString (void);
+int MSG_ReadBytes (int numbytes, unsigned char *out);
 
 #define MSG_ReadChar() (msg_readcount >= net_message.cursize ? (msg_badread = true, -1) : (signed char)net_message.data[msg_readcount++])
 #define MSG_ReadByte() (msg_readcount >= net_message.cursize ? (msg_badread = true, -1) : (unsigned char)net_message.data[msg_readcount++])
+#define MSG_ReadShort MSG_ReadLittleShort
+#define MSG_ReadLong MSG_ReadLittleLong
+#define MSG_ReadFloat MSG_ReadLittleFloat
 
 float MSG_ReadCoord (void);
 
