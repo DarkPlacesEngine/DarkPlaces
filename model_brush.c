@@ -3728,7 +3728,10 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 							{
 								out->surfaceparms = flags;
 								if ((flags & Q3SURFACEPARM_SKY) && sky[0])
-									strcpy(loadmodel->brush.skybox, sky);
+								{
+									// quake3 seems to append a _ to the skybox name, so this must do so as well
+									snprintf(loadmodel->brush.skybox, sizeof(loadmodel->brush.skybox), "%s_", sky);
+								}
 							}
 						}
 					}
