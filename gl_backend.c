@@ -729,13 +729,6 @@ void R_Mesh_Render(void)
 	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer <= 0)
 		GL_ConvertColorsFloatToByte();
 
-	if (gl_backend_rebindtextures)
-	{
-		gl_backend_rebindtextures = false;
-		GL_SetupTextureState();
-	}
-
-	GL_MeshState();
 	m[0] = buf_mesh.matrix.m[0][0];
 	m[1] = buf_mesh.matrix.m[0][1];
 	m[2] = buf_mesh.matrix.m[0][2];
@@ -906,6 +899,14 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 	}
 	if (overbright && j >= 0)
 		buf_mesh.texturergbscale[j] = 4;
+
+	if (gl_backend_rebindtextures)
+	{
+		gl_backend_rebindtextures = false;
+		GL_SetupTextureState();
+	}
+
+	GL_MeshState();
 
 	return true;
 }
