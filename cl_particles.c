@@ -148,6 +148,10 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 	VectorNormalizeFast(right);
 	CrossProduct(right, forward, up);
 }
+#if QW
+#include "pmove.h"
+extern qboolean PM_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, pmtrace_t *trace);
+#endif
 float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels, void **hitent)
 {
 #if QW
@@ -160,7 +164,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 	trace.fraction = 1;
 	VectorCopy (end, trace.endpos);
 #if QW
-	PM_RecursiveHullCheck (move.physents[0].model->hulls, move.physents[0].model->hulls.firstclipnode, 0, 1, start_l, end_l, &trace);
+	PM_RecursiveHullCheck (cl.model_precache[1]->hulls, 0, 0, 1, start_l, end_l, &trace);
 #else
 	RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start_l, end_l, &trace);
 #endif
@@ -1622,14 +1626,17 @@ void R_InitParticles(void)
 float varray_vertex[16];
 #endif
 
+#ifdef WORKINGLQUAKE
+void R_DrawParticle(particle_t *p)
+{
+#else
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
-	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
-	particletexture_t *tex;
-#ifndef WORKINGLQUAKE
+	const particle_t *p = calldata1;
 	rmeshstate_t m;
 #endif
-	const particle_t *p = calldata1;
+	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
+	particletexture_t *tex;
 
 	VectorCopy(p->org, org);
 
@@ -1804,7 +1811,7 @@ void R_DrawParticles (void)
 	// LordHavoc: only render if not too close
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
 		if (DotProduct(p->org, vpn) >= minparticledist)
-			R_DrawParticleCallback(p, 0);
+			R_DrawParticle(p);
 	glDepthMask(1);
 	glDisable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
