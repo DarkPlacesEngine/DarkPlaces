@@ -278,7 +278,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	lightmap = surf->samples;
 
 // set to full bright if no light data
-	if (currententity && currententity->effects & EF_FULLBRIGHT || !cl.worldmodel->lightdata)
+	if ((currententity && currententity->effects & EF_FULLBRIGHT) || !cl.worldmodel->lightdata)
 	{
 		bl = blocklights;
 		for (i=0 ; i<size ; i++)
