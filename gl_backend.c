@@ -89,9 +89,7 @@ typedef struct buf_mesh_s
 	int blendfunc1, blendfunc2;
 	int textures[MAX_TEXTUREUNITS];
 	int texturergbscale[MAX_TEXTUREUNITS];
-	int firsttriangle;
 	int triangles;
-	int firstvert;
 	int verts;
 	matrix4x4_t matrix;
 	struct buf_mesh_s *chain;
@@ -128,7 +126,7 @@ typedef struct
 }
 buf_texcoord_t;
 
-static int currenttriangle, currentvertex, backendunits, backendactive;
+static int backendunits, backendactive;
 static buf_mesh_t buf_mesh;
 static buf_tri_t *buf_tri;
 static buf_vertex_t *buf_vertex;
@@ -445,8 +443,6 @@ void R_Mesh_Start(float farclip)
 
 	gl_backend_bufferchanges(false);
 
-	currenttriangle = 0;
-	currentvertex = 0;
 	r_mesh_farclip = farclip;
 	viewdist = DotProduct(r_origin, vpn);
 	vpnbit0 = vpn[0] < 0;
@@ -505,7 +501,7 @@ void R_Mesh_Start(float farclip)
 
 int gl_backend_rebindtextures;
 
-void GL_ConvertColorsFloatToByte(void)
+void GL_ConvertColorsFloatToByte(int numverts)
 {
 	int i, k, total;
 	// LordHavoc: to avoid problems with aliasing (treating memory as two
@@ -515,7 +511,7 @@ void GL_ConvertColorsFloatToByte(void)
 	volatile float *fcolor;
 	qbyte *bcolor;
 
-	total = currentvertex * 4;
+	total = numverts * 4;
 
 	// shift float to have 8bit fraction at base of number
 	fcolor = &buf_fcolor->c[0];
@@ -538,6 +534,31 @@ void GL_ConvertColorsFloatToByte(void)
 		k = icolor[i + 2] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 2] = (qbyte) k;
 		k = icolor[i + 3] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 3] = (qbyte) k;
 		i += 4;
+	}
+}
+
+void GL_TransformVertices(int numverts)
+{
+	int i;
+	float m[12], tempv[4], *v;
+	m[0] = buf_mesh.matrix.m[0][0];
+	m[1] = buf_mesh.matrix.m[0][1];
+	m[2] = buf_mesh.matrix.m[0][2];
+	m[3] = buf_mesh.matrix.m[0][3];
+	m[4] = buf_mesh.matrix.m[1][0];
+	m[5] = buf_mesh.matrix.m[1][1];
+	m[6] = buf_mesh.matrix.m[1][2];
+	m[7] = buf_mesh.matrix.m[1][3];
+	m[8] = buf_mesh.matrix.m[2][0];
+	m[9] = buf_mesh.matrix.m[2][1];
+	m[10] = buf_mesh.matrix.m[2][2];
+	m[11] = buf_mesh.matrix.m[2][3];
+	for (i = 0, v = buf_vertex[0].v;i < numverts;i++, v += 4)
+	{
+		VectorCopy(v, tempv);
+		v[0] = tempv[0] * m[0] + tempv[1] * m[1] + tempv[2] * m[2] + m[3];
+		v[1] = tempv[0] * m[4] + tempv[1] * m[5] + tempv[2] * m[6] + m[7];
+		v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
 	}
 }
 
@@ -710,51 +731,20 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i;
-	float *v, tempv[4], m[12];
-
 	if (!backendactive)
 		Sys_Error("R_Mesh_Render: called when backend is not active\n");
 
 	if (!r_render.integer)
-	{
-		currenttriangle = 0;
-		currentvertex = 0;
 		return;
-	}
 
 	CHECKGLERROR
 
 	// drawmode 0 always uses byte colors
 	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer <= 0)
-		GL_ConvertColorsFloatToByte();
-
-	m[0] = buf_mesh.matrix.m[0][0];
-	m[1] = buf_mesh.matrix.m[0][1];
-	m[2] = buf_mesh.matrix.m[0][2];
-	m[3] = buf_mesh.matrix.m[0][3];
-	m[4] = buf_mesh.matrix.m[1][0];
-	m[5] = buf_mesh.matrix.m[1][1];
-	m[6] = buf_mesh.matrix.m[1][2];
-	m[7] = buf_mesh.matrix.m[1][3];
-	m[8] = buf_mesh.matrix.m[2][0];
-	m[9] = buf_mesh.matrix.m[2][1];
-	m[10] = buf_mesh.matrix.m[2][2];
-	m[11] = buf_mesh.matrix.m[2][3];
-	for (i = 0, v = buf_vertex[buf_mesh.firstvert].v;i < buf_mesh.verts;i++, v += 4)
-	{
-		VectorCopy(v, tempv);
-		//Matrix4x4_Transform(&buf_mesh.matrix, tempv, v);
-		v[0] = tempv[0] * m[0] + tempv[1] * m[1] + tempv[2] * m[2] + m[3];
-		v[1] = tempv[0] * m[4] + tempv[1] * m[5] + tempv[2] * m[6] + m[7];
-		v[2] = tempv[0] * m[8] + tempv[1] * m[9] + tempv[2] * m[10] + m[11];
-	}
-	GL_LockArray(0, currentvertex);
-	GL_DrawRangeElements(buf_mesh.firstvert, buf_mesh.firstvert + buf_mesh.verts, buf_mesh.triangles * 3, (unsigned int *)&buf_tri[buf_mesh.firsttriangle].index[0]);CHECKGLERROR
-
-	currenttriangle = 0;
-	currentvertex = 0;
-
+		GL_ConvertColorsFloatToByte(buf_mesh.verts);
+	GL_TransformVertices(buf_mesh.verts);
+	GL_LockArray(0, buf_mesh.verts);CHECKGLERROR
+	GL_DrawRangeElements(0, buf_mesh.verts, buf_mesh.triangles * 3, &buf_tri[0].index[0]);CHECKGLERROR
 	GL_UnlockArray();CHECKGLERROR
 }
 
@@ -844,17 +834,11 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m, int wantoverbright)
 
 	c_meshs++;
 	c_meshtris += m->numtriangles;
-	m->index = &buf_tri[currenttriangle].index[0];
-	m->vertex = &buf_vertex[currentvertex].v[0];
-	m->color = &buf_fcolor[currentvertex].c[0];
+	m->index = &buf_tri[0].index[0];
+	m->vertex = &buf_vertex[0].v[0];
+	m->color = &buf_fcolor[0].c[0];
 	for (i = 0;i < backendunits;i++)
-		m->texcoords[i] = &buf_texcoord[i][currentvertex].t[0];
-
-	// opaque meshs are rendered directly
-	buf_mesh.firsttriangle = currenttriangle;
-	buf_mesh.firstvert = currentvertex;
-	currenttriangle += m->numtriangles;
-	currentvertex += m->numverts;
+		m->texcoords[i] = &buf_texcoord[i][0].t[0];
 
 	buf_mesh.blendfunc1 = m->blendfunc1;
 	buf_mesh.blendfunc2 = m->blendfunc2;
