@@ -926,7 +926,7 @@ void Sbar_DeathmatchOverlay (void)
 // draw the text
 	l = scoreboardlines;
 
-	x = ((vid.conwidth - 320)>>1) - 140;
+	x = (vid.conwidth - 280)>>1;
 	y = 40;
 	for (i = 0;i < l;i++)
 	{
@@ -937,9 +937,9 @@ void Sbar_DeathmatchOverlay (void)
 
 	// draw background
 		c = (qbyte *)&d_8to24table[(s->colors & 0xf0) + 8];
-		DrawQ_Fill ( x, y+1, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill ( x + 8, y+1, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
 		c = (qbyte *)&d_8to24table[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill ( x, y+4, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
+		DrawQ_Fill ( x + 8, y+4, 88, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f), 0);
 
 		total = cl.time - s->entertime;
 		minutes = (int)total/60;
@@ -953,7 +953,7 @@ void Sbar_DeathmatchOverlay (void)
 
 		// put it together
 		sprintf (num, "%c %4i:%4i %4i:%c%c %s", k == cl.viewentity - 1 ? 12 : ' ', (int) s->frags, fph, minutes, tens, units, s->name);
-		DrawQ_String(x - 8, y, num, 0, 8, 8, 1, 1, 1, 1, 0);
+		DrawQ_String(x, y, num, 0, 8, 8, 1, 1, 1, 1, 0);
 
 		y += 8;
 	}
