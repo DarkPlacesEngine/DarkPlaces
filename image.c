@@ -180,7 +180,7 @@ typedef struct
 LoadPCX
 ============
 */
-qbyte* LoadPCX (qbyte *f, int matchwidth, int matchheight)
+qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 {
 	pcx_t pcx;
 	qbyte *a, *b, *image_rgba, *pbuf;
@@ -309,11 +309,11 @@ void PrintTargaHeader(TargaHeader *t)
 LoadTGA
 =============
 */
-qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
+qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 {
 	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex;
 	qbyte *pixbuf, *image_rgba;
-	qbyte *fin, *enddata;
+	const qbyte *fin, *enddata;
 	TargaHeader targa_header;
 	unsigned char palette[256*4], *p;
 
@@ -526,9 +526,9 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 LoadLMP
 ============
 */
-qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
+qbyte *LoadLMP (const qbyte *f, int matchwidth, int matchheight, qboolean loadAs8Bit)
 {
-	qbyte *image_rgba;
+	qbyte *image_buffer;
 
 	if (fs_filesize < 9)
 	{
@@ -537,8 +537,8 @@ qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 	}
 
 	// parse the very complicated header *chuckle*
-	image_width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
-	image_height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
+	image_width = BuffLittleLong(f);
+	image_height = BuffLittleLong(f + 4);
 	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
 	{
 		Con_Printf("LoadLMP: invalid size %ix%i\n", image_width, image_height);
@@ -553,15 +553,29 @@ qbyte *LoadLMP (qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 	}
 
-	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
-	if (!image_rgba)
+	if (loadAs8Bit)
 	{
-		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
-		return NULL;
+		image_buffer = Mem_Alloc(tempmempool, image_width * image_height);
+		memcpy(image_buffer, f + 8, image_width * image_height);
 	}
-	Image_Copy8bitRGBA(f + 8, image_rgba, image_width * image_height, palette_complete);
-	return image_rgba;
+	else
+	{
+		image_buffer = Mem_Alloc(tempmempool, image_width * image_height * 4);
+		Image_Copy8bitRGBA(f + 8, image_buffer, image_width * image_height, palette_complete);
+	}
+	return image_buffer;
 }
+
+static qbyte *LoadLMPRGBA (const qbyte *f, int matchwidth, int matchheight)
+{
+	return LoadLMP(f, matchwidth, matchheight, false);
+}
+
+qbyte *LoadLMPAs8Bit (const qbyte *f, int matchwidth, int matchheight)
+{
+	return LoadLMP(f, matchwidth, matchheight, true);
+}
+
 
 typedef struct
 {
@@ -574,7 +588,7 @@ typedef struct
 	int			value;
 } q2wal_t;
 
-qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
+qbyte *LoadWAL (const qbyte *f, int matchwidth, int matchheight)
 {
 	qbyte *image_rgba;
 	const q2wal_t *inwal = (const void *)f;
@@ -612,49 +626,6 @@ qbyte *LoadWAL (qbyte *f, int matchwidth, int matchheight)
 }
 
 
-
-/*
-============
-LoadLMP
-============
-*/
-qbyte *LoadLMPAs8Bit (qbyte *f, int matchwidth, int matchheight)
-{
-	qbyte *image_8bit;
-
-	if (fs_filesize < 9)
-	{
-		Con_Print("LoadLMPAs8Bit: invalid LMP file\n");
-		return NULL;
-	}
-
-	// parse the very complicated header *chuckle*
-	image_width = f[0] + f[1] * 256 + f[2] * 65536 + f[3] * 16777216;
-	image_height = f[4] + f[5] * 256 + f[6] * 65536 + f[7] * 16777216;
-	if (image_width > 4096 || image_height > 4096 || image_width <= 0 || image_height <= 0)
-	{
-		Con_Printf("LoadLMPAs8Bit: invalid size %ix%i\n", image_width, image_height);
-		return NULL;
-	}
-	if ((matchwidth && image_width != matchwidth) || (matchheight && image_height != matchheight))
-		return NULL;
-
-	if (fs_filesize < 8 + image_width * image_height)
-	{
-		Con_Print("LoadLMPAs8Bit: invalid LMP file\n");
-		return NULL;
-	}
-
-	image_8bit = Mem_Alloc(tempmempool, image_width * image_height);
-	if (!image_8bit)
-	{
-		Con_Printf("LoadLMPAs8Bit: not enough memory for %i by %i image\n", image_width, image_height);
-		return NULL;
-	}
-	memcpy(image_8bit, f + 8, image_width * image_height);
-	return image_8bit;
-}
-
 void Image_StripImageExtension (const char *in, char *out)
 {
 	const char *end, *temp;
@@ -679,7 +650,7 @@ void Image_StripImageExtension (const char *in, char *out)
 struct
 {
 	const char *formatstring;
-	qbyte *(*loadfunc)(qbyte *f, int matchwidth, int matchheight);
+	qbyte *(*loadfunc)(const qbyte *f, int matchwidth, int matchheight);
 }
 imageformats[] =
 {
@@ -692,7 +663,7 @@ imageformats[] =
 	{"%s.tga", LoadTGA},
 	{"%s.jpg", JPEG_LoadImage},
 	{"%s.pcx", LoadPCX},
-	{"%s.lmp", LoadLMP},
+	{"%s.lmp", LoadLMPRGBA},
 	{NULL, NULL}
 };
 
