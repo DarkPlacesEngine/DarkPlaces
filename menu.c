@@ -2634,7 +2634,7 @@ void M_Menu_GameOptions_f (void)
 	if (maxplayers == 0)
 		maxplayers = svs.maxclients;
 	if (maxplayers < 2)
-		maxplayers = svs.maxclientslimit;
+		maxplayers = MAX_SCOREBOARD;
 }
 
 
@@ -2783,9 +2783,9 @@ void M_NetStart_Change (int dir)
 	{
 	case 1:
 		maxplayers += dir;
-		if (maxplayers > svs.maxclientslimit)
+		if (maxplayers > MAX_SCOREBOARD)
 		{
-			maxplayers = svs.maxclientslimit;
+			maxplayers = MAX_SCOREBOARD;
 			m_serverInfoMessage = true;
 			m_serverInfoMessageTime = realtime;
 		}

@@ -165,29 +165,19 @@ void Host_Error (char *error, ...)
 	longjmp (host_abortserver, 1);
 }
 
-static mempool_t *clients_mempool;
-
-/*
-================
-Host_FindMaxClients
-================
-*/
-void	Host_FindMaxClients (void)
+void Host_ServerOptions (void)
 {
-	int		i;
+	int i, numplayers;
 
-	svs.maxclients = 1;
+	numplayers = 1;
 
 	i = COM_CheckParm ("-dedicated");
 	if (i)
 	{
 		cls.state = ca_dedicated;
+		numplayers = 0;
 		if (i != (com_argc - 1))
-		{
-			svs.maxclients = atoi (com_argv[i+1]);
-		}
-		else
-			svs.maxclients = 8;
+			numplayers = atoi (com_argv[i+1]);
 	}
 	else
 		cls.state = ca_disconnected;
@@ -197,34 +187,43 @@ void	Host_FindMaxClients (void)
 	{
 		if (cls.state == ca_dedicated)
 			Sys_Error ("Only one of -dedicated or -listen can be specified");
+		numplayers = 0;
 		if (i != (com_argc - 1))
-			svs.maxclients = atoi (com_argv[i+1]);
-		else
-			svs.maxclients = 8;
+			numplayers = atoi (com_argv[i+1]);
 	}
 
+	if (numplayers < 1)
+		numplayers = 8;
+	if (numplayers > MAX_SCOREBOARD)
+		numplayers = MAX_SCOREBOARD;
+
 	// Transfusion doesn't support single player games
-	if (gamemode == GAME_TRANSFUSION && svs.maxclients < 4)
-		svs.maxclients = 4;
+	if (gamemode == GAME_TRANSFUSION && numplayers < 4)
+		numplayers = 4;
 
-	if (svs.maxclients < 1)
-		svs.maxclients = 8;
-	else if (svs.maxclients > MAX_SCOREBOARD)
-		svs.maxclients = MAX_SCOREBOARD;
+	if (numplayers > 1)
+		Cvar_SetValueQuick (&deathmatch, 1);
+	else
+		Cvar_SetValueQuick (&deathmatch, 0);
 
-	svs.maxclientslimit = svs.maxclients;
-	if (svs.maxclientslimit < MAX_SCOREBOARD) // LordHavoc: upped listen mode limit from 4 to MAX_SCOREBOARD
-		svs.maxclientslimit = MAX_SCOREBOARD;
+	svs.maxclients = 0;
+	SV_SetMaxClients(numplayers);
+}
+
+static mempool_t *clients_mempool;
+void SV_SetMaxClients(int n)
+{
+	if (sv.active)
+		return;
+	n = bound(1, n, MAX_SCOREBOARD);
+	if (svs.maxclients == n)
+		return;
+	svs.maxclients = n;
 	if (!clients_mempool)
 		clients_mempool = Mem_AllocPool("clients");
 	if (svs.clients)
 		Mem_Free(svs.clients);
-	svs.clients = Mem_Alloc(clients_mempool, svs.maxclientslimit*sizeof(client_t));
-
-	if (svs.maxclients > 1)
-		Cvar_SetValue ("deathmatch", 1.0);
-	else
-		Cvar_SetValue ("deathmatch", 0.0);
+	svs.clients = Mem_Alloc(clients_mempool, svs.maxclients*sizeof(client_t));
 }
 
 
@@ -267,7 +266,7 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&timestamps);
 	Cvar_RegisterVariable (&timeformat);
 
-	Host_FindMaxClients ();
+	Host_ServerOptions ();
 }
 
 
@@ -502,7 +501,7 @@ void Host_ShutdownServer(qboolean crash)
 // clear structures
 //
 	memset (&sv, 0, sizeof(sv));
-	memset (svs.clients, 0, svs.maxclientslimit*sizeof(client_t));
+	memset (svs.clients, 0, svs.maxclients * sizeof(client_t));
 }
 
 
