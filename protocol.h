@@ -315,35 +315,37 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_SHADOW 64 // cast shadow
 #define RENDER_LIGHT 128 // receive light
 
+// this is 80 bytes
 typedef struct
 {
-	double time; // time this state was built
-	vec3_t origin;
-	vec3_t angles;
-	int number; // entity number this state is for
-	unsigned short active; // true if a valid state
-	unsigned short modelindex;
-	unsigned short frame;
-	unsigned short effects;
-	unsigned short tagentity;
+	// ! means this is sent to client
+	double time; // time this state was built (used on client for interpolation)
+	float origin[3]; // !
+	float angles[3]; // !
+	int number; // ! entity number this state is for
+	int effects; // !
+	unsigned short modelindex; // !
+	unsigned short frame; // !
+	unsigned short tagentity; // !
 	unsigned short specialvisibilityradius; // larger if it has effects/light
 	unsigned short viewmodelforclient;
-	unsigned short exteriormodelforclient;
+	unsigned short exteriormodelforclient; // not shown if first person viewing from this entity, shown in all other cases
 	unsigned short nodrawtoclient;
 	unsigned short drawonlytoclient;
-	unsigned short light[4]; // color*256 (0.00 to almost 64.00), and radius*1
-	qbyte lightstyle;
-	qbyte lightpflags;
-	qbyte colormap;
-	qbyte skin; // also chooses cubemap for rtlights if there is no model
-	qbyte alpha;
-	qbyte scale;
-	qbyte glowsize;
-	qbyte glowcolor;
-	qbyte flags;
-	qbyte tagindex;
+	unsigned short light[4]; // ! color*256 (0.00 to 255.996), and radius*1
+	unsigned char active; // ! true if a valid state
+	unsigned char lightstyle; // !
+	unsigned char lightpflags; // !
+	unsigned char colormap; // !
+	unsigned char skin; // ! also chooses cubemap for rtlights if lightpflags & LIGHTPFLAGS_FULLDYNAMIC
+	unsigned char alpha; // !
+	unsigned char scale; // !
+	unsigned char glowsize; // !
+	unsigned char glowcolor; // !
+	unsigned char flags; // !
+	unsigned char tagindex; // !
 	// padding to a multiple of 8 bytes (to align the double time)
-	qbyte unused[6];
+	unsigned char unused[5];
 }
 entity_state_t;
 
@@ -496,10 +498,23 @@ entity_frame_t;
 #define E_UNUSED7		(1<<30)
 #define E_EXTEND4		(1<<31)
 
+// baseline state values
+entity_state_t defaultstate;
+
 // clears a state to baseline values
 void ClearStateToDefault(entity_state_t *s);
-// used by some of the DP protocols
-void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta);
+// returns difference between two states as E_ flags
+int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n);
+// write E_ flags to a msg
+void EntityState_WriteExtendBits(sizebuf_t *msg, unsigned int bits);
+// write values for the E_ flagged fields to a msg
+void EntityState_WriteFields(entity_state_t *ent, sizebuf_t *msg, unsigned int bits);
+// write entity number and E_ flags and their values, or a remove number, describing the change from delta to ent
+void EntityState_WriteUpdate(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta);
+// read E_ flags
+int EntityState_ReadExtendBits(void);
+// read values for E_ flagged fields and apply them to a state
+void EntityState_ReadFields(entity_state_t *e, unsigned int bits);
 
 // (server) clears the database to contain no frames (thus delta compression
 // compresses against nothing)
@@ -577,6 +592,100 @@ int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int
 
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d);
+
+// reset all entity fields (typically used if status changed)
+#define E5_FULLUPDATE (1<<0)
+// E5_ORIGIN32=0: short[3] = s->origin[0] * 8, s->origin[1] * 8, s->origin[2] * 8
+// E5_ORIGIN32=1: float[3] = s->origin[0], s->origin[1], s->origin[2]
+#define E5_ORIGIN (1<<1)
+// E5_ANGLES16=0: byte[3] = s->angle[0] * 256 / 360, s->angle[1] * 256 / 360, s->angle[2] * 256 / 360
+// E5_ANGLES16=1: short[3] = s->angle[0] * 65536 / 360, s->angle[1] * 65536 / 360, s->angle[2] * 65536 / 360
+#define E5_ANGLES (1<<2)
+// E5_MODEL16=0: byte = s->modelindex
+// E5_MODEL16=1: short = s->modelindex
+#define E5_MODEL (1<<3)
+// E5_FRAME16=0: byte = s->frame
+// E5_FRAME16=1: short = s->frame
+#define E5_FRAME (1<<4)
+// byte = s->skin
+#define E5_SKIN (1<<5)
+// E5_EFFECTS16=0 && E5_EFFECTS32=0: byte = s->effects
+// E5_EFFECTS16=1 && E5_EFFECTS32=0: short = s->effects
+// E5_EFFECTS16=0 && E5_EFFECTS32=1: int = s->effects
+// E5_EFFECTS16=1 && E5_EFFECTS32=1: int = s->effects
+#define E5_EFFECTS (1<<6)
+// bits >= (1<<8)
+#define E5_EXTEND1 (1<<7)
+
+// flag
+#define E5_ORIGIN32 (1<<9) 
+// flag
+#define E5_ANGLES16 (1<<10)
+// flag
+#define E5_MODEL16 (1<<11)
+// byte = s->renderflags
+#define E5_FLAGS (1<<6)
+// byte = bound(0, s->alpha * 255, 255)
+#define E5_ALPHA (1<<13)
+// byte = bound(0, s->scale * 16, 255)
+#define E5_SCALE (1<<14)
+// bits >= (1<<16)
+#define E5_EXTEND2 (1<<15)
+
+// short = s->tagentity
+// byte = s->tagindex
+#define E5_ATTACHMENT (1<<16)
+// short = s->exteriormodelforentity
+#define E5_EXTERIORFORENTITY (1<<17)
+// short[4] = s->light[0], s->light[1], s->light[2], s->light[3]
+#define E5_LIGHT (1<<18)
+// byte = s->colormap
+#define E5_COLORMAP (1<<19)
+// byte = s->glowsize
+// byte = s->glowcolor
+#define E5_GLOW (1<<20)
+// short = s->effects
+#define E5_EFFECTS16 (1<<21)
+// int = s->effects
+#define E5_EFFECTS32 (1<<22)
+// bits >= (1<<24)
+#define E5_EXTEND3 (1<<23)
+
+// flag
+#define E5_FRAME16 (1<<24)
+// unused
+#define E5_UNUSED25 (1<<25)
+// unused
+#define E5_UNUSED26 (1<<26)
+// unused
+#define E5_UNUSED27 (1<<27)
+// unused
+#define E5_UNUSED28 (1<<28)
+// unused
+#define E5_UNUSED29 (1<<29)
+// unused
+#define E5_UNUSED30 (1<<30)
+// bits2 > 0
+#define E5_EXTEND4 (1<<31)
+
+typedef struct entity_database5_client_s
+{
+	qbyte visible[MAX_EDICTS];
+	qbyte visibledelta[MAX_EDICTS];
+	int statedelta[MAX_EDICTS];
+}
+entity_database5_t;
+
+typedef struct entity_database5_server_s
+{
+	// temporary working space for client data building
+	// 0-255 priority level, 0 = don't send
+	qbyte priorities[MAX_EDICTS];
+	// this is the visible entity numbers, sorted by their priority level
+	int numentitylist;
+	int entitylist[MAX_EDICTS];
+}
+entity_database5_server_t;
 
 extern cvar_t developer_networkentities;
 

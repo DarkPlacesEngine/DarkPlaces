@@ -1132,11 +1132,11 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 			if (s->exteriormodelforclient && s->exteriormodelforclient == sv_writeentitiestoclient_clentnum)
 			{
 				s->flags |= RENDER_EXTERIORMODEL;
-				EntityState_Write(s, &buf, e);
+				EntityState_WriteUpdate(s, &buf, e);
 				s->flags &= ~RENDER_EXTERIORMODEL;
 			}
 			else
-				EntityState_Write(s, &buf, e);
+				EntityState_WriteUpdate(s, &buf, e);
 		}
 		else
 		{
