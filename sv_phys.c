@@ -1187,12 +1187,15 @@ void SV_Physics_Toss (edict_t *ent)
 // if onground, return without moving
 	if ((int)ent->v.flags & FL_ONGROUND)
 	{
+		VectorClear(ent->v.velocity);
 		if (ent->v.groundentity == 0)
 			return;
+		// if ent was supported by a brush model on previous frame,
+		// and groundentity is now freed, set groundentity to 0 (floating)
 		groundentity = PROG_TO_EDICT(ent->v.groundentity);
-		if (groundentity != NULL && groundentity->v.solid == SOLID_BSP)
+		if (groundentity->v.solid == SOLID_BSP)
 			ent->suspendedinairflag = true;
-		else if (ent->suspendedinairflag && (groundentity == NULL || groundentity->free))
+		else if (ent->suspendedinairflag && groundentity->free)
 		{
 			// leave it suspended in the air
 			ent->v.groundentity = 0;
@@ -1205,9 +1208,7 @@ void SV_Physics_Toss (edict_t *ent)
 	SV_CheckVelocity (ent);
 
 // add gravity
-	if (ent->v.movetype != MOVETYPE_FLY
-	 && ent->v.movetype != MOVETYPE_BOUNCEMISSILE // LordHavoc: enabled MOVETYPE_BOUNCEMISSILE
-	 && ent->v.movetype != MOVETYPE_FLYMISSILE)
+	if (ent->v.movetype == MOVETYPE_TOSS || ent->v.movetype == MOVETYPE_BOUNCE)
 		SV_AddGravity (ent);
 
 // move angles
@@ -1218,40 +1219,41 @@ void SV_Physics_Toss (edict_t *ent)
 	trace = SV_PushEntity (ent, move, vec3_origin);
 	if (ent->free)
 		return;
-	if (trace.fraction == 1)
-		return;
 
-	if (ent->v.movetype == MOVETYPE_BOUNCEMISSILE)
+	if (trace.fraction < 1)
 	{
-		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 2.0);
-		ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
-	}
-	else if (ent->v.movetype == MOVETYPE_BOUNCE)
-	{
-		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.5);
-		// LordHavoc: fixed grenades not bouncing when fired down a slope
-		if (trace.plane.normal[2] > 0.7 && DotProduct(trace.plane.normal, ent->v.velocity) < 60)
+		if (ent->v.movetype == MOVETYPE_BOUNCEMISSILE)
 		{
-			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
-			VectorClear (ent->v.velocity);
-			VectorClear (ent->v.avelocity);
+			ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 2.0);
+			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
+		}
+		else if (ent->v.movetype == MOVETYPE_BOUNCE)
+		{
+			ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.5);
+			// LordHavoc: fixed grenades not bouncing when fired down a slope
+			if (trace.plane.normal[2] > 0.7 && DotProduct(trace.plane.normal, ent->v.velocity) < 60)
+			{
+				ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
+				ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+				VectorClear (ent->v.velocity);
+				VectorClear (ent->v.avelocity);
+			}
+			else
+				ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 		}
 		else
-			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
-	}
-	else
-	{
-		ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.0);
-		if (trace.plane.normal[2] > 0.7)
 		{
-			ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
-			ent->v.groundentity = EDICT_TO_PROG(trace.ent);
-			VectorClear (ent->v.velocity);
-			VectorClear (ent->v.avelocity);
+			ClipVelocity (ent->v.velocity, trace.plane.normal, ent->v.velocity, 1.0);
+			if (trace.plane.normal[2] > 0.7)
+			{
+				ent->v.flags = (int)ent->v.flags | FL_ONGROUND;
+				ent->v.groundentity = EDICT_TO_PROG(trace.ent);
+				VectorClear (ent->v.velocity);
+				VectorClear (ent->v.avelocity);
+			}
+			else
+				ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 		}
-		else
-			ent->v.flags = (int)ent->v.flags & ~FL_ONGROUND;
 	}
 
 // check for in water
