@@ -161,7 +161,7 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
 	int c, fullbright, layernum, firstpass;
-	float tint[3], fog, ifog, colorscale, ambientcolor4f[4];
+	float tint[3], fog, ifog, colorscale, ambientcolor4f[4], *fcolor;
 	vec3_t diff;
 	qbyte *bcolor;
 	rmeshstate_t m;
@@ -305,7 +305,8 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 						if (R_Mesh_CacheArray(&request))
 						{
 							// save off the color pointer before we blow away the request
-							m.pointer_color = request.data;
+							fcolor = request.data;
+							m.pointer_color = fcolor;
 							// request normal3f cache
 							request.data_size = mesh->num_vertices * sizeof(float[3]);
 							request.id_pointer1 = NULL;
@@ -313,7 +314,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 							request.id_number3 = CRC_Block((void *)ent->frameblend, sizeof(ent->frameblend));
 							if (R_Mesh_CacheArray(&request))
 								R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, request.data);
-							R_LightModel_CalcVertexColors(ambientcolor4f, mesh->num_vertices, m.pointer_vertex, request.data, m.pointer_color);
+							R_LightModel_CalcVertexColors(ambientcolor4f, mesh->num_vertices, m.pointer_vertex, request.data, fcolor);
 						}
 						else
 							m.pointer_color = request.data;
