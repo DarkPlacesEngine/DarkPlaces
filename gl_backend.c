@@ -401,7 +401,7 @@ typedef struct gltextureunit_s
 	int t1d, t2d, t3d, tcubemap;
 	int arrayenabled;
 	unsigned int arraycomponents;
-	const float *pointer_texcoord;
+	const void *pointer_texcoord;
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
@@ -426,8 +426,8 @@ static struct
 	float color4f[4];
 	int lockrange_first;
 	int lockrange_count;
-	const float *pointer_vertex;
-	const float *pointer_color;
+	const void *pointer_vertex;
+	const void *pointer_color;
 }
 gl_state;
 
@@ -898,13 +898,13 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 		const int *p;
 		if (!qglIsEnabled(GL_VERTEX_ARRAY))
 			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
-		for (j = 0, size = numvertices * 3, p = gl_state.pointer_vertex + firstvertex * 3;j < size;j++, p++)
+		for (j = 0, size = numvertices * 3, p = (int *)((float *)gl_state.pointer_vertex + firstvertex * 3);j < size;j++, p++)
 			paranoidblah += *p;
 		if (gl_state.pointer_color)
 		{
 			if (!qglIsEnabled(GL_COLOR_ARRAY))
 				Con_Print("R_Mesh_Draw: color array set but not enabled\n");
-			for (j = 0, size = numvertices * 4, p = gl_state.pointer_color + firstvertex * 4;j < size;j++, p++)
+			for (j = 0, size = numvertices * 4, p = (int *)((float *)gl_state.pointer_color + firstvertex * 4);j < size;j++, p++)
 				paranoidblah += *p;
 		}
 		for (i = 0;i < backendarrayunits;i++)
@@ -914,7 +914,7 @@ void R_Mesh_Draw(int firstvertex, int numvertices, int numtriangles, const int *
 				GL_ClientActiveTexture(i);
 				if (!qglIsEnabled(GL_TEXTURE_COORD_ARRAY))
 					Con_Print("R_Mesh_Draw: texcoord array set but not enabled\n");
-				for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents;j < size;j++, p++)
+				for (j = 0, size = numvertices * gl_state.units[i].arraycomponents, p = (int *)((float *)gl_state.units[i].pointer_texcoord + firstvertex * gl_state.units[i].arraycomponents);j < size;j++, p++)
 					paranoidblah += *p;
 			}
 		}
