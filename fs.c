@@ -1674,6 +1674,11 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	qbyte* buffer;
 	size_t buffersize;
 
+	// if this is an uncompressed real file we can just call the kernel seek
+	// (necessary when writing files)
+	if (file->offset == 0 && ! (file->flags & QFILE_FLAG_DEFLATED))
+		return lseek (file->handle, offset, whence);
+
 	// Compute the file offset
 	switch (whence)
 	{
@@ -1767,7 +1772,12 @@ Give the current position in a file
 */
 long FS_Tell (qfile_t* file)
 {
-	return file->position - file->buff_len + file->buff_ind;
+	// if this is an uncompressed real file we can just call the kernel tell
+	// (necessary when writing files)
+	if (file->offset == 0 && ! (file->flags & QFILE_FLAG_DEFLATED))
+		return lseek (file->handle, 0, SEEK_CUR);
+	else
+		return file->position - file->buff_len + file->buff_ind;
 }
 
 
