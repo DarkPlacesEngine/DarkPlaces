@@ -17,7 +17,7 @@ int		texels;
 typedef struct
 {
 	int		texnum;
-	int		totaltexels;
+	int		texeldatasize;
 	byte	*texels[MAXMIPS];
 	unsigned short texelsize[MAXMIPS][2];
 	char	identifier[64];
@@ -107,25 +107,26 @@ void GL_TextureStats_Print(char *name, int total, int crc, int mip, int alpha)
 		name = "<unnamed>";
 	while (name[c] && c < 28)
 		n[c++] = name[c];
-	while (c < 28)
-		n[c++] = ' ';
+	// no need to pad since the name was moved to last
+//	while (c < 28)
+//		n[c++] = ' ';
 	n[c] = 0;
-	Con_Printf("%s %5i %04X %s %s\n", n, total, crc, mip ? "yes" : "no ", alpha ? "yes  " : "no   ");
+	Con_Printf("%5i %04X %s %s %s\n", total, crc, mip ? "yes" : "no ", alpha ? "yes  " : "no   ", n);
 }
 
 void GL_TextureStats_f(void)
 {
 	int i, s = 0, sc = 0, t = 0;
 	gltexture_t *glt;
-	Con_Printf("name                        kbytes crc  mip alpha\n");
+	Con_Printf("kbytes crc  mip alpha name\n");
 	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
 	{
-		GL_TextureStats_Print(glt->identifier, ((glt->totaltexels * 4) + 512) >> 10, glt->crc, glt->mipmap, glt->alpha);
-		t += glt->totaltexels;
+		GL_TextureStats_Print(glt->identifier, (glt->texeldatasize + 512) >> 10, glt->crc, glt->mipmap, glt->alpha);
+		t += glt->texeldatasize;
 		if (glt->identifier[0] == '&')
 		{
 			sc++;
-			s += glt->totaltexels;
+			s += glt->texeldatasize;
 		}
 	}
 	Con_Printf("%i textures, totalling %.3fMB, %i are (usually) unnecessary model skins totalling %.3fMB\n", numgltextures, t / 1048576.0, sc, s / 1048576.0);
@@ -137,17 +138,15 @@ void GL_TextureStats_PrintTotal(void)
 	gltexture_t *glt;
 	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
 	{
-		t += glt->totaltexels;
+		t += glt->texeldatasize;
 		if (glt->identifier[0] == '&')
 		{
 			sc++;
-			s += glt->totaltexels;
+			s += glt->texeldatasize;
 		}
 	}
 	Con_Printf("%i textures, totalling %.3fMB, %i are (usually) unnecessary model skins totalling %.3fMB\n", numgltextures, t / 1048576.0, sc, s / 1048576.0);
 }
-
-extern int buildnumber;
 
 char engineversion[40];
 
@@ -332,7 +331,7 @@ void GL_FreeTexels(gltexture_t *glt)
 
 void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
 {
-	int i, w, h, size, done;
+	int i, w, h, size;
 	if (glt->texels[0])
 		GL_FreeTexels(glt);
 	glt->texelsize[0][0] = width;
@@ -342,12 +341,11 @@ void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
 		size = 0;
 		w = width;h = height;
 		i = 0;
-		done = false;
-		for (i = 0;i < MAXMIPS;i++)
+		while (i < MAXMIPS)
 		{
 			glt->texelsize[i][0] = w;
 			glt->texelsize[i][1] = h;
-			glt->texels[i] = (void *)size;
+			glt->texels[i++] = (void *)size;
 			size += w*h*4;
 			if (w > 1)
 			{
@@ -358,12 +356,9 @@ void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
 			else if (h > 1)
 				h >>= 1;
 			else
-			{
-				i++;
 				break;
-			}
 		}
-		glt->totaltexels = size;
+		glt->texeldatasize = size;
 		while (i < MAXMIPS)
 			glt->texels[i++] = NULL;
 		glt->texels[0] = qmalloc(size);
@@ -373,7 +368,7 @@ void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
 	else
 	{
 		size = width*height*4;
-		glt->totaltexels = size;
+		glt->texeldatasize = size;
 		glt->texels[0] = qmalloc(size);
 		for (i = 1;i < MAXMIPS;i++)
 			glt->texels[i] = NULL;
@@ -503,7 +498,6 @@ int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolea
 				{
 					Con_DPrintf("GL_LoadTexture: cache mismatch, replacing old texture\n");
 					goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
-					//Sys_Error ("GL_LoadTexture: cache mismatch");
 				}
 				if ((gl_lerpimages.value != 0) != glt->lerped)
 					goto GL_LoadTexture_setup; // drop out with glt pointing to the texture to replace
@@ -622,16 +616,6 @@ GL_LoadTexture_setup:
 //		GL_Upload32 (data, width, height, mipmap, true);
 
 	return glt->texnum;
-}
-
-/*
-================
-GL_LoadPicTexture
-================
-*/
-int GL_LoadPicTexture (qpic_t *pic)
-{
-	return GL_LoadTexture ("", pic->width, pic->height, pic->data, false, true, 1);
 }
 
 int GL_GetTextureSlots (int count)

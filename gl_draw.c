@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-#define GL_COLOR_INDEX8_EXT     0x80E5
+//#define GL_COLOR_INDEX8_EXT     0x80E5
 
 cvar_t		qsg_version = {"qsg_version", "1"};
 cvar_t		scr_conalpha = {"scr_conalpha", "1"};
@@ -36,87 +36,9 @@ int			char_texture;
 typedef struct
 {
 	int		texnum;
-	float	sl, tl, sh, th;
 } glpic_t;
 
 int			conbacktexnum;
-
-/*
-=============================================================================
-
-  scrap allocation
-
-  Allocate all the little status bar obejcts into a single texture
-  to crutch up stupid hardware / drivers
-
-=============================================================================
-*/
-
-/*
-#define	MAX_SCRAPS		2
-#define	BLOCK_WIDTH		256
-#define	BLOCK_HEIGHT	256
-
-int			scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
-byte		scrap_texels[MAX_SCRAPS][BLOCK_WIDTH*BLOCK_HEIGHT*4];
-qboolean	scrap_dirty;
-
-// returns a texture number and the position inside it
-int Scrap_AllocBlock (int w, int h, int *x, int *y)
-{
-	int		i, j;
-	int		best, best2;
-	int		texnum;
-
-	for (texnum=0 ; texnum<MAX_SCRAPS ; texnum++)
-	{
-		best = BLOCK_HEIGHT;
-
-		for (i=0 ; i<BLOCK_WIDTH-w ; i++)
-		{
-			best2 = 0;
-
-			for (j=0 ; j<w ; j++)
-			{
-				if (scrap_allocated[texnum][i+j] >= best)
-					break;
-				if (scrap_allocated[texnum][i+j] > best2)
-					best2 = scrap_allocated[texnum][i+j];
-			}
-			if (j == w)
-			{	// this is a valid spot
-				*x = i;
-				*y = best = best2;
-			}
-		}
-
-		if (best + h > BLOCK_HEIGHT)
-			continue;
-
-		for (i=0 ; i<w ; i++)
-			scrap_allocated[texnum][*x + i] = best + h;
-
-		return texnum;
-	}
-
-	Sys_Error ("Scrap_AllocBlock: full");
-	return 0;
-}
-
-int	scrap_uploads;
-int scraptexnum[MAX_SCRAPS];
-
-void Scrap_Upload (void)
-{
-	int		texnum;
-
-	scrap_uploads++;
-
-	for (texnum=0 ; texnum<MAX_SCRAPS ; texnum++)
-		scraptexnum[texnum] = GL_LoadTexture (va("scrapslot%d", texnum), BLOCK_WIDTH, BLOCK_HEIGHT, scrap_texels[texnum], false, true, 1);
-	scrap_dirty = false;
-}
-*/
 
 //=============================================================================
 /* Support Routines */
@@ -137,8 +59,6 @@ byte		menuplyr_pixels[4096];
 int		pic_texels;
 int		pic_count;
 
-extern int GL_LoadPicTexture (qpic_t *pic);
-
 qpic_t *Draw_PicFromWad (char *name)
 {
 	qpic_t	*p;
@@ -147,40 +67,7 @@ qpic_t *Draw_PicFromWad (char *name)
 	p = W_GetLumpName (name);
 	gl = (glpic_t *)p->data;
 
-	// load little ones into the scrap
-	/*
-	if (p->width < 64 && p->height < 64)
-	{
-		int		x, y;
-		int		i, j, k;
-		int		texnum;
-
-		texnum = Scrap_AllocBlock (p->width, p->height, &x, &y);
-		scrap_dirty = true;
-		k = 0;
-		for (i=0 ; i<p->height ; i++)
-			for (j=0 ; j<p->width ; j++, k++)
-				scrap_texels[texnum][(y+i)*BLOCK_WIDTH + x + j] = p->data[k];
-		if (!scraptexnum[texnum])
-			scraptexnum[texnum] = GL_LoadTexture (va("scrapslot%d", texnum), BLOCK_WIDTH, BLOCK_HEIGHT, scrap_texels[texnum], false, true, 1);
-		gl->texnum = scraptexnum[texnum];
-		gl->sl = (x+0.01)/(float)BLOCK_WIDTH;
-		gl->sh = (x+p->width-0.01)/(float)BLOCK_WIDTH;
-		gl->tl = (y+0.01)/(float)BLOCK_WIDTH;
-		gl->th = (y+p->height-0.01)/(float)BLOCK_WIDTH;
-
-		pic_count++;
-		pic_texels += p->width*p->height;
-	}
-	else
-	{
-	*/
-		gl->texnum = GL_LoadPicTexture (p);
-		gl->sl = 0;
-		gl->sh = 1;
-		gl->tl = 0;
-		gl->th = 1;
-	//}
+	gl->texnum = GL_LoadTexture (name, p->width, p->height, p->data, false, true, 1);
 	return p;
 }
 
@@ -226,11 +113,7 @@ qpic_t	*Draw_CachePic (char *path)
 	gl = (glpic_t *)pic->pic.data;
 	gl->texnum = loadtextureimage(path, 0, 0, false, false);
 	if (!gl->texnum)
-		gl->texnum = GL_LoadPicTexture (dat);
-	gl->sl = 0;
-	gl->sh = 1;
-	gl->tl = 0;
-	gl->th = 1;
+		gl->texnum = GL_LoadTexture (path, dat->width, dat->height, dat->data, false, true, 1);
 
 	qfree(dat);
 
@@ -245,7 +128,6 @@ Draw_Init
 ===============
 */
 void rmain_registercvars();
-extern int buildnumber;
 
 void gl_draw_start()
 {
@@ -264,8 +146,6 @@ void gl_draw_start()
 	}
 
 	conbacktexnum = loadtextureimage("gfx/conback", 0, 0, false, false);
-
-//	memset(scraptexnum, 0, sizeof(scraptexnum));
 
 	// get the other pics we need
 	draw_disc = Draw_PicFromWad ("disc");
@@ -355,8 +235,11 @@ void Draw_Character (int x, int y, int num)
 	glEnd ();
 
 	// LordHavoc: revert to LINEAR mode
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if (glwidth < (int) vid.width)
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 }
 
 /*
@@ -404,8 +287,11 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	glEnd ();
 
 	// LordHavoc: revert to LINEAR mode
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if (glwidth < (int) vid.width)
+	{
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	}
 }
 
 void Draw_GenericPic (int texnum, float red, float green, float blue, float alpha, int x, int y, int width, int height)
@@ -429,21 +315,7 @@ Draw_AlphaPic
 */
 void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 {
-	glpic_t			*gl;
-
-//	if (scrap_dirty)
-//		Scrap_Upload ();
-	gl = (glpic_t *)pic->data;
-	if (!r_render.value)
-		return;
-	glColor4f(1,1,1,alpha);
-	glBindTexture(GL_TEXTURE_2D, gl->texnum);
-	glBegin (GL_QUADS);
-	glTexCoord2f (gl->sl, gl->tl);glVertex2f (x, y);
-	glTexCoord2f (gl->sh, gl->tl);glVertex2f (x+pic->width, y);
-	glTexCoord2f (gl->sh, gl->th);glVertex2f (x+pic->width, y+pic->height);
-	glTexCoord2f (gl->sl, gl->th);glVertex2f (x, y+pic->height);
-	glEnd ();
+	Draw_GenericPic(((glpic_t *)pic->data)->texnum, 1,1,1,alpha, x,y,pic->width, pic->height);
 }
 
 
@@ -454,21 +326,7 @@ Draw_Pic
 */
 void Draw_Pic (int x, int y, qpic_t *pic)
 {
-	glpic_t			*gl;
-
-//	if (scrap_dirty)
-//		Scrap_Upload ();
-	gl = (glpic_t *)pic->data;
-	if (!r_render.value)
-		return;
-	glColor3f(1,1,1);
-	glBindTexture(GL_TEXTURE_2D, gl->texnum);
-	glBegin (GL_QUADS);
-	glTexCoord2f (gl->sl, gl->tl);glVertex2f (x, y);
-	glTexCoord2f (gl->sh, gl->tl);glVertex2f (x+pic->width, y);
-	glTexCoord2f (gl->sh, gl->th);glVertex2f (x+pic->width, y+pic->height);
-	glTexCoord2f (gl->sl, gl->th);glVertex2f (x, y+pic->height);
-	glEnd ();
+	Draw_GenericPic(((glpic_t *)pic->data)->texnum, 1,1,1,1, x,y,pic->width, pic->height);
 }
 
 
@@ -496,16 +354,6 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 	if (!r_render.value)
 		return;
 	Draw_GenericPic (c, 1,1,1,1, x, y, pic->width, pic->height);
-	/*
-	glBindTexture(GL_TEXTURE_2D, c);
-	glColor3f(1,1,1);
-	glBegin (GL_QUADS);
-	glTexCoord2f (0, 0);glVertex2f (x, y);
-	glTexCoord2f (1, 0);glVertex2f (x+pic->width, y);
-	glTexCoord2f (1, 1);glVertex2f (x+pic->width, y+pic->height);
-	glTexCoord2f (0, 1);glVertex2f (x, y+pic->height);
-	glEnd ();
-	*/
 }
 
 

@@ -413,7 +413,7 @@ int RSurf_Light(int *dlightbits, glpoly_t *polys)
 					cg = light->color[1];
 					cb = light->color[2];
 					radius = light->radius*light->radius*LIGHTSCALE;
-					radius2 = radius * (256.0f / LIGHTSCALE);
+					radius2 = radius * (256.0f / LIGHTSCALE2);
 					wv = wvert;
 					for (p = polys;p;p = p->next)
 					{
