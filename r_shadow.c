@@ -458,6 +458,11 @@ void r_shadow_start(void)
 			vertstrings_list[vertstrings_count++] = vertstring ? vertstring : builtinshader_light_vert;
 			fragstrings_list[fragstrings_count++] = fragstring ? fragstring : builtinshader_light_frag;
 			r_shadow_program_light[i] = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
+			if (!r_shadow_program_light[i])
+			{
+				Con_Printf("permutation %s %s %s %s failed for shader %s, some features may not work properly!\n", i & 1 ? "specular" : "", i & 1 ? "fog" : "", i & 1 ? "cubefilter" : "", i & 1 ? "offsetmapping" : "");
+				continue;
+			}
 			qglUseProgramObjectARB(r_shadow_program_light[i]);
 			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Normal"), 0);CHECKGLERROR
 			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Color"), 1);CHECKGLERROR
@@ -1623,16 +1628,19 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
 		CHECKGLERROR
 		perm = 0;
-		if (specularscale)
+		// only add a feature to the permutation if that permutation exists
+		// (otherwise it might end up not using a shader at all, which looks
+		// worse than using less features)
+		if (specularscale && r_shadow_program_light[perm | SHADERPERMUTATION_SPECULAR])
 			perm |= SHADERPERMUTATION_SPECULAR;
-		//if (fog)
+		//if (fog && r_shadow_program_light[perm | SHADERPERMUTATION_FOG])
 		//	perm |= SHADERPERMUTATION_FOG;
-		if (lightcubemap)
+		if (lightcubemap && r_shadow_program_light[perm | SHADERPERMUTATION_CUBEFILTER])
 			perm |= SHADERPERMUTATION_CUBEFILTER;
-		if (r_shadow_glsl_offsetmapping.integer)
+		if (r_shadow_glsl_offsetmapping.integer && r_shadow_program_light[perm | SHADERPERMUTATION_OFFSETMAPPING])
 			perm |= SHADERPERMUTATION_OFFSETMAPPING;
 		prog = r_shadow_program_light[perm];
-		qglUseProgramObjectARB(r_shadow_program_light[perm]);CHECKGLERROR
+		qglUseProgramObjectARB(prog);CHECKGLERROR
 		// TODO: support fog (after renderer is converted to texture fog)
 		if (perm & SHADERPERMUTATION_FOG)
 		{
