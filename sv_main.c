@@ -249,7 +249,7 @@ This will be sent on the initial connection and upon each server load.
 void SV_SendServerinfo (client_t *client)
 {
 	char			**s;
-	char			message[2048];
+	char			message[128];
 
 	// LordHavoc: clear entityframe tracking
 	client->entityframenumber = 0;
@@ -268,9 +268,7 @@ void SV_SendServerinfo (client_t *client)
 	else
 		MSG_WriteByte (&client->message, GAME_COOP);
 
-	sprintf (message, PR_GetString(sv.edicts->v->message));
-
-	MSG_WriteString (&client->message,message);
+	MSG_WriteString (&client->message,PR_GetString(sv.edicts->v->message));
 
 	for (s = sv.model_precache+1 ; *s ; s++)
 		MSG_WriteString (&client->message, *s);
@@ -291,6 +289,9 @@ void SV_SendServerinfo (client_t *client)
 
 	MSG_WriteByte (&client->message, svc_signonnum);
 	MSG_WriteByte (&client->message, 1);
+
+	client->sendsignon = true;
+	client->spawned = false;		// need prespawn, spawn, etc
 }
 
 /*
@@ -338,10 +339,7 @@ void SV_ConnectClient (int clientnum)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
 	}
 
-	client->spawned = false;		// need prespawn, spawn, etc
-	client->waitingforconnect = true;
-	client->sendserverinfo = false;
-	client->sendsignon = true;
+	SV_SendServerinfo (client);
 }
 
 
@@ -871,9 +869,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	model_t *model;
 	entity_state_t *s;
 
-	if (client->sendsignon)
-		return;
-
 	Mod_CheckLoaded(sv.worldmodel);
 
 // find the client's PVS
@@ -1387,17 +1382,14 @@ qboolean SV_SendClientDatagram (client_t *client)
 	MSG_WriteByte (&msg, svc_time);
 	MSG_WriteFloat (&msg, sv.time);
 
-	if (client->spawned)
-	{
-		// add the client specific data to the datagram
-		SV_WriteClientdataToMessage (client->edict, &msg);
+	// add the client specific data to the datagram
+	SV_WriteClientdataToMessage (client->edict, &msg);
 
-		SV_WriteEntitiesToClient (client, client->edict, &msg);
+	SV_WriteEntitiesToClient (client, client->edict, &msg);
 
-		// copy the server datagram if there is space
-		if (msg.cursize + sv.datagram.cursize < msg.maxsize)
-			SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
-	}
+	// copy the server datagram if there is space
+	if (msg.cursize + sv.datagram.cursize < msg.maxsize)
+		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
 
 // send the datagram
 	if (NET_SendUnreliableMessage (client->netconnection, &msg) == -1)
@@ -1503,12 +1495,6 @@ void SV_SendClientMessages (void)
 		// send a full message when the next signon stage has been requested
 		// some other message data (name changes, etc) may accumulate
 		// between signon stages
-			if (host_client->sendserverinfo)
-			{
-				Con_DPrintf("SV_SendClientMessages: sending server info to new client\n");
-				SV_SendServerinfo (host_client);
-				host_client->sendserverinfo = false;
-			}
 			if (!host_client->sendsignon)
 			{
 				if (realtime - host_client->last_message > 5)

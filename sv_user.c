@@ -540,13 +540,6 @@ nextmsg:
 		if (!ret)
 			return true;
 
-		if (host_client->waitingforconnect)
-		{
-			Con_DPrintf ("SV_ReadClientMessage: setting sendserverinfo to true\n");
-			host_client->waitingforconnect = false;
-			host_client->sendserverinfo = true;
-		}
-
 		MSG_BeginReading ();
 
 		while (1)
