@@ -1,256 +1,246 @@
 
 #include "quakedef.h"
 
+// this is 80 bytes
 entity_state_t defaultstate =
 {
-	0,//double time; // time this state was built
-	{0,0,0},//vec3_t origin;
-	{0,0,0},//vec3_t angles;
-	0,//int number; // entity number this state is for
-	0,//unsigned short active; // true if a valid state
-	0,//unsigned short modelindex;
-	0,//unsigned short frame;
-	0,//unsigned short effects;
-	0,//unsigned short tagentity;
-	0,//unsigned short specialvisibilityradius;
+	// ! means this is sent to client
+	0,//double time; // time this state was built (used on client for interpolation)
+	{0,0,0},//float origin[3]; // !
+	{0,0,0},//float angles[3]; // !
+	0,//int number; // ! entity number this state is for
+	0,//int effects; // !
+	0,//unsigned short modelindex; // !
+	0,//unsigned short frame; // !
+	0,//unsigned short tagentity; // !
+	0,//unsigned short specialvisibilityradius; // larger if it has effects/light
 	0,//unsigned short viewmodelforclient;
-	0,//unsigned short exteriormodelforclient;
+	0,//unsigned short exteriormodelforclient; // not shown if first person viewing from this entity, shown in all other cases
 	0,//unsigned short nodrawtoclient;
 	0,//unsigned short drawonlytoclient;
-	{0,0,0,0},//short light[4];
-	0,//qbyte lightstyle;
-	0,//qbyte lightpflags;
-	0,//qbyte colormap;
-	0,//qbyte skin;
-	255,//qbyte alpha;
-	16,//qbyte scale;
-	0,//qbyte glowsize;
-	254,//qbyte glowcolor;
-	0,//qbyte flags;
-	0,//qbyte tagindex;
-	{0,0,0,0,0,0}//qbyte unused[6];
+	{0,0,0,0},//unsigned short light[4]; // ! color*256 (0.00 to 255.996), and radius*1
+	0,//unsigned char active; // ! true if a valid state
+	0,//unsigned char lightstyle; // !
+	0,//unsigned char lightpflags; // !
+	0,//unsigned char colormap; // !
+	0,//unsigned char skin; // ! also chooses cubemap for rtlights if lightpflags & LIGHTPFLAGS_FULLDYNAMIC
+	255,//unsigned char alpha; // !
+	16,//unsigned char scale; // !
+	0,//unsigned char glowsize; // !
+	254,//unsigned char glowcolor; // !
+	0,//unsigned char flags; // !
+	0,//unsigned char tagindex; // !
+	// padding to a multiple of 8 bytes (to align the double time)
+	{0,0,0,0,0}//unsigned char unused[5];
 };
 
 void ClearStateToDefault(entity_state_t *s)
 {
 	*s = defaultstate;
-	/*
-	memset(s, 0, sizeof(*s));
-	s->alpha = 255;
-	s->scale = 16;
-	s->glowcolor = 254;
-	*/
 }
 
-void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta)
+int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n)
 {
-	int bits;
-	vec3_t org, deltaorg;
-	if (ent->active)
+	unsigned int bits;
+	// if o is not active, delta from default
+	if (!o->active)
+		o = &defaultstate;
+	bits = 0;
+	if (fabs(n->origin[0] - o->origin[0]) > (1.0f / 256.0f))
+		bits |= E_ORIGIN1;
+	if (fabs(n->origin[1] - o->origin[1]) > (1.0f / 256.0f))
+		bits |= E_ORIGIN2;
+	if (fabs(n->origin[2] - o->origin[2]) > (1.0f / 256.0f))
+		bits |= E_ORIGIN3;
+	if ((qbyte) (n->angles[0] * (256.0f / 360.0f)) != (qbyte) (o->angles[0] * (256.0f / 360.0f)))
+		bits |= E_ANGLE1;
+	if ((qbyte) (n->angles[1] * (256.0f / 360.0f)) != (qbyte) (o->angles[1] * (256.0f / 360.0f)))
+		bits |= E_ANGLE2;
+	if ((qbyte) (n->angles[2] * (256.0f / 360.0f)) != (qbyte) (o->angles[2] * (256.0f / 360.0f)))
+		bits |= E_ANGLE3;
+	if ((n->modelindex ^ o->modelindex) & 0x00FF)
+		bits |= E_MODEL1;
+	if ((n->modelindex ^ o->modelindex) & 0xFF00)
+		bits |= E_MODEL2;
+	if ((n->frame ^ o->frame) & 0x00FF)
+		bits |= E_FRAME1;
+	if ((n->frame ^ o->frame) & 0xFF00)
+		bits |= E_FRAME2;
+	if ((n->effects ^ o->effects) & 0x00FF)
+		bits |= E_EFFECTS1;
+	if ((n->effects ^ o->effects) & 0xFF00)
+		bits |= E_EFFECTS2;
+	if (n->colormap != o->colormap)
+		bits |= E_COLORMAP;
+	if (n->skin != o->skin)
+		bits |= E_SKIN;
+	if (n->alpha != o->alpha)
+		bits |= E_ALPHA;
+	if (n->scale != o->scale)
+		bits |= E_SCALE;
+	if (n->glowsize != o->glowsize)
+		bits |= E_GLOWSIZE;
+	if (n->glowcolor != o->glowcolor)
+		bits |= E_GLOWCOLOR;
+	if (n->flags != o->flags)
+		bits |= E_FLAGS;
+	if (n->tagindex != o->tagindex || n->tagentity != o->tagentity)
+		bits |= E_TAGATTACHMENT;
+	if (n->light[0] != o->light[0] || n->light[1] != o->light[1] || n->light[2] != o->light[2] || n->light[3] != o->light[3])
+		bits |= E_LIGHT;
+	if (n->lightstyle != o->lightstyle)
+		bits |= E_LIGHTSTYLE;
+	if (n->lightpflags != o->lightpflags)
+		bits |= E_LIGHTPFLAGS;
+
+	if (bits)
 	{
-		// if not active last frame, delta from defaults
-		if (!delta->active)
-			delta = &defaultstate;
-		bits = 0;
-		VectorCopy(ent->origin, org);
-		VectorCopy(delta->origin, deltaorg);
-		if (ent->flags & RENDER_LOWPRECISION)
-		{
-			if (org[0] > 0)
-				org[0] = (int) (org[0] + 0.5f);
-			else
-				org[0] = (int) (org[0] - 0.5f);
-			if (org[1] > 0)
-				org[1] = (int) (org[1] + 0.5f);
-			else
-				org[1] = (int) (org[1] - 0.5f);
-			if (org[2] > 0)
-				org[2] = (int) (org[2] + 0.5f);
-			else
-				org[2] = (int) (org[2] - 0.5f);
-		}
-		if (delta->flags & RENDER_LOWPRECISION)
-		{
-			if (deltaorg[0] > 0)
-				deltaorg[0] = (int) (deltaorg[0] + 0.5f);
-			else
-				deltaorg[0] = (int) (deltaorg[0] - 0.5f);
-			if (deltaorg[1] > 0)
-				deltaorg[1] = (int) (deltaorg[1] + 0.5f);
-			else
-				deltaorg[1] = (int) (deltaorg[1] - 0.5f);
-			if (deltaorg[2] > 0)
-				deltaorg[2] = (int) (deltaorg[2] + 0.5f);
-			else
-				deltaorg[2] = (int) (deltaorg[2] - 0.5f);
-		}
-		if (fabs(org[0] - deltaorg[0]) > 0.01f)
-			bits |= E_ORIGIN1;
-		if (fabs(org[1] - deltaorg[1]) > 0.01f)
-			bits |= E_ORIGIN2;
-		if (fabs(org[2] - deltaorg[2]) > 0.01f)
-			bits |= E_ORIGIN3;
-		if ((qbyte) (ent->angles[0] * (256.0f / 360.0f)) != (qbyte) (delta->angles[0] * (256.0f / 360.0f)))
-			bits |= E_ANGLE1;
-		if ((qbyte) (ent->angles[1] * (256.0f / 360.0f)) != (qbyte) (delta->angles[1] * (256.0f / 360.0f)))
-			bits |= E_ANGLE2;
-		if ((qbyte) (ent->angles[2] * (256.0f / 360.0f)) != (qbyte) (delta->angles[2] * (256.0f / 360.0f)))
-			bits |= E_ANGLE3;
-		if ((ent->modelindex ^ delta->modelindex) & 0x00FF)
-			bits |= E_MODEL1;
-		if ((ent->modelindex ^ delta->modelindex) & 0xFF00)
-			bits |= E_MODEL2;
-		if ((ent->frame ^ delta->frame) & 0x00FF)
-			bits |= E_FRAME1;
-		if ((ent->frame ^ delta->frame) & 0xFF00)
-			bits |= E_FRAME2;
-		if ((ent->effects ^ delta->effects) & 0x00FF)
-			bits |= E_EFFECTS1;
-		if ((ent->effects ^ delta->effects) & 0xFF00)
-			bits |= E_EFFECTS2;
-		if (ent->colormap != delta->colormap)
-			bits |= E_COLORMAP;
-		if (ent->skin != delta->skin)
-			bits |= E_SKIN;
-		if (ent->alpha != delta->alpha)
-			bits |= E_ALPHA;
-		if (ent->scale != delta->scale)
-			bits |= E_SCALE;
-		if (ent->glowsize != delta->glowsize)
-			bits |= E_GLOWSIZE;
-		if (ent->glowcolor != delta->glowcolor)
-			bits |= E_GLOWCOLOR;
-		if (ent->flags != delta->flags)
-			bits |= E_FLAGS;
-		if (ent->tagindex != delta->tagindex || ent->tagentity != delta->tagentity)
-			bits |= E_TAGATTACHMENT;
-		if (ent->light[0] != delta->light[0] || ent->light[1] != delta->light[1] || ent->light[2] != delta->light[2] || ent->light[3] != delta->light[3])
-			bits |= E_LIGHT;
-		if (ent->lightstyle != delta->lightstyle)
-			bits |= E_LIGHTSTYLE;
-		if (ent->lightpflags != delta->lightpflags)
-			bits |= E_LIGHTPFLAGS;
+		if (bits &  0xFF000000)
+			bits |= 0x00800000;
+		if (bits &  0x00FF0000)
+			bits |= 0x00008000;
+		if (bits &  0x0000FF00)
+			bits |= 0x00000080;
+	}
+	return bits;
+}
 
-		if (bits) // don't send anything if it hasn't changed
+void EntityState_WriteExtendBits(sizebuf_t *msg, unsigned int bits)
+{
+	MSG_WriteByte(msg, bits & 0xFF);
+	if (bits & 0x00000080)
+	{
+		MSG_WriteByte(msg, (bits >> 8) & 0xFF);
+		if (bits & 0x00008000)
 		{
-			if (bits & 0xFF000000)
-				bits |= E_EXTEND3;
-			if (bits & 0x00FF0000)
-				bits |= E_EXTEND2;
-			if (bits & 0x0000FF00)
-				bits |= E_EXTEND1;
-
-			MSG_WriteShort(msg, ent->number);
-			MSG_WriteByte(msg, bits & 0xFF);
-			if (bits & E_EXTEND1)
-			{
-				MSG_WriteByte(msg, (bits >> 8) & 0xFF);
-				if (bits & E_EXTEND2)
-				{
-					MSG_WriteByte(msg, (bits >> 16) & 0xFF);
-					if (bits & E_EXTEND3)
-						MSG_WriteByte(msg, (bits >> 24) & 0xFF);
-				}
-			}
-			// LordHavoc: have to write flags first, as they can modify protocol
-			if (bits & E_FLAGS)
-				MSG_WriteByte(msg, ent->flags);
-			if (ent->flags & RENDER_LOWPRECISION)
-			{
-				if (bits & E_ORIGIN1)
-					MSG_WriteShort(msg, org[0]);
-				if (bits & E_ORIGIN2)
-					MSG_WriteShort(msg, org[1]);
-				if (bits & E_ORIGIN3)
-					MSG_WriteShort(msg, org[2]);
-				if (bits & E_ANGLE1)
-					MSG_WriteAngle(msg, ent->angles[0]);
-				if (bits & E_ANGLE2)
-					MSG_WriteAngle(msg, ent->angles[1]);
-				if (bits & E_ANGLE3)
-					MSG_WriteAngle(msg, ent->angles[2]);
-			}
-			else
-			{
-				if (bits & E_ORIGIN1)
-					MSG_WriteFloat(msg, org[0]);
-				if (bits & E_ORIGIN2)
-					MSG_WriteFloat(msg, org[1]);
-				if (bits & E_ORIGIN3)
-					MSG_WriteFloat(msg, org[2]);
-				if (bits & E_ANGLE1)
-					MSG_WritePreciseAngle(msg, ent->angles[0]);
-				if (bits & E_ANGLE2)
-					MSG_WritePreciseAngle(msg, ent->angles[1]);
-				if (bits & E_ANGLE3)
-					MSG_WritePreciseAngle(msg, ent->angles[2]);
-			}
-			if (bits & E_MODEL1)
-				MSG_WriteByte(msg, ent->modelindex & 0xFF);
-			if (bits & E_MODEL2)
-				MSG_WriteByte(msg, (ent->modelindex >> 8) & 0xFF);
-			if (bits & E_FRAME1)
-				MSG_WriteByte(msg, ent->frame & 0xFF);
-			if (bits & E_FRAME2)
-				MSG_WriteByte(msg, (ent->frame >> 8) & 0xFF);
-			if (bits & E_EFFECTS1)
-				MSG_WriteByte(msg, ent->effects & 0xFF);
-			if (bits & E_EFFECTS2)
-				MSG_WriteByte(msg, (ent->effects >> 8) & 0xFF);
-			if (bits & E_COLORMAP)
-				MSG_WriteByte(msg, ent->colormap);
-			if (bits & E_SKIN)
-				MSG_WriteByte(msg, ent->skin);
-			if (bits & E_ALPHA)
-				MSG_WriteByte(msg, ent->alpha);
-			if (bits & E_SCALE)
-				MSG_WriteByte(msg, ent->scale);
-			if (bits & E_GLOWSIZE)
-				MSG_WriteByte(msg, ent->glowsize);
-			if (bits & E_GLOWCOLOR)
-				MSG_WriteByte(msg, ent->glowcolor);
-			if (bits & E_TAGATTACHMENT)
-			{
-				MSG_WriteShort(msg, ent->tagentity);
-				MSG_WriteByte(msg, ent->tagindex);
-			}
-			if (bits & E_LIGHT)
-			{
-				MSG_WriteShort(msg, ent->light[0]);
-				MSG_WriteShort(msg, ent->light[1]);
-				MSG_WriteShort(msg, ent->light[2]);
-				MSG_WriteShort(msg, ent->light[3]);
-			}
-			if (bits & E_LIGHTSTYLE)
-				MSG_WriteByte(msg, ent->lightstyle);
-			if (bits & E_LIGHTPFLAGS)
-				MSG_WriteByte(msg, ent->lightpflags);
+			MSG_WriteByte(msg, (bits >> 16) & 0xFF);
+			if (bits & 0x00800000)
+				MSG_WriteByte(msg, (bits >> 24) & 0xFF);
 		}
 	}
-	else if (delta->active)
-		MSG_WriteShort(msg, ent->number | 0x8000);
 }
 
-void EntityState_ReadUpdate(entity_state_t *e, int number)
+void EntityState_WriteFields(entity_state_t *ent, sizebuf_t *msg, unsigned int bits)
 {
-	int bits;
-	cl_entities_active[number] = true;
-	e->active = true;
-	e->time = cl.mtime[0];
-	e->number = number;
+	// LordHavoc: have to write flags first, as they can modify protocol
+	if (bits & E_FLAGS)
+		MSG_WriteByte(msg, ent->flags);
+	if (ent->flags & RENDER_LOWPRECISION)
+	{
+		if (bits & E_ORIGIN1)
+			MSG_WriteShort(msg, ent->origin[0]);
+		if (bits & E_ORIGIN2)
+			MSG_WriteShort(msg, ent->origin[1]);
+		if (bits & E_ORIGIN3)
+			MSG_WriteShort(msg, ent->origin[2]);
+		if (bits & E_ANGLE1)
+			MSG_WriteAngle(msg, ent->angles[0]);
+		if (bits & E_ANGLE2)
+			MSG_WriteAngle(msg, ent->angles[1]);
+		if (bits & E_ANGLE3)
+			MSG_WriteAngle(msg, ent->angles[2]);
+	}
+	else
+	{
+		if (bits & E_ORIGIN1)
+			MSG_WriteFloat(msg, ent->origin[0]);
+		if (bits & E_ORIGIN2)
+			MSG_WriteFloat(msg, ent->origin[1]);
+		if (bits & E_ORIGIN3)
+			MSG_WriteFloat(msg, ent->origin[2]);
+		if (bits & E_ANGLE1)
+			MSG_WritePreciseAngle(msg, ent->angles[0]);
+		if (bits & E_ANGLE2)
+			MSG_WritePreciseAngle(msg, ent->angles[1]);
+		if (bits & E_ANGLE3)
+			MSG_WritePreciseAngle(msg, ent->angles[2]);
+	}
+	if (bits & E_MODEL1)
+		MSG_WriteByte(msg, ent->modelindex & 0xFF);
+	if (bits & E_MODEL2)
+		MSG_WriteByte(msg, (ent->modelindex >> 8) & 0xFF);
+	if (bits & E_FRAME1)
+		MSG_WriteByte(msg, ent->frame & 0xFF);
+	if (bits & E_FRAME2)
+		MSG_WriteByte(msg, (ent->frame >> 8) & 0xFF);
+	if (bits & E_EFFECTS1)
+		MSG_WriteByte(msg, ent->effects & 0xFF);
+	if (bits & E_EFFECTS2)
+		MSG_WriteByte(msg, (ent->effects >> 8) & 0xFF);
+	if (bits & E_COLORMAP)
+		MSG_WriteByte(msg, ent->colormap);
+	if (bits & E_SKIN)
+		MSG_WriteByte(msg, ent->skin);
+	if (bits & E_ALPHA)
+		MSG_WriteByte(msg, ent->alpha);
+	if (bits & E_SCALE)
+		MSG_WriteByte(msg, ent->scale);
+	if (bits & E_GLOWSIZE)
+		MSG_WriteByte(msg, ent->glowsize);
+	if (bits & E_GLOWCOLOR)
+		MSG_WriteByte(msg, ent->glowcolor);
+	if (bits & E_TAGATTACHMENT)
+	{
+		MSG_WriteShort(msg, ent->tagentity);
+		MSG_WriteByte(msg, ent->tagindex);
+	}
+	if (bits & E_LIGHT)
+	{
+		MSG_WriteShort(msg, ent->light[0]);
+		MSG_WriteShort(msg, ent->light[1]);
+		MSG_WriteShort(msg, ent->light[2]);
+		MSG_WriteShort(msg, ent->light[3]);
+	}
+	if (bits & E_LIGHTSTYLE)
+		MSG_WriteByte(msg, ent->lightstyle);
+	if (bits & E_LIGHTPFLAGS)
+		MSG_WriteByte(msg, ent->lightpflags);
+}
 
+void EntityState_WriteUpdate(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta)
+{
+	unsigned int bits;
+	if (ent->active)
+	{
+		// entity is active, check for changes from the delta
+		if ((bits = EntityState_DeltaBits(delta, ent)))
+		{
+			// write the update number, bits, and fields
+			MSG_WriteShort(msg, ent->number);
+			EntityState_WriteExtendBits(msg, bits);
+			EntityState_WriteFields(ent, msg, bits);
+		}
+	}
+	else
+	{
+		// entity is inactive, check if the delta was active
+		if (delta->active)
+		{
+			// write the remove number
+			MSG_WriteShort(msg, ent->number | 0x8000);
+		}
+	}
+}
+
+int EntityState_ReadExtendBits(void)
+{
+	unsigned int bits;
 	bits = MSG_ReadByte();
-	if (bits & E_EXTEND1)
+	if (bits & 0x00000080)
 	{
 		bits |= MSG_ReadByte() << 8;
-		if (bits & E_EXTEND2)
+		if (bits & 0x00008000)
 		{
 			bits |= MSG_ReadByte() << 16;
-			if (bits & E_EXTEND3)
+			if (bits & 0x00800000)
 				bits |= MSG_ReadByte() << 24;
 		}
 	}
+	return bits;
+}
 
+void EntityState_ReadFields(entity_state_t *e, unsigned int bits)
+{
 	if (cl.protocol == PROTOCOL_DARKPLACES2)
 	{
 		if (bits & E_ORIGIN1)
@@ -347,7 +337,7 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 
 	if (developer_networkentities.integer >= 2)
 	{
-		Con_Printf("ReadUpdate e%i", number);
+		Con_Printf("ReadFields e%i", e->number);
 
 		if (bits & E_ORIGIN1)
 			Con_Printf(" E_ORIGIN1 %f", e->origin[0]);
@@ -555,7 +545,7 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 			// delta from defaults
 			delta = &defaultstate;
 		}
-		EntityState_Write(ent, msg, delta);
+		EntityState_WriteUpdate(ent, msg, delta);
 	}
 	for (;onum < o->numentities;onum++)
 	{
@@ -630,7 +620,11 @@ void EntityFrame_Read(entity_database_t *d)
 				*e = defaultstate;
 			}
 
-			EntityState_ReadUpdate(e, number);
+			cl_entities_active[number] = true;
+			e->active = true;
+			e->time = cl.mtime[0];
+			e->number = number;
+			EntityState_ReadFields(e, EntityState_ReadExtendBits());
 		}
 	}
 	while (old < oldend)
@@ -798,10 +792,9 @@ int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int
 	memset(&buf, 0, sizeof(buf));
 	buf.data = data;
 	buf.maxsize = sizeof(data);
-	// make the message
+	// make the update message
 	e = EntityFrame4_GetReferenceEntity(d, s->number);
-	// send an update (may update or remove the entity)
-	EntityState_Write(s, &buf, e);
+	EntityState_WriteUpdate(s, &buf, e);
 	// if the message is empty, skip out now
 	if (!buf.cursize)
 		return true;
@@ -820,6 +813,7 @@ extern void CL_MoveLerpEntityStates(entity_t *ent);
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 {
 	int i, n, cnumber, referenceframenum, framenum, enumber, done, stopnumber, skip = false;
+	entity_state_t *s;
 	// read the number of the frame this refers to
 	referenceframenum = MSG_ReadLong();
 	// read the number of this frame
@@ -880,7 +874,7 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 				if (enumber == cnumber && (n & 0x8000) == 0)
 				{
 					entity_state_t tempstate;
-					EntityState_ReadUpdate(&tempstate, enumber);
+					EntityState_ReadFields(&tempstate, EntityState_ReadExtendBits());
 				}
 				continue;
 			}
@@ -888,6 +882,7 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 			cl_entities[enumber].state_previous = cl_entities[enumber].state_current;
 			// copy a new current from reference database
 			cl_entities[enumber].state_current = *EntityFrame4_GetReferenceEntity(d, enumber);
+			s = &cl_entities[enumber].state_current;
 			// if this is the one to modify, read more data...
 			if (enumber == cnumber)
 			{
@@ -896,26 +891,28 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 					// simply removed
 					if (developer_networkentities.integer >= 2)
 						Con_Printf("entity %i: remove\n", enumber);
-					cl_entities[enumber].state_current = defaultstate;
+					*s = defaultstate;
 				}
 				else
 				{
 					// read the changes
 					if (developer_networkentities.integer >= 2)
 						Con_Printf("entity %i: update\n", enumber);
-					EntityState_ReadUpdate(&cl_entities[enumber].state_current, enumber);
+					s->active = true;
+					EntityState_ReadFields(s, EntityState_ReadExtendBits());
 				}
 			}
 			else if (developer_networkentities.integer >= 4)
 				Con_Printf("entity %i: copy\n", enumber);
+			// set the cl_entities_active flag
+			cl_entities_active[enumber] = s->active;
+			// set the update time
+			s->time = cl.mtime[0];
 			// fix the number (it gets wiped occasionally by copying from defaultstate)
-			cl_entities[enumber].state_current.number = enumber;
+			s->number = enumber;
 			// check if we need to update the lerp stuff
-			if (cl_entities[enumber].state_current.active)
-			{
+			if (s->active)
 				CL_MoveLerpEntityStates(&cl_entities[enumber]);
-				cl_entities_active[enumber] = true;
-			}
 			// add this to the commit entry whether it is modified or not
 			if (d->currentcommit)
 				EntityFrame4_AddCommitEntity(d, &cl_entities[enumber].state_current);
@@ -934,4 +931,340 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 		EntityFrame4_ResetDatabase(d);
 }
 
+
+
+
+
+/*
+int EntityState5_PriorityForChangedBits(int changedbits)
+{
+	if (changedbits & E5_ISACTIVE)
+		return 2;
+	else if (changedbits & (E5_FLAGS | E5_ATTACHMENT | E5_MODEL | E5_SKIN | E5_EXTERIORFORENTITY | E5_COLORMAP | E5_LIGHT | E5_GLOW | E5_EFFECTS | E5_ORIGIN | E5_ANGLES | E5_FRAME | E5_ALPHA | E5_SCALE))
+		return 1;
+	else
+		return 0;
+}
+
+void EntityState5_WriteUpdate(int number, entitystate_t *s, int changedbits, sizebuf_t *msg)
+{
+	bits = 0;
+	if (!s->active)
+		MSG_WriteShort(msg, number | 0x8000);
+	else
+	{
+		bits |= E5_ISACTIVE;
+		if (changedbits & E5_ORIGIN)
+		{
+			bits |= E5_ORIGIN;
+			if (s->origin[0] < -4096 || s->origin[0] >= 4096 || s->origin[1] < -4096 || s->origin[1] >= 4096 || s->origin[2] < -4096 || s->origin[2] >= 4096)
+				bits |= E5_ORIGIN32;
+		}
+		if (changedbits & E5_ANGLES)
+		{
+			bits |= E5_ANGLES;
+			if (!(s->flags & RENDERFLAGS_LOWPRECISION))
+				bits |= E5_ANGLES16;
+		}
+		if (changedbits & E5_MODEL)
+		{
+			bits |= E5_MODEL;
+			if (s->modelindex >= 256)
+				bits |= E5_MODEL16;
+		}
+		if (changedbits & E5_FRAME)
+		{
+			bits |= E5_FRAME;
+			if (s->frame >= 256)
+				bits |= E5_FRAME16;
+		}
+		if (changedbits & E5_SKIN)
+			bits |= E5_SKIN;
+		if (changedbits & E5_EFFECTS)
+		{
+			bits |= E5_EFFECTS;
+			if (s->modelindex >= 256)
+				bits |= E5_MODEL16;
+		}
+		if (changedbits & E5_FLAGS)
+			bits |= E5_FLAGS;
+		if (changedbits & E5_ALPHA)
+			bits |= E5_ALPHA;
+		if (changedbits & E5_SCALE)
+			bits |= E5_SCALE;
+		if (changedbits & E5_ATTACHMENT)
+			bits |= E5_ATTACHMENT;
+		if (changedbits & E5_EXTERIORFORENTITY)
+			bits |= E5_EXTERIORFORENTITY;
+		if (changedbits & E5_LIGHT)
+			bits |= E5_LIGHT;
+		if (changedbits & E5_COLORMAP)
+			bits |= E5_COLORMAP;
+		if (changedbits & E5_GLOW)
+			bits |= E5_GLOW;
+		if (bits >= 256)
+			bits |= E5_EXTEND1;
+		if (bits >= 65536)
+			bits |= E5_EXTEND2;
+		if (bits >= 16777216)
+			bits |= E5_EXTEND3;
+		MSG_WriteShort(msg, number);
+		MSG_WriteByte(msg, bits & 0xFF);
+		if (bits & E5_EXTEND1)
+			MSG_WriteByte(msg, (bits >> 8) & 0xFF);
+		if (bits & E5_EXTEND2)
+			MSG_WriteByte(msg, (bits >> 16) & 0xFF);
+		if (bits & E5_EXTEND3)
+			MSG_WriteByte(msg, (bits >> 24) & 0xFF);
+		if (bits & E5_FLAGS)
+			MSG_WriteByte(msg, s->flags);
+		if (bits & E5_ORIGIN)
+		{
+			if (bits & E5_ORIGIN32)
+			{
+				MSG_WriteFloat(msg, s->origin[0]);
+				MSG_WriteFloat(msg, s->origin[1]);
+				MSG_WriteFloat(msg, s->origin[2]);
+			}
+			else
+			{
+				MSG_WriteShort(msg, (int)floor(s->origin[0] * 8 + 0.5f));
+				MSG_WriteShort(msg, (int)floor(s->origin[1] * 8 + 0.5f));
+				MSG_WriteShort(msg, (int)floor(s->origin[2] * 8 + 0.5f));
+			}
+		}
+		if (bits & E5_ANGLES)
+		{
+			if (bits & E5_ANGLES16)
+			{
+				MSG_WriteShort(msg, (int)floor(s->angles[0] * (65536.0f / 360.0f) + 0.5f));
+				MSG_WriteShort(msg, (int)floor(s->angles[1] * (65536.0f / 360.0f) + 0.5f));
+				MSG_WriteShort(msg, (int)floor(s->angles[2] * (65536.0f / 360.0f) + 0.5f));
+			}
+			else
+			{
+				MSG_WriteByte(msg, (int)floor(s->angles[0] * (256.0f / 360.0f) + 0.5f));
+				MSG_WriteByte(msg, (int)floor(s->angles[1] * (256.0f / 360.0f) + 0.5f));
+				MSG_WriteByte(msg, (int)floor(s->angles[2] * (256.0f / 360.0f) + 0.5f));
+			}
+		}
+		if (bits & E5_MODEL)
+		{
+			if (bits & E5_MODEL16)
+				MSG_WriteShort(msg, s->modelindex);
+			else
+				MSG_WriteByte(msg, s->modelindex);
+		}
+		if (bits & E5_FRAME)
+		{
+			if (bits & E5_FRAME16)
+				MSG_WriteShort(msg, s->frame);
+			else
+				MSG_WriteByte(msg, s->frame);
+		}
+		if (bits & E5_SKIN)
+			MSG_WriteByte(msg, s->flags);
+		if (bits & E5_EFFECTS)
+		{
+			if (bits & E5_EFFECTS32)
+				MSG_WriteLong(msg, s->effects);
+			else if (bits & E5_EFFECTS16)
+				MSG_WriteShort(msg, s->effects);
+			else
+				MSG_WriteByte(msg, s->effects);
+		}
+		if (bits & E5_ALPHA)
+			MSG_WriteByte(msg, s->flags);
+		if (bits & E5_SCALE)
+			MSG_WriteByte(msg, s->flags);
+		if (bits & E5_ATTACHMENT)
+		{
+			MSG_WriteShort(msg, s->tagentity);
+			MSG_WriteByte(msg, s->tagindex);
+		}
+		if (bits & E5_EXTERIORFORENTITY)
+			MSG_WriteShort(msg, s->tagentity);
+		if (bits & E5_LIGHT)
+		{
+			MSG_WriteShort(msg, s->light[0]);
+			MSG_WriteShort(msg, s->light[1]);
+			MSG_WriteShort(msg, s->light[2]);
+			MSG_WriteShort(msg, s->light[3]);
+		}
+		if (bits & E5_COLORMAP)
+			MSG_WriteByte(msg, s->colormap);
+		if (bits & E5_GLOW)
+		{
+			MSG_WriteByte(msg, s->glowsize);
+			MSG_WriteByte(msg, s->glowcolor);
+		}
+	}
+}
+
+int EntityFrame5_ReadUpdate(void)
+{
+	number = MSG_ReadShort();
+	e = cl_entities + (number & 0x7FFF);
+	e->state_previous = e->state_current;
+	if (number & 0x8000)
+	{
+		if (number == 0x8000)
+		{
+			// end of entity list
+			return false;
+		}
+		// remove
+		number &= 0x7FFF;
+		e->state_current = defaultstate;
+		e->state_current.number = number;
+		return true;
+	}
+	else
+	{
+	}
+}
+
+int cl_entityframe5_lastreceivedframenum;
+
+void EntityFrame5_CL_ReadFrame(void)
+{
+	int n, enumber;
+	entity_t *ent;
+	entity_state_t *s;
+	// read the number of this frame to echo back in next input packet
+	cl_entityframe5_lastreceivedframenum = MSG_ReadLong();
+	// read entity numbers until we find a 0x8000
+	// (which would be remove world entity, but is actually a terminator)
+	while ((n = MSG_ReadShort()) != 0x8000)
+	{
+		// get the entity number and look it up
+		enumber = n & 0x7FFF;
+		ent = cl_entities + enumber;
+		// slide the current into the previous slot
+		ent->state_previous = ent->state_current;
+		// read the update
+		s = &ent->state_current;
+		if (n & 0x8000)
+		{
+			// remove entity
+			*s = defaultstate;
+		}
+		else
+		{
+			// update entity
+			s->active = true;
+			EntityState_ReadFields(s, EntityState_ReadExtendBits());
+		}
+		// set the cl_entities_active flag
+		cl_entities_active[enumber] = s->active;
+		// set the update time
+		s->time = cl.mtime[0];
+		// fix the number (it gets wiped occasionally by copying from defaultstate)
+		s->number = enumber;
+		// check if we need to update the lerp stuff
+		if (s->active)
+			CL_MoveLerpEntityStates(&cl_entities[enumber]);
+		// print extra messages if desired
+		if (developer_networkentities.integer >= 2 && cl_entities[enumber].state_current.active != cl_entities[enumber].state_previous.active)
+		{
+			if (cl_entities[enumber].state_current.active)
+				Con_Printf("entity #%i has become active\n", enumber);
+			else if (cl_entities[enumber].state_previous.active)
+				Con_Printf("entity #%i has become inactive\n", enumber);
+		}
+	}
+}
+
+#define ENTITYFRAME5_MAXPACKETLOGS 64
+#define ENTITYFRAME5_MAXSTATES 128
+
+typedef struct entityframe5_state_s
+{
+	unsigned short entitynumber;
+	qbyte active;
+	qbyte activedirtybit;
+	int dirtybits;
+}
+entityframe5_state_t;
+
+typedef struct entityframe5_packetlog_s
+{
+	int packetnumber;
+	int numstates;
+	entityframe5_state_t states[ENTITYFRAME5_MAXSTATES];
+}
+entityframe5_packetlog_t;
+
+typedef struct entityframe5_s
+{
+	int ackedframenum;
+	entityframe5_packetlog_t packetlog[ENTITYFRAME5_MAXPACKETLOGS];
+	qbyte activedirtybits[(MAX_EDICTS + 7) / 8];
+	int dirtybits[MAX_EDICTS];
+}
+entityframe5_t;
+
+void EntityFrame5_AckFrame(entityframe5_t *d, int framenum)
+{
+	int i, j, k, l, dirtybits, activedirtybit;
+	entityframe5_state_t *s, *s2;
+	entityframe5_packetlog_t *p, *p2;
+	if (framenum >= d->ackedframenum)
+		return;
+	d->ackedframenum = framenum;
+	// scan for packets made obsolete by this ack
+	for (i = 0, p = d->packetlog;i < ENTITYFRAME5_MAXPACKETLOGS;i++, p++)
+	{
+		// skip packets that are empty or in the future
+		if (p->packetnumber == 0 || p->packetnumber > framenum)
+			continue;
+		// if the packetnumber matches it is deleted without any processing 
+		// (since it was received).
+		// if the packet number is less than this ack it was lost and its
+		// important information will be repeated in this update if it is not
+		// already obsolete due to a later update.
+		if (p->packetnumber < framenum)
+		{
+			// packet was lost - merge dirtybits into the main array so they
+			// will be re-sent, but only if there is no newer update of that
+			// bit in the logs (as those will arrive before this update)
+			for (j = 0, s = p->states;j < p->numstates;j++, s++)
+			{
+				activedirtybit = s->activedirtybit;
+				dirtybits = s->dirtybits;
+				// check for any newer updates to this entity
+				for (k = 0, p2 = d->packetlog;k < ENTITYFRAME5_MAXPACKETLOGS;k++, p2++)
+				{
+					if (p2->packetnumber > framenum)
+					{
+						for (l = 0, s2 = p2->states;l < p2->numstates;l++, p2++)
+						{
+							if (s2->entitynumber == s->entitynumber)
+							{
+								activedirtybit &= ~s2->activedirtybit;
+								dirtybits &= ~s2->dirtybits;
+								break;
+							}
+						}
+						if (!activedirtybit && !dirtybits)
+							break;
+					}
+				}
+				// if the bits haven't all been cleared, there were some bits
+				// lost with this packet, so set them again now
+				if (activedirtybit)
+					d->activedirtybits[s->entitynumber / 8] |= 1 << (s->entitynumber & 7);
+				if (dirtybits)
+					d->dirtybits[s->entitynumber] |= dirtybits;
+			}
+		}
+		// delete this packet log as it is now obsolete
+		p->packetnumber = 0;
+	}
+}
+
+void EntityFrame5_WriteFrame(sizebuf_t *msg, int numstates, entity_state_t *states)
+{
+}
+*/
 
