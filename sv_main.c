@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+cvar_t sv_pvscheckentities = {0, "sv_pvscheckentities", "1"};
 cvar_t sv_vischeckentities = {0, "sv_vischeckentities", "1"};
 cvar_t sv_reportvischeckentities = {0, "sv_reportvischeckentities", "0"};
 int sv_vischeckentitycullcount = 0;
@@ -53,6 +54,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&sv_predict);
 	Cvar_RegisterVariable (&sv_deltacompress);
+	Cvar_RegisterVariable (&sv_pvscheckentities);
 	Cvar_RegisterVariable (&sv_vischeckentities);
 	Cvar_RegisterVariable (&sv_reportvischeckentities);
 
@@ -451,6 +453,40 @@ byte *SV_FatPVS (vec3_t org)
 //=============================================================================
 
 
+int SV_BoxTouchingPVS (byte *pvs, vec3_t mins, vec3_t maxs, mnode_t *node)
+{
+	int leafnum;
+loc0:
+	if (node->contents < 0)
+	{
+		// leaf
+		if (node->contents == CONTENTS_SOLID)
+			return false;
+		leafnum = (mleaf_t *)node - sv.worldmodel->leafs - 1;
+		return pvs[leafnum >> 3] & (1 << (leafnum & 7));
+	}
+
+	// node - recurse down the BSP tree
+	switch (BOX_ON_PLANE_SIDE(mins, maxs, node->plane))
+	{
+	case 1: // front
+		node = node->children[0];
+		goto loc0;
+	case 2: // back
+		node = node->children[1];
+		goto loc0;
+	default: // crossing
+		if (node->children[0]->contents != CONTENTS_SOLID)
+			if (SV_BoxTouchingPVS (pvs, mins, maxs, node->children[0]))
+				return true;
+		node = node->children[1];
+		goto loc0;
+	}
+	// never reached
+	return false;
+}
+
+
 /*
 =============
 SV_WriteEntitiesToClient
@@ -466,18 +502,17 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	edict_t	*ent;
 	eval_t  *val;
 	entity_state_t *baseline; // LordHavoc: delta or startup baseline
+	trace_t	trace;
 
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
 	pvs = SV_FatPVS (org);
 	/*
-	if (dpprotocol)
-	{
-		MSG_WriteByte(msg, svc_playerposition);
-		MSG_WriteFloat(msg, org[0]);
-		MSG_WriteFloat(msg, org[1]);
-		MSG_WriteFloat(msg, org[2]);
-	}
+	// dp protocol
+	MSG_WriteByte(msg, svc_playerposition);
+	MSG_WriteFloat(msg, org[0]);
+	MSG_WriteFloat(msg, org[1]);
+	MSG_WriteFloat(msg, org[2]);
 	*/
 
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
@@ -510,127 +545,24 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					continue;
 				if ((val = GETEDICTFIELDVALUE(ent, eval_drawonlytoclient)) && val->edict && val->edict != clentnum)
 					continue;
-				// ignore if not touching a PV leaf
-				for (i = 0;i < ent->num_leafs;i++)
-					if (pvs[ent->leafnums[i] >> 3] & (1 << (ent->leafnums[i]&7) ))
-						break;
-
-				if (i == ent->num_leafs)
-				{
-					// not visible
-					continue;
-				}
-
-				VectorAdd(ent->v.mins, ent->v.origin, entmins);
-				VectorAdd(ent->v.maxs, ent->v.origin, entmaxs);
-				entmins[0] -= 1.0f;entmins[1] -= 1.0f;entmins[2] -= 1.0f;
-				entmaxs[0] += 1.0f;entmaxs[1] += 1.0f;entmaxs[2] += 1.0f;
-				if (!Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
-				{
-					sv_vischeckentitycullcount++;
-					continue;
-				}
 			}
 		}
 
-		if ((val = GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)) && val->edict == clentnum)
-			bits = bits | U_EXTERIORMODEL;
-
-		// don't send if flagged for NODRAW and there are no effects
-		alpha = 255;
-		scale = 16;
 		glowsize = 0;
-		glowcolor = 254;
-		colormod = 255;
-		effects = ent->v.effects;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
-		if (val->_float != 0)
-			alpha = (int) (val->_float * 255.0);
-
-		// HalfLife support
-		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)))
-		if (val->_float != 0)
-			alpha = (int) val->_float;
-
-		if (alpha == 0)
-			alpha = 255;
-		alpha = bound(0, alpha, 255);
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_size)))
 			glowsize = (int) val->_float >> 2;
 		if (glowsize > 255) glowsize = 255;
 		if (glowsize < 0) glowsize = 0;
 
-		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
-		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
-		if (scale < 0) scale = 0;
-		if (scale > 255) scale = 255;
-
 		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_trail)))
 		if (val->_float != 0)
 			bits |= U_GLOWTRAIL;
 
-		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_color)))
-		if (val->_float != 0)
-			glowcolor = (int) val->_float;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_fullbright)))
-		if (val->_float != 0)
-			effects |= EF_FULLBRIGHT;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_colormod)))
-		if (val->vector[0] != 0 || val->vector[1] != 0 || val->vector[2] != 0)
-			colormod = (bound(0, (int) (val->vector[0] * 8.0), 7) << 5) | (bound(0, (int) (val->vector[1] * 8.0), 7) << 2) | bound(0, (int) (val->vector[2] * 4.0), 3);
-
-		if (ent != clent)
-		{
-			if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
-			{
-				if (ent->v.modelindex && pr_strings[ent->v.model]) // model
-				{
-					if (sv.models[ (int)ent->v.modelindex ]->flags == 0 && (ent->v.effects == EF_NODRAW || scale <= 0 || alpha <= 0))
-						continue;
-				}
-				else // no model and no effects
+		if (ent->v.modelindex == 0 || pr_strings[ent->v.model] == 0) // no model
+			if (ent != clent) // LordHavoc: always send player
+				if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
 					continue;
-			}
-		}
-
-		if (msg->maxsize - msg->cursize < 32) // LordHavoc: increased check from 16 to 32
-		{
-			Con_Printf ("packet overflow\n");
-			// mark the rest of the entities so they can't be delta compressed against this frame
-			for (;e < sv.num_edicts;e++)
-				client->nextfullupdate[e] = -1;
-			return;
-		}
-
-// send an update
-		baseline = &ent->baseline;
-
-		if (((int)ent->v.effects & EF_DELTA) && sv_deltacompress.value)
-		{
-			// every half second a full update is forced
-			if (realtime < client->nextfullupdate[e])
-			{
-				bits |= U_DELTA;
-				baseline = &ent->deltabaseline;
-			}
-			else
-				nextfullupdate = realtime + 0.5f;
-		}
-		else
-			nextfullupdate = realtime + 0.5f;
-
-		// restore nextfullupdate since this is being sent
-		client->nextfullupdate[e] = nextfullupdate;
-
-		if (e >= 256)
-			bits |= U_LONGENTITY;
-
-		if (ent->v.movetype == MOVETYPE_STEP)
-			bits |= U_STEP;
 
 		if (ent->v.movetype == MOVETYPE_STEP && ((int) ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM))) // monsters have smoothed walking/flying/swimming movement
 		{
@@ -667,13 +599,22 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			angles[0] = angles[0] * movelerp + ent->stepoldangles[0];
 			angles[1] = angles[1] * movelerp + ent->stepoldangles[1];
 			angles[2] = angles[2] * movelerp + ent->stepoldangles[2];
-			VectorMA(origin, host_client->latency, ent->v.velocity, origin);
+			//VectorMA(origin, host_client->latency, ent->v.velocity, origin);
 		}
 		else // copy as they are
 		{
-//			VectorCopy(ent->v.origin, origin);
 			VectorCopy(ent->v.angles, angles);
-			VectorMA(ent->v.origin, host_client->latency, ent->v.velocity, origin);
+			if (DotProduct(ent->v.velocity, ent->v.velocity) >= 1.0f)
+			{
+				VectorMA(ent->v.origin, host_client->latency, ent->v.velocity, origin);
+				// LordHavoc: trace predicted movement to avoid putting things in walls
+				trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, origin, MOVE_NORMAL, ent);
+				VectorCopy(trace.endpos, origin);
+			}
+			else
+			{
+				VectorCopy(ent->v.origin, origin);		
+			}
 			if (ent->v.movetype == MOVETYPE_STEP) // monster, but airborn, update lerp info
 			{
 				// update lerp positions
@@ -684,6 +625,118 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				VectorCopy(ent->v.angles, ent->stepangles);
 			}
 		}
+
+		// ent has survived every check so far, check if it is visible
+		if (ent != clent && ((bits & U_VIEWMODEL) == 0))
+		{
+			// use the predicted origin
+			entmins[0] = ent->v.mins[0] + origin[0] - 1.0f;
+			entmins[1] = ent->v.mins[1] + origin[1] - 1.0f;
+			entmins[2] = ent->v.mins[2] + origin[2] - 1.0f;
+			entmaxs[0] = ent->v.maxs[0] + origin[0] + 1.0f;
+			entmaxs[1] = ent->v.maxs[1] + origin[1] + 1.0f;
+			entmaxs[2] = ent->v.maxs[2] + origin[2] + 1.0f;
+
+			// if not touching a visible leaf
+			if (sv_pvscheckentities.value && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
+				continue;
+
+			// or not visible through the portals
+			if (sv_vischeckentities.value && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
+			{
+				sv_vischeckentitycullcount++;
+				continue;
+			}
+		}
+
+		alpha = 255;
+		scale = 16;
+		glowcolor = 254;
+		colormod = 255;
+		effects = ent->v.effects;
+
+		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
+		if (val->_float != 0)
+			alpha = (int) (val->_float * 255.0);
+
+		// HalfLife support
+		if ((val = GETEDICTFIELDVALUE(ent, eval_renderamt)))
+		if (val->_float != 0)
+			alpha = (int) val->_float;
+
+		if (alpha == 0)
+			alpha = 255;
+		alpha = bound(0, alpha, 255);
+
+		if ((val = GETEDICTFIELDVALUE(ent, eval_scale)))
+		if ((scale = (int) (val->_float * 16.0)) == 0) scale = 16;
+		if (scale < 0) scale = 0;
+		if (scale > 255) scale = 255;
+
+		if ((val = GETEDICTFIELDVALUE(ent, eval_glow_color)))
+		if (val->_float != 0)
+			glowcolor = (int) val->_float;
+
+		if ((val = GETEDICTFIELDVALUE(ent, eval_fullbright)))
+		if (val->_float != 0)
+			effects |= EF_FULLBRIGHT;
+
+		if ((val = GETEDICTFIELDVALUE(ent, eval_colormod)))
+		if (val->vector[0] != 0 || val->vector[1] != 0 || val->vector[2] != 0)
+			colormod = (bound(0, (int) (val->vector[0] * 8.0), 7) << 5) | (bound(0, (int) (val->vector[1] * 8.0), 7) << 2) | bound(0, (int) (val->vector[2] * 4.0), 3);
+
+		if (ent != clent)
+		{
+//			if (glowsize == 0 && (bits & U_GLOWTRAIL) == 0) // no effects
+//			{
+//				if (ent->v.modelindex && pr_strings[ent->v.model]) // model
+//				{
+					// don't send if flagged for NODRAW and there are no effects
+					if (sv.models[(int)ent->v.modelindex]->flags == 0 && ((effects & EF_NODRAW) || scale <= 0 || alpha <= 0))
+						continue;
+//				}
+//				else // no model and no effects
+//					continue;
+//			}
+		}
+
+		if (msg->maxsize - msg->cursize < 32) // LordHavoc: increased check from 16 to 32
+		{
+			Con_Printf ("packet overflow\n");
+			// mark the rest of the entities so they can't be delta compressed against this frame
+			for (;e < sv.num_edicts;e++)
+				client->nextfullupdate[e] = -1;
+			return;
+		}
+
+		if ((val = GETEDICTFIELDVALUE(ent, eval_exteriormodeltoclient)) && val->edict == clentnum)
+			bits = bits | U_EXTERIORMODEL;
+
+// send an update
+		baseline = &ent->baseline;
+
+		if (((int)ent->v.effects & EF_DELTA) && sv_deltacompress.value)
+		{
+			// every half second a full update is forced
+			if (realtime < client->nextfullupdate[e])
+			{
+				bits |= U_DELTA;
+				baseline = &ent->deltabaseline;
+			}
+			else
+				nextfullupdate = realtime + 0.5f;
+		}
+		else
+			nextfullupdate = realtime + 0.5f;
+
+		// restore nextfullupdate since this is being sent for real
+		client->nextfullupdate[e] = nextfullupdate;
+
+		if (e >= 256)
+			bits |= U_LONGENTITY;
+
+		if (ent->v.movetype == MOVETYPE_STEP)
+			bits |= U_STEP;
 
 		// LordHavoc: old stuff, but rewritten to have more exact tolerances
 //		if ((int)(origin[0]*8.0) != (int)(baseline->origin[0]*8.0))						bits |= U_ORIGIN1;

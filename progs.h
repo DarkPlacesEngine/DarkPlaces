@@ -43,9 +43,6 @@ typedef struct edict_s
 	qboolean	free;
 	link_t		area;
 
-	int			num_leafs;
-	short		leafnums[MAX_ENT_LEAFS];
-
 	entity_state_t	baseline;
 	entity_state_t	deltabaseline; // LordHavoc: previous frame
 
