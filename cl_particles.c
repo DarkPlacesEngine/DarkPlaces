@@ -1500,10 +1500,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	cg *= r_colorscale;
 	cb *= r_colorscale;
 
-	varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = cr;
-	varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = cg;
-	varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = cb;
-	varray_color[ 3] = varray_color[ 7] = varray_color[11] = varray_color[15] = ca;
 	varray_texcoord[0][0] = tex->s2;varray_texcoord[0][1] = tex->t1;
 	varray_texcoord[0][2] = tex->s1;varray_texcoord[0][3] = tex->t1;
 	varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t2;
@@ -1569,6 +1565,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	glTexCoord2f(tex->s2, tex->t2);glVertex3f(varray_vertex[12], varray_vertex[13], varray_vertex[14]);
 	glEnd();
 #else
+	GL_Color(cr, cg, cb, ca);
 	R_Mesh_Draw(4, 2, polygonelements);
 #endif
 }

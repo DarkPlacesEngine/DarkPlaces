@@ -167,10 +167,7 @@ void R_DrawCoronas(void)
 				VectorSubtract(rd->origin, r_origin, diff);
 				scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
 			}
-			varray_color[ 0] = varray_color[ 4] = varray_color[ 8] = varray_color[12] = rd->light[0] * scale;
-			varray_color[ 1] = varray_color[ 5] = varray_color[ 9] = varray_color[13] = rd->light[1] * scale;
-			varray_color[ 2] = varray_color[ 6] = varray_color[10] = varray_color[14] = rd->light[2] * scale;
-			varray_color[ 3] = varray_color[ 7] = varray_color[11] = varray_color[15] = 1;
+			GL_Color(rd->light[0] * scale, rd->light[1] * scale, rd->light[2] * scale, 1);
 			varray_texcoord[0][0] = 0;
 			varray_texcoord[0][1] = 0;
 			varray_texcoord[0][2] = 0;

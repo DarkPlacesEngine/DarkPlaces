@@ -321,7 +321,7 @@ extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei strid
 extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 extern void (GLAPIENTRY *qglArrayElement)(GLint i);
 
-extern void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
+extern void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
 extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);

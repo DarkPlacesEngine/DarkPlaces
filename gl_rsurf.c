@@ -791,10 +791,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 		{
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-			if (skyrendermasked)
-				memset(varray_color, 0, mesh->numverts * sizeof(float[4]));
-			else
-				R_FillColors(varray_color, mesh->numverts, fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
+			GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -837,6 +834,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		colorscale *= 0.25f;
 	}
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
@@ -923,6 +921,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	}
 	base = ent->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
@@ -965,6 +964,7 @@ static void RSurfShader_Wall_Pass_BaseFullbright(const entity_render_t *ent, con
 	}
 	m.tex[0] = R_GetTexture(surf->currenttexture->texture);
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
@@ -986,6 +986,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 	m.blendfunc2 = GL_ONE;
 	m.tex[0] = R_GetTexture(surf->currenttexture->glowtexture);
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
@@ -1007,6 +1008,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	m.blendfunc2 = GL_ONE;
 	m.tex[0] = R_GetTexture(surf->currenttexture->fogtexture);
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		R_Mesh_ResizeCheck(mesh->numverts);
@@ -1035,6 +1037,8 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	m.texrgbscale[1] = 4;
 	m.texrgbscale[2] = 2;
 	R_Mesh_State(&m);
+	cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
+	GL_Color(cl, cl, cl, 1);
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
@@ -1050,8 +1054,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
 			memcpy(varray_texcoord[1], mesh->uv, mesh->numverts * sizeof(float[2]));
 			memcpy(varray_texcoord[2], mesh->ab, mesh->numverts * sizeof(float[2]));
-			cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
-			R_FillColors(varray_color, mesh->numverts, cl, cl, cl, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1071,6 +1073,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	if (gl_combine.integer)
 		m.texrgbscale[1] = 4;
 	R_Mesh_State(&m);
+	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
@@ -1085,7 +1088,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
 			memcpy(varray_texcoord[1], mesh->uv, mesh->numverts * sizeof(float[2]));
-			R_FillColors(varray_color, mesh->numverts, r_colorscale, r_colorscale, r_colorscale, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1101,6 +1103,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	m.blendfunc2 = GL_ZERO;
 	m.tex[0] = R_GetTexture(texture->texture);
 	R_Mesh_State(&m);
+	GL_Color(1, 1, 1, 1);
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1108,7 +1111,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
-			R_FillColors(varray_color, mesh->numverts, 1, 1, 1, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1127,6 +1129,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	if (gl_combine.integer)
 		m.texrgbscale[0] = 4;
 	R_Mesh_State(&m);
+	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
@@ -1140,7 +1143,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], mesh->uv, mesh->numverts * sizeof(float[2]));
-			R_FillColors(varray_color, mesh->numverts, r_colorscale, r_colorscale, r_colorscale, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1164,6 +1166,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 		colorscale *= 0.25f;
 	}
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		if (surf->dlightframe == r_framecount)
@@ -1196,6 +1199,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	R_Mesh_State(&m);
+	GL_UseColorArray();
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1220,6 +1224,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 	m.blendfunc2 = GL_SRC_COLOR;
 	m.tex[0] = R_GetTexture(texture->detailtexture);
 	R_Mesh_State(&m);
+	GL_Color(1, 1, 1, 1);
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1227,7 +1232,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseDetail(const entity_render_t *ent, c
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], mesh->ab, mesh->numverts * sizeof(float[2]));
-			R_FillColors(varray_color, mesh->numverts, 1, 1, 1, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1243,6 +1247,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	m.blendfunc2 = GL_ONE;
 	m.tex[0] = R_GetTexture(texture->glowtexture);
 	R_Mesh_State(&m);
+	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	for (surf = texture->surfacechain;surf;surf = surf->texturechain)
 	{
 		for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -1250,7 +1255,6 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 			R_Mesh_ResizeCheck(mesh->numverts);
 			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], mesh->st, mesh->numverts * sizeof(float[2]));
-			R_FillColors(varray_color, mesh->numverts, r_colorscale, r_colorscale, r_colorscale, 1);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
 		}
 	}
@@ -1484,11 +1488,10 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	R_Mesh_State(&m);
 	R_Mesh_ResizeCheck(portal->numpoints);
 	i = portal - ent->model->portals;
-	R_FillColors(varray_color, portal->numpoints,
-		((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_colorscale,
-		((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_colorscale,
-		((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_colorscale,
-		0.125f);
+	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_colorscale,
+			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_colorscale,
+			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_colorscale,
+			 0.125f);
 	if (PlaneDiff(r_origin, (&portal->plane)) > 0)
 	{
 		for (i = portal->numpoints - 1, v = varray_vertex;i >= 0;i--, v += 4)

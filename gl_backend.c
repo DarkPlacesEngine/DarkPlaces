@@ -264,6 +264,7 @@ static struct
 	int clientunit;
 	int texture[MAX_TEXTUREUNITS];
 	float texturergbscale[MAX_TEXTUREUNITS];
+	int colorarray;
 }
 gl_state;
 
@@ -344,7 +345,6 @@ void GL_SetupTextureState(void)
 	}
 }
 
-int usedarrays;
 void GL_Backend_ResetState(void)
 {
 	int i;
@@ -373,8 +373,6 @@ void GL_Backend_ResetState(void)
 	gl_state.depthmask = GL_TRUE;
 	qglDepthMask(gl_state.depthmask);CHECKGLERROR
 
-	usedarrays = false;
-	usedarrays = true;
 	qglVertexPointer(3, GL_FLOAT, sizeof(float[4]), varray_vertex);CHECKGLERROR
 	qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 	if (gl_mesh_floatcolors.integer)
@@ -385,9 +383,30 @@ void GL_Backend_ResetState(void)
 	{
 		qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), varray_bcolor);CHECKGLERROR
 	}
-	qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+	// LordHavoc: default to color array off
+	gl_state.colorarray = false;
+	GL_Color(1, 1, 1, 1);
 
 	GL_SetupTextureState();
+}
+
+void GL_UseColorArray(void)
+{
+	if (!gl_state.colorarray)
+	{
+		gl_state.colorarray = true;
+		qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+	}
+}
+
+void GL_Color(float cr, float cg, float cb, float ca)
+{
+	if (gl_state.colorarray)
+	{
+		gl_state.colorarray = false;
+		qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+	}
+	qglColor4f(cr, cg, cb, ca);
 }
 
 // called at beginning of frame
@@ -511,7 +530,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, int *elements)
 
 	CHECKGLERROR
 
-	if (!gl_mesh_floatcolors.integer)
+	if (gl_state.colorarray && !gl_mesh_floatcolors.integer)
 		GL_ConvertColorsFloatToByte(numverts);
 	//GL_TransformVertices(numverts);
 	if (!r_render.integer)
@@ -545,27 +564,18 @@ void R_Mesh_Finish(void)
 			}
 			qglBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
 
-			if (usedarrays)
-			{
-				qglClientActiveTexture(GL_TEXTURE0_ARB + i);CHECKGLERROR
-				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-			}
+			qglClientActiveTexture(GL_TEXTURE0_ARB + i);CHECKGLERROR
+			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 	}
 	else
 	{
 		qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 		qglEnable(GL_TEXTURE_2D);CHECKGLERROR
-		if (usedarrays)
-		{
-			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-		}
+		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
-	if (usedarrays)
-	{
-		qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
-		qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
-	}
+	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+	qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 
 	qglDisable(GL_BLEND);CHECKGLERROR
 	qglEnable(GL_DEPTH_TEST);CHECKGLERROR

@@ -292,7 +292,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	colorscale = r_colorscale;
 	if (gl_combine.integer)
 		colorscale *= 0.25f;
-	
+
 	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
 	{
 		// untextured
@@ -313,6 +313,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		R_LightModel(ent, model->numverts, colorscale, colorscale, colorscale, false);
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
+		GL_UseColorArray();
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		return;
 	}
@@ -338,6 +339,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		R_LightModel(ent, model->numverts, colorscale, colorscale, colorscale, false);
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
+		GL_UseColorArray();
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		return;
 	}
@@ -380,6 +382,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		R_ModulateColors(aliasvertcolor, varray_color, model->numverts, colorscale, colorscale, colorscale);
 		memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+		GL_UseColorArray();
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 	}
 
@@ -402,9 +405,12 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 				blendfunc2 = GL_ONE;
 				c_alias_polys += model->numtris;
 				if (pantsfullbright)
-					R_FillColors(varray_color, model->numverts, pantscolor[0] * colorscale, pantscolor[1] * colorscale, pantscolor[2] * colorscale, ent->alpha);
+					GL_Color(pantscolor[0] * colorscale, pantscolor[1] * colorscale, pantscolor[2] * colorscale, ent->alpha);
 				else
+				{
+					GL_UseColorArray();
 					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, pantscolor[0] * colorscale, pantscolor[1] * colorscale, pantscolor[2] * colorscale);
+				}
 				memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 				R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -427,9 +433,12 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 				blendfunc2 = GL_ONE;
 				c_alias_polys += model->numtris;
 				if (shirtfullbright)
-					R_FillColors(varray_color, model->numverts, shirtcolor[0] * colorscale, shirtcolor[1] * colorscale, shirtcolor[2] * colorscale, ent->alpha);
+					GL_Color(shirtcolor[0] * colorscale, shirtcolor[1] * colorscale, shirtcolor[2] * colorscale, ent->alpha);
 				else
+				{
+					GL_UseColorArray();
 					R_ModulateColors(aliasvertcolor, varray_color, model->numverts, shirtcolor[0] * colorscale, shirtcolor[1] * colorscale, shirtcolor[2] * colorscale);
+				}
 				memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 				memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 				R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -450,9 +459,9 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			blendfunc1 = GL_SRC_ALPHA;
 			blendfunc2 = GL_ONE;
 			c_alias_polys += model->numtris;
-			R_FillColors(varray_color, model->numverts, (1 - fog) * r_colorscale, (1 - fog) * r_colorscale, (1 - fog) * r_colorscale, ent->alpha);
 			memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 			memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+			GL_Color((1 - fog) * r_colorscale, (1 - fog) * r_colorscale, (1 - fog) * r_colorscale, ent->alpha);
 			R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		}
 	}
@@ -465,9 +474,9 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		R_Mesh_State(&m);
 
 		c_alias_polys += model->numtris;
-		R_FillColors(varray_color, model->numverts, fogcolor[0] * fog * r_colorscale, fogcolor[1] * fog * r_colorscale, fogcolor[2] * fog * r_colorscale, ent->alpha);
 		memcpy(varray_vertex, aliasvert, model->numverts * sizeof(float[4]));
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
+		GL_Color(fogcolor[0] * fog * r_colorscale, fogcolor[1] * fog * r_colorscale, fogcolor[2] * fog * r_colorscale, ent->alpha);
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 	}
 }
@@ -500,12 +509,13 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 					R_Mesh_State(&m);
 					R_Mesh_Matrix(&ent->matrix);
 					R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-					R_FillColors(varray_color, model->numverts * 2, 0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
+					GL_Color(0.1 * r_colorscale, 0.025 * r_colorscale, 0.0125 * r_colorscale, 1);
 					Matrix4x4_Transform(&ent->inversematrix, r_dlight[i].origin, temp);
-					R_ShadowVolume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, r_dlight[i].cullradius + model->radius - sqrt(f));
+					R_ShadowVolume(model->numverts, model->numtris, model->mdlmd2data_indices, model->mdlmd2data_triangleneighbors, temp, r_dlight[i].cullradius + model->radius - sqrt(f), true);
 				}
 			}
 		}
+		return;
 	}
 
 	lightdirection[0] = 0.5;
@@ -529,7 +539,6 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 
 	c_alias_polys += model->numtris;
 	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
-	R_FillColors(varray_color, model->numverts, 0, 0, 0, 0.5);
 
 	// put a light direction in the entity's coordinate space
 	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, projection);
@@ -552,6 +561,7 @@ void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
 		//if (i & 1)
 			VectorMA(v, dist, projection, v);
 	}
+	GL_Color(0, 0, 0, 0.5);
 	R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 }
 
@@ -908,6 +918,7 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	memcpy(varray_vertex, aliasvert, numverts * sizeof(float[4]));
 	R_ModulateColors(aliasvertcolor, varray_color, numverts, colorscale, colorscale, colorscale);
 	memcpy(varray_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
+	GL_UseColorArray();
 	R_Mesh_Draw(numverts, numtriangles, elements);
 
 	if (fog)
@@ -921,8 +932,8 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 
 		c_alias_polys += numtriangles;
 		memcpy(varray_vertex, aliasvert, numverts * sizeof(float[4]));
-		R_FillColors(varray_color, numverts, fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
 		//memcpy(mesh_texcoord[0], (float *)(m->lump_texcoords.start + (int) m), numverts * sizeof(float[2]));
+		GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, ent->alpha * fog);
 		R_Mesh_Draw(numverts, numtriangles, elements);
 	}
 }

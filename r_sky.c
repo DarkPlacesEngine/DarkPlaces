@@ -132,10 +132,7 @@ static void R_SkyBox(void)
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
 	R_Mesh_State(&m);
 
-	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = r_colorscale;
-	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = r_colorscale;
-	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = r_colorscale;
-	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = 1;
+	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
 	
 	R_SkyBoxPolyVec(0, 1, 0,  1, -1,  1);
 	R_SkyBoxPolyVec(1, 1, 1,  1, -1, -1);
@@ -229,15 +226,11 @@ static void skyspherecalc(float *sphere, float dx, float dy, float dz)
 	}
 }
 
-static void skyspherearrays(float *v, float *t, float *c, float *source, float s, float colorscale)
+static void skyspherearrays(float *v, float *t, float *source, float s)
 {
 	int i;
-	for (i = 0;i < (skygridx1*skygridy1);i++, c += 4, t += 2, v += 4, source += 5)
+	for (i = 0;i < (skygridx1*skygridy1);i++, t += 2, v += 4, source += 5)
 	{
-		c[0] = colorscale;
-		c[1] = colorscale;
-		c[2] = colorscale;
-		c[3] = 1;
 		t[0] = source[0] + s;
 		t[1] = source[1] + s;
 		v[0] = source[2];
@@ -275,7 +268,9 @@ static void R_SkySphere(void)
 	m.tex[0] = R_GetTexture(solidskytexture);
 	R_Mesh_State(&m);
 
-	skyspherearrays(varray_vertex, varray_texcoord[0], varray_color, skysphere, speedscale, r_colorscale);
+	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+
+	skyspherearrays(varray_vertex, varray_texcoord[0], skysphere, speedscale);
 	R_Mesh_Draw(numverts, numtriangles, skysphereindices);
 
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -283,7 +278,7 @@ static void R_SkySphere(void)
 	m.tex[0] = R_GetTexture(alphaskytexture);
 	R_Mesh_State(&m);
 
-	skyspherearrays(varray_vertex, varray_texcoord[0], varray_color, skysphere, speedscale2, r_colorscale);
+	skyspherearrays(varray_vertex, varray_texcoord[0], skysphere, speedscale2);
 	R_Mesh_Draw(numverts, numtriangles, skysphereindices);
 }
 
