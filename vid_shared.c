@@ -111,8 +111,10 @@ const char *gl_platformextensions;
 char gl_driver[256];
 
 // GL_ARB_multitexture
+void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
 void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
+void (GLAPIENTRY *qglMultiTexCoord4f) (GLenum, GLfloat, GLfloat, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
 void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 
@@ -170,9 +172,10 @@ void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, c
 void (GLAPIENTRY *qglArrayElement)(GLint i);
 
 void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
-void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
+void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
 void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
 void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
+void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
 void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
 void (GLAPIENTRY *qglBegin)(GLenum mode);
@@ -405,8 +408,10 @@ static dllfunction_t opengl110funcs[] =
 	{"glTexCoordPointer", (void **) &qglTexCoordPointer},
 	{"glArrayElement", (void **) &qglArrayElement},
 	{"glColor4f", (void **) &qglColor4f},
+	{"glTexCoord1f", (void **) &qglTexCoord1f},
 	{"glTexCoord2f", (void **) &qglTexCoord2f},
 	{"glTexCoord3f", (void **) &qglTexCoord3f},
+	{"glTexCoord4f", (void **) &qglTexCoord4f},
 	{"glVertex2f", (void **) &qglVertex2f},
 	{"glVertex3f", (void **) &qglVertex3f},
 	{"glBegin", (void **) &qglBegin},
@@ -474,8 +479,10 @@ static dllfunction_t drawrangeelementsextfuncs[] =
 
 static dllfunction_t multitexturefuncs[] =
 {
+	{"glMultiTexCoord1fARB", (void **) &qglMultiTexCoord1f},
 	{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
 	{"glMultiTexCoord3fARB", (void **) &qglMultiTexCoord3f},
+	{"glMultiTexCoord4fARB", (void **) &qglMultiTexCoord4f},
 	{"glActiveTextureARB", (void **) &qglActiveTexture},
 	{"glClientActiveTextureARB", (void **) &qglClientActiveTexture},
 	{NULL, NULL}
@@ -839,7 +846,7 @@ void VID_UpdateGamma(qboolean force)
 	 && cachewhite[1] == v_color_white_g.value
 	 && cachewhite[2] == v_color_white_b.value)
 		return;
-		
+
 	forcenextframe = false;
 
 	if (vid_activewindow && v_hwgamma.integer)
@@ -899,7 +906,7 @@ void VID_UpdateGamma(qboolean force)
 					nt[x] = lhrandom(1, 8.2);
 				}
 			}
-			
+
 			for (x = 0;x < 3;x++)
 			{
 				nt[x] -= host_realframetime;
@@ -911,7 +918,7 @@ void VID_UpdateGamma(qboolean force)
 				n[x] += nd[x] * host_realframetime;
 				n[x] -= floor(n[x]);
 			}
-		
+
 			for (x = 0, ramp = vid_gammaramps;x < 3;x++)
 				for (y = 0, t = n[x] - 0.75f;y < 256;y++, t += 0.75f * (2.0f / 256.0f))
 					*ramp++ = cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f;
@@ -960,7 +967,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_color_white_b);
 
 	Cvar_RegisterVariable(&v_hwgamma);
-	
+
 	Cvar_RegisterVariable(&v_psycho);
 
 	Cvar_RegisterVariable(&vid_fullscreen);

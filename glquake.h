@@ -222,8 +222,10 @@ extern int gl_max_anisotropy;
 
 // GL_ARB_multitexture
 extern int gl_textureunits;
+extern void (GLAPIENTRY *qglMultiTexCoord1f) (GLenum, GLfloat);
 extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglMultiTexCoord3f) (GLenum, GLfloat, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglMultiTexCoord4f) (GLenum, GLfloat, GLfloat, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #ifndef GL_ACTIVE_TEXTURE_ARB
@@ -424,8 +426,10 @@ extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei st
 extern void (GLAPIENTRY *qglArrayElement)(GLint i);
 
 extern void (GLAPIENTRY *qglColor4f)(GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
+extern void (GLAPIENTRY *qglTexCoord1f)(GLfloat s);
 extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
 extern void (GLAPIENTRY *qglTexCoord3f)(GLfloat s, GLfloat t, GLfloat r);
+extern void (GLAPIENTRY *qglTexCoord4f)(GLfloat s, GLfloat t, GLfloat r, GLfloat q);
 extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
 extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
 extern void (GLAPIENTRY *qglBegin)(GLenum mode);
