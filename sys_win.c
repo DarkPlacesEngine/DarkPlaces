@@ -178,6 +178,8 @@ SYSTEM IO
 ===============================================================================
 */
 
+void SleepUntilInput (int time);
+
 void Sys_Error (char *error, ...)
 {
 	va_list		argptr;
