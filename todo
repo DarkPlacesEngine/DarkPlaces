@@ -1,18 +1,23 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, n = done but have not notified the people who asked for it, f = failed
+0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 0 darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 0 darkplaces: add lightning beam settings to menu (romi)
 0 darkplaces: add scr_conbrightness cvar (0-1) to control brightness of conback (0 = black and does not load conback, resets back to 0 if conback fails to load)
 0 darkplaces: add svc_setanglefloat and DP_SVC_SETANGLEFLOAT extension (FrikaC)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
 0 darkplaces: check if nodrawtoclient works and if not, fix it (Uffe)
+0 darkplaces: crash when changing level while using qe1 textures (Todd)
+0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: default to 32bit color
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: finish the parital update support in protocol.[ch] and reduce packet size to 1k to fix NAT routers
+0 darkplaces: fix particle trails (I think trail start is identical to trail end)
 0 darkplaces: funky lightmaps in prydon gate and dm1 on TNT1/2, which get worse the more times you reload it?  (NotoriousRay, Uffe)
 0 darkplaces: get rid of stencil options and make 32bit color automatically use stencil
 0 darkplaces: have a look at CFQ and figure out why its b0rked
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make S_Update take a matrix4x4_t *
+0 darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
 0 darkplaces: make dedicated server not load images (maybe all fail?)
 0 darkplaces: make extension for EF_FULLBRIGHT (FrikaC)
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
@@ -26,6 +31,7 @@
 0 darkplaces: revert nice noclip to nq noclip because it can break mods that trap player input and expect nq movement (MauveBib)
 0 darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 0 darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
+0 darkplaces: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces: toggling decals in menu doesn't work
 0 darkplaces: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
@@ -33,6 +39,17 @@
 0 dpmod: impulse 154 should cycle to deathmatch 7 (Rick)
 0 dpmod: items aren't respawning in coop, they should
 0 dpmod: up nail limit to 500 (scar3crow)
+0 dpzoo: colored lighting
+0 dpzoo: flame jet
+0 dpzoo: make some things that make the player bigger/smaller to demonstrate scaling and better viewheight handling and brush collisions (depends on brush collisions)
+0 dpzoo: particlecube
+0 dpzoo: rain
+0 dpzoo: rotating fan bmodels
+0 dpzoo: rtlights in normal mode (when that extension is made)
+0 dpzoo: snow
+0 dpzoo: swinging doors
+0 dpzoo: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
+0 dpzoo: transparent glass bmodels (DP_ENT_ALPHA)
 0 hmap: add space to seconds reports in all utilities so it doesn't say secondssss (FrikaC)
 0 sv_user.qc: figure out why looking up/down slows movement and fix it (Vermeulen)
 1 darkplaces: add a "cmd" command to the client for sending arbitrary commands to the server, mainly for use with KRIMZON_SV_PARSECLIENTCOMMAND
