@@ -12,6 +12,7 @@ cvar_t gl_paranoid = {0, "gl_paranoid", "0"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0"};
 
 cvar_t r_render = {0, "r_render", "1"};
+cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
@@ -204,6 +205,7 @@ void gl_backend_init(void)
 	}
 
 	Cvar_RegisterVariable(&r_render);
+	Cvar_RegisterVariable(&r_waterwarp);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
 	Cvar_RegisterVariable(&gl_delayfinish);
@@ -1326,15 +1328,18 @@ showtris:
 		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
 		r_refdef.fov_x = scr_fov.value * cl.viewzoom;
 		r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
-	
-		if (cl.worldmodel)
+
+		if (r_waterwarp.value > 0)
 		{
-			Mod_CheckLoaded(cl.worldmodel);
-			contents = CL_PointSuperContents(r_vieworigin);
-			if (contents & SUPERCONTENTS_LIQUIDSMASK)
+			if (cl.worldmodel)
 			{
-				r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);
-				r_refdef.fov_y *= (sin(cl.time * 3.0) * 0.015 + 0.985);
+				Mod_CheckLoaded(cl.worldmodel);
+				contents = CL_PointSuperContents(r_vieworigin);
+				if (contents & SUPERCONTENTS_LIQUIDSMASK)
+				{
+					r_refdef.fov_x *= 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
+					r_refdef.fov_y *= 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
+				}
 			}
 		}
 

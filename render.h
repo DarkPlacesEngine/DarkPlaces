@@ -152,6 +152,7 @@ extern vec_t fogdensity;
 #include "r_lerpanim.h"
 
 extern cvar_t r_render;
+extern cvar_t r_waterwarp;
 
 extern cvar_t r_textureunits;
 extern cvar_t gl_dither;
