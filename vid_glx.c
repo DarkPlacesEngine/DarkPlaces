@@ -83,8 +83,6 @@ Atom wm_delete_window_atom;
 #define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask )
 
 
-viddef_t	vid;				// global video state
-
 static qboolean		mouse_avail = true;
 static qboolean		mouse_active = false, usingmouse = false;
 static float	mouse_x, mouse_y;
@@ -636,7 +634,14 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 #endif
 }
 
-void VID_Init(int fullscreen, int width, int height, int bpp)
+void VID_Init(void)
+{
+	Cvar_RegisterVariable (&vid_dga);
+	Cvar_RegisterVariable (&vid_dga_mouseaccel);
+	InitSig(); // trap evil signals
+}
+
+int VID_InitMode(int fullscreen, int width, int height, int bpp)
 {
 	int i;
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
@@ -670,15 +675,15 @@ void VID_Init(int fullscreen, int width, int height, int bpp)
 	int MajorVersion, MinorVersion;
 
 	if (!GL_OpenLibrary("libGL.so.1"))
-		Sys_Error("Unable to load GL driver\n");
-
-	Cvar_RegisterVariable (&vid_dga);
-	Cvar_RegisterVariable (&vid_dga_mouseaccel);
+	{
+		Con_Printf("Unable to load GL driver\n");
+		return false;
+	}
 
 	if (!(vidx11_display = XOpenDisplay(NULL)))
 	{
-		fprintf(stderr, "Error couldn't open the X display\n");
-		exit(1);
+		Con_Printf("Couldn't open the X display\n");
+		return false;
 	}
 
 	scrnum = DefaultScreen(vidx11_display);
@@ -699,7 +704,10 @@ void VID_Init(int fullscreen, int width, int height, int bpp)
 	 || (qglXMakeCurrent = GL_GetProcAddress("glXMakeCurrent")) == NULL
 	 || (qglXSwapBuffers = GL_GetProcAddress("glXSwapBuffers")) == NULL
 	 || (qglXQueryExtensionsString = GL_GetProcAddress("glXQueryExtensionsString")) == NULL)
-		Sys_Error("glX functions not found in %s\n", gl_driver);
+	{
+		Con_Printf("glX functions not found in %s\n", gl_driver);
+		return false;
+	}
 
 	visinfo = NULL;
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
@@ -712,8 +720,8 @@ void VID_Init(int fullscreen, int width, int height, int bpp)
 		visinfo = qglXChooseVisual(vidx11_display, scrnum, nogammaattrib);
 		if (!visinfo)
 		{
-			Sys_Error("couldn't get an RGB, Double-buffered, Depth visual\n");
-			exit(1);
+			Con_Printf("Couldn't get an RGB, Double-buffered, Depth visual\n");
+			return false;
 		}
 	}
 
@@ -824,13 +832,9 @@ void VID_Init(int fullscreen, int width, int height, int bpp)
 	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 
-	InitSig(); // trap evil signals
-
 	vid_hidden = false;
-
 	GL_Init();
-
-	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
+	return true;
 }
 
 void Sys_SendKeyEvents(void)

@@ -24,10 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <windows.h>
 
-#ifndef SERVERONLY
 #include <ddraw.h>
 #include <dsound.h>
-#endif
 
 #ifndef WM_MOUSEWHEEL
 #define WM_MOUSEWHEEL                   0x020A
@@ -35,8 +33,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern	HINSTANCE	global_hInstance;
 extern	int			global_nCmdShow;
-
-#ifndef SERVERONLY
 
 extern LPDIRECTDRAW		lpDD;
 extern LPDIRECTDRAWSURFACE	lpPrimary;
@@ -51,36 +47,12 @@ extern DWORD gSndBufSize;
 void	VID_LockBuffer (void);
 void	VID_UnlockBuffer (void);
 
-#endif
-
-typedef enum {MS_WINDOWED, MS_FULLSCREEN, MS_FULLDIB, MS_UNINIT} modestate_t;
-
-extern modestate_t	modestate;
-
 extern HWND			mainwindow;
-
-void IN_ShowMouse (void);
-void IN_DeactivateMouse (void);
-void IN_HideMouse (void);
-void IN_ActivateMouse (void);
-void IN_MouseEvent (int mstate);
 
 extern qboolean	winsock_lib_initialized;
 
-extern int		window_center_x, window_center_y, window_x, window_y;
-extern RECT		window_rect;
-
-extern qboolean	mouseinitialized;
-
-extern HANDLE	hinput, houtput;
-
-void IN_UpdateClipCursor (void);
-void CenterWindow(HWND hWndCenter, int width, int height, BOOL lefttopjustify);
-
 void S_BlockSound (void);
 void S_UnblockSound (void);
-
-void VID_SetDefaultMode (void);
 
 int (PASCAL FAR *pWSAStartup)(WORD wVersionRequired, LPWSADATA lpWSAData);
 int (PASCAL FAR *pWSACleanup)(void);
