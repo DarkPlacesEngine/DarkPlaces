@@ -65,6 +65,8 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 }
 #endif
 
+#define BACKENDACTIVECHECK if (!backendactive) Sys_Error(__func__ " called when backend is not active\n");
+
 float r_mesh_farclip;
 
 static float viewdist;
@@ -433,8 +435,7 @@ void GL_Backend_ResetState(void)
 // called at beginning of frame
 void R_Mesh_Start(float farclip)
 {
-	if (!backendactive)
-		Sys_Error("R_Mesh_Clear: called when backend is not active\n");
+	BACKENDACTIVECHECK
 
 	CHECKGLERROR
 
@@ -599,8 +600,7 @@ void _R_Mesh_ResizeCheck(int numverts, int numtriangles)
 {
 	if (numtriangles > mesh_maxtris || numverts > mesh_maxverts)
 	{
-		if (!backendactive)
-			Sys_Error("R_Mesh_Begin: called when backend is not active\n");
+		BACKENDACTIVECHECK
 		GL_Backend_ResizeArrays(max(numtriangles, (numverts + 2) / 3) + 100);
 		GL_Backend_ResetState();
 	}
@@ -609,8 +609,7 @@ void _R_Mesh_ResizeCheck(int numverts, int numtriangles)
 // renders the mesh
 void R_Mesh_Draw(int numverts, int numtriangles)
 {
-	if (!backendactive)
-		Sys_Error("R_Mesh_End: called when backend is not active\n");
+	BACKENDACTIVECHECK
 
 	c_meshs++;
 	c_meshtris += numtriangles;
@@ -630,6 +629,8 @@ void R_Mesh_Draw(int numverts, int numtriangles)
 void R_Mesh_Finish(void)
 {
 	int i;
+	BACKENDACTIVECHECK
+
 	if (backendunits > 1)
 	{
 		for (i = backendunits - 1;i >= 0;i--)
@@ -680,6 +681,8 @@ void R_Mesh_Finish(void)
 
 void R_Mesh_ClearDepth(void)
 {
+	BACKENDACTIVECHECK
+
 	R_Mesh_Finish();
 	qglClear(GL_DEPTH_BUFFER_BIT);
 	R_Mesh_Start(r_mesh_farclip);
@@ -692,8 +695,7 @@ void R_Mesh_State(const rmeshstate_t *m)
 	int texturergbscale[MAX_TEXTUREUNITS];
 	float scaler;
 
-	if (!backendactive)
-		Sys_Error("R_Mesh_State: called when backend is not active\n");
+	BACKENDACTIVECHECK
 
 	if (gl_backend_rebindtextures)
 	{
