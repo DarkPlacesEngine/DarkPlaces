@@ -48,7 +48,7 @@ NOPROFILEOPTIMIZATIONS=
 #this is used to ensure that all released versions are free of warnings.
 
 #normal compile
-OPTIMIZATIONS= -O6 -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
 CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS) $(PROFILEOPTION)
 #debug compile
 #OPTIMIZATIONS=
