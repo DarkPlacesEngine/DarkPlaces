@@ -496,62 +496,7 @@ void DrawQ_Clear(void)
 static int picelements[6] = {0, 1, 2, 0, 2, 3};
 void DrawQ_Pic(float x, float y, char *picname, float width, float height, float red, float green, float blue, float alpha, int flags)
 {
-#if 1
 	DrawQ_SuperPic(x,y,picname,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
-#elif 1
-	float floats[48];
-	cachepic_t *pic;
-	drawqueuemesh_t mesh;
-	if (alpha < (1.0f / 255.0f) || !picname || !picname[0])
-		return;
-	pic = Draw_CachePic(picname);
-	if (width == 0)
-		width = pic->width;
-	if (height == 0)
-		height = pic->height;
-	mesh.texture = pic->tex;
-	mesh.numtriangles = 2;
-	mesh.numvertices = 4;
-	mesh.indices = picelements;
-	mesh.vertex3f = floats;
-	mesh.texcoord2f = floats + 16;
-	mesh.color4f = floats + 32;
-	memset(floats, 0, sizeof(floats));
-	mesh.vertex3f[0] = mesh.vertex3f[12] = x;
-	mesh.vertex3f[1] = mesh.vertex3f[5] = y;
-	mesh.vertex3f[4] = mesh.vertex3f[8] = x + width;
-	mesh.vertex3f[9] = mesh.vertex3f[13] = y + height;
-	mesh.texcoord2f[4] = mesh.texcoord2f[8] = mesh.texcoord2f[9] = mesh.texcoord2f[13] = 1;
-	mesh.color4f[0] = mesh.color4f[4] = mesh.color4f[8] = mesh.color4f[12] = red;
-	mesh.color4f[1] = mesh.color4f[5] = mesh.color4f[9] = mesh.color4f[13] = green;
-	mesh.color4f[2] = mesh.color4f[6] = mesh.color4f[10] = mesh.color4f[14] = blue;
-	mesh.color4f[3] = mesh.color4f[7] = mesh.color4f[11] = mesh.color4f[15] = alpha;
-	DrawQ_Mesh (&mesh, flags);
-#else
-	int size;
-	drawqueue_t *dq;
-	if (alpha < (1.0f / 255.0f) || !picname || !picname[0])
-		return;
-	size = sizeof(*dq) + ((strlen(picname) + 1 + 3) & ~3);
-	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
-		return;
-	red = bound(0, red, 1);
-	green = bound(0, green, 1);
-	blue = bound(0, blue, 1);
-	alpha = bound(0, alpha, 1);
-	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = size;
-	dq->command = DRAWQUEUE_PIC;
-	dq->flags = flags;
-	dq->color = ((unsigned int) (red * 255.0f) << 24) | ((unsigned int) (green * 255.0f) << 16) | ((unsigned int) (blue * 255.0f) << 8) | ((unsigned int) (alpha * 255.0f));
-	dq->x = x;
-	dq->y = y;
-	// if these are not zero, they override the pic's size
-	dq->scalex = width;
-	dq->scaley = height;
-	strcpy((char *)(dq + 1), picname);
-	r_refdef.drawqueuesize += dq->size;
-#endif
 }
 
 void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
@@ -595,55 +540,7 @@ void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex
 
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags)
 {
-#if 1
 	DrawQ_SuperPic(x,y,NULL,w,h,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
-#elif 1
-	float floats[48];
-	drawqueuemesh_t mesh;
-	if (alpha < (1.0f / 255.0f))
-		return;
-	mesh.texture = NULL;
-	mesh.numtriangles = 2;
-	mesh.numvertices = 4;
-	mesh.indices = picelements;
-	mesh.vertex3f = floats;
-	mesh.texcoord2f = floats + 16;
-	mesh.color4f = floats + 32;
-	memset(floats, 0, sizeof(floats));
-	mesh.vertex3f[0] = mesh.vertex3f[12] = x;
-	mesh.vertex3f[1] = mesh.vertex3f[5] = y;
-	mesh.vertex3f[4] = mesh.vertex3f[8] = x + w;
-	mesh.vertex3f[9] = mesh.vertex3f[13] = y + h;
-	mesh.color4f[0] = mesh.color4f[4] = mesh.color4f[8] = mesh.color4f[12] = red;
-	mesh.color4f[1] = mesh.color4f[5] = mesh.color4f[9] = mesh.color4f[13] = green;
-	mesh.color4f[2] = mesh.color4f[6] = mesh.color4f[10] = mesh.color4f[14] = blue;
-	mesh.color4f[3] = mesh.color4f[7] = mesh.color4f[11] = mesh.color4f[15] = alpha;
-	DrawQ_Mesh (&mesh, flags);
-#else
-	int size;
-	drawqueue_t *dq;
-	if (alpha < (1.0f / 255.0f))
-		return;
-	size = sizeof(*dq) + 4;
-	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
-		return;
-	red = bound(0, red, 1);
-	green = bound(0, green, 1);
-	blue = bound(0, blue, 1);
-	alpha = bound(0, alpha, 1);
-	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
-	dq->size = size;
-	dq->command = DRAWQUEUE_PIC;
-	dq->flags = flags;
-	dq->color = ((unsigned int) (red * 255.0f) << 24) | ((unsigned int) (green * 255.0f) << 16) | ((unsigned int) (blue * 255.0f) << 8) | ((unsigned int) (alpha * 255.0f));
-	dq->x = x;
-	dq->y = y;
-	dq->scalex = w;
-	dq->scaley = h;
-	// empty pic name
-	*((char *)(dq + 1)) = 0;
-	r_refdef.drawqueuesize += dq->size;
-#endif
 }
 
 void DrawQ_SuperPic(float x, float y, char *picname, float width, float height, float s1, float t1, float r1, float g1, float b1, float a1, float s2, float t2, float r2, float g2, float b2, float a2, float s3, float t3, float r3, float g3, float b3, float a3, float s4, float t4, float r4, float g4, float b4, float a4, int flags)

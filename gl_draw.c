@@ -377,7 +377,6 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
-float blendtexcoord2f[6] = {0, 0, 0, 0, 0, 0};
 float blendvertex3f[9] = {-5000, -5000, 10, 10000, -5000, 10, -5000, 10000, 10};
 
 int quadelements[768];
@@ -442,7 +441,6 @@ void R_DrawQueue(void)
 		else
 			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 		m.depthdisable = true;
-		R_Mesh_MainState(&m);
 
 		c[0] = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
 		c[1] = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
@@ -455,46 +453,12 @@ void R_DrawQueue(void)
 
 		switch(dq->command)
 		{
-		case DRAWQUEUE_PIC:
-			str = (char *)(dq + 1);
-			if (strcmp(str, currentpic))
-			{
-				currentpic = str;
-				if (*str)
-				{
-					pic = Draw_CachePic(str);
-					m.tex[0] = R_GetTexture(pic->tex);
-				}
-				else
-					m.tex[0] = 0;
-				R_Mesh_TextureState(&m);
-			}
-			if (*str)
-			{
-				if (w == 0)
-					w = pic->width;
-				if (h == 0)
-					h = pic->height;
-			}
-			GL_Color(c[0], c[1], c[2], c[3]);
-			R_Mesh_GetSpace(4);
-			varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 0;
-			varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
-			varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 1;
-			varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
-			varray_vertex3f[ 0] = x  ;varray_vertex3f[ 1] = y  ;varray_vertex3f[ 2] = 10;
-			varray_vertex3f[ 3] = x+w;varray_vertex3f[ 4] = y  ;varray_vertex3f[ 5] = 10;
-			varray_vertex3f[ 6] = x+w;varray_vertex3f[ 7] = y+h;varray_vertex3f[ 8] = 10;
-			varray_vertex3f[ 9] = x  ;varray_vertex3f[10] = y+h;varray_vertex3f[11] = 10;
-			R_Mesh_Draw(4, 2, quadelements);
-			break;
 		case DRAWQUEUE_STRING:
 			str = (char *)(dq + 1);
 			if (strcmp("gfx/conchars", currentpic))
 			{
 				currentpic = "gfx/conchars";
 				m.tex[0] = chartexnum;
-				R_Mesh_TextureState(&m);
 			}
 			batchcount = 0;
 			at = texttexcoords;
@@ -521,9 +485,25 @@ void R_DrawQueue(void)
 					batchcount++;
 					if (batchcount >= 128)
 					{
-						R_Mesh_GetSpace(batchcount * 4);
-						R_Mesh_CopyVertex3f(textverts, batchcount * 4);
-						R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
+						if (gl_mesh_copyarrays.integer)
+						{
+							m.pointervertexcount = 0;
+							m.pointer_vertex = NULL;
+							m.pointer_texcoord[0] = NULL;
+							m.pointer_color = NULL;
+							R_Mesh_State(&m);
+							R_Mesh_GetSpace(batchcount * 4);
+							R_Mesh_CopyVertex3f(textverts, batchcount * 4);
+							R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
+						}
+						else
+						{
+							m.pointervertexcount = batchcount * 4;
+							m.pointer_vertex = textverts;
+							m.pointer_texcoord[0] = texttexcoords;
+							m.pointer_color = NULL;
+							R_Mesh_State(&m);
+						}
 						R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 						batchcount = 0;
 						at = texttexcoords;
@@ -534,21 +514,52 @@ void R_DrawQueue(void)
 			}
 			if (batchcount > 0)
 			{
-				R_Mesh_GetSpace(batchcount * 4);
-				R_Mesh_CopyVertex3f(textverts, batchcount * 4);
-				R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
+				if (gl_mesh_copyarrays.integer)
+				{
+					m.pointervertexcount = 0;
+					m.pointer_vertex = NULL;
+					m.pointer_texcoord[0] = NULL;
+					m.pointer_color = NULL;
+					R_Mesh_State(&m);
+					R_Mesh_GetSpace(batchcount * 4);
+					R_Mesh_CopyVertex3f(textverts, batchcount * 4);
+					R_Mesh_CopyTexCoord2f(0, texttexcoords, batchcount * 4);
+				}
+				else
+				{
+					m.pointervertexcount = batchcount * 4;
+					m.pointer_vertex = textverts;
+					m.pointer_texcoord[0] = texttexcoords;
+					m.pointer_color = NULL;
+					R_Mesh_State(&m);
+				}
 				R_Mesh_Draw(batchcount * 4, batchcount * 2, quadelements);
 			}
 			break;
 		case DRAWQUEUE_MESH:
 			mesh = (void *)(dq + 1);
 			m.tex[0] = R_GetTexture(mesh->texture);
-			R_Mesh_TextureState(&m);
 			GL_UseColorArray();
-			R_Mesh_GetSpace(mesh->numvertices);
-			R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numvertices);
-			R_Mesh_CopyTexCoord2f(0, mesh->texcoord2f, mesh->numvertices);
-			R_Mesh_CopyColor4f(mesh->color4f, mesh->numvertices);
+			if (gl_mesh_copyarrays.integer)
+			{
+				m.pointervertexcount = 0;
+				m.pointer_vertex = NULL;
+				m.pointer_texcoord[0] = NULL;
+				m.pointer_color = NULL;
+				R_Mesh_State(&m);
+				R_Mesh_GetSpace(mesh->numvertices);
+				R_Mesh_CopyVertex3f(mesh->vertex3f, mesh->numvertices);
+				R_Mesh_CopyTexCoord2f(0, mesh->texcoord2f, mesh->numvertices);
+				R_Mesh_CopyColor4f(mesh->color4f, mesh->numvertices);
+			}
+			else
+			{
+				m.pointervertexcount = mesh->numvertices;
+				m.pointer_vertex = mesh->vertex3f;
+				m.pointer_texcoord[0] = mesh->texcoord2f;
+				m.pointer_color = mesh->color4f;
+				R_Mesh_State(&m);
+			}
 			R_Mesh_Draw(mesh->numvertices, mesh->numtriangles, mesh->element3i);
 			currentpic = "\0";
 			break;
@@ -573,13 +584,21 @@ void R_DrawQueue(void)
 		{
 			m.blendfunc1 = GL_DST_COLOR;
 			m.blendfunc2 = GL_ONE;
-			R_Mesh_State(&m);
+			if (gl_mesh_copyarrays.integer)
+			{
+				R_Mesh_State(&m);
+				R_Mesh_GetSpace(3);
+				R_Mesh_CopyVertex3f(blendvertex3f, 3);
+			}
+			else
+			{
+				m.pointervertexcount = 3;
+				m.pointer_vertex = blendvertex3f;
+				R_Mesh_State(&m);
+			}
 			while (c[0] >= 1.01f || c[1] >= 1.01f || c[2] >= 1.01f)
 			{
 				GL_Color(bound(0, c[0] - 1, 1), bound(0, c[1] - 1, 1), bound(0, c[2] - 1, 1), 1);
-				R_Mesh_GetSpace(3);
-				R_Mesh_CopyVertex3f(blendvertex3f, 3);
-				R_Mesh_CopyTexCoord2f(0, blendtexcoord2f, 3);
 				R_Mesh_Draw(3, 1, polygonelements);
 				VectorScale(c, 0.5, c);
 			}
@@ -596,11 +615,21 @@ void R_DrawQueue(void)
 		{
 			m.blendfunc1 = GL_ONE;
 			m.blendfunc2 = GL_ONE;
-			R_Mesh_State(&m);
+			if (gl_mesh_copyarrays.integer)
+			{
+				m.pointervertexcount = 0;
+				m.pointer_vertex = NULL;
+				R_Mesh_State(&m);
+				R_Mesh_GetSpace(3);
+				R_Mesh_CopyVertex3f(blendvertex3f, 3);
+			}
+			else
+			{
+				m.pointervertexcount = 3;
+				m.pointer_vertex = blendvertex3f;
+				R_Mesh_State(&m);
+			}
 			GL_Color(c[0], c[1], c[2], 1);
-			R_Mesh_GetSpace(3);
-			R_Mesh_CopyVertex3f(blendvertex3f, 3);
-			R_Mesh_CopyTexCoord2f(0, blendtexcoord2f, 3);
 			R_Mesh_Draw(3, 1, polygonelements);
 		}
 	}

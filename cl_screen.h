@@ -3,9 +3,8 @@
 #define CL_SCREEN_H
 
 // drawqueue stuff for use by client to feed 2D art to renderer
-#define DRAWQUEUE_PIC 0
-#define DRAWQUEUE_STRING 1
-#define DRAWQUEUE_MESH 2
+#define DRAWQUEUE_STRING 0
+#define DRAWQUEUE_MESH 1
 
 typedef struct drawqueue_s
 {
