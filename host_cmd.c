@@ -241,15 +241,15 @@ SERVER TRANSITIONS
 ======================
 Host_Map_f
 
-handle a 
+handle a
 map <servername>
 command from the console.  Active clients are kicked off.
 ======================
 */
 void Host_Map_f (void)
 {
-	int		i;
-	char	name[MAX_QPATH];
+	int i;
+	char name[MAX_QPATH];
 
 	if (cmd_source != src_command)
 		return;
@@ -259,7 +259,7 @@ void Host_Map_f (void)
 	SCR_BeginLoadingPlaque ();
 
 	CL_Disconnect ();
-	Host_ShutdownServer(false);		
+	Host_ShutdownServer(false);
 
 	key_dest = key_game;			// remove console or menu
 
@@ -276,9 +276,10 @@ void Host_Map_f (void)
 	SV_SpawnServer (name);
 	if (!sv.active)
 		return;
-	
+
 	if (cls.state != ca_dedicated)
 	{
+		/*
 		strcpy (cls.spawnparms, "");
 
 		for (i=2 ; i<Cmd_Argc() ; i++)
@@ -286,9 +287,9 @@ void Host_Map_f (void)
 			strcat (cls.spawnparms, Cmd_Argv(i));
 			strcat (cls.spawnparms, " ");
 		}
-		
+		*/
 		Cmd_ExecuteString ("connect local", src_command);
-	}	
+	}
 }
 
 /*
@@ -1019,7 +1020,8 @@ void Host_Spawn_f (void)
 
 // run the entrance script
 	if (sv.loadgame)
-	{	// loaded games are fully inited already
+	{
+		// loaded games are fully initialized already
 		// if this is the last client to be connected, unpause
 		sv.paused = false;
 
@@ -1079,7 +1081,7 @@ void Host_Spawn_f (void)
 		MSG_WriteByte (&host_client->message, i);
 		MSG_WriteByte (&host_client->message, client->colors);
 	}
-	
+
 // send all current light styles
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
