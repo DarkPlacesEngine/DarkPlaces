@@ -223,6 +223,7 @@ float RadiusFromBoundsAndOrigin (const vec3_t mins, const vec3_t maxs, const vec
 // print a matrix to the console
 struct matrix4x4_s;
 void Matrix4x4_Print(const struct matrix4x4_s *in);
+int Math_atov(const char *s, vec3_t out);
 
 #endif
 

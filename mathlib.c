@@ -518,3 +518,25 @@ void Matrix4x4_Print (const matrix4x4_t *in)
 	, in->m[2][0], in->m[2][1], in->m[2][2], in->m[2][3]
 	, in->m[3][0], in->m[3][1], in->m[3][2], in->m[3][3]);
 }
+
+int Math_atov(const char *s, vec3_t out)
+{
+	int i;
+	VectorClear(out);
+	if (*s == '\'')
+		s++;
+	for (i = 0;i < 3;i++)
+	{
+		while (*s == ' ' || *s == '\t')
+			s++;
+		out[i] = atof (s);
+		if (out[i] == 0 && *s != '-' && *s != '+' && (*s < '0' || *s > '9'))
+			break; // not a number
+		while (*s && *s != ' ' && *s !='\t' && *s != '\'')
+			s++;
+		if (*s == '\'')
+			break;
+	}
+	return i;
+}
+
