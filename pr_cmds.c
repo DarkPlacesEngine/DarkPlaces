@@ -2765,7 +2765,7 @@ void PF_stof(void)
 //float(string filename, float mode) fopen = #110; // opens a file inside quake/gamedir/data/ (mode is FILE_READ, FILE_APPEND, or FILE_WRITE), returns fhandle >= 0 if successful, or fhandle < 0 if unable to open file for any reason
 void PF_fopen(void)
 {
-	int filenum, mode;
+	int filenum, mode, i;
 	char *modestring, *filename;
 	for (filenum = 0;filenum < MAX_PRFILES;filenum++)
 		if (pr_files[filenum] == NULL)
@@ -2794,15 +2794,20 @@ void PF_fopen(void)
 		return;
 	}
 	filename = G_STRING(OFS_PARM0);
-	// .. is parent directory on many platforms
-	// / is parent directory on Amiga
+	// control characters do not cause issues with any platforms I know of, but they are usually annoying to deal with
+	// ../ is parent directory on many platforms
+	// // is parent directory on Amiga
+	// / at the beginning of a path is root on unix, and parent directory on Amiga
 	// : is root of drive on Amiga (also used as a directory separator on Mac, but / works there too, so that's a bad idea)
 	// \ is a windows-ism (so it's naughty to use it, / works on all platforms)
-	if ((filename[0] == '.' && filename[1] == '.') || filename[0] == '/' || strrchr(filename, ':') || strrchr(filename, '\\'))
+	for (i = 0;filename[i];i++)
 	{
-		Con_Printf("PF_fopen: dangerous or non-portable filename \"%s\" not allowed. (contains : or \\ or begins with .. or /)\n", filename);
-		G_FLOAT(OFS_RETURN) = -4;
-		return;
+		if (filename[i] < ' ' || (filename[i] == '/' && filename[i+1] == '/') || (filename[i] == '.' && filename[i+1] == '.') || filename[i] == ':' || filename[i] == '\\' || filename[0] == '/')
+		{
+			Con_Printf("PF_fopen: dangerous/confusing/annoying/non-portable filename \"%s\" not allowed. (contains control characters or // or .. or : or \\ or begins with /)\n", filename);
+			G_FLOAT(OFS_RETURN) = -4;
+			return;
+		}
 	}
 	pr_files[filenum] = FS_Open(va("data/%s", filename), modestring, false);
 
