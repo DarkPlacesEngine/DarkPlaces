@@ -777,26 +777,21 @@ loc0:
 				if (!(surf->flags & SURF_LIGHTMAP))
 					continue;	// no lightmaps
 
-				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3]);
-				dt = (int) (x * surf->texinfo->vecs[1][0] + y * surf->texinfo->vecs[1][1] + mid * surf->texinfo->vecs[1][2] + surf->texinfo->vecs[1][3]);
-
-				if (ds < surf->texturemins[0] || dt < surf->texturemins[1])
-					continue;
-
-				ds -= surf->texturemins[0];
-				dt -= surf->texturemins[1];
-
-				if (ds > surf->extents[0] || dt > surf->extents[1])
-					continue;
+				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3])- surf->texturemins[0];
+				dt = (int) (x * surf->texinfo->vecs[1][0] + y * surf->texinfo->vecs[1][1] + mid * surf->texinfo->vecs[1][2] + surf->texinfo->vecs[1][3]) - surf->texturemins[1];
+				ds = bound(0, ds, surf->extents[0]);
+				dt = bound(0, dt, surf->extents[1]);
 
 				if (surf->samples)
 				{
 					qbyte *lightmap;
-					int maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
-					line3 = ((surf->extents[0]>>4)+1)*3;
-					size3 = ((surf->extents[0]>>4)+1) * ((surf->extents[1]>>4)+1)*3; // LordHavoc: *3 for colored lighting
+					int lmwidth, lmheight, maps, line3, size3, dsfrac = ds & 15, dtfrac = dt & 15, scale = 0, r00 = 0, g00 = 0, b00 = 0, r01 = 0, g01 = 0, b01 = 0, r10 = 0, g10 = 0, b10 = 0, r11 = 0, g11 = 0, b11 = 0;
+					lmwidth = ((surf->extents[0]>>4)+1);
+					lmheight = ((surf->extents[1]>>4)+1);
+					line3 = lmwidth * 3; // LordHavoc: *3 for colored lighting
+					size3 = lmwidth * lmheight * 3; // LordHavoc: *3 for colored lighting
 
-					lightmap = surf->samples + ((dt>>4) * ((surf->extents[0]>>4)+1) + (ds>>4))*3; // LordHavoc: *3 for color
+					lightmap = surf->samples + ((dt>>4) * lmwidth + (ds>>4))*3; // LordHavoc: *3 for colored lighting
 
 					for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
 					{
