@@ -22,17 +22,19 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 
+cvar_t sv_public = {0, "sv_public", "0"};
+cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
+
 cvar_t sv_masters [] =
 {
+	{0, "sv_masterextra1", "68.102.242.12"},
 	{CVAR_SAVE, "sv_master1", ""},
 	{CVAR_SAVE, "sv_master2", ""},
 	{CVAR_SAVE, "sv_master3", ""},
 	{CVAR_SAVE, "sv_master4", ""}
 };
 
-static qboolean masteravailable = false;
 static double nextheartbeattime = 0;
-static unsigned int nbtries = 6;
 
 
 /*
@@ -44,30 +46,28 @@ Allow (or not) NET_Heartbeat to proceed depending on various factors
 */
 qboolean Master_AllowHeartbeat (int priority)
 {
-	// We try "nbtries" times to contact a master server before giving up
-	if (! masteravailable)
-	{
-		if (!nbtries || realtime < nextheartbeattime)
-			return false;
-
-		nbtries--;
-	}
-	else
-	{
-		// if it's a state change, it can wait a little bit (30 sec max for now)
-		if (priority == 1 && nextheartbeattime - realtime > 30.0)
-		{
-			nextheartbeattime = realtime + 30.0;
-			return false;
-		}
-
-		if (priority <= 1 && realtime < nextheartbeattime)
-			return false;
-	}
-
-	// send an heartbeat every 3 minutes by default (every 5 sec if we haven't yet found a master server)
-	// TODO: some cvars would be better than hardcoded values
-	nextheartbeattime = realtime + (masteravailable ? (3.0 * 60.0) : 5.0);
+	// LordHavoc: make advertising optional
+	if (!sv_public.integer)
+		return false;
+	// LordHavoc: don't advertise singleplayer games
+	if (svs.maxclients < 2)
+		return false;
+	// if it's a state change (client connected), limit next heartbeat to no
+	// more than 30 sec in the future
+	if (priority == 1 && nextheartbeattime > realtime + 30.0)
+		nextheartbeattime = realtime + 30.0;
+	if (priority <= 1 && realtime < nextheartbeattime)
+		return false;
+	// limit heartbeatperiod to 30 to 270 second range,
+	// lower limit is to avoid abusing master servers with excess traffic,
+	// upper limit is to avoid timing out on the master server (which uses
+	// 300 sec timeout)
+	if (sv_heartbeatperiod.value < 30)
+		Cvar_SetValueQuick(&sv_heartbeatperiod, 30);
+	if (sv_heartbeatperiod.value > 270)
+		Cvar_SetValueQuick(&sv_heartbeatperiod, 270);
+	// send a heartbeat as often as the admin wants
+	nextheartbeattime = realtime + sv_heartbeatperiod.value;
 	return true;
 }
 
@@ -84,7 +84,7 @@ const char* Master_BuildGetServers (void)
 	static int nextmaster = 0;
 	cvar_t* sv_master;
 	char request [256];
-	
+
 	if (nextmaster >= sizeof (sv_masters) / sizeof (sv_masters[0]))
 	{
 		nextmaster = 0;
@@ -99,7 +99,7 @@ const char* Master_BuildGetServers (void)
 		nextmaster = 0;
 		return NULL;
 	}
-	
+
 	// Build the heartbeat
 	snprintf (request, sizeof (request), "getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
 	SZ_Clear (&net_message);
@@ -138,7 +138,7 @@ const char* Master_BuildHeartbeat (void)
 		nextmaster = 0;
 		return NULL;
 	}
-	
+
 	// Build the heartbeat
 	SZ_Clear (&net_message);
 	MSG_WriteLong (&net_message, -1);
@@ -166,8 +166,6 @@ int Master_HandleMessage (void)
 	{
 		char response [512];
 		size_t length;
-
-		masteravailable = true;
 
 		length = snprintf (response, sizeof (response), "infoResponse\x0A"
 					"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"
@@ -212,6 +210,8 @@ Initialize the code that handles master server requests and reponses
 void Master_Init (void)
 {
 	unsigned int ind;
+	Cvar_RegisterVariable (&sv_public);
+	Cvar_RegisterVariable (&sv_heartbeatperiod);
 	for (ind = 0; ind < sizeof (sv_masters) / sizeof (sv_masters[0]); ind++)
 		Cvar_RegisterVariable (&sv_masters[ind]);
 }
