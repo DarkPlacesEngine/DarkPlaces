@@ -211,7 +211,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 
 	if (fread(lumps, sizeof(lumpinfo_t), numlumps, file) != numlumps)
 	{Con_Printf ("W_LoadTextureWadFile: unable to read lump table");return;}
-	
+
 	for (i=0, lump_p = lumps ; i<numlumps ; i++,lump_p++)
 	{
 		W_CleanupName (lump_p->name, lump_p->name);
@@ -236,7 +236,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	// leaves the file open
 }
 
-
+/*
 byte hlpalette[768] =
 {
 	0x00,0x00,0x00,0x0F,0x0F,0x0F,0x1F,0x1F,0x1F,0x2F,0x2F,0x2F,0x3F,0x3F,0x3F,0x4B,
@@ -288,31 +288,78 @@ byte hlpalette[768] =
 	0xE7,0xFF,0xD7,0xFF,0xFF,0x67,0x00,0x00,0x8B,0x00,0x00,0xB3,0x00,0x00,0xD7,0x00,
 	0x00,0xFF,0x00,0x00,0xFF,0xF3,0x93,0xFF,0xF7,0xC7,0xFF,0xFF,0xFF,0x9F,0x5B,0x53,
 };
+*/
 
-byte *W_GetTexture(char *name, int matchwidth, int matchheight)
+byte *W_ConvertWAD3Texture(miptex_t *tex)
 {
-	int i, c, datasize;
-	short colorcount;
-	FILE *file;
-	struct
+	byte *in, *data, *out, *pal;
+//	int palsize;
+	int d, p;
+	in = (byte *)((int) tex + tex->offsets[0]);
+	data = out = qmalloc(tex->width * tex->height * 4);
+	if (!data)
+		return NULL;
+	image_width = tex->width;
+	image_height = tex->height;
+	pal = in + (((image_width * image_height) * 85) >> 6);
+//	palsize = pal[1] * 0x100 + pal[0];
+//	if (palsize >= 256)
+//		palsize = 256;
+	pal += 2;
+	for (d = 0;d < image_width * image_height;d++)
 	{
-		char name[16];
-		int width;
-		int height;
-		int ofs[4];
-	} t;
-	byte pal[256][3], *indata, *outdata, *data;
+		p = *in++;
+		if (tex->name[0] == '{' && p == 255)
+			out[0] = out[1] = out[2] = out[3] = 0;
+		else
+		{
+			p *= 3;
+			out[0] = pal[p];
+			out[1] = pal[p+1];
+			out[2] = pal[p+2];
+			out[3] = 255;
+		}
+		out += 4;
+	}
+	return data;
+}
+
+byte *W_GetTexture(char *name)
+{
+//	int i, c, datasize;
+//	short colorcount;
+//	byte pal[256][3], *indata, *outdata, *data;
+	char texname[17];
+	int i, j;
+	FILE *file;
+	miptex_t *tex;
+	byte *data;
+	texname[16] = 0;
+	W_CleanupName (name, texname);
 	for (i = 0;i < TEXWAD_MAXIMAGES;i++)
 	{
 		if (texwadlump[i].name[0])
 		{
-			if (!strcmp(name, texwadlump[i].name)) // found it
+			if (!strcmp(texname, texwadlump[i].name)) // found it
 			{
 				file = texwadlump[i].file;
 				if (fseek(file, texwadlump[i].position, SEEK_SET))
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
-				if (fread(&t, sizeof(t), 1, file) != 1)
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
+
+				tex = qmalloc(texwadlump[i].size);
+				if (!tex)
+					return NULL;
+				if (fread(tex, 1, texwadlump[i].size, file) < texwadlump[i].size)
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
+
+				tex->width = LittleLong(tex->width);
+				tex->height = LittleLong(tex->height);
+				for (j = 0;j < MIPLEVELS;j++)
+					tex->offsets[j] = LittleLong(tex->offsets[j]);
+				data = W_ConvertWAD3Texture(tex);
+				qfree(tex);
+				return data;
+				/*
 				image_width = LittleLong(t.width);
 				image_height = LittleLong(t.height);
 				if (matchwidth && image_width != matchwidth)
@@ -320,23 +367,23 @@ byte *W_GetTexture(char *name, int matchwidth, int matchheight)
 				if (matchheight && image_height != matchheight)
 					continue;
 				if (image_width & 15 || image_height & 15)
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				// allocate space for expanded image,
 				// and load incoming image into upper area (overwritten as it expands)
 				if (!(data = outdata = qmalloc(image_width*image_height*4)))
-				{Con_Printf("W_GetTexture: out of memory");return FALSE;}
+				{Con_Printf("W_GetTexture: out of memory");return NULL;}
 				indata = outdata + image_width*image_height*3;
 				datasize = image_width*image_height*85/64;
 				// read the image data
 				if (fseek(file, texwadlump[i].position + sizeof(t), SEEK_SET))
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				if (fread(indata, 1, image_width*image_height, file) != image_width*image_height)
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				// read the number of colors used (always 256)
 				if (fseek(file, texwadlump[i].position + sizeof(t) + datasize, SEEK_SET))
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				if (fread(&colorcount, 2, 1, file) != 1)
-				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				if (texwadlump[i].size > (datasize + sizeof(t)))
 				{
 					colorcount = LittleShort(colorcount);
@@ -346,7 +393,7 @@ byte *W_GetTexture(char *name, int matchwidth, int matchheight)
 					// read the palette
 	//				fseek(file, texwadlump[i].position + sizeof(t) + datasize + 2, SEEK_SET);
 					if (fread(&pal, 3, colorcount, file) != colorcount)
-					{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
+					{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				}
 				else
 					memcpy(&pal, hlpalette, 768);
@@ -366,6 +413,7 @@ byte *W_GetTexture(char *name, int matchwidth, int matchheight)
 					outdata += 4;
 				}
 				return data;
+				*/
 			}
 		}
 		else

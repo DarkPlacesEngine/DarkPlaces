@@ -191,7 +191,7 @@ void IN_ShowMouse (void)
 
 	if (!mouseshowtoggle)
 	{
-		ShowCursor (TRUE);
+		ShowCursor (true);
 		mouseshowtoggle = 1;
 	}
 }
@@ -207,7 +207,7 @@ void IN_HideMouse (void)
 
 	if (mouseshowtoggle)
 	{
-		ShowCursor (FALSE);
+		ShowCursor (false);
 		mouseshowtoggle = 0;
 	}
 }
@@ -319,8 +319,8 @@ void IN_RestoreOriginalMouseState (void)
 
 // try to redraw the cursor so it gets reinitialized, because sometimes it
 // has garbage after the mode switch
-	ShowCursor (TRUE);
-	ShowCursor (FALSE);
+	ShowCursor (true);
+	ShowCursor (false);
 }
 
 

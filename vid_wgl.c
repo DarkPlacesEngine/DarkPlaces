@@ -168,7 +168,7 @@ qboolean VID_SetWindowedMode (int modenum)
 	ExWindowStyle = 0;
 
 	rect = WindowRect;
-	AdjustWindowRectEx(&rect, WindowStyle, FALSE, 0);
+	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
 
 	width = rect.right - rect.left;
 	height = rect.bottom - rect.top;
@@ -194,8 +194,8 @@ qboolean VID_SetWindowedMode (int modenum)
 	vid.width = vid.conwidth;
 	vid.height = vid.conheight;
 
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)TRUE, (LPARAM)hIcon);
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)FALSE, (LPARAM)hIcon);
+	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
+	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
 
 	return true;
 }
@@ -234,7 +234,7 @@ qboolean VID_SetFullDIBMode (int modenum)
 	ExWindowStyle = 0;
 
 	rect = WindowRect;
-	AdjustWindowRectEx(&rect, WindowStyle, FALSE, 0);
+	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
 
 	width = rect.right - rect.left;
 	height = rect.bottom - rect.top;
@@ -259,8 +259,8 @@ qboolean VID_SetFullDIBMode (int modenum)
 	window_x = 0;
 	window_y = 0;
 
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)TRUE, (LPARAM)hIcon);
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)FALSE, (LPARAM)hIcon);
+	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
+	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
 
 	return true;
 }
@@ -566,16 +566,16 @@ BOOL bSetupPixelFormat(HDC hDC)
     if ( (pixelformat = ChoosePixelFormat(hDC, &pfd)) == 0 )
     {
         MessageBox(NULL, "ChoosePixelFormat failed", "Error", MB_OK);
-        return FALSE;
+        return false;
     }
 
-    if (SetPixelFormat(hDC, pixelformat, &pfd) == FALSE)
+    if (SetPixelFormat(hDC, pixelformat, &pfd) == false)
     {
         MessageBox(NULL, "SetPixelFormat failed", "Error", MB_OK);
-        return FALSE;
+        return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 

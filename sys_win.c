@@ -612,7 +612,7 @@ WinMain
 void SleepUntilInput (int time)
 {
 
-	MsgWaitForMultipleObjects(1, &tevent, FALSE, time, QS_ALLINPUT);
+	MsgWaitForMultipleObjects(1, &tevent, false, time, QS_ALLINPUT);
 }
 
 
@@ -723,7 +723,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 //	Sys_PageIn (parms.membase, parms.memsize);
 
-	tevent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	tevent = CreateEvent(NULL, false, false, NULL);
 
 	if (!tevent)
 		Sys_Error ("Couldn't create event");
@@ -821,6 +821,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	}
 
     /* return success of application */
-    return TRUE;
+    return true;
 }
 

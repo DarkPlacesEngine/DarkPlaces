@@ -41,7 +41,7 @@ void	R_InitTextures (void)
 	r_notexture_mip->offsets[1] = r_notexture_mip->offsets[0] + 16*16;
 	r_notexture_mip->offsets[2] = r_notexture_mip->offsets[1] + 8*8;
 	r_notexture_mip->offsets[3] = r_notexture_mip->offsets[2] + 4*4;
-	r_notexture_mip->transparent = FALSE;
+	r_notexture_mip->transparent = false;
 	
 	for (m=0 ; m<4 ; m++)
 	{

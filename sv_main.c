@@ -545,7 +545,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 // send an update
 		bits = 0;
 
-		dodelta = FALSE;
+		dodelta = false;
 		if ((int)ent->v.effects & EF_DELTA)
 			dodelta = sv.time < client->nextfullupdate[e]; // every half second a full update is forced
 

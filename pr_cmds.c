@@ -95,11 +95,11 @@ qboolean checkextension(char *name)
 		if (!*e)
 			break;
 		if (!strncasecmp(e, name, len))
-			return TRUE;
+			return true;
 		while (*e && *e != ' ')
 			e++;
 	}
-	return FALSE;
+	return false;
 }
 
 /*

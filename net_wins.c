@@ -71,7 +71,7 @@ BOOL PASCAL FAR BlockingHook(void)
 	if ((Sys_FloatTime() - blocktime) > 2.0)
 	{
 		WSACancelBlockingCall();
-		return FALSE;
+		return false;
 	}
 
     /* get the next message, if any */ 
@@ -83,7 +83,7 @@ BOOL PASCAL FAR BlockingHook(void)
         DispatchMessage(&msg); 
     } 
  
-    /* TRUE if we got a message */ 
+    /* true if we got a message */ 
     return ret; 
 } 
 
