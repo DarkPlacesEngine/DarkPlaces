@@ -38,19 +38,19 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 	entity_render_t *ent;
 	float tracemins[3], tracemaxs[3];
 	trace_t trace;
+	matrix4x4_t matrix, imatrix;
+	float tempnormal[3], starttransformed[3], endtransformed[3];
 
 	if (hitent)
 		*hitent = NULL;
 	Mod_CheckLoaded(cl.worldmodel);
 	if (cl.worldmodel && cl.worldmodel->brush.TraceBox)
-		cl.worldmodel->brush.TraceBox(cl.worldmodel, vec3_origin, vec3_origin, &trace, NULL, start, vec3_origin, vec3_origin, end);
-	else
-		Collision_ClipTrace(&trace, NULL, cl.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, start, vec3_origin, vec3_origin, end);
+		cl.worldmodel->brush.TraceBox(cl.worldmodel, &trace, start, start, end, end);
 
 	if (impact)
-		VectorCopy (trace.endpos, impact);
+		VectorLerp(start, trace.fraction, end, impact);
 	if (normal)
-		VectorCopy (trace.plane.normal, normal);
+		VectorCopy(trace.plane.normal, normal);
 	cl_traceline_endcontents = trace.endcontents;
 	maxfrac = trace.fraction;
 	if (hitent && trace.fraction < 1)
@@ -72,23 +72,32 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 			if (ent->mins[0] > tracemaxs[0] || ent->maxs[0] < tracemins[0]
 			 || ent->mins[1] > tracemaxs[1] || ent->maxs[1] < tracemins[1]
 			 || ent->mins[2] > tracemaxs[2] || ent->maxs[2] < tracemins[2])
-			 	continue;
+				continue;
+
+			Matrix4x4_CreateFromQuakeEntity(&matrix, ent->origin[0], ent->origin[1], ent->origin[2], ent->angles[0], ent->angles[1], ent->angles[2], 1);
+			Matrix4x4_Invert_Simple(&imatrix, &matrix);
+			Matrix4x4_Transform(&imatrix, start, starttransformed);
+			Matrix4x4_Transform(&imatrix, end, endtransformed);
 
 			if (ent->model && ent->model->brush.TraceBox)
-				ent->model->brush.TraceBox(ent->model, ent->origin, ent->angles, &trace, NULL, start, vec3_origin, vec3_origin, end);
-			else
-				Collision_ClipTrace(&trace, ent, ent->model, ent->origin, ent->angles, ent->mins, ent->maxs, start, vec3_origin, vec3_origin, end);
+				ent->model->brush.TraceBox(ent->model, &trace, starttransformed, starttransformed, endtransformed, endtransformed);
 
-			if (trace.allsolid || trace.startsolid || trace.fraction < maxfrac)
+			if (trace.allsolid || trace.startsolid || maxfrac > trace.fraction)
 			{
-				maxfrac = trace.fraction;
-				if (impact)
-					VectorCopy(trace.endpos, impact);
-				if (normal)
-					VectorCopy(trace.plane.normal, normal);
 				cl_traceline_endcontents = trace.endcontents;
 				if (hitent)
 					*hitent = ent;
+				if (maxfrac > trace.fraction)
+				{
+					maxfrac = trace.fraction;
+					if (impact)
+						VectorLerp(start, trace.fraction, end, impact);
+					if (normal)
+					{
+						VectorCopy(trace.plane.normal, tempnormal);
+						Matrix4x4_Transform3x3(&matrix, tempnormal, normal);
+					}
+				}
 			}
 		}
 	}
@@ -105,9 +114,13 @@ void CL_FindNonSolidLocation(const vec3_t in, vec3_t out, vec_t radius)
 
 int CL_PointContents(const vec3_t p)
 {
+	CL_TraceLine (p, p, NULL, NULL, 0, true, NULL);
+	return cl_traceline_endcontents;
+	/*
 	// FIXME: check multiple brush models
-	if (cl.worldmodel && cl.worldmodel->brush.PointContents)
-		return cl.worldmodel->brush.PointContents(cl.worldmodel, p);
-	return CONTENTS_EMPTY;
+	if (cl.worldmodel && cl.worldmodel->brush.PointContentsQ1)
+		return cl.worldmodel->brush.PointContentsQ1(cl.worldmodel, p);
+	return 0;
+	*/
 }
 

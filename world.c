@@ -453,11 +453,14 @@ Handles selection or creation of a clipping hull, and offseting (and
 eventually rotation) of the end points
 ==================
 */
-trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
+trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
 {
 	int i;
 	trace_t trace;
 	model_t *model = NULL;
+	matrix4x4_t matrix, imatrix;
+	float tempnormal[3], starttransformed[3], endtransformed[3];
+	float starttransformedmins[3], starttransformedmaxs[3], endtransformedmins[3], endtransformedmaxs[3];
 
 	if ((int) ent->v->solid == SOLID_BSP)
 	{
@@ -479,13 +482,29 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 			Host_Error ("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
 	}
 
-	if (model && model->brush.TraceBox)
-		model->brush.TraceBox(model, ent->v->origin, ent->v->angles, &trace, ent, start, mins, maxs, end);
-	// FIXME: these should go away
-	else if (sv_polygoncollisions.integer && (mins[0] != maxs[0] || mins[1] != maxs[1] || mins[2] != maxs[2]))
-		Collision_PolygonClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
+	Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
+	Matrix4x4_Invert_Simple(&imatrix, &matrix);
+	Matrix4x4_Transform(&imatrix, start, starttransformed);
+	Matrix4x4_Transform(&imatrix, end, endtransformed);
+	VectorAdd(starttransformed, maxs, starttransformedmaxs);
+	VectorAdd(endtransformed, maxs, endtransformedmaxs);
+	VectorAdd(starttransformed, mins, starttransformedmins);
+	VectorAdd(endtransformed, mins, endtransformedmins);
+
+	// FIXME: the PolygonClipTrace should go away (should all be done in model code)
+	if (sv_polygoncollisions.integer == 1)
+		Collision_PolygonClipTrace(&trace, ent, model, vec3_origin, vec3_origin, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed);
+	else if (model && model->brush.TraceBox)
+		model->brush.TraceBox(model, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs);
 	else
-		Collision_ClipTrace(&trace, ent, model, ent->v->origin, ent->v->angles, ent->v->mins, ent->v->maxs, start, mins, maxs, end);
+		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed);
+
+	if (trace.fraction < 1 || trace.startsolid)
+		trace.ent = ent;
+	VectorLerp(start, trace.fraction, end, trace.endpos);
+	VectorCopy(trace.plane.normal, tempnormal);
+	Matrix4x4_Transform3x3(&matrix, tempnormal, trace.plane.normal);
+	// FIXME: should recalc trace.plane.dist
 
 	return trace;
 }
@@ -524,7 +543,7 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 
 		if (clip->passedict)
 		{
-			if (clip->passedict->v->size[0] && !touch->v->size[0])
+			if (!clip->passedict->v->size[0] && !touch->v->size[0])
 				continue;	// points never interact
 			if (PROG_TO_EDICT(touch->v->owner) == clip->passedict)
 				continue;	// don't clip against own missiles
@@ -570,84 +589,19 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 			clip->trace.fraction = trace.fraction;
 			VectorCopy(trace.endpos, clip->trace.endpos);
 			clip->trace.plane = trace.plane;
+			//clip->trace.endcontents = trace.endcontents;
+			clip->trace.ent = touch;
+		}
+		// FIXME: the handling of endcontents is really broken but works well enough for point checks
+		if (trace.endcontents < clip->trace.endcontents || trace.endcontents == CONTENTS_SOLID)
+		{
+			// lower numbered (lava is lower than water, for example)
+			// contents override higher numbered contents, except for
+			// CONTENTS_SOLID which overrides everything
 			clip->trace.endcontents = trace.endcontents;
-			clip->trace.ent = trace.ent;
 		}
 		if (clip->trace.allsolid)
 			return;
-	}
-}
-
-/*
-====================
-SV_ClipToAreaGrid
-
-Mins and maxs enclose the entire area swept by the move
-====================
-*/
-void SV_ClipToAreaGrid(moveclip_t *clip)
-{
-	areagrid_t *grid;
-	int igrid[3], igridmins[3], igridmaxs[3];
-
-	if (clip->trace.allsolid)
-		return;
-
-	sv_areagrid_stats_calls++;
-	sv_areagrid_marknumber++;
-	igridmins[0] = (int) ((clip->boxmins[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
-	igridmins[1] = (int) ((clip->boxmins[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
-	//igridmins[2] = (int) ((clip->boxmins[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
-	igridmaxs[0] = (int) ((clip->boxmaxs[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
-	igridmaxs[1] = (int) ((clip->boxmaxs[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
-	//igridmaxs[2] = (int) ((clip->boxmaxs[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
-	igridmins[0] = max(0, igridmins[0]);
-	igridmins[1] = max(0, igridmins[1]);
-	//igridmins[2] = max(0, igridmins[2]);
-	igridmaxs[0] = min(AREA_GRID, igridmaxs[0]);
-	igridmaxs[1] = min(AREA_GRID, igridmaxs[1]);
-	//igridmaxs[2] = min(AREA_GRID, igridmaxs[2]);
-
-	if (sv_areagrid_outside.solid_edicts.next != &sv_areagrid_outside.solid_edicts)
-		SV_ClipToNode(clip, &sv_areagrid_outside.solid_edicts);
-
-	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
-		for (grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0], igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
-			if (grid->solid_edicts.next != &grid->solid_edicts)
-				SV_ClipToNode(clip, &grid->solid_edicts);
-}
-
-
-/*
-==================
-SV_MoveBounds
-==================
-*/
-void SV_MoveBounds (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, vec3_t boxmins, vec3_t boxmaxs)
-{
-	if (!sv_debugmove.integer)
-	{
-		int i;
-
-		for (i=0 ; i<3 ; i++)
-		{
-			if (end[i] > start[i])
-			{
-				boxmins[i] = start[i] + mins[i] - 1;
-				boxmaxs[i] = end[i] + maxs[i] + 1;
-			}
-			else
-			{
-				boxmins[i] = end[i] + mins[i] - 1;
-				boxmaxs[i] = start[i] + maxs[i] + 1;
-			}
-		}
-	}
-	else
-	{
-		// debug to test against everything
-		boxmins[0] = boxmins[1] = boxmins[2] = -999999999;
-		boxmaxs[0] = boxmaxs[1] = boxmaxs[2] =  999999999;
 	}
 }
 
@@ -656,13 +610,14 @@ void SV_MoveBounds (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, vec3_t b
 SV_Move
 ==================
 */
-trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, edict_t *passedict)
+trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
 {
-	moveclip_t	clip;
-	vec3_t		bigmins, bigmaxs;
-	int			i;
+	moveclip_t clip;
+	vec3_t bigmins, bigmaxs;
+	areagrid_t *grid;
+	int i, igrid[3], igridmins[3], igridmaxs[3];
 
-	memset ( &clip, 0, sizeof ( moveclip_t ) );
+	memset(&clip, 0, sizeof(moveclip_t));
 
 	VectorCopy(start, clip.start);
 	VectorCopy(end, clip.end);
@@ -673,7 +628,12 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 
 	Collision_RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
 
-	if (type == MOVE_MISSILE)
+	// clip to world
+	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.hullmins, clip.hullmaxs, clip.end);
+	//if (clip.trace.allsolid)
+	//	return clip.trace;
+
+	if (clip.type == MOVE_MISSILE)
 	{
 		// LordHavoc: modified this, was = -15, now = clip.mins[i] - 15
 		for (i=0 ; i<3 ; i++)
@@ -695,22 +655,67 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	bigmins[2] = min(clip.mins2[2], clip.hullmins[2]);
 	bigmaxs[2] = max(clip.maxs2[2], clip.hullmaxs[2]);
 
-	// clip to world
-	clip.trace = SV_ClipMoveToEntity (sv.edicts, start, mins, maxs, end);
-
-	// clip to entities
 	// create the bounding box of the entire move
-	SV_MoveBounds ( start, bigmins, bigmaxs, end, clip.boxmins, clip.boxmaxs );
+	if (!sv_debugmove.integer)
+	{
+		int i;
 
-	SV_ClipToAreaGrid(&clip);
+		for (i=0 ; i<3 ; i++)
+		{
+			if (clip.trace.endpos[i] > clip.start[i])
+			{
+				clip.boxmins[i] = clip.start[i] + bigmins[i] - 1;
+				clip.boxmaxs[i] = clip.trace.endpos[i] + bigmaxs[i] + 1;
+			}
+			else
+			{
+				clip.boxmins[i] = clip.trace.endpos[i] + bigmins[i] - 1;
+				clip.boxmaxs[i] = clip.start[i] + bigmaxs[i] + 1;
+			}
+		}
+	}
+	else
+	{
+		// debug to test against everything
+		clip.boxmins[0] = clip.boxmins[1] = clip.boxmins[2] = -999999999;
+		clip.boxmaxs[0] = clip.boxmaxs[1] = clip.boxmaxs[2] =  999999999;
+	}
+
+	// clip to enttiies
+	sv_areagrid_stats_calls++;
+	sv_areagrid_marknumber++;
+	igridmins[0] = (int) ((clip.boxmins[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]);
+	igridmins[1] = (int) ((clip.boxmins[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]);
+	//igridmins[2] = (int) ((clip->boxmins[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]);
+	igridmaxs[0] = (int) ((clip.boxmaxs[0] + sv_areagrid_bias[0]) * sv_areagrid_scale[0]) + 1;
+	igridmaxs[1] = (int) ((clip.boxmaxs[1] + sv_areagrid_bias[1]) * sv_areagrid_scale[1]) + 1;
+	//igridmaxs[2] = (int) ((clip->boxmaxs[2] + sv_areagrid_bias[2]) * sv_areagrid_scale[2]) + 1;
+	igridmins[0] = max(0, igridmins[0]);
+	igridmins[1] = max(0, igridmins[1]);
+	//igridmins[2] = max(0, igridmins[2]);
+	igridmaxs[0] = min(AREA_GRID, igridmaxs[0]);
+	igridmaxs[1] = min(AREA_GRID, igridmaxs[1]);
+	//igridmaxs[2] = min(AREA_GRID, igridmaxs[2]);
+
+	if (sv_areagrid_outside.solid_edicts.next != &sv_areagrid_outside.solid_edicts)
+		SV_ClipToNode(&clip, &sv_areagrid_outside.solid_edicts);
+
+	for (igrid[1] = igridmins[1];igrid[1] < igridmaxs[1];igrid[1]++)
+		for (grid = sv_areagrid + igrid[1] * AREA_GRID + igridmins[0], igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++)
+			if (grid->solid_edicts.next != &grid->solid_edicts)
+				SV_ClipToNode(&clip, &grid->solid_edicts);
 
 	return clip.trace;
 }
 
 int SV_PointContents(const vec3_t point)
 {
+#if 1
+	return SV_Move(point, vec3_origin, vec3_origin, point, MOVE_NOMONSTERS, NULL).endcontents;
+#else
 	if (sv.worldmodel && sv.worldmodel->brush.PointContents)
 		return sv.worldmodel->brush.PointContents(sv.worldmodel, point);
 	return CONTENTS_SOLID;
+#endif
 }
 

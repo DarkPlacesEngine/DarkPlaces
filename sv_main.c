@@ -476,7 +476,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	edict_t *ent;
 	eval_t *val;
 	entity_state_t *baseline; // LordHavoc: delta or startup baseline
-	trace_t trace;
 	model_t *model;
 
 	Mod_CheckLoaded(sv.worldmodel);
@@ -605,12 +604,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
 
-				if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
-					sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, testeye, vec3_origin, vec3_origin, testorigin);
-				else
-					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
-
-				if (trace.fraction == 1)
+				if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
 				{
@@ -619,12 +613,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					testorigin[1] = bound(entmins[1], testeye[1], entmaxs[1]);
 					testorigin[2] = bound(entmins[2], testeye[2], entmaxs[2]);
 
-					if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
-						sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, testeye, vec3_origin, vec3_origin, testorigin);
-					else
-						Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
-
-					if (trace.fraction == 1)
+					if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
 						client->visibletime[e] = realtime + 1;
 					else if (realtime > client->visibletime[e])
 					{
@@ -817,7 +806,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	vec3_t origin, angles, entmins, entmaxs, lightmins, lightmaxs, testorigin, testeye;
 	edict_t *ent;
 	eval_t *val;
-	trace_t trace;
 	model_t *model;
 	entity_state_t *s;
 
@@ -988,11 +976,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
 				testorigin[1] = (entmins[1] + entmaxs[1]) * 0.5f;
 				testorigin[2] = (entmins[2] + entmaxs[2]) * 0.5f;
-				if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
-					sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, NULL, testeye, vec3_origin, vec3_origin, testorigin);
-				else
-					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
-				if (trace.fraction == 1)
+				if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
 				{
@@ -1000,11 +984,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
 					testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
 					testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
-					if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
-						sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, NULL, testeye, vec3_origin, vec3_origin, testorigin);
-					else
-						Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
-					if (trace.fraction == 1)
+					if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
 						client->visibletime[e] = realtime + 1;
 					else
 					{
@@ -1014,11 +994,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 							testorigin[0] = lhrandom(lightmins[0], lightmaxs[0]);
 							testorigin[1] = lhrandom(lightmins[1], lightmaxs[1]);
 							testorigin[2] = lhrandom(lightmins[2], lightmaxs[2]);
-							if (sv.worldmodel && sv.worldmodel->brush.TraceBox)
-								sv.worldmodel->brush.TraceBox(sv.worldmodel, vec3_origin, vec3_origin, &trace, NULL, testeye, vec3_origin, vec3_origin, testorigin);
-							else
-								Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
-							if (trace.fraction == 1)
+							if (SV_Move(testeye, vec3_origin, vec3_origin, testorigin, MOVE_NOMONSTERS, NULL).fraction == 1)
 								client->visibletime[e] = realtime + 1;
 							else
 							{
