@@ -816,6 +816,8 @@ char *FS_FileExtension (const char *in)
 	return exten;
 }
 
+void FS_Dir_f(void);
+void FS_Ls_f(void);
 
 /*
 ================
@@ -831,6 +833,8 @@ void FS_Init (void)
 	pak_mempool = Mem_AllocPool("paks");
 
 	Cmd_AddCommand ("path", FS_Path_f);
+	Cmd_AddCommand ("dir", FS_Dir_f);
+	Cmd_AddCommand ("ls", FS_Ls_f);
 
 	strcpy(fs_basedir, ".");
 
@@ -982,6 +986,10 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 
 	filenamelen = strlen (filename);
 
+	// LordHavoc: this is not written right!
+	// (should search have higher priority for files in each gamedir, while
+	// preserving the gamedir priorities, not searching for all paks in all
+	// gamedirs and then all files in all gamedirs)
 #ifdef AKVERSION
 	// first we search for a real file, after that we start to search through the paks
 	// search through the path, one element at a time
@@ -991,15 +999,15 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 		if(!search->pack)
 		{
 			snprintf (netpath, sizeof (netpath), "%s/%s",search->filename, filename);
-			
+
 			if (!FS_SysFileExists (netpath))
 				continue;
-			
+
 			if (!quiet)
 				Sys_Printf ("FindFile: %s\n",netpath);
 			return FS_OpenRead (netpath, -1, -1);
 		}
-		
+
 	search = fs_searchpaths;
 	for ( ; search ; search = search->next)
 		// is the element a pak file?
@@ -1165,7 +1173,7 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 		}
 	}
 #endif
-	
+
 	if (!quiet)
 		Sys_Printf ("FindFile: can't find %s\n", filename);
 
@@ -1835,3 +1843,242 @@ void FS_mkdir (const char *path)
 	mkdir (path, 0777);
 #endif
 }
+
+/*
+===========
+FS_Search
+
+Allocate and fill a search structure with information on matching filenames.
+===========
+*/
+fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
+{
+	fssearch_t *search;
+	searchpath_t *searchpath;
+	pack_t *pak;
+	int i, basepathlength, numfiles, numchars, step;
+	stringlist_t *dir, *dirfile;
+	const char *slash, *backslash, *colon, *separator;
+	char *basepath;
+	char netpath[MAX_OSPATH];
+
+	while(!strncmp(pattern, "./", 2))
+		pattern += 2;
+	while(!strncmp(pattern, ".\\", 2))
+		pattern += 2;
+
+	search = NULL;
+	numfiles = 0;
+	numchars = 0;
+	slash = strrchr(pattern, '/');
+	backslash = strrchr(pattern, '\\');
+	colon = strrchr(pattern, ':');
+	separator = slash;
+	if (separator < backslash)
+		separator = backslash;
+	if (separator < colon)
+		separator = colon;
+	if (separator)
+		basepathlength = separator + 1 - pattern;
+	else
+		basepathlength = 0;
+	basepath = Z_Malloc(basepathlength + 1);
+	if (basepathlength)
+		memcpy(basepath, pattern, basepathlength);
+	basepath[basepathlength] = 0;
+
+	for (step = 0;step < 2;step++)
+	{
+		// search through the path, one element at a time
+		for (searchpath = fs_searchpaths;searchpath;searchpath = searchpath->next)
+		{
+			// is the element a pak file?
+			if (searchpath->pack)
+			{
+				// look through all the pak file elements
+				pak = searchpath->pack;
+				for (i = 0;i < pak->numfiles;i++)
+				{
+					if (matchpattern(pak->files[i].name, (char *)pattern, caseinsensitive || pak->ignorecase))
+					{
+						if (search)
+						{
+							search->filenames[numfiles] = search->filenamesbuffer + numchars;
+							strcpy(search->filenames[numfiles], pak->files[i].name);
+						}
+						numfiles++;
+						numchars += strlen(pak->files[i].name) + 1;
+						if (!quiet)
+							Sys_Printf("SearchPackFile: %s : %s\n", pak->filename, pak->files[i].name);
+					}
+				}
+			}
+			else
+			{
+				// get a directory listing and look at each name
+				snprintf(netpath, sizeof (netpath), "%s/%s", searchpath->filename, pattern);
+				if ((dir = listdirectory(netpath)))
+				{
+					for (dirfile = dir;dirfile;dirfile = dirfile->next)
+					{
+						if (matchpattern(dirfile->text, (char *)pattern + basepathlength, caseinsensitive || pak->ignorecase))
+						{
+							if (search)
+							{
+								search->filenames[numfiles] = search->filenamesbuffer + numchars;
+								memcpy(search->filenames[numfiles], basepath, basepathlength);
+								strcpy(search->filenames[numfiles] + basepathlength, dirfile->text);
+							}
+							numfiles++;
+							numchars += basepathlength + strlen(dirfile->text) + 1;
+							if (!quiet)
+								Sys_Printf("SearchDirFile: %s\n", dirfile->text);
+						}
+					}
+					freedirectory(dir);
+				}
+			}
+		}
+
+		if (step == 0)
+		{
+			if (!numfiles || !numchars)
+			{
+				Z_Free(basepath);
+				return NULL;
+			}
+			// prepare for second pass (allocate the memory to fill in)
+			search = Z_Malloc(sizeof(fssearch_t) + numchars + numfiles * sizeof(char *));
+			search->filenames = (char **)((char *)search + sizeof(fssearch_t));
+			search->filenamesbuffer = (char *)((char *)search + sizeof(fssearch_t) + numfiles * sizeof(char *));
+			search->numfilenames = numfiles;
+			// these are used for tracking as the buffers are written on the second pass
+			numfiles = 0;
+			numchars = 0;
+		}
+	}
+
+	Z_Free(basepath);
+	return search;
+}
+
+void FS_FreeSearch(fssearch_t *search)
+{
+	Z_Free(search);
+}
+
+extern int con_linewidth;
+int FS_ListDirectory(const char *pattern, int oneperline)
+{
+	int numfiles;
+	int numcolumns;
+	int numlines;
+	int columnwidth;
+	int linebufpos;
+	int i, j, k, l;
+	const char *name;
+	char linebuf[4096];
+	fssearch_t *search;
+	search = FS_Search(pattern, true, false);
+	if (!search)
+		return 0;
+	numfiles = search->numfilenames;
+	if (!oneperline)
+	{
+		// FIXME: the names could be added to one column list and then
+		// gradually shifted into the next column if they fit, and then the
+		// next to make a compact variable width listing but it's a lot more
+		// complicated...
+		// find width for columns
+		columnwidth = 0;
+		for (i = 0;i < numfiles;i++)
+		{
+			l = strlen(search->filenames[i]);
+			if (columnwidth < l)
+				columnwidth = l;
+		}
+		// count the spacing character
+		columnwidth++;
+		// calculate number of columns
+		numcolumns = con_linewidth / columnwidth;
+		// don't bother with the column printing if it's only one column
+		if (numcolumns >= 2)
+		{
+			numlines = (numfiles + numcolumns - 1) / numcolumns;
+			for (i = 0;i < numlines;i++)
+			{
+				linebufpos = 0;
+				for (k = 0;k < numcolumns;k++)
+				{
+					l = i * numcolumns + k;
+					if (l < numfiles)
+					{
+						name = search->filenames[l];
+						for (j = 0;name[j] && j < (int)sizeof(linebuf) - 1;j++)
+							linebuf[linebufpos++] = name[j];
+						// space out name unless it's the last on the line
+						if (k < (numcolumns - 1) && l < (numfiles - 1))
+							for (;j < columnwidth && j < (int)sizeof(linebuf) - 1;j++)
+								linebuf[linebufpos++] = ' ';
+					}
+				}
+				linebuf[linebufpos] = 0;
+				Con_Printf("%s\n", linebuf);
+			}
+		}
+		else
+			oneperline = true;
+	}
+	if (oneperline)
+		for (i = 0;i < numfiles;i++)
+			Con_Printf("%s\n", search->filenames[i]);
+	FS_FreeSearch(search);
+	return numfiles;
+}
+
+void FS_Dir_f(void)
+{
+	char pattern[MAX_OSPATH];
+	if (Cmd_Argc() > 3)
+	{
+		Con_Printf("usage:\ndir [path/pattern]\n");
+		return;
+	}
+	if (Cmd_Argc() == 2)
+	{
+		snprintf(pattern, sizeof(pattern), "%s", Cmd_Argv(1));
+		if (!FS_ListDirectory(pattern, true))
+		{
+			snprintf(pattern, sizeof(pattern), "%s/*", Cmd_Argv(1));
+			if (!FS_ListDirectory(pattern, true))
+				Con_Printf("No files found.\n");
+		}
+	}
+	else
+	{
+		if (!FS_ListDirectory("*", true))
+			Con_Printf("No files found.\n");
+	}
+}
+
+void FS_Ls_f(void)
+{
+	char pattern[MAX_OSPATH];
+	if (Cmd_Argc() > 3)
+	{
+		Con_Printf("usage:\ndir [path/pattern]\n");
+		return;
+	}
+	if (Cmd_Argc() == 2)
+	{
+		snprintf(pattern, sizeof(pattern), "%s", Cmd_Argv(1));
+		if (!FS_ListDirectory(pattern, false))
+		{
+			snprintf(pattern, sizeof(pattern), "%s/*", Cmd_Argv(1));
+			FS_ListDirectory(pattern, false);
+		}
+	}
+	else
+		FS_ListDirectory("*", false);
+}
+
