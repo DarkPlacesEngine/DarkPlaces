@@ -118,9 +118,6 @@ typedef struct model_s
 	// LordHavoc: sorted surface pointer array, sorted by shader type and then by texture
 	msurface_t		**modelsortedsurfaces; // [nummodelsurfaces]
 
-	// used for surfaces without a valid texture
-	texture_t		notexture;
-
 	// lightmap format, set to r_lightmaprgba when model is loaded
 	int				lightmaprgba;
 
@@ -211,6 +208,11 @@ typedef struct model_s
 model_t;
 
 //============================================================================
+
+// this can be used for anything without a valid texture
+extern rtexture_t *r_notexture;
+// every texture must be in a pool...
+extern rtexturepool_t *r_notexturepool;
 
 // model loading
 extern model_t *loadmodel;

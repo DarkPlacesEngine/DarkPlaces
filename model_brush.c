@@ -20,6 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+// note: model_shared.c sets up r_notexture, and r_surf_notexture
+
 qbyte mod_novis[(MAX_MAP_LEAFS + 7)/ 8];
 
 cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
@@ -28,6 +30,7 @@ cvar_t r_novis = {0, "r_novis", "0"};
 cvar_t r_miplightmaps = {CVAR_SAVE, "r_miplightmaps", "0"};
 cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_vertexsurfacesthreshold = {CVAR_SAVE, "r_vertexsurfacesthreshold", "0"};
+cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 
 /*
 ===============
@@ -42,6 +45,7 @@ void Mod_BrushInit (void)
 	Cvar_RegisterVariable(&r_miplightmaps);
 	Cvar_RegisterVariable(&r_lightmaprgba);
 	Cvar_RegisterVariable(&r_vertexsurfacesthreshold);
+	Cvar_RegisterVariable(&r_nosurftextures);
 	memset(mod_novis, 0xff, sizeof(mod_novis));
 }
 
@@ -127,40 +131,6 @@ qbyte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 	return Mod_DecompressVis (leaf->compressed_vis, model);
 }
 
-void Mod_SetupNoTexture(void)
-{
-	int x, y;
-	qbyte pix[16][16][4];
-
-	for (y = 0;y < 16;y++)
-	{
-		for (x = 0;x < 16;x++)
-		{
-			if ((y < 8) ^ (x < 8))
-			{
-				pix[y][x][0] = 128;
-				pix[y][x][1] = 128;
-				pix[y][x][2] = 128;
-				pix[y][x][3] = 255;
-			}
-			else
-			{
-				pix[y][x][0] = 64;
-				pix[y][x][1] = 64;
-				pix[y][x][2] = 64;
-				pix[y][x][3] = 255;
-			}
-		}
-	}
-
-	memset(&loadmodel->notexture, 0, sizeof(texture_t));
-	strcpy(loadmodel->notexture.name, "notexture");
-	loadmodel->notexture.width = 16;
-	loadmodel->notexture.height = 16;
-	loadmodel->notexture.flags = 0;
-	loadmodel->notexture.texture = R_LoadTexture(loadmodel->texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP);
-}
-
 /*
 =================
 Mod_LoadTextures
@@ -175,29 +145,45 @@ static void Mod_LoadTextures (lump_t *l)
 	qbyte			*data, *mtdata, *data2;
 	char			name[256];
 
-	Mod_SetupNoTexture();
+	loadmodel->textures = NULL;
 
 	if (!l->filelen)
-	{
-		loadmodel->textures = NULL;
 		return;
-	}
 
 	m = (dmiptexlump_t *)(mod_base + l->fileofs);
 
 	m->nummiptex = LittleLong (m->nummiptex);
 
-	loadmodel->numtextures = m->nummiptex;
-	loadmodel->textures = Mem_Alloc(loadmodel->mempool, m->nummiptex * sizeof(*loadmodel->textures));
+	// add two slots for notexture walls and notexture liquids
+	loadmodel->numtextures = m->nummiptex + 2;
+	loadmodel->textures = Mem_Alloc(loadmodel->mempool, loadmodel->numtextures * sizeof(*loadmodel->textures));
+
+	// fill out all slots with notexture
+	for (i = 0;i < loadmodel->numtextures;i++)
+	{
+		loadmodel->textures[i] = tx = Mem_Alloc(loadmodel->mempool, sizeof(texture_t));
+		tx->width = 16;
+		tx->height = 16;
+		tx->texture = r_notexture;
+		if (i == loadmodel->numtextures - 1)
+			tx->flags = SURF_DRAWTURB | SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA | SURF_CLIPSOLID;
+	}
 
 	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
 	dofs = m->dataofs;
+	// LordHavoc: mostly rewritten map texture loader
 	for (i = 0;i < m->nummiptex;i++)
 	{
 		dofs[i] = LittleLong(dofs[i]);
-		if (dofs[i] == -1)
+		if (dofs[i] == -1 || r_nosurftextures.integer)
 			continue;
 		dmiptex = (miptex_t *)((qbyte *)m + dofs[i]);
+
+		// make sure name is no more than 15 characters
+		for (j = 0;dmiptex->name[j] && j < 15;j++)
+			name[j] = dmiptex->name[j];
+		name[j] = 0;
+
 		mtwidth = LittleLong (dmiptex->width);
 		mtheight = LittleLong (dmiptex->height);
 		mtdata = NULL;
@@ -206,43 +192,37 @@ static void Mod_LoadTextures (lump_t *l)
 		{
 			// texture included
 			if (j < 40 || j + mtwidth * mtheight > l->filelen)
-				Host_Error ("Texture %s is corrupt or incomplete\n", dmiptex->name);
+			{
+				Con_Printf ("Texture \"%s\" in \"%s\"is corrupt or incomplete\n", dmiptex->name, loadmodel->name);
+				continue;
+			}
 			mtdata = (qbyte *)dmiptex + j;
 		}
 
 		if ((mtwidth & 15) || (mtheight & 15))
-			Host_Error ("Texture %s is not 16 aligned", dmiptex->name);
-		// LordHavoc: rewriting the map texture loader for GLQuake
-		tx = Mem_Alloc(loadmodel->mempool, sizeof(texture_t));
-		memset(tx, 0, sizeof(texture_t));
-		tx->anim_total = 0;
-		tx->alternate_anims = NULL;
-		loadmodel->textures[i] = tx;
+			Con_Printf ("warning: texture \"%s\" in \"%s\" is not 16 aligned", dmiptex->name, loadmodel->name);
 
-		// LordHavoc: force all names to lowercase and make sure they are terminated while copying
-		for (j = 0;dmiptex->name[j] && j < 15;j++)
-		{
-			if (dmiptex->name[j] >= 'A' && dmiptex->name[j] <= 'Z')
-				tx->name[j] = dmiptex->name[j] + ('a' - 'A');
-			else
-				tx->name[j] = dmiptex->name[j];
-		}
-		for (;j < 16;j++)
-			tx->name[j] = 0;
+		// LordHavoc: force all names to lowercase
+		for (j = 0;name[j];j++)
+			if (name[j] >= 'A' && name[j] <= 'Z')
+				name[j] += 'a' - 'A';
 
-		if (!tx->name[0])
-		{
-			Con_Printf("warning: unnamed texture in %s\n", loadmodel->name);
-			sprintf(tx->name, "unnamed%i", i);
-		}
-
+		tx = loadmodel->textures[i];
+		strcpy(tx->name, name);
 		tx->width = mtwidth;
 		tx->height = mtheight;
 		tx->texture = NULL;
 		tx->glowtexture = NULL;
 		tx->fogtexture = NULL;
 
-		if (!loadmodel->ishlbsp && !strncmp(tx->name,"sky",3) && mtwidth == 256 && mtheight == 128) // LordHavoc: HL sky textures are entirely unrelated
+		if (!tx->name[0])
+		{
+			sprintf(tx->name, "unnamed%i", i);
+			Con_Printf("warning: unnamed texture in %s, renaming to %s\n", loadmodel->name, tx->name);
+		}
+
+		// LordHavoc: HL sky textures are entirely different than quake
+		if (!loadmodel->ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 		{
 			data = loadimagepixels(tx->name, false, 0, 0);
 			if (data)
@@ -256,7 +236,7 @@ static void Mod_LoadTextures (lump_t *l)
 				else
 				{
 					Mem_Free(data);
-					Host_Error("Mod_LoadTextures: replacement sky image must be 256x128 pixels\n");
+					Con_Printf ("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
 				}
 			}
 			else if (loadmodel->isworldmodel)
@@ -309,7 +289,7 @@ static void Mod_LoadTextures (lump_t *l)
 				{
 					tx->width = 16;
 					tx->height = 16;
-					tx->texture = loadmodel->notexture.texture;
+					tx->texture = r_notexture;
 				}
 			}
 			else
@@ -350,7 +330,7 @@ static void Mod_LoadTextures (lump_t *l)
 				{
 					tx->width = 16;
 					tx->height = 16;
-					tx->texture = loadmodel->notexture.texture;
+					tx->texture = r_notexture;
 				}
 			}
 		}
@@ -374,13 +354,11 @@ static void Mod_LoadTextures (lump_t *l)
 		}
 	}
 
-//
-// sequence the animations
-//
+	// sequence the animations
 	for (i = 0;i < m->nummiptex;i++)
 	{
 		tx = loadmodel->textures[i];
-		if (!tx || tx->name[0] != '+')
+		if (!tx || tx->name[0] != '+' || tx->name[1] == 0 || tx->name[2] == 0)
 			continue;
 		if (tx->anim_total)
 			continue;	// already sequenced
@@ -388,7 +366,6 @@ static void Mod_LoadTextures (lump_t *l)
 		// find the number of frames in the animation
 		memset (anims, 0, sizeof(anims));
 		memset (altanims, 0, sizeof(altanims));
-		max = altmax = 0;
 
 		for (j = i;j < m->nummiptex;j++)
 		{
@@ -405,6 +382,7 @@ static void Mod_LoadTextures (lump_t *l)
 				Host_Error ("Bad animating texture %s", tx->name);
 		}
 
+		max = altmax = 0;
 		for (j = 0;j < 10;j++)
 		{
 			if (anims[j] != NULL)
@@ -412,28 +390,46 @@ static void Mod_LoadTextures (lump_t *l)
 			if (altanims[j] != NULL)
 				altmax = j + 1;
 		}
+		if (altmax < 1)
+		{
+			// if there is no alternate animation, duplicate the primary
+			// animation into the alternate
+			altmax = max;
+			for (k = 0;k < 10;k++)
+				anims[k] = altanims[k];
+		}
 
-		// link them all together
+		// link together the primary animation
 		for (j = 0;j < max;j++)
 		{
 			tx2 = anims[j];
 			if (!tx2)
 				Host_Error ("Missing frame %i of %s", j, tx->name);
-			tx2->anim_total = max;
-			tx2->alternate_anims = altanims[0]; // NULL if there is no alternate
+			tx2->animated = true;
+			tx2->anim_total[0] = max;
+			tx2->anim_total[1] = altmax;
 			for (k = 0;k < 10;k++)
-				tx2->anim_frames[k] = anims[k];
+			{
+				tx2->anim_frames[0][k] = anims[k];
+				tx2->anim_frames[1][k] = altanims[k];
+			}
 		}
 
+		// link together the alternate animation
 		for (j = 0;j < altmax;j++)
 		{
 			tx2 = altanims[j];
 			if (!tx2)
 				Host_Error ("Missing frame %i of %s", j, tx->name);
-			tx2->anim_total = altmax;
-			tx2->alternate_anims = anims[0]; // NULL if there is no alternate
+			tx2->animated = true;
+			// the primary/alternate are reversed here
+			tx2->anim_total[0] = altmax;
+			tx2->anim_total[1] = max;
 			for (k = 0;k < 10;k++)
-				tx2->anim_frames[k] = altanims[k];
+			{
+				tx2->anim_frames[0][k] = altanims[k];
+				tx2->anim_frames[1][k] = anims[k];
+			}
 		}
 	}
 }
@@ -574,11 +570,9 @@ Mod_LoadVisibility
 */
 static void Mod_LoadVisibility (lump_t *l)
 {
+	loadmodel->visdata = NULL;
 	if (!l->filelen)
-	{
-		loadmodel->visdata = NULL;
 		return;
-	}
 	loadmodel->visdata = Mem_Alloc(loadmodel->mempool, l->filelen);
 	memcpy (loadmodel->visdata, mod_base + l->fileofs, l->filelen);
 }
@@ -653,11 +647,9 @@ Mod_LoadEntities
 */
 static void Mod_LoadEntities (lump_t *l)
 {
+	loadmodel->entities = NULL;
 	if (!l->filelen)
-	{
-		loadmodel->entities = NULL;
 		return;
-	}
 	loadmodel->entities = Mem_Alloc(loadmodel->mempool, l->filelen);
 	memcpy (loadmodel->entities, mod_base + l->fileofs, l->filelen);
 	if (loadmodel->ishlbsp)
@@ -766,8 +758,7 @@ static void Mod_LoadTexinfo (lump_t *l)
 {
 	texinfo_t *in;
 	mtexinfo_t *out;
-	int 	i, j, k, count;
-	int		miptex;
+	int i, j, k, count, miptex;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -787,18 +778,22 @@ static void Mod_LoadTexinfo (lump_t *l)
 		miptex = LittleLong (in->miptex);
 		out->flags = LittleLong (in->flags);
 
-		if (!loadmodel->textures)
-			out->texture = &loadmodel->notexture;
-		else
+		out->texture = NULL;
+		if (loadmodel->textures)
 		{
-			if (miptex < 0)
-				Host_Error ("miptex < 0");
-			if (miptex >= loadmodel->numtextures)
-				Host_Error ("miptex >= loadmodel->numtextures");
-			out->texture = loadmodel->textures[miptex];
+			if ((unsigned int) miptex >= (unsigned int) loadmodel->numtextures)
+				Con_Printf ("error in model \"%s\": invalid miptex index %i (of %i)\n", loadmodel->name, miptex, loadmodel->numtextures);
+			else
+				out->texture = loadmodel->textures[miptex];
 		}
-		if (!out->texture)
-			out->texture = &loadmodel->notexture;
+		if (out->texture == NULL)
+		{
+			// choose either the liquid notexture, or the normal notexture
+			if (out->flags & TEX_SPECIAL)
+				out->texture = loadmodel->textures[loadmodel->numtextures - 1];
+			else
+				out->texture = loadmodel->textures[loadmodel->numtextures - 2];
+		}
 	}
 }
 
@@ -981,9 +976,9 @@ can be done reasonably.
 */
 void Mod_GenerateWarpMesh (msurface_t *surf)
 {
-	int				i, j;
-	surfvertex_t	*v;
-	surfmesh_t		*mesh;
+	int i, j;
+	surfvertex_t *v;
+	surfmesh_t *mesh;
 
 	subdivpolytriangles = 0;
 	subdivpolyverts = 0;
@@ -1239,9 +1234,9 @@ Mod_LoadFaces
 */
 static void Mod_LoadFaces (lump_t *l)
 {
-	dface_t		*in;
+	dface_t *in;
 	msurface_t 	*out;
-	int			i, count, surfnum, planenum, side, ssize, tsize;
+	int i, count, surfnum, planenum, ssize, tsize;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -1257,13 +1252,20 @@ static void Mod_LoadFaces (lump_t *l)
 		// FIXME: validate edges, texinfo, etc?
 		out->firstedge = LittleLong(in->firstedge);
 		out->numedges = LittleShort(in->numedges);
+		if ((unsigned int) out->firstedge + (unsigned int) out->numedges > (unsigned int) loadmodel->numsurfedges)
+			Host_Error("Mod_LoadFaces: invalid edge range (firstedge %i, numedges %i, model edges %i)\n", out->firstedge, out->numedges, loadmodel->numsurfedges);
 
-		out->texinfo = loadmodel->texinfo + LittleShort (in->texinfo);
+		i = LittleShort (in->texinfo);
+		if ((unsigned int) i >= (unsigned int) loadmodel->numtexinfo)
+			Host_Error("Mod_LoadFaces: invalid texinfo index %i (model has %i texinfos)\n", i, loadmodel->numtexinfo);
+		out->texinfo = loadmodel->texinfo + i;
 		out->flags = out->texinfo->texture->flags;
 
 		planenum = LittleShort(in->planenum);
-		side = LittleShort(in->side);
-		if (side)
+		if ((unsigned int) planenum >= (unsigned int) loadmodel->numplanes)
+			Host_Error("Mod_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->numplanes);
+
+		if (LittleShort(in->side))
 			out->flags |= SURF_PLANEBACK;
 
 		out->plane = loadmodel->planes + planenum;
@@ -2377,7 +2379,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 
 	i = LittleLong (header->version);
 	if (i != BSPVERSION && i != 30)
-		Host_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i or 30 (HalfLife))", mod->name, i, BSPVERSION);
+		Host_Error ("Mod_LoadBrushModel: %s has wrong version number (%i should be %i (Quake) or 30 (HalfLife))", mod->name, i, BSPVERSION);
 	mod->ishlbsp = i == 30;
 	if (loadmodel->isworldmodel)
 		Cvar_SetValue("halflifebsp", mod->ishlbsp);
