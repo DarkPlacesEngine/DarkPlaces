@@ -737,9 +737,6 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	const msurface_t *surf;
 	rmeshstate_t m;
 
-	// LordHavoc: HalfLife maps have freaky skypolys...
-	if (ent->model->brush.ishlbsp)
-		return;
 	// sky rendering transparently would be too difficult
 	if (ent->flags & RENDER_TRANSPARENT)
 		return;
@@ -751,6 +748,9 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 			R_Sky();
 	}
 
+	// LordHavoc: HalfLife maps have freaky skypolys...
+	if (ent->model->brush.ishlbsp)
+		return;
 	R_Mesh_Matrix(&ent->matrix);
 
 	GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
