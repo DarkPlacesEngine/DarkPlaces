@@ -384,7 +384,12 @@ typedef struct
 	char levelname[40];
 	// cl_entitites[cl.viewentity] = player
 	int viewentity;
+	// the real player entity (normally same as viewentity,
+	// different than viewentity if mod uses chasecam or other tricks)
+	int playerentity;
+	// max players that can be in this game
 	int maxclients;
+	// type of game (deathmatch, coop, singleplayer)
 	int gametype;
 
 // refresh related state

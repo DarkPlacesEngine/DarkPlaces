@@ -470,6 +470,7 @@ void CL_ParseServerInfo (void)
 // local state
 	ent = &cl_entities[0];
 	// entire entity array was cleared, so just fill in a few fields
+	ent->state_current.active = true;
 	ent->render.model = cl.worldmodel = cl.model_precache[1];
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
@@ -1135,6 +1136,9 @@ void CL_ParseServerMessage (void)
 
 		case svc_setview:
 			cl.viewentity = MSG_ReadShort ();
+			// LordHavoc: assume first setview recieved is the real player entity
+			if (!cl.playerentity)
+				cl.playerentity = cl.viewentity;
 			break;
 
 		case svc_lightstyle:
