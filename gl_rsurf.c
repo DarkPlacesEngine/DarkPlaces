@@ -1759,10 +1759,10 @@ void R_PVSWorldNode()
 				if (c & bit)
 				{
 					leafnum = (k << 3)+i+1;
-					if (leafnum >= numleafs)
+					if (leafnum > numleafs)
 						return;
 					c -= bit;
-					leaf = &model->leafs[leafnum];
+					leaf = &model->leafs[i];
 					if (R_NotCulledBox(leaf->mins, leaf->maxs))
 					{
 						//for (portal = leaf->portals;portal;portal = portal->next)

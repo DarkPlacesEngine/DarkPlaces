@@ -249,7 +249,7 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 	}
 	else
 	{
-		int		i, k, l, m, c;
+		int		i, k, m, c, leafnum;
 		msurface_t *surf, **mark;
 		mleaf_t *leaf;
 		byte	*in = pvsleaf->compressed_vis;
@@ -276,14 +276,14 @@ void R_VisMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex
 			c = *in++;
 			if (c)
 			{
-				l = model->numleafs - (k << 3);
-				if (l > 8)
-					l = 8;
-				for (i=0 ; i<l ; i++)
+				for (i = 0;i < 8;i++)
 				{
 					if (c & (1<<i))
 					{
-						leaf = &model->leafs[(k << 3)+i+1];
+						leafnum = (k << 3)+i+1;
+						if (leafnum > model->numleafs)
+							return;
+						leaf = &model->leafs[leafnum];
 //						if (leaf->visframe != r_framecount)
 //							continue;
 //						if (leaf->contents == CONTENTS_SOLID)
