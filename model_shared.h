@@ -230,9 +230,13 @@ void Mod_UnloadModel (model_t *mod);
 
 void Mod_ClearUsed(void);
 void Mod_PurgeUnused(void);
+void Mod_LoadModels(void);
 
 extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
+
+int Mod_FindTriangleWithEdge(int *elements, int numtriangles, int start, int end);
+int *Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles);
 
 #endif	// __MODEL__
 
