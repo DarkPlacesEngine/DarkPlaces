@@ -5,7 +5,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
-#include <dlfcn.h>
 #endif
 
 #include <signal.h>
@@ -17,40 +16,6 @@
 cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 #endif
 
-/*
-===============================================================================
-
-DLL MANAGEMENT
-
-===============================================================================
-*/
-
-dllhandle_t Sys_LoadLibrary (const char* name)
-{
-#ifdef WIN32
-	return LoadLibrary (name);
-#else
-	return dlopen (name, RTLD_LAZY);
-#endif
-}
-
-void Sys_UnloadLibrary (dllhandle_t handle)
-{
-#ifdef WIN32
-	FreeLibrary (handle);
-#else
-	dlclose (handle);
-#endif
-}
-
-void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
-{
-#ifdef WIN32
-	return (void *)GetProcAddress (handle, name);
-#else
-	return (void *)dlsym (handle, name);
-#endif
-}
 
 
 // =======================================================================

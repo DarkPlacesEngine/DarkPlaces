@@ -118,3 +118,42 @@ void Sys_Shared_LateInit(void)
 {
 }
 
+/*
+===============================================================================
+
+DLL MANAGEMENT
+
+===============================================================================
+*/
+
+#ifndef WIN32
+#include <dlfcn.h>
+#endif
+
+dllhandle_t Sys_LoadLibrary (const char* name)
+{
+#ifdef WIN32
+	return LoadLibrary (name);
+#else
+	return dlopen (name, RTLD_LAZY);
+#endif
+}
+
+void Sys_UnloadLibrary (dllhandle_t handle)
+{
+#ifdef WIN32
+	FreeLibrary (handle);
+#else
+	dlclose (handle);
+#endif
+}
+
+void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
+{
+#ifdef WIN32
+	return (void *)GetProcAddress (handle, name);
+#else
+	return (void *)dlsym (handle, name);
+#endif
+}
+
