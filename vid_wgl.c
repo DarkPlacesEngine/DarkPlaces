@@ -306,9 +306,11 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 void VID_Finish (void)
 {
 	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
-	if (old_vsync != vsync && gl_videosyncavailable)
-		qwglSwapIntervalEXT (vsync);
-	vid_usingvsync = vsync;
+	if (vid_usingvsync != vid_usevsync && gl_videosyncavailable)
+	{
+		vid_usingvsync = vid_usevsync;
+		qwglSwapIntervalEXT (vid_usevsync);
+	}
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
