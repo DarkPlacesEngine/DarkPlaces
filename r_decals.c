@@ -235,7 +235,7 @@ void GL_DrawDecals (void)
 
 	dynamiclight = (int) r_dynamic.value != 0 && (int) r_decals_lighting.value != 0;
 
-	mindist = DotProduct(r_refdef.vieworg, vpn) + 4.0f;
+	mindist = DotProduct(r_origin, vpn) + 4.0f;
 
 	if (r_render.value)
 	{
@@ -261,7 +261,7 @@ void GL_DrawDecals (void)
 			continue;
 
 		// do not render if the view origin is behind the decal
-		VectorSubtract(p->org, r_refdef.vieworg, v);
+		VectorSubtract(p->org, r_origin, v);
 		if (DotProduct(p->direction, v) < 0)
 			continue;
 

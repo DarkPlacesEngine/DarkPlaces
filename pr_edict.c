@@ -107,6 +107,7 @@ int eval_idealpitch;
 int eval_pitch_speed;
 int eval_viewmodelforclient;
 int eval_nodrawtoclient;
+int eval_exteriormodeltoclient;
 int eval_drawonlytoclient;
 int eval_colormod;
 int eval_ping;
@@ -155,6 +156,7 @@ void FindEdictFieldOffsets()
 	eval_pitch_speed = FindFieldOffset("pitch_speed");
 	eval_viewmodelforclient = FindFieldOffset("viewmodelforclient");
 	eval_nodrawtoclient = FindFieldOffset("nodrawtoclient");
+	eval_exteriormodeltoclient = FindFieldOffset("exteriormodeltoclient");
 	eval_drawonlytoclient = FindFieldOffset("drawonlytoclient");
 	eval_colormod = FindFieldOffset("colormod");
 	eval_ping = FindFieldOffset("ping");
@@ -305,7 +307,6 @@ ddef_t *ED_FindField (char *name)
 	return NULL;
 }
 
-
 /*
 ============
 ED_FindGlobal
@@ -388,7 +389,7 @@ Returns a string describing *data in a type specific manner
 */
 char *PR_ValueString (etype_t type, eval_t *val)
 {
-	static char	line[256];
+	static char	line[1024]; // LordHavoc: enlarged a bit (was 256)
 	ddef_t		*def;
 	dfunction_t	*f;
 	
@@ -414,10 +415,12 @@ char *PR_ValueString (etype_t type, eval_t *val)
 		sprintf (line, "void");
 		break;
 	case ev_float:
-		sprintf (line, "%5.1f", val->_float);
+		// LordHavoc: changed from %5.1f to %10.4f
+		sprintf (line, "%10.4f", val->_float);
 		break;
 	case ev_vector:
-		sprintf (line, "'%5.1f %5.1f %5.1f'", val->vector[0], val->vector[1], val->vector[2]);
+		// LordHavoc: changed from %5.1f to %10.4f
+		sprintf (line, "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
 		sprintf (line, "pointer");
@@ -541,7 +544,7 @@ ED_Print
 For debugging
 =============
 */
-// LordHavoc: optimized this to print out much more quickly
+// LordHavoc: optimized this to print out much more quickly (tempstring)
 void ED_Print (edict_t *ed)
 {
 	int		l;
@@ -579,9 +582,9 @@ void ED_Print (edict_t *ed)
 			continue;
 
 		strcat(tempstring, name);
-		l = strlen (name);
-		while (l++ < 15)
+		for (l = strlen(name);l < 14;l++)
 			strcat(tempstring, " ");
+		strcat(tempstring, " ");
 
 		strcat(tempstring, PR_ValueString(d->type, (eval_t *)v));
 		strcat(tempstring, "\n");
@@ -743,9 +746,7 @@ void ED_WriteGlobals (FILE *f)
 			continue;
 		type &= ~DEF_SAVEGLOBAL;
 
-		if (type != ev_string
-		&& type != ev_float
-		&& type != ev_entity)
+		if (type != ev_string && type != ev_float && type != ev_entity)
 			continue;
 
 		name = pr_strings + def->s_name;		
@@ -1280,6 +1281,32 @@ void PR_LoadProgs (void)
 }
 
 
+void PR_Fields_f (void)
+{
+	int i;
+	if (!sv.active)
+	{
+		Con_Printf("no progs loaded\n");
+		return;
+	}
+	for (i = 0;i < progs->numfielddefs;i++)
+		Con_Printf("%s\n", (pr_strings + pr_fielddefs[i].s_name));
+	Con_Printf("%i entity fields, totalling %i bytes per edict, %i edicts, %i bytes total spent on edict fields\n", progs->entityfields, progs->entityfields * 4, MAX_EDICTS, progs->entityfields * 4 * MAX_EDICTS);
+}
+
+void PR_Globals_f (void)
+{
+	int i;
+	if (!sv.active)
+	{
+		Con_Printf("no progs loaded\n");
+		return;
+	}
+	for (i = 0;i < progs->numglobaldefs;i++)
+		Con_Printf("%s\n", (pr_strings + pr_globaldefs[i].s_name));
+	Con_Printf("%i global variables, totalling %i bytes\n", progs->numglobals, progs->numglobals * 4);
+}
+
 /*
 ===============
 PR_Init
@@ -1291,6 +1318,8 @@ void PR_Init (void)
 	Cmd_AddCommand ("edicts", ED_PrintEdicts);
 	Cmd_AddCommand ("edictcount", ED_Count);
 	Cmd_AddCommand ("profile", PR_Profile_f);
+	Cmd_AddCommand ("pr_fields", PR_Fields_f);
+	Cmd_AddCommand ("pr_globals", PR_Globals_f);
 	Cvar_RegisterVariable (&pr_checkextension);
 	Cvar_RegisterVariable (&nomonsters);
 	Cvar_RegisterVariable (&gamecfg);

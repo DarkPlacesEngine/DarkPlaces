@@ -83,7 +83,7 @@ char *svc_strings[128] =
 	"", // 50
 	"svc_fog", // 51
 	"svc_effect", // [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
-	"svc_effect2", // [vector] org [short] modelindex [byte] startframe [byte] framecount [byte] framerate
+	"svc_effect2", // [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
 };
 
 //=============================================================================
@@ -216,7 +216,7 @@ void CL_KeepaliveMessage (void)
 	memcpy (net_message.data, olddata, net_message.cursize);
 
 // check time
-	time = Sys_FloatTime ();
+	time = Sys_DoubleTime ();
 	if (time - lastmsg < 5)
 		return;
 	lastmsg = time;
@@ -490,9 +490,10 @@ relinked.  Other attributes can change without relinking.
 ==================
 */
 byte entkill[MAX_EDICTS];
+int bitprofile[32], bitprofilecount = 0;
 void CL_ParseUpdate (int bits)
 {
-	int num, deltadie;
+	int i, num, deltadie;
 	entity_t *ent;
 
 	if (cls.signon == SIGNONS - 1)
@@ -524,6 +525,11 @@ void CL_ParseUpdate (int bits)
 	entkill[num] = 0;
 
 	ent = CL_EntityNum (num);
+
+	for (i = 0;i < 32;i++)
+		if (bits & (1 << i))
+			bitprofile[i]++;
+	bitprofilecount++;
 
 	ent->state_previous = ent->state_current;
 	deltadie = false;
@@ -561,6 +567,7 @@ void CL_ParseUpdate (int bits)
 	if (bits & U_FRAME2)	ent->state_current.frame = (ent->state_current.frame & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_MODEL2)	ent->state_current.modelindex = (ent->state_current.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
 	if (bits & U_VIEWMODEL)	ent->state_current.flags |= RENDER_VIEWMODEL;
+	if (bits & U_EXTERIORMODEL)	ent->state_current.flags |= RENDER_EXTERIORMODEL;
 
 	// LordHavoc: to allow playback of the Nehahra movie
 	if (Nehahrademcompatibility && (bits & U_EXTEND1))
@@ -612,25 +619,65 @@ void CL_ParseUpdate (int bits)
 	}
 }
 
+char *bitprofilenames[32] =
+{
+	"U_MOREBITS",
+	"U_ORIGIN1",
+	"U_ORIGIN2",
+	"U_ORIGIN3",
+	"U_ANGLE2",
+	"U_STEP",
+	"U_FRAME",
+	"U_SIGNAL",
+	"U_ANGLE1",
+	"U_ANGLE3",
+	"U_MODEL",
+	"U_COLORMAP",
+	"U_SKIN",
+	"U_EFFECTS",
+	"U_LONGENTITY",
+	"U_EXTEND1",
+	"U_DELTA",
+	"U_ALPHA",
+	"U_SCALE",
+	"U_EFFECTS2",
+	"U_GLOWSIZE",
+	"U_GLOWCOLOR",
+	"U_COLORMOD",
+	"U_EXTEND2",
+	"U_GLOWTRAIL",
+	"U_VIEWMODEL",
+	"U_FRAME2",
+	"U_MODEL2",
+	"U_EXTERIORMODEL",
+	"U_UNUSED29",
+	"U_UNUSED30",
+	"U_EXTEND3",
+};
+
+void CL_BitProfile_f(void)
+{
+	int i;
+	Con_Printf("bitprofile: %i updates\n");
+	if (bitprofilecount)
+		for (i = 0;i < 32;i++)
+//			if (bitprofile[i])
+				Con_Printf("%s: %i %3.2f%%\n", bitprofilenames[i], bitprofile[i], bitprofile[i] * 100.0 / bitprofilecount);
+	Con_Printf("\n");
+	for (i = 0;i < 32;i++)
+		bitprofile[i] = 0;
+	bitprofilecount = 0;
+}
+
 void CL_EntityUpdateSetup()
 {
 	memset(entkill, 1, MAX_EDICTS);
 }
 
-int entityupdatestart;
-void CL_EntityUpdateBegin(int start)
-{
-	if (start < 0 || start >= MAX_EDICTS)
-		Host_Error("CL_EntityUpdateBegin: start (%i) < 0 or >= MAX_EDICTS (%i)\n", start, MAX_EDICTS);
-	entityupdatestart = start;
-}
-
-void CL_EntityUpdateEnd(int end)
+void CL_EntityUpdateEnd()
 {
 	int i;
-	if (end < 0 || end > MAX_EDICTS)
-		Host_Error("CL_EntityUpdateEnd: end (%i) < 0 or > MAX_EDICTS (%i)\n", end, MAX_EDICTS);
-	for (i = entityupdatestart;i < end;i++)
+	for (i = 1;i < MAX_EDICTS;i++)
 		if (entkill[i])
 			cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
 }
@@ -640,17 +687,22 @@ void CL_EntityUpdateEnd(int end)
 CL_ParseBaseline
 ==================
 */
-void CL_ParseBaseline (entity_t *ent, int largemodelindex)
+void CL_ParseBaseline (entity_t *ent, int large)
 {
 	int i;
 
 	memset(&ent->state_baseline, 0, sizeof(entity_state_t));
 	ent->state_baseline.active = true;
-	if (largemodelindex)
+	if (large)
+	{
 		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort ();
+		ent->state_baseline.frame = (unsigned short) MSG_ReadShort ();
+	}
 	else
+	{
 		ent->state_baseline.modelindex = MSG_ReadByte ();
-	ent->state_baseline.frame = MSG_ReadByte ();
+		ent->state_baseline.frame = MSG_ReadByte ();
+	}
 	ent->state_baseline.colormap = MSG_ReadByte();
 	ent->state_baseline.skin = MSG_ReadByte();
 	for (i = 0;i < 3;i++)
@@ -754,14 +806,14 @@ void CL_ParseClientdata (int bits)
 CL_ParseStatic
 =====================
 */
-void CL_ParseStatic (int largemodelindex)
+void CL_ParseStatic (int large)
 {
 	entity_t *ent;
 		
 	if (cl.num_statics >= MAX_STATIC_ENTITIES)
 		Host_Error ("Too many static entities");
 	ent = &cl_static_entities[cl.num_statics++];
-	CL_ParseBaseline (ent, largemodelindex);
+	CL_ParseBaseline (ent, large);
 
 // copy it to the current state
 	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
@@ -782,7 +834,6 @@ void CL_ParseStatic (int largemodelindex)
 
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);
 	VectorCopy (ent->state_baseline.angles, ent->render.angles);	
-//	R_AddEfrags (ent);
 }
 
 /*
@@ -790,13 +841,16 @@ void CL_ParseStatic (int largemodelindex)
 CL_ParseStaticSound
 ===================
 */
-void CL_ParseStaticSound (void)
+void CL_ParseStaticSound (int large)
 {
 	vec3_t		org;
 	int			sound_num, vol, atten;
 
 	MSG_ReadVector(org);
-	sound_num = MSG_ReadByte ();
+	if (large)
+		sound_num = (unsigned short) MSG_ReadShort ();
+	else
+		sound_num = MSG_ReadByte ();
 	vol = MSG_ReadByte ();
 	atten = MSG_ReadByte ();
 	
@@ -824,7 +878,7 @@ void CL_ParseEffect2 (void)
 
 	MSG_ReadVector(org);
 	modelindex = MSG_ReadShort ();
-	startframe = MSG_ReadByte ();
+	startframe = MSG_ReadShort ();
 	framecount = MSG_ReadByte ();
 	framerate = MSG_ReadByte ();
 
@@ -847,7 +901,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage (void)
 {
 	int			cmd;
-	int			i, updateend;
+	int			i, entitiesupdated;
 	byte		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
@@ -872,7 +926,7 @@ void CL_ParseServerMessage (void)
 //
 	MSG_BeginReading ();
 
-	updateend = false;
+	entitiesupdated = false;
 	CL_EntityUpdateSetup();
 	
 	while (1)
@@ -945,8 +999,7 @@ void CL_ParseServerMessage (void)
 			
 		case svc_time:
 			// handle old protocols which do not have entity update ranges
-			CL_EntityUpdateBegin(1);
-			updateend = true;
+			entitiesupdated = true;
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();			
 			break;
@@ -1064,7 +1117,7 @@ void CL_ParseServerMessage (void)
 		case svc_spawnbaseline2:
 			i = MSG_ReadShort ();
 			// must use CL_EntityNum() to force cl.num_entities up
-			CL_ParseBaseline (CL_EntityNum(i), false);
+			CL_ParseBaseline (CL_EntityNum(i), true);
 			break;
 		case svc_spawnstatic:
 			CL_ParseStatic (false);
@@ -1108,7 +1161,11 @@ void CL_ParseServerMessage (void)
 			break;
 			
 		case svc_spawnstaticsound:
-			CL_ParseStaticSound ();
+			CL_ParseStaticSound (false);
+			break;
+
+		case svc_spawnstaticsound2:
+			CL_ParseStaticSound (true);
 			break;
 
 		case svc_cdtrack:
@@ -1149,19 +1206,9 @@ void CL_ParseServerMessage (void)
 		case svc_showlmp:
 			SHOWLMP_decodeshow();
 			break;
-		case svc_entitiesbegin:
-			// the beginning of an entity update range
-			CL_EntityUpdateBegin((unsigned) MSG_ReadShort());
-			break;
-		case svc_entitiesend:
-			// the end of an entity update range
-			CL_EntityUpdateEnd((unsigned) MSG_ReadShort());
-			updateend = false;
-			break;
 		}
 	}
 
-	if (updateend)
-		CL_EntityUpdateEnd(MAX_EDICTS);
+	if (entitiesupdated)
+		CL_EntityUpdateEnd();
 }
-

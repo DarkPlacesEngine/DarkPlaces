@@ -24,7 +24,7 @@ typedef struct zymtype1header_s
 	zymlump_t lump_vertbonecounts; // int vertbonecounts[numvertices]; // how many bones influence each vertex (separate mainly to make this compress better)
 	zymlump_t lump_verts; // zymvertex_t vert[numvertices]; // see vertex struct
 	zymlump_t lump_texcoords; // float texcoords[numvertices][2];
-	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int shader, count), each run can be used with glDrawElements (each triangle is 3 int indices)
+	zymlump_t lump_render; // int renderlist[rendersize]; // sorted by shader with run lengths (int count), shaders are sequentially used, each run can be used with glDrawElements (each triangle is 3 int indices)
 	zymlump_t lump_shaders; // char shadername[numshaders][32]; // shaders used on this model
 	zymlump_t lump_trizone; // byte trizone[numtris]; // see trizone explanation
 }

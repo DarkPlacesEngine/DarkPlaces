@@ -46,8 +46,6 @@
 #include <glide/sst1vid.h>
 
 
-cvar_t		vid_mode = {"vid_mode","0",false};
-
 viddef_t	vid;	// global video state
 
 static void	*dlhand = NULL;
@@ -306,6 +304,11 @@ findres(int *width, int *height)
 	return GR_RESOLUTION_640x480;
 }
 
+int VID_SetGamma(float prescale, float gamma, float scale, float base)
+{
+	return FALSE;
+}
+
 void VID_Init()
 {
 	int i;
@@ -387,9 +390,6 @@ void VID_ExtraOptionCmd(int option_cursor)
 	break;
 	}
 */
-}
-void VID_InitCvars ()
-{
 }
 
 void VID_SetCaption (char *text)

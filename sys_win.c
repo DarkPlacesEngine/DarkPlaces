@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // sys_win.c -- Win32 system interface code
 
+#define WIN32_USETIMEGETTIME 0
+
 #include "quakedef.h"
 #include "winquake.h"
 #include "errno.h"
@@ -33,12 +35,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int			starttime;
 qboolean	ActiveApp, Minimized;
-qboolean	WinNT;
 
-static double		pfreq;
-static double		curtime = 0.0;
-static double		lastcurtime = 0.0;
-static int			lowshift;
 qboolean			isDedicated;
 static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
@@ -49,8 +46,6 @@ static HANDLE	tevent;
 static HANDLE	hFile;
 static HANDLE	heventParent;
 static HANDLE	heventChild;
-
-void Sys_InitFloatTime (void);
 
 volatile int					sys_checksum;
 
@@ -212,77 +207,6 @@ SYSTEM IO
 ===============================================================================
 */
 
-#if NOTUSED
-/*
-================
-Sys_MakeCodeWriteable
-================
-*/
-void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
-{
-	DWORD  flOldProtect;
-
-	if (!VirtualProtect((LPVOID)startaddr, length, PAGE_READWRITE, &flOldProtect))
-		Sys_Error("Protection change failed\n");
-}
-#endif
-
-
-/*
-================
-Sys_Init
-================
-*/
-void Sys_Init (void)
-{
-	LARGE_INTEGER	PerformanceFreq;
-	unsigned int	lowpart, highpart;
-	OSVERSIONINFO	vinfo;
-
-	if (!QueryPerformanceFrequency (&PerformanceFreq))
-		Sys_Error ("No hardware timer available");
-
-// get 32 out of the 64 time bits such that we have around
-// 1 microsecond resolution
-#ifdef __BORLANDC__
-	lowpart = (unsigned int)PerformanceFreq.u.LowPart;
-	highpart = (unsigned int)PerformanceFreq.u.HighPart;
-#else
-	lowpart = (unsigned int)PerformanceFreq.LowPart;
-	highpart = (unsigned int)PerformanceFreq.HighPart;
-#endif	
-        lowshift = 0;
-
-	while (highpart || (lowpart > 2000000.0))
-	{
-		lowshift++;
-		lowpart >>= 1;
-		lowpart |= (highpart & 1) << 31;
-		highpart >>= 1;
-	}
-
-	pfreq = 1.0 / (double)lowpart;
-
-	Sys_InitFloatTime ();
-
-	vinfo.dwOSVersionInfoSize = sizeof(vinfo);
-
-	if (!GetVersionEx (&vinfo))
-		Sys_Error ("Couldn't get OS info");
-
-	if ((vinfo.dwMajorVersion < 4) ||
-		(vinfo.dwPlatformId == VER_PLATFORM_WIN32s))
-	{
-		Sys_Error ("WinQuake requires at least Win95 or NT 4.0");
-	}
-
-	if (vinfo.dwPlatformId == VER_PLATFORM_WIN32_NT)
-		WinNT = true;
-	else
-		WinNT = false;
-}
-
-
 void Sys_Error (char *error, ...)
 {
 	va_list		argptr;
@@ -318,11 +242,11 @@ void Sys_Error (char *error, ...)
 		WriteFile (houtput, text4, strlen (text4), &dummy, NULL);
 
 
-		starttime = Sys_FloatTime ();
+		starttime = Sys_DoubleTime ();
 		sc_return_on_enter = true;	// so Enter will get us out of here
 
 		while (!Sys_ConsoleInput () &&
-				((Sys_FloatTime () - starttime) < CONSOLE_ERROR_TIMEOUT))
+				((Sys_DoubleTime () - starttime) < CONSOLE_ERROR_TIMEOUT))
 		{
 		}
 	}
@@ -396,95 +320,97 @@ void Sys_Quit (void)
 
 /*
 ================
-Sys_FloatTime
+Sys_DoubleTime
 ================
 */
-double Sys_FloatTime (void)
+double Sys_DoubleTime (void)
 {
-	static int			sametimecount;
-	static unsigned int	oldtime;
-	static int			first = 1;
-	LARGE_INTEGER		PerformanceCount;
-	unsigned int		temp, t2;
-	double				time;
+	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
+#if WIN32_USETIMEGETTIME
+	// timeGetTime
+	// platform:
+	// Windows 95/98/ME/NT/2000
+	// features:
+	// reasonable accuracy (millisecond)
+	// issues:
+	// none known
+	static int first = true;
+	static double oldtime = 0.0, basetime = 0.0, old = 0.0;
+	double newtime, now;
+
+	now = (double) timeGetTime () - basetime;
+
+	if (first)
+	{
+		first = false;
+		basetime = now;
+		now = 0;
+	}
+
+	if (now < old)
+	{
+		// wrapped
+		basetime -= (65536.0 * 65536.0);
+		now += (65536.0 * 65536.0);
+	}
+	old = now;
+
+	newtime = now / 1000.0;
+
+	if (newtime < oldtime)
+		Sys_Error("Sys_DoubleTime: time running backwards??\n");
+
+	oldtime = newtime;
+
+	return newtime;
+#else
+	// QueryPerformanceCounter
+	// platform:
+	// Windows 95/98/ME/NT/2000
+	// features:
+	// very accurate (CPU cycles)
+	// known issues:
+	// does not necessarily match realtime too well (tends to get faster and faster in win98)
+	static int first = true;
+	static double oldtime = 0.0, basetime = 0.0, timescale = 0.0;
+	double newtime;
+	LARGE_INTEGER PerformanceFreq;
+	LARGE_INTEGER PerformanceCount;
+
+	if (first)
+	{
+		if (!QueryPerformanceFrequency (&PerformanceFreq))
+			Sys_Error ("No hardware timer available");
+
+#ifdef __BORLANDC__
+		timescale = 1.0 / ((double) PerformanceFreq.u.LowPart + (double) PerformanceFreq.u.HighPart * 65536.0 * 65536.0);
+#else
+		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
+#endif	
+	}
 
 	QueryPerformanceCounter (&PerformanceCount);
 
 #ifdef __BORLANDC__
-	temp = ((unsigned int)PerformanceCount.u.LowPart >> lowshift) |
-	    ((unsigned int)PerformanceCount.u.HighPart << (32 - lowshift));
+	newtime = ((double) PerformanceCount.u.LowPart + (double) PerformanceCount.u.HighPart * 65536.0 * 65536.0) * timescale - basetime;
 #else
+	newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale - basetime;
+#endif	
 
-	temp = ((unsigned int)PerformanceCount.LowPart >> lowshift) |
-		   ((unsigned int)PerformanceCount.HighPart << (32 - lowshift));
-#endif
 	if (first)
 	{
-		oldtime = temp;
-		first = 0;
-	}
-	else
-	{
-	// check for turnover or backward time
-		if ((temp <= oldtime) && ((oldtime - temp) < 0x10000000))
-		{
-			oldtime = temp;	// so we can't get stuck
-		}
-		else
-		{
-			t2 = temp - oldtime;
-
-			time = (double)t2 * pfreq;
-			oldtime = temp;
-
-			curtime += time;
-
-			if (curtime == lastcurtime)
-			{
-				sametimecount++;
-
-				if (sametimecount > 100000)
-				{
-					curtime += 1.0;
-					sametimecount = 0;
-				}
-			}
-			else
-			{
-				sametimecount = 0;
-			}
-
-			lastcurtime = curtime;
-		}
+		first = false;
+		basetime = newtime;
+		newtime = 0;
 	}
 
-    return curtime;
-}
+	if (newtime < oldtime)
+		Sys_Error("Sys_DoubleTime: time running backwards??\n");
 
+	oldtime = newtime;
 
-/*
-================
-Sys_InitFloatTime
-================
-*/
-void Sys_InitFloatTime (void)
-{
-	int		j;
-
-	Sys_FloatTime ();
-
-	j = COM_CheckParm("-starttime");
-
-	if (j)
-	{
-		curtime = (double) (atof(com_argv[j+1]));
-	}
-	else
-	{
-		curtime = 0.0;
-	}
-
-	lastcurtime = curtime;
+	return newtime;
+#endif
 }
 
 
@@ -738,32 +664,27 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		InitConProc (hFile, heventParent, heventChild);
 	}
 
-	Sys_Init ();
-
 // because sound is off until we become active
 	S_BlockSound ();
+
+#if WIN32_USETIMEGETTIME
+	// make sure the timer is high precision, otherwise NT gets 18ms resolution
+	// LordHavoc:
+	// Windows 2000 Advanced Server (and possibly other versions)
+	// apparently have a broken timer, because it runs at more like 10x speed
+	// if this isn't used, heh
+	timeBeginPeriod (1);
+#endif
 
 	Sys_Printf ("Host_Init\n");
 	Host_Init ();
 
-	oldtime = Sys_FloatTime ();
+	oldtime = Sys_DoubleTime ();
 
     /* main window message loop */
 	while (1)
 	{
-		if (isDedicated)
-		{
-			newtime = Sys_FloatTime ();
-			time = newtime - oldtime;
-
-			while (time < sys_ticrate.value )
-			{
-				Sys_Sleep();
-				newtime = Sys_FloatTime ();
-				time = newtime - oldtime;
-			}
-		}
-		else
+		if (!isDedicated)
 		{
 		// yield the CPU for a little while when paused, minimized, or not the focus
 			if ((cl.paused && (!ActiveApp && !DDActive)) || Minimized)
@@ -775,22 +696,8 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			{
 				SleepUntilInput (NOT_FOCUS_SLEEP);
 			}
-			/*
-			else if (!cls.timedemo && time < (timediff = 1.0 / maxfps.value))
-			{
-				newtime = Sys_FloatTime ();
-				time = newtime - oldtime;
 
-				while (time < timediff)
-				{
-					Sys_Sleep();
-					newtime = Sys_FloatTime ();
-					time = newtime - oldtime;
-				}
-			}
-			*/
-
-			newtime = Sys_FloatTime ();
+			newtime = Sys_DoubleTime ();
 			time = newtime - oldtime;
 		}
 

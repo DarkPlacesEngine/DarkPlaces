@@ -737,7 +737,7 @@ void V_CalcRefdef (void)
 	vec3_t		forward;
 	vec3_t		angles;
 	float		bob;
-	static float oldz = 0;
+//	static float oldz = 0;
 
 	V_DriftPitch ();
 
@@ -794,25 +794,19 @@ void V_CalcRefdef (void)
 	for (i=0 ; i<3 ; i++)
 	{
 		view->render.origin[i] += forward[i]*bob*0.4;
-//		view->origin[i] += right[i]*bob*0.4;
-//		view->origin[i] += up[i]*bob*0.8;
+//		view->render.origin[i] += right[i]*bob*0.4;
+//		view->render.origin[i] += up[i]*bob*0.8;
 	}
 	view->render.origin[2] += bob;
-
-// fudge position around to keep amount of weapon visible
-// roughly equal with different FOV
 
 	view->render.model = cl.model_precache[cl.stats[STAT_WEAPON]];
 	view->render.frame = cl.stats[STAT_WEAPONFRAME];
 	view->render.colormap = -1; // no special coloring
 
 // set up the refresh position
-	if (!intimerefresh)
-	if (v_punch.value)
-	{
-		VectorAdd (r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
-	}
 
+	// LordHavoc: this never looked all that good to begin with...
+	/*
 // smooth out stair step ups
 if (cl.onground && ent->render.origin[2] - oldz > 0)
 {
@@ -833,9 +827,14 @@ if (cl.onground && ent->render.origin[2] - oldz > 0)
 }
 else
 	oldz = ent->render.origin[2];
+	*/
 
-// LordHavoc: origin view kick
-	VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
+// LordHavoc: origin view kick added
+	if (!intimerefresh && v_punch.value)
+	{
+		VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
+		VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
+	}
 
 	if (chase_active.value)
 		Chase_Update ();

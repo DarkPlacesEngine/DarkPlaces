@@ -229,7 +229,10 @@ void Draw_Character (int x, int y, int num)
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
-	glColor3f(1,1,1);
+	if (lighthalf)
+		glColor3f(0.5f,0.5f,0.5f);
+	else
+		glColor3f(1.0f,1.0f,1.0f);
 	glBegin (GL_QUADS);
 	glTexCoord2f (fcol, frow);
 	glVertex2f (x, y);
@@ -281,7 +284,10 @@ void Draw_String (int x, int y, char *str, int maxlen)
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	}
 
-	glColor3f(1,1,1);
+	if (lighthalf)
+		glColor3f(0.5f,0.5f,0.5f);
+	else
+		glColor3f(1.0f,1.0f,1.0f);
 	glBegin (GL_QUADS);
 	while (maxlen-- && x < (int) vid.width) // stop rendering when out of characters or room
 	{
@@ -310,7 +316,10 @@ void Draw_GenericPic (rtexture_t *tex, float red, float green, float blue, float
 {
 	if (!r_render.value)
 		return;
-	glColor4f(red,green,blue,alpha);
+	if (lighthalf)
+		glColor4f(red * 0.5f, green * 0.5f, blue * 0.5f, alpha);
+	else
+		glColor4f(red, green, blue, alpha);
 	glBindTexture(GL_TEXTURE_2D, R_GetTexture(tex));
 	glBegin (GL_QUADS);
 	glTexCoord2f (0, 0);glVertex2f (x, y);
@@ -395,7 +404,13 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	if (!r_render.value)
 		return;
 	glDisable (GL_TEXTURE_2D);
-	glColor3f (host_basepal[c*3]/255.0, host_basepal[c*3+1]/255.0, host_basepal[c*3+2]/255.0);
+	if (lighthalf)
+	{
+		byte *tempcolor = (byte *)&d_8to24table[c];
+		glColor4ub ((byte) (tempcolor[0] >> 1), (byte) (tempcolor[1] >> 1), (byte) (tempcolor[2] >> 1), tempcolor[3]);
+	}
+	else
+		glColor4ubv ((byte *)&d_8to24table[c]);
 
 	glBegin (GL_QUADS);
 

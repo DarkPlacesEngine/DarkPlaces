@@ -891,7 +891,7 @@ void R_DrawBrushModel (entity_t *e)
 
 	c_bmodels++;
 
-	VectorSubtract (r_refdef.vieworg, e->render.origin, modelorg);
+	VectorSubtract (r_origin, e->render.origin, modelorg);
 	if (rotated)
 	{
 		vec3_t	temp;
@@ -904,7 +904,13 @@ void R_DrawBrushModel (entity_t *e)
 		modelorg[2] = DotProduct (temp, up);
 	}
 
-	s = &clmodel->surfaces[clmodel->firstmodelsurface];
+	for (i = 0, s = &clmodel->surfaces[clmodel->firstmodelsurface];i < clmodel->nummodelsurfaces;i++, s++)
+	{
+		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
+			s->visframe = r_framecount;
+		else
+			s->visframe = -1;
+	}
 
 // calculate dynamic lighting for bmodel if it's not an
 // instanced model
@@ -923,9 +929,9 @@ void R_DrawBrushModel (entity_t *e)
 	e->render.angles[0] = -e->render.angles[0];	// stupid quake bug
 
 	// draw texture
-	for (i = 0;i < clmodel->nummodelsurfaces;i++, s++)
+	for (i = 0, s = &clmodel->surfaces[clmodel->firstmodelsurface];i < clmodel->nummodelsurfaces;i++, s++)
 	{
-		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
+		if (s->visframe == r_framecount)
 		{
 //			R_DrawSurf(s, true, vertexlit || s->texinfo->texture->transparent);
 			if (s->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
@@ -980,7 +986,7 @@ void R_SolidWorldNode ()
 
 	for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
 	{
-		if (/*leaf->efrags || */leaf->nummarksurfaces)
+		if (leaf->nummarksurfaces)
 		{
 			if (R_CullBox(leaf->mins, leaf->maxs))
 				continue;
@@ -988,10 +994,6 @@ void R_SolidWorldNode ()
 			c_leafs++;
 
 			leaf->visframe = r_framecount;
-
-			// deal with model fragments in this leaf
-//			if (leaf->efrags)
-//				R_StoreEfrags (&leaf->efrags);
 
 			if (leaf->nummarksurfaces)
 			{
@@ -1041,10 +1043,6 @@ void R_PortalWorldNode ()
 		c_leafs++;
 
 		leaf->visframe = r_framecount;
-
-		// deal with model fragments in this leaf
-	//	if (leaf->efrags)
-	//		R_StoreEfrags (&leaf->efrags);
 
 		if (leaf->nummarksurfaces)
 		{
@@ -1114,10 +1112,6 @@ loc0:
 	c_leafs++;
 
 	leaf->visframe = r_framecount;
-
-	// deal with model fragments in this leaf
-//	if (leaf->efrags)
-//		R_StoreEfrags (&leaf->efrags);
 
 	if (leaf->nummarksurfaces)
 	{
@@ -1270,7 +1264,7 @@ void R_DrawWorld (void)
 	modelalpha = ent.render.alpha = 1;
 	ent.render.scale = 1;
 
-	VectorCopy (r_refdef.vieworg, modelorg);
+	VectorCopy (r_origin, modelorg);
 
 	currententity = &ent;
 

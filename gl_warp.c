@@ -247,7 +247,7 @@ extern cvar_t r_farclip;
 
 #define R_SkyBoxPolyVec(s,t,x,y,z) \
 	glTexCoord2f((s) * (254.0f/256.0f) + (1.0f/256.0f), (t) * (254.0f/256.0f) + (1.0f/256.0f));\
-	glVertex3f((x) * 1024.0 + r_refdef.vieworg[0], (y) * 1024.0 + r_refdef.vieworg[1], (z) * 1024.0 + r_refdef.vieworg[2]);
+	glVertex3f((x) * 1024.0 + r_origin[0], (y) * 1024.0 + r_origin[1], (z) * 1024.0 + r_origin[2]);
 
 void R_SkyBox()
 {
@@ -341,9 +341,9 @@ void skydome(float *source, float s, float texscale)
 	{
 		*t++ = source[0] * texscale + s;
 		*t++ = source[1] * texscale + s;
-		*v++ = *source++ + r_refdef.vieworg[0];
-		*v++ = *source++ + r_refdef.vieworg[1];
-		*v++ = *source++ + r_refdef.vieworg[2];
+		*v++ = *source++ + r_origin[0];
+		*v++ = *source++ + r_origin[1];
+		*v++ = *source++ + r_origin[2];
 	}
 	glTexCoordPointer(2, GL_FLOAT, 0, tex);
 	glVertexPointer(3, GL_FLOAT, 0, vert);

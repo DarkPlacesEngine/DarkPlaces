@@ -75,8 +75,6 @@ cvar_t	r_dynamic = {"r_dynamic","1"};
 cvar_t	r_waterripple = {"r_waterripple","0"};
 cvar_t	r_fullbrights = {"r_fullbrights", "1"};
 
-cvar_t	contrast = {"contrast", "1.0", true}; // LordHavoc: a method of operating system independent color correction
-cvar_t	brightness = {"brightness", "1.0", true}; // LordHavoc: a method of operating system independent color correction
 cvar_t	gl_lightmode = {"gl_lightmode", "1", true}; // LordHavoc: overbright lighting
 //cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
 cvar_t	r_farclip = {"r_farclip", "6144"};
@@ -270,8 +268,6 @@ void GL_Main_Init()
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_speeds2);
-	Cvar_RegisterVariable (&contrast);
-	Cvar_RegisterVariable (&brightness);
 	Cvar_RegisterVariable (&gl_lightmode);
 //	Cvar_RegisterVariable (&r_dynamicwater);
 //	Cvar_RegisterVariable (&r_dynamicbothsides);
@@ -351,8 +347,6 @@ void GL_Init (void)
 	glAlphaFunc(GL_GREATER, 0.5);
 
 //	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
-
-	Palette_Init();
 }
 
 
@@ -438,9 +432,9 @@ void R_PrepareEntities (void)
 			ent->render.flags -= RENDER_VIEWMODEL;
 			// transform origin
 			VectorCopy(ent->render.origin, v);
-			ent->render.origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_refdef.vieworg[0];
-			ent->render.origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_refdef.vieworg[1];
-			ent->render.origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_refdef.vieworg[2];
+			ent->render.origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_origin[0];
+			ent->render.origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_origin[1];
+			ent->render.origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_origin[2];
 			// adjust angles
 			VectorAdd(ent->render.angles, r_refdef.viewangles, ent->render.angles);
 		}
@@ -587,8 +581,6 @@ void R_SetupFrame (void)
 		Cvar_Set ("r_ambient", "0");
 	}
 
-	R_AnimateLight ();
-
 	r_framecount++;
 
 // build the transformation matrix for the given view angles
@@ -616,6 +608,8 @@ void R_SetupFrame (void)
 	c_sprites = 0;
 	c_particles = 0;
 //	c_dlights = 0;
+
+	R_AnimateLight ();
 }
 
 
@@ -680,10 +674,7 @@ void R_SetupGL (void)
 	glViewport (glx + x, gly + y2, w, h);
     screenaspect = (float)r_refdef.vrect.width/r_refdef.vrect.height;
 //	yfov = 2*atan((float)r_refdef.vrect.height/r_refdef.vrect.width)*180/M_PI;
-//	if (skyname[0]) // skybox enabled?
-//		MYgluPerspective (r_refdef.fov_y,  screenaspect,  4,  r_skyboxsize.value*1.732050807569 + 256); // this is size*sqrt(3) + 256
-//	else
-		MYgluPerspective (r_refdef.fov_y,  screenaspect,  4,  r_farclip.value);
+	MYgluPerspective (r_refdef.fov_y,  screenaspect,  4,  r_farclip.value);
 
 	glCullFace(GL_FRONT);
 
@@ -760,14 +751,14 @@ void GL_Brighten()
 	glEnable (GL_CULL_FACE);
 }
 
-extern cvar_t contrast;
-extern cvar_t brightness;
-extern cvar_t gl_lightmode;
-
 void GL_BlendView()
 {
 	if (!r_render.value)
 		return;
+
+	if (v_blend[3] < 0.01f)
+		return;
+
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity ();
 	glOrtho  (0, vid.width, vid.height, 0, -99999, 99999);
@@ -777,27 +768,16 @@ void GL_BlendView()
 	glDisable (GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
-	if (lighthalf)
-	{
-		glBlendFunc (GL_DST_COLOR, GL_ONE);
-		glBegin (GL_TRIANGLES);
-		glColor3f (1, 1, 1);
-		glVertex2f (-5000, -5000);
-		glVertex2f (10000, -5000);
-		glVertex2f (-5000, 10000);
-		glEnd ();
-	}
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	contrast.value = bound(0.2, contrast.value, 1.0);
-	if (/*gl_polyblend.value && */v_blend[3])
-	{
-		glBegin (GL_TRIANGLES);
+	glBegin (GL_TRIANGLES);
+	if (lighthalf)
+		glColor4f (v_blend[0] * 0.5f, v_blend[1] * 0.5f, v_blend[2] * 0.5f, v_blend[3]);
+	else
 		glColor4fv (v_blend);
-		glVertex2f (-5000, -5000);
-		glVertex2f (10000, -5000);
-		glVertex2f (-5000, 10000);
-		glEnd ();
-	}
+	glVertex2f (-5000, -5000);
+	glVertex2f (10000, -5000);
+	glVertex2f (-5000, 10000);
+	glEnd ();
 
 	glEnable (GL_CULL_FACE);
 	glEnable (GL_DEPTH_TEST);
@@ -809,7 +789,7 @@ void GL_BlendView()
 	if (r_speeds2.value)\
 	{\
 		temptime = currtime;\
-		currtime = Sys_FloatTime();\
+		currtime = Sys_DoubleTime();\
 		VAR = (int) ((currtime - temptime) * 1000000.0);\
 	}\
 	else\
@@ -841,9 +821,7 @@ void R_RenderView (void)
 	FOG_framebegin();
 
 	if (r_speeds2.value)
-	{
-		starttime = currtime = Sys_FloatTime();
-	}
+		starttime = currtime = Sys_DoubleTime();
 	else
 		starttime = currtime = 0;
 	R_Clear();
@@ -908,7 +886,7 @@ void R_RenderView (void)
 	TIMEREPORT(time_blend)
 	if (r_speeds2.value)
 	{
-		time_total = (int) ((Sys_FloatTime() - starttime) * 1000000.0);
+		time_total = (int) ((Sys_DoubleTime() - starttime) * 1000000.0);
 		sprintf(r_speeds2_string1, "%6i walls %6i dlitwalls %7i modeltris %7i transpoly\n", c_brush_polys, c_light_polys, c_alias_polys, currenttranspoly);
 		sprintf(r_speeds2_string2, "BSP: %6i faces %6i nodes %6i leafs\n", c_faces, c_nodes, c_leafs);
 		sprintf(r_speeds2_string3, "%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n", c_models, c_bmodels, c_sprites, c_particles, c_dlights);

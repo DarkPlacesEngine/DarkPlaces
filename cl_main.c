@@ -41,11 +41,13 @@ cvar_t	m_yaw = {"m_yaw","0.022", true};
 cvar_t	m_forward = {"m_forward","1", true};
 cvar_t	m_side = {"m_side","0.8", true};
 
+cvar_t freelook = {"freelook", "1", true};
+
+cvar_t demo_nehahra = {"demo_nehahra", "0"};
 
 client_static_t	cls;
 client_state_t	cl;
 // FIXME: put these on hunk?
-//efrag_t			cl_efrags[MAX_EFRAGS];
 entity_t		cl_entities[MAX_EDICTS];
 entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
 lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
@@ -73,7 +75,6 @@ void CL_ClearState (void)
 	SZ_Clear (&cls.message);
 
 // clear other arrays	
-//	memset (cl_efrags, 0, sizeof(cl_efrags));
 	memset (cl_entities, 0, sizeof(cl_entities));
 	memset (cl_dlights, 0, sizeof(cl_dlights));
 	memset (cl_lightstyle, 0, sizeof(cl_lightstyle));
@@ -82,20 +83,10 @@ void CL_ClearState (void)
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < MAX_EDICTS;i++)
 	{
-		cl_entities[i].state_baseline.alpha = 255;
-		cl_entities[i].state_baseline.scale = 16;
-		cl_entities[i].state_baseline.glowsize = 0;
-		cl_entities[i].state_baseline.glowcolor = 254;
-		cl_entities[i].state_baseline.colormod = 255;
+		ClearStateToDefault(&cl_entities[i].state_baseline);
+		ClearStateToDefault(&cl_entities[i].state_previous);
+		ClearStateToDefault(&cl_entities[i].state_current);
 	}
-
-////
-//// allocate the efrags and chain together into a free list
-////
-//	cl.free_efrags = cl_efrags;
-//	for (i=0 ; i<MAX_EFRAGS-1 ; i++)
-//		cl.free_efrags[i].entnext = &cl.free_efrags[i+1];
-//	cl.free_efrags[i].entnext = NULL;
 }
 
 /*
@@ -678,7 +669,7 @@ void CL_RelinkEntities (void)
 			CL_AllocDlight (ent, ent->render.origin, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
 		}
 
-		if (i == cl.viewentity && !chase_active.value)
+		if (!chase_active.value && ((i == cl.viewentity) || (ent->render.flags & RENDER_EXTERIORMODEL)))
 			continue;
 
 		if (ent->render.model == NULL)
@@ -842,8 +833,6 @@ void CL_Fog_f (void)
 	fog_blue = atof(Cmd_Argv(4));
 }
 
-cvar_t demo_nehahra = {"demo_nehahra", "0"};
-
 /*
 =================
 CL_Init
@@ -875,6 +864,7 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&lookspring);
 	Cvar_RegisterVariable (&lookstrafe);
 	Cvar_RegisterVariable (&sensitivity);
+	Cvar_RegisterVariable (&freelook);
 
 	Cvar_RegisterVariable (&m_pitch);
 	Cvar_RegisterVariable (&m_yaw);
@@ -884,6 +874,7 @@ void CL_Init (void)
 //	Cvar_RegisterVariable (&cl_autofire);
 	
 	Cmd_AddCommand ("entities", CL_PrintEntities_f);
+	Cmd_AddCommand ("bitprofile", CL_BitProfile_f);
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
 	Cmd_AddCommand ("record", CL_Record_f);
 	Cmd_AddCommand ("stop", CL_Stop_f);

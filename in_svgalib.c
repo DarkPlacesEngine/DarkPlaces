@@ -324,16 +324,20 @@ void IN_Commands(void)
 
 void IN_Move(usercmd_t *cmd)
 {
+	int mouselook = (in_mlook.state & 1) || freelook.value;
 	if (!UseMouse) return;
 
 	/* Poll mouse values */
 	while (mouse_update())
 		;
 
-	if (m_filter.value) {
+	if (m_filter.value)
+	{
 		mouse_x = (mx + old_mouse_x) * 0.5;
 		mouse_y = (my + old_mouse_y) * 0.5;
-	} else {
+	}
+	else
+	{
 		mouse_x = mx;
 		mouse_y = my;
 	}
@@ -346,30 +350,28 @@ void IN_Move(usercmd_t *cmd)
 	mouse_y *= sensitivity.value;
 
 	/* Add mouse X/Y movement to cmd */
-	if ( (in_strafe.state & 1) ||
-	     (lookstrafe.value && (in_mlook.state & 1) )) {
+	if ( (in_strafe.state & 1) || (lookstrafe.value && mouselook))
 		cmd->sidemove += m_side.value * mouse_x;
-	} else {
+	else
 		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
-	}
 
-	if ((in_mlook.state & 1)) V_StopPitchDrift();
+	if (mouselook) V_StopPitchDrift();
 
 	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
-	if ((in_mlook.state & 1) && !(in_strafe.state & 1)) {
+	if (mouselook && !(in_strafe.state & 1))
+	{
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
-		if (cl.viewangles[PITCH] > 90) {
+		if (cl.viewangles[PITCH] > 90)
 			cl.viewangles[PITCH] = 90;
-		}
-		if (cl.viewangles[PITCH] < -90) {
+		if (cl.viewangles[PITCH] < -90)
 			cl.viewangles[PITCH] = -90;
-		}
-	} else {
-		if ((in_strafe.state & 1) && noclip_anglehack) {
+	}
+	else
+	{
+		if ((in_strafe.state & 1) && noclip_anglehack)
 			cmd->upmove -= m_forward.value * mouse_y;
-		} else {
+		else
 			cmd->forwardmove -= m_forward.value * mouse_y;
-		}
 	}
 }
 

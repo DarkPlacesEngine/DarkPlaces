@@ -441,7 +441,7 @@ void Host_ShutdownServer(qboolean crash)
 		CL_Disconnect ();
 
 // flush any pending messages - like the score!!!
-	start = Sys_FloatTime();
+	start = Sys_DoubleTime();
 	do
 	{
 		count = 0;
@@ -461,7 +461,7 @@ void Host_ShutdownServer(qboolean crash)
 				}
 			}
 		}
-		if ((Sys_FloatTime() - start) > 3.0)
+		if ((Sys_DoubleTime() - start) > 3.0)
 			break;
 	}
 	while (count);
@@ -555,8 +555,7 @@ qboolean Host_FilterTime (double time)
 			host_frametime = (1.0 / host_minfps.value);
 	}
 
-	host_frametime *= slowmo.value;
-	cl.frametime = host_frametime;
+	cl.frametime = host_frametime = bound(0, host_frametime * slowmo.value, 0.1f); // LordHavoc: the QC code relies on no less than 10fps
 	
 	return true;
 }
@@ -694,12 +693,12 @@ void _Host_Frame (float time)
 
 // update video
 	if (host_speeds.value)
-		time1 = Sys_FloatTime ();
+		time1 = Sys_DoubleTime ();
 		
 	SCR_UpdateScreen ();
 
 	if (host_speeds.value)
-		time2 = Sys_FloatTime ();
+		time2 = Sys_DoubleTime ();
 		
 // update audio
 	if (cls.signon == SIGNONS)
@@ -715,7 +714,7 @@ void _Host_Frame (float time)
 	if (host_speeds.value)
 	{
 		pass1 = (time1 - time3)*1000000;
-		time3 = Sys_FloatTime ();
+		time3 = Sys_DoubleTime ();
 		pass2 = (time2 - time1)*1000000;
 		pass3 = (time3 - time2)*1000000;
 		Con_Printf ("%6ius total %6ius server %6ius gfx %6ius snd\n",
@@ -738,9 +737,9 @@ void Host_Frame (float time)
 		return;
 	}
 	
-	time1 = Sys_FloatTime ();
+	time1 = Sys_DoubleTime ();
 	_Host_Frame (time);
-	time2 = Sys_FloatTime ();	
+	time2 = Sys_DoubleTime ();	
 	
 	timetotal += time2 - time1;
 	timecount++;
@@ -828,7 +827,11 @@ void Host_Init ()
 	
 	if (cls.state != ca_dedicated)
 	{
-		Palette_Init("gfx/palette.lmp");
+		VID_InitCvars();
+
+		Gamma_Init();
+
+		Palette_Init();
 
 #ifndef _WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();

@@ -70,24 +70,24 @@ console is:
 */
 
 
-int			glx, gly, glwidth, glheight;
+int		glx, gly, glwidth, glheight;
 
-float		scr_con_current;
-float		scr_conlines;		// lines of console to display
+float	scr_con_current;
+float	scr_conlines;		// lines of console to display
 
-float		oldscreensize, oldfov;
-cvar_t		scr_viewsize = {"viewsize","100", true};
-cvar_t		scr_fov = {"fov","90"};	// 10 - 170
-cvar_t		scr_conspeed = {"scr_conspeed","300"};
-cvar_t		scr_centertime = {"scr_centertime","2"};
-cvar_t		scr_showram = {"showram","1"};
-cvar_t		scr_showturtle = {"showturtle","0"};
-cvar_t		scr_showpause = {"showpause","1"};
-cvar_t		scr_printspeed = {"scr_printspeed","8"};
-cvar_t		showfps = {"showfps", "0", true};
-cvar_t		r_render = {"r_render", "1"};
-
-extern	cvar_t	crosshair;
+float	oldscreensize, oldfov;
+cvar_t	scr_viewsize = {"viewsize","100", true};
+cvar_t	scr_fov = {"fov","90"};	// 10 - 170
+cvar_t	scr_conspeed = {"scr_conspeed","300"};
+cvar_t	scr_centertime = {"scr_centertime","2"};
+cvar_t	scr_showram = {"showram","1"};
+cvar_t	scr_showturtle = {"showturtle","0"};
+cvar_t	scr_showpause = {"showpause","1"};
+cvar_t	scr_printspeed = {"scr_printspeed","8"};
+cvar_t	showfps = {"showfps", "0", true};
+cvar_t	r_render = {"r_render", "1"};
+cvar_t	r_brightness = {"r_brightness", "1", true}; // LordHavoc: a method of operating system independent color correction
+cvar_t	r_contrast = {"r_contrast", "1", true}; // LordHavoc: a method of operating system independent color correction
 
 qboolean	scr_initialized;		// ready to draw
 
@@ -97,10 +97,6 @@ qpic_t		*scr_turtle;
 
 int			clearconsole;
 int			clearnotify;
-
-extern int                     sb_lines;
-
-extern viddef_t        vid;                            // global video state
 
 qboolean	scr_disabled_for_loading;
 //qboolean	scr_drawloading;
@@ -392,6 +388,8 @@ void GL_Screen_Init (void)
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&showfps);
 	Cvar_RegisterVariable (&r_render);
+	Cvar_RegisterVariable (&r_brightness);
+	Cvar_RegisterVariable (&r_contrast);
 #ifdef NORENDER
 	r_render.value = 0;
 #endif
@@ -711,21 +709,34 @@ void DrawCrosshair(int num);
 void GL_Set2D (void);
 
 extern void SHOWLMP_drawall();
-extern cvar_t contrast;
-extern cvar_t brightness;
-extern cvar_t gl_lightmode;
 extern cvar_t r_speeds2;
 
 void GL_BrightenScreen()
 {
 	float f;
+
+	if (r_brightness.value < 0.1f)
+		Cvar_SetValue("r_brightness", 0.1f);
+	if (r_brightness.value > 5.0f)
+		Cvar_SetValue("r_brightness", 5.0f);
+
+	if (r_contrast.value < 0.2f)
+		Cvar_SetValue("r_contrast", 0.2f);
+	if (r_contrast.value > 1.0f)
+		Cvar_SetValue("r_contrast", 1.0f);
+
+	if (!(lighthalf && !hardwaregammasupported) && r_brightness.value < 1.01f && r_contrast.value > 0.99f)
+		return;
+
 	if (!r_render.value)
 		return;
+
 	glDisable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
-	f = bound(1.0f, brightness.value, 5.0f);
-	if (f != brightness.value)
-		Cvar_SetValue("brightness", f);
+	f = r_brightness.value;
+	// only apply lighthalf using software color correction if hardware is not available (speed reasons)
+	if (lighthalf && !hardwaregammasupported)
+		f *= 2;
 	if (f >= 1.01f)
 	{
 		glBlendFunc (GL_DST_COLOR, GL_ONE);
@@ -743,19 +754,20 @@ void GL_BrightenScreen()
 		}
 		glEnd ();
 	}
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	f = bound(0.2f, contrast.value, 1.0f);
-	if (f != contrast.value)
-		Cvar_SetValue("contrast", f);
-	if (contrast.value < 0.99f)
+	if (r_contrast.value <= 0.99f)
 	{
+		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		if (lighthalf && hardwaregammasupported)
+			glColor4f (0.5, 0.5, 0.5, 1 - r_contrast.value);
+		else
+			glColor4f (1, 1, 1, 1 - r_contrast.value);
 		glBegin (GL_TRIANGLES);
-		glColor4f (1, 1, 1, 1-contrast.value);
 		glVertex2f (-5000, -5000);
 		glVertex2f (10000, -5000);
 		glVertex2f (-5000, 10000);
 		glEnd ();
 	}
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glEnable (GL_CULL_FACE);
 	glEnable (GL_DEPTH_TEST);
@@ -779,7 +791,9 @@ void SCR_UpdateScreen (void)
 	double	time1 = 0, time2;
 
 	if (r_speeds.value)
-		time1 = Sys_FloatTime ();
+		time1 = Sys_DoubleTime ();
+
+	VID_UpdateGamma(false);
 
 	if (scr_disabled_for_loading)
 	{
@@ -861,7 +875,7 @@ void SCR_UpdateScreen (void)
 		double newtime;
 		char temp[32];
 		int calc;
-		newtime = Sys_FloatTime();
+		newtime = Sys_DoubleTime();
 		calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
 		sprintf(temp, "%4i fps", calc);
 		currtime = newtime;
@@ -888,7 +902,7 @@ void SCR_UpdateScreen (void)
 
 	if (r_speeds.value)
 	{
-		time2 = Sys_FloatTime ();
+		time2 = Sys_DoubleTime ();
 		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i lightpoly %4i BSPnodes %4i BSPleafs %4i BSPfaces %4i models %4i bmodels %4i sprites %4i particles %3i dlights\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_light_polys, c_nodes, c_leafs, c_faces, c_models, c_bmodels, c_sprites, c_particles, c_dlights);
 	}
 	GL_EndRendering ();

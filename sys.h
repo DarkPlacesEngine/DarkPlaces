@@ -37,13 +37,6 @@ int	Sys_FileTime (char *path);
 void Sys_mkdir (char *path);
 
 //
-// memory protection
-//
-#if NOTUSED
-void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length);
-#endif
-
-//
 // system IO
 //
 void Sys_DebugLog(char *file, char *fmt, ...);
@@ -56,7 +49,7 @@ void Sys_Printf (char *fmt, ...);
 
 void Sys_Quit (void);
 
-double Sys_FloatTime (void);
+double Sys_DoubleTime (void);
 
 char *Sys_ConsoleInput (void);
 

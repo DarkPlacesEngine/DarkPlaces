@@ -138,11 +138,6 @@ void R_NewMap (void)
 	r_worldentity.render.model = cl.worldmodel;
 	currententity = &r_worldentity;
 
-// clear out efrags in case the level hasn't been reloaded
-// FIXME: is this one short?
-//	for (i=0 ; i<cl.worldmodel->numleafs ; i++)
-//		cl.worldmodel->leafs[i].efrags = NULL;
-		 	
 	r_viewleaf = NULL;
 	R_Modules_NewMap();
 
@@ -175,7 +170,7 @@ void R_TimeRefresh_f (void)
 	float		start, stop, time;
 
 	intimerefresh = 1;
-	start = Sys_FloatTime ();
+	start = Sys_DoubleTime ();
 	for (i = 0;i < 128;i++)
 	{
 		r_refdef.viewangles[0] = 0;
@@ -184,7 +179,7 @@ void R_TimeRefresh_f (void)
 		SCR_UpdateScreen();
 	}
 
-	stop = Sys_FloatTime ();
+	stop = Sys_DoubleTime ();
 	intimerefresh = 0;
 	time = stop-start;
 	Con_Printf ("%f seconds (%f fps)\n", time, 128/time);

@@ -46,7 +46,7 @@ unsigned int uiWheelMessage;
 qboolean	mouseactive;
 qboolean		mouseinitialized;
 static qboolean	mouseparmsvalid, mouseactivatetoggle;
-static qboolean	mouseshowtoggle = 1;
+//static qboolean	mouseshowtoggle = 1;
 static qboolean	dinput_acquired;
 
 static unsigned int		mstate_di;
@@ -188,12 +188,11 @@ IN_ShowMouse
 */
 void IN_ShowMouse (void)
 {
-
-	if (!mouseshowtoggle)
-	{
+//	if (!mouseshowtoggle)
+//	{
 		ShowCursor (true);
-		mouseshowtoggle = 1;
-	}
+//		mouseshowtoggle = 1;
+//	}
 }
 
 
@@ -204,12 +203,11 @@ IN_HideMouse
 */
 void IN_HideMouse (void)
 {
-
-	if (mouseshowtoggle)
-	{
+//	if (mouseshowtoggle)
+//	{
 		ShowCursor (false);
-		mouseshowtoggle = 0;
-	}
+//		mouseshowtoggle = 0;
+//	}
 }
 
 
@@ -248,22 +246,11 @@ void IN_ActivateMouse (void)
 			SetCursorPos (window_center_x, window_center_y);
 			SetCapture (mainwindow);
 			ClipCursor (&window_rect);
+			
 		}
 
 		mouseactive = true;
 	}
-}
-
-
-/*
-===========
-IN_SetQuakeMouseState
-===========
-*/
-void IN_SetQuakeMouseState (void)
-{
-	if (mouseactivatetoggle)
-		IN_ActivateMouse ();
 }
 
 
@@ -301,26 +288,6 @@ void IN_DeactivateMouse (void)
 
 		mouseactive = false;
 	}
-}
-
-
-/*
-===========
-IN_RestoreOriginalMouseState
-===========
-*/
-void IN_RestoreOriginalMouseState (void)
-{
-	if (mouseactivatetoggle)
-	{
-		IN_DeactivateMouse ();
-		mouseactivatetoggle = true;
-	}
-
-// try to redraw the cursor so it gets reinitialized, because sometimes it
-// has garbage after the mode switch
-	ShowCursor (true);
-	ShowCursor (false);
 }
 
 
@@ -521,7 +488,7 @@ IN_Shutdown
 */
 void IN_Shutdown (void)
 {
-
+//	usingmouse = false;
 	IN_DeactivateMouse ();
 	IN_ShowMouse ();
 
@@ -578,8 +545,7 @@ IN_MouseMove
 */
 void IN_MouseMove (usercmd_t *cmd)
 {
-	int					mx, my;
-	int					i;
+	int					i, mx, my, mouselook = (in_mlook.state & 1) || freelook.value;
 	DIDEVICEOBJECTDATA	od;
 	DWORD				dwElements;
 	HRESULT				hr;
@@ -695,16 +661,16 @@ void IN_MouseMove (usercmd_t *cmd)
 	mouse_y *= sensitivity.value;
 
 // add mouse X/Y movement to cmd
-	if ( (in_strafe.state & 1) || (lookstrafe.value && (in_mlook.state & 1) ))
+	if ( (in_strafe.state & 1) || (lookstrafe.value && mouselook))
 		cmd->sidemove += m_side.value * mouse_x;
 	else
 		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
 
-	if (in_mlook.state & 1)
+	if (mouselook)
 		V_StopPitchDrift ();
 	
 	// LordHavoc: changed limits on pitch from -70 to 80, to -90 to 90
-	if ( (in_mlook.state & 1) && !(in_strafe.state & 1))
+	if (mouselook && !(in_strafe.state & 1))
 	{
 		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
 		if (cl.viewangles[PITCH] > 90)
@@ -1065,7 +1031,7 @@ void IN_JoyMove (usercmd_t *cmd)
 {
 	float	speed, aspeed;
 	float	fAxisValue, fTemp;
-	int		i;
+	int		i, mouselook = (in_mlook.state & 1) || freelook.value;
 
 	// complete initialization if first time in
 	// this is needed as cvars are not available at initialization time
@@ -1123,7 +1089,7 @@ void IN_JoyMove (usercmd_t *cmd)
 		switch (dwAxisMap[i])
 		{
 		case AxisForward:
-			if ((joy_advanced.value == 0.0) && (in_mlook.state & 1))
+			if ((joy_advanced.value == 0.0) && mouselook)
 			{
 				// user wants forward control to become look control
 				if (fabs(fAxisValue) > joy_pitchthreshold.value)
@@ -1168,7 +1134,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			break;
 
 		case AxisTurn:
-			if ((in_strafe.state & 1) || (lookstrafe.value && (in_mlook.state & 1)))
+			if ((in_strafe.state & 1) || (lookstrafe.value && mouselook))
 			{
 				// user wants turn control to become side control
 				if (fabs(fAxisValue) > joy_sidethreshold.value)
@@ -1195,7 +1161,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			break;
 
 		case AxisLook:
-			if (in_mlook.state & 1)
+			if (mouselook)
 			{
 				if (fabs(fAxisValue) > joy_pitchthreshold.value)
 				{

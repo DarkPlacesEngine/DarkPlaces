@@ -58,19 +58,13 @@ extern modestate_t	modestate;
 extern HWND			mainwindow;
 extern qboolean		ActiveApp, Minimized;
 
-extern qboolean	WinNT;
-
 void IN_ShowMouse (void);
 void IN_DeactivateMouse (void);
 void IN_HideMouse (void);
 void IN_ActivateMouse (void);
-void IN_RestoreOriginalMouseState (void);
-void IN_SetQuakeMouseState (void);
 void IN_MouseEvent (int mstate);
 
 extern qboolean	winsock_lib_initialized;
-
-extern cvar_t		_windowed_mouse;
 
 extern int		window_center_x, window_center_y;
 extern RECT		window_rect;

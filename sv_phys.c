@@ -948,8 +948,8 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 
 // retry the original move
 		ent->v.velocity[0] = oldvel[0];
-		ent->v. velocity[1] = oldvel[1];
-		ent->v. velocity[2] = 0;
+		ent->v.velocity[1] = oldvel[1];
+		ent->v.velocity[2] = 0;
 		clip = SV_FlyMove (ent, 0.1, &steptrace);
 
 		if ( fabs(oldorg[1] - ent->v.origin[1]) > 4
