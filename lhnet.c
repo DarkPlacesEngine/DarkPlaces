@@ -42,14 +42,14 @@ int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
 		memset(address, 0, sizeof(*address));
 		address->addresstype = LHNETADDRESSTYPE_INET4;
 		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
-		address->addressdata.inet4.port = htons(port);
+		address->addressdata.inet4.port = htons((unsigned short)port);
 		return 1;
 	case LHNETADDRESSTYPE_INET6:
 		// [0:0:0:0:0:0:0:0]:port  (IN6ADDR_ANY, binds to all interfaces)
 		memset(address, 0, sizeof(*address));
 		address->addresstype = LHNETADDRESSTYPE_INET6;
 		address->addressdata.inet6.family = LHNETADDRESSTYPE_INET6_FAMILY;
-		address->addressdata.inet6.port = htons(port);
+		address->addressdata.inet6.port = htons((unsigned short)port);
 		return 1;
 	}
 	return 0;
@@ -105,7 +105,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 				// great it worked
 				address->addresstype = LHNETADDRESSTYPE_INET6;
 				address->addressdata.inet6.family = hostentry->h_addrtype;
-				address->addressdata.inet6.port = htons(port);
+				address->addressdata.inet6.port = htons((unsigned short)port);
 				memcpy(address->addressdata.inet6.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet6.address));
 #ifdef STANDALONETEST
 				printf("gethostbyname(\"%s\") returned ipv6 address [%x:%x:%x:%x:%x:%x:%x:%x]:%d\n", name, (int)address->addressdata.inet6.address[0], (int)address->addressdata.inet6.address[1], (int)address->addressdata.inet6.address[2], (int)address->addressdata.inet6.address[3], (int)address->addressdata.inet6.address[4], (int)address->addressdata.inet6.address[5], (int)address->addressdata.inet6.address[6], (int)address->addressdata.inet6.address[7], (int)ntohs(address->addressdata.inet6.port));
@@ -117,7 +117,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 				// great it worked
 				address->addresstype = LHNETADDRESSTYPE_INET4;
 				address->addressdata.inet4.family = hostentry->h_addrtype;
-				address->addressdata.inet4.port = htons(port);
+				address->addressdata.inet4.port = htons((unsigned short)port);
 				memcpy(address->addressdata.inet4.address, hostentry->h_addr_list[0], sizeof(address->addressdata.inet4.address));
 #ifdef STANDALONETEST
 				printf("gethostbyname(\"%s\") returned ipv4 address %d.%d.%d.%d:%d\n", name, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
@@ -149,7 +149,7 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 		// parsed a valid ipv4 address
 		address->addresstype = LHNETADDRESSTYPE_INET4;
 		address->addressdata.inet4.family = LHNETADDRESSTYPE_INET4_FAMILY;
-		address->addressdata.inet4.port = htons(port);
+		address->addressdata.inet4.port = htons((unsigned short)port);
 #ifdef STANDALONETEST
 		printf("manual parsing of ipv4 dotted decimal address \"%s\" successful: %d.%d.%d.%d:%d\n", string, (int)address->addressdata.inet4.address[0], (int)address->addressdata.inet4.address[1], (int)address->addressdata.inet4.address[2], (int)address->addressdata.inet4.address[3], (int)ntohs(address->addressdata.inet4.port));
 #endif
@@ -251,10 +251,10 @@ int LHNETADDRESS_SetPort(lhnetaddress_t *address, int port)
 		address->addressdata.loop.port = port;
 		return 1;
 	case LHNETADDRESSTYPE_INET4:
-		address->addressdata.inet4.port = htons(port);
+		address->addressdata.inet4.port = htons((unsigned short)port);
 		return 1;
 	case LHNETADDRESSTYPE_INET6:
-		address->addressdata.inet6.port = htons(port);
+		address->addressdata.inet6.port = htons((unsigned short)port);
 		return 1;
 	default:
 		return 0;
