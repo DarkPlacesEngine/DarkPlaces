@@ -65,8 +65,7 @@ CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
 
 OPTIM_DEBUG=
-OPTIM_RELEASE=	-O6 -fno-strict-aliasing -ffast-math -funroll-loops \
-		-fexpensive-optimizations $(CPUOPTIMIZATIONS)
+OPTIM_RELEASE=	-O9 -fno-strict-aliasing -ffast-math -fexpensive-optimizations $(CPUOPTIMIZATIONS)
 
 DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 
