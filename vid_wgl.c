@@ -1255,10 +1255,10 @@ void	VID_Init (void)
 //========================================================
 
 extern void M_Menu_Options_f (void);
-extern void M_Print (int cx, int cy, char *str);
-extern void M_PrintWhite (int cx, int cy, char *str);
-extern void M_DrawCharacter (int cx, int line, int num);
-extern void M_DrawPic (int x, int y, char *picname);
+extern void M_Print (float cx, float cy, char *str);
+extern void M_PrintWhite (float cx, float cy, char *str);
+extern void M_DrawCharacter (float cx, float cy, int num);
+extern void M_DrawPic (float cx, float cy, char *picname);
 
 static int	vid_wmodes;
 
