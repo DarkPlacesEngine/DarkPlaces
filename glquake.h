@@ -123,6 +123,7 @@ typedef struct particle_s
 	float		alpha; // 0-255
 	float		time2; // used for various things (snow fluttering, for example)
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
+	vec3_t		pushvel; // temporary boost from explosions
 } particle_t;
 
 

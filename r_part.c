@@ -43,6 +43,15 @@ int			r_numparticles;
 
 vec3_t			r_pright, r_pup, r_ppn;
 
+// LordHavoc: reduced duplicate code, and allow particle allocation system independence
+#define ALLOCPARTICLE \
+	if (!free_particles)\
+		return;\
+	p = free_particles;\
+	free_particles = p->next;\
+	p->next = active_particles;\
+	active_particles = p;
+
 cvar_t r_particles = {"r_particles", "1"};
 cvar_t r_dynamicparticles = {"r_dynamicparticles", "0", TRUE};
 
@@ -337,17 +346,13 @@ avelocities[0][i] = (rand()&255) * 0.01;
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
 		p->texnum = flareparticletexture;
 		p->scale = 2;
 		p->alpha = 255;
-		p->die = cl.time + 0.01;
+		p->die = cl.time;
 		p->color = 0x6f;
 		p->type = pt_explode;
 		
@@ -408,10 +413,7 @@ void R_ReadPointFile_f (void)
 			Con_Printf ("Not enough free particles\n");
 			break;
 		}
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 		
 		p->texnum = particletexture;
 		p->scale = 2;
@@ -419,12 +421,41 @@ void R_ReadPointFile_f (void)
 		p->die = 99999;
 		p->color = (-c)&15;
 		p->type = pt_static;
-		VectorCopy (vec3_origin, p->vel);
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
 		VectorCopy (org, p->org);
 	}
 
 	fclose (f);
 	Con_Printf ("%i points read\n", c);
+}
+
+/*
+===============
+R_BlastParticles
+
+LordHavoc: blasts away particles in the area, used for explosions to disturb the smoke trail and such
+===============
+*/
+void R_BlastParticles(vec3_t org, vec_t radius, vec_t power)
+{
+	vec3_t v;
+	particle_t *p;
+	vec_t radius2 = radius * radius, speed, dist, scale = 2.5 * power / radius;
+	p = active_particles;
+	if (!p)
+		return;
+	while (p)
+	{
+		VectorSubtract(p->org, org, v);
+		dist = DotProduct(v,v);
+		if (dist < radius2)
+		{
+			speed = (radius - sqrt(dist)) * scale;
+			VectorNormalize(v);
+			VectorMA(p->pushvel, speed, v, p->pushvel);
+		}
+		p = p->next;
+	}
 }
 
 /*
@@ -468,13 +499,9 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 	
 	for (i=0 ; i<1024 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = particletexture;
 		p->scale = lhrandom(1,3);
 		p->alpha = rand()&255;
@@ -489,23 +516,40 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		p->type = pt_fallfadespark;
 		for (j=0 ; j<3 ; j++)
 		{
-			p->org[j] = org[j] + ((rand()&15)-8);
+			p->org[j] = org[j] + lhrandom(-8,8);
 			p->vel[j] = lhrandom(-192, 192);
 		}
 		p->vel[2] += 160;
 	}
 
-	if (smoke)
+	i = Mod_PointInLeaf(org, cl.worldmodel)->contents;
+	if (i == CONTENTS_SLIME || i == CONTENTS_WATER)
 	{
 		for (i=0 ; i<32 ; i++)
 		{
-			if (!free_particles)
-				return;
-			p = free_particles;
-			free_particles = p->next;
-			p->next = active_particles;
-			active_particles = p;
+			ALLOCPARTICLE
 
+			p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+			p->texnum = bubbleparticletexture;
+			p->scale = lhrandom(1,2);
+			p->alpha = 255;
+			p->color = (rand()&3)+12;
+			p->type = pt_bubble;
+			p->die = cl.time + 2;
+			for (j=0 ; j<3 ; j++)
+			{
+				p->org[j] = org[j] + lhrandom(-16,16);
+				p->vel[j] = lhrandom(-16,16);
+			}
+		}
+	}
+	else if (smoke)
+	{
+		for (i=0 ; i<32 ; i++)
+		{
+			ALLOCPARTICLE
+
+			p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 			p->texnum = smokeparticletexture[rand()&7];
 			p->scale = 12;
 			p->alpha = 80;
@@ -536,13 +580,9 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 
 	for (i=0; i<512; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = smokeparticletexture[rand()&7];
 		p->scale = 1.5;
 		p->alpha = 255;
@@ -573,13 +613,9 @@ void R_BlobExplosion (vec3_t org)
 	
 	for (i=0 ; i<1024 ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = smokeparticletexture[rand()&7];
 		p->scale = 2;
 		p->alpha = 255;
@@ -629,12 +665,7 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 	}
 	while (count)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 		if (count & 7)
 		{
 			p->alpha = (count & 7) * 16 + (rand()&15);
@@ -646,6 +677,7 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 			count -= 8;
 		}
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = particletexture;
 		p->scale = 6;
 		p->die = cl.time + 1; //lhrandom(0.1, 0.5);
@@ -672,12 +704,8 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 	particle_t	*p;
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
-	if (!free_particles)
-		return;
-	p = free_particles;
-	free_particles = p->next;
-	p->next = active_particles;
-	active_particles = p;
+	ALLOCPARTICLE
+	p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 	if (type == 0) // sparks
 	{
 		p->texnum = smokeparticletexture[rand()&7];
@@ -703,13 +731,9 @@ void R_SparkShower (vec3_t org, vec3_t dir, int count, int type)
 	}
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = flareparticletexture;
 		p->scale = 2;
 		p->alpha = 255;
@@ -761,13 +785,9 @@ void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 	
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = bloodcloudparticletexture;
 		p->scale = 12;
 		p->alpha = 96 + (rand()&63);
@@ -798,13 +818,9 @@ void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 	
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->texnum = flareparticletexture;
 		p->scale = 6;
 		p->alpha = 255;
@@ -855,12 +871,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 	
 	for (i=0 ; i<count ; i++)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 
 		vel[0] = dir[0] + (rand()&31) - 16;
 		vel[1] = dir[1] + (rand()&31) - 16;
@@ -869,6 +880,7 @@ void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorb
 		org[1] = diff[1] * (float) (rand()&1023) * (1.0 / 1024.0) + mins[1];
 		org[2] = z;
 
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 		p->scale = 1.5;
 		p->alpha = 255;
 		p->die = t;
@@ -908,13 +920,9 @@ void R_LavaSplash (vec3_t org)
 		for (j=-16 ; j<16 ; j+=2)
 			for (k=0 ; k<1 ; k++)
 			{
-				if (!free_particles)
-					return;
-				p = free_particles;
-				free_particles = p->next;
-				p->next = active_particles;
-				active_particles = p;
+				ALLOCPARTICLE
 		
+				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 				p->texnum = flareparticletexture;
 				p->scale = 10;
 				p->alpha = 128;
@@ -954,13 +962,9 @@ void R_TeleportSplash (vec3_t org)
 		for (j=-16 ; j<16 ; j+=4)
 			for (k=-24 ; k<32 ; k+=4)
 			{
-				if (!free_particles)
-					return;
-				p = free_particles;
-				free_particles = p->next;
-				p->next = active_particles;
-				active_particles = p;
+				ALLOCPARTICLE
 		
+				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 				p->contents = 0;
 				p->texnum = particletexture;
 				p->scale = 2;
@@ -987,13 +991,9 @@ void R_TeleportSplash (vec3_t org)
 		for (j=-24 ; j<24 ; j+=8)
 			for (k=-24 ; k<32 ; k+=8)
 			{
-				if (!free_particles)
-					return;
-				p = free_particles;
-				free_particles = p->next;
-				p->next = active_particles;
-				active_particles = p;
+				ALLOCPARTICLE
 		
+				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
 				p->texnum = flareparticletexture;
 				p->scale = 4;
 				p->alpha = lhrandom(32,256);
@@ -1043,14 +1043,9 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 
 	while (t < nt)
 	{
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 		
-		p->vel[0] = p->vel[1] = p->vel[2] = 0;
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
 		p->die = cl.time + 2;
 
 		switch (type)
@@ -1207,14 +1202,9 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 	{
 		len -= 3;
 
-		if (!free_particles)
-			return;
-		p = free_particles;
-		free_particles = p->next;
-		p->next = active_particles;
-		active_particles = p;
+		ALLOCPARTICLE
 		
-		VectorCopy (vec3_origin, p->vel);
+		p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = p->vel[0] = p->vel[1] = p->vel[2] = 0;
 
 		p->texnum = flareparticletexture;
 		p->scale = 8;
@@ -1245,7 +1235,7 @@ void R_DrawParticles (void)
 {
 	particle_t		*p, *kill;
 	int				i, r,g,b,a;
-	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2;
+	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2, f1, f2;
 	byte			*color24;
 	vec3_t			up, right, uprightangles, forward2, up2, right2, v, tempcolor;
 
@@ -1339,9 +1329,29 @@ void R_DrawParticles (void)
 			transpolyend();
 		}
 
-		p->org[0] += p->vel[0]*frametime;
-		p->org[1] += p->vel[1]*frametime;
-		p->org[2] += p->vel[2]*frametime;
+		if (p->pushvel[0] || p->pushvel[1] || p->pushvel[2])
+		{
+			p->org[0] += (p->vel[0]+p->pushvel[0])*frametime;
+			p->org[1] += (p->vel[1]+p->pushvel[1])*frametime;
+			p->org[2] += (p->vel[2]+p->pushvel[2])*frametime;
+			f1 = sqrt(DotProduct(p->pushvel,p->pushvel));
+			f2 = f1 - frametime * 32;
+			if (f2 <= 0)
+				p->pushvel[0] = p->pushvel[1] = p->pushvel[2] = 0;
+			else
+			{
+				f2 /= f1;
+				p->pushvel[0] *= f2;
+				p->pushvel[1] *= f2;
+				p->pushvel[2] *= f2;
+			}
+		}
+		else
+		{
+			p->org[0] += p->vel[0]*frametime;
+			p->org[1] += p->vel[1]*frametime;
+			p->org[2] += p->vel[2]*frametime;
+		}
 		
 		switch (p->type)
 		{
@@ -1412,7 +1422,7 @@ void R_DrawParticles (void)
 // LordHavoc: for smoke trails
 		case pt_smoke:
 			p->scale += frametime * 4;
-			p->alpha -= frametime * 48;
+			p->alpha -= frametime * 128;
 //			p->vel[2] += grav;
 			if (p->alpha < 1)
 				p->die = -1;
