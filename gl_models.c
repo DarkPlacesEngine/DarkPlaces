@@ -83,7 +83,7 @@ void gl_models_start(void)
 {
 	// allocate vertex processing arrays
 	gl_models_mempool = Mem_AllocPool("GL_Models");
-	aliasvert = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][3]));
+	aliasvert = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
 	aliasvertnorm = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][3]));
 	aliasvertcolor = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
 	aliasvertcolor2 = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
@@ -119,10 +119,10 @@ void R_AliasTransformVerts(int vertcount)
 	avn = aliasvertnorm;
 	while (vertcount >= 4)
 	{
-		VectorCopy(av, point);softwaretransform(point, av);av += 3;
-		VectorCopy(av, point);softwaretransform(point, av);av += 3;
-		VectorCopy(av, point);softwaretransform(point, av);av += 3;
-		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(av, point);softwaretransform(point, av);av += 4;
+		VectorCopy(av, point);softwaretransform(point, av);av += 4;
+		VectorCopy(av, point);softwaretransform(point, av);av += 4;
+		VectorCopy(av, point);softwaretransform(point, av);av += 4;
 		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
 		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
 		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
@@ -131,7 +131,7 @@ void R_AliasTransformVerts(int vertcount)
 	}
 	while(vertcount > 0)
 	{
-		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(av, point);softwaretransform(point, av);av += 4;
 		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
 		vertcount--;
 	}
@@ -175,7 +175,7 @@ void R_AliasLerpVerts(int vertcount,
 					avn[0] = n1[0] * lerp1 + n2[0] * lerp2 + n3[0] * lerp3 + n4[0] * lerp4;
 					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3 + n4[1] * lerp4;
 					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3 + n4[2] * lerp4;
-					av += 3;
+					av += 4;
 					avn += 3;
 					verts1++;verts2++;verts3++;verts4++;
 				}
@@ -197,7 +197,7 @@ void R_AliasLerpVerts(int vertcount,
 					avn[0] = n1[0] * lerp1 + n2[0] * lerp2 + n3[0] * lerp3;
 					avn[1] = n1[1] * lerp1 + n2[1] * lerp2 + n3[1] * lerp3;
 					avn[2] = n1[2] * lerp1 + n2[2] * lerp2 + n3[2] * lerp3;
-					av += 3;
+					av += 4;
 					avn += 3;
 					verts1++;verts2++;verts3++;
 				}
@@ -219,7 +219,7 @@ void R_AliasLerpVerts(int vertcount,
 				avn[0] = n1[0] * lerp1 + n2[0] * lerp2;
 				avn[1] = n1[1] * lerp1 + n2[1] * lerp2;
 				avn[2] = n1[2] * lerp1 + n2[2] * lerp2;
-				av += 3;
+				av += 4;
 				avn += 3;
 				verts1++;verts2++;
 			}
@@ -243,7 +243,7 @@ void R_AliasLerpVerts(int vertcount,
 				avn[0] = n1[0] * lerp1;
 				avn[1] = n1[1] * lerp1;
 				avn[2] = n1[2] * lerp1;
-				av += 3;
+				av += 4;
 				avn += 3;
 				verts1++;
 			}
@@ -257,7 +257,7 @@ void R_AliasLerpVerts(int vertcount,
 				av[1] = verts1->v[1] * scale1[1] + translate[1];
 				av[2] = verts1->v[2] * scale1[2] + translate[2];
 				VectorCopy(m_bytenormals[verts1->lightnormalindex], avn);
-				av += 3;
+				av += 4;
 				avn += 3;
 				verts1++;
 			}
@@ -329,7 +329,7 @@ void R_SetupMDLMD2Frames(skinframe_t **skinframe)
 	R_LightModel(model->numverts);
 }
 
-void R_DrawQ1AliasModel (void)
+void R_DrawQ1Q2AliasModel (void)
 {
 	float fog;
 	vec3_t diff;
@@ -343,12 +343,12 @@ void R_DrawQ1AliasModel (void)
 	memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
 
 	aliasmeshinfo.vertex = aliasvert;
-	aliasmeshinfo.vertexstep = sizeof(float[3]);
+	aliasmeshinfo.vertexstep = sizeof(float[4]);
 	aliasmeshinfo.numverts = model->numverts;
 	aliasmeshinfo.numtriangles = model->numtris;
-	aliasmeshinfo.index = model->mdldata_indices;
+	aliasmeshinfo.index = model->mdlmd2data_indices;
 	aliasmeshinfo.colorstep = sizeof(float[4]);
-	aliasmeshinfo.texcoords[0] = model->mdldata_texcoords;
+	aliasmeshinfo.texcoords[0] = model->mdlmd2data_texcoords;
 	aliasmeshinfo.texcoordstep[0] = sizeof(float[2]);
 
 	fog = 0;
@@ -440,7 +440,7 @@ void R_DrawQ1AliasModel (void)
 	else
 		R_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
 
-	if (fog)
+	if (fog && aliasmeshinfo.blendfunc2 != GL_ONE)
 	{
 		aliasmeshinfo.tex[0] = R_GetTexture(skinframe->fog);
 		aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
@@ -455,128 +455,6 @@ void R_DrawQ1AliasModel (void)
 		c_alias_polys += aliasmeshinfo.numtriangles;
 		R_Mesh_Draw(&aliasmeshinfo);
 	}
-}
-
-void R_DrawQ2AliasModel (void)
-{
-	int *order, count;
-	vec3_t diff;
-	skinframe_t *skinframe;
-	model_t *model;
-
-	model = currentrenderentity->model;
-
-	R_SetupMDLMD2Frames(&skinframe);
-
-	if (!r_render.integer)
-		return;
-
-	// FIXME FIXME FIXME rewrite loader to convert to triangle mesh
-	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skinframe->base));
-
-	if (currentrenderentity->effects & EF_ADDITIVE)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
-		glEnable(GL_BLEND);
-		glDepthMask(0);
-	}
-	else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(skinframe->base))
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_BLEND);
-		glDepthMask(0);
-	}
-	else
-	{
-		glDisable(GL_BLEND);
-		glDepthMask(1);
-	}
-
-	// LordHavoc: big mess...
-	// using vertex arrays only slightly, although it is enough to prevent duplicates
-	// (saving half the transforms)
-	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
-	glColorPointer(4, GL_FLOAT, sizeof(float[4]), aliasvertcolor);
-	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	GL_LockArray(0, model->numverts);
-
-	order = model->md2data_glcmds;
-	while(1)
-	{
-		if (!(count = *order++))
-			break;
-		if (count > 0)
-			glBegin(GL_TRIANGLE_STRIP);
-		else
-		{
-			glBegin(GL_TRIANGLE_FAN);
-			count = -count;
-		}
-		do
-		{
-			glTexCoord2f(((float *)order)[0], ((float *)order)[1]);
-			glArrayElement(order[2]);
-			order += 3;
-		}
-		while (count--);
-	}
-
-	GL_UnlockArray();
-
-	glDisableClientState(GL_COLOR_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
-
-	if (fogenabled)
-	{
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
-
-		VectorSubtract(currentrenderentity->origin, r_origin, diff);
-		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], currentrenderentity->alpha * exp(fogdensity/DotProduct(diff,diff)));
-
-		// LordHavoc: big mess...
-		// using vertex arrays only slightly, although it is enough to prevent duplicates
-		// (saving half the transforms)
-		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
-		glEnableClientState(GL_VERTEX_ARRAY);
-
-		GL_LockArray(0, model->numverts);
-
-		order = model->md2data_glcmds;
-		while(1)
-		{
-			if (!(count = *order++))
-				break;
-			if (count > 0)
-				glBegin(GL_TRIANGLE_STRIP);
-			else
-			{
-				glBegin(GL_TRIANGLE_FAN);
-				count = -count;
-			}
-			do
-			{
-				glArrayElement(order[2]);
-				order += 3;
-			}
-			while (count--);
-		}
-
-		GL_UnlockArray();
-
-		glDisableClientState(GL_VERTEX_ARRAY);
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
-	}
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(1);
 }
 
 int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone)
@@ -789,7 +667,7 @@ void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 				vert++;
 			}
 		}
-		out += 3;
+		out += 4;
 	}
 }
 
@@ -807,9 +685,9 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 		d = *renderlist++;
 		while (d--)
 		{
-			a = renderlist[0]*3;
-			b = renderlist[1]*3;
-			c = renderlist[2]*3;
+			a = renderlist[0]*4;
+			b = renderlist[1]*4;
+			c = renderlist[2]*4;
 			v1[0] = aliasvert[a+0] - aliasvert[b+0];
 			v1[1] = aliasvert[a+1] - aliasvert[b+1];
 			v1[2] = aliasvert[a+2] - aliasvert[b+2];
@@ -819,21 +697,25 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 			CrossProduct(v1, v2, normal);
 			VectorNormalizeFast(normal);
 			// add surface normal to vertices
+			a = renderlist[0] * 3;
 			aliasvertnorm[a+0] += normal[0];
 			aliasvertnorm[a+1] += normal[1];
 			aliasvertnorm[a+2] += normal[2];
 			aliasvertusage[renderlist[0]]++;
-			aliasvertnorm[b+0] += normal[0];
-			aliasvertnorm[b+1] += normal[1];
-			aliasvertnorm[b+2] += normal[2];
+			a = renderlist[1] * 3;
+			aliasvertnorm[a+0] += normal[0];
+			aliasvertnorm[a+1] += normal[1];
+			aliasvertnorm[a+2] += normal[2];
 			aliasvertusage[renderlist[1]]++;
-			aliasvertnorm[c+0] += normal[0];
-			aliasvertnorm[c+1] += normal[1];
-			aliasvertnorm[c+2] += normal[2];
+			a = renderlist[2] * 3;
+			aliasvertnorm[a+0] += normal[0];
+			aliasvertnorm[a+1] += normal[1];
+			aliasvertnorm[a+2] += normal[2];
 			aliasvertusage[renderlist[2]]++;
 			renderlist += 3;
 		}
 	}
+	// FIXME: precalc this
 	// average surface normals
 	out = aliasvertnorm;
 	u = aliasvertusage;
@@ -861,7 +743,7 @@ void R_DrawZymoticModelMesh(zymtype1header_t *m)
 	texture = (rtexture_t **)(m->lump_shaders.start + (int) m);
 
 	aliasmeshinfo.vertex = aliasvert;
-	aliasmeshinfo.vertexstep = sizeof(float[3]);
+	aliasmeshinfo.vertexstep = sizeof(float[4]);
 	aliasmeshinfo.color = aliasvertcolor;
 	aliasmeshinfo.colorstep = sizeof(float[4]);
 	aliasmeshinfo.texcoords[0] = (float *)(m->lump_texcoords.start + (int) m);
@@ -956,8 +838,6 @@ void R_DrawAliasModel (void)
 
 	if (currentrenderentity->model->aliastype == ALIASTYPE_ZYM)
 		R_DrawZymoticModel();
-	else if (currentrenderentity->model->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasModel();
 	else
-		R_DrawQ1AliasModel();
+		R_DrawQ1Q2AliasModel();
 }

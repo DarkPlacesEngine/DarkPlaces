@@ -180,14 +180,9 @@ typedef struct model_s
 
 	animscene_t		*animscenes; // [numframes]
 
-	// Q2 model information
-//	md2triangle_t	*md2data_tris;
-	// FIXME: redesign to use triangle mesh
-	int				*md2data_glcmds;
-
-	float			*mdldata_texcoords;
-	int				*mdldata_indices;
-
+	// Q1 and Q2 models are the same after loading
+	int				*mdlmd2data_indices;
+	float			*mdlmd2data_texcoords;
 	md2frame_t		*mdlmd2data_frames;
 	trivertx_t		*mdlmd2data_pose;
 

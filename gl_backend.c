@@ -895,7 +895,7 @@ void R_Mesh_AddTransparent(void)
 void R_Mesh_Draw(const rmeshinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, overbright;
+	static int i, j, overbright, *index;
 	static float *in, scaler;
 	static float cr, cg, cb, ca;
 	static buf_mesh_t *mesh;
@@ -960,7 +960,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		mesh = &buf_transmesh[currenttransmesh++];
 		mesh->firsttriangle = currenttranstriangle;
 		mesh->firstvert = currenttransvertex;
-		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		index = &buf_transtri[currenttranstriangle].index[0];
 
 		currenttranstriangle += m->numtriangles;
 		currenttransvertex += m->numverts;
@@ -987,12 +987,14 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
 		mesh->firstvert = currentvertex;
-		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		index = &buf_tri[currenttriangle].index[0];
+
 		currenttriangle += m->numtriangles;
 		currentvertex += m->numverts;
 	}
 
 	// code shared for transparent and opaque meshs
+	memcpy(index, m->index, sizeof(int[3]) * m->numtriangles);
 	mesh->blendfunc1 = m->blendfunc1;
 	mesh->blendfunc2 = m->blendfunc2;
 	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
@@ -1092,7 +1094,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, overbright;
+	static int i, j, overbright, *index;
 	static float *in, scaler;
 	static buf_mesh_t *mesh;
 	static buf_vertex_t *vert;
@@ -1147,7 +1149,7 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 		mesh = &buf_transmesh[currenttransmesh++];
 		mesh->firsttriangle = currenttranstriangle;
 		mesh->firstvert = currenttransvertex;
-		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		index = &buf_transtri[currenttranstriangle].index[0];
 		currenttranstriangle += m->numtriangles;
 		currenttransvertex += m->numverts;
 	}
@@ -1173,12 +1175,13 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 		mesh = &buf_mesh[currentmesh++];
 		mesh->firsttriangle = currenttriangle;
 		mesh->firstvert = currentvertex;
-		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
+		index = &buf_tri[currenttriangle].index[0];
 		currenttriangle += m->numtriangles;
 		currentvertex += m->numverts;
 	}
 
 	// code shared for transparent and opaque meshs
+	memcpy(index, m->index, sizeof(int[3]) * m->numtriangles);
 	mesh->blendfunc1 = m->blendfunc1;
 	mesh->blendfunc2 = m->blendfunc2;
 	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
@@ -1252,12 +1255,14 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 	}
 }
 
-/*
-void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
+// allocates space in geometry buffers, and fills in pointers to the buffers in passsed struct
+// (this is used for very high speed rendering, no copying)
+int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
 {
 	// these are static because gcc runs out of virtual registers otherwise
-	static int i, j, *index, overbright;
-	static float *in, scaler;
+	int i, j, overbright;
+	float scaler;
+	buf_mesh_t *mesh;
 
 	if (!backendactive)
 		Sys_Error("R_Mesh_Draw: called when backend is not active\n");
@@ -1266,6 +1271,70 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 	 || !m->numverts)
 		Host_Error("R_Mesh_Draw: no triangles or verts\n");
 
+	if (m->transparent)
+	{
+		if (currenttransmesh >= max_meshs || (currenttranstriangle + m->numtriangles) > max_meshs || (currenttransvertex + m->numverts) > max_verts)
+		{
+			if (!transranout)
+			{
+				Con_Printf("R_Mesh_Draw: ran out of room for transparent meshs\n");
+				transranout = true;
+			}
+			return false;
+		}
+
+		c_transmeshs++;
+		c_transtris += m->numtriangles;
+		m->index = &buf_transtri[currenttranstriangle].index[0];
+		m->vertex = &buf_transvertex[currenttransvertex].v[0];
+		m->color = &buf_transfcolor[currenttransvertex].c[0];
+		for (i = 0;i < backendunits;i++)
+			m->texcoords[i] = &buf_transtexcoord[i][currenttransvertex].t[0];
+
+		// transmesh is only for storage of transparent meshs until they
+		// are inserted into the main mesh array
+		mesh = &buf_transmesh[currenttransmesh++];
+		mesh->firsttriangle = currenttranstriangle;
+		mesh->firstvert = currenttransvertex;
+		currenttranstriangle += m->numtriangles;
+		currenttransvertex += m->numverts;
+	}
+	else
+	{
+		if (m->numtriangles > max_meshs || m->numverts > max_verts)
+		{
+			Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for buffers\n");
+			return false;
+		}
+
+		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
+			R_Mesh_Render();
+
+		c_meshs++;
+		c_meshtris += m->numtriangles;
+		m->index = &buf_tri[currenttriangle].index[0];
+		m->vertex = &buf_vertex[currentvertex].v[0];
+		m->color = &buf_fcolor[currentvertex].c[0];
+		for (i = 0;i < backendunits;i++)
+			m->texcoords[i] = &buf_texcoord[i][currentvertex].t[0];
+
+		// opaque meshs are rendered directly
+		mesh = &buf_mesh[currentmesh++];
+		mesh->firsttriangle = currenttriangle;
+		mesh->firstvert = currentvertex;
+		currenttriangle += m->numtriangles;
+		currentvertex += m->numverts;
+	}
+
+	// code shared for transparent and opaque meshs
+	mesh->blendfunc1 = m->blendfunc1;
+	mesh->blendfunc2 = m->blendfunc2;
+	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
+	mesh->depthtest = !m->depthdisable;
+	mesh->triangles = m->numtriangles;
+	mesh->verts = m->numverts;
+
+	overbright = false;
 	scaler = 1;
 	if (m->blendfunc2 == GL_SRC_COLOR)
 	{
@@ -1282,74 +1351,17 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 		}
 		scaler *= overbrightscale;
 	}
+	m->colorscale = scaler;
 
-	if (m->transparent)
-	{
-		if (currenttransmesh >= max_meshs || (currenttranstriangle + m->numtriangles) > max_meshs || (currenttransvertex + m->numverts) > max_verts)
-		{
-			if (!transranout)
-			{
-				Con_Printf("R_Mesh_Draw: ran out of room for transparent meshs\n");
-				transranout = true;
-			}
-			return;
-		}
-
-		c_transmeshs++;
-		c_transtris += m->numtriangles;
-		m->vertex = &buf_transvertex[currenttransvertex].v[0];
-		m->color = &buf_transfcolor[currenttransvertex].c[0];
-		for (i = 0;i < backendunits;i++)
-			m->texcoords[i] = &buf_transtexcoord[i][currenttransvertex].tc[0];
-
-		// transmesh is only for storage of transparent meshs until they
-		// are inserted into the main mesh array
-		mesh = &buf_transmesh[currenttransmesh++];
-		mesh->firsttriangle = currenttranstriangle;
-		mesh->firstvert = currenttransvertex;
-		memcpy(&buf_transtri[currenttranstriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
-		currenttranstriangle += m->numtriangles;
-		currenttransvertex += m->numverts;
-	}
-	else
-	{
-		if (m->numtriangles > max_meshs || m->numverts > max_verts)
-		{
-			Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for buffers\n");
-			return;
-		}
-
-		if (currentmesh >= max_meshs || (currenttriangle + m->numtriangles) > max_batch || (currentvertex + m->numverts) > max_verts)
-			R_Mesh_Render();
-
-		c_meshs++;
-		c_meshtris += m->numtriangles;
-		vert = &buf_vertex[currentvertex];
-		fcolor = &buf_fcolor[currentvertex];
-		for (i = 0;i < backendunits;i++)
-			texcoord[i] = &buf_texcoord[i][currentvertex];
-
-		// opaque meshs are rendered directly
-		mesh = &buf_mesh[currentmesh++];
-		mesh->firsttriangle = currenttriangle;
-		mesh->firstvert = currentvertex;
-		memcpy(&buf_tri[currenttriangle].index[0], m->index, sizeof(int[3]) * m->numtriangles);
-		currenttriangle += m->numtriangles;
-		currentvertex += m->numverts;
-	}
-
-	// code shared for transparent and opaque meshs
-	mesh->blendfunc1 = m->blendfunc1;
-	mesh->blendfunc2 = m->blendfunc2;
-	mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
-	mesh->depthtest = !m->depthdisable;
-	mesh->triangles = m->numtriangles;
-	mesh->verts = m->numverts;
 	j = -1;
-	for (i = 0;i < backendunits;i++)
+	for (i = 0;i < MAX_TEXTUREUNITS;i++)
 	{
 		if ((mesh->textures[i] = m->tex[i]))
+		{
 			j = i;
+			if (i >= backendunits)
+				Sys_Error("R_Mesh_Draw_GetBuffer: texture %i supplied when there are only %i texture units\n", j + 1, backendunits);
+		}
 		mesh->texturergbscale[i] = m->texrgbscale[i];
 		if (mesh->texturergbscale[i] != 1 && mesh->texturergbscale[i] != 2 && mesh->texturergbscale[i] != 4)
 			mesh->texturergbscale[i] = 1;
@@ -1357,42 +1369,8 @@ void R_Mesh_Draw_GetBuffer(volatile rmeshinfo_t *m)
 	if (overbright && j >= 0)
 		mesh->texturergbscale[j] = 4;
 
-	if (m->vertexstep != sizeof(buf_vertex_t))
-		Host_Error("R_Mesh_Draw_NativeOnly: unsupported vertexstep\n");
-	if (m->colorstep != sizeof(buf_fcolor_t))
-		Host_Error("R_Mesh_Draw_NativeOnly: unsupported colorstep\n");
-	if (m->color == NULL)
-		Host_Error("R_Mesh_Draw_NativeOnly: must provide color array\n");
-	for (j = 0;j < MAX_TEXTUREUNITS && m->tex[j];j++)
-	{
-		if (j >= backendunits)
-			Sys_Error("R_Mesh_Draw_NativeOnly: texture %i supplied when there are only %i texture units\n", j + 1, backendunits);
-		if (m->texcoordstep[j] != sizeof(buf_texcoord_t))
-			Host_Error("R_Mesh_Draw_NativeOnly: unsupported texcoordstep\n");
-	}
-
-	memcpy(vert, m->vertex, m->numverts * sizeof(buf_vertex_t));
-	for (j = 0;j < MAX_TEXTUREUNITS && m->tex[j];j++)
-		memcpy(&texcoord[j][0].t[0], m->texcoords[j], m->numverts * sizeof(buf_texcoord_t));
-	#if 0
-	for (;j < backendunits;j++)
-		memset(&texcoord[j][0].t[0], 0, m->numverts * sizeof(buf_texcoord_t));
-	#endif
-
-	memcpy(fcolor, m->color, m->numverts * sizeof(buf_fcolor_t));
-
-	// do this as a second step because memcpy preloaded the cache, which we can't easily do
-	if (scaler != 1)
-	{
-		for (i = 0;i < m->numverts;i++)
-		{
-			fcolor[i].c[0] *= scaler;
-			fcolor[i].c[1] *= scaler;
-			fcolor[i].c[2] *= scaler;
-		}
-	}
+	return true;
 }
-*/
 
 void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
 {
