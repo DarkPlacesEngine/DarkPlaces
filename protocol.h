@@ -571,5 +571,7 @@ void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg);
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d);
 
+extern cvar_t developer_networkentities;
+
 #endif
 

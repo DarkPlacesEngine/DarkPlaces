@@ -1,8 +1,6 @@
 
 #include "quakedef.h"
 
-extern cvar_t developer_networkentities;
-
 entity_state_t defaultstate =
 {
 	0,//double time; // time this state was built
