@@ -89,7 +89,9 @@ cvar_t net_address = {0, "net_address", "0.0.0.0"};
 //cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]"};
 
 // HostCache interface
-hostcache_mask_t		hostcache_currentmask;
+hostcache_mask_t			hostcache_andmasks[HOSTCACHE_ANDMASKCOUNT];
+hostcache_mask_t			hostcache_ormasks[HOSTCACHE_ORMASKCOUNT];
+
 hostcache_infofield_t	hostcache_sortbyfield;
 qboolean				hostcache_sortdescending;
 
@@ -151,56 +153,64 @@ static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
 
 static qboolean _hc_testint( int A, hostcache_maskop_t op, int B )
 {
-	int diff;
-
-	diff = A - B;
-	switch( op ) {
-			case HCMO_GREATER:
-				if( !diff )
-					return false;
-			case HCMO_GREATEREQUAL:
-				if( diff < 0 )
-					return false;
-				break;
-			case HCMO_EQUAL:
-				if( diff )
-					return false;
-				break;
-			case HCMO_LESS:
-				if( !diff )
-					return false;
-			case HCMO_LESSEQUAL:
-				if( diff > 0 )
-					return false;
-				break;
-	}
-	return true;
+	if( op == HCMO_LESS )
+		return A < B;
+	else if( op == HCMO_LESSEQUAL )
+		return A <= B;
+	else if( op == HCMO_EQUAL )
+		return A == B;
+	else if( op == HCMO_GREATER )
+		return A > B;
+	else if( op == HCMO_NOTEQUAL )
+		return A != B;
+	else // HCMO_GREATEREQUAL
+		return A >= B;
 }
 
-static qboolean _HostCache_TestMask( hostcache_info_t *info )
+static qboolean _hc_teststr( const char *A, hostcache_maskop_t op, const char *B )
 {
-	if( !_hc_testint( info->ping, hostcache_currentmask.pingtest, hostcache_currentmask.info.ping ) )
+	if( op == HCMO_CONTAINS ) // A info B mask
+		return *A && !!strstr( B, A ); // we want a real bool
+	else if( op == HCMO_NOTCONTAIN )
+		return !*A || !strstr( B, A );
+	else if( op == HCMO_LESS )
+		return strcmp( A, B ) < 0;
+	else if( op == HCMO_LESSEQUAL )
+		return strcmp( A, B ) <= 0;
+	else if( op == HCMO_EQUAL )
+		return strcmp( A, B ) == 0;
+	else if( op == HCMO_GREATER )
+		return strcmp( A, B ) > 0;	
+	else if( op == HCMO_NOTEQUAL )
+		return strcmp( A, B ) != 0;
+	else // HCMO_GREATEREQUAL
+		return strcmp( A, B ) >= 0;
+}
+
+static qboolean _HostCache_TestMask( hostcache_mask_t *mask, hostcache_info_t *info )
+{
+	if( !_hc_testint( info->ping, mask->tests[HCIF_PING], mask->info.ping ) )
 		return false;
-	if( !_hc_testint( info->maxplayers, hostcache_currentmask.maxplayerstest, hostcache_currentmask.info.maxplayers ) )
+	if( !_hc_testint( info->maxplayers, mask->tests[HCIF_MAXPLAYERS], mask->info.maxplayers ) )
 		return false;
-	if( !_hc_testint( info->numplayers, hostcache_currentmask.numplayerstest, hostcache_currentmask.info.numplayers ) )
+	if( !_hc_testint( info->numplayers, mask->tests[HCIF_NUMPLAYERS], mask->info.numplayers ) )
 		return false;
-	if( !_hc_testint( info->protocol, hostcache_currentmask.protocoltest, hostcache_currentmask.info.protocol ))
+	if( !_hc_testint( info->protocol, mask->tests[HCIF_PROTOCOL], mask->info.protocol ))
 		return false;
-	if( *hostcache_currentmask.info.cname
-		&& !strstr( info->cname, hostcache_currentmask.info.cname ) )
+	if( *mask->info.cname
+		&& !_hc_teststr( info->cname, mask->tests[HCIF_CNAME], mask->info.cname ) )
 		return false;
-	if( *hostcache_currentmask.info.game
-		&& !strstr( info->game, hostcache_currentmask.info.game ) )
+	if( *mask->info.game
+		&& !_hc_teststr( info->game, mask->tests[HCIF_GAME], mask->info.game ) )
 		return false;
-	if( *hostcache_currentmask.info.mod
-		&& !strstr( info->mod, hostcache_currentmask.info.mod ) )
+	if( *mask->info.mod
+		&& !_hc_teststr( info->mod, mask->tests[HCIF_MOD], mask->info.mod ) )
 		return false;
-	if( *hostcache_currentmask.info.map
-		&& !strstr( info->map, hostcache_currentmask.info.map ) )
+	if( *mask->info.map
+		&& !_hc_teststr( info->map, mask->tests[HCIF_MAP], mask->info.map ) )
 		return false;
-	if( *hostcache_currentmask.info.name
-		&& !strstr( info->name, hostcache_currentmask.info.name ) )
+	if( *mask->info.name
+		&& !_hc_teststr( info->name, mask->tests[HCIF_NAME], mask->info.name ) )
 		return false;
 	return true;
 }
@@ -210,8 +220,15 @@ static void _HostCache_Insert( hostcache_t *entry )
 	int start, end, mid;
 	if( hostcache_viewcount == HOSTCACHE_VIEWCACHESIZE )
 		return;
-	// now check whether it passes through mask
-	if( !_HostCache_TestMask( &entry->info ) )
+	// now check whether it passes through the masks mask
+	for( start = 0 ; hostcache_andmasks[start].active && start < HOSTCACHE_ANDMASKCOUNT ; start++ ) 
+		if( !_HostCache_TestMask( &hostcache_andmasks[start], &entry->info ) )
+			return;
+
+	for( start = 0 ; hostcache_ormasks[start].active && start < HOSTCACHE_ORMASKCOUNT ; start++ )
+		if( _HostCache_TestMask( &hostcache_ormasks[start], &entry->info ) )
+			break;
+	if( start == HOSTCACHE_ORMASKCOUNT || (start > 0 && !hostcache_ormasks[start].active) )
 		return;
 
 	if( !hostcache_viewcount ) {
@@ -269,9 +286,10 @@ void HostCache_RebuildViewSet(void)
 			_HostCache_Insert( &hostcache_cache[i] );
 }
 
-void HostCache_ResetMask(void)
+void HostCache_ResetMasks(void)
 {
-	memset( &hostcache_currentmask, 0, sizeof( hostcache_mask_t ) );
+	memset( &hostcache_andmasks, 0, sizeof( hostcache_andmasks ) );
+	memset( &hostcache_andmasks, 0, sizeof( hostcache_andmasks ) );
 }
 
 
@@ -1712,7 +1730,7 @@ void Net_Stats_f(void)
 
 void Net_Slist_f(void)
 {
-	HostCache_ResetMask();
+	HostCache_ResetMasks();
 	hostcache_sortbyfield = HCIF_PING;
 	hostcache_sortdescending = false;
     if (m_state != m_slist) {

@@ -159,9 +159,9 @@ string	gethostcachestring(float fld, float hostnr)
 
 float	stringtokeynum(string key)
 
-		resethostcachemask()
-		sethostcachemaskstring(float fld, string str)
-		sethostcachemasknumber(float fld, float num, float op)
+		resethostcachemasks()
+		sethostcachemaskstring(float mask, float fld, string str)
+		sethostcachemasknumber(float mask, float fld, float num, float op)
 		resorthostcache()
 		sethostcachesort(float field, float descending)
 		refreshhostcache()
@@ -3553,14 +3553,14 @@ void VM_M_gethostcachestat( void )
 
 /*
 ========================
-VM_M_resethostcachemask
+VM_M_resethostcachemasks
 
-resethostcachemask()
+resethostcachemasks()
 ========================
 */
-void VM_M_resethostcachemask( void )
+void VM_M_resethostcachemasks( void )
 {
-	HostCache_ResetMask();
+	HostCache_ResetMasks();
 }
 
 
@@ -3568,75 +3568,111 @@ void VM_M_resethostcachemask( void )
 ========================
 VM_M_sethostcachemaskstring
 
-sethostcachemaskstring(float field, string str)
+sethostcachemaskstring(float mask, float fld, string str, float op)
+0-511		and
+512 - 1024	or
 ========================
 */
 void VM_M_sethostcachemaskstring( void )
 {
 	char *str;
+	int masknr;
+	hostcache_mask_t *mask;
+	int field;
 
-	VM_SAFEPARMCOUNT( 2, VM_M_sethostcachemask );
+	VM_SAFEPARMCOUNT( 4, VM_M_sethostcachemaskstring );
 	str = PRVM_G_STRING( OFS_PARM1 );
 	if( !str )
-		PRVM_ERROR( "VM_M_sethostcachemask: null string passed!" );
+		PRVM_ERROR( "VM_M_sethostcachemaskstring: null string passed!" );
 
-	switch( (int) PRVM_G_FLOAT( OFS_PARM0 ) ) {
+	masknr = PRVM_G_FLOAT( OFS_PARM0 );
+	if( masknr >= 0 && masknr <= HOSTCACHE_ANDMASKCOUNT )
+		mask = &hostcache_andmasks[masknr];
+	else if( masknr >= 512 && masknr - 512 <= HOSTCACHE_ORMASKCOUNT )
+		mask = &hostcache_ormasks[masknr - 512 ];
+	else {
+		Con_Printf( "VM_M_sethostcachemaskstring: invalid mask number %i\n", masknr );
+		return;
+	}
+
+	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
+	
+	switch( field ) {
 		case HCIF_CNAME:
-			strncpy( hostcache_currentmask.info.cname, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.cname) );
+			strncpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
 			break;
 		case HCIF_NAME:
-			strncpy( hostcache_currentmask.info.name, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.name)  );
+			strncpy( mask->info.name, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.name)  );
 			break;
 		case HCIF_MAP:
-			strncpy( hostcache_currentmask.info.map, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.map)  );
+			strncpy( mask->info.map, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.map)  );
 			break;
 		case HCIF_MOD:
-			strncpy( hostcache_currentmask.info.mod, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.mod)  );
+			strncpy( mask->info.mod, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.mod)  );
 			break;
 		case HCIF_GAME:
-			strncpy( hostcache_currentmask.info.game, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.game)  );
+			strncpy( mask->info.game, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.game)  );
 			break;
 		default:
-			Con_Printf( "VM_M_sethostcachemask: Bad field number %i passed!\n", PRVM_G_INT( OFS_PARM0 ) );
+			Con_Printf( "VM_M_sethostcachemaskstring: Bad field number %i passed!\n", field );
+			return;
 	}
+
+	mask->active = true;
+	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
 }    
 
 /*
 ========================
 VM_M_sethostcachemasknumber
 
-sethostcachemasknumber(float field, float num, float op)
+sethostcachemasknumber(float mask, float fld, float num, float op)
+
+0-511		and
+512 - 1024	or
 ========================
 */
 void VM_M_sethostcachemasknumber( void )
 {
 	int number;
-	hostcache_maskop_t operand;
-	VM_SAFEPARMCOUNT( 3, VM_M_sethostcachemasknumber );
+	hostcache_mask_t *mask;
+	int	masknr;
+	int field;
+	VM_SAFEPARMCOUNT( 4, VM_M_sethostcachemasknumber );
 
-	number = PRVM_G_FLOAT( OFS_PARM1 );
-	operand = (int) PRVM_G_FLOAT( OFS_PARM2 );
+	masknr = PRVM_G_FLOAT( OFS_PARM0 );
+	if( masknr >= 0 && masknr <= HOSTCACHE_ANDMASKCOUNT )
+		mask = &hostcache_andmasks[masknr];
+	else if( masknr >= 512 && masknr - 512 <= HOSTCACHE_ORMASKCOUNT )
+		mask = &hostcache_ormasks[masknr - 512 ];
+	else {
+		Con_Printf( "VM_M_sethostcachemasknumber: invalid mask number %i\n", masknr );
+		return;
+	}
 
-	switch( (int) PRVM_G_FLOAT( OFS_PARM0 ) ) {
+	number = PRVM_G_FLOAT( OFS_PARM2 );
+	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
+
+	switch( field ) {
 		case HCIF_MAXPLAYERS:
-			hostcache_currentmask.info.maxplayers = number;
-			hostcache_currentmask.maxplayerstest = operand;
+			mask->info.maxplayers = number;
 			break;
 		case HCIF_NUMPLAYERS:
-			hostcache_currentmask.info.numplayers = number;
-			hostcache_currentmask.numplayerstest = operand;
+			mask->info.numplayers = number;
 			break;
 		case HCIF_PING:
-			hostcache_currentmask.info.ping = number;
-			hostcache_currentmask.pingtest = operand;
+			mask->info.ping = number;
 			break;
 		case HCIF_PROTOCOL:
-			hostcache_currentmask.info.protocol = number;
-			hostcache_currentmask.protocoltest = operand;
+			mask->info.protocol = number;
 			break;
 		default:
-			Con_Printf( "VM_M_sethostcachemask: Bad field number %i passed!\n", PRVM_G_INT( OFS_PARM0 ) );
+			Con_Printf( "VM_M_sethostcachemasknumber: Bad field number %i passed!\n", field );
+			return;
 	}
+
+	mask->active = true;
+	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
 }
 
 
@@ -3917,7 +3953,7 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_gethostcachestring,
 	VM_M_parseentitydata,
 	VM_M_stringtokeynum,
-	VM_M_resethostcachemask,
+	VM_M_resethostcachemasks,
 	VM_M_sethostcachemaskstring,
 	VM_M_sethostcachemasknumber,
 	VM_M_resorthostcache,
