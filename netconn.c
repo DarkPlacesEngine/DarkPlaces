@@ -615,16 +615,18 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 
 void NetConn_ConnectionEstablished(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 {
+	cls.connect_trying = false;
+	// the connection request succeeded, stop current connection and set up a new connection
+	CL_Disconnect();
 	cls.netcon = NetConn_Open(mysocket, peeraddress);
 	Con_Printf("Connection accepted to %s\n", cls.netcon->address);
 	key_dest = key_game;
 	m_state = m_none;
-	cls.connect_trying = false;
 	cls.demonum = -1;			// not in the demo loop now
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
 	CL_ClearState();
-	Host_Reconnect_f();
+	SCR_BeginLoadingPlaque();
 }
 
 int NetConn_IsLocalGame(void)
