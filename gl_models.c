@@ -13,6 +13,7 @@ int aliasvertmax = 0;
 void *aliasvertarrays = NULL;
 float *aliasvertcolor4fbuf = NULL;
 float *aliasvertcolor4f = NULL; // this may point at aliasvertcolorbuf or at vertex arrays in the mesh backend
+float *aliasvert_vertex3f = NULL;
 float *aliasvert_svector3f = NULL;
 float *aliasvert_tvector3f = NULL;
 float *aliasvert_normal3f = NULL;
@@ -31,10 +32,11 @@ void gl_models_allocarrays(int newmax)
 	aliasvertmax = newmax;
 	if (aliasvertarrays != NULL)
 		Mem_Free(aliasvertarrays);
-	aliasvertarrays = Mem_Alloc(gl_models_mempool, aliasvertmax * (sizeof(float[4+4+3+3+3]) + sizeof(int[3])));
+	aliasvertarrays = Mem_Alloc(gl_models_mempool, aliasvertmax * (sizeof(float[4+4+3+3+3+3]) + sizeof(int[3])));
 	data = aliasvertarrays;
 	aliasvertcolor4f = aliasvertcolor4fbuf = (void *)data;data += aliasvertmax * sizeof(float[4]);
 	aliasvertcolor2_4f = (void *)data;data += aliasvertmax * sizeof(float[4]); // used temporarily for tinted coloring
+	aliasvert_vertex3f = (void *)data;data += aliasvertmax * sizeof(float[3]);
 	aliasvert_svector3f = (void *)data;data += aliasvertmax * sizeof(float[3]);
 	aliasvert_tvector3f = (void *)data;data += aliasvertmax * sizeof(float[3]);
 	aliasvert_normal3f = (void *)data;data += aliasvertmax * sizeof(float[3]);
@@ -49,6 +51,7 @@ void gl_models_freearrays(void)
 	aliasvertarrays = NULL;
 	aliasvertcolor4f = aliasvertcolor4fbuf = NULL;
 	aliasvertcolor2_4f = NULL;
+	aliasvert_vertex3f = NULL;
 	aliasvert_svector3f = NULL;
 	aliasvert_tvector3f = NULL;
 	aliasvert_normal3f = NULL;
@@ -458,7 +461,7 @@ void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightor
 void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int c, meshnum, layernum;
-	float fog, ifog, lightcolor2[3], *vertices;
+	float fog, ifog, lightcolor2[3];
 	vec3_t diff;
 	qbyte *bcolor;
 	aliasmesh_t *mesh;
@@ -494,8 +497,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		if (skin->flags & ALIASSKIN_TRANSPARENT)
 			continue;
 		expandaliasvert(mesh->num_vertices);
-		vertices = R_Shadow_VertexBuffer(mesh->num_vertices);
-		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, vertices);
+		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, aliasvert_vertex3f);
 		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_SVECTOR, aliasvert_svector3f);
 		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_TVECTOR, aliasvert_tvector3f);
 		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_NORMAL, aliasvert_normal3f);
@@ -511,7 +513,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (layer->flags & ALIASLAYER_SPECULAR)
 			{
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertices, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
+				R_Shadow_SpecularLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, aliasvert_vertex3f, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
 			}
 			else if (layer->flags & ALIASLAYER_DIFFUSE)
 			{
@@ -540,7 +542,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 					lightcolor2[2] *= bcolor[2] * (1.0f / 255.0f);
 				}
 				c_alias_polys += mesh->num_triangles;
-				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertices, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
+				R_Shadow_DiffuseLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, aliasvert_vertex3f, aliasvert_svector3f, aliasvert_tvector3f, aliasvert_normal3f, mesh->data_texcoord2f, relativelightorigin, lightradius, lightcolor2, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, layer->texture, layer->nmap, NULL);
 			}
 		}
 	}
