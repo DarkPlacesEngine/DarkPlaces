@@ -243,6 +243,7 @@ void R_DrawCrosshair(void)
 	float scale, base;
 	vec3_t v1, v2, spriteorigin;
 	vec_t spritescale;
+	float cr, cg, cb, ca;
 	num = crosshair.integer - 1;
 	if (num < 0)
 		return;
@@ -279,8 +280,21 @@ void R_DrawCrosshair(void)
 		spritescale = 4.0f + (CL_TraceLine(v1, v2, spriteorigin, NULL, 0, true) * 8192.0f) * (1.0f / 48.0f);
 		spritescale = bound(0.0f, spritescale, 32.0f);
 		//VectorMA(spriteorigin, -4, vpn, spriteorigin);
-		// put the sprite there
-		R_DrawCrosshairSprite(crosshairtexture[num], spriteorigin, spritescale, color[0] * scale + base, color[1] * scale + base, color[2] * scale + base, crosshair_alpha.value);
+
+		cr = color[0] * scale + base;
+		cg = color[1] * scale + base;
+		cb = color[2] * scale + base;
+		ca = crosshair_alpha.value;
+
+		// clamp the colors so they don't go negative
+		cr = max(0, cr);
+		cg = max(0, cg);
+		cb = max(0, cb);
+		// might as well clamp the alpha
+		ca = bound(0, ca, 1.0f);
+
+		// finally draw the sprite
+		R_DrawCrosshairSprite(crosshairtexture[num], spriteorigin, spritescale, cr, cg, cb, ca);
 	}
 }
 
