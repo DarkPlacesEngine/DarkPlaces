@@ -5602,10 +5602,11 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->brush.submodel = i;
 
 		// make the model surface list (used by shadowing/lighting)
+		mod->firstmodelsurface = mod->brushq3.data_models[i].firstsurface - mod->brushq3.data_faces;
 		mod->nummodelsurfaces = mod->brushq3.data_models[i].numsurfaces;
 		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->nummodelsurfaces * sizeof(*mod->surfacelist));
 		for (j = 0;j < mod->nummodelsurfaces;j++)
-			mod->surfacelist[j] = (mod->brushq3.data_models[i].firstsurface - mod->brushq3.data_faces) + j;
+			mod->surfacelist[j] = mod->firstmodelsurface + j;
 
 		VectorCopy(mod->brushq3.data_models[i].mins, mod->normalmins);
 		VectorCopy(mod->brushq3.data_models[i].maxs, mod->normalmaxs);
