@@ -1262,7 +1262,8 @@ typedef struct
 	int             dirlen;
 } dpackheader_t;
 
-#define MAX_FILES_IN_PACK       2048
+// LordHavoc: was 2048
+#define MAX_FILES_IN_PACK       16384
 
 char    com_cachedir[MAX_OSPATH];
 char    com_gamedir[MAX_OSPATH];
