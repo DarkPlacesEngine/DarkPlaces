@@ -224,23 +224,27 @@ static void Mod_LoadTextures (lump_t *l)
 		// LordHavoc: HL sky textures are entirely different than quake
 		if (!loadmodel->ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 		{
-			data = loadimagepixels(tx->name, false, 0, 0);
-			if (data)
+			if (loadmodel->isworldmodel)
 			{
-				if (image_width == 256 && image_height == 128)
+				data = loadimagepixels(tx->name, false, 0, 0);
+				if (data)
 				{
-					if (loadmodel->isworldmodel)
-	 					R_InitSky (data, 4);
-					Mem_Free(data);
+					if (image_width == 256 && image_height == 128)
+					{
+ 						R_InitSky (data, 4);
+						Mem_Free(data);
+					}
+					else
+					{
+						Mem_Free(data);
+						Con_Printf ("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
+						if (mtdata != NULL)
+							R_InitSky (mtdata, 1);
+					}
 				}
-				else
-				{
-					Mem_Free(data);
-					Con_Printf ("Invalid replacement texture for sky \"%s\" in %\"%s\", must be 256x128 pixels\n", tx->name, loadmodel->name);
-				}
+				else if (mtdata != NULL)
+					R_InitSky (mtdata, 1);
 			}
-			else if (loadmodel->isworldmodel)
-				R_InitSky (mtdata, 1);
 		}
 		else if ((tx->texture = loadtextureimagewithmask(loadmodel->texturepool, tx->name, 0, 0, false, true, true)))
 		{
