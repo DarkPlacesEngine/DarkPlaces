@@ -18,7 +18,6 @@
 -d darkplaces: figure out what is wrong with dedicated server console on win32 and fix it (and tell willis@deathmask.net)
 -d darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -d darkplaces: fix a crash when changing level while using qe1 textures (Todd)
--d darkplaces: fix skybox orientation to match glquake/quake2/quake3, it needs to be rotated 90 degrees; +X should be rt (metlslime)
 -d darkplaces: generate tvectors the same as svectors in bumpvector calculations (Riot)
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces: locked console scrollback (sublim3)
@@ -35,11 +34,9 @@
 -d dpmod: add support for info_player_deathmatch in singleplayer for q3 compatibility (Static_Fiend)
 -d dpmod: add target_position entity for a touch of q3 compatibility on jumppads (Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
--d litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
 -f darkplaces: figure out what crashes when this sequence is done: r_speeds 1;map anything, crash (Stribbs)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
-d darkplaces: Host_Name_f validate player names, stripping \r and \n
 0 darkplaces: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 0 darkplaces: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
@@ -366,6 +363,7 @@ d darkplaces: Host_Name_f validate player names, stripping \r and \n
 4 darkplaces: ingame mod switching
 4 darkplaces: make hqbsp save mip textures to bsp if tga textures are found
 4 darkplaces: rewrite sound system! (FrikaC, Static_Fiend, SeienAbunae)
+4 darkplaces: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
 4 darkplaces: use getaddrinfo to support ipv6, add support for winsock2 (or require it), check if winsock2 has ipv6 functions (getaddrinfo)... (|Rain|)
 4 darkplaces: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)  
 4 darkplaces: use the memory pool nesting feature ! (Black[,Vicious])
@@ -395,7 +393,6 @@ d darkplaces: Host_Name_f validate player names, stripping \r and \n
 7 darkplaces: mirrors (SeienAbunae)
 7 darkplaces: shadow volume clipping (romi)
 7 darkplaces: should add quake3 shader support even though the language is utterly insane
-4 darkplaces: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
 d darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
@@ -404,6 +401,7 @@ d darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
 d darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
 d darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down (Sajt)
 d darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
+d darkplaces: Host_Name_f validate player names, stripping \r and \n
 d darkplaces: PF_traceline/PF_tracebox now work with world as the edict
 d darkplaces: Quake3 bsp support (Vermeulen, Mitchell, SeienAbunae)
 d darkplaces: TEXF_CLAMP needs to use GL_CLAMP_TO_EDGE (if not supported just use REPEAT as a fallback, not aware of any cards that lack this)
@@ -525,6 +523,7 @@ d darkplaces: fix server crashing from client timeouts (Moz)
 d darkplaces: fix server list not working until you set maxplayers above 1 (Rick)
 d darkplaces: fix server list only querying the master to reply (Rick)
 d darkplaces: fix skybox geometry (SeienAbunae)
+d darkplaces: fix skybox orientation to match glquake/quake2/quake3, it needs to be rotated 90 degrees; +X should be rt (metlslime)
 d darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 d darkplaces: fix starting non-existent maps.  (drops to console with an error like it should)
 d darkplaces: fix startup on multiplayer games so they don't start a game when executing startdemos unless -listen or -dedicated was used (yummyluv)
@@ -655,6 +654,7 @@ d hmap2: report locations of lights which can not be vis optimized (Urre, FrikaC
 d hmap2: update .bat files to use hmap2 name and remove -noreuse from revis.bat (Vic)
 d hmap: add support for GTKRadiant stuff
 d lhfire: post lhfire build with example scripts.
+d litsupport: fix the one COM_HunkFile call that uses two parameters (glquake took one) and fix the few "//lit support begin" messages at the end of code blocks (metlslime)
 d lmp2pcx: post new lmp2pcx build.
 d revelation: fix bodies, they're standing due to invalid frame mappings (romi)
 d revelation: fix lingering glow on lightning deaths (romi)
