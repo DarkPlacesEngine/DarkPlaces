@@ -1006,6 +1006,10 @@ void Host_Spawn_f (void)
 		return;
 	}
 
+	// LordHavoc: moved this above the QC calls at FrikaC's request
+// send all current names, colors, and frag counts
+	SZ_Clear (&host_client->message);
+
 // run the entrance script
 	if (sv.loadgame)
 	{	// loaded games are fully inited allready
@@ -1051,9 +1055,6 @@ void Host_Spawn_f (void)
 		PR_ExecuteProgram (pr_global_struct->PutClientInServer);	
 	}
 
-
-// send all current names, colors, and frag counts
-	SZ_Clear (&host_client->message);
 
 // send time of update
 	MSG_WriteByte (&host_client->message, svc_time);
