@@ -292,7 +292,7 @@ void HostCache_ResetMasks(void)
 	memset( &hostcache_ormasks, 0, sizeof( hostcache_ormasks ) );
 }
 
-#if 1
+#if 0
 static void _HostCache_Test(void)
 {
 	int i;
@@ -320,7 +320,7 @@ void HostCache_QueryList(void)
 	hostcache_consoleoutput = false;
 	NetConn_QueryMasters();
 	
-	_HostCache_Test(); 
+	//_HostCache_Test(); 
 }
 
 // rest
