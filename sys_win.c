@@ -35,8 +35,6 @@ cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 // sleep time when not focus
 #define NOT_FOCUS_SLEEP	20
 
-int			starttime;
-
 static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
 
@@ -44,30 +42,6 @@ static HANDLE	tevent;
 static HANDLE	hFile;
 static HANDLE	heventParent;
 static HANDLE	heventChild;
-
-
-/*
-===============================================================================
-
-DLL MANAGEMENT
-
-===============================================================================
-*/
-
-dllhandle_t Sys_LoadLibrary (const char* name)
-{
-	return LoadLibrary (name);
-}
-
-void Sys_UnloadLibrary (dllhandle_t handle)
-{
-	FreeLibrary (handle);
-}
-
-void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
-{
-	return (void *)GetProcAddress (handle, name);
-}
 
 
 /*
