@@ -1,6 +1,10 @@
 
 #include "quakedef.h"
 #include <time.h>
+#ifndef WIN32
+#include <unistd.h>
+#include <fcntl.h>
+#endif
 
 extern cvar_t	timestamps;
 extern cvar_t	timeformat;
