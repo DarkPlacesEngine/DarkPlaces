@@ -345,7 +345,7 @@ void VID_Finish (void)
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
-	if (vid_mouse.integer && key_dest == key_game)
+	if (vid_mouse.integer && !key_consoleactive)
 		vid_usemouse = true;
 	if (modestate == MS_FULLDIB)
 		vid_usemouse = true;

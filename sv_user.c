@@ -654,8 +654,7 @@ void SV_RunClients (void)
 			continue;
 		}
 
-		// always pause in single player if in console or menus
-		if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) )
+		if (sv.frametime)
 		{
 			// LordHavoc: QuakeC replacement for SV_ClientThink (player movement)
 			if (SV_PlayerPhysicsQC)

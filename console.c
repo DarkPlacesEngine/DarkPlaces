@@ -39,8 +39,6 @@ float		con_cursorspeed = 4;
 
 #define		CON_TEXTSIZE	16384
 
-qboolean 	con_forcedup;		// because no entities to refresh
-
 int			con_totallines;		// total lines in console scrollback
 int			con_backscroll;		// lines up from bottom to display
 int			con_current;		// where next message will be printed
@@ -80,16 +78,7 @@ Con_ToggleConsole_f
 */
 void Con_ToggleConsole_f (void)
 {
-	if (key_dest == key_console)
-	{
-		if (cls.state == ca_connected)
-			key_dest = key_game;
-		else
-			M_Menu_Main_f ();
-	}
-	else
-		key_dest = key_console;
-
+	key_consoleactive = !key_consoleactive;
 	memset (con_times, 0, sizeof(con_times));
 }
 
@@ -473,7 +462,7 @@ void Con_DrawInput (void)
 {
 	char editlinecopy[256], *text;
 
-	if (key_dest != key_console && !con_forcedup)
+	if (!key_consoleactive)
 		return;		// don't draw anything
 
 	text = strcpy(editlinecopy, key_lines[edit_line]);

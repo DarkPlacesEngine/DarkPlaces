@@ -26,31 +26,32 @@ key up events are sent even if in console mode
 */
 
 
-#define		MAXCMDLINE	256
-char	key_lines[32][MAXCMDLINE];
-int		key_linepos;
-int		shift_down = false;
-int		key_lastpress;
-int		key_insert;	// insert key toggle (for editing)
+#define MAXCMDLINE 256
+char key_lines[32][MAXCMDLINE];
+int key_linepos;
+int shift_down = false;
+int key_lastpress;
+int key_insert;	// insert key toggle (for editing)
 
-int		edit_line = 0;
-int		history_line = 0;
+int edit_line = 0;
+int history_line = 0;
 
-keydest_t	key_dest;
+int key_consoleactive;
+keydest_t key_dest;
 
-int		key_count;			// incremented every key event
+int key_count;			// incremented every key event
 
-char	*keybindings[256];
-qboolean	consolekeys[256];	// if true, can't be rebound while in console
-qboolean	menubound[256];	// if true, can't be rebound while in menu
-int		keyshift[256];		// key to map to if shift held down in console
-int		key_repeats[256];	// if > 1, it is autorepeating
-qboolean	keydown[256];
+char *keybindings[256];
+qboolean consolekeys[256];	// if true, can't be rebound while in console
+qboolean menubound[256];	// if true, can't be rebound while in menu
+int keyshift[256];		// key to map to if shift held down in console
+int key_repeats[256];	// if > 1, it is autorepeating
+qboolean keydown[256];
 
 typedef struct
 {
-	char	*name;
-	int		keynum;
+	char *name;
+	int keynum;
 } keyname_t;
 
 keyname_t keynames[] =
@@ -306,10 +307,10 @@ void Key_Console (int key)
 		con_backscroll = 0;
 		return;
 	}
-	
+
 	if (key < 32 || key > 127)
 		return;	// non printable
-		
+
 
 
 	if (key_linepos < MAXCMDLINE-1)
@@ -687,7 +688,7 @@ void Key_Event (int key, qboolean down)
 		key_repeats[key]++;
 		if (key != K_BACKSPACE && key != K_PAUSE && key_repeats[key] > 1)
 			return;	// ignore most autorepeats
-			
+
 		if (key >= 200 && !keybindings[key])
 			Con_Printf ("%s is unbound, hit F4 to set.\n", Key_KeynumToString (key) );
 	}
@@ -702,6 +703,123 @@ void Key_Event (int key, qboolean down)
 	{
 		if (!down)
 			return;
+		if (key_consoleactive)
+			M_ToggleMenu_f ();
+		else
+		{
+			switch (key_dest)
+			{
+			case key_message:
+				Key_Message (key);
+				break;
+			case key_menu:
+				M_Keydown (key);
+				break;
+			case key_game:
+			//case key_console:
+				M_ToggleMenu_f ();
+				break;
+			default:
+				Sys_Error ("Bad key_dest");
+			}
+		}
+		return;
+	}
+
+	// LordHavoc: hack to make toggleconsole always work
+	if (down)
+	{
+		kb = keybindings[key];
+		if (kb && !strncmp(kb, "toggleconsole", strlen("toggleconsole")))
+		{
+			Cbuf_AddText (kb);
+			Cbuf_AddText ("\n");
+			return;
+		}
+	}
+
+	if (key_consoleactive && consolekeys[key])
+	{
+		// console only wants key down events
+		if (!down)
+			return;
+
+		// FIXME: this does not support non-QWERTY keyboards
+		if (shift_down)
+			key = keyshift[key];
+
+		Key_Console (key);
+	}
+	else
+	{
+		//
+		// key up events only generate commands if the game key binding is
+		// a button command (leading + sign).  These will occur even in console mode,
+		// to keep the character from continuing an action started before a console
+		// switch.  Button commands include the keynum as a parameter, so multiple
+		// downs can be matched with ups
+		//
+		if (!down)
+		{
+			kb = keybindings[key];
+			if (kb && kb[0] == '+')
+			{
+				sprintf (cmd, "-%s %i\n", kb+1, key);
+				Cbuf_AddText (cmd);
+			}
+			if (keyshift[key] != key)
+			{
+				kb = keybindings[keyshift[key]];
+				if (kb && kb[0] == '+')
+				{
+					sprintf (cmd, "-%s %i\n", kb+1, key);
+					Cbuf_AddText (cmd);
+				}
+			}
+			return;
+		}
+
+		//
+		// during demo playback, most keys bring up the main menu
+		//
+		if (cls.demoplayback && down && consolekeys[key] && key_dest == key_game)
+		{
+			M_ToggleMenu_f ();
+			return;
+		}
+
+		//
+		// if not a consolekey, send to the interpreter no matter what mode is
+		//
+		//if ((key_dest == key_console && !consolekeys[key])
+		if ((key_consoleactive && !consolekeys[key])
+		 || (key_dest == key_menu && menubound[key])
+		 || key_dest == key_game)
+		{
+			kb = keybindings[key];
+			if (kb)
+			{
+				if (kb[0] == '+')
+				{	// button commands add keynum as a parm
+					sprintf (cmd, "%s %i\n", kb, key);
+					Cbuf_AddText (cmd);
+				}
+				else
+				{
+					Cbuf_AddText (kb);
+					Cbuf_AddText ("\n");
+				}
+			}
+			return;
+		}
+
+		if (!down)
+			return;		// other systems only care about key down events
+
+		// FIXME: this does not support non-QWERTY keyboards
+		if (shift_down)
+			key = keyshift[key];
+
 		switch (key_dest)
 		{
 		case key_message:
@@ -710,99 +828,14 @@ void Key_Event (int key, qboolean down)
 		case key_menu:
 			M_Keydown (key);
 			break;
+
 		case key_game:
-		case key_console:
-			M_ToggleMenu_f ();
+		//case key_console:
+			Key_Console (key);
 			break;
 		default:
 			Sys_Error ("Bad key_dest");
 		}
-		return;
-	}
-
-//
-// key up events only generate commands if the game key binding is
-// a button command (leading + sign).  These will occur even in console mode,
-// to keep the character from continuing an action started before a console
-// switch.  Button commands include the keynum as a parameter, so multiple
-// downs can be matched with ups
-//
-	if (!down)
-	{
-		kb = keybindings[key];
-		if (kb && kb[0] == '+')
-		{
-			sprintf (cmd, "-%s %i\n", kb+1, key);
-			Cbuf_AddText (cmd);
-		}
-		if (keyshift[key] != key)
-		{
-			kb = keybindings[keyshift[key]];
-			if (kb && kb[0] == '+')
-			{
-				sprintf (cmd, "-%s %i\n", kb+1, key);
-				Cbuf_AddText (cmd);
-			}
-		}
-		return;
-	}
-
-//
-// during demo playback, most keys bring up the main menu
-//
-	if (cls.demoplayback && down && consolekeys[key] && key_dest == key_game)
-	{
-		M_ToggleMenu_f ();
-		return;
-	}
-
-//
-// if not a consolekey, send to the interpreter no matter what mode is
-//
-	if ( (key_dest == key_menu && menubound[key])
-	|| (key_dest == key_console && !consolekeys[key])
-	|| (key_dest == key_game && ( !con_forcedup || !consolekeys[key] ) ) )
-	{
-		kb = keybindings[key];
-		if (kb)
-		{
-			if (kb[0] == '+')
-			{	// button commands add keynum as a parm
-				sprintf (cmd, "%s %i\n", kb, key);
-				Cbuf_AddText (cmd);
-			}
-			else
-			{
-				Cbuf_AddText (kb);
-				Cbuf_AddText ("\n");
-			}
-		}
-		return;
-	}
-
-	if (!down)
-		return;		// other systems only care about key down events
-
-	if (shift_down)
-	{
-		key = keyshift[key];
-	}
-
-	switch (key_dest)
-	{
-	case key_message:
-		Key_Message (key);
-		break;
-	case key_menu:
-		M_Keydown (key);
-		break;
-
-	case key_game:
-	case key_console:
-		Key_Console (key);
-		break;
-	default:
-		Sys_Error ("Bad key_dest");
 	}
 }
 
@@ -814,9 +847,9 @@ Key_ClearStates
 */
 void Key_ClearStates (void)
 {
-	int		i;
+	int i;
 
-	for (i=0 ; i<256 ; i++)
+	for (i = 0;i < 256;i++)
 	{
 		keydown[i] = false;
 		key_repeats[i] = 0;
