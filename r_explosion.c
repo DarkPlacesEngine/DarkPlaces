@@ -176,7 +176,7 @@ void R_NewExplosion(vec3_t org)
 void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 {
 	int i, numtriangles, numverts;
-	float *c, diff[3], centerdir[3], ifog, alpha, dist;
+	float *c, diff[3], centerdir[3], alpha, dist;
 	rmeshstate_t m;
 	const explosion_t *e;
 	e = calldata1;
@@ -195,47 +195,27 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 
 	R_Mesh_CopyVertex3f(e->vert[0], numverts);
 	R_Mesh_CopyTexCoord2f(0, explosiontexcoord2f[0], numverts);
-	alpha = e->alpha;
+	alpha = e->alpha * r_colorscale;
 	VectorSubtract(r_origin, e->origin, centerdir);
 	VectorNormalizeFast(centerdir);
-	if (fogenabled)
+	for (i = 0, c = varray_color4f;i < EXPLOSIONVERTS;i++, c += 4)
 	{
-		for (i = 0, c = varray_color4f;i < EXPLOSIONVERTS;i++, c += 4)
+		VectorSubtract(e->vert[i], e->origin, diff);
+		VectorNormalizeFast(diff);
+		dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
+		if (dist > 0)
 		{
-			VectorSubtract(e->vert[i], e->origin, diff);
-			VectorNormalizeFast(diff);
-			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
-			if (dist > 0)
+			if (fogenabled)
 			{
 				// use inverse fog alpha
 				VectorSubtract(e->vert[i], r_origin, diff);
-				ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
-				dist = dist * ifog;
-				if (dist < 0)
-					dist = 0;
-				else
-					dist *= r_colorscale;
+				dist *= (1 - exp(fogdensity/DotProduct(diff,diff)));
 			}
-			else
-				dist = 0;
-			c[0] = c[1] = c[2] = dist;
-			c[3] = 1;
 		}
-	}
-	else
-	{
-		for (i = 0, c = varray_color4f;i < EXPLOSIONVERTS;i++, c += 4)
-		{
-			VectorSubtract(e->vert[i], e->origin, diff);
-			VectorNormalizeFast(diff);
-			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
-			if (dist < 0)
-				dist = 0;
-			else
-				dist *= r_colorscale;
-			c[0] = c[1] = c[2] = dist;
-			c[3] = 1;
-		}
+		else
+			dist = 0;
+		c[0] = c[1] = c[2] = dist;
+		c[3] = 1;
 	}
 	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
 }
