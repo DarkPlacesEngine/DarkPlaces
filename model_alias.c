@@ -212,7 +212,7 @@ static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, int width, int
 extern void R_Model_Alias_Draw(entity_render_t *ent);
 extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
+extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
 void Mod_LoadAliasModel (model_t *mod, void *buffer)
 {
 	int						i, j, version, numverts, totalposes, totalskins, skinwidth, skinheight, totalverts, groupframes, groupskins;
@@ -764,7 +764,7 @@ extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
 extern void R_Model_Zymotic_Draw(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Zymotic_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
+extern void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
 void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 {
 	zymtype1header_t *pinmodel, *pheader;

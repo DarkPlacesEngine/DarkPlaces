@@ -251,7 +251,7 @@ typedef struct model_s
 	// draw a shadow volume for the model based on light source
 	void(*DrawShadowVolume)(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 	// draw the lighting on a model (through stencil)
-	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor);
+	void(*DrawLight)(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
 
 	// memory pool for allocations
 	mempool_t		*mempool;
@@ -290,13 +290,16 @@ extern char loadname[32];	// for hunk tags
 
 int Mod_FindTriangleWithEdge(const int *elements, int numtriangles, int start, int end);
 void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtriangles);
+void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh);
 int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *v);
+void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, float *vert0, float *vert1, float *vert2);
 void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts);
-shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool);
+void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts, int numtris, int *elements);
+shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int initialnumtriangles);
 shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);

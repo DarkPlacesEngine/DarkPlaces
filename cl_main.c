@@ -546,6 +546,8 @@ static void CL_RelinkNetworkEntities()
 
 		VectorCopy (neworg, ent->render.origin);
 		ent->render.flags = ent->state_current.flags;
+		if (i == cl.viewentity)
+			ent->render.flags |= RENDER_EXTERIORMODEL;
 		ent->render.effects = effects = ent->state_current.effects;
 		if (ent->state_current.flags & RENDER_COLORMAPPED)
 			ent->render.colormap = ent->state_current.colormap;
@@ -722,16 +724,8 @@ static void CL_RelinkNetworkEntities()
 			CL_AllocDlight (&ent->render, v, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}
 
-		if (chase_active.integer)
-		{
-			if (ent->render.flags & RENDER_VIEWMODEL)
-				continue;
-		}
-		else
-		{
-			if (i == cl.viewentity || (ent->render.flags & RENDER_EXTERIORMODEL))
-				continue;
-		}
+		if (chase_active.integer && (ent->render.flags & RENDER_VIEWMODEL))
+			continue;
 
 		// don't show entities with no modelindex (note: this still shows
 		// entities which have a modelindex that resolved to a NULL model)
