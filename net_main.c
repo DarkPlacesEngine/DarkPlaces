@@ -63,6 +63,7 @@ int unreliableMessagesReceived = 0;
 
 cvar_t	net_messagetimeout = {0, "net_messagetimeout","300"};
 cvar_t	hostname = {CVAR_SAVE, "hostname", "UNNAMED"};
+cvar_t	developer_networking = {0, "developer_networking", "0"};
 
 qboolean	configRestored = false;
 
@@ -889,6 +890,7 @@ void NET_Init (void)
 
 	Cvar_RegisterVariable (&net_messagetimeout);
 	Cvar_RegisterVariable (&hostname);
+	Cvar_RegisterVariable (&developer_networking);
 
 	Cmd_AddCommand ("net_slist", NET_Slist_f);
 	Cmd_AddCommand ("net_inetslist", NET_InetSlist_f);
