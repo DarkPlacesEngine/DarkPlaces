@@ -30,6 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // so here I jump to 3500
 #define	PROTOCOL_DARKPLACES3 3500
 #define PROTOCOL_DARKPLACES4 3501
+#define PROTOCOL_DARKPLACES5 3502
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail

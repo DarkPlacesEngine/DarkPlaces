@@ -163,6 +163,12 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 					MSG_WriteShort(msg, org[1]);
 				if (bits & E_ORIGIN3)
 					MSG_WriteShort(msg, org[2]);
+				if (bits & E_ANGLE1)
+					MSG_WriteAngle(msg, ent->angles[0]);
+				if (bits & E_ANGLE2)
+					MSG_WriteAngle(msg, ent->angles[1]);
+				if (bits & E_ANGLE3)
+					MSG_WriteAngle(msg, ent->angles[2]);
 			}
 			else
 			{
@@ -172,13 +178,13 @@ void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delt
 					MSG_WriteFloat(msg, org[1]);
 				if (bits & E_ORIGIN3)
 					MSG_WriteFloat(msg, org[2]);
+				if (bits & E_ANGLE1)
+					MSG_WritePreciseAngle(msg, ent->angles[0]);
+				if (bits & E_ANGLE2)
+					MSG_WritePreciseAngle(msg, ent->angles[1]);
+				if (bits & E_ANGLE3)
+					MSG_WritePreciseAngle(msg, ent->angles[2]);
 			}
-			if (bits & E_ANGLE1)
-				MSG_WriteAngle(msg, ent->angles[0]);
-			if (bits & E_ANGLE2)
-				MSG_WriteAngle(msg, ent->angles[1]);
-			if (bits & E_ANGLE3)
-				MSG_WriteAngle(msg, ent->angles[2]);
 			if (bits & E_MODEL1)
 				MSG_WriteByte(msg, ent->modelindex & 0xFF);
 			if (bits & E_MODEL2)
@@ -277,12 +283,24 @@ void EntityState_ReadUpdate(entity_state_t *e, int number)
 				e->origin[2] = MSG_ReadFloat();
 		}
 	}
-	if (bits & E_ANGLE1)
-		e->angles[0] = MSG_ReadAngle();
-	if (bits & E_ANGLE2)
-		e->angles[1] = MSG_ReadAngle();
-	if (bits & E_ANGLE3)
-		e->angles[2] = MSG_ReadAngle();
+	if (cl.protocol == PROTOCOL_DARKPLACES5 && !(e->flags & RENDER_LOWPRECISION))
+	{
+		if (bits & E_ANGLE1)
+			e->angles[0] = MSG_ReadPreciseAngle();
+		if (bits & E_ANGLE2)
+			e->angles[1] = MSG_ReadPreciseAngle();
+		if (bits & E_ANGLE3)
+			e->angles[2] = MSG_ReadPreciseAngle();
+	}
+	else
+	{
+		if (bits & E_ANGLE1)
+			e->angles[0] = MSG_ReadAngle();
+		if (bits & E_ANGLE2)
+			e->angles[1] = MSG_ReadAngle();
+		if (bits & E_ANGLE3)
+			e->angles[2] = MSG_ReadAngle();
+	}
 	if (bits & E_MODEL1)
 		e->modelindex = (e->modelindex & 0xFF00) | (unsigned int) MSG_ReadByte();
 	if (bits & E_MODEL2)

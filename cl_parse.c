@@ -151,8 +151,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	if (ent >= MAX_EDICTS)
 		Host_Error ("CL_ParseStartSoundPacket: ent = %i", ent);
 
-	for (i = 0;i < 3;i++)
-		pos[i] = MSG_ReadCoord ();
+	MSG_ReadVector(pos);
 
 	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
 }
@@ -335,9 +334,9 @@ void CL_ParseServerInfo (void)
 	// hack for unmarked Nehahra movie demos which had a custom protocol
 	if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
 		i = PROTOCOL_NEHAHRAMOVIE;
-	if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_NEHAHRAMOVIE)
+	if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_NEHAHRAMOVIE)
 	{
-		Host_Error("CL_ParseServerInfo: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_NEHAHRAMOVIE);
+		Host_Error("CL_ParseServerInfo: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_NEHAHRAMOVIE);
 		return;
 	}
 	cl.protocol = i;
@@ -765,25 +764,46 @@ void CL_ParseClientdata (int bits)
 		cl.idealpitch = 0;
 
 	VectorCopy (cl.mvelocity[0], cl.mvelocity[1]);
-	for (i=0 ; i<3 ; i++)
+	if (cl.protocol == PROTOCOL_DARKPLACES5)
 	{
-		if (bits & (SU_PUNCH1<<i) )
+		for (i = 0;i < 3;i++)
 		{
-			if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4)
+			if (bits & (SU_PUNCH1<<i) )
 				cl.punchangle[i] = MSG_ReadPreciseAngle();
 			else
-				cl.punchangle[i] = MSG_ReadChar();
+				cl.punchangle[i] = 0;
+			if (bits & (SU_PUNCHVEC1<<i))
+				cl.punchvector[i] = MSG_ReadFloat();
+			else
+				cl.punchvector[i] = 0;
+			if (bits & (SU_VELOCITY1<<i) )
+				cl.mvelocity[0][i] = MSG_ReadFloat();
+			else
+				cl.mvelocity[0][i] = 0;
 		}
-		else
-			cl.punchangle[i] = 0;
-		if (bits & (SU_PUNCHVEC1<<i))
-			cl.punchvector[i] = MSG_ReadCoord();
-		else
-			cl.punchvector[i] = 0;
-		if (bits & (SU_VELOCITY1<<i) )
-			cl.mvelocity[0][i] = MSG_ReadChar()*16;
-		else
-			cl.mvelocity[0][i] = 0;
+	}
+	else
+	{
+		for (i = 0;i < 3;i++)
+		{
+			if (bits & (SU_PUNCH1<<i) )
+			{
+				if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+					cl.punchangle[i] = MSG_ReadPreciseAngle();
+				else
+					cl.punchangle[i] = MSG_ReadChar();
+			}
+			else
+				cl.punchangle[i] = 0;
+			if (bits & (SU_PUNCHVEC1<<i))
+				cl.punchvector[i] = MSG_ReadCoord();
+			else
+				cl.punchvector[i] = 0;
+			if (bits & (SU_VELOCITY1<<i) )
+				cl.mvelocity[0][i] = MSG_ReadChar()*16;
+			else
+				cl.mvelocity[0][i] = 0;
+		}
 	}
 
 	i = MSG_ReadLong ();
@@ -1320,16 +1340,12 @@ void CL_ParseTempEntity(void)
 		break;
 
 	case TE_LAVASPLASH:
-		pos[0] = MSG_ReadCoord();
-		pos[1] = MSG_ReadCoord();
-		pos[2] = MSG_ReadCoord();
+		MSG_ReadVector(pos);
 		CL_LavaSplash(pos);
 		break;
 
 	case TE_TELEPORT:
-		pos[0] = MSG_ReadCoord();
-		pos[1] = MSG_ReadCoord();
-		pos[2] = MSG_ReadCoord();
+		MSG_ReadVector(pos);
 		Matrix4x4_CreateTranslate(&tempmatrix, pos[0], pos[1], pos[2]);
 		CL_AllocDlight(NULL, &tempmatrix, 500, 1.0f, 1.0f, 1.0f, 1500, 99.0f, 0, 0, true, 1);
 //		CL_TeleportSplash(pos);
@@ -1526,8 +1542,8 @@ void CL_ParseServerMessage(void)
 			// hack for unmarked Nehahra movie demos which had a custom protocol
 			if (i == PROTOCOL_QUAKE && cls.demoplayback && demo_nehahra.integer)
 				i = PROTOCOL_NEHAHRAMOVIE;
-			if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_NEHAHRAMOVIE)
-				Host_Error("CL_ParseServerMessage: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_NEHAHRAMOVIE);
+			if (i != PROTOCOL_QUAKE && i != PROTOCOL_DARKPLACES1 && i != PROTOCOL_DARKPLACES2 && i != PROTOCOL_DARKPLACES3 && i != PROTOCOL_DARKPLACES4 && i != PROTOCOL_DARKPLACES5 && i != PROTOCOL_NEHAHRAMOVIE)
+				Host_Error("CL_ParseServerMessage: Server is protocol %i, not %i (Quake), %i (DP1), %i (DP2), %i (DP3), %i (DP4), %i (DP5), or %i (Nehahra movie)", i, PROTOCOL_QUAKE, PROTOCOL_DARKPLACES1, PROTOCOL_DARKPLACES2, PROTOCOL_DARKPLACES3, PROTOCOL_DARKPLACES4, PROTOCOL_DARKPLACES5, PROTOCOL_NEHAHRAMOVIE);
 			cl.protocol = i;
 			break;
 

@@ -272,7 +272,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, PROTOCOL_DARKPLACES4);
+	MSG_WriteLong (&client->message, PROTOCOL_DARKPLACES5);
 	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
@@ -1295,9 +1295,9 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		if (bits & (SU_PUNCH1<<i))
 			MSG_WritePreciseAngle(msg, ent->v->punchangle[i]); // PROTOCOL_DARKPLACES
 		if (bits & (SU_PUNCHVEC1<<i)) // PROTOCOL_DARKPLACES
-			MSG_WriteDPCoord(msg, punchvector[i]); // PROTOCOL_DARKPLACES
+			MSG_WriteFloat(msg, punchvector[i]); // PROTOCOL_DARKPLACES
 		if (bits & (SU_VELOCITY1<<i))
-			MSG_WriteChar (msg, ent->v->velocity[i]/16);
+			MSG_WriteFloat(msg, ent->v->velocity[i]);
 	}
 
 // [always sent]	if (bits & SU_ITEMS)
