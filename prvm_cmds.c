@@ -138,6 +138,8 @@ float	getmousetarget(void)
 float	isfunction(string function_name)
 vector	getresolution(float number)
 string	keynumtostring(float keynum)
+string	findkeysforcommand(string command)
+
 
 */
 
@@ -3082,6 +3084,40 @@ void VM_M_keynumtostring(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tmp);
 }
 
+/*
+=========
+VM_M_findkeysforcommand
+
+string	findkeysforcommand(string command)
+
+the returned string is an altstring
+=========
+*/
+#define NUMKEYS 5 // TODO: merge the constant in keys.c with this one somewhen
+
+void M_FindKeysForCommand(char *command, int *keys);
+void VM_M_findkeysforcommand(void)
+{
+	char *cmd, *ret;
+	int keys[NUMKEYS];
+	int i;
+
+	VM_SAFEPARMCOUNT(1, VM_M_findkeysforcommand);
+
+	cmd = PRVM_G_STRING(OFS_PARM0);
+	
+	VM_CheckEmptyString(cmd);
+
+	ret = VM_GetTempString();
+	
+	M_FindKeysForCommand(cmd, keys);
+
+	for(i = 0; i < NUMKEYS; i++)
+		ret = va("%s \'%i\'", ret, keys[i]);
+
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_SetString(ret);
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -3209,7 +3245,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_writetofile,
 	VM_M_isfunction,
 	VM_M_getresolution,
-	VM_M_keynumtostring // 609
+	VM_M_keynumtostring,
+	VM_M_findkeysforcommand// 610
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
