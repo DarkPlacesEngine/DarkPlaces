@@ -1,5 +1,5 @@
 
-OBJECTS= builddate.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o r_sky.o gl_rmain.o gl_rsurf.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o transform.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o protocol.o quakeio.o ui.o portals.o sys_shared.o gl_backend.o cl_particles.o cl_screen.o cgamevm.o cgame.o filematch.o collision.o cl_collision.o matrixlib.o cl_video.o dpvsimpledecode.o wavefile.o meshqueue.o net_master.o r_shadow.o
+OBJECTS= builddate.o chase.o cl_demo.o cl_input.o cl_main.o cl_parse.o cmd.o common.o console.o crc.o cvar.o fractalnoise.o gl_draw.o r_sky.o gl_rmain.o gl_rsurf.o host.o host_cmd.o image.o keys.o mathlib.o menu.o model_alias.o model_brush.o model_shared.o model_sprite.o net_dgrm.o net_loop.o net_main.o pr_cmds.o pr_edict.o pr_exec.o r_light.o r_explosion.o sbar.o snd_dma.o snd_mem.o snd_mix.o sv_main.o sv_move.o sv_phys.o sv_user.o sv_light.o view.o wad.o world.o zone.o vid_shared.o palette.o r_crosshairs.o gl_textures.o gl_models.o r_sprites.o r_modules.o r_explosion.o r_lerpanim.o protocol.o quakeio.o ui.o portals.o sys_shared.o gl_backend.o cl_particles.o cl_screen.o cgamevm.o cgame.o filematch.o collision.o cl_collision.o matrixlib.o cl_video.o dpvsimpledecode.o wavefile.o meshqueue.o net_master.o r_shadow.o jpeg.o
 
 #K6/athlon optimizations
 #CPUOPTIMIZATIONS=-march=k6
@@ -16,7 +16,7 @@ OPTIMIZATIONS= -O2 -fno-strict-aliasing $(CPUOPTIMIZATIONS)
 #OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops -fomit-frame-pointer -fexpensive-optimizations $(CPUOPTIMIZATIONS)
 # -D WIN32 -D NDEBUG -D _WINDOWS -D _M_IX86
 
-CFLAGS= -MD -Wall -Werror $(OPTIMIZATIONS)
+CFLAGS= -MD -Wall $(OPTIMIZATIONS)
 LDFLAGS= -mwindows -luser32 -lgdi32 -lwinmm -ldxguid -ldinput -lopengl32 -lcomctl32 -lwsock32
 
 
