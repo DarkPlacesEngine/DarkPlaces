@@ -638,7 +638,7 @@ extern cvar_t cl_explosions_size_start;
 extern cvar_t cl_explosions_size_end;
 extern cvar_t cl_explosions_lifetime;
 extern cvar_t cl_stainmaps;
-extern cvar_t cl_stainmapsclearonload;
+extern cvar_t cl_stainmaps_clearonload;
 
 extern cvar_t cl_prydoncursor;
 

@@ -1491,7 +1491,7 @@ void M_Menu_Options_Effects_f (void)
 
 extern cvar_t r_detailtextures;
 extern cvar_t cl_stainmaps;
-extern cvar_t cl_stainmapsclearonload;
+extern cvar_t cl_stainmaps_clearonload;
 extern cvar_t r_explosionclip;
 extern cvar_t r_modellights;
 extern cvar_t r_coronas;
@@ -1521,7 +1521,7 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_explosions_shell, !cl_particles_explosions_shell.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_explosionclip, !r_explosionclip.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmaps, !cl_stainmaps.integer);
-	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmapsclearonload, !cl_stainmapsclearonload.integer);
+	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_stainmaps_clearonload, !cl_stainmaps_clearonload.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_decals, !cl_decals.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&r_detailtextures, !r_detailtextures.integer);
 	else if (options_effects_cursor == optnum++) Cvar_SetValueQuick (&cl_particles_bulletimpacts, !cl_particles_bulletimpacts.integer);
@@ -1576,7 +1576,7 @@ void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("       Explosion Shell", true, cl_particles_explosions_shell.integer);
 	M_Options_PrintCheckbox("  Explosion Shell Clip", true, r_explosionclip.integer);
 	M_Options_PrintCheckbox("             Stainmaps", true, cl_stainmaps.integer);
-	M_Options_PrintCheckbox("Onload Clear Stainmaps", true, cl_stainmapsclearonload.integer);
+	M_Options_PrintCheckbox("Onload Clear Stainmaps", true, cl_stainmaps_clearonload.integer);
 	M_Options_PrintCheckbox("                Decals", true, cl_decals.integer);
 	M_Options_PrintCheckbox("      Detail Texturing", true, r_detailtextures.integer);
 	M_Options_PrintCheckbox("        Bullet Impacts", true, cl_particles_bulletimpacts.integer);
