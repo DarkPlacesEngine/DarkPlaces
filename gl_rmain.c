@@ -262,7 +262,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable(&r_waterscroll);
 	Cvar_RegisterVariable(&r_watershader);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes);
-	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ)
+	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ || gamemode == GAME_TENEBRAE)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
