@@ -303,7 +303,7 @@ Goes to a new map, taking all clients along
 void Host_Changelevel_f (void)
 {
 	char level[MAX_QPATH];
-	
+
 	if (Cmd_Argc() != 2)
 	{
 		Con_Print("changelevel <levelname> : continue game on a new level\n");
@@ -339,7 +339,7 @@ Restarts the current server for a dead player
 void Host_Restart_f (void)
 {
 	char mapname[MAX_QPATH];
-	
+
 	if (Cmd_Argc() != 1)
 	{
 		Con_Print("restart : restart current level\n");
@@ -500,7 +500,7 @@ void Host_Savegame_f (void)
 	FS_DefaultExtension (name, ".sav", sizeof (name));
 
 	Con_Printf("Saving game to %s...\n", name);
-	f = FS_Open (name, "w", false);
+	f = FS_Open (name, "wb", false);
 	if (!f)
 	{
 		Con_Print("ERROR: couldn't open.\n");
@@ -545,12 +545,12 @@ void Host_Loadgame_f (void)
 	qfile_t *f;
 	char filename[MAX_QPATH];
 	char mapname[MAX_QPATH];
-	float time, tfloat;
-	char buf[32768];
+	float time;
 	const char *start;
-	char *str;
-	int i, r;
+	const char *t;
+	char *text;
 	edict_t *ent;
+	int i;
 	int entnum;
 	int version;
 	float spawn_parms[NUM_SPAWN_PARMS];
@@ -571,43 +571,53 @@ void Host_Loadgame_f (void)
 
 	cls.demonum = -1;		// stop demo loop in case this fails
 
-	f = FS_Open (filename, "r", false);
-	if (!f)
+	t = text = FS_LoadFile (filename, tempmempool, false);
+	if (!text)
 	{
 		Con_Print("ERROR: couldn't open.\n");
 		return;
 	}
 
-	str = FS_Getline (f);
-	sscanf (str, "%i\n", &version);
+	// version
+	COM_ParseToken(&t, false);
+	version = atoi(com_token);
 	if (version != SAVEGAME_VERSION)
 	{
-		FS_Close (f);
+		Mem_Free(text);
 		Con_Printf("Savegame is version %i, not %i\n", version, SAVEGAME_VERSION);
 		return;
 	}
 
-	str = FS_Getline (f);
+	// description
+	// this is a little hard to parse, as : is a separator in COM_ParseToken,
+	// so use the console parser instead
+	COM_ParseTokenConsole(&t);
+
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 	{
-		str = FS_Getline (f);
-		sscanf (str, "%f\n", &spawn_parms[i]);
+		COM_ParseToken(&t, false);
+		spawn_parms[i] = atof(com_token);
 	}
+	// skill
+	COM_ParseToken(&t, false);
 // this silliness is so we can load 1.06 save files, which have float skill values
-	str = FS_Getline (f);
-	sscanf (str, "%f\n", &tfloat);
-	current_skill = (int)(tfloat + 0.1);
+	current_skill = (int)(atof(com_token) + 0.5);
 	Cvar_SetValue ("skill", (float)current_skill);
 
-	strcpy (mapname, FS_Getline (f));
+	// mapname
+	COM_ParseToken(&t, false);
+	strcpy (mapname, com_token);
 
-	str = FS_Getline (f);
-	sscanf (str, "%f\n",&time);
+	// time
+	COM_ParseToken(&t, false);
+	time = atof(com_token);
 
 	allowcheats = sv_cheats.integer != 0;
+
 	SV_SpawnServer (mapname);
 	if (!sv.active)
 	{
+		Mem_Free(text);
 		Con_Print("Couldn't load map\n");
 		return;
 	}
@@ -618,9 +628,10 @@ void Host_Loadgame_f (void)
 
 	for (i = 0;i < MAX_LIGHTSTYLES;i++)
 	{
-		str = FS_Getline (f);
-		sv.lightstyles[i] = Mem_Alloc(edictstring_mempool, strlen(str)+1);
-		strcpy (sv.lightstyles[i], str);
+		// light style
+		COM_ParseToken(&t, false);
+		sv.lightstyles[i] = Mem_Alloc(edictstring_mempool, strlen(com_token)+1);
+		strcpy (sv.lightstyles[i], com_token);
 	}
 
 // load the edicts out of the savegame file
@@ -628,32 +639,20 @@ void Host_Loadgame_f (void)
 	entnum = -1;
 	for (;;)
 	{
-		r = EOF;
-		for (i = 0;i < (int)sizeof(buf) - 1;i++)
-		{
-			r = FS_Getc (f);
-			if (r == EOF || !r)
+		start = t;
+		while (COM_ParseToken(&t, false))
+			if (!strcmp(com_token, "}"))
 				break;
-			buf[i] = r;
-			if (r == '}')
-			{
-				i++;
-				break;
-			}
-		}
-		if (r == EOF)
-			break;
-		if (i == sizeof(buf)-1)
-			Host_Error ("Loadgame buffer overflow");
-		buf[i] = 0;
-		start = buf;
 		if (!COM_ParseToken(&start, false))
 		{
 			// end of file
 			break;
 		}
 		if (strcmp(com_token,"{"))
+		{
+			Mem_Free(text);
 			Host_Error ("First token isn't a brace");
+		}
 
 		if (entnum == -1)
 		{
@@ -664,7 +663,10 @@ void Host_Loadgame_f (void)
 		{
 			// parse an edict
 			if (entnum >= MAX_EDICTS)
+			{
+				Mem_Free(text);
 				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)\n", MAX_EDICTS);
+			}
 			while (entnum >= sv.max_edicts)
 				SV_IncreaseEdicts();
 			ent = EDICT_NUM(entnum);
@@ -735,7 +737,7 @@ void Host_Name_f (void)
 		SV_ClientPrintf("You can't change name more than once every 5 seconds!\n");
 		return;
 	}
-	
+
 	host_client->nametime = sv.time + 5;
 
 	// point the string back at updateclient->name to keep it safe
@@ -758,7 +760,7 @@ void Host_Name_f (void)
 Host_Playermodel_f
 ======================
 */
-cvar_t cl_playermodel = {CVAR_SAVE, "_cl_playermodel", ""}; 
+cvar_t cl_playermodel = {CVAR_SAVE, "_cl_playermodel", ""};
 // the old cl_playermodel in cl_main has been renamed to __cl_playermodel
 void Host_Playermodel_f (void)
 {
@@ -795,7 +797,7 @@ void Host_Playermodel_f (void)
 		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
 		return;
 	}
-	
+
 	host_client->nametime = sv.time + 5;
 	*/
 
@@ -856,7 +858,7 @@ void Host_Playerskin_f (void)
 		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
 		return;
 	}
-	
+
 	host_client->nametime = sv.time + 5;
 	*/
 

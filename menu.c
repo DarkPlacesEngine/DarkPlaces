@@ -712,9 +712,10 @@ int		loadable[MAX_SAVEGAMES];
 
 void M_ScanSaves (void)
 {
-	int		i, j;
+	int		i, j, len;
 	char	name[MAX_OSPATH];
-	char	*str;
+	char	buf[SAVEGAME_COMMENT_LENGTH + 256];
+	const char *t;
 	qfile_t	*f;
 	int		version;
 
@@ -723,13 +724,19 @@ void M_ScanSaves (void)
 		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
 		loadable[i] = false;
 		sprintf (name, "s%i.sav", i);
-		f = FS_Open (name, "r", false);
+		f = FS_Open (name, "rb", false);
 		if (!f)
 			continue;
-		str = FS_Getline (f);
-		sscanf (str, "%i\n", &version);
-		str = FS_Getline (f);
-		strlcpy (m_filenames[i], str, sizeof (m_filenames[i]));
+		// read enough to get the comment
+		len = FS_Read(f, buf, sizeof(buf) - 1);
+		buf[sizeof(buf) - 1] = 0;
+		t = buf;
+		// version
+		COM_ParseToken(&t, false);
+		version = atoi(com_token);
+		// description
+		COM_ParseToken(&t, false);
+		strlcpy (m_filenames[i], com_token, sizeof (m_filenames[i]));
 
 	// change _ back to space
 		for (j=0 ; j<SAVEGAME_COMMENT_LENGTH ; j++)
@@ -1673,7 +1680,7 @@ void M_Menu_Options_Graphics_AdjustSliders (int dir)
 {
 	int optnum;
 	S_LocalSound ("sound/misc/menu3.wav");
- 
+
 	optnum = 0;
 
 		 if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_gloss,							bound(0, r_shadow_gloss.integer + dir, 2));
@@ -4418,6 +4425,6 @@ void MR_Init(void)
 // COMMANDLINEOPTION: Client: -useqmenu causes the first time you open the menu to use the quake menu, then reverts to menu.dat (if forceqmenu is 0)
 	if(COM_CheckParm("-useqmenu"))
 		MR_SetRouting (TRUE);
-	else 
+	else
 		MR_SetRouting (FALSE);
 }

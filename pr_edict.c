@@ -931,6 +931,8 @@ char *ED_NewString (const char *string)
 			i++;
 			if (string[i] == 'n')
 				*new_p++ = '\n';
+			else if (string[i] == 'r')
+				*new_p++ = '\r';
 			else
 				*new_p++ = '\\';
 		}
@@ -1296,7 +1298,7 @@ void PR_LoadProgs (const char *progsname)
 	ddef_t *infielddefs;
 	dfunction_t *dfunctions;
 
-	if (!progsname || !*progsname) 
+	if (!progsname || !*progsname)
 		Host_Error("PR_LoadProgs: passed empty progsname");
 
 // flush the non-C variable lookup cache

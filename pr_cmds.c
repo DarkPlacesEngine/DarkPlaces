@@ -1400,7 +1400,7 @@ void PF_walkmove (void)
 
 	// assume failure if it returns early
 	G_FLOAT(OFS_RETURN) = 0;
-	
+
 	ent = PROG_TO_EDICT(pr_global_struct->self);
 	if (ent == sv.edicts)
 		PF_WARNING("walkmove: can not modify world entity\n");
@@ -2876,7 +2876,11 @@ void PF_fgets(void)
 	string[end] = 0;
 	// remove \n following \r
 	if (c == '\r')
+	{
 		c = FS_Getc(pr_files[filenum]);
+		if (c != '\n')
+			FS_UnGetc(pr_files[filenum], c);
+	}
 	if (developer.integer)
 		Con_Printf("fgets: %s\n", string);
 	if (c >= 0 || end)
@@ -3166,7 +3170,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 	else
 		Matrix4x4_CreateIdentity(&tagmatrix);
 
-	if ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict) 
+	if ((val = GETEDICTFIELDVALUE(ent, eval_tag_entity)) && val->edict)
 	{ // DP_GFX_QUAKE3MODELTAGS, scan all chain and stop on unattached entity
 		attachloop = 0;
 		do
@@ -3194,14 +3198,14 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 			Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 			out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
 			out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
-			out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);		
+			out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);
 			Matrix4x4_Copy(&tagmatrix, out);
 
 			// finally transformate by matrix of tag on parent entity
 			Matrix4x4_Concat(out, &attachmatrix, &tagmatrix);
 			out->m[0][3] = attachmatrix.m[0][3] + attachmatrix.m[0][0]*tagmatrix.m[0][3] + attachmatrix.m[0][1]*tagmatrix.m[1][3] + attachmatrix.m[0][2]*tagmatrix.m[2][3];
 			out->m[1][3] = attachmatrix.m[1][3] + attachmatrix.m[1][0]*tagmatrix.m[0][3] + attachmatrix.m[1][1]*tagmatrix.m[1][3] + attachmatrix.m[1][2]*tagmatrix.m[2][3];
-			out->m[2][3] = attachmatrix.m[2][3] + attachmatrix.m[2][0]*tagmatrix.m[0][3] + attachmatrix.m[2][1]*tagmatrix.m[1][3] + attachmatrix.m[2][2]*tagmatrix.m[2][3];		
+			out->m[2][3] = attachmatrix.m[2][3] + attachmatrix.m[2][0]*tagmatrix.m[0][3] + attachmatrix.m[2][1]*tagmatrix.m[1][3] + attachmatrix.m[2][2]*tagmatrix.m[2][3];
 			Matrix4x4_Copy(&tagmatrix, out);
 
 			ent = attachent;
@@ -3221,7 +3225,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 	Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 	out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
 	out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
-	out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);		
+	out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);
 
 	if ((val = GETEDICTFIELDVALUE(ent, eval_viewmodelforclient)) && val->edict)
 	{// RENDER_VIEWMODEL magic
@@ -3236,7 +3240,7 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 		Matrix4x4_Concat(out, &entitymatrix, &tagmatrix);
 		out->m[0][3] = entitymatrix.m[0][3] + val->_float*(entitymatrix.m[0][0]*tagmatrix.m[0][3] + entitymatrix.m[0][1]*tagmatrix.m[1][3] + entitymatrix.m[0][2]*tagmatrix.m[2][3]);
 		out->m[1][3] = entitymatrix.m[1][3] + val->_float*(entitymatrix.m[1][0]*tagmatrix.m[0][3] + entitymatrix.m[1][1]*tagmatrix.m[1][3] + entitymatrix.m[1][2]*tagmatrix.m[2][3]);
-		out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);		
+		out->m[2][3] = entitymatrix.m[2][3] + val->_float*(entitymatrix.m[2][0]*tagmatrix.m[0][3] + entitymatrix.m[2][1]*tagmatrix.m[1][3] + entitymatrix.m[2][2]*tagmatrix.m[2][3]);
 
 		/*
 		// Cl_bob, ported from rendering code
@@ -3364,7 +3368,7 @@ void PF_search_begin(void)
 
 	caseinsens = G_FLOAT(OFS_PARM1);
 	quiet = G_FLOAT(OFS_PARM2);
-	
+
 	for(handle = 0; handle < MAX_SEARCHES; handle++)
 		if(!pr_fssearchlist[handle])
 			break;
@@ -3394,7 +3398,7 @@ void PF_search_end(void)
 	int handle;
 
 	handle = G_FLOAT(OFS_PARM0);
-	
+
 	if(handle < 0 || handle >= MAX_SEARCHES)
 	{
 		Con_Printf("PF_search_end: invalid handle %i\n", handle);
@@ -3433,7 +3437,7 @@ void PF_search_getsize(void)
 		Con_Printf("PF_search_getsize: no such handle %i\n", handle);
 		return;
 	}
-	
+
 	G_FLOAT(OFS_RETURN) = pr_fssearchlist[handle]->numfilenames;
 }
 
@@ -3467,7 +3471,7 @@ void PF_search_getfilename(void)
 		Con_Printf("PF_search_getfilename: invalid filenum %i\n", filenum);
 		return;
 	}
-	
+
 	tmp = PR_GetTempString();
 	strcpy(tmp, pr_fssearchlist[handle]->filenames[filenum]);
 

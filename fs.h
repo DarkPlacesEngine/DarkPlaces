@@ -52,10 +52,9 @@ int FS_Print(qfile_t* file, const char *msg);
 int FS_Printf(qfile_t* file, const char* format, ...);
 int FS_VPrintf(qfile_t* file, const char* format, va_list ap);
 int FS_Getc (qfile_t* file);
+void FS_UnGetc (qfile_t* file, unsigned char c);
 int FS_Seek (qfile_t* file, long offset, int whence);
 long FS_Tell (qfile_t* file);
-char *FS_Gets (qfile_t* file, char* buffer, size_t buffersize);
-char *FS_Getline (qfile_t *file);  // DO NOT FREE the returned buffer
 
 typedef struct fssearch_s
 {

@@ -3181,7 +3181,7 @@ void R_Shadow_SelectLightInView(void)
 void R_Shadow_LoadWorldLights(void)
 {
 	int n, a, style, shadow, flags;
-	char name[MAX_QPATH], cubemapname[MAX_QPATH], *lightsstring, *s, *t;
+	char tempchar, *lightsstring, *s, *t, name[MAX_QPATH], cubemapname[MAX_QPATH];
 	float origin[3], radius, color[3], angles[3], corona, coronasizescale, ambientscale, diffusescale, specularscale;
 	if (r_refdef.worldmodel == NULL)
 	{
@@ -3214,11 +3214,11 @@ void R_Shadow_LoadWorldLights(void)
 			}
 			*/
 			t = s;
-			while (*s && *s != '\n')
+			while (*s && *s != '\n' && *s != '\r')
 				s++;
 			if (!*s)
 				break;
-			*s = 0;
+			tempchar = *s;
 			shadow = true;
 			// check for modifier flags
 			if (*t == '!')
@@ -3226,7 +3226,9 @@ void R_Shadow_LoadWorldLights(void)
 				shadow = false;
 				t++;
 			}
+			*s = 0;
 			a = sscanf(t, "%f %f %f %f %f %f %f %d %s %f %f %f %f %f %f %f %f %i", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname, &corona, &angles[0], &angles[1], &angles[2], &coronasizescale, &ambientscale, &diffusescale, &specularscale, &flags);
+			*s = tempchar;
 			if (a < 18)
 				flags = LIGHTFLAG_REALTIMEMODE;
 			if (a < 17)
@@ -3249,7 +3251,6 @@ void R_Shadow_LoadWorldLights(void)
 				cubemapname[strlen(cubemapname)-1] = 0;
 				strcpy(cubemapname, cubemapname + 1);
 			}
-			*s = '\n';
 			if (a < 8)
 			{
 				Con_Printf("found %d parameters on line %i, should be 8 or more parameters (origin[0] origin[1] origin[2] radius color[0] color[1] color[2] style \"cubemapname\" corona angles[0] angles[1] angles[2] coronasizescale ambientscale diffusescale specularscale flags)\n", a, n + 1);
@@ -3258,7 +3259,10 @@ void R_Shadow_LoadWorldLights(void)
 			VectorScale(color, r_editlights_rtlightscolorscale.value, color);
 			radius *= r_editlights_rtlightssizescale.value;
 			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, corona, style, shadow, cubemapname, coronasizescale, ambientscale, diffusescale, specularscale, flags);
-			s++;
+			if (*s == '\r')
+				s++;
+			if (*s == '\n')
+				s++;
 			n++;
 		}
 		if (*s)
@@ -3320,7 +3324,7 @@ void R_Shadow_SaveWorldLights(void)
 void R_Shadow_LoadLightsFile(void)
 {
 	int n, a, style;
-	char name[MAX_QPATH], *lightsstring, *s, *t;
+	char tempchar, *lightsstring, *s, *t, name[MAX_QPATH];
 	float origin[3], radius, color[3], subtract, spotdir[3], spotcone, falloff, distbias;
 	if (r_refdef.worldmodel == NULL)
 	{
@@ -3337,13 +3341,14 @@ void R_Shadow_LoadLightsFile(void)
 		while (*s)
 		{
 			t = s;
-			while (*s && *s != '\n')
+			while (*s && *s != '\n' && *s != '\r')
 				s++;
 			if (!*s)
 				break;
+			tempchar = *s;
 			*s = 0;
 			a = sscanf(t, "%f %f %f %f %f %f %f %f %f %f %f %f %f %d", &origin[0], &origin[1], &origin[2], &falloff, &color[0], &color[1], &color[2], &subtract, &spotdir[0], &spotdir[1], &spotdir[2], &spotcone, &distbias, &style);
-			*s = '\n';
+			*s = tempchar;
 			if (a < 14)
 			{
 				Con_Printf("invalid lights file, found %d parameters on line %i, should be 14 parameters (origin[0] origin[1] origin[2] falloff light[0] light[1] light[2] subtract spotdir[0] spotdir[1] spotdir[2] spotcone distancebias style)\n", a, n + 1);
@@ -3353,7 +3358,10 @@ void R_Shadow_LoadLightsFile(void)
 			radius = bound(15, radius, 4096);
 			VectorScale(color, (2.0f / (8388608.0f)), color);
 			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, vec3_origin, color, radius, 0, style, true, NULL, 0.25, 0, 1, 1, LIGHTFLAG_REALTIMEMODE);
-			s++;
+			if (*s == '\r')
+				s++;
+			if (*s == '\n')
+				s++;
 			n++;
 		}
 		if (*s)

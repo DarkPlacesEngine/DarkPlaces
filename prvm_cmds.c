@@ -42,7 +42,7 @@ entity	findchain(.string field, string match)
 
 entity	findchainfloat(.string field, float match)
 entity	findchainentity(.string field, entity match)
-  
+
 string	precache_file(string)
 string	precache_sound (string sample)
 		coredump()
@@ -89,7 +89,7 @@ float	mod(float val, float m)
 const string	str_cvar (string)
 		crash()
 		stackdump()
-		
+
 float	search_begin(string pattern, float caseinsensitive, float quiet)
 void	search_end(float handle)
 float	search_getsize(float handle)
@@ -104,8 +104,8 @@ float	altstr_count(string)
 string	altstr_prepare(string)
 string	altstr_get(string,float)
 string	altstr_set(string altstr, float num, string set)
-		
-perhaps only : Menu : WriteMsg 
+
+perhaps only : Menu : WriteMsg
 ===============================
 
 		WriteByte(float data, float dest, float desto)
@@ -116,12 +116,12 @@ perhaps only : Menu : WriteMsg
 		WriteCoord(float data, float dest, float desto)
 		WriteString(string data, float dest, float desto)
 		WriteEntity(entity data, float dest, float desto)
-		
+
 Client & Menu : draw functions & video functions
 ===================================================
 
 float	iscachedpic(string pic)
-string	precache_pic(string pic) 
+string	precache_pic(string pic)
 		freepic(string s)
 float	drawcharacter(vector position, float character, vector scale, vector rgb, float alpha, float flag)
 float	drawstring(vector position, string text, vector scale, vector rgb, float alpha, float flag)
@@ -134,7 +134,7 @@ vector	getimagesize(string pic)
 float	cin_open(string file, string name)
 void	cin_close(string name)
 void	cin_setstate(string name, float type)
-float	cin_getstate(string name)		
+float	cin_getstate(string name)
 void	cin_restart(string name)
 
 ==============================================================================
@@ -414,7 +414,7 @@ void VM_sprint (void)
 		Con_Printf("VM_sprint: %s: invalid client or server is not active !\n", PRVM_NAME);
 		return;
 	}
-	
+
 	client = svs.clients + clientnum;
 	VM_VarString(1, string, sizeof(string));
 	MSG_WriteChar(&client->message,svc_print);
@@ -641,7 +641,7 @@ localsound(string sample)
 void VM_localsound(void)
 {
 	char *s;
-	
+
 	VM_SAFEPARMCOUNT(1,VM_localsound);
 
 	s = PRVM_G_STRING(OFS_PARM0);
@@ -651,7 +651,7 @@ void VM_localsound(void)
 		Con_Printf("VM_localsound: Failed to play %s for %s !\n", s, PRVM_NAME);
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		return;
-	}		
+	}
 
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
@@ -708,7 +708,7 @@ VM_str_cvar
 const string	str_cvar (string)
 =================
 */
-void VM_str_cvar(void) 
+void VM_str_cvar(void)
 {
 	char *out, *name;
 	const char *cvar_string;
@@ -721,10 +721,10 @@ void VM_str_cvar(void)
 
 	VM_CheckEmptyString(name);
 
-	out = VM_GetTempString(); 
+	out = VM_GetTempString();
 
 	cvar_string = Cvar_VariableString(name);
-	
+
 	strcpy(out, cvar_string);
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(out);
@@ -884,7 +884,7 @@ void VM_ftoi(void)
 	ent = PRVM_G_FLOAT(OFS_PARM0);
 	if(PRVM_PROG_TO_EDICT(ent)->p.e->free)
 		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!\n", PRVM_NAME, ent);
-    
+
 	PRVM_G_INT(OFS_RETURN) = ent;
 }
 
@@ -1200,7 +1200,7 @@ crash()
 =========
 */
 
-void VM_crash(void) 
+void VM_crash(void)
 {
 	VM_SAFEPARMCOUNT(0, VM_crash);
 
@@ -1439,7 +1439,7 @@ void VM_changelevel (void)
 
 	if(!sv.active)
 	{
-		Con_Printf("VM_changelevel: game is not server (%s)\n", PRVM_NAME); 
+		Con_Printf("VM_changelevel: game is not server (%s)\n", PRVM_NAME);
 		return;
 	}
 
@@ -1853,7 +1853,11 @@ void VM_fgets(void)
 	string[end] = 0;
 	// remove \n following \r
 	if (c == '\r')
+	{
 		c = FS_Getc(VM_FILES[filenum]);
+		if (c != '\n')
+			FS_UnGetc(VM_FILES[filenum], c);
+	}
 	if (developer.integer >= 3)
 		Con_Printf("fgets: %s: %s\n", PRVM_NAME, string);
 	if (c >= 0 || end)
@@ -1931,9 +1935,9 @@ void VM_strcat(void)
 {
 	char *s;
 
-	if(prog->argc < 1) 
+	if(prog->argc < 1)
 		PRVM_ERROR("VM_strcat wrong parameter count (min. 1 expected ) !\n");
-	
+
 	s = VM_GetTempString();
 	VM_VarString(0, s, VM_STRINGTEMP_LENGTH);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
@@ -2244,7 +2248,7 @@ void VM_getmousepos(void)
 {
 
 	VM_SAFEPARMCOUNT(0,VM_getmousepos);
-	
+
 	PRVM_G_VECTOR(OFS_RETURN)[0] = in_mouse_x;
 	PRVM_G_VECTOR(OFS_RETURN)[1] = in_mouse_y;
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
@@ -2291,7 +2295,7 @@ void VM_M_parseentitydata(void)
 	const char *data;
 
 	VM_SAFEPARMCOUNT(2, VM_parseentitydata);
-    
+
     // get edict and test it
 	ent = PRVM_G_EDICT(OFS_PARM0);
 	if (ent->p.e->free)
@@ -2317,9 +2321,9 @@ void VM_loadfromfile(void)
 {
 	char *filename;
 	qbyte *data;
-	
+
 	VM_SAFEPARMCOUNT(1,VM_loadfromfile);
-	
+
 	filename = PRVM_G_STRING(OFS_PARM0);
 	// .. is parent directory on many platforms
 	// / is parent directory on Amiga
@@ -2336,7 +2340,7 @@ void VM_loadfromfile(void)
 	data = FS_LoadFile(filename, tempmempool, false);
 	if (data == NULL)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
-	
+
 	PRVM_ED_LoadFromFile(data);
 
 	if(data)
@@ -2398,7 +2402,7 @@ void VM_search_begin(void)
 
 	caseinsens = PRVM_G_FLOAT(OFS_PARM1);
 	quiet = PRVM_G_FLOAT(OFS_PARM2);
-	
+
 	for(handle = 0; handle < MAX_VMSEARCHES; handle++)
 		if(!VM_SEARCHLIST[handle])
 			break;
@@ -2429,7 +2433,7 @@ void VM_search_end(void)
 	VM_SAFEPARMCOUNT(1, VM_search_end);
 
 	handle = PRVM_G_FLOAT(OFS_PARM0);
-	
+
 	if(handle < 0 || handle >= MAX_VMSEARCHES)
 	{
 		Con_Printf("VM_search_end: invalid handle %i used in %s\n", handle, PRVM_NAME);
@@ -2469,7 +2473,7 @@ void VM_search_getsize(void)
 		Con_Printf("VM_search_getsize: no such handle %i in %s\n", handle, PRVM_NAME);
 		return;
 	}
-	
+
 	PRVM_G_FLOAT(OFS_RETURN) = VM_SEARCHLIST[handle]->numfilenames;
 }
 
@@ -2504,7 +2508,7 @@ void VM_search_getfilename(void)
 		Con_Printf("VM_search_getfilename: invalid filenum %i in %s\n", filenum, PRVM_NAME);
 		return;
 	}
-	
+
 	tmp = VM_GetTempString();
 	strcpy(tmp, VM_SEARCHLIST[handle]->filenames[filenum]);
 
@@ -2544,7 +2548,7 @@ void VM_iscachedpic(void)
 {
 	VM_SAFEPARMCOUNT(1,VM_iscachedpic);
 
-	// drawq hasnt such a function, thus always return true 
+	// drawq hasnt such a function, thus always return true
 	PRVM_G_FLOAT(OFS_RETURN) = false;
 }
 
@@ -2552,25 +2556,25 @@ void VM_iscachedpic(void)
 =========
 VM_precache_pic
 
-string	precache_pic(string pic) 
+string	precache_pic(string pic)
 =========
 */
 void VM_precache_pic(void)
 {
 	char	*s;
-	
+
 	VM_SAFEPARMCOUNT(1, VM_precache_pic);
-	
+
 	s = PRVM_G_STRING(OFS_PARM0);
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
-	
+
 	if(!s)
 		PRVM_ERROR ("VM_precache_pic: %s: NULL\n", PRVM_NAME);
 
 	VM_CheckEmptyString (s);
-	
+
 	if(!Draw_CachePic(s))
-		PRVM_G_INT(OFS_RETURN) = PRVM_SetString(""); 
+		PRVM_G_INT(OFS_RETURN) = PRVM_SetString("");
 }
 
 /*
@@ -2587,12 +2591,12 @@ void VM_freepic(void)
 	VM_SAFEPARMCOUNT(1,VM_freepic);
 
 	s = PRVM_G_STRING(OFS_PARM0);
-	
+
 	if(!s)
 		PRVM_ERROR ("VM_freepic: %s: NULL\n");
-	
+
 	VM_CheckEmptyString (s);
-	
+
 	Draw_FreePic(s);
 }
 
@@ -2617,21 +2621,21 @@ void VM_drawcharacter(void)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 		return;
 	}
-	
+
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
 	rgb = PRVM_G_VECTOR(OFS_PARM3);
 	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
-	
+
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		Con_Printf("VM_drawcharacter: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
 		return;
 	}
-	
+
 	if(pos[2] || scale[2])
-		Con_Printf("VM_drawcharacter: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
+		Con_Printf("VM_drawcharacter: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
 
 	if(!scale[0] || !scale[1])
 	{
@@ -2642,7 +2646,7 @@ void VM_drawcharacter(void)
 
 	DrawQ_String (pos[0], pos[1], &character, 1, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
-}	
+}
 
 /*
 =========
@@ -2657,7 +2661,7 @@ void VM_drawstring(void)
 	char  *string;
 	int flag;
 	VM_SAFEPARMCOUNT(6,VM_drawstring);
-	
+
 	string = PRVM_G_STRING(OFS_PARM1);
 	if(!string)
 	{
@@ -2665,21 +2669,21 @@ void VM_drawstring(void)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 		return;
 	}
-	
+
 	//VM_CheckEmptyString(string); Why should it be checked - perhaps the menu wants to support the precolored letters, too?
-	
+
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
 	rgb = PRVM_G_VECTOR(OFS_PARM3);
 	flag = (int)PRVM_G_FLOAT(OFS_PARM5);
-	
+
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
 		return;
 	}
-	
+
 	if(!scale[0] || !scale[1])
 	{
 		Con_Printf("VM_drawstring: scale %s is null !\n", (scale[0] == 0) ? ((scale[1] == 0) ? "x and y" : "x") : "y");
@@ -2688,8 +2692,8 @@ void VM_drawstring(void)
 	}
 
 	if(pos[2] || scale[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale"))); 
-	
+		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && scale[2]) ? 's' : 0,((pos[2] && scale[2]) ? "pos and scale" : (pos[2] ? "pos" : "scale")));
+
 	DrawQ_String (pos[0], pos[1], string, 0, scale[0], scale[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
@@ -2713,7 +2717,7 @@ void VM_drawpic(void)
 	if(!pic)
 	{
 		Con_Printf("VM_drawpic: %s passed null picture name !\n", PRVM_NAME);
-		PRVM_G_FLOAT(OFS_RETURN) = -1;	
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
 		return;
 	}
 
@@ -2726,7 +2730,7 @@ void VM_drawpic(void)
 		PRVM_G_FLOAT(OFS_RETURN) = -4;
 		return;
 	}
-	
+
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	size = PRVM_G_VECTOR(OFS_PARM2);
 	rgb = PRVM_G_VECTOR(OFS_PARM3);
@@ -2740,8 +2744,8 @@ void VM_drawpic(void)
 	}
 
 	if(pos[2] || size[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
-	
+		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+
 	DrawQ_Pic(pos[0], pos[1], pic, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM4), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
@@ -2757,25 +2761,25 @@ void VM_drawfill(void)
 {
 	float *size, *pos, *rgb;
 	int flag;
-	
+
 	VM_SAFEPARMCOUNT(5,VM_drawfill);
-	
-	
+
+
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	size = PRVM_G_VECTOR(OFS_PARM1);
 	rgb = PRVM_G_VECTOR(OFS_PARM2);
 	flag = (int) PRVM_G_FLOAT(OFS_PARM4);
-	
+
 	if(flag < DRAWFLAG_NORMAL || flag >=DRAWFLAG_NUMFLAGS)
 	{
 		Con_Printf("VM_drawstring: %s: wrong DRAWFLAG %i !\n",PRVM_NAME,flag);
 		PRVM_G_FLOAT(OFS_RETURN) = -2;
 		return;
 	}
-	
+
 	if(pos[2] || size[2])
-		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size"))); 
-	
+		Con_Printf("VM_drawstring: z value%c from %s discarded\n",(pos[2] && size[2]) ? 's' : 0,((pos[2] && size[2]) ? "pos and size" : (pos[2] ? "pos" : "size")));
+
 	DrawQ_Pic(pos[0], pos[1], 0, size[0], size[1], rgb[0], rgb[1], rgb[2], PRVM_G_FLOAT(OFS_PARM3), flag);
 	PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
@@ -2795,7 +2799,7 @@ void VM_drawsetcliparea(void)
 	x = bound(0, PRVM_G_FLOAT(OFS_PARM0), vid.conwidth);
 	y = bound(0, PRVM_G_FLOAT(OFS_PARM1), vid.conheight);
 	w = bound(0, PRVM_G_FLOAT(OFS_PARM2) + PRVM_G_FLOAT(OFS_PARM0) - x, (vid.conwidth  - x));
-	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid.conheight - y)); 
+	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid.conheight - y));
 
 	DrawQ_SetClipArea(x, y, w, h);
 }
@@ -2827,12 +2831,12 @@ void VM_getimagesize(void)
 	cachepic_t *pic;
 
 	VM_SAFEPARMCOUNT(1,VM_getimagesize);
-	
+
 	p = PRVM_G_STRING(OFS_PARM0);
 
 	if(!p)
 		PRVM_ERROR("VM_getimagepos: %s passed null picture name !\n", PRVM_NAME);
-	
+
 	VM_CheckEmptyString (p);
 
 	pic = Draw_CachePic (p);
@@ -2855,9 +2859,9 @@ void VM_cin_open( void )
 {
 	char *file;
 	char *name;
-	
+
 	VM_SAFEPARMCOUNT( 2, VM_cin_open );
-	
+
 	file = PRVM_G_STRING( OFS_PARM0 );
 	name = PRVM_G_STRING( OFS_PARM1 );
 
@@ -2886,7 +2890,7 @@ void VM_cin_close( void )
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
-	CL_CloseVideo( CL_GetVideo( name ) ); 
+	CL_CloseVideo( CL_GetVideo( name ) );
 }
 
 /*
@@ -2910,7 +2914,7 @@ void VM_cin_setstate( void )
 
 	video = CL_GetVideo( name );
 	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
-		CL_SetVideoState( video, state );		
+		CL_SetVideoState( video, state );
 }
 
 /*
@@ -3042,7 +3046,7 @@ void VM_altstr_get( void )
 
 	for( pos = altstr ; *pos && count ; pos++ )
 		if( *pos == '\\' && !*++pos )
-			break;        			
+			break;
 		else if( *pos == '\'' )
 			count--;
 
@@ -3108,7 +3112,7 @@ void VM_altstr_set( void )
 	for( ; *in ; in++ )
 		if( *in == '\'' || (*in == '\\' && !*++in) )
 			break;
-	
+
 	if( !in ) {
 		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( "" );
 		return;
@@ -3229,7 +3233,7 @@ void VM_M_getmousetarget(void)
 	else
 		PRVM_G_FLOAT(OFS_RETURN) = 1;
 }
-	
+
 
 
 /*
@@ -3296,7 +3300,7 @@ void VM_M_getkeydest(void)
 VM_M_callfunction
 
 	callfunction(...,string function_name)
-Extension: pass 
+Extension: pass
 =========
 */
 mfunction_t *PRVM_ED_FindFunction (const char *name);
@@ -3313,7 +3317,7 @@ void VM_M_callfunction(void)
 	if(!s)
 		PRVM_ERROR("VM_M_callfunction: null string !\n");
 
-	VM_CheckEmptyString(s); 
+	VM_CheckEmptyString(s);
 
 	func = PRVM_ED_FindFunction(s);
 
@@ -3335,7 +3339,7 @@ void VM_M_callfunction(void)
 		PRVM_ExecuteProgram(func - prog->functions,"");
 		prog->argc++;
 	}
-}	
+}
 
 /*
 =========
@@ -3349,16 +3353,16 @@ void VM_M_isfunction(void)
 {
 	mfunction_t *func;
 	char *s;
-	
+
 	VM_SAFEPARMCOUNT(1, VM_M_isfunction);
-	
+
 	s = PRVM_G_STRING(OFS_PARM0);
-	
+
 	if(!s)
 		PRVM_ERROR("VM_M_isfunction: null string !\n");
-	
-	VM_CheckEmptyString(s); 
-	
+
+	VM_CheckEmptyString(s);
+
 	func = PRVM_ED_FindFunction(s);
 
 	if(!func)
@@ -3393,7 +3397,7 @@ void VM_M_writetofile(void)
 		return;
 	}
 
-	ent = PRVM_G_EDICT(OFS_PARM1); 	
+	ent = PRVM_G_EDICT(OFS_PARM1);
 	if(ent->p.e->free)
 	{
 		Con_Printf("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
@@ -3421,7 +3425,7 @@ void VM_M_getresolution(void)
 
 	PRVM_G_VECTOR(OFS_RETURN)[0] = video_resolutions[nr][0];
 	PRVM_G_VECTOR(OFS_RETURN)[1] = video_resolutions[nr][1];
-	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;	
+	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
 /*
@@ -3440,7 +3444,7 @@ void VM_M_keynumtostring(void)
 	keynum = PRVM_G_FLOAT(OFS_PARM0);
 
 	tmp = VM_GetTempString();
-	
+
 	strcpy(tmp, Key_KeynumToString(keynum));
 
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tmp);
@@ -3484,11 +3488,11 @@ void VM_M_findkeysforcommand(void)
 	VM_SAFEPARMCOUNT(1, VM_M_findkeysforcommand);
 
 	cmd = PRVM_G_STRING(OFS_PARM0);
-	
+
 	VM_CheckEmptyString(cmd);
 
 	(ret = VM_GetTempString())[0] = 0;
-	
+
 	M_FindKeysForCommand(cmd, keys);
 
 	for(i = 0; i < NUMKEYS; i++)
@@ -3529,7 +3533,7 @@ void VM_M_gethostcachestat( void )
 		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_viewcount;
 		return;
 	case 1:
-		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_cachecount; 
+		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_cachecount;
 	case 2:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
 		return;
@@ -3598,7 +3602,7 @@ void VM_M_sethostcachemaskstring( void )
 	}
 
 	field = (int) PRVM_G_FLOAT( OFS_PARM1 );
-	
+
 	switch( field ) {
 		case HCIF_CNAME:
 			strncpy( mask->info.cname, PRVM_G_STRING( OFS_PARM2 ), sizeof(mask->info.cname) );
@@ -3622,7 +3626,7 @@ void VM_M_sethostcachemaskstring( void )
 
 	mask->active = true;
 	mask->tests[field] = (int) PRVM_G_FLOAT( OFS_PARM3 );
-}    
+}
 
 /*
 ========================
@@ -3826,7 +3830,7 @@ void VM_M_gethostcacheindexforkey( void )
 
 	key = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( key );
-	
+
 	if( !strcmp( key, "cname" ) )
 		PRVM_G_FLOAT( OFS_RETURN ) = HCIF_CNAME;
 	else if( !strcmp( key, "ping" ) )
@@ -3924,24 +3928,24 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_tokenize,
 	VM_argv,
 	VM_isserver,	// 60
-	VM_clientcount, 
-	VM_clientstate,	
+	VM_clientcount,
+	VM_clientstate,
 	VM_clcommand,
 	VM_changelevel,
-	VM_localsound,	
+	VM_localsound,
 	VM_getmousepos,
 	VM_gettime,
 	VM_loadfromdata,
 	VM_loadfromfile,
 	VM_modulo,		// 70
-	VM_str_cvar,	
+	VM_str_cvar,
 	VM_crash,
 	VM_stackdump,	// 73
 	VM_search_begin,
 	VM_search_end,
 	VM_search_getsize,
 	VM_search_getfilename, // 77
-	VM_chr,	
+	VM_chr,
 	VM_itof,
 	VM_ftoi,		// 80
 	VM_itof,		// isString
@@ -3976,13 +3980,13 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_drawcharacter,
 	VM_drawstring,
 	VM_drawpic,
-	VM_drawfill,	
+	VM_drawfill,
 	VM_drawsetcliparea,
 	VM_drawresetcliparea,
 	VM_getimagesize,// 460
 	VM_cin_open,
 	VM_cin_close,
-	VM_cin_setstate,	
+	VM_cin_setstate,
 	VM_cin_getstate,
 	VM_cin_restart, // 465
 	0,0,0,0,0,	// 470
@@ -4012,7 +4016,7 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_sethostcachesort,
 	VM_M_refreshhostcache,
 	VM_M_gethostcachenumber,
-	VM_M_gethostcacheindexforkey, 
+	VM_M_gethostcacheindexforkey,
 	VM_M_addwantedhostcachekey // 623
 };
 
