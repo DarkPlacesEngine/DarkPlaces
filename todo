@@ -5,8 +5,6 @@
 -d (Wazat, Kinn, romi) darkplaces WGL client: default WGL input back to GDI, the DirectInput driver is malfunctioning, losing key release messages, stuttering mouse input, and lacks mouse wheel support (Wazat, Kinn)
 -d (mashakos) darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 -d (ryan[sg]) darkplaces loader: halflife wad loading is unable to seek to lump table (ryan[sg], Elric)
--d (scar3crow) dpmod: add flame thrower enforcers back (scar3crow)
--d (scar3crow) dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 -f (VorteX) darkplaces protocol: add DP_EF_HIGHPRECISION to send float origins instead of shorts (VorteX)
 -f (sublim3) darkplaces protocol: fix cl_nodelta 1, it's halting updates after you move away from an area (Tomaz, sublim3)
 -f (yummyluv) darkplaces protocol: add buttons 9-16 (yummyluv)
@@ -751,6 +749,8 @@ d dpmod: add back charge-up on plasma rifle alt-fire and increase the max charge
 d dpmod: add back nails in walls, even if only in singleplayer (Zenex)
 d dpmod: add back tarbaby gibs (scar3crow)
 d dpmod: add combo kill detection; rapid burst of kills (Sajt)
+d dpmod: add flame thrower enforcers back (scar3crow)
+d dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
 d dpmod: add frags for killing monsters in dpmod (scar3crow)
 d dpmod: add killing spree reporting; how many kills since spawn when you die, as well as announcing when you hit certain numbers of kills (Sajt)
 d dpmod: add q3bsp teleport target entity
