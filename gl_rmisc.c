@@ -142,15 +142,6 @@ void R_NewMap (void)
 
 	GL_BuildLightmaps ();
 
-	// identify sky texture
-	skytexturenum = -1;
-	for (i=0 ; i<cl.worldmodel->numtextures ; i++)
-	{
-		if (!cl.worldmodel->textures[i])
-			continue;
-		if (!strncmp(cl.worldmodel->textures[i]->name,"sky",3) )
-			skytexturenum = i;
-	}
 	SHOWLMP_clear();
 }
 
