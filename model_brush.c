@@ -3510,7 +3510,10 @@ static void Mod_Q3BSP_LoadTriangles(lump_t *l)
 	{
 		*out = LittleLong(*in);
 		if (*out < 0 || *out >= loadmodel->brushq3.num_vertices)
-			Host_Error("Mod_Q3BSP_LoadTriangles: invalid vertexindex %i (%i vertices)\n", *out, loadmodel->brushq3.num_vertices);
+		{
+			Con_Printf("Mod_Q3BSP_LoadTriangles: invalid vertexindex %i (%i vertices), setting to 0\n", *out, loadmodel->brushq3.num_vertices);
+			*out = 0;
+		}
 	}
 }
 
@@ -3615,19 +3618,19 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 			out->type = 0; // error
 			continue;
 		}
+		out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
+		out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
+		out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
+		out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
+		out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
+		out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
+		out->data_color4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
+		out->data_element3i = loadmodel->brushq3.data_element3i + out->firstelement;
+		out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
 		switch(out->type)
 		{
 		case Q3FACETYPE_POLYGON:
 		case Q3FACETYPE_MESH:
-			out->data_vertex3f = loadmodel->brushq3.data_vertex3f + out->firstvertex * 3;
-			out->data_texcoordtexture2f = loadmodel->brushq3.data_texcoordtexture2f + out->firstvertex * 2;
-			out->data_texcoordlightmap2f = loadmodel->brushq3.data_texcoordlightmap2f + out->firstvertex * 2;
-			out->data_svector3f = loadmodel->brushq3.data_svector3f + out->firstvertex * 3;
-			out->data_tvector3f = loadmodel->brushq3.data_tvector3f + out->firstvertex * 3;
-			out->data_normal3f = loadmodel->brushq3.data_normal3f + out->firstvertex * 3;
-			out->data_color4f = loadmodel->brushq3.data_color4f + out->firstvertex * 4;
-			out->data_element3i = loadmodel->brushq3.data_element3i + out->firstelement;
-			out->data_neighbor3i = loadmodel->brushq3.data_neighbor3i + out->firstelement;
 			break;
 		case Q3FACETYPE_PATCH:
 			patchsize[0] = LittleLong(in->specific.patch.patchsize[0]);
@@ -3638,15 +3641,18 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				out->type = 0; // error
 				continue;
 			}
+			out->patchsize[0] = patchsize[0];
+			out->patchsize[1] = patchsize[1];
+			out->numelements = out->numtriangles = 0;
 			// FIXME: convert patch to triangles here!
-			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_PATCH not supported (yet)\n", i, out->texture->name);
-			out->type = 0;
-			continue;
+			//Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_PATCH not supported (yet)\n", i, out->texture->name);
+			//out->type = 0;
+			//continue;
 			break;
 		case Q3FACETYPE_FLARE:
 			Con_Printf("Mod_Q3BSP_LoadFaces: face #%i (texture \"%s\"): Q3FACETYPE_FLARE not supported (yet)\n", i, out->texture->name);
-			out->type = 0;
-			continue;
+			//out->type = 0;
+			//continue;
 			break;
 		}
 		for (j = 0, invalidelements = 0;j < out->numelements;j++)
@@ -3899,6 +3905,9 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 {
 	q3dpvs_t *in;
 	int totalchains;
+
+	if (l->filelen == 0)
+		return;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen < 9)
