@@ -1748,6 +1748,11 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumfaces, q3msurface_t **texturefacelist)
 {
 	int i, texturefaceindex;
+	qboolean dolightmap;
+	qboolean dobase;
+	qboolean doambient;
+	qboolean doglow;
+	qboolean dofog;
 	rmeshstate_t m;
 	if (!texturenumfaces)
 		return;
@@ -1844,11 +1849,11 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		return;
 	}
 	// anything else is a typical wall, lightmap * texture + glow
-	qboolean dolightmap = (ent->flags & RENDER_LIGHT);
-	qboolean dobase = true;
-	qboolean doambient = r_ambient.value > 0;
-	qboolean doglow = t->skin.glow != NULL;
-	qboolean dofog = fogenabled;
+	dolightmap = (ent->flags & RENDER_LIGHT);
+	dobase = true;
+	doambient = r_ambient.value > 0;
+	doglow = t->skin.glow != NULL;
+	dofog = fogenabled;
 	if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 		qglDisable(GL_CULL_FACE);
 	if (!dolightmap && dobase)
