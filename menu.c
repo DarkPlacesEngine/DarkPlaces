@@ -1171,7 +1171,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 38
+#define OPTIONS_ITEMS 37
 
 int options_cursor;
 
@@ -1183,7 +1183,6 @@ void M_Menu_Options_f (void)
 }
 
 extern cvar_t snd_staticvolume;
-extern cvar_t gl_delayfinish;
 extern cvar_t slowmo;
 extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;
@@ -1218,8 +1217,6 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&gl_delayfinish, !gl_delayfinish.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_texture_anisotropy, bound(1, gl_texture_anisotropy.integer + dir, gl_max_anisotropy));
 	else if (options_cursor == optnum++)
@@ -1343,7 +1340,6 @@ void M_Options_Draw (void)
 	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
 	M_Options_PrintCheckbox("   Texture Combine", true, gl_combine.integer);
 	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
-	M_Options_PrintCheckbox("Delay gfx (faster)", true, gl_delayfinish.integer);
 	M_Options_PrintSlider(  "Anisotropic Filter", gl_support_anisotropy, gl_texture_anisotropy.integer, 1, gl_max_anisotropy);
 	M_Options_PrintSlider(  "        Game Speed", sv.active, slowmo.value, 0, 5);
 	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);

@@ -7,7 +7,6 @@
 cvar_t gl_mesh_drawrangeelements = {0, "gl_mesh_drawrangeelements", "1"};
 cvar_t gl_mesh_testarrayelement = {0, "gl_mesh_testarrayelement", "0"};
 cvar_t gl_mesh_testmanualfeeding = {0, "gl_mesh_testmanualfeeding", "0"};
-cvar_t gl_delayfinish = {CVAR_SAVE, "gl_delayfinish", "0"};
 cvar_t gl_paranoid = {0, "gl_paranoid", "0"};
 cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0"};
 
@@ -210,7 +209,6 @@ void gl_backend_init(void)
 	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
-	Cvar_RegisterVariable(&gl_delayfinish);
 	Cvar_RegisterVariable(&gl_paranoid);
 	Cvar_RegisterVariable(&gl_printcheckerror);
 #ifdef NORENDER
@@ -1262,14 +1260,6 @@ text to the screen.
 */
 void SCR_UpdateScreen (void)
 {
-	if (gl_delayfinish.integer)
-	{
-		R_Mesh_Finish();
-		R_TimeReport("meshfinish");
-		VID_Finish();
-		R_TimeReport("finish");
-	}
-
 	R_Mesh_Start();
 
 	if (r_textureunits.integer > gl_textureunits)
@@ -1380,20 +1370,10 @@ showtris:
 		goto showtris;
 	}
 
-	if (gl_delayfinish.integer)
-	{
-		// tell driver to commit it's partially full geometry queue to the rendering queue
-		// (this doesn't wait for the commands themselves to complete)
-		if (gl_finish.integer)
-			qglFlush();
-	}
-	else
-	{
-		R_Mesh_Finish();
-		R_TimeReport("meshfinish");
-		VID_Finish();
-		R_TimeReport("finish");
-	}
+	R_Mesh_Finish();
+	R_TimeReport("meshfinish");
+	VID_Finish();
+	R_TimeReport("finish");
 }
 
 
