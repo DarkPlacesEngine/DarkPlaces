@@ -148,6 +148,26 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 	VectorNormalizeFast(right);
 	CrossProduct(right, forward, up);
 }
+float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels, void **hitent)
+{
+#if QW
+	pmtrace_t trace;
+#else
+	trace_t trace;
+#endif
+	vec3_t start_l, end_l;
+	memset (&trace, 0, sizeof(trace));
+	trace.fraction = 1;
+	VectorCopy (end, trace.endpos);
+#if QW
+	PM_RecursiveHullCheck (move.physents[0].model->hulls, move.physents[0].model->hulls.firstclipnode, 0, 1, start_l, end_l, &trace);
+#else
+	RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start_l, end_l, &trace);
+#endif
+	VectorCopy(trace.endpos, impact);
+	VectorCopy(trace.plane.normal, normal);
+	return trace.fraction;
+}
 #else
 #include "cl_collision.h"
 #endif
@@ -1153,7 +1173,6 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, p->oldorg);
 		VectorMA(p->org, frametime, p->vel, p->org);
 		VectorCopy(p->org, org);
-#ifndef WORKINGLQUAKE
 		if (p->bounce)
 		{
 			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true, NULL) < 1)
@@ -1162,8 +1181,10 @@ void CL_MoveParticles (void)
 				if (p->bounce < 0)
 				{
 					// assume it's blood (lame, but...)
+#ifndef WORKINGLQUAKE
 					if (cl_stainmaps.integer)
 						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 40.0f));
+#endif
 					if (cl_decals.integer)
 					{
 						p->type = pt_decal;
@@ -1196,7 +1217,6 @@ void CL_MoveParticles (void)
 				}
 			}
 		}
-#endif
 		p->vel[2] -= p->gravity * gravity;
 		p->alpha -= p->alphafade * frametime;
 		if (p->friction)
