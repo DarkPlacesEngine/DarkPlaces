@@ -104,11 +104,11 @@ SOURCE=.\chase.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\cl_demo.c
+SOURCE=.\cl_decals.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\cl_effects.c
+SOURCE=.\cl_demo.c
 # End Source File
 # Begin Source File
 
@@ -125,6 +125,10 @@ SOURCE=.\cl_main.c
 # Begin Source File
 
 SOURCE=.\cl_parse.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_particles.c
 # End Source File
 # Begin Source File
 
@@ -160,6 +164,10 @@ SOURCE=.\fractalnoise.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\gl_backend.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\gl_draw.c
 # End Source File
 # Begin Source File
@@ -168,15 +176,7 @@ SOURCE=.\gl_models.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\gl_poly.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\gl_rmain.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\gl_rmisc.c
 # End Source File
 # Begin Source File
 
@@ -189,10 +189,6 @@ SOURCE=.\gl_screen.c
 # Begin Source File
 
 SOURCE=.\gl_textures.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\gl_warp.c
 # End Source File
 # Begin Source File
 
@@ -320,7 +316,11 @@ SOURCE=.\r_modules.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\r_part.c
+SOURCE=.\r_particles.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\r_sky.c
 # End Source File
 # Begin Source File
 
@@ -456,7 +456,7 @@ SOURCE=.\draw.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\gl_poly.h
+SOURCE=.\gl_backend.h
 # End Source File
 # Begin Source File
 
@@ -548,6 +548,10 @@ SOURCE=.\pr_comp.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\pr_execprogram.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\progdefs.h
 # End Source File
 # Begin Source File
@@ -569,10 +573,6 @@ SOURCE=.\quakeio.h
 # Begin Source File
 
 SOURCE=.\r_clip.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\r_decals.h
 # End Source File
 # Begin Source File
 
