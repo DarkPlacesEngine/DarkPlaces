@@ -865,6 +865,9 @@ void R_RenderView (void)
 	R_MoveExplosions();
 	R_TimeReport("mexplosion");
 
+	qglPolygonOffset(0, 0);
+	qglEnable(GL_POLYGON_OFFSET_FILL);
+
 	R_Textures_Frame();
 	R_SetupFrame();
 	R_SetFrustum();
@@ -943,6 +946,9 @@ void R_RenderView (void)
 
 	R_Mesh_Finish();
 	R_TimeReport("meshfinish");
+
+	qglPolygonOffset(0, 0);
+	qglDisable(GL_POLYGON_OFFSET_FILL);
 }
 
 /*
