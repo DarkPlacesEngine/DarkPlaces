@@ -36,7 +36,7 @@
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
 d darkplaces: change cl_fakelocalping_min and _max to only lag by half each way, as currently it results in 2x ping
-0 darkplaces: make MAX_PACKETFRAGMENT a property of each net connection, so memory loopbacks could use huge limits (Sajt)
+d darkplaces: make MAX_PACKETFRAGMENT a property of each net connection, so memory loopbacks could use huge limits (Sajt)
 d darkplaces: add extension for tenebrae dlight entities
 0 darkplaces: fix broken mouse button display in key binding menu, it shows ??? for mouse buttons (Mercury, Tomaz)
 0 darkplaces: fix broken key repeat on backspace key in console (Mercury)
@@ -45,14 +45,13 @@ d darkplaces: add constant insertion capabilities to Image_CopyMux
 0 darkplaces: add scaling capabilities to Image_CopyMux
 4 dpmod: figure out why intermission camera pitch changes after a moment (Tomaz)
 0 darkplaces: add -benchmark commandline option which plays a demo, appends the resulting min/max/avg fps to gamedir/benchmark.log with commandline so people know what settings were used, like +exec realtimelow.cfg, +exec realtimemed.cfg, etc (romi)
-0 darkplaces: keep track of min and max fps (based on single frame frametime) during timedemo and print these stats (romi)
+-n darkplaces: keep track of min and max fps (based on single frame frametime) during timedemo and print these stats (romi)
 d darkplaces: add tenebrae light entity properties, like cubemap and style and such
 -n darkplaces: implement cubemap support on rtlights (romi, Vermeulen, Mitchell)
 d darkplaces: add r_shadow_realtime_world_lightmaps cvar to control lightmap brightness (Mitchell)
 -n darkplaces: add gl_lightmaps cvar to disable texturing except lightmaps for testing (Vic)
 0 hmap2: release hmap2 (Vic, Supajoe)
 4 darkplaces: add capability for qc entities to act as bones in a model, and send them as compressed origins in the parent entity's updates, with perhaps a limit of 16 bones, this would allow some simple serverside ragdoll (Mitchell)
-4 darkplaces: add .psk/.psa (ut2003/ut2004) model support (Mitchell)
 d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)
 0 darkplaces: release darkplaces build
 0 darkplaces: fix loadsky;r_restart;r_restart crash, again (sajt)
@@ -275,7 +274,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 1 darkplaces: add log cvar to set console logging target (default "", or default "qconsole.log" if -condebug is used)
 1 darkplaces: add r_displayrefresh cvar for windows video refresh settings (Willis)
 1 darkplaces: add r_waterwarp to allow disabling view squishing underwater
-1 darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (Transfusion)
+-n darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (Transfusion)
 1 darkplaces: add some particles to teleportsplash (Uffe)
 1 darkplaces: check out QMB lightning and lava effects (jeremy janzen)
 1 darkplaces: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex, Electro)
@@ -333,7 +332,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 2 hmap: hlight is not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
 3 LordHavoc: read up on dynamic visibility
 3 darkplaces: .loc support and other team messaging capabilities (sublim3)
-3 darkplaces: add .psk (ut2003) model support (Kazashi)
+3 darkplaces: add .psk (ut2003) model support (Kazashi, Mitchell)
 3 darkplaces: add DP_ENT_COLORSHELL which puts a Q2-style colored shell on a model (Supajoe)
 3 darkplaces: add DP_SV_CRATEPHYSICS (NotoriousRay, SeienAbunae)
 3 darkplaces: add OpenGL Extensions menu to enable/disable various features (zombie_13)
@@ -344,7 +343,7 @@ d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this nee
 3 darkplaces: add back r_waterripple (Vermeulen)
 3 darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 3 darkplaces: add stainmaps to realtime lighting mode
-3 darkplaces: add sv_rate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
+-n darkplaces: add sv_maxrate cvar (limits total rate of the server - rather complicated rules to distribute rate between clients on the server, honoring their requests as best as possible) (Transfusion)
 3 darkplaces: call checkvelocity (to clear NaNs) every time velocity is set in physics, to fix frikbot (tell FrikaC)
 3 darkplaces: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Electro)
 3 darkplaces: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
