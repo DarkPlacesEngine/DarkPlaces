@@ -20,7 +20,7 @@
 
 typedef struct
 {
-	FILE *file;
+	qfile_t *file;
 	int endoffile;
 }
 hz_bitstream_read_t;
@@ -45,9 +45,9 @@ hz_bitstream_readblocks_t;
 
 hz_bitstream_read_t *hz_bitstream_read_open(char *filename)
 {
-	FILE *file;
+	qfile_t *file;
 	hz_bitstream_read_t *stream;
-	if ((file = fopen(filename, "rb")))
+	if ((file = FS_Open (filename, "rb", false)))
 	{
 		stream = malloc(sizeof(hz_bitstream_read_t));
 		memset(stream, 0, sizeof(*stream));
@@ -62,20 +62,20 @@ void hz_bitstream_read_close(hz_bitstream_read_t *stream)
 {
 	if (stream)
 	{
-		fclose(stream->file);
+		FS_Close(stream->file);
 		free(stream);
 	}
 }
 
 unsigned int hz_bitstream_read_currentbyte(hz_bitstream_read_t *stream)
 {
-	return ftell(stream->file);
+	return FS_Tell(stream->file);
 }
 
 int hz_bitstream_read_seek(hz_bitstream_read_t *stream, unsigned int position)
 {
 	stream->endoffile = 0;
-	return fseek(stream->file, position, SEEK_SET) != 0;
+	return FS_Seek(stream->file, position, SEEK_SET) != 0;
 }
 
 hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
@@ -133,7 +133,7 @@ int hz_bitstream_read_blocks_read(hz_bitstream_readblocks_t *blocks, hz_bitstrea
 		else
 			b->size = s;
 		s -= b->size;
-		if (fread(b->data, 1, b->size, stream->file) != b->size)
+		if (FS_Read(stream->file, b->data, b->size) != b->size)
 		{
 			stream->endoffile = 1;
 			break;

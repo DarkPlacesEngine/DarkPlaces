@@ -35,8 +35,8 @@ void Palette_Setup8to24(void)
 	palette_complete[255] = 0; // completely transparent black
 
 	// FIXME: fullbright_start should be read from colormap.lmp
-	colormap = COM_LoadFile("gfx/colormap.lmp", true);
-	if (colormap && com_filesize >= 16385)
+	colormap = FS_LoadFile("gfx/colormap.lmp", true);
+	if (colormap && fs_filesize >= 16385)
 		fullbright_start = 256 - colormap[16384];
 	else
 		fullbright_start = 256;
@@ -171,7 +171,7 @@ void Palette_Init(void)
 	float gamma, scale, base;
 	qbyte *pal;
 	qbyte temp[256];
-	pal = (qbyte *)COM_LoadFile ("gfx/palette.lmp", false);
+	pal = (qbyte *)FS_LoadFile ("gfx/palette.lmp", false);
 	if (!pal)
 		Sys_Error ("Couldn't load gfx/palette.lmp");
 	memcpy(host_basepal, pal, 765);

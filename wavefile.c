@@ -1,4 +1,5 @@
 
+#include "quakedef.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,10 +10,10 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 	int validfmt, position, length, l;
 	char *error;
 	wavefile_t *w;
-	FILE *file;
+	qfile_t *file;
 	unsigned char buffer[1024];
 	error = NULL;
-	file = fopen(filename, "rb");
+	file = FS_Open (filename, "rb", true);
 	if (file)
 	{
 		w = malloc(sizeof(*w));
@@ -20,7 +21,7 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 		if (w)
 		{
 			w->file = file;
-			if (fread(buffer, 12, 1, w->file))
+			if (FS_Read (w->file, buffer, 12))
 			{
 				if (!memcmp(buffer, "RIFF", 4))
 				{
@@ -29,12 +30,12 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 						validfmt = 0;
 						for(;;)
 						{
-							if (!fread(buffer, 8, 1, w->file))
+							if (!FS_Read(w->file, buffer, 8))
 							{
 								//error = "error reading chunk\n");
 								break;
 							}
-							position = ftell(w->file);
+							position = FS_Tell(w->file);
 							length = buffer[4] | (buffer[5] << 8) | (buffer[6] << 16) | (buffer[7] << 24);
 							if (!memcmp(buffer, "fmt ", 4))
 							{
@@ -42,7 +43,7 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 								l = length;
 								if (l > 16)
 									l = 16;
-								if (!fread(buffer, l, 1, w->file))
+								if (!FS_Read(w->file, buffer, l))
 								{
 									error = "error reading \"fmt \" chunk\n";
 									break;
@@ -83,7 +84,7 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 							}
 							// other chunks that might be of interest:
 							// "cue " (for looping)
-							if (fseek(w->file, position + length, SEEK_SET))
+							if (FS_Seek(w->file, position + length, SEEK_SET))
 							{
 								error = "error seeking to next chunk\n";
 								break;
@@ -95,7 +96,7 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 							w->info_bytespersample = w->info_channels * w->info_bytesperchannel;
 							w->length = w->datalength / w->info_bytespersample;
 							w->position = 0;
-							fseek(w->file, w->dataposition, SEEK_SET);
+							FS_Seek(w->file, w->dataposition, SEEK_SET);
 							return w;
 						}
 					}
@@ -111,7 +112,7 @@ wavefile_t *waveopen(char *filename, char **errorstring)
 		}
 		else
 			error = "unable to allocate memory\n";
-		fclose(file);
+		FS_Close(file);
 	}
 	else
 		error = "unable to open file\n";
@@ -124,7 +125,7 @@ void waveclose(wavefile_t *f)
 {
 	if (f)
 	{
-		fclose(f->file);
+		FS_Close(f->file);
 		free(f);
 	}
 }
@@ -145,7 +146,7 @@ unsigned int waveread16stereo(wavefile_t *w, short *soundbuffer, unsigned int sa
 		w->bufferlength = length + 100;
 		w->buffer = malloc(w->bufferlength * w->info_bytespersample);
 	}
-	length = fread(w->buffer, w->info_bytespersample, length, w->file);
+	length = FS_Read(w->file, w->buffer, w->info_bytespersample * length);
 	w->position += length;
 	if (length > 0)
 	{
@@ -188,7 +189,7 @@ unsigned int waveseek(wavefile_t *w, unsigned int samples)
 	else
 	{
 		w->position = samples;
-		fseek(w->file, w->dataposition + w->position * w->info_bytespersample, SEEK_SET);
+		FS_Seek(w->file, w->dataposition + w->position * w->info_bytespersample, SEEK_SET);
 		return 0;
 	}
 }

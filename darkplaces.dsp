@@ -312,7 +312,7 @@ SOURCE=.\protocol.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\quakeio.c
+SOURCE=.\fs.c
 # End Source File
 # Begin Source File
 
@@ -628,7 +628,7 @@ SOURCE=.\quakedef.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\quakeio.h
+SOURCE=.\fs.h
 # End Source File
 # Begin Source File
 

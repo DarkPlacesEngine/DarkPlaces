@@ -525,7 +525,7 @@ qsocket_t *NET_Connect (char *host)
 
 	if (host)
 	{
-		if (Q_strcasecmp (host, "local") == 0)
+		if (strcasecmp (host, "local") == 0)
 		{
 			net_driverlevel = 0;
 			return dfunc.Connect (host);
@@ -534,7 +534,7 @@ qsocket_t *NET_Connect (char *host)
 		if (hostCacheCount)
 		{
 			for (n = 0; n < hostCacheCount; n++)
-				if (Q_strcasecmp (host, hostcache[n].name) == 0)
+				if (strcasecmp (host, hostcache[n].name) == 0)
 				{
 					host = hostcache[n].cname;
 					break;
@@ -560,7 +560,7 @@ qsocket_t *NET_Connect (char *host)
 
 	if (hostCacheCount)
 		for (n = 0; n < hostCacheCount; n++)
-			if (Q_strcasecmp (host, hostcache[n].name) == 0)
+			if (strcasecmp (host, hostcache[n].name) == 0)
 			{
 				host = hostcache[n].cname;
 				break;

@@ -74,16 +74,16 @@ void W_LoadWadFile (char *filename)
 	int				infotableofs;
 	void			*temp;
 
-	temp = COM_LoadFile (filename, false);
+	temp = FS_LoadFile (filename, false);
 	if (!temp)
 		Sys_Error ("W_LoadWadFile: couldn't load %s", filename);
 
 	if (wad_mempool)
 		Mem_FreePool(&wad_mempool);
 	wad_mempool = Mem_AllocPool(filename);
-	wad_base = Mem_Alloc(wad_mempool, loadsize);
+	wad_base = Mem_Alloc(wad_mempool, fs_filesize);
 
-	memcpy(wad_base, temp, loadsize);
+	memcpy(wad_base, temp, fs_filesize);
 	Mem_Free(temp);
 
 	header = (wadinfo_t *)wad_base;
@@ -139,7 +139,7 @@ void SwapPic (qpic_t *pic)
 typedef struct
 {
 	char name[16];
-	QFile *file;
+	qfile_t *file;
 	int position;
 	int size;
 } texwadlump_t;
@@ -157,10 +157,10 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	wadinfo_t		header;
 	int				i, j;
 	int				infotableofs;
-	QFile			*file;
+	qfile_t			*file;
 	int				numlumps;
 
-	COM_FOpenFile (filename, &file, false, false);
+	file = FS_Open (filename, "rb", false);
 	if (!file)
 	{
 		if (complain)
@@ -168,7 +168,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 		return;
 	}
 
-	if (Qread(file, &header, sizeof(wadinfo_t)) != sizeof(wadinfo_t))
+	if (FS_Read(file, &header, sizeof(wadinfo_t)) != sizeof(wadinfo_t))
 	{Con_Printf ("W_LoadTextureWadFile: unable to read wad header");return;}
 
 	if(memcmp(header.identification, "WAD3", 4))
@@ -178,12 +178,12 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	if (numlumps < 1 || numlumps > TEXWAD_MAXIMAGES)
 	{Con_Printf ("W_LoadTextureWadFile: invalid number of lumps (%i)\n", numlumps);return;}
 	infotableofs = LittleLong(header.infotableofs);
-	if (Qseek(file, infotableofs, SEEK_SET))
+	if (FS_Seek (file, infotableofs, SEEK_SET))
 	{Con_Printf ("W_LoadTextureWadFile: unable to seek to lump table");return;}
 	if (!(lumps = Mem_Alloc(tempmempool, sizeof(lumpinfo_t)*numlumps)))
 	{Con_Printf ("W_LoadTextureWadFile: unable to allocate temporary memory for lump table");return;}
 
-	if (Qread(file, lumps, sizeof(lumpinfo_t) * numlumps) != (int)sizeof(lumpinfo_t) * numlumps)
+	if (FS_Read(file, lumps, sizeof(lumpinfo_t) * numlumps) != (int)sizeof(lumpinfo_t) * numlumps)
 	{Con_Printf ("W_LoadTextureWadFile: unable to read lump table");return;}
 
 	for (i=0, lump_p = lumps ; i<numlumps ; i++,lump_p++)
@@ -246,7 +246,7 @@ qbyte *W_GetTexture(char *name)
 {
 	char texname[17];
 	int i, j;
-	QFile *file;
+	qfile_t *file;
 	miptex_t *tex;
 	qbyte *data;
 
@@ -259,13 +259,13 @@ qbyte *W_GetTexture(char *name)
 			if (!strcmp(texname, texwadlump[i].name)) // found it
 			{
 				file = texwadlump[i].file;
-				if (Qseek(file, texwadlump[i].position, SEEK_SET))
+				if (FS_Seek(file, texwadlump[i].position, SEEK_SET))
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 
 				tex = Mem_Alloc(tempmempool, texwadlump[i].size);
 				if (!tex)
 					return NULL;
-				if (Qread(file, tex, texwadlump[i].size) < texwadlump[i].size)
+				if (FS_Read(file, tex, texwadlump[i].size) < texwadlump[i].size)
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 
 				tex->width = LittleLong(tex->width);

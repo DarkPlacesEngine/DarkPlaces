@@ -509,7 +509,7 @@ int Key_StringToKeynum (const char *str)
 		return str[0];
 
 	for (kn=keynames ; kn->name ; kn++)
-		if (!Q_strcasecmp(str,kn->name))
+		if (!strcasecmp(str,kn->name))
 			return kn->keynum;
 	return -1;
 }
@@ -661,13 +661,13 @@ Key_WriteBindings
 Writes lines containing "bind key value"
 ============
 */
-void Key_WriteBindings (QFile *f)
+void Key_WriteBindings (qfile_t *f)
 {
 	int i;
 
 	for (i = 0;i < 256;i++)
 		if (keybindings[i] && *keybindings[i])
-			Qprintf (f, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
+			FS_Printf (f, "bind \"%s\" \"%s\"\n", Key_KeynumToString(i), keybindings[i]);
 }
 
 

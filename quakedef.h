@@ -156,7 +156,7 @@ extern char *buildstring;
 #define	SOUND_CHANNELS		8
 
 #include "zone.h"
-#include "quakeio.h"
+#include "fs.h"
 #include "common.h"
 #include "cvar.h"
 #include "bspfile.h"

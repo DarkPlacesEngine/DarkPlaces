@@ -2,10 +2,12 @@
 #ifndef WAVEFILE_H
 #define WAVEFILE_H
 
+#include "quakedef.h"
+
 typedef struct wavefile_s
 {
 	// file this is reading from
-	FILE *file;
+	qfile_t *file;
 
 	// these settings are read directly from the wave format
 	// 1 is uncompressed PCM

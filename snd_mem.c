@@ -228,7 +228,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	strcpy(namebuffer, "sound/");
 	strcat(namebuffer, s->name);
 
-	data = COM_LoadFile(namebuffer, false);
+	data = FS_LoadFile(namebuffer, false);
 
 	if (!data)
 	{
@@ -237,7 +237,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 		return NULL;
 	}
 
-	info = GetWavinfo (s->name, data, com_filesize);
+	info = GetWavinfo (s->name, data, fs_filesize);
 	// LordHavoc: stereo sounds are now allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
 	{

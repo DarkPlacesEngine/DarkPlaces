@@ -1963,9 +1963,9 @@ void R_Shadow_LoadWorldLights(void)
 		Con_Printf("No map loaded.\n");
 		return;
 	}
-	COM_StripExtension(cl.worldmodel->name, name);
+	FS_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".rtlights");
-	lightsstring = COM_LoadFile(name, false);
+	lightsstring = FS_LoadFile(name, false);
 	if (lightsstring)
 	{
 		s = lightsstring;
@@ -2020,7 +2020,7 @@ void R_Shadow_SaveWorldLights(void)
 		Con_Printf("No map loaded.\n");
 		return;
 	}
-	COM_StripExtension(cl.worldmodel->name, name);
+	FS_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".rtlights");
 	bufchars = bufmaxchars = 0;
 	buf = NULL;
@@ -2046,7 +2046,7 @@ void R_Shadow_SaveWorldLights(void)
 		}
 	}
 	if (bufchars)
-		COM_WriteFile(name, buf, bufchars);
+		FS_WriteFile(name, buf, bufchars);
 	if (buf)
 		Mem_Free(buf);
 }
@@ -2061,9 +2061,9 @@ void R_Shadow_LoadLightsFile(void)
 		Con_Printf("No map loaded.\n");
 		return;
 	}
-	COM_StripExtension(cl.worldmodel->name, name);
+	FS_StripExtension(cl.worldmodel->name, name);
 	strcat(name, ".lights");
-	lightsstring = COM_LoadFile(name, false);
+	lightsstring = FS_LoadFile(name, false);
 	if (lightsstring)
 	{
 		s = lightsstring;

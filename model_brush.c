@@ -617,19 +617,19 @@ static void Mod_LoadLighting (lump_t *l)
 	{
 		// LordHavoc: hope is not lost yet, check for a .lit file to load
 		strcpy(litfilename, loadmodel->name);
-		COM_StripExtension(litfilename, litfilename);
+		FS_StripExtension(litfilename, litfilename);
 		strcat(litfilename, ".lit");
-		data = (qbyte*) COM_LoadFile (litfilename, false);
+		data = (qbyte*) FS_LoadFile (litfilename, false);
 		if (data)
 		{
-			if (loadsize > 8 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
+			if (fs_filesize > 8 && data[0] == 'Q' && data[1] == 'L' && data[2] == 'I' && data[3] == 'T')
 			{
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)
 				{
 					Con_DPrintf("loaded %s\n", litfilename);
-					loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, loadsize - 8);
-					memcpy(loadmodel->lightdata, data + 8, loadsize - 8);
+					loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, fs_filesize - 8);
+					memcpy(loadmodel->lightdata, data + 8, fs_filesize - 8);
 					Mem_Free(data);
 					return;
 				}
@@ -641,7 +641,7 @@ static void Mod_LoadLighting (lump_t *l)
 			}
 			else
 			{
-				if (loadsize == 8)
+				if (fs_filesize == 8)
 					Con_Printf("Empty .lit file, ignoring\n");
 				else
 					Con_Printf("Corrupt .lit file (old version?), ignoring\n");
@@ -672,9 +672,9 @@ void Mod_LoadLightList(void)
 	mlight_t *e;
 
 	strcpy(lightsfilename, loadmodel->name);
-	COM_StripExtension(lightsfilename, lightsfilename);
+	FS_StripExtension(lightsfilename, lightsfilename);
 	strcat(lightsfilename, ".lights");
-	s = lightsstring = (char *) COM_LoadFile (lightsfilename, false);
+	s = lightsstring = (char *) FS_LoadFile (lightsfilename, false);
 	if (s)
 	{
 		numlights = 0;

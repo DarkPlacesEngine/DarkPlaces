@@ -136,7 +136,7 @@ void NET_Ban_f (void)
 			break;
 
 		case 2:
-			if (Q_strcasecmp(Cmd_Argv(1), "off") == 0)
+			if (strcasecmp(Cmd_Argv(1), "off") == 0)
 				banAddr = 0x00000000;
 			else
 				banAddr = inet_addr(Cmd_Argv(1));
@@ -491,7 +491,7 @@ void NET_Stats_f (void)
 	else
 	{
 		for (s = net_activeSockets; s; s = s->next)
-			if (Q_strcasecmp(Cmd_Argv(1), s->address) == 0)
+			if (strcasecmp(Cmd_Argv(1), s->address) == 0)
 				break;
 		if (s == NULL)
 			return;
@@ -581,7 +581,7 @@ static void Test_f (void)
 	if (host && hostCacheCount)
 	{
 		for (n = 0; n < hostCacheCount; n++)
-			if (Q_strcasecmp (host, hostcache[n].name) == 0)
+			if (strcasecmp (host, hostcache[n].name) == 0)
 			{
 				if (hostcache[n].driver != myDriverLevel)
 					continue;
@@ -711,7 +711,7 @@ static void Test2_f (void)
 	if (host && hostCacheCount)
 	{
 		for (n = 0; n < hostCacheCount; n++)
-			if (Q_strcasecmp (host, hostcache[n].name) == 0)
+			if (strcasecmp (host, hostcache[n].name) == 0)
 			{
 				if (hostcache[n].driver != myDriverLevel)
 					continue;
@@ -1156,7 +1156,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 	{
 		if (i == n)
 			continue;
-		if (Q_strcasecmp (hostcache[n].name, hostcache[i].name) == 0)
+		if (strcasecmp (hostcache[n].name, hostcache[i].name) == 0)
 		{
 			i = strlen(hostcache[n].name);
 			if (i < 15 && hostcache[n].name[i-1] > '8')

@@ -193,7 +193,7 @@ static void CL_PlayVideo_f(void)
 		return;
 	}
 
-	sprintf(name, "%s/video/%s.dpv", com_gamedir, Cmd_Argv(1));
+	sprintf(name, "%s/video/%s.dpv", fs_gamedir, Cmd_Argv(1));
 	CL_VideoStart(name);
 }
 

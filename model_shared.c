@@ -199,7 +199,7 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	{
 		if (checkdisk)
 		{
-			buf = COM_LoadFile (mod->name, false);
+			buf = FS_LoadFile (mod->name, false);
 			if (!buf)
 			{
 				if (crash)
@@ -207,7 +207,7 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 				return NULL;
 			}
 
-			crc = CRC_Block(buf, com_filesize);
+			crc = CRC_Block(buf, fs_filesize);
 		}
 		else
 			crc = mod->crc;
@@ -224,14 +224,14 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 
 	if (!buf)
 	{
-		buf = COM_LoadFile (mod->name, false);
+		buf = FS_LoadFile (mod->name, false);
 		if (!buf)
 		{
 			if (crash)
 				Host_Error ("Mod_LoadModel: %s not found", mod->name);
 			return NULL;
 		}
-		crc = CRC_Block(buf, com_filesize);
+		crc = CRC_Block(buf, fs_filesize);
 	}
 
 	// allocate a new model

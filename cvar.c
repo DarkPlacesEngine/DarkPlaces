@@ -323,13 +323,13 @@ Writes lines containing "set variable value" for all variables
 with the archive flag set to true.
 ============
 */
-void Cvar_WriteVariables (QFile *f)
+void Cvar_WriteVariables (qfile_t *f)
 {
 	cvar_t	*var;
 
 	for (var = cvar_vars ; var ; var = var->next)
 		if (var->flags & CVAR_SAVE)
-			Qprintf (f, "%s \"%s\"\n", var->name, var->string);
+			FS_Printf (f, "%s \"%s\"\n", var->name, var->string);
 }
 
 

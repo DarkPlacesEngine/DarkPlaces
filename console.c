@@ -217,9 +217,9 @@ void Con_Init (void)
 
 	if (con_debuglog)
 	{
-		if (strlen (com_gamedir) < (MAXGAMEDIRLEN - strlen (t2)))
+		if (strlen (fs_gamedir) < (MAXGAMEDIRLEN - strlen (t2)))
 		{
-			sprintf (temp, "%s%s", com_gamedir, t2);
+			sprintf (temp, "%s%s", fs_gamedir, t2);
 			unlink (temp);
 		}
 		logfile.integer = 1;
@@ -355,16 +355,16 @@ void Con_Print (const char *txt)
 Con_DebugLog
 ================
 */
-void Con_DebugLog(const char *file, const char *fmt, ...)
+void Con_DebugLog (const char *msg)
 {
-    va_list argptr;
-    FILE* fd;
+    qfile_t* file;
 
-    fd = fopen(file, "at");
-    va_start(argptr, fmt);
-    vfprintf (fd, fmt, argptr);
-    va_end(argptr);
-    fclose(fd);
+    file = FS_Open ("qconsole.log", "at", true);
+	if (file)
+	{
+		FS_Printf (file, "%s", msg);
+		FS_Close (file);
+	}
 }
 
 
@@ -387,17 +387,12 @@ void Con_Printf (const char *fmt, ...)
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
 
-// also echo to debugging console
+	// also echo to debugging console
 	Sys_Printf ("%s", msg);
 
-// log all messages to file
+	// log all messages to file
 	if (con_debuglog)
-	{
-		// can't use va() here because it might overwrite other important things
-		char logname[MAX_OSPATH];
-		sprintf(logname, "%s/qconsole.log", com_gamedir);
-		Con_DebugLog(logname, "%s", msg);
-	}
+		Con_DebugLog (msg);
 
 	if (!con_initialized)
 		return;
@@ -405,7 +400,7 @@ void Con_Printf (const char *fmt, ...)
 	if (cls.state == ca_dedicated)
 		return;		// no graphics mode
 
-// write it to the scrollable buffer
+	// write it to the scrollable buffer
 	Con_Print (msg);
 }
 
