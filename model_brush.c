@@ -2889,7 +2889,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	msurface_t *surf;
 	int numshadowmeshtriangles;
 
-	mod->type = mod_brush;
+	mod->type = mod_brushq1;
 
 	header = (dheader_t *)buffer;
 
