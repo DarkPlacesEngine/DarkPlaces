@@ -37,39 +37,39 @@ void Sys_DebugNumber(int y, int val)
 void Sys_Quit (void)
 {
 	Host_Shutdown();
-    fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 	fflush(stdout);
 	exit(0);
 }
 
 void Sys_Error (char *error, ...)
 {
-    va_list     argptr;
-    char        string[1024];
+	va_list argptr;
+	char string[1024];
 
 // change stdin to non blocking
-    fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
-    
-    va_start (argptr,error);
-    vsprintf (string,error,argptr);
-    va_end (argptr);
+	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
+
+	va_start (argptr,error);
+	vsprintf (string,error,argptr);
+	va_end (argptr);
 	fprintf(stderr, "Error: %s\n", string);
 
 	Host_Shutdown ();
 	exit (1);
 
-} 
+}
 
 void Sys_Warn (char *warning, ...)
-{ 
-    va_list     argptr;
-    char        string[1024];
-    
-    va_start (argptr,warning);
-    vsprintf (string,warning,argptr);
-    va_end (argptr);
+{
+	va_list argptr;
+	char string[1024];
+
+	va_start (argptr,warning);
+	vsprintf (string,warning,argptr);
+	va_end (argptr);
 	fprintf(stderr, "Warning: %s", string);
-} 
+}
 
 /*
 ============
@@ -78,33 +78,32 @@ Sys_FileTime
 returns -1 if not present
 ============
 */
-int	Sys_FileTime (char *path)
+int Sys_FileTime (char *path)
 {
-	struct	stat	buf;
-	
+	struct stat buf;
+
 	if (stat (path,&buf) == -1)
 		return -1;
-	
+
 	return buf.st_mtime;
 }
 
 
 void Sys_mkdir (char *path)
 {
-    mkdir (path, 0777);
+	mkdir (path, 0777);
 }
 
 int Sys_FileOpenRead (char *path, int *handle)
 {
-	int	h;
-	struct stat	fileinfo;
-    
-	
+	int h;
+	struct stat fileinfo;
+
 	h = open (path, O_RDONLY, 0666);
 	*handle = h;
 	if (h == -1)
 		return -1;
-	
+
 	if (fstat (h,&fileinfo) == -1)
 		Sys_Error ("Error fstating %s", path);
 
@@ -113,7 +112,7 @@ int Sys_FileOpenRead (char *path, int *handle)
 
 int Sys_FileOpenWrite (char *path)
 {
-	int     handle;
+	int handle;
 
 	umask (0);
 
@@ -145,48 +144,50 @@ void Sys_FileSeek (int handle, int position)
 
 int Sys_FileRead (int handle, void *dest, int count)
 {
-    return read (handle, dest, count);
+	return read (handle, dest, count);
 }
 
 void Sys_DebugLog(char *file, char *fmt, ...)
 {
-    va_list argptr; 
-    static char data[1024];
-    int fd;
-    
-    va_start(argptr, fmt);
-    vsprintf(data, fmt, argptr);
-    va_end(argptr);
-    fd = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
-    write(fd, data, strlen(data));
-    close(fd);
+	va_list argptr;
+	static char data[1024];
+	int fd;
+
+	va_start(argptr, fmt);
+	vsprintf(data, fmt, argptr);
+	va_end(argptr);
+	fd = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
+	write(fd, data, strlen(data));
+	close(fd);
 }
 
 double Sys_DoubleTime (void)
 {
 	static int first = true;
-	static double oldtime = 0.0, basetime = 0.0;
+	static double oldtime = 0.0, curtime = 0.0;
 	double newtime;
 	struct timeval tp;
-	struct timezone tzp; 
+	struct timezone tzp;
 
 	gettimeofday(&tp, &tzp);
 
-	newtime = (double) ((unsigned long) tp.tv_sec) + tp.tv_usec/1000000.0 - basetime;
+	newtime = (double) ((unsigned long) tp.tv_sec) + tp.tv_usec/1000000.0;
 
 	if (first)
 	{
 		first = false;
-		basetime = newtime;
-		newtime = 0.0;
+		oldtime = newtime;
 	}
 
 	if (newtime < oldtime)
-		Sys_Error("Sys_DoubleTime: time running backwards??\n");
+		Con_Printf("Sys_DoubleTime: time running backwards??\n");
+	else
+	{
+		curtime += newtime - oldtime;
+		oldtime = newtime;
+	}
 
-	oldtime = newtime;
-
-	return newtime;
+	return curtime;
 }
 
 // =======================================================================
@@ -207,12 +208,13 @@ void floating_point_exception_handler(int whatever)
 
 char *Sys_ConsoleInput(void)
 {
-    static char text[256];
-    int     len;
-	fd_set	fdset;
-    struct timeval timeout;
+	static char text[256];
+	int len;
+	fd_set fdset;
+	struct timeval timeout;
 
-	if (cls.state == ca_dedicated) {
+	if (cls.state == ca_dedicated)
+	{
 		FD_ZERO(&fdset);
 		FD_SET(0, &fdset); // stdin
 		timeout.tv_sec = 0;
@@ -237,7 +239,6 @@ void Sys_Sleep(void)
 
 int main (int c, char **v)
 {
-
 	double oldtime, newtime;
 
 	signal(SIGFPE, SIG_IGN);
@@ -270,4 +271,3 @@ int main (int c, char **v)
 	}
 	return 0;
 }
-
