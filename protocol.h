@@ -547,7 +547,6 @@ typedef struct entity_database4_s
 entity_database4_t;
 
 // should-be-private functions that aren't
-int EntityFrame4_SV_ChooseCommitToReplace(entity_database4_t *d);
 entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int number);
 void EntityFrame4_AddCommitEntity(entity_database4_t *d, entity_state_t *s);
 
@@ -558,15 +557,11 @@ void EntityFrame4_FreeDatabase(entity_database4_t *d);
 // reset a database (resets compression but does not reallocate anything)
 void EntityFrame4_ResetDatabase(entity_database4_t *d);
 // updates database to account for a frame-received acknowledgment
-void EntityFrame4_AckFrame(entity_database4_t *d, int framenum);
+int EntityFrame4_AckFrame(entity_database4_t *d, int framenum);
 
-// begin writing a frame
-void EntityFrame4_SV_WriteFrame_Begin(entity_database4_t *d, sizebuf_t *msg, int framenum);
 // write an entity in the frame
 // returns false if full
 int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int maxbytes, entity_state_t *s);
-// end writing a frame
-void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg);
 
 // reads a frame from the network stream
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d);

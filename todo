@@ -4,6 +4,10 @@
 -n darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: add Draw2D function to model struct to make it easy to draw models without an entity (Tomaz)
+0 darkplaces: fix "game speed" menu option, it's too far left (Tomaz)
+4 darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
+5 darkplaces: add crude SKM model loading with animation list (Vermeulen)
 2 darkplaces: should support corona-model shaders somehow (equation: pow(normalizationcubemap(transform(eye, vertexmatrix)) dot3 '0 0 1', 8)), which are normally used around unusually shaped lights instead of flat coronas (Mitchell)
 0 lhfire: make a lhfire.txt and move the scripting info to it, add some more general explanation and tips
 0 darkplaces: add sv_gameplayfix_grenadebouncedownslopes cvar (default 1)

@@ -744,7 +744,7 @@ void SV_ReadClientMessage(void)
 
 		case clc_ackentities:
 			host_client->entitydatabase4->ackframenum = MSG_ReadLong();
-			if (developer_networkentities.integer)
+			if (developer_networkentities.integer >= 1)
 				Con_Printf("recv clc_ackentities %i\n", host_client->entitydatabase4->ackframenum);
 			EntityFrame4_AckFrame(host_client->entitydatabase4, host_client->entitydatabase4->ackframenum);
 			break;
