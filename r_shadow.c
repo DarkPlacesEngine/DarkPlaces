@@ -1592,7 +1592,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 					{
 						originhack[0] = 0;
 						originhack[1] = 0;
-						originhack[2] = 40;
+						originhack[2] = 48;
 					}
 					if (!strcmp(value, "light_flame_small_yellow"))
 					{
