@@ -818,6 +818,7 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 	const colplanef_t *startplane, *endplane;
 
 	enterfrac = -1;
+	enterfrac2 = -1;
 	leavefrac = 1;
 	fstartsolid = true;
 	fendsolid = true;
