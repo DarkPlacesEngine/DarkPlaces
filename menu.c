@@ -3730,11 +3730,12 @@ void M_Keydown (int key, char ascii)
 
 void M_Shutdown(void)
 {
+	// reset key_dest
+	key_dest = key_game;
 }
 
 void M_Restart(void)
 {
-	key_dest = key_game;
 }
 
 //============================================================================
@@ -3767,6 +3768,10 @@ void MP_Error(void)
 
 	// say it
 	Con_Printf("Falling back to normal menu\n");
+
+	key_dest = key_game;
+
+	//PRVM_ResetProg();
 
 	// init the normal menu now -> this will also correct the menu router pointers
 	MR_SetRouting (TRUE);
@@ -3828,10 +3833,6 @@ void MP_Shutdown (void)
 	key_dest = key_game;
 
 	// AK not using this cause Im not sure whether this is useful at all instead :
-/*	// free mempools
-	Mem_FreePool(prog->edicts_mempool);
-	Mem_FreePool(prog->edictstring_mempool);
-	Mem_FreePool(prog->progs_mempool);*/
 	PRVM_ResetProg();
 
 	PRVM_End;
@@ -3875,7 +3876,7 @@ void MP_Init (void)
 
 void MP_Restart(void)
 {
-	key_dest = key_game;
+
 	MP_Init();
 }
 

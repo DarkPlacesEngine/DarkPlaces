@@ -1198,7 +1198,7 @@ PRVM_ResetProg
 
 void PRVM_ResetProg()
 {
-	mempool_t *t1, *t2, *t3;
+	/*mempool_t *t1, *t2, *t3;
 
 	t1 = prog->progs_mempool;
 	t2 = prog->edictstring_mempool;
@@ -1206,15 +1206,18 @@ void PRVM_ResetProg()
 	
 	Mem_EmptyPool(prog->progs_mempool);
 	Mem_EmptyPool(prog->edictstring_mempool);
-	Mem_EmptyPool(prog->edicts_mempool);
+	Mem_EmptyPool(prog->edicts_mempool);*/
+	Mem_FreePool(&prog->progs_mempool);
+	Mem_FreePool(&prog->edictstring_mempool);
+	Mem_FreePool(&prog->edicts_mempool);
 	
 	memset(prog,0,sizeof(prvm_prog_t));
 	
-	prog->time = &prog->_time;
+	/*prog->time = &prog->_time;
 	
 	prog->progs_mempool = t1;
 	prog->edictstring_mempool = t2;
-	prog->edicts_mempool = t3;
+	prog->edicts_mempool = t3;*/
 
 	PRVM_GCALL(reset_cmd)();
 }
@@ -1649,6 +1652,9 @@ void PRVM_InitProg(int prognr)
 		Sys_Error("PRVM_InitProg: Invalid program number %i\n",prognr);
 
 	prog = &prog_list[prognr];
+
+	if(prog->loaded)
+		PRVM_ResetProg();
 
 	memset(prog, 0, sizeof(prvm_prog_t));
 

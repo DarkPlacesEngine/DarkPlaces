@@ -1807,7 +1807,7 @@ void VM_strcat(void)
 {
 	char *s;
 
-	if(prog->argc <= 2) 
+	if(prog->argc < 2) 
 		PRVM_ERROR("VM_strcat wrong parameter count (min. 2 expected ) !\n");
 	
 	s = VM_GetTempString();
@@ -2499,7 +2499,8 @@ void VM_Cmd_Init(void)
 
 void VM_Cmd_Reset(void)
 {
-	Mem_EmptyPool(VM_STRINGS_MEMPOOL);
+	//Mem_EmptyPool(VM_STRINGS_MEMPOOL);
+	Mem_FreePool(&VM_STRINGS_MEMPOOL);
 	VM_Files_CloseAll();
 }
 
@@ -2842,6 +2843,7 @@ void VM_M_Cmd_Init(void)
 
 void VM_M_Cmd_Reset(void)
 {
-	VM_Cmd_Init();
+	//VM_Cmd_Init();
+	VM_Cmd_Reset();
 }
 
