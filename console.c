@@ -240,7 +240,7 @@ void Con_Init (void)
 	memset (con_text, ' ', CON_TEXTSIZE);
 	con_linewidth = -1;
 	Con_CheckResize ();
-	
+
 	Con_Printf ("Console initialized.\n");
 
 //
@@ -390,27 +390,32 @@ void Con_Printf (char *fmt, ...)
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
 //	static qboolean	inupdate;
-	
+
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
-	
+
 // also echo to debugging console
 	Sys_Printf ("%s", msg);
 
 // log all messages to file
 	if (con_debuglog)
-		Con_DebugLog(va("%s/qconsole.log",com_gamedir), "%s", msg);
+	{
+		// can't use va() here because it might overwrite other important things
+		char logname[MAX_OSPATH];
+		sprintf(logname, "%s/qconsole.log", com_gamedir);
+		Con_DebugLog(logname, "%s", msg);
+	}
 
 	if (!con_initialized)
 		return;
-		
+
 	if (cls.state == ca_dedicated)
 		return;		// no graphics mode
 
 // write it to the scrollable buffer
 	Con_Print (msg);
-	
+
 // update the screen if the console is displayed
 	// LordHavoc: I don't think there's a real need for this
 	/*

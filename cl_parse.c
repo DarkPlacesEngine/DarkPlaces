@@ -481,6 +481,10 @@ void CL_ParseServerInfo (void)
 
 	Mem_CheckSentinelsGlobal();
 
+	CL_CGVM_Start();
+
+	Mem_CheckSentinelsGlobal();
+
 	noclip_anglehack = false;		// noclip is turned off at start
 }
 
@@ -919,6 +923,8 @@ void CL_ParseEffect2 (void)
 
 #define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf ("%3i:%s\n", msg_readcount-1, x);
 
+static byte cgamenetbuffer[65536];
+
 /*
 =====================
 CL_ParseServerMessage
@@ -985,7 +991,7 @@ void CL_ParseServerMessage (void)
 			temp = "<unknown>";
 			cmdlogname[cmdindex] = temp;
 		}
-	
+
 		// other commands
 		switch (cmd)
 		{
@@ -1012,23 +1018,23 @@ void CL_ParseServerMessage (void)
 				Host_Error ("CL_ParseServerMessage: Illegible server message\n");
 			}
 			break;
-			
+
 		case svc_nop:
 //			Con_Printf ("svc_nop\n");
 			break;
-			
+
 		case svc_time:
 			// handle old protocols which do not have entity update ranges
 			entitiesupdated = true;
 			cl.mtime[1] = cl.mtime[0];
-			cl.mtime[0] = MSG_ReadFloat ();			
+			cl.mtime[0] = MSG_ReadFloat ();
 			break;
 
 		case svc_clientdata:
 			i = MSG_ReadShort ();
 			CL_ParseClientdata (i);
 			break;
-		
+
 		case svc_version:
 			i = MSG_ReadLong ();
 			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION && i != 250)
@@ -1047,11 +1053,11 @@ void CL_ParseServerMessage (void)
 		case svc_print:
 			Con_Printf ("%s", MSG_ReadString ());
 			break;
-			
+
 		case svc_centerprint:
 			SCR_CenterPrint (MSG_ReadString ());
 			break;
-			
+
 		case svc_stufftext:
 			Cbuf_AddText (MSG_ReadString ());
 			break;
@@ -1082,7 +1088,7 @@ void CL_ParseServerMessage (void)
 			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 			cl_lightstyle[i].length = strlen(cl_lightstyle[i].map);
 			break;
-			
+
 		case svc_sound:
 			CL_ParseStartSoundPacket(false);
 			break;
@@ -1102,7 +1108,7 @@ void CL_ParseServerMessage (void)
 				Host_Error ("CL_ParseServerMessage: svc_updatename >= MAX_SCOREBOARD");
 			strcpy (cl.scores[i].name, MSG_ReadString ());
 			break;
-			
+
 		case svc_updatefrags:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
@@ -1179,7 +1185,7 @@ void CL_ParseServerMessage (void)
 				Host_Error ("svc_updatestat: %i is invalid", i);
 			cl.stats[i] = MSG_ReadLong ();
 			break;
-			
+
 		case svc_spawnstaticsound:
 			CL_ParseStaticSound (false);
 			break;
@@ -1228,6 +1234,25 @@ void CL_ParseServerMessage (void)
 			break;
 		case svc_skybox:
 			R_SetSkyBox(MSG_ReadString());
+			break;
+		case svc_cgame:
+			{
+				int length;
+				length = (int) ((unsigned short) MSG_ReadShort());
+				/*
+				if (cgamenetbuffersize < length)
+				{
+					cgamenetbuffersize = length;
+					if (cgamenetbuffer)
+						Mem_Free(cgamenetbuffer);
+					cgamenetbuffer = Mem_Alloc(cgamenetbuffersize);
+				}
+				*/
+				for (i = 0;i < length;i++)
+					cgamenetbuffer[i] = MSG_ReadByte();
+				if (!msg_badread)
+					CL_CGVM_ParseNetwork(cgamenetbuffer, length);
+			}
 			break;
 		}
 	}

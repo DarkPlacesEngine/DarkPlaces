@@ -1064,12 +1064,12 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 	if (r_miplightmaps.integer)
 	{
 		surf->lightmaptexturestride = (surf->extents[0]>>4)+1;
-		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP/* | TEXF_PRECACHE*/, NULL, NULL, 0);
+		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_PRECACHE, NULL, NULL, 0);
 	}
 	else
 	{
 		surf->lightmaptexturestride = R_CompatibleFragmentWidth((surf->extents[0]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
-		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT/* | TEXF_PRECACHE*/, NULL, NULL, 0);
+		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE, NULL, NULL, 0);
 	}
 //	surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, va("lightmap%08x", lightmapnum), surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE);
 //	surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, va("lightmap%08x", lightmapnum), surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_PRECACHE);
@@ -1182,8 +1182,7 @@ static void Mod_LoadFaces (lump_t *l)
 {
 	dface_t		*in;
 	msurface_t 	*out;
-	int			i, count, surfnum;
-	int			planenum, side;
+	int			i, count, surfnum, planenum, side, ssize, tsize;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -1219,6 +1218,9 @@ static void Mod_LoadFaces (lump_t *l)
 		out->cached_lightscalebit = -1000;
 
 		CalcSurfaceExtents (out);
+
+		ssize = (out->extents[0] >> 4) + 1;
+		tsize = (out->extents[1] >> 4) + 1;
 
 		// lighting info
 		for (i = 0;i < MAXLIGHTMAPS;i++)
@@ -1272,15 +1274,22 @@ static void Mod_LoadFaces (lump_t *l)
 			out->samples = NULL;
 			Mod_GenerateVertexMesh(out);
 		}
-		else if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
-		{
-			out->shader = &Cshader_wall_vertex;
-			Mod_GenerateVertexLitMesh(out);
-		}
 		else
 		{
-			out->shader = &Cshader_wall_lightmap;
-			Mod_GenerateLightmappedMesh(out);
+			// stainmap for permanent marks on walls
+			out->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+			// clear to white
+			memset(out->stainsamples, 255, ssize * tsize * 3);
+			if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
+			{
+				out->shader = &Cshader_wall_vertex;
+				Mod_GenerateVertexLitMesh(out);
+			}
+			else
+			{
+				out->shader = &Cshader_wall_lightmap;
+				Mod_GenerateLightmappedMesh(out);
+			}
 		}
 	}
 }
@@ -1991,8 +2000,8 @@ static void Mod_FinalizePortals(void)
 	endleaf = leaf + loadmodel->numleafs;
 	for (;leaf < endleaf;leaf++)
 	{
-		VectorSet( 2000000000,  2000000000,  2000000000, leaf->mins);
-		VectorSet(-2000000000, -2000000000, -2000000000, leaf->maxs);
+		VectorSet(leaf->mins,  2000000000,  2000000000,  2000000000);
+		VectorSet(leaf->maxs, -2000000000, -2000000000, -2000000000);
 	}
 	p = portalchain;
 	while(p)

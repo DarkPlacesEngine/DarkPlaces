@@ -170,7 +170,7 @@ void R_NewExplosion(vec3_t org)
 	int i, j;
 	float dist;
 	byte noise[EXPLOSIONGRID*EXPLOSIONGRID];
-	fractalnoise(noise, EXPLOSIONGRID, 4);
+	fractalnoisequick(noise, EXPLOSIONGRID, 4);
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
 		if (explosion[i].alpha <= 0.0f)
@@ -207,7 +207,7 @@ void R_NewExplosion(vec3_t org)
 		}
 		VectorRandom(v);
 		VectorMA(org, EXPLOSIONGASSTARTRADIUS, v, v);
-		TraceLine(org, v, explosiongas[i].origin, NULL, 0);
+		TraceLine(org, v, explosiongas[i].origin, NULL, 0, true);
 		VectorRandom(v);
 		VectorScale(v, EXPLOSIONGASSTARTVELOCITY, explosiongas[i].velocity);
 		explosiongas[i].pressure = j * GASDENSITY_SCALER;
@@ -351,7 +351,7 @@ void R_MoveExplosion(explosion_t *e/*, explosiongas_t **list, explosiongas_t **l
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
 			if (r_explosionclip.integer)
 			{
-				if (TraceLine(e->vert[i], end, impact, normal, 0) < 1)
+				if (TraceLine(e->vert[i], end, impact, normal, 0, true) < 1)
 				{
 					// clip velocity against the wall
 					dot = DotProduct(e->vertvel[i], normal) * -1.125f;
@@ -397,7 +397,7 @@ void R_MoveExplosionGas(explosiongas_t *e, explosiongas_t **list, explosiongas_t
 		{
 			float f, dot;
 			vec3_t impact, normal;
-			f = TraceLine(e->origin, end, impact, normal, 0);
+			f = TraceLine(e->origin, end, impact, normal, 0, true);
 			VectorCopy(impact, e->origin);
 			if (f < 1)
 			{

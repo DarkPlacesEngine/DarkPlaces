@@ -32,6 +32,7 @@ void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
 		return NULL;
 	if (pool == NULL)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
+	Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, size);
 	pool->totalsize += size;
 	if (size < 4096)
 	{
@@ -124,6 +125,7 @@ void _Mem_Free(void *data, char *filename, int fileline)
 	if (*((int *)((long) mem + sizeof(memheader_t) + mem->size)) != MEMHEADER_SENTINEL)
 		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	pool = mem->pool;
+	Con_DPrintf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, mem->size);
 	for (memchainpointer = &pool->chain;*memchainpointer;memchainpointer = &(*memchainpointer)->chain)
 	{
 		if (*memchainpointer == mem)

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -25,7 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 void Sys_Error (char *error, ...);
 
 vec3_t vec3_origin = {0,0,0};
-int nanmask = 255<<23;
 float ixtable[4096];
 
 /*-----------------------------------------------------------------*/
@@ -58,7 +57,7 @@ float m_bytenormals[NUMVERTEXNORMALS][3] =
 {0.864188, 0.442863, 0.238856}, {0.688191, 0.587785, 0.425325}, 
 {0.809017, 0.309017, 0.500000}, {0.681718, 0.147621, 0.716567}, 
 {0.587785, 0.425325, 0.688191}, {0.955423, 0.295242, 0.000000}, 
-{1.000000, 0.000000, 0.000000}, {0.951056, 0.162460, 0.262866}, 
+{1.000000, 0.000000, 0.000000}, {0.951056, 0.162460, 0.262866},
 {0.850651, -0.525731, 0.000000}, {0.955423, -0.295242, 0.000000}, 
 {0.864188, -0.442863, 0.238856}, {0.951056, -0.162460, 0.262866}, 
 {0.809017, -0.309017, 0.500000}, {0.681718, -0.147621, 0.716567},
@@ -90,7 +89,7 @@ float m_bytenormals[NUMVERTEXNORMALS][3] =
 {0.500000, -0.809017, 0.309017}, {0.716567, -0.681718, 0.147621}, 
 {0.525731, -0.850651, 0.000000}, {-0.238856, -0.864188, -0.442863}, 
 {-0.500000, -0.809017, -0.309017}, {-0.262866, -0.951056, -0.162460}, 
-{-0.850651, -0.525731, 0.000000}, {-0.716567, -0.681718, -0.147621}, 
+{-0.850651, -0.525731, 0.000000}, {-0.716567, -0.681718, -0.147621},
 {-0.716567, -0.681718, 0.147621}, {-0.525731, -0.850651, 0.000000}, 
 {-0.500000, -0.809017, 0.309017}, {-0.238856, -0.864188, 0.442863},
 {-0.262866, -0.951056, 0.162460}, {-0.864188, -0.442863, 0.238856}, 
@@ -281,11 +280,6 @@ void PerpendicularVector( vec3_t dst, const vec3_t src )
 	}
 #endif
 }
-
-
-#ifdef _WIN32
-#pragma optimize( "", off )
-#endif
 
 
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
@@ -498,10 +492,6 @@ void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, 
 	       + (t0 * vr[2] + t1 * vu[2] + vf[2] * vf[2]) * point[2];
 #endif
 }
-
-#ifdef _WIN32
-#pragma optimize( "", on )
-#endif
 
 /*-----------------------------------------------------------------*/
 

@@ -174,7 +174,7 @@ void CL_Decal(vec3_t origin, int tex, float scale, float red, float green, float
 			{
 				softwaretransformforentity(decalent);
 				softwareuntransform(origin, decalorg);
-				CL_RecursiveDecalSurface (decalmodel->nodes);
+				CL_RecursiveDecalSurface (decalmodel->nodes + decalmodel->hulls[0].firstclipnode);
 			}
 		}
 	}

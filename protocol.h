@@ -202,8 +202,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_hidelmp			36		// [string] slotname
 #define	svc_skybox			37		// [string] skyname
 
-#define svc_unusedlh1
-#define svc_fog				51		// unfinished
+#define svc_cgame			50		// [short] length [bytes] data
+#define svc_fog				51		// unfinished and obsolete
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 #define svc_effect2			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
 #define	svc_sound2			54		// short soundindex instead of byte
@@ -265,6 +265,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TE_SMALLFLASH		72 // [vector] origin
 #define TE_CUSTOMFLASH		73 // [vector] origin [byte] radius / 8 - 1 [byte] lifetime / 256 - 1 [byte] red [byte] green [byte] blue
 #define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count
+#define TE_PLASMABURN		75 // [vector] origin
 
 #define RENDER_STEP 1
 #define RENDER_GLOWTRAIL 2

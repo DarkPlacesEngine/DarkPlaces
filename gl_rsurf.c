@@ -45,8 +45,18 @@ static void gl_surf_newmap(void)
 {
 }
 
+static int dlightdivtable[32768];
+
 void GL_Surf_Init(void)
 {
+	int i;
+	if (!dlightdivtable[1])
+	{
+		dlightdivtable[0] = 4194304;
+		for (i = 1;i < 32768;i++)
+			dlightdivtable[i] = 4194304 / (i << 7);
+	}
+
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&r_vertexsurfaces);
 	Cvar_RegisterVariable(&r_dlightmap);
@@ -55,8 +65,6 @@ void GL_Surf_Init(void)
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
-
-static int dlightdivtable[32768];
 
 static int R_AddDynamicLights (msurface_t *surf)
 {
@@ -74,13 +82,6 @@ static int R_AddDynamicLights (msurface_t *surf)
 
 	lit = false;
 
-	if (!dlightdivtable[1])
-	{
-		dlightdivtable[0] = 4194304;
-		for (s = 1; s < 32768; s++)
-			dlightdivtable[s] = 4194304 / (s << 7);
-	}
-
 	smax = (surf->extents[0] >> 4) + 1;
 	tmax = (surf->extents[1] >> 4) + 1;
 
@@ -94,7 +95,8 @@ static int R_AddDynamicLights (msurface_t *surf)
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
-		maxdist = (int) r_dlight[lnum].cullradius2;
+		// compensate for LIGHTOFFSET
+		maxdist = (int) r_dlight[lnum].cullradius2 + LIGHTOFFSET;
 
 		// already clamped, skip this
 		// clamp radius to avoid exceeding 32768 entry division table
@@ -164,6 +166,183 @@ static int R_AddDynamicLights (msurface_t *surf)
 	return lit;
 }
 
+void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, int icolor[8])
+{
+	float ndist;
+	msurface_t *surf, *endsurf;
+	int sdtable[256], td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, dist2, impacts, impactt, subtract, a, stained, cr, cg, cb, ca, ratio;
+	byte *bl;
+	vec3_t impact;
+	// LordHavoc: use 64bit integer...  shame it's not very standardized...
+#if _MSC_VER || __BORLANDC__
+	__int64     k;
+#else
+	long long   k;
+#endif
+
+
+	// for comparisons to minimum acceptable light
+	// compensate for 4096 offset
+	maxdist = radius * radius + 4096;
+
+	// clamp radius to avoid exceeding 32768 entry division table
+	if (maxdist > 4194304)
+		maxdist = 4194304;
+
+	subtract = (int) ((1.0f / maxdist) * 4194304.0f);
+
+loc0:
+	if (node->contents < 0)
+		return;
+	ndist = PlaneDiff(origin, node->plane);
+	if (ndist > radius)
+	{
+		node = node->children[0];
+		goto loc0;
+	}
+	if (ndist < -radius)
+	{
+		node = node->children[1];
+		goto loc0;
+	}
+
+	dist2 = ndist * ndist;
+	dist2 += 4096.0f;
+	if (dist2 < maxdist)
+	{
+		maxdist3 = maxdist - dist2;
+
+		impact[0] = origin[0] - node->plane->normal[0] * ndist;
+		impact[1] = origin[1] - node->plane->normal[1] * ndist;
+		impact[2] = origin[2] - node->plane->normal[2] * ndist;
+
+		for (surf = model->surfaces + node->firstsurface, endsurf = surf + node->numsurfaces;surf < endsurf;surf++)
+		{
+			if (surf->stainsamples)
+			{
+				smax = (surf->extents[0] >> 4) + 1;
+				tmax = (surf->extents[1] >> 4) + 1;
+
+				impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+				impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+				s = bound(0, impacts, smax * 16) - impacts;
+				t = bound(0, impactt, tmax * 16) - impactt;
+				i = s * s + t * t + dist2;
+				if (i > maxdist)
+					continue;
+
+				// reduce calculations
+				for (s = 0, i = impacts; s < smax; s++, i -= 16)
+					sdtable[s] = i * i + dist2;
+
+				// convert to 8.8 blocklights format
+				bl = surf->stainsamples;
+				smax3 = smax * 3;
+				stained = false;
+
+				i = impactt;
+				for (t = 0;t < tmax;t++, i -= 16)
+				{
+					td = i * i;
+					// make sure some part of it is visible on this line
+					if (td < maxdist3)
+					{
+						maxdist2 = maxdist - td;
+						for (s = 0;s < smax;s++)
+						{
+							if (sdtable[s] < maxdist2)
+							{
+								k = dlightdivtable[(sdtable[s] + td) >> 7] - subtract;
+								if (k > 0)
+								{
+									ratio = rand() & 255;
+									ca = (((icolor[7] - icolor[3]) * ratio) >> 8) + icolor[3];
+									a = (ca * k) >> 8;
+									if (a > 0)
+									{
+										a = bound(0, a, 256);
+										cr = (((icolor[4] - icolor[0]) * ratio) >> 8) + icolor[0];
+										cg = (((icolor[5] - icolor[1]) * ratio) >> 8) + icolor[1];
+										cb = (((icolor[6] - icolor[2]) * ratio) >> 8) + icolor[2];
+										bl[0] = (byte) ((((cr - (int) bl[0]) * a) >> 8) + (int) bl[0]);
+										bl[1] = (byte) ((((cg - (int) bl[1]) * a) >> 8) + (int) bl[1]);
+										bl[2] = (byte) ((((cb - (int) bl[2]) * a) >> 8) + (int) bl[2]);
+										stained = true;
+									}
+								}
+							}
+							bl += 3;
+						}
+					}
+					else // skip line
+						bl += smax3;
+				}
+				// force lightmap upload
+				if (stained)
+					surf->cached_dlight = true;
+			}
+		}
+	}
+
+	if (node->children[0]->contents >= 0)
+	{
+		if (node->children[1]->contents >= 0)
+		{
+			R_StainNode(node->children[0], model, origin, radius, icolor);
+			node = node->children[1];
+			goto loc0;
+		}
+		else
+		{
+			node = node->children[0];
+			goto loc0;
+		}
+	}
+	else if (node->children[1]->contents >= 0)
+	{
+		node = node->children[1];
+		goto loc0;
+	}
+}
+
+void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
+{
+	int n, icolor[8];
+	entity_render_t *ent;
+	model_t *model;
+	vec3_t org;
+	icolor[0] = cr1;
+	icolor[1] = cg1;
+	icolor[2] = cb1;
+	icolor[3] = ca1;
+	icolor[4] = cr2;
+	icolor[5] = cg2;
+	icolor[6] = cb2;
+	icolor[7] = ca2;
+
+	model = cl.worldmodel;
+	softwaretransformidentity();
+	R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, origin, radius, icolor);
+
+	// look for embedded bmodels
+	for (n = 1;n < MAX_EDICTS;n++)
+	{
+		ent = &cl_entities[n].render;
+		model = ent->model;
+		if (model && model->name[0] == '*')
+		{
+			Mod_CheckLoaded(model);
+			if (model->type == mod_brush)
+			{
+				softwaretransformforentity(ent);
+				softwareuntransform(origin, org);
+				R_StainNode(model->nodes + model->hulls[0].firstclipnode, model, org, radius, icolor);
+			}
+		}
+	}
+}
+
 /*
 ===============
 R_BuildLightMap
@@ -174,7 +353,7 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 {
 	int		smax, tmax, i, j, size, size3, shift, scale, maps, *bl, stride, l;
-	byte	*lightmap, *out;
+	byte	*lightmap, *out, *stain;
 
 	// update cached lighting info
 	surf->cached_dlight = 0;
@@ -230,6 +409,12 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 				for (scale = d_lightstylevalue[surf->styles[maps]], bl = blocklights, i = 0;i < size3;i++)
 					*bl++ += *lightmap++ * scale;
 	}
+
+	stain = surf->stainsamples;
+	if (stain)
+		for (bl = blocklights, i = 0;i < size3;i++)
+			if (stain[i] < 255)
+				bl[i] = (bl[i] * stain[i]) >> 8;
 
 	bl = blocklights;
 	out = templight;

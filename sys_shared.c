@@ -112,11 +112,11 @@ char engineversion[40];
 void Sys_Shared_EarlyInit(void)
 {
 #if defined(__linux__)
-	sprintf (engineversion, "%s Linux GL build %3i", gamename, buildnumber);
+	sprintf (engineversion, "%s Linux GL build %s", gamename, buildstring);
 #elif defined(WIN32)
-	sprintf (engineversion, "%s Windows GL build %3i", gamename, buildnumber);
+	sprintf (engineversion, "%s Windows GL build %s", gamename, buildstring);
 #else
-	sprintf (engineversion, "%s Unknown GL build %3i", gamename, buildnumber);
+	sprintf (engineversion, "%s Unknown GL build %s", gamename, buildstring);
 #endif
 
 	if (COM_CheckParm("-nostdout"))

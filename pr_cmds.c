@@ -254,7 +254,7 @@ void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 		angles = e->v.angles;
 		
 		a = angles[1]/180 * M_PI;
-		
+
 		xvector[0] = cos(a);
 		xvector[1] = sin(a);
 		yvector[0] = -sin(a);
@@ -1342,7 +1342,7 @@ void PF_precache_model (void)
 	
 	if (sv.state != ss_loading)
 		PR_RunError ("PF_Precache_*: Precache can only be done in spawn functions");
-		
+
 	s = G_STRING(OFS_PARM0);
 	if (sv.worldmodel->ishlbsp && ((!s) || (!s[0])))
 		return;
@@ -2538,6 +2538,15 @@ void PF_te_beam (void)
 	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM2)[2]);
 }
 
+void PF_te_plasmaburn (void)
+{
+	MSG_WriteByte(&sv.datagram, svc_temp_entity);
+	MSG_WriteByte(&sv.datagram, TE_PLASMABURN);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[0]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[1]);
+	MSG_WriteFloatCoord(&sv.datagram, G_VECTOR(OFS_PARM0)[2]);
+}
+
 void PF_Fixme (void)
 {
 	PR_RunError ("unimplemented builtin"); // LordHavoc: was misspelled (bulitin)
@@ -2636,7 +2645,7 @@ PF_precache_file,
 PF_setspawnparms,
 
 PF_Fixme,				// #79 LordHavoc: dunno who owns 79-89, so these are just padding
-PF_Fixme,				// #80 
+PF_Fixme,				// #80
 PF_Fixme,				// #81
 PF_Fixme,				// #82
 PF_Fixme,				// #83
@@ -2695,6 +2704,7 @@ PF_te_lightning2,		// #429
 PF_te_lightning3,		// #430
 PF_te_beam,				// #431
 PF_vectorvectors,		// #432
+PF_te_plasmaburn,		// #433
 };
 
 builtin_t *pr_builtins = pr_builtin;

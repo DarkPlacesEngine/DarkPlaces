@@ -116,6 +116,8 @@ void CL_ClearState (void)
 		ClearStateToDefault(&cl_entities[i].state_previous);
 		ClearStateToDefault(&cl_entities[i].state_current);
 	}
+
+	CL_CGVM_Clear();
 }
 
 void CL_LerpUpdate(entity_t *e)
@@ -502,7 +504,7 @@ static void CL_RelinkNetworkEntities()
 				v2[0] = v[0] * 18 + neworg[0];
 				v2[1] = v[1] * 18 + neworg[1];
 				v2[2] = v[2] * 18 + neworg[2] + 16;
-				TraceLine(neworg, v2, v, NULL, 0);
+				TraceLine(neworg, v2, v, NULL, 0, true);
 
 				CL_AllocDlight (NULL, v, 100, 1, 1, 1, 0, 0.1);
 			}
@@ -750,14 +752,13 @@ static void CL_RelinkEffects()
 
 void CL_RelinkEntities (void)
 {
-	r_refdef.numentities = 0;
-
 	CL_LerpPlayerVelocity();
 	CL_RelinkNetworkEntities();
+	TraceLine_ScanForBModels();
 	CL_RelinkEffects();
 	CL_MoveParticles();
 	CL_UpdateDecals();
-	CL_UpdateTEnts ();
+	CL_UpdateTEnts();
 }
 
 
@@ -796,7 +797,14 @@ int CL_ReadFromServer (void)
 	if (netshown)
 		Con_Printf ("\n");
 
-	CL_RelinkEntities ();
+	r_refdef.numentities = 0;
+	if (cls.state == ca_connected && cl.worldmodel)
+	{
+		CL_RelinkEntities ();
+
+		// run cgame code (which can add more entities)
+		CL_CGVM_Frame();
+	}
 
 //
 // bring the links up to date
@@ -980,4 +988,5 @@ void CL_Init (void)
 	CL_Particles_Init();
 	CL_Decals_Init();
 	CL_Screen_Init();
+	CL_CGVM_Init();
 }

@@ -489,6 +489,9 @@ void V_CalcRefdef (void)
 	float		bob;
 	float		side;
 
+	if (cls.state != ca_connected || !cl.worldmodel)
+		return;
+
 	// ent is the player model (visible when out of body)
 	ent = &cl_entities[cl.viewentity];
 	// view is the weapon model (only visible from inside body)
