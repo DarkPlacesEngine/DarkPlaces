@@ -9,3 +9,4 @@ void CL_CGVM_Start(void);
 void CL_CGVM_ParseNetwork(byte *netbuffer, int length);
 
 #endif
+
