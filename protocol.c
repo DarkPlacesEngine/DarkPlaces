@@ -699,6 +699,7 @@ void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg)
 	d->currentcommit = NULL;
 }
 
+extern void CL_MoveLerpEntityStates(entity_t *ent);
 void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 {
 	int i, n, number, referenceframenum, framenum;
@@ -732,6 +733,8 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d)
 		}
 		else
 			EntityState_Read(&cl_entities[number].state_current, EntityFrame4_GetReferenceEntity(d, number), number);
+		CL_MoveLerpEntityStates(&cl_entities[number]);
+		cl_entities_active[number] = true;
 		if (d->currentcommit)
 			EntityFrame4_AddCommitEntity(d, &cl_entities[number].state_current);
 	}

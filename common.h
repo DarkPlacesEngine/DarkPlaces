@@ -144,7 +144,7 @@ extern int dpprotocol;
 
 extern char com_token[1024];
 
-int COM_ParseToken (const char **data);
+int COM_ParseToken(const char **datapointer, int returnnewline);
 
 extern int com_argc;
 extern const char **com_argv;

@@ -2931,7 +2931,7 @@ void PF_tokenize (void)
 	tokens = Z_Malloc(strlen(str) * sizeof(char *));
 	max_tokens = strlen(str);
 
-	for (p = str;COM_ParseToken(&p) && num_tokens < max_tokens;num_tokens++)
+	for (p = str;COM_ParseToken(&p, false) && num_tokens < max_tokens;num_tokens++)
 	{
 		tokens[num_tokens] = Z_Malloc(strlen(com_token) + 1);
 		strcpy(tokens[num_tokens], com_token);
@@ -2977,7 +2977,11 @@ void PF_setattachment (void)
 		if (modelindex >= 0 && modelindex < MAX_MODELS)
 		{
 			model = sv.models[modelindex];
-			if (model->alias.aliasnum_tags)
+			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
+				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
+					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
+						v->_float = i + 1;
+			if (v->_float == 0 && model->alias.aliasnum_tags)
 				for (i = 0;i < model->alias.aliasnum_tags;i++)
 					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))
 						v->_float = i + 1;

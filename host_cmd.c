@@ -574,7 +574,7 @@ void Host_PerformLoadGame(char *name)
 			Host_Error ("Loadgame buffer overflow");
 		buf[i] = 0;
 		start = buf;
-		if (!COM_ParseToken(&start))
+		if (!COM_ParseToken(&start, false))
 		{
 			// end of file
 			break;
@@ -1226,7 +1226,7 @@ void Host_Kick_f (void)
 		if (Cmd_Argc() > 2)
 		{
 			message = Cmd_Args();
-			COM_ParseToken(&message);
+			COM_ParseToken(&message, false);
 			if (byNumber)
 			{
 				message++;							// skip the #

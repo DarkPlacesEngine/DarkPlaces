@@ -61,6 +61,20 @@ skinframe_t;
 
 #define MAX_SKINS 256
 
+typedef struct overridetagname_s
+{
+	char name[MAX_QPATH];
+}
+overridetagname_t;
+
+// a replacement set of tag names, per skin
+typedef struct overridetagnameset_s
+{
+	int num_overridetagnames;
+	overridetagname_t *data_overridetagnames;
+}
+overridetagnameset_t;
+
 #define SHADOWMESHVERTEXHASH 1024
 typedef struct shadowmeshvertexhash_s
 {
@@ -474,6 +488,8 @@ typedef struct model_s
 	model_brushq2_t	brushq2;
 	*/
 	model_brushq3_t	brushq3;
+	// skin files can have different tags for each skin
+	overridetagnameset_t	*data_overridetagnamesforskin;
 }
 model_t;
 

@@ -221,13 +221,13 @@ void CL_ParseEntityLump(char *entdata)
 	data = entdata;
 	if (!data)
 		return;
-	if (!COM_ParseToken(&data))
+	if (!COM_ParseToken(&data, false))
 		return; // error
 	if (com_token[0] != '{')
 		return; // error
 	while (1)
 	{
-		if (!COM_ParseToken(&data))
+		if (!COM_ParseToken(&data, false))
 			return; // error
 		if (com_token[0] == '}')
 			break; // end of worldspawn
@@ -237,7 +237,7 @@ void CL_ParseEntityLump(char *entdata)
 			strcpy(key, com_token);
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
-		if (!COM_ParseToken(&data))
+		if (!COM_ParseToken(&data, false))
 			return; // error
 		strcpy(value, com_token);
 		if (!strcmp("sky", key))
@@ -655,21 +655,26 @@ void CL_ParseUpdate (int bits)
 static entity_frame_t entityframe;
 void CL_ReadEntityFrame(void)
 {
-	entity_t *ent;
-	int i;
-	EntityFrame_Read(&cl.entitydatabase);
-	EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
-	for (i = 0;i < entityframe.numentities;i++)
+	if (dpprotocol == DPPROTOCOL_VERSION3)
 	{
-		// copy the states
-		ent = &cl_entities[entityframe.entitydata[i].number];
-		ent->state_previous = ent->state_current;
-		ent->state_current = entityframe.entitydata[i];
-		CL_MoveLerpEntityStates(ent);
-		// the entity lives again...
-		entlife[ent->state_current.number] = 2;
-		cl_entities_active[ent->state_current.number] = true;
+		int i;
+		entity_t *ent;
+		EntityFrame_Read(&cl.entitydatabase);
+		EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
+		for (i = 0;i < entityframe.numentities;i++)
+		{
+			// copy the states
+			ent = &cl_entities[entityframe.entitydata[i].number];
+			ent->state_previous = ent->state_current;
+			ent->state_current = entityframe.entitydata[i];
+			CL_MoveLerpEntityStates(ent);
+			// the entity lives again...
+			entlife[ent->state_current.number] = 2;
+			cl_entities_active[ent->state_current.number] = true;
+		}
 	}
+	else
+		EntityFrame4_CL_ReadFrame(&cl.entitydatabase4);
 }
 
 void CL_EntityUpdateSetup(void)
@@ -678,18 +683,21 @@ void CL_EntityUpdateSetup(void)
 
 void CL_EntityUpdateEnd(void)
 {
-	int i;
-	// disable entities that disappeared this frame
-	for (i = 1;i < MAX_EDICTS;i++)
+	if (dpprotocol != DPPROTOCOL_VERSION4)
 	{
-		// clear only the entities that were active last frame but not this
-		// frame, don't waste time clearing all entities (which would cause
-		// cache misses)
-		if (entlife[i])
+		int i;
+		// disable entities that disappeared this frame
+		for (i = 1;i < MAX_EDICTS;i++)
 		{
-			entlife[i]--;
-			if (!entlife[i])
-				cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
+			// clear only the entities that were active last frame but not this
+			// frame, don't waste time clearing all entities (which would cause
+			// cache misses)
+			if (entlife[i])
+			{
+				entlife[i]--;
+				if (!entlife[i])
+					cl_entities[i].state_previous.active = cl_entities[i].state_current.active = 0;
+			}
 		}
 	}
 }

@@ -424,6 +424,7 @@ typedef struct
 
 	// entity database stuff
 	entity_database_t entitydatabase;
+	entity_database4_t entitydatabase4;
 }
 client_state_t;
 

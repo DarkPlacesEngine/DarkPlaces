@@ -1195,13 +1195,13 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 	int i, j, k;
 	if (!data)
 		return;
-	if (!COM_ParseToken(&data))
+	if (!COM_ParseToken(&data, false))
 		return; // error
 	if (com_token[0] != '{')
 		return; // error
 	while (1)
 	{
-		if (!COM_ParseToken(&data))
+		if (!COM_ParseToken(&data, false))
 			return; // error
 		if (com_token[0] == '}')
 			break; // end of worldspawn
@@ -1211,7 +1211,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 			strcpy(key, com_token);
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
-		if (!COM_ParseToken(&data))
+		if (!COM_ParseToken(&data, false))
 			return; // error
 		strcpy(value, com_token);
 		if (!strcmp("wad", key)) // for HalfLife maps
@@ -3478,11 +3478,11 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
 	data = loadmodel->brush.entities;
 	// some Q3 maps override the lightgrid_cellsize with a worldspawn key
-	if (data && COM_ParseToken(&data) && com_token[0] == '{')
+	if (data && COM_ParseToken(&data, false) && com_token[0] == '{')
 	{
 		while (1)
 		{
-			if (!COM_ParseToken(&data))
+			if (!COM_ParseToken(&data, false))
 				break; // error
 			if (com_token[0] == '}')
 				break; // end of worldspawn
@@ -3492,7 +3492,7 @@ static void Mod_Q3BSP_LoadEntities(lump_t *l)
 				strcpy(key, com_token);
 			while (key[strlen(key)-1] == ' ') // remove trailing spaces
 				key[strlen(key)-1] = 0;
-			if (!COM_ParseToken(&data))
+			if (!COM_ParseToken(&data, false))
 				break; // error
 			strcpy(value, com_token);
 			if (!strcmp("gridsize", key))
