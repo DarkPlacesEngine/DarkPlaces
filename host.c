@@ -563,7 +563,7 @@ qboolean Host_FilterTime (double time)
 	double timecap, timeleft;
 	realtime += time;
 
-	if (sys_ticrate.value < 0.01 || sys_ticrate.value > 0.10001)
+	if (sys_ticrate.value < 0.00999 || sys_ticrate.value > 0.10001)
 		Cvar_SetValue("sys_ticrate", bound(0.01, sys_ticrate.value, 0.1));
 	if (slowmo.value < 0)
 		Cvar_SetValue("slowmo", 0);
