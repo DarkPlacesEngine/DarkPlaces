@@ -4,7 +4,8 @@
 *.s
 ChangeLog
 darkplaces-glx
-darkplaces-3dfx
+darkplaces-sdl
+darkplaces-dedicated
 gmon.out
 *.ncb
 *.opt
