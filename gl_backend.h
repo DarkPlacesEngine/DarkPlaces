@@ -104,9 +104,9 @@ typedef struct rcachearrayrequest_s
 	// for use by the code that is requesting the array, these are not
 	// directly used but merely compared to determine if cache items are
 	// identical
-	void *id_pointer1;
-	void *id_pointer2;
-	void *id_pointer3;
+	const void *id_pointer1;
+	const void *id_pointer2;
+	const void *id_pointer3;
 	int id_number1;
 	int id_number2;
 	int id_number3;
