@@ -224,20 +224,26 @@ cachepic_t	*Draw_CachePic (char *path)
 
 	// load the pic from disk
 	pic->tex = loadtextureimage(drawtexturepool, path, 0, 0, false, false, true);
-	if (pic->tex == NULL && (p = W_GetLumpName (path)))
+	if (pic->tex == NULL && !strncmp(path, "gfx/", 4))
 	{
-		if (!strcmp(path, "conchars"))
+		// compatibility with older versions
+		pic->tex = loadtextureimage(drawtexturepool, path + 4, 0, 0, false, false, true);
+		// failed to find gfx/whatever.tga or similar, try the wad
+		if (pic->tex == NULL && (p = W_GetLumpName (path + 4)))
 		{
-			qbyte *pix;
-			// conchars is a raw image and with the wrong transparent color
-			pix = (qbyte *)p;
-			for (i = 0;i < 128 * 128;i++)
-				if (pix[i] == 0)
-					pix[i] = 255;
-			pic->tex = R_LoadTexture (drawtexturepool, path, 128, 128, pix, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+			if (!strcmp(path, "gfx/conchars"))
+			{
+				qbyte *pix;
+				// conchars is a raw image and with the wrong transparent color
+				pix = (qbyte *)p;
+				for (i = 0;i < 128 * 128;i++)
+					if (pix[i] == 0)
+						pix[i] = 255;
+				pic->tex = R_LoadTexture (drawtexturepool, path, 128, 128, pix, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+			}
+			else
+				pic->tex = R_LoadTexture (drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
 		}
-		else
-			pic->tex = R_LoadTexture (drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
 	}
 	if (pic->tex == NULL && !strcmp(path, "ui/mousepointer.tga"))
 		pic->tex = draw_generatemousepointer();
@@ -252,7 +258,10 @@ cachepic_t	*Draw_CachePic (char *path)
 	if (pic->tex == NULL && !strcmp(path, "gfx/crosshair5.tga"))
 		pic->tex = draw_generatecrosshair(4);
 	if (pic->tex == NULL)
-		Sys_Error ("Draw_CachePic: failed to load %s", path);
+	{
+		Con_Printf ("Draw_CachePic: failed to load %s", path);
+		pic->tex = r_notexture;
+	}
 
 	pic->width = R_TextureWidth(pic->tex);
 	pic->height = R_TextureHeight(pic->tex);
@@ -332,7 +341,7 @@ static void gl_draw_start(void)
 	numcachepics = 0;
 	memset(cachepichash, 0, sizeof(cachepichash));
 
-	char_texture = Draw_CachePic("conchars")->tex;
+	char_texture = Draw_CachePic("gfx/conchars")->tex;
 }
 
 static void gl_draw_shutdown(void)
@@ -452,14 +461,14 @@ void R_DrawQueue(void)
 			break;
 		case DRAWQUEUE_STRING:
 			str = (char *)(dq + 1);
-			if (strcmp("conchars", currentpic))
+			if (strcmp("gfx/conchars", currentpic))
 			{
 				if (batch)
 				{
 					batch = false;
 					qglEnd();
 				}
-				currentpic = "conchars";
+				currentpic = "gfx/conchars";
 				qglBindTexture(GL_TEXTURE_2D, chartexnum);
 			}
 			batchcount = 0;
@@ -733,14 +742,14 @@ void R_DrawQueue(void)
 			break;
 		case DRAWQUEUE_STRING:
 			str = (char *)(dq + 1);
-			if (strcmp("conchars", currentpic))
+			if (strcmp("gfx/conchars", currentpic))
 			{
 				if (batch)
 				{
 					batch = false;
 					qglEnd();
 				}
-				currentpic = "conchars";
+				currentpic = "gfx/conchars";
 				qglBindTexture(GL_TEXTURE_2D, chartexnum);
 			}
 			if (!batch)

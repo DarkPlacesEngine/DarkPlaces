@@ -901,7 +901,6 @@ void Host_Init (void)
 		Render_Init();
 		S_Init ();
 		CDAudio_Init ();
-		Sbar_Init ();
 		CL_Init ();
 #ifdef _WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();
