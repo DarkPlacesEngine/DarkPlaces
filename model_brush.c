@@ -3587,7 +3587,10 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 {
 	q3dbrush_t *in;
 	q3mbrush_t *out;
-	int i, n, c, count;
+	int i, j, k, m, n, c, count, numpoints, numplanes;
+	winding_t *w;
+	colpointf_t pointsbuf[256*3];
+	colplanef_t planesbuf[256], colplanef;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3610,6 +3613,75 @@ static void Mod_Q3BSP_LoadBrushes(lump_t *l)
 		if (n < 0 || n >= loadmodel->brushq3.num_textures)
 			Host_Error("Mod_Q3BSP_LoadBrushes: invalid textureindex %i (%i textures)\n", n, loadmodel->brushq3.num_textures);
 		out->texture = loadmodel->brushq3.data_textures + n;
+
+		// construct a collision brush, which needs points and planes...
+		// each point and plane should be unique, and they don't refer to
+		// eachother in any way, so keeping them unique is fairly easy
+		numpoints = 0;
+		numplanes = 0;
+		for (j = 0;j < out->numbrushsides;j++)
+		{
+			// create a huge polygon for the plane
+			w = BaseWindingForPlane(out->firstbrushside[j].plane);
+			// clip it by all other planes
+			for (k = 0;k < out->numbrushsides && w;k++)
+				if (k != j)
+					w = ClipWinding(w, out->firstbrushside[k].plane, true);
+			// if nothing is left, skip it
+			// FIXME: should keep count of how many were skipped and report
+			// it, just for sake of statistics
+			if (!w)
+				continue;
+			// add the points uniquely (no duplicates)
+			for (k = 0;k < w->numpoints;k++)
+			{
+				for (m = 0;m < numpoints;m++)
+					if (VectorDistance2(w->points[k * 3], pointsbuf[m * 3].v) < DIST_EPSILON)
+						break;
+				if (m == numpoints)
+				{
+					// check if there are too many and skip the brush
+					if (numpoints >= 256)
+					{
+						Con_Printf("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many points for buffer\n");
+						FreeWinding(w);
+						goto failedtomakecolbrush;
+					}
+					// add the new one
+					VectorCopy(w->points[k * 3], pointsbuf[numpoints * 3].v);
+					numpoints++;
+				}
+			}
+			// add the plane uniquely (no duplicates)
+			memset(&colplanef, 0, sizeof(colplanef));
+			VectorCopy(out->firstbrushside[k].plane->normal, colplanef.normal);
+			colplanef.dist = out->firstbrushside[k].plane->dist;
+			for (k = 0;k < numplanes;k++)
+				if (VectorCompare(planesbuf[k].normal, colplanef.normal) && planesbuf[k].dist == colplanef.dist)
+					break;
+			if (k == numplanes)
+			{
+				// check if there are too many and skip the brush
+				if (numplanes >= 256)
+				{
+					Con_Printf("Mod_Q3BSP_LoadBrushes: failed to build collision brush: too many planes for buffer\n");
+					FreeWinding(w);
+					goto failedtomakecolbrush;
+				}
+				// add the new one
+				planesbuf[numplanes++] = colplanef;
+			}
+			FreeWinding(w);
+		}
+		// if anything is left, create the collision brush
+		if (numplanes && numpoints)
+		{
+			out->colbrushf = Collision_AllocBrushFloat(loadmodel->mempool, numpoints, numplanes);
+			memcpy(out->colbrushf->points, pointsbuf, numpoints * sizeof(float[3]));
+			memcpy(out->colbrushf->planes, planesbuf, numplanes * sizeof(mplane_t));
+		}
+		// return from errors to here
+		failedtomakecolbrush:;
 	}
 }
 
@@ -4103,6 +4175,77 @@ static void Mod_Q3BSP_LoadPVS(lump_t *l)
 	memcpy(loadmodel->brushq3.data_pvschains, (qbyte *)(in + 1), totalchains);
 }
 
+void Mod_Q3BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3_t out, vec_t radius)
+{
+	// FIXME: finish this code
+	VectorCopy(in, out);
+}
+
+void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end)
+{
+	if (node->isnode)
+	{
+		// recurse down node sides
+		int i;
+		float dist;
+		colpointf_t *ps, *pe;
+		// FIXME? if TraceBrushPolygonTransform were to be made usable, the
+		// node planes would need to be transformed too
+		dist = node->plane->dist - (1.0f / 8.0f);
+		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
+		{
+			if (DotProduct(ps->v, node->plane->normal) > dist || DotProduct(pe->v, node->plane->normal) > dist)
+			{
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end);
+				break;
+			}
+		}
+		dist = node->plane->dist + (1.0f / 8.0f);
+		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
+		{
+			if (DotProduct(ps->v, node->plane->normal) < dist || DotProduct(pe->v, node->plane->normal) < dist)
+			{
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end);
+				break;
+			}
+		}
+		/*
+		sides = BoxOnPlaneSide(boxstartmins, boxstartmaxs, node->plane) | BoxOnPlaneSide(boxendmins, boxendmaxs, node->plane);
+		if (sides & 1)
+			Mod_Q3BSP_TraceBox_RecursiveBSPNode(trace, node->children[0], boxstartmins, boxstartmaxs, boxendmins, boxendmaxs);
+		if (sides & 2)
+			Mod_Q3BSP_TraceBox_RecursiveBSPNode(trace, node->children[1], boxstartmins, boxstartmaxs, boxendmins, boxendmaxs);
+		*/
+	}
+	else
+	{
+		int i;
+		q3mleaf_t *leaf;
+		leaf = (q3mleaf_t *)node;
+		for (i = 0;i < leaf->numleafbrushes;i++)
+			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+	}
+}
+
+void Mod_Q3BSP_TraceBox(model_t *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs)
+{
+	int i;
+	colbrushf_t *thisbrush_start, *thisbrush_end;
+	matrix4x4_t startmatrix, endmatrix;
+	// FIXME: finish this code
+	Matrix4x4_CreateIdentity(&startmatrix);
+	Matrix4x4_CreateIdentity(&endmatrix);
+	thisbrush_start = Collision_BrushForBox(&startmatrix, boxstartmins, boxstartmaxs);
+	thisbrush_end = Collision_BrushForBox(&endmatrix, boxendmins, boxendmaxs);
+	memset(trace, 0, sizeof(*trace));
+	trace->fraction = 1;
+	if (model->brushq3.num_nodes)
+		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end);
+	else
+		for (i = 0;i < model->brushq3.num_brushes;i++)
+			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, model->brushq3.data_brushes[i].colbrushf, model->brushq3.data_brushes[i].colbrushf);
+}
+
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
 	int i;
@@ -4121,6 +4264,12 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		// until we get a texture for it...
 		R_ResetQuakeSky();
 	}
+
+	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
+	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
+	//mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
+	//mod->brushq1.LeafPVS = Mod_Q1BSP_LeafPVS;
+	//mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	mod_base = (qbyte *)header;
 

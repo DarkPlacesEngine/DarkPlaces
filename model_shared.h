@@ -299,6 +299,7 @@ q3mmodel_t;
 
 typedef struct q3mbrush_s
 {
+	struct colbrushf_s *colbrushf;
 	int numbrushsides;
 	struct q3mbrushside_s *firstbrushside;
 	struct q3mtexture_s *texture;
