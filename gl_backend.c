@@ -484,6 +484,8 @@ void GL_BlendFunc(int blendfunc1, int blendfunc2)
 {
 	if (gl_state.blendfunc1 != blendfunc1 || gl_state.blendfunc2 != blendfunc2)
 	{
+		if (r_showtrispass)
+			return;
 		qglBlendFunc(gl_state.blendfunc1 = blendfunc1, gl_state.blendfunc2 = blendfunc2);CHECKGLERROR
 		if (gl_state.blendfunc2 == GL_ZERO)
 		{
@@ -519,6 +521,8 @@ void GL_DepthMask(int state)
 {
 	if (gl_state.depthmask != state)
 	{
+		if (r_showtrispass)
+			return;
 		qglDepthMask(gl_state.depthmask = state);CHECKGLERROR
 	}
 }
@@ -527,6 +531,8 @@ void GL_DepthTest(int state)
 {
 	if (gl_state.depthtest != state)
 	{
+		if (r_showtrispass)
+			return;
 		gl_state.depthtest = state;
 		if (gl_state.depthtest)
 		{
@@ -554,6 +560,8 @@ void GL_ColorPointer(const float *p)
 {
 	if (gl_state.pointer_color != p)
 	{
+		if (r_showtrispass)
+			return;
 		CHECKGLERROR
 		if (!gl_state.pointer_color)
 		{
@@ -575,6 +583,8 @@ void GL_Color(float cr, float cg, float cb, float ca)
 {
 	if (gl_state.pointer_color || gl_state.color4f[0] != cr || gl_state.color4f[1] != cg || gl_state.color4f[2] != cb || gl_state.color4f[3] != ca)
 	{
+		if (r_showtrispass)
+			return;
 		GL_ColorPointer(NULL);
 		gl_state.color4f[0] = cr;
 		gl_state.color4f[1] = cg;
@@ -670,6 +680,11 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 	if (numverts == 0 || numtriangles == 0)
 	{
 		Con_Printf("R_Mesh_Draw(%d, %d, %08p);\n", numverts, numtriangles, elements);
+		return;
+	}
+	if (r_showtrispass)
+	{
+		R_Mesh_Draw_ShowTris(numverts, numtriangles, elements);
 		return;
 	}
 	c_meshs++;
@@ -797,9 +812,9 @@ void R_Mesh_Finish(void)
 {
 	int i;
 	BACKENDACTIVECHECK
-		CHECKGLERROR
+	CHECKGLERROR
 	GL_LockArrays(0, 0);
-		CHECKGLERROR
+	CHECKGLERROR
 
 	for (i = backendunits - 1;i >= 0;i--)
 	{
@@ -872,6 +887,8 @@ void R_Mesh_State_Texture(const rmeshstate_t *m)
 		GL_SetupTextureState();
 	}
 
+	if (r_showtrispass)
+		return;
 	for (i = 0, unit = gl_state.units;i < backendunits;i++, unit++)
 	{
 		if (unit->t1d != m->tex1d[i])
@@ -1005,7 +1022,7 @@ void R_Mesh_State_Texture(const rmeshstate_t *m)
 	}
 }
 
-void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, int *elements)
+void R_Mesh_Draw_ShowTris(int numverts, int numtriangles, const int *elements)
 {
 	qglBegin(GL_LINES);
 	for (;numtriangles;numtriangles--, elements += 3)

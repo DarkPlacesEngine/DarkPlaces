@@ -36,6 +36,7 @@ d darkplaces: revert noclip movement to match nq for compatibility with mods tha
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 d darkplaces: make light_lev dlights from qc require PFLAGS_FULLDYNAMIC flag
 d darkplaces: improve tenebrae compatibility by handling EF_FULLDYNAMIC flag in tenebrae mode, also make all sprites render additive
+d darkplaces: add r_showtris cvar (Riot)
 3 darkplaces: figure out BoxOnPlaneSide crash that happens in dpmod dpdm2 deathmatch 7 occasionally
 2 darkplaces: add q2 sprite support sometime
 0 dpmod: fix tilted corpse bug

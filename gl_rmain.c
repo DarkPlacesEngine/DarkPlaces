@@ -39,6 +39,9 @@ qboolean envmap;
 
 float r_farclip;
 
+// forces all rendering to draw triangle outlines
+int r_showtrispass;
+
 // view origin
 vec3_t r_vieworigin;
 vec3_t r_viewforward;
@@ -61,6 +64,7 @@ refdef_t r_refdef;
 // 8.8 fraction of base light value
 unsigned short d_lightstylevalue[256];
 
+cvar_t r_showtris = {0, "r_showtris", "0"};
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
@@ -253,6 +257,7 @@ void GL_Main_Init(void)
 // FIXME: move this to client?
 	FOG_registercvars();
 	Cmd_AddCommand("timerefresh", R_TimeRefresh_f);
+	Cvar_RegisterVariable(&r_showtris);
 	Cvar_RegisterVariable(&r_drawentities);
 	Cvar_RegisterVariable(&r_drawviewmodel);
 	Cvar_RegisterVariable(&r_speeds);
@@ -632,6 +637,19 @@ void R_RenderView(void)
 	qglEnable(GL_POLYGON_OFFSET_FILL);
 
 	R_RenderScene();
+	if (r_showtris.integer)
+	{
+		rmeshstate_t m;
+		GL_Color(1,1,1,1);
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthTest(GL_FALSE);
+		GL_DepthMask(GL_FALSE);
+		memset(&m, 0, sizeof(m));
+		R_Mesh_State_Texture(&m);
+		r_showtrispass = true;
+		R_RenderScene();
+		r_showtrispass = false;
+	}
 
 	qglPolygonOffset(0, 0);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
@@ -650,7 +668,7 @@ extern void R_DrawLightningBeams (void);
 void R_RenderScene(void)
 {
 	entity_render_t *world;
-
+	
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
