@@ -730,6 +730,9 @@ void _Host_Frame (float time)
 // process console commands
 	Cbuf_Execute ();
 
+	// LordHavoc: map and load are delayed until video is initialized
+	Host_PerformSpawnServerAndLoadGame();
+
 	NET_Poll();
 
 // if running the server locally, make intentions now
@@ -788,9 +791,6 @@ void _Host_Frame (float time)
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
 
 	CDAudio_Update();
-
-	// LordHavoc: map and load are delayed until video is initialized
-	Host_PerformSpawnServerAndLoadGame();
 
 	if (host_speeds.integer)
 	{
