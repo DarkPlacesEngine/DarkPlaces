@@ -568,6 +568,9 @@ void CL_SendMove(void)
 	// deliver the message
 	if (cls.demoplayback)
 		return;
+	// nothing to send
+	if (!buf.cursize)
+		return;
 
 	if (NetConn_SendUnreliableMessage(cls.netcon, &buf) == -1)
 	{
