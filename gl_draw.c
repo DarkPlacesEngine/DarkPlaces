@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern unsigned char d_15to8table[65536];
 
 cvar_t		qsg_version = {"qsg_version", "1"};
-cvar_t		gl_conalpha = {"gl_conalpha", "1"};
+cvar_t		scr_conalpha = {"scr_conalpha", "1"};
 
 byte		*draw_chars;				// 8*8 graphic characters
 qpic_t		*draw_disc;
@@ -319,7 +319,7 @@ void GL_Draw_Init (void)
 {
 	int i;
 	Cvar_RegisterVariable (&qsg_version);
-	Cvar_RegisterVariable (&gl_conalpha);
+	Cvar_RegisterVariable (&scr_conalpha);
 
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
 
@@ -490,13 +490,8 @@ void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 	if (scrap_dirty)
 		Scrap_Upload ();
 	gl = (glpic_t *)pic->data;
-//	glDisable(GL_ALPHA_TEST);
-//	glEnable (GL_BLEND);
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glCullFace(GL_FRONT);
-	glColor4f(0.8,0.8,0.8,alpha);
+	glColor4f(1,1,1,alpha);
 	glBindTexture(GL_TEXTURE_2D, gl->texnum);
-//	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	glBegin (GL_QUADS);
 	glTexCoord2f (gl->sl, gl->tl);
 	glVertex2f (x, y);
@@ -507,9 +502,6 @@ void Draw_AlphaPic (int x, int y, qpic_t *pic, float alpha)
 	glTexCoord2f (gl->sl, gl->th);
 	glVertex2f (x, y+pic->height);
 	glEnd ();
-	glColor3f(1,1,1);
-//	glEnable(GL_ALPHA_TEST);
-//	glDisable (GL_BLEND);
 }
 
 
@@ -525,7 +517,7 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 	if (scrap_dirty)
 		Scrap_Upload ();
 	gl = (glpic_t *)pic->data;
-	glColor3f(0.8,0.8,0.8);
+	glColor3f(1,1,1);
 	glBindTexture(GL_TEXTURE_2D, gl->texnum);
 	glBegin (GL_QUADS);
 	glTexCoord2f (gl->sl, gl->tl);
@@ -542,55 +534,26 @@ void Draw_Pic (int x, int y, qpic_t *pic)
 
 /*
 =============
-Draw_TransPic
-=============
-*/
-void Draw_TransPic (int x, int y, qpic_t *pic)
-{
-	if (x < 0 || (unsigned)(x + pic->width) > vid.width || y < 0 || (unsigned)(y + pic->height) > vid.height)
-		Sys_Error ("Draw_TransPic: bad coordinates");
-
-//	glEnable(GL_BLEND);
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glDisable(GL_ALPHA_TEST);
-	Draw_Pic (x, y, pic);
-//	glDisable(GL_BLEND);
-}
-
-
-/*
-=============
-Draw_TransPicTranslate
+Draw_PicTranslate
 
 Only used for the player color selection menu
 =============
 */
-void Draw_TransPicTranslate (int x, int y, qpic_t *pic, byte *translation)
+void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 {
-	int				v, u, c;
-	unsigned		trans[64*64], *dest;
-	byte			*src;
-	int				p;
+	int				i, c;
+	byte			*trans, *src, *dest;
 
 	c = pic->width * pic->height;
+	src = menuplyr_pixels;
+	dest = trans = malloc(c);
+	for (i = 0;i < c;i++)
+		*dest++ = translation[*src++];
 
-	dest = trans;
-	for (v=0 ; v<64 ; v++, dest += 64)
-	{
-		src = &menuplyr_pixels[ ((v*pic->height)>>6) *pic->width];
-		for (u=0 ; u<64 ; u++)
-		{
-			p = src[(u*pic->width)>>6];
-			if (p == 255)
-				dest[u] = p;
-			else
-				dest[u] =  d_8to24table[translation[p]];
-		}
-	}
+	glBindTexture(GL_TEXTURE_2D, GL_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, false, true, 1));
+	free(trans);
 
-	glBindTexture(GL_TEXTURE_2D, GL_LoadTexture ("translatedplayerpic", 64, 64, (void *) trans, false, true, 1));
-
-	glColor3f(0.8,0.8,0.8);
+	glColor3f(1,1,1);
 	glBegin (GL_QUADS);
 	glTexCoord2f (0, 0);
 	glVertex2f (x, y);
@@ -618,7 +581,7 @@ void Draw_ConsoleBackground (int lines)
 	if (lines >= (int) vid.height)
 		Draw_Pic(0, lines - vid.height, conback);
 	else
-		Draw_AlphaPic (0, lines - vid.height, conback, gl_conalpha.value*lines/vid.height);
+		Draw_AlphaPic (0, lines - vid.height, conback, scr_conalpha.value*lines/vid.height);
 	//	Draw_AlphaPic (0, lines - vid.height, conback, (float)(1.2 * lines)/y);
 	// LordHavoc: draw version
 	Draw_String(engineversionx, lines - vid.height + engineversiony, engineversion, 9999);
@@ -745,7 +708,7 @@ void SHOWLMP_drawall()
 	int i;
 	for (i = 0;i < SHOWLMP_MAXLABELS;i++)
 		if (showlmp[i].isactive)
-			Draw_TransPic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic));
+			Draw_Pic(showlmp[i].x, showlmp[i].y, Draw_CachePic(showlmp[i].pic));
 }
 
 void SHOWLMP_clear()

@@ -27,8 +27,7 @@ void Draw_Init (void);
 void Draw_Character (int x, int y, int num);
 void Draw_GenericPic (int texnum, float red, float green, float blue, float alpha, float x, float y, float width, float height);
 void Draw_Pic (int x, int y, qpic_t *pic);
-void Draw_TransPic (int x, int y, qpic_t *pic);
-void Draw_TransPicTranslate (int x, int y, qpic_t *pic, byte *translation);
+void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation);
 void Draw_ConsoleBackground (int lines);
 void Draw_Fill (int x, int y, int w, int h, int c);
 void Draw_String (int x, int y, char *str, int maxlen); // LordHavoc: added maxlen
