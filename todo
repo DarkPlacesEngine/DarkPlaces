@@ -21,7 +21,7 @@
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces: locked console scrollback (sublim3)
 -d darkplaces: make TE_EXPLOSION2 use a spherical spawn pattern rather than cube shape (VorteX)
--d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (metlslime, zinx)
+-d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (-metlslime, zinx)
 -d darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 -d darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (Sajt)
 -d darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
@@ -128,7 +128,6 @@
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 0 darkplaces: make players step down stairs rather than just flying off (Riot) 
 0 darkplaces: make qc profile command post an error message instead of crashing when used during demo playback (Sajt)
-0 darkplaces: make rocket trail have an orange glow
 0 darkplaces: make server able to work without models, just for sake of completeness
 0 darkplaces: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh) 
@@ -608,6 +607,7 @@ d darkplaces: make most QC builtin give warnings instead of errors, so broken mo
 d darkplaces: make notify lines show based on cl.time, not realtime, so they last the proper length when using cl_avidemo (Urre)
 d darkplaces: make r_fullbrights affect model skins, not just map textures
 d darkplaces: make reliable message splitting use a different limit than unreliable message size, to fix NAT routers (yummyluv)
+d darkplaces: make rocket trail have an orange glow
 d darkplaces: make screenshots save to screenshots directory (Sajt)
 d darkplaces: make screenshots save to screenshots/fniggium%04i.tga in GAME_FNIGGIUM (Sajt)
 d darkplaces: make sprite lerping optional (yummyluv)
