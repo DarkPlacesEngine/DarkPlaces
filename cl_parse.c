@@ -113,7 +113,6 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	int 	volume;
 	int 	field_mask;
 	float 	attenuation;
-	int		i;
 
 	field_mask = MSG_ReadByte();
 
