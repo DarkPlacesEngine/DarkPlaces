@@ -346,22 +346,25 @@ Try to load the Zlib DLL
 */
 qboolean PK3_OpenLibrary (void)
 {
-	const char* dllname;
+	const char* dllnames [] =
+	{
+#ifdef WIN32
+		"zlib.dll",
+#elif defined(MACOSX)
+		"libz.dylib",
+#else
+		"libz.so.1",
+		"libz.so",
+#endif
+		NULL
+	};
 
 	// Already loaded?
 	if (zlib_dll)
 		return true;
 
-#ifdef WIN32
-	dllname = "zlib.dll";
-#elif defined(MACOSX)
-	dllname = "libz.dylib";
-#else
-	dllname = "libz.so.1";
-#endif
-
 	// Load the DLL
-	if (! Sys_LoadLibrary (dllname, &zlib_dll, zlibfuncs))
+	if (! Sys_LoadLibrary (dllnames, &zlib_dll, zlibfuncs))
 	{
 		Con_Printf ("Compressed files support disabled\n");
 		return false;
@@ -848,7 +851,7 @@ Sets fs_gamedir, adds the directory to the head of the path,
 then loads and adds pak1.pak pak2.pak ...
 ================
 */
-void FS_AddGameDirectory (char *dir)
+void FS_AddGameDirectory (const char *dir)
 {
 	stringlist_t *list, *current;
 	searchpath_t *search;
@@ -909,31 +912,22 @@ void FS_AddGameDirectory (char *dir)
 
 /*
 ================
-FS_AddHomeAsGameDirectory
-
-Use ~/.games/darkplaces/dir as fs_gamedir
+FS_AddGameHierarchy
 ================
 */
-void FS_AddHomeAsGameDirectory (const char *dir)
+void FS_AddGameHierarchy (const char *dir)
 {
-#ifndef _WIN32
-	char *homedir=getenv("HOME");
-	char gdir[MAX_OSPATH];
-	if(homedir)
-	{
-		int len = snprintf(gdir,sizeof(gdir),"%s/.darkplaces/%s/", homedir, dir);
-		Con_Printf("using %s for writing\n",gdir);
-		FS_CreatePath (gdir);
+	const char *homedir;
 
-		if ((len > 0) && (len < sizeof(gdir)) && (gdir[len-1] == '/'))
-			gdir[len-1] = 0;
+	strlcpy (com_modname, dir, sizeof (com_modname));
 
-		strncpy(fs_gamedir,gdir,sizeof(fs_gamedir)-1);
-		fs_gamedir[sizeof(fs_gamedir)-1] = 0;
-		
-		FS_AddGameDirectory (gdir);
-	}
-#endif
+	// Add the common game directory
+	FS_AddGameDirectory (va("%s/%s", fs_basedir, dir));
+
+	// Add the personal game directory
+	homedir = getenv ("HOME");
+	if (homedir != NULL && homedir[0] != '\0')
+		FS_AddGameDirectory (va("%s/.darkplaces/%s", homedir, dir));
 }
 
 
@@ -1037,18 +1031,14 @@ void FS_Init (void)
 	}
 
 	// start up with GAMENAME by default (id1)
-	strlcpy (com_modname, GAMENAME, sizeof (com_modname));
-	FS_AddGameDirectory (va("%s/"GAMENAME, fs_basedir));
-	FS_AddHomeAsGameDirectory(GAMENAME);
+	FS_AddGameHierarchy (GAMENAME);
 	Cvar_SetQuick (&scr_screenshot_name, gamescreenshotname);
 
 	// add the game-specific path, if any
 	if (gamedirname[0])
 	{
 		fs_modified = true;
-		strlcpy (com_modname, gamedirname, sizeof (com_modname));
-		FS_AddGameDirectory (va("%s/%s", fs_basedir, gamedirname));
-		FS_AddHomeAsGameDirectory(gamedirname);
+		FS_AddGameHierarchy (gamedirname);
 	}
 
 	// -game <gamedir>
@@ -1062,9 +1052,7 @@ void FS_Init (void)
 		{
 			i++;
 			fs_modified = true;
-			strlcpy (com_modname, com_argv[i], sizeof (com_modname));
-			FS_AddGameDirectory (va("%s/%s", fs_basedir, com_argv[i]));
-			FS_AddHomeAsGameDirectory(com_argv[i]);
+			FS_AddGameHierarchy (com_argv[i]);
 			Cvar_SetQuick (&scr_screenshot_name, com_modname);
 		}
 	}
@@ -1200,7 +1188,10 @@ int FS_CheckNastyPath (const char *path)
 		return 1; // non-portable attempt to go to parent directory
 	// all: don't allow going to current directory (./) or parent directory (../ or /../)
 	if (strstr(path, "./"))
-		return 2; // attempt to go to parent directory
+		return 2; // attempt to go outside the game directory
+	// Windows and UNIXes: don't allow absolute paths
+	if (path[0] == '/')
+		return 2; // attempt to go outside the game directory
 	// after all these checks we're pretty sure it's a / separated filename
 	// and won't do much if any harm
 	return false;
