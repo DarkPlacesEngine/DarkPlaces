@@ -460,23 +460,42 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	if ((int) ent->v->solid == SOLID_BSP || movetype == MOVE_HITMODEL)
 	{
 		i = ent->v->modelindex;
+		// if the modelindex is 0, it shouldn't be SOLID_BSP!
+		if (i == 0)
+		{
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with no model\n", NUM_FOR_EDICT(ent));
+			memset(&trace, 0, sizeof(trace));
+			return trace;
+		}
 		if ((unsigned int) i >= MAX_MODELS)
-			Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
+		{
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
+			memset(&trace, 0, sizeof(trace));
+			return trace;
+		}
 		model = sv.models[i];
 		if (i != 0 && model == NULL)
-			Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
+		{
+			Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with invalid modelindex\n", NUM_FOR_EDICT(ent));
+			memset(&trace, 0, sizeof(trace));
+			return trace;
+		}
 
 		Mod_CheckLoaded(model);
 		if ((int) ent->v->solid == SOLID_BSP)
 		{
 			if (!model->TraceBox)
 			{
-				Con_Printf("SV_ClipMoveToEntity: SOLID_BSP with a non-collidable model, entity dump:\n");
-				ED_Print(ent);
-				Host_Error("SV_ClipMoveToEntity: SOLID_BSP with a non-collidable model\n");
+				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP with a non-collidable model\n", NUM_FOR_EDICT(ent));
+				memset(&trace, 0, sizeof(trace));
+				return trace;
 			}
 			if (ent->v->movetype != MOVETYPE_PUSH)
-				Host_Error("SV_ClipMoveToEntity: SOLID_BSP without MOVETYPE_PUSH");
+			{
+				Con_Printf("SV_ClipMoveToEntity: edict %i: SOLID_BSP without MOVETYPE_PUSH\n", NUM_FOR_EDICT(ent));
+				memset(&trace, 0, sizeof(trace));
+				return trace;
+			}
 		}
 		Matrix4x4_CreateFromQuakeEntity(&matrix, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], ent->v->angles[0], ent->v->angles[1], ent->v->angles[2], 1);
 	}
@@ -586,16 +605,17 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 		if (trace.startsolid)
 		{
 			clip->trace.startsolid = true;
-			if (clip->trace.fraction == 1)
+			if (clip->trace.realfraction == 1)
 				clip->trace.ent = touch;
 		}
 		if (trace.inopen)
 			clip->trace.inopen = true;
 		if (trace.inwater)
 			clip->trace.inwater = true;
-		if (trace.fraction < clip->trace.fraction)
+		if (trace.realfraction < clip->trace.realfraction)
 		{
 			clip->trace.fraction = trace.fraction;
+			clip->trace.realfraction = trace.realfraction;
 			VectorCopy(trace.endpos, clip->trace.endpos);
 			clip->trace.plane = trace.plane;
 			clip->trace.ent = touch;

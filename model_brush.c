@@ -36,7 +36,8 @@ cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t mod_q3bsp_curves_subdivide_level = {0, "mod_q3bsp_curves_subdivide_level", "2"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
-cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "0"};
+cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
+cvar_t mod_q3bsp_debugtracebrush = {0, "mod_q3bsp_debugtracebrush", "0"};
 
 static void Mod_Q1BSP_Collision_Init (void);
 void Mod_BrushInit(void)
@@ -50,6 +51,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_curves_subdivide_level);
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
+	Cvar_RegisterVariable(&mod_q3bsp_debugtracebrush);
 	memset(mod_q1bsp_novis, 0xff, sizeof(mod_q1bsp_novis));
 	Mod_Q1BSP_Collision_Init();
 }
@@ -516,12 +518,15 @@ loc0:
 		VectorCopy (plane->normal, t->trace->plane.normal);
 	}
 
-	// bias away from surface a bit
-	t1 = DotProduct(t->trace->plane.normal, t->start) - (t->trace->plane.dist + DIST_EPSILON);
-	t2 = DotProduct(t->trace->plane.normal, t->end) - (t->trace->plane.dist + DIST_EPSILON);
-
+	// calculate the true fraction
+	t1 = DotProduct(t->trace->plane.normal, t->start) - t->trace->plane.dist;
+	t2 = DotProduct(t->trace->plane.normal, t->end) - t->trace->plane.dist;
 	midf = t1 / (t1 - t2);
-	t->trace->fraction = bound(0.0f, midf, 1.0);
+	t->trace->realfraction = bound(0, midf, 1);
+
+	// calculate the return fraction which is nudged off the surface a bit
+	midf = (t1 - DIST_EPSILON) / (t1 - t2);
+	t->trace->fraction = bound(0, midf, 1);
 
 #if COLLISIONPARANOID >= 3
 	Con_Printf("D");
@@ -564,6 +569,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	rhc.trace = trace;
 	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
+	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	VectorSubtract(boxstartmaxs, boxstartmins, boxsize);
 	if (boxsize[0] < 3)
@@ -668,6 +674,7 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	memset(trace, 0, sizeof(trace_t));
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	trace->fraction = 1;
+	trace->realfraction = 1;
 	Collision_TraceLineBrushFloat(trace, start, end, &cbox, &cbox);
 #else
 	RecursiveHullCheckTraceInfo_t rhc;
@@ -692,12 +699,13 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	rhc.trace = trace;
 	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
 	rhc.trace->fraction = 1;
+	rhc.trace->realfraction = 1;
 	rhc.trace->allsolid = true;
 	VectorCopy(start, rhc.start);
 	VectorCopy(end, rhc.end);
 	VectorSubtract(rhc.end, rhc.start, rhc.dist);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
-	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
+	//VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
 	if (rhc.trace->startsupercontents)
 		rhc.trace->startsupercontents = boxsupercontents;
 #endif
@@ -851,11 +859,12 @@ void Mod_Q1BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientcolor, v
 static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *out, qbyte *outend)
 {
 	int c;
+	qbyte *outstart = out;
 	while (out < outend)
 	{
 		if (in == inend)
 		{
-			Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\"\n", loadmodel->name);
+			Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
 			return;
 		}
 		c = *in++;
@@ -865,14 +874,14 @@ static void Mod_Q1BSP_DecompressVis(const qbyte *in, const qbyte *inend, qbyte *
 		{
 			if (in == inend)
 			{
-				Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun on model \"%s\"\n", loadmodel->name);
+				Con_DPrintf("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
 				return;
 			}
 			for (c = *in++;c > 0;c--)
 			{
 				if (out == outend)
 				{
-					Con_DPrintf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\"\n", loadmodel->name);
+					Con_DPrintf("Mod_Q1BSP_DecompressVis: output overrun on model \"%s\" (decompressed %i of %i output bytes)\n", loadmodel->name, out - outstart, outend - outstart);
 					return;
 				}
 				*out++ = 0;
@@ -1970,7 +1979,8 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 	loadmodel->brushq1.leafs = out;
 	loadmodel->brushq1.numleafs = count;
-	pvschainbytes = ((loadmodel->brushq1.numleafs - 1)+7)>>3;
+	// get visleafs from the submodel data
+	pvschainbytes = (loadmodel->brushq1.submodels[0].visleafs+7)>>3;
 	loadmodel->brushq1.data_decompressedpvs = pvs = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numleafs * pvschainbytes);
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -2732,7 +2742,7 @@ static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 	}
 	// FIXME: code!
 	// if this is a leaf, accumulate the pvs bits
-	if (node->contents != CONTENTS_SOLID && ((mleaf_t *)node)->pvsdata)
+	if (/*node->contents != CONTENTS_SOLID && */((mleaf_t *)node)->pvsdata)
 		for (i = 0;i < pvsbytes;i++)
 			pvsbuffer[i] |= ((mleaf_t *)node)->pvsdata[i];
 }
@@ -2743,6 +2753,11 @@ static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 {
 	int bytes = ((model->brushq1.numleafs - 1) + 7) >> 3;
 	bytes = min(bytes, pvsbufferlength);
+	if (r_novis.integer)
+	{
+		memset(pvsbuffer, 0xFF, bytes);
+		return bytes;
+	}
 	memset(pvsbuffer, 0, bytes);
 	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brushq1.nodes);
 	return bytes;
@@ -2862,10 +2877,11 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_LoadFaces(&header->lumps[LUMP_FACES]);
 	Mod_Q1BSP_LoadMarksurfaces(&header->lumps[LUMP_MARKSURFACES]);
 	Mod_Q1BSP_LoadVisibility(&header->lumps[LUMP_VISIBILITY]);
+	// load submodels before leafs because they contain the number of vis leafs
+	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS]);
 	Mod_Q1BSP_LoadLeafs(&header->lumps[LUMP_LEAFS]);
 	Mod_Q1BSP_LoadNodes(&header->lumps[LUMP_NODES]);
 	Mod_Q1BSP_LoadClipnodes(&header->lumps[LUMP_CLIPNODES]);
-	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS]);
 
 	if (mod->brushq1.data_compressedpvs)
 		Mem_Free(mod->brushq1.data_compressedpvs);
@@ -2874,9 +2890,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 	Mod_Q1BSP_MakeHull0();
 	Mod_Q1BSP_MakePortals();
-
-	if (developer.integer)
-		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->brushq1.numsurfaces, loadmodel->brushq1.numnodes, loadmodel->brushq1.numleafs, loadmodel->brushq1.numleafs - 1, loadmodel->brushq1.numportals);
 
 	mod->numframes = 2;		// regular and alternate animation
 
@@ -2983,6 +2996,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 	loadmodel = originalloadmodel;
 	//Mod_Q1BSP_ProcessLightList();
+
+	if (developer.integer)
+		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->brushq1.numsurfaces, loadmodel->brushq1.numnodes, loadmodel->brushq1.numleafs, loadmodel->brushq1.visleafs, loadmodel->brushq1.numportals);
 }
 
 static void Mod_Q2BSP_LoadEntities(lump_t *l)
@@ -4308,15 +4324,15 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
-		out->isnode = false;
 		out->parent = NULL;
+		out->plane = NULL;
 		out->clusterindex = LittleLong(in->clusterindex);
 		out->areaindex = LittleLong(in->areaindex);
 		for (j = 0;j < 3;j++)
 		{
 			// yes the mins/maxs are ints
-			out->mins[j] = LittleLong(in->mins[j]);
-			out->maxs[j] = LittleLong(in->maxs[j]);
+			out->mins[j] = LittleLong(in->mins[j]) - 1;
+			out->maxs[j] = LittleLong(in->maxs[j]) + 1;
 		}
 		n = LittleLong(in->firstleafface);
 		c = LittleLong(in->numleaffaces);
@@ -4338,7 +4354,7 @@ static void Mod_Q3BSP_LoadNodes_RecursiveSetParent(q3mnode_t *node, q3mnode_t *p
 	if (node->parent)
 		Host_Error("Mod_Q3BSP_LoadNodes_RecursiveSetParent: runaway recursion\n");
 	node->parent = parent;
-	if (node->isnode)
+	if (node->plane)
 	{
 		Mod_Q3BSP_LoadNodes_RecursiveSetParent(node->children[0], node);
 		Mod_Q3BSP_LoadNodes_RecursiveSetParent(node->children[1], node);
@@ -4362,7 +4378,6 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
-		out->isnode = true;
 		out->parent = NULL;
 		n = LittleLong(in->planeindex);
 		if (n < 0 || n >= loadmodel->brushq3.num_planes)
@@ -4388,8 +4403,8 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 		for (j = 0;j < 3;j++)
 		{
 			// yes the mins/maxs are ints
-			out->mins[j] = LittleLong(in->mins[j]);
-			out->maxs[j] = LittleLong(in->maxs[j]);
+			out->mins[j] = LittleLong(in->mins[j]) - 1;
+			out->maxs[j] = LittleLong(in->maxs[j]) + 1;
 		}
 	}
 
@@ -4526,72 +4541,105 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	//Con_Printf("result: ambient %f %f %f diffuse %f %f %f diffusenormal %f %f %f\n", ambientcolor[0], ambientcolor[1], ambientcolor[2], diffusecolor[0], diffusecolor[1], diffusecolor[2], diffusenormal[0], diffusenormal[1], diffusenormal[2]);
 }
 
-static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe)
+static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t point, int markframe)
 {
-	int i, startside, endside;
-	float dist1, dist2, midfrac, mid[3], segmentmins[3], segmentmaxs[3];
+	int i;
 	q3mleaf_t *leaf;
-	q3mface_t *face;
 	colbrushf_t *brush;
-	if (startfrac >= trace->fraction)
-		return;
-	// note: all line fragments past first impact fraction are ignored
-	while (node->isnode)
-	{
-		// recurse down node sides
-		dist1 = PlaneDiff(start, node->plane);
-		dist2 = PlaneDiff(end, node->plane);
-		startside = dist1 < 0;
-		endside = dist2 < 0;
-		if (startside == endside)
-		{
-			// most of the time the line fragment is on one side of the plane
-			node = node->children[startside];
-		}
-		else
-		{
-			// line crosses node plane, split the line
-			midfrac = dist1 / (dist1 - dist2);
-			VectorLerp(linestart, midfrac, lineend, mid);
-			// take the near side first
-			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe);
-			if (midfrac < trace->fraction)
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe);
-			return;
-		}
-	}
-	// hit a leaf
-	segmentmins[0] = min(start[0], end[0]);
-	segmentmins[1] = min(start[1], end[1]);
-	segmentmins[2] = min(start[2], end[2]);
-	segmentmaxs[0] = max(start[0], end[0]);
-	segmentmaxs[1] = max(start[1], end[1]);
-	segmentmaxs[2] = max(start[2], end[2]);
+	// find which leaf the point is in
+	while (node->plane)
+		node = node->children[DotProduct(point, node->plane->normal) < node->plane->dist];
+	// point trace the brushes
 	leaf = (q3mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
-		if (startfrac >= trace->fraction)
-			return;
 		brush = leaf->firstleafbrush[i]->colbrushf;
-		if (brush && brush->markframe != markframe)
+		if (brush && brush->markframe != markframe && BoxesOverlap(point, point, brush->mins, brush->maxs))
 		{
 			brush->markframe = markframe;
-			if (BoxesOverlap(segmentmins, segmentmaxs, brush->mins, brush->maxs))
-				Collision_TraceLineBrushFloat(trace, linestart, lineend, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			Collision_TracePointBrushFloat(trace, point, leaf->firstleafbrush[i]->colbrushf);
 		}
 	}
-	if (mod_q3bsp_curves_collisions.integer)
+	// can't do point traces on curves (they have no thickness)
+}
+
+static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
+{
+	int i, startside, endside;
+	float dist1, dist2, midfrac, mid[3], nodesegmentmins[3], nodesegmentmaxs[3];
+	q3mleaf_t *leaf;
+	q3mface_t *face;
+	colbrushf_t *brush;
+	if (startfrac > trace->realfraction)
+		return;
+	// note: all line fragments past first impact fraction are ignored
+	if (VectorCompare(start, end))
 	{
+		// find which leaf the point is in
+		while (node->plane)
+			node = node->children[DotProduct(start, node->plane->normal) < node->plane->dist];
+	}
+	else
+	{
+		// find which nodes the line is in and recurse for them
+		while (node->plane)
+		{
+			// recurse down node sides
+			dist1 = PlaneDiff(start, node->plane);
+			dist2 = PlaneDiff(end, node->plane);
+			startside = dist1 < 0;
+			endside = dist2 < 0;
+			if (startside == endside)
+			{
+				// most of the time the line fragment is on one side of the plane
+				node = node->children[startside];
+			}
+			else
+			{
+				// line crosses node plane, split the line
+				midfrac = dist1 / (dist1 - dist2);
+				VectorLerp(start, midfrac, end, mid);
+				// take the near side first
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+				if (midfrac <= trace->realfraction)
+					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+				return;
+			}
+		}
+	}
+	// hit a leaf
+	nodesegmentmins[0] = min(start[0], end[0]);
+	nodesegmentmins[1] = min(start[1], end[1]);
+	nodesegmentmins[2] = min(start[2], end[2]);
+	nodesegmentmaxs[0] = max(start[0], end[0]);
+	nodesegmentmaxs[1] = max(start[1], end[1]);
+	nodesegmentmaxs[2] = max(start[2], end[2]);
+	// line trace the brushes
+	leaf = (q3mleaf_t *)node;
+	for (i = 0;i < leaf->numleafbrushes;i++)
+	{
+		brush = leaf->firstleafbrush[i]->colbrushf;
+		if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
+		{
+			brush->markframe = markframe;
+			Collision_TraceLineBrushFloat(trace, linestart, lineend, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
+			if (startfrac > trace->realfraction)
+				return;
+		}
+	}
+	// can't do point traces on curves (they have no thickness)
+	if (mod_q3bsp_curves_collisions.integer && !VectorCompare(start, end))
+	{
+		// line trace the curves
 		for (i = 0;i < leaf->numleaffaces;i++)
 		{
-			if (startfrac >= trace->fraction)
-				return;
 			face = leaf->firstleafface[i];
-			if (face->collisions && face->collisionmarkframe != markframe)
+			if (face->collisions && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
 				face->collisionmarkframe = markframe;
-				if (BoxesOverlap(segmentmins, segmentmaxs, face->mins, face->maxs))
-					Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				Collision_TraceLineTriangleMeshFloat(trace, linestart, lineend, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				if (startfrac > trace->realfraction)
+					return;
 			}
 		}
 	}
@@ -4604,78 +4652,295 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 	q3mleaf_t *leaf;
 	colbrushf_t *brush;
 	q3mface_t *face;
-	nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
-	nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
-	nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
-	nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
-	nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
-	nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
-	if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
-		return;
-	if (node->isnode)
-	{
-		// recurse down node sides
-		sides = BoxOnPlaneSide(segmentmins, segmentmaxs, node->plane);
-		if (sides == 3)
+	/*
+		// find which nodes the line is in and recurse for them
+		while (node->plane)
 		{
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
+			// recurse down node sides
+			int startside, endside;
+			float dist1near, dist1far, dist2near, dist2far;
+			BoxPlaneCornerDistances(thisbrush_start->mins, thisbrush_start->maxs, node->plane, &dist1near, &dist1far);
+			BoxPlaneCornerDistances(thisbrush_end->mins, thisbrush_end->maxs, node->plane, &dist2near, &dist2far);
+			startside = dist1near < 0;
+			startside = dist1near < 0 ? (dist1far < 0 ? 1 : 2) : (dist1far < 0 ? 2 : 0);
+			endside = dist2near < 0 ? (dist2far < 0 ? 1 : 2) : (dist2far < 0 ? 2 : 0);
+			if (startside == 2 || endside == 2)
+			{
+				// brushes cross plane
+				// do not clip anything, just take both sides
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+				node = node->children[1];
+				continue;
+			}
+			if (startside == 0)
+			{
+				if (endside == 0)
+				{
+					node = node->children[0];
+					continue;
+				}
+				else
+				{
+					//midf0 = dist1near / (dist1near - dist2near);
+					//midf1 = dist1far / (dist1far - dist2far);
+					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+					node = node->children[1];
+					continue;
+				}
+			}
+			else
+			{
+				if (endside == 0)
+				{
+					//midf0 = dist1near / (dist1near - dist2near);
+					//midf1 = dist1far / (dist1far - dist2far);
+					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+					node = node->children[1];
+					continue;
+				}
+				else
+				{
+					node = node->children[1];
+					continue;
+				}
+			}
+
+			if (dist1near <  0 && dist2near <  0 && dist1far <  0 && dist2far <  0){node = node->children[1];continue;}
+			if (dist1near <  0 && dist2near <  0 && dist1far <  0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near <  0 && dist2near <  0 && dist1far >= 0 && dist2far <  0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near <  0 && dist2near <  0 && dist1far >= 0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near <  0 && dist2near >= 0 && dist1far <  0 && dist2far <  0){node = node->children[1];continue;}
+			if (dist1near <  0 && dist2near >= 0 && dist1far <  0 && dist2far >= 0){}
+			if (dist1near <  0 && dist2near >= 0 && dist1far >= 0 && dist2far <  0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near <  0 && dist2near >= 0 && dist1far >= 0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near >= 0 && dist2near <  0 && dist1far <  0 && dist2far <  0){node = node->children[1];continue;}
+			if (dist1near >= 0 && dist2near <  0 && dist1far <  0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near >= 0 && dist2near <  0 && dist1far >= 0 && dist2far <  0){}
+			if (dist1near >= 0 && dist2near <  0 && dist1far >= 0 && dist2far >= 0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near >= 0 && dist2near >= 0 && dist1far <  0 && dist2far <  0){Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);node = node->children[1];continue;}
+			if (dist1near >= 0 && dist2near >= 0 && dist1far <  0 && dist2far >= 0){node = node->children[0];continue;}
+			if (dist1near >= 0 && dist2near >= 0 && dist1far >= 0 && dist2far <  0){node = node->children[0];continue;}
+			if (dist1near >= 0 && dist2near >= 0 && dist1far >= 0 && dist2far >= 0){node = node->children[0];continue;}
+			{             
+				if (dist2near < 0) // d1n<0 && d2n<0
+				{
+					if (dist2near < 0) // d1n<0 && d2n<0
+					{
+						if (dist2near < 0) // d1n<0 && d2n<0
+						{
+						}
+						else // d1n<0 && d2n>0
+						{
+						}
+					}
+					else // d1n<0 && d2n>0
+					{
+						if (dist2near < 0) // d1n<0 && d2n<0
+						{
+						}
+						else // d1n<0 && d2n>0
+						{
+						}
+					}
+				}
+				else // d1n<0 && d2n>0
+				{
+				}
+			}
+			else // d1n>0
+			{
+				if (dist2near < 0) // d1n>0 && d2n<0
+				{
+				}
+				else // d1n>0 && d2n>0
+				{
+				}
+			}
+			if (dist1near < 0 == dist1far < 0 == dist2near < 0 == dist2far < 0)
+			{
+				node = node->children[startside];
+				continue;
+			}
+			if (dist1near < dist2near)
+			{
+				// out
+				if (dist1near >= 0)
+				{
+					node = node->children[0];
+					continue;
+				}
+				if (dist2far < 0)
+				{
+					node = node->children[1];
+					continue;
+				}
+				// dist1near < 0 && dist2far >= 0
+			}
+			else
+			{
+				// in
+			}
+			startside = dist1near < 0 ? (dist1far < 0 ? 1 : 2) : (dist1far < 0 ? 2 : 0);
+			endside = dist2near < 0 ? (dist2far < 0 ? 1 : 2) : (dist2far < 0 ? 2 : 0);
+			if (startside == 2 || endside == 2)
+			{
+				// brushes cross plane
+				// do not clip anything, just take both sides
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+				node = node->children[1];
+			}
+			else if (startside == endside)
+				node = node->children[startside];
+			else if (startside == 0) // endside = 1 (start infront, end behind)
+			{
+			}
+			else // startside == 1 endside = 0 (start behind, end infront)
+			{
+			}
+			== endside)
+			{
+				if (startside < 2)
+					node = node->children[startside];
+				else
+				{
+					// start and end brush cross plane
+				}
+			}
+			else
+			{
+			}
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+				node = node->children[1];
+			else if (dist1near < 0 && dist1far < 0 && dist2near >= 0 && dist2far >= 0)
+			else if (dist1near >= 0 && dist1far >= 0 && dist2near < 0 && dist2far < 0)
+			else if (dist1near >= 0 && dist1far >= 0 && dist2near >= 0 && dist2far >= 0)
+				node = node->children[0];
+			else
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+			{
+			}
+			else if (dist1near >= 0 && dist1far >= 0)
+			{
+			}
+			else // mixed (lying on plane)
+			{
+			}
+			{
+				if (dist2near < 0 && dist2far < 0)
+				{
+				}
+				else
+					node = node->children[1];
+			}
+			if (dist1near < 0 && dist1far < 0 && dist2near < 0 && dist2far < 0)
+				node = node->children[0];
+			else if (dist1near >= 0 && dist1far >= 0 && dist2near >= 0 && dist2far >= 0)
+				node = node->children[1];
+			else
+			{
+				// both sides
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+				node = node->children[1];
+			}
+			sides = dist1near || dist1near < 0 | dist1far < 0 | dist2near < 0 | dist
+			startside = dist1 < 0;
+			endside = dist2 < 0;
+			if (startside == endside)
+			{
+				// most of the time the line fragment is on one side of the plane
+				node = node->children[startside];
+			}
+			else
+			{
+				// line crosses node plane, split the line
+				midfrac = dist1 / (dist1 - dist2);
+				VectorLerp(start, midfrac, end, mid);
+				// take the near side first
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+				if (midfrac <= trace->fraction)
+					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+				return;
+			}
 		}
-		else if (sides == 2)
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-		else // sides == 1
+	*/
+	// FIXME: could be made faster by copying TraceLine code and making it use
+	// box plane distances...  (variant on the BoxOnPlaneSide code)
+	for (;;)
+	{
+		nodesegmentmins[0] = max(segmentmins[0], node->mins[0]);
+		nodesegmentmins[1] = max(segmentmins[1], node->mins[1]);
+		nodesegmentmins[2] = max(segmentmins[2], node->mins[2]);
+		nodesegmentmaxs[0] = min(segmentmaxs[0], node->maxs[0]);
+		nodesegmentmaxs[1] = min(segmentmaxs[1], node->maxs[1]);
+		nodesegmentmaxs[2] = min(segmentmaxs[2], node->maxs[2]);
+		if (nodesegmentmins[0] > nodesegmentmaxs[0] || nodesegmentmins[1] > nodesegmentmaxs[1] || nodesegmentmins[2] > nodesegmentmaxs[2])
+			return;
+		if (!node->plane)
+			break;
+		if (mod_q3bsp_debugtracebrush.integer == 2)
+		{
 			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
-		/*
-		dist = node->plane->dist - (1.0f / 8.0f);
-		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
+			node = node->children[1];
+		}
+		else if (mod_q3bsp_debugtracebrush.integer == 1)
 		{
-			if (DotProduct(ps->v, node->plane->normal) >= dist || DotProduct(pe->v, node->plane->normal) >= dist)
+			// recurse down node sides
+			sides = BoxOnPlaneSide(segmentmins, segmentmaxs, node->plane);
+			if (sides == 3)
 			{
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
-				break;
+				// segment box crosses plane
+				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+				node = node->children[1];
+			}
+			else
+			{
+				// take whichever side the segment box is on
+				node = node->children[sides - 1];
 			}
 		}
-		*/
-		/*
-		dist = node->plane->dist + (1.0f / 8.0f);
-		for (i = 0, ps = thisbrush_start->points, pe = thisbrush_end->points;i < thisbrush_start->numpoints;i++, ps++, pe++)
+		else
 		{
-			if (DotProduct(ps->v, node->plane->normal) <= dist || DotProduct(pe->v, node->plane->normal) <= dist)
+			// recurse down node sides
+			sides = BoxOnPlaneSide(segmentmins, segmentmaxs, node->plane);
+			if (sides == 3)
 			{
-				Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[1], thisbrush_start, thisbrush_end, markframe, nodesegmentmins, nodesegmentmaxs);
-				break;
+				// segment box crosses plane
+				// now check start and end brush boxes to handle a lot of 'diagonal' cases more efficiently...
+				sides = BoxOnPlaneSide(thisbrush_start->mins, thisbrush_start->maxs, node->plane) | BoxOnPlaneSide(thisbrush_end->mins, thisbrush_end->maxs, node->plane);
+				if (sides == 3)
+				{
+					Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+					sides = 2;
+				}
 			}
+			// take whichever side the segment box is on
+			node = node->children[sides - 1];
 		}
-		*/
-		/*
-		sides = BoxOnPlaneSide(boxstartmins, boxstartmaxs, node->plane) | BoxOnPlaneSide(boxendmins, boxendmaxs, node->plane);
-		if (sides & 1)
-			Mod_Q3BSP_TraceBox_RecursiveBSPNode(trace, node->children[0], boxstartmins, boxstartmaxs, boxendmins, boxendmaxs);
-		if (sides & 2)
-			Mod_Q3BSP_TraceBox_RecursiveBSPNode(trace, node->children[1], boxstartmins, boxstartmaxs, boxendmins, boxendmaxs);
-		*/
 	}
-	else
+	// hit a leaf
+	leaf = (q3mleaf_t *)node;
+	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
-		// hit a leaf
-		leaf = (q3mleaf_t *)node;
-		for (i = 0;i < leaf->numleafbrushes;i++)
+		brush = leaf->firstleafbrush[i]->colbrushf;
+		if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
 		{
-			brush = leaf->firstleafbrush[i]->colbrushf;
-			if (brush && brush->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, brush->mins, brush->maxs))
-			{
-				brush->markframe = markframe;
-				Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
-			}
+			brush->markframe = markframe;
+			Collision_TraceBrushBrushFloat(trace, thisbrush_start, thisbrush_end, leaf->firstleafbrush[i]->colbrushf, leaf->firstleafbrush[i]->colbrushf);
 		}
-		if (mod_q3bsp_curves_collisions.integer)
+	}
+	if (mod_q3bsp_curves_collisions.integer)
+	{
+		for (i = 0;i < leaf->numleaffaces;i++)
 		{
-			for (i = 0;i < leaf->numleaffaces;i++)
+			face = leaf->firstleafface[i];
+			if (face->collisions && face->markframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
-				face = leaf->firstleafface[i];
-				// note: this can not be optimized with a face->collisionmarkframe because each triangle of the face would need to be marked as done individually (because each one is bbox culled individually), and if all are marked, then the face could be marked as done
-				if (face->collisions && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
-					Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+				face->markframe = markframe;
+				Collision_TraceBrushTriangleMeshFloat(trace, thisbrush_start, thisbrush_end, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
 			}
 		}
 	}
@@ -4691,6 +4956,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	q3mface_t *face;
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;
+	trace->realfraction = 1;
 	trace->hitsupercontentsmask = hitsupercontentsmask;
 	Matrix4x4_CreateIdentity(&startmatrix);
 	Matrix4x4_CreateIdentity(&endmatrix);
@@ -4702,24 +4968,39 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	segmentmaxs[2] = max(boxstartmaxs[2], boxendmaxs[2]);
 	if (mod_q3bsp_optimizedtraceline.integer && VectorCompare(boxstartmins, boxstartmaxs) && VectorCompare(boxendmins, boxendmaxs))
 	{
-		// line trace
-		if (model->brushq3.submodel)
+		if (VectorCompare(boxstartmins, boxendmins))
 		{
-			for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
-				if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
-					Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
-			if (mod_q3bsp_curves_collisions.integer)
+			// point trace
+			if (model->brushq3.submodel)
 			{
-				for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
-				{
-					face = model->brushq3.data_thismodel->firstface + i;
-					if (face->collisions)
-						Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
-				}
+				for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
+					if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
+						Collision_TracePointBrushFloat(trace, boxstartmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
 			}
+			else
+				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, ++markframe);
 		}
 		else
-			Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe);
+		{
+			// line trace
+			if (model->brushq3.submodel)
+			{
+				for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
+					if (model->brushq3.data_thismodel->firstbrush[i].colbrushf)
+						Collision_TraceLineBrushFloat(trace, boxstartmins, boxendmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+				if (mod_q3bsp_curves_collisions.integer)
+				{
+					for (i = 0;i < model->brushq3.data_thismodel->numfaces;i++)
+					{
+						face = model->brushq3.data_thismodel->firstface + i;
+						if (face->collisions)
+							Collision_TraceLineTriangleMeshFloat(trace, boxstartmins, boxendmins, face->num_triangles, face->data_element3i, face->data_vertex3f, face->texture->supercontents, segmentmins, segmentmaxs);
+					}
+				}
+			}
+			else
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe, segmentmins, segmentmaxs);
+		}
 	}
 	else
 	{
@@ -4749,32 +5030,24 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 
 static int Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(const model_t *model, const q3mnode_t *node, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
-	int clusterindex;
-loc0:
-	if (!node->isnode)
+	int clusterindex, side;
+	while (node->plane)
 	{
-		// leaf
-		clusterindex = ((q3mleaf_t *)node)->clusterindex;
-		return pvs[clusterindex >> 3] & (1 << (clusterindex & 7));
+		// node - recurse down the BSP tree
+		side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+		if (side < 2)
+			node = node->children[side];
+		else
+		{
+			// recurse for one child and loop for the other
+			if (Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, node->children[0], pvs, mins, maxs))
+				return true;
+			node = node->children[1];
+		}
 	}
-
-	// node - recurse down the BSP tree
-	switch (BoxOnPlaneSide(mins, maxs, node->plane))
-	{
-	case 1: // front
-		node = node->children[0];
-		goto loc0;
-	case 2: // back
-		node = node->children[1];
-		goto loc0;
-	default: // crossing
-		if (Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, node->children[0], pvs, mins, maxs))
-			return true;
-		node = node->children[1];
-		goto loc0;
-	}
-	// never reached
-	return false;
+	// leaf
+	clusterindex = ((q3mleaf_t *)node)->clusterindex;
+	return pvs[clusterindex >> 3] & (1 << (clusterindex & 7));
 }
 
 static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
@@ -4789,7 +5062,7 @@ static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
 	q3mnode_t *node;
 	Mod_CheckLoaded(model);
 	node = model->brushq3.data_nodes;
-	while (node->isnode)
+	while (node->plane)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 	if (((q3mleaf_t *)node)->clusterindex >= 0)
 		return model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
@@ -4803,7 +5076,7 @@ static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 	float d;
 	qbyte *pvs;
 
-	while (node->isnode)
+	while (node->plane)
 	{
 		d = PlaneDiff(org, node->plane);
 		if (d > radius)
@@ -4824,6 +5097,8 @@ static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 		for (i = 0;i < pvsbytes;i++)
 			pvsbuffer[i] |= pvs[i];
 	}
+	else
+		memset(pvsbuffer, 0xFF, pvsbytes);
 	return;
 }
 
@@ -4833,6 +5108,11 @@ static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 {
 	int bytes = model->brushq3.num_pvschainlength;
 	bytes = min(bytes, pvsbufferlength);
+	if (r_novis.integer)
+	{
+		memset(pvsbuffer, 0xFF, bytes);
+		return bytes;
+	}
 	memset(pvsbuffer, 0, bytes);
 	Mod_Q3BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brushq3.data_nodes);
 	return bytes;
