@@ -142,6 +142,7 @@ char *ENGINE_EXTENSIONS =
 "NEH_CMD_PLAY2 "
 "NEH_RESTOREGAME "
 "TW_SV_STEPCONTROL "
+"DP_QC_FS_SEARCH " // Black: same as in the menu qc
 ;
 
 qboolean checkextension(char *name)
@@ -3042,6 +3043,159 @@ void PF_setattachment (void)
 }
 
 
+/////////////////////////////////////////
+// DP_QC_FS_SEARCH extension
+
+// qc fs search handling
+#define MAX_SEARCHES 128
+
+fssearch_t *pr_fssearchlist[MAX_SEARCHES];
+
+void PR_Search_Init(void)
+{
+	memset(pr_fssearchlist,0,sizeof(pr_fssearchlist));
+}
+
+void PR_Search_Reset(void)
+{
+	int i;
+	// reset the fssearch list
+	for(i = 0; i < MAX_SEARCHES; i++)
+		if(pr_fssearchlist[i])
+			FS_FreeSearch(pr_fssearchlist[i]);
+	memset(pr_fssearchlist,0,sizeof(pr_fssearchlist));
+}
+
+/*
+=========
+PF_search_begin
+
+float search_begin(string pattern, float caseinsensitive, float quiet)
+=========
+*/
+void PF_search_begin(void)
+{
+	int handle;
+	char *pattern;
+	int caseinsens, quiet;
+
+	pattern = G_STRING(OFS_PARM0);
+
+	PR_CheckEmptyString(pattern);
+
+	caseinsens = G_FLOAT(OFS_PARM1);
+	quiet = G_FLOAT(OFS_PARM2);
+	
+	for(handle = 0; handle < MAX_SEARCHES; handle++)
+		if(!pr_fssearchlist[handle])
+			break;
+
+	if(handle >= MAX_SEARCHES)
+	{
+		Con_Printf("PR_search_begin: ran out of search handles (%i)\n", MAX_SEARCHES);
+		G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+
+	if(!(pr_fssearchlist[handle] = FS_Search(pattern,caseinsens, quiet)))
+		G_FLOAT(OFS_RETURN) = -1;
+	else
+		G_FLOAT(OFS_RETURN) = handle;
+}
+
+/*
+=========
+VM_search_end
+
+void	search_end(float handle)
+=========
+*/
+void PF_search_end(void)
+{
+	int handle;
+
+	handle = G_FLOAT(OFS_PARM0);
+	
+	if(handle < 0 || handle >= MAX_SEARCHES)
+	{
+		Con_Printf("PF_search_end: invalid handle %i\n", handle);
+		return;
+	}
+	if(pr_fssearchlist[handle] == NULL)
+	{
+		Con_Printf("PF_search_end: no such handle %i\n", handle);
+		return;
+	}
+
+	FS_FreeSearch(pr_fssearchlist[handle]);
+	pr_fssearchlist[handle] = NULL;
+}
+
+/*
+=========
+VM_search_getsize
+
+float	search_getsize(float handle)
+=========
+*/
+void PF_search_getsize(void)
+{
+	int handle;
+
+	handle = G_FLOAT(OFS_PARM0);
+
+	if(handle < 0 || handle >= MAX_SEARCHES)
+	{
+		Con_Printf("PF_search_getsize: invalid handle %i\n", handle);
+		return;
+	}
+	if(pr_fssearchlist[handle] == NULL)
+	{
+		Con_Printf("PF_search_getsize: no such handle %i\n", handle);
+		return;
+	}
+	
+	G_FLOAT(OFS_RETURN) = pr_fssearchlist[handle]->numfilenames;
+}
+
+/*
+=========
+VM_search_getfilename
+
+string	search_getfilename(float handle, float num)
+=========
+*/
+void PF_search_getfilename(void)
+{
+	int handle, filenum;
+	char *tmp;
+
+	handle = G_FLOAT(OFS_PARM0);
+	filenum = G_FLOAT(OFS_PARM1);
+
+	if(handle < 0 || handle >= MAX_SEARCHES)
+	{
+		Con_Printf("PF_search_getfilename: invalid handle %i\n", handle);
+		return;
+	}
+	if(pr_fssearchlist[handle] == NULL)
+	{
+		Con_Printf("PF_search_getfilename: no such handle %i\n", handle);
+		return;
+	}
+	if(filenum < 0 || filenum >= pr_fssearchlist[handle]->numfilenames)
+	{
+		Con_Printf("PF_search_getfilename: invalid filenum %i\n", filenum);
+		return;
+	}
+	
+	tmp = PR_GetTempString();
+	strcpy(tmp, pr_fssearchlist[handle]->filenames[filenum]);
+
+	G_INT(OFS_RETURN) = PR_SetString(tmp);
+}
+
+
 builtin_t pr_builtin[] =
 {
 NULL,						// #0
@@ -3212,10 +3366,10 @@ PF_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_P
 PF_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_setattachment,			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
-NULL,						// #444
-NULL,						// #445
-NULL,						// #446
-NULL,						// #447
+PF_search_begin,			// #444
+PF_search_end,				// #445
+PF_search_getsize,			// #446
+PF_search_getfilename,		// #447
 NULL,						// #448
 NULL,						// #449
 a a a a a					// #450-499 (LordHavoc)
@@ -3228,11 +3382,13 @@ void PR_Cmd_Init(void)
 {
 	pr_strings_mempool = Mem_AllocPool("pr_stringszone");
 	PR_Files_Init();
+	PR_Search_Init();
 }
 
 void PR_Cmd_Reset(void)
 {
 	Mem_EmptyPool(pr_strings_mempool);
+	PR_Search_Reset();
 	PR_Files_CloseAll();
 }
 

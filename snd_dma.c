@@ -42,7 +42,8 @@ int total_channels;
 
 int snd_blocked = 0;
 static qboolean snd_ambient = 1;
-qboolean snd_initialized = false;
+//qboolean snd_initialized = false;
+cvar_t snd_initialized = { CVAR_READONLY, "snd_initialized", "0"};
 
 // pointer should go away
 volatile dma_t *shm = 0;
@@ -144,7 +145,7 @@ void S_LoadSounds(void)
 
 void S_Startup(void)
 {
-	if (!snd_initialized)
+	if (!snd_initialized.integer)
 		return;
 
 	shm = &sn;
@@ -236,6 +237,7 @@ void S_Init(void)
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&snd_precache);
+	Cvar_RegisterVariable(&snd_initialized);
 	Cvar_RegisterVariable(&bgmbuffer);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);
@@ -244,7 +246,7 @@ void S_Init(void)
 	Cvar_RegisterVariable(&_snd_mixahead);
 	Cvar_RegisterVariable(&snd_swapstereo); // LordHavoc: for people with backwards sound wiring
 
-	snd_initialized = true;
+	Cvar_SetValueQuick(&snd_initialized, true);
 
 	known_sfx = Mem_Alloc(snd_mempool, MAX_SFX*sizeof(sfx_t));
 	num_sfx = 0;
@@ -273,7 +275,7 @@ sfx_t *S_GetCached (const char *name)
 {
 	int i;
 
-	if (!snd_initialized)
+	if (!snd_initialized.integer)
 		return NULL;
 
 	if (!name)
@@ -300,7 +302,7 @@ sfx_t *S_FindName (char *name)
 	int i;
 	sfx_t *sfx;
 
-	if (!snd_initialized)
+	if (!snd_initialized.integer)
 		return NULL;
 
 	if (!name)
@@ -345,7 +347,7 @@ sfx_t *S_PrecacheSound (char *name, int complain)
 {
 	sfx_t *sfx;
 
-	if (!snd_initialized)
+	if (!snd_initialized.integer)
 		return NULL;
 
 	sfx = S_FindName(name);
@@ -724,7 +726,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 	channel_t	*ch;
 	channel_t	*combine;
 
-	if (!snd_initialized || (snd_blocked > 0))
+	if (!snd_initialized.integer || (snd_blocked > 0))
 		return;
 
 	VectorCopy(origin, listener_vieworigin);
@@ -969,7 +971,7 @@ void S_LocalSound (char *sound)
 {
 	sfx_t	*sfx;
 
-	if (!snd_initialized || nosound.integer)
+	if (!snd_initialized.integer || nosound.integer)
 		return;
 
 	sfx = S_PrecacheSound (sound, true);

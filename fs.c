@@ -2066,7 +2066,7 @@ void FS_Ls_f(void)
 	char pattern[MAX_OSPATH];
 	if (Cmd_Argc() > 3)
 	{
-		Con_Printf("usage:\ndir [path/pattern]\n");
+		Con_Printf("usage:\nls [path/pattern]\n");
 		return;
 	}
 	if (Cmd_Argc() == 2)

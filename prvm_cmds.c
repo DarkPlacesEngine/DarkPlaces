@@ -1,7 +1,7 @@
 // AK
 // Basically every vm builtin cmd should be in here.
-// All 3 builtin list and extension lists can be found here
-// cause large (I think they will) are from pr_cmds the same copyright like in pr_cms
+// All 3 builtin and extension lists can be found here
+// cause large (I think they will) parts are from pr_cmds the same copyright like in pr_cmds
 // also applies here
 
 
@@ -90,6 +90,11 @@ const string	str_cvar (string)
 		crash()
 		stackdump()
 		
+float	search_begin(string pattern, float caseinsensitive, float quiet)
+void	search_end(float handle)
+float	search_getsize(float handle)
+string	search_getfilename(float handle, float num)
+		
 perhaps only : Menu : WriteMsg 
 ===============================
 
@@ -130,6 +135,8 @@ float	getmousetarget(void)
 		writetofile(float fhandle, entity ent)
 float	isfunction(string function_name)
 vector	getresolution(float number)
+string	keynumtostring(float keynum)
+
 */
 
 #include "quakedef.h"
@@ -178,6 +185,13 @@ int vm_currentqc_cvar;
 #define VM_FILES ((qfile_t**)(vm_files + PRVM_GetProgNr() * MAX_VMFILES))
 
 qfile_t *vm_files[MAX_PRVMFILES];
+
+// qc fs search handling
+#define MAX_VMSEARCHES 128
+#define TOTAL_VMSEARCHES MAX_VMSEARCHES * PRVM_MAXPROGS
+#define VM_SEARCHLIST ((fssearch_t**)(vm_fssearchlist + PRVM_GetProgNr() * MAX_VMSEARCHES))
+
+fssearch_t *vm_fssearchlist[TOTAL_VMSEARCHES];
 
 static char *VM_GetTempString(void)
 {
@@ -2268,6 +2282,155 @@ void VM_modulo(void)
 	PRVM_G_FLOAT(OFS_RETURN) = (float) (val % m);
 }
 
+void VM_Search_Init(void)
+{
+	memset(VM_SEARCHLIST,0,sizeof(fssearch_t*[MAX_VMSEARCHES]));
+}
+
+void VM_Search_Reset(void)
+{
+	int i;
+	// reset the fssearch list
+	for(i = 0; i < MAX_VMSEARCHES; i++)
+		if(VM_SEARCHLIST[i])
+			FS_FreeSearch(VM_SEARCHLIST[i]);
+	memset(VM_SEARCHLIST,0,sizeof(fssearch_t*[MAX_VMSEARCHES]));
+}
+
+/*
+=========
+VM_search_begin
+
+float search_begin(string pattern, float caseinsensitive, float quiet)
+=========
+*/
+void VM_search_begin(void)
+{
+	int handle;
+	char *pattern;
+	int caseinsens, quiet;
+
+	VM_SAFEPARMCOUNT(3, VM_search_begin);
+
+	pattern = PRVM_G_STRING(OFS_PARM0);
+
+	VM_CheckEmptyString(pattern);
+
+	caseinsens = PRVM_G_FLOAT(OFS_PARM1);
+	quiet = PRVM_G_FLOAT(OFS_PARM2);
+	
+	for(handle = 0; handle < MAX_VMSEARCHES; handle++)
+		if(!VM_SEARCHLIST[handle])
+			break;
+
+	if(handle >= MAX_VMSEARCHES)
+	{
+		Con_Printf("VM_search_begin: %s ran out of search handles (%i)\n", PRVM_NAME, MAX_VMSEARCHES);
+		PRVM_G_FLOAT(OFS_RETURN) = -2;
+		return;
+	}
+
+	if(!(VM_SEARCHLIST[handle] = FS_Search(pattern,caseinsens, quiet)))
+		PRVM_G_FLOAT(OFS_RETURN) = -1;
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = handle;
+}
+
+/*
+=========
+VM_search_end
+
+void	search_end(float handle)
+=========
+*/
+void VM_search_end(void)
+{
+	int handle;
+	VM_SAFEPARMCOUNT(1, VM_search_end);
+
+	handle = PRVM_G_FLOAT(OFS_PARM0);
+	
+	if(handle < 0 || handle >= MAX_VMSEARCHES)
+	{
+		Con_Printf("VM_search_end: invalid handle %i used in %s\n", handle, PRVM_NAME);
+		return;
+	}
+	if(VM_SEARCHLIST[handle] == NULL)
+	{
+		Con_Printf("VM_search_end: no such handle %i in %s\n", handle, PRVM_NAME);
+		return;
+	}
+
+	FS_FreeSearch(VM_SEARCHLIST[handle]);
+	VM_SEARCHLIST[handle] = NULL;
+}
+
+/*
+=========
+VM_search_getsize
+
+float	search_getsize(float handle)
+=========
+*/
+void VM_search_getsize(void)
+{
+	int handle;
+	VM_SAFEPARMCOUNT(1, VM_M_search_getsize);
+
+	handle = PRVM_G_FLOAT(OFS_PARM0);
+
+	if(handle < 0 || handle >= MAX_VMSEARCHES)
+	{
+		Con_Printf("VM_search_getsize: invalid handle %i used in %s\n", handle, PRVM_NAME);
+		return;
+	}
+	if(VM_SEARCHLIST[handle] == NULL)
+	{
+		Con_Printf("VM_search_getsize: no such handle %i in %s\n", handle, PRVM_NAME);
+		return;
+	}
+	
+	PRVM_G_FLOAT(OFS_RETURN) = VM_SEARCHLIST[handle]->numfilenames;
+}
+
+/*
+=========
+VM_search_getfilename
+
+string	search_getfilename(float handle, float num)
+=========
+*/
+void VM_search_getfilename(void)
+{
+	int handle, filenum;
+	char *tmp;
+	VM_SAFEPARMCOUNT(2, VM_search_getfilename);
+
+	handle = PRVM_G_FLOAT(OFS_PARM0);
+	filenum = PRVM_G_FLOAT(OFS_PARM1);
+
+	if(handle < 0 || handle >= MAX_VMSEARCHES)
+	{
+		Con_Printf("VM_search_getfilename: invalid handle %i used in %s\n", handle, PRVM_NAME);
+		return;
+	}
+	if(VM_SEARCHLIST[handle] == NULL)
+	{
+		Con_Printf("VM_search_getfilename: no such handle %i in %s\n", handle, PRVM_NAME);
+		return;
+	}
+	if(filenum < 0 || filenum >= VM_SEARCHLIST[handle]->numfilenames)
+	{
+		Con_Printf("VM_search_getfilename: invalid filenum %i in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	
+	tmp = VM_GetTempString();
+	strcpy(tmp, VM_SEARCHLIST[handle]->filenames[filenum]);
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tmp);
+}
+
 //=============================================================================
 // Draw builtins (client & menu)
 
@@ -2584,13 +2747,15 @@ void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
 	VM_STRINGS_MEMPOOL = Mem_AllocPool(va("vm_stringsmempool[%s]",PRVM_NAME));
-	VM_Files_Init();		
+	VM_Files_Init();
+	VM_Search_Init();
 }
 
 void VM_Cmd_Reset(void)
 {
 	//Mem_EmptyPool(VM_STRINGS_MEMPOOL);
 	Mem_FreePool(&VM_STRINGS_MEMPOOL);
+	VM_Search_Reset();
 	VM_Files_CloseAll();
 }
 
@@ -2874,6 +3039,28 @@ void VM_M_getresolution(void)
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;	
 }
 
+/*
+=========
+VM_M_keynumtostring
+
+string keynumtostring(float keynum)
+=========
+*/
+void VM_M_keynumtostring(void)
+{
+	int keynum;
+	char *tmp;
+	VM_SAFEPARMCOUNT(1, VM_M_keynumtostring);
+
+	keynum = PRVM_G_FLOAT(OFS_PARM0);
+
+	tmp = VM_GetTempString();
+	
+	strcpy(tmp, Key_KeynumToString(keynum));
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tmp);
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -2950,7 +3137,11 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_str_cvar,	
 	VM_crash,
 	VM_stackdump,	// 73
-	0,0,0,0,0,0,0,// 80
+	VM_search_begin,
+	VM_search_end,
+	VM_search_getsize,
+	VM_search_getfilename, // 77
+	0,0,0,// 80
 	e10,			// 90
 	e10,			// 100
 	e100,			// 200
@@ -2995,7 +3186,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_callfunction,
 	VM_M_writetofile,
 	VM_M_isfunction,
-	VM_M_getresolution // 608
+	VM_M_getresolution,
+	VM_M_keynumtostring // 609
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
@@ -3010,4 +3202,3 @@ void VM_M_Cmd_Reset(void)
 	//VM_Cmd_Init();
 	VM_Cmd_Reset();
 }
-
