@@ -93,43 +93,49 @@ static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p,
 		memset(out, 0, outsize);
 }
 
-
-static int Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(const model_t *model, const mnode_t *node, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
+static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
-	int leafnum;
-loc0:
-	if (node->contents < 0)
+	int clusterindex, side, nodestackindex = 0;
+	mnode_t *node, *nodestack[1024];
+	node = model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode;
+	for (;;)
 	{
-		// leaf
-		if (node->contents == CONTENTS_SOLID)
-			return false;
-		leafnum = (mleaf_t *)node - model->brushq1.leafs - 1;
-		return pvs[leafnum >> 3] & (1 << (leafnum & 7));
-	}
-
-	// node - recurse down the BSP tree
-	switch (BoxOnPlaneSide(mins, maxs, node->plane))
-	{
-	case 1: // front
-		node = node->children[0];
-		goto loc0;
-	case 2: // back
-		node = node->children[1];
-		goto loc0;
-	default: // crossing
-		if (node->children[0]->contents != CONTENTS_SOLID)
-			if (Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(model, node->children[0], pvs, mins, maxs))
+		if (node->plane)
+		{
+			// node - recurse down the BSP tree
+			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			if (side < 2)
+			{
+				// box is on one side of plane, take that path
+				node = node->children[side];
+			}
+			else
+			{
+				// box crosses plane, take one path and remember the other
+				nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+			}
+		}
+		else
+		{
+			// leaf - check cluster bit
+			clusterindex = (mleaf_t *)node - model->brushq1.leafs - 1;
+			if (clusterindex >= 0 && pvs[clusterindex >> 3] & (1 << (clusterindex & 7)))
+			{
+				// it is visible, return immediately with the news
 				return true;
-		node = node->children[1];
-		goto loc0;
+			}
+			else
+			{
+				// nothing to see here, try another path we didn't take earlier
+				if (nodestackindex == 0)
+					break;
+				node = nodestack[--nodestackindex];
+			}
+		}
 	}
-	// never reached
+	// it is not visible
 	return false;
-}
-
-int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
-{
-	return Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(model, model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode, pvs, mins, maxs);
 }
 
 /*
@@ -5032,7 +5038,9 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	int clusterindex, side, nodestackindex = 0;
 	q3mnode_t *node, *nodestack[1024];
 	node = model->brushq3.data_nodes;
-	for(;;)
+	if (!loadmodel->brushq3.num_pvsclusters)
+		return true;
+	for (;;)
 	{
 		if (node->plane)
 		{
@@ -5054,7 +5062,14 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 		{
 			// leaf - check cluster bit
 			clusterindex = ((q3mleaf_t *)node)->clusterindex;
-			if (pvs[clusterindex >> 3] & (1 << (clusterindex & 7)))
+#if 0
+			if (clusterindex >= loadmodel->brushq3.num_pvsclusters)
+			{
+				Con_Printf("%i >= %i\n", clusterindex, loadmodel->brushq3.num_pvsclusters);
+				return true;
+			}
+#endif
+			if (clusterindex < 0 || (pvs[clusterindex >> 3] & (1 << (clusterindex & 7))))
 			{
 				// it is visible, return immediately with the news
 				return true;
@@ -5125,7 +5140,7 @@ static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 {
 	int bytes = model->brushq3.num_pvschainlength;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer)
+	if (r_novis.integer || !loadmodel->brushq3.num_pvsclusters)
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
