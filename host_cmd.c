@@ -400,7 +400,7 @@ void Host_Reconnect_f (void)
 	}
 	if (!cls.signon)
 	{
-		Con_Print("reconnect: no signon, ignoring reconnect\n");
+		//Con_Print("reconnect: no signon, ignoring reconnect\n");
 		return;
 	}
 	SCR_BeginLoadingPlaque();
