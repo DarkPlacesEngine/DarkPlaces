@@ -459,7 +459,7 @@ void CL_ParseServerInfo (void)
 
 	cl_num_entities = 1;
 
-	R_NewMap ();
+	R_Modules_NewMap ();
 	CL_CGVM_Start();
 
 	// noclip is turned off at start

@@ -272,16 +272,6 @@ float R_FarClip_Finish(void)
 	return r_farclip_meshfarclip - r_farclip_directiondist;
 }
 
-/*
-===============
-R_NewMap
-===============
-*/
-void R_NewMap (void)
-{
-	R_Modules_NewMap();
-}
-
 extern void R_Textures_Init(void);
 extern void Mod_RenderInit(void);
 extern void GL_Draw_Init(void);
