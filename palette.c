@@ -14,8 +14,8 @@ cvar_t v_hwgamma = {0, "v_hwgamma", "1"};
 
 void Palette_Setup8to24(void)
 {
+	int i;
 	qbyte *in, *out;
-	unsigned short i;
 
 	in = host_basepal;
 	out = (qbyte *) d_8to24table; // d_8to24table is accessed as 32bit for speed reasons, but is created as 8bit bytes
