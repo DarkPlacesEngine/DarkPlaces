@@ -832,11 +832,11 @@ void Host_Frame (float time)
 
 	time1 = Sys_DoubleTime ();
 	_Host_Frame (time);
-	time2 = Sys_DoubleTime ();	
-	
+	time2 = Sys_DoubleTime ();
+
 	timetotal += time2 - time1;
 	timecount++;
-	
+
 	if (timecount < 1000)
 		return;
 
@@ -916,8 +916,8 @@ void Host_Init (void)
 	Cbuf_Execute ();
 
 	host_initialized = true;
-	
-	Con_Printf ("========Quake Initialized=========\n");	
+
+	Con_Printf ("========Quake Initialized=========\n");
 
 	if (cls.state != ca_dedicated)
 		VID_Open();
@@ -935,15 +935,15 @@ to run quit through here before the final handoff to the sys code.
 void Host_Shutdown(void)
 {
 	static qboolean isdown = false;
-	
+
 	if (isdown)
 	{
-		printf ("recursive shutdown\n");
+		Con_Printf ("recursive shutdown\n");
 		return;
 	}
 	isdown = true;
 
-	Host_WriteConfiguration (); 
+	Host_WriteConfiguration ();
 
 	CDAudio_Shutdown ();
 	NET_Shutdown ();

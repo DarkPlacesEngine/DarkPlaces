@@ -458,7 +458,7 @@ void CL_ReadPointFile_f (void)
 	char	*pointfile = NULL, *pointfilepos, *t, tchar;
 #if WORKINGLQUAKE
 	char	name[MAX_OSPATH];
-	
+
 	sprintf (name,"maps/%s.pts", cl.worldmodel->name);
 	COM_FOpenFile (name, &f);
 	if (f)
@@ -1328,7 +1328,7 @@ void CL_MoveParticles (void)
 				}
 				break;
 			default:
-				printf("unknown particle type %i\n", p->type);
+				Con_Printf("unknown particle type %i\n", p->type);
 				p->die = -1;
 				break;
 			}

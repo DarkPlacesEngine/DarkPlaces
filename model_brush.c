@@ -2400,7 +2400,7 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 		nodeportalwinding = ClipWinding (nodeportalwinding, &clipplane, true);
 		if (!nodeportalwinding)
 		{
-			printf ("Mod_RecursiveNodePortals: WARNING: new portal was clipped away\n");
+			Con_Printf ("Mod_RecursiveNodePortals: WARNING: new portal was clipped away\n");
 			break;
 		}
 	}
