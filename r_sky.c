@@ -441,7 +441,7 @@ void R_Sky(void)
 
 void R_ResetSkyBox(void)
 {
-	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
+	R_UnloadSkyBox();
 	skyname[0] = 0;
 	R_LoadSkyBox();
 }
@@ -469,7 +469,7 @@ void R_Sky_Init(void)
 	Cvar_RegisterVariable (&r_sky);
 	Cvar_RegisterVariable (&r_skyscroll1);
 	Cvar_RegisterVariable (&r_skyscroll2);
-	skyboxside[0] = skyboxside[1] = skyboxside[2] = skyboxside[3] = skyboxside[4] = skyboxside[5] = NULL;
+	memset(&skyboxside, 0, sizeof(skyboxside));
 	skyname[0] = 0;
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
 }
