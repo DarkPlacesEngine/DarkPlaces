@@ -57,6 +57,8 @@ static gl_extensionfunctionlist_t wglfuncs[] =
 	{"wglDeleteContext", (void **) &qwglDeleteContext},
 	{"wglGetProcAddress", (void **) &qwglGetProcAddress},
 	{"wglMakeCurrent", (void **) &qwglMakeCurrent},
+	{"wglGetCurrentContext", (void **) &qwglGetCurrentContext},
+	{"wglGetCurrentDC", (void **) &qwglGetCurrentDC},
 	{NULL, NULL}
 };
 
@@ -107,7 +109,6 @@ static vmode_t badmode;
 static DEVMODE gdevmode;
 static qboolean vid_initialized = false;
 static qboolean windowed, leavecurrentmode;
-static qboolean vid_canalttab = false;
 static qboolean vid_wassuspended = false;
 static int vid_usingmouse;
 extern qboolean mouseactive;  // from in_win.c
@@ -413,23 +414,18 @@ void VID_Shutdown (void)
 {
 	HGLRC hRC;
 	HDC hDC;
-	int i;
-	GLuint temp[8192];
 
 	if (vid_initialized)
 	{
-		vid_canalttab = false;
-		hRC = qwglGetCurrentContext();
-		hDC = qwglGetCurrentDC();
+		if (qwglGetCurrentContext)
+			hRC = qwglGetCurrentContext();
+		if (qwglGetCurrentDC)
+			hDC = qwglGetCurrentDC();
 
-		qwglMakeCurrent(NULL, NULL);
+		if (qwglMakeCurrent)
+			qwglMakeCurrent(NULL, NULL);
 
-		// LordHavoc: free textures before closing (may help NVIDIA)
-		for (i = 0;i < 8192;i++)
-			temp[i] = i+1;
-		qglDeleteTextures(8192, temp);
-
-		if (hRC)
+		if (hRC && qwglDeleteContext)
 			qwglDeleteContext(hRC);
 
 		// close the library before we get rid of the window
@@ -589,7 +585,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	{
 		if (modestate == MS_FULLDIB)
 		{
-			if (vid_canalttab && vid_wassuspended)
+			if (vid_wassuspended)
 			{
 				vid_wassuspended = false;
 				ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN);
@@ -608,7 +604,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 		vid_usingmouse = false;
 		IN_DeactivateMouse ();
 		IN_ShowMouse ();
-		if (modestate == MS_FULLDIB && vid_canalttab)
+		if (modestate == MS_FULLDIB)
 		{
 			ChangeDisplaySettings (NULL, 0);
 			vid_wassuspended = true;
@@ -1314,6 +1310,9 @@ void VID_Init (int fullscreen, int width, int height, int bpp)
 	if (!qwglMakeCurrent( maindc, baseRC ))
 		Sys_Error ("wglMakeCurrent failed");
 
+	qglGetString = GL_GetProcAddress("glGetString");
+	if (qglGetString == NULL)
+		Sys_Error ("glGetString does not exist");
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
 	gl_version = qglGetString(GL_VERSION);
@@ -1343,7 +1342,6 @@ void VID_Init (int fullscreen, int width, int height, int bpp)
 	vid_menukeyfn = VID_MenuKey;
 
 	strcpy (badmode.modedesc, "Bad mode");
-	vid_canalttab = true;
 
 	vid_hidden = false;
 }
