@@ -354,9 +354,9 @@ const char *builtinshader_light_frag =
 "#endif\n"
 "\n"
 "#ifdef USEOFFSETMAPPING\n"
-"	vec2 OffsetVector = normalize(EyeVector).xy * vec2(-1, 1);\n"
+"	// this is 3 sample because of ATI Radeon 9500-9800/X300 limits\n"
+"	vec2 OffsetVector = normalize(EyeVector).xy * vec2(-0.333, 0.333);\n"
 "	vec2 TexCoordOffset = TexCoord + OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
-"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
 "#define TexCoord TexCoordOffset\n"
@@ -1661,9 +1661,8 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		}
 		if (perm & SHADERPERMUTATION_OFFSETMAPPING)
 		{
-			// these are * 0.25 because the offsetmapping shader does the process 4 times
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value * 0.25);CHECKGLERROR
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value * 0.25);CHECKGLERROR
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value);CHECKGLERROR
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value);CHECKGLERROR
 		}
 		CHECKGLERROR
 		GL_LockArrays(0, numverts);
