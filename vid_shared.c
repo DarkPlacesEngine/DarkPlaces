@@ -56,7 +56,7 @@ cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "16"};
 cvar_t vid_stencil = {CVAR_SAVE, "vid_stencil", "0"};
 
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
-cvar_t gl_combine = {0, "gl_combine", "1"};
+cvar_t gl_combine = {CVAR_SAVE, "gl_combine", "1"};
 
 cvar_t in_pitch_min = {0, "in_pitch_min", "-70"};
 cvar_t in_pitch_max = {0, "in_pitch_max", "80"};
@@ -77,7 +77,7 @@ cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1"};
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1"};
 cvar_t v_overbrightbits = {CVAR_SAVE, "v_overbrightbits", "0"};
-cvar_t v_hwgamma = {0, "v_hwgamma", "1"};
+cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1"};
 
 // brand of graphics chip
 const char *gl_vendor;
