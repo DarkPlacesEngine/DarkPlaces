@@ -76,6 +76,10 @@ No 8bit texture uploads (fixes 'green' walls in the distance).
 Fixed view blends (glquake was quite broken).
 
 Client features:
+showtime cvar.
+showdate cvar.
+-benchmark option to run automated timedemo benchmarks (-benchmark demo1 does +timedemo demo1 and quits immediately when finished)
+automatic timedemo logging to gamedir/benchmark.log
 Slightly improved aiming on quake servers (does not support proquake aiming).
 -sndspeed samplerate (default: 44100, quake used 11025)
 snd_swapstereo cvar (for people with backwards SB16 sound cards)
