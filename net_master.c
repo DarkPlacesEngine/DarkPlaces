@@ -31,9 +31,8 @@ cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master2", ""},
 	{CVAR_SAVE, "sv_master3", ""},
 	{CVAR_SAVE, "sv_master4", ""},
-	{0, "sv_masterextra1", "rick.cube-sol.net"},
-	{0, "sv_masterextra2", "198.88.152.4"},
-	{0, "sv_masterextra3", "68.102.242.12"}
+	{0, "sv_masterextra1", "198.88.152.4"},
+	{0, "sv_masterextra2", "68.102.242.12"}
 };
 
 static double nextheartbeattime = 0;
