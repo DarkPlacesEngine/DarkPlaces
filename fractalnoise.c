@@ -32,7 +32,7 @@ void fractalnoise(qbyte *noise, int size, int startgrid)
 		g = g2 >> 1;
 		if (g)
 		{
-			// subdivide, diamond-square algorythm (really this has little to do with squares)
+			// subdivide, diamond-square algorithm (really this has little to do with squares)
 			// diamond
 			for (y = 0;y < size;y += g2)
 				for (x = 0;x < size;x += g2)
@@ -94,7 +94,7 @@ void fractalnoisequick(qbyte *noise, int size, int startgrid)
 		g = g2 >> 1;
 		if (g)
 		{
-			// subdivide, diamond-square algorythm (really this has little to do with squares)
+			// subdivide, diamond-square algorithm (really this has little to do with squares)
 			// diamond
 			for (y = 0;y < size;y += g2)
 				for (x = 0;x < size;x += g2)
