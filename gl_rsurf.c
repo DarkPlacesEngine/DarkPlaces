@@ -1654,7 +1654,7 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 
 static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 {
-	int c, leafstackpos, *mark, *surfacevisframes, bitnum;
+	int c, leafstackpos, *mark, *surfacevisframes;
 #if WORLDNODECULLBACKFACES
 	int n;
 	msurface_t *surf;
@@ -1718,8 +1718,7 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 				{
 					leaf->worldnodeframe = r_framecount;
 					// FIXME: R_CullBox is absolute, should be done relative
-					bitnum = (leaf - ent->model->brushq1.leafs) - 1;
-					if ((r_pvsbits[bitnum >> 3] & (1 << (bitnum & 7))) && !R_CullBox(leaf->mins, leaf->maxs))
+					if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 						leafstack[leafstackpos++] = leaf;
 				}
 			}
@@ -1744,11 +1743,10 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 		if (viewleaf)
 		{
 			surfacepvsframes = model->brushq1.surfacepvsframes;
-			for (j = 0;j < model->brushq1.visleafs;j++)
+			for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
 			{
-				if (r_pvsbits[j >> 3] & (1 << (j & 7)))
+				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex))
 				{
-					leaf = model->brushq1.leafs + j + 1;
 					leaf->pvsframe = model->brushq1.pvsframecount;
 					leaf->pvschain = model->brushq1.pvsleafchain;
 					model->brushq1.pvsleafchain = leaf;
@@ -1784,7 +1782,7 @@ void R_DrawWorld(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	if (!ent->model->brushq1.numleafs)
+	if (!ent->model->brushq1.num_leafs)
 	{
 		if (ent->model->DrawSky)
 			ent->model->DrawSky(ent);
@@ -2263,7 +2261,7 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 		node = node->children[1];
 	}
 	leaf = (q3mleaf_t *)node;
-	if (pvs[leaf->clusterindex >> 3] & (1 << (leaf->clusterindex & 7)))
+	if (CHECKPVSBIT(pvs, leaf->clusterindex))
 	{
 		c_leafs++;
 		for (i = 0;i < leaf->numleaffaces;i++)
@@ -2281,7 +2279,7 @@ void R_Q3BSP_MarkLeafPVS(entity_render_t *ent, qbyte *pvs, int markframe)
 	q3mleaf_t *leaf;
 	for (j = 0, leaf = ent->model->brushq3.data_leafs;j < ent->model->brushq3.num_leafs;j++, leaf++)
 	{
-		if (pvs[leaf->clusterindex >> 3] & (1 << (leaf->clusterindex & 7)))
+		if (CHECKPVSBIT(pvs, leaf->clusterindex))
 		{
 			c_leafs++;
 			for (i = 0;i < leaf->numleaffaces;i++)

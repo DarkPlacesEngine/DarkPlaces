@@ -34,6 +34,7 @@
 -n darkplaces: segfault reading memory in windows when starting a new server from menu (yummyluv)
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
+0 darkplaces: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
 0 darkplaces: fix q3bsp fogging (Sajt)
 0 darkplaces: add fov to menu
 d darkplaces: fov limit now 1-170, was 10-170

@@ -192,10 +192,10 @@ typedef struct model_brushq1_s
 	mplane_t		*planes;
 
 	// number of actual leafs (including 0 which is solid)
-	int				numleafs;
+	int				num_leafs;
 	// visible leafs, not counting 0 (solid)
-	int				visleafs;
-	mleaf_t			*leafs;
+	int				num_visleafs;
+	mleaf_t			*data_leafs;
 
 	int				numvertexes;
 	mvertex_t		*vertexes;
@@ -232,7 +232,9 @@ typedef struct model_brushq1_s
 
 	int				num_compressedpvs;
 	qbyte			*data_compressedpvs;
-	qbyte			*data_decompressedpvs;
+	int num_pvsclusters;
+	int num_pvsclusterbytes;
+	unsigned char *data_pvsclusters;
 
 	int				num_lightdata;
 	qbyte			*lightdata;
@@ -517,10 +519,10 @@ typedef struct model_brushq3_s
 
 	// pvs
 	int num_pvsclusters;
-	int num_pvschainlength;
-	unsigned char *data_pvschains;
+	int num_pvsclusterbytes;
+	unsigned char *data_pvsclusters;
 	// example
-	//pvschain = model->brushq3.data_pvschains + mycluster * model->brushq3.num_pvschainlength;
+	//pvschain = model->brushq3.data_pvsclusters + mycluster * model->brushq3.num_pvsclusterbytes;
 	//if (pvschain[thatcluster >> 3] & (1 << (thatcluster & 7)))
 }
 model_brushq3_t;

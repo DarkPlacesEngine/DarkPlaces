@@ -275,9 +275,8 @@ typedef struct mleaf_s
 	// used by polygon-through-portals visibility checker
 	int portalmarkid;
 
-	// decompressed pvs bits (potentially visible set)
-	// note: never NULL, always present, may be full of 0xFF though
-	qbyte *pvsdata;
+	// -1 is not in pvs, >= 0 is pvs bit number
+	int clusterindex;
 
 	int *firstmarksurface;
 	int nummarksurfaces;
@@ -766,6 +765,9 @@ typedef struct
 	// pvschains[mycluster * chainlength + (thatcluster >> 3)] & (1 << (thatcluster & 7))
 }
 q3dpvs_t;
+
+#define CHECKPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : false)
+#define SETPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : false)
 
 #endif
 

@@ -224,8 +224,8 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdli
 
 	// check if leaf is visible according to pvs
 	leaf = (mleaf_t *)node;
-	i = (leaf - ent->model->brushq1.leafs) - 1;
-	if (leaf->nummarksurfaces && (i >= pvsbits || pvs[i >> 3] & (1 << (i & 7))))
+	i = leaf->clusterindex;
+	if (leaf->nummarksurfaces && (i >= pvsbits || CHECKPVSBIT(pvs, i)))
 	{
 		int *surfacepvsframes, d, impacts, impactt;
 		float sdist, maxdist, dist2, impact[3];
@@ -285,7 +285,7 @@ void R_MarkLights(entity_render_t *ent)
 	int i, bit, bitindex;
 	rdlight_t *rd;
 	vec3_t lightorigin;
-	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brushq1.numleafs)
+	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brushq1.num_leafs)
 	{
 		for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
 		{
@@ -295,7 +295,7 @@ void R_MarkLights(entity_render_t *ent)
 			lightpvsbytes = 0;
 			if (r_vismarklights.integer && ent->model->brush.FatPVS)
 				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
-			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brushq1.visleafs));
+			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brushq1.num_pvsclusters));
 		}
 	}
 }

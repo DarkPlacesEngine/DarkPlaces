@@ -402,7 +402,7 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	}
 
 	if (info->leafmark)
-		info->leafmark[leaf - info->model->brushq1.leafs] = true;
+		info->leafmark[leaf - info->model->brushq1.data_leafs] = true;
 
 	// mark surfaces in leaf that can be seen through portal
 	if (leaf->nummarksurfaces && info->surfacemark)

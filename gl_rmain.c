@@ -559,7 +559,12 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 		{
 			if (d_lightstylevalue[wl->style] <= 0)
 				continue;
-			if (VIS_CullBox(wl->mins, wl->maxs))
+			if (R_CullBox(wl->mins, wl->maxs))
+				continue;
+			for (i = 0;i < wl->numclusters;i++)
+				if (CHECKPVSBIT(r_pvsbits, wl->clusterindices[i]))
+					break;
+			if (i == wl->numclusters)
 				continue;
 			if (r_shadow_debuglight.integer >= 0 && lnum != r_shadow_debuglight.integer)
 				continue;
