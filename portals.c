@@ -193,7 +193,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	portal_markid++;
 
 	Mod_CheckLoaded(model);
-	Portal_PolygonRecursiveMarkLeafs(model->brushq1.nodes, polypoints, numpoints);
+	Portal_PolygonRecursiveMarkLeafs(model->brush.data_nodes, polypoints, numpoints);
 
 	eyeleaf = model->brushq1.PointInLeaf(model, eye);
 
@@ -402,7 +402,7 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 	}
 
 	if (info->leafmark)
-		info->leafmark[leaf - info->model->brushq1.data_leafs] = true;
+		info->leafmark[leaf - info->model->brush.data_leafs] = true;
 
 	// mark surfaces in leaf that can be seen through portal
 	if (leaf->numleaffaces && info->surfacemark)
@@ -490,7 +490,7 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 
 	Mod_CheckLoaded(model);
 
-	if (!model->brushq1.numportals)
+	if (!model->brush.num_portals)
 	{
 		Con_Print("Portal_Visibility: not a brush model\n");
 		return;
@@ -517,7 +517,7 @@ void Portal_Visibility(model_t *model, const vec3_t eye, qbyte *leafmark, qbyte 
 	info.updateleafsmins = updateleafsmins;
 	info.updateleafsmaxs = updateleafsmaxs;
 
-	Portal_RecursiveFindLeafForFlow(&info, model->brushq1.nodes);
+	Portal_RecursiveFindLeafForFlow(&info, model->brush.data_nodes);
 
 	if (ranoutofportalplanes)
 		Con_Printf("Portal_RecursiveFlow: ran out of %d plane stack when recursing through portals\n", MAXRECURSIVEPORTALPLANES);

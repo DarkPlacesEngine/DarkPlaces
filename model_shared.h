@@ -181,6 +181,30 @@ typedef struct model_brush_s
 	// pointers to each of the submodels if .isworldmodel is true
 	struct model_s **submodels;
 
+	int num_planes;
+	mplane_t *data_planes;
+
+	int num_nodes;
+	mnode_t *data_nodes;
+
+	// visible leafs, not counting 0 (solid)
+	int num_visleafs;
+	// number of actual leafs (including 0 which is solid)
+	int num_leafs;
+	mleaf_t *data_leafs;
+
+	int num_leafbrushes;
+	int *data_leafbrushes;
+
+	int num_leaffaces;
+	int *data_leaffaces;
+
+	int num_portals;
+	mportal_t *data_portals;
+
+	int num_portalpoints;
+	mvertex_t *data_portalpoints;
+
 	// pvs
 	int num_pvsclusters;
 	int num_pvsclusterbytes;
@@ -218,23 +242,11 @@ typedef struct model_brushq1_s
 
 	dmodel_t		*submodels;
 
-	int				numplanes;
-	mplane_t		*planes;
-
-	// number of actual leafs (including 0 which is solid)
-	int				num_leafs;
-	// visible leafs, not counting 0 (solid)
-	int				num_visleafs;
-	mleaf_t			*data_leafs;
-
 	int				numvertexes;
 	mvertex_t		*vertexes;
 
 	int				numedges;
 	medge_t			*edges;
-
-	int				numnodes;
-	mnode_t			*nodes;
 
 	int				numtexinfo;
 	mtexinfo_t		*texinfo;
@@ -249,9 +261,6 @@ typedef struct model_brushq1_s
 	int				numclipnodes;
 	dclipnode_t		*clipnodes;
 
-	int				numleaffaces;
-	int				*leaffaces;
-
 	hull_t			hulls[MAX_MAP_HULLS];
 
 	int				numtextures;
@@ -262,12 +271,6 @@ typedef struct model_brushq1_s
 
 	int				num_lightdata;
 	qbyte			*lightdata;
-
-	int				numportals;
-	mportal_t		*portals;
-
-	int				numportalpoints;
-	mvertex_t		*portalpoints;
 
 	int				numlights;
 	mlight_t		*lights;
@@ -298,23 +301,6 @@ typedef struct model_brushq3_s
 
 	int num_textures;
 	q3mtexture_t *data_textures;
-	q3msurface_t **data_texturefaces;
-	int *data_texturefacenums;
-
-	int num_planes;
-	mplane_t *data_planes;
-
-	int num_nodes;
-	mnode_t *data_nodes;
-
-	int num_leafs;
-	mleaf_t *data_leafs;
-
-	int num_leafbrushes;
-	int *data_leafbrushes;
-
-	int num_leaffaces;
-	int *data_leaffaces;
 
 	int num_models;
 	q3mmodel_t *data_models;
@@ -327,18 +313,16 @@ typedef struct model_brushq3_s
 	int num_brushsides;
 	q3mbrushside_t *data_brushsides;
 
+	// freed after loading!
 	int num_vertices;
 	float *data_vertex3f;
 	float *data_texcoordtexture2f;
 	float *data_texcoordlightmap2f;
-	float *data_svector3f;
-	float *data_tvector3f;
-	float *data_normal3f;
 	float *data_color4f;
 
+	// freed after loading!
 	int num_triangles;
 	int *data_element3i;
-	int *data_neighbor3i;
 
 	int num_effects;
 	q3meffect_t *data_effects;
