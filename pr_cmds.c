@@ -70,9 +70,9 @@ void PF_VarString(int first, char *out, int outlength)
 }
 
 char *ENGINE_EXTENSIONS =
+"DP_CL_LOADSKY "
 "DP_CON_SET "
 "DP_CON_SETA "
-"DP_CL_LOADSKY "
 "DP_EF_ADDITIVE "
 "DP_EF_BLUE "
 "DP_EF_FLAME "
@@ -128,6 +128,7 @@ char *ENGINE_EXTENSIONS =
 "DP_QUAKE3_MODEL "
 "DP_REGISTERCVAR "
 "DP_SND_DIRECTIONLESSATTNNONE "
+"DP_SND_FAKETRACKS "
 "DP_SND_OGGVORBIS "
 "DP_SND_STEREOWAV "
 "DP_SOLIDCORPSE "
@@ -135,9 +136,10 @@ char *ENGINE_EXTENSIONS =
 "DP_SV_DRAWONLYTOCLIENT "
 "DP_SV_DROPCLIENT "
 "DP_SV_EFFECT "
-"DP_SV_EXTERIORMODELTOCLIENT "
 "DP_SV_NODRAWTOCLIENT "
+"DP_SV_PING "
 "DP_SV_PLAYERPHYSICS "
+"DP_SV_PUNCHVECTOR "
 "DP_SV_ROTATINGBMODEL "
 "DP_SV_SETCOLOR "
 "DP_SV_SLOWMO "
@@ -3669,10 +3671,10 @@ PF_clientcommand,			// #440 void(entity e, string s) clientcommand (KRIMZON_SV_P
 PF_tokenize,				// #441 float(string s) tokenize (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_argv,					// #442 string(float n) argv (KRIMZON_SV_PARSECLIENTCOMMAND)
 PF_setattachment,			// #443 void(entity e, entity tagentity, string tagname) setattachment (DP_GFX_QUAKE3MODELTAGS)
-PF_search_begin,			// #444
-PF_search_end,				// #445
-PF_search_getsize,			// #446
-PF_search_getfilename,		// #447
+PF_search_begin,			// #444 float(string pattern, float caseinsensitive, float quiet) search_begin (DP_FS_SEARCH)
+PF_search_end,				// #445 void(float handle) search_end (DP_FS_SEARCH)
+PF_search_getsize,			// #446 float(float handle) search_getsize (DP_FS_SEARCH)
+PF_search_getfilename,		// #447 string(float handle, float num) search_getfilename (DP_FS_SEARCH)
 PF_cvar_string,				// #448 string(string s) cvar_string (DP_QC_CVAR_STRING)
 PF_findflags,				// #449 entity(entity start, .float fld, float match) findflags (DP_QC_FINDFLAGS)
 PF_findchainflags,			// #450 entity(.float fld, float match) findchainflags (DP_QC_FINDCHAINFLAGS)
