@@ -94,6 +94,8 @@ float	search_begin(string pattern, float caseinsensitive, float quiet)
 void	search_end(float handle)
 float	search_getsize(float handle)
 string	search_getfilename(float handle, float num)
+
+string	chr(float ascii)
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -2431,6 +2433,25 @@ void VM_search_getfilename(void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tmp);
 }
 
+/*
+=========
+VM_chr
+
+string	chr(float ascii)
+=========
+*/
+void VM_chr(void)
+{
+	char *tmp;
+	VM_SAFEPARMCOUNT(1, VM_chr);
+
+	tmp = VM_GetTempString();
+	tmp[0] = (unsigned char) PRVM_G_FLOAT(OFS_PARM0);
+	tmp[1] = 0;
+
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(tmp);
+}
+
 //=============================================================================
 // Draw builtins (client & menu)
 
@@ -3141,7 +3162,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_search_end,
 	VM_search_getsize,
 	VM_search_getfilename, // 77
-	0,0,0,// 80
+	VM_chr,	//78
+	0,0,// 80
 	e10,			// 90
 	e10,			// 100
 	e100,			// 200

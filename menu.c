@@ -3498,8 +3498,6 @@ void M_Init (void)
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
 
-	Cmd_AddCommand ("togglemenu", M_ToggleMenu_f);
-
 	Cmd_AddCommand ("menu_main", M_Menu_Main_f);
 	Cmd_AddCommand ("menu_singleplayer", M_Menu_SinglePlayer_f);
 	Cmd_AddCommand ("menu_load", M_Menu_Load_f);
@@ -3946,11 +3944,18 @@ void MR_Restart(void)
 	MR_SetRouting (FALSE);
 }
 
+void Call_MR_ToggleMenu_f(void)
+{
+	if(MR_ToggleMenu_f)
+		MR_ToggleMenu_f();
+}
+
 void MR_Init()
 {
 	// set router console commands
 	Cvar_RegisterVariable (&forceqmenu);
 	Cmd_AddCommand ("menu_restart",MR_Restart);
+	Cmd_AddCommand ("togglemenu", Call_MR_ToggleMenu_f);
 
 	// use -forceqmenu to use always the normal quake menu (it sets forceqmenu to 1)
 	if(COM_CheckParm("-forceqmenu"))
