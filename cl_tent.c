@@ -127,6 +127,7 @@ void CL_ParseTEnt (void)
 	vec3_t	pos;
 	vec3_t	dir;
 	vec3_t	pos2;
+	vec3_t	color;
 	int		rnd;
 	int		colorStart, colorLength, count;
 	float	velspeed, radius;
@@ -335,7 +336,10 @@ void CL_ParseTEnt (void)
 		FindNonSolidLocation(pos);
 		R_ParticleExplosion (pos, false);
 //		R_BlastParticles (pos, 120, 120);
-		CL_AllocDlight (NULL, pos, 350, MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), 700, 0.5);
+		color[0] = MSG_ReadByte() * (1.0 / 255.0);
+		color[1] = MSG_ReadByte() * (1.0 / 255.0);
+		color[2] = MSG_ReadByte() * (1.0 / 255.0);
+		CL_AllocDlight (NULL, pos, 350, color[0], color[1], color[2], 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -361,7 +365,10 @@ void CL_ParseTEnt (void)
 		FindNonSolidLocation(pos);
 		radius = MSG_ReadByte() * 8;
 		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
-		CL_AllocDlight (NULL, pos, radius, MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), MSG_ReadByte() * (1.0 / 255.0), radius / velspeed, velspeed);
+		color[0] = MSG_ReadByte() * (1.0 / 255.0);
+		color[1] = MSG_ReadByte() * (1.0 / 255.0);
+		color[2] = MSG_ReadByte() * (1.0 / 255.0);
+		CL_AllocDlight (NULL, pos, radius, color[0], color[1], color[2], radius / velspeed, velspeed);
 		break;
 
 	case TE_FLAMEJET:
@@ -374,7 +381,7 @@ void CL_ParseTEnt (void)
 	case TE_LIGHTNING1:				// lightning bolts
 		CL_ParseBeam (Mod_ForName("progs/bolt.mdl", true));
 		break;
-	
+
 	case TE_LIGHTNING2:				// lightning bolts
 		CL_ParseBeam (Mod_ForName("progs/bolt2.mdl", true));
 		break;
