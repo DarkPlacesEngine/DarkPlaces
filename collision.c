@@ -640,9 +640,10 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 			if (developer.integer)
 			{
 				// validation code
+#if 0
 				VectorSubtract(brush->points[0].v, brush->points[1].v, edge0);
 				VectorSubtract(brush->points[2].v, brush->points[1].v, edge1);
-				CrossProduct(edge1, edge0, normal);
+				CrossProduct(edge0, edge1, normal);
 				VectorNormalize(normal);
 				VectorSubtract(normal, brush->planes[0].normal, temp);
 				if (VectorLength(temp) > 0.01f)
@@ -662,6 +663,7 @@ void Collision_CalcPlanesForPolygonBrushFloat(colbrushf_t *brush)
 					Con_Printf("Collision_CalcPlanesForPolygonBrushFloat: plane 3 (%f %f %f %f) is not perpendicular to edge 1 (%f %f %f to %f %f %f)\n", brush->planes[3].normal[0], brush->planes[3].normal[1], brush->planes[3].normal[2], brush->planes[3].dist, brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2]);
 				if (fabs(DotProduct(brush->planes[4].normal, edge2)) > 0.01f)
 					Con_Printf("Collision_CalcPlanesForPolygonBrushFloat: plane 4 (%f %f %f %f) is not perpendicular to edge 2 (%f %f %f to %f %f %f)\n", brush->planes[4].normal[0], brush->planes[4].normal[1], brush->planes[4].normal[2], brush->planes[4].dist, brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2]);
+#endif
 #endif
 				if (fabs(DotProduct(brush->points[0].v, brush->planes[0].normal) - brush->planes[0].dist) > 0.01f || fabs(DotProduct(brush->points[1].v, brush->planes[0].normal) - brush->planes[0].dist) > 0.01f || fabs(DotProduct(brush->points[2].v, brush->planes[0].normal) - brush->planes[0].dist) > 0.01f)
 					Con_Printf("Collision_CalcPlanesForPolygonBrushFloat: edges (%f %f %f to %f %f %f to %f %f %f) off front plane 0 (%f %f %f %f)\n", brush->points[0].v[0], brush->points[0].v[1], brush->points[0].v[2], brush->points[1].v[0], brush->points[1].v[1], brush->points[1].v[2], brush->points[2].v[0], brush->points[2].v[1], brush->points[2].v[2], brush->planes[0].normal[0], brush->planes[0].normal[1], brush->planes[0].normal[2], brush->planes[0].dist);
