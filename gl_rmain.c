@@ -564,7 +564,6 @@ static void R_BlendView(void)
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // magic
-	GL_ColorPointer(NULL);
 	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 	r = 64;
 	vertex3f[0] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r - r_viewup[0] * r;
@@ -764,10 +763,6 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	GL_DepthTest(true);
 	R_Mesh_Matrix(&r_identitymatrix);
 
-	memset(&m, 0, sizeof(m));
-	R_Mesh_State(&m);
-
-	R_Mesh_GetSpace(8);
 	vertex3f[ 0] = mins[0];vertex3f[ 1] = mins[1];vertex3f[ 2] = mins[2];
 	vertex3f[ 3] = maxs[0];vertex3f[ 4] = mins[1];vertex3f[ 5] = mins[2];
 	vertex3f[ 6] = mins[0];vertex3f[ 7] = maxs[1];vertex3f[ 8] = mins[2];
@@ -776,7 +771,6 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	vertex3f[15] = maxs[0];vertex3f[16] = mins[1];vertex3f[17] = maxs[2];
 	vertex3f[18] = mins[0];vertex3f[19] = maxs[1];vertex3f[20] = maxs[2];
 	vertex3f[21] = maxs[0];vertex3f[22] = maxs[1];vertex3f[23] = maxs[2];
-	GL_ColorPointer(color);
 	R_FillColors(color, 8, cr, cg, cb, ca);
 	if (fogenabled)
 	{
@@ -790,6 +784,10 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 			c[2] = c[2] * f1 + fogcolor[2] * f2;
 		}
 	}
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = vertex3f;
+	m.pointer_color = color;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(8, 12);
 }
 */
@@ -837,7 +835,6 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 
 	memset(&m, 0, sizeof(m));
 	m.pointer_vertex = nomodelvertex3f;
-	R_Mesh_State(&m);
 
 	if (ent->flags & EF_ADDITIVE)
 	{
@@ -858,7 +855,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	if (fogenabled)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		GL_ColorPointer(color4f);
+		m.pointer_color = color4f;
 		VectorSubtract(ent->origin, r_vieworigin, diff);
 		f2 = exp(fogdensity/DotProduct(diff, diff));
 		f1 = 1 - f2;
@@ -873,12 +870,13 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	else if (ent->alpha != 1)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
-		GL_ColorPointer(color4f);
+		m.pointer_color = color4f;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 			c[3] *= ent->alpha;
 	}
 	else
-		GL_ColorPointer(nomodelcolor4f);
+		m.pointer_color = nomodelcolor4f;
+	R_Mesh_State(&m);
 	R_Mesh_Draw(6, 8, nomodelelements);
 }
 
@@ -935,17 +933,9 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	}
 
 	R_Mesh_Matrix(&r_identitymatrix);
-	GL_ColorPointer(NULL);
-	GL_Color(cr, cg, cb, ca);
 	GL_BlendFunc(blendfunc1, blendfunc2);
 	GL_DepthMask(false);
 	GL_DepthTest(!depthdisable);
-
-	memset(&m, 0, sizeof(m));
-	m.tex[0] = R_GetTexture(texture);
-	m.pointer_texcoord[0] = spritetexcoord2f;
-	m.pointer_vertex = varray_vertex3f;
-	R_Mesh_State(&m);
 
 	varray_vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
 	varray_vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;
@@ -959,6 +949,13 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	varray_vertex3f[ 9] = origin[0] + left[0] * scalex1 + up[0] * scaley1;
 	varray_vertex3f[10] = origin[1] + left[1] * scalex1 + up[1] * scaley1;
 	varray_vertex3f[11] = origin[2] + left[2] * scalex1 + up[2] * scaley1;
+
+	memset(&m, 0, sizeof(m));
+	m.tex[0] = R_GetTexture(texture);
+	m.pointer_texcoord[0] = spritetexcoord2f;
+	m.pointer_vertex = varray_vertex3f;
+	R_Mesh_State(&m);
+	GL_Color(cr, cg, cb, ca);
 	R_Mesh_Draw(4, 2, polygonelements);
 }
 

@@ -737,7 +737,6 @@ void R_Shadow_Stage_Begin(void)
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	R_Mesh_State(&m);
-	GL_ColorPointer(NULL);
 	GL_Color(0, 0, 0, 1);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
@@ -769,7 +768,6 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State(&m);
-	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(0, 0, 0, 0);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -825,7 +823,6 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 	GL_DepthTest(true);
 	qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
-	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(1, 1, 1, 1);
 	qglDepthFunc(GL_EQUAL);
@@ -850,7 +847,6 @@ void R_Shadow_Stage_LightWithShadows(void)
 	GL_DepthTest(true);
 	qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
-	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(1, 1, 1, 1);
 	qglDepthFunc(GL_EQUAL);
@@ -877,7 +873,6 @@ void R_Shadow_Stage_End(void)
 	GL_DepthTest(true);
 	qglPolygonOffset(0, 0);
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
-	GL_ColorPointer(NULL);
 	GL_Color(1, 1, 1, 1);
 	GL_ColorMask(1, 1, 1, 1);
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
@@ -1194,7 +1189,6 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 	{
 		if (!bumptexture)
 			bumptexture = r_shadow_blankbumptexture;
-		GL_ColorPointer(NULL);
 		GL_Color(1,1,1,1);
 		// colorscale accounts for how much we multiply the brightness during combine
 		// mult is how many times the final pass of the lighting will be
@@ -1457,10 +1451,10 @@ void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *element
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
-		GL_ColorPointer(varray_color4f);
 		VectorScale(lightcolor, r_shadow_lightintensityscale.value, color2);
 		memset(&m, 0, sizeof(m));
 		m.pointer_vertex = vertex3f;
+		m.pointer_color = varray_color4f;
 		m.tex[0] = R_GetTexture(basetexture);
 		m.pointer_texcoord[0] = texcoord2f;
 		if (r_textureunits.integer >= 2)
@@ -1503,7 +1497,6 @@ void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elemen
 			bumptexture = r_shadow_blankbumptexture;
 		if (glosstexture == r_shadow_blankglosstexture)
 			colorscale *= r_shadow_gloss2intensity.value;
-		GL_ColorPointer(NULL);
 		GL_Color(1,1,1,1);
 		if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 		{
@@ -2098,7 +2091,6 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				qglDisable(GL_STENCIL_TEST);
 				//qglDisable(GL_CULL_FACE);
 				GL_ColorMask(1,1,1,1);
-				GL_ColorPointer(NULL);
 				GL_Color(0,0.1,0,1);
 				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 				memset(&m, 0, sizeof(m));
@@ -2156,7 +2148,6 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 					qglDisable(GL_STENCIL_TEST);
 					//qglDisable(GL_CULL_FACE);
 					memset(&m, 0, sizeof(m));
-					GL_ColorPointer(NULL);
 					GL_Color(0.2,0,0,1);
 					GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 					for (mesh = rtlight->static_meshchain_light;mesh;mesh = mesh->next)
@@ -2216,7 +2207,6 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 		GL_DepthMask(false);
 		GL_DepthTest(r_shadow_visiblevolumes.integer < 2);
 		qglDisable(GL_CULL_FACE);
-		GL_ColorPointer(NULL);
 		GL_Color(0.0, 0.0125, 0.1, 1);
 	}
 	else

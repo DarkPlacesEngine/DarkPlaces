@@ -1877,9 +1877,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		}
 	}
 
-	GL_ColorPointer(NULL);
-	GL_Color(cr, cg, cb, ca);
-
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	memset(&m, 0, sizeof(m));
@@ -1887,6 +1884,8 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	m.pointer_texcoord[0] = particle_texcoord2f;
 	m.pointer_vertex = particle_vertex3f;
 	R_Mesh_State(&m);
+
+	GL_Color(cr, cg, cb, ca);
 
 	if (p->blendmode == 0)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

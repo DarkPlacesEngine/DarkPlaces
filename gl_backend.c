@@ -451,7 +451,6 @@ void GL_Backend_ResetState(void)
 	qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
 	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 
-	GL_ColorPointer(NULL);
 	GL_Color(0, 0, 0, 0);
 	GL_Color(1, 1, 1, 1);
 
@@ -558,32 +557,6 @@ void GL_ColorMask(int r, int g, int b, int a)
 			return;
 		gl_state.colormask = state;
 		qglColorMask((GLboolean)r, (GLboolean)g, (GLboolean)b, (GLboolean)a);CHECKGLERROR
-	}
-}
-
-void GL_ColorPointer(const float *p)
-{
-	if (gl_state.pointer_color != p)
-	{
-		if (r_showtrispass)
-			return;
-		CHECKGLERROR
-		if (!gl_state.pointer_color)
-		{
-			qglEnableClientState(GL_COLOR_ARRAY);
-			CHECKGLERROR
-		}
-		else if (!p)
-		{
-			qglDisableClientState(GL_COLOR_ARRAY);
-			CHECKGLERROR
-			// when color array is on the glColor gets trashed, set it again
-			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
-			CHECKGLERROR
-		}
-		gl_state.pointer_color = p;
-		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), gl_state.pointer_color);
-		CHECKGLERROR
 	}
 }
 
@@ -913,14 +886,36 @@ void R_Mesh_State(const rmeshstate_t *m)
 		CHECKGLERROR
 	}
 
+	if (r_showtrispass)
+		return;
+
+	if (gl_state.pointer_color != m->pointer_color)
+	{
+		CHECKGLERROR
+		if (!gl_state.pointer_color)
+		{
+			qglEnableClientState(GL_COLOR_ARRAY);
+			CHECKGLERROR
+		}
+		else if (!m->pointer_color)
+		{
+			qglDisableClientState(GL_COLOR_ARRAY);
+			CHECKGLERROR
+			// when color array is on the glColor gets trashed, set it again
+			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
+			CHECKGLERROR
+		}
+		gl_state.pointer_color = m->pointer_color;
+		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), gl_state.pointer_color);
+		CHECKGLERROR
+	}
+
 	if (gl_backend_rebindtextures)
 	{
 		gl_backend_rebindtextures = false;
 		GL_SetupTextureState();
 	}
 
-	if (r_showtrispass)
-		return;
 	for (i = 0, unit = gl_state.units;i < backendunits;i++, unit++)
 	{
 		if (unit->t1d != m->tex1d[i])

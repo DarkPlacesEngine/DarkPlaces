@@ -282,7 +282,6 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 		m.tex[0] = R_GetTexture(r_lightningbeamtexture);
 	m.pointer_texcoord[0] = varray_texcoord2f[0];
 	m.pointer_vertex = varray_vertex3f;
-	R_Mesh_State(&m);
 
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -310,15 +309,15 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	if (fogenabled)
 	{
 		// per vertex colors if fog is used
-		GL_ColorPointer(varray_color4f);
+		m.pointer_color = varray_color4f;
 		R_FogLightningBeam_Vertex3f_Color4f(varray_vertex3f, varray_color4f, 12, r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
 	else
 	{
 		// solid color if fog is not used
-		GL_ColorPointer(NULL);
 		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
+	R_Mesh_State(&m);
 
 	// draw the 3 polygons as one batch of 6 triangles using the 12 vertices
 	R_Mesh_Draw(12, 6, r_lightningbeamelements);
