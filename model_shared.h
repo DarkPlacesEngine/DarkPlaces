@@ -76,24 +76,19 @@ overridetagnameset_t;
 // LordHavoc: replaces glpoly, triangle mesh
 typedef struct surfmesh_s
 {
-	int num_vertices; // number of vertices in the mesh
 	int num_triangles; // number of triangles in the mesh
-	float *data_vertex3f; // float[verts*3] vertex locations
 	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
+	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
+	int num_vertices; // number of vertices in the mesh
+	float *data_vertex3f; // float[verts*3] vertex locations
 	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
 	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
 	float *data_lightmapcolor4f;
 	float *data_svector3f; // float[verts*3] direction of 'S' (right) texture axis for each vertex
 	float *data_tvector3f; // float[verts*3] direction of 'T' (down) texture axis for each vertex
 	float *data_normal3f; // float[verts*3] direction of 'R' (out) texture axis for each vertex
-	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
 	float *data_texcoorddetail2f; // float[verts*2] texcoords for detail texture
-	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
-
-	int num_collisionvertices;
-	int num_collisiontriangles;
-	float *data_collisionvertex3f;
-	int *data_collisionelement3i;
+	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
 }
 surfmesh_t;
 
@@ -215,6 +210,7 @@ typedef struct model_brush_s
 
 	int num_surfaces;
 	msurface_t *data_surfaces;
+	msurface_lightmapinfo_t *data_surfaces_lightmapinfo;
 
 	int num_brushes;
 	q3mbrush_t *data_brushes;
@@ -468,7 +464,7 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 void Mod_BuildNormals(int numverts, int numtriangles, const float *vertex3f, const int *elements, float *normal3f);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, int numcollisionvertices, int numcollisiontriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors);
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors);
 
 shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
 shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
