@@ -459,7 +459,7 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 		ent->v->groundentity = EDICT_TO_PROG(hackongroundentity);
 	}
 	*/
-	
+
 	/*
 	if ((blocked & 1) == 0 && bumpcount > 1)
 	{
@@ -881,19 +881,17 @@ qboolean SV_CheckWater (edict_t *ent)
 
 	ent->v->waterlevel = 0;
 	ent->v->watertype = CONTENTS_EMPTY;
-	cont = SV_PointQ1Contents(point);
-	if (cont <= CONTENTS_WATER)
+	cont = SV_PointSuperContents(point);
+	if (cont & (SUPERCONTENTS_LIQUIDSMASK))
 	{
-		ent->v->watertype = cont;
+		ent->v->watertype = Mod_Q1BSP_NativeContentsFromSuperContents(NULL, cont);
 		ent->v->waterlevel = 1;
 		point[2] = ent->v->origin[2] + (ent->v->mins[2] + ent->v->maxs[2])*0.5;
-		cont = SV_PointQ1Contents(point);
-		if (cont <= CONTENTS_WATER)
+		if (SV_PointSuperContents(point) & (SUPERCONTENTS_LIQUIDSMASK))
 		{
 			ent->v->waterlevel = 2;
 			point[2] = ent->v->origin[2] + ent->v->view_ofs[2];
-			cont = SV_PointQ1Contents(point);
-			if (cont <= CONTENTS_WATER)
+			if (SV_PointSuperContents(point) & (SUPERCONTENTS_LIQUIDSMASK))
 				ent->v->waterlevel = 3;
 		}
 	}
@@ -1022,44 +1020,44 @@ void SV_WalkMove (edict_t *ent)
 
 	if (sv_nostep.integer)
 		return;
-	
+
 	// if move didn't block on a step, return
 	if (clip & 2)
 	{
 		// if move was not trying to move into the step, return
 		if (fabs(start_velocity[0]) < 0.03125 && fabs(start_velocity[1]) < 0.03125)
 			return;
-	
+
 		if (ent->v->movetype != MOVETYPE_FLY)
 		{
 			// return if gibbed by a trigger
 			if (ent->v->movetype != MOVETYPE_WALK)
 				return;
-	
+
 			// only step up while jumping if that is enabled
 			if (!(sv_jumpstep.integer && sv_gameplayfix_stepwhilejumping.integer))
 				if (!oldonground && ent->v->waterlevel == 0)
 					return;
 		}
-	
+
 		// try moving up and forward to go up a step
 		// back to start pos
 		VectorCopy (start_origin, ent->v->origin);
 		VectorCopy (start_velocity, ent->v->velocity);
-	
+
 		// move up
 		VectorClear (upmove);
 		upmove[2] = sv_stepheight.value;
 		// FIXME: don't link?
 		SV_PushEntity(ent, upmove);
-	
+
 		// move forward
 		ent->v->velocity[2] = 0;
 		clip = SV_FlyMove (ent, sv.frametime, stepnormal);
 		ent->v->velocity[2] += start_velocity[2];
-	
+
 		SV_CheckVelocity(ent);
-	
+
 		// check for stuckness, possibly due to the limited precision of floats
 		// in the clipping hulls
 		if (clip
@@ -1072,7 +1070,7 @@ void SV_WalkMove (edict_t *ent)
 			VectorCopy(originalmove_velocity, ent->v->velocity);
 			//clip = originalmove_clip;
 			ent->v->flags = originalmove_flags;
-			ent->v->groundentity = originalmove_groundentity; 
+			ent->v->groundentity = originalmove_groundentity;
 			// now try to unstick if needed
 			//clip = SV_TryUnstick (ent, oldvel);
 			return;
@@ -1114,7 +1112,7 @@ void SV_WalkMove (edict_t *ent)
 		VectorCopy(originalmove_velocity, ent->v->velocity);
 		//clip = originalmove_clip;
 		ent->v->flags = originalmove_flags;
-		ent->v->groundentity = originalmove_groundentity; 
+		ent->v->groundentity = originalmove_groundentity;
 	}
 
 	SV_SetOnGround (ent);
