@@ -354,7 +354,7 @@ byte *W_GetTexture(char *name, int matchwidth, int matchheight)
 				for (i = 0;i < image_width*image_height;i++)
 				{
 					c = *indata++;
-					if (pal[c][0] == 255 && pal[c][1] == 0 && pal[c][2] == 0) // HL transparent color (pure blue)
+					if (pal[c][0] == 0 && pal[c][1] == 0 && pal[c][2] == 255) // HL transparent color (pure blue)
 						outdata[0] = outdata[1] = outdata[2] = outdata[3] = 0;
 					else
 					{
