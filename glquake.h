@@ -143,9 +143,6 @@ extern int gl_combine_extension;
 
 extern cvar_t gl_combine;
 
-extern int gl_maxdrawrangeelementsvertices;
-extern int gl_maxdrawrangeelementsindices;
-
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
 
 extern void (GLAPIENTRY *qglClear)(GLbitfield mask);

@@ -13,7 +13,9 @@ cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
 // this is used to increase gl_mesh_maxtriangles automatically if a mesh was
 // too large for the buffers in the previous frame
-int overflowedmeshtris = 0;
+int overflowedverts = 0;
+// increase transtriangles automatically too
+int overflowedtransverts = 0;
 
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
@@ -168,6 +170,14 @@ static void gl_backend_start(void)
 {
 	int i;
 
+	qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
+	qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
+
+	Con_Printf("OpenGL Backend started with gl_mesh_maxtriangles %i, gl_mesh_transtriangles %i", gl_mesh_maxtriangles.integer, gl_mesh_transtriangles.integer);
+	if (qglDrawRangeElements != NULL)
+		Con_Printf(", with glDrawRangeElements (max vertices %i, max indices %i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
+	Con_Printf("\n");
+
 	max_verts = max_meshs * 3;
 	max_transverts = max_transmeshs * 3;
 
@@ -215,6 +225,8 @@ static void gl_backend_start(void)
 
 static void gl_backend_shutdown(void)
 {
+	Con_Printf("OpenGL Backend shutting down\n");
+
 	if (resizingbuffers)
 		Mem_EmptyPool(gl_backend_mempool);
 	else
@@ -226,30 +238,23 @@ static void gl_backend_shutdown(void)
 
 static void gl_backend_bufferchanges(int init)
 {
-	if (overflowedmeshtris > gl_mesh_maxtriangles.integer)
-		Cvar_SetValueQuick(&gl_mesh_maxtriangles, overflowedmeshtris);
-	overflowedmeshtris = 0;
+	if (overflowedverts > gl_mesh_maxtriangles.integer * 3)
+		Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) ((overflowedverts + 2) / 3));
+	overflowedverts = 0;
+
+	if (overflowedtransverts > gl_mesh_transtriangles.integer * 3)
+		Cvar_SetValueQuick(&gl_mesh_transtriangles, (int) ((overflowedtransverts + 2) / 3));
+	overflowedtransverts = 0;
 
 	if (gl_mesh_drawmode.integer < 0)
 		Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
 	if (gl_mesh_drawmode.integer > 3)
 		Cvar_SetValueQuick(&gl_mesh_drawmode, 3);
 
-	if (gl_mesh_drawmode.integer >= 3)
+	if (gl_mesh_drawmode.integer >= 3 && qglDrawRangeElements == NULL)
 	{
-		if (qglDrawRangeElements != NULL && gl_maxdrawrangeelementsindices >= 3072 && gl_maxdrawrangeelementsvertices >= 3072)
-		{
-			// make sure we don't exceed the DrawRangeElements limits
-			if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsindices)
-				Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsindices / 3));
-			if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsvertices)
-				Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsvertices / 3));
-		}
-		else
-		{
-			// change drawmode 3 to 2 if 3 won't work
-			Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
-		}
+		// change drawmode 3 to 2 if 3 won't work at all
+		Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
 	}
 
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
@@ -733,7 +738,7 @@ void GL_MeshState(buf_mesh_t *mesh)
 void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *index)
 {
 	unsigned int i, j, in;
-	if (gl_mesh_drawmode.integer >= 3)
+	if (gl_mesh_drawmode.integer >= 3/* && (endvert - firstvert) <= gl_maxdrawrangeelementsvertices && (indexcount) <= gl_maxdrawrangeelementsindices*/)
 	{
 		// GL 1.2 or GL 1.1 with extension
 		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, index);
@@ -1087,18 +1092,19 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	//	return;
 	//}
 
+	i = max(m->numtriangles * 3, m->numverts);
+	if (overflowedverts < i)
+		overflowedverts = i;
+
 	if (m->numtriangles > max_meshs || m->numverts > max_verts)
 	{
 		Con_Printf("R_Mesh_Draw: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
-		if (m->numtriangles > overflowedmeshtris)
-			overflowedmeshtris = m->numtriangles;
-		if (((m->numverts + 2) / 3) > overflowedmeshtris)
-			overflowedmeshtris = (m->numverts + 2) / 3;
 		return;
 	}
 
 	if (m->transparent)
 	{
+		overflowedtransverts += max(m->numtriangles * 3, m->numverts);
 		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
 		{
 			if (!transranout)
@@ -1288,18 +1294,19 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 	//	return;
 	//}
 
+	i = max(m->numtriangles * 3, m->numverts);
+	if (overflowedverts < i)
+		overflowedverts = i;
+
 	if (m->numtriangles > max_meshs || m->numverts > max_verts)
 	{
 		Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
-		if (m->numtriangles > overflowedmeshtris)
-			overflowedmeshtris = m->numtriangles;
-		if (((m->numverts + 2) / 3) > overflowedmeshtris)
-			overflowedmeshtris = (m->numverts + 2) / 3;
 		return;
 	}
 
 	if (m->transparent)
 	{
+		overflowedtransverts += max(m->numtriangles * 3, m->numverts);
 		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
 		{
 			if (!transranout)
@@ -1446,18 +1453,19 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
 	//	return false;
 	//}
 
+	i = max(m->numtriangles * 3, m->numverts);
+	if (overflowedverts < i)
+		overflowedverts = i;
+
 	if (m->numtriangles > max_meshs || m->numverts > max_verts)
 	{
 		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
-		if (m->numtriangles > overflowedmeshtris)
-			overflowedmeshtris = m->numtriangles;
-		if (((m->numverts + 2) / 3) > overflowedmeshtris)
-			overflowedmeshtris = (m->numverts + 2) / 3;
 		return false;
 	}
 
 	if (m->transparent)
 	{
+		overflowedtransverts += max(m->numtriangles * 3, m->numverts);
 		if (currenttransmesh >= max_transmeshs || (currenttranstriangle + m->numtriangles) > max_transmeshs || (currenttransvertex + m->numverts) > max_transverts)
 		{
 			if (!transranout)
