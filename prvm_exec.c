@@ -233,7 +233,8 @@ void PRVM_Profile_f (void)
 void PRVM_CrashAll()
 {
 	int i;
-	PRVM_Begin; 
+	prvm_prog_t *oldprog = prog;
+
 	for(i = 0; i < PRVM_MAXPROGS; i++)
 	{
 		if(!PRVM_ProgLoaded(i))
@@ -241,7 +242,8 @@ void PRVM_CrashAll()
 		PRVM_SetProg(i);
 		PRVM_Crash();
 	}
-	PRVM_End;
+	
+	prog = oldprog;
 }
 
 void PRVM_Crash()

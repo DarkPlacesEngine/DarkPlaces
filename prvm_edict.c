@@ -958,7 +958,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		def = PRVM_ED_FindField(s);
 		if (!def)
 		{
-			Con_DPrintf("PRVM_ED_ParseEpair: Can't find field %s on %s\n", s, PRVM_NAME);
+			Con_DPrintf("PRVM_ED_ParseEpair: Can't find field %s in %s\n", s, PRVM_NAME);
 			return false;
 		}
 		val->_int = PRVM_G_INT(def->ofs);
@@ -968,7 +968,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 		func = PRVM_ED_FindFunction(s);
 		if (!func)
 		{
-			Con_Printf ("PRVM_ED_ParseEpair: Can't find function %s on %s\n", s, PRVM_NAME);
+			Con_Printf ("PRVM_ED_ParseEpair: Can't find function %s in %s\n", s, PRVM_NAME);
 			return false;
 		}
 		val->function = func - prog->functions;
