@@ -324,6 +324,8 @@ void V_CalcRefdef (void)
 			// entity is a fixed camera, just copy the matrix
 			Matrix4x4_Copy(&r_refdef.viewentitymatrix, &ent->render.matrix);
 			Matrix4x4_Copy(&viewmodelmatrix, &ent->render.matrix);
+			r_refdef.viewentitymatrix.m[2][3] += cl.stats[STAT_VIEWHEIGHT];
+			viewmodelmatrix.m[2][3] += cl.stats[STAT_VIEWHEIGHT];
 		}
 		else
 		{
