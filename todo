@@ -41,14 +41,11 @@
 0 dpmod: items aren't respawning in coop, they should
 0 dpmod: up nail limit to 500 (scar3crow)
 0 dpzoo: colored lighting
-0 dpzoo: flame jet
-0 dpzoo: make some things that make the player bigger/smaller to demonstrate scaling and better viewheight handling and brush collisions (depends on brush collisions)
 0 dpzoo: particlecube
 0 dpzoo: rain
 0 dpzoo: rotating fan bmodels
 0 dpzoo: rtlights in normal mode (when that extension is made)
 0 dpzoo: snow
-0 dpzoo: swinging doors
 0 dpzoo: thief-like area to sneak past a guard who can easily kill you (shambler?) to demonstrate lightlevel checking
 0 dpzoo: transparent glass bmodels (DP_ENT_ALPHA)
 0 hmap: add space to seconds reports in all utilities so it doesn't say secondssss (FrikaC)
@@ -56,6 +53,7 @@
 1 darkplaces: add DP_CLIENTCAMERA extension (.entity clientcamera; sets which entity the client views from) (Wazat for Battlemech)
 1 darkplaces: add DP_EF_CLIENTLOCKANGLES extension (prevents client from turning view, takes angles from entity) (Wazat for Battlemech)
 1 darkplaces: add DP_EF_PRECISEANGLES extension (sends short angles instead of byte) (Wazat for Battlemech)
+1 darkplaces: add DP_SV_READCLIENTINPUT extension (.vector clientinput; works like .movement but for mouse or any other similar controllers) (Wazat for Battlemech, FrikaC)
 1 darkplaces: add a "cmd" command to the client for sending arbitrary commands to the server, mainly for use with KRIMZON_SV_PARSECLIENTCOMMAND
 1 darkplaces: add an optimized special case to AngleVectors for roll == 0 (thanks to fuh for the idea)
 1 darkplaces: add buttons 9-16 (yummyluv)
@@ -96,6 +94,7 @@
 1 dpmod: make a skill 4 mode where monsters are nearly invisible (alpha 0.2?) except when attacking or in pain
 1 dpmod: make grunts reload less often, like every 10 shotgun shells (scar3crow)
 1 dpmod: make ogres start up their chainsaw when first seeing an enemy (scar3crow)
+1 dpzoo: flame jet
 1 hlight: report locations of lights in solid (FrikaC)
 1 hmap: add mip loading support to hqbsp
 1 hmap: figure out why hqbsp is crashing when given a worldcraft map with the wads installed properly but referenced by a lengthy path, and not crashing when using local names (Todd)
@@ -126,6 +125,7 @@
 2 darkplaces: upgrade protocol to have shorts for stats (scar3crow)
 2 darkplaces: zym shadows
 2 dpmod: apparently can't fire in start.bsp? (scar3crow)
+2 dpzoo: swinging doors
 2 hmap: add hlwad support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd)
 2 hmap: hlight is not properly figuring out the origin of rotating objects - it should take the "origin" key (FrikaC)
 3 LordHavoc: read up on dynamic visibility
@@ -154,6 +154,7 @@
 3 dpmod: use FRIK_FILE extension to allow passing objects between levels, such as crates (NotoriousRay)
 3 dpmodel: add support for unnamed bones (Mitchell)
 3 dpmodel: fix dpmodel to compile v_HKmp5-sd (tell Riot)
+3 dpzoo: remote cameras (to demonstrate DP_CLIENTCAMERA, DP_EF_CLIENTLOCKANGLES, and DP_EF_PRECISEANGLES)
 3 hmap: add hlw support to hqbsp (convert to quake palette, and check for colormap.lmp to see how many fullbrights are involved, also add -fullbrights option to control this) (Todd)
 3 hmap: add tga support to hqbsp (load base texture and _glow/_luma)
 4 LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
@@ -170,6 +171,7 @@
 4 darkplaces: memory pool nesting, allowing pools of pools to be batch freed (Vicious)
 4 darkplaces: rewrite sound system! (FrikaC, Static_Fiend)
 4 darkplaces: use getaddrinfo to support ipv6, add support for winsock2 (or require it), check if winsock2 has ipv6 functions (getaddrinfo)... (|Rain|)
+4 dpzoo: a drivable vehicle (using same technique as remote cameras, plus DP_SV_READCLIENTINPUT)
 4 hmap: add hint brushes (HINT texture)
 5 darkplaces: add ALIASSKIN_NOCULLFACE and ALIASSKIN_SORTTRIANGLES flags, and figure out how to activate them somehow (FrikaC)
 5 darkplaces: add a "edictedit" command to open up a dialog to edit an edict (allow multiple dialogs to be open at once)
@@ -177,6 +179,7 @@
 5 darkplaces: add back colormod extension (FrikaC, Uffe)
 5 darkplaces: add dpshader support
 5 darkplaces: add short and long documentation string to each cvar/command (QorpsE)
+5 dpzoo: make some things that make the player bigger/smaller to demonstrate scaling and better viewheight handling and brush collisions (depends on brush collisions)
 5 hmap: fix tjunctions on leaky maps (SeienAbunae)
 6 darkplaces: add a "edit" command that can edit text files (I.E. .qc and progs.src) using a dialog window (allow multiple), and then add a "frikqcc" command to run it on the current mod (if it's in the command path at least)
 6 darkplaces: add cubemap reflections like UT2003 somehow (perhaps entities would define the reflection maps for rooms, and a water entity would take care of the rest?) (TEU, Nexuiz)
