@@ -1006,11 +1006,11 @@ static void R_Upload(gltexture_t *glt, byte *data)
 		{
 			glt->image->flags &= ~GLTEXF_UPLOAD;
 			memset(resizebuffer, 255, glt->image->width * glt->image->height * glt->image->bytesperpixel);
+			glTexImage2D (GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
+			CHECKGLERROR
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
 			CHECKGLERROR
 			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
-			CHECKGLERROR
-			glTexImage2D (GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
 			CHECKGLERROR
 		}
 
