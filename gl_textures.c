@@ -253,9 +253,6 @@ R_ResampleTexture
 */
 void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,  int outwidth, int outheight)
 {
-	if (outwidth & 3)
-		Sys_Error("R_ResampleTexture: output width must be a multiple of 4");
-
 	if (r_lerpimages.value)
 	{
 		int		i, j, yi, oldy, f, fstep, endy = (inheight-1);
@@ -285,7 +282,8 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 					R_ResampleTextureLerpLine (inrow + inwidth*4, row2, inwidth, outwidth);
 					oldy = yi;
 				}
-				for (j = 0;j < outwidth;j += 4)
+				j = outwidth - 4;
+				while(j >= 0)
 				{
 					out[ 0] = (byte) ((((row2[ 0] - row1[ 0]) * lerp) >> 16) + row1[ 0]);
 					out[ 1] = (byte) ((((row2[ 1] - row1[ 1]) * lerp) >> 16) + row1[ 1]);
@@ -306,6 +304,31 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 					out += 16;
 					row1 += 16;
 					row2 += 16;
+					j--;
+				}
+				if (j & 2)
+				{
+					out[ 0] = (byte) ((((row2[ 0] - row1[ 0]) * lerp) >> 16) + row1[ 0]);
+					out[ 1] = (byte) ((((row2[ 1] - row1[ 1]) * lerp) >> 16) + row1[ 1]);
+					out[ 2] = (byte) ((((row2[ 2] - row1[ 2]) * lerp) >> 16) + row1[ 2]);
+					out[ 3] = (byte) ((((row2[ 3] - row1[ 3]) * lerp) >> 16) + row1[ 3]);
+					out[ 4] = (byte) ((((row2[ 4] - row1[ 4]) * lerp) >> 16) + row1[ 4]);
+					out[ 5] = (byte) ((((row2[ 5] - row1[ 5]) * lerp) >> 16) + row1[ 5]);
+					out[ 6] = (byte) ((((row2[ 6] - row1[ 6]) * lerp) >> 16) + row1[ 6]);
+					out[ 7] = (byte) ((((row2[ 7] - row1[ 7]) * lerp) >> 16) + row1[ 7]);
+					out += 8;
+					row1 += 8;
+					row2 += 8;
+				}
+				if (j & 1)
+				{
+					out[ 0] = (byte) ((((row2[ 0] - row1[ 0]) * lerp) >> 16) + row1[ 0]);
+					out[ 1] = (byte) ((((row2[ 1] - row1[ 1]) * lerp) >> 16) + row1[ 1]);
+					out[ 2] = (byte) ((((row2[ 2] - row1[ 2]) * lerp) >> 16) + row1[ 2]);
+					out[ 3] = (byte) ((((row2[ 3] - row1[ 3]) * lerp) >> 16) + row1[ 3]);
+					out += 4;
+					row1 += 4;
+					row2 += 4;
 				}
 				row1 -= outwidth*4;
 				row2 -= outwidth*4;
@@ -340,13 +363,25 @@ void R_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata, 
 		{
 			inrow = (int *)indata + inwidth*(i*inheight/outheight);
 			frac = fracstep >> 1;
-			for (j = 0;j < outwidth;j += 4)
+			j = outwidth - 4;
+			while(j >= 0)
 			{
 				out[0] = inrow[frac >> 16];frac += fracstep;
 				out[1] = inrow[frac >> 16];frac += fracstep;
 				out[2] = inrow[frac >> 16];frac += fracstep;
 				out[3] = inrow[frac >> 16];frac += fracstep;
 				out += 4;
+			}
+			if (j & 2)
+			{
+				out[0] = inrow[frac >> 16];frac += fracstep;
+				out[1] = inrow[frac >> 16];frac += fracstep;
+				out += 2;
+			}
+			if (j & 1)
+			{
+				out[0] = inrow[frac >> 16];frac += fracstep;
+				out += 1;
 			}
 		}
 	}
