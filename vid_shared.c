@@ -82,6 +82,7 @@ cvar_t v_color_white_r = {CVAR_SAVE, "v_color_white_r", "1"};
 cvar_t v_color_white_g = {CVAR_SAVE, "v_color_white_g", "1"};
 cvar_t v_color_white_b = {CVAR_SAVE, "v_color_white_b", "1"};
 cvar_t v_hwgamma = {CVAR_SAVE, "v_hwgamma", "1"};
+cvar_t v_psycho = {0, "v_psycho", "0"};
 
 // brand of graphics chip
 const char *gl_vendor;
@@ -597,12 +598,15 @@ void VID_UpdateGamma(qboolean force)
 {
 	cvar_t *c;
 	float f;
+	static int forcenextframe = false;
 
 	// LordHavoc: don't mess with gamma tables if running dedicated
 	if (cls.state == ca_dedicated)
 		return;
 
 	if (!force
+	 && !forcenextframe
+	 && !v_psycho.integer
 	 && vid_usinghwgamma == (vid_activewindow && v_hwgamma.integer)
 	 && v_gamma.value == cachegamma
 	 && v_contrast.value == cachecontrast
@@ -618,6 +622,8 @@ void VID_UpdateGamma(qboolean force)
 	 && cachewhite[1] == v_color_white_g.value
 	 && cachewhite[2] == v_color_white_b.value)
 		return;
+		
+	forcenextframe = false;
 
 	if (vid_activewindow && v_hwgamma.integer)
 	{
@@ -653,6 +659,45 @@ void VID_UpdateGamma(qboolean force)
 			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps);
 			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 256);
 			BuildGammaTable16(1.0f, cachegamma, cachecontrast, cachebrightness, vid_gammaramps + 512);
+		}
+
+		// LordHavoc: this code came from Ben Winslow and Zinx Verituse, I have
+		// immensely butchered it to work with variable framerates and fit in with
+		// the rest of darkplaces.
+		if (v_psycho.integer)
+		{
+			int x, y;
+			float t;
+			static float n[3], nd[3], nt[3];
+			static int init = true;
+			unsigned short *ramp;
+			forcenextframe = true;
+			if (init)
+			{
+				init = false;
+				for (x = 0;x < 3;x++)
+				{
+					n[x] = lhrandom(0, 1);
+					nd[x] = (rand()&1)?-0.25:0.25;
+					nt[x] = lhrandom(1, 8.2);
+				}
+			}
+			
+			for (x = 0;x < 3;x++)
+			{
+				nt[x] -= host_realframetime;
+				if (nt[x] < 0)
+				{
+					nd[x] = -nd[x];
+					nt[x] += lhrandom(1, 8.2);
+				}
+				n[x] += nd[x] * host_realframetime;
+				n[x] -= floor(n[x]);
+			}
+		
+			for (x = 0, ramp = vid_gammaramps;x < 3;x++)
+				for (y = 0, t = n[x] - 0.75f;y < 256;y++, t += 0.75f * (2.0f / 256.0f))
+					*ramp++ = cos(t*(M_PI*2.0)) * 32767.0f + 32767.0f;
 		}
 
 		Cvar_SetValueQuick(&vid_hardwaregammasupported, VID_SetGamma(vid_gammaramps));
@@ -695,6 +740,8 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&v_color_white_b);
 
 	Cvar_RegisterVariable(&v_hwgamma);
+	
+	Cvar_RegisterVariable(&v_psycho);
 
 	Cvar_RegisterVariable(&vid_fullscreen);
 	Cvar_RegisterVariable(&vid_width);
