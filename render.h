@@ -201,4 +201,5 @@ void R_Entity_Callback(void *data, void *junk);
 
 extern cvar_t r_render;
 extern cvar_t r_upload;
+extern cvar_t r_ser;
 #include "image.h"

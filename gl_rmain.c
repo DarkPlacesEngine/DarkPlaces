@@ -32,7 +32,7 @@ mplane_t	frustum[4];
 
 int			c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
-qboolean	envmap;				// true during envmap command capture 
+qboolean	envmap;				// true during envmap command capture
 
 // LordHavoc: moved all code related to particles into r_part.c
 //int			particletexture;	// little dot for particles
@@ -86,6 +86,8 @@ cvar_t	gl_fogblue = {0, "gl_fogblue","0.3"};
 cvar_t	gl_fogstart = {0, "gl_fogstart", "0"};
 cvar_t	gl_fogend = {0, "gl_fogend","0"};
 cvar_t	glfog = {0, "glfog", "0"};
+
+cvar_t	r_ser = {CVAR_SAVE, "r_ser", "1"};
 
 /*
 int R_VisibleCullBox (vec3_t mins, vec3_t maxs)
@@ -288,6 +290,7 @@ void GL_Main_Init(void)
 //	if (gl_vendor && strstr(gl_vendor, "3Dfx"))
 //		gl_lightmode.value = 0;
 	Cvar_RegisterVariable (&r_fullbright);
+	Cvar_RegisterVariable (&r_ser);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
 
@@ -476,13 +479,26 @@ void R_AddModelEntities (void)
 		{
 			VectorAdd(currententity->render.origin, currententity->render.model->mins, mins);
 			VectorAdd(currententity->render.origin, currententity->render.model->maxs, maxs);
-			R_Clip_AddBox(mins, maxs, R_Entity_Callback, currententity, NULL);
+			if (r_ser.value)
+				R_Clip_AddBox(mins, maxs, R_Entity_Callback, currententity, NULL);
+			else if (R_NotCulledBox(mins, maxs))
+				currententity->render.visframe = r_framecount;
 		}
 		else if (currententity->render.model->type == mod_sprite)
 		{
 			R_LerpUpdate(currententity);
-			R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
-			R_ClipSprite(currententity, blend);
+			if (r_ser.value)
+			{
+				R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
+				R_ClipSprite(currententity, blend);
+			}
+			else
+			{
+				VectorAdd(currententity->render.origin, currententity->render.model->mins, mins);
+				VectorAdd(currententity->render.origin, currententity->render.model->maxs, maxs);
+				if (R_NotCulledBox(mins, maxs))
+					currententity->render.visframe = r_framecount;
+			}
 		}
 	}
 }
