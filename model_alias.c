@@ -29,24 +29,7 @@ void Mod_AliasInit (void)
 {
 }
 
-//aliashdr_t	*pheader;
-
-//typedef struct
-//{
-//	int v[3];
-//	vec3_t normal;
-//} temptris_t;
-//temptris_t *temptris;
-//stvert_t	stverts[MAXALIASVERTS];
-//mtriangle_t	triangles[MAXALIASTRIS];
-
-// a pose is a single set of vertexes.  a frame may be
-// an animating sequence of poses
-//trivertx_t	*poseverts[MAXALIASFRAMES];
 int			posenum;
-
-byte		**player_8bit_texels_tbl;
-byte		*player_8bit_texels;
 
 float		aliasbboxmin[3], aliasbboxmax[3]; // LordHavoc: proper bounding box considerations
 
@@ -174,8 +157,6 @@ typedef struct
 {
 	short		x, y;
 } floodfill_t;
-
-extern unsigned d_8to24table[];
 
 // must be a power of 2
 #define FLOODFILL_FIFO_SIZE 0x1000

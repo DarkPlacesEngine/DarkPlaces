@@ -25,8 +25,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define GL_COLOR_INDEX8_EXT     0x80E5
 
-extern unsigned char d_15to8table[65536];
-
 cvar_t		qsg_version = {"qsg_version", "1"};
 cvar_t		scr_conalpha = {"scr_conalpha", "1"};
 
@@ -235,8 +233,6 @@ qpic_t	*Draw_CachePic (char *path)
 
 extern void LoadSky_f(void);
 
-extern char *QSG_EXTENSIONS;
-
 /*
 ===============
 Draw_Init
@@ -285,22 +281,12 @@ void GL_Draw_Init (void)
 
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
 
-#ifdef NEHAHRA
-#if defined(__linux__)
-	sprintf (engineversion, "DPNehahra Linux   GL %.2f build %3i", (float) VERSION, buildnumber);
-#elif defined(WIN32)
-	sprintf (engineversion, "DPNehahra Windows GL %.2f build %3i", (float) VERSION, buildnumber);
-#else
-	sprintf (engineversion, "DPNehahra Unknown GL %.2f build %3i", (float) VERSION, buildnumber);
-#endif
-#else
 #if defined(__linux__)
 	sprintf (engineversion, "DarkPlaces Linux   GL %.2f build %3i", (float) VERSION, buildnumber);
 #elif defined(WIN32)
 	sprintf (engineversion, "DarkPlaces Windows GL %.2f build %3i", (float) VERSION, buildnumber);
 #else
 	sprintf (engineversion, "DarkPlaces Unknown GL %.2f build %3i", (float) VERSION, buildnumber);
-#endif
 #endif
 	for (i = 0;i < 40 && engineversion[i];i++)
 		engineversion[i] += 0x80; // shift to orange

@@ -52,8 +52,6 @@ client_t	*host_client;			// current client
 
 jmp_buf 	host_abortserver;
 
-byte		*host_basepal;
-
 cvar_t	host_framerate = {"host_framerate","0"};	// set for slow motion
 cvar_t	host_speeds = {"host_speeds","0"};			// set for running times
 cvar_t	slowmo = {"slowmo", "1.0"};					// LordHavoc: framerate independent slowmo
@@ -733,7 +731,7 @@ extern int vcrFile;
 #define	VCR_SIGNATURE	0x56435231
 // "VCR1"
 
-void Host_InitVCR (quakeparms_t *parms)
+void Host_InitVCR ()
 {
 	int		i, len, n;
 	char	*p;
@@ -753,7 +751,7 @@ void Host_InitVCR (quakeparms_t *parms)
 
 		Sys_FileRead (vcrFile, &com_argc, sizeof(int));
 		com_argv = malloc(com_argc * sizeof(char *));
-		com_argv[0] = parms->argv[0];
+		com_argv[0] = host_parms.argv[0];
 		for (i = 0; i < com_argc; i++)
 		{
 			Sys_FileRead (vcrFile, &len, sizeof(int));
@@ -762,8 +760,8 @@ void Host_InitVCR (quakeparms_t *parms)
 			com_argv[i+1] = p;
 		}
 		com_argc++; /* add one for arg[0] */
-		parms->argc = com_argc;
-		parms->argv = com_argv;
+		host_parms.argc = com_argc;
+		host_parms.argv = com_argv;
 	}
 
 	if ( (n = COM_CheckParm("-record")) != 0)
@@ -798,7 +796,7 @@ void Render_Init();
 Host_Init
 ====================
 */
-void Host_Init (quakeparms_t *parms)
+void Host_Init ()
 {
 
 	if (standard_quake)
@@ -807,23 +805,21 @@ void Host_Init (quakeparms_t *parms)
 		minimum_memory = MINIMUM_MEMORY_LEVELPAK;
 
 	if (COM_CheckParm ("-minmemory"))
-		parms->memsize = minimum_memory;
+		host_parms.memsize = minimum_memory;
 
-	host_parms = *parms;
+	if (host_parms.memsize < minimum_memory)
+		Sys_Error ("Only %4.1f megs of memory available, can't execute game", host_parms.memsize / (float)0x100000);
 
-	if (parms->memsize < minimum_memory)
-		Sys_Error ("Only %4.1f megs of memory available, can't execute game", parms->memsize / (float)0x100000);
+	com_argc = host_parms.argc;
+	com_argv = host_parms.argv;
 
-	com_argc = parms->argc;
-	com_argv = parms->argv;
-
-	Memory_Init (parms->membase, parms->memsize);
+	Memory_Init (host_parms.membase, host_parms.memsize);
 	Cbuf_Init ();
 	Cmd_Init ();	
 	V_Init ();
 	Chase_Init ();
-	Host_InitVCR (parms);
-	COM_Init (parms->basedir);
+	Host_InitVCR ();
+	COM_Init (host_parms.basedir);
 	Host_InitLocal ();
 	W_LoadWadFile ("gfx.wad");
 	Key_Init ();
@@ -835,21 +831,18 @@ void Host_Init (quakeparms_t *parms)
 	SV_Init ();
 
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
-	Con_Printf ("%4.1f megabyte heap\n",parms->memsize/ (1024*1024.0));
+	Con_Printf ("%4.1f megabyte heap\n",host_parms.memsize/(1024*1024.0));
 	
 	R_InitTextures ();		// needed even for dedicated servers
  
 	if (cls.state != ca_dedicated)
 	{
-		host_basepal = (byte *)COM_LoadHunkFile ("gfx/palette.lmp", false);
-		if (!host_basepal)
-			Sys_Error ("Couldn't load gfx/palette.lmp");
-		host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black
+		Palette_Init("gfx/palette.lmp");
 
 #ifndef _WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();
 #endif
-		VID_Init (host_basepal);
+		VID_Init ();
 
 		Render_Init();
 		S_Init ();

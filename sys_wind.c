@@ -263,20 +263,18 @@ char	*newargv[256];
 int main (int argc, char **argv)
 {
     MSG        msg;
-	quakeparms_t	parms;
 	double			time, oldtime;
 	static	char	cwd[1024];
 
-	memset (&parms, 0, sizeof(parms));
+	memset (&host_parms, 0, sizeof(host_parms));
 
-	parms.memsize = 16384*1024;
-	parms.membase = malloc (parms.memsize);
+	host_parms.memsize = 16384*1024;
+	host_parms.membase = malloc (parms.memsize);
 
 	_getcwd (cwd, sizeof(cwd));
 	if (cwd[strlen(cwd)-1] == '\\')
 		cwd[strlen(cwd)-1] = 0;
-	parms.basedir = cwd; //"f:/quake";
-//	parms.basedir = "f:\\quake";
+	host_parms.basedir = cwd;
 
 	COM_InitArgv (argc, argv);
 
@@ -290,11 +288,11 @@ int main (int argc, char **argv)
 		COM_InitArgv (argc, argv);
 	}
 
-	parms.argc = argc;
-	parms.argv = argv;
+	host_parms.argc = argc;
+	host_parms.argv = argv;
 
 	printf ("Host_Init\n");
-	Host_Init (&parms);
+	Host_Init ();
 
 	oldtime = Sys_FloatTime ();
 

@@ -41,8 +41,6 @@ qboolean	envmap;				// true during envmap command capture
 //int			particletexture;	// little dot for particles
 //int			playertextures;		// up to 16 color translated skins
 
-extern qboolean isG200, isRagePro; // LordHavoc: special card hacks
-
 //
 // view origin
 //
@@ -97,8 +95,6 @@ cvar_t	gl_fogstart = {"gl_fogstart", "0"};
 cvar_t	gl_fogend = {"gl_fogend","0"};
 cvar_t	glfog = {"glfog", "0"};
 
-extern qboolean isRagePro;
-
 qboolean lighthalf;
 
 vec3_t fogcolor;
@@ -128,6 +124,18 @@ void FOG_framebegin()
 			fog_green = 0;
 			fog_blue = 0;
 		}
+	}
+	if (fog_density)
+	{
+			fogcolor[0] = fog_red   = bound(0.0f, fog_red  , 1.0f);
+			fogcolor[1] = fog_green = bound(0.0f, fog_green, 1.0f);
+			fogcolor[2] = fog_blue  = bound(0.0f, fog_blue , 1.0f);
+			if (lighthalf)
+			{
+				fogcolor[0] *= 0.5f;
+				fogcolor[1] *= 0.5f;
+				fogcolor[2] *= 0.5f;
+			}
 	}
 	if (glfog.value)
 	{
@@ -163,15 +171,7 @@ void FOG_framebegin()
 		{
 			fogenabled = true;
 			fogdensity = -4000.0f / (fog_density * fog_density);
-			fogcolor[0] = fog_red   = bound(0.0f, fog_red  , 1.0f);
-			fogcolor[1] = fog_green = bound(0.0f, fog_green, 1.0f);
-			fogcolor[2] = fog_blue  = bound(0.0f, fog_blue , 1.0f);
-			if (lighthalf)
-			{
-				fogcolor[0] *= 0.5f;
-				fogcolor[1] *= 0.5f;
-				fogcolor[2] *= 0.5f;
-			}
+			// fog color was already set
 		}
 		else
 			fogenabled = false;
@@ -266,6 +266,43 @@ void Render_Init()
 }
 
 /*
+===============
+GL_Init
+===============
+*/
+extern char *QSG_EXTENSIONS;
+void GL_Init (void)
+{
+	gl_vendor = glGetString (GL_VENDOR);
+	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
+	gl_renderer = glGetString (GL_RENDERER);
+	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
+
+	gl_version = glGetString (GL_VERSION);
+	Con_Printf ("GL_VERSION: %s\n", gl_version);
+	gl_extensions = glGetString (GL_EXTENSIONS);
+	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
+
+//	Con_Printf ("%s %s\n", gl_renderer, gl_version);
+
+	VID_CheckMultiTexture();
+	VID_CheckVertexArrays();
+
+	// LordHavoc: report supported extensions
+	Con_Printf ("\nQSG extensions: %s\n", QSG_EXTENSIONS);
+
+	glCullFace(GL_FRONT);
+	glEnable(GL_TEXTURE_2D);
+//	glDisable(GL_ALPHA_TEST);
+	glAlphaFunc(GL_GREATER, 0.5);
+
+//	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
+
+	Palette_Init();
+}
+
+
+/*
 void R_RotateForEntity (entity_t *e)
 {
 	glTranslatef (e->origin[0],  e->origin[1],  e->origin[2]);
@@ -285,173 +322,16 @@ float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 #include "anorms.h"
 };
 
-// LordHavoc: moved this shading stuff up because the sprites need shading stuff
+// LordHavoc: shading stuff
 vec3_t	shadevector;
 vec3_t	shadecolor;
 
 float	modelalpha;
 
-extern void R_LightPoint (vec3_t color, vec3_t p);
-extern void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
-extern void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
-
-/*
-=============================================================
-
-  SPRITE MODELS
-
-=============================================================
-*/
-
-/*
-================
-R_GetSpriteFrame
-================
-*/
-void R_GetSpriteFrame (entity_t *currententity, mspriteframe_t **oldframe, mspriteframe_t **newframe, float *framelerp)
-{
-	msprite_t		*psprite;
-	mspritegroup_t	*pspritegroup;
-	int				i, j, numframes, frame;
-	float			*pintervals, fullinterval, targettime, time, jtime, jinterval;
-
-	psprite = currententity->model->cache.data;
-	frame = currententity->frame;
-
-	if ((frame >= psprite->numframes) || (frame < 0))
-	{
-		Con_Printf ("R_DrawSprite: no such frame %d\n", frame);
-		frame = 0;
-	}
-
-	if (psprite->frames[frame].type == SPR_SINGLE)
-	{
-		if (currententity->draw_lastmodel == currententity->model && currententity->draw_lerpstart < cl.time)
-		{
-			if (frame != currententity->draw_pose)
-			{
-				currententity->draw_lastpose = currententity->draw_pose;
-				currententity->draw_pose = frame;
-				currententity->draw_lerpstart = cl.time;
-				*framelerp = 0;
-			}
-			else
-				*framelerp = (cl.time - currententity->draw_lerpstart) * 10.0;
-		}
-		else // uninitialized
-		{
-			currententity->draw_lastmodel = currententity->model;
-			currententity->draw_lastpose = currententity->draw_pose = frame;
-			currententity->draw_lerpstart = cl.time;
-			*framelerp = 0;
-		}
-		*oldframe = psprite->frames[currententity->draw_lastpose].frameptr;
-		*newframe = psprite->frames[frame].frameptr;
-	}
-	else
-	{
-		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
-		pintervals = pspritegroup->intervals;
-		numframes = pspritegroup->numframes;
-		fullinterval = pintervals[numframes-1];
-
-		time = cl.time + currententity->syncbase;
-
-	// when loading in Mod_LoadSpriteGroup, we guaranteed all interval values
-	// are positive, so we don't have to worry about division by 0
-		targettime = time - ((int)(time / fullinterval)) * fullinterval;
-
-		// LordHavoc: since I can't measure the time properly when it loops from numframes-1 to 0,
-		//            I instead measure the time of the first frame, hoping it is consistent
-		j = numframes-1;jtime = 0;jinterval = pintervals[1] - pintervals[0];
-		for (i=0 ; i<(numframes-1) ; i++)
-		{
-			if (pintervals[i] > targettime)
-				break;
-			j = i;jinterval = pintervals[i] - jtime;jtime = pintervals[i];
-		}
-		*framelerp = (targettime - jtime) / jinterval;
-
-		*oldframe = pspritegroup->frames[j];
-		*newframe = pspritegroup->frames[i];
-	}
-}
-
-void GL_DrawSpriteImage (mspriteframe_t *frame, vec3_t origin, vec3_t up, vec3_t right, int red, int green, int blue, int alpha)
-{
-	// LordHavoc: rewrote this to use the transparent poly system
-	transpolybegin(frame->gl_texturenum, 0, frame->gl_fogtexturenum, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-	transpolyvert(origin[0] + frame->down * up[0] + frame->left * right[0], origin[1] + frame->down * up[1] + frame->left * right[1], origin[2] + frame->down * up[2] + frame->left * right[2], 0, 1, red, green, blue, alpha);
-	transpolyvert(origin[0] + frame->up * up[0] + frame->left * right[0], origin[1] + frame->up * up[1] + frame->left * right[1], origin[2] + frame->up * up[2] + frame->left * right[2], 0, 0, red, green, blue, alpha);
-	transpolyvert(origin[0] + frame->up * up[0] + frame->right * right[0], origin[1] + frame->up * up[1] + frame->right * right[1], origin[2] + frame->up * up[2] + frame->right * right[2], 1, 0, red, green, blue, alpha);
-	transpolyvert(origin[0] + frame->down * up[0] + frame->right * right[0], origin[1] + frame->down * up[1] + frame->right * right[1], origin[2] + frame->down * up[2] + frame->right * right[2], 1, 1, red, green, blue, alpha);
-	transpolyend();
-}
-
-extern qboolean isG200, isRagePro, lighthalf;
-
-/*
-=================
-R_DrawSpriteModel
-
-=================
-*/
-void R_DrawSpriteModel (entity_t *e)
-{
-	mspriteframe_t	*oldframe, *newframe;
-	float			lerp, ilerp;
-	vec3_t			forward, right, up, org;
-	msprite_t		*psprite;
-
-	// don't even bother culling, because it's just a single
-	// polygon without a surface cache
-	R_GetSpriteFrame (e, &oldframe, &newframe, &lerp);
-	if (lerp < 0) lerp = 0;
-	if (lerp > 1) lerp = 1;
-	if (isRagePro) // LordHavoc: no alpha scaling supported on per pixel alpha images on ATI Rage Pro... ACK!
-		lerp = 1;
-	ilerp = 1.0 - lerp;
-	psprite = e->model->cache.data;
-
-	if (psprite->type == SPR_ORIENTED)
-	{	// bullet marks on walls
-		AngleVectors (e->angles, forward, right, up);
-		VectorSubtract(e->origin, vpn, org);
-	}
-	else
-	{	// normal sprite
-		VectorCopy(vup, up);
-		VectorCopy(vright, right);
-		VectorCopy(e->origin, org);
-	}
-	if (e->scale != 1)
-	{
-		VectorScale(up, e->scale, up);
-		VectorScale(right, e->scale, right);
-	}
-
-	if (e->model->flags & EF_FULLBRIGHT || e->effects & EF_FULLBRIGHT)
-	{
-		shadecolor[0] = e->colormod[0] * 255;
-		shadecolor[1] = e->colormod[1] * 255;
-		shadecolor[2] = e->colormod[2] * 255;
-	}
-	else
-	{
-		R_LightPoint (shadecolor, e->origin);
-		R_DynamicLightPointNoMask(shadecolor, e->origin);
-	}
-
-	// LordHavoc: interpolated sprite rendering
-	if (ilerp != 0)
-		GL_DrawSpriteImage(oldframe, org, up, right, shadecolor[0],shadecolor[1],shadecolor[2],e->alpha*255*ilerp);
-	if (lerp != 0)
-		GL_DrawSpriteImage(newframe, org, up, right, shadecolor[0],shadecolor[1],shadecolor[2],e->alpha*255*lerp);
-}
-
 //==================================================================================
 
 void R_DrawBrushModel (entity_t *e);
+void R_DrawSpriteModel (entity_t *e);
 
 /*
 =============

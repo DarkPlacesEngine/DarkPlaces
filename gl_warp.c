@@ -176,17 +176,12 @@ void GL_SubdivideSurface (msurface_t *fa)
 
 
 
-extern qboolean lighthalf;
-
 int skyboxside[6];
 
 char skyname[256];
 
 // LordHavoc: moved LoadTGA and LoadPCX to gl_draw.c
 
-extern int image_width, image_height;
-
-byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight);
 /*
 ==================
 R_LoadSkyBox

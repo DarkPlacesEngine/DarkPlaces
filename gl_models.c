@@ -70,8 +70,6 @@ void R_AliasLerpVerts(int vertcount, float lerp, trivert2 *verts1, vec3_t scale1
 	if (lerp != 0)
 	{
 		float ilerp, ilerp127, lerp127, scalex1, scalex2, translatex, scaley1, scaley2, translatey, scalez1, scalez2, translatez;
-		if (lerp < 0) lerp = 0;
-		if (lerp > 1) lerp = 1;
 		ilerp = 1 - lerp;
 		ilerp127 = ilerp * (1.0 / 127.0);
 		lerp127 = lerp * (1.0 / 127.0);
@@ -146,8 +144,6 @@ float R_CalcAnimLerp(entity_t *ent, int pose, float lerpscale)
 	}
 }
 
-extern cvar_t gl_vertexarrays;
-extern qboolean lighthalf;
 void GL_DrawModelMesh(int skin, byte *colors, maliashdr_t *maliashdr)
 {
 	int i;
@@ -630,7 +626,6 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader, float alpha, vec3_t color, entity_t 
 
 int modeldlightbits[8];
 extern int r_dlightframecount;
-extern void R_LightPoint (vec3_t color, vec3_t p);
 
 /*
 =================

@@ -219,10 +219,6 @@ void CL_KeepaliveMessage (void)
 
 extern qboolean isworldmodel;
 extern char skyname[];
-extern float fog_density;
-extern float fog_red;
-extern float fog_green;
-extern float fog_blue;
 extern void R_SetSkyBox (char *sky);
 extern void FOG_clear();
 extern cvar_t r_farclip;
@@ -755,11 +751,6 @@ void CL_ParseStaticSound (void)
 extern void SHOWLMP_decodehide();
 extern void SHOWLMP_decodeshow();
 extern void R_SetSkyBox(char* sky);
-
-extern float fog_density;
-extern float fog_red;
-extern float fog_green;
-extern float fog_blue;
 
 /*
 =====================

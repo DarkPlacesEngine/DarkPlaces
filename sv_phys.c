@@ -449,6 +449,24 @@ void SV_PushMove (edict_t *pusher, float movetime)
 	vec3_t		moved_from[MAX_EDICTS];
 	float		savesolid;
 
+	switch ((int) pusher->v.solid)
+	{
+	// LordHavoc: valid pusher types
+	case SOLID_BSP:
+	case SOLID_BBOX:
+	case SOLID_SLIDEBOX:
+	case SOLID_CORPSE: // LordHavoc: this would be weird...
+		break;
+	// LordHavoc: no collisions
+	case SOLID_NOT:
+	case SOLID_TRIGGER:
+		VectorMA (pusher->v.origin, movetime, pusher->v.velocity, pusher->v.origin);
+		pusher->v.ltime += movetime;
+		SV_LinkEdict (pusher, false);
+		return;
+	default:
+		Host_Error("SV_PushMove: unrecognized solid type %f\n", pusher->v.solid);
+	}
 	if (!pusher->v.velocity[0] && !pusher->v.velocity[1] && !pusher->v.velocity[2])
 	{
 		pusher->v.ltime += movetime;
@@ -537,8 +555,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				SV_LinkEdict (pusher, false);
 				pusher->v.ltime -= movetime;
 
-				// if the pusher has a "blocked" function, call it
-				// otherwise, just stay in place until the obstacle is gone
+				// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
 				if (pusher->v.blocked)
 				{
 					pr_global_struct->self = EDICT_TO_PROG(pusher);
@@ -547,6 +564,7 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				}
 				
 				// move back any entities we already moved
+				num_moved--; // LordHavoc: pop off check, because it was already restored
 				for (i=0 ; i<num_moved ; i++)
 				{
 					VectorCopy (moved_from[i], moved_edict[i]->v.origin);
@@ -571,10 +589,11 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 	int			i, e;
 	edict_t		*check;
 	vec3_t		move, a, amove;
-	vec3_t		entorig, pushorig;
+	vec3_t		entorigin, entangles, pushorigin, pushangles;
 	int			num_moved;
 	edict_t		*moved_edict[MAX_EDICTS];
 	vec3_t		moved_from[MAX_EDICTS];
+	vec3_t		angled_from[MAX_EDICTS];
 	vec3_t		org, org2;
 	vec3_t		forward, right, up;
 	float		savesolid;
@@ -591,7 +610,8 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 	VectorSubtract (vec3_origin, amove, a);
 	AngleVectors (a, forward, right, up);
 
-	VectorCopy (pusher->v.angles, pushorig);
+	VectorCopy (pusher->v.origin, pushorigin);
+	VectorCopy (pusher->v.angles, pushangles);
 	
 // move the pusher to it's final position
 
@@ -608,21 +628,20 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 		if (check->free)
 			continue;
 		if (check->v.movetype == MOVETYPE_PUSH
-		|| check->v.movetype == MOVETYPE_NONE
-		|| check->v.movetype == MOVETYPE_FOLLOW
-		|| check->v.movetype == MOVETYPE_NOCLIP)
+		 || check->v.movetype == MOVETYPE_NONE
+		 || check->v.movetype == MOVETYPE_FOLLOW
+		 || check->v.movetype == MOVETYPE_NOCLIP)
 			continue;
 
 	// if the entity is standing on the pusher, it will definately be moved
-		if ( ! ( ((int)check->v.flags & FL_ONGROUND)
-		&& PROG_TO_EDICT(check->v.groundentity) == pusher) )
+		if (!(((int)check->v.flags & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher))
 		{
-			if ( check->v.absmin[0] >= pusher->v.absmax[0]
-			|| check->v.absmin[1] >= pusher->v.absmax[1]
-			|| check->v.absmin[2] >= pusher->v.absmax[2]
-			|| check->v.absmax[0] <= pusher->v.absmin[0]
-			|| check->v.absmax[1] <= pusher->v.absmin[1]
-			|| check->v.absmax[2] <= pusher->v.absmin[2] )
+			if (check->v.absmin[0] >= pusher->v.absmax[0]
+			 || check->v.absmin[1] >= pusher->v.absmax[1]
+			 || check->v.absmin[2] >= pusher->v.absmax[2]
+			 || check->v.absmax[0] <= pusher->v.absmin[0]
+			 || check->v.absmax[1] <= pusher->v.absmin[1]
+			 || check->v.absmax[2] <= pusher->v.absmin[2])
 				continue;
 
 		// see if the ent's bbox is inside the pusher's final position
@@ -634,8 +653,10 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 		if (check->v.movetype != MOVETYPE_WALK)
 			check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
 		
-		VectorCopy (check->v.origin, entorig);
+		VectorCopy (check->v.origin, entorigin);
 		VectorCopy (check->v.origin, moved_from[num_moved]);
+		VectorCopy (check->v.angles, entangles);
+		VectorCopy (check->v.angles, angled_from[num_moved]);
 		moved_edict[num_moved] = check;
 		num_moved++;
 
@@ -652,6 +673,8 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 		SV_PushEntity (check, move);
 		pusher->v.solid = savesolid; // LordHavoc: restore to correct solid type
 
+		VectorAdd (check->v.angles, amove, check->v.angles);
+
 	// if it is still inside the pusher, block
 		if (SV_TestEntityPosition (check))
 		{	// fail the move
@@ -664,15 +687,16 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 				continue;
 			}
 			
-			VectorCopy (entorig, check->v.origin);
+			VectorCopy (entorigin, check->v.origin);
+			VectorCopy (entangles, check->v.angles);
 			SV_LinkEdict (check, true);
 
-			VectorCopy (pushorig, pusher->v.angles);
+			VectorCopy (pushorigin, pusher->v.origin);
+			VectorCopy (pushangles, pusher->v.angles);
 			SV_LinkEdict (pusher, false);
 			pusher->v.ltime -= movetime;
 
-			// if the pusher has a "blocked" function, call it
-			// otherwise, just stay in place until the obstacle is gone
+			// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
 			if (pusher->v.blocked)
 			{
 				pr_global_struct->self = EDICT_TO_PROG(pusher);
@@ -681,23 +705,17 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 			}
 			
 		// move back any entities we already moved
+			num_moved--; // LordHavoc: pop off check, because it was already restored
 			for (i=0 ; i<num_moved ; i++)
 			{
 				VectorCopy (moved_from[i], moved_edict[i]->v.origin);
-				VectorSubtract (moved_edict[i]->v.angles, amove, moved_edict[i]->v.angles);
+				VectorCopy (angled_from[i], moved_edict[i]->v.angles);
 				SV_LinkEdict (moved_edict[i], false);
 			}
 			return;
 		}
-		else
-		{
-			VectorAdd (check->v.angles, amove, check->v.angles);
-		}
 	}
-
-	
 }
-//#endif
 
 /*
 ================
@@ -713,6 +731,7 @@ void SV_Physics_Pusher (edict_t *ent)
 
 	oldltime = ent->v.ltime;
 	
+	/*
 	thinktime = ent->v.nextthink;
 	if (thinktime < ent->v.ltime + host_frametime)
 	{
@@ -728,6 +747,23 @@ void SV_Physics_Pusher (edict_t *ent)
 		if (ent->v.avelocity[0] || ent->v.avelocity[1] || ent->v.avelocity[2])
 			SV_PushRotate (ent, movetime);
 		else
+			SV_PushMove (ent, movetime);	// advances ent->v.ltime if not blocked
+	}
+	*/
+	if (ent->v.avelocity[0] || ent->v.avelocity[1] || ent->v.avelocity[2])
+		SV_PushRotate (ent, host_frametime);
+	else
+	{
+		thinktime = ent->v.nextthink;
+		if (thinktime < ent->v.ltime + host_frametime)
+		{
+			movetime = thinktime - ent->v.ltime;
+			if (movetime < 0)
+				movetime = 0;
+		}
+		else
+			movetime = host_frametime;
+		if (movetime)
 			SV_PushMove (ent, movetime);	// advances ent->v.ltime if not blocked
 	}
 		
@@ -1354,25 +1390,33 @@ void SV_Physics (void)
 			continue;
 
 		if (pr_global_struct->force_retouch)
-		{
 			SV_LinkEdict (ent, true);	// force retouch even for stationary
-		}
 
 		if (i > 0 && i <= svs.maxclients)
-			SV_Physics_Client (ent, i);
-		else if (ent->v.movetype == MOVETYPE_PUSH)
-			SV_Physics_Pusher (ent);
-		else if (ent->v.movetype == MOVETYPE_NONE)
-			SV_Physics_None (ent);
-		else if (ent->v.movetype == MOVETYPE_FOLLOW)
-			SV_Physics_Follow (ent);
-		else if (ent->v.movetype == MOVETYPE_NOCLIP)
-			SV_Physics_Noclip (ent);
-		else if (ent->v.movetype == MOVETYPE_STEP)
-			SV_Physics_Step (ent);
-		// LordHavoc: added support for MOVETYPE_WALK on normal entities! :)
-		else if (ent->v.movetype == MOVETYPE_WALK)
 		{
+			SV_Physics_Client (ent, i);
+			continue;
+		}
+
+		switch ((int) ent->v.movetype)
+		{
+		case MOVETYPE_PUSH:
+			SV_Physics_Pusher (ent);
+			break;
+		case MOVETYPE_NONE:
+			SV_Physics_None (ent);
+			break;
+		case MOVETYPE_FOLLOW:
+			SV_Physics_Follow (ent);
+			break;
+		case MOVETYPE_NOCLIP:
+			SV_Physics_Noclip (ent);
+			break;
+		case MOVETYPE_STEP:
+			SV_Physics_Step (ent);
+			break;
+		// LordHavoc: added support for MOVETYPE_WALK on normal entities! :)
+		case MOVETYPE_WALK:
 			if (SV_RunThink (ent))
 			{
 				if (!SV_CheckWater (ent) && ! ((int)ent->v.flags & FL_WATERJUMP) )
@@ -1380,15 +1424,18 @@ void SV_Physics (void)
 				SV_CheckStuck (ent);
 				SV_WalkMove (ent);
 			}
-		}
-		else if (ent->v.movetype == MOVETYPE_TOSS 
-		|| ent->v.movetype == MOVETYPE_BOUNCE
-		|| ent->v.movetype == MOVETYPE_BOUNCEMISSILE
-		|| ent->v.movetype == MOVETYPE_FLY
-		|| ent->v.movetype == MOVETYPE_FLYMISSILE)
+			break;
+		case MOVETYPE_TOSS:
+		case MOVETYPE_BOUNCE:
+		case MOVETYPE_BOUNCEMISSILE:
+		case MOVETYPE_FLY:
+		case MOVETYPE_FLYMISSILE:
 			SV_Physics_Toss (ent);
-		else
-			Host_Error ("SV_Physics: bad movetype %i", (int)ent->v.movetype);			
+			break;
+		default:
+			Host_Error ("SV_Physics: bad movetype %i", (int)ent->v.movetype);
+			break;
+		}
 	}
 	
 	if (pr_global_struct->force_retouch)

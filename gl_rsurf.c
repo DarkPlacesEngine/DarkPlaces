@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-extern int                     skytexturenum;
-
 int		lightmap_textures;
 
 signed blocklights[18*18*3]; // LordHavoc: *3 for colored lighting
@@ -91,7 +89,6 @@ void GL_Surf_Init()
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown);
 }
 
-extern qboolean lighthalf;
 /*
 ===============
 R_BuildLightMap

@@ -137,6 +137,12 @@ extern qboolean gl_mtexable;
 
 // LordHavoc: ARB multitexure support
 extern int		gl_mtex_enum;
+
+// for platforms (wgl) that do not use GLAPIENTRY
+#ifndef GLAPIENTRY
+#define GLAPIENTRY APIENTRY
+#endif
+
 // Micro$oft dropped GL support beyond 1.1, so...
 #ifdef WIN32
 
@@ -155,44 +161,22 @@ extern int		gl_mtex_enum;
 
 // LordHavoc: vertex array defines
 #define GL_VERTEX_ARRAY					0x8074
-//#define GL_NORMAL_ARRAY					0x8075
+#define GL_NORMAL_ARRAY					0x8075
 #define GL_COLOR_ARRAY					0x8076
-//#define GL_INDEX_ARRAY					0x8077
 #define GL_TEXTURE_COORD_ARRAY			0x8078
-//#define GL_EDGE_FLAG_ARRAY				0x8079
-/*
-#define GL_V2F							0x2A20
-#define GL_V3F							0x2A21
-#define GL_C4UB_V2F						0x2A22
-#define GL_C4UB_V3F						0x2A23
-#define GL_C3F_V3F						0x2A24
-#define GL_N3F_V3F						0x2A25
-#define GL_C4F_N3F_V3F					0x2A26
-#define GL_T2F_V3F						0x2A27
-#define GL_T4F_V4F						0x2A28
-#define GL_T2F_C4UB_V3F					0x2A29
-#define GL_T2F_C3F_V3F					0x2A2A
-#define GL_T2F_N3F_V3F					0x2A2B
-#define GL_T2F_C4F_N3F_V3F				0x2A2C
-#define GL_T4F_C4F_N3F_V4F				0x2A2D
-*/
 
-//extern void (APIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
-extern void (APIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//extern void (APIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (APIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//extern void (APIENTRY *qglIndexPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
-extern void (APIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
-//extern void (APIENTRY *qglEdgeFlagPointer)(GLsizei stride, const GLvoid *ptr);
-//extern void (APIENTRY *qglGetPointerv)(GLenum pname, void **params);
-extern void (APIENTRY *qglArrayElement)(GLint i);
-//extern void (APIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
-extern void (APIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
-//extern void (APIENTRY *qglInterleavedArrays)(GLenum format, GLsizei stride, const GLvoid *pointer);
+//extern void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
+extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+//extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglArrayElement)(GLint i);
+//extern void (GLAPIENTRY *qglDrawArrays)(GLenum mode, GLint first, GLsizei count);
+extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 
-extern void (APIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (APIENTRY *qglSelectTexture) (GLenum);
-extern void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
+extern void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglSelectTexture) (GLenum);
+//extern void (GLAPIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
 
 #else
 
@@ -200,20 +184,16 @@ extern void (APIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
 #define qglVertexPointer glVertexPointer
 //#define qglNormalPointer glNormalPointer
 #define qglColorPointer glColorPointer
-//#define qglIndexPointer glIndexPointer
 #define qglTexCoordPointer glTexCoordPointer
-//#define qglEdgeFlagPointer glEdgeFlagPointer
-//#define qglGetPointerv glGetPointerv
 #define qglArrayElement glArrayElement
 //#define qglDrawArrays glDrawArrays
 #define qglDrawElements glDrawElements
-//#define qglInterleavedArrays glInterleavedArrays
 
-extern void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (*qglSelectTexture) (GLenum);
-#ifndef MESA
-extern void (*glColorTableEXT)(int, int, int, int, int, const void*);
-#endif
+extern void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglSelectTexture) (GLenum);
+//#ifndef MESA
+//extern void (GLAPIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
+//#endif
 
 #endif
 
@@ -240,6 +220,9 @@ extern vec_t fogdensity;
 #define calcfogbyte(v) ((byte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
 
 #include "r_modules.h"
+
+extern cvar_t gl_vertexarrays;
+extern qboolean lighthalf;
 
 extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, int effects, int flags, int colormap);
 

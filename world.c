@@ -435,21 +435,28 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 // set the abs box
 
 // LordHavoc: enabling rotating bmodels
-	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]) )
+	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
 	{	// expand for rotation
 		float		max, v;
 		int			i;
 
+		max = DotProduct(ent->v.mins, ent->v.mins);
+		v = DotProduct(ent->v.maxs, ent->v.maxs);
+		if (max < v)
+			max = v;
+		max = sqrt(max);
+		/*
 		max = 0;
 		for (i=0 ; i<3 ; i++)
 		{
-			v =fabs( ent->v.mins[i]);
-			if (v > max)
+			v = fabs(ent->v.mins[i]);
+			if (max < v)
 				max = v;
-			v =fabs( ent->v.maxs[i]);
-			if (v > max)
+			v = fabs(ent->v.maxs[i]);
+			if (max < v)
 				max = v;
 		}
+		*/
 		for (i=0 ; i<3 ; i++)
 		{
 			ent->v.absmin[i] = ent->v.origin[i] - max;
@@ -483,7 +490,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		ent->v.absmax[1] += 1;
 		ent->v.absmax[2] += 1;
 	}
-	
+
 // link to PVS leafs
 	ent->num_leafs = 0;
 	if (ent->v.modelindex)
@@ -505,7 +512,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		else
 			break;		// crosses the node
 	}
-	
+
 // link it in	
 
 	if (ent->v.solid == SOLID_TRIGGER)
@@ -933,8 +940,7 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 
 // LordHavoc: enabling rotating bmodels
 	// rotate start and end into the models frame of reference
-	if (ent->v.solid == SOLID_BSP && 
-	(ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]) )
+	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
 	{
 		vec3_t	forward, right, up;
 		vec3_t	temp;
@@ -957,8 +963,7 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 
 // LordHavoc: enabling rotating bmodels
 	// rotate endpos back to world frame of reference
-	if (ent->v.solid == SOLID_BSP && 
-	(ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]) )
+	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
 	{
 		vec3_t	a;
 		vec3_t	forward, right, up;

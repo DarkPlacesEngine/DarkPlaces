@@ -1,4 +1,6 @@
 
+extern float fog_density, fog_red, fog_green, fog_blue;
+
 #define TPOLYTYPE_ALPHA 0
 #define TPOLYTYPE_ADD 1
 

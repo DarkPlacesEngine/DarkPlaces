@@ -42,7 +42,6 @@ void Image_Copy8bitRGBA(byte *in, byte *out, int pixels, int *pal)
 		iout[0] = pal[in[0]];
 }
 
-extern byte qgamma[];
 void Image_CopyRGBAGamma(byte *in, byte *out, int pixels)
 {
 	while (pixels--)
@@ -103,12 +102,17 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 
 	pcx = &pcxbuf;
 
-	if (pcx->manufacturer != 0x0a
-		|| pcx->version != 5
-		|| pcx->encoding != 1
-		|| pcx->bits_per_pixel != 8
-		|| pcx->xmax > 320
-		|| pcx->ymax > 256)
+	// LordHavoc: big-endian support ported from QF newtree
+	pcx->xmax = LittleShort (pcx->xmax);
+	pcx->xmin = LittleShort (pcx->xmin);
+	pcx->ymax = LittleShort (pcx->ymax);
+	pcx->ymin = LittleShort (pcx->ymin);
+	pcx->hres = LittleShort (pcx->hres);
+	pcx->vres = LittleShort (pcx->vres);
+	pcx->bytes_per_line = LittleShort (pcx->bytes_per_line);
+	pcx->palette_type = LittleShort (pcx->palette_type);
+
+	if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 || pcx->bits_per_pixel != 8 || pcx->xmax > 320 || pcx->ymax > 256)
 	{
 		Con_Printf ("Bad pcx file\n");
 		return NULL;
@@ -139,19 +143,29 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 			{
 				runLength = dataByte & 0x3F;
 				dataByte = fgetc(f);
+				if (runLength)
+				{
+					x += runLength;
+					while(runLength--)
+					{
+						pix[0] = palette[dataByte*3];
+						pix[1] = palette[dataByte*3+1];
+						pix[2] = palette[dataByte*3+2];
+						pix[3] = 255;
+						pix += 4;
+					}
+				}
 			}
 			else
-				runLength = 1;
-
-			while(runLength-- > 0)
 			{
+				x++;
 				pix[0] = palette[dataByte*3];
 				pix[1] = palette[dataByte*3+1];
 				pix[2] = palette[dataByte*3+2];
 				pix[3] = 255;
 				pix += 4;
-				x++;
 			}
+
 		}
 	}
 	fclose(f);
@@ -399,14 +413,10 @@ byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int ma
 	char	basename[128], name[128];
 	byte	*image_rgba, *c;
 	COM_StripExtension(filename, basename); // strip the extension to allow TGA skins on Q2 models despite the .pcx in the skin name
-	// replace *'s with +, so commandline utils don't get confused when dealing with the external files
-	c = basename;
-	while (*c)
-	{
+	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
+	for (c = basename;*c;c++)
 		if (*c == '*')
-			*c = '+';
-		c++;
-	}
+			*c = '#';
 	sprintf (name, "textures/%s.tga", basename);
 	COM_FOpenFile (name, &f, true);
 	if (f)

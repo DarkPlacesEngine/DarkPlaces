@@ -110,7 +110,7 @@ void Mod_LoadTextures (lump_t *l)
 	texture_t	*anims[10];
 	texture_t	*altanims[10];
 	dmiptexlump_t *m;
-	byte *data;
+	byte	*data;
 
 	if (!l->filelen)
 	{
@@ -142,7 +142,17 @@ void Mod_LoadTextures (lump_t *l)
 		tx = Hunk_AllocName (sizeof(texture_t), loadname );
 		loadmodel->textures[i] = tx;
 
-		memcpy (tx->name, mt->name, sizeof(tx->name));
+		// LordHavoc: force all names to lowercase and make sure they are terminated while copying
+		for (j = 0;mt->name[j] && j < 15;j++)
+		{
+			if (mt->name[j] >= 'A' && mt->name[j] <= 'Z')
+				tx->name[j] = mt->name[j] + ('a' - 'A');
+			else
+				tx->name[j] = mt->name[j];
+		}
+		for (;j < 16;j++)
+			tx->name[j] = 0;
+
 		tx->width = mt->width;
 		tx->height = mt->height;
 		for (j=0 ; j<MIPLEVELS ; j++)
@@ -151,7 +161,7 @@ void Mod_LoadTextures (lump_t *l)
 		bytesperpixel = 4;
 		fullbrights = FALSE;
 		transparent = TRUE;
-		data = loadimagepixels(mt->name, FALSE, 0, 0); //tx->width, tx->height);
+		data = loadimagepixels(tx->name, FALSE, 0, 0); //tx->width, tx->height);
 		if (!data) // no external texture found
 		{
 			freeimage = FALSE;
@@ -160,7 +170,7 @@ void Mod_LoadTextures (lump_t *l)
 			if (!hlbsp && mt->offsets[0]) // texture included
 			{
 				data = (byte *)((int) mt + mt->offsets[0]);
-				if (r_fullbrights.value && mt->name[0] != '*')
+				if (r_fullbrights.value && tx->name[0] != '*')
 				{
 					for (j = 0;j < tx->width*tx->height;j++)
 						if (data[j] >= 224) // fullbright
@@ -181,7 +191,7 @@ void Mod_LoadTextures (lump_t *l)
 			tx->width = image_width;
 			tx->height = image_height;
 		}
-		if (!hlbsp && !strncmp(mt->name,"sky",3) && tx->width == 256 && tx->height == 128) // LordHavoc: HL sky textures are entirely unrelated
+		if (!hlbsp && !strncmp(tx->name,"sky",3) && tx->width == 256 && tx->height == 128) // LordHavoc: HL sky textures are entirely unrelated
 		{
 			tx->transparent = FALSE;
 			R_InitSky (data, bytesperpixel);
@@ -212,26 +222,6 @@ void Mod_LoadTextures (lump_t *l)
 		}
 		if (freeimage)
 			free(data);
-
-		/*
-		pixels = mt->width*mt->height/64*85;
-		tx = Hunk_AllocName (sizeof(texture_t) +pixels, loadname );
-		loadmodel->textures[i] = tx;
-
-		memcpy (tx->name, mt->name, sizeof(tx->name));
-		tx->width = mt->width;
-		tx->height = mt->height;
-		for (j=0 ; j<MIPLEVELS ; j++)
-			tx->offsets[j] = mt->offsets[j] + sizeof(texture_t) - sizeof(miptex_t);
-		// the pixels immediately follow the structures
-		memcpy ( tx+1, mt+1, pixels);
-		
-
-		if (!strncmp(mt->name,"sky",3))	
-			R_InitSky (tx);
-		else
-			tx->gl_texturenum = GL_LoadTexture (mt->name, tx->width, tx->height, (byte *)(tx+1), true, false, 1);
-		*/
 	}
 
 //
