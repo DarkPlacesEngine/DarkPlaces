@@ -207,10 +207,10 @@ static void skyspherecalc(void)
 		for (i = 0;i <= skygridx;i++)
 		{
 			b = i * skygridxrecip;
-			x = cos(b * M_PI * 2);
+			x = cos((b + 0.5) * M_PI);
 			v[0] = ax*x * dx;
 			v[1] = ay*x * dy;
-			v[2] = -sin(b * M_PI * 2) * dz;
+			v[2] = -sin((b + 0.5) * M_PI) * dz;
 			length = 3.0f / sqrt(v[0]*v[0]+v[1]*v[1]+(v[2]*v[2]*9));
 			*texcoord++ = v[0] * length;
 			*texcoord++ = v[1] * length;
