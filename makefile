@@ -41,7 +41,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
 		gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o \
 		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
-		r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o \
+		r_lerpanim.o r_light.o r_modules.o r_sky.o \
 		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
 		r_shadow.o
 SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
@@ -84,7 +84,7 @@ EXE_DED=darkplaces-dedicated
 
 GLX_LIB=-L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(SOUNDLIB)
 
-DO_LD=$(CC) $(LDFLAGS) -o $@ $^
+DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
 
 
 ##### Commands #####
@@ -140,54 +140,42 @@ ded-release :
 bin-debug :
 	@echo
 	@echo "========== $(EXE) (debug) =========="
-#	@echo Using compiler $(CC)
-#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_DEBUG) \
-#                                    $(OPTIM_DEBUG)
-#	@echo
+	$(MAKE) builddate
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
-		LDFLAGS="$(LDFLAGS_DEBUG)"
+		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)"
 
 bin-profile :
 	@echo
 	@echo "========== $(EXE) (profile) =========="
-#	@echo Using compiler $(CC)
-#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_PROFILE) \
-#                                    $(OPTIM_RELEASE)
-#	@echo
+	$(MAKE) builddate
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_PROFILE)"
+		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)"
 
 bin-release :
 	@echo
 	@echo "========== $(EXE) (release) =========="
-#	@echo Using compiler $(CC)
-#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_RELEASE) \
-#                                    $(OPTIM_RELEASE)
-#	@echo
+	$(MAKE) builddate
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_RELEASE)"
+		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
+	strip $(EXE)
 
 builddate:
 	touch builddate.c
 
 vid_glx.o: vid_glx.c
-#	@echo "   Compiling" $<
 	$(DO_CC) -I/usr/X11R6/include
 
 .c.o:
-#	@echo "   Compiling" $<
 	$(DO_CC)
 
 $(EXE_GLX):  $(OBJ_COMMON) $(OBJ_GLX)
-#	@echo "   Linking  " $@
-	$(DO_LD) $(GLX_LIB) $(LDFLAGS_COMMON)
+	$(DO_LD) $(GLX_LIB)
 
 $(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
-#	@echo "   Linking  " $@
-	$(DO_LD) $(LDFLAGS_COMMON)
+	$(DO_LD)
 
 clean:
 	rm -f $(EXE_GLX) $(EXE_DED) *.o *.d

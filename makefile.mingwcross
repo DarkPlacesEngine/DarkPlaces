@@ -28,7 +28,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		console.o dpvsimpledecode.o fractalnoise.o gl_backend.o \
 		gl_draw.o gl_models.o gl_rmain.o gl_rsurf.o gl_textures.o \
 		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
-		r_explosion.o r_lerpanim.o r_light.o r_modules.o r_sky.o \
+		r_lerpanim.o r_light.o r_modules.o r_sky.o \
 		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
 		r_shadow.o conproc.o
 SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
@@ -85,17 +85,17 @@ DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
 help:
 	@echo
 	@echo "===== Choose one ====="
-	@echo "* clean       : delete the binaries, and .o and .d files"
-	@echo "* help        : this help"
-	@echo "* debug       : make WGL and dedicated binaries (debug versions)"
-	@echo "* profile     : make WGL and dedicated binaries (profile versions)"
-	@echo "* release     : make WGL and dedicated binaries (release versions)"
-	@echo "* wgl-debug   : make WGL binary (debug version)"
-	@echo "* wgl-profile : make WGL binary (profile version)"
-	@echo "* wgl-release : make WGL binary (release version)"
-	@echo "* ded-debug   : make dedicated server (debug version)"
-	@echo "* ded-profile : make dedicated server (profile version)"
-	@echo "* ded-release : make dedicated server (release version)"
+	@echo "* $(MAKE) clean       : delete the binaries, and .o and .d files"
+	@echo "* $(MAKE) help        : this help"
+	@echo "* $(MAKE) debug       : make WGL and dedicated binaries (debug versions)"
+	@echo "* $(MAKE) profile     : make WGL and dedicated binaries (profile versions)"
+	@echo "* $(MAKE) release     : make WGL and dedicated binaries (release versions)"
+	@echo "* $(MAKE) wgl-debug   : make WGL binary (debug version)"
+	@echo "* $(MAKE) wgl-profile : make WGL binary (profile version)"
+	@echo "* $(MAKE) wgl-release : make WGL binary (release version)"
+	@echo "* $(MAKE) ded-debug   : make dedicated server (debug version)"
+	@echo "* $(MAKE) ded-profile : make dedicated server (profile version)"
+	@echo "* $(MAKE) ded-release : make dedicated server (release version)"
 	@echo
 
 debug :
@@ -128,50 +128,38 @@ ded-release :
 bin-debug :
 	@echo
 	@echo "========== $(EXE) (debug) =========="
-#	@echo Using compiler $(CC)
-#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_DEBUG) \
-#                                    $(OPTIM_DEBUG)
-#	@echo
+	$(MAKE) builddate
 	$(MAKE) -f makefile.mingwcross $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
-		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_DEBUG)"
+		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)"
 
 bin-profile :
 	@echo
 	@echo "========== $(EXE) (profile) =========="
-#	@echo Using compiler $(CC)
-#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_PROFILE) \
-#                                    $(OPTIM_RELEASE)
-#	@echo
+	$(MAKE) builddate
 	$(MAKE) -f makefile.mingwcross $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_PROFILE)"
+		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)"
 
 bin-release :
 	@echo
 	@echo "========== $(EXE) (release) =========="
-#	@echo Using compiler $(CC)
-#	@echo Compiling with flags: $(CFLAGS_COMMON) $(CFLAGS_RELEASE) \
-#                                    $(OPTIM_RELEASE)
-#	@echo
+	$(MAKE) builddate
 	$(MAKE) -f makefile.mingwcross $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
-		LDFLAGS="$(LDFLAGS_COMMON) $(LDFLAGS_RELEASE)"
+		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
+	strip $(EXE)
 
 builddate:
 	touch builddate.c
 
 .c.o:
-#	@echo "   Compiling" $<
 	$(DO_CC)
 
 $(EXE_WGL):  $(OBJ_COMMON) $(OBJ_WGL)
-#	@echo "   Linking  " $@
 	$(DO_LD) $(WGL_LIB)
-	strip $(EXE_WGL)
 
 $(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
-#	@echo "   Linking  " $@
 	$(DO_LD)
 
 clean:
