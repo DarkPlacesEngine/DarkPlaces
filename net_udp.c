@@ -69,6 +69,7 @@ int UDP_Init (void)
 	else
 		myAddr = *(int *)local->h_addr_list[0];
 
+	// LordHavoc FIXME: get rid of this someday, just leave machines unnamed
 	// if the quake hostname isn't set, set it to the machine name
 	if (strcmp(hostname.string, "UNNAMED") == 0)
 	{
@@ -170,8 +171,10 @@ this lets you type only as much of the net address as required, using
 the local network components to fill in the rest
 ============
 */
+// LordHavoc FIXME: this whole function is stupid
 static int PartialIPAddress (const char *in, struct qsockaddr *hostaddr)
 {
+	// LordHavoc FIXME: buff is stupid, it just ensures the address begins with a . for the parser
 	char buff[256];
 	char *b;
 	int addr;
@@ -179,7 +182,7 @@ static int PartialIPAddress (const char *in, struct qsockaddr *hostaddr)
 	int mask;
 	int run;
 	int port;
-	
+
 	buff[0] = '.';
 	b = buff;
 	strcpy(buff+1, in);
@@ -193,29 +196,27 @@ static int PartialIPAddress (const char *in, struct qsockaddr *hostaddr)
 		b++;
 		num = 0;
 		run = 0;
-		while (!( *b < '0' || *b > '9'))
+		while (*b >= '0' && *b <= '9')
 		{
-		  num = num*10 + *b++ - '0';
-		  if (++run > 3)
-		  	return -1;
+			num = num*10 + *b++ - '0';
+			if (num > 255)
+				return -1;
 		}
-		if ((*b < '0' || *b > '9') && *b != '.' && *b != ':' && *b != 0)
-			return -1;
-		if (num < 0 || num > 255)
+		if (*b != '.' && *b != ':' && *b != 0)
 			return -1;
 		mask<<=8;
 		addr = (addr<<8) + num;
 	}
-	
+
 	if (*b++ == ':')
 		port = atoi(b);
 	else
 		port = net_hostport;
 
 	hostaddr->sa_family = AF_INET;
-	((struct sockaddr_in *)hostaddr)->sin_port = htons((short)port);	
+	((struct sockaddr_in *)hostaddr)->sin_port = htons((short)port);
 	((struct sockaddr_in *)hostaddr)->sin_addr.s_addr = (myAddr & htonl(mask)) | htonl(addr);
-	
+
 	return 0;
 }
 //=============================================================================
@@ -389,13 +390,13 @@ int UDP_GetAddrFromName(const char *name, struct qsockaddr *addr)
 
 	if (name[0] >= '0' && name[0] <= '9')
 		return PartialIPAddress (name, addr);
-	
+
 	hostentry = gethostbyname (name);
 	if (!hostentry)
 		return -1;
 
 	addr->sa_family = AF_INET;
-	((struct sockaddr_in *)addr)->sin_port = htons(net_hostport);	
+	((struct sockaddr_in *)addr)->sin_port = htons(net_hostport);
 	((struct sockaddr_in *)addr)->sin_addr.s_addr = *(int *)hostentry->h_addr_list[0];
 
 	return 0;
