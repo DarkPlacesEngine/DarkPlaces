@@ -752,7 +752,7 @@ void COM_InitGameType (void)
 		break;
 	case GAME_BATTLEMECH:
 		gamename = "Battlemech";
-		gamedirname = "battlemech";
+		gamedirname = "base";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
