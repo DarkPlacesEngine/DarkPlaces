@@ -947,6 +947,14 @@ static void CL_RelinkNetworkEntities(void)
 			ent->state_current.modelindex = 0;
 	}
 
+	// reset animation interpolation on weaponmodel if model changed
+	if (ent->state_previous.modelindex != ent->state_current.modelindex)
+	{
+		ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
+		ent->render.frame1time = ent->render.frame2time = cl.time;
+		ent->render.framelerp = 1;
+	}
+
 	// start on the entity after the world
 	entitylinkframenumber++;
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS;i++, ent++)
