@@ -2,7 +2,7 @@
 #include "quakedef.h"
 #include "polygon.h"
 
-#define COLLISION_SNAPSCALE (32.0f)
+#define COLLISION_SNAPSCALE (8.0f)
 #define COLLISION_SNAP (1.0f / COLLISION_SNAPSCALE)
 
 cvar_t collision_impactnudge = {0, "collision_impactnudge", "0.03125"};
@@ -799,7 +799,7 @@ colbrushf_t *Collision_AllocBrushFromPermanentPolygonFloat(mempool_t *mempool, i
 void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
 	int nplane, nplane2, fstartsolid, fendsolid, brushsolid;
-	float enterfrac, leavefrac, d1, d2, f, move, imove, newimpactnormal[3], enterfrac2;
+	float enterfrac, leavefrac, d1, d2, f, imove, newimpactnormal[3], enterfrac2;
 	const colplanef_t *startplane, *endplane;
 
 	enterfrac = -1;
@@ -852,46 +852,38 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 		}
 		//Con_Printf("%c%i: d1 = %f, d2 = %f, d1 / (d1 - d2) = %f\n", nplane2 != nplane ? 'b' : 'a', nplane2, d1, d2, d1 / (d1 - d2));
 
-		move = d1 - d2;
-		if (move > 0)
+		if(d1 > d2)
 		{
 			// moving into brush
-			if (d2 > collision_enternudge.value)
+			if(d2 > 0)
 				return;
-			if (d1 < 0)
-				continue;
-			// enter
-			fstartsolid = false;
-			imove = 1 / move;
-			f = (d1 - collision_enternudge.value) * imove;
-			f = bound(0, f, 1);
-			if (enterfrac < f)
+			if(d1 > 0)
 			{
-				enterfrac = f;
-				enterfrac2 = f - collision_impactnudge.value * imove;
-				enterfrac2 = bound(0, enterfrac2, 1);
-				VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
+				// enter
+				fstartsolid = false;
+				imove = 1 / (d1 - d2);
+				f = (d1 - collision_enternudge.value) * imove;
+				if (enterfrac < f)
+				{
+					enterfrac = f;
+					enterfrac2 = f - collision_impactnudge.value * imove;
+					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
+				}
 			}
-		}
-		else if (move < 0)
-		{
-			// moving out of brush
-			if (d1 > collision_leavenudge.value)
-				return;
-			if (d2 < 0)
-				continue;
-			// leave
-			fendsolid = false;
-			f = (d1 + collision_leavenudge.value) / move;
-			f = bound(0, f, 1);
-			if (leavefrac > f)
-				leavefrac = f;
 		}
 		else
 		{
-			// sliding along plane
-			if (d1 > 0)
+			// moving out of brush
+			if(d1 > 0)
 				return;
+			if(d2 > 0)
+			{
+				// leave
+				fendsolid = false;
+				f = (d1 + collision_leavenudge.value) / (d1 - d2);
+				if (leavefrac > f)
+					leavefrac = f;
+			}
 		}
 	}
 
@@ -947,7 +939,7 @@ void Collision_TraceBrushBrushFloat(trace_t *trace, const colbrushf_t *thisbrush
 void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const vec3_t lineend, const colbrushf_t *thatbrush_start, const colbrushf_t *thatbrush_end)
 {
 	int nplane, fstartsolid, fendsolid, brushsolid;
-	float enterfrac, leavefrac, d1, d2, f, move, imove, newimpactnormal[3], enterfrac2;
+	float enterfrac, leavefrac, d1, d2, f, imove, newimpactnormal[3], enterfrac2;
 	const colplanef_t *startplane, *endplane;
 
 	enterfrac = -1;
@@ -978,37 +970,38 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 			}
 		}
 
-		move = d1 - d2;
-		if (move > 0)
+		if (d1 > d2)
 		{
 			// moving into brush
-			if (d2 >= 0)
+			if (d2 > 0)
 				return;
-			if (d1 <= 0)
-				continue;
-			// enter
-			fstartsolid = false;
-			imove = 1 / move;
-			f = (d1 - collision_enternudge.value) * imove;
-			if (enterfrac < f)
+			if (d1 > 0)
 			{
-				enterfrac = f;
-				enterfrac2 = f - collision_impactnudge.value * imove;
-				VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
+				// enter
+				fstartsolid = false;
+				imove = 1 / (d1 - d2);
+				f = (d1 - collision_enternudge.value) * imove;
+				if (enterfrac < f)
+				{
+					enterfrac = f;
+					enterfrac2 = f - collision_impactnudge.value * imove;
+					VectorLerp(startplane->normal, enterfrac, endplane->normal, newimpactnormal);
+				}
 			}
 		}
 		else
 		{
 			// moving out of brush
-			if (d1 >= 0)
+			if (d1 > 0)
 				return;
-			if (d2 <= 0)
-				continue;
-			// leave
-			fendsolid = false;
-			f = (d1 - collision_leavenudge.value) / move;
-			if (leavefrac > f)
-				leavefrac = f;
+			if (d2 > 0)
+			{
+				// leave
+				fendsolid = false;
+				f = (d1 + collision_leavenudge.value) / (d1 - d2);
+				if (leavefrac > f)
+					leavefrac = f;
+			}
 		}
 	}
 
@@ -1418,24 +1411,24 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	// it is easier to simply swap the point0 and point2 parameters to this
 	// function when calling it than it is to rewire the internals.
 
-	// calculate the faceplanenormal of the triangle, this represents the front side
+	// calculate the unnormalized faceplanenormal of the triangle,
+	// this represents the front side
 	TriangleNormal(point0, point1, point2, faceplanenormal);
-	// there's no point in processing a degenerate triangle (GIGO - Garbage In, Garbage Out)
+	// there's no point in processing a degenerate triangle
+	// (GIGO - Garbage In, Garbage Out)
 	if (DotProduct(faceplanenormal, faceplanenormal) < 0.0001f)
 		return;
-	// normalize the normal
-	VectorNormalize(faceplanenormal);
-	// calculate the distance
+	// calculate the unnormalized distance
 	faceplanedist = DotProduct(point0, faceplanenormal);
 
-	// calculate the start distance
+	// calculate the unnormalized start distance
 	d1 = DotProduct(faceplanenormal, linestart) - faceplanedist;
 	// if start point is on the back side there is no collision
 	// (we don't care about traces going through the triangle the wrong way)
 	if (d1 < 0)
 		return;
 
-	// calculate the end distance
+	// calculate the unnormalized end distance
 	d2 = DotProduct(faceplanenormal, lineend) - faceplanedist;
 	// if both are in front, there is no collision
 	if (d2 >= 0)
@@ -1483,9 +1476,19 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	// store the new trace fraction
 	trace->realfraction = bound(0, f, 1);
 
+	// store the new trace plane (because collisions only happen from
+	// the front this is always simply the triangle normal, never flipped)
+	VectorCopy(faceplanenormal, trace->plane.normal);
+	VectorNormalize(trace->plane.normal);
+	trace->plane.dist = DotProduct(point0, faceplanenormal);
+
+	// calculate the normalized start and end distances
+	d1 = DotProduct(faceplanenormal, linestart) - faceplanedist;
+	d2 = DotProduct(faceplanenormal, lineend) - faceplanedist;
+
 	// calculate a nudged fraction to keep it out of the surface
 	// (the main fraction remains perfect)
-	fnudged = (d1 - collision_impactnudge.value) * d;
+	fnudged = (d1 - collision_impactnudge.value) / (d1 - d2);
 	trace->fraction = bound(0, fnudged, 1);
 
 	// store the new trace endpos
@@ -1493,11 +1496,6 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 	//trace->endpos[0] = linestart[0] + fnudged * (lineend[0] - linestart[0]);
 	//trace->endpos[1] = linestart[1] + fnudged * (lineend[1] - linestart[1]);
 	//trace->endpos[2] = linestart[2] + fnudged * (lineend[2] - linestart[2]);
-
-	// store the new trace plane (because collisions only happen from
-	// the front this is always simply the triangle normal, never flipped)
-	VectorCopy(faceplanenormal, trace->plane.normal);
-	trace->plane.dist = faceplanedist;
 }
 
 typedef struct colbspnode_s
