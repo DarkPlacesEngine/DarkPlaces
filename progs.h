@@ -131,6 +131,8 @@ extern int eval_cursor_trace_start;
 extern int eval_cursor_trace_endpos;
 extern int eval_cursor_trace_ent;
 extern int eval_colormod;
+extern int eval_playermodel;
+extern int eval_playerskin;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 
