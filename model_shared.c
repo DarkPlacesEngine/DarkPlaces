@@ -655,7 +655,7 @@ void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numve
 	/*
 	int i, i1, i2, i3;
 	float *v;
-	while (mesh->numverts + numverts > mesh->maxverts || mesh->numtriangles + (numverts - 2) > mesh->maxtriangles)
+	while (mesh->num_vertices + numverts > mesh->maxverts || mesh->num_triangles + (numverts - 2) > mesh->maxtriangles)
 	{
 		if (mesh->next == NULL)
 			mesh->next = Mod_ShadowMesh_Alloc(mempool, max(mesh->maxtriangles, numverts));
@@ -668,10 +668,10 @@ void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numve
 	{
 		i2 = i3;
 		i3 = Mod_ShadowMesh_AddVertex(mesh, v);
-		mesh->elements[mesh->numtriangles * 3 + 0] = i1;
-		mesh->elements[mesh->numtriangles * 3 + 1] = i2;
-		mesh->elements[mesh->numtriangles * 3 + 2] = i3;
-		mesh->numtriangles++;
+		mesh->elements[mesh->num_triangles * 3 + 0] = i1;
+		mesh->elements[mesh->num_triangles * 3 + 1] = i2;
+		mesh->elements[mesh->num_triangles * 3 + 2] = i3;
+		mesh->num_triangles++;
 	}
 	*/
 }
@@ -703,7 +703,7 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 			newmesh->next = firstmesh;
 			firstmesh = newmesh;
 			//Con_Printf("mesh\n");
-			//for (i = 0;i < newmesh->numtriangles;i++)
+			//for (i = 0;i < newmesh->num_triangles;i++)
 			//	Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
 			Mod_ValidateElements(newmesh->element3i, newmesh->numtriangles, newmesh->numverts, __FILE__, __LINE__);
 			Mod_BuildTriangleNeighbors(newmesh->neighbor3i, newmesh->element3i, newmesh->numtriangles);
@@ -714,8 +714,8 @@ shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
 	shadowmesh_t *mesh;
 	for (mesh = firstmesh;mesh;mesh = mesh->next)
 	{
-		Mod_ValidateElements(mesh->elements, mesh->numtriangles, mesh->numverts, __FILE__, __LINE__);
-		Mod_BuildTriangleNeighbors(mesh->neighbors, mesh->elements, mesh->numtriangles);
+		Mod_ValidateElements(mesh->elements, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
+		Mod_BuildTriangleNeighbors(mesh->neighbors, mesh->elements, mesh->num_triangles);
 	}
 #endif
 	return firstmesh;

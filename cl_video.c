@@ -109,12 +109,12 @@ void CL_DrawVideo(void)
 		vertex3f[ 6] = x2;vertex3f[ 7] = y2;vertex3f[ 8] = 0;
 		vertex3f[ 9] = x1;vertex3f[10] = y2;vertex3f[11] = 0;
 		mesh.texture = cl_videotexture;
-		mesh.numtriangles = 2;
-		mesh.numvertices = 4;
-		mesh.element3i = polygonelements;
-		mesh.vertex3f = vertex3f;
-		mesh.texcoord2f = texcoord2f;
-		mesh.color4f = color4f;
+		mesh.num_triangles = 2;
+		mesh.num_vertices = 4;
+		mesh.data_element3i = polygonelements;
+		mesh.data_vertex3f = vertex3f;
+		mesh.data_texcoord2f = texcoord2f;
+		mesh.data_color4f = color4f;
 		DrawQ_Mesh(&mesh, 0);
 		//DrawQ_Pic(0, 0, "engine_videoframe", vid.conwidth, vid.conheight, 1, 1, 1, 1, 0);
 	}

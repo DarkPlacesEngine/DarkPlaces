@@ -565,21 +565,21 @@ void DrawQ_SuperPic(float x, float y, char *picname, float width, float height, 
 			height = pic->height;
 		mesh.texture = pic->tex;
 	}
-	mesh.numtriangles = 2;
-	mesh.numvertices = 4;
-	mesh.element3i = picelements;
-	mesh.vertex3f = floats;
-	mesh.texcoord2f = floats + 12;
-	mesh.color4f = floats + 20;
+	mesh.num_triangles = 2;
+	mesh.num_vertices = 4;
+	mesh.data_element3i = picelements;
+	mesh.data_vertex3f = floats;
+	mesh.data_texcoord2f = floats + 12;
+	mesh.data_color4f = floats + 20;
 	memset(floats, 0, sizeof(floats));
-	mesh.vertex3f[0] = mesh.vertex3f[9] = x;
-	mesh.vertex3f[1] = mesh.vertex3f[4] = y;
-	mesh.vertex3f[3] = mesh.vertex3f[6] = x + width;
-	mesh.vertex3f[7] = mesh.vertex3f[10] = y + height;
-	mesh.texcoord2f[0] = s1;mesh.texcoord2f[1] = t1;mesh.color4f[ 0] = r1;mesh.color4f[ 1] = g1;mesh.color4f[ 2] = b1;mesh.color4f[ 3] = a1;
-	mesh.texcoord2f[2] = s2;mesh.texcoord2f[3] = t2;mesh.color4f[ 4] = r2;mesh.color4f[ 5] = g2;mesh.color4f[ 6] = b2;mesh.color4f[ 7] = a2;
-	mesh.texcoord2f[4] = s4;mesh.texcoord2f[5] = t4;mesh.color4f[ 8] = r4;mesh.color4f[ 9] = g4;mesh.color4f[10] = b4;mesh.color4f[11] = a4;
-	mesh.texcoord2f[6] = s3;mesh.texcoord2f[7] = t3;mesh.color4f[12] = r3;mesh.color4f[13] = g3;mesh.color4f[14] = b3;mesh.color4f[15] = a3;
+	mesh.data_vertex3f[0] = mesh.data_vertex3f[9] = x;
+	mesh.data_vertex3f[1] = mesh.data_vertex3f[4] = y;
+	mesh.data_vertex3f[3] = mesh.data_vertex3f[6] = x + width;
+	mesh.data_vertex3f[7] = mesh.data_vertex3f[10] = y + height;
+	mesh.data_texcoord2f[0] = s1;mesh.data_texcoord2f[1] = t1;mesh.data_color4f[ 0] = r1;mesh.data_color4f[ 1] = g1;mesh.data_color4f[ 2] = b1;mesh.data_color4f[ 3] = a1;
+	mesh.data_texcoord2f[2] = s2;mesh.data_texcoord2f[3] = t2;mesh.data_color4f[ 4] = r2;mesh.data_color4f[ 5] = g2;mesh.data_color4f[ 6] = b2;mesh.data_color4f[ 7] = a2;
+	mesh.data_texcoord2f[4] = s4;mesh.data_texcoord2f[5] = t4;mesh.data_color4f[ 8] = r4;mesh.data_color4f[ 9] = g4;mesh.data_color4f[10] = b4;mesh.data_color4f[11] = a4;
+	mesh.data_texcoord2f[6] = s3;mesh.data_texcoord2f[7] = t3;mesh.data_color4f[12] = r3;mesh.data_color4f[13] = g3;mesh.data_color4f[14] = b3;mesh.data_color4f[15] = a3;
 	DrawQ_Mesh (&mesh, flags);
 }
 
@@ -591,10 +591,10 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	drawqueuemesh_t *m;
 	size = sizeof(*dq);
 	size += sizeof(drawqueuemesh_t);
-	size += sizeof(int[3]) * mesh->numtriangles;
-	size += sizeof(float[3]) * mesh->numvertices;
-	size += sizeof(float[2]) * mesh->numvertices;
-	size += sizeof(float[4]) * mesh->numvertices;
+	size += sizeof(int[3]) * mesh->num_triangles;
+	size += sizeof(float[3]) * mesh->num_vertices;
+	size += sizeof(float[2]) * mesh->num_vertices;
+	size += sizeof(float[4]) * mesh->num_vertices;
 	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
 	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
@@ -608,13 +608,13 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	dq->scaley = 0;
 	p = (void *)(dq + 1);
 	m = p;(qbyte *)p += sizeof(drawqueuemesh_t);
-	m->numtriangles = mesh->numtriangles;
-	m->numvertices = mesh->numvertices;
+	m->num_triangles = mesh->num_triangles;
+	m->num_vertices = mesh->num_vertices;
 	m->texture = mesh->texture;
-	m->element3i  = p;memcpy(m->element3i , mesh->element3i , m->numtriangles * sizeof(int[3]));(qbyte *)p += m->numtriangles * sizeof(int[3]);
-	m->vertex3f   = p;memcpy(m->vertex3f  , mesh->vertex3f  , m->numvertices * sizeof(float[3]));(qbyte *)p += m->numvertices * sizeof(float[3]);
-	m->texcoord2f = p;memcpy(m->texcoord2f, mesh->texcoord2f, m->numvertices * sizeof(float[2]));(qbyte *)p += m->numvertices * sizeof(float[2]);
-	m->color4f    = p;memcpy(m->color4f   , mesh->color4f   , m->numvertices * sizeof(float[4]));(qbyte *)p += m->numvertices * sizeof(float[4]);
+	m->data_element3i  = p;memcpy(m->data_element3i , mesh->data_element3i , m->num_triangles * sizeof(int[3]));(qbyte *)p += m->num_triangles * sizeof(int[3]);
+	m->data_vertex3f   = p;memcpy(m->data_vertex3f  , mesh->data_vertex3f  , m->num_vertices * sizeof(float[3]));(qbyte *)p += m->num_vertices * sizeof(float[3]);
+	m->data_texcoord2f = p;memcpy(m->data_texcoord2f, mesh->data_texcoord2f, m->num_vertices * sizeof(float[2]));(qbyte *)p += m->num_vertices * sizeof(float[2]);
+	m->data_color4f    = p;memcpy(m->data_color4f   , mesh->data_color4f   , m->num_vertices * sizeof(float[4]));(qbyte *)p += m->num_vertices * sizeof(float[4]);
 	r_refdef.drawqueuesize += dq->size;
 }
 

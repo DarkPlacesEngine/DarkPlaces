@@ -22,12 +22,12 @@ drawqueue_t;
 typedef struct drawqueuemesh_s
 {
 	rtexture_t *texture;
-	int numtriangles;
-	int numvertices;
-	int *element3i;
-	float *vertex3f;
-	float *texcoord2f;
-	float *color4f;
+	int num_triangles;
+	int num_vertices;
+	int *data_element3i;
+	float *data_vertex3f;
+	float *data_texcoord2f;
+	float *data_color4f;
 }
 drawqueuemesh_t;
 

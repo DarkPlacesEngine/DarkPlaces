@@ -339,7 +339,6 @@ void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *ma
 	int i, j, *elements;
 	vec3_t trimins, trimaxs;
 	msurface_t *surf;
-	surfmesh_t *surfmesh;
 	for (i = 0;i < nummarksurfaces;i++, mark++)
 	{
 		if (!info->surfacemark[*mark])
@@ -362,30 +361,25 @@ void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *ma
 			}
 			else
 			{
-				for (surfmesh = surf->mesh;surfmesh;surfmesh = surfmesh->chain)
+				for (j = 0, elements = surf->mesh.data_element3i;j < surf->mesh.num_triangles;j++, elements += 3)
 				{
-					for (j = 0, elements = surfmesh->element3i;j < surfmesh->numtriangles;j++, elements += 3)
+					VectorCopy((surf->mesh.data_vertex3f + elements[0] * 3), trianglepoints[0]);
+					VectorCopy((surf->mesh.data_vertex3f + elements[1] * 3), trianglepoints[1]);
+					VectorCopy((surf->mesh.data_vertex3f + elements[2] * 3), trianglepoints[2]);
+					if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2]))
 					{
-						VectorCopy((surfmesh->vertex3f + elements[0] * 3), trianglepoints[0]);
-						VectorCopy((surfmesh->vertex3f + elements[1] * 3), trianglepoints[1]);
-						VectorCopy((surfmesh->vertex3f + elements[2] * 3), trianglepoints[2]);
-						if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2]))
-						{
-							trimins[0] = min(trianglepoints[0][0], min(trianglepoints[1][0], trianglepoints[2][0]));
-							trimaxs[0] = max(trianglepoints[0][0], max(trianglepoints[1][0], trianglepoints[2][0]));
-							trimins[1] = min(trianglepoints[0][1], min(trianglepoints[1][1], trianglepoints[2][1]));
-							trimaxs[1] = max(trianglepoints[0][1], max(trianglepoints[1][1], trianglepoints[2][1]));
-							trimins[2] = min(trianglepoints[0][2], min(trianglepoints[1][2], trianglepoints[2][2]));
-							trimaxs[2] = max(trianglepoints[0][2], max(trianglepoints[1][2], trianglepoints[2][2]));
-							if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))
-								if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
-									break;
-						}
+						trimins[0] = min(trianglepoints[0][0], min(trianglepoints[1][0], trianglepoints[2][0]));
+						trimaxs[0] = max(trianglepoints[0][0], max(trianglepoints[1][0], trianglepoints[2][0]));
+						trimins[1] = min(trianglepoints[0][1], min(trianglepoints[1][1], trianglepoints[2][1]));
+						trimaxs[1] = max(trianglepoints[0][1], max(trianglepoints[1][1], trianglepoints[2][1]));
+						trimins[2] = min(trianglepoints[0][2], min(trianglepoints[1][2], trianglepoints[2][2]));
+						trimaxs[2] = max(trianglepoints[0][2], max(trianglepoints[1][2], trianglepoints[2][2]));
+						if (BoxesOverlap(trimins, trimaxs, info->boxmins, info->boxmaxs))
+							if (Portal_PortalThroughPortalPlanes(&portalplanes[firstclipplane], numclipplanes, trianglepoints[0], 3, &portaltemppoints2[0][0], 256) >= 3)
+								break;
 					}
-					if (j < surfmesh->numtriangles)
-						break;
 				}
-				if (surfmesh == NULL)
+				if (j == surf->mesh.num_triangles)
 					continue;
 			}
 			info->surfacemark[*mark] = true;
