@@ -418,6 +418,8 @@ void CDAudio_Update(void)
 
 int CDAudio_Init(void)
 {
+	int n;
+
 	if (cls.state == ca_dedicated)
 		return -1;
 
@@ -439,7 +441,6 @@ int CDAudio_Startup(void)
 	DWORD	dwReturn;
 	MCI_OPEN_PARMS	mciOpenParms;
 	MCI_SET_PARMS	mciSetParms;
-	int				n;
 
 	mciOpenParms.lpstrDeviceType = "cdaudio";
 	if ((dwReturn = mciSendCommand(0, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_SHAREABLE, (DWORD) (LPVOID) &mciOpenParms)))
