@@ -399,7 +399,7 @@ void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	if (!cl_particles.integer) return;
 
 	for (i = 0;i < 512;i++)
-		particle(pt_fade, PARTICLE_BILLBOARD, particlepalette[colorStart + (i % colorLength)], tex_particle, false, false, 1.5, 1.5, 255, 0.3, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192), 0, 0, 0, 0, 0.1f, 0);
+		particle(pt_fade, PARTICLE_BILLBOARD, particlepalette[colorStart + (i % colorLength)], tex_particle, false, false, 1.5, 1.5, 255, 0.3, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192), 0, 0, 0, 0, 1, 0);
 }
 
 /*
@@ -453,13 +453,13 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 
 	// smoke puff
 	if (cl_particles_smoke.integer)
-		particle(pt_bulletsmoke, PARTICLE_BILLBOARD, 0xA0A0A0, tex_smoke[rand()&7], true, true, 5, 5, 255, 9999, 0, org[0], org[1], org[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
+		particle(pt_bulletsmoke, PARTICLE_BILLBOARD, 0xFFFFFF /*0xA0A0A0*/, tex_smoke[rand()&7], true, true, 5, 5, 255, 9999, 0, org[0], org[1], org[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
 
 	if (cl_particles_sparks.integer)
 	{
 		// sparks
 		while(count--)
-			particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(0, 255), 9999, 1.5, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 512.0f, 0, 0, 0, 0.2f, 0);
+			particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(0, 255), 9999, 1.5, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 512, 0, 0, 0, 1, 0);
 	}
 }
 
@@ -482,7 +482,7 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 	bloodcount += count;
 	while(bloodcount >= 10)
 	{
-		particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, org[0], org[1], org[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1.0f, 0);
+		particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, org[0], org[1], org[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 		bloodcount -= 10;
 	}
 }
@@ -512,13 +512,13 @@ void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count)
 		vel[0] = (org[0] - center[0]) * velscale[0];
 		vel[1] = (org[1] - center[1]) * velscale[1];
 		vel[2] = (org[2] - center[2]) * velscale[2];
-		particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, 1.0f, 0);
+		particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, org[0], org[1], org[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, 1, 0);
 	}
 }
 
 void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel)
 {
-	float		t;
+	float t;
 	if (!cl_particles.integer) return;
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
 	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
@@ -530,8 +530,8 @@ void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 
 void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type)
 {
-	vec3_t		vel;
-	float		t, z;
+	vec3_t vel;
+	float t, z;
 	if (!cl_particles.integer) return;
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
 	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
@@ -578,14 +578,14 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 
 void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
 {
-	float		t;
+	float t;
 	if (!cl_particles.integer) return;
 	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
 	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
 	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
 
 	while (count--)
-		particle(pt_flame, PARTICLE_BILLBOARD, particlepalette[224 + (rand()&15)], tex_particle, false, true, 8, 8, 255, 9999, 1.1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(-32, 64), 0, 0, 0, 0, 0.1f, 0);
+		particle(pt_flame, PARTICLE_BILLBOARD, particlepalette[224 + (rand()&15)], tex_particle, false, true, 8, 8, 255, 9999, 1.1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(-32, 64), 0, 0, 0, 0, 1, 0);
 }
 
 void CL_Flames (vec3_t org, vec3_t vel, int count)
@@ -593,7 +593,7 @@ void CL_Flames (vec3_t org, vec3_t vel, int count)
 	if (!cl_particles.integer) return;
 
 	while (count--)
-		particle(pt_flame, PARTICLE_BILLBOARD, particlepalette[224 + (rand()&15)], tex_particle, false, true, 8, 8, 255, 9999, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 0.1f, 0);
+		particle(pt_flame, PARTICLE_BILLBOARD, particlepalette[224 + (rand()&15)], tex_particle, false, true, 8, 8, 255, 9999, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 1, 0);
 }
 
 
@@ -641,12 +641,13 @@ void CL_TeleportSplash (vec3_t org)
 	for (i=-16 ; i<16 ; i+=8)
 		for (j=-16 ; j<16 ; j+=8)
 			for (k=-24 ; k<32 ; k+=8)
-				particle(pt_fade, PARTICLE_BILLBOARD, 0xFFFFFF, tex_particle, false, true, 1.5, 1.5, lhrandom(64, 128), 9999, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), i*2 + lhrandom(-12.5, 12.5), j*2 + lhrandom(-12.5, 12.5), k*2 + lhrandom(27.5, 52.5), 0, 0, 0, 0, 0.1f, -512.0f);
+				//particle(pt_fade, PARTICLE_BILLBOARD, 0xFFFFFF, tex_particle, false, true, 1.5, 1.5, lhrandom(64, 128), 9999, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), i*2 + lhrandom(-12.5, 12.5), j*2 + lhrandom(-12.5, 12.5), k*2 + lhrandom(27.5, 52.5), 0, 0, 0, 0, 1, 0);
+				particle(pt_spark, PARTICLE_BILLBOARD, 0xFFFFFF, tex_particle, false, true, 2, 2, lhrandom(64, 255), 9999, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(0, 512), 512.0f, 0, 0, 0, 1, 0);
 }
 
 void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 {
-	vec3_t		vec, dir, vel;
+	vec3_t		vec, dir, vel, pos;
 	float		len, dec = 0, speed;
 	int			contents, bubbles;
 	double		t;
@@ -679,9 +680,9 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	// advance into this frame to reach the first puff location
 	dec = t - cl.oldtime;
 	dec *= speed;
-	VectorMA(start, dec, vec, start);
+	VectorMA(start, dec, vec, pos);
 
-	contents = Mod_PointInLeaf(start, cl.worldmodel)->contents;
+	contents = Mod_PointInLeaf(pos, cl.worldmodel)->contents;
 	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
 	{
 		// advance the trail time
@@ -701,18 +702,18 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				else if (bubbles && cl_particles_bubbles.integer)
 				{
 					dec = 0.005f;
-					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, start[0], start[1], start[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
-					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, start[0], start[1], start[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
-					particle(pt_smoke, PARTICLE_BILLBOARD, 0xFFFFFF, tex_smoke[rand()&7], false, false, 2, 2, 160, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
+					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
+					particle(pt_smoke, PARTICLE_BILLBOARD, 0xFFFFFF, tex_smoke[rand()&7], false, false, 2, 2, 160, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				}
 				else
 				{
 					dec = 0.005f;
-					particle(pt_smoke, PARTICLE_BILLBOARD, 0xC0C0C0, tex_smoke[rand()&7], true, false, 2, 2, 160, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
-					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, start[0], start[1], start[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 0.1f, 0);
-					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, start[0], start[1], start[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 0.1f, 0);
-					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, start[0], start[1], start[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 0.1f, 0);
-					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, start[0], start[1], start[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 0.1f, 0);
+					particle(pt_smoke, PARTICLE_BILLBOARD, 0xC0C0C0, tex_smoke[rand()&7], true, false, 2, 2, 160, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 1, 0);
+					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 1, 0);
+					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 1, 0);
+					//particle(pt_spark, PARTICLE_BILLBOARD, particlepalette[0x68 + (rand() & 7)], tex_particle, false, true, 1, 1, lhrandom(128, 255), 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-64, 64) - vel[0] * 0.0625, lhrandom(-64, 64) - vel[1] * 0.0625, lhrandom(-64, 64) - vel[2] * 0.0625, 512.0f, 0, 0, 0, 1, 0);
 				}
 				break;
 
@@ -723,14 +724,14 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				else if (bubbles && cl_particles_bubbles.integer)
 				{
 					dec = 0.02f;
-					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, start[0], start[1], start[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
-					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, start[0], start[1], start[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
-					particle(pt_smoke, PARTICLE_BILLBOARD, 0xFFFFFF, tex_smoke[rand()&7], false, false, 2, 2, 160, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
+					particle(pt_bubble, PARTICLE_BILLBOARD, 0xFFFFFF, tex_bubble, false, true, 2, 2, 255, 9999, 1.5, pos[0], pos[1], pos[2], lhrandom(-16, 16), lhrandom(-16, 16), lhrandom(-16, 16), 0, 0, 0, 0, 0, 0);
+					particle(pt_smoke, PARTICLE_BILLBOARD, 0xFFFFFF, tex_smoke[rand()&7], false, false, 2, 2, 160, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				}
 				else
 				{
 					dec = 0.02f;
-					particle(pt_smoke, PARTICLE_BILLBOARD, 0x808080, tex_smoke[rand()&7], true, false, 2, 2, 160, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					particle(pt_smoke, PARTICLE_BILLBOARD, 0x808080, tex_smoke[rand()&7], true, false, 2, 2, 160, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				}
 				break;
 
@@ -741,7 +742,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				else
 				{
 					dec = 0.1f;
-					particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, start[0], start[1], start[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1.0f, 0);
+					particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, pos[0], pos[1], pos[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				}
 				break;
 
@@ -751,23 +752,23 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				else
 				{
 					dec = 0.15f;
-					particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, start[0], start[1], start[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1.0f, 0);
+					particle(pt_blood, PARTICLE_BILLBOARD, 0x300000, tex_smoke[rand()&7], true, false, 24, 24, 255, 9999, -1, pos[0], pos[1], pos[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				}
 				break;
 
 			case 3:	// green tracer
 				dec = 0.02f;
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x373707, tex_smoke[rand()&7], false, false, 4, 4, 255, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x373707, tex_smoke[rand()&7], false, false, 4, 4, 255, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				break;
 
 			case 5:	// flame tracer
 				dec = 0.02f;
-				particle(pt_fade, PARTICLE_BILLBOARD, 0xCF632B, tex_smoke[rand()&7], false, false, 4, 4, 255, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0xCF632B, tex_smoke[rand()&7], false, false, 4, 4, 255, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				break;
 
 			case 6:	// voor trail
 				dec = 0.05f; // sparse trail
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x47232B, tex_smoke[rand()&7], false, false, 4, 4, 255, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x47232B, tex_smoke[rand()&7], false, false, 4, 4, 255, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				break;
 
 			case 7:	// Nehahra smoke tracer
@@ -776,7 +777,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				else
 				{
 					dec = 0.14f;
-					particle(pt_smoke, PARTICLE_BILLBOARD, 0xC0C0C0, tex_smoke[rand()&7], true, false, 10, 10, 64, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+					particle(pt_smoke, PARTICLE_BILLBOARD, 0xC0C0C0, tex_smoke[rand()&7], true, false, 10, 10, 64, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 				}
 				break;
 		}
@@ -784,26 +785,27 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 		// advance to next time and position
 		t += dec;
 		dec *= speed;
-		VectorMA (start, dec, vec, start);
+		VectorMA (pos, dec, vec, pos);
 	}
 	ent->persistent.trail_time = t;
 }
 
 void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 {
-	vec3_t		vec;
+	vec3_t		vec, pos;
 	int			len;
 	if (!cl_particles.integer) return;
 	if (!cl_particles_smoke.integer) return;
 
+	VectorCopy(start, pos);
 	VectorSubtract (end, start, vec);
 	len = (int) (VectorNormalizeLength (vec) * (1.0f / 3.0f));
 	VectorScale(vec, 3, vec);
 	color = particlepalette[color];
 	while (len--)
 	{
-		particle(pt_smoke, PARTICLE_BILLBOARD, color, tex_particle, false, false, 8, 8, 192, 9999, 0, start[0], start[1], start[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
-		VectorAdd (start, vec, start);
+		particle(pt_smoke, PARTICLE_BILLBOARD, color, tex_particle, false, false, 8, 8, 192, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
+		VectorAdd (pos, vec, pos);
 	}
 }
 
@@ -817,7 +819,7 @@ void CL_MoveParticles (void)
 {
 	particle_t *p;
 	renderparticle_t *r;
-	int i, activeparticles, maxparticle, j, a, pressureused = false;
+	int i, activeparticles, maxparticle, j, a, pressureused = false, content;
 	float gravity, dvel, frametime, f, dist, normal[3], v[3], org[3];
 
 	// LordHavoc: early out condition
@@ -844,11 +846,17 @@ void CL_MoveParticles (void)
 			continue;
 		}
 
+		content = 0;
 		VectorCopy(p->org, p->oldorg);
 		VectorMA(p->org, frametime, p->vel, p->org);
 		if (p->friction)
 		{
-			f = 1.0f - (p->friction * frametime);
+			f = p->friction * frametime;
+			if (!content)
+				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (content != CONTENTS_EMPTY)
+				f *= 4;
+			f = 1.0f - f;
 			VectorScale(p->vel, f, p->vel);
 		}
 		VectorCopy(p->org, org);
@@ -908,7 +916,9 @@ void CL_MoveParticles (void)
 				p->vel[1] = (rand()&63)-32 + p->vel2[1];
 				p->vel[2] = (rand()&63)-32 + p->vel2[2];
 			}
-			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (!content)
+				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			a = content;
 			if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
 			{
 				p->die = -1;
@@ -954,7 +964,9 @@ void CL_MoveParticles (void)
 			break;
 		case pt_blood:
 			p->friction = 1;
-			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (!content)
+				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			a = content;
 			if (a != CONTENTS_EMPTY)
 			{
 				if (a == CONTENTS_WATER || a == CONTENTS_SLIME)
@@ -981,24 +993,13 @@ void CL_MoveParticles (void)
 			p->vel[2] -= gravity;
 			if (p->alpha < 1)
 				p->die = -1;
-			else if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents != CONTENTS_EMPTY)
-				p->type = pt_underwaterspark;
-			break;
-		case pt_underwaterspark:
-			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_EMPTY)
-			{
-				p->tex = tex_smoke[rand()&7];
-				p->orientation = PARTICLE_BILLBOARD;
-				p->color[0] = p->color[1] = p->color[2] = 255;
-				p->scalex = 8;
-				p->scaley = 8;
-				p->type = pt_explosionsplash;
-			}
 			else
-				p->vel[2] += gravity * 0.5f;
-			p->alpha -= frametime * p->time2;
-			if (p->alpha < 1)
-				p->die = -1;
+			{
+				if (!content)
+					content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+				if (content != CONTENTS_EMPTY)
+					p->die = -1;
+			}
 			break;
 		case pt_explosionsplash:
 			if (Mod_PointInLeaf(p->org, cl.worldmodel)->contents == CONTENTS_EMPTY)
@@ -1017,8 +1018,9 @@ void CL_MoveParticles (void)
 				p->die = -1;
 			break;
 		case pt_bubble:
-			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
-			if (a != CONTENTS_WATER && a != CONTENTS_SLIME)
+			if (!content)
+				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
 			{
 				p->tex = tex_smoke[rand()&7];
 				p->orientation = PARTICLE_BILLBOARD;
@@ -1028,10 +1030,9 @@ void CL_MoveParticles (void)
 				p->vel[0] = p->vel[1] = p->vel[2] = 0;
 				break;
 			}
-			p->vel[2] += gravity * 0.25;
 			p->vel[0] *= (1 - (frametime * 0.0625));
 			p->vel[1] *= (1 - (frametime * 0.0625));
-			p->vel[2] *= (1 - (frametime * 0.0625));
+			p->vel[2] = (p->vel[2] + gravity * 0.25) * (1 - (frametime * 0.0625));
 			if (cl.time > p->time2)
 			{
 				p->time2 = cl.time + lhrandom(0, 0.5);
@@ -1073,7 +1074,9 @@ void CL_MoveParticles (void)
 				p->die = -1;
 			break;
 		case pt_rain:
-			a = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			if (!content)
+				content = Mod_PointInLeaf(p->org, cl.worldmodel)->contents;
+			a = content;
 			if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
 				p->die = -1;
 			/*
