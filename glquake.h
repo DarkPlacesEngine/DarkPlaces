@@ -35,12 +35,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define strncasecmp strnicmp
 #endif
 
-#include <GL/gl.h>
+//#include <GL/gl.h>
 
 extern qboolean isG200;
 extern qboolean isRagePro;
-
-extern float gldepthmin, gldepthmax;
 
 //====================================================
 
@@ -48,6 +46,10 @@ extern const char *gl_vendor;
 extern const char *gl_renderer;
 extern const char *gl_version;
 extern const char *gl_extensions;
+
+void GL_OpenLibrary(void);
+void GL_CloseLibrary(void);
+void *GL_GetProcAddress(char *name);
 
 // wgl uses APIENTRY
 #ifndef APIENTRY
@@ -57,6 +59,150 @@ extern const char *gl_extensions;
 // for platforms (wgl) that do not use GLAPIENTRY
 #ifndef GLAPIENTRY
 #define GLAPIENTRY APIENTRY
+#endif
+
+#ifndef GL_MATRIX_MODE
+typedef unsigned int GLenum;
+typedef unsigned char GLboolean;
+typedef unsigned int GLbitfield;
+typedef void GLvoid;
+// 1-byte signed
+typedef signed char GLbyte;
+// 2-byte signed
+typedef short GLshort;
+// 4-byte signed
+typedef int GLint;
+// 1-byte unsigned
+typedef unsigned char GLubyte;
+// 2-byte unsigned
+typedef unsigned short GLushort;
+// 4-byte unsigned
+typedef unsigned int GLuint;
+// 4-byte signed
+typedef int GLsizei;
+// single precision float
+typedef float GLfloat;
+// single precision float in [0,1]
+typedef float GLclampf;
+// double precision float
+typedef double GLdouble;
+// double precision float in [0,1]
+typedef double GLclampd;
+
+#define GL_MATRIX_MODE				0x0BA0
+#define GL_MODELVIEW				0x1700
+#define GL_PROJECTION				0x1701
+#define GL_TEXTURE				0x1702
+
+#define GL_DEPTH_TEST				0x0B71
+
+#define GL_CULL_FACE				0x0B44
+
+#define GL_BLEND				0x0BE2
+
+#define GL_ZERO					0x0
+#define GL_ONE					0x1
+#define GL_SRC_COLOR				0x0300
+#define GL_ONE_MINUS_SRC_COLOR			0x0301
+#define GL_DST_COLOR				0x0306
+#define GL_ONE_MINUS_DST_COLOR			0x0307
+#define GL_SRC_ALPHA				0x0302
+#define GL_ONE_MINUS_SRC_ALPHA			0x0303
+#define GL_DST_ALPHA				0x0304
+#define GL_ONE_MINUS_DST_ALPHA			0x0305
+#define GL_SRC_ALPHA_SATURATE			0x0308
+#define GL_CONSTANT_COLOR			0x8001
+#define GL_ONE_MINUS_CONSTANT_COLOR		0x8002
+#define GL_CONSTANT_ALPHA			0x8003
+#define GL_ONE_MINUS_CONSTANT_ALPHA		0x8004
+
+#define GL_TEXTURE_ENV				0x2300
+#define GL_TEXTURE_ENV_MODE			0x2200
+#define GL_TEXTURE_1D				0x0DE0
+#define GL_TEXTURE_2D				0x0DE1
+#define GL_TEXTURE_WRAP_S			0x2802
+#define GL_TEXTURE_WRAP_T			0x2803
+#define GL_TEXTURE_MAG_FILTER			0x2800
+#define GL_TEXTURE_MIN_FILTER			0x2801
+
+#define GL_NEAREST				0x2600
+#define GL_LINEAR				0x2601
+#define GL_NEAREST_MIPMAP_NEAREST		0x2700
+#define GL_NEAREST_MIPMAP_LINEAR		0x2702
+#define GL_LINEAR_MIPMAP_NEAREST		0x2701
+#define GL_LINEAR_MIPMAP_LINEAR			0x2703
+
+#define GL_DECAL				0x2101
+#define GL_MODULATE				0x2100
+
+#define GL_REPEAT				0x2901
+#define GL_CLAMP				0x2900
+
+#define GL_TRIANGLES				0x0004
+
+#define GL_FALSE				0x0
+#define GL_TRUE					0x1
+
+#define GL_BYTE					0x1400
+#define GL_UNSIGNED_BYTE			0x1401
+#define GL_SHORT				0x1402
+#define GL_UNSIGNED_SHORT			0x1403
+#define GL_INT					0x1404
+#define GL_UNSIGNED_INT				0x1405
+#define GL_FLOAT				0x1406
+#define GL_DOUBLE				0x140A
+#define GL_2_BYTES				0x1407
+#define GL_3_BYTES				0x1408
+#define GL_4_BYTES				0x1409
+
+#define GL_VERTEX_ARRAY				0x8074
+#define GL_NORMAL_ARRAY				0x8075
+#define GL_COLOR_ARRAY				0x8076
+//#define GL_INDEX_ARRAY				0x8077
+#define GL_TEXTURE_COORD_ARRAY			0x8078
+//#define GL_EDGE_FLAG_ARRAY			0x8079
+
+#define GL_FRONT				0x0404
+#define GL_BACK					0x0405
+
+#define GL_VENDOR				0x1F00
+#define GL_RENDERER				0x1F01
+#define GL_VERSION				0x1F02
+#define GL_EXTENSIONS				0x1F03
+
+#define GL_NO_ERROR 				0x0
+#define GL_INVALID_VALUE			0x0501
+#define GL_INVALID_ENUM				0x0500
+#define GL_INVALID_OPERATION			0x0502
+#define GL_STACK_OVERFLOW			0x0503
+#define GL_STACK_UNDERFLOW			0x0504
+#define GL_OUT_OF_MEMORY			0x0505
+
+#define GL_DITHER				0x0BD0
+#define GL_RGB					0x1907
+#define GL_RGBA					0x1908
+
+#define GL_MAX_TEXTURE_SIZE			0x0D33
+
+#define GL_NEVER				0x0200
+#define GL_LESS					0x0201
+#define GL_EQUAL				0x0202
+#define GL_LEQUAL				0x0203
+#define GL_GREATER				0x0204
+#define GL_NOTEQUAL				0x0205
+#define GL_GEQUAL				0x0206
+#define GL_ALWAYS				0x0207
+#define GL_DEPTH_TEST				0x0B71
+
+#define GL_RED_SCALE				0x0D14
+#define GL_GREEN_SCALE				0x0D18
+#define GL_BLUE_SCALE				0x0D1A
+#define GL_ALPHA_SCALE				0x0D1C
+
+#define GL_DEPTH_BUFFER_BIT			0x00000100
+#define GL_ACCUM_BUFFER_BIT			0x00000200
+#define GL_STENCIL_BUFFER_BIT			0x00000400
+#define GL_COLOR_BUFFER_BIT			0x00004000
 #endif
 
 // GL_ARB_multitexture
@@ -242,7 +388,7 @@ extern BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
 #define DEBUGGL
 
 #ifdef DEBUGGL
-#define CHECKGLERROR if ((errornumber = glGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);
+#define CHECKGLERROR if ((errornumber = qglGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);
 extern int errornumber;
 void GL_PrintError(int errornumber, char *filename, int linenumber);
 #else

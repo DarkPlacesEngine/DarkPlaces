@@ -17,18 +17,18 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
-#include <termios.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/vt.h>
-#include <stdarg.h>
-#include <stdio.h>
+//#include <termios.h>
+//#include <sys/ioctl.h>
+//#include <sys/stat.h>
+//#include <sys/vt.h>
+//#include <stdarg.h>
+//#include <stdio.h>
 #include <signal.h>
 
-#include <dlfcn.h>
+//#include <dlfcn.h>
 
-#include "quakedef.h"
-
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <GL/glx.h>
 
 #include <X11/keysym.h>
@@ -37,6 +37,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/extensions/XShm.h>
 #include <X11/extensions/xf86dga.h>
 #include <X11/extensions/xf86vmode.h>
+
+#include "quakedef.h"
+
+XVisualInfo *(GLAPIENTRY *qglXChooseVisual)(Display *dpy, int screen, int *attribList);
+GLXContext (GLAPIENTRY *qglXCreateContext)(Display *dpy, XVisualInfo *vis, GLXContext shareList, Bool direct);
+void (GLAPIENTRY *qglXDestroyContext)(Display *dpy, GLXContext ctx);
+Bool (GLAPIENTRY *qglXMakeCurrent)(Display *dpy, GLXDrawable drawable, GLXContext ctx);
+void (GLAPIENTRY *qglXSwapBuffers)(Display *dpy, GLXDrawable drawable);
+
 
 static Display *vidx11_display = NULL;
 static int scrnum;
@@ -76,12 +85,6 @@ static Colormap vidx11_colormap;
 
 /*-----------------------------------------------------------------------*/
 
-const char *gl_vendor;
-const char *gl_renderer;
-const char *gl_version;
-const char *gl_extensions;
-
-/*-----------------------------------------------------------------------*/
 static int
 XLateKey(XKeyEvent *ev)
 {
@@ -464,6 +467,8 @@ void VID_Shutdown(void)
 	vidx11_display = NULL;
 	win = 0;
 	ctx = NULL;
+
+	GL_CloseLibrary();
 }
 
 void signal_handler(int sig)
@@ -505,7 +510,7 @@ void VID_Finish (void)
 	if (r_render.integer)
 	{
 		qglFinish();
-		glXSwapBuffers(vidx11_display, win);
+		qglXSwapBuffers(vidx11_display, win);
 	}
 
 // handle the mouse state when windowed if that's changed
@@ -643,6 +648,8 @@ void VID_Init(void)
 	qboolean fullscreen = true;
 	int MajorVersion, MinorVersion;
 
+	GL_OpenLibrary();
+
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
 
@@ -695,18 +702,24 @@ void VID_Init(void)
 		vidmode_ext = true;
 	}
 
+	if ((qglXChooseVisual = GL_GetProcAddress("glXChooseVisual")) == NULL
+	 || (qglXCreateContext = GL_GetProcAddress("glXCreateContext")) == NULL
+	 || (qglXMakeCurrent = GL_GetProcAddress("glXMakeCurrent")) == NULL
+	 || (qglXSwapBuffers = GL_GetProcAddress("glXSwapBuffers")) == NULL)
+		Sys_Error("glX functions not found in libGL.so.1\n");
+
 	visinfo = NULL;
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
 #if 0
 	if (!COM_CheckParm("-nogamma"))
-		visinfo = glXChooseVisual(vidx11_display, scrnum, gammaattrib);
+		visinfo = qglXChooseVisual(vidx11_display, scrnum, gammaattrib);
 #endif
 	if (!visinfo)
 	{
-		visinfo = glXChooseVisual(vidx11_display, scrnum, nogammaattrib);
+		visinfo = qglXChooseVisual(vidx11_display, scrnum, nogammaattrib);
 		if (!visinfo)
 		{
-			fprintf(stderr, "qkHack: Error couldn't get an RGB, Double-buffered, Depth visual\n");
+			Sys_Error("couldn't get an RGB, Double-buffered, Depth visual\n");
 			exit(1);
 		}
 	}
@@ -798,9 +811,9 @@ void VID_Init(void)
 
 	XFlush(vidx11_display);
 
-	ctx = glXCreateContext(vidx11_display, visinfo, NULL, True);
+	ctx = qglXCreateContext(vidx11_display, visinfo, NULL, True);
 
-	glXMakeCurrent(vidx11_display, win, ctx);
+	qglXMakeCurrent(vidx11_display, win, ctx);
 
 	scr_width = width;
 	scr_height = height;

@@ -740,7 +740,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0;
-	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f, dist2, mscale;
+	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, f, dist2, mscale, dot;
 	struct
 	{
 		vec3_t origin;
@@ -877,8 +877,8 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			{
 				VectorSubtract(nl->origin, av, v);
 				// directional shading
-				a = DotProduct(avn,v);
-				if (a > 0)
+				dot = DotProduct(avn,v);
+				if (dot > 0)
 				{
 					// the vertex normal faces the light
 
@@ -890,18 +890,18 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						#if SLOWMATH
 						t = 1.0f / sqrt(dist2);
 						#else
-						number = DotProduct(v, v);
-						*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
-						t = t * (1.5f - (number * 0.5f * t * t));
+						*((int *)&t) = 0x5f3759df - ((* (int *) &dist2) >> 1);
+						t = t * (1.5f - (dist2 * 0.5f * t * t));
 						#endif
-						// a * t is dotproduct with a normalized v.
+
+						// dot * t is dotproduct with a normalized v.
 						// (the result would be -1 to +1, but we already
 						// eliminated the <= 0 case, so it is 0 to 1)
 
 						// the hardness variables are for backlighting/shinyness
 						// these have been hardwired at * 0.5 + 0.5 to match
 						// the quake map lighting utility's equations
-						f *= a * t * 0.5f + 0.5f;// * hardness + hardnessoffset;
+						f *= dot * t * 0.5f + 0.5f;// * hardness + hardnessoffset;
 						VectorMA(color, f, nl->light, color);
 					}
 				}

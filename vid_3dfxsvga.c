@@ -56,13 +56,6 @@ static int	scr_width, scr_height;
 int	VID_options_items = 0;
 
 /*-----------------------------------------------------------------------*/
-
-const char *gl_vendor;
-const char *gl_renderer;
-const char *gl_version;
-const char *gl_extensions;
-
-/*-----------------------------------------------------------------------*/
 void D_BeginDirectRect (int x, int y, qbyte *pbitmap, int width, int height)
 {
 }
@@ -77,6 +70,8 @@ void VID_Shutdown(void)
 		return;
 
 	fxMesaDestroyContext(fc);
+
+	GL_CloseLibrary();
 }
 
 void signal_handler(int sig)
@@ -234,6 +229,8 @@ void VID_Init(void)
 	int i;
 	GLint attribs[32];
 	int width = 640, height = 480;
+
+	GL_OpenLibrary();
 
 // set vid parameters
 	attribs[0] = FXMESA_DOUBLEBUFFER;

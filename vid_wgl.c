@@ -57,11 +57,6 @@ lmode_t	lowresmodes[] = {
 	{512, 384},
 };
 
-const char *gl_vendor;
-const char *gl_renderer;
-const char *gl_version;
-const char *gl_extensions;
-
 qboolean scr_skipupdate;
 
 static vmode_t modelist[MAX_MODE_LIST];
@@ -419,6 +414,8 @@ void VID_Shutdown (void)
 
 		VID_RestoreSystemGamma();
 	}
+
+	GL_CloseLibrary();
 }
 
 
@@ -1067,6 +1064,8 @@ void VID_Init (void)
 	int basenummodes, width, height = 0, bpp, findbpp, done;
 	HDC hdc;
 	DEVMODE devmode;
+
+	GL_OpenLibrary();
 
 	memset(&devmode, 0, sizeof(devmode));
 
