@@ -57,6 +57,7 @@ int CGVM_GetCvarInt(const char *name);
 char *CGVM_GetCvarString(const char *name);
 double CGVM_Time(void);
 int CGVM_Model(const char *name);
+void CGVM_Stain(const float *origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2);
 // more will be added
 
 // engine called functions
