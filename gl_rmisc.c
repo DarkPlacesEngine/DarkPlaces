@@ -125,21 +125,25 @@ void R_Envmap_f (void)
 
 void R_InitParticles (void);
 
+void gl_misc_start()
+{
+}
+
+void gl_misc_shutdown()
+{
+}
+
 /*
 ===============
 R_Init
 ===============
 */
-void R_Init (void)
+void GL_Misc_Init (void)
 {	
-//	extern cvar_t gl_finish;
-
 	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);	
 	Cmd_AddCommand ("envmap", R_Envmap_f);	
 	Cmd_AddCommand ("pointfile", R_ReadPointFile_f);	
 
-//	Cvar_RegisterVariable (&r_norefresh);
-//	Cvar_RegisterVariable (&r_lightmap);
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_shadows);
@@ -149,175 +153,11 @@ void R_Init (void)
 	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_waterripple); // LordHavoc: added waterripple
 
-//	Cvar_RegisterVariable (&gl_cull);
-//	Cvar_RegisterVariable (&gl_affinemodels);
-//	Cvar_RegisterVariable (&gl_polyblend);
-	Cvar_RegisterVariable (&gl_playermip);
-//	Cvar_RegisterVariable (&gl_nocolors);
-
-//	Cvar_RegisterVariable (&gl_keeptjunctions);
-//	Cvar_RegisterVariable (&gl_reporttjunctions);
-
-	R_InitParticles ();
-
-	playertextures = texture_extension_number;
-	texture_extension_number += 64; // LordHavoc: increased number of players from 16 to 64
+	R_RegisterModule("GL_Misc", gl_misc_start, gl_misc_shutdown);
 }
 
-qboolean VID_Is8bit(void);
-void GL_Upload8_EXT (byte *data, int width, int height,  qboolean mipmap, qboolean alpha);
-
-/*
-===============
-R_TranslatePlayerSkin
-
-Translates a skin texture by the per-player color lookup
-===============
-*/
-void R_TranslatePlayerSkin (int playernum)
-{
-	int		top, bottom;
-	byte	translate[256];
-	unsigned	translate32[256];
-	int		i, j, s;
-	model_t	*model;
-	aliashdr_t *paliashdr;
-	byte	*original;
-	unsigned	pixels[512*256], *out;
-	unsigned	scaled_width, scaled_height;
-	int			inwidth, inheight;
-	byte		*inrow;
-	unsigned	frac, fracstep;
-
-	top = cl.scores[playernum].colors & 0xf0;
-	bottom = (cl.scores[playernum].colors &15)<<4;
-
-	for (i=0 ; i<256 ; i++)
-		translate[i] = i;
-
-	for (i=0 ; i<16 ; i++)
-	{
-		// LordHavoc: corrected color ranges
-		if (top < 128 || (top >= 224 && top < 240))	// the artists made some backwards ranges.  sigh.
-			translate[TOP_RANGE+i] = top+i;
-		else
-			translate[TOP_RANGE+i] = top+15-i;
-
-		// LordHavoc: corrected color ranges
-		if (bottom < 128 || (bottom >= 224 && bottom < 240))
-			translate[BOTTOM_RANGE+i] = bottom+i;
-		else
-			translate[BOTTOM_RANGE+i] = bottom+15-i;
-	}
-
-	//
-	// locate the original skin pixels
-	//
-	currententity = &cl_entities[1+playernum];
-	model = currententity->model;
-	if (!model)
-		return;		// player doesn't have a model yet
-	if (model->type != mod_alias)
-		return; // only translate skins on alias models
-
-	paliashdr = (aliashdr_t *)Mod_Extradata (model);
-	s = paliashdr->skinwidth * paliashdr->skinheight;
-	if (currententity->skinnum < 0 || currententity->skinnum >= paliashdr->numskins)
-	{
-		Con_Printf("(%d): Invalid player skin #%d\n", playernum, currententity->skinnum);
-		original = (byte *)paliashdr + paliashdr->texels[0];
-	}
-	else
-		original = (byte *)paliashdr + paliashdr->texels[currententity->skinnum];
-	if (s & 3)
-		Sys_Error ("R_TranslateSkin: s&3");
-
-	inwidth = paliashdr->skinwidth;
-	inheight = paliashdr->skinheight;
-
-	// because this happens during gameplay, do it fast
-	// instead of sending it through gl_upload 8
-    glBindTexture(GL_TEXTURE_2D, playertextures + playernum);
-
-#if 0
-	byte	translated[320*200];
-
-	for (i=0 ; i<s ; i+=4)
-	{
-		translated[i] = translate[original[i]];
-		translated[i+1] = translate[original[i+1]];
-		translated[i+2] = translate[original[i+2]];
-		translated[i+3] = translate[original[i+3]];
-	}
-
-
-	// don't mipmap these, because it takes too long
-	GL_Upload8 (translated, paliashdr->skinwidth, paliashdr->skinheight, false, false, true);
-#else
-	scaled_width = gl_max_size.value < 512 ? gl_max_size.value : 512;
-	scaled_height = gl_max_size.value < 256 ? gl_max_size.value : 256;
-
-	// allow users to crunch sizes down even more if they want
-	scaled_width >>= (int)gl_playermip.value;
-	scaled_height >>= (int)gl_playermip.value;
-
-	if (VID_Is8bit())
-	{ // 8bit texture upload
-		byte *out2;
-
-		out2 = (byte *)pixels;
-		memset(pixels, 0, sizeof(pixels));
-		fracstep = inwidth*0x10000/scaled_width;
-		for (i=0 ; i<scaled_height ; i++, out2 += scaled_width)
-		{
-			inrow = original + inwidth*(i*inheight/scaled_height);
-			frac = fracstep >> 1;
-			for (j=0 ; j<scaled_width ; j+=4)
-			{
-				out2[j] = translate[inrow[frac>>16]];
-				frac += fracstep;
-				out2[j+1] = translate[inrow[frac>>16]];
-				frac += fracstep;
-				out2[j+2] = translate[inrow[frac>>16]];
-				frac += fracstep;
-				out2[j+3] = translate[inrow[frac>>16]];
-				frac += fracstep;
-			}
-		}
-
-		GL_Upload8_EXT ((byte *)pixels, scaled_width, scaled_height, false, false);
-		return;
-	}
-
-	for (i=0 ; i<256 ; i++)
-		translate32[i] = d_8to24table[translate[i]];
-
-	out = pixels;
-	fracstep = inwidth*0x10000/scaled_width;
-	for (i=0 ; i<scaled_height ; i++, out += scaled_width)
-	{
-		inrow = original + inwidth*(i*inheight/scaled_height);
-		frac = fracstep >> 1;
-		for (j=0 ; j<scaled_width ; j+=4)
-		{
-			out[j] = translate32[inrow[frac>>16]];
-			frac += fracstep;
-			out[j+1] = translate32[inrow[frac>>16]];
-			frac += fracstep;
-			out[j+2] = translate32[inrow[frac>>16]];
-			frac += fracstep;
-			out[j+3] = translate32[inrow[frac>>16]];
-			frac += fracstep;
-		}
-	}
-	glTexImage2D (GL_TEXTURE_2D, 0, gl_solid_format, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-#endif
-
-}
+//qboolean VID_Is8bit(void);
+//void GL_Upload8_EXT (byte *data, int width, int height,  qboolean mipmap, qboolean alpha);
 
 void R_ClearParticles (void);
 void GL_BuildLightmaps (void);

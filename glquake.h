@@ -37,17 +37,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <GL/gl.h>
 //#include <GL/glu.h>
 
-void GL_BeginRendering (int *x, int *y, int *width, int *height);
-void GL_EndRendering (void);
+extern void GL_BeginRendering (int *x, int *y, int *width, int *height);
+extern void GL_EndRendering (void);
 
 extern	int texture_extension_number;
 
 extern	float	gldepthmin, gldepthmax;
 
-void GL_Upload32 (void *data, int width, int height,  qboolean mipmap, qboolean alpha);
-void GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean alpha);
-int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolean mipmap, qboolean alpha, int bytesperpixel);
-int GL_FindTexture (char *identifier);
+extern void GL_Upload32 (void *data, int width, int height,  qboolean mipmap, qboolean alpha);
+extern void GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean alpha);
+extern int GL_LoadTexture (char *identifier, int width, int height, byte *data, qboolean mipmap, qboolean alpha, int bytesperpixel);
+extern int GL_FindTexture (char *identifier);
 
 typedef struct
 {
@@ -70,8 +70,8 @@ extern	int glx, gly, glwidth, glheight;
 #define BACKFACE_EPSILON	0.01
 
 
-void R_TimeRefresh_f (void);
-void R_ReadPointFile_f (void);
+extern void R_TimeRefresh_f (void);
+extern void R_ReadPointFile_f (void);
 
 //====================================================
 
@@ -103,39 +103,20 @@ extern	texture_t	*r_notexture_mip;
 extern	int		d_lightstylevalue[256];	// 8.8 fraction of base light value
 
 extern	qboolean	envmap;
-extern	int	cnttextures[2];
-// LordHavoc: moved all code relating to particles into r_part.c
-//extern	int	particletexture;
-extern	int	playertextures;
 
 extern	int	skytexturenum;		// index in cl.loadmodel, not gl texture object
 
-//extern	cvar_t	r_norefresh;
 extern	cvar_t	r_drawentities;
-//extern	cvar_t	r_drawworld;
 extern	cvar_t	r_drawviewmodel;
 extern	cvar_t	r_speeds;
-//extern	cvar_t	r_waterwarp;
 extern	cvar_t	r_fullbright;
-//extern	cvar_t	r_lightmap;
 extern	cvar_t	r_shadows;
 extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
 extern	cvar_t	r_novis;
 extern	cvar_t	r_waterripple;
 
-//extern	cvar_t	gl_cull;
-//extern	cvar_t	gl_poly;
-//extern	cvar_t	gl_smoothmodels;
-//extern	cvar_t	gl_affinemodels;
-//extern	cvar_t	gl_polyblend;
-//extern	cvar_t	gl_keeptjunctions;
-//extern	cvar_t	gl_reporttjunctions;
-//extern	cvar_t	gl_nocolors;
-//extern	cvar_t	gl_doubleeyes;
-
 extern	cvar_t	gl_max_size;
-extern	cvar_t	gl_playermip;
 
 extern	float	r_world_matrix[16];
 
@@ -143,8 +124,6 @@ extern	const char *gl_vendor;
 extern	const char *gl_renderer;
 extern	const char *gl_version;
 extern	const char *gl_extensions;
-
-void R_TranslatePlayerSkin (int playernum);
 
 // Multitexture
 #define    TEXTURE0_SGIS				0x835E
@@ -259,3 +238,7 @@ extern vec_t fogdensity;
 //#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_refdef.vieworg[0]) * vpn[0] + ((v)[1] - r_refdef.vieworg[1]) * vpn[1] + ((v)[2] - r_refdef.vieworg[2]) * vpn[2])*(((v)[0] - r_refdef.vieworg[0]) * vpn[0] + ((v)[1] - r_refdef.vieworg[1]) * vpn[1] + ((v)[2] - r_refdef.vieworg[2]) * vpn[2]))))
 #define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_refdef.vieworg[0])*((v)[0] - r_refdef.vieworg[0])+((v)[1] - r_refdef.vieworg[1])*((v)[1] - r_refdef.vieworg[1])+((v)[2] - r_refdef.vieworg[2])*((v)[2] - r_refdef.vieworg[2])))))
 #define calcfogbyte(v) ((byte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
+
+#include "r_modules.h"
+
+extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, int effects, int flags, int colormap);

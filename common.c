@@ -588,17 +588,18 @@ void MSG_WriteCoord (sizebuf_t *sb, float f)
 	if (dpprotocol)
 		MSG_WriteFloat(sb, f);
 	else
-		MSG_WriteShort (sb, (int)(f*8));
+		MSG_WriteShort (sb, (int)(f*8.0f + 0.5f));
 }
 
 void MSG_WritePreciseAngle (sizebuf_t *sb, float f)
 {
-	MSG_WriteShort (sb, (int) (f*65536.0f/360) & 65535);
+	MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) + 0.5f) & 65535);
 }
 
+// LordHavoc: round to nearest value, rather than rounding down, fixes crosshair problem
 void MSG_WriteAngle (sizebuf_t *sb, float f)
 {
-	MSG_WriteByte (sb, ((int)f*256/360) & 255);
+	MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) + 0.5f) & 255);
 }
 
 //

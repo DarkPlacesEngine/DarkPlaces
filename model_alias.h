@@ -29,6 +29,7 @@ Alias models are position independent, so the cache manager can move them.
 
 #include "modelgen.h"
 
+/*
 typedef struct
 {
 	int					firstpose;
@@ -54,11 +55,11 @@ typedef struct
 	maliasgroupframedesc_t	frames[1];
 } maliasgroup_t;
 
-// !!! if this is changed, it must be changed in asm_draw.h too !!!
 typedef struct mtriangle_s {
 	int					facesfront;
 	int					vertindex[3];
 } mtriangle_t;
+*/
 
 // LordHavoc: new vertex format
 typedef struct {
@@ -83,29 +84,33 @@ typedef struct {
 	synctype_t	synctype;
 	int			flags;
 	float		size;
+} daliashdr_t;
 
-	int					numposes;
-	int					posedata;	// LordHavoc: numposes*numverts*trivert2
-	int					frontfaces; // LordHavoc: how many front faces
-	int					backfaces; // LordHavoc: how many back faces
-//	int					poseverts;
-//	int					posedata;	// numposes*poseverts trivert_t
-//	int					commands;	// gl command list with embedded s/t
-	int					texcoords;	// LordHavoc: texture coordinates
-	int					vertindices;	// LordHavoc: vertex numbers
-	int					gl_texturenum[MAX_SKINS][4];
-	int					texels[MAX_SKINS];	// only for player skins
-	maliasframedesc_t	frames[1];	// variable sized
-} aliashdr_t;
+typedef struct
+{
+	char name[16]; // LordHavoc: only kept this for reasons of viewthing support
+	unsigned short start;
+	unsigned short length;
+	float rate; // in poses per second
+} maliasframe_t;
+
+typedef struct
+{
+	vec3_t		scale;
+	vec3_t		scale_origin;
+	int			numverts;
+	int			numtris;
+	int			numframes;
+	int			numposes;
+	int			framedata; // LordHavoc: unsigned short start
+	int			texdata; // LordHavoc: texture coordinate array
+	int			posedata; // LordHavoc: vertex data for all the poses
+	int			tridata; // LordHavoc: vertex indices for the triangles
+} maliashdr_t;
 
 #define	MAXALIASVERTS	4096
 #define	MAXALIASFRAMES	1024
 #define	MAXALIASTRIS	4096
-
-extern	aliashdr_t	*pheader;
-//extern	stvert_t	stverts[MAXALIASVERTS];
-//extern	mtriangle_t	triangles[MAXALIASTRIS];
-//extern	trivertx_t	*poseverts[MAXALIASFRAMES];
 
 /*
 ========================================================================
@@ -146,7 +151,7 @@ typedef struct
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
 	char		name[16];	// frame name from grabbing
-	trivertx_t	verts[0];	// variable sized
+	trivertx_t	verts[];	// variable sized
 } md2frame_t;
 
 // LordHavoc: memory representation is different than disk
@@ -154,7 +159,7 @@ typedef struct
 {
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
-	trivert2	verts[0];	// variable sized
+	trivert2	verts[];	// variable sized
 } md2memframe_t;
 
 
@@ -205,8 +210,6 @@ typedef struct
 	int			ofs_tris;		// offset for dtriangles
 	int			ofs_frames;		// offset for first frame
 	int			ofs_glcmds;	
-
-	int			gl_texturenum[MAX_SKINS];
 } md2mem_t;
 
 #define ALIASTYPE_MDL 1

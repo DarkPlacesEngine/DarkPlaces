@@ -41,7 +41,7 @@ typedef struct
 	float	entertime;
 	int		frags;
 	int		colors;			// two 4 bit fields
-	byte	translations[256]; // LordHavoc: major memory reduction (was VID_GRADES*256, and VID_GRADES is 64), and weirdness cleanup
+//	byte	translations[256]; // LordHavoc: major memory reduction (was VID_GRADES*256, and VID_GRADES is 64), and weirdness cleanup
 } scoreboard_t;
 
 typedef struct
@@ -65,20 +65,7 @@ typedef struct
 
 #define	SIGNONS		4			// signon messages to receive before connected
 
-// LordHavoc: 256 dynamic lights
-#define	MAX_DLIGHTS		256
-typedef struct
-{
-	vec3_t	origin;
-	float	radius;
-	float	die;				// stop lighting after this time
-	float	decay;				// drop this each second
-	float	minlight;			// don't add when contributing less
-	int		key;
-	vec3_t	color;				// LordHavoc: colored lighting
-	qboolean	dark;			// subtracts light instead of adding
-} dlight_t;
-
+#include "r_light.h"
 
 #define	MAX_BEAMS	24
 typedef struct

@@ -34,11 +34,9 @@ float transviewdist; // distance of view origin along the view normal
 
 float transreciptable[256];
 
-void glpoly_init()
+void gl_poly_start()
 {
 	int i;
-	Cvar_RegisterVariable (&gl_multitexture);
-	Cvar_RegisterVariable (&gl_vertexarrays);
 	transvert = malloc(MAX_TRANSVERTS * sizeof(transvert_t));
 	transpoly = malloc(MAX_TRANSPOLYS * sizeof(transpoly_t));
 	transpolyindex = malloc(MAX_TRANSPOLYS * sizeof(unsigned short));
@@ -49,6 +47,23 @@ void glpoly_init()
 	transreciptable[0] = 0.0f;
 	for (i = 1;i < 256;i++)
 		transreciptable[i] = 1.0f / i;
+}
+void gl_poly_shutdown()
+{
+	free(transvert);
+	free(transpoly);
+	free(transpolyindex);
+	free(wallvert);
+	free(wallpoly);
+	free(skyvert);
+	free(skypoly);
+}
+
+void GL_Poly_Init()
+{
+	Cvar_RegisterVariable (&gl_multitexture);
+	Cvar_RegisterVariable (&gl_vertexarrays);
+	R_RegisterModule("GL_Poly", gl_poly_start, gl_poly_shutdown);
 }
 
 void transpolyclear()

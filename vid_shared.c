@@ -98,7 +98,7 @@ void Check_Gamma (unsigned char *pal)
 	}
 
 	// gamma correct the palette
-	for (i=0 ; i<768 ; i++)
-		pal[i] = qgamma[pal[i]];
+	//for (i=0 ; i<768 ; i++)
+	//	pal[i] = qgamma[pal[i]];
 	// note: 32bit uploads are corrected by the upload functions
 }

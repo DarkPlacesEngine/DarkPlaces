@@ -70,18 +70,12 @@ particle_t	**freeparticles; // list used only in compacting particles array
 cvar_t r_particles = {"r_particles", "1"};
 cvar_t r_dynamicparticles = {"r_dynamicparticles", "0", TRUE};
 
-void fractalnoise(char *noise, int size);
-void fractalnoise_zeroedge(char *noise, int size);
-
 void R_InitParticleTexture (void)
 {
 	int		x,y,d,i;
 	float	dx, dy, dz, f, dot;
 	byte	data[32][32][4], noise1[32][32], noise2[32][32];
 	vec3_t	normal, light;
-
-	particletexture = texture_extension_number++;
-	glBindTexture(GL_TEXTURE_2D, particletexture);
 
 	for (x=0 ; x<32 ; x++)
 	{
@@ -95,13 +89,7 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = (byte) d;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
+	particletexture = GL_LoadTexture ("particletexture", 32, 32, &data[0][0][0], true, true, 4);
 
 	for (i = 0;i < 8;i++)
 	{
@@ -127,16 +115,8 @@ void R_InitParticleTexture (void)
 					data[y][x][3] = 0;
 			}
 
-		smokeparticletexture[i] = texture_extension_number++;
-		glBindTexture(GL_TEXTURE_2D, smokeparticletexture[i]);
-		glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		smokeparticletexture[i] = GL_LoadTexture (va("smokeparticletexture%d", i), 32, 32, &data[0][0][0], true, true, 4);
 	}
-
-	rainparticletexture = texture_extension_number++;
-	glBindTexture(GL_TEXTURE_2D, rainparticletexture);
 
 	for (x=0 ; x<32 ; x++)
 	{
@@ -159,15 +139,7 @@ void R_InitParticleTexture (void)
 			data[y][x][3] = (byte) d;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	bubbleparticletexture = texture_extension_number++;
-	glBindTexture(GL_TEXTURE_2D, bubbleparticletexture);
+	rainparticletexture = GL_LoadTexture ("rainparticletexture", 32, 32, &data[0][0][0], true, true, 4);
 
 	light[0] = 1;light[1] = 1;light[2] = 1;
 	VectorNormalize(light);
@@ -206,12 +178,20 @@ void R_InitParticleTexture (void)
 				data[y][x][3] = 0;
 		}
 	}
-	glTexImage2D (GL_TEXTURE_2D, 0, 4, 32, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	bubbleparticletexture = GL_LoadTexture ("bubbleparticletexture", 32, 32, &data[0][0][0], true, true, 4);
+}
 
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+void r_part_start()
+{
+	particles = (particle_t *) malloc (r_numparticles * sizeof(particle_t));
+	freeparticles = (void *) malloc (r_numparticles * sizeof(particle_t *));
+	R_InitParticleTexture ();
+}
 
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+void r_part_shutdown()
+{
+	free(particles);
+	free(freeparticles);
 }
 
 /*
@@ -219,7 +199,7 @@ void R_InitParticleTexture (void)
 R_InitParticles
 ===============
 */
-void R_InitParticles (void)
+void R_Particles_Init (void)
 {
 	int		i;
 
@@ -236,12 +216,10 @@ void R_InitParticles (void)
 		r_numparticles = MAX_PARTICLES;
 	}
 
-	particles = (particle_t *) Hunk_AllocName (r_numparticles * sizeof(particle_t), "particles");
-	freeparticles = (void *) Hunk_AllocName (r_numparticles * sizeof(particle_t *), "particles");
-
 	Cvar_RegisterVariable (&r_particles);
 	Cvar_RegisterVariable (&r_dynamicparticles);
-	R_InitParticleTexture ();
+
+	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown);
 }
 
 #define particle(ptype, pcolor, ptex, pscale, palpha, ptime, px, py, pz, pvx, pvy, pvz)\

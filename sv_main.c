@@ -1341,23 +1341,3 @@ void SV_SpawnServer (char *server)
 	
 	Con_DPrintf ("Server spawned.\n");
 }
-
-// LordHavoc: added light checking to the server
-int RecursiveLightPoint (vec3_t color, mnode_t *node, vec3_t start, vec3_t end);
-void SV_LightPoint (vec3_t color, vec3_t p)
-{
-	vec3_t		end;
-	
-	if (!sv.worldmodel->lightdata)
-	{
-		color[0] = color[1] = color[2] = 255;
-		return;
-	}
-	
-	end[0] = p[0];
-	end[1] = p[1];
-	end[2] = p[2] - 2048;
-
-	color[0] = color[1] = color[2] = 0;
-	RecursiveLightPoint (color, sv.worldmodel->nodes, p, end);
-}

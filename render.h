@@ -68,7 +68,6 @@ typedef struct entity_s
 	struct efrag_s			*efrag;			// linked list of efrags
 	int						frame;
 	float					syncbase;		// for client-side animations
-//	byte					*colormap;
 	int						colormap;
 	int						effects;		// light, particals, etc
 	int						skinnum;		// for Alias models
@@ -129,7 +128,7 @@ extern	struct texture_s	*r_notexture_mip;
 
 // LordHavoc: generic image loader
 byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight);
-int loadtextureimage (int texnum, char* filename, qboolean complain, int matchwidth, int matchheight);
+int loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap);
 
 void R_Init (void);
 void R_InitTextures (void);

@@ -568,27 +568,8 @@ void GL_Init (void)
 	// LordHavoc: report supported extensions
 	Con_Printf ("\nQSG extensions: %s\n", QSG_EXTENSIONS);
 	// LordHavoc: set up state
-//	glEnable(GL_DEPTH_TEST);
-//	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
-//	glShadeModel(GL_SMOOTH);
-//	glEnable(GL_TEXTURE_2D);
 	glAlphaFunc(GL_GREATER, 0.5);
-//	if (isRagePro || isG200)
-//	{
-//		glEnable(GL_ALPHA_TEST);
-//		glAlphaFunc(GL_GREATER, 0.5);
-//	}
-//	else
-//		glDisable(GL_ALPHA_TEST);
-//	glDepthMask(1);
-//	glDisable(GL_DITHER); // LordHavoc: disable dithering
-//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//	glEnable(GL_BLEND);
-
-//	glClearColor (0,0,0,0); // LordHavoc: changed from red to black
 	glCullFace(GL_FRONT);
-
-//	glAlphaFunc(GL_GREATER, 0.666);
 }
 
 /*

@@ -124,6 +124,7 @@ Offset is filled in to contain the adjustment that must be added to the
 testing object's origin to get a point to use with the returned hull.
 ================
 */
+extern qboolean hlbsp;
 hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 {
 	model_t		*model;
@@ -149,12 +150,29 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 
 		VectorSubtract (maxs, mins, size);
 		// LordHavoc: FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		if (size[0] < 3)
-			hull = &model->hulls[0];
-		else if (size[0] <= 32)
-			hull = &model->hulls[1];
+		if (hlbsp)
+		{
+			if (size[0] < 3)
+				hull = &model->hulls[0]; // 0x0x0
+			else if (size[0] <= 32)
+			{
+				if (size[2] < 54) // pick the nearest of 36 or 72
+					hull = &model->hulls[3]; // 32x32x36
+				else
+					hull = &model->hulls[1]; // 32x32x72
+			}
+			else
+				hull = &model->hulls[2]; // 64x64x64
+		}
 		else
-			hull = &model->hulls[2];
+		{
+			if (size[0] < 3)
+				hull = &model->hulls[0]; // 0x0x0
+			else if (size[0] <= 32)
+				hull = &model->hulls[1]; // 32x32x56
+			else
+				hull = &model->hulls[2]; // 64x64x88
+		}
 
 // calculate an offset value to center the origin
 		VectorSubtract (hull->clip_mins, mins, offset);

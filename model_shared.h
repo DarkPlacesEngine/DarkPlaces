@@ -105,6 +105,12 @@ typedef struct model_s
 	byte		*lightdata;
 	char		*entities;
 
+	// LordHavoc: useful for sprites and models
+	int			numtris;
+	int			numskins;
+	int			skinanimrange[1024]; // array of start and length pairs, note: offset from ->cache.data
+	int			skinanim[1024*5]; // texture numbers for each frame (indexed by animrange), note: offset from ->cache.data, second note: normal pants shirt glow body (normal contains no shirt/pants/glow colors and body is normal + pants + shirt, but not glow)
+
 // additional model data
 	cache_user_t	cache;		// only access through Mod_Extradata
 
