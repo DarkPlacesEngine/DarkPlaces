@@ -160,7 +160,8 @@ cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
 cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0"};
-cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "0"};
+cvar_t r_shadow_polygonfactor = {0, "r_shadow_polygonfactor", "0"};
+cvar_t r_shadow_polygonoffset = {0, "r_shadow_polygonoffset", "1"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "10000"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
@@ -249,6 +250,7 @@ void R_Shadow_Help_f(void)
 "r_shadow_scissor : use scissor optimization\n"
 "r_shadow_bumpscale_bumpmap : depth scale for bumpmap conversion\n"
 "r_shadow_bumpscale_basetexture : base texture as bumpmap with this scale\n"
+"r_shadow_polygonfactor : nudge shadow volumes closer/further\n"
 "r_shadow_polygonoffset : nudge shadow volumes closer/further\n"
 "r_shadow_portallight : use portal visibility for static light precomputation\n"
 "r_shadow_projectdistance : shadow volume projection distance\n"
@@ -275,6 +277,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_scissor);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_bumpmap);
 	Cvar_RegisterVariable(&r_shadow_bumpscale_basetexture);
+	Cvar_RegisterVariable(&r_shadow_polygonfactor);
 	Cvar_RegisterVariable(&r_shadow_polygonoffset);
 	Cvar_RegisterVariable(&r_shadow_portallight);
 	Cvar_RegisterVariable(&r_shadow_projectdistance);
@@ -862,13 +865,14 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	if (r_shadow_polygonoffset.value != 0)
-	{
-		qglPolygonOffset(1.0f, r_shadow_polygonoffset.value);
-		qglEnable(GL_POLYGON_OFFSET_FILL);
-	}
-	else
-		qglDisable(GL_POLYGON_OFFSET_FILL);
+	qglPolygonOffset(r_shadow_polygonfactor.value, r_shadow_polygonoffset.value);
+	//if (r_shadow_polygonoffset.value != 0)
+	//{
+	//	qglPolygonOffset(r_shadow_polygonfactor.value, r_shadow_polygonoffset.value);
+	//	qglEnable(GL_POLYGON_OFFSET_FILL);
+	//}
+	//else
+	//	qglDisable(GL_POLYGON_OFFSET_FILL);
 	qglDepthFunc(GL_LESS);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglEnable(GL_STENCIL_TEST);
@@ -894,7 +898,8 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglDisable(GL_POLYGON_OFFSET_FILL);
+	qglPolygonOffset(0, 0);
+	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
 	qglDepthFunc(GL_EQUAL);
@@ -914,7 +919,8 @@ void R_Shadow_Stage_LightWithShadows(void)
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	qglDisable(GL_POLYGON_OFFSET_FILL);
+	qglPolygonOffset(0, 0);
+	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
 	qglDepthFunc(GL_EQUAL);
@@ -936,7 +942,8 @@ void R_Shadow_Stage_End(void)
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
-	qglDisable(GL_POLYGON_OFFSET_FILL);
+	qglPolygonOffset(0, 0);
+	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
 	qglDisable(GL_SCISSOR_TEST);
