@@ -242,7 +242,6 @@ sfxcache_t *S_LoadWavFile (const char *filename, sfx_t *s)
 	len = (int) ((double) info.samples * (double) shm->speed / (double) info.rate);
 	len = len * info.width * info.channels;
 
-	// FIXME: add S_UnloadSounds or something?
 	Mem_FreePool(&s->mempool);
 	s->mempool = Mem_AllocPool(s->name);
 	sc = s->sfxcache = Mem_Alloc(s->mempool, len + sizeof(sfxcache_t));
@@ -305,7 +304,10 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 		return sc;
 
 	// Can't load the sound!
-	s->silentlymissing = !complain;
+	if (!complain)
+		s->flags |= SFXFLAG_SILENTLYMISSING;
+	else
+		s->flags &= ~SFXFLAG_SILENTLYMISSING;
 	if (complain)
 	{
 		if (modified_name)

@@ -342,8 +342,13 @@ S_TouchSound
 */
 void S_TouchSound (char *name)
 {
-	S_FindName(name);
-	// TODO: set the "used" flag for this sound
+	sfx_t *sfx;
+
+	sfx = S_FindName (name);
+
+	// Set the "used" flag for this sound
+	if (sfx != NULL)
+		sfx->flags |= SFXFLAG_USED;
 }
 
 
@@ -351,11 +356,15 @@ void S_TouchSound (char *name)
 ==================
 S_ClearUsed
 
+Reset the "used" flag of all precached sounds
 ==================
 */
 void S_ClearUsed (void)
 {
-	// TODO: reset the "used" flag of all precached sounds
+	int i;
+
+	for (i = 0; i < num_sfx; i++)
+		known_sfx[i].flags &= ~SFXFLAG_USED;
 }
 
 
@@ -363,11 +372,20 @@ void S_ClearUsed (void)
 ==================
 S_PurgeUnused
 
+Free all precached sounds without the "used" flag
 ==================
 */
 void S_PurgeUnused (void)
 {
-	// TODO: free all precached sounds without the "used" flag
+	int i;
+	sfx_t *sfx;
+
+	for (i = 0; i < num_sfx; i++)
+	{
+		sfx = &known_sfx[i];
+		if (! (sfx->flags & SFXFLAG_USED))
+			S_UnloadSound (sfx);
+	}
 }
 
 
@@ -718,7 +736,8 @@ void S_UpdateAmbientSounds (void)
 // calc ambient sound levels
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
 	{
-		if (ambient_sfx[ambient_channel] && ambient_sfx[ambient_channel]->silentlymissing)
+		if (ambient_sfx[ambient_channel] &&
+			(ambient_sfx[ambient_channel]->flags & SFXFLAG_SILENTLYMISSING))
 			continue;
 		chan = &channels[ambient_channel];
 		chan->forceloop = true;

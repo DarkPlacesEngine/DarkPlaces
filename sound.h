@@ -41,12 +41,16 @@ typedef struct
 	qbyte	data[1];		// variable sized
 } sfxcache_t;
 
+// sfx_t flags
+#define SFXFLAG_SILENTLYMISSING	(1 << 0) // if the sfx is missing and loaded with complain = false
+#define SFXFLAG_USED			(1 << 1)
+
 typedef struct sfx_s
 {
 	char 	name[MAX_QPATH];
 	mempool_t	*mempool;
 	sfxcache_t	*sfxcache;
-	qboolean silentlymissing; // true if missing and loaded with complain = false
+	unsigned int flags;  // cf SFXFLAG_* defines
 } sfx_t;
 
 typedef struct
