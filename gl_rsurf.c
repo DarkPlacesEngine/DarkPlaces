@@ -1391,27 +1391,15 @@ void R_UpdateTextureInfo(entity_render_t *ent)
 	}
 }
 
-void R_PrepareSurfaces(entity_render_t *ent)
+void R_UpdateLightmapInfo(entity_render_t *ent)
 {
-	int i, numsurfaces, *surfacevisframes;
-	model_t *model;
-	msurface_t *surf, *surfaces, **surfchain;
-	vec3_t modelorg;
-
-	if (!ent->model)
+	int i;
+	msurface_t *surface, **surfacechain;
+	model_t *model = ent->model;
+	if (!model)
 		return;
-
-	model = ent->model;
-	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-	numsurfaces = model->brushq1.nummodelsurfaces;
-	surfaces = model->brushq1.surfaces + model->brushq1.firstmodelsurface;
-	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
-
-	R_UpdateTextureInfo(ent);
-
 	if (r_dynamic.integer && !r_shadow_realtime_dlight.integer)
 		R_MarkLights(ent);
-
 	if (model->brushq1.light_ambient != r_ambient.value)
 	{
 		model->brushq1.light_ambient = r_ambient.value;
@@ -1425,12 +1413,28 @@ void R_PrepareSurfaces(entity_render_t *ent)
 			if (model->brushq1.light_stylevalue[i] != d_lightstylevalue[model->brushq1.light_style[i]])
 			{
 				model->brushq1.light_stylevalue[i] = d_lightstylevalue[model->brushq1.light_style[i]];
-				for (surfchain = model->brushq1.light_styleupdatechains[i];*surfchain;surfchain++)
-					(**surfchain).cached_dlight = true;
+				for (surfacechain = model->brushq1.light_styleupdatechains[i];(surface = *surfacechain);surfacechain++)
+					surface->cached_dlight = true;
 			}
 		}
 	}
+}
 
+void R_PrepareSurfaces(entity_render_t *ent)
+{
+	int i, numsurfaces, *surfacevisframes;
+	model_t *model;
+	msurface_t *surf, *surfaces;
+	vec3_t modelorg;
+
+	if (!ent->model)
+		return;
+
+	model = ent->model;
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+	numsurfaces = model->brushq1.nummodelsurfaces;
+	surfaces = model->brushq1.surfaces + model->brushq1.firstmodelsurface;
+	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
 	{
 		if (surfacevisframes[i] == r_framecount)
@@ -1569,7 +1573,8 @@ void R_PrepareBrushModel(entity_render_t *ent)
 #endif
 		surf->dlightframe = -1;
 	}
-	R_PrepareSurfaces(ent);
+	R_UpdateTextureInfo(ent);
+	R_UpdateLightmapInfo(ent);
 }
 
 void R_SurfaceWorldNode (entity_render_t *ent)
@@ -1743,27 +1748,9 @@ void R_WorldVisibility(entity_render_t *ent)
 		R_SurfaceWorldNode (ent);
 	else
 		R_PortalWorldNode (ent, viewleaf);
-}
 
-void R_DrawWorld(entity_render_t *ent)
-{
-	if (ent->model == NULL)
-		return;
-	if (!ent->model->brushq1.num_leafs)
-	{
-		if (ent->model->DrawSky)
-			ent->model->DrawSky(ent);
-		if (ent->model->Draw)
-			ent->model->Draw(ent);
-	}
-	else
-	{
-		R_PrepareSurfaces(ent);
-		R_DrawSurfaces(ent, SURF_DRAWSKY);
-		R_DrawSurfaces(ent, SURF_DRAWTURB | SURF_LIGHTMAP);
-		if (r_drawportals.integer)
-			R_DrawPortals(ent);
-	}
+	if (r_drawportals.integer)
+		R_DrawPortals(ent);
 }
 
 void R_Model_Brush_DrawSky(entity_render_t *ent)
@@ -1772,6 +1759,7 @@ void R_Model_Brush_DrawSky(entity_render_t *ent)
 		return;
 	if (ent != &cl_entities[0].render)
 		R_PrepareBrushModel(ent);
+	R_PrepareSurfaces(ent);
 	R_DrawSurfaces(ent, SURF_DRAWSKY);
 }
 
@@ -1782,6 +1770,9 @@ void R_Model_Brush_Draw(entity_render_t *ent)
 	c_bmodels++;
 	if (ent != &cl_entities[0].render)
 		R_PrepareBrushModel(ent);
+	R_PrepareSurfaces(ent);
+	R_UpdateTextureInfo(ent);
+	R_UpdateLightmapInfo(ent);
 	R_DrawSurfaces(ent, SURF_DRAWTURB | SURF_LIGHTMAP);
 }
 
