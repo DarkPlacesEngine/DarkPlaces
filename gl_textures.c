@@ -8,7 +8,7 @@ cvar_t	r_max_scrapsize = {CVAR_SAVE, "r_max_scrapsize", "256"};
 cvar_t	r_picmip = {CVAR_SAVE, "r_picmip", "0"};
 cvar_t	r_lerpimages = {CVAR_SAVE, "r_lerpimages", "1"};
 cvar_t	r_precachetextures = {CVAR_SAVE, "r_precachetextures", "1"};
-cvar_t  gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "0"};
+cvar_t  gl_texture_anisotropy = {CVAR_SAVE, "gl_texture_anisotropy", "1"};
 
 int		gl_filter_min = GL_LINEAR_MIPMAP_LINEAR;
 int		gl_filter_mag = GL_LINEAR;
@@ -571,40 +571,62 @@ static void GL_SetupTextureParameters(int flags, int texturetype)
 	CHECKGLERROR
 
 	if (gl_support_anisotropy)
-		qglTexParameterf(textureenum, GL_TEXTURE_MAX_ANISOTROPY_EXT, gl_texture_anisotropy.value);
-	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_S, wrapmode);
-	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);
+	{
+		int aniso = bound(1, gl_texture_anisotropy.integer, 128);
+		if (gl_texture_anisotropy.integer != aniso)
+			Cvar_SetValueQuick(&gl_texture_anisotropy, aniso);
+		qglTexParameteri(textureenum, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);CHECKGLERROR
+	}
+	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_S, wrapmode);CHECKGLERROR
+	qglTexParameteri(textureenum, GL_TEXTURE_WRAP_T, wrapmode);CHECKGLERROR
 	if (gltexturetypedimensions[texturetype] >= 3)
-		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_R, wrapmode);
+	{
+		qglTexParameteri(textureenum, GL_TEXTURE_WRAP_R, wrapmode);CHECKGLERROR
+	}
 
+	CHECKGLERROR
 	if (flags & TEXF_FORCENEAREST)
 	{
 		if (flags & TEXF_MIPMAP)
-			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);CHECKGLERROR
+		}
 		else
-			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_NEAREST);CHECKGLERROR
+		}
+		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, GL_NEAREST);CHECKGLERROR
 	}
 	else if (flags & TEXF_FORCELINEAR)
 	{
 		if (flags & TEXF_MIPMAP)
 		{
 			if (gl_filter_min == GL_NEAREST_MIPMAP_LINEAR || gl_filter_min == GL_LINEAR_MIPMAP_LINEAR)
-				qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			{
+				qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);CHECKGLERROR
+			}
 			else
-				qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+			{
+				qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);CHECKGLERROR
+			}
 		}
 		else
-			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, GL_LINEAR);CHECKGLERROR
+		}
+		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, GL_LINEAR);CHECKGLERROR
 	}
 	else
 	{
 		if (flags & TEXF_MIPMAP)
-			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, gl_filter_min);CHECKGLERROR
+		}
 		else
-			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+		{
+			qglTexParameteri(textureenum, GL_TEXTURE_MIN_FILTER, gl_filter_mag);CHECKGLERROR
+		}
+		qglTexParameteri(textureenum, GL_TEXTURE_MAG_FILTER, gl_filter_mag);CHECKGLERROR
 	}
 
 	CHECKGLERROR
