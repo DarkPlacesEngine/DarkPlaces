@@ -612,7 +612,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			Mod_CheckLoaded(e->render.model);
 			if (e->render.model->type == mod_alias || e->render.model->type == mod_sprite)
 				angles[0] = -angles[0];
-			if (e->render.model->flags & EF_ROTATE)
+			if ((e->render.model->flags & EF_ROTATE) && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
 			{
 				angles[1] = ANGLEMOD(100*cl.time);
 				if (cl_itembobheight.value)
@@ -722,7 +722,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			e->persistent.muzzleflash -= cl.frametime * 1000;
 		}
 		// LordHavoc: if the model has no flags, don't check each
-		if (e->render.model && e->render.model->flags)
+		if (e->render.model && e->render.model->flags && (!e->state_current.tagentity && !(e->render.flags & RENDER_VIEWMODEL)))
 		{
 			if (e->render.model->flags & EF_GIB)
 				trailtype = 2;
