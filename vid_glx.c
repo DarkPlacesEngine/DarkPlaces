@@ -381,8 +381,29 @@ static void HandleEvents(void)
 			case 5:
 				Key_Event(K_MWHEELDOWN, true);
 				break;
+			case 6:
+				Key_Event(K_MOUSE4, true);
+				break;
+			case 7:
+				Key_Event(K_MOUSE5, true);
+				break;
+			case 8:
+				Key_Event(K_MOUSE6, true);
+				break;
+			case 9:
+				Key_Event(K_MOUSE7, true);
+				break;
+			case 10:
+				Key_Event(K_MOUSE8, true);
+				break;
+			case 11:
+				Key_Event(K_MOUSE9, true);
+				break;
+			case 12:
+				Key_Event(K_MOUSE10, true);
+				break;
 			default:
-				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-5 expected\n", event.xbutton.button);
+				Con_Printf("HandleEvents: ButtonPress gave value %d, 1-12 expected\n", event.xbutton.button);
 				break;
 			}
 			break;
@@ -406,8 +427,29 @@ static void HandleEvents(void)
 			case 5:
 				Key_Event(K_MWHEELDOWN, false);
 				break;
+			case 6:
+				Key_Event(K_MOUSE4, false);
+				break;
+			case 7:
+				Key_Event(K_MOUSE5, false);
+				break;
+			case 8:
+				Key_Event(K_MOUSE6, false);
+				break;
+			case 9:
+				Key_Event(K_MOUSE7, false);
+				break;
+			case 10:
+				Key_Event(K_MOUSE8, false);
+				break;
+			case 11:
+				Key_Event(K_MOUSE9, false);
+				break;
+			case 12:
+				Key_Event(K_MOUSE10, false);
+				break;
 			default:
-				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-5 expected\n", event.xbutton.button);
+				Con_Printf("HandleEvents: ButtonRelease gave value %d, 1-12 expected\n", event.xbutton.button);
 				break;
 			}
 			break;

@@ -90,6 +90,17 @@ keyname_t keynames[] =
 	{"MOUSE1", K_MOUSE1},
 	{"MOUSE2", K_MOUSE2},
 	{"MOUSE3", K_MOUSE3},
+	// LordHavoc: thanks to backslash for this MOUSE4 and MOUSE5 code
+	/* backslash :: imouse explorer buttons */
+	{"MOUSE4", K_MOUSE4},
+	{"MOUSE5", K_MOUSE5},
+	/* :: backslash */
+	// LordHavoc: added more for completeness
+	{"MOUSE6", K_MOUSE6},
+	{"MOUSE7", K_MOUSE7},
+	{"MOUSE8", K_MOUSE8},
+	{"MOUSE9", K_MOUSE9},
+	{"MOUSE10", K_MOUSE10},
 
 	{"JOY1", K_JOY1},
 	{"JOY2", K_JOY2},

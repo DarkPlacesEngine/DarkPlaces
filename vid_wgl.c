@@ -110,6 +110,26 @@ static qboolean dinput;
 HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
 	LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
 
+// LordHavoc: thanks to backslash for this support for mouse buttons 4 and 5
+/* backslash :: imouse explorer buttons */
+/* These are #ifdefed out for non-Win2K in the February 2001 version of
+   MS's platform SDK, but we need them for compilation. . . */
+#ifndef WM_XBUTTONDOWN
+   #define WM_XBUTTONDOWN      0x020B
+   #define WM_XBUTTONUP      0x020C
+#endif
+#ifndef MK_XBUTTON1
+   #define MK_XBUTTON1         0x0020
+   #define MK_XBUTTON2         0x0040
+// LordHavoc: lets hope this allows more buttons in the future...
+   #define MK_XBUTTON3         0x0080
+   #define MK_XBUTTON4         0x0100
+   #define MK_XBUTTON5         0x0200
+   #define MK_XBUTTON6         0x0400
+   #define MK_XBUTTON7         0x0800
+#endif
+/* :: backslash */
+
 // mouse variables
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
@@ -536,6 +556,8 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		case WM_RBUTTONUP:
 		case WM_MBUTTONDOWN:
 		case WM_MBUTTONUP:
+		case WM_XBUTTONDOWN:   // backslash :: imouse explorer buttons
+		case WM_XBUTTONUP:      // backslash :: imouse explorer buttons
 		case WM_MOUSEMOVE:
 			temp = 0;
 
@@ -547,6 +569,26 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 			if (wParam & MK_MBUTTON)
 				temp |= 4;
+
+			/* backslash :: imouse explorer buttons */
+			if (wParam & MK_XBUTTON1)
+				temp |= 8;
+
+			if (wParam & MK_XBUTTON2)
+				temp |= 16;
+			/* :: backslash */
+
+			// LordHavoc: lets hope this allows more buttons in the future...
+			if (wParam & MK_XBUTTON3)
+				temp |= 32;
+			if (wParam & MK_XBUTTON4)
+				temp |= 64;
+			if (wParam & MK_XBUTTON5)
+				temp |= 128;
+			if (wParam & MK_XBUTTON6)
+				temp |= 256;
+			if (wParam & MK_XBUTTON7)
+				temp |= 512;
 
 			IN_MouseEvent (temp);
 
@@ -1216,7 +1258,7 @@ void IN_StartupMouse (void)
 		}
 	}
 
-	mouse_buttons = 3;
+	mouse_buttons = 10;
 
 // if a fullscreen video mode was set before the mouse was initialized,
 // set the mouse state appropriately
