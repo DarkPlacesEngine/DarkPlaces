@@ -882,7 +882,7 @@ Key_Event (int key, char ascii, qboolean down)
 		key_repeats[key]++;
 		if (key_repeats[key] > 1) {
 			if ((key_consoleactive && !consolekeys[key]) ||
-					(key_dest == key_game &&
+					(!key_consoleactive && key_dest == key_game &&
 					 (cls.state == ca_connected && cls.signon == SIGNONS)))
 				return;						// ignore most autorepeats
 		}
