@@ -832,7 +832,17 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 	qglGetObjectParameterivARB(programobject, GL_OBJECT_LINK_STATUS_ARB, &programlinked);
 	qglGetInfoLogARB(programobject, sizeof(compilelog), NULL, compilelog);
 	if (compilelog[0])
+	{
 		Con_Printf("program link log:\n%s\n", compilelog);
+		// software vertex shader is ok but software fragment shader is WAY
+		// too slow, fail program if so.
+		// NOTE: this string might be ATI specific, but that's ok because the
+		// ATI R300 chip (Radeon 9500-9800/X300) is the most likely to use a
+		// software fragment shader due to low instruction and dependent
+		// texture limits.
+		if (!strstr(compilelog, "fragment shader will run in software"))
+			programlinked = false;
+	}
 	CHECKGLERROR
 	if (!programlinked)
 	{
