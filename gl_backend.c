@@ -581,25 +581,33 @@ void GL_UpdateFarclip(void)
 
 void GL_ConvertColorsFloatToByte(void)
 {
-	int i, k, *icolor;
+	int i, k, total, *icolor;
 	float *fcolor;
 	qbyte *bcolor;
 
+	total = currentvertex * 4;
+
 	// shift float to have 8bit fraction at base of number
-	for (i = 0, fcolor = &buf_fcolor->c[0];i < currentvertex;i++)
+	fcolor = &buf_fcolor->c[0];
+	for (i = 0;i < total;)
 	{
-		*fcolor++ += 32768.0f;
-		*fcolor++ += 32768.0f;
-		*fcolor++ += 32768.0f;
-		*fcolor++ += 32768.0f;
+		fcolor[i    ] += 32768.0f;
+		fcolor[i + 1] += 32768.0f;
+		fcolor[i + 2] += 32768.0f;
+		fcolor[i + 3] += 32768.0f;
+		i += 4;
 	}
+
 	// then read as integer and kill float bits...
-	for (i = 0, icolor = (int *)&buf_fcolor->c[0], bcolor = &buf_bcolor->c[0];i < currentvertex;i++)
+	icolor = (int *)&buf_fcolor->c[0];
+	bcolor = &buf_bcolor->c[0];
+	for (i = 0;i < total;)
 	{
-		k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
-		k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
-		k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
-		k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
+		k = icolor[i    ] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i    ] = (qbyte) k;
+		k = icolor[i + 1] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 1] = (qbyte) k;
+		k = icolor[i + 2] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 2] = (qbyte) k;
+		k = icolor[i + 3] & 0x7FFFFF;if (k > 255) k = 255;bcolor[i + 3] = (qbyte) k;
+		i += 4;
 	}
 }
 
