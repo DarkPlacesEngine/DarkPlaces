@@ -22,14 +22,25 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+// LordHavoc: I own protocol ranges 96, 97, 3500-3599
+
+// quake or darkplaces extended quake entity protocol
+// (still used by TomazQuake and others)
 #define	PROTOCOL_QUAKE 15
+
+// neh_gl entity protocol
+// (failed QSG protocol, used only by nehahra movie)
 #define	PROTOCOL_NEHAHRAMOVIE 250
+
+// entityframe protocol
 #define	PROTOCOL_DARKPLACES1 96
 #define	PROTOCOL_DARKPLACES2 97
-// LordHavoc: I think the 96-99 range was going to run out too soon...
-// so here I jump to 3500
+
+// entityframe4 protocol
 #define	PROTOCOL_DARKPLACES3 3500
 #define PROTOCOL_DARKPLACES4 3501
+
+// entityframe5 protocol
 #define PROTOCOL_DARKPLACES5 3502
 
 // model effects
@@ -318,36 +329,47 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // this is 80 bytes
 typedef struct
 {
-	// ! means this is sent to client
-	double time; // time this state was built (used on client for interpolation)
-	float origin[3]; // !
-	float angles[3]; // !
-	int number; // ! entity number this state is for
-	int effects; // !
-	unsigned short modelindex; // !
-	unsigned short frame; // !
-	unsigned short tagentity; // !
-	unsigned short specialvisibilityradius; // larger if it has effects/light
-	unsigned short viewmodelforclient;
-	unsigned short exteriormodelforclient; // not shown if first person viewing from this entity, shown in all other cases
-	unsigned short nodrawtoclient;
-	unsigned short drawonlytoclient;
-	unsigned short light[4]; // ! color*256 (0.00 to 255.996), and radius*1
-	unsigned char active; // ! true if a valid state
-	unsigned char lightstyle; // !
-	unsigned char lightpflags; // !
-	unsigned char colormap; // !
-	unsigned char skin; // ! also chooses cubemap for rtlights if lightpflags & LIGHTPFLAGS_FULLDYNAMIC
-	unsigned char alpha; // !
-	unsigned char scale; // !
-	unsigned char glowsize; // !
-	unsigned char glowcolor; // !
-	unsigned char flags; // !
-	unsigned char tagindex; // !
+	// ! means this is not sent to client
+	double time; // ! time this state was built (used on client for interpolation)
+	float origin[3];
+	float angles[3];
+	int number; // entity number this state is for
+	int effects;
+	unsigned short modelindex;
+	unsigned short frame;
+	unsigned short tagentity;
+	unsigned short specialvisibilityradius; // ! larger if it has effects/light
+	unsigned short viewmodelforclient; // !
+	unsigned short exteriormodelforclient; // ! not shown if first person viewing from this entity, shown in all other cases
+	unsigned short nodrawtoclient; // !
+	unsigned short drawonlytoclient; // !
+	unsigned short light[4]; // color*256 (0.00 to 255.996), and radius*1
+	unsigned char active; // true if a valid state
+	unsigned char lightstyle;
+	unsigned char lightpflags;
+	unsigned char colormap;
+	unsigned char skin; // also chooses cubemap for rtlights if lightpflags & LIGHTPFLAGS_FULLDYNAMIC
+	unsigned char alpha;
+	unsigned char scale;
+	unsigned char glowsize;
+	unsigned char glowcolor;
+	unsigned char flags;
+	unsigned char tagindex;
+	unsigned char colormod;
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[5];
+	unsigned char unused[4];
 }
 entity_state_t;
+
+// baseline state values
+entity_state_t defaultstate;
+// reads a quake entity from the network stream
+void EntityFrameQuake_ReadEntity(int bits);
+// writes a list of quake entities to the network stream
+// (or as many will fit)
+void EntityFrameQuake_WriteFrame(sizebuf_t *msg, int numstates, const entity_state_t *states);
+// cleans up dead entities each frame after ReadEntity (which doesn't clear unused entities)
+void EntityFrameQuake_ISeeDeadEntities(void);
 
 /*
 PROTOCOL_DARKPLACES3
@@ -429,8 +451,10 @@ typedef struct
 	// note: if numframes == 0, insert at start (0 in entitydata)
 	// the only reason this system is used is to avoid copying memory when frames are removed
 	int numframes;
+	// server only: last sent frame
+	int latestframenum;
 	// server only: last acknowledged frame
-	int ackframe;
+	int ackframenum;
 	// the current state in the database
 	vec3_t eye;
 	// table of entities in the entityhistorydata
@@ -438,7 +462,7 @@ typedef struct
 	// entities
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }
-entity_database_t;
+entityframe_database_t;
 
 // build entity data in this, to pass to entity read/write functions
 typedef struct
@@ -498,44 +522,41 @@ entity_frame_t;
 #define E_UNUSED7		(1<<30)
 #define E_EXTEND4		(1<<31)
 
-// baseline state values
-entity_state_t defaultstate;
-
-// clears a state to baseline values
-void ClearStateToDefault(entity_state_t *s);
 // returns difference between two states as E_ flags
 int EntityState_DeltaBits(const entity_state_t *o, const entity_state_t *n);
 // write E_ flags to a msg
 void EntityState_WriteExtendBits(sizebuf_t *msg, unsigned int bits);
 // write values for the E_ flagged fields to a msg
-void EntityState_WriteFields(entity_state_t *ent, sizebuf_t *msg, unsigned int bits);
+void EntityState_WriteFields(const entity_state_t *ent, sizebuf_t *msg, unsigned int bits);
 // write entity number and E_ flags and their values, or a remove number, describing the change from delta to ent
-void EntityState_WriteUpdate(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta);
+void EntityState_WriteUpdate(const entity_state_t *ent, sizebuf_t *msg, const entity_state_t *delta);
 // read E_ flags
 int EntityState_ReadExtendBits(void);
 // read values for E_ flagged fields and apply them to a state
 void EntityState_ReadFields(entity_state_t *e, unsigned int bits);
 
+// (client and server) allocates a new empty database
+entityframe_database_t *EntityFrame_AllocDatabase(mempool_t *mempool);
+// (client and server) frees the database
+void EntityFrame_FreeDatabase(entityframe_database_t *d);
 // (server) clears the database to contain no frames (thus delta compression
 // compresses against nothing)
-void EntityFrame_ClearDatabase(entity_database_t *d);
+void EntityFrame_ClearDatabase(entityframe_database_t *d);
 // (server and client) removes frames older than 'frame' from database
-void EntityFrame_AckFrame(entity_database_t *d, int frame);
+void EntityFrame_AckFrame(entityframe_database_t *d, int frame);
 // (server) clears frame, to prepare for adding entities
 void EntityFrame_Clear(entity_frame_t *f, vec3_t eye, int framenum);
-// (server) adds an entity to frame
-void EntityFrame_AddEntity(entity_frame_t *f, entity_state_t *s);
 // (server and client) reads a frame from the database
-void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *f);
+void EntityFrame_FetchFrame(entityframe_database_t *d, int framenum, entity_frame_t *f);
 // (server and client) adds a entity_frame to the database, for future
 // reference
-void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f);
+void EntityFrame_AddFrame(entityframe_database_t *d, vec3_t eye, int framenum, int numentities, const entity_state_t *entitydata);
 // (server) writes a frame to network stream
-void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg);
+void EntityFrame_WriteFrame(sizebuf_t *msg, entityframe_database_t *d, int numstates, const entity_state_t *states, int viewentnum);
 // (client) reads a frame from network stream
-void EntityFrame_Read(entity_database_t *d);
+void EntityFrame_CL_ReadFrame(void);
 // (client) returns the frame number of the most recent frame recieved
-int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
+int EntityFrame_MostRecentlyRecievedFrameNum(entityframe_database_t *d);
 
 typedef struct entity_database4_commit_s
 {
@@ -567,31 +588,30 @@ typedef struct entity_database4_s
 	// (server only) if a commit won't fit entirely, continue where it left
 	// off next frame
 	int currententitynumber;
+	// (server only)
+	int latestframenumber;
 	// (client only) most recently received frame number to be sent in next
 	// input update
 	int ackframenum;
 }
-entity_database4_t;
+entityframe4_database_t;
 
 // should-be-private functions that aren't
-entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int number);
-void EntityFrame4_AddCommitEntity(entity_database4_t *d, entity_state_t *s);
+entity_state_t *EntityFrame4_GetReferenceEntity(entityframe4_database_t *d, int number);
+void EntityFrame4_AddCommitEntity(entityframe4_database_t *d, const entity_state_t *s);
 
 // allocate a database
-entity_database4_t *EntityFrame4_AllocDatabase(mempool_t *pool);
+entityframe4_database_t *EntityFrame4_AllocDatabase(mempool_t *pool);
 // free a database
-void EntityFrame4_FreeDatabase(entity_database4_t *d);
+void EntityFrame4_FreeDatabase(entityframe4_database_t *d);
 // reset a database (resets compression but does not reallocate anything)
-void EntityFrame4_ResetDatabase(entity_database4_t *d);
+void EntityFrame4_ResetDatabase(entityframe4_database_t *d);
 // updates database to account for a frame-received acknowledgment
-int EntityFrame4_AckFrame(entity_database4_t *d, int framenum);
-
-// write an entity in the frame
-// returns false if full
-int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int maxbytes, entity_state_t *s);
-
+int EntityFrame4_AckFrame(entityframe4_database_t *d, int framenum);
+// writes a frame to the network stream
+void EntityFrame4_WriteFrame(sizebuf_t *msg, entityframe4_database_t *d, int numstates, const entity_state_t *states);
 // reads a frame from the network stream
-void EntityFrame4_CL_ReadFrame(entity_database4_t *d);
+void EntityFrame4_CL_ReadFrame(void);
 
 // reset all entity fields (typically used if status changed)
 #define E5_FULLUPDATE (1<<0)
@@ -617,42 +637,46 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d);
 // bits >= (1<<8)
 #define E5_EXTEND1 (1<<7)
 
-// flag
-#define E5_ORIGIN32 (1<<9) 
-// flag
-#define E5_ANGLES16 (1<<10)
-// flag
-#define E5_MODEL16 (1<<11)
 // byte = s->renderflags
-#define E5_FLAGS (1<<6)
+#define E5_FLAGS (1<<8)
 // byte = bound(0, s->alpha * 255, 255)
-#define E5_ALPHA (1<<13)
+#define E5_ALPHA (1<<9)
 // byte = bound(0, s->scale * 16, 255)
-#define E5_SCALE (1<<14)
+#define E5_SCALE (1<<10)
+// flag
+#define E5_ORIGIN32 (1<<11) 
+// flag
+#define E5_ANGLES16 (1<<12)
+// flag
+#define E5_MODEL16 (1<<13)
+// byte = s->colormap
+#define E5_COLORMAP (1<<14)
 // bits >= (1<<16)
 #define E5_EXTEND2 (1<<15)
 
 // short = s->tagentity
 // byte = s->tagindex
 #define E5_ATTACHMENT (1<<16)
-// short = s->exteriormodelforentity
-#define E5_EXTERIORFORENTITY (1<<17)
 // short[4] = s->light[0], s->light[1], s->light[2], s->light[3]
-#define E5_LIGHT (1<<18)
-// byte = s->colormap
-#define E5_COLORMAP (1<<19)
+// byte = s->lightstyle
+// byte = s->lightpflags
+#define E5_LIGHT (1<<17)
 // byte = s->glowsize
 // byte = s->glowcolor
-#define E5_GLOW (1<<20)
+#define E5_GLOW (1<<18)
 // short = s->effects
-#define E5_EFFECTS16 (1<<21)
+#define E5_EFFECTS16 (1<<19)
 // int = s->effects
-#define E5_EFFECTS32 (1<<22)
+#define E5_EFFECTS32 (1<<20)
+// flag
+#define E5_FRAME16 (1<<21)
+// unused
+#define E5_UNUSED22 (1<<22)
 // bits >= (1<<24)
 #define E5_EXTEND3 (1<<23)
 
-// flag
-#define E5_FRAME16 (1<<24)
+// unused
+#define E5_UNUSED24 (1<<24)
 // unused
 #define E5_UNUSED25 (1<<25)
 // unused
@@ -668,24 +692,74 @@ void EntityFrame4_CL_ReadFrame(entity_database4_t *d);
 // bits2 > 0
 #define E5_EXTEND4 (1<<31)
 
-typedef struct entity_database5_client_s
-{
-	qbyte visible[MAX_EDICTS];
-	qbyte visibledelta[MAX_EDICTS];
-	int statedelta[MAX_EDICTS];
-}
-entity_database5_t;
+#define ENTITYFRAME5_MAXPACKETLOGS 64
+#define ENTITYFRAME5_MAXSTATES 1024
 
-typedef struct entity_database5_server_s
+typedef struct entityframe5_changestate_s
 {
-	// temporary working space for client data building
-	// 0-255 priority level, 0 = don't send
-	qbyte priorities[MAX_EDICTS];
-	// this is the visible entity numbers, sorted by their priority level
-	int numentitylist;
-	int entitylist[MAX_EDICTS];
+	unsigned int number;
+	unsigned int bits;
 }
-entity_database5_server_t;
+entityframe5_changestate_t;
+
+typedef struct entityframe5_packetlog_s
+{
+	int packetnumber;
+	int numstates;
+	entityframe5_changestate_t states[ENTITYFRAME5_MAXSTATES];
+}
+entityframe5_packetlog_t;
+
+typedef struct entityframe5_database_s
+{
+	// number of the latest message sent to client
+	int latestframenum;
+	// number of the latest message acknowledged by client
+	int ackframenum;
+
+	// logs of all recently sent messages (between acked and latest)
+	entityframe5_packetlog_t packetlog[ENTITYFRAME5_MAXPACKETLOGS];
+
+	// which properties of each entity have changed since last send
+	int deltabits[MAX_EDICTS];
+	// priorities of entities (updated whenever deltabits change)
+	// (derived from deltabits)
+	qbyte priorities[MAX_EDICTS];
+	// last frame this entity was sent on, for prioritzation
+	int updateframenum[MAX_EDICTS];
+
+	// database of current status of all entities
+	// (FIXME: this is 2.5mb per client even if most is unused!)
+	entity_state_t states[MAX_EDICTS];
+	// which entities are currently active
+	// (duplicate of the active bit of every state in states[])
+	// (derived from states)
+	qbyte visiblebits[(MAX_EDICTS+7)/8];
+
+	// old notes
+
+	// this is used to decide which changestates to set each frame
+	//int numvisiblestates;
+	//entity_state_t visiblestates[MAX_EDICTS];
+
+	// sorted changing states that need to be sent to the client
+	// kept sorted in lowest to highest priority order, because this allows
+	// the numchangestates to simply be decremented whenever an state is sent,
+	// rather than a memmove to remove them from the start.
+	//int numchangestates;
+	//entityframe5_changestate_t changestates[MAX_EDICTS];
+}
+entityframe5_database_t;
+
+entityframe5_database_t *EntityFrame5_AllocDatabase(mempool_t *pool);
+void EntityFrame5_FreeDatabase(entityframe5_database_t *d);
+void EntityFrame5_ResetDatabase(entityframe5_database_t *d);
+int EntityState5_Priority(entityframe5_database_t *d, entity_state_t *view, entity_state_t *s, int changedbits, int age);
+void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg);
+int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
+void EntityFrame5_CL_ReadFrame(void);
+void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum, int viewentnum);
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum);
 
 extern cvar_t developer_networkentities;
 

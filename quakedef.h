@@ -47,7 +47,7 @@ extern char *buildstring;
 
 #define MAX_PACKETFRAGMENT 1024		// max length of packet fragment
 #define NET_MAXMESSAGE	65536
-#define NET_MINRATE		500 // limits "rate" and "sv_maxrate" cvars
+#define NET_MINRATE		1000 // limits "rate" and "sv_maxrate" cvars
 #define NET_MAXRATE		25000 // limits "rate" and "sv_maxrate" cvars
 
 //

@@ -145,9 +145,9 @@ void CL_ClearState(void)
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl_max_entities;i++)
 	{
-		ClearStateToDefault(&cl_entities[i].state_baseline);
-		ClearStateToDefault(&cl_entities[i].state_previous);
-		ClearStateToDefault(&cl_entities[i].state_current);
+		cl_entities[i].state_baseline = defaultstate;
+		cl_entities[i].state_previous = defaultstate;
+		cl_entities[i].state_current = defaultstate;
 	}
 
 	CL_CGVM_Clear();
@@ -904,7 +904,7 @@ static void CL_RelinkNetworkEntities(void)
 
 	ent = &cl.viewent;
 	ent->state_previous = ent->state_current;
-	ClearStateToDefault(&ent->state_current);
+	ent->state_current = defaultstate;
 	ent->state_current.time = cl.time;
 	ent->state_current.number = -1;
 	ent->state_current.active = true;

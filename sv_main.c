@@ -21,6 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+// select which protocol to host, by name
+// this is named the same as PROTOCOL_DARKPLACES5 for example, minus the PROTOCOL_ prefix
+cvar_t sv_protocolname = {0, "sv_protocolname", "DARKPLACES5"};
+cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
+cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
+
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "1"}; // fast but loose
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "0"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
@@ -75,6 +81,9 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_stepdown);
 	Cvar_RegisterVariable (&sv_gameplayfix_stepwhilejumping);
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
+	Cvar_RegisterVariable (&sv_protocolname);
+	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
+	Cvar_RegisterVariable (&sv_maxrate);
 
 	SV_Phys_Init();
 	SV_World_Init();
@@ -119,9 +128,9 @@ void SV_StartParticle (vec3_t org, vec3_t dir, int color, int count)
 	if (sv.datagram.cursize > MAX_PACKETFRAGMENT-18)
 		return;
 	MSG_WriteByte (&sv.datagram, svc_particle);
-	MSG_WriteDPCoord (&sv.datagram, org[0]);
-	MSG_WriteDPCoord (&sv.datagram, org[1]);
-	MSG_WriteDPCoord (&sv.datagram, org[2]);
+	MSG_WriteCoord (&sv.datagram, org[0], sv.protocol);
+	MSG_WriteCoord (&sv.datagram, org[1], sv.protocol);
+	MSG_WriteCoord (&sv.datagram, org[2], sv.protocol);
 	for (i=0 ; i<3 ; i++)
 	{
 		v = dir[i]*16;
@@ -149,9 +158,9 @@ void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount,
 		if (sv.datagram.cursize > MAX_PACKETFRAGMENT-19)
 			return;
 		MSG_WriteByte (&sv.datagram, svc_effect2);
-		MSG_WriteDPCoord (&sv.datagram, org[0]);
-		MSG_WriteDPCoord (&sv.datagram, org[1]);
-		MSG_WriteDPCoord (&sv.datagram, org[2]);
+		MSG_WriteCoord (&sv.datagram, org[0], sv.protocol);
+		MSG_WriteCoord (&sv.datagram, org[1], sv.protocol);
+		MSG_WriteCoord (&sv.datagram, org[2], sv.protocol);
 		MSG_WriteShort (&sv.datagram, modelindex);
 		MSG_WriteShort (&sv.datagram, startframe);
 		MSG_WriteByte (&sv.datagram, framecount);
@@ -162,9 +171,9 @@ void SV_StartEffect (vec3_t org, int modelindex, int startframe, int framecount,
 		if (sv.datagram.cursize > MAX_PACKETFRAGMENT-17)
 			return;
 		MSG_WriteByte (&sv.datagram, svc_effect);
-		MSG_WriteDPCoord (&sv.datagram, org[0]);
-		MSG_WriteDPCoord (&sv.datagram, org[1]);
-		MSG_WriteDPCoord (&sv.datagram, org[2]);
+		MSG_WriteCoord (&sv.datagram, org[0], sv.protocol);
+		MSG_WriteCoord (&sv.datagram, org[1], sv.protocol);
+		MSG_WriteCoord (&sv.datagram, org[2], sv.protocol);
 		MSG_WriteByte (&sv.datagram, modelindex);
 		MSG_WriteByte (&sv.datagram, startframe);
 		MSG_WriteByte (&sv.datagram, framecount);
@@ -245,7 +254,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, floa
 	else
 		MSG_WriteByte (&sv.datagram, sound_num);
 	for (i = 0;i < 3;i++)
-		MSG_WriteDPCoord (&sv.datagram, entity->v->origin[i]+0.5*(entity->v->mins[i]+entity->v->maxs[i]));
+		MSG_WriteCoord (&sv.datagram, entity->v->origin[i]+0.5*(entity->v->mins[i]+entity->v->maxs[i]), sv.protocol);
 }
 
 /*
@@ -272,18 +281,29 @@ void SV_SendServerinfo (client_t *client)
 	// edicts get reallocated on level changes, so we need to update it here
 	client->edict = EDICT_NUM(client->number + 1);
 
+
 	// LordHavoc: clear entityframe tracking
-	client->entityframenumber = 0;
+
+	if (client->entitydatabase)
+		EntityFrame_FreeDatabase(client->entitydatabase);
 	if (client->entitydatabase4)
 		EntityFrame4_FreeDatabase(client->entitydatabase4);
-	client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool);
+	if (client->entitydatabase5)
+		EntityFrame5_FreeDatabase(client->entitydatabase5);
+
+	if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
+		client->entitydatabase = EntityFrame_AllocDatabase(sv_clients_mempool);
+	if (sv.protocol == PROTOCOL_DARKPLACES4)
+		client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool);
+	if (sv.protocol == PROTOCOL_DARKPLACES5)
+		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_clients_mempool);
 
 	MSG_WriteByte (&client->message, svc_print);
 	snprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
-	MSG_WriteLong (&client->message, PROTOCOL_DARKPLACES5);
+	MSG_WriteLong (&client->message, sv.protocol);
 	MSG_WriteByte (&client->message, svs.maxclients);
 
 	if (!coop.integer && deathmatch.integer)
@@ -404,8 +424,8 @@ SV_WriteEntitiesToClient
 
 =============
 */
-#ifdef QUAKEENTITIES
-void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
+/*
+void SV_WriteEntitiesToClient_QUAKE (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects, lightsize;
 	int culled_pvs, culled_trace, visibleentities, totalentities;
@@ -710,12 +730,12 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_COLORMAP)	MSG_WriteByte(msg, ent->v->colormap);
 		if (bits & U_SKIN)		MSG_WriteByte(msg, ent->v->skin);
 		if (bits & U_EFFECTS)	MSG_WriteByte(msg, ent->v->effects);
-		if (bits & U_ORIGIN1)	MSG_WriteDPCoord(msg, origin[0]);
-		if (bits & U_ANGLE1)	MSG_WriteAngle(msg, angles[0]);
-		if (bits & U_ORIGIN2)	MSG_WriteDPCoord(msg, origin[1]);
-		if (bits & U_ANGLE2)	MSG_WriteAngle(msg, angles[1]);
-		if (bits & U_ORIGIN3)	MSG_WriteDPCoord(msg, origin[2]);
-		if (bits & U_ANGLE3)	MSG_WriteAngle(msg, angles[2]);
+		if (bits & U_ORIGIN1)	MSG_WriteCoord13i(msg, origin[0]);
+		if (bits & U_ANGLE1)	MSG_WriteAngle8i(msg, angles[0]);
+		if (bits & U_ORIGIN2)	MSG_WriteCoord13i(msg, origin[1]);
+		if (bits & U_ANGLE2)	MSG_WriteAngle8i(msg, angles[1]);
+		if (bits & U_ORIGIN3)	MSG_WriteCoord13i(msg, origin[2]);
+		if (bits & U_ANGLE3)	MSG_WriteAngle8i(msg, angles[2]);
 
 		// LordHavoc: new stuff
 		if (bits & U_ALPHA)		MSG_WriteByte(msg, alpha);
@@ -730,7 +750,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_trace, culled_pvs, culled_trace);
 }
-#else
+*/
+
 static int numsendentities;
 static entity_state_t sendentities[MAX_EDICTS];
 static entity_state_t *sendentitiesindex[MAX_EDICTS];
@@ -750,7 +771,7 @@ void SV_PrepareEntitiesForSending(void)
 		if (ent->e->free)
 			continue;
 
-		ClearStateToDefault(&cs);
+		cs = defaultstate;
 		cs.active = true;
 		cs.number = e;
 		VectorCopy(ent->v->origin, cs.origin);
@@ -900,6 +921,7 @@ static client_t *sv_writeentitiestoclient_client;
 
 void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 {
+	int isbmodel;
 	vec3_t entmins, entmaxs, lightmins, lightmaxs, testorigin;
 	model_t *model;
 	trace_t trace;
@@ -925,6 +947,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		// LordHavoc: only send entities with a model or important effects
 		if (!s->modelindex && s->specialvisibilityradius == 0)
 			return;
+		isbmodel = (model = sv.models[s->modelindex]) == NULL || model->name[0] != '*';
 		if (s->tagentity)
 		{
 			// tag attached entities simply check their parent
@@ -935,7 +958,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				return;
 		}
 		// always send world submodels, they don't generate much traffic
-		else if ((model = sv.models[s->modelindex]) == NULL || model->name[0] != '*')
+		else if (!isbmodel || sv.protocol == PROTOCOL_QUAKE)
 		{
 			Mod_CheckLoaded(model);
 			// entity has survived every check so far, check if visible
@@ -981,7 +1004,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				return;
 			}
 			// or not seen by random tracelines
-			if (sv_cullentities_trace.integer)
+			if (sv_cullentities_trace.integer && !isbmodel)
 			{
 				// LordHavoc: test center first
 				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
@@ -1028,12 +1051,16 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 	sententities[s->number] = sententitiesmark;
 }
 
-void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
+entity_state_t sendstates[MAX_EDICTS]; 
+
+/*
+// entityframe4 protocol
+void SV_WriteEntitiesToClient_EF4(client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int i;
 	vec3_t testorigin;
 	entity_state_t *s;
-	entity_database4_t *d;
+	entityframe4_database_t *d;
 	int n, startnumber;
 	entity_state_t *e, inactiveentitystate;
 	sizebuf_t buf;
@@ -1059,8 +1086,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	d->currentcommit = d->commit + i;
 
 	// this state's number gets played around with later
-	ClearStateToDefault(&inactiveentitystate);
-	//inactiveentitystate = defaultstate;
+	inactiveentitystate = defaultstate;
 
 	sv_writeentitiestoclient_client = client;
 
@@ -1095,7 +1121,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 		SV_MarkWriteEntityStateToClient(sendentities + i);
 
 	d->currentcommit->numentities = 0;
-	d->currentcommit->framenum = ++client->entityframenumber;
+	d->currentcommit->framenum = ++d->latestframenumber;
 	MSG_WriteByte(msg, svc_entities);
 	MSG_WriteLong(msg, d->referenceframenum);
 	MSG_WriteLong(msg, d->currentcommit->framenum);
@@ -1177,7 +1203,64 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	if (sv_cullentities_stats.integer)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
 }
-#endif
+*/
+
+void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
+{
+	int i, numsendstates;
+	entity_state_t *s;
+
+	// if there isn't enough space to accomplish anything, skip it
+	if (msg->cursize + 25 > msg->maxsize)
+		return;
+
+	sv_writeentitiestoclient_client = client;
+
+	sv_writeentitiestoclient_culled_pvs = 0;
+	sv_writeentitiestoclient_culled_trace = 0;
+	sv_writeentitiestoclient_visibleentities = 0;
+	sv_writeentitiestoclient_totalentities = 0;
+
+	Mod_CheckLoaded(sv.worldmodel);
+
+// find the client's PVS
+	// the real place being tested from
+	VectorAdd(clent->v->origin, clent->v->view_ofs, sv_writeentitiestoclient_testeye);
+	sv_writeentitiestoclient_pvsbytes = 0;
+	if (sv.worldmodel && sv.worldmodel->brush.FatPVS)
+		sv_writeentitiestoclient_pvsbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, sv_writeentitiestoclient_testeye, 8, sv_writeentitiestoclient_pvs, sizeof(sv_writeentitiestoclient_pvs));
+
+	sv_writeentitiestoclient_clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
+
+	sententitiesmark++;
+
+	for (i = 0;i < numsendentities;i++)
+		SV_MarkWriteEntityStateToClient(sendentities + i);
+
+	numsendstates = 0;
+	for (i = 0;i < numsendentities;i++)
+	{
+		if (sententities[sendentities[i].number] == sententitiesmark)
+		{
+			s = &sendstates[numsendstates++];
+			*s = sendentities[i];
+			if (s->exteriormodelforclient && s->exteriormodelforclient == sv_writeentitiestoclient_clentnum)
+				s->flags |= RENDER_EXTERIORMODEL;
+		}
+	}
+
+	if (sv_cullentities_stats.integer)
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
+
+	if (client->entitydatabase5)
+		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1);
+	else if (client->entitydatabase4)
+		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sendstates);
+	else if (client->entitydatabase)
+		EntityFrame_WriteFrame(msg, client->entitydatabase, numsendstates, sendstates, client - svs.clients + 1);
+	else
+		EntityFrameQuake_WriteFrame(msg, numsendstates, sendstates);
+}
 
 /*
 =============
@@ -1221,7 +1304,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte (msg, ent->v->dmg_save);
 		MSG_WriteByte (msg, ent->v->dmg_take);
 		for (i=0 ; i<3 ; i++)
-			MSG_WriteDPCoord (msg, other->v->origin[i] + 0.5*(other->v->mins[i] + other->v->maxs[i]));
+			MSG_WriteCoord (msg, other->v->origin[i] + 0.5*(other->v->mins[i] + other->v->maxs[i]), sv.protocol);
 
 		ent->v->dmg_take = 0;
 		ent->v->dmg_save = 0;
@@ -1237,7 +1320,12 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	{
 		MSG_WriteByte (msg, svc_setangle);
 		for (i=0 ; i < 3 ; i++)
-			MSG_WriteAngle (msg, ent->v->angles[i] );
+		{
+			if (sv.protocol == PROTOCOL_DARKPLACES5)
+				MSG_WriteAngle16i (msg, ent->v->angles[i] );
+			else
+				MSG_WriteAngle8i (msg, ent->v->angles[i] );
+		}
 		ent->v->fixangle = 0;
 	}
 
@@ -1278,19 +1366,22 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		if (i == 0)
 			i = 255;
 		else
-			i = bound(0, i, 255);
+			i = bound(0, i, 65535);
 	}
 	viewzoom = i;
 
-	if (viewzoom != 255)
-		bits |= SU_VIEWZOOM;
+	// FIXME: which protocols support this?  does PROTOCOL_DARKPLACES3 support viewzoom?
+	if (sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+		if (viewzoom != 255)
+			bits |= SU_VIEWZOOM;
 
 	for (i=0 ; i<3 ; i++)
 	{
 		if (ent->v->punchangle[i])
 			bits |= (SU_PUNCH1<<i);
-		if (punchvector[i]) // PROTOCOL_DARKPLACES
-			bits |= (SU_PUNCHVEC1<<i); // PROTOCOL_DARKPLACES
+		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+			if (punchvector[i])
+				bits |= (SU_PUNCHVEC1<<i);
 		if (ent->v->velocity[i])
 			bits |= (SU_VELOCITY1<<i);
 	}
@@ -1326,48 +1417,114 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	for (i=0 ; i<3 ; i++)
 	{
 		if (bits & (SU_PUNCH1<<i))
-			MSG_WritePreciseAngle(msg, ent->v->punchangle[i]); // PROTOCOL_DARKPLACES
-		if (bits & (SU_PUNCHVEC1<<i)) // PROTOCOL_DARKPLACES
-			MSG_WriteFloat(msg, punchvector[i]); // PROTOCOL_DARKPLACES
+		{
+			if (sv.protocol == PROTOCOL_QUAKE)
+				MSG_WriteChar(msg, ent->v->punchangle[i]);
+			else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+				MSG_WriteAngle16i(msg, ent->v->punchangle[i]);
+		}
+		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+		{
+			if (bits & (SU_PUNCHVEC1<<i))
+			{
+				if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
+					MSG_WriteCoord16i(msg, punchvector[i]);
+				else if (sv.protocol == PROTOCOL_DARKPLACES5)
+					MSG_WriteCoord32f(msg, punchvector[i]);
+			}
+		}
 		if (bits & (SU_VELOCITY1<<i))
-			MSG_WriteFloat(msg, ent->v->velocity[i]);
+		{
+			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
+				MSG_WriteChar(msg, ent->v->velocity[i] * (1.0f / 16.0f));
+			else if (sv.protocol == PROTOCOL_DARKPLACES5)
+				MSG_WriteCoord32f(msg, ent->v->velocity[i]);
+		}
 	}
 
 // [always sent]	if (bits & SU_ITEMS)
 	MSG_WriteLong (msg, items);
 
-	if (bits & SU_WEAPONFRAME)
-		MSG_WriteByte (msg, ent->v->weaponframe);
-	if (bits & SU_ARMOR)
-		MSG_WriteByte (msg, ent->v->armorvalue);
-	if (bits & SU_WEAPON)
-		MSG_WriteByte (msg, SV_ModelIndex(PR_GetString(ent->v->weaponmodel)));
-
-	MSG_WriteShort (msg, ent->v->health);
-	MSG_WriteByte (msg, ent->v->currentammo);
-	MSG_WriteByte (msg, ent->v->ammo_shells);
-	MSG_WriteByte (msg, ent->v->ammo_nails);
-	MSG_WriteByte (msg, ent->v->ammo_rockets);
-	MSG_WriteByte (msg, ent->v->ammo_cells);
-
-	if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
+	if (sv.protocol == PROTOCOL_DARKPLACES5)
 	{
-		for(i=0;i<32;i++)
+		if (bits & SU_WEAPONFRAME)
+			MSG_WriteShort (msg, ent->v->weaponframe);
+		if (bits & SU_ARMOR)
+			MSG_WriteShort (msg, ent->v->armorvalue);
+		if (bits & SU_WEAPON)
 		{
-			if ( ((int)ent->v->weapon) & (1<<i) )
+			i = SV_ModelIndex(PR_GetString(ent->v->weaponmodel));
+			if (i < 0)
 			{
-				MSG_WriteByte (msg, i);
-				break;
+				Con_DPrintf("weaponmodel \"%s\" not precached\n", PR_GetString(ent->v->weaponmodel));
+				i = 0;
 			}
+			MSG_WriteShort (msg, i);
 		}
+
+		MSG_WriteShort (msg, ent->v->health);
+		MSG_WriteShort (msg, ent->v->currentammo);
+		MSG_WriteShort (msg, ent->v->ammo_shells);
+		MSG_WriteShort (msg, ent->v->ammo_nails);
+		MSG_WriteShort (msg, ent->v->ammo_rockets);
+		MSG_WriteShort (msg, ent->v->ammo_cells);
+
+		MSG_WriteShort (msg, ent->v->weapon);
+	
+		if (bits & SU_VIEWZOOM)
+			MSG_WriteShort (msg, viewzoom);
 	}
 	else
 	{
-		MSG_WriteByte (msg, ent->v->weapon);
-	}
+		if (bits & SU_WEAPONFRAME)
+			MSG_WriteByte (msg, ent->v->weaponframe);
+		if (bits & SU_ARMOR)
+			MSG_WriteByte (msg, ent->v->armorvalue);
+		if (bits & SU_WEAPON)
+		{
+			i = SV_ModelIndex(PR_GetString(ent->v->weaponmodel));
+			if (i < 0)
+			{
+				Con_DPrintf("weaponmodel \"%s\" not precached\n", PR_GetString(ent->v->weaponmodel));
+				i = 0;
+			}
+			MSG_WriteByte (msg, i);
+		}
 
-	if (bits & SU_VIEWZOOM)
-		MSG_WriteByte (msg, viewzoom);
+		MSG_WriteShort (msg, ent->v->health);
+		MSG_WriteByte (msg, ent->v->currentammo);
+		MSG_WriteByte (msg, ent->v->ammo_shells);
+		MSG_WriteByte (msg, ent->v->ammo_nails);
+		MSG_WriteByte (msg, ent->v->ammo_rockets);
+		MSG_WriteByte (msg, ent->v->ammo_cells);
+
+		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
+		{
+			for(i=0;i<32;i++)
+			{
+				if ( ((int)ent->v->weapon) & (1<<i) )
+				{
+					MSG_WriteByte (msg, i);
+					break;
+				}
+			}
+		}
+		else
+		{
+			MSG_WriteByte (msg, ent->v->weapon);
+		}
+	
+		if (bits & SU_VIEWZOOM)
+		{
+			if (sv.protocol == PROTOCOL_DARKPLACES4)
+			{
+				viewzoom = min(viewzoom, 255);
+				MSG_WriteByte (msg, viewzoom);
+			}
+			else if (sv.protocol == PROTOCOL_DARKPLACES5)
+				MSG_WriteShort (msg, viewzoom);
+		}
+	}
 }
 
 /*
@@ -1378,10 +1535,38 @@ SV_SendClientDatagram
 static qbyte sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
 qboolean SV_SendClientDatagram (client_t *client)
 {
-	sizebuf_t	msg;
+	int rate, maxrate, maxsize, maxsize2;
+	sizebuf_t msg;
+
+	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
+	{
+		// for good singleplayer, send huge packets
+		maxsize = sizeof(sv_sendclientdatagram_buf);
+		maxsize2 = sizeof(sv_sendclientdatagram_buf);
+	}
+	else if (sv.protocol == PROTOCOL_DARKPLACES5)
+	{
+		// PROTOCOL_DARKPLACES5 supports packet size limiting of updates
+		maxrate = bound(NET_MINRATE, sv_maxrate.integer, NET_MAXRATE);
+		if (sv_maxrate.integer != maxrate)
+			Cvar_SetValueQuick(&sv_maxrate, maxrate);
+
+		rate = bound(NET_MINRATE, client->netconnection->rate, maxrate);
+		rate = (int)(client->netconnection->rate * sys_ticrate.value);
+		maxsize = bound(100, rate, 1400);
+		maxsize2 = 1400;
+	}
+	else
+	{
+		// no rate limiting support on older protocols because dp protocols
+		// 1-4 kick the client off if they overflow, and quake protocol shows
+		// less than the full entity set if rate limited
+		maxsize = 1400;
+		maxsize2 = 1400;
+	}
 
 	msg.data = sv_sendclientdatagram_buf;
-	msg.maxsize = (int)bound(50.0, client->netconnection->rate * host_realframetime, (double)sizeof(sv_sendclientdatagram_buf));
+	msg.maxsize = maxsize;
 	msg.cursize = 0;
 
 	MSG_WriteByte (&msg, svc_time);
@@ -1392,9 +1577,13 @@ qboolean SV_SendClientDatagram (client_t *client)
 
 	SV_WriteEntitiesToClient (client, client->edict, &msg);
 
+	// expand packet size to allow effects to go over the rate limit
+	// (dropping them is FAR too ugly)
+	msg.maxsize = maxsize2;
+
 	// copy the server datagram if there is space
 	// FIXME: put in delayed queue of effects to send
-	if (msg.cursize + sv.datagram.cursize <= msg.maxsize)
+	if (sv.datagram.cursize > 0 && msg.cursize + sv.datagram.cursize <= msg.maxsize)
 		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
 
 // send the datagram
@@ -1614,11 +1803,13 @@ int SV_ModelIndex (const char *name)
 		if (!strcmp(sv.model_precache[i], name))
 			return i;
 	if (i==MAX_MODELS || !sv.model_precache[i])
-		Host_Error ("SV_ModelIndex: model %s not precached", name);
+	{
+		Con_DPrintf ("SV_ModelIndex: model %s not precached", name);
+		return -1;
+	}
 	return i;
 }
 
-#ifdef SV_QUAKEENTITIES
 /*
 ================
 SV_CreateBaseline
@@ -1637,7 +1828,7 @@ void SV_CreateBaseline (void)
 		svent = EDICT_NUM(entnum);
 
 		// LordHavoc: always clear state values, whether the entity is in use or not
-		ClearStateToDefault(&svent->e->baseline);
+		svent->e->baseline = defaultstate;
 
 		if (svent->e->free)
 			continue;
@@ -1652,7 +1843,10 @@ void SV_CreateBaseline (void)
 		if (entnum > 0 && entnum <= svs.maxclients)
 		{
 			svent->e->baseline.colormap = entnum;
-			svent->e->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
+			i = SV_ModelIndex("progs/player.mdl");
+			if (i < 0)
+				i = 0;
+			svent->e->baseline.modelindex = i;
 		}
 		else
 		{
@@ -1685,12 +1879,11 @@ void SV_CreateBaseline (void)
 		MSG_WriteByte (&sv.signon, svent->e->baseline.skin);
 		for (i=0 ; i<3 ; i++)
 		{
-			MSG_WriteDPCoord(&sv.signon, svent->e->baseline.origin[i]);
-			MSG_WriteAngle(&sv.signon, svent->e->baseline.angles[i]);
+			MSG_WriteCoord(&sv.signon, svent->e->baseline.origin[i], sv.protocol);
+			MSG_WriteAngle8i(&sv.signon, svent->e->baseline.angles[i]);
 		}
 	}
 }
-#endif
 
 
 /*
@@ -1852,6 +2045,49 @@ void SV_SpawnServer (const char *server)
 
 	strlcpy (sv.name, server, sizeof (sv.name));
 
+	// FIXME: cvar
+	if (!strcasecmp(sv_protocolname.string, "QUAKE"))
+	{
+		sv.protocol = PROTOCOL_QUAKE;
+		sv.netquakecompatible = true;
+	}
+	else if (!strcasecmp(sv_protocolname.string, "QUAKEDP"))
+	{
+		sv.protocol = PROTOCOL_QUAKE;
+		sv.netquakecompatible = false;
+	}
+	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES1"))
+	{
+		sv.protocol = PROTOCOL_DARKPLACES1;
+		sv.netquakecompatible = false;
+	}
+	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES2"))
+	{
+		sv.protocol = PROTOCOL_DARKPLACES2;
+		sv.netquakecompatible = false;
+	}
+	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES3"))
+	{
+		sv.protocol = PROTOCOL_DARKPLACES3;
+		sv.netquakecompatible = false;
+	}
+	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES4"))
+	{
+		sv.protocol = PROTOCOL_DARKPLACES4;
+		sv.netquakecompatible = false;
+	}
+	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES5"))
+	{
+		sv.protocol = PROTOCOL_DARKPLACES5;
+		sv.netquakecompatible = false;
+	}
+	else
+	{
+		sv.protocol = PROTOCOL_DARKPLACES5;
+		sv.netquakecompatible = false;
+		Con_Printf("Unknown sv_protocolname \"%s\", valid values are QUAKE, QUAKEDP, DARKPLACES1, DARKPLACES2, DARKPLACES3, DARKPLACES4, DARKPLACES5, falling back to DARKPLACES5 protocol\n", sv_protocolname.string);
+	}
+
 // load progs to get entity field count
 	PR_LoadProgs ();
 
@@ -1972,10 +2208,9 @@ void SV_SpawnServer (const char *server)
 
 	Mod_PurgeUnused();
 
-#ifdef QUAKEENTITIES
 // create a baseline for more efficient communications
-	SV_CreateBaseline ();
-#endif
+	if (sv.protocol == PROTOCOL_QUAKE)
+		SV_CreateBaseline ();
 
 // send serverinfo to all connected clients
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)

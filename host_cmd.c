@@ -50,6 +50,7 @@ Host_Status_f
 */
 void Host_Status_f (void)
 {
+	const char *protocolname;
 	client_t *client;
 	int seconds, minutes, hours = 0, j, players;
 	void (*print) (const char *fmt, ...);
@@ -71,6 +72,17 @@ void Host_Status_f (void)
 			players++;
 	print ("host:    %s\n", Cvar_VariableString ("hostname"));
 	print ("version: %s build %s\n", gamename, buildstring);
+	switch(sv.protocol)
+	{
+		case PROTOCOL_QUAKE: protocolname = sv.netquakecompatible ? "QUAKE" : "QUAKEDP";break;
+		case PROTOCOL_DARKPLACES1: protocolname = "PROTOCOL_DARKPLACES1";break;
+		case PROTOCOL_DARKPLACES2: protocolname = "PROTOCOL_DARKPLACES2";break;
+		case PROTOCOL_DARKPLACES3: protocolname = "PROTOCOL_DARKPLACES3";break;
+		case PROTOCOL_DARKPLACES4: protocolname = "PROTOCOL_DARKPLACES4";break;
+		case PROTOCOL_DARKPLACES5: protocolname = "PROTOCOL_DARKPLACES5";break;
+		default: protocolname = "PROTOCOL_UNKNOWN";break;
+	}
+	print ("protocol: %i (%s)\n", sv.protocol, protocolname);
 	print ("map:     %s\n", sv.name);
 	print ("players: %i active (%i max)\n\n", players, svs.maxclients);
 	for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
@@ -943,10 +955,9 @@ void Host_Color_f(void)
 }
 
 cvar_t cl_rate = {CVAR_SAVE, "_cl_rate", "10000"};
-cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
 void Host_Rate_f(void)
 {
-	int rate, maxrate;
+	int rate;
 
 	if (Cmd_Argc() != 2)
 	{
@@ -965,12 +976,7 @@ void Host_Rate_f(void)
 		return;
 	}
 
-	maxrate = bound(NET_MINRATE, sv_maxrate.integer, NET_MAXRATE);
-	if (sv_maxrate.integer != maxrate)
-		Cvar_SetValueQuick(&sv_maxrate, maxrate);
-
-	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) != LHNETADDRESSTYPE_LOOP)
-		host_client->netconnection->rate = bound(NET_MINRATE, rate, maxrate);
+	host_client->netconnection->rate = rate;
 }
 
 /*
@@ -1210,9 +1216,18 @@ void Host_Spawn_f (void)
 	// and it won't happen if the game was just loaded, so you wind up
 	// with a permanent head tilt
 	MSG_WriteByte (&host_client->message, svc_setangle);
-	for (i=0 ; i < 2 ; i++)
-		MSG_WriteAngle (&host_client->message, sv_player->v->angles[i] );
-	MSG_WriteAngle (&host_client->message, 0 );
+	if (sv.protocol == PROTOCOL_DARKPLACES5)
+	{
+		MSG_WriteAngle16i (&host_client->message, sv_player->v->angles[0]);
+		MSG_WriteAngle16i (&host_client->message, sv_player->v->angles[1]);
+		MSG_WriteAngle16i (&host_client->message, 0);
+	}
+	else
+	{
+		MSG_WriteAngle8i (&host_client->message, sv_player->v->angles[0]);
+		MSG_WriteAngle8i (&host_client->message, sv_player->v->angles[1]);
+		MSG_WriteAngle8i (&host_client->message, 0);
+	}
 
 	SV_WriteClientdataToMessage (sv_player, &host_client->message);
 
@@ -1778,7 +1793,6 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("color", Host_Color_f);
 	Cvar_RegisterVariable (&cl_rate);
 	Cmd_AddCommand ("rate", Host_Rate_f);
-	Cvar_RegisterVariable (&sv_maxrate);
 	if (gamemode == GAME_NEHAHRA)
 	{
 		Cvar_RegisterVariable (&cl_pmodel);

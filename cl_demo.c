@@ -42,7 +42,6 @@ CL_NextDemo
 Called to play the next demo in the demo loop
 =====================
 */
-extern void Call_MR_ToggleMenu_f (void);
 void CL_NextDemo (void)
 {
 	char	str[1024];
@@ -57,9 +56,6 @@ void CL_NextDemo (void)
 		{
 			Con_Print("No demos listed with startdemos\n");
 			cls.demonum = -1;
-			// put up menu instead of staring at console
-			if (key_dest != key_menu)
-				Call_MR_ToggleMenu_f();
 			return;
 		}
 	}

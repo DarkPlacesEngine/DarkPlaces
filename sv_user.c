@@ -613,7 +613,9 @@ void SV_ReadClientMove (usercmd_t *move)
 	float total;
 
 	// read ping time
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = sv.time - MSG_ReadFloat ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	host_client->num_pings++;
 	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
 		total += host_client->ping_times[i];
@@ -623,16 +625,28 @@ void SV_ReadClientMove (usercmd_t *move)
 		val->_float = host_client->ping * 1000.0;
 
 	// read current angles
-	// PROTOCOL_DARKPLACES4
 	for (i = 0;i < 3;i++)
-		angle[i] = MSG_ReadPreciseAngle();
+	{
+		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+		if (sv.protocol == PROTOCOL_QUAKE)
+			angle[i] = MSG_ReadAngle8i();
+		else if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
+			angle[i] = MSG_ReadAngle32f();
+		else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+			angle[i] = MSG_ReadAngle16i();
+		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	}
 
 	VectorCopy (angle, sv_player->v->v_angle);
 
 	// read movement
-	move->forwardmove = MSG_ReadShort ();
-	move->sidemove = MSG_ReadShort ();
-	move->upmove = MSG_ReadShort ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	move->forwardmove = MSG_ReadCoord16i ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	move->sidemove = MSG_ReadCoord16i ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	move->upmove = MSG_ReadCoord16i ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	if ((val = GETEDICTFIELDVALUE(sv_player, eval_movement)))
 	{
 		val->vector[0] = move->forwardmove;
@@ -642,6 +656,7 @@ void SV_ReadClientMove (usercmd_t *move)
 
 	// read buttons
 	bits = MSG_ReadByte ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	sv_player->v->button0 = bits & 1;
 	sv_player->v->button2 = (bits & 2)>>1;
 	// LordHavoc: added 6 new buttons
@@ -653,6 +668,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	if ((val = GETEDICTFIELDVALUE(sv_player, eval_button8))) val->_float = ((bits >> 7) & 1);
 
 	i = MSG_ReadByte ();
+	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	if (i)
 		sv_player->v->impulse = i;
 }
@@ -665,7 +681,7 @@ SV_ReadClientMessage
 extern void SV_SendServerinfo(client_t *client);
 void SV_ReadClientMessage(void)
 {
-	int cmd;
+	int cmd, num;
 	char *s;
 
 	//MSG_BeginReading ();
@@ -744,10 +760,17 @@ void SV_ReadClientMessage(void)
 			break;
 
 		case clc_ackentities:
-			host_client->entitydatabase4->ackframenum = MSG_ReadLong();
+			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+			num = MSG_ReadLong();
+			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 			if (developer_networkentities.integer >= 1)
-				Con_Printf("recv clc_ackentities %i\n", host_client->entitydatabase4->ackframenum);
-			EntityFrame4_AckFrame(host_client->entitydatabase4, host_client->entitydatabase4->ackframenum);
+				Con_Printf("recv clc_ackentities %i\n", num);
+			if (host_client->entitydatabase)
+				EntityFrame_AckFrame(host_client->entitydatabase, num);
+			else if (host_client->entitydatabase4)
+				EntityFrame4_AckFrame(host_client->entitydatabase4, host_client->entitydatabase4->ackframenum);
+			else if (host_client->entitydatabase5)
+				EntityFrame5_AckFrame(host_client->entitydatabase5, num, host_client - svs.clients + 1);
 			break;
 		}
 	}

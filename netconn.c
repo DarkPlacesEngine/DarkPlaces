@@ -1119,21 +1119,16 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 								if (clientnum < svs.maxclients)
 								{
 									// prepare the client struct
-									if ((client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool)))
+									if ((conn = NetConn_Open(mysocket, peeraddress)))
 									{
-										if ((conn = NetConn_Open(mysocket, peeraddress)))
-										{
-											// allocated connection
-											LHNETADDRESS_ToString(peeraddress, conn->address, sizeof(conn->address), true);
-											if (developer.integer)
-												Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
-											NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
-											// now set up the client
-											SV_ConnectClient(clientnum, conn);
-											NetConn_Heartbeat(1);
-										}
-										else
-											EntityFrame4_FreeDatabase(client->entitydatabase4);
+										// allocated connection
+										LHNETADDRESS_ToString(peeraddress, conn->address, sizeof(conn->address), true);
+										if (developer.integer)
+											Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
+										NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
+										// now set up the client
+										SV_ConnectClient(clientnum, conn);
+										NetConn_Heartbeat(1);
 									}
 								}
 								else

@@ -190,8 +190,15 @@ void MSG_WriteString (sizebuf_t *sb, const char *s)
 		SZ_Write (sb, s, strlen(s)+1);
 }
 
-// used by server (always latest PROTOCOL_DARKPLACES)
-void MSG_WriteDPCoord (sizebuf_t *sb, float f)
+void MSG_WriteCoord13i (sizebuf_t *sb, float f)
+{
+	if (f >= 0)
+		MSG_WriteShort (sb, (int)(f * 8.0f + 0.5f));
+	else
+		MSG_WriteShort (sb, (int)(f * 8.0f - 0.5f));
+}
+
+void MSG_WriteCoord16i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
 		MSG_WriteShort (sb, (int)(f + 0.5f));
@@ -199,7 +206,40 @@ void MSG_WriteDPCoord (sizebuf_t *sb, float f)
 		MSG_WriteShort (sb, (int)(f - 0.5f));
 }
 
-void MSG_WritePreciseAngle (sizebuf_t *sb, float f)
+void MSG_WriteCoord32f (sizebuf_t *sb, float f)
+{
+	MSG_WriteFloat (sb, f);
+}
+
+void MSG_WriteCoord (sizebuf_t *sb, float f, int protocol)
+{
+	if (protocol == PROTOCOL_QUAKE)
+		MSG_WriteCoord13i (sb, f);
+	else if (protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES5)
+		MSG_WriteCoord32f (sb, f);
+	else if (protocol == PROTOCOL_DARKPLACES2 || protocol == PROTOCOL_DARKPLACES3 || protocol == PROTOCOL_DARKPLACES4)
+		MSG_WriteCoord16i (sb, f);
+	else
+		Host_Error("MSG_WriteCoord: unknown protocol\n");
+}
+
+void MSG_WriteVector (sizebuf_t *sb, float *v, int protocol)
+{
+	MSG_WriteCoord (sb, v[0], protocol);
+	MSG_WriteCoord (sb, v[1], protocol);
+	MSG_WriteCoord (sb, v[2], protocol);
+}
+
+// LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
+void MSG_WriteAngle8i (sizebuf_t *sb, float f)
+{
+	if (f >= 0)
+		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) + 0.5f) & 255);
+	else
+		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) - 0.5f) & 255);
+}
+
+void MSG_WriteAngle16i (sizebuf_t *sb, float f)
 {
 	if (f >= 0)
 		MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) + 0.5f) & 65535);
@@ -207,14 +247,11 @@ void MSG_WritePreciseAngle (sizebuf_t *sb, float f)
 		MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) - 0.5f) & 65535);
 }
 
-// LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
-void MSG_WriteAngle (sizebuf_t *sb, float f)
+void MSG_WriteAngle32f (sizebuf_t *sb, float f)
 {
-	if (f >= 0)
-		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) + 0.5f) & 255);
-	else
-		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) - 0.5f) & 255);
+	MSG_WriteFloat (sb, f);
 }
+
 
 //
 // reading functions
@@ -324,15 +361,54 @@ int MSG_ReadBytes (int numbytes, unsigned char *out)
 	return l;
 }
 
-// used by client
-float MSG_ReadCoord (void)
+float MSG_ReadCoord13i (void)
 {
-	if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
-		return (signed short) MSG_ReadLittleShort();
-	else if (cl.protocol == PROTOCOL_DARKPLACES1)
-		return MSG_ReadLittleFloat();
-	else
-		return MSG_ReadLittleShort() * (1.0f/8.0f);
+	return MSG_ReadLittleShort() * (1.0f/8.0f);
+}
+
+float MSG_ReadCoord16i (void)
+{
+	return (signed short) MSG_ReadLittleShort();
+}
+
+float MSG_ReadCoord32f (void)
+{
+	return MSG_ReadLittleFloat();
+}
+
+float MSG_ReadCoord (int protocol)
+{
+	if (protocol == PROTOCOL_QUAKE)
+		return MSG_ReadCoord13i();
+	else if (protocol == PROTOCOL_DARKPLACES1 || protocol == PROTOCOL_DARKPLACES5)
+		return MSG_ReadCoord32f();
+	else if (protocol == PROTOCOL_DARKPLACES2 || protocol == PROTOCOL_DARKPLACES3 || protocol == PROTOCOL_DARKPLACES4)
+		return MSG_ReadCoord16i();
+	Host_Error("MSG_ReadCoord: unknown protocol\n");
+	return 0;
+}
+
+void MSG_ReadVector (float *v, int protocol)
+{
+	v[0] = MSG_ReadCoord(protocol);
+	v[1] = MSG_ReadCoord(protocol);
+	v[2] = MSG_ReadCoord(protocol);
+}
+
+// LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
+float MSG_ReadAngle8i (void)
+{
+	return MSG_ReadByte () * (360.0f/256.0f);
+}
+
+float MSG_ReadAngle16i (void)
+{
+	return MSG_ReadShort () * (360.0f/65536.0f);
+}
+
+float MSG_ReadAngle32f (void)
+{
+	return MSG_ReadFloat ();
 }
 
 

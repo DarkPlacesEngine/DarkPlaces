@@ -756,6 +756,7 @@ q3dpvs_t;
 
 #define CHECKPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] & (1 << ((b) & 7))) : false)
 #define SETPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] |= (1 << ((b) & 7))) : false)
+#define CLEARPVSBIT(pvs,b) ((b) >= 0 ? ((pvs)[(b) >> 3] &= ~(1 << ((b) & 7))) : false)
 
 #endif
 
