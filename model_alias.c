@@ -964,7 +964,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
 
-		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
+		if (LittleLong(pinmesh->num_shaders) >= 1)
 			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, pinmesh->name, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name);
 		else
 			for (j = 0;j < mesh->num_skins;j++)
