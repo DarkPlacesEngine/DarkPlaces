@@ -622,26 +622,45 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 
 void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
 {
-	float f, tangentcross[3];
-	normal3f[0] = (v1[1] - v0[1]) * (v2[2] - v0[2]) - (v1[2] - v0[2]) * (v2[1] - v0[1]);
-	normal3f[1] = (v1[2] - v0[2]) * (v2[0] - v0[0]) - (v1[0] - v0[0]) * (v2[2] - v0[2]);
-	normal3f[2] = (v1[0] - v0[0]) * (v2[1] - v0[1]) - (v1[1] - v0[1]) * (v2[0] - v0[0]);
+	float f, tangentcross[3], v10[3], v20[3], tc10[2], tc20[2];
+	// 103 add/sub/negate/multiply (1 cycle), 3 divide (20 cycle), 3 sqrt (22 cycle), 4 compare (3 cycle?), total cycles not counting load/store/exchange roughly 241 cycles
+	// 12 add, 28 subtract, 57 multiply, 3 divide, 3 sqrt, 4 compare, 50% chance of 6 negates
+
+	// 18 multiply, 19 subtract
+	VectorSubtract(v1, v0, v10);
+	VectorSubtract(v2, v0, v20);
+	normal3f[0] = v10[1] * v20[2] - v10[2] * v20[1];
+	normal3f[1] = v10[2] * v20[0] - v10[0] * v20[2];
+	normal3f[2] = v10[0] * v20[1] - v10[1] * v20[0];
+	tc10[1] = tc1[1] - tc0[1];
+	tc20[1] = tc2[1] - tc0[1];
+	svector3f[0] = tc10[1] * v20[0] - tc20[1] * v10[0];
+	svector3f[1] = tc10[1] * v20[1] - tc20[1] * v10[1];
+	svector3f[2] = tc10[1] * v20[2] - tc20[1] * v10[2];
+	tc10[0] = tc1[0] - tc0[0];
+	tc20[0] = tc2[0] - tc0[0];
+	tvector3f[0] = tc10[0] * v20[0] - tc20[0] * v10[0];
+	tvector3f[1] = tc10[0] * v20[1] - tc20[0] * v10[1];
+	tvector3f[2] = tc10[0] * v20[2] - tc20[0] * v10[2];
+	// 1 sqrt, 1 divide, 6 multiply, 2 add, 1 compare
 	VectorNormalize(normal3f);
-	tvector3f[0] = ((tc1[0] - tc0[0]) * (v2[0] - v0[0]) - (tc2[0] - tc0[0]) * (v1[0] - v0[0]));
-	tvector3f[1] = ((tc1[0] - tc0[0]) * (v2[1] - v0[1]) - (tc2[0] - tc0[0]) * (v1[1] - v0[1]));
-	tvector3f[2] = ((tc1[0] - tc0[0]) * (v2[2] - v0[2]) - (tc2[0] - tc0[0]) * (v1[2] - v0[2]));
-	f = -DotProduct(tvector3f, normal3f);
-	VectorMA(tvector3f, f, normal3f, tvector3f);
-	VectorNormalize(tvector3f);
-	// note: can't be a CrossProduct as that sometimes flips the texture
-	svector3f[0] = ((tc1[1] - tc0[1]) * (v2[0] - v0[0]) - (tc2[1] - tc0[1]) * (v1[0] - v0[0]));
-	svector3f[1] = ((tc1[1] - tc0[1]) * (v2[1] - v0[1]) - (tc2[1] - tc0[1]) * (v1[1] - v0[1]));
-	svector3f[2] = ((tc1[1] - tc0[1]) * (v2[2] - v0[2]) - (tc2[1] - tc0[1]) * (v1[2] - v0[2]));
-	f = -DotProduct(svector3f, normal3f);
-	VectorMA(svector3f, f, normal3f, svector3f);
+	// 12 multiply, 4 add, 6 subtract
+	f = DotProduct(svector3f, normal3f);
+	svector3f[0] -= f * normal3f[0];
+	svector3f[1] -= f * normal3f[1];
+	svector3f[2] -= f * normal3f[2];
+	f = DotProduct(tvector3f, normal3f);
+	tvector3f[0] -= f * normal3f[0];
+	tvector3f[1] -= f * normal3f[1];
+	tvector3f[2] -= f * normal3f[2];
+	// 2 sqrt, 2 divide, 12 multiply, 4 add, 2 compare
 	VectorNormalize(svector3f);
+	VectorNormalize(tvector3f);
+	// if texture is mapped the wrong way (counterclockwise), the tangents
+	// have to be flipped, this is detected by calculating a normal from the
+	// two tangents, and seeing if it is opposite the surface normal
+	// 9 multiply, 2 add, 3 subtract, 1 compare, 50% chance of: 6 negates
 	CrossProduct(tvector3f, svector3f, tangentcross);
-	// if texture is mapped the wrong way (counterclockwise), the tangents have to be flipped, this is detected by calculating a normal from the two tangents, and seeing if it is opposite the surface normal
 	if (DotProduct(tangentcross, normal3f) < 0)
 	{
 		VectorNegate(svector3f, svector3f);
