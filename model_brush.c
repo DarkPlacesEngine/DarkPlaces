@@ -2379,6 +2379,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	dheader_t	*header;
 	dmodel_t 	*bm;
 	mempool_t	*mainmempool;
+	char		*loadname;
 
 	mod->type = mod_brush;
 
@@ -2444,6 +2445,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	mod->numframes = 2;		// regular and alternate animation
 
 	mainmempool = mod->mempool;
+	loadname = mod->name;
 
 //
 // set up the submodels (FIXME: this is confusing)
@@ -2507,6 +2509,18 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->rotatedmins[0] = mod->rotatedmins[1] = mod->rotatedmins[2] = -modelradius;
 		mod->rotatedmaxs[0] = mod->rotatedmaxs[1] = mod->rotatedmaxs[2] = modelradius;
 //		mod->modelradius = modelradius;
+		// LordHavoc: check for empty submodels (lacrima.bsp has such a glitch)
+		if (mod->normalmins[0] > mod->normalmaxs[0] || mod->normalmins[1] > mod->normalmaxs[1] || mod->normalmins[2] > mod->normalmaxs[2])
+		{
+			Con_Printf("warning: empty submodel *%i in %s\n", i+1, loadname);
+			VectorClear(mod->normalmins);
+			VectorClear(mod->normalmaxs);
+			VectorClear(mod->yawmins);
+			VectorClear(mod->yawmaxs);
+			VectorClear(mod->rotatedmins);
+			VectorClear(mod->rotatedmaxs);
+			//mod->modelradius = 0;
+		}
 
 //		VectorCopy (bm->maxs, mod->maxs);
 //		VectorCopy (bm->mins, mod->mins);
