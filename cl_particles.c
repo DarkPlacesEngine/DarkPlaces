@@ -453,36 +453,27 @@ void CL_EntityParticles (entity_t *ent)
 
 void CL_ReadPointFile_f (void)
 {
-	vec3_t	org;
-	int		r, c;
-	char	*pointfile = NULL, *pointfilepos, *t, tchar;
-#if WORKINGLQUAKE
-	char	name[MAX_OSPATH];
+	vec3_t org, leakorg;
+	int r, c, s;
+	char *pointfile = NULL, *pointfilepos, *t, tchar;
+	char name[MAX_OSPATH];
 
-	sprintf (name,"maps/%s.pts", cl.worldmodel->name);
-	COM_FOpenFile (name, &f);
-	if (f)
-	{
-		int pointfilelength;
-		fseek(f, 0, SEEK_END);
-		pointfilelength = ftell(f);
-		fseek(f, 0, SEEK_SET);
-		pointfile = malloc(pointfilelength + 1);
-		fread(pointfile, 1, pointfilelength, f);
-		pointfile[pointfilelength] = 0;
-		fclose(f);
-	}
+	FS_StripExtension(cl.worldmodel->name, name);
+	strcat(name, ".pts");
+#if WORKINGLQUAKE
+	pointfile = COM_LoadTempFile (name);
 #else
-	pointfile = FS_LoadFile(va("maps/%s.pts", cl.worldmodel->name), true);
+	pointfile = FS_LoadFile(name, true);
 #endif
 	if (!pointfile)
 	{
-		Con_Printf ("couldn't open %s.pts\n", cl.worldmodel->name);
+		Con_Printf ("Could not open %s\n", name);
 		return;
 	}
 
-	Con_Printf ("Reading %s.pts...\n", cl.worldmodel->name);
+	Con_Printf ("Reading %s...\n", name);
 	c = 0;
+	s = 0;
 	pointfilepos = pointfile;
 	while (*pointfilepos)
 	{
@@ -500,22 +491,25 @@ void CL_ReadPointFile_f (void)
 		pointfilepos = t;
 		if (r != 3)
 			break;
+		if (c == 0)
+			VectorCopy(org, leakorg);
 		c++;
 
-		if (cl_numparticles >= cl_maxparticles)
+		if (cl_numparticles < cl_maxparticles - 3)
 		{
-			Con_Printf ("Not enough free particles\n");
-			break;
+			s++;
+			particle(pt_static, PARTICLE_BILLBOARD, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 99999, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 		}
-		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, false, PBLEND_ALPHA, 2, 2, 255, 0, 99999, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	}
-
-#ifdef WORKINGLQUAKE
-	free(pointfile);
-#else
+#ifndef WORKINGLQUAKE
 	Mem_Free(pointfile);
 #endif
-	Con_Printf ("%i points read\n", c);
+	VectorCopy(leakorg, org);
+	Con_Printf ("%i points read (%i particles spawned)\nLeak at %f %f %f\n", c, s, org[0], org[1], org[2]);
+
+	particle(pt_static, PARTICLE_BEAM, 0xFF0000, 0xFF0000, tex_beam, false, PBLEND_ALPHA, 64, 64, 255, 0, 99999, 0, 0, org[0] - 4096, org[1], org[2], 0, 0, 0, 0, org[0] + 4096, org[1], org[2], 0, 0);
+	particle(pt_static, PARTICLE_BEAM, 0x00FF00, 0x00FF00, tex_beam, false, PBLEND_ALPHA, 64, 64, 255, 0, 99999, 0, 0, org[0], org[1] - 4096, org[2], 0, 0, 0, 0, org[0], org[1] + 4096, org[2], 0, 0);
+	particle(pt_static, PARTICLE_BEAM, 0x0000FF, 0x0000FF, tex_beam, false, PBLEND_ALPHA, 64, 64, 255, 0, 99999, 0, 0, org[0], org[1], org[2] - 4096, 0, 0, 0, 0, org[0], org[1], org[2] + 4096, 0, 0);
 }
 
 /*
