@@ -122,7 +122,10 @@ typedef struct netconn_s
 	lhnetaddress_t peeraddress;
 
 	// this is mostly identical to qsocket_t from quake
+
+	// if this time is reached, kick off peer
 	double connecttime;
+	double timeout;
 	double lastMessageTime;
 	double lastSendTime;
 
