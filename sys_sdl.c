@@ -195,13 +195,11 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
-void Sys_Sleep(void)
+void Sys_Sleep(int milliseconds)
 {
-#ifdef WIN32
-	Sleep (1);
-#else
-	usleep(1);
-#endif
+	if (milliseconds < 1)
+		milliseconds = 1;
+	SDL_Delay(milliseconds);
 }
 
 int SDL_main (int argc, char *argv[])

@@ -271,9 +271,11 @@ char *Sys_ConsoleInput (void)
 	return NULL;
 }
 
-void Sys_Sleep (void)
+void Sys_Sleep(int milliseconds)
 {
-	Sleep (1);
+	if (milliseconds < 1)
+		milliseconds = 1;
+	Sleep(milliseconds);
 }
 
 

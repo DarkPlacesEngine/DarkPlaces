@@ -194,12 +194,14 @@ char *Sys_ConsoleInput(void)
 	return NULL;
 }
 
-void Sys_Sleep(void)
+void Sys_Sleep(int milliseconds)
 {
+	if (milliseconds < 1)
+		milliseconds = 1;
 #ifdef WIN32
-	Sleep (1);
+	Sleep(milliseconds);
 #else
-	usleep(1);
+	usleep(milliseconds * 1000);
 #endif
 }
 
