@@ -43,7 +43,7 @@ short lightmapupdate[MAX_LIGHTMAPS][2];
 
 int lightmapalign, lightmapalignmask; // LordHavoc: NVIDIA's broken subimage fix, see BuildLightmaps for notes
 cvar_t gl_lightmapalign = {"gl_lightmapalign", "4"};
-cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
+cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "0"};
 cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
