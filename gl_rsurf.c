@@ -30,7 +30,6 @@ static float floatblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHav
 static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
 cvar_t r_ambient = {0, "r_ambient", "0"};
-cvar_t r_dlightmap = {CVAR_SAVE, "r_dlightmap", "1"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
@@ -267,7 +266,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			else
 				memset(bl, 0, size*3*sizeof(unsigned int));
 
-			if (surf->dlightframe == r_framecount && r_dlightmap.integer)
+			if (surf->dlightframe == r_framecount)
 			{
 				surf->cached_dlight = R_IntAddDynamicLights(&ent->inversematrix, surf);
 				if (surf->cached_dlight)
@@ -350,7 +349,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		else
 			memset(bl, 0, size*3*sizeof(float));
 
-		if (surf->dlightframe == r_framecount && r_dlightmap.integer)
+		if (surf->dlightframe == r_framecount)
 		{
 			surf->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surf);
 			if (surf->cached_dlight)
@@ -1156,45 +1155,6 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
-{
-	const msurface_t *surf;
-	const surfmesh_t *mesh;
-	float colorscale;
-	rmeshstate_t m;
-
-	memset(&m, 0, sizeof(m));
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	GL_DepthMask(false);
-	GL_DepthTest(true);
-	m.tex[0] = R_GetTexture(texture->skin.base);
-	colorscale = 1;
-	if (gl_combine.integer)
-	{
-		m.texrgbscale[0] = 4;
-		colorscale *= 0.25f;
-	}
-	GL_ColorPointer(varray_color4f);
-	while((surf = *surfchain++) != NULL)
-	{
-		if (surf->visframe == r_framecount && surf->dlightframe == r_framecount)
-		{
-			for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-			{
-				if (RSurf_LightCheck(&ent->inversematrix, surf->dlightbits, mesh))
-				{
-					GL_VertexPointer(mesh->vertex3f);
-					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
-					R_FillColors(varray_color4f, mesh->numverts, 0, 0, 0, 1);
-					R_Mesh_State_Texture(&m);
-					RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, colorscale);
-					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
-				}
-			}
-		}
-	}
-}
-
 static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
@@ -1374,8 +1334,6 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 			if (r_detailtextures.integer)
 				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
 		}
-		if (!r_dlightmap.integer && !(ent->effects & EF_FULLBRIGHT))
-			RSurfShader_OpaqueWall_Pass_Light(ent, texture, surfchain);
 		if (texture->skin.glow)
 			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
 		if (fogenabled)
@@ -2146,7 +2104,6 @@ void GL_Surf_Init(void)
 		dlightdivtable[i] = 4194304 / (i << 7);
 
 	Cvar_RegisterVariable(&r_ambient);
-	Cvar_RegisterVariable(&r_dlightmap);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_testvis);
 	Cvar_RegisterVariable(&r_floatbuildlightmap);

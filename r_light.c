@@ -252,8 +252,7 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, rdli
 			{
 				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
 				surf->dlightframe = r_framecount;
-				if (r_dlightmap.integer)
-					surf->cached_dlight = true;
+				surf->cached_dlight = true;
 			}
 			surf->dlightbits[bitindex] |= bit;
 		}

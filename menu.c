@@ -1356,7 +1356,7 @@ void M_Options_Key (int k)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	21
+#define	OPTIONS_EFFECTS_ITEMS	20
 
 int options_effects_cursor;
 
@@ -1374,7 +1374,6 @@ extern cvar_t cl_explosions;
 extern cvar_t cl_stainmaps;
 extern cvar_t cl_decals;
 extern cvar_t r_explosionclip;
-extern cvar_t r_dlightmap;
 extern cvar_t r_modellights;
 extern cvar_t r_coronas;
 extern cvar_t gl_flashblend;
@@ -1394,8 +1393,6 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 	optnum = 0;
 	if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_modellights, bound(0, r_modellights.value + dir, 8));
-	else if (options_effects_cursor == optnum++)
-		Cvar_SetValueQuick (&r_dlightmap, !r_dlightmap.integer);
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_coronas, !r_coronas.integer);
 	else if (options_effects_cursor == optnum++)
@@ -1453,7 +1450,6 @@ void M_Options_Effects_Draw (void)
 	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_EFFECTS_ITEMS - visible)) * 8;
 
 	M_Options_PrintSlider(  "      Lights Per Model", true, r_modellights.value, 0, 8);
-	M_Options_PrintCheckbox(" Fast Dynamic Lighting", true, !r_dlightmap.integer);
 	M_Options_PrintCheckbox("               Coronas", true, r_coronas.integer);
 	M_Options_PrintCheckbox("      Use Only Coronas", true, gl_flashblend.integer);
 	M_Options_PrintCheckbox("             Particles", true, cl_particles.integer);
