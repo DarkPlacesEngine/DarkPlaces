@@ -656,7 +656,7 @@ void R_ModelLightPoint (const entity_render_t *ent, vec3_t color, const vec3_t p
 {
 	mleaf_t *leaf;
 	leaf = Mod_PointInLeaf(p, cl.worldmodel);
-	if (!leaf || leaf->contents == CONTENTS_SOLID || r_fullbright.integer || !cl.worldmodel->lightdata || ent->effects & EF_FULLBRIGHT)
+	if (!leaf || leaf->contents == CONTENTS_SOLID || !cl.worldmodel->lightdata)
 	{
 		color[0] = color[1] = color[2] = 1;
 		return;
@@ -691,7 +691,11 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 	// scale of the model's coordinate space, to alter light attenuation to match
 	// make the mscale squared so it can scale the squared distance results
 	mscale = ent->scale * ent->scale;
-	if ((maxnearlights != 0) && !r_fullbright.integer && !(ent->effects & EF_FULLBRIGHT))
+	if (r_fullbright.integer || (ent->effects & EF_FULLBRIGHT))
+		VectorSet(basecolor, 1, 1, 1);
+	else if (maxnearlights == 0 && r_shadow_lightingmode < 2)
+		R_CompleteLightPoint (basecolor, ent->origin, true, NULL);
+	else
 	{
 		R_ModelLightPoint(ent, basecolor, ent->origin);
 
@@ -824,8 +828,6 @@ void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, flo
 			}
 		}
 	}
-	else
-		R_CompleteLightPoint (basecolor, ent->origin, true, NULL);
 	basecolor[0] *= colorr;
 	basecolor[1] *= colorg;
 	basecolor[2] *= colorb;
