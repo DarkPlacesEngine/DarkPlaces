@@ -96,7 +96,7 @@ void Log_Init (void)
 	}
 
 	// Allocate a log queue
-	logq_size = 4;
+	logq_size = 256;
 	logqueue = Mem_Alloc (tempmempool, logq_size);
 	logq_ind = 0;
 }
