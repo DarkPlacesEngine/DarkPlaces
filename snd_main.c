@@ -365,7 +365,7 @@ void S_ServerSounds (char serversound [][MAX_QPATH], unsigned int numsounds)
 	for (sfx = known_sfx;sfx;sfx = sfxnext)
 	{
 		sfxnext = sfx->next;
-		S_FreeSfx (sfx);
+		S_FreeSfx (sfx, false);
 	}
 }
 
