@@ -17,21 +17,19 @@
 cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 #endif
 
-
-
 // =======================================================================
 // General routines
 // =======================================================================
 
-void Sys_Quit (void)
+void Sys_Shutdown (void)
 {
-	Host_Shutdown();
 #ifndef WIN32
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 #endif
 	fflush(stdout);
-	exit(0);
+	SDL_Quit();
 }
+	
 
 void Sys_Error (const char *error, ...)
 {
@@ -64,27 +62,7 @@ double Sys_DoubleTime (void)
 	double newtime;
 #ifdef WIN32
 	// LordHavoc: note to people modifying this code, DWORD is specifically defined as an unsigned 32bit number, therefore the 65536.0 * 65536.0 is fine.
-	if (sys_usetimegettime.integer)
-	{
-		static int firsttimegettime = true;
-		// timeGetTime
-		// platform:
-		// Windows 95/98/ME/NT/2000/XP
-		// features:
-		// reasonable accuracy (millisecond)
-		// issues:
-		// wraps around every 47 days or so (but this is non-fatal to us, odd times are rejected, only causes a one frame stutter)
-
-		// make sure the timer is high precision, otherwise different versions of windows have varying accuracy
-		if (firsttimegettime)
-		{
-			timeBeginPeriod (1);
-			firsttimegettime = false;
-		}
-
-		newtime = (double) timeGetTime () / 1000.0;
-	}
-	else
+	if (!sys_usetimegettime.integer)
 	{
 		// QueryPerformanceCounter
 		// platform:
@@ -109,12 +87,10 @@ double Sys_DoubleTime (void)
 		timescale = 1.0 / ((double) PerformanceFreq.LowPart + (double) PerformanceFreq.HighPart * 65536.0 * 65536.0);
 		newtime = ((double) PerformanceCount.LowPart + (double) PerformanceCount.HighPart * 65536.0 * 65536.0) * timescale;
 		#endif
-	}
-#else
-	struct timeval tp;
-	gettimeofday(&tp, NULL);
-	newtime = (double) tp.tv_sec + tp.tv_usec / 1000000.0;
+	} else
 #endif
+	newtime = (double) SDL_GetTicks() / 1000.0;
+
 
 	if (first)
 	{
@@ -216,6 +192,10 @@ int SDL_main (int argc, char *argv[])
 #endif
 
 	Sys_Shared_EarlyInit();
+
+#ifdef WIN32
+	Cvar_RegisterVariable(&sys_usetimegettime);
+#endif
 
 	Host_Init();
 
