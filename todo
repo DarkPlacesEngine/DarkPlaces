@@ -39,7 +39,7 @@
 -f darkplaces: figure out what crashes when this sequence is done: r_speeds 1;map anything, crash (Stribbs)
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces: model interpolation off crashes?  (SeienAbunae)
-0 darkplaces: Host_Name_f validate player names, stripping \r and \n
+d darkplaces: Host_Name_f validate player names, stripping \r and \n
 0 darkplaces: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces: add DP_OGGSOUND extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 0 darkplaces: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
@@ -395,7 +395,7 @@
 7 darkplaces: mirrors (SeienAbunae)
 7 darkplaces: shadow volume clipping (romi)
 7 darkplaces: should add quake3 shader support even though the language is utterly insane
-bug darkplaces: physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
+4 darkplaces: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
 d darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
