@@ -848,6 +848,7 @@ Sends the entire command line over to the server
 */
 void Cmd_ForwardToServer (void)
 {
+	char *s;
 	if (cls.state != ca_connected)
 	{
 		Con_Printf ("Can't \"%s\", not connected\n", Cmd_Argv(0));
@@ -857,16 +858,15 @@ void Cmd_ForwardToServer (void)
 	if (cls.demoplayback)
 		return;		// not really connected
 
-	MSG_WriteByte (&cls.message, clc_stringcmd);
+	// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
+	// attention, it has been eradicated from here, its only (former) use in
+	// all of darkplaces.
 	if (strcasecmp(Cmd_Argv(0), "cmd") != 0)
-	{
-		SZ_Print (&cls.message, Cmd_Argv(0));
-		SZ_Print (&cls.message, " ");
-	}
-	if (Cmd_Argc() > 1)
-		SZ_Print (&cls.message, Cmd_Args());
+		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "\n");
 	else
-		SZ_Print (&cls.message, "\n");
+		s = va("%s", Cmd_Argc() > 1 ? Cmd_Args() : "\n");
+	MSG_WriteByte(&cls.message, clc_stringcmd);
+	SZ_Write(&cls.message, s, strlen(s) + 1);
 }
 
 
