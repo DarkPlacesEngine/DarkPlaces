@@ -15,7 +15,7 @@ qboolean in_client_mouse = true;
 float in_mouse_x, in_mouse_y;
 
 // GL_ARB_multitexture
-int gl_textureunits = 0;
+int gl_textureunits = 1;
 // GL_ARB_texture_env_combine or GL_EXT_texture_env_combine
 int gl_combine_extension = false;
 // GL_EXT_compiled_vertex_array
@@ -38,6 +38,7 @@ int gl_support_var = false;
 int gl_support_var2 = false;
 // GL_EXT_texture_filter_anisotropic
 int gl_support_anisotropy = false;
+int gl_max_anisotropy = 1;
 // GL_NV_texture_shader
 int gl_textureshader = false;
 // GL_EXT_stencil_two_side
@@ -429,13 +430,23 @@ static dllfunction_t stenciltwosidefuncs[] =
 void VID_CheckExtensions(void)
 {
 	gl_stencil = vid_bitsperpixel.integer == 32;
-	gl_combine_extension = false;
-	gl_dot3arb = false;
-	gl_supportslockarrays = false;
+
+	// reset all the gl extension variables here
+	// this should match the declarations
 	gl_textureunits = 1;
+	gl_combine_extension = false;
+	gl_supportslockarrays = false;
+	gl_videosyncavailable = false;
+	gl_stencil = false;
+	gl_texture3d = false;
+	gl_texturecubemap = false;
+	gl_dot3arb = false;
 	gl_support_clamptoedge = false;
 	gl_support_var = false;
 	gl_support_var2 = false;
+	gl_support_anisotropy = false;
+	gl_max_anisotropy = 1;
+	gl_textureshader = false;
 	gl_support_stenciltwoside = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
@@ -472,7 +483,8 @@ void VID_CheckExtensions(void)
 	if (gl_support_var)
 		gl_support_var2 = GL_CheckExtension("GL_NV_vertex_array_range2", NULL, "-novar2", false);
 
-	gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
+	if ((gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false)))
+		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);
 
 	gl_textureshader = GL_CheckExtension("GL_NV_texture_shader", NULL, "-notextureshader", false);
 

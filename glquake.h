@@ -121,6 +121,7 @@ typedef double GLclampd;
 #define GL_LINEAR_MIPMAP_LINEAR			0x2703
 
 extern int gl_support_anisotropy;
+extern int gl_max_anisotropy;
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT		0x84FE
 #define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT	0x84FF
 
