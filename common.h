@@ -199,3 +199,13 @@ extern char *gamename;
 // LordHavoc: useful...
 extern void COM_ToLowerString(char *in, char *out);
 extern void COM_ToUpperString(char *in, char *out);
+
+typedef struct stringlist_s
+{
+	struct stringlist_s *next;
+	char *text;
+} stringlist_t;
+
+int matchpattern(char *in, char *pattern);
+stringlist_t *listdirectory(char *path);
+void freedirectory(stringlist_t *list);
