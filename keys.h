@@ -131,6 +131,18 @@ extern enum {
 	K_JOY2,
 	K_JOY3,
 	K_JOY4,
+	K_JOY5,
+	K_JOY6,
+	K_JOY7,
+	K_JOY8,
+	K_JOY9,
+	K_JOY10,
+	K_JOY11,
+	K_JOY12,
+	K_JOY13,
+	K_JOY14,
+	K_JOY15,
+	K_JOY16,
 
 //
 // aux keys are for multi-buttoned joysticks to generate so they can use
