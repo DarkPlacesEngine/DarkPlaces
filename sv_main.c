@@ -1097,6 +1097,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			break;
 		VectorCopy(origin, s->origin);
 		VectorCopy(angles, s->angles);
+		if (ent->v.colormap >= 1024)
+			flags |= RENDER_COLORMAPPED;
 		s->colormap = ent->v.colormap;
 		s->skin = ent->v.skin;
 		s->frame = ent->v.frame;
