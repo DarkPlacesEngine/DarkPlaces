@@ -1041,11 +1041,14 @@ to call ED_CallSpawnFunctions () to let the objects initialize themselves.
 void ED_LoadFromFile (const char *data)
 {
 	edict_t *ent;
-	int inhibit;
+	int parsed, inhibited, spawned, died;
 	mfunction_t *func;
 
 	ent = NULL;
-	inhibit = 0;
+	parsed = 0;
+	inhibited = 0;
+	spawned = 0;
+	died = 0;
 	pr_global_struct->time = sv.time;
 
 // parse ents
@@ -1062,6 +1065,7 @@ void ED_LoadFromFile (const char *data)
 		else
 			ent = ED_Alloc ();
 		data = ED_ParseEdict (data, ent);
+		parsed++;
 
 // remove things from different skill levels or deathmatch
 		if (deathmatch.integer)
@@ -1069,7 +1073,7 @@ void ED_LoadFromFile (const char *data)
 			if (((int)ent->v->spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
 			{
 				ED_Free (ent);
-				inhibit++;
+				inhibited++;
 				continue;
 			}
 		}
@@ -1078,7 +1082,7 @@ void ED_LoadFromFile (const char *data)
 			  || (current_skill >= 2 && ((int)ent->v->spawnflags & SPAWNFLAG_NOT_HARD  )))
 		{
 			ED_Free (ent);
-			inhibit++;
+			inhibited++;
 			continue;
 		}
 
@@ -1109,9 +1113,12 @@ void ED_LoadFromFile (const char *data)
 
 		pr_global_struct->self = EDICT_TO_PROG(ent);
 		PR_ExecuteProgram (func - pr_functions, "");
+		spawned++;
+		if (ent->free)
+			died++;
 	}
 
-	Con_DPrintf ("%i entities inhibited\n", inhibit);
+	Con_DPrintf ("%i entities parsed, %i inhibited, %i spawned (%i removed self, %i stayed)\n", parsed, inhibited, spawned, died, spawned - died);
 }
 
 
