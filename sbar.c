@@ -870,6 +870,11 @@ void Sbar_Draw (void)
 	if (crosshair.integer >= 1)
 		DrawCrosshair(crosshair.integer - 1);
 
+	if (cl.intermission == 1)
+		Sbar_IntermissionOverlay();
+	else if (cl.intermission == 2)
+		Sbar_FinaleOverlay();
+
 	Sbar_ShowFPS();
 }
 
