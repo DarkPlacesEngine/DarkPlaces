@@ -1012,9 +1012,9 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 									if ((conn = NetConn_Open(mysocket, peeraddress)))
 									{
 										// allocated connection
-										strcpy(conn->address, addressstring2);
+										LHNETADDRESS_ToString(peeraddress, conn->address, sizeof(conn->address), true);
 										if (developer.integer)
-											Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", addressstring2);
+											Con_Printf("Datagram_ParseConnectionless: sending \"accept\" to %s.\n", conn->address);
 										NetConn_WriteString(mysocket, "\377\377\377\377accept", peeraddress);
 										// now set up the client struct
 										SV_ConnectClient(clientnum, conn);
