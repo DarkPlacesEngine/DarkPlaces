@@ -7,6 +7,7 @@
 
 #define DRAWQUEUE_PIC 0
 #define DRAWQUEUE_STRING 1
+#define DRAWQUEUE_MESH 2
 
 typedef struct drawqueue_s
 {
@@ -17,14 +18,31 @@ typedef struct drawqueue_s
 }
 drawqueue_t;
 
+// a triangle mesh... embedded in the drawqueue
+typedef struct drawqueuemesh_s
+{
+	rtexture_t *texture;
+	int numindices;
+	int numvertices;
+	int *indices;
+	float *vertices;
+	float *texcoords;
+	qbyte *colors;
+}
+drawqueuemesh_t;
+
 #define DRAWFLAG_ADDITIVE 1
 
+// clear the draw queue
 void DrawQ_Clear(void);
+// draw an image
 void DrawQ_Pic(float x, float y, char *picname, float width, float height, float red, float green, float blue, float alpha, int flags);
+// draw a text string
 void DrawQ_String(float x, float y, char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags);
+// draw a filled rectangle
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags);
-// only used for player config menu
-void DrawQ_PicTranslate (int x, int y, char *picname, qbyte *translation);
+// draw a triangle mesh
+void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags);
 
 void SHOWLMP_decodehide(void);
 void SHOWLMP_decodeshow(void);

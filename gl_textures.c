@@ -201,12 +201,13 @@ int R_GetTexture(rtexture_t *rt)
 	return glt->image->texnum;
 }
 
-static void R_FreeTexture(gltexture_t *glt)
+void R_FreeTexture(rtexture_t *rt)
 {
-	gltexture_t **gltpointer;
+	gltexture_t *glt, **gltpointer;
 	gltextureimage_t *image, **gltimagepointer;
 	GLuint texnum;
 
+	glt = (gltexture_t *)rt;
 	if (glt == NULL)
 		Host_Error("R_FreeTexture: texture == NULL\n");
 
@@ -293,7 +294,7 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool)
 	else
 		Host_Error("R_FreeTexturePool: pool not linked\n");
 	while (pool->gltchain)
-		R_FreeTexture(pool->gltchain);
+		R_FreeTexture((rtexture_t *)pool->gltchain);
 	if (pool->imagechain)
 		Sys_Error("R_FreeTexturePool: not all images freed\n");
 	Mem_Free(pool);
@@ -924,7 +925,7 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 			return (rtexture_t *)glt; // exact match, use existing
 		}
 		Con_Printf("R_LoadTexture: cache mismatch on %s, replacing old texture\n", identifier);
-		R_FreeTexture(glt);
+		R_FreeTexture((rtexture_t *)glt);
 	}
 
 	return (rtexture_t *)R_SetupTexture(pool, identifier, crc, width, height, flags | GLTEXF_UPLOAD, texinfo, data, NULL, NULL, 0);
@@ -958,7 +959,7 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 			return (rtexture_t *)glt; // exact match, use existing
 		}
 		Con_Printf("R_LoadTexture: cache mismatch, replacing old texture\n");
-		R_FreeTexture(glt);
+		R_FreeTexture((rtexture_t *)glt);
 	}
 
 	return (rtexture_t *)R_SetupTexture(pool, identifier, 0, width, height, flags | GLTEXF_PROCEDURAL | GLTEXF_UPLOAD, texinfo, NULL, generate, proceduraldata, proceduraldatasize);

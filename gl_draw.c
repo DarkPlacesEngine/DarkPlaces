@@ -259,6 +259,67 @@ cachepic_t	*Draw_CachePic (char *path)
 	return pic;
 }
 
+cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *pixels)
+{
+	int crc, hashkey;
+	cachepic_t *pic;
+
+	crc = CRC_Block(picname, strlen(picname));
+	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
+	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
+		if (!strcmp (picname, pic->name))
+			break;
+
+	if (pic)
+	{
+		if (pic->tex && R_TextureWidth(pic->tex) == width && R_TextureHeight(pic->tex) == height && (R_TextureHasAlpha(pic->tex) != 0) == (alpha != 0))
+		{
+			R_UpdateTexture(pic->tex, pixels);
+			return pic;
+		}
+	}
+	else
+	{
+		if (pic == NULL)
+		{
+			if (numcachepics == MAX_CACHED_PICS)
+				Sys_Error ("numcachepics == MAX_CACHED_PICS");
+			pic = cachepics + (numcachepics++);
+			strcpy (pic->name, picname);
+			// link into list
+			pic->chain = cachepichash[hashkey];
+			cachepichash[hashkey] = pic;
+		}
+	}
+
+	pic->width = width;
+	pic->height = height;
+	if (pic->tex)
+		R_FreeTexture(pic->tex);
+	pic->tex = R_LoadTexture (drawtexturepool, picname, width, height, pixels, TEXTYPE_RGBA, alpha ? TEXF_ALPHA : 0);
+	return pic;
+}
+
+void Draw_FreePic(char *picname)
+{
+	int crc;
+	int hashkey;
+	cachepic_t *pic;
+	// this doesn't really free the pic, but does free it's texture
+	crc = CRC_Block(picname, strlen(picname));
+	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
+	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
+	{
+		if (!strcmp (picname, pic->name))
+		{
+			R_FreeTexture(pic->tex);
+			pic->width = 0;
+			pic->height = 0;
+			return;
+		}
+	}
+}
+
 /*
 ===============
 Draw_Init
@@ -296,6 +357,7 @@ void GL_Draw_Init (void)
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
+extern cvar_t gl_mesh_drawmode;
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright;
@@ -305,6 +367,7 @@ void R_DrawQueue(void)
 	char *str, *currentpic;
 	int batch, batchcount, additive;
 	unsigned int color;
+	drawqueuemesh_t *mesh;
 
 	if (!r_render.integer)
 		return;
@@ -478,6 +541,78 @@ void R_DrawQueue(void)
 				}
 				x += w;
 			}
+			break;
+		case DRAWQUEUE_MESH:
+			if (batch)
+			{
+				batch = false;
+				qglEnd();
+			}
+			mesh = (void *)(dq + 1);
+			qglBindTexture(GL_TEXTURE_2D, R_GetTexture(mesh->texture));
+			if (gl_mesh_drawmode.integer > 0)
+			{
+				qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
+				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), mesh->texcoords);CHECKGLERROR
+				qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), mesh->colors);CHECKGLERROR
+				qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+				qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+			}
+			if (gl_mesh_drawmode.integer == 3 && qglDrawRangeElements == NULL)
+				Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
+
+			if (gl_mesh_drawmode.integer == 3)
+			{
+				// GL 1.2 or GL 1.1 with extension
+				qglDrawRangeElements(GL_TRIANGLES, 0, mesh->numvertices, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
+				CHECKGLERROR
+			}
+			else if (gl_mesh_drawmode.integer == 2)
+			{
+				// GL 1.1
+				qglDrawElements(GL_TRIANGLES, mesh->numindices, GL_UNSIGNED_INT, mesh->indices);
+				CHECKGLERROR
+			}
+			else if (gl_mesh_drawmode.integer == 1)
+			{
+				int i;
+				// GL 1.1
+				// feed it manually using glArrayElement
+				qglBegin(GL_TRIANGLES);
+				for (i = 0;i < mesh->numindices;i++)
+					qglArrayElement(mesh->indices[i]);
+				qglEnd();
+				CHECKGLERROR
+			}
+			else
+			{
+				int i, in;
+				// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
+				// feed it manually
+				if (gl_mesh_drawmode.integer != 0)
+					Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
+				qglBegin(GL_TRIANGLES);
+				for (i = 0;i < mesh->numindices;i++)
+				{
+					in = mesh->indices[i];
+					qglColor4ub(mesh->colors[in * 4], mesh->colors[in * 4 + 1], mesh->colors[in * 4 + 2], mesh->colors[in * 4 + 3]);
+					qglTexCoord2f(mesh->texcoords[in * 2], mesh->texcoords[in * 2 + 1]);
+					qglVertex3f(mesh->vertices[in * 3], mesh->vertices[in * 3 + 1], mesh->vertices[in * 3 + 2]);
+				}
+				qglEnd();
+				CHECKGLERROR
+			}
+			if (gl_mesh_drawmode.integer > 0)
+			{
+				qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+				qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+			}
+			// restore color, since it got trashed by using color array
+			qglColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
+			CHECKGLERROR
+			currentpic = "\0";
 			break;
 		}
 	}

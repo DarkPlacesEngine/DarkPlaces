@@ -186,6 +186,11 @@ void S_RawSamples_Enqueue(short *samples, unsigned int length);
 void S_RawSamples_Dequeue(int *samples, unsigned int length);
 // empty the rawsamples queue
 void S_RawSamples_ClearQueue(void);
+// returns how much more data the queue wants, or 0 if it is already full enough
+int S_RawSamples_QueueWantsMore(void);
+
+// resamples one sound buffer into another, while changing the length
+void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int outputlength);
 
 #endif
 

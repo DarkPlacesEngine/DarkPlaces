@@ -53,6 +53,9 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 // a procedurally generated texture, often animated over time, note: generate can be NULL (for odd uses)
 rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, int textype, int flags, int (*generate)(qbyte *buffer, int width, int height, void *parameterdata, int parameterdatasize), void *parameterdata, int parameterdatasize);
 
+// free a texture
+void R_FreeTexture(rtexture_t *rt);
+
 // update the image data of a texture, used by lightmap updates and procedural
 // textures.
 void R_UpdateTexture(rtexture_t *rt, qbyte *data);

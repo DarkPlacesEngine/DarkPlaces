@@ -7,14 +7,14 @@
 CFG=darkplaces - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "darkplaces.mak".
-!MESSAGE 
+!MESSAGE
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "darkplaces.mak" CFG="darkplaces - Win32 Debug"
-!MESSAGE 
+!MESSAGE
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
 !MESSAGE "darkplaces - Win32 Release" (based on "Win32 (x86) Application")
@@ -148,6 +148,10 @@ SOURCE=.\cl_tent.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cl_video.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cmd.c
 # End Source File
 # Begin Source File
@@ -173,6 +177,10 @@ SOURCE=.\crc.c
 # Begin Source File
 
 SOURCE=.\cvar.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\dpvsimpledecode.c
 # End Source File
 # Begin Source File
 
@@ -412,6 +420,10 @@ SOURCE=.\wad.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\wavefile.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\world.c
 # End Source File
 # Begin Source File
@@ -456,6 +468,10 @@ SOURCE=.\cl_screen.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\cl_video.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\client.h
 # End Source File
 # Begin Source File
@@ -485,6 +501,10 @@ SOURCE=.\crc.h
 # Begin Source File
 
 SOURCE=.\cvar.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\dpvsimpledecode.h
 # End Source File
 # Begin Source File
 
@@ -673,6 +693,10 @@ SOURCE=.\vid.h
 # Begin Source File
 
 SOURCE=.\wad.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\wavefile.h
 # End Source File
 # Begin Source File
 
