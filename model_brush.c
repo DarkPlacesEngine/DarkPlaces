@@ -253,6 +253,11 @@ void Mod_FindNonSolidLocation(vec3_t in, vec3_t out, model_t *model, float radiu
 {
 	int i;
 	findnonsolidlocationinfo_t info;
+	if (model == NULL)
+	{
+		VectorCopy(in, out);
+		return;
+	}
 	VectorCopy(in, info.center);
 	info.radius = radius;
 	info.model = model;
