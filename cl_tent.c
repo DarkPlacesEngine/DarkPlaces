@@ -145,7 +145,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		// LordHavoc: changed to spark shower
-		R_SparkShower(pos, vec3_origin, 15, 0);
+		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -165,7 +165,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		// LordHavoc: changed to spark shower
-		R_SparkShower(pos, vec3_origin, 15, 0);
+		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
@@ -192,7 +192,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		// LordHavoc: changed to dust shower
-		R_SparkShower(pos, vec3_origin, 30, 0);
+		R_SparkShower(pos, vec3_origin, 30);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -212,7 +212,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		// LordHavoc: changed to dust shower
-		R_SparkShower(pos, vec3_origin, 30, 0);
+		R_SparkShower(pos, vec3_origin, 30);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
@@ -242,7 +242,13 @@ void CL_ParseTEnt (void)
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
 		count = MSG_ReadByte (); // amount of particles
-		R_SparkShower(pos, dir, count, 1);
+		R_BloodPuff(pos);
+		break;
+	case TE_BLOOD2:	// blood puff
+		pos[0] = MSG_ReadCoord ();
+		pos[1] = MSG_ReadCoord ();
+		pos[2] = MSG_ReadCoord ();
+		R_BloodPuff(pos);
 		break;
 	case TE_SPARK:	// spark shower
 		pos[0] = MSG_ReadCoord ();
@@ -252,7 +258,7 @@ void CL_ParseTEnt (void)
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
 		count = MSG_ReadByte (); // amount of particles
-		R_SparkShower(pos, dir, count, 0);
+		R_SparkShower(pos, dir, count);
 		break;
 		// LordHavoc: added for improved gore
 	case TE_BLOODSHOWER:	// vaporized body
@@ -318,7 +324,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		// LordHavoc: changed to dust shower
-		R_SparkShower(pos, vec3_origin, 15, 0);
+		R_SparkShower(pos, vec3_origin, 15);
 		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
 		break;
 
@@ -326,7 +332,7 @@ void CL_ParseTEnt (void)
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_SparkShower(pos, vec3_origin, 15, 0);
+		R_SparkShower(pos, vec3_origin, 15);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 200;
