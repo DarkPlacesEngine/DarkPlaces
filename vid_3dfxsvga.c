@@ -363,8 +363,6 @@ void VID_Init(void)
 	vid.width = vid.conwidth;
 	vid.height = vid.conheight;
 
-	vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
-
 	InitSig(); // trap evil signals
 
 	GL_Init();

@@ -573,7 +573,7 @@ void Host_Loadgame_f (void)
 	str = Qgetline (f);
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++) {
 		str = Qgetline (f);
-		sscanf (str, "%f", &spawn_parms[i]);
+		sscanf (str, "%f\n", &spawn_parms[i]);
 	}
 // this silliness is so we can load 1.06 save files, which have float skill values
 	str = Qgetline (f);
@@ -582,7 +582,6 @@ void Host_Loadgame_f (void)
 	Cvar_SetValue ("skill", (float)current_skill);
 
 	strcpy (mapname, Qgetline (f));
-	mapname[strlen (mapname) -1] = 0; // strip trailing \n
 
 	str = Qgetline (f);
 	sscanf (str, "%f\n",&time);
@@ -603,7 +602,6 @@ void Host_Loadgame_f (void)
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
 		str = Qgetline (f);
-		str[strlen (str) -1] = 0; // strip trailing \n
 		sv.lightstyles[i] = Hunk_AllocName (strlen(str)+1, "lightstyles");
 		strcpy (sv.lightstyles[i], str);
 	}

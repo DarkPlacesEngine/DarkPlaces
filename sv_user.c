@@ -260,7 +260,7 @@ void SV_WaterMove (void)
 {
 	int		i;
 	vec3_t	wishvel;
-	float	speed, newspeed, wishspeed, addspeed, accelspeed;
+	float	speed, newspeed, wishspeed, addspeed, accelspeed, temp;
 
 //
 // user intentions
@@ -278,7 +278,8 @@ void SV_WaterMove (void)
 	wishspeed = Length(wishvel);
 	if (wishspeed > sv_maxspeed.value)
 	{
-		VectorScale (wishvel, sv_maxspeed.value/wishspeed, wishvel);
+		temp = sv_maxspeed.value/wishspeed;
+		VectorScale (wishvel, temp, wishvel);
 		wishspeed = sv_maxspeed.value;
 	}
 	wishspeed *= 0.7;
@@ -291,8 +292,9 @@ void SV_WaterMove (void)
 	{
 		newspeed = speed - sv.frametime * speed * sv_friction.value;
 		if (newspeed < 0)
-			newspeed = 0;	
-		VectorScale (velocity, newspeed/speed, velocity);
+			newspeed = 0;
+		temp = newspeed/speed;
+		VectorScale (velocity, temp, velocity);
 	}
 	else
 		newspeed = 0;
@@ -339,7 +341,7 @@ void SV_AirMove (void)
 {
 	int			i;
 	vec3_t		wishvel;
-	float		fmove, smove;
+	float		fmove, smove, temp;
 
 	// LordHavoc: correct quake movement speed bug when looking up/down
 	wishvel[0] = wishvel[2] = 0;
@@ -366,7 +368,8 @@ void SV_AirMove (void)
 	wishspeed = VectorNormalizeLength(wishdir);
 	if (wishspeed > sv_maxspeed.value)
 	{
-		VectorScale (wishvel, sv_maxspeed.value/wishspeed, wishvel);
+		temp = sv_maxspeed.value/wishspeed;
+		VectorScale (wishvel, temp, wishvel);
 		wishspeed = sv_maxspeed.value;
 	}
 	

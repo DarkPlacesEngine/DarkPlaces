@@ -70,11 +70,10 @@ typedef struct texture_s
 #define SURF_DRAWTILED		0x20
 #define SURF_DRAWBACKGROUND	0x40
 //#define SURF_UNDERWATER		0x80
-// LordHavoc: added these for lava and teleport textures
 #define SURF_DRAWNOALPHA	0x100
 #define SURF_DRAWFULLBRIGHT	0x200
-// LordHavoc: light both sides
-#define SURF_LIGHTBOTHSIDES		0x400
+#define SURF_LIGHTBOTHSIDES	0x400
+#define SURF_CLIPSOLID		0x800 // this polygon can obscure other polygons
 
 typedef struct
 {
@@ -89,16 +88,22 @@ typedef struct
 } mtexinfo_t;
 
 // LordHavoc: was 7, I added one more for raw lightmap position
+// (xyz st uv l)
 #define	VERTEXSIZE	8
 
 typedef struct glpoly_s
 {
 	struct	glpoly_s	*next;
-	struct	glpoly_s	*chain;
+	int		numverts;
+	float	verts[4][VERTEXSIZE];	// variable sized
+} glpoly_t;
+
+typedef struct glpolysizeof_s
+{
+	struct	glpoly_s	*next;
 	int		numverts;
 	int		flags;			// for SURF_UNDERWATER
-	float	verts[4][VERTEXSIZE];	// variable sized (xyz s1t1 s2t2)
-} glpoly_t;
+} glpolysizeof_t;
 
 typedef struct msurface_s
 {
@@ -109,7 +114,7 @@ typedef struct msurface_s
 
 	int			firstedge;	// look up in model->surfedges[], negative numbers
 	int			numedges;	// are backwards edges
-	
+
 	short		texturemins[2];
 	short		extents[2];
 
@@ -118,7 +123,7 @@ typedef struct msurface_s
 	glpoly_t	*polys;				// multiple if warped
 
 	mtexinfo_t	*texinfo;
-	
+
 // lighting info
 	int			dlightframe;
 	int			dlightbits[8];
@@ -146,7 +151,7 @@ typedef struct mnode_s
 
 // node specific
 	mplane_t	*plane;
-	struct mnode_s	*children[2];	
+	struct mnode_s	*children[2];
 
 	unsigned short		firstsurface;
 	unsigned short		numsurfaces;
@@ -163,8 +168,8 @@ typedef struct mleaf_s
 	struct mportal_s *portals;
 
 // leaf specific
-	int			visframe;		// visible if current (r_framecount)
-	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
+//	int			visframe;		// visible if current (r_framecount)
+//	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
 
 	// for bounding box culling
 	vec3_t		mins;
@@ -199,6 +204,7 @@ typedef struct mportal_s
 	mvertex_t *points;
 	int numpoints;
 	mplane_t plane;
+	int visframe; // is this portal visible this frame?
 }
 mportal_t;
 

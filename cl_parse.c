@@ -67,7 +67,7 @@ char *svc_strings[128] =
 	"svc_cutscene",
 	"svc_showlmp",	// [string] iconlabel [string] lmpfile [short] x [short] y
 	"svc_hidelmp",	// [string] iconlabel
-	"", // 37
+	"svc_skybox", // [string] skyname
 	"", // 38
 	"", // 39
 	"", // 40
@@ -246,7 +246,7 @@ void CL_ParseEntityLump(char *entdata)
 	char wadname[128];
 	int i, j, k;
 	FOG_clear(); // LordHavoc: no fog until set
-	R_SetSkyBox(""); // LordHavoc: no enviroment mapped sky until set
+	R_SetSkyBox(""); // LordHavoc: no environment mapped sky until set
 	r_farclip.value = 6144; // LordHavoc: default farclip distance
 	data = entdata;
 	if (!data)
@@ -1195,6 +1195,9 @@ void CL_ParseServerMessage (void)
 			break;
 		case svc_showlmp:
 			SHOWLMP_decodeshow();
+			break;
+		case svc_skybox:
+			R_SetSkyBox(MSG_ReadString());
 			break;
 		}
 	}

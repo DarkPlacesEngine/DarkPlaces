@@ -30,7 +30,7 @@
 #ifndef __quakeio_h
 #define __quakeio_h
 
-#define HAVE_ZLIB
+//#define HAVE_ZLIB
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"

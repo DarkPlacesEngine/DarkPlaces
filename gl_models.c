@@ -149,16 +149,16 @@ void R_AliasLerpVerts(int vertcount,
 	float *av, *avn;
 	av = aliasvert;
 	avn = aliasvertnorm;
-	VectorScaleQuick(fscale1, lerp1, scale1);
+	VectorScale(fscale1, lerp1, scale1);
 	if (lerp2)
 	{
-		VectorScaleQuick(fscale2, lerp2, scale2);
+		VectorScale(fscale2, lerp2, scale2);
 		if (lerp3)
 		{
-			VectorScaleQuick(fscale3, lerp3, scale3);
+			VectorScale(fscale3, lerp3, scale3);
 			if (lerp4)
 			{
-				VectorScaleQuick(fscale4, lerp4, scale4);
+				VectorScale(fscale4, lerp4, scale4);
 				translate[0] = translate1[0] * lerp1 + translate2[0] * lerp2 + translate3[0] * lerp3 + translate4[0] * lerp4;
 				translate[1] = translate1[1] * lerp1 + translate2[1] * lerp2 + translate3[1] * lerp3 + translate4[1] * lerp4;
 				translate[2] = translate1[2] * lerp1 + translate2[2] * lerp2 + translate3[2] * lerp3 + translate4[2] * lerp4;
@@ -563,7 +563,6 @@ void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, z
 {
 	float lerp1, lerp2, lerp3, lerp4;
 	zymbonematrix *out, rootmatrix, m, *bone1, *bone2, *bone3, *bone4;
-	lerp1 = 1 - lerp2;
 	out = zymbonepose;
 	AngleVectors(rootangles, rootmatrix.m[0], rootmatrix.m[1], rootmatrix.m[2]);
 	VectorScale(rootmatrix.m[0], rootscale, rootmatrix.m[0]);
@@ -753,19 +752,11 @@ void ZymoticTransformVerts(int vertcount, int *bonecounts, zymvertex_t *vert)
 	}
 }
 
-float ixtable[4096];
-
 void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 {
 	int a, b, c, d;
 	float *out, v1[3], v2[3], normal[3];
 	int *u;
-	if (!ixtable[1])
-	{
-		ixtable[0] = 0;
-		for (a = 1;a < 4096;a++)
-			ixtable[a] = 1.0f / a;
-	}
 	// clear normals
 	memset(aliasvertnorm, 0, sizeof(float[3]) * vertcount);
 	memset(aliasvertusage, 0, sizeof(int) * vertcount);
@@ -947,8 +938,8 @@ void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, f
 	VectorAdd (org, clmodel->mins, mins);
 	VectorAdd (org, clmodel->maxs, maxs);
 
-	if (cull && R_VisibleCullBox (mins, maxs))
-		return;
+//	if (cull && R_CullBox (mins, maxs))
+//		return;
 
 	c_models++;
 

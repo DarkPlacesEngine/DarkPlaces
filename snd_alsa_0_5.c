@@ -320,7 +320,7 @@ void SNDDMA_Submit(void)
 	switch (mmap_control->status.status) {
 	case SND_PCM_STATUS_PREPARED:
 		if ((rc=snd_pcm_channel_go(pcm_handle, SND_PCM_CHANNEL_PLAYBACK))<0) {
-			Qprintf(stderr, "unable to start playback. %s\n",
+			fprintf(stderr, "unable to start playback. %s\n",
 					snd_strerror(rc));
 			exit(1);
 		}
@@ -329,7 +329,7 @@ void SNDDMA_Submit(void)
 		break;
 	case SND_PCM_STATUS_UNDERRUN:
 		if ((rc=snd_pcm_plugin_prepare(pcm_handle, SND_PCM_CHANNEL_PLAYBACK))<0) {
-			Qprintf(stderr, "underrun: playback channel prepare error. %s\n",
+			fprintf(stderr, "underrun: playback channel prepare error. %s\n",
 					snd_strerror(rc));
 			exit(1);
 		}

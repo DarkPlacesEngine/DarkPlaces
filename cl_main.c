@@ -667,8 +667,16 @@ void CL_RelinkEntities (void)
 			CL_AllocDlight (ent, ent->render.origin, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
 		}
 
-		if (!chase_active.value && ((i == cl.viewentity) || (ent->render.flags & RENDER_EXTERIORMODEL)))
-			continue;
+		if (chase_active.value)
+		{
+			if (ent->render.flags & RENDER_VIEWMODEL)
+				continue;
+		}
+		else
+		{
+			if (i == cl.viewentity || (ent->render.flags & RENDER_EXTERIORMODEL))
+				continue;
+		}
 
 		if (ent->render.model == NULL)
 			continue;

@@ -1392,7 +1392,6 @@ void SV_SpawnServer (char *server)
 	ent->v.modelindex = 1;		// world model
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
-	ent->v.angles[0] = ent->v.angles[1] = ent->v.angles[2] = 0;
 
 	if (coop.value)
 		pr_global_struct->coop = coop.value;
@@ -1406,7 +1405,7 @@ void SV_SpawnServer (char *server)
 	
 	ED_LoadFromFile (sv.worldmodel->entities);
 	// LordHavoc: clear world angles (to fix e3m3.bsp)
-	sv.edicts->v.angles[0] = sv.edicts->v.angles[1] = sv.edicts->v.angles[2] = 0;
+	VectorClear(sv.edicts->v.angles);
 
 	sv.active = true;
 

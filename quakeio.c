@@ -377,16 +377,18 @@ Qgetline (QFile *file)
 		return 0;
 
 	len = strlen (buf);
-	while (buf[len - 1] != '\n') {
+	while (buf[len - 1] != '\n' && buf[len - 1] != '\r') {
 		char       *t = realloc (buf, size + 256);
 
 		if (!t)
-			return 0;
+			Host_Error("Qgetline: realloc failed, out of memory?\n");
 		buf = t;
 		size += 256;
 		if (!Qgets (file, buf + len, size - len))
 			break;
 		len = strlen (buf);
 	}
+	while ((len = strlen(buf)) && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
+		buf[len - 1] = 0;
 	return buf;
 }

@@ -408,10 +408,10 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 		}
 	}
 outofdata:;
-	
+
 	image_width = columns;
 	image_height = rows;
-	free(f);
+	qfree(f);
 	return image_rgba;
 }
 

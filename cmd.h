@@ -91,14 +91,6 @@ char 	*Cmd_CompleteCommand (char *partial);
 // attempts to match a partial command for automatic command line completion
 // returns NULL if nothing fits
 
-int		Cmd_CompleteAliasCountPossible (char *partial);
-char	**Cmd_CompleteAliasBuildList (char *partial);
-int		Cmd_CompleteCountPossible (char *partial);
-char	**Cmd_CompleteBuildList (char *partial);
-char	*Cmd_CompleteAlias (char *partial);
-// Enhanced console completion by Fett erich@heintz.com
-// Added by EvilTypeGuy eviltypeguy@qeradiant.com
-
 int		Cmd_Argc (void);
 char	*Cmd_Argv (int arg);
 char	*Cmd_Args (void);

@@ -56,58 +56,47 @@ void SZ_Print (sizebuf_t *buf, char *data);	// strcats onto the sizebuf
 
 //============================================================================
 
-typedef struct link_s
-{
-	struct link_s	*prev, *next;
-} link_t;
-
-
-void ClearLink (link_t *l);
-void RemoveLink (link_t *l);
-void InsertLinkBefore (link_t *l, link_t *before);
-void InsertLinkAfter (link_t *l, link_t *after);
-
-// (type *)STRUCT_FROM_LINK(link_t *link, type, member)
-// ent = STRUCT_FROM_LINK(link,entity_t,order)
-// FIXME: remove this mess!
-#define	STRUCT_FROM_LINK(l,t,m) ((t *)((byte *)l - (int)&(((t *)0)->m)))
-
-//============================================================================
-
 #ifndef NULL
 #define NULL ((void *)0)
 #endif
 
-#define Q_MAXCHAR ((char)0x7f)
-#define Q_MAXSHORT ((short)0x7fff)
-#define Q_MAXINT	((int)0x7fffffff)
-#define Q_MAXLONG ((int)0x7fffffff)
-#define Q_MAXFLOAT ((int)0x7fffffff)
-
-#define Q_MINCHAR ((char)0x80)
-#define Q_MINSHORT ((short)0x8000)
-#define Q_MININT 	((int)0x80000000)
-#define Q_MINLONG ((int)0x80000000)
-#define Q_MINFLOAT ((int)0x7fffffff)
-
 //============================================================================
-#ifdef WIN32
-short   ShortSwap (short l);
-int    LongSwap (int l);
+#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
+#if  defined(__i386__) || defined(__ia64__) || defined(WIN32) || (defined(__alpha__) || defined(__alpha)) || defined(__arm__) || (defined(__mips__) && defined(__MIPSEL__)) || defined(__LITTLE_ENDIAN__)
+#define ENDIAN_LITTLE
+#else
+#define ENDIAN_BIG
+#endif
+#endif
+
+short ShortSwap (short l);
+int LongSwap (int l);
 float FloatSwap (float f);
+
+#ifdef ENDIAN_LITTLE
+// little endian
 #define BigShort(l) ShortSwap(l)
 #define LittleShort(l) (l)
 #define BigLong(l) LongSwap(l)
 #define LittleLong(l) (l)
 #define BigFloat(l) FloatSwap(l)
 #define LittleFloat(l) (l)
+#elif ENDIAN_BIG
+// big endian
+#define BigShort(l) (l)
+#define LittleShort(l) ShortSwap(l)
+#define BigLong(l) (l)
+#define LittleLong(l) LongSwap(l)
+#define BigFloat(l) (l)
+#define LittleFloat(l) FloatSwap(l)
 #else
-extern	short	(*BigShort) (short l);
-extern	short	(*LittleShort) (short l);
-extern	int	(*BigLong) (int l);
-extern	int	(*LittleLong) (int l);
-extern	float	(*BigFloat) (float l);
-extern	float	(*LittleFloat) (float l);
+// figure it out at runtime
+extern short (*BigShort) (short l);
+extern short (*LittleShort) (short l);
+extern int (*BigLong) (int l);
+extern int (*LittleLong) (int l);
+extern float (*BigFloat) (float l);
+extern float (*LittleFloat) (float l);
 #endif
 
 //============================================================================

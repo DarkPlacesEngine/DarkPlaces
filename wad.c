@@ -183,7 +183,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	QFile			*file;
 	int				numlumps;
 	
-	COM_FOpenFile (filename, &file, false, true);
+	COM_FOpenFile (filename, &file, false, false);
 	if (!file)
 	{
 		if (complain)

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -28,6 +28,55 @@ entities never clip against themselves, or their owner
 line of sight checks trace->crosscontent, but bullets don't
 
 */
+
+/*
+typedef struct link_s
+{
+	struct link_s	*prev, *next;
+} link_t;
+*/
+
+
+void ClearLink (link_t *l);
+void RemoveLink (link_t *l);
+void InsertLinkBefore (link_t *l, link_t *before);
+void InsertLinkAfter (link_t *l, link_t *after);
+
+// (type *)STRUCT_FROM_LINK(link_t *link, type, member)
+// ent = STRUCT_FROM_LINK(link,entity_t,order)
+// FIXME: remove this mess!
+//#define	STRUCT_FROM_LINK(l,t,m) ((t *)((byte *)l - (int)&(((t *)0)->m)))
+
+#define	EDICT_FROM_AREA(l) ((edict_t *)((byte *)l - (int)&(((edict_t *)0)->area)))
+
+//============================================================================
+
+// ClearLink is used for new headnodes
+void ClearLink (link_t *l)
+{
+	l->prev = l->next = l;
+}
+
+void RemoveLink (link_t *l)
+{
+	l->next->prev = l->prev;
+	l->prev->next = l->next;
+}
+
+void InsertLinkBefore (link_t *l, link_t *before)
+{
+	l->next = before;
+	l->prev = before->prev;
+	l->prev->next = l;
+	l->next->prev = l;
+}
+void InsertLinkAfter (link_t *l, link_t *after)
+{
+	l->next = after->next;
+	l->prev = after;
+	l->prev->next = l;
+	l->next->prev = l;
+}
 
 
 typedef struct
@@ -183,7 +232,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 		VectorSubtract (ent->v.mins, maxs, hullmins);
 		VectorSubtract (ent->v.maxs, mins, hullmaxs);
 		hull = SV_HullForBox (hullmins, hullmaxs);
-		
+
 		VectorCopy (ent->v.origin, offset);
 	}
 
@@ -231,28 +280,28 @@ areanode_t *SV_CreateAreaNode (int depth, vec3_t mins, vec3_t maxs)
 
 	ClearLink (&anode->trigger_edicts);
 	ClearLink (&anode->solid_edicts);
-	
+
 	if (depth == AREA_DEPTH)
 	{
 		anode->axis = -1;
 		anode->children[0] = anode->children[1] = NULL;
 		return anode;
 	}
-	
+
 	VectorSubtract (maxs, mins, size);
 	if (size[0] > size[1])
 		anode->axis = 0;
 	else
 		anode->axis = 1;
-	
+
 	anode->dist = 0.5 * (maxs[anode->axis] + mins[anode->axis]);
-	VectorCopy (mins, mins1);	
-	VectorCopy (mins, mins2);	
-	VectorCopy (maxs, maxs1);	
-	VectorCopy (maxs, maxs2);	
-	
+	VectorCopy (mins, mins1);
+	VectorCopy (mins, mins2);
+	VectorCopy (maxs, maxs1);
+	VectorCopy (maxs, maxs2);
+
 	maxs1[anode->axis] = mins2[anode->axis] = anode->dist;
-	
+
 	anode->children[0] = SV_CreateAreaNode (depth+1, mins2, maxs2);
 	anode->children[1] = SV_CreateAreaNode (depth+1, mins1, maxs1);
 
@@ -268,7 +317,7 @@ SV_ClearWorld
 void SV_ClearWorld (void)
 {
 	SV_InitBoxHull ();
-	
+
 	memset (sv_areanodes, 0, sizeof(sv_areanodes));
 	sv_numareanodes = 0;
 	SV_CreateAreaNode (0, sv.worldmodel->mins, sv.worldmodel->maxs);
@@ -312,11 +361,11 @@ loc0:
 		if (!touch->v.touch || touch->v.solid != SOLID_TRIGGER)
 			continue;
 		if (ent->v.absmin[0] > touch->v.absmax[0]
-		|| ent->v.absmin[1] > touch->v.absmax[1]
-		|| ent->v.absmin[2] > touch->v.absmax[2]
-		|| ent->v.absmax[0] < touch->v.absmin[0]
-		|| ent->v.absmax[1] < touch->v.absmin[1]
-		|| ent->v.absmax[2] < touch->v.absmin[2] )
+		 || ent->v.absmin[1] > touch->v.absmax[1]
+		 || ent->v.absmin[2] > touch->v.absmax[2]
+		 || ent->v.absmax[0] < touch->v.absmin[0]
+		 || ent->v.absmax[1] < touch->v.absmin[1]
+		 || ent->v.absmax[2] < touch->v.absmin[2])
 			continue;
 		old_self = pr_global_struct->self;
 		old_other = pr_global_struct->other;
@@ -329,11 +378,11 @@ loc0:
 		pr_global_struct->self = old_self;
 		pr_global_struct->other = old_other;
 	}
-	
+
 // recurse down both sides
 	if (node->axis == -1)
 		return;
-	
+
 	// LordHavoc: optimized recursion
 //	if (ent->v.absmax[node->axis] > node->dist) SV_TouchLinks (ent, node->children[0]);
 //	if (ent->v.absmin[node->axis] < node->dist) SV_TouchLinks (ent, node->children[1]);
@@ -363,15 +412,10 @@ SV_FindTouchedLeafs
 */
 void SV_FindTouchedLeafs (edict_t *ent, mnode_t *node)
 {
-	mplane_t	*splitplane;
-	mleaf_t		*leaf;
-	int			sides;
-	int			leafnum;
-
 loc0:
 	if (node->contents == CONTENTS_SOLID)
 		return;
-	
+
 // add an efrag if the node is a leaf
 
 	if ( node->contents < 0)
@@ -382,24 +426,18 @@ loc0:
 			return;
 		}
 
-		leaf = (mleaf_t *)node;
-		leafnum = leaf - sv.worldmodel->leafs - 1;
-
-		ent->leafnums[ent->num_leafs] = leafnum;
-		ent->num_leafs++;			
+		ent->leafnums[ent->num_leafs++] = (mleaf_t *)node - sv.worldmodel->leafs - 1;
 		return;
 	}
-	
-// NODE_MIXED
 
-	splitplane = node->plane;
-	sides = BOX_ON_PLANE_SIDE(ent->v.absmin, ent->v.absmax, splitplane);
-	
 // recurse down the contacted sides
-	// LordHavoc: optimized recursion
+
+//	sides = BOX_ON_PLANE_SIDE(ent->v.absmin, ent->v.absmax, node->plane);
 //	if (sides & 1) SV_FindTouchedLeafs (ent, node->children[0]);
 //	if (sides & 2) SV_FindTouchedLeafs (ent, node->children[1]);
-	switch (sides)
+
+	// LordHavoc: optimized recursion
+	switch (BOX_ON_PLANE_SIDE(ent->v.absmin, ent->v.absmax, node->plane))
 	{
 	case 1:
 		node = node->children[0];
@@ -438,7 +476,8 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 
 // LordHavoc: enabling rotating bmodels
 	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
-	{	// expand for rotation
+	{
+		// expand for rotation
 		float		max, v;
 		int			i;
 
@@ -467,7 +506,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 	}
 	else
 	{
-		VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);	
+		VectorAdd (ent->v.origin, ent->v.mins, ent->v.absmin);
 		VectorAdd (ent->v.origin, ent->v.maxs, ent->v.absmax);
 	}
 
@@ -483,7 +522,8 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 		ent->v.absmax[1] += 15;
 	}
 	else
-	{	// because movement is clipped an epsilon away from an actual edge,
+	{
+		// because movement is clipped an epsilon away from an actual edge,
 		// we must fully check even when bounding boxes don't quite touch
 		ent->v.absmin[0] -= 1;
 		ent->v.absmin[1] -= 1;
@@ -515,13 +555,13 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 			break;		// crosses the node
 	}
 
-// link it in	
+// link it in
 
 	if (ent->v.solid == SOLID_TRIGGER)
 		InsertLinkBefore (&ent->area, &node->trigger_edicts);
 	else
 		InsertLinkBefore (&ent->area, &node->solid_edicts);
-	
+
 // if touch_triggers, touch all entities at this node and descend for more
 	if (touch_triggers)
 		SV_TouchLinks ( ent, sv_areanodes );
@@ -547,7 +587,7 @@ int SV_HullPointContents (hull_t *hull, int num, vec3_t p)
 {
 	while (num >= 0)
 		num = hull->clipnodes[num].children[(hull->planes[hull->clipnodes[num].planenum].type < 3 ? p[hull->planes[hull->clipnodes[num].planenum].type] : DotProduct (hull->planes[hull->clipnodes[num].planenum].normal, p)) < hull->planes[hull->clipnodes[num].planenum].dist];
-	
+
 	return num;
 }
 
@@ -563,7 +603,7 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 	trace_t	trace;
 
 	trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, ent->v.origin, 0, ent);
-	
+
 	if (trace.startsolid)
 		return sv.edicts;
 		
@@ -1031,14 +1071,14 @@ loc0:
 			continue;
 
 		if (clip->boxmins[0] > touch->v.absmax[0]
-		|| clip->boxmins[1] > touch->v.absmax[1]
-		|| clip->boxmins[2] > touch->v.absmax[2]
-		|| clip->boxmaxs[0] < touch->v.absmin[0]
-		|| clip->boxmaxs[1] < touch->v.absmin[1]
-		|| clip->boxmaxs[2] < touch->v.absmin[2] )
+		 || clip->boxmins[1] > touch->v.absmax[1]
+		 || clip->boxmins[2] > touch->v.absmax[2]
+		 || clip->boxmaxs[0] < touch->v.absmin[0]
+		 || clip->boxmaxs[1] < touch->v.absmin[1]
+		 || clip->boxmaxs[2] < touch->v.absmin[2])
 			continue;
 
-		if (clip->passedict!=0 && clip->passedict->v.size[0] && !touch->v.size[0])
+		if (clip->passedict != NULL && clip->passedict->v.size[0] && !touch->v.size[0])
 			continue;	// points never interact
 
 	// might intersect, so do an exact clip
@@ -1075,7 +1115,7 @@ loc0:
 		else if (trace.startsolid)
 			clip->trace.startsolid = true;
 	}
-	
+
 // recurse down both sides
 	if (node->axis == -1)
 		return;

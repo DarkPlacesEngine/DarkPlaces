@@ -48,19 +48,16 @@ void R_Envmap_f (void)
 	r_refdef.viewangles[0] = 0;
 	r_refdef.viewangles[1] = 0;
 	r_refdef.viewangles[2] = 0;
-	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
 	R_RenderView ();
 	glReadPixels (0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	COM_WriteFile ("env0.rgb", buffer, sizeof(buffer));		
 
 	r_refdef.viewangles[1] = 90;
-	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
 	R_RenderView ();
 	glReadPixels (0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	COM_WriteFile ("env1.rgb", buffer, sizeof(buffer));		
 
 	r_refdef.viewangles[1] = 180;
-	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
 	R_RenderView ();
 	glReadPixels (0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	COM_WriteFile ("env2.rgb", buffer, sizeof(buffer));		
@@ -73,14 +70,12 @@ void R_Envmap_f (void)
 
 	r_refdef.viewangles[0] = -90;
 	r_refdef.viewangles[1] = 0;
-	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
 	R_RenderView ();
 	glReadPixels (0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	COM_WriteFile ("env4.rgb", buffer, sizeof(buffer));		
 
 	r_refdef.viewangles[0] = 90;
 	r_refdef.viewangles[1] = 0;
-	GL_BeginRendering (&glx, &gly, &glwidth, &glheight);
 	R_RenderView ();
 	glReadPixels (0, 0, 256, 256, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
 	COM_WriteFile ("env5.rgb", buffer, sizeof(buffer));		
@@ -132,10 +127,6 @@ void R_NewMap (void)
 	
 	for (i=0 ; i<256 ; i++)
 		d_lightstylevalue[i] = 264;		// normal light value
-
-	memset (&r_worldentity, 0, sizeof(r_worldentity));
-	r_worldentity.render.model = cl.worldmodel;
-	currententity = &r_worldentity;
 
 	r_viewleaf = NULL;
 	R_Modules_NewMap();

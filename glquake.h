@@ -73,7 +73,6 @@ extern void R_TimeRefresh_f (void);
 //====================================================
 
 
-extern	entity_t	r_worldentity;
 extern	qboolean	r_cache_thrash;		// compatability
 extern	vec3_t		modelorg, r_entorigin;
 extern	entity_t	*currententity;
@@ -156,40 +155,3 @@ extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 //#endif
 
 #endif
-
-// LordHavoc: vertex transform
-#include "transform.h"
-
-// LordHavoc: transparent polygon system
-#include "gl_poly.h"
-
-#define gl_solid_format 3
-#define gl_alpha_format 4
-
-//#define PARANOID
-
-// LordHavoc: was a major time waster
-#define R_CullBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) == 2 || frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) == 2 || frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) == 2 || frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) == 2)
-#define R_NotCulledBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) != 2 && frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) != 2 && frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) != 2 && frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) != 2)
-
-extern qboolean fogenabled;
-extern vec3_t fogcolor;
-extern vec_t fogdensity;
-//#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2])*(((v)[0] - r_origin[0]) * vpn[0] + ((v)[1] - r_origin[1]) * vpn[1] + ((v)[2] - r_origin[2]) * vpn[2]))))
-#define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0])*((v)[0] - r_origin[0])+((v)[1] - r_origin[1])*((v)[1] - r_origin[1])+((v)[2] - r_origin[2])*((v)[2] - r_origin[2])))))
-#define calcfogbyte(v) ((byte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
-
-#include "r_modules.h"
-
-extern qboolean lighthalf;
-
-#include "r_lerpanim.h"
-
-void GL_LockArray(int first, int count);
-void GL_UnlockArray(void);
-
-void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, frameblend_t *blend, int skin, vec3_t org, vec3_t angles, vec_t scale, int effects, int flags, int colormap);
-
-extern cvar_t r_render;
-extern cvar_t r_upload;
-#include "image.h"
