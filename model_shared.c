@@ -264,7 +264,7 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	{
 		if (checkdisk)
 		{
-			buf = FS_LoadFile (mod->name, false);
+			buf = FS_LoadFile (mod->name, tempmempool, false);
 			if (!buf)
 			{
 				if (crash)
@@ -289,7 +289,7 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 
 	if (!buf)
 	{
-		buf = FS_LoadFile (mod->name, false);
+		buf = FS_LoadFile (mod->name, tempmempool, false);
 		if (!buf)
 		{
 			if (crash)
@@ -1107,7 +1107,7 @@ tag_torso,
 */
 	memset(tagsets, 0, sizeof(tagsets));
 	memset(word, 0, sizeof(word));
-	for (i = 0;i < MAX_SKINS && (data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), true));i++)
+	for (i = 0;i < MAX_SKINS && (data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true));i++)
 	{
 		numtags = 0;
 		skinfile = Mem_Alloc(tempmempool, sizeof(skinfile_t));

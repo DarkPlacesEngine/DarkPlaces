@@ -380,7 +380,7 @@ sfxcache_t *OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		return NULL;
 
 	// Load the file
-	data = FS_LoadFile (filename, false);
+	data = FS_LoadFile (filename, tempmempool, false);
 	if (data == NULL)
 		return NULL;
 

@@ -655,7 +655,7 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	for (i = 0;imageformats[i].formatstring;i++)
 	{
 		sprintf (name, imageformats[i].formatstring, basename);
-		f = FS_LoadFile(name, true);
+		f = FS_LoadFile(name, tempmempool, true);
 		if (f)
 		{
 			data = imageformats[i].loadfunc(f, matchwidth, matchheight);

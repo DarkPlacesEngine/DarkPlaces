@@ -2266,7 +2266,7 @@ void VM_loadfromfile(void)
 	}
 
 	// not conform with VM_fopen
-	data = FS_LoadFile(filename, false);
+	data = FS_LoadFile(filename, tempmempool, false);
 	if (data == NULL)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	

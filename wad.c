@@ -73,7 +73,7 @@ void *W_GetLumpName(char *name)
 	if (!wad_loaded)
 	{
 		wad_loaded = true;
-		if ((temp = FS_LoadFile ("gfx.wad", false)))
+		if ((temp = FS_LoadFile ("gfx.wad", tempmempool, false)))
 		{
 			if (memcmp(temp, "WAD2", 4))
 				Con_Print("gfx.wad doesn't have WAD2 id\n");

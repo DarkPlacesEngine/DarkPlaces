@@ -1719,7 +1719,7 @@ Filename are relative to the quake directory.
 Always appends a 0 byte.
 ============
 */
-qbyte *FS_LoadFile (const char *path, qboolean quiet)
+qbyte *FS_LoadFile (const char *path, mempool_t *pool, qboolean quiet)
 {
 	qfile_t *h;
 	qbyte *buf;
@@ -1729,7 +1729,7 @@ qbyte *FS_LoadFile (const char *path, qboolean quiet)
 	if (!h)
 		return NULL;
 
-	buf = Mem_Alloc(tempmempool, fs_filesize+1);
+	buf = Mem_Alloc(pool, fs_filesize+1);
 	if (!buf)
 		Sys_Error ("FS_LoadFile: not enough available memory for %s (size %i)", path, fs_filesize);
 

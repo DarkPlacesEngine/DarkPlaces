@@ -1269,20 +1269,14 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	int i;
 	dstatement_t *st;
 	ddef_t *infielddefs;
-	void *temp;
 	dfunction_t *dfunctions;
 
 	Mem_EmptyPool(prog->progs_mempool);
 	Mem_EmptyPool(prog->edictstring_mempool);
 
-	temp = FS_LoadFile (filename, false);
-	if (temp == 0)
+	prog->progs = (dprograms_t *)FS_LoadFile (filename, prog->progs_mempool, false);
+	if (prog->progs == NULL)
 		PRVM_ERROR ("PRVM_LoadProgs: couldn't load %s for %s", filename, PRVM_NAME);
-
-	prog->progs = (dprograms_t *)Mem_Alloc(prog->progs_mempool, fs_filesize);
-
-	memcpy(prog->progs, temp, fs_filesize);
-	Mem_Free(temp);
 
 	Con_DPrintf("%s programs occupy %iK.\n", PRVM_NAME, fs_filesize/1024);
 
