@@ -20,10 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sv_main.c -- server main program
 
 #include "quakedef.h"
-#include "portals.h"
 
 static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "0"}; // fast but loose
-static cvar_t sv_cullentities_portal = {0, "sv_cullentities_portal", "0"}; // extremely accurate visibility checking, but too slow
 static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "1"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
 static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
 static cvar_t sv_entpatch = {0, "sv_entpatch", "1"};
@@ -62,7 +60,6 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&sv_deltacompress);
 	Cvar_RegisterVariable (&sv_cullentities_pvs);
-	Cvar_RegisterVariable (&sv_cullentities_portal);
 	Cvar_RegisterVariable (&sv_cullentities_trace);
 	Cvar_RegisterVariable (&sv_cullentities_stats);
 	Cvar_RegisterVariable (&sv_entpatch);
@@ -387,7 +384,7 @@ SV_WriteEntitiesToClient
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
 	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects, lightsize;
-	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
+	int culled_pvs, culled_trace, visibleentities, totalentities;
 	qbyte *pvs;
 	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
 	float nextfullupdate, alphaf;
@@ -405,7 +402,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		fatbytes = sv.worldmodel->brush.FatPVS(sv.worldmodel, testeye, 8, sv_writeentitiestoclient_pvs, sizeof(sv_writeentitiestoclient_pvs));
 
 	culled_pvs = 0;
-	culled_portal = 0;
 	culled_trace = 0;
 	visibleentities = 0;
 	totalentities = 0;
@@ -506,13 +502,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			if (sv_cullentities_pvs.integer && fatbytes && sv.worldmodel && sv.worldmodel->brush.BoxTouchingPVS && !sv.worldmodel->brush.BoxTouchingPVS(sv.worldmodel, sv_writeentitiestoclient_pvs, entmins, entmaxs))
 			{
 				culled_pvs++;
-				continue;
-			}
-
-			// or not visible through the portals
-			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, testeye, entmins, entmaxs))
-			{
-				culled_portal++;
 				continue;
 			}
 
@@ -713,7 +702,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	}
 
 	if (sv_cullentities_stats.integer)
-		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_portal + culled_trace, culled_pvs, culled_portal, culled_trace);
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_trace, culled_pvs, culled_trace);
 }
 #else
 static int numsendentities;
@@ -833,7 +822,6 @@ static int sententitiesmark = 0;
 static int sententities[MAX_EDICTS];
 static int sententitiesconsideration[MAX_EDICTS];
 static int sv_writeentitiestoclient_culled_pvs;
-static int sv_writeentitiestoclient_culled_portal;
 static int sv_writeentitiestoclient_culled_trace;
 static int sv_writeentitiestoclient_visibleentities;
 static int sv_writeentitiestoclient_totalentities;
@@ -924,12 +912,6 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				sv_writeentitiestoclient_culled_pvs++;
 				return;
 			}
-			// or not visible through the portals
-			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, sv_writeentitiestoclient_testeye, lightmins, lightmaxs))
-			{
-				sv_writeentitiestoclient_culled_portal++;
-				return;
-			}
 			// or not seen by random tracelines
 			if (sv_cullentities_trace.integer)
 			{
@@ -1000,7 +982,6 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	sv_writeentitiestoclient_client = client;
 
 	sv_writeentitiestoclient_culled_pvs = 0;
-	sv_writeentitiestoclient_culled_portal = 0;
 	sv_writeentitiestoclient_culled_trace = 0;
 	sv_writeentitiestoclient_visibleentities = 0;
 	sv_writeentitiestoclient_totalentities = 0;
@@ -1109,7 +1090,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	d->currentcommit = NULL;
 
 	if (sv_cullentities_stats.integer)
-		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_portal + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_portal, sv_writeentitiestoclient_culled_trace);
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
 }
 #endif
 
@@ -1836,7 +1817,7 @@ void SV_SpawnServer (const char *server)
 
 	sv.model_precache[0] = "";
 	sv.model_precache[1] = sv.modelname;
-	for (i = 1;i < sv.worldmodel->brushq1.numsubmodels;i++)
+	for (i = 1;i < sv.worldmodel->brush.numsubmodels;i++)
 	{
 		sv.model_precache[i+1] = localmodels[i];
 		sv.models[i+1] = Mod_ForName (localmodels[i], false, false, false);

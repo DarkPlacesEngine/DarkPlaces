@@ -1297,7 +1297,7 @@ void PF_precache_model (void)
 		Host_Error ("PF_Precache_*: Precache can only be done in spawn functions");
 
 	s = G_STRING(OFS_PARM0);
-	if (sv.worldmodel->brushq1.ishlbsp && ((!s) || (!s[0])))
+	if (sv.worldmodel->brush.ishlbsp && ((!s) || (!s[0])))
 		return;
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 	PR_CheckEmptyString (s);

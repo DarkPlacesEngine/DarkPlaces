@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef RENDER_H
 #define RENDER_H
 
+extern qbyte r_pvsbits[(MAX_MAP_LEAFS+7)>>3];
+
 extern matrix4x4_t r_identitymatrix;
 
 // 1.0f / N table
@@ -122,9 +124,6 @@ void R_DrawExplosions(void);
 //#define PARANOID 1
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
-int PVS_CullBox(const vec3_t mins, const vec3_t maxs);
-int R_CullSphere(const vec3_t origin, vec_t radius);
-int PVS_CullSphere(const vec3_t origin, vec_t radius);
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;

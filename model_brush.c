@@ -64,6 +64,25 @@ static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 	return (mleaf_t *)node;
 }
 
+static void Mod_Q1BSP_AmbientSoundLevelsForPoint(model_t *model, const vec3_t p, qbyte *out, int outsize)
+{
+	int i;
+	mleaf_t *leaf;
+	leaf = Mod_Q1BSP_PointInLeaf(model, p);
+	if (leaf)
+	{
+		i = min(outsize, (int)sizeof(leaf->ambient_sound_level));;
+		if (i)
+		{
+			memcpy(out, leaf->ambient_sound_level, i);
+			out += i;
+			outsize -= i;
+		}
+	}
+	if (outsize)
+		memset(out, 0, outsize);
+}
+
 
 static int Mod_Q1BSP_BoxTouchingPVS_RecursiveBSPNode(const model_t *model, const mnode_t *node, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
@@ -478,7 +497,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3
 	VectorSubtract(boxstartmaxs, boxstartmins, boxsize);
 	if (boxsize[0] < 3)
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
-	else if (model->brushq1.ishlbsp)
+	else if (model->brush.ishlbsp)
 	{
 		if (boxsize[0] <= 32)
 		{
@@ -766,7 +785,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 
 		// LordHavoc: HL sky textures are entirely different than quake
-		if (!loadmodel->brushq1.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
+		if (!loadmodel->brush.ishlbsp && !strncmp(tx->name, "sky", 3) && mtwidth == 256 && mtheight == 128)
 		{
 			if (loadmodel->isworldmodel)
 			{
@@ -795,7 +814,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true))
 			{
 				// did not find external texture, load it from the bsp or wad3
-				if (loadmodel->brushq1.ishlbsp)
+				if (loadmodel->brush.ishlbsp)
 				{
 					// internal texture overrides wad
 					qbyte *pixels, *freepixels, *fogpixels;
@@ -977,7 +996,7 @@ static void Mod_Q1BSP_LoadLighting(lump_t *l)
 	qbyte *in, *out, *data, d;
 	char litfilename[1024];
 	loadmodel->brushq1.lightdata = NULL;
-	if (loadmodel->brushq1.ishlbsp) // LordHavoc: load the colored lighting data straight
+	if (loadmodel->brush.ishlbsp) // LordHavoc: load the colored lighting data straight
 	{
 		loadmodel->brushq1.lightdata = Mem_Alloc(loadmodel->mempool, l->filelen);
 		memcpy(loadmodel->brushq1.lightdata, mod_base + l->fileofs, l->filelen);
@@ -1094,265 +1113,6 @@ static void Mod_Q1BSP_LoadLightList(void)
 	}
 }
 
-/*
-static int castshadowcount = 0;
-static void Mod_Q1BSP_ProcessLightList(void)
-{
-	int j, k, l, *mark, lnum;
-	mlight_t *e;
-	msurface_t *surf;
-	float dist;
-	mleaf_t *leaf;
-	qbyte *pvs;
-	vec3_t temp;
-	float *v, radius2;
-	for (lnum = 0, e = loadmodel->brushq1.lights;lnum < loadmodel->brushq1.numlights;lnum++, e++)
-	{
-		e->cullradius2 = DotProduct(e->light, e->light) / (e->falloff * e->falloff * 8192.0f * 8192.0f * 2.0f * 2.0f);// + 4096.0f;
-		if (e->cullradius2 > 4096.0f * 4096.0f)
-			e->cullradius2 = 4096.0f * 4096.0f;
-		e->cullradius = e->lightradius = sqrt(e->cullradius2);
-		leaf = Mod_Q1BSP_PointInLeaf(e->origin, loadmodel);
-		if (leaf->compressed_vis)
-			pvs = Mod_Q1BSP_DecompressVis(leaf->compressed_vis, loadmodel);
-		else
-			pvs = mod_q1bsp_novis;
-		for (j = 0;j < loadmodel->brushq1.numsurfaces;j++)
-			loadmodel->brushq1.surfacevisframes[j] = -1;
-		for (j = 0, leaf = loadmodel->brushq1.leafs + 1;j < loadmodel->brushq1.numleafs - 1;j++, leaf++)
-		{
-			if (pvs[j >> 3] & (1 << (j & 7)))
-			{
-				for (k = 0, mark = leaf->firstmarksurface;k < leaf->nummarksurfaces;k++, mark++)
-				{
-					surf = loadmodel->brushq1.surfaces + *mark;
-					if (surf->number != *mark)
-						Con_Printf("%d != %d\n", surf->number, *mark);
-					dist = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
-					if (surf->flags & SURF_PLANEBACK)
-						dist = -dist;
-					if (dist > 0 && dist < e->cullradius)
-					{
-						temp[0] = bound(surf->poly_mins[0], e->origin[0], surf->poly_maxs[0]) - e->origin[0];
-						temp[1] = bound(surf->poly_mins[1], e->origin[1], surf->poly_maxs[1]) - e->origin[1];
-						temp[2] = bound(surf->poly_mins[2], e->origin[2], surf->poly_maxs[2]) - e->origin[2];
-						if (DotProduct(temp, temp) < lightradius2)
-							loadmodel->brushq1.surfacevisframes[*mark] = -2;
-					}
-				}
-			}
-		}
-		// build list of light receiving surfaces
-		e->numsurfaces = 0;
-		for (j = 0;j < loadmodel->brushq1.numsurfaces;j++)
-			if (loadmodel->brushq1.surfacevisframes[j] == -2)
-				e->numsurfaces++;
-		e->surfaces = NULL;
-		if (e->numsurfaces > 0)
-		{
-			e->surfaces = Mem_Alloc(loadmodel->mempool, sizeof(msurface_t *) * e->numsurfaces);
-			e->numsurfaces = 0;
-			for (j = 0;j < loadmodel->brushq1.numsurfaces;j++)
-				if (loadmodel->brushq1.surfacevisframes[j] == -2)
-					e->surfaces[e->numsurfaces++] = loadmodel->brushq1.surfaces + j;
-		}
-		// find bounding box and sphere of lit surfaces
-		// (these will be used for creating a shape to clip the light)
-		radius2 = 0;
-		for (j = 0;j < e->numsurfaces;j++)
-		{
-			surf = e->surfaces[j];
-			if (j == 0)
-			{
-				VectorCopy(surf->poly_verts, e->mins);
-				VectorCopy(surf->poly_verts, e->maxs);
-			}
-			for (k = 0, v = surf->poly_verts;k < surf->poly_numverts;k++, v += 3)
-			{
-				if (e->mins[0] > v[0]) e->mins[0] = v[0];if (e->maxs[0] < v[0]) e->maxs[0] = v[0];
-				if (e->mins[1] > v[1]) e->mins[1] = v[1];if (e->maxs[1] < v[1]) e->maxs[1] = v[1];
-				if (e->mins[2] > v[2]) e->mins[2] = v[2];if (e->maxs[2] < v[2]) e->maxs[2] = v[2];
-				VectorSubtract(v, e->origin, temp);
-				dist = DotProduct(temp, temp);
-				if (radius2 < dist)
-					radius2 = dist;
-			}
-		}
-		if (e->cullradius2 > radius2)
-		{
-			e->cullradius2 = radius2;
-			e->cullradius = sqrt(e->cullradius2);
-		}
-		if (e->mins[0] < e->origin[0] - e->lightradius) e->mins[0] = e->origin[0] - e->lightradius;
-		if (e->maxs[0] > e->origin[0] + e->lightradius) e->maxs[0] = e->origin[0] + e->lightradius;
-		if (e->mins[1] < e->origin[1] - e->lightradius) e->mins[1] = e->origin[1] - e->lightradius;
-		if (e->maxs[1] > e->origin[1] + e->lightradius) e->maxs[1] = e->origin[1] + e->lightradius;
-		if (e->mins[2] < e->origin[2] - e->lightradius) e->mins[2] = e->origin[2] - e->lightradius;
-		if (e->maxs[2] > e->origin[2] + e->lightradius) e->maxs[2] = e->origin[2] + e->lightradius;
-		// clip shadow volumes against eachother to remove unnecessary
-		// polygons(and sections of polygons)
-		{
-			//vec3_t polymins, polymaxs;
-			int maxverts = 4;
-			float *verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-			float f, *v0, *v1, projectdistance;
-
-			e->shadowvolume = Mod_ShadowMesh_Begin(loadmodel->mempool, 1024);
-#if 0
-			{
-			vec3_t outermins, outermaxs, innermins, innermaxs;
-			innermins[0] = e->mins[0] - 1;
-			innermins[1] = e->mins[1] - 1;
-			innermins[2] = e->mins[2] - 1;
-			innermaxs[0] = e->maxs[0] + 1;
-			innermaxs[1] = e->maxs[1] + 1;
-			innermaxs[2] = e->maxs[2] + 1;
-			outermins[0] = loadmodel->normalmins[0] - 1;
-			outermins[1] = loadmodel->normalmins[1] - 1;
-			outermins[2] = loadmodel->normalmins[2] - 1;
-			outermaxs[0] = loadmodel->normalmaxs[0] + 1;
-			outermaxs[1] = loadmodel->normalmaxs[1] + 1;
-			outermaxs[2] = loadmodel->normalmaxs[2] + 1;
-			// add bounding box around the whole shadow volume set,
-			// facing inward to limit light area, with an outer bounding box
-			// facing outward (this is needed by the shadow rendering method)
-			// X major
-			verts[ 0] = innermaxs[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
-			verts[ 3] = innermaxs[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
-			verts[ 6] = innermaxs[0];verts[ 7] = innermaxs[1];verts[ 8] = innermins[2];
-			verts[ 9] = innermaxs[0];verts[10] = innermaxs[1];verts[11] = innermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			verts[ 0] = outermaxs[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
-			verts[ 3] = outermaxs[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
-			verts[ 6] = outermaxs[0];verts[ 7] = outermins[1];verts[ 8] = outermins[2];
-			verts[ 9] = outermaxs[0];verts[10] = outermins[1];verts[11] = outermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			// X minor
-			verts[ 0] = innermins[0];verts[ 1] = innermaxs[1];verts[ 2] = innermaxs[2];
-			verts[ 3] = innermins[0];verts[ 4] = innermaxs[1];verts[ 5] = innermins[2];
-			verts[ 6] = innermins[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
-			verts[ 9] = innermins[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			verts[ 0] = outermins[0];verts[ 1] = outermins[1];verts[ 2] = outermaxs[2];
-			verts[ 3] = outermins[0];verts[ 4] = outermins[1];verts[ 5] = outermins[2];
-			verts[ 6] = outermins[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
-			verts[ 9] = outermins[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			// Y major
-			verts[ 0] = innermaxs[0];verts[ 1] = innermaxs[1];verts[ 2] = innermaxs[2];
-			verts[ 3] = innermaxs[0];verts[ 4] = innermaxs[1];verts[ 5] = innermins[2];
-			verts[ 6] = innermins[0];verts[ 7] = innermaxs[1];verts[ 8] = innermins[2];
-			verts[ 9] = innermins[0];verts[10] = innermaxs[1];verts[11] = innermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			verts[ 0] = outermins[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
-			verts[ 3] = outermins[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
-			verts[ 6] = outermaxs[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
-			verts[ 9] = outermaxs[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			// Y minor
-			verts[ 0] = innermins[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
-			verts[ 3] = innermins[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
-			verts[ 6] = innermaxs[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
-			verts[ 9] = innermaxs[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			verts[ 0] = outermaxs[0];verts[ 1] = outermins[1];verts[ 2] = outermaxs[2];
-			verts[ 3] = outermaxs[0];verts[ 4] = outermins[1];verts[ 5] = outermins[2];
-			verts[ 6] = outermins[0];verts[ 7] = outermins[1];verts[ 8] = outermins[2];
-			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			// Z major
-			verts[ 0] = innermaxs[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
-			verts[ 3] = innermaxs[0];verts[ 4] = innermaxs[1];verts[ 5] = innermaxs[2];
-			verts[ 6] = innermins[0];verts[ 7] = innermaxs[1];verts[ 8] = innermaxs[2];
-			verts[ 9] = innermins[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			verts[ 0] = outermaxs[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
-			verts[ 3] = outermaxs[0];verts[ 4] = outermins[1];verts[ 5] = outermaxs[2];
-			verts[ 6] = outermins[0];verts[ 7] = outermins[1];verts[ 8] = outermaxs[2];
-			verts[ 9] = outermins[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			// Z minor
-			verts[ 0] = innermaxs[0];verts[ 1] = innermaxs[1];verts[ 2] = innermins[2];
-			verts[ 3] = innermaxs[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
-			verts[ 6] = innermins[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
-			verts[ 9] = innermins[0];verts[10] = innermaxs[1];verts[11] = innermins[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			verts[ 0] = outermaxs[0];verts[ 1] = outermins[1];verts[ 2] = outermins[2];
-			verts[ 3] = outermaxs[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
-			verts[ 6] = outermins[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
-			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermins[2];
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-			}
-#endif
-			castshadowcount++;
-			for (j = 0;j < e->numsurfaces;j++)
-			{
-				surf = e->surfaces[j];
-				if (surf->flags & SURF_SHADOWCAST)
-					surf->castshadow = castshadowcount;
-			}
-			for (j = 0;j < e->numsurfaces;j++)
-			{
-				surf = e->surfaces[j];
-				if (surf->castshadow != castshadowcount)
-					continue;
-				f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
-				if (surf->flags & SURF_PLANEBACK)
-					f = -f;
-				projectdistance = e->lightradius;
-				if (maxverts < surf->poly_numverts)
-				{
-					maxverts = surf->poly_numverts;
-					if (verts)
-						Mem_Free(verts);
-					verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
-				}
-				// copy the original polygon, for the front cap of the volume
-				for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
-					VectorCopy(v0, v1);
-				Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, surf->poly_numverts, verts);
-				// project the original polygon, reversed, for the back cap of the volume
-				for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
-				{
-					VectorSubtract(v0, e->origin, temp);
-					VectorNormalize(temp);
-					VectorMA(v0, projectdistance, temp, v1);
-				}
-				Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, surf->poly_numverts, verts);
-				// project the shadow volume sides
-				for (l = surf->poly_numverts - 1, k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;l = k, k++, v0 = v1, v1 += 3)
-				{
-					if (!surf->neighborsurfaces[l] || surf->neighborsurfaces[l]->castshadow != castshadowcount)
-					{
-						VectorCopy(v1, &verts[0]);
-						VectorCopy(v0, &verts[3]);
-						VectorCopy(v0, &verts[6]);
-						VectorCopy(v1, &verts[9]);
-						VectorSubtract(&verts[6], e->origin, temp);
-						VectorNormalize(temp);
-						VectorMA(&verts[6], projectdistance, temp, &verts[6]);
-						VectorSubtract(&verts[9], e->origin, temp);
-						VectorNormalize(temp);
-						VectorMA(&verts[9], projectdistance, temp, &verts[9]);
-						Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
-					}
-				}
-			}
-			// build the triangle mesh
-			e->shadowvolume = Mod_ShadowMesh_Finish(loadmodel->mempool, e->shadowvolume);
-			{
-				shadowmesh_t *mesh;
-				l = 0;
-				for (mesh = e->shadowvolume;mesh;mesh = mesh->next)
-					l += mesh->numtriangles;
-				Con_Printf("light %i shadow volume built containing %i triangles\n", lnum, l);
-			}
-		}
-	}
-}
-*/
-
-
 static void Mod_Q1BSP_LoadVisibility(lump_t *l)
 {
 	loadmodel->brushq1.num_compressedpvs = 0;
@@ -1393,7 +1153,7 @@ static void Mod_Q1BSP_ParseWadsFromEntityLump(const char *data)
 		strcpy(value, com_token);
 		if (!strcmp("wad", key)) // for HalfLife maps
 		{
-			if (loadmodel->brushq1.ishlbsp)
+			if (loadmodel->brush.ishlbsp)
 			{
 				j = 0;
 				for (i = 0;i < 4096;i++)
@@ -1431,7 +1191,7 @@ static void Mod_Q1BSP_LoadEntities(lump_t *l)
 		return;
 	loadmodel->brush.entities = Mem_Alloc(loadmodel->mempool, l->filelen);
 	memcpy(loadmodel->brush.entities, mod_base + l->fileofs, l->filelen);
-	if (loadmodel->brushq1.ishlbsp)
+	if (loadmodel->brush.ishlbsp)
 		Mod_Q1BSP_ParseWadsFromEntityLump(loadmodel->brush.entities);
 }
 
@@ -1472,7 +1232,7 @@ static void Mod_Q1BSP_LoadSubmodels(lump_t *l)
 	out = Mem_Alloc(loadmodel->mempool, count*sizeof(*out));
 
 	loadmodel->brushq1.submodels = out;
-	loadmodel->brushq1.numsubmodels = count;
+	loadmodel->brush.numsubmodels = count;
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -1850,7 +1610,7 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		i = LittleLong(in->lightofs);
 		if (i == -1)
 			surf->samples = NULL;
-		else if (loadmodel->brushq1.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
+		else if (loadmodel->brush.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
 			surf->samples = loadmodel->brushq1.lightdata + i;
 		else // LordHavoc: white lighting (bsp version 29)
 			surf->samples = loadmodel->brushq1.lightdata + (i * 3);
@@ -2018,7 +1778,7 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 	loadmodel->brushq1.leafs = out;
 	loadmodel->brushq1.numleafs = count;
-	pvschainbytes = ((loadmodel->brushq1.num_leafs - 1)+7)>>3;
+	pvschainbytes = ((loadmodel->brushq1.numleafs - 1)+7)>>3;
 	loadmodel->brushq1.data_decompressedpvs = pvs = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numleafs * pvschainbytes);
 
 	for ( i=0 ; i<count ; i++, in++, out++)
@@ -2067,7 +1827,7 @@ static void Mod_Q1BSP_LoadClipnodes(lump_t *l)
 	loadmodel->brushq1.clipnodes = out;
 	loadmodel->brushq1.numclipnodes = count;
 
-	if (loadmodel->brushq1.ishlbsp)
+	if (loadmodel->brush.ishlbsp)
 	{
 		hull = &loadmodel->brushq1.hulls[1];
 		hull->clipnodes = out;
@@ -3072,11 +2832,44 @@ void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t r
 //of the given point.
 int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength)
 {
-	int bytes = ((model->brushq1.num_leafs - 1) + 7) >> 3;
+	int bytes = ((model->brushq1.numleafs - 1) + 7) >> 3;
 	bytes = min(bytes, pvsbufferlength);
 	memset(pvsbuffer, 0, bytes);
 	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, sv.worldmodel->brushq1.nodes);
 	return bytes;
+}
+
+static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
+{
+	vec3_t size;
+	const hull_t *hull;
+
+	VectorSubtract(inmaxs, inmins, size);
+	if (cmodel->brush.ishlbsp)
+	{
+		if (size[0] < 3)
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
+		else if (size[0] <= 32)
+		{
+			if (size[2] < 54) // pick the nearest of 36 or 72
+				hull = &cmodel->brushq1.hulls[3]; // 32x32x36
+			else
+				hull = &cmodel->brushq1.hulls[1]; // 32x32x72
+		}
+		else
+			hull = &cmodel->brushq1.hulls[2]; // 64x64x64
+	}
+	else
+	{
+		if (size[0] < 3)
+			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
+		else if (size[0] <= 32)
+			hull = &cmodel->brushq1.hulls[1]; // 32x32x56
+		else
+			hull = &cmodel->brushq1.hulls[2]; // 64x64x88
+	}
+	VectorCopy(inmins, outmins);
+	VectorAdd(inmins, hull->clip_size, outmaxs);
 }
 
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
@@ -3102,19 +2895,21 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	i = LittleLong(header->version);
 	if (i != BSPVERSION && i != 30)
 		Host_Error("Mod_Q1BSP_Load: %s has wrong version number(%i should be %i(Quake) or 30(HalfLife))", mod->name, i, BSPVERSION);
-	mod->brushq1.ishlbsp = i == 30;
+	mod->brush.ishlbsp = i == 30;
 
+	mod->brush.AmbientSoundLevelsForPoint = Mod_Q1BSP_AmbientSoundLevelsForPoint;
 	mod->brush.FatPVS = Mod_Q1BSP_FatPVS;
 	mod->brush.BoxTouchingPVS = Mod_Q1BSP_BoxTouchingPVS;
 	mod->brush.LightPoint = Mod_Q1BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
+	mod->brush.RoundUpToHullSize = Mod_Q1BSP_RoundUpToHullSize;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
 
 	if (loadmodel->isworldmodel)
 	{
-		Cvar_SetValue("halflifebsp", mod->brushq1.ishlbsp);
+		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
 		// until we get a texture for it...
 		R_ResetQuakeSky();
 	}
@@ -3155,7 +2950,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_MakePortals();
 
 	if (developer.integer)
-		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->brushq1.numsurfaces, loadmodel->brushq1.numnodes, loadmodel->brushq1.numleafs, loadmodel->brushq1.num_leafs - 1, loadmodel->brushq1.numportals);
+		Con_Printf("Some stats for q1bsp model \"%s\": %i faces, %i nodes, %i leafs, %i visleafs, %i visleafportals\n", loadmodel->name, loadmodel->brushq1.numsurfaces, loadmodel->brushq1.numnodes, loadmodel->brushq1.numleafs, loadmodel->brushq1.numleafs - 1, loadmodel->brushq1.numportals);
 
 	mod->numframes = 2;		// regular and alternate animation
 
@@ -3168,7 +2963,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 //
 // set up the submodels(FIXME: this is confusing)
 //
-	for (i = 0;i < mod->brushq1.numsubmodels;i++)
+	for (i = 0;i < mod->brush.numsubmodels;i++)
 	{
 		bm = &mod->brushq1.submodels[i];
 
@@ -3206,7 +3001,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
 					mod->DrawSky = R_Model_Brush_DrawSky;
 				// LordHavoc: submodels always clip, even if water
-				if (mod->brushq1.numsubmodels - 1)
+				if (mod->brush.numsubmodels - 1)
 					surf->flags |= SURF_SOLIDCLIP;
 				// calculate bounding shapes
 				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
@@ -3245,11 +3040,11 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		}
 		Mod_Q1BSP_BuildSurfaceNeighbors(mod->brushq1.surfaces + mod->brushq1.firstmodelsurface, mod->brushq1.nummodelsurfaces, originalloadmodel->mempool);
 
-		mod->brushq1.numleafs = bm->visleafs;
+		mod->brushq1.visleafs = bm->visleafs;
 
 		// LordHavoc: only register submodels if it is the world
 		// (prevents bsp models from replacing world submodels)
-		if (loadmodel->isworldmodel && i < (mod->brushq1.numsubmodels - 1))
+		if (loadmodel->isworldmodel && i < (mod->brush.numsubmodels - 1))
 		{
 			char	name[10];
 			// duplicate the basic information
@@ -3660,10 +3455,10 @@ void Mod_Q2BSP_Load(model_t *mod, void *buffer)
 	i = LittleLong(header->version);
 	if (i != Q2BSPVERSION)
 		Host_Error("Mod_Q2BSP_Load: %s has wrong version number (%i, should be %i)", mod->name, i, Q2BSPVERSION);
-	mod->brushq1.ishlbsp = false;
+	mod->brush.ishlbsp = false;
 	if (loadmodel->isworldmodel)
 	{
-		Cvar_SetValue("halflifebsp", mod->brushq1.ishlbsp);
+		Cvar_SetValue("halflifebsp", mod->brush.ishlbsp);
 		// until we get a texture for it...
 		R_ResetQuakeSky();
 	}
@@ -4532,6 +4327,11 @@ int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsb
 	return pvsbufferlength;
 }
 
+//extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
+extern void R_Q3BSP_Draw(struct entity_render_s *ent);
+//extern void R_Q3BSP_DrawFakeShadow(struct entity_render_s *ent);
+//extern void R_Q3BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
+//extern void R_Q3BSP_DrawLight(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
 	int i;
@@ -4556,8 +4356,11 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
-	//mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
-	//mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;
+	//mod->DrawSky = R_Q3BSP_DrawSky;
+	mod->Draw = R_Q3BSP_Draw;
+	//mod->DrawFakeShadow = R_Q3BSP_DrawFakeShadow;
+	//mod->DrawShadowVolume = R_Q3BSP_DrawShadowVolume;
+	//mod->DrawLight = R_Q3BSP_DrawLight;
 
 	mod_base = (qbyte *)header;
 

@@ -680,17 +680,19 @@ S_UpdateAmbientSounds
 */
 void S_UpdateAmbientSounds (void)
 {
-	mleaf_t		*l;
 	float		vol;
 	int			ambient_channel;
 	channel_t	*chan;
+	qbyte		ambientlevels[NUM_AMBIENTS];
 
 	// LordHavoc: kill ambient sounds until proven otherwise
 	for (ambient_channel = 0 ; ambient_channel < NUM_AMBIENTS;ambient_channel++)
 		channels[ambient_channel].sfx = NULL;
 
-	if (!snd_ambient || ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brushq1.PointInLeaf || (l = cl.worldmodel->brushq1.PointInLeaf(cl.worldmodel, listener_origin)) == NULL)
+	if (!snd_ambient || ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
 		return;
+
+	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_origin, ambientlevels, sizeof(ambientlevels));
 
 // calc ambient sound levels
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
@@ -701,7 +703,7 @@ void S_UpdateAmbientSounds (void)
 		chan->forceloop = true;
 		chan->sfx = ambient_sfx[ambient_channel];
 
-		vol = ambient_level.value * l->ambient_sound_level[ambient_channel];
+		vol = ambient_level.value * ambientlevels[ambient_channel];
 		if (vol < 8)
 			vol = 0;
 

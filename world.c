@@ -30,7 +30,6 @@ line of sight checks trace->inopen and trace->inwater, but bullets don't
 */
 
 cvar_t sv_debugmove = {CVAR_NOTIFY, "sv_debugmove", "0"};
-cvar_t sv_polygoncollisions = {CVAR_NOTIFY, "sv_polygoncollisions", "0"};
 cvar_t sv_areagrid_mingridsize = {CVAR_NOTIFY, "sv_areagrid_mingridsize", "64"};
 
 void SV_AreaStats_f(void);
@@ -38,7 +37,6 @@ void SV_AreaStats_f(void);
 void SV_World_Init(void)
 {
 	Cvar_RegisterVariable(&sv_debugmove);
-	Cvar_RegisterVariable(&sv_polygoncollisions);
 	Cvar_RegisterVariable(&sv_areagrid_mingridsize);
 	Cmd_AddCommand("sv_areastats", SV_AreaStats_f);
 	Collision_Init();
@@ -491,10 +489,7 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	VectorAdd(starttransformed, mins, starttransformedmins);
 	VectorAdd(endtransformed, mins, endtransformedmins);
 
-	// FIXME: the PolygonClipTrace should go away (should all be done in model code)
-	if (sv_polygoncollisions.integer == 1)
-		Collision_PolygonClipTrace(&trace, ent, model, vec3_origin, vec3_origin, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed);
-	else if (model && model->brush.TraceBox)
+	if (model && model->brush.TraceBox)
 		model->brush.TraceBox(model, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs);
 	else
 		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed);
@@ -626,7 +621,8 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	clip.type = type;
 	clip.passedict = passedict;
 
-	Collision_RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
+	if (sv.worldmodel && sv.worldmodel->brush.RoundUpToHullSize)
+		sv.worldmodel->brush.RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
 
 	// clip to world
 	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.hullmins, clip.hullmaxs, clip.end);

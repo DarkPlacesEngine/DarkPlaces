@@ -729,7 +729,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 	rmeshstate_t m;
 
 	// LordHavoc: HalfLife maps have freaky skypolys...
-	if (ent->model->brushq1.ishlbsp)
+	if (ent->model->brush.ishlbsp)
 		return;
 
 	if (skyrendernow)
@@ -1528,6 +1528,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	R_Mesh_Draw(portal->numpoints, portal->numpoints - 2, polygonelements);
 }
 
+// LordHavoc: this is just a nice debugging tool, very slow
 static void R_DrawPortals(entity_render_t *ent)
 {
 	int i;
@@ -1537,7 +1538,7 @@ static void R_DrawPortals(entity_render_t *ent)
 		return;
 	for (portal = ent->model->brushq1.portals, endportal = portal + ent->model->brushq1.numportals;portal < endportal;portal++)
 	{
-		if ((portal->here->pvsframe == ent->model->brushq1.pvsframecount || portal->past->pvsframe == ent->model->brushq1.pvsframecount) && portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
+		if (portal->numpoints <= POLYGONELEMENTS_MAXPOINTS)
 		{
 			VectorClear(temp);
 			for (i = 0;i < portal->numpoints;i++)
@@ -1639,7 +1640,7 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 
 static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 {
-	int c, leafstackpos, *mark, *surfacevisframes;
+	int c, leafstackpos, *mark, *surfacevisframes, bitnum;
 #if WORLDNODECULLBACKFACES
 	int n;
 	msurface_t *surf;
@@ -1703,7 +1704,8 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 				{
 					leaf->worldnodeframe = r_framecount;
 					// FIXME: R_CullBox is absolute, should be done relative
-					if (leaf->pvsframe == ent->model->brushq1.pvsframecount && !R_CullBox(leaf->mins, leaf->maxs))
+					bitnum = (leaf - ent->model->brushq1.leafs) - 1;
+					if ((r_pvsbits[bitnum >> 3] & (1 << (bitnum & 7))) && !R_CullBox(leaf->mins, leaf->maxs))
 						leafstack[leafstackpos++] = leaf;
 				}
 			}
@@ -1715,7 +1717,6 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 {
 	int j, c, *surfacepvsframes, *mark;
 	mleaf_t *leaf;
-	qbyte *pvs;
 	model_t *model;
 
 	model = ent->model;
@@ -1728,11 +1729,10 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 		model->brushq1.pvssurflistlength = 0;
 		if (viewleaf)
 		{
-			pvs = viewleaf->pvsdata;
 			surfacepvsframes = model->brushq1.surfacepvsframes;
-			for (j = 0;j < model->brushq1.numleafs-1;j++)
+			for (j = 0;j < model->brushq1.visleafs;j++)
 			{
-				if (pvs[j >> 3] & (1 << (j & 7)))
+				if (r_pvsbits[j >> 3] & (1 << (j & 7)))
 				{
 					leaf = model->brushq1.leafs + j + 1;
 					leaf->pvsframe = model->brushq1.pvsframecount;
@@ -1896,6 +1896,34 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		}
 	}
 }
+
+/*
+void R_Q3BSP_DrawSky(entity_render_t *ent)
+{
+}
+*/
+
+void R_Q3BSP_Draw(entity_render_t *ent)
+{
+}
+
+/*
+void R_Q3BSP_DrawFakeShadow(entity_render_t *ent)
+{
+}
+*/
+
+/*
+void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
+{
+}
+*/
+
+/*
+void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
+{
+}
+*/
 
 static void gl_surf_start(void)
 {

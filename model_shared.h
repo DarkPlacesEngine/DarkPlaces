@@ -144,33 +144,41 @@ struct trace_s;
 
 typedef struct model_brush_s
 {
+	// true if this model is a HalfLife .bsp file
+	qboolean ishlbsp;
+	// string of entity definitions (.map format)
 	char *entities;
+	// number of submodels in this map (just used by server to know how many
+	// submodels to load)
+	int numsubmodels;
+	// common functions
+	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
 	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength);
 	int (*BoxTouchingPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
 	void (*TraceBox)(struct model_s *model, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs);
+	// this is actually only found on brushq1, but NULL is handled gracefully
+	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
 }
 model_brush_t;
 
 typedef struct model_brushq1_s
 {
-	// true if this model is a HalfLife .bsp file
-	qboolean		ishlbsp;
-
 	int				firstmodelsurface, nummodelsurfaces;
 
 	// lightmap format, set to r_lightmaprgba when model is loaded
 	int				lightmaprgba;
 
-	int				numsubmodels;
 	dmodel_t		*submodels;
 
 	int				numplanes;
 	mplane_t		*planes;
 
-	// number of visible leafs, not counting 0 (solid)
+	// number of actual leafs (including 0 which is solid)
 	int				numleafs;
+	// visible leafs, not counting 0 (solid)
+	int				visleafs;
 	mleaf_t			*leafs;
 
 	int				numvertexes;
