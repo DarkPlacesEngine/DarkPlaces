@@ -12,4 +12,4 @@ extern int softwaretransform_type;
 extern void softwaretransformforentity (entity_t *e);
 extern void softwaretransformidentity ();
 extern void softwaretransformset (vec3_t origin, vec3_t angles, vec_t scale);
-void (*softwaretransform) (vec3_t in, vec3_t out);
+extern void (*softwaretransform) (vec3_t in, vec3_t out);
