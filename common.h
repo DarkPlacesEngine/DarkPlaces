@@ -31,6 +31,11 @@ typedef enum {false, true}	qboolean;
 
 #include "quakeio.h"
 
+// LordHavoc: MSVC has a different name for snprintf
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
+
 //============================================================================
 
 extern void *qmalloc(unsigned int size);
