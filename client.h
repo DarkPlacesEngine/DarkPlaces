@@ -719,13 +719,36 @@ void CL_InitTEnts (void);
 // cl_part
 //
 
+extern cvar_t cl_particles;
+extern cvar_t cl_particles_quality;
+extern cvar_t cl_particles_size;
+extern cvar_t cl_particles_bloodshowers;
+extern cvar_t cl_particles_blood;
+extern cvar_t cl_particles_blood_alpha;
+extern cvar_t cl_particles_blood_bloodhack;
+extern cvar_t cl_particles_bulletimpacts;
+extern cvar_t cl_particles_explosions_bubbles;
+extern cvar_t cl_particles_explosions_smoke;
+extern cvar_t cl_particles_explosions_sparks;
+extern cvar_t cl_particles_explosions_shell;
+extern cvar_t cl_particles_smoke;
+extern cvar_t cl_particles_smoke_alpha;
+extern cvar_t cl_particles_smoke_alphafade;
+extern cvar_t cl_particles_sparks;
+extern cvar_t cl_particles_bubbles;
+extern cvar_t cl_decals;
+extern cvar_t cl_decals_time;
+extern cvar_t cl_decals_fadetime;
+
 void CL_Particles_Clear(void);
 void CL_Particles_Init(void);
 
 void CL_ParseParticleEffect (void);
 void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
 void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *ent);
-void CL_SparkShower (vec3_t org, vec3_t dir, int count);
+void CL_SparkShower (vec3_t org, vec3_t dir, int count, vec_t gravityscale);
+void CL_Smoke (vec3_t org, vec3_t dir, int count);
+void CL_BulletMark (vec3_t org);
 void CL_PlasmaBurn (vec3_t org);
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count);
 void CL_Stardust (vec3_t mins, vec3_t maxs, int count);

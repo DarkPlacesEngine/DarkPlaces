@@ -1490,23 +1490,12 @@ void M_Menu_Options_Effects_f (void)
 
 
 extern cvar_t r_detailtextures;
-extern cvar_t cl_particles;
 extern cvar_t cl_stainmaps;
 extern cvar_t cl_stainmapsclearonload;
-extern cvar_t cl_decals;
 extern cvar_t r_explosionclip;
 extern cvar_t r_modellights;
 extern cvar_t r_coronas;
 extern cvar_t gl_flashblend;
-extern cvar_t cl_particles_quality;
-extern cvar_t cl_particles_bulletimpacts;
-extern cvar_t cl_particles_smoke;
-extern cvar_t cl_particles_sparks;
-extern cvar_t cl_particles_bubbles;
-extern cvar_t cl_particles_blood;
-extern cvar_t cl_particles_blood_alpha;
-extern cvar_t cl_particles_blood_bloodhack;
-extern cvar_t cl_particles_explosions_shell;
 extern cvar_t cl_beams_polygon;
 extern cvar_t cl_beams_relative;
 extern cvar_t cl_beams_lightatend;
