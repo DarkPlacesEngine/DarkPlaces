@@ -959,12 +959,12 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					if (hostcache_cache[n].line1[i] != ' ')
 						hostcache_cache[n].line1[i] -= 30;
 			}
-			// if not in the slist menu we should print the server to console
-			if( hostcache_consoleoutput )
-				Con_Printf("%s\n%s\n", hostcache_cache[n].line1, hostcache_cache[n].line2);
 			// and finally, update the view set
 			if( hostcache_cache[n].finished )
                 _HostCache_Remove( &hostcache_cache[n] );
+			// else if not in the slist menu we should print the server to console (if wanted)
+			else if( hostcache_consoleoutput )
+				Con_Printf("%s\n%s\n", hostcache_cache[n].line1, hostcache_cache[n].line2);
 			_HostCache_Insert( &hostcache_cache[n] );
 			hostcache_cache[n].finished = true;
 
