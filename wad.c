@@ -209,7 +209,7 @@ qbyte *W_ConvertWAD3Texture(miptex_t *tex)
 	qbyte *in, *data, *out, *pal;
 	int d, p;
 
-	in = (qbyte *)((int) tex + tex->offsets[0]);
+	in = (qbyte *)tex + tex->offsets[0];
 	data = out = Mem_Alloc(tempmempool, tex->width * tex->height * 4);
 	if (!data)
 		return NULL;
