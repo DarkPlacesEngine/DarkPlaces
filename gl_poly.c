@@ -470,6 +470,7 @@ void wallpolyrender()
 	if (!gl_mtexable)
 		gl_multitexture.value = 0;
 	glDisable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glShadeModel(GL_FLAT);
 	// make sure zbuffer is enabled
 	glEnable(GL_DEPTH_TEST);
