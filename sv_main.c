@@ -961,6 +961,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			VectorCopy(ent->v.origin, origin);
 		}
 
+		// don't send an entity if it's coordinates would wrap around
+		if (origin[0] < -32768 || origin[1] < -32768 || origin[2] < -32768 || origin[0] > 32767 || origin[1] > 32767 || origin[2] > 32767)
+			continue;
+
 		// ent has survived every check so far, check if it is visible
 		// always send embedded brush models, they don't generate much traffic
 		if (ent != clent && ((flags & RENDER_VIEWMODEL) == 0) && (model == NULL || model->type != mod_brush || model->name[0] != '*'))
@@ -1791,6 +1795,7 @@ void SV_SpawnServer (char *server)
 // run two frames to allow everything to settle
 	sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
 	SV_Physics ();
+	sv.frametime = pr_global_struct->frametime = host_frametime = 0.1;
 	SV_Physics ();
 
 	Mod_PurgeUnused();
