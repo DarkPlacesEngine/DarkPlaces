@@ -1045,7 +1045,7 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 		end_l[2] = DotProduct (temp, up);
 	}
 
-// trace a line through the apropriate clipping hull
+// trace a line through the appropriate clipping hull
 	VectorCopy(start_l, RecursiveHullCheckInfo.start);
 	VectorSubtract(end_l, start_l, RecursiveHullCheckInfo.dist);
 	RecursiveHullCheckInfo.hull = hull;

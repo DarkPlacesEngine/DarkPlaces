@@ -95,7 +95,7 @@ typedef struct client_s
 	edict_t			*edict;				// EDICT_NUM(clientnum+1)
 	char			name[32];			// for printing to other people
 	int				colors;
-		
+
 	float			ping_times[NUM_PING_TIMES];
 	int				num_pings;			// ping_times[num_pings%NUM_PING_TIMES]
 	float			ping;				// LordHavoc: can be used for prediction or whatever...
@@ -104,12 +104,13 @@ typedef struct client_s
 // spawn parms are carried from level to level
 	float			spawn_parms[NUM_SPAWN_PARMS];
 
-// client known data for deltas	
+// client known data for deltas
 	int				old_frags;
 	int				pmodel;
 
 	// delta compression state
 	float			nextfullupdate[MAX_EDICTS];
+	float			lastvisible[MAX_EDICTS];
 } client_t;
 
 

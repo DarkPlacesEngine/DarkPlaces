@@ -21,10 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-static cvar_t sv_pvscheckentities = {0, "sv_pvscheckentities", "1"};
-static cvar_t sv_vischeckentities = {0, "sv_vischeckentities", "0"}; // extremely accurate visibility checking, but too slow
-static cvar_t sv_reportvischeckentities = {0, "sv_reportvischeckentities", "0"};
-static int sv_vischeckentitycullcount = 0;
+static cvar_t sv_cullentities_pvs = {0, "sv_cullentities_pvs", "0"}; // fast but loose
+static cvar_t sv_cullentities_portal = {0, "sv_cullentities_portal", "0"}; // extremely accurate visibility checking, but too slow
+static cvar_t sv_cullentities_trace = {0, "sv_cullentities_trace", "1"}; // tends to get false negatives, uses a timeout to keep entities visible a short time after becoming hidden
+static cvar_t sv_cullentities_stats = {0, "sv_cullentities_stats", "0"};
 
 server_t		sv;
 server_static_t	svs;
@@ -56,9 +56,10 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_nostep);
 	Cvar_RegisterVariable (&sv_predict);
 	Cvar_RegisterVariable (&sv_deltacompress);
-	Cvar_RegisterVariable (&sv_pvscheckentities);
-	Cvar_RegisterVariable (&sv_vischeckentities);
-	Cvar_RegisterVariable (&sv_reportvischeckentities);
+	Cvar_RegisterVariable (&sv_cullentities_pvs);
+	Cvar_RegisterVariable (&sv_cullentities_portal);
+	Cvar_RegisterVariable (&sv_cullentities_trace);
+	Cvar_RegisterVariable (&sv_cullentities_stats);
 
 	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
@@ -499,15 +500,16 @@ SV_WriteEntitiesToClient
 */
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
-	int		e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
-	byte	*pvs;
-	vec3_t	org, origin, angles, entmins, entmaxs;
-	float	nextfullupdate;
-	edict_t	*ent;
-	eval_t	*val;
-	entity_state_t	*baseline; // LordHavoc: delta or startup baseline
-	trace_t	trace;
-	model_t	*model;
+	int e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
+	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
+	byte *pvs;
+	vec3_t org, origin, angles, entmins, entmaxs, testorigin;
+	float nextfullupdate;
+	edict_t *ent;
+	eval_t *val;
+	entity_state_t *baseline; // LordHavoc: delta or startup baseline
+	trace_t trace;
+	model_t *model;
 
 	Mod_CheckLoaded(sv.worldmodel);
 
@@ -521,6 +523,12 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	MSG_WriteFloat(msg, org[1]);
 	MSG_WriteFloat(msg, org[2]);
 	*/
+
+	culled_pvs = 0;
+	culled_portal = 0;
+	culled_trace = 0;
+	visibleentities = 0;
+	totalentities = 0;
 
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 	// send all entities that touch the pvs
@@ -622,16 +630,53 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 				}
 			}
 
-			// if not touching a visible leaf
-			if (sv_pvscheckentities.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
-				continue;
+			totalentities++;
 
-			// or not visible through the portals
-			if (sv_vischeckentities.integer && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
+			// if not touching a visible leaf
+			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
 			{
-				sv_vischeckentitycullcount++;
+				culled_pvs++;
 				continue;
 			}
+
+			// or not visible through the portals
+			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
+			{
+				culled_portal++;
+				continue;
+			}
+
+			// don't try to cull embedded brush models with this, they're sometimes huge (spanning several rooms)
+			if (sv_cullentities_trace.integer && (model->type != mod_brush || model->name[0] != '*'))
+			{
+				// LordHavoc: test random offsets, to maximize chance of detection
+				testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
+				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
+				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
+
+				memset (&trace, 0, sizeof(trace_t));
+				trace.fraction = 1;
+				trace.allsolid = true;
+				VectorCopy(testorigin, trace.endpos);
+
+				VectorCopy(org, RecursiveHullCheckInfo.start);
+				VectorSubtract(testorigin, org, RecursiveHullCheckInfo.dist);
+				RecursiveHullCheckInfo.hull = sv.worldmodel->hulls;
+				RecursiveHullCheckInfo.trace = &trace;
+				SV_RecursiveHullCheck (sv.worldmodel->hulls->firstclipnode, 0, 1, org, testorigin);
+
+				if (trace.fraction == 1)
+					client->lastvisible[e] = realtime;
+				else
+				{
+					if (realtime - client->lastvisible[e] >= 1)
+					{
+						culled_trace++;
+						continue;
+					}
+				}
+			}
+			visibleentities++;
 		}
 
 		alpha = 255;
@@ -685,7 +730,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			Con_Printf ("packet overflow\n");
 			// mark the rest of the entities so they can't be delta compressed against this frame
 			for (;e < sv.num_edicts;e++)
+			{
 				client->nextfullupdate[e] = -1;
+				client->lastvisible[e] = -1;
+			}
 			return;
 		}
 
@@ -801,9 +849,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_MODEL2)	MSG_WriteByte(msg, (int)ent->v.modelindex >> 8);
 	}
 
-	if (sv_reportvischeckentities.integer)
-		Con_Printf("sv_vischeck culled entities: %d\n", sv_vischeckentitycullcount);
-	sv_vischeckentitycullcount = 0;
+	if (sv_cullentities_stats.integer)
+		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d portal %d trace\n", client->name, totalentities, visibleentities, culled_pvs + culled_portal + culled_trace, culled_pvs, culled_portal, culled_trace);
 }
 
 /*
