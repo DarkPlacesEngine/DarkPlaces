@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "wavefile.h"
 
 wavefile_t *waveopen(char *filename, char **errorstring)
@@ -130,8 +131,8 @@ void waveclose(wavefile_t *f)
 
 unsigned int waveread16stereo(wavefile_t *w, short *soundbuffer, unsigned int samples)
 {
-	int i;
-	int length;
+	unsigned int i;
+	unsigned int length;
 	unsigned char *in;
 	short *out;
 	length = samples;
