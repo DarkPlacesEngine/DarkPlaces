@@ -76,7 +76,10 @@ static dllfunction_t wglswapintervalfuncs[] =
 static DEVMODE gdevmode;
 static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
-static int vid_usingmouse;
+static qboolean vid_usingmouse = false;
+static qboolean vid_usingvsync = false;
+static qboolean vid_usemouse = false;
+static qboolean vid_usevsync = false;
 static HICON hIcon;
 
 HWND mainwindow;
@@ -302,23 +305,10 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 
 void VID_Finish (void)
 {
-	int vid_usemouse;
-	static int	old_vsync	= -1;
-
-	if (old_vsync != vid_vsync.integer)
-	{
-		old_vsync = bound(0, vid_vsync.integer, 1);
-		Cvar_SetValueQuick(&vid_vsync, old_vsync);
-		if (gl_videosyncavailable)
-			qwglSwapIntervalEXT (old_vsync);
-	}
-
-	if (r_render.integer && !vid_hidden)
-	{
-		if (r_speeds.integer || gl_finish.integer)
-			qglFinish();
-		SwapBuffers(baseDC);
-	}
+	vid_usevsync = vid_vsync.integer && !cls.timedemo && gl_videosyncavailable;
+	if (old_vsync != vsync && gl_videosyncavailable)
+		qwglSwapIntervalEXT (vsync);
+	vid_usingvsync = vsync;
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
@@ -345,6 +335,13 @@ void VID_Finish (void)
 			IN_DeactivateMouse ();
 			IN_ShowMouse();
 		}
+	}
+
+	if (r_render.integer && !vid_hidden)
+	{
+		if (r_speeds.integer || gl_finish.integer)
+			qglFinish();
+		SwapBuffers(baseDC);
 	}
 }
 
