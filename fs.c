@@ -193,7 +193,7 @@ typedef struct
 
 
 // Packages in memory
-typedef enum 
+typedef enum
 {
 	FILE_FLAG_NONE		= 0,
 	FILE_FLAG_TRUEOFFS	= (1 << 0),	// the offset in packfile_t is the true contents offset
@@ -213,6 +213,7 @@ typedef struct pack_s
 {
 	char filename [MAX_OSPATH];
 	FILE *handle;
+	int ignorecase; // LordHavoc: pk3 ignores case
 	int numfiles;
 	packfile_t *files;
 	mempool_t *mempool;
@@ -542,6 +543,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 
 	// Create a package structure in memory
 	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
+	pack->ignorecase = true; // LordHavoc: pk3 ignores case
 	strcpy (pack->filename, packfile);
 	pack->handle = packhandle;
 	pack->numfiles = eocd.nbentries;
@@ -682,6 +684,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 		Sys_Error ("%s has %i files", packfile, numpackfiles);
 
 	pack = Mem_Alloc(pak_mempool, sizeof (pack_t));
+	pack->ignorecase = false; // LordHavoc: pak is case sensitive
 	strcpy (pack->filename, packfile);
 	pack->handle = packhandle;
 	pack->numfiles = numpackfiles;
@@ -789,15 +792,23 @@ FS_FileExtension
 char *FS_FileExtension (const char *in)
 {
 	static char exten[8];
+	const char *slash, *backslash, *colon, *dot, *separator;
 	int i;
 
-	while (*in && *in != '.')
-		in++;
-	if (!*in)
+	slash = strrchr(in, '/');
+	backslash = strrchr(in, '\\');
+	colon = strrchr(in, ':');
+	dot = strrchr(in, '.');
+	separator = slash;
+	if (separator < backslash)
+		separator = backslash;
+	if (separator < colon)
+		separator = colon;
+	if (dot < separator)
 		return "";
-	in++;
-	for (i=0 ; i<7 && *in ; i++,in++)
-		exten[i] = *in;
+	dot++;
+	for (i = 0;i < 7 && dot[i];i++)
+		exten[i] = dot[i];
 	exten[i] = 0;
 	return exten;
 }
@@ -964,7 +975,7 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 	searchpath_t *search;
 	char netpath[MAX_OSPATH];
 	pack_t *pak;
-	int i, filenamelen;
+	int i, filenamelen, matched;
 
 	filenamelen = strlen (filename);
 
@@ -979,7 +990,12 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 			// look through all the pak file elements
 			pak = search->pack;
 			for (i=0 ; i<pak->numfiles ; i++)
-				if (!strcmp (pak->files[i].name, filename))  // found it?
+			{
+				if (pak->ignorecase)
+					matched = !strcasecmp (pak->files[i].name, filename);
+				else
+					matched = !strcmp (pak->files[i].name, filename);
+				if (matched)  // found it?
 				{
 					qfile_t *file;
 
@@ -1023,8 +1039,8 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 						 * windowBits is passed < 0 to tell that there is no zlib header.
 						 * Note that in this case inflate *requires* an extra "dummy" byte
 						 * after the compressed stream in order to complete decompression and
-						 * return Z_STREAM_END. 
-						 * In unzip, i don't wait absolutely Z_STREAM_END because I known the 
+						 * return Z_STREAM_END.
+						 * In unzip, i don't wait absolutely Z_STREAM_END because I known the
 						 * size of both compressed and uncompressed data
 						 */
 						if (qz_inflateInit2 (&ztk->zstream, -MAX_WBITS) != Z_OK)
@@ -1038,6 +1054,7 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 
 					return file;
 				}
+			}
 		}
 		else
 		{
@@ -1331,7 +1348,7 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		ztoolkit_t *ztk = file->z;
 		size_t crt_offset;
 		qbyte buffer [sizeof (ztk->output)];  // it's big to force inflating into buffer directly
-		
+
 		crt_offset = ztk->out_position - ztk->out_max + ztk->out_ind;
 
 		switch (whence)
@@ -1382,7 +1399,7 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 		{
 			size_t diff = offset - crt_offset;
 			size_t count, len;
-			
+
 			count = (diff > sizeof (buffer)) ? sizeof (buffer) : diff;
 			len = FS_Read (file, buffer, count);
 			if (len != count)
@@ -1548,7 +1565,7 @@ int FS_Eof (qfile_t* file)
 
 		return (file->position == file->length);
 	}
-	
+
 	return feof (file->stream);
 }
 
