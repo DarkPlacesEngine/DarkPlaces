@@ -3321,18 +3321,19 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 
 	for (i = 0;i < count;i++, in++, out++)
 	{
+		out->number = i;
 		strlcpy (out->name, in->name, sizeof (out->name));
 		out->surfaceflags = LittleLong(in->surfaceflags);
 		out->nativecontents = LittleLong(in->contents);
 		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
+		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
 		out->renderflags = 0;
 		if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk"))
 			out->renderflags |= Q3MTEXTURERENDERFLAGS_NODRAW;
 		if (!strncmp(out->name, "textures/skies/", 15))
 			out->renderflags |= Q3MTEXTURERENDERFLAGS_SKY;
-
-		out->number = i;
-		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
+		if (R_TextureHasAlpha(out->skin.base))
+			out->renderflags |= Q3MTEXTURERENDERFLAGS_TRANSPARENT;
 	}
 }
 
