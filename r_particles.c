@@ -87,6 +87,7 @@ static void R_InitParticleTexture (void)
 	memset(particletexturedata, 255, sizeof(particletexturedata));
 
 	// the particletexture[][] array numbers must match the cl_part.c textures
+	// smoke/blood
 	for (i = 0;i < 8;i++)
 	{
 		do
@@ -122,6 +123,7 @@ static void R_InitParticleTexture (void)
 		setuptex(i + 0, 1, i + 8, &data[0][0][0], particletexturedata);
 	}
 
+	// bullet hole
 	for (i = 0;i < 8;i++)
 	{
 		float p[32][32];
@@ -179,6 +181,7 @@ static void R_InitParticleTexture (void)
 		setuptex(i + 8, 1, i + 16, &data[0][0][0], particletexturedata);
 	}
 
+	// rain splash
 	for (i = 0;i < 16;i++)
 	{
 		radius = i * 3.0f / 16.0f;
@@ -199,6 +202,7 @@ static void R_InitParticleTexture (void)
 		setuptex(i + 16, 1, i + 24, &data[0][0][0], particletexturedata);
 	}
 
+	// normal particle
 	for (y = 0;y < 32;y++)
 	{
 		dy = y - 16;
@@ -214,6 +218,7 @@ static void R_InitParticleTexture (void)
 	setuptex(32, 0, 40, &data[0][0][0], particletexturedata);
 	setuptex(32, 1, 40, &data[0][0][0], particletexturedata);
 
+	// rain
 	light[0] = 1;light[1] = 1;light[2] = 1;
 	VectorNormalize(light);
 	for (y = 0;y < 32;y++)
@@ -227,6 +232,7 @@ static void R_InitParticleTexture (void)
 	setuptex(33, 0, 41, &data[0][0][0], particletexturedata);
 	setuptex(33, 1, 41, &data[0][0][0], particletexturedata);
 
+	// bubble
 	light[0] = 1;light[1] = 1;light[2] = 1;
 	VectorNormalize(light);
 	for (y = 0;y < 32;y++)
@@ -240,6 +246,7 @@ static void R_InitParticleTexture (void)
 	setuptex(34, 0, 42, &data[0][0][0], particletexturedata);
 	setuptex(34, 1, 42, &data[0][0][0], particletexturedata);
 
+	// rocket flare
 	for (y = 0;y < 32;y++)
 	{
 		dy = y - 16;
@@ -339,13 +346,13 @@ void R_DrawParticles (void)
 		VectorCopy(r->org, org);
 		if (r->orientation == PARTICLE_BILLBOARD)
 		{
-			VectorScale(vright, r->scale, right);
-			VectorScale(vup, r->scale, up);
+			VectorScale(vright, r->scalex, right);
+			VectorScale(vup, r->scaley, up);
 		}
 		else if (r->orientation == PARTICLE_UPRIGHT_FACING)
 		{
-			VectorScale(right2, r->scale, right);
-			VectorScale(up2, r->scale, up);
+			VectorScale(right2, r->scalex, right);
+			VectorScale(up2, r->scaley, up);
 		}
 		else if (r->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 		{
@@ -357,8 +364,8 @@ void R_DrawParticles (void)
 			}
 			else
 				VectorVectors(r->dir, right, up);
-			VectorScale(right, r->scale, right);
-			VectorScale(up, r->scale, up);
+			VectorScale(right, r->scalex, right);
+			VectorScale(up, r->scaley, up);
 		}
 		else
 			Host_Error("R_DrawParticles: unknown particle orientation %i\n", r->orientation);
@@ -377,29 +384,6 @@ void R_DrawParticles (void)
 
 		tex = &particletexture[r->tex][0];
 		texfog = &particletexture[r->tex][1];
-
-		fog = 0;
-		if (fogenabled)
-		{
-			VectorSubtract(org, r_origin, diff);
-			fog = exp(fogdensity/DotProduct(diff,diff));
-			if (fog >= 0.01f)
-			{
-				if (fog > 1)
-					fog = 1;
-				m.cr *= 1 - fog;
-				m.cg *= 1 - fog;
-				m.cb *= 1 - fog;
-				if (tex->s1 == texfog->s1 && tex->t1 == texfog->t1)
-				{
-					m.cr += fogcolor[0] * fog;
-					m.cg += fogcolor[1] * fog;
-					m.cb += fogcolor[2] * fog;
-				}
-			}
-			else
-				fog = 0;
-		}
 
 		tv[0][0] = org[0] - right[0] - up[0];
 		tv[0][1] = org[1] - right[1] - up[1];
@@ -422,27 +406,70 @@ void R_DrawParticles (void)
 		tv[3][3] = tex->s2;
 		tv[3][4] = tex->t1;
 
-		R_Mesh_Draw(&m);
-
-		if (fog && (tex->s1 != texfog->s1 || tex->t1 != texfog->t1))
+		fog = 0;
+		if (fogenabled)
 		{
-			m.blendfunc2 = GL_ONE;
-			m.cr = fogcolor[0];
-			m.cg = fogcolor[1];
-			m.cb = fogcolor[2];
-			m.ca = r->color[3] * fog;
-
-			tv[0][3] = texfog->s1;
-			tv[0][4] = texfog->t1;
-			tv[1][3] = texfog->s1;
-			tv[1][4] = texfog->t2;
-			tv[2][3] = texfog->s2;
-			tv[2][4] = texfog->t2;
-			tv[3][3] = texfog->s2;
-			tv[3][4] = texfog->t1;
-
-			R_Mesh_Draw(&m);
-			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+			VectorSubtract(org, r_origin, diff);
+			fog = exp(fogdensity/DotProduct(diff,diff));
+			if (fog >= 0.01f)
+			{
+				if (fog >= 0.99f)
+				{
+					// fully fogged, just use the fog texture and render as alpha
+					m.cr = fogcolor[0];
+					m.cg = fogcolor[1];
+					m.cb = fogcolor[2];
+					m.ca = r->color[3];
+					tv[0][3] = texfog->s1;
+					tv[0][4] = texfog->t1;
+					tv[1][3] = texfog->s1;
+					tv[1][4] = texfog->t2;
+					tv[2][3] = texfog->s2;
+					tv[2][4] = texfog->t2;
+					tv[3][3] = texfog->s2;
+					tv[3][4] = texfog->t1;
+					R_Mesh_Draw(&m);
+				}
+				else
+				{
+					// partially fogged, darken the first pass
+					m.cr *= 1 - fog;
+					m.cg *= 1 - fog;
+					m.cb *= 1 - fog;
+					if (tex->s1 == texfog->s1 && tex->t1 == texfog->t1)
+					{
+						// fog texture is the same as the base, just change the color
+						m.cr += fogcolor[0] * fog;
+						m.cg += fogcolor[1] * fog;
+						m.cb += fogcolor[2] * fog;
+						R_Mesh_Draw(&m);
+					}
+					else
+					{
+						// render the first pass (alpha), then do additive fog
+						R_Mesh_Draw(&m);
+						m.blendfunc2 = GL_ONE;
+						m.cr = fogcolor[0];
+						m.cg = fogcolor[1];
+						m.cb = fogcolor[2];
+						m.ca = r->color[3] * fog;
+						tv[0][3] = texfog->s1;
+						tv[0][4] = texfog->t1;
+						tv[1][3] = texfog->s1;
+						tv[1][4] = texfog->t2;
+						tv[2][3] = texfog->s2;
+						tv[2][4] = texfog->t2;
+						tv[3][3] = texfog->s2;
+						tv[3][4] = texfog->t1;
+						R_Mesh_Draw(&m);
+						m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+					}
+				}
+			}
+			else
+				R_Mesh_Draw(&m);
 		}
+		else
+			R_Mesh_Draw(&m);
 	}
 }

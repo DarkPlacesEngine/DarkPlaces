@@ -217,3 +217,7 @@ particletexture_t;
 #define MAX_PARTICLETEXTURES 64
 // [0] is normal, [1] is fog, they may be the same
 extern particletexture_t particletexture[MAX_PARTICLETEXTURES][2];
+
+void R_TimeReport(char *name);
+void R_TimeReport_Start(void);
+void R_TimeReport_End(void);
