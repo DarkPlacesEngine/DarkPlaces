@@ -114,14 +114,11 @@ void R_InitSky (byte *src, int bytesperpixel); // called at level load
 
 void R_NewMap (void);
 
-void R_Decals_Init(void);
-void R_DrawDecals(void);
-
 void R_DrawWorld(void);
 void R_SetupForWorldRendering(void);
 void R_MarkWorldLights(void);
 void R_PrepareSurfaces(void);
-void R_DrawSurfacesAll(void);
+void R_DrawSurfaces(int type);
 void R_DrawPortals(void);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);

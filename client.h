@@ -462,29 +462,8 @@ void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
 void CL_LavaSplash (vec3_t org);
 void CL_TeleportSplash (vec3_t org);
 void CL_MoveParticles(void);
-void CL_UpdateDecals(void);
 void R_MoveExplosions(void);
 void R_NewExplosion(vec3_t org);
-
-//
-// cl_decal
-//
-
-typedef struct renderdecal_s
-{
-	entity_render_t *ent;
-	int tex;
-	int surface;
-	float scale;
-	vec3_t org;
-	vec3_t dir;
-	float color[4];
-}
-renderdecal_t;
-
-void CL_Decals_Clear(void);
-void CL_Decals_Init(void);
-void CL_Decal(vec3_t origin, int tex, float scale, float red, float green, float blue, float alpha);
 
 // if contents is not zero, it will impact on content changes
 // (leafs matching contents are considered empty, others are solid)
@@ -512,9 +491,6 @@ typedef struct
 
 	// weapon model
 	entity_render_t viewent;
-
-	int numdecals;
-	renderdecal_t *decals;
 
 	int numentities;
 	entity_render_t **entities;

@@ -323,7 +323,6 @@ void Render_Init(void)
 	R_Light_Init();
 	R_Particles_Init();
 	R_Explosion_Init();
-	R_Decals_Init();
 	ui_init();
 	R_Modules_Start();
 }
@@ -695,19 +694,24 @@ void R_RenderView (void)
 	R_MarkWorldLights();
 	R_TimeReport("marklights");
 
-	if (skyrendermasked && R_DrawBModelSky())
+	if (skyrendermasked)
 	{
-		R_TimeReport("bmodelsky");
+		if (R_DrawBModelSky())
+			R_TimeReport("bmodelsky");
 	}
-
-	R_DrawViewModel();
-	R_TimeReport("viewmodel");
+	else
+	{
+		R_DrawViewModel();
+		R_TimeReport("viewmodel");
+	}
 
 	R_SetupForWorldRendering();
 	R_PrepareSurfaces();
 	R_TimeReport("surfprep");
 
-	R_DrawSurfacesAll();
+	R_DrawSurfaces(SHADERSTAGE_SKY);
+	R_DrawSurfaces(SHADERSTAGE_NORMAL);
+	R_DrawSurfaces(SHADERSTAGE_FOG);
 	R_TimeReport("surfdraw");
 
 	if (r_drawportals.integer)
@@ -720,11 +724,14 @@ void R_RenderView (void)
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
+	if (skyrendermasked)
+	{
+		R_DrawViewModel();
+		R_TimeReport("viewmodel");
+	}
+
 	R_DrawModels();
 	R_TimeReport("models");
-
-	R_DrawDecals();
-	R_TimeReport("decals");
 
 	R_DrawParticles();
 	R_TimeReport("particles");
