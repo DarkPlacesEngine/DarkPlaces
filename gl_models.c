@@ -366,7 +366,10 @@ void R_DrawQ1AliasModel (void)
 	if (fogenabled)
 	{
 		VectorSubtract(currentrenderentity->origin, r_origin, diff);
-		fog = exp(fogdensity/DotProduct(diff,diff));
+		fog = DotProduct(diff,diff);
+		if (fog < 0.01f)
+			fog = 0.01f;
+		fog = exp(fogdensity/fog);
 		if (fog > 1)
 			fog = 1;
 		if (fog < 0.01f)
