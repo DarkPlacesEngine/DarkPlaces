@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MASTER_PORT 27950
 
-cvar_t sv_public = {0, "sv_public", "0"};
+cvar_t sv_public = {0, "sv_public", "1"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
 
 // FIXME: resolve DNS on masters whenever their value changes and cache it (to avoid major delays in active servers when they heartbeat)
@@ -126,7 +126,7 @@ static void _HostCache_ViewSet_Remove( int index )
 // returns true if A should be inserted before B
 static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
 {
-	int result = 0; // > 0 if for numbers A > B and for text if A < B 
+	int result = 0; // > 0 if for numbers A > B and for text if A < B
 
 	if( hostcache_sortbyfield == HCIF_PING )
 		result = A->info.ping - B->info.ping;
@@ -146,7 +146,7 @@ static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
 		result = strcmp( B->info.mod, A->info.mod );
 	else if( hostcache_sortbyfield == HCIF_NAME )
 		result = strcmp( B->info.name, A->info.name );
-	
+
 	if( hostcache_sortdescending )
 		return result > 0;
 	return result < 0;
@@ -181,7 +181,7 @@ static qboolean _hc_teststr( const char *A, hostcache_maskop_t op, const char *B
 	else if( op == HCMO_EQUAL )
 		return strcmp( A, B ) == 0;
 	else if( op == HCMO_GREATER )
-		return strcmp( A, B ) > 0;	
+		return strcmp( A, B ) > 0;
 	else if( op == HCMO_NOTEQUAL )
 		return strcmp( A, B ) != 0;
 	else // HCMO_GREATEREQUAL
@@ -222,7 +222,7 @@ static void _HostCache_Insert( hostcache_t *entry )
 	if( hostcache_viewcount == HOSTCACHE_VIEWCACHESIZE )
 		return;
 	// now check whether it passes through the masks mask
-	for( start = 0 ; hostcache_andmasks[start].active && start < HOSTCACHE_ANDMASKCOUNT ; start++ ) 
+	for( start = 0 ; hostcache_andmasks[start].active && start < HOSTCACHE_ANDMASKCOUNT ; start++ )
 		if( !_HostCache_TestMask( &hostcache_andmasks[start], &entry->info ) )
 			return;
 
@@ -257,7 +257,7 @@ static void _HostCache_Insert( hostcache_t *entry )
 		if( _HostCache_SortTest( entry, hostcache_viewset[mid] ) )
 			// the item has to be in the upper half
 			end = mid;
-		else 
+		else
 			// the item has to be in the lower half
 			start = mid;
 	}
@@ -280,7 +280,7 @@ static void _HostCache_Remove( hostcache_t *entry )
 void HostCache_RebuildViewSet(void)
 {
 	int i;
-	
+
 	hostcache_viewcount = 0;
 	for( i = 0 ; i < hostcache_cachecount ; i++ )
 		if( hostcache_cache[i].finished )
@@ -320,8 +320,8 @@ void HostCache_QueryList(void)
 	hostcache_viewcount = 0;
 	hostcache_consoleoutput = false;
 	NetConn_QueryMasters();
-	
-	//_HostCache_Test(); 
+
+	//_HostCache_Test();
 }
 
 // rest
@@ -912,7 +912,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			hostcache_info_t *info;
 			int i, n;
 			double pingtime;
-	
+
 			string += 13;
 			// hostcache only uses text addresses
 			LHNETADDRESS_ToString(peeraddress, cname, sizeof(cname), true);
@@ -982,10 +982,10 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
 				serverquerycount++;
-	
+
 				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
 				if (developer.integer)
-					Con_Printf("Requesting info from server %s\n", ipstring);				
+					Con_Printf("Requesting info from server %s\n", ipstring);
 				// ignore the rest of the message if the hostcache is full
 				if( hostcache_cachecount == HOSTCACHE_TOTALSIZE )
 					break;
