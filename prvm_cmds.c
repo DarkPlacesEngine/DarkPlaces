@@ -104,6 +104,7 @@ float	altstr_count(string)
 string	altstr_prepare(string)
 string	altstr_get(string,float)
 string	altstr_set(string altstr, float num, string set)
+string	altstr_ins(string altstr, float num, string set)
 
 perhaps only : Menu : WriteMsg
 ===============================
@@ -3122,6 +3123,40 @@ void VM_altstr_set( void )
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( outstr );
 }
 
+/*
+========================
+VM_altstr_ins
+insert after num
+string	altstr_ins(string altstr, float num, string set)
+========================
+*/
+void VM_altstr_ins(void)
+{
+	int num;
+	char *setstr;
+	char *set;
+	char *instr;
+	char *in;
+	char *outstr;
+	char *out;
+
+	in = instr = PRVM_G_STRING( OFS_PARM0 );
+	num = PRVM_G_FLOAT( OFS_PARM1 );
+	set = setstr = PRVM_G_STRING( OFS_PARM2 );
+	
+	out = outstr = VM_GetTempString();	
+	for( num = num * 2 + 2 ; *in && num > 0 ; *out++ = *in++ )
+		if( *in == '\\' && !*++in )
+			break;
+		else if( *in == '\'' )
+			num--;
+
+	for( ; *set ; *out++ = *set++ );
+
+	strcpy( out, in );
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( outstr );
+}
+
 void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
@@ -3952,8 +3987,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_altstr_count,
 	VM_altstr_prepare,
 	VM_altstr_get,
-	VM_altstr_set,  // 85
-	0,0,0,0,0,	// 90
+	VM_altstr_set,
+	VM_altstr_ins,	// 86
+	0,0,0,0,	// 90
 	e10,			// 100
 	e100,			// 200
 	e100,			// 300

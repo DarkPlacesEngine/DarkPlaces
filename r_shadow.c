@@ -738,10 +738,10 @@ void R_Shadow_PrepareShadowMark(int numtris)
 
 int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
-	int i, j, tris = 0, vr[3], t, outvertices = 0;
-	float f, temp[3];
-	const int *e, *n;
-	const float *v;
+	int i, j;
+	int outtriangles = 0, outvertices = 0;
+	const int *element;
+	const float *vertex;
 
 	if (maxvertexupdate < innumvertices)
 	{
@@ -767,22 +767,22 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 
 	for (i = 0;i < numshadowmarktris;i++)
 	{
-		t = shadowmarktris[i];
-		e = inelement3i + t * 3;
+		element = inelement3i + shadowmarktris[i] * 3;
 		// make sure the vertices are created
 		for (j = 0;j < 3;j++)
 		{
-			if (vertexupdate[e[j]] != vertexupdatenum)
+			if (vertexupdate[element[j]] != vertexupdatenum)
 			{
-				vertexupdate[e[j]] = vertexupdatenum;
-				vertexremap[e[j]] = outvertices;
-				v = invertex3f + e[j] * 3;
+				float ratio, direction[3];
+				vertexupdate[element[j]] = vertexupdatenum;
+				vertexremap[element[j]] = outvertices;
+				vertex = invertex3f + element[j] * 3;
 				// project one copy of the vertex to the sphere radius of the light
 				// (FIXME: would projecting it to the light box be better?)
-				VectorSubtract(v, projectorigin, temp);
-				f = projectdistance / VectorLength(temp);
-				VectorCopy(v, outvertex3f);
-				VectorMA(projectorigin, f, temp, (outvertex3f + 3));
+				VectorSubtract(vertex, projectorigin, direction);
+				ratio = projectdistance / VectorLength(direction);
+				VectorCopy(vertex, outvertex3f);
+				VectorMA(projectorigin, ratio, direction, (outvertex3f + 3));
 				outvertex3f += 6;
 				outvertices += 2;
 			}
@@ -791,62 +791,70 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 
 	for (i = 0;i < numshadowmarktris;i++)
 	{
-		t = shadowmarktris[i];
-		e = inelement3i + t * 3;
-		n = inneighbor3i + t * 3;
+		int remappedelement[3];
+		int markindex;
+		const int *neighbortriangle;
+
+		markindex = shadowmarktris[i] * 3;
+		element = inelement3i + markindex;
+		neighbortriangle = inneighbor3i + markindex;
 		// output the front and back triangles
-		outelement3i[0] = vertexremap[e[0]];
-		outelement3i[1] = vertexremap[e[1]];
-		outelement3i[2] = vertexremap[e[2]];
-		outelement3i[3] = vertexremap[e[2]] + 1;
-		outelement3i[4] = vertexremap[e[1]] + 1;
-		outelement3i[5] = vertexremap[e[0]] + 1;
+		outelement3i[0] = vertexremap[element[0]];
+		outelement3i[1] = vertexremap[element[1]];
+		outelement3i[2] = vertexremap[element[2]];
+		outelement3i[3] = vertexremap[element[2]] + 1;
+		outelement3i[4] = vertexremap[element[1]] + 1;
+		outelement3i[5] = vertexremap[element[0]] + 1;
+
 		outelement3i += 6;
-		tris += 2;
+		outtriangles += 2;
 		// output the sides (facing outward from this triangle)
-		if (shadowmark[n[0]] != shadowmarkcount)
+		if (shadowmark[neighbortriangle[0]] != shadowmarkcount)
 		{
-			vr[0] = vertexremap[e[0]];
-			vr[1] = vertexremap[e[1]];
-			outelement3i[0] = vr[1];
-			outelement3i[1] = vr[0];
-			outelement3i[2] = vr[0] + 1;
-			outelement3i[3] = vr[1];
-			outelement3i[4] = vr[0] + 1;
-			outelement3i[5] = vr[1] + 1;
+			remappedelement[0] = vertexremap[element[0]];
+			remappedelement[1] = vertexremap[element[1]];
+			outelement3i[0] = remappedelement[1];
+			outelement3i[1] = remappedelement[0];
+			outelement3i[2] = remappedelement[0] + 1;
+			outelement3i[3] = remappedelement[1];
+			outelement3i[4] = remappedelement[0] + 1;
+			outelement3i[5] = remappedelement[1] + 1;
+
 			outelement3i += 6;
-			tris += 2;
+			outtriangles += 2;
 		}
-		if (shadowmark[n[1]] != shadowmarkcount)
+		if (shadowmark[neighbortriangle[1]] != shadowmarkcount)
 		{
-			vr[1] = vertexremap[e[1]];
-			vr[2] = vertexremap[e[2]];
-			outelement3i[0] = vr[2];
-			outelement3i[1] = vr[1];
-			outelement3i[2] = vr[1] + 1;
-			outelement3i[3] = vr[2];
-			outelement3i[4] = vr[1] + 1;
-			outelement3i[5] = vr[2] + 1;
+			remappedelement[1] = vertexremap[element[1]];
+			remappedelement[2] = vertexremap[element[2]];
+			outelement3i[0] = remappedelement[2];
+			outelement3i[1] = remappedelement[1];
+			outelement3i[2] = remappedelement[1] + 1;
+			outelement3i[3] = remappedelement[2];
+			outelement3i[4] = remappedelement[1] + 1;
+			outelement3i[5] = remappedelement[2] + 1;
+
 			outelement3i += 6;
-			tris += 2;
+			outtriangles += 2;
 		}
-		if (shadowmark[n[2]] != shadowmarkcount)
+		if (shadowmark[neighbortriangle[2]] != shadowmarkcount)
 		{
-			vr[0] = vertexremap[e[0]];
-			vr[2] = vertexremap[e[2]];
-			outelement3i[0] = vr[0];
-			outelement3i[1] = vr[2];
-			outelement3i[2] = vr[2] + 1;
-			outelement3i[3] = vr[0];
-			outelement3i[4] = vr[2] + 1;
-			outelement3i[5] = vr[0] + 1;
+			remappedelement[0] = vertexremap[element[0]];
+			remappedelement[2] = vertexremap[element[2]];
+			outelement3i[0] = remappedelement[0];
+			outelement3i[1] = remappedelement[2];
+			outelement3i[2] = remappedelement[2] + 1;
+			outelement3i[3] = remappedelement[0];
+			outelement3i[4] = remappedelement[2] + 1;
+			outelement3i[5] = remappedelement[0] + 1;
+
 			outelement3i += 6;
-			tris += 2;
+			outtriangles += 2;
 		}
 	}
 	if (outnumvertices)
 		*outnumvertices = outvertices;
-	return tris;
+	return outtriangles;
 }
 
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris)
