@@ -327,14 +327,14 @@ void M_Demo_Key (int k)
 		S_LocalSound ("misc/menu1.wav");
 		demo_cursor--;
 		if (demo_cursor < 0)
-			demo_cursor = NumberOfNehahraDemos;
+			demo_cursor = NumberOfNehahraDemos-1;
 		break;
 
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 		S_LocalSound ("misc/menu1.wav");
 		demo_cursor++;
-		if (demo_cursor > NumberOfNehahraDemos)
+		if (demo_cursor >= NumberOfNehahraDemos)
 			demo_cursor = 0;
 		break;
 	}
