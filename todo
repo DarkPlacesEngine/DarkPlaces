@@ -35,6 +35,7 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases?
 4 darkplaces: add qw protocol support (making darkplaces work as a qwcl client) (tell Fuh)
 0 darkplaces: add some cl_explosions_ cvars to control settings - start alpha, end alpha, start size, end size, life time (Supajoe, Mercury)
 0 darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
@@ -42,7 +43,7 @@
 0 darkplaces: change sky handling to draw sky even if fog is on (Deej, C0burn)
 3 darkplaces: redesign startup script handling to simply stop execution until video inits, when it encounters certain commands (instead of delaying those commands)
 d darkplaces: physics bug: rotating bmodels stop when the player blocks them instead of pushing the player
-0 darkplaces: physics bug: fiends can leap through the player
+d darkplaces: physics bug: fiends can leap through the player (thanks to Tomaz for massive assistance in tracking down this longstanding bug)
 -n darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
 0 darkplaces: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
 0 darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
