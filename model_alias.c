@@ -64,11 +64,6 @@ static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, 
 		if (modelradius < dist)
 			modelradius = dist;
 
-		VectorScale(temp, 16.0f, temp);
-		temp[0] = bound(-32768, temp[0], 32767);
-		temp[1] = bound(-32768, temp[1], 32767);
-		temp[2] = bound(-32768, temp[2], 32767);
-
 		j = vertremap[i]; // not onseam
 		if (j >= 0)
 			VectorCopy(temp, out[j].origin);
@@ -82,16 +77,16 @@ static void Mod_BuildAliasVertexTextureVectors(int numtriangles, const int *elem
 {
 	int i;
 	for (i = 0;i < numverts;i++)
-		VectorScale(vertices[i].origin, (1.0f / 16.0f), &vertexbuffer[i * 4]);
+		VectorCopy(vertices[i].origin, &vertexbuffer[i * 4]);
 	Mod_BuildTextureVectorsAndNormals(numverts, numtriangles, vertexbuffer, texcoords, elements, svectorsbuffer, tvectorsbuffer, normalsbuffer);
 	for (i = 0;i < numverts;i++)
 	{
-		vertices[i].normal[0] = normalsbuffer[i * 4 + 0] * 127.0f;
-		vertices[i].normal[1] = normalsbuffer[i * 4 + 1] * 127.0f;
-		vertices[i].normal[2] = normalsbuffer[i * 4 + 2] * 127.0f;
-		vertices[i].svector[0] = svectorsbuffer[i * 4 + 0] * 127.0f;
-		vertices[i].svector[1] = svectorsbuffer[i * 4 + 1] * 127.0f;
-		vertices[i].svector[2] = svectorsbuffer[i * 4 + 2] * 127.0f;
+		vertices[i].normal[0] = normalsbuffer[i * 4 + 0];
+		vertices[i].normal[1] = normalsbuffer[i * 4 + 1];
+		vertices[i].normal[2] = normalsbuffer[i * 4 + 2];
+		vertices[i].svector[0] = svectorsbuffer[i * 4 + 0];
+		vertices[i].svector[1] = svectorsbuffer[i * 4 + 1];
+		vertices[i].svector[2] = svectorsbuffer[i * 4 + 2];
 	}
 }
 
@@ -210,6 +205,104 @@ static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, int width, int
 	// quake model skins don't have alpha
 	skinframe->fog = NULL;
 	return true;
+}
+
+void Mod_BuildMDLMD2MeshInfo(void)
+{
+	int i;
+	aliasmesh_t *mesh;
+	aliasskin_t *skin;
+	aliaslayer_t *layer;
+	skinframe_t *skinframe;
+
+	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
+	Mod_ValidateElements(loadmodel->mdlmd2data_indices, loadmodel->numtris, loadmodel->numverts, __FILE__, __LINE__);
+	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
+
+	loadmodel->mdlmd2num_meshes = 1;
+	mesh = loadmodel->mdlmd2data_meshes = Mem_Alloc(loadmodel->mempool, loadmodel->mdlmd2num_meshes * sizeof(aliasmesh_t));
+	mesh->num_skins = 0;
+	mesh->num_frames = 0;
+	for (i = 0;i < loadmodel->numframes;i++)
+		mesh->num_frames += loadmodel->animscenes[i].framecount;
+	for (i = 0;i < loadmodel->numskins;i++)
+		mesh->num_skins += loadmodel->skinscenes[i].framecount;
+	mesh->num_triangles = loadmodel->numtris;
+	mesh->num_vertices = loadmodel->numverts;
+	mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(aliasskin_t));
+	mesh->data_elements = loadmodel->mdlmd2data_indices;
+	mesh->data_neighbors = loadmodel->mdlmd2data_triangleneighbors;
+	mesh->data_texcoords = loadmodel->mdlmd2data_texcoords;
+	mesh->data_vertices = loadmodel->mdlmd2data_pose;
+	for (i = 0, skin = mesh->data_skins, skinframe = loadmodel->skinframes;i < mesh->num_skins;i++, skin++, skinframe++)
+	{
+		skin->flags = 0;
+		// fog texture only exists if some pixels are transparent...
+		if (skinframe->fog != NULL)
+			skin->flags |= ALIASSKIN_TRANSPARENT;
+		// fog and gloss layers always exist
+		skin->num_layers = 2;
+		if (skinframe->glow != NULL)
+			skin->num_layers++;
+		if (skinframe->merged != NULL)
+			skin->num_layers++;
+		if (skinframe->base != NULL)
+			skin->num_layers++;
+		if (skinframe->pants != NULL)
+			skin->num_layers++;
+		if (skinframe->shirt != NULL)
+			skin->num_layers++;
+		layer = skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
+		if (skinframe->glow != NULL)
+		{
+			layer->flags = ALIASLAYER_REALTIME_NODRAW;
+			layer->texture = skinframe->glow;
+			layer++;
+		}
+		if (skinframe->merged != NULL)
+		{
+			layer->flags = ALIASLAYER_COLORMAP_NODRAW | ALIASLAYER_DIFFUSE;
+			if (skinframe->glow != NULL)
+				layer->flags |= ALIASLAYER_ADD;
+			layer->texture = skinframe->merged;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		if (skinframe->base != NULL)
+		{
+			layer->flags = ALIASLAYER_COLORMAP_DRAW | ALIASLAYER_DIFFUSE;
+			if (skinframe->glow != NULL)
+				layer->flags |= ALIASLAYER_ADD;
+			layer->texture = skinframe->base;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		if (skinframe->pants != NULL)
+		{
+			layer->flags = ALIASLAYER_COLORMAP_DRAW | ALIASLAYER_COLORMAP_DIFFUSE_SHIRT;
+			if (skinframe->glow != NULL || skinframe->base != NULL)
+				layer->flags |= ALIASLAYER_ADD;
+			layer->texture = skinframe->pants;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		if (skinframe->shirt != NULL)
+		{
+			layer->flags = ALIASLAYER_COLORMAP_DRAW | ALIASLAYER_COLORMAP_DIFFUSE_SHIRT;
+			if (skinframe->glow != NULL || skinframe->base != NULL || skinframe->pants != NULL)
+				layer->flags |= ALIASLAYER_ADD;
+			layer->texture = skinframe->shirt;
+			layer->nmap = skinframe->nmap;
+			layer++;
+		}
+		layer->flags = ALIASLAYER_REALTIME_DRAW | ALIASLAYER_SPECULAR;
+		layer->texture = skinframe->gloss;
+		layer->nmap = skinframe->nmap;
+		layer++;
+		layer->flags = ALIASLAYER_REALTIME_NODRAW | ALIASLAYER_FOG;
+		layer->texture = skinframe->fog;
+		layer++;
+	}
 }
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
@@ -498,9 +591,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	loadmodel->radius = modelradius;
 	loadmodel->radius2 = modelradius * modelradius;
 
-	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
-	Mod_ValidateElements(loadmodel->mdlmd2data_indices, loadmodel->numtris, loadmodel->numverts, __FILE__, __LINE__);
-	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
+	Mod_BuildMDLMD2MeshInfo();
 }
 
 static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, aliasvertex_t *out, int *vertremap)
@@ -528,10 +619,6 @@ static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v,
 		dist += temp[2]*temp[2];
 		if (modelradius < dist)
 			modelradius = dist;
-		VectorScale(temp, 16.0f, temp);
-		temp[0] = bound(-32768, temp[0], 32767);
-		temp[1] = bound(-32768, temp[1], 32767);
-		temp[2] = bound(-32768, temp[2], 32767);
 		VectorCopy(temp, out[i].origin);
 	}
 }
@@ -762,9 +849,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->radius = modelradius;
 	loadmodel->radius2 = modelradius * modelradius;
 
-	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
-	Mod_ValidateElements(loadmodel->mdlmd2data_indices, loadmodel->numtris, loadmodel->numverts, __FILE__, __LINE__);
-	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
+	Mod_BuildMDLMD2MeshInfo();
 }
 
 extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);

@@ -231,10 +231,12 @@ typedef struct model_s
 	animscene_t		*animscenes; // [numframes]
 
 	// Q1 and Q2 models are the same after loading
+	int				mdlmd2num_meshes;
 	int				*mdlmd2data_indices;
 	float			*mdlmd2data_texcoords;
 	aliasvertex_t	*mdlmd2data_pose;
 	int				*mdlmd2data_triangleneighbors;
+	aliasmesh_t		*mdlmd2data_meshes;
 
 	// for Zymotic models
 	int				zymnum_verts;

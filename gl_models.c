@@ -52,7 +52,7 @@ void GL_Models_Init(void)
 void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *normals, float *svectors, float *tvectors)
 {
 	int i, vertcount;
-	float vlerp1, nlerp1, vlerp2, nlerp2, vlerp3, nlerp3, vlerp4, nlerp4;
+	float lerp1, lerp2, lerp3, lerp4;
 	const aliasvertex_t *verts1, *verts2, *verts3, *verts4;
 
 	if (vertices == NULL)
@@ -64,31 +64,27 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 
 	vertcount = ent->model->numverts;
 	verts1 = ent->model->mdlmd2data_pose + ent->frameblend[0].frame * vertcount;
-	vlerp1 = ent->frameblend[0].lerp * (1.0f / 16.0f);
-	nlerp1 = ent->frameblend[0].lerp * (1.0f / 127.0f);
+	lerp1 = ent->frameblend[0].lerp;
 	if (ent->frameblend[1].lerp)
 	{
 		verts2 = ent->model->mdlmd2data_pose + ent->frameblend[1].frame * vertcount;
-		vlerp2 = ent->frameblend[1].lerp * (1.0f / 16.0f);
-		nlerp2 = ent->frameblend[1].lerp * (1.0f / 127.0f);
+		lerp2 = ent->frameblend[1].lerp;
 		if (ent->frameblend[2].lerp)
 		{
 			verts3 = ent->model->mdlmd2data_pose + ent->frameblend[2].frame * vertcount;
-			vlerp3 = ent->frameblend[2].lerp * (1.0f / 16.0f);
-			nlerp3 = ent->frameblend[2].lerp * (1.0f / 127.0f);
+			lerp3 = ent->frameblend[2].lerp;
 			if (ent->frameblend[3].lerp)
 			{
 				verts4 = ent->model->mdlmd2data_pose + ent->frameblend[3].frame * vertcount;
-				vlerp4 = ent->frameblend[3].lerp * (1.0f / 16.0f);
-				nlerp4 = ent->frameblend[3].lerp * (1.0f / 127.0f);
+				lerp4 = ent->frameblend[3].lerp;
 				// generate vertices
 				if (svectors != NULL)
 				{
 					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++, verts2++, verts3++, verts4++)
 					{
-						VectorMAMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vlerp4, verts4->origin, vertices);
-						VectorMAMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, nlerp4, verts4->normal, normals);
-						VectorMAMAMAM(nlerp1, verts1->svector, nlerp2, verts2->svector, nlerp3, verts3->svector, nlerp4, verts4->svector, svectors);
+						VectorMAMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, lerp4, verts4->origin, vertices);
+						VectorMAMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, lerp4, verts4->normal, normals);
+						VectorMAMAMAM(lerp1, verts1->svector, lerp2, verts2->svector, lerp3, verts3->svector, lerp4, verts4->svector, svectors);
 						CrossProduct(svectors, normals, tvectors);
 					}
 				}
@@ -96,13 +92,13 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 				{
 					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++, verts2++, verts3++, verts4++)
 					{
-						VectorMAMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vlerp4, verts4->origin, vertices);
-						VectorMAMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, nlerp4, verts4->normal, normals);
+						VectorMAMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, lerp4, verts4->origin, vertices);
+						VectorMAMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, lerp4, verts4->normal, normals);
 					}
 				}
 				else
 					for (i = 0;i < vertcount;i++, vertices += 4, verts1++, verts2++, verts3++, verts4++)
-						VectorMAMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vlerp4, verts4->origin, vertices);
+						VectorMAMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, lerp4, verts4->origin, vertices);
 			}
 			else
 			{
@@ -111,9 +107,9 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 				{
 					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++, verts2++, verts3++)
 					{
-						VectorMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vertices);
-						VectorMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, normals);
-						VectorMAMAM(nlerp1, verts1->svector, nlerp2, verts2->svector, nlerp3, verts3->svector, svectors);
+						VectorMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, vertices);
+						VectorMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, normals);
+						VectorMAMAM(lerp1, verts1->svector, lerp2, verts2->svector, lerp3, verts3->svector, svectors);
 						CrossProduct(svectors, normals, tvectors);
 					}
 				}
@@ -121,13 +117,13 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 				{
 					for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++, verts2++, verts3++)
 					{
-						VectorMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vertices);
-						VectorMAMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, nlerp3, verts3->normal, normals);
+						VectorMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, vertices);
+						VectorMAMAM(lerp1, verts1->normal, lerp2, verts2->normal, lerp3, verts3->normal, normals);
 					}
 				}
 				else
 					for (i = 0;i < vertcount;i++, vertices += 4, verts1++, verts2++, verts3++)
-						VectorMAMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vlerp3, verts3->origin, vertices);
+						VectorMAMAM(lerp1, verts1->origin, lerp2, verts2->origin, lerp3, verts3->origin, vertices);
 			}
 		}
 		else
@@ -137,9 +133,9 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 			{
 				for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++, verts2++)
 				{
-					VectorMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vertices);
-					VectorMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, normals);
-					VectorMAM(nlerp1, verts1->svector, nlerp2, verts2->svector, svectors);
+					VectorMAM(lerp1, verts1->origin, lerp2, verts2->origin, vertices);
+					VectorMAM(lerp1, verts1->normal, lerp2, verts2->normal, normals);
+					VectorMAM(lerp1, verts1->svector, lerp2, verts2->svector, svectors);
 					CrossProduct(svectors, normals, tvectors);
 				}
 			}
@@ -147,13 +143,13 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 			{
 				for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++, verts2++)
 				{
-					VectorMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vertices);
-					VectorMAM(nlerp1, verts1->normal, nlerp2, verts2->normal, normals);
+					VectorMAM(lerp1, verts1->origin, lerp2, verts2->origin, vertices);
+					VectorMAM(lerp1, verts1->normal, lerp2, verts2->normal, normals);
 				}
 			}
 			else
 				for (i = 0;i < vertcount;i++, vertices += 4, verts1++, verts2++)
-					VectorMAM(vlerp1, verts1->origin, vlerp2, verts2->origin, vertices);
+					VectorMAM(lerp1, verts1->origin, lerp2, verts2->origin, vertices);
 		}
 	}
 	else
@@ -163,9 +159,9 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 		{
 			for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, svectors += 4, tvectors += 4, verts1++)
 			{
-				VectorM(vlerp1, verts1->origin, vertices);
-				VectorM(nlerp1, verts1->normal, normals);
-				VectorM(nlerp1, verts1->svector, svectors);
+				VectorM(lerp1, verts1->origin, vertices);
+				VectorM(lerp1, verts1->normal, normals);
+				VectorM(lerp1, verts1->svector, svectors);
 				CrossProduct(svectors, normals, tvectors);
 			}
 		}
@@ -173,13 +169,13 @@ void R_Model_Alias_GetVerts(const entity_render_t *ent, float *vertices, float *
 		{
 			for (i = 0;i < vertcount;i++, vertices += 4, normals += 4, verts1++)
 			{
-				VectorM(vlerp1, verts1->origin, vertices);
-				VectorM(nlerp1, verts1->normal, normals);
+				VectorM(lerp1, verts1->origin, vertices);
+				VectorM(lerp1, verts1->normal, normals);
 			}
 		}
 		else
 			for (i = 0;i < vertcount;i++, vertices += 4, verts1++)
-				VectorM(vlerp1, verts1->origin, vertices);
+				VectorM(lerp1, verts1->origin, vertices);
 	}
 }
 
