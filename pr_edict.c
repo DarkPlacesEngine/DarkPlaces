@@ -545,6 +545,7 @@ For debugging
 =============
 */
 // LordHavoc: optimized this to print out much more quickly (tempstring)
+// LordHavoc: changed to print out every 4096 characters (incase there are a lot of fields to print)
 void ED_Print (edict_t *ed)
 {
 	int		l;
@@ -553,7 +554,7 @@ void ED_Print (edict_t *ed)
 	int		i, j;
 	char	*name;
 	int		type;
-	char	tempstring[8192]; // temporary string buffer
+	char	tempstring[8192], tempstring2[260]; // temporary string buffers
 
 	if (ed->free)
 	{
@@ -581,15 +582,36 @@ void ED_Print (edict_t *ed)
 		if (j == type_size[type])
 			continue;
 
+		if (strlen(name) > 256)
+		{
+			strncpy(tempstring2, name, 256);
+			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
+			tempstring2[259] = 0;
+			name = tempstring2;
+		}
 		strcat(tempstring, name);
 		for (l = strlen(name);l < 14;l++)
 			strcat(tempstring, " ");
 		strcat(tempstring, " ");
 
-		strcat(tempstring, PR_ValueString(d->type, (eval_t *)v));
+		name = PR_ValueString(d->type, (eval_t *)v);
+		if (strlen(name) > 256)
+		{
+			strncpy(tempstring2, name, 256);
+			tempstring2[256] = tempstring2[257] = tempstring2[258] = '.';
+			tempstring2[259] = 0;
+			name = tempstring2;
+		}
+		strcat(tempstring, name);
 		strcat(tempstring, "\n");
+		if (strlen(tempstring) >= 4096)
+		{
+			Con_Printf("%s", tempstring);
+			tempstring[0] = 0;
+		}
 	}
-	Con_Printf(tempstring);
+	if (tempstring[0])
+		Con_Printf("%s", tempstring);
 }
 
 /*
