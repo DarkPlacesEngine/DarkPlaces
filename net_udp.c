@@ -240,7 +240,7 @@ int UDP_CheckNewConnections (void)
 		Sys_Error ("UDP: ioctlsocket (FIONREAD) failed\n");
 	if (available)
 		return net_acceptsocket;
-	recvfrom (net_acceptsocket, buff, 0, 0, &from, &fromlen);
+	recvfrom (net_acceptsocket, buff, 0, 0, (struct sockaddr *) &from, &fromlen);
 	return -1;
 }
 
