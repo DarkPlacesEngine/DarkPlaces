@@ -157,7 +157,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 
 typedef enum
 {
-	pt_static, pt_rain, pt_bubble, pt_blood
+	pt_static, pt_rain, pt_bubble, pt_blood, pt_grow
 }
 ptype_t;
 
@@ -652,7 +652,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			k = count / 4;
 			while(k--)
 			{
-				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 4, 4, 255, 1024, 9999, -0.2, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 0, 0, 0, 0, 0, 0);
+				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 3, 3, 255, 1024, 9999, -0.2, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
 			}
 		}
 
@@ -960,7 +960,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 3;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, dec, dec, 32, 64, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 0, 0, 0, 0, 0, 0);
+					particle(pt_grow,   PARTICLE_BILLBOARD, 0x303030, 0x606060, tex_smoke[rand()&7], false, true, dec, dec, 32, 64, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 6, 0, 0, 0, 0, 0);
 					particle(pt_static, PARTICLE_BILLBOARD, 0x801010, 0xFFA020, tex_smoke[rand()&7], false, true, dec, dec, 128, 768, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-20, 20), lhrandom(-20, 20), lhrandom(-20, 20), 0, 0, 0, 0, 0, 0);
 				}
 				if (bubbles)
@@ -1171,6 +1171,10 @@ void CL_MoveParticles (void)
 				a = content;
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
 					p->die = -1;
+				break;
+			case pt_grow:
+				p->scalex += frametime * p->time2;
+				p->scaley += frametime * p->time2;
 				break;
 			default:
 				printf("unknown particle type %i\n", p->type);
