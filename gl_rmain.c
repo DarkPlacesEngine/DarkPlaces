@@ -98,15 +98,16 @@ static void R_TimeRefresh_f (void)
 
 	intimerefresh = 1;
 	start = Sys_DoubleTime ();
-	glDrawBuffer (GL_FRONT);
+	//glDrawBuffer (GL_FRONT);
 	for (i = 0;i < 128;i++)
 	{
 		r_refdef.viewangles[0] = 0;
 		r_refdef.viewangles[1] = i/128.0*360.0;
 		r_refdef.viewangles[2] = 0;
-		R_RenderView();
+		CL_UpdateScreen();
+		//R_RenderView();
 	}
-	glDrawBuffer  (GL_BACK);
+	//glDrawBuffer  (GL_BACK);
 
 	stop = Sys_DoubleTime ();
 	intimerefresh = 0;
