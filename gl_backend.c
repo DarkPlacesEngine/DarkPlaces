@@ -63,8 +63,6 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 #define BACKENDACTIVECHECK if (!backendactive) Sys_Error("GL backend function called when backend is not active\n");
 
-float r_mesh_farclip;
-
 int c_meshs, c_meshelements;
 
 int lightscalebit;
@@ -199,77 +197,63 @@ void gl_backend_init(void)
 	R_RegisterModule("GL_Backend", gl_backend_start, gl_backend_shutdown, gl_backend_newmap);
 }
 
-/*
-=============
-GL_SetupFrame
-=============
-*/
-static void GL_SetupFrame (void)
+void GL_SetupView_ViewPort (int x, int y, int width, int height)
+{
+	if (!r_render.integer)
+		return;
+
+	// y is weird beause OpenGL is bottom to top, we use top to bottom
+	qglViewport(x, vid.realheight - (y + height), width, height);
+	CHECKGLERROR
+}
+
+void GL_SetupView_Orientation_Identity (void)
+{
+	Matrix4x4_CreateIdentity(&backend_viewmatrix);
+	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
+}
+
+void GL_SetupView_Orientation_FromEntity (vec3_t origin, vec3_t angles)
+{
+	Matrix4x4_CreateRotate(&backend_viewmatrix, -90, 1, 0, 0);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, 90, 0, 0, 1);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[2], 1, 0, 0);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[0], 0, 1, 0);
+	Matrix4x4_ConcatRotate(&backend_viewmatrix, -angles[1], 0, 0, 1);
+	Matrix4x4_ConcatTranslate(&backend_viewmatrix, -origin[0], -origin[1], -origin[2]);
+	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
+}
+
+void GL_SetupView_Mode_Perspective (double aspect, double fovx, double fovy, double zNear, double zFar)
 {
 	double xmax, ymax;
-	double fovx, fovy, zNear, zFar, aspect;
 
 	if (!r_render.integer)
 		return;
 
-	qglDepthFunc (GL_LEQUAL);CHECKGLERROR
+	// set up viewpoint
+	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
+	qglLoadIdentity ();CHECKGLERROR
+	// pyramid slopes
+	xmax = zNear * tan(fovx * M_PI / 360.0);
+	ymax = zNear * tan(fovy * M_PI / 360.0);
+	// set view pyramid
+	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
+	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
+	GL_SetupView_Orientation_Identity();
+}
+
+void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double zNear, double zFar)
+{
+	if (!r_render.integer)
+		return;
 
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity ();CHECKGLERROR
-
-	// y is weird beause OpenGL is bottom to top, we use top to bottom
-	qglViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);CHECKGLERROR
-
-	// depth range
-	zNear = 1.0;
-	zFar = r_mesh_farclip;
-	if (zFar < 64)
-		zFar = 64;
-
-	// fov angles
-	fovx = r_refdef.fov_x;
-	fovy = r_refdef.fov_y;
-	aspect = r_refdef.width / r_refdef.height;
-
-	// pyramid slopes
-	xmax = zNear * tan(fovx * M_PI / 360.0) * aspect;
-	ymax = zNear * tan(fovy * M_PI / 360.0);
-
-	// set view pyramid
-	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
-
+	qglOrtho(x1, y2, x2, y1, zNear, zFar);
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
-
-	Matrix4x4_CreateRotate(&backend_viewmatrix, -90, 1, 0, 0);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, 90, 0, 0, 1);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, -r_refdef.viewangles[2], 1, 0, 0);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, -r_refdef.viewangles[0], 0, 1, 0);
-	Matrix4x4_ConcatRotate(&backend_viewmatrix, -r_refdef.viewangles[1], 0, 0, 1);
-	Matrix4x4_ConcatTranslate(&backend_viewmatrix, -r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);
-	//Con_Printf("Our Matrix:\n");
-	//Matrix4x4_Print(&backend_viewmatrix);
-
-	//Matrix4x4_Transpose(&backend_glmodelviewmatrix, &backend_viewmatrix);
-	//qglLoadMatrixf(&backend_glmodelviewmatrix.m[0][0]);CHECKGLERROR
-	memset(&backend_modelmatrix, 0, sizeof(backend_modelmatrix));
-
-	/*
-	// put Z going up
-	qglLoadIdentity ();CHECKGLERROR
-	qglRotatef (-90,  1, 0, 0);CHECKGLERROR
-	qglRotatef (90,  0, 0, 1);CHECKGLERROR
-	// camera rotation
-	qglRotatef (-r_refdef.viewangles[2],  1, 0, 0);CHECKGLERROR
-	qglRotatef (-r_refdef.viewangles[0],  0, 1, 0);CHECKGLERROR
-	qglRotatef (-r_refdef.viewangles[1],  0, 0, 1);CHECKGLERROR
-	// camera location
-	qglTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);CHECKGLERROR
-	qglGetFloatv (GL_MODELVIEW_MATRIX, &gl_viewmatrix.m[0][0]);
-	Matrix4x4_Transpose(&backend_viewmatrix, &gl_viewmatrix);
-	Con_Printf("GL Matrix:\n");
-	Matrix4x4_Print(&backend_viewmatrix);
-	*/
+	GL_SetupView_Orientation_Identity();
 }
 
 static struct
@@ -410,19 +394,15 @@ void GL_Backend_ResetState(void)
 }
 
 // called at beginning of frame
-void R_Mesh_Start(float farclip)
+void R_Mesh_Start(void)
 {
 	BACKENDACTIVECHECK
 
 	CHECKGLERROR
 
-	r_mesh_farclip = farclip;
-
 	GL_Backend_CheckCvars();
 	if (mesh_maxverts != gl_mesh_maxverts.integer)
 		GL_Backend_ResizeArrays(gl_mesh_maxverts.integer);
-
-	GL_SetupFrame();
 
 	GL_Backend_ResetState();
 }
@@ -596,13 +576,24 @@ void R_Mesh_Finish(void)
 	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);CHECKGLERROR
 }
 
-void R_Mesh_ClearDepth(void)
+void GL_DepthFunc(int value)
+{
+	if (!r_render.integer)
+		return;
+
+	qglDepthFunc (value);
+	CHECKGLERROR
+}
+
+void GL_ClearDepth(void)
 {
 	BACKENDACTIVECHECK
 
-	R_Mesh_Finish();
+	if (!r_render.integer)
+		return;
+
 	qglClear(GL_DEPTH_BUFFER_BIT);
-	R_Mesh_Start(r_mesh_farclip);
+	CHECKGLERROR
 }
 
 void R_Mesh_Matrix(const matrix4x4_t *matrix)

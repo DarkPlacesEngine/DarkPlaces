@@ -661,7 +661,12 @@ void R_RenderView (void)
 	r_farclip = R_FarClip_Finish() + 256.0f;
 	R_TimeReport("markentity");
 
-	R_Mesh_Start(r_farclip);
+	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	GL_SetupView_Mode_Perspective((double) r_refdef.height / r_refdef.width, r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
+	GL_SetupView_Orientation_FromEntity (r_refdef.vieworg, r_refdef.viewangles);
+	GL_DepthFunc(GL_LEQUAL);
+	
+	R_Mesh_Start();
 	R_MeshQueue_BeginScene();
 
 	if (R_DrawBrushModelsSky())
