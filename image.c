@@ -91,7 +91,7 @@ qbyte* LoadPCX (const qbyte *f, int matchwidth, int matchheight)
 	const qbyte *palette, *fin, *enddata;
 	int x, y, x2, dataByte;
 
-	if (loadsize < sizeof(pcx) + 768)
+	if (loadsize < (int)sizeof(pcx) + 768)
 	{
 		Con_Printf ("Bad pcx file\n");
 		return NULL;

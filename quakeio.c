@@ -116,7 +116,7 @@ Qopen (const char *path, const char *mode)
 	Qexpand_squiggle (path, e_path);
 	path = e_path;
 
-	for (p = m; *mode && p - m < (sizeof (m) - 1); mode++) {
+	for (p = m; *mode && p - m < (int)(sizeof (m) - 1); mode++) {
 		if (*mode == 'z') {
 			zip = 1;
 			continue;
@@ -160,7 +160,7 @@ Qdopen (int fd, const char *mode)
 	char        m[80], *p;
 	int         zip = 0;
 
-	for (p = m; *mode && p - m < (sizeof (m) - 1); mode++) {
+	for (p = m; *mode && p - m < (int)(sizeof (m) - 1); mode++) {
 		if (*mode == 'z') {
 			zip = 1;
 			continue;

@@ -148,7 +148,7 @@ Loads a model
 */
 static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk, qboolean isworldmodel)
 {
-	int crc;
+	unsigned int crc;
 	void *buf;
 
 	mod->used = true;
@@ -414,7 +414,7 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 {
 	int i;
 	for (i = 0;i < numtriangles * 3;i++)
-		if ((unsigned int)elements[i] >= numverts)
+		if ((unsigned int)elements[i] >= (unsigned int)numverts)
 			Con_Printf("Mod_ValidateElements: out of bounds element detected at %s:%d\n", filename, fileline);
 }
 

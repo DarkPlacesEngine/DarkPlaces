@@ -55,7 +55,7 @@ typedef struct memheader_s
 	const char *filename;
 	int fileline;
 	// should always be MEMHEADER_SENTINEL1
-	int sentinel1;
+	unsigned int sentinel1;
 	// immediately followed by data, which is followed by a MEMHEADER_SENTINEL2 byte
 }
 memheader_t;
@@ -66,12 +66,12 @@ typedef struct memclump_s
 	// contents of the clump
 	qbyte block[MEMCLUMPSIZE];
 	// should always be MEMCLUMP_SENTINEL
-	int sentinel1;
+	unsigned int sentinel1;
 	// if a bit is on, it means that the MEMUNIT bytes it represents are
 	// allocated, otherwise free
 	int bits[MEMBITINTS];
 	// should always be MEMCLUMP_SENTINEL
-	int sentinel2;
+	unsigned int sentinel2;
 	// if this drops to 0, the clump is freed
 	int blocksinuse;
 	// largest block of memory available (this is reset to an optimistic
@@ -86,7 +86,7 @@ memclump_t;
 typedef struct mempool_s
 {
 	// should always be MEMHEADER_SENTINEL1
-	int sentinel1;
+	unsigned int sentinel1;
 	// chain of individual memory allocations
 	struct memheader_s *chain;
 #if MEMCLUMPING
@@ -107,7 +107,7 @@ typedef struct mempool_s
 	const char *filename;
 	int fileline;
 	// should always be MEMHEADER_SENTINEL1
-	int sentinel2;
+	unsigned int sentinel2;
 }
 mempool_t;
 

@@ -543,7 +543,7 @@ void Con_DrawNotify (void)
 			sprintf(temptext, "say_team:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
 		else
 			sprintf(temptext, "say:%s%c", chat_buffer, (int) 10+((int)(realtime*con_cursorspeed)&1));
-		while (strlen(temptext) >= con_linewidth)
+		while (strlen(temptext) >= (size_t) con_linewidth)
 		{
 			DrawQ_String (0, v, temptext, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
 			strcpy(temptext, &temptext[con_linewidth]);

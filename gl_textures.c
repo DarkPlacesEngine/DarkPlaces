@@ -120,7 +120,7 @@ gltexture_t;
 
 typedef struct gltexturepool_s
 {
-	int sentinel;
+	unsigned int sentinel;
 	struct gltextureimage_s *imagechain;
 	struct gltexture_s *gltchain;
 	struct gltexturepool_s *next;

@@ -1974,7 +1974,7 @@ void M_Menu_Video_f (void)
 	m_entersound = true;
 
 	// Look for the current resolution
-	for (video_resolution = 0; video_resolution < sizeof (video_resolutions) / sizeof (video_resolutions[0]); video_resolution++)
+	for (video_resolution = 0; video_resolution < (int) (sizeof (video_resolutions) / sizeof (video_resolutions[0])); video_resolution++)
 	{
 		if (video_resolutions[video_resolution][0] == current_vid_width &&
 			video_resolutions[video_resolution][1] == current_vid_height)
@@ -2012,7 +2012,7 @@ void M_Video_Draw (void)
 	// Fullscreen
 	M_Print(16, video_cursor_table[2], "            Fullscreen");
 	M_DrawCheckbox(220, video_cursor_table[2], vid_fullscreen.integer);
-	
+
 	// Stencil
 	M_Print(16, video_cursor_table[3], "               Stencil");
 	M_DrawCheckbox(220, video_cursor_table[3], vid_stencil.integer);
@@ -2037,7 +2037,7 @@ void M_Menu_Video_AdjustSliders (int dir)
 			int new_resolution = video_resolution + dir;
 			if (new_resolution < 0)
 				video_resolution = sizeof (video_resolutions) / sizeof (video_resolutions[0]) - 1;
-			else if (new_resolution > sizeof (video_resolutions) / sizeof (video_resolutions[0]) - 1)
+			else if (new_resolution > (int) (sizeof (video_resolutions) / sizeof (video_resolutions[0]) - 1))
 				video_resolution = 0;
 			else
 				video_resolution = new_resolution;

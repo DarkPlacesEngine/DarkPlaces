@@ -302,7 +302,7 @@ S_TouchSound
 void S_TouchSound (char *name)
 {
 	sfx_t	*sfx;
-	
+
 	if (!sound_started)
 		return;
 
@@ -866,7 +866,7 @@ void S_Update_(void)
 // mix ahead of current position
 	endtime = soundtime + _snd_mixahead.value * shm->speed;
 	samps = shm->samples >> (shm->channels-1);
-	if (endtime - soundtime > samps)
+	if (endtime > (unsigned int)(soundtime + samps))
 		endtime = soundtime + samps;
 
 #ifdef _WIN32
@@ -1083,7 +1083,7 @@ void S_RawSamples_Dequeue(int *samples, unsigned int length)
 			out[i] = in[i];
 		//Con_Printf("S_RawSamples_Dequeue: normal      %i\n", l);
 	}
-	if (l < length)
+	if (l < (int)length)
 	{
 		memset(samples + l * 2, 0, (length - l) * sizeof(int[2]));
 		//Con_Printf("S_RawSamples_Dequeue: padding with %i samples\n", length - l);

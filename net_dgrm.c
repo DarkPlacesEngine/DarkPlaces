@@ -330,7 +330,7 @@ int	Datagram_GetMessage (qsocket_t *sock)
 		if (length == 0)
 			break;
 
-		if (length == -1)
+		if ((int)length == -1)
 		{
 			Con_Printf("Read error\n");
 			return -1;
@@ -526,7 +526,7 @@ static void Test_Poll(void)
 	while (1)
 	{
 		len = dfunc.Read (testSocket, net_message.data, net_message.maxsize, &clientaddr);
-		if (len < sizeof(int))
+		if (len < (int)sizeof(int))
 			break;
 
 		net_message.cursize = len;
@@ -536,7 +536,7 @@ static void Test_Poll(void)
 		MSG_ReadLong();
 		if (control == -1)
 			break;
-		if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+		if ((control & (~NETFLAG_LENGTH_MASK)) != (int)NETFLAG_CTL)
 			break;
 		if ((control & NETFLAG_LENGTH_MASK) != len)
 			break;
@@ -650,7 +650,7 @@ static void Test2_Poll(void)
 	name[0] = 0;
 
 	len = dfunc.Read (test2Socket, net_message.data, net_message.maxsize, &clientaddr);
-	if (len < sizeof(int))
+	if (len < (int)sizeof(int))
 		goto Reschedule;
 
 	net_message.cursize = len;
@@ -660,7 +660,7 @@ static void Test2_Poll(void)
 	MSG_ReadLong();
 	if (control == -1)
 		goto Error;
-	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+	if ((control & (~NETFLAG_LENGTH_MASK)) != (int)NETFLAG_CTL)
 		goto Error;
 	if ((control & NETFLAG_LENGTH_MASK) != len)
 		goto Error;
@@ -841,16 +841,16 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	SZ_Clear(&net_message);
 
 	len = dfunc.Read (acceptsock, net_message.data, net_message.maxsize, &clientaddr);
-	if (len < sizeof(int))
+	if (len < (int)sizeof(int))
 		return NULL;
 	net_message.cursize = len;
 
 	MSG_BeginReading ();
 	control = BigLong(*((int *)net_message.data));
 	MSG_ReadLong();
-	
+
 	// Messages starting by 0xFFFFFFFF are master server messages
-	if (control == 0xFFFFFFFF)
+	if ((unsigned int)control == 0xFFFFFFFF)
 	{
 		int responsesize = Master_HandleMessage();
 		if (responsesize > 0)
@@ -860,7 +860,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 		}
 		return NULL;
 	}
-	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+	if ((control & (~NETFLAG_LENGTH_MASK)) != (int)NETFLAG_CTL)
 		return NULL;
 	if ((control & NETFLAG_LENGTH_MASK) != len)
 		return NULL;
@@ -1096,7 +1096,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 	int control;
 	int c, n, i;
 
-	if (net_message.cursize < sizeof(int))
+	if (net_message.cursize < (int)sizeof(int))
 		return false;
 
 	// don't answer our own query
@@ -1113,7 +1113,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 	MSG_ReadLong();
 	if (control == -1)
 		return false;
-	if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+	if ((control & (~NETFLAG_LENGTH_MASK)) != (int)NETFLAG_CTL)
 		return false;
 	if ((control & NETFLAG_LENGTH_MASK) != net_message.cursize)
 		return false;
@@ -1240,7 +1240,7 @@ static qboolean _Datagram_SearchForInetHosts (const char *master)
 		Con_DPrintf("Datagram_SearchForInetHosts: Recv received %d byte message\n", net_message.cursize);
 		Master_ParseServerList (&dfunc);
 	}
-	
+
 	while ((ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr)) > 0)
 	{
 		net_message.cursize = ret;
@@ -1264,7 +1264,7 @@ qboolean Datagram_SearchForInetHosts (const char *master)
 			if (_Datagram_SearchForInetHosts (master))
 				result = true;
 	}
-	
+
 	return result;
 }
 
@@ -1331,7 +1331,7 @@ static qsocket_t *_Datagram_Connect (const char *host)
 					continue;
 				}
 
-				if (ret < sizeof(int))
+				if (ret < (int)sizeof(int))
 				{
 					ret = 0;
 					continue;
@@ -1347,7 +1347,7 @@ static qsocket_t *_Datagram_Connect (const char *host)
 					ret = 0;
 					continue;
 				}
-				if ((control & (~NETFLAG_LENGTH_MASK)) !=  NETFLAG_CTL)
+				if ((control & (~NETFLAG_LENGTH_MASK)) != (int)NETFLAG_CTL)
 				{
 					ret = 0;
 					continue;
