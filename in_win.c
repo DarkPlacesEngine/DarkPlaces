@@ -529,7 +529,7 @@ IN_MouseMove
 */
 void IN_MouseMove (usercmd_t *cmd)
 {
-	int					i, mx, my, mouselook = (in_mlook.state & 1) || freelook.integer;
+	int					i, mx, my;
 	DIDEVICEOBJECTDATA	od;
 	DWORD				dwElements;
 	HRESULT				hr;
@@ -703,6 +703,7 @@ void IN_StartupJoystick (void)
 	int			numdevs;
 	JOYCAPS		jc;
 	MMRESULT	mmr;
+	mmr = 0;
  
  	// assume no joystick
 	joy_avail = false; 
@@ -956,7 +957,7 @@ qboolean IN_ReadJoystick (void)
 	else
 	{
 		// read error occurred
-		// turning off the joystick seems too harsh for 1 read error,\
+		// turning off the joystick seems too harsh for 1 read error,
 		// but what should be done?
 		// Con_Printf ("IN_ReadJoystick: no response\n");
 		// joy_avail = false;
