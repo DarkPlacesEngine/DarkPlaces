@@ -173,17 +173,25 @@ void GL_ResampleTextureLerpLine (byte *in, byte *out, int inwidth, int outwidth)
 		{
 			l2 = f & 0xFFFF;
 			l1 = 0x10000 - l2;
-			*out++ = qgamma[(byte) ((in[0] * l1 + in[4] * l2) >> 16)];
-			*out++ = qgamma[(byte) ((in[1] * l1 + in[5] * l2) >> 16)];
-			*out++ = qgamma[(byte) ((in[2] * l1 + in[6] * l2) >> 16)];
-			*out++ =        (byte) ((in[3] * l1 + in[7] * l2) >> 16) ;
+			*out++ = (byte) ((in[0] * l1 + in[4] * l2) >> 16);
+			*out++ = (byte) ((in[1] * l1 + in[5] * l2) >> 16);
+			*out++ = (byte) ((in[2] * l1 + in[6] * l2) >> 16);
+			*out++ = (byte) ((in[3] * l1 + in[7] * l2) >> 16);
+//			*out++ = qgamma[(byte) ((in[0] * l1 + in[4] * l2) >> 16)];
+//			*out++ = qgamma[(byte) ((in[1] * l1 + in[5] * l2) >> 16)];
+//			*out++ = qgamma[(byte) ((in[2] * l1 + in[6] * l2) >> 16)];
+//			*out++ =        (byte) ((in[3] * l1 + in[7] * l2) >> 16) ;
 		}
 		else // last pixel of the line has no pixel to lerp to
 		{
-			*out++ = qgamma[in[0]];
-			*out++ = qgamma[in[1]];
-			*out++ = qgamma[in[2]];
-			*out++ =        in[3] ;
+			*out++ = in[0];
+			*out++ = in[1];
+			*out++ = in[2];
+			*out++ = in[3];
+//			*out++ = qgamma[in[0]];
+//			*out++ = qgamma[in[1]];
+//			*out++ = qgamma[in[2]];
+//			*out++ =        in[3] ;
 		}
 	}
 }
