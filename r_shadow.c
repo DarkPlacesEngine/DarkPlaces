@@ -221,6 +221,35 @@ void r_shadow_newmap(void)
 	r_shadow_reloadlights = true;
 }
 
+void R_Shadow_Help_f(void)
+{
+	Con_Printf(
+"Documentation on r_shadow system:\n"
+"Settings:\n"
+"r_shadow_lightattenuationpower : used to generate attenuation texture\n"
+"r_shadow_lightattenuationscale : used to generate attenuation texture\n"
+"r_shadow_lightintensityscale : scale rendering brightness of all lights\n"
+"r_shadow_realtime_world : use realtime world light rendering\n"
+"r_shadow_realtime_dlight : use high quality dlight rendering\n"
+"r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
+"r_shadow_gloss 0/1/2 : no gloss, gloss textures only, force gloss\n"
+"r_shadow_glossintensity : brightness of textured gloss\n"
+"r_shadow_gloss2intensity : brightness of forced gloss\n"
+"r_shadow_debuglight : render only this light number (-1 = all)\n"
+"r_shadow_scissor : use scissor optimization\n"
+"r_shadow_bumpscale_bumpmap : depth scale for bumpmap conversion\n"
+"r_shadow_bumpscale_basetexture : base texture as bumpmap with this scale\n"
+"r_shadow_polygonoffset : nudge shadow volumes closer/further\n"
+"r_shadow_portallight : use portal visibility for static light precomputation\n"
+"r_shadow_projectdistance : shadow volume projection distance\n"
+"r_shadow_texture3d : use 3d attenuation texture (if hardware supports)\n"
+"r_shadow_singlepassvolumegeneration : selects shadow volume algorithm\n"
+"r_shadow_shadows : dlight shadows (world always has shadows)\n"
+"Commands:\n"
+"r_shadow_help : this help\n"
+	);
+}
+
 void R_Shadow_Init(void)
 {
 	Cvar_RegisterVariable(&r_shadow_lightattenuationpower);
@@ -242,6 +271,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_singlepassvolumegeneration);
 	Cvar_RegisterVariable(&r_shadow_shadows);
+	Cmd_AddCommand("r_shadow_help", R_Shadow_Help_f);
 	R_Shadow_EditLights_Init();
 	R_RegisterModule("R_Shadow", r_shadow_start, r_shadow_shutdown, r_shadow_newmap);
 }
@@ -2550,6 +2580,48 @@ void R_Shadow_EditLights_Remove_f(void)
 	r_shadow_selectedlight = NULL;
 }
 
+void R_Shadow_EditLights_Help_f(void)
+{
+	Con_Printf(
+"Documentation on r_editlights system:\n"
+"Settings:\n"
+"r_editlights : enable/disable editing mode\n"
+"r_editlights_cursordistance : maximum distance of cursor from eye\n"
+"r_editlights_cursorpushback : push back cursor this far from surface\n"
+"r_editlights_cursorpushoff : push cursor off surface this far\n"
+"r_editlights_cursorgrid : snap cursor to grid of this size\n"
+"r_editlights_quakelightsizescale : imported quake light entity size scaling\n"
+"r_editlights_rtlightssizescale : imported rtlight size scaling\n"
+"r_editlights_rtlightscolorscale : imported rtlight color scaling\n"
+"Commands:\n"
+"r_editlights_help : this help\n"
+"r_editlights_clear : remove all lights\n"
+"r_editlights_reload : reload .rtlights, .lights file, or entities\n"
+"r_editlights_save : save to .rtlights file\n"
+"r_editlights_spawn : create a light with default settings\n"
+"r_editlights_edit command : edit selected light - more documentation below\n"
+"r_editlights_remove : remove selected light\n"
+"r_editlights_toggleshadow : toggles on/off selected light's shadow property\n"
+"r_editlights_importlightentitiesfrommap : reload light entities\n"
+"r_editlights_importlightsfile : reload .light file (produced by hlight)\n"
+"Edit commands:\n"
+"origin x y z : set light location\n"
+"originx x: set x component of light location\n"
+"originy y: set y component of light location\n"
+"originz z: set z component of light location\n"
+"move x y z : adjust light location\n"
+"movex x: adjust x component of light location\n"
+"movey y: adjust y component of light location\n"
+"movez z: adjust z component of light location\n"
+"color r g b : set color of light (can be brighter than 1 1 1)\n"
+"radius radius : set radius (size) of light\n"
+"style style : set lightstyle of light (flickering patterns, switches, etc)\n"
+"cubemap basename : set filter cubemap of light (not yet supported)\n"
+"shadows 1/0 : turn on/off shadows\n"
+"<nothing> : print light properties to console\n"
+	);
+}
+
 void R_Shadow_EditLights_Init(void)
 {
 	Cvar_RegisterVariable(&r_editlights);
@@ -2560,6 +2632,7 @@ void R_Shadow_EditLights_Init(void)
 	Cvar_RegisterVariable(&r_editlights_quakelightsizescale);
 	Cvar_RegisterVariable(&r_editlights_rtlightssizescale);
 	Cvar_RegisterVariable(&r_editlights_rtlightscolorscale);
+	Cmd_AddCommand("r_editlights_help", R_Shadow_EditLights_Help_f);
 	Cmd_AddCommand("r_editlights_clear", R_Shadow_EditLights_Clear_f);
 	Cmd_AddCommand("r_editlights_reload", R_Shadow_EditLights_Reload_f);
 	Cmd_AddCommand("r_editlights_save", R_Shadow_EditLights_Save_f);
