@@ -1874,7 +1874,18 @@ char *transfusionbindnames[][2] =
 {"impulse 26",		"next armor type"},
 {"impulse 27",		"identify player"},
 {"impulse 55",		"voting menu"},
-{"impulse 56",		"observer mode"}
+{"impulse 56",		"observer mode"},
+{"",				"Taunts"},            // Taunts
+{"impulse 70",		"taunt 0"},
+{"impulse 71",		"taunt 1"},
+{"impulse 72",		"taunt 2"},
+{"impulse 73",		"taunt 3"},
+{"impulse 74",		"taunt 4"},
+{"impulse 75",		"taunt 5"},
+{"impulse 76",		"taunt 6"},
+{"impulse 77",		"taunt 7"},
+{"impulse 78",		"taunt 8"},
+{"impulse 79",		"taunt 9"}
 };
 
 char *goodvsbad2bindnames[][2] =
