@@ -96,6 +96,10 @@ SOURCE=.\builddate.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cd_shared.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cd_win.c
 # End Source File
 # Begin Source File
