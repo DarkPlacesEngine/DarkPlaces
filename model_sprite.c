@@ -258,8 +258,8 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 		datapointer += 768;
 		switch(rendermode)
 		{
-		case SPRHL_NORMAL:
-			for (i = 0;i < 255;i++)
+		case SPRHL_OPAQUE:
+			for (i = 0;i < 256;i++)
 			{
 				palette[i][0] = *in++;
 				palette[i][1] = *in++;
@@ -288,7 +288,7 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 			}
 			break;
 		case SPRHL_ALPHATEST:
-			for (i = 0;i < 255;i++)
+			for (i = 0;i < 256;i++)
 			{
 				palette[i][0] = *in++;
 				palette[i][1] = *in++;

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -82,9 +82,8 @@ typedef struct
 #define SPR_ORIENTED				3
 #define SPR_VP_PARALLEL_ORIENTED	4
 
-#define SPRHL_NORMAL	0
+#define SPRHL_OPAQUE	0
 #define SPRHL_ADDITIVE	1
-// no idea how to handle these two rendering modes
 #define SPRHL_INDEXALPHA	2
 #define SPRHL_ALPHATEST	3
 
