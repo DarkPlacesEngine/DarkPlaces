@@ -713,7 +713,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		if (prevbuffer == NULL)
 		{
 			R_MakeResizeBufferBigger(glt->image->width * glt->image->height * glt->image->depth * glt->image->bytesperpixel);
-			memset(resizebuffer, 255, glt->width * glt->height * glt->image->depth * glt->image->bytesperpixel);
+			memset(resizebuffer, 0, glt->width * glt->height * glt->image->depth * glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 		}
 		else if (glt->textype->textype == TEXTYPE_PALETTE)
@@ -760,7 +760,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			width = glt->image->width;
 			height = glt->image->height;
 			depth = glt->image->depth;
-			memset(resizebuffer, 255, width * height * depth * glt->image->bytesperpixel);
+			memset(resizebuffer, 0, width * height * depth * glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 		}
 		else

@@ -199,10 +199,6 @@ cvar_t r_editlights_quakelightsizescale = {CVAR_SAVE, "r_editlights_quakelightsi
 cvar_t r_editlights_rtlightssizescale = {CVAR_SAVE, "r_editlights_rtlightssizescale", "0.7"};
 cvar_t r_editlights_rtlightscolorscale = {CVAR_SAVE, "r_editlights_rtlightscolorscale", "2"};
 
-int c_rt_lights, c_rt_clears, c_rt_scissored;
-int c_rt_shadowmeshes, c_rt_shadowtris, c_rt_lightmeshes, c_rt_lighttris;
-int c_rtcached_shadowmeshes, c_rtcached_shadowtris;
-
 float r_shadow_attenpower, r_shadow_attenscale;
 
 rtlight_t *r_shadow_compilingrtlight;
@@ -882,10 +878,6 @@ void R_Shadow_Stage_Begin(void)
 	qglEnable(GL_CULL_FACE);
 	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	r_shadowstage = SHADOWSTAGE_NONE;
-
-	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
-	c_rt_shadowmeshes = c_rt_shadowtris = c_rt_lightmeshes = c_rt_lighttris = 0;
-	c_rtcached_shadowmeshes = c_rtcached_shadowtris = 0;
 }
 
 void R_Shadow_Stage_ShadowVolumes(void)

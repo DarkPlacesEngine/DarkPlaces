@@ -75,8 +75,6 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 #define BACKENDACTIVECHECK if (!backendactive) Sys_Error("GL backend function called when backend is not active\n");
 
-int c_meshs, c_meshelements;
-
 void SCR_ScreenShot_f (void);
 
 static matrix4x4_t backend_viewmatrix;
