@@ -191,9 +191,14 @@ char	*suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 void R_LoadSkyBox (void)
 {
 	int		i;
-	char	name[64];
+	char	name[1024];
 	byte*	image_rgba;
 
+	if (strlen(skyname) >= 1000)
+	{
+		Con_Printf ("sky name too long (%i, max is 1000)\n", strlen(skyname));
+		return;
+	}
 	for (i=0 ; i<6 ; i++)
 	{
 		sprintf (name, "env/%s%s", skyname, suf[i]);

@@ -598,6 +598,24 @@ void SV_PushRotate (edict_t *pusher, float movetime)
 	vec3_t		forward, right, up;
 	float		savesolid;
 
+	switch ((int) pusher->v.solid)
+	{
+	// LordHavoc: valid pusher types
+	case SOLID_BSP:
+	case SOLID_BBOX:
+	case SOLID_SLIDEBOX:
+	case SOLID_CORPSE: // LordHavoc: this would be weird...
+		break;
+	// LordHavoc: no collisions
+	case SOLID_NOT:
+	case SOLID_TRIGGER:
+		VectorMA (pusher->v.angles, movetime, pusher->v.avelocity, pusher->v.angles);
+		pusher->v.ltime += movetime;
+		SV_LinkEdict (pusher, false);
+		return;
+	default:
+		Host_Error("SV_PushRotate: unrecognized solid type %f\n", pusher->v.solid);
+	}
 	if (!pusher->v.avelocity[0] && !pusher->v.avelocity[1] && !pusher->v.avelocity[2])
 	{
 		pusher->v.ltime += movetime;
@@ -731,7 +749,6 @@ void SV_Physics_Pusher (edict_t *ent)
 
 	oldltime = ent->v.ltime;
 	
-	/*
 	thinktime = ent->v.nextthink;
 	if (thinktime < ent->v.ltime + host_frametime)
 	{
@@ -747,23 +764,6 @@ void SV_Physics_Pusher (edict_t *ent)
 		if (ent->v.avelocity[0] || ent->v.avelocity[1] || ent->v.avelocity[2])
 			SV_PushRotate (ent, movetime);
 		else
-			SV_PushMove (ent, movetime);	// advances ent->v.ltime if not blocked
-	}
-	*/
-	if (ent->v.avelocity[0] || ent->v.avelocity[1] || ent->v.avelocity[2])
-		SV_PushRotate (ent, host_frametime);
-	else
-	{
-		thinktime = ent->v.nextthink;
-		if (thinktime < ent->v.ltime + host_frametime)
-		{
-			movetime = thinktime - ent->v.ltime;
-			if (movetime < 0)
-				movetime = 0;
-		}
-		else
-			movetime = host_frametime;
-		if (movetime)
 			SV_PushMove (ent, movetime);	// advances ent->v.ltime if not blocked
 	}
 		
@@ -1163,19 +1163,33 @@ Entities that are "stuck" to another entity
 */
 void SV_Physics_Follow (edict_t *ent)
 {
-	vec3_t vf, vu, vr, angles;
+	vec3_t vf, vr, vu, angles;
 	edict_t *e;
 // regular thinking
-	SV_RunThink (ent);
+	if (!SV_RunThink (ent))
+		return;
 	// LordHavoc: implemented rotation on MOVETYPE_FOLLOW objects
 	e = PROG_TO_EDICT(ent->v.aiment);
-	angles[0] = -e->v.angles[0];
-	angles[1] = e->v.angles[1];
-	angles[2] = e->v.angles[2];
-	AngleVectors (angles, vf, vr, vu);
-	VectorMA (e->v.origin, ent->v.view_ofs[0], vf, ent->v.origin);
-	VectorMA (ent->v.origin, ent->v.view_ofs[1], vr, ent->v.origin);
-	VectorMA (ent->v.origin, ent->v.view_ofs[2], vu, ent->v.origin);
+	if (e->v.angles[0] == ent->v.punchangle[0] && e->v.angles[1] == ent->v.punchangle[1] && e->v.angles[2] == ent->v.punchangle[2])
+	{
+		// quick case for no rotation
+		VectorAdd(e->v.origin, ent->v.view_ofs, ent->v.origin);
+	}
+	else
+	{
+		angles[0] = -(e->v.angles[0] - ent->v.punchangle[0]);
+		angles[1] = e->v.angles[1] - ent->v.punchangle[1];
+		angles[2] = e->v.angles[2] - ent->v.punchangle[2];
+		AngleVectors (angles, vf, vr, vu);
+		ent->v.origin[0] = ent->v.view_ofs[0] * vf[0] + ent->v.view_ofs[1] * vr[0] + ent->v.view_ofs[2] * vu[0] + e->v.origin[0];
+		ent->v.origin[1] = ent->v.view_ofs[0] * vf[1] + ent->v.view_ofs[1] * vr[1] + ent->v.view_ofs[2] * vu[1] + e->v.origin[1];
+		ent->v.origin[2] = ent->v.view_ofs[0] * vf[2] + ent->v.view_ofs[1] * vr[2] + ent->v.view_ofs[2] * vu[2] + e->v.origin[2];
+		/*
+		ent->v.origin[0] = ent->v.view_ofs[0] * vf[0] + ent->v.view_ofs[0] * vf[1] + ent->v.view_ofs[0] * vf[2] + e->v.origin[0];
+		ent->v.origin[1] = ent->v.view_ofs[1] * vr[0] + ent->v.view_ofs[1] * vr[1] + ent->v.view_ofs[1] * vr[2] + e->v.origin[1];
+		ent->v.origin[2] = ent->v.view_ofs[2] * vu[0] + ent->v.view_ofs[2] * vu[1] + ent->v.view_ofs[2] * vu[2] + e->v.origin[2];
+		*/
+	}
 	VectorAdd (e->v.angles, ent->v.v_angle, ent->v.angles);
 //	VectorAdd (PROG_TO_EDICT(ent->v.aiment)->v.origin, ent->v.v_angle, ent->v.origin);
 	SV_LinkEdict (ent, true);

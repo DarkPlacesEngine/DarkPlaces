@@ -378,7 +378,10 @@ loc0:
 	if ( node->contents < 0)
 	{
 		if (ent->num_leafs == MAX_ENT_LEAFS)
+		{
+			Con_DPrintf("FindTouchedLeafs overflow\n");
 			return;
+		}
 
 		leaf = (mleaf_t *)node;
 		leafnum = leaf - sv.worldmodel->leafs - 1;
