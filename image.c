@@ -1428,7 +1428,7 @@ int image_loadskin(imageskin_t *s, char *name)
 	s->basepixels_height = image_height;
 
 	bumppixels = NULL;bumppixels_width = 0;bumppixels_height = 0;
-	if (Image_HasAlpha(s->basepixels, s->basepixels_width * s->basepixels_height, true))
+	if (Image_CheckAlpha(s->basepixels, s->basepixels_width * s->basepixels_height, true))
 	{
 		s->maskpixels = Mem_Alloc(loadmodel->mempool, s->basepixels_width * s->basepixels_height * 4);
 		s->maskpixels_width = s->basepixels_width;
