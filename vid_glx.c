@@ -480,6 +480,7 @@ void VID_Shutdown(void)
 	{
 		uninstall_grabs();
 
+		// FIXME: glXDestroyContext here?
 		if (vidmode_active)
 			XF86VidModeSwitchToMode(vidx11_display, scrnum, vidmodes[0]);
 		if (win)
@@ -673,10 +674,15 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 	Window root;
 	XVisualInfo *visinfo;
 	int MajorVersion, MinorVersion;
-	
-	if (!GL_OpenLibrary("libGL.so.1"))
+	const char *drivername;
+
+	drivername = "libGL.so.1";
+	i = COM_CheckParm("-gl_driver");
+	if (i && i < com_argc - 1)
+		drivername = com_argv[i + 1];
+	if (!GL_OpenLibrary(drivername))
 	{
-		Con_Printf("Unable to load GL driver\n");
+		Con_Printf("Unable to load GL driver \"%s\"\n", drivername);
 		return false;
 	}
 
@@ -814,11 +820,16 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 		XF86VidModeSetViewPort(vidx11_display, scrnum, 0, 0);
 	}
 
-	XFlush(vidx11_display);
+	//XSync(vidx11_display, False);
 
 	ctx = qglXCreateContext(vidx11_display, visinfo, NULL, True);
+	if (!ctx)
+		Sys_Error ("glXCreateContext failed\n");
 
-	qglXMakeCurrent(vidx11_display, win, ctx);
+	if (!qglXMakeCurrent(vidx11_display, win, ctx))
+		Sys_Error ("glXMakeCurrent failed\n");
+
+	XSync(vidx11_display, False);
 
 	scr_width = width;
 	scr_height = height;
