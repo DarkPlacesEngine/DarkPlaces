@@ -752,11 +752,11 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 			VectorNormalize(v);
 }
 
-surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors)
+surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriangles, qboolean detailtexcoords, qboolean lightmapoffsets, qboolean vertexcolors, qboolean neighbors)
 {
 	surfmesh_t *mesh;
 	qbyte *data;
-	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3) * sizeof(int));
+	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
 	data = (qbyte *)(mesh + 1);
@@ -778,7 +778,8 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 	if (mesh->num_triangles)
 	{
 		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
-		mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
+		if (neighbors)
+			mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 	}
 	return mesh;
 }
