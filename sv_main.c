@@ -483,6 +483,8 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		MSG_WriteFloat(msg, org[2]);
 	}
 	*/
+	MSG_WriteByte(msg, svc_entitiesbegin);
+	MSG_WriteShort(msg, 1);
 
 	clentnum = EDICT_TO_PROG(clent); // LordHavoc: for comparison purposes
 // send over all entities (except the client) that touch the pvs
@@ -744,6 +746,9 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_FRAME2)	MSG_WriteByte(msg, (int)ent->v.frame >> 8);
 		if (bits & U_MODEL2)	MSG_WriteByte(msg, (int)ent->v.modelindex >> 8);
 	}
+
+	MSG_WriteByte(msg, svc_entitiesend);
+	MSG_WriteShort(msg, MAX_EDICTS);
 }
 
 /*

@@ -52,7 +52,7 @@ void R_RemoveEfrags (entity_t *ent)
 {
 	efrag_t		*ef, *old, *walk, **prev;
 	
-	ef = ent->efrag;
+	ef = ent->render.efrag;
 	
 	while (ef)
 	{
@@ -79,7 +79,7 @@ void R_RemoveEfrags (entity_t *ent)
 		cl.free_efrags = old;
 	}
 	
-	ent->efrag = NULL; 
+	ent->render.efrag = NULL; 
 }
 
 /*
@@ -181,25 +181,25 @@ void R_AddEfrags (entity_t *ent)
 	model_t		*entmodel;
 	int			i;
 		
-	if (!ent->model)
+	if (!ent->render.model)
 		return;
 
 	r_addent = ent;
 			
-	lastlink = &ent->efrag;
+	lastlink = &ent->render.efrag;
 	r_pefragtopnode = NULL;
 	
-	entmodel = ent->model;
+	entmodel = ent->render.model;
 
 	for (i=0 ; i<3 ; i++)
 	{
-		r_emins[i] = ent->origin[i] + entmodel->mins[i];
-		r_emaxs[i] = ent->origin[i] + entmodel->maxs[i];
+		r_emins[i] = ent->render.origin[i] + entmodel->mins[i];
+		r_emaxs[i] = ent->render.origin[i] + entmodel->maxs[i];
 	}
 
 	R_SplitEntityOnNode (cl.worldmodel->nodes);
 
-	ent->topnode = r_pefragtopnode;
+	ent->render.topnode = r_pefragtopnode;
 }
 
 
@@ -220,7 +220,7 @@ void R_StoreEfrags (efrag_t **ppefrag)
 	while ((pefrag = *ppefrag) != NULL)
 	{
 		pent = pefrag->entity;
-		clmodel = pent->model;
+		clmodel = pent->render.model;
 
 		switch (clmodel->type)
 		{
@@ -229,10 +229,10 @@ void R_StoreEfrags (efrag_t **ppefrag)
 		case mod_sprite:
 			pent = pefrag->entity;
 
-			if ((pent->visframe != r_framecount) && (cl_numvisedicts < MAX_VISEDICTS))
+			if ((pent->render.visframe != r_framecount) && (cl_numvisedicts < MAX_VISEDICTS))
 			{
 				cl_visedicts[cl_numvisedicts++] = pent;
-				pent->visframe = r_framecount; // render each entity only once per frame
+				pent->render.visframe = r_framecount; // render each entity only once per frame
 			}
 
 			ppefrag = &pefrag->leafnext;

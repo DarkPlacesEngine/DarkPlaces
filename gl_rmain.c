@@ -344,44 +344,69 @@ void R_DrawSpriteModel (entity_t *e, frameblend_t *blend);
 void R_LerpUpdate(entity_t *ent)
 {
 	int frame;
-	frame = ent->frame;
-	if (ent->model && ent->frame >= ent->model->numframes)
+	frame = ent->render.frame;
+	if (ent->render.model && ent->render.frame >= ent->render.model->numframes)
 	{
-		Con_Printf("R_LerpUpdate: no such frame%6i in \"%s\"\n", ent->frame, ent->model->name);
+		Con_Printf("R_LerpUpdate: no such frame%6i in \"%s\"\n", ent->render.frame, ent->render.model->name);
 		frame = 0;
 	}
 
-	if (ent->lerp_model != ent->model)
+	if (ent->render.lerp_model != ent->render.model)
 	{
 		// reset all interpolation information
-		ent->lerp_model = ent->model;
-		ent->frame1 = ent->frame2 = frame;
-		ent->frame1start = ent->frame2start = cl.time;
-		ent->framelerp = 1;
-		ent->lerp_starttime = 0;
+		ent->render.lerp_model = ent->render.model;
+		ent->render.frame1 = ent->render.frame2 = frame;
+		ent->render.frame1start = ent->render.frame2start = cl.time;
+		ent->render.framelerp = 1;
+		ent->render.lerp_starttime = 0;
 	}
-	else if (ent->frame2 != frame)
+	else if (ent->render.frame2 != frame)
 	{
 		// transition to new frame
-		ent->frame1 = ent->frame2;
-		ent->frame1start = ent->frame2start;
-		ent->frame2 = frame;
-		ent->frame2start = cl.time;
-		ent->framelerp = 0;
-		ent->lerp_starttime = cl.time;
+		ent->render.frame1 = ent->render.frame2;
+		ent->render.frame1start = ent->render.frame2start;
+		ent->render.frame2 = frame;
+		ent->render.frame2start = cl.time;
+		ent->render.framelerp = 0;
+		ent->render.lerp_starttime = cl.time;
 	}
 	else
 	{
 		// lerp_starttime < 0 is used to prevent changing of framelerp
-		if (ent->lerp_starttime >= 0)
+		if (ent->render.lerp_starttime >= 0)
 		{
 			// update transition
-			ent->framelerp = (cl.time - ent->lerp_starttime) * 10;
-			ent->framelerp = bound(0, ent->framelerp, 1);
+			ent->render.framelerp = (cl.time - ent->render.lerp_starttime) * 10;
+			ent->render.framelerp = bound(0, ent->render.framelerp, 1);
 		}
 	}
 }
 
+
+void R_PrepareEntities (void)
+{
+	int i;
+	entity_t *ent;
+	vec3_t v;
+	// this updates entities that are supposed to be view relative
+	for (i = 0;i < cl_numvisedicts;i++)
+	{
+		ent = cl_visedicts[i];
+
+		if (ent->render.flags & RENDER_VIEWMODEL)
+		{
+			// remove flag so it will not be repeated incase RelinkEntities is not called again for a while
+			ent->render.flags -= RENDER_VIEWMODEL;
+			// transform origin
+			VectorCopy(ent->render.origin, v);
+			ent->render.origin[0] = v[0] * vpn[0] + v[1] * vright[0] + v[2] * vup[0] + r_refdef.vieworg[0];
+			ent->render.origin[1] = v[0] * vpn[1] + v[1] * vright[1] + v[2] * vup[1] + r_refdef.vieworg[1];
+			ent->render.origin[2] = v[0] * vpn[2] + v[1] * vright[2] + v[2] * vup[2] + r_refdef.vieworg[2];
+			// adjust angles
+			VectorAdd(ent->render.angles, r_refdef.viewangles, ent->render.angles);
+		}
+	}
+}
 
 /*
 =============
@@ -396,12 +421,12 @@ void R_DrawEntitiesOnList1 (void)
 	if (!r_drawentities.value)
 		return;
 
-	for (i=0 ; i<cl_numvisedicts ; i++)
+	for (i = 0;i < cl_numvisedicts;i++)
 	{
-		if (cl_visedicts[i]->model->type != mod_brush)
+		if (cl_visedicts[i]->render.model->type != mod_brush)
 			continue;
 		currententity = cl_visedicts[i];
-		modelalpha = currententity->alpha;
+		modelalpha = currententity->render.alpha;
 
 		R_DrawBrushModel (currententity);
 	}
@@ -415,25 +440,22 @@ void R_DrawEntitiesOnList2 (void)
 	if (!r_drawentities.value)
 		return;
 
-	for (i=0 ; i<cl_numvisedicts ; i++)
+	for (i = 0;i < cl_numvisedicts;i++)
 	{
 		currententity = cl_visedicts[i];
-		modelalpha = currententity->alpha;
+		modelalpha = currententity->render.alpha;
 
-		switch (currententity->model->type)
+		switch (currententity->render.model->type)
 		{
 		case mod_alias:
-			if (!strcmp(currententity->model->name, "progs/flame2.mdl"))
-				blend[0].frame = 0;
-
 			R_LerpUpdate(currententity);
-			R_LerpAnimation(currententity->model, currententity->frame1, currententity->frame2, currententity->frame1start, currententity->frame2start, currententity->framelerp, blend);
-			R_DrawAliasModel (currententity, true, modelalpha, currententity->model, blend, currententity->skinnum, currententity->origin, currententity->angles, currententity->scale, currententity->effects, currententity->model->flags, currententity->colormap);
+			R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
+			R_DrawAliasModel (currententity, true, modelalpha, currententity->render.model, blend, currententity->render.skinnum, currententity->render.origin, currententity->render.angles, currententity->render.scale, currententity->render.effects, currententity->render.model->flags, currententity->render.colormap);
 			break;
 
 		case mod_sprite:
 			R_LerpUpdate(currententity);
-			R_LerpAnimation(currententity->model, currententity->frame1, currententity->frame2, currententity->frame1start, currententity->frame2start, currententity->framelerp, blend);
+			R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
 			R_DrawSpriteModel (currententity, blend);
 			break;
 
@@ -452,21 +474,21 @@ void R_DrawViewModel (void)
 {
 	frameblend_t blend[4];
 
-	if (!r_drawviewmodel.value || chase_active.value || envmap || !r_drawentities.value || cl.items & IT_INVISIBILITY || cl.stats[STAT_HEALTH] <= 0 || !cl.viewent.model)
+	if (!r_drawviewmodel.value || chase_active.value || envmap || !r_drawentities.value || cl.items & IT_INVISIBILITY || cl.stats[STAT_HEALTH] <= 0 || !cl.viewent.render.model)
 		return;
 
 	currententity = &cl.viewent;
-	currententity->alpha = modelalpha = cl_entities[cl.viewentity].alpha; // LordHavoc: if the player is transparent, so is his gun
-	currententity->effects = cl_entities[cl.viewentity].effects;
-	currententity->scale = 1;
-	VectorCopy(cl_entities[cl.viewentity].colormod, currententity->colormod);
+	currententity->render.alpha = modelalpha = cl_entities[cl.viewentity].render.alpha; // LordHavoc: if the player is transparent, so is the gun
+	currententity->render.effects = cl_entities[cl.viewentity].render.effects;
+	currententity->render.scale = 1;
+	VectorCopy(cl_entities[cl.viewentity].render.colormod, currententity->render.colormod);
 
 	R_LerpUpdate(currententity);
-	R_LerpAnimation(currententity->model, currententity->frame1, currententity->frame2, currententity->frame1start, currententity->frame2start, currententity->framelerp, blend);
+	R_LerpAnimation(currententity->render.model, currententity->render.frame1, currententity->render.frame2, currententity->render.frame1start, currententity->render.frame2start, currententity->render.framelerp, blend);
 
 	// hack the depth range to prevent view model from poking into walls
 	glDepthRange (gldepthmin, gldepthmin + 0.3*(gldepthmax-gldepthmin));
-	R_DrawAliasModel (currententity, false, modelalpha, currententity->model, blend, currententity->skinnum, currententity->origin, currententity->angles, currententity->scale, currententity->effects, currententity->model->flags, currententity->colormap);
+	R_DrawAliasModel (currententity, false, modelalpha, currententity->render.model, blend, currententity->render.skinnum, currententity->render.origin, currententity->render.angles, currententity->render.scale, currententity->render.effects, currententity->render.model->flags, currententity->render.colormap);
 	glDepthRange (gldepthmin, gldepthmax);
 }
 
@@ -773,8 +795,8 @@ void R_RenderView (void)
 //	if (r_norefresh.value)
 //		return;
 
-	if (!r_worldentity.model || !cl.worldmodel)
-		Sys_Error ("R_RenderView: NULL worldmodel");
+	if (!r_worldentity.render.model || !cl.worldmodel)
+		Host_Error ("R_RenderView: NULL worldmodel");
 
 	lighthalf = gl_lightmode.value;
 
@@ -795,6 +817,8 @@ void R_RenderView (void)
 	R_SetupFrame ();
 	R_SetFrustum ();
 	R_SetupGL ();
+
+	R_PrepareEntities();
 
 	skypolyclear();
 	wallpolyclear();

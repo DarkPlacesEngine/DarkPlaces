@@ -65,6 +65,7 @@ rtexture_t *smokeparticletexture[8];
 rtexture_t *rainparticletexture;
 rtexture_t *bubbleparticletexture;
 rtexture_t *bulletholetexture[8];
+rtexture_t *rocketglowparticletexture;
 
 particle_t	*particles;
 int			r_numparticles;
@@ -245,6 +246,21 @@ void R_InitParticleTexture (void)
 
 		bulletholetexture[i] = R_LoadTexture (va("bulletholetexture%d", i), 32, 32, &data[0][0][0], TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 	}
+
+	for (y = 0;y < 32;y++)
+	{
+		dy = y - 16;
+		for (x = 0;x < 32;x++)
+		{
+			dx = x - 16;
+			d = (2048.0f / (dx*dx+dy*dy+1)) - 8.0f;
+			data[y][x][0] = bound(0, d * 1.0f, 255);
+			data[y][x][1] = bound(0, d * 0.8f, 255);
+			data[y][x][2] = bound(0, d * 0.5f, 255);
+			data[y][x][3] = bound(0, d * 1.0f, 255);
+		}
+	}
+	rocketglowparticletexture = R_LoadTexture ("glowparticletexture", 32, 32, &data[0][0][0], TEXF_MIPMAP | TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
 }
 
 void r_part_start()
@@ -444,7 +460,7 @@ void R_EntityParticles (entity_t *ent)
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 
-		particle(pt_oneframe, 0x6f, particletexture, TPOLYTYPE_ALPHA, false, 2, 255, 9999, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0);
+		particle(pt_oneframe, 0x6f, particletexture, TPOLYTYPE_ALPHA, false, 2, 255, 9999, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0);
 	}
 }
 
@@ -837,12 +853,10 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	VectorSubtract(end, start, dir);
 	VectorNormalize(dir);
 
-	/*
 	if (type == 0) // rocket glow
-		particle(pt_glow, 254, particletexture, TPOLYTYPE_ADD, false, 10, 160, 9999, 0, start[0] - 12 * dir[0], start[1] - 12 * dir[1], start[2] - 12 * dir[2], 0, 0, 0);
-	*/
+		particle(pt_oneframe, 254, rocketglowparticletexture, TPOLYTYPE_ADD, false, 24, 255, 9999, 0, end[0] - 12 * dir[0], end[1] - 12 * dir[1], end[2] - 12 * dir[2], 0, 0, 0);
 
-	t = ent->trail_time;
+	t = ent->render.trail_time;
 	if (t >= cl.time)
 		return; // no particles to spawn this frame (sparse trail)
 
@@ -854,7 +868,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	if (len <= 0.01f)
 	{
 		// advance the trail time
-		ent->trail_time = cl.time;
+		ent->render.trail_time = cl.time;
 		return;
 	}
 	speed = len / (cl.time - cl.oldtime);
@@ -869,14 +883,14 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
 	{
 		// advance the trail time
-		ent->trail_time = cl.time;
+		ent->render.trail_time = cl.time;
 		return;
 	}
 
 	bubbles = (contents == CONTENTS_WATER || contents == CONTENTS_SLIME);
 
 	polytype = TPOLYTYPE_ALPHA;
-	if (ent->effects & EF_ADDITIVE)
+	if (ent->render.effects & EF_ADDITIVE)
 		polytype = TPOLYTYPE_ADD;
 
 	while (t < cl.time)
@@ -974,7 +988,7 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 		dec *= speed;
 		VectorMA (start, dec, vec, start);
 	}
-	ent->trail_time = t;
+	ent->render.trail_time = t;
 }
 
 void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)

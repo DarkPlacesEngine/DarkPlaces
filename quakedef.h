@@ -187,24 +187,6 @@ extern int buildnumber;
 #include "zone.h"
 #include "mathlib.h"
 
-// LordHavoc: made this more compact, and added some more fields
-typedef struct
-{
-	vec3_t	origin;
-	vec3_t	angles;
-	int		effects;
-	short	modelindex;
-	short	frame;
-	byte	colormap;
-	byte	skin;
-	byte	alpha;
-	byte	scale;
-	byte	glowsize;
-	byte	glowcolor;
-	byte	colormod;
-} entity_state_t;
-
-
 #include "r_textures.h"
 
 #include "wad.h"

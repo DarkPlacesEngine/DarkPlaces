@@ -151,8 +151,8 @@ void softwaretransformset (vec3_t origin, vec3_t angles, vec_t scale)
 void softwaretransformforentity (entity_t *e)
 {
 	vec3_t angles;
-	angles[0] = -e->angles[0];
-	angles[1] = e->angles[1];
-	angles[2] = e->angles[2];
-	softwaretransformset(e->origin, angles, e->scale);
+	angles[0] = -e->render.angles[0];
+	angles[1] = e->render.angles[1];
+	angles[2] = e->render.angles[2];
+	softwaretransformset(e->render.origin, angles, e->render.scale);
 }

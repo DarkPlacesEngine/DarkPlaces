@@ -144,7 +144,7 @@ typedef struct
 // information for local display
 	int			stats[MAX_CL_STATS];	// health, etc
 	int			items;			// inventory bit flags
-	float	item_gettime[32];	// cl.time of aquiring item, for blinking
+	float		item_gettime[32];	// cl.time of acquiring item, for blinking
 	float		faceanimtime;	// use anim frame if cl.time < this
 
 	cshift_t	cshifts[NUM_CSHIFTS];	// color shifts for damage, powerups
@@ -208,7 +208,7 @@ typedef struct
 // refresh related state
 	struct model_s	*worldmodel;	// cl_entitites[0].model
 	struct efrag_s	*free_efrags;
-	int			num_entities;	// held in cl_entities array
+//	int			num_entities;	// held in cl_entities array
 	int			num_statics;	// held in cl_staticentities array
 	entity_t	viewent;			// the gun model
 

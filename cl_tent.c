@@ -443,10 +443,10 @@ entity_t *CL_NewTempEntity (void)
 	memset (ent, 0, sizeof(*ent));
 	cl_visedicts[cl_numvisedicts++] = ent;
 
-	ent->colormap = -1; // no special coloring
-	ent->scale = 1;
-	ent->alpha = 1;
-	ent->colormod[0] = ent->colormod[1] = ent->colormod[2] = 1;
+	ent->render.colormap = -1; // no special coloring
+	ent->render.scale = 1;
+	ent->render.alpha = 1;
+	ent->render.colormod[0] = ent->render.colormod[1] = ent->render.colormod[2] = 1;
 	return ent;
 }
 
@@ -474,13 +474,11 @@ void CL_UpdateTEnts (void)
 		if (!b->model || b->endtime < cl.time)
 			continue;
 
-	// if coming from the player, update the start position
+		// if coming from the player, update the start position
 		if (b->entity == cl.viewentity)
-		{
-			VectorCopy (cl_entities[cl.viewentity].origin, b->start);
-		}
+			VectorCopy (cl_entities[cl.viewentity].render.origin, b->start);
 
-	// calculate pitch and yaw
+		// calculate pitch and yaw
 		VectorSubtract (b->end, b->start, dist);
 
 		if (dist[1] == 0 && dist[0] == 0)
@@ -503,7 +501,7 @@ void CL_UpdateTEnts (void)
 				pitch += 360;
 		}
 
-	// add new entities for the lightning
+		// add new entities for the lightning
 		VectorCopy (b->start, org);
 		d = VectorNormalizeLength(dist);
 		while (d > 0)
@@ -511,15 +509,15 @@ void CL_UpdateTEnts (void)
 			ent = CL_NewTempEntity ();
 			if (!ent)
 				return;
-			VectorCopy (org, ent->origin);
-			ent->model = b->model;
-			ent->effects = EF_FULLBRIGHT;
-			ent->angles[0] = pitch;
-			ent->angles[1] = yaw;
-			ent->angles[2] = rand()%360;
+			VectorCopy (org, ent->render.origin);
+			ent->render.model = b->model;
+			ent->render.effects = EF_FULLBRIGHT;
+			ent->render.angles[0] = pitch;
+			ent->render.angles[1] = yaw;
+			ent->render.angles[2] = rand()%360;
 
 			if (r_glowinglightning.value > 0)
-				CL_AllocDlight(ent, ent->origin, lhrandom(100, 120), r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, 0, 0);
+				CL_AllocDlight(ent, ent->render.origin, lhrandom(100, 120), r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, 0, 0);
 
 			VectorMA(org, 30, dist, org);
 			d -= 30;

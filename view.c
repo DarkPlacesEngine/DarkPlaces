@@ -312,10 +312,10 @@ void V_ParseDamage (void)
 //
 	ent = &cl_entities[cl.viewentity];
 	
-	VectorSubtract (from, ent->origin, from);
+	VectorSubtract (from, ent->render.origin, from);
 	VectorNormalize (from);
 	
-	AngleVectors (ent->angles, forward, right, NULL);
+	AngleVectors (ent->render.angles, forward, right, NULL);
 
 	side = DotProduct (from, right);
 	v_dmg_roll = count*side*v_kickroll.value;
@@ -555,7 +555,7 @@ void V_UpdateBlends (void)
 
 float angledelta (float a)
 {
-	a = anglemod(a);
+	a = ANGLEMOD(a);
 	if (a > 180)
 		a -= 360;
 	return a;
@@ -615,12 +615,12 @@ void CalcGunAngle (void)
 	cl.viewent.angles[YAW] = r_refdef.viewangles[YAW] + yaw;
 	cl.viewent.angles[PITCH] = - (r_refdef.viewangles[PITCH] + pitch);
 	*/
-	cl.viewent.angles[YAW] = r_refdef.viewangles[YAW];
-	cl.viewent.angles[PITCH] = -r_refdef.viewangles[PITCH];
+	cl.viewent.render.angles[YAW] = r_refdef.viewangles[YAW];
+	cl.viewent.render.angles[PITCH] = -r_refdef.viewangles[PITCH];
 
-	cl.viewent.angles[ROLL] -= v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
-	cl.viewent.angles[PITCH] -= v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
-	cl.viewent.angles[YAW] -= v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
+	cl.viewent.render.angles[ROLL] -= v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
+	cl.viewent.render.angles[PITCH] -= v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
+	cl.viewent.render.angles[YAW] -= v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
 }
 
 /*
@@ -634,21 +634,21 @@ void V_BoundOffsets (void)
 	
 	ent = &cl_entities[cl.viewentity];
 
-// absolutely bound refresh reletive to entity clipping hull
+// absolutely bound refresh relative to entity clipping hull
 // so the view can never be inside a solid wall
 
-	if (r_refdef.vieworg[0] < ent->origin[0] - 14)
-		r_refdef.vieworg[0] = ent->origin[0] - 14;
-	else if (r_refdef.vieworg[0] > ent->origin[0] + 14)
-		r_refdef.vieworg[0] = ent->origin[0] + 14;
-	if (r_refdef.vieworg[1] < ent->origin[1] - 14)
-		r_refdef.vieworg[1] = ent->origin[1] - 14;
-	else if (r_refdef.vieworg[1] > ent->origin[1] + 14)
-		r_refdef.vieworg[1] = ent->origin[1] + 14;
-	if (r_refdef.vieworg[2] < ent->origin[2] - 22)
-		r_refdef.vieworg[2] = ent->origin[2] - 22;
-	else if (r_refdef.vieworg[2] > ent->origin[2] + 30)
-		r_refdef.vieworg[2] = ent->origin[2] + 30;
+	if (r_refdef.vieworg[0] < ent->render.origin[0] - 14)
+		r_refdef.vieworg[0] = ent->render.origin[0] - 14;
+	else if (r_refdef.vieworg[0] > ent->render.origin[0] + 14)
+		r_refdef.vieworg[0] = ent->render.origin[0] + 14;
+	if (r_refdef.vieworg[1] < ent->render.origin[1] - 14)
+		r_refdef.vieworg[1] = ent->render.origin[1] - 14;
+	else if (r_refdef.vieworg[1] > ent->render.origin[1] + 14)
+		r_refdef.vieworg[1] = ent->render.origin[1] + 14;
+	if (r_refdef.vieworg[2] < ent->render.origin[2] - 22)
+		r_refdef.vieworg[2] = ent->render.origin[2] - 22;
+	else if (r_refdef.vieworg[2] > ent->render.origin[2] + 30)
+		r_refdef.vieworg[2] = ent->render.origin[2] + 30;
 }
 
 /*
@@ -677,7 +677,7 @@ void V_CalcViewRoll (void)
 {
 	float		side;
 		
-	side = V_CalcRoll (cl_entities[cl.viewentity].angles, cl.velocity);
+	side = V_CalcRoll (cl_entities[cl.viewentity].render.angles, cl.velocity);
 	r_refdef.viewangles[ROLL] += side;
 
 	if (v_dmg_time > 0)
@@ -712,9 +712,9 @@ void V_CalcIntermissionRefdef (void)
 // view is the weapon model (only visible from inside body)
 	view = &cl.viewent;
 
-	VectorCopy (ent->origin, r_refdef.vieworg);
-	VectorCopy (ent->angles, r_refdef.viewangles);
-	view->model = NULL;
+	VectorCopy (ent->render.origin, r_refdef.vieworg);
+	VectorCopy (ent->render.angles, r_refdef.viewangles);
+	view->render.model = NULL;
 
 // always idle in intermission
 	old = v_idlescale.value;
@@ -747,67 +747,64 @@ void V_CalcRefdef (void)
 	view = &cl.viewent;
 	
 
-// transform the view offset by the model's matrix to get the offset from
-// model origin for the view
+// transform the view offset by the model's matrix to get the offset from model origin for the view
 	if (!chase_active.value) // LordHavoc: get rid of angle problems in chase_active mode
 	{
-		ent->angles[YAW] = cl.viewangles[YAW];	// the model should face the view dir
-		ent->angles[PITCH] = -cl.viewangles[PITCH];	// the model should face the view dir
+		ent->render.angles[YAW] = cl.viewangles[YAW];	// the model should face the view dir
+		ent->render.angles[PITCH] = -cl.viewangles[PITCH];	// the model should face the view dir
 	}
 										
 	
 	bob = V_CalcBob ();
 	
 // refresh position
-	VectorCopy (ent->origin, r_refdef.vieworg);
+	VectorCopy (ent->render.origin, r_refdef.vieworg);
 	r_refdef.vieworg[2] += cl.viewheight + bob;
 
+	// LordHavoc: the protocol has changed...  so this is an obsolete approach
 // never let it sit exactly on a node line, because a water plane can
 // dissapear when viewed with the eye exactly on it.
 // the server protocol only specifies to 1/16 pixel, so add 1/32 in each axis
-	r_refdef.vieworg[0] += 1.0/32;
-	r_refdef.vieworg[1] += 1.0/32;
-	r_refdef.vieworg[2] += 1.0/32;
+//	r_refdef.vieworg[0] += 1.0/32;
+//	r_refdef.vieworg[1] += 1.0/32;
+//	r_refdef.vieworg[2] += 1.0/32;
 
 	if (!intimerefresh)
-	{
 		VectorCopy (cl.viewangles, r_refdef.viewangles);
-	}
 	V_CalcViewRoll ();
 	V_AddIdle ();
 
 // offsets
-	angles[PITCH] = -ent->angles[PITCH];	// because entity pitches are
-											//  actually backward
-	angles[YAW] = ent->angles[YAW];
-	angles[ROLL] = ent->angles[ROLL];
+	angles[PITCH] = -ent->render.angles[PITCH];	// because entity pitches are actually backward
+	angles[YAW] = ent->render.angles[YAW];
+	angles[ROLL] = ent->render.angles[ROLL];
 
 	AngleVectors (angles, forward, NULL, NULL);
 
 	V_BoundOffsets ();
 		
 // set up gun position
-	VectorCopy (cl.viewangles, view->angles);
+	VectorCopy (cl.viewangles, view->render.angles);
 	
 	CalcGunAngle ();
 
-	VectorCopy (ent->origin, view->origin);
-	view->origin[2] += cl.viewheight;
+	VectorCopy (ent->render.origin, view->render.origin);
+	view->render.origin[2] += cl.viewheight;
 
 	for (i=0 ; i<3 ; i++)
 	{
-		view->origin[i] += forward[i]*bob*0.4;
+		view->render.origin[i] += forward[i]*bob*0.4;
 //		view->origin[i] += right[i]*bob*0.4;
 //		view->origin[i] += up[i]*bob*0.8;
 	}
-	view->origin[2] += bob;
+	view->render.origin[2] += bob;
 
 // fudge position around to keep amount of weapon visible
 // roughly equal with different FOV
 
-	view->model = cl.model_precache[cl.stats[STAT_WEAPON]];
-	view->frame = cl.stats[STAT_WEAPONFRAME];
-	view->colormap = -1; // no special coloring
+	view->render.model = cl.model_precache[cl.stats[STAT_WEAPON]];
+	view->render.frame = cl.stats[STAT_WEAPONFRAME];
+	view->render.colormap = -1; // no special coloring
 
 // set up the refresh position
 	if (!intimerefresh)
@@ -817,7 +814,7 @@ void V_CalcRefdef (void)
 	}
 
 // smooth out stair step ups
-if (cl.onground && ent->origin[2] - oldz > 0)
+if (cl.onground && ent->render.origin[2] - oldz > 0)
 {
 	float steptime;
 	
@@ -827,15 +824,15 @@ if (cl.onground && ent->origin[2] - oldz > 0)
 		steptime = 0;
 
 	oldz += steptime * 80;
-	if (oldz > ent->origin[2])
-		oldz = ent->origin[2];
-	if (ent->origin[2] - oldz > 12)
-		oldz = ent->origin[2] - 12;
-	r_refdef.vieworg[2] += oldz - ent->origin[2];
-	view->origin[2] += oldz - ent->origin[2];
+	if (oldz > ent->render.origin[2])
+		oldz = ent->render.origin[2];
+	if (ent->render.origin[2] - oldz > 12)
+		oldz = ent->render.origin[2] - 12;
+	r_refdef.vieworg[2] += oldz - ent->render.origin[2];
+	view->render.origin[2] += oldz - ent->render.origin[2];
 }
 else
-	oldz = ent->origin[2];
+	oldz = ent->render.origin[2];
 
 // LordHavoc: origin view kick
 	VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);

@@ -100,16 +100,21 @@ This error checks and tracks the total number of entities
 */
 entity_t	*CL_EntityNum (int num)
 {
+	/*
 	if (num >= cl.num_entities)
 	{
 		if (num >= MAX_EDICTS)
 			Host_Error ("CL_EntityNum: %i is an invalid number",num);
-		while (cl.num_entities<=num)
-		{
-			cl_entities[cl.num_entities].colormap = -1; // no special coloring
-			cl.num_entities++;
-		}
+		cl.num_entities = num;
+//		while (cl.num_entities <= num)
+//		{
+//			cl_entities[cl.num_entities].colormap = -1; // no special coloring
+//			cl.num_entities++;
+//		}
 	}
+	*/
+	if (num >= MAX_EDICTS)
+		Host_Error ("CL_EntityNum: %i is an invalid number",num);
 		
 	return &cl_entities[num];
 }
@@ -441,7 +446,7 @@ void CL_ParseServerInfo (void)
 
 
 // local state
-	cl_entities[0].model = cl.worldmodel = cl.model_precache[1];
+	cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
 	
 	R_NewMap ();
 
@@ -450,6 +455,24 @@ void CL_ParseServerInfo (void)
 	noclip_anglehack = false;		// noclip is turned off at start	
 }
 
+void CL_ValidateState(entity_state_t *s)
+{
+	model_t *model;
+
+	if (s->modelindex >= MAX_MODELS)
+		Host_Error("CL_ValidateState: modelindex (%i) >= MAX_MODELS (%i)\n", s->modelindex, MAX_MODELS);
+
+	// colormap is client index + 1
+	if (s->colormap > cl.maxclients)
+		Host_Error ("CL_ValidateState: colormap (%i) > cl.maxclients (%i)", s->colormap, cl.maxclients);
+
+	model = cl.model_precache[s->modelindex];
+	if (model && s->frame >= model->numframes)
+	{
+		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
+		s->frame = 0;
+	}
+}
 
 /*
 ==================
@@ -460,13 +483,11 @@ If an entities model or origin changes from frame to frame, it must be
 relinked.  Other attributes can change without relinking.
 ==================
 */
+byte entkill[MAX_EDICTS];
 void CL_ParseUpdate (int bits)
 {
-	int			i, modnum, num, alpha, scale, glowsize, glowcolor, colormod, frame;
-	model_t		*model;
-	qboolean	forcelink;
-	entity_t	*ent;
-	entity_state_t *baseline;
+	int num, deltadie;
+	entity_t *ent;
 
 	if (cls.signon == SIGNONS - 1)
 	{	// first update is the final signon stage
@@ -476,7 +497,7 @@ void CL_ParseUpdate (int bits)
 
 	if (bits & U_MOREBITS)
 		bits |= (MSG_ReadByte()<<8);
-	if (bits & U_EXTEND1 && !Nehahrademcompatibility)
+	if ((bits & U_EXTEND1) && (!Nehahrademcompatibility))
 	{
 		bits |= MSG_ReadByte() << 16;
 		if (bits & U_EXTEND2)
@@ -484,139 +505,123 @@ void CL_ParseUpdate (int bits)
 	}
 
 	if (bits & U_LONGENTITY)	
-		num = MSG_ReadShort ();
+		num = (unsigned) MSG_ReadShort ();
 	else
-		num = MSG_ReadByte ();
+		num = (unsigned) MSG_ReadByte ();
+
+	if (num >= MAX_EDICTS)
+		Host_Error("CL_ParseUpdate: entity number (%i) >= MAX_EDICTS (%i)\n", num, MAX_EDICTS);
+	if (num < 1)
+		Host_Error("CL_ParseUpdate: invalid entity number (%i)\n", num);
+
+	// mark as visible (no kill)
+	entkill[num] = 0;
 
 	ent = CL_EntityNum (num);
 
-	forcelink = ent->msgtime != cl.mtime[1]; // no previous frame to lerp from
-
-	ent->msgtime = cl.mtime[0];
-	
-	// LordHavoc: new protocol stuff
-	baseline = &ent->baseline;
+	ent->state_previous = ent->state_current;
+	deltadie = false;
 	if (bits & U_DELTA)
-		baseline = &ent->deltabaseline;
-
-	if (forcelink)
 	{
-		ent->deltabaseline.origin[0] = ent->deltabaseline.origin[1] = ent->deltabaseline.origin[2] = 0;
-		ent->deltabaseline.angles[0] = ent->deltabaseline.angles[1] = ent->deltabaseline.angles[2] = 0;
-		ent->deltabaseline.effects = 0;
-		ent->deltabaseline.modelindex = 0;
-		ent->deltabaseline.frame = 0;
-		ent->deltabaseline.colormap = 0;
-		ent->deltabaseline.skin = 0;
-		ent->deltabaseline.alpha = 255;
-		ent->deltabaseline.scale = 16;
-		ent->deltabaseline.glowsize = 0;
-		ent->deltabaseline.glowcolor = 254;
-		ent->deltabaseline.colormod = 255;
+		if (!ent->state_current.modelindex)
+			deltadie = true; // was not present in previous frame, leave hidden until next full update
+	}
+	else
+		ent->state_current = ent->state_baseline;
+
+	ent->state_current.time = cl.mtime[0];
+
+	ent->state_current.flags = 0;
+	if (bits & U_MODEL)		ent->state_current.modelindex = (ent->state_current.modelindex & 0xFF00) | MSG_ReadByte();
+	if (bits & U_FRAME)		ent->state_current.frame = (ent->state_current.frame & 0xFF00) | MSG_ReadByte();
+	if (bits & U_COLORMAP)	ent->state_current.colormap = MSG_ReadByte();
+	if (bits & U_SKIN)		ent->state_current.skin = MSG_ReadByte();
+	if (bits & U_EFFECTS)	ent->state_current.effects = (ent->state_current.effects & 0xFF00) | MSG_ReadByte();
+	if (bits & U_ORIGIN1)	ent->state_current.origin[0] = MSG_ReadCoord();
+	if (bits & U_ANGLE1)	ent->state_current.angles[0] = MSG_ReadAngle();
+	if (bits & U_ORIGIN2)	ent->state_current.origin[1] = MSG_ReadCoord();
+	if (bits & U_ANGLE2)	ent->state_current.angles[1] = MSG_ReadAngle();
+	if (bits & U_ORIGIN3)	ent->state_current.origin[2] = MSG_ReadCoord();
+	if (bits & U_ANGLE3)	ent->state_current.angles[2] = MSG_ReadAngle();
+	if (bits & U_STEP)		ent->state_current.flags |= RENDER_STEP;
+	if (bits & U_ALPHA)		ent->state_current.alpha = MSG_ReadByte();
+	if (bits & U_SCALE)		ent->state_current.scale = MSG_ReadByte();
+	if (bits & U_EFFECTS2)	ent->state_current.effects = (ent->state_current.effects & 0x00FF) | (MSG_ReadByte() << 8);
+	if (bits & U_GLOWSIZE)	ent->state_current.glowsize = MSG_ReadByte();
+	if (bits & U_GLOWCOLOR)	ent->state_current.glowcolor = MSG_ReadByte();
+	if (bits & U_GLOWTRAIL) ent->state_current.flags |= RENDER_GLOWTRAIL;
+	if (bits & U_COLORMOD)	ent->state_current.colormod = MSG_ReadByte();
+	if (bits & U_FRAME2)	ent->state_current.frame = (ent->state_current.frame & 0x00FF) | (MSG_ReadByte() << 8);
+	if (bits & U_MODEL2)	ent->state_current.modelindex = (ent->state_current.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
+	if (bits & U_VIEWMODEL)	ent->state_current.flags |= RENDER_VIEWMODEL;
+
+	// LordHavoc: to allow playback of the Nehahra movie
+	if (Nehahrademcompatibility && (bits & U_EXTEND1))
+	{
+		// LordHavoc: evil format
+		int i = MSG_ReadFloat();
+		int j = MSG_ReadFloat() * 255.0f;
+		if (i == 2)
+		{
+			if (MSG_ReadFloat())
+				ent->state_current.effects |= EF_FULLBRIGHT;
+		}
+		if (j < 0)
+			ent->state_current.alpha = 0;
+		else if (j == 0 || j >= 255)
+			ent->state_current.alpha = 255;
+		else
+			ent->state_current.alpha = j;
 	}
 
-	modnum = bits & U_MODEL ? MSG_ReadByte() : baseline->modelindex;
-	if (modnum >= MAX_MODELS)
-		Host_Error ("CL_ParseModel: bad modnum");
-
-	frame = ((bits & U_FRAME) ? MSG_ReadByte() : (baseline->frame & 0xFF));
-
-	i = bits & U_COLORMAP ? MSG_ReadByte() : baseline->colormap;
-	ent->deltabaseline.colormap = i;
-	if (!i)
-		ent->colormap = -1; // no special coloring
+	if (deltadie)
+	{
+		// hide the entity
+		ent->state_current.modelindex = 0;
+	}
 	else
 	{
-		if (i > cl.maxclients)
-			Host_Error ("i >= cl.maxclients");
-		ent->colormap = cl.scores[i-1].colors; // color it
+		CL_ValidateState(&ent->state_current);
+
+		/*
+		if (!ent->state_current.modelindex)
+		{
+			if (bits & U_DELTA)
+			{
+				if (bits & U_MODEL)
+					Con_Printf("CL_ParseUpdate: delta NULL model on %i: %i %i\n", num, ent->state_previous.modelindex, ent->state_current.modelindex);
+				else
+					Con_Printf("CL_ParseUpdate: delta NULL model on %i: %i\n", num, ent->state_previous.modelindex);
+			}
+			else
+			{
+				if (bits & U_MODEL)
+					Con_Printf("CL_ParseUpdate:       NULL model on %i: %i %i\n", num, ent->state_baseline.modelindex, ent->state_current.modelindex);
+				else
+					Con_Printf("CL_ParseUpdate:       NULL model on %i: %i\n", num, ent->state_baseline.modelindex);
+			}
+		}
+		*/
 	}
+}
 
-	ent->deltabaseline.skin = ent->skinnum = bits & U_SKIN ? MSG_ReadByte() : baseline->skin;
+int entityupdatestart;
+void CL_EntityUpdateBegin(int start)
+{
+	if (start < 0 || start >= MAX_EDICTS)
+		Host_Error("CL_EntityUpdateBegin: start (%i) < 0 or >= MAX_EDICTS (%i)\n", start, MAX_EDICTS);
+	entityupdatestart = start;
+	memset(entkill, 1, MAX_EDICTS);
+}
 
-	ent->effects = ((bits & U_EFFECTS) ? MSG_ReadByte() : (baseline->effects & 0xFF));
-
-// shift the known values for interpolation
-	VectorCopy (ent->msg_origins[0], ent->msg_origins[1]);
-	VectorCopy (ent->msg_angles[0], ent->msg_angles[1]);
-	VectorCopy (baseline->origin, ent->msg_origins[0]);
-	VectorCopy (baseline->angles, ent->msg_angles[0]);
-
-	if (bits & U_ORIGIN1) ent->msg_origins[0][0] = MSG_ReadCoord ();
-	if (bits & U_ANGLE1) ent->msg_angles[0][0] = MSG_ReadAngle();
-	if (bits & U_ORIGIN2) ent->msg_origins[0][1] = MSG_ReadCoord ();
-	if (bits & U_ANGLE2) ent->msg_angles[0][1] = MSG_ReadAngle();
-	if (bits & U_ORIGIN3) ent->msg_origins[0][2] = MSG_ReadCoord ();
-	if (bits & U_ANGLE3) ent->msg_angles[0][2] = MSG_ReadAngle();
-
-	VectorCopy(ent->msg_origins[0], ent->deltabaseline.origin);
-	VectorCopy(ent->msg_angles[0], ent->deltabaseline.angles);
-
-	alpha = bits & U_ALPHA ? MSG_ReadByte() : baseline->alpha;
-	scale = bits & U_SCALE ? MSG_ReadByte() : baseline->scale;
-	ent->effects |= ((bits & U_EFFECTS2) ? (MSG_ReadByte() << 8) : (baseline->effects & 0xFF00));
-	glowsize = bits & U_GLOWSIZE ? MSG_ReadByte() : baseline->glowsize;
-	glowcolor = bits & U_GLOWCOLOR ? MSG_ReadByte() : baseline->glowcolor;
-	colormod = bits & U_COLORMOD ? MSG_ReadByte() : baseline->colormod;
-	modnum |= ((bits & U_MODEL2) ? (MSG_ReadByte() << 8) : (baseline->modelindex & 0xFF00));
-	frame |= ((bits & U_FRAME2) ? (MSG_ReadByte() << 8) : (baseline->frame & 0xFF00));
-
-	if (modnum >= MAX_MODELS)
-		Host_Error("modnum (%i) >= MAX_MODELS (%i)\n", modnum, MAX_MODELS);
-
-	model = cl.model_precache[modnum];
-	if (model != ent->model)
-	{
-		ent->model = model;
-	// automatic animation (torches, etc) can be either all together
-	// or randomized
-		if (model)
-			ent->syncbase = model->synctype == ST_RAND ? (float)(rand()&0x7fff) / 0x7fff : 0.0;
-		else
-			forcelink = true;	// hack to make null model players work
-	}
-
-	ent->frame = frame;
-	if (model && (unsigned) frame >= model->numframes)
-		Con_DPrintf("CL_ParseUpdate: no such frame %i in \"%s\"\n", frame, model->name);
-
-	ent->deltabaseline.alpha = alpha;
-	ent->deltabaseline.scale = scale;
-	ent->deltabaseline.effects = ent->effects;
-	ent->deltabaseline.glowsize = glowsize;
-	ent->deltabaseline.glowcolor = glowcolor;
-	ent->deltabaseline.colormod = colormod;
-	ent->deltabaseline.modelindex = modnum;
-	ent->deltabaseline.frame = frame;
-	ent->alpha = (float) alpha * (1.0 / 255.0);
-	ent->scale = (float) scale * (1.0 / 16.0);
-	ent->glowsize = glowsize * 4.0;
-	ent->glowcolor = glowcolor;
-	ent->colormod[0] = (float) ((colormod >> 5) & 7) * (1.0 / 7.0);
-	ent->colormod[1] = (float) ((colormod >> 2) & 7) * (1.0 / 7.0);
-	ent->colormod[2] = (float) (colormod & 3) * (1.0 / 3.0);
-	if (bits & U_EXTEND1 && Nehahrademcompatibility) // LordHavoc: to allow playback of the Nehahra movie
-	{
-		i = MSG_ReadFloat();
-		ent->alpha = MSG_ReadFloat();
-		if (i == 2 && MSG_ReadFloat() != 0.0)
-			ent->effects |= EF_FULLBRIGHT;
-		if (ent->alpha == 0)
-			ent->alpha = 1;
-	}
-
-	//if ( bits & U_NOLERP )
-	//	ent->forcelink = true;
-	//if (bits & U_STEP) // FIXME: implement clientside interpolation of monsters
-
-	if ( forcelink )
-	{	// didn't have an update last message
-		VectorCopy (ent->msg_origins[0], ent->msg_origins[1]);
-		VectorCopy (ent->msg_origins[0], ent->origin);
-		VectorCopy (ent->msg_angles[0], ent->msg_angles[1]);
-		VectorCopy (ent->msg_angles[0], ent->angles);
-		ent->forcelink = true;
-	}
+void CL_EntityUpdateEnd(int end)
+{
+	int i;
+	if (end < 0 || end > MAX_EDICTS)
+		Host_Error("CL_EntityUpdateEnd: end (%i) < 0 or > MAX_EDICTS (%i)\n", end, MAX_EDICTS);
+	for (i = entityupdatestart;i < end;i++)
+		if (entkill[i])
+			cl_entities[i].state_current.modelindex = 0;
 }
 
 /*
@@ -626,28 +631,29 @@ CL_ParseBaseline
 */
 void CL_ParseBaseline (entity_t *ent, int largemodelindex)
 {
-	int			i;
+	int i;
 
+	memset(&ent->state_baseline, 0, sizeof(entity_state_t));
 	if (largemodelindex)
-		ent->baseline.modelindex = (unsigned short) MSG_ReadShort ();
+		ent->state_baseline.modelindex = (unsigned short) MSG_ReadShort ();
 	else
-		ent->baseline.modelindex = MSG_ReadByte ();
-	ent->baseline.frame = MSG_ReadByte ();
-	ent->baseline.colormap = MSG_ReadByte();
-	ent->baseline.skin = MSG_ReadByte();
-	for (i=0 ; i<3 ; i++)
+		ent->state_baseline.modelindex = MSG_ReadByte ();
+	ent->state_baseline.frame = MSG_ReadByte ();
+	ent->state_baseline.colormap = MSG_ReadByte();
+	ent->state_baseline.skin = MSG_ReadByte();
+	for (i = 0;i < 3;i++)
 	{
-		ent->baseline.origin[i] = MSG_ReadCoord ();
-		ent->baseline.angles[i] = MSG_ReadAngle ();
+		ent->state_baseline.origin[i] = MSG_ReadCoord ();
+		ent->state_baseline.angles[i] = MSG_ReadAngle ();
 	}
-	ent->baseline.alpha = 255;
-	ent->baseline.scale = 16;
-	ent->baseline.glowsize = 0;
-	ent->baseline.glowcolor = 254;
-	ent->baseline.colormod = 255;
-	
-	if (ent->baseline.modelindex >= MAX_MODELS)
-		Host_Error("CL_ParseBaseline: modelindex (%i) >= MAX_MODELS (%i)\n", ent->baseline.modelindex, MAX_MODELS);
+	ent->state_baseline.alpha = 255;
+	ent->state_baseline.scale = 16;
+	ent->state_baseline.glowsize = 0;
+	ent->state_baseline.glowcolor = 254;
+	ent->state_baseline.colormod = 255;
+	ent->state_previous = ent->state_current = ent->state_baseline;
+
+	CL_ValidateState(&ent->state_baseline);
 }
 
 
@@ -660,7 +666,7 @@ Server information pertaining to this client only
 */
 void CL_ParseClientdata (int bits)
 {
-	int		i, j;
+	int i, j;
 
 	bits &= 0xFFFF;
 	if (bits & SU_EXTEND1)
@@ -739,34 +745,31 @@ CL_ParseStatic
 void CL_ParseStatic (int largemodelindex)
 {
 	entity_t *ent;
-	int		i;
 		
-	i = cl.num_statics;
-	if (i >= MAX_STATIC_ENTITIES)
+	if (cl.num_statics >= MAX_STATIC_ENTITIES)
 		Host_Error ("Too many static entities");
-	ent = &cl_static_entities[i];
-	cl.num_statics++;
+	ent = &cl_static_entities[cl.num_statics++];
 	CL_ParseBaseline (ent, largemodelindex);
 
 // copy it to the current state
-	ent->model = cl.model_precache[ent->baseline.modelindex];
-	ent->frame = ent->frame1 = ent->frame2 = ent->baseline.frame;
-	ent->framelerp = 0;
-	ent->lerp_starttime = -1;
+	ent->render.model = cl.model_precache[ent->state_baseline.modelindex];
+	ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_baseline.frame;
+	ent->render.framelerp = 0;
+	ent->render.lerp_starttime = -1;
 	// make torchs play out of sync
-	ent->frame1start = ent->frame2start = -(rand() & 32767);
-	ent->colormap = -1; // no special coloring
-	ent->skinnum = ent->baseline.skin;
-	ent->effects = ent->baseline.effects;
-	ent->alpha = 1;
-	ent->scale = 1;
-	ent->alpha = 1;
-	ent->glowsize = 0;
-	ent->glowcolor = 254;
-	ent->colormod[0] = ent->colormod[1] = ent->colormod[2] = 1;
+	ent->render.frame1start = ent->render.frame2start = -(rand() & 32767);
+	ent->render.colormap = -1; // no special coloring
+	ent->render.skinnum = ent->state_baseline.skin;
+	ent->render.effects = ent->state_baseline.effects;
+	ent->render.alpha = 1;
+	ent->render.scale = 1;
+	ent->render.alpha = 1;
+	ent->render.glowsize = 0;
+	ent->render.glowcolor = 254;
+	ent->render.colormod[0] = ent->render.colormod[1] = ent->render.colormod[2] = 1;
 
-	VectorCopy (ent->baseline.origin, ent->origin);
-	VectorCopy (ent->baseline.angles, ent->angles);	
+	VectorCopy (ent->state_baseline.origin, ent->render.origin);
+	VectorCopy (ent->state_baseline.angles, ent->render.angles);	
 	R_AddEfrags (ent);
 }
 
@@ -832,7 +835,7 @@ CL_ParseServerMessage
 void CL_ParseServerMessage (void)
 {
 	int			cmd;
-	int			i;
+	int			i, updateend;
 	byte		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
@@ -856,6 +859,8 @@ void CL_ParseServerMessage (void)
 // parse the message
 //
 	MSG_BeginReading ();
+
+	updateend = false;
 	
 	while (1)
 	{
@@ -867,7 +872,7 @@ void CL_ParseServerMessage (void)
 		if (cmd == -1)
 		{
 			SHOWNET("END OF MESSAGE");
-			return;		// end of message
+			break;		// end of message
 		}
 
 		cmdindex = cmdcount & 31;
@@ -878,7 +883,7 @@ void CL_ParseServerMessage (void)
 		if (cmd & 128)
 		{
 			// LordHavoc: fix for bizarre problem in MSVC that I do not understand (if I assign the string pointer directly it ends up storing a NULL pointer)
-			temp = "svc_entity";
+			temp = "entity";
 			cmdlogname[cmdindex] = temp;
 			SHOWNET("fast update");
 			CL_ParseUpdate (cmd&127);
@@ -926,6 +931,9 @@ void CL_ParseServerMessage (void)
 			break;
 			
 		case svc_time:
+			// handle old protocols which do not have entity update ranges
+			CL_EntityUpdateBegin(0);
+			updateend = true;
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();			
 			break;
@@ -938,10 +946,7 @@ void CL_ParseServerMessage (void)
 		case svc_version:
 			i = MSG_ReadLong ();
 			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION && i != 250)
-			{
 				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i or %i", i, DPPROTOCOL_VERSION, PROTOCOL_VERSION);
-				return;
-			}
 			Nehahrademcompatibility = false;
 			if (i == 250)
 				Nehahrademcompatibility = true;
@@ -986,7 +991,7 @@ void CL_ParseServerMessage (void)
 		case svc_lightstyle:
 			i = MSG_ReadByte ();
 			if (i >= MAX_LIGHTSTYLES)
-				Host_Error ("svc_lightstyle > MAX_LIGHTSTYLES");
+				Host_Error ("svc_lightstyle >= MAX_LIGHTSTYLES");
 			strncpy (cl_lightstyle[i].map,  MSG_ReadString(), MAX_STYLESTRING - 1);
 			cl_lightstyle[i].map[MAX_STYLESTRING - 1] = 0;
 			cl_lightstyle[i].length = strlen(cl_lightstyle[i].map);
@@ -1131,7 +1136,19 @@ void CL_ParseServerMessage (void)
 		case svc_showlmp:
 			SHOWLMP_decodeshow();
 			break;
+		case svc_entitiesbegin:
+			// the beginning of an entity update range
+			CL_EntityUpdateBegin((unsigned) MSG_ReadShort());
+			break;
+		case svc_entitiesend:
+			// the end of an entity update range
+			CL_EntityUpdateEnd((unsigned) MSG_ReadShort());
+			updateend = false;
+			break;
 		}
 	}
+
+	if (updateend)
+		CL_EntityUpdateEnd(MAX_EDICTS);
 }
 

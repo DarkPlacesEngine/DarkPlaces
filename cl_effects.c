@@ -118,21 +118,21 @@ void CL_DoEffects()
 			vis = CL_NewTempEntity();
 			if (!vis)
 				continue;
-			VectorCopy(e->origin, vis->origin);
-			vis->lerp_model = vis->model = cl.model_precache[e->modelindex];
-			vis->frame1 = e->frame;
-			vis->frame2 = e->frame + 1;
-			if (vis->frame2 >= e->endframe)
-				vis->frame2 = -1; // disappear
-			vis->frame = vis->frame2;
-			vis->framelerp = frame - vis->frame1;
-			vis->frame1start = e->frame1start;
-			vis->frame2start = e->frame2start;
-			vis->lerp_starttime = -1;
-			vis->colormap = -1; // no special coloring
-			vis->scale = 1;
-			vis->alpha = 1;
-			vis->colormod[0] = vis->colormod[1] = vis->colormod[2] = 1;
+			VectorCopy(e->origin, vis->render.origin);
+			vis->render.lerp_model = vis->render.model = cl.model_precache[e->modelindex];
+			vis->render.frame1 = e->frame;
+			vis->render.frame2 = e->frame + 1;
+			if (vis->render.frame2 >= e->endframe)
+				vis->render.frame2 = -1; // disappear
+			vis->render.frame = vis->render.frame2;
+			vis->render.framelerp = frame - vis->render.frame1;
+			vis->render.frame1start = e->frame1start;
+			vis->render.frame2start = e->frame2start;
+			vis->render.lerp_starttime = -1;
+			vis->render.colormap = -1; // no special coloring
+			vis->render.scale = 1;
+			vis->render.alpha = 1;
+			vis->render.colormod[0] = vis->render.colormod[1] = vis->render.colormod[2] = 1;
 		}
 	}
 }

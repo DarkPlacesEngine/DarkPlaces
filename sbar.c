@@ -783,6 +783,9 @@ void Sbar_DrawFace (void)
 		f = 4;
 	else
 		f = cl.stats[STAT_HEALTH] / 20;
+	// LordHavoc: I don't even know how the game didn't crash without this
+	if (f < 0)
+		f = 0;
 
 	if (cl.time <= cl.faceanimtime)
 	{
