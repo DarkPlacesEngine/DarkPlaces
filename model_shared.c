@@ -308,6 +308,14 @@ static model_t *Mod_LoadModel(model_t *mod, qboolean crash, qboolean checkdisk, 
 	Con_DPrintf("loading model %s\n", mod->name);
 	// LordHavoc: unload the existing model in this slot (if there is one)
 	Mod_UnloadModel(mod);
+	if (isworldmodel)
+	{
+		// clear out any stale submodels lying around, as well as the old world model itself
+		int i;
+		for (i = 0;i < MAX_MOD_KNOWN;i++)
+			if (mod_known[i].isworldmodel)
+				Mod_UnloadModel(mod_known + i);
+	}
 
 	// load the model
 	mod->isworldmodel = isworldmodel;
