@@ -40,7 +40,7 @@ builddate:
 .c.o:
 	gcc $(CFLAGS) -c $*.c
 
-darkplaces: $(OBJECTS) vid_wgl.o sys_win.o snd_win.o net_bsd.o net_wins.o cd_win.o conproc.o
+darkplaces: $(OBJECTS) vid_wgl.o sys_win.o snd_win.o net_bsd.o net_udp.o cd_win.o conproc.o
 	gcc -o $@ $^ $(LDFLAGS)
 
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -17,13 +17,17 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-// net_udp.c
-
 #include "quakedef.h"
-
+#include "net_udp.h"
+#ifdef WIN32
+#include "winquake.h"
+#define MAXHOSTNAMELEN		256
+#else
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -36,59 +40,68 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef NeXT
 #include <libc.h>
 #endif
-
-extern int gethostname (char *, int);
-extern int close (int);
+#endif
 
 static int net_acceptsocket = -1;		// socket for fielding new connections
 static int net_controlsocket;
 static int net_broadcastsocket = 0;
 static struct qsockaddr broadcastaddr;
 
-static unsigned long myAddr;
-
-#include "net_udp.h"
+static union {int i;unsigned char d[4];} myAddr;
 
 //=============================================================================
 
+#ifdef WIN32
+WSADATA		winsockdata;
+#endif
+
 int UDP_Init (void)
 {
-	struct hostent *local;
-	char	buff[MAXHOSTNAMELEN];
-	struct qsockaddr addr;
-	char *colon;
-	
+	int i;
+	struct hostent *local = NULL;
+	char buff[MAXHOSTNAMELEN];
+
 	if (COM_CheckParm ("-noudp"))
 		return -1;
 
-	// determine my name & address
-	gethostname(buff, MAXHOSTNAMELEN);
-	local = gethostbyname(buff);
-	if (!local)
-		myAddr = htonl(INADDR_LOOPBACK);  // default to the loopback address
-	else
-		myAddr = *(int *)local->h_addr_list[0];
-
-	// LordHavoc FIXME: get rid of this someday, just leave machines unnamed
-	// if the quake hostname isn't set, set it to the machine name
-	if (strcmp(hostname.string, "UNNAMED") == 0)
+#ifdef WIN32
+	if (WSAStartup (MAKEWORD(1, 1), &winsockdata))
 	{
-		buff[15] = 0;
-		Cvar_Set ("hostname", buff);
+		Con_SafePrintf ("Winsock initialization failed.\n");
+		return -1;
+	}
+#endif
+
+	// loopback as a worst case fallback
+	myAddr.d[0] = 127;myAddr.d[1] = 0;myAddr.d[2] = 0;myAddr.d[3] = 1;
+
+	if ((i = COM_CheckParm("-ip")) != 0 && i < com_argc)
+	{
+		myAddr.i = inet_addr(com_argv[i+1]);
+		Con_Printf("Binding to IP Interface Address of %i.%i.%i.%i\n", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
+	}
+	else if (gethostname(buff, MAXHOSTNAMELEN) != -1)
+	{
+		buff[MAXHOSTNAMELEN - 1] = 0;
+		local = gethostbyname(buff);
+		if (local != NULL)
+			myAddr.i = *((int *)local->h_addr_list[0]);
 	}
 
+	sprintf(my_tcpip_address, "%d.%d.%d.%d", myAddr.d[0], myAddr.d[1], myAddr.d[2], myAddr.d[3]);
+
 	if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
-		Sys_Error("UDP_Init: Unable to open control socket\n");
+	{
+		Con_Printf("UDP_Init: Unable to open control socket\n");
+#ifdef WIN32
+		WSACleanup ();
+#endif
+		return -1;
+	}
 
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
 	((struct sockaddr_in *)&broadcastaddr)->sin_addr.s_addr = htonl(INADDR_BROADCAST);
-	((struct sockaddr_in *)&broadcastaddr)->sin_port = htons(net_hostport);
-
-	UDP_GetSocketAddr (net_controlsocket, &addr);
-	strcpy(my_tcpip_address,  UDP_AddrToString (&addr));
-	colon = strrchr (my_tcpip_address, ':');
-	if (colon)
-		*colon = 0;
+	((struct sockaddr_in *)&broadcastaddr)->sin_port = htons((unsigned short)net_hostport);
 
 	Con_Printf("UDP Initialized\n");
 	tcpipAvailable = true;
@@ -102,6 +115,9 @@ void UDP_Shutdown (void)
 {
 	UDP_Listen (false);
 	UDP_CloseSocket (net_controlsocket);
+#ifdef WIN32
+	WSACleanup ();
+#endif
 }
 
 //=============================================================================
@@ -131,94 +147,55 @@ int UDP_OpenSocket (int port)
 {
 	int newsocket;
 	struct sockaddr_in address;
-	qboolean _true = true;
 
 	if ((newsocket = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return -1;
 
-	if (ioctl (newsocket, FIONBIO, (char *)&_true) == -1)
-		goto ErrorReturn;
+	{
+#ifdef WIN32
+		u_long _true = 1;
+		if (ioctlsocket (newsocket, FIONBIO, &_true) == -1)
+		{
+			closesocket (newsocket);
+#else
+		char _true = 1;
+		if (ioctl (newsocket, FIONBIO, &_true) == -1)
+		{
+			close (newsocket);
+#endif
+			Sys_Error("UDP_OpenSocket: unable to do a ioctl FIONBIO on the socket\n");
+		}
+	}
 
 	address.sin_family = AF_INET;
-	address.sin_addr.s_addr = INADDR_ANY;
-	address.sin_port = htons(port);
-	if( bind (newsocket, (void *)&address, sizeof(address)) == -1)
-		goto ErrorReturn;
+	address.sin_addr.s_addr = myAddr.i;
+	address.sin_port = htons((unsigned short)port);
+	if (bind(newsocket, (void *)&address, sizeof(address)) == -1)
+	{
+#ifdef WIN32
+		closesocket(newsocket);
+#else
+		close(newsocket);
+#endif
+		Sys_Error ("UDP_OpenSocket: Unable to bind to %s", UDP_AddrToString((struct qsockaddr *)&address));
+	}
 
 	return newsocket;
-
-ErrorReturn:
-	close (newsocket);
-	return -1;
 }
 
 //=============================================================================
 
 int UDP_CloseSocket (int socket)
 {
-	if (socket == net_broadcastsocket)
+	if (net_broadcastsocket == socket)
 		net_broadcastsocket = 0;
+#ifdef WIN32
+	return closesocket (socket);
+#else
 	return close (socket);
+#endif
 }
 
-
-//=============================================================================
-/*
-============
-PartialIPAddress
-
-this lets you type only as much of the net address as required, using
-the local network components to fill in the rest
-============
-*/
-// LordHavoc FIXME: this whole function is stupid
-static int PartialIPAddress (const char *in, struct qsockaddr *hostaddr)
-{
-	// LordHavoc FIXME: buff is stupid, it just ensures the address begins with a . for the parser
-	char buff[256];
-	char *b;
-	int addr;
-	int num;
-	int mask;
-	int run;
-	int port;
-
-	buff[0] = '.';
-	b = buff;
-	strcpy(buff+1, in);
-	if (buff[1] == '.')
-		b++;
-
-	addr = 0;
-	mask=-1;
-	while (*b == '.')
-	{
-		b++;
-		num = 0;
-		run = 0;
-		while (*b >= '0' && *b <= '9')
-		{
-			num = num*10 + *b++ - '0';
-			if (num > 255)
-				return -1;
-		}
-		if (*b != '.' && *b != ':' && *b != 0)
-			return -1;
-		mask<<=8;
-		addr = (addr<<8) + num;
-	}
-
-	if (*b++ == ':')
-		port = atoi(b);
-	else
-		port = net_hostport;
-
-	hostaddr->sa_family = AF_INET;
-	((struct sockaddr_in *)hostaddr)->sin_port = htons((short)port);
-	((struct sockaddr_in *)hostaddr)->sin_addr.s_addr = (myAddr & htonl(mask)) | htonl(addr);
-
-	return 0;
-}
 //=============================================================================
 
 int UDP_Connect (int socket, struct qsockaddr *addr)
@@ -230,19 +207,26 @@ int UDP_Connect (int socket, struct qsockaddr *addr)
 
 int UDP_CheckNewConnections (void)
 {
+	char buf[4096];
+#ifndef WIN32
 	unsigned long	available;
 	struct sockaddr_in	from;
 	socklen_t			fromlen;
-	char buff[1];
+#endif
 
 	if (net_acceptsocket == -1)
 		return -1;
 
+#ifdef WIN32
+	if (recvfrom (net_acceptsocket, buf, sizeof(buf), MSG_PEEK, NULL, NULL) >= 0)
+		return net_acceptsocket;
+#else
 	if (ioctl (net_acceptsocket, FIONREAD, &available) == -1)
 		Sys_Error ("UDP: ioctlsocket (FIONREAD) failed\n");
 	if (available)
 		return net_acceptsocket;
-	recvfrom (net_acceptsocket, buff, 0, 0, (struct sockaddr *) &from, &fromlen);
+	recvfrom (net_acceptsocket, buf, 0, 0, (struct sockaddr *) &from, &fromlen);
+#endif
 	return -1;
 }
 
@@ -268,8 +252,19 @@ int UDP_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 	int ret;
 
 	ret = recvfrom (socket, buf, len, 0, (struct sockaddr *)addr, &addrlen);
-	if (ret == -1 && (errno == EWOULDBLOCK || errno == ECONNREFUSED))
-		return 0;
+	if (ret == -1)
+	{
+#ifdef WIN32
+		int e = WSAGetLastError();
+		if (e == WSAEWOULDBLOCK || e == WSAECONNREFUSED)
+			return 0;
+		Con_Printf("UDP_Read: WASGetLastError == %i\n", e);
+#else
+		if (errno == EWOULDBLOCK || errno == ECONNREFUSED)
+			return 0;
+		Con_Printf("UDP_Read: errno == %i (%s)\n", errno, strerror(errno));
+#endif
+	}
 	return ret;
 }
 
@@ -277,7 +272,7 @@ int UDP_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 
 int UDP_MakeSocketBroadcastCapable (int socket)
 {
-	int				i = 1;
+	int i = 1;
 
 	// make this socket broadcast capable
 	if (setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i)) < 0)
@@ -315,8 +310,19 @@ int UDP_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 	int ret;
 
 	ret = sendto (socket, buf, len, 0, (struct sockaddr *)addr, sizeof(struct qsockaddr));
-	if (ret == -1 && errno == EWOULDBLOCK)
-		return 0;
+	if (ret == -1)
+	{
+#ifdef WIN32
+		int e = WSAGetLastError();
+		if (e == WSAEWOULDBLOCK)
+			return 0;
+		Con_Printf("UDP_Write: WASGetLastError == %i\n", e);
+#else
+		if (errno == EWOULDBLOCK)
+			return 0;
+		Con_Printf("UDP_Write: errno == %i (%s)\n", errno, strerror(errno));
+#endif
+	}
 	return ret;
 }
 
@@ -324,11 +330,9 @@ int UDP_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 
 char *UDP_AddrToString (const struct qsockaddr *addr)
 {
-	static char buffer[22];
-	int haddr;
-
-	haddr = ntohl(((struct sockaddr_in *)addr)->sin_addr.s_addr);
-	sprintf(buffer, "%d.%d.%d.%d:%d", (haddr >> 24) & 0xff, (haddr >> 16) & 0xff, (haddr >> 8) & 0xff, haddr & 0xff, ntohs(((struct sockaddr_in *)addr)->sin_port));
+	static char buffer[22]; // only 22 needed (3 + 1 + 3 + 1 + 3 + 1 + 3 + 1 + 5 + null)
+	unsigned char *ip = (char *)(&((struct sockaddr_in *)addr)->sin_addr.s_addr);
+	sprintf(buffer, "%d.%d.%d.%d:%d", ip[0], ip[1], ip[2], ip[3], ntohs(((struct sockaddr_in *)addr)->sin_port));
 	return buffer;
 }
 
@@ -344,25 +348,28 @@ int UDP_StringToAddr (const char *string, struct qsockaddr *addr)
 
 	addr->sa_family = AF_INET;
 	((struct sockaddr_in *)addr)->sin_addr.s_addr = htonl(ipaddr);
-	((struct sockaddr_in *)addr)->sin_port = htons(hp);
+	((struct sockaddr_in *)addr)->sin_port = htons((unsigned short)hp);
 	return 0;
 }
 
 //=============================================================================
 
-unsigned long inet_addr(const char *cp);
 int UDP_GetSocketAddr (int socket, struct qsockaddr *addr)
 {
+	int ret;
 	int addrlen = sizeof(struct qsockaddr);
-	unsigned int a;
-
 	memset(addr, 0, sizeof(struct qsockaddr));
-	getsockname(socket, (struct sockaddr *)addr, &addrlen);
-	a = ((struct sockaddr_in *)addr)->sin_addr.s_addr;
-	if (a == 0 || a == inet_addr("127.0.0.1"))
-		((struct sockaddr_in *)addr)->sin_addr.s_addr = myAddr;
-
-	return 0;
+	ret = getsockname(socket, (struct sockaddr *)addr, &addrlen);
+	if (ret == -1)
+	{
+#ifdef WIN32
+		int e = WSAGetLastError();
+		Con_Printf("UDP_GetSocketAddr: WASGetLastError == %i\n", e);
+#else
+		Con_Printf("UDP_GetSocketAddr: errno == %i (%s)\n", errno, strerror(errno));
+#endif
+	}
+	return ret;
 }
 
 //=============================================================================
@@ -389,14 +396,14 @@ int UDP_GetAddrFromName(const char *name, struct qsockaddr *addr)
 	struct hostent *hostentry;
 
 	if (name[0] >= '0' && name[0] <= '9')
-		return PartialIPAddress (name, addr);
+		return UDP_StringToAddr (name, addr);
 
 	hostentry = gethostbyname (name);
 	if (!hostentry)
 		return -1;
 
 	addr->sa_family = AF_INET;
-	((struct sockaddr_in *)addr)->sin_port = htons(net_hostport);
+	((struct sockaddr_in *)addr)->sin_port = htons((unsigned short)net_hostport);
 	((struct sockaddr_in *)addr)->sin_addr.s_addr = *(int *)hostentry->h_addr_list[0];
 
 	return 0;
@@ -428,7 +435,7 @@ int UDP_GetSocketPort (struct qsockaddr *addr)
 
 int UDP_SetSocketPort (struct qsockaddr *addr, int port)
 {
-	((struct sockaddr_in *)addr)->sin_port = htons(port);
+	((struct sockaddr_in *)addr)->sin_port = htons((unsigned short)port);
 	return 0;
 }
 
