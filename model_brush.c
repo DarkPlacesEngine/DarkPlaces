@@ -1645,12 +1645,6 @@ typedef struct
 }
 winding_t;
 
-typedef struct
-{
-	int numpoints;
-}
-windingsizeof_t;
-
 /*
 ==================
 NewWinding
@@ -1664,7 +1658,7 @@ static winding_t *NewWinding (int points)
 	if (points > MAX_POINTS_ON_WINDING)
 		Host_Error("NewWinding: too many points\n");
 
-	size = sizeof(windingsizeof_t) + sizeof(double[3]) * points;
+	size = sizeof(winding_t) + sizeof(double[3]) * (points - 8);
 	w = Mem_Alloc(loadmodel->mempool, size);
 	memset (w, 0, size);
 
@@ -2218,6 +2212,7 @@ static void Mod_RecursiveNodePortals (mnode_t *node)
 	nodeportal->plane = *node->plane;
 
 	nodeportalwinding = BaseWindingForPlane (node->plane);
+	Mem_CheckSentinels(nodeportalwinding);
 	side = 0;	// shut up compiler warning
 	for (portal = (portal_t *)node->portals;portal;portal = portal->next[side])
 	{
