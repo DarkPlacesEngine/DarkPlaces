@@ -1843,10 +1843,11 @@ void PF_setspawnparms (void)
 
 	ent = G_EDICT(OFS_PARM0);
 	i = NUM_FOR_EDICT(ent);
-	if (i < 1 || i > MAX_SCOREBOARD || !(client = svs.connectedclients[i-1]))
+	if (i < 1 || i > MAX_SCOREBOARD || !svs.connectedclients[i-1])
 		Host_Error ("Entity is not a client");
 
 	// copy spawn parms out of the client_t
+	client = svs.connectedclients[i-1];
 	for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
 		(&pr_global_struct->parm1)[i] = client->spawn_parms[i];
 }
