@@ -223,8 +223,10 @@ void Mod_BuildAliasSkinsFromSkinFiles(aliasskin_t *skin, skinfile_t *skinfile, c
 				if (!strcmp(skinfileitem->name, name))
 				{
 					memset(&tempskinframe, 0, sizeof(tempskinframe));
-					Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
-					Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+					if (Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true))
+						Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+					else
+						Con_Printf("failed to load skin #%i \"%s\" replacement \"%s\"\n", i, name, skinfileitem->replacement);
 					break;
 				}
 			}
@@ -232,8 +234,10 @@ void Mod_BuildAliasSkinsFromSkinFiles(aliasskin_t *skin, skinfile_t *skinfile, c
 	}
 	else
 	{
-		Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
-		Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+		if (Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true))
+			Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+		else
+			Con_Printf("failed to load skin \"%s\"\n", name);
 	}
 }
 
