@@ -841,8 +841,8 @@ void COM_StripExtension (char *in, char *out)
 	while (*in)
 	{
 		if (*in == '.')
-			last = in;
-		if ((*in == '/') || (*in == '\\') || (*in == ':'))
+			last = out;
+		else if (*in == '/' || *in == '\\' || *in == ':')
 			last = NULL;
 		*out++ = *in++;
 	}
@@ -1355,8 +1355,9 @@ void    COM_CreatePath (char *path)
 
 	for (ofs = path+1 ; *ofs ; ofs++)
 	{
-		if (*ofs == '/' || *ofs == '\\' || *ofs == ':')
-		{       // create the directory
+		if (*ofs == '/' || *ofs == '\\')
+		{
+			// create the directory
 			save = *ofs;
 			*ofs = 0;
 			Sys_mkdir (path);
