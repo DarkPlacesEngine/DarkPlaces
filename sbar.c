@@ -1027,7 +1027,7 @@ void Sbar_Draw (void)
 	else // Quake and others
 	{
 		sbar_y = vid.conheight - SBAR_HEIGHT;
-		if (cl.gametype == GAME_DEATHMATCH)
+		if (cl.gametype == GAME_DEATHMATCH && gamemode != GAME_TRANSFUSION)
 			sbar_x = 0;
 		else
 			sbar_x = (vid.conwidth - 320)/2;
@@ -1133,7 +1133,12 @@ void Sbar_Draw (void)
 		}
 
 		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
-			Sbar_MiniDeathmatchOverlay (324, vid.conheight - sb_lines);
+		{
+			if (gamemode == GAME_TRANSFUSION)
+				Sbar_MiniDeathmatchOverlay (0, 0);
+			else
+				Sbar_MiniDeathmatchOverlay (324, vid.conheight - sb_lines);
+		}
 	}
 
 	Sbar_ShowFPS();
@@ -1217,8 +1222,16 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 		i = bound(0, i, scoreboardlines - numlines);
 	}
 
-	for (;i < scoreboardlines && y < vid.conheight;i++)
-		y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+	if (gamemode == GAME_TRANSFUSION)
+	{
+		for (;i < scoreboardlines && x < vid.conwidth;i++)
+			x += 128 + Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+	}
+	else
+	{
+		for (;i < scoreboardlines && y < vid.conheight;i++)
+			y += Sbar_PrintScoreboardItem(cl.scores + fragsort[i], x, y);
+	}
 }
 
 /*
