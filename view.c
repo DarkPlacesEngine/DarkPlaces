@@ -56,6 +56,8 @@ cvar_t	crosshair = {CVAR_SAVE, "crosshair", "0"};
 cvar_t	v_centermove = {0, "v_centermove", "0.15"};
 cvar_t	v_centerspeed = {0, "v_centerspeed","500"};
 
+cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160"};
+
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 
@@ -301,29 +303,38 @@ V_CalcRefdef
 */
 void V_CalcRefdef (void)
 {
+	static float oldz;
 	entity_t *ent;
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// ent is the player model (visible when out of body)
 		ent = &cl_entities[cl.viewentity];
+		VectorCopy(ent->render.origin, r_refdef.vieworg);
+		VectorCopy(cl.viewangles, r_refdef.viewangles);
+		if (oldz < ent->render.origin[2])
+		{
+			if (cl.time > cl.oldtime)
+				oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+			oldz -= ent->render.origin[2];
+			oldz = bound(-16, oldz, 0);
+			r_refdef.vieworg[2] += oldz;
+			oldz += ent->render.origin[2];
+		}
+		else
+			oldz = ent->render.origin[2];
 		if (cl.intermission)
 		{
 			// entity is a fixed camera
-			VectorCopy(ent->render.origin, r_refdef.vieworg);
 			VectorCopy(ent->render.angles, r_refdef.viewangles);
 		}
 		else if (chase_active.value)
 		{
 			// observing entity from third person
-			VectorCopy(ent->render.origin, r_refdef.vieworg);
-			VectorCopy(cl.viewangles, r_refdef.viewangles);
 			Chase_Update();
 		}
 		else
 		{
 			// first person view from entity
-			VectorCopy(ent->render.origin, r_refdef.vieworg);
-			VectorCopy(cl.viewangles, r_refdef.viewangles);
 			// angles
 			if (cl.stats[STAT_HEALTH] <= 0)
 				r_refdef.viewangles[ROLL] = 80;	// dead view angle
@@ -512,5 +523,7 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_kicktime);
 	Cvar_RegisterVariable (&v_kickroll);
 	Cvar_RegisterVariable (&v_kickpitch);
+
+	Cvar_RegisterVariable (&cl_stairsmoothspeed);
 }
 
