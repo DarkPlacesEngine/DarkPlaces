@@ -197,6 +197,7 @@ Cshader_t;
 
 extern Cshader_t Cshader_wall_vertex;
 extern Cshader_t Cshader_wall_lightmap;
+extern Cshader_t Cshader_wall_fullbright;
 extern Cshader_t Cshader_water;
 extern Cshader_t Cshader_sky;
 
