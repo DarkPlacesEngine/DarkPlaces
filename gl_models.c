@@ -208,24 +208,34 @@ void R_Model_Alias_GetMesh_Vertex3f(const entity_render_t *ent, aliasmesh_t *mes
 	}
 }
 
+aliaslayer_t r_aliasnoskinlayers[2] = {{ALIASLAYER_DIFFUSE, NULL, NULL}, {ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS, NULL, NULL}};
+aliasskin_t r_aliasnoskin = {0, 2, r_aliasnoskinlayers};
 aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mesh)
 {
 	model_t *model = ent->model;
-	int s = ent->skinnum;
-	if ((unsigned int)s >= (unsigned int)model->numskins)
-		s = 0;
-	if (model->skinscenes[s].framecount > 1)
-		s = model->skinscenes[s].firstframe + (int) (cl.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
+	if (model->numskins)
+	{
+		int s = ent->skinnum;
+		if ((unsigned int)s >= (unsigned int)model->numskins)
+			s = 0;
+		if (model->skinscenes[s].framecount > 1)
+			s = model->skinscenes[s].firstframe + (int) (cl.time * model->skinscenes[s].framerate) % model->skinscenes[s].framecount;
+		else
+			s = model->skinscenes[s].firstframe;
+		if (s >= mesh->num_skins)
+			s = 0;
+		return mesh->data_skins + s;
+	}
 	else
-		s = model->skinscenes[s].firstframe;
-	if (s >= mesh->num_skins)
-		s = 0;
-	return mesh->data_skins + s;
+	{
+		r_aliasnoskinlayers[0].texture = r_notexture;
+		return &r_aliasnoskin;
+	}
 }
 
 void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
-	int c, fullbright, layernum;
+	int c, fullbright, layernum, firstpass;
 	float tint[3], fog, ifog, colorscale;
 	vec3_t diff;
 	qbyte *bcolor;
@@ -255,38 +265,26 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	}
 	ifog = 1 - fog;
 
+	firstpass = true;
 	memset(&m, 0, sizeof(m));
 	skin = R_FetchAliasSkin(ent, mesh);
 	for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 	{
-		if (((layer->flags & ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED) && ent->colormap < 0)
-		 || ((layer->flags & ALIASLAYER_NODRAW_IF_COLORMAPPED) && ent->colormap >= 0)
-		 ||  (layer->flags & ALIASLAYER_DRAW_PER_LIGHT))
-			continue;
-		expandaliasvert(mesh->num_vertices);
-		if (layer->flags & ALIASLAYER_FOG)
+		if (!(layer->flags & ALIASLAYER_FORCEDRAW_IF_FIRSTPASS) || !firstpass)
 		{
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE;
-			colorscale = r_colorscale;
-			m.texrgbscale[0] = 1;
-			m.tex[0] = R_GetTexture(layer->texture);
-			R_Mesh_State(&m);
-			GL_Color(fogcolor[0] * fog * colorscale, fogcolor[1] * fog * colorscale, fogcolor[2] * fog * colorscale, ent->alpha);
-			c_alias_polys += mesh->num_triangles;
-			R_Mesh_GetSpace(mesh->num_vertices);
-			R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, aliasvert_normal3f, NULL, NULL);
-			if (layer->texture != NULL)
-				R_Mesh_CopyTexCoord2f(0, mesh->data_texcoord2f, mesh->num_vertices);
-			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
-			continue;
+			if (((layer->flags & ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED) && ent->colormap < 0)
+			 || ((layer->flags & ALIASLAYER_NODRAW_IF_COLORMAPPED) && ent->colormap >= 0)
+			 || ((layer->flags & ALIASLAYER_FOG) && !fogenabled)
+			 ||  (layer->flags & ALIASLAYER_SPECULAR)
+			 || ((layer->flags & ALIASLAYER_DIFFUSE) && (r_shadow_realtime_world.integer && r_ambient.integer <= 0 && r_fullbright.integer == 0 && !(ent->effects & EF_FULLBRIGHT))))
+				continue;
 		}
-		if ((layer->flags & ALIASLAYER_ADD) || ((layer->flags & ALIASLAYER_ALPHA) && (ent->effects & EF_ADDITIVE)))
+		if (!firstpass || (ent->effects & EF_ADDITIVE))
 		{
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE;
 		}
-		else if ((layer->flags & ALIASLAYER_ALPHA) || ent->alpha != 1.0)
+		else if ((skin->flags & ALIASSKIN_TRANSPARENT) || ent->alpha != 1.0)
 		{
 			m.blendfunc1 = GL_SRC_ALPHA;
 			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
@@ -296,49 +294,64 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			m.blendfunc1 = GL_ONE;
 			m.blendfunc2 = GL_ZERO;
 		}
+		firstpass = false;
+		expandaliasvert(mesh->num_vertices);
 		colorscale = r_colorscale;
 		m.texrgbscale[0] = 1;
-		if (gl_combine.integer)
+		m.tex[0] = R_GetTexture(layer->texture);
+		if (gl_combine.integer && layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))
 		{
 			colorscale *= 0.25f;
 			m.texrgbscale[0] = 4;
 		}
-		m.tex[0] = R_GetTexture(layer->texture);
 		R_Mesh_State(&m);
-		if (layer->flags & ALIASLAYER_COLORMAP_PANTS)
-		{
-			// 128-224 are backwards ranges
-			c = (ent->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12;
-			bcolor = (qbyte *) (&palette_complete[c]);
-			fullbright = c >= 224;
-			VectorScale(bcolor, (1.0f / 255.0f), tint);
-		}
-		else if (layer->flags & ALIASLAYER_COLORMAP_SHIRT)
-		{
-			// 128-224 are backwards ranges
-			c = (ent->colormap & 0xF0);c += (c >= 128 && c < 224) ? 4 : 12;
-			bcolor = (qbyte *) (&palette_complete[c]);
-			fullbright = c >= 224;
-			VectorScale(bcolor, (1.0f / 255.0f), tint);
-		}
-		else
-		{
-			tint[0] = tint[1] = tint[2] = 1;
-			fullbright = false;
-		}
-		VectorScale(tint, ifog * colorscale, tint);
-		if (!(layer->flags & ALIASLAYER_DIFFUSE))
-			fullbright = true;
-		if (ent->effects & EF_FULLBRIGHT)
-			fullbright = true;
 		c_alias_polys += mesh->num_triangles;
 		R_Mesh_GetSpace(mesh->num_vertices);
-		R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, aliasvert_normal3f, NULL, NULL);
-		R_Mesh_CopyTexCoord2f(0, mesh->data_texcoord2f, mesh->num_vertices);
-		if (fullbright)
-			GL_Color(tint[0], tint[1], tint[2], ent->alpha);
+		if (layer->texture != NULL)
+			R_Mesh_CopyTexCoord2f(0, mesh->data_texcoord2f, mesh->num_vertices);
+		if (layer->flags & ALIASLAYER_FOG)
+		{
+			colorscale *= fog;
+			R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
+			GL_Color(fogcolor[0] * colorscale, fogcolor[1] * colorscale, fogcolor[2] * colorscale, ent->alpha);
+		}
 		else
-			R_LightModel(ent, mesh->num_vertices, varray_vertex3f, aliasvert_normal3f, varray_color4f, tint[0], tint[1], tint[2], false);
+		{
+			if (layer->flags & (ALIASLAYER_COLORMAP_PANTS | ALIASLAYER_COLORMAP_SHIRT))
+			{
+				// 128-224 are backwards ranges
+				if (layer->flags & ALIASLAYER_COLORMAP_PANTS)
+					c = (ent->colormap & 0xF) << 4;
+				else //if (layer->flags & ALIASLAYER_COLORMAP_SHIRT)
+					c = (ent->colormap & 0xF0);
+				c += (c >= 128 && c < 224) ? 4 : 12;
+				bcolor = (qbyte *) (&palette_complete[c]);
+				fullbright = c >= 224;
+				VectorScale(bcolor, (1.0f / 255.0f), tint);
+			}
+			else
+			{
+				tint[0] = tint[1] = tint[2] = 1;
+				fullbright = false;
+			}
+			colorscale *= ifog;
+			if (fullbright || !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT))
+			{
+				R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
+				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
+			}
+			else if (r_shadow_realtime_world.integer)
+			{
+				R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, NULL, NULL, NULL);
+				colorscale *= r_ambient.value * (2.0f / 128.0f);
+				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);
+			}
+			else
+			{
+				R_Model_Alias_GetMesh_Vertex3f(ent, mesh, varray_vertex3f, aliasvert_normal3f, NULL, NULL);
+				R_LightModel(ent, mesh->num_vertices, varray_vertex3f, aliasvert_normal3f, varray_color4f, tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, false);
+			}
+		}
 		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 	}
 }
@@ -488,7 +501,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		R_Model_Alias_GetMesh_Vertex3f(ent, mesh, vertices, aliasvert_normal3f, aliasvert_svector3f, aliasvert_tvector3f);
 		for (layernum = 0, layer = skin->data_layers;layernum < skin->num_layers;layernum++, layer++)
 		{
-			if (!(layer->flags & ALIASLAYER_DRAW_PER_LIGHT)
+			if (!(layer->flags & (ALIASLAYER_DIFFUSE | ALIASLAYER_SPECULAR))
 			 || ((layer->flags & ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED) && ent->colormap < 0)
 			 || ((layer->flags & ALIASLAYER_NODRAW_IF_COLORMAPPED) && ent->colormap >= 0))
 				continue;

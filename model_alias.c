@@ -171,103 +171,72 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, int outverts, v
 	Mem_Free(vertexbuffer);
 }
 
+aliaslayer_t mod_alias_layersbuffer[16]; // 7 currently used
 void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 {
 	aliaslayer_t *layer;
-	skin->flags = 0;
-	// fog texture only exists if some pixels are transparent...
-	if (skinframe->fog != NULL)
-		skin->flags |= ALIASSKIN_TRANSPARENT;
-	// fog and gloss layers always exist
-	skin->num_layers = 2;
-	if (skinframe->glow != NULL)
-		skin->num_layers++;
-	if (skinframe->merged != NULL)
-		skin->num_layers += 2;
-	if (skinframe->base != NULL)
-		skin->num_layers += 2;
-	if (skinframe->pants != NULL)
-		skin->num_layers += 2;
-	if (skinframe->shirt != NULL)
-		skin->num_layers += 2;
-	layer = skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
-	if (skinframe->glow != NULL)
-	{
-		layer->flags = 0;
-		layer->texture = skinframe->glow;
-		layer++;
-	}
-	if (skinframe->merged != NULL)
-	{
-		layer->flags = ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
-		if (skinframe->glow != NULL)
-			layer->flags |= ALIASLAYER_ADD;
-		layer->texture = skinframe->merged;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	if (skinframe->base != NULL)
-	{
-		layer->flags = (skinframe->merged != NULL ? ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED : 0) | ALIASLAYER_DIFFUSE;
-		if (skinframe->glow != NULL)
-			layer->flags |= ALIASLAYER_ADD;
-		layer->texture = skinframe->base;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	if (skinframe->pants != NULL)
-	{
-		layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
-		if (skinframe->glow != NULL || skinframe->base != NULL)
-			layer->flags |= ALIASLAYER_ADD;
-		layer->texture = skinframe->pants;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	if (skinframe->shirt != NULL)
-	{
-		layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
-		if (skinframe->glow != NULL || skinframe->base != NULL || skinframe->pants != NULL)
-			layer->flags |= ALIASLAYER_ADD;
-		layer->texture = skinframe->shirt;
-		layer->nmap = skinframe->nmap;
-		layer++;
-	}
-	layer->flags = ALIASLAYER_FOG;
-	layer->texture = skinframe->fog;
-	layer++;
-	layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_SPECULAR;
+
+	memset(&mod_alias_layersbuffer, 0, sizeof(mod_alias_layersbuffer));
+	layer = mod_alias_layersbuffer;
+	layer->flags = ALIASLAYER_SPECULAR;
 	layer->texture = skinframe->gloss;
 	layer->nmap = skinframe->nmap;
 	layer++;
 	if (skinframe->merged != NULL)
 	{
-		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
+		layer->flags = ALIASLAYER_DIFFUSE | ALIASLAYER_NODRAW_IF_COLORMAPPED;
 		layer->texture = skinframe->merged;
 		layer->nmap = skinframe->nmap;
 		layer++;
 	}
 	if (skinframe->base != NULL)
 	{
-		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | (skinframe->merged != NULL ? ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED : 0) | ALIASLAYER_DIFFUSE;
+		layer->flags = ALIASLAYER_DIFFUSE;
+		if (skinframe->merged != NULL)
+			layer->flags |= ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED;
 		layer->texture = skinframe->base;
 		layer->nmap = skinframe->nmap;
 		layer++;
 	}
 	if (skinframe->pants != NULL)
 	{
-		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_PANTS;
+		layer->flags = ALIASLAYER_DIFFUSE | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_COLORMAP_PANTS;
 		layer->texture = skinframe->pants;
 		layer->nmap = skinframe->nmap;
 		layer++;
 	}
 	if (skinframe->shirt != NULL)
 	{
-		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
+		layer->flags = ALIASLAYER_DIFFUSE | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_COLORMAP_SHIRT;
 		layer->texture = skinframe->shirt;
 		layer->nmap = skinframe->nmap;
 		layer++;
 	}
+
+	if (skinframe->glow != NULL)
+	{
+		layer->flags = 0;
+		layer->texture = skinframe->glow;
+		layer++;
+		layer->flags = ALIASLAYER_FOG;
+		layer->texture = skinframe->fog;
+		layer++;
+	}
+	else
+	{
+		layer->flags = ALIASLAYER_FOG | ALIASLAYER_FORCEDRAW_IF_FIRSTPASS;
+		layer->texture = skinframe->fog;
+		layer++;
+	}
+
+	skin->flags = 0;
+	// fog texture only exists if some pixels are transparent...
+	if (skinframe->fog != NULL)
+		skin->flags |= ALIASSKIN_TRANSPARENT;
+
+	skin->num_layers = layer - mod_alias_layersbuffer;
+	skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
+	memcpy(skin->data_layers, mod_alias_layersbuffer, skin->num_layers * sizeof(aliaslayer_t));
 }
 
 void Mod_BuildMDLMD2MeshInfo(int numverts, int numtris, int *elements, float *texcoord2f, aliasvertex_t *posedata)
@@ -655,17 +624,25 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	inskin = (void*)(base + LittleLong(pinmodel->ofs_skins));
 	if (loadmodel->numskins)
 	{
-		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins + sizeof(skinframe_t) * loadmodel->numskins);
-		loadmodel->skinframes = (void *)(loadmodel->skinscenes + loadmodel->numskins);
-		for (i = 0;i < loadmodel->numskins;i++)
-		{
-			loadmodel->skinscenes[i].firstframe = i;
-			loadmodel->skinscenes[i].framecount = 1;
-			loadmodel->skinscenes[i].loop = true;
-			loadmodel->skinscenes[i].framerate = 10;
+		// skins found (most likely not a player model)
+		loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, sizeof(skinframe_t) * loadmodel->numskins);
+		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
 			Mod_LoadSkinFrame (loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_PRECACHE, true, false, true);
-			inskin += MD2_SKINNAME;
-		}
+	}
+	else
+	{
+		// no skins (most likely a player model)
+		loadmodel->numskins = 1;
+		loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, sizeof(skinframe_t) * loadmodel->numskins);
+	}
+
+	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+	for (i = 0;i < loadmodel->numskins;i++)
+	{
+		loadmodel->skinscenes[i].firstframe = i;
+		loadmodel->skinscenes[i].framecount = 1;
+		loadmodel->skinscenes[i].loop = true;
+		loadmodel->skinscenes[i].framerate = 10;
 	}
 
 	// load the triangles and stvert data
@@ -749,7 +726,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	// load the frames
 	datapointer = (base + LittleLong(pinmodel->ofs_frames));
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
-	posedata = Mem_Alloc(loadmodel->mempool, numverts * loadmodel->numframes * sizeof(trivertx_t));
+	posedata = Mem_Alloc(loadmodel->mempool, numverts * loadmodel->numframes * sizeof(aliasvertex_t));
 
 	vertexbuffer = Mem_Alloc(tempmempool, numverts * sizeof(float[3+3+3+3]));
 	svectorsbuffer = vertexbuffer + numverts * 3;
