@@ -945,29 +945,21 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 		GL_DepthMask(true);
 	}
 	m.tex[0] = R_GetTexture(texture->skin.base);
-	colorscale = r_colorscale;
-	if (gl_combine.integer)
-	{
-		m.texrgbscale[0] = 4;
-		colorscale *= 0.25f;
-	}
-	base = ent->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 	GL_DepthTest(true);
-	GL_ColorPointer(varray_color4f);
+	if (fogenabled)
+		GL_ColorPointer(varray_color4f);
+	else
+		GL_Color(r_colorscale, r_colorscale, r_colorscale, currentalpha);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		GL_VertexPointer(mesh->vertex3f);
 		m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 		R_Mesh_State_Texture(&m);
-		R_FillColors(varray_color4f, mesh->numverts, base, base, base, currentalpha);
-		if (!(ent->effects & EF_FULLBRIGHT))
+		if (fogenabled)
 		{
-			if (surf->dlightframe == r_framecount)
-				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, 1);
-			if (surf->flags & SURF_LIGHTMAP)
-				RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, varray_color4f, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+			R_FillColors(varray_color4f, mesh->numverts, 1.0f, 1.0f, 1.0f, currentalpha);
+			RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, r_colorscale, mesh->numverts, modelorg);
 		}
-		RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 	}
 }
@@ -1379,16 +1371,13 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 	else
 	{
 		// opaque lightmapped
-		if (r_textureunits.integer >= 2)
+		if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
+			RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, surfchain);
+		else if (r_textureunits.integer >= 2)
 		{
-			if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, surfchain);
-			else
-			{
-				RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, surfchain);
-				if (r_detailtextures.integer)
-					RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			}
+			RSurfShader_OpaqueWall_Pass_BaseDoubleTex(ent, texture, surfchain);
+			if (r_detailtextures.integer)
+				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
 		}
 		else
 		{
