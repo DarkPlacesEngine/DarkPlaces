@@ -84,25 +84,27 @@ void Sys_Printf (char *fmt, ...)
 		mytime = time (NULL);
 		local = localtime (&mytime);
 		strftime (stamp, sizeof (stamp), timeformat.string, local);
-		
+
 		snprintf (final, sizeof (final), "%s%s", stamp, start);
 	}
 	else
 		snprintf (final, sizeof (final), "%s", start);
 
-	for (p = (unsigned char *) final; *p; p++)
+	// LordHavoc: make sure the string is terminated
+	final[MAX_PRINT_MSG - 1] = 0;
+	for (p = (unsigned char *) final;*p; p++)
 		*p = qfont_table[*p];
 #ifdef WIN32
 	if (cls.state == ca_dedicated)
-		WriteFile(houtput, final, strlen (final), &dummy, NULL);	
+		WriteFile(houtput, final, strlen (final), &dummy, NULL);
 #else
-	puts(final);
+	printf("%s", final);
 #endif
 //	for (p = (unsigned char *) final; *p; p++)
 //		putc (qfont_table[*p], stdout);
-#ifndef WIN32
-	fflush (stdout);
-#endif
+//#ifndef WIN32
+//	fflush (stdout);
+//#endif
 }
 
 void Sys_Shared_Init(void)
