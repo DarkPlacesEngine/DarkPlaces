@@ -80,6 +80,7 @@ QSG_SCALE \
 QSG_SKYBOX \
 QSG_TRACETOSS \
 QSG_VIEWMODEL \
+QSG_COPYENT \
 ";
 
 qboolean checkextension(char *name)
@@ -91,7 +92,9 @@ qboolean checkextension(char *name)
 	{
 		while (*e == ' ')
 			e++;
-		if (!*e || (e[len] == ' ' && !strncasecmp(e, name, len)))
+		if (!*e)
+			break;
+		if (!strncasecmp(e, name, len))
 			return TRUE;
 		while (*e && *e != ' ')
 			e++;
@@ -1936,6 +1939,23 @@ void PF_pow (void)
 	G_FLOAT(OFS_RETURN) = pow(G_FLOAT(OFS_PARM0), G_FLOAT(OFS_PARM1));
 }
 
+/*
+=================
+PF_copyentity
+
+copies data from one entity to another
+
+copyentity(src, dst)
+=================
+*/
+void PF_copyentity (void)
+{
+	edict_t *in, *out;
+	in = G_EDICT(OFS_PARM0);
+	out = G_EDICT(OFS_PARM1);
+	memcpy(out, in, pr_edict_size);
+}
+
 void PF_Fixme (void)
 {
 	PR_RunError ("unimplemented builtin"); // LordHavoc: was misspelled (bulitin)
@@ -2054,7 +2074,13 @@ PF_max,				// #95
 PF_bound,			// #96
 PF_pow,				// #97
 PF_FindFloat,		// #98
-PF_checkextension	// #99
+PF_checkextension,	// #99
+#define a PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme, PF_Fixme,
+#define aa a a a a a a a a a a
+aa // #200
+aa // #300
+aa // #400
+PF_copyentity		// #400 LordHavoc: builtin range (4xx)
 };
 
 builtin_t *pr_builtins = pr_builtin;
