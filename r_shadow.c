@@ -154,11 +154,7 @@ rtexturepool_t *r_shadow_texturepool;
 rtexture_t *r_shadow_normalcubetexture;
 rtexture_t *r_shadow_attenuation2dtexture;
 rtexture_t *r_shadow_attenuation3dtexture;
-rtexture_t *r_shadow_blankbumptexture;
-rtexture_t *r_shadow_blankglosstexture;
-rtexture_t *r_shadow_blankwhitetexture;
 rtexture_t *r_shadow_blankwhitecubetexture;
-rtexture_t *r_shadow_blankblacktexture;
 
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
@@ -394,11 +390,7 @@ void r_shadow_start(void)
 	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_blankbumptexture = NULL;
-	r_shadow_blankglosstexture = NULL;
-	r_shadow_blankwhitetexture = NULL;
 	r_shadow_blankwhitecubetexture = NULL;
-	r_shadow_blankblacktexture = NULL;
 	r_shadow_texturepool = NULL;
 	r_shadow_filters_texturepool = NULL;
 	R_Shadow_ValidateCvars();
@@ -503,11 +495,7 @@ void r_shadow_shutdown(void)
 	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
 	r_shadow_attenuation3dtexture = NULL;
-	r_shadow_blankbumptexture = NULL;
-	r_shadow_blankglosstexture = NULL;
-	r_shadow_blankwhitetexture = NULL;
 	r_shadow_blankwhitecubetexture = NULL;
-	r_shadow_blankblacktexture = NULL;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowelements = 0;
@@ -955,26 +943,6 @@ static void R_Shadow_MakeTextures(void)
 #define ATTEN2DSIZE 64
 #define ATTEN3DSIZE 32
 	data = Mem_Alloc(tempmempool, max(6*NORMSIZE*NORMSIZE*4, max(ATTEN3DSIZE*ATTEN3DSIZE*ATTEN3DSIZE*4, ATTEN2DSIZE*ATTEN2DSIZE*4)));
-	data[0] = 128; // normal X
-	data[1] = 128; // normal Y
-	data[2] = 255; // normal Z
-	data[3] = 128; // height
-	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	data[0] = 255;
-	data[1] = 255;
-	data[2] = 255;
-	data[3] = 255;
-	r_shadow_blankglosstexture = R_LoadTexture2D(r_shadow_texturepool, "blankgloss", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	data[0] = 255;
-	data[1] = 255;
-	data[2] = 255;
-	data[3] = 255;
-	r_shadow_blankwhitetexture = R_LoadTexture2D(r_shadow_texturepool, "blankwhite", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
-	data[0] = 0;
-	data[1] = 0;
-	data[2] = 0;
-	data[3] = 255;
-	r_shadow_blankblacktexture = R_LoadTexture2D(r_shadow_texturepool, "blankblack", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	r_shadow_blankwhitecubetexture = NULL;
 	r_shadow_normalcubetexture = NULL;
 	if (gl_texturecubemap)
@@ -1593,18 +1561,18 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	if (!bumptexture)
-		bumptexture = r_shadow_blankbumptexture;
+		bumptexture = r_texture_blanknormalmap;
 	specularscale *= r_shadow_glossintensity.value;
 	if (!glosstexture)
 	{
 		if (r_shadow_gloss.integer >= 2)
 		{
-			glosstexture = r_shadow_blankglosstexture;
+			glosstexture = r_texture_white;
 			specularscale *= r_shadow_gloss2intensity.value;
 		}
 		else
 		{
-			glosstexture = r_shadow_blankblacktexture;
+			glosstexture = r_texture_black;
 			specularscale = 0;
 		}
 	}
@@ -1629,7 +1597,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		m.tex[2] = R_GetTexture(glosstexture);
 		m.texcubemap[3] = R_GetTexture(lightcubemap);
 		// TODO: support fog (after renderer is converted to texture fog)
-		m.tex[4] = R_GetTexture(r_shadow_blankwhitetexture);
+		m.tex[4] = R_GetTexture(r_texture_white);
 		m.texmatrix[3] = *matrix_modeltolight;
 		R_Mesh_State(&m);
 		GL_BlendFunc(GL_ONE, GL_ONE);
@@ -1687,9 +1655,9 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 	else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
 	{
 		if (!bumptexture)
-			bumptexture = r_shadow_blankbumptexture;
+			bumptexture = r_texture_blanknormalmap;
 		if (!glosstexture)
-			glosstexture = r_shadow_blankglosstexture;
+			glosstexture = r_texture_white;
 		if (ambientscale)
 		{
 			GL_Color(1,1,1,1);
@@ -2145,7 +2113,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			}
 			GL_LockArrays(0, 0);
 		}
-		if (specularscale && glosstexture != r_shadow_blankblacktexture)
+		if (specularscale && glosstexture != r_texture_black)
 		{
 			// FIXME: detect blendsquare!
 			//if (gl_support_blendsquare)

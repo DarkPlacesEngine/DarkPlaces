@@ -161,6 +161,7 @@ void R_DrawCoronas(void)
 	}
 }
 
+#ifdef LHREMOVESOON
 /*
 =============================================================================
 
@@ -177,7 +178,7 @@ static qbyte lightpvs[(MAX_MAP_LEAFS+7)>>3];
 R_MarkLights
 =============
 */
-static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlight_t *light, int bit, int bitindex, mnode_t *node, qbyte *pvs, int pvsbits)
+static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, vec3_t lightmins, vec3_t lightmaxs, dlight_t *light, int bit, int bitindex, mnode_t *node, qbyte *pvs, int pvsbits)
 {
 	int i;
 	mleaf_t *leaf;
@@ -192,7 +193,7 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 		else
 		{
 			if (dist >= -light->rtlight.lightmap_cullradius)
-				R_RecursiveMarkLights(ent, lightorigin, light, bit, bitindex, node->children[0], pvs, pvsbits);
+				R_RecursiveMarkLights(ent, lightorigin, lightmins, lightmaxs, light, bit, bitindex, node->children[0], pvs, pvsbits);
 			node = node->children[1];
 		}
 	}
@@ -209,36 +210,44 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 		maxdist = light->rtlight.lightmap_cullradius2;
 		for (i = 0;i < leaf->numleafsurfaces;i++)
 		{
-			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[leaf->firstleafsurface[i]])
+			// note: this is only called on the worldmodel
+			if (r_worldsurfacevisible[leaf->firstleafsurface[i]])
 				continue;
 			surface = ent->model->brush.data_surfaces + leaf->firstleafsurface[i];
-			VectorCopy(surface->mesh.data_normal3f, planenormal);
-			planedist = DotProduct(surface->mesh.data_vertex3f, surface->mesh.data_normal3f);
-			dist = sdist = DotProduct(lightorigin, planenormal) - planedist;
-
-			if (dist < -0.25f && !(surface->texture->currentmaterialflags & MATERIALFLAG_LIGHTBOTHSIDES))
+			if (!BoxesOverlap(surface->mins, surface->maxs, lightmins, lightmaxs))
 				continue;
 
-			dist2 = dist * dist;
-			if (dist2 >= maxdist)
-				continue;
+			// do q1bsp culling checks only if it is a q1bsp surface
+			if (surface->samples && surface->texinfo)
+			{
+				VectorNegate(surface->mesh.data_normal3f, planenormal);
+				planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
+				dist = sdist = DotProduct(lightorigin, planenormal) - planedist;
 
-			VectorCopy(lightorigin, impact);
-			VectorMA(impact, -sdist, planenormal, impact);
+				if (dist < -0.25f && !(surface->texture->currentmaterialflags & MATERIALFLAG_LIGHTBOTHSIDES))
+					continue;
 
-			impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
+				dist2 = dist * dist;
+				if (dist2 >= maxdist)
+					continue;
 
-			d = bound(0, impacts, surface->extents[0] + 16) - impacts;
-			dist2 += d * d;
-			if (dist2 > maxdist)
-				continue;
+				VectorCopy(lightorigin, impact);
+				VectorMA(impact, -sdist, planenormal, impact);
 
-			impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
+				impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
 
-			d = bound(0, impactt, surface->extents[1] + 16) - impactt;
-			dist2 += d * d;
-			if (dist2 > maxdist)
-				continue;
+				d = bound(0, impacts, surface->extents[0] + 16) - impacts;
+				dist2 += d * d;
+				if (dist2 > maxdist)
+					continue;
+
+				impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
+
+				d = bound(0, impactt, surface->extents[1] + 16) - impactt;
+				dist2 += d * d;
+				if (dist2 > maxdist)
+					continue;
+			}
 
 			if (surface->dlightframe != r_framecount) // not dynamic until now
 			{
@@ -253,9 +262,9 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 
 void R_MarkLights(entity_render_t *ent)
 {
-	int i, bit, bitindex;
+	int i, j, bit, bitindex;
 	dlight_t *light;
-	vec3_t lightorigin;
+	vec3_t lightorigin, lightmins, lightmaxs;
 	if (!gl_flashblend.integer && r_dynamic.integer && ent->model && ent->model->brush.num_leafs)
 	{
 		for (i = 0, light = r_dlight;i < r_numdlights;i++, light++)
@@ -263,13 +272,40 @@ void R_MarkLights(entity_render_t *ent)
 			bit = 1 << (i & 31);
 			bitindex = i >> 5;
 			Matrix4x4_Transform(&ent->inversematrix, light->origin, lightorigin);
-			lightpvsbytes = 0;
-			if (r_vismarklights.integer && ent->model->brush.FatPVS)
-				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
-			R_RecursiveMarkLights(ent, lightorigin, light, bit, bitindex, ent->model->brush.data_nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
+			lightmins[0] = lightorigin[0] - light->rtlight.lightmap_cullradius;
+			lightmins[1] = lightorigin[1] - light->rtlight.lightmap_cullradius;
+			lightmins[2] = lightorigin[2] - light->rtlight.lightmap_cullradius;
+			lightmaxs[0] = lightorigin[0] + light->rtlight.lightmap_cullradius;
+			lightmaxs[1] = lightorigin[1] + light->rtlight.lightmap_cullradius;
+			lightmaxs[2] = lightorigin[2] + light->rtlight.lightmap_cullradius;
+			if (ent == r_refdef.worldentity)
+			{
+				lightpvsbytes = 0;
+				if (r_vismarklights.integer && ent->model->brush.FatPVS)
+					lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
+				R_RecursiveMarkLights(ent, lightorigin, lightmins, lightmaxs, light, bit, bitindex, ent->model->brush.data_nodes, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
+			}
+			else
+			{
+				msurface_t *surface;
+				for (j = 0, surface = ent->model->brush.data_surfaces + ent->model->firstmodelsurface;j < ent->model->nummodelsurfaces;j++, surface++)
+				{
+					if (BoxesOverlap(surface->mins, surface->maxs, lightmins, lightmaxs))
+					{
+						if (surface->dlightframe != r_framecount) // not dynamic until now
+						{
+							surface->dlightbits[0] = surface->dlightbits[1] = surface->dlightbits[2] = surface->dlightbits[3] = surface->dlightbits[4] = surface->dlightbits[5] = surface->dlightbits[6] = surface->dlightbits[7] = 0;
+							surface->dlightframe = r_framecount;
+							surface->cached_dlight = true;
+						}
+						surface->dlightbits[bitindex] |= bit;
+					}
+				}
+			}
 		}
 	}
 }
+#endif
 
 /*
 =============================================================================

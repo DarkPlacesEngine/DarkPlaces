@@ -26,7 +26,7 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 	}
 	else
 	{
-		r_aliasnoskinlayers[0].texture = r_notexture;
+		r_aliasnoskinlayers[0].texture = r_texture_notexture;
 		return &r_aliasnoskin;
 	}
 }

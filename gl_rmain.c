@@ -106,6 +106,10 @@ cvar_t r_bloom_power = {CVAR_SAVE, "r_bloom_power", "4"};
 rtexturepool_t *r_main_texturepool;
 rtexture_t *r_bloom_texture_screen;
 rtexture_t *r_bloom_texture_bloom;
+rtexture_t *r_texture_blanknormalmap;
+rtexture_t *r_texture_white;
+rtexture_t *r_texture_black;
+rtexture_t *r_texture_notexture;
 
 void R_ModulateColors(float *in, float *out, int verts, float r, float g, float b)
 {
@@ -207,9 +211,49 @@ void FOG_registercvars(void)
 
 void gl_main_start(void)
 {
+	int x, y;
+	qbyte pix[16][16][4];
+	qbyte data[4];
 	r_main_texturepool = R_AllocTexturePool();
 	r_bloom_texture_screen = NULL;
 	r_bloom_texture_bloom = NULL;
+	data[0] = 128; // normal X
+	data[1] = 128; // normal Y
+	data[2] = 255; // normal Z
+	data[3] = 128; // height
+	r_texture_blanknormalmap = R_LoadTexture2D(r_main_texturepool, "blankbump", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	data[0] = 255;
+	data[1] = 255;
+	data[2] = 255;
+	data[3] = 255;
+	r_texture_white = R_LoadTexture2D(r_main_texturepool, "blankwhite", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	data[0] = 0;
+	data[1] = 0;
+	data[2] = 0;
+	data[3] = 255;
+	r_texture_black = R_LoadTexture2D(r_main_texturepool, "blankblack", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	// this makes a light grey/dark grey checkerboard texture
+	for (y = 0;y < 16;y++)
+	{
+		for (x = 0;x < 16;x++)
+		{
+			if ((y < 8) ^ (x < 8))
+			{
+				pix[y][x][0] = 128;
+				pix[y][x][1] = 128;
+				pix[y][x][2] = 128;
+				pix[y][x][3] = 255;
+			}
+			else
+			{
+				pix[y][x][0] = 64;
+				pix[y][x][1] = 64;
+				pix[y][x][2] = 64;
+				pix[y][x][3] = 255;
+			}
+		}
+	}
+	r_texture_notexture = R_LoadTexture2D(mod_shared_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
 }
 
 void gl_main_shutdown(void)
@@ -217,6 +261,9 @@ void gl_main_shutdown(void)
 	R_FreeTexturePool(&r_main_texturepool);
 	r_bloom_texture_screen = NULL;
 	r_bloom_texture_bloom = NULL;
+	r_texture_blanknormalmap = NULL;
+	r_texture_white = NULL;
+	r_texture_black = NULL;
 }
 
 extern void CL_ParseEntityLump(char *entitystring);

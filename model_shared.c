@@ -35,7 +35,7 @@ model_t *loadmodel;
 static model_t mod_known[MAX_MOD_KNOWN];
 
 rtexturepool_t *mod_shared_texturepool;
-rtexture_t *r_notexture;
+rtexture_t *r_texture_notexture;
 rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
 rtexture_t *mod_shared_distorttexture[64];
 
@@ -136,36 +136,8 @@ void Mod_BuildDistortTexture (void)
 	return;
 }
 
-texture_t r_surf_notexture;
-
 void Mod_SetupNoTexture(void)
 {
-	int x, y;
-	qbyte pix[16][16][4];
-
-	// this makes a light grey/dark grey checkerboard texture
-	for (y = 0;y < 16;y++)
-	{
-		for (x = 0;x < 16;x++)
-		{
-			if ((y < 8) ^ (x < 8))
-			{
-				pix[y][x][0] = 128;
-				pix[y][x][1] = 128;
-				pix[y][x][2] = 128;
-				pix[y][x][3] = 255;
-			}
-			else
-			{
-				pix[y][x][0] = 64;
-				pix[y][x][1] = 64;
-				pix[y][x][2] = 64;
-				pix[y][x][3] = 255;
-			}
-		}
-	}
-
-	r_notexture = R_LoadTexture2D(mod_shared_texturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP, NULL);
 }
 
 static void mod_start(void)
