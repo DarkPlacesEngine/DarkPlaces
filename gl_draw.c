@@ -505,10 +505,10 @@ void R_DrawQueue(void)
 			glBegin (GL_TRIANGLES);
 			while (t >= 1.01f)
 			{
-				if (t >= 2)
-					glColor3f (1, 1, 1);
-				else
-					glColor3f (t-1, t-1, t-1);
+				num = (int) ((t - 1.0f) * 255.0f);
+				if (num > 255)
+					num = 255;
+				glColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
 				glVertex2f (-5000, -5000);
 				glVertex2f (10000, -5000);
 				glVertex2f (-5000, 10000);
@@ -522,10 +522,11 @@ void R_DrawQueue(void)
 			glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 			CHECKGLERROR
 			glBegin(GL_TRIANGLES);
-			glColor3f(t, t, t);
-			glVertex2f(-5000, -5000);
-			glVertex2f(10000, -5000);
-			glVertex2f(-5000, 10000);
+			num = (int) (t * 255.0f);
+			glColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+			glVertex2f (-5000, -5000);
+			glVertex2f (10000, -5000);
+			glVertex2f (-5000, 10000);
 			glEnd();
 			CHECKGLERROR
 		}
@@ -533,7 +534,8 @@ void R_DrawQueue(void)
 		{
 			glBlendFunc (GL_ONE, GL_ONE);
 			CHECKGLERROR
-			glColor3f (v_brightness.value, v_brightness.value, v_brightness.value);
+			num = (int) (v_brightness.value * 255.0f);
+			glColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
 			CHECKGLERROR
 			glBegin (GL_TRIANGLES);
 			glVertex2f (-5000, -5000);
@@ -552,8 +554,8 @@ void R_DrawQueue(void)
 	CHECKGLERROR
 	glEnable (GL_DEPTH_TEST);
 	CHECKGLERROR
-	glDisable(GL_BLEND);
+	glDisable (GL_BLEND);
 	CHECKGLERROR
-	glColor3f(1,1,1);
+	glColor4ub (255, 255, 255, 255);
 	CHECKGLERROR
 }
