@@ -658,7 +658,14 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 	while (count--)
 	{
 		k = particlepalette[color + (rand()&7)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 5, 5, 255, 300, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-10, 10), lhrandom(-10, 10), lhrandom(-10, 10), 0, 0, 0, 0, 0, 0);
+		if (gamemode == GAME_GOODVSBAD2)
+		{
+			particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 5, 5, 255, 300, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-10, 10), lhrandom(-10, 10), lhrandom(-10, 10), 0, 0, 0, 0, 0, 0);
+		}
+		else
+		{
+			particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 1, 1, 255, 512, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), dir[0] + lhrandom(-15, 15), dir[1] + lhrandom(-15, 15), dir[2] + lhrandom(-15, 15), 0, 0, 0, 0, 0, 0);
+		}
 	}
 }
 
