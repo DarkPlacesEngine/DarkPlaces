@@ -126,6 +126,15 @@ void GL_TextureStats_f(void)
 	Con_Printf("%i textures, totalling %.3f mbytes\n", numgltextures, t / 1024.0 / 1024.0);
 }
 
+void GL_TextureStats_PrintTotal(void)
+{
+	int i, t = 0;
+	gltexture_t *glt;
+	for (i = 0, glt = gltextures;i < numgltextures;i++, glt++)
+		t += glt->totaltexels;
+	Con_Printf("%i textures, totalling %.3f mbytes\n", numgltextures, t / 1024.0 / 1024.0);
+}
+
 extern int buildnumber;
 
 char engineversion[40];
@@ -228,8 +237,8 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 		out = outdata;
 		fstep = (int) (inheight*65536.0f/outheight);
 
-		row1 = malloc(outwidth*4);
-		row2 = malloc(outwidth*4);
+		row1 = qmalloc(outwidth*4);
+		row2 = qmalloc(outwidth*4);
 		inrow = indata;
 		oldy = 0;
 		GL_ResampleTextureLerpLine (inrow, row1, inwidth, outwidth);
@@ -276,8 +285,8 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 				row1 -= outwidth*4;
 			}
 		}
-		free(row1);
-		free(row2);
+		qfree(row1);
+		qfree(row2);
 	}
 	else
 	{
@@ -305,7 +314,7 @@ void GL_ResampleTexture (void *indata, int inwidth, int inheight, void *outdata,
 void GL_FreeTexels(gltexture_t *glt)
 {
 	if (glt->texels[0])
-		free(glt->texels[0]);
+		qfree(glt->texels[0]);
 	glt->texels[0] = 0;
 }
 
@@ -345,7 +354,7 @@ void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
 		glt->totaltexels = size;
 		while (i < MAXMIPS)
 			glt->texels[i++] = NULL;
-		glt->texels[0] = malloc(size);
+		glt->texels[0] = qmalloc(size);
 		for (i = 1;i < MAXMIPS && glt->texels[i];i++)
 			glt->texels[i] += (int) glt->texels[0];
 	}
@@ -353,7 +362,7 @@ void GL_AllocTexels(gltexture_t *glt, int width, int height, int mipmapped)
 	{
 		size = width*height*4;
 		glt->totaltexels = size;
-		glt->texels[0] = malloc(size);
+		glt->texels[0] = qmalloc(size);
 		for (i = 1;i < MAXMIPS;i++)
 			glt->texels[i] = NULL;
 	}
@@ -532,7 +541,7 @@ GL_LoadTexture_setup:
 	else if (width == width2 && height == height2) // perfect match for top level, but needs to be reduced
 	{
 		byte *temptexels2;
-		temptexels2 = malloc(width2*height2*4); // scaleup buffer
+		temptexels2 = qmalloc(width2*height2*4); // scaleup buffer
 		if (bytesperpixel == 1) // 8bit
 			Image_Copy8bitRGBA(data, temptexels2, width*height, d_8to24table);
 		else
@@ -547,13 +556,13 @@ GL_LoadTexture_setup:
 			else
 				GL_MipReduce(temptexels2, temptexels2, w, h, width3, height3);
 		}
-		free(temptexels2);
+		qfree(temptexels2);
 	}
 	else // scaling...
 	{
 		byte *temptexels;
 		// pre-scaleup buffer
-		temptexels = malloc(width*height*4);
+		temptexels = qmalloc(width*height*4);
 		if (bytesperpixel == 1) // 8bit
 			Image_Copy8bitRGBA(data, temptexels, width*height, d_8to24table);
 		else
@@ -561,7 +570,7 @@ GL_LoadTexture_setup:
 		if (width2 != width3 || height2 != height3) // reduced by gl_pic_mip or gl_max_size
 		{
 			byte *temptexels2;
-			temptexels2 = malloc(width2*height2*4); // scaleup buffer
+			temptexels2 = qmalloc(width2*height2*4); // scaleup buffer
 			GL_ResampleTexture(temptexels, width, height, temptexels2, width2, height2);
 			while (width2 > width3 || height2 > height3)
 			{
@@ -573,11 +582,11 @@ GL_LoadTexture_setup:
 				else
 					GL_MipReduce(temptexels2, temptexels2, w, h, width3, height3);
 			}
-			free(temptexels2);
+			qfree(temptexels2);
 		}
 		else // copy directly
 			GL_ResampleTexture(temptexels, width, height, glt->texels[0], width2, height2);
-		free(temptexels);
+		qfree(temptexels);
 	}
 	if (alpha)
 	{

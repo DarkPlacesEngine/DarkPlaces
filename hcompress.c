@@ -170,8 +170,8 @@ int hcompress_compress(void *indata, void *outdata, int size)
 		int length; // length of the chain
 	} hashindex[256][256];
 	int *hashtable;
-	token = malloc(size*sizeof(struct hctoken));
-	hashtable = malloc(size*sizeof(int));
+	token = qmalloc(size*sizeof(struct hctoken));
+	hashtable = qmalloc(size*sizeof(int));
 	in = indata;
 	memset(&hashindex, 0, sizeof(hashindex));
 	// count the chain lengths

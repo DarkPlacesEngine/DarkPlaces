@@ -212,7 +212,7 @@ void R_LoadSkyBox (void)
 			}
 		}
 		skyboxside[i] = GL_LoadTexture(va("skyboxside%d", i), image_width, image_height, image_rgba, false, false, 4);
-		free (image_rgba);
+		qfree(image_rgba);
 	}
 }
 

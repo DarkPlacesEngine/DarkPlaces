@@ -90,7 +90,7 @@ void Palette_Init()
 	if (!pal)
 		Sys_Error ("Couldn't load gfx/palette.lmp");
 	memcpy(host_basepal, pal, 765);
-	free(pal);
+	qfree(pal);
 	host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black
 	Palette_Setup8to24();
 //	Palette_Setup15to8();

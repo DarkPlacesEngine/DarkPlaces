@@ -718,7 +718,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			host_parms.memsize = atoi (com_argv[t]) * 1048576;
 	}
 
-	host_parms.membase = malloc (host_parms.memsize);
+	host_parms.membase = qmalloc(host_parms.memsize);
 
 	if (!host_parms.membase)
 		Sys_Error ("Not enough memory free; check disk space\n");

@@ -30,19 +30,19 @@ void makechrometexture()
 void gl_models_start()
 {
 	// allocate vertex processing arrays
-	aliasvert = malloc(sizeof(float[MD2MAX_VERTS][3]));
-	aliasvertnorm = malloc(sizeof(float[MD2MAX_VERTS][3]));
-	aliasvertcolor = malloc(sizeof(byte[MD2MAX_VERTS][4]));
-	aliasvertcolor2 = malloc(sizeof(byte[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
+	aliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
+	aliasvertnorm = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
+	aliasvertcolor = qmalloc(sizeof(byte[MD2MAX_VERTS][4]));
+	aliasvertcolor2 = qmalloc(sizeof(byte[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
 	makechrometexture();
 }
 
 void gl_models_shutdown()
 {
-	free(aliasvert);
-	free(aliasvertnorm);
-	free(aliasvertcolor);
-	free(aliasvertcolor2);
+	qfree(aliasvert);
+	qfree(aliasvertnorm);
+	qfree(aliasvertcolor);
+	qfree(aliasvertcolor2);
 }
 
 void GL_Models_Init()

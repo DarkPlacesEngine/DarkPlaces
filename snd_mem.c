@@ -226,7 +226,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	int		len;
 	float	stepscale;
 	sfxcache_t	*sc;
-	byte	stackbuf[1*1024];		// avoid dirtying the cache heap
 
 // see if still in memory
 	sc = Cache_Check (&s->cache);
@@ -240,7 +239,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 //	Con_Printf ("loading %s\n",namebuffer);
 
-	data = COM_LoadStackFile(namebuffer, stackbuf, sizeof(stackbuf), false);
+	data = COM_LoadMallocFile(namebuffer, false);
 
 	if (!data)
 	{
@@ -253,6 +252,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if (info.channels < 1 || info.channels > 2)
 	{
 		Con_Printf ("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
+		qfree(data);
 		return NULL;
 	}
 	/*
@@ -270,7 +270,10 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 	sc = Cache_Alloc ( &s->cache, len + sizeof(sfxcache_t), s->name);
 	if (!sc)
+	{
+		qfree(data);
 		return NULL;
+	}
 	
 	sc->length = info.samples;
 	sc->loopstart = info.loopstart;
@@ -280,6 +283,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 	ResampleSfx (s, sc->speed, data + info.dataofs);
 
+	qfree(data);
 	return sc;
 }
 

@@ -209,7 +209,7 @@ qpic_t	*Draw_CachePic (char *path)
 //
 // load the pic from disk
 //
-	dat = (qpic_t *)COM_LoadTempFile (path, false);
+	dat = (qpic_t *)COM_LoadMallocFile (path, false);
 	if (!dat)
 		Sys_Error ("Draw_CachePic: failed to load %s", path);
 	SwapPic (dat);
@@ -231,6 +231,8 @@ qpic_t	*Draw_CachePic (char *path)
 	gl->sh = 1;
 	gl->tl = 0;
 	gl->th = 1;
+
+	qfree(dat);
 
 	return &pic->pic;
 }
@@ -484,12 +486,12 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 
 	c = pic->width * pic->height;
 	src = menuplyr_pixels;
-	dest = trans = malloc(c);
+	dest = trans = qmalloc(c);
 	for (i = 0;i < c;i++)
 		*dest++ = translation[*src++];
 
 	c = GL_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, false, true, 1);
-	free(trans);
+	qfree(trans);
 
 	if (!r_render.value)
 		return;

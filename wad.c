@@ -206,7 +206,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	infotableofs = LittleLong(header.infotableofs);
 	if (fseek(file, infotableofs, SEEK_SET))
 	{Con_Printf ("W_LoadTextureWadFile: unable to seek to lump table");return;}
-	if (!(lumps = malloc(sizeof(lumpinfo_t)*numlumps)))
+	if (!(lumps = qmalloc(sizeof(lumpinfo_t)*numlumps)))
 	{Con_Printf ("W_LoadTextureWadFile: unable to allocate temporary memory for lump table");return;}
 
 	if (fread(lumps, sizeof(lumpinfo_t), numlumps, file) != numlumps)
@@ -232,7 +232,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 		texwadlump[j].position = LittleLong(lump_p->filepos);
 		texwadlump[j].size = LittleLong(lump_p->disksize);
 	}
-	free(lumps);
+	qfree(lumps);
 	// leaves the file open
 }
 
@@ -323,7 +323,7 @@ byte *W_GetTexture(char *name, int matchwidth, int matchheight)
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return FALSE;}
 				// allocate space for expanded image,
 				// and load incoming image into upper area (overwritten as it expands)
-				if (!(data = outdata = malloc(image_width*image_height*4)))
+				if (!(data = outdata = qmalloc(image_width*image_height*4)))
 				{Con_Printf("W_GetTexture: out of memory");return FALSE;}
 				indata = outdata + image_width*image_height*3;
 				datasize = image_width*image_height*85/64;

@@ -206,7 +206,7 @@ void Mod_LoadTextures (lump_t *l)
 			{
 				char name[64];
 				byte *data2;
-				data2 = malloc(tx->width*tx->height);
+				data2 = qmalloc(tx->width*tx->height);
 				for (j = 0;j < tx->width*tx->height;j++)
 					data2[j] = data[j] >= 224 ? 0 : data[j]; // no fullbrights
 				tx->gl_texturenum = GL_LoadTexture (tx->name, tx->width, tx->height, data2, true, transparent, 1);
@@ -215,7 +215,7 @@ void Mod_LoadTextures (lump_t *l)
 				for (j = 0;j < tx->width*tx->height;j++)
 					data2[j] = data[j] >= 224 ? data[j] : 0; // only fullbrights
 				tx->gl_glowtexturenum = GL_LoadTexture (name, tx->width, tx->height, data2, true, transparent, 1);
-				free(data2);
+				qfree(data2);
 			}
 			else
 			{
@@ -224,7 +224,7 @@ void Mod_LoadTextures (lump_t *l)
 			}
 		}
 		if (freeimage)
-			free(data);
+			qfree(data);
 	}
 
 //

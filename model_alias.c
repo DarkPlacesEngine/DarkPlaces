@@ -299,7 +299,7 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, in
 		Host_Error ("Mod_LoadAliasModel: Invalid # of skins: %d\n", numskins);
 
 	s = width * height;
-	skintemp = malloc(s);
+	skintemp = qmalloc(s);
 
 	// LordHavoc: skim the data, measure the number of skins and number of groups
 	skinranges = numskins;
@@ -373,7 +373,7 @@ void *Mod_LoadAllSkins (int numskins, daliasskintype_t *pskintype, int width, in
 		}
 	}
 	loadmodel->numskins = numskins;
-	free(skintemp);
+	qfree(skintemp);
 
 	return (void *)pskintype;
 }
@@ -691,7 +691,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	start = Hunk_LowMark ();
 
 //	if (!temptris)
-//		temptris = malloc(sizeof(temptris_t) * MD2MAX_TRIANGLES);
+//		temptris = qmalloc(sizeof(temptris_t) * MD2MAX_TRIANGLES);
 
 	pinmodel = (md2_t *)buffer;
 

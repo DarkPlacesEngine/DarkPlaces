@@ -1167,6 +1167,38 @@ void COM_InitArgv (int argc, char **argv)
 }
 
 
+unsigned int qmalloctotal_alloc, qmalloctotal_alloccount, qmalloctotal_free, qmalloctotal_freecount;
+
+void *qmalloc(unsigned int size)
+{
+	unsigned int *mem;
+	qmalloctotal_alloc += size;
+	qmalloctotal_alloccount++;
+	mem = malloc(size+sizeof(unsigned int));
+	*mem = size;
+	return (void *)(mem + 1);
+}
+
+void qfree(void *mem)
+{
+	unsigned int *m;
+	m = mem;
+	m--; // back up to size
+	qmalloctotal_free += *m; // size
+	qmalloctotal_freecount++;
+	free(m);
+}
+
+void GL_TextureStats_PrintTotal(void);
+extern int hunk_low_used, hunk_high_used, hunk_size;
+void COM_Memstats_f(void)
+{
+	Con_Printf("%i malloc calls totalling %i bytes (%.4gMB)\n%i free calls totalling %i bytes (%.4gMB)\n%i bytes (%.4gMB) currently allocated\n", qmalloctotal_alloccount, qmalloctotal_alloc, qmalloctotal_alloc / 1048576.0, qmalloctotal_freecount, qmalloctotal_free, qmalloctotal_free / 1048576.0, qmalloctotal_alloc - qmalloctotal_free, (qmalloctotal_alloc - qmalloctotal_free) / 1048576.0);
+	GL_TextureStats_PrintTotal();
+	Con_Printf ("%i bytes (%.4gMB) of %.4gMB hunk in use\n", hunk_low_used + hunk_high_used, (hunk_low_used + hunk_high_used) / 1048576.0, hunk_size / 1048576.0);
+}
+
+
 /*
 ================
 COM_Init
@@ -1201,6 +1233,7 @@ void COM_Init (char *basedir)
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
 	Cmd_AddCommand ("path", COM_Path_f);
+	Cmd_AddCommand ("memstats", COM_Memstats_f);
 
 	COM_InitFilesystem ();
 	COM_CheckRegistered ();
@@ -1617,7 +1650,7 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 			buf = loadbuf;
 	}
 	else if (usehunk == 5)
-		buf = malloc (len+1);
+		buf = qmalloc (len+1);
 	else
 		Sys_Error ("COM_LoadFile: bad usehunk");
 
@@ -1710,7 +1743,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 
 	newfiles = Hunk_AllocName (numpackfiles * sizeof(packfile_t), "packfile");
 
-	info = malloc(sizeof(*info)*MAX_FILES_IN_PACK);
+	info = qmalloc(sizeof(*info)*MAX_FILES_IN_PACK);
 	Sys_FileSeek (packhandle, header.dirofs);
 	Sys_FileRead (packhandle, (void *)info, header.dirlen);
 
@@ -1730,7 +1763,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 		newfiles[i].filepos = LittleLong(info[i].filepos);
 		newfiles[i].filelen = LittleLong(info[i].filelen);
 	}
-	free(info);
+	qfree(info);
 
 	pack = Hunk_Alloc (sizeof (pack_t));
 	strcpy (pack->filename, packfile);
@@ -1923,4 +1956,3 @@ int COM_FileExists(char *filename)
 
 	return false;
 }
-

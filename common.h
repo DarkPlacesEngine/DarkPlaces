@@ -31,6 +31,11 @@ typedef enum {false, true}	qboolean;
 
 //============================================================================
 
+extern void *qmalloc(unsigned int size);
+extern void qfree(void *mem);
+
+//============================================================================
+
 typedef struct sizebuf_s
 {
 	qboolean	allowoverflow;	// if false, do a Sys_Error

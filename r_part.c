@@ -189,15 +189,15 @@ void R_InitParticleTexture (void)
 
 void r_part_start()
 {
-	particles = (particle_t *) malloc (r_numparticles * sizeof(particle_t));
-	freeparticles = (void *) malloc (r_numparticles * sizeof(particle_t *));
+	particles = (particle_t *) qmalloc(r_numparticles * sizeof(particle_t));
+	freeparticles = (void *) qmalloc(r_numparticles * sizeof(particle_t *));
 	R_InitParticleTexture ();
 }
 
 void r_part_shutdown()
 {
-	free(particles);
-	free(freeparticles);
+	qfree(particles);
+	qfree(freeparticles);
 }
 
 /*
