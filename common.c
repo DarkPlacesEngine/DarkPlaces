@@ -740,6 +740,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_SOM;
 	else if (strstr(name, "tenebrae"))
 		gamemode = GAME_TENEBRAE;
+	else if (strstr(name, "neoteric"))
+		gamemode = GAME_NEOTERIC;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -771,6 +773,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_SOM;
 	else if (COM_CheckParm ("-tenebrae"))
 		gamemode = GAME_TENEBRAE;
+	else if (COM_CheckParm ("-neoteric"))
+		gamemode = GAME_NEOTERIC;
 
 	switch(gamemode)
 	{
@@ -843,6 +847,11 @@ void COM_InitGameType (void)
 		gamename = "DarkPlaces-Tenebrae";
 		gamedirname = "tenebrae";
 		gamescreenshotname = "dp";
+		break;
+	case GAME_NEOTERIC:
+		gamename = "Neoteric";
+		gamedirname = "neobase";
+		gamescreenshotname = "neo";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
