@@ -77,7 +77,7 @@ void SV_SetIdealPitch (void)
 		bottom[1] = top[1];
 		bottom[2] = top[2] - 160;
 		
-		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, 1, sv_player);
+		tr = SV_Move (top, vec3_origin, vec3_origin, bottom, MOVE_NOMONSTERS, sv_player);
 		if (tr.allsolid)
 			return;	// looking at a wall, leave ideal the way is was
 
@@ -140,7 +140,7 @@ void SV_UserFriction (void)
 	start[2] = origin[2] + sv_player->v.mins[2];
 	stop[2] = start[2] - 34;
 
-	trace = SV_Move (start, vec3_origin, vec3_origin, stop, true, sv_player);
+	trace = SV_Move (start, vec3_origin, vec3_origin, stop, MOVE_NOMONSTERS, sv_player);
 
 	if (trace.fraction == 1.0)
 		friction = sv_friction.value*sv_edgefriction.value;
@@ -465,8 +465,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	float	total;
 	
 // read ping time
-	host_client->ping_times[host_client->num_pings%NUM_PING_TIMES]
-		= sv.time - MSG_ReadFloat ();
+	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = sv.time - MSG_ReadFloat ();
 	host_client->num_pings++;
 	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
 		total += host_client->ping_times[i];
@@ -478,16 +477,9 @@ void SV_ReadClientMove (usercmd_t *move)
 		val->_float = host_client->ping * 1000.0;
 
 // read current angles
-	if (dpprotocol)
-	{
-		for (i=0 ; i<3 ; i++)
-			angle[i] = MSG_ReadPreciseAngle ();
-	}
-	else
-	{
-		for (i=0 ; i<3 ; i++)
-			angle[i] = MSG_ReadAngle ();
-	}
+	// dpprotocol
+	for (i=0 ; i<3 ; i++)
+		angle[i] = MSG_ReadPreciseAngle ();
 
 	VectorCopy (angle, host_client->edict->v.v_angle);
 		
@@ -565,7 +557,7 @@ nextmsg:
 				goto nextmsg;		// end of message
 				
 			default:
-				Sys_Printf ("SV_ReadClientMessage: unknown command char\n");
+				Sys_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
 				return false;
 							
 			case clc_nop:
