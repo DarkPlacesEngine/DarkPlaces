@@ -2732,24 +2732,72 @@ VM_M_callfunction
 =========
 */
 mfunction_t *PRVM_ED_FindFunction (const char *name);
-int PRVM_EnterFunction (mfunction_t *f);
 void VM_M_callfunction(void)
 {
 	mfunction_t *func;
 	char *s;
 
+	if(prog->argc == 0)
+		PRVM_ERROR("VM_M_callfunction: 1 parameter is required !\n");
+
 	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
 
 	if(!s)
-		PRVM_ERROR("VM_M_getfunction: null string !\n");
+		PRVM_ERROR("VM_M_callfunction: null string !\n");
 
 	VM_CheckEmptyString(s); 
 
 	func = PRVM_ED_FindFunction(s);
 
-	if(func)
-		PRVM_EnterFunction(func);
+	if(!func)
+		PRVM_ERROR("VM_M_callfunciton: function %s not found !\n", s);
+	else if (func->first_statement < 0)
+	{
+		// negative statements are built in functions
+		int builtinnumber = -func->first_statement;
+		prog->xfunction->builtinsprofile++;
+		if (builtinnumber < prog->numbuiltins && prog->builtins[builtinnumber])
+			prog->builtins[builtinnumber]();
+		else
+			PRVM_ERROR("No such builtin #%i in %s", builtinnumber, PRVM_NAME);
+	}
+	else if(func > 0)
+	{
+		prog->argc--;
+		PRVM_ExecuteProgram(func - prog->functions,"");
+		prog->argc++;
+	}
 }	
+
+/*
+=========
+VM_M_isfunction
+
+float	isfunction(string function_name)
+=========
+*/
+mfunction_t *PRVM_ED_FindFunction (const char *name);
+void VM_M_isfunction(void)
+{
+	mfunction_t *func;
+	char *s;
+	
+	VM_SAFEPARMCOUNT(1, VM_M_isfunction);
+	
+	s = PRVM_G_STRING(OFS_PARM0);
+	
+	if(!s)
+		PRVM_ERROR("VM_M_isfunction: null string !\n");
+	
+	VM_CheckEmptyString(s); 
+	
+	func = PRVM_ED_FindFunction(s);
+
+	if(!func)
+		PRVM_G_FLOAT(OFS_RETURN) = false;
+	else
+		PRVM_G_FLOAT(OFS_RETURN) = true;
+}
 
 /*
 =========
@@ -2905,7 +2953,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_setmousetarget,
 	VM_M_getmousetarget,
 	VM_M_callfunction,
-	VM_M_writetofile	// 606
+	VM_M_writetofile,
+	VM_M_isfunction	// 607
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
