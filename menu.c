@@ -40,6 +40,7 @@ void M_Menu_Main_f (void);
 		void M_Menu_Setup_f (void);
 	void M_Menu_Options_f (void);
 	void M_Menu_Options_Effects_f (void);
+	void M_Menu_Options_Graphics_f (void);
 	void M_Menu_Options_ColorControl_f (void);
 		void M_Menu_Keys_f (void);
 		void M_Menu_Video_f (void);
@@ -57,6 +58,7 @@ void M_Main_Draw (void);
 		void M_Setup_Draw (void);
 	void M_Options_Draw (void);
 	void M_Options_Effects_Draw (void);
+	void M_Options_Graphics_Draw (void);
 	void M_Options_ColorControl_Draw (void);
 		void M_Keys_Draw (void);
 		void M_Video_Draw (void);
@@ -74,6 +76,7 @@ void M_Main_Key (int key, char ascii);
 		void M_Setup_Key (int key, char ascii);
 	void M_Options_Key (int key, char ascii);
 	void M_Options_Effects_Key (int key, char ascii);
+	void M_Options_Graphics_Key (int key, char ascii);
 	void M_Options_ColorControl_Key (int key, char ascii);
 		void M_Keys_Key (int key, char ascii);
 		void M_Video_Key (int key, char ascii);
@@ -1168,7 +1171,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 37
+#define OPTIONS_ITEMS 38
 
 int options_cursor;
 
@@ -1326,6 +1329,7 @@ void M_Options_Draw (void)
 	M_Options_PrintCommand( " Reset to defaults", true);
 	M_Options_PrintCommand( "             Video", true);
 	M_Options_PrintCommand( "           Effects", true);
+	M_Options_PrintCommand( "          Graphics", true);
 	M_Options_PrintCommand( "     Color Control", true);
 	M_Options_PrintSlider(  "  2D Screen Width ", true, vid_conwidth.value, 320, 2048);
 	M_Options_PrintSlider(  "  2D Screen Height", true, vid_conheight.value, 240, 1536);
@@ -1391,6 +1395,9 @@ void M_Options_Key (int k, char ascii)
 			M_Menu_Options_Effects_f ();
 			break;
 		case 5:
+			M_Menu_Options_Graphics_f ();
+			break;
+		case 6:
 			M_Menu_Options_ColorControl_f ();
 			break;
 		default:
@@ -1590,7 +1597,103 @@ void M_Options_Effects_Key (int k, char ascii)
 }
 
 
+#define	OPTIONS_GRAPHICS_ITEMS	7
 
+int options_graphics_cursor;
+
+void M_Menu_Options_Graphics_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_options_graphics;
+	m_entersound = true;
+}
+
+extern cvar_t r_shadow_gloss;
+extern cvar_t r_shadow_realtime_dlight;
+extern cvar_t r_shadow_realtime_dlight_shadows;
+extern cvar_t r_shadow_realtime_world;
+extern cvar_t r_shadow_realtime_world_dlightshadows;
+extern cvar_t r_shadow_realtime_world_lightmaps;
+extern cvar_t r_shadow_realtime_world_shadows;
+
+void M_Menu_Options_Graphics_AdjustSliders (int dir)
+{
+	int optnum;
+	S_LocalSound ("misc/menu3.wav", true);
+ 
+	optnum = 0;
+
+		 if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_gloss,							bound(0, r_shadow_gloss.integer + dir, 2));
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_dlight,				!r_shadow_realtime_dlight.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_dlight_shadows,		!r_shadow_realtime_dlight_shadows.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world,					!r_shadow_realtime_world.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_dlightshadows,	!r_shadow_realtime_world_dlightshadows.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_lightmaps,		!r_shadow_realtime_world_lightmaps.integer);
+	else if (options_graphics_cursor == optnum++) Cvar_SetValueQuick (&r_shadow_realtime_world_shadows,			!r_shadow_realtime_world_shadows.integer);
+}
+
+
+void M_Options_Graphics_Draw (void)
+{
+	int visible;
+	cachepic_t	*p;
+
+	M_Background(320, 200);
+
+	M_DrawPic(16, 4, "gfx/qplaque.lmp");
+	p = Draw_CachePic("gfx/p_option.lmp");
+	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
+
+	optcursor = options_graphics_cursor;
+	optnum = 0;
+	visible = (vid.conheight - 32) / 8;
+	opty = 32 - bound(0, optcursor - (visible >> 1), max(0, OPTIONS_GRAPHICS_ITEMS - visible)) * 8;
+
+	M_Options_PrintSlider(  "             Gloss Mode", true, r_shadow_gloss.integer, 0, 2);
+	M_Options_PrintCheckbox("             RT DLights", true, r_shadow_realtime_dlight.integer);
+	M_Options_PrintCheckbox("      RT DLight Shadows", true, r_shadow_realtime_dlight_shadows.integer);
+	M_Options_PrintCheckbox("               RT World", true, r_shadow_realtime_world.integer);
+	M_Options_PrintCheckbox("RT World DLight Shadows", true, r_shadow_realtime_world_dlightshadows.integer);
+	M_Options_PrintCheckbox("     RT World Lightmaps", true, r_shadow_realtime_world_lightmaps.integer);
+	M_Options_PrintCheckbox("        RT World Shadow", true, r_shadow_realtime_world_shadows.integer);
+}
+
+
+void M_Options_Graphics_Key (int k, char ascii)
+{
+	switch (k)
+	{
+	case K_ESCAPE:
+		M_Menu_Options_f ();
+		break;
+
+	case K_ENTER:
+		M_Menu_Options_Graphics_AdjustSliders (1);
+		break;
+
+	case K_UPARROW:
+		S_LocalSound ("misc/menu1.wav", true);
+		options_graphics_cursor--;
+		if (options_graphics_cursor < 0)
+			options_graphics_cursor = OPTIONS_GRAPHICS_ITEMS-1;
+		break;
+
+	case K_DOWNARROW:
+		S_LocalSound ("misc/menu1.wav", true);
+		options_graphics_cursor++;
+		if (options_graphics_cursor >= OPTIONS_GRAPHICS_ITEMS)
+			options_graphics_cursor = 0;
+		break;
+
+	case K_LEFTARROW:
+		M_Menu_Options_Graphics_AdjustSliders (-1);
+		break;
+
+	case K_RIGHTARROW:
+		M_Menu_Options_Graphics_AdjustSliders (1);
+		break;
+	}
+}
 
 
 #define	OPTIONS_COLORCONTROL_ITEMS	18
@@ -3624,6 +3727,7 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_setup", M_Menu_Setup_f);
 	Cmd_AddCommand ("menu_options", M_Menu_Options_f);
 	Cmd_AddCommand ("menu_options_effects", M_Menu_Options_Effects_f);
+	Cmd_AddCommand ("menu_options_graphics", M_Menu_Options_Graphics_f);
 	Cmd_AddCommand ("menu_options_colorcontrol", M_Menu_Options_ColorControl_f);
 	Cvar_RegisterVariable (&menu_options_colorcontrol_correctionvalue);
 	Cmd_AddCommand ("menu_keys", M_Menu_Keys_f);
@@ -3739,6 +3843,10 @@ void M_Draw (void)
 		M_Options_Effects_Draw ();
 		break;
 
+	case m_options_graphics:
+		M_Options_Graphics_Draw ();
+		break;
+
 	case m_options_colorcontrol:
 		M_Options_ColorControl_Draw ();
 		break;
@@ -3823,6 +3931,10 @@ void M_Keydown (int key, char ascii)
 
 	case m_options_effects:
 		M_Options_Effects_Key (key, ascii);
+		return;
+
+	case m_options_graphics:
+		M_Options_Graphics_Key (key, ascii);
 		return;
 
 	case m_options_colorcontrol:
