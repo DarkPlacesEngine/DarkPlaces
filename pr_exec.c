@@ -386,7 +386,7 @@ void PR_ExecuteProgram (func_t fnum, const char *errormessage)
 	eval_t	*ptr;
 	int		profile, startprofile, cachedpr_trace, exitdepth;
 
-	if (!fnum || fnum >= progs->numfunctions)
+	if (!fnum || fnum >= (unsigned) progs->numfunctions)
 	{
 		if (pr_global_struct->self)
 			ED_Print(PROG_TO_EDICT(pr_global_struct->self));
