@@ -23,11 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int		lightmap_textures;
 
-signed int blocklights[18*18*3]; // LordHavoc: *3 for colored lighting
-
 // LordHavoc: skinny but tall lightmaps for quicker subimage uploads
-#define	BLOCK_WIDTH		128
-#define	BLOCK_HEIGHT	128
+#define	BLOCK_WIDTH		256
+#define	BLOCK_HEIGHT	256
 // LordHavoc: increased lightmap limit from 64 to 1024
 #define	MAX_LIGHTMAPS	1024
 #define LIGHTMAPSIZE	(BLOCK_WIDTH*BLOCK_HEIGHT*4)
@@ -38,6 +36,8 @@ short allocated[MAX_LIGHTMAPS][BLOCK_WIDTH];
 
 byte *lightmaps[MAX_LIGHTMAPS];
 short lightmapupdate[MAX_LIGHTMAPS][2];
+
+signed int blocklights[BLOCK_WIDTH*BLOCK_HEIGHT*3]; // LordHavoc: *3 for colored lighting
 
 int lightmapalign, lightmapalignmask; // LordHavoc: NVIDIA's broken subimage fix, see BuildLightmaps for notes
 cvar_t gl_lightmapalign = {"gl_lightmapalign", "4"};
@@ -328,7 +328,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	}
 }
 
-byte templight[32*32*4];
+byte templight[BLOCK_WIDTH*BLOCK_HEIGHT*4];
 
 void R_UpdateLightmap(msurface_t *s, int lnum)
 {
@@ -1324,7 +1324,7 @@ int AllocBlock (int w, int h, short *x, short *y)
 		// LordHavoc: clear texture to blank image, fragments are uploaded using subimage
 		else if (!allocated[texnum][0])
 		{
-			byte blank[BLOCK_WIDTH*BLOCK_HEIGHT*3];
+			byte blank[BLOCK_WIDTH*BLOCK_HEIGHT*4];
 			memset(blank, 0, sizeof(blank));
 			if(r_upload.value)
 			{
@@ -1344,7 +1344,7 @@ int AllocBlock (int w, int h, short *x, short *y)
 		return texnum;
 	}
 
-	Sys_Error ("AllocBlock: full");
+	Host_Error ("AllocBlock: full, unable to find room for %i by %i lightmap", w, h);
 	return 0;
 }
 
