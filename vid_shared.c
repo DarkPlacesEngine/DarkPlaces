@@ -520,7 +520,7 @@ void VID_Restart_f(void)
 int vid_commandlinecheck = true;
 void VID_Open(void)
 {
-	int i;
+	int i, width, height;
 	if (vid_commandlinecheck)
 	{
 		// interpret command-line parameters
@@ -529,10 +529,20 @@ void VID_Open(void)
 			Cvar_SetValueQuick(&vid_fullscreen, false);
 		if ((i = COM_CheckParm("-fullscreen")) != 0)
 			Cvar_SetValueQuick(&vid_fullscreen, true);
+		width = 0;
+		height = 0;
 		if ((i = COM_CheckParm("-width")) != 0)
-			Cvar_SetQuick(&vid_width, com_argv[i+1]);
+			width = atoi(com_argv[i+1]);
 		if ((i = COM_CheckParm("-height")) != 0)
-			Cvar_SetQuick(&vid_height, com_argv[i+1]);
+			height = atoi(com_argv[i+1]);
+		if (width == 0)
+			width = height * 4 / 3;
+		if (height == 0)
+			height = width * 3 / 4;
+		if (width)
+			Cvar_SetValueQuick(&vid_width, width);
+		if (height)
+			Cvar_SetValueQuick(&vid_height, height);
 		if ((i = COM_CheckParm("-bpp")) != 0)
 			Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 		if ((i = COM_CheckParm("-nostencil")) != 0)
