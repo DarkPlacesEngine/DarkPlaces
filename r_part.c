@@ -773,7 +773,6 @@ void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	float		len, dec = 0, t, nt, speed;
 	int			j, contents, bubbles;
 	particle_t	*p;
-	static int	tracercount;
 	if (!r_particles.value) return; // LordHavoc: particles are optional
 
 	t = cl.oldtime;
