@@ -7,6 +7,57 @@
 int		image_width;
 int		image_height;
 
+#if 1
+// written by LordHavoc in a readable way, optimized by Vic, further optimized by LordHavoc (the non-special index case), readable version preserved below this
+void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
+{
+	int index, c, x, y;
+	const qbyte *in, *line;
+	int row_inc = (inputflipy ? -inputwidth : inputwidth) * numinputcomponents, col_inc = (inputflipx ? -1 : 1) * numinputcomponents;
+	int row_ofs = (inputflipy ? (inputheight - 1) * inputwidth * numinputcomponents : 0), col_ofs = (inputflipx ? (inputwidth - 1) * numinputcomponents : 0);
+
+	for (c = 0; c < numoutputcomponents; c++)
+		if (outputinputcomponentindices[c] & 0x80000000)
+			break;
+	if (c < numoutputcomponents)
+	{
+		// special indices used
+		if (inputflipdiagonal)
+		{
+			for (x = 0, line = inpixels + col_ofs; x < inputwidth; x++, line += col_inc)
+				for (y = 0, in = line + row_ofs; y < inputheight; y++, in += row_inc, outpixels += numinputcomponents)
+					for (c = 0; c < numoutputcomponents; c++)
+						outpixels[c] = ((index = outputinputcomponentindices[c]) & 0x80000000) ? index : in[index];
+		}
+		else
+		{
+			for (y = 0, line = inpixels + row_ofs; y < inputheight; y++, line += row_inc)
+				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += 3)
+					for (c = 0; c < numoutputcomponents; c++)
+						outpixels[c] = ((index = outputinputcomponentindices[c]) & 0x80000000) ? index : in[index];
+		}
+	}
+	else
+	{
+		// special indices not used
+		if (inputflipdiagonal)
+		{
+			for (x = 0, line = inpixels + col_ofs; x < inputwidth; x++, line += col_inc)
+				for (y = 0, in = line + row_ofs; y < inputheight; y++, in += row_inc, outpixels += numinputcomponents)
+					for (c = 0; c < numoutputcomponents; c++)
+						outpixels[c] = in[outputinputcomponentindices[c]];
+		}
+		else
+		{
+			for (y = 0, line = inpixels + row_ofs; y < inputheight; y++, line += row_inc)
+				for (x = 0, in = line + col_ofs; x < inputwidth; x++, in += col_inc, outpixels += 3)
+					for (c = 0; c < numoutputcomponents; c++)
+						outpixels[c] = in[outputinputcomponentindices[c]];
+		}
+	}
+}
+#else
+// intentionally readable version
 void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int inputheight, qboolean inputflipx, qboolean inputflipy, qboolean inputflipdiagonal, int numoutputcomponents, int numinputcomponents, int *outputinputcomponentindices)
 {
 	int index, c, x, y;
@@ -15,14 +66,16 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int 
 	{
 		for (x = 0;x < inputwidth;x++)
 		{
-			incolumn = inpixels + (inputflipx ? inputwidth - 1 - x : x) * numinputcomponents;
 			for (y = 0;y < inputheight;y++)
 			{
-				in = incolumn + (inputflipy ? inputheight - 1 - y : y) * inputwidth * numinputcomponents;
+				in = inpixels + ((inputflipy ? inputheight - 1 - y : y) * inputwidth + (inputflipx ? inputwidth - 1 - x : x)) * numinputcomponents;
 				for (c = 0;c < numoutputcomponents;c++)
 				{
 					index = outputinputcomponentindices[c];
-					*outpixels++ = (index & 0x80000000) ? (index - 0x8000000) : in[index];
+					if (index & 0x80000000)
+						*outpixels++ = index;
+					else
+						*outpixels++ = in[index];
 				}
 			}
 		}
@@ -31,19 +84,22 @@ void Image_CopyMux(qbyte *outpixels, const qbyte *inpixels, int inputwidth, int 
 	{
 		for (y = 0;y < inputheight;y++)
 		{
-			inrow = inpixels + (inputflipy ? inputheight - 1 - y : y) * inputwidth * numinputcomponents;
 			for (x = 0;x < inputwidth;x++)
 			{
-				in = inrow + (inputflipx ? inputwidth - 1 - x : x) * numinputcomponents;
+				in = inpixels + ((inputflipy ? inputheight - 1 - y : y) * inputwidth + (inputflipx ? inputwidth - 1 - x : x)) * numinputcomponents;
 				for (c = 0;c < numoutputcomponents;c++)
 				{
 					index = outputinputcomponentindices[c];
-					*outpixels++ = (index & 0x80000000) ? (index - 0x8000000) : in[index];
+					if (index & 0x80000000)
+						*outpixels++ = index;
+					else
+						*outpixels++ = in[index];
 				}
 			}
 		}
 	}
 }
+#endif
 
 void Image_GammaRemapRGB(const qbyte *in, qbyte *out, int pixels, const qbyte *gammar, const qbyte *gammag, const qbyte *gammab)
 {
