@@ -2,7 +2,7 @@
 #ifndef GL_BACKEND_H
 #define GL_BACKEND_H
 
-#define MAX_TEXTUREUNITS 8
+#define MAX_TEXTUREUNITS 16
 
 #define POLYGONELEMENTS_MAXPOINTS 258
 extern int polygonelements[768];
@@ -25,6 +25,9 @@ void GL_ClientActiveTexture(int num);
 void GL_Scissor(int x, int y, int width, int height); // AK for DRAWQUEUE_SETCLIP
 void GL_ScissorTest(int state);	// AK for DRAWQUEUE_(RE)SETCLIP
 void GL_Clear(int mask);
+
+unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **vertexstrings_list, int fragmentstrings_count, const char **fragmentstrings_list);
+void GL_Backend_FreeProgram(unsigned int prog);
 
 extern cvar_t gl_lockarrays;
 extern cvar_t gl_mesh_copyarrays;
