@@ -535,7 +535,7 @@ void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex
 	if (r_textshadow.integer)
 		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,0,0,0,alpha*0.8,flags);
 
-	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags); 
+	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags);
 }
 
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags)
@@ -725,12 +725,12 @@ static qfile_t *cl_capturevideo_videofile = NULL;
 static qfile_t *cl_capturevideo_soundfile = NULL;
 static short cl_capturevideo_rgbtoyuvscaletable[3][3][256];
 static unsigned char cl_capturevideo_yuvnormalizetable[3][256];
-static unsigned char cl_capturevideo_rgbgammatable[3][256];
+//static unsigned char cl_capturevideo_rgbgammatable[3][256];
 
 void SCR_CaptureVideo_BeginVideo(void)
 {
 	double gamma, g;
-	unsigned int i, j;
+	unsigned int i;
 	qbyte out[44];
 	if (cl_capturevideo_active)
 		return;
@@ -743,13 +743,15 @@ void SCR_CaptureVideo_BeginVideo(void)
 	cl_capturevideo_buffer = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * (3+3+3) + 18);
 	gamma = 1.0/scr_screenshot_gamma.value;
 
+	/*
 	for (i = 0;i < 256;i++)
 	{
-		j = (unsigned char)bound(0, 255*pow(i/255.0, gamma), 255);
+		unsigned char j = (unsigned char)bound(0, 255*pow(i/255.0, gamma), 255);
 		cl_capturevideo_rgbgammatable[0][i] = j;
 		cl_capturevideo_rgbgammatable[1][i] = j;
 		cl_capturevideo_rgbgammatable[2][i] = j;
 	}
+	*/
 /*
 R = Y + 1.4075 * (Cr - 128);
 G = Y + -0.3455 * (Cb - 128) + -0.7169 * (Cr - 128);
@@ -760,7 +762,7 @@ Cr = R *  .500 + G * -.419 + B * -.0813 + 128.;
 */
 	for (i = 0;i < 256;i++)
 	{
-		g = i;//255*pow(i/255.0, gamma);
+		g = 255*pow(i/255.0, gamma);
 		// Y weights from RGB
 		cl_capturevideo_rgbtoyuvscaletable[0][0][i] = (short)(g *  0.299);
 		cl_capturevideo_rgbtoyuvscaletable[0][1][i] = (short)(g *  0.587);
