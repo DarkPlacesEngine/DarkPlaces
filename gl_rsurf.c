@@ -42,7 +42,7 @@ cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
 static int dlightdivtable[32768];
 
-static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
+static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface)
 {
 	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract, k;
 	unsigned int *bl;
@@ -51,17 +51,17 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 
 	lit = false;
 
-	smax = (surf->extents[0] >> 4) + 1;
-	tmax = (surf->extents[1] >> 4) + 1;
+	smax = (surface->extents[0] >> 4) + 1;
+	tmax = (surface->extents[1] >> 4) + 1;
 	smax3 = smax * 3;
 
 	for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 	{
-		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
+		if (!(surface->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
 		Matrix4x4_Transform(matrix, light->origin, local);
-		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
+		dist = DotProduct (local, surface->plane->normal) - surface->plane->dist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
@@ -72,20 +72,20 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 		if (dist2 >= maxdist)
 			continue;
 
-		if (surf->plane->type < 3)
+		if (surface->plane->type < 3)
 		{
 			VectorCopy(local, impact);
-			impact[surf->plane->type] -= dist;
+			impact[surface->plane->type] -= dist;
 		}
 		else
 		{
-			impact[0] = local[0] - surf->plane->normal[0] * dist;
-			impact[1] = local[1] - surf->plane->normal[1] * dist;
-			impact[2] = local[2] - surf->plane->normal[2] * dist;
+			impact[0] = local[0] - surface->plane->normal[0] * dist;
+			impact[1] = local[1] - surface->plane->normal[1] * dist;
+			impact[2] = local[2] - surface->plane->normal[2] * dist;
 		}
 
-		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+		impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
+		impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
 
 		s = bound(0, impacts, smax * 16) - impacts;
 		t = bound(0, impactt, tmax * 16) - impactt;
@@ -137,7 +137,7 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 	return lit;
 }
 
-static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
+static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface)
 {
 	int lnum, s, t, smax, tmax, smax3, lit, impacts, impactt;
 	float sdtable[256], *bl, k, dist, dist2, maxdist, maxdist2, maxdist3, td1, td, red, green, blue, impact[3], local[3], subtract;
@@ -145,17 +145,17 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 
 	lit = false;
 
-	smax = (surf->extents[0] >> 4) + 1;
-	tmax = (surf->extents[1] >> 4) + 1;
+	smax = (surface->extents[0] >> 4) + 1;
+	tmax = (surface->extents[1] >> 4) + 1;
 	smax3 = smax * 3;
 
 	for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 	{
-		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
+		if (!(surface->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
 		Matrix4x4_Transform(matrix, light->origin, local);
-		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
+		dist = DotProduct (local, surface->plane->normal) - surface->plane->dist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
@@ -166,20 +166,20 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surf)
 		if (dist2 >= maxdist)
 			continue;
 
-		if (surf->plane->type < 3)
+		if (surface->plane->type < 3)
 		{
 			VectorCopy(local, impact);
-			impact[surf->plane->type] -= dist;
+			impact[surface->plane->type] -= dist;
 		}
 		else
 		{
-			impact[0] = local[0] - surf->plane->normal[0] * dist;
-			impact[1] = local[1] - surf->plane->normal[1] * dist;
-			impact[2] = local[2] - surf->plane->normal[2] * dist;
+			impact[0] = local[0] - surface->plane->normal[0] * dist;
+			impact[1] = local[1] - surface->plane->normal[1] * dist;
+			impact[2] = local[2] - surface->plane->normal[2] * dist;
 		}
 
-		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+		impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
+		impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
 
 		td = bound(0, impacts, smax * 16) - impacts;
 		td1 = bound(0, impactt, tmax * 16) - impactt;
@@ -235,7 +235,7 @@ R_BuildLightMap
 Combine and scale multiple lightmaps into the 8.8 format in blocklights
 ===============
 */
-static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
+static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 {
 	if (!r_floatbuildlightmap.integer)
 	{
@@ -244,13 +244,13 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		qbyte *lightmap, *out, *stain;
 
 		// update cached lighting info
-		surf->cached_dlight = 0;
+		surface->cached_dlight = 0;
 
-		smax = (surf->extents[0]>>4)+1;
-		tmax = (surf->extents[1]>>4)+1;
+		smax = (surface->extents[0]>>4)+1;
+		tmax = (surface->extents[1]>>4)+1;
 		size = smax*tmax;
 		size3 = size*3;
-		lightmap = surf->samples;
+		lightmap = surface->samples;
 
 	// set to full bright if no light data
 		bl = intblocklights;
@@ -264,10 +264,10 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 	// clear to no light
 			memset(bl, 0, size*3*sizeof(unsigned int));
 
-			if (surf->dlightframe == r_framecount)
+			if (surface->dlightframe == r_framecount)
 			{
-				surf->cached_dlight = R_IntAddDynamicLights(&ent->inversematrix, surf);
-				if (surf->cached_dlight)
+				surface->cached_dlight = R_IntAddDynamicLights(&ent->inversematrix, surface);
+				if (surface->cached_dlight)
 					c_light_polys++;
 			}
 
@@ -275,13 +275,13 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			if (lightmap)
 			{
 				bl = intblocklights;
-				for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
-					for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
+				for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++, lightmap += size3)
+					for (scale = d_lightstylevalue[surface->styles[maps]], i = 0;i < size3;i++)
 						bl[i] += lightmap[i] * scale;
 			}
 		}
 
-		stain = surf->stainsamples;
+		stain = surface->stainsamples;
 		bl = intblocklights;
 		out = templight;
 		// the >> 16 shift adjusts down 8 bits to account for the stainmap
@@ -290,7 +290,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		// (0 = 0.0, 128 = 1.0, 256 = 2.0)
 		if (ent->model->brushq1.lightmaprgba)
 		{
-			stride = (surf->lightmaptexturestride - smax) * 4;
+			stride = (surface->lightmaptexturestride - smax) * 4;
 			for (i = 0;i < tmax;i++, out += stride)
 			{
 				for (j = 0;j < smax;j++)
@@ -304,7 +304,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		}
 		else
 		{
-			stride = (surf->lightmaptexturestride - smax) * 3;
+			stride = (surface->lightmaptexturestride - smax) * 3;
 			for (i = 0;i < tmax;i++, out += stride)
 			{
 				for (j = 0;j < smax;j++)
@@ -316,7 +316,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			}
 		}
 
-		R_UpdateTexture(surf->lightmaptexture, templight);
+		R_UpdateTexture(surface->lightmaptexture, templight);
 	}
 	else
 	{
@@ -325,13 +325,13 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		qbyte *lightmap, *out, *stain;
 
 		// update cached lighting info
-		surf->cached_dlight = 0;
+		surface->cached_dlight = 0;
 
-		smax = (surf->extents[0]>>4)+1;
-		tmax = (surf->extents[1]>>4)+1;
+		smax = (surface->extents[0]>>4)+1;
+		tmax = (surface->extents[1]>>4)+1;
 		size = smax*tmax;
 		size3 = size*3;
-		lightmap = surf->samples;
+		lightmap = surface->samples;
 
 	// set to full bright if no light data
 		bl = floatblocklights;
@@ -344,10 +344,10 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		{
 			memset(bl, 0, size*3*sizeof(float));
 
-			if (surf->dlightframe == r_framecount)
+			if (surface->dlightframe == r_framecount)
 			{
-				surf->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surf);
-				if (surf->cached_dlight)
+				surface->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surface);
+				if (surface->cached_dlight)
 					c_light_polys++;
 			}
 
@@ -355,13 +355,13 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			if (lightmap)
 			{
 				bl = floatblocklights;
-				for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
-					for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
+				for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++, lightmap += size3)
+					for (scale = d_lightstylevalue[surface->styles[maps]], i = 0;i < size3;i++)
 						bl[i] += lightmap[i] * scale;
 			}
 		}
 
-		stain = surf->stainsamples;
+		stain = surface->stainsamples;
 		bl = floatblocklights;
 		out = templight;
 		// this scaling adjusts down 8 bits to account for the stainmap
@@ -371,7 +371,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		scale = 1.0f / (1 << 16);
 		if (ent->model->brushq1.lightmaprgba)
 		{
-			stride = (surf->lightmaptexturestride - smax) * 4;
+			stride = (surface->lightmaptexturestride - smax) * 4;
 			for (i = 0;i < tmax;i++, out += stride)
 			{
 				for (j = 0;j < smax;j++)
@@ -385,7 +385,7 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 		}
 		else
 		{
-			stride = (surf->lightmaptexturestride - smax) * 3;
+			stride = (surface->lightmaptexturestride - smax) * 3;
 			for (i = 0;i < tmax;i++, out += stride)
 			{
 				for (j = 0;j < smax;j++)
@@ -397,14 +397,14 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surf)
 			}
 		}
 
-		R_UpdateTexture(surf->lightmaptexture, templight);
+		R_UpdateTexture(surface->lightmaptexture, templight);
 	}
 }
 
 void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])
 {
 	float ndist, a, ratio, maxdist, maxdist2, maxdist3, invradius, sdtable[256], td, dist2;
-	msurface_t *surf, *endsurf;
+	msurface_t *surface, *endsurface;
 	int i, s, t, smax, tmax, smax3, impacts, impactt, stained;
 	qbyte *bl;
 	vec3_t impact;
@@ -442,15 +442,15 @@ loc0:
 		impact[2] = origin[2] - node->plane->normal[2] * ndist;
 	}
 
-	for (surf = model->brushq1.surfaces + node->firstsurface, endsurf = surf + node->numsurfaces;surf < endsurf;surf++)
+	for (surface = model->brushq1.surfaces + node->firstsurface, endsurface = surface + node->numsurfaces;surface < endsurface;surface++)
 	{
-		if (surf->stainsamples)
+		if (surface->stainsamples)
 		{
-			smax = (surf->extents[0] >> 4) + 1;
-			tmax = (surf->extents[1] >> 4) + 1;
+			smax = (surface->extents[0] >> 4) + 1;
+			tmax = (surface->extents[1] >> 4) + 1;
 
-			impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-			impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+			impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
+			impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
 
 			s = bound(0, impacts, smax * 16) - impacts;
 			t = bound(0, impactt, tmax * 16) - impactt;
@@ -462,7 +462,7 @@ loc0:
 			for (s = 0, i = impacts; s < smax; s++, i -= 16)
 				sdtable[s] = i * i + dist2;
 
-			bl = surf->stainsamples;
+			bl = surface->stainsamples;
 			smax3 = smax * 3;
 			stained = false;
 
@@ -498,7 +498,7 @@ loc0:
 			}
 			// force lightmap upload
 			if (stained)
-				surf->cached_dlight = true;
+				surface->cached_dlight = true;
 		}
 	}
 
@@ -702,7 +702,7 @@ static int RSurf_LightSeparate_Vertex3f_Color4f(const matrix4x4_t *matrix, const
 static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
-	const msurface_t *surf = ent->model->brushq1.surfaces + calldata2;
+	const msurface_t *surface = ent->model->brushq1.surfaces + calldata2;
 	rmeshstate_t m;
 	float currentalpha;
 	float base, colorscale;
@@ -714,11 +714,11 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
-	texture = surf->texinfo->texture;
+	texture = surface->texinfo->texture;
 	if (texture->animated)
 		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (r_refdef.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
 	currentalpha = ent->alpha;
-	if (surf->flags & SURF_WATERALPHA)
+	if (surface->flags & SURF_WATERALPHA)
 		currentalpha *= r_wateralpha.value;
 
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
@@ -741,23 +741,23 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 		GL_DepthMask(!(ent->effects & EF_NODEPTHTEST));
 	}
 
-	turb = (surf->flags & SURF_DRAWTURB) && r_waterscroll.value;
-	fullbright = !(ent->flags & RENDER_LIGHT) || (surf->flags & SURF_DRAWFULLBRIGHT) || !surf->samples;
+	turb = (surface->flags & SURF_DRAWTURB) && r_waterscroll.value;
+	fullbright = !(ent->flags & RENDER_LIGHT) || (surface->flags & SURF_DRAWFULLBRIGHT) || !surface->samples;
 	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
-	if (surf->flags & SURF_DRAWTURB)
+	if (surface->flags & SURF_DRAWTURB)
 		base *= 0.5f;
-	if ((surf->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled && fullbright && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
+	if ((surface->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled && fullbright && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
 	{
 		// NVIDIA Geforce3 distortion texture shader on water
 		GL_Color(1, 1, 1, currentalpha);
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = surf->mesh.data_vertex3f;
+		m.pointer_vertex = surface->mesh.data_vertex3f;
 		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(r_refdef.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 		m.texcombinergb[0] = GL_REPLACE;
 		m.texcombinergb[1] = GL_REPLACE;
-		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
-		m.pointer_texcoord[1] = surf->mesh.data_texcoordtexture2f;
+		m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+		m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
 		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
 		Matrix4x4_CreateTranslate(&m.texmatrix[1], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 		R_Mesh_State(&m);
@@ -770,8 +770,8 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 		qglTexEnvfv(GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
 		qglEnable(GL_TEXTURE_SHADER_NV);
 
-		GL_LockArrays(0, surf->mesh.num_vertices);
-		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+		GL_LockArrays(0, surface->mesh.num_vertices);
+		R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 		GL_LockArrays(0, 0);
 
 		qglDisable(GL_TEXTURE_SHADER_NV);
@@ -781,9 +781,9 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	else
 	{
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = surf->mesh.data_vertex3f;
+		m.pointer_vertex = surface->mesh.data_vertex3f;
 		m.pointer_color = varray_color4f;
-		m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+		m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 		m.tex[0] = R_GetTexture(texture->skin.base);
 		if (turb)
 		{
@@ -796,18 +796,18 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 			m.texrgbscale[0] = 4;
 			colorscale *= 0.25f;
 		}
-		R_FillColors(varray_color4f, surf->mesh.num_vertices, base * ent->colormod[0], base * ent->colormod[1], base * ent->colormod[2], currentalpha);
+		R_FillColors(varray_color4f, surface->mesh.num_vertices, base * ent->colormod[0], base * ent->colormod[1], base * ent->colormod[2], currentalpha);
 		if (!fullbright)
 		{
-			if (surf->dlightframe == r_framecount)
-				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, surf->mesh.num_vertices, surf->mesh.data_vertex3f, varray_color4f, 1);
-			if (surf->samples)
-				RSurf_AddLightmapToVertexColors_Color4f(surf->mesh.data_lightmapoffsets, varray_color4f,surf->mesh.num_vertices, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
+			if (surface->dlightframe == r_framecount)
+				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surface->dlightbits, surface->mesh.num_vertices, surface->mesh.data_vertex3f, varray_color4f, 1);
+			if (surface->samples)
+				RSurf_AddLightmapToVertexColors_Color4f(surface->mesh.data_lightmapoffsets, varray_color4f,surface->mesh.num_vertices, surface->samples, ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3, surface->styles);
 		}
-		RSurf_FogColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, colorscale, surf->mesh.num_vertices, modelorg);
+		RSurf_FogColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, colorscale, surface->mesh.num_vertices, modelorg);
 		R_Mesh_State(&m);
-		GL_LockArrays(0, surf->mesh.num_vertices);
-		R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+		GL_LockArrays(0, surface->mesh.num_vertices);
+		R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 		GL_LockArrays(0, 0);
 		if (texture->skin.glow)
 		{
@@ -816,10 +816,10 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 			GL_DepthMask(false);
 			m.pointer_color = varray_color4f;
 			m.tex[0] = R_GetTexture(texture->skin.glow);
-			m.pointer_vertex = surf->mesh.data_vertex3f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			if (m.tex[0])
 			{
-				m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 				if (turb)
 				{
 					// scrolling in texture matrix
@@ -827,9 +827,9 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 				}
 			}
 			R_Mesh_State(&m);
-			RSurf_FoggedColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surf->mesh.num_vertices, modelorg);
-			GL_LockArrays(0, surf->mesh.num_vertices);
-			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+			RSurf_FoggedColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 		if (fogenabled && rendertype != SURFRENDER_ADD)
@@ -839,10 +839,10 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 			GL_DepthMask(false);
 			m.pointer_color = varray_color4f;
 			m.tex[0] = R_GetTexture(texture->skin.fog);
-			m.pointer_vertex = surf->mesh.data_vertex3f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			if (m.tex[0])
 			{
-				m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 				if (turb)
 				{
 					// scrolling in texture matrix
@@ -850,9 +850,9 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 				}
 			}
 			R_Mesh_State(&m);
-			RSurf_FogPassColors_Vertex3f_Color4f(surf->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surf->mesh.num_vertices, modelorg);
-			GL_LockArrays(0, surf->mesh.num_vertices);
-			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+			RSurf_FogPassColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -1338,8 +1338,8 @@ void R_WorldVisibility(void)
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
 				c_leafs++;
-				for (i = 0;i < leaf->numleaffaces;i++)
-					r_worldsurfacevisible[leaf->firstleafface[i]] = 1;
+				for (i = 0;i < leaf->numleafsurfaces;i++)
+					r_worldsurfacevisible[leaf->firstleafsurface[i]] = 1;
 			}
 		}
 	}
@@ -1366,8 +1366,8 @@ void R_WorldVisibility(void)
 				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
 				{
 					c_leafs++;
-					if (leaf->numleaffaces)
-						for (i = 0, mark = leaf->firstleafface;i < leaf->numleaffaces;i++, mark++)
+					if (leaf->numleafsurfaces)
+						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
 							r_worldsurfacevisible[*mark] = true;
 				}
 			}
@@ -1387,8 +1387,8 @@ void R_WorldVisibility(void)
 				leaf = leafstack[--leafstackpos];
 				leafvisited[leaf - r_refdef.worldmodel->brush.data_leafs] = 1;
 				// draw any surfaces bounding this leaf
-				if (leaf->numleaffaces)
-					for (i = 0, mark = leaf->firstleafface;i < leaf->numleaffaces;i++, mark++)
+				if (leaf->numleafsurfaces)
+					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
 						r_worldsurfacevisible[*mark] = true;
 				// follow portals into other leafs
 				for (p = leaf->portals;p;p = p->next)
@@ -1421,7 +1421,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
-	int t, leafindex, leaffaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
+	int t, leafindex, leafsurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
 	const float *v[3];
 	msurface_t *surface;
@@ -1470,9 +1470,9 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			}
 			if (outsurfacepvs)
 			{
-				for (leaffaceindex = 0;leaffaceindex < leaf->numleaffaces;leaffaceindex++)
+				for (leafsurfaceindex = 0;leafsurfaceindex < leaf->numleafsurfaces;leafsurfaceindex++)
 				{
-					surfaceindex = leaf->firstleafface[leaffaceindex];
+					surfaceindex = leaf->firstleafsurface[leafsurfaceindex];
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
 						surface = model->brushq1.surfaces + surfaceindex;
@@ -1587,60 +1587,60 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3msurface_t *face)
+void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3msurface_t *surface)
 {
 	int i;
 	rmeshstate_t m;
-	if (!face->mesh.num_collisiontriangles)
+	if (!surface->mesh.num_collisiontriangles)
 		return;
 	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = face->mesh.data_collisionvertex3f;
+	m.pointer_vertex = surface->mesh.data_collisionvertex3f;
 	R_Mesh_State(&m);
-	i = (int)(((size_t)face) / sizeof(q3msurface_t));
+	i = (int)(((size_t)surface) / sizeof(q3msurface_t));
 	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_LockArrays(0, face->mesh.num_collisionvertices);
-	R_Mesh_Draw(face->mesh.num_collisionvertices, face->mesh.num_collisiontriangles, face->mesh.data_collisionelement3i);
+	GL_LockArrays(0, surface->mesh.num_collisionvertices);
+	R_Mesh_Draw(surface->mesh.num_collisionvertices, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i);
 	GL_LockArrays(0, 0);
 }
 
-void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
+void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int surfacenumber)
 {
 	const entity_render_t *ent = voident;
-	q3msurface_t *face = ent->model->brushq3.data_faces + facenumber;
+	q3msurface_t *surface = ent->model->brushq3.data_faces + surfacenumber;
 	rmeshstate_t m;
 	R_Mesh_Matrix(&ent->matrix);
 	memset(&m, 0, sizeof(m));
-	if ((ent->effects & EF_ADDITIVE) || (face->texture->textureflags & Q3TEXTUREFLAG_ADDITIVE))
+	if ((ent->effects & EF_ADDITIVE) || (surface->texture->textureflags & Q3TEXTUREFLAG_ADDITIVE))
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	else
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
 	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
-	m.tex[0] = R_GetTexture(face->texture->skin.base);
-	m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
+	m.tex[0] = R_GetTexture(surface->texture->skin.base);
+	m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 	// LordHavoc: quake3 was not able to do this; lit transparent surfaces
 	if (gl_combine.integer)
 	{
 		m.texrgbscale[0] = 2;
 		if (r_textureunits.integer >= 2)
 		{
-			m.tex[1] = R_GetTexture(face->lightmaptexture);
-			m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
+			m.tex[1] = R_GetTexture(surface->lightmaptexture);
+			m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
 			GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], ent->alpha);
 		}
 		else
 		{
 			if (ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1 && ent->alpha == 1)
-				m.pointer_color = face->mesh.data_lightmapcolor4f;
+				m.pointer_color = surface->mesh.data_lightmapcolor4f;
 			else
 			{
 				int i;
-				for (i = 0;i < face->mesh.num_vertices;i++)
+				for (i = 0;i < surface->mesh.num_vertices;i++)
 				{
-					varray_color4f[i*4+0] = face->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0];
-					varray_color4f[i*4+1] = face->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1];
-					varray_color4f[i*4+2] = face->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2];
-					varray_color4f[i*4+3] = face->mesh.data_lightmapcolor4f[i*4+3] * ent->alpha;
+					varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0];
+					varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1];
+					varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2];
+					varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3] * ent->alpha;
 				}
 				m.pointer_color = varray_color4f;
 			}
@@ -1649,35 +1649,35 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 	else
 	{
 		int i;
-		for (i = 0;i < face->mesh.num_vertices;i++)
+		for (i = 0;i < surface->mesh.num_vertices;i++)
 		{
-			varray_color4f[i*4+0] = face->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0] * 2.0f;
-			varray_color4f[i*4+1] = face->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1] * 2.0f;
-			varray_color4f[i*4+2] = face->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2] * 2.0f;
-			varray_color4f[i*4+3] = face->mesh.data_lightmapcolor4f[i*4+3] * ent->alpha;
+			varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0] * 2.0f;
+			varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1] * 2.0f;
+			varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2] * 2.0f;
+			varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3] * ent->alpha;
 		}
 		m.pointer_color = varray_color4f;
 	}
-	if (face->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+	if (surface->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
 	{
 		int i, j;
 		float center[3], center2[3], forward[3], right[3], up[3], v[4][3];
 		matrix4x4_t matrix1, imatrix1;
 		R_Mesh_Matrix(&r_identitymatrix);
 		// a single autosprite surface can contain multiple sprites...
-		for (j = 0;j < face->mesh.num_vertices - 3;j += 4)
+		for (j = 0;j < surface->mesh.num_vertices - 3;j += 4)
 		{
 			VectorClear(center);
 			for (i = 0;i < 4;i++)
-				VectorAdd(center, face->mesh.data_vertex3f + (j+i) * 3, center);
+				VectorAdd(center, surface->mesh.data_vertex3f + (j+i) * 3, center);
 			VectorScale(center, 0.25f, center);
 			Matrix4x4_Transform(&ent->matrix, center, center2);
 			// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
-			Matrix4x4_FromVectors(&matrix1, face->mesh.data_normal3f + j*3, face->mesh.data_svector3f + j*3, face->mesh.data_tvector3f + j*3, center);
+			Matrix4x4_FromVectors(&matrix1, surface->mesh.data_normal3f + j*3, surface->mesh.data_svector3f + j*3, surface->mesh.data_tvector3f + j*3, center);
 			Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
 			for (i = 0;i < 4;i++)
-				Matrix4x4_Transform(&imatrix1, face->mesh.data_vertex3f + (j+i)*3, v[i]);
-			if (face->texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
+				Matrix4x4_Transform(&imatrix1, surface->mesh.data_vertex3f + (j+i)*3, v[i]);
+			if (surface->texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
 			{
 				forward[0] = r_vieworigin[0] - center2[0];
 				forward[1] = r_vieworigin[1] - center2[1];
@@ -1702,29 +1702,29 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 		m.pointer_vertex = varray_vertex3f;
 	}
 	else
-		m.pointer_vertex = face->mesh.data_vertex3f;
+		m.pointer_vertex = surface->mesh.data_vertex3f;
 	R_Mesh_State(&m);
-	if (face->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+	if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 		qglDisable(GL_CULL_FACE);
-	GL_LockArrays(0, face->mesh.num_vertices);
-	R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+	GL_LockArrays(0, surface->mesh.num_vertices);
+	R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 	GL_LockArrays(0, 0);
-	if (face->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+	if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 		qglEnable(GL_CULL_FACE);
 }
 
-void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumfaces, q3msurface_t **texturefacelist)
+void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumsurfaces, q3msurface_t **texturesurfacelist)
 {
-	int i, texturefaceindex;
+	int i, texturesurfaceindex;
 	qboolean dolightmap;
 	qboolean dobase;
 	qboolean doambient;
 	qboolean doglow;
 	qboolean dofog;
 	rmeshstate_t m;
-	if (!texturenumfaces)
+	if (!texturenumsurfaces)
 		return;
-	c_faces += texturenumfaces;
+	c_faces += texturenumsurfaces;
 	// gl_lightmaps debugging mode skips normal texturing
 	if (gl_lightmaps.integer)
 	{
@@ -1733,22 +1733,22 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		qglDisable(GL_CULL_FACE);
 		memset(&m, 0, sizeof(m));
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.tex[0] = R_GetTexture(face->lightmaptexture);
-			m.pointer_texcoord[0] = face->mesh.data_texcoordlightmap2f;
-			if (face->lightmaptexture)
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.tex[0] = R_GetTexture(surface->lightmaptexture);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+			if (surface->lightmaptexture)
 			{
 				GL_Color(1, 1, 1, 1);
 				m.pointer_color = NULL;
 			}
 			else
-				m.pointer_color = face->mesh.data_lightmapcolor4f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+				m.pointer_color = surface->mesh.data_lightmapcolor4f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 		qglEnable(GL_CULL_FACE);
@@ -1761,14 +1761,14 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		// drawing sky transparently would be too difficult
 		if (t->surfaceparms & Q3SURFACEPARM_SKY)
 			return;
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			facecenter[0] = (face->mins[0] + face->maxs[0]) * 0.5f;
-			facecenter[1] = (face->mins[1] + face->maxs[1]) * 0.5f;
-			facecenter[2] = (face->mins[2] + face->maxs[2]) * 0.5f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			facecenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			facecenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			facecenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
 			Matrix4x4_Transform(&ent->matrix, facecenter, center);
-			R_MeshQueue_AddTransparent(center, R_Q3BSP_DrawFace_TransparentCallback, ent, face - ent->model->brushq3.data_faces);
+			R_MeshQueue_AddTransparent(center, R_Q3BSP_DrawFace_TransparentCallback, ent, surface - ent->model->brushq3.data_faces);
 		}
 		return;
 	}
@@ -1804,13 +1804,13 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_DepthTest(true);
 
 		memset(&m, 0, sizeof(m));
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 		GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
@@ -1836,14 +1836,14 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 			qglDisable(GL_CULL_FACE);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -1856,13 +1856,13 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(0, 0, 0, 1);
 		memset(&m, 0, sizeof(m));
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -1878,63 +1878,63 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		m.tex[0] = R_GetTexture(t->skin.base);
 		GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 		m.pointer_color = NULL;
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			if (!face->lightmaptexture)
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			if (!surface->lightmaptexture)
 				continue;
-			m.tex[1] = R_GetTexture(face->lightmaptexture);
-			m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-			m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
+			m.tex[1] = R_GetTexture(surface->lightmaptexture);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
 			m.texrgbscale[1] = 2;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 		if (r_lightmapintensity == 1 && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
 		{
-			for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				q3msurface_t *face = texturefacelist[texturefaceindex];
-				if (face->lightmaptexture)
+				q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				if (surface->lightmaptexture)
 					continue;
-				m.tex[1] = R_GetTexture(face->lightmaptexture);
-				m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-				m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
+				m.tex[1] = R_GetTexture(surface->lightmaptexture);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
 				m.texrgbscale[1] = 2;
-				m.pointer_color = face->mesh.data_lightmapcolor4f;
-				m.pointer_vertex = face->mesh.data_vertex3f;
+				m.pointer_color = surface->mesh.data_lightmapcolor4f;
+				m.pointer_vertex = surface->mesh.data_vertex3f;
 				R_Mesh_State(&m);
-				GL_LockArrays(0, face->mesh.num_vertices);
-				R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 				GL_LockArrays(0, 0);
 			}
 		}
 		else
 		{
-			for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 			{
-				q3msurface_t *face = texturefacelist[texturefaceindex];
-				if (face->lightmaptexture)
+				q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+				if (surface->lightmaptexture)
 					continue;
-				m.tex[1] = R_GetTexture(face->lightmaptexture);
-				m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-				m.pointer_texcoord[1] = face->mesh.data_texcoordlightmap2f;
+				m.tex[1] = R_GetTexture(surface->lightmaptexture);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
 				m.texrgbscale[1] = 2;
 				m.pointer_color = varray_color4f;
-				for (i = 0;i < face->mesh.num_vertices;i++)
+				for (i = 0;i < surface->mesh.num_vertices;i++)
 				{
-					varray_color4f[i*4+0] = face->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0] * r_lightmapintensity;
-					varray_color4f[i*4+1] = face->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1] * r_lightmapintensity;
-					varray_color4f[i*4+2] = face->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2] * r_lightmapintensity;
-					varray_color4f[i*4+3] = face->mesh.data_lightmapcolor4f[i*4+3];
+					varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0] * r_lightmapintensity;
+					varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1] * r_lightmapintensity;
+					varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2] * r_lightmapintensity;
+					varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3];
 				}
-				m.pointer_vertex = face->mesh.data_vertex3f;
+				m.pointer_vertex = surface->mesh.data_vertex3f;
 				R_Mesh_State(&m);
-				GL_LockArrays(0, face->mesh.num_vertices);
-				R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 				GL_LockArrays(0, 0);
 			}
 		}
@@ -1946,19 +1946,19 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		memset(&m, 0, sizeof(m));
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.tex[0] = R_GetTexture(face->lightmaptexture);
-			m.pointer_texcoord[0] = face->mesh.data_texcoordlightmap2f;
-			if (face->lightmaptexture)
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.tex[0] = R_GetTexture(surface->lightmaptexture);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+			if (surface->lightmaptexture)
 				m.pointer_color = NULL;
 			else
-				m.pointer_color = face->mesh.data_lightmapcolor4f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+				m.pointer_color = surface->mesh.data_lightmapcolor4f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -1970,14 +1970,14 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -1989,14 +1989,14 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_Color(r_ambient.value * (1.0f / 128.0f) * ent->colormod[0], r_ambient.value * (1.0f / 128.0f) * ent->colormod[1], r_ambient.value * (1.0f / 128.0f) * ent->colormod[2], 1);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -2008,14 +2008,14 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		GL_Color(1, 1, 1, 1);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.glow);
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
-			m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -2030,16 +2030,16 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.fog);
 		m.pointer_color = varray_color4f;
-		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
-			q3msurface_t *face = texturefacelist[texturefaceindex];
+			q3msurface_t *surface = texturesurfacelist[texturesurfaceindex];
 			if (m.tex[0])
-				m.pointer_texcoord[0] = face->mesh.data_texcoordtexture2f;
-			m.pointer_vertex = face->mesh.data_vertex3f;
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
-			RSurf_FogPassColors_Vertex3f_Color4f(face->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, 1, face->mesh.num_vertices, modelorg);
-			GL_LockArrays(0, face->mesh.num_vertices);
-			R_Mesh_Draw(face->mesh.num_vertices, face->mesh.num_triangles, face->mesh.data_element3i);
+			RSurf_FogPassColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, 1, surface->mesh.num_vertices, modelorg);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
@@ -2050,12 +2050,12 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumface
 void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 {
 	int i, j, f, flagsmask, flags;
-	q3msurface_t *face;
+	q3msurface_t *surface;
 	model_t *model = ent->model;
 	texture_t *t;
 	const int maxfaces = 1024;
-	int numfaces = 0;
-	q3msurface_t *facelist[1024];
+	int numsurfaces = 0;
+	q3msurface_t *surfacelist[1024];
 	R_Mesh_Matrix(&ent->matrix);
 	flagsmask = Q3SURFACEFLAG_NODRAW | Q3SURFACEFLAG_SKY;
 	if (skyfaces)
@@ -2064,37 +2064,37 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 		flags = 0;
 	t = NULL;
 	f = 0;
-	numfaces = 0;
+	numsurfaces = 0;
 	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 	{
 		if (ent != r_refdef.worldentity || r_worldsurfacevisible[j])
 		{
-			face = model->brushq3.data_faces + j;
-			if (t != face->texture)
+			surface = model->brushq3.data_faces + j;
+			if (t != surface->texture)
 			{
-				if (numfaces)
+				if (numsurfaces)
 				{
-					R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
-					numfaces = 0;
+					R_Q3BSP_DrawFaceList(ent, t, numsurfaces, surfacelist);
+					numsurfaces = 0;
 				}
-				t = face->texture;
+				t = surface->texture;
 				f = t->surfaceflags & flagsmask;
 			}
 			if (f == flags)
 			{
-				if (!face->mesh.num_triangles)
+				if (!surface->mesh.num_triangles)
 					continue;
-				facelist[numfaces++] = face;
-				if (numfaces >= maxfaces)
+				surfacelist[numsurfaces++] = surface;
+				if (numsurfaces >= maxfaces)
 				{
-					R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
-					numfaces = 0;
+					R_Q3BSP_DrawFaceList(ent, t, numsurfaces, surfacelist);
+					numsurfaces = 0;
 				}
 			}
 		}
 	}
-	if (numfaces)
-		R_Q3BSP_DrawFaceList(ent, t, numfaces, facelist);
+	if (numsurfaces)
+		R_Q3BSP_DrawFaceList(ent, t, numsurfaces, surfacelist);
 }
 
 void R_Q3BSP_DrawSky(entity_render_t *ent)
@@ -2111,7 +2111,7 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	{
 		int i;
 		model_t *model = ent->model;
-		q3msurface_t *face;
+		q3msurface_t *surface;
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 		GL_DepthMask(false);
 		GL_DepthTest(true);
@@ -2119,9 +2119,9 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 		for (i = 0;i < model->brushq3.data_models[model->brush.submodel].numbrushes;i++)
 			if (model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf && model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf->numtriangles)
 				R_DrawCollisionBrush(model->brushq3.data_models[model->brush.submodel].firstbrush[i].colbrushf);
-		for (i = 0, face = model->brushq3.data_models[model->brush.submodel].firstface;i < model->brushq3.data_models[model->brush.submodel].numfaces;i++, face++)
-			if (face->mesh.num_collisiontriangles)
-				R_Q3BSP_DrawCollisionFace(ent, face);
+		for (i = 0, surface = model->brushq3.data_models[model->brush.submodel].firstsurface;i < model->brushq3.data_models[model->brush.submodel].numsurfaces;i++, surface++)
+			if (surface->mesh.num_collisiontriangles)
+				R_Q3BSP_DrawCollisionFace(ent, surface);
 		qglPolygonOffset(0, 0);
 	}
 }
@@ -2130,7 +2130,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 {
 	model_t *model = ent->model;
 	vec3_t lightmins, lightmaxs;
-	int t, leafindex, leaffaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
+	int t, leafindex, leafsurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
 	const float *v[3];
 	q3msurface_t *surface;
@@ -2179,9 +2179,9 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			}
 			if (outsurfacepvs)
 			{
-				for (leaffaceindex = 0;leaffaceindex < leaf->numleaffaces;leaffaceindex++)
+				for (leafsurfaceindex = 0;leafsurfaceindex < leaf->numleafsurfaces;leafsurfaceindex++)
 				{
-					surfaceindex = leaf->firstleafface[leaffaceindex];
+					surfaceindex = leaf->firstleafsurface[leafsurfaceindex];
 					surface = model->brushq3.data_faces + surfaceindex;
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
@@ -2255,7 +2255,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brushq3.data_faces + surfacelist[surfacelistindex];
-			// FIXME: check some manner of face->rendermode here?
+			// FIXME: check some manner of surface->rendermode here?
 			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && !(surface->texture->surfaceparms & (Q3SURFACEPARM_SKY | Q3SURFACEPARM_TRANS)) && !(surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED))
 				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->mesh.num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}

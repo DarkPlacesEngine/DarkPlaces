@@ -223,8 +223,8 @@ typedef struct mleaf_s
 	// common
 	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
 	int areaindex; // q3bsp
-	int numleaffaces;
-	int *firstleafface;
+	int numleafsurfaces;
+	int *firstleafsurface;
 	int numleafbrushes; // q3bsp
 	int *firstleafbrush; // q3bsp
 	qbyte ambient_sound_level[NUM_AMBIENTS]; // q1bsp
@@ -778,8 +778,8 @@ typedef struct q3mmodel_s
 {
 	vec3_t mins;
 	vec3_t maxs;
-	int numfaces;
-	struct q3msurface_s *firstface;
+	int numsurfaces;
+	struct q3msurface_s *firstsurface;
 	int numbrushes;
 	struct q3mbrush_s *firstbrush;
 }
