@@ -1,406 +1,26 @@
 
-// this code written by Forest Hale, on 2003-08-23, and placed into public domain
-// this code deals with quadratic splines (minimum of 3 points), the same kind used in Quake3 maps.
-
-// LordHavoc's rant on misuse of the name 'bezier': many people seem to think that bezier is a generic term for splines, but it is not, it is a term for a specific type of bspline (4 control points, cubic bspline), bsplines are the generalization of the bezier spline to support dimensions other than just cubic.
-// this implements Quadratic BSpline surfaces
-
-#include <math.h>
-#include "curves.h"
-#include "zone.h"
-
-#if 0
-void QuadraticBSplineSubdivideFloat(int inpoints, int components, const float *in, int instride, float *out, int outstride)
-{
-	int s;
-	// the input (control points) is read as a stream of points, and buffered
-	// by the cpprev, cpcurr, and cpnext variables (to allow subdivision in
-	// overlapping memory buffers, even subdivision in-place with pre-spaced
-	// control points in the buffer)
-	// the output (resulting curve) is written as a stream of points
-	// this subdivision is meant to be repeated until the desired flatness
-	// level is reached
-	if (components == 1 && instride == (int)sizeof(float) && outstride == instride)
-	{
-		// simple case, single component and no special stride
-		float cpprev0 = 0, cpcurr0 = 0, cpnext0;
-		cpnext0 = *in++;
-		for (s = 0;s < inpoints - 1;s++)
-		{
-			cpprev0 = cpcurr0;
-			cpcurr0 = cpnext0;
-			if (s < inpoints - 1)
-				cpnext0 = *in++;
-			if (s > 0)
-			{
-				// 50% flattened control point
-				// cp1 = average(cp1, average(cp0, cp2));
-				*out++ = (cpcurr0 + (cpprev0 + cpnext0) * 0.5f) * 0.5f;
-			}
-			else
-			{
-				// copy the control point directly
-				*out++ = cpcurr0;
-			}
-			// midpoint
-			// mid = average(cp0, cp1);
-			*out++ = (cpcurr0 + cpnext0) * 0.5f;
-		}
-		// copy the final control point
-		*out++ = cpnext0;
-	}
-	else
-	{
-		// multiple components or stride is used (complex case)
-		int c;
-		float cpprev[4], cpcurr[4], cpnext[4];
-		// check if there are too many components for the buffers
-		if (components > 1)
-		{
-			// more components can be handled, but slowly, by calling self multiple times...
-			for (c = 0;c < components;c++, in++, out++)
-				QuadraticBSplineSubdivideFloat(inpoints, 1, in, instride, out, outstride);
-			return;
-		}
-		for (c = 0;c < components;c++)
-			cpnext[c] = in[c];
-		(unsigned char *)in += instride;
-		for (s = 0;s < inpoints - 1;s++)
-		{
-			for (c = 0;c < components;c++)
-				cpprev[c] = cpcurr[c];
-			for (c = 0;c < components;c++)
-				cpcurr[c] = cpnext[c];
-			for (c = 0;c < components;c++)
-				cpnext[c] = in[c];
-			(unsigned char *)in += instride;
-			// the end points are copied as-is
-			if (s > 0)
-			{
-				// 50% flattened control point
-				// cp1 = average(cp1, average(cp0, cp2));
-				for (c = 0;c < components;c++)
-					out[c] = (cpcurr[c] + (cpprev[c] + cpnext[c]) * 0.5f) * 0.5f;
-			}
-			else
-			{
-				// copy the control point directly
-				for (c = 0;c < components;c++)
-					out[c] = cpcurr[c];
-			}
-			(unsigned char *)out += outstride;
-			// midpoint
-			// mid = average(cp0, cp1);
-			for (c = 0;c < components;c++)
-				out[c] = (cpcurr[c] + cpnext[c]) * 0.5f;
-			(unsigned char *)out += outstride;
-		}
-		// copy the final control point
-		for (c = 0;c < components;c++)
-			out[c] = cpnext[c];
-		//(unsigned char *)out += outstride;
-	}
-}
-
-// note: out must have enough room!
-// (see finalwidth/finalheight calcs below)
-void QuadraticBSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
-{
-	int finalwidth, finalheight, xstep, ystep, x, y, c;
-	float *o;
-
-	// error out on various bogus conditions
-	if (xlevel < 0 || ylevel < 0 || xlevel > 16 || ylevel > 16 || cpwidth < 3 || cpheight < 3)
-		return;
-
-	xstep = 1 << xlevel;
-	ystep = 1 << ylevel;
-	finalwidth = (cpwidth - 1) * xstep + 1;
-	finalheight = (cpheight - 1) * ystep + 1;
-
-	for (y = 0;y < finalheight;y++)
-		for (x = 0;x < finalwidth;x++)
-			for (c = 0, o = out + (y * finalwidth + x) * components;c < components;c++)
-				o[c] = 0;
-
-	if (xlevel == 1 && ylevel == 0)
-	{
-		for (y = 0;y < finalheight;y++)
-			QuadraticBSplineSubdivideFloat(cpwidth, components, in + y * cpwidth * components, sizeof(float) * components, out + y * finalwidth * components, sizeof(float) * components);
-		return;
-	}
-	if (xlevel == 0 && ylevel == 1)
-	{
-		for (x = 0;x < finalwidth;x++)
-			QuadraticBSplineSubdivideFloat(cpheight, components, in + x * components, sizeof(float) * cpwidth * components, out + x * components, sizeof(float) * finalwidth * components);
-		return;
-	}
-
-	// copy control points into correct positions in destination buffer
-	for (y = 0;y < finalheight;y += ystep)
-		for (x = 0;x < finalwidth;x += xstep)
-			for (c = 0, o = out + (y * finalwidth + x) * components;c < components;c++)
-				o[c] = *in++;
-
-	// subdivide in place in the destination buffer
-	while (xstep > 1 || ystep > 1)
-	{
-		if (xstep > 1)
-		{
-			xstep >>= 1;
-			for (y = 0;y < finalheight;y += ystep)
-				QuadraticBSplineSubdivideFloat(cpwidth, components, out + y * finalwidth * components, sizeof(float) * xstep * 2 * components, out + y * finalwidth * components, sizeof(float) * xstep * components);
-			cpwidth = (cpwidth - 1) * 2 + 1;
-		}
-		if (ystep > 1)
-		{
-			ystep >>= 1;
-			for (x = 0;x < finalwidth;x += xstep)
-				QuadraticBSplineSubdivideFloat(cpheight, components, out + x * components, sizeof(float) * ystep * 2 * finalwidth * components, out + x * components, sizeof(float) * ystep * finalwidth * components);
-			cpheight = (cpheight - 1) * 2 + 1;
-		}
-	}
-}
-#elif 1
-void QuadraticBSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
-{
-	int c, x, y, outwidth, outheight, halfstep, xstep, ystep;
-	float prev, curr, next;
-	xstep = 1 << xlevel;
-	ystep = 1 << ylevel;
-	outwidth = ((cpwidth - 1) * xstep) + 1;
-	outheight = ((cpheight - 1) * ystep) + 1;
-	for (y = 0;y < cpheight;y++)
-		for (x = 0;x < cpwidth;x++)
-			for (c = 0;c < components;c++)
-				out[(y * ystep * outwidth + x * xstep) * components + c] = in[(y * cpwidth + x) * components + c];
-	while (xstep > 1 || ystep > 1)
-	{
-		if (xstep >= ystep)
-		{
-			// subdivide on X
-			halfstep = xstep >> 1;
-			for (y = 0;y < outheight;y += ystep)
-			{
-				for (c = 0;c < components;c++)
-				{
-					x = xstep;
-					// fetch first two control points 
-					prev = out[(y * outwidth + (x - xstep)) * components + c];
-					curr = out[(y * outwidth + x) * components + c];
-					// create first midpoint
-					out[(y * outwidth + (x - halfstep)) * components + c] = (curr + prev) * 0.5f;
-					for (;x < outwidth - xstep;x += xstep, prev = curr, curr = next)
-					{
-						// fetch next control point
-						next = out[(y * outwidth + (x + xstep)) * components + c];
-						// flatten central control point 
-						out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
-						// create following midpoint
-						out[(y * outwidth + (x + halfstep)) * components + c] = (curr + next) * 0.5f;
-					}
-				}
-			}
-			xstep >>= 1;
-		}
-		else
-		{
-			// subdivide on Y
-			halfstep = ystep >> 1;
-			for (x = 0;x < outwidth;x += xstep)
-			{
-				for (c = 0;c < components;c++)
-				{
-					y = ystep;
-					// fetch first two control points 
-					prev = out[((y - ystep) * outwidth + x) * components + c];
-					curr = out[(y * outwidth + x) * components + c];
-					// create first midpoint
-					out[((y - halfstep) * outwidth + x) * components + c] = (curr + prev) * 0.5f;
-					for (;y < outheight - ystep;y += ystep, prev = curr, curr = next)
-					{
-						// fetch next control point
-						next = out[((y + ystep) * outwidth + x) * components + c];
-						// flatten central control point 
-						out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
-						// create following midpoint
-						out[((y + halfstep) * outwidth + x) * components + c] = (curr + next) * 0.5f;
-					}
-				}
-			}
-			ystep >>= 1;
-		}
-	}
-	// flatten control points on X
-	for (y = 0;y < outheight;y += ystep)
-	{
-		for (c = 0;c < components;c++)
-		{
-			x = xstep;
-			// fetch first two control points 
-			prev = out[(y * outwidth + (x - xstep)) * components + c];
-			curr = out[(y * outwidth + x) * components + c];
-			for (;x < outwidth - xstep;x += xstep, prev = curr, curr = next)
-			{
-				// fetch next control point 
-				next = out[(y * outwidth + (x + xstep)) * components + c];
-				// flatten central control point 
-				out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
-			}
-		}
-	}
-	// flatten control points on Y
-	for (x = 0;x < outwidth;x += xstep)
-	{
-		for (c = 0;c < components;c++)
-		{
-			y = ystep;
-			// fetch first two control points 
-			prev = out[((y - ystep) * outwidth + x) * components + c];
-			curr = out[(y * outwidth + x) * components + c];
-			for (;y < outheight - ystep;y += ystep, prev = curr, curr = next)
-			{
-				// fetch next control point 
-				next = out[((y + ystep) * outwidth + x) * components + c];
-				// flatten central control point 
-				out[(y * outwidth + x) * components + c] = (curr + (prev + next) * 0.5f) * 0.5f;
-			}
-		}
-	}
-
-	/*
-	for (y = ystep;y < outheight - ystep;y += ystep)
-	{
-		for (c = 0;c < components;c++)
-		{
-			for (x = xstep, outp = out + (y * outwidth + x) * components + c, prev = outp[-xstep * components], curr = outp[0], next = outp[xstep * components];x < outwidth;x += xstep, outp += ystep * outwidth * components, prev = curr, curr = next, next = outp[xstep * components])
-			{
-				// midpoint
-				outp[-halfstep * components] = (prev + curr) * 0.5f;
-				// flatten control point
-				outp[0] = (curr + (prev + next) * 0.5f) * 0.5f;
-				// next midpoint (only needed for end segment)
-				outp[halfstep * components] = (next + curr) * 0.5f;
-			}
-		}
-	}
-	*/
-}
-#else
-// unfinished code
-void QuadraticBSplinePatchSubdivideFloatBuffer(int cpwidth, int cpheight, int xlevel, int ylevel, int components, const float *in, float *out)
-{
-	int outwidth, outheight;
-	outwidth = ((cpwidth - 1) << xlevel) + 1;
-	outheight = ((cpheight - 1) << ylevel) + 1;
-	for (y = 0;y < cpheight;y++)
-	{
-		for (x = 0;x < cpwidth;x++)
-		{
-			for (c = 0;c < components;c++)
-			{
-				inp = in + (y * cpwidth + x) * components + c;
-				outp = out + ((y<<ylevel) * outwidth + (x<<xlevel)) * components + c;
-				for (sy = 0;sy < expandy;sy++)
-				{
-					for (sx = 0;sx < expandx;sx++)
-					{
-						d = a + (b - a) * 2 * t + (a - b + c - b) * t * t;
-					}
-				}
-			}
-		}
-	}
-}
-#endif
-
 /*
-0.00000 ?.????? ?.????? ?.????? ?.????? ?.????? ?.????? ?.????? 1.00000 ?.????? ?.????? ?.????? ?.????? ?.????? ?.????? ?.????? 0.00000 deviation: 0.5
-0.00000 ?.????? ?.????? ?.????? 0.50000 ?.????? ?.????? ?.????? 0.50000 ?.????? ?.????? ?.????? 0.50000 ?.????? ?.????? ?.????? 0.00000 deviation: 0.125
-0.00000 ?.????? 0.25000 ?.????? 0.37500 ?.????? 0.50000 ?.????? 0.50000 ?.????? 0.50000 ?.????? 0.37500 ?.????? 0.25000 ?.????? 0.00000 deviation: 0.03125
-0.00000 0.12500 0.21875 0.31250 0.37500 0.43750 0.46875 0.50000 0.50000 0.50000 0.46875 0.43750 0.37500 0.31250 0.21875 0.12500 0.00000 deviation: not available
-*/
+this code written by Forest Hale, on 2004-10-17, and placed into public domain
+this implements Quadratic BSpline surfaces as seen in Quake3 by id Software
 
-float QuadraticBSplinePatchLargestDeviationOnX(int cpwidth, int cpheight, int components, const float *in)
-{
-	int c, x, y;
-	const float *cp;
-	float deviation, squareddeviation, bestsquareddeviation;
-	bestsquareddeviation = 0;
-	for (y = 0;y < cpheight;y++)
-	{
-		for (x = 1;x < cpwidth-1;x++)
-		{
-			squareddeviation = 0;
-			for (c = 0, cp = in + ((y * cpwidth) + x) * components;c < components;c++, cp++)
-			{
-				deviation = cp[0] * 0.5f - cp[-components] * 0.25f - cp[components] * 0.25f;
-				squareddeviation += deviation*deviation;
-			}
-			if (bestsquareddeviation < squareddeviation)
-				bestsquareddeviation = squareddeviation;
-		}
-	}
-	return (float)sqrt(bestsquareddeviation);
-}
+a small rant on misuse of the name 'bezier': many people seem to think that
+bezier is a generic term for splines, but it is not, it is a term for a
+specific type of bspline (4 control points, cubic bspline), bsplines are the
+generalization of the bezier spline to support dimensions other than cubic.
 
-float QuadraticBSplinePatchLargestDeviationOnY(int cpwidth, int cpheight, int components, const float *in)
-{
-	int c, x, y;
-	const float *cp;
-	float deviation, squareddeviation, bestsquareddeviation;
-	bestsquareddeviation = 0;
-	for (y = 1;y < cpheight-1;y++)
-	{
-		for (x = 0;x < cpwidth;x++)
-		{
-			squareddeviation = 0;
-			for (c = 0, cp = in + ((y * cpwidth) + x) * components;c < components;c++, cp++)
-			{
-				deviation = cp[0] * 0.5f - cp[-cpwidth * components] * 0.25f - cp[cpwidth * components] * 0.25f;
-				squareddeviation += deviation*deviation;
-			}
-			if (bestsquareddeviation < squareddeviation)
-				bestsquareddeviation = squareddeviation;
-		}
-	}
-	return (float)sqrt(bestsquareddeviation);
-}
+example equations for 1-5 control point bsplines being sampled as t=0...1
+1: flat (0th dimension)
+o = a
+2: linear (1st dimension)
+o = a * (1 - t) + b * t
+3: quadratic bspline (2nd dimension)
+o = a * (1 - t) * (1 - t) + 2 * b * (1 - t) * t + c * t * t
+4: cubic (bezier) bspline (3rd dimension)
+o = a * (1 - t) * (1 - t) * (1 - t) + 3 * b * (1 - t) * (1 - t) * t + 3 * c * (1 - t) * t * t + d * t * t * t
+5: quartic bspline (4th dimension)
+o = a * (1 - t) * (1 - t) * (1 - t) * (1 - t) + 4 * b * (1 - t) * (1 - t) * (1 - t) * t + 6 * c * (1 - t) * (1 - t) * t * t + 4 * d * (1 - t) * t * t * t + e * t * t * t * t
 
-int QuadraticBSplinePatchSubdivisionLevelForDeviation(float deviation, float level1tolerance, int levellimit)
-{
-	int level;
-	// count the automatic flatten step which reduces deviation by 50%
-	deviation *= 0.5f;
-	// count the levels to subdivide to come under the tolerance
-	for (level = 0;level < levellimit && deviation > level1tolerance;level++)
-		deviation *= 0.25f;
-	return level;
-}
-
-int QuadraticBSplinePatchSubdivisionLevelOnX(int cpwidth, int cpheight, int components, const float *in, float level1tolerance, int levellimit)
-{
-	return QuadraticBSplinePatchSubdivisionLevelForDeviation(QuadraticBSplinePatchLargestDeviationOnX(cpwidth, cpheight, components, in), level1tolerance, levellimit);
-}
-
-int QuadraticBSplinePatchSubdivisionLevelOnY(int cpwidth, int cpheight, int components, const float *in, float level1tolerance, int levellimit)
-{
-	return QuadraticBSplinePatchSubdivisionLevelForDeviation(QuadraticBSplinePatchLargestDeviationOnY(cpwidth, cpheight, components, in), level1tolerance, levellimit);
-}
-
-/*
-	// 1: flat (0th dimension)
-	o = a
-	// 2: linear (1st dimension)
-	o = a * (1 - t) + b * t
-	// 3: quadratic bspline (2nd dimension)
-	o = a * (1 - t) * (1 - t) + 2 * b * (1 - t) * t + c * t * t
-	// 4: cubic (bezier) bspline (3rd dimension)
-	o = a * (1 - t) * (1 - t) * (1 - t) + 3 * b * (1 - t) * (1 - t) * t + 3 * c * (1 - t) * t * t + d * t * t * t
-	// 5: quartic bspline (4th dimension)
-	o = a * (1 - t) * (1 - t) * (1 - t) * (1 - t) + 4 * b * (1 - t) * (1 - t) * (1 - t) * t + 6 * c * (1 - t) * (1 - t) * t * t + 4 * d * (1 - t) * t * t * t + e * t * t * t * t
-
-	// n: arbitrary dimension bspline
+arbitrary dimension bspline
 double factorial(int n)
 {
 	int i;
@@ -417,4 +37,154 @@ double bsplinesample(int dimensions, double t, double *param)
 		o += param[i] * factorial(dimensions)/(factorial(i)*factorial(dimensions-i)) * pow(t, i) * pow(1 - t, dimensions - i);
 }
 */
+
+#include <math.h>
+#include "curves.h"
+
+// usage:
+// to expand a 5x5 patch to 21x21 vertices (4x4 tesselation), one might use this call:
+// Q3PatchSubdivideFloat(3, sizeof(float[3]), outvertices, 5, 5, sizeof(float[3]), patchvertices, 4, 4);
+void Q3PatchTesselateFloat(int numcomponents, int outputstride, float *outputvertices, int patchwidth, int patchheight, int inputstride, float *patchvertices, int tesselationwidth, int tesselationheight)
+{
+	int k, l, x, y, component, outputwidth = (patchwidth-1)*tesselationwidth+1;
+	float px, py, *v0, *v1, a, b, c, *cp[3][3], temp[3][64];
+	// iterate over the individual 3x3 quadratic spline surfaces one at a time
+	// expanding them to fill the output array (with some overlap to ensure
+	// the edges are filled)
+	for (k = 0;k < patchheight-1;k += 2)
+	{
+		for (l = 0;l < patchwidth-1;l += 2)
+		{
+			// set up control point pointers for quicker lookup later
+			for (y = 0;y < 3;y++)
+				for (x = 0;x < 3;x++)
+					cp[y][x] = (float *)((unsigned char *)patchvertices + ((k+y)*patchwidth+(l+x)) * inputstride);
+			// for each row...
+			for (y = 0;y <= tesselationheight*2;y++)
+			{
+				// calculate control points for this row by collapsing the 3
+				// rows of control points to one row using py
+				py = (float)y / (float)(tesselationheight*2);
+				// calculate quadratic spline weights for py
+				a = ((1.0f - py) * (1.0f - py));
+				b = ((1.0f - py) * (2.0f * py));
+				c = ((       py) * (       py));
+				for (component = 0;component < numcomponents;component++)
+				{
+					temp[0][component] = cp[0][0][component] * a + cp[1][0][component] * b + cp[2][0][component] * c;
+					temp[1][component] = cp[0][1][component] * a + cp[1][1][component] * b + cp[2][1][component] * c;
+					temp[2][component] = cp[0][2][component] * a + cp[1][2][component] * b + cp[2][2][component] * c;
+				}
+				// fetch a pointer to the beginning of the output vertex row
+				v = (float *)((unsigned char *)outputvertices + ((k * tesselationheight + y) * outputwidth + l * tesselationwidth) * outputstride);
+				// for each column of the row...
+				for (x = 0;x <= (tesselationwidth*2);x++)
+				{
+					// calculate point based on the row control points
+					px = (float)x / (float)(tesselationwidth*2);
+					// calculate quadratic spline weights for px
+					// (could be precalculated)
+					a = ((1.0f - px) * (1.0f - px));
+					b = ((1.0f - px) * (2.0f * px));
+					c = ((       px) * (       px));
+					for (component = 0;component < numcomponents;component++)
+						v[component] = temp[0][component] * a + temp[1][component] * b + temp[2][component] * c;
+					// advance to next output vertex using outputstride
+					// (the next vertex may not be directly following this
+					// one, as this may be part of a larger structure)
+					v = (float *)((unsigned char *)v + outputstride);
+				}
+			}
+		}
+	}
+#if 0
+	// enable this if you want results printed out
+	printf("vertices[%i][%i] =\n{\n", (patchheight-1)*tesselationheight+1, (patchwidth-1)*tesselationwidth+1);
+	for (y = 0;y < (patchheight-1)*tesselationheight+1;y++)
+	{
+		for (x = 0;x < (patchwidth-1)*tesselationwidth+1;x++)
+		{
+			printf("(");
+			for (component = 0;component < numcomponents;component++)
+				printf("%f ", outputvertices[(y*((patchwidth-1)*tesselationwidth+1)+x)*numcomponents+component]);
+			printf(") ");
+		}
+		printf("\n");
+	}
+	printf("}\n");
+#endif
+}
+
+// returns how much tesselation of each segment is needed to remain under tolerance
+int Q3PatchTesselationOnX(int patchwidth, int patchheight, int components, const float *in, float tolerance)
+{
+	int c, x, y;
+	const float *patch;
+	float deviation, squareddeviation, bestsquareddeviation;
+	bestsquareddeviation = 0;
+	for (y = 0;y < patchheight;y++)
+	{
+		for (x = 0;x < patchwidth-1;x += 2)
+		{
+			squareddeviation = 0;
+			for (c = 0, patch = in + ((y * patchwidth) + x) * components;c < components;c++, patch++)
+			{
+				deviation = patch[components] * 0.5f - patch[0] * 0.25f - patch[2*components] * 0.25f;
+				squareddeviation += deviation*deviation;
+			}
+			if (bestsquareddeviation < squareddeviation)
+				bestsquareddeviation = squareddeviation;
+		}
+	}
+	return (int)floor(log(sqrt(bestsquareddeviation) / tolerance) / log(2)) + 1;
+}
+
+// returns how much tesselation of each segment is needed to remain under tolerance
+int Q3PatchTesselationOnY(int patchwidth, int patchheight, int components, const float *in, float tolerance)
+{
+	int c, x, y;
+	const float *patch;
+	float deviation, squareddeviation, bestsquareddeviation;
+	bestsquareddeviation = 0;
+	for (y = 0;y < patchheight-1;y += 2)
+	{
+		for (x = 0;x < patchwidth;x++)
+		{
+			squareddeviation = 0;
+			for (c = 0, patch = in + ((y * patchwidth) + x) * components;c < components;c++, patch++)
+			{
+				deviation = patch[patchwidth*components] * 0.5f - patch[0] * 0.25f - patch[2*patchwidth*components] * 0.25f;
+				squareddeviation += deviation*deviation;
+			}
+			if (bestsquareddeviation < squareddeviation)
+				bestsquareddeviation = squareddeviation;
+		}
+	}
+	return (int)floor(log(sqrt(bestsquareddeviation) / tolerance) / log(2)) + 1;
+}
+
+// calculates elements for a grid of vertices
+// (such as those produced by Q3PatchTesselate)
+// (note: width and height are the actual vertex size, this produces
+//  (width-1)*(height-1)*2 triangles, 3 elements each)
+void Q3PatchTriangleElements(int *elements, int width, int height)
+{
+	int x, y, row0, row1;
+	for (y = 0;y < height - 1;y++)
+	{
+		row0 = (y + 0) * width;
+		row1 = (y + 1) * width;
+		for (x = 0;x < width - 1;x++)
+		{
+			*elements++ = row0;
+			*elements++ = row1;
+			*elements++ = row0 + 1;
+			*elements++ = row1;
+			*elements++ = row1 + 1;
+			*elements++ = row0 + 1;
+			row0++;
+			row1++;
+		}
+	}
+}
 
