@@ -2284,143 +2284,69 @@ void M_Help_Key (int key)
 //=============================================================================
 /* QUIT MENU */
 
-int		msgNumber;
+char *m_quit_message[9];
 int		m_quit_prevstate;
 qboolean	wasInMenus;
 
-char *quitMessage [] =
+
+int M_QuitMessage(char *line1, char *line2, char *line3, char *line4, char *line5, char *line6, char *line7, char *line8)
 {
-/* .........1.........2.... */
-/*
-  "  Are you gonna quit    ",
-  "  this game just like   ",
-  "   everything else?     ",
-  "                        ",
+	m_quit_message[0] = line1;
+	m_quit_message[1] = line2;
+	m_quit_message[2] = line3;
+	m_quit_message[3] = line4;
+	m_quit_message[4] = line5;
+	m_quit_message[5] = line6;
+	m_quit_message[6] = line7;
+	m_quit_message[7] = line8;
+	m_quit_message[8] = NULL;
+	return 1;
+}
 
-  " Milord, methinks that  ",
-  "   thou art a lowly     ",
-  " quitter. Is this true? ",
-  "                        ",
-
-  " Do I need to bust your ",
-  "  face open for trying  ",
-  "        to quit?        ",
-  "                        ",
-
-  " Man, I oughta smack you",
-  "   for trying to quit!  ",
-  "     Press Y to get     ",
-  "      smacked out.      ",
-
-  " Press Y to quit like a ",
-  "   big loser in life.   ",
-  "  Press N to stay proud ",
-  "    and successful!     ",
-
-  "   If you press Y to    ",
-  "  quit, I will summon   ",
-  "  Satan all over your   ",
-  "      hard drive!       ",
-
-  "  Um, Asmodeus dislikes ",
-  " his children trying to ",
-  " quit. Press Y to return",
-  "   to your Tinkertoys.  ",
-
-  "  If you quit now, I'll ",
-  "  throw a blanket-party ",
-  "   for you next time!   ",
-  "                        "
-  */
-
-/* .........1.........2.... */
-  "                        ",
-  "    Tired of fragging   ",
-  "        already?        ",
-  "                        ",
-
-  "                        ",
-  "  Quit now and forfeit  ",
-  "     your bodycount?    ",
-  "                        ",
-
-  "                        ",
-  "    Are you sure you    ",
-  "      want to quit?     ",
-  "                        ",
-
-  "                        ",
-  "   Off to do something  ",
-  "      constructive?     ",
-  "                        ",
-};
-
-char *goodvsbad2quitMessage [] =
+int M_ChooseQuitMessage(int request)
 {
-/* .........1.........2.... */
-  "  Press Yes To Quit     ",
-  "  ...                   ",
-  "   Yes                  ",
-  "                        ",
-
-  " Do you really want to  ",
-  "   Quit?                ",
-  " Play Good vs bad 3!    ",
-  "                        ",
-
-  " All your quit are      ",
-  "  belong to long duck   ",
-  "        dong            ",
-  "                        ",
-
-  " Press Y to quit        ",
-  "                        ",
-  "  But are you too legit?",
-  "                        ",
-
-  " This game was made by  ",
-  "   e@chip-web.com       ",
-  "  It is by far the best ",
-  "    game ever made.     ",
-
-  "   Even I really dont   ",
-  "  know of a game better ",
-  "  Press Y to quit       ",
-  "   like rougue chedder  ",
-
-  "  After you stop playing",
-  " tell the guys who made ",
-  " counterstrike to just  ",
-  "  kill themselves now   ",
-
-  "  Press Y to exit to DOS",
-  "                        ",
-  "  SSH login as user Y   ",
-  "   to exit to Linux     "
-
-  "                        ",
-  "    Press Y like you    ",
-  "    were waanderers     ",
-  "        from Ys'        ",
-
-  "                        ",
-  "  This game was made in ",
-  "     Nippon like the SS ",
-  " announcer's saying ipon",
-
-  "                        ",
-  "    you                 ",
-  "      want to quit?     ",
-  "                        ",
-
-  "                        ",
-  "   Please stop playing  ",
-  "      this stupid game  ",
-  "                        ",
+	switch (gamemode)
+	{
+	case GAME_NORMAL:
+	case GAME_HIPNOTIC:
+	case GAME_ROGUE:
+	case GAME_NEHAHRA:
+		if (request-- == 0) return M_QuitMessage("Are you gonna quit","this game just like","everything else?",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Milord, methinks that","thou art a lowly","quitter. Is this true?",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Do I need to bust your","face open for trying","to quit?",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Man, I oughta smack you","for trying to quit!","Press Y to get","smacked out.",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Press Y to quit like a","big loser in life.","Press N to stay proud","and successful!",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("If you press Y to","quit, I will summon","Satan all over your","hard drive!",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Um, Asmodeus dislikes","his children trying to","quit. Press Y to return","to your Tinkertoys.",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("If you quit now, I'll","throw a blanket-party","for you next time!",NULL,NULL,NULL,NULL,NULL);
+		break;
+	case GAME_GOODVSBAD2:
+		if (request-- == 0) return M_QuitMessage("Press Yes To Quit","...","Yes",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Do you really want to","Quit?","Play Good vs bad 3!",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("All your quit are","belong to long duck","dong",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Press Y to quit","","But are you too legit?",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("This game was made by","e@chip-web.com","It is by far the best","game ever made.",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Even I really dont","know of a game better","Press Y to quit","like rougue chedder",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("After you stop playing","tell the guys who made","counterstrike to just","kill themselves now",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Press Y to exit to DOS","","SSH login as user Y","to exit to Linux",NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Press Y like you","were waanderers","from Ys'",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("This game was made in","Nippon like the SS","announcer's saying ipon",NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("you","want to quit?",NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Please stop playing","this stupid game",NULL,NULL,NULL,NULL,NULL,NULL);
+		break;
+	default:
+		if (request-- == 0) return M_QuitMessage("Tired of fragging already?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Quit now and forfeit your bodycount?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Are you sure you want to quit?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		if (request-- == 0) return M_QuitMessage("Off to do something constructive?",NULL,NULL,NULL,NULL,NULL,NULL,NULL);
+		break;
+	}
+	return 0;
 };
 
 void M_Menu_Quit_f (void)
 {
+	int n;
 	if (m_state == m_quit)
 		return;
 	wasInMenus = (key_dest == key_menu);
@@ -2428,7 +2354,10 @@ void M_Menu_Quit_f (void)
 	m_quit_prevstate = m_state;
 	m_state = m_quit;
 	m_entersound = true;
-	msgNumber = rand()&3; //&7;
+	// count how many there are
+	for (n = 0;M_ChooseQuitMessage(n);n++);
+	// choose one
+	M_ChooseQuitMessage(rand() % n);
 }
 
 
@@ -2459,18 +2388,28 @@ void M_Quit_Key (int key)
 	default:
 		break;
 	}
-
 }
-
 
 void M_Quit_Draw (void)
 {
-	M_Background(208, 48);
-	M_DrawTextBox(0, 0, 24, 4);
-	M_Print(8,  8, quitMessage[msgNumber*4+0]);
-	M_Print(8, 16, quitMessage[msgNumber*4+1]);
-	M_Print(8, 24, quitMessage[msgNumber*4+2]);
-	M_Print(8, 32, quitMessage[msgNumber*4+3]);
+	int i, l, linelength, firstline, lastline, lines;
+	for (i = 0, linelength = 0, firstline = 9999, lastline = -1;m_quit_message[i];i++)
+	{
+		if ((l = strlen(m_quit_message[i])))
+		{
+			if (firstline > i)
+				firstline = i;
+			if (lastline < i)
+				lastline = i;
+			if (linelength < l)
+				linelength = l;
+		}
+	}
+	lines = (lastline - firstline) + 1;
+	M_Background(linelength * 8 + 16, lines * 8 + 16);
+	M_DrawTextBox(0, 0, linelength, lines);
+	for (i = 0, l = firstline;i < lines;i++, l++)
+		M_Print(8 + 4 * (linelength - strlen(m_quit_message[l])), 8 + 8 * i, m_quit_message[l]);
 }
 
 //=============================================================================
