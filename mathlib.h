@@ -124,40 +124,24 @@ float r2 = (r) * 0.5 * (M_PI / 180);\
 
 #define VectorCopy4(a,b) {(b)[0]=(a)[0];(b)[1]=(a)[1];(b)[2]=(a)[2];(b)[3]=(a)[3];}
 
-void VectorMASlow (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
-
-vec_t _DotProduct (vec3_t v1, vec3_t v2);
-void _VectorSubtract (vec3_t veca, vec3_t vecb, vec3_t out);
-void _VectorAdd (vec3_t veca, vec3_t vecb, vec3_t out);
-void _VectorCopy (vec3_t in, vec3_t out);
-
 vec_t Length (vec3_t v);
 float VectorNormalizeLength (vec3_t v);		// returns vector length
 float VectorNormalizeLength2 (vec3_t v, vec3_t dest);		// returns vector length
-void _VectorInverse (vec3_t v);
-void _VectorScale (vec3_t in, vec_t scale, vec3_t out);
-int Q_log2(int val);
-void _VectorNormalizeFast (vec3_t v);
-
-float Q_RSqrt(float number);
 
 #define NUMVERTEXNORMALS	162
 extern float m_bytenormals[NUMVERTEXNORMALS][3];
 
-qbyte NormalToByte(vec3_t n);
+qbyte NormalToByte(const vec3_t n);
 void ByteToNormal(qbyte num, vec3_t n);
 
-void R_ConcatRotations (float in1[3][3], float in2[3][3], float out[3][3]);
-void R_ConcatTransforms (float in1[3][4], float in2[3][4], float out[3][4]);
+void R_ConcatRotations (const float in1[3][3], const float in2[3][3], float out[3][3]);
+void R_ConcatTransforms (const float in1[3][4], const float in2[3][4], float out[3][4]);
 
-void FloorDivMod (double numer, double denom, int *quotient, int *rem);
-int GreatestCommonDivisor (int i1, int i2);
-
-void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+void AngleVectors (const vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
 // LordHavoc: proper matrix version of AngleVectors
-void AngleVectorsFLU (vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
+void AngleVectorsFLU (const vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
 // LordHavoc: builds a [3][4] matrix
-void AngleMatrix (vec3_t angles, vec3_t translate, vec_t matrix[][4]);
+void AngleMatrix (const vec3_t angles, const vec3_t translate, vec_t matrix[][4]);
 
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
