@@ -76,7 +76,6 @@ extern int		window_center_x, window_center_y;
 extern RECT		window_rect;
 
 extern qboolean	mouseinitialized;
-extern HWND		hwnd_dialog;
 
 extern HANDLE	hinput, houtput;
 

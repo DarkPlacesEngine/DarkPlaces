@@ -245,17 +245,9 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 		psprite->frames[i].type = frametype;
 
 		if (frametype == SPR_SINGLE)
-		{
-			pframetype = (dspriteframetype_t *)
-					Mod_LoadSpriteFrame (pframetype + 1,
-										 &psprite->frames[i].frameptr, i, bytesperpixel);
-		}
+			pframetype = (dspriteframetype_t *) Mod_LoadSpriteFrame (pframetype + 1, &psprite->frames[i].frameptr, i, bytesperpixel);
 		else
-		{
-			pframetype = (dspriteframetype_t *)
-					Mod_LoadSpriteGroup (pframetype + 1,
-										 &psprite->frames[i].frameptr, i, bytesperpixel);
-		}
+			pframetype = (dspriteframetype_t *) Mod_LoadSpriteGroup (pframetype + 1, &psprite->frames[i].frameptr, i, bytesperpixel);
 	}
 
 	mod->type = mod_sprite;

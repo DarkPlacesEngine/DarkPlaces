@@ -45,11 +45,7 @@
 #include <GL/fxmesa.h>
 #include <glide/sst1vid.h>
 
-#define WARP_WIDTH              320
-#define WARP_HEIGHT             200
 
-
-//unsigned short	d_8to16table[256];
 unsigned		d_8to24table[256];
 unsigned char	d_15to8table[65536];
 
@@ -75,17 +71,12 @@ const char *gl_renderer;
 const char *gl_version;
 const char *gl_extensions;
 
-void (*qglColorTableEXT) (int, int, int, int, int, const void*);
-void (*qgl3DfxSetPaletteEXT) (GLuint *);
 void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (*qglSelectTexture) (GLenum);
 
 int gl_mtex_enum = 0;
 
 // LordHavoc: in GLX these are never set, simply provided to make the rest of the code work
-qboolean is8bit = false;
-qboolean isPermedia = false;
-qboolean isATI = false;
 qboolean isG200 = false;
 qboolean isRagePro = false;
 qboolean gl_mtexable = false;
@@ -131,13 +122,17 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
+// LordHavoc: FIXME or something?
+void VID_CheckVertexArrays()
+{
+}
+
 /*
-	CheckMultiTextureExtensions
+	VID_CheckMultitexture
 
 	Check for ARB, SGIS, or EXT multitexture support
 */
-void
-CheckMultiTextureExtensions ( void )
+void VID_CheckMultitexture()
 {
 	Con_Printf ("Checking for multitexture... ");
 	if (COM_CheckParm ("-nomtex"))
@@ -158,16 +153,17 @@ CheckMultiTextureExtensions ( void )
 		qglSelectTexture = (void *)dlsym(dlhand, "glActiveTextureARB");
 		gl_mtex_enum = GL_TEXTURE0_ARB;
 		gl_mtexable = true;
-	} else if (strstr(gl_extensions, "GL_SGIS_multitexture "))
+	}
+	else if (strstr(gl_extensions, "GL_SGIS_multitexture "))
 	{
 		Con_Printf ("GL_SGIS_multitexture\n");
 		qglMTexCoord2f = (void *)dlsym(dlhand, "glMTexCoord2fSGIS");
 		qglSelectTexture = (void *)dlsym(dlhand, "glSelectTextureSGIS");
 		gl_mtex_enum = TEXTURE0_SGIS;
 		gl_mtexable = true;
-	} else {
-		Con_Printf ("none found\n");
 	}
+	else
+		Con_Printf ("none found\n");
 	dlclose(dlhand);
 	dlhand = NULL;		
 }
@@ -175,43 +171,8 @@ CheckMultiTextureExtensions ( void )
 
 typedef void (GLAPIENTRY *gl3DfxSetDitherModeEXT_FUNC) (GrDitherMode_t mode);
 
-/*
-===============
-GL_Init
-===============
-*/
-void GL_Init (void)
+void VID_SetupDithering()
 {
-	gl_vendor = glGetString (GL_VENDOR);
-	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
-	gl_renderer = glGetString (GL_RENDERER);
-	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
-
-	gl_version = glGetString (GL_VERSION);
-	Con_Printf ("GL_VERSION: %s\n", gl_version);
-	gl_extensions = glGetString (GL_EXTENSIONS);
-	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
-
-	CheckMultiTextureExtensions ();
-
-	glCullFace(GL_FRONT);
-	glEnable(GL_TEXTURE_2D);
-
-	glEnable(GL_ALPHA_TEST);
-	glAlphaFunc(GL_GREATER, 0.666);
-
-	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
-	glShadeModel (GL_FLAT);
-
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-
 	Con_Printf ("Dithering: ");
 
 	dlhand = dlopen (NULL, RTLD_LAZY);
@@ -339,83 +300,7 @@ findres(int *width, int *height)
 	return GR_RESOLUTION_640x480;
 }
 
-qboolean VID_Is8bit(void)
-{
-	return is8bit;
-}
-
-typedef void (GLAPIENTRY *glColorTableEXT_FUNC) (GLenum, GLenum, GLsizei, 
-		GLenum, GLenum, const GLvoid *);
-typedef void (GLAPIENTRY *gl3DfxSetPaletteEXT_FUNC) (GLuint *pal);
-
-void VID_Init8bitPalette()
-{
-	// Check for 8bit Extensions and initialize them.
-	int i;
-
-	dlhand = dlopen (NULL, RTLD_LAZY);
-
-	Con_SafePrintf ("8-bit GL extensions: ");
-
-	if (dlhand == NULL) {
-		Con_SafePrintf ("unable to check.\n");
-		return;
-	}
-
-	if (COM_CheckParm("-no8bit")) {
-		Con_SafePrintf("disabled.\n");
-		return;
-	}
-
-	if (strstr(gl_extensions, "3DFX_set_global_palette") && (qgl3DfxSetPaletteEXT = dlsym(dlhand, "gl3DfxSetPaletteEXT")) != NULL)
-	{
-		GLubyte table[256][4];
-		char *oldpal;
-
-		Con_SafePrintf("3DFX_set_global_palette.\n");
-		glEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
-		oldpal = (char *) d_8to24table; //d_8to24table3dfx;
-		for (i=0;i<256;i++)
-		{
-			table[i][2] = *oldpal++;
-			table[i][1] = *oldpal++;
-			table[i][0] = *oldpal++;
-			table[i][3] = 255;
-			oldpal++;
-		}
-		qgl3DfxSetPaletteEXT((GLuint *)table);
-		is8bit = true;
-	} else if (strstr(gl_extensions, "GL_EXT_shared_texture_palette")) {
-		char thePalette[256*3];
-		char *oldPalette, *newPalette;
-		glColorTableEXT_FUNC load_texture = NULL;
-
-		Con_SafePrintf("GL_EXT_shared.\n");
-		load_texture = (void *) dlsym(dlhand, "glColorTableEXT");
-
-		glEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
-		oldPalette = (char *) d_8to24table; //d_8to24table3dfx;
-		newPalette = thePalette;
-		for (i=0;i<256;i++) {
-			*newPalette++ = *oldPalette++;
-			*newPalette++ = *oldPalette++;
-			*newPalette++ = *oldPalette++;
-			oldPalette++;
-		}
-		load_texture(GL_SHARED_TEXTURE_PALETTE_EXT, GL_RGB, 256, GL_RGB, GL_UNSIGNED_BYTE, (void *) thePalette);
-		is8bit = true;
-	} else {
-		Con_SafePrintf ("not found.\n");
-	}
-
-	dlclose(dlhand);
-	dlhand = NULL;
-}
-
-extern void Check_Gamma (unsigned char *pal);
-void VID_Setup15to8Palette ();
-
-void VID_Init(unsigned char *palette)
+void VID_Init()
 {
 	int i;
 	GLint attribs[32];
@@ -476,18 +361,7 @@ void VID_Init(unsigned char *palette)
 
 	GL_Init();
 
-	snprintf(gldir, sizeof(gldir), "%s/glquake", com_gamedir);
-	Sys_mkdir (gldir);
-
-	VID_SetPalette(palette);
-
-	Check_Gamma(palette);
-
-	// Check for 3DFX Extensions and initialize them.
-	VID_Init8bitPalette();
-
-	if (is8bit) // LordHavoc: avoid calculating 15to8 table if it won't be used
-		VID_Setup15to8Palette ();
+	VID_SetupDithering(); // 3DFX specific
 
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
 

@@ -37,9 +37,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/extensions/xf86dga.h>
 #include <X11/extensions/xf86vmode.h>
 
-#define WARP_WIDTH              320
-#define WARP_HEIGHT             200
-
 static Display *dpy = NULL;
 static int scrnum;
 static Window win;
@@ -51,7 +48,6 @@ static GLXContext ctx = NULL;
 #define X_MASK (KEY_MASK | MOUSE_MASK | VisibilityChangeMask | StructureNotifyMask )
 
 
-unsigned short	d_8to16table[256];
 unsigned		d_8to24table[256];
 unsigned char	d_15to8table[65536];
 
@@ -59,10 +55,11 @@ cvar_t	vid_mode = {"vid_mode","0",false};
  
 viddef_t	vid;				// global video state
 
-static qboolean        mouse_avail;
-static qboolean        mouse_active;
-static int   mx, my;
-static int	old_mouse_x, old_mouse_y;
+static qboolean        mouse_avail = true;
+static qboolean        mouse_active = false;
+static float   mouse_x, mouse_y;
+static float	old_mouse_x, old_mouse_y;
+static int p_mouse_x, p_mouse_y;
 
 static cvar_t in_mouse = {"in_mouse", "1", false};
 static cvar_t in_dgamouse = {"in_dgamouse", "1", false};
@@ -91,8 +88,6 @@ const char *gl_renderer;
 const char *gl_version;
 const char *gl_extensions;
 
-void (*qglColorTableEXT) (int, int, int, int, int, const void*);
-void (*qgl3DfxSetPaletteEXT) (GLuint *);
 void (*qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (*qglSelectTexture) (GLenum);
 
@@ -102,149 +97,117 @@ void (*qglSelectTexture) (GLenum);
 int gl_mtex_enum = 0;
 
 // LordHavoc: in GLX these are never set, simply provided to make the rest of the code work
-qboolean is8bit = false;
-qboolean isPermedia = false;
-qboolean isATI = false;
 qboolean isG200 = false;
 qboolean isRagePro = false;
 qboolean gl_mtexable = false;
 qboolean gl_arrays = false;
 
 /*-----------------------------------------------------------------------*/
-void D_BeginDirectRect (int x, int y, byte *pbitmap, int width, int height)
+static int
+XLateKey(XKeyEvent *ev/*, qboolean modified*/)
 {
-}
-
-void D_EndDirectRect (int x, int y, int width, int height)
-{
-}
-
-static int XLateKey(XKeyEvent *ev)
-{
-
-	int key;
-	char buf[64];
+	char tmp[2];
+	int key = 0;
 	KeySym keysym;
 
-	key = 0;
+/*	if (!modified) {*/
+		keysym = XLookupKeysym(ev, 0);
+/*	} else {
+		XLookupString(ev, tmp, 1, &keysym, NULL);
+	}*/
 
-	XLookupString(ev, buf, sizeof buf, &keysym, 0);
+	switch(keysym) {
+		case XK_KP_Page_Up:	key = KP_PGUP; break;
+		case XK_Page_Up:	key = K_PGUP; break;
 
-	switch(keysym)
-	{
-		case XK_KP_Page_Up:	 
-		case XK_Page_Up:	 key = K_PGUP; break;
+		case XK_KP_Page_Down:	key = KP_PGDN; break;
+		case XK_Page_Down:	key = K_PGDN; break;
 
-		case XK_KP_Page_Down: 
-		case XK_Page_Down:	 key = K_PGDN; break;
+		case XK_KP_Home:	key = KP_HOME; break;
+		case XK_Home:		key = K_HOME; break;
 
-		case XK_KP_Home: 
-		case XK_Home:	 key = K_HOME; break;
+		case XK_KP_End:		key = KP_END; break;
+		case XK_End:		key = K_END; break;
 
-		case XK_KP_End:  
-		case XK_End:	 key = K_END; break;
+		case XK_KP_Left:	key = KP_LEFTARROW; break;
+		case XK_Left:		key = K_LEFTARROW; break;
 
-		case XK_KP_Left: 
-		case XK_Left:	 key = K_LEFTARROW; break;
+		case XK_KP_Right:	key = KP_RIGHTARROW; break;
+		case XK_Right:		key = K_RIGHTARROW; break;
 
-		case XK_KP_Right: 
-		case XK_Right:	key = K_RIGHTARROW;		break;
+		case XK_KP_Down:	key = KP_DOWNARROW; break;
+		case XK_Down:		key = K_DOWNARROW; break;
 
-		case XK_KP_Down: 
-		case XK_Down:	 key = K_DOWNARROW; break;
+		case XK_KP_Up:		key = KP_UPARROW; break;
+		case XK_Up:			key = K_UPARROW; break;
 
-		case XK_KP_Up:   
-		case XK_Up:		 key = K_UPARROW;	 break;
+		case XK_Escape:		key = K_ESCAPE; break;
 
-		case XK_Escape: key = K_ESCAPE;		break;
+		case XK_KP_Enter:	key = KP_ENTER; break;
+		case XK_Return:		key = K_ENTER; break;
 
-		case XK_KP_Enter: 
-		case XK_Return: key = K_ENTER;		 break;
+		case XK_Tab:		key = K_TAB; break;
 
-		case XK_Tab:		key = K_TAB;			 break;
+		case XK_F1:			key = K_F1; break;
+		case XK_F2:			key = K_F2; break;
+		case XK_F3:			key = K_F3; break;
+		case XK_F4:			key = K_F4; break;
+		case XK_F5:			key = K_F5; break;
+		case XK_F6:			key = K_F6; break;
+		case XK_F7:			key = K_F7; break;
+		case XK_F8:			key = K_F8; break;
+		case XK_F9:			key = K_F9; break;
+		case XK_F10:		key = K_F10; break;
+		case XK_F11:		key = K_F11; break;
+		case XK_F12:		key = K_F12; break;
 
-		case XK_F1:		 key = K_F1;				break;
+		case XK_BackSpace:	key = K_BACKSPACE; break;
 
-		case XK_F2:		 key = K_F2;				break;
+		case XK_KP_Delete:	key = KP_DEL; break;
+		case XK_Delete:		key = K_DEL; break;
 
-		case XK_F3:		 key = K_F3;				break;
-
-		case XK_F4:		 key = K_F4;				break;
-
-		case XK_F5:		 key = K_F5;				break;
-
-		case XK_F6:		 key = K_F6;				break;
-
-		case XK_F7:		 key = K_F7;				break;
-
-		case XK_F8:		 key = K_F8;				break;
-
-		case XK_F9:		 key = K_F9;				break;
-
-		case XK_F10:		key = K_F10;			 break;
-
-		case XK_F11:		key = K_F11;			 break;
-
-		case XK_F12:		key = K_F12;			 break;
-
-		case XK_BackSpace: key = K_BACKSPACE; break;
-
-		case XK_KP_Delete: 
-		case XK_Delete: key = K_DEL; break;
-
-		case XK_Pause:	key = K_PAUSE;		 break;
+		case XK_Pause:		key = K_PAUSE; break;
 
 		case XK_Shift_L:
-		case XK_Shift_R:	key = K_SHIFT;		break;
+		case XK_Shift_R:	key = K_SHIFT; break;
 
-		case XK_Execute: 
-		case XK_Control_L: 
-		case XK_Control_R:	key = K_CTRL;		 break;
+		case XK_Execute:
+		case XK_Control_L:
+		case XK_Control_R:	key = K_CTRL; break;
 
-		case XK_Alt_L:	
-		case XK_Meta_L: 
-		case XK_Alt_R:	
-		case XK_Meta_R: key = K_ALT;			break;
+		case XK_Mode_switch:
+		case XK_Alt_L:
+		case XK_Meta_L:
+		case XK_Alt_R:
+		case XK_Meta_R:		key = K_ALT; break;
 
-		case XK_KP_Begin: key = '5';	break;
+		case XK_Caps_Lock:	key = K_CAPSLOCK; break;
+		case XK_KP_Begin:	key = KP_5; break;
 
-		case XK_KP_Insert: 
-		case XK_Insert:key = K_INS; break;
+		case XK_Insert:		key = K_INS; break;
+		case XK_KP_Insert:	key = KP_INS; break;
 
-		case XK_KP_Multiply: key = '*'; break;
-		case XK_KP_Add:  key = '+'; break;
-		case XK_KP_Subtract: key = '-'; break;
-		case XK_KP_Divide: key = '/'; break;
+		case XK_KP_Multiply:	key = KP_MULTIPLY; break;
+		case XK_KP_Add:		key = KP_PLUS; break;
+		case XK_KP_Subtract:	key = KP_MINUS; break;
+		case XK_KP_Divide:	key = KP_DIVIDE; break;
 
-#if 0
-		case 0x021: key = '1';break;/* [!] */
-		case 0x040: key = '2';break;/* [@] */
-		case 0x023: key = '3';break;/* [#] */
-		case 0x024: key = '4';break;/* [$] */
-		case 0x025: key = '5';break;/* [%] */
-		case 0x05e: key = '6';break;/* [^] */
-		case 0x026: key = '7';break;/* [&] */
-		case 0x02a: key = '8';break;/* [*] */
-		case 0x028: key = '9';;break;/* [(] */
-		case 0x029: key = '0';break;/* [)] */
-		case 0x05f: key = '-';break;/* [_] */
-		case 0x02b: key = '=';break;/* [+] */
-		case 0x07c: key = '\'';break;/* [|] */
-		case 0x07d: key = '[';break;/* [}] */
-		case 0x07b: key = ']';break;/* [{] */
-		case 0x022: key = '\'';break;/* ["] */
-		case 0x03a: key = ';';break;/* [:] */
-		case 0x03f: key = '/';break;/* [?] */
-		case 0x03e: key = '.';break;/* [>] */
-		case 0x03c: key = ',';break;/* [<] */
-#endif
+		/* For Sun keyboards */
+		case XK_F27:		key = K_HOME; break;
+		case XK_F29:		key = K_PGUP; break;
+		case XK_F33:		key = K_END; break;
+		case XK_F35:		key = K_PGDN; break;
 
 		default:
-			key = *(unsigned char*)buf;
-			if (key >= 'A' && key <= 'Z')
-				key = key - 'A' + 'a';
+			if (keysym < 128) {
+				/* ASCII keys */
+				key = keysym;
+				if (/*!modified && */((key >= 'A') && (key <= 'Z'))) {
+					key = key + ('a' - 'A');
+				}
+			}
 			break;
-	} 
+	}
 
 	return key;
 }
@@ -273,19 +236,20 @@ static Cursor CreateNullCursor(Display *display, Window root)
 
 static void install_grabs(void)
 {
+        XWindowAttributes attribs_1;
+        XSetWindowAttributes attribs_2;
+
+        XGetWindowAttributes(dpy, win, &attribs_1);
+        attribs_2.event_mask = attribs_1.your_event_mask | KEY_MASK | MOUSE_MASK;
+        XChangeWindowAttributes(dpy, win, CWEventMask, &attribs_2);
 
 // inviso cursor
 	XDefineCursor(dpy, win, CreateNullCursor(dpy, win));
 
-	XGrabPointer(dpy, win,
-				 True,
-				 0,
-				 GrabModeAsync, GrabModeAsync,
-				 win,
-				 None,
-				 CurrentTime);
+	XGrabPointer(dpy, win,  True, 0, GrabModeAsync, GrabModeAsync,
+		     win, None, CurrentTime);
 
-	if (in_dgamouse.value) {
+/*	if (in_dgamouse.value) {
 		int MajorVersion, MinorVersion;
 
 		if (!XF86DGAQueryVersion(dpy, &MajorVersion, &MinorVersion)) { 
@@ -297,18 +261,16 @@ static void install_grabs(void)
 			XF86DGADirectVideo(dpy, DefaultScreen(dpy), XF86DGADirectMouse);
 			XWarpPointer(dpy, None, win, 0, 0, 0, 0, 0, 0);
 		}
-	} else {
+	} else {*/
 		XWarpPointer(dpy, None, win,
 					 0, 0, 0, 0,
 					 vid.width / 2, vid.height / 2);
-	}
+/*	}*/
 
-	XGrabKeyboard(dpy, win,
-				  False,
-				  GrabModeAsync, GrabModeAsync,
-				  CurrentTime);
+	XGrabKeyboard(dpy, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
 
 	mouse_active = true;
+	mouse_x = mouse_y = 0;
 
 //	XSync(dpy, True);
 }
@@ -318,10 +280,10 @@ static void uninstall_grabs(void)
 	if (!dpy || !win)
 		return;
 
-	if (dgamouse) {
+/*	if (dgamouse) {
 		dgamouse = false;
 		XF86DGADirectVideo(dpy, DefaultScreen(dpy), 0);
-	}
+	}*/
 
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
@@ -338,8 +300,6 @@ static void HandleEvents(void)
 //	KeySym ks;
 	int b;
 	qboolean dowarp = false;
-	int mwx = vid.width/2;
-	int mwy = vid.height/2;
 
 	if (!dpy)
 		return;
@@ -354,24 +314,47 @@ static void HandleEvents(void)
 			break;
 
 		case MotionNotify:
-			if (mouse_active) {
+        		if (dgamouse) {
+                		mouse_x += event.xmotion.x_root/* * in_dga_mouseaccel.value*/;
+                		mouse_y += event.xmotion.y_root/* * in_dga_mouseaccel.value*/;
+		        } else {
+		                if (!p_mouse_x && !p_mouse_y) {
+		                        Con_Printf("event->xmotion.x: %d\n", event.xmotion.x); 
+		                        Con_Printf("event->xmotion.y: %d\n", event.xmotion.y); 
+		                }
+/*		                if (vid_fullscreen.value || _windowed_mouse.value) {*/
+		                        if (!event.xmotion.send_event) {
+		                                mouse_x += (event.xmotion.x - p_mouse_x);
+		                                mouse_y += (event.xmotion.y - p_mouse_y);
+		                                if (abs(vid.width/2 - event.xmotion.x) > vid.width / 4
+		                                    || abs(vid.height/2 - event.xmotion.y) > vid.height / 4) {
+		                                        dowarp = true;
+		                                }
+		                        }
+/*		                } else {
+		                        mouse_x += (event.xmotion.x - p_mouse_x);
+		                        mouse_y += (event.xmotion.y - p_mouse_y);
+		                }*/
+                		p_mouse_x = event.xmotion.x;
+                		p_mouse_y = event.xmotion.y;
+        		}
+        
+/*			if (mouse_active) {
 				if (dgamouse) {
-					mx += (event.xmotion.x + win_x) * 2;
-					my += (event.xmotion.y + win_y) * 2;
+					mouse_x += (event.xmotion.x + win_x) * 2;
+					mouse_y += (event.xmotion.y + win_y) * 2;
 				} 
-				else 
+				else
 				{
-					mx += ((int)event.xmotion.x - mwx) * 2;
-					my += ((int)event.xmotion.y - mwy) * 2;
+					mouse_x += ((int)event.xmotion.x - mwx) * 2;
+					mouse_y += ((int)event.xmotion.y - mwy) * 2;
 					mwx = event.xmotion.x;
 					mwy = event.xmotion.y;
 
-					if (mx || my)
+					if (mouse_x || mouse_y)
 						dowarp = true;
 				}
-			}
-			break;
-
+			}*/
 			break;
 
 		case ButtonPress:
@@ -412,7 +395,9 @@ static void HandleEvents(void)
 
 	if (dowarp) {
 		/* move the mouse to the window center again */
-		XWarpPointer(dpy, None, win, 0, 0, 0, 0, vid.width / 2, vid.height / 2);
+		p_mouse_x = vid.width / 2;
+		p_mouse_y = vid.height / 2;
+		XWarpPointer(dpy, None, win, 0, 0, 0, 0, p_mouse_x, p_mouse_y);
 	}
 
 }
@@ -434,7 +419,7 @@ static void IN_ActivateMouse( void )
 		return;
 
 	if (!mouse_active) {
-		mx = my = 0; // don't spazz
+		mouse_x = mouse_y = 0; // don't spazz
 		install_grabs();
 		mouse_active = true;
 	}
@@ -445,8 +430,10 @@ void VID_Shutdown(void)
 {
 	if (!ctx || !dpy)
 		return;
-	IN_DeactivateMouse();
+
 	if (dpy) {
+		uninstall_grabs();
+
 		if (ctx)
 			glXDestroyContext(dpy, ctx);
 		if (win)
@@ -482,7 +469,6 @@ void InitSig(void)
 	signal(SIGTERM, signal_handler);
 }
 
-/*
 void (*qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (*qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
 void (*qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
@@ -490,9 +476,8 @@ void (*qglArrayElement)(GLint i);
 void (*qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
 void (*qglMTexCoord2f)(GLenum, GLfloat, GLfloat);
 void (*qglSelectTexture)(GLenum);
-void (*glColorTableEXT)(int, int, int, int, int, const void*);
 
-void CheckVertexArrays (void)
+void VID_CheckVertexArrays (void)
 {
 	void *prjobj;
 	if (COM_CheckParm("-novertex"))
@@ -524,9 +509,8 @@ void CheckVertexArrays (void)
 	Con_Printf("...vertex array support disabled (not detected - get a better driver)\n");
 	dlclose(prjobj);
 }
-*/
 
-void CheckMultiTexture(void) 
+void VID_CheckMultiTexture(void) 
 {
 	void *prjobj;
 	qglMTexCoord2f = NULL;
@@ -565,36 +549,6 @@ void CheckMultiTexture(void)
 }
 
 /*
-===============
-GL_Init
-===============
-*/
-extern char *QSG_EXTENSIONS;
-void GL_Init (void)
-{
-	gl_vendor = glGetString (GL_VENDOR);
-	Con_Printf ("GL_VENDOR: %s\n", gl_vendor);
-	gl_renderer = glGetString (GL_RENDERER);
-	Con_Printf ("GL_RENDERER: %s\n", gl_renderer);
-
-	gl_version = glGetString (GL_VERSION);
-	Con_Printf ("GL_VERSION: %s\n", gl_version);
-	gl_extensions = glGetString (GL_EXTENSIONS);
-	Con_Printf ("GL_EXTENSIONS: %s\n", gl_extensions);
-
-//	Con_Printf ("%s %s\n", gl_renderer, gl_version);
-
-	CheckMultiTexture();
-//	CheckVertexArrays();
-
-	// LordHavoc: report supported extensions
-	Con_Printf ("\nQSG extensions: %s\n", QSG_EXTENSIONS);
-
-	glCullFace(GL_FRONT);
-	glAlphaFunc(GL_GREATER, 0.5);
-}
-
-/*
 =================
 GL_BeginRendering
 
@@ -605,9 +559,6 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 	*x = *y = 0;
 	*width = scr_width;
 	*height = scr_height;
-
-//    if (!wglMakeCurrent( maindc, baseRC ))
-//		Sys_Error ("wglMakeCurrent failed");
 
 //	glViewport (*x, *y, *width, *height);
 }
@@ -621,72 +572,7 @@ void GL_EndRendering (void)
 	glXSwapBuffers(dpy, win);
 }
 
-qboolean VID_Is8bit(void)
-{
-	return is8bit;
-}
-
-void VID_Init8bitPalette(void) 
-{
-	// Check for 8bit Extensions and initialize them.
-	int i;
-	void *prjobj;
-
-	if (!COM_CheckParm("-8bit"))
-		return;
-	if ((prjobj = dlopen(NULL, RTLD_LAZY)) == NULL)
-	{
-		Con_Printf("Unable to open symbol list for main program.\n");
-		return;
-	}
-
-	if (strstr(gl_extensions, "3DFX_set_global_palette") && (qgl3DfxSetPaletteEXT = dlsym(prjobj, "gl3DfxSetPaletteEXT")) != NULL)
-	{
-		GLubyte table[256][4];
-		char *oldpal;
-
-		Con_SafePrintf("8-bit GL extensions enabled.\n");
-		glEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
-		oldpal = (char *) d_8to24table; //d_8to24table3dfx;
-		for (i=0;i<256;i++)
-		{
-			table[i][2] = *oldpal++;
-			table[i][1] = *oldpal++;
-			table[i][0] = *oldpal++;
-			table[i][3] = 255;
-			oldpal++;
-		}
-		qgl3DfxSetPaletteEXT((GLuint *)table);
-		is8bit = true;
-
-	}
-	else if (strstr(gl_extensions, "GL_EXT_shared_texture_palette") && (qglColorTableEXT = dlsym(prjobj, "glColorTableEXT")) != NULL)
-	{
-		char thePalette[256*3];
-		char *oldPalette, *newPalette;
-
-		Con_SafePrintf("8-bit GL extensions enabled.\n");
-		glEnable( GL_SHARED_TEXTURE_PALETTE_EXT );
-		oldPalette = (char *) d_8to24table; //d_8to24table3dfx;
-		newPalette = thePalette;
-		for (i=0;i<256;i++)
-		{
-			*newPalette++ = *oldPalette++;
-			*newPalette++ = *oldPalette++;
-			*newPalette++ = *oldPalette++;
-			oldPalette++;
-		}
-		qglColorTableEXT(GL_SHARED_TEXTURE_PALETTE_EXT, GL_RGB, 256, GL_RGB, GL_UNSIGNED_BYTE, (void *) thePalette);
-		is8bit = true;
-	}
-	
-	dlclose(prjobj);
-}
-
-extern void Check_Gamma (unsigned char *pal);
-void VID_Setup15to8Palette ();
-
-void VID_Init(unsigned char *palette)
+void VID_Init()
 {
 	int i;
 	int attrib[] = {
@@ -855,21 +741,11 @@ void VID_Init(unsigned char *palette)
 
 	GL_Init();
 
-//	sprintf (gldir, "%s/glquake", com_gamedir);
-//	Sys_mkdir (gldir);
-
-	VID_SetPalette(palette);
-
-	Check_Gamma(palette);
-
-	VID_Init8bitPalette();
-
-	if (is8bit) // LordHavoc: avoid calculating 15to8 table if it won't be used
-		VID_Setup15to8Palette ();
-
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
 
 	vid.recalc_refdef = 1;				// force a surface cache flush
+
+	install_grabs();
 }
 
 void Sys_SendKeyEvents(void)
@@ -915,43 +791,39 @@ void IN_MouseMove (usercmd_t *cmd)
 {
 	if (!mouse_avail)
 		return;
-   
-	if (m_filter.value)
-	{
-		mx = (mx + old_mouse_x) * 0.5;
-		my = (my + old_mouse_y) * 0.5;
-	}
-	old_mouse_x = mx;
-	old_mouse_y = my;
 
-	mx *= sensitivity.value;
-	my *= sensitivity.value;
+        if (!mouse_avail)
+                return;
 
-// add mouse X/Y movement to cmd
-	if ( (in_strafe.state & 1) || (lookstrafe.value && (in_mlook.state & 1) ))
-		cmd->sidemove += m_side.value * mx;
-	else
-		cl.viewangles[YAW] -= m_yaw.value * mx;
-	
-	if (in_mlook.state & 1)
-		V_StopPitchDrift ();
-		
-	if ( (in_mlook.state & 1) && !(in_strafe.state & 1))
-	{
-		cl.viewangles[PITCH] += m_pitch.value * my;
-		if (cl.viewangles[PITCH] > 80)
-			cl.viewangles[PITCH] = 80;
-		if (cl.viewangles[PITCH] < -70)
-			cl.viewangles[PITCH] = -70;
-	}
-	else
-	{
-		if ((in_strafe.state & 1) && noclip_anglehack)
-			cmd->upmove -= m_forward.value * my;
-		else
-			cmd->forwardmove -= m_forward.value * my;
-	}
-	mx = my = 0;
+        if (m_filter.value) {
+                mouse_x = (mouse_x + old_mouse_x) * 0.5;
+                mouse_y = (mouse_y + old_mouse_y) * 0.5;
+
+                old_mouse_x = mouse_x;
+                old_mouse_y = mouse_y;
+        }
+
+        mouse_x *= sensitivity.value;
+        mouse_y *= sensitivity.value;
+        
+        if (in_strafe.state & 1)
+                cmd->sidemove += m_side.value * mouse_x;
+        else
+                cl.viewangles[YAW] -= m_yaw.value * mouse_x;
+                
+/*        if (freelook)*/
+                V_StopPitchDrift ();
+
+        if (/*freelook && */!(in_strafe.state & 1)) {
+                cl.viewangles[PITCH] += m_pitch.value * mouse_y;
+                cl.viewangles[PITCH] = bound (-70, cl.viewangles[PITCH], 80);
+        } else {
+                if ((in_strafe.state & 1) && noclip_anglehack)
+                        cmd->upmove -= m_forward.value * mouse_y;
+                else
+                        cmd->forwardmove -= m_forward.value * mouse_y;
+        }
+        mouse_x = mouse_y = 0.0;
 }
 
 void IN_Move (usercmd_t *cmd)

@@ -159,9 +159,6 @@ void GL_Misc_Init (void)
 	R_RegisterModule("GL_Misc", gl_misc_start, gl_misc_shutdown);
 }
 
-//qboolean VID_Is8bit(void);
-//void GL_Upload8_EXT (byte *data, int width, int height,  qboolean mipmap, qboolean alpha);
-
 void R_ClearParticles (void);
 void GL_BuildLightmaps (void);
 

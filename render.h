@@ -126,34 +126,38 @@ extern vec3_t	r_origin, vpn, vright, vup;
 
 extern	struct texture_s	*r_notexture_mip;
 
-void R_Init (void);
-void R_InitTextures (void);
-void R_InitEfrags (void);
-void R_RenderView (void);		// must set r_refdef first
-void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect);
+extern void R_Init (void);
+extern void R_InitTextures (void);
+extern void R_InitEfrags (void);
+extern void R_RenderView (void);		// must set r_refdef first
+extern void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect);
 								// called whenever r_refdef or vid change
 // LordHavoc: changed this for sake of GLQuake
-void R_InitSky (byte *src, int bytesperpixel);	// called at level load
-//void R_InitSky (struct texture_s *mt);	// called at level load
+extern void R_InitSky (byte *src, int bytesperpixel);	// called at level load
+//extern void R_InitSky (struct texture_s *mt);	// called at level load
 
-void R_AddEfrags (entity_t *ent);
-void R_RemoveEfrags (entity_t *ent);
+extern void R_AddEfrags (entity_t *ent);
+extern void R_RemoveEfrags (entity_t *ent);
 
-void R_NewMap (void);
+extern void R_NewMap (void);
 
 
-void R_ParseParticleEffect (void);
-void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
-void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
-void R_RocketTrail2 (vec3_t start, vec3_t end, int type, entity_t *ent);
-void R_SparkShower (vec3_t org, vec3_t dir, int count);
-void R_BloodPuff (vec3_t org);
+extern void R_ParseParticleEffect (void);
+extern void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
+extern void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
+extern void R_RocketTrail2 (vec3_t start, vec3_t end, int type, entity_t *ent);
+extern void R_SparkShower (vec3_t org, vec3_t dir, int count);
+extern void R_BloodPuff (vec3_t org);
 
-void R_EntityParticles (entity_t *ent);
-void R_BlobExplosion (vec3_t org);
-void R_ParticleExplosion (vec3_t org, int smoke);
-void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
-void R_LavaSplash (vec3_t org);
-void R_TeleportSplash (vec3_t org);
+extern void R_EntityParticles (entity_t *ent);
+extern void R_BlobExplosion (vec3_t org);
+extern void R_ParticleExplosion (vec3_t org, int smoke);
+extern void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
+extern void R_LavaSplash (vec3_t org);
+extern void R_TeleportSplash (vec3_t org);
 
-void R_PushDlights (void);
+extern void R_PushDlights (void);
+
+extern void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
+extern void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
+extern void R_LightPoint (vec3_t color, vec3_t p);

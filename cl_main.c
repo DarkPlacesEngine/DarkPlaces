@@ -782,7 +782,6 @@ void CL_PModel_f (void)
 CL_Fog_f
 ======================
 */
-extern float fog_density, fog_red, fog_green, fog_blue;
 void CL_Fog_f (void)
 {
 	if (Cmd_Argc () == 1)

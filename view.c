@@ -238,7 +238,7 @@ void V_DriftPitch (void)
 /*
 ============================================================================== 
  
-						PALETTE FLASHES 
+						SCREEN FLASHES 
  
 ============================================================================== 
 */ 
@@ -501,10 +501,10 @@ void V_CalcBlend (void)
 
 /*
 =============
-V_UpdatePalette
+V_UpdateBlends
 =============
 */
-void V_UpdatePalette (void)
+void V_UpdateBlends (void)
 {
 	int		i, j;
 	qboolean	new;

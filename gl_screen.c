@@ -750,7 +750,7 @@ int SCR_ModalMessage (char *text)
 ===============
 SCR_BringDownConsole
 
-Brings the console down and fades the palettes back to normal
+Brings the console down and fades the blends back to normal
 ================
 */
 void SCR_BringDownConsole (void)
@@ -762,7 +762,7 @@ void SCR_BringDownConsole (void)
 	for (i=0 ; i<20 && scr_conlines != scr_con_current ; i++)
 		SCR_UpdateScreen ();
 
-	cl.cshifts[0].percent = 0;		// no area contents palette on next frame
+	cl.cshifts[0].percent = 0;		// no area contents blend on next frame
 }
 
 void DrawCrosshair(int num);
@@ -916,7 +916,7 @@ void SCR_UpdateScreen (void)
 	else
 	{
 		if (crosshair.value)
-			DrawCrosshair(crosshair.value);
+			DrawCrosshair(crosshair.value - 1);
 		
 		SCR_DrawRam ();
 		SCR_DrawNet ();
@@ -942,7 +942,7 @@ void SCR_UpdateScreen (void)
 		Draw_String(vid.width - (12*8), 0, temp, 9999);
 	}
 
-	V_UpdatePalette ();
+	V_UpdateBlends ();
 
 	GL_BrightenScreen();
 

@@ -940,8 +940,6 @@ void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 }
 
 
-extern qboolean lighthalf;
-
 /*
 ===============
 R_DrawParticles

@@ -149,7 +149,6 @@ void transpolyend()
 }
 
 int transpolyindices;
-extern qboolean isG200;
 
 /*
 void transpolyrenderminmax()
@@ -559,14 +558,11 @@ void transpolyrender()
 	glDisable(GL_ALPHA_TEST);
 }
 
-extern qboolean isG200;
-
 void wallpolyclear()
 {
 	currentwallpoly = currentwallvert = 0;
 }
 
-extern qboolean lighthalf;
 void wallpolyrender()
 {
 	int i, j, texnum, lighttexnum;
@@ -786,8 +782,6 @@ void skypolyclear()
 	currentskypoly = currentskyvert = 0;
 }
 
-extern qboolean isATI;
-
 extern char skyname[];
 extern int solidskytexture, alphaskytexture;
 void skypolyrender()
@@ -810,7 +804,10 @@ void skypolyrender()
 	glDepthMask(1);
 	if (!fogenabled && !skyname[0]) // normal quake sky
 	{
-		glColor3f(0.5f, 0.5f, 0.5f);
+		if(lighthalf)
+			glColor3f(0.5f, 0.5f, 0.5f);
+		else
+			glColor3f(1.0f,1.0f,1.0f);
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 		glEnable(GL_TEXTURE_2D);
 		glDisable(GL_BLEND);

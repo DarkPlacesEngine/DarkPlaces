@@ -396,7 +396,6 @@ int main (int c, char **v)
 {
 
 	double		time, oldtime, newtime;
-	quakeparms_t parms;
 	extern int vcrFile;
 	extern int recording;
 	int j;
@@ -406,31 +405,31 @@ int main (int c, char **v)
 //	signal(SIGFPE, floating_point_exception_handler);
 	signal(SIGFPE, SIG_IGN);
 
-	memset(&parms, 0, sizeof(parms));
+	memset(&host_parms, 0, sizeof(host_parms));
 
 	COM_InitArgv(c, v);
-	parms.argc = com_argc;
-	parms.argv = com_argv;
+	host_parms.argc = com_argc;
+	host_parms.argv = com_argv;
 
-	parms.memsize = 24*1024*1024;
+	host_parms.memsize = 24*1024*1024;
 
 	j = COM_CheckParm("-mem");
 	if (j)
-		parms.memsize = (int) (atof(com_argv[j+1]) * 1024 * 1024);
-	parms.membase = malloc (parms.memsize);
-	if (!parms.membase)
+		host_parms.memsize = (int) (atof(com_argv[j+1]) * 1024 * 1024);
+	host_parms.membase = malloc (host_parms.memsize);
+	if (!host_parms.membase)
 	{
 		printf("Unable to allocate heap memory\n");
 		return 1;
 	}
 
-	parms.basedir = basedir;
+	host_parms.basedir = basedir;
 // caching is disabled by default, use -cachedir to enable
-//	parms.cachedir = cachedir;
+//	host_parms.cachedir = cachedir;
 
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 
-	Host_Init(&parms);
+	Host_Init();
 
 	Sys_Init();
 

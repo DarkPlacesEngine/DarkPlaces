@@ -628,7 +628,6 @@ extern float *aliasvert;
 extern float *aliasvertnorm;
 extern byte *aliasvertcolor;
 extern float modelalpha;
-extern qboolean lighthalf;
 extern int modeldlightbits[8];
 void R_LightModel(int numverts, vec3_t center, vec3_t basecolor)
 {
