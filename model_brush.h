@@ -120,6 +120,8 @@ texture_t;
 #define SURF_DRAWFULLBRIGHT 0x200
 #define SURF_LIGHTBOTHSIDES 0x400
 #define SURF_CLIPSOLID 0x800 // this polygon can obscure other polygons
+#define SURF_SHADOWCAST 0x1000 // this polygon can cast stencil shadows
+#define SURF_SHADOWLIGHT 0x2000 // this polygon can be lit by stencil shadowing
 
 typedef struct
 {

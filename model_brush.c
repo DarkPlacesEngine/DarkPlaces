@@ -427,7 +427,7 @@ static void Mod_LoadTextures (lump_t *l)
 		{
 			tx->flags |= SURF_LIGHTMAP;
 			if (!tx->fogtexture)
-				tx->flags |= SURF_CLIPSOLID;
+				tx->flags |= SURF_SHADOWCAST | SURF_SHADOWLIGHT;
 			tx->shader = &Cshader_wall_lightmap;
 		}
 
@@ -1187,7 +1187,7 @@ void Mod_ProcessLightList(void)
 	qbyte *pvs;
 	for (lnum = 0, e = loadmodel->lights;lnum < loadmodel->numlights;lnum++, e++)
 	{
-		e->cullradius2 = DotProduct(e->light, e->light) * (1.0f / (8192.0f * 8192.0f)) / (e->falloff * e->falloff) + 4096.0f;
+		e->cullradius2 = DotProduct(e->light, e->light) / (e->falloff * e->falloff * 8192.0f * 8192.0f);// + 4096.0f;
 		if (e->cullradius2 > 4096.0f * 4096.0f)
 			e->cullradius2 = 4096.0f * 4096.0f;
 		e->cullradius = sqrt(e->cullradius2);
@@ -1287,7 +1287,7 @@ void Mod_ProcessLightList(void)
 			svworld = Mod_ShadowBrush_NewWorld(loadmodel->mempool);
 			for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
 			{
-				if (!(surf->flags & SURF_CLIPSOLID))
+				if (!(surf->flags & SURF_SHADOWCAST))
 					continue;
 				f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
 				if (surf->flags & SURF_PLANEBACK)
@@ -1442,7 +1442,7 @@ void Mod_ProcessLightList(void)
 #if 1
 				for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
 				{
-					if (!(surf->flags & SURF_CLIPSOLID))
+					if (!(surf->flags & SURF_SHADOWCAST))
 						continue;
 					/*
 					if (surf->poly_maxs[0] < e->mins[0]
@@ -1541,7 +1541,7 @@ void Mod_ProcessLightList(void)
 				for (j = 0;j < e->numsurfaces;j++)
 				{
 					surf = e->surfaces[j];
-					if (!(surf->flags & SURF_CLIPSOLID))
+					if (!(surf->flags & SURF_SHADOWCAST))
 						continue;
 					f = DotProduct(e->origin, surf->plane->normal) - surf->plane->dist;
 					if (surf->flags & SURF_PLANEBACK)
@@ -3459,7 +3459,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			// (only used for shadow volumes)
 			mod->shadowmesh = Mod_ShadowMesh_Begin(originalloadmodel->mempool);
 			for (j = 0, surf = &mod->surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surf++)
-				if (surf->flags & SURF_CLIPSOLID)
+				if (surf->flags & SURF_SHADOWCAST)
 					Mod_ShadowMesh_AddPolygon(originalloadmodel->mempool, mod->shadowmesh, surf->poly_numverts, surf->poly_verts);
 			mod->shadowmesh = Mod_ShadowMesh_Finish(originalloadmodel->mempool, mod->shadowmesh);
 			Mod_ShadowMesh_CalcBBox(mod->shadowmesh, mod->shadowmesh_mins, mod->shadowmesh_maxs, mod->shadowmesh_center, &mod->shadowmesh_radius);
