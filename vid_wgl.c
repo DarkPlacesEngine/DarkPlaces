@@ -125,15 +125,9 @@ qboolean gl_arrays = false;
 
 cvar_t		vid_mode = {"vid_mode","0", false};
 // Note that 0 is MODE_WINDOWED
-cvar_t		_vid_default_mode = {"_vid_default_mode","0", true};
+//cvar_t		_vid_default_mode = {"_vid_default_mode","0", true};
 // Note that 3 is MODE_FULLSCREEN_DEFAULT
-cvar_t		_vid_default_mode_win = {"_vid_default_mode_win","3", true};
-cvar_t		vid_wait = {"vid_wait","0"};
-cvar_t		vid_nopageflip = {"vid_nopageflip","0", true};
-cvar_t		_vid_wait_override = {"_vid_wait_override", "0", true};
-cvar_t		vid_config_x = {"vid_config_x","800", true};
-cvar_t		vid_config_y = {"vid_config_y","600", true};
-cvar_t		vid_stretch_by_2 = {"vid_stretch_by_2","1", true};
+//cvar_t		_vid_default_mode_win = {"_vid_default_mode_win","3", true};
 cvar_t		_windowed_mouse = {"_windowed_mouse","1", true};
 
 int			window_center_x, window_center_y, window_x, window_y, window_width, window_height;
@@ -1263,14 +1257,8 @@ void	VID_Init ()
 	memset(&devmode, 0, sizeof(devmode));
 
 	Cvar_RegisterVariable (&vid_mode);
-	Cvar_RegisterVariable (&vid_wait);
-	Cvar_RegisterVariable (&vid_nopageflip);
-	Cvar_RegisterVariable (&_vid_wait_override);
-	Cvar_RegisterVariable (&_vid_default_mode);
-	Cvar_RegisterVariable (&_vid_default_mode_win);
-	Cvar_RegisterVariable (&vid_config_x);
-	Cvar_RegisterVariable (&vid_config_y);
-	Cvar_RegisterVariable (&vid_stretch_by_2);
+//	Cvar_RegisterVariable (&_vid_default_mode);
+//	Cvar_RegisterVariable (&_vid_default_mode_win);
 	Cvar_RegisterVariable (&_windowed_mouse);
 
 	Cmd_AddCommand ("vid_nummodes", VID_NumModes_f);
