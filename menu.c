@@ -1613,9 +1613,31 @@ void M_Options_Effects_Key (int k)
 //=============================================================================
 /* KEYS MENU */
 
-char *bindnames[][2] =
+char *quakebindnames[][2] =
 {
-#ifdef TRANSFUSION
+{"+attack", 		"attack"},
+{"impulse 10", 		"next weapon"},
+{"impulse 12", 		"previous weapon"},
+{"+jump", 			"jump / swim up"},
+{"+forward", 		"walk forward"},
+{"+back", 			"backpedal"},
+{"+left", 			"turn left"},
+{"+right", 			"turn right"},
+{"+speed", 			"run"},
+{"+moveleft", 		"step left"},
+{"+moveright", 		"step right"},
+{"+strafe", 		"sidestep"},
+{"+lookup", 		"look up"},
+{"+lookdown", 		"look down"},
+{"centerview", 		"center view"},
+{"+mlook", 			"mouse look"},
+{"+klook", 			"keyboard look"},
+{"+moveup",			"swim up"},
+{"+movedown",		"swim down"}
+};
+
+char *transfusionbindnames[][2] =
+{
 {"+forward", 		"walk forward"},
 {"+back", 			"backpedal"},
 {"+moveleft", 		"step left"},
@@ -1646,30 +1668,10 @@ char *bindnames[][2] =
 {"impulse 141",		"identify player"},
 {"impulse 16",		"next armor type"},
 {"impulse 20",		"observer mode"}
-#else  // not TRANSFUSION
-{"+attack", 		"attack"},
-{"impulse 10", 		"next weapon"},
-{"impulse 12", 		"previous weapon"},
-{"+jump", 			"jump / swim up"},
-{"+forward", 		"walk forward"},
-{"+back", 			"backpedal"},
-{"+left", 			"turn left"},
-{"+right", 			"turn right"},
-{"+speed", 			"run"},
-{"+moveleft", 		"step left"},
-{"+moveright", 		"step right"},
-{"+strafe", 		"sidestep"},
-{"+lookup", 		"look up"},
-{"+lookdown", 		"look down"},
-{"centerview", 		"center view"},
-{"+mlook", 			"mouse look"},
-{"+klook", 			"keyboard look"},
-{"+moveup",			"swim up"},
-{"+movedown",		"swim down"}
-#endif  // not TRANSFUSION
 };
 
-#define	NUMCOMMANDS	(sizeof(bindnames)/sizeof(bindnames[0]))
+int numcommands;
+char *(*bindnames)[2];
 
 /*
 typedef struct binditem_s
@@ -1832,7 +1834,7 @@ void M_Keys_Draw (void)
 		M_Print (18, 32, "Enter to change, backspace to clear");
 
 // search for known bindings
-	for (i=0 ; i<NUMCOMMANDS ; i++)
+	for (i=0 ; i<numcommands ; i++)
 	{
 		y = 48 + 8*i;
 
@@ -1899,14 +1901,14 @@ void M_Keys_Key (int k)
 		S_LocalSound ("misc/menu1.wav");
 		keys_cursor--;
 		if (keys_cursor < 0)
-			keys_cursor = NUMCOMMANDS-1;
+			keys_cursor = numcommands-1;
 		break;
 
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 		S_LocalSound ("misc/menu1.wav");
 		keys_cursor++;
-		if (keys_cursor >= NUMCOMMANDS)
+		if (keys_cursor >= numcommands)
 			keys_cursor = 0;
 		break;
 
@@ -2523,7 +2525,6 @@ level_t		transfusionlevels[] =
 	{"bb3",			"Bodies"},
 	{"bb4",			"The Tower"},
 	{"bb5",			"Click!"},
-	{"bb6",			"Twin Fortress"},
 	{"bb7",			"Midgard"},
 	{"bb8",			"Fun With Heads"},
 	{"e1m1",		"Cradle to Grave"},
@@ -2535,9 +2536,7 @@ level_t		transfusionlevels[] =
 	{"e6m8",		"Beauty and the Beast"},
 
 	{"cpbb01",		"Crypt of Despair"},
-	{"cpbb02",		"Pits of Blood"},
 	{"cpbb03",		"Unholy Cathedral"},
-	{"cpbb04",		"Deadly Inspirations"},
 
 	{"b2a15",		"Area 15 (B2)"},
 	{"barena",		"Blood Arena"},
@@ -2556,11 +2555,11 @@ level_t		transfusionlevels[] =
 
 episode_t	transfusionepisodes[] =
 {
-	{"Blood", 0, 10},
-	{"Plasma Pack", 10, 4},
-	{"Cryptic Passage", 14, 4},
-	{"Blood 2", 18, 5},
-	{"Custom", 23, 7}
+	{"Blood", 0, 9},
+	{"Plasma Pack", 9, 4},
+	{"Cryptic Passage", 13, 2},
+	{"Blood 2", 15, 5},
+	{"Custom", 20, 7}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
@@ -3099,6 +3098,17 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_video", M_Menu_Video_f);
 	Cmd_AddCommand ("help", M_Menu_Help_f);
 	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f);
+
+	if (gamemode == GAME_TRANSFUSION)
+	{
+		numcommands = sizeof(transfusionbindnames) / sizeof(transfusionbindnames[0]);
+		bindnames = transfusionbindnames;
+	}
+	else
+	{
+		numcommands = sizeof(quakebindnames) / sizeof(quakebindnames[0]);
+		bindnames = quakebindnames;
+	}
 
 	if (gamemode == GAME_NEHAHRA)
 	{
