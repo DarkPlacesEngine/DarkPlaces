@@ -646,7 +646,6 @@ static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, in
 				m.tex[0] = R_GetTexture(texture->skin.base);
 				if (waterscrolling)
 					m.texmatrix[0] = r_surf_waterscrollmatrix;
-				m.texmatrix[0] = r_surf_waterscrollmatrix;
 				m.pointer_color = varray_color4f;
 				colorscale = 1;
 				if (gl_combine.integer)
