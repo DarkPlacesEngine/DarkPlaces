@@ -1740,7 +1740,6 @@ void M_Options_ColorControl_Key (int k, char ascii)
 			Cvar_SetValueQuick(&v_color_white_r, 1);
 			Cvar_SetValueQuick(&v_color_white_g, 1);
 			Cvar_SetValueQuick(&v_color_white_b, 1);
-			Cbuf_AddText ("exec default.cfg\n");
 			break;
 		default:
 			M_Menu_Options_ColorControl_AdjustSliders (1);
