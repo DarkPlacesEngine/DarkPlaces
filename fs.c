@@ -46,6 +46,13 @@
 // use syscalls instead of f* functions
 #define FS_USESYSCALLS
 
+// Win32 requires us to add O_BINARY, but the other OSes don't have it
+#ifdef FS_USESYSCALLS
+# ifndef O_BINARY
+#  define O_BINARY 0
+# endif
+#endif
+
 
 /*
 
@@ -560,7 +567,7 @@ pack_t *FS_LoadPackPK3 (const char *packfile)
 	int real_nb_files;
 
 #ifdef FS_USESYSCALLS
-	packhandle = open (packfile, O_RDONLY);
+	packhandle = open (packfile, O_RDONLY | O_BINARY);
 	if (packhandle < 0)
 		return NULL;
 #else
@@ -770,7 +777,7 @@ pack_t *FS_LoadPackPAK (const char *packfile)
 	dpackfile_t *info;	// temporary alloc, allowing huge pack directories
 
 #ifdef FS_USESYSCALLS
-	packhandle = open (packfile, O_RDONLY);
+	packhandle = open (packfile, O_RDONLY | O_BINARY);
 	if (packhandle < 0)
 		return NULL;
 	read (packhandle, (void *)&header, sizeof(header));
@@ -1042,11 +1049,11 @@ static qfile_t* FS_SysOpen (const char* filepath, const char* mode)
 
 #ifdef FS_USESYSCALLS
 	if (strchr(mode, 'r'))
-		file->stream = open (filepath, O_RDONLY);
+		file->stream = open (filepath, O_RDONLY | O_BINARY);
 	else if (strchr(mode, 'w'))
-		file->stream = open (filepath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+		file->stream = open (filepath, O_WRONLY | O_BINARY | O_CREAT | O_TRUNC, 0666);
 	else if (strchr(mode, 'a'))
-		file->stream = open (filepath, O_RDWR | O_CREAT | O_APPEND, 0666);
+		file->stream = open (filepath, O_RDWR | O_BINARY | O_CREAT | O_APPEND, 0666);
 	else
 		file->stream = -1;
 	if (file->stream < 0)
