@@ -812,7 +812,16 @@ int NET_SendToAll(sizebuf_t *data, int blocktime)
 	qbyte		state [MAX_SCOREBOARD];
 
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		state[i] = (host_client->netconnection && host_client->active) ? 0 : 2;
+	{
+		state[i] = 2;
+		if (host_client->netconnection && host_client->active)
+		{
+			if (host_client->netconnection->driver == 0)
+				NET_SendMessage(host_client->netconnection, data);
+			else
+				state[i] = 0;
+		}
+	}
 
 	// for every player (simultaneously) wait for the first CanSendMessage
 	// and send the message, then wait for a second CanSendMessage (verifying
@@ -825,23 +834,16 @@ int NET_SendToAll(sizebuf_t *data, int blocktime)
 		{
 			if (state[i] < 2)
 			{
+				count++;
 				// need to send to this one
 				if (NET_CanSendMessage (host_client->netconnection))
 				{
-					if (state[i] == 0)
-					{
-						if (NET_SendMessage (host_client->netconnection, data) == 1)
-							state[i] = 2; // connection lost
-						else
-							count++;
-					}
+					if (state[i] == 0 && NET_SendMessage (host_client->netconnection, data) == -1)
+						state[i] = 2; // connection lost
 					state[i]++;
 				}
 				else
-				{
 					NET_GetMessage (host_client->netconnection);
-					count++;
-				}
 			}
 		}
 	}
