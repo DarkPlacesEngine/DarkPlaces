@@ -87,7 +87,7 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 -f darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -n darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
-0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
+-n darkplaces: integrate zinx's psycho.c gamma hack as an easteregg (zinx)
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
