@@ -319,10 +319,7 @@ Key_Console (int key, char ascii)
 		key_linepos = 1;
 		// force an update, because the command may take some time
 		if (cls.state == ca_disconnected)
-		{
 			CL_UpdateScreen ();
-			CL_UpdateScreen ();
-		}
 		return;
 	}
 
@@ -432,7 +429,7 @@ Key_Console (int key, char ascii)
 
 	if (key == K_PGUP || key == K_KP_PGUP || key == K_MWHEELUP)
 	{
-		con_backscroll += ((int) scr_conlines >> 4);
+		con_backscroll += ((int) vid.conheight >> 5);
 		if (con_backscroll > con_totallines - (vid.conheight>>3) - 1)
 			con_backscroll = con_totallines - (vid.conheight>>3) - 1;
 		return;
@@ -440,7 +437,7 @@ Key_Console (int key, char ascii)
 
 	if (key == K_PGDN || key == K_KP_PGDN || key == K_MWHEELDOWN)
 	{
-		con_backscroll -= ((int) scr_conlines >> 4);
+		con_backscroll -= ((int) vid.conheight >> 5);
 		if (con_backscroll < 0)
 			con_backscroll = 0;
 		return;
