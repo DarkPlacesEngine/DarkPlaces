@@ -3308,7 +3308,12 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 {
 	q3dtexture_t *in;
 	q3mtexture_t *out;
-	int i, count;
+	int i, j, count, c;
+	fssearch_t *search;
+	char *f;
+	const char *text;
+	int flags;
+	char shadername[Q3PATHLENGTH];
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3319,10 +3324,6 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	loadmodel->brushq3.data_textures = out;
 	loadmodel->brushq3.num_textures = count;
 
-	// FIXME: do a quick parse of the shader files to see if any names match
-	// up and get their surfaceparms
-
-
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		out->number = i;
@@ -3331,15 +3332,151 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		out->nativecontents = LittleLong(in->contents);
 		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
 		Mod_LoadSkinFrame(&out->skin, out->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, true);
-		out->renderflags = 0;
-		if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk")
-		 || !strcmp(out->name, "nodraw") || !strcmp(out->name, "common/nodraw") || !strcmp(out->name, "textures/common/nodraw"))
-			out->renderflags |= Q3MTEXTURERENDERFLAGS_NODRAW;
-		if (!strncmp(out->name, "textures/skies/", 15))
-			out->renderflags |= Q3MTEXTURERENDERFLAGS_SKY;
-		if (R_TextureHasAlpha(out->skin.base))
-			out->renderflags |= Q3MTEXTURERENDERFLAGS_TRANSPARENT;
+		out->surfaceparms = -1;
 	}
+
+	// do a quick parse of shader files to get surfaceparms
+	if ((search = FS_Search("scripts/*.shader", true, false)))
+	{
+		for (i = 0;i < search->numfilenames;i++)
+		{
+			if ((f = FS_LoadFile(search->filenames[i], false)))
+			{
+				text = f;
+				while (COM_ParseToken(&text, false))
+				{
+					snprintf(shadername, sizeof(shadername), "%s", com_token);
+					flags = 0;
+					if (COM_ParseToken(&text, false) && !strcmp(com_token, "{"))
+					{
+						while (COM_ParseToken(&text, false))
+						{
+							if (!strcmp(com_token, "}"))
+								break;
+							else if (!strcmp(com_token, "{"))
+							{
+								while (COM_ParseToken(&text, false))
+								{
+									if (!strcmp(com_token, "}"))
+										break;
+								}
+							}
+							else if (!strcmp(com_token, "surfaceparm"))
+							{
+								if (COM_ParseToken(&text, true) && strcmp(com_token, "\n"))
+								{
+									if (!strcmp(com_token, "alphashadow"))
+										flags |= SURFACEPARM_ALPHASHADOW;
+									else if (!strcmp(com_token, "areaportal"))
+										flags |= SURFACEPARM_AREAPORTAL;
+									else if (!strcmp(com_token, "clusterportal"))
+										flags |= SURFACEPARM_CLUSTERPORTAL;
+									else if (!strcmp(com_token, "detail"))
+										flags |= SURFACEPARM_DETAIL;
+									else if (!strcmp(com_token, "donotenter"))
+										flags |= SURFACEPARM_DONOTENTER;
+									else if (!strcmp(com_token, "fog"))
+										flags |= SURFACEPARM_FOG;
+									else if (!strcmp(com_token, "lava"))
+										flags |= SURFACEPARM_LAVA;
+									else if (!strcmp(com_token, "lightfilter"))
+										flags |= SURFACEPARM_LIGHTFILTER;
+									else if (!strcmp(com_token, "metalsteps"))
+										flags |= SURFACEPARM_METALSTEPS;
+									else if (!strcmp(com_token, "nodamage"))
+										flags |= SURFACEPARM_NODAMAGE;
+									else if (!strcmp(com_token, "nodlight"))
+										flags |= SURFACEPARM_NODLIGHT;
+									else if (!strcmp(com_token, "nodraw"))
+										flags |= SURFACEPARM_NODRAW;
+									else if (!strcmp(com_token, "nodrop"))
+										flags |= SURFACEPARM_NODROP;
+									else if (!strcmp(com_token, "noimpact"))
+										flags |= SURFACEPARM_NOIMPACT;
+									else if (!strcmp(com_token, "nolightmap"))
+										flags |= SURFACEPARM_NOLIGHTMAP;
+									else if (!strcmp(com_token, "nomarks"))
+										flags |= SURFACEPARM_NOMARKS;
+									else if (!strcmp(com_token, "nomipmaps"))
+										flags |= SURFACEPARM_NOMIPMAPS;
+									else if (!strcmp(com_token, "nonsolid"))
+										flags |= SURFACEPARM_NONSOLID;
+									else if (!strcmp(com_token, "origin"))
+										flags |= SURFACEPARM_ORIGIN;
+									else if (!strcmp(com_token, "playerclip"))
+										flags |= SURFACEPARM_PLAYERCLIP;
+									else if (!strcmp(com_token, "sky"))
+										flags |= SURFACEPARM_SKY;
+									else if (!strcmp(com_token, "slick"))
+										flags |= SURFACEPARM_SLICK;
+									else if (!strcmp(com_token, "slime"))
+										flags |= SURFACEPARM_SLIME;
+									else if (!strcmp(com_token, "structural"))
+										flags |= SURFACEPARM_STRUCTURAL;
+									else if (!strcmp(com_token, "trans"))
+										flags |= SURFACEPARM_TRANS;
+									else if (!strcmp(com_token, "water"))
+										flags |= SURFACEPARM_WATER;
+									else
+										Con_Printf("%s parsing warning: unknown surfaceparm \"%s\"\n", search->filenames[i], com_token);
+									if (!COM_ParseToken(&text, true) || strcmp(com_token, "\n"))
+									{
+										Con_Printf("%s parsing error: surfaceparm only takes one parameter.\n", search->filenames[i]);
+										goto parseerror;
+									}
+								}
+								else
+								{
+									Con_Printf("%s parsing error: surfaceparm expects a parameter.\n", search->filenames[i]);
+									goto parseerror;
+								}
+							}
+							else
+							{
+								// look for linebreak or }
+								while(COM_ParseToken(&text, true) && strcmp(com_token, "\n") && strcmp(com_token, "}"));
+								// break out to top level if it was }
+								if (!strcmp(com_token, "}"))
+									break;
+							}
+						}
+						// add shader to list (shadername and flags)
+						// actually here we just poke into the texture settings
+						for (j = 0, out = loadmodel->brushq3.data_textures;j < loadmodel->brushq3.num_textures;j++, out++)
+							if (!strcmp(out->name, shadername))
+								out->surfaceparms = flags;
+					}
+					else
+					{
+						Con_Printf("%s parsing error - expected \"{\", found \"%s\"\n", search->filenames[i], com_token);
+						goto parseerror;
+					}
+				}
+parseerror:
+				Mem_Free(f);
+			}
+		}
+	}
+
+	c = 0;
+	for (j = 0, out = loadmodel->brushq3.data_textures;j < loadmodel->brushq3.num_textures;j++, out++)
+	{
+		if (out->surfaceparms == -1)
+		{
+			c++;
+			Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, out->name);
+			out->surfaceparms = 0;
+			// these are defaults
+			if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk")
+			 || !strcmp(out->name, "nodraw") || !strcmp(out->name, "common/nodraw") || !strcmp(out->name, "textures/common/nodraw"))
+				out->surfaceparms |= SURFACEPARM_NODRAW;
+			if (!strncmp(out->name, "textures/skies/", 15))
+				out->surfaceparms |= SURFACEPARM_SKY;
+			if (R_TextureHasAlpha(out->skin.base))
+				out->surfaceparms |= SURFACEPARM_TRANS;
+		}
+	}
+	Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
 }
 
 static void Mod_Q3BSP_LoadPlanes(lump_t *l)
@@ -4680,7 +4817,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->radius2 = modelradius * modelradius;
 
 		for (j = 0;j < mod->brushq3.data_thismodel->numfaces;j++)
-			if (mod->brushq3.data_thismodel->firstface[j].texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY)
+			if (mod->brushq3.data_thismodel->firstface[j].texture->surfaceparms & SURFACEPARM_SKY)
 				break;
 		if (j < mod->brushq3.data_thismodel->numfaces)
 			mod->DrawSky = R_Q3BSP_DrawSky;

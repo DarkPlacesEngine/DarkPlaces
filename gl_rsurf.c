@@ -2020,15 +2020,15 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	if (!face->num_triangles)
 		return;
-	if (face->texture->renderflags)
+	if (face->texture->surfaceparms)
 	{
-		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY)
+		if (face->texture->surfaceparms & SURFACEPARM_SKY)
 			return;
-		if (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW)
+		if (face->texture->surfaceparms & SURFACEPARM_NODRAW)
 			return;
 	}
 	face->visframe = r_framecount;
-	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_TRANSPARENT) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
+	if ((face->texture->surfaceparms & SURFACEPARM_TRANS) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
 	{
 		vec3_t facecenter, center;
 		facecenter[0] = (face->mins[0] + face->maxs[0]) * 0.5f;
@@ -2110,12 +2110,12 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 				R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, r_framecount);
 			}
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-				if (face->markframe == r_framecount && (face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY) && !R_CullBox(face->mins, face->maxs))
+				if (face->markframe == r_framecount && (face->texture->surfaceparms & SURFACEPARM_SKY) && !R_CullBox(face->mins, face->maxs))
 					R_Q3BSP_DrawSkyFace(ent, face);
 		}
 		else
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
-				if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY))
+				if ((face->texture->surfaceparms & SURFACEPARM_SKY))
 					R_Q3BSP_DrawSkyFace(ent, face);
 	}
 }
@@ -2191,7 +2191,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 
 void R_Q3BSP_DrawFaceLight(entity_render_t *ent, q3mface_t *face, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
-	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->num_triangles)
+	if ((face->texture->surfaceparms & SURFACEPARM_NODRAW) || !face->num_triangles)
 		return;
 	R_Shadow_DiffuseLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.base, face->texture->skin.nmap, NULL);
 	R_Shadow_SpecularLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltofilter, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.gloss, face->texture->skin.nmap, NULL);
