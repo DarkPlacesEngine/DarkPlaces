@@ -2738,6 +2738,21 @@ static void Mod_Q1BSP_BuildPVSTextureChains(model_t *model)
 	}
 }
 
+//Returns PVS data for a given point
+//(note: can return NULL)
+static qbyte *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
+{
+	mnode_t *node;
+	Mod_CheckLoaded(model);
+	node = model->brushq1.nodes;
+	while (node->plane)
+		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
+	if (((mleaf_t *)node)->clusterindex >= 0)
+		return model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
+	else
+		return NULL;
+}
+
 static void Mod_Q1BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	while (node->plane)
@@ -2770,7 +2785,7 @@ static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 {
 	int bytes = ((model->brushq1.num_leafs - 1) + 7) >> 3;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer)
+	if (r_novis.integer || !Mod_Q1BSP_GetPVS(model, org))
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
@@ -2778,21 +2793,6 @@ static int Mod_Q1BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 	memset(pvsbuffer, 0, bytes);
 	Mod_Q1BSP_FatPVS_RecursiveBSPNode(model, org, radius, pvsbuffer, bytes, model->brushq1.nodes);
 	return bytes;
-}
-
-//Returns PVS data for a given point
-//(note: can return NULL)
-static qbyte *Mod_Q1BSP_GetPVS(model_t *model, const vec3_t p)
-{
-	mnode_t *node;
-	Mod_CheckLoaded(model);
-	node = model->brushq1.nodes;
-	while (node->plane)
-		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
-	if (((mleaf_t *)node)->clusterindex >= 0)
-		return model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
-	else
-		return NULL;
 }
 
 static void Mod_Q1BSP_RoundUpToHullSize(model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
@@ -5390,7 +5390,7 @@ static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 {
 	int bytes = model->brush.num_pvsclusterbytes;
 	bytes = min(bytes, pvsbufferlength);
-	if (r_novis.integer || !loadmodel->brush.num_pvsclusters)
+	if (r_novis.integer || !loadmodel->brush.num_pvsclusters || !Mod_Q3BSP_GetPVS(model, org))
 	{
 		memset(pvsbuffer, 0xFF, bytes);
 		return bytes;
