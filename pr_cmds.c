@@ -1956,6 +1956,38 @@ void PF_copyentity (void)
 	memcpy(out, in, pr_edict_size);
 }
 
+/*
+=================
+PF_setcolor
+
+sets the color of a client and broadcasts the update to all connected clients
+
+setcolor(clientent, value)
+=================
+*/
+void PF_setcolor (void)
+{
+	client_t	*client;
+	int			entnum, i;
+	
+	entnum = G_EDICTNUM(OFS_PARM0);
+	i = G_FLOAT(OFS_PARM1);
+	
+	if (entnum < 1 || entnum > svs.maxclients)
+	{
+		Con_Printf ("tried to setcolor a non-client\n");
+		return;
+	}
+		
+	client = &svs.clients[entnum-1];
+	client->colors = i;
+	client->edict->v.team = (i & 15) + 1;
+		
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
+	MSG_WriteByte (&sv.reliable_datagram, i);
+}
+
 void PF_Fixme (void)
 {
 	PR_RunError ("unimplemented builtin"); // LordHavoc: was misspelled (bulitin)
@@ -2080,7 +2112,8 @@ PF_checkextension,	// #99
 aa // #200
 aa // #300
 aa // #400
-PF_copyentity		// #400 LordHavoc: builtin range (4xx)
+PF_copyentity,		// #400 LordHavoc: builtin range (4xx)
+PF_setcolor,		// #401
 };
 
 builtin_t *pr_builtins = pr_builtin;
