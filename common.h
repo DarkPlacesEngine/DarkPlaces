@@ -158,6 +158,7 @@ char	*va(const char *format, ...);
 //============================================================================
 
 extern	struct cvar_s	registered;
+extern	struct cvar_s	cmdline;
 
 #define GAME_NORMAL 0
 #define GAME_HIPNOTIC 1
