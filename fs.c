@@ -751,7 +751,7 @@ void FS_AddGameDirectory (char *dir)
 	{
 		if (matchpattern(current->text, "*.pak", true))
 		{
-			sprintf (pakfile, "%s/%s", dir, current->text);
+			snprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
 			pak = FS_LoadPackPAK (pakfile);
 			if (pak)
 			{
@@ -770,7 +770,7 @@ void FS_AddGameDirectory (char *dir)
 	{
 		if (matchpattern(current->text, "*.pk3", true))
 		{
-			sprintf (pakfile, "%s/%s", dir, current->text);
+			snprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
 			pak = FS_LoadPackPK3 (pakfile);
 			if (pak)
 			{
@@ -1061,7 +1061,7 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 		}
 		else
 		{
-			sprintf (netpath, "%s/%s",search->filename, filename);
+			snprintf (netpath, sizeof (netpath), "%s/%s",search->filename, filename);
 
 			if (!FS_SysFileExists (netpath))
 				continue;
@@ -1603,7 +1603,7 @@ qboolean FS_WriteFile (const char *filename, void *data, int len)
 	FILE *handle;
 	char name[MAX_OSPATH];
 
-	sprintf (name, "%s/%s", fs_gamedir, filename);
+	snprintf (name, sizeof (name), "%s/%s", fs_gamedir, filename);
 
 	// Create directories up to the file
 	FS_CreatePath (name);
@@ -1695,7 +1695,7 @@ qboolean FS_FileExists (const char *filename)
 		}
 		else
 		{
-			sprintf (netpath, "%s/%s",search->filename, filename);
+			snprintf (netpath, sizeof (netpath), "%s/%s",search->filename, filename);
 			if (FS_SysFileExists (netpath))
 				return true;
 		}
