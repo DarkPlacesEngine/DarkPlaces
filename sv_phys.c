@@ -1194,7 +1194,10 @@ void SV_Physics_Toss (edict_t *ent)
 		// and groundentity is now freed, set groundentity to 0 (floating)
 		groundentity = PROG_TO_EDICT(ent->v.groundentity);
 		if (groundentity->v.solid == SOLID_BSP)
+		{
 			ent->suspendedinairflag = true;
+			return;
+		}
 		else if (ent->suspendedinairflag && groundentity->free)
 		{
 			// leave it suspended in the air
