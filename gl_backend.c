@@ -261,7 +261,7 @@ void GL_SetupView_Mode_Perspective (double fovx, double fovy, double zNear, doub
 	ymax = zNear * tan(fovy * M_PI / 360.0);
 	// set view pyramid
 	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
-	qglGetDoublev(GL_PROJECTION_MATRIX, &m);
+	qglGetDoublev(GL_PROJECTION_MATRIX, m);
 	backend_projectmatrix.m[0][0] = m[0];
 	backend_projectmatrix.m[1][0] = m[1];
 	backend_projectmatrix.m[2][0] = m[2];
@@ -342,7 +342,7 @@ void GL_SetupView_Mode_Ortho (double x1, double y1, double x2, double y2, double
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
 	qglLoadIdentity();CHECKGLERROR
 	qglOrtho(x1, x2, y2, y1, zNear, zFar);
-	qglGetDoublev(GL_PROJECTION_MATRIX, &m);
+	qglGetDoublev(GL_PROJECTION_MATRIX, m);
 	backend_projectmatrix.m[0][0] = m[0];
 	backend_projectmatrix.m[1][0] = m[1];
 	backend_projectmatrix.m[2][0] = m[2];
