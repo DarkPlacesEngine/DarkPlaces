@@ -530,6 +530,8 @@ void R_Textures_Init (void)
 
 void R_Textures_Frame (void)
 {
+	static	old_aniso = 0;
+
 	// could do procedural texture animation here, if we keep track of which
 	// textures were accessed this frame...
 
@@ -544,6 +546,34 @@ void R_Textures_Frame (void)
 	{
 		Mem_Free(colorconvertbuffer);
 		colorconvertbuffer = NULL;
+	}
+
+	if (old_aniso != gl_texture_anisotropy.integer)
+	{
+		gltextureimage_t *image;
+		gltexturepool_t *pool;
+		GLint oldbindtexnum;
+
+		old_aniso = bound(1, gl_texture_anisotropy.integer, gl_max_anisotropy);
+		
+		Cvar_SetValueQuick(&gl_texture_anisotropy, old_aniso);
+
+		for (pool = gltexturepoolchain;pool;pool = pool->next)
+		{
+			for (image = pool->imagechain;image;image = image->imagechain)
+			{
+				// only update already uploaded images
+				if (!(image->flags & GLTEXF_UPLOAD))
+				{
+					qglGetIntegerv(gltexturetypebindingenums[image->texturetype], &oldbindtexnum);
+
+					qglBindTexture(gltexturetypeenums[image->texturetype], image->texnum);
+					qglTexParameteri(gltexturetypeenums[image->texturetype], GL_TEXTURE_MAX_ANISOTROPY_EXT, old_aniso);CHECKGLERROR
+
+					qglBindTexture(gltexturetypeenums[image->texturetype], oldbindtexnum);
+				}
+			}
+		}
 	}
 }
 
