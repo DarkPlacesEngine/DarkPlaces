@@ -408,33 +408,41 @@ void Com_HexDumpToConsole(const qbyte *data, int size)
 		if (n > size - i)
 			n = size - i;
 		d = data + i;
+		// print offset
 		*cur++ = hexchar[(i >> 12) & 15];
 		*cur++ = hexchar[(i >>  8) & 15];
 		*cur++ = hexchar[(i >>  4) & 15];
 		*cur++ = hexchar[(i >>  0) & 15];
 		*cur++ = ':';
-		for (j = 0;j < n;j++)
+		// print hex
+		for (j = 0;j < 16;j++)
 		{
-			if (j & 1)
-			{
-				*cur++ = hexchar[(d[j] >> 4) & 15] | 0x80;
-				*cur++ = hexchar[(d[j] >> 0) & 15] | 0x80;
-			}
-			else
+			if (j < n)
 			{
 				*cur++ = hexchar[(d[j] >> 4) & 15];
 				*cur++ = hexchar[(d[j] >> 0) & 15];
 			}
+			else
+			{
+				*cur++ = ' ';
+				*cur++ = ' ';
+			}
+			if ((j & 3) == 0)
+				*cur++ = ' ';
 		}
-		for (;j < 16;j++)
+		// print text
+		for (j = 0;j < 16;j++)
 		{
-			*cur++ = ' ';
-			*cur++ = ' ';
+			if (j < n)
+			{
+				if (d[j] >= ' ' && d[j] <= 127)
+					*cur++ = d[j];
+				else
+					*cur++ = '.';
+			}
+			else
+				*cur++ = ' ';
 		}
-		for (j = 0;j < n;j++)
-			*cur++ = (d[j] >= ' ' && d[j] <= 0x7E) ? d[j] : '.';
-		for (;j < 16;j++)
-			*cur++ = ' ';
 		*cur++ = '\n';
 		i += n;
 		if (cur >= flushpointer || i >= size)
