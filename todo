@@ -1,10 +1,11 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
--d darkplaces: add DP_SND_OGGVORBIS extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 -d darkplaces: add a config saving command (Speeds)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
 -d darkplaces: add cl_particles_particleffect_bloodhack cvar to menu (Alex Boveri)
 -d darkplaces: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
 -d darkplaces: add gl_polyblend cvar to control amount of viewblend effect (Andrew A. Gilevsky)
+-d darkplaces: add graphics options menu and put realtime lighting stuff in it (Antti)
+-d darkplaces: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
 -d darkplaces: add r_waterwarp cvar to control amount of viewwarping underwater (Andrew A. Gilevsky)
 -d darkplaces: add rate command (and _cl_rate cvar to save to config) to control client rate (send to server on connect as a command, like other properties) (protoplasmatic)
 -d darkplaces: add slowmo to options menu (Cristian Beltramo)
@@ -22,6 +23,7 @@
 -d darkplaces: generate tvectors the same as svectors in bumpvector calculations (Riot)
 -d darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 -d darkplaces: locked console scrollback (sublim3)
+-d darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (metlslime, zinx)
 -d darkplaces: make sure QuakeDoneQuick works (Chris Kemp)
 -d darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (SeienAbunae)
 -d darkplaces: physics bug: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
@@ -56,12 +58,10 @@
 0 darkplaces: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces: add de-we to credits page for the great icons (de-we)
 0 darkplaces: add display of current cursor coordinates in realtime lighting mode (Stribbs)
-0 darkplaces: add graphics options menu and put realtime lighting stuff in it (Antti)
 0 darkplaces: add lava-steam particle puff effect for bursting lava bubbles (Zombie)
 0 darkplaces: add more joystick buttons, 3 isn't enough (Static_Fiend)
 0 darkplaces: add per-entity PolygonOffset to renderer, to allow zfighting bmodel/world glitches to be fixed, this has to affect all rendering involving the entity, including light/shadow (Tomaz)
 0 darkplaces: add procedural ripple distortion texture of some sort for use with envmap reflections (FrikaC)
-0 darkplaces: add r_editlights_editall command, same as _edit but affects all lights (mashakos) 
 0 darkplaces: add scaling capabilities to Image_CopyMux
 0 darkplaces: add support for .float corona and corona_radius to control corona intensity and radius on dlights (Electro) 
 0 darkplaces: add sv_maxrate cvar to server setup menu
@@ -121,7 +121,6 @@
 0 darkplaces: make findradius use areagrid scans to speed up searching (Urre, Sajt)
 0 darkplaces: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: make gl_picmip affect only maps, models, and sprites by setting their TEXF_PICMIP flag (Zenex, Urre)
-0 darkplaces: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (metlslime, zinx)
 0 darkplaces: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
 0 darkplaces: make players step down stairs rather than just flying off (Riot) 
@@ -429,6 +428,7 @@ d darkplaces: add 66.28.32.64 to master server list (Willis)
 d darkplaces: add DP_EF_NOSHADOW extension (Urre)
 d darkplaces: add DP_GFX_EXTERNALTEXTURES extension (Electro)
 d darkplaces: add DP_LITSUPPORT extension and document it
+d darkplaces: add DP_SND_OGGVORBIS extension which can be checked by mods to know they can intentionally load .ogg instead of .wav, since the engine prefers wav over ogg normally (CheapAlert)
 d darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 d darkplaces: add GAME_NEXUIZ mode
 d darkplaces: add GL_EXT_stencil_two_side support to shadow rendering - note: this got a 77% speedup! (fuh)
