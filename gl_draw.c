@@ -358,6 +358,9 @@ void GL_Draw_Init (void)
 }
 
 extern cvar_t gl_mesh_drawmode;
+extern int gl_maxdrawrangeelementsvertices;
+extern int gl_maxdrawrangeelementsindices;
+
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright;
@@ -555,7 +558,7 @@ void R_DrawQueue(void)
 				Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
 			if (gl_mesh_drawmode.integer > 3)
 				Cvar_SetValueQuick(&gl_mesh_drawmode, 3);
-			if (gl_mesh_drawmode.integer >= 3 && (qglDrawRangeElements == NULL || gl_maxdrawrangeelementsindices < 3072 || gl_maxdrawrangeelementsvertices < 3072))
+			if (gl_mesh_drawmode.integer >= 3 && qglDrawRangeElements == NULL)
 				Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
 
 			if (gl_mesh_drawmode.integer > 0)
@@ -568,7 +571,7 @@ void R_DrawQueue(void)
 				qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 			}
 
-			if (gl_mesh_drawmode.integer >= 3)
+			if (gl_mesh_drawmode.integer >= 3/* && (mesh->numvertices) <= gl_maxdrawrangeelementsvertices && (mesh->numindices) <= gl_maxdrawrangeelementsindices*/)
 			{
 				// GL 1.2 or GL 1.1 with extension
 				GL_LockArray(0, mesh->numvertices);

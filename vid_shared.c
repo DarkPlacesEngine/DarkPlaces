@@ -12,9 +12,6 @@ int gl_combine_extension = false;
 // LordHavoc: GL_EXT_compiled_vertex_array support
 int gl_supportslockarrays = false;
 
-int gl_maxdrawrangeelementsvertices;
-int gl_maxdrawrangeelementsindices;
-
 cvar_t vid_mode = {0, "vid_mode", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
@@ -388,18 +385,8 @@ void VID_CheckExtensions(void)
 	if (!gl_checkextension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
 
-	if (gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true)
-	 || gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", true))
-	{
-		qglGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &gl_maxdrawrangeelementsvertices);
-		qglGetIntegerv(GL_MAX_ELEMENTS_INDICES, &gl_maxdrawrangeelementsindices);
-
-		if (gl_maxdrawrangeelementsvertices < 1 || gl_maxdrawrangeelementsindices < 1)
-		{
-			Con_Printf("invalid GL_MAX_ELEMENTS_VERTICES (%i) and/or GL_MAX_ELEMENTS_INDICES (%i)\n", gl_maxdrawrangeelementsvertices, gl_maxdrawrangeelementsindices);
-			qglDrawRangeElements = qglDrawRangeElementsEXT = NULL;
-		}
-	}
+	if (!gl_checkextension("glDrawRangeElements", drawrangeelementsfuncs, "-nodrawrangeelements", true))
+		gl_checkextension("GL_EXT_draw_range_elements", drawrangeelementsextfuncs, "-nodrawrangeelements", true);
 
 	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex", false))
 	{
