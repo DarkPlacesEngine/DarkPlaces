@@ -1307,14 +1307,14 @@ void CL_ParseTempEntity(void)
 	case TE_LIGHTNING1:
 		// lightning bolts
 		if (!cl_model_bolt)
-			cl_model_bolt = Mod_ForName("progs/bolt.mdl", true, false, false);
+			cl_model_bolt = Mod_ForName("progs/bolt.mdl", false, false, false);
 		CL_ParseBeam(cl_model_bolt, true);
 		break;
 
 	case TE_LIGHTNING2:
 		// lightning bolts
 		if (!cl_model_bolt2)
-			cl_model_bolt2 = Mod_ForName("progs/bolt2.mdl", true, false, false);
+			cl_model_bolt2 = Mod_ForName("progs/bolt2.mdl", false, false, false);
 		CL_ParseBeam(cl_model_bolt2, true);
 		break;
 
