@@ -1756,7 +1756,7 @@ void R_PVSWorldNode()
 								pstack[portalstack++] = p;
 								goto loc0;
 
-		loc1:
+	loc1:
 								p = pstack[--portalstack];
 							}
 						}
@@ -1767,18 +1767,6 @@ void R_PVSWorldNode()
 
 		if (portalstack)
 			goto loc1;
-
-		i = 0;
-		portalstack = 0;
-		p = r_viewleaf->portals;
-		for (;p;p = p->next)
-		{
-			portalstack++;
-			if (p->past->worldnodeframe != r_framecount)
-				i++;
-		}
-		if (i)
-			Con_Printf("%i portals of viewleaf (%i portals) were not checked\n", i, portalstack);
 	}
 	else
 	{
