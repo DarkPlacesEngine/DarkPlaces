@@ -4073,8 +4073,8 @@ void MR_Init()
 	// the normal quake menu only the first time
 	else if(COM_CheckParm("-useqmenu"))
 		MR_SetRouting (TRUE);
-	else
-		MR_SetRouting (FALSE);
+	
+	MR_SetRouting (FALSE);
 }
 
 

@@ -860,7 +860,7 @@ void VM_spawn (void)
 =========
 VM_remove
 
-entity	remove()
+remove(entity e)
 =========
 */
 
