@@ -456,22 +456,9 @@ void CL_DecayLights(void)
 	float time;
 
 	time = cl.time - cl.oldtime;
-
-	dl = cl_dlights;
-	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
-	{
-		if (!dl->radius)
-			continue;
-		if (dl->die < cl.time)
-		{
-			dl->radius = 0;
-			continue;
-		}
-
-		dl->radius -= time*dl->decay;
-		if (dl->radius < 0)
-			dl->radius = 0;
-	}
+	for (i = 0, dl = cl_dlights;i < MAX_DLIGHTS;i++, dl++)
+		if (dl->radius)
+			dl->radius = (cl.time < dl->die) ? max(0, dl->radius - time * dl->decay) : 0;
 }
 
 extern qboolean Nehahrademcompatibility;
