@@ -1025,17 +1025,17 @@ void SV_WalkMove (edict_t *ent)
 	originalmove_flags = (int)ent->v->flags;
 	originalmove_groundentity = ent->v->groundentity;
 
+	if ((int)ent->v->flags & FL_WATERJUMP)
+		return;
+
+	if (sv_nostep.integer)
+		return;
+	
 	// if move didn't block on a step, return
 	if (clip & 2)
 	{
 		// if move was not trying to move into the step, return
 		if (fabs(start_velocity[0]) < 0.03125 && fabs(start_velocity[1]) < 0.03125)
-			return;
-	
-		if (sv_nostep.integer)
-			return;
-		
-		if ((int)ent->v->flags & FL_WATERJUMP)
 			return;
 	
 		if (ent->v->movetype != MOVETYPE_FLY)
@@ -1092,7 +1092,7 @@ void SV_WalkMove (edict_t *ent)
 		if (clip & 2 && sv_wallfriction.integer)
 			SV_WallFriction (ent, stepnormal);
 	}
-	else if (!sv_gameplayfix_stepdown.integer || !oldonground || ((int)ent->v->flags & FL_ONGROUND))
+	else if (!sv_gameplayfix_stepdown.integer || !oldonground || ((int)ent->v->flags & FL_ONGROUND) || ent->v->waterlevel >= 2)
 		return;
 
 	// move down
