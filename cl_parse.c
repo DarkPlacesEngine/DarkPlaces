@@ -550,7 +550,10 @@ void CL_ParseUpdate (int bits)
 	if (bits & U_DELTA)
 		new = ent->state_current;
 	else
+	{
 		new = ent->state_baseline;
+		new.active = true;
+	}
 
 	new.number = num;
 	new.time = cl.mtime[0];
