@@ -1278,8 +1278,7 @@ void CL_ParseTempEntity(void)
 		MSG_ReadVector(pos, cl.protocol);
 		MSG_ReadVector(pos2, cl.protocol);
 		MSG_ReadVector(dir, cl.protocol);
-		CL_BeamParticle(pos, pos2, 12, 1, 0.3, 0.1, 1, 1);
-		CL_BeamParticle(pos, pos2, 5, 1, 0.9, 0.3, 1, 1);
+		CL_BeamParticle(pos, pos2, 8, 1, 1, 1, 1, 1);
 		break;
 
 	case TE_TEI_SMOKE:
