@@ -211,12 +211,12 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 		{
 			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[leaf->firstleafsurface[i]])
 				continue;
-			surface = ent->model->brushq1.surfaces + leaf->firstleafsurface[i];
+			surface = ent->model->brush.data_surfaces + leaf->firstleafsurface[i];
 			dist = sdist = PlaneDiff(lightorigin, surface->plane);
 			if (surface->flags & SURF_PLANEBACK)
 				dist = -dist;
 
-			if (dist < -0.25f && !(surface->flags & SURF_LIGHTBOTHSIDES))
+			if (dist < -0.25f && !(surface->texture->flags & SURF_LIGHTBOTHSIDES))
 				continue;
 
 			dist2 = dist * dist;

@@ -2602,25 +2602,35 @@ void PF_te_plasmaburn (void)
 
 static void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out)
 {
-	int i, j;
-	vec3_t v1, clipplanenormal, normal;
-	vec_t clipplanedist, clipdist;
+	int i, j, k;
+	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
+	bestdist = 1000000000;
 	VectorCopy(p, out);
-	if (surface->flags & SURF_PLANEBACK)
-		VectorNegate(surface->plane->normal, normal);
-	else
-		VectorCopy(surface->plane->normal, normal);
-	for (i = 0, j = surface->mesh.num_vertices - 1;i < surface->mesh.num_vertices;j = i, i++)
+	for (i = 0;i < surface->mesh.num_triangles;i++)
 	{
-		VectorSubtract(&surface->mesh.data_vertex3f[j * 3], &surface->mesh.data_vertex3f[i * 3], v1);
-		VectorNormalizeFast(v1);
-		CrossProduct(v1, normal, clipplanenormal);
-		clipplanedist = DotProduct(&surface->mesh.data_vertex3f[i * 3], clipplanenormal);
-		clipdist = DotProduct(out, clipplanenormal) - clipplanedist;
-		if (clipdist > 0)
+		// clip original point to each triangle of the surface and find the
+		// triangle that is closest
+		v[0] = surface->mesh.data_vertex3f + surface->mesh.data_element3i[i * 3 + 0] * 3;
+		v[1] = surface->mesh.data_vertex3f + surface->mesh.data_element3i[i * 3 + 1] * 3;
+		v[2] = surface->mesh.data_vertex3f + surface->mesh.data_element3i[i * 3 + 2] * 3;
+		TriangleNormal(v[0], v[1], v[2], facenormal);
+		VectorNormalize(facenormal);
+		offsetdist = DotProduct(v[0], facenormal) - DotProduct(p, facenormal);
+		VectorMA(p, offsetdist, facenormal, temp);
+		for (j = 0, k = 2;j < 3;k = j, j++)
 		{
-			clipdist = -clipdist;
-			VectorMA(out, clipdist, clipplanenormal, out);
+			VectorSubtract(v[k], v[j], edgenormal);
+			CrossProduct(edgenormal, facenormal, sidenormal);
+			VectorNormalize(sidenormal);
+			offsetdist = DotProduct(v[k], sidenormal) - DotProduct(temp, sidenormal);
+			if (offsetdist < 0)
+				VectorMA(temp, offsetdist, sidenormal, temp);
+		}
+		dist = VectorDistance2(temp, p);
+		if (bestdist > dist)
+		{
+			bestdist = dist;
+			VectorCopy(temp, out);
 		}
 	}
 }
@@ -2637,7 +2647,7 @@ static msurface_t *getsurface(edict_t *ed, int surfacenum)
 	model = sv.models[modelindex];
 	if (surfacenum < 0 || surfacenum >= model->nummodelsurfaces)
 		return NULL;
-	return model->brushq1.surfaces + surfacenum + model->firstmodelsurface;
+	return model->brush.data_surfaces + surfacenum + model->firstmodelsurface;
 }
 
 
@@ -2652,6 +2662,7 @@ void PF_getsurfacenumpoints(void)
 		return;
 	}
 
+	// note: this (incorrectly) assumes it is a simple polygon
 	G_FLOAT(OFS_RETURN) = surface->mesh.num_vertices;
 }
 //PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
@@ -2666,6 +2677,7 @@ void PF_getsurfacepoint(void)
 		return;
 	if (!(surface = getsurface(ed, G_FLOAT(OFS_PARM1))))
 		return;
+	// note: this (incorrectly) assumes it is a simple polygon
 	pointnum = G_FLOAT(OFS_PARM2);
 	if (pointnum < 0 || pointnum >= surface->mesh.num_vertices)
 		return;
@@ -2676,14 +2688,17 @@ void PF_getsurfacepoint(void)
 void PF_getsurfacenormal(void)
 {
 	msurface_t *surface;
+	vec3_t normal;
 	VectorClear(G_VECTOR(OFS_RETURN));
 	if (!(surface = getsurface(G_EDICT(OFS_PARM0), G_FLOAT(OFS_PARM1))))
 		return;
 	// FIXME: implement rotation/scaling
-	if (surface->flags & SURF_PLANEBACK)
-		VectorNegate(surface->plane->normal, G_VECTOR(OFS_RETURN));
-	else
-		VectorCopy(surface->plane->normal, G_VECTOR(OFS_RETURN));
+	// note: this (incorrectly) assumes it is a simple polygon
+	// note: this only returns the first triangle, so it doesn't work very
+	// well for curved surfaces or arbitrary meshes
+	TriangleNormal(surface->mesh.data_vertex3f, surface->mesh.data_vertex3f + 3, surface->mesh.data_vertex3f + 6, normal);
+	VectorNormalize(normal);
+	VectorCopy(normal, G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacetexture,   // #437 string(entity e, float s) getsurfacetexture = #437;
 void PF_getsurfacetexture(void)
@@ -2692,7 +2707,7 @@ void PF_getsurfacetexture(void)
 	G_INT(OFS_RETURN) = 0;
 	if (!(surface = getsurface(G_EDICT(OFS_PARM0), G_FLOAT(OFS_PARM1))))
 		return;
-	G_INT(OFS_RETURN) = PR_SetString(surface->texinfo->texture->name);
+	G_INT(OFS_RETURN) = PR_SetString(surface->texture->name);
 }
 //PF_getsurfacenearpoint, // #438 float(entity e, vector p) getsurfacenearpoint = #438;
 void PF_getsurfacenearpoint(void)
@@ -2714,7 +2729,7 @@ void PF_getsurfacenearpoint(void)
 	if (modelindex < 1 || modelindex >= MAX_MODELS)
 		return;
 	model = sv.models[modelindex];
-	if (!model->brushq1.numsurfaces)
+	if (!model->brush.num_surfaces)
 		return;
 
 	// FIXME: implement rotation/scaling
@@ -2723,16 +2738,21 @@ void PF_getsurfacenearpoint(void)
 	bestdist = 1000000000;
 	for (surfacenum = 0;surfacenum < model->nummodelsurfaces;surfacenum++)
 	{
-		surface = model->brushq1.surfaces + surfacenum + model->firstmodelsurface;
-		dist = PlaneDiff(p, surface->plane);
-		dist = dist * dist;
+		surface = model->brush.data_surfaces + surfacenum + model->firstmodelsurface;
+		// first see if the nearest point on the surface's box is closer than the previous match
+		clipped[0] = bound(surface->mins[0], p[0], surface->maxs[0]) - p[0];
+		clipped[1] = bound(surface->mins[1], p[1], surface->maxs[1]) - p[1];
+		clipped[2] = bound(surface->mins[2], p[2], surface->maxs[2]) - p[2];
+		dist = VectorLength2(clipped);
 		if (dist < bestdist)
 		{
+			// it is, check the nearest point on the actual geometry
 			clippointtosurface(surface, p, clipped);
 			VectorSubtract(clipped, p, clipped);
-			dist += DotProduct(clipped, clipped);
+			dist += VectorLength2(clipped);
 			if (dist < bestdist)
 			{
+				// that's closer too, store it as the best match
 				best = surfacenum;
 				bestdist = dist;
 			}
