@@ -137,5 +137,98 @@ extern void Mod_AliasInit(void);
 
 #include "model_zymotic.h"
 
+// all md3 ints, floats, and shorts, are little endian, and thus need to be
+// passed through LittleLong/LittleFloat/LittleShort to avoid breaking on
+// bigendian machines (Macs for example)
+#define MD3VERSION 15
+#define MD3NAME 64
+#define MD3FRAMENAME 16
+
+// the origin is at 1/16th scale
+// the pitch and yaw are encoded as 8 bits each
+typedef struct md3vertex_s
+{
+	short origin[3], normalpitchyaw;
+}
+md3vertex_t;
+
+// one per frame
+typedef struct md3frameinfo_s
+{
+	float mins[3];
+	float maxs[3];
+	float origin[3];
+	float radius;
+	char name[MD3FRAMENAME];
+}
+md3frameinfo_t;
+
+// one per tag per frame
+typedef struct md3tag_s
+{
+	char name[MD3NAME];
+	float origin[3];
+	float rotationmatrix[9];
+}
+md3tag_t;
+
+// one per shader per mesh
+typedef struct md3shader_s
+{
+	char name[MD3NAME];
+	// engine field (yes this empty int does exist in the file)
+	int shadernum;
+}
+md3shader_t;
+
+// one per mesh per model
+//
+// note that the lump_ offsets in this struct are relative to the beginning
+// of the mesh struct
+//
+// to find the next mesh in the file, you must go to lump_end, which puts you
+// at the beginning of the next mesh
+//
+// the comments after each field are example values from 4 models I examined
+typedef struct md3mesh_s
+{
+	char identifier[4]; // "IDP3"
+	char name[MD3NAME];
+	int num_unknown1; // 0 0 0 0
+	int num_frames; // 1 9 1 138
+	int num_shaders; // 1 1 1 1
+	int num_vertices; // 68 275 346 42
+	int num_triangles; // 96 324 324 55
+	int lump_elements; // 108 108 108 176
+	int lump_shaders; // 1260 3996 3996 108
+	int lump_texcoords; // 1328 4064 4064 836
+	int lump_framevertices; // 1872 6264 6832 1172
+	int lump_end; // 2416 26064 9600 47540
+}
+md3mesh_t;
+
+// this struct is at the beginning of the md3 file
+//
+// note that the lump_ offsets in this struct are relative to the beginning
+// of the header struct (which is the beginning of the file)
+//
+// the comments after each field are example values from 4 models I examined
+typedef struct md3modelheader_s
+{
+	char identifier[4]; // "IDP3"
+	int version; // 15 15 15 15
+	char name[MD3NAME]; // "eyes" "v_axe" "armor" "models/players/brandon/brandon.md3"
+	int unknown1; // 0 0 0 0
+	int num_frames; // 1 9 1 138
+	int num_tags; // 0 0 3 0
+	int num_meshes; // 1 1 1 3
+	int unknown2; // 0 0 0 0
+	int lump_frameinfo; // 108 108 108 108
+	int lump_tags; // 164 612 164 7836
+	int lump_meshes; // 164 612 164 54204
+	int lump_end; // 2580 26676 9764 219904
+}
+md3modelheader_t;
+
 #endif
 
