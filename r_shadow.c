@@ -945,14 +945,14 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	// if view is inside the box, just say yes it's visible
 	// LordHavoc: for some odd reason scissor seems broken without stencil
 	// (?!?  seems like a driver bug) so abort if gl_stencil is false
-	if (!gl_stencil || BoxesOverlap(r_origin, r_origin, mins, maxs))
+	if (!gl_stencil || BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
 	{
 		qglDisable(GL_SCISSOR_TEST);
 		return false;
 	}
 	for (i = 0;i < 3;i++)
 	{
-		if (vpn[i] >= 0)
+		if (r_viewforward[i] >= 0)
 		{
 			v[i] = mins[i];
 			v2[i] = maxs[i];
@@ -963,13 +963,13 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 			v2[i] = mins[i];
 		}
 	}
-	f = DotProduct(vpn, r_origin) + 1;
-	if (DotProduct(vpn, v2) <= f)
+	f = DotProduct(r_viewforward, r_vieworigin) + 1;
+	if (DotProduct(r_viewforward, v2) <= f)
 	{
 		// entirely behind nearclip plane
 		return true;
 	}
-	if (DotProduct(vpn, v) >= f)
+	if (DotProduct(r_viewforward, v) >= f)
 	{
 		// entirely infront of nearclip plane
 		x1 = y1 = x2 = y2 = 0;
@@ -1004,12 +1004,12 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 		// create viewspace bbox
 		for (i = 0;i < 8;i++)
 		{
-			v[0] = ((i & 1) ? mins[0] : maxs[0]) - r_origin[0];
-			v[1] = ((i & 2) ? mins[1] : maxs[1]) - r_origin[1];
-			v[2] = ((i & 4) ? mins[2] : maxs[2]) - r_origin[2];
-			v2[0] = DotProduct(v, vright);
-			v2[1] = DotProduct(v, vup);
-			v2[2] = DotProduct(v, vpn);
+			v[0] = ((i & 1) ? mins[0] : maxs[0]) - r_vieworigin[0];
+			v[1] = ((i & 2) ? mins[1] : maxs[1]) - r_vieworigin[1];
+			v[2] = ((i & 4) ? mins[2] : maxs[2]) - r_vieworigin[2];
+			v2[0] = -DotProduct(v, r_viewleft);
+			v2[1] = DotProduct(v, r_viewup);
+			v2[2] = DotProduct(v, r_viewforward);
 			if (i)
 			{
 				if (smins[0] > v2[0]) smins[0] = v2[0];
@@ -1042,9 +1042,9 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 			v2[0] = (i & 1) ? smins[0] : smaxs[0];
 			v2[1] = (i & 2) ? smins[1] : smaxs[1];
 			v2[2] = (i & 4) ? smins[2] : smaxs[2];
-			v[0] = v2[0] * vright[0] + v2[1] * vup[0] + v2[2] * vpn[0] + r_origin[0];
-			v[1] = v2[0] * vright[1] + v2[1] * vup[1] + v2[2] * vpn[1] + r_origin[1];
-			v[2] = v2[0] * vright[2] + v2[1] * vup[2] + v2[2] * vpn[2] + r_origin[2];
+			v[0] = v2[0] * -r_viewleft[0] + v2[1] * r_viewup[0] + v2[2] * r_viewforward[0] + r_vieworigin[0];
+			v[1] = v2[0] * -r_viewleft[1] + v2[1] * r_viewup[1] + v2[2] * r_viewforward[1] + r_vieworigin[1];
+			v[2] = v2[0] * -r_viewleft[2] + v2[1] * r_viewup[2] + v2[2] * r_viewforward[2] + r_vieworigin[2];
 			v[3] = 1.0f;
 			GL_TransformToScreen(v, v2);
 			//Con_Printf("%.3f %.3f %.3f %.3f transformed to %.3f %.3f %.3f %.3f\n", v[0], v[1], v[2], v[3], v2[0], v2[1], v2[2], v2[3]);
@@ -2055,7 +2055,7 @@ rtexture_t *lighttextures[5];
 void R_Shadow_DrawCursorCallback(const void *calldata1, int calldata2)
 {
 	float scale = r_editlights_cursorgrid.value * 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[0], false, r_editlights_cursorlocation, vright, vup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[0], false, r_editlights_cursorlocation, r_viewright, r_viewup, scale, -scale, -scale, scale, 1, 1, 1, 0.5f);
 }
 
 void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
@@ -2068,7 +2068,7 @@ void R_Shadow_DrawLightSpriteCallback(const void *calldata1, int calldata2)
 		intensity = 0.75 + 0.25 * sin(realtime * M_PI * 4.0);
 	if (!light->meshchain_shadow)
 		intensity *= 0.5f;
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[calldata2], false, light->origin, vright, vup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, lighttextures[calldata2], false, light->origin, r_viewright, r_viewup, 8, -8, -8, 8, intensity, intensity, intensity, 0.5);
 }
 
 void R_Shadow_DrawLightSprites(void)
@@ -2097,12 +2097,12 @@ void R_Shadow_SelectLightInView(void)
 	bestrating = 0;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		VectorSubtract(light->origin, r_refdef.vieworg, temp);
-		rating = (DotProduct(temp, vpn) / sqrt(DotProduct(temp, temp)));
+		VectorSubtract(light->origin, r_vieworigin, temp);
+		rating = (DotProduct(temp, r_viewforward) / sqrt(DotProduct(temp, temp)));
 		if (rating >= 0.95)
 		{
 			rating /= (1 + 0.0625f * sqrt(DotProduct(temp, temp)));
-			if (bestrating < rating && CL_TraceLine(light->origin, r_refdef.vieworg, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1.0f)
+			if (bestrating < rating && CL_TraceLine(light->origin, r_vieworigin, NULL, NULL, true, NULL, SUPERCONTENTS_SOLID) == 1.0f)
 			{
 				bestrating = rating;
 				best = light;
@@ -2396,8 +2396,8 @@ void R_Shadow_SetCursorLocationForView(void)
 {
 	vec_t dist, push, frac;
 	vec3_t dest, endpos, normal;
-	VectorMA(r_refdef.vieworg, r_editlights_cursordistance.value, vpn, dest);
-	frac = CL_TraceLine(r_refdef.vieworg, dest, endpos, normal, true, NULL, SUPERCONTENTS_SOLID);
+	VectorMA(r_vieworigin, r_editlights_cursordistance.value, r_viewforward, dest);
+	frac = CL_TraceLine(r_vieworigin, dest, endpos, normal, true, NULL, SUPERCONTENTS_SOLID);
 	if (frac < 1)
 	{
 		dist = frac * r_editlights_cursordistance.value;
@@ -2405,7 +2405,7 @@ void R_Shadow_SetCursorLocationForView(void)
 		if (push > dist)
 			push = dist;
 		push = -push;
-		VectorMA(endpos, push, vpn, endpos);
+		VectorMA(endpos, push, r_viewforward, endpos);
 		VectorMA(endpos, r_editlights_cursorpushoff.value, normal, endpos);
 	}
 	r_editlights_cursorlocation[0] = floor(endpos[0] / r_editlights_cursorgrid.value + 0.5f) * r_editlights_cursorgrid.value;

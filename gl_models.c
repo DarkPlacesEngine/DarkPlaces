@@ -175,7 +175,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 	fog = 0;
 	if (fogenabled)
 	{
-		VectorSubtract(ent->origin, r_origin, diff);
+		VectorSubtract(ent->origin, r_vieworigin, diff);
 		fog = DotProduct(diff,diff);
 		if (fog < 0.01f)
 			fog = 0.01f;
@@ -344,7 +344,7 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 	fog = 0;
 	if (fogenabled)
 	{
-		VectorSubtract(ent->origin, r_origin, diff);
+		VectorSubtract(ent->origin, r_vieworigin, diff);
 		fog = DotProduct(diff,diff);
 		if (fog < 0.01f)
 			fog = 0.01f;
@@ -704,7 +704,7 @@ void R_DrawZymoticModelMeshCallback (const void *calldata1, int calldata2)
 	fog = 0;
 	if (fogenabled)
 	{
-		VectorSubtract(ent->origin, r_origin, diff);
+		VectorSubtract(ent->origin, r_vieworigin, diff);
 		fog = DotProduct(diff,diff);
 		if (fog < 0.01f)
 			fog = 0.01f;

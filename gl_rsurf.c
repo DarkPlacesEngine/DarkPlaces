@@ -780,7 +780,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 
 	R_Mesh_Matrix(&ent->matrix);
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
 	memset(&m, 0, sizeof(m));
 	texture = surf->texinfo->texture->currentframe;
@@ -892,7 +892,7 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 	float base, colorscale;
 	rmeshstate_t m;
 	float modelorg[3];
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	memset(&m, 0, sizeof(m));
 	if (rendertype == SURFRENDER_ADD)
 	{
@@ -939,7 +939,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 {
 	rmeshstate_t m;
 	float modelorg[3];
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -959,7 +959,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 {
 	rmeshstate_t m;
 	float modelorg[3];
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	GL_DepthMask(false);
@@ -1099,7 +1099,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 	const msurface_t *surf;
 	rmeshstate_t m;
 	float modelorg[3];
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	GL_DepthMask(false);
@@ -1326,7 +1326,7 @@ void R_PrepareSurfaces(entity_render_t *ent)
 		return;
 
 	model = ent->model;
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	numsurfaces = model->brushq1.nummodelsurfaces;
 	surfaces = model->brushq1.surfaces + model->brushq1.firstmodelsurface;
 	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
@@ -1416,7 +1416,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
 			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
 			 0.125f);
-	if (PlaneDiff(r_origin, (&portal->plane)) < 0)
+	if (PlaneDiff(r_vieworigin, (&portal->plane)) < 0)
 	{
 		for (i = portal->numpoints - 1, v = varray_vertex3f;i >= 0;i--, v += 3)
 			VectorCopy(portal->points[i].position, v);
@@ -1465,7 +1465,7 @@ void R_PrepareBrushModel(entity_render_t *ent)
 	if (model == NULL)
 		return;
 #if WORLDNODECULLBACKFACES
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 #endif
 	numsurfaces = model->brushq1.nummodelsurfaces;
 	surf = model->brushq1.surfaces + model->brushq1.firstmodelsurface;
@@ -1504,7 +1504,7 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 		return;
 	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
 	surfacepvsframes = model->brushq1.surfacepvsframes + model->brushq1.firstmodelsurface;
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
 	for (leaf = model->brushq1.pvsleafchain;leaf;leaf = leaf->pvschain)
 	{
@@ -1556,7 +1556,7 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 	// RecursiveWorldNode
 	surfaces = ent->model->brushq1.surfaces;
 	surfacevisframes = ent->model->brushq1.surfacevisframes;
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	viewleaf->worldnodeframe = r_framecount;
 	leafstack[0] = viewleaf;
 	leafstackpos = 1;
@@ -1652,7 +1652,7 @@ void R_WorldVisibility(entity_render_t *ent)
 	vec3_t modelorg;
 	mleaf_t *viewleaf;
 
-	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	viewleaf = (ent->model && ent->model->brushq1.PointInLeaf) ? ent->model->brushq1.PointInLeaf(ent->model, modelorg) : NULL;
 	R_PVSUpdate(ent, viewleaf);
 
@@ -2101,7 +2101,7 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		{
 			if (r_q3bsp_framecount != r_framecount)
@@ -2131,7 +2131,7 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		{
 			if (r_q3bsp_framecount != r_framecount)
@@ -2173,7 +2173,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	{
 		model = ent->model;
 		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		lightmins[0] = relativelightorigin[0] - lightradius;
 		lightmins[1] = relativelightorigin[1] - lightradius;
 		lightmins[2] = relativelightorigin[2] - lightradius;
@@ -2209,7 +2209,7 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 	{
 		model = ent->model;
 		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		lightmins[0] = relativelightorigin[0] - lightradius;
 		lightmins[1] = relativelightorigin[1] - lightradius;
 		lightmins[2] = relativelightorigin[2] - lightradius;

@@ -49,12 +49,12 @@ void R_CalcBeam_Vertex3f (float *vert, vec3_t org1, vec3_t org2, float width)
 	VectorNormalizeFast (normal);
 
 	// calculate 'right' vector for start
-	VectorSubtract (r_origin, org1, diff);
+	VectorSubtract (r_vieworigin, org1, diff);
 	VectorNormalizeFast (diff);
 	CrossProduct (normal, diff, right1);
 
 	// calculate 'right' vector for end
-	VectorSubtract (r_origin, org2, diff);
+	VectorSubtract (r_vieworigin, org2, diff);
 	VectorNormalizeFast (diff);
 	CrossProduct (normal, diff, right2);
 
@@ -1819,7 +1819,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 #ifndef WORKINGLQUAKE
 	if (fogenabled && p->blendmode != PBLEND_MOD)
 	{
-		VectorSubtract(org, r_origin, fogvec);
+		VectorSubtract(org, r_vieworigin, fogvec);
 		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
 		ifog = 1 - fog;
 		cr = cr * ifog;
@@ -1857,7 +1857,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		if (p->orientation == PARTICLE_ORIENTED_DOUBLESIDED)
 		{
 			// double-sided
-			if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
+			if (DotProduct(p->vel2, r_vieworigin) > DotProduct(p->vel2, org))
 			{
 				VectorNegate(p->vel2, v);
 				VectorVectors(v, right, up);
@@ -1869,8 +1869,8 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		}
 		else
 		{
-			VectorScale(vright, p->scalex, right);
-			VectorScale(vup, p->scaley, up);
+			VectorScale(r_viewleft, -p->scalex, right);
+			VectorScale(r_viewup, p->scaley, up);
 		}
 		particle_vertex3f[ 0] = org[0] - right[0] - up[0];
 		particle_vertex3f[ 1] = org[1] - right[1] - up[1];
@@ -1947,7 +1947,7 @@ void R_DrawParticles (void)
 	if ((!cl_numparticles) || (!r_drawparticles.integer))
 		return;
 
-	minparticledist = DotProduct(r_origin, vpn) + 4.0f;
+	minparticledist = DotProduct(r_vieworigin, r_viewforward) + 4.0f;
 
 #ifdef WORKINGLQUAKE
 	glBindTexture(GL_TEXTURE_2D, particlefonttexture);
@@ -1956,7 +1956,7 @@ void R_DrawParticles (void)
 	glDepthMask(0);
 	// LordHavoc: only render if not too close
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-		if (DotProduct(p->org, vpn) >= minparticledist)
+		if (DotProduct(p->org, r_viewforward) >= minparticledist)
 			R_DrawParticle(p);
 	glDepthMask(1);
 	glDisable(GL_BLEND);
@@ -1965,7 +1965,7 @@ void R_DrawParticles (void)
 	// LordHavoc: only render if not too close
 	c_particles += cl_numparticles;
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-		if (DotProduct(p->org, vpn) >= minparticledist || p->orientation == PARTICLE_BEAM)
+		if (DotProduct(p->org, r_viewforward) >= minparticledist || p->orientation == PARTICLE_BEAM)
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
 #endif
 }

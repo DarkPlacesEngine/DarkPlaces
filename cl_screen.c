@@ -32,7 +32,6 @@ qboolean	scr_drawloading = false;
 static qbyte menuplyr_pixels[4096];
 
 void DrawCrosshair(int num);
-void V_CalcRefdef (void);
 static void SCR_ScreenShot_f (void);
 static void R_Envmap_f (void);
 
@@ -366,13 +365,12 @@ void R_TimeReport_Start(void)
 	if (r_timereport_active)
 	{
 		speedstringcount = 0;
-		AngleVectors (r_refdef.viewangles, vpn, NULL, NULL);
 		sprintf(r_speeds_string,
-			"org:'%+8.2f %+8.2f %+8.2f' ang:'%+4.0f %+4.0f %+4.0f' dir:'%+2.3f %+2.3f %+2.3f'\n"
+			"org:'%+8.2f %+8.2f %+8.2f' dir:'%+2.3f %+2.3f %+2.3f'\n"
 			"world:%6i faces%6i nodes%6i leafs%6i dlitwalls\n"
 			"%5i models%5i bmodels%5i sprites%6i particles%4i dlights\n"
 			"%6i modeltris%6i meshs%6i meshtris\n",
-			r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0], r_refdef.viewangles[1], r_refdef.viewangles[2], vpn[0], vpn[1], vpn[2],
+			r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], r_viewforward[0], r_viewforward[1], r_viewforward[2],
 			c_faces, c_nodes, c_leafs, c_light_polys,
 			c_models, c_bmodels, c_sprites, c_particles, c_dlights,
 			c_alias_polys, c_meshs, c_meshelements / 3);
@@ -635,7 +633,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 	dq->scaley = height;
 	dq->flags = 0;
 	dq->color = 0;
-	
+
 	r_refdef.drawqueuesize += dq->size;
 }
 
@@ -656,7 +654,7 @@ void DrawQ_ResetClipArea(void)
 	dq->scaley = 0;
 	dq->flags = 0;
 	dq->color = 0;
-	
+
 	r_refdef.drawqueuesize += dq->size;
 }
 
@@ -742,7 +740,7 @@ static void SCR_CalcRefdef (void)
 	if (cl.worldmodel)
 	{
 		Mod_CheckLoaded(cl.worldmodel);
-		contents = CL_PointSuperContents(r_refdef.vieworg);
+		contents = CL_PointSuperContents(r_vieworigin);
 		if (contents & SUPERCONTENTS_LIQUIDSMASK)
 		{
 			r_refdef.fov_x *= (sin(cl.time * 4.7) * 0.015 + 0.985);
@@ -870,10 +868,10 @@ static void R_Envmap_f (void)
 	for (j = 0;j < 6;j++)
 	{
 		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
-		VectorCopy(envmapinfo[j].angles, r_refdef.viewangles);
+		Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, r_vieworigin[0], r_vieworigin[1], r_vieworigin[2], envmapinfo[j].angles[0], envmapinfo[j].angles[1], envmapinfo[j].angles[2], 1);
 		R_ClearScreen();
-		R_RenderView ();
-		SCR_ScreenShot(filename, vid.realx, vid.realy, size, size, false);
+		R_RenderView();
+		SCR_ScreenShot(filename, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, false);
 	}
 
 	envmap = false;

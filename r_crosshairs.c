@@ -80,12 +80,12 @@ void R_DrawWorldCrosshair(void)
 
 	// get the forward vector for the gun (not the view)
 	AngleVectors(cl.viewangles, v2, NULL, NULL);
-	//VectorCopy(r_origin, v1);
+	//VectorCopy(r_vieworigin, v1);
 	VectorMA(v1, 8192, v2, v2);
 	spritescale = CL_TraceLine(v1, v2, spriteorigin, NULL, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY) * (8192.0f / 40.0f) * crosshair_size.value;
 
 	// draw the sprite
-	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, pic->tex, true, spriteorigin, vright, vup, spritescale, -spritescale, -spritescale, spritescale, color[0], color[1], color[2], color[3]);
+	R_DrawSprite(GL_SRC_ALPHA, GL_ONE, pic->tex, true, spriteorigin, r_viewright, r_viewup, spritescale, -spritescale, -spritescale, spritescale, color[0], color[1], color[2], color[3]);
 }
 
 void R_Draw2DCrosshair(void)

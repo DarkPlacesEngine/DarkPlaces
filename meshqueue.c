@@ -112,7 +112,7 @@ void R_MeshQueue_AddTransparent(const vec3_t center, void (*callback)(const void
 	mq->callback = callback;
 	mq->data1 = data1;
 	mq->data2 = data2;
-	mq->dist = DotProduct(center, vpn) - mqt_viewplanedist;
+	mq->dist = DotProduct(center, r_viewforward) - mqt_viewplanedist;
 	mq->next = NULL;
 }
 
@@ -167,7 +167,7 @@ void R_MeshQueue_BeginScene(void)
 	mq_count = 0;
 	mqt_count = 0;
 	mq_listhead = NULL;
-	mqt_viewplanedist = DotProduct(r_origin, vpn);
+	mqt_viewplanedist = DotProduct(r_vieworigin, r_viewforward);
 }
 
 void R_MeshQueue_EndScene(void)

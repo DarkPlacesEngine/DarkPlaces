@@ -58,6 +58,12 @@ cvar_t	v_centerspeed = {0, "v_centerspeed","500"};
 
 cvar_t cl_stairsmoothspeed = {CVAR_SAVE, "cl_stairsmoothspeed", "160"};
 
+cvar_t chase_back = {CVAR_SAVE, "chase_back", "48"};
+cvar_t chase_up = {CVAR_SAVE, "chase_up", "24"};
+cvar_t chase_active = {CVAR_SAVE, "chase_active", "0"};
+// GAME_GOODVSBAD2
+cvar_t chase_stevie = {0, "chase_stevie", "0"};
+
 float	v_dmg_time, v_dmg_roll, v_dmg_pitch;
 
 
@@ -295,91 +301,126 @@ static void V_BonusFlash_f (void)
 
 extern matrix4x4_t viewmodelmatrix;
 
+#include "cl_collision.h"
+
 /*
 ==================
 V_CalcRefdef
 
 ==================
 */
+extern float timerefreshangle;
 void V_CalcRefdef (void)
 {
 	static float oldz;
 	entity_t *ent;
+	float vieworg[3], viewangles[3], newz;
+	Matrix4x4_CreateIdentity(&viewmodelmatrix);
+	Matrix4x4_CreateIdentity(&r_refdef.viewentitymatrix);
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
-		// ent is the player model (visible when out of body)
+		// ent is the view entity (visible when out of body)
 		ent = &cl_entities[cl.viewentity];
-		VectorCopy(ent->render.origin, r_refdef.vieworg);
-		VectorCopy(cl.viewangles, r_refdef.viewangles);
-		if (oldz < ent->render.origin[2])
-		{
-			if (cl.time > cl.oldtime)
-				oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
-			oldz -= ent->render.origin[2];
-			oldz = bound(-16, oldz, 0);
-			r_refdef.vieworg[2] += oldz;
-			oldz += ent->render.origin[2];
-		}
-		else
-			oldz = ent->render.origin[2];
 		if (cl.intermission)
 		{
-			// entity is a fixed camera
-			VectorCopy(ent->render.angles, r_refdef.viewangles);
-		}
-		else if (chase_active.value)
-		{
-			// observing entity from third person
-			Chase_Update();
+			// entity is a fixed camera, just copy the matrix
+			Matrix4x4_Copy(&r_refdef.viewentitymatrix, &ent->render.matrix);
+			Matrix4x4_Copy(&viewmodelmatrix, &ent->render.matrix);
 		}
 		else
 		{
-			// first person view from entity
-			// angles
-			if (cl.stats[STAT_HEALTH] <= 0)
-				r_refdef.viewangles[ROLL] = 80;	// dead view angle
-			VectorAdd(r_refdef.viewangles, cl.punchangle, r_refdef.viewangles);
-			r_refdef.viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
-			if (v_dmg_time > 0)
+			// player can look around, so take the origin from the entity,
+			// and the angles from the input system
+			Matrix4x4_OriginFromMatrix(&ent->render.matrix, vieworg);
+			VectorCopy(cl.viewangles, viewangles);
+
+			// stair smoothing
+			newz = vieworg[2];
+			oldz -= newz;
+			oldz += (cl.time - cl.oldtime) * cl_stairsmoothspeed.value;
+			oldz = bound(-16, oldz, 0);
+			vieworg[2] += oldz;
+			oldz += newz;
+
+			if (chase_active.value)
 			{
-				r_refdef.viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
-				r_refdef.viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
-				v_dmg_time -= cl.frametime;
+				// observing entity from third person
+				vec_t camback, camup, dist, forward[3], stop[3], chase_dest[3], normal[3];
+
+				camback = bound(0, chase_back.value, 128);
+				if (chase_back.value != camback)
+					Cvar_SetValueQuick(&chase_back, camback);
+				camup = bound(-48, chase_up.value, 96);
+				if (chase_up.value != camup)
+					Cvar_SetValueQuick(&chase_up, camup);
+
+				// this + 22 is to match view_ofs for compatibility with older versions
+				camup += 22;
+
+				if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
+				{
+					// look straight down from high above
+					viewangles[0] = 90;
+					camback = 2048;
+				}
+				AngleVectors(viewangles, forward, NULL, NULL);
+
+				// trace a little further so it hits a surface more consistently (to avoid 'snapping' on the edge of the range)
+				dist = -camback - 8;
+				chase_dest[0] = vieworg[0] + forward[0] * dist;
+				chase_dest[1] = vieworg[1] + forward[1] * dist;
+				chase_dest[2] = vieworg[2] + forward[2] * dist + camup;
+				CL_TraceLine(vieworg, chase_dest, stop, normal, true, NULL, SUPERCONTENTS_SOLID | SUPERCONTENTS_SKY);
+				vieworg[0] = stop[0] + forward[0] * 8 + normal[0] * 4;
+				vieworg[1] = stop[1] + forward[1] * 8 + normal[1] * 4;
+				vieworg[2] = stop[2] + forward[2] * 8 + normal[2] * 4;
 			}
+			else
+			{
+				// first person view from entity
+				// angles
+				if (cl.stats[STAT_HEALTH] <= 0)
+					viewangles[ROLL] = 80;	// dead view angle
+				VectorAdd(viewangles, cl.punchangle, viewangles);
+				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
+				if (v_dmg_time > 0)
+				{
+					viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
+					viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
+					v_dmg_time -= cl.frametime;
+				}
+				// origin
+				VectorAdd(vieworg, cl.punchvector, vieworg);
+				vieworg[2] += cl.viewheight;
+				if (cl.stats[STAT_HEALTH] > 0 && cl_bob.value && cl_bobcycle.value)
+				{
+					double bob, cycle;
+					// LordHavoc: this code is *weird*, but not replacable (I think it
+					// should be done in QC on the server, but oh well, quake is quake)
+					// LordHavoc: figured out bobup: the time at which the sin is at 180
+					// degrees (which allows lengthening or squishing the peak or valley)
+					cycle = cl.time / cl_bobcycle.value;
+					cycle -= (int) cycle;
+					if (cycle < cl_bobup.value)
+						cycle = sin(M_PI * cycle / cl_bobup.value);
+					else
+						cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
+					// bob is proportional to velocity in the xy plane
+					// (don't count Z, or jumping messes it up)
+					bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
+					bob = bob*0.3 + bob*0.7*cycle;
+					vieworg[2] += bound(-7, bob, 4);
+				}
+			}
+			// calculate a view matrix for rendering the scene
 			if (v_idlescale.value)
-			{
-				r_refdef.viewangles[ROLL] += v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
-				r_refdef.viewangles[PITCH] += v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
-				r_refdef.viewangles[YAW] += v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value;
-			}
-			// origin
-			VectorAdd(r_refdef.vieworg, cl.punchvector, r_refdef.vieworg);
-			r_refdef.vieworg[2] += cl.viewheight;
-			if (cl.stats[STAT_HEALTH] > 0 && cl_bob.value && cl_bobcycle.value)
-			{
-				double bob, cycle;
-				// LordHavoc: this code is *weird*, but not replacable (I think it
-				// should be done in QC on the server, but oh well, quake is quake)
-				// LordHavoc: figured out bobup: the time at which the sin is at 180
-				// degrees (which allows lengthening or squishing the peak or valley)
-				cycle = cl.time / cl_bobcycle.value;
-				cycle -= (int) cycle;
-				if (cycle < cl_bobup.value)
-					cycle = sin(M_PI * cycle / cl_bobup.value);
-				else
-					cycle = sin(M_PI + M_PI * (cycle-cl_bobup.value)/(1.0 - cl_bobup.value));
-				// bob is proportional to velocity in the xy plane
-				// (don't count Z, or jumping messes it up)
-				bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
-				bob = bob*0.3 + bob*0.7*cycle;
-				r_refdef.vieworg[2] += bound(-7, bob, 4);
-			}
+				Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0] + v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, viewangles[1] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
+			else
+				Matrix4x4_CreateFromQuakeEntity(&r_refdef.viewentitymatrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2] + v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 1);
+			// calculate a viewmodel matrix for use in view-attached entities
+			Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, vieworg[0], vieworg[1], vieworg[2], viewangles[0], viewangles[1], viewangles[2], 0.3);
 		}
-		// calculate a viewmodel matrix for use in view-attached entities
-		Matrix4x4_CreateFromQuakeEntity(&viewmodelmatrix, r_refdef.vieworg[0], r_refdef.vieworg[1], r_refdef.vieworg[2], r_refdef.viewangles[0] + v_idlescale.value * sin(cl.time*v_iyaw_cycle.value) * v_iyaw_level.value, r_refdef.viewangles[1] - v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value, r_refdef.viewangles[2] - v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value, 0.3);
 	}
-	else
-		Matrix4x4_CreateIdentity(&viewmodelmatrix);
 }
 
 void V_FadeViewFlashs(void)
@@ -405,7 +446,7 @@ void V_CalcViewBlend(void)
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
 	{
 		// set contents color
-		switch (CL_PointQ1Contents(r_refdef.vieworg))
+		switch (CL_PointQ1Contents(r_vieworigin))
 		{
 		case CONTENTS_EMPTY:
 		case CONTENTS_SOLID:
@@ -525,5 +566,11 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_kickpitch);
 
 	Cvar_RegisterVariable (&cl_stairsmoothspeed);
+
+	Cvar_RegisterVariable (&chase_back);
+	Cvar_RegisterVariable (&chase_up);
+	Cvar_RegisterVariable (&chase_active);
+	if (gamemode == GAME_GOODVSBAD2)
+		Cvar_RegisterVariable (&chase_stevie);
 }
 

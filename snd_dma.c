@@ -48,10 +48,10 @@ qboolean snd_initialized = false;
 volatile dma_t *shm = 0;
 volatile dma_t sn;
 
-vec3_t listener_origin;
-vec3_t listener_forward;
-vec3_t listener_right;
-vec3_t listener_up;
+vec3_t listener_vieworigin;
+vec3_t listener_viewforward;
+vec3_t listener_viewleft;
+vec3_t listener_viewup;
 vec_t sound_nominal_clip_dist=1000.0;
 mempool_t *snd_mempool;
 
@@ -432,15 +432,15 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 		}
 
 		// calculate stereo seperation and distance attenuation
-		VectorSubtract(ch->origin, listener_origin, source_vec);
+		VectorSubtract(ch->origin, listener_vieworigin, source_vec);
 		dist = VectorNormalizeLength(source_vec);
 		// distance
 		scale = ch->master_vol * (1.0 - (dist * ch->dist_mult));
 		// panning
-		pan = scale * DotProduct(listener_right, source_vec);
+		pan = scale * DotProduct(listener_viewleft, source_vec);
 		// calculate the volumes
-		ch->leftvol = (int) (scale - pan);
-		ch->rightvol = (int) (scale + pan);
+		ch->leftvol = (int) (scale + pan);
+		ch->rightvol = (int) (scale - pan);
 	}
 
 	// LordHavoc: allow adjusting volume of static sounds
@@ -676,7 +676,7 @@ void S_UpdateAmbientSounds (void)
 	if (!snd_ambient || ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
 		return;
 
-	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_origin, ambientlevels, sizeof(ambientlevels));
+	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_vieworigin, ambientlevels, sizeof(ambientlevels));
 
 // calc ambient sound levels
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
@@ -717,7 +717,7 @@ S_Update
 Called once each time through the main loop
 ============
 */
-void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
+void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 {
 	int			i, j;
 	int			total;
@@ -727,10 +727,10 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 	if (!snd_initialized || (snd_blocked > 0))
 		return;
 
-	VectorCopy(origin, listener_origin);
-	VectorCopy(forward, listener_forward);
-	VectorCopy(right, listener_right);
-	VectorCopy(up, listener_up);
+	VectorCopy(origin, listener_vieworigin);
+	VectorCopy(forward, listener_viewforward);
+	VectorCopy(left, listener_viewleft);
+	VectorCopy(up, listener_viewup);
 
 // update general area ambient sound sources
 	S_UpdateAmbientSounds ();
@@ -924,7 +924,7 @@ static void S_Play_Common(float fvol, float attenuation)
 		else
 			i++;
 
-		S_StartSound(-1, 0, sfx, listener_origin, fvol, attenuation);
+		S_StartSound(-1, 0, sfx, listener_vieworigin, fvol, attenuation);
 	}
 }
 
