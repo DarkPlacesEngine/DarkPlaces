@@ -150,25 +150,25 @@ extern cvar_t developer_networking;
 extern char playername[];
 extern int playercolor;
 
-#define HOSTCACHE_TOTALSIZE			2048
-#define HOSTCACHE_VIEWCACHESIZE		128
-#define HOSTCACHE_ANDMASKCOUNT		5
-#define HOSTCACHE_ORMASKCOUNT		5
+#define SERVERLIST_TOTALSIZE			2048
+#define SERVERLIST_VIEWLISTSIZE		128
+#define SERVERLIST_ANDMASKCOUNT		5
+#define SERVERLIST_ORMASKCOUNT		5
 
 typedef enum 
 {
-	// HCMO_CONTAINS is the default for strings
-	// HCMO_GREATEREQUAL is the default for numbers (also used when OP == CONTAINS or NOTCONTAINS
-	HCMO_CONTAINS,
-	HCMO_NOTCONTAIN,
+	// SLMO_CONTAINS is the default for strings
+	// SLMO_GREATEREQUAL is the default for numbers (also used when OP == CONTAINS or NOTCONTAINS
+	SLMO_CONTAINS,
+	SLMO_NOTCONTAIN,
 
-	HCMO_LESSEQUAL,
-	HCMO_LESS,
-	HCMO_EQUAL,
-	HCMO_GREATER,
-	HCMO_GREATEREQUAL,
-	HCMO_NOTEQUAL
-} hostcache_maskop_t;
+	SLMO_LESSEQUAL,
+	SLMO_LESS,
+	SLMO_EQUAL,
+	SLMO_GREATER,
+	SLMO_GREATEREQUAL,
+	SLMO_NOTEQUAL
+} serverlist_maskop_t;
 
 // struct with all fields that you can search for or sort by
 typedef struct
@@ -191,21 +191,21 @@ typedef struct
 	int numplayers;
 	// protocol version
 	int protocol;
-} hostcache_info_t;
+} serverlist_info_t;
 
 typedef enum 
 {
-	HCIF_CNAME,
-	HCIF_PING,
-	HCIF_GAME,
-	HCIF_MOD,
-	HCIF_MAP,
-	HCIF_NAME,
-	HCIF_MAXPLAYERS,
-	HCIF_NUMPLAYERS,
-	HCIF_PROTOCOL,
-	HCIF_COUNT
-} hostcache_infofield_t;
+	SLIF_CNAME,
+	SLIF_PING,
+	SLIF_GAME,
+	SLIF_MOD,
+	SLIF_MAP,
+	SLIF_NAME,
+	SLIF_MAXPLAYERS,
+	SLIF_NUMPLAYERS,
+	SLIF_PROTOCOL,
+	SLIF_COUNT
+} serverlist_infofield_t;
 
 typedef struct
 {
@@ -214,32 +214,32 @@ typedef struct
 	// used to calculate ping when update comes in
 	double querytime;
 
-	hostcache_info_t info;
+	serverlist_info_t info;
 	
 	// legacy stuff
 	char line1[128];
 	char line2[128];
-} hostcache_t;
+} serverlist_entry_t;
 
 typedef struct
 {
 	qboolean			active;
-	hostcache_maskop_t  tests[HCIF_COUNT];
-	hostcache_info_t info;
-} hostcache_mask_t;
+	serverlist_maskop_t  tests[SLIF_COUNT];
+	serverlist_info_t info;
+} serverlist_mask_t;
 
-extern hostcache_mask_t			hostcache_andmasks[HOSTCACHE_ANDMASKCOUNT];
-extern hostcache_mask_t			hostcache_ormasks[HOSTCACHE_ORMASKCOUNT];
+extern serverlist_mask_t serverlist_andmasks[SERVERLIST_ANDMASKCOUNT];
+extern serverlist_mask_t serverlist_ormasks[SERVERLIST_ORMASKCOUNT];
 
-extern hostcache_infofield_t	hostcache_sortbyfield;
-extern qboolean					hostcache_sortdescending;
+extern serverlist_infofield_t serverlist_sortbyfield;
+extern qboolean serverlist_sortdescending;
 
-extern int			hostcache_viewcount;
-extern hostcache_t	*hostcache_viewset[HOSTCACHE_VIEWCACHESIZE];
+extern int serverlist_viewcount;
+extern serverlist_entry_t *serverlist_viewlist[SERVERLIST_VIEWLISTSIZE];
 
-extern int			hostcache_cachecount; 
+extern int serverlist_cachecount; 
 
-extern qboolean		hostcache_consoleoutput;
+extern qboolean serverlist_consoleoutput;
 
 #if !defined(_WIN32 ) && !defined (__linux__) && !defined (__sun__)
 #ifndef htonl
@@ -300,11 +300,11 @@ int NetConn_SendToAll(sizebuf_t *data, double blocktime);
 void Net_Stats_f(void);
 void Net_Slist_f(void);
 
-// Hostcache interface
+// ServerList interface (public)
 // manually refresh the view set, do this after having changed the mask or any other flag
-void HostCache_RebuildViewSet(void);
-void HostCache_ResetMasks(void);
-void HostCache_QueryList(void);
+void ServerList_RebuildViewList(void);
+void ServerList_ResetMasks(void);
+void ServerList_QueryList(void);
 
 #endif
 
