@@ -43,6 +43,8 @@ static int scrnum;
 static Window win;
 static GLXContext ctx = NULL;
 
+Atom wm_delete_window_atom;
+
 #define KEY_MASK (KeyPressMask | KeyReleaseMask)
 #define MOUSE_MASK (ButtonPressMask | ButtonReleaseMask | \
 		    PointerMotionMask | ButtonMotionMask )
@@ -278,11 +280,17 @@ static void HandleEvents(void)
 		switch (event.type)
 		{
 		case KeyPress:
+			// key pressed
+			Key_Event(XLateKey(&event.xkey), true);
+			break;
+
 		case KeyRelease:
-			Key_Event(XLateKey(&event.xkey), event.type == KeyPress);
+			// key released
+			Key_Event(XLateKey(&event.xkey), false);
 			break;
 
 		case MotionNotify:
+			// mouse moved
 			if (usingmouse)
 			{
 				if (vid_dga.integer == 1)
@@ -292,7 +300,7 @@ static void HandleEvents(void)
 				}
 				else
 				{
-					
+
 					if (!event.xmotion.send_event)
 					{
 						mouse_x += event.xmotion.x - p_mouse_x;
@@ -309,6 +317,7 @@ static void HandleEvents(void)
 			break;
 
 		case ButtonPress:
+			// mouse button pressed
 			switch(event.xbutton.button)
 			{
 			case 1:
@@ -333,6 +342,7 @@ static void HandleEvents(void)
 			break;
 
 		case ButtonRelease:
+			// mouse button released
 			switch(event.xbutton.button)
 			{
 			case 1:
@@ -356,14 +366,45 @@ static void HandleEvents(void)
 			}
 			break;
 
-		case CreateNotify :
+		case CreateNotify:
+			// window created
 			win_x = event.xcreatewindow.x;
 			win_y = event.xcreatewindow.y;
 			break;
 
-		case ConfigureNotify :
+		case ConfigureNotify:
+			// window changed size/location
 			win_x = event.xconfigure.x;
 			win_y = event.xconfigure.y;
+			break;
+		case DestroyNotify:
+			// window has been destroyed
+			Sys_Quit();
+			break;
+		case ClientMessage:
+			// window manager messages
+			if ((event.xclient.format == 32) && (event.xclient.data.l[0] == wm_delete_window_atom))
+				Sys_Quit();
+			break;
+		case MapNotify:
+			// window restored
+			vid_hidden = false;
+			break;
+		case UnmapNotify:
+			// window iconified/rolledup/whatever
+			vid_hidden = true;
+			break;
+		case FocusIn:
+			// window is now the input focus
+			break;
+		case FocusOut:
+			// window is no longer the input focus
+			break;
+		case EnterNotify:
+			// mouse entered window
+			break;
+		case LeaveNotify:
+			// mouse left window
 			break;
 		}
 	}
@@ -740,6 +781,11 @@ void VID_Init(void)
 	XStoreName(vidx11_display, win, gamename);
 	XMapWindow(vidx11_display, win);
 
+	// LordHavoc: making the close button on a window do the right thing
+	// seems to involve this mess, sigh...
+	wm_delete_window_atom = XInternAtom(vidx11_display, "WM_DELETE_WINDOW", false);
+	XSetWMProtocols(vidx11_display, win, &wm_delete_window_atom, 1);
+
 	if (vidmode_active)
 	{
 		XMoveWindow(vidx11_display, win, 0, 0);
@@ -765,6 +811,8 @@ void VID_Init(void)
 		vid.conwidth = width;
 
 	InitSig(); // trap evil signals
+
+	vid_hidden = false;
 
 	GL_Init();
 

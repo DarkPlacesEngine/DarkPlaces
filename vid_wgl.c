@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -62,41 +62,42 @@ const char *gl_renderer;
 const char *gl_version;
 const char *gl_extensions;
 
-qboolean		scr_skipupdate;
+qboolean scr_skipupdate;
 
-static vmode_t	modelist[MAX_MODE_LIST];
-static int		nummodes;
-static vmode_t	badmode;
+static vmode_t modelist[MAX_MODE_LIST];
+static int nummodes;
+static vmode_t badmode;
 
-static DEVMODE	gdevmode;
-static qboolean	vid_initialized = false;
-static qboolean	windowed, leavecurrentmode;
+static DEVMODE gdevmode;
+static qboolean vid_initialized = false;
+static qboolean windowed, leavecurrentmode;
 static qboolean vid_canalttab = false;
 static qboolean vid_wassuspended = false;
-static int		usingmouse;
-extern qboolean	mouseactive;  // from in_win.c
-static HICON	hIcon;
+static int vid_usingmouse;
+extern qboolean mouseactive;  // from in_win.c
+static HICON hIcon;
 
-int			DIBWidth, DIBHeight;
-RECT		WindowRect;
-DWORD		WindowStyle, ExWindowStyle;
+int DIBWidth, DIBHeight;
+RECT WindowRect;
+DWORD WindowStyle, ExWindowStyle;
 
-HWND	mainwindow;
+HWND mainwindow;
 
-int			vid_modenum = NO_MODE;
-int			vid_realmode;
-int			vid_default = MODE_WINDOWED;
-static int	windowed_default;
-unsigned char	vid_curpal[256*3];
+int vid_modenum = NO_MODE;
+int vid_realmode;
+int vid_default = MODE_WINDOWED;
+static int windowed_default;
+unsigned char vid_curpal[256*3];
 
-HGLRC	baseRC;
-HDC		maindc;
+HGLRC baseRC;
+HDC maindc;
 
 HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
-viddef_t	vid;				// global video state
+// global video state
+viddef_t vid;
 
-modestate_t	modestate = MS_UNINIT;
+modestate_t modestate = MS_UNINIT;
 
 void VID_MenuDraw (void);
 void VID_MenuKey (int key);
@@ -109,14 +110,14 @@ void VID_UpdateWindowStatus (void);
 
 //====================================
 
-int			window_center_x, window_center_y, window_x, window_y, window_width, window_height;
-RECT		window_rect;
+int window_center_x, window_center_y, window_x, window_y, window_width, window_height;
+RECT window_rect;
 
 // direct draw software compatability stuff
 
 void CenterWindow(HWND hWndCenter, int width, int height, BOOL lefttopjustify)
 {
-    int     CenterX, CenterY;
+	int CenterX, CenterY;
 
 	CenterX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
 	CenterY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
@@ -130,8 +131,8 @@ void CenterWindow(HWND hWndCenter, int width, int height, BOOL lefttopjustify)
 
 qboolean VID_SetWindowedMode (int modenum)
 {
-	int				lastmodestate, width, height;
-	RECT			rect;
+	int lastmodestate, width, height;
+	RECT rect;
 
 	lastmodestate = modestate;
 
@@ -180,15 +181,14 @@ qboolean VID_SetWindowedMode (int modenum)
 
 qboolean VID_SetFullDIBMode (int modenum)
 {
-	int				lastmodestate, width, height;
-	RECT			rect;
+	int lastmodestate, width, height;
+	RECT rect;
 
 	if (!leavecurrentmode)
 	{
 		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 		gdevmode.dmBitsPerPel = modelist[modenum].bpp;
-		gdevmode.dmPelsWidth = modelist[modenum].width <<
-							   modelist[modenum].halfscreen;
+		gdevmode.dmPelsWidth = modelist[modenum].width << modelist[modenum].halfscreen;
 		gdevmode.dmPelsHeight = modelist[modenum].height;
 		gdevmode.dmSize = sizeof (gdevmode);
 
@@ -243,9 +243,9 @@ qboolean VID_SetFullDIBMode (int modenum)
 
 int VID_SetMode (int modenum)
 {
-	int				original_mode;
-	qboolean		stat = 0;
-    MSG				msg;
+	int original_mode;
+	qboolean stat = 0;
+	MSG msg;
 
 	if ((windowed && (modenum != 0)) || (!windowed && (modenum < 1)) || (!windowed && (modenum >= nummodes)))
 		Sys_Error ("Bad video mode\n");
@@ -286,8 +286,8 @@ int VID_SetMode (int modenum)
 
 	while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE))
 	{
-      	TranslateMessage (&msg);
-      	DispatchMessage (&msg);
+		TranslateMessage (&msg);
+		DispatchMessage (&msg);
 	}
 
 	Sleep (100);
@@ -313,7 +313,6 @@ VID_UpdateWindowStatus
 */
 void VID_UpdateWindowStatus (void)
 {
-
 	window_rect.left = window_x;
 	window_rect.top = window_y;
 	window_rect.right = window_x + window_width;
@@ -342,7 +341,7 @@ void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 
 void VID_Finish (void)
 {
-	int usemouse;
+	int vid_usemouse;
 	if (r_render.integer && !scr_skipupdate)
 	{
 		qglFinish();
@@ -350,27 +349,27 @@ void VID_Finish (void)
 	}
 
 // handle the mouse state when windowed if that's changed
-	usemouse = false;
+	vid_usemouse = false;
 	if (vid_mouse.integer && key_dest == key_game)
-		usemouse = true;
+		vid_usemouse = true;
 	if (modestate == MS_FULLDIB)
-		usemouse = true;
-	if (!ActiveApp)
-		usemouse = false;
-	if (usemouse)
+		vid_usemouse = true;
+	if (!vid_activewindow)
+		vid_usemouse = false;
+	if (vid_usemouse)
 	{
-		if (!usingmouse)
+		if (!vid_usingmouse)
 		{
-			usingmouse = true;
+			vid_usingmouse = true;
 			IN_ActivateMouse ();
 			IN_HideMouse();
 		}
 	}
 	else
 	{
-		if (usingmouse)
+		if (vid_usingmouse)
 		{
-			usingmouse = false;
+			vid_usingmouse = false;
 			IN_DeactivateMouse ();
 			IN_ShowMouse();
 		}
@@ -384,10 +383,10 @@ void VID_SetDefaultMode (void)
 
 void VID_RestoreSystemGamma(void);
 
-void	VID_Shutdown (void)
+void VID_Shutdown (void)
 {
-   	HGLRC hRC;
-   	HDC	  hDC;
+	HGLRC hRC;
+	HDC hDC;
 	int i;
 	GLuint temp[8192];
 
@@ -395,17 +394,17 @@ void	VID_Shutdown (void)
 	{
 		vid_canalttab = false;
 		hRC = wglGetCurrentContext();
-    	hDC = wglGetCurrentDC();
+		hDC = wglGetCurrentDC();
 
-    	wglMakeCurrent(NULL, NULL);
+		wglMakeCurrent(NULL, NULL);
 
 		// LordHavoc: free textures before closing (may help NVIDIA)
 		for (i = 0;i < 8192;i++)
 			temp[i] = i+1;
 		qglDeleteTextures(8192, temp);
 
-    	if (hRC)
-    	    wglDeleteContext(hRC);
+		if (hRC)
+			wglDeleteContext(hRC);
 
 		if (hDC && mainwindow)
 			ReleaseDC(mainwindow, hDC);
@@ -428,7 +427,7 @@ void	VID_Shutdown (void)
 
 BOOL bSetupPixelFormat(HDC hDC)
 {
-    static PIXELFORMATDESCRIPTOR pfd = {
+	static PIXELFORMATDESCRIPTOR pfd = {
 	sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
 	1,				// version number
 	PFD_DRAW_TO_WINDOW 		// support window
@@ -441,28 +440,28 @@ BOOL bSetupPixelFormat(HDC hDC)
 	0,				// shift bit ignored
 	0,				// no accumulation buffer
 	0, 0, 0, 0, 			// accum bits ignored
-	32,				// 32-bit z-buffer	
+	32,				// 32-bit z-buffer
 	0,				// no stencil buffer
 	0,				// no auxiliary buffer
 	PFD_MAIN_PLANE,			// main layer
 	0,				// reserved
 	0, 0, 0				// layer masks ignored
-    };
-    int pixelformat;
+	};
+	int pixelformat;
 
-    if ( (pixelformat = ChoosePixelFormat(hDC, &pfd)) == 0 )
-    {
-        MessageBox(NULL, "ChoosePixelFormat failed", "Error", MB_OK);
-        return false;
-    }
+	if ( (pixelformat = ChoosePixelFormat(hDC, &pfd)) == 0 )
+	{
+		MessageBox(NULL, "ChoosePixelFormat failed", "Error", MB_OK);
+		return false;
+	}
 
-    if (SetPixelFormat(hDC, pixelformat, &pfd) == false)
-    {
-        MessageBox(NULL, "SetPixelFormat failed", "Error", MB_OK);
-        return false;
-    }
+	if (SetPixelFormat(hDC, pixelformat, &pfd) == false)
+	{
+		MessageBox(NULL, "SetPixelFormat failed", "Error", MB_OK);
+		return false;
+	}
 
-    return true;
+	return true;
 }
 
 
@@ -514,7 +513,7 @@ ClearAllStates
 void ClearAllStates (void)
 {
 	int		i;
-	
+
 // send an up event for each key, to make sure the server clears them all
 	for (i=0 ; i<256 ; i++)
 	{
@@ -542,16 +541,16 @@ void AppActivate(BOOL fActive, BOOL minimize)
 {
 	static BOOL	sound_active;
 
-	ActiveApp = fActive;
+	vid_activewindow = fActive;
 	Minimized = minimize;
 
 // enable/disable sound on focus gain/loss
-	if (!ActiveApp && sound_active)
+	if (!vid_activewindow && sound_active)
 	{
 		S_BlockSound ();
 		sound_active = false;
 	}
-	else if (ActiveApp && !sound_active)
+	else if (vid_activewindow && !sound_active)
 	{
 		S_UnblockSound ();
 		sound_active = true;
@@ -577,11 +576,11 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (!fActive)
 	{
-		usingmouse = false;
+		vid_usingmouse = false;
 		IN_DeactivateMouse ();
 		IN_ShowMouse ();
 		if (modestate == MS_FULLDIB && vid_canalttab)
-		{ 
+		{
 			ChangeDisplaySettings (NULL, 0);
 			vid_wassuspended = true;
 		}
@@ -594,15 +593,15 @@ LONG CDAudio_MessageHandler(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 /* main window procedure */
 LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 {
-    LONG    lRet = 1;
+	LONG    lRet = 1;
 	int		fActive, fMinimized, temp;
 	extern unsigned int uiWheelMessage;
 
 	if ( uMsg == uiWheelMessage )
 		uMsg = WM_MOUSEWHEEL;
 
-    switch (uMsg)
-    {
+	switch (uMsg)
+	{
 		case WM_KILLFOCUS:
 			if (modestate == MS_FULLDIB)
 				ShowWindow(mainwindow, SW_SHOWMINNOACTIVE);
@@ -621,7 +620,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		case WM_SYSKEYDOWN:
 			Key_Event (MapKey(lParam, wParam), true);
 			break;
-			
+
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
 			Key_Event (MapKey(lParam, wParam), false);
@@ -658,7 +657,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		// JACK: This is the mouse wheel with the Intellimouse
 		// Its delta is either positive or neg, and we generate the proper
 		// Event.
-		case WM_MOUSEWHEEL: 
+		case WM_MOUSEWHEEL:
 			if ((short) HIWORD(wParam) > 0) {
 				Key_Event(K_MWHEELUP, true);
 				Key_Event(K_MWHEELUP, false);
@@ -668,14 +667,14 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			}
 			break;
 
-    	case WM_SIZE:
-            break;
+		case WM_SIZE:
+			break;
 
-   	    case WM_CLOSE:
+		case WM_CLOSE:
 			if (MessageBox (mainwindow, "Are you sure you want to quit?", "Confirm Exit", MB_YESNO | MB_SETFOREGROUND | MB_ICONQUESTION) == IDYES)
 				Sys_Quit ();
 
-	        break;
+			break;
 
 		case WM_ACTIVATE:
 			fActive = LOWORD(wParam);
@@ -687,27 +686,27 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 
 			break;
 
-   	    case WM_DESTROY:
-        {
+		case WM_DESTROY:
+		{
 			if (mainwindow)
 				DestroyWindow (mainwindow);
 
-            PostQuitMessage (0);
-        }
-        break;
+			PostQuitMessage (0);
+		}
+		break;
 
 		case MM_MCINOTIFY:
-            lRet = CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
+			lRet = CDAudio_MessageHandler (hWnd, uMsg, wParam, lParam);
 			break;
 
-    	default:
-            /* pass all unhandled messages to DefWindowProc */
-            lRet = DefWindowProc (hWnd, uMsg, wParam, lParam);
-        break;
-    }
+		default:
+			/* pass all unhandled messages to DefWindowProc */
+			lRet = DefWindowProc (hWnd, uMsg, wParam, lParam);
+		break;
+	}
 
-    /* return 1 if handled message, 0 if not */
-    return lRet;
+	/* return 1 if handled message, 0 if not */
+	return lRet;
 }
 
 
@@ -721,7 +720,7 @@ int VID_NumModes (void)
 	return nummodes;
 }
 
-	
+
 /*
 =================
 VID_GetModePtr
@@ -829,7 +828,7 @@ VID_DescribeMode_f
 void VID_DescribeMode_f (void)
 {
 	int		t, modenum;
-	
+
 	modenum = atoi (Cmd_Argv(1));
 
 	t = leavecurrentmode;
@@ -898,18 +897,18 @@ void VID_InitDIB (HINSTANCE hInstance)
 	WNDCLASS		wc;
 
 	// Register the frame class
-    wc.style         = 0;
-    wc.lpfnWndProc   = (WNDPROC)MainWndProc;
-    wc.cbClsExtra    = 0;
-    wc.cbWndExtra    = 0;
-    wc.hInstance     = hInstance;
-    wc.hIcon         = 0;
-    wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
+	wc.style         = 0;
+	wc.lpfnWndProc   = (WNDPROC)MainWndProc;
+	wc.cbClsExtra    = 0;
+	wc.cbWndExtra    = 0;
+	wc.hInstance     = hInstance;
+	wc.hIcon         = 0;
+	wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
 	wc.hbrBackground = NULL;
-    wc.lpszMenuName  = 0;
-    wc.lpszClassName = gamename;
+	wc.lpszMenuName  = 0;
+	wc.lpszClassName = gamename;
 
-    if (!RegisterClass (&wc) )
+	if (!RegisterClass (&wc) )
 		Sys_Error ("Couldn't register window class");
 
 	if (COM_CheckParm("-width"))
@@ -1062,12 +1061,12 @@ void VID_RestoreSystemGamma(void)
 VID_Init
 ===================
 */
-void	VID_Init (void)
+void VID_Init (void)
 {
-	int		i;
-	int		basenummodes, width, height = 0, bpp, findbpp, done;
-	HDC		hdc;
-	DEVMODE	devmode;
+	int i;
+	int basenummodes, width, height = 0, bpp, findbpp, done;
+	HDC hdc;
+	DEVMODE devmode;
 
 	memset(&devmode, 0, sizeof(devmode));
 
@@ -1247,6 +1246,8 @@ void	VID_Init (void)
 
 	strcpy (badmode.modedesc, "Bad mode");
 	vid_canalttab = true;
+
+	vid_hidden = false;
 }
 
 
@@ -1260,20 +1261,20 @@ extern void M_PrintWhite (float cx, float cy, char *str);
 extern void M_DrawCharacter (float cx, float cy, int num);
 extern void M_DrawPic (float cx, float cy, char *picname);
 
-static int	vid_wmodes;
+static int vid_wmodes;
 
 typedef struct
 {
-	int		modenum;
-	char	*desc;
-	int		iscur;
+	int modenum;
+	char *desc;
+	int iscur;
 } modedesc_t;
 
 #define MAX_COLUMN_SIZE		9
 #define MODE_AREA_HEIGHT	(MAX_COLUMN_SIZE + 2)
 #define MAX_MODEDESCS		(MAX_COLUMN_SIZE*3)
 
-static modedesc_t	modedescs[MAX_MODEDESCS];
+static modedesc_t modedescs[MAX_MODEDESCS];
 
 /*
 ================

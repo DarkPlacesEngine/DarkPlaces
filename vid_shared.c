@@ -12,6 +12,12 @@ int gl_combine_extension = false;
 // LordHavoc: GL_EXT_compiled_vertex_array support
 int gl_supportslockarrays = false;
 
+// LordHavoc: if window is hidden, don't update screen
+int vid_hidden = false;
+// LordHavoc: if window is not the active window, don't hog as much CPU time,
+// let go of the mouse, turn off sound, and restore system gamma ramps...
+int vid_activewindow = true;
+
 cvar_t vid_mode = {0, "vid_mode", "0"};
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
