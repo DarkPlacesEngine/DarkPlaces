@@ -37,6 +37,7 @@ mempool_t *sv_edicts_mempool = NULL;
 
 extern void SV_Phys_Init (void);
 extern void SV_World_Init (void);
+static void SV_SaveEntFile_f(void);
 
 /*
 ===============
@@ -47,6 +48,7 @@ void SV_Init (void)
 {
 	int i;
 
+	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f);
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
 	Cvar_RegisterVariable (&sv_friction);
@@ -70,6 +72,18 @@ void SV_Init (void)
 		sprintf (localmodels[i], "*%i", i);
 
 	sv_edicts_mempool = Mem_AllocPool("server edicts");
+}
+
+static void SV_SaveEntFile_f(void)
+{
+	char basename[MAX_QPATH];
+	if (!sv.active || !sv.worldmodel)
+	{
+		Con_Printf("Not running a server\n");
+		return;
+	}
+	FS_StripExtension(sv.worldmodel->name, basename, sizeof(basename));
+	FS_WriteFile(va("%s.ent", basename), sv.worldmodel->brush.entities, strlen(sv.worldmodel->brush.entities));
 }
 
 /*
