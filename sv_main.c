@@ -947,7 +947,6 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 		// LordHavoc: only send entities with a model or important effects
 		if (!s->modelindex && s->specialvisibilityradius == 0)
 			return;
-		isbmodel = (model = sv.models[s->modelindex]) == NULL || model->name[0] != '*';
 		if (s->tagentity)
 		{
 			// tag attached entities simply check their parent
@@ -958,7 +957,8 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 				return;
 		}
 		// always send world submodels, they don't generate much traffic
-		else if (!isbmodel || sv.protocol == PROTOCOL_QUAKE)
+		// except in PROTOCOL_QUAKE where they hog bandwidth like crazy
+		else if (!(isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*') || sv.protocol == PROTOCOL_QUAKE)
 		{
 			Mod_CheckLoaded(model);
 			// entity has survived every check so far, check if visible
