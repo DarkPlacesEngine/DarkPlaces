@@ -70,7 +70,7 @@ OBJ_DED_EXE= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJ
 
 
 # Compilation
-CFLAGS_COMMON=-MD -Wall
+CFLAGS_COMMON=-MD -Wall -Werr
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
