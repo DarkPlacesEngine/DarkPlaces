@@ -1540,7 +1540,7 @@ void Host_Startdemos_f (void)
 {
 	int		i, c;
 
-	if (cls.state == ca_dedicated || sv_maxplayers.integer > 1)
+	if (cls.state == ca_dedicated || COM_CheckParm("-listen"))
 	{
 		if (!sv.active && !sv_spawnmap[0])
 		{

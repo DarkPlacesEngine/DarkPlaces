@@ -4,7 +4,6 @@
 -n darkplaces: fix server list only querying the master to reply (Rick)
 -n darkplaces: fix sounds not following entities (yummyluv, SeienAbunae)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: fix startup on multiplayer games so they don't start a game when executing startdemos unless -listen or -dedicated was used (yummyluv)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension
@@ -22,7 +21,6 @@
 0 darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
-d darkplaces: default deathmatch 1 in multiplayer games like Nexuiz incase someone starts a game from console (Vermeulen)
 0 darkplaces: default to 32bit color
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document how polygon collision works in the code (KrimZon)
@@ -245,6 +243,7 @@ d darkplaces: add wgl support for mouse buttons 4 and 5 (Intellimouse Explorer) 
 d darkplaces: check if nodrawtoclient works and if not, fix it (Uffe)
 d darkplaces: colors of player in demos seems to alter player config (this is clearly a more severe problem than just demos) (tkimmet@ezworks.net)
 d darkplaces: debug server crash
+d darkplaces: default deathmatch 1 in multiplayer games like Nexuiz incase someone starts a game from console (Vermeulen)
 d darkplaces: figure out what is broken about the shadow volumes or stencil comparisons
 d darkplaces: figure out what is wrong with loading _glow/_luma textures on md3 models (not bsp textures) (kd23 Nexuiz)
 d darkplaces: figure out why disconnections are showing up as " disconnected"
@@ -264,6 +263,7 @@ d darkplaces: fix non-polygonal lightning beam model pitch (it was backwards) (t
 d darkplaces: fix particle trails (I think trail start is identical to trail end) (Supajoe, SeienAbunae)
 d darkplaces: fix server list not working until you set maxplayers above 1 (Rick)
 d darkplaces: fix starting non-existent maps.  (drops to console with an error like it should)
+d darkplaces: fix startup on multiplayer games so they don't start a game when executing startdemos unless -listen or -dedicated was used (yummyluv)
 d darkplaces: fix toggling decals in menu
 d darkplaces: fix wrapping textures on sprites/models (Elric)
 d darkplaces: get rid of frags per hour rating in deathmatch scoreboard and mini scoreboard
