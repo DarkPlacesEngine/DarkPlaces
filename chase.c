@@ -50,7 +50,8 @@ void Chase_Update (void)
 	camback = bound(0, chase_back.value, 128);
 	if (chase_back.value != camback)
 		Cvar_SetValueQuick(&chase_back, camback);
-	camup = bound(-48, chase_up.value, 96);
+	// this + 22 is to match view_ofs for compatibility with older versions
+	camup = bound(-48, chase_up.value, 96) + 22;
 	if (chase_up.value != camup)
 		Cvar_SetValueQuick(&chase_up, camup);
 
@@ -59,7 +60,7 @@ void Chase_Update (void)
 	{
 		projectangles[0] = 90;
 		r_refdef.viewangles[0] = 90;
-		camback = 1024;
+		camback = 2048;
 	}
 	AngleVectors (projectangles, forward, NULL, NULL);
 
