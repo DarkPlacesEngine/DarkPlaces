@@ -230,12 +230,26 @@ static void gl_backend_bufferchanges(int init)
 		Cvar_SetValueQuick(&gl_mesh_maxtriangles, overflowedmeshtris);
 	overflowedmeshtris = 0;
 
-	if (gl_mesh_drawmode.integer == 3 && qglDrawRangeElements != NULL)
+	if (gl_mesh_drawmode.integer < 0)
+		Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
+	if (gl_mesh_drawmode.integer > 3)
+		Cvar_SetValueQuick(&gl_mesh_drawmode, 3);
+
+	if (gl_mesh_drawmode.integer >= 3)
 	{
-		if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsindices)
-			Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsindices / 3));
-		if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsvertices)
-			Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsvertices / 3));
+		if (qglDrawRangeElements != NULL && gl_maxdrawrangeelementsindices >= 3072 && gl_maxdrawrangeelementsvertices >= 3072)
+		{
+			// make sure we don't exceed the DrawRangeElements limits
+			if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsindices)
+				Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsindices / 3));
+			if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsvertices)
+				Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsvertices / 3));
+		}
+		else
+		{
+			// change drawmode 3 to 2 if 3 won't work
+			Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
+		}
 	}
 
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
@@ -306,7 +320,7 @@ int arraylocked = false;
 
 void GL_LockArray(int first, int count)
 {
-	if (!arraylocked && gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer != 0)
+	if (!arraylocked && gl_supportslockarrays && gl_lockarrays.integer && gl_mesh_drawmode.integer > 0)
 	{
 		qglLockArraysEXT(first, count);
 		CHECKGLERROR
@@ -430,7 +444,7 @@ void GL_SetupTextureState(void)
 			{
 				qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 			}
-			if (gl_mesh_drawmode.integer != 0)
+			if (gl_mesh_drawmode.integer > 0)
 			{
 				qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
 				qglTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[i]);CHECKGLERROR
@@ -457,7 +471,7 @@ void GL_SetupTextureState(void)
 		{
 			qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		}
-		if (gl_mesh_drawmode.integer != 0)
+		if (gl_mesh_drawmode.integer > 0)
 		{
 			qglTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[0]);CHECKGLERROR
 			if (mesh_texture[0])
@@ -527,7 +541,7 @@ void R_Mesh_Start(void)
 	qglDepthMask(mesh_depthmask);CHECKGLERROR
 
 	usedarrays = false;
-	if (gl_mesh_drawmode.integer != 0)
+	if (gl_mesh_drawmode.integer > 0)
 	{
 		usedarrays = true;
 		qglVertexPointer(3, GL_FLOAT, sizeof(buf_vertex_t), &buf_vertex[0].v[0]);CHECKGLERROR
@@ -719,20 +733,17 @@ void GL_MeshState(buf_mesh_t *mesh)
 void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *index)
 {
 	unsigned int i, j, in;
-	if (gl_mesh_drawmode.integer == 3 && qglDrawRangeElements == NULL)
-		Cvar_SetValueQuick(&gl_mesh_drawmode, 2);
-
-	if (gl_mesh_drawmode.integer == 3)
+	if (gl_mesh_drawmode.integer >= 3)
 	{
 		// GL 1.2 or GL 1.1 with extension
 		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, index);
 	}
-	else if (gl_mesh_drawmode.integer == 2)
+	else if (gl_mesh_drawmode.integer >= 2)
 	{
 		// GL 1.1
 		qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, index);
 	}
-	else if (gl_mesh_drawmode.integer == 1)
+	else if (gl_mesh_drawmode.integer >= 1)
 	{
 		// GL 1.1
 		// feed it manually using glArrayElement
@@ -745,8 +756,6 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 	{
 		// GL 1.1 but not using vertex arrays - 3dfx glquake minigl driver
 		// feed it manually
-		if (gl_mesh_drawmode.integer != 0)
-			Cvar_SetValueQuick(&gl_mesh_drawmode, 0);
 		qglBegin(GL_TRIANGLES);
 		if (r_multitexture.integer)
 		{
@@ -804,7 +813,8 @@ void R_Mesh_Render(void)
 
 	GL_UpdateFarclip();
 
-	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer == 0)
+	// drawmode 0 always uses byte colors
+	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer <= 0)
 		GL_ConvertColorsFloatToByte();
 
 	if (gl_backend_rebindtextures)
