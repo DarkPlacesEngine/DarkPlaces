@@ -406,6 +406,8 @@ qboolean JPEG_OpenLibrary (void)
 	dllname = "libjpeg.dll";
 #elif defined(__FreeBSD__)
 	dllname = "libjpeg.so";
+#elif defined(MACOSX)
+	dllname = "libjpeg.62.dylib";
 #else
 	dllname = "libjpeg.so.62";
 #endif
