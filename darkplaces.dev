@@ -1410,7 +1410,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit139]
-FileName=snd_dma.c
+FileName=snd_main.c
 CompileCpp=0
 Folder=Source Files
 Compile=1
