@@ -1419,10 +1419,10 @@ void R_CalcBeam_Vertex3f (float *vert, const vec3_t org1, const vec3_t org2, flo
 void R_DrawSpriteMesh(const vec3_t origin, const vec3_t left, const vec3_t up, float scalex1, float scalex2, float scaley1, float scaley2)
 {
 	R_Mesh_GetSpace(4);
-	varray_texcoord2f[0][0] = 1;varray_texcoord2f[0][1] = 1;
-	varray_texcoord2f[0][2] = 1;varray_texcoord2f[0][3] = 0;
-	varray_texcoord2f[0][4] = 0;varray_texcoord2f[0][5] = 0;
-	varray_texcoord2f[0][6] = 0;varray_texcoord2f[0][7] = 1;
+	varray_texcoord2f[0][0] = 0;varray_texcoord2f[0][1] = 1;
+	varray_texcoord2f[0][2] = 0;varray_texcoord2f[0][3] = 0;
+	varray_texcoord2f[0][4] = 1;varray_texcoord2f[0][5] = 0;
+	varray_texcoord2f[0][6] = 1;varray_texcoord2f[0][7] = 1;
 	varray_vertex3f[ 0] = origin[0] + left[0] * scalex2 + up[0] * scaley1;
 	varray_vertex3f[ 1] = origin[1] + left[1] * scalex2 + up[1] * scaley1;
 	varray_vertex3f[ 2] = origin[2] + left[2] * scalex2 + up[2] * scaley1;
