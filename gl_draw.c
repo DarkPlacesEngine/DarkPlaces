@@ -468,9 +468,9 @@ void R_DrawQueue(void)
 		{
 			color = dq->color;
 			if (lighthalf)
-				glColor4ub((color >> 25) & 0x7F, (color >> 17) & 0x7F, (color >> 9) & 0x7F, color & 0xFF);
+				glColor4ub((byte)((color >> 25) & 0x7F), (byte)((color >> 17) & 0x7F), (byte)((color >> 9) & 0x7F), (byte)(color & 0xFF));
 			else
-				glColor4ub((color >> 24) & 0xFF, (color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF);
+				glColor4ub((byte)((color >> 24) & 0xFF), (byte)((color >> 16) & 0xFF), (byte)((color >> 8) & 0xFF), (byte)(color & 0xFF));
 		}
 		x = dq->x;
 		y = dq->y;

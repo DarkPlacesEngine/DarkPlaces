@@ -92,11 +92,19 @@ LINK32=link.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE=.\buildnumber.c
+SOURCE=.\builddate.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\cd_win.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\cgame.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\cgamevm.c
 # End Source File
 # Begin Source File
 
@@ -421,6 +429,18 @@ SOURCE=.\bspfile.h
 # Begin Source File
 
 SOURCE=.\cdaudio.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cg_math.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cgame_api.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cgamevm.h
 # End Source File
 # Begin Source File
 
