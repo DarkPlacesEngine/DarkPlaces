@@ -1791,13 +1791,24 @@ void SV_SpawnServer (const char *server)
 	edict_t *ent;
 	int i;
 	qbyte *entities;
+	model_t *worldmodel;
+	char modelname[sizeof(sv.modelname)];
+
+	Con_DPrintf("SpawnServer: %s\n", server);
+
+	snprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
+	worldmodel = Mod_ForName(modelname, false, true, true);
+	if (!worldmodel || !worldmodel->TraceBox)
+	{
+		Con_Printf("Couldn't load map %s\n", modelname);
+		return;
+	}
 
 	// let's not have any servers with no name
 	if (hostname.string[0] == 0)
 		Cvar_Set ("hostname", "UNNAMED");
 	scr_centertime_off = 0;
 
-	Con_DPrintf("SpawnServer: %s\n",server);
 	svs.changelevel_issued = false;		// now safe to issue another
 
 //
@@ -1876,16 +1887,11 @@ void SV_SpawnServer (const char *server)
 	sv.time = 1.0;
 
 	Mod_ClearUsed();
+	worldmodel->used = true;
 
 	strlcpy (sv.name, server, sizeof (sv.name));
-	snprintf (sv.modelname, sizeof (sv.modelname), "maps/%s.bsp", server);
-	sv.worldmodel = Mod_ForName(sv.modelname, false, true, true);
-	if (!sv.worldmodel)
-	{
-		Con_Printf("Couldn't spawn server %s\n", sv.modelname);
-		sv.active = false;
-		return;
-	}
+	strcpy(sv.modelname, modelname);
+	sv.worldmodel = worldmodel;
 	sv.models[1] = sv.worldmodel;
 
 //
