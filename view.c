@@ -378,7 +378,7 @@ void V_CalcRefdef (void)
 			{
 				// first person view from entity
 				// angles
-				if (cl.stats[STAT_HEALTH] <= 0)
+				if (cl.stats[STAT_HEALTH] <= 0 && gamemode != GAME_FNIGGIUM)
 					viewangles[ROLL] = 80;	// dead view angle
 				VectorAdd(viewangles, cl.punchangle, viewangles);
 				viewangles[ROLL] += V_CalcRoll(cl.viewangles, cl.velocity);
