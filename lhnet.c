@@ -29,6 +29,8 @@
 
 int LHNETADDRESS_FromPort(lhnetaddress_t *address, int addresstype, int port)
 {
+	if (!address)
+		return 0;
 	switch(addresstype)
 	{
 	case LHNETADDRESSTYPE_LOOP:
@@ -61,6 +63,8 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 	struct hostent *hostentry;
 	const char *colon;
 	char name[128];
+	if (!address || !string)
+		return 0;
 	memset(address, 0, sizeof(*address));
 	address->addresstype = LHNETADDRESSTYPE_NONE;
 	port = 0;
@@ -143,6 +147,8 @@ int LHNETADDRESS_FromString(lhnetaddress_t *address, const char *string, int def
 int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int stringbuffersize, int includeport)
 {
 	*string = 0;
+	if (!address || !string || stringbuffersize < 1)
+		return 0;
 	switch(address->addresstype)
 	{
 	default:
@@ -207,11 +213,16 @@ int LHNETADDRESS_ToString(const lhnetaddress_t *address, char *string, int strin
 
 int LHNETADDRESS_GetAddressType(const lhnetaddress_t *address)
 {
-	return address->addresstype;
+	if (address)
+		return address->addresstype;
+	else
+		return LHNETADDRESSTYPE_NONE;
 }
 
 int LHNETADDRESS_GetPort(const lhnetaddress_t *address)
 {
+	if (!address)
+		return -1;
 	switch(address->addresstype)
 	{
 	case LHNETADDRESSTYPE_LOOP:
@@ -227,6 +238,8 @@ int LHNETADDRESS_GetPort(const lhnetaddress_t *address)
 
 int LHNETADDRESS_SetPort(lhnetaddress_t *address, int port)
 {
+	if (!address)
+		return 0;
 	switch(address->addresstype)
 	{
 	case LHNETADDRESSTYPE_LOOP:
@@ -245,6 +258,8 @@ int LHNETADDRESS_SetPort(lhnetaddress_t *address, int port)
 
 int LHNETADDRESS_Compare(const lhnetaddress_t *address1, const lhnetaddress_t *address2)
 {
+	if (!address1 || !address2)
+		return 1;
 	if (address1->addresstype != address2->addresstype)
 		return 1;
 	switch(address1->addresstype)
@@ -322,6 +337,8 @@ void LHNET_Shutdown(void)
 lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 {
 	lhnetsocket_t *lhnetsocket, *s;
+	if (!address)
+		return NULL;
 	lhnetsocket = Z_Malloc(sizeof(*lhnetsocket));
 	if (lhnetsocket)
 	{
@@ -443,12 +460,17 @@ void LHNET_CloseSocket(lhnetsocket_t *lhnetsocket)
 
 lhnetaddress_t *LHNET_AddressFromSocket(lhnetsocket_t *sock)
 {
-	return &sock->address;
+	if (sock)
+		return &sock->address;
+	else
+		return NULL;
 }
 
 int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, lhnetaddress_t *address)
 {
 	int value = 0;
+	if (!lhnetsocket || !address || !content || maxcontentlength < 1)
+		return -1;
 	if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_LOOP)
 	{
 		time_t currenttime;
@@ -536,6 +558,8 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentlength, const lhnetaddress_t *address)
 {
 	int value = -1;
+	if (!lhnetsocket || !address || !content || maxcontentlength < 1)
+		return -1;
 	if (lhnetsocket->address.addresstype != address->addresstype)
 		return -1;
 	if (lhnetsocket->address.addresstype == LHNETADDRESSTYPE_LOOP)
