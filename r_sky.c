@@ -39,12 +39,12 @@ static suffixinfo_t suffix[3][6] =
 		{"negz", false, false, false}
 	},
 	{
-		{"rt",    true, false,  true},
-		{"lf",   false,  true,  true},
-		{"ft",    true,  true, false},
-		{"bk",   false, false, false},
-		{"up",    true, false,  true},
-		{"dn",    true, false,  true}
+		{"rt",   false, false,  true},
+		{"lf",    true,  true,  true},
+		{"bk",   false,  true, false},
+		{"ft",    true, false, false},
+		{"up",   false, false,  true},
+		{"dn",   false, false,  true}
 	}
 };
 
