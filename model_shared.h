@@ -189,6 +189,8 @@ typedef struct model_brush_s
 	// these are actually only found on brushq1, but NULL is handled gracefully
 	void (*AmbientSoundLevelsForPoint)(struct model_s *model, const vec3_t p, qbyte *out, int outsize);
 	void (*RoundUpToHullSize)(struct model_s *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
+
+	char skybox[64];
 }
 model_brush_t;
 

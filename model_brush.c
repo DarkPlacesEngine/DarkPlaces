@@ -3573,6 +3573,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 	const char *text;
 	int flags;
 	char shadername[Q3PATHLENGTH];
+	char sky[Q3PATHLENGTH];
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
@@ -3606,6 +3607,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 				{
 					snprintf(shadername, sizeof(shadername), "%s", com_token);
 					flags = 0;
+					sky[0] = 0;
 					if (COM_ParseToken(&text, false) && !strcasecmp(com_token, "{"))
 					{
 						while (COM_ParseToken(&text, false))
@@ -3690,6 +3692,22 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 									goto parseerror;
 								}
 							}
+							else if (!strcasecmp(com_token, "sky"))
+							{
+								if (COM_ParseToken(&text, true) && strcasecmp(com_token, "\n"))
+									if (strlen(com_token) < sizeof(sky))
+										strcpy(sky, com_token);
+							}
+							else if (!strcasecmp(com_token, "skyparms"))
+							{
+								if (COM_ParseToken(&text, true) && strcasecmp(com_token, "\n"))
+								{
+									if (strlen(com_token) < sizeof(sky) && !atoi(com_token) && strcasecmp(com_token, "-"))
+										strcpy(sky, com_token);
+									if (COM_ParseToken(&text, true) && strcasecmp(com_token, "\n"))
+										COM_ParseToken(&text, true);
+								}
+							}
 							else
 							{
 								// look for linebreak or }
@@ -3702,8 +3720,14 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 						// add shader to list (shadername and flags)
 						// actually here we just poke into the texture settings
 						for (j = 0, out = loadmodel->brushq3.data_textures;j < loadmodel->brushq3.num_textures;j++, out++)
+						{
 							if (!strcasecmp(out->name, shadername))
+							{
 								out->surfaceparms = flags;
+								if ((flags & Q3SURFACEPARM_SKY) && sky[0])
+									strcpy(loadmodel->brush.skybox, sky);
+							}
+						}
 					}
 					else
 					{
