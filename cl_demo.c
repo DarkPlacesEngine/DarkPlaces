@@ -376,7 +376,7 @@ void CL_FinishTimeDemo (void)
 	fpsmax = cls.td_minframetime > 0 ? 1.0 / cls.td_minframetime : 0;
 	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps\nmin/avg/max: %5.7f/%5.7f/%5.7f\n", frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
-	Con_LogPrintf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps min/avg/max: %5.7f/%5.7f/%5.7f\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
+	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps min/avg/max: %5.7f/%5.7f/%5.7f\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
 	if (COM_CheckParm("-benchmark"))
 		Host_Quit_f();
 }

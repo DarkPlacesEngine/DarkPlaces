@@ -1451,6 +1451,19 @@ int FS_Printf(qfile_t* file, const char* format, ...)
 
 /*
 ====================
+FS_VPrintf
+
+Print a string into a file
+====================
+*/
+int FS_VPrintf(qfile_t* file, const char* format, va_list ap)
+{
+	return vfprintf (file->stream, format, ap);
+}
+
+
+/*
+====================
 FS_Getc
 
 Get the next character of a file

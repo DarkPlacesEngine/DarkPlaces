@@ -263,7 +263,7 @@ f darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 1 darkplaces: add findflag and findchainflag builtins (SeienAbunae)
 1 darkplaces: add gettimestamp builtin (returns a string) for logging purposes (SeienAbunae)
 1 darkplaces: add in_bindmap support to bind menu; a selector for which bindmap is actively being shown and bound in the menu, and add bind entries for some bindmap commands (sajt)
-1 darkplaces: add log cvar to set console logging target (default "", or default "qconsole.log" if -condebug is used)
+-n darkplaces: add log cvar to set console logging target (default "", or default "qconsole.log" if -condebug is used)
 1 darkplaces: add md3 mesh name reporting to qc somehow when traceline does model tracing and hits the model
 1 darkplaces: add palette conversion capabilities to Image_CopyMux
 1 darkplaces: add r_displayrefresh cvar for windows video refresh settings (Willis)
