@@ -22,11 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "image.h"
 #include "r_shadow.h"
 
-static cvar_t r_mipskins = {CVAR_SAVE, "r_mipskins", "0"};
-
 void Mod_AliasInit (void)
 {
-	Cvar_RegisterVariable(&r_mipskins);
 }
 
 static void Mod_CalcAliasModelBBoxes (void)
@@ -212,6 +209,34 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 	memcpy(skin->data_layers, mod_alias_layersbuffer, skin->num_layers * sizeof(aliaslayer_t));
 }
 
+void Mod_BuildAliasSkinsFromSkinFiles(aliasskin_t *skin, skinfile_t *skinfile, char *name)
+{
+	int i;
+	skinfileitem_t *skinfileitem;
+	skinframe_t tempskinframe;
+	if (skinfile)
+	{
+		for (i = 0;skinfile;skinfile = skinfile->next, i++, skin++)
+		{
+			for (skinfileitem = skinfile->items;skinfileitem;skinfileitem = skinfileitem->next)
+			{
+				if (!strcmp(skinfileitem->name, name))
+				{
+					memset(&tempskinframe, 0, sizeof(tempskinframe));
+					Mod_LoadSkinFrame(&tempskinframe, skinfileitem->replacement, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
+					Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+					break;
+				}
+			}
+		}
+	}
+	else
+	{
+		Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
+		Mod_BuildAliasSkinFromSkinFrame(skin, &tempskinframe);
+	}
+}
+
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
 #define BOUNDF(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%f exceeds %f - %f)\n", loadmodel->name, VALUE, MIN, MAX);
 extern void R_Model_Alias_Draw(entity_render_t *ent);
@@ -234,9 +259,10 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	char name[MAX_QPATH];
 	skinframe_t tempskinframe;
 	animscene_t *tempskinscenes;
-	skinframe_t *tempskinframes;
+	aliasskin_t *tempaliasskins;
 	float *vertst;
 	int *vertonseam, *vertremap;
+	skinfile_t *skinfiles;
 
 	datapointer = buffer;
 	pinmodel = (mdl_t *)datapointer;
@@ -333,89 +359,6 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 		}
 	}
 
-	// load the skins
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
-	loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, totalskins * sizeof(skinframe_t));
-	totalskins = 0;
-	datapointer = startskins;
-	for (i = 0;i < loadmodel->numskins;i++)
-	{
-		pinskintype = (daliasskintype_t *)datapointer;
-		datapointer += sizeof(daliasskintype_t);
-
-		if (pinskintype->type == ALIAS_SKIN_SINGLE)
-		{
-			groupskins = 1;
-			interval = 0.1f;
-		}
-		else
-		{
-			pinskingroup = (daliasskingroup_t *)datapointer;
-			datapointer += sizeof(daliasskingroup_t);
-
-			groupskins = LittleLong (pinskingroup->numskins);
-
-			pinskinintervals = (daliasskininterval_t *)datapointer;
-			datapointer += sizeof(daliasskininterval_t) * groupskins;
-
-			interval = LittleFloat(pinskinintervals[0].interval);
-			if (interval < 0.01f)
-				Host_Error("Mod_IDP0_Load: invalid interval\n");
-		}
-
-		sprintf(loadmodel->skinscenes[i].name, "skin %i", i);
-		loadmodel->skinscenes[i].firstframe = totalskins;
-		loadmodel->skinscenes[i].framecount = groupskins;
-		loadmodel->skinscenes[i].framerate = 1.0f / interval;
-		loadmodel->skinscenes[i].loop = true;
-
-		for (j = 0;j < groupskins;j++)
-		{
-			if (groupskins > 1)
-				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
-			else
-				sprintf (name, "%s_%i", loadmodel->name, i);
-			if (!Mod_LoadSkinFrame(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
-				Mod_LoadSkinFrame_Internal(loadmodel->skinframes + totalskins, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true, (qbyte *)datapointer, skinwidth, skinheight);
-			datapointer += skinwidth * skinheight;
-			totalskins++;
-		}
-	}
-	// check for skins that don't exist in the model, but do exist as external images
-	// (this was added because yummyluv kept pestering me about support for it)
-	for (;;)
-	{
-		sprintf (name, "%s_%i", loadmodel->name, loadmodel->numskins);
-		if (Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
-		{
-			// expand the arrays to make room
-			tempskinscenes = loadmodel->skinscenes;
-			tempskinframes = loadmodel->skinframes;
-			loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, (loadmodel->numskins + 1) * sizeof(animscene_t));
-			loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, (totalskins + 1) * sizeof(skinframe_t));
-			memcpy(loadmodel->skinscenes, tempskinscenes, loadmodel->numskins * sizeof(animscene_t));
-			memcpy(loadmodel->skinframes, tempskinframes, totalskins * sizeof(skinframe_t));
-			Mem_Free(tempskinscenes);
-			Mem_Free(tempskinframes);
-			// store the info about the new skin
-			strcpy(loadmodel->skinscenes[loadmodel->numskins].name, name);
-			loadmodel->skinscenes[loadmodel->numskins].firstframe = totalskins;
-			loadmodel->skinscenes[loadmodel->numskins].framecount = 1;
-			loadmodel->skinscenes[loadmodel->numskins].framerate = 10.0f;
-			loadmodel->skinscenes[loadmodel->numskins].loop = true;
-			loadmodel->skinframes[totalskins] = tempskinframe;
-			loadmodel->numskins++;
-			totalskins++;
-		}
-		else
-			break;
-	}
-
-	loadmodel->alias.aliasdata_meshes->num_skins = 0;
-	for (i = 0;i < loadmodel->numskins;i++)
-		loadmodel->alias.aliasdata_meshes->num_skins += loadmodel->skinscenes[i].framecount;
-	loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
-
 	// store texture coordinates into temporary array, they will be stored
 	// after usage is determined (triangle data)
 	vertst = Mem_Alloc(tempmempool, numverts * 2 * sizeof(float[2]));
@@ -489,12 +432,107 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 	Mod_MDL_LoadFrames (startframes, numverts, scale, translate, vertremap);
 	loadmodel->alias.aliasdata_meshes->data_neighbor3i = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_triangles * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->alias.aliasdata_meshes->data_neighbor3i, loadmodel->alias.aliasdata_meshes->data_element3i, loadmodel->alias.aliasdata_meshes->num_triangles);
-	for (i = 0;i < loadmodel->alias.aliasdata_meshes->num_skins;i++)
-		Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + i, loadmodel->skinframes + i);
 	Mod_CalcAliasModelBBoxes();
 
 	Mem_Free(vertst);
 	Mem_Free(vertremap);
+
+	// load the skins
+	if ((skinfiles = Mod_LoadSkinFiles()))
+	{
+		loadmodel->alias.aliasdata_meshes->num_skins = totalskins = loadmodel->numskins = Mod_CountSkinFiles(skinfiles);
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->alias.aliasdata_meshes->data_skins, skinfiles, "default");
+		Mod_FreeSkinFiles(skinfiles);
+		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+		for (i = 0;i < loadmodel->numskins;i++)
+		{
+			loadmodel->skinscenes[i].firstframe = i;
+			loadmodel->skinscenes[i].framecount = 1;
+			loadmodel->skinscenes[i].loop = true;
+			loadmodel->skinscenes[i].framerate = 10;
+		}
+	}
+	else
+	{
+		loadmodel->alias.aliasdata_meshes->num_skins = totalskins;
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+		totalskins = 0;
+		datapointer = startskins;
+		for (i = 0;i < loadmodel->numskins;i++)
+		{
+			pinskintype = (daliasskintype_t *)datapointer;
+			datapointer += sizeof(daliasskintype_t);
+
+			if (pinskintype->type == ALIAS_SKIN_SINGLE)
+			{
+				groupskins = 1;
+				interval = 0.1f;
+			}
+			else
+			{
+				pinskingroup = (daliasskingroup_t *)datapointer;
+				datapointer += sizeof(daliasskingroup_t);
+
+				groupskins = LittleLong (pinskingroup->numskins);
+
+				pinskinintervals = (daliasskininterval_t *)datapointer;
+				datapointer += sizeof(daliasskininterval_t) * groupskins;
+
+				interval = LittleFloat(pinskinintervals[0].interval);
+				if (interval < 0.01f)
+					Host_Error("Mod_IDP0_Load: invalid interval\n");
+			}
+
+			sprintf(loadmodel->skinscenes[i].name, "skin %i", i);
+			loadmodel->skinscenes[i].firstframe = totalskins;
+			loadmodel->skinscenes[i].framecount = groupskins;
+			loadmodel->skinscenes[i].framerate = 1.0f / interval;
+			loadmodel->skinscenes[i].loop = true;
+
+			for (j = 0;j < groupskins;j++)
+			{
+				if (groupskins > 1)
+					sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
+				else
+					sprintf (name, "%s_%i", loadmodel->name, i);
+				if (!Mod_LoadSkinFrame(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
+					Mod_LoadSkinFrame_Internal(&tempskinframe, name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true, (qbyte *)datapointer, skinwidth, skinheight);
+				Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + totalskins, &tempskinframe);
+				datapointer += skinwidth * skinheight;
+				totalskins++;
+			}
+		}
+		// check for skins that don't exist in the model, but do exist as external images
+		// (this was added because yummyluv kept pestering me about support for it)
+		while (Mod_LoadSkinFrame(&tempskinframe, va("%s_%i", loadmodel->name, loadmodel->numskins), (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_CLAMP | TEXF_ALPHA, true, false, true))
+		{
+			// expand the arrays to make room
+			tempskinscenes = loadmodel->skinscenes;
+			loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, (loadmodel->numskins + 1) * sizeof(animscene_t));
+			memcpy(loadmodel->skinscenes, tempskinscenes, loadmodel->numskins * sizeof(animscene_t));
+			Mem_Free(tempskinscenes);
+
+			tempaliasskins = loadmodel->alias.aliasdata_meshes->data_skins;
+			loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, (totalskins + 1) * sizeof(aliasskin_t));
+			memcpy(loadmodel->alias.aliasdata_meshes->data_skins, tempaliasskins, totalskins * sizeof(aliasskin_t));
+			Mem_Free(tempaliasskins);
+
+			// store the info about the new skin
+			Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + totalskins, &tempskinframe);
+			strcpy(loadmodel->skinscenes[loadmodel->numskins].name, name);
+			loadmodel->skinscenes[loadmodel->numskins].firstframe = totalskins;
+			loadmodel->skinscenes[loadmodel->numskins].framecount = 1;
+			loadmodel->skinscenes[loadmodel->numskins].framerate = 10.0f;
+			loadmodel->skinscenes[loadmodel->numskins].loop = true;
+
+			//increase skin counts
+			loadmodel->alias.aliasdata_meshes->num_skins++;
+			loadmodel->numskins++;
+			totalskins++;
+		}
+	}
 }
 
 static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, float *out3f, int numverts, int *vertremap)
@@ -527,6 +565,8 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 		float st[2];
 	}
 	*hash, **md2verthash, *md2verthashdata;
+	skinframe_t tempskinframe;
+	skinfile_t *skinfiles;
 
 	pinmodel = buffer;
 	base = buffer;
@@ -581,21 +621,31 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 
 	// load the skins
 	inskin = (void*)(base + LittleLong(pinmodel->ofs_skins));
-	if (loadmodel->numskins)
+	if ((skinfiles = Mod_LoadSkinFiles()))
+	{
+		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins = Mod_CountSkinFiles(skinfiles);
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
+		Mod_BuildAliasSkinsFromSkinFiles(loadmodel->alias.aliasdata_meshes->data_skins, skinfiles, "default");
+		Mod_FreeSkinFiles(skinfiles);
+	}
+	else if (loadmodel->numskins)
 	{
 		// skins found (most likely not a player model)
-		loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, sizeof(skinframe_t) * loadmodel->numskins);
+		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
 		for (i = 0;i < loadmodel->numskins;i++, inskin += MD2_SKINNAME)
-			Mod_LoadSkinFrame(loadmodel->skinframes + i, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
+		{
+			Mod_LoadSkinFrame(&tempskinframe, inskin, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
+			Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + i, &tempskinframe);
+		}
 	}
 	else
 	{
 		// no skins (most likely a player model)
 		loadmodel->numskins = 1;
-		loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, sizeof(skinframe_t) * loadmodel->numskins);
+		loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
+		loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
 	}
-	loadmodel->alias.aliasdata_meshes->num_skins = loadmodel->numskins;
-	loadmodel->alias.aliasdata_meshes->data_skins = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_skins * sizeof(aliasskin_t));
 
 	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
 	for (i = 0;i < loadmodel->numskins;i++)
@@ -605,7 +655,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 		loadmodel->skinscenes[i].loop = true;
 		loadmodel->skinscenes[i].framerate = 10;
 	}
-
 
 	// load the triangles and stvert data
 	inst = (void*)(base + LittleLong(pinmodel->ofs_st));
@@ -716,8 +765,6 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 
 	loadmodel->alias.aliasdata_meshes->data_neighbor3i = Mem_Alloc(loadmodel->mempool, loadmodel->alias.aliasdata_meshes->num_triangles * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->alias.aliasdata_meshes->data_neighbor3i, loadmodel->alias.aliasdata_meshes->data_element3i, loadmodel->alias.aliasdata_meshes->num_triangles);
-	for (i = 0;i < loadmodel->alias.aliasdata_meshes->num_skins;i++)
-		Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + i, loadmodel->skinframes + i);
 	Mod_CalcAliasModelBBoxes();
 }
 
@@ -729,7 +776,7 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	md3mesh_t *pinmesh;
 	md3tag_t *pintag;
 	aliasmesh_t *mesh;
-	skinframe_t tempskinframe;
+	skinfile_t *skinfiles;
 
 	pinmodel = buffer;
 
@@ -739,6 +786,11 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 	if (version != MD3VERSION)
 		Host_Error ("%s has wrong version number (%i should be %i)",
 			loadmodel->name, version, MD3VERSION);
+
+	skinfiles = Mod_LoadSkinFiles();
+	loadmodel->numskins = Mod_CountSkinFiles(skinfiles);
+	if (loadmodel->numskins < 1)
+		loadmodel->numskins = 1;
 
 	loadmodel->type = mod_alias;
 	loadmodel->alias.aliastype = ALIASTYPE_ALIAS;
@@ -752,13 +804,17 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 
 	// set up some global info about the model
 	loadmodel->numframes = LittleLong(pinmodel->num_frames);
-	loadmodel->numskins = 1;
 	loadmodel->alias.aliasnum_meshes = LittleLong(pinmodel->num_meshes);
-	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
-	loadmodel->skinscenes[0].firstframe = 0;
-	loadmodel->skinscenes[0].framecount = 1;
-	loadmodel->skinscenes[0].loop = true;
-	loadmodel->skinscenes[0].framerate = 10;
+
+	// make skinscenes for the skins (no groups)
+	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numskins);
+	for (i = 0;i < loadmodel->numskins;i++)
+	{
+		loadmodel->skinscenes[i].firstframe = i;
+		loadmodel->skinscenes[i].framecount = 1;
+		loadmodel->skinscenes[i].loop = true;
+		loadmodel->skinscenes[i].framerate = 10;
+	}
 
 	// load frameinfo
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
@@ -822,14 +878,14 @@ void Mod_IDP3_Load(model_t *mod, void *buffer)
 		for (j = 0;j < mesh->num_frames;j++)
 			Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, mesh->data_aliasvertex3f + j * mesh->num_vertices * 3, mesh->data_texcoord2f, mesh->data_element3i, mesh->data_aliassvector3f + j * mesh->num_vertices * 3, mesh->data_aliastvector3f + j * mesh->num_vertices * 3, mesh->data_aliasnormal3f + j * mesh->num_vertices * 3);
 
-		memset(&tempskinframe, 0, sizeof(tempskinframe));
-		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
-			Mod_LoadSkinFrame(&tempskinframe, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, (r_mipskins.integer ? TEXF_MIPMAP : 0) | TEXF_ALPHA | TEXF_CLAMP | TEXF_PRECACHE, true, false, true);
 		Mod_ValidateElements(mesh->data_element3i, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
 		Mod_BuildTriangleNeighbors(mesh->data_neighbor3i, mesh->data_element3i, mesh->num_triangles);
-		Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins, &tempskinframe);
+
+		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
+			Mod_BuildAliasSkinsFromSkinFiles(mesh->data_skins, skinfiles, ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name);
 	}
 	Mod_CalcAliasModelBBoxes();
+	Mod_FreeSkinFiles(skinfiles);
 }
 
 extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
@@ -924,12 +980,11 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 
 	{
 		// FIXME: add shaders, and make them switchable shader sets and...
-		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) + sizeof(skinframe_t));
+		loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t));
 		loadmodel->skinscenes[0].firstframe = 0;
 		loadmodel->skinscenes[0].framecount = 1;
 		loadmodel->skinscenes[0].loop = true;
 		loadmodel->skinscenes[0].framerate = 10;
-		loadmodel->skinframes = (void *)(loadmodel->skinscenes + 1);
 		loadmodel->numskins = 1;
 	}
 
@@ -1077,3 +1132,4 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		memcpy(loadmodel->alias.zymdata_trizone, (void *) (pheader->lump_trizone.start + pbase), pheader->numtris);
 	}
 }
+
