@@ -499,9 +499,26 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	CL_ValidateState(&ent->state_current);
 	VectorSubtract(ent->state_current.origin, ent->persistent.neworigin, odelta);
 	VectorSubtract(ent->state_current.angles, ent->persistent.newangles, adelta);
-	if (!ent->state_previous.active || cls.timedemo || DotProduct(odelta, odelta) > 1000*1000 || cl_nolerp.integer)
+	if (!ent->state_previous.active || ent->state_previous.modelindex != ent->state_current.modelindex)
 	{
-		// we definitely shouldn't lerp
+		// reset all persistent stuff if this is a new entity
+		ent->persistent.lerpdeltatime = 0;
+		ent->persistent.lerpstarttime = cl.mtime[1];
+		VectorCopy(ent->state_current.origin, ent->persistent.oldorigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.oldangles);
+		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);
+		VectorCopy(ent->state_current.angles, ent->persistent.newangles);
+		// reset animation interpolation as well
+		ent->render.frame = ent->render.frame1 = ent->render.frame2 = ent->state_current.frame;
+		ent->render.frame1time = ent->render.frame2time = cl.time;
+		ent->render.framelerp = 1;
+		// reset various persistent stuff
+		ent->persistent.muzzleflash = 0;
+		VectorCopy(ent->state_current.origin, ent->persistent.trail_origin);
+	}
+	else if (cls.timedemo || cl_nolerp.integer || DotProduct(odelta, odelta) > 1000*1000)
+	{
+		// don't interpolate the move
 		ent->persistent.lerpdeltatime = 0;
 		ent->persistent.lerpstarttime = cl.mtime[1];
 		VectorCopy(ent->state_current.origin, ent->persistent.oldorigin);
@@ -525,12 +542,12 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	else
 	{
 		// not a monster
-		ent->persistent.lerpstarttime = cl.mtime[1];
+		ent->persistent.lerpstarttime = ent->state_previous.time;
 		// no lerp if it's singleplayer
 		if (cl.islocalgame)
 			ent->persistent.lerpdeltatime = 0;
 		else
-			ent->persistent.lerpdeltatime = cl.mtime[0] - cl.mtime[1];
+			ent->persistent.lerpdeltatime = bound(0, ent->state_current.time - ent->state_previous.time, 0.1);
 		VectorCopy(ent->persistent.neworigin, ent->persistent.oldorigin);
 		VectorCopy(ent->persistent.newangles, ent->persistent.oldangles);
 		VectorCopy(ent->state_current.origin, ent->persistent.neworigin);

@@ -450,7 +450,6 @@ static void R_MarkEntities (void)
 		Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
 		// some of the renderer still relies on scale...
 		ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
-		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
 		 && (!VIS_CullBox(ent->mins, ent->maxs) || (ent->effects & EF_NODEPTHTEST))
