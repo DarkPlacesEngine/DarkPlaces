@@ -35,6 +35,10 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+d darkplaces: update darkplaces readme
+0 darkplaces: add a cvar to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
+d darkplaces: make r_fullbrights affect model skins, not just map textures
+1 darkplaces: add in_bindmap support to bind menu; a selector for which bindmap is actively being shown and bound in the menu, and add bind entries for some bindmap commands (sajt)
 d darkplaces: replace key system with twilight key system, note that this breaks existing mouse4 and mouse5 binds, and adds in_bindmap capability
 2 darkplaces: make the world lights check pvs bits instead of recursing a box which would tend to touch solids
 3 darkplaces: figure out why dlights are apparently disappearing in nexuiz when far away (Vermeulen)
