@@ -38,8 +38,8 @@ size_t ResampleSfx (const qbyte *in_data, size_t in_length, const snd_format_t* 
 	srclength = in_length * in_format->channels;
 	outcount = (double)in_length * shm->format.speed / in_format->speed;
 
-	Con_DPrintf("ResampleSfx: resampling sound \"%s\" from %dHz to %dHz (%d samples to %d samples)\n",
-				sfxname, in_format->speed, shm->format.speed, in_length, outcount);
+	Con_DPrintf("ResampleSfx(%s): %d samples @ %dHz -> %d samples @ %dHz\n",
+				sfxname, in_length, in_format->speed, outcount, shm->format.speed);
 
 	// Trivial case (direct transfer)
 	if (in_format->speed == shm->format.speed)
@@ -160,7 +160,7 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	if (!shm || !shm->format.speed)
 		return false;
 
-	// If we wasn't able to load it previously, no need to retry
+	// If we weren't able to load it previously, no need to retry
 	if (s->flags & SFXFLAG_FILEMISSING)
 		return false;
 
