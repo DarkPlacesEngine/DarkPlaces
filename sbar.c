@@ -1043,11 +1043,11 @@ void Sbar_IntermissionOverlay (void)
 		return;
 	}
 
-	sbar_x = 0;
-	sbar_y = 0;
+	sbar_x = (vid.conwidth - 320) >> 1;
+	sbar_y = (vid.conheight - 200) >> 1;
 
-	DrawQ_Pic (64, 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1, 0);
-	DrawQ_Pic (0, 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (sbar_x + 64, sbar_y + 24, "gfx/complete.lmp", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (sbar_x + 0, sbar_y + 56, "gfx/inter.lmp", 0, 0, 1, 1, 1, 1, 0);
 
 // time
 	dig = cl.completed_time/60;
