@@ -982,7 +982,8 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 
 	filenamelen = strlen (filename);
 
-		// search through the path, one element at a time
+#ifdef AKVERSION		
+	// search through the path, one element at a time
 	search = fs_searchpaths;
 
 	for( ; search ; search = search->next)
@@ -998,7 +999,6 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 			return FS_OpenRead (netpath, -1, -1);
 		}
 		
-#ifdef AKVERSION		
 	search = fs_searchpaths;
 	for ( ; search ; search = search->next)
 		// is the element a pak file?
