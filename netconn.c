@@ -28,14 +28,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t sv_public = {0, "sv_public", "0"};
 static cvar_t sv_heartbeatperiod = {CVAR_SAVE, "sv_heartbeatperiod", "180"};
 
+// FIXME: resolve DNS on masters whenever their value changes and cache it (to avoid major delays in active servers when they heartbeat)
 static cvar_t sv_masters [] =
 {
 	{CVAR_SAVE, "sv_master1", ""},
 	{CVAR_SAVE, "sv_master2", ""},
 	{CVAR_SAVE, "sv_master3", ""},
 	{CVAR_SAVE, "sv_master4", ""},
-	{0, "sv_masterextra1", "ghdigital.com"},
-	{0, "sv_masterextra2", "dpmaster.deathmask.net"},
+	{0, "sv_masterextra1", "69.59.212.88"}, // ghdigital.com
+	{0, "sv_masterextra2", "66.169.205.13"}, // dpmaster.deathmask.net
 	{0, NULL, NULL}
 };
 
