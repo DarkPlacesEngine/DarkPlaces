@@ -1227,12 +1227,12 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 					maxverts = surf->poly_numverts;
 			}
 		}
-		e->shadowvolume = Mod_ShadowMesh_Begin(loadmodel->mempool, 32768);
+		e->shadowvolume = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768);
 #if !PRECOMPUTEDSHADOWVOLUMES
 		// make a mesh to cast a shadow volume from
 		for (j = 0;j < e->numsurfaces;j++)
 			if (e->surfaces[j]->castshadow == castshadowcount)
-				Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, e->surfaces[j]->poly_numverts, e->surfaces[j]->poly_verts);
+				Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, e->surfaces[j]->poly_numverts, e->surfaces[j]->poly_verts);
 #else
 #if 1
 		{
@@ -1240,12 +1240,12 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 		shadowmesh_t *castmesh, *mesh;
 		surfmesh_t *surfmesh;
 		// make a mesh to cast a shadow volume from
-		castmesh = Mod_ShadowMesh_Begin(loadmodel->mempool, 32768);
+		castmesh = Mod_ShadowMesh_Begin(r_shadow_mempool, 32768);
 		for (j = 0;j < e->numsurfaces;j++)
 			if (e->surfaces[j]->castshadow == castshadowcount)
 				for (surfmesh = e->surfaces[j]->mesh;surfmesh;surfmesh = surfmesh->chain)
-					Mod_ShadowMesh_AddMesh(loadmodel->mempool, castmesh, surfmesh->numverts, surfmesh->verts, surfmesh->numtriangles, surfmesh->index);
-		castmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, castmesh);
+					Mod_ShadowMesh_AddMesh(r_shadow_mempool, castmesh, surfmesh->numverts, surfmesh->verts, surfmesh->numtriangles, surfmesh->index);
+		castmesh = Mod_ShadowMesh_Finish(r_shadow_mempool, castmesh);
 
 		// cast shadow volume from castmesh
 		for (mesh = castmesh;mesh;mesh = mesh->next)
@@ -1261,7 +1261,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 				verts = NULL;
 			}
 			if (verts == NULL && maxverts > 0)
-				verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[4]));
+				verts = Mem_Alloc(r_shadow_mempool, maxverts * sizeof(float[4]));
 
 			// now that we have the buffers big enough, construct shadow volume mesh
 			memcpy(verts, castmesh->verts, castmesh->numverts * sizeof(float[4]));
@@ -1269,7 +1269,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			R_Shadow_MakeTriangleShadowFlags(castmesh->elements, verts, castmesh->numtriangles, trianglefacinglight, e->origin, e->lightradius);
 			tris = R_Shadow_BuildShadowVolumeTriangles(castmesh->elements, castmesh->neighbors, castmesh->numtriangles, castmesh->numverts, trianglefacinglight, shadowelements);
 			// add the constructed shadow volume mesh
-			Mod_ShadowMesh_AddMesh(loadmodel->mempool, e->shadowvolume, castmesh->numverts, verts, tris, shadowelements);
+			Mod_ShadowMesh_AddMesh(r_shadow_mempool, e->shadowvolume, castmesh->numverts, verts, tris, shadowelements);
 		}
 		// we're done with castmesh now
 		Mod_ShadowMesh_Free(castmesh);
@@ -1277,7 +1277,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 #else
 		// make a shadow volume mesh
 		if (verts == NULL && maxverts > 0)
-			verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[4]));
+			verts = Mem_Alloc(r_shadow_mempool, maxverts * sizeof(float[4]));
 		for (j = 0;j < e->numsurfaces;j++)
 		{
 			surf = e->surfaces[j];
@@ -1287,7 +1287,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 			// copy the original polygon, for the front cap of the volume
 			for (k = 0, v0 = surf->poly_verts, v1 = verts;k < surf->poly_numverts;k++, v0 += 3, v1 += 3)
 				VectorCopy(v0, v1);
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, surf->poly_numverts, verts);
+			Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, surf->poly_numverts, verts);
 			// project the original polygon, reversed, for the back cap of the volume
 			for (k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = verts;k < surf->poly_numverts;k++, v0 -= 3, v1 += 3)
 			{
@@ -1295,7 +1295,7 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 				//VectorNormalize(temp);
 				VectorMA(v0, projectdistance, temp, v1);
 			}
-			Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, surf->poly_numverts, verts);
+			Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, surf->poly_numverts, verts);
 			// project the shadow volume sides
 			for (l = surf->poly_numverts - 1, k = 0, v0 = surf->poly_verts + (surf->poly_numverts - 1) * 3, v1 = surf->poly_verts;k < surf->poly_numverts;l = k, k++, v0 = v1, v1 += 3)
 			{
@@ -1333,13 +1333,13 @@ void R_Shadow_NewWorldLight(vec3_t origin, float radius, vec3_t color, int style
 					}
 #endif
 
-					Mod_ShadowMesh_AddPolygon(loadmodel->mempool, e->shadowvolume, 4, verts);
+					Mod_ShadowMesh_AddPolygon(r_shadow_mempool, e->shadowvolume, 4, verts);
 				}
 			}
 		}
 #endif
 #endif
-		e->shadowvolume = Mod_ShadowMesh_Finish(loadmodel->mempool, e->shadowvolume);
+		e->shadowvolume = Mod_ShadowMesh_Finish(r_shadow_mempool, e->shadowvolume);
 		for (l = 0, mesh = e->shadowvolume;mesh;mesh = mesh->next)
 			l += mesh->numtriangles;
 		Con_Printf("static shadow volume built containing %i triangles\n", l);
