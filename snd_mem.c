@@ -21,6 +21,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#include "ogg.h"
+
+
 /*
 ================
 ResampleSfx
@@ -270,6 +273,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	char namebuffer[MAX_QPATH];
 	size_t len;
 	sfxcache_t *sc;
+	qboolean modified_name = false;
 
 	// see if still in memory
 	if (!shm || !shm->speed)
@@ -277,25 +281,35 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	if (s->sfxcache && (s->sfxcache->speed == shm->speed))
 		return s->sfxcache;
 
+	s->silentlymissing = !complain;
+
 	len = snprintf (namebuffer, sizeof (namebuffer), "sound/%s", s->name);
 	if (len >= sizeof (namebuffer))
 		return NULL;
 
 	// Try to load it as a WAV file
 	sc = S_LoadWavFile (namebuffer, s);
+	if (sc != NULL)
+		return sc;
 
-	// TODO: insert Ogg Vorbis support here
+	// Else, try to load it as an Ogg Vorbis file
+	if (!strcasecmp (namebuffer + len - 4, ".wav"))
+	{
+		strcpy (namebuffer + len - 3, "ogg");
+		modified_name = true;
+	}
+	sc = OGG_LoadVorbisFile (namebuffer, s);
+	if (sc != NULL)
+		return sc;
 
 	// Can't load the sound!
-	if (sc == NULL)
+	if (complain)
 	{
-		s->silentlymissing = !complain;
-		if (complain)
-			Con_Printf ("Couldn't load %s\n", namebuffer);
-		return NULL;
+		if (modified_name)
+			strcpy (namebuffer + len - 3, "wav");
+		Con_Printf ("Couldn't load %s\n", namebuffer);
 	}
-
-	return sc;
+	return NULL;
 }
 
 void S_UnloadSound(sfx_t *s)

@@ -25,6 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "winquake.h"
 #endif
 
+#include "ogg.h"
+
+
 void S_Play(void);
 void S_PlayVol(void);
 void S_Play2(void);
@@ -257,6 +260,8 @@ void S_Init(void)
 
 	total_channels = MAX_DYNAMIC_CHANNELS + NUM_AMBIENTS;	// no statics
 	memset(channels, 0, MAX_CHANNELS * sizeof(channel_t));
+
+	OGG_OpenLibrary ();
 }
 
 
