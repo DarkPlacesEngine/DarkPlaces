@@ -86,6 +86,8 @@ float	gettime()
 		loadfromdata(string data)
 		loadfromfile(string file)
 float	mod(float val, float m)
+const string	str_cvar (string)
+		crash()
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -662,6 +664,35 @@ void VM_cvar (void)
 
 /*
 =================
+VM_str_cvar
+
+const string	str_cvar (string)
+=================
+*/
+void VM_str_cvar(void) 
+{
+	char *out, *name;
+	const char *cvar_string;
+	VM_SAFEPARMCOUNT(1,VM_str_cvar);
+
+	name = PRVM_G_STRING(OFS_PARM0);
+
+	if(!name)
+		PRVM_ERROR("VM_str_cvar: %s: null string\n", PRVM_NAME);
+
+	VM_CheckEmptyString(name);
+
+	out = VM_GetTempString(); 
+
+	cvar_string = Cvar_VariableString(name);
+	
+	strcpy(out, cvar_string);
+
+	PRVM_G_INT(OFS_PARM0) = PRVM_SetString(out);
+}
+
+/*
+=================
 VM_cvar_set
 
 void cvar_set (string,string)
@@ -1079,6 +1110,21 @@ void VM_coredump (void)
 	Cbuf_AddText("prvm_edicts ");
 	Cbuf_AddText(PRVM_NAME);
 	Cbuf_AddText("\n");
+}
+
+/*
+=========
+VM_crash
+
+crash()
+=========
+*/
+
+void VM_crash(void) 
+{
+	VM_SAFEPARMCOUNT(0, VM_crash);
+
+	PRVM_ERROR("Crash called by %s\n",PRVM_NAME);
 }
 
 /*
@@ -2079,6 +2125,32 @@ void VM_clientstate(void)
 
 /*
 =========
+VM_getostype
+
+float	getostype(void)
+=========
+*/ // not used at the moment -> not included in the common list
+void VM_getostype(void)
+{
+	VM_SAFEPARMCOUNT(0,VM_getostype);
+
+	/*
+	OS_WINDOWS
+	OS_LINUX
+	OS_MAC - not supported
+	*/
+
+#ifdef _WIN32
+	PRVM_G_FLOAT(OFS_RETURN) = 0;
+#elif defined _MAC
+	PRVM_G_FLOAT(OFS_RETURN) = 2;
+#else
+	PRVM_G_FLOAT(OFS_RETURN) = 1;
+#endif
+}
+
+/*
+=========
 VM_getmousepos
 
 vector	getmousepos()
@@ -2788,7 +2860,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_loadfromdata,
 	VM_loadfromfile,
 	VM_modulo,		// 70
-	e10,			// 80
+	VM_str_cvar,	
+	VM_crash,		// 72
+	0,0,0,0,0,0,0,0,// 80
 	e10,			// 90
 	e10,			// 100
 	e100,			// 200
