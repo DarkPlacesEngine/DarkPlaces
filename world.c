@@ -583,8 +583,11 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 			if (clip->trace.realfraction == 1)
 				clip->trace.ent = touch;
 		}
-		if (trace.inopen)
-			clip->trace.inopen = true;
+		// don't set this except on the world, because it can easily confuse
+		// monsters underwater if there's a bmodel involved in the trace
+		// (inopen && inwater is how they check water visibility)
+		//if (trace.inopen)
+		//	clip->trace.inopen = true;
 		if (trace.inwater)
 			clip->trace.inwater = true;
 		if (trace.realfraction < clip->trace.realfraction)
