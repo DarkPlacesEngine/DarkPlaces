@@ -35,7 +35,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <X11/cursorfont.h>
 
 #include <X11/extensions/XShm.h>
+#ifndef __APPLE__
 #include <X11/extensions/xf86dga.h>
+#endif
 #include <X11/extensions/xf86vmode.h>
 
 #include "quakedef.h"
@@ -90,8 +92,10 @@ static qboolean		mouse_active = false, usingmouse = false;
 static float	mouse_x, mouse_y;
 static int p_mouse_x, p_mouse_y;
 
+#ifndef __APPLE__
 cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1"};
 cvar_t vid_dga_mouseaccel = {0, "vid_dga_mouseaccel", "1"};
+#endif
 
 qboolean vidmode_ext = false;
 
@@ -254,6 +258,7 @@ static void install_grabs(void)
 
 	XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
+#ifndef __APPLE__
 	if (vid_dga.integer)
 	{
 		int MajorVersion, MinorVersion;
@@ -272,6 +277,7 @@ static void install_grabs(void)
 		}
 	}
 	else
+#endif
 		XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, scr_width / 2, scr_height / 2);
 
 	XGrabKeyboard(vidx11_display, win, False, GrabModeAsync, GrabModeAsync, CurrentTime);
@@ -285,8 +291,10 @@ static void uninstall_grabs(void)
 	if (!vidx11_display || !win)
 		return;
 
+#ifndef __APPLE__
 	if (vid_dga.integer == 1)
 		XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
+#endif
 
 	XUngrabPointer(vidx11_display, CurrentTime);
 	XUngrabKeyboard(vidx11_display, CurrentTime);
@@ -329,12 +337,14 @@ static void HandleEvents(void)
 			// mouse moved
 			if (usingmouse)
 			{
+#ifndef __APPLE__
 				if (vid_dga.integer == 1)
 				{
 					mouse_x += event.xmotion.x_root * vid_dga_mouseaccel.value;
 					mouse_y += event.xmotion.y_root * vid_dga_mouseaccel.value;
 				}
 				else
+#endif
 				{
 
 					if (!event.xmotion.send_event)
@@ -636,8 +646,10 @@ int VID_GetGamma(unsigned short *ramps)
 
 void VID_Init(void)
 {
+#ifndef __APPLE__
 	Cvar_RegisterVariable (&vid_dga);
 	Cvar_RegisterVariable (&vid_dga_mouseaccel);
+#endif
 	InitSig(); // trap evil signals
 	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe"))
 		mouse_avail = false;
