@@ -233,18 +233,27 @@ static void R_SkyBox(void)
 	R_Mesh_Draw(&m);
 }
 
-static float skysphere[33*33*5];
-static int skysphereindices[32*32*6];
+#define skygridx 16
+#define skygridx1 (skygridx + 1)
+#define skygridxrecip (1.0f / (skygridx))
+#define skygridy 32
+#define skygridy1 (skygridy + 1)
+#define skygridyrecip (1.0f / (skygridy))
+
+static float skysphere[skygridx1*skygridy1*5];
+static int skysphereindices[skygridx*skygridy*6];
 static void skyspherecalc(float *sphere, float dx, float dy, float dz)
 {
 	float a, b, x, ax, ay, v[3], length;
 	int i, j, *index;
-	for (a = 0;a <= 1;a += (1.0 / 32.0))
+	for (j = 0;j <= skygridy;j++)
 	{
+		a = j * skygridyrecip;
 		ax = cos(a * M_PI * 2);
 		ay = -sin(a * M_PI * 2);
-		for (b = 0;b <= 1;b += (1.0 / 32.0))
+		for (i = 0;i <= skygridx;i++)
 		{
+			b = i * skygridxrecip;
 			x = cos(b * M_PI * 2);
 			v[0] = ax*x * dx;
 			v[1] = ay*x * dy;
@@ -258,17 +267,17 @@ static void skyspherecalc(float *sphere, float dx, float dy, float dz)
 		}
 	}
 	index = skysphereindices;
-	for (j = 0;j < 32;j++)
+	for (j = 0;j < skygridy;j++)
 	{
-		for (i = 0;i < 32;i++)
+		for (i = 0;i < skygridx;i++)
 		{
-			*index++ =  j      * 33 + i;
-			*index++ =  j      * 33 + i + 1;
-			*index++ = (j + 1) * 33 + i;
+			*index++ =  j      * skygridx1 + i;
+			*index++ =  j      * skygridx1 + i + 1;
+			*index++ = (j + 1) * skygridx1 + i;
 
-			*index++ =  j      * 33 + i + 1;
-			*index++ = (j + 1) * 33 + i + 1;
-			*index++ = (j + 1) * 33 + i;
+			*index++ =  j      * skygridx1 + i + 1;
+			*index++ = (j + 1) * skygridx1 + i + 1;
+			*index++ = (j + 1) * skygridx1 + i;
 		}
 		i++;
 	}
@@ -282,7 +291,7 @@ static void skyspherearrays(float *vert, float *tex, float *tex2, float *source,
 	t = tex;
 	t2 = tex2;
 	radius = r_farclip - 8;
-	for (i = 0;i < (33*33);i++)
+	for (i = 0;i < (skygridx1*skygridy1);i++)
 	{
 		*t++ = source[0] + s;
 		*t++ = source[1] + s;
@@ -299,7 +308,7 @@ static void skyspherearrays(float *vert, float *tex, float *tex2, float *source,
 static void R_SkySphere(void)
 {
 	float speedscale, speedscale2;
-	float vert[33*33*4], tex[33*33*2], tex2[33*33*2];
+	float vert[skygridx1*skygridy1*4], tex[skygridx1*skygridy1*2], tex2[skygridx1*skygridy1*2];
 	static qboolean skysphereinitialized = false;
 	rmeshinfo_t m;
 	if (!skysphereinitialized)
@@ -311,8 +320,8 @@ static void R_SkySphere(void)
 	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
-	m.numtriangles = 32*32*2;
-	m.numverts = 33*33;
+	m.numtriangles = skygridx*skygridy*2;
+	m.numverts = skygridx1*skygridy1;
 	m.index = skysphereindices;
 	m.vertex = vert;
 	m.vertexstep = sizeof(float[4]);
