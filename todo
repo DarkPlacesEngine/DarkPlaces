@@ -143,7 +143,6 @@
 0 darkplaces server: make dedicated server not load images (maybe all fail?)
 0 darkplaces server: make findradius use areagrid scans to speed up searching (Urre, Sajt)
 0 darkplaces server: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
-0 darkplaces server: make qc profile command post an error message instead of crashing when used during demo playback (Sajt)
 0 darkplaces server: make server able to work without models, just for sake of completeness
 0 darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
 0 darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh) 
@@ -393,6 +392,7 @@ d darkplaces renderer: fix a crash when changing level while using qe1 textures 
 d darkplaces server: figure out what is wrong with dedicated server console on win32 and fix it (and tell Willis)
 d darkplaces server: figure out what's making monsters act like notarget is on while underwater (romi)
 d darkplaces server: figure out why zombies are disappearing when not entirely submerged in some hipnotic maps (romi) 
+d darkplaces server: make qc profile command post an error message instead of crashing when used during demo playback (Sajt)
 d darkplaces: "edict -1" and other invalid numbers cause an error, should just complain (Supajoe)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces: .skin loading for models (override skins - not exactly shaders, but adequate, missing replacements are nodraw, this allows q3 player models with optional accessories) (Electro)
