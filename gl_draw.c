@@ -396,7 +396,7 @@ void R_DrawQueue(void)
 	float x, y, w, h, s, t, u, v, *av, *at, c[4];
 	cachepic_t *pic;
 	drawqueue_t *dq;
-	char *str, *currentpic;
+	char *str;
 	int batchcount;
 	unsigned int color;
 	drawqueuemesh_t *mesh;
@@ -427,7 +427,6 @@ void R_DrawQueue(void)
 
 	memset(&m, 0, sizeof(m));
 
-	currentpic = "";
 	pic = NULL;
 	texnum = 0;
 	color = 0;
@@ -466,14 +465,11 @@ void R_DrawQueue(void)
 		case DRAWQUEUE_STRING:
 			GL_Color(c[0], c[1], c[2], c[3]);
 			str = (char *)(dq + 1);
-			if (strcmp("gfx/conchars", currentpic))
-			{
-				currentpic = "gfx/conchars";
-				m.tex[0] = chartexnum;
-			}
 			batchcount = 0;
 			m.pointer_vertex = varray_vertex3f;
+			m.pointer_color = NULL;
 			m.pointer_texcoord[0] = varray_texcoord2f[0];
+			m.tex[0] = chartexnum;
 			R_Mesh_State(&m);
 			at = varray_texcoord2f[0];
 			av = varray_vertex3f;
@@ -519,14 +515,14 @@ void R_DrawQueue(void)
 			mesh = (void *)(dq + 1);
 			m.pointer_vertex = mesh->data_vertex3f;
 			m.pointer_color = mesh->data_color4f;
-			m.tex[0] = R_GetTexture(mesh->texture);
 			m.pointer_texcoord[0] = mesh->data_texcoord2f;
+			m.tex[0] = R_GetTexture(mesh->texture);
+			if (!m.tex[0])
+				m.pointer_texcoord[0] = NULL;
 			R_Mesh_State(&m);
 			GL_LockArrays(0, mesh->num_vertices);
 			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 			GL_LockArrays(0, 0);
-			m.pointer_color = NULL;
-			currentpic = "\0";
 			break;
 		case DRAWQUEUE_SETCLIP:
 			{
