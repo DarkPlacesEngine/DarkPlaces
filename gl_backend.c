@@ -83,7 +83,7 @@ static matrix4x4_t backend_modelviewmatrix;
 static matrix4x4_t backend_glmodelviewmatrix;
 static matrix4x4_t backend_projectmatrix;
 
-static int backendunits, backendimageunits, backendarrayunits, backendactive;
+static unsigned int backendunits, backendimageunits, backendarrayunits, backendactive;
 static mempool_t *gl_backend_mempool;
 
 /*
