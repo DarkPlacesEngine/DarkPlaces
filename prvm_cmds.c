@@ -144,7 +144,7 @@ menu cmd list:
 		setkeydest(float dest)
 float	getkeydest()
 		setmousetarget(float target)
-float	getmousetarget(void)
+float	getmousetarget()
 
 		callfunction(...,string function_name)
 		writetofile(float fhandle, entity ent)
@@ -153,9 +153,19 @@ vector	getresolution(float number)
 string	keynumtostring(float keynum)
 string	findkeysforcommand(string command)
 float	gethostcachestat(float type)
-string	gethostcachestring(float type, float hostnr)
+string	gethostcachestring(float fld, float hostnr)
 
 		parseentitydata(entity ent, string data)
+
+float	stringtokeynum(string key)
+
+		resethostcachemask()
+		sethostcachemaskstring(float fld, string str)
+		sethostcachemasknumber(float fld, float num, float op)
+		resorthostcache()
+		sethostcachesort(float field, float descending)
+		refreshhostcache()
+float	gethostcachenumber(float fld, float hostnr)
 */
 
 #include "quakedef.h"
@@ -2654,7 +2664,7 @@ void VM_drawstring(void)
 		return;
 	}
 	
-	//VM_CheckEmptyString(string); Why should it be checked - perhaps the menu wants to the precolored letters, too?
+	//VM_CheckEmptyString(string); Why should it be checked - perhaps the menu wants to support the precolored letters, too?
 	
 	pos = PRVM_G_VECTOR(OFS_PARM0);
 	scale = PRVM_G_VECTOR(OFS_PARM2);
@@ -2966,7 +2976,7 @@ void VM_altstr_count( void )
 	VM_SAFEPARMCOUNT( 1, VM_altstr_count );
 
 	altstr = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( altstr );
+	//VM_CheckEmptyString( altstr );
 
 	for( count = 0, pos = altstr ; *pos ; pos++ )
 		if( *pos == '\\' && !*++pos )
@@ -2993,7 +3003,7 @@ void VM_altstr_prepare( void )
 	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
 
 	instr = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( instr );
+	//VM_CheckEmptyString( instr );
 	outstr = VM_GetTempString();
 
 	for( out = outstr, in = instr, size = VM_STRINGTEMP_LENGTH - 1 ; size && *in ; size--, in++, out++ )
@@ -3023,7 +3033,7 @@ void VM_altstr_get( void )
 	VM_SAFEPARMCOUNT( 2, VM_altstr_get );
 
 	altstr = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( altstr );
+	//VM_CheckEmptyString( altstr );
 
 	count = PRVM_G_FLOAT( OFS_PARM1 );
 	count = count * 2 + 1;
@@ -3072,12 +3082,12 @@ void VM_altstr_set( void )
 	VM_SAFEPARMCOUNT( 3, VM_altstr_set );
 
 	altstr = PRVM_G_STRING( OFS_PARM0 );
-	VM_CheckEmptyString( altstr );
+	//VM_CheckEmptyString( altstr );
 
 	num = PRVM_G_FLOAT( OFS_PARM1 );
 
 	str = PRVM_G_STRING( OFS_PARM2 );
-	VM_CheckEmptyString( str );
+	//VM_CheckEmptyString( str );
 
 	outstr = out = VM_GetTempString();
 	for( num = num * 2 + 1, in = altstr; *in && num; *out++ = *in++ )
@@ -3093,7 +3103,7 @@ void VM_altstr_set( void )
 	// copy set in
 	for( ; *str; *out++ = *str++ );
 	// now jump over the old contents
-	for( ; *in; *out++ = *in++ )
+	for( ; *in ; in++ )
 		if( *in == '\'' || *in == '\\' && !*++in )
 			break;
 	
@@ -3436,6 +3446,23 @@ void VM_M_keynumtostring(void)
 
 /*
 =========
+VM_M_stringtokeynum
+
+float stringtokeynum(string key)
+=========
+*/
+void VM_M_stringtokeynum( void )
+{
+	char *str;
+	VM_SAFEPARMCOUNT( 1, VM_M_keynumtostring );
+
+	str = PRVM_G_STRING( OFS_PARM0 );
+
+	PRVM_G_INT(OFS_RETURN) = Key_StringToKeynum( str );
+}
+
+/*
+=========
 VM_M_findkeysforcommand
 
 string	findkeysforcommand(string command)
@@ -3483,6 +3510,8 @@ float	gethostcachestat(float type)
 3	masterreplycount
 4	serverquerycount
 5	serverreplycount
+6	sortfield
+7	sortdescending
 */
 void VM_M_gethostcachestat( void )
 {
@@ -3492,9 +3521,7 @@ void VM_M_gethostcachestat( void )
 	PRVM_G_FLOAT( OFS_RETURN ) = 0;
 
 	type = PRVM_G_FLOAT( OFS_PARM0 );
-	if( type < 0 || type > 4 )
-		Con_Printf( "VM_M_gethostcachestat: bad type %i!\n", type );
-	else switch(type)
+	switch(type)
 	{
 	case 0:
 		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_viewcount;
@@ -3513,46 +3540,133 @@ void VM_M_gethostcachestat( void )
 	case 5:
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverreplycount;
 		return;
+	case 6:
+		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_sortbyfield;
+		return;
+	case 7:
+		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_sortdescending;
+		return;
+	default:
+		Con_Printf( "VM_M_gethostcachestat: bad type %i!\n", type );
 	}
 }
 
 /*
 ========================
-VM_M_sethostcachemask
+VM_M_resethostcachemask
 
-sethostcachemask( string map, string mod, string name, 
+resethostcachemask()
 ========================
 */
+void VM_M_resethostcachemask( void )
+{
+	HostCache_ResetMask();
+}
 
+
+/*
+========================
+VM_M_sethostcachemaskstring
+
+sethostcachemaskstring(float field, string str)
+========================
+*/
+void VM_M_sethostcachemaskstring( void )
+{
+	char *str;
+
+	VM_SAFEPARMCOUNT( 2, VM_M_sethostcachemask );
+	str = PRVM_G_STRING( OFS_PARM1 );
+	if( !str )
+		PRVM_ERROR( "VM_M_sethostcachemask: null string passed!" );
+
+	switch( (int) PRVM_G_FLOAT( OFS_PARM0 ) ) {
+		case HCIF_CNAME:
+			strncpy( hostcache_currentmask.info.cname, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.cname) );
+			break;
+		case HCIF_NAME:
+			strncpy( hostcache_currentmask.info.name, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.name)  );
+			break;
+		case HCIF_MAP:
+			strncpy( hostcache_currentmask.info.map, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.map)  );
+			break;
+		case HCIF_MOD:
+			strncpy( hostcache_currentmask.info.mod, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.mod)  );
+			break;
+		case HCIF_GAME:
+			strncpy( hostcache_currentmask.info.game, PRVM_G_STRING( OFS_PARM1 ), sizeof(hostcache_currentmask.info.game)  );
+			break;
+		default:
+			Con_Printf( "VM_M_sethostcachemask: Bad field number %i passed!\n", PRVM_G_INT( OFS_PARM0 ) );
+	}
+}    
+
+/*
+========================
+VM_M_sethostcachemasknumber
+
+sethostcachemasknumber(float field, float num, float op)
+========================
+*/
+void VM_M_sethostcachemasknumber( void )
+{
+	int number;
+	hostcache_maskop_t operand;
+	VM_SAFEPARMCOUNT( 3, VM_M_sethostcachemasknumber );
+
+	number = PRVM_G_FLOAT( OFS_PARM1 );
+	operand = (int) PRVM_G_FLOAT( OFS_PARM2 );
+
+	switch( (int) PRVM_G_FLOAT( OFS_PARM0 ) ) {
+		case HCIF_MAXPLAYERS:
+			hostcache_currentmask.info.maxplayers = number;
+			hostcache_currentmask.maxplayerstest = operand;
+			break;
+		case HCIF_NUMPLAYERS:
+			hostcache_currentmask.info.numplayers = number;
+			hostcache_currentmask.numplayerstest = operand;
+			break;
+		case HCIF_PING:
+			hostcache_currentmask.info.ping = number;
+			hostcache_currentmask.pingtest = operand;
+			break;
+		case HCIF_PROTOCOL:
+			hostcache_currentmask.info.protocol = number;
+			hostcache_currentmask.protocoltest = operand;
+			break;
+		default:
+			Con_Printf( "VM_M_sethostcachemask: Bad field number %i passed!\n", PRVM_G_INT( OFS_PARM0 ) );
+	}
+}
+
+
+/*
+========================
+VM_M_resorthostcache
+
+resorthostcache
+========================
+*/
+void VM_M_resorthostcache( void )
+{
+	HostCache_RebuildViewSet();
+}
 
 /*
 =========
 VM_M_gethostcachestring
 
-string	gethostcachestring(float type, float hostnr)
+string	gethostcachestring(float field, float hostnr)
 =========
-*/
-/*
-0	Get CName
-1	Get line1
-2	Get line2 
 */
 void VM_M_gethostcachestring(void)
 {
-	int type;
+	hostcache_t *cache;
 	int hostnr;
 
 	VM_SAFEPARMCOUNT(2, VM_M_gethostcachestring);
 
 	PRVM_G_INT(OFS_RETURN) = 0;
-
-	type = PRVM_G_FLOAT(OFS_PARM0);
-	
-	if(type < 0 || type > 2)
-	{
-		Con_Print("VM_M_gethostcachestring: bad string type requested!\n");
-		return;
-	}
 
 	hostnr = PRVM_G_FLOAT(OFS_PARM1);
 
@@ -3561,13 +3675,102 @@ void VM_M_gethostcachestring(void)
 		Con_Print("VM_M_gethostcachestring: bad hostnr passed!\n");
 		return;
 	}
+	cache = hostcache_viewset[hostnr];
+	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
+		case HCIF_CNAME:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.cname );
+			break;
+		case HCIF_NAME:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.name );
+			break;
+		case HCIF_GAME:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.game );
+			break;
+		case HCIF_MOD:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.mod );
+			break;
+		case HCIF_MAP:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->info.map );
+			break;
+		// TODO remove this again
+		case 1024:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->line1 );
+			break;
+		case 1025:
+			PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( cache->line2 );
+			break;
+		default:
+			Con_Print("VM_M_gethostcachestring: bad field number passed!\n");
+	}
+}
 
-	if( type == 0 )
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache_viewset[hostnr]->info.cname );
-	else if( type == 1 )
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache_viewset[hostnr]->line1 );
-	else
-		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( hostcache_viewset[hostnr]->line2 );
+/*
+=========
+VM_M_gethostcachenumber
+
+float	gethostcachenumber(float field, float hostnr)
+=========
+*/
+void VM_M_gethostcachenumber(void)
+{
+	hostcache_t *cache;
+	int hostnr;
+
+	VM_SAFEPARMCOUNT(2, VM_M_gethostcachestring);
+
+	PRVM_G_INT(OFS_RETURN) = 0;
+
+	hostnr = PRVM_G_FLOAT(OFS_PARM1);
+
+	if(hostnr < 0 || hostnr >= hostcache_viewcount)
+	{
+		Con_Print("VM_M_gethostcachestring: bad hostnr passed!\n");
+		return;
+	}
+	cache = hostcache_viewset[hostnr];
+	switch( (int) PRVM_G_FLOAT(OFS_PARM0) ) {
+		case HCIF_MAXPLAYERS:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.maxplayers;
+			break;
+		case HCIF_NUMPLAYERS:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.numplayers;
+			break;
+		case HCIF_PING:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.ping;
+			break;
+		case HCIF_PROTOCOL:
+			PRVM_G_FLOAT( OFS_RETURN ) = cache->info.protocol;
+			break;
+		default:
+			Con_Print("VM_M_gethostcachenumber: bad field number passed!\n");
+	}
+}
+
+/*
+========================
+VM_M_sethostcachesort
+
+sethostcachesort(float field, float descending)
+========================
+*/
+void VM_M_sethostcachesort( void )
+{
+	VM_SAFEPARMCOUNT( 2, VM_M_sethostcachesort );
+
+	hostcache_sortbyfield = (int) PRVM_G_FLOAT( OFS_PARM0 );
+	hostcache_sortdescending = (qboolean) PRVM_G_FLOAT( OFS_PARM1 );
+}
+
+/*
+========================
+VM_M_refreshhostcache
+
+refreshhostcache()
+========================
+*/
+void VM_M_refreshhostcache( void )
+{
+	HostCache_QueryList();
 }
 
 prvm_builtin_t vm_m_builtins[] = {
@@ -3712,7 +3915,15 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_findkeysforcommand,// 610
 	VM_M_gethostcachestat,
 	VM_M_gethostcachestring,
-	VM_M_parseentitydata	// 613
+	VM_M_parseentitydata,
+	VM_M_stringtokeynum,
+	VM_M_resethostcachemask,
+	VM_M_sethostcachemaskstring,
+	VM_M_sethostcachemasknumber,
+	VM_M_resorthostcache,
+	VM_M_sethostcachesort,
+	VM_M_refreshhostcache,
+	VM_M_gethostcachenumber // 621
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);

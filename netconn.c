@@ -101,21 +101,6 @@ hostcache_t hostcache_cache[HOSTCACHE_TOTALSIZE];
 
 qboolean	hostcache_consoleoutput;
 
-#if 0
-static void _HostCache_PingTest(void)
-{
-	int i;
-	for( i = 0 ; i < 50 ; i++ ) {
-		memset( &hostcache_cache[hostcache_cachecount], 0, sizeof( hostcache_t ) );
-		hostcache_cache[hostcache_cachecount].info.ping = rand() % 450;
-		hostcache_cache[hostcache_cachecount].finished = true;
-		sprintf( hostcache_cache[hostcache_cachecount].line1, "%i", hostcache_cache[hostcache_cachecount].info.ping );
-		_HostCache_Insert( &hostcache_cache[hostcache_cachecount] );
-		hostcache_cachecount++;
-	}
-}
-#endif
-
 // helper function to insert a value into the viewset
 // spare entries will be removed
 static void _HostCache_ViewSet_InsertBefore( int index, hostcache_t *entry )
@@ -302,6 +287,21 @@ void HostCache_QueryList(void)
 	hostcache_consoleoutput = false;
 	NetConn_QueryMasters();
 }
+
+#if 0
+static void _HostCache_PingTest(void)
+{
+	int i;
+	for( i = 0 ; i < 50 ; i++ ) {
+		memset( &hostcache_cache[hostcache_cachecount], 0, sizeof( hostcache_t ) );
+		hostcache_cache[hostcache_cachecount].info.ping = rand() % 450;
+		hostcache_cache[hostcache_cachecount].finished = true;
+		sprintf( hostcache_cache[hostcache_cachecount].line1, "%i", hostcache_cache[hostcache_cachecount].info.ping );
+		_HostCache_Insert( &hostcache_cache[hostcache_cachecount] );
+		hostcache_cachecount++;
+	}
+}
+#endif
 
 // rest
 
@@ -1722,6 +1722,8 @@ void Net_Slist_f(void)
 		Con_Print("Listening for replies...\n");
 	} else
 		HostCache_QueryList();
+
+	//_HostCache_PingTest(); 
 }
 
 void NetConn_Init(void)
