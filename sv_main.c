@@ -807,7 +807,6 @@ void SV_PrepareEntitiesForSending(void)
 	int e, i;
 	edict_t *ent;
 	entity_state_t cs;
-	eval_t *val;
 	// send all entities that touch the pvs
 	numsendentities = 0;
 	sendentitiesindex[0] = NULL;
@@ -861,7 +860,7 @@ void SV_PrepareEntitiesForSending(void)
 		cs.glowcolor = 254;
 		i = (int)(GETEDICTFIELDVALUE(ent, eval_glow_color)->_float);
 		if (i)
-			cs.glowcolor = (int) val->_float;
+			cs.glowcolor = i;
 
 		if (GETEDICTFIELDVALUE(ent, eval_fullbright)->_float)
 			cs.effects |= EF_FULLBRIGHT;
