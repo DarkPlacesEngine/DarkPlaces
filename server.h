@@ -103,6 +103,7 @@ typedef struct client_s
 
 // client known data for deltas	
 	int				old_frags;
+	int				pmodel;
 } client_t;
 
 
