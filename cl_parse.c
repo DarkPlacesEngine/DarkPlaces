@@ -644,12 +644,13 @@ void CL_ParseUpdate (int bits)
 		new.time = ent->state_current.time;
 		if (memcmp(&new, &ent->state_current, sizeof(entity_state_t)))
 		{
+			// set it back to what it should be
+			new.time = cl.mtime[0] + 0.1;
 			// state has changed
 			ent->state_previous = ent->state_current;
 			ent->state_current = new;
 			// assume 10fps animation
-			ent->state_previous.time = cl.mtime[0];
-			ent->state_current.time = cl.mtime[0] + 0.1; //ent->state_previous.time + 0.1;
+			//ent->state_previous.time = cl.mtime[0] - 0.1;
 		}
 	}
 	else
