@@ -694,6 +694,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_TEU;
 	else if (strstr(name, "battlemech"))
 		gamemode = GAME_BATTLEMECH;
+	else if (strstr(name, "zymotic"))
+		gamemode = GAME_ZYMOTIC;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -715,6 +717,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_TEU;
 	else if (COM_CheckParm ("-battlemech"))
 		gamemode = GAME_BATTLEMECH;
+	else if (COM_CheckParm ("-zymotic"))
+		gamemode = GAME_ZYMOTIC;
 
 	switch(gamemode)
 	{
@@ -753,6 +757,10 @@ void COM_InitGameType (void)
 	case GAME_BATTLEMECH:
 		gamename = "Battlemech";
 		gamedirname = "base";
+		break;
+	case GAME_ZYMOTIC:
+		gamename = "Zymotic";
+		gamedirname = "data";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
