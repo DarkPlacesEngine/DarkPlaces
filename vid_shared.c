@@ -181,6 +181,8 @@ void (GLAPIENTRY *qglCopyTexSubImage3D)(GLenum target, GLint level, GLint xoffse
 
 void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
+void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
+
 int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
@@ -305,6 +307,7 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{"glCopyTexSubImage1D", (void **) &qglCopyTexSubImage1D},
 	{"glCopyTexSubImage2D", (void **) &qglCopyTexSubImage2D},
 	{"glScissor", (void **) &qglScissor},
+	{"glPolygonOffset", (void **) &qglPolygonOffset},
 	{NULL, NULL}
 };
 
