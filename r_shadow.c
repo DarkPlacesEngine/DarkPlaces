@@ -208,6 +208,7 @@ float r_shadow_attenpower, r_shadow_attenscale;
 rtlight_t *r_shadow_compilingrtlight;
 dlight_t *r_shadow_worldlightchain;
 dlight_t *r_shadow_selectedlight;
+dlight_t r_shadow_bufferlight;
 vec3_t r_editlights_cursorlocation;
 
 rtexture_t *lighttextures[5];
@@ -3193,6 +3194,12 @@ void R_Shadow_EditLights_EditAll_f(void)
 {
 	dlight_t *light;
 
+	if (!r_editlights.integer)
+	{
+		Con_Print("Cannot edit lights when not in editing mode. Set r_editlights to 1.\n");
+		return;
+	}
+
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
 		R_Shadow_SelectLight(light);
@@ -3319,6 +3326,49 @@ void R_Shadow_EditLights_Help_f(void)
 	);
 }
 
+void R_Shadow_EditLights_CopyInfo_f(void)
+{
+	if (!r_editlights.integer)
+	{
+		Con_Print("Cannot copy light info when not in editing mode.  Set r_editlights to 1.\n");
+		return;
+	}
+	if (!r_shadow_selectedlight)
+	{
+		Con_Print("No selected light.\n");
+		return;
+	}
+	VectorCopy(r_shadow_selectedlight->angles, r_shadow_bufferlight.angles);
+	VectorCopy(r_shadow_selectedlight->color, r_shadow_bufferlight.color);
+	r_shadow_bufferlight.radius = r_shadow_selectedlight->radius;
+	r_shadow_bufferlight.style = r_shadow_selectedlight->style;
+	if (r_shadow_selectedlight->cubemapname)
+		strcpy(r_shadow_bufferlight.cubemapname, r_shadow_selectedlight->cubemapname);
+	else
+		r_shadow_bufferlight.cubemapname[0] = 0;
+	r_shadow_bufferlight.shadow = r_shadow_selectedlight->shadow;
+	r_shadow_bufferlight.corona = r_shadow_selectedlight->corona;
+}
+
+void R_Shadow_EditLights_PasteInfo_f(void)
+{
+	vec3_t origin;
+	VectorCopy(r_shadow_selectedlight->origin, origin);
+	if (!r_editlights.integer)
+	{
+		Con_Print("Cannot paste light info when not in editing mode.  Set r_editlights to 1.\n");
+		return;
+	}
+	if (!r_shadow_selectedlight)
+	{
+		Con_Print("No selected light.\n");
+		return;
+	}
+	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
+	r_shadow_selectedlight = NULL;
+	R_Shadow_NewWorldLight(origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname);
+}
+
 void R_Shadow_EditLights_Init(void)
 {
 	Cvar_RegisterVariable(&r_editlights);
@@ -3341,5 +3391,7 @@ void R_Shadow_EditLights_Init(void)
 	Cmd_AddCommand("r_editlights_togglecorona", R_Shadow_EditLights_ToggleCorona_f);
 	Cmd_AddCommand("r_editlights_importlightentitiesfrommap", R_Shadow_EditLights_ImportLightEntitiesFromMap_f);
 	Cmd_AddCommand("r_editlights_importlightsfile", R_Shadow_EditLights_ImportLightsFile_f);
+	Cmd_AddCommand("r_editlights_copyinfo", R_Shadow_EditLights_CopyInfo_f);
+	Cmd_AddCommand("r_editlights_pasteinfo", R_Shadow_EditLights_PasteInfo_f);
 }
 
