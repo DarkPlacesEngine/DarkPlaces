@@ -203,7 +203,7 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 	if (leaf->numleafsurfaces && (i >= pvsbits || CHECKPVSBIT(pvs, i)))
 	{
 		int d, impacts, impactt;
-		float sdist, maxdist, dist2, impact[3];
+		float sdist, maxdist, dist2, impact[3], planenormal[3], planedist;
 		msurface_t *surface;
 		// mark the polygons
 		maxdist = light->rtlight.lightmap_cullradius2;
@@ -212,11 +212,11 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[leaf->firstleafsurface[i]])
 				continue;
 			surface = ent->model->brush.data_surfaces + leaf->firstleafsurface[i];
-			dist = sdist = PlaneDiff(lightorigin, surface->plane);
-			if (surface->flags & SURF_PLANEBACK)
-				dist = -dist;
+			VectorCopy(surface->mesh.data_normal3f, planenormal);
+			planedist = DotProduct(surface->mesh.data_vertex3f, surface->mesh.data_normal3f);
+			dist = sdist = DotProduct(lightorigin, planenormal) - planedist;
 
-			if (dist < -0.25f && !(surface->texture->flags & SURF_LIGHTBOTHSIDES))
+			if (dist < -0.25f && !(surface->texture->currentmaterialflags & MATERIALFLAG_LIGHTBOTHSIDES))
 				continue;
 
 			dist2 = dist * dist;
@@ -224,10 +224,7 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 				continue;
 
 			VectorCopy(lightorigin, impact);
-			if (surface->plane->type >= 3)
-				VectorMA(impact, -sdist, surface->plane->normal, impact);
-			else
-				impact[surface->plane->type] -= sdist;
+			VectorMA(impact, -sdist, planenormal, impact);
 
 			impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
 

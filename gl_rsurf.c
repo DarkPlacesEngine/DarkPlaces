@@ -55,7 +55,7 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface
 {
 	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract, k;
 	unsigned int *bl;
-	float dist, impact[3], local[3];
+	float dist, impact[3], local[3], planenormal[3], planedist;
 	dlight_t *light;
 
 	lit = false;
@@ -70,7 +70,9 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface
 			continue;					// not lit by this light
 
 		Matrix4x4_Transform(matrix, light->origin, local);
-		dist = DotProduct (local, surface->plane->normal) - surface->plane->dist;
+		VectorCopy(surface->mesh.data_normal3f, planenormal);
+		planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
+		dist = DotProduct(local, planenormal) - planedist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
@@ -81,17 +83,7 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface
 		if (dist2 >= maxdist)
 			continue;
 
-		if (surface->plane->type < 3)
-		{
-			VectorCopy(local, impact);
-			impact[surface->plane->type] -= dist;
-		}
-		else
-		{
-			impact[0] = local[0] - surface->plane->normal[0] * dist;
-			impact[1] = local[1] - surface->plane->normal[1] * dist;
-			impact[2] = local[2] - surface->plane->normal[2] * dist;
-		}
+		VectorMA(local, -dist, planenormal, impact);
 
 		impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
 		impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
@@ -149,7 +141,7 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface
 static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface)
 {
 	int lnum, s, t, smax, tmax, smax3, lit, impacts, impactt;
-	float sdtable[256], *bl, k, dist, dist2, maxdist, maxdist2, maxdist3, td1, td, red, green, blue, impact[3], local[3], subtract;
+	float sdtable[256], *bl, k, dist, dist2, maxdist, maxdist2, maxdist3, td1, td, red, green, blue, impact[3], local[3], subtract, planenormal[3], planedist;
 	dlight_t *light;
 
 	lit = false;
@@ -164,7 +156,9 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surfa
 			continue;					// not lit by this light
 
 		Matrix4x4_Transform(matrix, light->origin, local);
-		dist = DotProduct (local, surface->plane->normal) - surface->plane->dist;
+		VectorCopy(surface->mesh.data_normal3f, planenormal);
+		planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
+		dist = DotProduct(local, planenormal) - planedist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
@@ -175,17 +169,7 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surfa
 		if (dist2 >= maxdist)
 			continue;
 
-		if (surface->plane->type < 3)
-		{
-			VectorCopy(local, impact);
-			impact[surface->plane->type] -= dist;
-		}
-		else
-		{
-			impact[0] = local[0] - surface->plane->normal[0] * dist;
-			impact[1] = local[1] - surface->plane->normal[1] * dist;
-			impact[2] = local[2] - surface->plane->normal[2] * dist;
-		}
+		VectorMA(local, -dist, planenormal, impact);
 
 		impacts = DotProduct (impact, surface->texinfo->vecs[0]) + surface->texinfo->vecs[0][3] - surface->texturemins[0];
 		impactt = DotProduct (impact, surface->texinfo->vecs[1]) + surface->texinfo->vecs[1][3] - surface->texturemins[1];
@@ -708,57 +692,67 @@ static int RSurf_LightSeparate_Vertex3f_Color4f(const matrix4x4_t *matrix, const
 	return lit;
 }
 
+void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
+{
+	t->currentmaterialflags = t->basematerialflags;
+	t->currentalpha = ent->alpha;
+	if (t->basematerialflags & MATERIALFLAG_WATERALPHA)
+		t->currentalpha *= r_wateralpha.value;
+	if (ent->effects & EF_ADDITIVE)
+		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
+	if (t->currentalpha < 1 || t->skin.fog != NULL)
+		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
+	// we don't need to set currentframe if t->animated is false because
+	// it was already set up by the texture loader for non-animating
+	if (t->animated)
+		t->currentframe = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
+}
+
+void R_UpdateAllTextureInfo(entity_render_t *ent)
+{
+	int i;
+	if (ent->model)
+		for (i = 0;i < ent->model->brush.num_textures;i++)
+			R_UpdateTextureInfo(ent, ent->model->brush.data_textures + i);
+}
+
 static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surface = ent->model->brush.data_surfaces + calldata2;
 	rmeshstate_t m;
-	float currentalpha;
 	float base, colorscale;
 	vec3_t modelorg;
 	texture_t *texture;
 	float args[4] = {0.05f,0,0,0.04f};
-	int rendertype, turb, fullbright;
+	int turb, fullbright;
+
+	texture = surface->texture;
+	R_UpdateTextureInfo(ent, texture);
+	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
+		return; // transparent sky is too difficult
 
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
-	texture = surface->texture;
-	if (texture->animated)
-		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (r_refdef.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
-	currentalpha = ent->alpha;
-	if (texture->flags & SURF_WATERALPHA)
-		currentalpha *= r_wateralpha.value;
-
-	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
-	if (ent->effects & EF_ADDITIVE)
-	{
-		rendertype = SURFRENDER_ADD;
+	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+	GL_DepthMask(!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT));
+	if (texture->currentmaterialflags & MATERIALFLAG_ADD)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		GL_DepthMask(false);
-	}
-	else if (currentalpha < 1 || texture->skin.fog != NULL)
-	{
-		rendertype = SURFRENDER_ALPHA;
+	else if (texture->currentmaterialflags & MATERIALFLAG_ALPHA)
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		GL_DepthMask(false);
-	}
 	else
-	{
-		rendertype = SURFRENDER_OPAQUE;
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_DepthMask(!(ent->effects & EF_NODEPTHTEST));
-	}
 
-	turb = (texture->flags & SURF_DRAWTURB) && r_waterscroll.value;
-	fullbright = !(ent->flags & RENDER_LIGHT) || (texture->flags & SURF_DRAWFULLBRIGHT) || !surface->samples;
+	turb = texture->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value;
+	fullbright = !(ent->flags & RENDER_LIGHT) || (texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || !surface->samples;
 	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
-	if (texture->flags & SURF_DRAWTURB)
+	if (texture->currentmaterialflags & MATERIALFLAG_WATER)
 		base *= 0.5f;
-	if ((texture->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled && fullbright && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
+	if (texture->currentmaterialflags & MATERIALFLAG_WATER && gl_textureshader && r_watershader.value && !fogenabled && fullbright && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
 	{
 		// NVIDIA Geforce3 distortion texture shader on water
-		GL_Color(1, 1, 1, currentalpha);
+		GL_Color(1, 1, 1, texture->currentalpha);
 		memset(&m, 0, sizeof(m));
 		m.pointer_vertex = surface->mesh.data_vertex3f;
 		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(r_refdef.time * 16)&63]);
@@ -805,7 +799,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 			m.texrgbscale[0] = 4;
 			colorscale *= 0.25f;
 		}
-		R_FillColors(varray_color4f, surface->mesh.num_vertices, base * ent->colormod[0], base * ent->colormod[1], base * ent->colormod[2], currentalpha);
+		R_FillColors(varray_color4f, surface->mesh.num_vertices, base * ent->colormod[0], base * ent->colormod[1], base * ent->colormod[2], texture->currentalpha);
 		if (!fullbright)
 		{
 			if (surface->dlightframe == r_framecount)
@@ -836,12 +830,12 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 				}
 			}
 			R_Mesh_State(&m);
-			RSurf_FoggedColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			RSurf_FoggedColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, 1, 1, 1, texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
 			GL_LockArrays(0, surface->mesh.num_vertices);
 			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
-		if (fogenabled && rendertype != SURFRENDER_ADD)
+		if (fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD))
 		{
 			memset(&m, 0, sizeof(m));
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
@@ -859,40 +853,11 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 				}
 			}
 			R_Mesh_State(&m);
-			RSurf_FogPassColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			RSurf_FogPassColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
 			GL_LockArrays(0, surface->mesh.num_vertices);
 			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
-	}
-}
-
-void R_UpdateTextureInfo(entity_render_t *ent)
-{
-	int i, texframe, alttextures;
-	texture_t *t;
-
-	if (!ent->model)
-		return;
-
-	alttextures = ent->frame != 0;
-	texframe = (int)(r_refdef.time * 5.0f);
-	for (i = 0;i < ent->model->brush.num_textures;i++)
-	{
-		t = ent->model->brush.data_textures + i;
-		t->currentalpha = ent->alpha;
-		if (t->flags & SURF_WATERALPHA)
-			t->currentalpha *= r_wateralpha.value;
-		if (ent->effects & EF_ADDITIVE)
-			t->rendertype = SURFRENDER_ADD;
-		else if (t->currentalpha < 1 || t->skin.fog != NULL)
-			t->rendertype = SURFRENDER_ALPHA;
-		else
-			t->rendertype = SURFRENDER_OPAQUE;
-		// we don't need to set currentframe if t->animated is false because
-		// it was already set up by the texture loader for non-animating
-		if (t->animated)
-			t->currentframe = t->anim_frames[alttextures][(t->anim_total[alttextures] >= 2) ? (texframe % t->anim_total[alttextures]) : 0];
 	}
 }
 
@@ -901,30 +866,48 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 	int texturesurfaceindex;
 	vec3_t tempcenter, center, modelorg;
 	msurface_t *surface;
+	qboolean dolightmap;
+	qboolean dobase;
+	qboolean doambient;
+	qboolean dodetail;
+	qboolean doglow;
+	qboolean dofog;
 	rmeshstate_t m;
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+	c_faces += texturenumsurfaces;
+	// gl_lightmaps debugging mode skips normal texturing
 	if (gl_lightmaps.integer)
 	{
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 		GL_DepthTest(true);
+		qglDisable(GL_CULL_FACE);
 		GL_Color(1, 1, 1, 1);
 		memset(&m, 0, sizeof(m));
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
 			m.tex[0] = R_GetTexture(surface->lightmaptexture);
-			m.pointer_vertex = surface->mesh.data_vertex3f;
 			m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+			if (surface->lightmaptexture)
+			{
+				GL_Color(1, 1, 1, 1);
+				m.pointer_color = NULL;
+			}
+			else
+				m.pointer_color = surface->mesh.data_lightmapcolor4f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
 			R_Mesh_State(&m);
 			GL_LockArrays(0, surface->mesh.num_vertices);
 			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
+		qglEnable(GL_CULL_FACE);
+		return;
 	}
-	else if (texture->rendertype != SURFRENDER_OPAQUE)
+	// transparent surfaces get sorted for later drawing
+	if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
 	{
-		// transparent vertex shaded from lightmap
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
@@ -934,15 +917,16 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 			Matrix4x4_Transform(&ent->matrix, tempcenter, center);
 			R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->brush.data_surfaces);
 		}
+		return;
 	}
-	else if (texture->flags & SURF_LIGHTMAP)
+	if (texture->currentmaterialflags & MATERIALFLAG_WALL)
 	{
-		qboolean dolightmap = (ent->flags & RENDER_LIGHT);
-		qboolean dobase = true;
-		qboolean doambient = r_ambient.value > 0;
-		qboolean dodetail = r_detailtextures.integer != 0;
-		qboolean doglow = texture->skin.glow != NULL;
-		qboolean dofog = fogenabled;
+		dolightmap = (ent->flags & RENDER_LIGHT);
+		dobase = true;
+		doambient = r_ambient.value > 0;
+		dodetail = texture->skin.detail != NULL && r_detailtextures.integer != 0;
+		doglow = texture->skin.glow != NULL;
+		dofog = fogenabled;
 		// multitexture cases
 		if (r_textureunits.integer >= 2 && gl_combine.integer && dobase && dolightmap)
 		{
@@ -1156,16 +1140,18 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 				GL_LockArrays(0, 0);
 			}
 		}
+		return;
 	}
-	else if (texture->flags & SURF_DRAWTURB)
+	if (texture->currentmaterialflags & MATERIALFLAG_WATER)
 	{
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
 			RSurfShader_Transparent_Callback(ent, surface - ent->model->brush.data_surfaces);
 		}
+		return;
 	}
-	else if (texture->flags & SURF_DRAWSKY)
+	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
 	{
 		if (skyrendernow)
 		{
@@ -1205,6 +1191,7 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 			}
 			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 		}
+		return;
 	}
 }
 
@@ -1248,8 +1235,8 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		}
 	}
 
-	R_UpdateTextureInfo(ent);
-	flagsmask = skysurfaces ? SURF_DRAWSKY : (SURF_DRAWTURB | SURF_LIGHTMAP);
+	R_UpdateAllTextureInfo(ent);
+	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
 	f = 0;
 	t = NULL;
 	numsurfacelist = 0;
@@ -1266,13 +1253,12 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
-				f = t->flags & flagsmask;
+				f = t->currentmaterialflags & flagsmask;
 				texture = t->currentframe;
 			}
 			if (f)
 			{
 				// add face to draw list and update lightmap if necessary
-				c_faces++;
 				if (surface->cached_dlight && surface->lightmaptexture != NULL)
 					R_BuildLightMap(ent, surface);
 				surfacelist[numsurfacelist++] = surface;
@@ -1427,7 +1413,8 @@ void R_Q1BSP_DrawSky(entity_render_t *ent)
 {
 	if (ent->model == NULL)
 		return;
-	R_DrawSurfaces(ent, true);
+	if (r_drawcollisionbrushes.integer < 2)
+		R_DrawSurfaces(ent, true);
 }
 
 void R_Q1BSP_Draw(entity_render_t *ent)
@@ -1435,7 +1422,8 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	if (ent->model == NULL)
 		return;
 	c_bmodels++;
-	R_DrawSurfaces(ent, false);
+	if (r_drawcollisionbrushes.integer < 2)
+		R_DrawSurfaces(ent, false);
 }
 
 void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
@@ -1470,6 +1458,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 		pvs = model->brush.GetPVS(model, relativelightorigin);
 	else
 		pvs = NULL;
+	R_UpdateAllTextureInfo(ent);
 	// FIXME: use BSP recursion as lights are often small
 	for (leafindex = 0, leaf = model->brush.data_leafs;leafindex < model->brush.num_leafs;leafindex++, leaf++)
 	{
@@ -1497,7 +1486,7 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
 						surface = model->brush.data_surfaces + surfaceindex;
-						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && (surface->texture->flags & SURF_LIGHTMAP) && !surface->texture->skin.fog)
+						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && ((surface->texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL) && !surface->texture->skin.fog)
 						{
 							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
 							{
@@ -1557,7 +1546,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		R_Mesh_Matrix(&ent->matrix);
-		R_UpdateTextureInfo(ent);
+		if (!r_shadow_compilingrtlight)
+			R_UpdateAllTextureInfo(ent);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brush.data_surfaces + surfacelist[surfacelistindex];
@@ -1565,14 +1555,14 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 			{
 				// if compiling an rtlight, capture the mesh
 				t = surface->texture;
-				if (t->flags & SURF_LIGHTMAP && t->skin.fog == NULL)
+				if ((t->basematerialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
 			else if (ent != r_refdef.worldentity || r_worldsurfacevisible[surfacelist[surfacelistindex]])
 			{
 				t = surface->texture->currentframe;
 				// FIXME: transparent surfaces need to be lit later
-				if (t->flags & SURF_LIGHTMAP && t->rendertype == SURFRENDER_OPAQUE)
+				if ((t->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
 					R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, t->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
 			}
 		}
@@ -1722,23 +1712,25 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int surfacenumber
 void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int i, texturesurfaceindex;
+	vec3_t modelorg;
 	msurface_t *surface;
 	qboolean dolightmap;
 	qboolean dobase;
 	qboolean doambient;
+	qboolean dodetail;
 	qboolean doglow;
 	qboolean dofog;
 	rmeshstate_t m;
-	if (!texturenumsurfaces)
-		return;
+	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 	c_faces += texturenumsurfaces;
 	// gl_lightmaps debugging mode skips normal texturing
 	if (gl_lightmaps.integer)
 	{
+		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_DepthMask(true);
 		GL_DepthTest(true);
-		GL_BlendFunc(GL_ONE, GL_ZERO);
 		qglDisable(GL_CULL_FACE);
+		GL_Color(1, 1, 1, 1);
 		memset(&m, 0, sizeof(m));
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
@@ -1827,6 +1819,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumsurf
 	dolightmap = (ent->flags & RENDER_LIGHT);
 	dobase = true;
 	doambient = r_ambient.value > 0;
+	dodetail = t->skin.detail != NULL && r_detailtextures.integer;
 	doglow = t->skin.glow != NULL;
 	dofog = fogenabled;
 	if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)

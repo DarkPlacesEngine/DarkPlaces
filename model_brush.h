@@ -61,19 +61,31 @@ mplane_t;
 #define SHADERSTAGE_NORMAL 1
 #define SHADERSTAGE_COUNT 2
 
-#define SURF_PLANEBACK 2
-#define SURF_DRAWSKY 4
-#define SURF_DRAWTURB 0x10
-#define SURF_LIGHTMAP 0x20
-#define SURF_DRAWNOALPHA 0x100
-#define SURF_DRAWFULLBRIGHT 0x200
-#define SURF_LIGHTBOTHSIDES 0x400
-#define SURF_WATERALPHA 0x4000 // this polygon's alpha is modulated by r_wateralpha
-#define SURF_SOLIDCLIP 0x8000 // this polygon blocks movement
+//#define SURF_PLANEBACK 2
 
-#define SURFRENDER_OPAQUE 0
-#define SURFRENDER_ALPHA 1
-#define SURFRENDER_ADD 2
+// set for anything to be transparent sorted
+#define MATERIALFLAG_TRANSPARENT 1
+// use alpha blend on this material
+#define MATERIALFLAG_ALPHA 2
+// use additive blend on this material
+#define MATERIALFLAG_ADD 4
+// turn off depth test on this material
+#define MATERIALFLAG_NODEPTHTEST 8
+// multiply alpha by r_wateralpha cvar
+#define MATERIALFLAG_WATERALPHA 16
+// draw with no lighting
+#define MATERIALFLAG_FULLBRIGHT 32
+// drawn as a normal lightmapped wall
+#define MATERIALFLAG_WALL 64
+// swirling water effect
+#define MATERIALFLAG_WATER 128
+// this surface shows the sky
+// skipped if transparent
+#define MATERIALFLAG_SKY 256
+// skips drawing the surface
+#define MATERIALFLAG_NODRAW 512
+// probably used only on q1bsp water
+#define MATERIALFLAG_LIGHTBOTHSIDES 1024
 
 struct entity_render_s;
 struct texture_s;
@@ -87,10 +99,12 @@ typedef struct texture_s
 	// size
 	unsigned int width, height;
 	// SURF_ flags
-	unsigned int flags;
+	//unsigned int flags;
 
-	// type of rendering (SURFRENDER_ value)
-	int rendertype;
+	// base material flags
+	int basematerialflags;
+	// current material flags (updated each bmodel render)
+	int currentmaterialflags;
 
 	// loaded the same as model skins
 	skinframe_t skin;
@@ -150,13 +164,11 @@ typedef struct msurface_s
 	int num_firstshadowmeshtriangle;
 
 	// the node plane this is on, backwards if SURF_PLANEBACK flag set
-	mplane_t *plane; // q1bsp
+	//mplane_t *plane; // q1bsp
 	// SURF_ flags
-	int flags; // q1bsp
+	//int flags; // q1bsp
 	// texture mapping properties used by this surface
 	mtexinfo_t *texinfo; // q1bsp
-	// if lightmap settings changed, this forces update
-	int cached_dlight; // q1bsp
 	// index into d_lightstylevalue array, 255 means not used (black)
 	qbyte styles[MAXLIGHTMAPS]; // q1bsp
 	// RGB lighting data [numstyles][height][width][3]
@@ -167,6 +179,8 @@ typedef struct msurface_s
 	int lightmaptexturestride; // q1bsp
 	int texturemins[2]; // q1bsp
 	int extents[2]; // q1bsp
+	// if lightmap settings changed, this forces update
+	int cached_dlight; // q1bsp
 	// if this == r_framecount there are dynamic lights on the surface
 	int dlightframe; // q1bsp
 	// which dynamic lights are touching this surface

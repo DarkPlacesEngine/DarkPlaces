@@ -220,7 +220,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 	for (surfacenum = 0, mark = leaf->firstleafsurface;surfacenum < leaf->numleafsurfaces;surfacenum++, mark++)
 	{
 		surface = info->model->brush.data_surfaces + *mark;
-		if (surface->flags & SURF_SOLIDCLIP)
+		if (surface->texture->supercontents & SUPERCONTENTS_SOLID)
 		{
 			for (k = 0;k < surface->mesh.num_triangles;k++)
 			{
@@ -790,7 +790,7 @@ loc0:
 			surface = r_refdef.worldmodel->brush.data_surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surface++)
 			{
-				if (!(surface->texture->flags & SURF_LIGHTMAP) || !surface->samples)
+				if (!(surface->texture->basematerialflags & MATERIALFLAG_WALL) || !surface->samples)
 					continue;	// no lightmaps
 
 				ds = (int) (x * surface->texinfo->vecs[0][0] + y * surface->texinfo->vecs[0][1] + mid * surface->texinfo->vecs[0][2] + surface->texinfo->vecs[0][3]) - surface->texturemins[0];
@@ -1010,9 +1010,16 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		tx->height = 16;
 		tx->skin.base = r_notexture;
 		if (i == loadmodel->brush.num_textures - 1)
-			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
+		{
+			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
+			tx->supercontents = SUPERCONTENTS_WATER;
+		}
 		else
-			tx->flags = SURF_LIGHTMAP | SURF_SOLIDCLIP;
+		{
+			tx->basematerialflags |= MATERIALFLAG_WALL;
+			tx->supercontents = SUPERCONTENTS_SOLID;
+		}
+		tx->basematerialflags = 0;
 		tx->currentframe = tx;
 	}
 
@@ -1131,22 +1138,37 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			tx->skin.base = r_notexture;
 		}
 
+		tx->basematerialflags = 0;
 		if (tx->name[0] == '*')
 		{
 			// turb does not block movement
-			tx->flags = SURF_DRAWTURB | SURF_LIGHTBOTHSIDES;
+			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
 			// LordHavoc: some turbulent textures should be fullbright and solid
 			if (!strncmp(tx->name,"*lava",5)
 			 || !strncmp(tx->name,"*teleport",9)
 			 || !strncmp(tx->name,"*rift",5)) // Scourge of Armagon texture
-				tx->flags |= SURF_DRAWFULLBRIGHT | SURF_DRAWNOALPHA;
+				tx->basematerialflags |= MATERIALFLAG_FULLBRIGHT;
 			else
-				tx->flags |= SURF_WATERALPHA;
+				tx->basematerialflags |= MATERIALFLAG_WATERALPHA;
+			if (!strncmp(tx->name, "*lava", 5))
+				tx->supercontents = SUPERCONTENTS_LAVA;
+			else if (!strncmp(tx->name, "*slime", 6))
+				tx->supercontents = SUPERCONTENTS_SLIME;
+			else
+				tx->supercontents = SUPERCONTENTS_WATER;
 		}
 		else if (tx->name[0] == 's' && tx->name[1] == 'k' && tx->name[2] == 'y')
-			tx->flags = SURF_DRAWSKY | SURF_SOLIDCLIP;
+		{
+			tx->supercontents = SUPERCONTENTS_SKY;
+			tx->basematerialflags |= MATERIALFLAG_SKY;
+		}
 		else
-			tx->flags = SURF_LIGHTMAP | SURF_SOLIDCLIP;
+		{
+			tx->supercontents = SUPERCONTENTS_SOLID;
+			tx->basematerialflags |= MATERIALFLAG_WALL;
+		}
+		if (tx->skin.fog)
+			tx->basematerialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
 
 		// start out with no animation
 		tx->currentframe = tx;
@@ -1576,7 +1598,7 @@ static void Mod_Q1BSP_LoadTexinfo(lump_t *l)
 		{
 			// if texture chosen is NULL or the shader needs a lightmap,
 			// force to notexture water shader
-			if (out->texture == NULL || out->texture->flags & SURF_LIGHTMAP)
+			if (out->texture == NULL || out->texture->basematerialflags & MATERIALFLAG_WALL)
 				out->texture = loadmodel->brush.data_textures + (loadmodel->brush.num_textures - 1);
 		}
 		else
@@ -1784,16 +1806,15 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 			Host_Error("Mod_Q1BSP_LoadFaces: invalid texinfo index %i(model has %i texinfos)\n", i, loadmodel->brushq1.numtexinfo);
 		surface->texinfo = loadmodel->brushq1.texinfo + i;
 		surface->texture = surface->texinfo->texture;
-		surface->flags = surface->texture->flags;
 
 		planenum = LittleShort(in->planenum);
 		if ((unsigned int) planenum >= (unsigned int) loadmodel->brush.num_planes)
 			Host_Error("Mod_Q1BSP_LoadFaces: invalid plane index %i (model has %i planes)\n", planenum, loadmodel->brush.num_planes);
 
-		if (LittleShort(in->side))
-			surface->flags |= SURF_PLANEBACK;
-
-		surface->plane = loadmodel->brush.data_planes + planenum;
+		//surface->flags = surface->texture->flags;
+		//if (LittleShort(in->side))
+		//	surface->flags |= SURF_PLANEBACK;
+		//surface->plane = loadmodel->brush.data_planes + planenum;
 
 		surface->mesh.num_vertices = numedges;
 		surface->mesh.num_triangles = numedges - 2;
@@ -1880,20 +1901,17 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		else // LordHavoc: white lighting (bsp version 29)
 			surface->samples = loadmodel->brushq1.lightdata + (i * 3);
 
-		if (surface->texture->flags & SURF_LIGHTMAP)
+		if (surface->texture->basematerialflags & MATERIALFLAG_WALL)
 		{
+			int i, iu, iv;
+			float u, v, ubase, vbase, uscale, vscale;
+
 			if (ssize > 256 || tsize > 256)
 				Host_Error("Bad surface extents");
 			// stainmap for permanent marks on walls
 			surface->stainsamples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
 			// clear to white
 			memset(surface->stainsamples, 255, ssize * tsize * 3);
-		}
-
-		if (surface->texture->flags & SURF_LIGHTMAP)
-		{
-			int i, iu, iv;
-			float u, v, ubase, vbase, uscale, vscale;
 
 			if (r_miplightmaps.integer)
 			{
@@ -3044,11 +3062,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			for (j = 0, surface = &mod->brush.data_surfaces[mod->firstmodelsurface];j < mod->nummodelsurfaces;j++, surface++)
 			{
 				// we only need to have a drawsky function if it is used(usually only on world model)
-				if (surface->texture->flags & SURF_DRAWSKY)
+				if (surface->texture->basematerialflags & MATERIALFLAG_SKY)
 					mod->DrawSky = R_Q1BSP_DrawSky;
-				// LordHavoc: submodels always clip, even if water
-				if (i)
-					surface->flags |= SURF_SOLIDCLIP;
 				// calculate bounding shapes
 				for (k = 0, vec = surface->mesh.data_vertex3f;k < surface->mesh.num_vertices;k++, vec += 3)
 				{
@@ -3784,6 +3799,17 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 							{
 								out->surfaceparms = flags;
 								out->textureflags = flags2;
+								out->basematerialflags = 0;
+								if (out->surfaceparms & Q3SURFACEPARM_NODRAW)
+									out->basematerialflags |= MATERIALFLAG_NODRAW;
+								else if (out->surfaceparms & Q3SURFACEPARM_SKY)
+									out->basematerialflags |= MATERIALFLAG_SKY;
+								else if (out->surfaceparms & (Q3SURFACEPARM_WATER | Q3SURFACEPARM_SLIME | Q3SURFACEPARM_LAVA))
+									out->basematerialflags |= MATERIALFLAG_WATER;
+								else
+									out->basematerialflags |= MATERIALFLAG_WALL;
+								if (out->surfaceparms & (Q3SURFACEPARM_SLIME | Q3SURFACEPARM_WATER))
+									out->basematerialflags |= MATERIALFLAG_WATERALPHA;
 								strlcpy(out->firstpasstexturename, firstpasstexturename, sizeof(out->firstpasstexturename));
 								if ((flags & Q3SURFACEPARM_SKY) && sky[0])
 								{
@@ -3813,6 +3839,12 @@ parseerror:
 			c++;
 			Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, out->name);
 			out->surfaceparms = 0;
+			if (out->surfaceflags & Q3SURFACEFLAG_NODRAW)
+				out->basematerialflags |= MATERIALFLAG_NODRAW;
+			else if (out->surfaceflags & Q3SURFACEFLAG_SKY)
+				out->basematerialflags |= MATERIALFLAG_SKY;
+			else
+				out->basematerialflags |= MATERIALFLAG_WALL;
 			// these are defaults
 			//if (!strncmp(out->name, "textures/skies/", 15))
 			//	out->surfaceparms |= Q3SURFACEPARM_SKY;
@@ -3825,6 +3857,8 @@ parseerror:
 		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true))
 			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true))
 				Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
+		if (out->skin.fog)
+			out->basematerialflags |= (MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT);
 	}
 	if (c)
 		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
