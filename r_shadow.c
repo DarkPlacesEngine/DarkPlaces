@@ -157,6 +157,8 @@ rtexture_t *r_shadow_attenuation3dtexture;
 rtexture_t *r_shadow_blankbumptexture;
 rtexture_t *r_shadow_blankglosstexture;
 rtexture_t *r_shadow_blankwhitetexture;
+rtexture_t *r_shadow_blankwhitecubetexture;
+rtexture_t *r_shadow_blankblacktexture;
 
 // lights are reloaded when this changes
 char r_shadow_mapname[MAX_QPATH];
@@ -189,6 +191,10 @@ cvar_t r_shadow_singlepassvolumegeneration = {0, "r_shadow_singlepassvolumegener
 cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_shadow_texture3d = {0, "r_shadow_texture3d", "1"};
 cvar_t r_shadow_visiblevolumes = {0, "r_shadow_visiblevolumes", "0"};
+cvar_t r_shadow_glsl = {0, "r_shadow_glsl", "1"};
+cvar_t r_shadow_glsl_offsetmapping = {0, "r_shadow_glsl_offsetmapping", "1"};
+cvar_t r_shadow_glsl_offsetmapping_scale = {0, "r_shadow_glsl_offsetmapping_scale", "0.04"};
+cvar_t r_shadow_glsl_offsetmapping_bias = {0, "r_shadow_glsl_offsetmapping_bias", "-0.02"};
 cvar_t gl_ext_stenciltwoside = {0, "gl_ext_stenciltwoside", "1"};
 cvar_t r_editlights = {0, "r_editlights", "0"};
 cvar_t r_editlights_cursordistance = {0, "r_editlights_distance", "1024"};
@@ -222,9 +228,13 @@ cubemapinfo_t;
 static int numcubemaps;
 static cubemapinfo_t cubemaps[MAX_CUBEMAPS];
 
-GLhandleARB r_shadow_program_light_diffusegloss = 0;
-GLhandleARB r_shadow_program_light_diffuse = 0;
-GLhandleARB r_shadow_program_light_gloss = 0;
+#define SHADERPERMUTATION_SPECULAR (1<<0)
+#define SHADERPERMUTATION_FOG (1<<1)
+#define SHADERPERMUTATION_CUBEFILTER (1<<2)
+#define SHADERPERMUTATION_OFFSETMAPPING (1<<3)
+#define SHADERPERMUTATION_COUNT (1<<4)
+
+GLhandleARB r_shadow_program_light[SHADERPERMUTATION_COUNT];
 
 void R_Shadow_UncompileWorldLights(void);
 void R_Shadow_ClearWorldLights(void);
@@ -237,18 +247,147 @@ void R_Shadow_ValidateCvars(void);
 static void R_Shadow_MakeTextures(void);
 void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, dlight_t *light);
 
-// beginnings of GL_ARB_shaders support, not done yet
-GLhandleARB GL_Backend_LoadProgram(const char *vertexshaderfilename, const char *fragmentshaderfilename)
-{
-	return 0;
-}
+const char *builtinshader_light_vert =
+"// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
+"// written by Forest 'LordHavoc' Hale\n"
+"\n"
+"uniform vec3 LightPosition;\n"
+"\n"
+"varying vec2 TexCoord;\n"
+"varying vec3 CubeVector;\n"
+"varying vec3 LightVector;\n"
+"\n"
+"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
+"uniform vec3 EyePosition;\n"
+"varying vec3 EyeVector;\n"
+"#endif\n"
+"\n"
+"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3)\n"
+"\n"
+"void main(void)\n"
+"{\n"
+"	// copy the surface texcoord\n"
+"	TexCoord = gl_MultiTexCoord0.st;\n"
+"\n"
+"	// transform vertex position into light attenuation/cubemap space\n"
+"	// (-1 to +1 across the light box)\n"
+"	CubeVector = vec3(gl_TextureMatrix[3] * gl_Vertex);\n"
+"\n"
+"	// transform unnormalized light direction into tangent space\n"
+"	// (we use unnormalized to ensure that it interpolates correctly and then\n"
+"	//  normalize it per pixel)\n"
+"	vec3 lightminusvertex = LightPosition - gl_Vertex.xyz;\n"
+"	LightVector.x = dot(lightminusvertex, gl_MultiTexCoord1.xyz);\n"
+"	LightVector.y = dot(lightminusvertex, gl_MultiTexCoord2.xyz);\n"
+"	LightVector.z = -dot(lightminusvertex, gl_MultiTexCoord3.xyz);\n"
+"\n"
+"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
+"	// transform unnormalized eye direction into tangent space\n"
+"	vec3 eyeminusvertex = EyePosition - gl_Vertex.xyz;\n"
+"	EyeVector.x = dot(eyeminusvertex, gl_MultiTexCoord1.xyz);\n"
+"	EyeVector.y = dot(eyeminusvertex, gl_MultiTexCoord2.xyz);\n"
+"	EyeVector.z = -dot(eyeminusvertex, gl_MultiTexCoord3.xyz);\n"
+"#endif\n"
+"\n"
+"	// transform vertex to camera space, using ftransform to match non-VS\n"
+"	// rendering\n"
+"	gl_Position = ftransform();\n"
+"}\n"
+;
 
-void GL_Backend_FreeProgram(GLhandleARB prog)
-{
-}
+const char *builtinshader_light_frag =
+"// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
+"// written by Forest 'LordHavoc' Hale\n"
+"\n"
+"uniform vec3 LightColor;\n"
+"\n"
+"#ifdef USEOFFSETMAPPING\n"
+"uniform float OffsetMapping_Scale;\n"
+"uniform float OffsetMapping_Bias;\n"
+"#endif\n"
+"#ifdef USESPECULAR\n"
+"uniform float SpecularPower;\n"
+"#endif\n"
+"#ifdef USEFOG\n"
+"uniform float FogRangeRecip;\n"
+"#endif\n"
+"uniform float AmbientScale;\n"
+"uniform float DiffuseScale;\n"
+"#ifdef USESPECULAR\n"
+"uniform float SpecularScale;\n"
+"#endif\n"
+"\n"
+"uniform sampler2D Texture_Normal;\n"
+"uniform sampler2D Texture_Color;\n"
+"#ifdef USESPECULAR\n"
+"uniform sampler2D Texture_Gloss;\n"
+"#endif\n"
+"#ifdef USECUBEFILTER\n"
+"uniform samplerCube Texture_Cube;\n"
+"#endif\n"
+"#ifdef USEFOG\n"
+"uniform sampler2D Texture_FogMask;\n"
+"#endif\n"
+"\n"
+"varying vec2 TexCoord;\n"
+"varying vec3 CubeVector;\n"
+"varying vec3 LightVector;\n"
+"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
+"varying vec3 EyeVector;\n"
+"#endif\n"
+"\n"
+"void main(void)\n"
+"{\n"
+"	// attenuation\n"
+"	//\n"
+"	// the attenuation is (1-(x*x+y*y+z*z)) which gives a large bright\n"
+"	// center and sharp falloff at the edge, this is about the most efficient\n"
+"	// we can get away with as far as providing illumination.\n"
+"	//\n"
+"	// pow(1-(x*x+y*y+z*z), 4) is far more realistic but needs large lights to\n"
+"	// provide significant illumination, large = slow = pain.\n"
+"	float colorscale = clamp(1.0 - dot(CubeVector, CubeVector), 0.0, 1.0);\n"
+"\n"
+"#ifdef USEFOG\n"
+"	// apply fog\n"
+"	colorscale *= texture2D(Texture_FogMask, vec2(length(EyeVector)*FogRangeRecip, 0)).x;\n"
+"#endif\n"
+"\n"
+"#ifdef USEOFFSETMAPPING\n"
+"	vec2 OffsetVector = normalize(EyeVector).xy * vec2(-1, 1);\n"
+"	TexCoord += OffsetVector * (texture2D(Texture_Normal, TexCoord).w * OffsetMapping_Scale + OffsetMapping_Bias);\n"
+"	TexCoord += OffsetVector * (texture2D(Texture_Normal, TexCoord).w * OffsetMapping_Scale + OffsetMapping_Bias);\n"
+"	TexCoord += OffsetVector * (texture2D(Texture_Normal, TexCoord).w * OffsetMapping_Scale + OffsetMapping_Bias);\n"
+"	TexCoord += OffsetVector * (texture2D(Texture_Normal, TexCoord).w * OffsetMapping_Scale + OffsetMapping_Bias);\n"
+"#endif\n"
+"\n"
+"#ifdef USECUBEFILTER\n"
+"	// apply light cubemap filter\n"
+"	LightColor *= vec3(textureCube(Texture_Cube, CubeVector));\n"
+"#endif\n"
+"\n"
+"	// get the texels - with a blendmap we'd need to blend multiple here\n"
+"	vec3 surfacenormal = vec3(texture2D(Texture_Normal, TexCoord)) * 2.0 - 1.0;\n"
+"	vec3 colortexel = vec3(texture2D(Texture_Color, TexCoord));\n"
+"#ifdef USESPECULAR\n"
+"	vec3 glosstexel = vec3(texture2D(Texture_Gloss, TexCoord));\n"
+"#endif\n"
+"\n"
+"	// calculate shading\n"
+"	vec3 diffusenormal = normalize(LightVector);\n"
+"	vec3 color = colortexel * (AmbientScale + DiffuseScale * clamp(dot(surfacenormal, diffusenormal), 0.0, 1.0));\n"
+"#ifdef USESPECULAR\n"
+"	color += glosstexel * (SpecularScale * pow(clamp(dot(surfacenormal, normalize(diffusenormal + normalize(EyeVector))), 0.0, 1.0), SpecularPower));\n"
+"#endif\n"
+"\n"
+"	// calculate fragment color\n"
+"	gl_FragColor = vec4(LightColor * color * colorscale, 1);\n"
+"}\n"
+;
 
 void r_shadow_start(void)
 {
+	int i;
 	// allocate vertex processing arrays
 	numcubemaps = 0;
 	r_shadow_normalcubetexture = NULL;
@@ -257,6 +396,8 @@ void r_shadow_start(void)
 	r_shadow_blankbumptexture = NULL;
 	r_shadow_blankglosstexture = NULL;
 	r_shadow_blankwhitetexture = NULL;
+	r_shadow_blankwhitecubetexture = NULL;
+	r_shadow_blankblacktexture = NULL;
 	r_shadow_texturepool = NULL;
 	r_shadow_filters_texturepool = NULL;
 	R_Shadow_ValidateCvars();
@@ -278,23 +419,79 @@ void r_shadow_start(void)
 	r_shadow_buffer_numsurfacepvsbytes = 0;
 	r_shadow_buffer_surfacepvs = NULL;
 	r_shadow_buffer_surfacelist = NULL;
+	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+		r_shadow_program_light[i] = 0;
 	if (gl_support_fragment_shader)
 	{
-		r_shadow_program_light_diffusegloss = GL_Backend_LoadProgram("glsl/diffusegloss.vert", "glsl/diffusegloss.frag");
-		r_shadow_program_light_diffuse = GL_Backend_LoadProgram("glsl/diffuse.vert", "glsl/diffuse.frag");
-		r_shadow_program_light_gloss = GL_Backend_LoadProgram("glsl/gloss.vert", "glsl/gloss.frag");
+		char *vertstring, *fragstring;
+		int vertstrings_count;
+		int fragstrings_count;
+		const char *vertstrings_list[SHADERPERMUTATION_COUNT];
+		const char *fragstrings_list[SHADERPERMUTATION_COUNT];
+		vertstring = FS_LoadFile("glsl/light.vert", tempmempool, false);
+		fragstring = FS_LoadFile("glsl/light.frag", tempmempool, false);
+		for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+		{
+			vertstrings_count = 0;
+			fragstrings_count = 0;
+			if (i & SHADERPERMUTATION_SPECULAR)
+			{
+				vertstrings_list[vertstrings_count++] = "#define USESPECULAR\n";
+				fragstrings_list[fragstrings_count++] = "#define USESPECULAR\n";
+			}
+			if (i & SHADERPERMUTATION_FOG)
+			{
+				vertstrings_list[vertstrings_count++] = "#define USEFOG\n";
+				fragstrings_list[fragstrings_count++] = "#define USEFOG\n";
+			}
+			if (i & SHADERPERMUTATION_CUBEFILTER)
+			{
+				vertstrings_list[vertstrings_count++] = "#define USECUBEFILTER\n";
+				fragstrings_list[fragstrings_count++] = "#define USECUBEFILTER\n";
+			}
+			if (i & SHADERPERMUTATION_OFFSETMAPPING)
+			{
+				vertstrings_list[vertstrings_count++] = "#define USEOFFSETMAPPING\n";
+				fragstrings_list[fragstrings_count++] = "#define USEOFFSETMAPPING\n";
+			}
+			vertstrings_list[vertstrings_count++] = vertstring ? vertstring : builtinshader_light_vert;
+			fragstrings_list[fragstrings_count++] = fragstring ? fragstring : builtinshader_light_frag;
+			r_shadow_program_light[i] = GL_Backend_CompileProgram(vertstrings_count, vertstrings_list, fragstrings_count, fragstrings_list);
+			qglUseProgramObjectARB(r_shadow_program_light[i]);
+			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Normal"), 0);CHECKGLERROR
+			qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Color"), 1);CHECKGLERROR
+			if (i & SHADERPERMUTATION_SPECULAR)
+			{
+				qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Gloss"), 2);CHECKGLERROR
+			}
+			if (i & SHADERPERMUTATION_CUBEFILTER)
+			{
+				qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_Cube"), 3);CHECKGLERROR
+			}
+			if (i & SHADERPERMUTATION_FOG)
+			{
+				qglUniform1iARB(qglGetUniformLocationARB(r_shadow_program_light[i], "Texture_FogMask"), 4);CHECKGLERROR
+			}
+		}
+		if (fragstring)
+			Mem_Free(fragstring);
+		if (vertstring)
+			Mem_Free(vertstring);
 	}
 }
 
 void r_shadow_shutdown(void)
 {
+	int i;
 	R_Shadow_UncompileWorldLights();
-	GL_Backend_FreeProgram(r_shadow_program_light_diffusegloss);
-	r_shadow_program_light_diffusegloss = 0;
-	GL_Backend_FreeProgram(r_shadow_program_light_diffuse);
-	r_shadow_program_light_diffuse = 0;
-	GL_Backend_FreeProgram(r_shadow_program_light_gloss);
-	r_shadow_program_light_gloss = 0;
+	for (i = 0;i < SHADERPERMUTATION_COUNT;i++)
+	{
+		if (r_shadow_program_light[i])
+		{
+			GL_Backend_FreeProgram(r_shadow_program_light[i]);
+			r_shadow_program_light[i] = 0;
+		}
+	}
 	numcubemaps = 0;
 	r_shadow_normalcubetexture = NULL;
 	r_shadow_attenuation2dtexture = NULL;
@@ -302,6 +499,8 @@ void r_shadow_shutdown(void)
 	r_shadow_blankbumptexture = NULL;
 	r_shadow_blankglosstexture = NULL;
 	r_shadow_blankwhitetexture = NULL;
+	r_shadow_blankwhitecubetexture = NULL;
+	r_shadow_blankblacktexture = NULL;
 	R_FreeTexturePool(&r_shadow_texturepool);
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 	maxshadowelements = 0;
@@ -405,6 +604,10 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_staticworldlights);
 	Cvar_RegisterVariable(&r_shadow_texture3d);
 	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
+	Cvar_RegisterVariable(&r_shadow_glsl);
+	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping);
+	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_scale);
+	Cvar_RegisterVariable(&r_shadow_glsl_offsetmapping_bias);
 	Cvar_RegisterVariable(&gl_ext_stenciltwoside);
 	if (gamemode == GAME_TENEBRAE)
 	{
@@ -748,8 +951,22 @@ static void R_Shadow_MakeTextures(void)
 	data[2] = 255;
 	data[3] = 255;
 	r_shadow_blankwhitetexture = R_LoadTexture2D(r_shadow_texturepool, "blankwhite", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	data[0] = 0;
+	data[1] = 0;
+	data[2] = 0;
+	data[3] = 255;
+	r_shadow_blankblacktexture = R_LoadTexture2D(r_shadow_texturepool, "blankblack", 1, 1, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_shadow_blankwhitecubetexture = NULL;
+	r_shadow_normalcubetexture = NULL;
 	if (gl_texturecubemap)
 	{
+		data[ 0] = 255;data[ 1] = 255;data[ 2] = 255;data[ 3] = 255;
+		data[ 4] = 255;data[ 5] = 255;data[ 6] = 255;data[ 7] = 255;
+		data[ 8] = 255;data[ 9] = 255;data[10] = 255;data[11] = 255;
+		data[12] = 255;data[13] = 255;data[14] = 255;data[15] = 255;
+		data[16] = 255;data[17] = 255;data[18] = 255;data[19] = 255;
+		data[20] = 255;data[21] = 255;data[22] = 255;data[23] = 255;
+		r_shadow_blankwhitecubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "blankwhitecube", 1, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 		for (side = 0;side < 6;side++)
 		{
 			for (y = 0;y < NORMSIZE;y++)
@@ -801,8 +1018,6 @@ static void R_Shadow_MakeTextures(void)
 		}
 		r_shadow_normalcubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "normalcube", NORMSIZE, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 	}
-	else
-		r_shadow_normalcubetexture = NULL;
 	for (y = 0;y < ATTEN2DSIZE;y++)
 	{
 		for (x = 0;x < ATTEN2DSIZE;x++)
@@ -1355,19 +1570,101 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 	int renders;
 	float color[3], color2[3], colorscale;
 	rmeshstate_t m;
-	if (!bumptexture)
-		bumptexture = r_shadow_blankbumptexture;
-	if (!glosstexture)
-		glosstexture = r_shadow_blankglosstexture;
 	// FIXME: support EF_NODEPTHTEST
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
+	if (!bumptexture)
+		bumptexture = r_shadow_blankbumptexture;
+	specularscale *= r_shadow_glossintensity.value;
+	if (!glosstexture)
 	{
+		if (r_shadow_gloss.integer >= 2)
+		{
+			glosstexture = r_shadow_blankglosstexture;
+			specularscale *= r_shadow_gloss2intensity.value;
+		}
+		else
+		{
+			glosstexture = r_shadow_blankblacktexture;
+			specularscale = 0;
+		}
+	}
+	if (r_shadow_gloss.integer < 1)
+		specularscale = 0;
+	if (!lightcubemap)
+		lightcubemap = r_shadow_blankwhitecubetexture;
+	if (ambientscale + diffusescale + specularscale < 0.01)
+		return;
+	if (r_shadow_glsl.integer && r_shadow_program_light[0])
+	{
+		unsigned int perm, prog;
+		// GLSL shader path (GFFX5200, Radeon 9500)
+		memset(&m, 0, sizeof(m));
+		m.pointer_vertex = vertex3f;
+		m.pointer_texcoord[0] = texcoord2f;
+		m.pointer_texcoord3f[1] = svector3f;
+		m.pointer_texcoord3f[2] = tvector3f;
+		m.pointer_texcoord3f[3] = normal3f;
+		m.tex[0] = R_GetTexture(bumptexture);
+		m.tex[1] = R_GetTexture(basetexture);
+		m.tex[2] = R_GetTexture(glosstexture);
+		m.texcubemap[3] = R_GetTexture(lightcubemap);
+		// TODO: support fog (after renderer is converted to texture fog)
+		m.tex[4] = R_GetTexture(r_shadow_blankwhitetexture);
+		m.texmatrix[3] = *matrix_modeltolight;
+		R_Mesh_State(&m);
+		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 0);
+		CHECKGLERROR
+		perm = 0;
+		if (specularscale)
+			perm |= SHADERPERMUTATION_SPECULAR;
+		//if (fog)
+		//	perm |= SHADERPERMUTATION_FOG;
+		if (lightcubemap)
+			perm |= SHADERPERMUTATION_CUBEFILTER;
+		if (r_shadow_glsl_offsetmapping.integer)
+			perm |= SHADERPERMUTATION_OFFSETMAPPING;
+		prog = r_shadow_program_light[perm];
+		qglUseProgramObjectARB(r_shadow_program_light[perm]);
+		// TODO: support fog (after renderer is converted to texture fog)
+		if (perm & SHADERPERMUTATION_FOG)
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "FogRangeRecip"), 0);
+		qglUniform1fARB(qglGetUniformLocationARB(prog, "AmbientScale"), ambientscale);
+		qglUniform1fARB(qglGetUniformLocationARB(prog, "DiffuseScale"), diffusescale);
+		if (perm & SHADERPERMUTATION_SPECULAR)
+		{
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularPower"), 8);
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularScale"), specularscale);
+		}
+		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolor[0], lightcolor[1], lightcolor[2]);
+		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightPosition"), relativelightorigin[0], relativelightorigin[1], relativelightorigin[2]);
+		if (perm & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
+			qglUniform3fARB(qglGetUniformLocationARB(prog, "EyePosition"), relativeeyeorigin[0], relativeeyeorigin[1], relativeeyeorigin[2]);
+		if (perm & SHADERPERMUTATION_OFFSETMAPPING)
+		{
+			// these are * 0.25 because the offsetmapping shader does the process 4 times
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value * 0.25);
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value * 0.25);
+		}
+		CHECKGLERROR
+		GL_LockArrays(0, numverts);
+		R_Mesh_Draw(numverts, numtriangles, elements);
+		c_rt_lightmeshes++;
+		c_rt_lighttris += numtriangles;
+		GL_LockArrays(0, 0);
+		qglUseProgramObjectARB(0);
+	}
+	else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
+	{
+		if (!bumptexture)
+			bumptexture = r_shadow_blankbumptexture;
+		if (!glosstexture)
+			glosstexture = r_shadow_blankglosstexture;
 		if (ambientscale)
 		{
 			GL_Color(1,1,1,1);
-			colorscale = r_shadow_lightintensityscale.value * ambientscale;
+			colorscale = ambientscale;
 			// colorscale accounts for how much we multiply the brightness
 			// during combine.
 			//
@@ -1542,7 +1839,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		if (diffusescale)
 		{
 			GL_Color(1,1,1,1);
-			colorscale = r_shadow_lightintensityscale.value * diffusescale;
+			colorscale = diffusescale;
 			// colorscale accounts for how much we multiply the brightness
 			// during combine.
 			//
@@ -1819,14 +2116,12 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 			}
 			GL_LockArrays(0, 0);
 		}
-		if (specularscale && (r_shadow_gloss.integer >= 2 || (r_shadow_gloss.integer >= 1 && glosstexture != r_shadow_blankglosstexture)))
+		if (specularscale && glosstexture != r_shadow_blankblacktexture)
 		{
 			// FIXME: detect blendsquare!
 			//if (gl_support_blendsquare)
 			{
-				colorscale = r_shadow_lightintensityscale.value * r_shadow_glossintensity.value * specularscale;
-				if (glosstexture == r_shadow_blankglosstexture)
-					colorscale *= r_shadow_gloss2intensity.value;
+				colorscale = specularscale;
 				GL_Color(1,1,1,1);
 				if (r_shadow_texture3d.integer && r_textureunits.integer >= 2 && lightcubemap /*&& gl_support_blendsquare*/) // FIXME: detect blendsquare!
 				{
@@ -2057,7 +2352,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		if (ambientscale)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
-			VectorScale(lightcolor, r_shadow_lightintensityscale.value * ambientscale, color2);
+			VectorScale(lightcolor, ambientscale, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
 			m.tex[0] = R_GetTexture(basetexture);
@@ -2112,7 +2407,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		if (diffusescale)
 		{
 			GL_BlendFunc(GL_ONE, GL_ONE);
-			VectorScale(lightcolor, r_shadow_lightintensityscale.value * diffusescale, color2);
+			VectorScale(lightcolor, diffusescale, color2);
 			memset(&m, 0, sizeof(m));
 			m.pointer_vertex = vertex3f;
 			m.pointer_color = varray_color4f;
@@ -2345,7 +2640,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	if (rtlight->ambientscale + rtlight->diffusescale + rtlight->specularscale < 0.01)
 		return;
 
-	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f);
+	f = (rtlight->style >= 0 ? d_lightstylevalue[rtlight->style] : 128) * (1.0f / 256.0f) * r_shadow_lightintensityscale.value;
 	VectorScale(rtlight->color, f, lightcolor);
 	if (VectorLength2(lightcolor) < 0.01)
 		return;
