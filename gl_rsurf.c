@@ -1523,7 +1523,7 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	m.wantoverbright = false;
+	//m.wantoverbright = false;
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 	R_Mesh_ResizeCheck(portal->numpoints, portal->numpoints - 2);
@@ -1774,20 +1774,24 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 		// follow portals into other leafs
 		for (p = leaf->portals;p;p = p->next)
 		{
-			leaf = p->past;
-			if (leaf->worldnodeframe != r_framecount)
+			// LordHavoc: this DotProduct hurts less than a cache miss
+			// (which is more likely to happen if backflowing through leafs)
+			if (DotProduct(modelorg, p->plane.normal) < (p->plane.dist + 1))
 			{
-				leaf->worldnodeframe = r_framecount;
-				// FIXME: R_NotCulledBox is absolute, should be done relative
-				if (leaf->pvsframe == r_pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
-					leafstack[leafstackpos++] = leaf;
+				leaf = p->past;
+				if (leaf->worldnodeframe != r_framecount)
+				{
+					leaf->worldnodeframe = r_framecount;
+					// FIXME: R_NotCulledBox is absolute, should be done relative
+					if (leaf->pvsframe == r_pvsframecount && R_NotCulledBox(leaf->mins, leaf->maxs))
+						leafstack[leafstackpos++] = leaf;
+				}
 			}
 		}
 	}
 	if (r_drawportals.integer)
 		R_DrawPortals(ent);
 }
-
 
 void R_PVSUpdate (mleaf_t *viewleaf)
 {
