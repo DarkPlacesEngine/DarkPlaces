@@ -2941,7 +2941,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		}
 		origin[2] += atof(Cmd_Argv(2));
 	}
-	if (!strcmp(Cmd_Argv(1), "angles"))
+	else if (!strcmp(Cmd_Argv(1), "angles"))
 	{
 		if (Cmd_Argc() != 5)
 		{
@@ -2999,7 +2999,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		}
 		radius = atof(Cmd_Argv(2));
 	}
-	else if (Cmd_Argc() == 3 && !strcmp(Cmd_Argv(1), "style"))
+	else if (!strcmp(Cmd_Argv(1), "style"))
 	{
 		if (Cmd_Argc() != 3)
 		{
@@ -3008,7 +3008,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		}
 		style = atoi(Cmd_Argv(2));
 	}
-	else if (Cmd_Argc() == 3 && !strcmp(Cmd_Argv(1), "cubemap"))
+	else if (!strcmp(Cmd_Argv(1), "cubemap"))
 	{
 		if (Cmd_Argc() > 3)
 		{
@@ -3020,7 +3020,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		else
 			cubemapname[0] = 0;
 	}
-	else if (Cmd_Argc() == 3 && !strcmp(Cmd_Argv(1), "shadows"))
+	else if (!strcmp(Cmd_Argv(1), "shadows"))
 	{
 		if (Cmd_Argc() != 3)
 		{
