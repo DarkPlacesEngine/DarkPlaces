@@ -335,6 +335,8 @@ typedef struct gltextureunit_s
 	float rgbscale, alphascale;
 	int combinergb, combinealpha;
 	// FIXME: add more combine stuff
+	// texmatrixenabled exists only to avoid unnecessary texmatrix compares
+	int texmatrixenabled;
 	matrix4x4_t matrix;
 }
 gltextureunit_t;
@@ -382,7 +384,11 @@ void GL_SetupTextureState(void)
 		unit->alphascale = 1;
 		unit->combinergb = GL_MODULATE;
 		unit->combinealpha = GL_MODULATE;
+		unit->texmatrixenabled = false;
 		unit->matrix = r_identitymatrix;
+		qglMatrixMode(GL_TEXTURE);
+		qglLoadIdentity();
+		qglMatrixMode(GL_MODELVIEW);
 
 		qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), NULL);CHECKGLERROR
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
@@ -863,7 +869,6 @@ void R_Mesh_State(const rmeshstate_t *m)
 {
 	int i, combinergb, combinealpha, scale;
 	gltextureunit_t *unit;
-	const matrix4x4_t *texmatrix;
 	matrix4x4_t tempmatrix;
 
 	BACKENDACTIVECHECK
@@ -1082,19 +1087,31 @@ void R_Mesh_State(const rmeshstate_t *m)
 				}
 			}
 			// update texmatrix
-			// if texmatrix is not set (3,3 should always be 1 in a texture matrix) just compare to the identity matrix
 			if (m->texmatrix[i].m[3][3])
-				texmatrix = &m->texmatrix[i];
-			else
-				texmatrix = &r_identitymatrix;
-			if (memcmp(&unit->matrix, texmatrix, sizeof(matrix4x4_t)))
 			{
-				unit->matrix = *texmatrix;
-				Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
-				qglMatrixMode(GL_TEXTURE);
-				GL_ActiveTexture(i);
-				qglLoadMatrixf(&tempmatrix.m[0][0]);
-				qglMatrixMode(GL_MODELVIEW);
+				// texmatrix specified, check if it is different
+				if (!unit->texmatrixenabled || memcmp(&unit->matrix, &m->texmatrix[i], sizeof(matrix4x4_t)))
+				{
+					unit->texmatrixenabled = true;
+					unit->matrix = m->texmatrix[i];
+					Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
+					qglMatrixMode(GL_TEXTURE);
+					GL_ActiveTexture(i);
+					qglLoadMatrixf(&tempmatrix.m[0][0]);
+					qglMatrixMode(GL_MODELVIEW);
+				}
+			}
+			else
+			{
+				// no texmatrix specified, revert to identity
+				if (unit->texmatrixenabled)
+				{
+					unit->texmatrixenabled = false;
+					qglMatrixMode(GL_TEXTURE);
+					GL_ActiveTexture(i);
+					qglLoadIdentity();
+					qglMatrixMode(GL_MODELVIEW);
+				}
 			}
 		}
 		else
