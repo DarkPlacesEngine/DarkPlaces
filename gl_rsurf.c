@@ -54,13 +54,15 @@ cvar_t r_dlightmap = {"r_dlightmap", "1"};
 qboolean lightmaprgba, nosubimagefragments, nosubimage, skyisvisible;
 int lightmapbytes;
 
-extern int r_dlightframecount;
-
 void gl_surf_start()
 {
 }
 
 void gl_surf_shutdown()
+{
+}
+
+void gl_surf_newmap()
 {
 }
 
@@ -80,7 +82,7 @@ void GL_Surf_Init()
 	Cvar_RegisterVariable(&r_oldclip);
 	Cvar_RegisterVariable(&r_dlightmap);
 
-	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown);
+	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
 
 int         dlightdivtable[32768];
@@ -278,7 +280,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	lightmap = surf->samples;
 
 // set to full bright if no light data
-	if ((currententity && currententity->effects & EF_FULLBRIGHT) || !cl.worldmodel->lightdata)
+	if ((currententity && (currententity->effects & EF_FULLBRIGHT)) || !cl.worldmodel->lightdata)
 	{
 		bl = blocklights;
 		for (i=0 ; i<size ; i++)
@@ -774,7 +776,6 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 }
 
 // LordHavoc: transparent brush models
-extern int r_dlightframecount;
 extern float modelalpha;
 
 void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmodel)
@@ -973,7 +974,7 @@ void R_DrawBrushModel (entity_t *e)
 // instanced model
 	for (i = 0;i < MAX_DLIGHTS;i++)
 	{
-		if ((cl_dlights[i].die < cl.time) || (!cl_dlights[i].radius))
+		if (!cl_dlights[i].radius)
 			continue;
 
 		VectorSubtract(cl_dlights[i].origin, currententity->origin, org);
