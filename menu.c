@@ -1171,7 +1171,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 37
+#define OPTIONS_ITEMS 38
 
 int options_cursor;
 
@@ -1186,6 +1186,7 @@ extern cvar_t snd_staticvolume;
 extern cvar_t slowmo;
 extern dllhandle_t jpeg_dll;
 extern cvar_t gl_texture_anisotropy;
+extern cvar_t r_textshadow;
 
 void M_Menu_Options_AdjustSliders (int dir)
 {
@@ -1227,6 +1228,8 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&snd_staticvolume, bound(0, snd_staticvolume.value + dir * 0.1, 1));
+	else if (options_cursor == optnum++)
+		Cvar_SetValueQuick (&r_textshadow, !r_textshadow.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
 	else if (options_cursor == optnum++)
@@ -1345,6 +1348,7 @@ void M_Options_Draw (void)
 	M_Options_PrintSlider(  "   CD Music Volume", cdaudioinitialized.integer, bgmvolume.value, 0, 1);
 	M_Options_PrintSlider(  "      Sound Volume", snd_initialized.integer, volume.value, 0, 1);
 	M_Options_PrintSlider(gamemode == GAME_GOODVSBAD2 ? "      Music Volume" : "    Ambient Volume", snd_initialized.integer, snd_staticvolume.value, 0, 1);
+	M_Options_PrintCheckbox("       Text Shadow", true, r_textshadow.integer);
 	M_Options_PrintSlider(  "         Crosshair", true, crosshair.value, 0, 5);
 	M_Options_PrintSlider(  "    Crosshair Size", true, crosshair_size.value, 1, 5);
 	M_Options_PrintCheckbox("  Static Crosshair", true, crosshair_static.integer);

@@ -22,6 +22,7 @@ cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t scr_screenshot_jpeg_quality = {CVAR_SAVE, "scr_screenshot_jpeg_quality","0.9"};
 cvar_t scr_screenshot_name = {0, "scr_screenshot_name","dp"};
 cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
+cvar_t r_textshadow = {0, "r_textshadow", "0"};
 
 int jpeg_supported = false;
 
@@ -476,6 +477,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&scr_screenshot_jpeg_quality);
 	Cvar_RegisterVariable (&cl_avidemo);
+	Cvar_RegisterVariable (&r_textshadow);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
@@ -496,7 +498,7 @@ void DrawQ_Pic(float x, float y, char *picname, float width, float height, float
 	DrawQ_SuperPic(x,y,picname,width,height,0,0,red,green,blue,alpha,1,0,red,green,blue,alpha,0,1,red,green,blue,alpha,1,1,red,green,blue,alpha,flags);
 }
 
-void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
+void DrawQ_String_Real(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
 {
 	int size, len;
 	drawqueue_t *dq;
@@ -533,6 +535,14 @@ void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex
 	memcpy(out, string, len);
 	out[len] = 0;
 	r_refdef.drawqueuesize += dq->size;
+}
+
+void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
+{
+	if (r_textshadow.integer)
+		DrawQ_String_Real(x+scalex*0.25,y+scaley*0.25,string,maxlen,scalex,scaley,0,0,0,alpha*0.8,flags);
+
+	DrawQ_String_Real(x,y,string,maxlen,scalex,scaley,red,green,blue,alpha,flags); 
 }
 
 void DrawQ_Fill (float x, float y, float w, float h, float red, float green, float blue, float alpha, int flags)
