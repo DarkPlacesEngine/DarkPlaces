@@ -527,7 +527,7 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 // Start a sound effect
 // =======================================================================
 
-void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
+int S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 {
 	channel_t *target_chan, *check;
 	int		vol;
@@ -535,14 +535,14 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	size_t	skip;
 
 	if (!sound_started || !sfx || !sfx->fetcher || nosound.integer)
-		return;
+		return -1;
 
 	vol = fvol*255;
 
 // pick a channel to play on
 	target_chan = SND_PickChannel(entnum, entchannel);
 	if (!target_chan)
-		return;
+		return -1;
 
 // spatialize
 	memset (target_chan, 0, sizeof(*target_chan));
@@ -561,7 +561,7 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	if (!S_LoadSound (sfx, true))
 	{
 		target_chan->sfx = NULL;
-		return;		// couldn't load the sound's data
+		return -1;		// couldn't load the sound's data
 	}
 
 	target_chan->sfx = sfx;
@@ -590,6 +590,8 @@ void S_StartSound(int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 			break;
 		}
 	}
+
+	return (channels - target_chan);
 }
 
 void S_StopSound(int entnum, int entchannel)
@@ -620,6 +622,34 @@ void S_StopAllSounds(qboolean clear)
 void S_StopAllSoundsC(void)
 {
 	S_StopAllSounds(true);
+}
+
+void S_PauseGameSounds (void)
+{
+	unsigned int i;
+
+	for (i = 0; i < total_channels; i++)
+	{
+		channel_t *ch;
+
+		ch = &channels[i];
+		if (ch->sfx != NULL && ! (ch->flags & CHANNELFLAG_LOCALSOUND))
+			ch->flags |= CHANNELFLAG_PAUSED;
+	}
+}
+
+void S_ResumeGameSounds (void)
+{
+	unsigned int i;
+
+	for (i = 0; i < total_channels; i++)
+	{
+		channel_t *ch;
+
+		ch = &channels[i];
+		if (ch->sfx != NULL && ! (ch->flags & CHANNELFLAG_LOCALSOUND))
+			ch->flags &= ~CHANNELFLAG_PAUSED;
+	}
 }
 
 void S_ClearBuffer(void)
@@ -963,7 +993,7 @@ console functions
 
 static void S_Play_Common(float fvol, float attenuation)
 {
-	int 	i;
+	int 	i, ch_ind;
 	char name[256];
 	sfx_t	*sfx;
 
@@ -985,7 +1015,9 @@ static void S_Play_Common(float fvol, float attenuation)
 		else
 			i++;
 
-		S_StartSound(-1, 0, sfx, listener_vieworigin, fvol, attenuation);
+		ch_ind = S_StartSound(-1, 0, sfx, listener_vieworigin, fvol, attenuation);
+		if (ch_ind >= 0)
+			channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 	}
 }
 
@@ -1027,6 +1059,7 @@ void S_SoundList(void)
 void S_LocalSound (char *sound)
 {
 	sfx_t	*sfx;
+	int		ch_ind;
 
 	if (!snd_initialized.integer || nosound.integer)
 		return;
@@ -1037,7 +1070,10 @@ void S_LocalSound (char *sound)
 		Con_Printf("S_LocalSound: can't precache %s\n", sound);
 		return;
 	}
-	S_StartSound (cl.viewentity, -1, sfx, vec3_origin, 1, 1);
+
+	ch_ind = S_StartSound (cl.viewentity, -1, sfx, vec3_origin, 1, 1);
+	if (ch_ind >= 0)
+		channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 }
 
 

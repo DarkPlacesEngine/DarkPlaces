@@ -296,6 +296,17 @@ void S_PaintChannels(int endtime)
 			if (!S_LoadSound (sfx, true))
 				continue;
 
+			// if the channel is paused
+			if (ch->flags & CHANNELFLAG_PAUSED)
+			{
+				size_t pausedtime;
+
+				pausedtime = end - paintedtime;
+				ch->lastptime += pausedtime;
+				ch->end += pausedtime;
+				continue;
+			}
+
 			// if the sound hasn't been painted last time, update his position
 			if (ch->lastptime < paintedtime)
 			{
