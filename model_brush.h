@@ -191,20 +191,16 @@ msurface_t;
 // change this stuff when real shaders are added
 typedef struct Cshader_s
 {
-	int (*shaderfunc[SHADERSTAGE_COUNT])(int stage, msurface_t *s);
+	void (*shaderfunc[SHADERSTAGE_COUNT])(msurface_t *firstsurf);
 	// list of surfaces using this shader (used during surface rendering)
 	msurface_t *chain;
 }
 Cshader_t;
 
 extern Cshader_t Cshader_wall_vertex;
-extern Cshader_t Cshader_wall_vertex_glow;
 extern Cshader_t Cshader_wall_lightmap;
-extern Cshader_t Cshader_wall_lightmap_glow;
 extern Cshader_t Cshader_wall_fullbright;
-extern Cshader_t Cshader_wall_fullbright_glow;
 extern Cshader_t Cshader_water;
-extern Cshader_t Cshader_water_glow;
 extern Cshader_t Cshader_sky;
 
 // warning: if this is changed, references must be updated in cpu_* assembly files
