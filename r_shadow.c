@@ -3044,7 +3044,7 @@ void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, ve
 	light->corona = corona;
 	if (!cubemapname)
 		cubemapname = "";
-	strlcpy(light->cubemapname, cubemapname, strlen(light->cubemapname));
+	strlcpy(light->cubemapname, cubemapname, sizeof(light->cubemapname));
 	light->coronasizescale = coronasizescale;
 	light->ambientscale = ambientscale;
 	light->diffusescale = diffusescale;
