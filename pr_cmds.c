@@ -2103,7 +2103,7 @@ void PF_setcolor (void)
 
 	client = &svs.clients[entnum-1];
 	client->colors = i;
-	client->edict->v->team = (i & 15) + 1;
+	EDICT_NUM(client->edictnumber)->v->team = (i & 15) + 1;
 
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
 	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);

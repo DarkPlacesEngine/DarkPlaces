@@ -419,7 +419,7 @@ static void Mod_LoadTextures (lump_t *l)
 				{
 					if (image_width == 256 && image_height == 128)
 					{
- 						R_InitSky (data, 4);
+						R_InitSky (data, 4);
 						Mem_Free(data);
 					}
 					else
@@ -442,7 +442,7 @@ static void Mod_LoadTextures (lump_t *l)
 				if (loadmodel->ishlbsp)
 				{
 					// internal texture overrides wad
-					qbyte *pixels, *freepixels;
+					qbyte *pixels, *freepixels, *fogpixels;
 					pixels = freepixels = NULL;
 					if (mtdata)
 						pixels = W_ConvertWAD3Texture(dmiptex);
@@ -453,12 +453,25 @@ static void Mod_LoadTextures (lump_t *l)
 						tx->width = image_width;
 						tx->height = image_height;
 						tx->skin.base = tx->skin.merged = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
+						if (Image_CheckAlpha(pixels, image_width * image_height, true))
+						{
+							fogpixels = Mem_Alloc(tempmempool, image_width * image_height * 4);
+							for (j = 0;j < image_width * image_height * 4;j += 4)
+							{
+								fogpixels[j + 0] = 255;
+								fogpixels[j + 1] = 255;
+								fogpixels[j + 2] = 255;
+								fogpixels[j + 3] = pixels[j + 3];
+							}
+							tx->skin.fog = R_LoadTexture2D(loadmodel->texturepool, tx->name, image_width, image_height, pixels, TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, NULL);
+							Mem_Free(fogpixels);
+						}
 					}
 					if (freepixels)
 						Mem_Free(freepixels);
 				}
 				else if (mtdata) // texture included
-					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE, false, true, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
+					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE, false, true, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
 			}
 		}
 		if (tx->skin.base == NULL)

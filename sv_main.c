@@ -33,7 +33,7 @@ server_static_t	svs;
 
 static char localmodels[MAX_MODELS][5];			// inline model names for precache
 
-static mempool_t *sv_edicts_mempool = NULL;
+mempool_t *sv_edicts_mempool = NULL;
 
 //============================================================================
 
@@ -287,7 +287,7 @@ void SV_SendServerinfo (client_t *client)
 
 // set view
 	MSG_WriteByte (&client->message, svc_setview);
-	MSG_WriteShort (&client->message, NUM_FOR_EDICT(client->edict));
+	MSG_WriteShort (&client->message, client->edictnumber);
 
 	MSG_WriteByte (&client->message, svc_signonnum);
 	MSG_WriteByte (&client->message, 1);
@@ -332,7 +332,7 @@ void SV_ConnectClient (int clientnum)
 	strcpy (client->name, "unconnected");
 	client->active = true;
 	client->spawned = false;
-	client->edict = ent;
+	client->edictnumber = edictnum;
 	client->message.data = client->msgbuf;
 	client->message.maxsize = sizeof(client->msgbuf);
 	client->message.allowoverflow = true;		// we can catch it
@@ -1403,9 +1403,9 @@ qboolean SV_SendClientDatagram (client_t *client)
 	if (client->spawned)
 	{
 		// add the client specific data to the datagram
-		SV_WriteClientdataToMessage (client->edict, &msg);
+		SV_WriteClientdataToMessage (EDICT_NUM(client->edictnumber), &msg);
 
-		SV_WriteEntitiesToClient (client, client->edict, &msg);
+		SV_WriteEntitiesToClient (client, EDICT_NUM(client->edictnumber), &msg);
 
 		// copy the server datagram if there is space
 		if (msg.cursize + sv.datagram.cursize < msg.maxsize)
@@ -1435,7 +1435,7 @@ void SV_UpdateToReliableMessages (void)
 // check for changes to be sent over the reliable streams
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 	{
-		if (host_client->old_frags != host_client->edict->v->frags)
+		if (host_client->old_frags != EDICT_NUM(host_client->edictnumber)->v->frags)
 		{
 			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 			{
@@ -1443,10 +1443,10 @@ void SV_UpdateToReliableMessages (void)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatefrags);
 				MSG_WriteByte (&client->message, i);
-				MSG_WriteShort (&client->message, host_client->edict->v->frags);
+				MSG_WriteShort (&client->message, EDICT_NUM(host_client->edictnumber)->v->frags);
 			}
 
-			host_client->old_frags = host_client->edict->v->frags;
+			host_client->old_frags = EDICT_NUM(host_client->edictnumber)->v->frags;
 		}
 	}
 
@@ -1714,11 +1714,48 @@ void SV_SaveSpawnparms (void)
 			continue;
 
 	// call the progs to get default spawn parms for the new client
-		pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+		pr_global_struct->self = EDICT_TO_PROG(EDICT_NUM(host_client->edictnumber));
 		PR_ExecuteProgram (pr_global_struct->SetChangeParms, "QC function SetChangeParms is missing");
 		for (j=0 ; j<NUM_SPAWN_PARMS ; j++)
 			host_client->spawn_parms[j] = (&pr_global_struct->parm1)[j];
 	}
+}
+
+void SV_IncreaseEdicts(void)
+{
+	int i;
+	edict_t *e;
+	int oldmax_edicts = sv.max_edicts;
+	void *oldedicts = sv.edicts;
+	void *oldedictsfields = sv.edictsfields;
+	void *oldedictstable = sv.edictstable;
+	void *oldmoved_edicts = sv.moved_edicts;
+
+	for (i = 0;i < sv.max_edicts;i++)
+		SV_UnlinkEdict (sv.edictstable[i]);
+	SV_ClearWorld();
+
+	sv.max_edicts   = min(sv.max_edicts + 32, MAX_EDICTS);
+	sv.edicts       = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t));
+	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
+	sv.edictstable  = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
+	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
+
+	memcpy(sv.edicts      , oldedicts      , oldmax_edicts * sizeof(edict_t));
+	memcpy(sv.edictsfields, oldedictsfields, oldmax_edicts * pr_edict_size);
+
+	for (i = 0;i < sv.max_edicts;i++)
+	{
+		e = sv.edictstable[i] = sv.edicts + i;
+		e->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
+		if (i > 0)
+			SV_LinkEdict(e, false);
+	}
+
+	Mem_Free(oldedicts);
+	Mem_Free(oldedictsfields);
+	Mem_Free(oldedictstable);
+	Mem_Free(oldmoved_edicts);
 }
 
 /*
@@ -1772,7 +1809,9 @@ void SV_SpawnServer (const char *server)
 	PR_LoadProgs ();
 
 // allocate server memory
-	sv.max_edicts = MAX_EDICTS;
+	// start out with just enough room for clients and a reasonable estimate of entities
+	sv.max_edicts = ((svs.maxclients + 1) + 31) & ~31;
+	sv.max_edicts = max(sv.max_edicts, 128);
 
 	// clear the edict memory pool
 	Mem_EmptyPool(sv_edicts_mempool);
@@ -1780,15 +1819,14 @@ void SV_SpawnServer (const char *server)
 	sv.edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t));
 	// progs fields, often accessed by server
 	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
-	// table of edict pointers, for quicker lookup of edicts
+	// table of edict pointers, for quick lookup of edicts
 	sv.edictstable = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
 	// used by PushMove to move back pushed entities
 	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
 	for (i = 0;i < sv.max_edicts;i++)
 	{
-		ent = sv.edicts + i;
-		ent->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
-		sv.edictstable[i] = ent;
+		sv.edictstable[i] = sv.edicts + i;
+		sv.edictstable[i]->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
 	}
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
@@ -1806,10 +1844,7 @@ void SV_SpawnServer (const char *server)
 // leave slots at start for clients only
 	sv.num_edicts = svs.maxclients+1;
 	for (i=0 ; i<svs.maxclients ; i++)
-	{
-		ent = EDICT_NUM(i+1);
-		svs.clients[i].edict = ent;
-	}
+		svs.clients[i].edictnumber = i+1;
 
 	sv.state = ss_loading;
 	sv.paused = false;

@@ -464,6 +464,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	int bits;
 	eval_t *val;
 	float total;
+	edict_t *e = EDICT_NUM(host_client->edictnumber);
 
 	// read ping time
 	host_client->ping_times[host_client->num_pings % NUM_PING_TIMES] = sv.time - MSG_ReadFloat ();
@@ -476,7 +477,7 @@ void SV_ReadClientMove (usercmd_t *move)
 	// if paused or a local game, don't predict
 	if (sv_predict.integer && (svs.maxclients > 1) && (!sv.paused))
 		host_client->latency = host_client->ping;
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
+	if ((val = GETEDICTFIELDVALUE(e, eval_ping)))
 		val->_float = host_client->ping * 1000.0;
 
 	// read current angles
@@ -484,13 +485,13 @@ void SV_ReadClientMove (usercmd_t *move)
 	for (i = 0;i < 3;i++)
 		angle[i] = MSG_ReadFloat ();
 
-	VectorCopy (angle, host_client->edict->v->v_angle);
+	VectorCopy (angle, e->v->v_angle);
 
 	// read movement
 	move->forwardmove = MSG_ReadShort ();
 	move->sidemove = MSG_ReadShort ();
 	move->upmove = MSG_ReadShort ();
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_movement)))
+	if ((val = GETEDICTFIELDVALUE(e, eval_movement)))
 	{
 		val->vector[0] = move->forwardmove;
 		val->vector[1] = move->sidemove;
@@ -499,19 +500,19 @@ void SV_ReadClientMove (usercmd_t *move)
 
 	// read buttons
 	bits = MSG_ReadByte ();
-	host_client->edict->v->button0 = bits & 1;
-	host_client->edict->v->button2 = (bits & 2)>>1;
+	e->v->button0 = bits & 1;
+	e->v->button2 = (bits & 2)>>1;
 	// LordHavoc: added 6 new buttons
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button3))) val->_float = ((bits >> 2) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button4))) val->_float = ((bits >> 3) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button5))) val->_float = ((bits >> 4) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((bits >> 5) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((bits >> 6) & 1);
-	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((bits >> 7) & 1);
+	if ((val = GETEDICTFIELDVALUE(e, eval_button3))) val->_float = ((bits >> 2) & 1);
+	if ((val = GETEDICTFIELDVALUE(e, eval_button4))) val->_float = ((bits >> 3) & 1);
+	if ((val = GETEDICTFIELDVALUE(e, eval_button5))) val->_float = ((bits >> 4) & 1);
+	if ((val = GETEDICTFIELDVALUE(e, eval_button6))) val->_float = ((bits >> 5) & 1);
+	if ((val = GETEDICTFIELDVALUE(e, eval_button7))) val->_float = ((bits >> 6) & 1);
+	if ((val = GETEDICTFIELDVALUE(e, eval_button8))) val->_float = ((bits >> 7) & 1);
 
 	i = MSG_ReadByte ();
 	if (i)
-		host_client->edict->v->impulse = i;
+		e->v->impulse = i;
 }
 
 /*
@@ -638,7 +639,7 @@ void SV_RunClients (void)
 		if (!host_client->active)
 			continue;
 
-		sv_player = host_client->edict;
+		sv_player = EDICT_NUM(host_client->edictnumber);
 
 		if (!SV_ReadClientMessage ())
 		{

@@ -72,37 +72,26 @@ typedef struct
 }
 moveclip_t;
 
-//#define EDICT_FROM_AREA(l) ((edict_t *)((qbyte *)l - (int)&(((edict_t *)0)->area)))
-#define EDICT_FROM_AREA(l) ((edict_t *)l->entity)
-
 //============================================================================
 
 // ClearLink is used for new headnodes
-void ClearLink (link_t *l)
+static void ClearLink (link_t *l)
 {
-	l->entity = NULL;
+	l->entitynumber = 0;
 	l->prev = l->next = l;
 }
 
-void RemoveLink (link_t *l)
+static void RemoveLink (link_t *l)
 {
 	l->next->prev = l->prev;
 	l->prev->next = l->next;
 }
 
-void InsertLinkBefore (link_t *l, link_t *before, void *ent)
+static void InsertLinkBefore (link_t *l, link_t *before, int entitynumber)
 {
-	l->entity = ent;
+	l->entitynumber = entitynumber;
 	l->next = before;
 	l->prev = before->prev;
-	l->prev->next = l;
-	l->next->prev = l;
-}
-
-void InsertLinkAfter (link_t *l, link_t *after)
-{
-	l->next = after->next;
-	l->prev = after;
 	l->prev->next = l;
 	l->next->prev = l;
 }
@@ -228,7 +217,7 @@ void SV_TouchAreaGrid(edict_t *ent)
 	for (l = sv_areagrid_outside.trigger_edicts.next;l != &sv_areagrid_outside.trigger_edicts;l = next)
 	{
 		next = l->next;
-		touch = EDICT_FROM_AREA(l);
+		touch = EDICT_NUM(l->entitynumber);
 		if (ent->v->absmin[0] > touch->v->absmax[0]
 		 || ent->v->absmax[0] < touch->v->absmin[0]
 		 || ent->v->absmin[1] > touch->v->absmax[1]
@@ -260,7 +249,7 @@ void SV_TouchAreaGrid(edict_t *ent)
 			for (l = grid->trigger_edicts.next;l != &grid->trigger_edicts;l = next)
 			{
 				next = l->next;
-				touch = EDICT_FROM_AREA(l);
+				touch = EDICT_NUM(l->entitynumber);
 				if (touch->areagridmarknumber == sv_areagrid_marknumber)
 					continue;
 				touch->areagridmarknumber = sv_areagrid_marknumber;
@@ -305,9 +294,9 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 	{
 		// wow, something outside the grid, store it as such
 		if (ent->v->solid == SOLID_TRIGGER)
-			InsertLinkBefore (&ent->areagrid[0], &sv_areagrid_outside.trigger_edicts, ent);
+			InsertLinkBefore (&ent->areagrid[0], &sv_areagrid_outside.trigger_edicts, NUM_FOR_EDICT(ent));
 		else
-			InsertLinkBefore (&ent->areagrid[0], &sv_areagrid_outside.solid_edicts, ent);
+			InsertLinkBefore (&ent->areagrid[0], &sv_areagrid_outside.solid_edicts, NUM_FOR_EDICT(ent));
 		return;
 	}
 
@@ -318,9 +307,9 @@ void SV_LinkEdict_AreaGrid(edict_t *ent)
 		for (igrid[0] = igridmins[0];igrid[0] < igridmaxs[0];igrid[0]++, grid++, gridnum++)
 		{
 			if (ent->v->solid == SOLID_TRIGGER)
-				InsertLinkBefore (&ent->areagrid[gridnum], &grid->trigger_edicts, ent);
+				InsertLinkBefore (&ent->areagrid[gridnum], &grid->trigger_edicts, NUM_FOR_EDICT(ent));
 			else
-				InsertLinkBefore (&ent->areagrid[gridnum], &grid->solid_edicts, ent);
+				InsertLinkBefore (&ent->areagrid[gridnum], &grid->solid_edicts, NUM_FOR_EDICT(ent));
 		}
 	}
 }
@@ -505,7 +494,7 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 	for (l = list->next;l != list;l = next)
 	{
 		next = l->next;
-		touch = EDICT_FROM_AREA(l);
+		touch = EDICT_NUM(l->entitynumber);
 		if (touch->areagridmarknumber == sv_areagrid_marknumber)
 			continue;
 		touch->areagridmarknumber = sv_areagrid_marknumber;
