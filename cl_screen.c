@@ -661,6 +661,7 @@ void SCR_ScreenShot_f (void)
 	char filename[MAX_QPATH];
 	qbyte *buffer1;
 	qbyte *buffer2;
+	qbyte *buffer3;
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
 	sprintf (base, "screenshots/%s", scr_screenshot_name.string);
@@ -688,14 +689,16 @@ void SCR_ScreenShot_f (void)
 
 	buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
 	buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+	buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
 
-	if (SCR_ScreenShot (filename, buffer1, buffer2, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
+	if (SCR_ScreenShot (filename, buffer1, buffer2, buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		Con_Printf("Wrote %s\n", filename);
 	else
 		Con_Printf("unable to write %s\n", filename);
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
+	Mem_Free (buffer3);
 
 	shotnumber++;
 }
@@ -706,6 +709,7 @@ void SCR_CaptureAVIDemo(void)
 {
 	static qbyte *avi_buffer1 = NULL;
 	static qbyte *avi_buffer2 = NULL;
+	static qbyte *avi_buffer3 = NULL;
 	char filename[32];
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
@@ -715,6 +719,7 @@ void SCR_CaptureAVIDemo(void)
 		{
 			avi_buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
 			avi_buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+			avi_buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
 		}
 	}
 	else
@@ -723,8 +728,10 @@ void SCR_CaptureAVIDemo(void)
 		{
 			Mem_Free (avi_buffer1);
 			Mem_Free (avi_buffer2);
+			Mem_Free (avi_buffer3);
 			avi_buffer1 = NULL;
 			avi_buffer2 = NULL;
+			avi_buffer3 = NULL;
 		}
 		cl_avidemo_frame = 0;
 		return;
@@ -735,7 +742,7 @@ void SCR_CaptureAVIDemo(void)
 	else
 		sprintf(filename, "video/dp%06d.tga", cl_avidemo_frame);
 
-	if (SCR_ScreenShot(filename, avi_buffer1, avi_buffer2, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
+	if (SCR_ScreenShot(filename, avi_buffer1, avi_buffer2, avi_buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		cl_avidemo_frame++;
 	else
 	{
@@ -781,6 +788,7 @@ static void R_Envmap_f (void)
 	char filename[256], basename[256];
 	qbyte *buffer1;
 	qbyte *buffer2;
+	qbyte *buffer3;
 
 	if (Cmd_Argc() != 3)
 	{
@@ -813,6 +821,7 @@ static void R_Envmap_f (void)
 
 	buffer1 = Mem_Alloc(tempmempool, size * size * 3);
 	buffer2 = Mem_Alloc(tempmempool, size * size * 3);
+	buffer3 = Mem_Alloc(tempmempool, size * size * 3 + 18);
 
 	for (j = 0;j < 12;j++)
 	{
@@ -822,11 +831,12 @@ static void R_Envmap_f (void)
 		R_Mesh_Start();
 		R_RenderView();
 		R_Mesh_Finish();
-		SCR_ScreenShot(filename, buffer1, buffer2, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false);
+		SCR_ScreenShot(filename, buffer1, buffer2, buffer3, vid.realx, vid.realy + vid.realheight - (r_refdef.y + r_refdef.height), size, size, envmapinfo[j].flipx, envmapinfo[j].flipy, envmapinfo[j].flipdiagonaly, false);
 	}
 
 	Mem_Free (buffer1);
 	Mem_Free (buffer2);
+	Mem_Free (buffer3);
 
 	envmap = false;
 }
