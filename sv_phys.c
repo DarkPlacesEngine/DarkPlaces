@@ -767,7 +767,6 @@ void SV_Physics_Pusher (edict_t *ent)
 		// advances ent->v->ltime if not blocked
 		SV_PushMove (ent, movetime);
 
-	/*
 	if (thinktime > oldltime && thinktime <= ent->v->ltime)
 	{
 		ent->v->nextthink = 0;
@@ -776,7 +775,6 @@ void SV_Physics_Pusher (edict_t *ent)
 		pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
 		PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
 	}
-	*/
 }
 
 
@@ -1439,14 +1437,7 @@ void SV_Physics (void)
 		{
 		case MOVETYPE_PUSH:
 		case MOVETYPE_FAKEPUSH:
-			if (ent->v->nextthink && ent->v->ltime > ent->v->nextthink)
-			{
-				ent->v->nextthink = 0;
-				pr_global_struct->time = sv.time;
-				pr_global_struct->self = EDICT_TO_PROG(ent);
-				pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
-				PR_ExecuteProgram (ent->v->think, "QC function self.think is missing");
-			}
+			// push thinks are called from SV_Physics_Pusher 
 			break;
 		case MOVETYPE_NONE:
 		case MOVETYPE_FOLLOW:
