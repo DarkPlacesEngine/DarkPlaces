@@ -243,7 +243,6 @@ void Mod_IDSP_Load(model_t *mod, void *buffer)
 
 	loadmodel->DrawSky = NULL;
 	loadmodel->Draw = R_Model_Sprite_Draw;
-	loadmodel->DrawFakeShadow = NULL;
 	loadmodel->DrawShadowVolume = NULL;
 	loadmodel->DrawLight = NULL;
 

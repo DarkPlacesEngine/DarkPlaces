@@ -2752,7 +2752,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
 		mod->Draw = R_Model_Brush_Draw;
-		mod->DrawFakeShadow = NULL;
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
 		mod->brushq1.pvstexturechains = Mem_Alloc(originalloadmodel->mempool, mod->brushq1.numtextures * sizeof(msurface_t **));
@@ -4446,7 +4445,6 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 
 //extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
 extern void R_Q3BSP_Draw(struct entity_render_s *ent);
-//extern void R_Q3BSP_DrawFakeShadow(struct entity_render_s *ent);
 extern void R_Q3BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Q3BSP_DrawLight(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
@@ -4481,7 +4479,6 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.TraceBox = Mod_Q3BSP_TraceBox;
 	//mod->DrawSky = R_Q3BSP_DrawSky;
 	mod->Draw = R_Q3BSP_Draw;
-	//mod->DrawFakeShadow = R_Q3BSP_DrawFakeShadow;
 	mod->DrawShadowVolume = R_Q3BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q3BSP_DrawLight;
 

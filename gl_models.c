@@ -303,68 +303,6 @@ void R_Model_Alias_Draw(entity_render_t *ent)
 	}
 }
 
-void R_Model_Alias_DrawFakeShadow (entity_render_t *ent)
-{
-	int i, meshnum;
-	aliasmesh_t *mesh;
-	aliasskin_t *skin;
-	rmeshstate_t m;
-	float *v, plane[4], dist, projection[3], floororigin[3], surfnormal[3], lightdirection[3], v2[3];
-
-	if ((ent->effects & EF_ADDITIVE) || ent->alpha < 1)
-		return;
-
-	lightdirection[0] = 0.5;
-	lightdirection[1] = 0.2;
-	lightdirection[2] = -1;
-	VectorNormalizeFast(lightdirection);
-
-	VectorMA(ent->origin, 65536.0f, lightdirection, v2);
-	if (CL_TraceLine(ent->origin, v2, floororigin, surfnormal, false, NULL, SUPERCONTENTS_SOLID) == 1)
-		return;
-
-	R_Mesh_Matrix(&ent->matrix);
-
-	memset(&m, 0, sizeof(m));
-	R_Mesh_State_Texture(&m);
-
-	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	GL_DepthMask(false);
-	GL_DepthTest(true);
-	GL_VertexPointer(varray_vertex3f);
-	GL_Color(0, 0, 0, 0.5);
-
-	// put a light direction in the entity's coordinate space
-	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, projection);
-	VectorNormalizeFast(projection);
-
-	// put the plane's normal in the entity's coordinate space
-	Matrix4x4_Transform3x3(&ent->inversematrix, surfnormal, plane);
-	VectorNormalizeFast(plane);
-
-	// put the plane's distance in the entity's coordinate space
-	VectorSubtract(floororigin, ent->origin, floororigin);
-	plane[3] = DotProduct(floororigin, surfnormal) + 2;
-
-	dist = -1.0f / DotProduct(projection, plane);
-	VectorScale(projection, dist, projection);
-	for (meshnum = 0, mesh = ent->model->alias.aliasdata_meshes;meshnum < ent->model->alias.aliasnum_meshes;meshnum++)
-	{
-		skin = R_FetchAliasSkin(ent, mesh);
-		if (skin->flags & ALIASSKIN_TRANSPARENT)
-			continue;
-		R_Model_Alias_GetMesh_Array3f(ent, mesh, MODELARRAY_VERTEX, varray_vertex3f);
-		for (i = 0, v = varray_vertex3f;i < mesh->num_vertices;i++, v += 3)
-		{
-			dist = DotProduct(v, plane) - plane[3];
-			if (dist > 0)
-				VectorMA(v, dist, projection, v);
-		}
-		c_alias_polys += mesh->num_triangles;
-		R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
-	}
-}
-
 void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
 	int meshnum;
@@ -860,11 +798,6 @@ void R_Model_Zymotic_Draw(entity_render_t *ent)
 		else
 			R_DrawZymoticModelMeshCallback(ent, i);
 	}
-}
-
-void R_Model_Zymotic_DrawFakeShadow(entity_render_t *ent)
-{
-	// FIXME
 }
 
 void R_Model_Zymotic_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor)
