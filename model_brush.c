@@ -1092,12 +1092,12 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 	if (r_miplightmaps.integer)
 	{
 		surf->lightmaptexturestride = (surf->extents[0]>>4)+1;
-		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_PRECACHE, NULL, NULL, 0);
+		surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_MIPMAP | TEXF_PRECACHE);
 	}
 	else
 	{
 		surf->lightmaptexturestride = R_CompatibleFragmentWidth((surf->extents[0]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, 0);
-		surf->lightmaptexture = R_ProceduralTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE, NULL, NULL, 0);
+		surf->lightmaptexture = R_LoadTexture(loadmodel->texturepool, NULL, surf->lightmaptexturestride, (surf->extents[1]>>4)+1, NULL, loadmodel->lightmaprgba ? TEXTYPE_RGBA : TEXTYPE_RGB, TEXF_FRAGMENT | TEXF_PRECACHE);
 	}
 	R_FragmentLocation(surf->lightmaptexture, NULL, NULL, &xbase, &ybase, &xscale, &yscale);
 	xscale = (xscale - xbase) * 16.0 / ((surf->extents[0] & ~15) + 16);
