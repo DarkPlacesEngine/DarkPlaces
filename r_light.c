@@ -194,7 +194,8 @@ void R_DrawCoronas(void)
 				}
 				// make it larger in the distance to keep a consistent size
 				//scale = 0.4f * dist;
-				scale = 128.0f;
+				//scale = 128.0f;
+				scale = rd->cullradius;
 				tvxyz[0][0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
 				tvxyz[0][1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
 				tvxyz[0][2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
