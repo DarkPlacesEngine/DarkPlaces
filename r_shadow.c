@@ -2719,6 +2719,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		origin[0] = origin[1] = origin[2] = 0;
 		originhack[0] = originhack[1] = originhack[2] = 0;
 		angles[0] = angles[1] = angles[2] = 0;
+		color[0] = color[1] = color[2] = 1;
 		light[0] = light[1] = light[2] = 1;light[3] = 300;
 		overridecolor[0] = overridecolor[1] = overridecolor[2] = 1;
 		fadescale = 1;
