@@ -146,25 +146,21 @@ void EntityFrameQuake_ISeeDeadEntities(void)
 		return;
 	lastentity = cl_lastquakeentity;
 	cl_lastquakeentity = 0;
-	for (num = 0;num < lastentity;num++)
+	for (num = 0;num <= lastentity;num++)
 	{
 		if (cl_isquakeentity[num])
 		{
-			cl_isquakeentity[num] = false;
-			if (cl_entities_active[num])
+			if (cl_entities_active[num] && cl_entities[num].state_current.time == cl.mtime[0])
 			{
-				if (cl_entities[num].state_current.time == cl.mtime[0])
-				{
-					cl_isquakeentity[num] = true;
-					cl_lastquakeentity = num;
-				}
-				else
-				{
-					cl_isquakeentity[num] = false;
-					cl_entities_active[num] = false;
-					cl_entities[num].state_current = defaultstate;
-					cl_entities[num].state_current.number = num;
-				}
+				cl_isquakeentity[num] = true;
+				cl_lastquakeentity = num;
+			}
+			else
+			{
+				cl_isquakeentity[num] = false;
+				cl_entities_active[num] = false;
+				cl_entities[num].state_current = defaultstate;
+				cl_entities[num].state_current.number = num;
 			}
 		}
 	}
