@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -18,17 +18,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-// draw.c -- this is the only file outside the refresh that touches the
-// vid buffer
-
 #include "quakedef.h"
 
 //#define GL_COLOR_INDEX8_EXT     0x80E5
 
 cvar_t		scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
-
-byte		*draw_chars;				// 8*8 graphic characters
-qpic_t		*draw_disc;
 
 rtexture_t	*char_texture;
 
@@ -45,45 +39,38 @@ rtexture_t	*conbacktex;
 typedef struct cachepic_s
 {
 	char		name[MAX_QPATH];
+	// FIXME: qpic is evil
 	qpic_t		pic;
 	byte		padding[32];	// for appended glpic
-} cachepic_t;
+}
+cachepic_t;
 
-#define	MAX_CACHED_PICS		128
+#define	MAX_CACHED_PICS		256
 cachepic_t	menu_cachepics[MAX_CACHED_PICS];
 int			menu_numcachepics;
 
 byte		menuplyr_pixels[4096];
 
-int		pic_texels;
-int		pic_count;
+int			pic_texels;
+int			pic_count;
 
-qpic_t *Draw_PicFromWad (char *name)
-{
-	qpic_t	*p;
-	glpic_t	*gl;
-
-	p = W_GetLumpName (name);
-	gl = (glpic_t *)p->data;
-
-	gl->tex = R_LoadTexture (name, p->width, p->height, p->data, TEXF_ALPHA | TEXF_PRECACHE);
-	return p;
-}
-
+rtexturepool_t *drawtexturepool;
 
 /*
 ================
 Draw_CachePic
 ================
 */
+// FIXME: qpic is evil
 qpic_t	*Draw_CachePic (char *path)
 {
 	cachepic_t	*pic;
 	int			i;
 	qpic_t		*dat;
 	glpic_t		*gl;
+	rtexture_t	*tex;
 
-	for (pic=menu_cachepics, i=0 ; i<menu_numcachepics ; pic++, i++)
+	for (pic = menu_cachepics, i = 0;i < menu_numcachepics;pic++, i++)
 		if (!strcmp (path, pic->name))
 			return &pic->pic;
 
@@ -92,31 +79,43 @@ qpic_t	*Draw_CachePic (char *path)
 	menu_numcachepics++;
 	strcpy (pic->name, path);
 
-//
-// load the pic from disk
-//
-	dat = (qpic_t *)COM_LoadMallocFile (path, false);
-	if (!dat)
-		Sys_Error ("Draw_CachePic: failed to load %s", path);
-	SwapPic (dat);
-
+	// FIXME: move this to menu code
 	// HACK HACK HACK --- we need to keep the bytes for
 	// the translatable player picture just for the menu
 	// configuration dialog
 	if (!strcmp (path, "gfx/menuplyr.lmp"))
+	{
+		dat = (qpic_t *)COM_LoadFile (path, false);
+		if (!dat)
+			Sys_Error("unable to load gfx/menuplyr.lmp");
+		SwapPic (dat);
+
 		memcpy (menuplyr_pixels, dat->data, dat->width*dat->height);
+	}
 
-	pic->pic.width = dat->width;
-	pic->pic.height = dat->height;
-
-	gl = (glpic_t *)pic->pic.data;
-	gl->tex = loadtextureimage(path, 0, 0, false, false, true);
-	if (!gl->tex)
-		gl->tex = R_LoadTexture (path, dat->width, dat->height, dat->data, TEXF_ALPHA | TEXF_PRECACHE);
-
-	qfree(dat);
-
-	return &pic->pic;
+	// load the pic from disk
+	if ((tex = loadtextureimage(drawtexturepool, path, 0, 0, false, false, true)))
+	{
+		// load the pic from an image file
+		pic->pic.width = image_width;
+		pic->pic.height = image_height;
+		gl = (glpic_t *)pic->pic.data;
+		gl->tex = tex;
+		return &pic->pic;
+	}
+	else
+	{
+		qpic_t *p;
+		// load the pic from gfx.wad
+		p = W_GetLumpName (path);
+		if (!p)
+			Sys_Error ("Draw_CachePic: failed to load %s", path);
+		pic->pic.width = p->width;
+		pic->pic.height = p->height;
+		gl = (glpic_t *)pic->pic.data;
+		gl->tex = R_LoadTexture (drawtexturepool, path, p->width, p->height, p->data, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+		return &pic->pic;
+	}
 }
 
 /*
@@ -124,51 +123,58 @@ qpic_t	*Draw_CachePic (char *path)
 Draw_Init
 ===============
 */
-void gl_draw_start(void)
+static void gl_draw_start(void)
 {
-	int		i;
+	int i;
+	byte *draw_chars;
 
-	char_texture = loadtextureimage ("conchars", 0, 0, false, false, true);
+	menu_numcachepics = 0;
+
+	drawtexturepool = R_AllocTexturePool();
+	char_texture = loadtextureimage (drawtexturepool, "conchars", 0, 0, false, false, true);
 	if (!char_texture)
 	{
 		draw_chars = W_GetLumpName ("conchars");
-		for (i=0 ; i<128*128 ; i++)
+		// convert font to proper transparent color
+		for (i = 0;i < 128 * 128;i++)
 			if (draw_chars[i] == 0)
-				draw_chars[i] = 255;	// proper transparent color
+				draw_chars[i] = 255;
 
-		// now turn them into textures
-		char_texture = R_LoadTexture ("charset", 128, 128, draw_chars, TEXF_ALPHA | TEXF_PRECACHE);
+		// now turn into texture
+		char_texture = R_LoadTexture (drawtexturepool, "charset", 128, 128, draw_chars, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
 	}
 
-	conbacktex = loadtextureimage("gfx/conback", 0, 0, false, false, true);
-
-	// get the other pics we need
-	draw_disc = Draw_PicFromWad ("disc");
+	conbacktex = loadtextureimage(drawtexturepool, "gfx/conback", 0, 0, false, false, true);
 }
 
-void gl_draw_shutdown(void)
+static void gl_draw_shutdown(void)
 {
+	R_FreeTexturePool(&drawtexturepool);
+
+	menu_numcachepics = 0;
 }
 
-void gl_draw_newmap(void)
+void SHOWLMP_clear(void);
+static void gl_draw_newmap(void)
 {
+	SHOWLMP_clear();
 }
 
 extern char engineversion[40];
 int engineversionx, engineversiony;
 
-extern void R_Textures_Init();
 void GL_Draw_Init (void)
 {
 	int i;
 	Cvar_RegisterVariable (&scr_conalpha);
 
 	for (i = 0;i < 40 && engineversion[i];i++)
-		engineversion[i] += 0x80; // shift to orange
+		engineversion[i] |= 0x80; // shift to orange
 	engineversionx = vid.conwidth - strlen(engineversion) * 8 - 8;
 	engineversiony = vid.conheight - 8;
 
-	R_Textures_Init();
+	menu_numcachepics = 0;
+
 	R_RegisterModule("GL_Draw", gl_draw_start, gl_draw_shutdown, gl_draw_newmap);
 }
 
@@ -201,25 +207,31 @@ void Draw_Character (int x, int y, int num)
 	fcol = col*0.0625;
 	size = 0.0625;
 
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	glBindTexture(GL_TEXTURE_2D, R_GetTexture(char_texture));
+	CHECKGLERROR
 	// LordHavoc: NEAREST mode on text if not scaling up
 	if (vid.realwidth <= (int) vid.conwidth)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		CHECKGLERROR
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		CHECKGLERROR
 	}
 	else
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		CHECKGLERROR
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		CHECKGLERROR
 	}
 
 	if (lighthalf)
 		glColor3f(0.5f,0.5f,0.5f);
 	else
 		glColor3f(1.0f,1.0f,1.0f);
+	CHECKGLERROR
 	glBegin (GL_QUADS);
 	glTexCoord2f (fcol, frow);
 	glVertex2f (x, y);
@@ -230,6 +242,7 @@ void Draw_Character (int x, int y, int num)
 	glTexCoord2f (fcol, frow + size);
 	glVertex2f (x, y+8);
 	glEnd ();
+	CHECKGLERROR
 
 	// LordHavoc: revert to LINEAR mode
 //	if (vid.realwidth <= (int) vid.conwidth)
@@ -249,7 +262,7 @@ void Draw_String (int x, int y, char *str, int maxlen)
 {
 	int num;
 	float frow, fcol;
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	if (y <= -8 || y >= (int) vid.conheight || x >= (int) vid.conwidth || *str == 0) // completely offscreen or no text to print
 		return;
@@ -263,18 +276,23 @@ void Draw_String (int x, int y, char *str, int maxlen)
 	if (vid.realwidth <= (int) vid.conwidth)
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		CHECKGLERROR
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		CHECKGLERROR
 	}
 	else
 	{
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		CHECKGLERROR
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		CHECKGLERROR
 	}
 
 	if (lighthalf)
 		glColor3f(0.5f,0.5f,0.5f);
 	else
 		glColor3f(1.0f,1.0f,1.0f);
+	CHECKGLERROR
 	glBegin (GL_QUADS);
 	while (maxlen-- && x < (int) vid.conwidth) // stop rendering when out of characters or room
 	{
@@ -290,6 +308,7 @@ void Draw_String (int x, int y, char *str, int maxlen)
 		x += 8;
 	}
 	glEnd ();
+	CHECKGLERROR
 
 	// LordHavoc: revert to LINEAR mode
 //	if (vid.realwidth < (int) vid.conwidth)
@@ -301,28 +320,33 @@ void Draw_String (int x, int y, char *str, int maxlen)
 
 void Draw_AdditiveString (int x, int y, char *str, int maxlen)
 {
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	CHECKGLERROR
 	Draw_String(x, y, str, maxlen);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	CHECKGLERROR
 }
 
 void Draw_GenericPic (rtexture_t *tex, float red, float green, float blue, float alpha, int x, int y, int width, int height)
 {
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	if (lighthalf)
 		glColor4f(red * 0.5f, green * 0.5f, blue * 0.5f, alpha);
 	else
 		glColor4f(red, green, blue, alpha);
+	CHECKGLERROR
 	glBindTexture(GL_TEXTURE_2D, R_GetTexture(tex));
+	CHECKGLERROR
 	glBegin (GL_QUADS);
 	glTexCoord2f (0, 0);glVertex2f (x, y);
 	glTexCoord2f (1, 0);glVertex2f (x+width, y);
 	glTexCoord2f (1, 1);glVertex2f (x+width, y+height);
 	glTexCoord2f (0, 1);glVertex2f (x, y+height);
 	glEnd ();
+	CHECKGLERROR
 }
 
 /*
@@ -354,8 +378,10 @@ void Draw_AdditivePic (int x, int y, qpic_t *pic)
 	if (pic)
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		CHECKGLERROR
 		Draw_GenericPic(((glpic_t *)pic->data)->tex, 1,1,1,1, x,y,pic->width, pic->height);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		CHECKGLERROR
 	}
 }
 
@@ -378,14 +404,14 @@ void Draw_PicTranslate (int x, int y, qpic_t *pic, byte *translation)
 
 	c = pic->width * pic->height;
 	src = menuplyr_pixels;
-	dest = trans = qmalloc(c);
+	dest = trans = Mem_Alloc(tempmempool, c);
 	for (i = 0;i < c;i++)
 		*dest++ = translation[*src++];
 
-	rt = R_LoadTexture ("translatedplayerpic", pic->width, pic->height, trans, TEXF_ALPHA | TEXF_PRECACHE);
-	qfree(trans);
+	rt = R_LoadTexture (drawtexturepool, "translatedplayerpic", pic->width, pic->height, trans, TEXTYPE_QPALETTE, TEXF_ALPHA | TEXF_PRECACHE);
+	Mem_Free(trans);
 
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	Draw_GenericPic (rt, 1,1,1,1, x, y, pic->width, pic->height);
 }
@@ -413,9 +439,10 @@ Fills a box of pixels with a single color
 */
 void Draw_Fill (int x, int y, int w, int h, int c)
 {
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	glDisable (GL_TEXTURE_2D);
+	CHECKGLERROR
 	if (lighthalf)
 	{
 		byte *tempcolor = (byte *)&d_8to24table[c];
@@ -423,6 +450,7 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	}
 	else
 		glColor4ubv ((byte *)&d_8to24table[c]);
+	CHECKGLERROR
 
 	glBegin (GL_QUADS);
 
@@ -432,8 +460,11 @@ void Draw_Fill (int x, int y, int w, int h, int c)
 	glVertex2f (x, y+h);
 
 	glEnd ();
+	CHECKGLERROR
 	glColor3f(1,1,1);
+	CHECKGLERROR
 	glEnable (GL_TEXTURE_2D);
+	CHECKGLERROR
 }
 //=============================================================================
 
@@ -448,28 +479,40 @@ Setup as if the screen was 320*200
 */
 void GL_Set2D (void)
 {
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	glViewport (vid.realx, vid.realy, vid.realwidth, vid.realheight);
+	CHECKGLERROR
 
 	glMatrixMode(GL_PROJECTION);
+	CHECKGLERROR
     glLoadIdentity ();
+	CHECKGLERROR
 	glOrtho  (0, vid.conwidth, vid.conheight, 0, -99999, 99999);
+	CHECKGLERROR
 
 	glMatrixMode(GL_MODELVIEW);
+	CHECKGLERROR
     glLoadIdentity ();
+	CHECKGLERROR
 
 	glDisable (GL_DEPTH_TEST);
+	CHECKGLERROR
 	glDisable (GL_CULL_FACE);
+	CHECKGLERROR
 	glEnable (GL_BLEND);
-	glDisable (GL_ALPHA_TEST);
+	CHECKGLERROR
 	glEnable(GL_TEXTURE_2D);
+	CHECKGLERROR
 
 	// LordHavoc: added this
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	CHECKGLERROR
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	CHECKGLERROR
 
 	glColor3f(1,1,1);
+	CHECKGLERROR
 }
 
 // LordHavoc: SHOWLMP stuff

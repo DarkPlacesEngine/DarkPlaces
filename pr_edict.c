@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -32,7 +32,10 @@ float			*pr_globals;			// same as pr_global_struct
 int				pr_edict_size;			// in bytes
 int				pr_edictareasize;		// LordHavoc: in bytes
 
-unsigned short		pr_crc;
+unsigned short	pr_crc;
+
+mempool_t		*progs_mempool;
+mempool_t		*edictstring_mempool;
 
 int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *)/4};
 
@@ -109,7 +112,6 @@ int eval_viewmodelforclient;
 int eval_nodrawtoclient;
 int eval_exteriormodeltoclient;
 int eval_drawonlytoclient;
-int eval_colormod;
 int eval_ping;
 int eval_movement;
 int eval_pmodel;
@@ -158,7 +160,6 @@ void FindEdictFieldOffsets(void)
 	eval_nodrawtoclient = FindFieldOffset("nodrawtoclient");
 	eval_exteriormodeltoclient = FindFieldOffset("exteriormodeltoclient");
 	eval_drawonlytoclient = FindFieldOffset("drawonlytoclient");
-	eval_colormod = FindFieldOffset("colormod");
 	eval_ping = FindFieldOffset("ping");
 	eval_movement = FindFieldOffset("movement");
 	eval_pmodel = FindFieldOffset("pmodel");
@@ -297,7 +298,7 @@ ddef_t *ED_FindField (char *name)
 {
 	ddef_t		*def;
 	int			i;
-	
+
 	for (i=0 ; i<progs->numfielddefs ; i++)
 	{
 		def = &pr_fielddefs[i];
@@ -387,12 +388,14 @@ PR_ValueString
 Returns a string describing *data in a type specific manner
 =============
 */
+int NoCrash_NUM_FOR_EDICT(edict_t *e);
 char *PR_ValueString (etype_t type, eval_t *val)
 {
-	static char	line[1024]; // LordHavoc: enlarged a bit (was 256)
-	ddef_t		*def;
-	dfunction_t	*f;
-	
+	static char line[1024]; // LordHavoc: enlarged a bit (was 256)
+	ddef_t *def;
+	dfunction_t *f;
+	int n;
+
 	type &= ~DEF_SAVEGLOBAL;
 
 	switch (type)
@@ -400,8 +403,12 @@ char *PR_ValueString (etype_t type, eval_t *val)
 	case ev_string:
 		sprintf (line, "%s", pr_strings + val->string);
 		break;
-	case ev_entity:	
-		sprintf (line, "entity %i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)) );
+	case ev_entity:
+		n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
+		if (n < 0 || n >= MAX_EDICTS)
+			sprintf (line, "entity %i (invalid!)", n);
+		else
+			sprintf (line, "entity %i", n);
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
@@ -575,7 +582,7 @@ void ED_Print (edict_t *ed)
 
 	// if the value is still all 0, skip the field
 		type = d->type & ~DEF_SAVEGLOBAL;
-		
+
 		for (j=0 ; j<type_size[type] ; j++)
 			if (v[j])
 				break;
@@ -643,7 +650,7 @@ void ED_Write (QFile *f, edict_t *ed)
 		name = pr_strings + d->s_name;
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
-			
+
 		v = (int *)((char *)&ed->v + d->ofs*4);
 
 	// if the value is still all 0, skip the field
@@ -653,9 +660,9 @@ void ED_Write (QFile *f, edict_t *ed)
 				break;
 		if (j == type_size[type])
 			continue;
-	
+
 		Qprintf (f,"\"%s\" ",name);
-		Qprintf (f,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));		
+		Qprintf (f,"\"%s\"\n", PR_UglyValueString(d->type, (eval_t *)v));
 	}
 
 	Qprintf (f, "}\n");
@@ -799,7 +806,7 @@ void ED_ParseGlobals (char *data)
 
 		strcpy (keyname, com_token);
 
-	// parse value	
+	// parse value
 		data = COM_Parse (data);
 		if (!data)
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
@@ -831,9 +838,9 @@ char *ED_NewString (char *string)
 {
 	char	*new, *new_p;
 	int		i,l;
-	
+
 	l = strlen(string) + 1;
-	new = Hunk_AllocName (l, "edict string");
+	new = Mem_Alloc(edictstring_mempool, l);
 	new_p = new;
 
 	for (i=0 ; i< l ; i++)
@@ -896,7 +903,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
 			w = v = v+1;
 		}
 		break;
-		
+
 	case ev_entity:
 		*(int *)d = EDICT_TO_PROG(EDICT_NUM(atoi (s)));
 		break;
@@ -922,7 +929,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
 		}
 		*(func_t *)d = func - pr_functions;
 		break;
-		
+
 	default:
 		break;
 	}
@@ -954,27 +961,27 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 
 // go through all the dictionary pairs
 	while (1)
-	{	
+	{
 	// parse key
 		data = COM_Parse (data);
 		if (com_token[0] == '}')
 			break;
 		if (!data)
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
-		
-// anglehack is to allow QuakeEd to write single scalar angles
-// and allow them to be turned into vectors. (FIXME...)
-if (!strcmp(com_token, "angle"))
-{
-	strcpy (com_token, "angles");
-	anglehack = true;
-}
-else
-	anglehack = false;
 
-// FIXME: change light to _light to get rid of this hack
-if (!strcmp(com_token, "light"))
-	strcpy (com_token, "light_lev");	// hack for single light def
+		// anglehack is to allow QuakeEd to write single scalar angles
+		// and allow them to be turned into vectors. (FIXME...)
+		if (!strcmp(com_token, "angle"))
+		{
+			strcpy (com_token, "angles");
+			anglehack = true;
+		}
+		else
+			anglehack = false;
+
+		// FIXME: change light to _light to get rid of this hack
+		if (!strcmp(com_token, "light"))
+			strcpy (com_token, "light_lev");	// hack for single light def
 
 		strcpy (keyname, com_token);
 
@@ -994,13 +1001,13 @@ if (!strcmp(com_token, "light"))
 		if (com_token[0] == '}')
 			Host_Error ("ED_ParseEntity: closing brace without data");
 
-		init = true;	
+		init = true;
 
 // keynames with a leading underscore are used for utility comments,
 // and are immediately discarded by quake
 		if (keyname[0] == '_')
 			continue;
-		
+
 		key = ED_FindField (keyname);
 		if (!key)
 		{
@@ -1008,12 +1015,12 @@ if (!strcmp(com_token, "light"))
 			continue;
 		}
 
-if (anglehack)
-{
-char	temp[32];
-strcpy (temp, com_token);
-sprintf (com_token, "0 %s 0", temp);
-}
+		if (anglehack)
+		{
+			char	temp[32];
+			strcpy (temp, com_token);
+			sprintf (com_token, "0 %s 0", temp);
+		}
 
 		if (!ED_ParseEpair ((void *)&ent->v, key, com_token))
 			Host_Error ("ED_ParseEdict: parse error");
@@ -1046,7 +1053,7 @@ void ED_LoadFromFile (char *data)
 	edict_t		*ent;
 	int			inhibit;
 	dfunction_t	*func;
-	
+
 	ent = NULL;
 	inhibit = 0;
 	pr_global_struct->time = sv.time;
@@ -1068,7 +1075,7 @@ void ED_LoadFromFile (char *data)
 		data = ED_ParseEdict (data, ent);
 
 // remove things from different skill levels or deathmatch
-		if (deathmatch.value)
+		if (deathmatch.integer)
 		{
 			if (((int)ent->v.spawnflags & SPAWNFLAG_NOT_DEATHMATCH))
 			{
@@ -1102,7 +1109,7 @@ void ED_LoadFromFile (char *data)
 
 		if (!func)
 		{
-			if (developer.value) // don't confuse non-developers with errors
+			if (developer.integer) // don't confuse non-developers with errors
 			{
 				Con_Printf ("No spawn function for:\n");
 				ED_Print (ent);
@@ -1159,7 +1166,6 @@ dpfield_t dpfields[] =
 	{ev_entity, "nodrawtoclient"},
 	{ev_entity, "exteriormodeltoclient"},
 	{ev_entity, "drawonlytoclient"},
-	{ev_vector, "colormod"},
 	{ev_float, "ping"},
 	{ev_vector, "movement"},
 	{ev_float, "pmodel"},
@@ -1176,14 +1182,24 @@ void PR_LoadProgs (void)
 	int i;
 	dstatement_t *st;
 	ddef_t *infielddefs;
+	void *temp;
 
 // flush the non-C variable lookup cache
 	for (i=0 ; i<GEFV_CACHESIZE ; i++)
 		gefvCache[i].field[0] = 0;
 
-	progs = (dprograms_t *)COM_LoadHunkFile ("progs.dat", false);
-	if (!progs)
+	Mem_EmptyPool(progs_mempool);
+	Mem_EmptyPool(edictstring_mempool);
+
+	temp = COM_LoadFile ("progs.dat", false);
+	if (!temp)
 		Host_Error ("PR_LoadProgs: couldn't load progs.dat");
+
+	progs = (dprograms_t *)Mem_Alloc(progs_mempool, com_filesize);
+
+	memcpy(progs, temp, com_filesize);
+	Mem_Free(temp);
+
 	Con_DPrintf ("Programs occupy %iK.\n", com_filesize/1024);
 
 	pr_crc = CRC_Block((byte *)progs, com_filesize);
@@ -1204,7 +1220,7 @@ void PR_LoadProgs (void)
 	// we need to expand the fielddefs list to include all the engine fields,
 	// so allocate a new place for it
 	infielddefs = (ddef_t *)((byte *)progs + progs->ofs_fielddefs);
-	pr_fielddefs = Hunk_AllocName((progs->numfielddefs + DPFIELDS) * sizeof(ddef_t), "progs fields\n");
+	pr_fielddefs = Mem_Alloc(progs_mempool, (progs->numfielddefs + DPFIELDS) * sizeof(ddef_t));
 
 	pr_statements = (dstatement_t *)((byte *)progs + progs->ofs_statements);
 
@@ -1443,6 +1459,9 @@ void PR_Init (void)
 	Cvar_RegisterVariable (&cutscene); // for Nehahra but useful to other mods as well
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&pr_boundscheck);
+
+	progs_mempool = Mem_AllocPool("progs.dat");
+	edictstring_mempool = Mem_AllocPool("edict strings");
 }
 
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
@@ -1463,11 +1482,20 @@ edict_t *EDICT_NUM(int n)
 int NUM_FOR_EDICT(edict_t *e)
 {
 	int		b;
-	
+
 	b = (byte *)e - (byte *)sv.edicts;
 	b = b / pr_edict_size;
-	
+
 	if (b < 0 || b >= sv.num_edicts)
 		Host_Error ("NUM_FOR_EDICT: bad pointer");
+	return b;
+}
+
+int NoCrash_NUM_FOR_EDICT(edict_t *e)
+{
+	int		b;
+
+	b = (byte *)e - (byte *)sv.edicts;
+	b = b / pr_edict_size;
 	return b;
 }

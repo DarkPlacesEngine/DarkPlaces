@@ -31,22 +31,9 @@ SPRITE MODELS
 // FIXME: shorten these?
 typedef struct mspriteframe_s
 {
-//	int		width;
-//	int		height;
 	float	up, down, left, right;
 	rtexture_t *texture, *fogtexture;
 } mspriteframe_t;
-
-typedef struct
-{
-	int					type;
-//	int					maxwidth;
-//	int					maxheight;
-//	int					numframes;
-//	float				beamlength;		// remove?
-//	void				*cachespot;		// remove?
-	int					ofs_frames;
-} msprite_t;
 
 extern void Mod_LoadSpriteModel (struct model_s *mod, void *buffer);
 extern void Mod_SpriteInit(void);

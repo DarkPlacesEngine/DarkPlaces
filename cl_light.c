@@ -2,24 +2,6 @@
 
 dlight_t cl_dlights[MAX_DLIGHTS];
 
-void cl_light_start(void)
-{
-}
-
-void cl_light_shutdown(void)
-{
-}
-
-void cl_light_newmap(void)
-{
-	memset (cl_dlights, 0, sizeof(cl_dlights));
-}
-
-void CL_Light_Init(void)
-{
-	R_RegisterModule("CL_Light", cl_light_start, cl_light_shutdown, cl_light_newmap);
-}
-
 /*
 ===============
 CL_AllocDlight
@@ -76,7 +58,6 @@ void CL_DecayLights (void)
 
 	time = cl.time - cl.oldtime;
 
-	c_dlights = 0;
 	dl = cl_dlights;
 	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
 	{
@@ -87,8 +68,6 @@ void CL_DecayLights (void)
 			dl->radius = 0;
 			continue;
 		}
-
-		c_dlights++; // count every dlight in use
 
 		dl->radius -= time*dl->decay;
 		if (dl->radius < 0)

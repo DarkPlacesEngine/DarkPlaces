@@ -5,7 +5,6 @@ extern cvar_t vid_contrast;
 
 extern unsigned int d_8to24table[256];
 //extern byte d_15to8table[32768];
-extern byte texgamma[256];
 
 extern qboolean hardwaregammasupported;
 

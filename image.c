@@ -54,20 +54,6 @@ void Image_Copy8bitRGBA(byte *in, byte *out, int pixels, int *pal)
 		iout[0] = pal[in[0]];
 }
 
-void Image_CopyRGBAGamma(byte *in, byte *out, int pixels)
-{
-	while (pixels--)
-	{
-		out[0] = texgamma[in[0]];
-		out[1] = texgamma[in[1]];
-		out[2] = texgamma[in[2]];
-		out[3] =          in[3] ;
-		in += 4;
-		out += 4;
-	}
-}
-
-
 /*
 =================================================================
 
@@ -106,7 +92,6 @@ byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 	if (loadsize < sizeof(pcx) + 768)
 	{
 		Con_Printf ("Bad pcx file\n");
-		qfree(f);
 		return NULL;
 	}
 
@@ -128,18 +113,15 @@ byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 	if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8 || pcx.xmax > 320 || pcx.ymax > 256)
 	{
 		Con_Printf ("Bad pcx file\n");
-		qfree(f);
 		return NULL;
 	}
 
 	if (matchwidth && (pcx.xmax+1) != matchwidth)
 	{
-		qfree(f);
 		return NULL;
 	}
 	if (matchheight && (pcx.ymax+1) != matchheight)
 	{
-		qfree(f);
 		return NULL;
 	}
 
@@ -148,11 +130,10 @@ byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 
 	palette = f + loadsize - 768;
 
-	image_rgba = qmalloc(image_width*image_height*4);
+	image_rgba = Mem_Alloc(tempmempool, image_width*image_height*4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadPCX: not enough memory for %i by %i image\n", image_width, image_height);
-		qfree(f);
 		return NULL;
 	}
 	pbuf = image_rgba + image_width*image_height*3;
@@ -194,7 +175,6 @@ byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 		*a++ = 255;
 	}
 
-	qfree(f);
 	return image_rgba;
 }
 
@@ -230,14 +210,11 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 	byte *pixbuf, *image_rgba, *fin, *enddata;
 
 	if (loadsize < 18+3)
-	{
-		qfree(f);
 		return NULL;
-	}
 	targa_header.id_length = f[0];
 	targa_header.colormap_type = f[1];
 	targa_header.image_type = f[2];
-	
+
 	targa_header.colormap_index = f[3] + f[4] * 256;
 	targa_header.colormap_length = f[5] + f[6] * 256;
 	targa_header.colormap_size = f[7];
@@ -246,29 +223,21 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 	targa_header.width = f[12] + f[13] * 256;
 	targa_header.height = f[14] + f[15] * 256;
 	if (matchwidth && targa_header.width != matchwidth)
-	{
-		qfree(f);
 		return NULL;
-	}
 	if (matchheight && targa_header.height != matchheight)
-	{
-		qfree(f);
 		return NULL;
-	}
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
 
 	if (targa_header.image_type != 2 && targa_header.image_type != 10)
 	{
 		Con_Printf ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
-		qfree(f);
 		return NULL;
 	}
 
 	if (targa_header.colormap_type != 0	|| (targa_header.pixel_size != 32 && targa_header.pixel_size != 24))
 	{
 		Con_Printf ("LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
-		qfree(f);
 		return NULL;
 	}
 
@@ -277,11 +246,10 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 	columns = targa_header.width;
 	rows = targa_header.height;
 
-	image_rgba = qmalloc(columns * rows * 4);
+	image_rgba = Mem_Alloc(tempmempool, columns * rows * 4);
 	if (!image_rgba)
 	{
 		Con_Printf ("LoadTGA: not enough memory for %i by %i image\n", columns, rows);
-		qfree(f);
 		return NULL;
 	}
 
@@ -356,7 +324,7 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 						alphabyte = *fin++;
 						break;
 					}
-	
+
 					for(j = 0;j < packetSize;j++)
 					{
 						*pixbuf++ = red;
@@ -412,7 +380,7 @@ byte* LoadTGA (byte *f, int matchwidth, int matchheight)
 							else
 								goto breakOut;
 							pixbuf = image_rgba + row * columns * 4;
-						}						
+						}
 					}
 				}
 			}
@@ -423,7 +391,6 @@ outofdata:;
 
 	image_width = columns;
 	image_height = rows;
-	qfree(f);
 	return image_rgba;
 }
 
@@ -436,11 +403,10 @@ byte* LoadLMP (byte *f, int matchwidth, int matchheight)
 {
 	byte	*image_rgba;
 	int		width, height;
-		
+
 	if (loadsize < 9)
 	{
 		Con_Printf("LoadLMP: invalid LMP file\n");
-		qfree(f);
 		return NULL;
 	}
 
@@ -450,39 +416,27 @@ byte* LoadLMP (byte *f, int matchwidth, int matchheight)
 	if ((unsigned) width > 4096 || (unsigned) height > 4096)
 	{
 		Con_Printf("LoadLMP: invalid size\n");
-		qfree(f);
 		return NULL;
 	}
-	if (matchwidth && width != matchwidth)
-	{
-		qfree(f);
+	if ((matchwidth && width != matchwidth) || (matchheight && height != matchheight))
 		return NULL;
-	}
-	if (matchheight && height != matchheight)
-	{
-		qfree(f);
-		return NULL;
-	}
 
 	if (loadsize < 8 + width * height)
 	{
 		Con_Printf("LoadLMP: invalid LMP file\n");
-		qfree(f);
 		return NULL;
 	}
 
 	image_width = width;
 	image_height = height;
 
-	image_rgba = qmalloc(image_width * image_height * 4);
+	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
 	{
 		Con_Printf("LoadLMP: not enough memory for %i by %i image\n", image_width, image_height);
-		qfree(f);
 		return NULL;
 	}
 	Image_Copy8bitRGBA(f + 8, image_rgba, image_width * image_height, d_8to24table);
-	qfree(f);
 	return image_rgba;
 }
 
@@ -505,34 +459,53 @@ void Image_StripImageExtension (char *in, char *out)
 
 byte* loadimagepixels (char* filename, qboolean complain, int matchwidth, int matchheight)
 {
-	byte	*f;
-	char	basename[256], name[256];
-	byte	*c;
+	byte	*f, *data;
+	char	basename[256], name[256], *c;
 	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
 		if (*c == '*')
 			*c = '#';
 	sprintf (name, "textures/%s.tga", basename);
-	f = COM_LoadMallocFile(name, true);
+	f = COM_LoadFile(name, true);
 	if (f)
-		return LoadTGA (f, matchwidth, matchheight);
+	{
+		data = LoadTGA (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	sprintf (name, "textures/%s.pcx", basename);
-	f = COM_LoadMallocFile(name, true);
+	f = COM_LoadFile(name, true);
 	if (f)
-		return LoadPCX (f, matchwidth, matchheight);
+	{
+		data = LoadPCX (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	sprintf (name, "%s.tga", basename);
-	f = COM_LoadMallocFile(name, true);
+	f = COM_LoadFile(name, true);
 	if (f)
-		return LoadTGA (f, matchwidth, matchheight);
+	{
+		data = LoadTGA (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	sprintf (name, "%s.pcx", basename);
-	f = COM_LoadMallocFile(name, true);
+	f = COM_LoadFile(name, true);
 	if (f)
-		return LoadPCX (f, matchwidth, matchheight);
+	{
+		data = LoadPCX (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	sprintf (name, "%s.lmp", basename);
-	f = COM_LoadMallocFile(name, true);
+	f = COM_LoadFile(name, true);
 	if (f)
-		return LoadLMP (f, matchwidth, matchheight);
+	{
+		data = LoadLMP (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	if (complain)
 		Con_Printf ("Couldn't load %s.tga, .pcx, .lmp\n", filename);
 	return NULL;
@@ -564,35 +537,35 @@ byte* loadimagepixelsmask (char* filename, qboolean complain, int matchwidth, in
 		return data; // some transparency
 	else
 	{
-		qfree(data);
+		Mem_Free(data);
 		return NULL; // all opaque
 	}
 }
 
-rtexture_t *loadtextureimage (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
+rtexture_t *loadtextureimage (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
 	byte *data;
 	rtexture_t *rt;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
-	rt = R_LoadTexture (filename, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
-	qfree(data);
+	rt = R_LoadTexture (pool, filename, image_width, image_height, data, TEXTYPE_RGBA, TEXF_ALPHA | (mipmap ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0));
+	Mem_Free(data);
 	return rt;
 }
 
-rtexture_t *loadtextureimagemask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
+rtexture_t *loadtextureimagemask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
 	byte *data;
 	rtexture_t *rt;
 	if (!(data = loadimagepixelsmask (filename, complain, matchwidth, matchheight)))
 		return 0;
-	rt = R_LoadTexture (filename, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
-	qfree(data);
+	rt = R_LoadTexture (pool, filename, image_width, image_height, data, TEXTYPE_RGBA, TEXF_ALPHA | (mipmap ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0));
+	Mem_Free(data);
 	return rt;
 }
 
 rtexture_t *image_masktex;
-rtexture_t *loadtextureimagewithmask (char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
+rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache)
 {
 	int count;
 	byte *data;
@@ -601,16 +574,16 @@ rtexture_t *loadtextureimagewithmask (char* filename, int matchwidth, int matchh
 	image_masktex = NULL;
 	if (!(data = loadimagepixels (filename, complain, matchwidth, matchheight)))
 		return 0;
-	rt = R_LoadTexture (filename, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
+	rt = R_LoadTexture (pool, filename, image_width, image_height, data, TEXTYPE_RGBA, TEXF_ALPHA | (mipmap ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0));
 	count = image_makemask(data, data, image_width * image_height);
 	if (count)
 	{
-		filename2 = qmalloc(strlen(filename) + 6);
+		filename2 = Mem_Alloc(tempmempool, strlen(filename) + 6);
 		sprintf(filename2, "%s_mask", filename);
-		image_masktex = R_LoadTexture (filename2, image_width, image_height, data, TEXF_ALPHA | TEXF_RGBA | (mipmap ? TEXF_MIPMAP : 0) | (mipmap ? TEXF_PRECACHE : 0));
-		qfree(filename2);
+		image_masktex = R_LoadTexture (pool, filename2, image_width, image_height, data, TEXTYPE_RGBA, TEXF_ALPHA | (mipmap ? TEXF_MIPMAP : 0) | (precache ? TEXF_PRECACHE : 0));
+		Mem_Free(filename2);
 	}
-	qfree(data);
+	Mem_Free(data);
 	return rt;
 }
 
@@ -618,7 +591,7 @@ void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *
 {
 	byte *buffer, *in, *out, *end;
 
-	buffer = qmalloc(width*height*3 + 18);
+	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -640,7 +613,7 @@ void Image_WriteTGARGB_preflipped (char *filename, int width, int height, byte *
 	}
 	COM_WriteFile (filename, buffer, width*height*3 + 18 );
 
-	qfree(buffer);
+	Mem_Free(buffer);
 }
 
 void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
@@ -648,7 +621,7 @@ void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 	int y;
 	byte *buffer, *in, *out, *end;
 
-	buffer = qmalloc(width*height*3 + 18);
+	buffer = Mem_Alloc(tempmempool, width*height*3 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -673,7 +646,7 @@ void Image_WriteTGARGB (char *filename, int width, int height, byte *data)
 	}
 	COM_WriteFile (filename, buffer, width*height*3 + 18 );
 
-	qfree(buffer);
+	Mem_Free(buffer);
 }
 
 void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
@@ -681,7 +654,7 @@ void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
 	int y;
 	byte *buffer, *in, *out, *end;
 
-	buffer = qmalloc(width*height*4 + 18);
+	buffer = Mem_Alloc(tempmempool, width*height*4 + 18);
 
 	memset (buffer, 0, 18);
 	buffer[2] = 2;		// uncompressed type
@@ -707,7 +680,7 @@ void Image_WriteTGARGBA (char *filename, int width, int height, byte *data)
 	}
 	COM_WriteFile (filename, buffer, width*height*4 + 18 );
 
-	qfree(buffer);
+	Mem_Free(buffer);
 }
 
 qboolean Image_CheckAlpha(byte *data, int size, qboolean rgba)

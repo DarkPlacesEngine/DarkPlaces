@@ -55,7 +55,7 @@ SlowPrint ()
 Screen_Update ();
 Con_Printf ();
 
-net 
+net
 turn off messages option
 
 the refresh is always rendered, unless the console is full screen
@@ -86,12 +86,9 @@ cvar_t	showfps = {CVAR_SAVE, "showfps", "0"};
 cvar_t	r_render = {0, "r_render", "1"};
 cvar_t	r_brightness = {CVAR_SAVE, "r_brightness", "1"}; // LordHavoc: a method of operating system independent color correction
 cvar_t	r_contrast = {CVAR_SAVE, "r_contrast", "1"}; // LordHavoc: a method of operating system independent color correction
+cvar_t	gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
 
 qboolean	scr_initialized;		// ready to draw
-
-qpic_t		*scr_ram;
-qpic_t		*scr_net;
-qpic_t		*scr_turtle;
 
 int			clearconsole;
 int			clearnotify;
@@ -332,9 +329,6 @@ void SCR_SizeDown_f (void)
 
 void gl_screen_start(void)
 {
-	scr_ram = Draw_PicFromWad ("ram");
-	scr_net = Draw_PicFromWad ("net");
-	scr_turtle = Draw_PicFromWad ("turtle");
 }
 
 void gl_screen_shutdown(void)
@@ -350,9 +344,9 @@ void gl_screen_newmap(void)
 SCR_Init
 ==================
 */
+static void R_Envmap_f (void);
 void GL_Screen_Init (void)
 {
-
 	Cvar_RegisterVariable (&scr_fov);
 	Cvar_RegisterVariable (&scr_viewsize);
 	Cvar_RegisterVariable (&scr_conspeed);
@@ -365,14 +359,16 @@ void GL_Screen_Init (void)
 	Cvar_RegisterVariable (&r_render);
 	Cvar_RegisterVariable (&r_brightness);
 	Cvar_RegisterVariable (&r_contrast);
+	Cvar_RegisterVariable (&gl_dither);
 #ifdef NORENDER
-	r_render.value = 0;
+	Cvar_SetValue("r_render", 0);
 #endif
 
 //
 // register our commands
 //
 	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f);
+	Cmd_AddCommand ("envmap", R_Envmap_f);
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
 
@@ -390,9 +386,9 @@ SCR_DrawRam
 */
 void SCR_DrawRam (void)
 {
-//	if (!scr_showram.value)
+//	if (!scr_showram.integer)
 //		return;
-//	Draw_Pic (32, 0, scr_ram);
+//	Draw_Pic (32, 0, Draw_CachePic("ram"));
 }
 
 /*
@@ -403,11 +399,11 @@ SCR_DrawTurtle
 void SCR_DrawTurtle (void)
 {
 	static int	count;
-	
-	if (!scr_showturtle.value)
+
+	if (!scr_showturtle.integer)
 		return;
 
-	if (cl.frametime < 0.1)
+	if (host_frametime < 0.1)
 	{
 		count = 0;
 		return;
@@ -417,7 +413,7 @@ void SCR_DrawTurtle (void)
 	if (count < 3)
 		return;
 
-	Draw_Pic (0, 0, scr_turtle);
+	Draw_Pic (0, 0, Draw_CachePic("turtle"));
 }
 
 /*
@@ -432,7 +428,7 @@ void SCR_DrawNet (void)
 	if (cls.demoplayback)
 		return;
 
-	Draw_Pic (64, 0, scr_net);
+	Draw_Pic (64, 0, Draw_CachePic("net"));
 }
 
 /*
@@ -444,7 +440,7 @@ void SCR_DrawPause (void)
 {
 	qpic_t	*pic;
 
-	if (!scr_showpause.value)		// turn off for screenshots
+	if (!scr_showpause.integer)		// turn off for screenshots
 		return;
 
 	if (!cl.paused)
@@ -543,7 +539,7 @@ void SCR_DrawConsole (void)
 ============================================================================== 
 
 						SCREEN SHOTS 
- 
+
 ============================================================================== 
 */ 
 
@@ -579,8 +575,9 @@ void SCR_ScreenShot_f (void)
 		return;
  	}
 
-	buffer = qmalloc(vid.realwidth*vid.realheight*3);
+	buffer = Mem_Alloc(tempmempool, vid.realwidth*vid.realheight*3);
 	glReadPixels (vid.realx, vid.realy, vid.realwidth, vid.realheight, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+	CHECKGLERROR
 
 	// apply hardware gamma to the image
 	BuildGammaTable8((lighthalf && hardwaregammasupported) ? 2.0f : 1.0f, 1, 1, 0, gamma);
@@ -588,10 +585,105 @@ void SCR_ScreenShot_f (void)
 
 	Image_WriteTGARGB_preflipped(filename, vid.realwidth, vid.realheight, buffer);
 
-	qfree(buffer);
+	Mem_Free(buffer);
 	Con_Printf ("Wrote %s\n", filename);
 }
 
+/*
+===============
+R_Envmap_f
+
+Grab six views for environment mapping tests
+===============
+*/
+float CalcFov (float fov_x, float width, float height);
+struct
+{
+	float angles[3];
+	char *name;
+}
+envmapinfo[6] =
+{
+	{{  0,   0, 0}, "ft"},
+	{{  0,  90, 0}, "rt"},
+	{{  0, 180, 0}, "bk"},
+	{{  0, 270, 0}, "lf"},
+	{{-90,  90, 0}, "up"},
+	{{ 90,  90, 0}, "dn"}
+};
+static void R_Envmap_f (void)
+{
+	int		i, size;
+	char	filename[256];
+	char	basename[256];
+	byte	*buffer, gamma[256];
+
+	if (Cmd_Argc() != 3)
+	{
+		Con_Printf ("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
+		return;
+	}
+
+	if (!r_render.integer)
+		return;
+
+	strcpy(basename, Cmd_Argv(1));
+	size = atoi(Cmd_Argv(2));
+	if (size != 128 && size != 256 && size != 512 && size != 1024)
+	{
+		Con_Printf("envmap: size must be one of 128, 256, 512, or 1024\n");
+		return;
+	}
+	if (size > vid.realwidth || size > vid.realheight)
+	{
+		Con_Printf("envmap: your resolution is not big enough to render that size\n");
+		return;
+	}
+
+	buffer = Mem_Alloc(tempmempool, size*size*3);
+	if (buffer == NULL)
+	{
+		Con_Printf("envmap: unable to allocate memory for image\n");
+		return;
+	}
+
+	BuildGammaTable8((lighthalf && hardwaregammasupported) ? 2.0f : 1.0f, 1, 1, 0, gamma);
+
+//	glDrawBuffer  (GL_FRONT);
+//	glReadBuffer  (GL_FRONT);
+	glDrawBuffer  (GL_BACK);
+	glReadBuffer  (GL_BACK);
+	envmap = true;
+
+	r_refdef.x = 0;
+	r_refdef.y = 0;
+	r_refdef.width = size;
+	r_refdef.height = size;
+
+	r_refdef.fov_x = 90;
+	r_refdef.fov_y = 90;
+
+	for (i = 0;i < 6;i++)
+	{
+		VectorCopy(envmapinfo[i].angles, r_refdef.viewangles);
+		glClearColor(0,0,0,0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+		R_RenderView ();
+		glReadPixels (0, 0, size, size, GL_RGB, GL_UNSIGNED_BYTE, buffer);
+		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[i].name);
+		Image_GammaRemapRGB(buffer, buffer, size * size, gamma, gamma, gamma);
+		Image_WriteTGARGB_preflipped(filename, size, size, buffer);
+	}
+
+	envmap = false;
+	glDrawBuffer  (GL_BACK);
+	glReadBuffer  (GL_BACK);
+
+	Mem_Free(buffer);
+
+	// cause refdef to be fixed
+//	vid.recalc_refdef = 1;
+}
 
 //=============================================================================
 
@@ -699,11 +791,13 @@ void GL_BrightenScreen(void)
 	if (!(lighthalf && !hardwaregammasupported) && r_brightness.value < 1.01f && r_contrast.value > 0.99f)
 		return;
 
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 
 	glDisable(GL_TEXTURE_2D);
+	CHECKGLERROR
 	glEnable(GL_BLEND);
+	CHECKGLERROR
 	f = r_brightness.value;
 	// only apply lighthalf using software color correction if hardware is not available (speed reasons)
 	if (lighthalf && !hardwaregammasupported)
@@ -711,6 +805,7 @@ void GL_BrightenScreen(void)
 	if (f >= 1.01f)
 	{
 		glBlendFunc (GL_DST_COLOR, GL_ONE);
+		CHECKGLERROR
 		glBegin (GL_TRIANGLES);
 		while (f >= 1.01f)
 		{
@@ -724,26 +819,35 @@ void GL_BrightenScreen(void)
 			f *= 0.5;
 		}
 		glEnd ();
+		CHECKGLERROR
 	}
 	if (r_contrast.value <= 0.99f)
 	{
 		glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		CHECKGLERROR
 		if (lighthalf && hardwaregammasupported)
 			glColor4f (0.5, 0.5, 0.5, 1 - r_contrast.value);
 		else
 			glColor4f (1, 1, 1, 1 - r_contrast.value);
+		CHECKGLERROR
 		glBegin (GL_TRIANGLES);
 		glVertex2f (-5000, -5000);
 		glVertex2f (10000, -5000);
 		glVertex2f (-5000, 10000);
 		glEnd ();
+		CHECKGLERROR
 	}
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	CHECKGLERROR
 
 	glEnable (GL_CULL_FACE);
+	CHECKGLERROR
 	glEnable (GL_DEPTH_TEST);
+	CHECKGLERROR
 	glDisable(GL_BLEND);
+	CHECKGLERROR
 	glEnable(GL_TEXTURE_2D);
+	CHECKGLERROR
 }
 
 /*
@@ -762,7 +866,7 @@ void SCR_UpdateScreen (void)
 {
 	double	time1 = 0, time2;
 
-	if (r_speeds.value)
+	if (r_speeds.integer)
 		time1 = Sys_DoubleTime ();
 
 	VID_UpdateGamma(false);
@@ -786,16 +890,16 @@ void SCR_UpdateScreen (void)
 
 	GL_BeginRendering (&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
 
-	if (gl_combine.value && !gl_combine_extension)
-		Cvar_SetValue("gl_combine", false);
+	if (gl_combine.integer && !gl_combine_extension)
+		Cvar_SetValue("gl_combine", 0);
 
-	lighthalf = gl_lightmode.value;
+	lighthalf = gl_lightmode.integer;
 
 	lightscalebit = 0;
 	if (lighthalf)
 		lightscalebit += 1;
 
-	if (gl_combine.value)
+	if (gl_combine.integer && r_multitexture.integer)
 		lightscalebit += 2;
 
 	lightscale = 1.0f / (float) (1 << lightscalebit);
@@ -818,11 +922,19 @@ void SCR_UpdateScreen (void)
 //	if (vid.recalc_refdef)
 		SCR_CalcRefdef();
 
-	if (r_render.value)
+	if (r_render.integer)
 	{
 		glClearColor(0,0,0,0);
+		CHECKGLERROR
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
+		CHECKGLERROR
 	}
+
+	if (gl_dither.integer)
+		glEnable(GL_DITHER);
+	else
+		glDisable(GL_DITHER);
+	CHECKGLERROR
 
 //
 // do 3D refresh drawing, and then update the screen
@@ -843,8 +955,8 @@ void SCR_UpdateScreen (void)
 	Sbar_Draw();
 	SHOWLMP_drawall();
 
-	if (crosshair.value)
-		DrawCrosshair(crosshair.value - 1);
+	if (crosshair.integer)
+		DrawCrosshair(crosshair.integer - 1);
 
 	if (cl.intermission == 1)
 		Sbar_IntermissionOverlay();
@@ -859,20 +971,40 @@ void SCR_UpdateScreen (void)
 //	if (scr_drawloading)
 //		SCR_DrawLoading();
 
-	if (showfps.value)
+	if (showfps.integer)
 	{
-		static double currtime;
-		double newtime;
+		static double currtime, frametimes[32];
+		double newtime, total;
 		char temp[32];
-		int calc;
+		int calc, count, i;
+		static int framecycle = 0;
 		newtime = Sys_DoubleTime();
-		calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
+		frametimes[framecycle] = newtime - currtime;
+		framecycle++;
+		framecycle &= 31;
+		total = 0;
+		count = 0;
+		for (i = 0;i < 32;i++)
+		{
+			if (frametimes[i])
+			{
+				total += frametimes[i];
+				count++;
+				// limit how far back we look
+				if (total >= 0.25)
+					break;
+			}
+		}
+		if (showfps.integer == 1)
+			calc = (int) ((count / total) + 0.5);
+		else // showfps 2, rapid update
+			calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
 		sprintf(temp, "%4i fps", calc);
 		currtime = newtime;
 		Draw_String(vid.conwidth - (8*8), vid.conheight - sb_lines - 8, temp, 9999);
 	}
 
-	if (r_speeds2.value && r_speeds2_string[0])
+	if (r_speeds2.integer && r_speeds2_string[0])
 	{
 		int i, j, lines, y;
 		lines = 1;
@@ -902,10 +1034,10 @@ void SCR_UpdateScreen (void)
 
 	GL_Finish();
 
-	if (r_speeds.value)
+	if (r_speeds.integer)
 	{
 		time2 = Sys_DoubleTime ();
-		Con_Printf ("%3i ms  %4i wpoly %4i epoly %4i transpoly %4i lightpoly %4i BSPnodes %4i BSPleafs %4i BSPfaces %4i models %4i bmodels %4i sprites %4i particles %3i dlights\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, currenttranspoly, c_light_polys, c_nodes, c_leafs, c_faces, c_models, c_bmodels, c_sprites, c_particles, c_dlights);
+		Con_Printf ("%3i ms  %4i wpoly %4i epoly %6i meshtris %4i lightpoly %4i BSPnodes %4i BSPleafs %4i BSPfaces %4i models %4i bmodels %4i sprites %4i particles %3i dlights\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, c_meshtris, c_light_polys, c_nodes, c_leafs, c_faces, c_models, c_bmodels, c_sprites, c_particles, c_dlights);
 	}
 	GL_EndRendering ();
 }
@@ -913,8 +1045,9 @@ void SCR_UpdateScreen (void)
 // for profiling, this is separated
 void GL_Finish(void)
 {
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	glFinish ();
+	CHECKGLERROR
 }
 

@@ -471,7 +471,7 @@ void SV_ReadClientMove (usercmd_t *move)
 		total += host_client->ping_times[i];
 	host_client->ping = total / NUM_PING_TIMES; // can be used for prediction
 	host_client->latency = 0;
-	if (sv_predict.value && (svs.maxclients > 1) && (!sv.paused)) // if paused or a local game, don't predict
+	if (sv_predict.integer && (svs.maxclients > 1) && (!sv.paused)) // if paused or a local game, don't predict
 		host_client->latency = host_client->ping;
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
 		val->_float = host_client->ping * 1000.0;

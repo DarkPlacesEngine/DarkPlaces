@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19,6 +19,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // mathlib.h
 
+#ifndef M_PI
+#define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
+#endif
+
 typedef float vec_t;
 typedef vec_t vec2_t[2];
 typedef vec_t vec3_t[3];
@@ -27,27 +31,24 @@ typedef vec_t vec5_t[5];
 typedef vec_t vec6_t[6];
 typedef vec_t vec7_t[7];
 typedef vec_t vec8_t[8];
+struct mplane_s;
+extern vec3_t vec3_origin;
 
-typedef	int	fixed4_t;
-typedef	int	fixed8_t;
-typedef	int	fixed16_t;
+extern int nanmask;
+#define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
 
-#ifndef M_PI
-#define M_PI		3.14159265358979323846	// matches value in gcc v2 math.h
+#define bound(min,num,max) (num >= min ? (num < max ? num : max) : min)
+
+#ifndef min
+#define min(A,B) (A < B ? A : B)
+#define max(A,B) (A > B ? A : B)
 #endif
+
+#define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
 
 #define DEG2RAD(a) ((a) * ((float) M_PI / 180.0f))
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
 #define ANGLEMOD(a) (((int) ((a) * (65536.0f / 360.0f)) & 65535) * (360.0f / 65536.0f))
-
-struct mplane_s;
-
-extern vec3_t vec3_origin;
-extern	int nanmask;
-
-#define	IS_NAN(x) (((*(int *)&x)&nanmask)==nanmask)
-
-#define bound(min,num,max) (num >= min ? (num < max ? num : max) : min)
 
 #define VectorNegate(a,b) {b[0] = -(a[0]);b[1] = -(a[1]);b[2] = -(a[2]);}
 #define VectorSet(a,b,c,d) {d[0]=(a);d[1]=(b);d[2]=(c);}
@@ -59,6 +60,7 @@ extern	int nanmask;
 #define CrossProduct(v1,v2,cross) {cross[0] = v1[1]*v2[2] - v1[2]*v2[1];cross[1] = v1[2]*v2[0] - v1[0]*v2[2];cross[2] = v1[0]*v2[1] - v1[1]*v2[0];}
 #define VectorNormalize(v) {float ilength = 1.0f / (float) sqrt(DotProduct(v,v));v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
 #define VectorNormalize2(v,dest) {float ilength = 1.0f / (float) sqrt(DotProduct(v,v));dest[0] = v[0] * ilength;dest[1] = v[1] * ilength;dest[2] = v[2] * ilength;}
+#define VectorNormalizeDouble(v) {double ilength = 1.0 / (float) sqrt(DotProduct(v,v));v[0] *= ilength;v[1] *= ilength;v[2] *= ilength;}
 #define VectorDistance2(a, b) ((a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1]) + (a[2] - b[2]) * (a[2] - b[2]))
 #define VectorDistance(a, b) (sqrt(VectorDistance2(a,b)))
 #define VectorLength(a) sqrt(DotProduct(a, a))
@@ -77,6 +79,30 @@ extern	int nanmask;
 }
 #define VectorRandom(v) {do{(v)[0] = lhrandom(-1, 1);(v)[1] = lhrandom(-1, 1);(v)[2] = lhrandom(-1, 1);}while(DotProduct(v, v) > 1);}
 
+// LordHavoc: quaternion math, untested, don't know if these are correct,
+// need to add conversion to/from matrices
+
+// returns length of quaternion
+#define qlen(a) ((float) sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]+a[3]*a[3]))
+// returns squared length of quaternion
+#define qlen2(a) (a[0]*a[0]+a[1]*a[1]+a[2]*a[2]+a[3]*a[3])
+// makes a quaternion from x, y, z, and a rotation angle
+#define QuatMake(x,y,z,r,c) {if (r2 == 0) {(c)[0]=(float) ((x)*sin(r2));c[1]=(float) ((y)*sin(r2));c[2]=((float) (z)*sin(r2));c[3]=(float) 1;} else {float r2 = (r) * 0.5 * (M_PI / 180);(c)[0]=(float) ((x)*sin(r2));c[1]=(float) ((y)*sin(r2));c[2]=((float) (z)*sin(r2));c[3]=(float) (cos(r2));}}
+// makes a quaternion from a vector and a rotation angle
+#define QuatFromVec(a,r,c) QuatMake((a)[0],(a)[1],(a)[2],(r))
+// copies a quaternion
+#define QuatCopy(a,c) {c[0]=a[0];c[1]=a[1];c[2]=a[2];c[3]=a[3];}
+#define QuatSubtract(a,b,c) {c[0]=a[0]-b[0];c[1]=a[1]-b[1];c[2]=a[2]-b[2];c[3]=a[3]-b[3];}
+#define QuatAdd(a,b,c) {c[0]=a[0]+b[0];c[1]=a[1]+b[1];c[2]=a[2]+b[2];c[3]=a[3]+b[3];}
+#define QuatScale(a,b,c) {c[0]=a[0]*b;c[1]=a[1]*b;c[2]=a[2]*b;c[3]=a[3]*b;}
+// FIXME: this is wrong, do some more research on quaternions
+//#define QuatMultiply(a,b,c) {c[0]=a[0]*b[0];c[1]=a[1]*b[1];c[2]=a[2]*b[2];c[3]=a[3]*b[3];}
+// FIXME: this is wrong, do some more research on quaternions
+//#define QuatMultiplyAdd(a,b,d,c) {c[0]=a[0]*b[0]+d[0];c[1]=a[1]*b[1]+d[1];c[2]=a[2]*b[2]+d[2];c[3]=a[3]*b[3]+d[3];}
+#define qdist(a,b) ((float) sqrt((b[0]-a[0])*(b[0]-a[0])+(b[1]-a[1])*(b[1]-a[1])+(b[2]-a[2])*(b[2]-a[2])+(b[3]-a[3])*(b[3]-a[3])))
+#define qdist2(a,b) ((b[0]-a[0])*(b[0]-a[0])+(b[1]-a[1])*(b[1]-a[1])+(b[2]-a[2])*(b[2]-a[2])+(b[3]-a[3])*(b[3]-a[3]))
+
+#define VectorCopy4(a,b) {b[0]=a[0];b[1]=a[1];b[2]=a[2];b[3]=a[3];}
 
 void VectorMASlow (vec3_t veca, float scale, vec3_t vecb, vec3_t vecc);
 
@@ -109,9 +135,14 @@ void FloorDivMod (double numer, double denom, int *quotient, int *rem);
 int GreatestCommonDivisor (int i1, int i2);
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up);
+// LordHavoc: proper matrix version of AngleVectors
+void AngleVectorsFLU (vec3_t angles, vec3_t forward, vec3_t left, vec3_t up);
+// LordHavoc: builds a [3][4] matrix
+void AngleMatrix (vec3_t angles, vec3_t translate, vec_t matrix[][4]);
 
 // LordHavoc: like AngleVectors, but taking a forward vector instead of angles, useful!
 void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
+void VectorVectorsDouble(const double *forward, double *right, double *up);
 
 void PlaneClassify(struct mplane_s *p);
 
@@ -136,22 +167,17 @@ void PlaneClassify(struct mplane_s *p);
 //#define PlaneDist(point,plane)  (DotProduct((point), (plane)->normal))
 //#define PlaneDiff(point,plane) (DotProduct((point), (plane)->normal) - (plane)->dist)
 
-#define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
-
-#ifndef min
-#define min(A,B) (A < B ? A : B)
-#define max(A,B) (A > B ? A : B)
-#endif
-
 // LordHavoc: minimal plane structure
 typedef struct
 {
-	float	normal[3], dist;
-} tinyplane_t;
+	float normal[3], dist;
+}
+tinyplane_t;
 
 typedef struct
 {
-	double	normal[3], dist;
-} tinydoubleplane_t;
+	double normal[3], dist;
+}
+tinydoubleplane_t;
 
-void RotatePointAroundVector( vec3_t dst, const vec3_t dir, const vec3_t point, float degrees );
+void RotatePointAroundVector(vec3_t dst, const vec3_t dir, const vec3_t point, float degrees);

@@ -1006,7 +1006,7 @@ void SV_WalkMove (edict_t *ent)
 	if (ent->v.movetype != MOVETYPE_WALK)
 		return;		// gibbed by a trigger
 	
-	if (sv_nostep.value)
+	if (sv_nostep.integer)
 		return;
 	
 	if ( (int)sv_player->v.flags & FL_WATERJUMP )

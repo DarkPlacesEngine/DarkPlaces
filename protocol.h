@@ -77,6 +77,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define U_EFFECTS2		(1<<19) // 1 byte, this is .effects & 0xFF00 (second byte)
 #define U_GLOWSIZE		(1<<20) // 1 byte, encoding is float/8.0, signed (negative is darklight), not sent if 0
 #define U_GLOWCOLOR		(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
+// LordHavoc: colormod feature has been removed, because no one used it
 #define U_COLORMOD		(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
 #define U_EXTEND2		(1<<23) // another byte to follow
 // LordHavoc: second extend byte
@@ -270,11 +271,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_VIEWMODEL 4
 #define RENDER_EXTERIORMODEL 8
 
-// LordHavoc: made this more compact, and added some more fields
 typedef struct
 {
-	double	time; // time this state was updated
-	unsigned short active;
+	double	time; // time this state was built
+	unsigned short active; // true if a valid state
 	unsigned short modelindex;
 	unsigned short frame;
 	unsigned short effects;
@@ -286,8 +286,8 @@ typedef struct
 	byte	scale;
 	byte	glowsize;
 	byte	glowcolor;
-	byte	colormod;
 	byte	flags;
-} entity_state_t;
+}
+entity_state_t;
 
 void ClearStateToDefault(entity_state_t *s);

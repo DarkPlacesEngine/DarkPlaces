@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -63,9 +63,11 @@ extern	char	key_lines[32][MAXCMDLINE];
 extern	int		edit_line;
 extern	int		key_linepos;
 extern	int		key_insert;
-		
+
 
 qboolean	con_initialized;
+
+mempool_t	*console_mempool;
 
 int		con_notifylines;		// scan lines to clear for notify lines
 
@@ -230,10 +232,11 @@ void Con_Init (void)
 			sprintf (temp, "%s%s", com_gamedir, t2);
 			unlink (temp);
 		}
-		logfile.value = 1;
+		logfile.integer = 1;
 	}
 
-	con_text = Hunk_AllocName (CON_TEXTSIZE, "context");
+	console_mempool = Mem_AllocPool("console");
+	con_text = Mem_Alloc(console_mempool, CON_TEXTSIZE);
 	memset (con_text, ' ', CON_TEXTSIZE);
 	con_linewidth = -1;
 	Con_CheckResize ();
@@ -439,7 +442,7 @@ void Con_DPrintf (char *fmt, ...)
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
 		
-	if (!developer.value)
+	if (!developer.integer)
 		return;			// don't confuse non-developers with techie stuff...
 
 	va_start (argptr,fmt);
@@ -798,6 +801,6 @@ Con_CompleteCommandLine (void)
 	}
 	for (i = 0; i < 3; i++)
 		if (list[i])
-			qfree (list[i]);
+			Mem_Free(list[i]);
 }
 

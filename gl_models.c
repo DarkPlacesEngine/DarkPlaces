@@ -1,7 +1,7 @@
 
 #include "quakedef.h"
 
-cvar_t gl_transform = {0, "gl_transform", "1"};
+//cvar_t gl_transform = {0, "gl_transform", "1"};
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
 typedef struct
@@ -12,17 +12,19 @@ typedef struct
 // LordHavoc: vertex array
 float *aliasvert;
 float *aliasvertnorm;
-byte *aliasvertcolor;
-byte *aliasvertcolor2;
+float *aliasvertcolor;
+float *aliasvertcolor2;
 zymbonematrix *zymbonepose;
 int *aliasvertusage;
+
+rmeshinfo_t aliasmeshinfo;
 
 rtexture_t *chrometexture;
 
 int arraylocked = false;
 void GL_LockArray(int first, int count)
 {
-	if (gl_supportslockarrays && gl_lockarrays.value)
+	if (gl_supportslockarrays && gl_lockarrays.integer)
 	{
 		qglLockArraysEXT(first, count);
 		arraylocked = true;
@@ -38,6 +40,7 @@ void GL_UnlockArray(void)
 	}
 }
 
+/*
 void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
 {
     glTranslatef (origin[0], origin[1], origin[2]);
@@ -51,6 +54,9 @@ void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
 	if (angles[2])
 	    glRotatef (angles[2],  1, 0, 0);
 }
+*/
+
+rtexturepool_t *chrometexturepool;
 
 // currently unused reflection effect texture
 void makechrometexture(void)
@@ -68,29 +74,29 @@ void makechrometexture(void)
 		data[i][3] = 255;
 	}
 
-	chrometexture = R_LoadTexture ("chrometexture", 64, 64, &data[0][0], TEXF_MIPMAP | TEXF_RGBA | TEXF_PRECACHE);
+	chrometexture = R_LoadTexture (chrometexturepool, "chrometexture", 64, 64, &data[0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE);
 }
+
+mempool_t *gl_models_mempool;
 
 void gl_models_start(void)
 {
 	// allocate vertex processing arrays
-	aliasvert = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
-	aliasvertnorm = qmalloc(sizeof(float[MD2MAX_VERTS][3]));
-	aliasvertcolor = qmalloc(sizeof(byte[MD2MAX_VERTS][4]));
-	aliasvertcolor2 = qmalloc(sizeof(byte[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
-	zymbonepose = qmalloc(sizeof(zymbonematrix[256]));
-	aliasvertusage = qmalloc(sizeof(int[MD2MAX_VERTS]));
+	gl_models_mempool = Mem_AllocPool("GL_Models");
+	aliasvert = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][3]));
+	aliasvertnorm = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][3]));
+	aliasvertcolor = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4]));
+	aliasvertcolor2 = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
+	zymbonepose = Mem_Alloc(gl_models_mempool, sizeof(zymbonematrix[256]));
+	aliasvertusage = Mem_Alloc(gl_models_mempool, sizeof(int[MD2MAX_VERTS]));
+	chrometexturepool = R_AllocTexturePool();
 	makechrometexture();
 }
 
 void gl_models_shutdown(void)
 {
-	qfree(aliasvert);
-	qfree(aliasvertnorm);
-	qfree(aliasvertcolor);
-	qfree(aliasvertcolor2);
-	qfree(zymbonepose);
-	qfree(aliasvertusage);
+	R_FreeTexturePool(&chrometexturepool);
+	Mem_FreePool(&gl_models_mempool);
 }
 
 void gl_models_newmap(void)
@@ -99,7 +105,7 @@ void gl_models_newmap(void)
 
 void GL_Models_Init(void)
 {
-	Cvar_RegisterVariable(&gl_transform);
+//	Cvar_RegisterVariable(&gl_transform);
 	Cvar_RegisterVariable(&gl_lockarrays);
 
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
@@ -107,34 +113,27 @@ void GL_Models_Init(void)
 
 void R_AliasTransformVerts(int vertcount)
 {
-	int i;
-	vec3_t point, matrix_x, matrix_y, matrix_z;
+	vec3_t point;
 	float *av, *avn;
 	av = aliasvert;
 	avn = aliasvertnorm;
-	matrix_x[0] = softwaretransform_x[0] * softwaretransform_scale;
-	matrix_x[1] = softwaretransform_y[0] * softwaretransform_scale;
-	matrix_x[2] = softwaretransform_z[0] * softwaretransform_scale;
-	matrix_y[0] = softwaretransform_x[1] * softwaretransform_scale;
-	matrix_y[1] = softwaretransform_y[1] * softwaretransform_scale;
-	matrix_y[2] = softwaretransform_z[1] * softwaretransform_scale;
-	matrix_z[0] = softwaretransform_x[2] * softwaretransform_scale;
-	matrix_z[1] = softwaretransform_y[2] * softwaretransform_scale;
-	matrix_z[2] = softwaretransform_z[2] * softwaretransform_scale;
-	for (i = 0;i < vertcount;i++)
+	while (vertcount >= 4)
 	{
-		// rotate, scale, and translate the vertex locations
-		VectorCopy(av, point);
-		av[0] = DotProduct(point, matrix_x) + softwaretransform_offset[0];
-		av[1] = DotProduct(point, matrix_y) + softwaretransform_offset[1];
-		av[2] = DotProduct(point, matrix_z) + softwaretransform_offset[2];
-		// rotate the normals
-		VectorCopy(avn, point);
-		avn[0] = point[0] * softwaretransform_x[0] + point[1] * softwaretransform_y[0] + point[2] * softwaretransform_z[0];
-		avn[1] = point[0] * softwaretransform_x[1] + point[1] * softwaretransform_y[1] + point[2] * softwaretransform_z[1];
-		avn[2] = point[0] * softwaretransform_x[2] + point[1] * softwaretransform_y[2] + point[2] * softwaretransform_z[2];
-		av += 3;
-		avn += 3;
+		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
+		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
+		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
+		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
+		vertcount -= 4;
+	}
+	while(vertcount > 0)
+	{
+		VectorCopy(av, point);softwaretransform(point, av);av += 3;
+		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
+		vertcount--;
 	}
 }
 
@@ -266,246 +265,221 @@ void R_AliasLerpVerts(int vertcount,
 	}
 }
 
-void GL_DrawModelMesh(rtexture_t *skin, byte *colors, maliashdr_t *m)
+void GL_DrawModelMesh(rtexture_t *skin, float *colors, float cred, float cgreen, float cblue)
 {
-	if (!r_render.value)
-		return;
-	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skin));
-	if (!colors)
+	aliasmeshinfo.tex[0] = R_GetTexture(skin);
+	aliasmeshinfo.color = colors;
+	if (colors == NULL)
 	{
-		if (lighthalf)
-			glColor3f(0.5f, 0.5f, 0.5f);
-		else
-			glColor3f(1.0f, 1.0f, 1.0f);
-	}
-	if (colors)
-	{
-		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(byte[4]), colors);
-		glEnableClientState(GL_COLOR_ARRAY);
+		aliasmeshinfo.cr = cred;
+		aliasmeshinfo.cg = cgreen;
+		aliasmeshinfo.cb = cblue;
+		aliasmeshinfo.ca = currentrenderentity->alpha;
 	}
 
-	glDrawElements(GL_TRIANGLES, m->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) m + m->tridata));
+	R_Mesh_Draw(&aliasmeshinfo);
 
-	if (colors)
-		glDisableClientState(GL_COLOR_ARRAY);
 	// leave it in a state for additional passes
-	glDepthMask(0);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive
+	aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+	aliasmeshinfo.blendfunc2 = GL_ONE;
 }
 
-void R_TintModel(byte *in, byte *out, int verts, byte *color)
+void R_TintModel(float *in, float *out, int verts, float r, float g, float b)
 {
 	int i;
-	byte r = color[0];
-	byte g = color[1];
-	byte b = color[2];
 	for (i = 0;i < verts;i++)
 	{
-		out[0] = (byte) ((in[0] * r) >> 8);
-		out[1] = (byte) ((in[1] * g) >> 8);
-		out[2] = (byte) ((in[2] * b) >> 8);
-		out[3] =          in[3];
+		out[0] = in[0] * r;
+		out[1] = in[1] * g;
+		out[2] = in[2] * b;
+		out[3] = in[3];
 		in += 4;
 		out += 4;
 	}
 }
 
-/*
-=================
-R_DrawAliasFrame
-
-=================
-*/
-void R_DrawAliasFrame (void)
+void R_SetupMDLMD2Frames(skinframe_t **skinframe)
 {
-	maliashdr_t *m = Mod_Extradata(currentrenderentity->model);
-//	int *skinanimrange = (int *) (currentrenderentity->model->skinanimrange + (int) modelheader) + skin * 2;
-//	int *skinanim = (int *) (currentrenderentity->model->skinanim + (int) modelheader);
-	int *skinanimrange = currentrenderentity->model->skinanimrange;
-	int skin;
-	rtexture_t **skinanim = currentrenderentity->model->skinanim;
-	rtexture_t **skinset;
+	md2frame_t *frame1, *frame2, *frame3, *frame4;
+	trivertx_t *frame1verts, *frame2verts, *frame3verts, *frame4verts;
+	model_t *model;
+	model = currentrenderentity->model;
 
-	skinanimrange += currentrenderentity->skinnum * 2;
-	skin = skinanimrange[0];
-	if (skinanimrange[1] > 1) // animated
-		skin += (int) (cl.time * 10) % skinanimrange[1];
-	skinset = skinanim + skin * 5;
+	if (model->skinscenes[currentrenderentity->skinnum].framecount > 1)
+		*skinframe = &model->skinframes[model->skinscenes[currentrenderentity->skinnum].firstframe + (int) (cl.time * 10) % model->skinscenes[currentrenderentity->skinnum].framecount];
+	else
+		*skinframe = &model->skinframes[model->skinscenes[currentrenderentity->skinnum].firstframe];
 
-	if (gl_transform.value)
-	{
-		if (r_render.value)
-		{
-			glPushMatrix();
-			GL_SetupModelTransform(currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
-		}
-	}
-	// always needed, for model lighting
 	softwaretransformforentity(currentrenderentity);
 
-	R_AliasLerpVerts(m->numverts,
-		currentrenderentity->frameblend[0].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[0].frame * m->numverts, m->scale, m->scale_origin,
-		currentrenderentity->frameblend[1].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[1].frame * m->numverts, m->scale, m->scale_origin,
-		currentrenderentity->frameblend[2].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[2].frame * m->numverts, m->scale, m->scale_origin,
-		currentrenderentity->frameblend[3].lerp, ((trivertx_t *)((int) m + m->posedata)) + currentrenderentity->frameblend[3].frame * m->numverts, m->scale, m->scale_origin);
+	frame1 = &model->mdlmd2data_frames[currentrenderentity->frameblend[0].frame];
+	frame2 = &model->mdlmd2data_frames[currentrenderentity->frameblend[1].frame];
+	frame3 = &model->mdlmd2data_frames[currentrenderentity->frameblend[2].frame];
+	frame4 = &model->mdlmd2data_frames[currentrenderentity->frameblend[3].frame];
+	frame1verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[0].frame * model->numverts];
+	frame2verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[1].frame * model->numverts];
+	frame3verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[2].frame * model->numverts];
+	frame4verts = &model->mdlmd2data_pose[currentrenderentity->frameblend[3].frame * model->numverts];
+	/*
+	if (currentrenderentity->frameblend[0].lerp)
+		Con_Printf("frame1: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame1->name, frame1->scale[0], frame1->scale[1], frame1->scale[2], frame1->translate[0], frame1->translate[1], frame1->translate[2]);
+	if (currentrenderentity->frameblend[1].lerp)
+		Con_Printf("frame2: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame2->name, frame2->scale[0], frame2->scale[1], frame2->scale[2], frame2->translate[0], frame2->translate[1], frame2->translate[2]);
+	if (currentrenderentity->frameblend[2].lerp)
+		Con_Printf("frame3: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame3->name, frame3->scale[0], frame3->scale[1], frame3->scale[2], frame3->translate[0], frame3->translate[1], frame3->translate[2]);
+	if (currentrenderentity->frameblend[3].lerp)
+		Con_Printf("frame4: %i/%i %s scale %f %f %f translate %f %f %f\n", currentrenderentity->frameblend[0].frame, model->numframes, frame4->name, frame4->scale[0], frame4->scale[1], frame4->scale[2], frame4->translate[0], frame4->translate[1], frame4->translate[2]);
+	*/
+	R_AliasLerpVerts(model->numverts,
+		currentrenderentity->frameblend[0].lerp, frame1verts, frame1->scale, frame1->translate,
+		currentrenderentity->frameblend[1].lerp, frame2verts, frame2->scale, frame2->translate,
+		currentrenderentity->frameblend[2].lerp, frame3verts, frame3->scale, frame3->translate,
+		currentrenderentity->frameblend[3].lerp, frame4verts, frame4->scale, frame4->translate);
+	R_AliasTransformVerts(model->numverts);
 
-	if (!gl_transform.value)
-		R_AliasTransformVerts(m->numverts);
+	R_LightModel(model->numverts);
+}
 
-	// prep the vertex array as early as possible
-	if (r_render.value)
+void R_DrawQ1AliasModel (void)
+{
+	float fog;
+	vec3_t diff;
+	model_t *model;
+	skinframe_t *skinframe;
+
+	model = currentrenderentity->model;
+
+	R_SetupMDLMD2Frames(&skinframe);
+
+	memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
+
+	aliasmeshinfo.vertex = aliasvert;
+	aliasmeshinfo.vertexstep = sizeof(float[3]);
+	aliasmeshinfo.numverts = model->numverts;
+	aliasmeshinfo.numtriangles = model->numtris;
+	aliasmeshinfo.index = model->mdldata_indices;
+	aliasmeshinfo.colorstep = sizeof(float[4]);
+	aliasmeshinfo.texcoords[0] = model->mdldata_texcoords;
+	aliasmeshinfo.texcoordstep[0] = sizeof(float[2]);
+
+	fog = 0;
+	if (fogenabled)
 	{
-		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (void *)((int) m->texdata + (int) m));
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		GL_LockArray(0, m->numverts);
+		VectorSubtract(currentrenderentity->origin, r_origin, diff);
+		fog = exp(fogdensity/DotProduct(diff,diff));
+		if (fog > 1)
+			fog = 1;
+		if (fog < 0.01f)
+			fog = 0;
+		// fog method: darken, additive fog
+		// 1. render model as normal, scaled by inverse of fog alpha (darkens it)
+		// 2. render fog as additive
 	}
 
-	R_LightModel(m->numverts);
-
-	if (!r_render.value)
-		return;
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-//	glShadeModel(GL_SMOOTH);
 	if (currentrenderentity->effects & EF_ADDITIVE)
 	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
-		glEnable(GL_BLEND);
-		glDepthMask(0);
+		aliasmeshinfo.transparent = true;
+		aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+		aliasmeshinfo.blendfunc2 = GL_ONE;
 	}
-	else if (currentrenderentity->alpha != 1.0 || (currentrenderentity->model->flags2 & MODF_TRANSPARENT))
+	else if (currentrenderentity->alpha != 1.0 || skinframe->fog != NULL)
 	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_BLEND);
-		glDepthMask(0);
+		aliasmeshinfo.transparent = true;
+		aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+		aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	}
 	else
 	{
-		glDisable(GL_BLEND);
-		glDepthMask(1);
+		aliasmeshinfo.transparent = false;
+		aliasmeshinfo.blendfunc1 = GL_ONE;
+		aliasmeshinfo.blendfunc2 = GL_ZERO;
 	}
 
-	if (skinset[0] || skinset[1] || skinset[2] || skinset[3] || skinset[4])
+	// darken source
+	if (fog)
+		R_TintModel(aliasvertcolor, aliasvertcolor, model->numverts, 1 - fog, 1 - fog, 1 - fog);
+
+	if (skinframe->base || skinframe->pants || skinframe->shirt || skinframe->glow || skinframe->merged)
 	{
-		if (currentrenderentity->colormap >= 0 && (skinset[0] || skinset[1] || skinset[2]))
+		if (currentrenderentity->colormap >= 0 && (skinframe->base || skinframe->pants || skinframe->shirt))
 		{
 			int c;
-			if (skinset[0])
-				GL_DrawModelMesh(skinset[0], aliasvertcolor, m);
-			if (skinset[1])
+			byte *color;
+			if (skinframe->base)
+				GL_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
+			if (skinframe->pants)
 			{
 				c = (currentrenderentity->colormap & 0xF) << 4;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-				R_TintModel(aliasvertcolor, aliasvertcolor2, m->numverts, (byte *) (&d_8to24table[c]));
-				GL_DrawModelMesh(skinset[1], aliasvertcolor2, m);
+				color = (byte *) (&d_8to24table[c]);
+				if (c >= 224) // fullbright ranges
+					GL_DrawModelMesh(skinframe->pants, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
+				else
+				{
+					R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
+					GL_DrawModelMesh(skinframe->pants, aliasvertcolor2, 0, 0, 0);
+				}
 			}
-			if (skinset[2])
+			if (skinframe->shirt)
 			{
 				c = currentrenderentity->colormap & 0xF0      ;c += (c >= 128 && c < 224) ? 4 : 12; // 128-224 are backwards ranges
-				R_TintModel(aliasvertcolor, aliasvertcolor2, m->numverts, (byte *) (&d_8to24table[c]));
-				GL_DrawModelMesh(skinset[2], aliasvertcolor2, m);
+				color = (byte *) (&d_8to24table[c]);
+				if (c >= 224) // fullbright ranges
+					GL_DrawModelMesh(skinframe->shirt, NULL, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
+				else
+				{
+					R_TintModel(aliasvertcolor, aliasvertcolor2, model->numverts, color[0] * (1.0f / 255.0f), color[1] * (1.0f / 255.0f), color[2] * (1.0f / 255.0f));
+					GL_DrawModelMesh(skinframe->shirt, aliasvertcolor2, 0, 0, 0);
+				}
 			}
 		}
 		else
 		{
-			if (skinset[4])
-				GL_DrawModelMesh(skinset[4], aliasvertcolor, m);
+			if (skinframe->merged)
+				GL_DrawModelMesh(skinframe->merged, aliasvertcolor, 0, 0, 0);
 			else
 			{
-				if (skinset[0]) GL_DrawModelMesh(skinset[0], aliasvertcolor, m);
-				if (skinset[1]) GL_DrawModelMesh(skinset[1], aliasvertcolor, m);
-				if (skinset[2]) GL_DrawModelMesh(skinset[2], aliasvertcolor, m);
+				if (skinframe->base) GL_DrawModelMesh(skinframe->base, aliasvertcolor, 0, 0, 0);
+				if (skinframe->pants) GL_DrawModelMesh(skinframe->pants, aliasvertcolor, 0, 0, 0);
+				if (skinframe->shirt) GL_DrawModelMesh(skinframe->shirt, aliasvertcolor, 0, 0, 0);
 			}
 		}
-		if (skinset[3]) GL_DrawModelMesh(skinset[3], NULL, m);
+		if (skinframe->glow) GL_DrawModelMesh(skinframe->glow, NULL, 1 - fog, 1 - fog, 1 - fog);
 	}
 	else
-		GL_DrawModelMesh(0, NULL, m);
+		GL_DrawModelMesh(0, NULL, 1 - fog, 1 - fog, 1 - fog);
 
-	if (fogenabled)
+	if (fog)
 	{
-		vec3_t diff;
-		glDisable (GL_TEXTURE_2D);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable (GL_BLEND);
-		glDepthMask(0); // disable zbuffer updates
+		aliasmeshinfo.tex[0] = R_GetTexture(skinframe->fog);
+		aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+		aliasmeshinfo.blendfunc2 = GL_ONE;
+		aliasmeshinfo.color = NULL;
 
-		VectorSubtract(currentrenderentity->origin, r_origin, diff);
-		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
+		aliasmeshinfo.cr = fogcolor[0];
+		aliasmeshinfo.cg = fogcolor[1];
+		aliasmeshinfo.cb = fogcolor[2];
+		aliasmeshinfo.ca = currentrenderentity->alpha * fog;
 
-		glDrawElements(GL_TRIANGLES, m->numtris * 3, GL_UNSIGNED_SHORT, (void *)((int) m + m->tridata));
-
-		glEnable (GL_TEXTURE_2D);
-		glColor3f (1,1,1);
+		R_Mesh_Draw(&aliasmeshinfo);
 	}
-
-	GL_UnlockArray();
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-	glDisableClientState(GL_VERTEX_ARRAY);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(1);
-
-	glPopMatrix();
 }
 
-/*
-=================
-R_DrawQ2AliasFrame
-
-=================
-*/
-void R_DrawQ2AliasFrame (void)
+void R_DrawQ2AliasModel (void)
 {
 	int *order, count;
-	md2frame_t *frame1, *frame2, *frame3, *frame4;
 	vec3_t diff;
-	md2mem_t *m = Mod_Extradata(currentrenderentity->model);
-//	int *skinanimrange = (int *) (currentrenderentity->model->skinanimrange + (int) modelheader) + skin * 2;
-//	int *skinanim = (int *) (currentrenderentity->model->skinanim + (int) modelheader);
-	int *skinanimrange = currentrenderentity->model->skinanimrange;
-	int skin;
-	rtexture_t **skinanim = currentrenderentity->model->skinanim;
-	rtexture_t **skinset;
+	skinframe_t *skinframe;
+	model_t *model;
 
-	skinanimrange += currentrenderentity->skinnum * 2;
-	skin = skinanimrange[0];
-	if (skinanimrange[1] > 1) // animated
-		skin += (int) (cl.time * 10) % skinanimrange[1];
-	skinset = skinanim + skin * 5;
+	model = currentrenderentity->model;
 
-	if (r_render.value)
-		glBindTexture(GL_TEXTURE_2D, R_GetTexture(skinset[0]));
+	R_SetupMDLMD2Frames(&skinframe);
 
-	if (gl_transform.value)
-	{
-		if (r_render.value)
-		{
-			glPushMatrix();
-			GL_SetupModelTransform(currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
-		}
-	}
-	// always needed, for model lighting
-	softwaretransformforentity(currentrenderentity);
-
-	frame1 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[0].frame));
-	frame2 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[1].frame));
-	frame3 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[2].frame));
-	frame4 = (void *)((int) m + m->ofs_frames + (m->framesize * currentrenderentity->frameblend[3].frame));
-	R_AliasLerpVerts(m->num_xyz,
-		currentrenderentity->frameblend[0].lerp, frame1->verts, frame1->scale, frame1->translate,
-		currentrenderentity->frameblend[1].lerp, frame2->verts, frame2->scale, frame2->translate,
-		currentrenderentity->frameblend[2].lerp, frame3->verts, frame3->scale, frame3->translate,
-		currentrenderentity->frameblend[3].lerp, frame4->verts, frame4->scale, frame4->translate);
-	if (!gl_transform.value)
-		R_AliasTransformVerts(m->num_xyz);
-
-	R_LightModel(m->num_xyz);
-
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
+
+	// FIXME FIXME FIXME rewrite loader to convert to triangle mesh
+	glBindTexture(GL_TEXTURE_2D, R_GetTexture(skinframe->base));
 
 	if (currentrenderentity->effects & EF_ADDITIVE)
 	{
@@ -513,7 +487,7 @@ void R_DrawQ2AliasFrame (void)
 		glEnable(GL_BLEND);
 		glDepthMask(0);
 	}
-	else if (currentrenderentity->alpha != 1.0 || (currentrenderentity->model->flags2 & MODF_TRANSPARENT))
+	else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(skinframe->base))
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_BLEND);
@@ -529,11 +503,13 @@ void R_DrawQ2AliasFrame (void)
 	// using vertex arrays only slightly, although it is enough to prevent duplicates
 	// (saving half the transforms)
 	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
-	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(byte[4]), aliasvertcolor);
+	glColorPointer(4, GL_FLOAT, sizeof(float[4]), aliasvertcolor);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	glEnableClientState(GL_COLOR_ARRAY);
 
-	order = (int *)((int)m + m->ofs_glcmds);
+	GL_LockArray(0, model->numverts);
+
+	order = model->md2data_glcmds;
 	while(1)
 	{
 		if (!(count = *order++))
@@ -554,6 +530,8 @@ void R_DrawQ2AliasFrame (void)
 		while (count--);
 	}
 
+	GL_UnlockArray();
+
 	glDisableClientState(GL_COLOR_ARRAY);
 	glDisableClientState(GL_VERTEX_ARRAY);
 
@@ -565,7 +543,7 @@ void R_DrawQ2AliasFrame (void)
 		glDepthMask(0); // disable zbuffer updates
 
 		VectorSubtract(currentrenderentity->origin, r_origin, diff);
-		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
+		glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], currentrenderentity->alpha * exp(fogdensity/DotProduct(diff,diff)));
 
 		// LordHavoc: big mess...
 		// using vertex arrays only slightly, although it is enough to prevent duplicates
@@ -573,7 +551,9 @@ void R_DrawQ2AliasFrame (void)
 		glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
 		glEnableClientState(GL_VERTEX_ARRAY);
 
-		order = (int *)((int)m + m->ofs_glcmds);
+		GL_LockArray(0, model->numverts);
+
+		order = model->md2data_glcmds;
 		while(1)
 		{
 			if (!(count = *order++))
@@ -593,6 +573,8 @@ void R_DrawQ2AliasFrame (void)
 			while (count--);
 		}
 
+		GL_UnlockArray();
+
 		glDisableClientState(GL_VERTEX_ARRAY);
 
 		glEnable (GL_TEXTURE_2D);
@@ -602,9 +584,6 @@ void R_DrawQ2AliasFrame (void)
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable (GL_BLEND);
 	glDepthMask(1);
-
-	if (gl_transform.value)
-		glPopMatrix();
 }
 
 void ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zymbone_t *bone, float rootorigin[3], float rootangles[3], float rootscale)
@@ -824,7 +803,7 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 			v2[1] = aliasvert[c+1] - aliasvert[b+1];
 			v2[2] = aliasvert[c+2] - aliasvert[b+2];
 			CrossProduct(v1, v2, normal);
-			VectorNormalize(normal);
+			VectorNormalizeFast(normal);
 			// add surface normal to vertices
 			aliasvertnorm[a+0] += normal[0];
 			aliasvertnorm[a+1] += normal[1];
@@ -858,137 +837,111 @@ void ZymoticCalcNormals(int vertcount, int shadercount, int *renderlist)
 	}
 }
 
-void GL_DrawZymoticModelMesh(byte *colors, zymtype1header_t *m)
+void GL_DrawZymoticModelMesh(zymtype1header_t *m)
 {
-	int i, c, *renderlist;
+	int i, *renderlist;
 	rtexture_t **texture;
-	if (!r_render.value)
-		return;
+
+	// FIXME: do better fog
 	renderlist = (int *)(m->lump_render.start + (int) m);
 	texture = (rtexture_t **)(m->lump_shaders.start + (int) m);
-	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
-	glEnableClientState(GL_VERTEX_ARRAY);
 
-	glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(byte[4]), colors);
-	glEnableClientState(GL_COLOR_ARRAY);
-
-	glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (float *)(m->lump_texcoords.start + (int) m));
-	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	aliasmeshinfo.vertex = aliasvert;
+	aliasmeshinfo.vertexstep = sizeof(float[3]);
+	aliasmeshinfo.color = aliasvertcolor;
+	aliasmeshinfo.colorstep = sizeof(float[4]);
+	aliasmeshinfo.texcoords[0] = (float *)(m->lump_texcoords.start + (int) m);
+	aliasmeshinfo.texcoordstep[0] = sizeof(float[2]);
 
 	for (i = 0;i < m->numshaders;i++)
 	{
-		c = (*renderlist++) * 3;
-		glBindTexture(GL_TEXTURE_2D, R_GetTexture(*texture));
-		texture++;
-		glDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
-		renderlist += c;
+		aliasmeshinfo.tex[0] = R_GetTexture(*texture);
+		aliasmeshinfo.tex[1] = 0;
+		if (currentrenderentity->effects & EF_ADDITIVE)
+		{
+			aliasmeshinfo.transparent = true;
+			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+			aliasmeshinfo.blendfunc2 = GL_ONE;
+		}
+		else if (currentrenderentity->alpha != 1.0 || R_TextureHasAlpha(*texture))
+		{
+			aliasmeshinfo.transparent = true;
+			aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+			aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		}
+		else
+		{
+			aliasmeshinfo.transparent = false;
+			aliasmeshinfo.blendfunc1 = GL_ONE;
+			aliasmeshinfo.blendfunc2 = GL_ZERO;
+		}
+		aliasmeshinfo.numtriangles = *renderlist++;
+		aliasmeshinfo.index = renderlist;
+		R_Mesh_Draw(&aliasmeshinfo);
+		renderlist += aliasmeshinfo.numtriangles * 3;
 	}
-
-	glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-	glDisableClientState(GL_COLOR_ARRAY);
-
-	glDisableClientState(GL_VERTEX_ARRAY);
 }
 
 void GL_DrawZymoticModelMeshFog(vec3_t org, zymtype1header_t *m)
 {
+	int i, *renderlist;
 	vec3_t diff;
-	int i, c, *renderlist;
-	if (!r_render.value)
-		return;
+
+	// FIXME: do better fog
 	renderlist = (int *)(m->lump_render.start + (int) m);
-	glDisable(GL_TEXTURE_2D);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(0); // disable zbuffer updates
+
+	aliasmeshinfo.tex[0] = 0;
+	aliasmeshinfo.blendfunc1 = GL_SRC_ALPHA;
+	aliasmeshinfo.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 
 	VectorSubtract(org, r_origin, diff);
-	glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
-
-	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), aliasvert);
-	glEnableClientState(GL_VERTEX_ARRAY);
+	aliasmeshinfo.cr = fogcolor[0];
+	aliasmeshinfo.cg = fogcolor[1];
+	aliasmeshinfo.cb = fogcolor[2];
+	aliasmeshinfo.ca = currentrenderentity->alpha * exp(fogdensity/DotProduct(diff,diff));
 
 	for (i = 0;i < m->numshaders;i++)
 	{
-		c = (*renderlist++) * 3;
-		glDrawElements(GL_TRIANGLES, c, GL_UNSIGNED_INT, renderlist);
-		renderlist += c;
+		aliasmeshinfo.numtriangles = *renderlist++;
+		aliasmeshinfo.index = renderlist;
+		R_Mesh_Draw(&aliasmeshinfo);
+		renderlist += aliasmeshinfo.numtriangles * 3;
 	}
-
-	glDisableClientState(GL_VERTEX_ARRAY);
-
-	glEnable(GL_TEXTURE_2D);
-	glColor3f (1,1,1);
 }
 
-/*
-=================
-R_DrawZymoticFrame
-=================
-*/
-void R_DrawZymoticFrame (void)
+void R_DrawZymoticModel (void)
 {
-	zymtype1header_t *m = Mod_Extradata(currentrenderentity->model);
+	zymtype1header_t *m;
+
+	// FIXME: do better fog
+	m = currentrenderentity->model->zymdata_header;
 	ZymoticLerpBones(m->numbones, (zymbonematrix *)(m->lump_poses.start + (int) m), currentrenderentity->frameblend, (zymbone_t *)(m->lump_bones.start + (int) m), currentrenderentity->origin, currentrenderentity->angles, currentrenderentity->scale);
 	ZymoticTransformVerts(m->numverts, (int *)(m->lump_vertbonecounts.start + (int) m), (zymvertex_t *)(m->lump_verts.start + (int) m));
 	ZymoticCalcNormals(m->numverts, m->numshaders, (int *)(m->lump_render.start + (int) m));
 
 	R_LightModel(m->numverts);
 
-	if (!r_render.value)
-		return;
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-//	glShadeModel(GL_SMOOTH);
-	if (currentrenderentity->effects & EF_ADDITIVE)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE); // additive rendering
-		glEnable(GL_BLEND);
-		glDepthMask(0);
-	}
-	else if (currentrenderentity->alpha != 1.0)
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glEnable(GL_BLEND);
-		glDepthMask(0);
-	}
-	else
-	{
-		glDisable(GL_BLEND);
-		glDepthMask(1);
-	}
+	memset(&aliasmeshinfo, 0, sizeof(aliasmeshinfo));
+	aliasmeshinfo.numverts = m->numverts;
 
-	GL_DrawZymoticModelMesh(aliasvertcolor, m);
+	GL_DrawZymoticModelMesh(m);
 
 	if (fogenabled)
 		GL_DrawZymoticModelMeshFog(currentrenderentity->origin, m);
-
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable (GL_BLEND);
-	glDepthMask(1);
 }
 
-/*
-=================
-R_DrawAliasModel
-
-=================
-*/
 void R_DrawAliasModel (void)
 {
-	if (currentrenderentity->alpha < (1.0 / 64.0))
+	if (currentrenderentity->alpha < (1.0f / 64.0f))
 		return; // basically completely transparent
 
 	c_models++;
 
-	if (r_render.value)
-		glEnable (GL_TEXTURE_2D);
-
 	c_alias_polys += currentrenderentity->model->numtris;
 	if (currentrenderentity->model->aliastype == ALIASTYPE_ZYM)
-		R_DrawZymoticFrame ();
+		R_DrawZymoticModel ();
 	else if (currentrenderentity->model->aliastype == ALIASTYPE_MD2)
-		R_DrawQ2AliasFrame ();
+		R_DrawQ2AliasModel ();
 	else
-		R_DrawAliasFrame   ();
+		R_DrawQ1AliasModel   ();
 }

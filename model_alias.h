@@ -79,19 +79,6 @@ typedef struct {
 	float		size;
 } daliashdr_t;
 
-typedef struct
-{
-	vec3_t		scale;
-	vec3_t		scale_origin;
-	int			numverts;
-	int			numtris;
-	int			numframes;
-	int			numposes;
-	int			texdata; // LordHavoc: texture coordinate array
-	int			posedata; // LordHavoc: vertex data for all the poses
-	int			tridata; // LordHavoc: vertex indices for the triangles
-} maliashdr_t;
-
 #define	MAXALIASVERTS	4096
 #define	MAXALIASFRAMES	1024
 #define	MAXALIASTRIS	4096
@@ -107,7 +94,6 @@ typedef struct
 // LordHavoc: grabbed this from the Q2 utility source,
 // renamed a things to avoid conflicts
 
-#define MD2IDALIASHEADER		(('2'<<24)+('P'<<16)+('D'<<8)+'I')
 #define MD2ALIAS_VERSION	8
 
 #define	MD2MAX_TRIANGLES	4096
@@ -134,16 +120,7 @@ typedef struct
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
 	char		name[16];	// frame name from grabbing
-	trivertx_t	verts[1];	// variable sized
 } md2frame_t;
-
-// must match md2frame_t, this is just used for sizeof()
-typedef struct
-{
-	float		scale[3];	// multiply byte verts by this
-	float		translate[3];	// then add this
-} md2framesize_t;
-
 
 // the glcmd format:
 // a positive integer starts a tristrip command, followed by that many
@@ -174,25 +151,9 @@ typedef struct
 	int			ofs_st;			// byte offset from start for stverts
 	int			ofs_tris;		// offset for dtriangles
 	int			ofs_frames;		// offset for first frame
-	int			ofs_glcmds;	
+	int			ofs_glcmds;
 	int			ofs_end;		// end of file
 } md2_t;
-
-typedef struct
-{
-	int			framesize;		// byte size of each frame
-
-	int			num_skins;
-	int			num_xyz;
-	int			num_st;			// greater than num_xyz for seams
-	int			num_tris;
-	int			num_glcmds;		// dwords in strip/fan command list
-	int			num_frames;
-
-	int			ofs_tris;		// offset for dtriangles
-	int			ofs_frames;		// offset for first frame
-	int			ofs_glcmds;	
-} md2mem_t;
 
 #define ALIASTYPE_MDL 1
 #define ALIASTYPE_MD2 2

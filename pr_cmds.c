@@ -646,7 +646,7 @@ void PF_ambientsound (void)
 	for (soundnum=0, check = sv.sound_precache ; *check ; check++, soundnum++)
 		if (!strcmp(*check,samp))
 			break;
-			
+
 	if (!*check)
 	{
 		Con_Printf ("no precache: %s\n", samp);
@@ -1006,7 +1006,7 @@ localcmd (string)
 void PF_localcmd (void)
 {
 	char	*str;
-	
+
 	str = G_STRING(OFS_PARM0);	
 	Cbuf_AddText (str);
 }
@@ -1326,7 +1326,7 @@ void PF_precache_model (void)
 		PR_RunError ("PF_Precache_*: Precache can only be done in spawn functions");
 		
 	s = G_STRING(OFS_PARM0);
-	if (hlbsp && ((!s) || (!s[0])))
+	if (sv.worldmodel->ishlbsp && ((!s) || (!s[0])))
 		return;
 	G_INT(OFS_RETURN) = G_INT(OFS_PARM0);
 	PR_CheckEmptyString (s);
@@ -1336,7 +1336,7 @@ void PF_precache_model (void)
 		if (!sv.model_precache[i])
 		{
 			sv.model_precache[i] = s;
-			sv.models[i] = Mod_ForName (s, true);
+			sv.models[i] = Mod_ForName (s, true, true, false);
 			return;
 		}
 		if (!strcmp(sv.model_precache[i], s))
@@ -1571,7 +1571,7 @@ void PF_aim (void)
 	VectorMA (start, 2048, dir, end);
 	tr = SV_Move (start, vec3_origin, vec3_origin, end, MOVE_NORMAL, ent);
 	if (tr.ent && tr.ent->v.takedamage == DAMAGE_AIM
-	&& (!teamplay.value || ent->v.team <=0 || ent->v.team != tr.ent->v.team) )
+	&& (!teamplay.integer || ent->v.team <=0 || ent->v.team != tr.ent->v.team) )
 	{
 		VectorCopy (pr_global_struct->v_forward, G_VECTOR(OFS_RETURN));
 		return;
@@ -1590,7 +1590,7 @@ void PF_aim (void)
 			continue;
 		if (check == ent)
 			continue;
-		if (teamplay.value && ent->v.team > 0 && ent->v.team == check->v.team)
+		if (teamplay.integer && ent->v.team > 0 && ent->v.team == check->v.team)
 			continue;	// don't aim at teammate
 		for (j=0 ; j<3 ; j++)
 			end[j] = check->v.origin[j]

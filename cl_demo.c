@@ -36,12 +36,45 @@ read from the demo file.
 */
 
 /*
+=====================
+CL_NextDemo
+
+Called to play the next demo in the demo loop
+=====================
+*/
+void CL_NextDemo (void)
+{
+	char	str[1024];
+
+	if (cls.demonum == -1)
+		return;		// don't play demos
+
+//	SCR_BeginLoadingPlaque ();
+
+	if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS)
+	{
+		cls.demonum = 0;
+		if (!cls.demos[cls.demonum][0])
+		{
+			Con_Printf ("No demos listed with startdemos\n");
+			cls.demonum = -1;
+			return;
+		}
+	}
+
+	sprintf (str,"playdemo %s\n", cls.demos[cls.demonum]);
+	Cbuf_InsertText (str);
+	cls.demonum++;
+}
+
+/*
 ==============
 CL_StopPlayback
 
 Called when a demo file runs out, or the user starts a game
 ==============
 */
+// LordHavoc: now called only by CL_Disconnect
 void CL_StopPlayback (void)
 {
 	if (!cls.demoplayback)
@@ -50,7 +83,6 @@ void CL_StopPlayback (void)
 	Qclose (cls.demofile);
 	cls.demoplayback = false;
 	cls.demofile = NULL;
-	cls.state = ca_disconnected;
 
 	if (cls.timedemo)
 		CL_FinishTimeDemo ();
@@ -134,7 +166,7 @@ int CL_GetMessage (void)
 		r = Qread (cls.demofile, net_message.data, net_message.cursize);
 		if (r != net_message.cursize)
 		{
-			CL_StopPlayback ();
+			CL_Disconnect ();
 			return 0;
 		}
 	

@@ -6,8 +6,6 @@ unsigned int d_8to24table[256];
 byte host_basepal[768];
 byte texgamma[256];
 
-static float texture_gamma = 1.0;
-
 cvar_t vid_gamma = {CVAR_SAVE, "vid_gamma", "1"};
 cvar_t vid_brightness = {CVAR_SAVE, "vid_brightness", "1"};
 cvar_t vid_contrast = {CVAR_SAVE, "vid_contrast", "1"};
@@ -116,32 +114,6 @@ void BuildGammaTable16(float prescale, float gamma, float scale, float base, uns
 	}
 }
 
-void Texture_Gamma (void)
-{
-	int i, adjusted;
-	double invgamma;
-
-	texture_gamma = 1;
-	if ((i = COM_CheckParm("-gamma")))
-		texture_gamma = atof(com_argv[i+1]);
-	texture_gamma = bound(0.1, texture_gamma, 5.0);
-
-	if (texture_gamma == 1) // LordHavoc: dodge the math
-	{
-		for (i = 0;i < 256;i++)
-			texgamma[i] = i;
-	}
-	else
-	{
-		invgamma = 1.0 / texture_gamma;
-		for (i = 0;i < 256;i++)
-		{
-			adjusted = (int) ((255.0 * pow((double) i / 255.0, invgamma)) + 0.5);
-			texgamma[i] = bound(0, adjusted, 255);
-		}
-	}
-}
-
 qboolean hardwaregammasupported = false;
 void VID_UpdateGamma(qboolean force)
 {
@@ -189,13 +161,12 @@ void Gamma_Init(void)
 void Palette_Init(void)
 {
 	byte *pal;
-	pal = (byte *)COM_LoadMallocFile ("gfx/palette.lmp", false);
+	pal = (byte *)COM_LoadFile ("gfx/palette.lmp", false);
 	if (!pal)
 		Sys_Error ("Couldn't load gfx/palette.lmp");
 	memcpy(host_basepal, pal, 765);
-	qfree(pal);
+	Mem_Free(pal);
 	host_basepal[765] = host_basepal[766] = host_basepal[767] = 0; // LordHavoc: force the transparent color to black
 	Palette_Setup8to24();
 //	Palette_Setup15to8();
-	Texture_Gamma();
 }

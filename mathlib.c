@@ -301,6 +301,22 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up)
 	right[0] -= d * forward[0];
 	right[1] -= d * forward[1];
 	right[2] -= d * forward[2];
+	VectorNormalizeFast(right);
+	CrossProduct(right, forward, up);
+}
+
+void VectorVectorsDouble(const double *forward, double *right, double *up)
+{
+	double d;
+
+	right[0] = forward[2];
+	right[1] = -forward[0];
+	right[2] = forward[1];
+
+	d = DotProduct(forward, right);
+	right[0] -= d * forward[0];
+	right[1] -= d * forward[1];
+	right[2] -= d * forward[2];
 	VectorNormalize(right);
 	CrossProduct(right, forward, up);
 }
@@ -580,54 +596,111 @@ void PlaneClassify(mplane_t *p)
 
 void AngleVectors (vec3_t angles, vec3_t forward, vec3_t right, vec3_t up)
 {
-	float		angle;
-	float		sr, sp, sy, cr, cp, cy;
-	
+	double angle, sr, sp, sy, cr, cp, cy;
+
 	angle = angles[YAW] * (M_PI*2 / 360);
 	sy = sin(angle);
 	cy = cos(angle);
 	angle = angles[PITCH] * (M_PI*2 / 360);
 	sp = sin(angle);
 	cp = cos(angle);
-	// LordHavoc: this is only to hush up gcc complaining about 'might be used uninitialized' variables
-	// (they are NOT used uninitialized, but oh well)
-	cr = 0;
-	sr = 0;
-	if (right || up)
-	{
-		angle = angles[ROLL] * (M_PI*2 / 360);
-		sr = sin(angle);
-		cr = cos(angle);
-	}
-
 	if (forward)
 	{
 		forward[0] = cp*cy;
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 	}
-	if (right)
+	if (right || up)
 	{
-		right[0] = (-1*sr*sp*cy+-1*cr*-sy);
-		right[1] = (-1*sr*sp*sy+-1*cr*cy);
-		right[2] = -1*sr*cp;
+		angle = angles[ROLL] * (M_PI*2 / 360);
+		sr = sin(angle);
+		cr = cos(angle);
+		if (right)
+		{
+			right[0] = -1*(sr*sp*cy+cr*-sy);
+			right[1] = -1*(sr*sp*sy+cr*cy);
+			right[2] = -1*(sr*cp);
+		}
+		if (up)
+		{
+			up[0] = (cr*sp*cy+-sr*-sy);
+			up[1] = (cr*sp*sy+-sr*cy);
+			up[2] = cr*cp;
+		}
 	}
-	if (up)
+}
+
+void AngleVectorsFLU (vec3_t angles, vec3_t forward, vec3_t left, vec3_t up)
+{
+	double angle, sr, sp, sy, cr, cp, cy;
+
+	angle = angles[YAW] * (M_PI*2 / 360);
+	sy = sin(angle);
+	cy = cos(angle);
+	angle = angles[PITCH] * (M_PI*2 / 360);
+	sp = sin(angle);
+	cp = cos(angle);
+	if (forward)
 	{
-		up[0] = (cr*sp*cy+-sr*-sy);
-		up[1] = (cr*sp*sy+-sr*cy);
-		up[2] = cr*cp;
+		forward[0] = cp*cy;
+		forward[1] = cp*sy;
+		forward[2] = -sp;
 	}
+	if (left || up)
+	{
+		angle = angles[ROLL] * (M_PI*2 / 360);
+		sr = sin(angle);
+		cr = cos(angle);
+		if (left)
+		{
+			left[0] = sr*sp*cy+cr*-sy;
+			left[1] = sr*sp*sy+cr*cy;
+			left[2] = sr*cp;
+		}
+		if (up)
+		{
+			up[0] = cr*sp*cy+-sr*-sy;
+			up[1] = cr*sp*sy+-sr*cy;
+			up[2] = cr*cp;
+		}
+	}
+}
+
+void AngleMatrix (vec3_t angles, vec3_t translate, vec_t matrix[][4])
+{
+	double angle, sr, sp, sy, cr, cp, cy;
+
+	angle = angles[YAW] * (M_PI*2 / 360);
+	sy = sin(angle);
+	cy = cos(angle);
+	angle = angles[PITCH] * (M_PI*2 / 360);
+	sp = sin(angle);
+	cp = cos(angle);
+	angle = angles[ROLL] * (M_PI*2 / 360);
+	sr = sin(angle);
+	cr = cos(angle);
+	matrix[0][0] = cp*cy;
+	matrix[0][1] = sr*sp*cy+cr*-sy;
+	matrix[0][2] = cr*sp*cy+-sr*-sy;
+	matrix[0][3] = translate[0];
+	matrix[1][0] = cp*sy;
+	matrix[1][1] = sr*sp*sy+cr*cy;
+	matrix[1][2] = cr*sp*sy+-sr*cy;
+	matrix[1][3] = translate[1];
+	matrix[2][0] = -sp;
+	matrix[2][1] = sr*cp;
+	matrix[2][2] = cr*cp;
+	matrix[2][3] = translate[2];
 }
 
 int VectorCompare (vec3_t v1, vec3_t v2)
 {
 	int		i;
-	
+
 	for (i=0 ; i<3 ; i++)
 		if (v1[i] != v2[i])
 			return 0;
-			
+
 	return 1;
 }
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -33,7 +33,8 @@ BRUSH MODELS
 typedef struct
 {
 	vec3_t		position;
-} mvertex_t;
+}
+mvertex_t;
 
 #define	SIDE_FRONT	0
 #define	SIDE_BACK	1
@@ -48,27 +49,32 @@ typedef struct mplane_s
 	int		type;			// for texture axis selection and fast side tests
 	// LordHavoc: faster than id's signbits system
 	int (*BoxOnPlaneSideFunc) (vec3_t emins, vec3_t emaxs, struct mplane_s *p);
-} mplane_t;
+}
+mplane_t;
 
 typedef struct texture_s
 {
 	char				name[16];
 	unsigned			width, height;
+	int					flags;				// LordHavoc: SURF_ flags
+
 	rtexture_t			*texture;
-	rtexture_t			*glowtexture;		// LordHavoc: fullbrights on walls
-	int					anim_total;			// total frames in sequence (0 = not animated)
+	rtexture_t			*glowtexture;
+	rtexture_t			*fogtexture;		// alpha-only version of main texture
+
+	int					anim_total;			// total frames in sequence (< 2 = not animated)
 	struct texture_s	*anim_frames[10];	// LordHavoc: direct pointers to each of the frames in the sequence
 	struct texture_s	*alternate_anims;	// bmodels in frame 1 use these
-	int					transparent;		// LordHavoc: transparent texture support
-} texture_t;
+}
+texture_t;
 
 
 #define	SURF_PLANEBACK		2
 #define	SURF_DRAWSKY		4
-#define SURF_DRAWSPRITE		8
+//#define SURF_DRAWSPRITE		8
 #define SURF_DRAWTURB		0x10
-#define SURF_DRAWTILED		0x20
-#define SURF_DRAWBACKGROUND	0x40
+#define SURF_LIGHTMAP		0x20
+//#define SURF_DRAWBACKGROUND	0x40
 //#define SURF_UNDERWATER		0x80
 #define SURF_DRAWNOALPHA	0x100
 #define SURF_DRAWFULLBRIGHT	0x200
@@ -78,117 +84,172 @@ typedef struct texture_s
 typedef struct
 {
 	unsigned short	v[2];
-} medge_t;
+}
+medge_t;
 
 typedef struct
 {
 	float		vecs[2][4];
 	texture_t	*texture;
 	int			flags;
-} mtexinfo_t;
+}
+mtexinfo_t;
 
-// LordHavoc: was 7, I added one more for raw lightmap position
-// (xyz st uv l)
-#define	VERTEXSIZE	8
-
-typedef struct glpoly_s
+typedef struct surfvertex_s
 {
-	struct	glpoly_s	*next;
-	int		numverts;
-	float	verts[4][VERTEXSIZE];	// variable sized
-} glpoly_t;
+	// position
+	float v[3];
+	// offset into lightmap (used by vertex lighting)
+	int lightmapoffset;
+	// texture coordinates
+	float st[2];
+	// lightmap coordinates
+	float uv[2];
+}
+surfvertex_t;
 
-typedef struct glpolysizeof_s
+// LordHavoc: replaces glpoly, triangle mesh
+typedef struct surfmesh_s
 {
-	struct	glpoly_s	*next;
-	int		numverts;
-} glpolysizeof_t;
+	int numverts;
+	int numtriangles;
+	surfvertex_t *vertex;
+	int *index;
+}
+surfmesh_t;
 
 typedef struct msurface_s
 {
-	int			visframe;		// should be drawn when node is crossed
+	// should be drawn if visframe == r_framecount (set by WorldNode functions)
+	int			visframe;
 
+	// the node plane this is on, backwards if SURF_PLANEBACK flag set
 	mplane_t	*plane;
+	// SURF_ flags
 	int			flags;
+	struct Cshader_s	*shader;
+	struct msurface_s	*chain; // shader rendering chain
 
-	int			firstedge;	// look up in model->surfedges[], negative numbers
-	int			numedges;	// are backwards edges
+	// look up in model->surfedges[], negative numbers are backwards edges
+	int			firstedge;
+	int			numedges;
 
 	short		texturemins[2];
 	short		extents[2];
 
-	short		light_s, light_t;	// gl lightmap coordinates
-
-	glpoly_t	*polys;				// multiple if warped
-
 	mtexinfo_t	*texinfo;
+	texture_t	*currenttexture; // updated (animated) during early surface processing each frame
 
-// lighting info
+	// index into d_lightstylevalue array, 255 means not used (black)
+	byte		styles[MAXLIGHTMAPS];
+	// RGB lighting data [numstyles][height][width][3]
+	byte		*samples;
+
+	// these fields are generated during model loading
+	// the lightmap texture fragment to use on the surface
+	rtexture_t *lightmaptexture;
+	// the stride when building lightmaps to comply with fragment update
+	int			lightmaptexturestride;
+	// mesh for rendering
+	surfmesh_t	mesh;
+
+	// these are just 3D points defining the outline of the polygon,
+	// no texcoord info (that can be generated from these)
+	int			poly_numverts;
+	float		*poly_verts;
+
+	// these are regenerated every frame
+	// lighting info
 	int			dlightframe;
 	int			dlightbits[8];
+	// avoid redundent addition of dlights
+	int			lightframe;
+	// only render each surface once
+	int			worldnodeframe;
+	// marked when surface is prepared for the frame
+	int			insertframe;
 
-	int			lightframe; // avoid redundent addition of dlights
-	int			worldnodeframe; // only render each surface once
+	// these cause lightmap updates if regenerated
+	// values currently used in lightmap
+	unsigned short cached_light[MAXLIGHTMAPS];
+	// if lightmap was lit by dynamic lights, force update on next frame
+	short		cached_dlight;
+	// to cause lightmap to be rerendered when lighthalf changes
+	short		cached_lightscalebit;
+	// rerender lightmaps when r_ambient changes
+	float		cached_ambient;
+}
+msurface_t;
 
-	int			lightmaptexturenum;
-	byte		styles[MAXLIGHTMAPS];
-	unsigned short cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-	short		cached_dlight;				// LordHavoc: if lightmap was lit by dynamic lights, update on frame after end of effect to erase it
-	short		cached_lightscalebit;		// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
-	float		cached_ambient;				// LordHavoc: rerender lightmaps when r_ambient changes
-	byte		*samples;		// [numstyles*surfsize]
-} msurface_t;
+#define SHADERSTAGE_SKY 0
+#define SHADERSTAGE_NORMAL 1
+#define SHADERSTAGE_FOG 2
+#define SHADERSTAGE_COUNT 3
+
+// change this stuff when real shaders are added
+typedef struct Cshader_s
+{
+	int (*shaderfunc[SHADERSTAGE_COUNT])(int stage, msurface_t *s);
+	// list of surfaces using this shader (used during surface rendering)
+	msurface_t *chain;
+}
+Cshader_t;
+
+extern Cshader_t Cshader_wall_vertex;
+extern Cshader_t Cshader_wall_lightmap;
+extern Cshader_t Cshader_water;
+extern Cshader_t Cshader_sky;
 
 // warning: if this is changed, references must be updated in cpu_* assembly files
 typedef struct mnode_s
 {
 // common with leaf
-	int			contents;		// 0, to differentiate from leafs
+	int					contents;		// 0, to differentiate from leafs
 
-	struct mnode_s	*parent;
-	struct mportal_s *portals;
+	struct mnode_s		*parent;
+	struct mportal_s	*portals;
 
 	// for bounding box culling
-	vec3_t		mins;
-	vec3_t		maxs;
+	vec3_t				mins;
+	vec3_t				maxs;
 
 // node specific
-	mplane_t	*plane;
-	struct mnode_s	*children[2];
+	mplane_t			*plane;
+	struct mnode_s		*children[2];
 
 	unsigned short		firstsurface;
 	unsigned short		numsurfaces;
-} mnode_t;
-
-
+}
+mnode_t;
 
 typedef struct mleaf_s
 {
 // common with node
-	int			contents;		// will be a negative contents number
+	int					contents;		// will be a negative contents number
 
-	struct mnode_s	*parent;
-	struct mportal_s *portals;
+	struct mnode_s		*parent;
+	struct mportal_s	*portals;
 
 	// for bounding box culling
-	vec3_t		mins;
-	vec3_t		maxs;
+	vec3_t				mins;
+	vec3_t				maxs;
 
 // leaf specific
-	int			visframe;		// visible if current (r_framecount)
-	int			worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
-	int			portalmarkid;	// used by polygon-through-portals visibility checker
+	int					visframe;		// visible if current (r_framecount)
+	int					worldnodeframe; // used by certain worldnode variants to avoid processing the same leaf twice in a frame
+	int					portalmarkid;	// used by polygon-through-portals visibility checker
 
 	// LordHavoc: leaf based dynamic lighting
-	int			dlightbits[8];
-	int			dlightframe;
+	int					dlightbits[8];
+	int					dlightframe;
 
-	byte		*compressed_vis;
+	byte				*compressed_vis;
 
-	msurface_t	**firstmarksurface;
-	int			nummarksurfaces;
-	byte		ambient_sound_level[NUM_AMBIENTS];
-} mleaf_t;
+	msurface_t			**firstmarksurface;
+	int					nummarksurfaces;
+	byte				ambient_sound_level[NUM_AMBIENTS];
+}
+mleaf_t;
 
 typedef struct
 {
@@ -198,7 +259,8 @@ typedef struct
 	int			lastclipnode;
 	vec3_t		clip_mins;
 	vec3_t		clip_maxs;
-} hull_t;
+}
+hull_t;
 
 typedef struct mportal_s
 {
@@ -212,10 +274,10 @@ typedef struct mportal_s
 }
 mportal_t;
 
-extern void CL_ParseEntityLump(char *entdata);
 extern rtexture_t *r_notexture;
 extern texture_t r_notexture_mip;
 
 struct model_s;
-extern void Mod_LoadBrushModel (struct model_s *mod, void *buffer);
-extern void Mod_BrushInit(void);
+void Mod_LoadBrushModel (struct model_s *mod, void *buffer);
+void Mod_BrushInit(void);
+void Mod_FindNonSolidLocation(vec3_t pos, struct model_s *mod);

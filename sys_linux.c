@@ -48,7 +48,7 @@ void Sys_Quit (void)
 	Host_Shutdown();
     fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 #if 0
-	if (registered.value)
+	if (registered.integer)
 		printf("%s", end2);
 	else
 		printf("%s", end1);
@@ -267,8 +267,6 @@ int main (int c, char **v)
 	COM_InitArgv(c, v);
 	host_parms.argc = com_argc;
 	host_parms.argv = com_argv;
-
-	host_parms.memsize = DEFAULTMEM * 1024*1024;
 
 	host_parms.basedir = basedir;
 

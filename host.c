@@ -35,7 +35,8 @@ Memory is cleared / released when a server or client begins, not when they end.
 quakeparms_t host_parms;
 
 qboolean	host_initialized;		// true if into command execution
-qboolean	hostloopactive = 0;		// LordHavoc: used to turn Host_Error into Sys_Error if Host_Frame has not yet run
+qboolean	host_loopactive = false;	// LordHavoc: used to turn Host_Error into Sys_Error if starting up or shutting down
+qboolean	host_shuttingdown = false;	// LordHavoc: set when quit is executed
 
 double		host_frametime;
 double		host_realframetime;		// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
@@ -44,8 +45,6 @@ double		oldrealtime;			// last frame run
 int			host_framecount;
 
 double		sv_frametime;
-
-int			host_hunklevel;
 
 int			minimum_memory;
 
@@ -124,8 +123,9 @@ void Host_Error (char *error, ...)
 	va_list		argptr;
 	static	qboolean inerror = false;
 
-	// LordHavoc: if host_frame loop has not been run yet, do a Sys_Error instead
-	if (!hostloopactive)
+	// LordHavoc: if first frame has not been shown, or currently shutting
+	// down, do Sys_Error instead
+	if (!host_loopactive || host_shuttingdown)
 	{
 		char string[4096];
 		va_start (argptr,error);
@@ -165,6 +165,8 @@ void Host_Error (char *error, ...)
 	longjmp (host_abortserver, 1);
 }
 
+static mempool_t *clients_mempool;
+
 /*
 ================
 Host_FindMaxClients
@@ -175,7 +177,7 @@ void	Host_FindMaxClients (void)
 	int		i;
 
 	svs.maxclients = 1;
-		
+
 	i = COM_CheckParm ("-dedicated");
 	if (i)
 	{
@@ -208,7 +210,11 @@ void	Host_FindMaxClients (void)
 	svs.maxclientslimit = svs.maxclients;
 	if (svs.maxclientslimit < MAX_SCOREBOARD) // LordHavoc: upped listen mode limit from 4 to MAX_SCOREBOARD
 		svs.maxclientslimit = MAX_SCOREBOARD;
-	svs.clients = Hunk_AllocName (svs.maxclientslimit*sizeof(client_t), "clients");
+	if (!clients_mempool)
+		clients_mempool = Mem_AllocPool("clients");
+	if (svs.clients)
+		Mem_Free(svs.clients);
+	svs.clients = Mem_Alloc(clients_mempool, svs.maxclientslimit*sizeof(client_t));
 
 	if (svs.maxclients > 1)
 		Cvar_SetValue ("deathmatch", 1.0);
@@ -225,7 +231,7 @@ Host_InitLocal
 void Host_InitLocal (void)
 {
 	Host_InitCommands ();
-	
+
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&slowmo);
@@ -498,8 +504,6 @@ void Host_ClearMemory (void)
 {
 	Con_DPrintf ("Clearing memory\n");
 	Mod_ClearAll ();
-	if (host_hunklevel)
-		Hunk_FreeToLowMark (host_hunklevel);
 
 	cls.signon = 0;
 	memset (&sv, 0, sizeof(sv));
@@ -640,7 +644,6 @@ void _Host_Frame (float time)
 
 	if (setjmp (host_abortserver) )
 		return;			// something bad happened, or the server disconnected
-	hostloopactive = 1;
 
 // keep the random time dependent
 	rand ();
@@ -698,12 +701,12 @@ void _Host_Frame (float time)
 	ui_update();
 
 // update video
-	if (host_speeds.value)
+	if (host_speeds.integer)
 		time1 = Sys_DoubleTime ();
 
 	SCR_UpdateScreen ();
 
-	if (host_speeds.value)
+	if (host_speeds.integer)
 		time2 = Sys_DoubleTime ();
 
 // update audio
@@ -717,7 +720,7 @@ void _Host_Frame (float time)
 
 	CDAudio_Update();
 
-	if (host_speeds.value)
+	if (host_speeds.integer)
 	{
 		pass1 = (time1 - time3)*1000000;
 		time3 = Sys_DoubleTime ();
@@ -728,6 +731,7 @@ void _Host_Frame (float time)
 	}
 
 	host_framecount++;
+	host_loopactive = true;
 }
 
 void Host_Frame (float time)
@@ -737,12 +741,12 @@ void Host_Frame (float time)
 	static int		timecount;
 	int		i, c, m;
 
-	if (!serverprofile.value)
+	if (!serverprofile.integer)
 	{
 		_Host_Frame (time);
 		return;
 	}
-	
+
 	time1 = Sys_DoubleTime ();
 	_Host_Frame (time);
 	time2 = Sys_DoubleTime ();	
@@ -769,6 +773,7 @@ void Host_Frame (float time)
 //============================================================================
 
 void Render_Init(void);
+void QuakeIO_Init(void);
 
 /*
 ====================
@@ -777,48 +782,30 @@ Host_Init
 */
 void Host_Init (void)
 {
-	int i;
-
-	host_parms.memsize = DEFAULTMEM * 1024 * 1024;
-
-	i = COM_CheckParm("-mem");
-	if (i)
-		host_parms.memsize = (int) (atof(com_argv[i+1]) * 1024 * 1024);
-
-	i = COM_CheckParm("-winmem");
-	if (i)
-		host_parms.memsize = (int) (atof(com_argv[i+1]) * 1024 * 1024);
-
-	i = COM_CheckParm("-heapsize");
-	if (i)
-		host_parms.memsize = (int) (atof(com_argv[i+1]) * 1024);
-
-	host_parms.membase = qmalloc(host_parms.memsize);
-	if (!host_parms.membase)
-		Sys_Error("Not enough memory free, close some programs and try again, or free disk space\n");
-
 	com_argc = host_parms.argc;
 	com_argv = host_parms.argv;
 
-	Memory_Init (host_parms.membase, host_parms.memsize);
+	Memory_Init ();
+	Cmd_Init ();
+	Memory_Init_Commands();
+	R_Modules_Init();
 	Cbuf_Init ();
-	Cmd_Init ();	
+	QuakeIO_Init ();
 	V_Init ();
-	COM_Init (host_parms.basedir);
+	COM_Init ();
 	Host_InitLocal ();
 	W_LoadWadFile ("gfx.wad");
 	Key_Init ();
-	Con_Init ();	
+	Con_Init ();
 	Chase_Init ();
-	M_Init ();	
+	M_Init ();
 	PR_Init ();
 	Mod_Init ();
 	NET_Init ();
 	SV_Init ();
 
 	Con_Printf ("Exe: "__TIME__" "__DATE__"\n");
-	Con_Printf ("%4.1f megabyte heap\n",host_parms.memsize/(1024*1024.0));
-	
+
 	if (cls.state != ca_dedicated)
 	{
 		VID_InitCvars();
@@ -843,9 +830,6 @@ void Host_Init (void)
 	}
 
 	Cbuf_InsertText ("exec quake.rc\n");
-
-	Hunk_AllocName (0, "-HOST_HUNKLEVEL-");
-	host_hunklevel = Hunk_LowMark ();
 
 	host_initialized = true;
 	

@@ -25,23 +25,30 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // references them even when on a unix system.
 
 // these two are not intended to be set directly
-cvar_t	cl_name = {CVAR_SAVE, "_cl_name", "player"};
-cvar_t	cl_color = {CVAR_SAVE, "_cl_color", "0"};
-cvar_t	cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
+cvar_t cl_name = {CVAR_SAVE, "_cl_name", "player"};
+cvar_t cl_color = {CVAR_SAVE, "_cl_color", "0"};
+cvar_t cl_pmodel = {CVAR_SAVE, "_cl_pmodel", "0"};
 
-cvar_t	cl_shownet = {0, "cl_shownet","0"};
-cvar_t	cl_nolerp = {0, "cl_nolerp", "0"};
+cvar_t cl_shownet = {0, "cl_shownet","0"};
+cvar_t cl_nolerp = {0, "cl_nolerp", "0"};
 
-cvar_t	lookspring = {CVAR_SAVE, "lookspring","0"};
-cvar_t	lookstrafe = {CVAR_SAVE, "lookstrafe","0"};
-cvar_t	sensitivity = {CVAR_SAVE, "sensitivity","3", 1, 30};
+cvar_t cl_itembobheight = {0, "cl_itembobheight", "8"};
+cvar_t cl_itembobspeed = {0, "cl_itembobspeed", "0.5"};
 
-cvar_t	m_pitch = {CVAR_SAVE, "m_pitch","0.022"};
-cvar_t	m_yaw = {CVAR_SAVE, "m_yaw","0.022"};
-cvar_t	m_forward = {CVAR_SAVE, "m_forward","1"};
-cvar_t	m_side = {CVAR_SAVE, "m_side","0.8"};
+cvar_t lookspring = {CVAR_SAVE, "lookspring","0"};
+cvar_t lookstrafe = {CVAR_SAVE, "lookstrafe","0"};
+cvar_t sensitivity = {CVAR_SAVE, "sensitivity","3", 1, 30};
+
+cvar_t m_pitch = {CVAR_SAVE, "m_pitch","0.022"};
+cvar_t m_yaw = {CVAR_SAVE, "m_yaw","0.022"};
+cvar_t m_forward = {CVAR_SAVE, "m_forward","1"};
+cvar_t m_side = {CVAR_SAVE, "m_side","0.8"};
 
 cvar_t freelook = {CVAR_SAVE, "freelook", "1"};
+
+cvar_t cl_draweffects = {0, "cl_draweffects", "1"};
+
+mempool_t *cl_scores_mempool;
 
 client_static_t	cls;
 client_state_t	cl;
@@ -52,6 +59,27 @@ lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 
 int				cl_numvisedicts;
 entity_t		*cl_visedicts[MAX_VISEDICTS];
+
+typedef struct effect_s
+{
+	int active;
+	vec3_t origin;
+	float starttime;
+	float framerate;
+	int modelindex;
+	int startframe;
+	int endframe;
+	// these are for interpolation
+	int frame;
+	double frame1time;
+	double frame2time;
+}
+cl_effect_t;
+
+#define MAX_EFFECTS 256
+
+static cl_effect_t cl_effect[MAX_EFFECTS];
+
 
 /*
 =====================
@@ -66,16 +94,22 @@ void CL_ClearState (void)
 	if (!sv.active)
 		Host_ClearMemory ();
 
+	Mem_EmptyPool(cl_scores_mempool);
+
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
 
 	SZ_Clear (&cls.message);
 
 // clear other arrays
-	memset (cl_entities, 0, sizeof(cl_entities));
-	memset (cl_lightstyle, 0, sizeof(cl_lightstyle));
-	memset (cl_temp_entities, 0, sizeof(cl_temp_entities));
-	memset (cl_beams, 0, sizeof(cl_beams));
+	memset(cl_entities, 0, sizeof(cl_entities));
+	memset(cl_lightstyle, 0, sizeof(cl_lightstyle));
+	memset(cl_temp_entities, 0, sizeof(cl_temp_entities));
+	memset(cl_beams, 0, sizeof(cl_beams));
+	memset(cl_dlights, 0, sizeof(cl_dlights));
+	memset(cl_effect, 0, sizeof(cl_effect));
+	CL_Particles_Clear();
+	CL_Decals_Clear();
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < MAX_EDICTS;i++)
 	{
@@ -142,7 +176,8 @@ void CL_Disconnect (void)
 	cl.cshifts[2].percent = 0;
 	cl.cshifts[3].percent = 0;
 
-// if running a local server, shut it down
+	cl.worldmodel = NULL;
+
 	if (cls.demoplayback)
 		CL_StopPlayback ();
 	else if (cls.state == ca_connected)
@@ -156,11 +191,11 @@ void CL_Disconnect (void)
 		NET_SendUnreliableMessage (cls.netcon, &cls.message);
 		SZ_Clear (&cls.message);
 		NET_Close (cls.netcon);
-
-		cls.state = ca_disconnected;
+		// if running a local server, shut it down
 		if (sv.active)
 			Host_ShutdownServer(false);
 	}
+	cls.state = ca_disconnected;
 
 	cls.demoplayback = cls.timedemo = false;
 	cls.signon = 0;
@@ -197,93 +232,10 @@ void CL_EstablishConnection (char *host)
 	if (!cls.netcon)
 		Host_Error ("CL_Connect: connect failed\n");
 	Con_DPrintf ("CL_EstablishConnection: connected to %s\n", host);
-	
+
 	cls.demonum = -1;			// not in the demo loop now
 	cls.state = ca_connected;
 	cls.signon = 0;				// need all the signon messages before playing
-}
-
-/*
-=====================
-CL_SignonReply
-
-An svc_signonnum has been received, perform a client side setup
-=====================
-*/
-void CL_SignonReply (void)
-{
-	char 	str[8192];
-
-Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
-
-	switch (cls.signon)
-	{
-	case 1:
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, "prespawn");
-		break;
-
-	case 2:
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
-
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, va("color %i %i\n", ((int)cl_color.value)>>4, ((int)cl_color.value)&15));
-	
-		if (cl_pmodel.value)
-		{
-			MSG_WriteByte (&cls.message, clc_stringcmd);
-			MSG_WriteString (&cls.message, va("pmodel %f\n", cl_pmodel.value));
-		}
-
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		sprintf (str, "spawn %s", cls.spawnparms);
-		MSG_WriteString (&cls.message, str);
-		break;
-		
-	case 3:	
-		MSG_WriteByte (&cls.message, clc_stringcmd);
-		MSG_WriteString (&cls.message, "begin");
-		Cache_Report ();		// print remaining memory
-		break;
-		
-	case 4:
-//		SCR_EndLoadingPlaque ();		// allow normal screen updates
-		Con_ClearNotify();
-		break;
-	}
-}
-
-/*
-=====================
-CL_NextDemo
-
-Called to play the next demo in the demo loop
-=====================
-*/
-void CL_NextDemo (void)
-{
-	char	str[1024];
-
-	if (cls.demonum == -1)
-		return;		// don't play demos
-
-//	SCR_BeginLoadingPlaque ();
-
-	if (!cls.demos[cls.demonum][0] || cls.demonum == MAX_DEMOS)
-	{
-		cls.demonum = 0;
-		if (!cls.demos[cls.demonum][0])
-		{
-			Con_Printf ("No demos listed with startdemos\n");
-			cls.demonum = -1;
-			return;
-		}
-	}
-
-	sprintf (str,"playdemo %s\n", cls.demos[cls.demonum]);
-	Cbuf_InsertText (str);
-	cls.demonum++;
 }
 
 /*
@@ -291,12 +243,12 @@ void CL_NextDemo (void)
 CL_PrintEntities_f
 ==============
 */
-void CL_PrintEntities_f (void)
+static void CL_PrintEntities_f (void)
 {
 	entity_t	*ent;
 	int			i, j;
 	char		name[32];
-	
+
 	for (i = 0, ent = cl_entities;i < MAX_EDICTS /*cl.num_entities*/;i++, ent++)
 	{
 		if (!ent->state_current.active)
@@ -327,19 +279,19 @@ Determines the fraction between the last two messages that the objects
 should be put at.
 ===============
 */
-float	CL_LerpPoint (void)
+static float CL_LerpPoint (void)
 {
 	float	f, frac;
 
 	f = cl.mtime[0] - cl.mtime[1];
 
 	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)
-	if (!f || cl_nolerp.value || cls.timedemo || (sv.active && svs.maxclients == 1))
+	if (!f || cl_nolerp.integer || cls.timedemo || (sv.active && svs.maxclients == 1))
 	{
 		cl.time = cl.mtime[0];
 		return 1;
 	}
-		
+
 	if (f > 0.1)
 	{	// dropped packet, or start of demo
 		cl.mtime[1] = cl.mtime[0] - 0.1;
@@ -365,35 +317,18 @@ float	CL_LerpPoint (void)
 		}
 		frac = 1;
 	}
-		
+
 	return frac;
 }
 
-float CL_EntityLerpPoint (entity_t *ent)
-{
-	float	f;
-
-	if (cl_nolerp.value || cls.timedemo || (sv.active && svs.maxclients == 1))
-		return 1;
-
-	f = ent->state_current.time - ent->state_previous.time;
-//	Con_Printf(" %g-%g=%g", ent->state_current.time, ent->state_previous.time, f);
-
-	if (f <= 0)
-		return 1;
-	if (f >= 0.1)
-		f = 0.1;
-
-//	Con_Printf(" %g-%g/%g=%f", cl.time, ent->state_previous.time, f, (cl.time - ent->state_previous.time) / f);
-	f = (cl.time - ent->state_previous.time) / f;
-	return bound(0, f, 1);
-}
-
-void CL_RelinkStaticEntities(void)
+static void CL_RelinkStaticEntities(void)
 {
 	int i;
 	for (i = 0;i < cl.num_statics && cl_numvisedicts < MAX_VISEDICTS;i++)
+	{
+		Mod_CheckLoaded(cl_static_entities[i].render.model);
 		cl_visedicts[cl_numvisedicts++] = &cl_static_entities[i];
+	}
 }
 
 /*
@@ -401,16 +336,18 @@ void CL_RelinkStaticEntities(void)
 CL_RelinkEntities
 ===============
 */
-void R_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent);
-void CL_RelinkNetworkEntities()
+static void CL_RelinkNetworkEntities()
 {
 	entity_t	*ent;
-	int			i, j, glowcolor, effects;
-	float		f, d, bobjrotate/*, bobjoffset*/, dlightradius, glowsize;
+	int			i, glowcolor, effects;
+	float		f, d, bobjrotate, bobjoffset, dlightradius, glowsize, lerp;
 	vec3_t		oldorg, neworg, delta, dlightcolor;
 
 	bobjrotate = ANGLEMOD(100*cl.time);
-//	bobjoffset = cos(180 * cl.time * M_PI / 180) * 4.0f + 4.0f;
+	if (cl_itembobheight.value)
+		bobjoffset = (cos(cl.time * cl_itembobspeed.value * (2.0 * M_PI)) + 1.0) * 0.5 * cl_itembobheight.value;
+	else
+		bobjoffset = 0;
 
 	CL_RelinkStaticEntities();
 
@@ -426,19 +363,84 @@ void CL_RelinkNetworkEntities()
 		if (!ent->state_previous.active)
 		{
 			// only one state available
+			lerp = 1;
+			VectorCopy (ent->state_current.origin, oldorg); // skip trails
 			VectorCopy (ent->state_current.origin, neworg);
 			VectorCopy (ent->state_current.angles, ent->render.angles);
+
+			/*
+			// monster interpolation
+			ent->persistent.steplerptime = 0;
+			VectorCopy(ent->state_current.origin, ent->persistent.stepoldorigin);
+			VectorCopy(ent->state_current.angles, ent->persistent.stepoldangles);
+			VectorCopy(ent->state_current.origin, ent->persistent.steporigin);
+			VectorCopy(ent->state_current.angles, ent->persistent.stepangles);
+			*/
 		}
+		/*
+		else if ((ent->state_current.flags & ent->state_previous.flags) & ENTFLAG_STEP)
+		{
+			if (ent->state_current.origin[0] != ent->persistent.steporigin[0]
+			 || ent->state_current.origin[1] != ent->persistent.steporigin[1]
+			 || ent->state_current.origin[2] != ent->persistent.steporigin[2]
+			 || ent->state_current.angles[0] != ent->persistent.stepangles[0]
+			 || ent->state_current.angles[1] != ent->persistent.stepangles[1]
+			 || ent->state_current.angles[2] != ent->persistent.stepangles[2])
+			{
+				// update lerp positions
+				ent->clientpersistent.steplerptime = sv.time;
+				VectorCopy(ent->steporigin, ent->stepoldorigin);
+				VectorCopy(ent->stepangles, ent->stepoldangles);
+				VectorCopy(ent->v.origin, ent->steporigin);
+				VectorCopy(ent->v.angles, ent->stepangles);
+			}
+			lerp = (cl.time - ent->persistent.steplerptime) * 10.0;
+			if (lerp < 1)
+			{
+				// origin
+				VectorSubtract(ent->persistent.steporigin, ent->persistent.stepoldorigin, delta);
+				VectorMA(ent->persistent.stepoldorigin, lerp, delta, neworg);
+
+				// angles
+				VectorSubtract(ent->persistent.stepangles, ent->persistent.stepoldangles, delta);
+				// choose shortest rotate (to avoid 'spin around' situations)
+				if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+				if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+				if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+				VectorMA(ent->stepoldangles, lerp, delta, ent->render.angles);
+			}
+			else
+			{
+				VectorCopy(ent->persistent.steporigin, neworg);
+				VectorCopy(ent->persistent.stepangles, ent->render.angles);
+			}
+		}
+		*/
 		else
 		{
+			/*
+			// monster interpolation
+			ent->persistent.steplerptime = 0;
+			VectorCopy(ent->state_current.origin, ent->persistent.stepoldorigin);
+			VectorCopy(ent->state_current.angles, ent->persistent.stepoldangles);
+			VectorCopy(ent->state_current.origin, ent->persistent.steporigin);
+			VectorCopy(ent->state_current.angles, ent->persistent.stepangles);
+			*/
+
 			// if the delta is large, assume a teleport and don't lerp
 			VectorSubtract(ent->state_current.origin, ent->state_previous.origin, delta);
 			// LordHavoc: increased tolerance from 100 to 200
-			if (DotProduct(delta, delta) > 200*200)
-				f = 1;
+			if ((sv.active && svs.maxclients == 1 && !(ent->state_current.flags & RENDER_STEP)) || cls.timedemo || DotProduct(delta, delta) > 200*200 || cl_nolerp.integer)
+				lerp = 1;
 			else
-				f = CL_EntityLerpPoint(ent);
-			if (f >= 1)
+			{
+				f = ent->state_current.time - ent->state_previous.time;
+				if (f > 0)
+					lerp = (cl.time - ent->state_previous.time) / f;
+				else
+					lerp = 1;
+			}
+			if (lerp >= 1)
 			{
 				// no interpolation
 				VectorCopy (ent->state_current.origin, neworg);
@@ -447,29 +449,25 @@ void CL_RelinkNetworkEntities()
 			else
 			{
 				// interpolate the origin and angles
-				for (j = 0;j < 3;j++)
-				{
-					neworg[j] = ent->state_previous.origin[j] + f*delta[j];
-
-					d = ent->state_current.angles[j] - ent->state_previous.angles[j];
-					if (d > 180)
-						d -= 360;
-					else if (d < -180)
-						d += 360;
-					ent->render.angles[j] = ent->state_previous.angles[j] + f*d;
-				}
+				VectorMA(ent->state_previous.origin, lerp, delta, neworg);
+				VectorSubtract(ent->state_current.angles, ent->state_previous.angles, delta);
+				if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
+				if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
+				if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
+				VectorMA(ent->state_previous.angles, lerp, delta, ent->render.angles);
 			}
 		}
 
 		VectorCopy (neworg, ent->persistent.trail_origin);
 		// persistent.modelindex will be updated by CL_LerpUpdate
-		if (ent->state_current.modelindex != ent->persistent.modelindex)
+		if (ent->state_current.modelindex != ent->persistent.modelindex || !ent->state_previous.active)
 			VectorCopy(neworg, oldorg);
 
 		VectorCopy (neworg, ent->render.origin);
 		ent->render.flags = ent->state_current.flags;
 		ent->render.effects = effects = ent->state_current.effects;
 		ent->render.model = cl.model_precache[ent->state_current.modelindex];
+		Mod_CheckLoaded(ent->render.model);
 		ent->render.frame = ent->state_current.frame;
 		if (cl.scores == NULL || !ent->state_current.colormap)
 			ent->render.colormap = -1; // no special coloring
@@ -480,9 +478,6 @@ void CL_RelinkNetworkEntities()
 		ent->render.scale = ent->state_current.scale * (1.0f / 16.0f); // FIXME: interpolate?
 		glowsize = ent->state_current.glowsize * 4.0f; // FIXME: interpolate?
 		glowcolor = ent->state_current.glowcolor;
-		ent->render.colormod[0] = (float) ((ent->state_current.colormod >> 5) & 7) * (1.0f / 7.0f);
-		ent->render.colormod[1] = (float) ((ent->state_current.colormod >> 2) & 7) * (1.0f / 7.0f);
-		ent->render.colormod[2] = (float) (ent->state_current.colormod & 3) * (1.0f / 3.0f);
 
 		// update interpolation info
 		CL_LerpUpdate(ent, ent->state_current.frame, ent->state_current.modelindex);
@@ -497,7 +492,7 @@ void CL_RelinkNetworkEntities()
 		if (effects)
 		{
 			if (effects & EF_BRIGHTFIELD)
-				R_EntityParticles (ent);
+				CL_EntityParticles (ent);
 			if (effects & EF_MUZZLEFLASH)
 			{
 				vec3_t v, v2;
@@ -559,7 +554,7 @@ void CL_RelinkNetworkEntities()
 					}
 					// how many flames to make
 					temp = (int) (cl.time * 300) - (int) (cl.oldtime * 300);
-					R_FlameCube(mins, maxs, temp);
+					CL_FlameCube(mins, maxs, temp);
 				}
 				d = lhrandom(200, 250);
 				dlightcolor[0] += d * 1.0f;
@@ -574,22 +569,22 @@ void CL_RelinkNetworkEntities()
 			if (ent->render.model->flags & EF_ROTATE)
 			{
 				ent->render.angles[1] = bobjrotate;
-//				ent->render.origin[2] += bobjoffset;
+				ent->render.origin[2] += bobjoffset;
 			}
 			// only do trails if present in the previous frame as well
 			if (ent->state_previous.active)
 			{
 				if (ent->render.model->flags & EF_GIB)
-					R_RocketTrail (oldorg, neworg, 2, ent);
+					CL_RocketTrail (oldorg, neworg, 2, ent);
 				else if (ent->render.model->flags & EF_ZOMGIB)
-					R_RocketTrail (oldorg, neworg, 4, ent);
+					CL_RocketTrail (oldorg, neworg, 4, ent);
 				else if (ent->render.model->flags & EF_TRACER)
-					R_RocketTrail (oldorg, neworg, 3, ent);
+					CL_RocketTrail (oldorg, neworg, 3, ent);
 				else if (ent->render.model->flags & EF_TRACER2)
-					R_RocketTrail (oldorg, neworg, 5, ent);
+					CL_RocketTrail (oldorg, neworg, 5, ent);
 				else if (ent->render.model->flags & EF_ROCKET)
 				{
-					R_RocketTrail (oldorg, ent->render.origin, 0, ent);
+					CL_RocketTrail (oldorg, ent->render.origin, 0, ent);
 					dlightcolor[0] += 200.0f;
 					dlightcolor[1] += 160.0f;
 					dlightcolor[2] +=  80.0f;
@@ -597,12 +592,12 @@ void CL_RelinkNetworkEntities()
 				else if (ent->render.model->flags & EF_GRENADE)
 				{
 					if (ent->render.alpha == -1) // LordHavoc: Nehahra dem compatibility
-						R_RocketTrail (oldorg, neworg, 7, ent);
+						CL_RocketTrail (oldorg, neworg, 7, ent);
 					else
-						R_RocketTrail (oldorg, neworg, 1, ent);
+						CL_RocketTrail (oldorg, neworg, 1, ent);
 				}
 				else if (ent->render.model->flags & EF_TRACER3)
-					R_RocketTrail (oldorg, neworg, 6, ent);
+					CL_RocketTrail (oldorg, neworg, 6, ent);
 			}
 		}
 		// LordHavoc: customizable glow
@@ -615,7 +610,7 @@ void CL_RelinkNetworkEntities()
 		}
 		// LordHavoc: customizable trail
 		if (ent->render.flags & RENDER_GLOWTRAIL)
-			R_RocketTrail2 (oldorg, neworg, glowcolor, ent);
+			CL_RocketTrail2 (oldorg, neworg, glowcolor, ent);
 
 		if (dlightcolor[0] || dlightcolor[1] || dlightcolor[2])
 		{
@@ -624,12 +619,12 @@ void CL_RelinkNetworkEntities()
 			d = 1.0f / dlightradius;
 			VectorCopy(neworg, vec);
 			// hack to make glowing player light shine on their gun
-			if (i == cl.viewentity && !chase_active.value)
+			if (i == cl.viewentity && !chase_active.integer)
 				vec[2] += 30;
 			CL_AllocDlight (&ent->render, vec, dlightradius, dlightcolor[0] * d, dlightcolor[1] * d, dlightcolor[2] * d, 0, 0);
 		}
 
-		if (chase_active.value)
+		if (chase_active.integer)
 		{
 			if (ent->render.flags & RENDER_VIEWMODEL)
 				continue;
@@ -649,7 +644,7 @@ void CL_RelinkNetworkEntities()
 	}
 }
 
-void CL_LerpPlayerVelocity (void)
+static void CL_LerpPlayerVelocity (void)
 {
 	int i;
 	float frac, d;
@@ -675,12 +670,90 @@ void CL_LerpPlayerVelocity (void)
 	}
 }
 
+void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate)
+{
+	int i;
+	cl_effect_t *e;
+	if (!modelindex) // sanity check
+		return;
+	for (i = 0, e = cl_effect;i < MAX_EFFECTS;i++, e++)
+	{
+		if (e->active)
+			continue;
+		e->active = true;
+		VectorCopy(org, e->origin);
+		e->modelindex = modelindex;
+		e->starttime = cl.time;
+		e->startframe = startframe;
+		e->endframe = startframe + framecount;
+		e->framerate = framerate;
+
+		e->frame = 0;
+		e->frame1time = cl.time;
+		e->frame2time = cl.time;
+		break;
+	}
+}
+
+static void CL_RelinkEffects()
+{
+	int i, intframe;
+	cl_effect_t *e;
+	entity_t *vis;
+	float frame;
+
+	for (i = 0, e = cl_effect;i < MAX_EFFECTS;i++, e++)
+	{
+		if (e->active)
+		{
+			frame = (cl.time - e->starttime) * e->framerate + e->startframe;
+			intframe = frame;
+			if (intframe < 0 || intframe >= e->endframe)
+			{
+				e->active = false;
+				memset(e, 0, sizeof(*e));
+				continue;
+			}
+
+			if (intframe != e->frame)
+			{
+				e->frame = intframe;
+				e->frame1time = e->frame2time;
+				e->frame2time = cl.time;
+			}
+
+			if ((vis = CL_NewTempEntity()))
+			{
+				// interpolation stuff
+				vis->render.frame1 = intframe;
+				vis->render.frame2 = intframe + 1;
+				if (vis->render.frame2 >= e->endframe)
+					vis->render.frame2 = -1; // disappear
+				vis->render.framelerp = frame - intframe;
+				vis->render.frame1time = e->frame1time;
+				vis->render.frame2time = e->frame2time;
+
+				// normal stuff
+				VectorCopy(e->origin, vis->render.origin);
+				vis->render.model = cl.model_precache[e->modelindex];
+				vis->render.frame = vis->render.frame2;
+				vis->render.colormap = -1; // no special coloring
+				vis->render.scale = 1;
+				vis->render.alpha = 1;
+			}
+		}
+	}
+}
+
 void CL_RelinkEntities (void)
 {
 	cl_numvisedicts = 0;
 
 	CL_LerpPlayerVelocity();
 	CL_RelinkNetworkEntities();
+	CL_RelinkEffects();
+	CL_MoveParticles();
+	CL_UpdateDecals();
 }
 
 
@@ -697,7 +770,7 @@ int CL_ReadFromServer (void)
 
 	cl.oldtime = cl.time;
 	cl.time += cl.frametime;
-	
+
 	netshown = false;
 	do
 	{
@@ -706,22 +779,21 @@ int CL_ReadFromServer (void)
 			Host_Error ("CL_ReadFromServer: lost server connection");
 		if (!ret)
 			break;
-		
+
 		cl.last_received_message = realtime;
 
-		if (cl_shownet.value)
+		if (cl_shownet.integer)
 			netshown = true;
 
 		CL_ParseServerMessage ();
 	}
 	while (ret && cls.state == ca_connected);
-	
+
 	if (netshown)
 		Con_Printf ("\n");
 
 	CL_RelinkEntities ();
 	CL_UpdateTEnts ();
-	CL_DoEffects ();
 
 //
 // bring the links up to date
@@ -748,7 +820,7 @@ void CL_SendCmd (void)
 
 	// allow mice or other external controllers to add to the move
 		IN_Move (&cmd);
-	
+
 	// send the unreliable message
 		CL_SendMove (&cmd);
 	}
@@ -758,11 +830,11 @@ void CL_SendCmd (void)
 		SZ_Clear (&cls.message);
 		return;
 	}
-	
+
 // send the reliable message
 	if (!cls.message.cursize)
 		return;		// no message at all
-	
+
 	if (!NET_CanSendMessage (cls.netcon))
 	{
 		Con_DPrintf ("CL_WriteToServer: can't send\n");
@@ -776,7 +848,7 @@ void CL_SendCmd (void)
 }
 
 // LordHavoc: pausedemo command
-void CL_PauseDemo_f (void)
+static void CL_PauseDemo_f (void)
 {
 	cls.demopaused = !cls.demopaused;
 	if (cls.demopaused)
@@ -791,7 +863,7 @@ CL_PModel_f
 LordHavoc: Intended for Nehahra, I personally think this is dumb, but Mindcrime won't listen.
 ======================
 */
-void CL_PModel_f (void)
+static void CL_PModel_f (void)
 {
 	int i;
 	eval_t *val;
@@ -805,7 +877,7 @@ void CL_PModel_f (void)
 
 	if (cmd_source == src_command)
 	{
-		if (cl_pmodel.value == i)
+		if (cl_pmodel.integer == i)
 			return;
 		Cvar_SetValue ("_cl_pmodel", i);
 		if (cls.state == ca_connected)
@@ -823,7 +895,7 @@ void CL_PModel_f (void)
 CL_Fog_f
 ======================
 */
-void CL_Fog_f (void)
+static void CL_Fog_f (void)
 {
 	if (Cmd_Argc () == 1)
 	{
@@ -842,18 +914,19 @@ CL_Init
 =================
 */
 void CL_Init (void)
-{	
-	SZ_Alloc (&cls.message, 1024);
+{
+	SZ_Alloc (&cls.message, 1024, "cls.message");
 
 	CL_InitInput ();
 	CL_InitTEnts ();
-	
+
 //
 // register our commands
 //
 	Cvar_RegisterVariable (&cl_name);
 	Cvar_RegisterVariable (&cl_color);
-	Cvar_RegisterVariable (&cl_pmodel);
+	if (gamemode == GAME_NEHAHRA)
+		Cvar_RegisterVariable (&cl_pmodel);
 	Cvar_RegisterVariable (&cl_upspeed);
 	Cvar_RegisterVariable (&cl_forwardspeed);
 	Cvar_RegisterVariable (&cl_backspeed);
@@ -874,8 +947,9 @@ void CL_Init (void)
 	Cvar_RegisterVariable (&m_forward);
 	Cvar_RegisterVariable (&m_side);
 
-//	Cvar_RegisterVariable (&cl_autofire);
-	
+	Cvar_RegisterVariable (&cl_itembobspeed);
+	Cvar_RegisterVariable (&cl_itembobheight);
+
 	Cmd_AddCommand ("entities", CL_PrintEntities_f);
 	Cmd_AddCommand ("bitprofile", CL_BitProfile_f);
 	Cmd_AddCommand ("disconnect", CL_Disconnect_f);
@@ -888,8 +962,14 @@ void CL_Init (void)
 
 	// LordHavoc: added pausedemo
 	Cmd_AddCommand ("pausedemo", CL_PauseDemo_f);
-	// LordHavoc: added pmodel command (like name, etc, only intended for Nehahra)
-	Cmd_AddCommand ("pmodel", CL_PModel_f);
+	if (gamemode == GAME_NEHAHRA)
+		Cmd_AddCommand ("pmodel", CL_PModel_f);
+
+	cl_scores_mempool = Mem_AllocPool("client player info");
+
+	Cvar_RegisterVariable(&cl_draweffects);
 
 	CL_Parse_Init();
+	CL_Particles_Init();
+	CL_Decals_Init();
 }

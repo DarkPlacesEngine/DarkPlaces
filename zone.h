@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -17,112 +17,97 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
-/*
- memory allocation
 
+#define POOLNAMESIZE 128
+// give malloc padding so we can't waste most of a page at the end
+#define MEMCLUMPSIZE (65536 - 1536)
+// smallest unit we care about is this many bytes
+#define MEMUNIT 8
+#define MEMBITS (MEMCLUMPSIZE / MEMUNIT)
+#define MEMBITINTS (MEMBITS / 32)
 
-H_??? The hunk manages the entire memory block given to quake.  It must be
-contiguous.  Memory can be allocated from either the low or high end in a
-stack fashion.  The only way memory is released is by resetting one of the
-pointers.
+#define MEMHEADER_SENTINEL 0xABADCAFE
+#define MEMCLUMP_SENTINEL 0xDEADF00D
 
-Hunk allocations should be given a name, so the Hunk_Print () function
-can display usage.
-
-Hunk allocations are guaranteed to be 16 byte aligned.
-
-The video buffers are allocated high to avoid leaving a hole underneath
-server allocations when changing to a higher video mode.
-
-
-Z_??? Zone memory functions used for small, dynamic allocations like text
-strings from command input.  There is only about 48K for it, allocated at
-the very bottom of the hunk.
-
-Cache_??? Cache memory is for objects that can be dynamically loaded and
-can usefully stay persistant between levels.  The size of the cache
-fluctuates from level to level.
-
-To allocate a cachable object
-
-
-Temp_??? Temp memory is used for file loading and surface caching.  The size
-of the cache memory is adjusted so that there is a minimum of 512k remaining
-for temp memory.
-
-
------- Top of Memory -------
-
-high hunk allocations
-
-<--- high hunk reset point held by vid
-
-video buffer
-
-z buffer
-
-surface cache
-
-<--- high hunk used
-
-cachable memory
-
-<--- low hunk used
-
-client and server low hunk allocations
-
-<-- low hunk reset point held by host
-
-startup hunk allocations
-
-Zone block
-
------ Bottom of Memory -----
-
-
-
-*/
-
-void Memory_Init (void *buf, int size);
-
-void Z_Free (void *ptr);
-void *Z_Malloc (int size);			// returns 0 filled memory
-void *Z_TagMalloc (int size, int tag);
-
-void Z_DumpHeap (void);
-void Z_CheckHeap (void);
-int Z_FreeMemory (void);
-
-void *Hunk_AllocName (int size, char *name);
-
-void *Hunk_HighAllocName (int size, char *name);
-
-int	Hunk_LowMark (void);
-void Hunk_FreeToLowMark (int mark);
-
-int	Hunk_HighMark (void);
-void Hunk_FreeToHighMark (int mark);
-
-void Hunk_Check (void);
-
-typedef struct cache_user_s
+typedef struct memheader_s
 {
-	void	*data;
-} cache_user_t;
+	// next memheader in chain belonging to pool
+	struct memheader_s *chain;
+	// pool this memheader belongs to
+	struct mempool_s *pool;
+	// clump this memheader lives in, NULL if not in a clump
+	struct memclump_s *clump;
+	// size of the memory after the header (excluding header and sentinel2)
+	int size;
+	// file name and line where Mem_Alloc was called
+	char *filename;
+	int fileline;
+	// should always be MEMHEADER_SENTINEL
+	int sentinel1;
+	// immediately followed by data, which is followed by another MEMHEADER_SENTINEL
+}
+memheader_t;
 
-void Cache_Flush (void);
+typedef struct memclump_s
+{
+	// contents of the clump
+	byte block[MEMCLUMPSIZE];
+	// should always be MEMCLUMP_SENTINEL
+	int sentinel1;
+	// if a bit is on, it means that the MEMUNIT bytes it represents are
+	// allocated, otherwise free
+	int bits[MEMBITINTS];
+	// should always be MEMCLUMP_SENTINEL
+	int sentinel2;
+	// if this drops to 0, the clump is freed
+	int blocksinuse;
+	// largest block of memory available (this is reset to an optimistic
+	// number when anything is freed, and updated when alloc fails the clump)
+	int largestavailable;
+	// next clump in the chain
+	struct memclump_s *chain;
+}
+memclump_t;
 
-void *Cache_Check (cache_user_t *c);
-// returns the cached data, and moves to the head of the LRU list
-// if present, otherwise returns NULL
+typedef struct mempool_s
+{
+	// chain of individual memory allocations
+	struct memheader_s *chain;
+	// chain of clumps (if any)
+	struct memclump_s *clumpchain;
+	// total memory allocated in this pool (inside memheaders)
+	int totalsize;
+	// total memory allocated in this pool (actual malloc total)
+	int realsize;
+	// updated each time the pool is displayed by memlist, shows change from previous time (unless pool was freed)
+	int lastchecksize;
+	// name of the pool
+	char name[POOLNAMESIZE];
+	// linked into global mempool list
+	struct mempool_s *next;
+}
+mempool_t;
 
-void Cache_Free (cache_user_t *c);
+#define Mem_Alloc(pool,size) _Mem_Alloc(pool, size, __FILE__, __LINE__)
+#define Mem_CheckSentinels(data) _Mem_CheckSentinels(data, __FILE__, __LINE__)
+#define Mem_CheckSentinelsGlobal() _Mem_CheckSentinelsGlobal(__FILE__, __LINE__)
 
-void *Cache_Alloc (cache_user_t *c, int size, char *name);
-// Returns NULL if all purgable data was tossed and there still
-// wasn't enough room.
+void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline);
+void Mem_Free(void *data);
+mempool_t *Mem_AllocPool(char *name);
+void Mem_FreePool(mempool_t **pool);
+void Mem_EmptyPool(mempool_t *pool);
+void _Mem_CheckSentinels(void *data, char *filename, int fileline);
+void _Mem_CheckSentinelsGlobal(char *filename, int fileline);
+void Mem_PrintStats(void);
+void Mem_PrintList(void);
 
-void Cache_Report (void);
+// used for temporary allocations
+mempool_t *tempmempool;
 
+void Memory_Init (void);
+void Memory_Init_Commands (void);
 
-
+extern mempool_t *zonemempool;
+#define Z_Malloc(size) Mem_Alloc(zonemempool,size)
+#define Z_Free(data) Mem_Free(data)

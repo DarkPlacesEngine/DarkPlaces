@@ -96,3 +96,7 @@ RecursiveHullCheckTraceInfo_t;
 // LordHavoc: FIXME: this is not thread safe, if threading matters here, pass
 // this as a struct to RecursiveHullCheck, RecursiveHullCheck_Impact, etc...
 extern RecursiveHullCheckTraceInfo_t RecursiveHullCheckInfo;
+
+// optimized variant of RecursiveHullCheck that only returns success/failure
+// FIXME: broken, fix it
+//extern qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2);

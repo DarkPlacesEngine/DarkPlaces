@@ -60,6 +60,8 @@
 # endif
 #endif
 
+mempool_t *quakeio_mempool;
+
 void
 Qexpand_squiggle (const char *path, char *dest)
 {
@@ -132,7 +134,7 @@ Qopen (const char *path, const char *mode)
 	}
 	*p = 0;
 
-	file = qmalloc (sizeof (*file));
+	file = Mem_Alloc(quakeio_mempool, sizeof (*file));
 	memset(file, 0, sizeof(*file));
 	if (!file)
 		return 0;
@@ -140,7 +142,7 @@ Qopen (const char *path, const char *mode)
 	if (zip) {
 		file->gzfile = gzopen (path, m);
 		if (!file->gzfile) {
-			qfree (file);
+			Mem_Free(file);
 			return 0;
 		}
 	} else
@@ -148,7 +150,7 @@ Qopen (const char *path, const char *mode)
 	{
 		file->file = fopen (path, m);
 		if (!file->file) {
-			qfree (file);
+			Mem_Free(file);
 			return 0;
 		}
 	}
@@ -172,7 +174,7 @@ Qdopen (int fd, const char *mode)
 
 	*p = 0;
 
-	file = qmalloc (sizeof (*file));
+	file = Mem_Alloc(quakeio_mempool, sizeof (*file));
 	memset(file, 0, sizeof(*file));
 	if (!file)
 		return 0;
@@ -180,7 +182,7 @@ Qdopen (int fd, const char *mode)
 	if (zip) {
 		file->gzfile = gzdopen (fd, m);
 		if (!file->gzfile) {
-			qfree (file);
+			Mem_Free(file);
 			return 0;
 		}
 	} else
@@ -188,7 +190,7 @@ Qdopen (int fd, const char *mode)
 	{
 		file->file = fdopen (fd, m);
 		if (!file->file) {
-			qfree (file);
+			Mem_Free(file);
 			return 0;
 		}
 	}
@@ -208,7 +210,7 @@ Qclose (QFile *file)
 	else
 		gzclose (file->gzfile);
 #endif
-	qfree (file);
+	Mem_Free(file);
 }
 
 int
@@ -370,22 +372,23 @@ Qgetline (QFile *file)
 {
 	static int  size = 256;
 	static char *buf = 0;
+	char        *t;
 	int         len;
 
 	if (!buf)
-		buf = malloc (size);
+		buf = Mem_Alloc(quakeio_mempool, size);
 
 	if (!Qgets (file, buf, size))
 		return 0;
 
 	len = strlen (buf);
-	while (buf[len - 1] != '\n' && buf[len - 1] != '\r') {
-		char       *t = realloc (buf, size + 256);
-
-		if (!t)
-			Host_Error("Qgetline: realloc failed, out of memory?\n");
-		buf = t;
+	while (buf[len - 1] != '\n' && buf[len - 1] != '\r')
+	{
+		t = Mem_Alloc(quakeio_mempool, size + 256);
+		memcpy(t, buf, size);
+		Mem_Free(buf);
 		size += 256;
+		buf = t;
 		if (!Qgets (file, buf + len, size - len))
 			break;
 		len = strlen (buf);
@@ -393,4 +396,9 @@ Qgetline (QFile *file)
 	while ((len = strlen(buf)) && (buf[len - 1] == '\n' || buf[len - 1] == '\r'))
 		buf[len - 1] = 0;
 	return buf;
+}
+
+void QuakeIO_Init(void)
+{
+	quakeio_mempool = Mem_AllocPool("file management");
 }

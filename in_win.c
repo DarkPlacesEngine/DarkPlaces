@@ -534,7 +534,7 @@ IN_MouseMove
 */
 void IN_MouseMove (usercmd_t *cmd)
 {
-	int					i, mx, my, mouselook = (in_mlook.state & 1) || freelook.value;
+	int					i, mx, my, mouselook = (in_mlook.state & 1) || freelook.integer;
 	DIDEVICEOBJECTDATA	od;
 	DWORD				dwElements;
 	HRESULT				hr;
@@ -636,7 +636,7 @@ void IN_MouseMove (usercmd_t *cmd)
 //if (mx ||  my)
 //	Con_DPrintf("mx=%d, my=%d\n", mx, my);
 
-	if (m_filter.value)
+	if (m_filter.integer)
 	{
 		mouse_x = (mx + old_mouse_x) * 0.5;
 		mouse_y = (my + old_mouse_y) * 0.5;
@@ -654,7 +654,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	mouse_y *= sensitivity.value;
 
 // add mouse X/Y movement to cmd
-	if ( (in_strafe.state & 1) || (lookstrafe.value && mouselook))
+	if ( (in_strafe.state & 1) || (lookstrafe.integer && mouselook))
 		cmd->sidemove += m_side.value * mouse_x;
 	else
 		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
@@ -859,7 +859,7 @@ void Joy_AdvancedUpdate_f (void)
 		pdwRawValue[i] = RawValuePointer(i);
 	}
 
-	if( joy_advanced.value == 0.0)
+	if( joy_advanced.integer == 0)
 	{
 		// default joystick initialization
 		// 2 axes only with joystick control
@@ -997,7 +997,7 @@ qboolean IN_ReadJoystick (void)
 		// this is a hack -- there is a bug in the Logitech WingMan Warrior DirectInput Driver
 		// rather than having 32768 be the zero point, they have the zero point at 32668
 		// go figure -- anyway, now we get the full resolution out of the device
-		if (joy_wwhack1.value != 0.0)
+		if (joy_wwhack1.integer != 0.0)
 		{
 			ji.dwUpos += 100;
 		}
@@ -1024,7 +1024,7 @@ void IN_JoyMove (usercmd_t *cmd)
 {
 	float	speed, aspeed;
 	float	fAxisValue, fTemp;
-	int		i, mouselook = (in_mlook.state & 1) || freelook.value;
+	int		i, mouselook = (in_mlook.state & 1) || freelook.integer;
 
 	// complete initialization if first time in
 	// this is needed as cvars are not available at initialization time
@@ -1035,11 +1035,11 @@ void IN_JoyMove (usercmd_t *cmd)
 	}
 
 	// verify joystick is available and that the user wants to use it
-	if (!joy_avail || !in_joystick.value)
+	if (!joy_avail || !in_joystick.integer)
 	{
 		return; 
 	}
- 
+
 	// collect the joystick data, if possible
 	if (IN_ReadJoystick () != true)
 	{
@@ -1060,7 +1060,7 @@ void IN_JoyMove (usercmd_t *cmd)
 		// move centerpoint to zero
 		fAxisValue -= 32768.0;
 
-		if (joy_wwhack2.value != 0.0)
+		if (joy_wwhack2.integer != 0.0)
 		{
 			if (dwAxisMap[i] == AxisTurn)
 			{
@@ -1082,7 +1082,7 @@ void IN_JoyMove (usercmd_t *cmd)
 		switch (dwAxisMap[i])
 		{
 		case AxisForward:
-			if ((joy_advanced.value == 0.0) && mouselook)
+			if ((joy_advanced.integer == 0) && mouselook)
 			{
 				// user wants forward control to become look control
 				if (fabs(fAxisValue) > joy_pitchthreshold.value)
@@ -1127,7 +1127,7 @@ void IN_JoyMove (usercmd_t *cmd)
 			break;
 
 		case AxisTurn:
-			if ((in_strafe.state & 1) || (lookstrafe.value && mouselook))
+			if ((in_strafe.state & 1) || (lookstrafe.integer && mouselook))
 			{
 				// user wants turn control to become side control
 				if (fabs(fAxisValue) > joy_sidethreshold.value)
@@ -1175,7 +1175,7 @@ void IN_JoyMove (usercmd_t *cmd)
 					// disable pitch return-to-center unless requested by user
 					// *** this code can be removed when the lookspring bug is fixed
 					// *** the bug always has the lookspring feature on
-					if(lookspring.value == 0.0)
+					if(lookspring.integer == 0)
 						V_StopPitchDrift();
 				}
 			}

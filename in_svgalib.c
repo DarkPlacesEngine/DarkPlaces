@@ -322,7 +322,7 @@ void IN_Commands(void)
 
 void IN_Move(usercmd_t *cmd)
 {
-	int mouselook = (in_mlook.state & 1) || freelook.value;
+	int mouselook = (in_mlook.state & 1) || freelook.integer;
 	if (!UseMouse)
 		return;
 
@@ -338,7 +338,7 @@ void IN_Move(usercmd_t *cmd)
 	}
 	uimx = uimy = 0;
 
-	if (m_filter.value)
+	if (m_filter.integer)
 	{
 		mouse_x = (mx + old_mouse_x) * 0.5;
 		mouse_y = (my + old_mouse_y) * 0.5;
@@ -357,7 +357,7 @@ void IN_Move(usercmd_t *cmd)
 	mouse_y *= sensitivity.value;
 
 	/* Add mouse X/Y movement to cmd */
-	if ( (in_strafe.state & 1) || (lookstrafe.value && mouselook))
+	if ( (in_strafe.state & 1) || (lookstrafe.integer && mouselook))
 		cmd->sidemove += m_side.value * mouse_x;
 	else
 		cl.viewangles[YAW] -= m_yaw.value * mouse_x;

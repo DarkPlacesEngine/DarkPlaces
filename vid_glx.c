@@ -227,7 +227,7 @@ static void install_grabs(void)
 
 	XGrabPointer(vidx11_display, win,  True, 0, GrabModeAsync, GrabModeAsync, win, None, CurrentTime);
 
-	if (vid_dga.value)
+	if (vid_dga.integer)
 	{
 		int MajorVersion, MinorVersion;
 
@@ -235,11 +235,11 @@ static void install_grabs(void)
 		{
 			// unable to query, probalby not supported
 			Con_Printf( "Failed to detect XF86DGA Mouse\n" );
-			vid_dga.value = 0;
+			vid_dga.integer = 0;
 		}
 		else
 		{
-			vid_dga.value = 1;
+			vid_dga.integer = 1;
 			XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), XF86DGADirectMouse);
 			XWarpPointer(vidx11_display, None, win, 0, 0, 0, 0, 0, 0);
 		}
@@ -260,7 +260,7 @@ static void uninstall_grabs(void)
 	if (!vidx11_display || !win)
 		return;
 
-	if (vid_dga.value == 1)
+	if (vid_dga.integer == 1)
 		XF86DGADirectVideo(vidx11_display, DefaultScreen(vidx11_display), 0);
 
 	XUngrabPointer(vidx11_display, CurrentTime);
@@ -295,7 +295,7 @@ static void HandleEvents(void)
 		case MotionNotify:
 			if (usingmouse)
 			{
-				if (vid_dga.value == 1)
+				if (vid_dga.integer == 1)
 				{
 					mouse_x += event.xmotion.x_root * vid_dga_mouseaccel.value;
 					mouse_y += event.xmotion.y_root * vid_dga_mouseaccel.value;
@@ -495,14 +495,14 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 void GL_EndRendering (void)
 {
 	int usemouse;
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	glFlush();
 	glXSwapBuffers(vidx11_display, win);
 
 // handle the mouse state when windowed if that's changed
 	usemouse = false;
-	if (vid_mouse.value && key_dest == key_game)
+	if (vid_mouse.integer && key_dest == key_game)
 		usemouse = true;
 	if (vidmode_active)
 		usemouse = true;
@@ -844,7 +844,7 @@ void IN_MouseMove (usercmd_t *cmd)
 	if (!mouse_avail)
 		return;
 
-	if (m_filter.value)
+	if (m_filter.integer)
 	{
 		mouse_x = (mouse_x + old_mouse_x) * 0.5;
 		mouse_y = (mouse_y + old_mouse_y) * 0.5;

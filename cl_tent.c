@@ -21,19 +21,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t r_glowinglightning = {CVAR_SAVE, "r_glowinglightning", "1"};
+cvar_t cl_glowinglightning = {CVAR_SAVE, "cl_glowinglightning", "1"};
 
 int			num_temp_entities;
 entity_t	cl_temp_entities[MAX_TEMP_ENTITIES];
 beam_t		cl_beams[MAX_BEAMS];
 
-sfx_t			*cl_sfx_wizhit;
-sfx_t			*cl_sfx_knighthit;
-sfx_t			*cl_sfx_tink1;
-sfx_t			*cl_sfx_ric1;
-sfx_t			*cl_sfx_ric2;
-sfx_t			*cl_sfx_ric3;
-sfx_t			*cl_sfx_r_exp3;
+model_t		*cl_model_bolt = NULL;
+model_t		*cl_model_bolt2 = NULL;
+model_t		*cl_model_bolt3 = NULL;
+model_t		*cl_model_beam = NULL;
+
+sfx_t		*cl_sfx_wizhit;
+sfx_t		*cl_sfx_knighthit;
+sfx_t		*cl_sfx_tink1;
+sfx_t		*cl_sfx_ric1;
+sfx_t		*cl_sfx_ric2;
+sfx_t		*cl_sfx_ric3;
+sfx_t		*cl_sfx_r_exp3;
 
 /*
 =================
@@ -42,7 +47,7 @@ CL_ParseTEnt
 */
 void CL_InitTEnts (void)
 {
-	Cvar_RegisterVariable(&r_glowinglightning);
+	Cvar_RegisterVariable(&cl_glowinglightning);
 	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav");
 	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav");
 	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav");
@@ -63,7 +68,7 @@ void CL_ParseBeam (model_t *m)
 	vec3_t	start, end;
 	beam_t	*b;
 	int		i;
-	
+
 	ent = MSG_ReadShort ();
 	MSG_ReadVector(start);
 	MSG_ReadVector(end);
@@ -96,25 +101,6 @@ void CL_ParseBeam (model_t *m)
 	Con_Printf ("beam list overflow!\n");	
 }
 
-//void R_BlastParticles(vec3_t org, vec_t radius, vec_t power);
-void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count);
-void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel);
-void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type);
-
-// attempts to find the nearest non-solid location, used for explosions mainly
-void FindNonSolidLocation(vec3_t pos)
-{
-	if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[0]-=1;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[0]+=2;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[0]-=1;
-	pos[1]-=1;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[1]+=2;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[1]-=1;
-	pos[2]-=1;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[2]+=2;if (SV_HullPointContents (cl.worldmodel->hulls, 0, pos) != CONTENTS_SOLID) return;
-	pos[2]-=1;
-}
 
 /*
 =================
@@ -138,21 +124,21 @@ void CL_ParseTEnt (void)
 	{
 	case TE_WIZSPIKE:			// spike hitting wall
 		MSG_ReadVector(pos);
-		R_RunParticleEffect (pos, vec3_origin, 20, 30);
+		CL_RunParticleEffect (pos, vec3_origin, 20, 30);
 		S_StartSound (-1, 0, cl_sfx_wizhit, pos, 1, 1);
 		break;
 		
 	case TE_KNIGHTSPIKE:			// spike hitting wall
 		MSG_ReadVector(pos);
-		R_RunParticleEffect (pos, vec3_origin, 226, 20);
+		CL_RunParticleEffect (pos, vec3_origin, 226, 20);
 		S_StartSound (-1, 0, cl_sfx_knighthit, pos, 1, 1);
 		break;
 		
 	case TE_SPIKE:			// spike hitting wall
 		MSG_ReadVector(pos);
 		// LordHavoc: changed to spark shower
-		R_SparkShower(pos, vec3_origin, 15);
-		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
+		CL_SparkShower(pos, vec3_origin, 15);
+		//CL_RunParticleEffect (pos, vec3_origin, 0, 10);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -169,8 +155,8 @@ void CL_ParseTEnt (void)
 	case TE_SPIKEQUAD:			// quad spike hitting wall
 		MSG_ReadVector(pos);
 		// LordHavoc: changed to spark shower
-		R_SparkShower(pos, vec3_origin, 15);
-		//R_RunParticleEffect (pos, vec3_origin, 0, 10);
+		CL_SparkShower(pos, vec3_origin, 15);
+		//CL_RunParticleEffect (pos, vec3_origin, 0, 10);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		if ( rand() % 5 )
@@ -189,8 +175,8 @@ void CL_ParseTEnt (void)
 	case TE_SUPERSPIKE:			// super spike hitting wall
 		MSG_ReadVector(pos);
 		// LordHavoc: changed to dust shower
-		R_SparkShower(pos, vec3_origin, 30);
-		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
+		CL_SparkShower(pos, vec3_origin, 30);
+		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
 		else
@@ -207,8 +193,8 @@ void CL_ParseTEnt (void)
 	case TE_SUPERSPIKEQUAD:			// quad super spike hitting wall
 		MSG_ReadVector(pos);
 		// LordHavoc: changed to dust shower
-		R_SparkShower(pos, vec3_origin, 30);
-		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
+		CL_SparkShower(pos, vec3_origin, 30);
+		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		if ( rand() % 5 )
 			S_StartSound (-1, 0, cl_sfx_tink1, pos, 1, 1);
@@ -230,11 +216,11 @@ void CL_ParseTEnt (void)
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
 		count = MSG_ReadByte (); // amount of particles
-		R_BloodPuff(pos, dir, count);
+		CL_BloodPuff(pos, dir, count);
 		break;
 	case TE_BLOOD2:	// blood puff
 		MSG_ReadVector(pos);
-		R_BloodPuff(pos, vec3_origin, 10);
+		CL_BloodPuff(pos, vec3_origin, 10);
 		break;
 	case TE_SPARK:	// spark shower
 		MSG_ReadVector(pos);
@@ -242,7 +228,7 @@ void CL_ParseTEnt (void)
 		dir[1] = MSG_ReadChar ();
 		dir[2] = MSG_ReadChar ();
 		count = MSG_ReadByte (); // amount of particles
-		R_SparkShower(pos, dir, count);
+		CL_SparkShower(pos, dir, count);
 		break;
 		// LordHavoc: added for improved gore
 	case TE_BLOODSHOWER:	// vaporized body
@@ -250,7 +236,7 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos2); // maxs
 		velspeed = MSG_ReadCoord (); // speed
 		count = MSG_ReadShort (); // number of particles
-		R_BloodShower(pos, pos2, velspeed, count);
+		CL_BloodShower(pos, pos2, velspeed, count);
 		break;
 	case TE_PARTICLECUBE:	// general purpose particle effect
 		MSG_ReadVector(pos); // mins
@@ -260,7 +246,7 @@ void CL_ParseTEnt (void)
 		colorStart = MSG_ReadByte (); // color
 		colorLength = MSG_ReadByte (); // gravity (1 or 0)
 		velspeed = MSG_ReadCoord (); // randomvel
-		R_ParticleCube(pos, pos2, dir, count, colorStart, colorLength, velspeed);
+		CL_ParticleCube(pos, pos2, dir, count, colorStart, colorLength, velspeed);
 		break;
 
 	case TE_PARTICLERAIN:	// general purpose particle effect
@@ -269,7 +255,7 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(dir); // dir
 		count = MSG_ReadShort (); // number of particles
 		colorStart = MSG_ReadByte (); // color
-		R_ParticleRain(pos, pos2, dir, count, colorStart, 0);
+		CL_ParticleRain(pos, pos2, dir, count, colorStart, 0);
 		break;
 
 	case TE_PARTICLESNOW:	// general purpose particle effect
@@ -278,36 +264,36 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(dir); // dir
 		count = MSG_ReadShort (); // number of particles
 		colorStart = MSG_ReadByte (); // color
-		R_ParticleRain(pos, pos2, dir, count, colorStart, 1);
+		CL_ParticleRain(pos, pos2, dir, count, colorStart, 1);
 		break;
 
 	case TE_GUNSHOT:			// bullet hitting wall
 		MSG_ReadVector(pos);
 		// LordHavoc: changed to dust shower
-		R_SparkShower(pos, vec3_origin, 15);
-		//R_RunParticleEffect (pos, vec3_origin, 0, 20);
+		CL_SparkShower(pos, vec3_origin, 15);
+		//CL_RunParticleEffect (pos, vec3_origin, 0, 20);
 		break;
 
 	case TE_GUNSHOTQUAD:			// quad bullet hitting wall
 		MSG_ReadVector(pos);
-		R_SparkShower(pos, vec3_origin, 15);
+		CL_SparkShower(pos, vec3_origin, 15);
 		CL_AllocDlight (NULL, pos, 200, 0.1f, 0.1f, 1.0f, 1000, 0.2);
 		break;
 
 	case TE_EXPLOSION:			// rocket explosion
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
-		R_ParticleExplosion (pos, false);
-//		R_BlastParticles (pos, 120, 120);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_ParticleExplosion (pos, false);
+//		CL_BlastParticles (pos, 120, 120);
 		CL_AllocDlight (NULL, pos, 350, 1.0f, 0.8f, 0.4f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONQUAD:			// quad rocket explosion
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
-		R_ParticleExplosion (pos, false);
-//		R_BlastParticles (pos, 120, 480);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_ParticleExplosion (pos, false);
+//		CL_BlastParticles (pos, 120, 480);
 		CL_AllocDlight (NULL, pos, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
@@ -315,8 +301,8 @@ void CL_ParseTEnt (void)
 		/*
 	case TE_SMOKEEXPLOSION:			// rocket explosion with a cloud of smoke
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
-		R_ParticleExplosion (pos, true);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_ParticleExplosion (pos, true);
 		CL_AllocDlight (NULL, pos, 350, 1.0f, 0.8f, 0.4f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
@@ -324,18 +310,18 @@ void CL_ParseTEnt (void)
 
 	case TE_EXPLOSION3:				// Nehahra movie colored lighting explosion
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
-		R_ParticleExplosion (pos, false);
-//		R_BlastParticles (pos, 120, 120);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_ParticleExplosion (pos, false);
+//		CL_BlastParticles (pos, 120, 120);
 		CL_AllocDlight (NULL, pos, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
 	case TE_EXPLOSIONRGB:			// colored lighting explosion
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
-		R_ParticleExplosion (pos, false);
-//		R_BlastParticles (pos, 120, 120);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_ParticleExplosion (pos, false);
+//		CL_BlastParticles (pos, 120, 120);
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
 		color[1] = MSG_ReadByte() * (1.0 / 255.0);
 		color[2] = MSG_ReadByte() * (1.0 / 255.0);
@@ -345,9 +331,9 @@ void CL_ParseTEnt (void)
 
 	case TE_TAREXPLOSION:			// tarbaby explosion
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
-		R_BlobExplosion (pos);
-//		R_BlastParticles (pos, 120, 120);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
+		CL_BlobExplosion (pos);
+//		CL_BlastParticles (pos, 120, 120);
 
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		CL_AllocDlight (NULL, pos, 600, 0.8f, 0.4f, 1.0f, 1200, 0.5);
@@ -356,13 +342,13 @@ void CL_ParseTEnt (void)
 
 	case TE_SMALLFLASH:
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_AllocDlight (NULL, pos, 200, 1, 1, 1, 1000, 0.2);
 		break;
 
 	case TE_CUSTOMFLASH:
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		radius = MSG_ReadByte() * 8;
 		velspeed = (MSG_ReadByte() + 1) * (1.0 / 256.0);
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
@@ -375,53 +361,61 @@ void CL_ParseTEnt (void)
 		MSG_ReadVector(pos);
 		MSG_ReadVector(dir);
 		count = MSG_ReadByte();
-		R_Flames(pos, dir, count);
+		CL_Flames(pos, dir, count);
 		break;
 
 	case TE_LIGHTNING1:				// lightning bolts
-		CL_ParseBeam (Mod_ForName("progs/bolt.mdl", true));
+		if (!cl_model_bolt)
+			cl_model_bolt = Mod_ForName("progs/bolt.mdl", true, true, false);
+		CL_ParseBeam (cl_model_bolt);
 		break;
 
 	case TE_LIGHTNING2:				// lightning bolts
-		CL_ParseBeam (Mod_ForName("progs/bolt2.mdl", true));
-		break;
-	
-	case TE_LIGHTNING3:				// lightning bolts
-		CL_ParseBeam (Mod_ForName("progs/bolt3.mdl", true));
+		if (!cl_model_bolt2)
+			cl_model_bolt2 = Mod_ForName("progs/bolt2.mdl", true, true, false);
+		CL_ParseBeam (cl_model_bolt2);
 		break;
 
-// PGM 01/21/97 
+	case TE_LIGHTNING3:				// lightning bolts
+		if (!cl_model_bolt3)
+			cl_model_bolt3 = Mod_ForName("progs/bolt3.mdl", true, true, false);
+		CL_ParseBeam (cl_model_bolt3);
+		break;
+
+// PGM 01/21/97
 	case TE_BEAM:				// grappling hook beam
-		CL_ParseBeam (Mod_ForName("progs/beam.mdl", true));
+		if (!cl_model_beam)
+			cl_model_beam = Mod_ForName("progs/beam.mdl", true, true, false);
+		CL_ParseBeam (cl_model_beam);
 		break;
 // PGM 01/21/97
 
 // LordHavoc: for compatibility with the Nehahra movie...
 	case TE_LIGHTNING4NEH:
-		CL_ParseBeam (Mod_ForName(MSG_ReadString(), true));
+		CL_ParseBeam (Mod_ForName(MSG_ReadString(), true, false, false));
 		break;
 
 	case TE_LAVASPLASH:	
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_LavaSplash (pos);
+		CL_LavaSplash (pos);
 		break;
 	
 	case TE_TELEPORT:
 		pos[0] = MSG_ReadCoord ();
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
-		R_TeleportSplash (pos);
+		CL_TeleportSplash (pos);
 		break;
 		
 	case TE_EXPLOSION2:				// color mapped explosion
 		MSG_ReadVector(pos);
-		FindNonSolidLocation(pos);
+		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
-		R_ParticleExplosion2 (pos, colorStart, colorLength);
-//		R_BlastParticles (pos, 80, 80);
+		CL_ParticleExplosion2 (pos, colorStart, colorLength);
+//		CL_BlastParticles (pos, 80, 80);
 		tempcolor = (byte *)&d_8to24table[(rand()%colorLength) + colorStart];
 		CL_AllocDlight (NULL, pos, 350, tempcolor[0] * (1.0f / 255.0f), tempcolor[1] * (1.0f / 255.0f), tempcolor[2] * (1.0f / 255.0f), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -453,7 +447,6 @@ entity_t *CL_NewTempEntity (void)
 	ent->render.colormap = -1; // no special coloring
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
-	ent->render.colormod[0] = ent->render.colormod[1] = ent->render.colormod[2] = 1;
 	return ent;
 }
 
@@ -523,8 +516,8 @@ void CL_UpdateTEnts (void)
 			ent->render.angles[1] = yaw;
 			ent->render.angles[2] = rand()%360;
 
-			if (r_glowinglightning.value > 0)
-				CL_AllocDlight(&ent->render, ent->render.origin, lhrandom(100, 120), r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, r_glowinglightning.value * 0.25f, 0, 0);
+			if (cl_glowinglightning.value > 0)
+				CL_AllocDlight(&ent->render, ent->render.origin, lhrandom(200, 240), cl_glowinglightning.value * 0.25f, cl_glowinglightning.value * 0.25f, cl_glowinglightning.value * 0.25f, 0, 0);
 
 			VectorMA(org, 30, dist, org);
 			d -= 30;

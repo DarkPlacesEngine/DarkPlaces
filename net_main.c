@@ -691,6 +691,8 @@ NET_Init
 ====================
 */
 
+static mempool_t *net_mempool;
+
 void NET_Init (void)
 {
 	int			i;
@@ -720,16 +722,18 @@ void NET_Init (void)
 
 	SetNetTime();
 
+	net_mempool = Mem_AllocPool("qsocket");
+	s = Mem_Alloc(net_mempool, net_numsockets * sizeof(qsocket_t));
 	for (i = 0; i < net_numsockets; i++)
 	{
-		s = (qsocket_t *)Hunk_AllocName(sizeof(qsocket_t), "qsocket");
 		s->next = net_freeSockets;
 		net_freeSockets = s;
 		s->disconnected = true;
+		s++;
 	}
 
 	// allocate space for network message buffer
-	SZ_Alloc (&net_message, NET_MAXMESSAGE);
+	SZ_Alloc (&net_message, NET_MAXMESSAGE, "net_message");
 
 	Cvar_RegisterVariable (&net_messagetimeout);
 	Cvar_RegisterVariable (&hostname);
@@ -783,6 +787,8 @@ void		NET_Shutdown (void)
 			net_drivers[net_driverlevel].initialized = false;
 		}
 	}
+
+	Mem_FreePool(&net_mempool);
 }
 
 

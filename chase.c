@@ -44,6 +44,11 @@ float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int con
 {
 	trace_t trace;
 
+// FIXME: broken, fix it
+//	if (impact == NULL && normal == NULL && contents == 0)
+//		return SV_TestLine (cl.worldmodel->hulls, 0, start, end);
+
+	Mod_CheckLoaded(cl.worldmodel);
 	memset (&trace, 0, sizeof(trace));
 	VectorCopy (end, trace.endpos);
 	trace.fraction = 1;

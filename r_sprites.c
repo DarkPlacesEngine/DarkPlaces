@@ -1,19 +1,19 @@
 #include "quakedef.h"
 
-void R_ClipSpriteImage (msprite_t *psprite, vec3_t origin, vec3_t right, vec3_t up)
+void R_ClipSpriteImage (vec3_t origin, vec3_t right, vec3_t up)
 {
 	int i;
 	mspriteframe_t *frame;
 	vec3_t points[4];
 	float fleft, fright, fdown, fup;
-	frame = ((mspriteframe_t *)(psprite->ofs_frames + (int) psprite)) + currentrenderentity->frameblend[0].frame;
+	frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[0].frame;
 	fleft  = frame->left;
 	fdown  = frame->down;
 	fright = frame->right;
 	fup    = frame->up;
 	for (i = 1;i < 4 && currentrenderentity->frameblend[i].lerp;i++)
 	{
-		frame = ((mspriteframe_t *)(psprite->ofs_frames + (int) psprite)) + currentrenderentity->frameblend[i].frame;
+		frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[i].frame;
 		fleft  = min(fleft , frame->left );
 		fdown  = min(fdown , frame->down );
 		fright = max(fright, frame->right);
@@ -96,29 +96,61 @@ int R_SpriteSetup (int type, float org[3], float right[3], float up[3])
 void R_ClipSprite (void)
 {
 	vec3_t org, right, up;
-	msprite_t *psprite;
 
 	if (currentrenderentity->frameblend[0].frame < 0)
 		return;
 
-	psprite = Mod_Extradata(currentrenderentity->model);
-	if (R_SpriteSetup(psprite->type, org, right, up))
+	if (R_SpriteSetup(currentrenderentity->model->sprnum_type, org, right, up))
 		return;
 
 	// LordHavoc: interpolated sprite rendering
-	R_ClipSpriteImage(psprite, org, right, up);
+	R_ClipSpriteImage(org, right, up);
 }
 
-void GL_DrawSpriteImage (mspriteframe_t *frame, vec3_t origin, vec3_t up, vec3_t right, byte red, byte green, byte blue, int alpha)
+void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t right, float red, float green, float blue, float alpha)
 {
-	byte alphaub;
-	alphaub = bound(0, alpha, 255);
-	transpolybegin(R_GetTexture(frame->texture), 0, R_GetTexture(frame->fogtexture), ((currentrenderentity->effects & EF_ADDITIVE) || (currentrenderentity->model->flags & EF_ADDITIVE)) ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-	transpolyvertub(origin[0] + frame->down * up[0] + frame->left  * right[0], origin[1] + frame->down * up[1] + frame->left  * right[1], origin[2] + frame->down * up[2] + frame->left  * right[2], 0, 1, red, green, blue, alphaub);
-	transpolyvertub(origin[0] + frame->up   * up[0] + frame->left  * right[0], origin[1] + frame->up   * up[1] + frame->left  * right[1], origin[2] + frame->up   * up[2] + frame->left  * right[2], 0, 0, red, green, blue, alphaub);
-	transpolyvertub(origin[0] + frame->up   * up[0] + frame->right * right[0], origin[1] + frame->up   * up[1] + frame->right * right[1], origin[2] + frame->up   * up[2] + frame->right * right[2], 1, 0, red, green, blue, alphaub);
-	transpolyvertub(origin[0] + frame->down * up[0] + frame->right * right[0], origin[1] + frame->down * up[1] + frame->right * right[1], origin[2] + frame->down * up[2] + frame->right * right[2], 1, 1, red, green, blue, alphaub);
-	transpolyend();
+	rmeshinfo_t m;
+	float v[4][5];
+	memset(&m, 0, sizeof(m));
+	m.transparent = true;
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	if ((currentrenderentity->effects & EF_ADDITIVE)
+	 || (currentrenderentity->model->flags & EF_ADDITIVE)
+	 || fog)
+		m.blendfunc2 = GL_ONE;
+	m.vertex = &v[0][0];
+	m.vertexstep = sizeof(float[5]);
+	m.cr = red;
+	m.cg = green;
+	m.cb = blue;
+	m.ca = alpha;
+	m.tex[0] = texture;
+	m.texcoords[0] = &v[0][3];
+	m.texcoordstep[0] = sizeof(float[5]);
+
+	v[0][0] = origin[0] + frame->down * up[0] + frame->left  * right[0];
+	v[0][1] = origin[1] + frame->down * up[1] + frame->left  * right[1];
+	v[0][2] = origin[2] + frame->down * up[2] + frame->left  * right[2];
+	v[0][3] = 0;
+	v[0][4] = 1;
+	v[1][0] = origin[0] + frame->up   * up[0] + frame->left  * right[0];
+	v[1][1] = origin[1] + frame->up   * up[1] + frame->left  * right[1];
+	v[1][2] = origin[2] + frame->up   * up[2] + frame->left  * right[2];
+	v[1][3] = 0;
+	v[1][4] = 0;
+	v[2][0] = origin[0] + frame->up   * up[0] + frame->right * right[0];
+	v[2][1] = origin[1] + frame->up   * up[1] + frame->right * right[1];
+	v[2][2] = origin[2] + frame->up   * up[2] + frame->right * right[2];
+	v[2][3] = 1;
+	v[2][4] = 0;
+	v[3][0] = origin[0] + frame->down * up[0] + frame->right * right[0];
+	v[3][1] = origin[1] + frame->down * up[1] + frame->right * right[1];
+	v[3][2] = origin[2] + frame->down * up[2] + frame->right * right[2];
+	v[3][3] = 1;
+	v[3][4] = 1;
+
+	R_Mesh_DrawPolygon(&m, 4);
 }
 
 /*
@@ -130,34 +162,43 @@ void R_DrawSpriteModel ()
 {
 	int			i;
 	vec3_t		right, up, org, color;
-	byte		colorub[4];
-	msprite_t	*psprite;
+	mspriteframe_t *frame;
+	vec3_t diff;
+	float		fog, ifog;
 
 	if (currentrenderentity->frameblend[0].frame < 0)
 		return;
 
-	psprite = Mod_Extradata(currentrenderentity->model);
-	if (R_SpriteSetup(psprite->type, org, right, up))
+	if (R_SpriteSetup(currentrenderentity->model->sprnum_type, org, right, up))
 		return;
 
 	c_sprites++;
 
 	if ((currentrenderentity->model->flags & EF_FULLBRIGHT) || (currentrenderentity->effects & EF_FULLBRIGHT))
-	{
-		color[0] = currentrenderentity->colormod[0] * 255;
-		color[1] = currentrenderentity->colormod[1] * 255;
-		color[2] = currentrenderentity->colormod[2] * 255;
-	}
+		color[0] = color[1] = color[2] = 1;
 	else
 		R_CompleteLightPoint(color, currentrenderentity->origin, true, NULL);
 
-	colorub[0] = bound(0, color[0], 255);
-	colorub[1] = bound(0, color[1], 255);
-	colorub[2] = bound(0, color[2], 255);
+	if (fogenabled)
+	{
+		VectorSubtract(currentrenderentity->origin, r_origin, diff);
+		fog = exp(fogdensity/DotProduct(diff,diff));
+		if (fog > 1)
+			fog = 1;
+	}
+	else
+		fog = 0;
+	ifog = 1 - fog;
 
 	// LordHavoc: interpolated sprite rendering
 	for (i = 0;i < 4;i++)
-		if (currentrenderentity->frameblend[i].lerp)
-			GL_DrawSpriteImage(((mspriteframe_t *)(psprite->ofs_frames + (int) psprite)) + currentrenderentity->frameblend[i].frame, org, up, right, colorub[0],colorub[1],colorub[2], currentrenderentity->alpha*255*currentrenderentity->frameblend[i].lerp);
+	{
+		if (currentrenderentity->frameblend[i].lerp >= 0.01f)
+		{
+			frame = currentrenderentity->model->sprdata_frames + currentrenderentity->frameblend[i].frame;
+			GL_DrawSpriteImage(false, frame, R_GetTexture(frame->texture), org, up, right, color[0] * ifog, color[1] * ifog, color[2] * ifog, currentrenderentity->alpha * currentrenderentity->frameblend[i].lerp);
+			if (fog * currentrenderentity->frameblend[i].lerp >= 0.01f)
+				GL_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, right, fogcolor[0],fogcolor[1],fogcolor[2], fog * currentrenderentity->alpha * currentrenderentity->frameblend[i].lerp);
+		}
+	}
 }
-
