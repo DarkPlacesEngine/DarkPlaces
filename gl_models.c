@@ -203,10 +203,13 @@ void R_AliasLerpVerts(int vertcount,
 skinframe_t *R_FetchSkinFrame(const entity_render_t *ent)
 {
 	model_t *model = ent->model;
-	if (model->skinscenes[ent->skinnum].framecount > 1)
-		return &model->skinframes[model->skinscenes[ent->skinnum].firstframe + (int) (cl.time * 10) % model->skinscenes[ent->skinnum].framecount];
+	unsigned int s = (unsigned int) ent->skinnum;
+	if (s >= model->numskins)
+		s = 0;
+	if (model->skinscenes[s].framecount > 1)
+		return &model->skinframes[model->skinscenes[s].firstframe + (int) (cl.time * 10) % model->skinscenes[s].framecount];
 	else
-		return &model->skinframes[model->skinscenes[ent->skinnum].firstframe];
+		return &model->skinframes[model->skinscenes[s].firstframe];
 }
 
 void R_SetupMDLMD2Frames(const entity_render_t *ent, float colorr, float colorg, float colorb)
