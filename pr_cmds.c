@@ -266,6 +266,10 @@ void PF_setorigin (void)
 	float	*org;
 
 	e = G_EDICT(OFS_PARM0);
+	if (e == sv.edicts)
+		Host_Error("setorigin: can not modify world entity\n");
+	if (e->e->free)
+		Host_Error("setorigin: can not modify free entity\n");
 	org = G_VECTOR(OFS_PARM1);
 	VectorCopy (org, e->v->origin);
 	SV_LinkEdict (e, false);
@@ -304,6 +308,10 @@ void PF_setsize (void)
 	float	*min, *max;
 
 	e = G_EDICT(OFS_PARM0);
+	if (e == sv.edicts)
+		Host_Error("setsize: can not modify world entity\n");
+	if (e->e->free)
+		Host_Error("setsize: can not modify free entity\n");
 	min = G_VECTOR(OFS_PARM1);
 	max = G_VECTOR(OFS_PARM2);
 	SetMinMaxSize (e, min, max, false);
@@ -325,6 +333,10 @@ void PF_setmodel (void)
 	int		i;
 
 	e = G_EDICT(OFS_PARM0);
+	if (e == sv.edicts)
+		Host_Error("setmodel: can not modify world entity\n");
+	if (e->e->free)
+		Host_Error("setmodel: can not modify free entity\n");
 	m = G_STRING(OFS_PARM1);
 
 // check to see if model was properly precached
@@ -796,6 +808,8 @@ void PF_TraceToss (void)
 	pr_xfunction->builtinsprofile += 600;
 
 	ent = G_EDICT(OFS_PARM0);
+	if (ent == sv.edicts)
+		Host_Error("tracetoss: can not use world entity\n");
 	ignore = G_EDICT(OFS_PARM1);
 
 	trace = SV_Trace_Toss (ent, ignore);
@@ -960,7 +974,7 @@ void PF_stuffcmd (void)
 =================
 PF_localcmd
 
-Sends text over to the client's execution buffer
+Sends text to server console
 
 localcmd (string)
 =================
@@ -1113,6 +1127,8 @@ void PF_Remove (void)
 		Host_Error("remove: tried to remove world\n");
 	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
 		Host_Error("remove: tried to remove a client\n");
+	if (ed->e->free)
+		Host_Error("remove: tried to remove an entity that was already removed\n");
 	ED_Free (ed);
 }
 
@@ -1350,6 +1366,10 @@ void PF_walkmove (void)
 	int 	oldself;
 
 	ent = PROG_TO_EDICT(pr_global_struct->self);
+	if (ent == sv.edicts)
+		Host_Error("walkmove: can not modify world entity\n");
+	if (ent->e->free)
+		Host_Error("walkmove: can not modify free entity\n");
 	yaw = G_FLOAT(OFS_PARM0);
 	dist = G_FLOAT(OFS_PARM1);
 
@@ -1391,6 +1411,10 @@ void PF_droptofloor (void)
 	trace_t		trace;
 
 	ent = PROG_TO_EDICT(pr_global_struct->self);
+	if (ent == sv.edicts)
+		Host_Error("droptofloor: can not modify world entity\n");
+	if (ent->e->free)
+		Host_Error("droptofloor: can not modify free entity\n");
 
 	VectorCopy (ent->v->origin, end);
 	end[2] -= 256;
@@ -1534,6 +1558,10 @@ void PF_aim (void)
 	float	speed;
 
 	ent = G_EDICT(OFS_PARM0);
+	if (ent == sv.edicts)
+		Host_Error("aim: can not use world entity\n");
+	if (ent->e->free)
+		Host_Error("aim: can not use free entity\n");
 	speed = G_FLOAT(OFS_PARM1);
 
 	VectorCopy (ent->v->origin, start);
@@ -1610,6 +1638,10 @@ void PF_changeyaw (void)
 	float		ideal, current, move, speed;
 
 	ent = PROG_TO_EDICT(pr_global_struct->self);
+	if (ent == sv.edicts)
+		Host_Error("changeyaw: can not modify world entity\n");
+	if (ent->e->free)
+		Host_Error("changeyaw: can not modify free entity\n");
 	current = ANGLEMOD(ent->v->angles[1]);
 	ideal = ent->v->ideal_yaw;
 	speed = ent->v->yaw_speed;
@@ -1653,6 +1685,10 @@ void PF_changepitch (void)
 	eval_t		*val;
 
 	ent = G_EDICT(OFS_PARM0);
+	if (ent == sv.edicts)
+		Host_Error("changepitch: can not modify world entity\n");
+	if (ent->e->free)
+		Host_Error("changepitch: can not modify free entity\n");
 	current = ANGLEMOD( ent->v->angles[0] );
 	if ((val = GETEDICTFIELDVALUE(ent, eval_idealpitch)))
 		ideal = val->_float;
@@ -1725,7 +1761,7 @@ sizebuf_t *WriteDest (void)
 		ent = PROG_TO_EDICT(pr_global_struct->msg_entity);
 		entnum = NUM_FOR_EDICT(ent);
 		if (entnum < 1 || entnum > svs.maxclients || !svs.clients[entnum-1].active)
-			Con_Printf("WriteDest: tried to write to non-client\n");
+			Host_Error("WriteDest: tried to write to non-client\n");
 		return &svs.clients[entnum-1].message;
 
 	case MSG_ALL:
@@ -1791,6 +1827,10 @@ void PF_makestatic (void)
 	int i, large;
 
 	ent = G_EDICT(OFS_PARM0);
+	if (ent == sv.edicts)
+		Host_Error("makestatic: can not modify world entity\n");
+	if (ent->e->free)
+		Host_Error("makestatic: can not modify free entity\n");
 
 	large = false;
 	if (ent->v->modelindex >= 256 || ent->v->frame >= 256)
@@ -2060,7 +2100,15 @@ void PF_copyentity (void)
 {
 	edict_t *in, *out;
 	in = G_EDICT(OFS_PARM0);
+	if (in == sv.edicts)
+		Host_Error("copyentity: can not read world entity\n");
+	if (in->e->free)
+		Host_Error("copyentity: can not read free entity\n");
 	out = G_EDICT(OFS_PARM1);
+	if (out == sv.edicts)
+		Host_Error("copyentity: can not modify world entity\n");
+	if (out->e->free)
+		Host_Error("copyentity: can not modify free entity\n");
 	memcpy(out->v, in->v, progs->entityfields * 4);
 }
 
@@ -2954,6 +3002,11 @@ void PF_setattachment (void)
 	eval_t *v;
 	int i, modelindex;
 	model_t *model;
+
+	if (e == sv.edicts)
+		Host_Error("setattachment: can not modify world entity\n");
+	if (e->e->free)
+		Host_Error("setattachment: can not modify free entity\n");
 
 	if (tagentity == NULL)
 		tagentity = sv.edicts;
