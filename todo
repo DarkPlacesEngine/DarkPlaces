@@ -22,6 +22,7 @@
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
 0 darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
+0 darkplaces: cl_port 26001 causes server browser to read successfully (yummyluv)
 0 darkplaces: client colors being reset to "15 15" each level in prydon gate (FrikaC)
 0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
@@ -48,8 +49,10 @@
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
 0 darkplaces: make Com_HexDumpToConsole not use color
 0 darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
+0 darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a flag for rtlights that makes them appear in normal mode (not just r_shadow_realtime_world mode) (Vermeulen)
+0 darkplaces: make cl_beams_relative only affect view-attached beams
 0 darkplaces: make dedicated server not load images (maybe all fail?)
 0 darkplaces: make fopen builtin check / as well as data/ when reading (writing would always go in data/)
 0 darkplaces: make lightning work without bolt models persent (Vermeulen)
@@ -67,9 +70,12 @@
 0 darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
 0 darkplaces: may be reading md3 tag matrices wrong (Electro)
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
+0 darkplaces: net_slist and the server browser should show servers when they are queried, not just when they reply; which would replace the matching entry (yummyluv)
+0 darkplaces: net_slist should print out "No network." if networking is not initialized (yummyluv)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 0 darkplaces: r_shadow should load .ent when importing light entities
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
+0 darkplaces: remove dead master server from default masters list (yummyluv)
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
 0 darkplaces: reset zoom on connect (Rick)
 0 darkplaces: scrags frequently fly through ceilings - this needs to be fixed
@@ -80,6 +86,7 @@
 0 darkplaces: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 darkplaces: try not adding gravity when onground to see if it gets rid of ramp sliding (Midgar)
 0 darkplaces: tweak the blood decals in the particlefont to make them look more like the q2e_blood.avi video (Vermeulen)
+0 darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 0 dpmod: add a "monsterwander" cvar and default it off, this would enable the spawnwanderpath code (Zombie13)
 0 dpmod: add combo kill detection; rapid burst of kills (SeienAbunae)
 0 dpmod: add flame thrower enforcers back (scar3crow)
