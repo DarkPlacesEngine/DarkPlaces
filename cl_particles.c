@@ -1637,11 +1637,43 @@ void particletextureinvert(qbyte *data)
 	}
 }
 
+// Those loops are in a separate function to work around an optimization bug in Mac OS X's GCC
+static void R_InitBloodTextures (qbyte *particletexturedata)
+{
+	int i, j, k, m;
+	qbyte data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4];
+
+	// blood particles
+	for (i = 0;i < 8;i++)
+	{
+		memset(&data[0][0][0], 255, sizeof(data));
+		for (k = 0;k < 24;k++)
+			particletextureblotch(&data[0][0][0], PARTICLETEXTURESIZE/16, 96, 0, 0, 160);
+		//particletextureclamp(&data[0][0][0], 32, 32, 32, 255, 255, 255);
+		particletextureinvert(&data[0][0][0]);
+		setuptex(tex_bloodparticle[i], &data[0][0][0], particletexturedata);
+	}
+
+	// blood decals
+	for (i = 0;i < 8;i++)
+	{
+		memset(&data[0][0][0], 255, sizeof(data));
+		m = 8;
+		for (j = 1;j < 10;j++)
+			for (k = min(j, m - 1);k < m;k++)
+				particletextureblotch(&data[0][0][0], (float)j*PARTICLETEXTURESIZE/64.0f, 96, 0, 0, 192 - j * 8);
+		//particletextureclamp(&data[0][0][0], 32, 32, 32, 255, 255, 255);
+		particletextureinvert(&data[0][0][0]);
+		setuptex(tex_blooddecal[i], &data[0][0][0], particletexturedata);
+	}
+
+}
+
 static void R_InitParticleTexture (void)
 {
-	int x, y, d, i, j, k, m;
+	int x, y, d, i, k, m;
 	float dx, dy, radius, f, f2;
-	qbyte data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4], noise1[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise2[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise3[64][64], data2[64][16][4];
+	qbyte data[PARTICLETEXTURESIZE][PARTICLETEXTURESIZE][4], noise3[64][64], data2[64][16][4];
 	vec3_t light;
 	qbyte *particletexturedata;
 
@@ -1663,6 +1695,8 @@ static void R_InitParticleTexture (void)
 		memset(&data[0][0][0], 255, sizeof(data));
 		do
 		{
+			qbyte noise1[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2], noise2[PARTICLETEXTURESIZE*2][PARTICLETEXTURESIZE*2];
+
 			fractalnoise(&noise1[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/8);
 			fractalnoise(&noise2[0][0], PARTICLETEXTURESIZE*2, PARTICLETEXTURESIZE/4);
 			m = 0;
@@ -1759,29 +1793,8 @@ static void R_InitParticleTexture (void)
 	}
 	setuptex(tex_bubble, &data[0][0][0], particletexturedata);
 
-	// blood particles
-	for (i = 0;i < 8;i++)
-	{
-		memset(&data[0][0][0], 255, sizeof(data));
-		for (k = 0;k < 24;k++)
-			particletextureblotch(&data[0][0][0], PARTICLETEXTURESIZE/16, 96, 0, 0, 160);
-		//particletextureclamp(&data[0][0][0], 32, 32, 32, 255, 255, 255);
-		particletextureinvert(&data[0][0][0]);
-		setuptex(tex_bloodparticle[i], &data[0][0][0], particletexturedata);
-	}
-
-	// blood decals
-	for (i = 0;i < 8;i++)
-	{
-		memset(&data[0][0][0], 255, sizeof(data));
-		m = 8;
-		for (j = 1;j < 10;j++)
-			for (k = min(j, m - 1);k < m;k++)
-				particletextureblotch(&data[0][0][0], (float)j*PARTICLETEXTURESIZE/64.0f, 96, 0, 0, 192 - j * 8);
-		//particletextureclamp(&data[0][0][0], 32, 32, 32, 255, 255, 255);
-		particletextureinvert(&data[0][0][0]);
-		setuptex(tex_blooddecal[i], &data[0][0][0], particletexturedata);
-	}
+	// Blood particles and blood decals
+	R_InitBloodTextures (particletexturedata);
 
 	// bullet decals
 	for (i = 0;i < 8;i++)
