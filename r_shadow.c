@@ -1887,7 +1887,7 @@ void R_RTLight_Compile(rtlight_t *rtlight)
 		// this variable directs the DrawShadowVolume and DrawLight code to capture into the mesh chain instead of rendering
 		r_shadow_compilingrtlight = rtlight;
 		R_Shadow_EnlargeClusterBuffer(model->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(model->numsurfaces); 
+		R_Shadow_EnlargeSurfaceBuffer(model->nummodelsurfaces); 
 		model->GetLightInfo(ent, rtlight->shadoworigin, rtlight->radius, rtlight->cullmins, rtlight->cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		if (numclusters)
 		{
@@ -2015,7 +2015,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	else if (cl.worldmodel && cl.worldmodel->GetLightInfo)
 	{
 		R_Shadow_EnlargeClusterBuffer(cl.worldmodel->brush.num_pvsclusters);
-		R_Shadow_EnlargeSurfaceBuffer(cl.worldmodel->numsurfaces); 
+		R_Shadow_EnlargeSurfaceBuffer(cl.worldmodel->nummodelsurfaces); 
 		cl.worldmodel->GetLightInfo(&cl_entities[0].render, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		clusterlist = r_shadow_buffer_clusterlist;
 		clusterpvs = r_shadow_buffer_clusterpvs;
@@ -2106,7 +2106,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 				// light emitting entities should not cast their own shadow
 				if (VectorLength2(relativelightorigin) < 0.1)
 					continue;
-				ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, ent->model->numsurfaces, ent->model->surfacelist);
+				ent->model->DrawShadowVolume(ent, relativelightorigin, rtlight->radius, ent->model->nummodelsurfaces, ent->model->surfacelist);
 			}
 		}
 	}
@@ -2147,7 +2147,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 					Matrix4x4_Concat(&matrix_modeltolight, &rtlight->matrix_worldtolight, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &rtlight->matrix_worldtoattenuationxyz, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationz, &rtlight->matrix_worldtoattenuationz, &ent->matrix);
-					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, ent->model->numsurfaces, ent->model->surfacelist);
+					ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, rtlight->radius, lightcolor, &matrix_modeltolight, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz, cubemaptexture, ent->model->nummodelsurfaces, ent->model->surfacelist);
 				}
 			}
 		}

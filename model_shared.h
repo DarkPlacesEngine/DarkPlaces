@@ -196,8 +196,6 @@ model_brush_t;
 
 typedef struct model_brushq1_s
 {
-	int				firstmodelsurface, nummodelsurfaces;
-
 	// lightmap format, set to r_lightmaprgba when model is loaded
 	int				lightmaprgba;
 
@@ -586,8 +584,9 @@ typedef struct model_s
 	animscene_t		*skinscenes; // [numskins]
 	// skin animation info
 	animscene_t		*animscenes; // [numframes]
-	// how many surfaces this (sub)model has
-	int				numsurfaces;
+	// range of surface numbers in this (sub)model
+	int				firstmodelsurface;
+	int				nummodelsurfaces;
 	// list of surface numbers in this (sub)model
 	int				*surfacelist;
 	// draw the model's sky polygons (only used by brush models)

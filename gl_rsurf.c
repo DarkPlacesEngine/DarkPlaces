@@ -1403,8 +1403,8 @@ void R_UpdateLightmapInfo(entity_render_t *ent)
 	if (model->brushq1.light_ambient != r_ambient.value)
 	{
 		model->brushq1.light_ambient = r_ambient.value;
-		for (i = 0;i < model->brushq1.nummodelsurfaces;i++)
-			model->brushq1.surfaces[i + model->brushq1.firstmodelsurface].cached_dlight = true;
+		for (i = 0;i < model->nummodelsurfaces;i++)
+			model->brushq1.surfaces[i + model->firstmodelsurface].cached_dlight = true;
 	}
 	else
 	{
@@ -1432,9 +1432,9 @@ void R_PrepareSurfaces(entity_render_t *ent)
 
 	model = ent->model;
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-	numsurfaces = model->brushq1.nummodelsurfaces;
-	surfaces = model->brushq1.surfaces + model->brushq1.firstmodelsurface;
-	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
+	numsurfaces = model->nummodelsurfaces;
+	surfaces = model->brushq1.surfaces + model->firstmodelsurface;
+	surfacevisframes = model->brushq1.surfacevisframes + model->firstmodelsurface;
 	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
 	{
 		if (surfacevisframes[i] == r_framecount)
@@ -1553,10 +1553,10 @@ void R_PrepareBrushModel(entity_render_t *ent)
 #if WORLDNODECULLBACKFACES
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 #endif
-	numsurfaces = model->brushq1.nummodelsurfaces;
-	surf = model->brushq1.surfaces + model->brushq1.firstmodelsurface;
-	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
-	surfacepvsframes = model->brushq1.surfacepvsframes + model->brushq1.firstmodelsurface;
+	numsurfaces = model->nummodelsurfaces;
+	surf = model->brushq1.surfaces + model->firstmodelsurface;
+	surfacevisframes = model->brushq1.surfacevisframes + model->firstmodelsurface;
+	surfacepvsframes = model->brushq1.surfacepvsframes + model->firstmodelsurface;
 	for (i = 0;i < numsurfaces;i++, surf++)
 	{
 #if WORLDNODECULLBACKFACES
@@ -1589,8 +1589,8 @@ void R_SurfaceWorldNode (entity_render_t *ent)
 	model = ent->model;
 	if (model == NULL)
 		return;
-	surfacevisframes = model->brushq1.surfacevisframes + model->brushq1.firstmodelsurface;
-	surfacepvsframes = model->brushq1.surfacepvsframes + model->brushq1.firstmodelsurface;
+	surfacevisframes = model->brushq1.surfacevisframes + model->firstmodelsurface;
+	surfacepvsframes = model->brushq1.surfacepvsframes + model->firstmodelsurface;
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
 	for (leaf = model->brushq1.pvsleafchain;leaf;leaf = leaf->pvschain)
@@ -1795,7 +1795,7 @@ void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin
 	*outnumclusterspointer = 0;
 	*outnumsurfacespointer = 0;
 	memset(outclusterpvs, 0, model->brush.num_pvsclusterbytes);
-	memset(outsurfacepvs, 0, (model->numsurfaces + 7) >> 3);
+	memset(outsurfacepvs, 0, (model->nummodelsurfaces + 7) >> 3);
 	if (model == NULL)
 	{
 		VectorCopy(lightmins, outmins);
@@ -2472,7 +2472,7 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 	*outnumclusterspointer = 0;
 	*outnumsurfacespointer = 0;
 	memset(outclusterpvs, 0, model->brush.num_pvsclusterbytes);
-	memset(outsurfacepvs, 0, (model->numsurfaces + 7) >> 3);
+	memset(outsurfacepvs, 0, (model->nummodelsurfaces + 7) >> 3);
 	if (model == NULL)
 	{
 		VectorCopy(lightmins, outmins);
