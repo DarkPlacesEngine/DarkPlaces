@@ -128,7 +128,7 @@ void R_DrawCoronas(void)
 	int i, lnum;
 	float cscale, scale, viewdist, dist;
 	dlight_t *light;
-	if (!r_coronas.integer)
+	if (r_coronas.value < 0.01)
 		return;
 	R_Mesh_Matrix(&r_identitymatrix);
 	viewdist = DotProduct(r_vieworigin, r_viewforward);
