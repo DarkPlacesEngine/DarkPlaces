@@ -156,7 +156,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 // first check to see if it has allready been defined
 	if (Cvar_FindVar (variable->name))
 	{
-		Con_Printf ("Can't register variable %s, allready defined\n", variable->name);
+		Con_Printf ("Can't register variable %s, already defined\n", variable->name);
 		return;
 	}
 	
