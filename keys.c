@@ -505,13 +505,9 @@ static void
 Key_Message (int key, char ascii)
 {
 
-	if (key == K_ENTER) {
-		if (chat_team)
-			Cbuf_AddText ("say_team \"");
-		else
-			Cbuf_AddText ("say \"");
-		Cbuf_AddText (chat_buffer);
-		Cbuf_AddText ("\"\n");
+	if (key == K_ENTER)
+	{
+		Cmd_ForwardStringToServer(va("%s %s", chat_team ? "say_team" : "say ", chat_buffer));
 
 		key_dest = key_game;
 		chat_bufferlen = 0;

@@ -820,17 +820,16 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 
 /*
 ===================
-Cmd_ForwardToServer
+Cmd_ForwardStringToServer
 
-Sends the entire command line over to the server
+Sends an entire command string over to the server, unprocessed
 ===================
 */
-void Cmd_ForwardToServer (void)
+void Cmd_ForwardStringToServer (const char *s)
 {
-	const char *s;
 	if (cls.state != ca_connected)
 	{
-		Con_Printf("Can't \"%s\", not connected\n", Cmd_Argv(0));
+		Con_Printf("Can't \"%s\", not connected\n", s);
 		return;
 	}
 
@@ -840,12 +839,25 @@ void Cmd_ForwardToServer (void)
 	// LordHavoc: thanks to Fuh for bringing the pure evil of SZ_Print to my
 	// attention, it has been eradicated from here, its only (former) use in
 	// all of darkplaces.
-	if (strcasecmp(Cmd_Argv(0), "cmd") != 0)
-		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "\n");
-	else
-		s = Cmd_Argc() > 1 ? Cmd_Args() : "\n";
 	MSG_WriteByte(&cls.message, clc_stringcmd);
 	SZ_Write(&cls.message, s, strlen(s) + 1);
+}
+
+/*
+===================
+Cmd_ForwardToServer
+
+Sends the entire command line over to the server
+===================
+*/
+void Cmd_ForwardToServer (void)
+{
+	const char *s;
+	if (strcasecmp(Cmd_Argv(0), "cmd"))
+		s = va("%s %s", Cmd_Argv(0), Cmd_Argc() > 1 ? Cmd_Args() : "");
+	else
+		s = Cmd_Argc() > 1 ? Cmd_Args() : "";
+	Cmd_ForwardStringToServer(s);
 }
 
 
