@@ -13,6 +13,7 @@ cvar_t gl_printcheckerror = {0, "gl_printcheckerror", "0"};
 
 cvar_t r_render = {0, "r_render", "1"};
 cvar_t r_waterwarp = {CVAR_SAVE, "r_waterwarp", "1"};
+cvar_t gl_polyblend = {CVAR_SAVE, "gl_polyblend", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
@@ -206,6 +207,7 @@ void gl_backend_init(void)
 
 	Cvar_RegisterVariable(&r_render);
 	Cvar_RegisterVariable(&r_waterwarp);
+	Cvar_RegisterVariable(&gl_polyblend);
 	Cvar_RegisterVariable(&gl_dither);
 	Cvar_RegisterVariable(&gl_lockarrays);
 	Cvar_RegisterVariable(&gl_delayfinish);
