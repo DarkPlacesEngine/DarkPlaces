@@ -291,9 +291,6 @@ void SV_SendServerinfo (client_t *client)
 
 	MSG_WriteByte (&client->message, svc_signonnum);
 	MSG_WriteByte (&client->message, 1);
-
-	client->sendsignon = true;
-	client->spawned = false;		// need prespawn, spawn, etc
 }
 
 /*
@@ -341,13 +338,17 @@ void SV_ConnectClient (int clientnum)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
 	}
 
-#if NOROUTINGFIX
-	SV_SendServerinfo (client);
-#else
-	// send serverinfo on first nop
-	client->waitingforconnect = true;
+	client->sendserverinfo = false;
 	client->sendsignon = true;
 	client->spawned = false;		// need prespawn, spawn, etc
+	// LordHavoc: 1 = attempt to work through NAT routers
+#if 0
+	// send serverinfo immediately (may get lost if client is behind a NAT router)
+	client->waitingforconnect = false;
+	SV_SendServerinfo (client);
+#else
+	// send serverinfo only after receiving a nop from client
+	client->waitingforconnect = true;
 #endif
 }
 
@@ -1498,14 +1499,6 @@ void SV_SendClientMessages (void)
 		if (!host_client->active)
 			continue;
 
-#ifndef NOROUTINGFIX
-		if (host_client->sendserverinfo)
-		{
-			host_client->sendserverinfo = false;
-			SV_SendServerinfo (host_client);
-		}
-#endif
-
 		if (host_client->spawned)
 		{
 			if (!SV_SendClientDatagram (host_client))
@@ -1520,6 +1513,12 @@ void SV_SendClientMessages (void)
 		// between signon stages
 			if (!host_client->sendsignon)
 			{
+				if (host_client->sendserverinfo)
+				{
+					host_client->sendserverinfo = false;
+					SV_SendServerinfo (host_client);
+				}
+
 				if (realtime - host_client->last_message > 5)
 					SV_SendNop (host_client);
 				continue;	// don't send out non-signon messages

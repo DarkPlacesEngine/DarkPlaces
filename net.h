@@ -227,18 +227,18 @@ void NET_FreeQSocket(qsocket_t *);
 double SetNetTime(void);
 
 
-#define HOSTCACHESIZE	8
+#define HOSTCACHESIZE	128
 
 typedef struct
 {
-	char	name[16];
-	char	map[16];
-	char	cname[32];
+	char	name[64];
+	char	map[64];
+	char	cname[64];
 	int		users;
 	int		maxusers;
-	int		driver;
-	int		ldriver;
-	struct qsockaddr addr;
+	//int		driver;
+	//int		ldriver;
+	//struct qsockaddr addr;
 } hostcache_t;
 
 extern int hostCacheCount;

@@ -336,8 +336,8 @@ static void NET_Heartbeat_f (void)
 
 static void PrintSlistHeader(void)
 {
-	Con_Printf("Server          Map             Users\n");
-	Con_Printf("--------------- --------------- -----\n");
+	Con_Printf("Server Address        Name/Description                   Map             Users\n");
+	Con_Printf("--------------------- ---------------------------------- --------------- -----\n");
 	slistLastShown = 0;
 }
 
@@ -345,14 +345,8 @@ static void PrintSlistHeader(void)
 static void PrintSlist(void)
 {
 	int n;
-
 	for (n = slistLastShown; n < hostCacheCount; n++)
-	{
-		if (hostcache[n].maxusers)
-			Con_Printf("%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name, hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
-		else
-			Con_Printf("%-15.15s %-15.15s\n", hostcache[n].name, hostcache[n].map);
-	}
+		Con_Printf("%-21.21s %-34.34s %-15.15s %2u/%2u\n", hostcache[n].cname, hostcache[n].name, hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
 	slistLastShown = n;
 }
 
@@ -508,58 +502,19 @@ hostcache_t hostcache[HOSTCACHESIZE];
 
 qsocket_t *NET_Connect (char *host)
 {
-	qsocket_t		*ret;
-	int				n;
+	qsocket_t *ret;
+
+	if (host == NULL || *host == 0)
+		return NULL;
 
 	SetNetTime();
 
-	if (host && *host == 0)
-		host = NULL;
-
-	if (host)
+	if (host && strcasecmp (host, "local") == 0)
 	{
-		if (strcasecmp (host, "local") == 0)
-		{
-			net_driverlevel = 0;
-			return dfunc.Connect (host);
-		}
-
-		if (hostCacheCount)
-		{
-			for (n = 0; n < hostCacheCount; n++)
-				if (strcasecmp (host, hostcache[n].name) == 0)
-				{
-					host = hostcache[n].cname;
-					break;
-				}
-			if (n < hostCacheCount)
-				goto JustDoIt;
-		}
+		net_driverlevel = 0;
+		return dfunc.Connect (host);
 	}
 
-	slistSilent = host ? true : false;
-	NET_Slist_f ();
-
-	while(slistInProgress)
-		NET_Poll();
-
-	if (host == NULL)
-	{
-		if (hostCacheCount != 1)
-			return NULL;
-		host = hostcache[0].cname;
-		Con_Printf("Connecting to...\n%s @ %s\n\n", hostcache[0].name, host);
-	}
-
-	if (hostCacheCount)
-		for (n = 0; n < hostCacheCount; n++)
-			if (strcasecmp (host, hostcache[n].name) == 0)
-			{
-				host = hostcache[n].cname;
-				break;
-			}
-
-JustDoIt:
 	for (net_driverlevel = 0;net_driverlevel < net_numdrivers;net_driverlevel++)
 	{
 		if (net_drivers[net_driverlevel].initialized == false)
@@ -567,14 +522,6 @@ JustDoIt:
 		ret = dfunc.Connect (host);
 		if (ret)
 			return ret;
-	}
-
-	if (host)
-	{
-		Con_Printf("\n");
-		PrintSlistHeader();
-		PrintSlist();
-		PrintSlistTrailer();
 	}
 
 	return NULL;

@@ -540,6 +540,12 @@ nextmsg:
 		if (!ret)
 			return true;
 
+		if (host_client->waitingforconnect)
+		{
+			host_client->waitingforconnect = false;
+			host_client->sendserverinfo = true;
+		}
+
 		MSG_BeginReading ();
 
 		while (1)
@@ -555,14 +561,6 @@ nextmsg:
 			}
 
 			cmd = MSG_ReadChar ();
-
-#ifndef NOROUTINGFIX
-			if (cmd != -1 && host_client->waitingforconnect)
-			{
-				host_client->waitingforconnect = false;
-				host_client->sendserverinfo = true;
-			}
-#endif
 
 			switch (cmd)
 			{
