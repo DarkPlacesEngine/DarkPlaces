@@ -164,7 +164,10 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, v
 
 			interval = LittleFloat (intervals->interval); // FIXME: support variable framerate groups
 			if (interval < 0.01f)
-				Host_Error("Mod_MDL_LoadFrames: invalid interval");
+			{
+				Con_Printf("%s has an invalid interval %f, changing to 0.1\n", loadmodel->name, interval);
+				interval = 0.1f;
+			}
 		}
 
 		// get scene name from first frame
@@ -552,7 +555,10 @@ void Mod_IDP0_Load(model_t *mod, void *buffer)
 
 				interval = LittleFloat(pinskinintervals[0].interval);
 				if (interval < 0.01f)
-					Host_Error("Mod_IDP0_Load: invalid interval\n");
+				{
+					Con_Printf("%s has an invalid interval %f, changing to 0.1\n", loadmodel->name, interval);
+					interval = 0.1f;
+				}
 			}
 
 			sprintf(loadmodel->skinscenes[i].name, "skin %i", i);
@@ -709,7 +715,7 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + i, &tempskinframe);
 			else
 			{
-				Con_Printf("Mod_IDP2_Load: missing skin \"%s\"\n", inskin);
+				Con_Printf("%s is missing skin \"%s\"\n", loadmodel->name, inskin);
 				Mod_BuildAliasSkinFromSkinFrame(loadmodel->alias.aliasdata_meshes->data_skins + i, NULL);
 			}
 		}
@@ -747,8 +753,9 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 		k = (unsigned short) LittleShort(inst[i*2+1]);
 		if (j >= skinwidth || k >= skinheight)
 		{
-			Mem_Free(stverts);
-			Host_Error("Mod_MD2_LoadGeometry: invalid skin coordinate (%i %i) on vert %i of model %s\n", j, k, i, loadmodel->name);
+			Con_Printf("%s has an invalid skin coordinate (%i %i) on vert %i, changing to 0 0\n", loadmodel->name, j, k, i);
+			j = 0;
+			k = 0;
 		}
 		stverts[i*2+0] = j * s;
 		stverts[i*2+1] = k * t;
@@ -765,15 +772,15 @@ void Mod_IDP2_Load(model_t *mod, void *buffer)
 		{
 			xyz = (unsigned short) LittleShort (intri[i].index_xyz[j]);
 			st = (unsigned short) LittleShort (intri[i].index_st[j]);
-			if (xyz >= numxyz || st >= numst)
+			if (xyz >= numxyz)
 			{
-				Mem_Free(md2verthash);
-				Mem_Free(md2verthashdata);
-				Mem_Free(stverts);
-				if (xyz >= numxyz)
-					Host_Error("Mod_MD2_LoadGeometry: invalid xyz index (%i) on triangle %i of model %s\n", xyz, i, loadmodel->name);
-				if (st >= numst)
-					Host_Error("Mod_MD2_LoadGeometry: invalid st index (%i) on triangle %i of model %s\n", st, i, loadmodel->name);
+				Con_Printf("%s has an invalid xyz index (%i) on triangle %i, resetting to 0\n", loadmodel->name, xyz, i);
+				xyz = 0;
+			}
+			if (st >= numst)
+			{
+				Con_Printf("%s has an invalid st index (%i) on triangle %i, resetting to 0\n", loadmodel->name, st, i);
+				st = 0;
 			}
 			s = stverts[st*2+0];
 			t = stverts[st*2+1];
@@ -1082,11 +1089,11 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 			loadmodel->animscenes[i].framerate = BigFloat(scene->framerate);
 			loadmodel->animscenes[i].loop = (BigLong(scene->flags) & ZYMSCENEFLAG_NOLOOP) == 0;
 			if ((unsigned int) loadmodel->animscenes[i].firstframe >= (unsigned int) numposes)
-				Host_Error("Mod_ZYMOTICMODEL_Load: scene firstframe (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, numposes);
+				Host_Error("%s scene->firstframe (%i) >= numposes (%i)\n", loadmodel->name, loadmodel->animscenes[i].firstframe, numposes);
 			if ((unsigned int) loadmodel->animscenes[i].firstframe + (unsigned int) loadmodel->animscenes[i].framecount > (unsigned int) numposes)
-				Host_Error("Mod_ZYMOTICMODEL_Load: scene firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
+				Host_Error("%s scene->firstframe (%i) + framecount (%i) >= numposes (%i)\n", loadmodel->name, loadmodel->animscenes[i].firstframe, loadmodel->animscenes[i].framecount, numposes);
 			if (loadmodel->animscenes[i].framerate < 0)
-				Host_Error("Mod_ZYMOTICMODEL_Load: scene framerate (%f) < 0\n", loadmodel->animscenes[i].framerate);
+				Host_Error("%s scene->framerate (%f) < 0\n", loadmodel->name, loadmodel->animscenes[i].framerate);
 			scene++;
 		}
 	}
@@ -1113,7 +1120,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 			loadmodel->alias.zymdata_bones[i].flags = BigLong(bone[i].flags);
 			loadmodel->alias.zymdata_bones[i].parent = BigLong(bone[i].parent);
 			if (loadmodel->alias.zymdata_bones[i].parent >= i)
-				Host_Error("Mod_ZYMOTICMODEL_Load: bone[%i].parent >= %i in %s\n", i, i, loadmodel->name);
+				Host_Error("%s bone[%i].parent >= %i\n", loadmodel->name, i, i);
 		}
 	}
 
@@ -1126,7 +1133,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		{
 			loadmodel->alias.zymdata_vertbonecounts[i] = BigLong(bonecount[i]);
 			if (loadmodel->alias.zymdata_vertbonecounts[i] < 1)
-				Host_Error("Mod_ZYMOTICMODEL_Load: bone vertex count < 1 in %s\n", loadmodel->name);
+				Host_Error("%s bonecount[%i] < 1\n", loadmodel->name, i);
 		}
 	}
 
@@ -1166,17 +1173,17 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 		// byteswap, validate, and swap winding order of tris
 		count = pheader->numshaders * sizeof(int) + pheader->numtris * sizeof(int[3]);
 		if (pheader->lump_render.length != count)
-			Host_Error("Mod_ZYMOTICMODEL_Load: renderlist is wrong size in %s (is %i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
+			Host_Error("%s renderlist is wrong size (%i bytes, should be %i bytes)\n", loadmodel->name, pheader->lump_render.length, count);
 		outrenderlist = loadmodel->alias.zymdata_renderlist = Mem_Alloc(loadmodel->mempool, count);
 		renderlist = (void *) (pheader->lump_render.start + pbase);
 		renderlistend = (void *) ((qbyte *) renderlist + pheader->lump_render.length);
 		for (i = 0;i < pheader->numshaders;i++)
 		{
 			if (renderlist >= renderlistend)
-				Host_Error("Mod_ZYMOTICMODEL_Load: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+				Host_Error("%s corrupt renderlist (wrong size)\n", loadmodel->name);
 			count = BigLong(*renderlist);renderlist++;
 			if (renderlist + count * 3 > renderlistend)
-				Host_Error("Mod_ZYMOTICMODEL_Load: corrupt renderlist in %s (wrong size)\n", loadmodel->name);
+				Host_Error("%s corrupt renderlist (wrong size)\n", loadmodel->name);
 			*outrenderlist++ = count;
 			while (count--)
 			{
@@ -1186,7 +1193,7 @@ void Mod_ZYMOTICMODEL_Load(model_t *mod, void *buffer)
 				if ((unsigned int)outrenderlist[0] >= (unsigned int)pheader->numverts
 				 || (unsigned int)outrenderlist[1] >= (unsigned int)pheader->numverts
 				 || (unsigned int)outrenderlist[2] >= (unsigned int)pheader->numverts)
-					Host_Error("Mod_ZYMOTICMODEL_Load: corrupt renderlist in %s (out of bounds index)\n", loadmodel->name);
+					Host_Error("%s corrupt renderlist (out of bounds index)\n", loadmodel->name);
 				renderlist += 3;
 				outrenderlist += 3;
 			}
