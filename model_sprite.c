@@ -247,6 +247,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	loadmodel->Draw = R_DrawSpriteModel;
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawFakeShadow = NULL;
+	loadmodel->DrawShadowVolume = NULL;
 
 	version = LittleLong(((dsprite_t *)buffer)->version);
 	if (version == SPRITE_VERSION || SPRITE32_VERSION)

@@ -667,7 +667,7 @@ void R_ModelLightPoint (const entity_render_t *ent, vec3_t color, const vec3_t p
 		RecursiveLightPoint (color, cl.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 }
 
-void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float colorg, float colorb, int worldcoords)
+void R_LightModel(const entity_render_t *ent, int numverts, float *vertices, float *normals, float *colors, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0, maxnearlights = r_modellights.integer;
 	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, f, dist2, mscale, dot, stylescale, intensity, ambientcolor[3];
@@ -825,11 +825,11 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 	basecolor[0] *= colorr;
 	basecolor[1] *= colorg;
 	basecolor[2] *= colorb;
-	avc = aliasvertcolor;
+	avc = colors;
 	if (nearlights)
 	{
-		av = aliasvert;
-		avn = aliasvertnorm;
+		av = vertices;
+		avn = normals;
 		for (i = 0;i < numverts;i++)
 		{
 			VectorCopy(basecolor, color);

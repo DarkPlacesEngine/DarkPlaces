@@ -1830,8 +1830,23 @@ void R_DrawBrushModelNormal (entity_render_t *ent)
 	R_DrawBrushModel(ent, false, true);
 }
 
-void R_DrawBrushModelShadowVolumes (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
+void R_DrawBrushModelShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
 {
+#if 0
+	float projectdistance, temp[3];
+	shadowmesh_t *mesh;
+	VectorSubtract(relativelightorigin, ent->model->shadowmesh_center, temp);
+	projectdistance = lightradius + ent->model->shadowmesh_radius - sqrt(DotProduct(temp, temp));
+	if (projectdistance >= 0.1)
+	{
+		for (mesh = ent->model->shadowmesh;mesh;mesh = mesh->next)
+		{
+			R_Mesh_ResizeCheck(mesh->numverts * 2);
+			memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+			R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->elements, mesh->neighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
+		}
+	}
+#else
 	int i, numsurfaces;
 	msurface_t *surf;
 	float projectdistance, f, temp[3], lightradius2;
@@ -1840,30 +1855,29 @@ void R_DrawBrushModelShadowVolumes (entity_render_t *ent, vec3_t relativelightor
 	lightradius2 = lightradius * lightradius;
 	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < numsurfaces;i++, surf++)
 	{
-		VectorSubtract(relativelightorigin, surf->poly_center, temp);
-		if (DotProduct(temp, temp) < (surf->poly_radius2 + lightradius2))
+		f = PlaneDiff(relativelightorigin, surf->plane);
+		if (surf->flags & SURF_PLANEBACK)
+			f = -f;
+		// draw shadows only for backfaces
+		projectdistance = lightradius + f;
+		if (projectdistance >= 0.1 && projectdistance < lightradius)
 		{
-			f = PlaneDiff(relativelightorigin, surf->plane);
-			if (surf->flags & SURF_PLANEBACK)
-				f = -f;
-			// draw shadows only for backfaces
-			if (f < 0)
+			VectorSubtract(relativelightorigin, surf->poly_center, temp);
+			if (DotProduct(temp, temp) < (surf->poly_radius2 + lightradius2))
 			{
-				projectdistance = lightradius + f;
-				if (projectdistance > 0)
+				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 				{
-					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
-					{
-						R_Mesh_ResizeCheck(mesh->numverts * 2);
-						memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
-						R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, projectdistance, visiblevolume);
-					}
+					R_Mesh_ResizeCheck(mesh->numverts * 2);
+					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+					R_Shadow_Volume(mesh->numverts, mesh->numtriangles, varray_vertex, mesh->index, mesh->triangleneighbors, relativelightorigin, lightradius, projectdistance, visiblevolume);
 				}
 			}
 		}
 	}
+#endif
 }
 
+/*
 extern cvar_t r_shadows;
 void R_DrawBrushModelFakeShadow (entity_render_t *ent)
 {
@@ -1872,6 +1886,7 @@ void R_DrawBrushModelFakeShadow (entity_render_t *ent)
 	rmeshstate_t m;
 	mlight_t *sl;
 	rdlight_t *rd;
+	svbspmesh_t *mesh;
 
 	if (r_shadows.integer < 2)
 		return;
@@ -1882,18 +1897,35 @@ void R_DrawBrushModelFakeShadow (entity_render_t *ent)
 	R_Mesh_State(&m);
 	R_Mesh_Matrix(&ent->matrix);
 	GL_Color(0.0125 * r_colorscale, 0.025 * r_colorscale, 0.1 * r_colorscale, 1);
-	for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
+	if (0)//ent->model == cl.worldmodel)
 	{
-		if (d_lightstylevalue[sl->style] > 0
-		 && ent->maxs[0] >= sl->origin[0] - sl->cullradius
-		 && ent->mins[0] <= sl->origin[0] + sl->cullradius
-		 && ent->maxs[1] >= sl->origin[1] - sl->cullradius
-		 && ent->mins[1] <= sl->origin[1] + sl->cullradius
-		 && ent->maxs[2] >= sl->origin[2] - sl->cullradius
-		 && ent->mins[2] <= sl->origin[2] + sl->cullradius)
+		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
 		{
-			Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
-			R_DrawBrushModelShadowVolumes (ent, relativelightorigin, sl->cullradius, true);
+			if (d_lightstylevalue[sl->style] > 0 && R_NotCulledBox(sl->shadowvolumemins, sl->shadowvolumemaxs))
+			{
+				for (mesh = sl->shadowvolume;mesh;mesh = mesh->next)
+				{
+					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->elements);
+				}
+			}
+		}
+	}
+	else
+	{
+		for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights;i++, sl++)
+		{
+			if (d_lightstylevalue[sl->style] > 0
+			 && ent->maxs[0] >= sl->origin[0] - sl->cullradius
+			 && ent->mins[0] <= sl->origin[0] + sl->cullradius
+			 && ent->maxs[1] >= sl->origin[1] - sl->cullradius
+			 && ent->mins[1] <= sl->origin[1] + sl->cullradius
+			 && ent->maxs[2] >= sl->origin[2] - sl->cullradius
+			 && ent->mins[2] <= sl->origin[2] + sl->cullradius)
+			{
+				Matrix4x4_Transform(&ent->inversematrix, sl->origin, relativelightorigin);
+				R_DrawBrushModelShadowVolume (ent, relativelightorigin, sl->cullradius, true);
+			}
 		}
 	}
 	for (i = 0, rd = r_dlight;i < r_numdlights;i++, rd++)
@@ -1906,10 +1938,11 @@ void R_DrawBrushModelFakeShadow (entity_render_t *ent)
 		 && ent->mins[2] <= rd->origin[2] + rd->cullradius)
 		{
 			Matrix4x4_Transform(&ent->inversematrix, rd->origin, relativelightorigin);
-			R_DrawBrushModelShadowVolumes (ent, relativelightorigin, rd->cullradius, true);
+			R_DrawBrushModelShadowVolume (ent, relativelightorigin, rd->cullradius, true);
 		}
 	}
 }
+*/
 
 static void gl_surf_start(void)
 {

@@ -408,3 +408,153 @@ void Mod_BuildTriangleNeighbors(int *neighbors, int *elements, int numtriangles)
 		n[2] = Mod_FindTriangleWithEdge(elements, numtriangles, e[0], e[2]);
 	}
 }
+
+shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts)
+{
+	shadowmesh_t *mesh;
+	mesh = Mem_Alloc(mempool, sizeof(shadowmesh_t) + maxverts * sizeof(float[4]) + maxverts * sizeof(int[3]) + maxverts * sizeof(int[3]));
+	mesh->maxverts = maxverts;
+	mesh->maxtriangles = maxverts;
+	mesh->numverts = 0;
+	mesh->numtriangles = 0;
+	mesh->verts = (float *)(mesh + 1);
+	mesh->elements = (int *)(mesh->verts + mesh->maxverts * 4);
+	mesh->neighbors = (int *)(mesh->elements + mesh->maxtriangles * 3);
+	return mesh;
+}
+
+shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh)
+{
+	shadowmesh_t *newmesh;
+	newmesh = Mem_Alloc(mempool, sizeof(shadowmesh_t) + oldmesh->numverts * sizeof(float[4]) + oldmesh->numtriangles * sizeof(int[3]) + oldmesh->numtriangles * sizeof(int[3]));
+	newmesh->maxverts = newmesh->numverts = oldmesh->numverts;
+	newmesh->maxtriangles = newmesh->numtriangles = oldmesh->numtriangles;
+	newmesh->verts = (float *)(newmesh + 1);
+	newmesh->elements = (int *)(newmesh->verts + newmesh->maxverts * 4);
+	newmesh->neighbors = (int *)(newmesh->elements + newmesh->maxtriangles * 3);
+	memcpy(newmesh->verts, oldmesh->verts, newmesh->numverts * sizeof(float[4]));
+	memcpy(newmesh->elements, oldmesh->elements, newmesh->numtriangles * sizeof(int[3]));
+	memcpy(newmesh->neighbors, oldmesh->neighbors, newmesh->numtriangles * sizeof(int[3]));
+	return newmesh;
+}
+
+int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *v)
+{
+	int j;
+	float *m, temp[3];
+	for (j = 0, m = mesh->verts;j < mesh->numverts;j++, m += 4)
+	{
+		VectorSubtract(v, m, temp);
+		if (DotProduct(temp, temp) < 0.1)
+			return j;
+	}
+	mesh->numverts++;
+	VectorCopy(v, m);
+	return j;
+}
+
+void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts)
+{
+	int i, i1, i2, i3;
+	float *v;
+	while (numverts + mesh->numverts > mesh->maxverts || (numverts - 2) + mesh->numtriangles > mesh->maxtriangles)
+	{
+		if (mesh->next == NULL)
+			mesh->next = Mod_ShadowMesh_Alloc(mempool, max(1000, numverts));
+		mesh = mesh->next;
+	}
+	i1 = Mod_ShadowMesh_AddVertex(mesh, verts);
+	i2 = 0;
+	i3 = Mod_ShadowMesh_AddVertex(mesh, verts + 3);
+	for (i = 0, v = verts + 6;i < numverts - 2;i++, v += 3)
+	{
+		i2 = i3;
+		i3 = Mod_ShadowMesh_AddVertex(mesh, v);
+		mesh->elements[mesh->numtriangles * 3 + 0] = i1;
+		mesh->elements[mesh->numtriangles * 3 + 1] = i2;
+		mesh->elements[mesh->numtriangles * 3 + 2] = i3;
+		mesh->numtriangles++;
+	}
+}
+
+shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool)
+{
+	return Mod_ShadowMesh_Alloc(mempool, 1000);
+}
+
+shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh)
+{
+	int i;
+	shadowmesh_t *mesh, *newmesh, *nextmesh;
+	// reallocate meshs to conserve space
+	for (mesh = firstmesh, firstmesh = NULL;mesh;mesh = nextmesh)
+	{
+		nextmesh = mesh->next;
+		newmesh = Mod_ShadowMesh_ReAlloc(mempool, mesh);
+		newmesh->next = firstmesh;
+		firstmesh = newmesh;
+		Mem_Free(mesh);
+		Con_Printf("mesh\n");
+		for (i = 0;i < newmesh->numtriangles;i++)
+			Con_Printf("tri %d %d %d\n", newmesh->elements[i * 3 + 0], newmesh->elements[i * 3 + 1], newmesh->elements[i * 3 + 2]);
+		Mod_BuildTriangleNeighbors(newmesh->neighbors, newmesh->elements, newmesh->numtriangles);
+	}
+	return firstmesh;
+}
+
+void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius)
+{
+	int i;
+	shadowmesh_t *mesh;
+	vec3_t nmins, nmaxs, ncenter, temp;
+	float nradius2, dist2, *v;
+	// calculate bbox
+	for (mesh = firstmesh;mesh;mesh = mesh->next)
+	{
+		if (mesh == firstmesh)
+		{
+			VectorCopy(mesh->verts, nmins);
+			VectorCopy(mesh->verts, nmaxs);
+		}
+		for (i = 0, v = mesh->verts;i < mesh->numverts;i++, v += 4)
+		{
+			if (nmins[0] > v[0]) nmins[0] = v[0];if (nmaxs[0] < v[0]) nmaxs[0] = v[0];
+			if (nmins[1] > v[1]) nmins[1] = v[1];if (nmaxs[1] < v[1]) nmaxs[1] = v[1];
+			if (nmins[2] > v[2]) nmins[2] = v[2];if (nmaxs[2] < v[2]) nmaxs[2] = v[2];
+		}
+	}
+	// calculate center and radius
+	ncenter[0] = (nmins[0] + nmaxs[0]) * 0.5f;
+	ncenter[1] = (nmins[1] + nmaxs[1]) * 0.5f;
+	ncenter[2] = (nmins[2] + nmaxs[2]) * 0.5f;
+	nradius2 = 0;
+	for (mesh = firstmesh;mesh;mesh = mesh->next)
+	{
+		for (i = 0, v = mesh->verts;i < mesh->numverts;i++, v += 4)
+		{
+			VectorSubtract(v, ncenter, temp);
+			dist2 = DotProduct(temp, temp);
+			if (nradius2 < dist2)
+				nradius2 = dist2;
+		}
+	}
+	// return data
+	if (mins)
+		VectorCopy(nmins, mins);
+	if (maxs)
+		VectorCopy(nmaxs, maxs);
+	if (center)
+		VectorCopy(ncenter, center);
+	if (radius)
+		*radius = sqrt(nradius2);
+}
+
+void Mod_ShadowMesh_Free(shadowmesh_t *mesh)
+{
+	shadowmesh_t *nextmesh;
+	for (;mesh;mesh = nextmesh)
+	{
+		nextmesh = mesh->next;
+		Mem_Free(mesh);
+	}
+}
