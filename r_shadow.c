@@ -2253,6 +2253,14 @@ suffixinfo_t;
 static suffixinfo_t suffix[3][6] =
 {
 	{
+		{"px",   false, false, false},
+		{"nx",   false, false, false},
+		{"py",   false, false, false},
+		{"ny",   false, false, false},
+		{"pz",   false, false, false},
+		{"nz",   false, false, false}
+	},
+	{
 		{"posx", false, false, false},
 		{"negx", false, false, false},
 		{"posy", false, false, false},
@@ -2261,20 +2269,12 @@ static suffixinfo_t suffix[3][6] =
 		{"negz", false, false, false}
 	},
 	{
-		{"px", false, false, false},
-		{"nx", false, false, false},
-		{"py", false, false, false},
-		{"ny", false, false, false},
-		{"pz", false, false, false},
-		{"nz", false, false, false}
-	},
-	{
-		{"rt",  true, false,  true},
-		{"lf", false,  true,  true},
-		{"ft",  true,  true, false},
-		{"bk", false, false, false},
-		{"up",  true, false,  true},
-		{"dn",  true, false,  true}
+		{"rt",    true, false,  true},
+		{"lf",   false,  true,  true},
+		{"ft",    true,  true, false},
+		{"bk",   false, false, false},
+		{"up",    true, false,  true},
+		{"dn",    true, false,  true}
 	}
 };
 

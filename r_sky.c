@@ -22,23 +22,31 @@ typedef struct suffixinfo_s
 	qboolean flipx, flipy, flipdiagonal;
 }
 suffixinfo_t;
-static suffixinfo_t suffix[2][6] =
+static suffixinfo_t suffix[3][6] =
 {
 	{
-		{"rt", false, false, false},
-		{"bk", false, false, false},
-		{"lf", false, false, false},
-		{"ft", false, false, false},
-		{"up", false, false, false},
-		{"dn", false, false, false},
+		{"px",   false, false, false},
+		{"nx",   false, false, false},
+		{"py",   false, false, false},
+		{"ny",   false, false, false},
+		{"pz",   false, false, false},
+		{"nz",   false, false, false}
 	},
 	{
-		{"px", false,  true,  true},
-		{"ny", false, false, false},
-		{"nx",  true, false,  true},
-		{"py",  true,  true, false},
-		{"pz", false,  true,  true},
-		{"nz", false,  true,  true}
+		{"posx", false, false, false},
+		{"negx", false, false, false},
+		{"posy", false, false, false},
+		{"negy", false, false, false},
+		{"posz", false, false, false},
+		{"negz", false, false, false}
+	},
+	{
+		{"rt",    true, false,  true},
+		{"lf",   false,  true,  true},
+		{"ft",    true,  true, false},
+		{"bk",   false, false, false},
+		{"up",    true, false,  true},
+		{"dn",    true, false,  true}
 	}
 };
 
@@ -89,7 +97,7 @@ void R_LoadSkyBox(void)
 	if (!skyname[0])
 		return;
 
-	for (j=0; j<2; j++)
+	for (j=0; j<3; j++)
 	{
 		for (i=0; i<6; i++)
 		{
@@ -123,6 +131,8 @@ void R_LoadSkyBox(void)
 		if (skyboxside[0] != NULL)
 			return;
 	}
+
+	Con_Printf ("Failed to load %s as skybox\n", skyname);
 }
 
 int R_SetSkyBox(const char *sky)
@@ -189,20 +199,20 @@ float skyboxvertex3f[6*4*3] =
 	 16,  16, -16,
 	 16,  16,  16,
 	// skyside[1]
-	-16, -16,  16,
-	-16, -16, -16,
-	 16, -16, -16,
-	 16, -16,  16,
-	// skyside[2]
 	-16,  16,  16,
 	-16,  16, -16,
 	-16, -16, -16,
 	-16, -16,  16,
-	// skyside[3]
+	// skyside[2]
 	 16,  16,  16,
 	 16,  16, -16,
 	-16,  16, -16,
 	-16,  16,  16,
+	// skyside[3]
+	-16, -16,  16,
+	-16, -16, -16,
+	 16, -16, -16,
+	 16, -16,  16,
 	// skyside[4]
 	-16, -16,  16,
 	 16, -16,  16,
@@ -218,35 +228,35 @@ float skyboxvertex3f[6*4*3] =
 float skyboxtexcoord2f[6*4*2] =
 {
 	// skyside[0]
-	0, 0,
 	0, 1,
 	1, 1,
 	1, 0,
+	0, 0,
 	// skyside[1]
+	1, 0,
 	0, 0,
 	0, 1,
 	1, 1,
-	1, 0,
 	// skyside[2]
-	0, 0,
-	0, 1,
 	1, 1,
 	1, 0,
+	0, 0,
+	0, 1,
 	// skyside[3]
 	0, 0,
 	0, 1,
 	1, 1,
 	1, 0,
 	// skyside[4]
-	0, 0,
 	0, 1,
 	1, 1,
 	1, 0,
-	// skyside[5]
 	0, 0,
+	// skyside[5]
 	0, 1,
 	1, 1,
-	1, 0
+	1, 0,
+	0, 0
 };
 
 int skyboxelements[6*2*3] =
