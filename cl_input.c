@@ -414,62 +414,48 @@ void CL_SendMove(void)
 	int bits;
 	sizebuf_t buf;
 	qbyte data[128];
-	static double lastmovetime;
+	static double lastmovetime = 0;
+#define MOVEAVERAGING 0
+#if MOVEAVERAGING
 	static float forwardmove, sidemove, upmove, total; // accumulation
+#else
+	float forwardmove, sidemove, upmove;
+#endif
 
 	CL_UpdatePrydonCursor();
 
+#if MOVEAVERAGING
+	// accumulate changes between messages
 	forwardmove += cl.cmd.forwardmove;
 	sidemove += cl.cmd.sidemove;
 	upmove += cl.cmd.upmove;
 	total++;
+#endif
 	// LordHavoc: cap outgoing movement messages to sys_ticrate
 	if (!cl.islocalgame && (realtime - lastmovetime < sys_ticrate.value))
 		return;
-	lastmovetime = realtime;
-	// average what has happened during this time
+	lastmovetime = max(lastmovetime + sys_ticrate.value, realtime);
+#if MOVEAVERAGING
+	// average the accumulated changes
 	total = 1.0f / total;
 	forwardmove *= total;
 	sidemove *= total;
 	upmove *= total;
 	total = 0;
+#else
+	// use the latest values
+	forwardmove = cl.cmd.forwardmove;
+	sidemove = cl.cmd.sidemove;
+	upmove = cl.cmd.upmove;
+#endif
 
 	buf.maxsize = 128;
 	buf.cursize = 0;
 	buf.data = data;
 
-	// send the movement message
-	MSG_WriteByte (&buf, clc_move);
-
-	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
-
-	if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
-	{
-		for (i = 0;i < 3;i++)
-			MSG_WriteAngle8i (&buf, cl.viewangles[i]);
-	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
-	{
-		for (i = 0;i < 3;i++)
-			MSG_WriteAngle32f (&buf, cl.viewangles[i]);
-	}
-	else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5 || cl.protocol == PROTOCOL_DARKPLACES6)
-	{
-		for (i = 0;i < 3;i++)
-			MSG_WriteAngle16i (&buf, cl.viewangles[i]);
-	}
-	else
-		Host_Error("CL_SendMove: unknown cl.protocol %i\n", cl.protocol);
-
-	MSG_WriteCoord16i (&buf, forwardmove);
-	MSG_WriteCoord16i (&buf, sidemove);
-	MSG_WriteCoord16i (&buf, upmove);
-
-	forwardmove = sidemove = upmove = 0;
-	// send button bits
+	// set button bits
+	// LordHavoc: added 6 new buttons and use and chat buttons, and prydon cursor active button
 	bits = 0;
-
-	// LordHavoc: added 13 new buttons and chat button
 	if (in_attack.state   & 3) bits |=   1;in_attack.state  &= ~2;
 	if (in_jump.state     & 3) bits |=   2;in_jump.state    &= ~2;
 	if (in_button3.state  & 3) bits |=   4;in_button3.state &= ~2;
@@ -482,53 +468,105 @@ void CL_SendMove(void)
 	if (key_dest != key_game || key_consoleactive) bits |= 512;
 	if (cl_prydoncursor.integer) bits |= 1024;
 	// button bits 11-31 unused currently
+	// rotate/zoom view serverside if PRYDON_CLIENTCURSOR cursor is at edge of screen
 	if (cl.cmd.cursor_screen[0] <= -1) bits |= 8;
 	if (cl.cmd.cursor_screen[0] >=  1) bits |= 16;
 	if (cl.cmd.cursor_screen[1] <= -1) bits |= 32;
 	if (cl.cmd.cursor_screen[1] >=  1) bits |= 64;
 
-	if (cl.protocol == PROTOCOL_DARKPLACES6)
-		MSG_WriteLong (&buf, bits);
-	else
-		MSG_WriteByte (&buf, bits);
-
-	MSG_WriteByte (&buf, in_impulse);
-	in_impulse = 0;
-
-	// PRYDON_CLIENTCURSOR
-	if (cl.protocol == PROTOCOL_DARKPLACES6)
+	// always dump the first two messages, because they may contain leftover inputs from the last level
+	if (++cl.movemessages >= 2)
 	{
-		// 30 bytes
-		MSG_WriteShort (&buf, cl.cmd.cursor_screen[0] * 32767.0f);
-		MSG_WriteShort (&buf, cl.cmd.cursor_screen[1] * 32767.0f);
-		MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
-		MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
-		MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);
-		MSG_WriteFloat (&buf, cl.cmd.cursor_impact[0]);
-		MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
-		MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
-		MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
+		// send the movement message
+		// PROTOCOL_QUAKE       clc_move = 16 bytes total
+		// PROTOCOL_DARKPLACES1 clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES2 clc_move = 25 bytes total
+		// PROTOCOL_DARKPLACES3 clc_move = 25 bytes total
+		// PROTOCOL_DARKPLACES4 clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES5 clc_move = 19 bytes total
+		// PROTOCOL_DARKPLACES6 clc_move = 52 bytes total
+		// 5 bytes
+		MSG_WriteByte (&buf, clc_move);
+		MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
+		if (cl.protocol == PROTOCOL_DARKPLACES6)
+		{
+			// 6 bytes
+			for (i = 0;i < 3;i++)
+				MSG_WriteAngle16i (&buf, cl.viewangles[i]);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, forwardmove);
+			MSG_WriteCoord16i (&buf, sidemove);
+			MSG_WriteCoord16i (&buf, upmove);
+			// 5 bytes
+			MSG_WriteLong (&buf, bits);
+			MSG_WriteByte (&buf, in_impulse);
+			// PRYDON_CLIENTCURSOR
+			// 30 bytes
+			MSG_WriteShort (&buf, cl.cmd.cursor_screen[0] * 32767.0f);
+			MSG_WriteShort (&buf, cl.cmd.cursor_screen[1] * 32767.0f);
+			MSG_WriteFloat (&buf, cl.cmd.cursor_start[0]);
+			MSG_WriteFloat (&buf, cl.cmd.cursor_start[1]);
+			MSG_WriteFloat (&buf, cl.cmd.cursor_start[2]);
+			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[0]);
+			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[1]);
+			MSG_WriteFloat (&buf, cl.cmd.cursor_impact[2]);
+			MSG_WriteShort (&buf, cl.cmd.cursor_entitynumber);
+		}
+		else
+		{
+			if (cl.protocol == PROTOCOL_QUAKE || cl.protocol == PROTOCOL_NEHAHRAMOVIE)
+			{
+				// 3 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle8i (&buf, cl.viewangles[i]);
+			}
+			else if (cl.protocol == PROTOCOL_DARKPLACES2 || cl.protocol == PROTOCOL_DARKPLACES3)
+			{
+				// 12 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle32f (&buf, cl.viewangles[i]);
+			}
+			else if (cl.protocol == PROTOCOL_DARKPLACES1 || cl.protocol == PROTOCOL_DARKPLACES4 || cl.protocol == PROTOCOL_DARKPLACES5)
+			{
+				// 6 bytes
+				for (i = 0;i < 3;i++)
+					MSG_WriteAngle16i (&buf, cl.viewangles[i]);
+			}
+			else
+				Host_Error("CL_SendMove: unknown cl.protocol %i\n", cl.protocol);
+			// 6 bytes
+			MSG_WriteCoord16i (&buf, forwardmove);
+			MSG_WriteCoord16i (&buf, sidemove);
+			MSG_WriteCoord16i (&buf, upmove);
+			// 2 bytes
+			MSG_WriteByte (&buf, bits);
+			MSG_WriteByte (&buf, in_impulse);
+		}
 	}
+
+#if MOVEAVERAGING
+	forwardmove = sidemove = upmove = 0;
+#endif
+	in_impulse = 0;
 
 	// ack the last few frame numbers
 	// (redundent to improve handling of client->server packet loss)
-	if (cl.latestframenums[LATESTFRAMENUMS-1] > 0)
+	// for LATESTFRAMENUMS == 3 case this is 15 bytes
+	for (i = 0;i < LATESTFRAMENUMS;i++)
 	{
-		if (developer_networkentities.integer >= 1)
-			Con_Printf("send clc_ackframe %i\n", cl.latestframenums[LATESTFRAMENUMS-1]);
-		for (i = 0;i < LATESTFRAMENUMS;i++)
+		if (cl.latestframenums[i] > 0)
 		{
+			if (developer_networkentities.integer >= 1)
+				Con_Printf("send clc_ackframe %i\n", cl.latestframenums[i]);
 			MSG_WriteByte(&buf, clc_ackframe);
 			MSG_WriteLong(&buf, cl.latestframenums[i]);
 		}
 	}
 
+	// PROTOCOL_DARKPLACES6 = 67 bytes per packet
+
 	// deliver the message
 	if (cls.demoplayback)
-		return;
-
-	// always dump the first two messages, because they may contain leftover inputs from the last level
-	if (++cl.movemessages <= 2)
 		return;
 
 	if (NetConn_SendUnreliableMessage(cls.netcon, &buf) == -1)
