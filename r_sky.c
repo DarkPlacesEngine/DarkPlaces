@@ -250,9 +250,7 @@ static void skyspherecalc(void)
 
 static void R_SkySphere(void)
 {
-	int i;
-	float speedscale, *out2f;
-	const float *in2f;
+	float speedscale;
 	static qboolean skysphereinitialized = false;
 	rmeshstate_t m;
 	rcachearrayrequest_t request;
