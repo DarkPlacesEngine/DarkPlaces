@@ -128,7 +128,7 @@ void R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, 
 		// of the comparison use it, therefore they are both multiplied the
 		// same amount...  furthermore the subtract can be done on the
 		// vectors, saving a little bit of math in the dotproducts
-#if 0
+#if 1
 		// fast version
 		// subtracts v1 from v0 and v2, combined into a crossproduct,
 		// combined with a dotproduct of the light location relative to the
@@ -142,7 +142,7 @@ void R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, 
 #else
 		// readable version
 		{
-		float dir0[3], dir1[3], temp[3], f;
+		float dir0[3], dir1[3], temp[3];
 
 		// calculate two mostly perpendicular edge directions
 		VectorSubtract(v0, v1, dir0);
@@ -161,9 +161,7 @@ void R_Shadow_MakeTriangleShadowFlags(const int *elements, const float *vertex, 
 		// I.E. flat, so all points give the same answer)
 		// the normal is not normalized because it is used on both sides of
 		// the comparison, so it's magnitude does not matter
-		//trianglefacinglight[i] = DotProduct(relativelightorigin, temp) >= DotProduct(v0, temp);
-		f = DotProduct(relativelightorigin, temp) - DotProduct(v0, temp);
-		trianglefacinglight[i] = f > 0 && f < lightradius * sqrt(DotProduct(temp, temp));
+		trianglefacinglight[i] = DotProduct(relativelightorigin, temp) >= DotProduct(v0, temp);
 		}
 #endif
 	}
@@ -612,6 +610,8 @@ int R_Shadow_ScissorForBBoxAndSphere(const float *mins, const float *maxs, const
 		return true;
 	// ok some of it is infront of the view, transform each corner back to
 	// worldspace and then to screenspace and make screen rect
+	// initialize these variables just to avoid compiler warnings
+	x1 = y1 = x2 = y2 = 0;
 	for (i = 0;i < 8;i++)
 	{
 		v2[0] = (i & 1) ? smins[0] : smaxs[0];
