@@ -642,22 +642,43 @@ void M_Menu_SinglePlayer_f (void)
 
 void M_SinglePlayer_Draw (void)
 {
-	int		f;
 	cachepic_t	*p;
 
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_sgl.lmp");
-	M_DrawPic (72, 32, "gfx/sp_menu.lmp");
 
-	f = (int)(realtime * 10)%6;
+	// BloodBath doesn't have a single player mode
+	if (gamemode == GAME_BLOODBATH)
+	{
+		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
 
-	M_DrawPic (54, 32 + m_singleplayer_cursor * 20, va("gfx/menudot%i.lmp", f+1));
+		M_DrawTextBox (60, 8 * 8, 23, 4);
+		M_PrintWhite (102, 10 * 8, "BloodBath is for");
+		M_PrintWhite (83, 11 * 8, "multiplayer play only");
+	}
+	else
+	{
+		int		f;
+
+		M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_sgl.lmp");
+		M_DrawPic (72, 32, "gfx/sp_menu.lmp");
+
+		f = (int)(realtime * 10)%6;
+
+		M_DrawPic (54, 32 + m_singleplayer_cursor * 20, va("gfx/menudot%i.lmp", f+1));
+	}
 }
 
 
 void M_SinglePlayer_Key (int key)
 {
+	if (gamemode == GAME_BLOODBATH)
+	{
+		if (key == K_ESCAPE || key == K_ENTER)
+			m_state = m_main;
+		return;
+	}
+
 	switch (key)
 	{
 	case K_ESCAPE:
@@ -2451,12 +2472,24 @@ void M_GameOptions_Draw (void)
 	M_Print (160, 56, va("%i", maxplayers) );
 
 	M_Print (0, 64, "        Game Type");
-	if (!coop.integer && !deathmatch.integer)
-		Cvar_SetValue("deathmatch", 1);
-	if (coop.integer)
-		M_Print (160, 64, "Cooperative");
+	if (gamemode == GAME_BLOODBATH)
+	{
+		if (!deathmatch.integer)
+			Cvar_SetValue("deathmatch", 1);
+		if (deathmatch.integer == 2)
+			M_Print (160, 64, "Capture the Flag");
+		else
+			M_Print (160, 64, "Blood Bath");
+	}
 	else
-		M_Print (160, 64, "Deathmatch");
+	{
+		if (!coop.integer && !deathmatch.integer)
+			Cvar_SetValue("deathmatch", 1);
+		if (coop.integer)
+			M_Print (160, 64, "Cooperative");
+		else
+			M_Print (160, 64, "Deathmatch");
+	}
 
 	M_Print (0, 72, "        Teamplay");
 	if (gamemode == GAME_ROGUE)
@@ -2472,6 +2505,18 @@ void M_GameOptions_Draw (void)
 			case 5: msg = "One Flag CTF"; break;
 			case 6: msg = "Three Team CTF"; break;
 			default: msg = "Off"; break;
+		}
+		M_Print (160, 72, msg);
+	}
+	else if (gamemode == GAME_BLOODBATH)
+	{
+		char *msg;
+
+		switch (teamplay.integer)
+		{
+			case 0: msg = "Off"; break;
+			case 2: msg = "Friendly Fire"; break;
+			default: msg = "No Friendly Fire"; break;
 		}
 		M_Print (160, 72, msg);
 	}
@@ -2568,15 +2613,25 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 2:
-		if (deathmatch.integer) // changing from deathmatch to coop
+		if (gamemode == GAME_BLOODBATH)
 		{
-			Cvar_SetValueQuick (&coop, 1);
-			Cvar_SetValueQuick (&deathmatch, 0);
+			if (deathmatch.integer == 2) // changing from CTF to BloodBath
+				Cvar_SetValueQuick (&deathmatch, 0);
+			else // changing from BloodBath to CTF
+				Cvar_SetValueQuick (&deathmatch, 2);
 		}
-		else // changing from coop to deathmatch
+		else
 		{
-			Cvar_SetValueQuick (&coop, 0);
-			Cvar_SetValueQuick (&deathmatch, 1);
+			if (deathmatch.integer) // changing from deathmatch to coop
+			{
+				Cvar_SetValueQuick (&coop, 1);
+				Cvar_SetValueQuick (&deathmatch, 0);
+			}
+			else // changing from coop to deathmatch
+			{
+				Cvar_SetValueQuick (&coop, 0);
+				Cvar_SetValueQuick (&deathmatch, 1);
+			}
 		}
 		break;
 
