@@ -348,10 +348,10 @@ extern void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 extern void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
-//extern void (GLAPIENTRY *qglStencilFunc)(GLenum func, GLint ref, GLuint mask);
-//extern void (GLAPIENTRY *qglStencilMask)(GLuint mask);
-//extern void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
-//extern void (GLAPIENTRY *qglClearStencil)(GLint s);
+extern void (GLAPIENTRY *qglStencilFunc)(GLenum func, GLint ref, GLuint mask);
+extern void (GLAPIENTRY *qglStencilMask)(GLuint mask);
+extern void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
+extern void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);

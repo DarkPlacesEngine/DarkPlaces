@@ -49,6 +49,9 @@ extern cvar_t vid_width;
 extern cvar_t vid_height;
 extern cvar_t vid_bitsperpixel;
 extern cvar_t vid_mouse;
+extern cvar_t vid_stencil;
+
+extern int gl_stencil;
 
 // brand of graphics chip
 extern const char *gl_vendor;
@@ -101,7 +104,6 @@ void GL_Init (void);
 void VID_CheckExtensions(void);
 
 void VID_Init (void);
-int VID_Mode(int fullscreen, int width, int height, int bpp);
 // Called at startup
 
 void VID_Shutdown (void);

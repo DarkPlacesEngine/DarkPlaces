@@ -671,7 +671,7 @@ void VID_Init(void)
 	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
 }
 
-int VID_InitMode (int fullscreen, int width, int height, int bpp)
+int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil)
 {
 	int i;
 	HDC hdc;
@@ -703,9 +703,14 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	HGLRC baseRC;
 	int CenterX, CenterY;
 	const char *gldrivername;
-
+	
 	if (vid_initialized)
 		Sys_Error("VID_InitMode called when video is already initialised\n");
+
+	if (stencil)
+		pfd.cStencilBits = 8;
+	else
+		pfd.cStencilBits = 0;
 
 	gldrivername = "opengl32.dll";
 	i = COM_CheckParm("-gl_driver");
