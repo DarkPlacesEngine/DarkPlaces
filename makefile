@@ -4,22 +4,22 @@
 CC=gcc
 
 #recommended for: anyone not using ALSA 0.5
-OBJ_SND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o
-SOUNDLIB=
+OBJ_LINUXSOUND=snd_oss.o snd_dma.o snd_mix.o snd_mem.o
+LINUXSOUNDLIB=
 #recommended for: anyone using ALSA 0.5
-#OBJ_SND=snd_alsa_0_5.o snd_dma.o snd_mix.o snd_mem.o
-#SOUNDLIB=-lasound
+#OBJ_LINUXSOUND=snd_alsa_0_5.o snd_dma.o snd_mix.o snd_mem.o
+#LINUXSOUNDLIB=-lasound
 #recommended for: no one (this driver needs to be updated, it doesn't compile anymore)
-#OBJ_SND=snd_alsa_0_9.o snd_dma.o snd_mix.o snd_mem.o
-#SOUNDLIB=-lasound
+#OBJ_LINUXSOUND=snd_alsa_0_9.o snd_dma.o snd_mix.o snd_mem.o
+#LINUXSOUNDLIB=-lasound
 #recommended for: anyone who can't use the above drivers
-#OBJ_SND=snd_null.o
-#SOUNDLIB=
+#OBJ_LINUXSOUND=snd_null.o
+#LINUXSOUNDLIB=
 
 #if you want CD sound in Linux
-OBJ_CD=cd_linux.o
+OBJ_LINUXCD=cd_linux.o
 #if you want no CD audio
-#OBJ_CD=cd_null.o
+#OBJ_LINUXCD=cd_null.o
 
 #K6/athlon optimizations
 #CPUOPTIMIZATIONS=-march=k6
@@ -35,6 +35,12 @@ CPUOPTIMIZATIONS=
 
 ##### Variables that you shouldn't care about #####
 
+ifdef windir
+CMD_RM=del
+else
+CMD_RM=rm -f
+endif
+
 # Objects
 CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		cl_main.o cl_parse.o cl_particles.o cl_screen.o cl_video.o \
@@ -46,7 +52,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		r_shadow.o
 SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_light.o sv_main.o sv_move.o \
 		sv_phys.o sv_user.o
-SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
+SHAREDOBJECTS=	cmd.o collision.o common.o crc.o cvar.o \
 		filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o \
 		model_alias.o model_brush.o model_shared.o model_sprite.o \
 		net_bsd.o net_dgrm.o net_loop.o net_main.o net_master.o \
@@ -54,14 +60,17 @@ SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
 		sys_shared.o world.o wad.o zone.o
 COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 
-# objects used by glx target
-OBJ_GLX= sys_linux.o vid_glx.o $(OBJ_CD) $(OBJ_SND) $(COMMONOBJECTS)
-# objects used by dedicated target
-OBJ_DED= sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
+# note that builddate.c is very intentionally not compiled to a .o before
+# being linked, because it should be recompiled every time an executable is
+# built to give the executable a proper date string
+OBJ_GLX= builddate.c sys_linux.o vid_glx.o $(OBJ_LINUXCD) $(OBJ_LINUXSOUND) $(COMMONOBJECTS)
+OBJ_DED= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
+OBJ_WGL_EXE= builddate.c sys_win.o vid_wgl.o conproc.o cd_win.o snd_win.o snd_dma.o snd_mix.o snd_mem.o $(COMMONOBJECTS)
+OBJ_DED_EXE= builddate.c sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
 
 
 # Compilation
-CFLAGS_COMMON=-MD -Wall -Werror
+CFLAGS_COMMON=-MD -Wall
 CFLAGS_DEBUG=-ggdb
 CFLAGS_PROFILE=-g -pg -ggdb
 CFLAGS_RELEASE=
@@ -75,15 +84,18 @@ DO_CC=$(CC) $(CFLAGS) -c $< -o $@
 # Link
 # LordHavoc note: I have been informed that system libraries must come last
 # on the linker line, and that -lm must always be last
-LDFLAGS_COMMON=-ldl -lm
+LDFLAGS_GLX=-ldl -lm
+LDFLAGS_DED=-ldl -lm
+LDFLAGS_WGL_EXE=-mwindows -lwinmm -lwsock32 -luser32 -lgdi32 -ldxguid -ldinput -lcomctl32
+LDFLAGS_DED_EXE=-mconsole -lwinmm -lwsock32
 LDFLAGS_DEBUG=-g -ggdb
 LDFLAGS_PROFILE=-g -pg
 LDFLAGS_RELEASE=
 
 EXE_GLX=darkplaces-glx
 EXE_DED=darkplaces-dedicated
-
-GLX_LIB=-L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(SOUNDLIB)
+EXE_WGL_EXE=darkplaces.exe
+EXE_DED_EXE=darkplaces-dedicated.exe
 
 DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
 
@@ -94,21 +106,33 @@ DO_LD=$(CC) -o $@ $^ $(LDFLAGS)
 	 debug profile release \
 	 glx-debug glx-profile glx-release \
 	 ded-debug ded-profile ded-release \
+	 exedebug exeprofile exerelease \
+	 exewgl-debug exewgl-profile exewgl-release \
+	 exeded-debug exeded-profile exeded-release \
 
 help:
 	@echo
 	@echo "===== Choose one ====="
-	@echo "* $(MAKE) clean       : delete the binaries, and .o and .d files"
-	@echo "* $(MAKE) help        : this help"
-	@echo "* $(MAKE) debug       : make GLX and dedicated binaries (debug versions)"
-	@echo "* $(MAKE) profile     : make GLX and dedicated binaries (profile versions)"
-	@echo "* $(MAKE) release     : make GLX and dedicated binaries (release versions)"
-	@echo "* $(MAKE) glx-debug   : make GLX binary (debug version)"
-	@echo "* $(MAKE) glx-profile : make GLX binary (profile version)"
-	@echo "* $(MAKE) glx-release : make GLX binary (release version)"
-	@echo "* $(MAKE) ded-debug   : make dedicated server (debug version)"
-	@echo "* $(MAKE) ded-profile : make dedicated server (profile version)"
-	@echo "* $(MAKE) ded-release : make dedicated server (release version)"
+	@echo "* $(MAKE) clean          : delete the binaries, and .o and .d files"
+	@echo "* $(MAKE) help           : this help"
+	@echo "* $(MAKE) debug          : make GLX and dedicated binaries (debug versions)"
+	@echo "* $(MAKE) profile        : make GLX and dedicated binaries (profile versions)"
+	@echo "* $(MAKE) release        : make GLX and dedicated binaries (release versions)"
+	@echo "* $(MAKE) glx-debug      : make GLX client (debug version)"
+	@echo "* $(MAKE) glx-profile    : make GLX client (profile version)"
+	@echo "* $(MAKE) glx-release    : make GLX client (release version)"
+	@echo "* $(MAKE) ded-debug      : make dedicated server (debug version)"
+	@echo "* $(MAKE) ded-profile    : make dedicated server (profile version)"
+	@echo "* $(MAKE) ded-release    : make dedicated server (release version)"
+	@echo "* $(MAKE) exedebug       : make WGL and dedicated binaries (debug versions)"
+	@echo "* $(MAKE) exeprofile     : make WGL and dedicated binaries (profile versions)"
+	@echo "* $(MAKE) exerelease     : make WGL and dedicated binaries (release versions)"
+	@echo "* $(MAKE) exewgl-debug   : make WGL client (debug version)"
+	@echo "* $(MAKE) exewgl-profile : make WGL client (profile version)"
+	@echo "* $(MAKE) exewgl-release : make WGL client (release version)"
+	@echo "* $(MAKE) exeded-debug   : make dedicated server (debug version)"
+	@echo "* $(MAKE) exeded-profile : make dedicated server (profile version)"
+	@echo "* $(MAKE) exeded-release : make dedicated server (release version)"
 	@echo
 
 debug :
@@ -120,28 +144,54 @@ profile :
 release :
 	$(MAKE) glx-release ded-release
 
+exedebug :
+	$(MAKE) wglexe-debug dedexe-debug
+
+exeprofile :
+	$(MAKE) wglexe-profile dedexe-profile
+
+exerelease :
+	$(MAKE) wglexe-release dedexe-release
+
 glx-debug :
-	$(MAKE) bin-debug EXE="$(EXE_GLX)"
+	$(MAKE) bin-debug EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)"
 
 glx-profile :
-	$(MAKE) bin-profile EXE="$(EXE_GLX)"
+	$(MAKE) bin-profile EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)"
 
 glx-release :
-	$(MAKE) bin-release EXE="$(EXE_GLX)"
+	$(MAKE) bin-release EXE="$(EXE_GLX)" LDFLAGS_COMMON="$(LDFLAGS_GLX)"
 
 ded-debug :
-	$(MAKE) bin-debug EXE="$(EXE_DED)"
+	$(MAKE) bin-debug EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
 
 ded-profile :
-	$(MAKE) bin-profile EXE="$(EXE_DED)"
+	$(MAKE) bin-profile EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
 
 ded-release :
-	$(MAKE) bin-release EXE="$(EXE_DED)"
+	$(MAKE) bin-release EXE="$(EXE_DED)" LDFLAGS_COMMON="$(LDFLAGS_DED)"
+
+wglexe-debug :
+	$(MAKE) bin-debug EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)"
+
+wglexe-profile :
+	$(MAKE) bin-profile EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)"
+
+wglexe-release :
+	$(MAKE) bin-release EXE="$(EXE_WGL_EXE)" LDFLAGS_COMMON="$(LDFLAGS_WGL_EXE)"
+
+dedexe-debug :
+	$(MAKE) bin-debug EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)"
+
+dedexe-profile :
+	$(MAKE) bin-profile EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)"
+
+dedexe-release :
+	$(MAKE) bin-release EXE="$(EXE_DED_EXE)" LDFLAGS_COMMON="$(LDFLAGS_DED_EXE)"
 
 bin-debug :
 	@echo
 	@echo "========== $(EXE) (debug) =========="
-	$(MAKE) builddate
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_DEBUG) $(OPTIM_DEBUG)"\
 		LDFLAGS="$(LDFLAGS_DEBUG) $(LDFLAGS_COMMON)"
@@ -149,7 +199,6 @@ bin-debug :
 bin-profile :
 	@echo
 	@echo "========== $(EXE) (profile) =========="
-	$(MAKE) builddate
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_PROFILE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_PROFILE) $(LDFLAGS_COMMON)"
@@ -157,14 +206,10 @@ bin-profile :
 bin-release :
 	@echo
 	@echo "========== $(EXE) (release) =========="
-	$(MAKE) builddate
 	$(MAKE) $(EXE) \
 		CFLAGS="$(CFLAGS_COMMON) $(CFLAGS_RELEASE) $(OPTIM_RELEASE)"\
 		LDFLAGS="$(LDFLAGS_RELEASE) $(LDFLAGS_COMMON)"
 	strip $(EXE)
-
-builddate:
-	touch builddate.c
 
 vid_glx.o: vid_glx.c
 	$(DO_CC) -I/usr/X11R6/include
@@ -173,12 +218,25 @@ vid_glx.o: vid_glx.c
 	$(DO_CC)
 
 $(EXE_GLX):  $(OBJ_GLX)
-	$(DO_LD) $(GLX_LIB)
+	$(DO_LD) -L/usr/X11R6/lib -lX11 -lXext -lXxf86dga -lXxf86vm $(LINUXSOUNDLIB)
 
 $(EXE_DED): $(OBJ_DED)
 	$(DO_LD)
 
+$(EXE_WGL_EXE):  $(OBJ_WGL_EXE)
+	$(DO_LD)
+
+$(EXE_DED_EXE): $(OBJ_DED_EXE)
+	$(DO_LD)
+
+
 clean:
-	rm -f $(EXE_GLX) $(EXE_DED) *.o *.d
+	-$(CMD_RM) $(EXE_GLX)
+	-$(CMD_RM) $(EXE_DED)
+	-$(CMD_RM) $(EXE_WGL_EXE)
+	-$(CMD_RM) $(EXE_DED_EXE)
+	-$(CMD_RM) *.o
+	-$(CMD_RM) *.d
 
 -include *.d
+
