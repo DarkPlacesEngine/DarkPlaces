@@ -20,7 +20,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // common.c -- misc functions used in client and server
 
 #include <fcntl.h>
-#ifndef WIN32
+#ifdef WIN32
+#include <io.h>
+#else
 #include <unistd.h>
 #endif
 #include <stdlib.h>
@@ -1550,7 +1552,7 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 	int				filenamelen;
 
 	filenamelen = strlen (filename);
-	snprintf (gzfilename, sizeof (gzfilename), "%s.gz", filename);
+	sprintf (gzfilename, "%s.gz", filename);
 
 	if (!file)
 		Sys_Error ("COM_FindFile: file not set");
