@@ -115,6 +115,7 @@ typedef double GLclampd;
 #define GL_TEXTURE_WRAP_T			0x2803
 #define GL_TEXTURE_MAG_FILTER			0x2800
 #define GL_TEXTURE_MIN_FILTER			0x2801
+#define GL_UNPACK_ALIGNMENT			0x0CF5
 
 #define GL_NEAREST				0x2600
 #define GL_LINEAR				0x2601
@@ -362,6 +363,8 @@ extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
 extern void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels );
 extern void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
 extern void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+extern void (GLAPIENTRY *qglPixelStoref)(GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglPixelStorei)(GLenum pname, GLint param);
 
 #if WIN32
 extern int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
