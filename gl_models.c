@@ -239,7 +239,7 @@ void R_SetupMDLMD2Frames(const entity_render_t *ent, float colorr, float colorg,
 
 void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 {
-	int c, pantsfullbright, shirtfullbright, colormapped;
+	int i, c, pantsfullbright, shirtfullbright, colormapped;
 	float pantscolor[3], shirtcolor[3];
 	float fog;
 	vec3_t diff;
@@ -273,26 +273,59 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 
 	skinframe = R_FetchSkinFrame(ent);
 
+	if (ent->effects & EF_ADDITIVE)
+	{
+		blendfunc1 = GL_SRC_ALPHA;
+		blendfunc2 = GL_ONE;
+	}
+	else if (ent->alpha != 1.0 || skinframe->fog != NULL)
+	{
+		blendfunc1 = GL_SRC_ALPHA;
+		blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		blendfunc1 = GL_ONE;
+		blendfunc2 = GL_ZERO;
+	}
+
+	if (!skinframe->base && !skinframe->pants && !skinframe->shirt && !skinframe->glow)
+	{
+		// untextured
+		memset(&m, 0, sizeof(m));
+		m.blendfunc1 = blendfunc1;
+		m.blendfunc2 = blendfunc2;
+		m.numtriangles = model->numtris;
+		m.numverts = model->numverts;
+		m.tex[0] = R_GetTexture(r_notexture);
+		m.matrix = ent->matrix;
+
+		c_alias_polys += m.numtriangles;
+		if (R_Mesh_Draw_GetBuffer(&m, true))
+		{
+			memcpy(m.index, model->mdlmd2data_indices, m.numtriangles * sizeof(int[3]));
+			for (i = 0;i < m.numverts * 2;i++)
+				m.texcoords[0][i] = model->mdlmd2data_texcoords[i] * 8.0f;
+
+			aliasvert = m.vertex;
+			aliasvertcolor = m.color;
+			R_SetupMDLMD2Frames(ent, m.colorscale, m.colorscale, m.colorscale);
+			aliasvert = aliasvertbuf;
+			aliasvertcolor = aliasvertcolorbuf;
+
+			R_Mesh_Render();
+		}
+		return;
+	}
+
+
 	colormapped = !skinframe->merged || (ent->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt));
 	if (!colormapped && !fog && !skinframe->glow && !skinframe->fog)
 	{
 		// fastpath for the normal situation (one texture)
 		memset(&m, 0, sizeof(m));
-		if (ent->effects & EF_ADDITIVE)
-		{
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE;
-		}
-		else if (ent->alpha != 1.0 || skinframe->fog != NULL)
-		{
-			m.blendfunc1 = GL_SRC_ALPHA;
-			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-		}
-		else
-		{
-			m.blendfunc1 = GL_ONE;
-			m.blendfunc2 = GL_ZERO;
-		}
+		m.blendfunc1 = blendfunc1;
+		m.blendfunc2 = blendfunc2;
 		m.numtriangles = model->numtris;
 		m.numverts = model->numverts;
 		m.tex[0] = R_GetTexture(skinframe->merged);
@@ -333,22 +366,6 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 	{
 		pantscolor[0] = pantscolor[1] = pantscolor[2] = shirtcolor[0] = shirtcolor[1] = shirtcolor[2] = 1;
 		pantsfullbright = shirtfullbright = false;
-	}
-
-	if (ent->effects & EF_ADDITIVE)
-	{
-		blendfunc1 = GL_SRC_ALPHA;
-		blendfunc2 = GL_ONE;
-	}
-	else if (ent->alpha != 1.0 || skinframe->fog != NULL)
-	{
-		blendfunc1 = GL_SRC_ALPHA;
-		blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	}
-	else
-	{
-		blendfunc1 = GL_ONE;
-		blendfunc2 = GL_ZERO;
 	}
 
 	memset(&m, 0, sizeof(m));
