@@ -28,7 +28,7 @@ rtexture_t *image_masktex;
 rtexture_t *loadtextureimagewithmask (rtexturepool_t *pool, char* filename, int matchwidth, int matchheight, qboolean complain, qboolean mipmap, qboolean precache);
 
 // writes a RGB TGA that is already upside down (which TGA wants)
-void Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte *data);
+qboolean Image_WriteTGARGB_preflipped (char *filename, int width, int height, qbyte *data);
 
 // writes a RGB TGA
 void Image_WriteTGARGB (char *filename, int width, int height, qbyte *data);

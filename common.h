@@ -174,7 +174,7 @@ extern int com_filesize;
 
 extern	char	com_gamedir[MAX_OSPATH];
 
-void COM_WriteFile (char *filename, void *data, int len);
+qboolean COM_WriteFile (char *filename, void *data, int len);
 int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
 
 // set by COM_LoadFile functions

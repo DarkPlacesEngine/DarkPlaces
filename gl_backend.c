@@ -1426,13 +1426,14 @@ void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
 ==============================================================================
 */
 
-void SCR_ScreenShot(char *filename, int x, int y, int width, int height)
+qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 {
+	qboolean ret;
 	int i;
 	qbyte *buffer;
 
 	if (!r_render.integer)
-		return;
+		return false;
 
 	buffer = Mem_Alloc(tempmempool, width*height*3);
 	glReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
@@ -1443,9 +1444,10 @@ void SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 		for (i = 0;i < width * height * 3;i++)
 			buffer[i] <<= v_overbrightbits.integer;
 
-	Image_WriteTGARGB_preflipped(filename, width, height, buffer);
+	ret = Image_WriteTGARGB_preflipped(filename, width, height, buffer);
 
 	Mem_Free(buffer);
+	return ret;
 }
 
 //=============================================================================

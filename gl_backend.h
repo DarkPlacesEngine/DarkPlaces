@@ -87,7 +87,7 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m);
 int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m);
 
 // saves a section of the rendered frame to a .tga file
-void SCR_ScreenShot(char *filename, int x, int y, int width, int height);
+qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(void);
 // invoke refresh of frame

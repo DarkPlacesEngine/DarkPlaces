@@ -10,6 +10,7 @@ cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1"};
 cvar_t scr_printspeed = {0, "scr_printspeed","8"};
 cvar_t scr_2dresolution = {CVAR_SAVE, "scr_2dresolution", "1"};
+cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
 
 qboolean	scr_initialized;		// ready to draw
 
@@ -525,7 +526,8 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_showpause);
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
-	Cvar_RegisterVariable(&scr_2dresolution);
+	Cvar_RegisterVariable (&scr_2dresolution);
+	Cvar_RegisterVariable (&cl_avidemo);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
 	Cmd_AddCommand ("sizedown",SCR_SizeDown_f);
@@ -796,8 +798,26 @@ void SCR_ScreenShot_f (void)
 		return;
  	}
 
-	SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight);
-	Con_Printf ("Wrote %s\n", filename);
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight))
+		Con_Printf ("Wrote %s\n", filename);
+	else
+		Con_Printf ("unable to write %s\n", filename);
+}
+
+static int cl_avidemo_frame = 0;
+
+void SCR_CaptureAVIDemo(void)
+{
+	char filename[32];
+	sprintf(filename, "dpavi%06d.tga", cl_avidemo_frame);
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight))
+		cl_avidemo_frame++;
+	else
+	{
+		Cvar_SetValueQuick(&cl_avidemo, 0);
+		Con_Printf("avi saving failed on frame %i, out of disk space?  stopping avi demo catpure.\n", cl_avidemo_frame);
+		cl_avidemo_frame = 0;
+	}
 }
 
 /*
@@ -993,6 +1013,10 @@ void CL_UpdateScreen(void)
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
 
+	if (cl_avidemo.integer)
+		SCR_CaptureAVIDemo();
+	else
+		cl_avidemo_frame = 0;
 
 	R_TimeReport("other");
 
