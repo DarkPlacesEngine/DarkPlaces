@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-int			skytexturenum;
+extern int                     skytexturenum;
 
 int		lightmap_textures;
 
@@ -83,7 +83,7 @@ void R_AddDynamicLights (msurface_t *surf)
 	float		dist, f;
 	vec3_t		impact, local;
 	// use 64bit integer...  shame it's not very standardized...
-#if _MSC_VER
+#if _MSC_VER || __BORLANDC__
 	__int64		k; // MSVC
 #else
 	long long	k; // GCC
