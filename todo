@@ -1,4 +1,6 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -n = done but have not notified the people who asked for it, f = failed
+-n darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
+-n darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
 -n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
 -n darkplaces: add airborn blood images to the particlefont which would look like a cloud of droplets (Vermeulen)
 -n darkplaces: add bullet hole decals to the particlefont (Vermeulen)
@@ -32,8 +34,6 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: GAME_FNIGGIUM: "data" directory (not "id1" at all)
-0 darkplaces: GAME_FNIGGIUM: 22050/44100 khz sound default
 0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
 0 darkplaces: GAME_FNIGGIUM: minimum resolution: 640x480
 0 darkplaces: GAME_FNIGGIUM: startup loading screen (gfx/loadback.tga or whatever)
@@ -67,6 +67,8 @@
 0 darkplaces: alias layers should have a shadow volume pass so that nodraw textures don't cast a shadow (Electro)
 0 darkplaces: can't move when stuck in a monster (SeienAbunae)
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
+0 darkplaces: check for out of bounds lump data ranges in maps (FrikaC)
+0 darkplaces: check for truncated sound files (FrikaC)
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: clean up the DrawQ_ blendfunc handling, instead of taking DRAWFLAG_ADDITIVE they should take blendfunc values (Black)
 0 darkplaces: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
@@ -74,6 +76,7 @@
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 0 darkplaces: delay "connect" and "playdemo" and "timedemo" until after video init to cause quicker video startup (KrimZon)
 0 darkplaces: document the TEI stuff used in Nexuiz?  check telejano site first (SeienAbunae)
+0 darkplaces: embed a fallback conchars.tga so it can load in an empty directory with a visible console (right now it uses the checkerboard texture)
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: fix con_notify (should control number of lines)
@@ -81,6 +84,7 @@
 0 darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
+0 darkplaces: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
 0 darkplaces: make Com_HexDumpToConsole not use color
@@ -93,6 +97,7 @@
 0 darkplaces: make gl_texture_anisotropy changes take effect immediately (by modifying all texparams accordingly, like gl_texturemode does).
 0 darkplaces: make lightning work without bolt models persent (Vermeulen)
 0 darkplaces: make memory pools have a flag to print them as temporary pools (I.E. consider them leaks if anything is in them) (Vicious)
+0 darkplaces: make server able to work without models, just for sake of completeness
 0 darkplaces: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces: make sure EF_FULLBRIGHT works on bmodels (FrikaC)
 0 darkplaces: make sure EF_FULLBRIGHT works on models (FrikaC)
@@ -246,6 +251,7 @@
 3 darkplaces: directional lighting from the q3bsp lightgrid should use diffuse and specular lighting if available (Electro)
 3 darkplaces: dpshaders (when supported) should have support for envmaps, and should support being lit by diffuse lighting as a fake gloss effect for normal mode (Vermeulen)
 3 darkplaces: dsound broken, needs to be managed as part of video system (jeremy janzen)
+3 darkplaces: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
 3 darkplaces: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)
 3 darkplaces: hub save support, one file indicating active map, and then for each map it saves a quake savegame (SeienAbunae)
 3 darkplaces: make a new caching system with handles (which can be purged) and give every entity a cache handle to a model instance, which contains cache handles for each mesh/array
