@@ -1299,8 +1299,9 @@ void R_UpdateLightmapInfo(entity_render_t *ent)
 		if (model->brushq1.light_stylevalue[i] != d_lightstylevalue[model->brushq1.light_style[i]])
 		{
 			model->brushq1.light_stylevalue[i] = d_lightstylevalue[model->brushq1.light_style[i]];
-			for (surfacechain = model->brushq1.light_styleupdatechains[i];(surface = *surfacechain);surfacechain++)
-				surface->cached_dlight = true;
+			if ((surfacechain = model->brushq1.light_styleupdatechains[i]))
+				for (;(surface = *surfacechain);surfacechain++)
+					surface->cached_dlight = true;
 		}
 	}
 }
