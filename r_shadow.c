@@ -503,6 +503,7 @@ void R_Shadow_PrepareShadowMark(int numtris)
 int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
 	int i, j, tris = 0, vr[3], t, outvertices = 0;
+	float f, temp[3];
 	const int *e, *n;
 	const float *v;
 
@@ -540,22 +541,12 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 				vertexupdate[e[j]] = vertexupdatenum;
 				vertexremap[e[j]] = outvertices;
 				v = invertex3f + e[j] * 3;
-#if 1
-				outvertex3f[0] = v[0];
-				outvertex3f[1] = v[1];
-				outvertex3f[2] = v[2];
-				outvertex3f[3] = v[0] + 1000000 * (v[0] - projectorigin[0]);
-				outvertex3f[4] = v[1] + 1000000 * (v[1] - projectorigin[1]);
-				outvertex3f[5] = v[2] + 1000000 * (v[2] - projectorigin[2]);
-#else
-{
-float f, temp[3];
+				// project one copy of the vertex to the sphere radius of the light
+				// (FIXME: would projecting it to the light box be better?)
 				VectorSubtract(v, projectorigin, temp);
 				f = projectdistance / VectorLength(temp);
 				VectorCopy(v, outvertex3f);
 				VectorMA(projectorigin, f, temp, (outvertex3f + 3));
-}
-#endif
 				outvertex3f += 6;
 				outvertices += 2;
 			}
