@@ -3842,6 +3842,10 @@ mfunction_t *PRVM_ED_FindFunction(const char *);
 #define M_F_INIT		"m_init"
 #define M_F_KEYDOWN		"m_keydown"
 #define M_F_DRAW		"m_draw"
+// ng_menu function names
+#define	M_F_DISPLAY		"m_display"
+#define	M_F_HIDE		"m_hide"
+// normal menu names (rest)
 #define M_F_TOGGLE		"m_toggle"
 #define M_F_SHUTDOWN	"m_shutdown"
 
@@ -3849,13 +3853,22 @@ static char *m_required_func[] = {
 M_F_INIT,
 M_F_KEYDOWN,
 M_F_DRAW,
+#ifdef NG_MENU
+M_F_DISPLAY,
+M_F_HIDE,
+#else
 M_F_TOGGLE,
+#endif
 M_F_SHUTDOWN,
 };
 
+#ifdef NG_MENU
+qboolean m_displayed;
+#endif
+
 static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
 
-static func_t m_draw,m_keydown;
+static func_t m_draw, m_keydown;
 
 void MR_SetRouting (qboolean forceold);
 
@@ -3911,7 +3924,15 @@ void MP_ToggleMenu_f (void)
 	// set time
 	*prog->time = realtime;
 
+#ifdef NG_MENU
+	m_displayed = !m_displayed;
+	if( m_displayed )
+		PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_DISPLAY) - prog->functions),"");
+	else
+		PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_HIDE) - prog->functions),"");
+#else
 	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_TOGGLE) - prog->functions),"");
+#endif
 
 	PRVM_End;
 }
@@ -3961,6 +3982,10 @@ void MP_Init (void)
 	// set m_draw and m_keydown
 	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
 	m_keydown = (func_t) (PRVM_ED_FindFunction(M_F_KEYDOWN) - prog->functions);
+
+#ifdef NG_MENU
+	m_displayed = false;
+#endif
 
 	// set time
 	*prog->time = realtime;
