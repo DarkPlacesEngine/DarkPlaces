@@ -180,7 +180,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 
 typedef enum
 {
-	pt_dead, pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_decalfade, pt_ember
+	pt_dead, pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_ember
 }
 ptype_t;
 
@@ -1349,8 +1349,8 @@ void CL_MoveParticles (void)
 					Matrix4x4_Transform3x3(&hitent->inversematrix, normal, p->relativedirection);
 					VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
 #endif
-					p->time2 = cl.time + cl_decals_time.value;
-					p->die = p->time2 + cl_decals_fadetime.value;
+					p->time2 = cl.time;
+					p->die = p->time2 + cl_decals_time.value + cl_decals_fadetime.value;
 					p->alphafade = 0;
 					VectorCopy(normal, p->vel2);
 					VectorClear(p->vel);
@@ -1443,22 +1443,7 @@ void CL_MoveParticles (void)
 				p->scaley += frametime * p->time2;
 				break;
 			case pt_decal:
-#ifndef WORKINGLQUAKE
-				if (p->owner->model == p->ownermodel)
-				{
-					Matrix4x4_Transform(&p->owner->matrix, p->relativeorigin, p->org);
-					Matrix4x4_Transform3x3(&p->owner->matrix, p->relativedirection, p->vel2);
-					if (cl.time > p->time2)
-					{
-						p->alphafade = p->alpha / (p->die - cl.time);
-						p->type = pt_decalfade;
-					}
-				}
-				else
-					p->type = pt_dead;
-#endif
-				break;
-			case pt_decalfade:
+				p->alphafade = cl.time > (p->time2 + cl_decals_time.value) ? (p->alpha / cl_decals_fadetime.value) : 0;
 #ifndef WORKINGLQUAKE
 				if (p->owner->model == p->ownermodel)
 				{
@@ -2025,7 +2010,12 @@ void R_DrawParticles (void)
 		{
 			c_particles++;
 			if (DotProduct(p->org, r_viewforward) >= minparticledist || p->orientation == PARTICLE_BEAM)
-				R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
+			{
+				if (p->type == pt_decal)
+					R_DrawParticleCallback(p, 0);
+				else
+					R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
+			}
 		}
 	}
 #endif
