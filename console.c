@@ -660,7 +660,7 @@ void Con_Printf(const char *fmt, ...)
 	char msg[MAXPRINTMSG];
 
 	va_start(argptr,fmt);
-	vsprintf(msg,fmt,argptr);
+	vsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
 	Con_Print(msg);
@@ -696,7 +696,7 @@ void Con_DPrintf(const char *fmt, ...)
 		return;			// don't confuse non-developers with techie stuff...
 
 	va_start(argptr,fmt);
-	vsprintf(msg,fmt,argptr);
+	vsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
 	Con_Print(msg);
