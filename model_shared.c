@@ -54,13 +54,13 @@ Caches the data if needed
 void *Mod_Extradata (model_t *mod)
 {
 	void	*r;
-	
+
 	r = Cache_Check (&mod->cache);
 	if (r)
 		return r;
 
 	Mod_LoadModel (mod, true);
-	
+
 	if (!mod->cache.data)
 		Host_Error ("Mod_Extradata: caching failed");
 	return mod->cache.data;
@@ -75,7 +75,7 @@ void Mod_ClearAll (void)
 {
 	int		i;
 	model_t	*mod;
-	
+
 	for (i=0 , mod=mod_known ; i<mod_numknown ; i++, mod++)
 		if (!mod->cachesize)
 			mod->needload = true;
@@ -91,17 +91,17 @@ model_t *Mod_FindName (char *name)
 {
 	int		i;
 	model_t	*mod;
-	
+
 	if (!name[0])
 		Host_Error ("Mod_ForName: NULL name");
-		
+
 //
 // search the currently loaded models
 //
 	for (i=0 , mod=mod_known ; i<mod_numknown ; i++, mod++)
 		if (!strcmp (mod->name, name) )
 			break;
-			
+
 	if (i == mod_numknown)
 	{
 		if (mod_numknown == MAX_MOD_KNOWN)
@@ -123,9 +123,9 @@ Mod_TouchModel
 void Mod_TouchModel (char *name)
 {
 	model_t	*mod;
-	
+
 	mod = Mod_FindName (name);
-	
+
 	if (!mod->needload)
 		if (mod->cachesize)
 			Cache_Check (&mod->cache);
@@ -165,16 +165,20 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 			Host_Error ("Mod_NumForName: %s not found", mod->name); // LordHavoc: Sys_Error was *ANNOYING*
 		return NULL;
 	}
-	
+
 // allocate a new model
 //	COM_FileBase (mod->name, loadname);
 	strcpy(loadname, mod->name);
-	
+
 	loadmodel = mod;
 
 // call the apropriate loader
 	mod->needload = false;
-	
+
+	// LordHavoc: clear some important stuff in the model_t structure
+	mod->flags = 0;
+	mod->flags2 = 0;
+
 	switch (LittleLong(*(unsigned *)buf))
 	{
 	case IDPOLYHEADER:
@@ -188,7 +192,7 @@ model_t *Mod_LoadModel (model_t *mod, qboolean crash)
 	case (('O'<<24)+('M'<<16)+('Y'<<8)+'Z'):
 		Mod_LoadZymoticModel(mod, buf);
 		break;
-		
+
 	case IDSPRITEHEADER:
 		Mod_LoadSpriteModel (mod, buf);
 		break;
