@@ -598,6 +598,8 @@ extern cvar_t cl_name;
 extern cvar_t cl_color;
 extern cvar_t cl_rate;
 extern cvar_t cl_pmodel;
+extern cvar_t cl_playermodel;
+extern cvar_t cl_playerskin;
 
 extern cvar_t cl_upspeed;
 extern cvar_t cl_forwardspeed;
