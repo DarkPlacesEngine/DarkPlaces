@@ -8,6 +8,7 @@
 -(Antti) d darkplaces menu: add graphics options menu and put realtime lighting stuff in it (Antti)
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -(Carni) d darkplaces renderer: make sure r_novis works (Carni)
+-(Chillo) d darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
 -(Chris Kemp) d darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
 -(Cristian Beltramo) d darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 -(Hidayat) d darkplaces client bug: ignore modelflags on view weaponmodel - in Malice the double barreled shotgun leaves a smoke trail, and the hellfire rotates, also in Zerstorer the riot shotgun rotates (Hidayat)
@@ -19,6 +20,7 @@
 -(QorpsE) d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 -(Speeds) d darkplaces client: add a config saving command (Speeds)
 -(Throvold@uboot.com) d darkplaces client: add cvars for sbar alpha (background and foreground) (Throvold@uboot.com)
+-(ashridah) d darkplaces client: make blood decals a bit lighter as they're nearly black (ashridah)
 -(avirox) d darkplaces editlights: light entity loader is broken, it ends up with scrambled colors (avirox, Tomaz)
 -(de-we) d darkplaces docs: add de-we to credits page for the great icons (de-we)
 -(frightfan) d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
@@ -30,9 +32,8 @@
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces client: don't disconnect before attempting to connect to another server, so if it fails you remain on the current one (RenegadeC, Urre)
-0 darkplaces client: increase resolution of particlefont to 512x512 (Chillo)
+0 darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
 0 darkplaces client: interpolate punchangle and punchvector from network (Sajt)
-0 darkplaces client: make blood decals a bit lighter as they're nearly black (ashridah)
 0 darkplaces client: make server queries use a queue to avoid flooding out queries too fast (Willis)
 0 darkplaces client: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases, fix this!
 0 darkplaces client: skybox should not be reset by r_restart (Stribbs)
@@ -52,6 +53,7 @@
 0 darkplaces loading: make sure startup script code executes aliases when doing the cvar scan
 0 darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
+0 darkplaces menu: r_shadow_realtime_world_lightmaps cvar should be a slider, not a checkbox (Diablo-D3)
 0 darkplaces optimize: Collision_TraceBrushBrush should compare enterfrac changes to realfraction and skip out if further, also leavefrac (Vic)
 0 darkplaces optimize: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
 0 darkplaces optimize: R_Q3BSP_RecursiveWorldNode should take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)
