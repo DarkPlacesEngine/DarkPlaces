@@ -39,7 +39,7 @@ int  WIPX_StringToAddr (const char *string, struct qsockaddr *addr);
 int  WIPX_GetSocketAddr (int socket, struct qsockaddr *addr);
 int  WIPX_GetNameFromAddr (const struct qsockaddr *addr, char *name);
 int  WIPX_GetAddrFromName (const char *name, struct qsockaddr *addr);
-int  WIPX_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2);
+int  WIPX_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2);
 int  WIPX_GetSocketPort (struct qsockaddr *addr);
 int  WIPX_SetSocketPort (struct qsockaddr *addr, int port);
 

@@ -411,7 +411,7 @@ int WIPX_GetAddrFromName(const char *name, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WIPX_AddrCompare (struct qsockaddr *addr1, struct qsockaddr *addr2)
+int WIPX_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2)
 {
 	if (addr1->sa_family != addr2->sa_family)
 		return -1;
