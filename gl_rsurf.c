@@ -194,63 +194,32 @@ int R_AddDynamicLights (msurface_t *surf)
 
 void R_ConvertLightmap (int *in, byte *out, int width, int height, int stride)
 {
-	int i, j;
+	int i, j, shift;
 	stride -= (width*lightmapbytes);
-	if (lighthalf)
+	// deal with lightmap brightness scale
+	shift = 7 + lightscalebit;
+	if (lightmaprgba)
 	{
-		// LordHavoc: I shift down by 8 unlike GLQuake's 7,
-		// the image is brightened as a processing pass
-		if (lightmaprgba)
+		for (i = 0;i < height;i++, out += stride)
 		{
-			for (i = 0;i < height;i++, out += stride)
+			for (j = 0;j < width;j++, in += 3, out += 4)
 			{
-				for (j = 0;j < width;j++, in += 3, out += 4)
-				{
-					out[0] = min(in[0] >> 8, 255);
-					out[1] = min(in[1] >> 8, 255);
-					out[2] = min(in[2] >> 8, 255);
-					out[3] = 255;
-				}
-			}
-		}
-		else
-		{
-			for (i = 0;i < height;i++, out += stride)
-			{
-				for (j = 0;j < width;j++, in += 3, out += 3)
-				{
-					out[0] = min(in[0] >> 8, 255);
-					out[1] = min(in[1] >> 8, 255);
-					out[2] = min(in[2] >> 8, 255);
-				}
+				out[0] = min(in[0] >> shift, 255);
+				out[1] = min(in[1] >> shift, 255);
+				out[2] = min(in[2] >> shift, 255);
+				out[3] = 255;
 			}
 		}
 	}
 	else
 	{
-		if (lightmaprgba)
+		for (i = 0;i < height;i++, out += stride)
 		{
-			for (i = 0;i < height;i++, out += stride)
+			for (j = 0;j < width;j++, in += 3, out += 3)
 			{
-				for (j = 0;j < width;j++, in += 3, out += 4)
-				{
-					out[0] = min(in[0] >> 7, 255);
-					out[1] = min(in[1] >> 7, 255);
-					out[2] = min(in[2] >> 7, 255);
-					out[3] = 255;
-				}
-			}
-		}
-		else
-		{
-			for (i = 0;i < height;i++, out += stride)
-			{
-				for (j = 0;j < width;j++, in += 3, out += 3)
-				{
-					out[0] = min(in[0] >> 7, 255);
-					out[1] = min(in[1] >> 7, 255);
-					out[2] = min(in[2] >> 7, 255);
-				}
+				out[0] = min(in[0] >> shift, 255);
+				out[1] = min(in[1] >> shift, 255);
+				out[2] = min(in[2] >> shift, 255);
 			}
 		}
 	}
@@ -273,7 +242,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	int		*bl;
 
 	surf->cached_dlight = 0;
-	surf->cached_lighthalf = lighthalf;
+	surf->cached_lightscalebit = lightscalebit;
 	surf->cached_ambient = r_ambient.value;
 
 	smax = (surf->extents[0]>>4)+1;
@@ -658,7 +627,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	if (s->cached_dlight
 	 || (r_dynamic.value && r_dlightmap.value && s->dlightframe == r_framecount)
 	 || r_ambient.value != s->cached_ambient
-	 || lighthalf != s->cached_lighthalf
+	 || lightscalebit != s->cached_lightscalebit
 	 || (r_dynamic.value
 	 && ((s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
 	 || (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])

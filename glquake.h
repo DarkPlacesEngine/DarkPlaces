@@ -137,7 +137,7 @@ extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 
 
 #ifndef GL_ACTIVE_TEXTURE_ARB
-// multitexture
+// GL_ARB_multitexture
 #define GL_ACTIVE_TEXTURE_ARB			0x84E0
 #define GL_CLIENT_ACTIVE_TEXTURE_ARB	0x84E1
 #define GL_MAX_TEXTURES_UNITS_ARB		0x84E2
@@ -145,8 +145,64 @@ extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 #define GL_TEXTURE1_ARB					0x84C1
 #define GL_TEXTURE2_ARB					0x84C2
 #define GL_TEXTURE3_ARB					0x84C3
-// LordHavoc: ARB supports 32+ texture units, but hey I only use 2 anyway...
+#define GL_TEXTURE4_ARB					0x84C4
+#define GL_TEXTURE5_ARB					0x84C5
+#define GL_TEXTURE6_ARB					0x84C6
+#define GL_TEXTURE7_ARB					0x84C7
+#define GL_TEXTURE8_ARB					0x84C8
+#define GL_TEXTURE9_ARB					0x84C9
+#define GL_TEXTURE10_ARB				0x84CA
+#define GL_TEXTURE11_ARB				0x84CB
+#define GL_TEXTURE12_ARB				0x84CC
+#define GL_TEXTURE13_ARB				0x84CD
+#define GL_TEXTURE14_ARB				0x84CE
+#define GL_TEXTURE15_ARB				0x84CF
+#define GL_TEXTURE16_ARB				0x84D0
+#define GL_TEXTURE17_ARB				0x84D1
+#define GL_TEXTURE18_ARB				0x84D2
+#define GL_TEXTURE19_ARB				0x84D3
+#define GL_TEXTURE20_ARB				0x84D4
+#define GL_TEXTURE21_ARB				0x84D5
+#define GL_TEXTURE22_ARB				0x84D6
+#define GL_TEXTURE23_ARB				0x84D7
+#define GL_TEXTURE24_ARB				0x84D8
+#define GL_TEXTURE25_ARB				0x84D9
+#define GL_TEXTURE26_ARB				0x84DA
+#define GL_TEXTURE27_ARB				0x84DB
+#define GL_TEXTURE28_ARB				0x84DC
+#define GL_TEXTURE29_ARB				0x84DD
+#define GL_TEXTURE30_ARB				0x84DE
+#define GL_TEXTURE31_ARB				0x84DF
 #endif
+
+#ifndef GL_COMBINE_ARB
+// GL_ARB_texture_env_combine
+#define GL_COMBINE_ARB					0x8570
+#define GL_COMBINE_RGB_ARB				0x8571
+#define GL_COMBINE_ALPHA_ARB			0x8572
+#define GL_SOURCE0_RGB_ARB				0x8580
+#define GL_SOURCE1_RGB_ARB				0x8581
+#define GL_SOURCE2_RGB_ARB				0x8582
+#define GL_SOURCE0_ALPHA_ARB			0x8588
+#define GL_SOURCE1_ALPHA_ARB			0x8589
+#define GL_SOURCE2_ALPHA_ARB			0x858A
+#define GL_OPERAND0_RGB_ARB				0x8590
+#define GL_OPERAND1_RGB_ARB				0x8591
+#define GL_OPERAND2_RGB_ARB				0x8592
+#define GL_OPERAND0_ALPHA_ARB			0x8598
+#define GL_OPERAND1_ALPHA_ARB			0x8599
+#define GL_OPERAND2_ALPHA_ARB			0x859A
+#define GL_RGB_SCALE_ARB				0x8573
+#define GL_ADD_SIGNED_ARB				0x8574
+#define GL_INTERPOLATE_ARB				0x8575
+#define GL_SUBTRACT_ARB					0x84E7
+#define GL_CONSTANT_ARB					0x8576
+#define GL_PRIMARY_COLOR_ARB			0x8577
+#define GL_PREVIOUS_ARB					0x8578
+#endif
+
+extern qboolean gl_combine_extension;
+extern cvar_t gl_combine;
 
 #ifdef WIN32
 #else
