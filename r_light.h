@@ -7,7 +7,6 @@ typedef struct
 	float	radius;
 	float	die;				// stop lighting after this time
 	float	decay;				// drop this each second
-	float	minlight;			// don't add when contributing less
 	int		key;
 	vec3_t	color;				// LordHavoc: colored lighting
 	qboolean	dark;			// subtracts light instead of adding
