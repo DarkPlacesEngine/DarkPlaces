@@ -142,7 +142,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		if (normal3f == NULL)
 		{
 			normal3f = varray_normal3f;
-			Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
+			Mod_BuildNormals(0, mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
 		}
 		R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
 	}
@@ -179,7 +179,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			if (normal3f == NULL)
 			{
 				normal3f = varray_normal3f;
-				Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
+				Mod_BuildNormals(0, mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
 			}
 			R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
 		}
@@ -207,7 +207,7 @@ static void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			if (normal3f == NULL)
 			{
 				normal3f = varray_normal3f;
-				Mod_BuildNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
+				Mod_BuildNormals(0, mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_element3i, normal3f);
 			}
 			R_LightModel_CalcVertexColors(ambientcolor4f, diffusecolor, diffusenormal, mesh->num_vertices, vertex3f, normal3f, varray_color4f);
 		}
@@ -384,16 +384,16 @@ void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			tvector3f = varray_tvector3f;
 			normal3f = varray_normal3f;
 			Mod_Alias_GetMesh_Vertex3f(ent->model, ent->frameblend, mesh, vertex3f);
-			Mod_BuildTextureVectorsAndNormals(mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
+			Mod_BuildTextureVectorsAndNormals(0, mesh->num_vertices, mesh->num_triangles, vertex3f, mesh->data_texcoord2f, mesh->data_element3i, svector3f, tvector3f, normal3f);
 		}
 		c_alias_polys += mesh->num_triangles;
-		R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorbase, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, (ent->colormap >= 0 || !texture->skin.merged) ? texture->skin.base : texture->skin.merged, texture->skin.nmap, texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
+		R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorbase, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, (ent->colormap >= 0 || !texture->skin.merged) ? texture->skin.base : texture->skin.merged, texture->skin.nmap, texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
 		if (ent->colormap >= 0)
 		{
 			if (texture->skin.pants && VectorLength2(lightcolorpants) >= 0.001)
-				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, texture->skin.pants, texture->skin.nmap, NULL, lightcubemap, ambientscale, diffusescale, 0);
+				R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorpants, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, texture->skin.pants, texture->skin.nmap, NULL, lightcubemap, ambientscale, diffusescale, 0);
 			if (texture->skin.shirt && VectorLength2(lightcolorshirt) >= 0.001)
-				R_Shadow_RenderLighting(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, texture->skin.shirt, texture->skin.nmap, NULL, lightcubemap, ambientscale, diffusescale, 0);
+				R_Shadow_RenderLighting(0, mesh->num_vertices, mesh->num_triangles, mesh->data_element3i, vertex3f, svector3f, tvector3f, normal3f, mesh->data_texcoord2f, relativelightorigin, relativeeyeorigin, lightcolorshirt, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, texture->skin.shirt, texture->skin.nmap, NULL, lightcubemap, ambientscale, diffusescale, 0);
 		}
 	}
 }

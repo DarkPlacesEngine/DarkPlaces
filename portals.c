@@ -347,9 +347,9 @@ void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark,
 			surface = info->model->brush.data_surfaces + *mark;
 			for (j = 0, elements = (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle);j < surface->num_triangles;j++, elements += 3)
 			{
-				VectorCopy(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + elements[0] * 3), trianglepoints[0]);
-				VectorCopy(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + elements[1] * 3), trianglepoints[1]);
-				VectorCopy(((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + elements[2] * 3), trianglepoints[2]);
+				VectorCopy((surface->groupmesh->data_vertex3f + elements[0] * 3), trianglepoints[0]);
+				VectorCopy((surface->groupmesh->data_vertex3f + elements[1] * 3), trianglepoints[1]);
+				VectorCopy((surface->groupmesh->data_vertex3f + elements[2] * 3), trianglepoints[2]);
 				if (PointInfrontOfTriangle(info->eye, trianglepoints[0], trianglepoints[1], trianglepoints[2]))
 				{
 					trimins[0] = min(trianglepoints[0][0], min(trianglepoints[1][0], trianglepoints[2][0]));

@@ -612,13 +612,13 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 }
 
 // warning: this is an expensive function!
-void Mod_BuildNormals(int numverts, int numtriangles, const float *vertex3f, const int *elements, float *normal3f)
+void Mod_BuildNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const int *elements, float *normal3f)
 {
 	int i, tnum;
 	float normal[3], *v;
 	const int *e;
 	// clear the vectors
-	memset(normal3f, 0, numverts * sizeof(float[3]));
+	memset(normal3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	// process each vertex of each triangle and accumulate the results
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
@@ -639,7 +639,7 @@ void Mod_BuildNormals(int numverts, int numtriangles, const float *vertex3f, con
 	}
 	// now we could divide the vectors by the number of averaged values on
 	// each vertex...  but instead normalize them
-	for (i = 0, v = normal3f;i < numverts;i++, v += 3)
+	for (i = 0, v = normal3f + 3 * firstvertex;i < numvertices;i++, v += 3)
 		VectorNormalize(v);
 }
 
@@ -693,18 +693,18 @@ void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, con
 }
 
 // warning: this is a very expensive function!
-void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f)
+void Mod_BuildTextureVectorsAndNormals(int firstvertex, int numvertices, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f)
 {
 	int i, tnum;
 	float sdir[3], tdir[3], normal[3], *v;
 	const int *e;
 	// clear the vectors
 	if (svector3f)
-		memset(svector3f, 0, numverts * sizeof(float[3]));
+		memset(svector3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	if (tvector3f)
-		memset(tvector3f, 0, numverts * sizeof(float[3]));
+		memset(tvector3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	if (normal3f)
-		memset(normal3f, 0, numverts * sizeof(float[3]));
+		memset(normal3f + 3 * firstvertex, 0, numvertices * sizeof(float[3]));
 	// process each vertex of each triangle and accumulate the results
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
@@ -741,15 +741,15 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 	// each vertex...  but instead normalize them
 	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
 	if (svector3f)
-		for (i = 0, v = svector3f;i < numverts;i++, v += 3)
+		for (i = 0, v = svector3f + 3 * firstvertex;i < numvertices;i++, v += 3)
 			VectorNormalize(v);
 	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
 	if (tvector3f)
-		for (i = 0, v = tvector3f;i < numverts;i++, v += 3)
+		for (i = 0, v = tvector3f + 3 * firstvertex;i < numvertices;i++, v += 3)
 			VectorNormalize(v);
 	// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
 	if (normal3f)
-		for (i = 0, v = normal3f;i < numverts;i++, v += 3)
+		for (i = 0, v = normal3f + 3 * firstvertex;i < numvertices;i++, v += 3)
 			VectorNormalize(v);
 }
 
@@ -757,7 +757,7 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 {
 	surfmesh_t *mesh;
 	qbyte *data;
-	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + (neighbors ? 3 : 0)) * sizeof(int));
+	mesh = Mem_Alloc(mempool, sizeof(surfmesh_t) + numvertices * (3 + 3 + 3 + 3 + 2 + 2 + (detailtexcoords ? 2 : 0) + (vertexcolors ? 4 : 0)) * sizeof(float) + numvertices * (lightmapoffsets ? 1 : 0) * sizeof(int) + numtriangles * (3 + 3 + (neighbors ? 3 : 0)) * sizeof(int));
 	mesh->num_vertices = numvertices;
 	mesh->num_triangles = numtriangles;
 	data = (qbyte *)(mesh + 1);
@@ -778,6 +778,7 @@ surfmesh_t *Mod_AllocSurfMesh(mempool_t *mempool, int numvertices, int numtriang
 	}
 	if (mesh->num_triangles)
 	{
+		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 		mesh->data_element3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
 		if (neighbors)
 			mesh->data_neighbor3i = (int *)data, data += sizeof(int[3]) * mesh->num_triangles;
