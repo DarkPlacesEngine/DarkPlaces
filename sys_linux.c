@@ -30,10 +30,6 @@ char *cachedir = "/tmp";
 // General routines
 // =======================================================================
 
-void Sys_DebugNumber(int y, int val)
-{
-}
-
 void Sys_Quit (void)
 {
 	Host_Shutdown();
@@ -42,7 +38,7 @@ void Sys_Quit (void)
 	exit(0);
 }
 
-void Sys_Error (char *error, ...)
+void Sys_Error (const char *error, ...)
 {
 	va_list argptr;
 	char string[1024];
@@ -60,7 +56,7 @@ void Sys_Error (char *error, ...)
 
 }
 
-void Sys_Warn (char *warning, ...)
+void Sys_Warn (const char *warning, ...)
 {
 	va_list argptr;
 	char string[1024];
@@ -69,96 +65,6 @@ void Sys_Warn (char *warning, ...)
 	vsprintf (string,warning,argptr);
 	va_end (argptr);
 	fprintf(stderr, "Warning: %s", string);
-}
-
-/*
-============
-Sys_FileTime
-
-returns -1 if not present
-============
-*/
-int Sys_FileTime (char *path)
-{
-	struct stat buf;
-
-	if (stat (path,&buf) == -1)
-		return -1;
-
-	return buf.st_mtime;
-}
-
-
-void Sys_mkdir (char *path)
-{
-	mkdir (path, 0777);
-}
-
-int Sys_FileOpenRead (char *path, int *handle)
-{
-	int h;
-	struct stat fileinfo;
-
-	h = open (path, O_RDONLY, 0666);
-	*handle = h;
-	if (h == -1)
-		return -1;
-
-	if (fstat (h,&fileinfo) == -1)
-		Sys_Error ("Error fstating %s", path);
-
-	return fileinfo.st_size;
-}
-
-int Sys_FileOpenWrite (char *path)
-{
-	int handle;
-
-	umask (0);
-
-	handle = open(path,O_RDWR | O_CREAT | O_TRUNC, 0666);
-
-	if (handle == -1)
-	{
-		Con_Printf("Sys_FileOpenWrite: Error opening %s: %s", path, strerror(errno));
-		return 0;
-	}
-
-	return handle;
-}
-
-int Sys_FileWrite (int handle, void *src, int count)
-{
-	return write (handle, src, count);
-}
-
-void Sys_FileClose (int handle)
-{
-	close (handle);
-}
-
-void Sys_FileSeek (int handle, int position)
-{
-	lseek (handle, position, SEEK_SET);
-}
-
-int Sys_FileRead (int handle, void *dest, int count)
-{
-	return read (handle, dest, count);
-}
-
-void Sys_DebugLog(char *file, char *fmt, ...)
-{
-	va_list argptr;
-	static char data[1024];
-	int fd;
-
-	va_start(argptr, fmt);
-	vsprintf(data, fmt, argptr);
-	va_end(argptr);
-	fd = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
-	write(fd, data, strlen(data));
-	close(fd);
 }
 
 double Sys_DoubleTime (void)
@@ -246,10 +152,8 @@ int main (int c, char **v)
 
 	memset(&host_parms, 0, sizeof(host_parms));
 
-	COM_InitArgv(c, v);
-	host_parms.argc = com_argc;
-	host_parms.argv = com_argv;
-
+	host_parms.argc = c;
+	host_parms.argv = v;
 	host_parms.basedir = basedir;
 
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);

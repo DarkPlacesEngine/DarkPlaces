@@ -48,130 +48,6 @@ static HANDLE	heventChild;
 /*
 ===============================================================================
 
-QFile IO
-
-===============================================================================
-*/
-
-// LordHavoc: 256 pak files (was 10)
-#define	MAX_HANDLES		256
-QFile	*sys_handles[MAX_HANDLES];
-
-int		findhandle (void)
-{
-	int		i;
-
-	for (i=1 ; i<MAX_HANDLES ; i++)
-		if (!sys_handles[i])
-			return i;
-	Sys_Error ("out of handles");
-	return -1;
-}
-
-/*
-================
-Sys_FileLength
-================
-*/
-int Sys_FileLength (QFile *f)
-{
-	int		pos;
-	int		end;
-
-	pos = Qtell (f);
-	Qseek (f, 0, SEEK_END);
-	end = Qtell (f);
-	Qseek (f, pos, SEEK_SET);
-
-	return end;
-}
-
-int Sys_FileOpenRead (char *path, int *hndl)
-{
-	QFile	*f;
-	int		i, retval;
-
-	i = findhandle ();
-
-	f = Qopen(path, "rbz");
-
-	if (!f)
-	{
-		*hndl = -1;
-		retval = -1;
-	}
-	else
-	{
-		sys_handles[i] = f;
-		*hndl = i;
-		retval = Sys_FileLength(f);
-	}
-
-	return retval;
-}
-
-int Sys_FileOpenWrite (char *path)
-{
-	QFile	*f;
-	int		i;
-
-	i = findhandle ();
-
-	f = Qopen(path, "wb");
-	if (!f)
-	{
-		Con_Printf("Sys_FileOpenWrite: Error opening %s: %s", path, strerror(errno));
-		return 0;
-	}
-	sys_handles[i] = f;
-
-	return i;
-}
-
-void Sys_FileClose (int handle)
-{
-	Qclose (sys_handles[handle]);
-	sys_handles[handle] = NULL;
-}
-
-void Sys_FileSeek (int handle, int position)
-{
-	Qseek (sys_handles[handle], position, SEEK_SET);
-}
-
-int Sys_FileRead (int handle, void *dest, int count)
-{
-	return Qread (sys_handles[handle], dest, count);
-}
-
-int Sys_FileWrite (int handle, void *data, int count)
-{
-	return Qwrite (sys_handles[handle], data, count);
-}
-
-int	Sys_FileTime (char *path)
-{
-	QFile	*f;
-
-	f = Qopen(path, "rb");
-	if (f)
-	{
-		Qclose(f);
-		return 1;
-	}
-
-	return -1;
-}
-
-void Sys_mkdir (char *path)
-{
-	_mkdir (path);
-}
-
-
-/*
-===============================================================================
-
 SYSTEM IO
 
 ===============================================================================
@@ -179,7 +55,7 @@ SYSTEM IO
 
 void SleepUntilInput (int time);
 
-void Sys_Error (char *error, ...)
+void Sys_Error (const char *error, ...)
 {
 	va_list		argptr;
 	char		text[1024], text2[1024];
@@ -521,16 +397,9 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 				*lpCmdLine = 0;
 				lpCmdLine++;
 			}
-
 		}
 	}
-
 	host_parms.argv = argv;
-
-	COM_InitArgv (host_parms.argc, host_parms.argv);
-
-	host_parms.argc = com_argc;
-	host_parms.argv = com_argv;
 
 	Sys_Shared_EarlyInit();
 
