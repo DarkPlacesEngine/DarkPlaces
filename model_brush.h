@@ -56,6 +56,27 @@ typedef struct mplane_s
 }
 mplane_t;
 
+#define SHADERSTAGE_SKY 0
+#define SHADERSTAGE_NORMAL 1
+#define SHADERSTAGE_COUNT 2
+
+#define SHADERFLAGS_NEEDLIGHTMAP 1
+
+struct entity_render_s;
+struct texture_s;
+// change this stuff when real shaders are added
+typedef struct Cshader_s
+{
+	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const struct texture_s *texture);
+	int flags;
+}
+Cshader_t;
+
+extern Cshader_t Cshader_wall_lightmap;
+extern Cshader_t Cshader_wall_fullbright;
+extern Cshader_t Cshader_water;
+extern Cshader_t Cshader_sky;
+
 typedef struct texture_s
 {
 	// name
@@ -73,6 +94,12 @@ typedef struct texture_s
 	rtexture_t *fogtexture;
 	// detail texture (usually not used if transparent)
 	rtexture_t *detailtexture;
+
+	// shader to use for this texture
+	Cshader_t *shader;
+
+	// list of surfaces to render using this texture
+	struct msurface_s *surfacechain;
 
 	// total frames in sequence and alternate sequence
 	int anim_total[2];
@@ -138,8 +165,8 @@ typedef struct msurface_s
 	mplane_t *plane;
 	// SURF_ flags
 	int flags;
-	struct Cshader_s *shader;
-	struct msurface_s *chain; // shader rendering chain
+	// rendering chain
+	struct msurface_s *texturechain;
 
 	// look up in model->surfedges[], negative numbers are backwards edges
 	int firstedge;
@@ -193,26 +220,6 @@ typedef struct msurface_s
 	float cached_ambient;
 }
 msurface_t;
-
-#define SHADERSTAGE_SKY 0
-#define SHADERSTAGE_NORMAL 1
-#define SHADERSTAGE_COUNT 2
-
-struct entity_render_s;
-// change this stuff when real shaders are added
-typedef struct Cshader_s
-{
-	void (*shaderfunc[SHADERSTAGE_COUNT])(const struct entity_render_s *ent, const msurface_t *firstsurf);
-	// list of surfaces using this shader (used during surface rendering)
-	msurface_t *chain;
-}
-Cshader_t;
-
-extern Cshader_t Cshader_wall_vertex;
-extern Cshader_t Cshader_wall_lightmap;
-extern Cshader_t Cshader_wall_fullbright;
-extern Cshader_t Cshader_water;
-extern Cshader_t Cshader_sky;
 
 typedef struct mnode_s
 {
