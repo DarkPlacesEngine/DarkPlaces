@@ -539,7 +539,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 	static BOOL	sound_active;
 
 	vid_activewindow = fActive;
-	Minimized = minimize;
+	vid_hidden = minimize;
 
 // enable/disable sound on focus gain/loss
 	if (!vid_activewindow && sound_active)

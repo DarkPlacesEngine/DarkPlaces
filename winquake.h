@@ -58,7 +58,6 @@ typedef enum {MS_WINDOWED, MS_FULLSCREEN, MS_FULLDIB, MS_UNINIT} modestate_t;
 extern modestate_t	modestate;
 
 extern HWND			mainwindow;
-extern qboolean		ActiveApp, Minimized;
 
 void IN_ShowMouse (void);
 void IN_DeactivateMouse (void);
