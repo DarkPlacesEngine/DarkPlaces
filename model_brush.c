@@ -2271,6 +2271,102 @@ static void Mod_Q1BSP_LoadPlanes(lump_t *l)
 	}
 }
 
+static void Mod_Q1BSP_LoadMapBrushes(void)
+{
+#if 0
+// unfinished
+	int submodel, numbrushes;
+	qboolean firstbrush;
+	char *text, *maptext;
+	char mapfilename[MAX_QPATH];
+	FS_StripExtension (loadmodel->name, mapfilename, sizeof (mapfilename));
+	strlcat (mapfilename, ".map", sizeof (mapfilename));
+	maptext = (qbyte*) FS_LoadFile(mapfilename, tempmempool, false);
+	if (!maptext)
+		return;
+	text = maptext;
+	if (!COM_ParseToken(&data, false))
+		return; // error
+	submodel = 0;
+	for (;;)
+	{
+		if (!COM_ParseToken(&data, false))
+			break;
+		if (com_token[0] != '{')
+			return; // error
+		// entity
+		firstbrush = true;
+		numbrushes = 0;
+		maxbrushes = 256;
+		brushes = Mem_Alloc(loadmodel->mempool, maxbrushes * sizeof(mbrush_t));
+		for (;;)
+		{
+			if (!COM_ParseToken(&data, false))
+				return; // error
+			if (com_token[0] == '}')
+				break; // end of entity
+			if (com_token[0] == '{')
+			{
+				// brush
+				if (firstbrush)
+				{
+					if (submodel)
+					{
+						if (submodel > loadmodel->brush.numsubmodels)
+						{
+							Con_Printf("Mod_Q1BSP_LoadMapBrushes: .map has more submodels than .bsp!\n");
+							model = NULL;
+						}
+						else
+							model = loadmodel->brush.submodels[submodel];
+					}
+					else
+						model = loadmodel;
+				}
+				for (;;)
+				{
+					if (!COM_ParseToken(&data, false))
+						return; // error
+					if (com_token[0] == '}')
+						break; // end of brush
+					// each brush face should be this format:
+					// ( x y z ) ( x y z ) ( x y z ) texture scroll_s scroll_t rotateangle scale_s scale_t
+					// FIXME: support hl .map format
+					for (pointnum = 0;pointnum < 3;pointnum++)
+					{
+						COM_ParseToken(&data, false);
+						for (componentnum = 0;componentnum < 3;componentnum++)
+						{
+							COM_ParseToken(&data, false);
+							point[pointnum][componentnum] = atof(com_token);
+						}
+						COM_ParseToken(&data, false);
+					}
+					COM_ParseToken(&data, false);
+					strlcpy(facetexture, com_token, sizeof(facetexture));
+					COM_ParseToken(&data, false);
+					//scroll_s = atof(com_token);
+					COM_ParseToken(&data, false);
+					//scroll_t = atof(com_token);
+					COM_ParseToken(&data, false);
+					//rotate = atof(com_token);
+					COM_ParseToken(&data, false);
+					//scale_s = atof(com_token);
+					COM_ParseToken(&data, false);
+					//scale_t = atof(com_token);
+					TriangleNormal(point[0], point[1], point[2], planenormal);
+					VectorNormalizeDouble(planenormal);
+					planedist = DotProduct(point[0], planenormal);
+					//ChooseTexturePlane(planenormal, texturevector[0], texturevector[1]);
+				}
+				continue;
+			}
+		}
+	}
+#endif
+}
+
+
 #define MAX_PORTALPOINTS 64
 
 typedef struct portal_s
@@ -3026,7 +3122,6 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mainmempool = mod->mempool;
 
 	Mod_Q1BSP_LoadLightList();
-	loadmodel = loadmodel;
 
 	// make a single combined shadow mesh to allow optimized shadow volume creation
 	numshadowmeshtriangles = 0;
@@ -3040,7 +3135,10 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		Mod_ShadowMesh_AddMesh(loadmodel->mempool, loadmodel->brush.shadowmesh, NULL, NULL, NULL, surf->mesh.data_vertex3f, NULL, NULL, NULL, NULL, surf->mesh.num_triangles, surf->mesh.data_element3i);
 	loadmodel->brush.shadowmesh = Mod_ShadowMesh_Finish(loadmodel->mempool, loadmodel->brush.shadowmesh, false, true);
 	Mod_BuildTriangleNeighbors(loadmodel->brush.shadowmesh->neighbor3i, loadmodel->brush.shadowmesh->element3i, loadmodel->brush.shadowmesh->numtriangles);
-	
+
+	if (loadmodel->brush.numsubmodels)
+		loadmodel->brush.submodels = Mem_Alloc(loadmodel->mempool, loadmodel->brush.numsubmodels * sizeof(model_t *));
+
 	// LordHavoc: to clear the fog around the original quake submodel code, I
 	// will explain:
 	// first of all, some background info on the submodels:
@@ -3079,6 +3177,9 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 			mod->texturepool = NULL;
 			mod->mempool = NULL;
 		}
+
+		if (loadmodel->brush.submodels)
+			loadmodel->brush.submodels[i] = mod;
 
 		bm = &mod->brushq1.submodels[i];
 
@@ -3167,6 +3268,8 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 
 		mod->brushq1.num_visleafs = bm->visleafs;
 	}
+
+	Mod_Q1BSP_LoadMapBrushes();
 
 	//Mod_Q1BSP_ProcessLightList();
 
@@ -3896,8 +3999,8 @@ parseerror:
 			Con_DPrintf("%s: No shader found for texture \"%s\"\n", loadmodel->name, out->name);
 			out->surfaceparms = 0;
 			// these are defaults
-			if (!strncmp(out->name, "textures/skies/", 15))
-				out->surfaceparms |= Q3SURFACEPARM_SKY;
+			//if (!strncmp(out->name, "textures/skies/", 15))
+			//	out->surfaceparms |= Q3SURFACEPARM_SKY;
 			//if (!strcmp(out->name, "caulk") || !strcmp(out->name, "common/caulk") || !strcmp(out->name, "textures/common/caulk")
 			// || !strcmp(out->name, "nodraw") || !strcmp(out->name, "common/nodraw") || !strcmp(out->name, "textures/common/nodraw"))
 			//	out->surfaceparms |= Q3SURFACEPARM_NODRAW;
