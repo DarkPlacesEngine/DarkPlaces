@@ -15,7 +15,33 @@ static int skyrendersphere;
 static int skyrenderbox;
 static rtexturepool_t *skytexturepool;
 static char skyname[256];
-static char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
+
+typedef struct suffixinfo_s
+{
+	char *suffix;
+	qboolean flipx, flipy, flipdiagonal;
+}
+suffixinfo_t;
+static suffixinfo_t suffix[2][6] =
+{
+	{
+		{"rt", false, false, false},
+		{"bk", false, false, false},
+		{"lf", false, false, false},
+		{"ft", false, false, false},
+		{"up", false, false, false},
+		{"dn", false, false, false},
+	},
+	{
+		{"px", false,  true,  true},
+		{"ny", false, false, false},
+		{"nx",  true, false,  true},
+		{"py",  true,  true, false},
+		{"pz", false,  true,  true},
+		{"nz", false,  true,  true}
+	}
+};
+
 static rtexture_t *skyboxside[6];
 
 void R_SkyStartFrame(void)
@@ -48,36 +74,54 @@ void R_UnloadSkyBox(void)
 	{
 		if (skyboxside[i])
 			R_FreeTexture(skyboxside[i]);
-		skyboxside[i] = NULL;;
+		skyboxside[i] = NULL;
 	}
 }
 
 void R_LoadSkyBox(void)
 {
-	int i;
+	int i, j;
+	int indices[4] = {0,1,2,3};
 	char name[1024];
 	qbyte *image_rgba;
+	qbyte *temp;
 	R_UnloadSkyBox();
 	if (!skyname[0])
 		return;
-	for (i = 0;i < 6;i++)
+
+	for (j=0; j<2; j++)
 	{
-		if (snprintf(name, sizeof(name), "%s_%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+		for (i=0; i<6; i++)
 		{
-			if (snprintf(name, sizeof(name), "%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+			if (snprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 			{
-				if (snprintf(name, sizeof(name), "env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+				if (snprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 				{
-					if (snprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suf[i]) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+					if (snprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 					{
-						Con_Printf("Couldn't load %s_%s or %s%s or env/%s%s or gfx/env/%s%s\n", skyname, suf[i], skyname, suf[i], skyname, suf[i], skyname, suf[i]);
-						continue;
+						if (snprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+							continue;
 					}
 				}
 			}
+			temp = Mem_Alloc(tempmempool, image_width*image_height*4);
+			Image_CopyMux (temp, image_rgba, image_width, image_height, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, indices);
+			skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, temp, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
+			Mem_Free(image_rgba);
+			Mem_Free(temp);
 		}
-		skyboxside[i] = R_LoadTexture2D(skytexturepool, va("skyboxside%d", i), image_width, image_height, image_rgba, TEXTYPE_RGBA, TEXF_CLAMP | TEXF_PRECACHE, NULL);
-		Mem_Free(image_rgba);
+
+		for (i=0; i<6; i++)
+		{
+			if (skyboxside[i] == NULL)
+			{
+				R_UnloadSkyBox();
+				break;
+			}
+		}
+
+		if (skyboxside[0] != NULL)
+			return;
 	}
 }
 
