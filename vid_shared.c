@@ -43,6 +43,14 @@ int gl_max_anisotropy = 1;
 int gl_textureshader = false;
 // GL_EXT_stencil_two_side
 int gl_support_stenciltwoside = false;
+// GL_ARB_shader_objects
+int gl_support_shader_objects = false;
+// GL_ARB_shading_language_100
+int gl_support_shading_language_100 = false;
+// GL_ARB_vertex_shader
+int gl_support_vertex_shader = false;
+// GL_ARB_fragment_shader
+int gl_support_fragment_shader = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -237,6 +245,93 @@ void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
 void (GLAPIENTRY *qglActiveStencilFaceEXT)(GLenum);
 
+void (GLAPIENTRY *qglDeleteObjectARB)(GLhandleARB obj);
+GLhandleARB (GLAPIENTRY *qglGetHandleARB)(GLenum pname);
+void (GLAPIENTRY *qglDetachObjectARB)(GLhandleARB containerObj, GLhandleARB attachedObj);
+GLhandleARB (GLAPIENTRY *qglCreateShaderObjectARB)(GLenum shaderType);
+void (GLAPIENTRY *qglShaderSourceARB)(GLhandleARB shaderObj, GLsizei count, const GLcharARB **string, const GLint *length);
+void (GLAPIENTRY *qglCompileShaderARB)(GLhandleARB shaderObj);
+GLhandleARB (GLAPIENTRY *qglCreateProgramObjectARB)(void);
+void (GLAPIENTRY *qglAttachObjectARB)(GLhandleARB containerObj, GLhandleARB obj);
+void (GLAPIENTRY *qglLinkProgramARB)(GLhandleARB programObj);
+void (GLAPIENTRY *qglUseProgramObjectARB)(GLhandleARB programObj);
+void (GLAPIENTRY *qglValidateProgramARB)(GLhandleARB programObj);
+void (GLAPIENTRY *qglUniform1fARB)(GLint location, GLfloat v0);
+void (GLAPIENTRY *qglUniform2fARB)(GLint location, GLfloat v0, GLfloat v1);
+void (GLAPIENTRY *qglUniform3fARB)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+void (GLAPIENTRY *qglUniform4fARB)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+void (GLAPIENTRY *qglUniform1iARB)(GLint location, GLint v0);
+void (GLAPIENTRY *qglUniform2iARB)(GLint location, GLint v0, GLint v1);
+void (GLAPIENTRY *qglUniform3iARB)(GLint location, GLint v0, GLint v1, GLint v2);
+void (GLAPIENTRY *qglUniform4iARB)(GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
+void (GLAPIENTRY *qglUniform1fvARB)(GLint location, GLsizei count, const GLfloat *value);
+void (GLAPIENTRY *qglUniform2fvARB)(GLint location, GLsizei count, const GLfloat *value);
+void (GLAPIENTRY *qglUniform3fvARB)(GLint location, GLsizei count, const GLfloat *value);
+void (GLAPIENTRY *qglUniform4fvARB)(GLint location, GLsizei count, const GLfloat *value);
+void (GLAPIENTRY *qglUniform1ivARB)(GLint location, GLsizei count, const GLint *value);
+void (GLAPIENTRY *qglUniform2ivARB)(GLint location, GLsizei count, const GLint *value);
+void (GLAPIENTRY *qglUniform3ivARB)(GLint location, GLsizei count, const GLint *value);
+void (GLAPIENTRY *qglUniform4ivARB)(GLint location, GLsizei count, const GLint *value);
+void (GLAPIENTRY *qglUniformMatrix2fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+void (GLAPIENTRY *qglUniformMatrix3fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+void (GLAPIENTRY *qglUniformMatrix4fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+void (GLAPIENTRY *qglGetObjectParameterfvARB)(GLhandleARB obj, GLenum pname, GLfloat *params);
+void (GLAPIENTRY *qglGetObjectParameterivARB)(GLhandleARB obj, GLenum pname, GLint *params);
+void (GLAPIENTRY *qglGetInfoLogARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *infoLog);
+void (GLAPIENTRY *qglGetAttachedObjectsARB)(GLhandleARB containerObj, GLsizei maxCount, GLsizei *count, GLhandleARB *obj);
+GLint (GLAPIENTRY *qglGetUniformLocationARB)(GLhandleARB programObj, const GLcharARB *name);
+void (GLAPIENTRY *qglGetActiveUniformARB)(GLhandleARB programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLcharARB *name);
+void (GLAPIENTRY *qglGetUniformfvARB)(GLhandleARB programObj, GLint location, GLfloat *params);
+void (GLAPIENTRY *qglGetUniformivARB)(GLhandleARB programObj, GLint location, GLint *params);
+void (GLAPIENTRY *qglGetShaderSourceARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *source);
+
+//void (GLAPIENTRY *qglVertexAttrib1fARB)(GLuint index, GLfloat v0);
+//void (GLAPIENTRY *qglVertexAttrib1sARB)(GLuint index, GLshort v0);
+//void (GLAPIENTRY *qglVertexAttrib1dARB)(GLuint index, GLdouble v0);
+//void (GLAPIENTRY *qglVertexAttrib2fARB)(GLuint index, GLfloat v0, GLfloat v1);
+//void (GLAPIENTRY *qglVertexAttrib2sARB)(GLuint index, GLshort v0, GLshort v1);
+//void (GLAPIENTRY *qglVertexAttrib2dARB)(GLuint index, GLdouble v0, GLdouble v1);
+//void (GLAPIENTRY *qglVertexAttrib3fARB)(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2);
+//void (GLAPIENTRY *qglVertexAttrib3sARB)(GLuint index, GLshort v0, GLshort v1, GLshort v2);
+//void (GLAPIENTRY *qglVertexAttrib3dARB)(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2);
+//void (GLAPIENTRY *qglVertexAttrib4fARB)(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+//void (GLAPIENTRY *qglVertexAttrib4sARB)(GLuint index, GLshort v0, GLshort v1, GLshort v2, GLshort v3);
+//void (GLAPIENTRY *qglVertexAttrib4dARB)(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2, GLdouble v3);
+//void (GLAPIENTRY *qglVertexAttrib4NubARB)(GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w);
+//void (GLAPIENTRY *qglVertexAttrib1fvARB)(GLuint index, const GLfloat *v);
+//void (GLAPIENTRY *qglVertexAttrib1svARB)(GLuint index, const GLshort *v);
+//void (GLAPIENTRY *qglVertexAttrib1dvARB)(GLuint index, const GLdouble *v);
+//void (GLAPIENTRY *qglVertexAttrib2fvARB)(GLuint index, const GLfloat *v);
+//void (GLAPIENTRY *qglVertexAttrib2svARB)(GLuint index, const GLshort *v);
+//void (GLAPIENTRY *qglVertexAttrib2dvARB)(GLuint index, const GLdouble *v);
+//void (GLAPIENTRY *qglVertexAttrib3fvARB)(GLuint index, const GLfloat *v);
+//void (GLAPIENTRY *qglVertexAttrib3svARB)(GLuint index, const GLshort *v);
+//void (GLAPIENTRY *qglVertexAttrib3dvARB)(GLuint index, const GLdouble *v);
+//void (GLAPIENTRY *qglVertexAttrib4fvARB)(GLuint index, const GLfloat *v);
+//void (GLAPIENTRY *qglVertexAttrib4svARB)(GLuint index, const GLshort *v);
+//void (GLAPIENTRY *qglVertexAttrib4dvARB)(GLuint index, const GLdouble *v);
+//void (GLAPIENTRY *qglVertexAttrib4ivARB)(GLuint index, const GLint *v);
+//void (GLAPIENTRY *qglVertexAttrib4bvARB)(GLuint index, const GLbyte *v);
+//void (GLAPIENTRY *qglVertexAttrib4ubvARB)(GLuint index, const GLubyte *v);
+//void (GLAPIENTRY *qglVertexAttrib4usvARB)(GLuint index, const GLushort *v);
+//void (GLAPIENTRY *qglVertexAttrib4uivARB)(GLuint index, const GLuint *v);
+//void (GLAPIENTRY *qglVertexAttrib4NbvARB)(GLuint index, const GLbyte *v);
+//void (GLAPIENTRY *qglVertexAttrib4NsvARB)(GLuint index, const GLshort *v);
+//void (GLAPIENTRY *qglVertexAttrib4NivARB)(GLuint index, const GLint *v);
+//void (GLAPIENTRY *qglVertexAttrib4NubvARB)(GLuint index, const GLubyte *v);
+//void (GLAPIENTRY *qglVertexAttrib4NusvARB)(GLuint index, const GLushort *v);
+//void (GLAPIENTRY *qglVertexAttrib4NuivARB)(GLuint index, const GLuint *v);
+void (GLAPIENTRY *qglVertexAttribPointerARB)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
+void (GLAPIENTRY *qglEnableVertexAttribArrayARB)(GLuint index);
+void (GLAPIENTRY *qglDisableVertexAttribArrayARB)(GLuint index);
+void (GLAPIENTRY *qglBindAttribLocationARB)(GLhandleARB programObj, GLuint index, const GLcharARB *name);
+void (GLAPIENTRY *qglGetActiveAttribARB)(GLhandleARB programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLcharARB *name);
+GLint (GLAPIENTRY *qglGetAttribLocationARB)(GLhandleARB programObj, const GLcharARB *name);
+//void (GLAPIENTRY *qglGetVertexAttribdvARB)(GLuint index, GLenum pname, GLdouble *params);
+//void (GLAPIENTRY *qglGetVertexAttribfvARB)(GLuint index, GLenum pname, GLfloat *params);
+//void (GLAPIENTRY *qglGetVertexAttribivARB)(GLuint index, GLenum pname, GLint *params);
+//void (GLAPIENTRY *qglGetVertexAttribPointervARB)(GLuint index, GLenum pname, GLvoid **pointer);
+
 int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
@@ -427,6 +522,101 @@ static dllfunction_t stenciltwosidefuncs[] =
 	{NULL, NULL}
 };
 
+static dllfunction_t shaderobjectsfuncs[] =
+{
+	{"glDeleteObjectARB", (void **) &qglDeleteObjectARB},
+	{"glGetHandleARB", (void **) &qglGetHandleARB},
+	{"glDetachObjectARB", (void **) &qglDetachObjectARB},
+	{"glCreateShaderObjectARB", (void **) &qglCreateShaderObjectARB},
+	{"glShaderSourceARB", (void **) &qglShaderSourceARB},
+	{"glCompileShaderARB", (void **) &qglCompileShaderARB},
+	{"glCreateProgramObjectARB", (void **) &qglCreateProgramObjectARB},
+	{"glAttachObjectARB", (void **) &qglAttachObjectARB},
+	{"glLinkProgramARB", (void **) &qglLinkProgramARB},
+	{"glUseProgramObjectARB", (void **) &qglUseProgramObjectARB},
+	{"glValidateProgramARB", (void **) &qglValidateProgramARB},
+	{"glUniform1fARB", (void **) &qglUniform1fARB},
+	{"glUniform2fARB", (void **) &qglUniform2fARB},
+	{"glUniform3fARB", (void **) &qglUniform3fARB},
+	{"glUniform4fARB", (void **) &qglUniform4fARB},
+	{"glUniform1iARB", (void **) &qglUniform1iARB},
+	{"glUniform2iARB", (void **) &qglUniform2iARB},
+	{"glUniform3iARB", (void **) &qglUniform3iARB},
+	{"glUniform4iARB", (void **) &qglUniform4iARB},
+	{"glUniform1fvARB", (void **) &qglUniform1fvARB},
+	{"glUniform2fvARB", (void **) &qglUniform2fvARB},
+	{"glUniform3fvARB", (void **) &qglUniform3fvARB},
+	{"glUniform4fvARB", (void **) &qglUniform4fvARB},
+	{"glUniform1ivARB", (void **) &qglUniform1ivARB},
+	{"glUniform2ivARB", (void **) &qglUniform2ivARB},
+	{"glUniform3ivARB", (void **) &qglUniform3ivARB},
+	{"glUniform4ivARB", (void **) &qglUniform4ivARB},
+	{"glUniformMatrix2fvARB", (void **) &qglUniformMatrix2fvARB},
+	{"glUniformMatrix3fvARB", (void **) &qglUniformMatrix3fvARB},
+	{"glUniformMatrix4fvARB", (void **) &qglUniformMatrix4fvARB},
+	{"glGetObjectParameterfvARB", (void **) &qglGetObjectParameterfvARB},
+	{"glGetObjectParameterivARB", (void **) &qglGetObjectParameterivARB},
+	{"glGetInfoLogARB", (void **) &qglGetInfoLogARB},
+	{"glGetAttachedObjectsARB", (void **) &qglGetAttachedObjectsARB},
+	{"glGetUniformLocationARB", (void **) &qglGetUniformLocationARB},
+	{"glGetActiveUniformARB", (void **) &qglGetActiveUniformARB},
+	{"glGetUniformfvARB", (void **) &qglGetUniformfvARB},
+	{"glGetUniformivARB", (void **) &qglGetUniformivARB},
+	{"glGetShaderSourceARB", (void **) &qglGetShaderSourceARB},
+	{NULL, NULL}
+};
+
+static dllfunction_t vertexshaderfuncs[] =
+{
+//	{"glVertexAttrib1fARB", (void **) &qglVertexAttrib1fARB},
+//	{"glVertexAttrib1sARB", (void **) &qglVertexAttrib1sARB},
+//	{"glVertexAttrib1dARB", (void **) &qglVertexAttrib1dARB},
+//	{"glVertexAttrib2fARB", (void **) &qglVertexAttrib2fARB},
+//	{"glVertexAttrib2sARB", (void **) &qglVertexAttrib2sARB},
+//	{"glVertexAttrib2dARB", (void **) &qglVertexAttrib2dARB},
+//	{"glVertexAttrib3fARB", (void **) &qglVertexAttrib3fARB},
+//	{"glVertexAttrib3sARB", (void **) &qglVertexAttrib3sARB},
+//	{"glVertexAttrib3dARB", (void **) &qglVertexAttrib3dARB},
+//	{"glVertexAttrib4fARB", (void **) &qglVertexAttrib4fARB},
+//	{"glVertexAttrib4sARB", (void **) &qglVertexAttrib4sARB},
+//	{"glVertexAttrib4dARB", (void **) &qglVertexAttrib4dARB},
+//	{"glVertexAttrib4NubARB", (void **) &qglVertexAttrib4NubARB},
+//	{"glVertexAttrib1fvARB", (void **) &qglVertexAttrib1fvARB},
+//	{"glVertexAttrib1svARB", (void **) &qglVertexAttrib1svARB},
+//	{"glVertexAttrib1dvARB", (void **) &qglVertexAttrib1dvARB},
+//	{"glVertexAttrib2fvARB", (void **) &qglVertexAttrib1fvARB},
+//	{"glVertexAttrib2svARB", (void **) &qglVertexAttrib1svARB},
+//	{"glVertexAttrib2dvARB", (void **) &qglVertexAttrib1dvARB},
+//	{"glVertexAttrib3fvARB", (void **) &qglVertexAttrib1fvARB},
+//	{"glVertexAttrib3svARB", (void **) &qglVertexAttrib1svARB},
+//	{"glVertexAttrib3dvARB", (void **) &qglVertexAttrib1dvARB},
+//	{"glVertexAttrib4fvARB", (void **) &qglVertexAttrib1fvARB},
+//	{"glVertexAttrib4svARB", (void **) &qglVertexAttrib1svARB},
+//	{"glVertexAttrib4dvARB", (void **) &qglVertexAttrib1dvARB},
+//	{"glVertexAttrib4ivARB", (void **) &qglVertexAttrib1ivARB},
+//	{"glVertexAttrib4bvARB", (void **) &qglVertexAttrib1bvARB},
+//	{"glVertexAttrib4ubvARB", (void **) &qglVertexAttrib1ubvARB},
+//	{"glVertexAttrib4usvARB", (void **) &qglVertexAttrib1usvARB},
+//	{"glVertexAttrib4uivARB", (void **) &qglVertexAttrib1uivARB},
+//	{"glVertexAttrib4NbvARB", (void **) &qglVertexAttrib1NbvARB},
+//	{"glVertexAttrib4NsvARB", (void **) &qglVertexAttrib1NsvARB},
+//	{"glVertexAttrib4NivARB", (void **) &qglVertexAttrib1NivARB},
+//	{"glVertexAttrib4NubvARB", (void **) &qglVertexAttrib1NubvARB},
+//	{"glVertexAttrib4NusvARB", (void **) &qglVertexAttrib1NusvARB},
+//	{"glVertexAttrib4NuivARB", (void **) &qglVertexAttrib1NuivARB},
+	{"glVertexAttribPointerARB", (void **) &qglVertexAttribPointerARB},
+	{"glEnableVertexAttribArrayARB", (void **) &qglEnableVertexAttribArrayARB},
+	{"glDisableVertexAttribArrayARB", (void **) &qglDisableVertexAttribArrayARB},
+	{"glBindAttribLocationARB", (void **) &qglBindAttribLocationARB},
+	{"glGetActiveAttribARB", (void **) &qglGetActiveAttribARB},
+	{"glGetAttribLocationARB", (void **) &qglGetAttribLocationARB},
+//	{"glGetVertexAttribdvARB", (void **) &qglGetVertexAttribdvARB},
+//	{"glGetVertexAttribfvARB", (void **) &qglGetVertexAttribfvARB},
+//	{"glGetVertexAttribivARB", (void **) &qglGetVertexAttribivARB},
+//	{"glGetVertexAttribPointervARB", (void **) &qglGetVertexAttribPointervARB},
+	{NULL, NULL}
+};
+
 
 void VID_CheckExtensions(void)
 {
@@ -448,6 +638,10 @@ void VID_CheckExtensions(void)
 	gl_max_anisotropy = 1;
 	gl_textureshader = false;
 	gl_support_stenciltwoside = false;
+	gl_support_shader_objects = false;
+	gl_support_shading_language_100 = false;
+	gl_support_vertex_shader = false;
+	gl_support_fragment_shader = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
@@ -493,6 +687,11 @@ void VID_CheckExtensions(void)
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
 		qglDrawRangeElements = qglDrawRangeElementsEXT;
+
+	if ((gl_support_shader_objects = GL_CheckExtension("GL_ARB_shader_objects", shaderobjectsfuncs, "-noshaderobjects", false)))
+		if ((gl_support_shading_language_100 = GL_CheckExtension("GL_ARB_shading_language_100", NULL, "-noshadinglanguage100", false)))
+			if ((gl_support_vertex_shader = GL_CheckExtension("GL_ARB_vertex_shader", vertexshaderfuncs, "-novertexshader", false)))
+				gl_support_fragment_shader = GL_CheckExtension("GL_ARB_fragment_shader", NULL, "-nofragmentshader", false);
 }
 
 int vid_vertexarrays_are_var = false;

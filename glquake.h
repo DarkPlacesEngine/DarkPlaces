@@ -511,6 +511,178 @@ extern BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
 extern BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
 #endif
 
+#ifndef GL_PROGRAM_OBJECT_ARB
+// 1-byte character string
+typedef char GLcharARB;
+// 4-byte integer handle to a shader object or program object
+typedef int GLhandleARB;
+#endif
+
+extern void (GLAPIENTRY *qglDeleteObjectARB)(GLhandleARB obj);
+extern GLhandleARB (GLAPIENTRY *qglGetHandleARB)(GLenum pname);
+extern void (GLAPIENTRY *qglDetachObjectARB)(GLhandleARB containerObj, GLhandleARB attachedObj);
+extern GLhandleARB (GLAPIENTRY *qglCreateShaderObjectARB)(GLenum shaderType);
+extern void (GLAPIENTRY *qglShaderSourceARB)(GLhandleARB shaderObj, GLsizei count, const GLcharARB **string, const GLint *length);
+extern void (GLAPIENTRY *qglCompileShaderARB)(GLhandleARB shaderObj);
+extern GLhandleARB (GLAPIENTRY *qglCreateProgramObjectARB)(void);
+extern void (GLAPIENTRY *qglAttachObjectARB)(GLhandleARB containerObj, GLhandleARB obj);
+extern void (GLAPIENTRY *qglLinkProgramARB)(GLhandleARB programObj);
+extern void (GLAPIENTRY *qglUseProgramObjectARB)(GLhandleARB programObj);
+extern void (GLAPIENTRY *qglValidateProgramARB)(GLhandleARB programObj);
+extern void (GLAPIENTRY *qglUniform1fARB)(GLint location, GLfloat v0);
+extern void (GLAPIENTRY *qglUniform2fARB)(GLint location, GLfloat v0, GLfloat v1);
+extern void (GLAPIENTRY *qglUniform3fARB)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+extern void (GLAPIENTRY *qglUniform4fARB)(GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+extern void (GLAPIENTRY *qglUniform1iARB)(GLint location, GLint v0);
+extern void (GLAPIENTRY *qglUniform2iARB)(GLint location, GLint v0, GLint v1);
+extern void (GLAPIENTRY *qglUniform3iARB)(GLint location, GLint v0, GLint v1, GLint v2);
+extern void (GLAPIENTRY *qglUniform4iARB)(GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
+extern void (GLAPIENTRY *qglUniform1fvARB)(GLint location, GLsizei count, const GLfloat *value);
+extern void (GLAPIENTRY *qglUniform2fvARB)(GLint location, GLsizei count, const GLfloat *value);
+extern void (GLAPIENTRY *qglUniform3fvARB)(GLint location, GLsizei count, const GLfloat *value);
+extern void (GLAPIENTRY *qglUniform4fvARB)(GLint location, GLsizei count, const GLfloat *value);
+extern void (GLAPIENTRY *qglUniform1ivARB)(GLint location, GLsizei count, const GLint *value);
+extern void (GLAPIENTRY *qglUniform2ivARB)(GLint location, GLsizei count, const GLint *value);
+extern void (GLAPIENTRY *qglUniform3ivARB)(GLint location, GLsizei count, const GLint *value);
+extern void (GLAPIENTRY *qglUniform4ivARB)(GLint location, GLsizei count, const GLint *value);
+extern void (GLAPIENTRY *qglUniformMatrix2fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+extern void (GLAPIENTRY *qglUniformMatrix3fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+extern void (GLAPIENTRY *qglUniformMatrix4fvARB)(GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
+extern void (GLAPIENTRY *qglGetObjectParameterfvARB)(GLhandleARB obj, GLenum pname, GLfloat *params);
+extern void (GLAPIENTRY *qglGetObjectParameterivARB)(GLhandleARB obj, GLenum pname, GLint *params);
+extern void (GLAPIENTRY *qglGetInfoLogARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *infoLog);
+extern void (GLAPIENTRY *qglGetAttachedObjectsARB)(GLhandleARB containerObj, GLsizei maxCount, GLsizei *count, GLhandleARB *obj);
+extern GLint (GLAPIENTRY *qglGetUniformLocationARB)(GLhandleARB programObj, const GLcharARB *name);
+extern void (GLAPIENTRY *qglGetActiveUniformARB)(GLhandleARB programObj, uint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLcharARB *name);
+extern void (GLAPIENTRY *qglGetUniformfvARB)(GLhandleARB programObj, GLint location, GLfloat *params);
+extern void (GLAPIENTRY *qglGetUniformivARB)(GLhandleARB programObj, GLint location, GLint *params);
+extern void (GLAPIENTRY *qglGetShaderSourceARB)(GLhandleARB obj, GLsizei maxLength, GLsizei *length, GLcharARB *source);
+#ifndef GL_PROGRAM_OBJECT_ARB
+#define GL_PROGRAM_OBJECT_ARB					0x8B40
+#define GL_OBJECT_TYPE_ARB						0x8B4E
+#define GL_OBJECT_SUBTYPE_ARB					0x8B4F
+#define GL_OBJECT_DELETE_STATUS_ARB				0x8B80
+#define GL_OBJECT_COMPILE_STATUS_ARB			0x8B81
+#define GL_OBJECT_LINK_STATUS_ARB				0x8B82
+#define GL_OBJECT_VALIDATE_STATUS_ARB			0x8B83
+#define GL_OBJECT_INFO_LOG_LENGTH_ARB			0x8B84
+#define GL_OBJECT_ATTACHED_OBJECTS_ARB			0x8B85
+#define GL_OBJECT_ACTIVE_UNIFORMS_ARB			0x8B86
+#define GL_OBJECT_ACTIVE_UNIFORM_MAX_LENGTH_ARB	0x8B87
+#define GL_OBJECT_SHADER_SOURCE_LENGTH_ARB		0x8B88
+#define GL_SHADER_OBJECT_ARB					0x8B48
+#define GL_FLOAT								0x1406
+#define GL_FLOAT_VEC2_ARB						0x8B50
+#define GL_FLOAT_VEC3_ARB						0x8B51
+#define GL_FLOAT_VEC4_ARB						0x8B52
+#define GL_INT									0x1404
+#define GL_INT_VEC2_ARB							0x8B53
+#define GL_INT_VEC3_ARB							0x8B54
+#define GL_INT_VEC4_ARB							0x8B55
+#define GL_BOOL_ARB								0x8B56
+#define GL_BOOL_VEC2_ARB						0x8B57
+#define GL_BOOL_VEC3_ARB						0x8B58
+#define GL_BOOL_VEC4_ARB						0x8B59
+#define GL_FLOAT_MAT2_ARB						0x8B5A
+#define GL_FLOAT_MAT3_ARB						0x8B5B
+#define GL_FLOAT_MAT4_ARB						0x8B5C
+#define GL_SAMPLER_1D_ARB						0x8B5D
+#define GL_SAMPLER_2D_ARB						0x8B5E
+#define GL_SAMPLER_3D_ARB						0x8B5F
+#define GL_SAMPLER_CUBE_ARB						0x8B60
+#define GL_SAMPLER_1D_SHADOW_ARB				0x8B61
+#define GL_SAMPLER_2D_SHADOW_ARB				0x8B62
+#define GL_SAMPLER_2D_RECT_ARB					0x8B63
+#define GL_SAMPLER_2D_RECT_SHADOW_ARB			0x8B64
+#endif
+
+//extern void (GLAPIENTRY *qglVertexAttrib1fARB)(GLuint index, GLfloat v0);
+//extern void (GLAPIENTRY *qglVertexAttrib1sARB)(GLuint index, GLshort v0);
+//extern void (GLAPIENTRY *qglVertexAttrib1dARB)(GLuint index, GLdouble v0);
+//extern void (GLAPIENTRY *qglVertexAttrib2fARB)(GLuint index, GLfloat v0, GLfloat v1);
+//extern void (GLAPIENTRY *qglVertexAttrib2sARB)(GLuint index, GLshort v0, GLshort v1);
+//extern void (GLAPIENTRY *qglVertexAttrib2dARB)(GLuint index, GLdouble v0, GLdouble v1);
+//extern void (GLAPIENTRY *qglVertexAttrib3fARB)(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2);
+//extern void (GLAPIENTRY *qglVertexAttrib3sARB)(GLuint index, GLshort v0, GLshort v1, GLshort v2);
+//extern void (GLAPIENTRY *qglVertexAttrib3dARB)(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2);
+//extern void (GLAPIENTRY *qglVertexAttrib4fARB)(GLuint index, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
+//extern void (GLAPIENTRY *qglVertexAttrib4sARB)(GLuint index, GLshort v0, GLshort v1, GLshort v2, GLshort v3);
+//extern void (GLAPIENTRY *qglVertexAttrib4dARB)(GLuint index, GLdouble v0, GLdouble v1, GLdouble v2, GLdouble v3);
+//extern void (GLAPIENTRY *qglVertexAttrib4NubARB)(GLuint index, GLubyte x, GLubyte y, GLubyte z, GLubyte w);
+//extern void (GLAPIENTRY *qglVertexAttrib1fvARB)(GLuint index, const GLfloat *v);
+//extern void (GLAPIENTRY *qglVertexAttrib1svARB)(GLuint index, const GLshort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib1dvARB)(GLuint index, const GLdouble *v);
+//extern void (GLAPIENTRY *qglVertexAttrib2fvARB)(GLuint index, const GLfloat *v);
+//extern void (GLAPIENTRY *qglVertexAttrib2svARB)(GLuint index, const GLshort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib2dvARB)(GLuint index, const GLdouble *v);
+//extern void (GLAPIENTRY *qglVertexAttrib3fvARB)(GLuint index, const GLfloat *v);
+//extern void (GLAPIENTRY *qglVertexAttrib3svARB)(GLuint index, const GLshort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib3dvARB)(GLuint index, const GLdouble *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4fvARB)(GLuint index, const GLfloat *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4svARB)(GLuint index, const GLshort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4dvARB)(GLuint index, const GLdouble *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4ivARB)(GLuint index, const GLint *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4bvARB)(GLuint index, const GLbyte *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4ubvARB)(GLuint index, const GLubyte *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4usvARB)(GLuint index, const GLushort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4uivARB)(GLuint index, const GLuint *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4NbvARB)(GLuint index, const GLbyte *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4NsvARB)(GLuint index, const GLshort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4NivARB)(GLuint index, const GLint *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4NubvARB)(GLuint index, const GLubyte *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4NusvARB)(GLuint index, const GLushort *v);
+//extern void (GLAPIENTRY *qglVertexAttrib4NuivARB)(GLuint index, const GLuint *v);
+extern void (GLAPIENTRY *qglVertexAttribPointerARB)(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer);
+extern void (GLAPIENTRY *qglEnableVertexAttribArrayARB)(GLuint index);
+extern void (GLAPIENTRY *qglDisableVertexAttribArrayARB)(GLuint index);
+extern void (GLAPIENTRY *qglBindAttribLocationARB)(GLhandleARB programObj, GLuint index, const GLcharARB *name);
+extern void (GLAPIENTRY *qglGetActiveAttribARB)(GLhandleARB programObj, GLuint index, GLsizei maxLength, GLsizei *length, GLint *size, GLenum *type, GLcharARB *name);
+extern GLint (GLAPIENTRY *qglGetAttribLocationARB)(GLhandleARB programObj, const GLcharARB *name);
+//extern void (GLAPIENTRY *qglGetVertexAttribdvARB)(GLuint index, GLenum pname, GLdouble *params);
+//extern void (GLAPIENTRY *qglGetVertexAttribfvARB)(GLuint index, GLenum pname, GLfloat *params);
+//extern void (GLAPIENTRY *qglGetVertexAttribivARB)(GLuint index, GLenum pname, GLint *params);
+//extern void (GLAPIENTRY *qglGetVertexAttribPointervARB)(GLuint index, GLenum pname, GLvoid **pointer);
+#ifndef GL_VERTEX_SHADER_ARB
+#define GL_VERTEX_SHADER_ARB						0x8B31
+#define GL_MAX_VERTEX_UNIFORM_COMPONENTS_ARB		0x8B4A
+#define GL_MAX_VARYING_FLOATS_ARB					0x8B4B
+#define GL_MAX_VERTEX_ATTRIBS_ARB					0x8869
+#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB				0x8872
+#define GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS_ARB		0x8B4C
+#define GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS_ARB		0x8B4D
+#define GL_MAX_TEXTURE_COORDS_ARB					0x8871
+#define GL_VERTEX_PROGRAM_POINT_SIZE_ARB			0x8642
+#define GL_VERTEX_PROGRAM_TWO_SIDE_ARB				0x8643
+#define GL_OBJECT_ACTIVE_ATTRIBUTES_ARB				0x8B89
+#define GL_OBJECT_ACTIVE_ATTRIBUTE_MAX_LENGTH_ARB	0x8B8A
+#define GL_VERTEX_ATTRIB_ARRAY_ENABLED_ARB			0x8622
+#define GL_VERTEX_ATTRIB_ARRAY_SIZE_ARB				0x8623
+#define GL_VERTEX_ATTRIB_ARRAY_STRIDE_ARB			0x8624
+#define GL_VERTEX_ATTRIB_ARRAY_TYPE_ARB				0x8625
+#define GL_VERTEX_ATTRIB_ARRAY_NORMALIZED_ARB		0x886A
+#define GL_CURRENT_VERTEX_ATTRIB_ARB				0x8626
+#define GL_VERTEX_ATTRIB_ARRAY_POINTER_ARB			0x8645
+#define GL_FLOAT									0x1406
+#define GL_FLOAT_VEC2_ARB							0x8B50
+#define GL_FLOAT_VEC3_ARB							0x8B51
+#define GL_FLOAT_VEC4_ARB							0x8B52
+#define GL_FLOAT_MAT2_ARB							0x8B5A
+#define GL_FLOAT_MAT3_ARB							0x8B5B
+#define GL_FLOAT_MAT4_ARB							0x8B5C
+#endif
+
+#ifndef GL_FRAGMENT_SHADER_ARB
+#define GL_FRAGMENT_SHADER_ARB						0x8B30
+#define GL_MAX_FRAGMENT_UNIFORM_COMPONENTS_ARB		0x8B49
+#define GL_MAX_TEXTURE_COORDS_ARB					0x8871
+#define GL_MAX_TEXTURE_IMAGE_UNITS_ARB				0x8872
+#define GL_FRAGMENT_SHADER_DERIVATIVE_HINT_ARB		0x8B8B
+#endif
+
+#ifndef GL_SHADING_LANGUAGE_VERSION_ARB
+#define GL_SHADING_LANGUAGE_VERSION_ARB				0x8B8C
+#endif
+
 #define DEBUGGL
 
 #ifdef DEBUGGL
