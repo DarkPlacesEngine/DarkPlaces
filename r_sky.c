@@ -15,7 +15,6 @@ static rtexturepool_t *skytexturepool;
 static char skyname[256];
 static char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 static rtexture_t *skyboxside[6];
-int R_SetSkyBox(char *sky);
 
 void R_SkyStartFrame(void)
 {
@@ -40,7 +39,7 @@ void R_SkyStartFrame(void)
 R_SetSkyBox
 ==================
 */
-int R_SetSkyBox(char *sky)
+int R_SetSkyBox(const char *sky)
 {
 	int i;
 	char name[1024];
