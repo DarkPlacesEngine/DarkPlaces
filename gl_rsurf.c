@@ -2302,7 +2302,7 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		{
 			if (r_q3bsp_framecount != r_framecount)
 			{
@@ -2333,7 +2333,7 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		{
 			if (r_q3bsp_framecount != r_framecount)
 			{
@@ -2384,7 +2384,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		lightmaxs[0] = relativelightorigin[0] + lightradius;
 		lightmaxs[1] = relativelightorigin[1] + lightradius;
 		lightmaxs[2] = relativelightorigin[2] + lightradius;
-		//if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		//if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		//	R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
 		//else
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
@@ -2420,7 +2420,7 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 		lightmaxs[0] = relativelightorigin[0] + lightradius;
 		lightmaxs[1] = relativelightorigin[1] + lightradius;
 		lightmaxs[2] = relativelightorigin[2] + lightradius;
-		//if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		//if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 		//	R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
 		//else
 			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)

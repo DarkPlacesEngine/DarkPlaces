@@ -295,7 +295,7 @@ void R_MarkLights(entity_render_t *ent)
 			lightpvsbytes = 0;
 			if (r_vismarklights.integer && ent->model->brush.FatPVS)
 				lightpvsbytes = ent->model->brush.FatPVS(ent->model, lightorigin, 0, lightpvs, sizeof(lightpvs));
-			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brushq1.num_pvsclusters));
+			R_RecursiveMarkLights(ent, lightorigin, rd, bit, bitindex, ent->model->brushq1.nodes + ent->model->brushq1.hulls[0].firstclipnode, lightpvs, min(lightpvsbytes * 8, ent->model->brush.num_pvsclusters));
 		}
 	}
 }
