@@ -4,7 +4,7 @@
 
 cvar_t r_lightningbeam_thickness = {CVAR_SAVE, "r_lightningbeam_thickness", "4"};
 cvar_t r_lightningbeam_scroll = {CVAR_SAVE, "r_lightningbeam_scroll", "5"};
-cvar_t r_lightningbeam_repeatdistance = {CVAR_SAVE, "r_lightningbeam_repeatdistance", "1024"};
+cvar_t r_lightningbeam_repeatdistance = {CVAR_SAVE, "r_lightningbeam_repeatdistance", "128"};
 cvar_t r_lightningbeam_color_red = {CVAR_SAVE, "r_lightningbeam_color_red", "1"};
 cvar_t r_lightningbeam_color_green = {CVAR_SAVE, "r_lightningbeam_color_green", "1"};
 cvar_t r_lightningbeam_color_blue = {CVAR_SAVE, "r_lightningbeam_color_blue", "1"};
