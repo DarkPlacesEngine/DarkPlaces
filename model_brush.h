@@ -181,13 +181,6 @@ typedef struct msurface_s
 	int extents[2]; // q1bsp
 	// if lightmap settings changed, this forces update
 	int cached_dlight; // q1bsp
-#ifdef LHREMOVESOON
-	// if this == r_framecount there are dynamic lights on the surface
-	int dlightframe; // q1bsp
-	// which dynamic lights are touching this surface
-	// (only access this if dlightframe is current)
-	int dlightbits[8]; // q1bsp
-#endif
 
 	struct q3deffect_s *effect; // q3bsp
 	// FIXME: collisionmarkframe should be kept in a separate array
