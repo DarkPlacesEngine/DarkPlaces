@@ -111,6 +111,7 @@ void Mod_LoadTextures (lump_t *l)
 	texture_t	*altanims[10];
 	dmiptexlump_t *m;
 	byte	*data;
+	int		*dofs;
 
 	if (!l->filelen)
 	{
@@ -125,12 +126,14 @@ void Mod_LoadTextures (lump_t *l)
 	loadmodel->numtextures = m->nummiptex;
 	loadmodel->textures = Hunk_AllocName (m->nummiptex * sizeof(*loadmodel->textures) , loadname);
 
+	// just to work around bounds checking when debugging with it (array index out of bounds error thing)
+	dofs = m->dataofs;
 	for (i=0 ; i<m->nummiptex ; i++)
 	{
-		m->dataofs[i] = LittleLong(m->dataofs[i]);
-		if (m->dataofs[i] == -1)
+		dofs[i] = LittleLong(dofs[i]);
+		if (dofs[i] == -1)
 			continue;
-		mt = (miptex_t *)((byte *)m + m->dataofs[i]);
+		mt = (miptex_t *)((byte *)m + dofs[i]);
 		mt->width = LittleLong (mt->width);
 		mt->height = LittleLong (mt->height);
 		for (j=0 ; j<MIPLEVELS ; j++)
