@@ -99,7 +99,7 @@ static void R_InitParticleTexture (void)
 				dy = y - 16;
 				for (x = 0;x < 32;x++)
 				{
-					d = (noise1[y][x] - 128) * 2 + 64; // was + 128
+					d = (noise1[y][x] - 128) * 2 + 128;
 					d = bound(0, d, 255);
 					data[y][x][0] = data[y][x][1] = data[y][x][2] = d;
 					dx = x - 16;
