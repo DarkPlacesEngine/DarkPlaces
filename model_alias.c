@@ -102,6 +102,71 @@ void Mod_Alias_GetMesh_Vertex3f(const model_t *model, const frameblend_t *frameb
 	}
 }
 
+int Mod_Alias_GetTagMatrix(const model_t *model, int poseframe, int tagindex, matrix4x4_t *outmatrix)
+{
+	const float *boneframe;
+	float tempbonematrix[12], bonematrix[12];
+	Matrix4x4_CreateIdentity(outmatrix);
+	if (model->alias.aliasnum_bones)
+	{
+		if (tagindex < 0 || tagindex >= model->alias.aliasnum_bones)
+			return 4;
+		if (poseframe >= model->alias.aliasnum_poses)
+			return 6;
+		boneframe = model->alias.aliasdata_poses + poseframe * model->alias.aliasnum_bones * 12;
+		memcpy(bonematrix, boneframe + tagindex * 12, sizeof(float[12]));
+		while (model->alias.aliasdata_bones[tagindex].parent >= 0)
+		{
+			memcpy(tempbonematrix, bonematrix, sizeof(float[12]));
+			R_ConcatTransforms(boneframe + model->alias.aliasdata_bones[tagindex].parent * 12, tempbonematrix, bonematrix);
+			tagindex = model->alias.aliasdata_bones[tagindex].parent;
+		}
+		outmatrix->m[0][0] = bonematrix[0];
+		outmatrix->m[0][1] = bonematrix[1];
+		outmatrix->m[0][2] = bonematrix[2];
+		outmatrix->m[0][3] = bonematrix[3];
+		outmatrix->m[1][0] = bonematrix[4];
+		outmatrix->m[1][1] = bonematrix[5];
+		outmatrix->m[1][2] = bonematrix[6];
+		outmatrix->m[1][3] = bonematrix[7];
+		outmatrix->m[2][0] = bonematrix[8];
+		outmatrix->m[2][1] = bonematrix[9];
+		outmatrix->m[2][2] = bonematrix[10];
+		outmatrix->m[2][3] = bonematrix[11];
+		outmatrix->m[3][0] = 0;
+		outmatrix->m[3][1] = 0;
+		outmatrix->m[3][2] = 0;
+		outmatrix->m[3][3] = 1;
+	}
+	else if (model->alias.aliasnum_tags)
+	{
+		if (tagindex < 0 || tagindex >= model->alias.aliasnum_tags)
+			return 4;
+		if (poseframe >= model->alias.aliasnum_tagframes)
+			return 6;
+		*outmatrix = model->alias.aliasdata_tags[poseframe * model->alias.aliasnum_tags + tagindex].matrix;
+	}
+	return 0;
+}
+
+int Mod_Alias_GetTagIndexForName(const model_t *model, unsigned int skin, const char *tagname)
+{
+	int i;
+	if (model->data_overridetagnamesforskin && skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)skin].num_overridetagnames)
+		for (i = 0;i < model->data_overridetagnamesforskin[skin].num_overridetagnames;i++)
+			if (!strcasecmp(tagname, model->data_overridetagnamesforskin[skin].data_overridetagnames[i].name))
+				return i + 1;
+	if (model->alias.aliasnum_bones)
+		for (i = 0;i < model->alias.aliasnum_bones;i++)
+			if (!strcasecmp(tagname, model->alias.aliasdata_bones[i].name))
+				return i + 1;
+	if (model->alias.aliasnum_tags)
+		for (i = 0;i < model->alias.aliasnum_tags;i++)
+			if (!strcasecmp(tagname, model->alias.aliasdata_tags[i].name))
+				return i + 1;
+	return 0;
+}
+
 static void Mod_Alias_Mesh_CompileFrameZero(aliasmesh_t *mesh)
 {
 	frameblend_t frameblend[4] = {{0, 1}, {0, 0}, {0, 0}, {0, 0}};

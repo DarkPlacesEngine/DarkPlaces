@@ -79,15 +79,15 @@ typedef struct surfmesh_s
 	int num_vertices; // number of vertices in the mesh
 	int num_triangles; // number of triangles in the mesh
 	float *data_vertex3f; // float[verts*3] vertex locations
+	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
+	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
+	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
+	float *data_lightmapcolor4f;
 	float *data_svector3f; // float[verts*3] direction of 'S' (right) texture axis for each vertex
 	float *data_tvector3f; // float[verts*3] direction of 'T' (down) texture axis for each vertex
 	float *data_normal3f; // float[verts*3] direction of 'R' (out) texture axis for each vertex
 	int *data_lightmapoffsets; // index into surface's lightmap samples for vertex lighting
-	float *data_texcoordtexture2f; // float[verts*2] texcoords for surface texture
-	float *data_texcoordlightmap2f; // float[verts*2] texcoords for lightmap texture
 	float *data_texcoorddetail2f; // float[verts*2] texcoords for detail texture
-	float *data_lightmapcolor4f;
-	int *data_element3i; // int[tris*3] triangles of the mesh, 3 indices into vertex arrays for each
 	int *data_neighbor3i; // int[tris*3] neighboring triangle on each edge (-1 if none)
 
 	int num_collisionvertices;

@@ -271,6 +271,8 @@ aliasbone_t;
 
 struct frameblend_s;
 void Mod_Alias_GetMesh_Vertex3f(const struct model_s *model, const struct frameblend_s *frameblend, const struct aliasmesh_s *mesh, float *out3f);
+int Mod_Alias_GetTagMatrix(const struct model_s *model, int poseframe, int tagindex, matrix4x4_t *outmatrix);
+int Mod_Alias_GetTagIndexForName(const struct model_s *model, unsigned int skin, const char *tagname);
 
 #endif
 
