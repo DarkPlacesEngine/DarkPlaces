@@ -144,10 +144,11 @@ void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f)
 }
 
 // (server) writes a frame to network stream
+static entity_frame_t deltaframe; // FIXME?
 void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 {
 	int i, onum, bits, number;
-	entity_frame_t deltaframe, *o = &deltaframe;
+	entity_frame_t *o = &deltaframe;
 	entity_state_t *ent, *delta, baseline;
 
 	EntityFrame_AddFrame(d, f);
@@ -318,10 +319,11 @@ void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, sizebuf_t *msg)
 }
 
 // (client) reads a frame from network stream
+static entity_frame_t framedata; // FIXME?
 void EntityFrame_Read(entity_database_t *d)
 {
 	int number, removed, bits;
-	entity_frame_t framedata, *f = &framedata, deltaframedata, *delta = &deltaframedata;
+	entity_frame_t *f = &framedata, *delta = &deltaframe;
 	entity_state_t *e, baseline, *old, *oldend;
 
 	ClearStateToDefault(&baseline);
