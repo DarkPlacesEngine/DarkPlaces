@@ -558,7 +558,7 @@ int LHNET_Read(lhnetsocket_t *lhnetsocket, void *content, int maxcontentlength, 
 int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentlength, const lhnetaddress_t *address)
 {
 	int value = -1;
-	if (!lhnetsocket || !address || !content || maxcontentlength < 1)
+	if (!lhnetsocket || !address || !content || contentlength < 1)
 		return -1;
 	if (lhnetsocket->address.addresstype != address->addresstype)
 		return -1;
