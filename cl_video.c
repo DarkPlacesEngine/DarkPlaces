@@ -56,7 +56,7 @@ void CL_VideoFrame(void)
 	}
 	if (cl_videosoundrate && (samples = S_RawSamples_QueueWantsMore()))
 	{
-		Con_Printf("%i = S_RawSamples_QueueWantsMore()\n", samples);
+		Con_DPrintf("%i = S_RawSamples_QueueWantsMore()\n", samples);
 
 		// calculate how much source data we need to fill the output...
 		s = samples * cl_videosoundrate / S_RawSamples_SampleRate();
