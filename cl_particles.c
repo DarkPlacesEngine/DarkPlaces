@@ -184,15 +184,22 @@ typedef enum
 }
 ptype_t;
 
-#define PARTICLE_INVALID 0
-#define PARTICLE_BILLBOARD 1
-#define PARTICLE_SPARK 2
-#define PARTICLE_ORIENTED_DOUBLESIDED 3
-#define PARTICLE_BEAM 4
+typedef enum
+{
+	PARTICLE_BILLBOARD = 0,
+	PARTICLE_SPARK = 1,
+	PARTICLE_ORIENTED_DOUBLESIDED = 2,
+	PARTICLE_BEAM = 3
+}
+porientation_t;
 
-#define PBLEND_ALPHA 0
-#define PBLEND_ADD 1
-#define PBLEND_MOD 2
+typedef enum
+{
+	PBLEND_ALPHA = 0,
+	PBLEND_ADD = 1,
+	PBLEND_MOD = 2
+}
+pblend_t;
 
 typedef struct particle_s
 {
@@ -355,7 +362,26 @@ void CL_Particles_Init (void)
 	cl_numparticles = 0;
 }
 
-particle_t *particle(int ptype, int porientation, int pcolor1, int pcolor2, int ptex, int plight, int pblendmode, float pscalex, float pscaley, float palpha, float palphafade, float ptime, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float ptime2, float pvx2, float pvy2, float pvz2, float pfriction, float ppressure)
+// list of all 26 parameters:
+// ptype - any of the pt_ enum values (pt_static, pt_blood, etc), see ptype_t near the top of this file
+// porientation - PARTICLE_ enum values (PARTICLE_BILLBOARD, PARTICLE_SPARK, etc)
+// pcolor1,pcolor2 - minimum and maximum ranges of color, randomly interpolated to decide particle color
+// ptex - any of the tex_ values such as tex_smoke[rand()&7] or tex_particle
+// plight - no longer used (this used to turn on particle lighting)
+// pblendmode - PBLEND_ enum values (PBLEND_ALPHA, PBLEND_ADD, etc)
+// pscalex,pscaley - width and height of particle (according to orientation), these are normally the same except when making sparks and beams
+// palpha - opacity of particle as 0-255 (can be more than 255)
+// palphafade - rate of fade per second (so 256 would mean a 256 alpha particle would fade to nothing in 1 second)
+// ptime - how long the particle can live (note it is also removed if alpha drops to nothing)
+// pgravity - how much effect gravity has on the particle (0-1)
+// pbounce - how much bounce the particle has when it hits a surface (0-1), -1 makes a blood splat when it hits a surface, 0 does not even check for collisions
+// px,py,pz - starting origin of particle
+// pvx,pvy,pvz - starting velocity of particle
+// ptime2 - extra time parameter for certain particle types (pt_decal delayed fades and pt_rain snowflutter use this)
+// pvx2,pvy2,pvz2 - for PARTICLE_ORIENTED_DOUBLESIDED this is the surface normal of the orientation (forward vector), pt_rain uses this for snow fluttering
+// pfriction - how much the particle slows down per second (0-1 typically, can slowdown faster than 1)
+// ppressure - pushes other particles away if they are within 64 units distance, the force is based on scalex, this feature is supported but not currently used
+particle_t *particle(ptype_t ptype, porientation_t porientation, int pcolor1, int pcolor2, int ptex, int plight, pblend_t pblendmode, float pscalex, float pscaley, float palpha, float palphafade, float ptime, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float ptime2, float pvx2, float pvy2, float pvz2, float pfriction, float ppressure)
 {
 	if (cl_numparticles < cl_maxparticles)
 	{
