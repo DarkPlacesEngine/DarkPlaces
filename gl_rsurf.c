@@ -387,7 +387,7 @@ void R_LightSurface(int *dlightbits, glpoly_t *polys, float *wvert)
 	glpoly_t	*p;
 	for (a = 0;a < 8;a++)
 	{
-		if (c = dlightbits[a])
+		if ((c = dlightbits[a]))
 		{
 			for (b = 0;c && b < 32;b++)
 			{
