@@ -1177,7 +1177,7 @@ void R_RenderView (void)
 		}
 		else if (!gl_stencil)
 		{
-			Con_Printf("Stencil not enabled, turning off r_shadow_realtime, please type vid_stencil 1;vid_restart and try again\n");
+			Con_Printf("Stencil not enabled, turning off r_shadow_realtime, please type vid_stencil 1;vid_bitsperpixel 32;vid_restart and try again\n");
 			Cvar_SetValueQuick(&r_shadow_realtime, 0);
 		}
 		else if (!gl_combine.integer)
