@@ -792,12 +792,12 @@ Key_WriteBindings (qfile_t *f)
 
 	for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
 		if (keybindings[0][i])
-			FS_Printf(f, "bind %s \"%s\"\n",
+			FS_Printf(f, "bind \"%s\" \"%s\"\n",
 					Key_KeynumToString (i), keybindings[0][i]);
 	for (j = 1; j < 8; j++)
 		for (i = 0; i < (int)(sizeof(keybindings[0])/sizeof(keybindings[0][0])); i++)
 			if (keybindings[j][i])
-				FS_Printf(f, "in_bind %d %s \"%s\"\n",
+				FS_Printf(f, "in_bind %d \"%s\" \"%s\"\n",
 						j, Key_KeynumToString (i), keybindings[j][i]);
 }
 
