@@ -766,9 +766,9 @@ typedef struct q3mmodel_s
 	vec3_t mins;
 	vec3_t maxs;
 	int numsurfaces;
-	struct msurface_s *firstsurface;
+	int firstsurface;
 	int numbrushes;
-	struct q3mbrush_s *firstbrush;
+	int firstbrush;
 }
 q3mmodel_t;
 
