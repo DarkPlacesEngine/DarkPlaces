@@ -645,39 +645,35 @@ void VID_Init(void)
 		mouse_avail = false;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp)
+void VID_BuildGLXAttrib(int *attrib, int stencil, int gamma)
+{
+	*attrib++ = GLX_RGBA;
+	*attrib++ = GLX_RED_SIZE;*attrib++ = 1;
+	*attrib++ = GLX_GREEN_SIZE;*attrib++ = 1;
+	*attrib++ = GLX_BLUE_SIZE;*attrib++ = 1;
+	*attrib++ = GLX_DOUBLEBUFFER;
+	*attrib++ = GLX_DEPTH_SIZE;*attrib++ = 1;
+	if (stencil)
+	{
+		*attrib++ = GLX_STENCIL_SIZE;*attrib++ = 8;
+	}
+	if (gamma)
+	{
+		*attrib++ = GLX_X_VISUAL_TYPE;*attrib++ = GLX_DIRECT_COLOR;
+	};
+	*attrib++ = None;
+}
+
+int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 {
 	int i;
-// LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
-#if 0
-	int gammaattrib[] =
-	{
-		GLX_RGBA,
-		GLX_RED_SIZE, 1,
-		GLX_GREEN_SIZE, 1,
-		GLX_BLUE_SIZE, 1,
-		GLX_DOUBLEBUFFER,
-		GLX_DEPTH_SIZE, 1,
-		GLX_X_VISUAL_TYPE, GLX_DIRECT_COLOR,
-		None
-	};
-#endif
-	int nogammaattrib[] =
-	{
-		GLX_RGBA,
-		GLX_RED_SIZE, 1,
-		GLX_GREEN_SIZE, 1,
-		GLX_BLUE_SIZE, 1,
-		GLX_DOUBLEBUFFER,
-		GLX_DEPTH_SIZE, 1,
-		None
-	};
+	int attrib[32];
 	XSetWindowAttributes attr;
 	unsigned long mask;
 	Window root;
 	XVisualInfo *visinfo;
 	int MajorVersion, MinorVersion;
-
+	
 	if (!GL_OpenLibrary("libGL.so.1"))
 	{
 		Con_Printf("Unable to load GL driver\n");
@@ -717,11 +713,15 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them
 #if 0
 	if (!COM_CheckParm("-nogamma"))
-		visinfo = qglXChooseVisual(vidx11_display, scrnum, gammaattrib);
+	{
+		VID_BuildGLXAttrib(attrib, stencil, true);
+		visinfo = qglXChooseVisual(vidx11_display, scrnum, attrib);
+	}
 #endif
 	if (!visinfo)
 	{
-		visinfo = qglXChooseVisual(vidx11_display, scrnum, nogammaattrib);
+		VID_BuildGLXAttrib(attrib, stencil, false);
+		visinfo = qglXChooseVisual(vidx11_display, scrnum, attrib);
 		if (!visinfo)
 		{
 			Con_Printf("Couldn't get an RGB, Double-buffered, Depth visual\n");

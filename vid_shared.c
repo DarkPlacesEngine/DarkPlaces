@@ -16,6 +16,8 @@ int gl_combine_extension = false;
 int gl_supportslockarrays = false;
 // LordHavoc: GLX_SGI_video_sync and WGL_EXT_swap_control
 int gl_videosyncavailable = false;
+// indicates that stencil is available
+int gl_stencil = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -27,6 +29,7 @@ cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1"};
 cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
 cvar_t vid_height = {CVAR_SAVE, "vid_height", "480"};
 cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "16"};
+cvar_t vid_stencil = {CVAR_SAVE, "vid_stencil", "0"};
 
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
@@ -131,10 +134,10 @@ void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
 
 void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
 
-//void (GLAPIENTRY *qglStencilFunc)(GLenum func, GLint ref, GLuint mask);
-//void (GLAPIENTRY *qglStencilMask)(GLuint mask);
-//void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
-//void (GLAPIENTRY *qglClearStencil)(GLint s);
+void (GLAPIENTRY *qglStencilFunc)(GLenum func, GLint ref, GLuint mask);
+void (GLAPIENTRY *qglStencilMask)(GLuint mask);
+void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
+void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
@@ -250,10 +253,10 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 //	{"glTranslated", (void **) &qglTranslated},
 	{"glTranslatef", (void **) &qglTranslatef},
 	{"glReadPixels", (void **) &qglReadPixels},
-//	{"glStencilFunc", (void **) &qglStencilFunc},
-//	{"glStencilMask", (void **) &qglStencilMask},
-//	{"glStencilOp", (void **) &qglStencilOp},
-//	{"glClearStencil", (void **) &qglClearStencil},
+	{"glStencilFunc", (void **) &qglStencilFunc},
+	{"glStencilMask", (void **) &qglStencilMask},
+	{"glStencilOp", (void **) &qglStencilOp},
+	{"glClearStencil", (void **) &qglClearStencil},
 //	{"glTexEnvf", (void **) &qglTexEnvf},
 	{"glTexEnvi", (void **) &qglTexEnvi},
 //	{"glTexParameterf", (void **) &qglTexParameterf},
@@ -401,6 +404,7 @@ void VID_Shared_Init(void)
 	Cvar_RegisterVariable(&vid_width);
 	Cvar_RegisterVariable(&vid_height);
 	Cvar_RegisterVariable(&vid_bitsperpixel);
+	Cvar_RegisterVariable(&vid_stencil);
 	Cvar_RegisterVariable(&vid_mouse);
 	Cvar_RegisterVariable(&gl_combine);
 	Cvar_RegisterVariable(&in_pitch_min);
@@ -420,25 +424,33 @@ void VID_Shared_Init(void)
 		Cvar_SetQuick(&vid_height, com_argv[i+1]);
 	if ((i = COM_CheckParm("-bpp")) != 0)
 		Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
+	if ((i = COM_CheckParm("-nostencil")) != 0)
+		Cvar_SetValueQuick(&vid_stencil, 0);
+	if ((i = COM_CheckParm("-stencil")) != 0)
+		Cvar_SetValueQuick(&vid_stencil, 1);
 }
 
 int current_vid_fullscreen;
 int current_vid_width;
 int current_vid_height;
 int current_vid_bitsperpixel;
-extern int VID_InitMode (int fullscreen, int width, int height, int bpp);
-int VID_Mode(int fullscreen, int width, int height, int bpp)
+int current_vid_stencil;
+extern int VID_InitMode (int fullscreen, int width, int height, int bpp, int stencil);
+int VID_Mode(int fullscreen, int width, int height, int bpp, int stencil)
 {
-	if (fullscreen)
-		Con_Printf("Video: %dx%dx%d fullscreen\n", width, height, bpp);
-	else
-		Con_Printf("Video: %dx%d windowed\n", width, height);
-	if (VID_InitMode(fullscreen, width, height, bpp))
+	Con_Printf("Video: %s %dx%dx%d %s\n", fullscreen ? "fullscreen" : "window", width, height, bpp, stencil ? "with stencil" : "without stencil");
+	if (VID_InitMode(fullscreen, width, height, bpp, stencil))
 	{
 		current_vid_fullscreen = fullscreen;
 		current_vid_width = width;
 		current_vid_height = height;
 		current_vid_bitsperpixel = bpp;
+		current_vid_stencil = stencil;
+		Cvar_SetValueQuick(&vid_fullscreen, fullscreen);
+		Cvar_SetValueQuick(&vid_width, width);
+		Cvar_SetValueQuick(&vid_height, height);
+		Cvar_SetValueQuick(&vid_bitsperpixel, bpp);
+		Cvar_SetValueQuick(&vid_stencil, stencil);
 		return true;
 	}
 	else
@@ -461,14 +473,14 @@ static void VID_CloseSystems(void)
 
 void VID_Restart_f(void)
 {
-	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp, to %s %dx%dx%dbpp.\n",
-		current_vid_fullscreen ? "fullscreen" : "window", current_vid_width, current_vid_height, current_vid_bitsperpixel, 
-		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
+	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp %s, to %s %dx%dx%dbpp %s.\n",
+		current_vid_fullscreen ? "fullscreen" : "window", current_vid_width, current_vid_height, current_vid_bitsperpixel, current_vid_stencil ? "with stencil" : "without stencil",
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_stencil.integer ? "with stencil" : "without stencil");
 	VID_Close();
-	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_stencil.integer))
 	{
 		Con_Printf("Video mode change failed\n");
-		if (!VID_Mode(current_vid_fullscreen, current_vid_width, current_vid_height, current_vid_bitsperpixel))
+		if (!VID_Mode(current_vid_fullscreen, current_vid_width, current_vid_height, current_vid_bitsperpixel, current_vid_stencil))
 			Sys_Error("Unable to restore to last working video mode\n");
 	}
 	VID_OpenSystems();
@@ -477,16 +489,20 @@ void VID_Restart_f(void)
 void VID_Open(void)
 {
 	Con_Printf("Starting video system\n");
-	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, vid_stencil.integer))
 	{
-		if (vid_fullscreen.integer)
+		Con_Printf("Desired video mode fail, trying fallbacks...\n");
+		if (!vid_stencil.integer || !VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer, false))
 		{
-			if (!VID_Mode(true, 640, 480, 16))
-				if (!VID_Mode(false, 640, 480, 16))
-					Sys_Error("Video modes failed\n");
+			if (vid_fullscreen.integer)
+			{
+				if (!VID_Mode(true, 640, 480, 16, false))
+					if (!VID_Mode(false, 640, 480, 16, false))
+						Sys_Error("Video modes failed\n");
+			}
+			else
+				Sys_Error("Windowed video failed\n");
 		}
-		else
-			Sys_Error("Windowed video failed\n");
 	}
 	VID_OpenSystems();
 }
