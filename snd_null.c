@@ -101,6 +101,10 @@ void S_ResumeGameSounds (void)
 {
 }
 
+void S_SetChannelVolume (unsigned int ch_ind, float fvol)
+{
+}
+
 sfx_t *S_GetCached(const char *name)
 {
 	return NULL;
