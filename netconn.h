@@ -150,23 +150,86 @@ extern cvar_t developer_networking;
 extern char playername[];
 extern int playercolor;
 
-#define HOSTCACHESIZE	128
+#define HOSTCACHE_TOTALSIZE			2048
+#define HOSTCACHE_VIEWCACHESIZE		128
+
+typedef enum 
+{
+	HCMO_GREATEREQUAL,
+	HCMO_GREATER,
+	HCMO_EQUAL,
+	HCMO_LESSEQUAL,
+	HCMO_LESS,
+} hostcache_maskop_t;
+
+// struct with all fields that you can search for or sort by
+typedef struct
+{
+	// address for connecting
+	char cname[128];
+	// ping time for sorting servers
+	int ping;
+	// name of the game
+	char game[32];
+	// name of the mod
+	char mod[32];
+	// name of the map
+	char map[32];
+	// name of the session
+	char name[128];
+	// max client number
+	int maxplayers;
+	// number of currently connected players
+	int numplayers;
+	// protocol version
+	int protocol;
+} hostcache_info_t;
+
+typedef enum 
+{
+	HCIF_CNAME,
+	HCIF_PING,
+	HCIF_GAME,
+	HCIF_MOD,
+	HCIF_MAP,
+	HCIF_NAME,
+	HCIF_MAXPLAYERS,
+	HCIF_NUMPLAYERS,
+	HCIF_PROTOCOL,
+	HCIF_COUNT
+} hostcache_infofield_t;
 
 typedef struct
 {
-	// ping time for sorting servers
-	int ping;
+	// used to determine whether this entry should be included into the final view
+	qboolean finished; 
 	// used to calculate ping when update comes in
 	double querytime;
-	// address for connecting
-	char cname[128];
-	// description (seen by user)
+
+	hostcache_info_t info;
+	
+	// legacy stuff
 	char line1[128];
 	char line2[128];
 } hostcache_t;
 
-extern int hostCacheCount;
-extern hostcache_t hostcache[HOSTCACHESIZE];
+typedef struct
+{
+	hostcache_maskop_t pingtest;
+	hostcache_maskop_t maxplayerstest;
+	hostcache_maskop_t numplayerstest;
+	hostcache_maskop_t protocoltest;
+	hostcache_info_t info;
+} hostcache_mask_t;
+
+extern hostcache_mask_t			hostcache_currentmask;
+extern hostcache_infofield_t	hostcache_sortbyfield;
+extern qboolean					hostcache_sortdescending;
+
+extern int			hostcache_viewcount;
+extern hostcache_t	*hostcache_viewset[HOSTCACHE_VIEWCACHESIZE];
+
+extern qboolean		hostcache_consoleoutput;
 
 #if !defined(_WIN32 ) && !defined (__linux__) && !defined (__sun__)
 #ifndef htonl
@@ -226,6 +289,12 @@ void NetConn_Heartbeat(int priority);
 int NetConn_SendToAll(sizebuf_t *data, double blocktime);
 void Net_Stats_f(void);
 void Net_Slist_f(void);
+
+// Hostcache interface
+// manually refresh the view set, do this after having changed the mask or any other flag
+void HostCache_RebuildViewSet(void);
+void HostCache_ResetMask(void);
+void HostCache_QueryList(void);
 
 #endif
 

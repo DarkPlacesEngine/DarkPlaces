@@ -3831,8 +3831,8 @@ void M_ServerList_Draw (void)
 		M_Print(16, menu_height - 8, m_return_reason);
 	y = 48;
 	visible = (menu_height - 16 - y) / 8;
-	start = bound(0, slist_cursor - (visible >> 1), hostCacheCount - visible);
-	end = min(start + visible, hostCacheCount);
+	start = bound(0, slist_cursor - (visible >> 1), hostcache_viewcount - visible);
+	end = min(start + visible, hostcache_viewcount);
 
 	p = Draw_CachePic("gfx/p_multi.lmp");
 	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_multi.lmp");
@@ -3841,8 +3841,8 @@ void M_ServerList_Draw (void)
 		for (n = start;n < end;n++)
 		{
 			DrawQ_Fill(menu_x, menu_y + y, 640, 16, n == slist_cursor ? (0.5 + 0.2 * sin(realtime * M_PI)) : 0, 0, 0, 0.5, 0);
-			M_Print(0, y, hostcache[n].line1);y += 8;
-			M_Print(0, y, hostcache[n].line2);y += 8;
+			M_Print(0, y, hostcache_viewset[n]->line1);y += 8;
+			M_Print(0, y, hostcache_viewset[n]->line2);y += 8;
 		}
 	}
 	else if (realtime - masterquerytime < 3)
@@ -3872,20 +3872,20 @@ void M_ServerList_Key(int k, char ascii)
 		S_LocalSound ("sound/misc/menu1.wav");
 		slist_cursor--;
 		if (slist_cursor < 0)
-			slist_cursor = hostCacheCount - 1;
+			slist_cursor = hostcache_viewcount - 1;
 		break;
 
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 		S_LocalSound ("sound/misc/menu1.wav");
 		slist_cursor++;
-		if (slist_cursor >= hostCacheCount)
+		if (slist_cursor >= hostcache_viewcount)
 			slist_cursor = 0;
 		break;
 
 	case K_ENTER:
 		S_LocalSound ("sound/misc/menu2.wav");
-		Cbuf_AddText(va("connect \"%s\"\n", hostcache[slist_cursor].cname));
+		Cbuf_AddText(va("connect \"%s\"\n", hostcache_viewset[slist_cursor]->info.cname));
 		break;
 
 	default:

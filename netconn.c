@@ -72,9 +72,6 @@ int masterreplycount = 0;
 int serverquerycount = 0;
 int serverreplycount = 0;
 
-int hostCacheCount = 0;
-hostcache_t hostcache[HOSTCACHESIZE];
-
 static qbyte sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 static qbyte readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 
@@ -90,6 +87,192 @@ cvar_t cl_netport = {0, "cl_port", "0"};
 cvar_t sv_netport = {0, "port", "26000"};
 cvar_t net_address = {0, "net_address", "0.0.0.0"};
 //cvar_t net_netaddress_ipv6 = {0, "net_address_ipv6", "[0:0:0:0:0:0:0:0]"};
+
+// HostCache interface
+hostcache_mask_t		hostcache_currentmask;
+hostcache_infofield_t	hostcache_sortbyfield;
+qboolean				hostcache_sortdescending;
+
+int			hostcache_viewcount = 0;
+hostcache_t	*hostcache_viewset[HOSTCACHE_VIEWCACHESIZE];
+
+int			hostcache_cachecount;
+hostcache_t hostcache_cache[HOSTCACHE_TOTALSIZE];
+
+qboolean	hostcache_consoleoutput;
+
+// helper function to insert a value into the viewset
+// spare entries will be removed
+static void _HostCache_VS_Insert( int index, hostcache_t *entry )
+{
+    int start;
+	for( start = index, index = hostcache_viewcount; index > start; index-- )
+		hostcache_viewset[index] = hostcache_viewset[index - 1];
+	if( ++hostcache_viewcount > HOSTCACHE_VIEWCACHESIZE )
+		hostcache_viewcount = HOSTCACHE_VIEWCACHESIZE;
+	hostcache_viewset[start] = entry;
+}
+
+// we suppose hostcache_viewcount to be valid, ie > 0
+static void _HostCache_VS_Remove( int index )
+{
+	for( --hostcache_viewcount; index < hostcache_viewcount; index++ )
+		hostcache_viewset[index] = hostcache_viewset[index + 1];
+}
+
+// returns true if A should be inserted before B
+static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
+{
+	int result; // > 0 if for numbers A > B and for text if A < B 
+
+	if( hostcache_sortbyfield == HCIF_PING )
+		result = A->info.ping - B->info.ping;
+	else if( hostcache_sortbyfield == HCIF_MAXPLAYERS )
+		result = A->info.maxplayers - B->info.maxplayers;
+	else if( hostcache_sortbyfield == HCIF_NUMPLAYERS )
+		result = A->info.numplayers - B->info.numplayers;
+	else if( hostcache_sortbyfield == HCIF_PROTOCOL )
+		result = A->info.protocol - B->info.protocol;
+	else if( hostcache_sortbyfield == HCIF_CNAME )
+		result = strcmp( B->info.cname, A->info.cname );
+	else if( hostcache_sortbyfield == HCIF_GAME )
+		result = strcmp( B->info.game, A->info.game );
+	else if( hostcache_sortbyfield == HCIF_MAP )
+		result = strcmp( B->info.map, A->info.map );
+	else if( hostcache_sortbyfield == HCIF_MOD )
+		result = strcmp( B->info.mod, A->info.mod );
+	else if( hostcache_sortbyfield == HCIF_NAME )
+		result = strcmp( B->info.name, A->info.name );
+	
+	if( result > 0 && hostcache_sortdescending)
+		return true;
+	return false;
+}
+
+static qboolean _hc_testint( int A, hostcache_infofield_t op, int B )
+{
+	int diff;
+
+	diff = A - B;
+	switch( hostcache_currentmask.pingtest ) {
+			case HCMO_GREATER:
+				if( !diff )
+					return false;
+			case HCMO_GREATEREQUAL:
+				if( diff < 0 )
+					return false;
+				break;
+			case HCMO_EQUAL:
+				if( diff )
+					return false;
+				break;
+			case HCMO_LESS:
+				if( !diff )
+					return false;
+			case HCMO_LESSEQUAL:
+				if( diff > 0 )
+					return false;
+				break;
+	}
+	return true;
+}
+
+static qboolean _HostCache_TestMask( hostcache_info_t *info )
+{
+	if( !_hc_testint( info->ping, hostcache_currentmask.pingtest, hostcache_currentmask.info.ping ) )
+		return false;
+	if( !_hc_testint( info->maxplayers, hostcache_currentmask.maxplayerstest, hostcache_currentmask.info.maxplayers ) )
+		return false;
+	if( !_hc_testint( info->numplayers, hostcache_currentmask.numplayerstest, hostcache_currentmask.info.numplayers ) )
+		return false;
+	if( !_hc_testint( info->protocol, hostcache_currentmask.protocoltest, hostcache_currentmask.info.protocol ))
+		return false;
+	if( *hostcache_currentmask.info.cname
+		&& !strstr( info->cname, hostcache_currentmask.info.cname ) )
+		return false;
+	if( *hostcache_currentmask.info.game
+		&& !strstr( info->game, hostcache_currentmask.info.game ) )
+		return false;
+	if( *hostcache_currentmask.info.mod
+		&& !strstr( info->mod, hostcache_currentmask.info.mod ) )
+		return false;
+	if( *hostcache_currentmask.info.map
+		&& !strstr( info->map, hostcache_currentmask.info.map ) )
+		return false;
+	if( *hostcache_currentmask.info.name
+		&& !strstr( info->name, hostcache_currentmask.info.name ) )
+		return false;
+	return true;
+}
+
+static void _HostCache_Insert( hostcache_t *entry )
+{
+	int start, end, size;
+	if( hostcache_viewcount == HOSTCACHE_VIEWCACHESIZE )
+		return;
+	// now check whether it passes through mask
+	if( !_HostCache_TestMask( &entry->info ) )
+		return;
+
+	if( !hostcache_viewcount ) {
+		_HostCache_VS_Insert( 0, entry );
+		return;
+	}
+	// ok, insert it, we just need to find out where exactly:
+
+	// two special cases
+	// check whether to insert it as new first item
+	if( _HostCache_SortTest( entry, hostcache_viewset[0] ) ) {
+		_HostCache_VS_Insert( 0, entry );
+		return;
+	} // check whether to insert it as new last item
+	else if( !_HostCache_SortTest( entry, hostcache_viewset[hostcache_viewcount - 1] ) ) {
+		_HostCache_VS_Insert( hostcache_viewcount, entry );
+		return;
+	}
+	start = 1;
+	end = hostcache_viewcount - 1;
+	while( (size = start - end) > 0 )
+		// test the item that lies in the middle between start and end
+		if( _HostCache_SortTest( entry, hostcache_viewset[(start + end) / 2] ) )
+			// the item has to be in the upper half
+			end = (start + end) / 2 - 1;
+		else 
+			// the item has to be in the lower half
+			start = (start + end) / 2 + 1;
+	_HostCache_VS_Insert( start + 1, entry );
+}
+
+void HostCache_RebuildViewSet(void)
+{
+	int i;
+	
+	hostcache_viewcount = 0;
+	for( i = 0 ; i < hostcache_cachecount ; i++ )
+		if( hostcache_cache[i].finished )
+			_HostCache_Insert( &hostcache_cache[i] );
+}
+
+void HostCache_ResetMask(void)
+{
+	memset( &hostcache_currentmask, 0, sizeof( hostcache_mask_t ) );
+}
+
+
+void HostCache_QueryList(void)
+{
+	masterquerytime = realtime;
+	masterquerycount = 0;
+	masterreplycount = 0;
+	serverquerycount = 0;
+	serverreplycount = 0;
+	hostcache_cachecount = 0;
+	hostcache_viewcount = 0;
+	hostcache_consoleoutput = false;
+	NetConn_QueryMasters();
+}
+
+// rest
 
 int NetConn_Read(lhnetsocket_t *mysocket, void *data, int maxlength, lhnetaddress_t *peeraddress)
 {
@@ -620,13 +803,6 @@ int NetConn_IsLocalGame(void)
 	return false;
 }
 
-static struct
-{
-	double senttime;
-	lhnetaddress_t peeraddress;
-}
-pingcache[HOSTCACHESIZE];
-
 int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, lhnetaddress_t *peeraddress)
 {
 	int ret, c, control;
@@ -680,136 +856,104 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 		}
 		if (length >= 13 && !memcmp(string, "infoResponse\x0A", 13))
 		{
-			int i, j, c, n, users, maxusers;
-			char game[32], mod[32], map[32], name[128];
+			hostcache_info_t *info;
+			int i, n;
 			double pingtime;
-			hostcache_t temp;
+	
 			string += 13;
 			// hostcache only uses text addresses
 			LHNETADDRESS_ToString(peeraddress, cname, sizeof(cname), true);
-			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(game, s, sizeof (game));else game[0] = 0;
-			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(mod , s, sizeof (mod ));else mod[0]  = 0;
-			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(map , s, sizeof (map ));else map[0]  = 0;
-			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(name, s, sizeof (name));else name[0] = 0;
-			if ((s = SearchInfostring(string, "protocol"     )) != NULL) c = atoi(s);else c = -1;
-			if ((s = SearchInfostring(string, "clients"      )) != NULL) users = atoi(s);else users = 0;
-			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) maxusers = atoi(s);else maxusers = 0;
 			// search the cache for this server and update it
-			for (n = 0; n < hostCacheCount; n++)
-			{
-				if (!strcmp(cname, hostcache[n].cname))
-				{
-					if (hostcache[n].ping == 100000)
-						serverreplycount++;
-					pingtime = (int)((realtime - hostcache[n].querytime) * 1000.0);
-					pingtime = bound(0, pingtime, 9999);
-					// update the ping
-					hostcache[n].ping = pingtime;
-					// build description strings for the things users care about
-					snprintf(hostcache[n].line1, sizeof(hostcache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, c != NET_PROTOCOL_VERSION ? '*' : ' ', users, maxusers, name);
-					snprintf(hostcache[n].line2, sizeof(hostcache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", cname, game, mod, map);
-					// if ping is especially high, display it as such
-					if (pingtime >= 300)
-					{
-						// orange numbers (lower block)
-						for (i = 0;i < 5;i++)
-							if (hostcache[n].line1[i] != ' ')
-								hostcache[n].line1[i] += 128;
-					}
-					else if (pingtime >= 200)
-					{
-						// yellow numbers (in upper block)
-						for (i = 0;i < 5;i++)
-							if (hostcache[n].line1[i] != ' ')
-								hostcache[n].line1[i] -= 30;
-					}
-					// if not in the slist menu we should print the server to console
-					if (m_state != m_slist)
-						Con_Printf("%s\n%s\n", hostcache[n].line1, hostcache[n].line2);
-					// and finally, re-sort the list
-					for (i = 0;i < hostCacheCount;i++)
-					{
-						for (j = i + 1;j < hostCacheCount;j++)
-						{
-							//if (strcmp(hostcache[j].name, hostcache[i].name) < 0)
-							if (hostcache[i].ping > hostcache[j].ping)
-							{
-								memcpy(&temp, &hostcache[j], sizeof(hostcache_t));
-								memcpy(&hostcache[j], &hostcache[i], sizeof(hostcache_t));
-								memcpy(&hostcache[i], &temp, sizeof(hostcache_t));
-							}
-						}
-					}
+			for( n = 0; n < hostcache_cachecount; n++ ) {
+				if( !strcmp( cname, hostcache_cache[n].info.cname ) )
 					break;
-				}
 			}
+			if( n == hostcache_cachecount )
+				return true;
+
+			info = &hostcache_cache[n].info;
+			if ((s = SearchInfostring(string, "gamename"     )) != NULL) strlcpy(info->game, s, sizeof (info->game));else info->game[0] = 0;
+			if ((s = SearchInfostring(string, "modname"      )) != NULL) strlcpy(info->mod , s, sizeof (info->mod ));else info->mod[0]  = 0;
+			if ((s = SearchInfostring(string, "mapname"      )) != NULL) strlcpy(info->map , s, sizeof (info->map ));else info->map[0]  = 0;
+			if ((s = SearchInfostring(string, "hostname"     )) != NULL) strlcpy(info->name, s, sizeof (info->name));else info->name[0] = 0;
+			if ((s = SearchInfostring(string, "protocol"     )) != NULL) info->protocol = atoi(s);else info->protocol = -1;
+			if ((s = SearchInfostring(string, "clients"      )) != NULL) info->numplayers = atoi(s);else info->numplayers = 0;
+			if ((s = SearchInfostring(string, "sv_maxclients")) != NULL) info->maxplayers = atoi(s);else info->maxplayers  = 0;
+
+			if (info->ping == 100000)
+					serverreplycount++;
+	
+			pingtime = (int)((realtime - hostcache_cache[n].querytime) * 1000.0);
+			pingtime = bound(0, pingtime, 9999);
+			// update the ping
+			info->ping = pingtime;
+
+			// legacy/old stuff move it to the menu ASAP
+			
+			// build description strings for the things users care about
+			snprintf(hostcache_cache[n].line1, sizeof(hostcache_cache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
+			snprintf(hostcache_cache[n].line2, sizeof(hostcache_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			// if ping is especially high, display it as such
+			if (pingtime >= 300)
+			{
+				// orange numbers (lower block)
+				for (i = 0;i < 5;i++)
+					if (hostcache_cache[n].line1[i] != ' ')
+						hostcache_cache[n].line1[i] += 128;
+			}
+			else if (pingtime >= 200)
+			{
+				// yellow numbers (in upper block)
+				for (i = 0;i < 5;i++)
+					if (hostcache_cache[n].line1[i] != ' ')
+						hostcache_cache[n].line1[i] -= 30;
+			}
+			// if not in the slist menu we should print the server to console
+			if( hostcache_consoleoutput )
+				Con_Printf("%s\n%s\n", hostcache_cache[n].line1, hostcache_cache[n].line2);
+			// and finally, update the view set
+			if( hostcache_cache[n].finished ) {
+                _HostCache_VS_Remove( n );
+				_HostCache_Insert( &hostcache_cache[n] );
+			} else
+				_HostCache_Insert( &hostcache_cache[n] );
+			hostcache_cache[n].finished = true;
+	
 			return true;
 		}
-		if (!strncmp(string, "getserversResponse\\", 19) && hostCacheCount < HOSTCACHESIZE)
+		if (!strncmp(string, "getserversResponse\\", 19) && hostcache_cachecount < HOSTCACHE_TOTALSIZE)
 		{
-			int i, n, j;
-			hostcache_t temp;
 			// Extract the IP addresses
 			data += 18;
 			length -= 18;
 			masterreplycount++;
-			if (m_state != m_slist)
+			if (hostcache_consoleoutput)
 				Con_Print("received server list...\n");
 			while (length >= 7 && data[0] == '\\' && (data[1] != 0xFF || data[2] != 0xFF || data[3] != 0xFF || data[4] != 0xFF) && data[5] * 256 + data[6] != 0)
 			{
+				serverquerycount++;
+	
 				snprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
 				if (developer.integer)
-					Con_Printf("Requesting info from server %s\n", ipstring);
+					Con_Printf("Requesting info from server %s\n", ipstring);				
+				if( hostcache_cachecount == HOSTCACHE_TOTALSIZE )
+						// ignore the rest of the message since there wont magically disappear entries
+						break;
+						
 				LHNETADDRESS_FromString(&svaddress, ipstring, 0);
 				NetConn_WriteString(mysocket, "\377\377\377\377getinfo", &svaddress);
-
-
-				// add to slist (hostCache)
-				// search the cache for this server
-				for (n = 0; n < hostCacheCount; n++)
-					if (!strcmp(ipstring, hostcache[n].cname))
-						break;
-				// add it or update it
-				if (n == hostCacheCount)
-				{
-					// if cache is full replace highest ping server (the list is
-					// kept sorted so this is always the last, and if this server
-					// is good it will be sorted into an early part of the list)
-					if (hostCacheCount >= HOSTCACHESIZE)
-						n = hostCacheCount - 1;
-					else
-					{
-						serverquerycount++;
-						hostCacheCount++;
-					}
-				}
-				memset(&hostcache[n], 0, sizeof(hostcache[n]));
+                
+				memset(&hostcache_cache[hostcache_cachecount], 0, sizeof(hostcache_cache[hostcache_cachecount]));
 				// store the data the engine cares about (address and ping)
-				strlcpy (hostcache[n].cname, ipstring, sizeof (hostcache[n].cname));
-				hostcache[n].ping = 100000;
-				hostcache[n].querytime = realtime;
-				// build description strings for the things users care about
-				strlcpy (hostcache[n].line1, "?", sizeof (hostcache[n].line1));
-				strlcpy (hostcache[n].line2, ipstring, sizeof (hostcache[n].line2));
+				strlcpy (hostcache_cache[hostcache_cachecount].info.cname, ipstring, sizeof (hostcache_cache[hostcache_cachecount].info.cname));
+				hostcache_cache[hostcache_cachecount].info.ping = 100000;
+				hostcache_cache[hostcache_cachecount].querytime = realtime;
 				// if not in the slist menu we should print the server to console
-				if (m_state != m_slist)
+				if (hostcache_consoleoutput)
 					Con_Printf("querying %s\n", ipstring);
-				// and finally, re-sort the list
-				for (i = 0;i < hostCacheCount;i++)
-				{
-					for (j = i + 1;j < hostCacheCount;j++)
-					{
-						//if (strcmp(hostcache[j].name, hostcache[i].name) < 0)
-						if (hostcache[i].ping > hostcache[j].ping)
-						{
-							memcpy(&temp, &hostcache[j], sizeof(hostcache_t));
-							memcpy(&hostcache[j], &hostcache[i], sizeof(hostcache_t));
-							memcpy(&hostcache[i], &temp, sizeof(hostcache_t));
-						}
-					}
-				}
 
-
+				++hostcache_cachecount;
+				
 				// move on to next address in packet
 				data += 7;
 				length -= 7;
@@ -1395,7 +1539,7 @@ void NetConn_QueryMasters(void)
 	lhnetaddress_t masteraddress;
 	char request[256];
 
-	if (hostCacheCount >= HOSTCACHESIZE)
+	if (hostcache_cachecount >= HOSTCACHE_TOTALSIZE)
 		return;
 
 	for (i = 0;i < cl_numsockets;i++)
@@ -1540,18 +1684,16 @@ void Net_Stats_f(void)
 
 void Net_Slist_f(void)
 {
-	masterquerytime = realtime;
-	masterquerycount = 0;
-	masterreplycount = 0;
-	serverquerycount = 0;
-	serverreplycount = 0;
-	hostCacheCount = 0;
-	memset(&pingcache, 0, sizeof(pingcache));
-	if (m_state != m_slist)
+	HostCache_ResetMask();
+	hostcache_sortbyfield = HCIF_PING;
+	hostcache_sortdescending = false;
+    if (m_state != m_slist) {
 		Con_Print("Sending requests to master servers\n");
-	NetConn_QueryMasters();
-	if (m_state != m_slist)
+		HostCache_QueryList();
+		hostcache_consoleoutput = true;
 		Con_Print("Listening for replies...\n");
+	} else
+		HostCache_QueryList();
 }
 
 void NetConn_Init(void)
@@ -1602,7 +1744,6 @@ void NetConn_Init(void)
 	}
 	cl_numsockets = 0;
 	sv_numsockets = 0;
-	memset(&pingcache, 0, sizeof(pingcache));
 	SZ_Alloc(&net_message, NET_MAXMESSAGE, "net_message");
 	LHNET_Init();
 }
