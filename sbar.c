@@ -720,30 +720,51 @@ void Sbar_ShowFPS(void)
 {
 	if (showfps.integer)
 	{
-		static double currtime, frametimes[32];
-		double newtime, total;
+		int calc;
 		char temp[32];
-		int calc, count, i;
-		static int framecycle = 0;
 		float fps_x, fps_y, fps_scalex, fps_scaley;
-
-		newtime = Sys_DoubleTime();
-		frametimes[framecycle] = newtime - currtime;
-		total = 0;
-		count = 0;
-		while(total < 0.2 && count < 32 && frametimes[i = (framecycle - count) & 31])
+		if (showfps.integer > 1)
 		{
-			total += frametimes[i];
-			count++;
+			static double currtime, frametimes[32];
+			double newtime, total;
+			int count, i;
+			static int framecycle = 0;
+
+			newtime = Sys_DoubleTime();
+			frametimes[framecycle] = newtime - currtime;
+			total = 0;
+			count = 0;
+			while(total < 0.2 && count < 32 && frametimes[i = (framecycle - count) & 31])
+			{
+				total += frametimes[i];
+				count++;
+			}
+			framecycle++;
+			framecycle &= 31;
+			if (showfps.integer == 2)
+				calc = (int) (((double) count / total) + 0.5);
+			else // showfps 3, rapid update
+				calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
+			currtime = newtime;
 		}
-		framecycle++;
-		framecycle &= 31;
-		if (showfps.integer == 1)
-			calc = (int) (((double) count / total) + 0.5);
-		else // showfps 2, rapid update
-			calc = (int) ((1.0 / (newtime - currtime)) + 0.5);
+		else
+		{
+			static double nexttime = 0, lasttime = 0;
+			static int framerate = 0, framecount = 0;
+			double newtime;
+			newtime = Sys_DoubleTime();
+			if (newtime < nexttime)
+				framecount++;
+			else
+			{
+				framerate = (int) (framecount / (newtime - lasttime) + 0.5);
+				lasttime = newtime;
+				nexttime = lasttime + 0.2;
+				framecount = 1;
+			}
+			calc = framerate;
+		}
 		sprintf(temp, "%4i", calc);
-		currtime = newtime;
 		fps_scalex = 12;
 		fps_scaley = 12;
 		fps_x = vid.conwidth - (fps_scalex * strlen(temp));
