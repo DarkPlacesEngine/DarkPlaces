@@ -214,8 +214,9 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 		mod->texturepool = R_AllocTexturePool();
 
 	// call the apropriate loader
-	     if (!memcmp(buf, "IDPO"    , 4)) Mod_LoadAliasModel  (mod, buf);
+	     if (!memcmp(buf, "IDPO"    , 4)) Mod_LoadQ1AliasModel(mod, buf);
 	else if (!memcmp(buf, "IDP2"    , 4)) Mod_LoadQ2AliasModel(mod, buf);
+	else if (!memcmp(buf, "IDP3"    , 4)) Mod_LoadQ3AliasModel(mod, buf);
 	else if (!memcmp(buf, "ZYMOTIC" , 7)) Mod_LoadZymoticModel(mod, buf);
 	else if (!memcmp(buf, "IDSP"    , 4)) Mod_LoadSpriteModel (mod, buf);
 	else                                  Mod_LoadBrushModel  (mod, buf);

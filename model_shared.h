@@ -108,17 +108,13 @@ typedef struct model_s
 	int				aliastype;
 	// LordHavoc: if true (normally only for sprites) the model/sprite/bmodel is always rendered fullbright
 	int				fullbright;
-	// number of QC accessable frame(group)s in the model
+	// number of QC accessible frame(group)s in the model
 	int				numframes;
+	// number of QC accessible skin(group)s in the model
+	int				numskins;
 	// whether to randomize animated framegroups
 	synctype_t		synctype;
 
-	// used for sprites and models
-	int				numtris;
-	// used for models
-	int				numskins;
-	// used by models
-	int				numverts;
 
 	// flags from the model file
 	int				flags;

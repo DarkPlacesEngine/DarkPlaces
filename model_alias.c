@@ -28,42 +28,63 @@ void Mod_AliasInit (void)
 	Cvar_RegisterVariable(&r_mipskins);
 }
 
-// LordHavoc: proper bounding box considerations
-static float aliasbboxmin[3], aliasbboxmax[3], modelyawradius, modelradius;
-
 static float vertst[MAXALIASVERTS][2];
 static int vertusage[MAXALIASVERTS];
 static int vertonseam[MAXALIASVERTS];
 static int vertremap[MAXALIASVERTS];
 static int temptris[MAXALIASTRIS][3];
 
+static void Mod_CalcAliasModelBBoxes (void)
+{
+	int vnum, meshnum;
+	float dist, yawradius, radius;
+	aliasmesh_t *mesh;
+	aliasvertex_t *v;
+	VectorClear(loadmodel->normalmins);
+	VectorClear(loadmodel->normalmaxs);
+	yawradius = 0;
+	radius = 0;
+	for (meshnum = 0, mesh = loadmodel->aliasdata_meshes;meshnum < loadmodel->aliasnum_meshes;meshnum++, mesh++)
+	{
+		for (vnum = 0, v = mesh->data_vertices;vnum < mesh->num_vertices * mesh->num_frames;vnum++, v++)
+		{
+			if (loadmodel->normalmins[0] > v->origin[0]) loadmodel->normalmins[0] = v->origin[0];
+			if (loadmodel->normalmins[1] > v->origin[1]) loadmodel->normalmins[1] = v->origin[1];
+			if (loadmodel->normalmins[2] > v->origin[2]) loadmodel->normalmins[2] = v->origin[2];
+			if (loadmodel->normalmaxs[0] < v->origin[0]) loadmodel->normalmaxs[0] = v->origin[0];
+			if (loadmodel->normalmaxs[1] < v->origin[1]) loadmodel->normalmaxs[1] = v->origin[1];
+			if (loadmodel->normalmaxs[2] < v->origin[2]) loadmodel->normalmaxs[2] = v->origin[2];
+			dist = v->origin[0] * v->origin[0] + v->origin[1] * v->origin[1];
+			if (yawradius < dist)
+				yawradius = dist;
+			dist += v->origin[2] * v->origin[2];
+			if (radius < dist)
+				radius = dist;
+		}
+	}
+	radius = sqrt(radius);
+	yawradius = sqrt(yawradius);
+	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -yawradius;
+	loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = yawradius;
+	loadmodel->yawmins[2] = loadmodel->normalmins[2];
+	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
+	loadmodel->rotatedmins[0] = loadmodel->rotatedmins[1] = loadmodel->rotatedmins[2] = -radius;
+	loadmodel->rotatedmaxs[0] = loadmodel->rotatedmaxs[1] = loadmodel->rotatedmaxs[2] = radius;
+	loadmodel->radius = radius;
+	loadmodel->radius2 = radius * radius;
+}
+
 static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, trivertx_t *v, aliasvertex_t *out)
 {
 	int i, j;
-	float dist;
 	vec3_t temp;
 	for (i = 0;i < inverts;i++)
 	{
 		if (vertremap[i] < 0 && vertremap[i+inverts] < 0) // only used vertices need apply...
 			continue;
-
 		temp[0] = v[i].v[0] * scale[0] + translate[0];
 		temp[1] = v[i].v[1] * scale[1] + translate[1];
 		temp[2] = v[i].v[2] * scale[2] + translate[2];
-		// update bounding box
-		if (temp[0] < aliasbboxmin[0]) aliasbboxmin[0] = temp[0];
-		if (temp[1] < aliasbboxmin[1]) aliasbboxmin[1] = temp[1];
-		if (temp[2] < aliasbboxmin[2]) aliasbboxmin[2] = temp[2];
-		if (temp[0] > aliasbboxmax[0]) aliasbboxmax[0] = temp[0];
-		if (temp[1] > aliasbboxmax[1]) aliasbboxmax[1] = temp[1];
-		if (temp[2] > aliasbboxmax[2]) aliasbboxmax[2] = temp[2];
-		dist = temp[0]*temp[0]+temp[1]*temp[1];
-		if (modelyawradius < dist)
-			modelyawradius = dist;
-		dist += temp[2]*temp[2];
-		if (modelradius < dist)
-			modelradius = dist;
-
 		j = vertremap[i]; // not onseam
 		if (j >= 0)
 			VectorCopy(temp, out[j].origin);
@@ -73,7 +94,7 @@ static void Mod_ConvertAliasVerts (int inverts, vec3_t scale, vec3_t translate, 
 	}
 }
 
-static void Mod_BuildAliasVertexTextureVectors(int numtriangles, const int *elements, int numverts, aliasvertex_t *vertices, const float *texcoords, float *vertexbuffer, float *svectorsbuffer, float *tvectorsbuffer, float *normalsbuffer)
+static void Mod_BuildAliasVertexTextureVectors(int numverts, aliasvertex_t *vertices, const float *texcoords, float *vertexbuffer, float *svectorsbuffer, float *tvectorsbuffer, float *normalsbuffer, int numtriangles, const int *elements)
 {
 	int i;
 	for (i = 0;i < numverts;i++)
@@ -91,7 +112,7 @@ static void Mod_BuildAliasVertexTextureVectors(int numtriangles, const int *elem
 	}
 }
 
-static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, vec3_t translate, int *elements, float *texcoords, aliasvertex_t *posedata)
+static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, int outverts, vec3_t scale, vec3_t translate, float *texcoords, aliasvertex_t *posedata, int numtris, int *elements)
 {
 	int i, f, pose, groupframes;
 	float interval, *vertexbuffer, *svectorsbuffer, *tvectorsbuffer, *normalsbuffer;
@@ -102,10 +123,10 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, v
 	animscene_t *scene;
 	pose = 0;
 	scene = loadmodel->animscenes;
-	vertexbuffer = Mem_Alloc(tempmempool, loadmodel->numverts * sizeof(float[4]) * 4);
-	svectorsbuffer = vertexbuffer + loadmodel->numverts * 4;
-	tvectorsbuffer = svectorsbuffer + loadmodel->numverts * 4;
-	normalsbuffer = tvectorsbuffer + loadmodel->numverts * 4;
+	vertexbuffer = Mem_Alloc(tempmempool, outverts * sizeof(float[4]) * 4);
+	svectorsbuffer = vertexbuffer + outverts * 4;
+	tvectorsbuffer = svectorsbuffer + outverts * 4;
+	normalsbuffer = tvectorsbuffer + outverts * 4;
 	for (f = 0;f < loadmodel->numframes;f++)
 	{
 		pframetype = (daliasframetype_t *)datapointer;
@@ -129,7 +150,7 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, v
 
 			interval = LittleFloat (intervals->interval); // FIXME: support variable framerate groups
 			if (interval < 0.01f)
-				Host_Error("Mod_LoadAliasGroup: invalid interval");
+				Host_Error("Mod_MDL_LoadFrames: invalid interval");
 		}
 
 		// get scene name from first frame
@@ -147,8 +168,8 @@ static void Mod_MDL_LoadFrames (qbyte* datapointer, int inverts, vec3_t scale, v
 		{
 			pinframe = (daliasframe_t *)datapointer;
 			datapointer += sizeof(daliasframe_t);
-			Mod_ConvertAliasVerts(inverts, scale, translate, (trivertx_t *)datapointer, posedata + pose * loadmodel->numverts);
-			Mod_BuildAliasVertexTextureVectors(loadmodel->numtris, elements, loadmodel->numverts, posedata + pose * loadmodel->numverts, texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer);
+			Mod_ConvertAliasVerts(inverts, scale, translate, (trivertx_t *)datapointer, posedata + pose * outverts);
+			Mod_BuildAliasVertexTextureVectors(outverts, posedata + pose * outverts, texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer, numtris, elements);
 			datapointer += sizeof(trivertx_t) * inverts;
 			pose++;
 		}
@@ -167,16 +188,31 @@ static rtexture_t *GL_TextureForSkinLayer(const qbyte *in, int width, int height
 
 static int Mod_LoadExternalSkin (char *basename, skinframe_t *skinframe, int precache)
 {
-	skinframe->base   = loadtextureimagewithmaskandnmap(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
-	if (!skinframe->base)
-		skinframe->base   = loadtextureimagewithmaskandnmap(loadmodel->texturepool, basename, 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
-	skinframe->fog    = image_masktex;
-	skinframe->nmap   = image_nmaptex;
+	skinframe->nmap   = loadtextureimage(loadmodel->texturepool, va("%s_nmap" , basename), 0, 0, false, (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
+	if (skinframe->nmap == NULL)
+		skinframe->nmap   = loadtextureimagebumpasnmap(loadmodel->texturepool, va("%s_bump" , basename), 0, 0, false, (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
+	if (skinframe->nmap != NULL)
+	{
+		skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
+		if (skinframe->base == NULL)
+			skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, basename, 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
+		skinframe->fog    = image_masktex;
+	}
+	else
+	{
+		skinframe->base   = loadtextureimagewithmaskandnmap(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
+		if (skinframe->base == NULL)
+			skinframe->base   = loadtextureimagewithmaskandnmap(loadmodel->texturepool, basename, 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
+		skinframe->fog    = image_masktex;
+		skinframe->nmap   = image_nmaptex;
+	}
 	skinframe->gloss  = loadtextureimage(loadmodel->texturepool, va("%s_gloss" , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
 	skinframe->pants  = loadtextureimage(loadmodel->texturepool, va("%s_pants" , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
 	skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
 	skinframe->glow   = loadtextureimage(loadmodel->texturepool, va("%s_glow"  , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
-	skinframe->merged = NULL;
+	if (skinframe->glow == NULL)
+		skinframe->glow = loadtextureimage(loadmodel->texturepool, va("%s_luma"  , basename), 0, 0, false, TEXF_ALPHA | (precache ? TEXF_PRECACHE : 0) | (r_mipskins.integer ? TEXF_MIPMAP : 0));
+	skinframe->merged = skinframe->base;
 	return skinframe->base != NULL || skinframe->pants != NULL || skinframe->shirt != NULL || skinframe->glow != NULL;
 }
 
@@ -207,13 +243,109 @@ static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, int width, int
 	return true;
 }
 
-void Mod_BuildMDLMD2MeshInfo(int *elements, float *texcoords, aliasvertex_t *posedata)
+void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
+{
+	aliaslayer_t *layer;
+	skin->flags = 0;
+	// fog texture only exists if some pixels are transparent...
+	if (skinframe->fog != NULL)
+		skin->flags |= ALIASSKIN_TRANSPARENT;
+	// fog and gloss layers always exist
+	skin->num_layers = 2;
+	if (skinframe->glow != NULL)
+		skin->num_layers++;
+	if (skinframe->merged != NULL)
+		skin->num_layers += 2;
+	if (skinframe->base != NULL)
+		skin->num_layers += 2;
+	if (skinframe->pants != NULL)
+		skin->num_layers += 2;
+	if (skinframe->shirt != NULL)
+		skin->num_layers += 2;
+	layer = skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
+	if (skinframe->glow != NULL)
+	{
+		layer->flags = 0;
+		layer->texture = skinframe->glow;
+		layer++;
+	}
+	if (skinframe->merged != NULL)
+	{
+		layer->flags = ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
+		if (skinframe->glow != NULL)
+			layer->flags |= ALIASLAYER_ADD;
+		layer->texture = skinframe->merged;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	if (skinframe->base != NULL)
+	{
+		layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
+		if (skinframe->glow != NULL)
+			layer->flags |= ALIASLAYER_ADD;
+		layer->texture = skinframe->base;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	if (skinframe->pants != NULL)
+	{
+		layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
+		if (skinframe->glow != NULL || skinframe->base != NULL)
+			layer->flags |= ALIASLAYER_ADD;
+		layer->texture = skinframe->pants;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	if (skinframe->shirt != NULL)
+	{
+		layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
+		if (skinframe->glow != NULL || skinframe->base != NULL || skinframe->pants != NULL)
+			layer->flags |= ALIASLAYER_ADD;
+		layer->texture = skinframe->shirt;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	layer->flags = ALIASLAYER_FOG;
+	layer->texture = skinframe->fog;
+	layer++;
+	layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_SPECULAR;
+	layer->texture = skinframe->gloss;
+	layer->nmap = skinframe->nmap;
+	layer++;
+	if (skinframe->merged != NULL)
+	{
+		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
+		layer->texture = skinframe->merged;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	if (skinframe->base != NULL)
+	{
+		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
+		layer->texture = skinframe->base;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	if (skinframe->pants != NULL)
+	{
+		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_PANTS;
+		layer->texture = skinframe->pants;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+	if (skinframe->shirt != NULL)
+	{
+		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
+		layer->texture = skinframe->shirt;
+		layer->nmap = skinframe->nmap;
+		layer++;
+	}
+}
+
+void Mod_BuildMDLMD2MeshInfo(int numverts, int numtris, int *elements, float *texcoords, aliasvertex_t *posedata)
 {
 	int i;
 	aliasmesh_t *mesh;
-	aliasskin_t *skin;
-	aliaslayer_t *layer;
-	skinframe_t *skinframe;
 
 	loadmodel->aliasnum_meshes = 1;
 	mesh = loadmodel->aliasdata_meshes = Mem_Alloc(loadmodel->mempool, loadmodel->aliasnum_meshes * sizeof(aliasmesh_t));
@@ -223,112 +355,18 @@ void Mod_BuildMDLMD2MeshInfo(int *elements, float *texcoords, aliasvertex_t *pos
 		mesh->num_frames += loadmodel->animscenes[i].framecount;
 	for (i = 0;i < loadmodel->numskins;i++)
 		mesh->num_skins += loadmodel->skinscenes[i].framecount;
-	mesh->num_triangles = loadmodel->numtris;
-	mesh->num_vertices = loadmodel->numverts;
+	mesh->num_triangles = numtris;
+	mesh->num_vertices = numverts;
 	mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(aliasskin_t));
 	mesh->data_elements = elements;
-	mesh->data_neighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
-	Mod_ValidateElements(mesh->data_elements, loadmodel->numtris, loadmodel->numverts, __FILE__, __LINE__);
-	Mod_BuildTriangleNeighbors(mesh->data_neighbors, elements, loadmodel->numtris);
+	mesh->data_neighbors = Mem_Alloc(loadmodel->mempool, numtris * sizeof(int[3]));
+	Mod_ValidateElements(mesh->data_elements, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
+	Mod_BuildTriangleNeighbors(mesh->data_neighbors, mesh->data_elements, mesh->num_triangles);
 	mesh->data_texcoords = texcoords;
 	mesh->data_vertices = posedata;
-	for (i = 0, skin = mesh->data_skins, skinframe = loadmodel->skinframes;i < mesh->num_skins;i++, skin++, skinframe++)
-	{
-		skin->flags = 0;
-		// fog texture only exists if some pixels are transparent...
-		if (skinframe->fog != NULL)
-			skin->flags |= ALIASSKIN_TRANSPARENT;
-		// fog and gloss layers always exist
-		skin->num_layers = 2;
-		if (skinframe->glow != NULL)
-			skin->num_layers++;
-		if (skinframe->merged != NULL)
-			skin->num_layers += 2;
-		if (skinframe->base != NULL)
-			skin->num_layers += 2;
-		if (skinframe->pants != NULL)
-			skin->num_layers += 2;
-		if (skinframe->shirt != NULL)
-			skin->num_layers += 2;
-		layer = skin->data_layers = Mem_Alloc(loadmodel->mempool, skin->num_layers * sizeof(aliaslayer_t));
-		if (skinframe->glow != NULL)
-		{
-			layer->flags = 0;
-			layer->texture = skinframe->glow;
-			layer++;
-		}
-		if (skinframe->merged != NULL)
-		{
-			layer->flags = ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
-			if (skinframe->glow != NULL)
-				layer->flags |= ALIASLAYER_ADD;
-			layer->texture = skinframe->merged;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		if (skinframe->base != NULL)
-		{
-			layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
-			if (skinframe->glow != NULL)
-				layer->flags |= ALIASLAYER_ADD;
-			layer->texture = skinframe->base;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		if (skinframe->pants != NULL)
-		{
-			layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
-			if (skinframe->glow != NULL || skinframe->base != NULL)
-				layer->flags |= ALIASLAYER_ADD;
-			layer->texture = skinframe->pants;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		if (skinframe->shirt != NULL)
-		{
-			layer->flags = ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
-			if (skinframe->glow != NULL || skinframe->base != NULL || skinframe->pants != NULL)
-				layer->flags |= ALIASLAYER_ADD;
-			layer->texture = skinframe->shirt;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		layer->flags = ALIASLAYER_FOG;
-		layer->texture = skinframe->fog;
-		layer++;
-		layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_SPECULAR;
-		layer->texture = skinframe->gloss;
-		layer->nmap = skinframe->nmap;
-		layer++;
-		if (skinframe->merged != NULL)
-		{
-			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_COLORMAPPED | ALIASLAYER_DIFFUSE;
-			layer->texture = skinframe->merged;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		if (skinframe->base != NULL)
-		{
-			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE;
-			layer->texture = skinframe->base;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		if (skinframe->pants != NULL)
-		{
-			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_PANTS;
-			layer->texture = skinframe->pants;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-		if (skinframe->shirt != NULL)
-		{
-			layer->flags = ALIASLAYER_DRAW_PER_LIGHT | ALIASLAYER_NODRAW_IF_NOTCOLORMAPPED | ALIASLAYER_DIFFUSE | ALIASLAYER_COLORMAP_SHIRT;
-			layer->texture = skinframe->shirt;
-			layer->nmap = skinframe->nmap;
-			layer++;
-		}
-	}
+	for (i = 0;i < mesh->num_skins;i++)
+		Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins + i, loadmodel->skinframes + i);
+	Mod_CalcAliasModelBBoxes();
 }
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
@@ -337,9 +375,9 @@ extern void R_Model_Alias_Draw(entity_render_t *ent);
 extern void R_Model_Alias_DrawFakeShadow(entity_render_t *ent);
 extern void R_Model_Alias_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Model_Alias_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor);
-void Mod_LoadAliasModel (model_t *mod, void *buffer)
+void Mod_LoadQ1AliasModel (model_t *mod, void *buffer)
 {
-	int i, j, version, numverts, totalposes, totalskins, skinwidth, skinheight, totalverts, groupframes, groupskins, *elements;
+	int i, j, version, totalposes, totalskins, skinwidth, skinheight, totalverts, groupframes, groupskins, *elements, numverts, numtris;
 	float scales, scalet, scale[3], translate[3], interval, *texcoords;
 	mdl_t *pinmodel;
 	stvert_t *pinstverts;
@@ -355,8 +393,6 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	skinframe_t tempskinframe;
 	animscene_t *tempskinscenes;
 	skinframe_t *tempskinframes;
-	modelyawradius = 0;
-	modelradius = 0;
 
 	datapointer = buffer;
 	pinmodel = (mdl_t *)datapointer;
@@ -381,10 +417,10 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	BOUNDI(skinwidth,0,4096);
 	skinheight = LittleLong (pinmodel->skinheight);
 	BOUNDI(skinheight,0,4096);
-	loadmodel->numverts = numverts = LittleLong(pinmodel->numverts);
-	BOUNDI(loadmodel->numverts,0,MAXALIASVERTS);
-	loadmodel->numtris = LittleLong(pinmodel->numtris);
-	BOUNDI(loadmodel->numtris,0,MAXALIASTRIS);
+	numverts = LittleLong(pinmodel->numverts);
+	BOUNDI(numverts,0,MAXALIASVERTS);
+	numtris = LittleLong(pinmodel->numtris);
+	BOUNDI(numtris,0,MAXALIASTRIS);
 	loadmodel->numframes = LittleLong(pinmodel->numframes);
 	BOUNDI(loadmodel->numframes,0,65536);
 	loadmodel->synctype = LittleLong (pinmodel->synctype);
@@ -424,7 +460,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	datapointer += sizeof(stvert_t) * numverts;
 
 	pintriangles = (dtriangle_t *)datapointer;
-	datapointer += sizeof(dtriangle_t) * loadmodel->numtris;
+	datapointer += sizeof(dtriangle_t) * numtris;
 
 	startframes = datapointer;
 	totalposes = 0;
@@ -477,7 +513,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 			interval = LittleFloat(pinskinintervals[0].interval);
 			if (interval < 0.01f)
-				Host_Error("Mod_LoadAliasModel: invalid interval\n");
+				Host_Error("Mod_LoadQ1AliasModel: invalid interval\n");
 		}
 
 		sprintf(loadmodel->skinscenes[i].name, "skin %i", i);
@@ -543,12 +579,12 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	}
 
 // load triangle data
-	elements = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * loadmodel->numtris);
+	elements = Mem_Alloc(loadmodel->mempool, sizeof(int[3]) * numtris);
 
 	// count the vertices used
 	for (i = 0;i < numverts*2;i++)
 		vertusage[i] = 0;
-	for (i = 0;i < loadmodel->numtris;i++)
+	for (i = 0;i < numtris;i++)
 	{
 		temptris[i][0] = LittleLong(pintriangles[i].vertindex[0]);
 		temptris[i][1] = LittleLong(pintriangles[i].vertindex[1]);
@@ -577,9 +613,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		else
 			vertremap[i] = -1; // not used at all
 	}
-	loadmodel->numverts = totalverts;
 	// remap the triangle references
-	for (i = 0;i < loadmodel->numtris;i++)
+	for (i = 0;i < numtris;i++)
 	{
 		elements[i*3+0] = vertremap[temptris[i][0]];
 		elements[i*3+1] = vertremap[temptris[i][1]];
@@ -596,63 +631,26 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 // load the frames
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, sizeof(animscene_t) * loadmodel->numframes);
 	posedata = Mem_Alloc(loadmodel->mempool, sizeof(aliasvertex_t) * totalposes * totalverts);
-
-	// LordHavoc: doing proper bbox for model
-	aliasbboxmin[0] = aliasbboxmin[1] = aliasbboxmin[2] = 1000000000;
-	aliasbboxmax[0] = aliasbboxmax[1] = aliasbboxmax[2] = -1000000000;
-
-	Mod_MDL_LoadFrames (startframes, numverts, scale, translate, elements, texcoords, posedata);
-
-	modelyawradius = sqrt(modelyawradius);
-	modelradius = sqrt(modelradius);
-	for (j = 0;j < 3;j++)
-	{
-		loadmodel->normalmins[j] = aliasbboxmin[j];
-		loadmodel->normalmaxs[j] = aliasbboxmax[j];
-		loadmodel->rotatedmins[j] = -modelradius;
-		loadmodel->rotatedmaxs[j] = modelradius;
-	}
-	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -(loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelyawradius);
-	loadmodel->yawmins[2] = loadmodel->normalmins[2];
-	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
-	loadmodel->radius = modelradius;
-	loadmodel->radius2 = modelradius * modelradius;
-
-	Mod_BuildMDLMD2MeshInfo(elements, texcoords, posedata);
+	Mod_MDL_LoadFrames (startframes, numverts, totalverts, scale, translate, texcoords, posedata, numtris, elements);
+	Mod_BuildMDLMD2MeshInfo(totalverts, numtris, elements, texcoords, posedata);
 }
 
-static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, aliasvertex_t *out, int *vertremap)
+static void Mod_MD2_ConvertVerts (vec3_t scale, vec3_t translate, trivertx_t *v, aliasvertex_t *out, int numverts, int *vertremap)
 {
 	int i;
-	float dist;
 	trivertx_t *in;
-	vec3_t temp;
-	for (i = 0;i < loadmodel->numverts;i++)
+	for (i = 0;i < numverts;i++)
 	{
 		in = v + vertremap[i];
-		temp[0] = in->v[0] * scale[0] + translate[0];
-		temp[1] = in->v[1] * scale[1] + translate[1];
-		temp[2] = in->v[2] * scale[2] + translate[2];
-		// update bounding box
-		if (temp[0] < aliasbboxmin[0]) aliasbboxmin[0] = temp[0];
-		if (temp[1] < aliasbboxmin[1]) aliasbboxmin[1] = temp[1];
-		if (temp[2] < aliasbboxmin[2]) aliasbboxmin[2] = temp[2];
-		if (temp[0] > aliasbboxmax[0]) aliasbboxmax[0] = temp[0];
-		if (temp[1] > aliasbboxmax[1]) aliasbboxmax[1] = temp[1];
-		if (temp[2] > aliasbboxmax[2]) aliasbboxmax[2] = temp[2];
-		dist = temp[0]*temp[0]+temp[1]*temp[1];
-		if (modelyawradius < dist)
-			modelyawradius = dist;
-		dist += temp[2]*temp[2];
-		if (modelradius < dist)
-			modelradius = dist;
-		VectorCopy(temp, out[i].origin);
+		out[i].origin[0] = in->v[0] * scale[0] + translate[0];
+		out[i].origin[1] = in->v[1] * scale[1] + translate[1];
+		out[i].origin[2] = in->v[2] * scale[2] + translate[2];
 	}
 }
 
 void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 {
-	int i, j, k, hashindex, num, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end, *elements;
+	int i, j, k, hashindex, num, numxyz, numst, xyz, st, skinwidth, skinheight, *vertremap, version, end, *elements, numverts, numtris;
 	float *stverts, s, t, scale[3], translate[3], *vertexbuffer, *svectorsbuffer, *tvectorsbuffer, *normalsbuffer, *texcoords;
 	aliasvertex_t *posedata;
 	md2_t *pinmodel;
@@ -709,7 +707,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->numskins = LittleLong(pinmodel->num_skins);
 	numxyz = LittleLong(pinmodel->num_xyz);
 	numst = LittleLong(pinmodel->num_st);
-	loadmodel->numtris = LittleLong(pinmodel->num_tris);
+	numtris = LittleLong(pinmodel->num_tris);
 	loadmodel->numframes = LittleLong(pinmodel->num_frames);
 
 	loadmodel->flags = 0; // there are no MD2 flags
@@ -727,14 +725,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 			loadmodel->skinscenes[i].framecount = 1;
 			loadmodel->skinscenes[i].loop = true;
 			loadmodel->skinscenes[i].framerate = 10;
-			loadmodel->skinframes[i].base = loadtextureimagewithmaskandnmap (loadmodel->texturepool, inskin, 0, 0, true, TEXF_ALPHA | TEXF_PRECACHE | (r_mipskins.integer ? TEXF_MIPMAP : 0), 1);
-			loadmodel->skinframes[i].fog = image_masktex;
-			loadmodel->skinframes[i].nmap = image_nmaptex;
-			loadmodel->skinframes[i].gloss = NULL;
-			loadmodel->skinframes[i].pants = NULL;
-			loadmodel->skinframes[i].shirt = NULL;
-			loadmodel->skinframes[i].glow = NULL;
-			loadmodel->skinframes[i].merged = NULL;
+			Mod_LoadExternalSkin (inskin, loadmodel->skinframes + i, true);
 			inskin += MD2MAX_SKINNAME;
 		}
 	}
@@ -762,11 +753,11 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	}
 
 	md2verthash = Mem_Alloc(tempmempool, 256 * sizeof(hash));
-	md2verthashdata = Mem_Alloc(tempmempool, loadmodel->numtris * 3 * sizeof(*hash));
+	md2verthashdata = Mem_Alloc(tempmempool, numtris * 3 * sizeof(*hash));
 	// swap the triangle list
 	num = 0;
-	elements = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
-	for (i = 0;i < loadmodel->numtris;i++)
+	elements = Mem_Alloc(loadmodel->mempool, numtris * sizeof(int[3]));
+	for (i = 0;i < numtris;i++)
 	{
 		for (j = 0;j < 3;j++)
 		{
@@ -803,7 +794,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 
 	Mem_Free(stverts);
 
-	loadmodel->numverts = num;
+	numverts = num;
 	vertremap = Mem_Alloc(loadmodel->mempool, num * sizeof(int));
 	texcoords = Mem_Alloc(loadmodel->mempool, num * sizeof(float[4]));
 	for (i = 0;i < num;i++)
@@ -817,22 +808,15 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	Mem_Free(md2verthash);
 	Mem_Free(md2verthashdata);
 
-	// load frames
-	// LordHavoc: doing proper bbox for model
-	aliasbboxmin[0] = aliasbboxmin[1] = aliasbboxmin[2] = 1000000000;
-	aliasbboxmax[0] = aliasbboxmax[1] = aliasbboxmax[2] = -1000000000;
-	modelyawradius = 0;
-	modelradius = 0;
-
-	datapointer = (base + LittleLong(pinmodel->ofs_frames));
 	// load the frames
+	datapointer = (base + LittleLong(pinmodel->ofs_frames));
 	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
-	posedata = Mem_Alloc(loadmodel->mempool, loadmodel->numverts * loadmodel->numframes * sizeof(trivertx_t));
+	posedata = Mem_Alloc(loadmodel->mempool, numverts * loadmodel->numframes * sizeof(trivertx_t));
 
-	vertexbuffer = Mem_Alloc(tempmempool, loadmodel->numverts * sizeof(float[4]) * 4);
-	svectorsbuffer = vertexbuffer + loadmodel->numverts * 4;
-	tvectorsbuffer = svectorsbuffer + loadmodel->numverts * 4;
-	normalsbuffer = tvectorsbuffer + loadmodel->numverts * 4;
+	vertexbuffer = Mem_Alloc(tempmempool, numverts * sizeof(float[4]) * 4);
+	svectorsbuffer = vertexbuffer + numverts * 4;
+	tvectorsbuffer = svectorsbuffer + numverts * 4;
+	normalsbuffer = tvectorsbuffer + numverts * 4;
 	for (i = 0;i < loadmodel->numframes;i++)
 	{
 		pinframe = (md2frame_t *)datapointer;
@@ -842,8 +826,8 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 			scale[j] = LittleFloat(pinframe->scale[j]);
 			translate[j] = LittleFloat(pinframe->translate[j]);
 		}
-		Mod_MD2_ConvertVerts(scale, translate, (void *)datapointer, posedata + i * loadmodel->numverts, vertremap);
-		Mod_BuildAliasVertexTextureVectors(loadmodel->numtris, elements, loadmodel->numverts, posedata + i * loadmodel->numverts, texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer);
+		Mod_MD2_ConvertVerts(scale, translate, (void *)datapointer, posedata + i * numverts, numverts, vertremap);
+		Mod_BuildAliasVertexTextureVectors(numverts, posedata + i * numverts, texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer, numtris, elements);
 		datapointer += numxyz * sizeof(trivertx_t);
 
 		strcpy(loadmodel->animscenes[i].name, pinframe->name);
@@ -856,23 +840,106 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 
 	Mem_Free(vertremap);
 
-	// LordHavoc: model bbox
-	modelyawradius = sqrt(modelyawradius);
-	modelradius = sqrt(modelradius);
-	for (j = 0;j < 3;j++)
-	{
-		loadmodel->normalmins[j] = aliasbboxmin[j];
-		loadmodel->normalmaxs[j] = aliasbboxmax[j];
-		loadmodel->rotatedmins[j] = -modelradius;
-		loadmodel->rotatedmaxs[j] = modelradius;
-	}
-	loadmodel->yawmins[0] = loadmodel->yawmins[1] = -(loadmodel->yawmaxs[0] = loadmodel->yawmaxs[1] = modelyawradius);
-	loadmodel->yawmins[2] = loadmodel->normalmins[2];
-	loadmodel->yawmaxs[2] = loadmodel->normalmaxs[2];
-	loadmodel->radius = modelradius;
-	loadmodel->radius2 = modelradius * modelradius;
+	Mod_BuildMDLMD2MeshInfo(numverts, numtris, elements, texcoords, posedata);
+}
 
-	Mod_BuildMDLMD2MeshInfo(elements, texcoords, posedata);
+void Mod_LoadQ3AliasModel(model_t *mod, void *buffer)
+{
+	int i, j, version;
+	float *vertexbuffer, *svectorsbuffer, *tvectorsbuffer, *normalsbuffer;
+	md3modelheader_t *pinmodel;
+	md3frameinfo_t *pinframe;
+	md3mesh_t *pinmesh;
+	aliasmesh_t *mesh;
+	skinframe_t tempskinframe;
+
+	pinmodel = buffer;
+
+	if (memcmp(pinmodel->identifier, "IDP3", 4))
+		Host_Error ("%s is not a MD3 (IDP3) file\n", loadmodel->name);
+	version = LittleLong (pinmodel->version);
+	if (version != MD3VERSION)
+		Host_Error ("%s has wrong version number (%i should be %i)",
+			loadmodel->name, version, MD3VERSION);
+
+	loadmodel->type = mod_alias;
+	loadmodel->aliastype = ALIASTYPE_ALIAS;
+	loadmodel->DrawSky = NULL;
+	loadmodel->Draw = R_Model_Alias_Draw;
+	loadmodel->DrawFakeShadow = R_Model_Alias_DrawFakeShadow;
+	loadmodel->DrawShadowVolume = R_Model_Alias_DrawShadowVolume;
+	loadmodel->DrawLight = R_Model_Alias_DrawLight;
+	loadmodel->flags = 0;
+	loadmodel->synctype = ST_RAND;
+
+	// set up some global info about the model
+	loadmodel->numframes = LittleLong(pinmodel->num_frames);
+	loadmodel->numskins = 1;
+	loadmodel->aliasnum_meshes = LittleLong(pinmodel->num_meshes);
+	loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numskins * sizeof(animscene_t));
+	loadmodel->skinscenes[0].firstframe = 0;
+	loadmodel->skinscenes[0].framecount = 1;
+	loadmodel->skinscenes[0].loop = true;
+	loadmodel->skinscenes[0].framerate = 10;
+
+	// load frameinfo
+	loadmodel->animscenes = Mem_Alloc(loadmodel->mempool, loadmodel->numframes * sizeof(animscene_t));
+	for (i = 0, pinframe = (md3frameinfo_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_frameinfo));i < loadmodel->numframes;i++, pinframe++)
+	{
+		strcpy(loadmodel->animscenes[i].name, pinframe->name);
+		loadmodel->animscenes[i].firstframe = i;
+		loadmodel->animscenes[i].framecount = 1;
+		loadmodel->animscenes[i].framerate = 10;
+		loadmodel->animscenes[i].loop = true;
+	}
+
+	// tags are not loaded yet
+
+	// load meshes
+	loadmodel->aliasdata_meshes = Mem_Alloc(loadmodel->mempool, loadmodel->aliasnum_meshes * sizeof(aliasmesh_t));
+	for (i = 0, pinmesh = (md3mesh_t *)((qbyte *)pinmodel + LittleLong(pinmodel->lump_meshes));i < loadmodel->aliasnum_meshes;i++, pinmesh = (md3mesh_t *)((qbyte *)pinmesh + LittleLong(pinmesh->lump_end)))
+	{
+		if (memcmp(pinmesh->identifier, "IDP3", 4))
+			Host_Error("Mod_LoadQ3AliasModel: invalid mesh identifier (not IDP3)\n");
+		mesh = loadmodel->aliasdata_meshes + i;
+		mesh->num_skins = loadmodel->numskins;
+		mesh->num_frames = LittleLong(pinmesh->num_frames);
+		mesh->num_vertices = LittleLong(pinmesh->num_vertices);
+		mesh->num_triangles = LittleLong(pinmesh->num_triangles);
+		mesh->data_skins = Mem_Alloc(loadmodel->mempool, mesh->num_skins * sizeof(aliasskin_t));
+		mesh->data_elements = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_neighbors = Mem_Alloc(loadmodel->mempool, mesh->num_triangles * sizeof(int[3]));
+		mesh->data_texcoords = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * sizeof(float[4]));
+		mesh->data_vertices = Mem_Alloc(loadmodel->mempool, mesh->num_vertices * mesh->num_frames * sizeof(aliasvertex_t));
+		for (j = 0;j < mesh->num_triangles * 3;j++)
+			mesh->data_elements[j] = LittleLong(((int *)((qbyte *)pinmesh + pinmesh->lump_elements))[j]);
+		for (j = 0;j < mesh->num_vertices;j++)
+		{
+			mesh->data_texcoords[j * 4 + 0] = LittleLong(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 0]);
+			mesh->data_texcoords[j * 4 + 1] = LittleLong(((float *)((qbyte *)pinmesh + pinmesh->lump_texcoords))[j * 2 + 1]);
+		}
+		for (j = 0;j < mesh->num_vertices * mesh->num_frames;j++)
+		{
+			mesh->data_vertices[j].origin[0] = LittleShort(((short *)((qbyte *)pinmesh + pinmesh->lump_framevertices))[j * 4 + 0]) * (1.0f / 64.0f);
+			mesh->data_vertices[j].origin[1] = LittleShort(((short *)((qbyte *)pinmesh + pinmesh->lump_framevertices))[j * 4 + 1]) * (1.0f / 64.0f);
+			mesh->data_vertices[j].origin[2] = LittleShort(((short *)((qbyte *)pinmesh + pinmesh->lump_framevertices))[j * 4 + 2]) * (1.0f / 64.0f);
+		}
+		vertexbuffer = Mem_Alloc(tempmempool, mesh->num_vertices * sizeof(float[4]) * 4);
+		svectorsbuffer = vertexbuffer + mesh->num_vertices * 4;
+		tvectorsbuffer = svectorsbuffer + mesh->num_vertices * 4;
+		normalsbuffer = tvectorsbuffer + mesh->num_vertices * 4;
+		for (j = 0;j < mesh->num_frames;j++)
+			Mod_BuildAliasVertexTextureVectors(mesh->num_vertices, mesh->data_vertices + j * mesh->num_vertices, mesh->data_texcoords, vertexbuffer, svectorsbuffer, tvectorsbuffer, normalsbuffer, mesh->num_triangles, mesh->data_elements);
+		Mem_Free(vertexbuffer);
+
+		memset(&tempskinframe, 0, sizeof(tempskinframe));
+		if (LittleLong(pinmesh->num_shaders) >= 1 && ((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name[0])
+			Mod_LoadExternalSkin (((md3shader_t *)((qbyte *) pinmesh + pinmesh->lump_shaders))->name, &tempskinframe, true);
+		Mod_ValidateElements(mesh->data_elements, mesh->num_triangles, mesh->num_vertices, __FILE__, __LINE__);
+		Mod_BuildTriangleNeighbors(mesh->data_neighbors, mesh->data_elements, mesh->num_triangles);
+		Mod_BuildAliasSkinFromSkinFrame(mesh->data_skins, &tempskinframe);
+	}
+	Mod_CalcAliasModelBBoxes();
 }
 
 extern void R_Model_Zymotic_DrawSky(entity_render_t *ent);
@@ -938,8 +1005,8 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->flags = 0; // there are no flags
 	loadmodel->numframes = pheader->numscenes;
 	loadmodel->synctype = ST_SYNC;
-	loadmodel->numtris = pheader->numtris;
-	loadmodel->numverts = 0;
+	//loadmodel->numtris = pheader->numtris;
+	//loadmodel->numverts = 0;
 
 	{
 		unsigned int i;
