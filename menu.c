@@ -1955,56 +1955,73 @@ void M_Keys_Key (int k)
 
 #define VIDEO_ITEMS 5
 
-int video_cursor;
+int video_cursor = 0;
+int video_cursor_table[] = {56, 68, 80, 92, 116};
+unsigned short video_resolutions[][2] = {{512,384}, {640,480}, {800,600}, {1024,768}, {1280,960}};
+int video_resolution;
+
+extern int current_vid_fullscreen;
+extern int current_vid_width;
+extern int current_vid_height;
+extern int current_vid_bitsperpixel;
+extern int current_vid_stencil;
+
 
 void M_Menu_Video_f (void)
 {
 	key_dest = key_menu;
 	m_state = m_video;
 	m_entersound = true;
+
+	// Look for the current resolution
+	for (video_resolution = 0; video_resolution < sizeof (video_resolutions) / sizeof (video_resolutions[0]); video_resolution++)
+	{
+		if (video_resolutions[video_resolution][0] == current_vid_width &&
+			video_resolutions[video_resolution][1] == current_vid_height)
+			break;
+	}
+
+	// Default to 800x600 if we didn't find it
+	if (video_resolution == sizeof (video_resolutions) / sizeof (video_resolutions[0]))
+	{
+		video_resolution = 2;
+		Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution][0]);
+		Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution][1]);
+	}
 }
 
 
 void M_Video_Draw (void)
 {
 	cachepic_t	*p;
-	float y;
 	const char* string;
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/vidmodes.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes.lmp");
 
-	y = 40;
-
 	// Resolution
-	M_Print(16, y, "            Resolution");
-	switch (vid_width.integer)
-	{
-		case 512: string = "512x384"; break;
-		case 800: string = "800x600"; break;
-		case 1024: string = "1024x768"; break;
-		case 1280: string = "1280x960"; break;
-		default: string = "640x480";
-	}
-	M_Print (220, y, string);
-	y += 8;
+	M_Print(16, video_cursor_table[0], "            Resolution");
+	string = va("%dx%d", video_resolutions[video_resolution][0], video_resolutions[video_resolution][1]);
+	M_Print (220, video_cursor_table[0], string);
 
 	// Bits per pixel
-	M_Print(16, y, "        Bits per pixel");
-	if (vid_bitsperpixel.integer == 32)
-		M_Print (220, y, "32");
-	else
-		M_Print (220, y, "16");
-	y += 8;
+	M_Print(16, video_cursor_table[1], "        Bits per pixel");
+	M_Print (220, video_cursor_table[1], (vid_bitsperpixel.integer == 32) ? "32" : "16");
 
-	M_Print(16, y, "            Fullscreen");M_DrawCheckbox(220, y, vid_fullscreen.integer);y += 8;
-	M_Print(16, y, "               Stencil");M_DrawCheckbox(220, y, vid_stencil.integer);y += 8;
+	// Fullscreen
+	M_Print(16, video_cursor_table[2], "            Fullscreen");
+	M_DrawCheckbox(220, video_cursor_table[2], vid_fullscreen.integer);
+	
+	// Stencil
+	M_Print(16, video_cursor_table[3], "               Stencil");
+	M_DrawCheckbox(220, video_cursor_table[3], vid_stencil.integer);
 
-	M_Print(220, y, "Apply");
+	// "Apply" button
+	M_Print(220, video_cursor_table[4], "Apply");
 
 	// Cursor
-	M_DrawCharacter(200, 40 + video_cursor*8, 12+((int)(realtime*4)&1));
+	M_DrawCharacter(200, video_cursor_table[video_cursor], 12+((int)(realtime*4)&1));
 }
 
 
@@ -2017,46 +2034,22 @@ void M_Menu_Video_AdjustSliders (int dir)
 		// Resolution
 		case 0:
 		{
-			int new_width, new_height;
-			if (dir < 0)
-				switch (vid_width.integer)
-				{
-					case 1280: new_width = 1024; break;
-					case 1024: new_width = 800; break;
-					case 640: new_width = 512; break;
-					case 512: new_width = 1280; break;
-					default: new_width = 640;
-				}
+			int new_resolution = video_resolution + dir;
+			if (new_resolution < 0)
+				video_resolution = sizeof (video_resolutions) / sizeof (video_resolutions[0]) - 1;
+			else if (new_resolution > sizeof (video_resolutions) / sizeof (video_resolutions[0]) - 1)
+				video_resolution = 0;
 			else
-				switch (vid_width.integer)
-				{
-					case 1280: new_width = 512; break;
-					case 1024: new_width = 1280; break;
-					case 800: new_width = 1024; break;
-					case 640: new_width = 800; break;
-					default: new_width = 640;
-				}
-			
-			switch (new_width)
-			{
-				case 1280: new_height = 960; break;
-				case 1024: new_height = 768; break;
-				case 800: new_height = 600; break;
-				case 512: new_height = 384; break;
-				default: new_height = 480;
-			}
+				video_resolution = new_resolution;
 
-			Cvar_SetValueQuick (&vid_width, new_width);
-			Cvar_SetValueQuick (&vid_height, new_height);
+			Cvar_SetValueQuick (&vid_width, video_resolutions[video_resolution][0]);
+			Cvar_SetValueQuick (&vid_height, video_resolutions[video_resolution][1]);
 			break;
 		}
 
 		// Bits per pixel
 		case 1:
-			if (vid_bitsperpixel.integer == 32)
-				Cvar_SetValueQuick (&vid_bitsperpixel, 16);
-			else
-				Cvar_SetValueQuick (&vid_bitsperpixel, 32);
+			Cvar_SetValueQuick (&vid_bitsperpixel, (vid_bitsperpixel.integer == 32) ? 16 : 32);
 			break;
 		case 2:
 			Cvar_SetValueQuick (&vid_fullscreen, !vid_fullscreen.integer);
@@ -2067,11 +2060,6 @@ void M_Menu_Video_AdjustSliders (int dir)
 	}
 }
 
-extern int current_vid_fullscreen;
-extern int current_vid_width;
-extern int current_vid_height;
-extern int current_vid_bitsperpixel;
-extern int current_vid_stencil;
 
 void M_Video_Key (int key)
 {
@@ -2711,7 +2699,8 @@ level_t		transfusionlevels[] =
 	{"e1m1",		"Cradle to Grave"},
 	{"e1m2",		"Wrong Side of the Tracks"},
 	{"e1m7",		"Altar of Stone"},
-	{"e4m8",		"The Hall Of Epiphany"},
+	{"e3m7",		"The Pit of Cerberus"},
+	{"e4m8",		"The Hall of the Epiphany"},
 
 	{"dm1",			"Monolith Building 11"},
 	{"dm2",			"Power!"},
@@ -2744,12 +2733,12 @@ level_t		transfusionlevels[] =
 episode_t	transfusionepisodes[] =
 {
 	{"Blood", 0, 8},
-	{"Blood Single Player", 8, 4},
-	{"Plasma Pack", 12, 4},
-	{"Cryptic Passage", 16, 2},
-	{"Blood 2", 18, 5},
-	{"Transfusion", 23, 6},
-	{"Conversions", 29, 5}
+	{"Blood Single Player", 8, 5},
+	{"Plasma Pack", 13, 4},
+	{"Cryptic Passage", 17, 2},
+	{"Blood 2", 19, 5},
+	{"Transfusion", 24, 6},
+	{"Conversions", 30, 5}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
