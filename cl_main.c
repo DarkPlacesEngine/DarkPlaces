@@ -418,7 +418,7 @@ void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float
 	}
 }
 
-void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona)
+void CL_AllocDlight(entity_render_t *ent, matrix4x4_t *matrix, float radius, float red, float green, float blue, float decay, float lifetime, int cubemapnum, int style, int shadowenable, vec_t corona, vec_t coronasizescale, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int flags)
 {
 	int i;
 	dlight_t *dl;
@@ -468,6 +468,11 @@ dlightsetup:
 	dl->style = style;
 	dl->shadow = shadowenable;
 	dl->corona = corona;
+	dl->flags = flags;
+	dl->coronasizescale = coronasizescale;
+	dl->ambientscale = ambientscale;
+	dl->diffusescale = diffusescale;
+	dl->specularscale = specularscale;
 }
 
 void CL_DecayLights(void)
@@ -741,7 +746,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			tempmatrix.m[0][3] = v[0];
 			tempmatrix.m[1][3] = v[1];
 			tempmatrix.m[2][3] = v[2];
-			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, 0, true, 0);
+			CL_AllocDlight(NULL, &tempmatrix, 100, e->persistent.muzzleflash, e->persistent.muzzleflash, e->persistent.muzzleflash, 0, 0, 0, 0, true, 0, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			e->persistent.muzzleflash -= cl.frametime * 10;
 		}
 		// LordHavoc: if the model has no flags, don't check each
@@ -814,7 +819,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// hack to make glowing player light shine on their gun
 			//if ((e - cl_entities) == cl.viewentity/* && !chase_active.integer*/)
 			//	dlightmatrix.m[2][3] += 30;
-			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, 0, true, 1);
+			CL_AllocDlight(&e->render, &e->render.matrix, dlightradius, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0, 0, 0, true, 1, 0.25, 0.25, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		}
 		// custom rtlight
 		if (e->state_current.lightpflags & PFLAGS_FULLDYNAMIC)
@@ -826,7 +831,8 @@ void CL_LinkNetworkEntity(entity_t *e)
 				VectorSet(light, 1, 1, 1);
 			if (light[3] == 0)
 				light[3] = 350;
-			CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0);
+			// FIXME: add ambient/diffuse/specular scales as an extension ontop of TENEBRAE_GFX_DLIGHTS?
+			CL_AllocDlight(&e->render, &e->render.matrix, light[3], light[0], light[1], light[2], 0, 0, e->state_current.skin, e->state_current.lightstyle, !(e->state_current.lightpflags & PFLAGS_NOSHADOW), (e->state_current.lightpflags & PFLAGS_CORONA) != 0, 0.25, 0, 1, 1, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 		}
 		// do trails
 		if (e->render.flags & RENDER_GLOWTRAIL)
@@ -1063,7 +1069,7 @@ void CL_RelinkBeams(void)
 			{
 				// FIXME: create a matrix from the beam start/end orientation
 				Matrix4x4_CreateTranslate(&tempmatrix, b->end[0], b->end[1], b->end[2]);
-				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, 0, true, 1);
+				CL_AllocDlight (NULL, &tempmatrix, 200, 0.3, 0.7, 1, 0, 0, 0, 0, true, 1, 0.25, 1, 0, 0, LIGHTFLAG_NORMALMODE | LIGHTFLAG_REALTIMEMODE);
 			}
 			if (cl_beams_polygons.integer)
 				continue;
