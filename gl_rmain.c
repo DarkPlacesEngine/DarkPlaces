@@ -52,7 +52,7 @@ unsigned short d_lightstylevalue[256];
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
 cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "1"};
-cvar_t r_staticworldlights = {0, "r_staticworldlights", "1"};
+cvar_t r_shadow_staticworldlights = {0, "r_shadow_staticworldlights", "1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
@@ -221,7 +221,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
 	Cvar_RegisterVariable (&r_shadows);
-	Cvar_RegisterVariable (&r_staticworldlights);
+	Cvar_RegisterVariable (&r_shadow_staticworldlights);
 	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_fullbrights);
 	Cvar_RegisterVariable (&r_wateralpha);
@@ -892,7 +892,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 		if (!visiblevolumes)
 			R_Shadow_Stage_ShadowVolumes();
 		ent = &cl_entities[0].render;
-		if (wl->shadowvolume && r_staticworldlights.integer)
+		if (wl->shadowvolume && r_shadow_staticworldlights.integer)
 			R_Shadow_DrawWorldLightShadowVolume(&ent->matrix, wl);
 		else
 			R_TestAndDrawShadowVolume(ent, wl->origin, cullradius / ent->scale, lightradius / ent->scale, clipmins, clipmaxs);
@@ -958,7 +958,7 @@ void R_ShadowVolumeLighting (int visiblevolumes)
 
 		if (!visiblevolumes)
 			R_Shadow_Stage_ShadowVolumes();
-		if (sl->shadowvolume && r_staticworldlights.integer)
+		if (sl->shadowvolume && r_shadow_staticworldlights.integer)
 			R_DrawWorldLightShadowVolume(&cl_entities[0].render.matrix, sl->shadowvolume);
 		else
 			R_TestAndDrawShadowVolume(&cl_entities[0].render, sl->origin, cullradius, lightradius);
