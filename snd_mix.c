@@ -290,8 +290,33 @@ void S_PaintChannels(int endtime)
 			if (!S_LoadSound (sfx, true))
 				continue;
 
-			ltime = paintedtime;
+			// if the sound hasn't been painted last time, update his position
+			if (ch->lastptime < paintedtime)
+			{
+				ch->pos += paintedtime - ch->lastptime;
 
+				// If the sound should have ended by then
+				if ((unsigned int)ch->pos > sfx->total_length)
+				{
+					int loopstart;
+
+					if (ch->forceloop)
+						loopstart = 0;
+					else
+						loopstart = -1;
+					if (sfx->loopstart >= 0)
+						loopstart = sfx->loopstart;
+
+					// If the sound is looped
+					if (loopstart >= 0)
+						ch->pos = (ch->pos - sfx->total_length) % (sfx->total_length - loopstart) + loopstart;
+					else 
+						ch->pos = sfx->total_length;
+					ch->end = paintedtime + sfx->total_length - ch->pos;
+				}
+			}
+
+			ltime = paintedtime;
 			while (ltime < end)
 			{
 				qboolean stop_paint;
@@ -309,7 +334,11 @@ void S_PaintChannels(int endtime)
 					else
 						stop_paint = !SND_PaintChannelFrom16(ch, count);
 
-					ltime += count;
+					if (!stop_paint)
+					{
+						ltime += count;
+						ch->lastptime = ltime;
+					}
 				}
 				else
 					stop_paint = false;
