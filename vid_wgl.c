@@ -1702,13 +1702,13 @@ void IN_Commands (void)
 	{
 		if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
 		{
-			key_index = (i < 4) ? K_JOY1 : K_AUX1;
+			key_index = (i < 16) ? K_JOY1 : K_AUX1;
 			Key_Event (key_index + i, 0, true);
 		}
 
 		if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
 		{
-			key_index = (i < 4) ? K_JOY1 : K_AUX1;
+			key_index = (i < 16) ? K_JOY1 : K_AUX1;
 			Key_Event (key_index + i, 0, false);
 		}
 	}
