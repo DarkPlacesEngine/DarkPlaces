@@ -217,7 +217,7 @@ LoadTGA
 */
 qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 {
-	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen;
+	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen, pindex;
 	qbyte *pixbuf, *image_rgba;
 	qbyte *fin, *enddata;
 	TargaHeader targa_header;
@@ -270,9 +270,9 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
-		if (targa_header.colormap_length != 256)
+		if (targa_header.colormap_length > 256)
 		{
-			Con_Printf ("LoadTGA: only 256 colormap_length supported\n");
+			Con_Printf ("LoadTGA: only up to 256 colormap_length supported\n");
 			PrintTargaHeader(&targa_header);
 			return NULL;
 		}
@@ -381,7 +381,10 @@ qbyte *LoadTGA (qbyte *f, int matchwidth, int matchheight)
 					case 1:
 					case 9:
 						// colormapped
-						p = palette + (*fin++) * 4;
+						pindex = *fin++;
+						if (pindex >= targa_header.colormap_length)
+							pindex = 0; // error
+						p = palette + pindex * 4;
 						red = p[0];
 						green = p[1];
 						blue = p[2];
