@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // host.c -- coordinates spawning and killing of local servers
 
 #include "quakedef.h"
+#include <time.h>
 
 /*
 
@@ -791,6 +792,9 @@ Host_Init
 */
 void Host_Init (void)
 {
+	// LordHavoc: quake never seeded the random number generator before... heh
+	srand(time(NULL));
+
 	com_argc = host_parms.argc;
 	com_argv = host_parms.argv;
 	// FIXME: this is evil, but possibly temporary
