@@ -211,9 +211,9 @@ void CDAudio_Resume(void)
 
 static void CD_f (void)
 {
-	char	*command;
-	int		ret;
-	int		n;
+	const char	*command;
+	int			ret;
+	int			n;
 
 	if (Cmd_Argc() < 2)
 		return;
