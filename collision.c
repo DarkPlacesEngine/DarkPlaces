@@ -401,12 +401,12 @@ void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmode
 				rhc.trace->plane.normal[1] = DotProduct (tempd, left);
 				rhc.trace->plane.normal[2] = DotProduct (tempd, up);
 			}
-			// fix offset
-			VectorAdd (rhc.trace->endpos, offset, rhc.trace->endpos);
 			rhc.trace->ent = (void *) cent;
 		}
 		else if (rhc.trace->allsolid || rhc.trace->startsolid)
 			rhc.trace->ent = (void *) cent;
+		// fix offset
+		VectorAdd (rhc.trace->endpos, offset, rhc.trace->endpos);
 	}
 	else
 	{
