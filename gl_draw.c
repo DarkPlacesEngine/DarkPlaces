@@ -443,8 +443,13 @@ void R_DrawQueue(void)
 			if (strcmp(str, currentpic))
 			{
 				currentpic = str;
-				pic = Draw_CachePic(str);
-				m.tex[0] = R_GetTexture(pic->tex);
+				if (*str)
+				{
+					pic = Draw_CachePic(str);
+					m.tex[0] = R_GetTexture(pic->tex);
+				}
+				else
+					m.tex[0] = 0;
 				R_Mesh_TextureState(&m);
 			}
 			if (*str)
