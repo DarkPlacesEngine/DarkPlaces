@@ -1593,7 +1593,7 @@ void Host_Stopdemo_f (void)
 // we have to delay map and game loads until AFTER video is initialized
 void Host_PerformSpawnServerAndLoadGame(void)
 {
-	if (vid_hidden)
+	if (vid_hidden && cls.state != ca_dedicated)
 		return;
 	if (sv_loadgame[0])
 		Host_PerformLoadGame(sv_loadgame);
