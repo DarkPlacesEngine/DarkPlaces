@@ -85,6 +85,23 @@ static int backendunits, backendactive;
 static qbyte *varray_bcolor;
 static mempool_t *gl_backend_mempool;
 
+/*
+note: here's strip order for a terrain row:
+0--1--2--3--4
+|\ |\ |\ |\ |
+| \| \| \| \|
+A--B--C--D--E
+
+A0B, 01B, B1C, 12C, C2D, 23D, D3E, 34E
+
+*elements++ = i + row;
+*elements++ = i;
+*elements++ = i + row + 1;
+*elements++ = i;
+*elements++ = i + 1;
+*elements++ = i + row + 1;
+*/
+
 int polygonelements[768];
 
 void GL_Backend_AllocArrays(void)
