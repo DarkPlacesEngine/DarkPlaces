@@ -170,12 +170,12 @@ typedef struct
 	int 		(*Read) (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 	int 		(*Write) (int socket, qbyte *buf, int len, struct qsockaddr *addr);
 	int 		(*Broadcast) (int socket, qbyte *buf, int len);
-	char *		(*AddrToString) (struct qsockaddr *addr);
+	char *		(*AddrToString) (const struct qsockaddr *addr);
 	int 		(*StringToAddr) (const char *string, struct qsockaddr *addr);
 	int 		(*GetSocketAddr) (int socket, struct qsockaddr *addr);
-	int 		(*GetNameFromAddr) (struct qsockaddr *addr, char *name);
+	int 		(*GetNameFromAddr) (const struct qsockaddr *addr, char *name);
 	int 		(*GetAddrFromName) (const char *name, struct qsockaddr *addr);
-	int			(*AddrCompare) (struct qsockaddr *addr1, struct qsockaddr *addr2);
+	int			(*AddrCompare) (const struct qsockaddr *addr1, const struct qsockaddr *addr2);
 	int			(*GetSocketPort) (struct qsockaddr *addr);
 	int			(*SetSocketPort) (struct qsockaddr *addr, int port);
 } net_landriver_t;
