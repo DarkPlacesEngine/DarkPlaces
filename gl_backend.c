@@ -1047,14 +1047,14 @@ void R_Mesh_Finish(void)
 			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, 0);CHECKGLERROR
 		}
 	}
-	for (i = backendarrayunits - 1;i >= 0;i--)
+	for (i = 0;i < backendarrayunits;i++)
 	{
-		GL_ActiveTexture(i);
+		GL_ActiveTexture(backendarrayunits - 1 - i);
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
-	for (i = backendunits - 1;i >= 0;i--)
+	for (i = 0;i < backendunits;i++)
 	{
-		GL_ActiveTexture(i);
+		GL_ActiveTexture(backendarrayunits - 1 - i);
 		qglDisable(GL_TEXTURE_1D);CHECKGLERROR
 		qglDisable(GL_TEXTURE_2D);CHECKGLERROR
 		if (gl_texture3d)
