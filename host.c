@@ -864,6 +864,8 @@ Host_Init
 */
 void Host_Init (void)
 {
+	int i;
+
 	// LordHavoc: quake never seeded the random number generator before... heh
 	srand(time(NULL));
 
@@ -928,6 +930,12 @@ void Host_Init (void)
 		Cbuf_InsertText("exec teu.rc\n");
 	else
 		Cbuf_InsertText("exec quake.rc\n");
+
+	// check for special benchmark mode
+	i = COM_CheckParm("-benchmark");
+	if (i && i + 1 < com_argc)
+		Cbuf_InsertText(va("timedemo %s\n", com_argv[i + 1]));
+
 	Cbuf_Execute();
 }
 
