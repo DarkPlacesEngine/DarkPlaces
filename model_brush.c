@@ -4563,7 +4563,7 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 	return nativecontents;
 }
 
-//extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
+extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
 extern void R_Q3BSP_Draw(struct entity_render_s *ent);
 extern void R_Q3BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
 extern void R_Q3BSP_DrawLight(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
@@ -4665,6 +4665,12 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		mod->yawmaxs[2] = mod->normalmaxs[2];
 		mod->radius = modelradius;
 		mod->radius2 = modelradius * modelradius;
+
+		for (i = 0;i < mod->brushq3.data_thismodel->numfaces;i++)
+			if (mod->brushq3.data_thismodel->firstface[i].texture->renderflags & Q3MTEXTURERENDERFLAGS_SKY)
+				break;
+		if (i < mod->brushq3.data_thismodel->numfaces)
+			mod->DrawSky = R_Q3BSP_DrawSky;
 	}
 }
 
