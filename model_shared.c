@@ -479,11 +479,27 @@ void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, c
 			Con_Printf("Mod_ValidateElements: out of bounds element detected at %s:%d\n", filename, fileline);
 }
 
+void Mod_BuildBumpVectors(const float *v0, const float *v1, const float *v2, const float *tc0, const float *tc1, const float *tc2, float *svector3f, float *tvector3f, float *normal3f)
+{
+	float f;
+	normal3f[0] = (v1[1] - v0[1]) * (v2[2] - v0[2]) - (v1[2] - v0[2]) * (v2[1] - v0[1]);
+	normal3f[1] = (v1[2] - v0[2]) * (v2[0] - v0[0]) - (v1[0] - v0[0]) * (v2[2] - v0[2]);
+	normal3f[2] = (v1[0] - v0[0]) * (v2[1] - v0[1]) - (v1[1] - v0[1]) * (v2[0] - v0[0]);
+	VectorNormalize(normal3f);
+	tvector3f[0] = ((tc1[0] - tc0[0]) * (v2[0] - v0[0]) - (tc2[0] - tc0[0]) * (v1[0] - v0[0]));
+	tvector3f[1] = ((tc1[0] - tc0[0]) * (v2[1] - v0[1]) - (tc2[0] - tc0[0]) * (v1[1] - v0[1]));
+	tvector3f[2] = ((tc1[0] - tc0[0]) * (v2[2] - v0[2]) - (tc2[0] - tc0[0]) * (v1[2] - v0[2]));
+	f = -DotProduct(tvector3f, normal3f);
+	VectorMA(tvector3f, f, normal3f, tvector3f);
+	VectorNormalize(tvector3f);
+	CrossProduct(normal3f, tvector3f, svector3f);
+}
+
 // warning: this is an expensive function!
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex3f, const float *texcoord2f, const int *elements, float *svector3f, float *tvector3f, float *normal3f)
 {
 	int i, tnum;
-	float sdir[3], tdir[3], normal[3], f, *v;
+	float sdir[3], tdir[3], normal[3], *v;
 	const int *e;
 	// clear the vectors
 	if (svector3f)
@@ -495,73 +511,32 @@ void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const flo
 	// process each vertex of each triangle and accumulate the results
 	for (tnum = 0, e = elements;tnum < numtriangles;tnum++, e += 3)
 	{
-		// calculate texture matrix for triangle
-		// and then accumulate matrix onto verts used by triangle
-#if 0
-		// 3 assignments, 3 subtracts
-		VectorSubtract(vertex3f + e[1] * 3, vertex3f + e[0] * 3, edgedir1);
-		// 3 assignments, 3 subtracts
-		VectorSubtract(vertex3f + e[2] * 3, vertex3f + e[0] * 3, edgedir2);
-		// 3 assignments, 3 subtracts, 6 multiplies
-		CrossProduct(edgedir1, edgedir2, normal);
-#else
-		// 3 assignments, 15 subtracts, 6 multiplies
-		normal[0] = (vertex3f[e[1] * 3 + 1] - vertex3f[e[0] * 3 + 1]) * (vertex3f[e[2] * 3 + 2] - vertex3f[e[0] * 3 + 2]) - (vertex3f[e[1] * 3 + 2] - vertex3f[e[0] * 3 + 2]) * (vertex3f[e[2] * 3 + 1] - vertex3f[e[0] * 3 + 1]);
-		normal[1] = (vertex3f[e[1] * 3 + 2] - vertex3f[e[0] * 3 + 2]) * (vertex3f[e[2] * 3 + 0] - vertex3f[e[0] * 3 + 0]) - (vertex3f[e[1] * 3 + 0] - vertex3f[e[0] * 3 + 0]) * (vertex3f[e[2] * 3 + 2] - vertex3f[e[0] * 3 + 2]);
-		normal[2] = (vertex3f[e[1] * 3 + 0] - vertex3f[e[0] * 3 + 0]) * (vertex3f[e[2] * 3 + 1] - vertex3f[e[0] * 3 + 1]) - (vertex3f[e[1] * 3 + 1] - vertex3f[e[0] * 3 + 1]) * (vertex3f[e[2] * 3 + 0] - vertex3f[e[0] * 3 + 0]);
-#endif
-
-		// 1 assignment, 2 adds, 3 multiplies, 1 compare
-		f = DotProduct(normal, normal);
-		if (f >= 0.001)
+		Mod_BuildBumpVectors(vertex3f + e[0] * 3, vertex3f + e[1] * 3, vertex3f + e[2] * 3, texcoord2f + e[0] * 2, texcoord2f + e[1] * 2, texcoord2f + e[2] * 2, sdir, tdir, normal);
+		if (svector3f)
 		{
-			// 4 assignments, 1 divide, 1 sqrt, 3 multiplies
-			f = 1.0f / f;
-			VectorScale(normal, f, normal);
-			if (normal3f)
+			for (i = 0;i < 3;i++)
 			{
-				// 9 assignments, 9 adds
-				for (i = 0;i < 3;i++)
-				{
-					normal3f[e[i]*3  ] += normal[0];
-					normal3f[e[i]*3+1] += normal[1];
-					normal3f[e[i]*3+2] += normal[2];
-				}
+				svector3f[e[i]*3  ] += sdir[0];
+				svector3f[e[i]*3+1] += sdir[1];
+				svector3f[e[i]*3+2] += sdir[2];
 			}
-			if (tvector3f || svector3f)
+		}
+		if (tvector3f)
+		{
+			for (i = 0;i < 3;i++)
 			{
-				// 3 assignments, 15 subtracts, 6 multiplies
-				tdir[0] = ((texcoord2f[e[1] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[2]*3+0] - vertex3f[e[0]*3+0]) - (texcoord2f[e[2] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[1]*3+0] - vertex3f[e[0]*3+0]));
-				tdir[1] = ((texcoord2f[e[1] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[2]*3+1] - vertex3f[e[0]*3+1]) - (texcoord2f[e[2] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[1]*3+1] - vertex3f[e[0]*3+1]));
-				tdir[2] = ((texcoord2f[e[1] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[2]*3+2] - vertex3f[e[0]*3+2]) - (texcoord2f[e[2] * 2] - texcoord2f[e[0] * 2]) * (vertex3f[e[1]*3+2] - vertex3f[e[0]*3+2]));
-				// 1 assignments, 1 negates, 2 adds, 3 multiplies
-				f = -DotProduct(tdir, normal);
-				// 3 assignments, 3 adds, 3 multiplies
-				VectorMA(tdir, f, normal, tdir);
-				// 4 assignments, 1 divide, 1 sqrt, 2 adds, 6 multiplies
-				VectorNormalize(tdir);
-				if (tvector3f)
-				{
-					// 9 assignments, 9 adds
-					for (i = 0;i < 3;i++)
-					{
-						tvector3f[e[i]*3  ] += tdir[0];
-						tvector3f[e[i]*3+1] += tdir[1];
-						tvector3f[e[i]*3+2] += tdir[2];
-					}
-				}
-				if (svector3f)
-				{
-					// 3 assignments, 3 subtracts, 6 multiplies
-					CrossProduct(normal, tdir, sdir);
-					// 9 assignments, 9 adds
-					for (i = 0;i < 3;i++)
-					{
-						svector3f[e[i]*3  ] += sdir[0];
-						svector3f[e[i]*3+1] += sdir[1];
-						svector3f[e[i]*3+2] += sdir[2];
-					}
-				}
+				tvector3f[e[i]*3  ] += tdir[0];
+				tvector3f[e[i]*3+1] += tdir[1];
+				tvector3f[e[i]*3+2] += tdir[2];
+			}
+		}
+		if (normal3f)
+		{
+			for (i = 0;i < 3;i++)
+			{
+				normal3f[e[i]*3  ] += normal[0];
+				normal3f[e[i]*3+1] += normal[1];
+				normal3f[e[i]*3+2] += normal[2];
 			}
 		}
 	}
@@ -860,3 +835,67 @@ int Mod_LoadSkinFrame_Internal(skinframe_t *skinframe, char *basename, int textu
 	}
 	return true;
 }
+
+void Mod_GetTerrainVertex3fTexCoord2fFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+{
+	float v[3], tc[3];
+	v[0] = ix;
+	v[1] = iy;
+	if (ix >= 0 && iy >= 0 && ix < imagewidth && iy < imageheight)
+		v[2] = (imagepixels[((iy*imagewidth)+ix)*4+0] + imagepixels[((iy*imagewidth)+ix)*4+1] + imagepixels[((iy*imagewidth)+ix)*4+2]) * (1.0f / 765.0f);
+	else
+		v[2] = 0;
+	Matrix4x4_Transform(pixelstepmatrix, v, vertex3f);
+	Matrix4x4_Transform(pixeltexturestepmatrix, v, tc);
+	texcoord2f[0] = tc[0];
+	texcoord2f[1] = tc[1];
+}
+
+void Mod_GetTerrainVertexFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int ix, int iy, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+{
+	float v[3], vup[3], vdown[3], vleft[3], vright[3];
+	float tc[3], tcup[3], tcdown[3], tcleft[3], tcright[3];
+	float sv[3], tv[3], nl[3];
+	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy - 1, vup, tcup, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix, iy + 1, vdown, tcdown, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix - 1, iy, vleft, tcleft, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_GetTerrainVertex3fTexCoord2fFromRGBA(imagepixels, imagewidth, imageheight, ix + 1, iy, vright, tcright, pixelstepmatrix, pixeltexturestepmatrix);
+	Mod_BuildBumpVectors(vertex3f, vup, vright, texcoord2f, tcup, tcright, svector3f, tvector3f, normal3f);
+	Mod_BuildBumpVectors(vertex3f, vright, vdown, texcoord2f, tcright, tcdown, sv, tv, nl);
+	VectorAdd(svector3f, sv, svector3f);
+	VectorAdd(tvector3f, tv, tvector3f);
+	VectorAdd(normal3f, nl, normal3f);
+	Mod_BuildBumpVectors(vertex3f, vdown, vleft, texcoord2f, tcdown, tcleft, sv, tv, nl);
+	VectorAdd(svector3f, sv, svector3f);
+	VectorAdd(tvector3f, tv, tvector3f);
+	VectorAdd(normal3f, nl, normal3f);
+	Mod_BuildBumpVectors(vertex3f, vleft, vup, texcoord2f, tcleft, tcup, sv, tv, nl);
+	VectorAdd(svector3f, sv, svector3f);
+	VectorAdd(tvector3f, tv, tvector3f);
+	VectorAdd(normal3f, nl, normal3f);
+}
+
+void Mod_ConstructTerrainPatchFromRGBA(const qbyte *imagepixels, int imagewidth, int imageheight, int x1, int y1, int width, int height, int *element3i, int *neighbor3i, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, matrix4x4_t *pixelstepmatrix, matrix4x4_t *pixeltexturestepmatrix)
+{
+	int x, y, ix, iy, *e;
+	e = element3i;
+	for (y = 0;y < height;y++)
+	{
+		for (x = 0;x < width;x++)
+		{
+			e[0] = (y + 1) * (width + 1) + (x + 0);
+			e[1] = (y + 0) * (width + 1) + (x + 0);
+			e[2] = (y + 1) * (width + 1) + (x + 1);
+			e[3] = (y + 0) * (width + 1) + (x + 0);
+			e[4] = (y + 0) * (width + 1) + (x + 1);
+			e[5] = (y + 1) * (width + 1) + (x + 1);
+			e += 6;
+		}
+	}
+	Mod_BuildTriangleNeighbors(neighbor3i, element3i, width*height*2);
+	for (y = 0, iy = y1;y < height + 1;y++, iy++)
+		for (x = 0, ix = x1;x < width + 1;x++, ix++, vertex3f += 3, texcoord2f += 2, svector3f += 3, tvector3f += 3, normal3f += 3)
+			Mod_GetTerrainVertexFromRGBA(imagepixels, imagewidth, imageheight, ix, iy, vertex3f, texcoord2f, svector3f, tvector3f, normal3f, pixelstepmatrix, pixeltexturestepmatrix);
+}
+
