@@ -510,7 +510,7 @@ void CL_MoveLerpEntityStates(entity_t *ent)
 	else// if (ent->state_current.flags & RENDER_STEP)
 	{
 		// monster interpolation
-		if (DotProduct(odelta, odelta) + DotProduct(adelta, adelta) > 0.01)
+		if (DotProduct(odelta, odelta) + DotProduct(adelta, adelta) > 0.01 || cl.mtime[0] - ent->persistent.lerpstarttime >= 0.1)
 		{
 			ent->persistent.lerpdeltatime = cl.time - ent->persistent.lerpstarttime;
 			ent->persistent.lerpstarttime = cl.mtime[1];
