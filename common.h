@@ -189,5 +189,7 @@ int matchpattern(char *in, char *pattern, int caseinsensitive);
 stringlist_t *listdirectory(char *path);
 void freedirectory(stringlist_t *list);
 
+char *SearchInfostring(const char *infostring, const char *key);
+
 #endif
 

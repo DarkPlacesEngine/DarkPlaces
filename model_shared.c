@@ -242,11 +242,10 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	// LordHavoc: unload the existing model in this slot (if there is one)
 	Mod_UnloadModel(mod);
 	mod->isworldmodel = isworldmodel;
-	mod->needload = false;
 	mod->used = true;
 	mod->crc = crc;
-	// errors can prevent the corresponding mod->error = false;
-	mod->error = true;
+	// errors can prevent the corresponding mod->needload = false;
+	mod->needload = true;
 
 	// all models use memory, so allocate a memory pool
 	mod->mempool = Mem_AllocPool(mod->name);
@@ -266,7 +265,7 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	Mem_Free(buf);
 
 	// no errors occurred
-	mod->error = false;
+	mod->needload = false;
 	return mod;
 }
 
@@ -293,16 +292,6 @@ Mod_ClearAll
 */
 void Mod_ClearAll (void)
 {
-}
-
-void Mod_ClearErrorModels (void)
-{
-	int i;
-	model_t *mod;
-
-	for (i = 0, mod = mod_known;i < MAX_MOD_KNOWN;i++, mod++)
-		if (mod->error)
-			Mod_FreeModel(mod);
 }
 
 void Mod_ClearUsed(void)

@@ -2092,8 +2092,9 @@ setcolor(clientent, value)
 */
 void PF_setcolor (void)
 {
-	client_t	*client;
-	int			entnum, i;
+	client_t *client;
+	int entnum, i;
+	eval_t *val;
 
 	entnum = G_EDICTNUM(OFS_PARM0);
 	i = G_FLOAT(OFS_PARM1);
@@ -2105,7 +2106,10 @@ void PF_setcolor (void)
 	}
 
 	client = &svs.clients[entnum-1];
+	if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
+		val->_float = i;
 	client->colors = i;
+	client->old_colors = i;
 	client->edict->v->team = (i & 15) + 1;
 
 	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);

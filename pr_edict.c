@@ -119,6 +119,7 @@ int eval_movement;
 int eval_pmodel;
 int eval_punchvector;
 int eval_viewzoom;
+int eval_clientcolors;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -170,6 +171,7 @@ void FindEdictFieldOffsets(void)
 	eval_pmodel = FindFieldOffset("pmodel");
 	eval_punchvector = FindFieldOffset("punchvector");
 	eval_viewzoom = FindFieldOffset("viewzoom");
+	eval_clientcolors = FindFieldOffset("clientcolors");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
@@ -1177,7 +1179,8 @@ dpfield_t dpfields[] =
 	{ev_float, "ping"},
 	{ev_vector, "movement"},
 	{ev_float, "pmodel"},
-	{ev_vector, "punchvector"}
+	{ev_vector, "punchvector"},
+	{ev_float, "clientcolors"}
 };
 
 /*

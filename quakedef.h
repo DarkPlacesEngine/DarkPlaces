@@ -152,7 +152,8 @@ extern char *buildstring;
 
 // LordHavoc: increased player limit from 16 to 64
 #define	MAX_SCOREBOARD		64
-#define	MAX_SCOREBOARDNAME	32
+// LordHavoc: increased name limit from 32 to 64 characters
+#define	MAX_SCOREBOARDNAME	64
 
 #define	SOUND_CHANNELS		8
 
@@ -170,7 +171,7 @@ extern char *buildstring;
 #include "wad.h"
 #include "draw.h"
 #include "screen.h"
-#include "net.h"
+#include "netconn.h"
 #include "protocol.h"
 #include "cmd.h"
 #include "sbar.h"
@@ -211,17 +212,17 @@ extern int host_framecount;
 // not bounded in any way, changed at start of every frame, never reset
 extern double realtime;
 
-void Host_ClearMemory (void);
-void Host_ServerFrame (void);
-void Host_InitCommands (void);
-void Host_Init (void);
+void Host_ClearMemory(void);
+void Host_InitCommands(void);
+void Host_Init(void);
 void Host_Shutdown(void);
-void Host_Error (const char *error, ...);
-void Host_EndGame (const char *message, ...);
-void Host_Frame (float time);
-void Host_Quit_f (void);
-void Host_ClientCommands (const char *fmt, ...);
-void Host_ShutdownServer (qboolean crash);
+void Host_Error(const char *error, ...);
+void Host_EndGame(const char *message, ...);
+void Host_Frame(float time);
+void Host_Quit_f(void);
+void Host_ClientCommands(const char *fmt, ...);
+void Host_ShutdownServer(qboolean crash);
+void Host_Reconnect_f(void);
 
 // skill level for currently loaded level (in case the user changes the cvar while the level is running, this reflects the level actually in use)
 extern int current_skill;

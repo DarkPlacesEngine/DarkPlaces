@@ -27,8 +27,8 @@ void CL_FinishTimeDemo (void);
 
 DEMO CODE
 
-When a demo is playing back, all NET_SendMessages are skipped, and
-NET_GetMessages are read from the demo file.
+When a demo is playing back, all outgoing network messages are skipped, and
+incoming messages are read from the demo file.
 
 Whenever cl.time gets past the last received message, another message is
 read from the demo file.
@@ -115,80 +115,66 @@ void CL_WriteDemoMessage (void)
 
 /*
 ====================
-CL_GetMessage
+CL_ReadDemoMessage
 
-Handles recording and playback of demos, on top of NET_ code
+Handles playback of demos
 ====================
 */
-int CL_GetMessage (void)
+void CL_ReadDemoMessage(void)
 {
-	int		r, i;
-	float	f;
+	int r, i;
+	float f;
 
-	if	(cls.demoplayback)
-	{
-		if (cls.demopaused) // LordHavoc: pausedemo
-			return 0;
+	if (!cls.demoplayback)
+		return;
+
+	// LordHavoc: pausedemo
+	if (cls.demopaused)
+		return;
 
 	// decide if it is time to grab the next message
-		if (cls.signon == SIGNONS)	// always grab until fully connected
+	// always grab until fully connected
+	if (cls.signon == SIGNONS)
+	{
+		if (cls.timedemo)
 		{
-			if (cls.timedemo)
+			if (host_framecount == cls.td_lastframe)
 			{
-				if (host_framecount == cls.td_lastframe)
-					return 0;		// already read this frame's message
-				cls.td_lastframe = host_framecount;
+				// already read this frame's message
+				return;
+			}
+			cls.td_lastframe = host_framecount;
 			// if this is the second frame, grab the real td_starttime
 			// so the bogus time on the first frame doesn't count
-				if (host_framecount == cls.td_startframe + 1)
-					cls.td_starttime = realtime;
-			}
-			else if (cl.time <= cl.mtime[0])
-			{
-					return 0;		// don't need another message yet
-			}
+			if (host_framecount == cls.td_startframe + 1)
+				cls.td_starttime = realtime;
 		}
+		else if (cl.time <= cl.mtime[0])
+		{
+			// don't need another message yet
+			return;
+		}
+	}
 
 	// get the next message
-		FS_Read (cls.demofile, &net_message.cursize, 4);
-		VectorCopy (cl.mviewangles[0], cl.mviewangles[1]);
-		for (i=0 ; i<3 ; i++)
-		{
-			r = FS_Read (cls.demofile, &f, 4);
-			cl.mviewangles[0][i] = LittleFloat (f);
-		}
-
-		net_message.cursize = LittleLong (net_message.cursize);
-		if (net_message.cursize > MAX_DATAGRAM)
-			Host_Error ("Demo message > MAX_DATAGRAM");
-		r = FS_Read (cls.demofile, net_message.data, net_message.cursize);
-		if (r != net_message.cursize)
-		{
-			CL_Disconnect ();
-			return 0;
-		}
-
-		return 1;
-	}
-
-	while (1)
+	FS_Read(cls.demofile, &net_message.cursize, 4);
+	net_message.cursize = LittleLong(net_message.cursize);
+	VectorCopy(cl.mviewangles[0], cl.mviewangles[1]);
+	for (i = 0;i < 3;i++)
 	{
-		r = NET_GetMessage (cls.netcon);
-
-		if (r != 1 && r != 2)
-			return r;
-
-	// discard nop keepalive message
-		if (net_message.cursize == 1 && net_message.data[0] == svc_nop)
-			Con_Printf ("<-- server to client keepalive\n");
-		else
-			break;
+		r = FS_Read(cls.demofile, &f, 4);
+		cl.mviewangles[0][i] = LittleFloat(f);
 	}
 
-	if (cls.demorecording)
-		CL_WriteDemoMessage ();
-
-	return r;
+	if (net_message.cursize > NET_MAXMESSAGE)
+		Host_Error("Demo message > NET_MAXMESSAGE");
+	if (FS_Read(cls.demofile, net_message.data, net_message.cursize) == (size_t)net_message.cursize)
+	{
+		MSG_BeginReading();
+		CL_ParseServerMessage();
+	}
+	else
+		CL_Disconnect();
 }
 
 

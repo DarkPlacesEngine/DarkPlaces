@@ -108,12 +108,14 @@ typedef struct client_s
 	qboolean dropasap;
 	// only valid before spawned
 	qboolean sendsignon;
+	// remove this client immediately
+	qboolean deadsocket;
 
 	// reliable messages must be sent periodically
 	double last_message;
 
 	// communications handle
-	struct qsocket_s *netconnection;
+	netconn_t *netconnection;
 
 	// movement
 	usercmd_t cmd;
@@ -125,9 +127,6 @@ typedef struct client_s
 	qbyte msgbuf[MAX_DATAGRAM];
 	// EDICT_NUM(clientnum+1)
 	edict_t *edict;
-	// for printing to other people
-	char name[32];
-	int colors;
 
 	float ping_times[NUM_PING_TIMES];
 	// ping_times[num_pings%NUM_PING_TIMES]
@@ -140,18 +139,19 @@ typedef struct client_s
 // spawn parms are carried from level to level
 	float spawn_parms[NUM_SPAWN_PARMS];
 
-// client known data for deltas
-	int old_frags;
+	// properties that are sent across the network only when changed
+	char name[64], old_name[64];
+	int colors, old_colors;
+	int frags, old_frags;
+	// other properties not sent across the network
 	int pmodel;
 
+	// visibility state
+	float visibletime[MAX_EDICTS];
 #ifdef QUAKEENTITIES
 	// delta compression state
 	float nextfullupdate[MAX_EDICTS];
-#endif
-	// visibility state
-	float visibletime[MAX_EDICTS];
-
-#ifndef QUAKEENTITIES
+#else
 	entity_database_t entitydatabase;
 	int entityframenumber; // incremented each time an entity frame is sent
 #endif
@@ -273,6 +273,8 @@ void SV_DropClient (qboolean crash);
 void SV_SendClientMessages (void);
 void SV_ClearDatagram (void);
 
+void SV_ReadClientMessage(void);
+
 int SV_ModelIndex (const char *name);
 
 void SV_SetIdealPitch (void);
@@ -280,7 +282,6 @@ void SV_SetIdealPitch (void);
 void SV_AddUpdates (void);
 
 void SV_ClientThink (void);
-void SV_AddClientToServer (struct qsocket_s	*ret);
 
 void SV_ClientPrintf (const char *fmt, ...);
 void SV_BroadcastPrintf (const char *fmt, ...);
@@ -294,7 +295,6 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg);
 
 void SV_MoveToGoal (void);
 
-void SV_CheckForNewClients (void);
 void SV_RunClients (void);
 void SV_SaveSpawnparms (void);
 void SV_SpawnServer (const char *server);

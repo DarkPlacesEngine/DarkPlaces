@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -189,12 +189,12 @@ float CL_KeyState (kbutton_t *key)
 {
 	float		val;
 	qboolean	impulsedown, impulseup, down;
-	
+
 	impulsedown = key->state & 2;
 	impulseup = key->state & 4;
 	down = key->state & 1;
 	val = 0;
-	
+
 	if (impulsedown && !impulseup)
 	{
 		if (down)
@@ -225,7 +225,7 @@ float CL_KeyState (kbutton_t *key)
 	}
 
 	key->state &= 1;		// clear impulses
-	
+
 	return val;
 }
 
@@ -307,14 +307,14 @@ Send the intended movement message to the server
 ================
 */
 void CL_BaseMove (usercmd_t *cmd)
-{	
+{
 	if (cls.signon != SIGNONS)
 		return;
-			
+
 	CL_AdjustAngles ();
-	
+
 	memset (cmd, 0, sizeof(*cmd));
-	
+
 	if (in_strafe.state & 1)
 	{
 		cmd->sidemove += cl_sidespeed.value * CL_KeyState (&in_right);
@@ -328,10 +328,10 @@ void CL_BaseMove (usercmd_t *cmd)
 	cmd->upmove -= cl_upspeed.value * CL_KeyState (&in_down);
 
 	if (! (in_klook.state & 1) )
-	{	
+	{
 		cmd->forwardmove += cl_forwardspeed.value * CL_KeyState (&in_forward);
 		cmd->forwardmove -= cl_backspeed.value * CL_KeyState (&in_back);
-	}	
+	}
 
 //
 // adjust for speed key
@@ -351,12 +351,12 @@ void CL_BaseMove (usercmd_t *cmd)
 CL_SendMove
 ==============
 */
-void CL_SendMove (usercmd_t *cmd)
+void CL_SendMove(usercmd_t *cmd)
 {
-	int		i;
-	int		bits;
-	sizebuf_t	buf;
-	qbyte	data[128];
+	int i;
+	int bits;
+	sizebuf_t buf;
+	qbyte data[128];
 	static double lastmovetime;
 	static float forwardmove, sidemove, upmove, total; // accumulation
 
@@ -381,10 +381,8 @@ void CL_SendMove (usercmd_t *cmd)
 
 	cl.cmd = *cmd;
 
-//
-// send the movement message
-//
-    MSG_WriteByte (&buf, clc_move);
+	// send the movement message
+	MSG_WriteByte (&buf, clc_move);
 
 	MSG_WriteFloat (&buf, cl.mtime[0]);	// so server can get ping times
 
@@ -404,14 +402,12 @@ void CL_SendMove (usercmd_t *cmd)
 			MSG_WriteAngle (&buf, cl.viewangles[i]);
 	}
 
-    MSG_WriteShort (&buf, forwardmove);
-    MSG_WriteShort (&buf, sidemove);
-    MSG_WriteShort (&buf, upmove);
+	MSG_WriteShort (&buf, forwardmove);
+	MSG_WriteShort (&buf, sidemove);
+	MSG_WriteShort (&buf, upmove);
 
 	forwardmove = sidemove = upmove = 0;
-//
-// send button bits
-//
+	// send button bits
 	bits = 0;
 
 	if ( in_attack.state & 3 )
@@ -429,35 +425,31 @@ void CL_SendMove (usercmd_t *cmd)
 	if (in_button7.state & 3) bits |=  64;in_button7.state &= ~2;
 	if (in_button8.state & 3) bits |= 128;in_button8.state &= ~2;
 
-    MSG_WriteByte (&buf, bits);
+	MSG_WriteByte (&buf, bits);
 
-    MSG_WriteByte (&buf, in_impulse);
+	MSG_WriteByte (&buf, in_impulse);
 	in_impulse = 0;
 
 	// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
 	i = EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase);
 	if (i > 0)
 	{
-		MSG_WriteByte (&buf, clc_ackentities);
-		MSG_WriteLong (&buf, i);
+		MSG_WriteByte(&buf, clc_ackentities);
+		MSG_WriteLong(&buf, i);
 	}
 
-//
-// deliver the message
-//
+	// deliver the message
 	if (cls.demoplayback)
 		return;
 
-//
-// always dump the first two messages, because they may contain leftover inputs from the last level
-//
+	// always dump the first two messages, because they may contain leftover inputs from the last level
 	if (++cl.movemessages <= 2)
 		return;
 
-	if (NET_SendUnreliableMessage (cls.netcon, &buf) == -1)
+	if (NetConn_SendUnreliableMessage(cls.netcon, &buf) == -1)
 	{
-		Con_Printf ("CL_SendMove: lost server connection\n");
-		CL_Disconnect ();
+		Con_Printf("CL_SendMove: lost server connection\n");
+		CL_Disconnect();
 	}
 }
 

@@ -99,6 +99,8 @@ cvar_t demo_nehahra = {0, "demo_nehahra", "0"};
 qboolean Nehahrademcompatibility; // LordHavoc: to allow playback of the early Nehahra movie segments
 int dpprotocol; // LordHavoc: version of network protocol, or 0 if not DarkPlaces
 
+mempool_t *cl_scores_mempool;
+
 /*
 ==================
 CL_ParseStartSoundPacket
@@ -164,59 +166,44 @@ When the client is taking a long time to load stuff, send keepalive messages
 so the server doesn't disconnect.
 ==================
 */
+
+static qbyte olddata[NET_MAXMESSAGE];
 void CL_KeepaliveMessage (void)
 {
-	float	time;
+	float time;
 	static float lastmsg;
-	int		ret;
-	int		c;
-	sizebuf_t	old;
-	qbyte		olddata[8192];
+	int oldreadcount;
+	qboolean oldbadread;
+	sizebuf_t old;
 
-	if (sv.active)
-		return;		// no need if server is local
-	if (cls.demoplayback)
+	// no need if server is local and definitely not if this is a demo
+	if (sv.active || cls.demoplayback)
 		return;
 
 // read messages from server, should just be nops
+	oldreadcount = msg_readcount;
+	oldbadread = msg_badread;
 	old = net_message;
-	memcpy (olddata, net_message.data, net_message.cursize);
+	memcpy(olddata, net_message.data, net_message.cursize);
 
-	do
-	{
-		ret = CL_GetMessage ();
-		switch (ret)
-		{
-		default:
-			Host_Error ("CL_KeepaliveMessage: CL_GetMessage failed");
-		case 0:
-			break;	// nothing waiting
-		case 1:
-			Host_Error ("CL_KeepaliveMessage: received a message");
-			break;
-		case 2:
-			c = MSG_ReadByte();
-			if (c != svc_nop)
-				Host_Error ("CL_KeepaliveMessage: datagram wasn't a nop");
-			break;
-		}
-	} while (ret);
+	NetConn_ClientFrame();
 
+	msg_readcount = oldreadcount;
+	msg_badread = oldbadread;
 	net_message = old;
-	memcpy (net_message.data, olddata, net_message.cursize);
+	memcpy(net_message.data, olddata, net_message.cursize);
 
-// check time
-	time = Sys_DoubleTime ();
-	if (time - lastmsg < 5)
-		return;
-	lastmsg = time;
-
-// write out a nop
-	Con_Printf ("--> client to server keepalive\n");
-
-	MSG_WriteByte (&cls.message, clc_nop);
-	NET_SendMessage (cls.netcon, &cls.message);
-	SZ_Clear (&cls.message);
+	if (cls.netcon && NetConn_CanSendMessage(cls.netcon) && (time = Sys_DoubleTime()) - lastmsg >= 5)
+	{
+		lastmsg = time;
+		// write out a nop
+		Con_Printf("--> client to server keepalive\n");
+		MSG_WriteByte(&cls.message, clc_nop);
+		NetConn_SendReliableMessage(cls.netcon, &cls.message);
+		SZ_Clear(&cls.message);
+		// try not to utterly crush the computer with work, that's just rude
+		Sys_Sleep();
+	}
 }
 
 void CL_ParseEntityLump(char *entdata)
@@ -359,6 +346,7 @@ void CL_ParseServerInfo (void)
 		Con_Printf("Bad maxclients (%u) from server\n", cl.maxclients);
 		return;
 	}
+	Mem_EmptyPool(cl_scores_mempool);
 	cl.scores = Mem_Alloc(cl_scores_mempool, cl.maxclients*sizeof(*cl.scores));
 
 // parse gametype
@@ -1376,7 +1364,7 @@ CL_ParseServerMessage
 =====================
 */
 int parsingerror = false;
-void CL_ParseServerMessage (void)
+void CL_ParseServerMessage(void)
 {
 	int			cmd;
 	int			i, entitiesupdated;
@@ -1384,11 +1372,16 @@ void CL_ParseServerMessage (void)
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
 
+	if (cls.demorecording)
+		CL_WriteDemoMessage ();
+
+	cl.last_received_message = realtime;
+
 //
 // if recording demos, copy the message out
 //
 	if (cl_shownet.integer == 1)
-		Con_Printf ("%i ",net_message.cursize);
+		Con_Printf ("%f %i\n", realtime, net_message.cursize);
 	else if (cl_shownet.integer == 2)
 		Con_Printf ("------------------\n");
 
@@ -1396,7 +1389,7 @@ void CL_ParseServerMessage (void)
 //
 // parse the message
 //
-	MSG_BeginReading ();
+	//MSG_BeginReading ();
 
 	entitiesupdated = false;
 
@@ -1473,6 +1466,8 @@ void CL_ParseServerMessage (void)
 			break;
 
 		case svc_nop:
+			if (cls.signon < SIGNONS)
+				Con_Printf("<-- server to client keepalive\n");
 			break;
 
 		case svc_time:
@@ -1735,6 +1730,7 @@ void CL_Parse_DumpPacket(void)
 void CL_Parse_Init(void)
 {
 	// LordHavoc: added demo_nehahra cvar
+	cl_scores_mempool = Mem_AllocPool("client player info");
 	Cvar_RegisterVariable (&demo_nehahra);
 	if (gamemode == GAME_NEHAHRA)
 		Cvar_SetValue("demo_nehahra", 1);

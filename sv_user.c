@@ -517,105 +517,94 @@ void SV_ReadClientMove (usercmd_t *move)
 /*
 ===================
 SV_ReadClientMessage
-
-Returns false if the client should be killed
 ===================
 */
-extern void SV_SendServerinfo (client_t *client);
-qboolean SV_ReadClientMessage (void)
+extern void SV_SendServerinfo(client_t *client);
+void SV_ReadClientMessage(void)
 {
-	int		ret;
-	int		cmd;
-	char		*s;
+	int cmd;
+	char *s;
 
-	for (;;)
+	//MSG_BeginReading ();
+
+	for(;;)
 	{
-nextmsg:
-		ret = NET_GetMessage (host_client->netconnection);
-		if (ret == -1)
+		if (!host_client->active)
 		{
-			Con_Printf ("SV_ReadClientMessage: NET_GetMessage failed\n");
-			return false;
+			// a command caused an error
+			SV_DropClient (false);
+			return;
 		}
-		if (!ret)
-			return true;
 
-		MSG_BeginReading ();
-
-		for(;;)
+		if (msg_badread)
 		{
-			if (!host_client->active)
-				// a command caused an error
-				return false;
+			Con_Printf ("SV_ReadClientMessage: badread\n");
+			SV_DropClient (false);
+			return;
+		}
 
-			if (msg_badread)
+		cmd = MSG_ReadChar ();
+		if (cmd == -1)
+		{
+			// end of message
+			break;
+		}
+
+		switch (cmd)
+		{
+		default:
+			Con_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
+			SV_DropClient (false);
+			return;
+
+		case clc_nop:
+			break;
+
+		case clc_stringcmd:
+			s = MSG_ReadString ();
+			if (strncasecmp(s, "spawn", 5) == 0
+			 || strncasecmp(s, "begin", 5) == 0
+			 || strncasecmp(s, "prespawn", 8) == 0)
+				Cmd_ExecuteString (s, src_client);
+			else if (SV_ParseClientCommandQC)
 			{
-				Con_Printf ("SV_ReadClientMessage: badread\n");
-				return false;
+				G_INT(OFS_PARM0) = PR_SetString(s);
+				pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
+				PR_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - pr_functions), "");
 			}
+			else if (strncasecmp(s, "status", 6) == 0
+			 || strncasecmp(s, "name", 4) == 0
+			 || strncasecmp(s, "say", 3) == 0
+			 || strncasecmp(s, "say_team", 8) == 0
+			 || strncasecmp(s, "tell", 4) == 0
+			 || strncasecmp(s, "color", 5) == 0
+			 || strncasecmp(s, "kill", 4) == 0
+			 || strncasecmp(s, "pause", 5) == 0
+			 || strncasecmp(s, "kick", 4) == 0
+			 || strncasecmp(s, "ping", 4) == 0
+			 || strncasecmp(s, "ban", 3) == 0
+			 || strncasecmp(s, "pmodel", 6) == 0
+			 || (gamemode == GAME_NEHAHRA && (strncasecmp(s, "max", 3) == 0 || strncasecmp(s, "monster", 7) == 0 || strncasecmp(s, "scrag", 5) == 0 || strncasecmp(s, "gimme", 5) == 0 || strncasecmp(s, "wraith", 6) == 0))
+			 || (gamemode != GAME_NEHAHRA && (strncasecmp(s, "god", 3) == 0 || strncasecmp(s, "notarget", 8) == 0 || strncasecmp(s, "fly", 3) == 0 || strncasecmp(s, "give", 4) == 0 || strncasecmp(s, "noclip", 6) == 0)))
+				Cmd_ExecuteString (s, src_client);
+			else
+				Con_Printf("%s tried to %s\n", host_client->name, s);
+			break;
 
-			cmd = MSG_ReadChar ();
+		case clc_disconnect:
+			SV_DropClient (false); // client wants to disconnect
+			return;
 
-			switch (cmd)
-			{
-			case -1:
-				// end of message
-				goto nextmsg;
+		case clc_move:
+			SV_ReadClientMove (&host_client->cmd);
+			break;
 
-			default:
-				Con_Printf ("SV_ReadClientMessage: unknown command char %i\n", cmd);
-				return false;
-
-			case clc_nop:
-				break;
-
-			case clc_stringcmd:
-				s = MSG_ReadString ();
-				if (strncasecmp(s, "spawn", 5) == 0
-				 || strncasecmp(s, "begin", 5) == 0
-				 || strncasecmp(s, "prespawn", 8) == 0)
-					Cmd_ExecuteString (s, src_client);
-				else if (SV_ParseClientCommandQC)
-				{
-					G_INT(OFS_PARM0) = PR_SetString(s);
-					pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-					PR_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - pr_functions), "");
-				}
-				else if (strncasecmp(s, "status", 6) == 0
-				 || strncasecmp(s, "name", 4) == 0
-				 || strncasecmp(s, "say", 3) == 0
-				 || strncasecmp(s, "say_team", 8) == 0
-				 || strncasecmp(s, "tell", 4) == 0
-				 || strncasecmp(s, "color", 5) == 0
-				 || strncasecmp(s, "kill", 4) == 0
-				 || strncasecmp(s, "pause", 5) == 0
-				 || strncasecmp(s, "kick", 4) == 0
-				 || strncasecmp(s, "ping", 4) == 0
-				 || strncasecmp(s, "ban", 3) == 0
-				 || strncasecmp(s, "pmodel", 6) == 0
-				 || (gamemode == GAME_NEHAHRA && (strncasecmp(s, "max", 3) == 0 || strncasecmp(s, "monster", 7) == 0 || strncasecmp(s, "scrag", 5) == 0 || strncasecmp(s, "gimme", 5) == 0 || strncasecmp(s, "wraith", 6) == 0))
-				 || (gamemode != GAME_NEHAHRA && (strncasecmp(s, "god", 3) == 0 || strncasecmp(s, "notarget", 8) == 0 || strncasecmp(s, "fly", 3) == 0 || strncasecmp(s, "give", 4) == 0 || strncasecmp(s, "noclip", 6) == 0)))
-					Cmd_ExecuteString (s, src_client);
-				else
-					Con_Printf("%s tried to %s\n", host_client->name, s);
-				break;
-
-			case clc_disconnect:
-				return false;
-
-			case clc_move:
-				SV_ReadClientMove (&host_client->cmd);
-				break;
-
-			case clc_ackentities:
-				EntityFrame_AckFrame(&host_client->entitydatabase, MSG_ReadLong());
-				break;
-			}
+		case clc_ackentities:
+			EntityFrame_AckFrame(&host_client->entitydatabase, MSG_ReadLong());
+			break;
 		}
 	}
-	return true;
 }
-
 
 /*
 ==================
@@ -632,12 +621,6 @@ void SV_RunClients (void)
 			continue;
 
 		sv_player = host_client->edict;
-
-		if (!SV_ReadClientMessage ())
-		{
-			SV_DropClient (false); // client misbehaved...
-			continue;
-		}
 
 		if (!host_client->spawned)
 		{

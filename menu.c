@@ -35,7 +35,6 @@ void M_Menu_Main_f (void);
 		void M_Menu_Save_f (void);
 	void M_Menu_MultiPlayer_f (void);
 		void M_Menu_Setup_f (void);
-		void M_Menu_Net_f (void);
 	void M_Menu_Options_f (void);
 	void M_Menu_Options_Effects_f (void);
 	void M_Menu_Options_ColorControl_f (void);
@@ -45,8 +44,6 @@ void M_Menu_Main_f (void);
 	void M_Menu_Quit_f (void);
 void M_Menu_LanConfig_f (void);
 void M_Menu_GameOptions_f (void);
-void M_Menu_Search_f (void);
-void M_Menu_InetSearch_f (void);
 void M_Menu_ServerList_f (void);
 
 void M_Main_Draw (void);
@@ -55,7 +52,6 @@ void M_Main_Draw (void);
 		void M_Save_Draw (void);
 	void M_MultiPlayer_Draw (void);
 		void M_Setup_Draw (void);
-		void M_Net_Draw (void);
 	void M_Options_Draw (void);
 	void M_Options_Effects_Draw (void);
 	void M_Options_ColorControl_Draw (void);
@@ -65,8 +61,6 @@ void M_Main_Draw (void);
 	void M_Quit_Draw (void);
 void M_LanConfig_Draw (void);
 void M_GameOptions_Draw (void);
-void M_Search_Draw (void);
-void M_InetSearch_Draw (void);
 void M_ServerList_Draw (void);
 
 void M_Main_Key (int key);
@@ -75,7 +69,6 @@ void M_Main_Key (int key);
 		void M_Save_Key (int key);
 	void M_MultiPlayer_Key (int key);
 		void M_Setup_Key (int key);
-		void M_Net_Key (int key);
 	void M_Options_Key (int key);
 	void M_Options_Effects_Key (int key);
 	void M_Options_ColorControl_Key (int key);
@@ -85,23 +78,15 @@ void M_Main_Key (int key);
 	void M_Quit_Key (int key);
 void M_LanConfig_Key (int key);
 void M_GameOptions_Key (int key);
-void M_Search_Key (int key);
-void M_InetSearch_Key (int key);
 void M_ServerList_Key (int key);
 
 qboolean	m_entersound;		// play after drawing a frame, so caching
 								// won't disrupt the sound
 
-int			m_return_state;
-qboolean	m_return_onerror;
 char		m_return_reason [32];
 
 #define StartingGame	(m_multiplayer_cursor == 1)
 #define JoiningGame		(m_multiplayer_cursor == 0)
-#define	IPXConfig		(m_net_cursor == 0)
-#define	TCPIPConfig		(m_net_cursor == 1)
-
-void M_ConfigureNetSubsystem(void);
 
 // Nehahra
 #define NumberOfNehahraDemos 34
@@ -151,13 +136,14 @@ nehahrademonames_t NehahraDemos[NumberOfNehahraDemos] =
 
 float menu_x, menu_y, menu_width, menu_height;
 
-void M_DrawBackground(void)
+void M_Background(int width, int height)
 {
-	menu_width = 320;
-	menu_height = 200;
+	menu_width = width;
+	menu_height = height;
 	menu_x = (vid.conwidth - menu_width) * 0.5;
 	menu_y = (vid.conheight - menu_height) * 0.5;
-	DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
+	DrawQ_Fill(menu_x, menu_y, menu_width, menu_height, 0, 0, 0, 0.5, 0);
+	//DrawQ_Fill(0, 0, vid.conwidth, vid.conheight, 0, 0, 0, 0.5, 0);
 }
 
 /*
@@ -287,21 +273,13 @@ void M_ToggleMenu_f (void)
 {
 	m_entersound = true;
 
-	if (key_dest == key_menu)
+	if (key_dest != key_menu || m_state != m_main)
+		M_Menu_Main_f ();
+	else
 	{
-		if (m_state != m_main)
-		{
-			M_Menu_Main_f ();
-			return;
-		}
 		key_dest = key_game;
 		m_state = m_none;
-		return;
 	}
-	//if (key_dest == key_console)
-	//	Con_ToggleConsole_f ();
-	//else
-		M_Menu_Main_f ();
 }
 
 
@@ -309,6 +287,8 @@ int demo_cursor;
 void M_Demo_Draw (void)
 {
 	int i;
+
+	M_Background(320, 200);
 
 	for (i = 0;i < NumberOfNehahraDemos;i++)
 		M_Print (16, 16 + 8*i, NehahraDemos[i].desc);
@@ -396,6 +376,8 @@ void M_Main_Draw (void)
 {
 	int		f;
 	cachepic_t	*p;
+
+	M_Background(320, 200);
 
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/ttl_main.lmp");
@@ -580,6 +562,8 @@ void M_SinglePlayer_Draw (void)
 {
 	cachepic_t	*p;
 
+	M_Background(320, 200);
+
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
 
@@ -730,6 +714,8 @@ void M_Load_Draw (void)
 	int		i;
 	cachepic_t	*p;
 
+	M_Background(320, 200);
+
 	p = Draw_CachePic ("gfx/p_load.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_load.lmp");
 
@@ -745,6 +731,8 @@ void M_Save_Draw (void)
 {
 	int		i;
 	cachepic_t	*p;
+
+	M_Background(320, 200);
 
 	p = Draw_CachePic ("gfx/p_save.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_save.lmp");
@@ -847,6 +835,8 @@ void M_MultiPlayer_Draw (void)
 	int		f;
 	cachepic_t	*p;
 
+	M_Background(320, 200);
+
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/p_multi.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
@@ -855,10 +845,6 @@ void M_MultiPlayer_Draw (void)
 	f = (int)(realtime * 10)%6;
 
 	M_DrawPic (54, 32 + m_multiplayer_cursor * 20, va("gfx/menudot%i.lmp", f+1));
-
-	if (ipxAvailable || tcpipAvailable)
-		return;
-	M_PrintWhite ((320/2) - ((27*8)/2), 168, "No Communications Available");
 }
 
 
@@ -887,13 +873,8 @@ void M_MultiPlayer_Key (int key)
 		switch (m_multiplayer_cursor)
 		{
 		case 0:
-			if (ipxAvailable || tcpipAvailable)
-				M_Menu_Net_f ();
-			break;
-
 		case 1:
-			if (ipxAvailable || tcpipAvailable)
-				M_Menu_Net_f ();
+			M_Menu_LanConfig_f ();
 			break;
 
 		case 2:
@@ -981,6 +962,8 @@ void M_MenuPlayerTranslate (qbyte *translation, int top, int bottom)
 void M_Setup_Draw (void)
 {
 	cachepic_t	*p;
+
+	M_Background(320, 200);
 
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/p_multi.lmp");
@@ -1126,126 +1109,6 @@ forward:
 }
 
 //=============================================================================
-/* NET MENU */
-
-int	m_net_cursor;
-int m_net_items;
-int m_net_saveHeight;
-
-char *net_helpMessage [] =
-{
-/* .........1.........2.... */
-  " Novell network LANs    ",
-  " or Windows 95 DOS-box. ",
-  "                        ",
-  "(LAN=Local Area Network)",
-
-  " Commonly used to play  ",
-  " over the Internet, but ",
-  " also used on a Local   ",
-  " Area Network.          "
-};
-
-void M_Menu_Net_f (void)
-{
-	key_dest = key_menu;
-	m_state = m_net;
-	m_entersound = true;
-	m_net_items = 2;
-
-	if (m_net_cursor >= m_net_items)
-		m_net_cursor = 0;
-	m_net_cursor--;
-	M_Net_Key (K_DOWNARROW);
-}
-
-
-void M_Net_Draw (void)
-{
-	int		f;
-	cachepic_t	*p;
-
-	M_DrawPic (16, 4, "gfx/qplaque.lmp");
-	p = Draw_CachePic ("gfx/p_multi.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
-
-	f = 32;
-
-	if (ipxAvailable)
-		M_DrawPic (72, f, "gfx/netmen3.lmp");
-	else
-		M_DrawPic (72, f, "gfx/dim_ipx.lmp");
-
-	f += 19;
-	if (tcpipAvailable)
-		M_DrawPic (72, f, "gfx/netmen4.lmp");
-	else
-		M_DrawPic (72, f, "gfx/dim_tcp.lmp");
-
-	if (m_net_items == 5)	// JDC, could just be removed
-	{
-		f += 19;
-		M_DrawPic (72, f, "gfx/netmen5.lmp");
-	}
-
-	f = (320-26*8)/2;
-	M_DrawTextBox (f, 134, 24, 4);
-	f += 8;
-	M_Print (f, 142, net_helpMessage[m_net_cursor*4+0]);
-	M_Print (f, 150, net_helpMessage[m_net_cursor*4+1]);
-
-	f = (int)(realtime * 10)%6;
-	M_DrawPic (54, 32 + m_net_cursor * 20, va("gfx/menudot%i.lmp", f+1));
-}
-
-
-void M_Net_Key (int k)
-{
-again:
-	switch (k)
-	{
-	case K_ESCAPE:
-		M_Menu_MultiPlayer_f ();
-		break;
-
-	case K_DOWNARROW:
-		S_LocalSound ("misc/menu1.wav");
-		if (++m_net_cursor >= m_net_items)
-			m_net_cursor = 0;
-		break;
-
-	case K_UPARROW:
-		S_LocalSound ("misc/menu1.wav");
-		if (--m_net_cursor < 0)
-			m_net_cursor = m_net_items - 1;
-		break;
-
-	case K_ENTER:
-		m_entersound = true;
-
-		switch (m_net_cursor)
-		{
-		case 0:
-			M_Menu_LanConfig_f ();
-			break;
-
-		case 1:
-			M_Menu_LanConfig_f ();
-			break;
-
-		case 2:
-// multiprotocol
-			break;
-		}
-	}
-
-	if (m_net_cursor == 0 && !ipxAvailable)
-		goto again;
-	if (m_net_cursor == 1 && !tcpipAvailable)
-		goto again;
-}
-
-//=============================================================================
 /* OPTIONS MENU */
 
 #define	SLIDER_RANGE	10
@@ -1382,6 +1245,8 @@ void M_Options_Draw (void)
 {
 	float y;
 	cachepic_t	*p;
+
+	M_Background(320, 240);
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp");
@@ -1575,6 +1440,8 @@ void M_Options_Effects_Draw (void)
 	float y;
 	cachepic_t	*p;
 
+	M_Background(320, 200);
+
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/p_option.lmp");
@@ -1746,6 +1613,8 @@ void M_Options_ColorControl_Draw (void)
 {
 	float x, y, c, s, t, u, v;
 	cachepic_t	*p;
+
+	M_Background(320, 256);
 
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/p_option.lmp");
@@ -2089,6 +1958,8 @@ void M_Keys_Draw (void)
 	cachepic_t	*p;
 	char	keystring[1024];
 
+	M_Background(320, 200);
+
 	p = Draw_CachePic ("gfx/ttl_cstm.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_cstm.lmp");
 
@@ -2241,6 +2112,8 @@ void M_Video_Draw (void)
 	cachepic_t	*p;
 	const char* string;
 
+	M_Background(320, 200);
+
 	M_DrawPic(16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic("gfx/vidmodes.lmp");
 	M_DrawPic((320-p->width)/2, 4, "gfx/vidmodes.lmp");
@@ -2378,6 +2251,7 @@ void M_Menu_Help_f (void)
 
 void M_Help_Draw (void)
 {
+	M_Background(320, 200);
 	M_DrawPic (0, 0, va("gfx/help%i.lmp", help_page));
 }
 
@@ -2527,19 +2401,20 @@ void M_Quit_Key (int key)
 
 void M_Quit_Draw (void)
 {
-	M_DrawTextBox (56, 76, 24, 4);
-	M_Print (64, 84,  quitMessage[msgNumber*4+0]);
-	M_Print (64, 92,  quitMessage[msgNumber*4+1]);
-	M_Print (64, 100, quitMessage[msgNumber*4+2]);
-	M_Print (64, 108, quitMessage[msgNumber*4+3]);
+	M_Background(208, 48);
+	M_DrawTextBox(0, 0, 24, 4);
+	M_Print(8,  8, quitMessage[msgNumber*4+0]);
+	M_Print(8, 16, quitMessage[msgNumber*4+1]);
+	M_Print(8, 24, quitMessage[msgNumber*4+2]);
+	M_Print(8, 32, quitMessage[msgNumber*4+3]);
 }
 
 //=============================================================================
 /* LAN CONFIG MENU */
 
 int		lanConfig_cursor = -1;
-int		lanConfig_cursor_table [] = {72, 92, 112, 144};
-#define NUM_LANCONFIG_CMDS	4
+int		lanConfig_cursor_table [] = {56, 76, 112};
+#define NUM_LANCONFIG_CMDS	3
 
 int 	lanConfig_port;
 char	lanConfig_portname[6];
@@ -2552,17 +2427,14 @@ void M_Menu_LanConfig_f (void)
 	m_entersound = true;
 	if (lanConfig_cursor == -1)
 	{
-		if (JoiningGame && TCPIPConfig)
-			lanConfig_cursor = 2;
-		else
+		if (JoiningGame)
 			lanConfig_cursor = 1;
 	}
-	if (StartingGame && lanConfig_cursor == 2)
+	if (StartingGame)
 		lanConfig_cursor = 1;
-	lanConfig_port = DEFAULTnet_hostport;
+	lanConfig_port = 26000;
 	sprintf(lanConfig_portname, "%u", lanConfig_port);
 
-	m_return_onerror = false;
 	m_return_reason[0] = 0;
 }
 
@@ -2574,6 +2446,8 @@ void M_LanConfig_Draw (void)
 	char	*startJoin;
 	char	*protocol;
 
+	M_Background(320, 200);
+
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/p_multi.lmp");
 	basex = (320-p->width)/2;
@@ -2583,18 +2457,9 @@ void M_LanConfig_Draw (void)
 		startJoin = "New Game";
 	else
 		startJoin = "Join Game";
-	if (IPXConfig)
-		protocol = "IPX";
-	else
-		protocol = "TCP/IP";
+	protocol = "TCP/IP";
 	M_Print (basex, 32, va ("%s - %s", startJoin, protocol));
 	basex += 8;
-
-	M_Print (basex, 52, "Address:");
-	if (IPXConfig)
-		M_Print (basex+9*8, 52, my_ipx_address);
-	else
-		M_Print (basex+9*8, 52, my_tcpip_address);
 
 	M_Print (basex, lanConfig_cursor_table[0], "Port");
 	M_DrawTextBox (basex+8*8, lanConfig_cursor_table[0]-8, 6, 1);
@@ -2602,11 +2467,10 @@ void M_LanConfig_Draw (void)
 
 	if (JoiningGame)
 	{
-		M_Print (basex, lanConfig_cursor_table[1], "Search for local games...");
-		M_Print (basex, lanConfig_cursor_table[2], "Search for internet games...");
-		M_Print (basex, 128, "Join game at:");
-		M_DrawTextBox (basex+8, lanConfig_cursor_table[3]-8, 22, 1);
-		M_Print (basex+16, lanConfig_cursor_table[3], lanConfig_joinname);
+		M_Print (basex, lanConfig_cursor_table[1], "Search for games...");
+		M_Print (basex, lanConfig_cursor_table[2]-16, "Join game at:");
+		M_DrawTextBox (basex+8, lanConfig_cursor_table[2]-8, 22, 1);
+		M_Print (basex+16, lanConfig_cursor_table[2], lanConfig_joinname);
 	}
 	else
 	{
@@ -2619,8 +2483,8 @@ void M_LanConfig_Draw (void)
 	if (lanConfig_cursor == 0)
 		M_DrawCharacter (basex+9*8 + 8*strlen(lanConfig_portname), lanConfig_cursor_table [0], 10+((int)(realtime*4)&1));
 
-	if (lanConfig_cursor == 3)
-		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [3], 10+((int)(realtime*4)&1));
+	if (lanConfig_cursor == 2)
+		M_DrawCharacter (basex+16 + 8*strlen(lanConfig_joinname), lanConfig_cursor_table [2], 10+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
 		M_PrintWhite (basex, 168, m_return_reason);
@@ -2634,7 +2498,7 @@ void M_LanConfig_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Net_f ();
+		M_Menu_MultiPlayer_f ();
 		break;
 
 	case K_UPARROW:
@@ -2657,32 +2521,23 @@ void M_LanConfig_Key (int key)
 
 		m_entersound = true;
 
-		M_ConfigureNetSubsystem ();
+		Cbuf_AddText ("stopdemo\n");
 
-		if (lanConfig_cursor == 1 || lanConfig_cursor == 2)
+		Cvar_SetValue("port", lanConfig_port);
+
+		if (lanConfig_cursor == 1)
 		{
 			if (StartingGame)
 			{
 				M_Menu_GameOptions_f ();
 				break;
 			}
-			if (lanConfig_cursor == 1)
-				M_Menu_Search_f();
-			else
-				M_Menu_InetSearch_f();
+			M_Menu_ServerList_f();
 			break;
 		}
 
-		if (lanConfig_cursor == 3)
-		{
-			m_return_state = m_state;
-			m_return_onerror = true;
-			key_dest = key_game;
-			m_state = m_none;
+		if (lanConfig_cursor == 2)
 			Cbuf_AddText ( va ("connect \"%s\"\n", lanConfig_joinname) );
-			break;
-		}
-
 		break;
 
 	case K_BACKSPACE:
@@ -2692,7 +2547,7 @@ void M_LanConfig_Key (int key)
 				lanConfig_portname[strlen(lanConfig_portname)-1] = 0;
 		}
 
-		if (lanConfig_cursor == 3)
+		if (lanConfig_cursor == 2)
 		{
 			if (strlen(lanConfig_joinname))
 				lanConfig_joinname[strlen(lanConfig_joinname)-1] = 0;
@@ -2703,7 +2558,7 @@ void M_LanConfig_Key (int key)
 		if (key < 32 || key > 127)
 			break;
 
-		if (lanConfig_cursor == 3)
+		if (lanConfig_cursor == 2)
 		{
 			l = strlen(lanConfig_joinname);
 			if (l < 21)
@@ -2726,7 +2581,7 @@ void M_LanConfig_Key (int key)
 		}
 	}
 
-	if (StartingGame && lanConfig_cursor == 3)
+	if (StartingGame && lanConfig_cursor == 2)
 	{
 		if (key == K_UPARROW)
 			lanConfig_cursor = 1;
@@ -2735,9 +2590,7 @@ void M_LanConfig_Key (int key)
 	}
 
 	l =  atoi(lanConfig_portname);
-	if (l > 65535)
-		l = lanConfig_port;
-	else
+	if (l <= 65535)
 		lanConfig_port = l;
 	sprintf(lanConfig_portname, "%u", lanConfig_port);
 }
@@ -3054,6 +2907,8 @@ void M_GameOptions_Draw (void)
 	int		x;
 	gamelevels_t *g;
 
+	M_Background(320, 200);
+
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/p_multi.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
@@ -3299,7 +3154,7 @@ void M_GameOptions_Key (int key)
 	switch (key)
 	{
 	case K_ESCAPE:
-		M_Menu_Net_f ();
+		M_Menu_MultiPlayer_f ();
 		break;
 
 	case K_UPARROW:
@@ -3336,7 +3191,6 @@ void M_GameOptions_Key (int key)
 		{
 			if (sv.active)
 				Cbuf_AddText ("disconnect\n");
-			Cbuf_AddText ("listen 0\n");	// so host_netport will be re-examined
 			Cbuf_AddText ( va ("maxplayers %u\n", maxplayers) );
 
 			g = lookupgameinfo();
@@ -3350,96 +3204,9 @@ void M_GameOptions_Key (int key)
 }
 
 //=============================================================================
-/* SEARCH MENU */
-
-qboolean	searchComplete = false;
-double		searchCompleteTime;
-
-void M_Menu_Search_f (void)
-{
-	key_dest = key_menu;
-	m_state = m_search;
-	m_entersound = false;
-	slistSilent = true;
-	slistLocal = false;
-	searchComplete = false;
-	NET_Slist_f();
-
-}
-
-
-void M_Search_Draw (void)
-{
-	cachepic_t	*p;
-	int x;
-
-	p = Draw_CachePic ("gfx/p_multi.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
-	x = (320/2) - ((12*8)/2) + 4;
-	M_DrawTextBox (x-8, 32, 12, 1);
-	M_Print (x, 40, "Searching...");
-
-	if(slistInProgress)
-	{
-		NET_Poll();
-		return;
-	}
-
-	if (! searchComplete)
-	{
-		searchComplete = true;
-		searchCompleteTime = realtime;
-	}
-
-	if (hostCacheCount)
-	{
-		M_Menu_ServerList_f ();
-		return;
-	}
-
-	M_PrintWhite ((320/2) - ((22*8)/2), 64, va("No %s servers found", gamename));
-	if ((realtime - searchCompleteTime) < 3.0)
-		return;
-
-	M_Menu_LanConfig_f ();
-}
-
-
-void M_Search_Key (int key)
-{
-}
-
-//=============================================================================
-/* INTERNET SEARCH MENU */
-
-void M_Menu_InetSearch_f (void)
-{
-	key_dest = key_menu;
-	m_state = m_search;
-	m_entersound = false;
-	slistSilent = true;
-	slistLocal = false;
-	searchComplete = false;
-	NET_InetSlist_f();
-
-}
-
-
-void M_InetSearch_Draw (void)
-{
-	M_Search_Draw ();  // it's the same one, so why bother?
-}
-
-
-void M_InetSearch_Key (int key)
-{
-}
-
-//=============================================================================
 /* SLIST MENU */
 
-int		slist_cursor;
-qboolean slist_sorted;
+int slist_cursor;
 
 void M_Menu_ServerList_f (void)
 {
@@ -3447,68 +3214,53 @@ void M_Menu_ServerList_f (void)
 	m_state = m_slist;
 	m_entersound = true;
 	slist_cursor = 0;
-	m_return_onerror = false;
 	m_return_reason[0] = 0;
-	slist_sorted = false;
+	Net_Slist_f();
 }
 
 
 void M_ServerList_Draw (void)
 {
-	int		n;
-	char	string [64];
-	cachepic_t	*p;
+	int n, y, visible, start, end;
+	cachepic_t *p;
 
-	if (!slist_sorted)
-	{
-		if (hostCacheCount > 1)
-		{
-			int	i,j;
-			hostcache_t temp;
-			for (i = 0; i < hostCacheCount; i++)
-				for (j = i+1; j < hostCacheCount; j++)
-					if (strcmp(hostcache[j].name, hostcache[i].name) < 0)
-					{
-						memcpy(&temp, &hostcache[j], sizeof(hostcache_t));
-						memcpy(&hostcache[j], &hostcache[i], sizeof(hostcache_t));
-						memcpy(&hostcache[i], &temp, sizeof(hostcache_t));
-					}
-		}
-		slist_sorted = true;
-	}
+	// use as much vertical space as available
+	M_Background(640, vid.conheight);
+	// scroll the list as the cursor moves
+	visible = (vid.conheight - 16 - 32) / 8;
+	start = bound(0, slist_cursor - (visible >> 1), hostCacheCount - visible);
+	end = min(start + visible, hostCacheCount);
 
-	p = Draw_CachePic ("gfx/p_multi.lmp");
-	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
-	for (n = 0; n < hostCacheCount; n++)
+	p = Draw_CachePic("gfx/p_multi.lmp");
+	M_DrawPic((640 - p->width) / 2, 4, "gfx/p_multi.lmp");
+	y = 32;
+	for (n = start;n < end;n++)
 	{
-		if (hostcache[n].maxusers)
-			sprintf(string, "%-15.15s %-15.15s %2u/%2u\n", hostcache[n].name, hostcache[n].map, hostcache[n].users, hostcache[n].maxusers);
-		else
-			sprintf(string, "%-15.15s %-15.15s\n", hostcache[n].name, hostcache[n].map);
-		M_Print (16, 32 + 8*n, string);
+		M_Print(0, y, hostcache[n].line1);y += 8;
+		M_Print(0, y, hostcache[n].line2);y += 8;
 	}
-	M_DrawCharacter (0, 32 + slist_cursor*8, 12+((int)(realtime*4)&1));
+	M_DrawCharacter(0, 32 + (slist_cursor - start) * 16, 12+((int)(realtime*4)&1));
 
 	if (*m_return_reason)
-		M_PrintWhite (16, 168, m_return_reason);
+		M_PrintWhite(16, vid.conheight - 8, m_return_reason);
 }
 
 
-void M_ServerList_Key (int k)
+void M_ServerList_Key(int k)
 {
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_LanConfig_f ();
+		M_Menu_LanConfig_f();
 		break;
 
 	case K_SPACE:
-		M_Menu_Search_f ();
+		Net_Slist_f();
 		break;
 
 	case K_UPARROW:
 	case K_LEFTARROW:
-		S_LocalSound ("misc/menu1.wav");
+		S_LocalSound("misc/menu1.wav");
 		slist_cursor--;
 		if (slist_cursor < 0)
 			slist_cursor = hostCacheCount - 1;
@@ -3516,20 +3268,15 @@ void M_ServerList_Key (int k)
 
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
-		S_LocalSound ("misc/menu1.wav");
+		S_LocalSound("misc/menu1.wav");
 		slist_cursor++;
 		if (slist_cursor >= hostCacheCount)
 			slist_cursor = 0;
 		break;
 
 	case K_ENTER:
-		S_LocalSound ("misc/menu2.wav");
-		m_return_state = m_state;
-		m_return_onerror = true;
-		slist_sorted = false;
-		key_dest = key_game;
-		m_state = m_none;
-		Cbuf_AddText ( va ("connect \"%s\"\n", hostcache[slist_cursor].cname) );
+		S_LocalSound("misc/menu2.wav");
+		Cbuf_AddText(va("connect \"%s\"\n", hostcache[slist_cursor].cname));
 		break;
 
 	default:
@@ -3605,10 +3352,10 @@ void M_Init (void)
 
 void M_Draw (void)
 {
-	if (m_state == m_none || key_dest != key_menu)
+	if (key_dest != key_menu)
+		m_state = m_none;
+	if (m_state == m_none)
 		return;
-
-	M_DrawBackground();
 
 	switch (m_state)
 	{
@@ -3641,10 +3388,6 @@ void M_Draw (void)
 
 	case m_setup:
 		M_Setup_Draw ();
-		break;
-
-	case m_net:
-		M_Net_Draw ();
 		break;
 
 	case m_options:
@@ -3681,10 +3424,6 @@ void M_Draw (void)
 
 	case m_gameoptions:
 		M_GameOptions_Draw ();
-		break;
-
-	case m_search:
-		M_Search_Draw ();
 		break;
 
 	case m_slist:
@@ -3737,10 +3476,6 @@ void M_Keydown (int key)
 		M_Setup_Key (key);
 		return;
 
-	case m_net:
-		M_Net_Key (key);
-		return;
-
 	case m_options:
 		M_Options_Key (key);
 		return;
@@ -3777,24 +3512,9 @@ void M_Keydown (int key)
 		M_GameOptions_Key (key);
 		return;
 
-	case m_search:
-		M_Search_Key (key);
-		break;
-
 	case m_slist:
 		M_ServerList_Key (key);
 		return;
 	}
-}
-
-
-void M_ConfigureNetSubsystem(void)
-{
-// enable/disable net systems to match desired config
-
-	Cbuf_AddText ("stopdemo\n");
-
-	if (IPXConfig || TCPIPConfig)
-		net_hostport = lanConfig_port;
 }
 

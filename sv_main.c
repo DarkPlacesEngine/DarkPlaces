@@ -302,24 +302,21 @@ Initializes a client_t for a new net connection.  This will only be called
 once for a player each game, not once for each level change.
 ================
 */
-void SV_ConnectClient (int clientnum)
+void SV_ConnectClient (int clientnum, netconn_t *netconnection)
 {
 	client_t		*client;
-	struct qsocket_s *netconnection;
 	int				i;
 	float			spawn_parms[NUM_SPAWN_PARMS];
 
 	client = svs.clients + clientnum;
 
-	Con_DPrintf ("Client %s connected\n", client->netconnection->address);
-
 // set up the client_t
-	netconnection = client->netconnection;
-
 	if (sv.loadgame)
 		memcpy (spawn_parms, client->spawn_parms, sizeof(spawn_parms));
 	memset (client, 0, sizeof(*client));
 	client->netconnection = netconnection;
+
+	Con_DPrintf ("Client %s connected\n", client->netconnection->address);
 
 	strcpy (client->name, "unconnected");
 	client->active = true;
@@ -333,53 +330,18 @@ void SV_ConnectClient (int clientnum)
 		memcpy (client->spawn_parms, spawn_parms, sizeof(spawn_parms));
 	else
 	{
-	// call the progs to get default spawn parms for the new client
+		// call the progs to get default spawn parms for the new client
 		PR_ExecuteProgram (pr_global_struct->SetNewParms, "QC function SetNewParms is missing");
 		for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
 			client->spawn_parms[i] = (&pr_global_struct->parm1)[i];
+		// set up the edict a bit
+		ED_ClearEdict(client->edict);
+		client->edict->v->colormap = NUM_FOR_EDICT(client->edict);
+		client->edict->v->netname = PR_SetString(client->name);
 	}
 
 	SV_SendServerinfo (client);
 }
-
-
-/*
-===================
-SV_CheckForNewClients
-
-===================
-*/
-void SV_CheckForNewClients (void)
-{
-	struct qsocket_s	*ret;
-	int				i;
-
-//
-// check for new connections
-//
-	while (1)
-	{
-		ret = NET_CheckNewConnections ();
-		if (!ret)
-			break;
-
-	//
-	// init a new client structure
-	//
-		for (i=0 ; i<svs.maxclients ; i++)
-			if (!svs.clients[i].active)
-				break;
-		if (i == svs.maxclients)
-			Sys_Error ("Host_CheckForNewClients: no free clients");
-
-		svs.clients[i].netconnection = ret;
-		SV_ConnectClient (i);
-
-		net_activeconnections++;
-		NET_Heartbeat (1);
-	}
-}
-
 
 
 /*
@@ -1392,7 +1354,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
 
 // send the datagram
-	if (NET_SendUnreliableMessage (client->netconnection, &msg) == -1)
+	if (NetConn_SendUnreliableMessage (client->netconnection, &msg) == -1)
 	{
 		SV_DropClient (true);// if the message couldn't send, kick off
 		return false;
@@ -1410,31 +1372,74 @@ void SV_UpdateToReliableMessages (void)
 {
 	int i, j;
 	client_t *client;
+	eval_t *val;
+	char *s;
 
 // check for changes to be sent over the reliable streams
 	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
 	{
+		// update the host_client fields we care about according to the entity fields
 		sv_player = host_client->edict;
-		if (host_client->old_frags != sv_player->v->frags)
+		s = PR_GetString(sv_player->v->netname);
+		if (s != host_client->name)
 		{
+			if (s == NULL)
+				s = "";
+			// point the string back at host_client->name to keep it safe
+			strncpy(host_client->name, s, sizeof(host_client->name) - 1);
+			sv_player->v->netname = PR_SetString(host_client->name);
+		}
+		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)
+			host_client->colors = val->_float;
+		host_client->frags = sv_player->v->frags;
+		if (gamemode == GAME_NEHAHRA)
+			if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)) && host_client->pmodel != val->_float)
+				host_client->pmodel = val->_float;
+
+		// if the fields changed, send messages about the changes
+		if (strcmp(host_client->old_name, host_client->name))
+		{
+			strcpy(host_client->old_name, host_client->name);
+			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+			{
+				if (!client->active || !client->spawned)
+					continue;
+				MSG_WriteByte (&client->message, svc_updatename);
+				MSG_WriteByte (&client->message, i);
+				MSG_WriteString (&client->message, host_client->name);
+			}
+		}
+		if (host_client->old_colors != host_client->colors)
+		{
+			host_client->old_colors = host_client->colors;
+			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+			{
+				if (!client->active || !client->spawned)
+					continue;
+				MSG_WriteByte (&client->message, svc_updatecolors);
+				MSG_WriteByte (&client->message, i);
+				MSG_WriteByte (&client->message, host_client->colors);
+			}
+		}
+		if (host_client->old_frags != host_client->frags)
+		{
+			host_client->old_frags = host_client->frags;
 			for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 			{
 				if (!client->active || !client->spawned)
 					continue;
 				MSG_WriteByte (&client->message, svc_updatefrags);
 				MSG_WriteByte (&client->message, i);
-				MSG_WriteShort (&client->message, sv_player->v->frags);
+				MSG_WriteShort (&client->message, host_client->frags);
 			}
-
-			host_client->old_frags = sv_player->v->frags;
 		}
 	}
 
-	for (j=0, host_client = svs.clients ; j<svs.maxclients ; j++, host_client++)
+	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 	{
-		if (!host_client->active)
+		if (!client->active)
 			continue;
-		SZ_Write (&host_client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
+		SZ_Write (&client->message, sv.reliable_datagram.data, sv.reliable_datagram.cursize);
 	}
 
 	SZ_Clear (&sv.reliable_datagram);
@@ -1460,7 +1465,7 @@ void SV_SendNop (client_t *client)
 
 	MSG_WriteChar (&msg, svc_nop);
 
-	if (NET_SendUnreliableMessage (client->netconnection, &msg) == -1)
+	if (NetConn_SendUnreliableMessage (client->netconnection, &msg) == -1)
 		SV_DropClient (true);	// if the message couldn't send, kick off
 	client->last_message = realtime;
 }
@@ -1482,6 +1487,12 @@ void SV_SendClientMessages (void)
 	{
 		if (!host_client->active)
 			continue;
+
+		if (host_client->deadsocket)
+		{
+			SV_DropClient (true);	// if the message couldn't send, kick off
+			continue;
+		}
 
 		if (host_client->spawned)
 		{
@@ -1515,14 +1526,14 @@ void SV_SendClientMessages (void)
 
 		if (host_client->message.cursize || host_client->dropasap)
 		{
-			if (!NET_CanSendMessage (host_client->netconnection))
+			if (!NetConn_CanSendMessage (host_client->netconnection))
 				continue;
 
 			if (host_client->dropasap)
 				SV_DropClient (false);	// went to another level
 			else
 			{
-				if (NET_SendMessage (host_client->netconnection, &host_client->message) == -1)
+				if (NetConn_SendReliableMessage (host_client->netconnection, &host_client->message) == -1)
 					SV_DropClient (true);	// if the message couldn't send, kick off
 				SZ_Clear (&host_client->message);
 				host_client->last_message = realtime;
@@ -1659,7 +1670,7 @@ void SV_SendReconnect (void)
 
 	MSG_WriteChar (&msg, svc_stufftext);
 	MSG_WriteString (&msg, "reconnect\n");
-	NET_SendToAll (&msg, 5);
+	NetConn_SendToAll (&msg, 5);
 
 	if (cls.state != ca_dedicated)
 		Cmd_ExecuteString ("reconnect\n", src_command);
@@ -1758,6 +1769,8 @@ void SV_SpawnServer (const char *server)
 //
 	if (sv.active)
 		SV_SendReconnect ();
+	else
+		NetConn_OpenServerPorts(svs.maxclients > 1);
 
 //
 // make cvars consistant
@@ -1914,6 +1927,6 @@ void SV_SpawnServer (const char *server)
 			SV_SendServerinfo (host_client);
 
 	Con_DPrintf ("Server spawned.\n");
-	NET_Heartbeat (2);
+	NetConn_Heartbeat (2);
 }
 
