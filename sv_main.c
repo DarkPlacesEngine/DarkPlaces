@@ -1772,10 +1772,15 @@ void SV_SpawnServer (const char *server)
 
 	// clear the edict memory pool
 	Mem_EmptyPool(sv_edicts_mempool);
+	// edict_t structures (hidden from progs)
 	sv.edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t));
+	// progs fields, often accessed by server
 	sv.edictsfields = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
+	// table of edict pointers, for quicker lookup of edicts
 	sv.edictstable = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
-	for (i = 0;i < MAX_EDICTS;i++)
+	// used by PushMove to move back pushed entities
+	sv.moved_edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * sizeof(edict_t *));
+	for (i = 0;i < sv.max_edicts;i++)
 	{
 		ent = sv.edicts + i;
 		ent->v = (void *)((qbyte *)sv.edictsfields + i * pr_edict_size);
