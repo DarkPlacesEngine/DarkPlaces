@@ -225,7 +225,7 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 	case 4:
 		SCR_EndLoadingPlaque ();		// allow normal screen updates
 		// LordHavoc: debugging purposes
-		Con_DPrintf("GLQuake texture slots in use: %i : %i : %i texels\n", texture_extension_number, numgltextures, texels);
+		Con_DPrintf("Texture slots in use: %i : %i : %i texels\n", texture_extension_number, numgltextures, texels);
 		break;
 	}
 }
