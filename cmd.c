@@ -158,13 +158,15 @@ void Cbuf_Execute (void)
 		text = (char *)cmd_text.data;
 
 		quotes = 0;
+		while (*text && *text <= ' ')
+			text++;
 		for (i=0 ; i< cmd_text.cursize ; i++)
 		{
 			if (text[i] == '"')
 				quotes++;
 			if ( !(quotes&1) &&  text[i] == ';')
 				break;	// don't break if inside a quoted string
-			if (text[i] == '\n')
+			if (text[i] == '\r' || text[i] == '\n')
 				break;
 		}
 
