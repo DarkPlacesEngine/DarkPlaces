@@ -1393,7 +1393,7 @@ void R_Shadow_LoadWorldLights(void)
 				shadow = false;
 				t++;
 			}
-			a = sscanf(t, "%f %f %f %f %f %f %f %d %s", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, &cubemapname);
+			a = sscanf(t, "%f %f %f %f %f %f %f %d %s", &origin[0], &origin[1], &origin[2], &radius, &color[0], &color[1], &color[2], &style, cubemapname);
 			if (a < 9)
 				cubemapname[0] = 0;
 			*s = '\n';
