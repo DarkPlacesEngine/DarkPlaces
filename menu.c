@@ -1243,7 +1243,7 @@ again:
 //=============================================================================
 /* OPTIONS MENU */
 
-#define	OPTIONS_ITEMS	26
+#define	OPTIONS_ITEMS	27
 
 #define	SLIDER_RANGE	10
 
