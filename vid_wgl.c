@@ -1256,8 +1256,8 @@ void IN_StartupMouse (void)
 
 	mouseinitialized = true;
 
-// COMMANDLINEOPTION: Windows Input: -nodinput disables DirectInput for mouse/joystick input, gl_finish 1 mode recommended if this option is used as otherwise it tends to stutter due to input backlog.
-	if (!COM_CheckParm ("-nodinput"))
+// COMMANDLINEOPTION: Windows Input: -dinput enables DirectInput for mouse/joystick input
+	if (COM_CheckParm ("-dinput"))
 	{
 		dinput = IN_InitDInput ();
 
@@ -1277,18 +1277,18 @@ void IN_StartupMouse (void)
 
 		if (mouseparmsvalid)
 		{
-// COMMANDLINEOPTION: Windows GDI Input: -noforcemspd disables setting of mouse speed (-nodinput only, windows only)
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemspd disables setting of mouse speed (not used with -dinput, windows only)
 			if ( COM_CheckParm ("-noforcemspd") )
 				newmouseparms[2] = originalmouseparms[2];
 
-// COMMANDLINEOPTION: Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (-nodinput only, windows only)
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemaccel disables setting of mouse acceleration (not used with -dinput, windows only)
 			if ( COM_CheckParm ("-noforcemaccel") )
 			{
 				newmouseparms[0] = originalmouseparms[0];
 				newmouseparms[1] = originalmouseparms[1];
 			}
 
-// COMMANDLINEOPTION: Windows GDI Input: -noforcemparms disables setting of mouse parameters (-nodinput only, windows only)
+// COMMANDLINEOPTION: Windows GDI Input: -noforcemparms disables setting of mouse parameters (not used with -dinput, windows only)
 			if ( COM_CheckParm ("-noforcemparms") )
 			{
 				newmouseparms[0] = originalmouseparms[0];
