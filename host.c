@@ -118,28 +118,34 @@ Host_Error
 This shuts down both the client and server
 ================
 */
+char		hosterrorstring[1024];
 void Host_Error (char *error, ...)
 {
 	va_list		argptr;
-	char		string[1024];
 	static	qboolean inerror = false;
 	
 	if (inerror)
-		Sys_Error ("Host_Error: recursively entered");
+	{
+		char string[1024];
+		va_start (argptr,error);
+		vsprintf (string,error,argptr);
+		va_end (argptr);
+		Sys_Error ("Host_Error: recursively entered (original error was: %s    new error is: %s)", hosterrorstring, string);
+	}
 	inerror = true;
 	
 	SCR_EndLoadingPlaque ();		// reenable screen updates
 
 	va_start (argptr,error);
-	vsprintf (string,error,argptr);
+	vsprintf (hosterrorstring,error,argptr);
 	va_end (argptr);
-	Con_Printf ("Host_Error: %s\n",string);
+	Con_Printf ("Host_Error: %s\n",hosterrorstring);
 	
 	if (sv.active)
 		Host_ShutdownServer (false);
 
 	if (cls.state == ca_dedicated)
-		Sys_Error ("Host_Error: %s\n",string);	// dedicated servers exit
+		Sys_Error ("Host_Error: %s\n",hosterrorstring);	// dedicated servers exit
 
 	CL_Disconnect ();
 	cls.demonum = -1;
@@ -359,7 +365,7 @@ void SV_DropClient (qboolean crash)
 			NET_SendMessage (host_client->netconnection, &host_client->message);
 		}
 	
-		if (host_client->edict && host_client->spawned)
+		if (sv.active && host_client->edict && host_client->spawned) // LordHavoc: don't call QC if server is dead (avoids recursive Host_Error in some mods when they run out of edicts)
 		{
 		// call the prog function for removing a client
 		// this will set the body to a dead frame, among other things
