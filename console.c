@@ -43,7 +43,6 @@ char *con_text = 0;
 //seconds
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3"};
 cvar_t con_notify = {CVAR_SAVE, "con_notify","4"};
-cvar_t logfile = {0, "logfile","0"};
 
 #define MAX_NOTIFYLINES 32
 // cl.time time the line was generated for transparent notify lines
@@ -203,7 +202,6 @@ void Con_InitLogging (void)
 			sprintf (temp, "%s%s", fs_gamedir, t2);
 			unlink (temp);
 		}
-		logfile.integer = 1;
 	}
 }
 
@@ -214,8 +212,6 @@ Con_Init
 */
 void Con_Init (void)
 {
-	Cvar_RegisterVariable(&logfile);
-
 	console_mempool = Mem_AllocPool("console");
 	con_text = Mem_Alloc(console_mempool, CON_TEXTSIZE);
 	memset (con_text, ' ', CON_TEXTSIZE);
