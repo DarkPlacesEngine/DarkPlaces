@@ -68,13 +68,8 @@ void R_LerpAnimation(entity_render_t *r)
 					sub1 = (sub1 % scene->framecount);
 					sub2 = (sub2 % scene->framecount);
 				}
-				else
-				{
-					sub1 = bound(0, sub1, (scene->framecount - 1));
-					sub2 = bound(0, sub2, (scene->framecount - 1));
-				}
-				sub1 += scene->firstframe;
-				sub2 += scene->firstframe;
+				sub1 = bound(0, sub1, (scene->framecount - 1)) + scene->firstframe;
+				sub2 = bound(0, sub2, (scene->framecount - 1)) + scene->firstframe;
 				f = sub1;
 				d = (1 - sublerp) * lerp;
 #define FRAMEBLENDINSERT\
@@ -128,13 +123,8 @@ void R_LerpAnimation(entity_render_t *r)
 					sub1 = (sub1 % scene->framecount);
 					sub2 = (sub2 % scene->framecount);
 				}
-				else
-				{
-					sub1 = bound(0, sub1, (scene->framecount - 1));
-					sub2 = bound(0, sub2, (scene->framecount - 1));
-				}
-				sub1 += scene->firstframe;
-				sub2 += scene->firstframe;
+				sub1 = bound(0, sub1, (scene->framecount - 1)) + scene->firstframe;
+				sub2 = bound(0, sub2, (scene->framecount - 1)) + scene->firstframe;
 				f = sub1;
 				d = (1 - sublerp) * lerp;
 				FRAMEBLENDINSERT
