@@ -1931,7 +1931,7 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 	rmeshstate_t m;
 	R_Mesh_Matrix(&ent->matrix);
 	memset(&m, 0, sizeof(m));
-	if (ent->effects & EF_ADDITIVE)
+	if ((ent->effects & EF_ADDITIVE) || (face->texture->textureflags & Q3TEXTUREFLAG_ADDITIVE))
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 	else
 		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -1979,13 +1979,60 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 		}
 		m.pointer_color = varray_color4f;
 	}
-	m.pointer_vertex = face->data_vertex3f;
+	if (face->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+	{
+		int i, j;
+		float f, center[3], center2[3], forward[3], right[3], up[3], v[4][3];
+		matrix4x4_t matrix1, imatrix1;
+		R_Mesh_Matrix(&r_identitymatrix);
+		// a single autosprite surface can contain multiple sprites...
+		for (j = 0;j < face->num_vertices - 3;j += 4)
+		{
+			VectorClear(center);
+			for (i = 0;i < 4;i++)
+				VectorAdd(center, face->data_vertex3f + (j+i) * 3, center);
+			VectorScale(center, 0.25f, center);
+			Matrix4x4_Transform(&ent->matrix, center, center2);
+			// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
+			Matrix4x4_FromVectors(&matrix1, face->data_normal3f + j*3, face->data_svector3f + j*3, face->data_tvector3f + j*3, center);
+			Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
+			for (i = 0;i < 4;i++)
+				Matrix4x4_Transform(&imatrix1, face->data_vertex3f + (j+i)*3, v[i]);
+			if (face->texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
+			{
+				CL_SparkShower (center, vec3_origin, 1);
+				forward[0] = r_vieworigin[0] - center2[0];
+				forward[1] = r_vieworigin[1] - center2[1];
+				forward[2] = 0;
+				VectorNormalize(forward);
+				right[0] = forward[1];
+				right[1] = -forward[0];
+				right[2] = 0;
+				up[0] = 0;
+				up[1] = 0;
+				up[2] = 1;
+			}
+			else
+			{
+				VectorCopy(r_viewforward, forward);
+				VectorCopy(r_viewright, right);
+				VectorCopy(r_viewup, up);
+			}
+			for (i = 0;i < 4;i++)
+				VectorMAMAMAM(1, center2, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (i+j) * 3);
+		}
+		m.pointer_vertex = varray_vertex3f;
+	}
+	else
+		m.pointer_vertex = face->data_vertex3f;
 	R_Mesh_State(&m);
-	qglDisable(GL_CULL_FACE);
+	if (face->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglDisable(GL_CULL_FACE);
 	GL_LockArrays(0, face->num_vertices);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 	GL_LockArrays(0, 0);
-	qglEnable(GL_CULL_FACE);
+	if (face->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglEnable(GL_CULL_FACE);
 }
 
 void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumfaces, q3msurface_t **texturefacelist)
@@ -2063,6 +2110,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		GL_DepthMask(true);
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
+		qglDisable(GL_CULL_FACE);
 		memset(&m, 0, sizeof(m));
 		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
 		{
@@ -2082,6 +2130,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 			R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 			GL_LockArrays(0, 0);
 		}
+		qglEnable(GL_CULL_FACE);
 		return;
 	}
 	// anything else is a typical wall, lightmap * texture + glow
@@ -2091,6 +2140,8 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 		GL_Color(1, 1, 1, 1);
+		if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+			qglDisable(GL_CULL_FACE);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
 		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
@@ -2119,8 +2170,12 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 				GL_LockArrays(0, 0);
 			}
 		}
+		if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+			qglEnable(GL_CULL_FACE);
 		return;
 	}
+	if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglDisable(GL_CULL_FACE);
 	if (r_lightmapintensity <= 0)
 	{
 		GL_DepthMask(true);
@@ -2252,6 +2307,8 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 			GL_LockArrays(0, 0);
 		}
 	}
+	if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglEnable(GL_CULL_FACE);
 }
 
 void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
@@ -2424,16 +2481,34 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 					{
 						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)) && surface->num_triangles)
 						{
-							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+							if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 							{
-								v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-								v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-								v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-								if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+								for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 								{
-									SETPVSBIT(outsurfacepvs, surfaceindex);
-									outsurfacelist[outnumsurfaces++] = surfaceindex;
-									break;
+									v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+									v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+									v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+									if (lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+									{
+										SETPVSBIT(outsurfacepvs, surfaceindex);
+										outsurfacelist[outnumsurfaces++] = surfaceindex;
+										break;
+									}
+								}
+							}
+							else
+							{
+								for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+								{
+									v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+									v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+									v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+									if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+									{
+										SETPVSBIT(outsurfacepvs, surfaceindex);
+										outsurfacelist[outnumsurfaces++] = surfaceindex;
+										break;
+									}
 								}
 							}
 						}
@@ -2475,7 +2550,7 @@ void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 		{
 			surface = model->brushq3.data_faces + surfacelist[surfacelistindex];
 			// FIXME: check some manner of face->rendermode here?
-			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS))
+			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && !(surface->texture->surfaceparms & (Q3SURFACEPARM_SKY | Q3SURFACEPARM_TRANS)) && !(surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED))
 				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
@@ -2507,7 +2582,13 @@ void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->data_vertex3f, surface->data_svector3f, surface->data_tvector3f, surface->data_normal3f, surface->data_texcoordtexture2f, surface->num_triangles, surface->data_element3i);
 			}
 			else if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles)
+			{
+				if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+					qglDisable(GL_CULL_FACE);
 				R_Shadow_RenderLighting(surface->num_vertices, surface->num_triangles, surface->data_element3i, surface->data_vertex3f, surface->data_svector3f, surface->data_tvector3f, surface->data_normal3f, surface->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, surface->texture->skin.base, surface->texture->skin.nmap, surface->texture->skin.gloss, lightcubemap, LIGHTING_DIFFUSE | LIGHTING_SPECULAR);
+				if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+					qglEnable(GL_CULL_FACE);
+			}
 		}
 	}
 }

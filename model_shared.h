@@ -327,14 +327,24 @@ model_brushq2_t;
 #define Q3SURFACEPARM_TRANS 16777216
 #define Q3SURFACEPARM_WATER 33554432
 
+// various flags from shaders
+#define Q3TEXTUREFLAG_TWOSIDED 1
+#define Q3TEXTUREFLAG_ADDITIVE 2
+#define Q3TEXTUREFLAG_NOMIPMAPS 4
+#define Q3TEXTUREFLAG_NOPICMIP 8
+#define Q3TEXTUREFLAG_AUTOSPRITE 16
+#define Q3TEXTUREFLAG_AUTOSPRITE2 32
+
 struct q3msurface_s;
 typedef struct q3mtexture_s
 {
 	char name[Q3PATHLENGTH];
+	char firstpasstexturename[Q3PATHLENGTH];
 	int surfaceflags;
 	int nativecontents;
 	int supercontents;
 	int surfaceparms;
+	int textureflags;
 
 	int number;
 	skinframe_t skin;
