@@ -370,7 +370,7 @@ int quadelements[768];
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright, texnum, additive, batch;
-	float x, y, w, h, s, t, u, v, cr, cg, cb, ca, *av, *at, *ac;
+	float x, y, w, h, s, t, u, v, cr, cg, cb, ca, *av, *at;
 	cachepic_t *pic;
 	drawqueue_t *dq;
 	char *str, *currentpic;
@@ -498,7 +498,6 @@ void R_DrawQueue(void)
 					av[ 4] = x+w;av[ 5] = y  ;av[ 6] = 10;
 					av[ 8] = x+w;av[ 9] = y+h;av[10] = 10;
 					av[12] = x  ;av[13] = y+h;av[14] = 10;
-					ac += 16;
 					at += 8;
 					av += 16;
 					batchcount++;
