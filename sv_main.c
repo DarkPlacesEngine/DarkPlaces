@@ -314,7 +314,7 @@ void SV_SendServerinfo (client_t *client)
 		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_clients_mempool);
 
 	MSG_WriteByte (&client->message, svc_print);
-	snprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
+	dpsnprintf (message, sizeof (message), "\002\nServer: %s build %s (progs %i crc)", gamename, buildstring, pr_crc);
 	MSG_WriteString (&client->message,message);
 
 	MSG_WriteByte (&client->message, svc_serverinfo);
@@ -1610,7 +1610,7 @@ void SV_SpawnServer (const char *server)
 	if (cls.state != ca_dedicated)
 		SCR_BeginLoadingPlaque();
 
-	snprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
+	dpsnprintf (modelname, sizeof(modelname), "maps/%s.bsp", server);
 	worldmodel = Mod_ForName(modelname, false, true, true);
 	if (!worldmodel || !worldmodel->TraceBox)
 	{
@@ -1750,7 +1750,7 @@ void SV_SpawnServer (const char *server)
 	strlcpy(sv.model_precache[1], sv.modelname, sizeof(sv.model_precache[1]));
 	for (i = 1;i < sv.worldmodel->brush.numsubmodels;i++)
 	{
-		snprintf(sv.model_precache[i+1], sizeof(sv.model_precache[i+1]), "*%i", i);
+		dpsnprintf(sv.model_precache[i+1], sizeof(sv.model_precache[i+1]), "*%i", i);
 		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, false);
 	}
 

@@ -57,7 +57,7 @@ void Sys_Error (const char *error, ...)
 	static int	in_sys_error3 = 0;
 
 	va_start (argptr, error);
-	vsnprintf (text, sizeof (text), error, argptr);
+	dpvsnprintf (text, sizeof (text), error, argptr);
 	va_end (argptr);
 
 	Con_Printf ("Quake Error: %s\n", text);

@@ -439,34 +439,34 @@ char *PR_ValueString (etype_t type, eval_t *val)
 		//n = NoCrash_NUM_FOR_EDICT(PROG_TO_EDICT(val->edict));
 		n = val->edict;
 		if (n < 0 || n >= MAX_EDICTS)
-			snprintf (line, sizeof (line), "entity %i (invalid!)", n);
+			dpsnprintf (line, sizeof (line), "entity %i (invalid!)", n);
 		else
-			snprintf (line, sizeof (line), "entity %i", n);
+			dpsnprintf (line, sizeof (line), "entity %i", n);
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		snprintf (line, sizeof (line), "%s()", PR_GetString(f->s_name));
+		dpsnprintf (line, sizeof (line), "%s()", PR_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
-		snprintf (line, sizeof (line), ".%s", PR_GetString(def->s_name));
+		dpsnprintf (line, sizeof (line), ".%s", PR_GetString(def->s_name));
 		break;
 	case ev_void:
-		snprintf (line, sizeof (line), "void");
+		dpsnprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
 		// LordHavoc: changed from %5.1f to %10.4f
-		snprintf (line, sizeof (line), "%10.4f", val->_float);
+		dpsnprintf (line, sizeof (line), "%10.4f", val->_float);
 		break;
 	case ev_vector:
 		// LordHavoc: changed from %5.1f to %10.4f
-		snprintf (line, sizeof (line), "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, sizeof (line), "'%10.4f %10.4f %10.4f'", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	case ev_pointer:
-		snprintf (line, sizeof (line), "pointer");
+		dpsnprintf (line, sizeof (line), "pointer");
 		break;
 	default:
-		snprintf (line, sizeof (line), "bad type %i", type);
+		dpsnprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
 
@@ -517,7 +517,7 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		line[i] = '\0';
 		break;
 	case ev_entity:
-		snprintf (line, sizeof (line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
+		dpsnprintf (line, sizeof (line), "%i", NUM_FOR_EDICT(PROG_TO_EDICT(val->edict)));
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
@@ -525,19 +525,19 @@ char *PR_UglyValueString (etype_t type, eval_t *val)
 		break;
 	case ev_field:
 		def = ED_FieldAtOfs ( val->_int );
-		snprintf (line, sizeof (line), ".%s", PR_GetString(def->s_name));
+		dpsnprintf (line, sizeof (line), ".%s", PR_GetString(def->s_name));
 		break;
 	case ev_void:
-		snprintf (line, sizeof (line), "void");
+		dpsnprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
-		snprintf (line, sizeof (line), "%f", val->_float);
+		dpsnprintf (line, sizeof (line), "%f", val->_float);
 		break;
 	case ev_vector:
-		snprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	default:
-		snprintf (line, sizeof (line), "bad type %i", type);
+		dpsnprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
 
@@ -563,11 +563,11 @@ char *PR_GlobalString (int ofs)
 	val = (void *)&pr_globals[ofs];
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		snprintf (line, sizeof (line), "%i(?)", ofs);
+		dpsnprintf (line, sizeof (line), "%i(?)", ofs);
 	else
 	{
 		s = PR_ValueString (def->type, val);
-		snprintf (line, sizeof (line), "%i(%s)%s", ofs, PR_GetString(def->s_name), s);
+		dpsnprintf (line, sizeof (line), "%i(%s)%s", ofs, PR_GetString(def->s_name), s);
 	}
 
 	i = strlen(line);
@@ -586,9 +586,9 @@ char *PR_GlobalStringNoContents (int ofs)
 
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		snprintf (line, sizeof (line), "%i(?)", ofs);
+		dpsnprintf (line, sizeof (line), "%i(?)", ofs);
 	else
-		snprintf (line, sizeof (line), "%i(%s)", ofs, PR_GetString(def->s_name));
+		dpsnprintf (line, sizeof (line), "%i(%s)", ofs, PR_GetString(def->s_name));
 
 	i = strlen(line);
 	for ( ; i<20 ; i++)
@@ -625,7 +625,7 @@ void ED_Print(edict_t *ed)
 	}
 
 	tempstring[0] = 0;
-	snprintf (tempstring, sizeof (tempstring), "\nEDICT %i:\n", NUM_FOR_EDICT(ed));
+	dpsnprintf (tempstring, sizeof (tempstring), "\nEDICT %i:\n", NUM_FOR_EDICT(ed));
 	for (i=1 ; i<progs->numfielddefs ; i++)
 	{
 		d = &pr_fielddefs[i];
@@ -1108,7 +1108,7 @@ const char *ED_ParseEdict (const char *data, edict_t *ent)
 		{
 			char	temp[32];
 			strlcpy (temp, com_token, sizeof (temp));
-			snprintf (com_token, sizeof (com_token), "0 %s 0", temp);
+			dpsnprintf (com_token, sizeof (com_token), "0 %s 0", temp);
 		}
 
 		if (!ED_ParseEpair(ent, key, com_token))
@@ -1579,7 +1579,7 @@ void PR_Fields_f (void)
 			strlcat (tempstring, "pointer  ", sizeof (tempstring));
 			break;
 		default:
-			snprintf (tempstring2, sizeof (tempstring2), "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
+			dpsnprintf (tempstring2, sizeof (tempstring2), "bad type %i ", d->type & ~DEF_SAVEGLOBAL);
 			strlcat (tempstring, tempstring2, sizeof (tempstring));
 			break;
 		}
@@ -1593,7 +1593,7 @@ void PR_Fields_f (void)
 		strcat (tempstring, name);
 		for (j = strlen(name);j < 25;j++)
 			strcat(tempstring, " ");
-		snprintf (tempstring2, sizeof (tempstring2), "%5d", counts[i]);
+		dpsnprintf (tempstring2, sizeof (tempstring2), "%5d", counts[i]);
 		strlcat (tempstring, tempstring2, sizeof (tempstring));
 		strlcat (tempstring, "\n", sizeof (tempstring));
 		if (strlen(tempstring) >= 4096)

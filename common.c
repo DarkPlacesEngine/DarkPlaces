@@ -1067,10 +1067,51 @@ char *va(const char *format, ...)
 	s = string[stringindex];
 	stringindex = (stringindex + 1) & 7;
 	va_start (argptr, format);
-	vsnprintf (s, sizeof (string[0]), format,argptr);
+	dpvsnprintf (s, sizeof (string[0]), format,argptr);
 	va_end (argptr);
 
 	return s;
+}
+
+
+//======================================
+
+// snprintf and vsnprintf are NOT portable. Use their DP counterparts instead
+
+#undef snprintf
+#undef vsnprintf
+
+#ifdef WIN32
+# define snprintf _snprintf
+# define vsnprintf _vsnprintf
+#endif
+
+
+int dpsnprintf (char *buffer, size_t buffersize, const char *format, ...)
+{
+	va_list args;
+	int result;
+
+	va_start (args, format);
+	result = dpvsnprintf (buffer, buffersize, format, args);
+	va_end (args);
+
+	return result;
+}
+
+
+int dpvsnprintf (char *buffer, size_t buffersize, const char *format, va_list args)
+{
+	int result;
+
+	result = vsnprintf (buffer, buffersize, format, args);
+	if (result < 0 || (size_t)result >= buffersize)
+	{
+		buffer[buffersize - 1] = '\0';
+		return -1;
+	}
+
+	return result;
 }
 
 

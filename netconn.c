@@ -299,7 +299,7 @@ static void _HostCache_Test(void)
 	for( i = 0 ; i < 1024 ; i++ ) {
 		memset( &hostcache_cache[hostcache_cachecount], 0, sizeof( hostcache_t ) );
 		hostcache_cache[hostcache_cachecount].info.ping = rand() % 450 + 250;
-		snprintf( hostcache_cache[hostcache_cachecount].info.name, 128, "Black's HostCache Test %i", i );
+		dpsnprintf( hostcache_cache[hostcache_cachecount].info.name, 128, "Black's HostCache Test %i", i );
 		hostcache_cache[hostcache_cachecount].finished = true;
 		sprintf( hostcache_cache[hostcache_cachecount].line1, "%i %s", hostcache_cache[hostcache_cachecount].info.ping, hostcache_cache[hostcache_cachecount].info.name );
 		_HostCache_Insert( &hostcache_cache[hostcache_cachecount] );
@@ -942,8 +942,8 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			// legacy/old stuff move it to the menu ASAP
 
 			// build description strings for the things users care about
-			snprintf(hostcache_cache[n].line1, sizeof(hostcache_cache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
-			snprintf(hostcache_cache[n].line2, sizeof(hostcache_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
+			dpsnprintf(hostcache_cache[n].line1, sizeof(hostcache_cache[n].line1), "%5d%c%3u/%3u %-65.65s", (int)pingtime, info->protocol != NET_PROTOCOL_VERSION ? '*' : ' ', info->numplayers, info->maxplayers, info->name);
+			dpsnprintf(hostcache_cache[n].line2, sizeof(hostcache_cache[n].line2), "%-21.21s %-19.19s %-17.17s %-20.20s", info->cname, info->game, info->mod, info->map);
 			// if ping is especially high, display it as such
 			if (pingtime >= 300)
 			{
@@ -982,7 +982,7 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			{
 				serverquerycount++;
 	
-				snprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
+				dpsnprintf (ipstring, sizeof (ipstring), "%u.%u.%u.%u:%u", data[1], data[2], data[3], data[4], (data[5] << 8) | data[6]);
 				if (developer.integer)
 					Con_Printf("Requesting info from server %s\n", ipstring);				
 				// ignore the rest of the message if the hostcache is full
@@ -1318,13 +1318,13 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				for (i = 0, n = 0;i < svs.maxclients;i++)
 					if (svs.clients[i].active)
 						n++;
-				responselength = snprintf(response, sizeof(response), "\377\377\377\377infoResponse\x0A"
+				responselength = dpsnprintf(response, sizeof(response), "\377\377\377\377infoResponse\x0A"
 							"\\gamename\\%s\\modname\\%s\\sv_maxclients\\%d"
 							"\\clients\\%d\\mapname\\%s\\hostname\\%s\\protocol\\%d%s%s",
 							gamename, com_modname, svs.maxclients, n,
 							sv.name, hostname.string, NET_PROTOCOL_VERSION, challenge ? "\\challenge\\" : "", challenge ? challenge : "");
 				// does it fit in the buffer?
-				if (responselength < (int)sizeof(response))
+				if (responselength >= 0)
 				{
 					if (developer.integer)
 						Con_Printf("Sending reply to master %s - %s\n", addressstring2, response);
@@ -1613,7 +1613,7 @@ void NetConn_QueryMasters(void)
 #endif
 
 			// build the getservers
-			snprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
+			dpsnprintf(request, sizeof(request), "\377\377\377\377getservers %s %u empty full\x0A", gamename, NET_PROTOCOL_VERSION);
 
 			// search internet
 			for (masternum = 0;sv_masters[masternum].name;masternum++)

@@ -467,7 +467,7 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 		line[i] = '\0';
 		break;
 	case ev_entity:
-		snprintf (line, sizeof (line), "%i", PRVM_NUM_FOR_EDICT(PRVM_PROG_TO_EDICT(val->edict)));
+		dpsnprintf (line, sizeof (line), "%i", PRVM_NUM_FOR_EDICT(PRVM_PROG_TO_EDICT(val->edict)));
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
@@ -475,19 +475,19 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( val->_int );
-		snprintf (line, sizeof (line), ".%s", PRVM_GetString(def->s_name));
+		dpsnprintf (line, sizeof (line), ".%s", PRVM_GetString(def->s_name));
 		break;
 	case ev_void:
-		snprintf (line, sizeof (line), "void");
+		dpsnprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
-		snprintf (line, sizeof (line), "%f", val->_float);
+		dpsnprintf (line, sizeof (line), "%f", val->_float);
 		break;
 	case ev_vector:
-		snprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+		dpsnprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	default:
-		snprintf (line, sizeof (line), "bad type %i", type);
+		dpsnprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
 	

@@ -1410,7 +1410,7 @@ void CL_ParseServerMessage(void)
 				i &= 31;
 				while(count > 0)
 				{
-					snprintf (temp, sizeof (temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
+					dpsnprintf (temp, sizeof (temp), "%3i:%s ", cmdlog[i], cmdlogname[i]);
 					strlcat (description, temp, sizeof (description));
 					count--;
 					i++;

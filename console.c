@@ -99,9 +99,9 @@ const char* Log_Timestamp (const char *desc)
 	strftime (timestring, sizeof (timestring), "%a %b %d %H:%M:%S %Y", crt_tm);
 
 	if (desc != NULL)
-		snprintf (timestamp, sizeof (timestamp), "====== %s (%s) ======\n", desc, timestring);
+		dpsnprintf (timestamp, sizeof (timestamp), "====== %s (%s) ======\n", desc, timestring);
 	else
-		snprintf (timestamp, sizeof (timestamp), "====== %s ======\n", timestring);
+		dpsnprintf (timestamp, sizeof (timestamp), "====== %s ======\n", timestring);
 
 	return timestamp;
 }
@@ -637,7 +637,7 @@ void Con_Printf(const char *fmt, ...)
 	char msg[MAXPRINTMSG];
 
 	va_start(argptr,fmt);
-	vsnprintf(msg,sizeof(msg),fmt,argptr);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
 	Con_Print(msg);
@@ -673,7 +673,7 @@ void Con_DPrintf(const char *fmt, ...)
 		return;			// don't confuse non-developers with techie stuff...
 
 	va_start(argptr,fmt);
-	vsnprintf(msg,sizeof(msg),fmt,argptr);
+	dpvsnprintf(msg,sizeof(msg),fmt,argptr);
 	va_end(argptr);
 
 	Con_Print(msg);

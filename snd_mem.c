@@ -174,8 +174,8 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	// LordHavoc: if the sound filename does not begin with sound/, try adding it
 	if (strncasecmp(s->name, "sound/", 6))
 	{
-		len = snprintf (namebuffer, sizeof(namebuffer), "sound/%s", s->name);
-		if (len >= sizeof (namebuffer))
+		len = dpsnprintf (namebuffer, sizeof(namebuffer), "sound/%s", s->name);
+		if (len < 0)
 		{
 			// name too long
 			Con_Printf("S_LoadSound: name \"%s\" is too long\n", s->name);
@@ -190,8 +190,8 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	}
 
 	// LordHavoc: then try without the added sound/ as wav and ogg
-	len = snprintf (namebuffer, sizeof(namebuffer), "%s", s->name);
-	if (len >= sizeof (namebuffer))
+	len = dpsnprintf (namebuffer, sizeof(namebuffer), "%s", s->name);
+	if (len < 0)
 	{
 		// name too long
 		Con_Printf("S_LoadSound: name \"%s\" is too long\n", s->name);

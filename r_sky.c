@@ -102,13 +102,13 @@ void R_LoadSkyBox(void)
 		success = 0;
 		for (i=0; i<6; i++)
 		{
-			if (snprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+			if (dpsnprintf(name, sizeof(name), "%s_%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 			{
-				if (snprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+				if (dpsnprintf(name, sizeof(name), "%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 				{
-					if (snprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+					if (dpsnprintf(name, sizeof(name), "env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 					{
-						if (snprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) >= (int)sizeof(name) || !(image_rgba = loadimagepixels(name, false, 0, 0)))
+						if (dpsnprintf(name, sizeof(name), "gfx/env/%s%s", skyname, suffix[j][i].suffix) < 0 || !(image_rgba = loadimagepixels(name, false, 0, 0)))
 							continue;
 					}
 				}

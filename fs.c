@@ -803,7 +803,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (matchpattern(current->text, "*.pak", true))
 		{
-			snprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
 			pak = FS_LoadPackPAK (pakfile);
 			if (pak)
 			{
@@ -822,7 +822,7 @@ void FS_AddGameDirectory (const char *dir)
 	{
 		if (matchpattern(current->text, "*.pk3", true))
 		{
-			snprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
+			dpsnprintf (pakfile, sizeof (pakfile), "%s/%s", dir, current->text);
 			pak = FS_LoadPackPK3 (pakfile);
 			if (pak)
 			{
@@ -1260,7 +1260,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 		else
 		{
 			char netpath[MAX_OSPATH];
-			snprintf(netpath, sizeof(netpath), "%s/%s", search->filename, name);
+			dpsnprintf(netpath, sizeof(netpath), "%s/%s", search->filename, name);
 			if (FS_SysFileExists (netpath))
 			{
 				if (!quiet)
@@ -1309,7 +1309,7 @@ qfile_t *FS_OpenReadFile (const char *filename, qboolean quiet)
 	if (pack_ind < 0)
 	{
 		char path [MAX_OSPATH];
-		snprintf (path, sizeof (path), "%s/%s", search->filename, filename);
+		dpsnprintf (path, sizeof (path), "%s/%s", search->filename, filename);
 		return FS_SysOpen (path, "rb");
 	}
 
@@ -1349,7 +1349,7 @@ qfile_t* FS_Open (const char* filepath, const char* mode, qboolean quiet)
 		char real_path [MAX_OSPATH];
 
 		// Open the file on disk directly
-		snprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
+		dpsnprintf (real_path, sizeof (real_path), "%s/%s", fs_gamedir, filepath);
 
 		// Create directories up to the file
 		FS_CreatePath (real_path);
@@ -1604,19 +1604,24 @@ Print a string into a file
 int FS_VPrintf (qfile_t* file, const char* format, va_list ap)
 {
 	int len;
-	char tempstring [1024];
+	size_t buff_size;
+	char *tempbuff = NULL;
 
-	len = vsnprintf (tempstring, sizeof(tempstring), format, ap);
-	if (len >= sizeof (tempstring))
+	buff_size = 1024;
+	tempbuff = Mem_Alloc (tempmempool, buff_size);
+	len = dpvsnprintf (tempbuff, buff_size, format, ap);
+	while (len < 0)
 	{
-		char *temp = Mem_Alloc (tempmempool, len + 1);
-		len = vsnprintf (temp, len + 1, format, ap);
-		len = write (file->handle, temp, len);
-		Mem_Free (temp);
-		return len;
+		Mem_Free (tempbuff);
+		buff_size *= 2;
+		tempbuff = Mem_Alloc (tempmempool, buff_size);
+		len = dpvsnprintf (tempbuff, buff_size, format, ap);
 	}
 
-	return write (file->handle, tempstring, len);
+	len = write (file->handle, tempbuff, len);
+	Mem_Free (tempbuff);
+
+	return len;
 }
 
 
@@ -2019,12 +2024,12 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 		else
 		{
 			// get a directory listing and look at each name
-			snprintf(netpath, sizeof (netpath), "%s/%s", searchpath->filename, basepath);
+			dpsnprintf(netpath, sizeof (netpath), "%s/%s", searchpath->filename, basepath);
 			if ((dir = listdirectory(netpath)))
 			{
 				for (dirfile = dir;dirfile;dirfile = dirfile->next)
 				{
-					snprintf(temp, sizeof(temp), "%s/%s", basepath, dirfile->text);
+					dpsnprintf(temp, sizeof(temp), "%s/%s", basepath, dirfile->text);
 					if (matchpattern(temp, (char *)pattern, true))
 					{
 						for (listtemp = liststart;listtemp;listtemp = listtemp->next)
