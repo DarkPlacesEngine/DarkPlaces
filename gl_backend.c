@@ -1473,8 +1473,8 @@ void SCR_DrawScreen (void)
 			}
 
 			// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-			r_refdef.fov_x = scr_fov.value * cl.viewzoom * r_refdef.fovscale_x;
-			r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
+			r_refdef.fov_x = scr_fov.value * r_refdef.fovscale_x;
+			r_refdef.fov_y = CalcFov (scr_fov.value, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
 
 			R_RenderView();
 
@@ -1487,7 +1487,7 @@ void SCR_DrawScreen (void)
 				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
 				r_refdef.y = 0;
 				r_refdef.fov_x = scr_zoomwindow_fov.value * r_refdef.fovscale_x;
-				r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
+				r_refdef.fov_y = CalcFov(scr_zoomwindow_fov.value, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
 
 				R_RenderView();
 			}
