@@ -405,10 +405,10 @@ qboolean PK3_GetEndOfCentralDir (const char *packfile, FILE *packhandle, pk3_end
 	buffer = Mem_Alloc (tempmempool, maxsize);
 #ifdef FS_USESYSCALLS
 	lseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (read (packhandle, buffer, maxsize) != (unsigned long) maxsize)
+	if (read (packhandle, buffer, maxsize) != (int) maxsize)
 #else
 	fseek (packhandle, filesize - maxsize, SEEK_SET);
-	if (fread (buffer, 1, maxsize, packhandle) != (unsigned long) maxsize)
+	if (fread (buffer, 1, maxsize, packhandle) != (unsigned int) maxsize)
 #endif
 	{
 		Mem_Free (buffer);
@@ -665,28 +665,29 @@ static packfile_t* FS_AddFileToPack (const char* name, pack_t* pack,
 									 size_t realsize, file_flags_t flags)
 {
 	int (*strcmp_funct) (const char* str1, const char* str2);
-	size_t left, right, middle;
-	int diff;
+	int left, right, middle;
 	packfile_t *file;
 
 	strcmp_funct = pack->ignorecase ? strcasecmp : strcmp;
 
 	// Look for the slot we should put that file into (binary search)
 	left = 0;
-	right = pack->numfiles;
-	while (left != right)
+	right = pack->numfiles - 1;
+	while (left <= right)
 	{
-		middle = (left + right - 1) / 2;
+		int diff;
+
+		middle = (left + right) / 2;
 		diff = strcmp_funct (pack->files[middle].name, name);
 
 		// If we found the file, there's a problem
 		if (!diff)
-			Sys_Error ("Package %s contains several time the file %s\n",
+			Sys_Error ("Package %s contains the file %s several times\n",
 					   pack->filename, name);
 
 		// If we're too far in the list
 		if (diff > 0)
-			right = middle;
+			right = middle - 1;
 		else
 			left = middle + 1;
 	}
@@ -1136,7 +1137,6 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 {
 	searchpath_t *search;
 	pack_t *pak;
-	int (*strcmp_funct) (const char* str1, const char* str2);
 
 	// search through the path, one element at a time
 	for (search = fs_searchpaths;search;search = search->next)
@@ -1144,19 +1144,20 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 		// is the element a pak file?
 		if (search->pack)
 		{
-			size_t left, right, middle;
+			int (*strcmp_funct) (const char* str1, const char* str2);
+			int left, right, middle;
 
 			pak = search->pack;
 			strcmp_funct = pak->ignorecase ? strcasecmp : strcmp;
 
 			// Look for the file (binary search)
 			left = 0;
-			right = pak->numfiles;
-			while (left != right)
+			right = pak->numfiles - 1;
+			while (left <= right)
 			{
 				int diff;
 
-				middle = (left + right - 1) / 2;
+				middle = (left + right) / 2;
 				diff = strcmp_funct (pak->files[middle].name, name);
 
 				// Found it
@@ -1173,7 +1174,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 
 				// If we're too far in the list
 				if (diff > 0)
-					right = middle;
+					right = middle - 1;
 				else
 					left = middle + 1;
 			}
