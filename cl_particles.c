@@ -35,7 +35,7 @@ ptype_t;
 #define P_ORIENTATION_FIRSTBIT (P_TEXNUM_FIRSTBIT + P_TEXNUM_BITS)
 #define P_ORIENTATION_BITS 2
 #define P_FLAGS_FIRSTBIT (P_ORIENTATION_FIRSTBIT + P_ORIENTATION_BITS)
-#define P_DYNLIGHT (1 << (P_FLAGS_FIRSTBIT + 0))
+//#define P_DYNLIGHT (1 << (P_FLAGS_FIRSTBIT + 0))
 #define P_ADDITIVE (1 << (P_FLAGS_FIRSTBIT + 1))
 
 typedef struct particle_s
@@ -179,8 +179,8 @@ void CL_Particles_Init (void)
 		partflags = ((porientation) << P_ORIENTATION_FIRSTBIT) | ((ptex) << P_TEXNUM_FIRSTBIT);\
 		if (padditive)\
 			partflags |= P_ADDITIVE;\
-		if (plight)\
-			partflags |= P_DYNLIGHT;\
+		/*if (plight)*/\
+		/*	partflags |= P_DYNLIGHT;*/\
 		tempcolor = (pcolor1);\
 		tempcolor2 = (pcolor2);\
 		cr2 = ((tempcolor2) >> 16) & 0xFF;\
@@ -1005,7 +1005,6 @@ static rtexture_t *particlefonttexture;
 static particletexture_t particletexture[MAX_PARTICLETEXTURES];
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
-static cvar_t r_particles_lighting = {0, "r_particles_lighting", "0"};
 
 static qbyte shadebubble(float dx, float dy, vec3_t light)
 {
@@ -1177,7 +1176,6 @@ static void r_part_newmap(void)
 void R_Particles_Init (void)
 {
 	Cvar_RegisterVariable(&r_drawparticles);
-	Cvar_RegisterVariable(&r_particles_lighting);
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
 }
 
@@ -1185,83 +1183,17 @@ int partindexarray[6] = {0, 1, 2, 0, 2, 3};
 
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
-	int lighting, dynlight, additive, texnum, orientation;
+	int additive, texnum, orientation;
 	float org[3], up2[3], right2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	particletexture_t *tex;
-	mleaf_t *leaf;
 	rmeshbufferinfo_t m;
 	const particle_t *p = calldata1;
-
-	// LordHavoc: check if it's in a visible leaf
-	leaf = Mod_PointInLeaf(p->org, cl.worldmodel);
-	if (leaf->visframe != r_framecount)
-		return;
-
-	lighting = r_dynamic.integer ? r_particles_lighting.integer : 0;
 
 	VectorCopy(p->org, org);
 	orientation = (p->flags >> P_ORIENTATION_FIRSTBIT) & ((1 << P_ORIENTATION_BITS) - 1);
 	texnum = (p->flags >> P_TEXNUM_FIRSTBIT) & ((1 << P_TEXNUM_BITS) - 1);
-	dynlight = p->flags & P_DYNLIGHT;
+	//dynlight = p->flags & P_DYNLIGHT;
 	additive = p->flags & P_ADDITIVE;
-	if (orientation == PARTICLE_BILLBOARD)
-	{
-		VectorScale(vright, p->scalex, right);
-		VectorScale(vup, p->scaley, up);
-	}
-	else if (orientation == PARTICLE_UPRIGHT_FACING)
-	{
-		v[0] = r_origin[0] - org[0];
-		v[1] = r_origin[1] - org[1];
-		v[2] = 0;
-		VectorNormalizeFast(v);
-		VectorVectors(v, right2, up2);
-		VectorScale(right2, p->scalex, right);
-		VectorScale(up2, p->scaley, up);
-	}
-	else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
-	{
-		// double-sided
-		if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
-		{
-			VectorNegate(p->vel2, v);
-			VectorVectors(v, right, up);
-		}
-		else
-			VectorVectors(p->vel2, right, up);
-		VectorScale(right, p->scalex, right);
-		VectorScale(up, p->scaley, up);
-	}
-	else
-		Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
-
-	cr = p->color[0] * (1.0f / 255.0f);
-	cg = p->color[1] * (1.0f / 255.0f);
-	cb = p->color[2] * (1.0f / 255.0f);
-	ca = p->alpha * (1.0f / 255.0f);
-	if (lighting >= 1 && (dynlight || lighting >= 2))
-	{
-		R_CompleteLightPoint(v, org, true, leaf);
-		cr *= v[0];
-		cg *= v[1];
-		cb *= v[2];
-	}
-
-	if (fogenabled)
-	{
-		VectorSubtract(org, r_origin, fogvec);
-		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
-		ifog = 1 - fog;
-		cr = cr * ifog;
-		cg = cg * ifog;
-		cb = cb * ifog;
-		if (!additive)
-		{
-			cr += fogcolor[0] * fog;
-			cg += fogcolor[1] * fog;
-			cb += fogcolor[2] * fog;
-		}
-	}
 
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -1281,6 +1213,36 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		m.index[3] = 0;
 		m.index[4] = 2;
 		m.index[5] = 3;
+		if (orientation == PARTICLE_BILLBOARD)
+		{
+			VectorScale(vright, p->scalex, right);
+			VectorScale(vup, p->scaley, up);
+		}
+		else if (orientation == PARTICLE_UPRIGHT_FACING)
+		{
+			v[0] = r_origin[0] - org[0];
+			v[1] = r_origin[1] - org[1];
+			v[2] = 0;
+			VectorNormalizeFast(v);
+			VectorVectors(v, right2, up2);
+			VectorScale(right2, p->scalex, right);
+			VectorScale(up2, p->scaley, up);
+		}
+		else if (orientation == PARTICLE_ORIENTED_DOUBLESIDED)
+		{
+			// double-sided
+			if (DotProduct(p->vel2, r_origin) > DotProduct(p->vel2, org))
+			{
+				VectorNegate(p->vel2, v);
+				VectorVectors(v, right, up);
+			}
+			else
+				VectorVectors(p->vel2, right, up);
+			VectorScale(right, p->scalex, right);
+			VectorScale(up, p->scaley, up);
+		}
+		else
+			Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
 		m.vertex[0] = org[0] - right[0] - up[0];
 		m.vertex[1] = org[1] - right[1] - up[1];
 		m.vertex[2] = org[2] - right[2] - up[2];
@@ -1302,6 +1264,25 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		m.texcoords[0][5] = tex->t2;
 		m.texcoords[0][6] = tex->s2;
 		m.texcoords[0][7] = tex->t1;
+		cr = p->color[0] * (1.0f / 255.0f);
+		cg = p->color[1] * (1.0f / 255.0f);
+		cb = p->color[2] * (1.0f / 255.0f);
+		ca = p->alpha * (1.0f / 255.0f);
+		if (fogenabled)
+		{
+			VectorSubtract(org, r_origin, fogvec);
+			fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+			ifog = 1 - fog;
+			cr = cr * ifog;
+			cg = cg * ifog;
+			cb = cb * ifog;
+			if (!additive)
+			{
+				cr += fogcolor[0] * fog;
+				cg += fogcolor[1] * fog;
+				cb += fogcolor[2] * fog;
+			}
+		}
 		m.color[0] = m.color[4] = m.color[8] = m.color[12] = cr * m.colorscale;
 		m.color[1] = m.color[5] = m.color[9] = m.color[13] = cg * m.colorscale;
 		m.color[2] = m.color[6] = m.color[10] = m.color[14] = cb * m.colorscale;
@@ -1329,6 +1310,10 @@ void R_DrawParticles (void)
 		// LordHavoc: only render if not too close
 		if (DotProduct(p->org, vpn) < minparticledist)
 			continue;
+
+		// LordHavoc: check if it's in a visible leaf
+		//if (Mod_PointInLeaf(p->org, cl.worldmodel)->visframe != r_framecount)
+		//	continue;
 
 		R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
 	}
