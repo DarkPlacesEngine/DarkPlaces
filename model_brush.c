@@ -176,7 +176,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 	float surfnormal[3];
 #endif
 	msurface_t *surf;
-	for (surfnum = 0, mark = leaf->firstmarksurface;surfnum < leaf->nummarksurfaces;surfnum++, mark++)
+	for (surfnum = 0, mark = leaf->firstleafface;surfnum < leaf->numleaffaces;surfnum++, mark++)
 	{
 		surf = info->model->brushq1.surfaces + *mark;
 		if (surf->flags & SURF_SOLIDCLIP)
@@ -303,7 +303,7 @@ static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, m
 	}
 	else
 	{
-		if (((mleaf_t *)node)->nummarksurfaces)
+		if (((mleaf_t *)node)->numleaffaces)
 			Mod_Q1BSP_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
 	}
 }
@@ -2025,13 +2025,13 @@ static void Mod_Q1BSP_LoadLeafs(lump_t *l)
 
 		out->contents = LittleLong(in->contents);
 
-		out->firstmarksurface = loadmodel->brushq1.marksurfaces + LittleShort(in->firstmarksurface);
-		out->nummarksurfaces = LittleShort(in->nummarksurfaces);
-		if (out->firstmarksurface < 0 || LittleShort(in->firstmarksurface) + out->nummarksurfaces > loadmodel->brushq1.nummarksurfaces)
+		out->firstleafface = loadmodel->brushq1.leaffaces + LittleShort(in->firstmarksurface);
+		out->numleaffaces = LittleShort(in->nummarksurfaces);
+		if (out->firstleafface < 0 || LittleShort(in->firstmarksurface) + out->numleaffaces > loadmodel->brushq1.numleaffaces)
 		{
-			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid marksurface range %i:%i outside range %i:%i\n", out->firstmarksurface, out->firstmarksurface + out->nummarksurfaces, 0, loadmodel->brushq1.nummarksurfaces);
-			out->firstmarksurface = NULL;
-			out->nummarksurfaces = 0;
+			Con_Printf("Mod_Q1BSP_LoadLeafs: invalid leafface range %i:%i outside range %i:%i\n", out->firstleafface, out->firstleafface + out->numleaffaces, 0, loadmodel->brushq1.numleaffaces);
+			out->firstleafface = NULL;
+			out->numleaffaces = 0;
 		}
 
 		out->clusterindex = i - 1;
@@ -2176,23 +2176,23 @@ static void Mod_Q1BSP_MakeHull0(void)
 	}
 }
 
-static void Mod_Q1BSP_LoadMarksurfaces(lump_t *l)
+static void Mod_Q1BSP_LoadLeaffaces(lump_t *l)
 {
 	int i, j;
 	short *in;
 
 	in = (void *)(mod_base + l->fileofs);
 	if (l->filelen % sizeof(*in))
-		Host_Error("Mod_Q1BSP_LoadMarksurfaces: funny lump size in %s",loadmodel->name);
-	loadmodel->brushq1.nummarksurfaces = l->filelen / sizeof(*in);
-	loadmodel->brushq1.marksurfaces = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.nummarksurfaces * sizeof(int));
+		Host_Error("Mod_Q1BSP_LoadLeaffaces: funny lump size in %s",loadmodel->name);
+	loadmodel->brushq1.numleaffaces = l->filelen / sizeof(*in);
+	loadmodel->brushq1.leaffaces = Mem_Alloc(loadmodel->mempool, loadmodel->brushq1.numleaffaces * sizeof(int));
 
-	for (i = 0;i < loadmodel->brushq1.nummarksurfaces;i++)
+	for (i = 0;i < loadmodel->brushq1.numleaffaces;i++)
 	{
 		j = (unsigned) LittleShort(in[i]);
 		if (j >= loadmodel->brushq1.numsurfaces)
-			Host_Error("Mod_Q1BSP_LoadMarksurfaces: bad surface number");
-		loadmodel->brushq1.marksurfaces[i] = j;
+			Host_Error("Mod_Q1BSP_LoadLeaffaces: bad surface number");
+		loadmodel->brushq1.leaffaces[i] = j;
 	}
 }
 
@@ -2927,15 +2927,15 @@ void Mod_Q1BSP_RecursiveGetVisible(mnode_t *node, model_t *model, const vec3_t p
 	leaf = (mleaf_t *)node;
 	if ((pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
 	{
-		int marksurfacenum;
+		int leaffacenum;
 		msurface_t *surf;
 		if (maxleafs && *numleafs < maxleafs)
 			leaflist[(*numleafs)++] = leaf;
 		if (maxsurfaces)
 		{
-			for (marksurfacenum = 0;marksurfacenum < leaf->nummarksurfaces;marksurfacenum++)
+			for (leaffacenum = 0;leaffacenum < leaf->numleaffaces;leaffacenum++)
 			{
-				surf = model->brushq1.surfaces + leaf->firstmarksurface[marksurfacenum];
+				surf = model->brushq1.surfaces + leaf->firstleafface[leaffacenum];
 				if (surf->shadowmark != shadowmarkcount)
 				{
 					surf->shadowmark = shadowmarkcount;
@@ -3023,7 +3023,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	Mod_Q1BSP_LoadPlanes(&header->lumps[LUMP_PLANES]);
 	Mod_Q1BSP_LoadTexinfo(&header->lumps[LUMP_TEXINFO]);
 	Mod_Q1BSP_LoadFaces(&header->lumps[LUMP_FACES]);
-	Mod_Q1BSP_LoadMarksurfaces(&header->lumps[LUMP_MARKSURFACES]);
+	Mod_Q1BSP_LoadLeaffaces(&header->lumps[LUMP_MARKSURFACES]);
 	Mod_Q1BSP_LoadVisibility(&header->lumps[LUMP_VISIBILITY]);
 	// load submodels before leafs because they contain the number of vis leafs
 	Mod_Q1BSP_LoadSubmodels(&header->lumps[LUMP_MODELS]);
@@ -4582,7 +4582,7 @@ static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 {
 	q3dleaf_t *in;
-	q3mleaf_t *out;
+	mleaf_t *out;
 	int i, j, n, c, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -4621,7 +4621,7 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 	}
 }
 
-static void Mod_Q3BSP_LoadNodes_RecursiveSetParent(q3mnode_t *node, q3mnode_t *parent)
+static void Mod_Q3BSP_LoadNodes_RecursiveSetParent(mnode_t *node, mnode_t *parent)
 {
 	if (node->parent)
 		Host_Error("Mod_Q3BSP_LoadNodes_RecursiveSetParent: runaway recursion\n");
@@ -4636,7 +4636,7 @@ static void Mod_Q3BSP_LoadNodes_RecursiveSetParent(q3mnode_t *node, q3mnode_t *p
 static void Mod_Q3BSP_LoadNodes(lump_t *l)
 {
 	q3dnode_t *in;
-	q3mnode_t *out;
+	mnode_t *out;
 	int i, j, n, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -4669,7 +4669,7 @@ static void Mod_Q3BSP_LoadNodes(lump_t *l)
 				n = -1 - n;
 				if (n >= loadmodel->brushq3.num_leafs)
 					Host_Error("Mod_Q3BSP_LoadNodes: invalid child leaf index %i (%i leafs)\n", n, loadmodel->brushq3.num_leafs);
-				out->children[j] = (q3mnode_t *)(loadmodel->brushq3.data_leafs + n);
+				out->children[j] = (mnode_t *)(loadmodel->brushq3.data_leafs + n);
 			}
 		}
 		for (j = 0;j < 3;j++)
@@ -4844,16 +4844,16 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	//Con_Printf("result: ambient %f %f %f diffuse %f %f %f diffusenormal %f %f %f\n", ambientcolor[0], ambientcolor[1], ambientcolor[2], diffusecolor[0], diffusecolor[1], diffusecolor[2], diffusenormal[0], diffusenormal[1], diffusenormal[2]);
 }
 
-static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, model_t *model, q3mnode_t *node, const vec3_t point, int markframe)
+static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, model_t *model, mnode_t *node, const vec3_t point, int markframe)
 {
 	int i;
-	q3mleaf_t *leaf;
+	mleaf_t *leaf;
 	colbrushf_t *brush;
 	// find which leaf the point is in
 	while (node->plane)
 		node = node->children[DotProduct(point, node->plane->normal) < node->plane->dist];
 	// point trace the brushes
-	leaf = (q3mleaf_t *)node;
+	leaf = (mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
 		brush = model->brushq3.data_brushes[leaf->firstleafbrush[i]].colbrushf;
@@ -4866,11 +4866,11 @@ static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, model_t *model
 	// can't do point traces on curves (they have no thickness)
 }
 
-static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
+static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model, mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i, startside, endside;
 	float dist1, dist2, midfrac, mid[3], nodesegmentmins[3], nodesegmentmaxs[3];
-	q3mleaf_t *leaf;
+	mleaf_t *leaf;
 	q3msurface_t *face;
 	colbrushf_t *brush;
 	if (startfrac > trace->realfraction)
@@ -4918,7 +4918,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 	nodesegmentmaxs[1] = max(start[1], end[1]);
 	nodesegmentmaxs[2] = max(start[2], end[2]);
 	// line trace the brushes
-	leaf = (q3mleaf_t *)node;
+	leaf = (mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
 		brush = model->brushq3.data_brushes[leaf->firstleafbrush[i]].colbrushf;
@@ -4948,12 +4948,12 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model,
 	}
 }
 
-static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
+static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model, mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
 	//int sides;
 	float nodesegmentmins[3], nodesegmentmaxs[3];
-	q3mleaf_t *leaf;
+	mleaf_t *leaf;
 	colbrushf_t *brush;
 	q3msurface_t *face;
 	/*
@@ -5302,7 +5302,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model
 	}
 #endif
 	// hit a leaf
-	leaf = (q3mleaf_t *)node;
+	leaf = (mleaf_t *)node;
 	for (i = 0;i < leaf->numleafbrushes;i++)
 	{
 		brush = model->brushq3.data_brushes[leaf->firstleafbrush[i]].colbrushf;
@@ -5410,7 +5410,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
 	int clusterindex, side, nodestackindex = 0;
-	q3mnode_t *node, *nodestack[1024];
+	mnode_t *node, *nodestack[1024];
 	node = model->brushq3.data_nodes;
 	if (!model->brush.num_pvsclusters)
 		return true;
@@ -5436,7 +5436,7 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 		else
 		{
 			// leaf - check cluster bit
-			clusterindex = ((q3mleaf_t *)node)->clusterindex;
+			clusterindex = ((mleaf_t *)node)->clusterindex;
 #if 0
 			if (clusterindex >= model->brush.num_pvsclusters)
 			{
@@ -5466,18 +5466,18 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 //(note: can return NULL)
 static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
 {
-	q3mnode_t *node;
+	mnode_t *node;
 	Mod_CheckLoaded(model);
 	node = model->brushq3.data_nodes;
 	while (node->plane)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
-	if (((q3mleaf_t *)node)->clusterindex >= 0)
-		return model->brush.data_pvsclusters + ((q3mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
+	if (((mleaf_t *)node)->clusterindex >= 0)
+		return model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
 	else
 		return NULL;
 }
 
-static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, q3mnode_t *node)
+static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, mnode_t *node)
 {
 	while (node->plane)
 	{
@@ -5494,10 +5494,10 @@ static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 		}
 	}
 	// if this leaf is in a cluster, accumulate the pvs bits
-	if (((q3mleaf_t *)node)->clusterindex >= 0)
+	if (((mleaf_t *)node)->clusterindex >= 0)
 	{
 		int i;
-		qbyte *pvs = model->brush.data_pvsclusters + ((q3mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
+		qbyte *pvs = model->brush.data_pvsclusters + ((mleaf_t *)node)->clusterindex * model->brush.num_pvsclusterbytes;
 		for (i = 0;i < pvsbytes;i++)
 			pvsbuffer[i] |= pvs[i];
 	}
@@ -5584,7 +5584,7 @@ void Mod_Q3BSP_BuildTextureFaceLists(void)
 	}
 }
 
-void Mod_Q3BSP_RecursiveFindNumLeafs(q3mnode_t *node)
+void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 {
 	int numleafs;
 	while (node->plane)
@@ -5592,7 +5592,7 @@ void Mod_Q3BSP_RecursiveFindNumLeafs(q3mnode_t *node)
 		Mod_Q3BSP_RecursiveFindNumLeafs(node->children[0]);
 		node = node->children[1];
 	}
-	numleafs = ((q3mleaf_t *)node - loadmodel->brushq3.data_leafs) + 1;
+	numleafs = ((mleaf_t *)node - loadmodel->brushq3.data_leafs) + 1;
 	if (loadmodel->brushq3.num_leafs < numleafs)
 		loadmodel->brushq3.num_leafs = numleafs;
 }

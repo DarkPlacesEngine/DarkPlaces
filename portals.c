@@ -334,12 +334,12 @@ typedef struct portalrecursioninfo_s
 }
 portalrecursioninfo_t;
 
-void Portal_RecursiveFlow_ExactMarkSurfaces(portalrecursioninfo_t *info, int *mark, int nummarksurfaces, int firstclipplane, int numclipplanes)
+void Portal_RecursiveFlow_ExactLeafFaces(portalrecursioninfo_t *info, int *mark, int numleaffaces, int firstclipplane, int numclipplanes)
 {
 	int i, j, *elements;
 	vec3_t trimins, trimaxs;
 	msurface_t *surf;
-	for (i = 0;i < nummarksurfaces;i++, mark++)
+	for (i = 0;i < numleaffaces;i++, mark++)
 	{
 		if (!info->surfacemark[*mark])
 		{
@@ -405,13 +405,13 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 		info->leafmark[leaf - info->model->brushq1.data_leafs] = true;
 
 	// mark surfaces in leaf that can be seen through portal
-	if (leaf->nummarksurfaces && info->surfacemark)
+	if (leaf->numleaffaces && info->surfacemark)
 	{
 		if (info->exact)
-			Portal_RecursiveFlow_ExactMarkSurfaces(info, leaf->firstmarksurface, leaf->nummarksurfaces, firstclipplane, numclipplanes);
+			Portal_RecursiveFlow_ExactLeafFaces(info, leaf->firstleafface, leaf->numleaffaces, firstclipplane, numclipplanes);
 		else
-			for (i = 0;i < leaf->nummarksurfaces;i++)
-				info->surfacemark[leaf->firstmarksurface[i]] = true;
+			for (i = 0;i < leaf->numleaffaces;i++)
+				info->surfacemark[leaf->firstleafface[i]] = true;
 	}
 
 	// follow portals into other leafs
