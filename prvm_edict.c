@@ -1655,6 +1655,31 @@ void PRVM_Globals_f (void)
 
 /*
 ===============
+PRVM_Global
+===============
+*/
+void PRVM_Global_f(void)
+{
+	ddef_t *global;
+	if( Cmd_Argc() != 3 ) {
+		Con_Printf( "prvm_global <program name> <global name>\n" );
+		return;
+	}
+
+	PRVM_Begin;
+	if( !PRVM_SetProgFromString( Cmd_Argv(1) ) )
+		return;
+
+	global = PRVM_ED_FindGlobal( Cmd_Argv(2) );
+	if( !global )
+		Con_Printf( "No global '%s' in %s!\n", Cmd_Argv(2), Cmd_Argv(1) );
+	else
+		Con_Printf( "%s: %s\n", Cmd_Argv(2), PRVM_ValueString( global->type, (prvm_eval_t *) &prog->globals[ global->ofs ] ) ); 
+	PRVM_End;
+}
+
+/*
+===============
 PRVM_Init
 ===============
 */
@@ -1666,6 +1691,7 @@ void PRVM_Init (void)
 	Cmd_AddCommand ("prvm_profile", PRVM_Profile_f);
 	Cmd_AddCommand ("prvm_fields", PRVM_Fields_f);
 	Cmd_AddCommand ("prvm_globals", PRVM_Globals_f);
+	Cmd_AddCommand ("prvm_global", PRVM_Global_f);
 	Cmd_AddCommand ("prvm_edictset", PRVM_ED_EdictSet_f);
 	// LordHavoc: optional runtime bounds checking (speed drain, but worth it for security, on by default - breaks most QCCX features (used by CRMod and others))
 	Cvar_RegisterVariable (&prvm_boundscheck);
