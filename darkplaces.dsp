@@ -192,10 +192,6 @@ SOURCE=.\gl_rsurf.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\gl_screen.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\gl_textures.c
 # End Source File
 # Begin Source File
