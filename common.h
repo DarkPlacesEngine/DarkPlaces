@@ -209,7 +209,7 @@ int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
 
 byte *COM_LoadHunkFile (char *path, qboolean quiet);
 byte *COM_LoadMallocFile (char *path, qboolean quiet);
-void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet);
+//void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet);
 
 byte *COM_LoadFile (char *path, int usehunk, qboolean quiet);
 
