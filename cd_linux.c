@@ -202,7 +202,7 @@ void CDAudio_SysInit (void)
 
 int CDAudio_SysStartup (void)
 {
-	if ((cdfile = open(cd_dev, O_RDONLY)) == -1)
+	if ((cdfile = open(cd_dev, O_RDONLY | O_NONBLOCK)) == -1)
 	{
 		Con_DPrintf("CDAudio_SysStartup: open of \"%s\" failed (%i)\n",
 					cd_dev, errno);
