@@ -372,7 +372,7 @@ static void Mod_LoadTextures (lump_t *l)
 					}
 					if (fullbrights)
 					{
-						data2 = Mem_Alloc(tempmempool, tx->width*tx->height);
+						data2 = Mem_Alloc(loadmodel->mempool, tx->width*tx->height);
 						for (j = 0;j < tx->width*tx->height;j++)
 							data2[j] = data[j] >= 224 ? 0 : data[j]; // no fullbrights
 						tx->texture = R_LoadTexture (loadmodel->texturepool, tx->name, tx->width, tx->height, data2, TEXTYPE_QPALETTE, TEXF_MIPMAP | TEXF_PRECACHE);
@@ -1665,7 +1665,7 @@ static winding_t *NewWinding (int points)
 		Host_Error("NewWinding: too many points\n");
 
 	size = sizeof(windingsizeof_t) + sizeof(double[3]) * points;
-	w = Mem_Alloc(tempmempool, size);
+	w = Mem_Alloc(loadmodel->mempool, size);
 	memset (w, 0, size);
 
 	return w;
@@ -1769,6 +1769,9 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 
 	for (i = 0;i < in->numpoints;i++)
 	{
+		if (neww->numpoints >= maxpts)
+			Host_Error ("ClipWinding: points exceeded estimate");
+
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
@@ -1804,9 +1807,6 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 		VectorCopy (mid, neww->points[neww->numpoints]);
 		neww->numpoints++;
 	}
-
-	if (neww->numpoints > maxpts)
-		Host_Error ("ClipWinding: points exceeded estimate");
 
 	// free the original winding
 	FreeWinding (in);
@@ -1873,6 +1873,9 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 
 	for (i = 0;i < in->numpoints;i++)
 	{
+		if (f->numpoints >= maxpts || b->numpoints >= maxpts)
+			Host_Error ("DivideWinding: points exceeded estimate");
+
 		p1 = in->points[i];
 
 		if (sides[i] == SIDE_ON)
@@ -1917,9 +1920,6 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		VectorCopy (mid, b->points[b->numpoints]);
 		b->numpoints++;
 	}
-
-	if (f->numpoints > maxpts || b->numpoints > maxpts)
-		Host_Error ("DivideWinding: points exceeded estimate");
 }
 
 typedef struct portal_s
@@ -1942,7 +1942,7 @@ AllocPortal
 static portal_t *AllocPortal (void)
 {
 	portal_t *p;
-	p = Mem_Alloc(tempmempool, sizeof(portal_t));
+	p = Mem_Alloc(loadmodel->mempool, sizeof(portal_t));
 	//memset(p, 0, sizeof(portal_t));
 	p->chain = portalchain;
 	portalchain = p;
