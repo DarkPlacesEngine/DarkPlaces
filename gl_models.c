@@ -320,7 +320,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 
 
 	colormapped = !skinframe->merged || (ent->colormap >= 0 && skinframe->base && (skinframe->pants || skinframe->shirt));
-	if (!colormapped && !fog && !skinframe->glow && !skinframe->fog)
+	if (r_quickmodels.integer && !colormapped && !fog && !skinframe->glow && !skinframe->fog)
 	{
 		// fastpath for the normal situation (one texture)
 		memset(&m, 0, sizeof(m));
