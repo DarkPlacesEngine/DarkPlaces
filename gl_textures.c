@@ -818,7 +818,7 @@ static void R_ResampleTexture (void *indata, int inwidth, int inheight, void *ou
 			fracstep = inwidth*0x10000/outwidth;
 			for (i = 0;i < outheight;i++)
 			{
-				inrow = indata + inwidth3*(i*inheight/outheight);
+				inrow = (byte *)indata + inwidth3*(i*inheight/outheight);
 				frac = fracstep >> 1;
 				j = outwidth - 4;
 				while (j >= 0)
