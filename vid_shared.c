@@ -230,13 +230,17 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 #include <dlfcn.h>
 #endif
 
-#ifndef WIN32
+#ifdef WIN32
+static HINSTANCE gldll;
+#else
 static void *prjobj = NULL;
 #endif
 
 static void gl_getfuncs_begin(void)
 {
-#ifndef WIN32
+#ifdef WIN32
+	gldll = LoadLibrary("opengl32.dll");
+#else
 	if (prjobj)
 		dlclose(prjobj);
 
@@ -251,19 +255,20 @@ static void gl_getfuncs_begin(void)
 
 static void gl_getfuncs_end(void)
 {
-#ifndef WIN32
+#ifdef WIN32
+	FreeLibrary(gldll);
+#else
 	if (prjobj)
-	{
 		dlclose(prjobj);
-		prjobj = NULL;
-	}
+	prjobj = NULL;
 #endif
 }
 
 static void *gl_getfuncaddress(char *name)
 {
 #ifdef WIN32
-	return (void *) wglGetProcAddress(name);
+//	return (void *) wglGetProcAddress(name);
+	return (void *) GetProcAddress(gldll, name);
 #else
 	return (void *) dlsym(prjobj, name);
 #endif
@@ -271,6 +276,7 @@ static void *gl_getfuncaddress(char *name)
 
 static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char *disableparm)
 {
+	int failed = false;
 	gl_extensionfunctionlist_t *func;
 
 	Con_Printf("checking for %s...  ", name);
@@ -291,9 +297,12 @@ static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char
 			if (!(*func->funcvariable = (void *) gl_getfuncaddress(func->name)))
 			{
 				Con_Printf("missing function \"%s\"!\n", func->name);
-				return false;
+				failed = true;
 			}
 		}
+		// delay the return so it prints all missing functions
+		if (failed)
+			return false;
 		Con_Printf("enabled\n");
 		return true;
 	}
