@@ -98,6 +98,7 @@ void CL_ClearState(void)
 	if (!sv.active)
 		Host_ClearMemory ();
 
+	// note: this also gets rid of the entity database
 	Mem_EmptyPool(cl_entities_mempool);
 
 // wipe the entire cl structure
@@ -349,7 +350,7 @@ static float CL_LerpPoint(void)
 
 	// LordHavoc: lerp in listen games as the server is being capped below the client (usually)
 	f = cl.mtime[0] - cl.mtime[1];
-	if (!f || cl_nolerp.integer || cls.timedemo || (sv.active && svs.maxclients == 1))
+	if (!f || cl_nolerp.integer || cls.timedemo || cl.islocalgame)
 	{
 		cl.time = cl.mtime[0];
 		return 1;

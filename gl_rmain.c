@@ -1125,7 +1125,7 @@ R_SetupFrame
 static void R_SetupFrame (void)
 {
 // don't allow cheats in multiplayer
-	if (cl.maxclients > 1)
+	if (!cl.islocalgame)
 	{
 		if (r_fullbright.integer != 0)
 			Cvar_Set ("r_fullbright", "0");

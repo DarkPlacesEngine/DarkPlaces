@@ -483,7 +483,10 @@ entity_frame_t;
 #define E_UNUSED7		(1<<30)
 #define E_EXTEND4		(1<<31)
 
+// clears a state to baseline values
 void ClearStateToDefault(entity_state_t *s);
+// used by some of the DP protocols
+void EntityState_Write(entity_state_t *ent, sizebuf_t *msg, entity_state_t *delta);
 
 // (server) clears the database to contain no frames (thus delta compression
 // compresses against nothing)
@@ -531,10 +534,21 @@ typedef struct entity_database4_s
 	// commits waiting to be applied to the reference database when confirmed
 	// (commit[i]->numentities == 0 means it is empty)
 	entity_database4_commit_t commit[MAX_ENTITY_HISTORY];
-	// used only while building a commit
+	// (server only) the current commit being worked on
 	entity_database4_commit_t *currentcommit;
+	// (server only) if a commit won't fit entirely, continue where it left
+	// off next frame
+	int currententitynumber;
+	// (client only) most recently received frame number to be sent in next
+	// input update
+	int ackframenum;
 }
 entity_database4_t;
+
+// should-be-private functions that aren't
+int EntityFrame4_SV_ChooseCommitToReplace(entity_database4_t *d);
+entity_state_t *EntityFrame4_GetReferenceEntity(entity_database4_t *d, int number);
+void EntityFrame4_AddCommitEntity(entity_database4_t *d, entity_state_t *s);
 
 // allocate a database
 entity_database4_t *EntityFrame4_AllocDatabase(mempool_t *pool);

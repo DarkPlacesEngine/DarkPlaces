@@ -66,16 +66,16 @@ void Host_Status_f (void)
 	else
 		print = SV_ClientPrintf;
 
-	for (players = 0, j = 0;j < svs.maxclients;j++)
-		if (svs.clients[j].active)
+	for (players = 0, j = 0;j < MAX_SCOREBOARD;j++)
+		if (svs.connectedclients[j])
 			players++;
 	print ("host:    %s\n", Cvar_VariableString ("hostname"));
 	print ("version: %s build %s\n", gamename, buildstring);
 	print ("map:     %s\n", sv.name);
-	print ("players: %i active (%i max)\n\n", players, svs.maxclients);
-	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
+	print ("players: %i active (%i max)\n\n", players, min(sv_maxplayers.integer, MAX_SCOREBOARD));
+	for (j = 0;j < MAX_SCOREBOARD;j++)
 	{
-		if (!client->active)
+		if (!(client = svs.connectedclients[j]))
 			continue;
 		seconds = (int)(realtime - client->netconnection->connecttime);
 		minutes = seconds / 60;
@@ -214,9 +214,9 @@ void Host_Ping_f (void)
 	}
 
 	SV_ClientPrintf ("Client ping times:\n");
-	for (i=0, client = svs.clients ; i<svs.maxclients ; i++, client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		if (!client->active)
+		if (!(client = svs.connectedclients[i]))
 			continue;
 		total = 0;
 		for (j=0 ; j<NUM_PING_TIMES ; j++)
@@ -390,10 +390,21 @@ void Host_Savegame_f (void)
 		return;
 	}
 
-	if (svs.maxclients != 1)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		Con_Printf ("Can't save multiplayer games.\n");
-		return;
+		if (svs.connectedclients[i])
+		{
+			if (i > 0)
+			{
+				Con_Printf("Can't save multiplayer games.\n");
+				return;
+			}
+			if (svs.connectedclients[i]->edict->v->deadflag)
+			{
+				Con_Printf("Can't savegame with a dead player\n");
+				return;
+			}
+		}
 	}
 
 	if (Cmd_Argc() != 2)
@@ -406,15 +417,6 @@ void Host_Savegame_f (void)
 	{
 		Con_Printf ("Relative pathnames are not allowed.\n");
 		return;
-	}
-
-	for (i=0 ; i<svs.maxclients ; i++)
-	{
-		if (svs.clients[i].active && (svs.clients[i].edict->v->health <= 0) )
-		{
-			Con_Printf ("Can't savegame with a dead player\n");
-			return;
-		}
 	}
 
 	strncpy (name, Cmd_Argv(1), sizeof (name) - 1);
@@ -433,7 +435,7 @@ void Host_Savegame_f (void)
 	Host_SavegameComment (comment);
 	FS_Printf (f, "%s\n", comment);
 	for (i=0 ; i<NUM_SPAWN_PARMS ; i++)
-		FS_Printf (f, "%f\n", svs.clients->spawn_parms[i]);
+		FS_Printf (f, "%f\n", svs.connectedclients[0]->spawn_parms[i]);
 	FS_Printf (f, "%d\n", current_skill);
 	FS_Printf (f, "%s\n", sv.name);
 	FS_Printf (f, "%f\n",sv.time);
@@ -613,7 +615,7 @@ void Host_PerformLoadGame(char *name)
 	FS_Close (f);
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
-		svs.clients->spawn_parms[i] = spawn_parms[i];
+		svs.connectedclients[0]->spawn_parms[i] = spawn_parms[i];
 
 	// make sure we're connected to loopback
 	if (cls.state == ca_disconnected || !(cls.state == ca_connected && cls.netcon != NULL && LHNETADDRESS_GetAddressType(&cls.netcon->peeraddress) == LHNETADDRESSTYPE_LOOP))
@@ -665,7 +667,7 @@ void Host_Name_f (void)
 // send notification to all clients
 
 	MSG_WriteByte(&sv.reliable_datagram, svc_updatename);
-	MSG_WriteByte(&sv.reliable_datagram, host_client - svs.clients);
+	MSG_WriteByte(&sv.reliable_datagram, host_client->number);
 	MSG_WriteString(&sv.reliable_datagram, host_client->name);
 }
 
@@ -732,8 +734,8 @@ void Host_Say(qboolean teamonly)
 	text[j++] = '\n';
 	text[j++] = 0;
 
-	for (j = 0, host_client = svs.clients; j < svs.maxclients; j++, host_client++)
-		if (host_client && host_client->active && host_client->spawned && (!teamplay.integer || host_client->edict->v->team == save->edict->v->team))
+	for (j = 0;j < MAX_SCOREBOARD;j++)
+		if ((host_client = svs.connectedclients[j]) && host_client->spawned && (!teamplay.integer || host_client->edict->v->team == save->edict->v->team))
 			SV_ClientPrintf("%s", text);
 	host_client = save;
 
@@ -809,14 +811,9 @@ void Host_Tell_f(void)
 	text[j++] = 0;
 
 	save = host_client;
-	for (j = 0, host_client = svs.clients; j < svs.maxclients; j++, host_client++)
-	{
-		if (host_client->active && host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
-		{
+	for (j = 0;j < MAX_SCOREBOARD;j++)
+		if ((host_client = svs.connectedclients[j]) && host_client->spawned && !strcasecmp(host_client->name, Cmd_Argv(1)))
 			SV_ClientPrintf("%s", text);
-			break;
-		}
-	}
 	host_client = save;
 }
 
@@ -890,7 +887,7 @@ void Host_Color_f(void)
 
 		// send notification to all clients
 		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteByte (&sv.reliable_datagram, host_client->number);
 		MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 	}
 }
@@ -1084,8 +1081,10 @@ void Host_Spawn_f (void)
 	MSG_WriteByte (&host_client->message, svc_time);
 	MSG_WriteFloat (&host_client->message, sv.time);
 
-	for (i=0, client = svs.clients ; i<svs.maxclients ; i++, client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
+		if (!(client = svs.connectedclients[i]))
+			continue;
 		MSG_WriteByte (&host_client->message, svc_updatename);
 		MSG_WriteByte (&host_client->message, i);
 		MSG_WriteString (&host_client->message, client->old_name);
@@ -1189,25 +1188,22 @@ void Host_Kick_f (void)
 	if (Cmd_Argc() > 2 && strcmp(Cmd_Argv(1), "#") == 0)
 	{
 		i = atof(Cmd_Argv(2)) - 1;
-		if (i < 0 || i >= svs.maxclients)
+		if (i < 0 || i >= MAX_SCOREBOARD || !(host_client = svs.connectedclients[i]))
 			return;
-		if (!svs.clients[i].active)
-			return;
-		host_client = &svs.clients[i];
 		byNumber = true;
 	}
 	else
 	{
-		for (i = 0, host_client = svs.clients; i < svs.maxclients; i++, host_client++)
+		for (i = 0;i < MAX_SCOREBOARD;i++)
 		{
-			if (!host_client->active)
+			if (!(host_client = svs.connectedclients[i]))
 				continue;
 			if (strcasecmp(host_client->name, Cmd_Argv(1)) == 0)
 				break;
 		}
 	}
 
-	if (i < svs.maxclients)
+	if (i < MAX_SCOREBOARD)
 	{
 		if (cmd_source == src_command)
 		{
@@ -1544,7 +1540,7 @@ void Host_Startdemos_f (void)
 {
 	int		i, c;
 
-	if (cls.state == ca_dedicated)
+	if (cls.state == ca_dedicated || sv_maxplayers.integer > 1)
 	{
 		if (!sv.active && !sv_spawnmap[0])
 		{

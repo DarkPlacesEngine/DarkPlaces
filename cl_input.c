@@ -246,6 +246,7 @@ cvar_t cl_pitchspeed = {CVAR_SAVE, "cl_pitchspeed","150"};
 
 cvar_t cl_anglespeedkey = {CVAR_SAVE, "cl_anglespeedkey","1.5"};
 
+cvar_t cl_nodelta = {0, "cl_nodelta", "0"};
 
 /*
 ================
@@ -391,7 +392,7 @@ void CL_SendMove(usercmd_t *cmd)
 		for (i = 0;i < 3;i++)
 			MSG_WriteFloat (&buf, cl.viewangles[i]);
 	}
-	else if (dpprotocol == DPPROTOCOL_VERSION1)
+	else if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION4)
 	{
 		for (i=0 ; i<3 ; i++)
 			MSG_WritePreciseAngle (&buf, cl.viewangles[i]);
@@ -430,12 +431,26 @@ void CL_SendMove(usercmd_t *cmd)
 	MSG_WriteByte (&buf, in_impulse);
 	in_impulse = 0;
 
-	// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
-	i = EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase);
-	if (i > 0)
+	if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
 	{
-		MSG_WriteByte(&buf, clc_ackentities);
-		MSG_WriteLong(&buf, i);
+		// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
+		i = EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase);
+		if (i > 0)
+		{
+			MSG_WriteByte(&buf, clc_ackentities);
+			MSG_WriteLong(&buf, i);
+		}
+	}
+	else
+	{
+		if (cl.entitydatabase4)
+		{
+			MSG_WriteByte(&buf, clc_ackentities);
+			if (cl_nodelta.integer)
+				MSG_WriteLong(&buf, -1);
+			else
+				MSG_WriteLong(&buf, cl.entitydatabase4->ackframenum);
+		}
 	}
 
 	// deliver the message
@@ -509,5 +524,7 @@ void CL_InitInput (void)
 	Cmd_AddCommand ("-button7", IN_Button7Up);
 	Cmd_AddCommand ("+button8", IN_Button8Down);
 	Cmd_AddCommand ("-button8", IN_Button8Up);
+
+	Cvar_RegisterVariable(&cl_nodelta);
 }
 

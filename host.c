@@ -184,6 +184,9 @@ void Host_ServerOptions (void)
 {
 	int i, numplayers;
 
+	// general default
+	numplayers = 8;
+
 	if (cl_available)
 	{
 		// client exists, check what mode the user wants
@@ -191,7 +194,7 @@ void Host_ServerOptions (void)
 		if (i)
 		{
 			cls.state = ca_dedicated;
-			numplayers = 8;
+			// default players unless specified
 			if (i != (com_argc - 1))
 				numplayers = atoi (com_argv[i+1]);
 			if (COM_CheckParm ("-listen"))
@@ -199,64 +202,50 @@ void Host_ServerOptions (void)
 		}
 		else
 		{
-			numplayers = 1;
 			cls.state = ca_disconnected;
 			i = COM_CheckParm ("-listen");
 			if (i)
 			{
-				numplayers = 8;
+				// default players unless specified
 				if (i != (com_argc - 1))
 					numplayers = atoi (com_argv[i+1]);
+			}
+			else
+			{
+				// default players in some games, singleplayer in most
+				if (gamemode != GAME_TRANSFUSION && gamemode != GAME_GOODVSBAD2 && gamemode != GAME_NEXUIZ || gamemode == GAME_BATTLEMECH)
+					numplayers = 1;
 			}
 		}
 	}
 	else
 	{
-		// no client in the executable, start dedicated server
+		// no client in the executable, always start dedicated server
 		if (COM_CheckParm ("-listen"))
 			Sys_Error ("-listen not available in a dedicated server executable");
-		numplayers = 8;
 		cls.state = ca_dedicated;
 		// check for -dedicated specifying how many players
 		i = COM_CheckParm ("-dedicated");
+		// default players unless specified
 		if (i && i != (com_argc - 1))
 			numplayers = atoi (com_argv[i+1]);
 	}
 
 	if (numplayers < 1)
 		numplayers = 8;
-	if (numplayers > MAX_SCOREBOARD)
-		numplayers = MAX_SCOREBOARD;
 
-	// Transfusion doesn't support single player games
-	if (gamemode == GAME_TRANSFUSION && numplayers < 4)
-		numplayers = 4;
+	numplayers = bound(1, numplayers, MAX_SCOREBOARD);
 
 	if (numplayers > 1)
-		Cvar_SetValueQuick (&deathmatch, 1);
+	{
+		if (!deathmatch.integer)
+			Cvar_SetValueQuick(&deathmatch, 1);
+	}
 	else
-		Cvar_SetValueQuick (&deathmatch, 0);
+		Cvar_SetValueQuick(&deathmatch, 0);
 
-	svs.maxclients = 0;
-	SV_SetMaxClients(numplayers);
+	Cvar_SetValueQuick(&sv_maxplayers, numplayers);
 }
-
-static mempool_t *clients_mempool;
-void SV_SetMaxClients(int n)
-{
-	if (sv.active)
-		return;
-	n = bound(1, n, MAX_SCOREBOARD);
-	if (svs.maxclients == n)
-		return;
-	svs.maxclients = n;
-	if (!clients_mempool)
-		clients_mempool = Mem_AllocPool("clients");
-	if (svs.clients)
-		Mem_Free(svs.clients);
-	svs.clients = Mem_Alloc(clients_mempool, svs.maxclients*sizeof(client_t));
-}
-
 
 /*
 =======================
@@ -364,17 +353,20 @@ void SV_BroadcastPrintf(const char *fmt, ...)
 	va_list argptr;
 	char string[4096];
 	int i;
+	client_t *client;
 
 	va_start(argptr,fmt);
 	vsnprintf(string, sizeof(string), fmt,argptr);
 	va_end(argptr);
 
-	for (i=0 ; i<svs.maxclients ; i++)
-		if (svs.clients[i].active && svs.clients[i].spawned)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
+	{
+		if ((client = svs.connectedclients[i]) && client->spawned)
 		{
-			MSG_WriteByte(&svs.clients[i].message, svc_print);
-			MSG_WriteString(&svs.clients[i].message, string);
+			MSG_WriteByte(&client->message, svc_print);
+			MSG_WriteString(&client->message, string);
 		}
+	}
 
 	if (sv_echobprint.integer && cls.state == ca_dedicated)
 		Sys_Printf("%s", string);
@@ -420,8 +412,6 @@ void SV_DropClient(qboolean crash)
 	if (host_client->netconnection)
 	{
 		// free the client (the body stays around)
-		host_client->active = false;
-
 		if (!crash)
 		{
 			// LordHavoc: no opportunity for resending, so use unreliable
@@ -446,27 +436,30 @@ void SV_DropClient(qboolean crash)
 		}
 	}
 
-	// now clear name (after ClientDisconnect was called)
-	host_client->name[0] = 0;
-	host_client->old_frags = -999999;
-
 	// send notification to all clients
-	for (i = 0, client = svs.clients;i < svs.maxclients;i++, client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		if (!client->active)
+		if (!(client = svs.connectedclients[i]))
 			continue;
 		MSG_WriteByte(&client->message, svc_updatename);
-		MSG_WriteByte(&client->message, host_client - svs.clients);
+		MSG_WriteByte(&client->message, host_client->number);
 		MSG_WriteString(&client->message, "");
 		MSG_WriteByte(&client->message, svc_updatefrags);
-		MSG_WriteByte(&client->message, host_client - svs.clients);
+		MSG_WriteByte(&client->message, host_client->number);
 		MSG_WriteShort(&client->message, 0);
 		MSG_WriteByte(&client->message, svc_updatecolors);
-		MSG_WriteByte(&client->message, host_client - svs.clients);
+		MSG_WriteByte(&client->message, host_client->number);
 		MSG_WriteByte(&client->message, 0);
 	}
 
 	NetConn_Heartbeat(1);
+
+	// free the client now
+	if (host_client->entitydatabase4)
+		EntityFrame4_FreeDatabase(host_client->entitydatabase4);
+	// remove the index reference
+	svs.connectedclients[host_client->number] = NULL;
+	Mem_Free(host_client);
 }
 
 /*
@@ -504,9 +497,10 @@ void Host_ShutdownServer(qboolean crash)
 		count = 0;
 		NetConn_ClientFrame();
 		NetConn_ServerFrame();
-		for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
+		for (i = 0;i < MAX_SCOREBOARD;i++)
 		{
-			if (host_client->active && host_client->message.cursize)
+			host_client = svs.connectedclients[i];
+			if (host_client && host_client->message.cursize)
 			{
 				if (NetConn_CanSendMessage(host_client->netconnection))
 				{
@@ -531,8 +525,8 @@ void Host_ShutdownServer(qboolean crash)
 	if (count)
 		Con_Printf("Host_ShutdownServer: NetConn_SendToAll failed for %u clients\n", count);
 
-	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
-		if (host_client->active)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
+		if ((host_client = svs.connectedclients[i]))
 			SV_DropClient(crash); // server shutdown
 
 	NetConn_CloseServerPorts();
@@ -541,7 +535,6 @@ void Host_ShutdownServer(qboolean crash)
 // clear structures
 //
 	memset(&sv, 0, sizeof(sv));
-	memset(svs.clients, 0, svs.maxclients * sizeof(client_t));
 }
 
 
@@ -665,14 +658,14 @@ void Host_ServerFrame (void)
 {
 	static double frametimetotal = 0, lastservertime = 0;
 	frametimetotal += host_frametime;
-	// LordHavoc: cap server at sys_ticrate in listen games
-	if (cls.state != ca_dedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
+	// LordHavoc: cap server at sys_ticrate in networked games
+	if (!cl.islocalgame && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 
 	NetConn_ServerFrame();
 
 // run the world state
-	if (!sv.paused && (svs.maxclients > 1 || (key_dest == key_game && !key_consoleactive)))
+	if (!sv.paused && (!cl.islocalgame || (key_dest == key_game && !key_consoleactive)))
 		sv.frametime = pr_global_struct->frametime = frametimetotal;
 	else
 		sv.frametime = 0;
@@ -725,6 +718,8 @@ void _Host_Frame (float time)
 		Sys_Sleep();
 		return;
 	}
+
+	cl.islocalgame = NetConn_IsLocalGame();
 
 	// get new key events
 	Sys_SendKeyEvents();
@@ -841,11 +836,9 @@ void Host_Frame (float time)
 	timecount = 0;
 	timetotal = 0;
 	c = 0;
-	for (i=0 ; i<svs.maxclients ; i++)
-	{
-		if (svs.clients[i].active)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
+		if (svs.connectedclients[i])
 			c++;
-	}
 
 	Con_Printf ("serverprofile: %2i clients %2i msec\n",  c,  m);
 }

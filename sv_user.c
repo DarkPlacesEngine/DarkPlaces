@@ -475,9 +475,9 @@ void SV_ReadClientMove (usercmd_t *move)
 		val->_float = host_client->ping * 1000.0;
 
 	// read current angles
-	// dpprotocol version 2
+	// DPPROTOCOL_VERSION4
 	for (i = 0;i < 3;i++)
-		angle[i] = MSG_ReadFloat ();
+		angle[i] = MSG_ReadPreciseAngle();
 
 	VectorCopy (angle, sv_player->v->v_angle);
 
@@ -517,14 +517,14 @@ SV_ReadClientMessage
 extern void SV_SendServerinfo(client_t *client);
 void SV_ReadClientMessage(void)
 {
-	int cmd;
+	int cmd, clientnum = host_client->number;
 	char *s;
 
 	//MSG_BeginReading ();
 
 	for(;;)
 	{
-		if (!host_client->active)
+		if (!(host_client = svs.connectedclients[clientnum]))
 		{
 			// a command caused an error
 			SV_DropClient (false);
@@ -595,7 +595,10 @@ void SV_ReadClientMessage(void)
 			break;
 
 		case clc_ackentities:
-			EntityFrame_AckFrame(&host_client->entitydatabase, MSG_ReadLong());
+			//if (dpprotocol == DPPROTOCOL_VERSION1 || dpprotocol == DPPROTOCOL_VERSION2 || dpprotocol == DPPROTOCOL_VERSION3)
+			//	EntityFrame_AckFrame(&host_client->entitydatabase, MSG_ReadLong());
+			//else
+				EntityFrame4_AckFrame(host_client->entitydatabase4, MSG_ReadLong());
 			break;
 		}
 	}
@@ -610,9 +613,9 @@ void SV_RunClients (void)
 {
 	int i;
 
-	for (i=0, host_client = svs.clients ; i<svs.maxclients ; i++, host_client++)
+	for (i = 0;i < MAX_SCOREBOARD;i++)
 	{
-		if (!host_client->active)
+		if (!(host_client = svs.connectedclients[i]))
 			continue;
 
 		sv_player = host_client->edict;

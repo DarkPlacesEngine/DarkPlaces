@@ -372,16 +372,15 @@ void PF_sprint (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	s = PF_VarString(1);
 
-	if (entnum < 1 || entnum > svs.maxclients)
+	if (entnum < 1 || entnum > MAX_SCOREBOARD || !svs.connectedclients[entnum-1])
 	{
 		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
 
-	client = &svs.clients[entnum-1];
-
-	MSG_WriteChar (&client->message,svc_print);
-	MSG_WriteString (&client->message, s );
+	client = svs.connectedclients[entnum-1];
+	MSG_WriteChar(&client->message,svc_print);
+	MSG_WriteString(&client->message, s );
 }
 
 
@@ -403,16 +402,15 @@ void PF_centerprint (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	s = PF_VarString(1);
 
-	if (entnum < 1 || entnum > svs.maxclients)
+	if (entnum < 1 || entnum > MAX_SCOREBOARD || !svs.connectedclients[entnum-1])
 	{
 		Con_Printf ("tried to sprint to a non-client\n");
 		return;
 	}
 
-	client = &svs.clients[entnum-1];
-
-	MSG_WriteChar (&client->message,svc_centerprint);
-	MSG_WriteString (&client->message, s );
+	client = svs.connectedclients[entnum-1];
+	MSG_WriteChar(&client->message,svc_centerprint);
+	MSG_WriteString(&client->message, s );
 }
 
 
@@ -830,35 +828,25 @@ int PF_newcheckclient (int check)
 
 // cycle to the next one
 
-	if (check < 1)
-		check = 1;
-	if (check > svs.maxclients)
-		check = svs.maxclients;
-
-	if (check == svs.maxclients)
+	check = bound(1, check, MAX_SCOREBOARD);
+	if (check == MAX_SCOREBOARD)
 		i = 1;
 	else
 		i = check + 1;
 
 	for ( ;  ; i++)
 	{
+		// count the cost
 		pr_xfunction->builtinsprofile++;
-		if (i == svs.maxclients+1)
+		// wrap around
+		if (i == MAX_SCOREBOARD+1)
 			i = 1;
-
+		// look up the client's edict
 		ent = EDICT_NUM(i);
-
-		if (i == check)
-			break;	// didn't find anything else
-
-		if (ent->e->free)
+		// check if it is to be ignored, but never ignore the one we started on (prevent infinite loop)
+		if (i != check && (ent->e->free || ent->v->health <= 0 || ((int)ent->v->flags & FL_NOTARGET)))
 			continue;
-		if (ent->v->health <= 0)
-			continue;
-		if ((int)ent->v->flags & FL_NOTARGET)
-			continue;
-
-	// anything that is a client, or has a client as an enemy
+		// found a valid client (possibly the same one again)
 		break;
 	}
 
@@ -946,13 +934,13 @@ void PF_stuffcmd (void)
 	client_t	*old;
 
 	entnum = G_EDICTNUM(OFS_PARM0);
-	if (entnum < 1 || entnum > svs.maxclients)
+	if (entnum < 1 || entnum > MAX_SCOREBOARD)
 		Host_Error ("Parm 0 not a client");
 	str = G_STRING(OFS_PARM1);
 
 	old = host_client;
-	host_client = &svs.clients[entnum-1];
-	Host_ClientCommands ("%s", str);
+	if ((host_client = svs.connectedclients[entnum-1]))
+		Host_ClientCommands ("%s", str);
 	host_client = old;
 }
 
@@ -1130,7 +1118,7 @@ void PF_Remove (void)
 	ed = G_EDICT(OFS_PARM0);
 	if (ed == sv.edicts)
 		Host_Error("remove: tried to remove world\n");
-	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
+	if (NUM_FOR_EDICT(ed) <= MAX_SCOREBOARD)
 		Host_Error("remove: tried to remove a client\n");
 	ED_Free (ed);
 }
@@ -1454,13 +1442,15 @@ void PF_lightstyle (void)
 	if (sv.state != ss_active)
 		return;
 
-	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
-		if (client->active || client->spawned)
+	for (j = 0;j < MAX_SCOREBOARD;j++)
+	{
+		if ((client = svs.connectedclients[j]))
 		{
 			MSG_WriteChar (&client->message, svc_lightstyle);
 			MSG_WriteChar (&client->message,style);
 			MSG_WriteString (&client->message, val);
 		}
+	}
 }
 
 void PF_rint (void)
@@ -1741,9 +1731,9 @@ sizebuf_t *WriteDest (void)
 	case MSG_ONE:
 		ent = PROG_TO_EDICT(pr_global_struct->msg_entity);
 		entnum = NUM_FOR_EDICT(ent);
-		if (entnum < 1 || entnum > svs.maxclients)
-			Host_Error ("WriteDest: not a client");
-		return &svs.clients[entnum-1].message;
+		if (entnum < 1 || entnum > MAX_SCOREBOARD || svs.connectedclients[entnum-1] == NULL)
+			Host_Error("WriteDest: not a client");
+		return &svs.connectedclients[entnum-1]->message;
 
 	case MSG_ALL:
 		return &sv.reliable_datagram;
@@ -1853,12 +1843,10 @@ void PF_setspawnparms (void)
 
 	ent = G_EDICT(OFS_PARM0);
 	i = NUM_FOR_EDICT(ent);
-	if (i < 1 || i > svs.maxclients)
+	if (i < 1 || i > MAX_SCOREBOARD || !(client = svs.connectedclients[i-1]))
 		Host_Error ("Entity is not a client");
 
 	// copy spawn parms out of the client_t
-	client = svs.clients + (i-1);
-
 	for (i=0 ; i< NUM_SPAWN_PARMS ; i++)
 		(&pr_global_struct->parm1)[i] = client->spawn_parms[i];
 }
@@ -2094,13 +2082,12 @@ void PF_setcolor (void)
 	entnum = G_EDICTNUM(OFS_PARM0);
 	i = G_FLOAT(OFS_PARM1);
 
-	if (entnum < 1 || entnum > svs.maxclients)
+	if (entnum < 1 || entnum > MAX_SCOREBOARD || !(client = svs.connectedclients[entnum-1]))
 	{
 		Con_Printf ("tried to setcolor a non-client\n");
 		return;
 	}
 
-	client = &svs.clients[entnum-1];
 	if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
 		val->_float = i;
 	client->colors = i;
@@ -2855,15 +2842,15 @@ void PF_strcat(void)
 //string(string s, float start, float length) substring = #116; // returns a section of a string as a tempstring
 void PF_substring(void)
 {
-	int i, start, end;
-	char *s, string[MAX_VARSTRING];
+	int i, start, length;
+	char *s, *string = PR_GetTempString();
 	s = G_STRING(OFS_PARM0);
 	start = G_FLOAT(OFS_PARM1);
-	end = G_FLOAT(OFS_PARM2) + start;
+	length = G_FLOAT(OFS_PARM2);
 	if (!s)
 		s = "";
 	for (i = 0;i < start && *s;i++, s++);
-	for (i = 0;i < MAX_VARSTRING - 1 && *s && i < end;i++, s++)
+	for (i = 0;i < STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
 		string[i] = *s;
 	string[i] = 0;
 	G_INT(OFS_RETURN) = PR_SetString(string);
@@ -2900,11 +2887,11 @@ void PF_clientcommand (void)
 
 	//find client for this entity
 	i = (NUM_FOR_EDICT(G_EDICT(OFS_PARM0)) - 1);
-	if (i < 0 || i >= svs.maxclients)
+	if (i < 0 || i >= MAX_SCOREBOARD || !svs.connectedclients[i])
 		Host_Error("PF_clientcommand: entity is not a client");
 
 	temp_client = host_client;
-	host_client = &svs.clients[i];
+	host_client = svs.connectedclients[i];
 	Cmd_ExecuteString (G_STRING(OFS_PARM1), src_client);
 	host_client = temp_client;
 }
@@ -2977,7 +2964,7 @@ void PF_setattachment (void)
 		if (modelindex >= 0 && modelindex < MAX_MODELS)
 		{
 			model = sv.models[modelindex];
-			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
+			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
 				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
 					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
 						v->_float = i + 1;
