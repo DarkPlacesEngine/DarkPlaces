@@ -66,6 +66,7 @@ typedef struct
 typedef struct
 {
 	sfx_t	*sfx;			// sfx number
+	int		forceloop;		// force looping even if the sound is not looped
 	int		leftvol;		// 0-255 volume
 	int		rightvol;		// 0-255 volume
 	int		end;			// end time in global paintsamples

@@ -313,9 +313,9 @@ void S_PaintChannels(int endtime)
 				// if at end of loop, restart
 				if (ltime >= ch->end)
 				{
-					if (sc->loopstart >= 0)
+					if (sc->loopstart >= 0 || ch->forceloop)
 					{
-						ch->pos = sc->loopstart;
+						ch->pos = bound(0, sc->loopstart, sc->length - 1);
 						ch->end = ltime + sc->length - ch->pos;
 					}
 					else
