@@ -2606,13 +2606,13 @@ static void clippointtosurface(msurface_t *surface, vec3_t p, vec3_t out)
 	float *v[3], facenormal[3], edgenormal[3], sidenormal[3], temp[3], offsetdist, dist, bestdist;
 	bestdist = 1000000000;
 	VectorCopy(p, out);
-	for (i = 0;i < surface->mesh.num_triangles;i++)
+	for (i = 0;i < surface->num_triangles;i++)
 	{
 		// clip original point to each triangle of the surface and find the
 		// triangle that is closest
-		v[0] = surface->mesh.data_vertex3f + surface->mesh.data_element3i[i * 3 + 0] * 3;
-		v[1] = surface->mesh.data_vertex3f + surface->mesh.data_element3i[i * 3 + 1] * 3;
-		v[2] = surface->mesh.data_vertex3f + surface->mesh.data_element3i[i * 3 + 2] * 3;
+		v[0] = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 0] * 3;
+		v[1] = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 1] * 3;
+		v[2] = (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + (surface->groupmesh->data_element3i + 3 * surface->num_firsttriangle)[i * 3 + 2] * 3;
 		TriangleNormal(v[0], v[1], v[2], facenormal);
 		VectorNormalize(facenormal);
 		offsetdist = DotProduct(v[0], facenormal) - DotProduct(p, facenormal);
@@ -2663,7 +2663,7 @@ void PF_getsurfacenumpoints(void)
 	}
 
 	// note: this (incorrectly) assumes it is a simple polygon
-	G_FLOAT(OFS_RETURN) = surface->mesh.num_vertices;
+	G_FLOAT(OFS_RETURN) = surface->num_vertices;
 }
 //PF_getsurfacepoint,     // #435 vector(entity e, float s, float n) getsurfacepoint = #435;
 void PF_getsurfacepoint(void)
@@ -2679,10 +2679,10 @@ void PF_getsurfacepoint(void)
 		return;
 	// note: this (incorrectly) assumes it is a simple polygon
 	pointnum = G_FLOAT(OFS_PARM2);
-	if (pointnum < 0 || pointnum >= surface->mesh.num_vertices)
+	if (pointnum < 0 || pointnum >= surface->num_vertices)
 		return;
 	// FIXME: implement rotation/scaling
-	VectorAdd(&surface->mesh.data_vertex3f[pointnum * 3], ed->v->origin, G_VECTOR(OFS_RETURN));
+	VectorAdd(&(surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex)[pointnum * 3], ed->v->origin, G_VECTOR(OFS_RETURN));
 }
 //PF_getsurfacenormal,    // #436 vector(entity e, float s) getsurfacenormal = #436;
 void PF_getsurfacenormal(void)
@@ -2696,7 +2696,7 @@ void PF_getsurfacenormal(void)
 	// note: this (incorrectly) assumes it is a simple polygon
 	// note: this only returns the first triangle, so it doesn't work very
 	// well for curved surfaces or arbitrary meshes
-	TriangleNormal(surface->mesh.data_vertex3f, surface->mesh.data_vertex3f + 3, surface->mesh.data_vertex3f + 6, normal);
+	TriangleNormal((surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex), (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + 3, (surface->groupmesh->data_vertex3f + 3 * surface->num_firstvertex) + 6, normal);
 	VectorNormalize(normal);
 	VectorCopy(normal, G_VECTOR(OFS_RETURN));
 }

@@ -175,21 +175,26 @@ typedef struct msurface_s
 	texture_t *texture;
 	// the lightmap texture fragment to use on the rendering mesh
 	rtexture_t *lightmaptexture;
-	// if lightmap settings changed, this forces update
-	int cached_dlight; // q1bsp
-	// mesh for rendering
-	surfmesh_t mesh;
 
-	int num_collisiontriangles;
-	int *data_collisionelement3i;
-	int num_collisionvertices;
-	float *data_collisionvertex3f;
+	// this surface is part of this mesh
+	surfmesh_t *groupmesh;
+	int num_triangles; // number of triangles in the mesh
+	int num_firsttriangle; // first triangle in the mesh (index into groupmesh)
+	int num_vertices; // number of vertices in the mesh
+	int num_firstvertex; // first vertex in the mesh (index into groupmesh)
 
-	// index into model->brush.shadowmesh
-	int num_firstshadowmeshtriangle;
+	// shadow volume building information
+	int num_firstshadowmeshtriangle; // index into model->brush.shadowmesh
 
-	msurface_lightmapinfo_t *lightmapinfo;
+	// lightmaptexture rebuild information not used in q3bsp
+	int cached_dlight; // q1bsp // forces rebuild of lightmaptexture
+	msurface_lightmapinfo_t *lightmapinfo; // q1bsp
 
+	// mesh information for collisions (only used by q3bsp curves)
+	int num_collisiontriangles; // q3bsp
+	int *data_collisionelement3i; // q3bsp
+	int num_collisionvertices; // q3bsp
+	float *data_collisionvertex3f; // q3bsp
 	struct q3deffect_s *effect; // q3bsp
 	// FIXME: collisionmarkframe should be kept in a separate array
 	int collisionmarkframe; // q3bsp // don't collide twice in one trace
