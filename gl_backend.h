@@ -24,7 +24,7 @@ void GL_LockArrays(int first, int count);
 void GL_ActiveTexture(int num);
 void GL_ClientActiveTexture(int num);
 void GL_Scissor(int x, int y, int width, int height); // AK for DRAWQUEUE_SETCLIP
-void GL_ScissorTest(qboolean state);	// AK for DRAWQUEUE_(RE)SETCLIP
+void GL_ScissorTest(int state);	// AK for DRAWQUEUE_(RE)SETCLIP
  
 
 extern cvar_t gl_lockarrays;
