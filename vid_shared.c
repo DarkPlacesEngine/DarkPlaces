@@ -241,7 +241,7 @@ int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *
 	for (func = funcs;func && func->name;func++)
 		*func->funcvariable = NULL;
 
-	if (disableparm && COM_CheckParm(disableparm))
+	if (disableparm && (COM_CheckParm(disableparm) || COM_CheckParm("-safe")))
 	{
 		Con_DPrintf("disabled by commandline\n");
 		return false;
@@ -823,9 +823,9 @@ void VID_Open(void)
 	{
 		// interpret command-line parameters
 		vid_commandlinecheck = false;
-		if ((i = COM_CheckParm("-window")) != 0)
+		if (COM_CheckParm("-window") || COM_CheckParm("-safe"))
 			Cvar_SetValueQuick(&vid_fullscreen, false);
-		if ((i = COM_CheckParm("-fullscreen")) != 0)
+		if (COM_CheckParm("-fullscreen"))
 			Cvar_SetValueQuick(&vid_fullscreen, true);
 		width = 0;
 		height = 0;
