@@ -279,8 +279,8 @@ void S_PaintChannels(int endtime)
 		if (endtime - paintedtime > PAINTBUFFER_SIZE)
 			end = paintedtime + PAINTBUFFER_SIZE;
 
-		// clear the paint buffer, filling it with data from rawsamples (music/video/whatever)
-		S_RawSamples_Dequeue(&paintbuffer->left, end - paintedtime);
+		// clear the paint buffer
+		memset (&paintbuffer, 0, (end - paintedtime) * sizeof (paintbuffer[0]));
 
 		// paint in the channels.
 		ch = channels;

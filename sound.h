@@ -189,20 +189,4 @@ void SNDDMA_Submit(void);
 void *S_LockBuffer(void);
 void S_UnlockBuffer(void);
 
-// add some data to the tail of the rawsamples queue
-void S_RawSamples_Enqueue(short *samples, unsigned int length);
-// read and remove some data from the head of the rawsamples queue
-void S_RawSamples_Dequeue(int *samples, unsigned int length);
-// empty the rawsamples queue
-void S_RawSamples_ClearQueue(void);
-// returns how much more data the queue wants, or 0 if it is already full enough
-int S_RawSamples_QueueWantsMore(void);
-
-// resamples one sound buffer into another, while changing the length
-void S_ResampleBuffer16Stereo(short *input, int inputlength, short *output, int outputlength);
-
-// returns the rate that the rawsamples system is running at
-int S_RawSamples_SampleRate(void);
-
 #endif
-
