@@ -3231,6 +3231,7 @@ level_t		transfusionlevels[] =
 	{"cpbb04",		"Deadly Inspirations"},
 
 	{"b2a15",		"Area 15 (B2)"},
+	{"b2power",		"BB_Power"},
 	{"barena",		"Blood Arena"},
 	{"bkeep",		"Blood Keep"},
 	{"bstar",		"Brown Star"},
@@ -3264,9 +3265,9 @@ episode_t	transfusionepisodes[] =
 	{"Post Mortem", 45, 9},
 	{"Cryptic Passage", 54, 10},
 	{"Cryptic BloodBath", 64, 4},
-	{"Blood 2", 68, 5},
-	{"Transfusion", 73, 9},
-	{"Conversions", 82, 6}
+	{"Blood 2", 68, 6},
+	{"Transfusion", 74, 9},
+	{"Conversions", 83, 6}
 };
 
 level_t goodvsbad2levels[] =
