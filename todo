@@ -28,6 +28,8 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+d darkplaces: limit maximum lerp time on animations to .1 seconds (Vermeulen)
+-n darkplaces: add PF_copyentity error checking for copying to world (yummyluv)
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
 0 darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
