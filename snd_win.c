@@ -188,6 +188,7 @@ sndinitstat SNDDMA_InitDirect (void)
 	WAVEFORMATEX	format, pformat; 
 	HRESULT			hresult;
 	int				reps;
+	int i;
 
 	memset ((void *)&sn, 0, sizeof (sn));
 
@@ -195,7 +196,11 @@ sndinitstat SNDDMA_InitDirect (void)
 
 	shm->channels = 2;
 	shm->samplebits = 16;
-	shm->speed = 44100; // LordHavoc: 44.1khz sound
+	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
+	if (i && i != (com_argc - 1))
+		shm->speed = atoi(com_argv[i+1]);
+	else
+		shm->speed = 11025;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
@@ -431,7 +436,11 @@ qboolean SNDDMA_InitWav (void)
 
 	shm->channels = 2;
 	shm->samplebits = 16;
-	shm->speed = 44100; // LordHavoc: 44.1khz sound
+	i = COM_CheckParm ("-sndspeed"); // LordHavoc: -sndspeed option
+	if (i && i != (com_argc - 1))
+		shm->speed = atoi(com_argv[i+1]);
+	else
+		shm->speed = 11025;
 
 	memset (&format, 0, sizeof(format));
 	format.wFormatTag = WAVE_FORMAT_PCM;
