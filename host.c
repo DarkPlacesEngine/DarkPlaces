@@ -786,6 +786,9 @@ void _Host_Frame (float time)
 
 	CDAudio_Update();
 
+	// LordHavoc: map and load are delayed until video is initialized
+	Host_PerformSpawnServerAndLoadGame();
+
 	if (host_speeds.integer)
 	{
 		pass1 = (time1 - time3)*1000000;

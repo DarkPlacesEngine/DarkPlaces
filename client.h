@@ -251,7 +251,6 @@ typedef struct
 
 #define	SIGNONS		4			// signon messages to receive before connected
 
-#define	MAX_MAPSTRING	2048
 #define	MAX_DEMOS		8
 #define	MAX_DEMONAME	16
 
@@ -270,11 +269,6 @@ cactive_t;
 typedef struct
 {
 	cactive_t state;
-
-// personalization data sent to server
-	char mapstring[MAX_QPATH];
-	// to restart a level
-	//char spawnparms[MAX_MAPSTRING];
 
 // demo loop control
 	// -1 = don't play demos
@@ -656,6 +650,8 @@ refdef_t r_refdef;
 extern mempool_t *cl_refdef_mempool;
 
 #include "cgamevm.h"
+
+void Host_PerformSpawnServerAndLoadGame(void);
 
 #endif
 
