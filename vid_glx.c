@@ -475,6 +475,7 @@ void VID_Shutdown(void)
 		return;
 
 	vid_hidden = true;
+	usingmouse = false;
 	if (vidx11_display)
 	{
 		uninstall_grabs();
@@ -835,6 +836,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 
+	usingmouse = false;
 	vid_hidden = false;
 	GL_Init();
 	return true;
