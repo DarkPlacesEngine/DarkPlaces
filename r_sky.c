@@ -347,7 +347,7 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 	{
 		for (i = 0;i < 128;i++)
 			for (j = 0;j < 128;j++)
-				trans[(i*128) + j] = src[i*256+j+128];
+				trans[(i*128) + j] = ((unsigned *)src)[i*256+j+128];
 	}
 	else
 	{
@@ -381,7 +381,7 @@ void R_InitSky (qbyte *src, int bytesperpixel)
 	{
 		for (i = 0;i < 128;i++)
 			for (j = 0;j < 128;j++)
-				trans[(i*128) + j] = src[i*256+j];
+				trans[(i*128) + j] = ((unsigned *)src)[i*256+j];
 	}
 	else
 	{
