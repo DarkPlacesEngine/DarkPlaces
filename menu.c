@@ -2306,41 +2306,49 @@ episode_t	nehahraepisodes[] =
 // Map list for BloodBath
 level_t		bloodbathlevels[] =
 {
-	{"bb1",		"The Stronghold"},
-	{"bb2",		"Winter Wonderland"},
-	{"bb3",		"Bodies"},
-	{"bb4",		"The Tower"},
-	{"bb5",		"Click!"},
-	{"bb7",		"Midgard"},
-	{"bb8",		"Fun With Heads"},
+	{"bb1",			"The Stronghold"},
+	{"bb2",			"Winter Wonderland"},
+	{"bb3",			"Bodies"},
+	{"bb4",			"The Tower"},
+	{"bb5",			"Click!"},
+	{"bb6",			"Twin Fortress"},
+	{"bb7",			"Midgard"},
+	{"bb8",			"Fun With Heads"},
+	{"e1m1",		"Cradle to Grave"},
+	{"e1m7",		"Altar of Stone"},
 
-	{"dm1",		"Monolith Building #11"},
-	{"dm2",		"Power!"},
-	{"dm3",		"Area 15"},
+	{"dm1",			"Monolith Building 11"},
+	{"dm2",			"Power!"},
+	{"dm3",			"Area 15"},
+	{"e6m8",		"Beauty and the Beast"},
 
-	{"cpbb01",	"Crypt of Despair"},
-	{"cpbb03",	"Unholy Cathedral"},
+	{"cpbb01",		"Crypt of Despair"},
+	{"cpbb02",		"Pits of Blood"},
+	{"cpbb03",		"Unholy Cathedral"},
+	{"cpbb04",		"Deadly Inspirations"},
 
-	{"b2a15",	"A15"},
-	{"barena",	"Blood Arena"},
-	{"bkeep",	"Blood Keep"},
-	{"bstar",	"Brownstar"},
-	{"crypt",	"The Crypt"},
+	{"b2a15",		"Area 15 (B2)"},
+	{"barena",		"Blood Arena"},
+	{"bkeep",		"Blood Keep"},
+	{"bstar",		"Brown Star"},
+	{"crypt",		"The Crypt"},
 
-	{"bb3_2k1",	"Bodies Infusion"},
-	{"qbb1",	"The Confluence"},
-	{"qbb2",	"Kathartic"},
-	{"qbb3",	"Caleb's Woodland Retreat"},
-	{"qe1m7",	"The House of Chthon"}
+	{"bb3_2k1",		"Bodies Infusion"},
+	{"qbb1",		"The Confluence"},
+	{"qbb2",		"KathartiK"},
+	{"qbb3",		"Caleb's Woodland Retreat"},
+	{"ded_simp",	"Dead Simple"},
+	{"dranzbb6",	"Black Coffee"},
+	{"qe1m7",		"The House of Chthon"}
 };
 
 episode_t	bloodbathepisodes[] =
 {
-	{"Blood", 0, 7},
-	{"Plasma Pack", 7, 3},
-	{"Cryptic Passage", 10, 2},
-	{"Blood 2", 12, 5},
-	{"BloodBath", 17, 5}
+	{"Blood", 0, 10},
+	{"Plasma Pack", 10, 4},
+	{"Cryptic Passage", 14, 4},
+	{"Blood 2", 18, 5},
+	{"BloodBath", 23, 7}
 };
 
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
