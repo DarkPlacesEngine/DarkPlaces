@@ -179,7 +179,7 @@ typedef struct areagrid_s
 }
 areagrid_t;
 
-#define AREA_GRID 32
+#define AREA_GRID 16
 #define AREA_GRIDNODES (AREA_GRID * AREA_GRID)
 
 static areagrid_t sv_areagrid[AREA_GRIDNODES];
