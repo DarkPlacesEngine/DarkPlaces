@@ -36,6 +36,8 @@ enum m_state_e m_state;
 
 void M_Menu_Main_f (void);
 	void M_Menu_SinglePlayer_f (void);
+		void M_Menu_Transfusion_Episode_f (void);
+			void M_Menu_Transfusion_Skill_f (void);
 		void M_Menu_Load_f (void);
 		void M_Menu_Save_f (void);
 	void M_Menu_MultiPlayer_f (void);
@@ -48,6 +50,7 @@ void M_Menu_Main_f (void);
 		void M_Menu_Reset_f (void);
 		void M_Menu_Video_f (void);
 	void M_Menu_Help_f (void);
+	void M_Menu_Credits_f (void);
 	void M_Menu_Quit_f (void);
 void M_Menu_LanConfig_f (void);
 void M_Menu_GameOptions_f (void);
@@ -55,6 +58,8 @@ void M_Menu_ServerList_f (void);
 
 void M_Main_Draw (void);
 	void M_SinglePlayer_Draw (void);
+		void M_Transfusion_Episode_Draw (void);
+			void M_Transfusion_Skill_Draw (void);
 		void M_Load_Draw (void);
 		void M_Save_Draw (void);
 	void M_MultiPlayer_Draw (void);
@@ -67,6 +72,7 @@ void M_Main_Draw (void);
 		void M_Reset_Draw (void);
 		void M_Video_Draw (void);
 	void M_Help_Draw (void);
+	void M_Credits_Draw (void);
 	void M_Quit_Draw (void);
 void M_LanConfig_Draw (void);
 void M_GameOptions_Draw (void);
@@ -74,6 +80,8 @@ void M_ServerList_Draw (void);
 
 void M_Main_Key (int key, char ascii);
 	void M_SinglePlayer_Key (int key, char ascii);
+		void M_Transfusion_Episode_Key (int key, char ascii);
+			void M_Transfusion_Skill_Key (int key, char ascii);
 		void M_Load_Key (int key, char ascii);
 		void M_Save_Key (int key, char ascii);
 	void M_MultiPlayer_Key (int key, char ascii);
@@ -86,6 +94,7 @@ void M_Main_Key (int key, char ascii);
 		void M_Reset_Key (int key, char ascii);
 		void M_Video_Key (int key, char ascii);
 	void M_Help_Key (int key, char ascii);
+	void M_Credits_Key (int key, char ascii);
 	void M_Quit_Key (int key, char ascii);
 void M_LanConfig_Key (int key, char ascii);
 void M_GameOptions_Key (int key, char ascii);
@@ -376,6 +385,12 @@ void M_Menu_Main_f (void)
 	}
 	else if (gamemode == GAME_NETHERWORLD)//VORTEX: menu restarting item
 		MAIN_ITEMS = 6;
+	else if (gamemode == GAME_TRANSFUSION) {
+		if (sv.active && !cl.intermission && cl.islocalgame)
+			MAIN_ITEMS = 8;
+		else
+			MAIN_ITEMS = 7;
+	}
 	else
 		MAIN_ITEMS = 5;
 
@@ -397,8 +412,29 @@ void M_Main_Draw (void)
 	int		f;
 	cachepic_t	*p;
 
-	M_Background(320, 200);
+	if (gamemode == GAME_TRANSFUSION) {
+		int y1, y2, y3;
+		M_Background(640, 480);
+		p = Draw_CachePic ("gfx/tb-transfusion");
+		M_DrawPic (640/2 - p->width/2, 40, "gfx/tb-transfusion");
+		y2 = 120;
+		// 8 rather than MAIN_ITEMS to skip a number and not miss the last option
+		for (y1 = 1; y1 <= 8; y1++)
+		{
+			if (MAIN_ITEMS == 7 && y1 == 4)
+				y1++;
+			M_DrawPic (0, y2, va("gfx/mainmenu%i", y1));
+			y2 += 40;
+		}
+		if (MAIN_ITEMS == 7 && m_main_cursor > 2)
+			y3 = m_main_cursor + 2;
+		else
+			y3 = m_main_cursor + 1;
+		M_DrawPic (0, 120 + m_main_cursor * 40, va("gfx/mainmenu%iselected", y3));
+		return;
+	}
 
+	M_Background(320, 200);
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/ttl_main.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/ttl_main.lmp");
@@ -563,6 +599,78 @@ void M_Main_Key (int key, char ascii)
 				break;
 			}
 		}
+		else if (gamemode == GAME_TRANSFUSION) {
+			if (MAIN_ITEMS == 7)
+			{
+				switch (m_main_cursor)
+				{
+				case 0:
+					M_Menu_Transfusion_Episode_f ();
+					break;
+					
+				case 1:
+					M_Menu_MultiPlayer_f ();
+					break;
+					
+				case 2:
+					M_Menu_Options_f ();
+					break;
+
+				case 3:
+					M_Menu_Load_f ();
+					break;
+
+				case 4:
+					M_Menu_Help_f ();
+					break;
+					
+				case 5:
+					M_Menu_Credits_f ();
+					break;
+
+				case 6:
+					M_Menu_Quit_f ();
+					break;
+				}
+			}
+			else
+			{
+				switch (m_main_cursor)
+				{
+				case 0:
+					M_Menu_Transfusion_Episode_f ();
+					break;
+					
+				case 1:
+					M_Menu_MultiPlayer_f ();
+					break;
+					
+				case 2:
+					M_Menu_Options_f ();
+					break;
+
+				case 3:
+					M_Menu_Save_f ();
+					break;
+
+				case 4:
+					M_Menu_Load_f ();
+					break;
+					
+				case 5:
+					M_Menu_Help_f ();
+					break;
+
+				case 6:
+					M_Menu_Credits_f ();
+					break;
+
+				case 7:
+					M_Menu_Quit_f ();
+					break;
+				}
+			}
+		}
 		else
 		{
 			switch (m_main_cursor)
@@ -682,6 +790,12 @@ void M_SinglePlayer_Key (int key, char ascii)
 			Cbuf_AddText ("maxplayers 1\n");
 			Cbuf_AddText ("deathmatch 0\n");
 			Cbuf_AddText ("coop 0\n");
+			if (gamemode == GAME_TRANSFUSION)
+			{
+				key_dest = key_menu;
+				M_Menu_Transfusion_Episode_f ();
+				break;
+			}
 			Cbuf_AddText ("startmap_sp\n");
 			break;
 
@@ -807,7 +921,10 @@ void M_Load_Key (int k, char ascii)
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_SinglePlayer_f ();
+		if (gamemode == GAME_TRANSFUSION)
+			M_Menu_Main_f ();
+		else
+			M_Menu_SinglePlayer_f ();
 		break;
 
 	case K_ENTER:
@@ -845,7 +962,10 @@ void M_Save_Key (int k, char ascii)
 	switch (k)
 	{
 	case K_ESCAPE:
-		M_Menu_SinglePlayer_f ();
+		if (gamemode == GAME_TRANSFUSION)
+			M_Menu_Main_f ();
+		else
+			M_Menu_SinglePlayer_f ();
 		break;
 
 	case K_ENTER:
@@ -873,6 +993,163 @@ void M_Save_Key (int k, char ascii)
 }
 
 //=============================================================================
+/* Transfusion Single Player Episode Menu */
+
+int	m_episode_cursor;
+#define	EPISODE_ITEMS	6
+
+void M_Menu_Transfusion_Episode_f (void)
+{
+	m_entersound = true;
+	m_state = m_transfusion_episode;
+	key_dest = key_menu;
+}
+
+void M_Transfusion_Episode_Draw (void)
+{
+	int y;
+	cachepic_t *p;
+	M_Background(640, 480);
+	
+	p = Draw_CachePic ("gfx/tb-episodes");
+	M_DrawPic (640/2 - p->width/2, 40, "gfx/tb-episodes");
+	for (y = 0; y < EPISODE_ITEMS; y++){
+		M_DrawPic (0, 160 + y * 40, va("gfx/episode%i", y+1));
+	}
+	
+	M_DrawPic (0, 120 + (m_episode_cursor + 1) * 40, va("gfx/episode%iselected", m_episode_cursor + 1));
+}
+
+void M_Transfusion_Episode_Key (int key, char ascii)
+{
+	switch (key)
+	{
+	case K_ESCAPE:
+		M_Menu_Main_f ();
+		break;
+
+	case K_DOWNARROW:
+		S_LocalSound ("sound/misc/menu1.wav");
+		m_episode_cursor++;
+		if (m_episode_cursor >= EPISODE_ITEMS)
+			m_episode_cursor = 0;
+		break;
+
+	case K_UPARROW:
+		S_LocalSound ("sound/misc/menu1.wav");
+		m_episode_cursor--;
+		if (m_episode_cursor < 0)
+			m_episode_cursor = EPISODE_ITEMS - 1;
+		break;
+
+	case K_ENTER:
+		Cbuf_AddText ("deathmatch 0\n");
+		m_entersound = true;
+		M_Menu_Transfusion_Skill_f ();
+	}
+}
+
+//=============================================================================
+/* Transfusion Single Player Skill Menu */
+
+int	m_skill_cursor = 2;
+#define	SKILL_ITEMS	5
+
+void M_Menu_Transfusion_Skill_f (void)
+{
+	m_entersound = true;
+	m_state = m_transfusion_skill;
+	key_dest = key_menu;
+}
+
+void M_Transfusion_Skill_Draw (void)
+{
+	int y;
+	cachepic_t	*p;
+	M_Background(640, 480);
+
+	p = Draw_CachePic ("gfx/tb-difficulty");
+	M_DrawPic(640/2 - p->width/2, 40, "gfx/tb-difficulty");
+
+	for (y = 0; y < SKILL_ITEMS; y++)
+	{
+		M_DrawPic (0, 180 + y * 40, va("gfx/difficulty%i", y+1));
+	}
+	M_DrawPic (0, 140 + (m_skill_cursor + 1) *40, va("gfx/difficulty%iselected", m_skill_cursor + 1));
+}
+
+void M_Transfusion_Skill_Key (int key, char ascii)
+{
+	switch (key)
+	{
+	case K_ESCAPE:
+		M_Menu_Transfusion_Episode_f ();
+		break;
+
+	case K_DOWNARROW:
+		S_LocalSound ("sound/misc/menu1.wav");
+		m_skill_cursor++;
+		if (m_skill_cursor >= SKILL_ITEMS)
+			m_skill_cursor = 0;
+		break;
+
+	case K_UPARROW:
+		S_LocalSound ("sound/misc/menu1.wav");
+		m_skill_cursor--;
+		if (m_skill_cursor < 0)
+			m_skill_cursor = SKILL_ITEMS - 1;
+		break;
+
+	case K_ENTER:
+		m_entersound = true;
+		switch (m_skill_cursor)
+		{
+		case 0:
+			Cbuf_AddText ("skill 0\n");
+			break;
+		case 1:
+			Cbuf_AddText ("skill 1\n");
+			break;
+		case 2:
+			Cbuf_AddText ("skill 2\n");
+			break;
+		case 3:
+			Cbuf_AddText ("skill 3\n");
+			break;
+		case 4:
+			Cbuf_AddText ("skill 4\n");
+			break;
+		}
+		key_dest = key_game;
+		if (sv.active)
+			Cbuf_AddText ("disconnect\n");
+		Cbuf_AddText ("maxplayers 1\n");
+		Cbuf_AddText ("deathmatch 0\n");
+		Cbuf_AddText ("coop 0\n");
+		switch (m_episode_cursor)
+		{
+		case 0:
+			Cbuf_AddText ("map e1m1\n");
+			break;
+		case 1:
+			Cbuf_AddText ("map e2m1\n");
+			break;
+		case 2:
+			Cbuf_AddText ("map e3m1\n");
+			break;
+		case 3:
+			Cbuf_AddText ("map e4m1\n");
+			break;
+		case 4:
+			Cbuf_AddText ("map e6m1\n");
+			break;
+		case 5:
+			Cbuf_AddText ("map cp01\n");
+			break;
+		}
+	}
+}
+//=============================================================================
 /* MULTIPLAYER MENU */
 
 int	m_multiplayer_cursor;
@@ -892,6 +1169,16 @@ void M_MultiPlayer_Draw (void)
 	int		f;
 	cachepic_t	*p;
 
+	if (gamemode == GAME_TRANSFUSION)
+	{
+		M_Background(640, 480);
+		p = Draw_CachePic ("gfx/tb-online");
+		M_DrawPic (640/2 - p->width/2, 140, "gfx/tb-online");
+		for (f = 1; f <= MULTIPLAYER_ITEMS; f++)
+			M_DrawPic (0, 180 + f*40, va("gfx/online%i", f));
+		M_DrawPic (0, 220 + m_multiplayer_cursor * 40, va("gfx/online%iselected", m_multiplayer_cursor + 1));
+		return;
+	}
 	M_Background(320, 200);
 
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
@@ -2650,6 +2937,33 @@ void M_Help_Key (int key, char ascii)
 }
 
 //=============================================================================
+/* CEDITS MENU */
+
+void M_Menu_Credits_f (void)
+{
+	key_dest = key_menu;
+	m_state = m_credits;
+	m_entersound = true;
+}
+
+
+
+void M_Credits_Draw (void)
+{
+	M_Background(640, 480);
+	DrawQ_Pic (0, 0, "gfx/creditsmiddle", 0, 0, 1, 1, 1, 1, 0);
+	M_Print (640/2 - 14/2*8, 236, "Coming soon...");
+	DrawQ_Pic (0, 0, "gfx/creditstop", 0, 0, 1, 1, 1, 1, 0);
+	DrawQ_Pic (0, 433, "gfx/creditsbottom", 0, 0, 1, 1, 1, 1, 0);
+}
+
+
+void M_Credits_Key (int key, char ascii)
+{
+		M_Menu_Main_f ();
+}
+
+//=============================================================================
 /* QUIT MENU */
 
 char *m_quit_message[9];
@@ -3835,7 +4149,10 @@ void M_ServerList_Draw (void)
 	const char *s;
 
 	// use as much vertical space as available
-	M_Background(640, vid.conheight);
+	if (gamemode == GAME_TRANSFUSION)
+		M_Background(640, vid.conheight - 80);
+	else
+		M_Background(640, vid.conheight);
 	// scroll the list as the cursor moves
 	s = va("%i/%i masters %i/%i servers", masterreplycount, masterquerycount, serverreplycount, serverquerycount);
 	M_PrintRed((640 - strlen(s) * 8) / 2, 32, s);
@@ -3937,6 +4254,9 @@ void M_Init (void)
 	Cmd_AddCommand ("menu_reset", M_Menu_Reset_f);
 	Cmd_AddCommand ("help", M_Menu_Help_f);
 	Cmd_AddCommand ("menu_quit", M_Menu_Quit_f);
+	Cmd_AddCommand ("menu_transfusion_episode", M_Menu_Transfusion_Episode_f);
+	Cmd_AddCommand ("menu_transfusion_skill", M_Menu_Transfusion_Skill_f);
+	Cmd_AddCommand ("menu_credits", M_Menu_Credits_f);
 
 	if (gamemode == GAME_TRANSFUSION)
 	{
@@ -4022,6 +4342,14 @@ void M_Draw (void)
 		M_SinglePlayer_Draw ();
 		break;
 
+	case m_transfusion_episode:
+		M_Transfusion_Episode_Draw ();
+		break;
+
+	case m_transfusion_skill:
+		M_Transfusion_Skill_Draw ();
+		break;
+
 	case m_load:
 		M_Load_Draw ();
 		break;
@@ -4070,6 +4398,10 @@ void M_Draw (void)
 		M_Help_Draw ();
 		break;
 
+	case m_credits:
+		M_Credits_Draw ();
+		break;
+
 	case m_quit:
 		M_Quit_Draw ();
 		break;
@@ -4085,6 +4417,35 @@ void M_Draw (void)
 	case m_slist:
 		M_ServerList_Draw ();
 		break;
+	}
+
+	if (gamemode == GAME_TRANSFUSION) {
+		if (m_state != m_credits) {
+			cachepic_t	*p;
+			int g, scale_x, scale_y, scale_y_repeat, top_offset;
+			float scale_y_rate;
+			scale_y_repeat = vid.conheight * 2;
+			g = (int)(realtime * 64)%96;
+			scale_y_rate = (float)(g+1) / 96;
+			top_offset = (g+12)/12;
+			p = Draw_CachePic (va("gfx/blooddrip%i", top_offset));
+			for (scale_x = 0; scale_x <= vid.conwidth; scale_x += p->width) {
+				for (scale_y = -scale_y_repeat; scale_y <= vid.conheight; scale_y += scale_y_repeat) {
+					DrawQ_Pic (scale_x + 21, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x +  116, scale_y_repeat + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 180, scale_y_repeat * .275 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 242, scale_y_repeat * .75 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 304, scale_y_repeat * .25 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 362, scale_y_repeat * .46125 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 402, scale_y_repeat * .1725 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 438, scale_y_repeat * .9 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 484, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop3", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 557, scale_y_repeat * .9425 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop1", 0, 0, 1, 1, 1, 1, 0);
+					DrawQ_Pic (scale_x + 606, scale_y_repeat * .5 + scale_y + scale_y_rate * scale_y_repeat, "gfx/blooddrop2", 0, 0, 1, 1, 1, 1, 0);
+				}
+				DrawQ_Pic (scale_x, -1, va("gfx/blooddrip%i", top_offset), 0, 0, 1, 1, 1, 1, 0);
+			}
+		}
 	}
 
 	if (m_entersound)
@@ -4114,6 +4475,14 @@ void M_Keydown (int key, char ascii)
 
 	case m_singleplayer:
 		M_SinglePlayer_Key (key, ascii);
+		return;
+
+	case m_transfusion_episode:
+		M_Transfusion_Episode_Key (key, ascii);
+		return;
+
+	case m_transfusion_skill:
+		M_Transfusion_Skill_Key (key, ascii);
 		return;
 
 	case m_load:
@@ -4163,6 +4532,10 @@ void M_Keydown (int key, char ascii)
 
 	case m_help:
 		M_Help_Key (key, ascii);
+		return;
+
+	case m_credits:
+		M_Credits_Key (key, ascii);
 		return;
 
 	case m_quit:
