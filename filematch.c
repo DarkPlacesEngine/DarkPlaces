@@ -164,3 +164,4 @@ void freedirectory(stringlist_t *list)
 {
 	stringlistfree(list);
 }
+
