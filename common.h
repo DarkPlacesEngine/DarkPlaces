@@ -180,6 +180,8 @@ void COM_ToLowerString (const char *in, char *out, size_t size_out);
 void COM_ToUpperString (const char *in, char *out, size_t size_out);
 int COM_StringBeginsWith(const char *s, const char *match);
 
+int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize);
+
 typedef struct stringlist_s
 {
 	struct stringlist_s *next;
