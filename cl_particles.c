@@ -378,15 +378,7 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 		}
 	}
 	else
-	{
 		R_NewExplosion(org);
-
-		for (i = 0;i < 256;i++)
-		{
-			VectorRandom(v);
-			particle(pt_spark, explosparkramp[rand()&7], tex_particle, false, 2, lhrandom(16, 255), 9999, 1.5, end[0], end[1], end[2], v[0] * 384.0f, v[1] * 384.0f, v[2] * 384.0f + 160.0f, 512.0f, 0, 0, 0, 2, 0);
-		}
-	}
 }
 
 /*
@@ -814,7 +806,10 @@ void CL_MoveParticles (void)
 
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
+	{
+		r_refdef.numparticles = 0;
 		return;
+	}
 
 	frametime = cl.time - cl.oldtime;
 	if (!frametime)
