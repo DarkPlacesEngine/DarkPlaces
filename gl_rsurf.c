@@ -46,6 +46,7 @@ cvar_t gl_lightmapalign = {"gl_lightmapalign", "4"};
 cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
 cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
+cvar_t r_ambient = {"r_ambient", "0"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
@@ -62,11 +63,12 @@ void glrsurf_init()
 	Cvar_RegisterVariable(&gl_lightmaprgba);
 	Cvar_RegisterVariable(&gl_nosubimagefragments);
 	Cvar_RegisterVariable(&gl_nosubimage);
+	Cvar_RegisterVariable(&r_ambient);
 	// check if it's the glquake minigl driver
 	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
 	{
-		Cvar_SetValue("gl_nosubimagefragments", 1);
+//		Cvar_SetValue("gl_nosubimagefragments", 1);
 //		Cvar_SetValue("gl_nosubimage", 1);
 		Cvar_SetValue("gl_lightmode", 0);
 	}
@@ -188,6 +190,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 
 	surf->cached_dlight = (surf->dlightframe == r_framecount);
 	surf->cached_lighthalf = lighthalf;
+	surf->cached_ambient = r_ambient.value;
 
 	smax = (surf->extents[0]>>4)+1;
 	tmax = (surf->extents[1]>>4)+1;
@@ -209,11 +212,12 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	{
 // clear to no light
 		bl = blocklights;
+		j = r_ambient.value * 512.0f; // would be 256.0f logically, but using 512.0f to match winquake style
 		for (i=0 ; i<size ; i++)
 		{
-			*bl++ = 0;
-			*bl++ = 0;
-			*bl++ = 0;
+			*bl++ = j;
+			*bl++ = j;
+			*bl++ = j;
 		}
 
 // add all the lightmaps
@@ -511,7 +515,7 @@ void DrawTextureChains (void)
 					// check for lightmap modification
 					if (r_dynamic.value)
 					{
-						if (s->dlightframe == r_framecount || s->cached_dlight || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
+						if (s->dlightframe == r_framecount || s->cached_dlight || r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed, or r_ambient changed
 							R_UpdateLightmap(s, s->lightmaptexturenum);
 						else
 							for (maps = 0 ; maps < MAXLIGHTMAPS && s->styles[maps] != 255 ; maps++)
@@ -563,7 +567,7 @@ void DrawTextureChains (void)
 			else if (s->dlightframe == r_dlightframecount && r_dynamic.value)
 				light = true;
 			else
-				r = g = b = lighthalf ? 64 : 128;
+				r = g = b = (lighthalf ? 64 : 128) + (int) (r_ambient.value * 2.0f);
 			if (r_waterripple.value)
 			{
 				if (lighthalf)
@@ -581,7 +585,7 @@ void DrawTextureChains (void)
 									nv[0] = v[0];
 									nv[1] = v[1];
 									nv[2] = v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128;
+									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
 									R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
 									transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) shadecolor[0] >> 1,(int) shadecolor[1] >> 1,(int) shadecolor[2] >> 1,alpha);
 								}
@@ -624,7 +628,7 @@ void DrawTextureChains (void)
 									nv[0] = v[0];
 									nv[1] = v[1];
 									nv[2] = v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128;
+									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
 									R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
 									transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), shadecolor[0],shadecolor[1],shadecolor[2],alpha);
 								}
@@ -667,7 +671,7 @@ void DrawTextureChains (void)
 								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
 								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
 								{
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128;
+									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
 									R_DynamicLightPoint(shadecolor, v, s->dlightbits);
 									transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) shadecolor[0] >> 1,(int) shadecolor[1] >> 1,(int) shadecolor[2] >> 1,alpha);
 								}
@@ -704,7 +708,7 @@ void DrawTextureChains (void)
 								transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
 								for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
 								{
-									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128;
+									shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
 									R_DynamicLightPoint(shadecolor, v, s->dlightbits);
 									transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), shadecolor[0],shadecolor[1],shadecolor[2],alpha);
 								}
@@ -870,15 +874,15 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 				{
 					if (lighthalf)
 					{
-						r = 64.0f * currententity->colormod[0];
-						g = 64.0f * currententity->colormod[1];
-						b = 64.0f * currententity->colormod[2];
+						r = 64.0f * currententity->colormod[0] + (int) r_ambient.value;
+						g = 64.0f * currententity->colormod[1] + (int) r_ambient.value;
+						b = 64.0f * currententity->colormod[2] + (int) r_ambient.value;
 					}
 					else
 					{
-						r = 128.0f * currententity->colormod[0];
-						g = 128.0f * currententity->colormod[1];
-						b = 128.0f * currententity->colormod[2];
+						r = 128.0f * currententity->colormod[0] + (int) (r_ambient.value * 2.0f);
+						g = 128.0f * currententity->colormod[1] + (int) (r_ambient.value * 2.0f);
+						b = 128.0f * currententity->colormod[2] + (int) (r_ambient.value * 2.0f);
 					}
 				}
 				for (p=s->polys ; p ; p=p->next)
@@ -892,7 +896,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 							nv[2] += r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
 						if (light)
 						{
-							shadecolor[0] = shadecolor[1] = shadecolor[2] = 128;
+							shadecolor[0] = shadecolor[1] = shadecolor[2] = 128 + (int) (r_ambient.value * 2.0f);
 							R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
 							if (lighthalf)
 							{
@@ -934,7 +938,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 					size3 = smax*tmax*3; // *3 for colored lighting
 					for (i = 0;i < s->polys->numverts;i++, v += VERTEXSIZE)
 					{
-						shadecolor[0] = shadecolor[1] = shadecolor[2] = 0;
+						shadecolor[0] = shadecolor[1] = shadecolor[2] = r_ambient.value * 2.0f;
 						lm = (byte *)((long) s->samples + ((int) v[8] * smax + (int) v[7]) * 3); // LordHavoc: *3 for colored lighting
 						for (maps = 0;maps < MAXLIGHTMAPS && s->styles[maps] != 255;maps++)
 						{
@@ -963,7 +967,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 				// check for lightmap modification
 				if (r_dynamic.value)
 				{
-					if (s->dlightframe == r_framecount || s->cached_dlight || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
+					if (s->dlightframe == r_framecount || s->cached_dlight || r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
 						R_UpdateLightmap(s, s->lightmaptexturenum);
 					else
 						for (maps = 0 ; maps < MAXLIGHTMAPS && s->styles[maps] != 255 ; maps++)

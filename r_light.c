@@ -203,6 +203,8 @@ LIGHT SAMPLING
 mplane_t		*lightplane;
 vec3_t			lightspot;
 
+extern cvar_t r_ambient;
+
 int RecursiveLightPoint (vec3_t color, mnode_t *node, vec3_t start, vec3_t end)
 {
 	float		front, back, frac;
@@ -303,7 +305,7 @@ void R_LightPoint (vec3_t color, vec3_t p)
 	end[1] = p[1];
 	end[2] = p[2] - 2048;
 
-	color[0] = color[1] = color[2] = 0;
+	color[0] = color[1] = color[2] = r_ambient.value * 2.0f;
 	RecursiveLightPoint (color, cl.worldmodel->nodes, p, end);
 }
 

@@ -137,6 +137,7 @@ typedef struct msurface_s
 	int			cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
 	qboolean	cached_dlight;				// true if dynamic light in cache
 	qboolean	cached_lighthalf;			// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
+	float		cached_ambient;				// LordHavoc: rerender lightmaps when r_ambient changes
 	byte		*samples;		// [numstyles*surfsize]
 } msurface_t;
 

@@ -1324,7 +1324,10 @@ void R_SetupFrame (void)
 {
 // don't allow cheats in multiplayer
 	if (cl.maxclients > 1)
+	{
 		Cvar_Set ("r_fullbright", "0");
+		Cvar_Set ("r_ambient", "0");
+	}
 
 	R_AnimateLight ();
 

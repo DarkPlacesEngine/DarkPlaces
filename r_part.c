@@ -44,7 +44,7 @@ int			r_numparticles;
 vec3_t			r_pright, r_pup, r_ppn;
 
 cvar_t r_particles = {"r_particles", "1"};
-cvar_t r_dynamicparticles = {"r_dynamicparticles", "1"};
+cvar_t r_dynamicparticles = {"r_dynamicparticles", "0", TRUE};
 
 void fractalnoise(char *noise, int size);
 void fractalnoise_zeroedge(char *noise, int size);
