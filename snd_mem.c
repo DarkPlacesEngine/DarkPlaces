@@ -36,6 +36,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 	srclength = sc->length << sc->stereo;
 
 	outcount = (double) sc->length * (double) shm->speed / (double) sc->speed;
+	Con_DPrintf("ResampleSfx: resampling sound %s from %dhz to %dhz (%d samples to %d samples)\n", name, sc->speed, shm->speed, sc->length, outcount);
 	sc->length = outcount;
 	if (sc->loopstart != -1)
 		sc->loopstart = (double) sc->loopstart * (double) shm->speed / (double) sc->speed;
@@ -57,7 +58,6 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 	else
 	{
 		// general case
-		Con_DPrintf("ResampleSfx: resampling sound %s\n", name);
 		samplefrac = 0;
 		if ((fracstep & 255) == 0) // skipping points on perfect multiple
 		{
@@ -212,7 +212,7 @@ S_LoadSound
 */
 sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 {
-    char namebuffer[256];
+	char namebuffer[MAX_QPATH];
 	qbyte *data;
 	wavinfo_t info;
 	int len;
@@ -232,7 +232,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	{
 		s->silentlymissing = !complain;
 		if (complain)
-			Con_DPrintf ("Couldn't load %s\n", namebuffer);
+			Con_Printf("Couldn't load %s\n", namebuffer);
 		return NULL;
 	}
 
@@ -240,7 +240,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	// LordHavoc: stereo sounds are now allowed (intended for music)
 	if (info.channels < 1 || info.channels > 2)
 	{
-		Con_Printf ("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
+		Con_Printf("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
 		Mem_Free(data);
 		return NULL;
 	}
@@ -255,6 +255,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	sc = s->sfxcache = Mem_Alloc(s->mempool, len + sizeof(sfxcache_t));
 	if (!sc)
 	{
+		Con_Printf("failed to allocate memory for sound \"%s\"\n", s->name);
 		Mem_FreePool(&s->mempool);
 		Mem_Free(data);
 		return NULL;
@@ -266,7 +267,7 @@ sfxcache_t *S_LoadSound (sfx_t *s, int complain)
 	sc->width = info.width;
 	sc->stereo = info.channels == 2;
 
-	ResampleSfx (sc, data + info.dataofs, s->name);
+	ResampleSfx(sc, data + info.dataofs, s->name);
 
 	Mem_Free(data);
 	return sc;
