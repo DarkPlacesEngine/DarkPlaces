@@ -3059,7 +3059,7 @@ void PF_setattachment (void)
 	edict_t *tagentity = G_EDICT(OFS_PARM1);
 	char *tagname = G_STRING(OFS_PARM2);
 	eval_t *v;
-	int i, modelindex;
+	int modelindex;
 	model_t *model;
 
 	if (e == sv.edicts)
@@ -3082,15 +3082,7 @@ void PF_setattachment (void)
 		modelindex = (int)tagentity->v->modelindex;
 		if (modelindex >= 0 && modelindex < MAX_MODELS && (model = sv.models[modelindex]))
 		{
-			if (model->data_overridetagnamesforskin && (unsigned int)tagentity->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames)
-				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
-					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
-						v->_float = i + 1;
-			// FIXME: use a model function to get tag info (need to handle skeletal)
-			if (v->_float == 0 && model->alias.aliasnum_tags)
-				for (i = 0;i < model->alias.aliasnum_tags;i++)
-					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))
-						v->_float = i + 1;
+			v->_float = Mod_Alias_GetTagIndexForName(model, tagentity->v->skin, tagname);
 			if (v->_float == 0)
 				Con_DPrintf("setattachment(edict %i, edict %i, string \"%s\"): tried to find tag named \"%s\" on entity %i (model \"%s\") but could not find it\n", NUM_FOR_EDICT(e), NUM_FOR_EDICT(tagentity), tagname, tagname, NUM_FOR_EDICT(tagentity), model->name);
 		}
@@ -3104,7 +3096,7 @@ void PF_setattachment (void)
 
 int SV_GetTagIndex (edict_t *e, char *tagname)
 {
-	int tagindex, i;
+	int i;
 	model_t *model;
 
 	i = e->v->modelindex;
@@ -3112,30 +3104,7 @@ int SV_GetTagIndex (edict_t *e, char *tagname)
 		return -1;
 	model = sv.models[i];
 
-	tagindex = -1;
-	if (model->data_overridetagnamesforskin && (unsigned int)e->v->skin < (unsigned int)model->numskins && model->data_overridetagnamesforskin[(unsigned int)e->v->skin].num_overridetagnames)
-	{
-		for (i = 0; i < model->data_overridetagnamesforskin[(unsigned int)e->v->skin].num_overridetagnames; i++)
-		{
-			if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)e->v->skin].data_overridetagnames[i].name))
-			{
-				tagindex = i;
-				break;
-			}
-		}
-	}
-	if (tagindex == -1)
-	{
-		for (i = 0;i < model->alias.aliasnum_tags; i++)
-		{
-			if (!(strcmp(tagname, model->alias.aliasdata_tags[i].name)))
-			{
-				tagindex = i;
-				break;
-			}
-		}
-	}
-	return tagindex + 1;
+	return Mod_Alias_GetTagIndexForName(model, e->v->skin, tagname);
 };
 
 // Warnings/errors code:
@@ -3151,7 +3120,7 @@ extern cvar_t cl_bobup;
 int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 {
 	eval_t *val;
-	int modelindex, reqtag, reqframe, attachloop;
+	int modelindex, reqframe, attachloop;
 	matrix4x4_t entitymatrix, tagmatrix, attachmatrix;
 	edict_t *attachent;
 	model_t *model;
@@ -3168,25 +3137,18 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 		return 3;
 
 	model = sv.models[modelindex];
-	reqtag = model->alias.aliasnum_tags;
 
-	if (tagindex <= 0 || tagindex > reqtag)
-	{
-		if (reqtag && tagindex) // Only appear if model has no tags or not-null tag requested
-			return 4;
-		return 0;
-	}
-
-	if (ent->v->frame < 0 || ent->v->frame > model->alias.aliasnum_tagframes)
-		reqframe = model->numframes - 1; // if model has wrong frame, engine automatically switches to model last frame
+	if (ent->v->frame >= 0 && ent->v->frame < model->numframes && model->animscenes)
+		reqframe = model->animscenes[(int)ent->v->frame].firstframe;
 	else
-		reqframe = ent->v->frame;
+		reqframe = 0; // if model has wrong frame, engine automatically switches to model first frame
 
 	// get initial tag matrix
 	if (tagindex)
 	{
-		reqtag = (tagindex - 1) + ent->v->frame*model->alias.aliasnum_tags;
-		Matrix4x4_Copy(&tagmatrix, &model->alias.aliasdata_tags[reqtag].matrix);
+		int ret = Mod_Alias_GetTagMatrix(model, reqframe, tagindex - 1, &tagmatrix);
+		if (ret)
+			return ret;
 	}
 	else
 		Matrix4x4_CreateIdentity(&tagmatrix);
@@ -3198,18 +3160,10 @@ int SV_GetTagMatrix (matrix4x4_t *out, edict_t *ent, int tagindex)
 		{
 			attachent = EDICT_NUM(val->edict); // to this it entity our entity is attached
 			val = GETEDICTFIELDVALUE(ent, eval_tag_index);
-			Matrix4x4_CreateIdentity(&attachmatrix);
-			if (val->_float >= 1 && attachent->v->modelindex >= 1 && attachent->v->modelindex < MAX_MODELS)
-			{
-				model = sv.models[(int)attachent->v->modelindex];
-				if (val->_float < model->alias.aliasnum_tags)
-				{
-					// got tagname on parent entity attachment tag via tag_index (and got it's matrix)
-					model = sv.models[(int)attachent->v->modelindex];
-					reqtag = (val->_float - 1) + attachent->v->frame*model->alias.aliasnum_tags;
-					Matrix4x4_Copy(&attachmatrix, &model->alias.aliasdata_tags[reqtag].matrix);
-				}
-			}
+			if (val->_float >= 1 && attachent->v->modelindex >= 1 && attachent->v->modelindex < MAX_MODELS && (model = sv.models[(int)attachent->v->modelindex]) && model->animscenes && attachent->v->frame >= 0 && attachent->v->frame < model->numframes)
+				Mod_Alias_GetTagMatrix(model, model->animscenes[(int)attachent->v->frame].firstframe, val->_float - 1, &attachmatrix);
+			else
+				Matrix4x4_CreateIdentity(&attachmatrix);
 
 			// apply transformation by child entity matrix
 			val = GETEDICTFIELDVALUE(ent, eval_scale);

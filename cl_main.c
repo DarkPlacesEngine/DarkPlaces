@@ -560,17 +560,18 @@ void CL_LinkNetworkEntity(entity_t *e)
 			e->render.flags |= t->render.flags & RENDER_EXTERIORMODEL;
 			// if a valid tagindex is used, make it relative to that tag instead
 			// FIXME: use a model function to get tag info (need to handle skeletal)
-			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model) && e->state_current.tagindex <= t->render.model->alias.aliasnum_tags)
+			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model))
 			{
 				// blend the matrices
 				memset(&blendmatrix, 0, sizeof(blendmatrix));
 				for (j = 0;j < 4 && t->render.frameblend[j].lerp > 0;j++)
 				{
-					matrix = &t->render.model->alias.aliasdata_tags[t->render.frameblend[j].frame * t->render.model->alias.aliasnum_tags + (e->state_current.tagindex - 1)].matrix;
+					matrix4x4_t tagmatrix;
+					Mod_Alias_GetTagMatrix(model, t->render.frameblend[j].frame, e->state_current.tagindex - 1, &tagmatrix);
 					d = t->render.frameblend[j].lerp;
 					for (l = 0;l < 4;l++)
 						for (k = 0;k < 4;k++)
-							blendmatrix.m[l][k] += d * matrix->m[l][k];
+							blendmatrix.m[l][k] += d * tagmatrix.m[l][k];
 				}
 				// concat the tag matrices onto the entity matrix
 				Matrix4x4_Concat(&tempmatrix, &t->render.matrix, &blendmatrix);
