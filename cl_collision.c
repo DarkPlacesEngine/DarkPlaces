@@ -30,11 +30,13 @@ physentity_t;
 
 int cl_traceline_endcontents;
 
-float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels)
+float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t normal, int contents, int hitbmodels, entity_render_t **hitent)
 {
 	double maxfrac;
 	trace_t trace;
 
+	if (hitent)
+		*hitent = NULL;
 	Mod_CheckLoaded(cl.worldmodel);
 	Collision_ClipTrace(&trace, NULL, cl.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, start, vec3_origin, vec3_origin, end);
 
@@ -44,6 +46,8 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 		VectorCopy (trace.plane.normal, normal);
 	cl_traceline_endcontents = trace.endcontents;
 	maxfrac = trace.fraction;
+	if (hitent && trace.fraction < 1)
+		*hitent = &cl_entities[0].render;
 
 	if (hitbmodels && cl_num_brushmodel_entities)
 	{
@@ -76,6 +80,8 @@ float CL_TraceLine (const vec3_t start, const vec3_t end, vec3_t impact, vec3_t 
 				if (normal)
 					VectorCopy(trace.plane.normal, normal);
 				cl_traceline_endcontents = trace.endcontents;
+				if (hitent)
+					*hitent = ent;
 			}
 		}
 	}

@@ -111,11 +111,12 @@ void R_NewMap (void);
 void R_DrawWorld(entity_render_t *ent);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
-void R_DrawBrushModelSky (entity_render_t *ent);
-void R_DrawBrushModelNormal (entity_render_t *ent);
-void R_DrawZymoticModel (entity_render_t *ent);
+void R_DrawBrushModelSky(entity_render_t *ent);
+void R_DrawBrushModelNormal(entity_render_t *ent);
+void R_DrawZymoticModel(entity_render_t *ent);
 void R_DrawQ1Q2AliasModel(entity_render_t *ent);
-void R_DrawSpriteModel (entity_render_t *ent);
+void R_DrawQ1Q2AliasModelFakeShadow(entity_render_t *ent);
+void R_DrawSpriteModel(entity_render_t *ent);
 
 // LordHavoc: vertex transform
 #include "transform.h"

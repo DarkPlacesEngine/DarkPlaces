@@ -2475,7 +2475,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->numleafs = bm->visleafs;
 
 		mod->Draw = R_DrawBrushModelNormal;
-		mod->DrawShadow = NULL;
+		mod->DrawFakeShadow = NULL;
 
 		// LordHavoc: only register submodels if it is the world
 		// (prevents bsp models from replacing world submodels)

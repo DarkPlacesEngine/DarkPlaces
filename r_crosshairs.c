@@ -128,7 +128,7 @@ void R_DrawWorldCrosshair(void)
 	AngleVectors(cl.viewangles, v2, NULL, NULL);
 	//VectorCopy(r_origin, v1);
 	VectorMA(v1, 8192, v2, v2);
-	spritescale = CL_TraceLine(v1, v2, spriteorigin, NULL, 0, true) * (8192.0f / 40.0f) * crosshair_size.value;
+	spritescale = CL_TraceLine(v1, v2, spriteorigin, NULL, 0, true, NULL) * (8192.0f / 40.0f) * crosshair_size.value;
 
 	// draw the sprite
 	R_DrawCrosshairSprite(pic->tex, spriteorigin, spritescale, color[0], color[1], color[2], color[3]);

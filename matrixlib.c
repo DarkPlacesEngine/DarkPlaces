@@ -364,6 +364,13 @@ void Matrix4x4_Transform4 (const matrix4x4_t *in, const float v[4], float out[4]
 	out[3] = v[0] * in->m[3][0] + v[1] * in->m[3][1] + v[2] * in->m[3][2] + v[3] * in->m[3][3];
 }
 
+void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[3])
+{
+	out[0] = v[0] * in->m[0][0] + v[1] * in->m[0][1] + v[2] * in->m[0][2];
+	out[1] = v[0] * in->m[1][0] + v[1] * in->m[1][1] + v[2] * in->m[1][2];
+	out[2] = v[0] * in->m[2][0] + v[1] * in->m[2][1] + v[2] * in->m[2][2];
+}
+
 /*
 void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float out[3])
 {
@@ -707,6 +714,7 @@ void Matrix3x4_Transform (const matrix3x4_t *in, const float v[3], float out[3])
 	out[2] = v[0] * in->m[2][0] + v[1] * in->m[2][1] + v[2] * in->m[2][2] + in->m[2][3];
 }
 
+/*
 void Matrix3x4_SimpleUntransform (const matrix3x4_t *in, const float v[3], float out[3])
 {
 	float t[3];
@@ -717,6 +725,15 @@ void Matrix3x4_SimpleUntransform (const matrix3x4_t *in, const float v[3], float
 	out[1] = t[0] * in->m[0][1] + t[1] * in->m[1][1] + t[2] * in->m[2][1];
 	out[2] = t[0] * in->m[0][2] + t[1] * in->m[1][2] + t[2] * in->m[2][2];
 }
+*/
+
+void Matrix3x4_Transform3x3 (const matrix3x4_t *in, const float v[3], float out[3])
+{
+	out[0] = v[0] * in->m[0][0] + v[1] * in->m[0][1] + v[2] * in->m[0][2] + in->m[0][3];
+	out[1] = v[0] * in->m[1][0] + v[1] * in->m[1][1] + v[2] * in->m[1][2] + in->m[1][3];
+	out[2] = v[0] * in->m[2][0] + v[1] * in->m[2][1] + v[2] * in->m[2][2] + in->m[2][3];
+}
+
 
 // FIXME: optimize
 void Matrix3x4_ConcatTranslate (matrix3x4_t *out, float x, float y, float z)

@@ -157,7 +157,7 @@ void R_DrawCoronas(void)
 	{
 		rd = r_dlight + i;
 		dist = (DotProduct(rd->origin, vpn) - viewdist);
-		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, 0, true) == 1)
+		if (dist >= 24.0f && CL_TraceLine(rd->origin, r_origin, NULL, NULL, 0, true, NULL) == 1)
 		{
 			scale = r_colorscale * (1.0f / 131072.0f);
 			if (gl_flashblend.integer)
@@ -628,7 +628,7 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 			{
 				VectorSubtract (p, sl->origin, v);
 				f = ((1.0f / (DotProduct(v, v) * sl->falloff + sl->distbias)) - sl->subtract);
-				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, 0, false) == 1)
+				if (f > 0 && CL_TraceLine(p, sl->origin, NULL, NULL, 0, false, NULL) == 1)
 				{
 					f *= d_lightstylevalue[sl->style] * (1.0f / 65536.0f);
 					VectorMA(color, f, sl->light, color);
@@ -646,7 +646,7 @@ void R_CompleteLightPoint (vec3_t color, const vec3_t p, int dynamic, const mlea
 			rd = r_dlight + i;
 			VectorSubtract (p, rd->origin, v);
 			f = DotProduct(v, v);
-			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, 0, false) == 1)
+			if (f < rd->cullradius2 && CL_TraceLine(p, rd->origin, NULL, NULL, 0, false, NULL) == 1)
 			{
 				f = (1.0f / (f + LIGHTOFFSET)) - rd->subtract;
 				VectorMA(color, f, rd->light, color);
@@ -759,7 +759,7 @@ void R_LightModel(const entity_render_t *ent, int numverts, float colorr, float 
 			VectorSubtract (v, rd->origin, v);
 			if (DotProduct(v, v) < rd->cullradius2)
 			{
-				if (CL_TraceLine(ent->origin, rd->origin, NULL, NULL, 0, false) != 1)
+				if (CL_TraceLine(ent->origin, rd->origin, NULL, NULL, 0, false, NULL) != 1)
 					continue;
 				VectorSubtract (ent->origin, rd->origin, v);
 				f = ((1.0f / (DotProduct(v, v) + LIGHTOFFSET)) - rd->subtract);
@@ -901,7 +901,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 		ent->numentlights = 0;
 		if (cl.worldmodel)
 			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && ent->numentlights < MAXENTLIGHTS;i++, sl++)
-				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false) == 1)
+				if (CL_TraceLine(ent->origin, sl->origin, NULL, NULL, 0, false, NULL) == 1)
 					ent->entlights[ent->numentlights++] = i;
 	}
 	ent->entlightsframe = r_framecount;

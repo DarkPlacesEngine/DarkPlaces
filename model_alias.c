@@ -527,7 +527,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
-	loadmodel->DrawShadow = NULL;
+	loadmodel->DrawFakeShadow = R_DrawQ1Q2AliasModelFakeShadow;
 
 	loadmodel->mdlmd2data_triangleneighbors = Mem_Alloc(loadmodel->mempool, loadmodel->numtris * sizeof(int[3]));
 	Mod_BuildTriangleNeighbors(loadmodel->mdlmd2data_triangleneighbors, loadmodel->mdlmd2data_indices, loadmodel->numtris);
@@ -604,7 +604,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	loadmodel->aliastype = ALIASTYPE_MDLMD2;
 	loadmodel->Draw = R_DrawQ1Q2AliasModel;
 	loadmodel->DrawSky = NULL;
-	loadmodel->DrawShadow = NULL;
+	loadmodel->DrawFakeShadow = NULL;
 
 	if (LittleLong(pinmodel->num_tris < 1) || LittleLong(pinmodel->num_tris) > MD2MAX_TRIANGLES)
 		Host_Error ("%s has invalid number of triangles: %i", loadmodel->name, LittleLong(pinmodel->num_tris));
@@ -993,5 +993,5 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 
 	loadmodel->Draw = R_DrawZymoticModel;
 	loadmodel->DrawSky = NULL;
-	loadmodel->DrawShadow = NULL;
+	loadmodel->DrawFakeShadow = NULL;
 }

@@ -858,7 +858,7 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, org);
 		if (p->bounce)
 		{
-			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true) < 1)
+			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true, NULL) < 1)
 			{
 				VectorCopy(v, p->org);
 				if (p->bounce < 0)
