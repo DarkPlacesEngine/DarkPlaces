@@ -184,8 +184,8 @@ void R_DrawExplosion(explosion_t *e)
 	glColor4f(1,1,1,e->alpha);
 	glDisable(GL_TEXTURE_2D);
 //	glBindTexture(GL_TEXTURE_2D, explosiontexture);
-	glVertexPointer(3, GL_FLOAT, 0, (float *) &e->vert[0][0]);
-//	glTexCoordPointer(2, GL_FLOAT, 0, (float *) &explosiontexcoords[0][0]);
+	glVertexPointer(3, GL_FLOAT, sizeof(float[3]), (float *) &e->vert[0][0]);
+//	glTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), (float *) &explosiontexcoords[0][0]);
 	glEnableClientState(GL_VERTEX_ARRAY);
 //	glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 	glDrawElements(GL_TRIANGLES, EXPLOSIONTRIS, GL_UNSIGNED_INT, indexlist);
