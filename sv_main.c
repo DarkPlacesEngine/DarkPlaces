@@ -1115,65 +1115,54 @@ void SV_UpdateToReliableMessages (void)
 	int i, j;
 	client_t *client;
 	eval_t *val;
-	char *s;
+	char *name;
 
 // check for changes to be sent over the reliable streams
 	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
 		// update the host_client fields we care about according to the entity fields
 		sv_player = EDICT_NUM(i+1);
-		s = PR_GetString(sv_player->v->netname);
-		if (s != host_client->name)
-		{
-			if (s == NULL)
-				s = "";
-			// point the string back at host_client->name to keep it safe
-			strlcpy (host_client->name, s, sizeof (host_client->name));
-			sv_player->v->netname = PR_SetString(host_client->name);
-		}
-		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)) && host_client->colors != val->_float)
-			host_client->colors = val->_float;
-		host_client->frags = sv_player->v->frags;
-		if (gamemode == GAME_NEHAHRA)
-			if ((val = GETEDICTFIELDVALUE(sv_player, eval_pmodel)) && host_client->pmodel != val->_float)
-				host_client->pmodel = val->_float;
 
-		// if the fields changed, send messages about the changes
+		// DP_SV_CLIENTNAME
+		name = PR_GetString(sv_player->v->netname);
+		if (name == NULL)
+			name = "";
+		// always point the string back at host_client->name to keep it safe
+		strlcpy (host_client->name, name, sizeof (host_client->name));
+		sv_player->v->netname = PR_SetString(host_client->name);
 		if (strcmp(host_client->old_name, host_client->name))
 		{
+			if (host_client->spawned)
+				SV_BroadcastPrintf("%s changed name to %s\n", host_client->old_name, host_client->name);
 			strcpy(host_client->old_name, host_client->name);
-			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
-			{
-				if (!client->netconnection)
-					continue;
-				MSG_WriteByte (&client->message, svc_updatename);
-				MSG_WriteByte (&client->message, i);
-				MSG_WriteString (&client->message, host_client->name);
-			}
+			// send notification to all clients
+			MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteString (&sv.reliable_datagram, host_client->name);
 		}
+
+		// DP_SV_CLIENTCOLORS
+		// this is always found (since it's added by the progs loader)
+		if ((val = GETEDICTFIELDVALUE(sv_player, eval_clientcolors)))
+			host_client->colors = (int)val->_float;
 		if (host_client->old_colors != host_client->colors)
 		{
 			host_client->old_colors = host_client->colors;
-			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
-			{
-				if (!client->netconnection)
-					continue;
-				MSG_WriteByte (&client->message, svc_updatecolors);
-				MSG_WriteByte (&client->message, i);
-				MSG_WriteByte (&client->message, host_client->colors);
-			}
+			// send notification to all clients
+			MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
 		}
+
+		// frags
+		host_client->frags = (int)sv_player->v->frags;
 		if (host_client->old_frags != host_client->frags)
 		{
 			host_client->old_frags = host_client->frags;
-			for (j = 0, client = svs.clients;j < svs.maxclients;j++, client++)
-			{
-				if (!client->netconnection)
-					continue;
-				MSG_WriteByte (&client->message, svc_updatefrags);
-				MSG_WriteByte (&client->message, i);
-				MSG_WriteShort (&client->message, host_client->frags);
-			}
+			// send notification to all clients
+			MSG_WriteByte (&sv.reliable_datagram, svc_updatefrags);
+			MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+			MSG_WriteShort (&sv.reliable_datagram, host_client->frags);
 		}
 	}
 

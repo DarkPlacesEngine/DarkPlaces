@@ -434,6 +434,27 @@ void SV_DropClient(qboolean crash)
 		}
 	}
 
+	// remove leaving player from scoreboard
+	// clear a fields that matter to DP_SV_CLIENTNAME and DP_SV_CLIENTCOLORS, and also frags
+	ED_ClearEdict(host_client->edict);
+	//host_client->edict->v->netname = PR_SetString(host_client->name);
+	//if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_clientcolors)))
+	//	val->_float = 0;
+	//host_client->edict->v->frags = 0;
+	host_client->name[0] = 0;
+	host_client->colors = 0;
+	host_client->frags = 0;
+	// send notification to all clients
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatename);
+	MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+	MSG_WriteString (&sv.reliable_datagram, host_client->name);
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+	MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+	MSG_WriteByte (&sv.reliable_datagram, host_client->colors);
+	MSG_WriteByte (&sv.reliable_datagram, svc_updatefrags);
+	MSG_WriteByte (&sv.reliable_datagram, host_client->number);
+	MSG_WriteShort (&sv.reliable_datagram, host_client->frags);
+
 	// free the client now
 	if (host_client->entitydatabase)
 		EntityFrame_FreeDatabase(host_client->entitydatabase);
@@ -443,13 +464,6 @@ void SV_DropClient(qboolean crash)
 		EntityFrame5_FreeDatabase(host_client->entitydatabase5);
 	// clear the client struct (this sets active to false)
 	memset(host_client, 0, sizeof(*host_client));
-
-	// force next SV_UpdateToReliableMessages to update this client's
-	// scoreboard data by plugging in fake old values that don't match the
-	// new empty values
-	strlcpy(host_client->old_name, "nothing", sizeof(host_client->old_name));
-	host_client->old_frags = 1;
-	host_client->old_colors = 1;
 
 	// update server listing on the master because player count changed
 	// (which the master uses for filtering empty/full servers)

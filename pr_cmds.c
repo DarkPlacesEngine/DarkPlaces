@@ -2218,15 +2218,21 @@ void PF_setcolor (void)
 	}
 
 	client = svs.clients + entnum-1;
-	if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
-		val->_float = i;
+	if (client->edict)
+	{
+		if ((val = GETEDICTFIELDVALUE(client->edict, eval_clientcolors)))
+			val->_float = i;
+		client->edict->v->team = (i & 15) + 1;
+	}
 	client->colors = i;
-	client->old_colors = i;
-	client->edict->v->team = (i & 15) + 1;
-
-	MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
-	MSG_WriteByte (&sv.reliable_datagram, entnum - 1);
-	MSG_WriteByte (&sv.reliable_datagram, i);
+	if (client->old_colors != client->colors)
+	{
+		client->old_colors = client->colors;
+		// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatecolors);
+		MSG_WriteByte (&sv.reliable_datagram, client->number);
+		MSG_WriteByte (&sv.reliable_datagram, client->colors);
+	}
 }
 
 /*

@@ -149,8 +149,6 @@ typedef struct client_s
 	char name[64], old_name[64];
 	int colors, old_colors;
 	int frags, old_frags;
-	// other properties not sent across the network
-	int pmodel;
 
 	// visibility state
 	float visibletime[MAX_EDICTS];
