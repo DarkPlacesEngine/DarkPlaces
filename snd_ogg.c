@@ -415,13 +415,20 @@ static const sfxbuffer_t* OGG_FetchSound (channel_t* ch, unsigned int start, uns
 	}
 
 	sb = &per_ch->sb;
+	factor = per_ch->format.width * per_ch->format.channels;
+
+	// If the stream buffer can't contain that much samples anyway
+	if (nbsamples * factor > STREAM_BUFFER_SIZE)
+	{
+		Con_Printf ("OGG_FetchSound: stream buffer too small (%u bytes required)\n", nbsamples * factor);
+		return NULL;
+	}
 
 	// If the data we need has already been decompressed in the sfxbuffer, just return it
 	if (sb->offset <= start && sb->offset + sb->length >= start + nbsamples)
 		return sb;
 
 	newlength = sb->offset + sb->length - start;
-	factor = per_ch->format.width * per_ch->format.channels;
 
 	// If we need to skip some data before decompressing the rest, or if the stream has looped
 	if (newlength < 0 || sb->offset > start)
