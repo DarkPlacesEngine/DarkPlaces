@@ -134,7 +134,17 @@ extern int gl_combine_extension;
 #define GL_PREVIOUS_ARB					0x8578
 #endif
 
+#ifndef GL_MAX_ELEMENTS_VERTICES
+#define GL_MAX_ELEMENTS_VERTICES		0x80E8
+#endif
+#ifndef GL_MAX_ELEMENTS_INDICES
+#define GL_MAX_ELEMENTS_INDICES			0x80E9
+#endif
+
 extern cvar_t gl_combine;
+
+extern int gl_maxdrawrangeelementsvertices;
+extern int gl_maxdrawrangeelementsindices;
 
 extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
 
@@ -214,11 +224,23 @@ extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
 //extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
-extern void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels );
-
 extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
-
+extern void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels );
 extern void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
+extern void (GLAPIENTRY *qglDeleteTextures)(GLsizei n, const GLuint *textures);
+
+#if WIN32
+extern int (WINAPI *qwglChoosePixelFormat)(HDC, CONST PIXELFORMATDESCRIPTOR *);
+extern int (WINAPI *qwglDescribePixelFormat)(HDC, int, UINT, LPPIXELFORMATDESCRIPTOR);
+//extern int (WINAPI *qwglGetPixelFormat)(HDC);
+extern BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
+extern BOOL (WINAPI *qwglSwapBuffers)(HDC);
+extern HGLRC (WINAPI *qwglCreateContext)(HDC);
+extern BOOL (WINAPI *qwglDeleteContext)(HGLRC);
+extern PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
+extern BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
+extern BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
+#endif
 
 #define DEBUGGL
 

@@ -13,6 +13,9 @@ cvar_t r_render = {0, "r_render", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
+int gl_maxdrawrangeelementsvertices;
+int gl_maxdrawrangeelementsindices;
+
 #ifdef DEBUGGL
 int errornumber = 0;
 
@@ -221,6 +224,14 @@ static void gl_backend_shutdown(void)
 
 static void gl_backend_bufferchanges(int init)
 {
+	if (gl_mesh_drawmode.integer == 3)
+	{
+		if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsindices)
+			Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsindices / 3));
+		if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsvertices)
+			Cvar_SetValueQuick(&gl_mesh_maxtriangles, (int) (gl_maxdrawrangeelementsvertices / 3));
+	}
+
 	// 21760 is (65536 / 3) rounded off to a multiple of 128
 	if (gl_mesh_maxtriangles.integer < 256)
 		Cvar_SetValueQuick(&gl_mesh_maxtriangles, 256);
