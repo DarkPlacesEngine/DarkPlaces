@@ -272,9 +272,11 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 	case GL_OUT_OF_MEMORY:
 		Con_Printf("GL_OUT_OF_MEMORY at %s:%i\n", filename, linenumber);
 		break;
-	case GL_TABLE_TOO_LARGE:
+#ifdef GL_TABLE_TOO_LARGE
+    case GL_TABLE_TOO_LARGE:
 		Con_Printf("GL_TABLE_TOO_LARGE at %s:%i\n", filename, linenumber);
 		break;
+#endif
 	default:
 		Con_Printf("GL UNKNOWN (%i) at %s:%i\n", errornumber, filename, linenumber);
 		break;

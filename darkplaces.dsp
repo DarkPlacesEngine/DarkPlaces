@@ -132,6 +132,10 @@ SOURCE=.\cl_particles.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cl_screen.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cl_tent.c
 # End Source File
 # Begin Source File
@@ -424,6 +428,10 @@ SOURCE=.\cl_light.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\cl_screen.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\client.h
 # End Source File
 # Begin Source File
@@ -521,10 +529,6 @@ SOURCE=.\net_dgrm.h
 # Begin Source File
 
 SOURCE=.\net_loop.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_udp.h
 # End Source File
 # Begin Source File
 
@@ -633,10 +637,6 @@ SOURCE=.\ui.h
 # Begin Source File
 
 SOURCE=.\vid.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\view.h
 # End Source File
 # Begin Source File
 
