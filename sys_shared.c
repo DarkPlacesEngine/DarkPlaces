@@ -93,6 +93,11 @@ void Sys_Printf(const char *fmt, ...)
 	Sys_Print(msg);
 }
 
+void Sys_Quit (void)
+{
+	Host_Shutdown();
+	exit(0);
+}
 
 char engineversion[128];
 

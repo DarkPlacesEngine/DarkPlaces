@@ -21,15 +21,12 @@ cvar_t sys_usetimegettime = {CVAR_SAVE, "sys_usetimegettime", "1"};
 // =======================================================================
 // General routines
 // =======================================================================
-
-void Sys_Quit (void)
+void Sys_Shutdown (void)
 {
-	Host_Shutdown();
 #ifndef WIN32
 	fcntl (0, F_SETFL, fcntl (0, F_GETFL, 0) & ~FNDELAY);
 #endif
 	fflush(stdout);
-	exit(0);
 }
 
 void Sys_Error (const char *error, ...)

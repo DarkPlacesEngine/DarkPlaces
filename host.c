@@ -949,5 +949,7 @@ void Host_Shutdown(void)
 		R_Modules_Shutdown();
 		VID_Shutdown();
 	}
+
+	Sys_Shutdown();
 }
 

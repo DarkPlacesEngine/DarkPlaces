@@ -62,6 +62,7 @@ void Sys_Printf(const char *fmt, ...);
 void Sys_PrintToTerminal(const char *text);
 // (may) output text to terminal which launched program
 
+void Sys_Shutdown (void); //INFO: This is only called by Host_Shutdown so we dont need testing for recursion
 void Sys_Quit (void);
 
 double Sys_DoubleTime (void);

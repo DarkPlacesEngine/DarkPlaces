@@ -93,10 +93,8 @@ void Sys_Error (const char *error, ...)
 	exit (1);
 }
 
-void Sys_Quit (void)
+void Sys_Shutdown (void)
 {
-	Host_Shutdown();
-
 	if (tevent)
 		CloseHandle (tevent);
 
@@ -105,8 +103,6 @@ void Sys_Quit (void)
 
 // shut down QHOST hooks if necessary
 	DeinitConProc ();
-
-	exit (0);
 }
 
 void Sys_PrintToTerminal(const char *text)

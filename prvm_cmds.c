@@ -1116,7 +1116,7 @@ void VM_precache_sound (void)
 	}
 	
 	if(!S_PrecacheSound(s,true, true))
-		Con_Printf("VM_prache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
+		Con_Printf("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
 }
 
 /*
