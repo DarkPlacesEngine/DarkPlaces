@@ -26,6 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <commctrl.h>
 
 extern void S_BlockSound (void);
+extern void S_UnblockSound (void);
 extern HINSTANCE global_hInstance;
 
 
