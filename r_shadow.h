@@ -5,7 +5,6 @@
 extern cvar_t r_shadow_lightattenuationscale;
 extern cvar_t r_shadow_lightintensityscale;
 extern cvar_t r_shadow_realtime;
-extern cvar_t r_shadow_texture3d;
 extern cvar_t r_shadow_gloss;
 extern cvar_t r_shadow_debuglight;
 
