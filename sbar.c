@@ -696,8 +696,6 @@ void Sbar_DrawFrags (void)
 	{
 		k = fragsort[i];
 		s = &cl.scores[k];
-		if (!s->name[0])
-			continue;
 
 		// draw background
 		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
@@ -1159,19 +1157,14 @@ Sbar_DeathmatchOverlay
 float Sbar_PrintScoreboardItem(scoreboard_t *s, float x, float y)
 {
 	qbyte *c;
-	if (s->name[0] || s->frags || s->colors || (s - cl.scores) == cl.playerentity - 1)
-	{
-		// draw colors behind score
-		c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
-		DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-		c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
-		DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
-		// print the text
-		DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
-		return 8;
-	}
-	else
-		return 0;
+	// draw colors behind score
+	c = (qbyte *)&palette_complete[(s->colors & 0xf0) + 8];
+	DrawQ_Fill(x + 8, y+1, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+	c = (qbyte *)&palette_complete[((s->colors & 15)<<4) + 8];
+	DrawQ_Fill(x + 8, y+4, 32, 3, c[0] * (1.0f / 255.0f), c[1] * (1.0f / 255.0f), c[2] * (1.0f / 255.0f), c[3] * (1.0f / 255.0f) * sbar_alpha_fg.value, 0);
+	// print the text
+	DrawQ_String(x, y, va("%c%4i %s", (s - cl.scores) == cl.playerentity - 1 ? 13 : ' ', (int) s->frags, s->name), 0, 8, 8, 1, 1, 1, 1 * sbar_alpha_fg.value, 0);
+	return 8;
 }
 
 void Sbar_DeathmatchOverlay (void)
@@ -1221,7 +1214,8 @@ void Sbar_MiniDeathmatchOverlay (int x, int y)
 
 	// figure out start
 	i -= numlines/2;
-	i = bound(0, i, scoreboardlines - numlines);
+	i = min(i, scoreboardlines - numlines);
+	i = max(i, 0);
 
 	if (gamemode == GAME_TRANSFUSION)
 	{
