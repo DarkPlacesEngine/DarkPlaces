@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef enum
 {
-	pt_static, pt_grav, pt_blob, pt_blob2, pt_bulletsmoke, pt_smoke, pt_snow, pt_rain, pt_spark, pt_bubble, pt_fade, pt_steam, pt_splash, pt_splashpuff, pt_flame, pt_blood, pt_oneframe, pt_lavasplash, pt_raindropsplash, pt_underwaterspark, pt_explosionsplash
+	pt_static, pt_grav, pt_blob, pt_blob2, pt_bulletsmoke, pt_smoke, pt_snow, pt_rain, pt_spark, pt_bubble, pt_fade, pt_steam, pt_splash, pt_splashpuff, pt_flame, pt_blood, pt_oneframe, pt_lavasplash, pt_raindropsplash, pt_underwaterspark, pt_explosionsplash, pt_stardust
 }
 ptype_t;
 
@@ -40,12 +40,9 @@ ptype_t;
 typedef struct particle_s
 {
 	ptype_t		type;
-	unsigned int	flags;
-	//int			orientation; // typically PARTICLE_BILLBOARD
+	unsigned int	flags; // dynamically lit, orientation, additive blending, texnum
 	vec3_t		org;
 	vec3_t		vel;
-	//int			additive;
-	//int			tex;
 	float		die;
 	float		scalex;
 	float		scaley;
@@ -56,7 +53,6 @@ typedef struct particle_s
 	vec3_t		vel2; // used for snow fluttering (base velocity, wind for instance)
 	float		friction; // how much air friction affects this object (objects with a low mass/size ratio tend to get more air friction)
 	float		pressure; // if non-zero, apply pressure to other particles
-	//int			dynlight; // if set the particle will be dynamically lit (if cl_dynamicparticles is on), used for smoke and blood
 	qbyte		color[4];
 }
 particle_t;
@@ -673,6 +669,36 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 	}
 }
 
+void CL_Stardust (vec3_t mins, vec3_t maxs, int count)
+{
+	int k;
+	float t;
+	vec3_t o, v, center;
+	//Con_Printf("CL_Stardust ('%f %f %f', '%f %f %f', %d);\n", mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2], count);
+	if (!cl_particles.integer) return;
+
+	if (maxs[0] <= mins[0]) {t = mins[0];mins[0] = maxs[0];maxs[0] = t;}
+	if (maxs[1] <= mins[1]) {t = mins[1];mins[1] = maxs[1];maxs[1] = t;}
+	if (maxs[2] <= mins[2]) {t = mins[2];mins[2] = maxs[2];maxs[2] = t;}
+
+	center[0] = (mins[0] + maxs[0]) * 0.5f;
+	center[1] = (mins[1] + maxs[1]) * 0.5f;
+	center[2] = (mins[2] + maxs[2]) * 0.5f;
+
+	while (count--)
+	{
+		k = particlepalette[224 + (rand()&15)];
+		o[0] = lhrandom(mins[0], maxs[0]);
+		o[1] = lhrandom(mins[1], maxs[1]);
+		o[2] = lhrandom(mins[2], maxs[2]);
+		VectorSubtract(o, center, v);
+		VectorNormalizeFast(v);
+		VectorScale(v, 100, v);
+		v[2] += sv_gravity.value * 0.15f;
+		particle(pt_stardust, PARTICLE_BILLBOARD, 0x903010, 0xFFD030, tex_particle, false, true, 1.5, 1.5, lhrandom(64, 128), 9999, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0, 0, 0, 0, 0, 0);
+	}
+}
+
 void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
 {
 	int k;
@@ -685,7 +711,7 @@ void CL_FlameCube (vec3_t mins, vec3_t maxs, int count)
 	while (count--)
 	{
 		k = particlepalette[224 + (rand()&15)];
-		particle(pt_flame, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 8, 8, 255, 9999, 1.1, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(-32, 64), 0, 0, 0, 0, 1, 0);
+		particle(pt_flame, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 4, 4, lhrandom(64, 128), 9999, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(mins[2], maxs[2]), lhrandom(-32, 32), lhrandom(-32, 32), lhrandom(0, 64), 0, 0, 0, 0, 1, 0);
 	}
 }
 
@@ -697,7 +723,7 @@ void CL_Flames (vec3_t org, vec3_t vel, int count)
 	while (count--)
 	{
 		k = particlepalette[224 + (rand()&15)];
-		particle(pt_flame, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 8, 8, 255, 9999, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 1, 0);
+		particle(pt_flame, PARTICLE_BILLBOARD, k, k, tex_particle, false, true, 4, 4, lhrandom(64, 128), 9999, 1.1, org[0], org[1], org[2], vel[0] + lhrandom(-128, 128), vel[1] + lhrandom(-128, 128), vel[2] + lhrandom(-128, 128), 0, 0, 0, 0, 1, 0);
 	}
 }
 
@@ -954,7 +980,7 @@ void CL_MoveParticles (void)
 				if (p->bounce < 0)
 				{
 					// assume it's blood (lame, but...)
-					R_Stain(v, 64, 32, 16, 16, p->alpha * p->scalex * (1.0f / 100.0f), 128, 48, 48, p->alpha * p->scalex * (1.0f / 100.0f));
+					R_Stain(v, 64, 32, 16, 16, p->alpha * p->scalex * (1.0f / 100.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 100.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
 					continue;
@@ -1235,7 +1261,7 @@ void CL_MoveParticles (void)
 			break;
 			*/
 		case pt_flame:
-			p->alpha -= frametime * 512;
+			p->alpha -= frametime * 384;
 			p->vel[2] += gravity;
 			if (p->alpha < 16)
 				p->die = -1;
@@ -1244,6 +1270,12 @@ void CL_MoveParticles (void)
 			if (p->time2)
 				p->die = -1;
 			p->time2 = 1;
+			break;
+		case pt_stardust:
+			p->alpha -= frametime * 128;
+			p->vel[2] -= gravity;
+			if (p->alpha < 16)
+				p->die = -1;
 			break;
 		default:
 			printf("unknown particle type %i\n", p->type);
