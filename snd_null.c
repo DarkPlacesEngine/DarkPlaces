@@ -77,6 +77,18 @@ int S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float f
 	return -1;
 }
 
+void S_StopChannel (unsigned int channel_ind)
+{
+}
+
+void S_PauseChannel (unsigned int channel_ind, qboolean toggle)
+{
+}
+
+void S_LoopChannel (unsigned int channel_ind, qboolean toggle)
+{
+}
+
 void S_StopSound (int entnum, int entchannel)
 {
 }

@@ -62,6 +62,9 @@ int CDAudio_SysGetAudioDiskInfo (void)
 {
 	struct ioc_toc_header tochdr;
 
+	if (cdfile == -1)
+		return -1;
+
 	if (ioctl(cdfile, CDIOREADTOCHEADER, &tochdr) == -1)
 	{
 		Con_DPrint("ioctl CDIOREADTOCHEADER failed\n");
