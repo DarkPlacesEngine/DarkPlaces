@@ -121,6 +121,10 @@ typedef double GLclampd;
 #define GL_LINEAR_MIPMAP_NEAREST		0x2701
 #define GL_LINEAR_MIPMAP_LINEAR			0x2703
 
+extern int gl_support_anisotropy;
+#define GL_TEXTURE_MAX_ANISOTROPY_EXT		0x84FE
+#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT	0x84FF
+
 #define GL_DECAL				0x2101
 #define GL_MODULATE				0x2100
 
@@ -444,7 +448,7 @@ extern void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
-//extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 //extern void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 

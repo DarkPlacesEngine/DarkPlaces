@@ -30,6 +30,8 @@ int gl_support_clamptoedge = false;
 int gl_support_var = false;
 // GL_NV_vertex_array_range2
 int gl_support_var2 = false;
+// GL_EXT_texture_filter_anisotropic
+int gl_support_anisotropy = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -188,7 +190,7 @@ void (GLAPIENTRY *qglClearStencil)(GLint s);
 
 //void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
 void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
-//void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
 //void (GLAPIENTRY *qglTexParameterfv)(GLenum target, GLenum pname, GLfloat *params);
 void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
 
@@ -328,7 +330,7 @@ static dllfunction_t opengl110funcs[] =
 	{"glClearStencil", (void **) &qglClearStencil},
 //	{"glTexEnvf", (void **) &qglTexEnvf},
 	{"glTexEnvi", (void **) &qglTexEnvi},
-//	{"glTexParameterf", (void **) &qglTexParameterf},
+	{"glTexParameterf", (void **) &qglTexParameterf},
 //	{"glTexParameterfv", (void **) &qglTexParameterfv},
 	{"glTexParameteri", (void **) &qglTexParameteri},
 //	{"glPixelStoref", (void **) &qglPixelStoref},
@@ -451,6 +453,8 @@ void VID_CheckExtensions(void)
 		gl_support_var = GL_CheckExtension("GL_NV_vertex_array_range", wglvarfuncs, "-novar", false);
 	if (gl_support_var)
 		gl_support_var2 = GL_CheckExtension("GL_NV_vertex_array_range2", NULL, "-novar2", false);
+
+	gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
