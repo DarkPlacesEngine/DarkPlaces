@@ -336,7 +336,7 @@ typedef struct mlight_s
 	int numsurfaces;
 	msurface_t **surfaces;
 	// lit area
-	//vec3_t mins, maxs;
+	vec3_t mins, maxs;
 	// precomputed shadow volume meshs
 	//svbspmesh_t *shadowvolume;
 	//vec3_t shadowvolumemins, shadowvolumemaxs;

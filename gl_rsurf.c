@@ -1814,23 +1814,33 @@ void R_DrawWorld (entity_render_t *ent)
 	R_DrawSurfaces(ent, true, true);
 }
 
-/*
-=================
-R_DrawBrushModel
-=================
-*/
-void R_DrawBrushModelSky (entity_render_t *ent)
+void R_Model_Brush_DrawSky (entity_render_t *ent)
 {
 	R_DrawBrushModel(ent, true, false);
 }
 
-void R_DrawBrushModelNormal (entity_render_t *ent)
+void R_Model_Brush_Draw (entity_render_t *ent)
 {
 	c_bmodels++;
 	R_DrawBrushModel(ent, false, true);
 }
 
-void R_DrawBrushModelShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
+void R_Model_Brush_DrawDepth (entity_render_t *ent)
+{
+	shadowmesh_t *mesh;
+	if (!cl.worldmodel->numlights)
+		GL_Color(0.3, 0.3, 0.3, 1);
+	for (mesh = ent->model->shadowmesh;mesh;mesh = mesh->next)
+	{
+		R_Mesh_ResizeCheck(mesh->numverts);
+		memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->elements);
+	}
+	if (!cl.worldmodel->numlights)
+		GL_Color(0, 0, 0, 1);
+}
+
+void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume)
 {
 #if 0
 	float projectdistance, temp[3];
@@ -1847,13 +1857,12 @@ void R_DrawBrushModelShadowVolume (entity_render_t *ent, vec3_t relativelightori
 		}
 	}
 #else
-	int i, numsurfaces;
+	int i;
 	msurface_t *surf;
 	float projectdistance, f, temp[3], lightradius2;
 	surfmesh_t *mesh;
-	numsurfaces = ent->model->nummodelsurfaces;
 	lightradius2 = lightradius * lightradius;
-	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < numsurfaces;i++, surf++)
+	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 	{
 		f = PlaneDiff(relativelightorigin, surf->plane);
 		if (surf->flags & SURF_PLANEBACK)
@@ -1875,6 +1884,46 @@ void R_DrawBrushModelShadowVolume (entity_render_t *ent, vec3_t relativelightori
 		}
 	}
 #endif
+}
+
+void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, float lightdistbias, float lightsubtract, float *lightcolor)
+{
+	int i;
+	msurface_t *surf;
+	float f, lightradius2;
+	surfmesh_t *mesh;
+	vec3_t modelorg;
+	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+	lightradius2 = lightradius * lightradius;
+	GL_UseColorArray();
+	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
+	{
+		f = PlaneDiff(relativelightorigin, surf->plane);
+		if (surf->flags & SURF_PLANEBACK)
+			f = -f;
+		if (f >= -0.1 && f < lightradius)
+		{
+			f = PlaneDiff(modelorg, surf->plane);
+			if (surf->flags & SURF_PLANEBACK)
+				f = -f;
+			if (f > 0)
+			{
+				for (mesh = surf->mesh;mesh;mesh = mesh->chain)
+				{
+					R_Mesh_ResizeCheck(mesh->numverts);
+					memcpy(varray_vertex, mesh->verts, mesh->numverts * sizeof(float[4]));
+					R_Shadow_VertexLight(mesh->numverts, varray_vertex, mesh->normals, relativelightorigin, lightradius2, lightdistbias, lightsubtract, lightcolor);
+					R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->index);
+				}
+			}
+		}
+	}
+}
+
+void R_Model_Brush_DrawOntoLight(entity_render_t *ent)
+{
+	// FIXME
+	c_bmodels++;
 }
 
 /*

@@ -1229,9 +1229,9 @@ void Mod_ProcessLightList(void)
 				if (loadmodel->surfacevisframes[j] == -2)
 					e->surfaces[e->numsurfaces++] = loadmodel->surfaces + j;
 		}
-		/*
 		{
 		// find bounding box and sphere of lit surfaces
+		// (these will be used for creating a shape to clip the light)
 		float *v, temp[3], radius2;
 		radius2 = 0;
 		for (j = 0;j < e->numsurfaces;j++)
@@ -1253,26 +1253,37 @@ void Mod_ProcessLightList(void)
 					radius2 = dist;
 			}
 		}
+		/*
 		if (e->cullradius2 > radius2)
 		{
 			e->cullradius2 = radius2;
 			e->cullradius = sqrt(e->cullradius2);
 		}
-		}
 		*/
+		}
 #if 1
 		// clip shadow volumes against eachother to remove unnecessary
 		// polygons (and sections of polygons)
 		{
+			vec3_t temp, outermins, outermaxs, innermins, innermaxs;
+			int maxverts = 4;
+			float *verts = Mem_Alloc(loadmodel->mempool, maxverts * sizeof(float[3]));
+			float f, *v0, *v1, projectdistance;
 			svworld_t *svworld;
-			float f;
-			float temp[3];
-			float *verts = NULL;
 			svbrush_t *svbrush;
-			float *v0;
-			float projectdistance;
-			int maxverts = 0;
-			float *v1;
+
+			innermins[0] = e->mins[0] - 1;
+			innermins[1] = e->mins[1] - 1;
+			innermins[2] = e->mins[2] - 1;
+			innermaxs[0] = e->maxs[0] + 1;
+			innermaxs[1] = e->maxs[1] + 1;
+			innermaxs[2] = e->maxs[2] + 1;
+			outermins[0] = loadmodel->normalmins[0] - 1;
+			outermins[1] = loadmodel->normalmins[1] - 1;
+			outermins[2] = loadmodel->normalmins[2] - 1;
+			outermaxs[0] = loadmodel->normalmaxs[0] + 1;
+			outermaxs[1] = loadmodel->normalmaxs[1] + 1;
+			outermaxs[2] = loadmodel->normalmaxs[2] + 1;
 			svworld = Mod_ShadowBrush_NewWorld(loadmodel->mempool);
 			for (j = 0, surf = loadmodel->surfaces + loadmodel->firstmodelsurface;j < loadmodel->nummodelsurfaces;j++, surf++)
 			{
@@ -1324,6 +1335,90 @@ void Mod_ProcessLightList(void)
 				}
 				Mod_ShadowBrush_EndBrush(svworld, svbrush);
 			}
+			// add bounding box around the whole shadow volume set,
+			// facing inward to limit light area, with an outer bounding box
+			// facing outward (this is needed by the shadow rendering method)
+			// X major
+			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+			verts[ 0] = innermaxs[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
+			verts[ 3] = innermaxs[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
+			verts[ 6] = innermaxs[0];verts[ 7] = innermaxs[1];verts[ 8] = innermins[2];
+			verts[ 9] = innermaxs[0];verts[10] = innermaxs[1];verts[11] = innermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			verts[ 0] = outermaxs[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
+			verts[ 3] = outermaxs[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
+			verts[ 6] = outermaxs[0];verts[ 7] = outermins[1];verts[ 8] = outermins[2];
+			verts[ 9] = outermaxs[0];verts[10] = outermins[1];verts[11] = outermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			// X minor
+			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+			verts[ 0] = innermins[0];verts[ 1] = innermaxs[1];verts[ 2] = innermaxs[2];
+			verts[ 3] = innermins[0];verts[ 4] = innermaxs[1];verts[ 5] = innermins[2];
+			verts[ 6] = innermins[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
+			verts[ 9] = innermins[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			verts[ 0] = outermins[0];verts[ 1] = outermins[1];verts[ 2] = outermaxs[2];
+			verts[ 3] = outermins[0];verts[ 4] = outermins[1];verts[ 5] = outermins[2];
+			verts[ 6] = outermins[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
+			verts[ 9] = outermins[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			// Y major
+			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+			verts[ 0] = innermaxs[0];verts[ 1] = innermaxs[1];verts[ 2] = innermaxs[2];
+			verts[ 3] = innermaxs[0];verts[ 4] = innermaxs[1];verts[ 5] = innermins[2];
+			verts[ 6] = innermins[0];verts[ 7] = innermaxs[1];verts[ 8] = innermins[2];
+			verts[ 9] = innermins[0];verts[10] = innermaxs[1];verts[11] = innermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			verts[ 0] = outermins[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
+			verts[ 3] = outermins[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
+			verts[ 6] = outermaxs[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
+			verts[ 9] = outermaxs[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			// Y minor
+			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+			verts[ 0] = innermins[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
+			verts[ 3] = innermins[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
+			verts[ 6] = innermaxs[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
+			verts[ 9] = innermaxs[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			verts[ 0] = outermaxs[0];verts[ 1] = outermins[1];verts[ 2] = outermaxs[2];
+			verts[ 3] = outermaxs[0];verts[ 4] = outermins[1];verts[ 5] = outermins[2];
+			verts[ 6] = outermins[0];verts[ 7] = outermins[1];verts[ 8] = outermins[2];
+			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			// Z major
+			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+			verts[ 0] = innermaxs[0];verts[ 1] = innermins[1];verts[ 2] = innermaxs[2];
+			verts[ 3] = innermaxs[0];verts[ 4] = innermaxs[1];verts[ 5] = innermaxs[2];
+			verts[ 6] = innermins[0];verts[ 7] = innermaxs[1];verts[ 8] = innermaxs[2];
+			verts[ 9] = innermins[0];verts[10] = innermins[1];verts[11] = innermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			verts[ 0] = outermaxs[0];verts[ 1] = outermaxs[1];verts[ 2] = outermaxs[2];
+			verts[ 3] = outermaxs[0];verts[ 4] = outermins[1];verts[ 5] = outermaxs[2];
+			verts[ 6] = outermins[0];verts[ 7] = outermins[1];verts[ 8] = outermaxs[2];
+			verts[ 9] = outermins[0];verts[10] = outermaxs[1];verts[11] = outermaxs[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			// Z minor
+			svbrush = Mod_ShadowBrush_BeginBrush(loadmodel->mempool);
+			verts[ 0] = innermaxs[0];verts[ 1] = innermaxs[1];verts[ 2] = innermins[2];
+			verts[ 3] = innermaxs[0];verts[ 4] = innermins[1];verts[ 5] = innermins[2];
+			verts[ 6] = innermins[0];verts[ 7] = innermins[1];verts[ 8] = innermins[2];
+			verts[ 9] = innermins[0];verts[10] = innermaxs[1];verts[11] = innermins[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			verts[ 0] = outermaxs[0];verts[ 1] = outermins[1];verts[ 2] = outermins[2];
+			verts[ 3] = outermaxs[0];verts[ 4] = outermaxs[1];verts[ 5] = outermins[2];
+			verts[ 6] = outermins[0];verts[ 7] = outermaxs[1];verts[ 8] = outermins[2];
+			verts[ 9] = outermins[0];verts[10] = outermins[1];verts[11] = outermins[2];
+			Mod_ShadowBrush_AddPolygon(loadmodel->mempool, svbrush, 4, verts);
+			Mod_ShadowBrush_EndBrush(svworld, svbrush);
+			// clip away hidden polygons
+			Mod_ShadowBrush_ProcessWorld(loadmodel->mempool, svworld);
+			// build the triangle mesh
 			e->shadowvolume = Mod_ShadowBrush_BuildMeshs(loadmodel->mempool, svworld);
 			Mod_ShadowBrush_FreeWorld(svworld);
 		}
@@ -3219,7 +3314,13 @@ static void Mod_MakePortals(void)
 Mod_LoadBrushModel
 =================
 */
-extern void R_DrawBrushModelShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+extern void R_Model_Brush_DrawSky(entity_render_t *ent);
+extern void R_Model_Brush_Draw(entity_render_t *ent);
+//extern void R_Model_Brush_DrawFakeShadow(entity_render_t *ent);
+extern void R_Model_Brush_DrawDepth(entity_render_t *ent);
+extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int visiblevolume);
+extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, float lightradius2, float lightdistbias, float lightsubtract, float *lightcolor);
+extern void R_Model_Brush_DrawOntoLight(entity_render_t *ent);
 void Mod_LoadBrushModel (model_t *mod, void *buffer)
 {
 	int			i, j;
@@ -3308,7 +3409,14 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		mod->firstmodelsurface = bm->firstface;
 		mod->nummodelsurfaces = bm->numfaces;
 
+		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
+		mod->Draw = R_Model_Brush_Draw;
+		mod->DrawFakeShadow = NULL;
+		mod->DrawDepth = R_Model_Brush_DrawDepth;
+		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
+		mod->DrawLight = R_Model_Brush_DrawLight;
+		mod->DrawOntoLight = R_Model_Brush_DrawOntoLight;
 		if (mod->nummodelsurfaces)
 		{
 			// LordHavoc: calculate bmodel bounding box rather than trusting what it says
@@ -3316,7 +3424,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			{
 				// we only need to have a drawsky function if it is used (usually only on world model)
 				if (surf->texinfo->texture->shader == &Cshader_sky)
-					mod->DrawSky = R_DrawBrushModelSky;
+					mod->DrawSky = R_Model_Brush_DrawSky;
 				for (k = 0;k < surf->numedges;k++)
 				{
 					l = mod->surfedges[k + surf->firstedge];
@@ -3372,10 +3480,6 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 		}
 
 		mod->numleafs = bm->visleafs;
-
-		mod->Draw = R_DrawBrushModelNormal;
-		mod->DrawFakeShadow = NULL;
-		mod->DrawShadowVolume = R_DrawBrushModelShadowVolume;
 
 		// LordHavoc: only register submodels if it is the world
 		// (prevents bsp models from replacing world submodels)

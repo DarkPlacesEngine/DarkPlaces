@@ -168,12 +168,7 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 #endif
 }
 
-/*
-=================
-R_DrawSpriteModel
-=================
-*/
-void R_DrawSpriteModel (entity_render_t *ent)
+void R_Model_Sprite_Draw(entity_render_t *ent)
 {
 	if (ent->frameblend[0].frame < 0)
 		return;
