@@ -404,10 +404,6 @@ if (crash = true), don't bother sending signofs
 */
 void SV_DropClient(qboolean crash)
 {
-	int saveSelf;
-	int i;
-	client_t *client;
-
 	Con_Printf("Client \"%s\" dropped\n", host_client->name);
 
 	// send any final messages (don't check for errors)
@@ -431,7 +427,7 @@ void SV_DropClient(qboolean crash)
 		{
 			// call the prog function for removing a client
 			// this will set the body to a dead frame, among other things
-			saveSelf = pr_global_struct->self;
+			int saveSelf = pr_global_struct->self;
 			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
 			PR_ExecuteProgram(pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
 			pr_global_struct->self = saveSelf;
