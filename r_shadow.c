@@ -251,47 +251,90 @@ const char *builtinshader_light_vert =
 "// ambient+diffuse+specular+normalmap+attenuation+cubemap+fog shader\n"
 "// written by Forest 'LordHavoc' Hale\n"
 "\n"
-"uniform vec3 LightPosition;\n"
+"uniform vec3 LightColor;\n"
+"\n"
+"#ifdef USEOFFSETMAPPING\n"
+"uniform float OffsetMapping_Scale;\n"
+"uniform float OffsetMapping_Bias;\n"
+"#endif\n"
+"#ifdef USESPECULAR\n"
+"uniform float SpecularPower;\n"
+"#endif\n"
+"#ifdef USEFOG\n"
+"uniform float FogRangeRecip;\n"
+"#endif\n"
+"uniform float AmbientScale;\n"
+"uniform float DiffuseScale;\n"
+"#ifdef USESPECULAR\n"
+"uniform float SpecularScale;\n"
+"#endif\n"
+"\n"
+"uniform sampler2D Texture_Normal;\n"
+"uniform sampler2D Texture_Color;\n"
+"#ifdef USESPECULAR\n"
+"uniform sampler2D Texture_Gloss;\n"
+"#endif\n"
+"#ifdef USECUBEFILTER\n"
+"uniform samplerCube Texture_Cube;\n"
+"#endif\n"
+"#ifdef USEFOG\n"
+"uniform sampler2D Texture_FogMask;\n"
+"#endif\n"
 "\n"
 "varying vec2 TexCoord;\n"
 "varying vec3 CubeVector;\n"
 "varying vec3 LightVector;\n"
-"\n"
 "#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
-"uniform vec3 EyePosition;\n"
 "varying vec3 EyeVector;\n"
 "#endif\n"
 "\n"
-"// TODO: get rid of tangentt (texcoord2) and use a crossproduct to regenerate it from tangents (texcoord1) and normal (texcoord3)\n"
-"\n"
 "void main(void)\n"
 "{\n"
-"	// copy the surface texcoord\n"
-"	TexCoord = gl_MultiTexCoord0.st;\n"
+"	// attenuation\n"
+"	//\n"
+"	// the attenuation is (1-(x*x+y*y+z*z)) which gives a large bright\n"
+"	// center and sharp falloff at the edge, this is about the most efficient\n"
+"	// we can get away with as far as providing illumination.\n"
+"	//\n"
+"	// pow(1-(x*x+y*y+z*z), 4) is far more realistic but needs large lights to\n"
+"	// provide significant illumination, large = slow = pain.\n"
+"	float colorscale = clamp(1.0 - dot(CubeVector, CubeVector), 0.0, 1.0);\n"
 "\n"
-"	// transform vertex position into light attenuation/cubemap space\n"
-"	// (-1 to +1 across the light box)\n"
-"	CubeVector = vec3(gl_TextureMatrix[3] * gl_Vertex);\n"
-"\n"
-"	// transform unnormalized light direction into tangent space\n"
-"	// (we use unnormalized to ensure that it interpolates correctly and then\n"
-"	//  normalize it per pixel)\n"
-"	vec3 lightminusvertex = LightPosition - gl_Vertex.xyz;\n"
-"	LightVector.x = dot(lightminusvertex, gl_MultiTexCoord1.xyz);\n"
-"	LightVector.y = dot(lightminusvertex, gl_MultiTexCoord2.xyz);\n"
-"	LightVector.z = -dot(lightminusvertex, gl_MultiTexCoord3.xyz);\n"
-"\n"
-"#if defined(USESPECULAR) || defined(USEFOG) || defined(USEOFFSETMAPPING)\n"
-"	// transform unnormalized eye direction into tangent space\n"
-"	vec3 eyeminusvertex = EyePosition - gl_Vertex.xyz;\n"
-"	EyeVector.x = dot(eyeminusvertex, gl_MultiTexCoord1.xyz);\n"
-"	EyeVector.y = dot(eyeminusvertex, gl_MultiTexCoord2.xyz);\n"
-"	EyeVector.z = -dot(eyeminusvertex, gl_MultiTexCoord3.xyz);\n"
+"#ifdef USEFOG\n"
+"	// apply fog\n"
+"	colorscale *= texture2D(Texture_FogMask, vec2(length(EyeVector)*FogRangeRecip, 0)).x;\n"
 "#endif\n"
 "\n"
-"	// transform vertex to camera space, using ftransform to match non-VS\n"
-"	// rendering\n"
-"	gl_Position = ftransform();\n"
+"#ifdef USEOFFSETMAPPING\n"
+"	vec2 OffsetVector = normalize(EyeVector).xy * vec2(-1, 1);\n"
+"	vec2 TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoord).w);\n"
+"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
+"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
+"	TexCoordOffset += OffsetVector * (OffsetMapping_Bias + OffsetMapping_Scale * texture2D(Texture_Normal, TexCoordOffset).w);\n"
+"#define TexCoord TexCoordOffset\n"
+"#endif\n"
+"\n"
+"	// get the texels - with a blendmap we'd need to blend multiple here\n"
+"	vec3 surfacenormal = -1.0 + 2.0 * vec3(texture2D(Texture_Normal, TexCoord));\n"
+"	vec3 colortexel = vec3(texture2D(Texture_Color, TexCoord));\n"
+"#ifdef USESPECULAR\n"
+"	vec3 glosstexel = vec3(texture2D(Texture_Gloss, TexCoord));\n"
+"#endif\n"
+"\n"
+"	// calculate shading\n"
+"	vec3 diffusenormal = normalize(LightVector);\n"
+"	vec3 color = colortexel * (AmbientScale + DiffuseScale * clamp(dot(surfacenormal, diffusenormal), 0.0, 1.0));\n"
+"#ifdef USESPECULAR\n"
+"	color += glosstexel * (SpecularScale * pow(clamp(dot(surfacenormal, normalize(diffusenormal + normalize(EyeVector))), 0.0, 1.0), SpecularPower));\n"
+"#endif\n"
+"\n"
+"#ifdef USECUBEFILTER\n"
+"	// apply light cubemap filter\n"
+"	color *= vec3(textureCube(Texture_Cube, CubeVector));\n"
+"#endif\n"
+"\n"
+"	// calculate fragment color\n"
+"	gl_FragColor = vec4(LightColor * color * colorscale, 1);\n"
 "}\n"
 ;
 
@@ -1631,26 +1674,30 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		if (r_shadow_glsl_offsetmapping.integer)
 			perm |= SHADERPERMUTATION_OFFSETMAPPING;
 		prog = r_shadow_program_light[perm];
-		qglUseProgramObjectARB(r_shadow_program_light[perm]);
+		qglUseProgramObjectARB(r_shadow_program_light[perm]);CHECKGLERROR
 		// TODO: support fog (after renderer is converted to texture fog)
 		if (perm & SHADERPERMUTATION_FOG)
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "FogRangeRecip"), 0);
-		qglUniform1fARB(qglGetUniformLocationARB(prog, "AmbientScale"), ambientscale);
-		qglUniform1fARB(qglGetUniformLocationARB(prog, "DiffuseScale"), diffusescale);
+		{
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "FogRangeRecip"), 0);CHECKGLERROR
+		}
+		qglUniform1fARB(qglGetUniformLocationARB(prog, "AmbientScale"), ambientscale);CHECKGLERROR
+		qglUniform1fARB(qglGetUniformLocationARB(prog, "DiffuseScale"), diffusescale);CHECKGLERROR
 		if (perm & SHADERPERMUTATION_SPECULAR)
 		{
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularPower"), 8);
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularScale"), specularscale);
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularPower"), 8);CHECKGLERROR
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "SpecularScale"), specularscale);CHECKGLERROR
 		}
-		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolor[0], lightcolor[1], lightcolor[2]);
-		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightPosition"), relativelightorigin[0], relativelightorigin[1], relativelightorigin[2]);
+		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightColor"), lightcolor[0], lightcolor[1], lightcolor[2]);CHECKGLERROR
+		qglUniform3fARB(qglGetUniformLocationARB(prog, "LightPosition"), relativelightorigin[0], relativelightorigin[1], relativelightorigin[2]);CHECKGLERROR
 		if (perm & (SHADERPERMUTATION_SPECULAR | SHADERPERMUTATION_FOG | SHADERPERMUTATION_OFFSETMAPPING))
-			qglUniform3fARB(qglGetUniformLocationARB(prog, "EyePosition"), relativeeyeorigin[0], relativeeyeorigin[1], relativeeyeorigin[2]);
+		{
+			qglUniform3fARB(qglGetUniformLocationARB(prog, "EyePosition"), relativeeyeorigin[0], relativeeyeorigin[1], relativeeyeorigin[2]);CHECKGLERROR
+		}
 		if (perm & SHADERPERMUTATION_OFFSETMAPPING)
 		{
 			// these are * 0.25 because the offsetmapping shader does the process 4 times
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value * 0.25);
-			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value * 0.25);
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Scale"), r_shadow_glsl_offsetmapping_scale.value * 0.25);CHECKGLERROR
+			qglUniform1fARB(qglGetUniformLocationARB(prog, "OffsetMapping_Bias"), r_shadow_glsl_offsetmapping_bias.value * 0.25);CHECKGLERROR
 		}
 		CHECKGLERROR
 		GL_LockArrays(0, numverts);
@@ -1662,6 +1709,7 @@ void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements
 		// HACK HACK HACK: work around for stupid NVIDIA bug that causes GL_OUT_OF_MEMORY and/or software rendering
 		qglBegin(GL_TRIANGLES);
 		qglEnd();
+		CHECKGLERROR
 	}
 	else if (gl_dot3arb && gl_texturecubemap && gl_combine.integer && gl_stencil)
 	{
