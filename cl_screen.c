@@ -691,20 +691,15 @@ SCR_ScreenShot_f
 */
 void SCR_ScreenShot_f (void)
 {
-	int i;
+	static int i = 0;
 	char filename[16];
 	char checkname[MAX_OSPATH];
 //
 // find a file name to save it to
 //
-	strcpy(filename, "dp0000.tga");
-
-	for (i=0 ; i<=9999 ; i++)
+	for (; i<=9999 ; i++)
 	{
-		filename[2] = (i/1000)%10 + '0';
-		filename[3] = (i/ 100)%10 + '0';
-		filename[4] = (i/  10)%10 + '0';
-		filename[5] = (i/   1)%10 + '0';
+		sprintf (filename, "dp%04i.tga", i);
 		sprintf (checkname, "%s/%s", com_gamedir, filename);
 		if (Sys_FileTime(checkname) == -1)
 			break;	// file doesn't exist
