@@ -360,12 +360,12 @@ static void GL_TextureMode_f (void)
 			// only update already uploaded images
 			if (!(image->flags & GLTEXF_UPLOAD))
 			{
-				glBindTexture(GL_TEXTURE_2D, image->texnum);
+				qglBindTexture(GL_TEXTURE_2D, image->texnum);
 				if (image->flags & TEXF_MIPMAP)
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+					qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 				else
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+					qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+				qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 			}
 		}
 	}
@@ -525,7 +525,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 	qbyte *prevbuffer;
 	prevbuffer = data;
 
-	glBindTexture(GL_TEXTURE_2D, glt->image->texnum);
+	qglBindTexture(GL_TEXTURE_2D, glt->image->texnum);
 	CHECKGLERROR
 
 	gl_backend_rebindtextures = true;
@@ -552,11 +552,11 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			Con_DPrintf("uploaded new fragments image\n");
 			glt->image->flags &= ~GLTEXF_UPLOAD;
 			memset(resizebuffer, 255, glt->image->width * glt->image->height * glt->image->bytesperpixel);
-			glTexImage2D (GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
+			qglTexImage2D (GL_TEXTURE_2D, 0, glt->image->glinternalformat, glt->image->width, glt->image->height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, resizebuffer);
 			CHECKGLERROR
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+			qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
 			CHECKGLERROR
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+			qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 			CHECKGLERROR
 		}
 
@@ -573,7 +573,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			prevbuffer = colorconvertbuffer;
 		}
 
-		glTexSubImage2D(GL_TEXTURE_2D, 0, glt->x, glt->y, glt->width, glt->height, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+		qglTexSubImage2D(GL_TEXTURE_2D, 0, glt->x, glt->y, glt->width, glt->height, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 		CHECKGLERROR
 		return;
 	}
@@ -634,7 +634,7 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 		internalformat = 4;
 
 	mip = 0;
-	glTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+	qglTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 	CHECKGLERROR
 	if (glt->flags & TEXF_MIPMAP)
 	{
@@ -643,20 +643,20 @@ static void R_Upload(gltexture_t *glt, qbyte *data)
 			Image_MipReduce(prevbuffer, resizebuffer, &width, &height, 1, 1, glt->image->bytesperpixel);
 			prevbuffer = resizebuffer;
 
-			glTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
+			qglTexImage2D(GL_TEXTURE_2D, mip++, internalformat, width, height, 0, glt->image->glformat, GL_UNSIGNED_BYTE, prevbuffer);
 			CHECKGLERROR
 		}
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
 		CHECKGLERROR
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 		CHECKGLERROR
 	}
 	else
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_mag);
 		CHECKGLERROR
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_mag);
 		CHECKGLERROR
 	}
 }

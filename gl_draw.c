@@ -314,45 +314,45 @@ void R_DrawQueue(void)
 	if (!r_render.integer)
 		return;
 
-	glViewport(vid.realx, vid.realy, vid.realwidth, vid.realheight);
+	qglViewport(vid.realx, vid.realy, vid.realwidth, vid.realheight);
 
-	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-	glOrtho(0, vid.conwidth, vid.conheight, 0, -99999, 99999);
+	qglMatrixMode(GL_PROJECTION);
+    qglLoadIdentity();
+	qglOrtho(0, vid.conwidth, vid.conheight, 0, -99999, 99999);
 
-	glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+	qglMatrixMode(GL_MODELVIEW);
+    qglLoadIdentity();
 
-	glDisable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
-	glEnable(GL_BLEND);
-	glEnable(GL_TEXTURE_2D);
-	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	qglDisable(GL_DEPTH_TEST);
+	qglDisable(GL_CULL_FACE);
+	qglEnable(GL_BLEND);
+	qglEnable(GL_TEXTURE_2D);
+	qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
 	chartexnum = R_GetTexture(char_texture);
 
 	additive = false;
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	currentpic = "";
 	pic = NULL;
-	glBindTexture(GL_TEXTURE_2D, 0);
+	qglBindTexture(GL_TEXTURE_2D, 0);
 	color = 0;
-	glColor4ub(0,0,0,0);
+	qglColor4ub(0,0,0,0);
 
 	// LordHavoc: NEAREST mode on text if not scaling up
 	/*
 	if (vid.realwidth <= (int) vid.conwidth)
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		CHECKGLERROR
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		CHECKGLERROR
 	}
 	else
 	{
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		CHECKGLERROR
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		CHECKGLERROR
 	}
 	*/
@@ -370,10 +370,10 @@ void R_DrawQueue(void)
 				if (batch)
 				{
 					batch = false;
-					glEnd();
+					qglEnd();
 				}
 				additive = true;
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+				qglBlendFunc(GL_SRC_ALPHA, GL_ONE);
 			}
 		}
 		else
@@ -383,21 +383,21 @@ void R_DrawQueue(void)
 				if (batch)
 				{
 					batch = false;
-					glEnd();
+					qglEnd();
 				}
 				additive = false;
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+				qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			}
 		}
 		if (color != dq->color)
 		{
 			color = dq->color;
-			glColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
+			qglColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
 		}
 		if (batch && batchcount > 128)
 		{
 			batch = false;
-			glEnd();
+			qglEnd();
 		}
 		x = dq->x;
 		y = dq->y;
@@ -414,11 +414,11 @@ void R_DrawQueue(void)
 					if (batch)
 					{
 						batch = false;
-						glEnd();
+						qglEnd();
 					}
 					currentpic = str;
 					pic = Draw_CachePic(str);
-					glBindTexture(GL_TEXTURE_2D, R_GetTexture(pic->tex));
+					qglBindTexture(GL_TEXTURE_2D, R_GetTexture(pic->tex));
 				}
 				if (w == 0)
 					w = pic->width;
@@ -427,14 +427,14 @@ void R_DrawQueue(void)
 				if (!batch)
 				{
 					batch = true;
-					glBegin(GL_QUADS);
+					qglBegin(GL_QUADS);
 					batchcount = 0;
 				}
 				//DrawQuad(dq->x, dq->y, w, h, 0, 0, 1, 1);
-				glTexCoord2f (0, 0);glVertex2f (x  , y  );
-				glTexCoord2f (1, 0);glVertex2f (x+w, y  );
-				glTexCoord2f (1, 1);glVertex2f (x+w, y+h);
-				glTexCoord2f (0, 1);glVertex2f (x  , y+h);
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
+				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
 				batchcount++;
 			}
 			else
@@ -444,22 +444,22 @@ void R_DrawQueue(void)
 					if (batch)
 					{
 						batch = false;
-						glEnd();
+						qglEnd();
 					}
 					currentpic = "";
-					glBindTexture(GL_TEXTURE_2D, 0);
+					qglBindTexture(GL_TEXTURE_2D, 0);
 				}
 				if (!batch)
 				{
 					batch = true;
-					glBegin(GL_QUADS);
+					qglBegin(GL_QUADS);
 					batchcount = 0;
 				}
 				//DrawQuad(dq->x, dq->y, dq->scalex, dq->scaley, 0, 0, 1, 1);
-				glTexCoord2f (0, 0);glVertex2f (x  , y  );
-				glTexCoord2f (1, 0);glVertex2f (x+w, y  );
-				glTexCoord2f (1, 1);glVertex2f (x+w, y+h);
-				glTexCoord2f (0, 1);glVertex2f (x  , y+h);
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
+				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
 				batchcount++;
 			}
 			break;
@@ -470,15 +470,15 @@ void R_DrawQueue(void)
 				if (batch)
 				{
 					batch = false;
-					glEnd();
+					qglEnd();
 				}
 				currentpic = "conchars";
-				glBindTexture(GL_TEXTURE_2D, chartexnum);
+				qglBindTexture(GL_TEXTURE_2D, chartexnum);
 			}
 			if (!batch)
 			{
 				batch = true;
-				glBegin(GL_QUADS);
+				qglBegin(GL_QUADS);
 				batchcount = 0;
 			}
 			while ((num = *str++) && x < vid.conwidth)
@@ -490,10 +490,10 @@ void R_DrawQueue(void)
 					u = 0.0625f - (1.0f / 256.0f);
 					v = 0.0625f - (1.0f / 256.0f);
 					//DrawQuad(x, y, w, h, (num & 15)*0.0625f + (0.5f / 256.0f), (num >> 4)*0.0625f + (0.5f / 256.0f), 0.0625f - (1.0f / 256.0f), 0.0625f - (1.0f / 256.0f));
-					glTexCoord2f (s  , t  );glVertex2f (x  , y  );
-					glTexCoord2f (s+u, t  );glVertex2f (x+w, y  );
-					glTexCoord2f (s+u, t+v);glVertex2f (x+w, y+h);
-					glTexCoord2f (s  , t+v);glVertex2f (x  , y+h);
+					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
+					qglTexCoord2f (s+u, t  );qglVertex2f (x+w, y  );
+					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
+					qglTexCoord2f (s  , t+v);qglVertex2f (x  , y+h);
 					batchcount++;
 				}
 				x += w;
@@ -502,72 +502,72 @@ void R_DrawQueue(void)
 		}
 	}
 	if (batch)
-		glEnd();
+		qglEnd();
 	CHECKGLERROR
 
 	if (!v_hwgamma.integer)
 	{
-		glDisable(GL_TEXTURE_2D);
+		qglDisable(GL_TEXTURE_2D);
 		CHECKGLERROR
 		t = v_contrast.value * (float) (1 << v_overbrightbits.integer);
 		if (t >= 1.01f)
 		{
-			glBlendFunc (GL_DST_COLOR, GL_ONE);
+			qglBlendFunc (GL_DST_COLOR, GL_ONE);
 			CHECKGLERROR
-			glBegin (GL_TRIANGLES);
+			qglBegin (GL_TRIANGLES);
 			while (t >= 1.01f)
 			{
 				num = (int) ((t - 1.0f) * 255.0f);
 				if (num > 255)
 					num = 255;
-				glColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
-				glVertex2f (-5000, -5000);
-				glVertex2f (10000, -5000);
-				glVertex2f (-5000, 10000);
+				qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+				qglVertex2f (-5000, -5000);
+				qglVertex2f (10000, -5000);
+				qglVertex2f (-5000, 10000);
 				t *= 0.5;
 			}
-			glEnd ();
+			qglEnd ();
 			CHECKGLERROR
 		}
 		else if (t <= 0.99f)
 		{
-			glBlendFunc(GL_ZERO, GL_SRC_COLOR);
+			qglBlendFunc(GL_ZERO, GL_SRC_COLOR);
 			CHECKGLERROR
-			glBegin(GL_TRIANGLES);
+			qglBegin(GL_TRIANGLES);
 			num = (int) (t * 255.0f);
-			glColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
-			glVertex2f (-5000, -5000);
-			glVertex2f (10000, -5000);
-			glVertex2f (-5000, 10000);
-			glEnd();
+			qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+			qglVertex2f (-5000, -5000);
+			qglVertex2f (10000, -5000);
+			qglVertex2f (-5000, 10000);
+			qglEnd();
 			CHECKGLERROR
 		}
 		if (v_brightness.value >= 0.01f)
 		{
-			glBlendFunc (GL_ONE, GL_ONE);
+			qglBlendFunc (GL_ONE, GL_ONE);
 			CHECKGLERROR
 			num = (int) (v_brightness.value * 255.0f);
-			glColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+			qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
 			CHECKGLERROR
-			glBegin (GL_TRIANGLES);
-			glVertex2f (-5000, -5000);
-			glVertex2f (10000, -5000);
-			glVertex2f (-5000, 10000);
-			glEnd ();
+			qglBegin (GL_TRIANGLES);
+			qglVertex2f (-5000, -5000);
+			qglVertex2f (10000, -5000);
+			qglVertex2f (-5000, 10000);
+			qglEnd ();
 			CHECKGLERROR
 		}
-		glEnable(GL_TEXTURE_2D);
+		qglEnable(GL_TEXTURE_2D);
 		CHECKGLERROR
 	}
 
-	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	qglBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	CHECKGLERROR
-	glEnable (GL_CULL_FACE);
+	qglEnable (GL_CULL_FACE);
 	CHECKGLERROR
-	glEnable (GL_DEPTH_TEST);
+	qglEnable (GL_DEPTH_TEST);
 	CHECKGLERROR
-	glDisable (GL_BLEND);
+	qglDisable (GL_BLEND);
 	CHECKGLERROR
-	glColor4ub (255, 255, 255, 255);
+	qglColor4ub (255, 255, 255, 255);
 	CHECKGLERROR
 }

@@ -49,8 +49,9 @@ extern const char *gl_renderer;
 extern const char *gl_version;
 extern const char *gl_extensions;
 
-#ifndef _WIN32
-#define APIENTRY /* */
+// wgl uses APIENTRY
+#ifndef APIENTRY
+#define APIENTRY
 #endif
 
 // for platforms (wgl) that do not use GLAPIENTRY
@@ -60,7 +61,7 @@ extern const char *gl_extensions;
 
 // GL_ARB_multitexture
 extern int gl_textureunits;
-//extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #ifndef GL_ACTIVE_TEXTURE_ARB
@@ -135,13 +136,89 @@ extern int gl_combine_extension;
 
 extern cvar_t gl_combine;
 
-#ifdef WIN32
-#else
-//#ifndef MESA
-//extern void (GLAPIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
-//#endif
+extern void (GLAPIENTRY *qglClearColor)(GLclampf red, GLclampf green, GLclampf blue, GLclampf alpha);
 
-#endif
+extern void (GLAPIENTRY *qglClear)(GLbitfield mask);
+
+//extern void (GLAPIENTRY *qglAlphaFunc)(GLenum func, GLclampf ref);
+extern void (GLAPIENTRY *qglBlendFunc)(GLenum sfactor, GLenum dfactor);
+extern void (GLAPIENTRY *qglCullFace)(GLenum mode);
+
+extern void (GLAPIENTRY *qglDrawBuffer)(GLenum mode);
+extern void (GLAPIENTRY *qglReadBuffer)(GLenum mode);
+extern void (GLAPIENTRY *qglEnable)(GLenum cap);
+extern void (GLAPIENTRY *qglDisable)(GLenum cap);
+//extern GLboolean GLAPIENTRY *qglIsEnabled)(GLenum cap);
+
+extern void (GLAPIENTRY *qglEnableClientState)(GLenum cap);
+extern void (GLAPIENTRY *qglDisableClientState)(GLenum cap);
+
+//extern void (GLAPIENTRY *qglGetBooleanv)(GLenum pname, GLboolean *params);
+//extern void (GLAPIENTRY *qglGetDoublev)(GLenum pname, GLdouble *params);
+//extern void (GLAPIENTRY *qglGetFloatv)(GLenum pname, GLfloat *params);
+extern void (GLAPIENTRY *qglGetIntegerv)(GLenum pname, GLint *params);
+
+extern GLenum (GLAPIENTRY *qglGetError)(void);
+extern const GLubyte* (GLAPIENTRY *qglGetString)(GLenum name);
+extern void (GLAPIENTRY *qglFinish)(void);
+extern void (GLAPIENTRY *qglFlush)(void);
+
+extern void (GLAPIENTRY *qglClearDepth)(GLclampd depth);
+extern void (GLAPIENTRY *qglDepthFunc)(GLenum func);
+extern void (GLAPIENTRY *qglDepthMask)(GLboolean flag);
+extern void (GLAPIENTRY *qglDepthRange)(GLclampd near_val, GLclampd far_val);
+
+extern void (GLAPIENTRY *qglDrawRangeElements)(GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const GLvoid *indices);
+extern void (GLAPIENTRY *qglDrawElements)(GLenum mode, GLsizei count, GLenum type, const GLvoid *indices);
+extern void (GLAPIENTRY *qglVertexPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+//extern void (GLAPIENTRY *qglNormalPointer)(GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglColorPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglTexCoordPointer)(GLint size, GLenum type, GLsizei stride, const GLvoid *ptr);
+extern void (GLAPIENTRY *qglArrayElement)(GLint i);
+
+extern void (GLAPIENTRY *qglColor4ub)(GLubyte red, GLubyte green, GLubyte blue, GLubyte alpha);
+extern void (GLAPIENTRY *qglTexCoord2f)(GLfloat s, GLfloat t);
+extern void (GLAPIENTRY *qglVertex2f)(GLfloat x, GLfloat y);
+extern void (GLAPIENTRY *qglVertex3f)(GLfloat x, GLfloat y, GLfloat z);
+extern void (GLAPIENTRY *qglBegin)(GLenum mode);
+extern void (GLAPIENTRY *qglEnd)(void);
+
+extern void (GLAPIENTRY *qglMatrixMode)(GLenum mode);
+extern void (GLAPIENTRY *qglOrtho)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+extern void (GLAPIENTRY *qglFrustum)(GLdouble left, GLdouble right, GLdouble bottom, GLdouble top, GLdouble near_val, GLdouble far_val);
+extern void (GLAPIENTRY *qglViewport)(GLint x, GLint y, GLsizei width, GLsizei height);
+//extern void (GLAPIENTRY *qglPushMatrix)(void);
+//extern void (GLAPIENTRY *qglPopMatrix)(void);
+extern void (GLAPIENTRY *qglLoadIdentity)(void);
+//extern void (GLAPIENTRY *qglLoadMatrixd)(const GLdouble *m);
+//extern void (GLAPIENTRY *qglLoadMatrixf)(const GLfloat *m);
+//extern void (GLAPIENTRY *qglMultMatrixd)(const GLdouble *m);
+//extern void (GLAPIENTRY *qglMultMatrixf)(const GLfloat *m);
+//extern void (GLAPIENTRY *qglRotated)(GLdouble angle, GLdouble x, GLdouble y, GLdouble z);
+extern void (GLAPIENTRY *qglRotatef)(GLfloat angle, GLfloat x, GLfloat y, GLfloat z);
+//extern void (GLAPIENTRY *qglScaled)(GLdouble x, GLdouble y, GLdouble z);
+//extern void (GLAPIENTRY *qglScalef)(GLfloat x, GLfloat y, GLfloat z);
+//extern void (GLAPIENTRY *qglTranslated)(GLdouble x, GLdouble y, GLdouble z);
+extern void (GLAPIENTRY *qglTranslatef)(GLfloat x, GLfloat y, GLfloat z);
+
+extern void (GLAPIENTRY *qglReadPixels)(GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, GLvoid *pixels);
+
+//extern void (GLAPIENTRY *qglStencilFunc)(GLenum func, GLint ref, GLuint mask);
+//extern void (GLAPIENTRY *qglStencilMask)(GLuint mask);
+//extern void (GLAPIENTRY *qglStencilOp)(GLenum fail, GLenum zfail, GLenum zpass);
+//extern void (GLAPIENTRY *qglClearStencil)(GLint s);
+
+//extern void (GLAPIENTRY *qglTexEnvf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexEnvi)(GLenum target, GLenum pname, GLint param);
+
+//extern void (GLAPIENTRY *qglTexParameterf)(GLenum target, GLenum pname, GLfloat param);
+extern void (GLAPIENTRY *qglTexParameteri)(GLenum target, GLenum pname, GLint param);
+
+extern void (GLAPIENTRY *qglTexImage2D)(GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels );
+
+extern void (GLAPIENTRY *qglBindTexture)(GLenum target, GLuint texture);
+
+extern void (GLAPIENTRY *qglTexSubImage2D)(GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
 
 #define DEBUGGL
 
