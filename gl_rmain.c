@@ -327,6 +327,100 @@ void GL_Init (void)
 	qglEnable(GL_TEXTURE_2D);
 }
 
+int R_CullBox(const vec3_t emins, const vec3_t emaxs)
+{
+	int i;
+	mplane_t *p;
+	for (i = 0;i < 4;i++)
+	{
+		p = frustum + i;
+		switch(p->signbits)
+		{
+		default:
+		case 0:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2] < p->dist)
+				return true;
+			break;
+		case 1:
+			if (p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2] < p->dist)
+				return true;
+			break;
+		case 2:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2] < p->dist)
+				return true;
+			break;
+		case 3:
+			if (p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2] < p->dist)
+				return true;
+			break;
+		case 4:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2] < p->dist)
+				return true;
+			break;
+		case 5:
+			if (p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2] < p->dist)
+				return true;
+			break;
+		case 6:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2] < p->dist)
+				return true;
+			break;
+		case 7:
+			if (p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2] < p->dist)
+				return true;
+			break;
+		}
+	}
+	return false;
+}
+
+int R_NotCulledBox(const vec3_t emins, const vec3_t emaxs)
+{
+	int i;
+	mplane_t *p;
+	for (i = 0;i < 4;i++)
+	{
+		p = frustum + i;
+		switch(p->signbits)
+		{
+		default:
+		case 0:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2] < p->dist)
+				return false;
+			break;
+		case 1:
+			if (p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emaxs[2] < p->dist)
+				return false;
+			break;
+		case 2:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2] < p->dist)
+				return false;
+			break;
+		case 3:
+			if (p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emaxs[2] < p->dist)
+				return false;
+			break;
+		case 4:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2] < p->dist)
+				return false;
+			break;
+		case 5:
+			if (p->normal[0]*emins[0] + p->normal[1]*emaxs[1] + p->normal[2]*emins[2] < p->dist)
+				return false;
+			break;
+		case 6:
+			if (p->normal[0]*emaxs[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2] < p->dist)
+				return false;
+			break;
+		case 7:
+			if (p->normal[0]*emins[0] + p->normal[1]*emins[1] + p->normal[2]*emins[2] < p->dist)
+				return false;
+			break;
+		}
+	}
+	return true;
+}
+
 
 //==================================================================================
 

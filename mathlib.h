@@ -156,22 +156,7 @@ void VectorVectors(const vec3_t forward, vec3_t right, vec3_t up);
 void VectorVectorsDouble(const double *forward, double *right, double *up);
 
 void PlaneClassify(struct mplane_s *p);
-
-#define BOX_ON_PLANE_SIDE(emins, emaxs, p)	\
-	(((p)->type < 3)?						\
-	(										\
-		((p)->dist <= (emins)[(p)->type])?	\
-			1								\
-		:									\
-		(									\
-			((p)->dist >= (emaxs)[(p)->type])?\
-				2							\
-			:								\
-				3							\
-		)									\
-	)										\
-	:										\
-		(p)->BoxOnPlaneSideFunc( (emins), (emaxs), (p)))
+int BoxOnPlaneSide (const vec3_t emins, const vec3_t emaxs, const struct mplane_s *p);
 
 #define PlaneDist(point,plane)  ((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal))
 #define PlaneDiff(point,plane) (((plane)->type < 3 ? (point)[(plane)->type] : DotProduct((point), (plane)->normal)) - (plane)->dist)

@@ -128,9 +128,8 @@ void R_DrawSpriteModel (entity_render_t *ent);
 
 //#define PARANOID 1
 
-// LordHavoc: was a major time waster
-#define R_CullBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) == 2 || frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) == 2 || frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) == 2 || frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) == 2)
-#define R_NotCulledBox(mins,maxs) (frustum[0].BoxOnPlaneSideFunc(mins, maxs, &frustum[0]) != 2 && frustum[1].BoxOnPlaneSideFunc(mins, maxs, &frustum[1]) != 2 && frustum[2].BoxOnPlaneSideFunc(mins, maxs, &frustum[2]) != 2 && frustum[3].BoxOnPlaneSideFunc(mins, maxs, &frustum[3]) != 2)
+int R_CullBox(const vec3_t emins, const vec3_t emaxs);
+int R_NotCulledBox(const vec3_t emins, const vec3_t emaxs);
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;

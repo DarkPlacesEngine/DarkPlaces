@@ -51,8 +51,7 @@ typedef struct mplane_s
 	float dist;
 	// for texture axis selection and fast side tests
 	int type;
-	// LordHavoc: faster than id's signbits system
-	int (*BoxOnPlaneSideFunc) (vec3_t emins, vec3_t emaxs, struct mplane_s *p);
+	int signbits;
 }
 mplane_t;
 
