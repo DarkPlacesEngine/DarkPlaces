@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define RENDER_H
 
 extern qbyte r_pvsbits[(MAX_MAP_LEAFS+7)>>3];
+extern qbyte r_worldsurfacevisible[MAX_MAP_LEAFS];
 
 extern matrix4x4_t r_identitymatrix;
 

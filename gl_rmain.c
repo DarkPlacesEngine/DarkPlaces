@@ -28,6 +28,10 @@ int r_framecount;
 // used for visibility checking
 qbyte r_pvsbits[(MAX_MAP_LEAFS+7)>>3];
 
+// TODO: dynamic resize?  65536 seems enough because q1bsp can't have more
+// than 32768, and q3bsp compilers have more like a 4096 limit
+qbyte r_worldsurfacevisible[MAX_MAP_LEAFS];
+
 mplane_t frustum[4];
 
 matrix4x4_t r_identitymatrix;

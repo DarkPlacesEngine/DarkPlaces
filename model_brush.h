@@ -192,21 +192,16 @@ msurface_t;
 
 typedef struct mnode_s
 {
-// common with leaf
-	// always 0 in nodes
-	int contents;
-
+	//this part shared between node and leaf
+	mplane_t *plane; // != NULL
 	struct mnode_s *parent;
 	struct mportal_s *portals;
-
 	// for bounding box culling
 	vec3_t mins;
 	vec3_t maxs;
 
-	mplane_t *plane; // != NULL
-// node specific
+	// this part unique to node
 	struct mnode_s *children[2];
-
 	unsigned short firstsurface;
 	unsigned short numsurfaces;
 }
@@ -214,36 +209,21 @@ mnode_t;
 
 typedef struct mleaf_s
 {
-// common with node
-	// always negative in leafs
-	int contents;
-
+	//this part shared between node and leaf
+	mplane_t *plane; // == NULL
 	struct mnode_s *parent;
 	struct mportal_s *portals;
-
 	// for bounding box culling
 	vec3_t mins;
 	vec3_t maxs;
 
-	mplane_t *plane; // == NULL
-// leaf specific
-	// next leaf in pvschain
-	struct mleaf_s *pvschain;
-	// potentially visible if current (model->pvsframecount)
-	int pvsframe;
-	// visible if marked current (r_framecount)
-	int visframe;
-	// used by certain worldnode variants to avoid processing the same leaf twice in a frame
-	int worldnodeframe;
-	// used by polygon-through-portals visibility checker
-	int portalmarkid;
-
-	// -1 is not in pvs, >= 0 is pvs bit number
-	int clusterindex;
-
+	// this part unique to leaf
+	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
+	int contents; // TODO: remove (only used temporarily during loading when making collision hull 0)
 	int *firstmarksurface;
 	int nummarksurfaces;
 	qbyte ambient_sound_level[NUM_AMBIENTS];
+	int portalmarkid; // used by see-polygon-through-portals visibility checker
 }
 mleaf_t;
 
@@ -268,7 +248,6 @@ typedef struct mportal_s
 	mvertex_t *points;
 	vec3_t mins, maxs; // culling
 	mplane_t plane;
-	int visframe; // is this portal visible this frame?
 }
 mportal_t;
 

@@ -446,7 +446,7 @@ void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radi
 	invradius = 1.0f / radius;
 
 loc0:
-	if (node->contents < 0)
+	if (!node->plane)
 		return;
 	ndist = PlaneDiff(origin, node->plane);
 	if (ndist > radius)
@@ -535,9 +535,9 @@ loc0:
 		}
 	}
 
-	if (node->children[0]->contents >= 0)
+	if (node->children[0]->plane)
 	{
-		if (node->children[1]->contents >= 0)
+		if (node->children[1]->plane)
 		{
 			R_StainNode(node->children[0], model, origin, radius, fcolor);
 			node = node->children[1];
@@ -549,7 +549,7 @@ loc0:
 			goto loc0;
 		}
 	}
-	else if (node->children[1]->contents >= 0)
+	else if (node->children[1]->plane)
 	{
 		node = node->children[1];
 		goto loc0;
@@ -1215,7 +1215,7 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
-	int i, j, f, *surfacevisframes, flagsmask;
+	int i, j, f, flagsmask;
 	msurface_t *surface, **surfacechain;
 	texture_t *t, *texture;
 	model_t *model = ent->model;
@@ -1230,15 +1230,10 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 
 	if (ent != r_refdef.worldentity)
 	{
-		// because bmodels can be reused, we have to decide which things to render
-		// from scratch every time
-		int *mark = model->brushq1.surfacevisframes + model->firstmodelsurface;
+		// because bmodels can be reused, we have to clear dlightframe every time
 		surface = model->brushq1.surfaces + model->firstmodelsurface;
-		for (i = 0;i < model->nummodelsurfaces;i++, mark++, surface++)
-		{
-			*mark = r_framecount;
+		for (i = 0;i < model->nummodelsurfaces;i++, surface++)
 			surface->dlightframe = -1;
-		}
 	}
 
 	// update light styles
@@ -1259,14 +1254,13 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	}
 
 	R_UpdateTextureInfo(ent);
-	surfacevisframes = model->brushq1.surfacevisframes;
 	flagsmask = skysurfaces ? SURF_DRAWSKY : (SURF_DRAWTURB | SURF_LIGHTMAP);
 	f = 0;
 	t = NULL;
 	numsurfacelist = 0;
 	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 	{
-		if (surfacevisframes[j] == r_framecount)
+		if (ent != r_refdef.worldentity || r_worldsurfacevisible[j])
 		{
 			surface = model->brushq1.surfaces + j;
 			if (t != surface->texinfo->texture)
@@ -1282,23 +1276,6 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			}
 			if (f)
 			{
-				// mark any backface surfaces as not visible
-				if (PlaneDist(modelorg, surface->plane) < surface->plane->dist)
-				{
-					if (!(surface->flags & SURF_PLANEBACK))
-					{
-						surfacevisframes[j] = -1;
-						continue;
-					}
-				}
-				else
-				{
-					if ((surface->flags & SURF_PLANEBACK))
-					{
-						surfacevisframes[j] = -1;
-						continue;
-					}
-				}
 				// add face to draw list and update lightmap if necessary
 				c_faces++;
 				if (surface->cached_dlight && surface->lightmaptexture != NULL)
@@ -1379,10 +1356,10 @@ void R_WorldVisibility(void)
 	mleaf_t *leaf;
 	mleaf_t *viewleaf;
 	model_t *model = r_refdef.worldmodel;
-	int *surfacevisframes = model->brushq1.surfacevisframes;
 	int leafstackpos;
 	mportal_t *p;
 	mleaf_t *leafstack[8192];
+	qbyte leafvisited[32768];
 
 	if (!model || !model->brushq1.PointInLeaf)
 		return;
@@ -1391,7 +1368,8 @@ void R_WorldVisibility(void)
 	if (!viewleaf)
 		return;
 
-	if (viewleaf->contents == CONTENTS_SOLID || r_surfaceworldnode.integer)
+	memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brushq1.numsurfaces);
+	if (viewleaf->clusterindex < 0 || r_surfaceworldnode.integer)
 	{
 		// equivilant to quake's RecursiveWorldNode but faster and more effective
 		for (j = 0, leaf = model->brushq1.data_leafs;j < model->brushq1.num_leafs;j++, leaf++)
@@ -1399,10 +1377,9 @@ void R_WorldVisibility(void)
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
 			{
 				c_leafs++;
-				leaf->visframe = r_framecount;
 				if (leaf->nummarksurfaces)
 					for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
-						surfacevisframes[*mark] = r_framecount;
+						r_worldsurfacevisible[*mark] = true;
 			}
 		}
 	}
@@ -1414,18 +1391,19 @@ void R_WorldVisibility(void)
 		// RecursiveWorldNode
 		leafstack[0] = viewleaf;
 		leafstackpos = 1;
+		memset(leafvisited, 0, r_refdef.worldmodel->brushq1.num_leafs);
 		while (leafstackpos)
 		{
 			c_leafs++;
 			leaf = leafstack[--leafstackpos];
-			leaf->visframe = r_framecount;
+			leafvisited[leaf - r_refdef.worldmodel->brushq1.data_leafs] = 1;
 			// draw any surfaces bounding this leaf
 			if (leaf->nummarksurfaces)
 				for (i = 0, mark = leaf->firstmarksurface;i < leaf->nummarksurfaces;i++, mark++)
-					surfacevisframes[*mark] = r_framecount;
+					r_worldsurfacevisible[*mark] = true;
 			// follow portals into other leafs
 			for (p = leaf->portals;p;p = p->next)
-				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && p->past->visframe != r_framecount && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
+				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !leafvisited[p->past - r_refdef.worldmodel->brushq1.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
 					leafstack[leafstackpos++] = p->past;
 		}
 	}
@@ -1594,7 +1572,7 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				if (t->flags & SURF_LIGHTMAP && t->skin.fog == NULL)
 					Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texinfo->texture->skin.base, surface->texinfo->texture->skin.gloss, surface->texinfo->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			}
-			else if (ent != r_refdef.worldentity || ent->model->brushq1.surfacevisframes[surface - ent->model->brushq1.surfaces] == r_framecount)
+			else if (ent != r_refdef.worldentity || r_worldsurfacevisible[surface - ent->model->brushq1.surfaces])
 			{
 				t = surface->texinfo->texture->currentframe;
 				// FIXME: transparent surfaces need to be lit later

@@ -84,7 +84,7 @@ static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 	// LordHavoc: modified to start at first clip node,
 	// in other words: first node of the (sub)model
 	node = model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode;
-	while (node->contents == 0)
+	while (node->plane)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
 
 	return (mleaf_t *)node;
@@ -154,26 +154,6 @@ static int Mod_Q1BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 	// it is not visible
 	return false;
 }
-
-/*
-static int Mod_Q1BSP_PointContents(model_t *model, const vec3_t p)
-{
-	mnode_t *node;
-
-	if (model == NULL)
-		return CONTENTS_EMPTY;
-
-	Mod_CheckLoaded(model);
-
-	// LordHavoc: modified to start at first clip node,
-	// in other words: first node of the (sub)model
-	node = model->brushq1.nodes + model->brushq1.hulls[0].firstclipnode;
-	while (node->contents == 0)
-		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
-
-	return ((mleaf_t *)node)->contents;
-}
-*/
 
 typedef struct findnonsolidlocationinfo_s
 {
@@ -313,18 +293,18 @@ static void Mod_Q1BSP_FindNonSolidLocation_r_Leaf(findnonsolidlocationinfo_t *in
 
 static void Mod_Q1BSP_FindNonSolidLocation_r(findnonsolidlocationinfo_t *info, mnode_t *node)
 {
-	if (node->contents)
-	{
-		if (((mleaf_t *)node)->nummarksurfaces)
-			Mod_Q1BSP_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
-	}
-	else
+	if (node->plane)
 	{
 		float f = PlaneDiff(info->center, node->plane);
 		if (f >= -info->bestdist)
 			Mod_Q1BSP_FindNonSolidLocation_r(info, node->children[0]);
 		if (f <= info->bestdist)
 			Mod_Q1BSP_FindNonSolidLocation_r(info, node->children[1]);
+	}
+	else
+	{
+		if (((mleaf_t *)node)->nummarksurfaces)
+			Mod_Q1BSP_FindNonSolidLocation_r_Leaf(info, (mleaf_t *)node);
 	}
 }
 
@@ -741,7 +721,7 @@ static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(vec3_t ambientcolor, vec3_t dif
 	float mid;
 
 loc0:
-	if (node->contents < 0)
+	if (!node->plane)
 		return false;		// didn't hit anything
 
 	switch (node->plane->type)
@@ -778,7 +758,7 @@ loc0:
 	}
 
 	// go down front side
-	if (node->children[side]->contents >= 0 && Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
+	if (node->children[side]->plane && Mod_Q1BSP_LightPoint_RecursiveBSPNode(ambientcolor, diffusecolor, diffusenormal, node->children[side], x, y, startz, mid))
 		return true;	// hit something
 	else
 	{
@@ -1816,7 +1796,6 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 	loadmodel->brushq1.surfaces = Mem_Alloc(loadmodel->mempool, count*sizeof(msurface_t));
 
 	loadmodel->brushq1.numsurfaces = count;
-	loadmodel->brushq1.surfacevisframes = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
 
 	for (surfnum = 0, surf = loadmodel->brushq1.surfaces, totalverts = 0, totaltris = 0, totalmeshes = 0;surfnum < count;surfnum++, totalverts += surf->poly_numverts, totaltris += surf->poly_numverts - 2, totalmeshes++, in++, surf++)
 	{
@@ -1965,10 +1944,11 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 static void Mod_Q1BSP_SetParent(mnode_t *node, mnode_t *parent)
 {
 	node->parent = parent;
-	if (node->contents < 0)
-		return;
-	Mod_Q1BSP_SetParent(node->children[0], node);
-	Mod_Q1BSP_SetParent(node->children[1], node);
+	if (node->plane)
+	{
+		Mod_Q1BSP_SetParent(node->children[0], node);
+		Mod_Q1BSP_SetParent(node->children[1], node);
+	}
 }
 
 static void Mod_Q1BSP_LoadNodes(lump_t *l)
@@ -2191,8 +2171,8 @@ static void Mod_Q1BSP_MakeHull0(void)
 	for (i = 0;i < loadmodel->brushq1.numnodes;i++, out++, in++)
 	{
 		out->planenum = in->plane - loadmodel->brushq1.planes;
-		out->children[0] = in->children[0]->contents < 0 ? in->children[0]->contents : in->children[0] - loadmodel->brushq1.nodes;
-		out->children[1] = in->children[1]->contents < 0 ? in->children[1]->contents : in->children[1] - loadmodel->brushq1.nodes;
+		out->children[0] = in->children[0]->plane ? in->children[0] - loadmodel->brushq1.nodes : ((mleaf_t *)in->children[0])->contents;
+		out->children[1] = in->children[1]->plane ? in->children[1] - loadmodel->brushq1.nodes : ((mleaf_t *)in->children[1])->contents;
 	}
 }
 
@@ -2388,11 +2368,13 @@ static void FreePortal(portal_t *p)
 
 static void Mod_Q1BSP_RecursiveRecalcNodeBBox(mnode_t *node)
 {
+	// process only nodes (leafs already had their box calculated)
+	if (!node->plane)
+		return;
+
 	// calculate children first
-	if (node->children[0]->contents >= 0)
-		Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[0]);
-	if (node->children[1]->contents >= 0)
-		Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[1]);
+	Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[0]);
+	Mod_Q1BSP_RecursiveRecalcNodeBBox(node->children[1]);
 
 	// make combined bounding box from children
 	node->mins[0] = min(node->children[0]->mins[0], node->children[1]->mins[0]);
@@ -2451,9 +2433,7 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	{
 		// note: this check must match the one below or it will usually corrupt memory
 		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
-		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1]
-		 && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID
-		 && p->nodes[0]->contents != CONTENTS_SKY && p->nodes[1]->contents != CONTENTS_SKY)
+		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1] && ((mleaf_t *)p->nodes[0])->clusterindex >= 0 && ((mleaf_t *)p->nodes[1])->clusterindex >= 0)
 		{
 			numportals += 2;
 			numpoints += p->numpoints * 2;
@@ -2476,60 +2456,55 @@ static void Mod_Q1BSP_FinalizePortals(void)
 	{
 		pnext = p->chain;
 
-		if (p->numpoints >= 3)
+		// note: this check must match the one above or it will usually corrupt memory
+		// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
+		if (p->numpoints >= 3 && p->nodes[0] != p->nodes[1] && ((mleaf_t *)p->nodes[0])->clusterindex >= 0 && ((mleaf_t *)p->nodes[1])->clusterindex >= 0)
 		{
-			// note: this check must match the one above or it will usually corrupt memory
-			// the nodes[0] != nodes[1] check is because leaf 0 is the shared solid leaf, it can have many portals inside with leaf 0 on both sides
-			if (p->nodes[0] != p->nodes[1]
-			 && p->nodes[0]->contents != CONTENTS_SOLID && p->nodes[1]->contents != CONTENTS_SOLID
-			 && p->nodes[0]->contents != CONTENTS_SKY && p->nodes[1]->contents != CONTENTS_SKY)
+			// first make the back to front portal(forward portal)
+			portal->points = point;
+			portal->numpoints = p->numpoints;
+			portal->plane.dist = p->plane.dist;
+			VectorCopy(p->plane.normal, portal->plane.normal);
+			portal->here = (mleaf_t *)p->nodes[1];
+			portal->past = (mleaf_t *)p->nodes[0];
+			// copy points
+			for (j = 0;j < portal->numpoints;j++)
 			{
-				// first make the back to front portal(forward portal)
-				portal->points = point;
-				portal->numpoints = p->numpoints;
-				portal->plane.dist = p->plane.dist;
-				VectorCopy(p->plane.normal, portal->plane.normal);
-				portal->here = (mleaf_t *)p->nodes[1];
-				portal->past = (mleaf_t *)p->nodes[0];
-				// copy points
-				for (j = 0;j < portal->numpoints;j++)
-				{
-					VectorCopy(p->points + j*3, point->position);
-					point++;
-				}
-				BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
-				PlaneClassify(&portal->plane);
-
-				// link into leaf's portal chain
-				portal->next = portal->here->portals;
-				portal->here->portals = portal;
-
-				// advance to next portal
-				portal++;
-
-				// then make the front to back portal(backward portal)
-				portal->points = point;
-				portal->numpoints = p->numpoints;
-				portal->plane.dist = -p->plane.dist;
-				VectorNegate(p->plane.normal, portal->plane.normal);
-				portal->here = (mleaf_t *)p->nodes[0];
-				portal->past = (mleaf_t *)p->nodes[1];
-				// copy points
-				for (j = portal->numpoints - 1;j >= 0;j--)
-				{
-					VectorCopy(p->points + j*3, point->position);
-					point++;
-				}
-				BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
-				PlaneClassify(&portal->plane);
-
-				// link into leaf's portal chain
-				portal->next = portal->here->portals;
-				portal->here->portals = portal;
-
-				// advance to next portal
-				portal++;
+				VectorCopy(p->points + j*3, point->position);
+				point++;
 			}
+			BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
+			PlaneClassify(&portal->plane);
+
+			// link into leaf's portal chain
+			portal->next = portal->here->portals;
+			portal->here->portals = portal;
+
+			// advance to next portal
+			portal++;
+
+			// then make the front to back portal(backward portal)
+			portal->points = point;
+			portal->numpoints = p->numpoints;
+			portal->plane.dist = -p->plane.dist;
+			VectorNegate(p->plane.normal, portal->plane.normal);
+			portal->here = (mleaf_t *)p->nodes[0];
+			portal->past = (mleaf_t *)p->nodes[1];
+			// copy points
+			for (j = portal->numpoints - 1;j >= 0;j--)
+			{
+				VectorCopy(p->points + j*3, point->position);
+				point++;
+			}
+			BoxFromPoints(portal->mins, portal->maxs, portal->numpoints, portal->points->position);
+			PlaneClassify(&portal->plane);
+
+			// link into leaf's portal chain
+			portal->next = portal->here->portals;
+			portal->here->portals = portal;
+
+			// advance to next portal
+			portal++;
 		}
 		FreePortal(p);
 		p = pnext;
@@ -2619,7 +2594,7 @@ static void Mod_Q1BSP_RecursiveNodePortals(mnode_t *node)
 	double frontpoints[3*MAX_PORTALPOINTS], backpoints[3*MAX_PORTALPOINTS];
 
 	// if a leaf, we're done
-	if (node->contents)
+	if (!node->plane)
 		return;
 
 	plane = node->plane;
@@ -3722,8 +3697,7 @@ static void Mod_Q3BSP_LoadTextures(lump_t *l)
 		out->number = i;
 		strlcpy (out->name, in->name, sizeof (out->name));
 		out->surfaceflags = LittleLong(in->surfaceflags);
-		out->nativecontents = LittleLong(in->contents);
-		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, out->nativecontents);
+		out->supercontents = Mod_Q3BSP_SuperContentsFromNativeContents(loadmodel, LittleLong(in->contents));
 		out->surfaceparms = -1;
 	}
 
@@ -4472,7 +4446,7 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 					invalidelements++;
 			if (invalidelements)
 			{
-				Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, texture->nativecontents = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, out->texture->nativecontents, firstvertex, out->mesh.num_vertices, firstelement, out->mesh.num_triangles * 3);
+				Con_Printf("Mod_Q3BSP_LoadFaces: Warning: face #%i has %i invalid elements, type = %i, texture->name = \"%s\", texture->surfaceflags = %i, firstvertex = %i, numvertices = %i, firstelement = %i, numelements = %i, elements list:\n", i, invalidelements, type, out->texture->name, out->texture->surfaceflags, firstvertex, out->mesh.num_vertices, firstelement, out->mesh.num_triangles * 3);
 				for (j = 0;j < out->mesh.num_triangles * 3;j++)
 				{
 					Con_Printf(" %i", out->mesh.data_element3i[j]);
@@ -5553,14 +5527,20 @@ static int Mod_Q3BSP_FatPVS(model_t *model, const vec3_t org, vec_t radius, qbyt
 static int Mod_Q3BSP_SuperContentsFromNativeContents(model_t *model, int nativecontents)
 {
 	int supercontents = 0;
-	if (nativecontents & Q2CONTENTS_SOLID)
+	if (nativecontents & CONTENTSQ3_SOLID)
 		supercontents |= SUPERCONTENTS_SOLID;
-	if (nativecontents & Q2CONTENTS_WATER)
+	if (nativecontents & CONTENTSQ3_WATER)
 		supercontents |= SUPERCONTENTS_WATER;
-	if (nativecontents & Q2CONTENTS_SLIME)
+	if (nativecontents & CONTENTSQ3_SLIME)
 		supercontents |= SUPERCONTENTS_SLIME;
-	if (nativecontents & Q2CONTENTS_LAVA)
+	if (nativecontents & CONTENTSQ3_LAVA)
 		supercontents |= SUPERCONTENTS_LAVA;
+	if (nativecontents & CONTENTSQ3_BODY)
+		supercontents |= SUPERCONTENTS_BODY;
+	if (nativecontents & CONTENTSQ3_CORPSE)
+		supercontents |= SUPERCONTENTS_CORPSE;
+	if (nativecontents & CONTENTSQ3_NODROP)
+		supercontents |= SUPERCONTENTS_NODROP;
 	return supercontents;
 }
 
@@ -5568,13 +5548,19 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 {
 	int nativecontents = 0;
 	if (supercontents & SUPERCONTENTS_SOLID)
-		nativecontents |= Q2CONTENTS_SOLID;
+		nativecontents |= CONTENTSQ3_SOLID;
 	if (supercontents & SUPERCONTENTS_WATER)
-		nativecontents |= Q2CONTENTS_WATER;
+		nativecontents |= CONTENTSQ3_WATER;
 	if (supercontents & SUPERCONTENTS_SLIME)
-		nativecontents |= Q2CONTENTS_SLIME;
+		nativecontents |= CONTENTSQ3_SLIME;
 	if (supercontents & SUPERCONTENTS_LAVA)
-		nativecontents |= Q2CONTENTS_LAVA;
+		nativecontents |= CONTENTSQ3_LAVA;
+	if (supercontents & SUPERCONTENTS_BODY)
+		nativecontents |= CONTENTSQ3_BODY;
+	if (supercontents & SUPERCONTENTS_CORPSE)
+		nativecontents |= CONTENTSQ3_CORPSE;
+	if (supercontents & SUPERCONTENTS_NODROP)
+		nativecontents |= CONTENTSQ3_NODROP;
 	return nativecontents;
 }
 

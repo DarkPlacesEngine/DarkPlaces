@@ -154,7 +154,7 @@ void Portal_PolygonRecursiveMarkLeafs(mnode_t *node, float *polypoints, int nump
 	float *p;
 
 loc0:
-	if (node->contents < 0)
+	if (!node->plane)
 	{
 		((mleaf_t *)node)->portalmarkid = portal_markid;
 		return;
@@ -460,18 +460,19 @@ void Portal_RecursiveFlow (portalrecursioninfo_t *info, mleaf_t *leaf, int first
 
 void Portal_RecursiveFindLeafForFlow(portalrecursioninfo_t *info, mnode_t *node)
 {
-	if (node->contents)
-	{
-		if (node->contents != CONTENTS_SKY && node->contents != CONTENTS_SOLID)
-			Portal_RecursiveFlow(info, (mleaf_t *)node, 0, info->numfrustumplanes);
-	}
-	else
+	if (node->plane)
 	{
 		float f = DotProduct(info->eye, node->plane->normal) - node->plane->dist;
 		if (f > -0.1)
 			Portal_RecursiveFindLeafForFlow(info, node->children[0]);
 		if (f < 0.1)
 			Portal_RecursiveFindLeafForFlow(info, node->children[1]);
+	}
+	else
+	{
+		mleaf_t *leaf = (mleaf_t *)node;
+		if (leaf->portals)
+			Portal_RecursiveFlow(info, leaf, 0, info->numfrustumplanes);
 	}
 }
 
