@@ -51,6 +51,8 @@ extern vec3_t vec3_origin;
 
 #define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
 
+#define invpow(base,number) (log(number) / log(base))
+
 #define DEG2RAD(a) ((a) * ((float) M_PI / 180.0f))
 #define RAD2DEG(a) ((a) * (180.0f / (float) M_PI))
 #define ANGLEMOD(a) (((int) ((a) * (65536.0f / 360.0f)) & 65535) * (360.0f / 65536.0f))
