@@ -558,7 +558,7 @@ void R_MakeResizeBufferBigger(int size)
 static void GL_SetupTextureParameters(int flags, int texturetype)
 {
 	int textureenum = gltexturetypeenums[texturetype];
-	int wrapmode = (flags & TEXF_CLAMP) ? GL_CLAMP : GL_REPEAT;
+	int wrapmode = ((flags & TEXF_CLAMP) && gl_support_clamptoedge) ? GL_CLAMP_TO_EDGE : GL_REPEAT;
 
 	CHECKGLERROR
 

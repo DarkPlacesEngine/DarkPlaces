@@ -24,6 +24,8 @@ int gl_texture3d = false;
 int gl_texturecubemap = false;
 // GL_ARB_texture_env_dot3
 int gl_dot3arb = false;
+// GL_SGIS_texture_edge_clamp
+int gl_support_clamptoedge = false;
 
 // LordHavoc: if window is hidden, don't update screen
 int vid_hidden = true;
@@ -353,6 +355,7 @@ void VID_CheckExtensions(void)
 	gl_dot3arb = false;
 	gl_supportslockarrays = false;
 	gl_textureunits = 1;
+	gl_support_clamptoedge = false;
 
 	if (!GL_CheckExtension("OpenGL 1.1.0", opengl110funcs, NULL, false))
 		Sys_Error("OpenGL 1.1.0 functions not found\n");
@@ -379,6 +382,7 @@ void VID_CheckExtensions(void)
 	gl_texture3d = GL_CheckExtension("GL_EXT_texture3D", texture3dextfuncs, "-notexture3d", false);
 	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
+	gl_support_clamptoedge = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
 
 	// we don't care if it's an extension or not, they are identical functions, so keep it simple in the rendering code
 	if (qglDrawRangeElements == NULL)
