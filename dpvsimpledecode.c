@@ -178,7 +178,7 @@ int hz_bitstream_read_bit(hz_bitstream_readblocks_t *blocks)
 	return (blocks->store >> blocks->count) & 1;
 }
 
-unsigned int hz_bitstream_read_bits(hz_bitstream_readblocks_t *blocks, unsigned int size)
+unsigned int hz_bitstream_read_bits(hz_bitstream_readblocks_t *blocks, int size)
 {
 	unsigned int num = 0;
 	// we can only handle about 24 bits at a time safely

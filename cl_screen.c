@@ -590,14 +590,14 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	dq->scalex = 0;
 	dq->scaley = 0;
 	p = (void *)(dq + 1);
-	m = p;p += sizeof(drawqueuemesh_t);
+	m = p;(qbyte *)p += sizeof(drawqueuemesh_t);
 	m->numindices = mesh->numindices;
 	m->numvertices = mesh->numvertices;
 	m->texture = mesh->texture;
-	m->indices   = p;memcpy(m->indices  , mesh->indices  , m->numindices  * sizeof(int     ));p += m->numindices  * sizeof(int     );
-	m->vertices  = p;memcpy(m->vertices , mesh->vertices , m->numvertices * sizeof(float[3]));p += m->numvertices * sizeof(float[3]);
-	m->texcoords = p;memcpy(m->texcoords, mesh->texcoords, m->numvertices * sizeof(float[2]));p += m->numvertices * sizeof(float[2]);
-	m->colors    = p;memcpy(m->colors   , mesh->colors   , m->numvertices * sizeof(float[4]));p += m->numvertices * sizeof(float[4]);
+	m->indices   = p;memcpy(m->indices  , mesh->indices  , m->numindices  * sizeof(int     ));(qbyte *)p += m->numindices  * sizeof(int     );
+	m->vertices  = p;memcpy(m->vertices , mesh->vertices , m->numvertices * sizeof(float[3]));(qbyte *)p += m->numvertices * sizeof(float[3]);
+	m->texcoords = p;memcpy(m->texcoords, mesh->texcoords, m->numvertices * sizeof(float[2]));(qbyte *)p += m->numvertices * sizeof(float[2]);
+	m->colors    = p;memcpy(m->colors   , mesh->colors   , m->numvertices * sizeof(float[4]));(qbyte *)p += m->numvertices * sizeof(float[4]);
 	r_refdef.drawqueuesize += dq->size;
 }
 

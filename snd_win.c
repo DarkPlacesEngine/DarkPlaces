@@ -729,20 +729,20 @@ void SNDDMA_Shutdown(void)
 	FreeSound ();
 }
 
-
+DWORD dsound_dwSize;
+DWORD dsound_dwSize2;
+DWORD *dsound_pbuf;
+DWORD *dsound_pbuf2;
 void *S_LockBuffer(void)
 {
 	int reps;
-	DWORD dwSize,dwSize2;
-	DWORD *pbuf;
-	DWORD *pbuf2;
 	HRESULT hresult;
 
 	if (pDSBuf)
 	{
 		reps = 0;
 
-		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &pbuf, &dwSize, &pbuf2, &dwSize2, 0)) != DS_OK)
+		while ((hresult = pDSBuf->lpVtbl->Lock(pDSBuf, 0, gSndBufSize, &dsound_pbuf, &dsound_dwSize, &dsound_pbuf2, &dsound_dwSize2, 0)) != DS_OK)
 		{
 			if (hresult != DSERR_BUFFERLOST)
 			{
@@ -760,14 +760,15 @@ void *S_LockBuffer(void)
 				return NULL;
 			}
 		}
+		return dsound_pbuf;
 	}
 	else
 		return shm->buffer;
 }
 
-void S_UnlockBuffer(void)
+void S_UnlockBuffer()
 {
 	if (pDSBuf)
-		pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
+		pDSBuf->lpVtbl->Unlock(pDSBuf, dsound_pbuf, dsound_dwSize, dsound_pbuf2, dsound_dwSize2);
 }
 
