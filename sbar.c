@@ -967,11 +967,11 @@ void Sbar_Draw (void)
 				{
 					if (!(cl.items & (1 << i)))
 						continue;
-					Sbar_DrawWeapon(i + 1, fade, (i == cl.stats[STAT_ACTIVEWEAPON]));
+					Sbar_DrawWeapon(i + 1, fade, ((1<<i) == cl.stats[STAT_ACTIVEWEAPON]));
 				}
 			
 				if((cl.items & (1<<12)))
-					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == 12));
+					Sbar_DrawWeapon(0, fade, (cl.stats[STAT_ACTIVEWEAPON] == (1<<12)));
 			}
 
 			//if (!cl.islocalgame)
