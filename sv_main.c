@@ -863,7 +863,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 #else
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
-	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects;
+	int e, clentnum, flags, alpha, glowcolor, glowsize, scale, effects, modelindex;
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	float alphaf, lightsize;
 	qbyte *pvs;
@@ -966,8 +966,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			lightsize = max(lightsize, 100);
 		}
 
+		modelindex = 0;
 		if (ent->v.modelindex >= 0 && ent->v.modelindex < MAX_MODELS && pr_strings[ent->v.model])
 		{
+			modelindex = ent->v.modelindex;
 			model = sv.models[(int)ent->v.modelindex];
 			Mod_CheckLoaded(model);
 		}
@@ -1137,7 +1139,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		s->colormap = ent->v.colormap;
 		s->skin = ent->v.skin;
 		s->frame = ent->v.frame;
-		s->modelindex = ent->v.modelindex;
+		s->modelindex = modelindex;
 		s->effects = effects;
 		s->alpha = alpha;
 		s->scale = scale;
