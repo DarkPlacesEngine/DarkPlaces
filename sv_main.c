@@ -1001,10 +1001,15 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 	vec3_t testorigin;
 	entity_state_t *s;
 	entity_database4_t *d;
-	int maxbytes, n, startnumber;
+	int n, startnumber;
 	entity_state_t *e, inactiveentitystate;
 	sizebuf_t buf;
 	qbyte data[128];
+
+	// if there isn't enough space to accomplish anything, skip it
+	if (msg->cursize + 24 > msg->maxsize)
+		return;
+
 	// prepare the buffer
 	memset(&buf, 0, sizeof(buf));
 	buf.data = data;
@@ -1055,10 +1060,6 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 
 	for (i = 0;i < numsendentities;i++)
 		SV_MarkWriteEntityStateToClient(sendentities + i);
-
-	// calculate maximum bytes to allow in this packet
-	// deduct 4 to account for the end data
-	maxbytes = min(msg->maxsize, MAX_PACKETFRAGMENT) - 4;
 
 	d->currentcommit->numentities = 0;
 	d->currentcommit->framenum = ++client->entityframenumber;
@@ -1117,7 +1118,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 		}
 		// if the commit is full, we're done this frame
-		if (msg->cursize + buf.cursize > maxbytes)
+		if (msg->cursize + buf.cursize > msg->maxsize - 4)
 		{
 			// next frame we will continue where we left off
 			break;
@@ -1341,13 +1342,13 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 SV_SendClientDatagram
 =======================
 */
-static qbyte sv_sendclientdatagram_buf[MAX_DATAGRAM]; // FIXME?
+static qbyte sv_sendclientdatagram_buf[NET_MAXMESSAGE]; // FIXME?
 qboolean SV_SendClientDatagram (client_t *client)
 {
 	sizebuf_t	msg;
 
 	msg.data = sv_sendclientdatagram_buf;
-	msg.maxsize = sizeof(sv_sendclientdatagram_buf);
+	msg.maxsize = (int)bound(50.0, client->netconnection->rate * host_realframetime, (double)sizeof(sv_sendclientdatagram_buf));
 	msg.cursize = 0;
 
 	MSG_WriteByte (&msg, svc_time);
@@ -1359,7 +1360,8 @@ qboolean SV_SendClientDatagram (client_t *client)
 	SV_WriteEntitiesToClient (client, client->edict, &msg);
 
 	// copy the server datagram if there is space
-	if (msg.cursize + sv.datagram.cursize < msg.maxsize)
+	// FIXME: put in delayed queue of effects to send
+	if (msg.cursize + sv.datagram.cursize <= msg.maxsize)
 		SZ_Write (&msg, sv.datagram.data, sv.datagram.cursize);
 
 // send the datagram

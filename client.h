@@ -454,6 +454,7 @@ extern mempool_t *cl_scores_mempool;
 //
 extern cvar_t cl_name;
 extern cvar_t cl_color;
+extern cvar_t cl_rate;
 extern cvar_t cl_pmodel;
 
 extern cvar_t cl_upspeed;

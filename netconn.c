@@ -78,8 +78,8 @@ int serverreplycount = 0;
 int hostCacheCount = 0;
 hostcache_t hostcache[HOSTCACHESIZE];
 
-static qbyte sendbuffer[NET_MAXMESSAGE];
-static qbyte readbuffer[NET_MAXMESSAGE];
+static qbyte sendbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
+static qbyte readbuffer[NET_HEADERSIZE+NET_MAXMESSAGE];
 
 int cl_numsockets;
 lhnetsocket_t *cl_sockets[16];
@@ -163,8 +163,8 @@ int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
 	if (data->cursize == 0)
 		Sys_Error("Datagram_SendMessage: zero length message\n");
 
-	if (data->cursize > NET_MAXMESSAGE)
-		Sys_Error("Datagram_SendMessage: message too big %u\n", data->cursize);
+	if (data->cursize > (int)sizeof(conn->sendMessage))
+		Sys_Error("Datagram_SendMessage: message too big (%u > %u)\n", data->cursize, sizeof(conn->sendMessage));
 
 	if (conn->canSend == false)
 		Sys_Error("SendMessage: called with canSend == false\n");
@@ -189,7 +189,7 @@ int NetConn_SendReliableMessage(netconn_t *conn, sizebuf_t *data)
 	header = (void *)sendbuffer;
 	header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
 	header[1] = BigLong(conn->sendSequence);
-	memcpy(sendbuffer + 8, conn->sendMessage, dataLen);
+	memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 	conn->sendSequence++;
 	conn->canSend = false;
@@ -228,7 +228,7 @@ static void NetConn_SendMessageNext(netconn_t *conn)
 		header = (void *)sendbuffer;
 		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
 		header[1] = BigLong(conn->sendSequence);
-		memcpy(sendbuffer + 8, conn->sendMessage, dataLen);
+		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 		conn->sendSequence++;
 		conn->sendNext = false;
@@ -266,7 +266,7 @@ static void NetConn_ReSendMessage(netconn_t *conn)
 		header = (void *)sendbuffer;
 		header[0] = BigLong(packetLen | (NETFLAG_DATA | eom));
 		header[1] = BigLong(conn->sendSequence - 1);
-		memcpy(sendbuffer + 8, conn->sendMessage, dataLen);
+		memcpy(sendbuffer + NET_HEADERSIZE, conn->sendMessage, dataLen);
 
 		conn->sendNext = false;
 
@@ -288,20 +288,20 @@ int NetConn_SendUnreliableMessage(netconn_t *conn, sizebuf_t *data)
 	int packetLen;
 	int *header;
 
-#ifdef DEBUG
+	packetLen = NET_HEADERSIZE + data->cursize;
+
+//#ifdef DEBUG
 	if (data->cursize == 0)
 		Sys_Error("Datagram_SendUnreliableMessage: zero length message\n");
 
-	if (data->cursize > MAX_DATAGRAM)
+	if (packetLen > (int)sizeof(sendbuffer))
 		Sys_Error("Datagram_SendUnreliableMessage: message too big %u\n", data->cursize);
-#endif
-
-	packetLen = NET_HEADERSIZE + data->cursize;
+//#endif
 
 	header = (void *)sendbuffer;
 	header[0] = BigLong(packetLen | NETFLAG_UNRELIABLE);
 	header[1] = BigLong(conn->unreliableSendSequence);
-	memcpy(sendbuffer + 8, data->data, data->cursize);
+	memcpy(sendbuffer + NET_HEADERSIZE, data->data, data->cursize);
 
 	conn->unreliableSendSequence++;
 
@@ -431,6 +431,11 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn = Mem_Alloc(netconn_mempool, sizeof(*conn));
 	conn->mysocket = mysocket;
 	conn->peeraddress = *peeraddress;
+	// updated by receiving "rate" command from client
+	conn->rate = NET_MINRATE;
+	// no limits for local player
+	if (LHNETADDRESS_GetAddressType(peeraddress) == LHNETADDRESSTYPE_LOOP)
+		conn->rate = 1000000000;
 	conn->canSend = true;
 	conn->connecttime = realtime;
 	conn->lastMessageTime = realtime;
