@@ -25,7 +25,6 @@
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
 -d dpmod: make grunts reload less often, like every 10 shotgun shells (scar3crow)
--d dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
 -f darkplaces server: add an extension to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
 -f darkplaces testing: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
@@ -680,6 +679,7 @@ d dpmod: make enforcers drop more cells for plasma gun (Sajt)
 d dpmod: make tarbabies easier to kill?  (Sajt)
 d dpmod: make tarbabies explode larger (Sajt)
 d dpmod: make the in-wall spikeballs only appear in developer 1 mode (Tomaz)
+d dpmod: modify anglemod to be able to recover from extremely large angles numbers (Zombie13)
 d dpmod: post new dpmod build.
 d dpmod: switch to new Tomaz weapon models
 d dpmod: use Tomaz's ammo box models (Tomaz) 
