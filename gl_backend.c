@@ -840,7 +840,7 @@ unsigned int GL_Backend_CompileProgram(int vertexstrings_count, const char **ver
 		// ATI R300 chip (Radeon 9500-9800/X300) is the most likely to use a
 		// software fragment shader due to low instruction and dependent
 		// texture limits.
-		if (!strstr(compilelog, "fragment shader will run in software"))
+		if (strstr(compilelog, "fragment shader will run in software"))
 			programlinked = false;
 	}
 	CHECKGLERROR
