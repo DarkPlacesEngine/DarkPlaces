@@ -15,6 +15,7 @@
 -f (yummyluv) darkplaces protocol: add buttons 9-16 (yummyluv)
 0 darkplaces SDL client: add key emulated repeat
 0 darkplaces WGL client: figure out why GDI input has stuttering problems with gl_finish 0 mode (Kinn, Urre, romi, Spike, Black)
+0 darkplaces client bug: CL_Video_Init is allocating a texture pool, this is not allowed in init functions, it must be moved to cl_video_start and the corresponding free must be moved to cl_video_shutdown, and an empty cl_video_newmap added, these need to be registered with an R_RegisterModule call (Black, Randy)
 0 darkplaces client: GAME_NEXUIZ: cvar for console text size (Vermeulen)
 0 darkplaces client: GAME_NEXUIZ: horizontally center notify lines (Vermeulen)
 0 darkplaces client: GAME_NEXUIZ: implement new hud and scoreboard based on http://www.quirkybastards.net/qmods/scoreboard.jpg except with deaths instead of lives, and map name instead of "be the last one alive" and remove the time string and map string at the bottom, instead showing the hud (Vermeulen)
@@ -26,6 +27,7 @@
 0 darkplaces client: cl_particles_size isn't working, it should affect rendering (Chillo)
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces client: detect 5x4 video aspect ratio modes (such as 1280x1024) and set a 0.9375 pixel aspect (which is (1280/1024)/(1280/960)) when these modes are active?
+0 darkplaces client: disable vsync when doing a timedemo (Randy)
 0 darkplaces client: figure out why r_editlights_edit cubemap is not setting the light's cubemap name
 0 darkplaces client: fix 'no such frame 0' warnings in prydon when examining wands in stores
 0 darkplaces client: fix gl_flashblend, it's still drawing rtdlights even when gl_flashblend is on (Toddd)
@@ -208,7 +210,7 @@
 2 darkplaces collision: modify Collision_ClipTrace_Line_Sphere to have a slight backoff on impact, like all other collision functions (tell TheBurningRed)
 2 darkplaces collision: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)  
 2 darkplaces console: figure out how to prevent "alias a a" - infinite loop when executed, this should be detected when executing it (Vicious)
-2 darkplaces console: review the whole set of console commands and cvars carefully and identify interactions, known interactions include sequences such as +sv_cheats 1 +map e1m1, or +maxplayers 8 +deathmatch 7 +map dpdm2, but for some reason this works with the cvar after the map command, and also if you do -window it does not affect the value saved to config, because the configs are executed again after the -window, perhaps it is not executing the commandline a second time? (Wazat)
+2 darkplaces console: review the whole set of console commands and cvars carefully and identify interactions, known interactions include sequences such as +sv_cheats 1 +map e1m1, or +maxplayers 8 +deathmatch 7 +map dpdm2, but for some reason this works with the cvar after the map command, and also if you do -window it does not affect the value saved to config, because the configs are executed again after the -window, perhaps it is not executing the commandline a second time?  apparently also -dedicated without +map does not load a map automatically in transfusion (Wazat, Willis)
 2 darkplaces filesystem: make FS_Open fail to open paths that contain parent directory links (/../ and such, depending on platform) to prevent console commands from doing damage, this is similar to the FRIK_FILE qc extension checking the path (FrikaC, Spike)
 2 darkplaces image: add scaling capabilities to Image_CopyMux
 2 darkplaces loader: add q2 sprite support sometime
