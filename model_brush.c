@@ -1244,7 +1244,10 @@ static void Mod_LoadFaces (lump_t *l)
 
 		if (out->texinfo->texture->flags & SURF_DRAWTURB)
 		{
-			out->shader = &Cshader_water;
+			if (out->texinfo->texture->glowtexture)
+				out->shader = &Cshader_water_glow;
+			else
+				out->shader = &Cshader_water;
 			/*
 			for (i=0 ; i<2 ; i++)
 			{
@@ -1262,6 +1265,10 @@ static void Mod_LoadFaces (lump_t *l)
 		if (out->texinfo->flags & TEX_SPECIAL)
 		{
 			// qbsp couldn't find the texture for this surface, but it was either turb or sky...  assume turb
+			if (out->texinfo->texture->glowtexture)
+				out->shader = &Cshader_water_glow;
+			else
+				out->shader = &Cshader_water;
 			out->shader = &Cshader_water;
 			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
@@ -1269,7 +1276,10 @@ static void Mod_LoadFaces (lump_t *l)
 		else if ((out->extents[0]+1) > (256*16) || (out->extents[1]+1) > (256*16))
 		{
 			Con_Printf ("Bad surface extents, converting to fullbright polygon");
-			out->shader = &Cshader_wall_fullbright;
+			if (out->texinfo->texture->glowtexture)
+				out->shader = &Cshader_wall_fullbright_glow;
+			else
+				out->shader = &Cshader_wall_fullbright;
 			out->samples = NULL;
 			Mod_GenerateVertexMesh(out);
 		}
@@ -1281,12 +1291,18 @@ static void Mod_LoadFaces (lump_t *l)
 			memset(out->stainsamples, 255, ssize * tsize * 3);
 			if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
 			{
-				out->shader = &Cshader_wall_vertex;
+				if (out->texinfo->texture->glowtexture)
+					out->shader = &Cshader_wall_vertex_glow;
+				else
+					out->shader = &Cshader_wall_vertex;
 				Mod_GenerateVertexLitMesh(out);
 			}
 			else
 			{
-				out->shader = &Cshader_wall_lightmap;
+				if (out->texinfo->texture->glowtexture)
+					out->shader = &Cshader_wall_lightmap_glow;
+				else
+					out->shader = &Cshader_wall_lightmap;
 				Mod_GenerateLightmappedMesh(out);
 			}
 		}

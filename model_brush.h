@@ -198,9 +198,13 @@ typedef struct Cshader_s
 Cshader_t;
 
 extern Cshader_t Cshader_wall_vertex;
+extern Cshader_t Cshader_wall_vertex_glow;
 extern Cshader_t Cshader_wall_lightmap;
+extern Cshader_t Cshader_wall_lightmap_glow;
 extern Cshader_t Cshader_wall_fullbright;
+extern Cshader_t Cshader_wall_fullbright_glow;
 extern Cshader_t Cshader_water;
+extern Cshader_t Cshader_water_glow;
 extern Cshader_t Cshader_sky;
 
 // warning: if this is changed, references must be updated in cpu_* assembly files
