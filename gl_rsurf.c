@@ -37,6 +37,7 @@ cvar_t r_testvis = {0, "r_testvis", "0"};
 cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "1"};
+cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygonoffset", "-4"};
 
 static int dlightdivtable[32768];
 
@@ -1914,7 +1915,7 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
-	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->numtriangles)
+	if ((face->texture->renderflags & Q3MTEXTURERENDERFLAGS_NODRAW) || !face->numtriangles || R_CullBox(face->mins, face->maxs))
 		return;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1949,6 +1950,7 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 {
 	int i;
 	q3mleaf_t *leaf;
+	q3mface_t *face;
 	while (node->isnode)
 	{
 		if (R_CullBox(node->mins, node->maxs))
@@ -1963,10 +1965,11 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 	{
 		for (i = 0;i < leaf->numleaffaces;i++)
 		{
-			if (leaf->firstleafface[i]->markframe != markframe)
+			face = leaf->firstleafface[i];
+			if (face->markframe != markframe)
 			{
-				leaf->firstleafface[i]->markframe = markframe;
-				R_Q3BSP_DrawFace(ent, leaf->firstleafface[i]);
+				face->markframe = markframe;
+				R_Q3BSP_DrawFace(ent, face);
 			}
 		}
 	}
@@ -1975,6 +1978,58 @@ void R_Q3BSP_RecursiveWorldNode(entity_render_t *ent, q3mnode_t *node, const vec
 
 
 void R_Q3BSP_Draw(entity_render_t *ent)
+{
+	int i;
+	q3mface_t *face;
+	vec3_t modelorg;
+	model_t *model;
+	qbyte *pvs;
+	static int markframe = 0;
+	qglEnable(GL_POLYGON_OFFSET_FILL);
+	R_Mesh_Matrix(&ent->matrix);
+	model = ent->model;
+	if (r_drawcollisionbrushes.integer < 2)
+	{
+		qglPolygonOffset(1.0f, 0);
+		if (ent == &cl_entities[0].render && model->brushq3.num_pvsclusters && !r_novis.integer)
+		{
+			Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
+			pvs = model->brush.GetPVS(model, modelorg);
+			R_Q3BSP_RecursiveWorldNode(ent, model->brushq3.data_nodes, modelorg, pvs, ++markframe);
+		}
+		else
+			for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+				R_Q3BSP_DrawFace(ent, face);
+	}
+	if (r_drawcollisionbrushes.integer >= 1)
+	{
+		rmeshstate_t m;
+		memset(&m, 0, sizeof(m));
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_DepthMask(false);
+		GL_DepthTest(true);
+		R_Mesh_State_Texture(&m);
+		qglPolygonOffset(1.0f, r_drawcollisionbrushes_polygonoffset.value);
+		for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
+			if (model->brushq3.data_thismodel->firstbrush[i].colbrushf && model->brushq3.data_thismodel->firstbrush[i].colbrushf->numtriangles)
+				R_DrawCollisionBrush(model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+	}
+	qglDisable(GL_POLYGON_OFFSET_FILL);
+}
+
+/*
+void R_Q3BSP_DrawFakeShadow(entity_render_t *ent)
+{
+}
+*/
+
+/*
+void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
+{
+}
+*/
+
+void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
 {
 	int i;
 	q3mface_t *face;
@@ -2010,24 +2065,6 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	}
 }
 
-/*
-void R_Q3BSP_DrawFakeShadow(entity_render_t *ent)
-{
-}
-*/
-
-/*
-void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
-{
-}
-*/
-
-/*
-void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz)
-{
-}
-*/
-
 static void gl_surf_start(void)
 {
 }
@@ -2055,6 +2092,7 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_floatbuildlightmap);
 	Cvar_RegisterVariable(&r_detailtextures);
 	Cvar_RegisterVariable(&r_surfaceworldnode);
+	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonoffset);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

@@ -1039,4 +1039,30 @@ int Mod_CountSkinFiles(skinfile_t *skinfile)
 	return i;
 }
 
+int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f)
+{
+	int i, outtriangles;
+	float d, edgedir[3], temp[3];
+	// a degenerate triangle is one with no width (thickness, surface area)
+	// these are characterized by having all 3 points colinear (along a line)
+	// or having two points identical
+	for (i = 0, outtriangles = 0;i < numtriangles;i++, inelement3i += 3)
+	{
+		// calculate first edge
+		VectorSubtract(vertex3f + inelement3i[1] * 3, vertex3f + inelement3i[0] * 3, edgedir);
+		if (VectorLength2(edgedir) < 0.0001f)
+			continue; // degenerate first edge (no length)
+		VectorNormalize(edgedir);
+		// check if third point is on the edge (colinear)
+		d = -DotProduct(vertex3f + inelement3i[2] * 3, edgedir);
+		VectorMA(vertex3f + inelement3i[2] * 3, d, edgedir, temp);
+		if (VectorLength2(temp) < 0.0001f)
+			continue; // third point colinear with first edge
+		// valid triangle (no colinear points, no duplicate points)
+		VectorCopy(inelement3i, outelement3i);
+		outelement3i += 3;
+		outtriangles++;
+	}
+	return outtriangles;
+}
 

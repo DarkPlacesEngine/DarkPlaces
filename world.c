@@ -53,9 +53,6 @@ typedef struct
 	// size when clipping against monsters
 	vec3_t mins2, maxs2;
 
-	// size when clipping against brush models
-	vec3_t hullmins, hullmaxs;
-
 	// start and end origin of move
 	vec3_t start, end;
 
@@ -484,22 +481,28 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	Matrix4x4_Invert_Simple(&imatrix, &matrix);
 	Matrix4x4_Transform(&imatrix, start, starttransformed);
 	Matrix4x4_Transform(&imatrix, end, endtransformed);
-	VectorAdd(starttransformed, maxs, starttransformedmaxs);
-	VectorAdd(endtransformed, maxs, endtransformedmaxs);
-	VectorAdd(starttransformed, mins, starttransformedmins);
-	VectorAdd(endtransformed, mins, endtransformedmins);
 
 	if (model && model->brush.TraceBox)
+	{
+		VectorAdd(starttransformed, maxs, starttransformedmaxs);
+		VectorAdd(endtransformed, maxs, endtransformedmaxs);
+		VectorAdd(starttransformed, mins, starttransformedmins);
+		VectorAdd(endtransformed, mins, endtransformedmins);
 		model->brush.TraceBox(model, &trace, starttransformedmins, starttransformedmaxs, endtransformedmins, endtransformedmaxs, SUPERCONTENTS_SOLID);
+	}
 	else
 		Collision_ClipTrace_Box(&trace, ent->v->mins, ent->v->maxs, starttransformed, mins, maxs, endtransformed, SUPERCONTENTS_SOLID, SUPERCONTENTS_SOLID);
 
 	if (trace.fraction < 1 || trace.startsolid)
+	{
 		trace.ent = ent;
-	VectorLerp(start, trace.fraction, end, trace.endpos);
-	VectorCopy(trace.plane.normal, tempnormal);
-	Matrix4x4_Transform3x3(&matrix, tempnormal, trace.plane.normal);
-	// FIXME: should recalc trace.plane.dist
+		VectorLerp(start, trace.fraction, end, trace.endpos);
+		VectorCopy(trace.plane.normal, tempnormal);
+		Matrix4x4_Transform3x3(&matrix, tempnormal, trace.plane.normal);
+		// FIXME: should recalc trace.plane.dist
+	}
+	else
+		VectorCopy(end, trace.endpos);
 
 	return trace;
 }
@@ -561,7 +564,7 @@ void SV_ClipToNode(moveclip_t *clip, link_t *list)
 
 		// might interact, so do an exact clip
 		if (touch->v->solid == SOLID_BSP)
-			trace = SV_ClipMoveToEntity (touch, clip->start, clip->hullmins, clip->hullmaxs, clip->end);
+			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins, clip->maxs, clip->end);
 		else if ((int)touch->v->flags & FL_MONSTER)
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
@@ -600,7 +603,7 @@ SV_Move
 trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int type, edict_t *passedict)
 {
 	moveclip_t clip;
-	vec3_t bigmins, bigmaxs;
+	vec3_t hullmins, hullmaxs;
 	areagrid_t *grid;
 	int i, igrid[3], igridmins[3], igridmaxs[3];
 
@@ -610,64 +613,46 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	VectorCopy(end, clip.end);
 	VectorCopy(mins, clip.mins);
 	VectorCopy(maxs, clip.maxs);
-	VectorCopy(mins, clip.hullmins);
-	VectorCopy(maxs, clip.hullmaxs);
+	VectorCopy(mins, clip.mins2);
+	VectorCopy(maxs, clip.maxs2);
 	clip.type = type;
 	clip.passedict = passedict;
 
-	if (sv.worldmodel && sv.worldmodel->brush.RoundUpToHullSize)
-		sv.worldmodel->brush.RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, clip.hullmins, clip.hullmaxs);
-
 	// clip to world
-	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.hullmins, clip.hullmaxs, clip.end);
+	clip.trace = SV_ClipMoveToEntity(sv.edicts, clip.start, clip.mins, clip.maxs, clip.end);
 	if (clip.type == MOVE_WORLDONLY)
 	//if (clip.trace.allsolid)
 		return clip.trace;
 
 	if (clip.type == MOVE_MISSILE)
 	{
-		// LordHavoc: modified this, was = -15, now = clip.mins[i] - 15
-		for (i=0 ; i<3 ; i++)
+		// LordHavoc: modified this, was = -15, now -= 15
+		for (i = 0;i < 3;i++)
 		{
-			clip.mins2[i] = clip.mins[i] - 15;
-			clip.maxs2[i] = clip.maxs[i] + 15;
+			clip.mins2[i] -= 15;
+			clip.maxs2[i] += 15;
 		}
 	}
+
+	// get adjusted box for bmodel collisions if the world is q1bsp or hlbsp
+	if (sv.worldmodel && sv.worldmodel->brush.RoundUpToHullSize)
+		sv.worldmodel->brush.RoundUpToHullSize(sv.worldmodel, clip.mins, clip.maxs, hullmins, hullmaxs);
 	else
 	{
-		VectorCopy (clip.mins, clip.mins2);
-		VectorCopy (clip.maxs, clip.maxs2);
+		VectorCopy(clip.mins, hullmins);
+		VectorCopy(clip.maxs, hullmaxs);
 	}
-
-	bigmins[0] = min(clip.mins2[0], clip.hullmins[0]);
-	bigmaxs[0] = max(clip.maxs2[0], clip.hullmaxs[0]);
-	bigmins[1] = min(clip.mins2[1], clip.hullmins[1]);
-	bigmaxs[1] = max(clip.maxs2[1], clip.hullmaxs[1]);
-	bigmins[2] = min(clip.mins2[2], clip.hullmins[2]);
-	bigmaxs[2] = max(clip.maxs2[2], clip.hullmaxs[2]);
 
 	// create the bounding box of the entire move
-	if (!sv_debugmove.integer)
+	for (i = 0;i < 3;i++)
 	{
-		int i;
-
-		for (i=0 ; i<3 ; i++)
-		{
-			if (clip.trace.endpos[i] > clip.start[i])
-			{
-				clip.boxmins[i] = clip.start[i] + bigmins[i] - 1;
-				clip.boxmaxs[i] = clip.trace.endpos[i] + bigmaxs[i] + 1;
-			}
-			else
-			{
-				clip.boxmins[i] = clip.trace.endpos[i] + bigmins[i] - 1;
-				clip.boxmaxs[i] = clip.start[i] + bigmaxs[i] + 1;
-			}
-		}
+		clip.boxmins[i] = min(clip.start[i], clip.trace.endpos[i]) + min(hullmins[i], clip.mins2[i]) - 1;
+		clip.boxmaxs[i] = max(clip.start[i], clip.trace.endpos[i]) + max(hullmaxs[i], clip.maxs2[i]) + 1;
 	}
-	else
+
+	// debug override to test against everything
+	if (sv_debugmove.integer)
 	{
-		// debug to test against everything
 		clip.boxmins[0] = clip.boxmins[1] = clip.boxmins[2] = -999999999;
 		clip.boxmaxs[0] = clip.boxmaxs[1] = clip.boxmaxs[2] =  999999999;
 	}

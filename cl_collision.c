@@ -42,7 +42,7 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 	float tempnormal[3], starttransformed[3], endtransformed[3];
 
 	if (hitent)
-		*hitent = NULL;
+		*hitent = &cl_entities[0].render;
 	Mod_CheckLoaded(cl.worldmodel);
 	if (cl.worldmodel && cl.worldmodel->brush.TraceBox)
 		cl.worldmodel->brush.TraceBox(cl.worldmodel, &trace, start, start, end, end, hitsupercontentsmask);
@@ -53,8 +53,6 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 		VectorCopy(trace.plane.normal, normal);
 	cl_traceline_startsupercontents = trace.startsupercontents;
 	maxfrac = trace.fraction;
-	if (hitent && trace.fraction < 1)
-		*hitent = &cl_entities[0].render;
 
 	if (hitbmodels && cl_num_brushmodel_entities)
 	{
@@ -82,21 +80,18 @@ float CL_TraceLine(const vec3_t start, const vec3_t end, vec3_t impact, vec3_t n
 			if (ent->model && ent->model->brush.TraceBox)
 				ent->model->brush.TraceBox(ent->model, &trace, starttransformed, starttransformed, endtransformed, endtransformed, hitsupercontentsmask);
 
-			if (trace.allsolid || trace.startsolid || maxfrac > trace.fraction)
+			cl_traceline_startsupercontents |= trace.startsupercontents;
+			if (maxfrac > trace.fraction)
 			{
-				cl_traceline_startsupercontents = trace.startsupercontents;
 				if (hitent)
 					*hitent = ent;
-				if (maxfrac > trace.fraction)
+				maxfrac = trace.fraction;
+				if (impact)
+					VectorLerp(start, trace.fraction, end, impact);
+				if (normal)
 				{
-					maxfrac = trace.fraction;
-					if (impact)
-						VectorLerp(start, trace.fraction, end, impact);
-					if (normal)
-					{
-						VectorCopy(trace.plane.normal, tempnormal);
-						Matrix4x4_Transform3x3(&matrix, tempnormal, normal);
-					}
+					VectorCopy(trace.plane.normal, tempnormal);
+					Matrix4x4_Transform3x3(&matrix, tempnormal, normal);
 				}
 			}
 		}

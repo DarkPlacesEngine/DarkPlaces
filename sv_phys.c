@@ -521,7 +521,7 @@ trace_t SV_PushEntity (edict_t *ent, vec3_t push, vec3_t pushangles)
 	ent->v->angles[1] += trace.fraction * pushangles[1];
 	SV_LinkEdict (ent, true);
 
-	if (trace.ent && (!((int)ent->v->flags & FL_ONGROUND) || ent->v->groundentity != EDICT_TO_PROG(trace.ent)))
+	if (trace.fraction < 1 && trace.ent && (!((int)ent->v->flags & FL_ONGROUND) || ent->v->groundentity != EDICT_TO_PROG(trace.ent)))
 		SV_Impact (ent, trace.ent);
 	return trace;
 }
