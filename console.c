@@ -51,11 +51,12 @@ char *con_text = 0;
 
 //seconds
 cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3"};
+cvar_t con_notify = {CVAR_SAVE, "con_notify","4"};
 cvar_t logfile = {0, "logfile","0"};
 
-#define	NUM_CON_TIMES 4
+#define MAX_NOTIFYLINES 32
 // realtime time the line was generated for transparent notify lines
-float con_times[NUM_CON_TIMES];
+float con_times[MAX_NOTIFYLINES];
 
 int con_vislines;
 
@@ -110,7 +111,7 @@ void Con_ClearNotify (void)
 {
 	int i;
 
-	for (i=0 ; i<NUM_CON_TIMES ; i++)
+	for (i=0 ; i<MAX_NOTIFYLINES ; i++)
 		con_times[i] = 0;
 }
 
@@ -236,6 +237,7 @@ void Con_Init (void)
 // register our commands
 //
 	Cvar_RegisterVariable (&con_notifytime);
+	Cvar_RegisterVariable (&con_notify);
 
 	Cmd_AddCommand ("toggleconsole", Con_ToggleConsole_f);
 	Cmd_AddCommand ("messagemode", Con_MessageMode_f);
@@ -314,7 +316,14 @@ void Con_Print (const char *txt)
 			Con_Linefeed ();
 		// mark time for transparent overlay
 			if (con_current >= 0)
-				con_times[con_current % NUM_CON_TIMES] = realtime;
+			{
+				if (con_notify.integer < 0)
+					Cvar_SetValueQuick(&con_notify, 0);
+				if (con_notifylines > MAX_NOTIFYLINES)
+					Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
+				if (con_notify.integer > 0)
+					con_times[con_current % con_notify.integer] = realtime;
+			}
 		}
 
 		switch (c)
@@ -509,12 +518,16 @@ void Con_DrawNotify (void)
 	extern char chat_buffer[];
 	char	temptext[256];
 
+	if (con_notify.integer < 0)
+		Cvar_SetValueQuick(&con_notify, 0);
+	if (con_notifylines > MAX_NOTIFYLINES)
+		Cvar_SetValueQuick(&con_notify, MAX_NOTIFYLINES);
 	v = 0;
-	for (i= con_current-NUM_CON_TIMES+1 ; i<=con_current ; i++)
+	for (i= con_current-con_notify.integer+1 ; i<=con_current ; i++)
 	{
 		if (i < 0)
 			continue;
-		time = con_times[i % NUM_CON_TIMES];
+		time = con_times[i % con_notify.integer];
 		if (time == 0)
 			continue;
 		time = realtime - time;
@@ -554,7 +567,7 @@ void Con_DrawNotify (void)
 		}
 	}
 
-	if (v > con_notifylines)
+	if (con_notifylines < v)
 		con_notifylines = v;
 }
 
