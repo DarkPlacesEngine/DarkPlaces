@@ -69,6 +69,26 @@ over areas they shouldn't.
 /*
 =============================================================================
 
+CONSTANTS
+
+=============================================================================
+*/
+
+// Magic numbers of a ZIP file (big-endian format)
+#define ZIP_DATA_HEADER	0x504B0304  // "PK\3\4"
+#define ZIP_CDIR_HEADER	0x504B0102  // "PK\1\2"
+#define ZIP_END_HEADER	0x504B0506  // "PK\5\6"
+
+// Other constants for ZIP files
+#define ZIP_MAX_COMMENTS_SIZE		((unsigned short)0xFFFF)
+#define ZIP_END_CDIR_SIZE			22
+#define ZIP_CDIR_CHUNK_BASE_SIZE	46
+#define ZIP_LOCAL_CHUNK_BASE_SIZE	30
+
+
+/*
+=============================================================================
+
 TYPES
 
 =============================================================================
@@ -79,7 +99,6 @@ typedef enum
 {
 	FS_FLAG_NONE		= 0,
 	FS_FLAG_PACKED		= (1 << 0)	// inside a package (PAK or PK3)
-//	FS_FLAG_COMPRESSED	= (1 << 1)  // compressed (inside a PK3 file)
 } fs_flags_t;
 
 struct qfile_s
@@ -92,7 +111,24 @@ struct qfile_s
 };
 
 
-// PAK files on disk
+// ------ PK3 files on disk ------ //
+
+// You can get the complete ZIP format description from PKWARE website
+
+typedef struct
+{
+	unsigned int signature;
+	unsigned short disknum;
+	unsigned short cdir_disknum;	// number of the disk with the start of the central directory
+	unsigned short localentries;	// number of entries in the central directory on this disk
+	unsigned short nbentries;		// total number of entries in the central directory on this disk
+	unsigned int cdir_size;			// size of the central directory
+	unsigned int cdir_offset;		// with respect to the starting disk number
+	unsigned short comment_size;
+} pk3_endOfCentralDir_t;
+
+
+// ------ PAK files on disk ------ //
 typedef struct
 {
 	char name[56];
@@ -108,15 +144,25 @@ typedef struct
 
 
 // Packages in memory
+typedef enum 
+{
+	FILE_FLAG_NONE		= 0,
+	FILE_FLAG_TRUEOFFS	= (1 << 0),	// the offset in packfile_t is the true contents offset
+	FILE_FLAG_DEFLATED	= (1 << 1)	// file compressed using the deflate algorithm
+} file_flags_t;
+
 typedef struct
 {
-	char name[MAX_QPATH];
-	int filepos, filelen;
+	char name [MAX_QPATH];
+	file_flags_t flags;
+	size_t offset;
+	size_t packsize;	// size in the package
+	size_t realsize;	// real file size (uncompressed)
 } packfile_t;
 
 typedef struct pack_s
 {
-	char filename[MAX_OSPATH];
+	char filename [MAX_OSPATH];
 	FILE *handle;
 	int numfiles;
 	packfile_t *files;
@@ -164,7 +210,247 @@ qboolean fs_modified;   // set true if using non-id files
 /*
 =============================================================================
 
-PRIVATE FUNCTIONS
+PRIVATE FUNCTIONS - PK3 HANDLING
+
+=============================================================================
+*/
+
+/*
+====================
+PK3_GetEndOfCentralDir
+
+Extract the end of the central directory from a PK3 package
+====================
+*/
+qboolean PK3_GetEndOfCentralDir (const char *packfile, FILE *packhandle, pk3_endOfCentralDir_t *eocd)
+{
+	long filesize, maxsize;
+	qbyte *buffer, *ptr;
+	int ind;
+
+	// Get the package size
+	fseek (packhandle, 0, SEEK_END);
+	filesize = ftell (packhandle);
+	if (filesize < ZIP_END_CDIR_SIZE)
+		return false;
+
+	// Load the end of the file in memory
+	if (filesize < ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE)
+		maxsize = filesize;
+	else
+		maxsize = ZIP_MAX_COMMENTS_SIZE + ZIP_END_CDIR_SIZE;
+	buffer = Mem_Alloc (tempmempool, maxsize);
+	fseek (packhandle, filesize - maxsize, SEEK_SET);
+	if (fread (buffer, 1, maxsize, packhandle) != maxsize)
+	{
+		Mem_Free (buffer);
+		return false;
+	}
+
+	// Look for the end of central dir signature around the end of the file
+	maxsize -= ZIP_END_CDIR_SIZE;
+	ptr = &buffer[maxsize];
+	ind = 0;
+	while (BuffBigLong (ptr) != ZIP_END_HEADER)
+	{
+		if (ind == maxsize)
+		{
+			Mem_Free (buffer);
+			return false;
+		}
+
+		ind++;
+		ptr--;
+	}
+
+	memcpy (eocd, ptr, ZIP_END_CDIR_SIZE);
+	eocd->signature = LittleLong (eocd->signature);
+	eocd->disknum = LittleShort (eocd->disknum);
+	eocd->cdir_disknum = LittleShort (eocd->cdir_disknum);
+	eocd->localentries = LittleShort (eocd->localentries);
+	eocd->nbentries = LittleShort (eocd->nbentries);
+	eocd->cdir_size = LittleLong (eocd->cdir_size);
+	eocd->cdir_offset = LittleLong (eocd->cdir_offset);
+	eocd->comment_size = LittleShort (eocd->comment_size);
+
+	Mem_Free (buffer);
+
+	return true;
+}
+
+
+/*
+====================
+PK3_BuildFileList
+
+Extract the file list from a PK3 file
+====================
+*/
+int PK3_BuildFileList (pack_t *pack, const pk3_endOfCentralDir_t *eocd)
+{
+	qbyte *central_dir, *ptr;
+	unsigned int ind;
+	int remaining;
+
+	// Load the central directory in memory
+	central_dir = Mem_Alloc (tempmempool, eocd->cdir_size);
+	fseek (pack->handle, eocd->cdir_offset, SEEK_SET);
+	fread (central_dir, 1, eocd->cdir_size, pack->handle);
+
+	// Extract the files properties
+	// The parsing is done "by hand" because some fields have variable sizes and
+	// the constant part isn't 4-bytes aligned, which makes the use of structs difficult
+	remaining = eocd->cdir_size;
+	pack->numfiles = 0;
+	ptr = central_dir;
+	for (ind = 0; ind < eocd->nbentries; ind++)
+	{
+		size_t namesize, count;
+		packfile_t *file;
+
+		// Checking the remaining size
+		if (remaining < ZIP_CDIR_CHUNK_BASE_SIZE)
+		{
+			Mem_Free (central_dir);
+			return -1;
+		}
+		remaining -= ZIP_CDIR_CHUNK_BASE_SIZE;
+
+		// Check header
+		if (BuffBigLong (ptr) != ZIP_CDIR_HEADER)
+		{
+			Mem_Free (central_dir);
+			return -1;
+		}
+
+		namesize = BuffLittleShort (&ptr[28]);	// filename length
+
+		// Check encryption, compression, and attributes
+		// 1st uint8  : general purpose bit flag
+		//    Check bits 0 (encryption), 3 (data descriptor after the file), and 5 (compressed patched data (?))
+		// 2nd uint8 : external file attributes
+		//    Check bits 3 (file is a directory) and 5 (file is a volume (?))
+		if ((ptr[8] & 0x29) == 0 && (ptr[38] & 0x18) == 0)
+		{
+			// Still enough bytes for the name?
+			if (remaining < namesize || namesize >= sizeof (*pack->files))
+			{
+				Mem_Free (central_dir);
+				return -1;
+			}
+
+			// WinZip doesn't use the "directory" attribute, so we need to check the name directly
+			if (ptr[ZIP_CDIR_CHUNK_BASE_SIZE + namesize - 1] != '/')
+			{
+				// Extract the name
+				file = &pack->files[pack->numfiles];
+				memcpy (file->name, &ptr[ZIP_CDIR_CHUNK_BASE_SIZE], namesize);
+				file->name[namesize] = '\0';
+
+				// Compression, sizes and offset
+				if (BuffLittleShort (&ptr[10]))
+					file->flags = FILE_FLAG_DEFLATED;
+				file->packsize = BuffLittleLong (&ptr[20]);
+				file->realsize = BuffLittleLong (&ptr[24]);
+				file->offset = BuffLittleLong (&ptr[42]);
+
+				pack->numfiles++;
+			}
+		}
+
+		// Skip the name, additionnal field, and comment
+		// 1er uint16 : extra field length
+		// 2eme uint16 : file comment length
+		count = namesize + BuffLittleShort (&ptr[30]) + BuffLittleShort (&ptr[32]);
+		ptr += ZIP_CDIR_CHUNK_BASE_SIZE + count;
+		remaining -= count;
+	}
+
+	Mem_Free (central_dir);
+	return pack->numfiles;
+}
+
+
+/*
+====================
+FS_LoadPackPK3
+
+Create a package entry associated with a PK3 file
+====================
+*/
+pack_t *FS_LoadPackPK3 (const char *packfile)
+{
+	FILE *packhandle;
+	pk3_endOfCentralDir_t eocd;
+	pack_t *pack;
+	int real_nb_files;
+
+	packhandle = fopen (packfile, "rb");
+	if (!packhandle)
+		return NULL;
+
+	if (! PK3_GetEndOfCentralDir (packfile, packhandle, &eocd))
+		Sys_Error ("%s is not a PK3 file", packfile);
+
+	// Multi-volume ZIP archives are NOT allowed
+	if (eocd.disknum != 0 || eocd.cdir_disknum != 0)
+		Sys_Error ("%s is a multi-volume ZIP archive", packfile);
+
+	if (eocd.nbentries > MAX_FILES_IN_PACK)
+		Sys_Error ("%s contains too many files (%hu)", packfile, eocd.nbentries);
+
+	// Create a package structure in memory
+	pack = Mem_Alloc (pak_mempool, sizeof (pack_t));
+	strcpy (pack->filename, packfile);
+	pack->handle = packhandle;
+	pack->numfiles = eocd.nbentries;
+	pack->mempool = Mem_AllocPool (packfile);
+	pack->files = Mem_Alloc (pack->mempool, eocd.nbentries * sizeof(packfile_t));
+	pack->next = packlist;
+	packlist = pack;
+
+	real_nb_files = PK3_BuildFileList (pack, &eocd);
+	if (real_nb_files <= 0)
+		Sys_Error ("%s is not a valid PK3 file", packfile);
+
+	Con_Printf ("Added packfile %s (%i files)\n", packfile, real_nb_files);
+	return pack;
+}
+
+
+/*
+====================
+PK3_GetTrueFileOffset
+
+Find where the true file data offset is
+====================
+*/
+void PK3_GetTrueFileOffset (packfile_t *file, pack_t *pack)
+{
+	qbyte buffer [ZIP_LOCAL_CHUNK_BASE_SIZE];
+	size_t count;
+
+	// Already found?
+	if (file->flags & FILE_FLAG_TRUEOFFS)
+		return;
+
+	// Load the local file description
+	fseek (pack->handle, file->offset, SEEK_SET);
+	count = fread (buffer, 1, ZIP_LOCAL_CHUNK_BASE_SIZE, pack->handle);
+	if (count != ZIP_LOCAL_CHUNK_BASE_SIZE || BuffBigLong (buffer) != ZIP_DATA_HEADER)
+		Sys_Error ("Can't retrieve file %s in package %s", file->name, pack->filename);
+
+	// Skip name and extra field
+	file->offset += BuffLittleShort (&buffer[26]) + BuffLittleShort (&buffer[28]) + ZIP_LOCAL_CHUNK_BASE_SIZE;
+
+	file->flags |= FILE_FLAG_TRUEOFFS;
+}
+
+
+/*
+=============================================================================
+
+OTHER PRIVATE FUNCTIONS
 
 =============================================================================
 */
@@ -174,7 +460,7 @@ PRIVATE FUNCTIONS
 ============
 FS_CreatePath
 
-LordHavoc: Previously only used for CopyFile, now also used for FS_WriteFile.
+Only used for FS_WriteFile.
 ============
 */
 void FS_CreatePath (char *path)
@@ -220,7 +506,7 @@ void FS_Path_f (void)
 
 /*
 =================
-FS_LoadPackFile
+FS_LoadPackPAK
 
 Takes an explicit (not game tree related) path to a pak file.
 
@@ -228,14 +514,13 @@ Loads the header and directory, adding the files at the beginning
 of the list so they override previous pack files.
 =================
 */
-pack_t *FS_LoadPackFile (const char *packfile)
+pack_t *FS_LoadPackPAK (const char *packfile)
 {
 	dpackheader_t header;
 	int i, numpackfiles;
 	FILE *packhandle;
 	pack_t *pack;
-	// LordHavoc: changed from stack array to temporary alloc, allowing huge pack directories
-	dpackfile_t *info;
+	dpackfile_t *info;	// temporary alloc, allowing huge pack directories
 
 	packhandle = fopen (packfile, "rb");
 	if (!packhandle)
@@ -268,12 +553,18 @@ pack_t *FS_LoadPackFile (const char *packfile)
 	fseek (packhandle, header.dirofs, SEEK_SET);
 	fread ((void *)info, 1, header.dirlen, packhandle);
 
-// parse the directory
+	// parse the directory
 	for (i = 0;i < numpackfiles;i++)
 	{
-		strcpy (pack->files[i].name, info[i].name);
-		pack->files[i].filepos = LittleLong(info[i].filepos);
-		pack->files[i].filelen = LittleLong(info[i].filelen);
+		size_t size;
+		packfile_t *file = &pack->files[i];
+
+		strcpy (file->name, info[i].name);
+		file->offset = LittleLong(info[i].filepos);
+		size = LittleLong (info[i].filelen);
+		file->packsize = size;
+		file->realsize = size;
+		file->flags = FILE_FLAG_TRUEOFFS;
 	}
 
 	Mem_Free(info);
@@ -306,14 +597,34 @@ void FS_AddGameDirectory (char *dir)
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
 
-	// add any paks in the directory
 	list = listdirectory(dir);
+
+	// add any PAK package in the directory
 	for (current = list;current;current = current->next)
 	{
 		if (matchpattern(current->text, "*.pak", true))
 		{
 			sprintf (pakfile, "%s/%s", dir, current->text);
-			pak = FS_LoadPackFile (pakfile);
+			pak = FS_LoadPackPAK (pakfile);
+			if (pak)
+			{
+				search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
+				search->pack = pak;
+				search->next = fs_searchpaths;
+				fs_searchpaths = search;
+			}
+			else
+				Con_Printf("unable to load pak \"%s\"\n", pakfile);
+		}
+	}
+
+	// add any PK3 package in the director
+	for (current = list;current;current = current->next)
+	{
+		if (matchpattern(current->text, "*.pk3", true))
+		{
+			sprintf (pakfile, "%s/%s", dir, current->text);
+			pak = FS_LoadPackPK3 (pakfile);
 			if (pak)
 			{
 				search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
@@ -411,9 +722,15 @@ void FS_Init (void)
 				break;
 
 			search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
-			if ( !strcmp(FS_FileExtension(com_argv[i]), "pak") )
+			if (!strcasecmp (FS_FileExtension(com_argv[i]), "pak"))
 			{
-				search->pack = FS_LoadPackFile (com_argv[i]);
+				search->pack = FS_LoadPackPAK (com_argv[i]);
+				if (!search->pack)
+					Sys_Error ("Couldn't load packfile: %s", com_argv[i]);
+			}
+			else if (!strcasecmp (FS_FileExtension (com_argv[i]), "pk3"))
+			{
+				search->pack = FS_LoadPackPK3 (com_argv[i]);
 				if (!search->pack)
 					Sys_Error ("Couldn't load packfile: %s", com_argv[i]);
 			}
@@ -429,7 +746,7 @@ void FS_Init (void)
 /*
 =============================================================================
 
-MAIN FUNCTIONS
+MAIN PUBLIC FUNCTIONS
 
 =============================================================================
 */
@@ -528,12 +845,25 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 			// look through all the pak file elements
 			pak = search->pack;
 			for (i=0 ; i<pak->numfiles ; i++)
-				if (!strcmp (pak->files[i].name, filename))
-				{       // found it!
+				if (!strcmp (pak->files[i].name, filename))  // found it?
+				{
+					// TODO: compressed files are NOT supported yet
+					if (pak->files[i].flags & FILE_FLAG_DEFLATED)
+					{
+						Con_Printf ("WARNING: %s is a compressed file and so cannot be opened\n");
+						fs_filesize = -1;
+						return NULL;
+					}
+
 					if (!quiet)
 						Sys_Printf ("PackFile: %s : %s\n",pak->filename, pak->files[i].name);
+
+					// If we don't have the true offset, get it now
+					if (! (pak->files[i].flags & FILE_FLAG_TRUEOFFS))
+						PK3_GetTrueFileOffset (&pak->files[i], pak);
+
 					// open a new file in the pakfile
-					return FS_OpenRead (pak->filename, pak->files[i].filepos, pak->files[i].filelen);
+					return FS_OpenRead (pak->filename, pak->files[i].offset, pak->files[i].packsize);
 				}
 		}
 		else
@@ -916,7 +1246,7 @@ qboolean FS_WriteFile (const char *filename, void *data, int len)
 /*
 =============================================================================
 
-OTHERS FUNCTIONS
+OTHERS PUBLIC FUNCTIONS
 
 =============================================================================
 */
