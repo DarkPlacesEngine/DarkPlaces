@@ -70,6 +70,7 @@ int cl_max_lightstyle;
 int cl_max_brushmodel_entities;
 
 entity_t *cl_entities;
+qbyte *cl_entities_active;
 entity_t *cl_static_entities;
 entity_t *cl_temp_entities;
 cl_effect_t *cl_effects;
@@ -120,6 +121,7 @@ void CL_ClearState (void)
 	cl_max_brushmodel_entities = MAX_EDICTS;
 
 	cl_entities = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(entity_t));
+	cl_entities_active = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(qbyte));
 	cl_static_entities = Mem_Alloc(cl_entities_mempool, cl_max_static_entities * sizeof(entity_t));
 	cl_temp_entities = Mem_Alloc(cl_entities_mempool, cl_max_temp_entities * sizeof(entity_t));
 	cl_effects = Mem_Alloc(cl_entities_mempool, cl_max_effects * sizeof(cl_effect_t));
@@ -359,9 +361,14 @@ static void CL_RelinkNetworkEntities()
 	// start on the entity after the world
 	for (i = 1, ent = cl_entities + 1;i < MAX_EDICTS;i++, ent++)
 	{
-		// if the object wasn't included in the latest packet, remove it
-		if (!ent->state_current.active)
+		// if the object isn't active in the current network frame, skip it
+		if (!cl_entities_active[i])
 			continue;
+		if (!ent->state_current.active)
+		{
+			cl_entities_active[i] = false;
+			continue;
+		}
 
 		VectorCopy(ent->persistent.trail_origin, oldorg);
 
