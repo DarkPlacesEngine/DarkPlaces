@@ -722,6 +722,7 @@ void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 	vec3_t vel;
 	vec3_t offset;
 	int i, k;
+	float pscale;
 	if (!cl_particles.integer) return;
 
 	for (i = 0;i < 512 * cl_particles_quality.value;i++)
@@ -730,7 +731,8 @@ void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 		VectorScale (offset, 192, vel);
 		VectorScale (offset, 8, offset);
 		k = particlepalette[colorStart + (i % colorLength)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 1.5, 1.5, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 384, 0.3, 0, 0, org[0] + offset[0], org[1] + offset[1], org[2] + offset[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, 1, 0);
+		pscale = lhrandom(0.5, 1.5);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, pscale, pscale, (1.0f / cl_particles_quality.value) * 255, (1.0f/cl_particles_quality.value)*512, 9999, 0, 0, org[0] + offset[0], org[1] + offset[1], org[2] + offset[2], vel[0], vel[1], vel[2], 0, 0, 0, 0, lhrandom(1.5, 3), 0);
 	}
 }
 
