@@ -751,6 +751,10 @@ typedef struct
 	int x, y, width, height;
 	float fov_x, fov_y;
 
+	// these are set for water warping before
+	// fov_x/fov_y are calculated
+	float fovscale_x, fovscale_y;
+
 	// view transform
 	matrix4x4_t viewentitymatrix;
 

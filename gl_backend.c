@@ -1260,146 +1260,44 @@ float CalcFov (float fov_x, float width, float height)
 	return atan (((height/width)/vid_pixelaspect.value)*tan(fov_x/360.*M_PI))*360./M_PI; 
 }
 
-/*
-==================
-SCR_UpdateScreen
+int r_stereo_side;
 
-This is called every frame, and can also be called explicitly to flush
-text to the screen.
-==================
-*/
-void SCR_UpdateScreen (void)
+void SCR_DrawScreen (void)
 {
-	R_Mesh_Start();
-
-	if (r_textureunits.integer > gl_textureunits)
-		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
-	if (r_textureunits.integer < 1)
-		Cvar_SetValueQuick(&r_textureunits, 1);
-
-	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
-		Cvar_SetValueQuick(&gl_combine, 0);
-
-showtris:
-	R_TimeReport("setup");
-
-	R_ClearScreen();
-
-	R_TimeReport("clear");
-
-	if (scr_conlines < vid.conheight && cls.signon == SIGNONS)
+	for (r_showtrispass = 0;r_showtrispass <= (r_showtris.value > 0);r_showtrispass++)
 	{
-		float size;
-		int contents;
+		R_Mesh_Start();
 
-		// bound viewsize
-		if (scr_viewsize.value < 30)
-			Cvar_Set ("viewsize","30");
-		if (scr_viewsize.value > 120)
-			Cvar_Set ("viewsize","120");
+		R_TimeReport("setup");
 
-		// bound field of view
-		if (scr_fov.value < 1)
-			Cvar_Set ("fov","1");
-		if (scr_fov.value > 170)
-			Cvar_Set ("fov","170");
-
-		// intermission is always full screen
-		if (cl.intermission)
+		if (scr_conlines < vid.conheight && cls.signon == SIGNONS)
 		{
-			size = 1;
-			sb_lines = 0;
-		}
-		else
-		{
-			if (scr_viewsize.value >= 120)
-				sb_lines = 0;		// no status bar at all
-			else if (scr_viewsize.value >= 110)
-				sb_lines = 24;		// no inventory
-			else
-				sb_lines = 24+16+8;
+			float size;
+
 			size = scr_viewsize.value * (1.0 / 100.0);
 			size = min(size, 1);
-		}
 
-		r_refdef.width = vid.realwidth * size;
-		r_refdef.height = vid.realheight * size;
-		r_refdef.x = (vid.realwidth - r_refdef.width)/2;
-		r_refdef.y = (vid.realheight - r_refdef.height)/2;
-
-		// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
-		r_refdef.fov_x = scr_fov.value * cl.viewzoom;
-		r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height);
-
-		if (r_waterwarp.value > 0)
-		{
-			if (cl.worldmodel)
+			if (r_stereo_sidebyside.integer)
 			{
-				Mod_CheckLoaded(cl.worldmodel);
-				contents = CL_PointSuperContents(r_vieworigin);
-				if (contents & SUPERCONTENTS_LIQUIDSMASK)
-				{
-					r_refdef.fov_x *= 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
-					r_refdef.fov_y *= 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
-				}
+				r_refdef.width = vid.realwidth * size / 2.5;
+				r_refdef.height = vid.realheight * size / 2.5;
+				r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5;
+				r_refdef.y = (vid.realheight - r_refdef.height)/2;
+				if (r_stereo_side)
+					r_refdef.x += r_refdef.width * 1.5;
 			}
-		}
+			else
+			{
+				r_refdef.width = vid.realwidth * size;
+				r_refdef.height = vid.realheight * size;
+				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
+				r_refdef.y = (vid.realheight - r_refdef.height)/2;
+			}
 
-		r_refdef.colormask[0] = 1;
-		r_refdef.colormask[1] = 1;
-		r_refdef.colormask[2] = 1;
+			// LordHavoc: viewzoom (zoom in for sniper rifles, etc)
+			r_refdef.fov_x = scr_fov.value * cl.viewzoom * r_refdef.fovscale_x;
+			r_refdef.fov_y = CalcFov (r_refdef.fov_x, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
 
-		if (r_stereo_redblue.integer || r_stereo_redcyan.integer || r_stereo_redgreen.integer)
-		{
-			matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
-			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][0];
-			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
-			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][2];
-
-			r_refdef.colormask[0] = 1;
-			r_refdef.colormask[1] = 0;
-			r_refdef.colormask[2] = 0;
-
-			R_RenderView();
-
-			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][0];
-			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
-			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][2];
-
-			r_refdef.colormask[0] = 0;
-			r_refdef.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
-			r_refdef.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
-
-			R_RenderView();
-
-			r_refdef.viewentitymatrix = originalmatrix;
-		}
-		else if (r_stereo_sidebyside.integer)
-		{
-			matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
-			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][0];
-			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
-			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][2];
-
-			r_refdef.width = vid.realwidth * size / 2.5;
-			r_refdef.height = vid.realheight * size / 2.5;
-			r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5;
-			r_refdef.y = (vid.realheight - r_refdef.height)/2;
-
-			R_RenderView();
-
-			r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][0];
-			r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
-			r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][2];
-
-			r_refdef.x = (vid.realwidth - r_refdef.width * 2.5) * 0.5 + r_refdef.width * 1.5;
-		
-			R_RenderView();
-
-			r_refdef.viewentitymatrix = originalmatrix;
-		}
-		else
-		{
 			R_RenderView();
 
 			if (scr_zoomwindow.integer)
@@ -1410,40 +1308,157 @@ showtris:
 				r_refdef.height = vid.realheight * sizey;
 				r_refdef.x = (vid.realwidth - r_refdef.width)/2;
 				r_refdef.y = 0;
-				r_refdef.fov_x = scr_zoomwindow_fov.value;
-				r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.width, r_refdef.height);
+				r_refdef.fov_x = scr_zoomwindow_fov.value * r_refdef.fovscale_x;
+				r_refdef.fov_y = CalcFov(r_refdef.fov_x, r_refdef.width, r_refdef.height) * r_refdef.fovscale_y;
 
 				R_RenderView();
 			}
 		}
 
-		r_refdef.colormask[0] = 1;
-		r_refdef.colormask[1] = 1;
-		r_refdef.colormask[2] = 1;
+		if (!r_stereo_sidebyside.integer)
+		{
+			r_refdef.width = vid.realwidth;
+			r_refdef.height = vid.realheight;
+			r_refdef.x = 0;
+			r_refdef.y = 0;
+		}
+
+		// draw 2D stuff
+		R_DrawQueue();
+
+		R_Mesh_Finish();
+
+		R_TimeReport("meshfinish");
 	}
+}
 
-	GL_ColorMask(1,1,1,1);
+/*
+==================
+SCR_UpdateScreen
 
-	// draw 2D stuff
-	R_DrawQueue();
+This is called every frame, and can also be called explicitly to flush
+text to the screen.
+==================
+*/
+void SCR_UpdateScreen (void)
+{
+	if (r_textureunits.integer > gl_textureunits)
+		Cvar_SetValueQuick(&r_textureunits, gl_textureunits);
+	if (r_textureunits.integer < 1)
+		Cvar_SetValueQuick(&r_textureunits, 1);
 
-	if (r_showtrispass)
-		r_showtrispass = false;
-	else if (r_showtris.value > 0)
+	if (gl_combine.integer && (!gl_combine_extension || r_textureunits.integer < 2))
+		Cvar_SetValueQuick(&gl_combine, 0);
+
+	// bound viewsize
+	if (scr_viewsize.value < 30)
+		Cvar_Set ("viewsize","30");
+	if (scr_viewsize.value > 120)
+		Cvar_Set ("viewsize","120");
+
+	// bound field of view
+	if (scr_fov.value < 1)
+		Cvar_Set ("fov","1");
+	if (scr_fov.value > 170)
+		Cvar_Set ("fov","170");
+
+	// intermission is always full screen
+	if (cl.intermission)
+		sb_lines = 0;
+	else
 	{
-		rmeshstate_t m;
-		GL_BlendFunc(GL_ONE, GL_ONE);
-		GL_DepthTest(GL_FALSE);
-		GL_DepthMask(GL_FALSE);
-		memset(&m, 0, sizeof(m));
-		R_Mesh_State(&m);
-		r_showtrispass = true;
-		GL_ShowTrisColor(0.2,0.2,0.2,1);
-		goto showtris;
+		if (scr_viewsize.value >= 120)
+			sb_lines = 0;		// no status bar at all
+		else if (scr_viewsize.value >= 110)
+			sb_lines = 24;		// no inventory
+		else
+			sb_lines = 24+16+8;
 	}
 
-	R_Mesh_Finish();
-	R_TimeReport("meshfinish");
+	r_refdef.fovscale_x = 1;
+	r_refdef.fovscale_y = 1;
+	if (r_waterwarp.value > 0 && cl.worldmodel)
+	{
+		Mod_CheckLoaded(cl.worldmodel);
+		if (CL_PointSuperContents(r_vieworigin) & SUPERCONTENTS_LIQUIDSMASK)
+		{
+			r_refdef.fovscale_x = 1 - (((sin(cl.time * 4.7) + 1) * 0.015) * r_waterwarp.value);
+			r_refdef.fovscale_y = 1 - (((sin(cl.time * 3.0) + 1) * 0.015) * r_waterwarp.value);
+		}
+	}
+
+	r_refdef.colormask[0] = 1;
+	r_refdef.colormask[1] = 1;
+	r_refdef.colormask[2] = 1;
+
+	CHECKGLERROR
+	qglViewport(0, 0, vid.realwidth, vid.realheight);
+	qglDisable(GL_SCISSOR_TEST);
+	qglDepthMask(1);
+	qglColorMask(1,1,1,1);
+	qglClearColor(0,0,0,0);
+	qglClear(GL_COLOR_BUFFER_BIT);
+	CHECKGLERROR
+
+	R_TimeReport("clear");
+
+	if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer || r_stereo_sidebyside.integer)
+	{
+		matrix4x4_t originalmatrix = r_refdef.viewentitymatrix;
+		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][0];
+		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][1];
+		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * -0.5f * r_refdef.viewentitymatrix.m[0][2];
+
+		if (r_stereo_sidebyside.integer)
+			r_stereo_side = 0;
+
+		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
+		{
+			r_refdef.colormask[0] = 1;
+			r_refdef.colormask[1] = 0;
+			r_refdef.colormask[2] = 0;
+		}
+
+		SCR_DrawScreen();
+
+		r_refdef.viewentitymatrix.m[0][3] = originalmatrix.m[0][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][0];
+		r_refdef.viewentitymatrix.m[1][3] = originalmatrix.m[1][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][1];
+		r_refdef.viewentitymatrix.m[2][3] = originalmatrix.m[2][3] + r_stereo_separation.value * 0.5f * r_refdef.viewentitymatrix.m[0][2];
+
+		if (r_stereo_sidebyside.integer)
+			r_stereo_side = 1;
+
+		if (r_stereo_redblue.integer || r_stereo_redgreen.integer || r_stereo_redcyan.integer)
+		{
+			r_refdef.colormask[0] = 0;
+			r_refdef.colormask[1] = r_stereo_redcyan.integer || r_stereo_redgreen.integer;
+			r_refdef.colormask[2] = r_stereo_redcyan.integer || r_stereo_redblue.integer;
+		}
+
+		SCR_DrawScreen();
+
+		r_refdef.viewentitymatrix = originalmatrix;
+	}
+	else
+	{
+		r_showtrispass = false;
+		SCR_DrawScreen();
+	
+		if (r_showtris.value > 0)
+		{
+			rmeshstate_t m;
+			GL_BlendFunc(GL_ONE, GL_ONE);
+			GL_DepthTest(GL_FALSE);
+			GL_DepthMask(GL_FALSE);
+			memset(&m, 0, sizeof(m));
+			R_Mesh_State(&m);
+			r_showtrispass = true;
+			GL_ShowTrisColor(0.2,0.2,0.2,1);
+			SCR_DrawScreen();
+			r_showtrispass = false;
+		}
+	}
+
 	VID_Finish();
 	R_TimeReport("finish");
 }
