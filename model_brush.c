@@ -463,7 +463,7 @@ static void Mod_LoadLighting (lump_t *l)
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)
 				{
-					Con_DPrintf("%s loaded", litfilename);
+					Con_DPrintf("loaded %s\n", litfilename);
 					loadmodel->lightdata = Mem_Alloc(loadmodel->mempool, loadsize - 8);
 					memcpy(loadmodel->lightdata, data + 8, loadsize - 8);
 					Mem_Free(data);
