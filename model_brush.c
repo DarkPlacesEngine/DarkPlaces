@@ -5027,32 +5027,49 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 	}
 }
 
-
-static int Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(const model_t *model, const q3mnode_t *node, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
-{
-	int clusterindex, side;
-	while (node->plane)
-	{
-		// node - recurse down the BSP tree
-		side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-		if (side < 2)
-			node = node->children[side];
-		else
-		{
-			// recurse for one child and loop for the other
-			if (Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, node->children[0], pvs, mins, maxs))
-				return true;
-			node = node->children[1];
-		}
-	}
-	// leaf
-	clusterindex = ((q3mleaf_t *)node)->clusterindex;
-	return pvs[clusterindex >> 3] & (1 << (clusterindex & 7));
-}
-
 static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs)
 {
-	return Mod_Q3BSP_BoxTouchingPVS_RecursiveBSPNode(model, model->brushq3.data_nodes, pvs, mins, maxs);
+	int clusterindex, side, nodestackindex = 0;
+	q3mnode_t *node, *nodestack[1024];
+	node = model->brushq3.data_nodes;
+	for(;;)
+	{
+		if (node->plane)
+		{
+			// node - recurse down the BSP tree
+			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
+			if (side < 2)
+			{
+				// box is on one side of plane, take that path
+				node = node->children[side];
+			}
+			else
+			{
+				// box crosses plane, take one path and remember the other
+				nodestack[nodestackindex++] = node->children[0];
+				node = node->children[1];
+			}
+		}
+		else
+		{
+			// leaf - check cluster bit
+			clusterindex = ((q3mleaf_t *)node)->clusterindex;
+			if (pvs[clusterindex >> 3] & (1 << (clusterindex & 7)))
+			{
+				// it is visible, return immediately with the news
+				return true;
+			}
+			else
+			{
+				// nothing to see here, try another path we didn't take earlier
+				if (nodestackindex == 0)
+					break;
+				node = nodestack[--nodestackindex];
+			}
+		}
+	}
+	// it is not visible
+	return false;
 }
 
 //Returns PVS data for a given point
