@@ -84,6 +84,8 @@ memclump_t;
 
 typedef struct mempool_s
 {
+	// should always be MEMHEADER_SENTINEL1
+	int sentinel1;
 	// chain of individual memory allocations
 	struct memheader_s *chain;
 #if MEMCLUMPING
@@ -100,6 +102,11 @@ typedef struct mempool_s
 	char name[POOLNAMESIZE];
 	// linked into global mempool list
 	struct mempool_s *next;
+	// file name and line where Mem_AllocPool was called
+	char *filename;
+	int fileline;
+	// should always be MEMHEADER_SENTINEL1
+	int sentinel2;
 }
 mempool_t;
 

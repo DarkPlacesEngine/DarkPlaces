@@ -201,6 +201,10 @@ mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline)
 	if (pool == NULL)
 		Sys_Error("Mem_AllocPool: out of memory (allocpool at %s:%i)", filename, fileline);
 	memset(pool, 0, sizeof(mempool_t));
+	pool->sentinel1 = MEMHEADER_SENTINEL1;
+	pool->sentinel2 = MEMHEADER_SENTINEL1;
+	pool->filename = filename;
+	pool->fileline = fileline;
 	pool->chain = NULL;
 	pool->totalsize = 0;
 	pool->realsize = sizeof(mempool_t);
@@ -215,6 +219,10 @@ void _Mem_FreePool(mempool_t **pool, char *filename, int fileline)
 	mempool_t **chainaddress;
 	if (*pool)
 	{
+		if ((*pool)->sentinel1 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_FreePool: trashed pool sentinel 1 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
+		if ((*pool)->sentinel2 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_FreePool: trashed pool sentinel 2 (allocpool at %s:%i, freepool at %s:%i)", (*pool)->filename, (*pool)->fileline, filename, fileline);
 		// unlink pool from chain
 		for (chainaddress = &poolchain;*chainaddress && *chainaddress != *pool;chainaddress = &((*chainaddress)->next));
 		if (*chainaddress != *pool)
@@ -236,6 +244,10 @@ void _Mem_EmptyPool(mempool_t *pool, char *filename, int fileline)
 {
 	if (pool == NULL)
 		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
+	if (pool->sentinel1 != MEMHEADER_SENTINEL1)
+		Sys_Error("Mem_EmptyPool: trashed pool sentinel 1 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+	if (pool->sentinel2 != MEMHEADER_SENTINEL1)
+		Sys_Error("Mem_EmptyPool: trashed pool sentinel 2 (allocpool at %s:%i, emptypool at %s:%i)", pool->filename, pool->fileline, filename, fileline);
 
 	// free memory owned by the pool
 	while (pool->chain)
@@ -275,15 +287,19 @@ void _Mem_CheckSentinelsGlobal(char *filename, int fileline)
 #endif
 	mempool_t *pool;
 	for (pool = poolchain;pool;pool = pool->next)
-#if MEMCLUMPING
 	{
-#endif
+		if (pool->sentinel1 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 1 (allocpool at %s:%i, sentinel check at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+		if (pool->sentinel2 != MEMHEADER_SENTINEL1)
+			Sys_Error("Mem_CheckSentinelsGlobal: trashed pool sentinel 2 (allocpool at %s:%i, sentinel check at %s:%i)", pool->filename, pool->fileline, filename, fileline);
+	}
+	for (pool = poolchain;pool;pool = pool->next)
 		for (mem = pool->chain;mem;mem = mem->chain)
 			_Mem_CheckSentinels((void *)((qbyte *) mem + sizeof(memheader_t)), filename, fileline);
 #if MEMCLUMPING
+	for (pool = poolchain;pool;pool = pool->next)
 		for (clump = pool->clumpchain;clump;clump = clump->chain)
 			_Mem_CheckClumpSentinels(clump, filename, fileline);
-	}
 #endif
 }
 
