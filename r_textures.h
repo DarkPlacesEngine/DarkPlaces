@@ -11,7 +11,7 @@
 // upload immediately, never defer (ignore r_textureprecache)
 #define TEXF_ALWAYSPRECACHE 0x00000008
 // allocated as a fragment in a larger texture, mipmap is not allowed with
-// this, mostly used for lightmaps (which are procedural textures)
+// this, mostly used for lightmaps
 #define TEXF_FRAGMENT 0x00000010
 // used for checking if textures mismatch
 #define TEXF_IMPORTANTBITS (TEXF_ALPHA | TEXF_MIPMAP | TEXF_FRAGMENT)
@@ -37,7 +37,7 @@ typedef struct
 }
 rtexturepool_t;
 
-// allocate a texture pool, to be used with R_LoadTexture/R_ProceduralTexture
+// allocate a texture pool, to be used with R_LoadTexture
 rtexturepool_t *R_AllocTexturePool(void);
 // free a texture pool (textures can not be freed individually)
 void R_FreeTexturePool(rtexturepool_t **rtexturepool);
@@ -47,23 +47,23 @@ void R_FreeTexturePool(rtexturepool_t **rtexturepool);
 // update system, to get a compliant size, use R_CompatibleFragmentWidth
 int R_CompatibleFragmentWidth(int width, int textype, int flags);
 
-// these two functions add a texture to a pool, and may precache (upload) it
-// a normal static texture
+// add a texture to a pool and optionally precache (upload) it
+// (note: data == NULL is perfectly acceptable)
 rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
-// a procedurally generated texture, often animated over time, note: generate can be NULL (for odd uses)
-rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, int textype, int flags, int (*generate)(qbyte *buffer, int width, int height, void *parameterdata, int parameterdatasize), void *parameterdata, int parameterdatasize);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);
 
-// update the image data of a texture, used by lightmap updates and procedural
-// textures.
+// update the image data of a texture, used by lightmap updates and
+// procedural textures.
 void R_UpdateTexture(rtexture_t *rt, qbyte *data);
 
-// location of the fragment in the texture (note: any parameter except rt can be NULL)
+// location of the fragment in the texture (note: any parameter except rt can
+// be NULL)
 void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2);
 
-// returns the renderer dependent texture slot number (call this before each use, as a texture might not have been precached, or it might change over time if it is procedural)
+// returns the renderer dependent texture slot number (call this before each
+// use, as a texture might not have been precached)
 int R_GetTexture (rtexture_t *rt);
 
 // returns true if the texture is transparent (useful for rendering code)
