@@ -54,8 +54,8 @@ byte* LoadPCX (FILE *f, int matchwidth, int matchheight)
 		|| pcx->version != 5
 		|| pcx->encoding != 1
 		|| pcx->bits_per_pixel != 8
-		|| pcx->xmax >= 320
-		|| pcx->ymax >= 256)
+		|| pcx->xmax > 320
+		|| pcx->ymax > 256)
 	{
 		Con_Printf ("Bad pcx file\n");
 		return NULL;
