@@ -159,6 +159,7 @@ qbyte* LoadPCX (qbyte *f, int matchwidth, int matchheight)
 			else
 				a[x++] = dataByte;
 		}
+		fin += pcx.bytes_per_line - image_width; // the number of bytes per line is always forced to an even number
 		while(x < image_width)
 			a[x++] = 0;
 	}
