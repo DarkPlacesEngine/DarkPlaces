@@ -292,6 +292,10 @@ typedef struct
 	int td_startframe;
 	// realtime at second frame of timedemo (LordHavoc: changed to double)
 	double td_starttime;
+	// LordHavoc: for measuring maxfps
+	double td_minframetime;
+	// LordHavoc: for measuring minfps
+	double td_maxframetime;
 	// LordHavoc: pausedemo
 	qboolean demopaused;
 

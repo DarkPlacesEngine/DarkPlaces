@@ -157,6 +157,13 @@ void CL_ReadDemoMessage(void)
 				// count against the final report
 				if (host_framecount == cls.td_startframe)
 					cls.td_starttime = realtime;
+				if (host_framecount > cls.td_startframe + 2)
+				{
+					cls.td_minframetime = min(cls.td_minframetime, host_realframetime);
+					cls.td_maxframetime = max(cls.td_maxframetime, host_realframetime);
+				}
+				else
+					cls.td_minframetime = cls.td_maxframetime = host_realframetime;
 			}
 			else if (cl.time <= cl.mtime[0])
 			{
@@ -353,18 +360,20 @@ CL_FinishTimeDemo
 */
 void CL_FinishTimeDemo (void)
 {
-	int		frames;
-	double	time; // LordHavoc: changed timedemo accuracy to double
+	int frames;
+	double time; // LordHavoc: changed timedemo accuracy to double
+	double fpsmin, fpsavg, fpsmax; // report min/avg/max fps
 
 	cls.timedemo = false;
 
 // the first frame didn't count
 	frames = (host_framecount - cls.td_startframe) - 1;
 	time = realtime - cls.td_starttime;
-	if (!time)
-		time = 1;
-	// LordHavoc: timedemo now prints out 7 digits of fraction
-	Con_Printf ("%i frames %5.7f seconds %5.7f fps\n", frames, time, frames/time);
+	fpsmin = cls.td_maxframetime > 0 ? 1.0 / cls.td_maxframetime : 0;
+	fpsavg = time > 0 ? frames / time : 0;
+	fpsmax = cls.td_minframetime > 0 ? 1.0 / cls.td_minframetime : 0;
+	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
+	Con_Printf ("%i frames %5.7f seconds %5.7f fps\nmin/avg/max: %5.7f/%5.7f/%5.7f\n", frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
 }
 
 /*
