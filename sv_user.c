@@ -729,7 +729,7 @@ void SV_ReadClientMessage(void)
 			{
 				G_INT(OFS_PARM0) = PR_SetString(s);
 				pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-				PR_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - pr_functions), "");
+				PR_ExecuteProgram ((func_t)(SV_ParseClientCommandQC - pr_functions), "QC function SV_ParseClientCommand is missing");
 			}
 			else if (strncasecmp(s, "status", 6) == 0
 			 || strncasecmp(s, "name", 4) == 0
@@ -806,7 +806,7 @@ void SV_RunClients (void)
 			{
 				pr_global_struct->time = sv.time;
 				pr_global_struct->self = EDICT_TO_PROG(sv_player);
-				PR_ExecuteProgram ((func_t)(SV_PlayerPhysicsQC - pr_functions), "");
+				PR_ExecuteProgram ((func_t)(SV_PlayerPhysicsQC - pr_functions), "QC function SV_PlayerPhysics is missing");
 			}
 			else
 				SV_ClientThink ();
