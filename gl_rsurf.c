@@ -749,10 +749,10 @@ static void RSurf_FogPassColors(const float *v, float *c, float r, float g, floa
 	{
 		VectorSubtract(v, modelorg, diff);
 		f = exp(fogdensity/DotProduct(diff, diff));
-		c[0] = r * f;
-		c[1] = g * f;
-		c[2] = b * f;
-		c[3] = a;
+		c[0] = r;
+		c[1] = g;
+		c[2] = b;
+		c[3] = a * f;
 	}
 }
 
@@ -828,13 +828,23 @@ static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firsts
 	if (skyrendernow)
 	{
 		skyrendernow = false;
-		R_Sky();
+		if (skyrendermasked)
+			R_Sky();
 	}
 
 	// draw depth-only polys
 	memset(&m, 0, sizeof(m));
-	m.blendfunc1 = GL_ZERO;
-	m.blendfunc2 = GL_ONE;
+	if (skyrendermasked)
+	{
+		m.blendfunc1 = GL_ZERO;
+		m.blendfunc2 = GL_ONE;
+	}
+	else
+	{
+		// fog sky
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
 	m.depthwrite = true;
 	m.matrix = ent->matrix;
 	for (surf = firstsurf;surf;surf = surf->chain)
@@ -847,7 +857,10 @@ static void RSurfShader_Sky(const entity_render_t *ent, const msurface_t *firsts
 			{
 				memcpy(m.index, mesh->index, m.numtriangles * sizeof(int[3]));
 				RSurf_CopyXYZ(mesh->vertex, m.vertex, m.numverts);
-				memset(m.color, 0, m.numverts * sizeof(float[4]));
+				if (skyrendermasked)
+					memset(m.color, 0, m.numverts * sizeof(float[4]));
+				else
+					R_FillColors(m.color, m.numverts, fogcolor[0] * m.colorscale, fogcolor[1] * m.colorscale, fogcolor[2] * m.colorscale, 1);
 				R_Mesh_Render();
 			}
 		}
