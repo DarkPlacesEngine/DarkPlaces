@@ -1,10 +1,7 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -(MoALTz) d darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
--(RenegadeC) d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 -(Sajt, Randy) d darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
--(Vermeulen) d darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
--(Vermeulen) d darkplaces loading: make sky work without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 -(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
 -(jitspoe) d darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 -(mashakos) d darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
@@ -345,9 +342,11 @@ d darkplaces client: make CL_RocketTrail2 use the entity to keep track of trail 
 d darkplaces client: make blood decals a bit lighter as they're nearly black (ashridah)
 d darkplaces client: make cl_beams_relative only affect view-attached beams
 d darkplaces client: make colormap > cl.maxclients error be only a warning, to play QDDQ demo of end map (Stribbs)
+d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 d darkplaces client: mini scoreboard (the deathmatch overlay) shows player names multiple times in some cases, fix this!
 d darkplaces client: reset cl.viewzoom on connect (Rick)
 d darkplaces client: skybox should not be reset by r_restart (Stribbs)
+d darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
 d darkplaces commandline: make commandline parser ignore + and - if they were not directly following a space, so that + and - can be used in map names and such, also ignore if - or + is start of a number (Urre)
 d darkplaces console: add "set" and "seta" commands (DP_CONSOLE_SET and DP_CONSOLE_SETA extensions) to create a cvar and set its value (seta makes a saved cvar) (VorteX)
 d darkplaces console: redesign startup script handling to scan scripts for cvars (ignoring commands) and then init video and then run the scripts for real
@@ -371,6 +370,7 @@ d darkplaces loading: clear stainmaps on map restart/change based on cl_stainmap
 d darkplaces loading: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
 d darkplaces loading: make hl map loading halve the lightmap samples, to fit hl's 0-1 range into quake's 0-2 range (KrimZon)
 d darkplaces loading: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
+d darkplaces loading: make sky work without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 d darkplaces loading: make sure .skin files work on md3 models that have no default shaders but do have mesh names (VorteX)
 d darkplaces loading: make sure startup script code executes aliases when doing the cvar scan
 d darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
