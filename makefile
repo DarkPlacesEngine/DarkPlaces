@@ -48,11 +48,11 @@ NOPROFILEOPTIMIZATIONS=
 #this is used to ensure that all released versions are free of warnings.
 
 #normal compile
-#OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
-#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS) $(PROFILEOPTION)
+OPTIMIZATIONS= -O6 -fno-strict-aliasing -ffast-math -funroll-loops $(NOPROFILEOPTIMIZATIONS) -fexpensive-optimizations $(CPUOPTIMIZATIONS)
+CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -I/usr/include/glide $(OPTIMIZATIONS) $(PROFILEOPTION)
 #debug compile
-OPTIMIZATIONS=
-CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
+#OPTIMIZATIONS=
+#CFLAGS= -MD -Wall -Werror -I/usr/X11R6/include -ggdb $(OPTIMIZATIONS) $(PROFILEOPTION)
 
 #LordHavoc: what is XIE?  XFree 4.1.0 doesn't need it and 4.2.0 seems to be missing it entirely
 #LDFLAGS= -L/usr/X11R6/lib -lm -lX11 -lXext -lXIE -lXxf86dga -lXxf86vm -lGL -ldl $(SOUNDLIB) $(PROFILEOPTION)
