@@ -260,49 +260,48 @@ static void PrintSlistTrailer(void)
 	if (hostCacheCount)
 		Con_Printf("== end list ==\n\n");
 	else
-		Con_Printf("No Quake servers found.\n\n");
+	{
+		if (gamemode == GAME_TRANSFUSION)
+			Con_Printf("No Transfusion servers found.\n\n");
+		else
+			Con_Printf("No Quake servers found.\n\n");
+	}
+}
+
+
+void NET_SlistCommon (PollProcedure *sendProcedure, PollProcedure *pollProcedure)
+{
+	if (slistInProgress)
+		return;
+
+	if (! slistSilent)
+	{
+		if (gamemode == GAME_TRANSFUSION)
+			Con_Printf("Looking for Transfusion servers...\n");
+		else
+			Con_Printf("Looking for Quake servers...\n");
+		PrintSlistHeader();
+	}
+
+	slistInProgress = true;
+	slistStartTime = Sys_DoubleTime();
+
+	SchedulePollProcedure(sendProcedure, 0.0);
+	SchedulePollProcedure(pollProcedure, 0.1);
+
+	hostCacheCount = 0;
 }
 
 
 void NET_Slist_f (void)
 {
-	if (slistInProgress)
-		return;
-
-	if (! slistSilent)
-	{
-		Con_Printf("Looking for Quake servers...\n");
-		PrintSlistHeader();
-	}
-
-	slistInProgress = true;
-	slistStartTime = Sys_DoubleTime();
-
-	SchedulePollProcedure(&slistSendProcedure, 0.0);
-	SchedulePollProcedure(&slistPollProcedure, 0.1);
-
-	hostCacheCount = 0;
+	NET_SlistCommon (&slistSendProcedure, &slistPollProcedure);
 }
 
 
 void NET_InetSlist_f (void)
 {
-	if (slistInProgress)
-		return;
-
-	if (! slistSilent)
-	{
-		Con_Printf("Looking for Quake servers...\n");
-		PrintSlistHeader();
-	}
-
-	slistInProgress = true;
-	slistStartTime = Sys_DoubleTime();
-
-	SchedulePollProcedure(&inetSlistSendProcedure, 0.0);
-	SchedulePollProcedure(&inetSlistPollProcedure, 0.1);
-
-	hostCacheCount = 0;
+	NET_SlistCommon (&inetSlistSendProcedure, &inetSlistPollProcedure);
 }
 
 

@@ -506,7 +506,7 @@ void DrawQ_Pic(float x, float y, char *picname, float width, float height, float
 	r_refdef.drawqueuesize += dq->size;
 }
 
-void DrawQ_String(float x, float y, char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
+void DrawQ_String(float x, float y, const char *string, int maxlen, float scalex, float scaley, float red, float green, float blue, float alpha, int flags)
 {
 	int size, len;
 	drawqueue_t *dq;
