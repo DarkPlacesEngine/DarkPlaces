@@ -1092,7 +1092,7 @@ void SV_WalkMove (edict_t *ent)
 		if (clip & 2 && sv_wallfriction.integer)
 			SV_WallFriction (ent, stepnormal);
 	}
-	else if (!sv_gameplayfix_stepdown.integer || !oldonground || ((int)ent->v->flags & FL_ONGROUND) || ent->v->waterlevel >= 2)
+	else if (!sv_gameplayfix_stepdown.integer || !oldonground || start_velocity[2] > 0 || ((int)ent->v->flags & FL_ONGROUND) || ent->v->waterlevel >= 2)
 		return;
 
 	// move down
