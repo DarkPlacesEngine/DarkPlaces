@@ -114,9 +114,6 @@ void R_DrawWorld(entity_render_t *ent);
 void R_DrawParticles(void);
 void R_DrawExplosions(void);
 
-// LordHavoc: vertex transform
-#include "transform.h"
-
 #define gl_solid_format 3
 #define gl_alpha_format 4
 
