@@ -455,8 +455,6 @@ void CL_ParseServerInfo (void)
 // now we try to load everything else until a cache allocation fails
 //
 
-	Mem_CheckSentinelsGlobal();
-
 	for (i=1 ; i<nummodels ; i++)
 	{
 		// LordHavoc: i == 1 means the first model is the world model
@@ -469,8 +467,6 @@ void CL_ParseServerInfo (void)
 		}
 		CL_KeepaliveMessage ();
 	}
-
-	Mem_CheckSentinelsGlobal();
 
 	S_BeginPrecaching ();
 	for (i=1 ; i<numsounds ; i++)
@@ -486,8 +482,6 @@ void CL_ParseServerInfo (void)
 	cl_entities[0].render.alpha = 1;
 
 	R_NewMap ();
-
-	Mem_CheckSentinelsGlobal();
 
 	CL_CGVM_Start();
 
