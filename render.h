@@ -149,7 +149,6 @@ void R_DrawExplosions(void);
 #define gl_alpha_format 4
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs);
-int R_BoxVisible(const vec3_t mins, const vec3_t maxs);
 
 extern qboolean fogenabled;
 extern vec3_t fogcolor;

@@ -239,6 +239,7 @@ typedef struct model_brush_s
 	qbyte *(*GetPVS)(struct model_s *model, const vec3_t p);
 	int (*FatPVS)(struct model_s *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbufferlength);
 	int (*BoxTouchingPVS)(struct model_s *model, const qbyte *pvs, const vec3_t mins, const vec3_t maxs);
+	int (*BoxTouchingVisibleLeafs)(struct model_s *model, const qbyte *visibleleafs, const vec3_t mins, const vec3_t maxs);
 	void (*LightPoint)(struct model_s *model, const vec3_t p, vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal);
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
 	// these are actually only found on brushq1, but NULL is handled gracefully

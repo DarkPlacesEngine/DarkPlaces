@@ -418,56 +418,6 @@ int R_CullBox(const vec3_t mins, const vec3_t maxs)
 	return false;
 }
 
-int R_BoxVisible(const vec3_t mins, const vec3_t maxs)
-{
-	int side, nodestackindex = 0;
-	mnode_t *node, *nodestack[1024];
-	if (R_CullBox(mins, maxs))
-		return false;
-	if (!r_refdef.worldmodel || !r_refdef.worldmodel->brush.data_nodes)
-		return true;
-	node = r_refdef.worldmodel->brush.data_nodes;
-	for (;;)
-	{
-		if (node->plane)
-		{
-			// node - recurse down the BSP tree
-			side = BoxOnPlaneSide(mins, maxs, node->plane) - 1;
-			if (side < 2)
-			{
-				// box is on one side of plane, take that path
-				node = node->children[side];
-			}
-			else
-			{
-				// box crosses plane, take one path and remember the other
-				if (nodestackindex < 1024)
-					nodestack[nodestackindex++] = node->children[0];
-				node = node->children[1];
-			}
-		}
-		else
-		{
-			// leaf - check leaf visibility
-			if (r_worldleafvisible[(mleaf_t *)node - r_refdef.worldmodel->brush.data_leafs])
-			{
-				// it is visible, return immediately with the news
-				return true;
-			}
-			else
-			{
-				// nothing to see here, try another path we didn't take earlier
-				if (nodestackindex == 0)
-					break;
-				node = nodestack[--nodestackindex];
-			}
-		}
-	}
-	// it is not visible
-	return false;
-}
-
-
 //==================================================================================
 
 static void R_MarkEntities (void)
@@ -479,18 +429,40 @@ static void R_MarkEntities (void)
 		return;
 
 	renderimask = envmap ? (RENDER_EXTERIORMODEL | RENDER_VIEWMODEL) : (chase_active.integer ? 0 : RENDER_EXTERIORMODEL);
-	for (i = 0;i < r_refdef.numentities;i++)
+	if (r_refdef.worldmodel && r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs)
 	{
-		ent = r_refdef.entities[i];
-		Mod_CheckLoaded(ent->model);
-		// some of the renderer still relies on origin...
-		Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
-		// some of the renderer still relies on scale...
-		ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
-		if (!(ent->flags & renderimask) && ((ent->effects & EF_NODEPTHTEST) ? R_CullBox(ent->mins, ent->maxs) : R_BoxVisible(ent->mins, ent->maxs)))
+		// worldmodel can check visibility
+		for (i = 0;i < r_refdef.numentities;i++)
 		{
-			R_UpdateEntLights(ent);
-			ent->visframe = r_framecount;
+			ent = r_refdef.entities[i];
+			Mod_CheckLoaded(ent->model);
+			// some of the renderer still relies on origin...
+			Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
+			// some of the renderer still relies on scale...
+			ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
+			if (!(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && ((ent->effects & EF_NODEPTHTEST) || r_refdef.worldmodel->brush.BoxTouchingVisibleLeafs(r_refdef.worldmodel, r_worldleafvisible, ent->mins, ent->maxs)))
+			{
+				R_UpdateEntLights(ent);
+				ent->visframe = r_framecount;
+			}
+		}
+	}
+	else
+	{
+		// no worldmodel or it can't check visibility
+		for (i = 0;i < r_refdef.numentities;i++)
+		{
+			ent = r_refdef.entities[i];
+			Mod_CheckLoaded(ent->model);
+			// some of the renderer still relies on origin...
+			Matrix4x4_OriginFromMatrix(&ent->matrix, ent->origin);
+			// some of the renderer still relies on scale...
+			ent->scale = Matrix4x4_ScaleFromMatrix(&ent->matrix);
+			if (!(ent->flags & renderimask) && !R_CullBox(ent->mins, ent->maxs) && (ent->effects & EF_NODEPTHTEST))
+			{
+				R_UpdateEntLights(ent);
+				ent->visframe = r_framecount;
+			}
 		}
 	}
 }
