@@ -99,6 +99,10 @@ string	chr(float ascii)
 
 float	itof(intt ent)
 intt	ftoi(float num)
+
+float	altstr_count(string)
+string	altstr_prepare(string)
+string	altstr_get(string,float)
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -2775,12 +2779,12 @@ void VM_drawsetcliparea(void)
 	float x,y,w,h;
 	VM_SAFEPARMCOUNT(4,VM_drawsetcliparea);
 
-	x = bound(0,PRVM_G_FLOAT(OFS_PARM0),vid.conwidth);
-	y = bound(0,PRVM_G_FLOAT(OFS_PARM1),vid.conheight);
-	w = bound(0,PRVM_G_FLOAT(OFS_PARM2),(vid.conwidth  - x));
-	h = bound(0,PRVM_G_FLOAT(OFS_PARM3),(vid.conheight - y)); 
+	x = bound(0, PRVM_G_FLOAT(OFS_PARM0), vid.conwidth);
+	y = bound(0, PRVM_G_FLOAT(OFS_PARM1), vid.conheight);
+	w = bound(0, PRVM_G_FLOAT(OFS_PARM2) + PRVM_G_FLOAT(OFS_PARM0) - x, (vid.conwidth  - x));
+	h = bound(0, PRVM_G_FLOAT(OFS_PARM3) + PRVM_G_FLOAT(OFS_PARM1) - y, (vid.conheight - y)); 
 
-	DrawQ_SetClipArea(x,y,w,h);
+	DrawQ_SetClipArea(x, y, w, h);
 }
 
 /*
@@ -2838,7 +2842,9 @@ void VM_cin_open( void )
 {
 	char *file;
 	char *name;
-
+	
+	VM_SAFEPARMCOUNT( 2, VM_cin_open );
+	
 	file = PRVM_G_STRING( OFS_PARM0 );
 	name = PRVM_G_STRING( OFS_PARM1 );
 
@@ -2862,6 +2868,8 @@ void VM_cin_close( void )
 {
 	char *name;
 
+	VM_SAFEPARMCOUNT( 1, VM_cin_close );
+
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
@@ -2879,6 +2887,8 @@ void VM_cin_setstate( void )
 	char *name;
 	clvideostate_t 	state;
 	clvideo_t		*video;
+
+	VM_SAFEPARMCOUNT( 2, VM_cin_netstate );
 
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
@@ -2902,6 +2912,8 @@ void VM_cin_getstate( void )
 	char *name;
 	clvideo_t		*video;
 
+	VM_SAFEPARMCOUNT( 1, VM_cin_getstate );
+
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
@@ -2924,12 +2936,122 @@ void VM_cin_restart( void )
 	char *name;
 	clvideo_t		*video;
 
+	VM_SAFEPARMCOUNT( 1, VM_cin_restart );
+
 	name = PRVM_G_STRING( OFS_PARM0 );
 	VM_CheckEmptyString( name );
 
 	video = CL_GetVideo( name );
 	if( video )
 		CL_RestartVideo( video );
+}
+
+////////////////////////////////////////
+// AltString functions
+////////////////////////////////////////
+
+/*
+========================
+VM_altstr_count
+
+float altstr_count(string)
+========================
+*/
+void VM_altstr_count( void )
+{
+	char *altstr, *pos;
+	int	count;
+
+	VM_SAFEPARMCOUNT( 1, VM_altstr_count );
+
+	altstr = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( altstr );
+
+	for( count = 0, pos = altstr ; *pos ; pos++ )
+		if( *pos == '\\' && !*++pos )
+				break;
+		else if( *pos == '\'' )
+			count++;
+
+	PRVM_G_FLOAT( OFS_RETURN ) = (float) (count / 2);
+}
+
+/*
+========================
+VM_altstr_prepare
+
+string altstr_prepare(string)
+========================
+*/
+void VM_altstr_prepare( void )
+{
+	char *outstr, *out;
+	char *instr, *in;
+	int size;
+
+	VM_SAFEPARMCOUNT( 1, VM_altstr_prepare );
+
+	instr = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( instr );
+	outstr = VM_GetTempString();
+
+	for( out = outstr, in = instr, size = VM_STRINGTEMP_LENGTH - 1 ; size && *in ; size--, in++, out++ )
+		if( *in == '\'' ) {
+			*out++ = '\\';
+			*out = '\'';
+			size--;
+		} else
+			*out = *in;
+	*out = 0;
+
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( outstr );
+}
+
+/*
+========================
+VM_altstr_get
+
+string altstr_get(string, float)
+========================
+*/
+void VM_altstr_get( void )
+{
+	char *altstr, *pos, *outstr, *out;
+	int count, size;
+
+	VM_SAFEPARMCOUNT( 2, VM_altstr_get );
+
+	altstr = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( altstr );
+
+	count = PRVM_G_FLOAT( OFS_PARM1 );
+	count = count * 2 + 1;
+
+	for( pos = altstr ; *pos && count ; pos++ )
+		if( *pos == '\\' && !*++pos )
+			break;        			
+		else if( *pos == '\'' )
+			count--;
+
+	if( !*pos ) {
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( "" );
+		return;
+	}
+
+    outstr = VM_GetTempString();
+	for( out = outstr, size = VM_STRINGTEMP_LENGTH - 1 ; size && *pos ; size--, pos++, out++ )
+		if( *pos == '\\' ) {
+			if( !*++pos )
+				break;
+			*out = *pos;
+			size--;
+		} else if( *pos == '\'' )
+			break;
+		else
+			*out = *pos;
+
+	*out = 0;
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( outstr );
 }
 
 void VM_Cmd_Init(void)
@@ -3001,7 +3123,7 @@ void VM_CL_Cmd_Reset(void)
 // Menu
 
 char *vm_m_extensions =
-"";
+"DP_CINEMATIC_DPV";
 
 /*
 =========
@@ -3466,8 +3588,12 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_search_getfilename, // 77
 	VM_chr,	
 	VM_itof,
-	VM_ftoi,// 80
-	e10,			// 90
+	VM_ftoi,		// 80
+	VM_itof,		// isString
+	VM_altstr_count,
+	VM_altstr_prepare,
+	VM_altstr_get,	// 84
+	0,0,0,0,0,0,	// 90
 	e10,			// 100
 	e100,			// 200
 	e100,			// 300
