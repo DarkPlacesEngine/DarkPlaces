@@ -179,7 +179,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_hidelmp			36		// [string] slotname
 #define	svc_skybox			37		// [string] skyname
 
-#define svc_skyboxsize		50		// [coord] size (default is 4096)
+#define svc_farclip			50		// [coord] size (default is 6144)
 #define svc_fog				51		// [byte] enable <optional past this point, only included if enable is true> [float] density [byte] red [byte] green [byte] blue
 
 //

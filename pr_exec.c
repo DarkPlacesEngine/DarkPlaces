@@ -1358,6 +1358,12 @@ void PR_ExecuteProgram (func_t fnum)
 			case OP_DIV_FI:
 				OPC->_float = OPA->_float / (float) OPB->_int;
 				break;
+			case OP_CONV_IF:
+				OPC->_float = OPA->_int;
+				break;
+			case OP_CONV_FI:
+				OPC->_int = OPA->_float;
+				break;
 			case OP_BITAND_I:
 				OPC->_int = OPA->_int & OPB->_int;
 				break;

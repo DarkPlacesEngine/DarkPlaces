@@ -95,6 +95,7 @@ cvar_t	brightness = {"brightness", "1.0", TRUE}; // LordHavoc: a method of opera
 cvar_t	gl_lightmode = {"gl_lightmode", "1", TRUE}; // LordHavoc: overbright lighting
 //cvar_t	r_dynamicwater = {"r_dynamicwater", "1"};
 //cvar_t	r_dynamicbothsides = {"r_dynamicbothsides", "1"}; // LordHavoc: can disable dynamic lighting of backfaces, but quake maps are weird so it doesn't always work right...
+cvar_t	r_farclip = {"r_farclip", "6144"};
 
 cvar_t	gl_fogenable = {"gl_fogenable", "0"};
 cvar_t	gl_fogdensity = {"gl_fogdensity", "0.25"};
@@ -1349,8 +1350,7 @@ void R_SetupFrame (void)
 }
 
 
-void MYgluPerspective( GLdouble fovy, GLdouble aspect,
-		     GLdouble zNear, GLdouble zFar )
+void MYgluPerspective( GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar )
 {
    GLdouble xmin, xmax, ymin, ymax;
 
@@ -1412,7 +1412,7 @@ void R_SetupGL (void)
 //	if (skyname[0]) // skybox enabled?
 //		MYgluPerspective (r_refdef.fov_y,  screenaspect,  4,  r_skyboxsize.value*1.732050807569 + 256); // this is size*sqrt(3) + 256
 //	else
-		MYgluPerspective (r_refdef.fov_y,  screenaspect,  4,  6144);
+		MYgluPerspective (r_refdef.fov_y,  screenaspect,  4,  r_farclip.value);
 
 	glCullFace(GL_FRONT);
 

@@ -880,7 +880,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
 		if (!def)
 		{
 			// LordHavoc: don't warn about worldspawn sky/fog fields because they don't require mod support
-			if (strcmp(s, "sky") && strncmp(s, "fog_", 4) && strcmp(s, "skyboxsize"))
+			if (strcmp(s, "sky") && strcmp(s, "fog") && strncmp(s, "fog_", 4) && strcmp(s, "farclip"))
 				Con_DPrintf ("Can't find field %s\n", s);
 			return false;
 		}

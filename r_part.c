@@ -43,7 +43,8 @@ int			r_numparticles;
 
 vec3_t			r_pright, r_pup, r_ppn;
 
-cvar_t r_particles = {"r_particles", "1", true};
+cvar_t r_particles = {"r_particles", "1"};
+cvar_t r_dynamicparticles = {"r_dynamicparticles", "1"};
 
 void fractalnoise(char *noise, int size);
 void fractalnoise_zeroedge(char *noise, int size);
@@ -56,7 +57,7 @@ void R_InitParticleTexture (void)
 	vec3_t	normal, light;
 
 	particletexture = texture_extension_number++;
-    glBindTexture(GL_TEXTURE_2D, particletexture);
+	glBindTexture(GL_TEXTURE_2D, particletexture);
 
 	for (x=0 ; x<32 ; x++)
 	{
@@ -156,7 +157,7 @@ void R_InitParticleTexture (void)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	flareparticletexture = texture_extension_number++;
-    glBindTexture(GL_TEXTURE_2D, flareparticletexture);
+	glBindTexture(GL_TEXTURE_2D, flareparticletexture);
 
 	for (x=0 ; x<32 ; x++)
 	{
@@ -178,7 +179,7 @@ void R_InitParticleTexture (void)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	rainparticletexture = texture_extension_number++;
-    glBindTexture(GL_TEXTURE_2D, rainparticletexture);
+	glBindTexture(GL_TEXTURE_2D, rainparticletexture);
 
 	for (x=0 ; x<32 ; x++)
 	{
@@ -209,7 +210,7 @@ void R_InitParticleTexture (void)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	bubbleparticletexture = texture_extension_number++;
-    glBindTexture(GL_TEXTURE_2D, bubbleparticletexture);
+	glBindTexture(GL_TEXTURE_2D, bubbleparticletexture);
 
 	light[0] = 1;light[1] = 1;light[2] = 1;
 	VectorNormalize(light);
@@ -281,6 +282,7 @@ void R_InitParticles (void)
 	particles = (particle_t *) Hunk_AllocName (r_numparticles * sizeof(particle_t), "particles");
 
 	Cvar_RegisterVariable (&r_particles);
+	Cvar_RegisterVariable (&r_dynamicparticles);
 	R_InitParticleTexture ();
 }
 
@@ -473,7 +475,7 @@ void R_ParticleExplosion (vec3_t org, int smoke)
 		p->next = active_particles;
 		active_particles = p;
 
-		p->texnum = smokeparticletexture[rand()&7];
+		p->texnum = particletexture;
 		p->scale = lhrandom(1,3);
 		p->alpha = rand()&255;
 		p->die = cl.time + 5;
@@ -552,7 +554,7 @@ void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength)
 		for (j=0 ; j<3 ; j++)
 		{
 			p->org[j] = org[j] + ((rand()&15)-8);
-			p->vel[j] = lhrandom(-128, 128);
+			p->vel[j] = lhrandom(-192, 192);
 		}
 	}
 }
@@ -633,15 +635,15 @@ void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 		free_particles = p->next;
 		p->next = active_particles;
 		active_particles = p;
-		if (count & 3)
+		if (count & 7)
 		{
-			p->alpha = (count & 3) * 16 + (rand()&15);
-			count &= ~3;
+			p->alpha = (count & 7) * 16 + (rand()&15);
+			count &= ~7;
 		}
 		else
 		{
-			p->alpha = 64;
-			count -= 4;
+			p->alpha = 128;
+			count -= 8;
 		}
 
 		p->texnum = particletexture;
@@ -1237,6 +1239,7 @@ R_DrawParticles
 ===============
 */
 extern	cvar_t	sv_gravity;
+void R_CompleteLightPoint (vec3_t color, vec3_t p);
 
 void R_DrawParticles (void)
 {
@@ -1244,7 +1247,7 @@ void R_DrawParticles (void)
 	int				i, r,g,b,a;
 	float			grav, grav1, time1, time2, time3, dvel, frametime, scale, scale2;
 	byte			*color24;
-	vec3_t			up, right, uprightangles, forward2, up2, right2, v;
+	vec3_t			up, right, uprightangles, forward2, up2, right2, v, tempcolor;
 
 	// LordHavoc: early out condition
 	if (!active_particles)
@@ -1310,6 +1313,13 @@ void R_DrawParticles (void)
 				r >>= 1;
 				g >>= 1;
 				b >>= 1;
+			}
+			if (r_dynamicparticles.value)
+			{
+				R_CompleteLightPoint(tempcolor, p->org);
+				r = (r * (int) tempcolor[0]) >> 7;
+				g = (g * (int) tempcolor[1]) >> 7;
+				b = (b * (int) tempcolor[2]) >> 7;
 			}
 			transpolybegin(p->texnum, 0, p->texnum, TPOLYTYPE_ALPHA);
 			if (p->texnum == rainparticletexture) // rain streak
