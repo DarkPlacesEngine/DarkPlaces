@@ -446,12 +446,12 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int trianglerange_start, i
 					}
 				}
 				// output the front and back triangles
-				outelement3i[3] = vertexremap[e[0]];
-				outelement3i[4] = vertexremap[e[1]];
-				outelement3i[5] = vertexremap[e[2]];
-				outelement3i[0] = vertexremap[e[2]] + 1;
-				outelement3i[1] = vertexremap[e[1]] + 1;
-				outelement3i[2] = vertexremap[e[0]] + 1;
+				outelement3i[0] = vertexremap[e[0]];
+				outelement3i[1] = vertexremap[e[1]];
+				outelement3i[2] = vertexremap[e[2]];
+				outelement3i[3] = vertexremap[e[2]] + 1;
+				outelement3i[4] = vertexremap[e[1]] + 1;
+				outelement3i[5] = vertexremap[e[0]] + 1;
 				outelement3i += 6;
 				tris += 2;
 			}
@@ -532,7 +532,7 @@ void R_Shadow_Volume(int numverts, int numtris, const float *invertex3f, int *el
 	// triangle elements and vertices...  by clever use of elements we
 	// can construct the whole shadow from the unprojected vertices and
 	// the projected vertices
-	if ((tris = R_Shadow_ConstructShadowVolume(numverts, 0, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, varray_vertex3f2, relativelightorigin, projectdistance)))
+	if ((tris = R_Shadow_ConstructShadowVolume(numverts, 0, numtris, elements, neighbors, invertex3f, &outverts, shadowelements, varray_vertex3f2, relativelightorigin, r_shadow_projectdistance.value/*projectdistance*/)))
 	{
 		GL_VertexPointer(varray_vertex3f2);
 		if (r_shadowstage == SHADOWSTAGE_STENCIL)
@@ -556,8 +556,6 @@ void R_Shadow_Volume(int numverts, int numtris, const float *invertex3f, int *el
 void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *firstmesh)
 {
 	shadowmesh_t *mesh;
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
 	if (r_shadowstage == SHADOWSTAGE_STENCIL)
 	{
 		// increment stencil if backface is behind depthbuffer
@@ -726,14 +724,12 @@ void R_Shadow_Stage_Begin(void)
 	 || r_shadow_lightattenuationscale.value != r_shadow_attenscale)
 		R_Shadow_MakeTextures();
 
+	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-	GL_Color(0, 0, 0, 1);
-
-	memset(&m, 0, sizeof(m));
 	R_Mesh_State_Texture(&m);
-
+	GL_Color(0, 0, 0, 1);
 	qglDisable(GL_SCISSOR_TEST);
 	r_shadowstage = SHADOWSTAGE_NONE;
 
@@ -761,15 +757,13 @@ void R_Shadow_LoadWorldLightsIfNeeded(void)
 void R_Shadow_Stage_ShadowVolumes(void)
 {
 	rmeshstate_t m;
-
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State_Texture(&m);
-
 	GL_Color(1, 1, 1, 1);
+	qglColorMask(0, 0, 0, 0);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
-
 	if (r_shadow_polygonoffset.value != 0)
 	{
 		qglPolygonOffset(1.0f, r_shadow_polygonoffset.value);
@@ -777,13 +771,11 @@ void R_Shadow_Stage_ShadowVolumes(void)
 	}
 	else
 		qglDisable(GL_POLYGON_OFFSET_FILL);
-	qglColorMask(0, 0, 0, 0);
 	qglDepthFunc(GL_LESS);
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
 	r_shadowstage = SHADOWSTAGE_STENCIL;
-
 	qglClear(GL_STENCIL_BUFFER_BIT);
 	c_rt_clears++;
 	// LordHavoc note: many shadow volumes reside entirely inside the world
@@ -798,24 +790,18 @@ void R_Shadow_Stage_ShadowVolumes(void)
 void R_Shadow_Stage_LightWithoutShadows(void)
 {
 	rmeshstate_t m;
-
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State_Texture(&m);
-
-	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
-
-	//GL_DepthTest(false);
-
+	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
-	qglDepthFunc(GL_LEQUAL);
+	qglDepthFunc(GL_EQUAL);
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_EQUAL, 128, 0xFF);
-
 	r_shadowstage = SHADOWSTAGE_LIGHT;
 	c_rt_lights++;
 }
@@ -823,26 +809,20 @@ void R_Shadow_Stage_LightWithoutShadows(void)
 void R_Shadow_Stage_LightWithShadows(void)
 {
 	rmeshstate_t m;
-
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State_Texture(&m);
-
-	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ONE);
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
-
-	//GL_DepthTest(false);
-
+	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
-	qglDepthFunc(GL_LEQUAL);
+	qglDepthFunc(GL_EQUAL);
 	qglEnable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	// only draw light where this geometry was already rendered AND the
 	// stencil is 128 (values other than this mean shadow)
 	qglStencilFunc(GL_EQUAL, 128, 0xFF);
-
 	r_shadowstage = SHADOWSTAGE_LIGHT;
 	c_rt_lights++;
 }
@@ -850,23 +830,19 @@ void R_Shadow_Stage_LightWithShadows(void)
 void R_Shadow_Stage_End(void)
 {
 	rmeshstate_t m;
-
 	memset(&m, 0, sizeof(m));
 	R_Mesh_State_Texture(&m);
-
-	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(true);
 	qglDisable(GL_POLYGON_OFFSET_FILL);
-
+	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
 	qglDisable(GL_SCISSOR_TEST);
 	qglDepthFunc(GL_LEQUAL);
 	qglDisable(GL_STENCIL_TEST);
 	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 	qglStencilFunc(GL_ALWAYS, 128, 0xFF);
-
 	r_shadowstage = SHADOWSTAGE_NONE;
 }
 
