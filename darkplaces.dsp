@@ -248,6 +248,10 @@ SOURCE=.\menu.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\meshqueue.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\model_alias.c
 # End Source File
 # Begin Source File
@@ -541,6 +545,10 @@ SOURCE=.\mathlib.h
 # Begin Source File
 
 SOURCE=.\menu.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\meshqueue.h
 # End Source File
 # Begin Source File
 
