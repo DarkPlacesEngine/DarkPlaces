@@ -129,6 +129,9 @@ EXT2=.obj
 #EXT2=.asm
 
 DEPEND = \
+   $(OBJS)\sv_light.obj\
+   $(OBJS)\r_explosion.obj\
+   $(OBJS)\r_sprites.obj\
    $(OBJS)\r_sprites.obj\
    $(OBJS)\palette.obj\
    $(OBJS)\r_crosshairs.obj\
@@ -207,6 +210,8 @@ $(EXE)\darkplaces.exe : $(DEPEND)
   $(TLINK32) @&&|
  /v $(LINKOPTS) +
 $(CROOT)\LIB\c0w32.obj+
+$(OBJS)\sv_light.obj+
+$(OBJS)\r_explosion.obj+
 $(OBJS)\r_sprites.obj+
 $(OBJS)\palette.obj+
 $(OBJS)\r_crosshairs.obj+
@@ -290,6 +295,15 @@ $(OBJS)\r_sprites.obj :  $(DPROOT)\r_sprites.c
   $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_sprites.c
 
 |
+$(OBJS)\r_explosion.obj :  $(DPROOT)\r_explosion.c
+  $(BCC32) -P- -c @&&|
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_explosion.c
+|
+$(OBJS)\sv_light.obj :  $(DPROOT)\sv_light.c
+  $(BCC32) -P- -c @&&|
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\sv_light.c
+|
+
 $(OBJS)\r_crosshairs.obj :  $(DPROOT)\r_crosshairs.c
   $(BCC32) -P- -c @&&|
   $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_crosshairs.c
