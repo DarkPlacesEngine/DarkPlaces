@@ -143,7 +143,7 @@ void PF_error (void)
 {
 	char	*s;
 	edict_t	*ed;
-	
+
 	s = PF_VarString(0);
 	Con_Printf ("======SERVER ERROR in %s:\n%s\n", pr_strings + pr_xfunction->s_name, s);
 	ed = PROG_TO_EDICT(pr_global_struct->self);
@@ -907,7 +907,7 @@ void PF_stuffcmd (void)
 	if (entnum < 1 || entnum > svs.maxclients)
 		Host_Error ("Parm 0 not a client");
 	str = G_STRING(OFS_PARM1);	
-	
+
 	old = host_client;
 	host_client = &svs.clients[entnum-1];
 	Host_ClientCommands ("%s", str);
@@ -943,7 +943,7 @@ void PF_cvar (void)
 	char	*str;
 	
 	str = G_STRING(OFS_PARM0);
-	
+
 	G_FLOAT(OFS_RETURN) = Cvar_VariableValue (str);
 }
 
@@ -1751,12 +1751,10 @@ void PF_WriteEntity (void)
 
 //=============================================================================
 
-int SV_ModelIndex (char *name);
-
 void PF_makestatic (void)
 {
-	edict_t	*ent;
-	int		i, large;
+	edict_t *ent;
+	int i, large;
 
 	ent = G_EDICT(OFS_PARM0);
 
