@@ -1125,6 +1125,9 @@ void Host_PreSpawn_f (void)
 	MSG_WriteByte (&host_client->message, svc_signonnum);
 	MSG_WriteByte (&host_client->message, 2);
 	host_client->sendsignon = true;
+
+	// reset the name change timer because the client will send name soon
+	host_client->nametime = 0;
 }
 
 /*
@@ -1157,6 +1160,8 @@ void Host_Spawn_f (void)
 		return;
 	}
 
+	// reset name change timer again because they might want to change name
+	// again in the first 5 seconds after connecting
 	host_client->nametime = 0;
 
 	// LordHavoc: moved this above the QC calls at FrikaC's request
