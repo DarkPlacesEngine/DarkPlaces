@@ -254,7 +254,6 @@
 3 darkplaces server: finish DP_QC_BOTCLIENT extension docs and implement it (MauveBib, Supajoe)
 3 darkplaces server: hub save support, one file indicating active map, and then for each map it saves a quake savegame (Sajt)
 3 darkplaces server: make an event message queue for each client, so TE_ effects and sounds and can be stuffed into successive packets if they don't all fit at once, currently a large number of explosions at once are never sent because they don't fit in one size limited packet
-3 darkplaces sound: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
 3 darkplaces sound: add snd_rate cvar and make it changable during game (RenegadeC)
 3 dpmod: code a func_swinging entity which takes a starting angle and swing time and swings back and forth, each time reaching that angle, and swinging through '0 0 0' (Zombie)
 3 dpmod: code an alternate ending for shub being killed by normal weapons (scar3crow)
@@ -426,6 +425,7 @@ d darkplaces server: make sys_ticrate impose a maximum frame time so that it cal
 d darkplaces server: prevent player name changes faster than once every 5 seconds (sublim3)
 d darkplaces server: still says " disconnected" in dpmod, figure out why and fix it
 d darkplaces server: stop sound before loading a level to get rid of looping noise (Edward Holness)
+d darkplaces sound: add a sound unloader of some sort, to allow music and other one-level stuff to be unloaded
 d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 d darkplaces sound: make sound loader check both sound/%s and %s, incase a sound (like music/something.wav in q3 maps) is not in the sound directory (Static_Fiend)
 d darkplaces sound: non-cd music tracks should not be affected by sound volume setting (Urre)
