@@ -50,8 +50,10 @@ vec3_t r_viewright;
 vec3_t r_viewup;
 int r_view_x;
 int r_view_y;
+int r_view_z;
 int r_view_width;
 int r_view_height;
+int r_view_depth;
 float r_view_fov_x;
 float r_view_fov_y;
 matrix4x4_t r_view_matrix;
@@ -617,8 +619,10 @@ void R_RenderView(void)
 	
 	r_view_width = bound(0, r_refdef.width, vid.realwidth);
 	r_view_height = bound(0, r_refdef.height, vid.realheight);
+	r_view_depth = 1;
 	r_view_x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
 	r_view_y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
+	r_view_z = 0;
 	r_view_fov_x = bound(1, r_refdef.fov_x, 170);
 	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
 	r_view_matrix = r_refdef.viewentitymatrix;
