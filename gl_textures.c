@@ -263,6 +263,8 @@ static gltexture_t *R_FindTexture (gltexturepool_t *pool, char *identifier)
 rtexturepool_t *R_AllocTexturePool(void)
 {
 	gltexturepool_t *pool;
+	if (texturemempool == NULL)
+		return NULL;
 	pool = Mem_Alloc(texturemempool, sizeof(gltexturepool_t));
 	if (pool == NULL)
 		return NULL;
