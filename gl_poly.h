@@ -85,15 +85,37 @@ extern unsigned short currentwallvert;
 extern unsigned short currentskypoly;
 extern unsigned short currentskyvert;
 
+#define transpolybegin(ttexnum, tglowtexnum, tfogtexnum, ttranspolytype)\
+{\
+	if (currenttranspoly < MAX_TRANSPOLYS && currenttransvert < MAX_TRANSVERTS)\
+	{\
+		transpoly[currenttranspoly].texnum = (unsigned short) (ttexnum);\
+		transpoly[currenttranspoly].glowtexnum = (unsigned short) (tglowtexnum);\
+		transpoly[currenttranspoly].fogtexnum = (unsigned short) (tfogtexnum);\
+		transpoly[currenttranspoly].transpolytype = (unsigned short) (ttranspolytype);\
+		transpoly[currenttranspoly].firstvert = currenttransvert;\
+		transpoly[currenttranspoly].verts = 0;\
+	}\
+}
+
 #define transpolyvert(vx,vy,vz,vs,vt,vr,vg,vb,va) \
 {\
 	if (currenttranspoly < MAX_TRANSPOLYS && currenttransvert < MAX_TRANSVERTS)\
 	{\
 		transvert[currenttransvert].s = (vs);\
 		transvert[currenttransvert].t = (vt);\
-		transvert[currenttransvert].r = (byte) (bound(0, (int) (vr), 255));\
-		transvert[currenttransvert].g = (byte) (bound(0, (int) (vg), 255));\
-		transvert[currenttransvert].b = (byte) (bound(0, (int) (vb), 255));\
+		if (lighthalf)\
+		{\
+			transvert[currenttransvert].r = (byte) (bound(0, (int) (vr) >> 1, 255));\
+			transvert[currenttransvert].g = (byte) (bound(0, (int) (vg) >> 1, 255));\
+			transvert[currenttransvert].b = (byte) (bound(0, (int) (vb) >> 1, 255));\
+		}\
+		else\
+		{\
+			transvert[currenttransvert].r = (byte) (bound(0, (int) (vr), 255));\
+			transvert[currenttransvert].g = (byte) (bound(0, (int) (vg), 255));\
+			transvert[currenttransvert].b = (byte) (bound(0, (int) (vb), 255));\
+		}\
 		transvert[currenttransvert].a = (byte) (bound(0, (int) (va), 255));\
 		transvert[currenttransvert].v[0] = (vx);\
 		transvert[currenttransvert].v[1] = (vy);\

@@ -48,6 +48,7 @@ cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
 cvar_t gl_vertex = {"gl_vertex", "0"};
+cvar_t gl_texsort = {"gl_texsort", "1"};
 //cvar_t gl_funnywalls = {"gl_funnywalls", "0"}; // LordHavoc: see BuildSurfaceDisplayList
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
@@ -70,6 +71,7 @@ void glrsurf_init()
 	Cvar_RegisterVariable(&r_ambient);
 //	Cvar_RegisterVariable(&gl_funnywalls);
 	Cvar_RegisterVariable(&gl_vertex);
+	Cvar_RegisterVariable(&gl_texsort);
 	// check if it's the glquake minigl driver
 	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
@@ -430,7 +432,7 @@ void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
 	int		i;
 	float	os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
 	glpoly_t *p;
-	float	wvert[64*6], *wv, *v;
+	float	wvert[1024*6], *wv, *v;
 	wv = wvert;
 	for (p = s->polys;p;p = p->next)
 	{
@@ -441,7 +443,7 @@ void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
 			else
 				VectorCopy(v, wv);
 			if (r_waterripple.value)
-				wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
+				wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
 			wv[3] = wv[4] = wv[5] = 128.0f;
 			wv += 6;
 		}
@@ -450,25 +452,12 @@ void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
 		R_LightSurface(s->dlightbits, s->polys, wvert);
 	wv = wvert;
 	// FIXME: make fog texture if water texture is transparent?
-	if (lighthalf)
+	for (p=s->polys ; p ; p=p->next)
 	{
-		for (p=s->polys ; p ; p=p->next)
-		{
-			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-				transpolyvert(wv[0], wv[1], wv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) wv[3] >> 1,(int) wv[4] >> 1,(int) wv[5] >> 1,alpha);
-			transpolyend();
-		}
-	}
-	else
-	{
-		for (p=s->polys ; p ; p=p->next)
-		{
-			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
-			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-				transpolyvert(wv[0], wv[1], wv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) wv[3],(int) wv[4],(int) wv[5],alpha);
-			transpolyend();
-		}
+		transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+		for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+			transpolyvert(wv[0], wv[1], wv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), wv[3], wv[4], wv[5], alpha);
+		transpolyend();
 	}
 }
 
@@ -606,52 +595,24 @@ void R_WallSurfVertex(msurface_t *s, texture_t *t, qboolean transform, qboolean 
 	wv = wvert;
 	if (isbmodel && (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1))
 	{
-		if (lighthalf)
+		for (p = s->polys;p;p = p->next)
 		{
-			for (p = s->polys;p;p = p->next)
-			{
-				v = p->verts[0];
-				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) (wv[3] * currententity->colormod[0]) >> 1,(int) (wv[4] * currententity->colormod[1]) >> 1,(int) (wv[5] * currententity->colormod[0]) >> 1,alpha);
-				transpolyend();
-			}
-		}
-		else
-		{
-			for (p = s->polys;p;p = p->next)
-			{
-				v = p->verts[0];
-				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) (wv[3] * currententity->colormod[0]),(int) (wv[4] * currententity->colormod[1]),(int) (wv[5] * currententity->colormod[2]),alpha);
-				transpolyend();
-			}
+			v = p->verts[0];
+			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3] * currententity->colormod[0], wv[4] * currententity->colormod[1], wv[5] * currententity->colormod[2], alpha);
+			transpolyend();
 		}
 	}
 	else
 	{
-		if (lighthalf)
+		for (p = s->polys;p;p = p->next)
 		{
-			for (p = s->polys;p;p = p->next)
-			{
-				v = p->verts[0];
-				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) wv[3] >> 1,(int) wv[4] >> 1,(int) wv[5] >> 1,alpha);
-				transpolyend();
-			}
-		}
-		else
-		{
-			for (p = s->polys;p;p = p->next)
-			{
-				v = p->verts[0];
-				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
-				for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
-					transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], (int) wv[3],(int) wv[4],(int) wv[5],alpha);
-				transpolyend();
-			}
+			v = p->verts[0];
+			transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+			for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE, wv += 6)
+				transpolyvert(wv[0], wv[1], wv[2], v[3], v[4], wv[3], wv[4], wv[5], alpha);
+			transpolyend();
 		}
 	}
 }
@@ -664,6 +625,28 @@ DrawTextureChains
 extern qboolean hlbsp;
 extern char skyname[];
 //extern qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2);
+void R_DrawSurf(msurface_t *s, qboolean isbmodel, qboolean vertexlit)
+{
+	texture_t *t;
+	if (s->flags & SURF_DRAWSKY)
+	{
+		skyisvisible = true;
+		if (!hlbsp) // LordHavoc: HalfLife maps have freaky skypolys...
+			R_SkySurf(s, false);
+		return;
+	}
+	t = R_TextureAnimation (s->texinfo->texture);
+	if (s->flags & SURF_DRAWTURB)
+	{
+		R_WaterSurf(s, t, false, s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f);
+		return;
+	}
+	if (vertexlit)
+		R_WallSurfVertex(s, t, false, false);
+	else
+		R_WallSurf(s, t, false);
+}
+
 void DrawTextureChains (void)
 {
 	int			n;
@@ -674,9 +657,10 @@ void DrawTextureChains (void)
 	{
 		if (!cl.worldmodel->textures[n] || !(s = cl.worldmodel->textures[n]->texturechain))
 			continue;
-		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
 		cl.worldmodel->textures[n]->texturechain = NULL;
-		t = R_TextureAnimation (cl.worldmodel->textures[n]);
+//		for (;s;s = s->texturechain)
+//			R_DrawSurf(s, false, gl_vertex.value);
+		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
 		// sky
 		if (s->flags & SURF_DRAWSKY)
 		{
@@ -686,6 +670,7 @@ void DrawTextureChains (void)
 					R_SkySurf(s, false);
 			continue;
 		}
+		t = R_TextureAnimation (cl.worldmodel->textures[n]);
 		// subdivided water surface warp
 		if (s->flags & SURF_DRAWTURB)
 		{
@@ -779,6 +764,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 	{
 		if (((s->flags & SURF_PLANEBACK) == 0) == (PlaneDiff(modelorg, s->plane) >= 0))
 		{
+//			R_DrawSurf(s, true, vertexlit || s->texinfo->texture->transparent);
 			if (s->flags & SURF_DRAWSKY)
 			{
 				R_SkySurf(s, true);
@@ -894,8 +880,13 @@ loc0:
 				{
 					if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
 					{
-						surf->texturechain = surf->texinfo->texture->texturechain;
-						surf->texinfo->texture->texturechain = surf;
+						if (gl_texsort.value)
+						{
+							surf->texturechain = surf->texinfo->texture->texturechain;
+							surf->texinfo->texture->texturechain = surf;
+						}
+						else
+							R_DrawSurf(surf, false, gl_vertex.value);
 					}
 				}
 			}
@@ -905,8 +896,13 @@ loc0:
 				{
 					if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
 					{
-						surf->texturechain = surf->texinfo->texture->texturechain;
-						surf->texinfo->texture->texturechain = surf;
+						if (gl_texsort.value)
+						{
+							surf->texturechain = surf->texinfo->texture->texturechain;
+							surf->texinfo->texture->texturechain = surf;
+						}
+						else
+							R_DrawSurf(surf, false, gl_vertex.value);
 					}
 				}
 			}

@@ -340,8 +340,6 @@ void Mod_LoadLighting (lump_t *l)
 	byte d;
 	char litfilename[1024];
 	loadmodel->lightdata = NULL;
-	if (!l->filelen)
-		return;
 	if (hlbsp) // LordHavoc: load the colored lighting data straight
 	{
 		loadmodel->lightdata = Hunk_AllocName ( l->filelen, loadname);
@@ -361,6 +359,7 @@ void Mod_LoadLighting (lump_t *l)
 				i = LittleLong(((int *)data)[1]);
 				if (i == 1)
 				{
+					Con_DPrintf("%s loaded", litfilename);
 					loadmodel->lightdata = data + 8;
 					return;
 				}
@@ -371,6 +370,8 @@ void Mod_LoadLighting (lump_t *l)
 				Con_Printf("Corrupt .lit file (old version?), ignoring\n");
 		}
 		// LordHavoc: oh well, expand the white lighting data
+		if (!l->filelen)
+			return;
 		loadmodel->lightdata = Hunk_AllocName ( l->filelen*3, litfilename);
 		in = loadmodel->lightdata + l->filelen*2; // place the file at the end, so it will not be overwritten until the very last write
 		out = loadmodel->lightdata;

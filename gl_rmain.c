@@ -513,29 +513,14 @@ void R_DrawSpriteModel (entity_t *e)
 
 	if (e->model->flags & EF_FULLBRIGHT || e->effects & EF_FULLBRIGHT)
 	{
-		if (lighthalf)
-		{
-			shadecolor[0] = e->colormod[0] * 128;
-			shadecolor[1] = e->colormod[1] * 128;
-			shadecolor[2] = e->colormod[2] * 128;
-		}
-		else
-		{
-			shadecolor[0] = e->colormod[0] * 255;
-			shadecolor[1] = e->colormod[1] * 255;
-			shadecolor[2] = e->colormod[2] * 255;
-		}
+		shadecolor[0] = e->colormod[0] * 255;
+		shadecolor[1] = e->colormod[1] * 255;
+		shadecolor[2] = e->colormod[2] * 255;
 	}
 	else
 	{
 		R_LightPoint (shadecolor, e->origin);
 		R_DynamicLightPointNoMask(shadecolor, e->origin);
-		if (lighthalf)
-		{
-			shadecolor[0] *= e->colormod[0] * 0.5;
-			shadecolor[1] *= e->colormod[1] * 0.5;
-			shadecolor[2] *= e->colormod[2] * 0.5;
-		}
 	}
 
 	// LordHavoc: interpolated sprite rendering
@@ -1612,13 +1597,14 @@ void R_RenderView (void)
 	if (skyname[0] && skyisvisible && !fogenabled)
 		R_Sky(); // does not affect depth, draws over the sky polys
 
+	UploadLightmaps();
+	wallpolyrender();
+
 	R_DrawEntitiesOnList2 (); // other models
 //	R_RenderDlights ();
 	R_DrawViewModel ();
 	R_DrawParticles ();
 
-	UploadLightmaps();
-	wallpolyrender();
 	transpolyrender();
 
 	FOG_frameend();
