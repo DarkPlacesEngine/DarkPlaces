@@ -156,8 +156,8 @@ byte* LoadPCX (byte *f, int matchwidth, int matchheight)
 	}
 
 	palette = fin;
-	a = pbuf;
-	b = image_rgba;
+	a = image_rgba;
+	b = pbuf;
 
 	for(x = 0;x < image_width*image_height;x++)
 	{
