@@ -850,6 +850,59 @@ void GL_BrightenScreen(void)
 	CHECKGLERROR
 }
 
+char r_speeds2_string[1024];
+int speedstringcount, r_timereport_active;
+double r_timereport_temp = 0, r_timereport_current = 0, r_timereport_start = 0;
+
+void R_TimeReport(char *desc)
+{
+	char tempbuf[256];
+	int length;
+	int t;
+
+	if (!r_timereport_active)
+		return;
+
+	r_timereport_temp = r_timereport_current;
+	r_timereport_current = Sys_DoubleTime();
+	t = (int) ((r_timereport_current - r_timereport_temp) * 1000000.0);
+
+	sprintf(tempbuf, "%8i %s", t, desc);
+	length = strlen(tempbuf);
+	while (length < 20)
+		tempbuf[length++] = ' ';
+	tempbuf[length] = 0;
+	if (speedstringcount + length > (vid.conwidth / 8))
+	{
+		strcat(r_speeds2_string, "\n");
+		speedstringcount = 0;
+	}
+	// skip the space at the beginning if it's the first on the line
+	if (speedstringcount == 0)
+	{
+		strcat(r_speeds2_string, tempbuf + 1);
+		speedstringcount = length - 1;
+	}
+	else
+	{
+		strcat(r_speeds2_string, tempbuf);
+		speedstringcount += length;
+	}
+}
+
+void R_TimeReport_Start(void)
+{
+	r_timereport_active = r_speeds2.integer && cl.worldmodel && cls.state == ca_connected;
+	if (r_timereport_active)
+		r_timereport_start = Sys_DoubleTime();
+}
+
+void R_TimeReport_End(void)
+{
+	r_timereport_current = r_timereport_start;
+	R_TimeReport("total");
+}
+
 /*
 ==================
 SCR_UpdateScreen
@@ -887,6 +940,25 @@ void SCR_UpdateScreen (void)
 	if (!scr_initialized || !con_initialized)
 		return;				// not initialized yet
 
+	r_speeds2_string[0] = 0;
+	if (r_speeds2.integer)
+	{
+		speedstringcount = 0;
+		sprintf(r_speeds2_string, "org:'%c%6.2f %c%6.2f %c%6.2f' ang:'%c%3.0f %c%3.0f %c%3.0f' dir:'%c%2.3f %c%2.3f %c%2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i meshtris\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
+			r_origin[0] < 0 ? '-' : ' ', fabs(r_origin[0]), r_origin[1] < 0 ? '-' : ' ', fabs(r_origin[1]), r_origin[2] < 0 ? '-' : ' ', fabs(r_origin[2]), r_refdef.viewangles[0] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[0]), r_refdef.viewangles[1] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[1]), r_refdef.viewangles[2] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[2]), vpn[0] < 0 ? '-' : ' ', fabs(vpn[0]), vpn[1] < 0 ? '-' : ' ', fabs(vpn[1]), vpn[2] < 0 ? '-' : ' ', fabs(vpn[2]),
+			c_brush_polys, c_light_polys, c_alias_polys, c_meshtris,
+			c_faces, c_nodes, c_leafs,
+			c_models, c_bmodels, c_sprites, c_particles, c_dlights);
+		R_TimeReport_Start();
+	}
+
+	Mem_CheckSentinelsGlobal();
+	R_TimeReport("memtest");
+
+	GL_Finish();
+	GL_EndRendering ();
+
+	R_TimeReport("finish");
 
 	GL_BeginRendering (&vid.realx, &vid.realy, &vid.realwidth, &vid.realheight);
 
@@ -922,6 +994,8 @@ void SCR_UpdateScreen (void)
 //	if (vid.recalc_refdef)
 		SCR_CalcRefdef();
 
+	R_TimeReport("calcrefdef");
+
 	if (r_render.integer)
 	{
 		glClearColor(0,0,0,0);
@@ -929,6 +1003,8 @@ void SCR_UpdateScreen (void)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
 		CHECKGLERROR
 	}
+
+	R_TimeReport("clear");
 
 	if (gl_dither.integer)
 		glEnable(GL_DITHER);
@@ -941,7 +1017,11 @@ void SCR_UpdateScreen (void)
 //
 	SCR_SetUpToDrawConsole();
 
+	R_TimeReport("setupconsole");
+
 	V_RenderView();
+
+	V_UpdateBlends();
 
 	GL_Set2D();
 
@@ -1004,7 +1084,11 @@ void SCR_UpdateScreen (void)
 		Draw_String(vid.conwidth - (8*8), vid.conheight - sb_lines - 8, temp, 9999);
 	}
 
-	if (r_speeds2.integer && r_speeds2_string[0])
+	R_TimeReport("2d");
+
+	R_TimeReport_End();
+
+	if (r_speeds2_string[0] && cls.state == ca_connected && cl.worldmodel)
 	{
 		int i, j, lines, y;
 		lines = 1;
@@ -1024,22 +1108,15 @@ void SCR_UpdateScreen (void)
 				i++;
 			y += 8;
 		}
-		// clear so it won't reprint without renderer being called again
-		r_speeds2_string[0] = 0;
 	}
 
-	V_UpdateBlends();
-
 	GL_BrightenScreen();
-
-	GL_Finish();
 
 	if (r_speeds.integer)
 	{
 		time2 = Sys_DoubleTime ();
 		Con_Printf ("%3i ms  %4i wpoly %4i epoly %6i meshtris %4i lightpoly %4i BSPnodes %4i BSPleafs %4i BSPfaces %4i models %4i bmodels %4i sprites %4i particles %3i dlights\n", (int)((time2-time1)*1000), c_brush_polys, c_alias_polys, c_meshtris, c_light_polys, c_nodes, c_leafs, c_faces, c_models, c_bmodels, c_sprites, c_particles, c_dlights);
 	}
-	GL_EndRendering ();
 }
 
 // for profiling, this is separated

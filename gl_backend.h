@@ -7,6 +7,7 @@ typedef struct
 {
 	int transparent;
 	int depthwrite; // force depth writing enabled even if polygon is not opaque
+	int depthdisable; // disable depth read/write entirely
 	int blendfunc1;
 	int blendfunc2;
 	int numtriangles;

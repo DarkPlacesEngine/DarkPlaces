@@ -589,6 +589,13 @@ static void R_SetupGL (void)
 	if (!r_render.integer)
 		return;
 
+//	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
+	gldepthmin = 0;
+	gldepthmax = 1;
+	glDepthFunc (GL_LEQUAL);
+
+	glDepthRange (gldepthmin, gldepthmax);
+
 	// update farclip based on previous frame
 	r_farclip = r_newfarclip;
 
@@ -628,24 +635,7 @@ static void R_SetupGL (void)
 	glDepthMask(1);
 }
 
-/*
-=============
-R_Clear
-=============
-*/
-static void R_Clear (void)
-{
-	if (!r_render.integer)
-		return;
-//	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
-	gldepthmin = 0;
-	gldepthmax = 1;
-	glDepthFunc (GL_LEQUAL);
-
-	glDepthRange (gldepthmin, gldepthmax);
-}
-
-static void GL_BlendView(void)
+static void R_BlendView(void)
 {
 	if (!r_render.integer)
 		return;
@@ -654,10 +644,10 @@ static void GL_BlendView(void)
 		return;
 
 	glMatrixMode(GL_PROJECTION);
-    glLoadIdentity ();
+	glLoadIdentity ();
 	glOrtho  (0, 1, 1, 0, -99999, 99999);
 	glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity ();
+	glLoadIdentity ();
 	glDisable (GL_DEPTH_TEST);
 	glDisable (GL_CULL_FACE);
 	glDisable(GL_TEXTURE_2D);
@@ -686,76 +676,14 @@ R_RenderView
 r_refdef must be set before the first call
 ================
 */
-char r_speeds2_string[1024];
-int speedstringcount;
-
-void timestring(int t, char *desc)
-{
-	char tempbuf[256];
-	int length;
-	if (t < 1000000)
-		sprintf(tempbuf, "%6ius %s", t, desc);
-	else
-		sprintf(tempbuf, "%6ims %s", t / 1000, desc);
-	length = strlen(tempbuf);
-//	while (length < 20)
-//		tempbuf[length++] = ' ';
-//	tempbuf[length] = 0;
-	if (speedstringcount + length > (vid.conwidth / 8))
-	{
-		strcat(r_speeds2_string, "\n");
-		speedstringcount = 0;
-	}
-	// skip the space at the beginning if it's the first on the line
-	if (speedstringcount == 0)
-	{
-		strcat(r_speeds2_string, tempbuf + 1);
-		speedstringcount = length - 1;
-	}
-	else
-	{
-		strcat(r_speeds2_string, tempbuf);
-		speedstringcount += length;
-	}
-}
-
-#define TIMEREPORT(NAME) \
-	if (r_speeds2.integer)\
-	{\
-		temptime = currtime;\
-		currtime = Sys_DoubleTime();\
-		timestring((int) ((currtime - temptime) * 1000000.0), NAME);\
-	}
-
 void R_RenderView (void)
 {
-	double starttime, currtime, temptime;
-
 	if (!cl.worldmodel)
 		Host_Error ("R_RenderView: NULL worldmodel");
 
-	if (r_speeds2.integer)
-	{
-		speedstringcount = 0;
-		sprintf(r_speeds2_string, "org:'%c%6.2f %c%6.2f %c%6.2f' ang:'%c%3.0f %c%3.0f %c%3.0f' dir:'%c%2.3f %c%2.3f %c%2.3f'\n%6i walls %6i dlitwalls %7i modeltris %7i meshtris\nBSP: %6i faces %6i nodes %6i leafs\n%4i models %4i bmodels %4i sprites %5i particles %3i dlights\n",
-			r_origin[0] < 0 ? '-' : ' ', fabs(r_origin[0]), r_origin[1] < 0 ? '-' : ' ', fabs(r_origin[1]), r_origin[2] < 0 ? '-' : ' ', fabs(r_origin[2]), r_refdef.viewangles[0] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[0]), r_refdef.viewangles[1] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[1]), r_refdef.viewangles[2] < 0 ? '-' : ' ', fabs(r_refdef.viewangles[2]), vpn[0] < 0 ? '-' : ' ', fabs(vpn[0]), vpn[1] < 0 ? '-' : ' ', fabs(vpn[1]), vpn[2] < 0 ? '-' : ' ', fabs(vpn[2]),
-			c_brush_polys, c_light_polys, c_alias_polys, c_meshtris,
-			c_faces, c_nodes, c_leafs,
-			c_models, c_bmodels, c_sprites, c_particles, c_dlights);
-
-		starttime = currtime = Sys_DoubleTime();
-	}
-	else
-		starttime = currtime = 0;
-
 	// FIXME: move to client
 	R_MoveExplosions();
-	TIMEREPORT("mexplosion")
-
-	R_Clear();
-	TIMEREPORT("clear     ")
-
-	// render normal view
+	R_TimeReport("mexplosion");
 
 	R_SetupFrame();
 	R_SetFrustum();
@@ -767,39 +695,39 @@ void R_RenderView (void)
 		R_Clip_StartFrame();
 	R_BuildLightList();
 
-	TIMEREPORT("setup     ")
+	R_TimeReport("setup");
 
 	R_DrawWorld();
-	TIMEREPORT("worldnode ")
+	R_TimeReport("worldnode");
 
 	R_MarkEntities();
-	TIMEREPORT("markentity")
+	R_TimeReport("markentity");
 
 	if (r_ser.integer)
 	{
 		R_Clip_EndFrame();
-	TIMEREPORT("hiddensurf")
+		R_TimeReport("hiddensurf");
 	}
 
 	R_MarkWorldLights();
-	TIMEREPORT("marklights")
+	R_TimeReport("marklights");
 
 	if (skyrendermasked && R_DrawBModelSky())
 	{
-	TIMEREPORT("bmodelsky ")
+		R_TimeReport("bmodelsky");
 	}
 
 	R_SetupForWorldRendering();
 	R_PrepareSurfaces();
-	TIMEREPORT("surfprep  ")
+	R_TimeReport("surfprep");
 
 	R_DrawSurfacesAll();
-	TIMEREPORT("surf      ")
+	R_TimeReport("surfdraw");
 
 	if (r_drawportals.integer)
 	{
 		R_DrawPortals();
-	TIMEREPORT("portals   ")
+		R_TimeReport("portals");
 	}
 
 	// don't let sound skip if going slow
@@ -808,29 +736,28 @@ void R_RenderView (void)
 
 	R_DrawViewModel();
 	R_DrawModels();
-	TIMEREPORT("models    ")
+	R_TimeReport("models");
 
 	R_DrawDecals();
-	TIMEREPORT("decals    ")
+	R_TimeReport("decals");
 
 	R_DrawParticles();
-	TIMEREPORT("particles ")
+	R_TimeReport("particles");
 
 	R_DrawExplosions();
-	TIMEREPORT("explosions")
+	R_TimeReport("explosions");
 
 	// draw transparent meshs
 	R_Mesh_AddTransparent();
-	TIMEREPORT("transmesh ")
+	R_TimeReport("sorttrans");
 
 	// render any queued meshs
 	R_Mesh_Render();
-	TIMEREPORT("finishmesh")
+	R_TimeReport("meshrender");
 
-	GL_BlendView();
-	TIMEREPORT("blend     ")
+	R_BlendView();
+	R_TimeReport("blendview");
 
-	if (r_speeds2.integer)
-		timestring((int) ((Sys_DoubleTime() - starttime) * 1000000.0),
-	           "total     ");
+	Mem_CheckSentinelsGlobal();
+	R_TimeReport("memtest");
 }

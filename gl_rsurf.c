@@ -534,7 +534,7 @@ static void RSurfShader_Water_Pass_Base(msurface_t *s)
 	else
 	{
 		m.transparent = false;
-		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc1 = GL_ONE;
 		m.blendfunc2 = GL_ZERO;
 	}
 	m.numtriangles = s->mesh.numtriangles;

@@ -15,11 +15,14 @@ typedef struct buf_mesh_s
 {
 	struct buf_mesh_s *next;
 	int depthmask;
+	int depthtest;
 	int blendfunc1, blendfunc2;
 	int textures[MAX_TEXTUREUNITS];
 	float texturergbscale[MAX_TEXTUREUNITS];
 	int firsttriangle;
 	int triangles;
+	int firstvert;
+	int lastvert;
 }
 buf_mesh_t;
 
@@ -284,7 +287,7 @@ int errornumber = 0;
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i, k, blendfunc1, blendfunc2, blend, depthmask, unit = 0, clientunit = 0, firsttriangle, triangles, texture[MAX_TEXTUREUNITS];
+	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, triangles, firstvert, lastvert, texture[MAX_TEXTUREUNITS];
 	float farclip, texturergbscale[MAX_TEXTUREUNITS];
 	buf_mesh_t *mesh;
 	if (!backendactive)
@@ -307,6 +310,7 @@ CHECKGLERROR
 CHECKGLERROR
 	glCullFace(GL_FRONT);
 CHECKGLERROR
+	depthtest = true;
 	glEnable(GL_DEPTH_TEST);
 CHECKGLERROR
 	blendfunc1 = GL_ONE;
@@ -545,6 +549,14 @@ CHECKGLERROR
 				}
 			}
 		}
+		if (depthtest != mesh->depthtest)
+		{
+			depthtest = mesh->depthtest;
+			if (depthtest)
+				glEnable(GL_DEPTH_TEST);
+			else
+				glDisable(GL_DEPTH_TEST);
+		}
 		if (depthmask != mesh->depthmask)
 		{
 			depthmask = mesh->depthmask;
@@ -554,6 +566,8 @@ CHECKGLERROR
 
 		firsttriangle = mesh->firsttriangle;
 		triangles = mesh->triangles;
+		firstvert = mesh->firstvert;
+		lastvert = mesh->lastvert;
 		mesh = &buf_mesh[++k];
 
 		if (meshmerge)
@@ -564,6 +578,7 @@ CHECKGLERROR
 			while (k < currentmesh
 				&& mesh->blendfunc1 == blendfunc1
 				&& mesh->blendfunc2 == blendfunc2
+				&& mesh->depthtest == depthtest
 				&& mesh->depthmask == depthmask
 				&& mesh->textures[0] == texture[0]
 				&& mesh->textures[1] == texture[1]
@@ -575,11 +590,20 @@ CHECKGLERROR
 				&& mesh->texturergbscale[3] == texturergbscale[3])
 			{
 				triangles += mesh->triangles;
+				if (firstvert > mesh->firstvert)
+					firstvert = mesh->firstvert;
+				if (lastvert < mesh->lastvert)
+					lastvert = mesh->lastvert;
 				mesh = &buf_mesh[++k];
 			}
 		}
 
+#ifdef WIN32
+		// FIXME: dynamic link to GL so we can get DrawRangeElements on WIN32
 		glDrawElements(GL_TRIANGLES, triangles * 3, GL_UNSIGNED_INT, (unsigned int *)&buf_tri[firsttriangle]);
+#else
+		glDrawRangeElements(GL_TRIANGLES, firstvert, lastvert + 1, triangles * 3, GL_UNSIGNED_INT, (unsigned int *)&buf_tri[firsttriangle]);
+#endif
 CHECKGLERROR
 	}
 
@@ -637,6 +661,8 @@ CHECKGLERROR
 CHECKGLERROR
 
 	glDisable(GL_BLEND);
+CHECKGLERROR
+	glEnable(GL_DEPTH_TEST);
 CHECKGLERROR
 	glDepthMask(true);
 CHECKGLERROR
@@ -720,6 +746,8 @@ void R_Mesh_AddTransparent(void)
 				buf_tri[currenttriangle].index[0] = tri->index[0] + currentvertex;
 				buf_tri[currenttriangle].index[1] = tri->index[1] + currentvertex;
 				buf_tri[currenttriangle].index[2] = tri->index[2] + currentvertex;
+				mesh->firstvert = min(buf_tri[currenttriangle].index[0], min(buf_tri[currenttriangle].index[1], buf_tri[currenttriangle].index[2]));
+				mesh->lastvert = max(buf_tri[currenttriangle].index[0], max(buf_tri[currenttriangle].index[1], buf_tri[currenttriangle].index[2]));
 				mesh->firsttriangle = currenttriangle++;
 				mesh->triangles = 1;
 				tri = tri->next;
@@ -748,7 +776,21 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 	 || !m->numtriangles
 	 || m->vertex == NULL
 	 || !m->numverts)
-	 	return;
+		return;
+	// ignore meaningless alpha meshs
+	if (!m->depthwrite && m->blendfunc1 == GL_SRC_ALPHA && (m->blendfunc2 == GL_ONE || m->blendfunc2 == GL_ONE_MINUS_SRC_ALPHA))
+	{
+		if (m->color)
+		{
+			for (i = 0, in = m->color + 3;i < m->numverts;i++, (int)in += m->colorstep)
+				if (*in >= 0.01f)
+					break;
+			if (i == m->numverts)
+				return;
+		}
+		else if (m->ca < 0.01f)
+			return;
+	}
 
 	if (!backendactive)
 		Sys_Error("R_DrawMesh: called when backend is not active\n");
@@ -904,6 +946,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		mesh->blendfunc1 = m->blendfunc1;
 		mesh->blendfunc2 = m->blendfunc2;
 		mesh->depthmask = false;
+		mesh->depthtest = !m->depthdisable;
 		j = -1;
 		for (i = 0;i < backendunits;i++)
 		{
@@ -935,6 +978,7 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		mesh->blendfunc1 = m->blendfunc1;
 		mesh->blendfunc2 = m->blendfunc2;
 		mesh->depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite);
+		mesh->depthtest = !m->depthdisable;
 		mesh->firsttriangle = currenttriangle;
 		mesh->triangles = m->numtriangles;
 		j = -1;
@@ -953,8 +997,10 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		index = (int *)&buf_tri[currenttriangle];
 		for (i = 0;i < m->numtriangles * 3;i++)
 			index[i] = m->index[i] + currentvertex;
+		mesh->firstvert = currentvertex;
 		currenttriangle += m->numtriangles;
 		currentvertex += m->numverts;
+		mesh->lastvert = currentvertex - 1;
 	}
 
 	c_meshtris += m->numtriangles;

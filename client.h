@@ -438,7 +438,8 @@ typedef struct renderparticle_s
 	int			tex;
 	int			orientation;
 	int			dynlight;
-	float		scale;
+	float		scalex;
+	float		scaley;
 	float		org[3];
 	float		dir[3];
 	float		color[4];
