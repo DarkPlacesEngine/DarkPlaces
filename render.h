@@ -33,11 +33,11 @@ extern float fog_density, fog_red, fog_green, fog_blue;
 
 // sky stuff
 extern int R_SetSkyBox(char* sky);
-extern cvar_t r_skyquality;
+extern cvar_t r_sky;
 // these are exposed because surface rendering uses them
 extern rtexture_t *solidskytexture;
 extern rtexture_t *alphaskytexture;
-extern int skyrendernow, skyrendermasked, skyrenderglquake;
+extern int skyrendernow, skyrendermasked;
 extern void R_SkyStartFrame(void);
 extern void R_Sky(void);
 
@@ -95,7 +95,6 @@ extern	cvar_t	r_speeds;
 extern	cvar_t	r_fullbright;
 extern	cvar_t	r_wateralpha;
 extern	cvar_t	r_dynamic;
-extern	cvar_t	r_waterripple;
 
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first

@@ -1300,7 +1300,7 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&scr_viewsize, bound(30, scr_viewsize.value + dir * 10, 120));
 		break;
 	case 7:
-		Cvar_SetValueQuick (&r_skyquality, bound(0, r_skyquality.integer + dir, 2));
+		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
 		break;
 	case 8:
 		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
@@ -1392,7 +1392,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, "       Effects Options");y += 8;
 	M_Print(16, y, "         2D Resolution");M_DrawSlider(220, y, scr_2dresolution.value);y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
-	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 2);y += 8;
+	M_Print(16, y, "                   Sky");M_DrawCheckbox(220, y, r_sky.integer);y += 8;
 	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, (v_overbrightbits.value) / 4);y += 8;
 	M_Print(16, y, "       Texture Combine");M_DrawCheckbox(220, y, gl_combine.integer);y += 8;
 	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;

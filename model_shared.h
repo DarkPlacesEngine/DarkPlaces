@@ -215,7 +215,7 @@ extern rtexturepool_t *r_notexturepool;
 extern model_t *loadmodel;
 extern qbyte *mod_base;
 // sky/water subdivision
-extern cvar_t gl_subdivide_size;
+//extern cvar_t gl_subdivide_size;
 // texture fullbrights
 extern cvar_t r_fullbrights;
 

@@ -3,8 +3,7 @@
 
 void LoadSky_f(void);
 
-cvar_t r_skyquality = {CVAR_SAVE, "r_skyquality", "2"};
-cvar_t r_skyflush = {0, "r_skyflush", "0"};
+cvar_t r_sky = {CVAR_SAVE, "r_sky", "1"};
 
 static char skyworldname[1024];
 rtexture_t *solidskytexture;
@@ -15,7 +14,6 @@ static rtexturepool_t *skytexturepool;
 
 int skyrendernow;
 int skyrendermasked;
-int skyrenderglquake;
 
 static void r_sky_start(void)
 {
@@ -43,8 +41,7 @@ static void r_sky_newmap(void)
 void R_Sky_Init(void)
 {
 	Cmd_AddCommand ("loadsky", &LoadSky_f);
-	Cvar_RegisterVariable (&r_skyquality);
-	Cvar_RegisterVariable (&r_skyflush);
+	Cvar_RegisterVariable (&r_sky);
 	R_RegisterModule("R_Sky", r_sky_start, r_sky_shutdown, r_sky_newmap);
 }
 
@@ -56,31 +53,16 @@ void R_SkyStartFrame(void)
 	skyrendernow = false;
 	skyrendersphere = false;
 	skyrenderbox = false;
-	skyrenderglquake = false;
 	skyrendermasked = false;
-	if (r_skyquality.integer >= 1 && !fogenabled)
+	if (r_sky.integer && !fogenabled)
 	{
 		if (skyavailable_box)
 			skyrenderbox = true;
 		else if (skyavailable_quake)
-		{
-			switch(r_skyquality.integer)
-			{
-			case 1:
-				skyrenderglquake = true;
-				break;
-			default:
-			case 2:
-				skyrendersphere = true;
-				break;
-			}
-		}
-		if (skyrenderbox || skyrendersphere)
-		{
-			// for depth-masked sky, render the sky on the first sky surface encountered
-			skyrendernow = true;
-			skyrendermasked = true;
-		}
+			skyrendersphere = true;
+		// for depth-masked sky, render the sky on the first sky surface encountered
+		skyrendernow = true;
+		skyrendermasked = true;
 	}
 }
 
@@ -185,6 +167,7 @@ static void R_SkyBox(void)
 	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
+	m.depthdisable = true; // don't modify or read zbuffer
 	m.numtriangles = 2;
 	m.numverts = 4;
 	m.tex[0] = R_GetTexture(skyboxside[3]); // front
@@ -354,6 +337,7 @@ static void R_SkySphere(void)
 	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ZERO;
+	m.depthdisable = true; // don't modify or read zbuffer
 	m.numtriangles = skygridx*skygridy*2;
 	m.numverts = skygridx1*skygridy1;
 	m.tex[0] = R_GetTexture(solidskytexture);
@@ -377,12 +361,24 @@ void R_Sky(void)
 	if (skyrendermasked)
 	{
 		if (skyrendersphere)
+		{
+			// this does not modify depth buffer
 			R_SkySphere();
+		}
 		else if (skyrenderbox)
+		{
+			// this does not modify depth buffer
 			R_SkyBox();
-
-		// clear the zbuffer that was used while rendering the sky
-		R_Mesh_ClearDepth();
+		}
+		/* this will be skyroom someday
+		else
+		{
+			// this modifies the depth buffer so we have to clear it afterward
+			//R_SkyRoom();
+			// clear the depthbuffer that was used while rendering the skyroom
+			//R_Mesh_ClearDepth();
+		}
+		*/
 	}
 }
 
