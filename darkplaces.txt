@@ -12,7 +12,7 @@ I am not very good at writing documentation, so this readme is organized as a
 feature list, with information on each feature, I hope it is still adequate
 documentation.
 
-Tip:
+Graphics Tips:
 Visit the Color Control submenu of Options, it's near the top, fiddle with
 gamma (or grey level if using the color levels mode) until the grey box
 surrounding the white/black dither pattern matches up with the grey you see
@@ -21,7 +21,31 @@ approximately as id Software intended, and ensure everyone sees it the same.
 Note: Different resolutions may be different intensities depending on monitor.
 Note2: ATI Radeon Catalyst 3.10 drivers seem to have a weird gamma limiting
 'feature' which rejects gamma settings it doesn't like, feel free to complain
-to ATI about this if it gets in your way (it probably will). 
+to ATI about this if it gets in your way (it probably will).
+
+Visit the Effects Options submenu of Options, and check out the options.
+
+Networking tips:
+Visit the Player Setup submenu of the Multiplayer menu to configure your
+network speed (as well as the usual settings from quake like name and colors).
+
+To host a server behind a router/firewall, simply set up a port forward on the
+UDP port you are running the server on (default is 26000), to forward incoming
+UDP packets on that port to the server, then people can connect.
+
+To make your server show up on the server browser (in the Join Game menu),
+either set sv_public 1 in the console, or use the multiplayer new game menu
+and check the Public server checkbox.
+
+Thanks to:
+Tomaz for adding the Geforce3 water shader, bugtesting and many suggestions.
+Andreas 'Black' Kirsch for much work on the QuakeC VM (menu.dat, someday clprogs.dat) and other contributions.
+Mathieu 'Elric' Olivier for much work on the sound engine (especially the Ogg vorbis support)
+Joseph Caporale for adding 5 mouse button support.
+KGB|romi for his contributions to the Quake community, including his rtlights project and many suggestions.
+Zombie for making great levels and general DarkPlaces publicity.
+FrikaC for FrikQCC and FrikBot and general community support.
+Transfusion Project for recreating Blood in the world of Quake.
 
 Questions/comments/bugreports/suggestions?
 Send email to havoc@telefragged.com.
@@ -86,6 +110,12 @@ Transparent statusbar (sbar_alpha) that does not block your view as much.
 No 8bit texture uploads (fixes 'green' walls in the distance).
 Fixed view blends (glquake was quite broken).
 
+Sound features:
+Ogg and wav file overrides for cd tracks (example: sound/cdtracks/track01.ogg or .wav)
+Streaming ogg sounds to save memory (Ogg sounds over a certain size are streamed automatically)
+Ogg Vorbis sound support (all .wav sounds look for .ogg if the .wav is missing, useful for making mods smaller, particularly for ambientsound() music)
+Stereo wav support (useful for music as ambientsound() calls)
+
 Client features:
 showtime cvar.
 showdate cvar.
@@ -106,6 +136,8 @@ Support for more mouse buttons (mouse1-mouse16, mwheelup/mwheeldown are aliases 
 Server browser for public (sv_public 1) darkplaces servers. 
 
 Server features: (Note server only supports darkplaces clients)
+Allows clients to connect through firewalls (automatic feature)
+Works behind firewalls unlike NetQuake (must port forward UDP packets on the relevant port from the firewall to the server, as with any game)
 More accurate movement and precise aiming.
 64 player support.
 sv_cheats cvar controls cheats (no longer based on deathmatch).
