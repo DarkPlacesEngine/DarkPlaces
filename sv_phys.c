@@ -623,38 +623,48 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		// if it is still inside the pusher, block
 		if (SV_TestEntityPosition (check))
 		{
-			// fail the move
-			if (check->v.mins[0] == check->v.maxs[0])
-				continue;
-			if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER)
+			// try moving the contacted entity a tiny bit further to account for precision errors
+			pusher->v.solid = SOLID_NOT;
+			VectorScale(move, 0.1, move);
+			trace = SV_PushEntity (check, move, vec3_origin);
+			pusher->v.solid = savesolid;
+			if (SV_TestEntityPosition (check))
 			{
-				// corpse
-				check->v.mins[0] = check->v.mins[1] = 0;
-				VectorCopy (check->v.mins, check->v.maxs);
-				continue;
-			}
+				// still inside pusher, so it's really blocked
 
-			VectorCopy (pushorig, pusher->v.origin);
-			VectorCopy (pushang, pusher->v.angles);
-			pusher->v.ltime = pushltime;
-			SV_LinkEdict (pusher, false);
+				// fail the move
+				if (check->v.mins[0] == check->v.maxs[0])
+					continue;
+				if (check->v.solid == SOLID_NOT || check->v.solid == SOLID_TRIGGER)
+				{
+					// corpse
+					check->v.mins[0] = check->v.mins[1] = 0;
+					VectorCopy (check->v.mins, check->v.maxs);
+					continue;
+				}
 
-			// move back any entities we already moved
-			for (i=0 ; i<num_moved ; i++)
-			{
-				VectorCopy (moved_from[i], moved_edict[i]->v.origin);
-				VectorCopy (moved_fromangles[i], moved_edict[i]->v.angles);
-				SV_LinkEdict (moved_edict[i], false);
-			}
+				VectorCopy (pushorig, pusher->v.origin);
+				VectorCopy (pushang, pusher->v.angles);
+				pusher->v.ltime = pushltime;
+				SV_LinkEdict (pusher, false);
 
-			// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
-			if (pusher->v.blocked)
-			{
-				pr_global_struct->self = EDICT_TO_PROG(pusher);
-				pr_global_struct->other = EDICT_TO_PROG(check);
-				PR_ExecuteProgram (pusher->v.blocked, "");
+				// move back any entities we already moved
+				for (i=0 ; i<num_moved ; i++)
+				{
+					VectorCopy (moved_from[i], moved_edict[i]->v.origin);
+					VectorCopy (moved_fromangles[i], moved_edict[i]->v.angles);
+					SV_LinkEdict (moved_edict[i], false);
+				}
+
+				// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
+				if (pusher->v.blocked)
+				{
+					pr_global_struct->self = EDICT_TO_PROG(pusher);
+					pr_global_struct->other = EDICT_TO_PROG(check);
+					PR_ExecuteProgram (pusher->v.blocked, "");
+				}
+				return;
 			}
-			return;
 		}
 	}
 }
