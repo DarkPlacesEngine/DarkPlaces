@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+cvar_t developer_memory = {0, "developer_memory", "0"};
+
 mempool_t *poolchain = NULL;
 
 void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline)
@@ -34,7 +36,8 @@ void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline)
 		return NULL;
 	if (pool == NULL)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
-	Con_DPrintf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, size);
+	if (developer.integer && developer_memory.integer)
+		Con_Printf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, size);
 	pool->totalsize += size;
 #if MEMCLUMPING
 	if (size < 4096)
@@ -136,7 +139,8 @@ void _Mem_Free(void *data, const char *filename, int fileline)
 	if (*((qbyte *) mem + sizeof(memheader_t) + mem->size) != MEMHEADER_SENTINEL2)
 		Sys_Error("Mem_Free: trashed header sentinel 2 (alloc at %s:%i, free at %s:%i)", mem->filename, mem->fileline, filename, fileline);
 	pool = mem->pool;
-	Con_DPrintf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, mem->size);
+	if (developer.integer && developer_memory.integer)
+		Con_Printf("Mem_Free: pool %s, alloc %s:%i, free %s:%i, size %i bytes\n", pool->name, mem->filename, mem->fileline, filename, fileline, mem->size);
 	// unlink memheader from doubly linked list
 	if ((mem->prev ? mem->prev->next != mem : pool->chain != mem) || (mem->next && mem->next->prev != mem))
 		Sys_Error("Mem_Free: not allocated or double freed (free at %s:%i)", filename, fileline);
@@ -402,5 +406,6 @@ void Memory_Init_Commands (void)
 {
 	Cmd_AddCommand ("memstats", MemStats_f);
 	Cmd_AddCommand ("memlist", MemList_f);
+	Cvar_RegisterVariable (&developer_memory);
 }
 
