@@ -253,10 +253,12 @@
 				if (newf->first_statement < 0)
 				{
 					// negative statements are built in functions
-					if ((-newf->first_statement) >= pr_numbuiltins)
-						Host_Error ("Bad builtin call number");
+					int builtinnumber = -newf->first_statement;
 					pr_xfunction->builtinsprofile++;
-					pr_builtins[-newf->first_statement] ();
+					if (builtinnumber < pr_numbuiltins && pr_builtins[builtinnumber])
+						pr_builtins[builtinnumber] ();
+					else
+						Host_Error ("No such builtin #%i", builtinnumber);
 				}
 				else
 					st = pr_statements + PR_EnterFunction(newf);

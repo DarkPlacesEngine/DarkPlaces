@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -48,43 +48,43 @@ char *pr_opnames[] =
 "DONE",
 
 "MUL_F",
-"MUL_V", 
+"MUL_V",
 "MUL_FV",
 "MUL_VF",
- 
+
 "DIV",
 
 "ADD_F",
-"ADD_V", 
-  
+"ADD_V",
+
 "SUB_F",
 "SUB_V",
 
 "EQ_F",
 "EQ_V",
-"EQ_S", 
+"EQ_S",
 "EQ_E",
 "EQ_FNC",
- 
+
 "NE_F",
-"NE_V", 
+"NE_V",
 "NE_S",
-"NE_E", 
+"NE_E",
 "NE_FNC",
- 
+
 "LE",
 "GE",
 "LT",
-"GT", 
+"GT",
 
 "INDIRECT",
 "INDIRECT",
-"INDIRECT", 
-"INDIRECT", 
 "INDIRECT",
-"INDIRECT", 
+"INDIRECT",
+"INDIRECT",
+"INDIRECT",
 
-"ADDRESS", 
+"ADDRESS",
 
 "STORE_F",
 "STORE_V",
@@ -101,16 +101,16 @@ char *pr_opnames[] =
 "STOREP_FNC",
 
 "RETURN",
-  
+
 "NOT_F",
 "NOT_V",
-"NOT_S", 
-"NOT_ENT", 
-"NOT_FNC", 
-  
+"NOT_S",
+"NOT_ENT",
+"NOT_FNC",
+
 "IF",
 "IFNOT",
-  
+
 "CALL0",
 "CALL1",
 "CALL2",
@@ -120,13 +120,13 @@ char *pr_opnames[] =
 "CALL6",
 "CALL7",
 "CALL8",
-  
+
 "STATE",
 
-"GOTO", 
-  
+"GOTO",
+
 "AND",
-"OR", 
+"OR",
 
 "BITAND",
 "BITOR"
