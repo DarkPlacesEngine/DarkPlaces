@@ -389,7 +389,6 @@ sndinitstat SNDDMA_InitDirect (void)
 	}
 
 	memset(lpData, 0, dwSize);
-//		lpData[4] = lpData[5] = 0x7f;	// force a pop for debugging
 
 	pDSBuf->lpVtbl->Unlock(pDSBuf, lpData, dwSize, NULL, 0);
 
@@ -619,12 +618,7 @@ qboolean SNDDMA_Init(void)
 	snd_firsttime = false;
 
 	if (!dsound_init && !wav_init)
-	{
-//		if (snd_firsttime)
-//			Con_SafePrintf ("No sound device initialized\n");
-
 		return 0;
-	}
 
 	return 1;
 }

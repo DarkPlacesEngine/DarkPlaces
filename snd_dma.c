@@ -71,7 +71,6 @@ cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
 
 cvar_t nosound = {0, "nosound", "0"};
 cvar_t precache = {0, "precache", "1"};
-//cvar_t loadas8bit = {0, "loadas8bit", "0"};
 cvar_t bgmbuffer = {0, "bgmbuffer", "4096"};
 cvar_t ambient_level = {0, "ambient_level", "0.3"};
 cvar_t ambient_fade = {0, "ambient_fade", "100"};
@@ -189,7 +188,6 @@ void S_Init (void)
 
 	Cvar_RegisterVariable(&nosound);
 	Cvar_RegisterVariable(&precache);
-//	Cvar_RegisterVariable(&loadas8bit);
 	Cvar_RegisterVariable(&bgmbuffer);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);
@@ -197,16 +195,6 @@ void S_Init (void)
 	Cvar_RegisterVariable(&snd_show);
 	Cvar_RegisterVariable(&_snd_mixahead);
 	Cvar_RegisterVariable(&snd_swapstereo); // LordHavoc: for people with backwards sound wiring
-
-	/*
-	if (host_parms.memsize < 0x800000)
-	{
-		Cvar_Set ("loadas8bit", "1");
-		Con_Printf ("loading all sounds as 8bit\n");
-	}
-	*/
-
-
 
 	snd_initialized = true;
 
@@ -240,9 +228,6 @@ void S_Init (void)
 	Con_Printf ("Sound sampling rate: %i\n", shm->speed);
 
 	// provides a tick sound until washed clean
-
-//	if (shm->buffer)
-//		shm->buffer[4] = shm->buffer[5] = 0x7f;	// force a pop for debugging
 
 	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav");
 	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
@@ -798,8 +783,6 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 				continue;
 			}
 		}
-
-
 	}
 
 //
@@ -811,10 +794,7 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t right, vec3_t up)
 		ch = channels;
 		for (i=0 ; i<total_channels; i++, ch++)
 			if (ch->sfx && (ch->leftvol || ch->rightvol) )
-			{
-				//Con_Printf ("%3i %3i %s\n", ch->leftvol, ch->rightvol, ch->sfx->name);
 				total++;
-			}
 
 		Con_Printf ("----(%i)----\n", total);
 	}
@@ -884,10 +864,7 @@ void S_Update_(void)
 
 // check to make sure that we haven't overshot
 	if (paintedtime < soundtime)
-	{
-		//Con_Printf ("S_Update_ : overflow\n");
 		paintedtime = soundtime;
-	}
 
 // mix ahead of current position
 	endtime = soundtime + _snd_mixahead.value * shm->speed;

@@ -27,7 +27,6 @@ int r_numdlights = 0;
 
 cvar_t r_lightmodels = {CVAR_SAVE, "r_lightmodels", "1"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
-//cvar_t r_lightmodelhardness = {CVAR_SAVE, "r_lightmodelhardness", "1"};
 
 static rtexture_t *lightcorona;
 static rtexturepool_t *lighttexturepool;
@@ -68,7 +67,6 @@ void r_light_newmap(void)
 void R_Light_Init(void)
 {
 	Cvar_RegisterVariable(&r_lightmodels);
-	//Cvar_RegisterVariable(&r_lightmodelhardness);
 	Cvar_RegisterVariable(&r_vismarklights);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
 }
@@ -174,7 +172,6 @@ void R_DrawCoronas(void)
 			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
 			{
 				scale = 1.0f / 262144.0f;
-				//scale = 64.0f / (DotProduct(diff,diff) + 1024.0f);
 				m.cr = rd->light[0] * scale;
 				m.cg = rd->light[1] * scale;
 				m.cb = rd->light[2] * scale;
@@ -295,65 +292,12 @@ loc0:
 		if (dist2 > maxdist)
 			continue;
 
-
-		/*
-		d = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-
-		if (d < 0)
-		{
-			dist2 += d * d;
-			if (dist2 >= maxdist)
-				continue;
-		}
-		else
-		{
-			d -= surf->extents[0] + 16;
-			if (d > 0)
-			{
-				dist2 += d * d;
-				if (dist2 >= maxdist)
-					continue;
-			}
-		}
-
-		d = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-
-		if (d < 0)
-		{
-			dist2 += d * d;
-			if (dist2 >= maxdist)
-				continue;
-		}
-		else
-		{
-			d -= surf->extents[1] + 16;
-			if (d > 0)
-			{
-				dist2 += d * d;
-				if (dist2 >= maxdist)
-					continue;
-			}
-		}
-		*/
-
 		if (surf->dlightframe != r_framecount) // not dynamic until now
 		{
 			surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
 			surf->dlightframe = r_framecount;
 		}
 		surf->dlightbits[bitindex] |= bit;
-
-		/*
-		if (((surf->flags & SURF_PLANEBACK) == 0) == ((PlaneDist(lightorigin, surf->plane)) >= surf->plane->dist))
-		{
-			if (surf->dlightframe != r_framecount) // not dynamic until now
-			{
-				surf->dlightbits[0] = surf->dlightbits[1] = surf->dlightbits[2] = surf->dlightbits[3] = surf->dlightbits[4] = surf->dlightbits[5] = surf->dlightbits[6] = surf->dlightbits[7] = 0;
-				surf->dlightframe = r_framecount;
-			}
-			surf->dlightbits[bitindex] |= bit;
-		}
-		*/
 	}
 
 	if (node->children[0]->contents >= 0)
@@ -377,15 +321,6 @@ loc0:
 	}
 }
 
-/*
-static void R_NoVisMarkLights (rdlight_t *rd, int bit, int bitindex)
-{
-	vec3_t lightorigin;
-	softwareuntransform(rd->origin, lightorigin);
-
-	R_OldMarkLights(lightorigin, rd, bit, bitindex, currentrenderentity->model->nodes + currentrenderentity->model->hulls[0].firstclipnode);
-}
-*/
 
 static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 {
@@ -494,45 +429,6 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 								impact[1] = rd->origin[1] - surf->plane->normal[1] * dist;
 								impact[2] = rd->origin[2] - surf->plane->normal[2] * dist;
 
-#if 0
-								d = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-								if (d < 0)
-								{
-									dist2 += d * d;
-									if (dist2 > maxdist)
-										continue;
-								}
-								else
-								{
-									d -= surf->extents[0];
-									if (d < 0)
-									{
-										dist2 += d * d;
-										if (dist2 > maxdist)
-											continue;
-									}
-								}
-
-								d = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-								if (d < 0)
-								{
-									dist2 += d * d;
-									if (dist2 > maxdist)
-										continue;
-								}
-								else
-								{
-									d -= surf->extents[1];
-									if (d < 0)
-									{
-										dist2 += d * d;
-										if (dist2 > maxdist)
-											continue;
-									}
-								}
-
-#else
-
 								impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
 								d = bound(0, impacts, surf->extents[0] + 16) - impacts;
 								dist2 += d * d;
@@ -544,8 +440,6 @@ static void R_VisMarkLights (rdlight_t *rd, int bit, int bitindex)
 								dist2 += d * d;
 								if (dist2 > maxdist)
 									continue;
-
-#endif
 
 								if (surf->dlightframe != r_framecount) // not dynamic until now
 								{
@@ -608,11 +502,6 @@ loc0:
 			goto loc0;
 		}
 		// found an intersection
-//		mid = startz + (endz - startz) * (startz - node->plane->dist) / (startz - endz);
-//		mid = startz + distz * (startz - node->plane->dist) / (-distz);
-//		mid = startz + (-(startz - node->plane->dist));
-//		mid = startz - (startz - node->plane->dist);
-//		mid = startz + node->plane->dist - startz;
 		mid = node->plane->dist;
 		break;
 	default:
@@ -626,8 +515,6 @@ loc0:
 			goto loc0;
 		}
 		// found an intersection
-//		mid = startz + (endz - startz) * ((front - node->plane->dist) / ((front - node->plane->dist) - (back - node->plane->dist)));
-//		mid = startz + (endz - startz) * ((front - node->plane->dist) / (front - back));
 		mid = startz + distz * (front - node->plane->dist) / (front - back);
 		break;
 	}
@@ -680,33 +567,38 @@ loc0:
 						lightmap += size3;
 					}
 
-					/*
-					// LordHavoc: here's the readable version of the interpolation
-					// code, not quite as easy for the compiler to optimize...
+/*
+LordHavoc: here's the readable version of the interpolation
+code, not quite as easy for the compiler to optimize...
 
-					// dsfrac is the X position in the lightmap pixel, * 16
-					// dtfrac is the Y position in the lightmap pixel, * 16
-					// r00 is top left corner, r01 is top right corner
-					// r10 is bottom left corner, r11 is bottom right corner
-					// g and b are the same layout.
-					// r0 and r1 are the top and bottom intermediate results
+dsfrac is the X position in the lightmap pixel, * 16
+dtfrac is the Y position in the lightmap pixel, * 16
+r00 is top left corner, r01 is top right corner
+r10 is bottom left corner, r11 is bottom right corner
+g and b are the same layout.
+r0 and r1 are the top and bottom intermediate results
 
-					// first we interpolate the top two points, to get the top
-					// edge sample
-					r0 = (((r01-r00) * dsfrac) >> 4) + r00;
-					g0 = (((g01-g00) * dsfrac) >> 4) + g00;
-					b0 = (((b01-b00) * dsfrac) >> 4) + b00;
-					// then we interpolate the bottom two points, to get the
-					// bottom edge sample
-					r1 = (((r11-r10) * dsfrac) >> 4) + r10;
-					g1 = (((g11-g10) * dsfrac) >> 4) + g10;
-					b1 = (((b11-b10) * dsfrac) >> 4) + b10;
-					// then we interpolate the top and bottom samples to get the
-					// middle sample (the one which was requested)
-					r = (((r1-r0) * dtfrac) >> 4) + r0;
-					g = (((g1-g0) * dtfrac) >> 4) + g0;
-					b = (((b1-b0) * dtfrac) >> 4) + b0;
-					*/
+first we interpolate the top two points, to get the top
+edge sample
+
+	r0 = (((r01-r00) * dsfrac) >> 4) + r00;
+	g0 = (((g01-g00) * dsfrac) >> 4) + g00;
+	b0 = (((b01-b00) * dsfrac) >> 4) + b00;
+
+then we interpolate the bottom two points, to get the
+bottom edge sample
+
+	r1 = (((r11-r10) * dsfrac) >> 4) + r10;
+	g1 = (((g11-g10) * dsfrac) >> 4) + g10;
+	b1 = (((b11-b10) * dsfrac) >> 4) + b10;
+
+then we interpolate the top and bottom samples to get the
+middle sample (the one which was requested)
+
+	r = (((r1-r0) * dtfrac) >> 4) + r0;
+	g = (((g1-g0) * dtfrac) >> 4) + g0;
+	b = (((b1-b0) * dtfrac) >> 4) + b0;
+*/
 
 					color[0] += (float) ((((((((r11-r10) * dsfrac) >> 4) + r10)-((((r01-r00) * dsfrac) >> 4) + r00)) * dtfrac) >> 4) + ((((r01-r00) * dsfrac) >> 4) + r00)) * (1.0f / 32768.0f);
 					color[1] += (float) ((((((((g11-g10) * dsfrac) >> 4) + g10)-((((g01-g00) * dsfrac) >> 4) + g00)) * dtfrac) >> 4) + ((((g01-g00) * dsfrac) >> 4) + g00)) * (1.0f / 32768.0f);
@@ -721,7 +613,6 @@ loc0:
 		startz = mid;
 		distz = endz - startz;
 		goto loc0;
-//		return RecursiveLightPoint (color, node->children[side ^ 1], x, y, mid, endz);
 	}
 }
 
@@ -833,7 +724,7 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0;
-	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f/*, hardness, hardnessoffset*/, dist2;
+	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f, dist2;
 	struct
 	{
 		vec3_t origin;
@@ -845,7 +736,6 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	}
 	nearlight[MAX_DLIGHTS], *nl;
 	int modeldlightbits[8];
-	//staticlight_t *sl;
 	mlight_t *sl;
 	a = currentrenderentity->alpha;
 	if (currentrenderentity->effects & EF_FULLBRIGHT)
@@ -861,29 +751,6 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			R_ModelLightPoint(basecolor, currentrenderentity->origin, modeldlightbits);
 
 			nl = &nearlight[0];
-			/*
-			// this code is unused for now
-			for (i = 0, sl = staticlight;i < staticlights && nearlights < MAX_DLIGHTS;i++, sl++)
-			{
-				if (TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0) == 1)
-				{
-					nl->fadetype = sl->fadetype;
-					nl->distancescale = sl->distancescale;
-					nl->radius = sl->radius;
-					// transform the light into the model's coordinate system
-					if (worldcoords)
-						VectorCopy(sl->origin, nl->origin);
-					else
-						softwareuntransform(sl->origin, nl->origin);
-					VectorCopy(sl->color, nl->light);
-					nl->cullradius2 = 99999999;
-					nl->lightsubtract = 0;
-					nl++;
-					nearlights++;
-				}
-			}
-			*/
-			// this code is unused for now
 			for (i = 0, sl = cl.worldmodel->lights;i < cl.worldmodel->numlights && nearlights < MAX_DLIGHTS;i++, sl++)
 			{
 				if (CL_TraceLine(currentrenderentity->origin, sl->origin, NULL, NULL, 0, false) == 1)
@@ -915,23 +782,19 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 				}
 				else
 				{
-					// convert 0-255 radius coloring to 0-1, while also amplifying the brightness by 16
-					//if (TraceLine(currentrenderentity->origin, r_dlight[i].origin, NULL, NULL, 0) == 1)
-					{
-						// transform the light into the model's coordinate system
-						if (worldcoords)
-							VectorCopy(r_dlight[i].origin, nl->origin);
-						else
-							softwareuntransform(r_dlight[i].origin, nl->origin);
-						nl->cullradius2 = r_dlight[i].cullradius2;
-						nl->light[0] = r_dlight[i].light[0] * colorr;
-						nl->light[1] = r_dlight[i].light[1] * colorg;
-						nl->light[2] = r_dlight[i].light[2] * colorb;
-						nl->lightsubtract = r_dlight[i].lightsubtract;
-						nl->offset = LIGHTOFFSET;
-						nl++;
-						nearlights++;
-					}
+					// transform the light into the model's coordinate system
+					if (worldcoords)
+						VectorCopy(r_dlight[i].origin, nl->origin);
+					else
+						softwareuntransform(r_dlight[i].origin, nl->origin);
+					nl->cullradius2 = r_dlight[i].cullradius2;
+					nl->light[0] = r_dlight[i].light[0] * colorr;
+					nl->light[1] = r_dlight[i].light[1] * colorg;
+					nl->light[2] = r_dlight[i].light[2] * colorb;
+					nl->lightsubtract = r_dlight[i].lightsubtract;
+					nl->offset = LIGHTOFFSET;
+					nl++;
+					nearlights++;
 				}
 			}
 		}
@@ -946,8 +809,6 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	{
 		av = aliasvert;
 		avn = aliasvertnorm;
-		//hardness = r_lightmodelhardness.value;
-		//hardnessoffset = (1.0f - hardness);
 		for (i = 0;i < numverts;i++)
 		{
 			VectorCopy(basecolor, color);
@@ -962,13 +823,13 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 					if (f > 0)
 					{
 						// directional shading
-						#if SLOWMATH
+#if SLOWMATH
 						t = 1.0f / sqrt(dist2);
-						#else
+#else
 						number = DotProduct(v, v);
 						*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
 						t = t * (1.5f - (number * 0.5f * t * t));
-						#endif
+#endif
 						// DotProduct(avn,v) * t is dotproduct with a normalized v,
 						// the hardness variables are for backlighting/shinyness
 						f *= DotProduct(avn,v) * t;// * hardness + hardnessoffset;
@@ -995,3 +856,4 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 		}
 	}
 }
+

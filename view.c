@@ -78,8 +78,6 @@ float V_CalcRoll (vec3_t angles, vec3_t velocity)
 	side = fabs(side);
 
 	value = cl_rollangle.value;
-//	if (cl.inwater)
-//		value *= 6;
 
 	if (side < cl_rollspeed.value)
 		side = side * value / cl_rollspeed.value;
@@ -112,7 +110,6 @@ static float V_CalcBob (void)
 	// (don't count Z, or jumping messes it up)
 
 	bob = sqrt(cl.velocity[0]*cl.velocity[0] + cl.velocity[1]*cl.velocity[1]) * cl_bob.value;
-	//Con_Printf ("speed: %5.1f\n", VectorLength(cl.velocity));
 	bob = bob*0.3 + bob*0.7*sin(cycle);
 	bob = bound(-7, bob, 4);
 	return bob;
@@ -121,12 +118,9 @@ static float V_CalcBob (void)
 
 void V_StartPitchDrift (void)
 {
-#if 1
 	if (cl.laststop == cl.time)
-	{
 		return;		// something else is keeping it from drifting
-	}
-#endif
+
 	if (cl.nodrift || !cl.pitchvel)
 	{
 		cl.pitchvel = v_centerspeed.value;
@@ -192,8 +186,6 @@ static void V_DriftPitch (void)
 	move = cl.frametime * cl.pitchvel;
 	cl.pitchvel += cl.frametime * v_centerspeed.value;
 
-//Con_Printf ("move: %f (%f)\n", move, cl.frametime);
-
 	if (delta > 0)
 	{
 		if (move > delta)
@@ -213,9 +205,6 @@ static void V_DriftPitch (void)
 		cl.viewangles[PITCH] -= move;
 	}
 }
-
-
-
 
 
 /*
@@ -608,5 +597,4 @@ void V_Init (void)
 	Cvar_RegisterVariable (&v_kickroll);
 	Cvar_RegisterVariable (&v_kickpitch);
 }
-
 

@@ -83,18 +83,13 @@ void Con_ToggleConsole_f (void)
 	if (key_dest == key_console)
 	{
 		if (cls.state == ca_connected)
-//		{
 			key_dest = key_game;
-//			key_lines[edit_line][1] = 0;	// clear any typing
-//			key_linepos = 1;
-//		}
 		else
 			M_Menu_Main_f ();
 	}
 	else
 		key_dest = key_console;
 
-	SCR_EndLoadingPlaque ();
 	memset (con_times, 0, sizeof(con_times));
 }
 
@@ -389,7 +384,6 @@ void Con_Printf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[MAXPRINTMSG];
-//	static qboolean	inupdate;
 
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
@@ -415,24 +409,6 @@ void Con_Printf (char *fmt, ...)
 
 // write it to the scrollable buffer
 	Con_Print (msg);
-
-// update the screen if the console is displayed
-	// LordHavoc: I don't think there's a real need for this
-	/*
-	// LordHavoc: don't print text while loading scripts
-	if (cls.state != ca_disconnected)
-	if (cls.signon != SIGNONS && !scr_disabled_for_loading )
-	{
-	// protect against infinite loop if something in SCR_UpdateScreen calls
-	// Con_Printf
-		if (!inupdate)
-		{
-			inupdate = true;
-			SCR_UpdateScreen ();
-			inupdate = false;
-		}
-	}
-	*/
 }
 
 /*
@@ -469,16 +445,12 @@ void Con_SafePrintf (char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[1024];
-	//int			temp;
 
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
 	va_end (argptr);
 
-	//temp = scr_disabled_for_loading;
-	//scr_disabled_for_loading = true;
 	Con_Printf ("%s", msg);
-	//scr_disabled_for_loading = temp;
 }
 
 

@@ -11,7 +11,6 @@ static int ranoutofportals;
 static float portaltemppoints[2][256][3];
 static float portaltemppoints2[256][3];
 static int portal_markid = 0;
-//float viewportalpoints[16*3];
 static float boxpoints[4*3];
 
 int Portal_ClipPolygonToPlane(float *in, float *out, int inpoints, int maxoutpoints, tinyplane_t *p)
@@ -66,18 +65,6 @@ begin:
 	return outpoints;
 }
 
-/*
-void Portal_TriangleToPlane(vec3_t point1, vec3_t point2, vec3_t point3, tinyplane_t *p)
-{
-	vec3_t v1, v2;
-	VectorSubtract(point1, point2, v1);
-	VectorSubtract(point3, point2, v2);
-	CrossProduct(v1, v2, p->normal);
-//	VectorNormalize(p->normal);
-	VectorNormalizeFast(p->normal);
-	p->dist = DotProduct(point1, p->normal);
-}
-*/
 
 int Portal_PortalThroughPortalPlanes(tinyplane_t *clipplanes, int clipnumplanes, float *targpoints, int targnumpoints, float *out, int maxpoints)
 {
@@ -134,7 +121,6 @@ int Portal_RecursiveFlowSearch (mleaf_t *leaf, vec3_t eye, int firstclipplane, i
 				newplanes = &portalplanes[firstclipplane + numclipplanes];
 				for (prev = newpoints - 1, i = 0;i < newpoints;prev = i, i++)
 				{
-//					Portal_TriangleToPlane(eye, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
 					VectorSubtract(eye, portaltemppoints2[i], v1);
 					VectorSubtract(portaltemppoints2[prev], portaltemppoints2[i], v2);
 					CrossProduct(v1, v2, newplanes[i].normal);
@@ -218,7 +204,6 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 	// calculate the planes, and make sure the polygon can see it's own center
 	for (prev = numpoints - 1, i = 0;i < numpoints;prev = i, i++)
 	{
-//		Portal_TriangleToPlane(eye, portaltemppoints2[i], portaltemppoints2[prev], newplanes + i);
 		VectorSubtract(eye, (&polypoints[i * 3]), v1);
 		VectorSubtract((&polypoints[prev * 3]), (&polypoints[i * 3]), v2);
 		CrossProduct(v1, v2, portalplanes[i].normal);
@@ -329,3 +314,4 @@ int Portal_CheckBox(model_t *model, vec3_t eye, vec3_t a, vec3_t b)
 
 	return false;
 }
+

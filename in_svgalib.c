@@ -68,9 +68,6 @@ static void keyhandler(int scancode, int state)
 	int sc;
 
 	sc = scancode & 0x7f;
-#if 0
-	Con_Printf("scancode=%x (%d%s)\n", scancode, sc, scancode&0x80?"+128":"");
-#endif
 	Key_Event(scantokey[sc], state == KEY_EVENTPRESS);
 }
 
@@ -247,10 +244,6 @@ static void IN_init_mouse(void)
 		mouserate = atoi(com_argv[COM_CheckParm("-mrate")+1]);
 	}
 
-#if 0
-	printf("Mouse: dev=%s,type=%s,speed=%d\n",
-		mousedev, mice[mtype].name, mouserate);
-#endif
 	if (mouse_init(mousedev, mtype, mouserate)) {
 		Con_Printf("No mouse found\n");
 		UseMouse = 0;
@@ -338,3 +331,4 @@ void IN_Move(usercmd_t *cmd)
 void IN_HandlePause (qboolean pause)
 {
 }
+

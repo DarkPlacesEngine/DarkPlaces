@@ -510,10 +510,8 @@ char	*Cmd_Args (void)
 }
 
 
-#if 1
 #define CMD_TOKENIZELENGTH 4096
 char cmd_tokenizebuffer[CMD_TOKENIZELENGTH];
-#endif
 
 /*
 ============
@@ -525,15 +523,8 @@ Parses the given string into command line tokens.
 static void Cmd_TokenizeString (char *text)
 {
 	int l;
-#ifdef CMD_TOKENIZELENGTH
 	int pos;
 	pos = 0;
-#else
-	int i;
-// clear the args from the last string
-	for (i=0 ; i<cmd_argc ; i++)
-		Z_Free (cmd_argv[i]);
-#endif
 
 	cmd_argc = 0;
 	cmd_args = NULL;
@@ -565,14 +556,10 @@ static void Cmd_TokenizeString (char *text)
 		if (cmd_argc < MAX_ARGS)
 		{
 			l = strlen(com_token) + 1;
-#ifdef CMD_TOKENIZELENGTH
 			if (pos + l > CMD_TOKENIZELENGTH)
 				Sys_Error("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
 			cmd_argv[cmd_argc] = cmd_tokenizebuffer + pos;
 			pos += l;
-#else
-			cmd_argv[cmd_argc] = Z_Malloc (l);
-#endif
 			strcpy (cmd_argv[cmd_argc], com_token);
 			cmd_argc++;
 		}
@@ -589,9 +576,6 @@ Cmd_AddCommand
 void	Cmd_AddCommand (char *cmd_name, xcommand_t function)
 {
 	cmd_function_t	*cmd;
-
-//	if (host_initialized)	// because hunk allocation would get stomped
-//		Sys_Error ("Cmd_AddCommand after host_initialized");
 
 // fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0])
@@ -632,7 +616,6 @@ qboolean	Cmd_Exists (char *cmd_name)
 
 	return false;
 }
-
 
 
 /*

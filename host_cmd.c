@@ -30,19 +30,9 @@ Host_Quit_f
 ==================
 */
 
-// LordHavoc: didn't like it asking me if I wanted to quit
-//extern void M_Menu_Quit_f (void);
-
 extern qboolean host_shuttingdown;
 void Host_Quit_f (void)
 {
-	/*
-	if (key_dest != key_console && cls.state != ca_dedicated)
-	{
-		M_Menu_Quit_f ();
-		return;
-	}
-	*/
 	host_shuttingdown = true;
 	CL_Disconnect ();
 	Host_ShutdownServer(false);
@@ -680,11 +670,7 @@ void Host_Name_f (void)
 		Con_Printf ("\"name\" is \"%s\"\n", cl_name.string);
 		return;
 	}
-	//if (Cmd_Argc () == 2)
-	//	newName = Cmd_Argv(1);
-	//else
-	//	newName = Cmd_Args();
-	//newName[15] = 0;
+
 	if (Cmd_Argc () == 2)
 		strncpy(newName, Cmd_Argv(1), 15);
 	else
@@ -895,7 +881,6 @@ void Host_Color_f(void)
 		return;
 	}
 
-	// void(float color) SV_ChangeTeam;
 	if ((f = ED_FindFunction ("SV_ChangeTeam")) && (SV_ChangeTeam = (func_t)(f - pr_functions)))
 	{
 		Con_DPrintf("Calling SV_ChangeTeam\n");
@@ -1122,7 +1107,6 @@ void Host_Spawn_f (void)
 	MSG_WriteByte (&host_client->message, STAT_MONSTERS);
 	MSG_WriteLong (&host_client->message, pr_global_struct->killed_monsters);
 
-//
 // send a fixangle
 // Never send a roll angle, because savegames can catch the server
 // in a state where it is expecting the client to correct the angle
@@ -1662,3 +1646,4 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("viewnext", Host_Viewnext_f);
 	Cmd_AddCommand ("viewprev", Host_Viewprev_f);
 }
+

@@ -201,9 +201,7 @@ void ResampleSfx (sfxcache_t *sc, qbyte *data, char *name)
 	}
 
 	// LordHavoc: use this for testing if it ever becomes useful again
-#if 0
-	COM_WriteFile (va("sound/%s.pcm", name), sc->data, (sc->length << sc->stereo) * sc->width);
-#endif
+//	COM_WriteFile (va("sound/%s.pcm", name), sc->data, (sc->length << sc->stereo) * sc->width);
 }
 
 //=============================================================================
@@ -225,12 +223,9 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if (s->sfxcache)
 		return s->sfxcache;
 
-//Con_Printf ("S_LoadSound: %x\n", (int)stackbuf);
 // load it in
 	strcpy(namebuffer, "sound/");
 	strcat(namebuffer, s->name);
-
-//	Con_Printf ("loading %s\n",namebuffer);
 
 	data = COM_LoadFile(namebuffer, false);
 
@@ -248,13 +243,6 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 		Mem_Free(data);
 		return NULL;
 	}
-	/*
-	if (info.channels != 1)
-	{
-		Con_Printf ("%s is a stereo sample\n",s->name);
-		return NULL;
-	}
-	*/
 
 	// calculate resampled length
 	len = (int) ((double) info.samples * (double) shm->speed / (double) info.rate);
@@ -340,8 +328,6 @@ void FindNextChunk(char *name)
 			data_p = NULL;
 			return;
 		}
-//		if (iff_chunk_len > 1024*1024)
-//			Sys_Error ("FindNextChunk: %i length is past the 1 meg sanity limit", iff_chunk_len);
 		data_p -= 8;
 		last_chunk = data_p + 8 + ( (iff_chunk_len + 1) & ~1 );
 		if (!strncmp(data_p, name, 4))
@@ -429,7 +415,6 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	{
 		data_p += 32;
 		info.loopstart = GetLittleLong();
-//		Con_Printf("loopstart=%d\n", sfx->loopstart);
 
 	// if the next chunk is a LIST chunk, look for a cue length marker
 		FindNextChunk ("LIST");
@@ -440,7 +425,6 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 				data_p += 24;
 				i = GetLittleLong ();	// samples in loop
 				info.samples = info.loopstart + i;
-//				Con_Printf("looped length: %i\n", i);
 			}
 		}
 	}

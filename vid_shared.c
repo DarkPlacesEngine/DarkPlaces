@@ -493,3 +493,4 @@ void VID_InitCvars(void)
 	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
 }
+

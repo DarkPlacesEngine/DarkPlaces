@@ -39,8 +39,6 @@ qboolean	ActiveApp, Minimized;
 static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
 
-//static char			*tracking_tag = "Clams & Mooses";
-
 static HANDLE	tevent;
 static HANDLE	hFile;
 static HANDLE	heventParent;
@@ -478,14 +476,8 @@ void Sys_SendKeyEvents (void)
 */
 
 
-/*
-==================
-WinMain
-==================
-*/
 void SleepUntilInput (int time)
 {
-
 	MsgWaitForMultipleObjects(1, &tevent, false, time, QS_ALLINPUT);
 }
 

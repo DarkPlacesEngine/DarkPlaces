@@ -484,12 +484,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 
 	Mod_MDL_LoadFrames (startframes, numverts, totalverts, scale, translate);
 
-	// LordHavoc: fixed model bbox - was //FIXME: do this right
-	//loadmodel->mins[0] = loadmodel->mins[1] = loadmodel->mins[2] = -16;
-	//loadmodel->maxs[0] = loadmodel->maxs[1] = loadmodel->maxs[2] = 16;
 	modelyawradius = sqrt(modelyawradius);
 	modelradius = sqrt(modelradius);
-//	loadmodel->modelradius = modelradius;
 	for (j = 0;j < 3;j++)
 	{
 		loadmodel->normalmins[j] = aliasbboxmin[j];
@@ -749,7 +745,6 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	// LordHavoc: model bbox
 	modelyawradius = sqrt(modelyawradius);
 	modelradius = sqrt(modelradius);
-//	loadmodel->modelradius = modelradius;
 	for (j = 0;j < 3;j++)
 	{
 		loadmodel->normalmins[j] = aliasbboxmin[j];
@@ -948,7 +943,6 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 
 	// model bbox
 	modelradius = pheader->radius;
-//	loadmodel->modelradius = pheader->radius;
 	for (i = 0;i < 3;i++)
 	{
 		loadmodel->normalmins[i] = pheader->mins[i];
@@ -970,3 +964,4 @@ void Mod_LoadZymoticModel(model_t *mod, void *buffer)
 	loadmodel->DrawSky = NULL;
 	loadmodel->DrawShadow = NULL;
 }
+

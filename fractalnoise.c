@@ -110,3 +110,4 @@ void fractalnoisequick(qbyte *noise, int size, int startgrid)
 	}
 #undef n
 }
+

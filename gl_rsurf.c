@@ -88,17 +88,11 @@ static int R_AddDynamicLights (msurface_t *surf)
 			continue;					// not lit by this light
 
 		softwareuntransform(r_dlight[lnum].origin, local);
-//		VectorSubtract (r_dlight[lnum].origin, currentrenderentity->origin, local);
 		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
 
 		// for comparisons to minimum acceptable light
 		// compensate for LIGHTOFFSET
 		maxdist = (int) r_dlight[lnum].cullradius2 + LIGHTOFFSET;
-
-		// already clamped, skip this
-		// clamp radius to avoid exceeding 32768 entry division table
-		//if (maxdist > 4194304)
-		//	maxdist = 4194304;
 
 		dist2 = dist * dist;
 		dist2 += LIGHTOFFSET;
@@ -448,27 +442,6 @@ static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
 	R_UpdateTexture(surf->lightmaptexture, templight);
 }
 
-/*
-===============
-R_TextureAnimation
-
-Returns the proper texture for a given time and base texture
-===============
-*/
-/*
-// note: this was manually inlined in R_PrepareSurfaces
-static texture_t *R_TextureAnimation (texture_t *base)
-{
-	if (currentrenderentity->frame && base->alternate_anims != NULL)
-		base = base->alternate_anims;
-
-	if (base->anim_total < 2)
-		return base;
-
-	return base->anim_frames[(int)(cl.time * 5.0f) % base->anim_total];
-}
-*/
-
 
 /*
 =============================================================
@@ -531,10 +504,6 @@ static void RSurfShader_Sky(msurface_t *firstsurf)
 				m.numtriangles = mesh->numtriangles;
 				m.numverts = mesh->numverts;
 				m.index = mesh->index;
-				//m.cr = 0;
-				//m.cg = 0;
-				//m.cb = 0;
-				//m.ca = 0;
 				if (softwaretransform_complexity)
 				{
 					m.vertex = &svert[0].v[0];
@@ -904,8 +873,7 @@ static void RSurfShader_Water(msurface_t *firstsurf)
 			RSurfShader_Water_Pass_Glow(surf);
 	if (fogenabled)
 		for (surf = firstsurf;surf;surf = surf->chain)
-			//if (currentrenderentity->alpha * (surf->flags & SURF_DRAWNOALPHA ? 1 : r_wateralpha.value) >= 1.0f)
-				RSurfShader_Water_Pass_Fog(surf);
+			RSurfShader_Water_Pass_Fog(surf);
 }
 
 static void RSurfShader_Wall_Pass_BaseMTex(msurface_t *surf)
@@ -1972,8 +1940,6 @@ void R_PrepareSurfaces(void)
 			{
 				surf->insertframe = r_framecount;
 				c_faces++;
-				// manually inlined R_TextureAnimation
-				//t = R_TextureAnimation(surf->texinfo->texture);
 				t = surf->texinfo->texture;
 				if (t->alternate_anims != NULL && currentrenderentity->frame)
 					t = t->alternate_anims;
@@ -2006,38 +1972,14 @@ static float portalpointbuffer[256][3];
 void R_DrawPortals(void)
 {
 	int drawportals, i;
-//	mleaf_t *leaf, *endleaf;
 	mportal_t *portal, *endportal;
-	mvertex_t *point/*, *endpoint*/;
+	mvertex_t *point;
 	rmeshinfo_t m;
 	drawportals = r_drawportals.integer;
+
 	if (drawportals < 1)
 		return;
-	/*
-	leaf = cl.worldmodel->leafs;
-	endleaf = leaf + cl.worldmodel->numleafs;
-	for (;leaf < endleaf;leaf++)
-	{
-		if (leaf->visframe == r_framecount && leaf->portals)
-		{
-			i = leaf - cl.worldmodel->leafs;
-			r = (i & 0x0007) << 5;
-			g = (i & 0x0038) << 2;
-			b = (i & 0x01C0) >> 1;
-			portal = leaf->portals;
-			while (portal)
-			{
-				transpolybegin(0, 0, 0, TPOLYTYPE_ALPHA);
-				point = portal->points + portal->numpoints - 1;
-				endpoint = portal->points;
-				for (;point >= endpoint;point--)
-					transpolyvertub(point->position[0], point->position[1], point->position[2], 0, 0, r, g, b, 32);
-				transpolyend();
-				portal = portal->next;
-			}
-		}
-	}
-	*/
+
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -2135,10 +2077,6 @@ static void R_SurfMarkLights (void)
 					 || (surf->styles[1] != 255 && (d_lightstylevalue[surf->styles[1]] != surf->cached_light[1]
 					 || (surf->styles[2] != 255 && (d_lightstylevalue[surf->styles[2]] != surf->cached_light[2]
 					 || (surf->styles[3] != 255 && (d_lightstylevalue[surf->styles[3]] != surf->cached_light[3]))))))))
-					//if (surf->cached_light[0] != d_lightstylevalue[surf->styles[0]]
-					// || surf->cached_light[1] != d_lightstylevalue[surf->styles[1]]
-					// || surf->cached_light[2] != d_lightstylevalue[surf->styles[2]]
-					// || surf->cached_light[3] != d_lightstylevalue[surf->styles[3]])
 						R_BuildLightMap(surf, false); // base lighting changed
 					else if (surf->dlightframe == r_framecount && r_dlightmap.integer)
 						R_BuildLightMap(surf, true); // only dlights
@@ -2199,3 +2137,4 @@ void R_DrawBrushModelNormal (void)
 		R_DrawSurfaces(SHADERSTAGE_SKY);
 	R_DrawSurfaces(SHADERSTAGE_NORMAL);
 }
+

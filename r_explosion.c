@@ -26,29 +26,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
 #define EXPLOSIONSTARTVELOCITY (256.0f)
-//#define EXPLOSIONSTARTVELOCITY (384.0f)
-//#define EXPLOSIONRANDOMVELOCITY (32.0f)
 #define EXPLOSIONFADESTART (1.5f)
-//#define EXPLOSIONFADERATE (4.5f)
 #define EXPLOSIONFADERATE (3.0f)
-/*
-#define MAX_EXPLOSIONGAS (MAX_EXPLOSIONS * EXPLOSIONGAS)
-#define EXPLOSIONGAS 8
-#define EXPLOSIONGASSTARTRADIUS (15.0f)
-#define EXPLOSIONGASSTARTVELOCITY (50.0f)
-#define GASDENSITY_SCALER (32768.0f / EXPLOSIONGAS)
-#define GASFADERATE (GASDENSITY_SCALER * EXPLOSIONGAS * 2)
-
-typedef struct explosiongas_s
-{
-	float pressure;
-	vec3_t origin;
-	vec3_t velocity;
-}
-explosiongas_t;
-
-explosiongas_t explosiongas[MAX_EXPLOSIONGAS];
-*/
 
 float explosiontexcoords[EXPLOSIONVERTS][2];
 int explosiontris[EXPLOSIONTRIS][3];
@@ -117,7 +96,6 @@ void r_explosion_shutdown(void)
 void r_explosion_newmap(void)
 {
 	memset(explosion, 0, sizeof(explosion));
-//	memset(explosiongas, 0, sizeof(explosiongas));
 }
 
 int R_ExplosionVert(int column, int row)
@@ -189,53 +167,27 @@ void R_NewExplosion(vec3_t org)
 				// calculate velocity
 				dist = noise[explosionnoiseindex[j]] * (1.0f / 255.0f) + 0.5;
 				VectorScale(explosionspherevertvel[j], dist, explosion[i].vertvel[j]);
-				//explosion[i].vertvel[j][0] = explosionspherevertvel[j][0] * dist; + (((float) noise[0][explosionnoiseindex[j]] - 128.0f) * (EXPLOSIONRANDOMVELOCITY / 128.0f));
-				//explosion[i].vertvel[j][1] = explosionspherevertvel[j][1] * dist; + (((float) noise[1][explosionnoiseindex[j]] - 128.0f) * (EXPLOSIONRANDOMVELOCITY / 128.0f));
-				//explosion[i].vertvel[j][2] = explosionspherevertvel[j][2] * dist; + (((float) noise[2][explosionnoiseindex[j]] - 128.0f) * (EXPLOSIONRANDOMVELOCITY / 128.0f));
 			}
 			break;
 		}
 	}
-
-	/*
-	i = 0;
-	j = EXPLOSIONGAS;
-	while (i < MAX_EXPLOSIONGAS && j > 0)
-	{
-		while (explosiongas[i].pressure > 0)
-		{
-			i++;
-			if (i >= MAX_EXPLOSIONGAS)
-				return;
-		}
-		VectorRandom(v);
-		VectorMA(org, EXPLOSIONGASSTARTRADIUS, v, v);
-		TraceLine(org, v, explosiongas[i].origin, NULL, 0, true);
-		VectorRandom(v);
-		VectorScale(v, EXPLOSIONGASSTARTVELOCITY, explosiongas[i].velocity);
-		explosiongas[i].pressure = j * GASDENSITY_SCALER;
-		j--;
-	}
-	*/
 }
 
 void R_DrawExplosion(explosion_t *e)
 {
 	int i;
-	float c[EXPLOSIONVERTS][4], diff[3], centerdir[3], /*fog, */ifog, alpha, dist/*, centerdist, size, scale*/;
+	float c[EXPLOSIONVERTS][4], diff[3], centerdir[3], ifog, alpha, dist;
 	rmeshinfo_t m;
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
-	m.blendfunc2 = GL_ONE; //_MINUS_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE;
 	m.numtriangles = EXPLOSIONTRIS;
 	m.index = &explosiontris[0][0];
 	m.numverts = EXPLOSIONVERTS;
 	m.vertex = &e->vert[0][0];
 	m.vertexstep = sizeof(float[3]);
 	alpha = e->alpha;
-	//if (alpha > 1)
-	//	alpha = 1;
 	m.cr = 1;
 	m.cg = 1;
 	m.cb = 1;
@@ -244,22 +196,10 @@ void R_DrawExplosion(explosion_t *e)
 	m.colorstep = sizeof(float[4]);
 	VectorSubtract(r_origin, e->origin, centerdir);
 	VectorNormalizeFast(centerdir);
-	/*
-	centerdist = DotProduct(e->origin, centerdir);
-	size = 0;
-	for (i = 0;i < EXPLOSIONVERTS;i++)
-	{
-		dist = DotProduct(e->vert[i], centerdir) - centerdist;
-		if (size < dist)
-			size = dist;
-	}
-	scale = 4.0f / size;
-	*/
 	if (fogenabled)
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
 		{
-			//dist = (DotProduct(e->vert[i], centerdir) - centerdist) * scale - 2.0f;
 			VectorSubtract(e->vert[i], e->origin, diff);
 			VectorNormalizeFast(diff);
 			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
@@ -282,7 +222,6 @@ void R_DrawExplosion(explosion_t *e)
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
 		{
-			//dist = (DotProduct(e->vert[i], centerdir) - centerdist) * scale - 2.0f;
 			VectorSubtract(e->vert[i], e->origin, diff);
 			VectorNormalizeFast(diff);
 			dist = (DotProduct(diff, centerdir) * 6.0f - 4.0f) * alpha;
@@ -292,62 +231,18 @@ void R_DrawExplosion(explosion_t *e)
 			c[i][3] = 1;
 		}
 	}
-	/*
-	if (fogenabled)
-	{
-		m.color = &c[0][0];
-		m.colorstep = sizeof(float[4]);
-		for (i = 0;i < EXPLOSIONVERTS;i++)
-		{
-			// use inverse fog alpha as color
-			VectorSubtract(e->vert[i], r_origin, diff);
-			ifog = 1 - exp(fogdensity/DotProduct(diff,diff));
-			if (ifog < 0)
-				ifog = 0;
-			c[i][0] = ifog;
-			c[i][1] = ifog;
-			c[i][2] = ifog;
-			c[i][3] = alpha;
-		}
-	}
-	*/
 	m.tex[0] = R_GetTexture(explosiontexture);
 	m.texcoords[0] = &explosiontexcoords[0][0];
 	m.texcoordstep[0] = sizeof(float[2]);
 
 	R_Mesh_Draw(&m);
-
-	/*
-	if (fogenabled)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE;
-		for (i = 0;i < EXPLOSIONVERTS;i++)
-		{
-			VectorSubtract(e->vert[i], r_origin, diff);
-			fog = exp(fogdensity/DotProduct(diff,diff));
-			c[i][0] = fogcolor[0];
-			c[i][1] = fogcolor[1];
-			c[i][2] = fogcolor[2];
-			c[i][3] = alpha * fog;
-		}
-		//m.color = &c[0][0];
-		//m.colorstep = sizeof(float[4]);
-		m.tex[0] = R_GetTexture(explosiontexturefog);
-		R_Mesh_Draw(&m);
-	}
-	*/
 }
 
-void R_MoveExplosion(explosion_t *e/*, explosiongas_t **list, explosiongas_t **listend, */)
+void R_MoveExplosion(explosion_t *e)
 {
 	int i;
 	float dot, frictionscale, end[3], impact[3], normal[3], frametime;
-	/*
-	vec3_t diff;
-	vec_t dist;
-	explosiongas_t **l;
-	*/
+
 	frametime = cl.time - e->time;
 	e->time = cl.time;
 	e->alpha = EXPLOSIONFADESTART - (cl.time - e->starttime) * EXPLOSIONFADERATE;
@@ -362,7 +257,6 @@ void R_MoveExplosion(explosion_t *e/*, explosiongas_t **list, explosiongas_t **l
 	{
 		if (e->vertvel[i][0] || e->vertvel[i][1] || e->vertvel[i][2])
 		{
-			//e->vertvel[i][2] += sv_gravity.value * frametime * -0.25f;
 			VectorScale(e->vertvel[i], frictionscale, e->vertvel[i]);
 			VectorMA(e->vert[i], frametime, e->vertvel[i], end);
 			if (r_explosionclip.integer)
@@ -378,108 +272,33 @@ void R_MoveExplosion(explosion_t *e/*, explosiongas_t **list, explosiongas_t **l
 			else
 				VectorCopy(end, e->vert[i]);
 		}
-		/*
-		for (l = list;l < listend;l++)
-		{
-			VectorSubtract(e->vert[i], (*l)->origin, diff);
-			dist = DotProduct(diff, diff);
-			if (dist < 4096 && dist >= 1)
-			{
-				dist = (*l)->pressure * frametime / dist;
-				VectorMA(e->vertvel[i], dist, diff, e->vertvel[i]);
-			}
-		}
-		*/
 	}
 	for (i = 0;i < EXPLOSIONGRID;i++)
 		VectorCopy(e->vert[i * (EXPLOSIONGRID + 1)], e->vert[i * (EXPLOSIONGRID + 1) + EXPLOSIONGRID]);
 	memcpy(e->vert[EXPLOSIONGRID * (EXPLOSIONGRID + 1)], e->vert[0], sizeof(float[3]) * (EXPLOSIONGRID + 1));
 }
 
-/*
-void R_MoveExplosionGas(explosiongas_t *e, explosiongas_t **list, explosiongas_t **listend, float frametime)
-{
-	vec3_t end, diff;
-	vec_t dist, frictionscale;
-	explosiongas_t **l;
-	frictionscale = 1 - frametime;
-	frictionscale = bound(0, frictionscale, 1);
-	if (e->velocity[0] || e->velocity[1] || e->velocity[2])
-	{
-		end[0] = e->origin[0] + frametime * e->velocity[0];
-		end[1] = e->origin[1] + frametime * e->velocity[1];
-		end[2] = e->origin[2] + frametime * e->velocity[2];
-		if (r_explosionclip.integer)
-		{
-			float f, dot;
-			vec3_t impact, normal;
-			f = TraceLine(e->origin, end, impact, normal, 0, true);
-			VectorCopy(impact, e->origin);
-			if (f < 1)
-			{
-				// clip velocity against the wall
-				dot = DotProduct(e->velocity, normal) * -1.3f;
-				e->velocity[0] += normal[0] * dot;
-				e->velocity[1] += normal[1] * dot;
-				e->velocity[2] += normal[2] * dot;
-			}
-		}
-		else
-		{
-			VectorCopy(end, e->origin);
-		}
-		e->velocity[2] += sv_gravity.value * frametime;
-		VectorScale(e->velocity, frictionscale, e->velocity);
-	}
-	for (l = list;l < listend;l++)
-	{
-		if (*l != e)
-		{
-			VectorSubtract(e->origin, (*l)->origin, diff);
-			dist = DotProduct(diff, diff);
-			if (dist < 4096 && dist >= 1)
-			{
-				dist = (*l)->pressure * frametime / dist;
-				VectorMA(e->velocity, dist, diff, e->velocity);
-			}
-		}
-	}
-}
-*/
 
 void R_MoveExplosions(void)
 {
 	int i;
 	float frametime;
-//	explosiongas_t *gaslist[MAX_EXPLOSIONGAS], **l, **end;
+
 	frametime = cl.time - cl.oldtime;
-	/*
-	l = &gaslist[0];
-	for (i = 0;i < MAX_EXPLOSIONGAS;i++)
-	{
-		if (explosiongas[i].pressure > 0)
-		{
-			explosiongas[i].pressure -= frametime * GASFADERATE;
-			if (explosiongas[i].pressure > 0)
-				*l++ = &explosiongas[i];
-		}
-	}
-	end = l;
-	for (l = gaslist;l < end;l++)
-		R_MoveExplosionGas(*l, gaslist, end, frametime);
-	*/
 
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 		if (explosion[i].alpha > 0.01f)
-			R_MoveExplosion(&explosion[i]/*, gaslist, end, */);
+			R_MoveExplosion(&explosion[i]);
 }
 
 void R_DrawExplosions(void)
 {
 	int i;
+
 	if (!r_drawexplosions.integer)
 		return;
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 		if (explosion[i].alpha > 0.01f)
 			R_DrawExplosion(&explosion[i]);
 }
+

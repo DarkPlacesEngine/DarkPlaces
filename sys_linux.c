@@ -157,7 +157,6 @@ void Sys_DebugLog(char *file, char *fmt, ...)
     va_start(argptr, fmt);
     vsprintf(data, fmt, argptr);
     va_end(argptr);
-//    fd = open(file, O_WRONLY | O_BINARY | O_CREAT | O_APPEND, 0666);
     fd = open(file, O_WRONLY | O_CREAT | O_APPEND, 0666);
     write(fd, data, strlen(data));
     close(fd);
@@ -203,7 +202,6 @@ void alarm_handler(int x)
 
 void floating_point_exception_handler(int whatever)
 {
-//	Sys_Warn("floating point exception\n");
 	signal(SIGFPE, floating_point_exception_handler);
 }
 
@@ -242,9 +240,6 @@ int main (int c, char **v)
 
 	double oldtime, newtime;
 
-//	static char cwd[1024];
-
-//	signal(SIGFPE, floating_point_exception_handler);
 	signal(SIGFPE, SIG_IGN);
 
 	memset(&host_parms, 0, sizeof(host_parms));
@@ -275,3 +270,4 @@ int main (int c, char **v)
 	}
 	return 0;
 }
+

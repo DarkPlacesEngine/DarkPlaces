@@ -311,9 +311,6 @@ void S_TransferPaintBuffer(int endtime)
 		pDSBuf->lpVtbl->Unlock(pDSBuf, pbuf, dwSize, NULL, 0);
 
 		pDSBuf->lpVtbl->GetCurrentPosition(pDSBuf, &dwNewpos, &dwWrite);
-
-//		if ((dwNewpos >= il) && (dwNewpos <= ir))
-//			Con_Printf("%d-%d p %d c\n", il, ir, dwNewpos);
 	}
 #endif
 }
@@ -418,7 +415,6 @@ void SND_InitScaletable (void)
 
 void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 {
-//	int 	data;
 	int		*lscale, *rscale;
 	unsigned char *sfx;
 	int		i;
@@ -458,8 +454,6 @@ void SND_PaintChannelFrom8 (channel_t *ch, sfxcache_t *sc, int count)
 
 void SND_PaintChannelFrom16 (channel_t *ch, sfxcache_t *sc, int count)
 {
-//	int data;
-//	int left, right;
 	int leftvol, rightvol;
 	signed short *sfx;
 	int	i;

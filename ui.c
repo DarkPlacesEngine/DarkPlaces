@@ -405,6 +405,6 @@ void ui_draw(void)
 			DrawQ_String(it->draw_x, it->draw_y, it->draw_string, 0, 8, 8, 1, 1, 1, 1, DRAWFLAG_ADDITIVE);
 
 		DrawQ_Pic(ui_mouse_x, ui_mouse_y, "ui/mousepointer.tga", 0, 0, 1, 1, 1, 1, 0);
-		//Draw_GenericPic(ui_mousepointertexture, 1, 1, 1, 1, ui_mouse_x, ui_mouse_y, 16, 16);
 	}
 }
+

@@ -326,9 +326,6 @@ int	Datagram_GetMessage (qsocket_t *sock)
 	{
 		length = sfunc.Read (sock->socket, (qbyte *)&packetBuffer, NET_DATAGRAMSIZE, &readaddr);
 
-//	if ((rand() & 255) > 220)
-//		continue;
-
 		if (length == 0)
 			break;
 
@@ -489,20 +486,12 @@ void NET_Stats_f (void)
 	{
 		for (s = net_activeSockets; s; s = s->next)
 			PrintStats(s);
-		// LordHavoc: sockets are dynamically allocated now
-		//for (s = net_freeSockets; s; s = s->next)
-		//	PrintStats(s);
 	}
 	else
 	{
 		for (s = net_activeSockets; s; s = s->next)
 			if (Q_strcasecmp(Cmd_Argv(1), s->address) == 0)
 				break;
-		// LordHavoc: sockets are dynamically allocated now
-		//if (s == NULL)
-		//	for (s = net_freeSockets; s; s = s->next)
-		//		if (Q_strcasecmp(Cmd_Argv(1), s->address) == 0)
-		//			break;
 		if (s == NULL)
 			return;
 		PrintStats(s);
@@ -1086,7 +1075,6 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	MSG_WriteByte(&net_message, CCREP_ACCEPT);
 	dfunc.GetSocketAddr(newsock, &newaddr);
 	MSG_WriteLong(&net_message, dfunc.GetSocketPort(&newaddr));
-//	MSG_WriteString(&net_message, dfunc.AddrToString(&newaddr));
 	*((int *)net_message.data) = BigLong(NETFLAG_CTL | (net_message.cursize & NETFLAG_LENGTH_MASK));
 	dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
 	SZ_Clear(&net_message);
@@ -1274,12 +1262,10 @@ static qsocket_t *_Datagram_Connect (char *host)
 				// is it from the right place?
 				if (sfunc.AddrCompare(&readaddr, &sendaddr) != 0)
 				{
-//#ifdef DEBUG
 					Con_DPrintf("wrong reply address\n");
 					Con_DPrintf("Expected: %s\n", StrAddr (&sendaddr));
 					Con_DPrintf("Received: %s\n", StrAddr (&readaddr));
 					CL_UpdateScreen ();
-//#endif
 					ret = 0;
 					continue;
 				}
@@ -1397,3 +1383,4 @@ qsocket_t *Datagram_Connect (char *host)
 				break;
 	return ret;
 }
+

@@ -155,6 +155,5 @@ void R_LerpAnimation(entity_render_t *r)
 			FRAMEBLENDINSERT
 		}
 	}
-	//Con_Printf("Lerp: %i:%f %i:%f %i:%f %i:%f\n", blend[0].frame, blend[0].lerp, blend[1].frame, blend[1].lerp, blend[2].frame, blend[2].lerp, blend[3].frame, blend[3].lerp);
 }
 

@@ -45,8 +45,6 @@ void CL_TraceLine_ScanForBModels(void)
 		// look for embedded brush models only
 		if (model && model->name[0] == '*')
 		{
-			// this does nothing for * models currently...
-			//Mod_CheckLoaded(model);
 			if (model->type == mod_brush)
 			{
 				traceline_entity[traceline_entities++] = ent;
@@ -93,7 +91,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 	{
 		int n;
 		entity_render_t *ent;
-		double /*start2[3], end2[3], */tracemins[3], tracemaxs[3];
+		double tracemins[3], tracemaxs[3];
 		tracemins[0] = min(start[0], end[0]);
 		tracemaxs[0] = max(start[0], end[0]);
 		tracemins[1] = min(start[1], end[1]);
@@ -125,3 +123,4 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 	}
 	return maxfrac;
 }
+

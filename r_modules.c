@@ -90,3 +90,4 @@ void R_Modules_NewMap(void)
 		rendermodule[i].newmap();
 	}
 }
+

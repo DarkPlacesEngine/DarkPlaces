@@ -351,39 +351,6 @@ dfunction_t *ED_FindFunction (char *name)
 
 
 /*
-eval_t *GetEdictFieldValue(edict_t *ed, char *field)
-{
-	ddef_t			*def = NULL;
-	int				i;
-	static int		rep = 0;
-
-	for (i=0 ; i<GEFV_CACHESIZE ; i++)
-	{
-		if (!strcmp(field, gefvCache[i].field))
-		{
-			def = gefvCache[i].pcache;
-			goto Done;
-		}
-	}
-
-	def = ED_FindField (field);
-
-	if (strlen(field) < MAX_FIELD_LEN)
-	{
-		gefvCache[rep].pcache = def;
-		strcpy (gefvCache[rep].field, field);
-		rep ^= 1;
-	}
-
-Done:
-	if (!def)
-		return NULL;
-
-	return (eval_t *)((char *)&ed->v + def->ofs*4);
-}
-*/
-
-/*
 ============
 PR_ValueString
 
@@ -1495,14 +1462,6 @@ edict_t *EDICT_NUM_ERROR(int n)
 	Host_Error ("EDICT_NUM: bad number %i", n);
 	return NULL;
 }
-/*
-edict_t *EDICT_NUM(int n)
-{
-	if (n < 0 || n >= sv.max_edicts)
-		Sys_Error ("EDICT_NUM: bad number %i", n);
-	return (edict_t *)((qbyte *)sv.edicts+ (n)*pr_edict_size);
-}
-*/
 
 int NUM_FOR_EDICT(edict_t *e)
 {
@@ -1524,3 +1483,4 @@ int NoCrash_NUM_FOR_EDICT(edict_t *e)
 	b = b / pr_edict_size;
 	return b;
 }
+

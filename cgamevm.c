@@ -143,14 +143,7 @@ void CGVM_Draw_Entity(const cgdrawentity_t *e)
 		Con_Printf("CGVM_Draw_Entity: invalid model index %i\n", e->model);
 		return;
 	}
-	r->model = cgvm_model[e->model]; //Mod_ForName(e->model, false, false, false);
-	/*
-	if (!r->model)
-	{
-		Con_Printf("CGVM_Draw_Entity: unable to find model \"%s\"");
-		return;
-	}
-	*/
+	r->model = cgvm_model[e->model];
 
 	r->frame = e->frame2;
 	// FIXME: support colormapping?
@@ -205,8 +198,6 @@ float CGVM_TracePhysics(const float *start, const float *end, const float *world
 	VectorAdd(end, middle, end2);
 	frac = CL_TraceLine((float *)start2, (float *)end2, impactpos, impactnormal, 0, true);
 	VectorSubtract(impactpos, middle, impactpos);
-	//VectorCopy(end, impactpos);
-	//VectorClear(impactnormal);
 	*impactentnum = -1;
 	return frac;
 }
@@ -273,3 +264,4 @@ void CGVM_Stain(const float *origin, float radius, int cr1, int cg1, int cb1, in
 {
 	R_Stain((float *)origin, radius, cr1, cg1, cb1, ca1, cr2, cg2, cb2, ca2);
 }
+

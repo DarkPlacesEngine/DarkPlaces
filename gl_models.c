@@ -1,7 +1,6 @@
 
 #include "quakedef.h"
 
-//cvar_t gl_transform = {0, "gl_transform", "1"};
 cvar_t r_quickmodels = {0, "r_quickmodels", "1"};
 
 typedef struct
@@ -23,46 +22,6 @@ zymbonematrix *zymbonepose;
 
 rmeshinfo_t aliasmeshinfo;
 
-/*
-void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
-{
-	qglTranslatef (origin[0], origin[1], origin[2]);
-
-	if (scale != 1)
-		qglScalef (scale, scale, scale);
-	if (angles[1])
-	    qglRotatef (angles[1],  0, 0, 1);
-	if (angles[0])
-	    qglRotatef (-angles[0],  0, 1, 0);
-	if (angles[2])
-	    qglRotatef (angles[2],  1, 0, 0);
-}
-*/
-
-/*
-rtexturepool_t *chrometexturepool;
-rtexture_t *chrometexture;
-
-// currently unused reflection effect texture
-void makechrometexture(void)
-{
-	int i;
-	qbyte noise[64*64];
-	qbyte data[64*64][4];
-
-	fractalnoise(noise, 64, 8);
-
-	// convert to RGBA data
-	for (i = 0;i < 64*64;i++)
-	{
-		data[i][0] = data[i][1] = data[i][2] = noise[i];
-		data[i][3] = 255;
-	}
-
-	chrometexture = R_LoadTexture (chrometexturepool, "chrometexture", 64, 64, &data[0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE);
-}
-*/
-
 mempool_t *gl_models_mempool;
 
 void gl_models_start(void)
@@ -75,13 +34,10 @@ void gl_models_start(void)
 	aliasvertcolor2 = Mem_Alloc(gl_models_mempool, sizeof(float[MD2MAX_VERTS][4])); // used temporarily for tinted coloring
 	zymbonepose = Mem_Alloc(gl_models_mempool, sizeof(zymbonematrix[256]));
 	aliasvertusage = Mem_Alloc(gl_models_mempool, sizeof(int[MD2MAX_VERTS]));
-	//chrometexturepool = R_AllocTexturePool();
-	//makechrometexture();
 }
 
 void gl_models_shutdown(void)
 {
-	//R_FreeTexturePool(&chrometexturepool);
 	Mem_FreePool(&gl_models_mempool);
 }
 
@@ -91,7 +47,6 @@ void gl_models_newmap(void)
 
 void GL_Models_Init(void)
 {
-//	Cvar_RegisterVariable(&gl_transform);
 	Cvar_RegisterVariable(&r_quickmodels);
 
 	R_RegisterModule("GL_Models", gl_models_start, gl_models_shutdown, gl_models_newmap);
@@ -101,34 +56,27 @@ void R_AliasTransformVerts(int vertcount)
 {
 	vec3_t point;
 	float *av;
-//	float *avn;
 	av = aliasvert;
-//	avn = aliasvertnorm;
 	while (vertcount >= 4)
 	{
 		VectorCopy(av, point);softwaretransform(point, av);av += 4;
 		VectorCopy(av, point);softwaretransform(point, av);av += 4;
 		VectorCopy(av, point);softwaretransform(point, av);av += 4;
 		VectorCopy(av, point);softwaretransform(point, av);av += 4;
-//		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
-//		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
-//		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
-//		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
 		vertcount -= 4;
 	}
 	while(vertcount > 0)
 	{
 		VectorCopy(av, point);softwaretransform(point, av);av += 4;
-//		VectorCopy(avn, point);softwaretransformdirection(point, avn);avn += 3;
 		vertcount--;
 	}
 }
 
 void R_AliasLerpVerts(int vertcount,
-					  float lerp1, trivertx_t *verts1, vec3_t fscale1, vec3_t translate1,
-					  float lerp2, trivertx_t *verts2, vec3_t fscale2, vec3_t translate2,
-					  float lerp3, trivertx_t *verts3, vec3_t fscale3, vec3_t translate3,
-					  float lerp4, trivertx_t *verts4, vec3_t fscale4, vec3_t translate4)
+		float lerp1, trivertx_t *verts1, vec3_t fscale1, vec3_t translate1,
+		float lerp2, trivertx_t *verts2, vec3_t fscale2, vec3_t translate2,
+		float lerp3, trivertx_t *verts3, vec3_t fscale3, vec3_t translate3,
+		float lerp4, trivertx_t *verts4, vec3_t fscale4, vec3_t translate4)
 {
 	int i;
 	vec3_t scale1, scale2, scale3, scale4, translate;
@@ -555,22 +503,6 @@ int ZymoticLerpBones(int count, zymbonematrix *bonebase, frameblend_t *blend, zy
 	float lerp1, lerp2, lerp3, lerp4;
 	zymbonematrix *out, rootmatrix, m, *bone1, *bone2, *bone3, *bone4;
 
-	/*
-	m.m[0][0] = 0;
-	m.m[0][1] = -1;
-	m.m[0][2] = 0;
-	m.m[0][3] = 0;
-	m.m[1][0] = 1;
-	m.m[1][1] = 0;
-	m.m[1][2] = 0;
-	m.m[1][3] = 0;
-	m.m[2][0] = 0;
-	m.m[2][1] = 0;
-	m.m[2][2] = 1;
-	m.m[2][3] = 0;
-	R_ConcatTransforms(&softwaretransform_matrix[0], &m.m[0][0], &rootmatrix.m[0][0]);
-	*/
-
 	// LordHavoc: combine transform from zym coordinate space to quake coordinate space with model to world transform matrix
 	rootmatrix.m[0][0] = softwaretransform_matrix[0][1];
 	rootmatrix.m[0][1] = -softwaretransform_matrix[0][0];
@@ -951,3 +883,4 @@ void R_DrawAliasModel (void)
 	else
 		R_DrawQ1Q2AliasModel(fog);
 }
+

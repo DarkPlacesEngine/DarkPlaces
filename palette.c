@@ -2,7 +2,6 @@
 #include "quakedef.h"
 
 unsigned int d_8to24table[256];
-//qbyte d_15to8table[32768];
 qbyte host_basepal[768];
 
 cvar_t v_gamma = {CVAR_SAVE, "v_gamma", "1"};
@@ -28,38 +27,6 @@ void Palette_Setup8to24(void)
 	d_8to24table[255] = 0; // completely transparent black
 }
 
-/*
-void	Palette_Setup15to8(void)
-{
-	qbyte	*pal;
-	unsigned r,g,b;
-	unsigned v;
-	int     r1,g1,b1;
-	int		j,k,l;
-	unsigned short i;
-
-	for (i = 0;i < 32768;i++)
-	{
-		r = ((i & 0x001F) << 3)+4;
-		g = ((i & 0x03E0) >> 2)+4;
-		b = ((i & 0x7C00) >> 7)+4;
-		pal = (unsigned char *)d_8to24table;
-		for (v = 0, k = 0, l = 1000000000;v < 256;v++, pal += 4)
-		{
-			r1 = r - pal[0];
-			g1 = g - pal[1];
-			b1 = b - pal[2];
-			j = r1*r1+g1*g1+b1*b1;
-			if (j < l)
-			{
-				k = v;
-				l = j;
-			}
-		}
-		d_15to8table[i] = k;
-	}
-}
-*/
 
 void BuildGammaTable8(float prescale, float gamma, float scale, float base, qbyte *out)
 {
@@ -205,5 +172,5 @@ void Palette_Init(void)
 		host_basepal[i] = temp[host_basepal[i]];
 
 	Palette_Setup8to24();
-//	Palette_Setup15to8();
 }
+

@@ -27,7 +27,6 @@ void CL_UpdateScreen (void);
 void SCR_CenterPrint (char *str);
 
 void SCR_BeginLoadingPlaque (void);
-void SCR_EndLoadingPlaque (void);
 
 extern float scr_con_current;
 extern float scr_conlines; // lines of console to display

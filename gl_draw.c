@@ -20,8 +20,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-//#define GL_COLOR_INDEX8_EXT     0x80E5
-
 cvar_t scr_conalpha = {CVAR_SAVE, "scr_conalpha", "1"};
 
 static rtexture_t *char_texture;
@@ -215,9 +213,6 @@ cachepic_t	*Draw_CachePic (char *path)
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 		if (!strcmp (path, pic->name))
 			return pic;
-	//for (pic = cachepics, i = 0;i < numcachepics;pic++, i++)
-	//	if (!strcmp (path, pic->name))
-	//		return pic;
 
 	if (numcachepics == MAX_CACHED_PICS)
 		Sys_Error ("numcachepics == MAX_CACHED_PICS");
@@ -339,24 +334,6 @@ void R_DrawQueue(void)
 	color = 0;
 	qglColor4ub(0,0,0,0);
 
-	// LordHavoc: NEAREST mode on text if not scaling up
-	/*
-	if (vid.realwidth <= (int) vid.conwidth)
-	{
-		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		CHECKGLERROR
-		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		CHECKGLERROR
-	}
-	else
-	{
-		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		CHECKGLERROR
-		qglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		CHECKGLERROR
-	}
-	*/
-
 	overbright = v_overbrightbits.integer;
 	batch = false;
 	batchcount = 0;
@@ -430,7 +407,6 @@ void R_DrawQueue(void)
 					qglBegin(GL_TRIANGLES);
 					batchcount = 0;
 				}
-				//DrawQuad(dq->x, dq->y, w, h, 0, 0, 1, 1);
 				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
 				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
 				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
@@ -457,7 +433,6 @@ void R_DrawQueue(void)
 					qglBegin(GL_TRIANGLES);
 					batchcount = 0;
 				}
-				//DrawQuad(dq->x, dq->y, dq->scalex, dq->scaley, 0, 0, 1, 1);
 				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
 				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
 				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
@@ -493,7 +468,6 @@ void R_DrawQueue(void)
 					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
 					u = 0.0625f - (1.0f / 256.0f);
 					v = 0.0625f - (1.0f / 256.0f);
-					//DrawQuad(x, y, w, h, (num & 15)*0.0625f + (0.5f / 256.0f), (num >> 4)*0.0625f + (0.5f / 256.0f), 0.0625f - (1.0f / 256.0f), 0.0625f - (1.0f / 256.0f));
 					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
 					qglTexCoord2f (s+u, t  );qglVertex2f (x+w, y  );
 					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
@@ -577,3 +551,4 @@ void R_DrawQueue(void)
 	qglColor4ub (255, 255, 255, 255);
 	CHECKGLERROR
 }
+

@@ -1,9 +1,7 @@
 
 #include "quakedef.h"
 
-//cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
 cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "1024"};
-//cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
 cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "0"};
 cvar_t gl_mesh_transtriangles = {0, "gl_mesh_transtriangles", "16384"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
@@ -318,8 +316,6 @@ void GL_UnlockArray(void)
 	}
 }
 
-//static float gldepthmin, gldepthmax;
-
 /*
 =============
 GL_SetupFrame
@@ -336,12 +332,7 @@ static void GL_SetupFrame (void)
 	if (!r_render.integer)
 		return;
 
-//	qglClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
-//	gldepthmin = 0;
-//	gldepthmax = 1;
 	qglDepthFunc (GL_LEQUAL);CHECKGLERROR
-
-//	qglDepthRange (gldepthmin, gldepthmax);CHECKGLERROR
 
 	// set up viewpoint
 	qglMatrixMode(GL_PROJECTION);CHECKGLERROR
@@ -366,8 +357,6 @@ static void GL_SetupFrame (void)
 	// set view pyramid
 	qglFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
 
-//	qglCullFace(GL_FRONT);CHECKGLERROR
-
 	qglMatrixMode(GL_MODELVIEW);CHECKGLERROR
 	qglLoadIdentity ();CHECKGLERROR
 
@@ -380,24 +369,6 @@ static void GL_SetupFrame (void)
 	qglRotatef (-r_refdef.viewangles[1],  0, 0, 1);CHECKGLERROR
 	// camera location
 	qglTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);CHECKGLERROR
-
-//	qglGetFloatv (GL_MODELVIEW_MATRIX, r_world_matrix);
-
-	//
-	// set drawing parms
-	//
-//	if (gl_cull.integer)
-//	{
-//		qglEnable(GL_CULL_FACE);CHECKGLERROR
-//	}
-//	else
-//	{
-//		qglDisable(GL_CULL_FACE);CHECKGLERROR
-//	}
-
-//	qglEnable(GL_BLEND);CHECKGLERROR
-//	qglEnable(GL_DEPTH_TEST);CHECKGLERROR
-//	qglDepthMask(1);CHECKGLERROR
 }
 
 static int mesh_blendfunc1;
@@ -795,19 +766,6 @@ void GL_DrawRangeElements(int firstvert, int endvert, int indexcount, GLuint *in
 		}
 		qglEnd();
 	}
-	/*
-	if (qglDrawRangeElements)
-		qglDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, index);
-	else
-	{
-	}
-	#ifdef WIN32
-	// FIXME: dynamic link to GL so we can get DrawRangeElements on WIN32
-	qglDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, index);CHECKGLERROR
-	#else
-	qglDrawRangeElements(GL_TRIANGLES, firstvert, firstvert + mesh->verts, indexcount, GL_UNSIGNED_INT, index);CHECKGLERROR
-	#endif
-	*/
 }
 
 // renders mesh buffers, called to flush buffers when full
@@ -833,8 +791,6 @@ void R_Mesh_Render(void)
 	if (!gl_mesh_floatcolors.integer || gl_mesh_drawmode.integer == 0)
 		GL_ConvertColorsFloatToByte();
 
-	// lock the arrays now that they will have no further modifications
-	//GL_LockArray(0, currentvertex);CHECKGLERROR
 	if (gl_backend_rebindtextures)
 	{
 		gl_backend_rebindtextures = false;
@@ -1253,10 +1209,6 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 		else
 			memcpy(&texcoord[j][0].t[0], m->texcoords[j], m->numverts * sizeof(buf_texcoord_t));
 	}
-	#if 0
-	for (;j < backendunits;j++)
-		memset(&texcoord[j][0].t[0], 0, m->numverts * sizeof(buf_texcoord_t));
-	#endif
 
 	if (currenttriangle >= max_batch)
 		R_Mesh_Render();
@@ -1415,10 +1367,6 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 	memcpy(vert, m->vertex, m->numverts * sizeof(buf_vertex_t));
 	for (j = 0;j < MAX_TEXTUREUNITS && m->tex[j];j++)
 		memcpy(&texcoord[j][0].t[0], m->texcoords[j], m->numverts * sizeof(buf_texcoord_t));
-	#if 0
-	for (;j < backendunits;j++)
-		memset(&texcoord[j][0].t[0], 0, m->numverts * sizeof(buf_texcoord_t));
-	#endif
 
 	memcpy(fcolor, m->color, m->numverts * sizeof(buf_fcolor_t));
 
@@ -1644,9 +1592,6 @@ text to the screen.
 */
 void SCR_UpdateScreen (void)
 {
-	//Mem_CheckSentinelsGlobal();
-	//R_TimeReport("memtest");
-
 	VID_Finish ();
 
 	R_TimeReport("finish");
@@ -1677,3 +1622,4 @@ void SCR_UpdateScreen (void)
 	// (this doesn't wait for the commands themselves to complete)
 	qglFlush();
 }
+

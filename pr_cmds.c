@@ -168,11 +168,7 @@ void PF_objerror (void)
 	ed = PROG_TO_EDICT(pr_global_struct->self);
 	ED_Print (ed);
 	ED_Free (ed);
-
-// LordHavoc: bug fix - no longer kills server
-//	Host_Error ("Program error");
 }
-
 
 
 /*
@@ -225,80 +221,12 @@ void PF_setorigin (void)
 
 void SetMinMaxSize (edict_t *e, float *min, float *max, qboolean rotate)
 {
-	/*
-	float	*angles;
-	vec3_t	rmin, rmax;
-	float	bounds[2][3];
-	float	xvector[2], yvector[2];
-	float	a;
-	vec3_t	base, transformed;
-	int		i, j, k, l;
-	*/
 	int		i;
 	
 	for (i=0 ; i<3 ; i++)
 		if (min[i] > max[i])
 			PR_RunError ("backwards mins/maxs");
 
-	/*
-	rotate = false;		// FIXME: implement rotation properly again
-
-	if (!rotate)
-	{
-		VectorCopy (min, rmin);
-		VectorCopy (max, rmax);
-	}
-	else
-	{
-	// find min / max for rotations
-		angles = e->v.angles;
-		
-		a = angles[1]/180 * M_PI;
-
-		xvector[0] = cos(a);
-		xvector[1] = sin(a);
-		yvector[0] = -sin(a);
-		yvector[1] = cos(a);
-		
-		VectorCopy (min, bounds[0]);
-		VectorCopy (max, bounds[1]);
-
-		rmin[0] = rmin[1] = rmin[2] = 9999;
-		rmax[0] = rmax[1] = rmax[2] = -9999;
-		
-		for (i=0 ; i<= 1 ; i++)
-		{
-			base[0] = bounds[i][0];
-			for (j=0 ; j<= 1 ; j++)
-			{
-				base[1] = bounds[j][1];
-				for (k=0 ; k<= 1 ; k++)
-				{
-					base[2] = bounds[k][2];
-					
-				// transform the point
-					transformed[0] = xvector[0]*base[0] + yvector[0]*base[1];
-					transformed[1] = xvector[1]*base[0] + yvector[1]*base[1];
-					transformed[2] = base[2];
-					
-					for (l=0 ; l<3 ; l++)
-					{
-						if (transformed[l] < rmin[l])
-							rmin[l] = transformed[l];
-						if (transformed[l] > rmax[l])
-							rmax[l] = transformed[l];
-					}
-				}
-			}
-		}
-	}
-	
-// set derived values
-	VectorCopy (rmin, e->v.mins);
-	VectorCopy (rmax, e->v.maxs);
-	VectorSubtract (max, min, e->v.size);
-	*/
-	
 // set derived values
 	VectorCopy (min, e->v.mins);
 	VectorCopy (max, e->v.maxs);
@@ -356,24 +284,11 @@ void PF_setmodel (void)
 
 
 	e->v.model = m - pr_strings;
-	e->v.modelindex = i; //SV_ModelIndex (m);
+	e->v.modelindex = i;
 
-	mod = sv.models[ (int)e->v.modelindex];  // Mod_ForName (m, true);
+	mod = sv.models[ (int)e->v.modelindex];
 
 	if (mod)
-	/*
-	{ // LordHavoc: corrected model bounding box, but for compatibility that means I have to break it here
-		vec3_t min, max;
-		if (mod->type == ALIASTYPE_MDL)
-		{
-			min[0] = min[1] = min[2] = -16;
-			max[0] = max[1] = max[2] = 16;
-			SetMinMaxSize (e, min, max, true);
-		}
-		else
-			SetMinMaxSize (e, mod->mins, mod->maxs, true);
-	}
-	*/
 		SetMinMaxSize (e, mod->normalmins, mod->normalmaxs, true);
 	else
 		SetMinMaxSize (e, vec3_origin, vec3_origin, true);
@@ -727,8 +642,6 @@ break()
 */
 void PF_break (void)
 {
-//	Con_Printf ("break statement\n");
-//	*(int *)-4 = 0;	// dump to debugger
 	PR_RunError ("break statement");
 }
 
@@ -1123,12 +1036,6 @@ void PF_ftos (void)
 	v = G_FLOAT(OFS_PARM0);
 
 	s = PR_GetTempString();
-	/*
-	if (v == (int)v)
-		sprintf (s, "%d",(int)v);
-	else
-		sprintf (s, "%5.1f",v);
-	*/
 	// LordHavoc: ftos improvement
 	sprintf (s, "%g", v);
 	G_INT(OFS_RETURN) = s - pr_strings;
@@ -2717,3 +2624,4 @@ PF_te_plasmaburn,		// #433
 
 builtin_t *pr_builtins = pr_builtin;
 int pr_numbuiltins = sizeof(pr_builtin)/sizeof(pr_builtin[0]);
+

@@ -84,7 +84,6 @@ void signal_handler(int sig)
 	printf("Received signal %d, exiting...\n", sig);
 	Host_Shutdown();
 	abort();
-	//Sys_Quit();
 	exit(0);
 }
 
@@ -95,9 +94,7 @@ void InitSig(void)
 	signal(SIGQUIT, signal_handler);
 	signal(SIGILL, signal_handler);
 	signal(SIGTRAP, signal_handler);
-//	signal(SIGIOT, signal_handler);
 	signal(SIGBUS, signal_handler);
-//	signal(SIGFPE, signal_handler);
 	signal(SIGSEGV, signal_handler);
 	signal(SIGTERM, signal_handler);
 }
@@ -291,24 +288,14 @@ void VID_Init(void)
 	VID_SetupDithering(); // 3DFX specific
 
 	Con_SafePrintf ("Video mode %dx%d initialized.\n", width, height);
-
-//	vid.recalc_refdef = 1;				// force a surface cache flush
 }
 
 void VID_ExtraOptionDraw(unsigned int options_draw_cursor)
 {
-/* Port specific Options menu entrys */
 }
 
 void VID_ExtraOptionCmd(int option_cursor)
 {
-/*
-	switch(option_cursor)
-	{
-	case 12:  // Always start with 12
-	break;
-	}
-*/
 }
 
 void VID_SetCaption (char *text)
@@ -318,3 +305,4 @@ void VID_SetCaption (char *text)
 void VID_HandlePause (qboolean pause)
 {
 }
+

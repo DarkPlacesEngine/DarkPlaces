@@ -417,3 +417,4 @@ void CDAudio_Shutdown(void)
 	close(cdfile);
 	cdfile = -1;
 }
+

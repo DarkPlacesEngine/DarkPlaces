@@ -355,66 +355,9 @@ static void CL_RelinkNetworkEntities()
 			VectorCopy (ent->state_current.origin, oldorg); // skip trails
 			VectorCopy (ent->state_current.origin, neworg);
 			VectorCopy (ent->state_current.angles, ent->render.angles);
-
-			/*
-			// monster interpolation
-			ent->persistent.steplerptime = 0;
-			VectorCopy(ent->state_current.origin, ent->persistent.stepoldorigin);
-			VectorCopy(ent->state_current.angles, ent->persistent.stepoldangles);
-			VectorCopy(ent->state_current.origin, ent->persistent.steporigin);
-			VectorCopy(ent->state_current.angles, ent->persistent.stepangles);
-			*/
 		}
-		/*
-		else if ((ent->state_current.flags & ent->state_previous.flags) & ENTFLAG_STEP)
-		{
-			if (ent->state_current.origin[0] != ent->persistent.steporigin[0]
-			 || ent->state_current.origin[1] != ent->persistent.steporigin[1]
-			 || ent->state_current.origin[2] != ent->persistent.steporigin[2]
-			 || ent->state_current.angles[0] != ent->persistent.stepangles[0]
-			 || ent->state_current.angles[1] != ent->persistent.stepangles[1]
-			 || ent->state_current.angles[2] != ent->persistent.stepangles[2])
-			{
-				// update lerp positions
-				ent->clientpersistent.steplerptime = sv.time;
-				VectorCopy(ent->steporigin, ent->stepoldorigin);
-				VectorCopy(ent->stepangles, ent->stepoldangles);
-				VectorCopy(ent->v.origin, ent->steporigin);
-				VectorCopy(ent->v.angles, ent->stepangles);
-			}
-			lerp = (cl.time - ent->persistent.steplerptime) * 10.0;
-			if (lerp < 1)
-			{
-				// origin
-				VectorSubtract(ent->persistent.steporigin, ent->persistent.stepoldorigin, delta);
-				VectorMA(ent->persistent.stepoldorigin, lerp, delta, neworg);
-
-				// angles
-				VectorSubtract(ent->persistent.stepangles, ent->persistent.stepoldangles, delta);
-				// choose shortest rotate (to avoid 'spin around' situations)
-				if (delta[0] < -180) delta[0] += 360;else if (delta[0] >= 180) delta[0] -= 360;
-				if (delta[1] < -180) delta[1] += 360;else if (delta[1] >= 180) delta[1] -= 360;
-				if (delta[2] < -180) delta[2] += 360;else if (delta[2] >= 180) delta[2] -= 360;
-				VectorMA(ent->stepoldangles, lerp, delta, ent->render.angles);
-			}
-			else
-			{
-				VectorCopy(ent->persistent.steporigin, neworg);
-				VectorCopy(ent->persistent.stepangles, ent->render.angles);
-			}
-		}
-		*/
 		else
 		{
-			/*
-			// monster interpolation
-			ent->persistent.steplerptime = 0;
-			VectorCopy(ent->state_current.origin, ent->persistent.stepoldorigin);
-			VectorCopy(ent->state_current.angles, ent->persistent.stepoldangles);
-			VectorCopy(ent->state_current.origin, ent->persistent.steporigin);
-			VectorCopy(ent->state_current.angles, ent->persistent.stepangles);
-			*/
-
 			// if the delta is large, assume a teleport and don't lerp
 			VectorSubtract(ent->state_current.origin, ent->state_previous.origin, delta);
 			// LordHavoc: increased tolerance from 100 to 200, and now to 1000
@@ -509,23 +452,6 @@ static void CL_RelinkNetworkEntities()
 				{
 					vec3_t mins, maxs;
 					int temp;
-					/*
-					if (ent->render.angles[0] || ent->render.angles[2])
-					{
-						VectorMA(neworg, 0.25f, ent->render.model->rotatedmins, mins);
-						VectorMA(neworg, 0.25f, ent->render.model->rotatedmaxs, maxs);
-					}
-					else if (ent->render.angles[1])
-					{
-						VectorMA(neworg, 0.25f, ent->render.model->yawmins, mins);
-						VectorMA(neworg, 0.25f, ent->render.model->yawmaxs, maxs);
-					}
-					else
-					{
-						VectorMA(neworg, 0.25f, ent->render.model->normalmins, mins);
-						VectorMA(neworg, 0.25f, ent->render.model->normalmaxs, maxs);
-					}
-					*/
 					mins[0] = neworg[0] - 16.0f;
 					mins[1] = neworg[1] - 16.0f;
 					mins[2] = neworg[2] - 16.0f;
@@ -547,23 +473,6 @@ static void CL_RelinkNetworkEntities()
 				{
 					vec3_t mins, maxs;
 					int temp;
-					/*
-					if (ent->render.angles[0] || ent->render.angles[2])
-					{
-						VectorMA(neworg, 0.25f, ent->render.model->rotatedmins, mins);
-						VectorMA(neworg, 0.25f, ent->render.model->rotatedmaxs, maxs);
-					}
-					else if (ent->render.angles[1])
-					{
-						VectorMA(neworg, 0.25f, ent->render.model->yawmins, mins);
-						VectorMA(neworg, 0.25f, ent->render.model->yawmaxs, maxs);
-					}
-					else
-					{
-						VectorMA(neworg, 0.25f, ent->render.model->normalmins, mins);
-						VectorMA(neworg, 0.25f, ent->render.model->normalmaxs, maxs);
-					}
-					*/
 					mins[0] = neworg[0] - 16.0f;
 					mins[1] = neworg[1] - 16.0f;
 					mins[2] = neworg[2] - 16.0f;
@@ -655,7 +564,7 @@ static void CL_RelinkNetworkEntities()
 			// hack to make glowing player light shine on their gun
 			if (i == cl.viewentity && !chase_active.integer)
 				vec[2] += 30;
-			CL_AllocDlight (/*&ent->render*/ NULL, vec, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
+			CL_AllocDlight (NULL, vec, 1, dlightcolor[0], dlightcolor[1], dlightcolor[2], 0, 0);
 		}
 
 		if (chase_active.integer)
@@ -1052,3 +961,4 @@ void CL_Init (void)
 	CL_Screen_Init();
 	CL_CGVM_Init();
 }
+
