@@ -19,7 +19,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 #include "quakedef.h"
 
-void CDAudio_Play(byte track, qboolean looping)
+qboolean cdaudioinitialized = false;
+
+void CDAudio_Play(qbyte track, qboolean looping)
 {
 }
 
@@ -53,3 +55,4 @@ int CDAudio_Init(void)
 void CDAudio_Shutdown(void)
 {
 }
+
