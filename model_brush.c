@@ -176,39 +176,47 @@ void Mod_LoadTextures (lump_t *l)
 				if (hlbsp)
 				{
 					byte *in, *out, *pal;
-					int palsize, d, p;
+//					int palsize;
+					int d, p;
 					bytesperpixel = 4;
 					freeimage = TRUE;
 					in = data;
 					data = out = qmalloc(mt->width * mt->height * 4);
 					pal = in + (((mt->width * mt->height) * 85) >> 6);
-					palsize = pal[1] * 0x100 + pal[0];
-					if (palsize >= 256)
-						palsize = 255;
+//					palsize = pal[1] * 0x100 + pal[0];
+//					if (palsize >= 256)
+//						palsize = 256;
 					pal += 2;
 					for (d = 0;d < mt->width * mt->height;d++)
 					{
-						p = (*in++) * 3;
-						out[0] = pal[p];
-						out[1] = pal[p+1];
-						out[2] = pal[p+2];
-						out[3] = 255;
-						if (out[0] == 0 && out[1] == 0 && out[2] == 255) // HL transparent color (pure blue)
+						p = *in++;
+						if (mt->name[0] == '{' && p == 255)
 						{
 							out[0] = out[1] = out[2] = out[3] = 0;
 							transparent = TRUE;
 						}
+						else
+						{
+							p *= 3;
+							out[0] = pal[p];
+							out[1] = pal[p+1];
+							out[2] = pal[p+2];
+							out[3] = 255;
+						}
 						out += 4;
 					}
 				}
-				else if (r_fullbrights.value && tx->name[0] != '*')
+				else
 				{
-					for (j = 0;j < tx->width*tx->height;j++)
+					if (r_fullbrights.value && tx->name[0] != '*')
 					{
-						if (data[j] >= 224) // fullbright
+						for (j = 0;j < tx->width*tx->height;j++)
 						{
-							fullbrights = TRUE;
-							break;
+							if (data[j] >= 224) // fullbright
+							{
+								fullbrights = TRUE;
+								break;
+							}
 						}
 					}
 				}
@@ -218,11 +226,6 @@ void Mod_LoadTextures (lump_t *l)
 				tx->width = tx->height = 16;
 				data = (byte *)((int) r_notexture_mip + r_notexture_mip->offsets[0]);
 			}
-		}
-		else
-		{
-			tx->width = image_width;
-			tx->height = image_height;
 		}
 		if (!hlbsp && !strncmp(tx->name,"sky",3) && tx->width == 256 && tx->height == 128) // LordHavoc: HL sky textures are entirely unrelated
 		{
