@@ -467,7 +467,10 @@ lhnetsocket_t *LHNET_OpenSocket_Connectionless(lhnetaddress_t *address)
 						namelen = address->addresstype == LHNETADDRESSTYPE_INET6 ? sizeof(lhnetsocket->address.addressdata.inet6) : sizeof(lhnetsocket->address.addressdata.inet4);
 						if (bind(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, namelen) != -1)
 						{
+							int i = 1;
 							getsockname(lhnetsocket->inetsocket, (void *)&lhnetsocket->address.addressdata, &namelen);
+							// enable broadcast on this socket
+							setsockopt(lhnetsocket->inetsocket, SOL_SOCKET, SO_BROADCAST, (char *)&i, sizeof(i));
 							lhnetsocket->next = &lhnet_socketlist;
 							lhnetsocket->prev = lhnetsocket->next->prev;
 							lhnetsocket->next->prev = lhnetsocket;
