@@ -44,6 +44,8 @@ static double nextheartbeattime = 0;
 sizebuf_t net_message;
 
 cvar_t net_messagetimeout = {0, "net_messagetimeout","300"};
+cvar_t net_messagerejointimeout = {0, "net_messagerejointimeout","10"};
+cvar_t net_connecttimeout = {0, "net_connecttimeout","10"};
 cvar_t hostname = {CVAR_SAVE, "hostname", "UNNAMED"};
 cvar_t developer_networking = {0, "developer_networking", "0"};
 
@@ -353,6 +355,9 @@ netconn_t *NetConn_Open(lhnetsocket_t *mysocket, lhnetaddress_t *peeraddress)
 	conn->canSend = true;
 	conn->connecttime = realtime;
 	conn->lastMessageTime = realtime;
+	// LordHavoc: (inspired by ProQuake) use a short connect timeout to
+	// reduce effectiveness of connection request floods
+	conn->timeout = realtime + net_connecttimeout.value;
 	LHNETADDRESS_ToString(&conn->peeraddress, conn->address, sizeof(conn->address), true);
 	conn->next = netconn_list;
 	netconn_list = conn;
@@ -419,96 +424,99 @@ int NetConn_ReceivedMessage(netconn_t *conn, qbyte *data, int length)
 	unsigned int flags;
 	unsigned int sequence;
 
-	if (length < 8)
-		return 0;
-
-	length = BigLong(((int *)data)[0]);
-	flags = length & ~NETFLAG_LENGTH_MASK;
-	length &= NETFLAG_LENGTH_MASK;
-	// control packets were already handled
-	if (!(flags & NETFLAG_CTL))
+	if (length >= 8)
 	{
-		sequence = BigLong(((int *)data)[1]);
-		packetsReceived++;
-		data += 8;
-		length -= 8;
-		if (flags & NETFLAG_UNRELIABLE)
+		length = BigLong(((int *)data)[0]);
+		flags = length & ~NETFLAG_LENGTH_MASK;
+		length &= NETFLAG_LENGTH_MASK;
+		// control packets were already handled
+		if (!(flags & NETFLAG_CTL))
 		{
-			if (sequence >= conn->unreliableReceiveSequence)
+			sequence = BigLong(((int *)data)[1]);
+			packetsReceived++;
+			data += 8;
+			length -= 8;
+			if (flags & NETFLAG_UNRELIABLE)
 			{
-				if (sequence > conn->unreliableReceiveSequence)
+				if (sequence >= conn->unreliableReceiveSequence)
 				{
-					count = sequence - conn->unreliableReceiveSequence;
-					droppedDatagrams += count;
-					Con_DPrintf("Dropped %u datagram(s)\n", count);
-				}
-				conn->unreliableReceiveSequence = sequence + 1;
-				conn->lastMessageTime = realtime;
-				unreliableMessagesReceived++;
-				SZ_Clear(&net_message);
-				SZ_Write(&net_message, data, length);
-				MSG_BeginReading();
-				return 2;
-			}
-			else
-				Con_DPrintf("Got a stale datagram\n");
-			return 1;
-		}
-		else if (flags & NETFLAG_ACK)
-		{
-			if (sequence == (conn->sendSequence - 1))
-			{
-				if (sequence == conn->ackSequence)
-				{
-					conn->ackSequence++;
-					if (conn->ackSequence != conn->sendSequence)
-						Con_DPrintf("ack sequencing error\n");
+					if (sequence > conn->unreliableReceiveSequence)
+					{
+						count = sequence - conn->unreliableReceiveSequence;
+						droppedDatagrams += count;
+						Con_DPrintf("Dropped %u datagram(s)\n", count);
+					}
+					conn->unreliableReceiveSequence = sequence + 1;
 					conn->lastMessageTime = realtime;
-					conn->sendMessageLength -= MAX_DATAGRAM;
-					if (conn->sendMessageLength > 0)
-					{
-						memcpy(conn->sendMessage, conn->sendMessage+MAX_DATAGRAM, conn->sendMessageLength);
-						conn->sendNext = true;
-						NetConn_SendMessageNext(conn);
-					}
-					else
-					{
-						conn->sendMessageLength = 0;
-						conn->canSend = true;
-					}
-				}
-				else
-					Con_DPrintf("Duplicate ACK received\n");
-			}
-			else
-				Con_DPrintf("Stale ACK received\n");
-			return 1;
-		}
-		else if (flags & NETFLAG_DATA)
-		{
-			unsigned int temppacket[2];
-			temppacket[0] = BigLong(8 | NETFLAG_ACK);
-			temppacket[1] = BigLong(sequence);
-			NetConn_Write(conn->mysocket, (qbyte *)temppacket, 8, &conn->peeraddress);
-			if (sequence == conn->receiveSequence)
-			{
-				conn->lastMessageTime = realtime;
-				conn->receiveSequence++;
-				memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
-				conn->receiveMessageLength += length;
-				if (flags & NETFLAG_EOM)
-				{
-					reliableMessagesReceived++;
+					conn->timeout = realtime + net_messagetimeout.value;
+					unreliableMessagesReceived++;
 					SZ_Clear(&net_message);
-					SZ_Write(&net_message, conn->receiveMessage, conn->receiveMessageLength);
-					conn->receiveMessageLength = 0;
+					SZ_Write(&net_message, data, length);
 					MSG_BeginReading();
 					return 2;
 				}
+				else
+					Con_DPrintf("Got a stale datagram\n");
+				return 1;
 			}
-			else
-				receivedDuplicateCount++;
-			return 1;
+			else if (flags & NETFLAG_ACK)
+			{
+				if (sequence == (conn->sendSequence - 1))
+				{
+					if (sequence == conn->ackSequence)
+					{
+						conn->ackSequence++;
+						if (conn->ackSequence != conn->sendSequence)
+							Con_DPrintf("ack sequencing error\n");
+						conn->lastMessageTime = realtime;
+						conn->timeout = realtime + net_messagetimeout.value;
+						conn->sendMessageLength -= MAX_DATAGRAM;
+						if (conn->sendMessageLength > 0)
+						{
+							memcpy(conn->sendMessage, conn->sendMessage+MAX_DATAGRAM, conn->sendMessageLength);
+							conn->sendNext = true;
+							NetConn_SendMessageNext(conn);
+						}
+						else
+						{
+							conn->sendMessageLength = 0;
+							conn->canSend = true;
+						}
+					}
+					else
+						Con_DPrintf("Duplicate ACK received\n");
+				}
+				else
+					Con_DPrintf("Stale ACK received\n");
+				return 1;
+			}
+			else if (flags & NETFLAG_DATA)
+			{
+				unsigned int temppacket[2];
+				temppacket[0] = BigLong(8 | NETFLAG_ACK);
+				temppacket[1] = BigLong(sequence);
+				NetConn_Write(conn->mysocket, (qbyte *)temppacket, 8, &conn->peeraddress);
+				if (sequence == conn->receiveSequence)
+				{
+					conn->lastMessageTime = realtime;
+					conn->timeout = realtime + net_messagetimeout.value;
+					conn->receiveSequence++;
+					memcpy(conn->receiveMessage + conn->receiveMessageLength, data, length);
+					conn->receiveMessageLength += length;
+					if (flags & NETFLAG_EOM)
+					{
+						reliableMessagesReceived++;
+						SZ_Clear(&net_message);
+						SZ_Write(&net_message, conn->receiveMessage, conn->receiveMessageLength);
+						conn->receiveMessageLength = 0;
+						MSG_BeginReading();
+						return 2;
+					}
+				}
+				else
+					receivedDuplicateCount++;
+				return 1;
+			}
 		}
 	}
 	return 0;
@@ -690,6 +698,13 @@ int NetConn_ClientParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				key_dest = key_game;
 				m_state = m_none;
 				cls.netcon = NetConn_Open(mysocket, peeraddress);
+				if (length >= 4)
+				{
+					unsigned int port = (data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3];
+					data += 4;
+					length -= 4;
+					LHNETADDRESS_SetPort(&cls.netcon->peeraddress, port);
+				}
 				cls.connect_trying = false;
 				cls.demonum = -1;			// not in the demo loop now
 				cls.state = ca_connected;
@@ -798,7 +813,7 @@ void NetConn_ClientFrame(void)
 	for (i = 0;i < cl_numsockets;i++)
 		while (cl_sockets[i] && (length = NetConn_Read(cl_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ClientParsePacket(cl_sockets[i], readbuffer, length, &peeraddress);
-	if (cls.netcon && realtime > cls.netcon->lastMessageTime + net_messagetimeout.value)
+	if (cls.netcon && realtime > cls.netcon->timeout)
 	{
 		Con_Printf("Connection timed out\n");
 		CL_Disconnect();
@@ -868,6 +883,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 			// we're done processing this packet now
 			return true;
 		}
+#if 1
 		if (length >= 5)
 		{
 			control = BigLong(*((int *)data));
@@ -877,7 +893,6 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				data += 5;
 				length -= 5;
 				LHNETADDRESS_ToString(peeraddress, addressstring2, sizeof(addressstring2), true);
-#if 1
 				switch (c)
 				{
 				case CCREQ_CONNECT:
@@ -887,7 +902,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 					{
 						if (memcmp(data, "QUAKE", strlen("QUAKE") + 1) != 0 || (int)data[strlen("QUAKE") + 1] != NET_PROTOCOL_VERSION)
 						{
-							//if (developer.integer)
+							if (developer.integer)
 								Con_Printf("Datagram_ParseConnectionless: sending CCREP_REJECT \"Incompatible version.\" to %s.\n", addressstring2);
 #if 0
 							NetConn_Write(mysocket, "\377\377\377\377reject Incompatible version.", 32, peeraddress);
@@ -904,18 +919,19 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 						}
 						else
 						{
-							// see if this client is already connected
+							// see if this is a duplicate connection request
 							for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
-								if (client->active && (ret = LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress)) == 0)//>= 0)
+								if (client->active && LHNETADDRESS_Compare(peeraddress, &client->netconnection->peeraddress) == 0)
 									break;
 							if (clientnum < svs.maxclients)
 							{
-								// is this a duplicate connection request?
-								if (ret == 0 && realtime - client->netconnection->connecttime < 2.0)
+								// duplicate connection request
+								if (realtime - client->netconnection->connecttime < 2.0)
 								{
-									//if (developer.integer)
+									// client is still trying to connect,
+									// so we send a duplicate reply
+									if (developer.integer)
 										Con_Printf("Datagram_ParseConnectionless: sending duplicate CCREP_ACCEPT to %s.\n", addressstring2);
-									// yes, so send a duplicate reply
 #if 0
 									NetConn_Write(mysocket, "\377\377\377\377accept", 10, peeraddress);
 #else
@@ -929,18 +945,17 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 									SZ_Clear(&net_message);
 #endif
 								}
-								else
+								else if (realtime - client->netconnection->lastMessageTime >= net_messagerejointimeout.value)
 								{
-									//if (developer.integer)
-										Con_Printf("Datagram_ParseConnectionless: removing crashed/disconnected client #%i \"%s\" (address %s).\n", clientnum, client->name, client->netconnection->address);
-									// it's somebody coming back from a
-									// crash/disconnect so kill old connection
-									// asap and let them retry to get in
+									// the old client hasn't sent us anything
+									// in quite a while, so kick off and let
+									// the retry take care of it...
 									client->deadsocket = true;
 								}
 							}
 							else
 							{
+								// this is a new client, find a slot
 								for (clientnum = 0, client = svs.clients;clientnum < svs.maxclients;clientnum++, client++)
 									if (!client->active)
 										break;
@@ -949,7 +964,7 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 									// connect to the client
 									// everything is allocated, just fill in the details
 									strcpy(conn->address, addressstring2);
-									//if (developer.integer)
+									if (developer.integer)
 										Con_Printf("Datagram_ParseConnectionless: sending CCREP_ACCEPT to %s.\n", addressstring2);
 #if 0
 									NetConn_Write(mysocket, "\377\377\377\377accept", 10, peeraddress);
@@ -1076,12 +1091,12 @@ int NetConn_ServerParsePacket(lhnetsocket_t *mysocket, qbyte *data, int length, 
 				default:
 					break;
 				}
-#endif
 				// we may not have liked the packet, but it was a valid control
 				// packet, so we're done processing this packet now
 				return true;
 			}
 		}
+#endif
 		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		{
 			if (host_client->active && host_client->netconnection && host_client->netconnection->mysocket == mysocket && !LHNETADDRESS_Compare(&host_client->netconnection->peeraddress, peeraddress))
@@ -1105,9 +1120,9 @@ void NetConn_ServerFrame(void)
 	for (i = 0;i < sv_numsockets;i++)
 		while (sv_sockets[i] && (length = NetConn_Read(sv_sockets[i], readbuffer, sizeof(readbuffer), &peeraddress)) > 0)
 			NetConn_ServerParsePacket(sv_sockets[i], readbuffer, length, &peeraddress);
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++)
+	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 	{
-		if (host_client->active && realtime > host_client->netconnection->lastMessageTime + net_messagetimeout.value)
+		if (host_client->active && realtime > host_client->netconnection->timeout)
 		{
 			Con_Printf("Client \"%s\" connection timed out\n", host_client->name);
 			sv_player = host_client->edict;
@@ -1197,13 +1212,15 @@ void NetConn_Heartbeat(int priority)
 int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 {
 	int i, count = 0;
-	qbyte state[MAX_SCOREBOARD];
+	qbyte sent[MAX_SCOREBOARD];
 
-	for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
-		state[i] = 0;
+	memset(sent, 0, sizeof(sent));
 
 	// simultaneously wait for the first CanSendMessage and send the message,
-	// then wait for a second CanSendMessage (verifying it was received)
+	// then wait for a second CanSendMessage (verifying it was received), or
+	// the client drops and is no longer counted
+	// the loop aborts when either it runs out of clients to send to, or a
+	// timeout expires
 	blocktime += Sys_DoubleTime();
 	do
 	{
@@ -1212,16 +1229,16 @@ int NetConn_SendToAll(sizebuf_t *data, double blocktime)
 		NetConn_ServerFrame();
 		for (i = 0, host_client = svs.clients;i < svs.maxclients;i++, host_client++)
 		{
-			if (host_client->active && state[i] < 2)
+			if (host_client->active)
 			{
-				count++;
-				// need to send to this one
 				if (NetConn_CanSendMessage(host_client->netconnection))
 				{
-					if (state[i] == 0 && NetConn_SendReliableMessage(host_client->netconnection, data) == -1)
-						state[i] = 2; // connection lost
-					state[i]++;
+					if (!sent[i])
+						NetConn_SendReliableMessage(host_client->netconnection, data);
+					sent[i] = true;
 				}
+				if (!NetConn_CanSendMessage(host_client->netconnection))
+					count++;
 			}
 		}
 	}
@@ -1300,6 +1317,8 @@ void NetConn_Init(void)
 	Cmd_AddCommand("maxplayers", MaxPlayers_f);
 	Cmd_AddCommand("heartbeat", Net_Heartbeat_f);
 	Cvar_RegisterVariable(&net_messagetimeout);
+	Cvar_RegisterVariable(&net_messagerejointimeout);
+	Cvar_RegisterVariable(&net_connecttimeout);
 	Cvar_RegisterVariable(&hostname);
 	Cvar_RegisterVariable(&developer_networking);
 	Cvar_RegisterVariable(&cl_netport);
