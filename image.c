@@ -199,8 +199,22 @@ typedef struct _TargaHeader
 }
 TargaHeader;
 
-TargaHeader		targa_header;
-
+void PrintTargaHeader(TargaHeader *t)
+{
+	Con_Printf("TargaHeader:\n");
+	Con_Printf("uint8 id_length = %i;\n", t->id_length);
+	Con_Printf("uint8 colormap_type = %i;\n", t->colormap_type);
+	Con_Printf("uint8 image_type = %i;\n", t->image_type);
+	Con_Printf("uint16 colormap_index = %i;\n", t->colormap_index);
+	Con_Printf("uint16 colormap_length = %i;\n", t->colormap_length);
+	Con_Printf("uint8 colormap_size = %i;\n", t->colormap_size);
+	Con_Printf("uint16 x_origin = %i;\n", t->x_origin);
+	Con_Printf("uint16 y_origin = %i;\n", t->y_origin);
+	Con_Printf("uint16 width = %i;\n", t->width);
+	Con_Printf("uint16 height = %i;\n", t->height);
+	Con_Printf("uint8 pixel_size = %i;\n", t->pixel_size);
+	Con_Printf("uint8 attributes = %i;\n", t->attributes);
+}
 
 /*
 =============
@@ -209,13 +223,17 @@ LoadTGA
 */
 qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 {
-	int x, y, row_inc;
-	unsigned char red, green, blue, alpha, run, runlen;
+	int x, y, row_inc, compressed, readpixelcount, red, green, blue, alpha, runlen;
 	qbyte *pixbuf, *image_rgba;
 	const qbyte *fin, *enddata;
+	TargaHeader targa_header;
+	unsigned char palette[256*4], *p;
 
-	if (loadsize < 18+3)
+	if (loadsize < 19)
 		return NULL;
+
+	enddata = f + loadsize;
+
 	targa_header.id_length = f[0];
 	targa_header.colormap_type = f[1];
 	targa_header.image_type = f[2];
@@ -234,22 +252,89 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 	targa_header.pixel_size = f[16];
 	targa_header.attributes = f[17];
 
-	if (targa_header.image_type != 2 && targa_header.image_type != 10)
-	{
-		Con_Printf ("LoadTGA: Only type 2 and 10 targa RGB images supported\n");
-		return NULL;
-	}
-
-	if (targa_header.colormap_type != 0	|| (targa_header.pixel_size != 32 && targa_header.pixel_size != 24))
-	{
-		Con_Printf ("LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
-		return NULL;
-	}
-
-	enddata = f + loadsize;
-
 	image_width = targa_header.width;
 	image_height = targa_header.height;
+
+	fin = f + 18;
+	if (targa_header.id_length != 0)
+		fin += targa_header.id_length;  // skip TARGA image comment
+	if (targa_header.image_type == 2 || targa_header.image_type == 10)
+	{
+		if (targa_header.pixel_size != 24 && targa_header.pixel_size != 32)
+		{
+			Con_Printf ("LoadTGA: only 24bit and 32bit pixel sizes supported for type 2 and type 10 images\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+	}
+	else if (targa_header.image_type == 1 || targa_header.image_type == 9)
+	{
+		if (targa_header.pixel_size != 8)
+		{
+			Con_Printf ("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+		if (targa_header.colormap_length != 256)
+		{
+			Con_Printf ("LoadTGA: only 256 colormap_length supported\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+		if (targa_header.colormap_index)
+		{
+			Con_Printf ("LoadTGA: colormap_index not supported\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+		if (targa_header.colormap_size == 24)
+		{
+			for (x = 0;x < targa_header.colormap_length;x++)
+			{
+				palette[x*4+2] = *fin++;
+				palette[x*4+1] = *fin++;
+				palette[x*4+0] = *fin++;
+				palette[x*4+3] = 255;
+			}
+		}
+		else if (targa_header.colormap_size == 32)
+		{
+			for (x = 0;x < targa_header.colormap_length;x++)
+			{
+				palette[x*4+2] = *fin++;
+				palette[x*4+1] = *fin++;
+				palette[x*4+0] = *fin++;
+				palette[x*4+3] = *fin++;
+			}
+		}
+		else
+		{
+			Con_Printf ("LoadTGA: Only 32 and 24 bit colormap_size supported\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+	}
+	else if (targa_header.image_type == 3 || targa_header.image_type == 11)
+	{
+		if (targa_header.pixel_size != 8)
+		{
+			Con_Printf ("LoadTGA: only 8bit pixel size for type 1, 3, 9, and 11 images supported\n");
+			PrintTargaHeader(&targa_header);
+			return NULL;
+		}
+	}
+	else
+	{
+		Con_Printf ("LoadTGA: Only type 1, 2, 3, 9, 10, and 11 targa RGB images supported, image_type = %i\n", targa_header.image_type);
+		PrintTargaHeader(&targa_header);
+		return NULL;
+	}
+
+	if (targa_header.attributes & 0x10)
+	{
+		Con_Printf ("LoadTGA: origin must be in top left or bottom left, top right and bottom right are not supported\n");
+		return NULL;
+	}
 
 	image_rgba = Mem_Alloc(tempmempool, image_width * image_height * 4);
 	if (!image_rgba)
@@ -257,10 +342,6 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 		Con_Printf ("LoadTGA: not enough memory for %i by %i image\n", image_width, image_height);
 		return NULL;
 	}
-
-	fin = f + 18;
-	if (targa_header.id_length != 0)
-		fin += targa_header.id_length;  // skip TARGA image comment
 
 	// If bit 5 of attributes isn't set, the image has been stored from bottom to top
 	if ((targa_header.attributes & 0x20) == 0)
@@ -274,148 +355,77 @@ qbyte *LoadTGA (const qbyte *f, int matchwidth, int matchheight)
 		row_inc = 0;
 	}
 
-	if (targa_header.image_type == 2)
+	compressed = targa_header.image_type == 9 || targa_header.image_type == 10 || targa_header.image_type == 11;
+	x = 0;
+	y = 0;
+	red = green = blue = alpha = 255;
+	while (y < image_height)
 	{
-		// Uncompressed, RGB images
-		if (targa_header.pixel_size == 24)
-		{
-			if (fin + image_width * image_height * 3 <= enddata)
-			{
-				for(y = 0;y < image_height;y++)
-				{
-					for(x = 0;x < image_width;x++)
-					{
-						*pixbuf++ = fin[2];
-						*pixbuf++ = fin[1];
-						*pixbuf++ = fin[0];
-						*pixbuf++ = 255;
-						fin += 3;
-					}
-					pixbuf += row_inc;
-				}
-			}
-		}
-		else
-		{
-			if (fin + image_width * image_height * 4 <= enddata)
-			{
-				for(y = 0;y < image_height;y++)
-				{
-					for(x = 0;x < image_width;x++)
-					{
-						*pixbuf++ = fin[2];
-						*pixbuf++ = fin[1];
-						*pixbuf++ = fin[0];
-						*pixbuf++ = fin[3];
-						fin += 4;
-					}
-					pixbuf += row_inc;
-				}
-			}
-		}
-	}
-	else if (targa_header.image_type==10)
-	{
-		// Runlength encoded RGB images
-		x = 0;
-		y = 0;
-		while (y < image_height && fin < enddata)
+		// decoder is mostly the same whether it's compressed or not
+		readpixelcount = 1000000;
+		runlen = 1000000;
+		if (compressed && fin < enddata)
 		{
 			runlen = *fin++;
+			// high bit indicates this is an RLE compressed run
 			if (runlen & 0x80)
-			{
-				// RLE compressed run
-				runlen = 1 + (runlen & 0x7f);
-				if (targa_header.pixel_size == 24)
-				{
-					if (fin + 3 > enddata)
-						break;
-					blue = *fin++;
-					green = *fin++;
-					red = *fin++;
-					alpha = 255;
-				}
-				else
-				{
-					if (fin + 4 > enddata)
-						break;
-					blue = *fin++;
-					green = *fin++;
-					red = *fin++;
-					alpha = *fin++;
-				}
+				readpixelcount = 1;
+			runlen = 1 + (runlen & 0x7f);
+		}
 
-				while (runlen && y < image_height)
+		while((runlen--) && y < image_height)
+		{
+			if (readpixelcount > 0)
+			{
+				readpixelcount--;
+				red = green = blue = alpha = 255;
+				if (fin < enddata)
 				{
-					run = runlen;
-					if (run > image_width - x)
-						run = image_width - x;
-					x += run;
-					runlen -= run;
-					while(run--)
+					switch(targa_header.image_type)
 					{
-						*pixbuf++ = red;
-						*pixbuf++ = green;
-						*pixbuf++ = blue;
-						*pixbuf++ = alpha;
-					}
-					if (x == image_width)
-					{
-						// end of line, advance to next
-						x = 0;
-						y++;
-						pixbuf += row_inc;
+					case 1:
+					case 9:
+						// colormapped
+						p = palette + (*fin++) * 4;
+						red = p[0];
+						green = p[1];
+						blue = p[2];
+						alpha = p[3];
+						break;
+					case 2:
+					case 10:
+						// BGR or BGRA
+						blue = *fin++;
+						if (fin < enddata)
+							green = *fin++;
+						if (fin < enddata)
+							red = *fin++;
+						if (targa_header.pixel_size == 32 && fin < enddata)
+							alpha = *fin++;
+						break;
+					case 3:
+					case 11:
+						// greyscale
+						red = green = blue = *fin++;
+						break;
 					}
 				}
 			}
-			else
+			*pixbuf++ = red;
+			*pixbuf++ = green;
+			*pixbuf++ = blue;
+			*pixbuf++ = alpha;
+			x++;
+			if (x == image_width)
 			{
-				// RLE uncompressed run
-				runlen = 1 + (runlen & 0x7f);
-				while (runlen && y < image_height)
-				{
-					run = runlen;
-					if (run > image_width - x)
-						run = image_width - x;
-					x += run;
-					runlen -= run;
-					if (targa_header.pixel_size == 24)
-					{
-						if (fin + run * 3 > enddata)
-							break;
-						while(run--)
-						{
-							*pixbuf++ = fin[2];
-							*pixbuf++ = fin[1];
-							*pixbuf++ = fin[0];
-							*pixbuf++ = 255;
-							fin += 3;
-						}
-					}
-					else
-					{
-						if (fin + run * 4 > enddata)
-							break;
-						while(run--)
-						{
-							*pixbuf++ = fin[2];
-							*pixbuf++ = fin[1];
-							*pixbuf++ = fin[0];
-							*pixbuf++ = fin[3];
-							fin += 4;
-						}
-					}
-					if (x == image_width)
-					{
-						// end of line, advance to next
-						x = 0;
-						y++;
-						pixbuf += row_inc;
-					}
-				}
+				// end of line, advance to next
+				x = 0;
+				y++;
+				pixbuf += row_inc;
 			}
 		}
 	}
+
 	return image_rgba;
 }
 
