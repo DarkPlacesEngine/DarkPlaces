@@ -268,13 +268,13 @@ int SV_FlyMove (edict_t *ent, float time, trace_t *steptrace)
 
 		trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, end, MOVE_NORMAL, ent);
 
-		/*
 		if (trace.allsolid)
-		{	// entity is trapped in another solid
+		{
+			// LordHavoc: note: this code is what makes entities stick in place if embedded in another object (which can be the world)
+			// entity is trapped in another solid
 			VectorClear(ent->v.velocity);
 			return 3;
 		}
-		*/
 
 		if (trace.fraction > 0)
 		{	// actually covered some distance
