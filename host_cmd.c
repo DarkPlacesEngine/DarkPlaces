@@ -600,6 +600,10 @@ void Host_PerformLoadGame(char *name)
 		else
 		{
 			// parse an edict
+			if (entnum >= MAX_EDICTS)
+				Host_Error("Host_PerformLoadGame: too many edicts in save file (reached MAX_EDICTS %i)\n", MAX_EDICTS);
+			while (entnum >= sv.max_edicts)
+				SV_IncreaseEdicts();
 			ent = EDICT_NUM(entnum);
 			memset (ent->v, 0, progs->entityfields * 4);
 			ent->e->free = false;

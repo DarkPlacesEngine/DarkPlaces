@@ -154,6 +154,8 @@ void PR_Profile_f (void);
 
 void PR_Crash (void);
 
+void SV_IncreaseEdicts(void);
+
 edict_t *ED_Alloc (void);
 void ED_Free (edict_t *ed);
 void ED_ClearEdict (edict_t *e);
