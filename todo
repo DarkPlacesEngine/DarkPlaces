@@ -60,6 +60,7 @@
 0 darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 0 darkplaces: figure out and fix the 'rubbing against a moving door causes block' bug (Static_Fiend)
 0 darkplaces: figure out random crashes on map changes (Uffe, QorpsE)
+0 darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 0 darkplaces: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: fix "game speed" menu option, it's too far left (Tomaz)
@@ -95,6 +96,7 @@
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 0 darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range (SeienAbunae)
 0 darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
+0 darkplaces: make v_cshift affect view even if in a liquid, by adding another cshift slot for it
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
 0 darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
