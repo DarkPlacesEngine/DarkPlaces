@@ -76,26 +76,10 @@ extern qboolean isRagePro;
 // LordHavoc: GLX_SGI_video_sync and WGL_EXT_swap_control
 extern int gl_videosyncavailable;
 
-typedef struct
-{
-	const char *name;
-	void **funcvariable;
-}
-gl_extensionfunctionlist_t;
-
-typedef struct
-{
-	const char *name;
-	const gl_extensionfunctionlist_t *funcs;
-	int *enablevariable;
-	const char *disableparm;
-}
-gl_extensioninfo_t;
-
 int GL_OpenLibrary(const char *name);
 void GL_CloseLibrary(void);
 void *GL_GetProcAddress(const char *name);
-int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent);
+int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent);
 
 void VID_Shared_Init(void);
 

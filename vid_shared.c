@@ -183,10 +183,10 @@ void (GLAPIENTRY *qglScissor)(GLint x, GLint y, GLsizei width, GLsizei height);
 
 void (GLAPIENTRY *qglPolygonOffset)(GLfloat factor, GLfloat units);
 
-int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent)
+int GL_CheckExtension(const char *name, const dllfunction_t *funcs, const char *disableparm, int silent)
 {
 	int failed = false;
-	const gl_extensionfunctionlist_t *func;
+	const dllfunction_t *func;
 
 	Con_Printf("checking for %s...  ", name);
 
@@ -224,7 +224,7 @@ int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs,
 	}
 }
 
-static gl_extensionfunctionlist_t opengl110funcs[] =
+static dllfunction_t opengl110funcs[] =
 {
 	{"glClearColor", (void **) &qglClearColor},
 	{"glClear", (void **) &qglClear},
@@ -311,19 +311,19 @@ static gl_extensionfunctionlist_t opengl110funcs[] =
 	{NULL, NULL}
 };
 
-static gl_extensionfunctionlist_t drawrangeelementsfuncs[] =
+static dllfunction_t drawrangeelementsfuncs[] =
 {
 	{"glDrawRangeElements", (void **) &qglDrawRangeElements},
 	{NULL, NULL}
 };
 
-static gl_extensionfunctionlist_t drawrangeelementsextfuncs[] =
+static dllfunction_t drawrangeelementsextfuncs[] =
 {
 	{"glDrawRangeElementsEXT", (void **) &qglDrawRangeElementsEXT},
 	{NULL, NULL}
 };
 
-static gl_extensionfunctionlist_t multitexturefuncs[] =
+static dllfunction_t multitexturefuncs[] =
 {
 	{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
 	{"glActiveTextureARB", (void **) &qglActiveTexture},
@@ -331,14 +331,14 @@ static gl_extensionfunctionlist_t multitexturefuncs[] =
 	{NULL, NULL}
 };
 
-static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
+static dllfunction_t compiledvertexarrayfuncs[] =
 {
 	{"glLockArraysEXT", (void **) &qglLockArraysEXT},
 	{"glUnlockArraysEXT", (void **) &qglUnlockArraysEXT},
 	{NULL, NULL}
 };
 
-static gl_extensionfunctionlist_t texture3dextfuncs[] =
+static dllfunction_t texture3dextfuncs[] =
 {
 	{"glTexImage3DEXT", (void **) &qglTexImage3D},
 	{"glTexSubImage3DEXT", (void **) &qglTexSubImage3D},

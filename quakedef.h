@@ -161,8 +161,8 @@ extern char *buildstring;
 #include "common.h"
 #include "cvar.h"
 #include "bspfile.h"
-#include "vid.h"
 #include "sys.h"
+#include "vid.h"
 #include "mathlib.h"
 
 #include "r_textures.h"

@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "image.h"
+#include "jpeg.h"
 
 int		image_width;
 int		image_height;
@@ -541,8 +542,8 @@ void Image_StripImageExtension (const char *in, char *out)
 qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth, int matchheight)
 {
 	qbyte *f, *data;
-	char basename[256], name[256], *c;
-	Image_StripImageExtension(filename, basename); // strip .tga, .pcx and .lmp extensions to allow replacement by other types
+	char basename[MAX_QPATH], name[MAX_QPATH], *c;
+	Image_StripImageExtension(filename, basename); // strip filename extensions to allow replacement by other types
 	// replace *'s with #, so commandline utils don't get confused when dealing with the external files
 	for (c = basename;*c;c++)
 		if (*c == '*')
@@ -555,11 +556,27 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 		Mem_Free(f);
 		return data;
 	}
+	sprintf (name, "override/%s.jpg", basename);
+	f = COM_LoadFile(name, true);
+	if (f)
+	{
+		data = JPEG_LoadImage (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
 	sprintf (name, "textures/%s.tga", basename);
 	f = COM_LoadFile(name, true);
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
+	sprintf (name, "textures/%s.jpg", basename);
+	f = COM_LoadFile(name, true);
+	if (f)
+	{
+		data = JPEG_LoadImage (f, matchwidth, matchheight);
 		Mem_Free(f);
 		return data;
 	}
@@ -576,6 +593,14 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 	if (f)
 	{
 		data = LoadTGA (f, matchwidth, matchheight);
+		Mem_Free(f);
+		return data;
+	}
+	sprintf (name, "%s.jpg", basename);
+	f = COM_LoadFile(name, true);
+	if (f)
+	{
+		data = JPEG_LoadImage (f, matchwidth, matchheight);
 		Mem_Free(f);
 		return data;
 	}
@@ -596,7 +621,7 @@ qbyte *loadimagepixels (const char *filename, qboolean complain, int matchwidth,
 		return data;
 	}
 	if (complain)
-		Con_Printf ("Couldn't load %s.tga, .pcx, .lmp\n", filename);
+		Con_Printf ("Couldn't load %s.tga, .jpg, .pcx, .lmp\n", filename);
 	return NULL;
 }
 

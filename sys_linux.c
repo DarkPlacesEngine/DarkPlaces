@@ -19,7 +19,33 @@
 #include <errno.h>
 #include <time.h>
 
+#include <dlfcn.h>
+
 #include "quakedef.h"
+
+/*
+===============================================================================
+
+DLL MANAGEMENT
+
+===============================================================================
+*/
+
+dllhandle_t Sys_LoadLibrary (const char* name)
+{
+	return dlopen (name, RTLD_LAZY);
+}
+
+void Sys_UnloadLibrary (dllhandle_t handle)
+{
+	dlclose (handle);
+}
+
+void* Sys_GetProcAddress (dllhandle_t handle, const char* name)
+{
+	return (void *)dlsym (handle, name);
+}
+
 
 // =======================================================================
 // General routines
