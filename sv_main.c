@@ -877,11 +877,6 @@ void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg
 		VectorCopy(val->vector, punchvector);
 
 	weaponmodelindex = SV_ModelIndex(PR_GetString(ent->v->weaponmodel), 1);
-	if (!weaponmodelindex)
-	{
-		Con_DPrintf("weaponmodel \"%s\" not precached\n", PR_GetString(ent->v->weaponmodel));
-		weaponmodelindex = 0;
-	}
 
 	viewzoom = 255;
 	if ((val = GETEDICTFIELDVALUE(ent, eval_viewzoom)))
