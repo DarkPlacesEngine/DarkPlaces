@@ -1040,7 +1040,7 @@ void VM_findchain (void)
 		if (strcmp(t,s))
 			continue;
 
-		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_E_INT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
 		chain = ent;
 	}
 
@@ -1083,10 +1083,10 @@ void VM_findchainfloat (void)
 		prog->xfunction->builtinsprofile++;
 		if (ent->p.e->free)
 			continue;
-		if (E_FLOAT(ent,f) != s)
+		if (PRVM_E_FLOAT(ent,f) != s)
 			continue;
 
-		PRVM_E_FLOAT(ent,chain_of) = PRVM_NUM_FOR_EDICT(chain);
+		PRVM_E_INT(ent,chain_of) = PRVM_EDICT_TO_PROG(chain);
 		chain = ent;
 	}
 
