@@ -230,7 +230,7 @@ void GL_Main_Init(void)
 	Cvar_RegisterVariable (&r_fullbright);
 	Cvar_RegisterVariable (&r_textureunits);
 	Cvar_RegisterVariable (&r_shadow_cull);
-	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXIUZ)
+	if (gamemode == GAME_NEHAHRA || gamemode == GAME_NEXUIZ)
 		Cvar_SetValue("r_fullbrights", 0);
 	R_RegisterModule("GL_Main", gl_main_start, gl_main_shutdown, gl_main_newmap);
 }
