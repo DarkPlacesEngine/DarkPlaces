@@ -154,7 +154,6 @@ typedef struct
 */
 
 
-// !!! if this is changed, it must be changed in asm_i386.h too !!!
 typedef struct
 {
 	int			planenum;

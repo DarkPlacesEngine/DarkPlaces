@@ -211,14 +211,6 @@ void Sys_SendKeyEvents (void)
 {
 }
 
-void Sys_HighFPPrecision (void)
-{
-}
-
-void Sys_LowFPPrecision (void)
-{
-}
-
 char *Sys_ConsoleInput (void)
 {
 	static char	text[256];
