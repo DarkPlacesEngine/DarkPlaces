@@ -1136,6 +1136,7 @@ static void R_BlendView(void)
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
+	R_Mesh_GetSpace(3);
 	r = 64000;
 	varray_vertex[0] = r_origin[0] + vpn[0] * 1.5 - vright[0] * r - vup[0] * r;
 	varray_vertex[1] = r_origin[1] + vpn[1] * 1.5 - vright[1] * r - vup[1] * r;
@@ -1295,6 +1296,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
+	R_Mesh_GetSpace(8);
 	varray_vertex[ 0] = mins[0];varray_vertex[ 1] = mins[1];varray_vertex[ 2] = mins[2];
 	varray_vertex[ 4] = maxs[0];varray_vertex[ 5] = mins[1];varray_vertex[ 6] = mins[2];
 	varray_vertex[ 8] = mins[0];varray_vertex[ 9] = maxs[1];varray_vertex[10] = mins[2];
@@ -1322,10 +1324,22 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 }
 */
 
+int nomodelelements[24] =
+{
+	5, 2, 0,
+	5, 1, 2,
+	5, 0, 3,
+	5, 3, 1,
+	0, 2, 4,
+	2, 1, 4,
+	3, 0, 4,
+	1, 3, 4
+};
+
 void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
-	int i, element[24];
+	int i;
 	float f1, f2, *c, diff[3];
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -1347,14 +1361,8 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&ent->matrix);
 	R_Mesh_State(&m);
 
-	element[ 0] = 5;element[ 1] = 2;element[ 2] = 0;
-	element[ 3] = 5;element[ 4] = 1;element[ 5] = 2;
-	element[ 6] = 5;element[ 7] = 0;element[ 8] = 3;
-	element[ 9] = 5;element[10] = 3;element[11] = 1;
-	element[12] = 0;element[13] = 2;element[14] = 4;
-	element[15] = 2;element[16] = 1;element[17] = 4;
-	element[18] = 3;element[19] = 0;element[20] = 4;
-	element[21] = 1;element[22] = 3;element[23] = 4;
+	GL_UseColorArray();
+	R_Mesh_GetSpace(6);
 	varray_vertex[ 0] = -16;varray_vertex[ 1] =   0;varray_vertex[ 2] =   0;
 	varray_vertex[ 4] =  16;varray_vertex[ 5] =   0;varray_vertex[ 6] =   0;
 	varray_vertex[ 8] =   0;varray_vertex[ 9] = -16;varray_vertex[10] =   0;
@@ -1388,8 +1396,7 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 			c[2] *= r_colorscale;
 		}
 	}
-	GL_UseColorArray();
-	R_Mesh_Draw(6, 8, element);
+	R_Mesh_Draw(6, 8, nomodelelements);
 }
 
 void R_DrawNoModel(entity_render_t *ent)

@@ -676,6 +676,7 @@ CL_SparkShower
 */
 void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 {
+	vec3_t org2, org3;
 	int k;
 	if (!cl_particles.integer) return;
 
@@ -690,7 +691,11 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			k = count / 4;
 			while(k--)
 			{
-				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, 255, 1024, 9999, -0.2, 0, org[0] + 0.125f * lhrandom(-count, count), org[1] + 0.125f * lhrandom (-count, count), org[2] + 0.125f * lhrandom(-count, count), lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
+				org2[0] = org[0] + 0.125f * lhrandom(-count, count);
+				org2[1] = org[1] + 0.125f * lhrandom(-count, count);
+				org2[2] = org[2] + 0.125f * lhrandom(-count, count);
+				CL_TraceLine(org, org2, org3, NULL, 0, true, NULL);
+				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, 255, 1024, 9999, -0.2, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
 			}
 		}
 
@@ -716,6 +721,7 @@ static float bloodcount = 0;
 void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 {
 	float s, r, a;
+	vec3_t org2, org3;
 	// bloodcount is used to accumulate counts too small to cause a blood particle
 	if (!cl_particles.integer) return;
 	if (!cl_particles_blood.integer) return;
@@ -729,8 +735,12 @@ void CL_BloodPuff (vec3_t org, vec3_t vel, int count)
 	a = cl_particles_blood_alpha.value * 255;
 	while(bloodcount > 0)
 	{
-		particle(pt_blood, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_blooddecal[rand()&7], true, PBLEND_MOD, r, r, a * 3, a * 1.5, 9999, 0, -1, org[0], org[1], org[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
-		//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, PBLEND_ALPHA, r, r, a, a * 0.5, 9999, 0, -1, org[0], org[1], org[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
+		org2[0] = org[0] + 0.125f * lhrandom(-bloodcount, bloodcount);
+		org2[1] = org[1] + 0.125f * lhrandom(-bloodcount, bloodcount);
+		org2[2] = org[2] + 0.125f * lhrandom(-bloodcount, bloodcount);
+		CL_TraceLine(org, org2, org3, NULL, 0, true, NULL);
+		particle(pt_blood, PARTICLE_BILLBOARD, 0xFFFFFF, 0xFFFFFF, tex_blooddecal[rand()&7], true, PBLEND_MOD, r, r, a * 3, a * 1.5, 9999, 0, -1, org3[0], org3[1], org3[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
+		//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, PBLEND_ALPHA, r, r, a, a * 0.5, 9999, 0, -1, org3[0], org3[1], org3[2], vel[0] + lhrandom(-s, s), vel[1] + lhrandom(-s, s), vel[2] + lhrandom(-s, s), 0, 0, 0, 0, 1, 0);
 		bloodcount -= r;
 	}
 }
@@ -1659,7 +1669,7 @@ void R_InitParticles(void)
 	R_Particles_Init();
 }
 
-float varray_vertex[16];
+float varray_vertex[16], varray_texcoord[1][16];
 #endif
 
 #ifdef WORKINGLQUAKE
@@ -1676,6 +1686,66 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 
 	VectorCopy(p->org, org);
 
+	tex = &particletexture[p->texnum];
+	cr = p->color[0] * (1.0f / 255.0f);
+	cg = p->color[1] * (1.0f / 255.0f);
+	cb = p->color[2] * (1.0f / 255.0f);
+	ca = p->alpha * (1.0f / 255.0f);
+	if (p->blendmode == PBLEND_MOD)
+	{
+		cr *= ca;
+		cg *= ca;
+		cb *= ca;
+		cr = min(cr, 1);
+		cg = min(cg, 1);
+		cb = min(cb, 1);
+		ca = 1;
+	}
+
+#ifndef WORKINGLQUAKE
+	memset(&m, 0, sizeof(m));
+	if (p->blendmode == 0)
+	{
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else if (p->blendmode == 1)
+	{
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else
+	{
+		m.blendfunc1 = GL_ZERO;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_COLOR;
+	}
+	m.tex[0] = R_GetTexture(tex->texture);
+	R_Mesh_Matrix(&r_identitymatrix);
+	R_Mesh_State(&m);
+
+	if (fogenabled && p->blendmode != PBLEND_MOD)
+	{
+		VectorSubtract(org, r_origin, fogvec);
+		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
+		ifog = 1 - fog;
+		cr = cr * ifog;
+		cg = cg * ifog;
+		cb = cb * ifog;
+		if (p->blendmode == 0)
+		{
+			cr += fogcolor[0] * fog;
+			cg += fogcolor[1] * fog;
+			cb += fogcolor[2] * fog;
+		}
+	}
+	cr *= r_colorscale;
+	cg *= r_colorscale;
+	cb *= r_colorscale;
+
+	GL_Color(cr, cg, cb, ca);
+
+	R_Mesh_GetSpace(4);
+#endif
 	if (p->orientation == PARTICLE_BILLBOARD)
 	{
 		VectorScale(vright, p->scalex, right);
@@ -1729,76 +1799,6 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	else
 		Host_Error("R_DrawParticles: unknown particle orientation %i\n", p->orientation);
 
-	tex = &particletexture[p->texnum];
-	cr = p->color[0] * (1.0f / 255.0f);
-	cg = p->color[1] * (1.0f / 255.0f);
-	cb = p->color[2] * (1.0f / 255.0f);
-	ca = p->alpha * (1.0f / 255.0f);
-	if (p->blendmode == PBLEND_MOD)
-	{
-		cr *= ca;
-		cg *= ca;
-		cb *= ca;
-		cr = min(cr, 1);
-		cg = min(cg, 1);
-		cb = min(cb, 1);
-		ca = 1;
-	}
-
-#if WORKINGLQUAKE
-	if (p->blendmode == 0)
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	else if (p->blendmode == 1)
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else
-		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-	glBegin(GL_QUADS);
-	glColor4f(cr, cg, cb, ca);
-	glTexCoord2f(tex->s2, tex->t1);glVertex3f(varray_vertex[ 0], varray_vertex[ 1], varray_vertex[ 2]);
-	glTexCoord2f(tex->s1, tex->t1);glVertex3f(varray_vertex[ 4], varray_vertex[ 5], varray_vertex[ 6]);
-	glTexCoord2f(tex->s1, tex->t2);glVertex3f(varray_vertex[ 8], varray_vertex[ 9], varray_vertex[10]);
-	glTexCoord2f(tex->s2, tex->t2);glVertex3f(varray_vertex[12], varray_vertex[13], varray_vertex[14]);
-	glEnd();
-#else
-	memset(&m, 0, sizeof(m));
-	if (p->blendmode == 0)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
-	}
-	else if (p->blendmode == 1)
-	{
-		m.blendfunc1 = GL_SRC_ALPHA;
-		m.blendfunc2 = GL_ONE;
-	}
-	else
-	{
-		m.blendfunc1 = GL_ZERO;
-		m.blendfunc2 = GL_ONE_MINUS_SRC_COLOR;
-	}
-	m.tex[0] = R_GetTexture(tex->texture);
-	R_Mesh_Matrix(&r_identitymatrix);
-	R_Mesh_State(&m);
-
-	if (fogenabled && p->blendmode != PBLEND_MOD)
-	{
-		VectorSubtract(org, r_origin, fogvec);
-		fog = exp(fogdensity/DotProduct(fogvec,fogvec));
-		ifog = 1 - fog;
-		cr = cr * ifog;
-		cg = cg * ifog;
-		cb = cb * ifog;
-		if (p->blendmode == 0)
-		{
-			cr += fogcolor[0] * fog;
-			cg += fogcolor[1] * fog;
-			cb += fogcolor[2] * fog;
-		}
-	}
-	cr *= r_colorscale;
-	cg *= r_colorscale;
-	cb *= r_colorscale;
-
 	if (p->orientation == PARTICLE_BEAM)
 	{
 		VectorSubtract(p->vel2, p->org, up);
@@ -1818,7 +1818,21 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 		varray_texcoord[0][12] = tex->s2;varray_texcoord[0][13] = tex->t2;
 	}
 
-	GL_Color(cr, cg, cb, ca);
+#if WORKINGLQUAKE
+	if (p->blendmode == 0)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	else if (p->blendmode == 1)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else
+		glBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+	glColor4f(cr, cg, cb, ca);
+	glBegin(GL_QUADS);
+	glTexCoord2f(varray_texcoord[0][ 0], varray_texcoord[0][ 1]);glVertex3f(varray_vertex[ 0], varray_vertex[ 1], varray_vertex[ 2]);
+	glTexCoord2f(varray_texcoord[0][ 4], varray_texcoord[0][ 5]);glVertex3f(varray_vertex[ 4], varray_vertex[ 5], varray_vertex[ 6]);
+	glTexCoord2f(varray_texcoord[0][ 8], varray_texcoord[0][ 9]);glVertex3f(varray_vertex[ 8], varray_vertex[ 9], varray_vertex[10]);
+	glTexCoord2f(varray_texcoord[0][12], varray_texcoord[0][13]);glVertex3f(varray_vertex[12], varray_vertex[13], varray_vertex[14]);
+	glEnd();
+#else
 	R_Mesh_Draw(4, 2, polygonelements);
 #endif
 }

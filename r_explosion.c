@@ -190,7 +190,8 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 
 	numtriangles = EXPLOSIONTRIS;
 	numverts = EXPLOSIONVERTS;
-	R_Mesh_ResizeCheck(numverts);
+	GL_UseColorArray();
+	R_Mesh_GetSpace(numverts);
 
 	for (i = 0, v = varray_vertex;i < numverts;i++, v += 4)
 	{
@@ -241,7 +242,6 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 			c[3] = 1;
 		}
 	}
-	GL_UseColorArray();
 	R_Mesh_Draw(numverts, numtriangles, explosiontris[0]);
 }
 
