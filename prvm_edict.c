@@ -54,7 +54,7 @@ void PRVM_MEM_Alloc()
 	prog->max_edicts = min(prog->max_edicts,prog->limit_edicts);
 
 	// edictprivate_size has to be min as big prvm_edict_private_t
-	prog->edictprivate_size = max(prog->edictprivate_size,sizeof(prvm_edict_private_t)); 
+	prog->edictprivate_size = max(prog->edictprivate_size,(int)sizeof(prvm_edict_private_t)); 
 
 	// alloc edicts
 	prog->edicts = Mem_Alloc(prog->edicts_mempool,prog->limit_edicts * sizeof(prvm_edict_t));
