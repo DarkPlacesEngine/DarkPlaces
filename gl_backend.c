@@ -613,7 +613,7 @@ void GL_Scissor (int x, int y, int width, int height)
 	CHECKGLERROR
 }
 
-void GL_ScissorTest(qboolean state)
+void GL_ScissorTest(int state)
 {
 	if(gl_state.scissortest == state)
 		return;

@@ -621,7 +621,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 void DrawQ_SetClipArea(float x, float y, float width, float height)
 {
 	drawqueue_t * dq;
-	if(r_refdef.drawqueuesize + sizeof(*dq) > r_refdef.maxdrawqueuesize)
+	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
 	{
 		Con_DPrintf("DrawQueue full !\n");
 		return;
@@ -642,7 +642,7 @@ void DrawQ_SetClipArea(float x, float y, float width, float height)
 void DrawQ_ResetClipArea(void)
 {
 	drawqueue_t *dq;
-	if(r_refdef.drawqueuesize + sizeof(*dq) > r_refdef.maxdrawqueuesize)
+	if(r_refdef.drawqueuesize + (int)sizeof(*dq) > r_refdef.maxdrawqueuesize)
 	{
 		Con_DPrintf("DrawQueue full !\n");
 		return;
