@@ -48,10 +48,10 @@ cvar_t r_draweffects = {0, "r_draweffects", "1"};
 
 cvar_t cl_explosions = {CVAR_SAVE, "cl_explosions", "1"};
 cvar_t cl_explosions_alpha_start = {CVAR_SAVE, "cl_explosions_alpha_start", "1.5"};
-cvar_t cl_explosions_alpha_end = {CVAR_SAVE, "cl_explosions_alpha_end", "0.01"};
-cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "1"};
-cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "1"};
-cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "1"};
+cvar_t cl_explosions_alpha_end = {CVAR_SAVE, "cl_explosions_alpha_end", "0"};
+cvar_t cl_explosions_size_start = {CVAR_SAVE, "cl_explosions_size_start", "64"};
+cvar_t cl_explosions_size_end = {CVAR_SAVE, "cl_explosions_size_end", "128"};
+cvar_t cl_explosions_lifetime = {CVAR_SAVE, "cl_explosions_lifetime", "0.5"};
 
 cvar_t cl_stainmaps = {CVAR_SAVE, "cl_stainmaps", "1"};
 
@@ -497,7 +497,8 @@ extern void V_CalcRefdef(void);
 // note this is a recursive function, but it can never get in a runaway loop (because of the delayedlink flags)
 void CL_LinkNetworkEntity(entity_t *e)
 {
-	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2, dlightmatrix;
+	matrix4x4_t *matrix, blendmatrix, tempmatrix, matrix2;
+	//matrix4x4_t dlightmatrix;
 	int j, k, l, trailtype, temp;
 	float origin[3], angles[3], delta[3], lerp, dlightcolor[3], dlightradius, mins[3], maxs[3], v[3], v2[3], d;
 	entity_t *t;
