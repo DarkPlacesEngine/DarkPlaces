@@ -26,7 +26,6 @@ static mempool_t *textureprocessingmempool;
 #define GLTEXF_DESTROYED 0x00040000
 
 // size of images which hold fragment textures, ignores picmip and max_size
-//#define BLOCK_SIZE 256
 static int block_size;
 
 // really this number only governs gltexnuminuse
@@ -677,10 +676,11 @@ static void R_FindImageForTexture(gltexture_t *glt)
 				continue;
 			if (image->glformat != texinfo->glformat || image->glinternalformat != texinfo->glinternalformat)
 				continue;
+			if (glt->width > image->width || glt->height > image->height)
+				continue;
 
 			// got a fragments texture, find a place in it if we can
-			best = block_size;
-			for (best = block_size, i = 0;i < block_size - w;i += texinfo->align)
+			for (best = image->width, i = 0;i < image->width - w;i += texinfo->align)
 			{
 				for (best2 = 0, j = 0;j < w;j++)
 				{
@@ -697,7 +697,7 @@ static void R_FindImageForTexture(gltexture_t *glt)
 				}
 			}
 
-			if (best + h > block_size)
+			if (best + h > image->height)
 				continue;
 
 			for (i = 0;i < w;i++)
@@ -714,10 +714,11 @@ static void R_FindImageForTexture(gltexture_t *glt)
 		if (image == NULL)
 			Sys_Error("R_FindImageForTexture: ran out of memory\n");
 		image->type = GLIMAGETYPE_FRAGMENTS;
-		image->width = block_size;
-		image->height = block_size;
-		image->blockallocation = Mem_Alloc(texturemempool, block_size * sizeof(short));
-		memset(image->blockallocation, 0, block_size * sizeof(short));
+		// make sure the created image is big enough for the fragment
+		for (image->width = block_size;image->width < glt->width;image->width <<= 1);
+		for (image->height = block_size;image->height < glt->height;image->height <<= 1);
+		image->blockallocation = Mem_Alloc(texturemempool, image->width * sizeof(short));
+		memset(image->blockallocation, 0, image->width * sizeof(short));
 
 		x = 0;
 		y = 0;
@@ -864,12 +865,8 @@ rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int w
 	texinfo = R_GetTexTypeInfo(textype, flags);
 
 	if (flags & TEXF_FRAGMENT)
-	{
-		if (width > block_size || height > block_size)
-			Host_Error("R_LoadTexture: fragment too big, must be no more than %dx%d\n", block_size, block_size);
 		if ((width * texinfo->internalbytesperpixel) & 3)
 			Host_Error("R_LoadTexture: incompatible width for fragment");
-	}
 
 	// clear the alpha flag if the texture has no transparent pixels
 	switch(textype)
@@ -943,12 +940,8 @@ rtexture_t *R_ProceduralTexture (rtexturepool_t *rtexturepool, char *identifier,
 	texinfo = R_GetTexTypeInfo(textype, flags);
 
 	if (flags & TEXF_FRAGMENT)
-	{
-		if (width > block_size || height > block_size)
-			Host_Error("R_ProceduralTexture: fragment too big, must be no more than %dx%d\n", block_size, block_size);
 		if ((width * texinfo->internalbytesperpixel) & 3)
 			Host_Error("R_ProceduralTexture: incompatible width for fragment");
-	}
 
 	// see if the texture is already present
 	if (identifier && (glt = R_FindTexture(pool, identifier)))
