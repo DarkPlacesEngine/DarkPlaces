@@ -164,7 +164,7 @@ static qboolean _HostCache_SortTest( hostcache_t *A, hostcache_t *B )
 	return result < 0;
 }
 
-static qboolean _hc_testint( int A, hostcache_infofield_t op, int B )
+static qboolean _hc_testint( int A, hostcache_maskop_t op, int B )
 {
 	int diff;
 

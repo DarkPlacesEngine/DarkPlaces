@@ -229,6 +229,8 @@ extern qboolean					hostcache_sortdescending;
 extern int			hostcache_viewcount;
 extern hostcache_t	*hostcache_viewset[HOSTCACHE_VIEWCACHESIZE];
 
+extern int			hostcache_cachecount; 
+
 extern qboolean		hostcache_consoleoutput;
 
 #if !defined(_WIN32 ) && !defined (__linux__) && !defined (__sun__)

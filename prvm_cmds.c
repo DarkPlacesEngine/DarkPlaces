@@ -103,6 +103,7 @@ intt	ftoi(float num)
 float	altstr_count(string)
 string	altstr_prepare(string)
 string	altstr_get(string,float)
+string	altstr_set(string altstr, float num, string set)
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -151,7 +152,7 @@ float	isfunction(string function_name)
 vector	getresolution(float number)
 string	keynumtostring(float keynum)
 string	findkeysforcommand(string command)
-float	gethostcachevalue(float type)
+float	gethostcachestat(float type)
 string	gethostcachestring(float type, float hostnr)
 
 		parseentitydata(entity ent, string data)
@@ -1144,7 +1145,7 @@ void VM_precache_sound (void)
 	PRVM_G_INT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
 	VM_CheckEmptyString (s);
 
-	if(!S_PrecacheSound (s,true, true))
+	if(snd_initialized.integer && !S_PrecacheSound (s,true, true))
 		Con_Printf("VM_precache_sound: Failed to load %s for %s\n", s, PRVM_NAME);
 }
 
@@ -3054,6 +3055,57 @@ void VM_altstr_get( void )
 	PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( outstr );
 }
 
+/*
+========================
+VM_altstr_set
+
+string altstr_set(string altstr, float num, string set)
+========================
+*/
+void VM_altstr_set( void )
+{
+    int num;
+	char *altstr, *str;
+	char *in;
+	char *outstr, *out;
+
+	VM_SAFEPARMCOUNT( 3, VM_altstr_set );
+
+	altstr = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( altstr );
+
+	num = PRVM_G_FLOAT( OFS_PARM1 );
+
+	str = PRVM_G_STRING( OFS_PARM2 );
+	VM_CheckEmptyString( str );
+
+	outstr = out = VM_GetTempString();
+	for( num = num * 2 + 1, in = altstr; *in && num; *out++ = *in++ )
+		if( *in == '\\' && !*++in )
+			break;
+		else if( *in == '\'' )
+			num--;
+
+	if( !in ) {
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( "" );
+		return;
+	}
+	// copy set in
+	for( ; *str; *out++ = *str++ );
+	// now jump over the old contents
+	for( ; *in; *out++ = *in++ )
+		if( *in == '\'' || *in == '\\' && !*++in )
+			break;
+	
+	if( !in ) {
+		PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( "" );
+		return;
+	}
+
+	strcpy( out, in );
+	PRVM_G_INT( OFS_RETURN ) = PRVM_SetString( outstr );
+}
+
 void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
@@ -3418,48 +3470,60 @@ void VM_M_findkeysforcommand(void)
 
 /*
 =========
-VM_M_gethostcachecount
+VM_M_gethostcachestat
 
-float	gethostcachevalue(float type)
+float	gethostcachestat(float type)
 =========
 */
 /*
 	type:
-0	hostcachecount
-1	masterquerycount
-2	masterreplycount
-3	serverquerycount
-4	serverreplycount
+0	hostcache_viewcount
+1   hostcache_totalcount
+2	masterquerycount
+3	masterreplycount
+4	serverquerycount
+5	serverreplycount
 */
-void VM_M_gethostcachevalue( void )
+void VM_M_gethostcachestat( void )
 {
 	int type;
-	VM_SAFEPARMCOUNT ( 1, VM_M_gethostcachevalue );
+	VM_SAFEPARMCOUNT ( 1, VM_M_gethostcachestat );
 
 	PRVM_G_FLOAT( OFS_RETURN ) = 0;
 
 	type = PRVM_G_FLOAT( OFS_PARM0 );
 	if( type < 0 || type > 4 )
-		Con_Printf( "VM_M_gethostcachevalue: bad type %i!\n", type );
+		Con_Printf( "VM_M_gethostcachestat: bad type %i!\n", type );
 	else switch(type)
 	{
 	case 0:
 		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_viewcount;
 		return;
 	case 1:
+		PRVM_G_FLOAT ( OFS_RETURN ) = hostcache_cachecount; 
+	case 2:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterquerycount;
 		return;
-	case 2:
+	case 3:
 		PRVM_G_FLOAT ( OFS_RETURN ) = masterreplycount;
 		return;
-	case 3:
+	case 4:
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverquerycount;
 		return;
-	case 4:
+	case 5:
 		PRVM_G_FLOAT ( OFS_RETURN ) = serverreplycount;
 		return;
 	}
 }
+
+/*
+========================
+VM_M_sethostcachemask
+
+sethostcachemask( string map, string mod, string name, 
+========================
+*/
+
 
 /*
 =========
@@ -3592,8 +3656,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_itof,		// isString
 	VM_altstr_count,
 	VM_altstr_prepare,
-	VM_altstr_get,	// 84
-	0,0,0,0,0,0,	// 90
+	VM_altstr_get,
+	VM_altstr_set,  // 85
+	0,0,0,0,0,	// 90
 	e10,			// 100
 	e100,			// 200
 	e100,			// 300
@@ -3645,7 +3710,7 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_getresolution,
 	VM_M_keynumtostring,
 	VM_M_findkeysforcommand,// 610
-	VM_M_gethostcachevalue,
+	VM_M_gethostcachestat,
 	VM_M_gethostcachestring,
 	VM_M_parseentitydata	// 613
 };
