@@ -796,11 +796,6 @@ static void R_SetupFrame (void)
 	VectorNegate(r_viewleft, r_viewright);
 
 	GL_SetupView_ViewPort(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
-	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
-	else
-		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
-	GL_SetupView_Orientation_FromEntity(&r_refdef.viewentitymatrix);
 
 	R_AnimateLight();
 }
@@ -887,6 +882,11 @@ void R_RenderView (void)
 	R_FarClip_Start(r_vieworigin, r_viewforward, 768.0f);
 	R_MarkEntities();
 	r_farclip = R_FarClip_Finish() + 256.0f;
+	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
+	else
+		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
+	GL_SetupView_Orientation_FromEntity(&r_refdef.viewentitymatrix);
 	R_TimeReport("markentity");
 
 	qglDepthFunc(GL_LEQUAL);
