@@ -1328,7 +1328,7 @@ void M_Setup_Draw (void)
 		menuplyr_bottom = -1;
 		if ((f = FS_LoadFile("gfx/menuplyr.lmp", tempmempool, true)))
 		{
-			data = LoadLMPAs8Bit (f, 0, 0);
+			data = LoadLMP (f, 0, 0, true);
 			menuplyr_width = image_width;
 			menuplyr_height = image_height;
 			Mem_Free(f);
