@@ -86,6 +86,8 @@ static clvideo_t* OpenVideo( clvideo_t *video, char *filename, char *name, int o
 	video->framerate = dpvsimpledecode_getframerate( video->stream );
 	video->lasttime = realtime;
 
+	cl_videotexturepool = R_AllocTexturePool();
+
 	video->cpif.width = dpvsimpledecode_getwidth( video->stream );
 	video->cpif.height = dpvsimpledecode_getheight( video->stream );
 	video->cpif.tex = R_LoadTexture2D( cl_videotexturepool, video->cpif.name, 
@@ -168,6 +170,7 @@ void CL_CloseVideo( clvideo_t * video )
 	if( !video->suspended ) {
 		Mem_Free( video->imagedata );
 		R_FreeTexture( video->cpif.tex );
+		R_FreeTexturePool( &cl_videotexturepool );
 	}
 
 	video->state = CLVIDEO_UNUSED;
@@ -226,7 +229,6 @@ void CL_Video_Shutdown( void )
 	for( i = 0 ; i < MAXCLVIDEOS ; i++ )
 		CL_CloseVideo( &videoarray[ i ] );
 
-	R_FreeTexturePool( &cl_videotexturepool );
 	Mem_FreePool( &cl_videomempool );
 }
 
@@ -292,9 +294,9 @@ void CL_Video_Init( void )
 	cl_videogmask = BigLong(0x00FF0000);
 	cl_videobmask = BigLong(0x0000FF00);
 
-	cl_videomempool = Mem_AllocPool( "CL_Video", 0, NULL );
-	cl_videotexturepool = R_AllocTexturePool();
-
 	Cmd_AddCommand( "playvideo", CL_PlayVideo_f );
 	Cmd_AddCommand( "stopvideo", CL_StopVideo_f );
+	
+	cl_videomempool = Mem_AllocPool( "CL_Video", 0, NULL );
 }
+
