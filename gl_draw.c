@@ -427,11 +427,13 @@ void R_DrawQueue(void)
 	{
 		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
 		color = dq->color;
-
-		if(dq->flags & DRAWFLAG_ADDITIVE)
+		
+		if(dq->flags == DRAWFLAG_ADDITIVE)
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-		else if(dq->flags & DRAWFLAG_MODULATE)
+		else if(dq->flags == DRAWFLAG_MODULATE)
 			GL_BlendFunc(GL_DST_COLOR, GL_ZERO);
+		else if(dq->flags == DRAWFLAG_2XMODULATE)
+			GL_BlendFunc(GL_DST_COLOR,GL_SRC_COLOR);
 		else
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "image.h"
 
+#include "mprogdefs.h"
 
 #define TYPE_DEMO 1
 #define TYPE_GAME 2
@@ -3480,9 +3481,20 @@ void M_ServerList_Key(int k)
 //=============================================================================
 /* Menu Subsystem */
 
+void M_Keydown(int key);
+void M_Draw(void);
+void M_ToggleMenu_f(void);
+void M_Shutdown(void);
 
 void M_Init (void)
 {
+	// set menu router function pointer
+	MR_Keydown = M_Keydown;
+	MR_Draw = M_Draw;
+	MR_ToggleMenu_f = M_ToggleMenu_f;
+	MR_Shutdown = M_Shutdown;
+
+	// init
 	menu_mempool = Mem_AllocPool("Menu");
 	menuplyr_load = true;
 	menuplyr_pixels = NULL;
@@ -3567,6 +3579,7 @@ void M_Draw (void)
 {
 	if (key_dest != key_menu)
 		m_state = m_none;
+
 	if (m_state == m_none)
 		return;
 
@@ -3730,4 +3743,161 @@ void M_Keydown (int key)
 		return;
 	}
 }
+
+void M_Shutdown(void)
+{
+}
+
+//============================================================================
+// Menu prog handling
+mfunction_t *PRVM_ED_FindFunction(const char *);
+
+#define M_F_INIT		"m_init"
+#define M_F_KEYDOWN		"m_keydown"
+#define M_F_DRAW		"m_draw"
+#define M_F_TOGGLE		"m_toggle"
+#define M_F_SHUTDOWN	"m_shutdown"
+
+static char *m_required_func[] = {
+M_F_INIT,
+M_F_KEYDOWN,
+M_F_DRAW,
+M_F_TOGGLE,
+M_F_SHUTDOWN,
+};
+
+static int m_numrequiredfunc = sizeof(m_required_func) / sizeof(char*);
+
+static func_t m_draw,m_keydown;
+
+void MP_Error(void)
+{
+	// fall back to the normal menu
+
+	// say it
+	Con_Printf("Falling back to normal menu.\n Error :");
+	
+	// init the normal menu now -> this will also correct the menu router pointers
+	M_Init();
+}
+
+void MP_Keydown (int key)
+{
+	PRVM_Begin;
+	PRVM_SetProg(PRVM_MENUPROG);
+
+	// pass key
+	prog->globals[OFS_PARM0] = (float) key;
+	PRVM_ExecuteProgram(m_keydown, M_F_KEYDOWN"(float key) required\n");
+
+	PRVM_End;
+}
+void MP_Draw (void)
+{
+	PRVM_Begin;
+	PRVM_SetProg(PRVM_MENUPROG);
+	
+	PRVM_ExecuteProgram(m_draw,"");
+
+	PRVM_End;
+}
+
+void MP_ToggleMenu_f (void)
+{
+	PRVM_Begin;
+	PRVM_SetProg(PRVM_MENUPROG);
+
+	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_TOGGLE) - prog->functions),"");
+
+	PRVM_End;
+}
+
+void MP_Shutdown (void)
+{
+	PRVM_Begin;
+	PRVM_SetProg(PRVM_MENUPROG);
+
+	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_SHUTDOWN) - prog->functions),"");
+
+	// reset key_dest
+	key_dest = key_game;
+
+	// AK not using this cause Im not sure whether this is useful at all instead :
+/*	// free mempools
+	Mem_FreePool(prog->edicts_mempool);
+	Mem_FreePool(prog->edictstring_mempool);
+	Mem_FreePool(prog->progs_mempool);*/
+	PRVM_ResetProg();
+
+	PRVM_End;
+}
+
+void MP_Init (void)
+{
+	MR_Keydown = MP_Keydown;
+	MR_Draw = MP_Draw;
+	MR_ToggleMenu_f = MP_ToggleMenu_f;
+	MR_Shutdown = MP_Shutdown;
+	
+	PRVM_Begin;
+	PRVM_InitProg(PRVM_MENUPROG);
+	
+	prog->crc = M_PROGHEADER_CRC;
+	prog->edictprivate_size = 0; // no private struct used
+	prog->name = M_NAME;
+	prog->limit_edicts = M_MAX_EDICTS;
+	prog->extensionstring = vm_m_extensions;
+	prog->builtins = vm_m_builtins;
+	prog->numbuiltins = vm_m_numbuiltins;
+	prog->init_cmd = VM_M_Cmd_Init;
+	prog->reset_cmd = VM_M_Cmd_Reset;
+	prog->error_cmd = MP_Error;
+	
+	// allocate the mempools
+	prog->edicts_mempool = Mem_AllocPool(M_NAME " edicts mempool");
+	prog->edictstring_mempool = Mem_AllocPool( M_NAME " edict string mempool");
+	prog->progs_mempool = Mem_AllocPool(M_PROG_FILENAME);
+	
+	PRVM_LoadProgs(M_PROG_FILENAME, m_numrequiredfunc, m_required_func);
+
+	// set m_draw and m_keydown
+	m_draw = (func_t) (PRVM_ED_FindFunction(M_F_DRAW) - prog->functions);
+	m_keydown = (func_t) (PRVM_ED_FindFunction(M_F_KEYDOWN) - prog->functions);
+	
+	// call the prog init
+	PRVM_ExecuteProgram((func_t) (PRVM_ED_FindFunction(M_F_INIT) - prog->functions),"");
+	
+	PRVM_End;
+}
+
+//============================================================================
+// Menu router
+
+static cvar_t forceqmenu = { 0, "forceqmenu", "0" };
+
+void MR_ChooseInit(void)
+{
+	if(!FS_FileExists(M_PROG_FILENAME) || forceqmenu.integer)
+		M_Init();
+	else
+		MP_Init();
+}
+
+void MR_Restart_f(void)
+{
+	MR_Shutdown ();
+	MR_ChooseInit ();
+}
+
+void MR_Init()
+{
+	// set router console commands
+	Cvar_RegisterVariable (&forceqmenu);
+	Cmd_AddCommand ("menu_restart",MR_Restart_f);
+
+	MR_ChooseInit ();
+}
+
+
+
 

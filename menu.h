@@ -21,6 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef MENU_H
 #define MENU_H
 
+#define M_PROG_FILENAME "menu.dat"
+#define M_NAME	"MENU"
+#define M_MAX_EDICTS	(1 << 11) // should be enough for a menu
+
 enum m_state_e {
 	m_none,
 	m_main,
@@ -45,13 +49,31 @@ enum m_state_e {
 extern enum m_state_e m_state;
 extern char m_return_reason[32];
 
-//
-// menus
+/*
+// hard-coded menus
 //
 void M_Init (void);
 void M_Keydown (int key);
 void M_Draw (void);
 void M_ToggleMenu_f (void);
 
+//
+// menu prog menu
+//
+void MP_Init (void);
+void MP_Keydown (int key);
+void MP_Draw (void);
+void MP_ToggleMenu_f (void);
+void MP_Shutdown (void);*/
+
+//
+// menu router
+//
+void MR_Init (void);
+void MR_Restart_f (void);
+void (*MR_Keydown) (int key);
+void (*MR_Draw) (void);
+void (*MR_ToggleMenu_f) (void);
+void (*MR_Shutdown) (void);
 #endif
 

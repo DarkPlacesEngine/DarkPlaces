@@ -836,10 +836,10 @@ void Key_Event (int key, qboolean down)
 			Key_Message (key);
 			break;
 		case key_menu:
-			M_Keydown (key);
+			MR_Keydown (key);
 			break;
 		case key_game:
-			M_ToggleMenu_f ();
+			MR_ToggleMenu_f ();
 			break;
 		default:
 			Sys_Error ("Bad key_dest");
@@ -866,11 +866,15 @@ void Key_Event (int key, qboolean down)
 		}
 	}
 
-	if (key_consoleactive && consolekeys[key])
+	// AK What the fuck ?!?
+	// AK Changed so the code does what the comments tell 
+	// 
+	// 1. if console is active or not, always send the up events
+	if (key_consoleactive && consolekeys[key] && down)
 	{
 		// console only wants key down events
-		if (!down)
-			return;
+		//if (!down)
+		//	return;
 
 		// FIXME: this does not support non-QWERTY keyboards
 		if (shift_down)
@@ -951,7 +955,7 @@ void Key_Event (int key, qboolean down)
 			Key_Message (key);
 			break;
 		case key_menu:
-			M_Keydown (key);
+			MR_Keydown (key);
 			break;
 
 		case key_game:
