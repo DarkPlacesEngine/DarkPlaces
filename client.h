@@ -274,6 +274,12 @@ typedef struct
 
 // frag scoreboard
 	scoreboard_t	*scores;		// [cl.maxclients]
+
+	vec3_t		viewentorigin;
+
+	// entity database stuff
+	vec3_t		viewentoriginold, viewentoriginnew;
+	entity_database_t entitydatabase;
 }
 client_state_t;
 

@@ -549,19 +549,26 @@ void MSG_WriteString (sizebuf_t *sb, char *s)
 		SZ_Write (sb, s, strlen(s)+1);
 }
 
-// used by server (always dpprotocol)
-// moved to common.h as #define
-/*
-void MSG_WriteFloatCoord (sizebuf_t *sb, float f)
+// used by server (always latest dpprotocol)
+void MSG_WriteDPCoord (sizebuf_t *sb, float f)
 {
-	MSG_WriteFloat(sb, f);
+	if (f >= 0)
+		MSG_WriteShort (sb, (int)(f + 0.5f));
+	else
+		MSG_WriteShort (sb, (int)(f - 0.5f));
 }
-*/
 
 // used by client
 void MSG_WriteCoord (sizebuf_t *sb, float f)
 {
-	if (dpprotocol)
+	if (dpprotocol == DPPROTOCOL_VERSION2)
+	{
+		if (f >= 0)
+			MSG_WriteShort (sb, (int)(f + 0.5f));
+		else
+			MSG_WriteShort (sb, (int)(f - 0.5f));
+	}
+	else if (dpprotocol == DPPROTOCOL_VERSION1)
 		MSG_WriteFloat(sb, f);
 	else
 	{
@@ -606,7 +613,7 @@ void MSG_BeginReading (void)
 int MSG_ReadChar (void)
 {
 	int     c;
-	
+
 	// LordHavoc: minor optimization
 	if (msg_readcount >= net_message.cursize)
 //	if (msg_readcount+1 > net_message.cursize)
@@ -614,7 +621,7 @@ int MSG_ReadChar (void)
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = (signed char)net_message.data[msg_readcount];
 	msg_readcount++;
 
@@ -624,7 +631,7 @@ int MSG_ReadChar (void)
 int MSG_ReadByte (void)
 {
 	int     c;
-	
+
 	// LordHavoc: minor optimization
 	if (msg_readcount >= net_message.cursize)
 //	if (msg_readcount+1 > net_message.cursize)
@@ -635,7 +642,7 @@ int MSG_ReadByte (void)
 
 	c = (unsigned char)net_message.data[msg_readcount];
 	msg_readcount++;
-	
+
 	return c;
 }
 */
@@ -649,19 +656,19 @@ int MSG_ReadShort (void)
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = (short)(net_message.data[msg_readcount]
 	+ (net_message.data[msg_readcount+1]<<8));
-	
+
 	msg_readcount += 2;
-	
+
 	return c;
 }
 
 int MSG_ReadLong (void)
 {
 	int     c;
-	
+
 	if (msg_readcount+4 > net_message.cursize)
 	{
 		msg_badread = true;
@@ -672,9 +679,9 @@ int MSG_ReadLong (void)
 	+ (net_message.data[msg_readcount+1]<<8)
 	+ (net_message.data[msg_readcount+2]<<16)
 	+ (net_message.data[msg_readcount+3]<<24);
-	
+
 	msg_readcount += 4;
-	
+
 	return c;
 }
 
@@ -686,23 +693,23 @@ float MSG_ReadFloat (void)
 		float   f;
 		int     l;
 	} dat;
-	
+
 	dat.b[0] =      net_message.data[msg_readcount];
 	dat.b[1] =      net_message.data[msg_readcount+1];
 	dat.b[2] =      net_message.data[msg_readcount+2];
 	dat.b[3] =      net_message.data[msg_readcount+3];
 	msg_readcount += 4;
-	
+
 	dat.l = LittleLong (dat.l);
 
-	return dat.f;   
+	return dat.f;
 }
 
 char *MSG_ReadString (void)
 {
 	static char     string[2048];
 	int             l,c;
-	
+
 	l = 0;
 	do
 	{
@@ -712,25 +719,24 @@ char *MSG_ReadString (void)
 		string[l] = c;
 		l++;
 	} while (l < sizeof(string)-1);
-	
+
 	string[l] = 0;
-	
+
 	return string;
 }
 
-// used by server (always dpprotocol)
-// moved to common.h as #define
-/*
-float MSG_ReadFloatCoord (void)
+// used by server (always latest dpprotocol)
+float MSG_ReadDPCoord (void)
 {
-	return MSG_ReadFloat();
+	return (signed short) MSG_ReadShort();
 }
-*/
 
 // used by client
 float MSG_ReadCoord (void)
 {
-	if (dpprotocol)
+	if (dpprotocol == DPPROTOCOL_VERSION2)
+		return (signed short) MSG_ReadShort();
+	else if (dpprotocol == DPPROTOCOL_VERSION1)
 		return MSG_ReadFloat();
 	else
 		return MSG_ReadShort() * (1.0f/8.0f);

@@ -22,7 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 cvar_t chase_back = {CVAR_SAVE, "chase_back", "48"};
-cvar_t chase_up = {CVAR_SAVE, "chase_up", "48"};
+cvar_t chase_up = {CVAR_SAVE, "chase_up", "24"};
 cvar_t chase_active = {CVAR_SAVE, "chase_active", "0"};
 
 void Chase_Init (void)

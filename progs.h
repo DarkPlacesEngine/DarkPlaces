@@ -43,8 +43,10 @@ typedef struct edict_s
 	qboolean	free;
 	link_t		area;
 
+#ifdef QUAKEENTITIES
 	entity_state_t	baseline;
 	entity_state_t	deltabaseline; // LordHavoc: previous frame
+#endif
 
 	float		freetime;			// sv.time when the object was freed
 	entvars_t	v;					// C exported fields from progs

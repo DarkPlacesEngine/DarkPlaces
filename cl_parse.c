@@ -48,7 +48,7 @@ char *svc_strings[128] =
 	"svc_updatecolors",	// [byte] [byte]
 	"svc_particle",		// [vec3] <variable>
 	"svc_damage",			// [byte] impact [byte] blood [vec3] from
-	
+
 	"svc_spawnstatic",
 	"OBSOLETE svc_spawnbinary",
 	"svc_spawnbaseline",
@@ -99,7 +99,7 @@ void CL_Parse_Init(void)
 }
 
 qboolean Nehahrademcompatibility; // LordHavoc: to allow playback of the early Nehahra movie segments
-qboolean dpprotocol; // LordHavoc: whether or not the current network stream is the enhanced DarkPlaces protocol
+int dpprotocol; // LordHavoc: version of network protocol, or 0 if not DarkPlaces
 
 /*
 ===============
@@ -360,9 +360,9 @@ void CL_ParseServerInfo (void)
 
 // parse protocol version number
 	i = MSG_ReadLong ();
-	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION && i != 250)
+	if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != 250)
 	{
-		Con_Printf ("Server returned version %i, not %i or %i", i, DPPROTOCOL_VERSION, PROTOCOL_VERSION);
+		Con_Printf ("Server is protocol %i, not %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, PROTOCOL_VERSION);
 		return;
 	}
 	Nehahrademcompatibility = false;
@@ -370,7 +370,9 @@ void CL_ParseServerInfo (void)
 		Nehahrademcompatibility = true;
 	if (cls.demoplayback && demo_nehahra.integer)
 		Nehahrademcompatibility = true;
-	dpprotocol = i == DPPROTOCOL_VERSION;
+	dpprotocol = i;
+	if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2)
+		dpprotocol = 0;
 
 // parse maxclients
 	cl.maxclients = MSG_ReadByte ();
@@ -533,12 +535,6 @@ void CL_ParseUpdate (int bits)
 	entity_t *ent;
 	entity_state_t new;
 
-	if (cls.signon == SIGNONS - 1)
-	{	// first update is the final signon stage
-		cls.signon = SIGNONS;
-		CL_SignonReply ();
-	}
-
 	if (bits & U_MOREBITS)
 		bits |= (MSG_ReadByte()<<8);
 	if ((bits & U_EXTEND1) && (!Nehahrademcompatibility))
@@ -658,6 +654,27 @@ void CL_ParseUpdate (int bits)
 		ent->state_previous = ent->state_current;
 		ent->state_current = new;
 	}
+}
+
+void CL_ReadEntityFrame(void)
+{
+	entity_t *ent;
+	entity_state_t *s;
+	entity_frame_t entityframe;
+	int i;
+	EntityFrame_Read(&cl.entitydatabase);
+	EntityFrame_FetchFrame(&cl.entitydatabase, EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase), &entityframe);
+	for (i = 0;i < entityframe.numentities;i++)
+	{
+		s = &entityframe.entitydata[i];
+		entkill[s->number] = 0;
+		ent = &cl_entities[s->number];
+		memcpy(&ent->state_previous, &ent->state_current, sizeof(*s));
+		memcpy(&ent->state_current, s, sizeof(*s));
+		ent->state_current.time = cl.mtime[0];
+	}
+	VectorCopy(cl.viewentoriginnew, cl.viewentoriginold);
+	VectorCopy(entityframe.eye, cl.viewentoriginnew);
 }
 
 char *bitprofilenames[32] =
@@ -801,7 +818,7 @@ void CL_ParseClientdata (int bits)
 		else
 			cl.punchangle[i] = 0;
 		if (bits & (SU_PUNCHVEC1<<i))
-			cl.punchvector[i] = MSG_ReadFloatCoord();
+			cl.punchvector[i] = MSG_ReadCoord();
 		else
 			cl.punchvector[i] = 0;
 		if (bits & (SU_VELOCITY1<<i) )
@@ -889,7 +906,7 @@ void CL_ParseStaticSound (int large)
 		sound_num = MSG_ReadByte ();
 	vol = MSG_ReadByte ();
 	atten = MSG_ReadByte ();
-	
+
 	S_StaticSound (cl.sound_precache[sound_num], org, vol, atten);
 }
 
@@ -938,7 +955,7 @@ void CL_ParseServerMessage (void)
 	byte		cmdlog[32];
 	char		*cmdlogname[32], *temp;
 	int			cmdindex, cmdcount = 0;
-	
+
 //
 // if recording demos, copy the message out
 //
@@ -946,8 +963,8 @@ void CL_ParseServerMessage (void)
 		Con_Printf ("%i ",net_message.cursize);
 	else if (cl_shownet.integer == 2)
 		Con_Printf ("------------------\n");
-	
-	cl.onground = false;	// unless the server says otherwise	
+
+	cl.onground = false;	// unless the server says otherwise
 //
 // parse the message
 //
@@ -955,7 +972,7 @@ void CL_ParseServerMessage (void)
 
 	entitiesupdated = false;
 	CL_EntityUpdateSetup();
-	
+
 	while (1)
 	{
 		if (msg_badread)
@@ -980,6 +997,11 @@ void CL_ParseServerMessage (void)
 			temp = "entity";
 			cmdlogname[cmdindex] = temp;
 			SHOWNET("fast update");
+			if (cls.signon == SIGNONS - 1)
+			{	// first update is the final signon stage
+				cls.signon = SIGNONS;
+				CL_SignonReply ();
+			}
 			CL_ParseUpdate (cmd&127);
 			continue;
 		}
@@ -1038,16 +1060,18 @@ void CL_ParseServerMessage (void)
 
 		case svc_version:
 			i = MSG_ReadLong ();
-			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION && i != 250)
-				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i or %i", i, DPPROTOCOL_VERSION, PROTOCOL_VERSION);
+			if (i != PROTOCOL_VERSION && i != DPPROTOCOL_VERSION1 && i != DPPROTOCOL_VERSION2 && i != 250)
+				Host_Error ("CL_ParseServerMessage: Server is protocol %i, not %i, %i or %i", i, DPPROTOCOL_VERSION1, DPPROTOCOL_VERSION2, PROTOCOL_VERSION);
 			Nehahrademcompatibility = false;
 			if (i == 250)
 				Nehahrademcompatibility = true;
 			if (cls.demoplayback && demo_nehahra.integer)
 				Nehahrademcompatibility = true;
-			dpprotocol = i == DPPROTOCOL_VERSION;
+			dpprotocol = i;
+			if (dpprotocol != DPPROTOCOL_VERSION1 && dpprotocol != DPPROTOCOL_VERSION2)
+				dpprotocol = 0;
 			break;
-			
+
 		case svc_disconnect:
 			Host_EndGame ("Server disconnected\n");
 
@@ -1071,16 +1095,16 @@ void CL_ParseServerMessage (void)
 			CL_ParseServerInfo ();
 //			vid.recalc_refdef = true;	// leave intermission full screen
 			break;
-			
+
 		case svc_setangle:
 			for (i=0 ; i<3 ; i++)
 				cl.viewangles[i] = MSG_ReadAngle ();
 			break;
-			
+
 		case svc_setview:
 			cl.viewentity = MSG_ReadShort ();
 			break;
-					
+
 		case svc_lightstyle:
 			i = MSG_ReadByte ();
 			if (i >= MAX_LIGHTSTYLES)
@@ -1115,7 +1139,7 @@ void CL_ParseServerMessage (void)
 			if (i >= cl.maxclients)
 				Host_Error ("CL_ParseServerMessage: svc_updatefrags >= MAX_SCOREBOARD");
 			cl.scores[i].frags = MSG_ReadShort ();
-			break;			
+			break;
 
 		case svc_updatecolors:
 			i = MSG_ReadByte ();
@@ -1123,7 +1147,7 @@ void CL_ParseServerMessage (void)
 				Host_Error ("CL_ParseServerMessage: svc_updatecolors >= MAX_SCOREBOARD");
 			cl.scores[i].colors = MSG_ReadByte ();
 			break;
-			
+
 		case svc_particle:
 			CL_ParseParticleEffect ();
 			break;
@@ -1163,7 +1187,7 @@ void CL_ParseServerMessage (void)
 			else
 				CDAudio_Resume ();
 			break;
-			
+
 		case svc_signonnum:
 			i = MSG_ReadByte ();
 			if (i <= cls.signon)
@@ -1221,7 +1245,7 @@ void CL_ParseServerMessage (void)
 			cl.intermission = 3;
 			cl.completed_time = cl.time;
 //			vid.recalc_refdef = true;	// go to full screen
-			SCR_CenterPrint (MSG_ReadString ());			
+			SCR_CenterPrint (MSG_ReadString ());
 			break;
 
 		case svc_sellscreen:
@@ -1254,6 +1278,14 @@ void CL_ParseServerMessage (void)
 				if (!msg_badread)
 					CL_CGVM_ParseNetwork(cgamenetbuffer, length);
 			}
+			break;
+		case svc_entities:
+			if (cls.signon == SIGNONS - 1)
+			{	// first update is the final signon stage
+				cls.signon = SIGNONS;
+				CL_SignonReply ();
+			}
+			CL_ReadEntityFrame();
 			break;
 		}
 	}

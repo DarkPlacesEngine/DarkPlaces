@@ -392,7 +392,7 @@ void CL_SendMove (usercmd_t *cmd)
 		for (i=0 ; i<3 ; i++)
 			MSG_WriteAngle (&buf, cl.viewangles[i]);
 	}
-	
+
     MSG_WriteShort (&buf, forwardmove);
     MSG_WriteShort (&buf, sidemove);
     MSG_WriteShort (&buf, upmove);
@@ -402,11 +402,11 @@ void CL_SendMove (usercmd_t *cmd)
 // send button bits
 //
 	bits = 0;
-	
+
 	if ( in_attack.state & 3 )
 		bits |= 1;
 	in_attack.state &= ~2;
-	
+
 	if (in_jump.state & 3)
 		bits |= 2;
 	in_jump.state &= ~2;
@@ -417,11 +417,19 @@ void CL_SendMove (usercmd_t *cmd)
 	if (in_button6.state & 3) bits |=  32;in_button6.state &= ~2;
 	if (in_button7.state & 3) bits |=  64;in_button7.state &= ~2;
 	if (in_button8.state & 3) bits |= 128;in_button8.state &= ~2;
-	
+
     MSG_WriteByte (&buf, bits);
 
     MSG_WriteByte (&buf, in_impulse);
 	in_impulse = 0;
+
+	// LordHavoc: should we ack this on receipt instead?  would waste net bandwidth though
+	i = EntityFrame_MostRecentlyRecievedFrameNum(&cl.entitydatabase);
+	if (i > 0)
+	{
+		MSG_WriteByte (&buf, clc_ackentities);
+		MSG_WriteLong (&buf, i);
+	}
 
 //
 // deliver the message
