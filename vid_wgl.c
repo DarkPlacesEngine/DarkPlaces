@@ -645,6 +645,30 @@ void VID_Init(void)
 
 	if (!RegisterClass (&wc))
 		Sys_Error("Couldn't register window class\n");
+
+	uiWheelMessage = RegisterWindowMessage ( "MSWHEEL_ROLLMSG" );
+
+	// joystick variables
+	Cvar_RegisterVariable (&in_joystick);
+	Cvar_RegisterVariable (&joy_name);
+	Cvar_RegisterVariable (&joy_advanced);
+	Cvar_RegisterVariable (&joy_advaxisx);
+	Cvar_RegisterVariable (&joy_advaxisy);
+	Cvar_RegisterVariable (&joy_advaxisz);
+	Cvar_RegisterVariable (&joy_advaxisr);
+	Cvar_RegisterVariable (&joy_advaxisu);
+	Cvar_RegisterVariable (&joy_advaxisv);
+	Cvar_RegisterVariable (&joy_forwardthreshold);
+	Cvar_RegisterVariable (&joy_sidethreshold);
+	Cvar_RegisterVariable (&joy_pitchthreshold);
+	Cvar_RegisterVariable (&joy_yawthreshold);
+	Cvar_RegisterVariable (&joy_forwardsensitivity);
+	Cvar_RegisterVariable (&joy_sidesensitivity);
+	Cvar_RegisterVariable (&joy_pitchsensitivity);
+	Cvar_RegisterVariable (&joy_yawsensitivity);
+	Cvar_RegisterVariable (&joy_wwhack1);
+	Cvar_RegisterVariable (&joy_wwhack2);
+	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
 }
 
 int VID_InitMode (int fullscreen, int width, int height, int bpp)
@@ -878,6 +902,10 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	//vid_menukeyfn = VID_MenuKey;
 	vid_hidden = false;
 	vid_initialized = true;
+	
+	IN_StartupMouse ();
+	IN_StartupJoystick ();
+	
 	return true;
 }
 
@@ -889,8 +917,21 @@ void VID_Shutdown (void)
 	if (vid_initialized)
 	{
 		vid_initialized = false;
+		
+		IN_DeactivateMouse ();
+		IN_ShowMouse ();
+
+		if (g_pMouse)
+			IDirectInputDevice_Release(g_pMouse);
+		g_pMouse = NULL;
+		
+		if (g_pdi)
+			IDirectInput_Release(g_pdi);
+		g_pdi = NULL;
+
 		if (qwglGetCurrentContext)
 			hRC = qwglGetCurrentContext();
+		
 		if (qwglGetCurrentDC)
 			hDC = qwglGetCurrentDC();
 
@@ -1315,66 +1356,6 @@ void IN_StartupMouse (void)
 
 /*
 ===========
-IN_Init
-===========
-*/
-void IN_Init (void)
-{
-	// joystick variables
-	Cvar_RegisterVariable (&in_joystick);
-	Cvar_RegisterVariable (&joy_name);
-	Cvar_RegisterVariable (&joy_advanced);
-	Cvar_RegisterVariable (&joy_advaxisx);
-	Cvar_RegisterVariable (&joy_advaxisy);
-	Cvar_RegisterVariable (&joy_advaxisz);
-	Cvar_RegisterVariable (&joy_advaxisr);
-	Cvar_RegisterVariable (&joy_advaxisu);
-	Cvar_RegisterVariable (&joy_advaxisv);
-	Cvar_RegisterVariable (&joy_forwardthreshold);
-	Cvar_RegisterVariable (&joy_sidethreshold);
-	Cvar_RegisterVariable (&joy_pitchthreshold);
-	Cvar_RegisterVariable (&joy_yawthreshold);
-	Cvar_RegisterVariable (&joy_forwardsensitivity);
-	Cvar_RegisterVariable (&joy_sidesensitivity);
-	Cvar_RegisterVariable (&joy_pitchsensitivity);
-	Cvar_RegisterVariable (&joy_yawsensitivity);
-	Cvar_RegisterVariable (&joy_wwhack1);
-	Cvar_RegisterVariable (&joy_wwhack2);
-
-	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
-
-	uiWheelMessage = RegisterWindowMessage ( "MSWHEEL_ROLLMSG" );
-
-	IN_StartupMouse ();
-	IN_StartupJoystick ();
-}
-
-/*
-===========
-IN_Shutdown
-===========
-*/
-void IN_Shutdown (void)
-{
-	IN_DeactivateMouse ();
-	IN_ShowMouse ();
-
-    if (g_pMouse)
-	{
-		IDirectInputDevice_Release(g_pMouse);
-		g_pMouse = NULL;
-	}
-
-    if (g_pdi)
-	{
-		IDirectInput_Release(g_pdi);
-		g_pdi = NULL;
-	}
-}
-
-
-/*
-===========
 IN_MouseEvent
 ===========
 */
@@ -1529,8 +1510,6 @@ void IN_Move (usercmd_t *cmd)
 		IN_MouseMove (cmd);
 		IN_JoyMove (cmd);
 	}
-
-	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
 }
 
 

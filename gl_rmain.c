@@ -293,7 +293,6 @@ extern void Sbar_Init(void);
 
 void Render_Init(void)
 {
-	R_Modules_Shutdown();
 	R_Textures_Init();
 	Mod_RenderInit();
 	gl_backend_init();
@@ -309,7 +308,6 @@ void Render_Init(void)
 	R_Explosion_Init();
 	ui_init();
 	Sbar_Init();
-	R_Modules_Start();
 }
 
 /*

@@ -94,7 +94,7 @@ void GL_CloseLibrary(void);
 void *GL_GetProcAddress(const char *name);
 int GL_CheckExtension(const char *name, const gl_extensionfunctionlist_t *funcs, const char *disableparm, int silent);
 
-void VID_InitCvars(void);
+void VID_Shared_Init(void);
 
 void GL_Init (void);
 
@@ -118,6 +118,11 @@ int VID_SetGamma (float prescale, float gamma, float scale, float base);
 void VID_GetWindowSize (int *x, int *y, int *width, int *height);
 
 void VID_Finish (void);
+
+void VID_Restart_f(void);
+
+void VID_Open (void);
+void VID_Close (void);
 
 #endif
 

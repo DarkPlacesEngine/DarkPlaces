@@ -766,9 +766,16 @@ void *S_LockBuffer(void)
 		return shm->buffer;
 }
 
-void S_UnlockBuffer()
+void S_UnlockBuffer(void)
 {
 	if (pDSBuf)
 		pDSBuf->lpVtbl->Unlock(pDSBuf, dsound_pbuf, dsound_dwSize, dsound_pbuf2, dsound_dwSize2);
 }
 
+void S_Open(void)
+{
+}
+
+void S_Close(void)
+{
+}

@@ -18,15 +18,15 @@ int gl_supportslockarrays = false;
 int gl_videosyncavailable = false;
 
 // LordHavoc: if window is hidden, don't update screen
-int vid_hidden = false;
+int vid_hidden = true;
 // LordHavoc: if window is not the active window, don't hog as much CPU time,
 // let go of the mouse, turn off sound, and restore system gamma ramps...
 int vid_activewindow = true;
 
-cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
-cvar_t vid_width = {0, "vid_width", "640"};
-cvar_t vid_height = {0, "vid_height", "480"};
-cvar_t vid_bitsperpixel = {0, "vid_bitsperpixel", "16"};
+cvar_t vid_fullscreen = {CVAR_SAVE, "vid_fullscreen", "1"};
+cvar_t vid_width = {CVAR_SAVE, "vid_width", "640"};
+cvar_t vid_height = {CVAR_SAVE, "vid_height", "480"};
+cvar_t vid_bitsperpixel = {CVAR_SAVE, "vid_bitsperpixel", "16"};
 
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
@@ -393,7 +393,7 @@ void IN_Mouse(usercmd_t *cmd, float mx, float my)
 	}
 }
 
-void VID_InitCvars(void)
+void VID_Shared_Init(void)
 {
 	int i;
 
@@ -407,6 +407,7 @@ void VID_InitCvars(void)
 	Cvar_RegisterVariable(&in_pitch_max);
 	Cvar_RegisterVariable(&m_filter);
 	Cmd_AddCommand("force_centerview", Force_CenterView_f);
+	Cmd_AddCommand("vid_restart", VID_Restart_f);
 
 // interpret command-line parameters
 	if ((i = COM_CheckParm("-window")) != 0)
@@ -421,6 +422,10 @@ void VID_InitCvars(void)
 		Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 }
 
+int current_vid_fullscreen;
+int current_vid_width;
+int current_vid_height;
+int current_vid_bitsperpixel;
 extern int VID_InitMode (int fullscreen, int width, int height, int bpp);
 int VID_Mode(int fullscreen, int width, int height, int bpp)
 {
@@ -429,7 +434,65 @@ int VID_Mode(int fullscreen, int width, int height, int bpp)
 	else
 		Con_Printf("Video: %dx%d windowed\n", width, height);
 	if (VID_InitMode(fullscreen, width, height, bpp))
+	{
+		current_vid_fullscreen = fullscreen;
+		current_vid_width = width;
+		current_vid_height = height;
+		current_vid_bitsperpixel = bpp;
 		return true;
+	}
 	else
 		return false;
+}
+
+static void VID_OpenSystems(void)
+{
+	R_Modules_Start();
+	S_Open();
+	CDAudio_Open();
+}
+
+static void VID_CloseSystems(void)
+{
+	CDAudio_Close();
+	S_Close();
+	R_Modules_Shutdown();
+}
+
+void VID_Restart_f(void)
+{
+	Con_Printf("VID_Restart: changing from %s %dx%dx%dbpp, to %s %dx%dx%dbpp.\n",
+		current_vid_fullscreen ? "fullscreen" : "window", current_vid_width, current_vid_height, current_vid_bitsperpixel, 
+		vid_fullscreen.integer ? "fullscreen" : "window", vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
+	VID_Close();
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+	{
+		Con_Printf("Video mode change failed\n");
+		if (!VID_Mode(current_vid_fullscreen, current_vid_width, current_vid_height, current_vid_bitsperpixel))
+			Sys_Error("Unable to restore to last working video mode\n");
+	}
+	VID_OpenSystems();
+}
+
+void VID_Open(void)
+{
+	Con_Printf("Starting video system\n");
+	if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+	{
+		if (vid_fullscreen.integer)
+		{
+			if (!VID_Mode(true, 640, 480, 16))
+				if (!VID_Mode(false, 640, 480, 16))
+					Sys_Error("Video modes failed\n");
+		}
+		else
+			Sys_Error("Windowed video failed\n");
+	}
+	VID_OpenSystems();
+}
+
+void VID_Close(void)
+{
+	VID_CloseSystems();
+	VID_Shutdown();
 }

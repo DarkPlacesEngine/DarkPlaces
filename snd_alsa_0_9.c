@@ -314,3 +314,11 @@ void S_UnlockBuffer(void)
 {
 }
 
+
+void S_Open(void)
+{
+}
+
+void S_Close(void)
+{
+}

@@ -881,42 +881,29 @@ void Host_Init (void)
 
 	if (cls.state != ca_dedicated)
 	{
-		VID_InitCvars();
-
 		Gamma_Init();
-
 		Palette_Init();
-
-#ifndef _WIN32 // on non win32, mouse comes before video for security reasons
-		IN_Init ();
-#endif
+		VID_Shared_Init();
 		VID_Init();
-		if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
-		{
-			if (vid_fullscreen.integer)
-			{
-				if (!VID_Mode(true, 640, 480, 16))
-					if (!VID_Mode(false, 640, 480, 16))
-						Sys_Error("Video modes failed\n");
-			}
-			else
-				Sys_Error("Requested windowed video mode failed\n");
-		}
 
 		Render_Init();
 		S_Init ();
 		CDAudio_Init ();
 		CL_Init ();
-#ifdef _WIN32 // on non win32, mouse comes before video for security reasons
-		IN_Init ();
-#endif
 	}
 
 	Cbuf_InsertText ("exec quake.rc\n");
+	Cbuf_Execute ();
+	Cbuf_Execute ();
+	Cbuf_Execute ();
+	Cbuf_Execute ();
 
 	host_initialized = true;
 	
-	Sys_Printf ("========Quake Initialized=========\n");	
+	Con_Printf ("========Quake Initialized=========\n");	
+
+	if (cls.state != ca_dedicated)
+		VID_Open();
 }
 
 
@@ -944,7 +931,6 @@ void Host_Shutdown(void)
 	CDAudio_Shutdown ();
 	NET_Shutdown ();
 	S_Shutdown();
-	IN_Shutdown ();
 
 	if (cls.state != ca_dedicated)
 	{
