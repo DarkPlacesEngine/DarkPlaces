@@ -1279,40 +1279,43 @@ void M_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
 		break;
 	case 9:
-		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
+		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
 		break;
 	case 10:
-		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
+		Cvar_SetValueQuick (&gl_dither, !gl_dither.integer);
 		break;
 	case 11:
-		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.25, 5));
+		Cvar_SetValueQuick (&v_hwgamma, !v_hwgamma.integer);
 		break;
 	case 12:
-		Cvar_SetValueQuick (&v_contrast, bound(0.5, v_contrast.value + dir * 0.25, 5));
+		Cvar_SetValueQuick (&v_gamma, bound(1, v_gamma.value + dir * 0.25, 5));
 		break;
 	case 13:
+		Cvar_SetValueQuick (&v_contrast, bound(0.5, v_contrast.value + dir * 0.25, 5));
+		break;
+	case 14:
 		Cvar_SetValueQuick (&v_brightness, bound(0, v_brightness.value + dir * 0.05, 0.8));
 		break;
-	case 14: // music volume
+	case 15: // music volume
 		#ifdef _WIN32
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 1.0, 1));
 		#else
 		Cvar_SetValueQuick (&bgmvolume, bound(0, bgmvolume.value + dir * 0.1, 1));
 		#endif
 		break;
-	case 15: // sfx volume
+	case 16: // sfx volume
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 		break;
-	case 16:
+	case 17:
 		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
 		break;
-	case 17:
+	case 18:
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 		break;
-	case 18: // show framerate
+	case 19: // show framerate
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
 		break;
-	case 19: // always run
+	case 20: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValueQuick (&cl_forwardspeed, 200);
@@ -1324,22 +1327,22 @@ void M_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 		break;
-	case 20: // lookspring
+	case 21: // lookspring
 		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
 		break;
-	case 21: // lookstrafe
+	case 22: // lookstrafe
 		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
 		break;
-	case 22: // mouse speed
+	case 23: // mouse speed
 		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
-	case 23: // mouse look
+	case 24: // mouse look
 		Cvar_SetValueQuick (&freelook, !freelook.integer);
 		break;
-	case 24: // invert mouse
+	case 25: // invert mouse
 		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
 		break;
-	case 25: // windowed mouse
+	case 26: // windowed mouse
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 		break;
 	}
@@ -1447,6 +1450,7 @@ void M_Options_Draw (void)
 	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 2);y += 8;
 	M_Print(16, y, "Hidden Surface Removal");M_DrawCheckbox(220, y, r_ser.integer);y += 8;
 	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, (v_overbrightbits.value) / 4);y += 8;
+	M_Print(16, y, "       Texture Combine");M_DrawCheckbox(220, y, gl_combine.integer);y += 8;
 	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;
 	M_ItemPrint(16, y, "Hardware Gamma Control", hardwaregammasupported);M_DrawCheckbox(220, y, v_hwgamma.integer);y += 8;
 	M_ItemPrint(16, y, "                 Gamma", v_hwgamma.integer);M_DrawSlider(220, y, (v_gamma.value - 1) / 4);y += 8;
@@ -1831,7 +1835,7 @@ char *quitMessage [] =
   " his children trying to ",
   " quit. Press Y to return",
   "   to your Tinkertoys.  ",
- 
+
   "  If you quit now, I'll ",
   "  throw a blanket-party ",
   "   for you next time!   ",
