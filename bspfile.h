@@ -109,25 +109,68 @@ typedef struct
 } dplane_t;
 
 
+// contents values in Q1 maps
+#define CONTENTS_EMPTY			-1
+#define CONTENTS_SOLID			-2
+#define CONTENTS_WATER			-3
+#define CONTENTS_SLIME			-4
+#define CONTENTS_LAVA				-5
+#define CONTENTS_SKY				-6
+// these were #ifdef QUAKE2 in the quake source
+#define CONTENTS_ORIGIN			-7 // removed at csg time
+#define CONTENTS_CLIP				-8 // changed to contents_solid
+#define CONTENTS_CURRENT_0		-9
+#define CONTENTS_CURRENT_90		-10
+#define CONTENTS_CURRENT_180		-11
+#define CONTENTS_CURRENT_270		-12
+#define CONTENTS_CURRENT_UP		-13
+#define CONTENTS_CURRENT_DOWN		-14
 
-#define	CONTENTS_EMPTY		-1
-#define	CONTENTS_SOLID		-2
-#define	CONTENTS_WATER		-3
-#define	CONTENTS_SLIME		-4
-#define	CONTENTS_LAVA		-5
-#define	CONTENTS_SKY		-6
-#define	CONTENTS_ORIGIN		-7		// removed at csg time
-#define	CONTENTS_CLIP		-8		// changed to contents_solid
+//contents flags in Q2 maps
+#define CONTENTSQ2_SOLID			0x00000001 // an eye is never valid in a solid
+#define CONTENTSQ2_WINDOW			0x00000002 // translucent, but not watery
+#define CONTENTSQ2_AUX				0x00000004
+#define CONTENTSQ2_LAVA				0x00000008
+#define CONTENTSQ2_SLIME			0x00000010
+#define CONTENTSQ2_WATER			0x00000020
+#define CONTENTSQ2_MIST				0x00000040
+#define CONTENTSQ2_AREAPORTAL		0x00008000
+#define CONTENTSQ2_PLAYERCLIP		0x00010000
+#define CONTENTSQ2_MONSTERCLIP		0x00020000
+#define CONTENTSQ2_CURRENT_0		0x00040000
+#define CONTENTSQ2_CURRENT_90		0x00080000
+#define CONTENTSQ2_CURRENT_180		0x00100000
+#define CONTENTSQ2_CURRENT_270		0x00200000
+#define CONTENTSQ2_CURRENT_UP		0x00400000
+#define CONTENTSQ2_CURRENT_DOWN		0x00800000
+#define CONTENTSQ2_ORIGIN			0x01000000 // removed before bsping an entity
+#define CONTENTSQ2_MONSTER			0x02000000 // should never be on a brush, only in game
+#define CONTENTSQ2_DEADMONSTER		0x04000000
+#define CONTENTSQ2_DETAIL			0x08000000 // brushes to be added after vis leafs
+#define CONTENTSQ2_TRANSLUCENT		0x10000000 // auto set if any surface has trans
+#define CONTENTSQ2_LADDER			0x20000000
 
-// LordHavoc: Q2 water
-/*
-#define	CONTENTS_CURRENT_0		-9
-#define	CONTENTS_CURRENT_90		-10
-#define	CONTENTS_CURRENT_180	-11
-#define	CONTENTS_CURRENT_270	-12
-#define	CONTENTS_CURRENT_UP		-13
-#define	CONTENTS_CURRENT_DOWN	-14
-*/
+//contents flags in Q3 maps
+#define CONTENTSQ3_SOLID			0x00000001 // solid (opaque and transparent)
+#define CONTENTSQ3_LAVA				0x00000008 // lava
+#define CONTENTSQ3_SLIME			0x00000010 // slime
+#define CONTENTSQ3_WATER			0x00000020 // water
+#define CONTENTSQ3_FOG				0x00000040 // unused?
+#define CONTENTSQ3_AREAPORTAL		0x00008000 // areaportal (separates areas)
+#define CONTENTSQ3_PLAYERCLIP		0x00010000 // block players
+#define CONTENTSQ3_MONSTERCLIP		0x00020000 // block monsters
+#define CONTENTSQ3_TELEPORTER		0x00040000 // hint for Q3's bots
+#define CONTENTSQ3_JUMPPAD			0x00080000 // hint for Q3's bots
+#define CONTENTSQ3_CLUSTERPORTAL	0x00100000 // hint for Q3's bots
+#define CONTENTSQ3_DONOTENTER		0x00200000 // hint for Q3's bots
+#define CONTENTSQ3_ORIGIN			0x01000000 // used by origin brushes to indicate origin of bmodel (removed by map compiler)
+#define CONTENTSQ3_BODY				0x02000000 // used by bbox entities (should never be on a brush)
+#define CONTENTSQ3_CORPSE			0x04000000 // used by dead bodies (SOLID_CORPSE in darkplaces)
+#define CONTENTSQ3_DETAIL			0x08000000 // brushes that do not split the bsp tree (decorations)
+#define CONTENTSQ3_STRUCTURAL		0x10000000 // brushes that split the bsp tree
+#define CONTENTSQ3_TRANSLUCENT		0x20000000 // leaves surfaces that are inside for rendering
+#define CONTENTSQ3_TRIGGER			0x40000000 // used by trigger entities
+#define CONTENTSQ3_NODROP			0x80000000 // remove items that fall into this brush
 
 
 typedef struct
