@@ -42,7 +42,7 @@ int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *
 ddef_t *ED_FieldAtOfs(int ofs);
 qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s);
 
-cvar_t	pr_checkextension = {0, "pr_checkextension", "1"};
+cvar_t	pr_checkextension = {CVAR_READONLY, "pr_checkextension", "1"};
 cvar_t	nomonsters = {0, "nomonsters", "0"};
 cvar_t	gamecfg = {0, "gamecfg", "0"};
 cvar_t	scratch1 = {0, "scratch1", "0"};

@@ -59,6 +59,7 @@ interface from being ambiguous.
 // cvar flags
 #define CVAR_SAVE 1
 #define CVAR_NOTIFY 2
+#define	CVAR_READONLY 4
 
 /*
 // type of a cvar for menu purposes

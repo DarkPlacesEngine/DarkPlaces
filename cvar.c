@@ -223,6 +223,11 @@ void Cvar_Set (const char *var_name, const char *value)
 		Con_Printf ("Cvar_Set: variable %s not found\n", var_name);
 		return;
 	}
+	if (var->flags & CVAR_READONLY)
+	{
+		Con_Printf ("Cvar_Set: %s is read-only\n", var_name);
+		return;
+	}
 
 	Cvar_SetQuick(var, value);
 }
