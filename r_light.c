@@ -45,13 +45,13 @@ void r_light_start(void)
 			dx = (x - 15.5f) * (1.0f / 16.0f);
 			a = ((1.0f / (dx * dx + dy * dy + 0.2f)) - (1.0f / (1.0f + 0.2))) * 32.0f / (1.0f / (1.0f + 0.2));
 			a = bound(0, a, 255);
-			pixels[y][x][0] = 255;
-			pixels[y][x][1] = 255;
-			pixels[y][x][2] = 255;
-			pixels[y][x][3] = a;
+			pixels[y][x][0] = a;
+			pixels[y][x][1] = a;
+			pixels[y][x][2] = a;
+			pixels[y][x][3] = 255;
 		}
 	}
-	lightcorona = R_LoadTexture (lighttexturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_ALPHA);
+	lightcorona = R_LoadTexture (lighttexturepool, "lightcorona", 32, 32, &pixels[0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE);
 }
 
 void r_light_shutdown(void)
@@ -131,35 +131,20 @@ void R_BuildLightList(void)
 	}
 }
 
-static int coronapolyindex[6] = {0, 1, 2, 0, 2, 3};
-
 void R_DrawCoronas(void)
 {
 	int i;
-	rmeshinfo_t m;
-	float tvxyz[4][4], tvst[4][2], scale, viewdist, diff[3], dist;
+	rmeshbufferinfo_t m;
+	float scale, viewdist, diff[3], dist;
 	rdlight_t *rd;
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
-	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc1 = GL_ONE;
 	m.blendfunc2 = GL_ONE;
 	m.depthdisable = true; // magic
 	m.numtriangles = 2;
 	m.numverts = 4;
-	m.index = coronapolyindex;
-	m.vertex = &tvxyz[0][0];
-	m.vertexstep = sizeof(float[4]);
 	m.tex[0] = R_GetTexture(lightcorona);
-	m.texcoords[0] = &tvst[0][0];
-	m.texcoordstep[0] = sizeof(float[2]);
-	tvst[0][0] = 0;
-	tvst[0][1] = 0;
-	tvst[1][0] = 0;
-	tvst[1][1] = 1;
-	tvst[2][0] = 1;
-	tvst[2][1] = 1;
-	tvst[3][0] = 1;
-	tvst[3][1] = 0;
 	viewdist = DotProduct(r_origin, vpn);
 	for (i = 0;i < r_numdlights;i++)
 	{
@@ -169,32 +154,45 @@ void R_DrawCoronas(void)
 		{
 			// trace to a point just barely closer to the eye
 			VectorSubtract(rd->origin, vpn, diff);
-			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1)
+			if (CL_TraceLine(r_origin, diff, NULL, NULL, 0, true) == 1 && R_Mesh_Draw_GetBuffer(&m))
 			{
-				scale = 1.0f / 131072.0f;
-				m.cr = rd->light[0] * scale;
-				m.cg = rd->light[1] * scale;
-				m.cb = rd->light[2] * scale;
-				m.ca = 1;
+				scale = m.colorscale * (1.0f / 131072.0f);
 				if (fogenabled)
 				{
 					VectorSubtract(rd->origin, r_origin, diff);
-					m.ca *= 1 - exp(fogdensity/DotProduct(diff,diff));
+					scale *= 1 - exp(fogdensity/DotProduct(diff,diff));
 				}
+				m.index[0] = 0;
+				m.index[1] = 1;
+				m.index[2] = 2;
+				m.index[3] = 0;
+				m.index[4] = 2;
+				m.index[5] = 3;
+				m.color[0] = m.color[4] = m.color[8] = m.color[12] = rd->light[0] * scale;
+				m.color[1] = m.color[5] = m.color[9] = m.color[13] = rd->light[1] * scale;
+				m.color[2] = m.color[6] = m.color[10] = m.color[14] = rd->light[2] * scale;
+				m.color[3] = m.color[7] = m.color[11] = m.color[15] = 1;
+				m.texcoords[0][0] = 0;
+				m.texcoords[0][1] = 0;
+				m.texcoords[0][2] = 0;
+				m.texcoords[0][3] = 1;
+				m.texcoords[0][4] = 1;
+				m.texcoords[0][5] = 1;
+				m.texcoords[0][6] = 1;
+				m.texcoords[0][7] = 0;
 				scale = rd->cullradius * 0.25f;
-				tvxyz[0][0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
-				tvxyz[0][1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
-				tvxyz[0][2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
-				tvxyz[1][0] = rd->origin[0] - vright[0] * scale + vup[0] * scale;
-				tvxyz[1][1] = rd->origin[1] - vright[1] * scale + vup[1] * scale;
-				tvxyz[1][2] = rd->origin[2] - vright[2] * scale + vup[2] * scale;
-				tvxyz[2][0] = rd->origin[0] + vright[0] * scale + vup[0] * scale;
-				tvxyz[2][1] = rd->origin[1] + vright[1] * scale + vup[1] * scale;
-				tvxyz[2][2] = rd->origin[2] + vright[2] * scale + vup[2] * scale;
-				tvxyz[3][0] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
-				tvxyz[3][1] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
-				tvxyz[3][2] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
-				R_Mesh_Draw(&m);
+				m.vertex[0] = rd->origin[0] - vright[0] * scale - vup[0] * scale;
+				m.vertex[1] = rd->origin[1] - vright[1] * scale - vup[1] * scale;
+				m.vertex[2] = rd->origin[2] - vright[2] * scale - vup[2] * scale;
+				m.vertex[4] = rd->origin[0] - vright[0] * scale + vup[0] * scale;
+				m.vertex[5] = rd->origin[1] - vright[1] * scale + vup[1] * scale;
+				m.vertex[6] = rd->origin[2] - vright[2] * scale + vup[2] * scale;
+				m.vertex[8] = rd->origin[0] + vright[0] * scale + vup[0] * scale;
+				m.vertex[9] = rd->origin[1] + vright[1] * scale + vup[1] * scale;
+				m.vertex[10] = rd->origin[2] + vright[2] * scale + vup[2] * scale;
+				m.vertex[12] = rd->origin[0] + vright[0] * scale - vup[0] * scale;
+				m.vertex[13] = rd->origin[1] + vright[1] * scale - vup[1] * scale;
+				m.vertex[14] = rd->origin[2] + vright[2] * scale - vup[2] * scale;
 			}
 		}
 	}
