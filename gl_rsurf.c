@@ -2084,7 +2084,7 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 			{
 				c_leafs++;
 				for (i = 0;i < leaf->numleaffaces;i++)
-					r_surf_surfacevisible[leaf->firstleaffacenum[i]] = 1;
+					r_surf_surfacevisible[leaf->firstleafface[i]] = 1;
 			}
 		}
 		for (ti = 0, t = model->brushq3.data_textures;ti < model->brushq3.num_textures;ti++, t++)
@@ -2222,8 +2222,8 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			{
 				for (marksurfaceindex = 0;marksurfaceindex < leaf->numleaffaces;marksurfaceindex++)
 				{
-					surface = leaf->firstleafface[marksurfaceindex];
-					surfaceindex = surface - model->brushq3.data_faces;
+					surfaceindex = leaf->firstleafface[marksurfaceindex];
+					surface = model->brushq3.data_faces + surfaceindex;
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
 						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)) && surface->mesh.num_triangles)

@@ -393,8 +393,7 @@ typedef struct q3mleaf_s
 	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
 	int areaindex;
 	int numleaffaces;
-	struct q3msurface_s **firstleafface;
-	int *firstleaffacenum;
+	int *firstleafface;
 	int numleafbrushes;
 	struct q3mbrush_s **firstleafbrush;
 }
@@ -482,8 +481,7 @@ typedef struct model_brushq3_s
 	q3mbrush_t **data_leafbrushes;
 
 	int num_leaffaces;
-	q3msurface_t **data_leaffaces;
-	int *data_leaffacenums;
+	int *data_leaffaces;
 
 	int num_models;
 	q3mmodel_t *data_models;

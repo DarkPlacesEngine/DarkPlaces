@@ -4558,7 +4558,7 @@ static void Mod_Q3BSP_LoadLeafBrushes(lump_t *l)
 static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 {
 	int *in;
-	q3msurface_t **out;
+	int *out;
 	int i, n, count;
 
 	in = (void *)(mod_base + l->fileofs);
@@ -4570,15 +4570,12 @@ static void Mod_Q3BSP_LoadLeafFaces(lump_t *l)
 	loadmodel->brushq3.data_leaffaces = out;
 	loadmodel->brushq3.num_leaffaces = count;
 
-	loadmodel->brushq3.data_leaffacenums = Mem_Alloc(loadmodel->mempool, count * sizeof(int));
-
 	for (i = 0;i < count;i++, in++, out++)
 	{
 		n = LittleLong(*in);
 		if (n < 0 || n >= loadmodel->brushq3.num_faces)
 			Host_Error("Mod_Q3BSP_LoadLeafFaces: invalid face index %i (%i faces)\n", n, loadmodel->brushq3.num_faces);
-		*out = loadmodel->brushq3.data_faces + n;
-		loadmodel->brushq3.data_leaffacenums[i] = n;
+		*out = n;
 	}
 }
 
@@ -4614,7 +4611,6 @@ static void Mod_Q3BSP_LoadLeafs(lump_t *l)
 		if (n < 0 || n + c > loadmodel->brushq3.num_leaffaces)
 			Host_Error("Mod_Q3BSP_LoadLeafs: invalid leafface range %i : %i (%i leaffaces)\n", n, n + c, loadmodel->brushq3.num_leaffaces);
 		out->firstleafface = loadmodel->brushq3.data_leaffaces + n;
-		out->firstleaffacenum = loadmodel->brushq3.data_leaffacenums + n;
 		out->numleaffaces = c;
 		n = LittleLong(in->firstleafbrush);
 		c = LittleLong(in->numleafbrushes);
@@ -4848,7 +4844,7 @@ static void Mod_Q3BSP_LightPoint(model_t *model, const vec3_t p, vec3_t ambientc
 	//Con_Printf("result: ambient %f %f %f diffuse %f %f %f diffusenormal %f %f %f\n", ambientcolor[0], ambientcolor[1], ambientcolor[2], diffusecolor[0], diffusecolor[1], diffusecolor[2], diffusenormal[0], diffusenormal[1], diffusenormal[2]);
 }
 
-static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t point, int markframe)
+static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, model_t *model, q3mnode_t *node, const vec3_t point, int markframe)
 {
 	int i;
 	q3mleaf_t *leaf;
@@ -4870,7 +4866,7 @@ static void Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 	// can't do point traces on curves (they have no thickness)
 }
 
-static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
+static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, model_t *model, q3mnode_t *node, const vec3_t start, const vec3_t end, vec_t startfrac, vec_t endfrac, const vec3_t linestart, const vec3_t lineend, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i, startside, endside;
 	float dist1, dist2, midfrac, mid[3], nodesegmentmins[3], nodesegmentmaxs[3];
@@ -4907,9 +4903,9 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 				midfrac = dist1 / (dist1 - dist2);
 				VectorLerp(start, midfrac, end, mid);
 				// take the near side first
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[startside], start, mid, startfrac, midfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
 				if (midfrac <= trace->realfraction)
-					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
+					Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, node->children[endside], mid, end, midfrac, endfrac, linestart, lineend, markframe, segmentmins, segmentmaxs);
 				return;
 			}
 		}
@@ -4940,7 +4936,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 		// line trace the curves
 		for (i = 0;i < leaf->numleaffaces;i++)
 		{
-			face = leaf->firstleafface[i];
+			face = model->brushq3.data_faces + leaf->firstleafface[i];
 			if (face->mesh.num_collisiontriangles && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
 				face->collisionmarkframe = markframe;
@@ -4952,7 +4948,7 @@ static void Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace_t *trace, q3mnode_t *node
 	}
 }
 
-static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
+static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, model_t *model, q3mnode_t *node, const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, int markframe, const vec3_t segmentmins, const vec3_t segmentmaxs)
 {
 	int i;
 	//int sides;
@@ -5188,7 +5184,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 			return;
 		if (!node->plane)
 			break;
-		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
+		Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, node->children[0], thisbrush_start, thisbrush_end, markframe, segmentmins, segmentmaxs);
 		node = node->children[1];
 	}
 #elif 0
@@ -5320,7 +5316,7 @@ static void Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace_t *trace, q3mnode_t *nod
 	{
 		for (i = 0;i < leaf->numleaffaces;i++)
 		{
-			face = leaf->firstleafface[i];
+			face = model->brushq3.data_faces + leaf->firstleafface[i];
 			if (face->mesh.num_collisiontriangles && face->collisionmarkframe != markframe && BoxesOverlap(nodesegmentmins, nodesegmentmaxs, face->mins, face->maxs))
 			{
 				face->collisionmarkframe = markframe;
@@ -5362,7 +5358,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 						Collision_TracePointBrushFloat(trace, boxstartmins, model->brushq3.data_thismodel->firstbrush[i].colbrushf);
 			}
 			else
-				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, ++markframe);
+				Mod_Q3BSP_TracePoint_RecursiveBSPNode(trace, model, model->brushq3.data_nodes, boxstartmins, ++markframe);
 		}
 		else
 		{
@@ -5383,7 +5379,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 				}
 			}
 			else
-				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model->brushq3.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe, segmentmins, segmentmaxs);
+				Mod_Q3BSP_TraceLine_RecursiveBSPNode(trace, model, model->brushq3.data_nodes, boxstartmins, boxendmins, 0, 1, boxstartmins, boxendmins, ++markframe, segmentmins, segmentmaxs);
 		}
 	}
 	else
@@ -5407,7 +5403,7 @@ static void Mod_Q3BSP_TraceBox(model_t *model, int frame, trace_t *trace, const 
 			}
 		}
 		else
-			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model->brushq3.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);
+			Mod_Q3BSP_TraceBrush_RecursiveBSPNode(trace, model, model->brushq3.data_nodes, thisbrush_start, thisbrush_end, ++markframe, segmentmins, segmentmaxs);
 	}
 }
 
@@ -5563,69 +5559,6 @@ static int Mod_Q3BSP_NativeContentsFromSuperContents(model_t *model, int superco
 		nativecontents |= CONTENTSQ3_NODROP;
 	return nativecontents;
 }
-
-/*
-void Mod_Q3BSP_RecursiveGetVisible(q3mnode_t *node, model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, q3mleaf_t *leaflist, int *numleafs, int maxsurfaces, q3msurface_t *surfacelist, int *numsurfaces, const qbyte *pvs)
-{
-	mleaf_t *leaf;
-	for (;;)
-	{
-		if (!BoxesOverlap(node->mins, node->maxs, mins, maxs))
-			return;
-		if (!node->plane)
-			break;
-		Mod_Q3BSP_RecursiveGetVisible(node->children[0], model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces, pvs);
-		node = node->children[1];
-	}
-	leaf = (mleaf_t *)node;
-	if ((pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
-	{
-		int marksurfacenum;
-		q3msurface_t *surf;
-		if (maxleafs && *numleafs < maxleafs)
-			leaflist[(*numleaf)++] = leaf;
-		if (maxsurfaces)
-		{
-			for (marksurfacenum = 0;marksurfacenum < leaf->nummarksurfaces;marksurfacenum++)
-			{
-				face = leaf->firstleafface[marksurfacenum];
-				if (face->shadowmark != shadowmarkcount)
-				{
-					face->shadowmark = shadowmarkcount;
-					if (BoxesOverlap(mins, maxs, face->mins, face->maxs) && *numsurfaces < maxsurfaces)
-						surfacelist[(*numsurfaces)++] = face;
-				}
-			}
-		}
-	}
-}
-
-void Mod_Q3BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins, const vec3_t maxs, int maxleafs, q3mleaf_t *leaflist, int *numleafs, int maxsurfaces, q3msurface_t *surfacelist, int *numsurfaces)
-{
-	// FIXME: support portals
-	if (maxsurfaces)
-		*numsurfaces = 0;
-	if (maxleafs)
-		*numleafs = 0;
-	if (model->submodel)
-	{
-		if (maxsurfaces)
-		{
-			for (marksurfacenum = 0;marksurfacenum < leaf->nummarksurfaces;marksurfacenum++)
-			{
-				face = ent->model->brushq3.surfaces + leaf->firstmarksurface[marksurfacenum];
-				if (BoxesOverlap(mins, maxs, face->mins, face->maxs) && *numsurfaces < maxsurfaces)
-					surfacelist[(*numsurfaces)++] = face;
-			}
-		}
-	}
-	else
-	{
-		pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
-		Mod_Q3BSP_RecursiveGetVisible(ent->model->brushq3.data_nodes, model, point, mins, maxs, maxleafs, leaflist, numleafs, maxsurfaces, surfacelist, numsurfaces, pvs);
-	}
-}
-*/
 
 void Mod_Q3BSP_BuildTextureFaceLists(void)
 {
