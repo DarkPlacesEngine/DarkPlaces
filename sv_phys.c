@@ -778,10 +778,7 @@ void SV_Physics_Pusher (edict_t *ent)
 		pr_global_struct->self = EDICT_TO_PROG(ent);
 		pr_global_struct->other = EDICT_TO_PROG(sv.edicts);
 		PR_ExecuteProgram (ent->v->think, "NULL think function");
-		if (ent->e->free)
-			return;
 	}
-
 }
 
 
@@ -889,19 +886,15 @@ void SV_WallFriction (edict_t *ent, float *stepnormal)
 	vec3_t forward, into, side;
 
 	AngleVectors (ent->v->v_angle, forward, NULL, NULL);
-	d = DotProduct (stepnormal, forward);
-
-	d += 0.5;
-	if (d >= 0)
-		return;
-
-	// cut the tangential velocity
-	i = DotProduct (stepnormal, ent->v->velocity);
-	VectorScale (stepnormal, i, into);
-	VectorSubtract (ent->v->velocity, into, side);
-
-	ent->v->velocity[0] = side[0] * (1 + d);
-	ent->v->velocity[1] = side[1] * (1 + d);
+	if ((d = DotProduct (stepnormal, forward) + 0.5) < 0)
+	{
+		// cut the tangential velocity
+		i = DotProduct (stepnormal, ent->v->velocity);
+		VectorScale (stepnormal, i, into);
+		VectorSubtract (ent->v->velocity, into, side);
+		ent->v->velocity[0] = side[0] * (1 + d);
+		ent->v->velocity[1] = side[1] * (1 + d);
+	}
 }
 
 /*
@@ -1192,7 +1185,6 @@ void SV_Physics_Toss (edict_t *ent)
 // if onground, return without moving
 	if ((int)ent->v->flags & FL_ONGROUND)
 	{
-		VectorClear(ent->v->velocity);
 		if (ent->v->groundentity == 0)
 			return;
 		// if ent was supported by a brush model on previous frame,
@@ -1289,50 +1281,25 @@ will fall if the floor is pulled out from under them.
 */
 void SV_Physics_Step (edict_t *ent)
 {
-	int flags, fall, hitsound;
-
-	// freefall if not fly/swim
-	fall = true;
-	flags = (int)ent->v->flags;
-	if (flags & (FL_FLY | FL_SWIM))
+	// freefall if not onground/fly/swim
+	if (!((int)ent->v->flags & (FL_ONGROUND | FL_FLY | FL_SWIM)))
 	{
-		if (flags & FL_FLY)
-			fall = false;
-		else if ((flags & FL_SWIM) && Mod_PointContents(ent->v->origin, sv.worldmodel) != CONTENTS_EMPTY)
-			fall = false;
-	}
-	if (fall && (flags & FL_ONGROUND) && ent->v->groundentity == 0)
-		fall = false;
+		int hitsound = ent->v->velocity[2] < sv_gravity.value * -0.1;
 
-	if (fall)
-	{
-		if (ent->v->velocity[2] < sv_gravity.value*-0.1)
-		{
-			hitsound = true;
-			if (flags & FL_ONGROUND)
-				hitsound = false;
-		}
-		else
-			hitsound = false;
-
-		SV_AddGravity (ent);
-		SV_CheckVelocity (ent);
-		SV_FlyMove (ent, sv.frametime, NULL);
-		SV_LinkEdict (ent, false);
+		SV_AddGravity(ent);
+		SV_CheckVelocity(ent);
+		SV_FlyMove(ent, sv.frametime, NULL);
+		SV_LinkEdict(ent, false);
 
 		// just hit ground
-		if ((int)ent->v->flags & FL_ONGROUND)
-		{
-			VectorClear(ent->v->velocity);
-			if (hitsound)
-				SV_StartSound (ent, 0, "demon/dland2.wav", 255, 1);
-		}
+		if (hitsound && (int)ent->v->flags & FL_ONGROUND)
+			SV_StartSound(ent, 0, "demon/dland2.wav", 255, 1);
 	}
 
 // regular thinking
-	SV_RunThink (ent);
+	SV_RunThink(ent);
 
-	SV_CheckWaterTransition (ent);
+	SV_CheckWaterTransition(ent);
 }
 
 //============================================================================
