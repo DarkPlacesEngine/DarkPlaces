@@ -1327,30 +1327,22 @@ int SV_ModelIndex(char *s, int precachemode)
 		{
 			if (precachemode)
 			{
-				if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+				if (sv.state != ss_loading && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5))
 				{
-					// not able to precache during game
-					if (precachemode == 2 && sv.state != ss_loading)
-					{
-						Con_Printf("SV_ModelIndex(\"%s\"): precache_model can only be done in spawn functions\n", filename);
-						return 0;
-					}
+					Con_Printf("SV_ModelIndex(\"%s\"): precache_model can only be done in spawn functions\n", filename);
+					return 0;
 				}
-				else
+				if (precachemode == 1)
+					Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
+				strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
+				sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
+				if (sv.protocol == PROTOCOL_DARKPLACES6)
 				{
-					// able to precache during game
-					if (precachemode == 1)
-						Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
-					strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
-					sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
-					if (sv.state != ss_loading)
-					{
-						MSG_WriteByte(&sv.reliable_datagram, svc_precache);
-						MSG_WriteShort(&sv.reliable_datagram, i);
-						MSG_WriteString(&sv.reliable_datagram, filename);
-					}
-					return i;
+					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
+					MSG_WriteShort(&sv.reliable_datagram, i + 32768);
+					MSG_WriteString(&sv.reliable_datagram, filename);
 				}
+				return i;
 			}
 			Con_Printf("SV_ModelIndex(\"%s\"): not precached\n", filename);
 			return 0;
@@ -1358,10 +1350,7 @@ int SV_ModelIndex(char *s, int precachemode)
 		if (!strcmp(sv.model_precache[i], filename))
 			return i;
 	}
-	if (precachemode)
-		Con_Printf("SV_ModelIndex(\"%s\"): i == MAX_MODELS\n", filename);
-	else
-		Con_Printf("SV_ModelIndex(\"%s\"): not precached\n", filename);
+	Con_Printf("SV_ModelIndex(\"%s\"): i (%i) == MAX_MODELS (%i)\n", filename, i, MAX_MODELS);
 	return 0;
 }
 
@@ -1377,33 +1366,31 @@ int SV_SoundIndex(char *s, int precachemode)
 	char filename[MAX_QPATH];
 	if (!s || !*s)
 		return 0;
+	// testing
+	//if (precachemode == 2)
+	//	return 0;
 	strlcpy(filename, s, sizeof(filename));
 	for (i = 1;i < limit;i++)
 	{
 		if (!sv.sound_precache[i][0])
 		{
-			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+			if (precachemode)
 			{
-				// not able to precache during game
-				if (precachemode == 2 && sv.state != ss_loading)
+				if (sv.state != ss_loading && (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5))
 				{
 					Con_Printf("SV_SoundIndex(\"%s\"): precache_sound can only be done in spawn functions\n", filename);
 					return 0;
 				}
-			}
-			else
-			{
-				// able to precache during game
-				if (precachemode)
+				if (precachemode == 1)
+					Con_Printf("SV_SoundIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
+				strlcpy(sv.sound_precache[i], filename, sizeof(sv.sound_precache[i]));
+				if (sv.protocol == PROTOCOL_DARKPLACES6)
 				{
-					if (precachemode == 1)
-						Con_Printf("SV_SoundIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
-					strlcpy(sv.sound_precache[i], filename, sizeof(sv.sound_precache[i]));
 					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
 					MSG_WriteShort(&sv.reliable_datagram, i + 32768);
 					MSG_WriteString(&sv.reliable_datagram, filename);
-					return i;
 				}
+				return i;
 			}
 			Con_Printf("SV_SoundIndex(\"%s\"): not precached\n", filename);
 			return 0;
@@ -1411,10 +1398,7 @@ int SV_SoundIndex(char *s, int precachemode)
 		if (!strcmp(sv.sound_precache[i], filename))
 			return i;
 	}
-	if (precachemode)
-		Con_Printf("SV_SoundIndex(\"%s\"): i == MAX_SOUNDS\n", filename);
-	else
-		Con_Printf("SV_SoundIndex(\"%s\"): not precached\n", filename);
+	Con_Printf("SV_SoundIndex(\"%s\"): i (%i) == MAX_SOUNDS (%i)\n", filename, i, MAX_SOUNDS);
 	return 0;
 }
 
