@@ -64,7 +64,9 @@ static void Cmd_Wait_f (void)
 =============================================================================
 */
 
+	// LordHavoc: inreased this from 8192 to 32768
 static sizebuf_t	cmd_text;
+static qbyte		cmd_text_buf[32768];
 
 /*
 ============
@@ -73,8 +75,10 @@ Cbuf_Init
 */
 void Cbuf_Init (void)
 {
-	// LordHavoc: inreased this from 8192 to 32768
-	SZ_Alloc (&cmd_text, 32768, "command buffer"); // space for commands and script files
+	// space for commands and script files
+	cmd_text.data = cmd_text_buf;
+	cmd_text.maxsize = sizeof(cmd_text_buf);
+	cmd_text.cursize = 0;
 }
 
 /*
@@ -84,7 +88,6 @@ Cbuf_Shutdown
 */
 void Cbuf_Shutdown (void)
 {
-	SZ_Free (&cmd_text);
 }
 
 /*
