@@ -55,6 +55,7 @@ Transfusion Project for recreating Blood in the world of Quake.
 de-we for the great icons.
 |Rain| for running my favorite anynet IRC server and his bot feh (which although a bit antisocial never seems to grow tired of being my calculator).
 VorteX for the DP_QC_GETTAGINFO extension.
+Ludwig Nussel for the ~/.games/darkplaces/ user directory support on non-Windows platforms (allowing games to be installed in a non-writable system location as is the standard on UNIX but still save configs to the user's home directory).
 
 Questions/comments/bugreports/suggestions?
 Send email to lordhavoc@ghdigital.com.
