@@ -1627,7 +1627,11 @@ int FS_Seek (qfile_t* file, long offset, int whence)
 	// Quick path for unpacked files
 	if (! (file->flags & FS_FLAG_PACKED))
 #ifdef FS_USESYSCALLS
-		return lseek (file->stream, offset, whence);
+	{
+		if (lseek (file->stream, offset, whence) == -1)
+			return -1;
+		return 0;
+	}
 #else
 		return fseek (file->stream, offset, whence);
 #endif
