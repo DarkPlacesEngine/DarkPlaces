@@ -416,11 +416,17 @@ loc0:
 			// if the first leaf is solid, set startsolid
 			if (t->trace->allsolid)
 				t->trace->startsolid = true;
+#ifdef COLLISIONPARANOID
+			Con_Printf("S");
+#endif
 			return HULLCHECKSTATE_SOLID;
 		}
 		else
 		{
 			t->trace->allsolid = false;
+#ifdef COLLISIONPARANOID
+			Con_Printf("E");
+#endif
 			return HULLCHECKSTATE_EMPTY;
 		}
 	}
@@ -444,6 +450,9 @@ loc0:
 	{
 		if (t2 < 0)
 		{
+#ifdef COLLISIONPARANOID
+			Con_Printf("<");
+#endif
 			num = node->children[1];
 			goto loc0;
 		}
@@ -453,6 +462,9 @@ loc0:
 	{
 		if (t2 >= 0)
 		{
+#ifdef COLLISIONPARANOID
+			Con_Printf(">");
+#endif
 			num = node->children[0];
 			goto loc0;
 		}
@@ -461,6 +473,9 @@ loc0:
 
 	// the line intersects, find intersection point
 	// LordHavoc: this uses the original trace for maximum accuracy
+#ifdef COLLISIONPARANOID
+	Con_Printf("M");
+#endif
 	if (plane->type < 3)
 	{
 		t1 = t->start[plane->type] - plane->dist;
@@ -506,8 +521,35 @@ loc0:
 	midf = t1 / (t1 - t2);
 	t->trace->fraction = bound(0.0f, midf, 1.0);
 
+#ifdef COLLISIONPARANOID
+	Con_Printf("D");
+#endif
 	return HULLCHECKSTATE_DONE;
 }
+
+#ifndef COLLISIONPARANOID
+static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, int num)
+{
+	while (num >= 0)
+		num = t->hull->clipnodes[num].children[(t->hull->planes[t->hull->clipnodes[num].planenum].type < 3 ? t->start[t->hull->planes[t->hull->clipnodes[num].planenum].type] : DotProduct(t->hull->planes[t->hull->clipnodes[num].planenum].normal, t->start)) < t->hull->planes[t->hull->clipnodes[num].planenum].dist];
+	num = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
+	t->trace->startsupercontents |= num;
+	if (num & SUPERCONTENTS_LIQUIDSMASK)
+		t->trace->inwater = true;
+	if (num == 0)
+		t->trace->inopen = true;
+	if (num & t->trace->hitsupercontentsmask)
+	{
+		t->trace->allsolid = t->trace->startsolid = true;
+		return HULLCHECKSTATE_SOLID;
+	}
+	else
+	{
+		t->trace->allsolid = t->trace->startsolid = false;
+		return HULLCHECKSTATE_EMPTY;
+	}
+}
+#endif
 
 static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs, int hitsupercontentsmask)
 {
@@ -526,7 +568,9 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
 	else if (model->brush.ishlbsp)
 	{
-		if (boxsize[0] <= 32)
+		// LordHavoc: this has to have a minor tolerance (the .1) because of
+		// minor float precision errors from the box being transformed around
+		if (boxsize[0] < 32.1)
 		{
 			if (boxsize[2] < 54) // pick the nearest of 36 or 72
 				rhc.hull = &model->brushq1.hulls[3]; // 32x32x36
@@ -538,7 +582,9 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	}
 	else
 	{
-		if (boxsize[0] <= 32)
+		// LordHavoc: this has to have a minor tolerance (the .1) because of
+		// minor float precision errors from the box being transformed around
+		if (boxsize[0] < 32.1)
 			rhc.hull = &model->brushq1.hulls[1]; // 32x32x56
 		else
 			rhc.hull = &model->brushq1.hulls[2]; // 64x64x88
@@ -546,7 +592,16 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	VectorSubtract(boxstartmins, rhc.hull->clip_mins, rhc.start);
 	VectorSubtract(boxendmins, rhc.hull->clip_mins, rhc.end);
 	VectorSubtract(rhc.end, rhc.start, rhc.dist);
+#ifdef COLLISIONPARANOID
+	Con_Printf("t(%f %f %f,%f %f %f,%i %f %f %f)", rhc.start[0], rhc.start[1], rhc.start[2], rhc.end[0], rhc.end[1], rhc.end[2], rhc.hull - model->brushq1.hulls, rhc.hull->clip_mins[0], rhc.hull->clip_mins[1], rhc.hull->clip_mins[2]);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+	Con_Printf("\n");
+#else
+	if (DotProduct(rhc.dist, rhc.dist))
+		Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+	else
+		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
+#endif
 }
 
 static int Mod_Q1BSP_LightPoint_RecursiveBSPNode(vec3_t ambientcolor, vec3_t diffusecolor, vec3_t diffusenormal, const mnode_t *node, float x, float y, float startz, float endz)

@@ -35,6 +35,7 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+2 darkplaces: add lan searching to the server browser and related code (Vermeulen)
 4 darkplaces: use larger of model box or collision box for linking into areagrid so that bullet tracing can use the model bounding box instead of the collision one?  (Urre)  
 2 darkplaces: use model box size for SOLID_BSP objects in areagrid linking and such, just for optimal consistency.
 0 darkplaces: GAME_FNIGGIUM: console doesn't show unless you manually pull it down
@@ -108,13 +109,13 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: make sure r_fullbright works
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 -n darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range - now spawns sounds even if out of range (SeienAbunae)
-0 darkplaces: make v_cshift affect view even if in a liquid, by adding another cshift slot for it
+d darkplaces: make v_cshift affect view even if in a liquid, by adding another cshift slot for it
 0 darkplaces: mod_q3bsp_optimizedtraceline bug: shooting through brushes? (Vermeulen)
-0 darkplaces: model interpolation off crashes?  (SeienAbunae)
+-f darkplaces: model interpolation off crashes?  (SeienAbunae)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
-0 darkplaces: q1bsp trace bug: 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters and causes block on moving doors (romi, Static_Fiend)
-0 darkplaces: q1bsp trace bug: bullets don't hit walls at steep angles?
-0 darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this needs to be fixed
+-n darkplaces: q1bsp trace bug: 'wall hugging' stuttering, also stuttering movement when walking over steps or monsters and causes block on moving doors (Urre, romi, Static_Fiend)
+0 darkplaces: q1bsp trace bug: bullets don't hit walls at extremely steep angles, especially at very high framerates...
+d darkplaces: q1bsp trace bug: scrags frequently fly through ceilings - this needs to be fixed
 0 darkplaces: r_shadow should load .ent when importing light entities
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
@@ -227,7 +228,7 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 2 darkplaces: player ip logging by nickname (sublim3)
 2 darkplaces: prevent player name changes faster than twice a second (sublim3)
 2 darkplaces: proquake precise aiming support (sublim3 doesn't care, but tell him anyway)
-2 darkplaces: q1bsp trace bug: movetogoal is broken - monsters are not going around corners, just running into walls (scar3crow)
+-n darkplaces: q1bsp trace bug: movetogoal is broken - monsters are not going around corners, just running into walls (scar3crow)
 2 darkplaces: should support corona-model shaders somehow (equation: pow(normalizationcubemap(transform(eye, vertexmatrix)) dot3 '0 0 1', 8)), which are normally used around unusually shaped lights instead of flat coronas (Mitchell)
 2 darkplaces: upgrade protocol to have shorts for stats (scar3crow)
 2 darkplaces: write a readme (Antti)
@@ -311,8 +312,8 @@ d darkplaces: fix key based turning being affected by slowmo - it should not be
 ? darkplaces: fix colormapping (Demonix)
 ? darkplaces: fix connecting to proquake servers through routers (Demonix)
 ? dpmod: apparently can't fire in start.bsp? (scar3crow)
-bug darkplaces: Zerstorer: riot shotgun rotates even as a view model: need to ignore that model flag when a view model
-bug darkplaces: collision: 'wall stuttering' collision bugs: getting stuck and nudged out constantly when sliding along certain walls
+resolvedbug darkplaces: Zerstorer: riot shotgun rotates even as a view model: need to ignore that model flag when a view model
+resolvedbug darkplaces: collision: 'wall stuttering' collision bugs: getting stuck and nudged out constantly when sliding along certain walls
 bug darkplaces: collision: q3bsp curve problems: comparing nudged impacts causes player to hit edges of triangles in a q3bsp curve closer than the surface
 bug darkplaces: physics: rotating MOVETYPE_PUSH code calls blocked when it's just a touch, it isn't even trying to push (SeienAbunae)
 d darkplaces: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
