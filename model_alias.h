@@ -116,10 +116,6 @@ typedef struct
 	int			ofs_end;		// end of file
 } md2_t;
 
-// LordHavoc: mdl, md2 and md3 models are converted to the same internal format
-#define ALIASTYPE_ALIAS 1
-#define ALIASTYPE_ZYM 2
-
 extern void Mod_IDP0_Load(struct model_s *mod, void *buffer);
 extern void Mod_IDP2_Load(struct model_s *mod, void *buffer);
 extern void Mod_IDP3_Load(struct model_s *mod, void *buffer);
@@ -253,20 +249,37 @@ typedef struct aliasskin_s
 }
 aliasskin_t;
 
+typedef struct aliasvertexboneweight_s
+{
+	unsigned int vertexindex;
+	unsigned int boneindex;
+	float origin[3];
+	float weight;
+}
+aliasvertexboneweight_t;
+
 typedef struct aliasmesh_s
 {
+	// skins to choose from (indexed by entity skin)
 	int num_skins;
-	int num_triangles;
-	int num_frames;
-	int num_vertices;
 	aliasskin_t *data_skins;
+
+	// triangles comprising the mesh
+	int num_triangles;
 	int *data_element3i;
 	int *data_neighbor3i;
+
+	// skin texcoords do not change
+	int num_vertices;
 	float *data_texcoord2f;
-	float *data_aliasvertex3f;
-	float *data_aliassvector3f;
-	float *data_aliastvector3f;
-	float *data_aliasnormal3f;
+
+	// morph blending, these are zero if model is skeletal
+	int num_morphframes;
+	float *data_morphvertex3f;
+
+	// skeletal blending, these are zero if model is morph
+	int num_vertexboneweights;
+	aliasvertexboneweight_t *data_vertexboneweights;
 }
 aliasmesh_t;
 
@@ -277,6 +290,13 @@ typedef struct aliastag_s
 }
 aliastag_t;
 
+typedef struct aliasbone_s
+{
+	char name[MD3NAME];
+	int flags;
+	int parent; // -1 for no parent
+}
+aliasbone_t;
 
 #endif
 

@@ -535,6 +535,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			// make relative to the entity
 			matrix = &t->render.matrix;
 			// if a valid tagindex is used, make it relative to that tag instead
+			// FIXME: use a model function to get tag info (need to handle skeletal)
 			if (e->state_current.tagentity && e->state_current.tagindex >= 1 && (model = t->render.model) && e->state_current.tagindex <= t->render.model->alias.aliasnum_tags)
 			{
 				// blend the matrices

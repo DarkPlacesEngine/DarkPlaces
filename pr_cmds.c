@@ -3115,6 +3115,7 @@ void PF_setattachment (void)
 				for (i = 0;i < model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].num_overridetagnames;i++)
 					if (!strcmp(tagname, model->data_overridetagnamesforskin[(unsigned int)tagentity->v->skin].data_overridetagnames[i].name))
 						v->_float = i + 1;
+			// FIXME: use a model function to get tag info (need to handle skeletal)
 			if (v->_float == 0 && model->alias.aliasnum_tags)
 				for (i = 0;i < model->alias.aliasnum_tags;i++)
 					if (!strcmp(tagname, model->alias.aliasdata_tags[i].name))

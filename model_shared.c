@@ -489,6 +489,20 @@ static void Mod_Precache(void)
 		Con_Print("usage: modelprecache <filename>\n");
 }
 
+int Mod_BuildVertexRemapTableFromElements(int numelements, const int *elements, int numvertices, int *remapvertices)
+{
+	int i, count;
+	qbyte *used;
+	used = Mem_Alloc(tempmempool, numvertices);
+	memset(used, 0, numvertices);
+	for (i = 0;i < numelements;i++)
+		used[elements[i]] = 1;
+	for (i = 0, count = 0;i < numvertices;i++)
+		remapvertices[i] = used[i] ? count++ : -1;
+	Mem_Free(used);
+	return count;
+}
+
 #if 1
 // fast way, using an edge hash
 #define TRIANGLEEDGEHASH 1024
