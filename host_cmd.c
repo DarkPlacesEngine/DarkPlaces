@@ -283,16 +283,24 @@ void Host_Map_f (void)
 {
 	char level[MAX_QPATH];
 
+	if (Cmd_Argc() != 2)
+	{
+		Con_Print("map <levelname> : start a new game (kicks off all players)\n");
+		return;
+	}
+
 	if (cmd_source != src_command)
 		return;
 
+	SCR_BeginLoadingPlaque ();
 	cls.demonum = -1;		// stop demo loop in case this fails
 
 	CL_Disconnect ();
 	Host_ShutdownServer(false);
 
-	key_dest = key_game;			// remove console or menu
-	SCR_BeginLoadingPlaque ();
+	// remove console or menu
+	key_dest = key_game;
+	key_consoleactive = 0;
 
 	svs.serverflags = 0;			// haven't completed an episode yet
 	allowcheats = sv_cheats.integer != 0;
@@ -323,7 +331,15 @@ void Host_Changelevel_f (void)
 		Con_Print("Only the server may changelevel\n");
 		return;
 	}
+	if (cmd_source != src_command)
+		return;
+
+	// remove console or menu
+	key_dest = key_game;
+	key_consoleactive = 0;
+
 	SV_SaveSpawnparms ();
+	SCR_BeginLoadingPlaque();
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(level, Cmd_Argv(1));
 	SV_SpawnServer(level);
@@ -342,11 +358,24 @@ void Host_Restart_f (void)
 {
 	char mapname[MAX_QPATH];
 	
-	if (cls.demoplayback || !sv.active)
+	if (Cmd_Argc() != 1)
+	{
+		Con_Print("restart : restart current level\n");
 		return;
-
+	}
+	if (!sv.active || cls.demoplayback)
+	{
+		Con_Print("Only the server may restart\n");
+		return;
+	}
 	if (cmd_source != src_command)
 		return;
+
+	// remove console or menu
+	key_dest = key_game;
+	key_consoleactive = 0;
+
+	SCR_BeginLoadingPlaque();
 	allowcheats = sv_cheats.integer != 0;
 	strcpy(mapname, sv.name);
 	SV_SpawnServer(mapname);
@@ -364,6 +393,21 @@ This is sent just before a server changes levels
 */
 void Host_Reconnect_f (void)
 {
+	if (Cmd_Argc() != 1)
+	{
+		Con_Print("reconnect : wait for signon messages again\n");
+		return;
+	}
+	if (cmd_source == src_command)
+	{
+		Con_Print("reconnect not valid from console\n");
+		return;
+	}
+	if (!cls.signon)
+	{
+		Con_Print("reconnect: no signon, ignoring reconnect\n");
+		return;
+	}
 	SCR_BeginLoadingPlaque();
 	cls.signon = 0;		// need new connection messages
 }
@@ -377,6 +421,11 @@ User command to connect to server
 */
 void Host_Connect_f (void)
 {
+	if (Cmd_Argc() != 2)
+	{
+		Con_Print("connect <serveraddress> : connect to a multiplayer game\n");
+		return;
+	}
 	CL_EstablishConnection(Cmd_Argv(1));
 }
 
