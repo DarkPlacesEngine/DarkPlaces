@@ -445,11 +445,13 @@ void CL_SendMove(usercmd_t *cmd)
 	{
 		if (cl.entitydatabase4)
 		{
-			MSG_WriteByte(&buf, clc_ackentities);
+			i = cl.entitydatabase4->ackframenum;
 			if (cl_nodelta.integer)
-				MSG_WriteLong(&buf, -1);
-			else
-				MSG_WriteLong(&buf, cl.entitydatabase4->ackframenum);
+				i = -1;
+			if (developer_networkentities.integer)
+				Con_Printf("send clc_ackentities %i\n", i);
+			MSG_WriteByte(&buf, clc_ackentities);
+			MSG_WriteLong(&buf, i);
 		}
 	}
 
