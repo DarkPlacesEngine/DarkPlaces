@@ -152,14 +152,22 @@ extern int playercolor;
 
 #define HOSTCACHE_TOTALSIZE			2048
 #define HOSTCACHE_VIEWCACHESIZE		128
+#define HOSTCACHE_ANDMASKCOUNT		5
+#define HOSTCACHE_ORMASKCOUNT		5
 
 typedef enum 
 {
-	HCMO_GREATEREQUAL,
-	HCMO_GREATER,
-	HCMO_EQUAL,
+	// HCMO_CONTAINS is the default for strings
+	// HCMO_GREATEREQUAL is the default for numbers (also used when OP == CONTAINS or NOTCONTAINS
+	HCMO_CONTAINS,
+	HCMO_NOTCONTAIN,
+
 	HCMO_LESSEQUAL,
 	HCMO_LESS,
+	HCMO_EQUAL,
+	HCMO_GREATER,
+	HCMO_GREATEREQUAL,
+	HCMO_NOTEQUAL
 } hostcache_maskop_t;
 
 // struct with all fields that you can search for or sort by
@@ -215,14 +223,14 @@ typedef struct
 
 typedef struct
 {
-	hostcache_maskop_t pingtest;
-	hostcache_maskop_t maxplayerstest;
-	hostcache_maskop_t numplayerstest;
-	hostcache_maskop_t protocoltest;
+	qboolean			active;
+	hostcache_maskop_t  tests[HCIF_COUNT];
 	hostcache_info_t info;
 } hostcache_mask_t;
 
-extern hostcache_mask_t			hostcache_currentmask;
+extern hostcache_mask_t			hostcache_andmasks[HOSTCACHE_ANDMASKCOUNT];
+extern hostcache_mask_t			hostcache_ormasks[HOSTCACHE_ORMASKCOUNT];
+
 extern hostcache_infofield_t	hostcache_sortbyfield;
 extern qboolean					hostcache_sortdescending;
 
@@ -295,7 +303,7 @@ void Net_Slist_f(void);
 // Hostcache interface
 // manually refresh the view set, do this after having changed the mask or any other flag
 void HostCache_RebuildViewSet(void);
-void HostCache_ResetMask(void);
+void HostCache_ResetMasks(void);
 void HostCache_QueryList(void);
 
 #endif
