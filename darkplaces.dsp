@@ -372,6 +372,10 @@ SOURCE=.\snd_ogg.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\snd_wav.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\snd_win.c
 # End Source File
 # Begin Source File
@@ -669,6 +673,10 @@ SOURCE=.\server.h
 # Begin Source File
 
 SOURCE=.\snd_ogg.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\snd_wav.h
 # End Source File
 # Begin Source File
 

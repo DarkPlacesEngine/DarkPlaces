@@ -418,6 +418,8 @@ sfx_t *S_PrecacheSound (char *name, int complain)
 /*
 =================
 SND_PickChannel
+
+Picks a channel based on priorities, empty slots, number of channels
 =================
 */
 channel_t *SND_PickChannel(int entnum, int entchannel)
@@ -468,6 +470,8 @@ channel_t *SND_PickChannel(int entnum, int entchannel)
 /*
 =================
 SND_Spatialize
+
+Spatializes a channel
 =================
 */
 void SND_Spatialize(channel_t *ch, int isstatic)

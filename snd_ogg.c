@@ -24,6 +24,7 @@
 
 #include "quakedef.h"
 #include "snd_ogg.h"
+#include "snd_wav.h"
 
 
 /*
@@ -482,7 +483,6 @@ static void OGG_FetchEnd (channel_t* ch)
 }
 
 static const snd_fetcher_t ogg_fetcher = { OGG_FetchSound, OGG_FetchEnd };
-extern snd_fetcher_t wav_fetcher;
 
 
 /*
