@@ -34,6 +34,8 @@ float		scr_conlines;		// lines of console to display
 int			clearconsole;
 int			clearnotify;
 
+extern int	con_vislines;
+
 qboolean	scr_drawloading = false;
 
 void DrawCrosshair(int num);
@@ -294,6 +296,7 @@ void SCR_DrawConsole (void)
 	}
 	else
 	{
+		con_vislines = 0;
 		if (key_dest == key_game || key_dest == key_message)
 			Con_DrawNotify ();	// only draw notify in game
 	}
