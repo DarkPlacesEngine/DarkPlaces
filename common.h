@@ -46,6 +46,8 @@ void SZ_Write (sizebuf_t *buf, const void *data, int length);
 void SZ_Print (sizebuf_t *buf, const char *data);	// strcats onto the sizebuf
 void SZ_HexDumpToConsole(const sizebuf_t *buf);
 
+void Com_HexDumpToConsole(const qbyte *data, int size);
+
 //============================================================================
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 #if  defined(__i386__) || defined(__ia64__) || defined(WIN32) || (defined(__alpha__) || defined(__alpha)) || defined(__arm__) || (defined(__mips__) && defined(__MIPSEL__)) || defined(__LITTLE_ENDIAN__)
