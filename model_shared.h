@@ -18,13 +18,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#ifndef __MODEL__
-#define __MODEL__
+#ifndef MODEL_SHARED_H
+#define MODEL_SHARED_H
 
-#ifndef SYNCTYPE_T
-#define SYNCTYPE_T
 typedef enum {ST_SYNC=0, ST_RAND } synctype_t;
-#endif
 
 /*
 
@@ -694,5 +691,5 @@ int Mod_CountSkinFiles(skinfile_t *skinfile);
 
 int Mod_RemoveDegenerateTriangles(int numtriangles, const int *inelement3i, int *outelement3i, const float *vertex3f);
 
-#endif	// __MODEL__
+#endif	// MODEL_SHARED_H
 
