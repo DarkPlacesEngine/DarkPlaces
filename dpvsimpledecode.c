@@ -67,17 +67,6 @@ void hz_bitstream_read_close(hz_bitstream_read_t *stream)
 	}
 }
 
-unsigned int hz_bitstream_read_currentbyte(hz_bitstream_read_t *stream)
-{
-	return FS_Tell(stream->file);
-}
-
-int hz_bitstream_read_seek(hz_bitstream_read_t *stream, unsigned int position)
-{
-	stream->endoffile = 0;
-	return FS_Seek(stream->file, position, SEEK_SET) != 0;
-}
-
 hz_bitstream_readblocks_t *hz_bitstream_read_blocks_new(void)
 {
 	hz_bitstream_readblocks_t *blocks;
