@@ -330,6 +330,19 @@ void _Mem_CheckSentinelsGlobal(const char *filename, int fileline)
 #endif
 }
 
+qboolean Mem_IsAllocated(mempool_t *pool, void *data)
+{
+	memheader_t *header;
+	memheader_t *target;
+
+    target = (memheader_t *)((qbyte *) data - sizeof(memheader_t));
+	for( header = pool->chain ; header ; header = header->next )
+		if( header == target )
+			return true;
+	return false;
+}
+
+
 // used for temporary memory allocations around the engine, not for longterm
 // storage, if anything in this pool stays allocated during gameplay, it is
 // considered a leak
