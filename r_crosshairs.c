@@ -217,7 +217,7 @@ void R_DrawCrosshair(void)
 	vec_t spritescale;
 	float cr, cg, cb, ca;
 	num = crosshair.integer - 1;
-	if (num < 0)
+	if (num < 0 || cl.intermission)
 		return;
 	if (num >= NUMCROSSHAIRS)
 		num = 0;
