@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 cvar_t developer_memory = {0, "developer_memory", "0"};
+cvar_t developer_memorydebug = {0, "developer_memorydebug", "0"};
 
 mempool_t *poolchain = NULL;
 
@@ -38,6 +39,8 @@ void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline)
 		Sys_Error("Mem_Alloc: pool == NULL (alloc at %s:%i)", filename, fileline);
 	if (developer.integer && developer_memory.integer)
 		Con_Printf("Mem_Alloc: pool %s, file %s:%i, size %i bytes\n", pool->name, filename, fileline, size);
+	if (developer.integer && developer_memorydebug.integer)
+		_Mem_CheckSentinelsGlobal(filename, fileline);
 	pool->totalsize += size;
 #if MEMCLUMPING
 	if (size < 4096)
@@ -407,5 +410,6 @@ void Memory_Init_Commands (void)
 	Cmd_AddCommand ("memstats", MemStats_f);
 	Cmd_AddCommand ("memlist", MemList_f);
 	Cvar_RegisterVariable (&developer_memory);
+	Cvar_RegisterVariable (&developer_memorydebug);
 }
 
