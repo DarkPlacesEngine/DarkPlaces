@@ -554,7 +554,7 @@ edict_t	*SV_TestEntityPosition (edict_t *ent)
 
 	if (trace.startsolid)
 		return sv.edicts;
-		
+
 	return NULL;
 }
 
@@ -742,44 +742,36 @@ eventually rotation) of the end points
 trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end)
 {
 	trace_t trace;
-	vec3_t offset, start_l, end_l;
-	double startd[3], endd[3];
+	vec3_t offset, forward, left, up;
+	double startd[3], endd[3], tempd[3];
 	hull_t *hull;
 
 // fill in a default trace
 	memset (&trace, 0, sizeof(trace_t));
 	trace.fraction = 1;
 	trace.allsolid = true;
-	VectorCopy (end, trace.endpos);
 
 // get the clipping hull
 	hull = SV_HullForEntity (ent, mins, maxs, offset);
 
-	VectorSubtract (start, offset, start_l);
-	VectorSubtract (end, offset, end_l);
+	VectorSubtract(start, offset, startd);
+	VectorSubtract(end, offset, endd);
 
-// LordHavoc: enabling rotating bmodels
 	// rotate start and end into the models frame of reference
 	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
 	{
-		vec3_t	forward, right, up;
-		vec3_t	temp;
-
-		AngleVectors (ent->v.angles, forward, right, up);
-
-		VectorCopy (start_l, temp);
-		start_l[0] = DotProduct (temp, forward);
-		start_l[1] = -DotProduct (temp, right);
-		start_l[2] = DotProduct (temp, up);
-
-		VectorCopy (end_l, temp);
-		end_l[0] = DotProduct (temp, forward);
-		end_l[1] = -DotProduct (temp, right);
-		end_l[2] = DotProduct (temp, up);
+		AngleVectorsFLU (ent->v.angles, forward, left, up);
+		VectorCopy(startd, tempd);
+		startd[0] = DotProduct (tempd, forward);
+		startd[1] = DotProduct (tempd, left);
+		startd[2] = DotProduct (tempd, up);
+		VectorCopy(endd, tempd);
+		endd[0] = DotProduct (tempd, forward);
+		endd[1] = DotProduct (tempd, left);
+		endd[2] = DotProduct (tempd, up);
 	}
 
-	VectorCopy(start_l, startd);
-	VectorCopy(end_l, endd);
+	VectorCopy(end, trace.endpos);
 
 // trace a line through the appropriate clipping hull
 	VectorCopy(startd, RecursiveHullCheckInfo.start);
@@ -788,37 +780,30 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 	RecursiveHullCheckInfo.trace = &trace;
 	SV_RecursiveHullCheck (hull->firstclipnode, 0, 1, startd, endd);
 
-// LordHavoc: enabling rotating bmodels
-	// rotate endpos back to world frame of reference
-	if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
-	{
-		vec3_t	a;
-		vec3_t	forward, right, up;
-		vec3_t	temp;
-
-		if (trace.fraction != 1)
-		{
-			VectorNegate (ent->v.angles, a);
-			AngleVectors (a, forward, right, up);
-
-			VectorCopy (trace.endpos, temp);
-			trace.endpos[0] = DotProduct (temp, forward);
-			trace.endpos[1] = -DotProduct (temp, right);
-			trace.endpos[2] = DotProduct (temp, up);
-
-			VectorCopy (trace.plane.normal, temp);
-			trace.plane.normal[0] = DotProduct (temp, forward);
-			trace.plane.normal[1] = -DotProduct (temp, right);
-			trace.plane.normal[2] = DotProduct (temp, up);
-		}
-	}
-
-// fix trace up by the offset
+	// if we hit, unrotate endpos and normal, and store the entity we hit
 	if (trace.fraction != 1)
-		VectorAdd (trace.endpos, offset, trace.endpos);
+	{
+		// rotate endpos back to world frame of reference
+		if (ent->v.solid == SOLID_BSP && (ent->v.angles[0] || ent->v.angles[1] || ent->v.angles[2]))
+		{
+			VectorNegate (ent->v.angles, offset);
+			AngleVectorsFLU (offset, forward, left, up);
 
-// did we clip the move?
-	if (trace.fraction < 1 || trace.startsolid  )
+			VectorCopy (trace.endpos, tempd);
+			trace.endpos[0] = DotProduct (tempd, forward);
+			trace.endpos[1] = DotProduct (tempd, left);
+			trace.endpos[2] = DotProduct (tempd, up);
+
+			VectorCopy (trace.plane.normal, tempd);
+			trace.plane.normal[0] = DotProduct (tempd, forward);
+			trace.plane.normal[1] = DotProduct (tempd, left);
+			trace.plane.normal[2] = DotProduct (tempd, up);
+		}
+		// fix offset
+		VectorAdd (trace.endpos, offset, trace.endpos);
+		trace.ent = ent;
+	}
+	else if (trace.startsolid)
 		trace.ent = ent;
 
 	return trace;
@@ -839,6 +824,8 @@ void SV_ClipToLinks ( areanode_t *node, moveclip_t *clip )
 	edict_t		*touch;
 	trace_t		trace;
 
+	if (clip->trace.allsolid)
+		return;
 loc0:
 // touch linked edicts
 	for (l = node->solid_edicts.next ; l != &node->solid_edicts ; l = next)
@@ -850,27 +837,23 @@ loc0:
 		if (touch == clip->passedict)
 			continue;
 		if (touch->v.solid == SOLID_TRIGGER)
-			Sys_Error ("Trigger in clipping list");
+			Host_Error ("Trigger in clipping list");
 
 		if (clip->type == MOVE_NOMONSTERS && touch->v.solid != SOLID_BSP)
 			continue;
 
 		if (clip->boxmins[0] > touch->v.absmax[0]
-		 || clip->boxmins[1] > touch->v.absmax[1]
-		 || clip->boxmins[2] > touch->v.absmax[2]
 		 || clip->boxmaxs[0] < touch->v.absmin[0]
+		 || clip->boxmins[1] > touch->v.absmax[1]
 		 || clip->boxmaxs[1] < touch->v.absmin[1]
+		 || clip->boxmins[2] > touch->v.absmax[2]
 		 || clip->boxmaxs[2] < touch->v.absmin[2])
 			continue;
 
-		if (clip->passedict != NULL && clip->passedict->v.size[0] && !touch->v.size[0])
-			continue;	// points never interact
-
-	// might intersect, so do an exact clip
-		if (clip->trace.allsolid)
-			return;
 		if (clip->passedict)
 		{
+			if (clip->passedict->v.size[0] && !touch->v.size[0])
+				continue;	// points never interact
 		 	if (PROG_TO_EDICT(touch->v.owner) == clip->passedict)
 				continue;	// don't clip against own missiles
 			if (PROG_TO_EDICT(clip->passedict->v.owner) == touch)
@@ -882,6 +865,7 @@ loc0:
 				continue;
 		}
 
+		// might interact, so do an exact clip
 		if ((int)touch->v.flags & FL_MONSTER)
 			trace = SV_ClipMoveToEntity (touch, clip->start, clip->mins2, clip->maxs2, clip->end);
 		else
@@ -897,8 +881,8 @@ loc0:
 			else
 				clip->trace = trace;
 		}
-		else if (trace.startsolid)
-			clip->trace.startsolid = true;
+		if (clip->trace.allsolid)
+			return;
 	}
 
 // recurse down both sides
@@ -965,9 +949,6 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 
 	memset ( &clip, 0, sizeof ( moveclip_t ) );
 
-// clip to world
-	clip.trace = SV_ClipMoveToEntity ( sv.edicts, start, mins, maxs, end );
-
 	clip.start = start;
 	clip.end = end;
 	clip.mins = mins;
@@ -985,15 +966,21 @@ trace_t SV_Move (vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end, int type, e
 	}
 	else
 	{
-		VectorCopy (mins, clip.mins2);
-		VectorCopy (maxs, clip.maxs2);
+		VectorCopy (clip.mins, clip.mins2);
+		VectorCopy (clip.maxs, clip.maxs2);
 	}
 
-// create the bounding box of the entire move
-	SV_MoveBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
+	// clip to world
+	clip.trace = SV_ClipMoveToEntity (sv.edicts, start, mins, maxs, end);
 
-// clip to entities
-	SV_ClipToLinks ( sv_areanodes, &clip );
+	// clip to entities
+	if (!clip.trace.allsolid)
+	{
+		// create the bounding box of the entire move
+		SV_MoveBounds ( start, clip.mins2, clip.maxs2, end, clip.boxmins, clip.boxmaxs );
+
+		SV_ClipToLinks ( sv_areanodes, &clip );
+	}
 
 	return clip.trace;
 }
