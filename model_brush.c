@@ -683,7 +683,9 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	box_planes[3].dist = cmins[1] - maxs[1];
 	box_planes[4].dist = cmaxs[2] - mins[2];
 	box_planes[5].dist = cmins[2] - maxs[2];
+#if COLLISIONPARANOID >= 3
 	Con_Printf("box_planes %f:%f %f:%f %f:%f\ncbox %f %f %f:%f %f %f\nbox %f %f %f:%f %f %f\n", box_planes[0].dist, box_planes[1].dist, box_planes[2].dist, box_planes[3].dist, box_planes[4].dist, box_planes[5].dist, cmins[0], cmins[1], cmins[2], cmaxs[0], cmaxs[1], cmaxs[2], mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]);
+#endif
 	// trace a line through the generated clipping hull
 	//rhc.boxsupercontents = boxsupercontents;
 	rhc.hull = &box_hull;
