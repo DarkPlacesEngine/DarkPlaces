@@ -551,7 +551,7 @@ static void R_MarkEntities (void)
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
 		if ((chase_active.integer || !(ent->flags & RENDER_EXTERIORMODEL))
-		 && !VIS_CullSphere(ent->origin, ent->model->radius * ent->scale)
+		 && !VIS_CullSphere(ent->origin, (ent->model != NULL ? ent->model->radius : 16) * ent->scale)
 		 && !VIS_CullBox(ent->mins, ent->maxs))
 		{
 			ent->visframe = r_framecount;
