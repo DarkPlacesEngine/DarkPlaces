@@ -639,7 +639,7 @@ IN_Move
 */
 void IN_Move (usercmd_t *cmd)
 {
-	if (ActiveApp && !Minimized)
+	if (vid_activewindow && !vid_hidden)
 	{
 		IN_MouseMove (cmd);
 		IN_JoyMove (cmd);

@@ -36,7 +36,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NOT_FOCUS_SLEEP	20
 
 int			starttime;
-qboolean	ActiveApp, Minimized;
 
 static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
@@ -576,12 +575,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		if (cls.state != ca_dedicated)
 		{
 		// yield the CPU for a little while when paused, minimized, or not the focus
-			if ((cl.paused && !ActiveApp) || Minimized)
+			if ((cl.paused && !vid_activewindow) || vid_hidden)
 			{
 				SleepUntilInput (PAUSE_SLEEP);
 				scr_skipupdate = 1;		// no point in bothering to draw
 			}
-			else if (!ActiveApp)
+			else if (!vid_activewindow)
 				SleepUntilInput (NOT_FOCUS_SLEEP);
 		}
 
