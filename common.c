@@ -469,49 +469,53 @@ void SZ_Print (sizebuf_t *buf, const char *data)
 static char *hexchar = "0123456789ABCDEF";
 void Com_HexDumpToConsole(const qbyte *data, int size)
 {
-	int i;
+	int i, j, n;
 	char text[1024];
 	char *cur, *flushpointer;
+	const qbyte *d;
 	cur = text;
 	flushpointer = text + 512;
-	for (i = 0;i < size;i++)
+	for (i = 0;i < size;)
 	{
-		if ((i & 15) == 0)
+		n = 16;
+		if (n > size - i)
+			n = size - i;
+		d = data + i;
+		*cur++ = hexchar[(i >> 12) & 15];
+		*cur++ = hexchar[(i >>  8) & 15];
+		*cur++ = hexchar[(i >>  4) & 15];
+		*cur++ = hexchar[(i >>  0) & 15];
+		*cur++ = ':';
+		for (j = 0;j < n;j++)
 		{
-			*cur++ = hexchar[(i >> 12) & 15];
-			*cur++ = hexchar[(i >>  8) & 15];
-			*cur++ = hexchar[(i >>  4) & 15];
-			*cur++ = hexchar[(i >>  0) & 15];
-			*cur++ = ':';
+			if (j & 1)
+			{
+				*cur++ = hexchar[(d[j] >> 4) & 15] | 0x80;
+				*cur++ = hexchar[(d[j] >> 0) & 15] | 0x80;
+			}
+			else
+			{
+				*cur++ = hexchar[(d[j] >> 4) & 15];
+				*cur++ = hexchar[(d[j] >> 0) & 15];
+			}
+		}
+		for (;j < 16;j++)
+		{
+			*cur++ = ' ';
 			*cur++ = ' ';
 		}
-		else if ((i & 15) == 15)
-			*cur++ = '\n';
-		else
+		for (j = 0;j < n;j++)
+			*cur++ = (d[j] >= ' ' && d[j] <= 0x7E) ? d[j] : '.';
+		for (;j < 16;j++)
 			*cur++ = ' ';
-		if (i & 1)
-		{
-			*cur++ = hexchar[(data[i] >> 4) & 15] | 0x80;
-			*cur++ = hexchar[(data[i] >> 0) & 15] | 0x80;
-		}
-		else
-		{
-			*cur++ = hexchar[(data[i] >> 4) & 15];
-			*cur++ = hexchar[(data[i] >> 0) & 15];
-		}
-		if (cur >= flushpointer)
+		*cur++ = '\n';
+		i += n;
+		if (cur >= flushpointer || i >= size)
 		{
 			*cur++ = 0;
 			Con_Printf("%s", text);
 			cur = text;
 		}
-	}
-	if ((i & 15) != 0)
-		*cur++ = '\n';
-	if (cur > text)
-	{
-		*cur++ = 0;
-		Con_Printf("%s", text);
 	}
 }
 
