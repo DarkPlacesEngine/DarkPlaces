@@ -765,7 +765,6 @@ int current_vid_fullscreen;
 int current_vid_width;
 int current_vid_height;
 int current_vid_bitsperpixel;
-extern int VID_InitMode (int fullscreen, int width, int height, int bpp);
 int VID_Mode(int fullscreen, int width, int height, int bpp)
 {
 	Con_Printf("Video: %s %dx%dx%d\n", fullscreen ? "fullscreen" : "window", width, height, bpp);
