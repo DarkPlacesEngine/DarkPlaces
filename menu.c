@@ -1436,6 +1436,38 @@ void M_Options_Key (int k)
 
 char *bindnames[][2] =
 {
+#ifdef BLOODBATH
+{"+forward", 		"walk forward"},
+{"+back", 			"backpedal"},
+{"+moveleft", 		"step left"},
+{"+moveright", 		"step right"},
+{"+jump", 			"jump / swim up"},
+{"+movedown",		"swim down"},
+{"+attack", 		"attack"},
+{"+button3",		"altfire"},
+{"impulse 1",		"Pitch Fork"},
+{"impulse 2",		"Flare Gun"},
+{"impulse 3",		"Shotgun"},
+{"impulse 4",		"Machine Gun"},
+{"impulse 5",		"Incinerator"},
+{"impulse 6",		"Bombs"},
+{"impulse 7",		"Aerosol Can"},
+{"impulse 8",		"Tesla Cannon"},
+{"impulse 9",		"Life Leech"},
+{"impulse 17",		"Voodoo Doll"},
+{"impulse 11",		"previous weapon"},
+{"impulse 10",		"next weapon"},
+{"impulse 14",		"previous item"},
+{"impulse 15",		"next item"},
+{"impulse 13",		"use item"},
+{"impulse 100",		"add bot (red)"},
+{"impulse 101",		"add bot (blue)"},
+{"impulse 102",		"kick a bot"},
+{"impulse 50",		"voting menu"},
+{"impulse 141",		"identify player"},
+{"impulse 16",		"next armor type"},
+{"impulse 20",		"observer mode"}
+#else  // not BLOODBATH
 {"+attack", 		"attack"},
 {"impulse 10", 		"next weapon"},
 {"impulse 12", 		"previous weapon"},
@@ -1455,6 +1487,7 @@ char *bindnames[][2] =
 {"+klook", 			"keyboard look"},
 {"+moveup",			"swim up"},
 {"+movedown",		"swim down"}
+#endif  // not BLOODBATH
 };
 
 #define	NUMCOMMANDS	(sizeof(bindnames)/sizeof(bindnames[0]))
@@ -1644,13 +1677,13 @@ void M_Keys_Draw (void)
 				}
 			}
 		}
-		M_Print (140, y, keystring);
+		M_Print (150, y, keystring);
 	}
 
 	if (bind_grab)
-		M_DrawCharacter (130, 48 + keys_cursor*8, '=');
+		M_DrawCharacter (140, 48 + keys_cursor*8, '=');
 	else
-		M_DrawCharacter (130, 48 + keys_cursor*8, 12+((int)(realtime*4)&1));
+		M_DrawCharacter (140, 48 + keys_cursor*8, 12+((int)(realtime*4)&1));
 }
 
 
