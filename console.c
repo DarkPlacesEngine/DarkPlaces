@@ -800,8 +800,8 @@ void Con_DrawNotify (void)
 		if (gamemode == GAME_NEXUIZ) {
 			int linewidth;
 
-			for (linewidth = con_linewidth; text[--linewidth] == ' ' && linewidth; linewidth--);
-			x = (vid.conwidth - ++linewidth * 8) / 2;
+			for (linewidth = con_linewidth; linewidth && text[linewidth-1] == ' '; linewidth--);
+			x = (vid.conwidth - linewidth * 8) / 2;
 		} else 
 			x = 0;
 
