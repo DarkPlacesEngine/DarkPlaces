@@ -188,7 +188,6 @@ extern char *buildstring;
 
 #include "r_textures.h"
 
-#include "wad.h"
 #include "draw.h"
 #include "screen.h"
 #include "netconn.h"
@@ -200,7 +199,6 @@ extern char *buildstring;
 #include "client.h"
 #include "render.h"
 #include "progs.h"
-#include "progsvm.h"
 #include "server.h"
 
 #include "input.h"
@@ -208,25 +206,20 @@ extern char *buildstring;
 #include "keys.h"
 #include "console.h"
 #include "menu.h"
-#include "crc.h"
-#include "cdaudio.h"
 
 #include "glquake.h"
 
 #include "ui.h"
+#include "palette.h"
 
 extern qboolean noclip_anglehack;
 
-//
-// host
-//
-extern cvar_t sys_ticrate;
 extern cvar_t developer;
 
 // true if into command execution
 extern qboolean host_initialized;
 extern double host_frametime;
-// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
+// the real frametime, before slowmo and clamping are applied (used for console scrolling)
 extern double host_realframetime;
 // incremented every frame, never reset
 extern int host_framecount;
@@ -247,8 +240,6 @@ void Host_Reconnect_f(void);
 // skill level for currently loaded level (in case the user changes the cvar while the level is running, this reflects the level actually in use)
 extern int current_skill;
 
-extern int minimum_memory;
-
 //
 // chase
 //
@@ -260,8 +251,6 @@ void Chase_Update (void);
 
 void fractalnoise(unsigned char *noise, int size, int startgrid);
 void fractalnoisequick(unsigned char *noise, int size, int startgrid);
-
-#include "palette.h"
 
 void Sys_Shared_Init(void);
 

@@ -150,6 +150,7 @@ string	gethostcachestring(float type, float hostnr)
 
 #include "quakedef.h"
 #include "progdefs.h"
+#include "progsvm.h"
 #include "clprogdefs.h"
 #include "mprogdefs.h"
 

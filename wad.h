@@ -71,10 +71,8 @@ extern	qbyte		*wad_base;
 
 void	*W_GetLumpName (char *name);
 
-void SwapPic (qpic_t *pic);
 
 // LordHavoc: added alternate texture WAD2/WAD3 system for easier loading of HalfLife texture wads
-extern int image_width, image_height;
 void	W_LoadTextureWadFile (char *filename, int complain);
 qbyte	*W_GetTexture (char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
 qbyte	*W_ConvertWAD3Texture(miptex_t *tex); // returns tempmempool allocated image data, width and height are in image_width and image_height

@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_shadow.h"
 #include "polygon.h"
 #include "curves.h"
+#include "wad.h"
+
 
 // note: model_shared.c sets up r_notexture, and r_surf_notexture
 

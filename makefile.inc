@@ -43,7 +43,6 @@ OBJ_COMMON= \
 	collision.o \
 	common.o \
 	console.o \
-	crc.o \
 	curves.o \
 	cvar.o \
 	dpvsimpledecode.o \

@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "cdaudio.h"
 
 // global video state
 viddef_t vid;
