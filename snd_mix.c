@@ -40,8 +40,7 @@ void S_CaptureAVISound(portable_samplepair_t *buf, int length)
 	{
 		if (cl_avidemo_soundfile == NULL)
 		{
-			sprintf (filename, "%s/dpavi.wav", com_gamedir);
-			cl_avidemo_soundfile = FS_Open (filename, "wb", false);
+			cl_avidemo_soundfile = FS_Open ("dpavi.wav", "wb", false);
 			memset(out, 0, 44);
 			fwrite(out, 1, 44, cl_avidemo_soundfile);
 			// header will be filled out when file is closed
