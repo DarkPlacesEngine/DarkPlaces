@@ -784,10 +784,10 @@ void R_SetSkyBox(char *sky)
 
 	for (i = 0;i < 6;i++)
 	{
-		sprintf (name, "env/%s%s", skyname, suf[i]);
+		sprintf (name, "env/%s%s", sky, suf[i]);
 		if (!(image_rgba = loadimagepixels(name, false, 0, 0)))
 		{
-			sprintf (name, "gfx/env/%s%s", skyname, suf[i]);
+			sprintf (name, "gfx/env/%s%s", sky, suf[i]);
 			if (!(image_rgba = loadimagepixels(name, false, 0, 0)))
 			{
 				Con_Printf ("Couldn't load %s\n", name);
