@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t cl_glowinglightning = {CVAR_SAVE, "cl_glowinglightning", "1"};
-
 int			num_temp_entities;
 entity_t	cl_temp_entities[MAX_TEMP_ENTITIES];
 beam_t		cl_beams[MAX_BEAMS];
@@ -47,7 +45,6 @@ CL_ParseTEnt
 */
 void CL_InitTEnts (void)
 {
-	Cvar_RegisterVariable(&cl_glowinglightning);
 	cl_sfx_wizhit = S_PrecacheSound ("wizard/hit.wav");
 	cl_sfx_knighthit = S_PrecacheSound ("hknight/hit.wav");
 	cl_sfx_tink1 = S_PrecacheSound ("weapons/tink1.wav");
@@ -285,7 +282,8 @@ void CL_ParseTEnt (void)
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
 		CL_ParticleExplosion (pos, false);
 //		CL_BlastParticles (pos, 120, 120);
-		CL_AllocDlight (NULL, pos, 350, 1.0f, 0.8f, 0.4f, 700, 0.5);
+		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
+		CL_AllocDlight (NULL, pos, 350, 1.25f, 1.0f, 0.5f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
 
@@ -515,10 +513,6 @@ void CL_UpdateTEnts (void)
 			ent->render.angles[0] = pitch;
 			ent->render.angles[1] = yaw;
 			ent->render.angles[2] = rand()%360;
-
-			if (cl_glowinglightning.value > 0)
-				CL_AllocDlight(&ent->render, ent->render.origin, lhrandom(200, 240), cl_glowinglightning.value * 0.25f, cl_glowinglightning.value * 0.25f, cl_glowinglightning.value * 0.25f, 0, 0);
-
 			VectorMA(org, 30, dist, org);
 			d -= 30;
 		}
