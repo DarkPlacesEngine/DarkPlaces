@@ -764,7 +764,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 			GL_LockArrays(0, 0);
 		}
 	}
-	GL_ColorMask(1,1,1,1);
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 }
 
 static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
@@ -1967,7 +1967,7 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3msurface_t *face)
 	GL_LockArrays(0, face->num_vertices);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 	GL_LockArrays(0, 0);
-	GL_ColorMask(1,1,1,1);
+	GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
 }
 
 void R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(entity_render_t *ent, q3msurface_t *face)
