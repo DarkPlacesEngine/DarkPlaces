@@ -700,6 +700,9 @@ void R_RenderView (void)
 		R_TimeReport("bmodelsky");
 	}
 
+	R_DrawViewModel();
+	R_TimeReport("viewmodel");
+
 	R_SetupForWorldRendering();
 	R_PrepareSurfaces();
 	R_TimeReport("surfprep");
@@ -717,7 +720,6 @@ void R_RenderView (void)
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
 
-	R_DrawViewModel();
 	R_DrawModels();
 	R_TimeReport("models");
 
