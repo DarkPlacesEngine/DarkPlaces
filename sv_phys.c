@@ -206,7 +206,7 @@ int ClipVelocity (vec3_t in, vec3_t normal, vec3_t out, float overbounce)
 		blocked |= 1;		// floor
 	if (!normal[2])
 		blocked |= 2;		// step
-	
+
 	backoff = DotProduct (in, normal) * overbounce;
 
 	for (i=0 ; i<3 ; i++)
@@ -431,7 +431,6 @@ trace_t SV_PushEntity (edict_t *ent, vec3_t push, vec3_t pushangles)
 
 	if (trace.ent)
 		SV_Impact (ent, trace.ent);
-
 	return trace;
 }
 
@@ -442,16 +441,18 @@ SV_PushMove
 
 ============
 */
+trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t maxs, vec3_t end);
 void SV_PushMove (edict_t *pusher, float movetime)
 {
 	int			i, e, index;
 	edict_t		*check;
 	float		savesolid, movetime2, pushltime;
-	vec3_t		mins, maxs, move, move1, moveangle, entorig, entang, pushorig, pushang, a, forward, left, up, org, org2;
+	vec3_t		mins, maxs, move, move1, moveangle, /*entorig, entang, */pushorig, pushang, a, forward, left, up, org, org2;
 	int			num_moved;
 	edict_t		*moved_edict[MAX_EDICTS];
 	vec3_t		moved_from[MAX_EDICTS], moved_fromangles[MAX_EDICTS];
 	model_t		*pushermodel;
+	trace_t		trace;
 
 	switch ((int) pusher->v.solid)
 	{
@@ -484,33 +485,54 @@ void SV_PushMove (edict_t *pusher, float movetime)
 
 	// LordHavoc: round up by a small epsilon
 	movetime2 = movetime; // + (1.0 / 256.0);
-	for (i = 0;i < 3;i++)
-	{
-		move1[i] = pusher->v.velocity[i] * movetime2;
-		moveangle[i] = pusher->v.avelocity[i] * movetime2;
-	}
+	VectorScale(pusher->v.velocity, movetime2, move1);
+	VectorScale(pusher->v.avelocity, movetime2, moveangle);
 	if (moveangle[0] || moveangle[2])
 	{
 		for (i = 0;i < 3;i++)
 		{
-			mins[i] = pushermodel->rotatedmins[i] + move1[i] - 32;
-			maxs[i] = pushermodel->rotatedmaxs[i] + move1[i] + 32;
+			if (move1[i] > 0)
+			{
+				mins[i] = pushermodel->rotatedmins[i] + pusher->v.origin[i] - 1;
+				maxs[i] = pushermodel->rotatedmaxs[i] + move1[i] + pusher->v.origin[i] + 1;
+			}
+			else
+			{
+				mins[i] = pushermodel->rotatedmins[i] + move1[i] + pusher->v.origin[i] - 1;
+				maxs[i] = pushermodel->rotatedmaxs[i] + pusher->v.origin[i] + 1;
+			}
 		}
 	}
 	else if (moveangle[1])
 	{
 		for (i = 0;i < 3;i++)
 		{
-			mins[i] = pushermodel->yawmins[i] + move1[i] - 32;
-			maxs[i] = pushermodel->yawmaxs[i] + move1[i] + 32;
+			if (move1[i] > 0)
+			{
+				mins[i] = pushermodel->yawmins[i] + pusher->v.origin[i] - 1;
+				maxs[i] = pushermodel->yawmaxs[i] + move1[i] + pusher->v.origin[i] + 1;
+			}
+			else
+			{
+				mins[i] = pushermodel->yawmins[i] + move1[i] + pusher->v.origin[i] - 1;
+				maxs[i] = pushermodel->yawmaxs[i] + pusher->v.origin[i] + 1;
+			}
 		}
 	}
 	else
 	{
 		for (i = 0;i < 3;i++)
 		{
-			mins[i] = pushermodel->normalmins[i] + move1[i] - 32;
-			maxs[i] = pushermodel->normalmaxs[i] + move1[i] + 32;
+			if (move1[i] > 0)
+			{
+				mins[i] = pushermodel->normalmins[i] + pusher->v.origin[i] - 1;
+				maxs[i] = pushermodel->normalmaxs[i] + move1[i] + pusher->v.origin[i] + 1;
+			}
+			else
+			{
+				mins[i] = pushermodel->normalmins[i] + move1[i] + pusher->v.origin[i] - 1;
+				maxs[i] = pushermodel->normalmaxs[i] + pusher->v.origin[i] + 1;
+			}
 		}
 	}
 
@@ -547,30 +569,45 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		if (!(((int)check->v.flags & FL_ONGROUND) && PROG_TO_EDICT(check->v.groundentity) == pusher))
 		{
 			if (check->v.absmin[0] >= maxs[0]
-			 || check->v.absmin[1] >= maxs[1]
-			 || check->v.absmin[2] >= maxs[2]
 			 || check->v.absmax[0] <= mins[0]
+			 || check->v.absmin[1] >= maxs[1]
 			 || check->v.absmax[1] <= mins[1]
+			 || check->v.absmin[2] >= maxs[2]
 			 || check->v.absmax[2] <= mins[2])
 				continue;
 
+			/*
+			if (forward[0] < 0.999f) // quick way to check if any rotation is used
+			{
+				VectorSubtract (check->v.origin, pusher->v.origin, org);
+				org2[0] = DotProduct (org, forward);
+				org2[1] = DotProduct (org, left);
+				org2[2] = DotProduct (org, up);
+				//VectorSubtract (org2, org, move);
+				//VectorAdd (move, move1, move);
+				//VectorSubtract(check->v.origin, move, a);
+				a[0] = check->v.origin[0] + (org[0] - org2[0]) - move1[0];
+				a[1] = check->v.origin[1] + (org[1] - org2[1]) - move1[1];
+				a[2] = check->v.origin[2] + (org[2] - org2[2]) - move1[2];
+			}
+			else
+				VectorSubtract (check->v.origin, move1, a);
+
+			trace = SV_ClipMoveToEntity (pusher, a, check->v.mins, check->v.maxs, check->v.origin);
+			if (trace.fraction == 1 && !trace.startsolid)
+				continue;
+			*/
+			trace = SV_ClipMoveToEntity (pusher, check->v.origin, check->v.mins, check->v.maxs, check->v.origin);
+			if (!trace.startsolid)
+				continue;
+			/*
 			// see if the ent's bbox is inside the pusher's final position
 			if (!SV_TestEntityPosition (check))
 				continue;
+			*/
 		}
 
-		// remove the onground flag for non-players
-		if (check->v.movetype != MOVETYPE_WALK)
-			check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
-
-		VectorCopy (check->v.origin, entorig);
-		VectorCopy (check->v.angles, entang);
-		VectorCopy (check->v.origin, moved_from[num_moved]);
-		VectorCopy (check->v.angles, moved_fromangles[num_moved]);
-		moved_edict[num_moved] = check;
-		num_moved++;
-
-		if (forward[0] > 0.999f) // quick way to check if any rotation is used
+		if (forward[0] < 0.999f) // quick way to check if any rotation is used
 		{
 			VectorSubtract (check->v.origin, pusher->v.origin, org);
 			org2[0] = DotProduct (org, forward);
@@ -586,13 +623,24 @@ void SV_PushMove (edict_t *pusher, float movetime)
 		//VectorAdd(entorig, move, org2);
 		//CL_RocketTrail2 (entorig, org2, 238, NULL);
 
+		// remove the onground flag for non-players
+		if (check->v.movetype != MOVETYPE_WALK)
+			check->v.flags = (int)check->v.flags & ~FL_ONGROUND;
+
+		//VectorCopy (check->v.origin, entorig);
+		//VectorCopy (check->v.angles, entang);
+		VectorCopy (check->v.origin, moved_from[num_moved]);
+		VectorCopy (check->v.angles, moved_fromangles[num_moved]);
+		moved_edict[num_moved++] = check;
+
 		// try moving the contacted entity
 		pusher->v.solid = SOLID_NOT;
-		SV_PushEntity (check, move, moveangle);
+		trace = SV_PushEntity (check, move, moveangle);
 		pusher->v.solid = savesolid; // was SOLID_BSP
 
 		// if it is still inside the pusher, block
-		if (SV_TestEntityPosition (check))
+		// LordHavoc: cleanup - check trace.fraction and startsolid
+		if (/*trace.fraction != 1 || trace.startsolid || */SV_TestEntityPosition (check))
 		{
 			// fail the move
 			if (check->v.mins[0] == check->v.maxs[0])
@@ -605,14 +653,25 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				continue;
 			}
 
+			/*
 			VectorCopy (entorig, check->v.origin);
 			VectorCopy (entang, check->v.angles);
 			SV_LinkEdict (check, true);
+			*/
 
 			VectorCopy (pushorig, pusher->v.origin);
 			VectorCopy (pushang, pusher->v.angles);
 			pusher->v.ltime = pushltime;
 			SV_LinkEdict (pusher, false);
+
+			// move back any entities we already moved
+			//num_moved--; // LordHavoc: pop off check, because it was already restored
+			for (i=0 ; i<num_moved ; i++)
+			{
+				VectorCopy (moved_from[i], moved_edict[i]->v.origin);
+				VectorCopy (moved_fromangles[i], moved_edict[i]->v.angles);
+				SV_LinkEdict (moved_edict[i], false);
+			}
 
 			// if the pusher has a "blocked" function, call it, otherwise just stay in place until the obstacle is gone
 			if (pusher->v.blocked)
@@ -620,15 +679,6 @@ void SV_PushMove (edict_t *pusher, float movetime)
 				pr_global_struct->self = EDICT_TO_PROG(pusher);
 				pr_global_struct->other = EDICT_TO_PROG(check);
 				PR_ExecuteProgram (pusher->v.blocked, "");
-			}
-
-			// move back any entities we already moved
-			num_moved--; // LordHavoc: pop off check, because it was already restored
-			for (i=0 ; i<num_moved ; i++)
-			{
-				VectorCopy (moved_from[i], moved_edict[i]->v.origin);
-				VectorCopy (moved_fromangles[i], moved_edict[i]->v.angles);
-				SV_LinkEdict (moved_edict[i], false);
 			}
 			return;
 		}
@@ -780,7 +830,7 @@ void SV_WallFriction (edict_t *ent, trace_t *trace)
 	vec3_t		forward;
 	float		d, i;
 	vec3_t		into, side;
-	
+
 	AngleVectors (ent->v.v_angle, forward, NULL, NULL);
 	d = DotProduct (trace->plane.normal, forward);
 	
@@ -849,7 +899,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 //Con_DPrintf ("unstuck!\n");
 			return clip;
 		}
-			
+
 // go back to the original pos and try again
 		VectorCopy (oldorg, ent->v.origin);
 	}
@@ -874,7 +924,7 @@ void SV_WalkMove (edict_t *ent)
 	int			clip;
 	int			oldonground;
 	trace_t		steptrace, downtrace;
-	
+
 //
 // do a regular slide move unless it looks like you ran into a step
 //
