@@ -433,7 +433,7 @@ gl_state;
 
 void GL_SetupTextureState(void)
 {
-	int i;
+	unsigned int i;
 	gltextureunit_t *unit;
 	CHECKGLERROR
 	gl_state.unit = -1;
@@ -894,7 +894,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 	c_meshelements += numelements;
 	if (gl_paranoid.integer)
 	{
-		int i, j, size;
+		unsigned int i, j, size;
 		const int *p;
 		if (!qglIsEnabled(GL_VERTEX_ARRAY))
 			Con_Print("R_Mesh_Draw: vertex array not enabled\n");
@@ -933,7 +933,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 		CHECKGLERROR
 		if (gl_mesh_testmanualfeeding.integer)
 		{
-			int i, j;
+			unsigned int i, j;
 			const GLfloat *p;
 			qglBegin(GL_TRIANGLES);
 			for (i = 0;i < numtriangles * 3;i++)
@@ -1027,7 +1027,7 @@ void R_Mesh_Draw(int numverts, int numtriangles, const int *elements)
 // restores backend state, used when done with 3D rendering
 void R_Mesh_Finish(void)
 {
-	int i;
+	unsigned int i;
 	BACKENDACTIVECHECK
 	CHECKGLERROR
 	GL_LockArrays(0, 0);
@@ -1558,7 +1558,7 @@ void R_Mesh_TexCombine(unsigned int unitnum, int combinergb, int combinealpha, i
 
 void R_Mesh_State(const rmeshstate_t *m)
 {
-	int i;
+	unsigned int i;
 
 	BACKENDACTIVECHECK
 
