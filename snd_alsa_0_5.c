@@ -1,7 +1,7 @@
 /*
-	snd_alsa.c
+	snd_alsa_0_5.c
 
-	(description)
+	Support for ALSA 0.5, the old stable version of ALSA.
 
 	Copyright (C) 1999,2000  contributors of the QuakeForge project
 	Please see the file "AUTHORS" for a list of contributors
