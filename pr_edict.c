@@ -203,7 +203,6 @@ instead of being removed and recreated, which can cause interpolated
 angles and bad trails.
 =================
 */
-extern void SV_IncreaseEdicts(void);
 edict_t *ED_Alloc (void)
 {
 	int			i;
@@ -905,7 +904,12 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
 		break;
 
 	case ev_entity:
-		*(int *)d = EDICT_TO_PROG(EDICT_NUM(atoi (s)));
+		i = atoi (s);
+		if (i < 0 || i >= MAX_EDICTS)
+			Con_DPrintf("ED_ParseEpair: ev_entity reference too large (edict %i >= MAX_EDICTS %i)\n", i, MAX_EDICTS);
+		while (i >= sv.max_edicts)
+			SV_IncreaseEdicts();
+		*(int *)d = EDICT_TO_PROG(EDICT_NUM(i));
 		break;
 
 	case ev_field:
@@ -1574,7 +1578,7 @@ void PR_Init (void)
 // LordHavoc: turned EDICT_NUM into a #define for speed reasons
 edict_t *EDICT_NUM_ERROR(int n, char *filename, int fileline)
 {
-	Host_Error ("EDICT_NUM: bad number %i (called at %f:%i)", n, filename, fileline);
+	Host_Error ("EDICT_NUM: bad number %i (called at %s:%i)", n, filename, fileline);
 	return NULL;
 }
 
