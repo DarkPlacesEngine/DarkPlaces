@@ -116,6 +116,10 @@ SOURCE=.\cl_input.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\cl_light.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cl_main.c
 # End Source File
 # Begin Source File
@@ -413,6 +417,10 @@ SOURCE=.\bspfile.h
 # Begin Source File
 
 SOURCE=.\cdaudio.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cl_light.h
 # End Source File
 # Begin Source File
 
