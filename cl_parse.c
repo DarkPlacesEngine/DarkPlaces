@@ -195,12 +195,17 @@ void CL_KeepaliveMessage (void)
 
 	if (cls.netcon && NetConn_CanSendMessage(cls.netcon) && (time = Sys_DoubleTime()) - lastmsg >= 5)
 	{
+		sizebuf_t	msg;
+		qbyte		buf[4];
 		lastmsg = time;
 		// write out a nop
+		// LordHavoc: must use unreliable because reliable could kill the sigon message!
 		Con_Printf("--> client to server keepalive\n");
-		MSG_WriteByte(&cls.message, clc_nop);
-		NetConn_SendReliableMessage(cls.netcon, &cls.message);
-		SZ_Clear(&cls.message);
+		msg.data = buf;
+		msg.maxsize = sizeof(buf);
+		msg.cursize = 0;
+		MSG_WriteChar(&msg, svc_nop);
+		NetConn_SendUnreliableMessage(cls.netcon, &msg);
 		// try not to utterly crush the computer with work, that's just rude
 		Sys_Sleep();
 	}
@@ -369,41 +374,48 @@ void CL_ParseServerInfo (void)
 	// disable until we get textures for it
 	R_ResetSkyBox();
 
-	memset (cl.model_precache, 0, sizeof(cl.model_precache));
-	memset (cl.sound_precache, 0, sizeof(cl.sound_precache));
+	memset(cl.model_precache, 0, sizeof(cl.model_precache));
+	memset(cl.sound_precache, 0, sizeof(cl.sound_precache));
 
-	// touch all of the precached models that are still loaded so we can free
-	// anything that isn't needed
-	Mod_ClearUsed();
+	// parse model precache list
 	for (nummodels=1 ; ; nummodels++)
 	{
-		CL_KeepaliveMessage ();
-		str = MSG_ReadString ();
+		str = MSG_ReadString();
 		if (!str[0])
 			break;
 		if (nummodels==MAX_MODELS)
 			Host_Error ("Server sent too many model precaches\n");
 		if (strlen(str) >= MAX_QPATH)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strcpy (parse_model_precache[nummodels], str);
-		Mod_TouchModel (str);
+		strcpy(parse_model_precache[nummodels], str);
 	}
-
-	// do the same for sounds
+	// parse sound precache list
 	for (numsounds=1 ; ; numsounds++)
 	{
-		CL_KeepaliveMessage ();
-		str = MSG_ReadString ();
+		str = MSG_ReadString();
 		if (!str[0])
 			break;
 		if (numsounds==MAX_SOUNDS)
-			Host_Error ("Server sent too many sound precaches\n");
+			Host_Error("Server sent too many sound precaches\n");
 		if (strlen(str) >= MAX_QPATH)
-			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
-		strcpy (parse_sound_precache[numsounds], str);
-		S_TouchSound (str);
+			Host_Error("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
+		strcpy(parse_sound_precache[numsounds], str);
 	}
 
+	// touch all of the precached models that are still loaded so we can free
+	// anything that isn't needed
+	Mod_ClearUsed();
+	for (i = 1;i < nummodels;i++)
+	{
+		CL_KeepaliveMessage();
+		Mod_TouchModel(parse_model_precache[i]);
+	}
+	// do the same for sounds
+	for (i = 1;i < numsounds;i++)
+	{
+		CL_KeepaliveMessage();
+		S_TouchSound(parse_sound_precache[i]);
+	}
 	// purge anything that was not touched
 	Mod_PurgeUnused();
 
@@ -411,15 +423,15 @@ void CL_ParseServerInfo (void)
 
 	// world model
 	CL_KeepaliveMessage ();
-	cl.model_precache[1] = Mod_ForName (parse_model_precache[1], false, false, true);
+	cl.model_precache[1] = Mod_ForName(parse_model_precache[1], false, false, true);
 	if (cl.model_precache[1] == NULL)
 		Con_Printf("Map %s not found\n", parse_model_precache[1]);
 
 	// normal models
 	for (i=2 ; i<nummodels ; i++)
 	{
-		CL_KeepaliveMessage ();
-		if ((cl.model_precache[i] = Mod_ForName (parse_model_precache[i], false, false, false)) == NULL)
+		CL_KeepaliveMessage();
+		if ((cl.model_precache[i] = Mod_ForName(parse_model_precache[i], false, false, false)) == NULL)
 			Con_Printf("Model %s not found\n", parse_model_precache[i]);
 	}
 
@@ -427,8 +439,8 @@ void CL_ParseServerInfo (void)
 	S_BeginPrecaching ();
 	for (i=1 ; i<numsounds ; i++)
 	{
-		CL_KeepaliveMessage ();
-		cl.sound_precache[i] = S_PrecacheSound (parse_sound_precache[i], true);
+		CL_KeepaliveMessage();
+		cl.sound_precache[i] = S_PrecacheSound(parse_sound_precache[i], true);
 	}
 	S_EndPrecaching ();
 
@@ -448,7 +460,7 @@ void CL_ParseServerInfo (void)
 
 	cl_num_entities = 1;
 
-	R_Modules_NewMap ();
+	R_Modules_NewMap();
 	CL_CGVM_Start();
 
 	// noclip is turned off at start
