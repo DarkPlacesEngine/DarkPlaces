@@ -182,10 +182,8 @@ double Sys_DoubleTime (void)
 	if (newtime < oldtime)
 		Con_Printf("Sys_DoubleTime: time running backwards??\n");
 	else
-	{
 		curtime += newtime - oldtime;
-		oldtime = newtime;
-	}
+	oldtime = newtime;
 
 	return curtime;
 }
