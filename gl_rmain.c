@@ -1582,10 +1582,6 @@ void R_RenderView (void)
 	lighthalf = gl_lightmode.value;
 
 	FOG_framebegin();
-	skypolyclear();
-	wallpolyclear();
-	transpolyclear();
-	skyisvisible = false;
 
 //	if (r_speeds2.value)
 //	{
@@ -1600,6 +1596,12 @@ void R_RenderView (void)
 	R_SetupFrame ();
 	R_SetFrustum ();
 	R_SetupGL ();
+
+	skypolyclear();
+	wallpolyclear();
+	transpolyclear();
+	skyisvisible = false;
+
 	R_MarkLeaves ();	// done here so we know if we're in water
 	R_DrawWorld ();		// adds static entities to the list
 	if (!intimerefresh)
