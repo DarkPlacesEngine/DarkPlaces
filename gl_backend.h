@@ -1,7 +1,7 @@
 
 #define MAX_TEXTUREUNITS 4
 
-extern int c_meshtris;
+extern int c_meshtris, c_meshs, c_transtris, c_transmeshs;
 
 typedef struct
 {
