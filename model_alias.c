@@ -722,7 +722,7 @@ void Mod_LoadQ2AliasModel (model_t *mod, void *buffer)
 	mod->type = mod_alias;
 	mod->aliastype = ALIASTYPE_MD2;
 
-	framesize = sizeof(md2memframe_t) + LittleLong(pinmodel->num_xyz) * sizeof(trivert2);
+	framesize = sizeof(md2memframesize_t) + LittleLong(pinmodel->num_xyz) * sizeof(trivert2);
 	// LordHavoc: calculate size for in memory version
 	size = sizeof(md2mem_t)
 		 + LittleLong(pinmodel->num_st) * sizeof(md2stvert_t)
