@@ -171,7 +171,10 @@ void Key_Console (int key)
 		key_linepos = 1;
 		// force an update, because the command may take some time
 		if (cls.state == ca_disconnected)
+		{
 			CL_UpdateScreen ();
+			CL_UpdateScreen ();
+		}
 		return;
 	}
 

@@ -19,8 +19,8 @@ float		scr_conlines;		// lines of console to display
 int			clearconsole;
 int			clearnotify;
 
-qboolean	scr_disabled_for_loading;
-qboolean	scr_drawloading;
+//qboolean	scr_disabled_for_loading;
+qboolean	scr_drawloading = false;
 //float		scr_disabled_time;
 
 static qbyte menuplyr_pixels[4096];
@@ -227,8 +227,8 @@ void SCR_DrawLoading (void)
 {
 	cachepic_t	*pic;
 
-	if (!scr_drawloading)
-		return;
+	//if (!scr_drawloading)
+	//	return;
 
 	pic = Draw_CachePic ("gfx/loading.lmp");
 	DrawQ_Pic ((vid.conwidth - pic->width)/2, (vid.conheight - pic->height)/2, "gfx/loading.lmp", 0, 0, 1, 1, 1, 1, 0);
@@ -336,12 +336,14 @@ SCR_EndLoadingPlaque
 */
 void SCR_EndLoadingPlaque (void)
 {
+	/*
 	if (!scr_drawloading)
 		return;
 
 //	scr_disabled_for_loading = false;
 	scr_drawloading = false;
 	Con_ClearNotify ();
+	*/
 }
 
 //=============================================================================
@@ -1003,16 +1005,6 @@ void CL_UpdateScreen(void)
 
 	R_TimeReport("setup");
 
-	if (scr_drawloading)
-	{
-		scr_drawloading = false;
-		scr_con_current = vid.conheight;
-		DrawQ_Clear();
-		SCR_DrawLoading();
-		SCR_UpdateScreen();
-		return;
-	}
-
 	SCR_DrawRam();
 	SCR_DrawNet();
 	SCR_DrawTurtle();
@@ -1025,13 +1017,11 @@ void CL_UpdateScreen(void)
 
 	ui_draw();
 
-	/*
 	if (scr_drawloading)
 	{
+		scr_drawloading = false;
 		SCR_DrawLoading();
-		if (
 	}
-	*/
 
 	R_TimeReport("2d");
 

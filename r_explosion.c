@@ -172,7 +172,7 @@ void R_NewExplosion(vec3_t org)
 	int i, j;
 	float dist;
 	qbyte noise[EXPLOSIONGRID*EXPLOSIONGRID];
-	fractalnoisequick(noise, EXPLOSIONGRID, 4);
+	fractalnoisequick(noise, EXPLOSIONGRID, 4); // adjust noise grid size according to explosion
 	for (i = 0;i < MAX_EXPLOSIONS;i++)
 	{
 		if (explosion[i].alpha <= 0.01f)
@@ -221,7 +221,7 @@ void R_NewExplosion(vec3_t org)
 void R_DrawExplosion(explosion_t *e)
 {
 	int i;
-	float c[EXPLOSIONVERTS][4], diff[3], /*fog, */ifog, alpha, dist, centerdist, size, scale;
+	float c[EXPLOSIONVERTS][4], diff[3], centerdir[3], /*fog, */ifog, alpha, dist/*, centerdist, size, scale*/;
 	rmeshinfo_t m;
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
@@ -233,28 +233,35 @@ void R_DrawExplosion(explosion_t *e)
 	m.vertex = &e->vert[0][0];
 	m.vertexstep = sizeof(float[3]);
 	alpha = e->alpha;
-	if (alpha > 1)
-		alpha = 1;
+	//if (alpha > 1)
+	//	alpha = 1;
 	m.cr = 1;
 	m.cg = 1;
 	m.cb = 1;
-	m.ca = alpha;
+	m.ca = 1; //alpha;
 	m.color = &c[0][0];
 	m.colorstep = sizeof(float[4]);
-	centerdist = DotProduct(e->origin, vpn);
+	VectorSubtract(r_origin, e->origin, centerdir);
+	VectorNormalizeFast(centerdir);
+	/*
+	centerdist = DotProduct(e->origin, centerdir);
 	size = 0;
 	for (i = 0;i < EXPLOSIONVERTS;i++)
 	{
-		dist = DotProduct(e->vert[i], vpn) - centerdist;
-		if (size > dist)
+		dist = DotProduct(e->vert[i], centerdir) - centerdist;
+		if (size < dist)
 			size = dist;
 	}
-	scale = 1.0f / size;
+	scale = 4.0f / size;
+	*/
 	if (fogenabled)
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
 		{
-			dist = (DotProduct(e->vert[i], vpn) - centerdist) * scale;
+			//dist = (DotProduct(e->vert[i], centerdir) - centerdist) * scale - 2.0f;
+			VectorSubtract(e->vert[i], e->origin, diff);
+			VectorNormalizeFast(diff);
+			dist = DotProduct(diff, centerdir) * 6.0f - 4.0f;
 			if (dist > 0)
 			{
 				// use inverse fog alpha as color
@@ -273,7 +280,10 @@ void R_DrawExplosion(explosion_t *e)
 	{
 		for (i = 0;i < EXPLOSIONVERTS;i++)
 		{
-			dist = (DotProduct(e->vert[i], vpn) - centerdist) * scale;
+			//dist = (DotProduct(e->vert[i], centerdir) - centerdist) * scale - 2.0f;
+			VectorSubtract(e->vert[i], e->origin, diff);
+			VectorNormalizeFast(diff);
+			dist = DotProduct(diff, centerdir) * 6.0f - 4.0f;
 			if (dist > 0)
 				c[i][0] = c[i][1] = c[i][2] = dist * alpha;
 			else

@@ -26,7 +26,7 @@ int r_numdlights = 0;
 
 cvar_t r_lightmodels = {CVAR_SAVE, "r_lightmodels", "1"};
 cvar_t r_vismarklights = {0, "r_vismarklights", "1"};
-cvar_t r_lightmodelhardness = {CVAR_SAVE, "r_lightmodelhardness", "0.9"};
+//cvar_t r_lightmodelhardness = {CVAR_SAVE, "r_lightmodelhardness", "1"};
 
 static rtexture_t *lightcorona;
 static rtexturepool_t *lighttexturepool;
@@ -67,7 +67,7 @@ void r_light_newmap(void)
 void R_Light_Init(void)
 {
 	Cvar_RegisterVariable(&r_lightmodels);
-	Cvar_RegisterVariable(&r_lightmodelhardness);
+	//Cvar_RegisterVariable(&r_lightmodelhardness);
 	Cvar_RegisterVariable(&r_vismarklights);
 	R_RegisterModule("R_Light", r_light_start, r_light_shutdown, r_light_newmap);
 }
@@ -804,10 +804,10 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 		dlightbits[0] = dlightbits[1] = dlightbits[2] = dlightbits[3] = dlightbits[4] = dlightbits[5] = dlightbits[6] = dlightbits[7] = 0;
 }
 
-void R_LightModel(int numverts)
+void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0;
-	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f, hardness, hardnessoffset, dist2;
+	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f/*, hardness, hardnessoffset*/, dist2;
 	struct
 	{
 		vec3_t origin;
@@ -820,7 +820,11 @@ void R_LightModel(int numverts)
 	//staticlight_t *sl;
 	a = currentrenderentity->alpha;
 	if (currentrenderentity->effects & EF_FULLBRIGHT)
-		basecolor[0] = basecolor[1] = basecolor[2] = 1;
+	{
+		basecolor[0] = colorr;
+		basecolor[1] = colorg;
+		basecolor[2] = colorb;
+	}
 	else
 	{
 		if (r_lightmodels.integer)
@@ -837,7 +841,11 @@ void R_LightModel(int numverts)
 					nl->fadetype = sl->fadetype;
 					nl->distancescale = sl->distancescale;
 					nl->radius = sl->radius;
-					VectorCopy(sl->origin, nl->origin);
+					// transform the light into the model's coordinate system
+					if (worldcoords)
+						VectorCopy(sl->origin, nl->origin);
+					else
+						softwareuntransform(sl->origin, nl->origin);
 					VectorCopy(sl->color, nl->light);
 					nl->cullradius2 = 99999999;
 					nl->lightsubtract = 0;
@@ -862,12 +870,14 @@ void R_LightModel(int numverts)
 					//if (TraceLine(currentrenderentity->origin, r_dlight[i].origin, NULL, NULL, 0) == 1)
 					{
 						// transform the light into the model's coordinate system
-						//if (gl_transform.integer)
-						//	softwareuntransform(r_dlight[i].origin, nl->origin);
-						//else
+						if (worldcoords)
 							VectorCopy(r_dlight[i].origin, nl->origin);
+						else
+							softwareuntransform(r_dlight[i].origin, nl->origin);
 						nl->cullradius2 = r_dlight[i].cullradius2;
-						VectorCopy(r_dlight[i].light, nl->light);
+						nl->light[0] = r_dlight[i].light[0] * colorr;
+						nl->light[1] = r_dlight[i].light[1] * colorg;
+						nl->light[2] = r_dlight[i].light[2] * colorb;
 						nl->lightsubtract = r_dlight[i].lightsubtract;
 						nl++;
 						nearlights++;
@@ -878,13 +888,16 @@ void R_LightModel(int numverts)
 		else
 			R_CompleteLightPoint (basecolor, currentrenderentity->origin, true, NULL);
 	}
+	basecolor[0] *= colorr;
+	basecolor[1] *= colorg;
+	basecolor[2] *= colorb;
 	avc = aliasvertcolor;
 	if (nearlights)
 	{
 		av = aliasvert;
 		avn = aliasvertnorm;
-		hardness = r_lightmodelhardness.value;
-		hardnessoffset = (1.0f - hardness);
+		//hardness = r_lightmodelhardness.value;
+		//hardnessoffset = (1.0f - hardness);
 		for (i = 0;i < numverts;i++)
 		{
 			VectorCopy(basecolor, color);
@@ -908,7 +921,7 @@ void R_LightModel(int numverts)
 						#endif
 						// DotProduct(avn,v) * t is dotproduct with a normalized v,
 						// the hardness variables are for backlighting/shinyness
-						f *= DotProduct(avn,v) * t * hardness + hardnessoffset;
+						f *= DotProduct(avn,v) * t;// * hardness + hardnessoffset;
 						if (f > 0)
 							VectorMA(color, f, nl->light, color);
 					}
