@@ -742,6 +742,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_TENEBRAE;
 	else if (strstr(name, "neoteric"))
 		gamemode = GAME_NEOTERIC;
+	else if (strstr(name, "openquartz"))
+		gamemode = GAME_OPENQUARTZ;
 	else
 		gamemode = GAME_NORMAL;
 
@@ -775,6 +777,8 @@ void COM_InitGameType (void)
 		gamemode = GAME_TENEBRAE;
 	else if (COM_CheckParm ("-neoteric"))
 		gamemode = GAME_NEOTERIC;
+	else if (COM_CheckParm ("-openquartz"))
+		gamemode = GAME_OPENQUARTZ;
 
 	switch(gamemode)
 	{
@@ -852,6 +856,11 @@ void COM_InitGameType (void)
 		gamename = "Neoteric";
 		gamedirname = "neobase";
 		gamescreenshotname = "neo";
+		break;
+	case GAME_OPENQUARTZ:
+		gamename = "OpenQuartz";
+		gamedirname = "id1";
+		gamescreenshotname = "openquartz";
 		break;
 	default:
 		Sys_Error("COM_InitGameType: unknown gamemode %i\n", gamemode);
