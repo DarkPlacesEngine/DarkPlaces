@@ -24,15 +24,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_LIGHTMAP_SIZE 256
 
-static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
-static float floatblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
-
-static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
-
 cvar_t r_ambient = {0, "r_ambient", "0"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
-cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "0"};
 cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1"};
@@ -58,154 +52,79 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 */
 static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 {
-	if (!r_floatbuildlightmap.integer)
+	int smax, tmax, i, j, size, size3, maps, stride, l;
+	unsigned int *bl, scale;
+	qbyte *lightmap, *out, *stain;
+	static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
+	static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
+
+	// update cached lighting info
+	surface->cached_dlight = 0;
+
+	smax = (surface->extents[0]>>4)+1;
+	tmax = (surface->extents[1]>>4)+1;
+	size = smax*tmax;
+	size3 = size*3;
+	lightmap = surface->samples;
+
+// set to full bright if no light data
+	bl = intblocklights;
+	if (!ent->model->brushq1.lightdata)
 	{
-		int smax, tmax, i, j, size, size3, maps, stride, l;
-		unsigned int *bl, scale;
-		qbyte *lightmap, *out, *stain;
-
-		// update cached lighting info
-		surface->cached_dlight = 0;
-
-		smax = (surface->extents[0]>>4)+1;
-		tmax = (surface->extents[1]>>4)+1;
-		size = smax*tmax;
-		size3 = size*3;
-		lightmap = surface->samples;
-
-	// set to full bright if no light data
-		bl = intblocklights;
-		if (!ent->model->brushq1.lightdata)
-		{
-			for (i = 0;i < size3;i++)
-				bl[i] = 255*256;
-		}
-		else
-		{
-	// clear to no light
-			memset(bl, 0, size*3*sizeof(unsigned int));
-
-	// add all the lightmaps
-			if (lightmap)
-			{
-				bl = intblocklights;
-				for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++, lightmap += size3)
-					for (scale = d_lightstylevalue[surface->styles[maps]], i = 0;i < size3;i++)
-						bl[i] += lightmap[i] * scale;
-			}
-		}
-
-		stain = surface->stainsamples;
-		bl = intblocklights;
-		out = templight;
-		// the >> 16 shift adjusts down 8 bits to account for the stainmap
-		// scaling, and remaps the 0-65536 (2x overbright) to 0-256, it will
-		// be doubled during rendering to achieve 2x overbright
-		// (0 = 0.0, 128 = 1.0, 256 = 2.0)
-		if (ent->model->brushq1.lightmaprgba)
-		{
-			stride = (surface->lightmaptexturestride - smax) * 4;
-			for (i = 0;i < tmax;i++, out += stride)
-			{
-				for (j = 0;j < smax;j++)
-				{
-					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-					*out++ = 255;
-				}
-			}
-		}
-		else
-		{
-			stride = (surface->lightmaptexturestride - smax) * 3;
-			for (i = 0;i < tmax;i++, out += stride)
-			{
-				for (j = 0;j < smax;j++)
-				{
-					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-					l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
-				}
-			}
-		}
-
-		R_UpdateTexture(surface->lightmaptexture, templight);
+		for (i = 0;i < size3;i++)
+			bl[i] = 255*256;
 	}
 	else
 	{
-		int smax, tmax, i, j, size, size3, maps, stride, l;
-		float *bl, scale;
-		qbyte *lightmap, *out, *stain;
+// clear to no light
+		memset(bl, 0, size*3*sizeof(unsigned int));
 
-		// update cached lighting info
-		surface->cached_dlight = 0;
-
-		smax = (surface->extents[0]>>4)+1;
-		tmax = (surface->extents[1]>>4)+1;
-		size = smax*tmax;
-		size3 = size*3;
-		lightmap = surface->samples;
-
-	// set to full bright if no light data
-		bl = floatblocklights;
-		if (!ent->model->brushq1.lightdata)
+// add all the lightmaps
+		if (lightmap)
 		{
-			for (i = 0;i < size3;i++)
-				bl[i] = 255*256;
+			bl = intblocklights;
+			for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++, lightmap += size3)
+				for (scale = d_lightstylevalue[surface->styles[maps]], i = 0;i < size3;i++)
+					bl[i] += lightmap[i] * scale;
 		}
-		else
-		{
-			memset(bl, 0, size*3*sizeof(float));
-
-			// add all the lightmaps
-			if (lightmap)
-			{
-				bl = floatblocklights;
-				for (maps = 0;maps < MAXLIGHTMAPS && surface->styles[maps] != 255;maps++, lightmap += size3)
-					for (scale = d_lightstylevalue[surface->styles[maps]], i = 0;i < size3;i++)
-						bl[i] += lightmap[i] * scale;
-			}
-		}
-
-		stain = surface->stainsamples;
-		bl = floatblocklights;
-		out = templight;
-		// this scaling adjusts down 8 bits to account for the stainmap
-		// scaling, and remaps the 0.0-2.0 (2x overbright) to 0-256, it will
-		// be doubled during rendering to achieve 2x overbright
-		// (0 = 0.0, 128 = 1.0, 256 = 2.0)
-		scale = 1.0f / (1 << 16);
-		if (ent->model->brushq1.lightmaprgba)
-		{
-			stride = (surface->lightmaptexturestride - smax) * 4;
-			for (i = 0;i < tmax;i++, out += stride)
-			{
-				for (j = 0;j < smax;j++)
-				{
-					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
-					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
-					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
-					*out++ = 255;
-				}
-			}
-		}
-		else
-		{
-			stride = (surface->lightmaptexturestride - smax) * 3;
-			for (i = 0;i < tmax;i++, out += stride)
-			{
-				for (j = 0;j < smax;j++)
-				{
-					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
-					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
-					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
-				}
-			}
-		}
-
-		R_UpdateTexture(surface->lightmaptexture, templight);
 	}
+
+	stain = surface->stainsamples;
+	bl = intblocklights;
+	out = templight;
+	// the >> 16 shift adjusts down 8 bits to account for the stainmap
+	// scaling, and remaps the 0-65536 (2x overbright) to 0-256, it will
+	// be doubled during rendering to achieve 2x overbright
+	// (0 = 0.0, 128 = 1.0, 256 = 2.0)
+	if (ent->model->brushq1.lightmaprgba)
+	{
+		stride = (surface->lightmaptexturestride - smax) * 4;
+		for (i = 0;i < tmax;i++, out += stride)
+		{
+			for (j = 0;j < smax;j++)
+			{
+				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+				*out++ = 255;
+			}
+		}
+	}
+	else
+	{
+		stride = (surface->lightmaptexturestride - smax) * 3;
+		for (i = 0;i < tmax;i++, out += stride)
+		{
+			for (j = 0;j < smax;j++)
+			{
+				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+				l = (*bl++ * *stain++) >> 16;*out++ = min(l, 255);
+			}
+		}
+	}
+
+	R_UpdateTexture(surface->lightmaptexture, templight);
 }
 
 void R_StainNode (mnode_t *node, model_t *model, const vec3_t origin, float radius, const float fcolor[8])
@@ -1747,7 +1666,6 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&r_drawportals);
 	Cvar_RegisterVariable(&r_testvis);
-	Cvar_RegisterVariable(&r_floatbuildlightmap);
 	Cvar_RegisterVariable(&r_detailtextures);
 	Cvar_RegisterVariable(&r_surfaceworldnode);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonfactor);
