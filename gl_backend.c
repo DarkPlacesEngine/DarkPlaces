@@ -592,8 +592,12 @@ void GL_UpdateFarclip(void)
 
 void GL_ConvertColorsFloatToByte(void)
 {
-	int i, k, total, *icolor;
-	float *fcolor;
+	int i, k, total;
+	// LordHavoc: to avoid problems with aliasing (treating memory as two
+	// different types - exactly what this is doing), these must be volatile
+	// (or a union)
+	volatile int *icolor;
+	volatile float *fcolor;
 	qbyte *bcolor;
 
 	total = currentvertex * 4;
