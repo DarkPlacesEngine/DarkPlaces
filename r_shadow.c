@@ -298,9 +298,10 @@ static void R_Shadow_Make3DTextures(void)
 {
 	int x, y, z;
 	float v[3], intensity, ilen, bordercolor[4];
-	qbyte data[ATTEN3DSIZE][ATTEN3DSIZE][ATTEN3DSIZE][4];
+	qbyte *data;
 	if (r_light_quality.integer != 1 || !gl_texture3d)
 		return;
+	data = Mem_Alloc(tempmempool, ATTEN3DSIZE * ATTEN3DSIZE * ATTEN3DSIZE * 4);
 	for (z = 0;z < ATTEN3DSIZE;z++)
 	{
 		for (y = 0;y < ATTEN3DSIZE;y++)
@@ -314,26 +315,28 @@ static void R_Shadow_Make3DTextures(void)
 				if (intensity > 0)
 					intensity *= intensity;
 				ilen = 127.0f * bound(0, intensity * r_shadow_atten1, 1) / sqrt(DotProduct(v, v));
-				data[z][y][x][0] = 128.0f + ilen * v[0];
-				data[z][y][x][1] = 128.0f + ilen * v[1];
-				data[z][y][x][2] = 128.0f + ilen * v[2];
-				data[z][y][x][3] = 255;
+				data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+0] = 128.0f + ilen * v[0];
+				data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+1] = 128.0f + ilen * v[1];
+				data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+2] = 128.0f + ilen * v[2];
+				data[((z*ATTEN3DSIZE+y)*ATTEN3DSIZE+x)*4+3] = 255;
 			}
 		}
 	}
-	r_shadow_normalsattenuationtexture = R_LoadTexture3D(r_shadow_texturepool, "normalsattenuation", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
+	r_shadow_normalsattenuationtexture = R_LoadTexture3D(r_shadow_texturepool, "normalsattenuation", ATTEN3DSIZE, ATTEN3DSIZE, ATTEN3DSIZE, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALWAYSPRECACHE, NULL);
 	bordercolor[0] = 0.5f;
 	bordercolor[1] = 0.5f;
 	bordercolor[2] = 0.5f;
 	bordercolor[3] = 1.0f;
 	qglTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, bordercolor);
+	Mem_Free(data);
 }
 
 static void R_Shadow_MakeTextures(void)
 {
 	int x, y, d, side;
 	float v[3], s, t, intensity;
-	qbyte data[6][128][128][4];
+	qbyte *data;
+	data = Mem_Alloc(tempmempool, 6*128*128*4);
 	R_FreeTexturePool(&r_shadow_texturepool);
 	r_shadow_texturepool = R_AllocTexturePool();
 	r_shadow_atten1 = r_shadow1.value;
@@ -343,13 +346,13 @@ static void R_Shadow_MakeTextures(void)
 	{
 		for (x = 0;x < 128;x++)
 		{
-			data[0][y][x][0] = 128;
-			data[0][y][x][1] = 128;
-			data[0][y][x][2] = 255;
-			data[0][y][x][3] = 255;
+			data[((0*128+y)*128+x)*4+0] = 128;
+			data[((0*128+y)*128+x)*4+1] = 128;
+			data[((0*128+y)*128+x)*4+2] = 255;
+			data[((0*128+y)*128+x)*4+3] = 255;
 		}
 	}
-	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
+	r_shadow_blankbumptexture = R_LoadTexture2D(r_shadow_texturepool, "blankbump", 128, 128, data, TEXTYPE_RGBA, TEXF_PRECACHE, NULL);
 	for (side = 0;side < 6;side++)
 	{
 		for (y = 0;y < 128;y++)
@@ -392,14 +395,14 @@ static void R_Shadow_MakeTextures(void)
 					break;
 				}
 				intensity = 127.0f / sqrt(DotProduct(v, v));
-				data[side][y][x][0] = 128.0f + intensity * v[0];
-				data[side][y][x][1] = 128.0f + intensity * v[1];
-				data[side][y][x][2] = 128.0f + intensity * v[2];
-				data[side][y][x][3] = 255;
+				data[((side*128+y)*128+x)*4+0] = 128.0f + intensity * v[0];
+				data[((side*128+y)*128+x)*4+1] = 128.0f + intensity * v[1];
+				data[((side*128+y)*128+x)*4+2] = 128.0f + intensity * v[2];
+				data[((side*128+y)*128+x)*4+3] = 255;
 			}
 		}
 	}
-	r_shadow_normalscubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "normalscube", 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
+	r_shadow_normalscubetexture = R_LoadTextureCubeMap(r_shadow_texturepool, "normalscube", 128, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP, NULL);
 	for (y = 0;y < 128;y++)
 	{
 		for (x = 0;x < 128;x++)
@@ -412,13 +415,14 @@ static void R_Shadow_MakeTextures(void)
 				intensity *= intensity;
 			intensity = bound(0, intensity * r_shadow_atten1 * 256.0f, 255.0f);
 			d = bound(0, intensity, 255);
-			data[0][y][x][0] = d;
-			data[0][y][x][1] = d;
-			data[0][y][x][2] = d;
-			data[0][y][x][3] = d;
+			data[((0*128+y)*128+x)*4+0] = d;
+			data[((0*128+y)*128+x)*4+1] = d;
+			data[((0*128+y)*128+x)*4+2] = d;
+			data[((0*128+y)*128+x)*4+3] = d;
 		}
 	}
-	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, &data[0][0][0][0], TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA | TEXF_MIPMAP, NULL);
+	r_shadow_attenuation2dtexture = R_LoadTexture2D(r_shadow_texturepool, "attenuation2d", 128, 128, data, TEXTYPE_RGBA, TEXF_PRECACHE | TEXF_CLAMP | TEXF_ALPHA | TEXF_MIPMAP, NULL);
+	Mem_Free(data);
 	R_Shadow_Make3DTextures();
 }
 
