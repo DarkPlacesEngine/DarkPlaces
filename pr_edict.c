@@ -579,7 +579,7 @@ void ED_Print (edict_t *ed)
 		name = pr_strings + d->s_name;
 		if (name[strlen(name)-2] == '_')
 			continue;	// skip _x, _y, _z vars
-			
+
 		v = (int *)((char *)&ed->v + d->ofs*4);
 
 	// if the value is still all 0, skip the field
@@ -685,7 +685,7 @@ For debugging, prints all the entities in the current server
 void ED_PrintEdicts (void)
 {
 	int		i;
-	
+
 	Con_Printf ("%i entities\n", sv.num_edicts);
 	for (i=0 ; i<sv.num_edicts ; i++)
 		ED_PrintNum (i);
@@ -701,7 +701,7 @@ For debugging, prints a single edicy
 void ED_PrintEdict_f (void)
 {
 	int		i;
-	
+
 	i = atoi (Cmd_Argv(1));
 	if (i >= sv.num_edicts)
 	{
