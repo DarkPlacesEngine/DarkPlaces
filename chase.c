@@ -67,9 +67,9 @@ void Chase_Update (void)
 	chase_dest[2] = r_refdef.vieworg[2] + forward[2] * dist + chase_up.value;
 
 	TraceLine (r_refdef.vieworg, chase_dest, stop, normal);
-	chase_dest[0] = stop[0] + forward[0] * 8;
-	chase_dest[1] = stop[1] + forward[1] * 8;
-	chase_dest[2] = stop[2] + forward[2] * 8;
+	chase_dest[0] = stop[0] + forward[0] * 8 + normal[0] * 4;
+	chase_dest[1] = stop[1] + forward[1] * 8 + normal[1] * 4;
+	chase_dest[2] = stop[2] + forward[2] * 8 + normal[2] * 4;
 
 	VectorCopy (chase_dest, r_refdef.vieworg);
 }
