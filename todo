@@ -16,8 +16,11 @@
 -n darkplaces: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -n darkplaces: figure out why -sndspeed 22050, 44100 and 16000 are choppy in windows? (cheapalert)
 -n darkplaces: fix a crash when changing level while using qe1 textures (Todd)
+-n darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
 -n darkplaces: fix r_shadow_portallight 1 (default) mode (Vermeulen)
 -n darkplaces: fix skybox geometry (SeienAbunae)
+-n darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (NotoriousRay, Uffe)
+-n darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
 -n darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
 -n darkplaces: make the reply receive code drop packets from servers not in the list (Willis)
 -n darkplaces: net_slist and the server browser should show servers when they are queried, not just when they reply; which would replace the matching entry (yummyluv)
@@ -74,15 +77,12 @@
 0 darkplaces: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces: fix con_notify (should control number of lines)
 0 darkplaces: fix disappearing viewmodel (and other models) when in an unvised q3bsp, or partially inside a wall in q3bsp
--n darkplaces: fix intermission failing to move view to intermission camera (romi, Zombie_13)
 0 darkplaces: fix key based turning being affected by slowmo - it should not be
 0 darkplaces: fix r_drawentities view problem (stops updating r_refdef.vieworg?) (Vic)
 0 darkplaces: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
-0 darkplaces: identify weird lightmap texturing bug on TNT cards - goes away in r_textureunits 1 (NotoriousRay, Uffe)
 0 darkplaces: increase resolution of particlefont to 512x512 (Chillo)
 0 darkplaces: integrate zinx's psycho.c gamma hack as an easteregg
 0 darkplaces: make Com_HexDumpToConsole not use color
--n darkplaces: make DP_EF_FULLBRIGHT extension (FrikaC)
 0 darkplaces: make S_Update take a matrix4x4_t *
 0 darkplaces: make a getattachmentvectors qc builtin (Supajoe)
 0 darkplaces: make cl_beams_relative only affect view-attached beams
