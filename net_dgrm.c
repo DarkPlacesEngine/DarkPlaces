@@ -338,11 +338,9 @@ int	Datagram_GetMessage (qsocket_t *sock)
 
 		if (sfunc.AddrCompare(&readaddr, &sock->addr) != 0)
 		{
-#ifdef DEBUG
 			Con_DPrintf("Forged packet received\n");
 			Con_DPrintf("Expected: %s\n", StrAddr (&sock->addr));
 			Con_DPrintf("Received: %s\n", StrAddr (&readaddr));
-#endif
 			continue;
 		}
 
@@ -1004,7 +1002,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 		ret = dfunc.AddrCompare(&clientaddr, &s->addr);
 		if (ret >= 0)
 		{
-			// is this a duplicate connection reqeust?
+			// is this a duplicate connection request?
 			if (ret == 0 && net_time - s->connecttime < 2.0)
 			{
 				// yes, so send a duplicate reply
@@ -1021,6 +1019,8 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 				// explanation of NAT nightmares, and realize this easy
 				// workaround for quake)
 				dfunc.Write (s->socket, net_message.data, net_message.cursize, &clientaddr);
+				// LordHavoc: also send from acceptsock, for good measure
+				dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
 				SZ_Clear(&net_message);
 				return NULL;
 			}
@@ -1082,6 +1082,8 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	// me to recite a lengthy explanation of NAT nightmares, and realize this
 	// easy workaround for quake)
 	dfunc.Write (sock->socket, net_message.data, net_message.cursize, &clientaddr);
+	// LordHavoc: also send from acceptsock, for good measure
+	dfunc.Write (acceptsock, net_message.data, net_message.cursize, &clientaddr);
 	SZ_Clear(&net_message);
 
 	return sock;
@@ -1277,6 +1279,7 @@ static qsocket_t *_Datagram_Connect (const char *host)
 {
 	struct qsockaddr sendaddr;
 	struct qsockaddr readaddr;
+	struct qsockaddr testaddr;
 	qsocket_t	*sock;
 	int			newsock;
 	int			ret;
@@ -1325,11 +1328,16 @@ static qsocket_t *_Datagram_Connect (const char *host)
 			if (ret > 0)
 			{
 				// is it from the right place?
-				if (sfunc.AddrCompare(&readaddr, &sendaddr) != 0)
+				// we don't care if the port matches (this adds support for
+				// the NAT fix in the server inspired by faded)
+				memcpy(&testaddr, &sendaddr, sizeof(struct qsockaddr));
+				dfunc.SetSocketPort (&testaddr, dfunc.GetSocketPort(&readaddr));
+				if (sfunc.AddrCompare(&readaddr, &testaddr) != 0)
 				{
-					Con_DPrintf("wrong reply address\n");
-					Con_DPrintf("Expected: %s\n", StrAddr (&sendaddr));
-					Con_DPrintf("Received: %s\n", StrAddr (&readaddr));
+					Con_Printf("wrong reply address\n");
+					Con_Printf("Expected: %s\n", StrAddr (&sendaddr));
+					Con_Printf("Received: %s\n", StrAddr (&readaddr));
+					CL_UpdateScreen ();
 					CL_UpdateScreen ();
 					ret = 0;
 					continue;
