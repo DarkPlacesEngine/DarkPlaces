@@ -22,8 +22,10 @@
 -d darkplaces renderer: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -d darkplaces renderer: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
 -d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
+-d darkplaces renderer: make gl_picmip affect only maps, models, and sprites by setting their TEXF_PICMIP flag (Zenex, Urre)
 -d darkplaces renderer: make gl_texture_anisotropy take effect immediately like gl_texturemode rather than needing an r_restart (-metlslime, zinx)
 -d darkplaces server: prevent player name changes faster than once every 5 seconds (sublim3)
+-d darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
@@ -124,7 +126,6 @@
 0 darkplaces renderer: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 0 darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 0 darkplaces renderer: fix vis problems when outside the level in q1bsp
-0 darkplaces renderer: make gl_picmip affect only maps, models, and sprites by setting their TEXF_PICMIP flag (Zenex, Urre)
 0 darkplaces renderer: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
 0 darkplaces renderer: make sure r_novis works (Carni)
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
@@ -160,7 +161,6 @@
 0 dpmod: crash when dog attacks you in dpdm2 deathmatch 7 with bots present (Zombie13)
 0 dpmod: figure out why the dbsg isn't selectable in deathmatch 7 mode
 0 dpmod: find a way to make deathmatch 7 get more difficult as kills increase?  (Zombie13)
-0 dpmod: fix angled corpse bug
 0 dpmod: fix the 'shell casing spawning at wrong player' bug somehow
 0 dpmod: fix the plasma wave doing excessive damage at low framerates
 0 dpmod: fix tilted corpse bug
@@ -307,7 +307,6 @@
 3 darkplaces: add clientside entity prediction similar to qw based on ping, and add cl_prediction and cl_prediction_lockping
 3 darkplaces: add edge bevels in collision code, by trying all crossproduct combinations of an edge with planes from the other brush, and choosing only the ones which are valid
 3 darkplaces: add fs_reload command to allow restarting the filesystem module, this would mean that it could check for new paks and such (Mercury)
-3 darkplaces: add ogg music playback using optional library after adding wav music playback (Joseph Caporale, Static_Fiend, Akuma)
 3 darkplaces: add short and long documentation string to each cvar/command (QorpsE)
 3 darkplaces: add snd_rate cvar and make it changable during game (RenegadeC)
 3 darkplaces: add stainmaps to realtime lighting mode
