@@ -868,7 +868,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 	int culled_pvs, culled_portal, culled_trace, visibleentities, totalentities;
 	float alphaf, lightsize;
 	qbyte *pvs;
-	vec3_t origin, angles, entmins, entmaxs, testorigin, testeye;
+	vec3_t origin, angles, entmins, entmaxs, lightmins, lightmaxs, testorigin, testeye;
 	edict_t *ent;
 	eval_t *val;
 	trace_t trace;
@@ -1025,27 +1025,24 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					VectorAdd(entmaxs, model->normalmaxs, entmaxs);
 				}
 			}
-			if (lightsize)
-			{
-				entmins[0] = min(entmins[0], origin[0] - lightsize);
-				entmins[1] = min(entmins[1], origin[1] - lightsize);
-				entmins[2] = min(entmins[2], origin[2] - lightsize);
-				entmaxs[0] = min(entmaxs[0], origin[0] + lightsize);
-				entmaxs[1] = min(entmaxs[1], origin[1] + lightsize);
-				entmaxs[2] = min(entmaxs[2], origin[2] + lightsize);
-			}
+			lightmins[0] = min(entmins[0], origin[0] - lightsize);
+			lightmins[1] = min(entmins[1], origin[1] - lightsize);
+			lightmins[2] = min(entmins[2], origin[2] - lightsize);
+			lightmaxs[0] = min(entmaxs[0], origin[0] + lightsize);
+			lightmaxs[1] = min(entmaxs[1], origin[1] + lightsize);
+			lightmaxs[2] = min(entmaxs[2], origin[2] + lightsize);
 
 			totalentities++;
 
 			// if not touching a visible leaf
-			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
+			if (sv_cullentities_pvs.integer && !SV_BoxTouchingPVS(pvs, lightmins, lightmaxs, sv.worldmodel->nodes))
 			{
 				culled_pvs++;
 				continue;
 			}
 
 			// or not visible through the portals
-			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, testeye, entmins, entmaxs))
+			if (sv_cullentities_portal.integer && !Portal_CheckBox(sv.worldmodel, testeye, lightmins, lightmaxs))
 			{
 				culled_portal++;
 				continue;
@@ -1053,21 +1050,50 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 
 			if (sv_cullentities_trace.integer)
 			{
-				// LordHavoc: test random offsets, to maximize chance of detection
-				testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
-				testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
-				testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
-
+				// LordHavoc: test center first
+				testorigin[0] = (entmins[0] + entmaxs[0]) * 0.5f;
+				testorigin[1] = (entmins[1] + entmaxs[1]) * 0.5f;
+				testorigin[2] = (entmins[2] + entmaxs[2]) * 0.5f;
 				Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
-
 				if (trace.fraction == 1)
 					client->visibletime[e] = realtime + 1;
 				else
 				{
-					if (realtime > client->visibletime[e])
+					// LordHavoc: test random offsets, to maximize chance of detection
+					testorigin[0] = lhrandom(entmins[0], entmaxs[0]);
+					testorigin[1] = lhrandom(entmins[1], entmaxs[1]);
+					testorigin[2] = lhrandom(entmins[2], entmaxs[2]);
+					Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+					if (trace.fraction == 1)
+						client->visibletime[e] = realtime + 1;
+					else
 					{
-						culled_trace++;
-						continue;
+						if (lightsize)
+						{
+							// LordHavoc: test random offsets, to maximize chance of detection
+							testorigin[0] = lhrandom(lightmins[0], lightmaxs[0]);
+							testorigin[1] = lhrandom(lightmins[1], lightmaxs[1]);
+							testorigin[2] = lhrandom(lightmins[2], lightmaxs[2]);
+							Collision_ClipTrace(&trace, NULL, sv.worldmodel, vec3_origin, vec3_origin, vec3_origin, vec3_origin, testeye, vec3_origin, vec3_origin, testorigin);
+							if (trace.fraction == 1)
+								client->visibletime[e] = realtime + 1;
+							else
+							{
+								if (realtime > client->visibletime[e])
+								{
+									culled_trace++;
+									continue;
+								}
+							}
+						}
+						else
+						{
+							if (realtime > client->visibletime[e])
+							{
+								culled_trace++;
+								continue;
+							}
+						}
 					}
 				}
 			}
