@@ -46,6 +46,7 @@ void SV_Init (void)
 	extern	cvar_t	sv_accelerate;
 	extern	cvar_t	sv_idealpitchscale;
 	extern	cvar_t	sv_aim;
+	extern	cvar_t	sv_predict;
 
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
@@ -57,6 +58,7 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_idealpitchscale);
 	Cvar_RegisterVariable (&sv_aim);
 	Cvar_RegisterVariable (&sv_nostep);
+	Cvar_RegisterVariable (&sv_predict);
 
 	for (i=0 ; i<MAX_MODELS ; i++)
 		sprintf (localmodels[i], "*%i", i);
@@ -598,7 +600,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			angles[0] = angles[0] * movelerp + ent->stepoldangles[0];
 			angles[1] = angles[1] * movelerp + ent->stepoldangles[1];
 			angles[2] = angles[2] * movelerp + ent->stepoldangles[2];
-			VectorMA(origin, host_client->ping, ent->v.velocity, origin);
+			VectorMA(origin, host_client->latency, ent->v.velocity, origin);
 		}
 		else // copy as they are
 		{
@@ -1015,8 +1017,7 @@ void SV_SendClientMessages (void)
 				SV_DropClient (false);	// went to another level
 			else
 			{
-				if (NET_SendMessage (host_client->netconnection
-				, &host_client->message) == -1)
+				if (NET_SendMessage (host_client->netconnection, &host_client->message) == -1)
 					SV_DropClient (true);	// if the message couldn't send, kick off
 				SZ_Clear (&host_client->message);
 				host_client->last_message = realtime;

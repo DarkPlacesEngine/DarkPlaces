@@ -229,20 +229,17 @@ void R_StoreEfrags (efrag_t **ppefrag)
 		case mod_sprite:
 			pent = pefrag->entity;
 
-			if ((pent->visframe != r_framecount) &&
-				(cl_numvisedicts < MAX_VISEDICTS))
+			if ((pent->visframe != r_framecount) && (cl_numvisedicts < MAX_VISEDICTS))
 			{
 				cl_visedicts[cl_numvisedicts++] = pent;
-
-			// mark that we've recorded this entity for this frame
-				pent->visframe = r_framecount;
+				pent->visframe = r_framecount; // render each entity only once per frame
 			}
 
 			ppefrag = &pefrag->leafnext;
 			break;
 
 		default:	
-			Sys_Error ("R_StoreEfrags: Bad entity type %d\n", clmodel->type);
+			Host_Error ("R_StoreEfrags: Bad entity type %d\n", clmodel->type);
 		}
 	}
 }

@@ -25,6 +25,7 @@ edict_t	*sv_player;
 
 extern	cvar_t	sv_friction;
 cvar_t	sv_edgefriction = {"edgefriction", "2"};
+cvar_t	sv_predict = {"sv_predict", "1"};
 extern	cvar_t	sv_stopspeed;
 
 static	vec3_t		forward, right, up;
@@ -459,8 +460,9 @@ void SV_ReadClientMove (usercmd_t *move)
 	for (i=0, total = 0;i < NUM_PING_TIMES;i++)
 		total += host_client->ping_times[i];
 	host_client->ping = total / NUM_PING_TIMES; // can be used for prediction
-	if (!sv.paused && (svs.maxclients > 1 || key_dest == key_game) ) // if paused for any reason, don't predict
-		host_client->latency = host_client->ping + sv_frametime; // push ahead by ticrate
+	host_client->latency = 0;
+	if (sv_predict.value && (svs.maxclients > 1) && (!sv.paused)) // if paused or a local game, don't predict
+		host_client->latency = host_client->ping;
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_ping)))
 		val->_float = host_client->ping * 1000.0;
 

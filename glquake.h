@@ -71,7 +71,6 @@ extern	int glx, gly, glwidth, glheight;
 
 
 extern void R_TimeRefresh_f (void);
-extern void R_ReadPointFile_f (void);
 
 //====================================================
 
@@ -83,7 +82,7 @@ extern	entity_t	*currententity;
 extern	int			r_visframecount;	// ??? what difs?
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
-extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_nodes, c_leafs;
+extern	int		c_brush_polys, c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c_bmodels, c_sprites, c_particles, c_dlights;
 
 
 //

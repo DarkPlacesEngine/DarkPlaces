@@ -692,11 +692,7 @@ loc0:
 	}
 	else
 	{
-		// LordHavoc: unrolled vector operation because the compiler can't be sure vec3_origin is 0
-//		VectorSubtract (vec3_origin, plane->normal, trace->plane.normal);
-		trace->plane.normal[0] = -plane->normal[0];
-		trace->plane.normal[1] = -plane->normal[1];
-		trace->plane.normal[2] = -plane->normal[2];
+		VectorNegate (plane->normal, trace->plane.normal);
 		trace->plane.dist = -plane->dist;
 	}
 
@@ -824,11 +820,7 @@ loc0:
 	}
 	else
 	{
-		// LordHavoc: vec3_origin is evil; the compiler can not rely on it being '0 0 0'
-//		VectorSubtract (vec3_origin, plane->normal, trace->plane.normal);
-		trace->plane.normal[0] = -plane->normal[0];
-		trace->plane.normal[1] = -plane->normal[1];
-		trace->plane.normal[2] = -plane->normal[2];
+		VectorNegate (plane->normal, trace->plane.normal);
 		trace->plane.dist = -plane->dist;
 	}
 
@@ -974,7 +966,7 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 
 		if (trace.fraction != 1)
 		{
-			VectorSubtract (vec3_origin, ent->v.angles, a);
+			VectorNegate (ent->v.angles, a);
 			AngleVectors (a, forward, right, up);
 
 			VectorCopy (trace.endpos, temp);

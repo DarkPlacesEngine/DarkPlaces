@@ -48,6 +48,8 @@ cvar_t r_ambient = {"r_ambient", "0"};
 cvar_t gl_vertex = {"gl_vertex", "0"};
 cvar_t gl_texsort = {"gl_texsort", "1"};
 //cvar_t gl_funnywalls = {"gl_funnywalls", "0"}; // LordHavoc: see BuildSurfaceDisplayList
+cvar_t r_newworldnode = {"r_newworldnode", "0"};
+cvar_t r_oldclip = {"r_oldclip", "1"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage, skyisvisible;
 int lightmapbytes;
@@ -77,6 +79,8 @@ void GL_Surf_Init()
 //	Cvar_RegisterVariable(&gl_funnywalls);
 	Cvar_RegisterVariable(&gl_vertex);
 	Cvar_RegisterVariable(&gl_texsort);
+	Cvar_RegisterVariable(&r_newworldnode);
+	Cvar_RegisterVariable(&r_oldclip);
 	// check if it's the glquake minigl driver
 	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
@@ -99,7 +103,6 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 {
 	int			smax, tmax;
-	int			t;
 	int			i, j, size;
 	byte		*lightmap;
 	int			scale;
@@ -139,6 +142,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 
 // add all the lightmaps
 		if (lightmap)
+		{
 			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++)
 			{
 				scale = d_lightstylevalue[surf->styles[maps]];
@@ -151,6 +155,7 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 					*bl++ += *lightmap++ * scale;
 				}
 			}
+		}
 	}
 	stride -= (smax*lightmapbytes);
 	bl = blocklights;
@@ -160,26 +165,26 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 		// the image is brightened as a processing pass
 		if (lightmaprgba)
 		{
-			for (i=0 ; i<tmax ; i++, dest += stride)
+			for (i = 0;i < tmax;i++, dest += stride)
 			{
-				for (j=0 ; j<smax ; j++)
+				for (j = 0;j < smax;j++, bl += 3, dest += 4)
 				{
-					t = *bl++ >> 8;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 8;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 8;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					*dest++ = 255;
+					dest[0] = min(bl[0] >> 8, 255);
+					dest[1] = min(bl[1] >> 8, 255);
+					dest[2] = min(bl[2] >> 8, 255);
+					dest[3] = 255;
 				}
 			}
 		}
 		else
 		{
-			for (i=0 ; i<tmax ; i++, dest += stride)
+			for (i = 0;i < tmax;i++, dest += stride)
 			{
-				for (j=0 ; j<smax ; j++)
+				for (j = 0;j < smax;j++, bl += 3, dest += 3)
 				{
-					t = *bl++ >> 8;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 8;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 8;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
+					dest[0] = min(bl[0] >> 8, 255);
+					dest[1] = min(bl[1] >> 8, 255);
+					dest[2] = min(bl[2] >> 8, 255);
 				}
 			}
 		}
@@ -188,26 +193,26 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	{
 		if (lightmaprgba)
 		{
-			for (i=0 ; i<tmax ; i++, dest += stride)
+			for (i = 0;i < tmax;i++, dest += stride)
 			{
-				for (j=0 ; j<smax ; j++)
+				for (j = 0;j < smax;j++, bl += 3, dest += 4)
 				{
-					t = *bl++ >> 7;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 7;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 7;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					*dest++ = 255;
+					dest[0] = min(bl[0] >> 7, 255);
+					dest[1] = min(bl[1] >> 7, 255);
+					dest[2] = min(bl[2] >> 7, 255);
+					dest[3] = 255;
 				}
 			}
 		}
 		else
 		{
-			for (i=0 ; i<tmax ; i++, dest += stride)
+			for (i = 0;i < tmax;i++, dest += stride)
 			{
-				for (j=0 ; j<smax ; j++)
+				for (j = 0;j < smax;j++, bl += 3, dest += 3)
 				{
-					t = *bl++ >> 7;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 7;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
-					t = *bl++ >> 7;if (t > 255) t = 255;else if (t < 0) t = 0;*dest++ = t;
+					dest[0] = min(bl[0] >> 7, 255);
+					dest[1] = min(bl[1] >> 7, 255);
+					dest[2] = min(bl[2] >> 7, 255);
 				}
 			}
 		}
@@ -441,7 +446,7 @@ int RSurf_Light(int *dlightbits, glpoly_t *polys)
 void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 {
 	int		i;
-	float	os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
+	float	os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(cl.time * TURBSCALE + 96.0) & 255];
 	glpoly_t *p;
 	float	*wv, *v;
 	wv = wvert;
@@ -454,7 +459,7 @@ void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 			else
 				VectorCopy(v, wv);
 			if (r_waterripple.value)
-				wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
+				wv[2] += r_waterripple.value * turbsin[(int)((wv[0]*(1.0f/32.0f)+cl.time) * TURBSCALE) & 255] * turbsin[(int)((wv[1]*(1.0f/32.0f)+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f);
 			wv[3] = wv[4] = wv[5] = 128.0f;
 			wv += 6;
 		}
@@ -732,6 +737,8 @@ void R_DrawBrushModel (entity_t *e)
 	if (R_CullBox (mins, maxs))
 		return;
 
+	c_bmodels++;
+
 	VectorSubtract (r_refdef.vieworg, e->origin, modelorg);
 	if (rotated)
 	{
@@ -799,10 +806,78 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 
 void R_StoreEfrags (efrag_t **ppefrag);
 
+void R_NewWorldNode ()
+{
+	int l, texsort = gl_texsort.value, vertex = gl_vertex.value;
+	mleaf_t *leaf;
+	msurface_t *surf, **mark, **endmark;
+
+	for (l = 0, leaf = cl.worldmodel->leafs;l < cl.worldmodel->numleafs;l++, leaf++)
+	{
+		if ((leaf->visframe == r_visframecount) && (leaf->efrags || leaf->nummarksurfaces))
+		{
+			if (R_CullBox(leaf->minmaxs, leaf->minmaxs+3))
+				continue;
+
+			c_leafs++;
+
+			// deal with model fragments in this leaf
+			if (leaf->efrags)
+				R_StoreEfrags (&leaf->efrags);
+
+			if (leaf->nummarksurfaces)
+			{
+				mark = leaf->firstmarksurface;
+				endmark = mark + leaf->nummarksurfaces;
+				do
+				{
+					surf = *mark++;
+					// make sure surfaces are only processed once
+					if (surf->worldnodeframe == r_framecount)
+						continue;
+					surf->worldnodeframe = r_framecount;
+					if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
+					{
+						if ( (surf->flags & SURF_PLANEBACK))
+						{
+							surf->visframe = r_framecount;
+							c_faces++;
+							if (texsort)
+							{
+								surf->texturechain = surf->texinfo->texture->texturechain;
+								surf->texinfo->texture->texturechain = surf;
+							}
+							else
+								R_DrawSurf(surf, false, vertex);
+						}
+					}
+					else
+					{
+						if (!(surf->flags & SURF_PLANEBACK))
+						{
+							surf->visframe = r_framecount;
+							c_faces++;
+							if (texsort)
+							{
+								surf->texturechain = surf->texinfo->texture->texturechain;
+								surf->texinfo->texture->texturechain = surf;
+							}
+							else
+								R_DrawSurf(surf, false, vertex);
+						}
+					}
+				}
+				while (mark < endmark);
+			}
+		}
+	}
+}
+
 struct nodestack_s
 {
 	int side;
 	mnode_t *node;
+	int noclipping;
 } nodestack[8192];
 
 /*
@@ -812,20 +887,43 @@ R_WorldNode
 */
 void R_WorldNode ()
 {
-	int side, texsort, vertex;
+	int side, texsort = gl_texsort.value, vertex = gl_vertex.value, ca, cb, cc, cd, noclipping = false, oldclip = r_oldclip.value;
 	struct nodestack_s *nstack;
 	mnode_t *node;
 	mleaf_t *pleaf;
 	msurface_t *surf, *endsurf, **mark, **endmark;
 	nstack = nodestack;
-	texsort = gl_texsort.value;
-	vertex = gl_vertex.value;
 
 	if (!(node = cl.worldmodel->nodes))
 		return;
 
 	while(1)
 	{
+		if (oldclip)
+		{
+			if (R_CullBox(node->minmaxs, node->minmaxs+3))
+			{
+backupstack:
+				if (nstack <= nodestack)
+					break;
+				nstack--;
+				node = nstack->node;
+				side = nstack->side;
+				noclipping = nstack->noclipping;
+				goto loc0;
+			}
+		}
+		else
+		if (!noclipping)
+		{
+			ca = frustum[0].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[0]);if (ca == 2) goto backupstack; // completely clipped away
+			cb = frustum[1].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[1]);if (cb == 2) goto backupstack; // completely clipped away
+			cc = frustum[2].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[2]);if (cc == 2) goto backupstack; // completely clipped away
+			cd = frustum[3].BoxOnPlaneSideFunc(node->minmaxs, node->minmaxs+3, &frustum[3]);if (cd == 2) goto backupstack; // completely clipped away
+			if (ca == 0 && cb == 0 && cc == 0 && cd == 0)
+				noclipping = true; // not clipped at all, no need to clip any children of this node
+			// partially clipped node
+		}
 	// if a leaf node, draw stuff
 		if (node->contents < 0)
 		{
@@ -856,6 +954,7 @@ void R_WorldNode ()
 			nstack--;
 			node = nstack->node;
 			side = nstack->side;
+			noclipping = nstack->noclipping;
 			goto loc0;
 		}
 
@@ -867,10 +966,11 @@ void R_WorldNode ()
 		side = PlaneDist(modelorg, node->plane) < node->plane->dist;
 
 		// recurse down the children, front side first
-		if (node->children[side]->visframe == r_visframecount && R_NotCulledBox(node->children[side]->minmaxs, node->children[side]->minmaxs+3))
+		if (node->children[side]->visframe == r_visframecount)
 		{
 			nstack->node = node;
 			nstack->side = !side; // go down back side when we come back up
+			nstack->noclipping = noclipping;
 			nstack++;
 			node = node->children[side];
 			continue;
@@ -892,9 +992,12 @@ loc0:
 					{
 						if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
 						{
+							c_faces++;
 							surf->texturechain = surf->texinfo->texture->texturechain;
 							surf->texinfo->texture->texturechain = surf;
 						}
+						else
+							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
 						surf++;
 					}
 					while (surf < endsurf);
@@ -905,9 +1008,12 @@ loc0:
 					{
 						if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
 						{
+							c_faces++;
 							surf->texturechain = surf->texinfo->texture->texturechain;
 							surf->texinfo->texture->texturechain = surf;
 						}
+						else
+							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
 						surf++;
 					}
 					while (surf < endsurf);
@@ -920,7 +1026,12 @@ loc0:
 					do
 					{
 						if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
+						{
+							c_faces++;
 							R_DrawSurf(surf, false, vertex);
+						}
+						else
+							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
 						surf++;
 					}
 					while (surf < endsurf);
@@ -930,7 +1041,12 @@ loc0:
 					do
 					{
 						if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
+						{
+							c_faces++;
 							R_DrawSurf(surf, false, vertex);
+						}
+						else
+							surf->visframe = -1; // LordHavoc: mark as not visible, so lighting will not touch it
 						surf++;
 					}
 					while (surf < endsurf);
@@ -939,7 +1055,7 @@ loc0:
 		}
 
 	// recurse down the back side
-		if (node->children[side]->visframe == r_visframecount && R_NotCulledBox(node->children[side]->minmaxs, node->children[side]->minmaxs+3))
+		if (node->children[side]->visframe == r_visframecount)
 		{
 			node = node->children[side];
 			continue;
@@ -950,6 +1066,7 @@ loc0:
 		nstack--;
 		node = nstack->node;
 		side = nstack->side;
+		noclipping = nstack->noclipping;
 		goto loc0;
 	}
 }
@@ -977,7 +1094,12 @@ void R_DrawWorld (void)
 	softwaretransformidentity(); // LordHavoc: clear transform
 
 	if (cl.worldmodel)
-		R_WorldNode ();
+	{
+		if (r_newworldnode.value)
+			R_NewWorldNode ();
+		else
+			R_WorldNode ();
+	}
 
 	R_PushDlights (); // now mark the lit surfaces
 

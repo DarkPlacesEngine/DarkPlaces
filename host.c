@@ -37,6 +37,7 @@ quakeparms_t host_parms;
 qboolean	host_initialized;		// true if into command execution
 
 double		host_frametime;
+double		host_realframetime;		// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
 double		host_time;
 double		realtime;				// without any filtering or bounding
 double		oldrealtime;			// last frame run
@@ -55,6 +56,8 @@ jmp_buf 	host_abortserver;
 cvar_t	host_framerate = {"host_framerate","0"};	// set for slow motion
 cvar_t	host_speeds = {"host_speeds","0"};			// set for running times
 cvar_t	slowmo = {"slowmo", "1.0"};					// LordHavoc: framerate independent slowmo
+cvar_t	host_minfps = {"host_minfps", "10"};		// LordHavoc: game logic lower cap on framerate (if framerate is below this is, it pretends it is this, so game logic will run normally)
+cvar_t	host_maxfps = {"host_maxfps", "1000"};		// LordHavoc: framerate upper cap
 
 cvar_t	sys_ticrate = {"sys_ticrate","0.05"};
 cvar_t	serverprofile = {"serverprofile","0"};
@@ -216,6 +219,8 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&host_framerate);
 	Cvar_RegisterVariable (&host_speeds);
 	Cvar_RegisterVariable (&slowmo);
+	Cvar_RegisterVariable (&host_minfps);
+	Cvar_RegisterVariable (&host_maxfps);
 
 	Cvar_RegisterVariable (&sys_ticrate);
 	Cvar_RegisterVariable (&serverprofile);
@@ -507,21 +512,32 @@ qboolean Host_FilterTime (float time)
 {
 	realtime += time;
 
-//	if (!cls.timedemo && realtime - oldrealtime < (1.0 / 72.0))
-//		return false;		// framerate is too high
+	if (slowmo.value < 0.0f)
+		Cvar_SetValue("slowmo", 0.0f);
+	if (host_minfps.value < 10.0f)
+		Cvar_SetValue("host_minfps", 10.0f);
+	if (host_maxfps.value < host_minfps.value)
+		Cvar_SetValue("host_maxfps", host_minfps.value);
 
-	host_frametime = (realtime - oldrealtime) * slowmo.value; // LordHavoc: slowmo cvar
+	if ((!cls.timedemo) && ((realtime - oldrealtime) < (1.0 / host_maxfps.value)))
+		return false;		// framerate is too high
+
+	host_realframetime = host_frametime = realtime - oldrealtime; // LordHavoc: copy into host_realframetime as well
 	oldrealtime = realtime;
+
+	if (cls.timedemo)
+		return true; // disable time effects
 
 	if (host_framerate.value > 0)
 		host_frametime = host_framerate.value;
 	else
-	{	// don't allow really long or short frames
-		if (host_frametime > 0.1)
-			host_frametime = 0.1;
-		if (host_frametime < 0.001)
-			host_frametime = 0.001;
+	{
+		// don't allow really short frames
+		if (host_frametime > (1.0 / host_minfps.value))
+			host_frametime = (1.0 / host_minfps.value);
 	}
+
+	host_frametime *= slowmo.value;
 	
 	return true;
 }
