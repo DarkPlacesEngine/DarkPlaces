@@ -37,6 +37,7 @@ cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "1"};
 cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1"};
 cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygonoffset", "0"};
+cvar_t r_q3bsp_renderskydepth = {0, "r_q3bsp_renderskydepth", "0"};
 cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
 /*
@@ -1774,29 +1775,35 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			outmaxs[0] = max(outmaxs[0], leaf->maxs[0]);
 			outmaxs[1] = max(outmaxs[1], leaf->maxs[1]);
 			outmaxs[2] = max(outmaxs[2], leaf->maxs[2]);
-			if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
+			if (outclusterpvs)
 			{
-				SETPVSBIT(outclusterpvs, leaf->clusterindex);
-				outclusterlist[outnumclusters++] = leaf->clusterindex;
-			}
-			for (marksurfaceindex = 0;marksurfaceindex < leaf->nummarksurfaces;marksurfaceindex++)
-			{
-				surfaceindex = leaf->firstmarksurface[marksurfaceindex];
-				if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
+				if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
 				{
-					surface = model->brushq1.surfaces + surfaceindex;
-					if (BoxesOverlap(lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs) && (surface->flags & SURF_LIGHTMAP) && !surface->texinfo->texture->skin.fog)
+					SETPVSBIT(outclusterpvs, leaf->clusterindex);
+					outclusterlist[outnumclusters++] = leaf->clusterindex;
+				}
+			}
+			if (outsurfacepvs)
+			{
+				for (marksurfaceindex = 0;marksurfaceindex < leaf->nummarksurfaces;marksurfaceindex++)
+				{
+					surfaceindex = leaf->firstmarksurface[marksurfaceindex];
+					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
-						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
+						surface = model->brushq1.surfaces + surfaceindex;
+						if (BoxesOverlap(lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs) && (surface->flags & SURF_LIGHTMAP) && !surface->texinfo->texture->skin.fog)
 						{
-							v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-							v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-							v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-							if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
 							{
-								SETPVSBIT(outsurfacepvs, surfaceindex);
-								outsurfacelist[outnumsurfaces++] = surfaceindex;
-								break;
+								v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+								v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+								v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+								if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+								{
+									SETPVSBIT(outsurfacepvs, surfaceindex);
+									outsurfacelist[outnumsurfaces++] = surfaceindex;
+									break;
+								}
 							}
 						}
 					}
@@ -1931,6 +1938,8 @@ void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3msurface_t *face)
 		if (skyrendermasked)
 			R_Sky();
 	}
+	if (!r_q3bsp_renderskydepth.integer)
+		return;
 
 	R_Mesh_Matrix(&ent->matrix);
 
@@ -2451,29 +2460,35 @@ void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 			outmaxs[0] = max(outmaxs[0], leaf->maxs[0]);
 			outmaxs[1] = max(outmaxs[1], leaf->maxs[1]);
 			outmaxs[2] = max(outmaxs[2], leaf->maxs[2]);
-			if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
+			if (outclusterpvs)
 			{
-				SETPVSBIT(outclusterpvs, leaf->clusterindex);
-				outclusterlist[outnumclusters++] = leaf->clusterindex;
-			}
-			for (marksurfaceindex = 0;marksurfaceindex < leaf->numleaffaces;marksurfaceindex++)
-			{
-				surface = leaf->firstleafface[marksurfaceindex];
-				surfaceindex = surface - model->brushq3.data_faces;
-				if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
+				if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
 				{
-					if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)))
+					SETPVSBIT(outclusterpvs, leaf->clusterindex);
+					outclusterlist[outnumclusters++] = leaf->clusterindex;
+				}
+			}
+			if (outsurfacepvs)
+			{
+				for (marksurfaceindex = 0;marksurfaceindex < leaf->numleaffaces;marksurfaceindex++)
+				{
+					surface = leaf->firstleafface[marksurfaceindex];
+					surfaceindex = surface - model->brushq3.data_faces;
+					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
-						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
+						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)))
 						{
-							v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-							v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-							v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-							if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 							{
-								SETPVSBIT(outsurfacepvs, surfaceindex);
-								outsurfacelist[outnumsurfaces++] = surfaceindex;
-								break;
+								v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+								v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+								v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+								if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+								{
+									SETPVSBIT(outsurfacepvs, surfaceindex);
+									outsurfacelist[outnumsurfaces++] = surfaceindex;
+									break;
+								}
 							}
 						}
 					}
@@ -2589,6 +2604,7 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_surfaceworldnode);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonoffset);
+	Cvar_RegisterVariable(&r_q3bsp_renderskydepth);
 	Cvar_RegisterVariable(&gl_lightmaps);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
