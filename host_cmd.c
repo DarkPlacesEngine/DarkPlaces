@@ -764,6 +764,126 @@ void Host_Name_f (void)
 	}
 }
 
+/*
+======================
+Host_Playermodel_f
+======================
+*/
+cvar_t cl_playermodel = {CVAR_SAVE, "_cl_playermodel", ""}; 
+// the old cl_playermodel in cl_main has been renamed to __cl_playermodel
+void Host_Playermodel_f (void)
+{
+	int i, j;
+	char newPath[sizeof(host_client->playermodel)];
+
+	if (Cmd_Argc () == 1)
+	{
+		Con_Printf("\"playermodel\" is \"%s\"\n", cl_playermodel.string);
+		return;
+	}
+
+	if (Cmd_Argc () == 2)
+		strlcpy (newPath, Cmd_Argv(1), sizeof (newPath));
+	else
+		strlcpy (newPath, Cmd_Args(), sizeof (newPath));
+
+	for (i = 0, j = 0;newPath[i];i++)
+		if (newPath[i] != '\r' && newPath[i] != '\n')
+			newPath[j++] = newPath[i];
+	newPath[j] = 0;
+
+	if (cmd_source == src_command)
+	{
+		Cvar_Set ("_cl_playermodel", newPath);
+		if (cls.state == ca_connected)
+			Cmd_ForwardToServer ();
+		return;
+	}
+
+	/*
+	if (sv.time < host_client->nametime)
+	{
+		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
+		return;
+	}
+	
+	host_client->nametime = sv.time + 5;
+	*/
+
+	// point the string back at updateclient->name to keep it safe
+	strlcpy (host_client->playermodel, newPath, sizeof (host_client->playermodel));
+	host_client->edict->v->playermodel = PR_SetString(host_client->playermodel);
+	if (strcmp(host_client->old_model, host_client->playermodel))
+	{
+		if (host_client->spawned)
+			SV_BroadcastPrintf("%s changed model to %s\n", host_client->old_model, host_client->playermodel);
+		strcpy(host_client->old_model, host_client->playermodel);
+		/*// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatepmodel);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteString (&sv.reliable_datagram, host_client->playermodel);*/
+	}
+}
+
+/*
+======================
+Host_Playerskin_f
+======================
+*/
+cvar_t cl_playerskin = {CVAR_SAVE, "_cl_playerskin", ""};
+void Host_Playerskin_f (void)
+{
+	int i, j;
+	char newPath[sizeof(host_client->playerskin)];
+
+	if (Cmd_Argc () == 1)
+	{
+		Con_Printf("\"playerskin\" is \"%s\"\n", cl_playerskin.string);
+		return;
+	}
+
+	if (Cmd_Argc () == 2)
+		strlcpy (newPath, Cmd_Argv(1), sizeof (newPath));
+	else
+		strlcpy (newPath, Cmd_Args(), sizeof (newPath));
+
+	for (i = 0, j = 0;newPath[i];i++)
+		if (newPath[i] != '\r' && newPath[i] != '\n')
+			newPath[j++] = newPath[i];
+	newPath[j] = 0;
+
+	if (cmd_source == src_command)
+	{
+		Cvar_Set ("_cl_playerskin", newPath);
+		if (cls.state == ca_connected)
+			Cmd_ForwardToServer ();
+		return;
+	}
+
+	/*
+	if (sv.time < host_client->nametime)
+	{
+		SV_ClientPrintf("You can't change playermodel more than once every 5 seconds!\n");
+		return;
+	}
+	
+	host_client->nametime = sv.time + 5;
+	*/
+
+	// point the string back at updateclient->name to keep it safe
+	strlcpy (host_client->playerskin, newPath, sizeof (host_client->playerskin));
+	host_client->edict->v->playerskin = PR_SetString(host_client->playerskin);
+	if (strcmp(host_client->old_skin, host_client->playerskin))
+	{
+		if (host_client->spawned)
+			SV_BroadcastPrintf("%s changed skin to %s\n", host_client->old_skin, host_client->playerskin);
+		strcpy(host_client->old_skin, host_client->playerskin);
+		/*// send notification to all clients
+		MSG_WriteByte (&sv.reliable_datagram, svc_updatepskin);
+		MSG_WriteByte (&sv.reliable_datagram, host_client - svs.clients);
+		MSG_WriteString (&sv.reliable_datagram, host_client->playerskin);*/
+	}
+}
 
 void Host_Version_f (void)
 {
@@ -1806,6 +1926,15 @@ void Host_InitCommands (void)
 		Cvar_RegisterVariable (&cl_pmodel);
 		Cmd_AddCommand ("pmodel", Host_PModel_f);
 	}
+	// FIXME: Do this only for GAME_NEXUIZ?
+	else if (gamemode == GAME_NEXUIZ) 
+	{
+		Cvar_RegisterVariable (&cl_playermodel);
+		Cmd_AddCommand ("playermodel", Host_Playermodel_f);
+		Cvar_RegisterVariable (&cl_playerskin);
+		Cmd_AddCommand ("playerskin", Host_Playerskin_f);
+	}
+
 	Cmd_AddCommand ("prespawn", Host_PreSpawn_f);
 	Cmd_AddCommand ("spawn", Host_Spawn_f);
 	Cmd_AddCommand ("begin", Host_Begin_f);

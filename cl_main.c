@@ -1274,7 +1274,7 @@ CL_Init
 =================
 */
 //VorteX: cvars for GAME_NETHERWORLD
-cvar_t cl_playermodel = {CVAR_SAVE, "cl_playermodel", "ranger"}; 
+cvar_t __cl_playermodel = {CVAR_SAVE, "cl_playermodel", "ranger"}; 
 cvar_t cl_footsteps = {CVAR_SAVE, "cl_footsteps", "1"}; 
 cvar_t cl_weapon_ofs = {CVAR_SAVE, "cl_weapon_ofs", "0 0 0"}; 
 cvar_t cl_weapon_bstep = {CVAR_SAVE, "cl_weapon_bstep", "100 0 0"}; 
@@ -1371,7 +1371,7 @@ void CL_Init (void)
 
 	if (gamemode == GAME_NETHERWORLD)
 	{
-		Cvar_RegisterVariable (&cl_playermodel); 
+		Cvar_RegisterVariable (&__cl_playermodel); 
 		Cvar_RegisterVariable (&cl_footsteps); 
 		Cvar_RegisterVariable (&cl_weapon_ofs); 
 		Cvar_RegisterVariable (&cl_weapon_bstep); 

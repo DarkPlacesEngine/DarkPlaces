@@ -56,12 +56,12 @@
 0 darkplaces optimize: put patches on a delayed queue in q3bsp collision code so the trace is first clipped by brushes
 0 darkplaces optimize: remove the loop unrolling in Image_Resample32LerpLine and Image_Resample24LerpLine and related functions, as the loop is really too long to get much benefit, and it might even not fit in the L1 instruction cache on Pentium1 (fuh)
 0 darkplaces optimize: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side yet (romi)
-0 darkplaces parse: support " as an end token for words in Com_Parse
-0 darkplaces parse: support ' quoted strings
+d darkplaces parse: support " as an end token for words in Com_Parse
+d darkplaces parse: support ' quoted strings
 0 darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces physics: q3bsp collisions are still glitchy, particularly gunshots hitting thin air near brushes, even with mod_q3bsp_optimizedtraceline 0, test in dpdm2r by shooting down through gaps in the architecture around the top platform (Vermeulen)
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
-0 darkplaces protocol: GAME_NEXUIZ: add a NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN extension which would add playermodel and playerskin commands and set them up like the Host_Name_f stuff works, this means a command for each, saved _cl_playermodel and _cl_playerskin cvars, playermodel and playerskin fields in the client_t struct, and quakec fields to allow access to these similarly to .clientcolors (Vermeulen, Black, VorteX)
+d darkplaces protocol: GAME_NEXUIZ: add a NEXUIZ_PLAYERMODEL and NEXUIZ_PLAYERSKIN extension which would add playermodel and playerskin commands and set them up like the Host_Name_f stuff works, this means a command for each, saved _cl_playermodel and _cl_playerskin cvars, playermodel and playerskin fields in the client_t struct, and quakec fields to allow access to these similarly to .clientcolors (Vermeulen, Black, VorteX)
 0 darkplaces protocol: PRYDON_CLIENTCURSOR should use a stat and .prydoncursor field instead of the cl_prydoncursor cvar, because stuffcmd is a bit icky (FrikaC)
 0 darkplaces protocol: add DP_GFX_QUAKE3MODELTAGS_ATTACHMENTTYPE extension to allow attachments to affect only origin or only orientation, and enable/disable client camera turning while attached (Urre)
 0 darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)

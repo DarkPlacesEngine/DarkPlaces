@@ -161,6 +161,8 @@ typedef struct
 	string_t	noise1;
 	string_t	noise2;
 	string_t	noise3;
+	string_t	playermodel;
+	string_t	playerskin;
 } entvars_t;
 
 #define PROGHEADER_CRC 5927
