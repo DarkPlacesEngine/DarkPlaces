@@ -216,7 +216,7 @@ typedef struct msurface_s
 	// if lightmap was lit by dynamic lights, force update on next frame
 	short cached_dlight;
 	// to cause lightmap to be rerendered when v_overbrightbits changes
-	short cached_lightscalebit;
+	short cached_lightmapscalebit;
 	// rerender lightmaps when r_ambient changes
 	float cached_ambient;
 }

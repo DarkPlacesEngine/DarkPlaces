@@ -78,7 +78,7 @@ static int R_SpriteSetup (const entity_render_t *ent, int type, float org[3], fl
 	return false;
 }
 
-static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
+static void R_DrawSpriteImage (int additive, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
 {
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
@@ -86,13 +86,12 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
 	if (additive)
 		m.blendfunc2 = GL_ONE;
-	m.wantoverbright = wantoverbright;
 	m.tex[0] = texture;
 	R_Mesh_State(&m);
 
-	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = red * mesh_colorscale;
-	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = green * mesh_colorscale;
-	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = blue * mesh_colorscale;
+	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = red * r_colorscale;
+	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = green * r_colorscale;
+	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = blue * r_colorscale;
 	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = alpha;
 	varray_texcoord[0][0] = 0;
 	varray_texcoord[0][1] = 1;
@@ -121,7 +120,7 @@ static void R_DrawSpriteImage (int wantoverbright, int additive, mspriteframe_t 
 void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
-	int i, wantoverbright;
+	int i;
 	vec3_t left, up, org, color;
 	mspriteframe_t *frame;
 	vec3_t diff;
@@ -133,15 +132,9 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 	R_Mesh_Matrix(&r_identitymatrix);
 
 	if ((ent->model->flags & EF_FULLBRIGHT) || (ent->effects & EF_FULLBRIGHT))
-	{
 		color[0] = color[1] = color[2] = 1;
-		wantoverbright = false;
-	}
 	else
-	{
 		R_CompleteLightPoint(color, ent->origin, true, NULL);
-		wantoverbright = color[0] > 1 || color[1] > 1 || color[2] > 1;
-	}
 
 	if (fogenabled)
 	{
@@ -161,9 +154,9 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		if (ent->frameblend[i].lerp >= 0.01f)
 		{
 			frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
-			R_DrawSpriteImage(wantoverbright, (ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, R_GetTexture(frame->texture), org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
+			R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, R_GetTexture(frame->texture), org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha * ent->frameblend[i].lerp);
 			if (fog * ent->frameblend[i].lerp >= 0.01f)
-				R_DrawSpriteImage(false, true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
+				R_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha * ent->frameblend[i].lerp);
 		}
 	}
 #else
@@ -172,9 +165,9 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 	for (i = 0;i < 4 && ent->frameblend[i].lerp;i++)
 		frame = ent->model->sprdata_frames + ent->frameblend[i].frame;
 
-	R_DrawSpriteImage(wantoverbright, (ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, R_GetTexture(frame->texture), org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
+	R_DrawSpriteImage((ent->effects & EF_ADDITIVE) || (ent->model->flags & EF_ADDITIVE), frame, R_GetTexture(frame->texture), org, up, left, color[0] * ifog, color[1] * ifog, color[2] * ifog, ent->alpha);
 	if (fog * ent->frameblend[i].lerp >= 0.01f)
-		R_DrawSpriteImage(false, true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
+		R_DrawSpriteImage(true, frame, R_GetTexture(frame->fogtexture), org, up, left, fogcolor[0],fogcolor[1],fogcolor[2], fog * ent->alpha);
 #endif
 }
 

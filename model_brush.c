@@ -1316,8 +1316,6 @@ static void Mod_LoadFaces (lump_t *l)
 
 		// force lightmap upload on first time seeing the surface
 		out->cached_dlight = true;
-		out->cached_ambient = -1000;
-		out->cached_lightscalebit = -1000;
 
 		CalcSurfaceExtents (out);
 

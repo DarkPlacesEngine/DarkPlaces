@@ -28,14 +28,15 @@ typedef struct
 	int depthdisable; // disable depth read/write entirely
 	int blendfunc1;
 	int blendfunc2;
-	int wantoverbright;
+	//int wantoverbright;
 	int tex[MAX_TEXTUREUNITS];
 	int texrgbscale[MAX_TEXTUREUNITS]; // used only if COMBINE is present
 }
 rmeshstate_t;
 
 // overbright rendering scale for the current state
-extern float mesh_colorscale;
+extern int r_lightmapscalebit;
+extern float r_colorscale;
 extern float *varray_vertex;
 extern float *varray_color;
 extern float *varray_texcoord[MAX_TEXTUREUNITS];
@@ -56,6 +57,12 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix);
 
 // sets up the requested state
 void R_Mesh_State(const rmeshstate_t *m);
+
+// sets up the requested main state
+void R_Mesh_MainState(const rmeshstate_t *m);
+
+// sets up the requested texture state
+void R_Mesh_TextureState(const rmeshstate_t *m);
 
 // enlarges vertex arrays if they are too small
 #define R_Mesh_ResizeCheck(numverts) if ((numverts) > mesh_maxverts) _R_Mesh_ResizeCheck(numverts);

@@ -184,7 +184,6 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.wantoverbright = false;
 	m.tex[0] = R_GetTexture(explosiontexture);
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
@@ -219,7 +218,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 				if (dist < 0)
 					dist = 0;
 				else
-					dist *= mesh_colorscale;
+					dist *= r_colorscale;
 			}
 			else
 				dist = 0;
@@ -237,7 +236,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 			if (dist < 0)
 				dist = 0;
 			else
-				dist *= mesh_colorscale;
+				dist *= r_colorscale;
 			c[0] = c[1] = c[2] = dist;
 			c[3] = 1;
 		}

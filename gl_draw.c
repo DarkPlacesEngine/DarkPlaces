@@ -361,6 +361,7 @@ extern cvar_t gl_mesh_drawrangeelements;
 extern int gl_maxdrawrangeelementsvertices;
 extern int gl_maxdrawrangeelementsindices;
 
+#if 0
 void R_DrawQueue(void)
 {
 	int pos, num, chartexnum, overbright;
@@ -375,15 +376,263 @@ void R_DrawQueue(void)
 	if (!r_render.integer)
 		return;
 
-	qglViewport(vid.realx, vid.realy, vid.realwidth, vid.realheight);
+	GL_SetupView_ViewPort(vid.realx, vid.realy, vid.realwidth, vid.realheight);
+	GL_SetupView_Mode_Ortho(0, 0, vid.conwidth, vid.conheight, -10, 100);
+	GL_SetupView_Orientation_Identity();
+	GL_DepthFunc(GL_LEQUAL);
+	R_Mesh_Start();
+
+	chartexnum = R_GetTexture(char_texture);
+
+	additive = false;
+	qglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	currentpic = "";
+	pic = NULL;
+	qglBindTexture(GL_TEXTURE_2D, 0);
+	color = 0;
+	qglColor4ub(0,0,0,0);
+
+	overbright = v_overbrightbits.integer;
+	batch = false;
+	batchcount = 0;
+	for (pos = 0;pos < r_refdef.drawqueuesize;pos += ((drawqueue_t *)(r_refdef.drawqueue + pos))->size)
+	{
+		dq = (drawqueue_t *)(r_refdef.drawqueue + pos);
+		additive = (dq->flags & DRAWFLAG_ADDITIVE) != 0;
+		color = dq->color;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		if (additive)
+			m.blendfunc2 = GL_ONE;
+		else
+			m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+		m.depthdisable = true;
+		R_Mesh_MainState(&m);
+		cr = (float) ((color >> 24) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		cg = (float) ((color >> 16) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		cb = (float) ((color >>  8) & 0xFF) * (1.0f / 255.0f) * r_colorscale;
+		ca = (float) ( color        & 0xFF) * (1.0f / 255.0f);
+		x = dq->x;
+		y = dq->y;
+		w = dq->scalex;
+		h = dq->scaley;
+		switch(dq->command)
+		{
+		case DRAWQUEUE_PIC:
+			str = (char *)(dq + 1);
+			if (*str)
+			{
+				if (strcmp(str, currentpic))
+				{
+					if (batch)
+					{
+						batch = false;
+						qglEnd();
+					}
+					currentpic = str;
+					pic = Draw_CachePic(str);
+					qglBindTexture(GL_TEXTURE_2D, R_GetTexture(pic->tex));
+				}
+				if (w == 0)
+					w = pic->width;
+				if (h == 0)
+					h = pic->height;
+				if (!batch)
+				{
+					batch = true;
+					qglBegin(GL_TRIANGLES);
+					batchcount = 0;
+				}
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
+				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
+				batchcount++;
+			}
+			else
+			{
+				if (currentpic[0])
+				{
+					if (batch)
+					{
+						batch = false;
+						qglEnd();
+					}
+					currentpic = "";
+					qglBindTexture(GL_TEXTURE_2D, 0);
+				}
+				if (!batch)
+				{
+					batch = true;
+					qglBegin(GL_TRIANGLES);
+					batchcount = 0;
+				}
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
+				qglTexCoord2f (1, 0);qglVertex2f (x+w, y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 0);qglVertex2f (x  , y  );
+				qglTexCoord2f (1, 1);qglVertex2f (x+w, y+h);
+				qglTexCoord2f (0, 1);qglVertex2f (x  , y+h);
+				batchcount++;
+			}
+			break;
+		case DRAWQUEUE_STRING:
+			str = (char *)(dq + 1);
+			if (strcmp("conchars", currentpic))
+			{
+				if (batch)
+				{
+					batch = false;
+					qglEnd();
+				}
+				currentpic = "conchars";
+				qglBindTexture(GL_TEXTURE_2D, chartexnum);
+			}
+			if (!batch)
+			{
+				batch = true;
+				qglBegin(GL_TRIANGLES);
+				batchcount = 0;
+			}
+			while ((num = *str++) && x < vid.conwidth)
+			{
+				if (num != ' ')
+				{
+					s = (num & 15)*0.0625f + (0.5f / 256.0f);
+					t = (num >> 4)*0.0625f + (0.5f / 256.0f);
+					u = 0.0625f - (1.0f / 256.0f);
+					v = 0.0625f - (1.0f / 256.0f);
+					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
+					qglTexCoord2f (s+u, t  );qglVertex2f (x+w, y  );
+					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
+					qglTexCoord2f (s  , t  );qglVertex2f (x  , y  );
+					qglTexCoord2f (s+u, t+v);qglVertex2f (x+w, y+h);
+					qglTexCoord2f (s  , t+v);qglVertex2f (x  , y+h);
+					batchcount++;
+				}
+				x += w;
+			}
+			break;
+		case DRAWQUEUE_MESH:
+			if (batch)
+			{
+				batch = false;
+				qglEnd();
+			}
+			
+			mesh = (void *)(dq + 1);
+			qglBindTexture(GL_TEXTURE_2D, R_GetTexture(mesh->texture));
+			qglVertexPointer(3, GL_FLOAT, sizeof(float[3]), mesh->vertices);CHECKGLERROR
+			qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), mesh->texcoords);CHECKGLERROR
+			qglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(qbyte[4]), mesh->colors);CHECKGLERROR
+			qglEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+			qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+			GL_DrawRangeElements(0, mesh->numvertices, mesh->numindices, mesh->indices);
+			qglDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+			qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+
+			// restore color, since it got trashed by using color array
+			qglColor4ub((qbyte)(((color >> 24) & 0xFF) >> overbright), (qbyte)(((color >> 16) & 0xFF) >> overbright), (qbyte)(((color >> 8) & 0xFF) >> overbright), (qbyte)(color & 0xFF));
+			CHECKGLERROR
+			currentpic = "\0";
+			break;
+		}
+	}
+	if (batch)
+		qglEnd();
+	CHECKGLERROR
+
+	if (!v_hwgamma.integer)
+	{
+		qglDisable(GL_TEXTURE_2D);
+		CHECKGLERROR
+		t = v_contrast.value * (float) (1 << v_overbrightbits.integer);
+		if (t >= 1.01f)
+		{
+			qglBlendFunc (GL_DST_COLOR, GL_ONE);
+			CHECKGLERROR
+			qglBegin (GL_TRIANGLES);
+			while (t >= 1.01f)
+			{
+				num = (int) ((t - 1.0f) * 255.0f);
+				if (num > 255)
+					num = 255;
+				qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+				qglVertex2f (-5000, -5000);
+				qglVertex2f (10000, -5000);
+				qglVertex2f (-5000, 10000);
+				t *= 0.5;
+			}
+			qglEnd ();
+			CHECKGLERROR
+		}
+		else if (t <= 0.99f)
+		{
+			qglBlendFunc(GL_ZERO, GL_SRC_COLOR);
+			CHECKGLERROR
+			qglBegin(GL_TRIANGLES);
+			num = (int) (t * 255.0f);
+			qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+			qglVertex2f (-5000, -5000);
+			qglVertex2f (10000, -5000);
+			qglVertex2f (-5000, 10000);
+			qglEnd();
+			CHECKGLERROR
+		}
+		if (v_brightness.value >= 0.01f)
+		{
+			qglBlendFunc (GL_ONE, GL_ONE);
+			CHECKGLERROR
+			num = (int) (v_brightness.value * 255.0f);
+			qglColor4ub ((qbyte) num, (qbyte) num, (qbyte) num, 255);
+			CHECKGLERROR
+			qglBegin (GL_TRIANGLES);
+			qglVertex2f (-5000, -5000);
+			qglVertex2f (10000, -5000);
+			qglVertex2f (-5000, 10000);
+			qglEnd ();
+			CHECKGLERROR
+		}
+		qglEnable(GL_TEXTURE_2D);
+		CHECKGLERROR
+	}
+
+	qglBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	CHECKGLERROR
+	qglEnable (GL_CULL_FACE);
+	CHECKGLERROR
+	qglEnable (GL_DEPTH_TEST);
+	CHECKGLERROR
+	qglDisable (GL_BLEND);
+	CHECKGLERROR
+	qglColor4ub (255, 255, 255, 255);
+	CHECKGLERROR
+}
+#else
+void R_DrawQueue(void)
+{
+	int pos, num, chartexnum, overbright;
+	float x, y, w, h, s, t, u, v;
+	cachepic_t *pic;
+	drawqueue_t *dq;
+	char *str, *currentpic;
+	int batch, batchcount, additive;
+	unsigned int color;
+	drawqueuemesh_t *mesh;
+
+	if (!r_render.integer)
+		return;
 
 	qglMatrixMode(GL_PROJECTION);
-    qglLoadIdentity();
+	qglLoadIdentity();
 	qglOrtho(0, vid.conwidth, vid.conheight, 0, -99999, 99999);
 
 	qglMatrixMode(GL_MODELVIEW);
     qglLoadIdentity();
-
+	
 	qglDisable(GL_DEPTH_TEST);
 	qglDisable(GL_CULL_FACE);
 	qglEnable(GL_BLEND);
@@ -642,4 +891,5 @@ void R_DrawQueue(void)
 	qglColor4ub (255, 255, 255, 255);
 	CHECKGLERROR
 }
+#endif
 

@@ -65,14 +65,11 @@ void GL_PrintError(int errornumber, char *filename, int linenumber)
 
 int c_meshs, c_meshelements;
 
-int lightscalebit;
-float lightscale;
-float overbrightscale;
-
 void SCR_ScreenShot_f (void);
 
 // these are externally accessible
-float mesh_colorscale;
+int r_lightmapscalebit;
+float r_colorscale;
 float *varray_vertex;
 float *varray_color;
 float *varray_texcoord[MAX_TEXTUREUNITS];
@@ -608,39 +605,9 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 }
 
 // sets up the requested state
-void R_Mesh_State(const rmeshstate_t *m)
+void R_Mesh_MainState(const rmeshstate_t *m)
 {
-	int i, overbright;
-	int texturergbscale[MAX_TEXTUREUNITS];
-	float scaler;
-
 	BACKENDACTIVECHECK
-
-	if (gl_backend_rebindtextures)
-	{
-		gl_backend_rebindtextures = false;
-		GL_SetupTextureState();
-	}
-
-	overbright = false;
-	scaler = 1;
-	if (m->blendfunc1 == GL_DST_COLOR)
-	{
-		// check if it is a 2x modulate with framebuffer
-		if (m->blendfunc2 == GL_SRC_COLOR)
-			scaler *= 0.5f;
-	}
-	else if (m->blendfunc2 != GL_SRC_COLOR)
-	{
-		if (m->tex[0])
-		{
-			overbright = m->wantoverbright && gl_combine.integer;
-			if (overbright)
-				scaler *= 0.25f;
-		}
-		scaler *= overbrightscale;
-	}
-	mesh_colorscale = scaler;
 
 	if (gl_state.blendfunc1 != m->blendfunc1 || gl_state.blendfunc2 != m->blendfunc2)
 	{
@@ -685,6 +652,20 @@ void R_Mesh_State(const rmeshstate_t *m)
 	{
 		qglDepthMask(gl_state.depthmask = (m->blendfunc2 == GL_ZERO || m->depthwrite));CHECKGLERROR
 	}
+}
+
+void R_Mesh_TextureState(const rmeshstate_t *m)
+{
+	int i;
+	int texturergbscale[MAX_TEXTUREUNITS];
+
+	BACKENDACTIVECHECK
+
+	if (gl_backend_rebindtextures)
+	{
+		gl_backend_rebindtextures = false;
+		GL_SetupTextureState();
+	}
 
 	for (i = 0;i < backendunits;i++)
 	{
@@ -692,17 +673,6 @@ void R_Mesh_State(const rmeshstate_t *m)
 			texturergbscale[i] = m->texrgbscale[i];
 		else
 			texturergbscale[i] = 1;
-	}
-	if (overbright)
-	{
-		for (i = backendunits - 1;i >= 0;i--)
-		{
-			if (m->tex[i])
-			{
-				texturergbscale[i] = 4;
-				break;
-			}
-		}
 	}
 
 	if (backendunits > 1)
@@ -762,6 +732,12 @@ void R_Mesh_State(const rmeshstate_t *m)
 			}
 		}
 	}
+}
+
+void R_Mesh_State(const rmeshstate_t *m)
+{
+	R_Mesh_MainState(m);
+	R_Mesh_TextureState(m);
 }
 
 /*
@@ -841,13 +817,12 @@ void SCR_UpdateScreen (void)
 		Cvar_SetValueQuick(&gl_combine, 0);
 
 	// lighting scale
-	overbrightscale = 1.0f / (float) (1 << v_overbrightbits.integer);
+	r_colorscale = 1.0f / (float) (1 << v_overbrightbits.integer);
 
 	// lightmaps only
-	lightscalebit = v_overbrightbits.integer;
+	r_lightmapscalebit = v_overbrightbits.integer;
 	if (gl_combine.integer && r_textureunits.integer > 1)
-		lightscalebit += 2;
-	lightscale = 1.0f / (float) (1 << lightscalebit);
+		r_lightmapscalebit += 2;
 
 	R_TimeReport("setup");
 

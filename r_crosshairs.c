@@ -168,15 +168,14 @@ void R_DrawCrosshairSprite(rtexture_t *texture, vec3_t origin, vec_t scale, floa
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	m.blendfunc2 = GL_ONE;
-	m.wantoverbright = false;
 	m.depthdisable = true;
 	m.tex[0] = R_GetTexture(texture);
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
 
-	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * mesh_colorscale;
-	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * mesh_colorscale;
-	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * mesh_colorscale;
+	varray_color[0] = varray_color[4] = varray_color[8] = varray_color[12] = cr * r_colorscale;
+	varray_color[1] = varray_color[5] = varray_color[9] = varray_color[13] = cg * r_colorscale;
+	varray_color[2] = varray_color[6] = varray_color[10] = varray_color[14] = cb * r_colorscale;
 	varray_color[3] = varray_color[7] = varray_color[11] = varray_color[15] = ca;
 	varray_texcoord[0][0] = 0;
 	varray_texcoord[0][1] = 0;
