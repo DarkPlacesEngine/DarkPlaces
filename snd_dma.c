@@ -66,7 +66,6 @@ sfx_t		*ambient_sfx[NUM_AMBIENTS];
 
 int sound_started = 0;
 
-// FIXME: make bgmvolume/volume always be registered for sake of config saving, and add check for whether sound is enabled to menu
 cvar_t bgmvolume = {CVAR_SAVE, "bgmvolume", "1"};
 cvar_t volume = {CVAR_SAVE, "volume", "0.7"};
 
@@ -170,6 +169,9 @@ void S_Init (void)
 {
 	Con_Printf("\nSound Initialization\n");
 
+	Cvar_RegisterVariable(&volume);
+	Cvar_RegisterVariable(&bgmvolume);
+
 	if (COM_CheckParm("-nosound"))
 		return;
 
@@ -186,10 +188,8 @@ void S_Init (void)
 	Cmd_AddCommand("soundinfo", S_SoundInfo_f);
 
 	Cvar_RegisterVariable(&nosound);
-	Cvar_RegisterVariable(&volume);
 	Cvar_RegisterVariable(&precache);
 //	Cvar_RegisterVariable(&loadas8bit);
-	Cvar_RegisterVariable(&bgmvolume);
 	Cvar_RegisterVariable(&bgmbuffer);
 	Cvar_RegisterVariable(&ambient_level);
 	Cvar_RegisterVariable(&ambient_fade);

@@ -35,6 +35,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+// used by menu to ghost CD audio slider
+qboolean cdaudioinitialized = false;
 static qboolean cdValid = false;
 static qboolean	playing = false;
 static qboolean	wasPlaying = false;
@@ -202,7 +204,7 @@ void CDAudio_Resume(void)
 	if (!wasPlaying)
 		return;
 	
-	if ( ioctl(cdfile, CDROMRESUME) == -1 ) 
+	if ( ioctl(cdfile, CDROMRESUME) == -1 )
 		Con_DPrintf("ioctl cdromresume failed\n");
 	playing = true;
 }
@@ -337,13 +339,13 @@ void CDAudio_Update(void)
 	{
 		if (cdvolume)
 		{
-			Cvar_SetValue ("bgmvolume", 0.0);
+			Cvar_SetValueQuick (&bgmvolume, 0.0);
 			cdvolume = bgmvolume.value;
 			CDAudio_Pause ();
 		}
 		else
 		{
-			Cvar_SetValue ("bgmvolume", 1.0);
+			Cvar_SetValueQuick (&bgmvolume, 1.0);
 			cdvolume = bgmvolume.value;
 			CDAudio_Resume ();
 		}
@@ -389,6 +391,7 @@ int CDAudio_Init(void)
 
 	for (i = 0; i < 100; i++)
 		remap[i] = i;
+	cdaudioinitialized = true;
 	initialized = true;
 	enabled = true;
 
