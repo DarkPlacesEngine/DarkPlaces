@@ -2462,6 +2462,22 @@ void R_Shadow_LoadWorldLights(void)
 		while (*s)
 		{
 			t = s;
+			/*
+			shadow = true;
+			for (;COM_Parse(t, true) && strcmp(
+			if (COM_Parse(t, true))
+			{
+				if (com_token[0] == '!')
+				{
+					shadow = false;
+					origin[0] = atof(com_token+1);
+				}
+				else
+					origin[0] = atof(com_token);
+				if (Com_Parse(t
+			}
+			*/
+			t = s;
 			while (*s && *s != '\n')
 				s++;
 			if (!*s)
@@ -2519,7 +2535,7 @@ void R_Shadow_SaveWorldLights(void)
 	buf = NULL;
 	for (light = r_shadow_worldlightchain;light;light = light->next)
 	{
-		sprintf(line, "%s%f %f %f %f %f %f %f %d %s %f %f %f %f\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname ? light->cubemapname : "\"\"", light->corona, light->angles[0], light->angles[1], light->angles[2]);
+		sprintf(line, "%s%f %f %f %f %f %f %f %d %s %f %f %f %f\n", light->shadow ? "" : "!", light->origin[0], light->origin[1], light->origin[2], light->radius / r_editlights_rtlightssizescale.value, light->color[0] / r_editlights_rtlightscolorscale.value, light->color[1] / r_editlights_rtlightscolorscale.value, light->color[2] / r_editlights_rtlightscolorscale.value, light->style, light->cubemapname[0] ? light->cubemapname : "\"\"", light->corona, light->angles[0], light->angles[1], light->angles[2]);
 		if (bufchars + (int) strlen(line) > bufmaxchars)
 		{
 			bufmaxchars = bufchars + strlen(line) + 2048;
