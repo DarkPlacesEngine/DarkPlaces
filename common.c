@@ -678,7 +678,7 @@ void COM_InitGameType (void)
 		gamemode = GAME_HIPNOTIC;
 	else if (strstr(name, "rogue"))
 		gamemode = GAME_ROGUE;
-	else if (strstr(name, "goodvsbad2"))
+	else if (strstr(name, "gvb2"))
 		gamemode = GAME_GOODVSBAD2;
 	else if (strstr(name, "teu"))
 		gamemode = GAME_TEU;
