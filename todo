@@ -1,6 +1,5 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
--(Randy) d darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
 -(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
 -(jitspoe) d darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 -(mashakos) d darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
@@ -400,6 +399,7 @@ d darkplaces renderer: figure out the 'inverted bumps' bug on some texture orien
 d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
 d darkplaces renderer: fix EF_ADDITIVE alias model entities not appearing in realtime lighting mode (VorteX)
 d darkplaces renderer: fix a crash when changing level while using qe1 textures (Todd)
+d darkplaces renderer: fix loadsky;r_restart;r_restart crashing or showing random textures (Sajt, Randy)
 d darkplaces renderer: fix model lighting with r_shadow_realtime_world_lightmaps mode, it seems to be adding dlights to vertices? (Mitchell)
 d darkplaces renderer: fix the bug causing models in an unlit map to be black when they should be fullbright (Sajt)
 d darkplaces renderer: fix the sometimes non-animating framegroups on sprites (Kinn) 
