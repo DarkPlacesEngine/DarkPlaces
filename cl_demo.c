@@ -383,11 +383,6 @@ void CL_FinishTimeDemo (void)
 	// LordHavoc: timedemo now prints out 7 digits of fraction, and min/avg/max
 	Con_Printf("%i frames %5.7f seconds %5.7f fps\nmin/avg/max: %5.7f/%5.7f/%5.7f\n", frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
 	Log_Printf("benchmark.log", "date %s | enginedate %s | demo %s | commandline %s | result %i frames %5.7f seconds %5.7f fps min/avg/max: %5.7f/%5.7f/%5.7f\n", Sys_TimeString("%Y-%m-%d %H:%M:%S"), buildstring, cls.demoname, cmdline.string, frames, time, fpsavg, fpsmin, fpsavg, fpsmax);
-	if (gl_videosyncavailable)
-	{
-		Cvar_SetValueQuick (&vid_vsync, old_vsync);
-		qwglSwapIntervalEXT (old_vsync);
-	}
 	if (COM_CheckParm("-benchmark"))
 		Host_Quit_f();
 }
@@ -408,13 +403,6 @@ void CL_TimeDemo_f (void)
 	{
 		Con_Print("timedemo <demoname> : gets demo speeds\n");
 		return;
-	}
-
-	if (gl_videosyncavailable)
-	{
-		old_vsync = vid_vsync.integer;
-		Cvar_SetValueQuick (&vid_vsync, 0);
-		qwglSwapIntervalEXT (0);
 	}
 
 	CL_PlayDemo_f ();
