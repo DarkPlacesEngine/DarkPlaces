@@ -232,18 +232,9 @@ typedef struct msurface_s
 	int dlightbits[8];
 	// avoid redundent addition of dlights
 	int lightframe;
-	// only render each surface once
-	//int worldnodeframe;
 
-	// these cause lightmap updates if regenerated
-	// values currently used in lightmap
-	unsigned short cached_light[MAXLIGHTMAPS];
-	// if lightmap was lit by dynamic lights, force update on next frame
-	short cached_dlight;
-	// to cause lightmap to be rerendered when v_overbrightbits changes
-	short cached_lightmapscalebit;
-	// rerender lightmaps when r_ambient changes
-	float cached_ambient;
+	// if lightmap settings changed, this forces update
+	int cached_dlight;
 }
 msurface_t;
 
