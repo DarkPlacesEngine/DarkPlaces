@@ -872,7 +872,7 @@ void R_Shadow_Stage_Begin(void)
 	R_Mesh_State_Texture(&m);
 	GL_Color(0, 0, 0, 1);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
-	GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	r_shadowstage = SHADOWSTAGE_NONE;
 
 	c_rt_lights = c_rt_clears = c_rt_scissored = 0;
@@ -987,7 +987,7 @@ void R_Shadow_Stage_End(void)
 	//qglDisable(GL_POLYGON_OFFSET_FILL);
 	GL_Color(1, 1, 1, 1);
 	qglColorMask(1, 1, 1, 1);
-	GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	qglDepthFunc(GL_LEQUAL);
 	qglCullFace(GL_FRONT); // quake is backwards, this culls back faces
 	qglDisable(GL_STENCIL_TEST);
@@ -1009,7 +1009,7 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	// (?!?  seems like a driver bug) so abort if gl_stencil is false
 	if (!gl_stencil || BoxesOverlap(r_vieworigin, r_vieworigin, mins, maxs))
 	{
-		GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+		GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 		return false;
 	}
 	for (i = 0;i < 3;i++)
@@ -1155,10 +1155,10 @@ int R_Shadow_ScissorForBBox(const float *mins, const float *maxs)
 	ix2 = x2 + 1.0f;
 	iy2 = y2 + 1.0f;
 	//Con_Printf("%f %f %f %f\n", x1, y1, x2, y2);
-	if (ix1 < r_refdef.x) ix1 = r_refdef.x;
-	if (iy1 < r_refdef.y) iy1 = r_refdef.y;
-	if (ix2 > r_refdef.x + r_refdef.width) ix2 = r_refdef.x + r_refdef.width;
-	if (iy2 > r_refdef.y + r_refdef.height) iy2 = r_refdef.y + r_refdef.height;
+	if (ix1 < r_view_x) ix1 = r_view_x;
+	if (iy1 < r_view_y) iy1 = r_view_y;
+	if (ix2 > r_view_x + r_view_width) ix2 = r_view_x + r_view_width;
+	if (iy2 > r_view_y + r_view_height) iy2 = r_view_y + r_view_height;
 	if (ix2 <= ix1 || iy2 <= iy1)
 		return true;
 	// set up the scissor rectangle
@@ -2307,7 +2307,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 	if (visiblevolumes)
 	{
 		qglEnable(GL_CULL_FACE);
-		GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+		GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	}
 	else
 		R_Shadow_Stage_End();
