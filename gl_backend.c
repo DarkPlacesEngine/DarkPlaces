@@ -11,6 +11,10 @@ cvar_t r_render = {0, "r_render", "1"};
 cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
 cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
 
+// this is used to increase gl_mesh_maxtriangles automatically if a mesh was
+// too large for the buffers in the previous frame
+int overflowedmeshtris = 0;
+
 int gl_maxdrawrangeelementsvertices;
 int gl_maxdrawrangeelementsindices;
 
@@ -222,6 +226,10 @@ static void gl_backend_shutdown(void)
 
 static void gl_backend_bufferchanges(int init)
 {
+	if (overflowedmeshtris > gl_mesh_maxtriangles.integer)
+		Cvar_SetValueQuick(&gl_mesh_maxtriangles, overflowedmeshtris);
+	overflowedmeshtris = 0;
+
 	if (gl_mesh_drawmode.integer == 3 && qglDrawRangeElements != NULL)
 	{
 		if (gl_mesh_maxtriangles.integer * 3 > gl_maxdrawrangeelementsindices)
@@ -1060,19 +1068,24 @@ void R_Mesh_Draw(const rmeshinfo_t *m)
 			Host_Error("R_Mesh_Draw: invalid index (%i of %i verts)\n", m->index, m->numverts);
 #endif
 
+	// LordHavoc: removed this error condition because with floatcolors 0,
+	// the 3DFX driver works with very large meshs
 	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
-	if (m->numtriangles > 1024 || m->numverts > 3072)
-	{
-		Con_Printf("R_Mesh_Draw: mesh too big for 3DFX drivers, rejected\n");
-		return;
-	}
+	//if (m->numtriangles > 1024 || m->numverts > 3072)
+	//{
+	//	Con_Printf("R_Mesh_Draw: mesh too big for 3DFX drivers, rejected\n");
+	//	return;
+	//}
 
 	if (m->numtriangles > max_meshs || m->numverts > max_verts)
 	{
-		Con_Printf("R_Mesh_Draw: mesh too big for current gl_mesh_maxtriangles setting, rejected\n");
+		Con_Printf("R_Mesh_Draw: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
+		if (m->numtriangles > overflowedmeshtris)
+			overflowedmeshtris = m->numtriangles;
+		if (((m->numverts + 2) / 3) > overflowedmeshtris)
+			overflowedmeshtris = (m->numverts + 2) / 3;
 		return;
 	}
-
 
 	if (m->transparent)
 	{
@@ -1256,19 +1269,24 @@ void R_Mesh_Draw_NativeOnly(const rmeshinfo_t *m)
 			return;
 	}
 
+	// LordHavoc: removed this error condition because with floatcolors 0,
+	// the 3DFX driver works with very large meshs
 	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
-	if (m->numtriangles > 1024 || m->numverts > 3072)
-	{
-		Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for 3DFX drivers, rejected\n");
-		return;
-	}
+	//if (m->numtriangles > 1024 || m->numverts > 3072)
+	//{
+	//	Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for 3DFX drivers, rejected\n");
+	//	return;
+	//}
 
 	if (m->numtriangles > max_meshs || m->numverts > max_verts)
 	{
-		Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for current gl_mesh_maxtriangles setting, rejected\n");
+		Con_Printf("R_Mesh_Draw_NativeOnly: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
+		if (m->numtriangles > overflowedmeshtris)
+			overflowedmeshtris = m->numtriangles;
+		if (((m->numverts + 2) / 3) > overflowedmeshtris)
+			overflowedmeshtris = (m->numverts + 2) / 3;
 		return;
 	}
-
 
 	if (m->transparent)
 	{
@@ -1409,19 +1427,24 @@ int R_Mesh_Draw_GetBuffer(rmeshbufferinfo_t *m)
 	 || !m->numverts)
 		Host_Error("R_Mesh_Draw: no triangles or verts\n");
 
+	// LordHavoc: removed this error condition because with floatcolors 0,
+	// the 3DFX driver works with very large meshs
 	// FIXME: we can work around this by falling back on non-array renderer if buffers are too big
-	if (m->numtriangles > 1024 || m->numverts > 3072)
-	{
-		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for 3DFX drivers, rejected\n");
-		return false;
-	}
+	//if (m->numtriangles > 1024 || m->numverts > 3072)
+	//{
+	//	Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for 3DFX drivers, rejected\n");
+	//	return false;
+	//}
 
 	if (m->numtriangles > max_meshs || m->numverts > max_verts)
 	{
-		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for current gl_mesh_maxtriangles setting, rejected\n");
+		Con_Printf("R_Mesh_Draw_GetBuffer: mesh too big for current gl_mesh_maxtriangles setting, increasing limits\n");
+		if (m->numtriangles > overflowedmeshtris)
+			overflowedmeshtris = m->numtriangles;
+		if (((m->numverts + 2) / 3) > overflowedmeshtris)
+			overflowedmeshtris = (m->numverts + 2) / 3;
 		return false;
 	}
-
 
 	if (m->transparent)
 	{
