@@ -117,9 +117,6 @@ typedef struct netconn_s
 	lhnetsocket_t *mysocket;
 	lhnetaddress_t peeraddress;
 	
-	// requested rate in bytes per second
-	int rate;
-
 	// this is mostly identical to qsocket_t from quake
 
 	// if this time is reached, kick off peer
