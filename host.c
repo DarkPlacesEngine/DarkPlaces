@@ -351,7 +351,7 @@ void SV_BroadcastPrint(const char *msg)
 	}
 
 	if (sv_echobprint.integer && cls.state == ca_dedicated)
-		Sys_Print(msg);
+		Con_Print(msg);
 }
 
 /*

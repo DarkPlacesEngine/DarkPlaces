@@ -338,7 +338,7 @@ void CL_ParseServerInfo (void)
 		return;
 	}
 	cl.protocol = i;
-	Con_DPrintf("Protocol %i\n", cl.protocol);
+	Con_DPrintf("Server protocol is %i\n", cl.protocol);
 
 // parse maxclients
 	cl.maxclients = MSG_ReadByte ();

@@ -551,29 +551,97 @@ void Con_PrintToHistory(const char *txt)
 	}
 }
 
+/* The translation table between the graphical font and plain ASCII  --KB */
+static char qfont_table[256] = {
+	'\0', '#',  '#',  '#',  '#',  '.',  '#',  '#',
+	'#',  9,    10,   '#',  ' ',  13,   '.',  '.',
+	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
+	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
+	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
+	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
+	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
+	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
+	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
+	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
+	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
+	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
+	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<',
+
+	'<',  '=',  '>',  '#',  '#',  '.',  '#',  '#',
+	'#',  '#',  ' ',  '#',  ' ',  '>',  '.',  '.',
+	'[',  ']',  '0',  '1',  '2',  '3',  '4',  '5',
+	'6',  '7',  '8',  '9',  '.',  '<',  '=',  '>',
+	' ',  '!',  '"',  '#',  '$',  '%',  '&',  '\'',
+	'(',  ')',  '*',  '+',  ',',  '-',  '.',  '/',
+	'0',  '1',  '2',  '3',  '4',  '5',  '6',  '7',
+	'8',  '9',  ':',  ';',  '<',  '=',  '>',  '?',
+	'@',  'A',  'B',  'C',  'D',  'E',  'F',  'G',
+	'H',  'I',  'J',  'K',  'L',  'M',  'N',  'O',
+	'P',  'Q',  'R',  'S',  'T',  'U',  'V',  'W',
+	'X',  'Y',  'Z',  '[',  '\\', ']',  '^',  '_',
+	'`',  'a',  'b',  'c',  'd',  'e',  'f',  'g',
+	'h',  'i',  'j',  'k',  'l',  'm',  'n',  'o',
+	'p',  'q',  'r',  's',  't',  'u',  'v',  'w',
+	'x',  'y',  'z',  '{',  '|',  '}',  '~',  '<'
+};
+
 /*
 ================
 Con_Print
 
-Prints to all appropriate console targets
+Prints to all appropriate console targets, and adds timestamps
 ================
 */
+extern cvar_t timestamps;
+extern cvar_t timeformat;
+extern qboolean sys_nostdout;
 void Con_Print(const char *msg)
 {
-	// also echo to debugging console
-	Sys_Print(msg);
+	static int index = 0;
+	static char line[16384];
 
-	// log all messages to file
-	Log_ConPrint (msg);
-
-	if (!con_initialized)
-		return;
-
-	if (cls.state == ca_dedicated)
-		return;		// no graphics mode
-
-	// write it to the scrollable buffer
-	Con_PrintToHistory(msg);
+	for (;*msg;msg++)
+	{
+		if (index == 0)
+		{
+			// if this is the beginning of a new line, print timestamp
+			char *timestamp = timestamps.integer ? Sys_TimeString(timeformat.string) : "";
+			// special color codes for chat messages must always come first
+			// for Con_PrintToHistory to work properly
+			if (*msg <= 2)
+				line[index++] = *msg++;
+			// store timestamp
+			for (;*timestamp;index++, timestamp++)
+				if (index < sizeof(line) - 2)
+					line[index] = *timestamp;
+		}
+		// append the character
+		line[index++] = *msg;
+		// if this is a newline character, we have a complete line to print
+		if (*msg == '\n' || index >= 16000)
+		{
+			// terminate the line
+			line[index] = 0;
+			// send to log file
+			Log_ConPrint(line);
+			// send to scrollable buffer
+			if (con_initialized && cls.state != ca_dedicated)
+				Con_PrintToHistory(line);
+			// send to terminal or dedicated server window
+			if (!sys_nostdout)
+			{
+				unsigned char *p;
+				for (p = (unsigned char *) line;*p; p++)
+					*p = qfont_table[*p];
+				Sys_PrintToTerminal(line);
+			}
+			// empty the line buffer
+			index = 0;
+		}
+	}
 }
 
 

@@ -1164,7 +1164,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 				if (!diff)
 				{
 					if (!quiet)
-						Sys_Printf("FS_FindFile: %s in %s\n",
+						Con_DPrintf("FS_FindFile: %s in %s\n",
 									pak->files[middle].name, pak->filename);
 
 					if (index != NULL)
@@ -1186,7 +1186,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 			if (FS_SysFileExists (netpath))
 			{
 				if (!quiet)
-					Sys_Printf("FS_FindFile: %s\n", netpath);
+					Con_DPrintf("FS_FindFile: %s\n", netpath);
 
 				if (index != NULL)
 					*index = -1;
@@ -1196,7 +1196,7 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 	}
 
 	if (!quiet)
-		Sys_Printf("FS_FindFile: can't find %s\n", name);
+		Con_DPrintf("FS_FindFile: can't find %s\n", name);
 
 	if (index != NULL)
 		*index = -1;
@@ -2110,7 +2110,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 							if (liststart == NULL)
 								liststart = listcurrent;
 							if (!quiet)
-								Sys_Printf("SearchPackFile: %s : %s\n", pak->filename, temp);
+								Con_DPrintf("SearchPackFile: %s : %s\n", pak->filename, temp);
 						}
 					}
 					// strip off one path element at a time until empty
@@ -2149,7 +2149,7 @@ fssearch_t *FS_Search(const char *pattern, int caseinsensitive, int quiet)
 							if (liststart == NULL)
 								liststart = listcurrent;
 							if (!quiet)
-								Sys_Printf("SearchDirFile: %s\n", temp);
+								Con_DPrintf("SearchDirFile: %s\n", temp);
 						}
 					}
 				}

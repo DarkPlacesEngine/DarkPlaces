@@ -48,10 +48,6 @@ qboolean Sys_LoadLibrary (const char* dllname, dllhandle_t* handle, const dllfun
 void Sys_UnloadLibrary (dllhandle_t* handle);
 void* Sys_GetProcAddress (dllhandle_t handle, const char* name);
 
-void Sys_Print(const char *msg);
-void Sys_Printf(const char *fmt, ...);
-// send text to the quake console (and possibly to terminal)
-
 // called after Com_InitArgv
 void Sys_Shared_EarlyInit (void);
 // called after Host_init

@@ -829,7 +829,7 @@ void Host_Say(qboolean teamonly)
 			SV_ClientPrint(text);
 	host_client = save;
 
-	Sys_Print(&text[1]);
+	//Con_Print(&text[1]);
 }
 
 
@@ -1189,7 +1189,7 @@ void Host_Spawn_f (void)
 		PR_ExecuteProgram (pr_global_struct->ClientConnect, "QC function ClientConnect is missing");
 
 		if ((Sys_DoubleTime() - host_client->connecttime) <= sv.time)
-			Sys_Printf("%s entered the game\n", host_client->name);
+			Con_Printf("%s entered the game\n", host_client->name);
 
 		PR_ExecuteProgram (pr_global_struct->PutClientInServer, "QC function PutClientInServer is missing");
 	}
@@ -1662,7 +1662,7 @@ void Host_Startdemos_f (void)
 		Con_Printf("Max %i demos in demoloop\n", MAX_DEMOS);
 		c = MAX_DEMOS;
 	}
-	Con_DPrintf("%i demo(s) in loop\n", c);
+	Con_Printf("%i demo(s) in loop\n", c);
 
 	for (i=1 ; i<c+1 ; i++)
 		strlcpy (cls.demos[i-1], Cmd_Argv(i), sizeof (cls.demos[i-1]));

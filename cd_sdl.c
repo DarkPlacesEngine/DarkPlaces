@@ -153,12 +153,12 @@ int CDAudio_SysStartup (void)
 	if( numdrives == -1 ) // was the CDROM system initialized correctly?
 		return -1;
 
-	Con_DPrintf( "Found %i cdrom drives.\n", numdrives );
+	Con_Printf( "Found %i cdrom drives.\n", numdrives );
 
 	for( i = 0 ; i < numdrives ; i++, cd = NULL ) {
 		cd = SDL_CDOpen( i );
 		if( !cd ) {
-			Con_DPrintf( "CD drive %i is invalid.\n", i );
+			Con_Printf( "CD drive %i is invalid.\n", i );
 			continue;
 		}
 
@@ -166,9 +166,9 @@ int CDAudio_SysStartup (void)
 			if( IsAudioCD() )
 				break;
 			else
-				Con_DPrintf( "The CD in drive %i is not an audio cd.\n", i );
+				Con_Printf( "The CD in drive %i is not an audio cd.\n", i );
 		else
-			Con_DPrintf( "No CD in drive %i.\n", i );
+			Con_Printf( "No CD in drive %i.\n", i );
 
 		SDL_CDClose( cd );
 	}
