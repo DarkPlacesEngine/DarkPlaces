@@ -3108,14 +3108,14 @@ void VM_M_findkeysforcommand(void)
 	
 	VM_CheckEmptyString(cmd);
 
-	ret = VM_GetTempString();
+	(ret = VM_GetTempString())[0] = 0;
 	
 	M_FindKeysForCommand(cmd, keys);
 
 	for(i = 0; i < NUMKEYS; i++)
-		ret = va("%s \'%i\'", ret, keys[i]);
+		ret = strcat(ret, va(" \'%i\'", keys[i]));
 
-	PRVM_G_FLOAT(OFS_RETURN) = PRVM_SetString(ret);
+	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(ret);
 }
 
 prvm_builtin_t vm_m_builtins[] = {
