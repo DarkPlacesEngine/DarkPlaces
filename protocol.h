@@ -506,5 +506,55 @@ void EntityFrame_Read(entity_database_t *d);
 // (client) returns the frame number of the most recent frame recieved
 int EntityFrame_MostRecentlyRecievedFrameNum(entity_database_t *d);
 
+typedef struct entity_database4_commit_s
+{
+	// frame number this commit represents
+	int framenum;
+	// number of entities in entity[] array
+	int numentities;
+	// maximum number of entities in entity[] array (dynamic resizing)
+	int maxentities;
+	entity_state_t *entity;
+}
+entity_database4_commit_t;
+
+typedef struct entity_database4_s
+{
+	// what mempool to use for allocations
+	mempool_t *mempool;
+	// reference frame
+	int referenceframenum;
+	// reference entities array is resized according to demand
+	int maxreferenceentities;
+	// array of states for entities, these are indexable by their entity number (yes there are gaps)
+	entity_state_t *referenceentity;
+	// commits waiting to be applied to the reference database when confirmed
+	// (commit[i]->numentities == 0 means it is empty)
+	entity_database4_commit_t commit[MAX_ENTITY_HISTORY];
+	// used only while building a commit
+	entity_database4_commit_t *currentcommit;
+}
+entity_database4_t;
+
+// allocate a database
+entity_database4_t *EntityFrame4_AllocDatabase(mempool_t *pool);
+// free a database
+void EntityFrame4_FreeDatabase(entity_database4_t *d);
+// reset a database (resets compression but does not reallocate anything)
+void EntityFrame4_ResetDatabase(entity_database4_t *d);
+// updates database to account for a frame-received acknowledgment
+void EntityFrame4_AckFrame(entity_database4_t *d, int framenum);
+
+// begin writing a frame
+void EntityFrame4_SV_WriteFrame_Begin(entity_database4_t *d, sizebuf_t *msg, int framenum);
+// write an entity in the frame
+// returns false if full
+int EntityFrame4_SV_WriteFrame_Entity(entity_database4_t *d, sizebuf_t *msg, int maxbytes, entity_state_t *s);
+// end writing a frame
+void EntityFrame4_SV_WriteFrame_End(entity_database4_t *d, sizebuf_t *msg);
+
+// reads a frame from the network stream
+void EntityFrame4_CL_ReadFrame(entity_database4_t *d);
+
 #endif
 
