@@ -617,7 +617,16 @@ void S_ClearBuffer (void)
 	else
 #endif
 	{
-		memset(shm->buffer, clear, shm->samples * shm->samplebits/8);
+		int		setsize = shm->samples * shm->samplebits / 8;
+		char	*buf = shm->buffer;
+
+		while (setsize--)
+			*buf++ = 0;
+
+// on i586/i686 optimized versions of glibc, glibc *wrongly* IMO,
+// reads the memory area before writing to it causing a seg fault
+// since the memory is PROT_WRITE only and not PROT_READ|PROT_WRITE
+//		memset(shm->buffer, clear, shm->samples * shm->samplebits/8);
 	}
 }
 
