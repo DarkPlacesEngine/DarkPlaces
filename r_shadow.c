@@ -168,7 +168,7 @@ cvar_t r_shadow_bumpscale_basetexture = {0, "r_shadow_bumpscale_basetexture", "0
 cvar_t r_shadow_bumpscale_bumpmap = {0, "r_shadow_bumpscale_bumpmap", "4"};
 cvar_t r_shadow_cull = {0, "r_shadow_cull", "1"};
 cvar_t r_shadow_debuglight = {0, "r_shadow_debuglight", "-1"};
-cvar_t r_shadow_gloss = {0, "r_shadow_gloss", "1"};
+cvar_t r_shadow_gloss = {CVAR_SAVE, "r_shadow_gloss", "1"};
 cvar_t r_shadow_gloss2intensity = {0, "r_shadow_gloss2intensity", "0.25"};
 cvar_t r_shadow_glossintensity = {0, "r_shadow_glossintensity", "1"};
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
@@ -176,12 +176,12 @@ cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
 cvar_t r_shadow_portallight = {0, "r_shadow_portallight", "1"};
 cvar_t r_shadow_projectdistance = {0, "r_shadow_projectdistance", "1000000"};
-cvar_t r_shadow_realtime_dlight = {0, "r_shadow_realtime_dlight", "1"};
-cvar_t r_shadow_realtime_dlight_shadows = {0, "r_shadow_realtime_dlight_shadows", "0"};
-cvar_t r_shadow_realtime_world = {0, "r_shadow_realtime_world", "0"};
-cvar_t r_shadow_realtime_world_dlightshadows = {0, "r_shadow_realtime_world_dlightshadows", "1"};
-cvar_t r_shadow_realtime_world_lightmaps = {0, "r_shadow_realtime_world_lightmaps", "0"};
-cvar_t r_shadow_realtime_world_shadows = {0, "r_shadow_realtime_world_shadows", "1"};
+cvar_t r_shadow_realtime_dlight = {CVAR_SAVE, "r_shadow_realtime_dlight", "1"};
+cvar_t r_shadow_realtime_dlight_shadows = {CVAR_SAVE, "r_shadow_realtime_dlight_shadows", "0"};
+cvar_t r_shadow_realtime_world = {CVAR_SAVE, "r_shadow_realtime_world", "0"};
+cvar_t r_shadow_realtime_world_dlightshadows = {CVAR_SAVE, "r_shadow_realtime_world_dlightshadows", "1"};
+cvar_t r_shadow_realtime_world_lightmaps = {CVAR_SAVE, "r_shadow_realtime_world_lightmaps", "0"};
+cvar_t r_shadow_realtime_world_shadows = {CVAR_SAVE, "r_shadow_realtime_world_shadows", "1"};
 cvar_t r_shadow_scissor = {0, "r_shadow_scissor", "1"};
 cvar_t r_shadow_shadow_polygonfactor = {0, "r_shadow_shadow_polygonfactor", "0"};
 cvar_t r_shadow_shadow_polygonoffset = {0, "r_shadow_shadow_polygonoffset", "1"};
@@ -2387,21 +2387,25 @@ void R_Shadow_FreeCubemaps(void)
 	R_FreeTexturePool(&r_shadow_filters_texturepool);
 }
 
-void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname)
+dlight_t *R_Shadow_NewWorldLight(void)
 {
 	dlight_t *light;
-
-	if (radius < 15 || DotProduct(color, color) < 0.03)
-	{
-		Con_Print("R_Shadow_NewWorldLight: refusing to create a light too small/dim\n");
-		return;
-	}
-
 	light = Mem_Alloc(r_shadow_mempool, sizeof(dlight_t));
+	light->next = r_shadow_worldlightchain;
+	r_shadow_worldlightchain = light;
+	return light;
+}
+
+void R_Shadow_UpdateWorldLight(dlight_t *light, vec3_t origin, vec3_t angles, vec3_t color, vec_t radius, vec_t corona, int style, int shadowenable, const char *cubemapname)
+{
 	VectorCopy(origin, light->origin);
-	VectorCopy(angles, light->angles);
-	VectorCopy(color, light->color);
-	light->radius = radius;
+	light->angles[0] = angles[0] - 360 * floor(angles[0] / 360);
+	light->angles[1] = angles[1] - 360 * floor(angles[1] / 360);
+	light->angles[2] = angles[2] - 360 * floor(angles[2] / 360);
+	light->color[0] = max(color[0], 0);
+	light->color[1] = max(color[1], 0);
+	light->color[2] = max(color[2], 0);
+	light->radius = max(radius, 0);
 	light->style = style;
 	if (light->style < 0 || light->style >= MAX_LIGHTSTYLES)
 	{
@@ -2413,8 +2417,6 @@ void R_Shadow_NewWorldLight(vec3_t origin, vec3_t angles, vec3_t color, vec_t ra
 	if (cubemapname && cubemapname[0] && strlen(cubemapname) < sizeof(light->cubemapname))
 		strcpy(light->cubemapname, cubemapname);
 	Matrix4x4_CreateFromQuakeEntity(&light->matrix, light->origin[0], light->origin[1], light->origin[2], light->angles[0], light->angles[1], light->angles[2], 1);
-	light->next = r_shadow_worldlightchain;
-	r_shadow_worldlightchain = light;
 
 	R_RTLight_UpdateFromDLight(&light->rtlight, light, true);
 }
@@ -2570,7 +2572,7 @@ void R_Shadow_LoadWorldLights(void)
 			}
 			VectorScale(color, r_editlights_rtlightscolorscale.value, color);
 			radius *= r_editlights_rtlightssizescale.value;
-			R_Shadow_NewWorldLight(origin, angles, color, radius, corona, style, shadow, cubemapname);
+			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, corona, style, shadow, cubemapname);
 			s++;
 			n++;
 		}
@@ -2660,7 +2662,7 @@ void R_Shadow_LoadLightsFile(void)
 			radius = sqrt(DotProduct(color, color) / (falloff * falloff * 8192.0f * 8192.0f));
 			radius = bound(15, radius, 4096);
 			VectorScale(color, (2.0f / (8388608.0f)), color);
-			R_Shadow_NewWorldLight(origin, vec3_origin, color, radius, 0, style, true, NULL);
+			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, vec3_origin, color, radius, 0, style, true, NULL);
 			s++;
 			n++;
 		}
@@ -2877,7 +2879,7 @@ void R_Shadow_LoadWorldLightsFromMap_LightArghliteTyrlite(void)
 		}
 		VectorAdd(origin, originhack, origin);
 		if (radius >= 1)
-			R_Shadow_NewWorldLight(origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va("cubemaps/%i", skin) : NULL);
+			R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), origin, angles, color, radius, (pflags & PFLAGS_CORONA) != 0, style, (pflags & PFLAGS_NOSHADOW) == 0, skin >= 16 ? va("cubemaps/%i", skin) : NULL);
 	}
 }
 
@@ -2968,7 +2970,7 @@ void R_Shadow_EditLights_Spawn_f(void)
 		return;
 	}
 	color[0] = color[1] = color[2] = 1;
-	R_Shadow_NewWorldLight(r_editlights_cursorlocation, vec3_origin, color, 200, 0, 0, true, NULL);
+	R_Shadow_UpdateWorldLight(R_Shadow_NewWorldLight(), r_editlights_cursorlocation, vec3_origin, color, 200, 0, 0, true, NULL);
 }
 
 void R_Shadow_EditLights_Edit_f(void)
@@ -3185,9 +3187,7 @@ void R_Shadow_EditLights_Edit_f(void)
 		Con_Printf("Cubemap: %s\n", r_shadow_selectedlight->cubemapname);
 		return;
 	}
-	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
-	r_shadow_selectedlight = NULL;
-	R_Shadow_NewWorldLight(origin, angles, color, radius, corona, style, shadows, cubemapname);
+	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, origin, angles, color, radius, corona, style, shadows, cubemapname);
 }
 
 void R_Shadow_EditLights_EditAll_f(void)
@@ -3241,9 +3241,7 @@ void R_Shadow_EditLights_ToggleShadow_f(void)
 		Con_Print("No selected light.\n");
 		return;
 	}
-	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname);
-	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
-	r_shadow_selectedlight = NULL;
+	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, r_shadow_selectedlight->corona, r_shadow_selectedlight->style, !r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname);
 }
 
 void R_Shadow_EditLights_ToggleCorona_f(void)
@@ -3258,9 +3256,7 @@ void R_Shadow_EditLights_ToggleCorona_f(void)
 		Con_Print("No selected light.\n");
 		return;
 	}
-	R_Shadow_NewWorldLight(r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname);
-	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
-	r_shadow_selectedlight = NULL;
+	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_selectedlight->angles, r_shadow_selectedlight->color, r_shadow_selectedlight->radius, !r_shadow_selectedlight->corona, r_shadow_selectedlight->style, r_shadow_selectedlight->shadow, r_shadow_selectedlight->cubemapname);
 }
 
 void R_Shadow_EditLights_Remove_f(void)
@@ -3352,7 +3348,6 @@ void R_Shadow_EditLights_CopyInfo_f(void)
 
 void R_Shadow_EditLights_PasteInfo_f(void)
 {
-	vec3_t origin;
 	if (!r_editlights.integer)
 	{
 		Con_Print("Cannot paste light info when not in editing mode.  Set r_editlights to 1.\n");
@@ -3363,10 +3358,7 @@ void R_Shadow_EditLights_PasteInfo_f(void)
 		Con_Print("No selected light.\n");
 		return;
 	}
-	VectorCopy(r_shadow_selectedlight->origin, origin);
-	R_Shadow_FreeWorldLight(r_shadow_selectedlight);
-	r_shadow_selectedlight = NULL;
-	R_Shadow_NewWorldLight(origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname);
+	R_Shadow_UpdateWorldLight(r_shadow_selectedlight, r_shadow_selectedlight->origin, r_shadow_bufferlight.angles, r_shadow_bufferlight.color, r_shadow_bufferlight.radius, r_shadow_bufferlight.corona, r_shadow_bufferlight.style, r_shadow_bufferlight.shadow, r_shadow_bufferlight.cubemapname);
 }
 
 void R_Shadow_EditLights_Init(void)
