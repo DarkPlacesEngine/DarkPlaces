@@ -461,7 +461,7 @@ void Key_SetBinding (int keynum, char *binding)
 	char	*new;
 	int		l;
 			
-	if (keynum == -1)
+	if (keynum < 0 || keynum >= 256)
 		return;
 
 // free old bindings
