@@ -260,6 +260,10 @@ SOURCE=.\model_sprite.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\net_bsd.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\net_dgrm.c
 # End Source File
 # Begin Source File
@@ -273,10 +277,6 @@ SOURCE=.\net_main.c
 # Begin Source File
 
 SOURCE=.\net_master.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\net_win.c
 # End Source File
 # Begin Source File
 
@@ -580,7 +580,7 @@ SOURCE=.\net_master.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\net_wins.h
+SOURCE=.\net_udp.h
 # End Source File
 # Begin Source File
 

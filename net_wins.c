@@ -31,7 +31,7 @@ static struct qsockaddr broadcastaddr;
 
 static unsigned long myAddr;
 
-#include "net_wins.h"
+#include "net_udp.h"
 
 WSADATA		winsockdata;
 
@@ -64,7 +64,7 @@ BOOL PASCAL FAR BlockingHook(void)
 }
 
 
-void WINS_GetLocalAddress(void)
+void UDP_GetLocalAddress(void)
 {
 	struct hostent	*local = NULL;
 	char			buff[MAXHOSTNAMELEN];
@@ -90,7 +90,7 @@ void WINS_GetLocalAddress(void)
 }
 
 
-int WINS_Init (void)
+int UDP_Init (void)
 {
 	int		i;
 	char	buff[MAXHOSTNAMELEN];
@@ -155,9 +155,9 @@ int WINS_Init (void)
 		strcpy(my_tcpip_address, "INADDR_ANY");
 	}
 
-	if ((net_controlsocket = WINS_OpenSocket (0)) == -1)
+	if ((net_controlsocket = UDP_OpenSocket (0)) == -1)
 	{
-		Con_Printf("WINS_Init: Unable to open control socket\n");
+		Con_Printf("UDP_Init: Unable to open control socket\n");
 		WSACleanup ();
 		return -1;
 	}
@@ -174,38 +174,38 @@ int WINS_Init (void)
 
 //=============================================================================
 
-void WINS_Shutdown (void)
+void UDP_Shutdown (void)
 {
-	WINS_Listen (false);
-	WINS_CloseSocket (net_controlsocket);
+	UDP_Listen (false);
+	UDP_CloseSocket (net_controlsocket);
 	WSACleanup ();
 }
 
 //=============================================================================
 
-void WINS_Listen (qboolean state)
+void UDP_Listen (qboolean state)
 {
 	// enable listening
 	if (state)
 	{
 		if (net_acceptsocket != -1)
 			return;
-		WINS_GetLocalAddress();
-		if ((net_acceptsocket = WINS_OpenSocket (net_hostport)) == -1)
-			Sys_Error ("WINS_Listen: Unable to open accept socket\n");
+		UDP_GetLocalAddress();
+		if ((net_acceptsocket = UDP_OpenSocket (net_hostport)) == -1)
+			Sys_Error ("UDP_Listen: Unable to open accept socket\n");
 		return;
 	}
 
 	// disable listening
 	if (net_acceptsocket == -1)
 		return;
-	WINS_CloseSocket (net_acceptsocket);
+	UDP_CloseSocket (net_acceptsocket);
 	net_acceptsocket = -1;
 }
 
 //=============================================================================
 
-int WINS_OpenSocket (int port)
+int UDP_OpenSocket (int port)
 {
 	int newsocket;
 	struct sockaddr_in address;
@@ -223,7 +223,7 @@ int WINS_OpenSocket (int port)
 	if( bind (newsocket, (void *)&address, sizeof(address)) == 0)
 		return newsocket;
 
-	Sys_Error ("Unable to bind to %s", WINS_AddrToString((struct qsockaddr *)&address));
+	Sys_Error ("Unable to bind to %s", UDP_AddrToString((struct qsockaddr *)&address));
 ErrorReturn:
 	closesocket (newsocket);
 	return -1;
@@ -231,7 +231,7 @@ ErrorReturn:
 
 //=============================================================================
 
-int WINS_CloseSocket (int socket)
+int UDP_CloseSocket (int socket)
 {
 	if (socket == net_broadcastsocket)
 		net_broadcastsocket = 0;
@@ -298,14 +298,14 @@ static int PartialIPAddress (const char *in, struct qsockaddr *hostaddr)
 }
 //=============================================================================
 
-int WINS_Connect (int socket, struct qsockaddr *addr)
+int UDP_Connect (int socket, struct qsockaddr *addr)
 {
 	return 0;
 }
 
 //=============================================================================
 
-int WINS_CheckNewConnections (void)
+int UDP_CheckNewConnections (void)
 {
 	char buf[4096];
 
@@ -319,21 +319,21 @@ int WINS_CheckNewConnections (void)
 
 //=============================================================================
 
-int WINS_Recv (qbyte *buf, int len, struct qsockaddr *addr)
+int UDP_Recv (qbyte *buf, int len, struct qsockaddr *addr)
 {
-	return WINS_Read (net_acceptsocket, buf, len, addr);
+	return UDP_Read (net_acceptsocket, buf, len, addr);
 }
 
 //=============================================================================
 
-int WINS_Send (qbyte *buf, int len, struct qsockaddr *addr)
+int UDP_Send (qbyte *buf, int len, struct qsockaddr *addr)
 {
-	return WINS_Write (net_acceptsocket, buf, len, addr);
+	return UDP_Write (net_acceptsocket, buf, len, addr);
 }
 
 //=============================================================================
 
-int WINS_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
+int UDP_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int addrlen = sizeof (struct qsockaddr);
 	int ret;
@@ -353,7 +353,7 @@ int WINS_Read (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_MakeSocketBroadcastCapable (int socket)
+int UDP_MakeSocketBroadcastCapable (int socket)
 {
 	int	i = 1;
 
@@ -367,7 +367,7 @@ int WINS_MakeSocketBroadcastCapable (int socket)
 
 //=============================================================================
 
-int WINS_Broadcast (int socket, qbyte *buf, int len)
+int UDP_Broadcast (int socket, qbyte *buf, int len)
 {
 	int ret;
 
@@ -375,8 +375,8 @@ int WINS_Broadcast (int socket, qbyte *buf, int len)
 	{
 		if (net_broadcastsocket != 0)
 			Sys_Error("Attempted to use multiple broadcasts sockets\n");
-		WINS_GetLocalAddress();
-		ret = WINS_MakeSocketBroadcastCapable (socket);
+		UDP_GetLocalAddress();
+		ret = UDP_MakeSocketBroadcastCapable (socket);
 		if (ret == -1)
 		{
 			Con_Printf("Unable to make socket broadcast capable\n");
@@ -384,12 +384,12 @@ int WINS_Broadcast (int socket, qbyte *buf, int len)
 		}
 	}
 
-	return WINS_Write (socket, buf, len, &broadcastaddr);
+	return UDP_Write (socket, buf, len, &broadcastaddr);
 }
 
 //=============================================================================
 
-int WINS_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
+int UDP_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 {
 	int ret;
 
@@ -403,7 +403,7 @@ int WINS_Write (int socket, qbyte *buf, int len, struct qsockaddr *addr)
 
 //=============================================================================
 
-char *WINS_AddrToString (const struct qsockaddr *addr)
+char *UDP_AddrToString (const struct qsockaddr *addr)
 {
 	static char buffer[22];
 	int haddr;
@@ -415,7 +415,7 @@ char *WINS_AddrToString (const struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_StringToAddr (const char *string, struct qsockaddr *addr)
+int UDP_StringToAddr (const char *string, struct qsockaddr *addr)
 {
 	int ha1, ha2, ha3, ha4, hp;
 	int ipaddr;
@@ -431,7 +431,7 @@ int WINS_StringToAddr (const char *string, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_GetSocketAddr (int socket, struct qsockaddr *addr)
+int UDP_GetSocketAddr (int socket, struct qsockaddr *addr)
 {
 	int addrlen = sizeof(struct qsockaddr);
 	unsigned int a;
@@ -447,7 +447,7 @@ int WINS_GetSocketAddr (int socket, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_GetNameFromAddr (const struct qsockaddr *addr, char *name)
+int UDP_GetNameFromAddr (const struct qsockaddr *addr, char *name)
 {
 	struct hostent *hostentry;
 
@@ -458,13 +458,13 @@ int WINS_GetNameFromAddr (const struct qsockaddr *addr, char *name)
 		return 0;
 	}
 
-	strcpy (name, WINS_AddrToString (addr));
+	strcpy (name, UDP_AddrToString (addr));
 	return 0;
 }
 
 //=============================================================================
 
-int WINS_GetAddrFromName(const char *name, struct qsockaddr *addr)
+int UDP_GetAddrFromName(const char *name, struct qsockaddr *addr)
 {
 	struct hostent *hostentry;
 
@@ -484,7 +484,7 @@ int WINS_GetAddrFromName(const char *name, struct qsockaddr *addr)
 
 //=============================================================================
 
-int WINS_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2)
+int UDP_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *addr2)
 {
 	if (addr1->sa_family != addr2->sa_family)
 		return -1;
@@ -500,13 +500,13 @@ int WINS_AddrCompare (const struct qsockaddr *addr1, const struct qsockaddr *add
 
 //=============================================================================
 
-int WINS_GetSocketPort (struct qsockaddr *addr)
+int UDP_GetSocketPort (struct qsockaddr *addr)
 {
 	return ntohs(((struct sockaddr_in *)addr)->sin_port);
 }
 
 
-int WINS_SetSocketPort (struct qsockaddr *addr, int port)
+int UDP_SetSocketPort (struct qsockaddr *addr, int port)
 {
 	((struct sockaddr_in *)addr)->sin_port = htons((unsigned short)port);
 	return 0;
