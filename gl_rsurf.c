@@ -821,6 +821,12 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 
 void R_StoreEfrags (efrag_t **ppefrag);
 
+struct nodestack_s
+{
+	int side;
+	mnode_t *node;
+} nodestack[8192];
+
 /*
 ================
 R_WorldNode
@@ -828,14 +834,14 @@ R_WorldNode
 */
 void R_WorldNode ()
 {
-	int		c, side, s = 0;
-	double	dot;
-	struct
-	{
-		double dot;
-		mnode_t *node;
-	} nodestack[8192];
+	int side, texsort, vertex;
+	struct nodestack_s *nstack;
 	mnode_t *node;
+	mleaf_t *pleaf;
+	msurface_t *surf, *endsurf, **mark, **endmark;
+	nstack = nodestack;
+	texsort = gl_texsort.value;
+	vertex = gl_vertex.value;
 
 	if (!(node = cl.worldmodel->nodes))
 		return;
@@ -847,19 +853,19 @@ void R_WorldNode ()
 		{
 			if (node->contents != CONTENTS_SOLID)
 			{
-				mleaf_t		*pleaf;
 				pleaf = (mleaf_t *)node;
 
 				c_leafs++;
-				if ((c = pleaf->nummarksurfaces))
+				if (pleaf->nummarksurfaces)
 				{
-					msurface_t	**mark;
 					mark = pleaf->firstmarksurface;
+					endmark = mark + pleaf->nummarksurfaces;
 					do
 					{
 						(*mark)->visframe = r_framecount;
 						mark++;
-					} while (--c);
+					}
+					while (mark < endmark);
 				}
 
 				// deal with model fragments in this leaf
@@ -867,69 +873,89 @@ void R_WorldNode ()
 					R_StoreEfrags (&pleaf->efrags);
 			}
 
-			if (!s)
+			if (nstack <= nodestack)
 				break;
-			node = nodestack[--s].node;
-			dot = nodestack[s].dot;
+			nstack--;
+			node = nstack->node;
+			side = nstack->side;
 			goto loc0;
 		}
 
 		c_nodes++;
 
-	// node is just a decision point, so go down the apropriate sides
+		// node is just a decision point, so go down the apropriate sides
 
-	// find which side of the node we are on
-		dot = (node->plane->type < 3 ? modelorg[node->plane->type] : DotProduct (modelorg, node->plane->normal)) - node->plane->dist;
+		// find which side of the node we are on
+		side = PlaneDist(modelorg, node->plane) < node->plane->dist;
 
-	// recurse down the children, front side first
-		side = dot < 0;
+		// recurse down the children, front side first
 		if (node->children[side]->visframe == r_visframecount && R_NotCulledBox(node->children[side]->minmaxs, node->children[side]->minmaxs+3))
 		{
-			nodestack[s].node = node;
-			nodestack[s++].dot = dot;
+			nstack->node = node;
+			nstack->side = !side; // go down back side when we come back up
+			nstack++;
 			node = node->children[side];
 			continue;
 		}
+		side = !side;
 loc0:
 
-		// backside
-		side = dot >= 0;
 	// draw stuff
-		if ((c = node->numsurfaces))
+		if (node->numsurfaces)
 		{
-			msurface_t	*surf;
 			surf = cl.worldmodel->surfaces + node->firstsurface;
+			endsurf = surf + node->numsurfaces;
 
-			if (side)
+			if (texsort)
 			{
-				for (;c;c--, surf++)
+				if (side)
 				{
-					if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
+					do
 					{
-						if (gl_texsort.value)
+						if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
 						{
 							surf->texturechain = surf->texinfo->texture->texturechain;
 							surf->texinfo->texture->texturechain = surf;
 						}
-						else
-							R_DrawSurf(surf, false, gl_vertex.value);
+						surf++;
 					}
+					while (surf < endsurf);
+				}
+				else
+				{
+					do
+					{
+						if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
+						{
+							surf->texturechain = surf->texinfo->texture->texturechain;
+							surf->texinfo->texture->texturechain = surf;
+						}
+						surf++;
+					}
+					while (surf < endsurf);
 				}
 			}
 			else
 			{
-				for (;c;c--, surf++)
+				if (side)
 				{
-					if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
+					do
 					{
-						if (gl_texsort.value)
-						{
-							surf->texturechain = surf->texinfo->texture->texturechain;
-							surf->texinfo->texture->texturechain = surf;
-						}
-						else
-							R_DrawSurf(surf, false, gl_vertex.value);
+						if (surf->visframe == r_framecount && !(surf->flags & SURF_PLANEBACK))
+							R_DrawSurf(surf, false, vertex);
+						surf++;
 					}
+					while (surf < endsurf);
+				}
+				else
+				{
+					do
+					{
+						if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
+							R_DrawSurf(surf, false, vertex);
+						surf++;
+					}
+					while (surf < endsurf);
 				}
 			}
 		}
@@ -941,10 +967,11 @@ loc0:
 			continue;
 		}
 
-		if (!s)
+		if (nstack <= nodestack)
 			break;
-		node = nodestack[--s].node;
-		dot = nodestack[s].dot;
+		nstack--;
+		node = nstack->node;
+		side = nstack->side;
 		goto loc0;
 	}
 }
@@ -1048,7 +1075,7 @@ void R_MarkLeaves (void)
 */
 
 // returns a texture number and the position inside it
-int AllocBlock (int w, int h, int *x, int *y)
+int AllocBlock (int w, int h, short *x, short *y)
 {
 	int		i, j;
 	int		best, best2;

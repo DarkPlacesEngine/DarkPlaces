@@ -63,7 +63,7 @@ mleaf_t		*r_viewleaf, *r_oldviewleaf;
 
 texture_t	*r_notexture_mip;
 
-int		d_lightstylevalue[256];	// 8.8 fraction of base light value
+unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
 
 void R_MarkLeaves (void);
