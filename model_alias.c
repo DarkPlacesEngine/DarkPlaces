@@ -224,22 +224,6 @@ static rtexture_t *GL_SkinSplit(byte *in, byte *out, int width, int height, unsi
 		return NULL;
 }
 
-static int GL_SkinCheck(byte *in, int width, int height, unsigned short bits)
-{
-	int i, pixels, passed;
-	byte pixeltest[16];
-	for (i = 0;i < 16;i++)
-		pixeltest[i] = (bits & (1 << i)) != 0;
-	pixels = width*height;
-	passed = 0;
-	while(pixels--)
-	{
-		if (pixeltest[*in >> 4] && *in != 0 && *in != 255)
-			return true;
-		in++;
-	}
-	return false;
-}
 
 static void Mod_LoadSkin (maliashdr_t *mheader, char *basename, byte *skindata, byte *skintemp, int width, int height, rtexture_t **skintex)
 {

@@ -817,6 +817,8 @@ void Sys_SendKeyEvents(void)
 
 void IN_Init(void)
 {
+	if (COM_CheckParm ("-nomouse"))
+		mouse_avail = false;
 }
 
 void IN_Shutdown(void)

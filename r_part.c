@@ -1435,7 +1435,7 @@ void R_DrawParticles (void)
 			continue;
 
 		// LordHavoc: check if it's in a visible leaf
-		leaf = leaf = Mod_PointInLeaf(p->org, cl.worldmodel);
+		leaf = Mod_PointInLeaf(p->org, cl.worldmodel);
 		if (leaf->visframe != r_framecount)
 			continue;
 
