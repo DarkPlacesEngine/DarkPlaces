@@ -497,22 +497,22 @@ char *PR_GlobalString (int ofs)
 	ddef_t	*def;
 	void	*val;
 	static char	line[128];
-	
+
 	val = (void *)&pr_globals[ofs];
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(???)", ofs);
+		sprintf (line,"%i(??\?)", ofs); // LordHavoc: escaping the third ? so it is not a trigraph
 	else
 	{
 		s = PR_ValueString (def->type, val);
 		sprintf (line,"%i(%s)%s", ofs, pr_strings + def->s_name, s);
 	}
-	
+
 	i = strlen(line);
 	for ( ; i<20 ; i++)
 		strcat (line," ");
 	strcat (line," ");
-		
+
 	return line;
 }
 
@@ -521,18 +521,18 @@ char *PR_GlobalStringNoContents (int ofs)
 	int		i;
 	ddef_t	*def;
 	static char	line[128];
-	
+
 	def = ED_GlobalAtOfs(ofs);
 	if (!def)
-		sprintf (line,"%i(???)", ofs);
+		sprintf (line,"%i(??\?)", ofs); // LordHavoc: escaping the third ? so it is not a trigraph
 	else
 		sprintf (line,"%i(%s)", ofs, pr_strings + def->s_name);
-	
+
 	i = strlen(line);
 	for ( ; i<20 ; i++)
 		strcat (line," ");
 	strcat (line," ");
-		
+
 	return line;
 }
 
