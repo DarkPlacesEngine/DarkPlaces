@@ -242,7 +242,6 @@ typedef struct model_brushq1_s
 	int				numsurfaces;
 	msurface_t		*surfaces;
 	int				*surfacevisframes;
-	int				*surfacepvsframes;
 	msurface_t		*surfacepvsnext;
 
 	int				numsurfedges;
@@ -274,19 +273,6 @@ typedef struct model_brushq1_s
 	int				numlights;
 	mlight_t		*lights;
 
-	// pvs visibility marking
-	mleaf_t			*pvsviewleaf;
-	int				pvsviewleafnovis;
-	int				pvsframecount;
-	mleaf_t			*pvsleafchain;
-	int				*pvssurflist;
-	int				pvssurflistlength;
-	// these get rebuilt as the player moves around if this is the world,
-	// otherwise they are left alone (no pvs for bmodels)
-	msurface_t		***pvstexturechains;
-	msurface_t		**pvstexturechainsbuffer;
-	int				*pvstexturechainslength;
-
 	// lightmap update chains for light styles
 	int				light_styles;
 	qbyte			*light_style;
@@ -295,7 +281,6 @@ typedef struct model_brushq1_s
 	msurface_t		**light_styleupdatechainsbuffer;
 
 	mleaf_t *(*PointInLeaf)(struct model_s *model, const float *p);
-	void (*BuildPVSTextureChains)(struct model_s *model);
 }
 model_brushq1_t;
 

@@ -1425,7 +1425,7 @@ void R_WorldVisibility(void)
 					surfacevisframes[*mark] = r_framecount;
 			// follow portals into other leafs
 			for (p = leaf->portals;p;p = p->next)
-				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && p->past->visframe != r_framecount && !R_CullBox(p->mins, p->maxs) && CHECKPVSBIT(r_pvsbits, p->past->clusterindex))
+				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && p->past->visframe != r_framecount && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
 					leafstack[leafstackpos++] = p->past;
 		}
 	}
