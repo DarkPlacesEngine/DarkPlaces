@@ -100,14 +100,50 @@ char		m_return_reason [32];
 void M_ConfigureNetSubsystem(void);
 
 // Nehahra
-int NumberOfDemos;
+#define NumberOfNehahraDemos 34
 typedef struct
 {
-	char name[50];
-	char desc[50];
-} demonames_t;
+	char *name;
+	char *desc;
+} nehahrademonames_t;
 
-demonames_t Demos[35];
+nehahrademonames_t NehahraDemos[NumberOfNehahraDemos] =
+{
+	{"intro", "Prologue"},
+	{"genf", "The Beginning"},
+	{"genlab", "A Doomed Project"},
+	{"nehcre", "The New Recruits"},
+	{"maxneh", "Breakthrough"},
+	{"maxchar", "Renewal and Duty"},
+	{"crisis", "Worlds Collide"},
+	{"postcris", "Darkening Skies"},
+	{"hearing", "The Hearing"},
+	{"getjack", "On a Mexican Radio"},
+	{"prelude", "Honor and Justice"},
+	{"abase", "A Message Sent"},
+	{"effect", "The Other Side"},
+	{"uhoh", "Missing in Action"},
+	{"prepare", "The Response"},
+	{"vision", "Farsighted Eyes"},
+	{"maxturns", "Enter the Immortal"},
+	{"backlot", "Separate Ways"},
+	{"maxside", "The Ancient Runes"},
+	{"counter", "The New Initiative"},
+	{"warprep", "Ghosts to the World"},
+	{"counter1", "A Fate Worse Than Death"},
+	{"counter2", "Friendly Fire"},
+	{"counter3", "Minor Setback"},
+	{"madmax", "Scores to Settle"},
+	{"quake", "One Man"},
+	{"cthmm", "Shattered Masks"},
+	{"shades", "Deal with the Dead"},
+	{"gophil", "An Unlikely Hero"},
+	{"cstrike", "War in Hell"},
+	{"shubset", "The Conspiracy"},
+	{"shubdie", "Even Death May Die"},
+	{"newranks", "An Empty Throne"},
+	{"seal", "The Seal is Broken"}
+};
 
 float menu_x, menu_y, menu_width, menu_height;
 
@@ -339,8 +375,8 @@ void M_Demo_Draw (void)
 {
 	int		i;
 
-	for (i=0; i < NumberOfDemos; i++)
-		M_Print (16, 16 + 8*i, Demos[i].desc);
+	for (i=0; i < NumberOfNehahraDemos; i++)
+		M_Print (16, 16 + 8*i, NehahraDemos[i].desc);
 
 	// line cursor
 	M_DrawCharacter (8, 16 + demo_cursor*8, 12+((int)(realtime*4)&1));
@@ -349,47 +385,9 @@ void M_Demo_Draw (void)
 
 void M_Menu_Demos_f (void)
 {
-        key_dest = key_menu;
-        m_state = m_demo;
-        m_entersound = true;
-
-
-        NumberOfDemos = 34;
-
-        strcpy(Demos[0].name,  "intro");         strcpy(Demos[0].desc,  "Prologue");
-        strcpy(Demos[1].name,  "genf");          strcpy(Demos[1].desc,  "The Beginning");
-        strcpy(Demos[2].name,  "genlab");        strcpy(Demos[2].desc,  "A Doomed Project");
-        strcpy(Demos[3].name,  "nehcre");        strcpy(Demos[3].desc,  "The New Recruits");
-        strcpy(Demos[4].name,  "maxneh");        strcpy(Demos[4].desc,  "Breakthrough");
-        strcpy(Demos[5].name,  "maxchar");       strcpy(Demos[5].desc,  "Renewal and Duty");
-        strcpy(Demos[6].name,  "crisis");        strcpy(Demos[6].desc,  "Worlds Collide");
-        strcpy(Demos[7].name,  "postcris");      strcpy(Demos[7].desc,  "Darkening Skies");
-        strcpy(Demos[8].name,  "hearing");       strcpy(Demos[8].desc,  "The Hearing");
-        strcpy(Demos[9].name,  "getjack");       strcpy(Demos[9].desc,  "On a Mexican Radio");
-        strcpy(Demos[10].name, "prelude");       strcpy(Demos[10].desc, "Honor and Justice");
-        strcpy(Demos[11].name, "abase");         strcpy(Demos[11].desc, "A Message Sent");
-        strcpy(Demos[12].name, "effect");        strcpy(Demos[12].desc, "The Other Side");
-        strcpy(Demos[13].name, "uhoh");          strcpy(Demos[13].desc, "Missing in Action");
-        strcpy(Demos[14].name, "prepare");       strcpy(Demos[14].desc, "The Response");
-        strcpy(Demos[15].name, "vision");        strcpy(Demos[15].desc, "Farsighted Eyes");
-        strcpy(Demos[16].name, "maxturns");      strcpy(Demos[16].desc, "Enter the Immortal");
-        strcpy(Demos[17].name, "backlot");       strcpy(Demos[17].desc, "Separate Ways");
-        strcpy(Demos[18].name, "maxside");       strcpy(Demos[18].desc, "The Ancient Runes");
-        strcpy(Demos[19].name, "counter");       strcpy(Demos[19].desc, "The New Initiative");
-        strcpy(Demos[20].name, "warprep");       strcpy(Demos[20].desc, "Ghosts to the World");
-        strcpy(Demos[21].name, "counter1");      strcpy(Demos[21].desc, "A Fate Worse Than Death");
-        strcpy(Demos[22].name, "counter2");      strcpy(Demos[22].desc, "Friendly Fire");
-        strcpy(Demos[23].name, "counter3");      strcpy(Demos[23].desc, "Minor Setback");
-        strcpy(Demos[24].name, "madmax");        strcpy(Demos[24].desc, "Scores to Settle");
-        strcpy(Demos[25].name, "quake");         strcpy(Demos[25].desc, "One Man");
-        strcpy(Demos[26].name, "cthmm");         strcpy(Demos[26].desc, "Shattered Masks");
-        strcpy(Demos[27].name, "shades");        strcpy(Demos[27].desc, "Deal with the Dead");
-        strcpy(Demos[28].name, "gophil");        strcpy(Demos[28].desc, "An Unlikely Hero");
-        strcpy(Demos[29].name, "cstrike");       strcpy(Demos[29].desc, "War in Hell");
-        strcpy(Demos[30].name, "shubset");       strcpy(Demos[30].desc, "The Conspiracy");
-        strcpy(Demos[31].name, "shubdie");       strcpy(Demos[31].desc, "Even Death May Die");
-        strcpy(Demos[32].name, "newranks");      strcpy(Demos[32].desc, "An Empty Throne");
-        strcpy(Demos[33].name, "seal");          strcpy(Demos[33].desc, "The Seal is Broken");
+    key_dest = key_menu;
+    m_state = m_demo;
+    m_entersound = true;
 }
 
 void M_Demo_Key (int k)
@@ -404,7 +402,7 @@ void M_Demo_Key (int k)
 		S_LocalSound ("misc/menu2.wav");
 		m_state = m_none;
 		key_dest = key_game;
-		Cbuf_AddText (va ("playdemo %s\n", Demos[demo_cursor].name));
+		Cbuf_AddText (va ("playdemo %s\n", NehahraDemos[demo_cursor].name));
 		return;
 
 	case K_UPARROW:
@@ -412,14 +410,14 @@ void M_Demo_Key (int k)
 		S_LocalSound ("misc/menu1.wav");
 		demo_cursor--;
 		if (demo_cursor < 0)
-			demo_cursor = NumberOfDemos;
+			demo_cursor = NumberOfNehahraDemos;
 		break;
 
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 		S_LocalSound ("misc/menu1.wav");
 		demo_cursor++;
-		if (demo_cursor > NumberOfDemos)
+		if (demo_cursor > NumberOfNehahraDemos)
 			demo_cursor = 0;
 		break;
 	}
@@ -2159,7 +2157,23 @@ typedef struct
 	char	*description;
 } level_t;
 
-level_t		levels[] =
+typedef struct
+{
+	char	*description;
+	int		firstLevel;
+	int		levels;
+} episode_t;
+
+typedef struct
+{
+	char *gamename;
+	level_t *levels;
+	episode_t *episodes;
+	int numepisodes;
+}
+gamelevels_t;
+
+level_t quakelevels[] =
 {
 	{"start", "Entrance"},	// 0
 
@@ -2207,6 +2221,17 @@ level_t		levels[] =
 	{"dm6", "The Dark Zone"}
 };
 
+episode_t quakeepisodes[] =
+{
+	{"Welcome to Quake", 0, 1},
+	{"Doomed Dimension", 1, 8},
+	{"Realm of Black Magic", 9, 7},
+	{"Netherworld", 16, 7},
+	{"The Elder World", 23, 8},
+	{"Final Level", 31, 1},
+	{"Deathmatch Arena", 32, 6}
+};
+
 //MED 01/06/97 added hipnotic levels
 level_t     hipnoticlevels[] =
 {
@@ -2235,6 +2260,17 @@ level_t     hipnoticlevels[] =
    {"hipdm1", "The Edge of Oblivion"}           // 17
 };
 
+//MED 01/06/97  added hipnotic episodes
+episode_t   hipnoticepisodes[] =
+{
+   {"Scourge of Armagon", 0, 1},
+   {"Fortress of the Dead", 1, 5},
+   {"Dominion of Darkness", 6, 6},
+   {"The Rift", 12, 4},
+   {"Final Level", 16, 1},
+   {"Deathmatch Arena", 17, 1}
+};
+
 //PGM 01/07/97 added rogue levels
 //PGM 03/02/97 added dmatch level
 level_t		roguelevels[] =
@@ -2256,35 +2292,6 @@ level_t		roguelevels[] =
 	{"r2m7",	"Last Bastion"},
 	{"r2m8",	"Source of Evil"},
 	{"ctf1",    "Division of Change"}
-};
-
-typedef struct
-{
-	char	*description;
-	int		firstLevel;
-	int		levels;
-} episode_t;
-
-episode_t	episodes[] =
-{
-	{"Welcome to Quake", 0, 1},
-	{"Doomed Dimension", 1, 8},
-	{"Realm of Black Magic", 9, 7},
-	{"Netherworld", 16, 7},
-	{"The Elder World", 23, 8},
-	{"Final Level", 31, 1},
-	{"Deathmatch Arena", 32, 6}
-};
-
-//MED 01/06/97  added hipnotic episodes
-episode_t   hipnoticepisodes[] =
-{
-   {"Scourge of Armagon", 0, 1},
-   {"Fortress of the Dead", 1, 5},
-   {"Dominion of Darkness", 6, 6},
-   {"The Rift", 12, 4},
-   {"Final Level", 16, 1},
-   {"Deathmatch Arena", 17, 1}
 };
 
 //PGM 01/07/97 added rogue episodes
@@ -2328,6 +2335,56 @@ episode_t	nehahraepisodes[] =
 	{"Dimension of the Lost", 17, 2}
 };
 
+// these are placeholders for bloodbath developers to fill in more correctly
+level_t		bloodbathlevels[] =
+{
+	{"start",	"Welcome to BloodBath"},
+	{"bb1m1",	"Level 1"}
+};
+
+episode_t	bloodbathepisodes[] =
+{
+	{"Welcome to BloodBath", 0, 1},
+	{"BloodBath Episode 1", 1, 1}
+};
+
+gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
+gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
+gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
+gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
+gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
+gamelevels_t bloodbathgame = {"BloodBath", bloodbathlevels, bloodbathepisodes, 2};
+
+typedef struct
+{
+	int gameid;
+	gamelevels_t *notregistered;
+	gamelevels_t *registered;
+}
+gameinfo_t;
+
+gameinfo_t gamelist[] =
+{
+	{GAME_NORMAL, &sharewarequakegame, &registeredquakegame},
+	{GAME_HIPNOTIC, &hipnoticgame, &hipnoticgame},
+	{GAME_ROGUE, &roguegame, &roguegame},
+	{GAME_NEHAHRA, &nehahragame, &nehahragame},
+	{GAME_FIENDARENA, &sharewarequakegame, &registeredquakegame},
+	{GAME_ZYMOTIC, &sharewarequakegame, &registeredquakegame},
+	{GAME_BLOODBATH, &bloodbathgame, &bloodbathgame},
+	{-1, &sharewarequakegame, &registeredquakegame} // final fallback
+};
+
+gamelevels_t *lookupgameinfo(void)
+{
+	int i;
+	for (i = 0;gamelist[i].gameid >= 0 && gamelist[i].gameid != gamemode;i++);
+	if (registered.integer)
+		return gamelist[i].registered;
+	else
+		return gamelist[i].notregistered;
+}
+
 int	startepisode;
 int	startlevel;
 int maxplayers;
@@ -2354,6 +2411,7 @@ void M_GameOptions_Draw (void)
 {
 	cachepic_t	*p;
 	int		x;
+	gamelevels_t *g;
 
 	M_DrawPic (16, 4, "gfx/qplaque.lmp");
 	p = Draw_CachePic ("gfx/p_multi.lmp");
@@ -2425,41 +2483,14 @@ void M_GameOptions_Draw (void)
 	else
 		M_Print (160, 96, va("%i minutes", timelimit.integer));
 
+	g = lookupgameinfo();
+
 	M_Print (0, 112, "         Episode");
-	//MED 01/06/97 added hipnotic episodes
-	if (gamemode == GAME_HIPNOTIC)
-		M_Print (160, 112, hipnoticepisodes[startepisode].description);
-	//PGM 01/07/97 added rogue episodes
-	else if (gamemode == GAME_ROGUE)
-		M_Print (160, 112, rogueepisodes[startepisode].description);
-	else if (gamemode == GAME_NEHAHRA)
-		M_Print (160, 112, nehahraepisodes[startepisode].description);
-	else
-		M_Print (160, 112, episodes[startepisode].description);
+	M_Print (160, 112, g->episodes[startepisode].description);
 
 	M_Print (0, 120, "           Level");
-	//MED 01/06/97 added hipnotic episodes
-	if (gamemode == GAME_HIPNOTIC)
-	{
-		M_Print (160, 120, hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].description);
-		M_Print (160, 128, hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name);
-	}
-	//PGM 01/07/97 added rogue episodes
-	else if (gamemode == GAME_ROGUE)
-	{
-		M_Print (160, 120, roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].description);
-		M_Print (160, 128, roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].name);
-	}
-	else if (gamemode == GAME_NEHAHRA)
-	{
-		M_Print (160, 120, nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].description);
-		M_Print (160, 128, nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].name);
-	}
-	else
-	{
-		M_Print (160, 120, levels[episodes[startepisode].firstLevel + startlevel].description);
-		M_Print (160, 128, levels[episodes[startepisode].firstLevel + startlevel].name);
-	}
+	M_Print (160, 120, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
+	M_Print (160, 128, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
 
 // line cursor
 	M_DrawCharacter (144, gameoptions_cursor_table[gameoptions_cursor], 12+((int)(realtime*4)&1));
@@ -2492,6 +2523,7 @@ void M_GameOptions_Draw (void)
 
 void M_NetStart_Change (int dir)
 {
+	gamelevels_t *g;
 	int count;
 
 	switch (gameoptions_cursor)
@@ -2560,24 +2592,12 @@ void M_NetStart_Change (int dir)
 
 	case 7:
 		startepisode += dir;
-	//MED 01/06/97 added hipnotic count
-		if (gamemode == GAME_HIPNOTIC)
-			count = 6;
-	//PGM 01/07/97 added rogue count
-	//PGM 03/02/97 added 1 for dmatch episode
-		else if (gamemode == GAME_ROGUE)
-			count = 4;
-		else if (gamemode == GAME_NEHAHRA)
-			count = 4;
-		else if (registered.integer)
-			count = 7;
-		else
-			count = 2;
+		g = lookupgameinfo();
 
 		if (startepisode < 0)
-			startepisode = count - 1;
+			startepisode = g->numepisodes - 1;
 
-		if (startepisode >= count)
+		if (startepisode >= g->numepisodes)
 			startepisode = 0;
 
 		startlevel = 0;
@@ -2585,21 +2605,12 @@ void M_NetStart_Change (int dir)
 
 	case 8:
 		startlevel += dir;
-    //MED 01/06/97 added hipnotic episodes
-		if (gamemode == GAME_HIPNOTIC)
-			count = hipnoticepisodes[startepisode].levels;
-	//PGM 01/06/97 added hipnotic episodes
-		else if (gamemode == GAME_ROGUE)
-			count = rogueepisodes[startepisode].levels;
-		else if (gamemode == GAME_NEHAHRA)
-			count = nehahraepisodes[startepisode].levels;
-		else
-			count = episodes[startepisode].levels;
+		g = lookupgameinfo();
 
 		if (startlevel < 0)
-			startlevel = count - 1;
+			startlevel = g->episodes[startepisode].levels - 1;
 
-		if (startlevel >= count)
+		if (startlevel >= g->episodes[startepisode].levels)
 			startlevel = 0;
 		break;
 	}
@@ -2607,6 +2618,8 @@ void M_NetStart_Change (int dir)
 
 void M_GameOptions_Key (int key)
 {
+	gamelevels_t *g;
+
 	switch (key)
 	{
 	case K_ESCAPE:
@@ -2650,15 +2663,8 @@ void M_GameOptions_Key (int key)
 			Cbuf_AddText ("listen 0\n");	// so host_netport will be re-examined
 			Cbuf_AddText ( va ("maxplayers %u\n", maxplayers) );
 
-			if (gamemode == GAME_HIPNOTIC)
-				Cbuf_AddText ( va ("map %s\n", hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name) );
-			else if (gamemode == GAME_ROGUE)
-				Cbuf_AddText ( va ("map %s\n", roguelevels[rogueepisodes[startepisode].firstLevel + startlevel].name) );
-			else if (gamemode == GAME_NEHAHRA)
-				Cbuf_AddText ( va ("map %s\n", nehahralevels[nehahraepisodes[startepisode].firstLevel + startlevel].name) );
-			else
-				Cbuf_AddText ( va ("map %s\n", levels[episodes[startepisode].firstLevel + startlevel].name) );
-
+			g = lookupgameinfo();
+			Cbuf_AddText ( va ("map %s\n", g->levels[g->episodes[startepisode].firstLevel + startlevel].name) );
 			return;
 		}
 
