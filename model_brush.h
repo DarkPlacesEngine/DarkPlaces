@@ -57,17 +57,28 @@ mplane_t;
 
 typedef struct texture_s
 {
-	char				name[16];
-	unsigned			width, height;
-	int					flags;				// LordHavoc: SURF_ flags
+	// name
+	char name[16];
+	// size
+	unsigned int width, height;
+	// SURF_ flags
+	unsigned int flags;
 
-	rtexture_t			*texture;
-	rtexture_t			*glowtexture;
-	rtexture_t			*fogtexture;		// alpha-only version of main texture
+	// base texture without fullbrights, never NULL
+	rtexture_t *texture;
+	// fullbrights texture, NULL if no fullbrights used
+	rtexture_t *glowtexture;
+	// alpha texture (used for fogging), NULL if opaque
+	rtexture_t *fogtexture;
 
-	int					anim_total;			// total frames in sequence (< 2 = not animated)
-	struct texture_s	*anim_frames[10];	// LordHavoc: direct pointers to each of the frames in the sequence
-	struct texture_s	*alternate_anims;	// bmodels in frame 1 use these
+	// total frames in sequence and alternate sequence
+	int anim_total[2];
+	// direct pointers to each of the frames in the sequences
+	// (indexed as [alternate][frame])
+	struct texture_s *anim_frames[2][10];
+	// set if animated or there is an alternate frame set
+	// (this is an optimization in the renderer)
+	int animated;
 }
 texture_t;
 

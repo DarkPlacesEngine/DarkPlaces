@@ -30,12 +30,50 @@ model_t *loadmodel;
 #define	MAX_MOD_KNOWN	2048
 static model_t mod_known[MAX_MOD_KNOWN];
 
+rtexture_t *r_notexture;
+rtexturepool_t *r_notexturepool;
+
+texture_t r_surf_notexture;
+
+void Mod_SetupNoTexture(void)
+{
+	int x, y;
+	qbyte pix[16][16][4];
+
+	// this makes a light grey/dark grey checkerboard texture
+	for (y = 0;y < 16;y++)
+	{
+		for (x = 0;x < 16;x++)
+		{
+			if ((y < 8) ^ (x < 8))
+			{
+				pix[y][x][0] = 128;
+				pix[y][x][1] = 128;
+				pix[y][x][2] = 128;
+				pix[y][x][3] = 255;
+			}
+			else
+			{
+				pix[y][x][0] = 64;
+				pix[y][x][1] = 64;
+				pix[y][x][2] = 64;
+				pix[y][x][3] = 255;
+			}
+		}
+	}
+
+	r_notexturepool = R_AllocTexturePool();
+	r_notexture = R_LoadTexture(r_notexturepool, "notexture", 16, 16, &pix[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP);
+}
+
 static void mod_start(void)
 {
 	int i;
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
+
+	Mod_SetupNoTexture();
 }
 
 static void mod_shutdown(void)
@@ -44,6 +82,8 @@ static void mod_shutdown(void)
 	for (i = 0;i < MAX_MOD_KNOWN;i++)
 		if (mod_known[i].name[0])
 			Mod_UnloadModel(&mod_known[i]);
+
+	R_FreeTexturePool(&r_notexturepool);
 }
 
 static void mod_newmap(void)
