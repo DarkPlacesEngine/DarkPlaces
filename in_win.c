@@ -158,17 +158,6 @@ void IN_JoyMove (usercmd_t *cmd);
 
 /*
 ===========
-Force_CenterView_f
-===========
-*/
-void Force_CenterView_f (void)
-{
-	cl.viewangles[PITCH] = 0;
-}
-
-
-/*
-===========
 IN_UpdateClipCursor
 ===========
 */
@@ -473,7 +462,6 @@ void IN_Init (void)
 	Cvar_RegisterVariable (&joy_wwhack1);
 	Cvar_RegisterVariable (&joy_wwhack2);
 
-	Cmd_AddCommand ("force_centerview", Force_CenterView_f);
 	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
 
 	uiWheelMessage = RegisterWindowMessage ( "MSWHEEL_ROLLMSG" );
