@@ -211,39 +211,39 @@ static rtexture_t *GL_SkinSplit(qbyte *in, qbyte *out, int width, int height, in
 		return NULL;
 }
 
-static void Mod_LoadSkin (char *basename, qbyte *skindata, qbyte *skintemp, int width, int height, skinframe_t *skinframe, int precache)
+static int Mod_LoadExternalSkin (char *basename, skinframe_t *skinframe, int precache)
 {
 	skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, va("%s_normal", basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->fog    = image_masktex;
-	skinframe->pants  = NULL;
-	skinframe->shirt  = NULL;
+	if (!skinframe->base)
+	{
+		skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, basename, 0, 0, false, r_mipskins.integer, precache);
+		skinframe->fog    = image_masktex;
+	}
+	skinframe->pants  = loadtextureimage(loadmodel->texturepool, va("%s_pants" , basename), 0, 0, false, r_mipskins.integer, precache);
+	skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->glow   = loadtextureimage(loadmodel->texturepool, va("%s_glow"  , basename), 0, 0, false, r_mipskins.integer, precache);
 	skinframe->merged = NULL;
-	if (skinframe->base)
+	return skinframe->base != NULL || skinframe->pants != NULL || skinframe->shirt != NULL || skinframe->glow != NULL || skinframe->merged != NULL || skinframe->fog != NULL;
+}
+
+static int Mod_LoadInternalSkin (char *basename, qbyte *skindata, qbyte *skintemp, int width, int height, skinframe_t *skinframe, int precache)
+{
+	if (skindata && skintemp)
+		return false;
+	skinframe->pants  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("%s_pants", basename), false); // pants
+	skinframe->shirt  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("%s_shirt", basename), false); // shirt
+	skinframe->glow   = GL_SkinSplit     (skindata, skintemp, width, height, 0xC000, va("%s_glow", basename), precache); // glow
+	if (skinframe->pants || skinframe->shirt)
 	{
-		skinframe->pants  = loadtextureimage(loadmodel->texturepool, va("%s_pants" , basename), 0, 0, false, r_mipskins.integer, precache);
-		skinframe->shirt  = loadtextureimage(loadmodel->texturepool, va("%s_shirt" , basename), 0, 0, false, r_mipskins.integer, precache);
+		skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FBD, va("%s_normal", basename), false); // normal (no special colors)
+		skinframe->merged = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename), precache); // body (normal + pants + shirt, but not glow)
 	}
 	else
-	{
-		skinframe->base   = loadtextureimagewithmask(loadmodel->texturepool, basename, 0, 0, false, true, true);
-		skinframe->fog    = image_masktex;
-		if (!skinframe->base)
-		{
-			skinframe->pants  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0040, va("%s_pants", basename), false); // pants
-			skinframe->shirt  = GL_SkinSplitShirt(skindata, skintemp, width, height, 0x0002, va("%s_shirt", basename), false); // shirt
-			skinframe->glow   = GL_SkinSplit     (skindata, skintemp, width, height, 0xC000, va("%s_glow", basename), precache); // glow
-			if (skinframe->pants || skinframe->shirt)
-			{
-				skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FBD, va("%s_normal", basename), false); // normal (no special colors)
-				skinframe->merged = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_body", basename), precache); // body (normal + pants + shirt, but not glow)
-			}
-			else
-				skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_base", basename), precache); // no special colors
-			// quake model skins don't have alpha
-			skinframe->fog = NULL;
-		}
-	}
+		skinframe->base   = GL_SkinSplit (skindata, skintemp, width, height, 0x3FFF, va("%s_base", basename), precache); // no special colors
+	// quake model skins don't have alpha
+	skinframe->fog = NULL;
+	return true;
 }
 
 #define BOUNDI(VALUE,MIN,MAX) if (VALUE < MIN || VALUE >= MAX) Host_Error("model %s has an invalid ##VALUE (%d exceeds %d - %d)\n", loadmodel->name, VALUE, MIN, MAX);
@@ -263,6 +263,9 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	qbyte					*datapointer, *startframes, *startskins;
 	char					name[MAX_QPATH];
 	qbyte					*skintemp = NULL;
+	skinframe_t				tempskinframe;
+	animscene_t				*tempskinscenes;
+	skinframe_t				*tempskinframes;
 	modelyawradius = 0;
 	modelradius = 0;
 
@@ -396,12 +399,42 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 				sprintf (name, "%s_%i_%i", loadmodel->name, i, j);
 			else
 				sprintf (name, "%s_%i", loadmodel->name, i);
-			Mod_LoadSkin(name, (qbyte *)datapointer, skintemp, skinwidth, skinheight, loadmodel->skinframes + totalskins, i == 0);
+			if (!Mod_LoadExternalSkin(name, loadmodel->skinframes + totalskins, i == 0))
+				Mod_LoadInternalSkin(name, (qbyte *)datapointer, skintemp, skinwidth, skinheight, loadmodel->skinframes + totalskins, i == 0);
 			datapointer += skinwidth * skinheight;
 			totalskins++;
 		}
 	}
 	Mem_Free(skintemp);
+	// check for skins that don't exist in the model, but do exist as external images
+	// (this was added because yummyluv kept pestering me about support for it)
+	for (;;)
+	{
+		sprintf (name, "%s_%i", loadmodel->name, loadmodel->numskins);
+		if (Mod_LoadExternalSkin(name, &tempskinframe, loadmodel->numskins == 0))
+		{
+			// expand the arrays to make room
+			tempskinscenes = loadmodel->skinscenes;
+			tempskinframes = loadmodel->skinframes;
+			loadmodel->skinscenes = Mem_Alloc(loadmodel->mempool, (loadmodel->numskins + 1) * sizeof(animscene_t));
+			loadmodel->skinframes = Mem_Alloc(loadmodel->mempool, (totalskins + 1) * sizeof(skinframe_t));
+			memcpy(loadmodel->skinscenes, tempskinscenes, loadmodel->numskins * sizeof(animscene_t));
+			memcpy(loadmodel->skinframes, tempskinframes, totalskins * sizeof(skinframe_t));
+			Mem_Free(tempskinscenes);
+			Mem_Free(tempskinframes);
+			// store the info about the new skin
+			strcpy(loadmodel->skinscenes[loadmodel->numskins].name, name);
+			loadmodel->skinscenes[loadmodel->numskins].firstframe = totalskins;
+			loadmodel->skinscenes[loadmodel->numskins].framecount = 1;
+			loadmodel->skinscenes[loadmodel->numskins].framerate = 10.0f;
+			loadmodel->skinscenes[loadmodel->numskins].loop = true;
+			loadmodel->skinframes[totalskins] = tempskinframe;
+			loadmodel->numskins++;
+			totalskins++;
+		}
+		else
+			break;
+	}
 
 	// store texture coordinates into temporary array, they will be stored after usage is determined (triangle data)
 	scales = 1.0 / skinwidth;
