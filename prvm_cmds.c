@@ -1746,6 +1746,9 @@ void VM_fopen(void)
 		return;
 	}
 	VM_FILES[filenum] = FS_Open(va("data/%s", filename), modestring, false);
+	if (VM_FILES[filenum] == NULL && mode == 0)
+		VM_FILES[filenum] = FS_Open(va("%s", filename), modestring, false);
+
 	if (VM_FILES[filenum] == NULL)
 		PRVM_G_FLOAT(OFS_RETURN) = -1;
 	else
