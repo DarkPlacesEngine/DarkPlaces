@@ -1912,8 +1912,8 @@ void VM_strcat(void)
 {
 	char *s;
 
-	if(prog->argc < 2) 
-		PRVM_ERROR("VM_strcat wrong parameter count (min. 2 expected ) !\n");
+	if(prog->argc < 1) 
+		PRVM_ERROR("VM_strcat wrong parameter count (min. 1 expected ) !\n");
 	
 	s = VM_GetTempString();
 	VM_VarString(0, s, VM_STRINGTEMP_LENGTH);
@@ -1997,9 +1997,14 @@ strunzone(string s)
 //void(string s) strunzone = #119; // removes a copy of a string from the string zone (you can not use that string again or it may crash!!!)
 void VM_strunzone(void)
 {
+	char *str;
 	VM_SAFEPARMCOUNT(1,VM_strunzone);
 
-	Mem_Free(PRVM_G_STRING(OFS_PARM0));
+	str = PRVM_G_STRING(OFS_PARM0);
+	if( developer.integer && !Mem_IsAllocated( VM_STRINGS_MEMPOOL, str ) )
+		PRVM_ERROR( "VM_strunzone: Zone string already freed in %s!", PRVM_NAME );
+	else
+		Mem_Free( str );
 }
 
 /*
