@@ -2290,30 +2290,39 @@ rtexture_t *R_Shadow_LoadCubemap(const char *basename)
 	cubemapsize = 0;
 	cubemappixels = NULL;
 	cubemaptexture = NULL;
+	// keep trying different suffix groups (posx, px, rt) until one loads
 	for (j = 0;j < 3 && !cubemappixels;j++)
 	{
+		// load the 6 images in the suffix group
 		for (i = 0;i < 6;i++)
 		{
+			// generate an image name based on the base and and suffix
 			snprintf(name, sizeof(name), "%s%s", basename, suffix[j][i].suffix);
+			// load it
 			if ((image_rgba = loadimagepixels(name, false, cubemapsize, cubemapsize)))
 			{
+				// an image loaded, make sure width and height are equal
 				if (image_width == image_height)
 				{
+					// if this is the first image to load successfully, allocate the cubemap memory
 					if (!cubemappixels && image_width >= 1)
 					{
 						cubemapsize = image_width;
-						// note this clears to black, so unavailable sizes are black
+						// note this clears to black, so unavailable sides are black
 						cubemappixels = Mem_Alloc(tempmempool, 6*cubemapsize*cubemapsize*4);
 					}
+					// copy the image with any flipping needed by the suffix (px and posx types don't need flipping)
 					if (cubemappixels)
 						Image_CopyMux(cubemappixels+i*cubemapsize*cubemapsize*4, image_rgba, cubemapsize, cubemapsize, suffix[j][i].flipx, suffix[j][i].flipy, suffix[j][i].flipdiagonal, 4, 4, componentorder);
 				}
 				else
 					Con_Printf("Cubemap image \"%s\" (%ix%i) is not square, OpenGL requires square cubemaps.\n", name, image_width, image_height);
+				// free the image
 				Mem_Free(image_rgba);
 			}
 		}
 	}
+	// if a cubemap loaded, upload it
 	if (cubemappixels)
 	{
 		if (!r_shadow_filters_texturepool)
