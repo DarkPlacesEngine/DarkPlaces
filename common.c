@@ -885,18 +885,27 @@ int COM_StringBeginsWith(const char *s, const char *match)
 	return true;
 }
 
-int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize)
+int COM_ReadAndTokenizeLine(const char **text, char **argv, int maxargc, char *tokenbuf, int tokenbufsize, const char *commentprefix)
 {
-	int argc;
+	int argc, commentprefixlength;
 	char *tokenbufend;
 	const char *l;
 	argc = 0;
 	tokenbufend = tokenbuf + tokenbufsize;
 	l = *text;
+	commentprefixlength = 0;
+	if (commentprefix)
+		commentprefixlength = strlen(commentprefix);
 	while (*l && *l != '\n')
 	{
 		if (*l > ' ')
 		{
+			if (commentprefixlength && !strncmp(l, commentprefix, commentprefixlength))
+			{
+				while (*l && *l != '\n')
+					l++;
+				break;
+			}
 			if (argc >= maxargc)
 				return -1;
 			argv[argc++] = tokenbuf;
