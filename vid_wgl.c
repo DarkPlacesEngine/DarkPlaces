@@ -380,7 +380,7 @@ void VID_Finish (void)
 	int usemouse;
 	if (r_render.integer && !scr_skipupdate)
 	{
-		glFinish();
+		qglFinish();
 		SwapBuffers(maindc);
 	}
 
@@ -437,7 +437,7 @@ void	VID_Shutdown (void)
 		// LordHavoc: free textures before closing (may help NVIDIA)
 		for (i = 0;i < 8192;i++)
 			temp[i] = i+1;
-		glDeleteTextures(8192, temp);
+		qglDeleteTextures(8192, temp);
 
     	if (hRC)
     	    wglDeleteContext(hRC);

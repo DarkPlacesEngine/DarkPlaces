@@ -330,7 +330,7 @@ void VID_CheckExtensions(void)
 
 	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex"))
 	{
-		glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
+		qglGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
 		if (gl_textureunits > 1)
 			gl_combine_extension = gl_checkextension("GL_ARB_texture_env_combine", NULL, "-nocombine") || gl_checkextension("GL_EXT_texture_env_combine", NULL, "-nocombine");
 		else

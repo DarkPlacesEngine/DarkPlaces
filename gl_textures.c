@@ -462,7 +462,7 @@ char engineversion[40];
 static void r_textures_start(void)
 {
 	// deal with size limits of various drivers (3dfx in particular)
-	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &realmaxsize);
+	qglGetIntegerv(GL_MAX_TEXTURE_SIZE, &realmaxsize);
 	CHECKGLERROR
 
 	// use the largest scrap texture size we can (not sure if this is really a good idea)

@@ -489,7 +489,7 @@ void VID_Finish (void)
 	int usemouse;
 	if (r_render.integer)
 	{
-		glFinish();
+		qglFinish();
 		glXSwapBuffers(vidx11_display, win);
 	}
 

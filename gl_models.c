@@ -26,16 +26,16 @@ rmeshinfo_t aliasmeshinfo;
 /*
 void GL_SetupModelTransform (vec3_t origin, vec3_t angles, vec_t scale)
 {
-	glTranslatef (origin[0], origin[1], origin[2]);
+	qglTranslatef (origin[0], origin[1], origin[2]);
 
 	if (scale != 1)
-		glScalef (scale, scale, scale);
+		qglScalef (scale, scale, scale);
 	if (angles[1])
-	    glRotatef (angles[1],  0, 0, 1);
+	    qglRotatef (angles[1],  0, 0, 1);
 	if (angles[0])
-	    glRotatef (-angles[0],  0, 1, 0);
+	    qglRotatef (-angles[0],  0, 1, 0);
 	if (angles[2])
-	    glRotatef (angles[2],  1, 0, 0);
+	    qglRotatef (angles[2],  1, 0, 0);
 }
 */
 
