@@ -17,13 +17,17 @@
 -d darkplaces menu: add slowmo to options menu (Cristian Beltramo)
 -d darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
 -d darkplaces physics: bmodels (doors, etc) hurt player if player pushes against it, and sometimes gets stuck for a frame when falling onto it (Andrew A. Gilevsky)
+-d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 -d darkplaces renderer: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
 -d darkplaces renderer: figure out what's wrong with gloss rendering vertex calculations, which may be GF2 related (QorpsE)
+-d darkplaces renderer: make sure r_novis works (Carni)
 -d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
 -d darkplaces: add ogg music playback using optional library after adding wav music playback (-Joseph Caporale, Static_Fiend, Akuma)
 -d darkplaces: add wav music playback (-Joseph Caporale, Static_Fiend)
 -d dpmod: make grapple off-hand (joe hill)
 -f darkplaces client: fix view blends slightly lingering as time goes on, they should go away completely (Cruaich)
+-f darkplaces loading: crash when progs/k_spike.mdl isn't found? (CheapAlert)
+-f darkplaces server: add an extension to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
 -f darkplaces testing: figure out a workaround for broken gcc optimizers on BoxOnPlaneSide? (Diablo-D3)
 -f darkplaces: add crude DML model loading with animation list (ask Riot for dml library) (Mitchell)
 -f darkplaces: crashes on radeon in rare situations that seem to occur in dpmod dm 7 mode? (Option42)
@@ -55,8 +59,6 @@
 0 darkplaces input: fix the mouse move when console is raised in glx, probably by ignoring the first move after console raise (mashakos)
 0 darkplaces loading: check for out of bounds lump data ranges in maps (FrikaC)
 0 darkplaces loading: check for truncated sound files (FrikaC)
-0 darkplaces loading: crash when progs/k_spike.mdl isn't found? (CheapAlert)
-0 darkplaces loading: make hl map loading halve the lightmap samples, to fit hl's 0-1 range into quake's 0-2 range (KrimZon)
 0 darkplaces loading: make sky work without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 0 darkplaces loading: make sure startup script code executes aliases when doing the cvar scan
 0 darkplaces loading: missing triangles in q3bsp patches, appears only one of the two triangles per cell is being rendered (Zombie)
@@ -70,7 +72,6 @@
 0 darkplaces optimize: support GL_ATI_separate_stencil since ATI does not support GL_EXT_stencil_two_side yet (romi)
 0 darkplaces parse: support " as an end token for words in Com_Parse
 0 darkplaces parse: support ' quoted strings
-0 darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 0 darkplaces physics: figure out why monsters keep making fall pain sound after they've landed in dpmod (Cruaich)
 0 darkplaces physics: test TecnoX and find the frikbot crash in SV_Physics (KrimZon)
 0 darkplaces protocol: add DP_SENSITIVITYSCALE extension which scales sensitivity on client like viewzoom does, but without affecting fov, note if this is non-zero it overrides viewzoom sensitivity entirely, it does not scale it (Urre)
@@ -100,7 +101,6 @@
 0 darkplaces renderer: fix the delayed lightmap updates on bmodels, they're lagging behind one frame, very noticable on flickering light
 0 darkplaces renderer: fix vis problems when outside the level in q1bsp
 0 darkplaces renderer: make static entities work in realtime lighting mode, like func_illusionary for example, they're currently black (Urre)
-0 darkplaces renderer: make sure r_novis works (Carni)
 0 darkplaces renderer: make sure that the texture fragment allocator can upload a full size block that uses the entire image, this may involve width/height comparisons needing a + 1 (fuh)
 0 darkplaces renderer: water shader not working with fog (Tomaz)
 0 darkplaces server: add DP_HALFLIFESPRITE extension (Urre)
@@ -109,7 +109,6 @@
 0 darkplaces server: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces server: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
 0 darkplaces server: add an extension to check if a file exists outside the data directory, FRIK_FILE can do this but only inside data directory (Error)
-0 darkplaces server: add an extension to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
 0 darkplaces server: add sv_playerphysicsqc cvar to allow engine to ignore SV_PlayerPhysics function, this would also have to change the reported extensions (Gleeb)
 0 darkplaces server: add te_flamejet builtin and add extension (Supajoe)
 0 darkplaces server: client colors are being reset to "15 15" each level in prydon gate? (FrikaC)
@@ -175,7 +174,6 @@
 1 darkplaces client: add some particles to teleportsplash (Uffe)
 1 darkplaces console: add con_dump command to dump history to a file
 1 darkplaces docs: fix lots of bugs and then retitle the website to get more publicity: DarkPlaces: Re-live Quake again...
-1 darkplaces editlights: add r_editlights_copyinfo and r_editlights_pasteinfo commands to clone the properties of a light, all except for origin (Stribbs)
 1 darkplaces input: finish porting Quake2 keyboard stuff (Rick, FrikaC)
 1 darkplaces input: fix stuck buttons during a level change (mercury82, tkimmet@ezworks.net)  (further note: this is from the console becoming active temporarily and catching the key release when the player lets go during the loading stage, make it possible to release a button that was pressed before the console was activated, or make it execute -commands for all pressed binds when level starts)
 1 darkplaces loading: clear stainmaps on map restart/change based on cl_stainmapsclearonload cvar (John Truex)
@@ -373,6 +371,7 @@ d darkplaces client: locked console scrollback (sublim3)
 d darkplaces client: make colormap > cl.maxclients error be only a warning, to play QDDQ demo of end map (Stribbs)
 d darkplaces client: reset cl.viewzoom on connect (Rick)
 d darkplaces console: redesign startup script handling to scan scripts for cvars (ignoring commands) and then init video and then run the scripts for real
+d darkplaces editlights: add r_editlights_copyinfo and r_editlights_pasteinfo commands to clone the properties of a light, all except for origin (Stribbs)
 d darkplaces filesystem: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
 d darkplaces game: GAME_FNIGGIUM: "data" directory (not "id1" at all)
 d darkplaces game: GAME_FNIGGIUM: 22050/44100 khz sound default
@@ -382,6 +381,7 @@ d darkplaces input: CTRL-V clipboard paste feature in windows (Rick, FrikaC)
 d darkplaces input: allow typing characters > 128 into console to allow Latin1 fonts to be used properly, already works in text messages (Urre)
 d darkplaces input: key repeat should work in menus, for example scrolling quickly through options (Up2nOgOoD)
 d darkplaces loading: fix bumpmapping, there's something quite mixed up about the svectors and tvectors (Randi)
+d darkplaces loading: make hl map loading halve the lightmap samples, to fit hl's 0-1 range into quake's 0-2 range (KrimZon)
 d darkplaces loading: make it only reload rtlights when current map changes, not when restarting renderer or reloading same map (Stribbs)
 d darkplaces loading: make sure .skin files work on md3 models that have no default shaders but do have mesh names (VorteX)
 d darkplaces menu: add sv_maxrate cvar to server setup menu
