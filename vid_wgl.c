@@ -505,7 +505,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 	LONG    lRet = 1;
 	int		fActive, fMinimized, temp;
 	char	state[256];
-	short	ascchar;
+	char	asciichar[4];
 	int		vkey;
 	qboolean down = false;
 
@@ -537,8 +537,11 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 		case WM_SYSKEYUP:
 			vkey = MapKey(lParam, wParam);
 			GetKeyboardState (state);
-			ToAscii (wParam, vkey, state, &ascchar, 0);
-			Key_Event (vkey, (char)(ascchar & 0xFF), down);
+			// alt/ctrl/shift tend to produce funky ToAscii values,
+			// and if it's not a single character we don't know care about it
+			if (vkey == K_ALT || vkey == K_CTRL || vkey == K_SHIFT || ToAscii (wParam, lParam >> 16, state, asciichar, 0) != 1)
+				asciichar[0] = 0;
+			Key_Event (vkey, asciichar[0], down);
 			break;
 
 		case WM_SYSCHAR:
