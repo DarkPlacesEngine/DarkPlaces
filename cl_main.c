@@ -109,6 +109,8 @@ void CL_ClearState(void)
 
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
+	// reset the view zoom interpolation
+	cl.viewzoomold = cl.viewzoomnew = 1;
 
 	SZ_Clear (&cls.message);
 
