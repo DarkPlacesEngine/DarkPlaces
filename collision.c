@@ -25,7 +25,7 @@ RecursiveHullCheckTraceInfo_t;
 #define HULLCHECKSTATE_SOLID 1
 #define HULLCHECKSTATE_DONE 2
 
-static int RecursiveHullCheck (RecursiveHullCheckTraceInfo_t *t, int num, double p1f, double p2f, double p1[3], double p2[3])
+static int RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int num, double p1f, double p2f, double p1[3], double p2[3])
 {
 	// status variables, these don't need to be saved on the stack when
 	// recursing...  but are because this should be thread-safe
@@ -45,9 +45,9 @@ loc0:
 	if (num < 0)
 	{
 		t->trace->endcontents = num;
-		if (t->trace->startcontents)
+		if (t->trace->thiscontents)
 		{
-			if (num == t->trace->startcontents)
+			if (num == t->trace->thiscontents)
 				t->trace->allsolid = false;
 			else
 			{
@@ -165,6 +165,7 @@ loc0:
 	return HULLCHECKSTATE_DONE;
 }
 
+#if 0
 // used if start and end are the same
 static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
 {
@@ -174,9 +175,9 @@ static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
 
 	// check for empty
 	t->trace->endcontents = num;
-	if (t->trace->startcontents)
+	if (t->trace->thiscontents)
 	{
-		if (num == t->trace->startcontents)
+		if (num == t->trace->thiscontents)
 			t->trace->allsolid = false;
 		else
 		{
@@ -203,6 +204,7 @@ static void RecursiveHullCheckPoint (RecursiveHullCheckTraceInfo_t *t, int num)
 		}
 	}
 }
+#endif
 
 void Collision_RoundUpToHullSize(const model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs)
 {
@@ -271,170 +273,30 @@ void Collision_Init (void)
 	}
 }
 
-
-static hull_t *HullForBBoxEntity (const vec3_t corigin, const vec3_t cmins, const vec3_t cmaxs, const vec3_t mins, const vec3_t maxs, vec3_t offset)
-{
-	vec3_t hullmins, hullmaxs;
-
-	// create a temp hull from bounding box sizes
-	VectorCopy (corigin, offset);
-	VectorSubtract (cmins, maxs, hullmins);
-	VectorSubtract (cmaxs, mins, hullmaxs);
-
-	//To keep everything totally uniform, bounding boxes are turned into small
-	//BSP trees instead of being compared directly.
-	box_planes[0].dist = hullmaxs[0];
-	box_planes[1].dist = hullmins[0];
-	box_planes[2].dist = hullmaxs[1];
-	box_planes[3].dist = hullmins[1];
-	box_planes[4].dist = hullmaxs[2];
-	box_planes[5].dist = hullmins[2];
-	return &box_hull;
-}
-
-static const hull_t *HullForBrushModel (const model_t *cmodel, const vec3_t corigin, const vec3_t mins, const vec3_t maxs, vec3_t offset)
-{
-	vec3_t size;
-	const hull_t *hull;
-
-	// decide which clipping hull to use, based on the size
-	// explicit hulls in the BSP model
-	VectorSubtract (maxs, mins, size);
-	// LordHavoc: FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	if (cmodel->brushq1.ishlbsp)
-	{
-		if (size[0] < 3)
-			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
-		else if (size[0] <= 32)
-		{
-			if (size[2] < 54) // pick the nearest of 36 or 72
-				hull = &cmodel->brushq1.hulls[3]; // 32x32x36
-			else
-				hull = &cmodel->brushq1.hulls[1]; // 32x32x72
-		}
-		else
-			hull = &cmodel->brushq1.hulls[2]; // 64x64x64
-	}
-	else
-	{
-		if (size[0] < 3)
-			hull = &cmodel->brushq1.hulls[0]; // 0x0x0
-		else if (size[0] <= 32)
-			hull = &cmodel->brushq1.hulls[1]; // 32x32x56
-		else
-			hull = &cmodel->brushq1.hulls[2]; // 64x64x88
-	}
-
-	// calculate an offset value to center the origin
-	VectorSubtract (hull->clip_mins, mins, offset);
-	VectorAdd (offset, corigin, offset);
-
-	return hull;
-}
-
-void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmodel, const vec3_t corigin, const vec3_t cangles, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
+void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end)
 {
 	RecursiveHullCheckTraceInfo_t rhc;
-	vec3_t offset, forward, left, up;
-	double startd[3], endd[3], tempd[3];
-
 	// fill in a default trace
-	memset (&rhc, 0, sizeof(rhc));
-	memset (trace, 0, sizeof(trace_t));
-
+	memset(&rhc, 0, sizeof(rhc));
+	memset(trace, 0, sizeof(trace_t));
+	//To keep everything totally uniform, bounding boxes are turned into small
+	//BSP trees instead of being compared directly.
+	// create a temp hull from bounding box sizes
+	box_planes[0].dist = cmaxs[0] - mins[0];
+	box_planes[1].dist = cmins[0] - maxs[0];
+	box_planes[2].dist = cmaxs[1] - mins[1];
+	box_planes[3].dist = cmins[1] - maxs[1];
+	box_planes[4].dist = cmaxs[2] - mins[2];
+	box_planes[5].dist = cmins[2] - maxs[2];
+	// trace a line through the generated clipping hull
+	rhc.hull = &box_hull;
 	rhc.trace = trace;
-
 	rhc.trace->fraction = 1;
 	rhc.trace->allsolid = true;
-
-	if (cmodel && cmodel->type == mod_brush)
-	{
-		// brush model
-
-		// get the clipping hull
-		rhc.hull = HullForBrushModel (cmodel, corigin, mins, maxs, offset);
-
-		VectorSubtract(start, offset, startd);
-		VectorSubtract(end, offset, endd);
-
-		// rotate start and end into the model's frame of reference
-		if (cangles[0] || cangles[1] || cangles[2])
-		{
-			AngleVectorsFLU (cangles, forward, left, up);
-			VectorCopy(startd, tempd);
-			startd[0] = DotProduct (tempd, forward);
-			startd[1] = DotProduct (tempd, left);
-			startd[2] = DotProduct (tempd, up);
-			VectorCopy(endd, tempd);
-			endd[0] = DotProduct (tempd, forward);
-			endd[1] = DotProduct (tempd, left);
-			endd[2] = DotProduct (tempd, up);
-		}
-
-		// trace a line through the appropriate clipping hull
-		VectorCopy(startd, rhc.start);
-		VectorCopy(endd, rhc.end);
-		VectorCopy(rhc.end, rhc.trace->endpos);
-		VectorSubtract(rhc.end, rhc.start, rhc.dist);
-		if (rhc.dist[0] || rhc.dist[1] || rhc.dist[2])
-			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
-		else
-			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
-		if (rhc.trace->fraction < 0 || rhc.trace->fraction > 1) Con_Printf("fraction out of bounds %f %s:%d\n", rhc.trace->fraction, __FILE__, __LINE__);
-
-		// if we hit, unrotate endpos and normal, and store the entity we hit
-		if (rhc.trace->fraction != 1)
-		{
-			// rotate endpos back to world frame of reference
-			if (cangles[0] || cangles[1] || cangles[2])
-			{
-				VectorNegate (cangles, offset);
-				AngleVectorsFLU (offset, forward, left, up);
-
-				VectorCopy (rhc.trace->endpos, tempd);
-				rhc.trace->endpos[0] = DotProduct (tempd, forward);
-				rhc.trace->endpos[1] = DotProduct (tempd, left);
-				rhc.trace->endpos[2] = DotProduct (tempd, up);
-
-				VectorCopy (rhc.trace->plane.normal, tempd);
-				rhc.trace->plane.normal[0] = DotProduct (tempd, forward);
-				rhc.trace->plane.normal[1] = DotProduct (tempd, left);
-				rhc.trace->plane.normal[2] = DotProduct (tempd, up);
-			}
-			rhc.trace->ent = (void *) cent;
-		}
-		else if (rhc.trace->allsolid || rhc.trace->startsolid)
-			rhc.trace->ent = (void *) cent;
-		// fix offset
-		VectorAdd (rhc.trace->endpos, offset, rhc.trace->endpos);
-	}
-	else
-	{
-		// bounding box
-
-		rhc.hull = HullForBBoxEntity (corigin, cmins, cmaxs, mins, maxs, offset);
-
-		// trace a line through the generated clipping hull
-		VectorSubtract(start, offset, rhc.start);
-		VectorSubtract(end, offset, rhc.end);
-		VectorCopy(rhc.end, rhc.trace->endpos);
-		VectorSubtract(rhc.end, rhc.start, rhc.dist);
-		if (rhc.dist[0] || rhc.dist[1] || rhc.dist[2])
-			RecursiveHullCheck (&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
-		else
-			RecursiveHullCheckPoint (&rhc, rhc.hull->firstclipnode);
-		if (rhc.trace->fraction < 0 || rhc.trace->fraction > 1) Con_Printf("fraction out of bounds %f %s:%d\n", rhc.trace->fraction, __FILE__, __LINE__);
-
-		// if we hit, store the entity we hit
-		if (rhc.trace->fraction != 1)
-		{
-			// fix offset
-			VectorAdd (rhc.trace->endpos, offset, rhc.trace->endpos);
-			rhc.trace->ent = (void *) cent;
-		}
-		else if (rhc.trace->allsolid || rhc.trace->startsolid)
-			rhc.trace->ent = (void *) cent;
-	}
+	VectorCopy(start, rhc.start);
+	VectorCopy(end, rhc.end);
+	VectorSubtract(rhc.end, rhc.start, rhc.dist);
+	RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 }
 
 
@@ -1147,5 +1009,75 @@ void Collision_PolygonClipTrace (trace_t *trace, const void *cent, model_t *cmod
 	}
 	else
 		VectorCopy(end, trace->endpos);
+}
+
+
+// LordHavoc: currently unused and not yet tested
+// note: this can be used for tracing a moving sphere vs a stationary sphere,
+// by simply adding the moving sphere's radius to the sphereradius parameter,
+// all the results are correct (impactpoint, impactnormal, and fraction)
+float Collision_ClipTrace_Line_Sphere(double *linestart, double *lineend, double *sphereorigin, double sphereradius, double *impactpoint, double *impactnormal)
+{
+	double dir[3], scale, v[3], deviationdist, impactdist, linelength;
+	// make sure the impactpoint and impactnormal are valid even if there is
+	// no collision
+	impactpoint[0] = lineend[0];
+	impactpoint[1] = lineend[1];
+	impactpoint[2] = lineend[2];
+	impactnormal[0] = 0;
+	impactnormal[1] = 0;
+	impactnormal[2] = 0;
+	// calculate line direction
+	dir[0] = lineend[0] - linestart[0];
+	dir[1] = lineend[1] - linestart[1];
+	dir[2] = lineend[2] - linestart[2];
+	// normalize direction
+	linelength = sqrt(dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2]);
+	if (linelength)
+	{
+		scale = 1.0 / linelength;
+		dir[0] *= scale;
+		dir[1] *= scale;
+		dir[2] *= scale;
+	}
+	// this dotproduct calculates the distance along the line at which the
+	// sphere origin is (nearest point to the sphere origin on the line)
+	impactdist = dir[0] * (sphereorigin[0] - linestart[0]) + dir[1] * (sphereorigin[1] - linestart[1]) + dir[2] * (sphereorigin[2] - linestart[2]);
+	// calculate point on line at that distance, and subtract the
+	// sphereorigin from it, so we have a vector to measure for the distance
+	// of the line from the sphereorigin (deviation, how off-center it is)
+	v[0] = linestart[0] + impactdist * dir[0] - sphereorigin[0];
+	v[1] = linestart[1] + impactdist * dir[1] - sphereorigin[1];
+	v[2] = linestart[2] + impactdist * dir[2] - sphereorigin[2];
+	deviationdist = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
+	// if outside the radius, it's a miss for sure
+	// (we do this comparison using squared radius to avoid a sqrt)
+	if (deviationdist > sphereradius*sphereradius)
+		return 1; // miss (off to the side)
+	// nudge back to find the correct impact distance
+	impactdist += (sqrt(deviationdist) - sphereradius);
+	if (impactdist >= linelength)
+		return 1; // miss (not close enough)
+	if (impactdist < 0)
+		return 1; // miss (linestart is past or inside sphere)
+	// calculate new impactpoint
+	impactpoint[0] = linestart[0] + impactdist * dir[0];
+	impactpoint[1] = linestart[1] + impactdist * dir[1];
+	impactpoint[2] = linestart[2] + impactdist * dir[2];
+	// calculate impactnormal (surface normal at point of impact)
+	impactnormal[0] = impactpoint[0] - sphereorigin[0];
+	impactnormal[1] = impactpoint[1] - sphereorigin[1];
+	impactnormal[2] = impactpoint[2] - sphereorigin[2];
+	// normalize impactnormal
+	scale = impactnormal[0] * impactnormal[0] + impactnormal[1] * impactnormal[1] + impactnormal[2] * impactnormal[2];
+	if (scale)
+	{
+		scale = 1.0 / sqrt(scale);
+		impactnormal[0] *= scale;
+		impactnormal[1] *= scale;
+		impactnormal[2] *= scale;
+	}
+	// return fraction of movement distance
+	return impactdist / linelength;
 }
 

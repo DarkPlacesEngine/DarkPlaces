@@ -64,6 +64,7 @@ static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
 	return (mleaf_t *)node;
 }
 
+/*
 static int Mod_Q1BSP_PointContents(model_t *model, const vec3_t p)
 {
 	mnode_t *node;
@@ -81,6 +82,7 @@ static int Mod_Q1BSP_PointContents(model_t *model, const vec3_t p)
 
 	return ((mleaf_t *)node)->contents;
 }
+*/
 
 typedef struct findnonsolidlocationinfo_s
 {
@@ -261,6 +263,205 @@ static void Mod_Q1BSP_FindNonSolidLocation(model_t *model, const vec3_t in, vec3
 	}
 	while (info.bestdist < radius && ++i < 10);
 	VectorCopy(info.center, out);
+}
+
+typedef struct
+{
+	// the hull we're tracing through
+	const hull_t *hull;
+
+	// the trace structure to fill in
+	trace_t *trace;
+
+	// start, end, and end - start (in model space)
+	double start[3];
+	double end[3];
+	double dist[3];
+}
+RecursiveHullCheckTraceInfo_t;
+
+// 1/32 epsilon to keep floating point happy
+#define DIST_EPSILON (0.03125)
+
+#define HULLCHECKSTATE_EMPTY 0
+#define HULLCHECKSTATE_SOLID 1
+#define HULLCHECKSTATE_DONE 2
+
+static int Mod_Q1BSP_RecursiveHullCheck(RecursiveHullCheckTraceInfo_t *t, int num, double p1f, double p2f, double p1[3], double p2[3])
+{
+	// status variables, these don't need to be saved on the stack when
+	// recursing...  but are because this should be thread-safe
+	// (note: tracing against a bbox is not thread-safe, yet)
+	int ret;
+	mplane_t *plane;
+	double t1, t2;
+
+	// variables that need to be stored on the stack when recursing
+	dclipnode_t *node;
+	int side;
+	double midf, mid[3];
+
+	// LordHavoc: a goto!  everyone flee in terror... :)
+loc0:
+	// check for empty
+	if (num < 0)
+	{
+		t->trace->endcontents = num;
+		if (t->trace->thiscontents)
+		{
+			if (num == t->trace->thiscontents)
+				t->trace->allsolid = false;
+			else
+			{
+				// if the first leaf is solid, set startsolid
+				if (t->trace->allsolid)
+					t->trace->startsolid = true;
+				return HULLCHECKSTATE_SOLID;
+			}
+			return HULLCHECKSTATE_EMPTY;
+		}
+		else
+		{
+			if (num != CONTENTS_SOLID)
+			{
+				t->trace->allsolid = false;
+				if (num == CONTENTS_EMPTY)
+					t->trace->inopen = true;
+				else
+					t->trace->inwater = true;
+			}
+			else
+			{
+				// if the first leaf is solid, set startsolid
+				if (t->trace->allsolid)
+					t->trace->startsolid = true;
+				return HULLCHECKSTATE_SOLID;
+			}
+			return HULLCHECKSTATE_EMPTY;
+		}
+	}
+
+	// find the point distances
+	node = t->hull->clipnodes + num;
+
+	plane = t->hull->planes + node->planenum;
+	if (plane->type < 3)
+	{
+		t1 = p1[plane->type] - plane->dist;
+		t2 = p2[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct (plane->normal, p1) - plane->dist;
+		t2 = DotProduct (plane->normal, p2) - plane->dist;
+	}
+
+	if (t1 < 0)
+	{
+		if (t2 < 0)
+		{
+			num = node->children[1];
+			goto loc0;
+		}
+		side = 1;
+	}
+	else
+	{
+		if (t2 >= 0)
+		{
+			num = node->children[0];
+			goto loc0;
+		}
+		side = 0;
+	}
+
+	// the line intersects, find intersection point
+	// LordHavoc: this uses the original trace for maximum accuracy
+	if (plane->type < 3)
+	{
+		t1 = t->start[plane->type] - plane->dist;
+		t2 = t->end[plane->type] - plane->dist;
+	}
+	else
+	{
+		t1 = DotProduct (plane->normal, t->start) - plane->dist;
+		t2 = DotProduct (plane->normal, t->end) - plane->dist;
+	}
+
+	midf = t1 / (t1 - t2);
+	midf = bound(p1f, midf, p2f);
+	VectorMA(t->start, midf, t->dist, mid);
+
+	// recurse both sides, front side first
+	ret = Mod_Q1BSP_RecursiveHullCheck(t, node->children[side], p1f, midf, p1, mid);
+	// if this side is not empty, return what it is (solid or done)
+	if (ret != HULLCHECKSTATE_EMPTY)
+		return ret;
+
+	ret = Mod_Q1BSP_RecursiveHullCheck(t, node->children[side ^ 1], midf, p2f, mid, p2);
+	// if other side is not solid, return what it is (empty or done)
+	if (ret != HULLCHECKSTATE_SOLID)
+		return ret;
+
+	// front is air and back is solid, this is the impact point...
+	if (side)
+	{
+		t->trace->plane.dist = -plane->dist;
+		VectorNegate (plane->normal, t->trace->plane.normal);
+	}
+	else
+	{
+		t->trace->plane.dist = plane->dist;
+		VectorCopy (plane->normal, t->trace->plane.normal);
+	}
+
+	// bias away from surface a bit
+	t1 = DotProduct(t->trace->plane.normal, t->start) - (t->trace->plane.dist + DIST_EPSILON);
+	t2 = DotProduct(t->trace->plane.normal, t->end) - (t->trace->plane.dist + DIST_EPSILON);
+
+	midf = t1 / (t1 - t2);
+	t->trace->fraction = bound(0.0f, midf, 1.0);
+
+	return HULLCHECKSTATE_DONE;
+}
+
+static void Mod_Q1BSP_TraceBox(struct model_s *model, trace_t *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs)
+{
+	// this function currently only supports same size start and end
+	double boxsize[3];
+	RecursiveHullCheckTraceInfo_t rhc;
+
+	memset(&rhc, 0, sizeof(rhc));
+	memset(trace, 0, sizeof(trace_t));
+	rhc.trace = trace;
+	rhc.trace->fraction = 1;
+	rhc.trace->allsolid = true;
+	VectorSubtract(boxstartmaxs, boxstartmins, boxsize);
+	if (boxsize[0] < 3)
+		rhc.hull = &model->brushq1.hulls[0]; // 0x0x0
+	else if (model->brushq1.ishlbsp)
+	{
+		if (boxsize[0] <= 32)
+		{
+			if (boxsize[2] < 54) // pick the nearest of 36 or 72
+				rhc.hull = &model->brushq1.hulls[3]; // 32x32x36
+			else
+				rhc.hull = &model->brushq1.hulls[1]; // 32x32x72
+		}
+		else
+			rhc.hull = &model->brushq1.hulls[2]; // 64x64x64
+	}
+	else
+	{
+		if (boxsize[0] <= 32)
+			rhc.hull = &model->brushq1.hulls[1]; // 32x32x56
+		else
+			rhc.hull = &model->brushq1.hulls[2]; // 64x64x88
+	}
+	VectorSubtract(boxstartmins, rhc.hull->clip_mins, rhc.start);
+	VectorSubtract(boxendmins, rhc.hull->clip_mins, rhc.end);
+	VectorSubtract(rhc.end, rhc.start, rhc.dist);
+	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 }
 
 static qbyte *Mod_Q1BSP_DecompressVis(model_t *model, qbyte *in)
@@ -2679,7 +2880,7 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 	mod->brushq1.ishlbsp = i == 30;
 
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
-	mod->brush.PointContents = Mod_Q1BSP_PointContents;
+	mod->brush.TraceBox = Mod_Q1BSP_TraceBox;
 	mod->brushq1.PointInLeaf = Mod_Q1BSP_PointInLeaf;
 	mod->brushq1.LeafPVS = Mod_Q1BSP_LeafPVS;
 	mod->brushq1.BuildPVSTextureChains = Mod_Q1BSP_BuildPVSTextureChains;

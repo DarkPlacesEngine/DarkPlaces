@@ -2,13 +2,14 @@
 #ifndef COLLISION_H
 #define COLLISION_H
 
-typedef struct
+typedef struct plane_s
 {
 	vec3_t	normal;
 	float	dist;
-} plane_t;
+}
+plane_t;
 
-typedef struct
+typedef struct trace_s
 {
 	// if true, the entire trace was in solid
 	int allsolid;
@@ -29,15 +30,15 @@ typedef struct
 	void *ent;
 	// if not zero, treats this value as empty, and all others as solid (impact
 	// on content change)
-	int startcontents;
-	// the contents that was hit at the end or impact point
+	int thiscontents;
+	// the contents at the impact or end point
 	int endcontents;
 }
 trace_t;
 
 void Collision_RoundUpToHullSize(const model_t *cmodel, const vec3_t inmins, const vec3_t inmaxs, vec3_t outmins, vec3_t outmaxs);
-void Collision_Init (void);
-void Collision_ClipTrace (trace_t *trace, const void *cent, const model_t *cmodel, const vec3_t corigin, const vec3_t cangles, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
+void Collision_Init(void);
+void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
 
 typedef struct colpointf_s
 {
@@ -99,6 +100,6 @@ double Collision_TraceBrushPolygonDouble(const colbrushd_t *thisbrush_start, con
 float Collision_TraceBrushBModel(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, float *impactnormal, int *startsolid, int *allsolid);
 float Collision_TraceBrushBModelTransform(const colbrushf_t *thisbrush_start, const colbrushf_t *thisbrush_end, model_t *model, float *impactnormal, const matrix4x4_t *modelmatrixstart, const matrix4x4_t *modelmatrixend, int *startsolid, int *allsolid);
 
-void Collision_PolygonClipTrace (trace_t *trace, const void *cent, model_t *cmodel, const vec3_t corigin, const vec3_t cangles, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
+void Collision_PolygonClipTrace(trace_t *trace, const void *cent, model_t *cmodel, const vec3_t corigin, const vec3_t cangles, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
 
 #endif

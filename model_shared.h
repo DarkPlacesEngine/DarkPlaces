@@ -122,12 +122,13 @@ typedef struct model_sprite_s
 }
 model_sprite_t;
 
+struct trace_s;
+
 typedef struct model_brush_s
 {
 	char *entities;
 	void (*FindNonSolidLocation)(struct model_s *model, const vec3_t in, vec3_t out, vec_t radius);
-	int (*PointContents)(struct model_s *model, const float *p);
-	void (*TraceBox)(struct model_s *model, const vec3_t corigin, const vec3_t cangles, void *trace, const void *cent, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end);
+	void (*TraceBox)(struct model_s *model, struct trace_s *trace, const vec3_t boxstartmins, const vec3_t boxstartmaxs, const vec3_t boxendmins, const vec3_t boxendmaxs);
 }
 model_brush_t;
 
