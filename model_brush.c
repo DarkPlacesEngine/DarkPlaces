@@ -1736,6 +1736,9 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 	winding_t	*neww;
 	int		maxpts;
 
+	// debugging
+	Mem_CheckSentinels(in);
+
 	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
 
 	// determine sides for each point
@@ -1811,6 +1814,9 @@ static winding_t *ClipWinding (winding_t *in, mplane_t *split, int keepon)
 	// free the original winding
 	FreeWinding (in);
 
+	// debugging
+	Mem_CheckSentinels(neww);
+
 	return neww;
 }
 
@@ -1836,6 +1842,9 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 	double	mid[3];
 	winding_t	*f, *b;
 	int		maxpts;
+
+	// debugging
+	Mem_CheckSentinels(in);
 
 	counts[SIDE_FRONT] = counts[SIDE_BACK] = counts[SIDE_ON] = 0;
 
@@ -1920,6 +1929,10 @@ static void DivideWinding (winding_t *in, mplane_t *split, winding_t **front, wi
 		VectorCopy (mid, b->points[b->numpoints]);
 		b->numpoints++;
 	}
+
+	// debugging
+	Mem_CheckSentinels(front);
+	Mem_CheckSentinels(back);
 }
 
 typedef struct portal_s
