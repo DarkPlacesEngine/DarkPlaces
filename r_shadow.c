@@ -502,9 +502,8 @@ void R_Shadow_PrepareShadowMark(int numtris)
 
 int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *inelement3i, const int *inneighbor3i, const float *invertex3f, int *outnumvertices, int *outelement3i, float *outvertex3f, const float *projectorigin, float projectdistance, int numshadowmarktris, const int *shadowmarktris)
 {
-	int i, tris = 0, vr[3], t, outvertices = 0;
+	int i, j, tris = 0, vr[3], t, outvertices = 0;
 	const int *e, *n;
-	float f, temp[3];
 	const float *v;
 
 	if (maxvertexupdate < innumvertices)
@@ -549,10 +548,13 @@ int R_Shadow_ConstructShadowVolume(int innumvertices, int innumtris, const int *
 				outvertex3f[4] = v[1] + 1000000 * (v[1] - projectorigin[1]);
 				outvertex3f[5] = v[2] + 1000000 * (v[2] - projectorigin[2]);
 #else
+{
+float f, temp[3];
 				VectorSubtract(v, projectorigin, temp);
 				f = projectdistance / VectorLength(temp);
 				VectorCopy(v, outvertex3f);
 				VectorMA(projectorigin, f, temp, (outvertex3f + 3));
+}
 #endif
 				outvertex3f += 6;
 				outvertices += 2;
@@ -639,7 +641,7 @@ void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f,
 
 void R_Shadow_MarkVolumeFromBox(int firsttriangle, int numtris, const float *invertex3f, const int *elements, const vec3_t projectorigin, vec3_t lightmins, vec3_t lightmaxs, vec3_t surfacemins, vec3_t surfacemaxs)
 {
-	int j, t, tend;
+	int t, tend;
 	const int *e;
 	const float *v[3];
 	if (!BoxesOverlap(lightmins, lightmaxs, surfacemins, surfacemaxs))
