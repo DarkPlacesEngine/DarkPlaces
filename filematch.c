@@ -113,7 +113,7 @@ stringlist_t *stringlistsort(stringlist_t *start)
 #include <io.h>
 stringlist_t *listdirectory(char *path)
 {
-	char pattern[4096];
+	char pattern[4096], *c;
 	struct _finddata_t n_file;
     long hFile;
 	stringlist_t *start, *current;
@@ -129,8 +129,16 @@ stringlist_t *listdirectory(char *path)
 		while (_findnext(hFile, &n_file) == 0)
 			current = stringlistappend(current, n_file.name);
 		_findclose(hFile);
+
+		// convert names to lowercase because windows does not care, but pattern matching code often does
+		for (current = start;current;current = current->next)
+			for (c = current->text;*c;c++)
+				if (*c >= 'A' && *c <= 'Z')
+					*c += 'a' - 'A';
+
 		// sort the list alphanumerically
-		return stringlistsort(start);
+		start = stringlistsort(start);
+		return start;
 	}
 	else
 		return NULL;
