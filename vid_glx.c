@@ -636,7 +636,7 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 #endif
 }
 
-void VID_Init(int fullscreen, int width, int height)
+void VID_Init(int fullscreen, int width, int height, int bpp)
 {
 	int i;
 // LordHavoc: FIXME: finish this code, we need to allocate colors before we can store them

@@ -33,14 +33,16 @@ BOOL (WINAPI *qwglSetPixelFormat)(HDC, int, CONST PIXELFORMATDESCRIPTOR *);
 BOOL (WINAPI *qwglSwapBuffers)(HDC);
 HGLRC (WINAPI *qwglCreateContext)(HDC);
 BOOL (WINAPI *qwglDeleteContext)(HGLRC);
+HGLRC (WINAPI *qwglGetCurrentContext)(VOID);
+HDC (WINAPI *qwglGetCurrentDC)(VOID);
 PROC (WINAPI *qwglGetProcAddress)(LPCSTR);
 BOOL (WINAPI *qwglMakeCurrent)(HDC, HGLRC);
 BOOL (WINAPI *qwglSwapIntervalEXT)(int interval);
-const char *(WINAPI *wglGetExtensionsStringARB)(HDC hdc);
+const char *(WINAPI *qwglGetExtensionsStringARB)(HDC hdc);
 
 static gl_extensionfunctionlist_t getextensionsstringfuncs[] =
 {
-	{"wglGetExtensionsString", (void **) &qwglGetExtensionsString},
+	{"wglGetExtensionsString", (void **) &qwglGetExtensionsStringARB},
 	{NULL, NULL}
 };
 
@@ -986,14 +988,7 @@ void VID_InitFullDIB (HINSTANCE hInstance)
 			devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 
 			if (ChangeDisplaySettings (&devmode, CDS_TEST | CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL)
-			{
-			// if the width is more than twice the height, reduce it by half because this
-			// is probably a dual-screen monitor
-				if ((!COM_CheckParm("-noadjustaspect")) && (devmode.dmPelsWidth > (devmode.dmPelsHeight << 1)))
-					VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth >> 1, devmode.dmPelsHeight, 0, 1, 1, 1, devmode.dmBitsPerPel);
-				else
-					VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth, devmode.dmPelsHeight, 0, 0, 1, 1, devmode.dmBitsPerPel);
-			}
+				VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth, devmode.dmPelsHeight, 0, 1, 1, devmode.dmBitsPerPel);
 		}
 
 		modenum++;
@@ -1015,7 +1010,7 @@ void VID_InitFullDIB (HINSTANCE hInstance)
 			devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 
 			if (ChangeDisplaySettings (&devmode, CDS_TEST | CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL)
-				VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth, devmode.dmPelsHeight, 0, 0, 1, 1, devmode.dmBitsPerPel);
+				VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth, devmode.dmPelsHeight, 0, 1, 1, devmode.dmBitsPerPel);
 		}
 		switch (bpp)
 		{
@@ -1233,10 +1228,11 @@ void *GL_GetProcAddress(const char *name)
 VID_Init
 ===================
 */
-void VID_Init (int fullscreen, int width, int height)
+void VID_Init (int fullscreen, int width, int height, int bpp)
 {
-	int i;
-	int basenummodes, bpp, findbpp, done;
+	int i, bestmode;
+	double rating, bestrating;
+	int basenummodes, done;
 	HDC hdc;
 	DEVMODE devmode;
 
@@ -1287,11 +1283,14 @@ void VID_Init (int fullscreen, int width, int height)
 		bestrating = 1000000000;
 		for (i = 0;i < nummodes;i++)
 		{
-			rating = VID_CompareMode(fullscreen, width, height, bpp, modelist[i].fullscreen, modelist[i].width, modelist[i].height, modelist[i].bpp);
-			if (bestrating > rating)
+			if (fullscreen == modelist[i].fullscreen)
 			{
-				bestrating = rating;
-				bestmode = i;
+				rating = VID_CompareMode(width, height, bpp, modelist[i].width, modelist[i].height, modelist[i].bpp);
+				if (bestrating > rating)
+				{
+					bestrating = rating;
+					bestmode = i;
+				}
 			}
 		}
 
@@ -1306,7 +1305,7 @@ void VID_Init (int fullscreen, int width, int height)
 	maindc = GetDC(mainwindow);
 	bSetupPixelFormat(maindc);
 
-	if (!gl_checkextension("wgl", wglfuncs, NULL, false))
+	if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
 		Sys_Error("wgl functions not found\n");
 
 	baseRC = qwglCreateContext( maindc );
@@ -1319,13 +1318,13 @@ void VID_Init (int fullscreen, int width, int height)
 	gl_vendor = qglGetString(GL_VENDOR);
 	gl_version = qglGetString(GL_VERSION);
 	gl_extensions = qglGetString(GL_EXTENSIONS);
-	gl_platformname = "WGL";
+	gl_platform = "WGL";
 	gl_platformextensions = "";
 
-	if (gl_checkextension("WGL_ARB_extensions_string", extensionsstringfuncs, NULL, false))
+	if (GL_CheckExtension("WGL_ARB_extensions_string", getextensionsstringfuncs, NULL, false))
 		gl_platformextensions = qwglGetExtensionsStringARB(maindc);
 
-	gl_videosyncavailable = gl_checkextension("WGL_EXT_swap_control", wglswapintervalfuncs, NULL, false);
+	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, NULL, false);
 
 	GL_Init ();
 

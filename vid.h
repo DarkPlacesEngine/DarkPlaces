@@ -102,7 +102,7 @@ void GL_Init (void);
 
 void VID_CheckExtensions(void);
 
-void VID_Init (int fullscreen, int width, int height);
+void VID_Init (int fullscreen, int width, int height, int bpp);
 // Called at startup
 
 void VID_Shutdown (void);

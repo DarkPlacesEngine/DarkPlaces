@@ -67,7 +67,7 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 	return FALSE;
 }
 
-void VID_Init(int fullscreen, int width, int height)
+void VID_Init(int fullscreen, int width, int height, int bpp)
 {
 	InitSig(); // trap evil signals
 }

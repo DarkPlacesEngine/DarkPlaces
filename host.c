@@ -885,7 +885,7 @@ void Host_Init (void)
 #ifndef _WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();
 #endif
-		VID_Init (vid_fullscreen.integer, vid_width.integer, vid_height.integer);
+		VID_Init (vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
 
 		Render_Init();
 		S_Init ();
