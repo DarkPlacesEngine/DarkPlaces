@@ -50,8 +50,10 @@ void PRVM_MEM_Alloc()
 {
 	int i;
 
+	// reserve space for the null entity aka world
 	// check bound of max_edicts
-	prog->max_edicts = min(prog->max_edicts,prog->limit_edicts);
+	prog->max_edicts = bound(1, prog->max_edicts, prog->limit_edicts);
+	prog->num_edicts = bound(1, prog->num_edicts, prog->max_edicts);	
 
 	// edictprivate_size has to be min as big prvm_edict_private_t
 	prog->edictprivate_size = max(prog->edictprivate_size,(int)sizeof(prvm_edict_private_t)); 
@@ -216,14 +218,14 @@ prvm_edict_t *PRVM_ED_Alloc (void)
 	// the client qc dont need maxclients
 	// thus it doesnt need to use svs.maxclients
 	// AK:	changed i=svs.maxclients+1
-	// AK:	changed so the edict 0 wont spawned -> used as reserved/world entity
+	// AK:	changed so the edict 0 wont spawn -> used as reserved/world entity
 	//		although the menu/client has no world
 	for (i = 1;i < prog->num_edicts;i++)
 	{
 		e = PRVM_EDICT_NUM(i);
 		// the first couple seconds of server time can involve a lot of
 		// freeing and allocating, so relax the replacement policy
-		if (e->e->free && ( e->e->freetime < 2 || prog->time - e->e->freetime > 0.5 ) )
+		if (e->e->free && ( e->e->freetime < 2 || *prog->time - e->e->freetime > 0.5 ) )
 		{
 			PRVM_ED_ClearEdict (e);
 			return e;
@@ -256,7 +258,7 @@ void PRVM_ED_Free (prvm_edict_t *ed)
 	PRVM_GCALL(free_edict)(ed);
 
 	ed->e->free = true;
-	ed->e->freetime = prog->time;
+	ed->e->freetime = *prog->time;
 }
 
 //===========================================================================
@@ -770,7 +772,7 @@ void PRVM_ED_Count_f (void)
 			active++;
 		}
 		
-		Con_Printf ("num_edicts:%3i\n", sv.num_edicts);
+		Con_Printf ("num_edicts:%3i\n", prog->num_edicts);
 		Con_Printf ("active    :%3i\n", active);
 	}
 
@@ -913,7 +915,7 @@ qboolean PRVM_ED_ParseEpair(prvm_edict_t *ent, ddef_t *key, const char *s)
 	switch (key->type & ~DEF_SAVEGLOBAL)
 	{
 	case ev_string:
-		val->string = PRVM_SetString(ED_NewString(s));
+		val->string = PRVM_SetString(PRVM_ED_NewString(s));
 		break;
 
 	case ev_float:
@@ -1027,7 +1029,7 @@ const char *PRVM_ED_ParseEdict (const char *data, prvm_edict_t *ent)
 
 		strcpy (keyname, com_token);
 
-		// another hack to fix heynames with trailing spaces
+		// another hack to fix keynames with trailing spaces
 		n = strlen(keyname);
 		while (n && keyname[n-1] == ' ')
 		{
@@ -1095,16 +1097,12 @@ void PRVM_ED_LoadFromFile (const char *data)
 	int parsed, inhibited, spawned, died;
 	mfunction_t *func;
 
-	ent = NULL;
 	parsed = 0;
 	inhibited = 0;
 	spawned = 0;
 	died = 0;
 
-	// time defined ?
-	if(prog->flag & PRVM_GE_TIME)
-		PRVM_G_FLOAT(PRVM_ED_FindFieldOffset("time")) = prog->time;
-	
+
 // parse ents
 	while (1)
 	{
@@ -1112,12 +1110,14 @@ void PRVM_ED_LoadFromFile (const char *data)
 		if (!COM_ParseToken(&data, false))
 			break;
 		if (com_token[0] != '{')
-			PRVM_ERROR ("PRVM_ED_LoadFromFile: found %s when expecting (%s) {",com_token, PRVM_NAME);
+			PRVM_ERROR ("PRVM_ED_LoadFromFile: %s: found %s when expecting {", PRVM_NAME, com_token);
 
-		if (!ent)
+		// CHANGED: this is not conform to ED_LoadFromFile
+		if(!prog->num_edicts) 
 			ent = PRVM_EDICT_NUM(0);
-		else
-			ent = PRVM_ED_Alloc ();
+		else 
+			ent = PRVM_ED_Alloc();
+
 		data = PRVM_ED_ParseEdict (data, ent);
 		parsed++;
 
@@ -1167,8 +1167,8 @@ void PRVM_ED_LoadFromFile (const char *data)
 			died++;
 	}
 
-	Con_DPrintf ("%s: %i entities parsed, %i inhibited, %i spawned (%i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, spawned, died, spawned - died);
-}
+	Con_DPrintf ("%s: %i new entities parsed, %i new inhibited, %i (%i new) spawned (whereas %i removed self, %i stayed)\n", PRVM_NAME, parsed, inhibited, prog->num_edicts, spawned, died, spawned - died);
+}	
 
 // not used
 /*
@@ -1206,6 +1206,7 @@ void PRVM_ResetProg()
 	
 	memset(prog,0,sizeof(prvm_prog_t));
 	
+	prog->time = &prog->_time;
 	
 	prog->progs_mempool = t1;
 	prog->edictstring_mempool = t2;
@@ -1444,7 +1445,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 	prog->self = PRVM_ED_FindGlobal("self");
 
 	if(PRVM_ED_FindGlobal("time"))
-		prog->flag |= PRVM_GE_TIME;
+		prog->time = &PRVM_G_FLOAT(PRVM_ED_FindGlobal("time")->ofs);
 
 	if(PRVM_ED_FindField ("chain"))
 		prog->flag |= PRVM_FE_CHAIN;
@@ -1453,7 +1454,7 @@ void PRVM_LoadProgs (const char * filename, int numrequiredfunc, char **required
 		prog->flag |= PRVM_FE_CLASSNAME; 
 
 	if(PRVM_ED_FindField ("nextthink") && PRVM_ED_FindField ("frame") && PRVM_ED_FindField ("think") 
-		&& prog->flag &  PRVM_GE_TIME && prog->self) 
+		&& prog->flag && prog->self) 
 		prog->flag |= PRVM_OP_STATE;
 	
 	PRVM_GCALL(reset_cmd)();
@@ -1646,6 +1647,8 @@ void PRVM_InitProg(int prognr)
 	prog = &prog_list[prognr];
 
 	memset(prog, 0, sizeof(prvm_prog_t));
+
+	prog->time = &prog->_time;
 
 	PRVM_GCALL(init_cmd)();
 }

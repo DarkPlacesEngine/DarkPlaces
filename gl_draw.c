@@ -328,7 +328,7 @@ void Draw_FreePic(char *picname)
 	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
 	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
 	{
-		if (!strcmp (picname, pic->name))
+		if (!strcmp (picname, pic->name) && pic->tex)
 		{
 			R_FreeTexture(pic->tex);
 			pic->width = 0;
@@ -507,6 +507,24 @@ void R_DrawQueue(void)
 			R_Mesh_Draw(mesh->num_vertices, mesh->num_triangles, mesh->data_element3i);
 			currentpic = "\0";
 			break;
+		case DRAWQUEUE_SETCLIP:
+			{
+				// We have to convert the con coords into real coords
+				int x , y, width, height;
+				x = dq->x * (vid.realwidth / vid.conwidth) + vid.realx;
+				// OGL uses top to bottom 
+				y = (dq->y + dq->scaley) * (vid.realheight / vid.conheight) + vid.realy;
+				width = dq->scalex * (vid.realwidth / vid.conwidth);
+				height = dq->scaley * (vid.realheight / vid.conheight);
+
+				GL_Scissor(x, y, width, height);
+
+				GL_ScissorTest(true);
+			}
+			break;
+		case DRAWQUEUE_RESETCLIP:
+			GL_ScissorTest(false);
+			break;				
 		}
 	}
 

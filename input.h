@@ -33,6 +33,9 @@ extern float in_mouse_x, in_mouse_y;
 void IN_Commands (void);
 // oportunity for devices to stick commands on the script buffer
 
+// AK added to allow mouse movement for the menu
+void IN_ProcessMove(usercmd_t *cmd);
+
 void IN_Move (usercmd_t *cmd);
 // add additional movement on top of the keyboard move cmd
 

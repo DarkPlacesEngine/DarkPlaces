@@ -344,6 +344,7 @@ static struct
 	int blend;
 	GLboolean depthmask;
 	int depthtest;
+	int scissortest;
 	int unit;
 	int clientunit;
 	gltextureunit_t units[MAX_TEXTUREUNITS];
@@ -603,6 +604,26 @@ void GL_LockArrays(int first, int count)
 			CHECKGLERROR
 		}
 	}
+}
+
+void GL_Scissor (int x, int y, int width, int height)
+{
+	CHECKGLERROR
+	qglScissor(x, vid.realheight - (y + height),width,height);	
+	CHECKGLERROR
+}
+
+void GL_ScissorTest(qboolean state)
+{
+	if(gl_state.scissortest == state)
+		return;
+	
+	CHECKGLERROR
+	if((gl_state.scissortest = state))
+		qglEnable(GL_SCISSOR_TEST);
+	else
+		qglDisable(GL_SCISSOR_TEST);
+	CHECKGLERROR
 }
 
 void GL_TransformToScreen(const vec4_t in, vec4_t out)

@@ -28,7 +28,9 @@ typedef struct
 } prstack_t;
 
 #define	MAX_STACK_DEPTH		256
-prstack_t	pr_stack[MAX_STACK_DEPTH];
+// stacktrace writes into pr_stack[MAX_STACK_DEPTH]
+// thus increase the array, so depth wont be overwritten
+prstack_t	pr_stack[MAX_STACK_DEPTH+1];
 int			pr_depth = 0;
 
 #define	LOCALSTACK_SIZE		2048

@@ -618,6 +618,48 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	r_refdef.drawqueuesize += dq->size;
 }
 
+void DrawQ_SetClipArea(float x, float y, float width, float height)
+{
+	drawqueue_t * dq;
+	if(r_refdef.drawqueuesize + sizeof(*dq) > r_refdef.maxdrawqueuesize)
+	{
+		Con_DPrintf("DrawQueue full !\n");
+		return;
+	}
+	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq->size = sizeof(*dq);
+	dq->command = DRAWQUEUE_SETCLIP;
+	dq->x = x;
+	dq->y = y;
+	dq->scalex = width;
+	dq->scaley = height;
+	dq->flags = 0;
+	dq->color = 0;
+	
+	r_refdef.drawqueuesize += dq->size;
+}
+
+void DrawQ_ResetClipArea(void)
+{
+	drawqueue_t *dq;
+	if(r_refdef.drawqueuesize + sizeof(*dq) > r_refdef.maxdrawqueuesize)
+	{
+		Con_DPrintf("DrawQueue full !\n");
+		return;
+	}
+	dq = (void*) (r_refdef.drawqueue + r_refdef.drawqueuesize);
+	dq->size = sizeof(*dq);
+	dq->command = DRAWQUEUE_RESETCLIP;
+	dq->x = 0;
+	dq->y = 0;
+	dq->scalex = 0;
+	dq->scaley = 0;
+	dq->flags = 0;
+	dq->color = 0;
+	
+	r_refdef.drawqueuesize += dq->size;
+}
+
 /*
 ====================
 CalcFov
