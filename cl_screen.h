@@ -52,7 +52,8 @@ void SHOWLMP_decodeshow(void);
 void SHOWLMP_drawall(void);
 void SHOWLMP_clear(void);
 
-extern cvar_t scr_2dresolution;
+extern cvar_t vid_conwidth;
+extern cvar_t vid_conheight;
 extern cvar_t scr_screenshot_jpeg;
 
 void CL_Screen_NewMap(void);
