@@ -842,7 +842,7 @@ void R_Mesh_State(const rmeshstate_t *m)
 qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 {
 	qboolean ret;
-	int i;
+	int i, j;
 	qbyte *buffer;
 
 	if (!r_render.integer)
@@ -854,8 +854,13 @@ qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 
 	// LordHavoc: compensate for v_overbrightbits when using hardware gamma
 	if (v_hwgamma.integer)
+	{
 		for (i = 0;i < width * height * 3;i++)
-			buffer[i] <<= v_overbrightbits.integer;
+		{
+			j = buffer[i] << v_overbrightbits.integer;
+			buffer[i] = (qbyte) (bound(0, j, 255));
+		}
+	}
 
 	ret = Image_WriteTGARGB_preflipped(filename, width, height, buffer);
 
