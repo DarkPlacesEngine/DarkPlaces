@@ -1103,9 +1103,8 @@ static searchpath_t *FS_FindFile (const char *name, int* index, qboolean quiet)
 		}
 		else
 		{
-			char* netpath;
-
-			netpath = va ("%s/%s", search->filename, name);
+			char netpath[MAX_OSPATH];
+			snprintf(netpath, sizeof(netpath), "%s/%s", search->filename, name);
 			if (FS_SysFileExists (netpath))
 			{
 				if (!quiet)
@@ -1155,7 +1154,11 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 
 	// Found in the filesystem?
 	if (i < 0)
-		return FS_OpenRead (va ("%s/%s", search->filename, filename), -1, -1);
+	{
+		char netpath[MAX_OSPATH];
+		snprintf(netpath, sizeof(netpath), "%s/%s", search->filename, filename);
+		return FS_OpenRead(netpath, -1, -1);
+	}
 
 	// So, we found it in a package...
 	packfile = &search->pack->files[i];
