@@ -72,6 +72,107 @@ qboolean	configRestored = false;
 
 int	net_driverlevel;
 
+/*
+#define SLSERVERS 1024
+#define SLNAME 40
+#define SLMAPNAME 16
+#define SLMODNAME 16
+typedef struct slserver_s
+{
+	unsigned int ipaddr;
+	unsigned short port;
+	unsigned short ping;
+	char name[SLNAME];
+	char mapname[SLMAPNAME];
+	char modname[SLMODNAME];
+}
+slserver_t;
+
+slserver_t sl_server[SLSERVERS];
+int sl_numservers = 0;
+
+void SL_ClearServers(void)
+{
+	sl_numservers = 0;
+}
+
+slserver_t *SL_FindServer(unsigned int ipaddr, unsigned short port)
+{
+	int i;
+	slserver_t *sl;
+	for (i = 0, sl = sl_server;i < sl_numservers;i++, sl++)
+		if (sl->ipaddr == ipaddr && sl->port == port)
+			return;
+}
+
+void SL_AddServer(unsigned int ipaddr, unsigned short port)
+{
+	if (SL_FindServer(ipaddr, port))
+		return;
+	memset(sl_server + sl_numservers, 0, sizeof(slserver_t));
+	sl_server[sl_numservers].ipaddr = ipaddr;
+	sl_server[sl_numservers].port = port;
+	sl_server[sl_numservers].ping = 0xFFFF;
+	sl_numservers++;
+}
+
+void SL_UpdateServerName(unsigned int ipaddr, unsigned short port, const char *name);
+{
+	int namelen;
+	slserver_t *sl;
+	sl = SL_FindServer(ipaddr, port);
+	if (sl == NULL)
+		return;
+	memset(sl->name, 0, sizeof(sl->name));
+	namelen = strlen(name);
+	if (namelen > sizeof(sl->name) - 1)
+		namelen = sizeof(sl->name) - 1;
+	if (namelen)
+		memcpy(sl->name, name, namelen);
+}
+
+void SL_UpdateServerModName(unsigned int ipaddr, unsigned short port, const char *name);
+{
+	int namelen;
+	slserver_t *sl;
+	sl = SL_FindServer(ipaddr, port);
+	if (sl == NULL)
+		return;
+	memset(sl->modname, 0, sizeof(sl->modname));
+	namelen = strlen(name);
+	if (namelen > sizeof(sl->modname) - 1)
+		namelen = sizeof(sl->modname) - 1;
+	if (namelen)
+		memcpy(sl->modname, name, namelen);
+}
+
+void SL_UpdateServerMapName(unsigned int ipaddr, unsigned short port, const char *name);
+{
+	int namelen;
+	slserver_t *sl;
+	sl = SL_FindServer(ipaddr, port);
+	if (sl == NULL)
+		return;
+	memset(sl->mapname, 0, sizeof(sl->mapname));
+	namelen = strlen(name);
+	if (namelen > sizeof(sl->mapname) - 1)
+		namelen = sizeof(sl->mapname) - 1;
+	if (namelen)
+		memcpy(sl->mapname, name, namelen);
+}
+
+void SL_UpdateServerPing(unsigned int ipaddr, unsigned short port, float ping);
+{
+	int i;
+	slserver_t *sl;
+	sl = SL_FindServer(ipaddr, port);
+	if (sl == NULL)
+		return;
+	i = ping * 1000.0;
+	sl->ping = bound(0, i, 9999);
+}
+*/
+
 
 double			net_time;
 
