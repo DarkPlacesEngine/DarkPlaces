@@ -50,12 +50,14 @@ SHAREDOBJECTS=	builddate.o cmd.o collision.o common.o crc.o cvar.o \
 		filematch.o host.o host_cmd.o image.o mathlib.o matrixlib.o \
 		model_alias.o model_brush.o model_shared.o model_sprite.o \
 		net_bsd.o net_dgrm.o net_loop.o net_main.o net_master.o \
-		net_udp.o palette.o portals.o protocol.o fs.o sys_linux.o \
+		net_udp.o palette.o portals.o protocol.o fs.o \
 		sys_shared.o world.o wad.o zone.o
+COMMONOBJECTS= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
 
-OBJ_COMMON= $(CLIENTOBJECTS) $(SERVEROBJECTS) $(SHAREDOBJECTS)
-OBJ_GLX= vid_glx.o $(OBJ_CD) $(OBJ_SND)
-OBJ_DED= vid_null.o cd_null.o snd_null.o
+# objects used by glx target
+OBJ_GLX= sys_linux.o vid_glx.o $(OBJ_CD) $(OBJ_SND) $(COMMONOBJECTS)
+# objects used by dedicated target
+OBJ_DED= sys_linux.o vid_null.o cd_null.o snd_null.o $(COMMONOBJECTS)
 
 
 # Compilation
@@ -170,10 +172,10 @@ vid_glx.o: vid_glx.c
 .c.o:
 	$(DO_CC)
 
-$(EXE_GLX):  $(OBJ_COMMON) $(OBJ_GLX)
+$(EXE_GLX):  $(OBJ_GLX)
 	$(DO_LD) $(GLX_LIB)
 
-$(EXE_DED): $(OBJ_COMMON) $(OBJ_DED)
+$(EXE_DED): $(OBJ_DED)
 	$(DO_LD)
 
 clean:
