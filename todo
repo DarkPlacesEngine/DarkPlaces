@@ -1,13 +1,12 @@
 - todo: difficulty ratings are: 0 = trivial, 1 = easy, 2 = easy-moderate, 3 = moderate, 4 = moderate-hard, 5 = hard, 6 = hard++, 7 = nightmare, d = done, -d = done but have not notified the people who asked for it, f = failed, -f = failed but have not notified the people who asked for it
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
+-(Elric) d darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 -(Kinn) d darkplaces client: all glow trails are bright blue (Kinn)
 -(Kinn) d darkplaces renderer: fix the sometimes non-animating framegroups on sprites (Kinn) 
 -(RenegadeC) d darkplaces client: make sure the join game menu shows status on a connection attempt, such as connecting or failed (RenegadeC)
 -(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
-0 darkplaces client: add DP_LITSPRITES extension to document the fact that any sprite with a ! in its filename is lit rather than fullbright
 0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
-0 darkplaces client: add back random framegroup animation sync for sprites and models so torch flames don't play in sync (Elric)
 0 darkplaces client: add cvars to control lighting quality to allow performance tradeoffs; r_shadow_ options for use of dot3 shading, etc
 0 darkplaces client: corona on your own muzzleflash is annoying when looking down because it can be seen (flum)
 0 darkplaces client: entities not being removed in quake protocol demos? (MoALTz)
@@ -18,6 +17,7 @@
 0 darkplaces client: skybox should not be reset by r_restart (Stribbs)
 0 darkplaces collision: Mod_Q3BSP_TraceBrush_RecursiveBSPNode can be optimized to take a clipflags parameter like R_Q3BSP_RecursiveworldNode (Vic)
 0 darkplaces collision: mod_q3bsp_optimizedtraceline going through brushes? (Vermeulen)
+0 darkplaces console: bug: when logging using log_file and log_sync 0, setting log_file back to "" does not close the file until another message is posted?
 0 darkplaces console: make typing "; quit " in messagemode NOT quit the game (jitspoe)
 0 darkplaces docs: write docs about in_bind/in_bindmap in readme (shadowalker)
 0 darkplaces editlights: add coronascale setting to rtlights (romi)
@@ -325,6 +325,7 @@ d darkplaces client bug: ignore modelflags on view weaponmodel - in Malice the d
 d darkplaces client bug: make sure QuakeDoneQuick works (Chris Kemp)
 d darkplaces client: (goodvsbad2) increase chase_stevie height to 2048 (yummyluv)
 d darkplaces client: ValidateState should not error out about colormap > maxclients, only warn (Static_Fiend)
+d darkplaces client: add DP_LITSPRITES extension to document the fact that any sprite with a ! in its filename is lit rather than fullbright
 d darkplaces client: add GAME_PRYDON mode which would make vore spike trails blue as they're used for ice (Urre, Harb, FrikaC)
 d darkplaces client: add a config saving command (Speeds)
 d darkplaces client: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
