@@ -831,9 +831,6 @@ static void CalcSurfaceExtents (msurface_t *s)
 
 		s->texturemins[i] = bmins[i] * 16;
 		s->extents[i] = (bmaxs[i] - bmins[i]) * 16;
-//		if ( !(tex->flags & TEX_SPECIAL) && s->extents[i] > 512)
-		if ((tex->flags & TEX_SPECIAL) == 0 && (s->extents[i]+1) > (256*16))
-			Host_Error ("Bad surface extents");
 	}
 }
 
@@ -1121,6 +1118,39 @@ void Mod_GenerateLightmappedMesh (msurface_t *surf)
 	}
 }
 
+void Mod_GenerateVertexMesh (msurface_t *surf)
+{
+	int				i, *index;
+	float			*in;
+	surfvertex_t	*out;
+	surfmesh_t		*mesh;
+
+	surf->lightmaptexturestride = 0;
+	surf->lightmaptexture = NULL;
+
+	mesh = &surf->mesh;
+	mesh->numverts = surf->poly_numverts;
+	mesh->numtriangles = surf->poly_numverts - 2;
+	mesh->index = Mem_Alloc(loadmodel->mempool, mesh->numtriangles * sizeof(int[3]) + mesh->numverts * sizeof(surfvertex_t));
+	mesh->vertex = (surfvertex_t *)((long) mesh->index + mesh->numtriangles * sizeof(int[3]));
+	memset(mesh->vertex, 0, mesh->numverts * sizeof(surfvertex_t));
+
+	index = mesh->index;
+	for (i = 0;i < mesh->numtriangles;i++)
+	{
+		*index++ = 0;
+		*index++ = i + 1;
+		*index++ = i + 2;
+	}
+
+	for (i = 0, in = surf->poly_verts, out = mesh->vertex;i < mesh->numverts;i++, in += 3, out++)
+	{
+		VectorCopy (in, out->v);
+		out->st[0] = (DotProduct (out->v, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3]) / surf->texinfo->texture->width;
+		out->st[1] = (DotProduct (out->v, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3]) / surf->texinfo->texture->height;
+	}
+}
+
 void Mod_GenerateSurfacePolygon (msurface_t *surf)
 {
 	float		*vert;
@@ -1210,6 +1240,7 @@ static void Mod_LoadFaces (lump_t *l)
 		if (out->texinfo->texture->flags & SURF_DRAWSKY)
 		{
 			out->shader = &Cshader_sky;
+			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
 			continue;
 		}
@@ -1224,6 +1255,7 @@ static void Mod_LoadFaces (lump_t *l)
 				out->texturemins[i] = -8192*1024;
 			}
 			*/
+			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
 			continue;
 		}
@@ -1234,7 +1266,15 @@ static void Mod_LoadFaces (lump_t *l)
 		{
 			// qbsp couldn't find the texture for this surface, but it was either turb or sky...  assume turb
 			out->shader = &Cshader_water;
+			out->samples = NULL;
 			Mod_GenerateWarpMesh (out);
+		}
+		else if ((out->extents[0]+1) > (256*16) || (out->extents[1]+1) > (256*16))
+		{
+			Con_Printf ("Bad surface extents, converting to fullbright polygon");
+			out->shader = &Cshader_wall_fullbright;
+			out->samples = NULL;
+			Mod_GenerateVertexMesh(out);
 		}
 		else if (out->extents[0] < r_vertexsurfacesthreshold.integer && out->extents[1] < r_vertexsurfacesthreshold.integer)
 		{

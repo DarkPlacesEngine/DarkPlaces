@@ -1019,6 +1019,66 @@ static void RSurfShader_Wall_Pass_BaseVertex(msurface_t *s)
 	R_Mesh_Draw(&m);
 }
 
+static void RSurfShader_Wall_Pass_BaseFullbright(msurface_t *s)
+{
+	int				i;
+	float			diff[3], ifog;
+	surfvertex_t	*v;
+	surfvert_t		*sv;
+	rmeshinfo_t		m;
+
+	memset(&m, 0, sizeof(m));
+	if (currentrenderentity->effects & EF_ADDITIVE)
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE;
+	}
+	else if (currentrenderentity != &cl_entities[0].render && (s->currenttexture->fogtexture != NULL || currentrenderentity->alpha != 1))
+	{
+		m.transparent = true;
+		m.blendfunc1 = GL_SRC_ALPHA;
+		m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	}
+	else
+	{
+		m.transparent = false;
+		m.blendfunc1 = GL_ONE;
+		m.blendfunc2 = GL_ZERO;
+	}
+	m.numtriangles = s->mesh.numtriangles;
+	m.numverts = s->mesh.numverts;
+	m.index = s->mesh.index;
+	m.vertex = &svert[0].v[0];
+	m.vertexstep = sizeof(surfvert_t);
+	m.tex[0] = R_GetTexture(s->currenttexture->texture);
+	m.texcoords[0] = &s->mesh.vertex->st[0];
+	m.texcoordstep[0] = sizeof(surfvertex_t);
+	if (fogenabled)
+	{
+		m.color = &svert[0].c[0];
+		m.colorstep = sizeof(surfvert_t);
+		for (i = 0, sv = svert, v = s->mesh.vertex;i < m.numverts;i++, sv++, v++)
+		{
+			softwaretransform(v->v, sv->v);
+			VectorSubtract(sv->v, r_origin, diff);
+			ifog = 1 - exp(fogdensity/DotProduct(diff, diff));
+			sv->c[0] = ifog;
+			sv->c[1] = ifog;
+			sv->c[2] = ifog;
+			sv->c[3] = currentrenderentity->alpha;
+		}
+	}
+	else
+	{
+		m.cr = m.cg = m.cb = 1;
+		m.ca = currentrenderentity->alpha;
+		for (i = 0, sv = svert, v = s->mesh.vertex;i < m.numverts;i++, sv++, v++)
+			softwaretransform(v->v, sv->v);
+	}
+	R_Mesh_Draw(&m);
+}
+
 static void RSurfShader_Wall_Pass_Light(msurface_t *s)
 {
 	int				i;
@@ -1203,6 +1263,22 @@ static void RSurfShader_Wall_Pass_Fog(msurface_t *s)
 		}
 	}
 	R_Mesh_Draw(&m);
+}
+
+static int RSurfShader_Wall_Fullbright(int stage, msurface_t *s)
+{
+	switch(stage)
+	{
+	case 0:
+		RSurfShader_Wall_Pass_BaseFullbright(s);
+		return false;
+	case 1:
+		if (s->currenttexture->glowtexture)
+			RSurfShader_Wall_Pass_Glow(s);
+		return false;
+	default:
+		return true;
+	}
 }
 
 static int RSurfShader_Wall_Vertex(int stage, msurface_t *s)
@@ -1673,14 +1749,16 @@ loc1:
 
 Cshader_t Cshader_wall_vertex = {{NULL, RSurfShader_Wall_Vertex, RSurfShader_Wall_Fog}, NULL};
 Cshader_t Cshader_wall_lightmap = {{NULL, RSurfShader_Wall_Lightmap, RSurfShader_Wall_Fog}, NULL};
+Cshader_t Cshader_wall_fullbright = {{NULL, RSurfShader_Wall_Fullbright, RSurfShader_Wall_Fog}, NULL};
 Cshader_t Cshader_water = {{NULL, RSurfShader_Water, NULL}, NULL};
 Cshader_t Cshader_sky = {{RSurfShader_Sky, NULL, NULL}, NULL};
 
-int Cshader_count = 4;
-Cshader_t *Cshaders[4] =
+int Cshader_count = 5;
+Cshader_t *Cshaders[5] =
 {
 	&Cshader_wall_vertex,
 	&Cshader_wall_lightmap,
+	&Cshader_wall_fullbright,
 	&Cshader_water,
 	&Cshader_sky
 };
