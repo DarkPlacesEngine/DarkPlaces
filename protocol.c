@@ -26,15 +26,26 @@ void EntityFrame_ClearDatabase(entity_database_t *d)
 	d->ackframe = -1;
 }
 
-// (server) acknowledge a frame as recieved by client (removes old frames from database, will use this new frame for delta compression)
+// (server and client) removes frames older than 'frame' from database
 void EntityFrame_AckFrame(entity_database_t *d, int frame)
 {
+	int i;
+	for (i = 0;i < d->numframes && d->frames[i].framenum >= frame;i++);
+	// ignore outdated frame acks (out of order packets)
+	if (i == 0)
+		return;
+	d->ackframe = frame;
+	d->numframes -= i;
+	// if some queue is left, slide it down to beginning of array
+	if (d->numframes)
+		memcpy(&d->frames[0], &d->frames[i], sizeof(d->frames[0]) * d->numframes);
 }
 
 // (server) clears frame, to prepare for adding entities
-void EntityFrame_Clear(entity_frame_t *f)
+void EntityFrame_Clear(entity_frame_t *f, vec3_t eye)
 {
 	memset(f, 0, sizeof(*f));
+	VectorCopy(eye, f->eye);
 }
 
 // (server) allocates an entity slot in frame, returns NULL if full
@@ -49,17 +60,376 @@ entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number)
 	return e;
 }
 
-// (server) writes a frame to network stream
-void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, int deltaframe, int newframe, sizebuf_t *msg)
+void EntityFrame_FetchFrame(entity_database_t *d, int framenum, entity_frame_t *f)
 {
+	int i, n;
+	memset(f, 0, sizeof(*f));
+	for (i = 0;i < d->numframes && d->frames[i].framenum < framenum;i++);
+	if (framenum == d->frames[i].framenum)
+	{
+		f->framenum = framenum;
+		f->numentities = d->frames[i].endentity - d->frames[i].firstentity;
+		n = MAX_ENTITY_DATABASE - (d->frames[i].firstentity % MAX_ENTITY_DATABASE);
+		if (n > f->numentities)
+			n = f->numentities;
+		memcpy(f->entitydata, d->entitydata + d->frames[i].firstentity % MAX_ENTITY_DATABASE, sizeof(*f->entitydata) * n);
+		if (f->numentities > n)
+			memcpy(f->entitydata + n, d->entitydata, sizeof(*f->entitydata) * (f->numentities - n));
+	}
+	else
+		f->framenum = -1;
+}
+
+// (server and client) adds a entity_frame to the database, for future reference
+void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f)
+{
+	int n, e;
+	entity_frameinfo_t *info;
+	// figure out how many entity slots are used already
+	if (d->numframes)
+	{
+		n = d->frames[d->numframes - 1].endentity - d->frames[0].firstentity;
+		if (n + f->numentities > MAX_ENTITY_DATABASE || d->numframes >= MAX_ENTITY_HISTORY)
+		{
+			// ran out of room, dump database
+			EntityFrame_ClearDatabase(d);
+		}
+	}
+
+	info = &d->frames[d->numframes];
+	info->framenum = f->framenum;
+	// if database still has frames after that...
+	if (d->numframes)
+		info->firstentity = d->frames[d->numframes - 1].endentity;
+	else
+		info->firstentity = 0;
+	info->endentity = info->firstentity + f->numentities;
+
+	n = info->firstentity % MAX_ENTITY_DATABASE;
+	e = MAX_ENTITY_DATABASE - n;
+	if (e > f->numentities)
+		e = f->numentities;
+	memcpy(d->entitydata + n, f->entitydata, sizeof(entity_state_t) * e);
+	if (f->numentities > e)
+		memcpy(d->entitydata, f->entitydata + e, sizeof(entity_state_t) * (f->numentities - e));
+}
+
+// (server) writes a frame to network stream
+void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, int newframe, sizebuf_t *msg)
+{
+	int i, onum, bits, number;
+	entity_frame_t deltaframe, *o = &deltaframe;
+	entity_state_t *ent, *delta, baseline;
+
+	EntityFrame_AddFrame(d, f);
+
+	ClearStateToDefault(&baseline);
+	EntityFrame_FetchFrame(d, d->ackframe, o);
+	MSG_WriteByte (msg, svc_entities);
+	MSG_WriteLong (msg, o->framenum);
+	MSG_WriteLong (msg, newframe);
+	MSG_WriteFloat (msg, f->eye[0]);
+	MSG_WriteFloat (msg, f->eye[1]);
+	MSG_WriteFloat (msg, f->eye[2]);
+
+	onum = 0;
+	for (i = 0;i < f->numentities;i++)
+	{
+		ent = f->entitydata + i;
+		number = ent->number;
+		for (;onum < o->numentities && o->entitydata[onum].number < number;onum++)
+		{
+			// write remove message
+			MSG_WriteShort(msg, o->entitydata[onum].number | 0x8000);
+		}
+		if (onum < o->numentities && (o->entitydata[onum].number == number))
+		{
+			// delta from previous frame
+			delta = o->entitydata + onum;
+			// advance to next entity in delta frame
+			onum++;
+		}
+		else
+		{
+			// delta from baseline
+			delta = &baseline;
+		}
+		bits = 0;
+		if (ent->origin[0] != delta->origin[0])
+			bits |= E_ORIGIN1;
+		if (ent->origin[1] != delta->origin[1])
+			bits |= E_ORIGIN2;
+		if (ent->origin[2] != delta->origin[2])
+			bits |= E_ORIGIN3;
+		if (ent->angles[0] != delta->angles[0])
+			bits |= E_ANGLE1;
+		if (ent->angles[1] != delta->angles[1])
+			bits |= E_ANGLE2;
+		if (ent->angles[2] != delta->angles[2])
+			bits |= E_ANGLE3;
+		if ((ent->modelindex ^ delta->modelindex) & 0x00FF)
+			bits |= E_MODEL1;
+		if ((ent->modelindex ^ delta->modelindex) & 0xFF00)
+			bits |= E_MODEL2;
+		if ((ent->frame ^ delta->frame) & 0x00FF)
+			bits |= E_FRAME1;
+		if ((ent->frame ^ delta->frame) & 0xFF00)
+			bits |= E_FRAME2;
+		if ((ent->effects ^ delta->effects) & 0x00FF)
+			bits |= E_EFFECTS1;
+		if ((ent->effects ^ delta->effects) & 0xFF00)
+			bits |= E_EFFECTS2;
+		if (ent->colormap != delta->colormap)
+			bits |= E_COLORMAP;
+		if (ent->skin != delta->skin)
+			bits |= E_SKIN;
+		if (ent->alpha != delta->alpha)
+			bits |= E_ALPHA;
+		if (ent->scale != delta->scale)
+			bits |= E_SCALE;
+		if (ent->glowsize != delta->glowsize)
+			bits |= E_GLOWSIZE;
+		if (ent->glowcolor != delta->glowcolor)
+			bits |= E_GLOWCOLOR;
+		if (ent->flags != delta->flags)
+			bits |= E_FLAGS;
+
+		if (bits) // don't send anything if it hasn't changed
+		{
+			if (bits & 0xFF000000)
+				bits |= E_EXTEND3;
+			if (bits & 0x00FF0000)
+				bits |= E_EXTEND2;
+			if (bits & 0x0000FF00)
+				bits |= E_EXTEND1;
+
+			MSG_WriteShort(msg, number);
+			MSG_WriteByte(msg, bits & 0xFF);
+			if (bits & E_EXTEND1)
+			{
+				MSG_WriteByte(msg, (bits >> 8) & 0xFF);
+				if (bits & E_EXTEND2)
+				{
+					MSG_WriteByte(msg, (bits >> 16) & 0xFF);
+					if (bits & E_EXTEND3)
+						MSG_WriteByte(msg, (bits >> 24) & 0xFF);
+				}
+			}
+			if (bits & E_ORIGIN1)
+				MSG_WriteFloat(msg, ent->origin[0]);
+			if (bits & E_ORIGIN2)
+				MSG_WriteFloat(msg, ent->origin[1]);
+			if (bits & E_ORIGIN3)
+				MSG_WriteFloat(msg, ent->origin[2]);
+			if (bits & E_ANGLE1)
+				MSG_WriteAngle(msg, ent->angles[0]);
+			if (bits & E_ANGLE2)
+				MSG_WriteAngle(msg, ent->angles[1]);
+			if (bits & E_ANGLE3)
+				MSG_WriteAngle(msg, ent->angles[2]);
+			if (bits & E_MODEL1)
+				MSG_WriteByte(msg, ent->modelindex & 0x00FF);
+			if (bits & E_MODEL2)
+				MSG_WriteByte(msg, ent->modelindex & 0xFF00);
+			if (bits & E_FRAME1)
+				MSG_WriteByte(msg, ent->frame & 0x00FF);
+			if (bits & E_FRAME2)
+				MSG_WriteByte(msg, ent->frame & 0xFF00);
+			if (bits & E_EFFECTS1)
+				MSG_WriteByte(msg, ent->effects & 0x00FF);
+			if (bits & E_EFFECTS2)
+				MSG_WriteByte(msg, ent->effects & 0xFF00);
+			if (bits & E_COLORMAP)
+				MSG_WriteByte(msg, ent->colormap);
+			if (bits & E_SKIN)
+				MSG_WriteByte(msg, ent->skin);
+			if (bits & E_ALPHA)
+				MSG_WriteByte(msg, ent->alpha);
+			if (bits & E_SCALE)
+				MSG_WriteByte(msg, ent->scale);
+			if (bits & E_GLOWSIZE)
+				MSG_WriteByte(msg, ent->glowsize);
+			if (bits & E_GLOWCOLOR)
+				MSG_WriteByte(msg, ent->glowcolor);
+			if (bits & E_FLAGS)
+				MSG_WriteByte(msg, ent->flags);
+		}
+	}
+	for (;onum < o->numentities;onum++)
+	{
+		// write remove message
+		MSG_WriteShort(msg, o->entitydata[onum].number | 0x8000);
+	}
+	MSG_WriteShort(msg, 0xFFFF);
 }
 
 // (client) reads a frame from network stream
-void EntityFrame_Read(entity_database_t *d, entity_frame_t *f)
+void EntityFrame_Read(entity_database_t *d)
 {
+	int newframenum, deltaframenum, onum, number, removed, bits;
+	entity_frame_t framedata, *f = &framedata, deltaframedata, *delta = &deltaframedata;
+	entity_state_t *e, baseline;
+
+	ClearStateToDefault(&baseline);
+	memset(f, 0, sizeof(*f));
+	// read the frame header info
+	f->time = cl.mtime[0];
+	deltaframenum = MSG_ReadLong();
+	newframenum = MSG_ReadLong();
+	f->eye[0] = MSG_ReadFloat();
+	f->eye[1] = MSG_ReadFloat();
+	f->eye[2] = MSG_ReadFloat();
+	EntityFrame_AckFrame(d, deltaframenum);
+	EntityFrame_FetchFrame(d, deltaframenum, delta);
+	f->framenum = newframenum;
+	onum = 0;
+	f->numentities = 0;
+	// read entities until we hit the magic 0xFFFF end tag
+	while ((number = MSG_ReadShort()) != 0xFFFF)
+	{
+		if (msg_badread)
+			Host_Error("EntityFrame_Read: read error\n");
+		removed = number & 0x8000;
+		number &= 0x7FFF;
+		if (number >= MAX_EDICTS)
+			Host_Error("EntityFrame_Read: number (%i) >= MAX_EDICTS (%i)\n", number, MAX_EDICTS);
+
+		// seek to entity, while copying any skipped entities (assume unchanged)
+		while (onum < delta->numentities && delta->entitydata[onum].number < number)
+		{
+			if (f->numentities >= MAX_ENTITY_DATABASE)
+				Host_Error("EntityFrame_Read: entity list too big\n");
+			memcpy(f->entitydata + f->numentities, delta->entitydata + onum, sizeof(entity_state_t));
+			onum++;
+			f->numentities++;
+		}
+		if (removed)
+		{
+			if (onum < delta->numentities && delta->entitydata[onum].number == number)
+				onum++;
+			else
+				Con_Printf("EntityFrame_Read: REMOVE on unused entity!\n");
+		}
+		else
+		{
+			if (f->numentities >= MAX_ENTITY_DATABASE)
+				Host_Error("EntityFrame_Read: entity list too big\n");
+			if (onum < delta->numentities && delta->entitydata[onum].number == number)
+			{
+				// delta from old entity
+				memcpy(f->entitydata + f->numentities, delta->entitydata + onum++, sizeof(*e));
+			}
+			else
+			{
+				// delta from baseline
+				memcpy(f->entitydata + f->numentities, &baseline, sizeof(*e));
+			}
+
+			// reserve this slot
+			e = f->entitydata + f->numentities++;
+
+			e->active = true;
+			e->time = cl.mtime[0];
+
+			bits = MSG_ReadByte();
+			if (bits & E_EXTEND1)
+			{
+				bits |= MSG_ReadByte() << 8;
+				if (bits & E_EXTEND2)
+				{
+					bits |= MSG_ReadByte() << 16;
+					if (bits & E_EXTEND3)
+						bits |= MSG_ReadByte() << 24;
+				}
+			}
+
+			if (bits & E_ORIGIN1)
+				e->origin[0] = MSG_ReadFloat();
+			if (bits & E_ORIGIN2)
+				e->origin[1] = MSG_ReadFloat();
+			if (bits & E_ORIGIN3)
+				e->origin[2] = MSG_ReadFloat();
+			if (bits & E_ANGLE1)
+				e->angles[0] = MSG_ReadAngle();
+			if (bits & E_ANGLE2)
+				e->angles[1] = MSG_ReadAngle();
+			if (bits & E_ANGLE3)
+				e->angles[2] = MSG_ReadAngle();
+			if (bits & E_MODEL1)
+				e->modelindex = (e->modelindex & 0xFF00) | MSG_ReadByte();
+			if (bits & E_MODEL2)
+				e->modelindex = (e->modelindex & 0x00FF) | (MSG_ReadByte() << 8);
+			if (bits & E_FRAME1)
+				e->frame = (e->frame & 0xFF00) | MSG_ReadByte();
+			if (bits & E_FRAME2)
+				e->frame = (e->frame & 0x00FF) | (MSG_ReadByte() << 8);
+			if (bits & E_EFFECTS1)
+				e->effects = (e->effects & 0xFF00) | MSG_ReadByte();
+			if (bits & E_EFFECTS2)
+				e->effects = (e->effects & 0x00FF) | (MSG_ReadByte() << 8);
+			if (bits & E_COLORMAP)
+				e->colormap = MSG_ReadByte();
+			if (bits & E_SKIN)
+				e->skin = MSG_ReadByte();
+			if (bits & E_ALPHA)
+				e->alpha = MSG_ReadByte();
+			if (bits & E_SCALE)
+				e->scale = MSG_ReadByte();
+			if (bits & E_GLOWSIZE)
+				e->glowsize = MSG_ReadByte();
+			if (bits & E_GLOWCOLOR)
+				e->glowcolor = MSG_ReadByte();
+			if (bits & E_FLAGS)
+				e->flags = MSG_ReadByte();
+		}
+	}
+	while (onum < delta->numentities)
+	{
+		if (f->numentities >= MAX_ENTITY_DATABASE)
+			Host_Error("EntityFrame_Read: entity list too big\n");
+		memcpy(f->entitydata + f->numentities, delta->entitydata + onum, sizeof(entity_state_t));
+		onum++;
+		f->numentities++;
+	}
+	EntityFrame_AddFrame(d, f);
 }
 
-// (client) fetchs an entity from the database, read with _Read, fills in structs for current and previous state
-void EntityFrame_FetchEntity(entity_database_t *d, entity_state_t *previous, entity_state_t *current)
+void EntityFrame_FetchEye(entity_database_t *d, vec3_t eye, double time)
 {
+	float frac;
+	if (d->numframes == 0)
+		Host_Error("EntityFrame_FetchEye: no frames\n");
+	if (d->numframes > 1 && d->frames[d->numframes - 2].time != d->frames[d->numframes - 1].time)
+	{
+		frac = (time - d->frames[d->numframes - 2].time) / (d->frames[d->numframes - 1].time - d->frames[d->numframes - 2].time);
+		frac = bound(0, frac, 1);
+		VectorSubtract(d->frames[d->numframes - 2].eye, d->frames[d->numframes - 1].eye, eye);
+		VectorMA(d->frames[d->numframes - 2].eye, frac, eye, eye);
+	}
+	else
+		VectorCopy(d->frames[0].eye, eye);
+}
+
+// (client) fetchs an entity from a frame, index is the index into the frame's entity list, returns false if index is out of bounds
+int EntityFrame_FetchEntityByIndex(entity_frame_t *f, entity_state_t *e, int index)
+{
+	if (index < 0 || index >= f->numentities)
+		return false;
+	memcpy(e, f->entitydata + index, sizeof(*e));
+	return true;
+}
+
+int EntityFrame_FetchEntityByNumber(entity_frame_t *f, entity_state_t *e, int number)
+{
+	int i;
+	for (i = 0;i < f->numentities;i++)
+	{
+		if (f->entitydata[i].number == number)
+		{
+			memcpy(e, f->entitydata + i, sizeof(*e));
+			return true;
+		}
+	}
+	ClearStateToDefault(e);
+	return false;
 }
