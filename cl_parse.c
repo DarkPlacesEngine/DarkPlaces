@@ -182,7 +182,7 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 		pos[i] = MSG_ReadCoord ();
 
     S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0, attenuation);
-}       
+}
 
 /*
 ==================
@@ -197,6 +197,7 @@ void CL_KeepaliveMessage (void)
 	float	time;
 	static float lastmsg;
 	int		ret;
+	int		c;
 	sizebuf_t	old;
 	qbyte		olddata[8192];
 	
@@ -222,7 +223,8 @@ void CL_KeepaliveMessage (void)
 			Host_Error ("CL_KeepaliveMessage: received a message");
 			break;
 		case 2:
-			if (MSG_ReadByte() != svc_nop)
+			c = MSG_ReadByte();
+			if (c != svc_nop)
 				Host_Error ("CL_KeepaliveMessage: datagram wasn't a nop");
 			break;
 		}
@@ -615,7 +617,8 @@ void CL_ParseUpdate (int bits)
 		int j = MSG_ReadFloat() * 255.0f;
 		if (i == 2)
 		{
-			if (MSG_ReadFloat())
+			i = MSG_ReadFloat();
+			if (i)
 				new.effects |= EF_FULLBRIGHT;
 		}
 		if (j < 0)

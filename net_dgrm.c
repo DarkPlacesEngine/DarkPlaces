@@ -529,6 +529,7 @@ static void Test_Poll(void)
 	int		frags;
 	int		connectTime;
 	qbyte	playerNumber;
+	int		c;
 
 	net_landriverlevel = testDriver;
 
@@ -550,7 +551,8 @@ static void Test_Poll(void)
 		if ((control & NETFLAG_LENGTH_MASK) != len)
 			break;
 
-		if (MSG_ReadByte() != CCREP_PLAYER_INFO)
+		c = MSG_ReadByte();
+		if (c != CCREP_PLAYER_INFO)
 			Sys_Error("Unexpected repsonse to Player Info request\n");
 
 		playerNumber = MSG_ReadByte();
@@ -651,6 +653,7 @@ static void Test2_Poll(void)
 	struct qsockaddr clientaddr;
 	int		control;
 	int		len;
+	int		c;
 	char	name[256];
 	char	value[256];
 
@@ -673,7 +676,8 @@ static void Test2_Poll(void)
 	if ((control & NETFLAG_LENGTH_MASK) != len)
 		goto Error;
 
-	if (MSG_ReadByte() != CCREP_RULE_INFO)
+	c = MSG_ReadByte();
+	if (c != CCREP_RULE_INFO)
 		goto Error;
 
 	strcpy(name, MSG_ReadString());
@@ -839,6 +843,7 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	int			command;
 	int			control;
 	int			ret;
+	int			c;
 
 	acceptsock = dfunc.CheckNewConnections();
 	if (acceptsock == -1)
@@ -971,7 +976,8 @@ static qsocket_t *_Datagram_CheckNewConnections (void)
 	if (strcmp(MSG_ReadString(), "QUAKE") != 0)
 		return NULL;
 
-	if (MSG_ReadByte() != NET_PROTOCOL_VERSION)
+	c = MSG_ReadByte();
+	if (c != NET_PROTOCOL_VERSION)
 	{
 		SZ_Clear(&net_message);
 		// save space for the header, filled in later
@@ -1108,6 +1114,7 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 	struct qsockaddr readaddr;
 	struct qsockaddr myaddr;
 	int		control;
+	int		c;
 
 	dfunc.GetSocketAddr (dfunc.controlSock, &myaddr);
 	if (xmit)
@@ -1147,7 +1154,8 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 		if ((control & NETFLAG_LENGTH_MASK) != ret)
 			continue;
 
-		if (MSG_ReadByte() != CCREP_SERVER_INFO)
+		c = MSG_ReadByte();
+		if (c != CCREP_SERVER_INFO)
 			continue;
 
 		dfunc.GetAddrFromName(MSG_ReadString(), &readaddr);
@@ -1166,7 +1174,8 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 		strcpy(hostcache[n].map, MSG_ReadString());
 		hostcache[n].users = MSG_ReadByte();
 		hostcache[n].maxusers = MSG_ReadByte();
-		if (MSG_ReadByte() != NET_PROTOCOL_VERSION)
+		c = MSG_ReadByte();
+		if (c != NET_PROTOCOL_VERSION)
 		{
 			strcpy(hostcache[n].cname, hostcache[n].name);
 			hostcache[n].cname[14] = 0;
