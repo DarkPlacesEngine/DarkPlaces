@@ -683,7 +683,7 @@ void M_ScanSaves (void)
 	{
 		strcpy (m_filenames[i], "--- UNUSED SLOT ---");
 		loadable[i] = false;
-		sprintf (name, "%s/s%i.sav", fs_gamedir, i);
+		sprintf (name, "s%i.sav", i);
 		f = FS_Open (name, "r", false);
 		if (!f)
 			continue;
