@@ -732,7 +732,10 @@ void R_RenderView (void)
 
 	// draw transparent meshs
 	R_Mesh_AddTransparent();
-	R_TimeReport("sorttrans");
+	R_TimeReport("addtrans");
+
+	R_DrawCoronas();
+	R_TimeReport("coronas");
 
 	// render any queued meshs
 	R_Mesh_Render();
