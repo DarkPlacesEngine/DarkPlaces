@@ -266,6 +266,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	sc = s->sfxcache = Mem_Alloc(s->mempool, len + sizeof(sfxcache_t));
 	if (!sc)
 	{
+		Mem_FreePool(&s->mempool);
 		Mem_Free(data);
 		return NULL;
 	}
@@ -331,7 +332,7 @@ void FindNextChunk(char *name)
 			data_p = NULL;
 			return;
 		}
-		
+
 		data_p += 4;
 		iff_chunk_len = GetLittleLong();
 		if (iff_chunk_len < 0)
@@ -455,7 +456,7 @@ wavinfo_t GetWavinfo (char *name, qbyte *wav, int wavlength)
 	}
 
 	data_p += 4;
-	samples = GetLittleLong () / info.width;
+	samples = GetLittleLong () / info.width / info.channels;
 
 	if (info.samples)
 	{
