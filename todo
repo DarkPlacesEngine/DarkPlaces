@@ -49,8 +49,8 @@ d darkplaces: make LHNET_OpenSocket_Connectionless call getsockname to find out 
 d darkplaces: add a newline to map name printing
 d darkplaces: tenebrae dlights have reversed pitch (like v_angle, not model angles), make DP match this
 1 darkplaces: change host_minfps to not lie about the time but instead control how many times SV_Physics runs per network frame, so if rendering goes slow the game doesn't slow down
-3 darkplaces: make 22khz ogg files not crash (CheapAlert)
-2 darkplaces: make 48khz ogg files load (CheapAlert)
+-n darkplaces: make 22khz ogg files not crash (CheapAlert)
+-n darkplaces: make 48khz ogg files load (CheapAlert)
 2 darkplaces: implement r_shadow_bumpscale_basetexture support in hl maps (CheapAlert)
 4 darkplaces: add DP_QC_MODELINFO extension to allow QC to ask about the range of frames owned by an animation base name, and other things like how many skins it has (Vermeulen)
 0 darkplaces: make sure zym code is rendering at correct brightness, it's too dark in nexuiz (Vermeulen)
