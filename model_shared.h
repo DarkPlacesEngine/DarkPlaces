@@ -243,8 +243,8 @@ q3mtexture_t;
 typedef struct q3mnode_s
 {
 	int isnode; // true
-	struct mplane_s *plane;
 	struct q3mnode_s *parent;
+	struct mplane_s *plane;
 	struct q3mnode_s *children[2];
 }
 q3mnode_t;
@@ -252,14 +252,15 @@ q3mnode_t;
 typedef struct q3mleaf_s
 {
 	int isnode; // false
+	struct q3mnode_s *parent;
 	int clusterindex;
 	int areaindex;
-	vec3_t mins[3];
-	vec3_t maxs[3];
 	int numleaffaces;
-	struct q3mface_s **leaffaces;
+	struct q3mface_s **firstleafface;
 	int numleafbrushes;
-	struct q3mbrush_s **leafbrushes;
+	struct q3mbrush_s **firstleafbrush;
+	vec3_t mins;
+	vec3_t maxs;
 }
 q3mleaf_t;
 
@@ -268,16 +269,16 @@ typedef struct q3mmodel_s
 	vec3_t mins;
 	vec3_t maxs;
 	int numfaces;
-	struct q3mface_s *faces;
+	struct q3mface_s *firstface;
 	int numbrushes;
-	struct q3mbrush_s *brushes;
+	struct q3mbrush_s *firstbrush;
 }
 q3mmodel_t;
 
 typedef struct q3mbrush_s
 {
-	int numsides;
-	struct q3mbrushside_s *sides;
+	int numbrushsides;
+	struct q3mbrushside_s *firstbrushside;
 	struct q3mtexture_s *texture;
 }
 q3mbrush_t;
@@ -301,6 +302,7 @@ typedef struct q3mface_s
 {
 	struct q3mtexture_s *texture;
 	struct q3meffect_s *effect;
+	rtexture_t *lightmaptexture;
 	int type;
 	int firstvertex;
 	int numvertices;
@@ -315,6 +317,9 @@ typedef struct q3mface_s
 	float *data_tvector3f;
 	float *data_normal3f;
 	float *data_color4f;
+	int numtriangles;
+	int *data_element3i;
+	int *data_neighbor3i;
 }
 q3mface_t;
 
@@ -332,6 +337,12 @@ typedef struct model_brushq3_s
 	int num_leafs;
 	q3mleaf_t *data_leafs;
 
+	int num_leafbrushes;
+	q3mbrush_t **data_leafbrushes;
+
+	int num_leaffaces;
+	q3mface_t **data_leaffaces;
+
 	int num_models;
 	q3mmodel_t *data_models;
 	// each submodel gets its own model struct so this is different for each.
@@ -347,6 +358,8 @@ typedef struct model_brushq3_s
 	float *data_vertex3f;
 	float *data_texturetexcoord2f;
 	float *data_lightmaptexcoord2f;
+	float *data_svector3f;
+	float *data_tvector3f;
 	float *data_normal3f;
 	float *data_color4f;
 
@@ -355,18 +368,30 @@ typedef struct model_brushq3_s
 	int *data_neighbor3i;
 
 	int num_effects;
-	q3meffect_t data_effects;
+	q3meffect_t *data_effects;
 
 	int num_faces;
 	q3mface_t *data_faces;
 
 	// lightmap textures
 	int num_lightmaps;
-	rtexture_t *data_lightmaps;
+	rtexture_t **data_lightmaps;
 
-	// transform world coordinates to lightgrid index
+	// voxel light data with directional shading
+	int num_lightgrid;
+	q3dlightgrid_t *data_lightgrid;
+	// size of each cell (may vary by map, typically 64 64 128)
+	float num_lightgrid_cellsize[3];
+	// 1.0 / num_lightgrid_cellsize
+	float num_lightgrid_scale[3];
+	// dimensions of the world model in lightgrid cells
+	int num_lightgrid_imins[3];
+	int num_lightgrid_imaxs[3];
+	int num_lightgrid_isize[3];
+	// indexing/clamping
+	int num_lightgrid_dimensions[3];
+	// transform modelspace coordinates to lightgrid index
 	matrix4x4_t num_lightgrid_indexfromworld;
-	q3dlightgrid_t *data_lightgrid_cells;
 
 	// pvs
 	int num_pvsclusters;

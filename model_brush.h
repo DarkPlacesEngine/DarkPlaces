@@ -668,7 +668,7 @@ q3deffect_t;
 #define Q3FACETYPE_POLYGON 1 // common
 #define Q3FACETYPE_PATCH 2 // common
 #define Q3FACETYPE_MESH 3 // common
-#define Q3FACETYPE_BILLBOARD 4 // rare (is this ever used?)
+#define Q3FACETYPE_FLARE 4 // rare (is this ever used?)
 
 typedef struct
 {
@@ -679,19 +679,71 @@ typedef struct
 	int numvertices;
 	int firstelement;
 	int numelements;
-	int lightmapindex;
-	int lightmap_base[2]; // only needed by lighting util
-	int lightmap_size[2]; // only needed by lighting util
-	float lightmap_origin[3]; // only needed by lighting util
-	float lightmap_vectors[2][3]; // only needed by lighting util
-	float normal[3]; // only needed by lighting util
-	int patchsize[2]; // size for Q3FACETYPE_PATCH
+	int lightmapindex; // -1 if none
+	int lightmap_base[2];
+	int lightmap_size[2];
+	union
+	{
+		struct
+		{
+			// corrupt or don't care
+			int blah[14];
+		}
+		unknown;
+		struct
+		{
+			// Q3FACETYPE_POLYGON
+			// polygon is simply a convex polygon, renderable as a mesh
+			float lightmap_origin[3];
+			float lightmap_vectors[2][3];
+			float normal[3];
+			int unused1[2];
+		}
+		polygon;
+		struct
+		{
+			// Q3FACETYPE_PATCH
+			// patch renders as a bezier mesh, with adjustable tesselation
+			// level (optionally based on LOD using the bbox and polygon
+			// count to choose a tesselation level)
+			// note: multiple patches may have the same bbox to cause them to
+			// be LOD adjusted together as a group
+			int unused1[3];
+			float mins[3]; // LOD bbox
+			float maxs[3]; // LOD bbox
+			int unused2[3];
+			int patchsize[2]; // dimensions of vertex grid
+		}
+		patch;
+		struct
+		{
+			// Q3FACETYPE_MESH
+			// mesh renders as simply a triangle mesh
+			int unused1[3];
+			float mins[3];
+			float maxs[3];
+			int unused2[5];
+		}
+		mesh;
+		struct
+		{
+			// Q3FACETYPE_FLARE
+			// flare renders as a simple sprite at origin, no geometry
+			// exists, nor does it have a radius, a cvar controls the radius
+			// and another cvar controls distance fade
+			// (they were not used in Q3 I'm told)
+			float origin[3];
+			int unused1[11];
+		}
+		flare;
+	}
+	specific;
 }
 q3dface_t;
 
 typedef struct
 {
-	unsigned char rgb[128][128][3];
+	unsigned char rgb[128*128*3];
 }
 q3dlightmap_t;
 
