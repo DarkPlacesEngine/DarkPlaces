@@ -52,7 +52,6 @@
 0 darkplaces loading: make sure startup script code executes aliases when doing the cvar scan
 0 darkplaces loading: test zlib support with entirely pk3'd id1 data (should crash because of zlib not being setup early enough - fix this) (Mabus)
 0 darkplaces memory: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
-0 darkplaces menu: r_shadow_realtime_world_lightmaps cvar should be a slider, not a checkbox (Diablo-D3)
 0 darkplaces optimize: Collision_TraceBrushBrush should compare enterfrac changes to realfraction and skip out if further, also leavefrac (Vic)
 0 darkplaces optimize: R_Q1BSP_BoxTouchingPVS and R_Q3BSP_BoxTouchingPVS should check pvsframe on nodes as well as leafs (Vic)
 0 darkplaces optimize: R_Q3BSP_RecursiveWorldNode should take clipflags parameter and do not cull a node against a plane if the parent node is totally on one side of the plane (Vic)
@@ -367,6 +366,7 @@ d darkplaces loading: missing triangles in q3bsp patches, appears only one of th
 d darkplaces menu: add confirm question to "Reset to Defaults" option, with No selected (Sajt)
 d darkplaces menu: add sv_maxrate cvar to server setup menu
 d darkplaces menu: player setup menu network speed is never applying to rate (Mitchell)
+d darkplaces menu: r_shadow_realtime_world_lightmaps cvar should be a slider, not a checkbox (Diablo-D3)
 d darkplaces physics: disable sv_gameplayfix_stepdown while underwater (Sajt)
 d darkplaces physics: make players step down stairs rather than just flying off (Riot) 
 d darkplaces physics: repeatedly jumping against a wall can cause a fall to your death (MoALTz)
