@@ -409,8 +409,8 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	for (i = 0;i < numverts;i++)
 	{
 		vertonseam[i] = LittleLong(pinstverts[i].onseam);
-		vertst[i][0] = LittleLong(pinstverts[i].s) * scales;
-		vertst[i][1] = LittleLong(pinstverts[i].t) * scalet;
+		vertst[i][0] = (LittleLong(pinstverts[i].s) + 0.5) * scales;
+		vertst[i][1] = (LittleLong(pinstverts[i].t) + 0.5) * scalet;
 		vertst[i+numverts][0] = vertst[i][0] + 0.5;
 		vertst[i+numverts][1] = vertst[i][1];
 		vertusage[i] = 0;
