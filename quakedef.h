@@ -252,7 +252,6 @@ extern qboolean noclip_anglehack;
 extern	quakeparms_t host_parms;
 
 extern	cvar_t		sys_ticrate;
-extern	cvar_t		sys_nostdout;
 extern	cvar_t		developer;
 
 extern	qboolean	host_initialized;		// true if into command execution
@@ -280,8 +279,6 @@ extern int			current_skill;		// skill level for currently loaded level (in case
 										//  the user changes the cvar while the level is
 										//  running, this reflects the level actually in use)
 
-extern qboolean		isDedicated;
-
 extern int			minimum_memory;
 
 //
@@ -297,3 +294,5 @@ void fractalnoise(unsigned char *noise, int size, int startgrid);
 
 #include "palette.h"
 #include "image.h"
+
+void Sys_Shared_Init(void);
