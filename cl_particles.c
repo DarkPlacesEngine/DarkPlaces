@@ -839,8 +839,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				if (!cl_particles_blood.integer)
 					return;
 				dec = lhrandom(cl_particles_blood_size_min.value, cl_particles_blood_size_max.value);
-				//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, 9999, -1, pos[0], pos[1], pos[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
-				particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, 9999, -1, pos[0], pos[1], pos[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
+				particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, 9999, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f + lhrandom(-64, 64), vel[1] * 0.5f + lhrandom(-64, 64), vel[2] * 0.5f + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
+				//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, 9999, -1, pos[0], pos[1], pos[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_particle, true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, 9999, -1, pos[0], pos[1], pos[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				break;
 
@@ -848,8 +848,8 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				if (!cl_particles_blood.integer)
 					return;
 				dec = lhrandom(cl_particles_blood_size_min.value, cl_particles_blood_size_max.value);
-				//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 128.0f, 9999, -1, pos[0], pos[1], pos[2], vel[0] + lhrandom(-64, 64), vel[1] + lhrandom(-64, 64), vel[2] + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
-				particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 128.0f, 9999, -1, pos[0], pos[1], pos[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
+				particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 255.0f, 9999, -1, pos[0], pos[1], pos[2], vel[0] * 0.5f + lhrandom(-64, 64), vel[1] * 0.5f + lhrandom(-64, 64), vel[2] * 0.5f + lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
+				//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_smoke[rand()&7], true, false, dec, dec, cl_particles_blood_alpha.value * 128.0f, 9999, -1, pos[0], pos[1], pos[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				//particle(pt_blood, PARTICLE_BILLBOARD, 0x000000, 0x200000, tex_particle, true, false, dec, dec, cl_particles_blood_alpha.value * 128.0f, 9999, -1, pos[0], pos[1], pos[2], lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-64, 64), 0, 0, 0, 0, 1, 0);
 				break;
 
@@ -954,7 +954,7 @@ void CL_MoveParticles (void)
 				if (p->bounce < 0)
 				{
 					// assume it's blood (lame, but...)
-					R_Stain(v, 48, 64, 24, 24, p->alpha * p->scalex * p->scaley * (1.0f / 2048.0f), 192, 48, 48, p->alpha * p->scalex * p->scaley * (1.0f / 2048.0f));
+					R_Stain(v, 64, 32, 16, 16, p->alpha * p->scalex * (1.0f / 100.0f), 128, 48, 48, p->alpha * p->scalex * (1.0f / 100.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
 					continue;
