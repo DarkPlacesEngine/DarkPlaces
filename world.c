@@ -453,17 +453,17 @@ trace_t SV_ClipMoveToEntity (edict_t *ent, vec3_t start, vec3_t mins, vec3_t max
 {
 	int i;
 	trace_t trace;
-	model_t *model;
-
-	i = ent->v->modelindex;
-	if ((unsigned int) i >= MAX_MODELS)
-		Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
-	model = sv.models[i];
-	if (i != 0 && model == NULL)
-		Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
+	model_t *model = NULL;
 
 	if ((int) ent->v->solid == SOLID_BSP)
 	{
+		i = ent->v->modelindex;
+		if ((unsigned int) i >= MAX_MODELS)
+			Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
+		model = sv.models[i];
+		if (i != 0 && model == NULL)
+			Host_Error("SV_ClipMoveToEntity: invalid modelindex\n");
+
 		Mod_CheckLoaded(model);
 		if (model->type != mod_brush)
 		{
