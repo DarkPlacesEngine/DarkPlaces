@@ -209,7 +209,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	svc_sound2			54		// short soundindex instead of byte
 #define	svc_spawnbaseline2	55		// short modelindex instead of byte
 #define svc_spawnstatic2	56		// short modelindex instead of byte
-#define svc_entities		57		// [short] numentities [int] deltaframe [float vector] eye [variable length] entitydata
+#define svc_entities		57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
 #define svc_unusedlh3			58
 #define	svc_spawnstaticsound2	59	// [coord3] [short] samp [byte] vol [byte] aten
 
@@ -267,6 +267,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define TE_FLAMEJET			74 // [vector] origin [vector] velocity [byte] count
 #define TE_PLASMABURN		75 // [vector] origin
 
+// these are bits for the 'flags' field of the entity_state_t
 #define RENDER_STEP 1
 #define RENDER_GLOWTRAIL 2
 #define RENDER_VIEWMODEL 4
@@ -289,12 +290,13 @@ typedef struct
 	byte	glowsize;
 	byte	glowcolor;
 	byte	flags;
-	byte	padding[3];
 }
 entity_state_t;
 
 typedef struct
 {
+	double time;
+	vec3_t eye;
 	int framenum;
 	int firstentity; // index into entitydata, modulo MAX_ENTITY_DATABASE
 	int endentity; // index into entitydata, firstentity + numentities
@@ -324,24 +326,77 @@ entity_database_t;
 // build entity data in this, to pass to entity read/write functions
 typedef struct
 {
+	double time;
 	int framenum;
 	int numentities;
+	vec3_t eye;
 	entity_state_t entitydata[MAX_ENTITY_DATABASE];
 }
 entity_frame_t;
 
+// LordHavoc: these are in approximately sorted order, according to cost and
+// likelyhood of being used for numerous objects in a frame
+
+// note that the bytes are not written/read in this order, this is only the
+// order of the bits to minimize overhead from extend bytes
+
+// enough to describe a nail, gib, shell casing, bullet hole, or rocket
+#define E_ORIGIN1		(1<<0)
+#define E_ORIGIN2		(1<<1)
+#define E_ORIGIN3		(1<<2)
+#define E_ANGLE1		(1<<3)
+#define E_ANGLE2		(1<<4)
+#define E_ANGLE3		(1<<5)
+#define E_MODEL1		(1<<6)
+#define E_EXTEND1		(1<<7)
+
+// enough to describe almost anything
+#define E_FRAME1		(1<<8)
+#define E_EFFECTS1		(1<<9)
+#define E_ALPHA			(1<<10)
+#define E_SCALE			(1<<11)
+#define E_COLORMAP		(1<<12)
+#define E_SKIN			(1<<13)
+#define E_FLAGS			(1<<14)
+#define E_EXTEND2		(1<<15)
+
+// players, custom color glows, high model numbers
+#define E_FRAME2		(1<<16)
+#define E_MODEL2		(1<<17)
+#define E_EFFECTS2		(1<<18)
+#define E_GLOWSIZE		(1<<19)
+#define E_GLOWCOLOR		(1<<20)
+#define E_UNUSED1		(1<<21)
+#define E_UNUSED2		(1<<22)
+#define E_EXTEND3		(1<<23)
+
+#define E_SOUND1		(1<<24)
+#define E_SOUNDVOL		(1<<25)
+#define E_SOUNDATTEN	(1<<26)
+#define E_UNUSED4		(1<<27)
+#define E_UNUSED5		(1<<28)
+#define E_UNUSED6		(1<<29)
+#define E_UNUSED7		(1<<30)
+#define E_EXTEND4		(1<<31)
+
 void ClearStateToDefault(entity_state_t *s);
-// (server) clears the database to contain no frames (thus delta compression compresses against nothing)
+// (server) clears the database to contain no frames (thus delta compression
+// compresses against nothing)
 void EntityFrame_ClearDatabase(entity_database_t *d);
-// (server) acknowledge a frame as recieved by client (removes old frames from database, will use this new frame for delta compression)
+// (server and client) removes frames older than 'frame' from database
 void EntityFrame_AckFrame(entity_database_t *d, int frame);
 // (server) clears frame, to prepare for adding entities
-void EntityFrame_Clear(entity_frame_t *f);
+void EntityFrame_Clear(entity_frame_t *f, vec3_t eye);
 // (server) allocates an entity slot in frame, returns NULL if full
 entity_state_t *EntityFrame_NewEntity(entity_frame_t *f, int number);
+// (server and client) adds a entity_frame to the database, for future
+// reference
+void EntityFrame_AddFrame(entity_database_t *d, entity_frame_t *f);
 // (server) writes a frame to network stream
-void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, int deltaframe, int newframe, sizebuf_t *msg);
+void EntityFrame_Write(entity_database_t *d, entity_frame_t *f, int newframe, sizebuf_t *msg);
 // (client) reads a frame from network stream
-void EntityFrame_Read(entity_database_t *d, entity_frame_t *f);
-// (client) fetchs an entity from the database, read with _Read, fills in structs for current and previous state
-void EntityFrame_FetchEntity(entity_database_t *d, entity_state_t *previous, entity_state_t *current);
+void EntityFrame_Read(entity_database_t *d);
+// (client) fetchs an entity from the frame by index into the entity list
+int EntityFrame_FetchEntityByIndex(entity_frame_t *f, entity_state_t *e, int index);
+// (client) fetchs an entity from the frame by entity number
+int EntityFrame_FetchEntityByNumber(entity_frame_t *f, entity_state_t *e, int number);
