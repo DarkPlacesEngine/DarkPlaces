@@ -58,10 +58,8 @@ cvar_t snd_streaming = { CVAR_SAVE, "snd_streaming", "1"};
 volatile dma_t *shm = 0;
 volatile dma_t sn;
 
-vec3_t listener_vieworigin;
-vec3_t listener_viewforward;
-vec3_t listener_viewleft;
-vec3_t listener_viewup;
+vec3_t listener_origin;
+matrix4x4_t listener_matrix;
 vec_t sound_nominal_clip_dist=1000.0;
 mempool_t *snd_mempool;
 
@@ -485,12 +483,12 @@ void SND_Spatialize(channel_t *ch, int isstatic)
 		}
 
 		// calculate stereo seperation and distance attenuation
-		VectorSubtract(ch->origin, listener_vieworigin, source_vec);
+		Matrix4x4_Transform(&listener_matrix, ch->origin, source_vec);
 		dist = VectorNormalizeLength(source_vec);
 		// distance
 		scale = ch->master_vol * (1.0 - (dist * ch->dist_mult));
 		// panning
-		pan = scale * DotProduct(listener_viewleft, source_vec);
+		pan = scale * source_vec[0];
 		// calculate the volumes
 		ch->leftvol = (int) (scale + pan);
 		ch->rightvol = (int) (scale - pan);
@@ -803,7 +801,7 @@ void S_UpdateAmbientSounds (void)
 	if (ambient_level.value <= 0 || !cl.worldmodel || !cl.worldmodel->brush.AmbientSoundLevelsForPoint)
 		return;
 
-	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_vieworigin, ambientlevels, sizeof(ambientlevels));
+	cl.worldmodel->brush.AmbientSoundLevelsForPoint(cl.worldmodel, listener_origin, ambientlevels, sizeof(ambientlevels));
 
 // calc ambient sound levels
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
@@ -845,7 +843,7 @@ S_Update
 Called once each time through the main loop
 ============
 */
-void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
+void S_Update(const matrix4x4_t *listenermatrix)
 {
 	unsigned int i, j, total;
 	channel_t *ch, *combine;
@@ -853,10 +851,8 @@ void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
 	if (!snd_initialized.integer || (snd_blocked > 0))
 		return;
 
-	VectorCopy(origin, listener_vieworigin);
-	VectorCopy(forward, listener_viewforward);
-	VectorCopy(left, listener_viewleft);
-	VectorCopy(up, listener_viewup);
+	listener_matrix = *listenermatrix;
+	Matrix4x4_OriginFromMatrix(&listener_matrix, listener_origin);
 
 // update general area ambient sound sources
 	S_UpdateAmbientSounds ();
@@ -1045,7 +1041,7 @@ static void S_Play_Common(float fvol, float attenuation)
 		else
 			i++;
 
-		ch_ind = S_StartSound(-1, 0, sfx, listener_vieworigin, fvol, attenuation);
+		ch_ind = S_StartSound(-1, 0, sfx, listener_origin, fvol, attenuation);
 		if (ch_ind >= 0)
 			channels[ch_ind].flags |= CHANNELFLAG_LOCALSOUND;
 	}
