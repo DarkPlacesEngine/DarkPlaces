@@ -1836,7 +1836,7 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 			if (projectdistance >= 0.1 && projectdistance < lightradius)
 			{
 				VectorSubtract(relativelightorigin, surf->poly_center, temp);
-				if (DotProduct(temp, temp) < (surf->poly_radius2 + lightradius2))
+				if (DotProduct(temp, temp) < lightradius2 - surf->poly_radius2)
 				{
 					for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 					{
@@ -1894,7 +1894,7 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 		for (surfnum = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;surfnum < ent->model->nummodelsurfaces;surfnum++, surf++)
 		{
 			VectorSubtract(relativelightorigin, surf->poly_center, temp);
-			if (DotProduct(temp, temp) < lightradius2 + surf->poly_radius2)
+			if (DotProduct(temp, temp) < lightradius2 - surf->poly_radius2)
 			{
 				f = PlaneDiff(relativelightorigin, surf->plane);
 				if (surf->flags & SURF_PLANEBACK)
@@ -1930,7 +1930,7 @@ void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, v
 			if (surf->visframe == r_framecount)
 			{
 				VectorSubtract(relativelightorigin, surf->poly_center, temp);
-				if (DotProduct(temp, temp) < lightradius2 + surf->poly_radius2)
+				if (DotProduct(temp, temp) < lightradius2 - surf->poly_radius2)
 				{
 					f = PlaneDiff(relativelightorigin, surf->plane);
 					if (surf->flags & SURF_PLANEBACK)

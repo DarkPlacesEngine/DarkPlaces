@@ -784,7 +784,7 @@ void Mod_ProcessLightList(void)
 					if (dist > 0 && dist < e->cullradius)
 					{
 						VectorSubtract(e->origin, surf->poly_center, temp);
-						if (DotProduct(temp, temp) - surf->poly_radius2 < e->cullradius2)
+						if (DotProduct(temp, temp) < e->cullradius2 - surf->poly_radius2)
 							loadmodel->surfacevisframes[*mark] = -2;
 					}
 				}
