@@ -109,7 +109,7 @@ void SCR_DrawCenterString (void)
 	do
 	{
 	// scan the width of the line
-		for (l=0 ; l<40 ; l++)
+		for (l=0 ; l<vid.conwidth/8 ; l++)
 			if (start[l] == '\n' || !start[l])
 				break;
 		x = (vid.conwidth - l*8)/2;
