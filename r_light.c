@@ -380,7 +380,7 @@ int R_LightModel(float *ambient4f, float *diffusecolor, float *diffusenormal, co
 		VectorSet(ambient4f, 1, 1, 1);
 		maxnearlights = 0;
 	}
-	else if (r_shadow_realtime_world.integer)
+	else if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
 		maxnearlights = 0;
 	else
 	{
@@ -590,7 +590,7 @@ void R_UpdateEntLights(entity_render_t *ent)
 	int i;
 	const mlight_t *sl;
 	vec3_t v;
-	if (r_shadow_realtime_world.integer)
+	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
 		return;
 	VectorSubtract(ent->origin, ent->entlightsorigin, v);
 	if (ent->entlightsframe != (r_framecount - 1) || (realtime > ent->entlightstime && DotProduct(v,v) >= 1.0f))

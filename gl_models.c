@@ -200,7 +200,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			 || ((layer->flags & ALIASLAYER_NODRAW_IF_COLORMAPPED) && ent->colormap >= 0)
 			 || ((layer->flags & ALIASLAYER_FOG) && !fogenabled)
 			 ||  (layer->flags & ALIASLAYER_SPECULAR)
-			 || ((layer->flags & ALIASLAYER_DIFFUSE) && (r_shadow_realtime_world.integer && r_ambient.integer <= 0 && r_fullbright.integer == 0 && !(ent->effects & EF_FULLBRIGHT))))
+			 || ((layer->flags & ALIASLAYER_DIFFUSE) && (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0 && r_ambient.integer <= 0 && r_fullbright.integer == 0 && !(ent->effects & EF_FULLBRIGHT))))
 				continue;
 		}
 		if (!firstpass || (ent->effects & EF_ADDITIVE))
@@ -247,7 +247,7 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 		else
 		{
 			fullbright = !(layer->flags & ALIASLAYER_DIFFUSE) || r_fullbright.integer || (ent->effects & EF_FULLBRIGHT);
-			if (r_shadow_realtime_world.integer && !fullbright)
+			if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0 && !fullbright)
 			{
 				colorscale *= r_ambient.value * (2.0f / 128.0f);
 				fullbright = true;
@@ -266,6 +266,8 @@ void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 			}
 			else
 				tint[0] = tint[1] = tint[2] = 1;
+			if (r_shadow_realtime_world.integer)
+				VectorScale(tint, r_shadow_realtime_world_lightmaps.value, tint);
 			colorscale *= ifog;
 			if (fullbright)
 				GL_Color(tint[0] * colorscale, tint[1] * colorscale, tint[2] * colorscale, ent->alpha);

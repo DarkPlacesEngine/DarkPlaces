@@ -37,6 +37,7 @@ cvar_t r_detailtextures = {CVAR_SAVE, "r_detailtextures", "1"};
 cvar_t r_surfaceworldnode = {0, "r_surfaceworldnode", "1"};
 cvar_t r_drawcollisionbrushes_polygonfactor = {0, "r_drawcollisionbrushes_polygonfactor", "-1"};
 cvar_t r_drawcollisionbrushes_polygonoffset = {0, "r_drawcollisionbrushes_polygonoffset", "0"};
+cvar_t gl_lightmaps = {0, "gl_lightmaps", "0"};
 
 static int dlightdivtable[32768];
 
@@ -976,7 +977,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 	R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
+static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	rmeshstate_t m;
@@ -990,7 +991,55 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	m.texrgbscale[1] = 2;
 	m.tex[2] = R_GetTexture(texture->skin.detail);
 	m.texrgbscale[2] = 2;
-	GL_Color(1, 1, 1, 1);
+	if (texture->skin.glow)
+	{
+		m.tex[3] = R_GetTexture(texture->skin.glow);
+		m.texcombinergb[3] = GL_ADD;
+	}
+	if (r_shadow_realtime_world.integer)
+		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
+	else
+		GL_Color(1, 1, 1, 1);
+
+	while((surf = *surfchain++) != NULL)
+	{
+		if (surf->visframe == r_framecount)
+		{
+			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
+			//if (m.tex[1] != lightmaptexturenum)
+			//{
+				m.tex[1] = lightmaptexturenum;
+			//	R_Mesh_State_Texture(&m);
+			//}
+			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+			m.pointer_texcoord[1] = surf->mesh.data_texcoordlightmap2f;
+			m.pointer_texcoord[2] = surf->mesh.data_texcoorddetail2f;
+			m.pointer_texcoord[3] = surf->mesh.data_texcoordtexture2f;
+			R_Mesh_State_Texture(&m);
+			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+		}
+	}
+}
+
+static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
+{
+	const msurface_t *surf;
+	rmeshstate_t m;
+	int lightmaptexturenum;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(texture->skin.base);
+	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
+	m.texrgbscale[1] = 2;
+	m.tex[2] = R_GetTexture(texture->skin.detail);
+	m.texrgbscale[2] = 2;
+	if (r_shadow_realtime_world.integer)
+		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
+	else
+		GL_Color(1, 1, 1, 1);
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1012,7 +1061,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	}
 }
 
-static void RSurfShader_OpaqueWall_Pass_BaseDoubleTexCombine(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
+static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
 	rmeshstate_t m;
@@ -1024,7 +1073,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTexCombine(const entity_render
 	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	m.texrgbscale[1] = 2;
-	GL_Color(1, 1, 1, 1);
+	if (r_shadow_realtime_world.integer)
+		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
+	else
+		GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1053,7 +1105,10 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	GL_DepthTest(true);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	m.tex[0] = R_GetTexture(texture->skin.base);
-	GL_Color(1, 1, 1, 1);
+	if (r_shadow_realtime_world.integer)
+		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
+	else
+		GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1164,6 +1219,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	}
 }
 
+/*
 static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
 {
 	const msurface_t *surf;
@@ -1182,6 +1238,39 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 		{
 			GL_VertexPointer(surf->mesh.data_vertex3f);
 			m.pointer_texcoord[0] = surf->mesh.data_texcoordtexture2f;
+			R_Mesh_State_Texture(&m);
+			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
+		}
+	}
+}
+*/
+
+static void RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(const entity_render_t *ent, const texture_t *texture, msurface_t **surfchain)
+{
+	const msurface_t *surf;
+	rmeshstate_t m;
+	int lightmaptexturenum;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture((**surfchain).lightmaptexture);
+	if (r_shadow_realtime_world.integer)
+		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
+	else
+		GL_Color(1, 1, 1, 1);
+	while((surf = *surfchain++) != NULL)
+	{
+		if (surf->visframe == r_framecount)
+		{
+			lightmaptexturenum = R_GetTexture(surf->lightmaptexture);
+			//if (m.tex[0] != lightmaptexturenum)
+			//{
+				m.tex[0] = lightmaptexturenum;
+			//	R_Mesh_State_Texture(&m);
+			//}
+			GL_VertexPointer(surf->mesh.data_vertex3f);
+			m.pointer_texcoord[0] = surf->mesh.data_texcoordlightmap2f;
 			R_Mesh_State_Texture(&m);
 			R_Mesh_Draw(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i);
 		}
@@ -1243,45 +1332,60 @@ static void RSurfShader_Wall_Lightmap(const entity_render_t *ent, const texture_
 		if (fogenabled)
 			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
-	else if (r_shadow_realtime_world.integer)
+	/*
+	// opaque base lighting
+	else if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
 	{
-		// opaque base lighting
-		RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, surfchain);
+		if (r_ambient.value > 0)
+		{
+		}
+		else
+			RSurfShader_OpaqueWall_Pass_OpaqueGlow(ent, texture, surfchain);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+	}
+	*/
+	// opaque lightmapped
+	else if (r_textureunits.integer >= 4 && gl_combine.integer && r_detailtextures.integer && !gl_lightmaps.integer)
+	{
+		RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(ent, texture, surfchain);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+	}
+	else if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer && !gl_lightmaps.integer)
+	{
+		RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(ent, texture, surfchain);
+		if (texture->skin.glow)
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+	}
+	else if (r_textureunits.integer >= 2 && gl_combine.integer && !gl_lightmaps.integer)
+	{
+		RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(ent, texture, surfchain);
+		if (r_detailtextures.integer)
+			RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+		if (texture->skin.glow)
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
+	}
+	else if (!gl_lightmaps.integer)
+	{
+		RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
+		RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
+		if (r_detailtextures.integer)
+			RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
+		if (texture->skin.glow)
+			RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
 		if (fogenabled)
 			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
 	else
 	{
-		// opaque lightmapped
-		if (r_textureunits.integer >= 3 && gl_combine.integer && r_detailtextures.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else if (r_textureunits.integer >= 2 && gl_combine.integer)
-		{
-			RSurfShader_OpaqueWall_Pass_BaseDoubleTexCombine(ent, texture, surfchain);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
-		else
-		{
-			RSurfShader_OpaqueWall_Pass_BaseTexture(ent, texture, surfchain);
-			RSurfShader_OpaqueWall_Pass_BaseLightmap(ent, texture, surfchain);
-			if (r_detailtextures.integer)
-				RSurfShader_OpaqueWall_Pass_BaseDetail(ent, texture, surfchain);
-			if (texture->skin.glow)
-				RSurfShader_OpaqueWall_Pass_Glow(ent, texture, surfchain);
-			if (fogenabled)
-				RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
-		}
+		RSurfShader_OpaqueWall_Pass_BaseLightmapOnly(ent, texture, surfchain);
+		if (fogenabled)
+			RSurfShader_OpaqueWall_Pass_Fog(ent, texture, surfchain);
 	}
 }
 
@@ -1890,11 +1994,29 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(entity_render_t *ent, q3mface_t *
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
-	GL_DepthMask(true);
+	GL_DepthMask(false);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(face->lightmaptexture);
 	m.pointer_texcoord[0] = face->data_texcoordlightmap2f;
 	GL_Color(1, 1, 1, 1);
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(entity_render_t *ent, q3mface_t *face)
+{
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	m.tex[0] = R_GetTexture(face->lightmaptexture);
+	m.pointer_texcoord[0] = face->data_texcoordlightmap2f;
+	if (r_shadow_realtime_world.integer)
+		GL_Color(r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, r_shadow_realtime_world_lightmaps.value, 1);
+	else
+		GL_Color(1, 1, 1, 1);
 	R_Mesh_State_Texture(&m);
 	GL_VertexPointer(face->data_vertex3f);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
@@ -1905,7 +2027,7 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3mface_t *face
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	GL_DepthMask(true);
+	GL_DepthMask(false);
 	GL_DepthTest(true);
 	if (face->texture->skin.glow)
 	{
@@ -1922,6 +2044,8 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(entity_render_t *ent, q3mface_t *face
 
 void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mface_t *face)
 {
+	int i;
+	float mul;
 	rmeshstate_t m;
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
@@ -1929,14 +2053,49 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mfac
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(face->texture->skin.base);
 	m.pointer_texcoord[0] = face->data_texcoordtexture2f;
-	if (gl_combine.integer)
+	mul = 2.0f;
+	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value != 1)
+		mul *= r_shadow_realtime_world_lightmaps.value;
+	if (mul == 2 && gl_combine.integer)
 	{
 		m.texrgbscale[0] = 2;
 		GL_ColorPointer(face->data_color4f);
 	}
+	else if (mul == 1)
+		GL_ColorPointer(face->data_color4f);
 	else
 	{
-		int i;
+		for (i = 0;i < face->num_vertices;i++)
+		{
+			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * mul;
+			varray_color4f[i*4+1] = face->data_color4f[i*4+1] * mul;
+			varray_color4f[i*4+2] = face->data_color4f[i*4+2] * mul;
+			varray_color4f[i*4+3] = face->data_color4f[i*4+3];
+		}
+		GL_ColorPointer(varray_color4f);
+	}
+	R_Mesh_State_Texture(&m);
+	GL_VertexPointer(face->data_vertex3f);
+	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
+}
+
+void R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(entity_render_t *ent, q3mface_t *face)
+{
+	int i;
+	float mul;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	GL_BlendFunc(GL_ONE, GL_ZERO);
+	GL_DepthMask(true);
+	GL_DepthTest(true);
+	R_Mesh_State_Texture(&m);
+	mul = 2.0f;
+	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value != 1)
+		mul *= r_shadow_realtime_world_lightmaps.value;
+	if (mul == 1)
+		GL_ColorPointer(face->data_color4f);
+	else
+	{
 		for (i = 0;i < face->num_vertices;i++)
 		{
 			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * 2.0f;
@@ -1946,7 +2105,6 @@ void R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(entity_render_t *ent, q3mfac
 		}
 		GL_ColorPointer(varray_color4f);
 	}
-	R_Mesh_State_Texture(&m);
 	GL_VertexPointer(face->data_vertex3f);
 	R_Mesh_Draw(face->num_vertices, face->num_triangles, face->data_element3i);
 }
@@ -2050,7 +2208,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		return;
 	}
 	R_Mesh_Matrix(&ent->matrix);
-	if (r_shadow_realtime_world.integer)
+	if (r_shadow_realtime_world.integer && r_shadow_realtime_world_lightmaps.value <= 0)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_OpaqueGlow(ent, face);
 	else if ((ent->effects & EF_FULLBRIGHT) || r_fullbright.integer)
 	{
@@ -2060,21 +2218,31 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 	}
 	else if (face->lightmaptexture)
 	{
-		if (r_textureunits.integer >= 2 && gl_combine.integer)
-			R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(ent, face);
+		if (gl_lightmaps.integer)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_LightmapOnly(ent, face);
 		else
 		{
-			R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(ent, face);
-			R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(ent, face);
+			if (r_textureunits.integer >= 2 && gl_combine.integer)
+				R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureLightmapCombine(ent, face);
+			else
+			{
+				R_Q3BSP_DrawFace_OpaqueWall_Pass_Texture(ent, face);
+				R_Q3BSP_DrawFace_OpaqueWall_Pass_Lightmap(ent, face);
+			}
+			if (face->texture->skin.glow)
+				R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
 		}
-		if (face->texture->skin.glow)
-			R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
 	}
 	else
 	{
-		R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(ent, face);
-		if (face->texture->skin.glow)
-			R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
+		if (gl_lightmaps.integer)
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_VertexOnly(ent, face);
+		else
+		{
+			R_Q3BSP_DrawFace_OpaqueWall_Pass_TextureVertex(ent, face);
+			if (face->texture->skin.glow)
+				R_Q3BSP_DrawFace_OpaqueWall_Pass_Glow(ent, face);
+		}
 	}
 	if (r_ambient.value)
 		R_Q3BSP_DrawFace_OpaqueWall_Pass_AddTextureAmbient(ent, face);
@@ -2290,6 +2458,7 @@ void GL_Surf_Init(void)
 	Cvar_RegisterVariable(&r_surfaceworldnode);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonfactor);
 	Cvar_RegisterVariable(&r_drawcollisionbrushes_polygonoffset);
+	Cvar_RegisterVariable(&gl_lightmaps);
 
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }

@@ -124,6 +124,7 @@ extern int gl_support_anisotropy;
 #define GL_TEXTURE_MAX_ANISOTROPY_EXT		0x84FE
 #define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT	0x84FF
 
+#define GL_ADD					0x0104
 #define GL_DECAL				0x2101
 #define GL_MODULATE				0x2100
 

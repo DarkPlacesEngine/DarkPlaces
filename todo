@@ -35,6 +35,19 @@
 -n darkplaces: server is starting before the "port" cvar is set by commandline and scripts? (yummyluv)
 -n darkplaces: typing ip in join game menu should show 'trying' and 'no response' after a while, or 'no network' if networking is not initialized (yummyluv)
 -n dpmod: make grapple off-hand (joe hill)
+0 darkplaces: add r_shadow_realtime_world_lightmaps cvar to control lightmap brightness (Mitchell)
+0 darkplaces: add gl_lightmaps cvar to disable texturing except lightmaps for testing (Vic)
+0 hmap2: release hmap2 (Vic, Supajoe)
+4 darkplaces: add capability for qc entities to act as bones in a model, and send them as compressed origins in the parent entity's updates, with perhaps a limit of 16 bones, this would allow some simple serverside ragdoll (Mitchell)
+4 darkplaces: add .psk/.psa (ut2003/ut2004) model support (Mitchell)
+d darkplaces: worked around Intel precision bug with view blends (they were not covering one line of the screen, due to being so huge that it had precision problems, on ATI and NVIDIA) (Sajt)
+0 darkplaces: release darkplaces build
+0 darkplaces: fix loadsky;r_restart;r_restart crash, again (sajt)
+0 darkplaces: add Mem_AllocNoClear function, and use it where possible, if developer is on it should clear with random garbage
+0 darkplaces: make Mem_Free function clear memory only if developer is on
+d darkplaces: fix video modes menu as you can select 2048x1536 and then go right to get 0x0 (Sajt)
+2 darkplaces: change menu qc key input to using string key names instead of numbers (the bind alias names should be able to do this) (Mercury, Black, Vermeulen)
+d darkplaces: add 66.28.32.64 to master server list (Willis)
 d darkplaces: update darkplaces readme
 0 darkplaces: add a cvar to indicate that MOVETYPE_WALK works on non-clients (tell FrikaC)
 d darkplaces: make r_fullbrights affect model skins, not just map textures

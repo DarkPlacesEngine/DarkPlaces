@@ -147,6 +147,7 @@ rtexture_t *r_shadow_blankbumptexture;
 rtexture_t *r_shadow_blankglosstexture;
 rtexture_t *r_shadow_blankwhitetexture;
 
+cvar_t r_shadow_realtime_world_lightmaps = {0, "r_shadow_realtime_world_lightmaps", "0"};
 cvar_t r_shadow_lightattenuationpower = {0, "r_shadow_lightattenuationpower", "0.5"};
 cvar_t r_shadow_lightattenuationscale = {0, "r_shadow_lightattenuationscale", "1"};
 cvar_t r_shadow_lightintensityscale = {0, "r_shadow_lightintensityscale", "1"};
@@ -243,6 +244,7 @@ void R_Shadow_Help_f(void)
 "r_shadow_lightintensityscale : scale rendering brightness of all lights\n"
 "r_shadow_realtime_world : use realtime world light rendering\n"
 "r_shadow_realtime_dlight : use high quality dlight rendering\n"
+"r_shadow_realtime_world_lightmaps : use lightmaps in addition to rtlights\n"
 "r_shadow_visiblevolumes : useful for performance testing; bright = slow!\n"
 "r_shadow_gloss 0/1/2 : no gloss, gloss textures only, force gloss\n"
 "r_shadow_glossintensity : brightness of textured gloss\n"
@@ -270,6 +272,7 @@ void R_Shadow_Init(void)
 	Cvar_RegisterVariable(&r_shadow_lightattenuationscale);
 	Cvar_RegisterVariable(&r_shadow_lightintensityscale);
 	Cvar_RegisterVariable(&r_shadow_realtime_world);
+	Cvar_RegisterVariable(&r_shadow_realtime_world_lightmaps);
 	Cvar_RegisterVariable(&r_shadow_realtime_dlight);
 	Cvar_RegisterVariable(&r_shadow_visiblevolumes);
 	Cvar_RegisterVariable(&r_shadow_gloss);
