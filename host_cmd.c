@@ -1603,8 +1603,6 @@ Return to looping demos
 */
 void Host_Stopdemo_f (void)
 {
-	if (cls.state == ca_dedicated)
-		return;
 	if (!cls.demoplayback)
 		return;
 	CL_Disconnect ();

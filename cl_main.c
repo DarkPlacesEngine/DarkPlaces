@@ -165,6 +165,9 @@ This is also called on Host_Error, so it shouldn't cause any errors
 */
 void CL_Disconnect (void)
 {
+	if (cls.state == ca_dedicated)
+		return;
+
 // stop sounds (especially looping!)
 	S_StopAllSounds (true);
 

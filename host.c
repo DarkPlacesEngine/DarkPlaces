@@ -442,8 +442,7 @@ void Host_ShutdownServer(qboolean crash)
 	sv.active = false;
 
 // stop all client sounds immediately
-	if (cls.state == ca_connected)
-		CL_Disconnect ();
+	CL_Disconnect ();
 
 // flush any pending messages - like the score!!!
 	start = Sys_DoubleTime();
