@@ -61,7 +61,10 @@ interface from being ambiguous.
 #define CVAR_SAVE 1
 #define CVAR_NOTIFY 2
 #define	CVAR_READONLY 4
-#define CVAR_MAXFLAGSVAL 7 // used to determine if flags is valid
+// used to determine if flags is valid
+#define CVAR_MAXFLAGSVAL 7
+// for internal use only!
+#define CVAR_ALLOCATED (1<<31)
 
 /*
 // type of a cvar for menu purposes
@@ -165,6 +168,15 @@ void Cvar_List_f (void);
 // Referenced in cmd.c in Cmd_Init hence it's inclusion here
 // Added by EvilTypeGuy eviltypeguy@qeradiant.com
 // Thanks to Matthias "Maddes" Buecher, http://www.inside3d.com/qip/
+
+void Cvar_Set_f (void);
+void Cvar_SetA_f (void);
+// commands to create new cvars (or set existing ones)
+// seta creates an archived cvar (saved to config)
+
+cvar_t *Cvar_Get (const char *name, const char *value, int flags);
+// allocates a cvar by name and returns its address,
+// or merely sets its value if it already exists.
 
 #endif
 

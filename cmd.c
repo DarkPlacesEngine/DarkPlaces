@@ -455,6 +455,8 @@ void Cmd_Init (void)
 	Cmd_AddCommand ("cmdlist", Cmd_List_f); 	// Added/Modified by EvilTypeGuy eviltypeguy@qeradiant.com
 	Cmd_AddCommand ("cvarlist", Cvar_List_f);	// 2000-01-09 CmdList, CvarList commands
 												// By Matthias "Maddes" Buecher
+	Cmd_AddCommand ("set", Cvar_Set_f);
+	Cmd_AddCommand ("seta", Cvar_SetA_f);
 }
 
 /*
@@ -781,7 +783,7 @@ void Cmd_ExecuteString (const char *text, cmd_source_t src)
 	}
 
 // check functions (only after host_initialized)
-	if (host_initialized || !strcasecmp(cmd_argv[0], "exec"))
+	if (host_initialized || !strcasecmp(cmd_argv[0], "exec") || !strcasecmp(cmd_argv[0], "set") || !strcasecmp(cmd_argv[0], "seta"))
 	{
 		for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
 		{
