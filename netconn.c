@@ -37,6 +37,7 @@ static cvar_t sv_masters [] =
 	{CVAR_SAVE, "sv_master4", ""},
 	{0, "sv_masterextra1", "69.59.212.88"}, // ghdigital.com
 	{0, "sv_masterextra2", "66.169.205.13"}, // dpmaster.deathmask.net
+	{0, "sv_masterextra3", "12.166.196.192"}, // blaze.mindphukd.org
 	{0, NULL, NULL}
 };
 
