@@ -409,7 +409,7 @@ byte* LoadLMP (FILE *f, int matchwidth, int matchheight)
 
 void Image_StripImageExtension (char *in, char *out)
 {
-	byte *end;
+	char *end;
 	end = in + strlen(in);
 	if ((end - in) >= 4)
 	{
