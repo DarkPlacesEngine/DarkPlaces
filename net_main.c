@@ -737,14 +737,12 @@ NET_Shutdown
 ====================
 */
 
-void		NET_Shutdown (void)
+void NET_Shutdown (void)
 {
-	qsocket_t	*sock;
-
 	SetNetTime();
 
-	for (sock = net_activeSockets;sock;sock = net_activeSockets)
-		NET_Close(sock);
+	while (net_activeSockets)
+		NET_Close(net_activeSockets);
 
 //
 // shutdown the drivers
