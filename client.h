@@ -344,12 +344,6 @@ void CL_EstablishConnection (char *host);
 void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 
-// LordHavoc: fixme: move this to r_refdef?
-// LordHavoc: raised this from 256 to the maximum possible number of entities visible
-#define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
-extern	int			cl_numvisedicts;
-extern	entity_t	*cl_visedicts[MAX_VISEDICTS];
-
 //
 // cl_input
 //
@@ -496,3 +490,29 @@ void CL_Decal(vec3_t origin, int tex, float scale, float red, float green, float
 extern int traceline_endcontents; // set by TraceLine
 float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents);
 
+#define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
+
+typedef struct
+{
+	// area to render in
+	int		x, y, width, height;
+	float	fov_x, fov_y;
+
+	// view point
+	vec3_t	vieworg;
+	vec3_t	viewangles;
+
+	int numdecals;
+	renderdecal_t *decals;
+
+	int numentities;
+	entity_render_t **entities;
+
+	int numparticles;
+	struct renderparticle_s *particles;
+}
+refdef_t;
+
+refdef_t r_refdef;
+
+extern mempool_t *cl_refdef_mempool;

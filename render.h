@@ -75,28 +75,6 @@ extern cvar_t r_novis;
 
 //=============================================================================
 
-typedef struct
-{
-	// area to render in
-	int		x, y, width, height;
-	float	fov_x, fov_y;
-
-	// view point
-	vec3_t	vieworg;
-	vec3_t	viewangles;
-
-	int numdecals;
-	renderdecal_t *decals;
-
-	// LordHavoc: this will be enabled at some point, taking the place of cl_visedicts
-	int numentities;
-	entity_render_t *entities;
-
-	int numparticles;
-	struct renderparticle_s *particles;
-}
-refdef_t;
-
 //extern	qboolean	r_cache_thrash;		// compatability
 extern	entity_render_t	*currentrenderentity;
 extern	int			r_framecount;
@@ -111,12 +89,6 @@ extern	vec3_t	vup;
 extern	vec3_t	vpn;
 extern	vec3_t	vright;
 extern	vec3_t	r_origin;
-
-//
-// screen size info
-//
-extern	refdef_t	r_refdef;
-
 
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value

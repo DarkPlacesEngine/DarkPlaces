@@ -159,7 +159,7 @@ void CL_Particles_Init (void)
 	cl_numparticles = 0;
 
 	// FIXME: r_refdef stuff should be allocated somewhere else?
-	r_refdef.particles = cl_renderparticles = Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(renderparticle_t));
+	r_refdef.particles = cl_renderparticles = Mem_Alloc(cl_refdef_mempool, cl_maxparticles * sizeof(renderparticle_t));
 }
 
 #define particle(ptype, porientation, pcolor, ptex, plight, pscalex, pscaley, palpha, ptime, pbounce, px, py, pz, pvx, pvy, pvz, ptime2, pvx2, pvy2, pvz2, pfriction, ppressure)\

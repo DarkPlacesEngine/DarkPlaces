@@ -56,7 +56,7 @@ void CL_Decals_Init(void)
 	cl_currentdecal = 0;
 
 	// FIXME: r_refdef stuff should be allocated somewhere else?
-	r_refdef.decals = cl_renderdecals = Mem_Alloc(cl_decal_mempool, MAX_DECALS * sizeof(renderdecal_t));
+	r_refdef.decals = cl_renderdecals = Mem_Alloc(cl_refdef_mempool, MAX_DECALS * sizeof(renderdecal_t));
 }
 
 
