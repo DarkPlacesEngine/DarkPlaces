@@ -26,7 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EXPLOSIONVERTS ((EXPLOSIONGRID+1)*(EXPLOSIONGRID+1))
 #define EXPLOSIONTRIS (EXPLOSIONGRID*EXPLOSIONGRID*2)
 #define EXPLOSIONSTARTVELOCITY (256.0f)
-#define EXPLOSIONFADERATE (3.0f)
 
 float explosiontexcoord2f[EXPLOSIONVERTS][2];
 int explosiontris[EXPLOSIONTRIS][3];
@@ -39,6 +38,7 @@ typedef struct explosion_s
 	float starttime;
 	float time;
 	float alpha;
+	float fade;
 	vec3_t origin;
 	vec3_t vert[EXPLOSIONVERTS];
 	vec3_t vertvel[EXPLOSIONVERTS];
@@ -157,6 +157,7 @@ void R_NewExplosion(vec3_t org)
 			explosion[i].starttime = cl.time;
 			explosion[i].time = explosion[i].starttime - 0.1;
 			explosion[i].alpha = cl_explosions_alpha_start.value;
+			explosion[i].fade = (cl_explosions_alpha_start.value - cl_explosions_alpha_end.value) / cl_explosions_lifetime.value;
 			VectorCopy(org, explosion[i].origin);
 			for (j = 0;j < EXPLOSIONVERTS;j++)
 			{
@@ -208,7 +209,7 @@ void R_MoveExplosion(explosion_t *e)
 
 	frametime = cl.time - e->time;
 	e->time = cl.time;
-	e->alpha = cl_explosions_alpha_start.value - (cl.time - e->starttime) * EXPLOSIONFADERATE;
+	e->alpha = e->alpha - (e->fade * frametime);
 	if (e->alpha <= cl_explosions_alpha_end.value)
 	{
 		e->alpha = -1;
