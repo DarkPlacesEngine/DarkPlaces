@@ -247,16 +247,21 @@ int SV_FlyMove (edict_t *ent, float time, float *stepnormal)
 			VectorMA(ent->v->origin, time, ent->v->velocity, end);
 			trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
 			//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 1
 			{
 				int endstuck;
 				vec3_t temp;
 				VectorCopy(trace.endpos, temp);
 				endstuck = SV_Move(temp, ent->v->mins, ent->v->maxs, temp, MOVE_WORLDONLY, ent).startsolid;
-				Con_Printf("%s{%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", bumpcount, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], end[0] - ent->v->origin[0], end[1] - ent->v->origin[1], end[2] - ent->v->origin[2], trace.fraction, trace.endpos[0] - ent->v->origin[0], trace.endpos[1] - ent->v->origin[1], trace.endpos[2] - ent->v->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
-				//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
-				if (endstuck)
-					Cbuf_AddText("disconnect\n");
+#if COLLISIONPARANOID < 2
+				if (trace.startsolid || endstuck)
+#endif
+				{
+					Con_Printf("%s{e%i:%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", ent - sv.edicts, bumpcount, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], end[0] - ent->v->origin[0], end[1] - ent->v->origin[1], end[2] - ent->v->origin[2], trace.fraction, trace.endpos[0] - ent->v->origin[0], trace.endpos[1] - ent->v->origin[1], trace.endpos[2] - ent->v->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
+					//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
+					if (endstuck)
+						Cbuf_AddText("disconnect\n");
+				}
 			}
 #endif
 
@@ -531,6 +536,23 @@ trace_t SV_PushEntity (edict_t *ent, vec3_t push, vec3_t pushangles)
 		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NOMONSTERS, ent);
 	else
 		trace = SV_Move (ent->v->origin, ent->v->mins, ent->v->maxs, end, MOVE_NORMAL, ent);
+#if COLLISIONPARANOID >= 1
+	{
+		int endstuck;
+		vec3_t temp;
+		VectorCopy(trace.endpos, temp);
+		endstuck = SV_Move(temp, ent->v->mins, ent->v->maxs, temp, MOVE_WORLDONLY, ent).startsolid;
+#if COLLISIONPARANOID < 2
+		if (trace.startsolid || endstuck)
+#endif
+		{
+			Con_Printf("%s{e%i:%f %f %f:%f %f %f:%f:%f %f %f%s%s}\n", (trace.startsolid || endstuck) ? "\002" : "", ent - sv.edicts, ent->v->origin[0], ent->v->origin[1], ent->v->origin[2], end[0] - ent->v->origin[0], end[1] - ent->v->origin[1], end[2] - ent->v->origin[2], trace.fraction, trace.endpos[0] - ent->v->origin[0], trace.endpos[1] - ent->v->origin[1], trace.endpos[2] - ent->v->origin[2], trace.startsolid ? " startstuck" : "", endstuck ? " endstuck" : "");
+			//Con_Printf("trace %f %f %f : %f : %f %f %f\n", trace.endpos[0], trace.endpos[1], trace.endpos[2], trace.fraction, trace.plane.normal[0], trace.plane.normal[1], trace.plane.normal[2]);
+			if (endstuck)
+				Cbuf_AddText("disconnect\n");
+		}
+	}
+#endif
 
 	VectorCopy (trace.endpos, ent->v->origin);
 	// FIXME: turn players specially
@@ -956,7 +978,10 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 
 		if (fabs(oldorg[1] - ent->v->origin[1]) > 4
 		 || fabs(oldorg[0] - ent->v->origin[0]) > 4)
+		{
+			Con_DPrintf("TryUnstick - success.\n");
 			return clip;
+		}
 
 		// go back to the original pos and try again
 		VectorCopy (oldorg, ent->v->origin);
@@ -964,6 +989,7 @@ int SV_TryUnstick (edict_t *ent, vec3_t oldvel)
 
 	// still not moving
 	VectorClear (ent->v->velocity);
+	Con_Printf("TryUnstick - failure.\n");
 	return 7;
 }
 

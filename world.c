@@ -484,7 +484,7 @@ trace_t SV_ClipMoveToEntity(edict_t *ent, const vec3_t start, const vec3_t mins,
 	Matrix4x4_Invert_Simple(&imatrix, &matrix);
 	Matrix4x4_Transform(&imatrix, start, starttransformed);
 	Matrix4x4_Transform(&imatrix, end, endtransformed);
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 	Con_Printf("trans(%f %f %f -> %f %f %f, %f %f %f -> %f %f %f)", start[0], start[1], start[2], starttransformed[0], starttransformed[1], starttransformed[2], end[0], end[1], end[2], endtransformed[0], endtransformed[1], endtransformed[2]);
 #endif
 
@@ -626,7 +626,7 @@ trace_t SV_Move(const vec3_t start, const vec3_t mins, const vec3_t maxs, const 
 	VectorCopy(maxs, clip.maxs2);
 	clip.type = type;
 	clip.passedict = passedict;
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 	Con_Printf("move(%f %f %f,%f %f %f)", clip.start[0], clip.start[1], clip.start[2], clip.end[0], clip.end[1], clip.end[2]);
 #endif
 

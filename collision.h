@@ -101,4 +101,12 @@ colbrushf_t *Collision_BrushForBox(const matrix4x4_t *matrix, const vec3_t mins,
 
 void Collision_BoundingBoxOfBrushTraceSegment(const colbrushf_t *start, const colbrushf_t *end, vec3_t mins, vec3_t maxs, float startfrac, float endfrac);
 
+// this enables rather large debugging spew!
+// settings:
+// 0 = no spew
+// 1 = spew trace calls if something odd is happening
+// 2 = spew trace calls always
+// 3 = spew detailed trace flow (bsp tree recursion info)
+#define COLLISIONPARANOID 0
+
 #endif

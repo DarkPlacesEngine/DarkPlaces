@@ -38,6 +38,7 @@ cvar_t mod_q3bsp_curves_subdivide_level = {0, "mod_q3bsp_curves_subdivide_level"
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
 cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "0"};
 
+static void Mod_Q1BSP_Collision_Init (void);
 void Mod_BrushInit(void)
 {
 //	Cvar_RegisterVariable(&r_subdivide_size);
@@ -50,6 +51,7 @@ void Mod_BrushInit(void)
 	Cvar_RegisterVariable(&mod_q3bsp_curves_collisions);
 	Cvar_RegisterVariable(&mod_q3bsp_optimizedtraceline);
 	memset(mod_q1bsp_novis, 0xff, sizeof(mod_q1bsp_novis));
+	Mod_Q1BSP_Collision_Init();
 }
 
 static mleaf_t *Mod_Q1BSP_PointInLeaf(model_t *model, const vec3_t p)
@@ -416,7 +418,7 @@ loc0:
 			// if the first leaf is solid, set startsolid
 			if (t->trace->allsolid)
 				t->trace->startsolid = true;
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 			Con_Printf("S");
 #endif
 			return HULLCHECKSTATE_SOLID;
@@ -424,7 +426,7 @@ loc0:
 		else
 		{
 			t->trace->allsolid = false;
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 			Con_Printf("E");
 #endif
 			return HULLCHECKSTATE_EMPTY;
@@ -450,7 +452,7 @@ loc0:
 	{
 		if (t2 < 0)
 		{
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 			Con_Printf("<");
 #endif
 			num = node->children[1];
@@ -462,7 +464,7 @@ loc0:
 	{
 		if (t2 >= 0)
 		{
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 			Con_Printf(">");
 #endif
 			num = node->children[0];
@@ -473,7 +475,7 @@ loc0:
 
 	// the line intersects, find intersection point
 	// LordHavoc: this uses the original trace for maximum accuracy
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 	Con_Printf("M");
 #endif
 	if (plane->type < 3)
@@ -521,13 +523,13 @@ loc0:
 	midf = t1 / (t1 - t2);
 	t->trace->fraction = bound(0.0f, midf, 1.0);
 
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 3
 	Con_Printf("D");
 #endif
 	return HULLCHECKSTATE_DONE;
 }
 
-#ifndef COLLISIONPARANOID
+#if COLLISIONPARANOID < 2
 static int Mod_Q1BSP_RecursiveHullCheckPoint(RecursiveHullCheckTraceInfo_t *t, int num)
 {
 	while (num >= 0)
@@ -592,7 +594,7 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 	VectorSubtract(boxstartmins, rhc.hull->clip_mins, rhc.start);
 	VectorSubtract(boxendmins, rhc.hull->clip_mins, rhc.end);
 	VectorSubtract(rhc.end, rhc.start, rhc.dist);
-#ifdef COLLISIONPARANOID
+#if COLLISIONPARANOID >= 2
 	Con_Printf("t(%f %f %f,%f %f %f,%i %f %f %f)", rhc.start[0], rhc.start[1], rhc.start[2], rhc.end[0], rhc.end[1], rhc.end[2], rhc.hull - model->brushq1.hulls, rhc.hull->clip_mins[0], rhc.hull->clip_mins[1], rhc.hull->clip_mins[2]);
 	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 	Con_Printf("\n");
@@ -601,6 +603,101 @@ static void Mod_Q1BSP_TraceBox(struct model_s *model, int frame, trace_t *trace,
 		Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 	else
 		Mod_Q1BSP_RecursiveHullCheckPoint(&rhc, rhc.hull->firstclipnode);
+#endif
+}
+
+static hull_t box_hull;
+static dclipnode_t box_clipnodes[6];
+static mplane_t box_planes[6];
+
+static void Mod_Q1BSP_Collision_Init (void)
+{
+	int		i;
+	int		side;
+
+	//Set up the planes and clipnodes so that the six floats of a bounding box
+	//can just be stored out and get a proper hull_t structure.
+
+	box_hull.clipnodes = box_clipnodes;
+	box_hull.planes = box_planes;
+	box_hull.firstclipnode = 0;
+	box_hull.lastclipnode = 5;
+
+	for (i = 0;i < 6;i++)
+	{
+		box_clipnodes[i].planenum = i;
+
+		side = i&1;
+
+		box_clipnodes[i].children[side] = CONTENTS_EMPTY;
+		if (i != 5)
+			box_clipnodes[i].children[side^1] = i + 1;
+		else
+			box_clipnodes[i].children[side^1] = CONTENTS_SOLID;
+
+		box_planes[i].type = i>>1;
+		box_planes[i].normal[i>>1] = 1;
+	}
+}
+
+void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cmaxs, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, int hitsupercontentsmask, int boxsupercontents)
+{
+#if 1
+	colbrushf_t cbox;
+	colplanef_t cbox_planes[6];
+	cbox.supercontents = boxsupercontents;
+	cbox.numplanes = 6;
+	cbox.numpoints = 0;
+	cbox.numtriangles = 0;
+	cbox.planes = cbox_planes;
+	cbox.points = NULL;
+	cbox.elements = NULL;
+	cbox.markframe = 0;
+	cbox.mins[0] = 0;
+	cbox.mins[1] = 0;
+	cbox.mins[2] = 0;
+	cbox.maxs[0] = 0;
+	cbox.maxs[1] = 0;
+	cbox.maxs[2] = 0;
+	cbox_planes[0].normal[0] =  1;cbox_planes[0].normal[1] =  0;cbox_planes[0].normal[2] =  0;cbox_planes[0].dist = cmaxs[0] - mins[0];
+	cbox_planes[1].normal[0] = -1;cbox_planes[1].normal[1] =  0;cbox_planes[1].normal[2] =  0;cbox_planes[1].dist = maxs[0] - cmins[0];
+	cbox_planes[2].normal[0] =  0;cbox_planes[2].normal[1] =  1;cbox_planes[2].normal[2] =  0;cbox_planes[2].dist = cmaxs[1] - mins[1];
+	cbox_planes[3].normal[0] =  0;cbox_planes[3].normal[1] = -1;cbox_planes[3].normal[2] =  0;cbox_planes[3].dist = maxs[1] - cmins[1];
+	cbox_planes[4].normal[0] =  0;cbox_planes[4].normal[1] =  0;cbox_planes[4].normal[2] =  1;cbox_planes[4].dist = cmaxs[2] - mins[2];
+	cbox_planes[5].normal[0] =  0;cbox_planes[5].normal[1] =  0;cbox_planes[5].normal[2] = -1;cbox_planes[5].dist = maxs[2] - cmins[2];
+	memset(trace, 0, sizeof(trace_t));
+	trace->hitsupercontentsmask = hitsupercontentsmask;
+	trace->fraction = 1;
+	Collision_TraceLineBrushFloat(trace, start, end, &cbox, &cbox);
+#else
+	RecursiveHullCheckTraceInfo_t rhc;
+	// fill in a default trace
+	memset(&rhc, 0, sizeof(rhc));
+	memset(trace, 0, sizeof(trace_t));
+	//To keep everything totally uniform, bounding boxes are turned into small
+	//BSP trees instead of being compared directly.
+	// create a temp hull from bounding box sizes
+	box_planes[0].dist = cmaxs[0] - mins[0];
+	box_planes[1].dist = cmins[0] - maxs[0];
+	box_planes[2].dist = cmaxs[1] - mins[1];
+	box_planes[3].dist = cmins[1] - maxs[1];
+	box_planes[4].dist = cmaxs[2] - mins[2];
+	box_planes[5].dist = cmins[2] - maxs[2];
+	Con_Printf("box_planes %f:%f %f:%f %f:%f\ncbox %f %f %f:%f %f %f\nbox %f %f %f:%f %f %f\n", box_planes[0].dist, box_planes[1].dist, box_planes[2].dist, box_planes[3].dist, box_planes[4].dist, box_planes[5].dist, cmins[0], cmins[1], cmins[2], cmaxs[0], cmaxs[1], cmaxs[2], mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]);
+	// trace a line through the generated clipping hull
+	//rhc.boxsupercontents = boxsupercontents;
+	rhc.hull = &box_hull;
+	rhc.trace = trace;
+	rhc.trace->hitsupercontentsmask = hitsupercontentsmask;
+	rhc.trace->fraction = 1;
+	rhc.trace->allsolid = true;
+	VectorCopy(start, rhc.start);
+	VectorCopy(end, rhc.end);
+	VectorSubtract(rhc.end, rhc.start, rhc.dist);
+	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
+	if (rhc.trace->startsupercontents)
+		rhc.trace->startsupercontents = boxsupercontents;
 #endif
 }
 

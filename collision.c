@@ -2,6 +2,10 @@
 #include "quakedef.h"
 #include "winding.h"
 
+// 1/32 epsilon to keep floating point happy
+#define DIST_EPSILON (0.03125)
+
+#if 0
 typedef struct
 {
 	// the hull we're tracing through
@@ -21,9 +25,6 @@ typedef struct
 	int boxsupercontents;
 }
 RecursiveHullCheckTraceInfo_t;
-
-// 1/32 epsilon to keep floating point happy
-#define DIST_EPSILON (0.03125)
 
 #define HULLCHECKSTATE_EMPTY 0
 #define HULLCHECKSTATE_SOLID 1
@@ -48,26 +49,32 @@ loc0:
 	// check for empty
 	if (num < 0)
 	{
-		// translate the fake CONTENTS values in the box bsp tree
-		if (num == CONTENTS_SOLID)
-			num = t->boxsupercontents;
-		else
-			num = 0;
+		num = Mod_Q1BSP_SuperContentsFromNativeContents(NULL, num);
 		if (!t->trace->startfound)
 		{
 			t->trace->startfound = true;
 			t->trace->startsupercontents |= num;
 		}
+		if (num & SUPERCONTENTS_LIQUIDSMASK)
+			t->trace->inwater = true;
+		if (num == 0)
+			t->trace->inopen = true;
 		if (num & t->trace->hitsupercontentsmask)
 		{
 			// if the first leaf is solid, set startsolid
 			if (t->trace->allsolid)
 				t->trace->startsolid = true;
+#if COLLISIONPARANOID >= 3
+			Con_Printf("S");
+#endif
 			return HULLCHECKSTATE_SOLID;
 		}
 		else
 		{
 			t->trace->allsolid = false;
+#if COLLISIONPARANOID >= 3
+			Con_Printf("E");
+#endif
 			return HULLCHECKSTATE_EMPTY;
 		}
 	}
@@ -91,6 +98,9 @@ loc0:
 	{
 		if (t2 < 0)
 		{
+#if COLLISIONPARANOID >= 3
+			Con_Printf("<");
+#endif
 			num = node->children[1];
 			goto loc0;
 		}
@@ -100,6 +110,9 @@ loc0:
 	{
 		if (t2 >= 0)
 		{
+#if COLLISIONPARANOID >= 3
+			Con_Printf(">");
+#endif
 			num = node->children[0];
 			goto loc0;
 		}
@@ -108,6 +121,9 @@ loc0:
 
 	// the line intersects, find intersection point
 	// LordHavoc: this uses the original trace for maximum accuracy
+#if COLLISIONPARANOID >= 3
+	Con_Printf("M");
+#endif
 	if (plane->type < 3)
 	{
 		t1 = t->start[plane->type] - plane->dist;
@@ -153,6 +169,9 @@ loc0:
 	midf = t1 / (t1 - t2);
 	t->trace->fraction = bound(0.0f, midf, 1.0);
 
+#if COLLISIONPARANOID >= 3
+	Con_Printf("D");
+#endif
 	return HULLCHECKSTATE_DONE;
 }
 
@@ -201,7 +220,7 @@ static hull_t box_hull;
 static dclipnode_t box_clipnodes[6];
 static mplane_t box_planes[6];
 
-void Collision_Init (void)
+void Mod_Q1BSP_Collision_Init (void)
 {
 	int		i;
 	int		side;
@@ -256,10 +275,16 @@ void Collision_ClipTrace_Box(trace_t *trace, const vec3_t cmins, const vec3_t cm
 	VectorCopy(start, rhc.start);
 	VectorCopy(end, rhc.end);
 	VectorSubtract(rhc.end, rhc.start, rhc.dist);
-	RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
+	Mod_Q1BSP_RecursiveHullCheck(&rhc, rhc.hull->firstclipnode, 0, 1, rhc.start, rhc.end);
 	VectorMA(rhc.start, rhc.trace->fraction, rhc.dist, rhc.trace->endpos);
+	if (rhc.trace->startsupercontents)
+		rhc.trace->startsupercontents = boxsupercontents;
 }
+#endif
 
+void Collision_Init (void)
+{
+}
 
 
 
@@ -814,9 +839,12 @@ void Collision_TraceLineBrushFloat(trace_t *trace, const vec3_t linestart, const
 				Con_Printf("Collision_TraceLineBrushFloat: degenerate plane!\n");
 				return;
 			}
-			f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
-			if (fabs(f - startplane->dist) > 0.01f)
-				Con_Printf("startplane->dist %f != calculated %f\n", startplane->dist, f);
+			if (thatbrush_start->numpoints)
+			{
+				f = furthestplanedist_float(startplane->normal, thatbrush_start->points, thatbrush_start->numpoints);
+				if (fabs(f - startplane->dist) > 0.01f)
+					Con_Printf("startplane->dist %f != calculated %f\n", startplane->dist, f);
+			}
 		}
 
 		f = d1 - d2;
