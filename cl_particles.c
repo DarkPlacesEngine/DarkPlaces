@@ -727,7 +727,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				//dec = 5;
 				//particle(pt_fade, PARTICLE_BILLBOARD, 0x707070, tex_particle, true, false, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 256.0f, 0, 0, 0, 0, 0);
 				dec = 6;
-				particle(pt_fade, PARTICLE_BILLBOARD, 0x707070, tex_smoke[rand()&7], true, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 256.0f, 0, 0, 0, 0, 0);
+				particle(pt_fade, PARTICLE_BILLBOARD, 0x404040, tex_smoke[rand()&7], true, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-5, 5), lhrandom(-5, 5), lhrandom(-5, 5), 256.0f, 0, 0, 0, 0, 0);
 				//particle(pt_fade, PARTICLE_BILLBOARD, 0x707070, tex_smoke[rand()&7], false, true, dec, dec, 128, 9999, 0, pos[0], pos[1], pos[2], lhrandom(-10, 10), lhrandom(-10, 10), lhrandom(-10, 10), 128.0f, 0, 0, 0, 0, 0);
 				//dec = 10;
 				//particle(pt_smoke, PARTICLE_BILLBOARD, 0x707070, tex_smoke[rand()&7], false, true, 2, 2, 160, 9999, 0, pos[0], pos[1], pos[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
