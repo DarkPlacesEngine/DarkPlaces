@@ -169,6 +169,8 @@ void CL_ExpandEntities(int num)
 	entity_t *oldentities;
 	if (num >= cl_max_entities)
 	{
+		if (!cl_entities)
+			Host_Error("CL_ExpandEntities: cl_entities not initialized\n");
 		if (num >= MAX_EDICTS)
 			Host_Error("CL_ExpandEntities: num %i >= %i\n", num, MAX_EDICTS);
 		oldmaxentities = cl_max_entities;
