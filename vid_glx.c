@@ -662,7 +662,7 @@ void VID_BuildGLXAttrib(int *attrib, int stencil)
 	*attrib++ = None;
 }
 
-int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
+int VID_InitMode(int fullscreen, int width, int height, int bpp)
 {
 	int i;
 	int attrib[32];
@@ -712,7 +712,7 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp, int stencil)
 		return false;
 	}
 
-	VID_BuildGLXAttrib(attrib, stencil);
+	VID_BuildGLXAttrib(attrib, bpp == 32);
 	visinfo = qglXChooseVisual(vidx11_display, vidx11_screen, attrib);
 	if (!visinfo)
 	{
