@@ -37,6 +37,7 @@ static model_t mod_known[MAX_MOD_KNOWN];
 rtexturepool_t *mod_shared_texturepool;
 rtexture_t *r_notexture;
 rtexture_t *mod_shared_detailtextures[NUM_DETAILTEXTURES];
+rtexture_t *mod_shared_distorttexture;
 
 void Mod_BuildDetailTextures (void)
 {
@@ -76,6 +77,24 @@ void Mod_BuildDetailTextures (void)
 		}
 		mod_shared_detailtextures[i] = R_LoadTexture2D(mod_shared_texturepool, va("detailtexture%i", i), DETAILRESOLUTION, DETAILRESOLUTION, &data[0][0][0], TEXTYPE_RGBA, TEXF_MIPMAP | TEXF_PRECACHE, NULL);
 	}
+}
+
+void Mod_BuildDistortTexture (void)
+{
+	int x, y;
+#define DISTORTRESOLUTION 32
+	qbyte data[DISTORTRESOLUTION][DISTORTRESOLUTION][2];
+	for (y=0; y<DISTORTRESOLUTION; y++)
+	{
+		for (x=0; x<DISTORTRESOLUTION; x++)
+		{
+			data[y][x][0] = rand () & 255;
+			data[y][x][1] = rand () & 255;
+		}
+	}
+
+	mod_shared_distorttexture = R_LoadTexture2D(mod_shared_texturepool, "distorttexture", DISTORTRESOLUTION, DISTORTRESOLUTION, &data[0][0][0], TEXTYPE_DSDT, TEXF_PRECACHE, NULL);
+	return;
 }
 
 texture_t r_surf_notexture;
@@ -121,6 +140,7 @@ static void mod_start(void)
 	mod_shared_texturepool = R_AllocTexturePool();
 	Mod_SetupNoTexture();
 	Mod_BuildDetailTextures();
+	Mod_BuildDistortTexture();
 }
 
 static void mod_shutdown(void)

@@ -1359,7 +1359,7 @@ void M_Options_Key (int k)
 	}
 }
 
-#define	OPTIONS_EFFECTS_ITEMS	20
+#define	OPTIONS_EFFECTS_ITEMS	21
 
 int options_effects_cursor;
 
@@ -1435,6 +1435,8 @@ void M_Menu_Options_Effects_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&r_lerpsprites, !r_lerpsprites.integer);
 	else if (options_effects_cursor == optnum++)
 		Cvar_SetValueQuick (&r_waterscroll, bound(0, r_waterscroll.value + dir * 0.5, 10));
+	else if (options_effects_cursor == optnum++)
+		Cvar_SetValueQuick (&r_watershader, !r_watershader.integer);
 }
 
 void M_Options_Effects_Draw (void)
@@ -1473,6 +1475,7 @@ void M_Options_Effects_Draw (void)
 	M_Options_PrintCheckbox("   Model Interpolation", true, r_lerpmodels.integer);
 	M_Options_PrintCheckbox("  Sprite Interpolation", true, r_lerpsprites.integer);
 	M_Options_PrintSlider(  "        Water Movement", true, r_waterscroll.value, 0, 10);
+	M_Options_PrintCheckbox(" GeForce3 Water Shader", true, r_watershader.integer);
 }
 
 
