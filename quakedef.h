@@ -177,8 +177,6 @@ extern char *buildstring;
 // LordHavoc: increased name limit from 32 to 64 characters
 #define	MAX_SCOREBOARDNAME	64
 
-#define	SOUND_CHANNELS		8
-
 #include "zone.h"
 #include "fs.h"
 #include "common.h"

@@ -23,6 +23,7 @@
 
 
 #include "quakedef.h"
+#include "snd_main.h"
 #include "snd_ogg.h"
 #include "snd_wav.h"
 
@@ -587,7 +588,7 @@ qboolean OGG_LoadVorbisFile (const char *filename, sfx_t *s)
 		long ret;
 		sfxbuffer_t *sb;
 
-		Con_DPrintf ("\"%s\" will be streamed\n", filename);
+		Con_DPrintf ("\"%s\" will be cached\n", filename);
 
 		// Decode it
 		buff = Mem_Alloc (s->mempool, (int)len);

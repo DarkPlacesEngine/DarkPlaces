@@ -31,7 +31,6 @@
 #include "quakedef.h"
 
 static int			snd_inited;
-static int			snd_blocked = 0;
 static snd_pcm_uframes_t buffer_size;
 
 static const char  *pcmname = NULL;
@@ -306,9 +305,6 @@ void SNDDMA_Submit (void)
 	const snd_pcm_channel_area_t *areas;
 	snd_pcm_uframes_t nframes;
 	snd_pcm_uframes_t offset;
-
-	if (snd_blocked)
-		return;
 
 	nframes = count / shm->format.channels;
 

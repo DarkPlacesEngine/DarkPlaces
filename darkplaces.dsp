@@ -688,6 +688,10 @@ SOURCE=.\sound.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\snd_main.h
+# End Source File
+# Begin Source File
+
 SOURCE=.\spritegn.h
 # End Source File
 # Begin Source File

@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#include "snd_main.h"
 #include "snd_ogg.h"
 #include "snd_wav.h"
 
@@ -156,9 +157,14 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	size_t len;
 	qboolean modified_name = false;
 
-	// see if still in memory
 	if (!shm || !shm->format.speed)
 		return false;
+
+	// If we wasn't able to load it previously, no need to retry
+	if (s->flags & SFXFLAG_FILEMISSING)
+		return false;
+
+	// See if in memory
 	if (s->fetcher != NULL)
 	{
 		if (s->format.speed != shm->format.speed)
@@ -184,10 +190,7 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 		return true;
 
 	// Can't load the sound!
-	if (!complain)
-		s->flags |= SFXFLAG_SILENTLYMISSING;
-	else
-		s->flags &= ~SFXFLAG_SILENTLYMISSING;
+	s->flags |= SFXFLAG_FILEMISSING;
 	if (complain)
 	{
 		if (modified_name)
@@ -197,20 +200,19 @@ qboolean S_LoadSound (sfx_t *s, qboolean complain)
 	return false;
 }
 
-void S_UnloadSound(sfx_t *s)
+void S_UnloadSound (sfx_t *s)
 {
 	if (s->fetcher != NULL)
 	{
 		unsigned int i;
 
+		// Stop all channels that use this sound
+		for (i = 0; i < total_channels ; i++)
+			if (channels[i].sfx == s)
+				S_StopChannel (i);
+
 		s->fetcher = NULL;
 		s->fetcher_data = NULL;
 		Mem_FreePool(&s->mempool);
-
-		// At this point, some per-channel data pointers may point to freed zones.
-		// Practically, it shouldn't be a problem; but it's wrong, so we fix that
-		for (i = 0; i < total_channels ; i++)
-			if (channels[i].sfx == s)
-				channels[i].fetcher_data = NULL;
 	}
 }

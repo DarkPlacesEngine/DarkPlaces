@@ -79,7 +79,6 @@ static DEVMODE gdevmode;
 static qboolean vid_initialized = false;
 static qboolean vid_wassuspended = false;
 static int vid_usingmouse;
-extern qboolean mouseactive;  // from in_win.c
 static HICON hIcon;
 
 HWND mainwindow;
@@ -145,7 +144,7 @@ HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
 int			mouse_buttons;
 int			mouse_oldbuttonstate;
 POINT		current_pos;
-int			mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
+int			mouse_x, mouse_y, old_mouse_x, old_mouse_y;
 
 static qboolean	restore_spi;
 static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
@@ -1453,10 +1452,8 @@ void IN_MouseMove (usercmd_t *cmd)
 	else
 	{
 		GetCursorPos (&current_pos);
-		mx = current_pos.x - window_center_x + mx_accum;
-		my = current_pos.y - window_center_y + my_accum;
-		mx_accum = 0;
-		my_accum = 0;
+		mx = current_pos.x - window_center_x;
+		my = current_pos.y - window_center_y;
 	}
 
 	IN_Mouse(cmd, mx, my);
@@ -1483,29 +1480,6 @@ void IN_Move (usercmd_t *cmd)
 
 
 /*
-===========
-IN_Accumulate
-===========
-*/
-void IN_Accumulate (void)
-{
-	if (mouseactive)
-	{
-		if (!dinput)
-		{
-			GetCursorPos (&current_pos);
-
-			mx_accum += current_pos.x - window_center_x;
-			my_accum += current_pos.y - window_center_y;
-
-		// force the mouse to the center, so there's room to move
-			SetCursorPos (window_center_x, window_center_y);
-		}
-	}
-}
-
-
-/*
 ===================
 IN_ClearStates
 ===================
@@ -1513,11 +1487,7 @@ IN_ClearStates
 void IN_ClearStates (void)
 {
 	if (mouseactive)
-	{
-		mx_accum = 0;
-		my_accum = 0;
 		mouse_oldbuttonstate = 0;
-	}
 }
 
 

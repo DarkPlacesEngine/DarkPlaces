@@ -2,6 +2,7 @@
 -(Baalz) d darkplaces input bug: figure out what's wrong with ctrl key in Linux, hitting character keys tends to do nothing, and holding a character key and then hitting ctrl tends to leave the character key stuck on, this sounds like a window manager issue, but somehow quake3 works around it (Baalz)
 -(Kinn) d darkplaces client: all glow trails are bright blue (Kinn)
 -(Kinn) d darkplaces renderer: fix the sometimes non-animating framegroups on sprites (Kinn) 
+-(fuh) d darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh)
 0 darkplaces client: add DP_LITSPRITES extension to document the fact that any sprite with a ! in its filename is lit rather than fullbright
 0 darkplaces client: add a swinging weapon motion to replace the removed forward/back movement of the weapon, should be controllable with cl_bob_* cvars (Joel Murdoch)
 0 darkplaces client: add back cl_particles_lighting cvar and add back the particle lighting (romi)
@@ -87,8 +88,6 @@
 0 darkplaces server: make fopen have the ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces server: make server able to work without models, just for sake of completeness
 0 darkplaces sound: Lordhavoc needs to talk to fuh about snd_macos.c (fuh)
-0 darkplaces sound: make sound precaching not allocate an sfx if the sound is not found, so it complains only once about missing sounds when you connect, rather than constantly, and also so using "play" commands for non-existent files won't eat up sfx slots (fuh) 
-0 darkplaces sound: non-cd music tracks should not be affected by sound volume setting (Urre)
 0 darkplaces sound: the new sound engine should have a cvar for random variations of pitch on sounds like in doom (RenegadeC)
 0 dpmod: add flame thrower enforcers back (scar3crow)
 0 dpmod: add flame thrower weapon, and make its altfire drop a canister of fuel (10 fuel units?), which can be ignited to set off as a bomb about the size of a rocket blast, plus some fireballs raining down (scar3crow)
@@ -415,6 +414,7 @@ d darkplaces server: make qc profile command post an error message instead of cr
 d darkplaces server: prevent player name changes faster than once every 5 seconds (sublim3)
 d darkplaces server: stop sound before loading a level to get rid of looping noise (Edward Holness)
 d darkplaces sound: dsound broken, needs to be managed as part of video system (jeremy janzen)
+d darkplaces sound: non-cd music tracks should not be affected by sound volume setting (Urre)
 d darkplaces video: add vid_vsync cvar and also to options menu (metlslime)
 d darkplaces: Host_Name_f validate player names, stripping \r and \n
 d darkplaces: PF_traceline/PF_tracebox now work with world as the edict
