@@ -897,10 +897,21 @@ void CL_RelinkWorld(void)
 static void CL_RelinkStaticEntities(void)
 {
 	int i;
-	for (i = 0;i < cl_num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++)
+	entity_t *e;
+	for (i = 0, e = cl_static_entities;i < cl_num_static_entities && r_refdef.numentities < r_refdef.maxentities;i++, e++)
 	{
-		Mod_CheckLoaded(cl_static_entities[i].render.model);
-		r_refdef.entities[r_refdef.numentities++] = &cl_static_entities[i].render;
+		Mod_CheckLoaded(e->render.model);
+		e->render.flags = 0;
+		// transparent stuff can't be lit during the opaque stage
+		if (e->render.effects & (EF_ADDITIVE) || e->render.alpha < 1)
+			e->render.flags |= RENDER_TRANSPARENT;
+		// either fullbright or lit
+		if (!(e->render.effects & EF_FULLBRIGHT) && !r_fullbright.integer)
+			e->render.flags |= RENDER_LIGHT;
+		// hide player shadow during intermission or nehahra movie
+		if (!(e->render.effects & EF_NOSHADOW) && !(e->render.flags & RENDER_TRANSPARENT))
+			e->render.flags |= RENDER_SHADOW;
+		r_refdef.entities[r_refdef.numentities++] = &e->render;
 	}
 }
 
