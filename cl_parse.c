@@ -206,7 +206,7 @@ void CL_KeepaliveMessage (void)
 		MSG_WriteChar(&msg, svc_nop);
 		NetConn_SendUnreliableMessage(cls.netcon, &msg);
 		// try not to utterly crush the computer with work, that's just rude
-		Sys_Sleep();
+		Sys_Sleep(1);
 	}
 }
 
