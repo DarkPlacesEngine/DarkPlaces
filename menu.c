@@ -1193,7 +1193,7 @@ void M_Menu_Options_AdjustSliders (int dir)
 	int optnum;
 	S_LocalSound ("misc/menu3.wav", true);
 
-	optnum = 6;
+	optnum = 7;
 	if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&vid_conwidth, bound(320, vid_conwidth.value + dir * 64, 2048));
 	else if (options_cursor == optnum++)
