@@ -2,7 +2,8 @@
 // this code written by Forest Hale, on 2003-08-23, and placed into public domain
 // this code deals with quadratic splines (minimum of 3 points), the same kind used in Quake3 maps.
 
-// LordHavoc's rant on misuse of the name 'bezier': many people seem to think that bezier is a generic term for splines, but it is not, it is a term for a specific type of spline (minimum of 4 control points, cubic spline).
+// LordHavoc's rant on misuse of the name 'bezier': many people seem to think that bezier is a generic term for splines, but it is not, it is a term for a specific type of bspline (4 control points, cubic bspline), bsplines are the generalization of the bezier spline to support dimensions other than just cubic.
+// this implements Quadratic BSpline surfaces
 
 #include <math.h>
 #include "curves.h"
@@ -388,33 +389,32 @@ int QuadraticSplinePatchSubdivisionLevelOnY(int cpwidth, int cpheight, int compo
 }
 
 /*
-	d = a * (1 - 2 * t + t * t) + b * (2 * t - 2 * t * t) + c * t * t;
-	d = a * (1 + t * t + -2 * t) + b * (2 * t + -2 * t * t) + c * t * t;
-	d = a * 1 + a * t * t + a * -2 * t + b * 2 * t + b * -2 * t * t + c * t * t;
-	d = a * 1 + (a * t + a * -2) * t + (b * 2 + b * -2 * t) * t + (c * t) * t;
-	d = a + ((a * t + a * -2) + (b * 2 + b * -2 * t) + (c * t)) * t;
-	d = a + (a * (t - 2) + b * 2 + b * -2 * t + c * t) * t;
-	d = a + (a * (t - 2) + b * 2 + (b * -2 + c) * t) * t;
-	d = a + (a * (t - 2) + b * 2 + (c + b * -2) * t) * t;
-	d = a + a * (t - 2) * t + b * 2 * t + (c + b * -2) * t * t;
-	d = a * (1 + (t - 2) * t) + b * 2 * t + (c + b * -2) * t * t;
-	d = a * (1 + (t - 2) * t) + b * 2 * t + c * t * t + b * -2 * t * t;
-	d = a * 1 + a * (t - 2) * t + b * 2 * t + c * t * t + b * -2 * t * t;
-	d = a * 1 + a * t * t + a * -2 * t + b * 2 * t + c * t * t + b * -2 * t * t;
-	d = a * (1 - 2 * t + t * t) + b * 2 * t + c * t * t + b * -2 * t * t;
-	d = a * (1 - 2 * t) + a * t * t + b * 2 * t + c * t * t + b * -2 * t * t;
-	d = a + a * -2 * t + a * t * t + b * 2 * t + c * t * t + b * -2 * t * t;
-	d = a + a * -2 * t + a * t * t + b * 2 * t + b * -2 * t * t + c * t * t;
-	d = a + a * -2 * t + a * t * t + b * 2 * t + b * -2 * t * t + c * t * t;
-	d = a + a * -2 * t + b * 2 * t + b * -2 * t * t + a * t * t + c * t * t;
-	d = a + a * -2 * t + b * 2 * t + (a + c + b * -2) * t * t;
-	d = a + (a * -2 + b * 2) * t + (a + c + b * -2) * t * t;
-	d = a + ((a * -2 + b * 2) + (a + c + b * -2) * t) * t;
-	d = a + ((b + b - a - a) + (a + c - b - b) * t) * t;
-	d = a + (b + b - a - a) * t + (a + c - b - b) * t * t;
-	d = a + (b - a) * 2 * t + (a + c - b * 2) * t * t;
-	d = a + (b - a) * 2 * t + (a - b + c - b) * t * t;
-	
-	d = in[0] + (in[1] - in[0]) * 2 * t + (in[0] - in[1] + in[2] - in[1]) * t * t;
+	// 1: flat (0th dimension)
+	o = a
+	// 2: linear (1st dimension)
+	o = a * (1 - t) + b * t
+	// 3: quadratic bspline (2nd dimension)
+	o = a * (1 - t) * (1 - t) + 2 * b * (1 - t) * t + c * t * t
+	// 4: cubic (bezier) bspline (3rd dimension)
+	o = a * (1 - t) * (1 - t) * (1 - t) + 3 * b * (1 - t) * (1 - t) * t + 3 * c * (1 - t) * t * t + d * t * t * t
+	// 5: quartic bspline (4th dimension)
+	o = a * (1 - t) * (1 - t) * (1 - t) * (1 - t) + 4 * b * (1 - t) * (1 - t) * (1 - t) * t + 6 * c * (1 - t) * (1 - t) * t * t + 4 * d * (1 - t) * t * t * t + e * t * t * t * t
+
+	// n: arbitrary dimension bspline
+double factorial(int n)
+{
+	int i;
+	double f;
+	f = 1;
+	for (i = 1;i < n;i++)
+		f = f * i;
+	return f;
+}
+double bsplinesample(int dimensions, double t, double *param)
+{
+	double o = 0;
+	for (i = 0;i < dimensions + 1;i++)
+		o += param[i] * factorial(dimensions)/(factorial(i)*factorial(dimensions-i)) * pow(t, i) * pow(1 - t, dimensions - i);
+}
 */
 
