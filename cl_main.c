@@ -644,7 +644,7 @@ static void CL_RelinkNetworkEntities()
 			v2[0] = v[0] * 18 + neworg[0];
 			v2[1] = v[1] * 18 + neworg[1];
 			v2[2] = v[2] * 18 + neworg[2] + 16;
-			CL_TraceLine(neworg, v2, v, NULL, 0, true);
+			CL_TraceLine(neworg, v2, v, NULL, 0, true, NULL);
 
 			CL_AllocDlight (NULL, v, ent->persistent.muzzleflash, 1, 1, 1, 0, 0);
 			ent->persistent.muzzleflash -= cl.frametime * 1000;

@@ -73,6 +73,8 @@ void Matrix4x4_Transform4 (const matrix4x4_t *in, const float v[4], float out[4]
 // cases (rotation and translation *ONLY*), this attempts to undo the results
 // of Transform
 //void Matrix4x4_SimpleUntransform (const matrix4x4_t *in, const float v[3], float out[3]);
+// transforms a direction vector through the rotation part of a matrix
+void Matrix4x4_Transform3x3 (const matrix4x4_t *in, const float v[3], float out[3]);
 
 // ease of use functions
 // immediately applies a Translate to the matrix
@@ -139,7 +141,9 @@ void Matrix3x4_Transform (const matrix3x4_t *in, const float v[3], float out[3])
 // reverse transforms a 3D vector through a matrix3x4, at least for *simple*
 // cases (rotation and translation *ONLY*), this attempts to undo the results
 // of Transform
-void Matrix3x4_SimpleUntransform (const matrix3x4_t *in, const float v[3], float out[3]);
+//void Matrix3x4_SimpleUntransform (const matrix3x4_t *in, const float v[3], float out[3]);
+// transforms a direction vector through the rotation part of a matrix
+void Matrix3x4_Transform3x3 (const matrix3x4_t *in, const float v[3], float out[3]);
 
 // ease of use functions
 // immediately applies a Translate to the matrix

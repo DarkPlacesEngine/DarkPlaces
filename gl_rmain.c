@@ -51,6 +51,7 @@ unsigned short d_lightstylevalue[256];
 
 cvar_t r_drawentities = {0, "r_drawentities","1"};
 cvar_t r_drawviewmodel = {0, "r_drawviewmodel","1"};
+cvar_t r_shadows = {CVAR_SAVE, "r_shadows", "1"};
 cvar_t r_speeds = {0, "r_speeds","0"};
 cvar_t r_fullbright = {0, "r_fullbright","0"};
 cvar_t r_wateralpha = {CVAR_SAVE, "r_wateralpha","1"};
@@ -218,6 +219,7 @@ void GL_Main_Init(void)
 	Cmd_AddCommand ("timerefresh", R_TimeRefresh_f);
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_drawviewmodel);
+	Cvar_RegisterVariable (&r_shadows);
 	Cvar_RegisterVariable (&r_speeds);
 	Cvar_RegisterVariable (&r_fullbrights);
 	Cvar_RegisterVariable (&r_wateralpha);
@@ -459,9 +461,6 @@ static void R_MarkEntities (void)
 			VectorAdd(ent->angles, r_refdef.viewangles, ent->angles);
 		}
 
-		if (R_CullBox(ent->mins, ent->maxs))
-			continue;
-
 		ent->visframe = r_framecount;
 		VectorCopy(ent->angles, v);
 		if (!ent->model || ent->model->type != mod_brush)
@@ -470,6 +469,8 @@ static void R_MarkEntities (void)
 		Matrix4x4_Invert_Simple(&ent->inversematrix, &ent->matrix);
 		R_LerpAnimation(ent);
 		R_UpdateEntLights(ent);
+		if (R_CullBox(ent->mins, ent->maxs))
+			continue;
 		R_FarClip_Box(ent->mins, ent->maxs);
 	}
 }
@@ -541,6 +542,22 @@ void R_DrawModels (void)
 			else
 				R_DrawNoModel(ent);
 		}
+	}
+}
+
+void R_DrawModelFakeShadows (void)
+{
+	int i;
+	entity_render_t *ent;
+
+	if (!r_drawentities.integer)
+		return;
+
+	for (i = 0;i < r_refdef.numentities;i++)
+	{
+		ent = r_refdef.entities[i];
+		if (ent->model && ent->model->DrawFakeShadow)
+			ent->model->DrawFakeShadow(ent);
 	}
 }
 
@@ -678,6 +695,12 @@ void R_RenderView (void)
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)
 		S_ExtraUpdate ();
+
+	if (r_shadows.integer)
+	{
+		R_DrawModelFakeShadows();
+		R_TimeReport("fakeshadows");
+	}
 
 	R_DrawModels();
 	R_TimeReport("models");

@@ -1,5 +1,6 @@
 
 #include "quakedef.h"
+#include "cl_collision.h"
 
 cvar_t r_quickmodels = {0, "r_quickmodels", "1"};
 
@@ -72,7 +73,7 @@ void R_AliasTransformVerts(int vertcount)
 }
 */
 
-void R_AliasLerpVerts(int vertcount,
+void R_AliasLerpVerts(int vertcount, float *vertices, float *normals,
 		float lerp1, const trivertx_t *verts1, const vec3_t fscale1, const vec3_t translate1,
 		float lerp2, const trivertx_t *verts2, const vec3_t fscale2, const vec3_t translate2,
 		float lerp3, const trivertx_t *verts3, const vec3_t fscale3, const vec3_t translate3,
@@ -82,8 +83,8 @@ void R_AliasLerpVerts(int vertcount,
 	vec3_t scale1, scale2, scale3, scale4, translate;
 	const float *n1, *n2, *n3, *n4;
 	float *av, *avn;
-	av = aliasvert;
-	avn = aliasvertnorm;
+	av = vertices;
+	avn = normals;
 	VectorScale(fscale1, lerp1, scale1);
 	if (lerp2)
 	{
@@ -212,7 +213,7 @@ skinframe_t *R_FetchSkinFrame(const entity_render_t *ent)
 		return &model->skinframes[model->skinscenes[s].firstframe];
 }
 
-void R_SetupMDLMD2Frames(const entity_render_t *ent, float colorr, float colorg, float colorb)
+void R_LerpMDLMD2Vertices(const entity_render_t *ent, float *vertices, float *normals)
 {
 	const md2frame_t *frame1, *frame2, *frame3, *frame4;
 	const trivertx_t *frame1verts, *frame2verts, *frame3verts, *frame4verts;
@@ -226,15 +227,11 @@ void R_SetupMDLMD2Frames(const entity_render_t *ent, float colorr, float colorg,
 	frame2verts = &model->mdlmd2data_pose[ent->frameblend[1].frame * model->numverts];
 	frame3verts = &model->mdlmd2data_pose[ent->frameblend[2].frame * model->numverts];
 	frame4verts = &model->mdlmd2data_pose[ent->frameblend[3].frame * model->numverts];
-	R_AliasLerpVerts(model->numverts,
+	R_AliasLerpVerts(model->numverts, vertices, normals,
 		ent->frameblend[0].lerp, frame1verts, frame1->scale, frame1->translate,
 		ent->frameblend[1].lerp, frame2verts, frame2->scale, frame2->translate,
 		ent->frameblend[2].lerp, frame3verts, frame3->scale, frame3->translate,
 		ent->frameblend[3].lerp, frame4verts, frame4->scale, frame4->translate);
-
-	R_LightModel(ent, model->numverts, colorr, colorg, colorb, false);
-
-	//R_AliasTransformVerts(model->numverts);
 }
 
 void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
@@ -311,7 +308,8 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 			varray_texcoord[0][i] = model->mdlmd2data_texcoords[i] * 8.0f;
 		aliasvert = varray_vertex;
 		aliasvertcolor = varray_color;
-		R_SetupMDLMD2Frames(ent, colorscale, colorscale, colorscale);
+		R_LerpMDLMD2Vertices(ent, aliasvert, aliasvertnorm);
+		R_LightModel(ent, model->numverts, colorscale, colorscale, colorscale, false);
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
@@ -335,14 +333,16 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		aliasvert = varray_vertex;
 		aliasvertcolor = varray_color;
-		R_SetupMDLMD2Frames(ent, colorscale, colorscale, colorscale);
+		R_LerpMDLMD2Vertices(ent, aliasvert, aliasvertnorm);
+		R_LightModel(ent, model->numverts, colorscale, colorscale, colorscale, false);
 		aliasvert = aliasvertbuf;
 		aliasvertcolor = aliasvertcolorbuf;
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 		return;
 	}
 
-	R_SetupMDLMD2Frames(ent, 1 - fog, 1 - fog, 1 - fog);
+	R_LerpMDLMD2Vertices(ent, aliasvert, aliasvertnorm);
+	R_LightModel(ent, model->numverts, colorscale * (1 - fog), colorscale * (1 - fog), colorscale * (1 - fog), false);
 
 	if (colormapped)
 	{
@@ -469,6 +469,77 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		memcpy(varray_texcoord[0], model->mdlmd2data_texcoords, model->numverts * sizeof(float[2]));
 		R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 	}
+}
+
+void R_DrawQ1Q2AliasModelFakeShadow (entity_render_t *ent)
+{
+	int i;
+	rmeshstate_t m;
+	model_t *model;
+	float *v, lightdirection[3], surfnormal[3], planenormal[3], planedist, floororigin[3], v2[3], offset[3], dist1, dist2, frac;
+
+	VectorCopy(ent->origin, v2);
+	v2[2] -= 65536.0f;
+	if (CL_TraceLine(ent->origin, v2, floororigin, surfnormal, 0, false, NULL) == 1)
+		return;
+
+	R_Mesh_Matrix(&ent->matrix);
+
+	model = ent->model;
+	R_Mesh_ResizeCheck(model->numverts);
+
+	memset(&m, 0, sizeof(m));
+	m.blendfunc1 = GL_SRC_ALPHA;
+	m.blendfunc2 = GL_ONE_MINUS_SRC_ALPHA;
+	R_Mesh_State(&m);
+
+	c_alias_polys += model->numtris;
+	R_LerpMDLMD2Vertices(ent, varray_vertex, aliasvertnorm);
+	R_FillColors(varray_color, model->numverts, 0, 0, 0, 0.5);
+
+	// put a light direction in the entity's coordinate space
+	lightdirection[0] = 0.3;
+	lightdirection[1] = 0.1;
+	lightdirection[2] = -1;
+	Matrix4x4_Transform3x3(&ent->inversematrix, lightdirection, offset);
+	VectorNormalizeFast(offset);
+	VectorScale(offset, 65536.0f, offset);
+
+	// put the plane's normal in the entity's coordinate space
+	Matrix4x4_Transform3x3(&ent->inversematrix, surfnormal, planenormal);
+	VectorNormalizeFast(planenormal);
+
+	// put the plane's distance in the entity's coordinate space
+	VectorSubtract(floororigin, ent->origin, floororigin);
+	planedist = DotProduct(floororigin, surfnormal) + 1;
+
+	//Con_Printf("sn: %f %f %f pn: %f %f %f pd: %f\n", surfnormal[0], surfnormal[1], surfnormal[2], planenormal[0], planenormal[1], planenormal[2], planedist);
+	{
+	//int count1 = 0, count2 = 0, count3 = 0;
+	for (i = 0, v = varray_vertex;i < model->numverts;i++, v += 4)
+	{
+		v2[0] = v[0] + offset[0];
+		v2[1] = v[1] + offset[1];
+		v2[2] = v[2] + offset[2];
+		dist1 = DotProduct(v, planenormal) - planedist;
+		dist2 = DotProduct(v2, planenormal) - planedist;
+		//if (dist1 > 0)
+		//	count1++;
+		//if (dist2 > 0)
+		//	count2++;
+		//if (dist1 > 0 != dist2 > 0)
+		//	count3++;
+		if (dist1 > 0 && dist2 < 0)
+		//if (i & 1)
+		{
+			// clipped
+			frac = dist1 / (dist1 - dist2);
+			VectorMA(v, frac, offset, v);
+		}
+	}
+	//Con_Printf("counts %d %d %d\n", count1, count2, count3);
+	}
+	R_Mesh_Draw(model->numverts, model->numtris, model->mdlmd2data_indices);
 }
 
 int ZymoticLerpBones(int count, const zymbonematrix *bonebase, const frameblend_t *blend, const zymbone_t *bone)
@@ -877,4 +948,3 @@ void R_DrawQ1Q2AliasModel(entity_render_t *ent)
 	else
 		R_DrawQ1Q2AliasModelCallback(ent, 0);
 }
-

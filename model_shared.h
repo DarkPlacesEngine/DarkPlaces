@@ -198,8 +198,8 @@ typedef struct model_s
 	void(*Draw)(struct entity_render_s *ent);
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
-	// draw the model's shadows
-	void(*DrawShadow)(struct entity_render_s *ent);
+	// draw a fake shadow for the model
+	void(*DrawFakeShadow)(struct entity_render_s *ent);
 
 	// memory pool for allocations
 	mempool_t		*mempool;
