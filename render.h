@@ -106,7 +106,6 @@ extern cvar_t r_speeds;
 extern cvar_t r_fullbright;
 extern cvar_t r_wateralpha;
 extern cvar_t r_dynamic;
-extern cvar_t r_dlightmap;
 extern cvar_t r_drawcollisionbrushes;
 
 void R_Init (void);
