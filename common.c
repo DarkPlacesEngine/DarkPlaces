@@ -751,16 +751,12 @@ void COM_InitArgv (void)
 
 void COM_InitGameType (void)
 {
-	char name[128];
+	char name[MAX_OSPATH];
 	COM_StripExtension(com_argv[0], name);
 	COM_ToLowerString(name, name);
 
 	if (strstr(name, "transfusion"))
 		gamemode = GAME_TRANSFUSION;
-	else if (strstr(name, "zymotic"))
-		gamemode = GAME_ZYMOTIC;
-	else if (strstr(name, "fiendarena"))
-		gamemode = GAME_FIENDARENA;
 	else if (strstr(name, "nehahra"))
 		gamemode = GAME_NEHAHRA;
 	else if (strstr(name, "hipnotic"))
@@ -772,10 +768,6 @@ void COM_InitGameType (void)
 
 	if (COM_CheckParm ("-transfusion"))
 		gamemode = GAME_TRANSFUSION;
-	else if (COM_CheckParm ("-zymotic"))
-		gamemode = GAME_ZYMOTIC;
-	else if (COM_CheckParm ("-fiendarena"))
-		gamemode = GAME_FIENDARENA;
 	else if (COM_CheckParm ("-nehahra"))
 		gamemode = GAME_NEHAHRA;
 	else if (COM_CheckParm ("-hipnotic"))
@@ -788,10 +780,7 @@ void COM_InitGameType (void)
 	switch(gamemode)
 	{
 	case GAME_NORMAL:
-		if (registered.integer)
-			gamename = "DarkPlaces-Quake";
-		else
-			gamename = "DarkPlaces-SharewareQuake";
+		gamename = "DarkPlaces-Quake";
 		gamedirname = "";
 		break;
 	case GAME_HIPNOTIC:
@@ -805,14 +794,6 @@ void COM_InitGameType (void)
 	case GAME_NEHAHRA:
 		gamename = "DarkPlaces-Nehahra";
 		gamedirname = "nehahra";
-		break;
-	case GAME_FIENDARENA:
-		gamename = "FiendArena";
-		gamedirname = "fiendarena";
-		break;
-	case GAME_ZYMOTIC:
-		gamename = "Zymotic";
-		gamedirname = "zymotic";
 		break;
 	case GAME_TRANSFUSION:
 		gamename = "Transfusion";

@@ -171,9 +171,7 @@ extern	struct cvar_s	registered;
 #define GAME_HIPNOTIC 1
 #define GAME_ROGUE 2
 #define GAME_NEHAHRA 3
-#define GAME_FIENDARENA 4
-#define GAME_ZYMOTIC 5
-#define GAME_TRANSFUSION 6
+#define GAME_TRANSFUSION 4
 
 extern int gamemode;
 extern char *gamename;
