@@ -187,6 +187,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 			Host_Error ("SOLID_BSP without MOVETYPE_PUSH");
 
 		model = sv.models[ (int)ent->v.modelindex ];
+		Mod_CheckLoaded(model);
 
 		// LordHavoc: fixed SOLID_BSP error message
 		if (!model || model->type != mod_brush)
@@ -198,7 +199,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 
 		VectorSubtract (maxs, mins, size);
 		// LordHavoc: FIXME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		if (hlbsp)
+		if (sv.worldmodel->ishlbsp)
 		{
 			if (size[0] < 3)
 				hull = &model->hulls[0]; // 0x0x0
@@ -320,6 +321,7 @@ void SV_ClearWorld (void)
 
 	memset (sv_areanodes, 0, sizeof(sv_areanodes));
 	sv_numareanodes = 0;
+	Mod_CheckLoaded(sv.worldmodel);
 	SV_CreateAreaNode (0, sv.worldmodel->normalmins, sv.worldmodel->normalmaxs);
 }
 
@@ -878,6 +880,8 @@ loc0:
 }
 */
 
+/*
+// FIXME: this is broken and I'm not interested in figuring out what is broken about it right now
 qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2)
 {
 	dclipnode_t	*node;
@@ -991,6 +995,7 @@ loc0:
 		}
 	}
 }
+*/
 
 
 /*

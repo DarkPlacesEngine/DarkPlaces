@@ -93,8 +93,6 @@ unsigned char	vid_curpal[256*3];
 HGLRC	baseRC;
 HDC		maindc;
 
-glvert_t glv;
-
 HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
 viddef_t	vid;				// global video state
@@ -274,7 +272,7 @@ int VID_SetMode (int modenum)
 	// Set either the fullscreen or windowed mode
 	if (modelist[modenum].type == MS_WINDOWED)
 	{
-//		if (vid_mouse.value && key_dest == key_game)
+//		if (vid_mouse.integer && key_dest == key_game)
 //		{
 //			stat = VID_SetWindowedMode(modenum);
 //			usingmouse = true;
@@ -387,12 +385,12 @@ void GL_BeginRendering (int *x, int *y, int *width, int *height)
 void GL_EndRendering (void)
 {
 	int usemouse;
-	if (r_render.value && !scr_skipupdate)
+	if (r_render.integer && !scr_skipupdate)
 		SwapBuffers(maindc);
 
 // handle the mouse state when windowed if that's changed
 	usemouse = false;
-	if (vid_mouse.value && key_dest == key_game)
+	if (vid_mouse.integer && key_dest == key_game)
 		usemouse = true;
 	if (modestate == MS_FULLDIB)
 		usemouse = true;
@@ -583,7 +581,7 @@ void ClearAllStates (void)
 }
 
 void VID_RestoreGameGamma(void);
-extern qboolean hostloopactive;
+extern qboolean host_loopactive;
 
 void AppActivate(BOOL fActive, BOOL minimize)
 /****************************************************************************
@@ -631,13 +629,13 @@ void AppActivate(BOOL fActive, BOOL minimize)
 			// LordHavoc: from dabb, fix for alt-tab bug in NVidia drivers
 			MoveWindow(mainwindow,0,0,gdevmode.dmPelsWidth,gdevmode.dmPelsHeight,false);
 		}
-//		else if ((modestate == MS_WINDOWED) && vid_mouse.value && key_dest == key_game)
+//		else if ((modestate == MS_WINDOWED) && vid_mouse.integer && key_dest == key_game)
 //		{
 //			usingmouse = true;
 //			IN_ActivateMouse ();
 //			IN_HideMouse ();
 //		}
-		if (hostloopactive)
+		if (host_loopactive)
 			VID_RestoreGameGamma();
 	}
 
@@ -657,7 +655,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 				vid_wassuspended = true;
 			}
 		}
-//		else if ((modestate == MS_WINDOWED) && vid_mouse.value)
+//		else if ((modestate == MS_WINDOWED) && vid_mouse.integer)
 //		{
 //			usingmouse = false;
 //			IN_DeactivateMouse ();

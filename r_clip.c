@@ -65,6 +65,8 @@ float r_clip_viewmatrix[3][3], r_clip_viewmulx, r_clip_viewmuly, r_clip_viewcent
 //float r_clip_nearclipdist, r_clip_nearclipdist2;
 tinyplane_t r_clip_viewplane[5];
 
+mempool_t *r_clip_mempool;
+
 void R_Clip_MakeViewMatrix(void)
 {
 	float pixelaspect, screenaspect, horizontalfieldofview, verticalfieldofview;
@@ -100,35 +102,35 @@ void R_Clip_StartFrame(void)
 {
 	int i;
 	int newwidth, newheight, newmaxedges, newmaxsurfs;
-	newwidth = bound(80, (int) r_clipwidth.value, vid.realwidth * 2);
-	newheight = bound(60, (int) r_clipheight.value, vid.realheight * 2);
-	newmaxedges = bound(128, (int) r_clipedges.value, 262144);
-	newmaxsurfs = bound(32, (int) r_clipsurfaces.value, 65536);
+	newwidth = bound(80, r_clipwidth.integer, vid.realwidth * 2);
+	newheight = bound(60, r_clipheight.integer, vid.realheight * 2);
+	newmaxedges = bound(128, r_clipedges.integer, 262144);
+	newmaxsurfs = bound(32, r_clipsurfaces.integer, 65536);
 	if (newwidth != clipwidth || newheight != clipheight || maxclipedges != newmaxedges || maxclipsurfs != newmaxsurfs)
 	{
 #if CLIPTEST
 		if (clipbuffer)
-			qfree(clipbuffer);
+			Mem_Free(clipbuffer);
 #endif
 		if (clipedges)
-			qfree(clipedges);
+			Mem_Free(clipedges);
 		if (clipsurfs)
-			qfree(clipsurfs);
+			Mem_Free(clipsurfs);
 		if (newedges)
-			qfree(newedges);
+			Mem_Free(newedges);
 		if (removeedges)
-			qfree(removeedges);
+			Mem_Free(removeedges);
 		clipwidth = newwidth;
 		clipheight = newheight;
 		maxclipedges = newmaxedges;
 		maxclipsurfs = newmaxsurfs;
 #if CLIPTEST
-		clipbuffer = qmalloc(clipwidth * clipheight * sizeof(clippixel_t));
+		clipbuffer = Mem_Alloc(r_clip_mempool, clipwidth * clipheight * sizeof(clippixel_t));
 #endif
-		clipedges = qmalloc(maxclipedges * sizeof(clipedge_t));
-		clipsurfs = qmalloc(maxclipsurfs * sizeof(clipsurf_t));
-		newedges = qmalloc(clipheight * sizeof(clipedge_t));
-		removeedges = qmalloc(clipheight * sizeof(clipedge_t *));
+		clipedges = Mem_Alloc(r_clip_mempool, maxclipedges * sizeof(clipedge_t));
+		clipsurfs = Mem_Alloc(r_clip_mempool, maxclipsurfs * sizeof(clipsurf_t));
+		newedges = Mem_Alloc(r_clip_mempool, clipheight * sizeof(clipedge_t));
+		removeedges = Mem_Alloc(r_clip_mempool, clipheight * sizeof(clipedge_t *));
 		clipedgesend = clipedges + maxclipedges;
 		clipsurfsend = clipsurfs + maxclipsurfs;
 	}
@@ -169,26 +171,18 @@ void R_Clip_EndFrame(void)
 
 void r_clip_start(void)
 {
+	r_clip_mempool = Mem_AllocPool("R_Clip");
 }
 
 void r_clip_shutdown(void)
 {
+	Mem_FreePool(&r_clip_mempool);
 #if CLIPTEST
-	if (clipbuffer)
-		qfree(clipbuffer);
 	clipbuffer = NULL;
 #endif
-	if (clipsurfs)
-		qfree(clipsurfs);
 	clipsurfs = NULL;
-	if (clipedges)
-		qfree(clipedges);
 	clipedges = NULL;
-	if (newedges)
-		qfree(newedges);
 	newedges = NULL;
-	if (removeedges)
-		qfree(removeedges);
 	removeedges = NULL;
 	clipwidth = -1;
 	clipheight = -1;
@@ -881,7 +875,7 @@ void R_Clip_DisplayBuffer(void)
 	int i;
 	static int firstupload = true;
 	byte clipbuffertex[256*256], *b;
-	if (!r_render.value)
+	if (!r_render.integer)
 		return;
 	if (clipwidth > 256 || clipheight > 256)
 		return;

@@ -15,7 +15,6 @@ void ClearStateToDefault(entity_state_t *s)
 	s->scale = 16;
 	s->glowsize = 0;
 	s->glowcolor = 254;
-	s->colormod = 255;
 	s->flags = 0;
 	s->active = 0;
 }

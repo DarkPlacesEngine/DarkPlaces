@@ -6,21 +6,21 @@
 // LordHavoc: later note: made FRAMEBLENDINSERT macro
 void R_LerpAnimation(entity_render_t *r)
 {
-	int sub1, sub2, numframes, f, i, data;
+	int sub1, sub2, numframes, f, i;
 	double sublerp, lerp, d;
-	animscene_t *scene, *scenes;
+	animscene_t *scene;
 	frameblend_t *blend;
 	blend = r->frameblend;
 
 	numframes = r->model->numframes;
 
-	if ((r->frame1 >= numframes))
+	if (r->frame1 >= numframes)
 	{
 		Con_Printf ("CL_LerpAnimation: no such frame %d\n", r->frame1);
 		r->frame1 = 0;
 	}
 
-	if ((r->frame2 >= numframes))
+	if (r->frame2 >= numframes)
 	{
 		Con_Printf ("CL_LerpAnimation: no such frame %d\n", r->frame2);
 		r->frame2 = 0;
@@ -36,23 +36,13 @@ void R_LerpAnimation(entity_render_t *r)
 	if (r->framelerp >= (65535.0f / 65536.0f))
 		r->framelerp = 1;
 
-	blend[0].frame = blend[1].frame = blend[2].frame = blend[3].frame = -1;
+	blend[0].frame = blend[1].frame = blend[2].frame = blend[3].frame = 0;
 	blend[0].lerp = blend[1].lerp = blend[2].lerp = blend[3].lerp = 0;
-	if (r->model->ofs_scenes)
+	if (r->model->animscenes)
 	{
-		if (r->model->cachesize)
-		{
-			data = (int) Mod_Extradata(r->model);
-			if (!data)
-				Host_Error("CL_LerpAnimation: model not loaded\n");
-			scenes = (animscene_t *) (r->model->ofs_scenes + data);
-		}
-		else
-			scenes = (animscene_t *) r->model->ofs_scenes;
-
 		if (r->framelerp < 1 && r->frame1 >= 0)
 		{
-			scene = scenes + r->frame1;
+			scene = r->model->animscenes + r->frame1;
 			lerp = 1 - r->framelerp;
 
 			if (scene->framecount > 1)
@@ -67,14 +57,16 @@ void R_LerpAnimation(entity_render_t *r)
 					sublerp = 1;
 				if (scene->loop)
 				{
-					sub1 = (sub1 % scene->framecount) + scene->firstframe;
-					sub2 = (sub2 % scene->framecount) + scene->firstframe;
+					sub1 = (sub1 % scene->framecount);
+					sub2 = (sub2 % scene->framecount);
 				}
 				else
 				{
-					sub1 = bound(0, sub1, (scene->framecount - 1)) + scene->firstframe;
-					sub2 = bound(0, sub2, (scene->framecount - 1)) + scene->firstframe;
+					sub1 = bound(0, sub1, (scene->framecount - 1));
+					sub2 = bound(0, sub2, (scene->framecount - 1));
 				}
+				sub1 += scene->firstframe;
+				sub2 += scene->firstframe;
 				f = sub1;
 				d = (1 - sublerp) * lerp;
 #define FRAMEBLENDINSERT\
@@ -108,7 +100,7 @@ void R_LerpAnimation(entity_render_t *r)
 		}
 		if (r->framelerp > 0 && r->frame2 >= 0)
 		{
-			scene = scenes + r->frame2;
+			scene = r->model->animscenes + r->frame2;
 			lerp = r->framelerp;
 
 			if (scene->framecount > 1)
@@ -123,14 +115,16 @@ void R_LerpAnimation(entity_render_t *r)
 					sublerp = 1;
 				if (scene->loop)
 				{
-					sub1 = (sub1 % scene->framecount) + scene->firstframe;
-					sub2 = (sub2 % scene->framecount) + scene->firstframe;
+					sub1 = (sub1 % scene->framecount);
+					sub2 = (sub2 % scene->framecount);
 				}
 				else
 				{
-					sub1 = bound(0, sub1, (scene->framecount - 1)) + scene->firstframe;
-					sub2 = bound(0, sub2, (scene->framecount - 1)) + scene->firstframe;
+					sub1 = bound(0, sub1, (scene->framecount - 1));
+					sub2 = bound(0, sub2, (scene->framecount - 1));
 				}
+				sub1 += scene->firstframe;
+				sub2 += scene->firstframe;
 				f = sub1;
 				d = (1 - sublerp) * lerp;
 				FRAMEBLENDINSERT
@@ -161,5 +155,6 @@ void R_LerpAnimation(entity_render_t *r)
 			FRAMEBLENDINSERT
 		}
 	}
+	//Con_Printf("Lerp: %i:%f %i:%f %i:%f %i:%f\n", blend[0].frame, blend[0].lerp, blend[1].frame, blend[1].lerp, blend[2].frame, blend[2].lerp, blend[3].frame, blend[3].lerp);
 }
 

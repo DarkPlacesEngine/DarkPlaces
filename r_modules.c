@@ -18,6 +18,7 @@ rendermodule_t rendermodule[MAXRENDERMODULES];
 void R_Modules_Init(void)
 {
 	int i;
+	Cmd_AddCommand("r_restart", R_Modules_Restart);
 	for (i = 0;i < MAXRENDERMODULES;i++)
 		rendermodule[i].name = NULL;
 }
@@ -58,7 +59,8 @@ void R_Modules_Start(void)
 void R_Modules_Shutdown(void)
 {
 	int i;
-	for (i = 0;i < MAXRENDERMODULES;i++)
+	// shutdown in reverse
+	for (i = MAXRENDERMODULES - 1;i >= 0;i--)
 	{
 		if (rendermodule[i].name == NULL)
 			continue;
@@ -71,6 +73,7 @@ void R_Modules_Shutdown(void)
 
 void R_Modules_Restart(void)
 {
+	Con_Printf("restarting renderer\n");
 	R_Modules_Shutdown();
 	R_Modules_Start();
 }

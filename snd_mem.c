@@ -21,8 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-int			cache_full_cycle;
-
 byte *S_Alloc (int size);
 
 /*
@@ -39,7 +37,7 @@ void ResampleSfx (sfx_t *sfx, int inrate, byte *data, char *name)
 	int		samplefrac, fracstep;
 	sfxcache_t	*sc;
 	
-	sc = Cache_Check (&sfx->cache);
+	sc = sfx->sfxcache;
 	if (!sc)
 		return;
 
@@ -260,9 +258,8 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	sfxcache_t	*sc;
 
 // see if still in memory
-	sc = Cache_Check (&s->cache);
-	if (sc)
-		return sc;
+	if (s->sfxcache)
+		return s->sfxcache;
 
 //Con_Printf ("S_LoadSound: %x\n", (int)stackbuf);
 // load it in
@@ -271,7 +268,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 //	Con_Printf ("loading %s\n",namebuffer);
 
-	data = COM_LoadMallocFile(namebuffer, false);
+	data = COM_LoadFile(namebuffer, false);
 
 	if (!data)
 	{
@@ -284,7 +281,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	if (info.channels < 1 || info.channels > 2)
 	{
 		Con_Printf ("%s has an unsupported number of channels (%i)\n",s->name, info.channels);
-		qfree(data);
+		Mem_Free(data);
 		return NULL;
 	}
 	/*
@@ -295,18 +292,21 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 	}
 	*/
 
-	stepscale = (float)info.rate / shm->speed;	
+	stepscale = (float)info.rate / shm->speed;
 	len = info.samples / stepscale;
 
 	len = len * info.width * info.channels;
 
-	sc = Cache_Alloc ( &s->cache, len + sizeof(sfxcache_t), s->name);
+	// FIXME: add S_UnloadSounds or something?
+	Mem_FreePool(&s->mempool);
+	s->mempool = Mem_AllocPool(s->name);
+	sc = s->sfxcache = Mem_Alloc(s->mempool, len + sizeof(sfxcache_t));
 	if (!sc)
 	{
-		qfree(data);
+		Mem_Free(data);
 		return NULL;
 	}
-	
+
 	sc->length = info.samples;
 	sc->loopstart = info.loopstart;
 	sc->speed = info.rate;
@@ -315,7 +315,7 @@ sfxcache_t *S_LoadSound (sfx_t *s)
 
 	ResampleSfx (s, sc->speed, data + info.dataofs, s->name);
 
-	qfree(data);
+	Mem_Free(data);
 	return sc;
 }
 

@@ -46,37 +46,6 @@ static HANDLE	hFile;
 static HANDLE	heventParent;
 static HANDLE	heventChild;
 
-volatile int					sys_checksum;
-
-
-/*
-================
-Sys_PageIn
-================
-*/
-/*
-void Sys_PageIn (void *ptr, int size)
-{
-	byte	*x;
-	int		m, n;
-
-// touch all the memory to make sure it's there. The 16-page skip is to
-// keep Win 95 from thinking we're trying to page ourselves in (we are
-// doing that, of course, but there's no reason we shouldn't)
-	x = (byte *)ptr;
-
-	for (n=0 ; n<4 ; n++)
-	{
-		for (m=0 ; m<(size - 16 * 0x1000) ; m += 4)
-		{
-			sys_checksum += *(int *)&x[m];
-			sys_checksum += *(int *)&x[m + 16 * 0x1000];
-		}
-	}
-}
-*/
-
-
 /*
 ===============================================================================
 
@@ -591,24 +560,6 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	host_parms.argv = com_argv;
 
 	Sys_Shared_EarlyInit();
-
-// take the greater of all the available memory or half the total memory,
-// but at least 8 Mb and no more than 16 Mb, unless they explicitly
-// request otherwise
-	/*
-	host_parms.memsize = lpBuffer.dwAvailPhys;
-
-	if (host_parms.memsize < MINIMUM_WIN_MEMORY)
-		host_parms.memsize = MINIMUM_WIN_MEMORY;
-
-	if (host_parms.memsize < (lpBuffer.dwTotalPhys >> 1))
-		host_parms.memsize = lpBuffer.dwTotalPhys >> 1;
-
-	if (host_parms.memsize > MAXIMUM_WIN_MEMORY)
-		host_parms.memsize = MAXIMUM_WIN_MEMORY;
-	*/
-
-//	Sys_PageIn (parms.membase, parms.memsize);
 
 	tevent = CreateEvent(NULL, false, false, NULL);
 

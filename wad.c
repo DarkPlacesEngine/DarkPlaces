@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -21,9 +21,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-int			wad_numlumps;
-lumpinfo_t	*wad_lumps;
-byte		*wad_base;
+static int			wad_numlumps;
+static lumpinfo_t	*wad_lumps;
+static byte			*wad_base = NULL;
+static mempool_t	*wad_mempool = NULL;
 
 void SwapPic (qpic_t *pic);
 
@@ -38,22 +39,22 @@ Space padding is so names can be printed nicely in tables.
 Can safely be performed in place.
 ==================
 */
-void W_CleanupName (char *in, char *out)
+static void W_CleanupName (char *in, char *out)
 {
 	int		i;
 	int		c;
-	
+
 	for (i=0 ; i<16 ; i++ )
 	{
 		c = in[i];
 		if (!c)
 			break;
-			
+
 		if (c >= 'A' && c <= 'Z')
 			c += ('a' - 'A');
 		out[i] = c;
 	}
-	
+
 	for ( ; i< 16 ; i++ )
 		out[i] = 0;
 }
@@ -71,23 +72,29 @@ void W_LoadWadFile (char *filename)
 	wadinfo_t		*header;
 	unsigned		i;
 	int				infotableofs;
-	
-	wad_base = COM_LoadHunkFile (filename, false);
-	if (!wad_base)
+	void			*temp;
+
+	temp = COM_LoadFile (filename, false);
+	if (!temp)
 		Sys_Error ("W_LoadWadFile: couldn't load %s", filename);
 
+	if (wad_mempool)
+		Mem_FreePool(&wad_mempool);
+	wad_mempool = Mem_AllocPool(filename);
+	wad_base = Mem_Alloc(wad_mempool, loadsize);
+
+	memcpy(wad_base, temp, loadsize);
+	Mem_Free(temp);
+
 	header = (wadinfo_t *)wad_base;
-	
-	if (header->identification[0] != 'W'
-	|| header->identification[1] != 'A'
-	|| header->identification[2] != 'D'
-	|| header->identification[3] != '2')
+
+	if (memcmp(header->identification, "WAD2", 4))
 		Sys_Error ("Wad file %s doesn't have WAD2 id\n",filename);
-		
+
 	wad_numlumps = LittleLong(header->numlumps);
 	infotableofs = LittleLong(header->infotableofs);
 	wad_lumps = (lumpinfo_t *)(wad_base + infotableofs);
-	
+
 	for (i=0, lump_p = wad_lumps ; i<wad_numlumps ; i++,lump_p++)
 	{
 		lump_p->filepos = LittleLong(lump_p->filepos);
@@ -98,49 +105,20 @@ void W_LoadWadFile (char *filename)
 	}
 }
 
-
-/*
-=============
-W_GetLumpinfo
-=============
-*/
-lumpinfo_t	*W_GetLumpinfo (char *name)
-{
-	int		i;
-	lumpinfo_t	*lump_p;
-	char	clean[16];
-	
-	W_CleanupName (name, clean);
-	
-	for (lump_p=wad_lumps, i=0 ; i<wad_numlumps ; i++,lump_p++)
-	{
-		if (!strcmp(clean, lump_p->name))
-			return lump_p;
-	}
-	
-	Sys_Error ("W_GetLumpinfo: %s not found", name);
-	return NULL;
-}
-
 void *W_GetLumpName (char *name)
 {
+	int		i;
 	lumpinfo_t	*lump;
-	
-	lump = W_GetLumpinfo (name);
-	
-	return (void *)(wad_base + lump->filepos);
-}
+	char	clean[16];
 
-void *W_GetLumpNum (int num)
-{
-	lumpinfo_t	*lump;
-	
-	if (num < 0 || num > wad_numlumps)
-		Sys_Error ("W_GetLumpNum: bad number: %i", num);
-		
-	lump = wad_lumps + num;
-	
-	return (void *)(wad_base + lump->filepos);
+	W_CleanupName (name, clean);
+
+	for (lump = wad_lumps, i = 0;i < wad_numlumps;i++, lump++)
+		if (!strcmp(clean, lump->name))
+			return (void *)(wad_base + lump->filepos);
+
+	Sys_Error ("W_GetLumpinfo: %s not found", name);
+	return NULL;
 }
 
 /*
@@ -154,7 +132,7 @@ automatic byte swapping
 void SwapPic (qpic_t *pic)
 {
 	pic->width = LittleLong(pic->width);
-	pic->height = LittleLong(pic->height);	
+	pic->height = LittleLong(pic->height);
 }
 
 // LordHavoc: added alternate WAD2/WAD3 system for HalfLife texture wads
@@ -167,7 +145,7 @@ typedef struct
 	int size;
 } texwadlump_t;
 
-texwadlump_t	texwadlump[TEXWAD_MAXIMAGES];
+static texwadlump_t texwadlump[TEXWAD_MAXIMAGES];
 
 /*
 ====================
@@ -182,7 +160,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	int				infotableofs;
 	QFile			*file;
 	int				numlumps;
-	
+
 	COM_FOpenFile (filename, &file, false, false);
 	if (!file)
 	{
@@ -193,11 +171,8 @@ void W_LoadTextureWadFile (char *filename, int complain)
 
 	if (Qread(file, &header, sizeof(wadinfo_t)) != sizeof(wadinfo_t))
 	{Con_Printf ("W_LoadTextureWadFile: unable to read wad header");return;}
-	
-	if(header.identification[0] != 'W'
-	|| header.identification[1] != 'A'
-	|| header.identification[2] != 'D'
-	|| header.identification[3] != '3')
+
+	if(memcmp(header.identification, "WAD3", 4))
 	{Con_Printf ("W_LoadTextureWadFile: Wad file %s doesn't have WAD3 id\n",filename);return;}
 
 	numlumps = LittleLong(header.numlumps);
@@ -206,7 +181,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 	infotableofs = LittleLong(header.infotableofs);
 	if (Qseek(file, infotableofs, SEEK_SET))
 	{Con_Printf ("W_LoadTextureWadFile: unable to seek to lump table");return;}
-	if (!(lumps = qmalloc(sizeof(lumpinfo_t)*numlumps)))
+	if (!(lumps = Mem_Alloc(tempmempool, sizeof(lumpinfo_t)*numlumps)))
 	{Con_Printf ("W_LoadTextureWadFile: unable to allocate temporary memory for lump table");return;}
 
 	if (Qread(file, lumps, sizeof(lumpinfo_t) * numlumps) != sizeof(lumpinfo_t) * numlumps)
@@ -232,7 +207,7 @@ void W_LoadTextureWadFile (char *filename, int complain)
 		texwadlump[j].position = LittleLong(lump_p->filepos);
 		texwadlump[j].size = LittleLong(lump_p->disksize);
 	}
-	qfree(lumps);
+	Mem_Free(lumps);
 	// leaves the file open
 }
 
@@ -296,7 +271,7 @@ byte *W_ConvertWAD3Texture(miptex_t *tex)
 //	int palsize;
 	int d, p;
 	in = (byte *)((int) tex + tex->offsets[0]);
-	data = out = qmalloc(tex->width * tex->height * 4);
+	data = out = Mem_Alloc(tempmempool, tex->width * tex->height * 4);
 	if (!data)
 		return NULL;
 	image_width = tex->width;
@@ -346,7 +321,7 @@ byte *W_GetTexture(char *name)
 				if (Qseek(file, texwadlump[i].position, SEEK_SET))
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 
-				tex = qmalloc(texwadlump[i].size);
+				tex = Mem_Alloc(tempmempool, texwadlump[i].size);
 				if (!tex)
 					return NULL;
 				if (Qread(file, tex, texwadlump[i].size) < texwadlump[i].size)
@@ -357,7 +332,7 @@ byte *W_GetTexture(char *name)
 				for (j = 0;j < MIPLEVELS;j++)
 					tex->offsets[j] = LittleLong(tex->offsets[j]);
 				data = W_ConvertWAD3Texture(tex);
-				qfree(tex);
+				Mem_Free(tex);
 				return data;
 				/*
 				image_width = LittleLong(t.width);
@@ -370,7 +345,7 @@ byte *W_GetTexture(char *name)
 				{Con_Printf("W_GetTexture: corrupt WAD3 file");return NULL;}
 				// allocate space for expanded image,
 				// and load incoming image into upper area (overwritten as it expands)
-				if (!(data = outdata = qmalloc(image_width*image_height*4)))
+				if (!(data = outdata = Mem_Alloc(tempmempool, image_width*image_height*4)))
 				{Con_Printf("W_GetTexture: out of memory");return NULL;}
 				indata = outdata + image_width*image_height*3;
 				datasize = image_width*image_height*85/64;

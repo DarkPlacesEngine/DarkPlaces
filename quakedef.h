@@ -23,6 +23,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern int buildnumber;
 
+#if !defined BYTE_DEFINED
+typedef unsigned char 		byte;
+#define BYTE_DEFINED 1
+#endif
+
+#undef true
+#undef false
+
+typedef enum {false, true} qboolean;
+
+#ifndef NULL
+#define NULL ((void *)0)
+#endif
+
 #ifndef FALSE
 #define FALSE 0
 #define TRUE 1
@@ -35,7 +49,7 @@ extern int buildnumber;
 #define ASSERT(condition)
 #endif
 
-#define	GAMENAME	"id1"
+#define GAMENAME "id1"
 
 #include <math.h>
 #include <string.h>
@@ -43,13 +57,6 @@ extern int buildnumber;
 #include <stdio.h>
 #include <stdlib.h>
 #include <setjmp.h>
-
-#define UNUSED(x)	(x = x)	// for pesky compiler / lint warnings
-
-// LordHavoc: default heap size (unless -heapsize, -mem, or -winmem is used), in megabytes
-#define DEFAULTMEM 24
-//#define	MINIMUM_MEMORY			0x550000
-//#define	MINIMUM_MEMORY_LEVELPAK	(MINIMUM_MEMORY + 0x100000)
 
 #define MAX_NUM_ARGVS	50
 
@@ -179,12 +186,13 @@ extern int buildnumber;
 
 #define	SOUND_CHANNELS		8
 
+#include "zone.h"
+#include "quakeio.h"
 #include "common.h"
 #include "cvar.h"
 #include "bspfile.h"
 #include "vid.h"
 #include "sys.h"
-#include "zone.h"
 #include "mathlib.h"
 
 #include "r_textures.h"
@@ -198,8 +206,8 @@ extern int buildnumber;
 #include "sbar.h"
 #include "sound.h"
 #include "model_shared.h"
-#include "render.h"
 #include "client.h"
+#include "render.h"
 #include "progs.h"
 #include "server.h"
 
@@ -232,8 +240,6 @@ typedef struct
 #endif
 	int		argc;
 	char	**argv;
-	void	*membase;
-	int		memsize;
 } quakeparms_t;
 
 

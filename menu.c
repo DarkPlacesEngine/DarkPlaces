@@ -958,8 +958,8 @@ void M_Menu_Setup_f (void)
 	m_entersound = true;
 	strcpy(setup_myname, cl_name.string);
 	strcpy(setup_hostname, hostname.string);
-	setup_top = setup_oldtop = ((int)cl_color.value) >> 4;
-	setup_bottom = setup_oldbottom = ((int)cl_color.value) & 15;
+	setup_top = setup_oldtop = cl_color.integer >> 4;
+	setup_bottom = setup_oldbottom = cl_color.integer & 15;
 }
 
 
@@ -1236,7 +1236,7 @@ again:
 //=============================================================================
 /* OPTIONS MENU */
 
-#define	OPTIONS_ITEMS	(vid_menudrawfn ? 24 : 23)
+#define	OPTIONS_ITEMS	(vid_menudrawfn ? 25 : 24)
 
 #define	SLIDER_RANGE	10
 
@@ -1260,38 +1260,42 @@ void M_AdjustSliders (int dir)
 		Cvar_SetValue ("viewsize", bound(30, scr_viewsize.value + dir * 10, 120));
 		break;
 	case 4:
-		Cvar_SetValue ("r_ser", !r_ser.value);
+		Cvar_SetValue ("r_ser", !r_ser.integer);
 		break;
 
 	case 5: // overbright rendering
-		Cvar_SetValue ("gl_lightmode", !gl_lightmode.value);
+		Cvar_SetValue ("gl_lightmode", !gl_lightmode.integer);
 		break;
 
-	case 6: // sky quality
-		Cvar_SetValue ("r_skyquality", bound(0, r_skyquality.value + dir, 4));
+	case 6: // dithering
+		Cvar_SetValue ("gl_dither", !gl_dither.integer);
 		break;
 
-	case 7:	// hardware gamma
+	case 7: // sky quality
+		Cvar_SetValue ("r_skyquality", bound(0, r_skyquality.integer + dir, 2));
+		break;
+
+	case 8:	// hardware gamma
 		Cvar_SetValue ("vid_gamma", bound(1, vid_gamma.value + dir * 0.25, 5));
 		break;
 
-	case 8:	// hardware brightness
+	case 9:	// hardware brightness
 		Cvar_SetValue ("vid_brightness", bound(1, vid_brightness.value + dir * 0.25, 5));
 		break;
 
-	case 9:	// hardware contrast
+	case 10:	// hardware contrast
 		Cvar_SetValue ("vid_contrast", bound(0.2, vid_contrast.value + dir * 0.08, 1));
 		break;
 
-	case 10:	// software brightness
+	case 11:	// software brightness
 		Cvar_SetValue ("r_brightness", bound(1, r_brightness.value + dir * 0.25, 5));
 		break;
 
-	case 11: // software base brightness
+	case 12: // software base brightness
 		Cvar_SetValue ("r_contrast", bound(0.2, r_contrast.value + dir * 0.08, 1));
 		break;
 
-	case 12: // music volume
+	case 13: // music volume
 #ifdef _WIN32
 		Cvar_SetValue ("bgmvolume", bound(0, bgmvolume.value + dir * 1.0, 1));
 #else
@@ -1299,11 +1303,11 @@ void M_AdjustSliders (int dir)
 #endif
 		break;
 
-	case 13: // sfx volume
+	case 14: // sfx volume
 		Cvar_SetValue ("volume", bound(0, volume.value + dir * 0.1, 1));
 		break;
 
-	case 14: // always run
+	case 15: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValue ("cl_forwardspeed", 200);
@@ -1316,36 +1320,36 @@ void M_AdjustSliders (int dir)
 		}
 		break;
 
-	case 15: // lookspring
-		Cvar_SetValue ("lookspring", !lookspring.value);
+	case 16: // lookspring
+		Cvar_SetValue ("lookspring", !lookspring.integer);
 		break;
 
-	case 16: // lookstrafe
-		Cvar_SetValue ("lookstrafe", !lookstrafe.value);
+	case 17: // lookstrafe
+		Cvar_SetValue ("lookstrafe", !lookstrafe.integer);
 		break;
 
-	case 17: // mouse speed
+	case 18: // mouse speed
 		Cvar_SetValue ("sensitivity", bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
 
-	case 18: // mouse look
-		Cvar_SetValue ("freelook", !freelook.value);
+	case 19: // mouse look
+		Cvar_SetValue ("freelook", !freelook.integer);
 		break;
 
-	case 19: // invert mouse
+	case 20: // invert mouse
 		Cvar_SetValue ("m_pitch", -m_pitch.value);
 		break;
 
-	case 20: // windowed mouse
-		Cvar_SetValue ("vid_mouse", !vid_mouse.value);
+	case 21: // windowed mouse
+		Cvar_SetValue ("vid_mouse", !vid_mouse.integer);
 		break;
 
-	case 21:
-		Cvar_SetValue ("crosshair", bound(0, crosshair.value + dir, 5));
+	case 22:
+		Cvar_SetValue ("crosshair", bound(0, crosshair.integer + dir, 5));
 		break;
 
-	case 22: // show framerate
-		Cvar_SetValue ("showfps", !showfps.value);
+	case 23: // show framerate
+		Cvar_SetValue ("showfps", !showfps.integer);
 		break;
 	}
 }
@@ -1394,9 +1398,10 @@ void M_Options_Draw (void)
 	M_Print(16, y, "         Go to console");y += 8;
 	M_Print(16, y, "     Reset to defaults");y += 8;
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, (scr_viewsize.value - 30) /(120 - 30));y += 8;
-	M_Print(16, y, "Hidden Surface Removal");M_DrawCheckbox(220, y, r_ser.value);y += 8;
-	M_Print(16, y, "  Overbright Rendering");M_DrawCheckbox(220, y, gl_lightmode.value);y += 8;
-	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 4);y += 8;
+	M_Print(16, y, "Hidden Surface Removal");M_DrawCheckbox(220, y, r_ser.integer);y += 8;
+	M_Print(16, y, "  Overbright Rendering");M_DrawCheckbox(220, y, gl_lightmode.integer);y += 8;
+	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;
+	M_Print(16, y, "           Sky Quality");M_DrawSlider(220, y, r_skyquality.value / 2);y += 8;
 	M_Print(16, y, "        Hardware Gamma");M_DrawSlider(220, y, (vid_gamma.value - 1) / 4);y += 8;
 	M_Print(16, y, "   Hardware Brightness");M_DrawSlider(220, y, (vid_brightness.value - 1) / 4);y += 8;
 	M_Print(16, y, "     Hardware Contrast");M_DrawSlider(220, y, (vid_contrast.value - 0.2) / 0.8);y += 8;
@@ -1405,14 +1410,14 @@ void M_Options_Draw (void)
 	M_Print(16, y, "       CD Music Volume");M_DrawSlider(220, y, bgmvolume.value);y += 8;
 	M_Print(16, y, "          Sound Volume");M_DrawSlider(220, y, volume.value);y += 8;
 	M_Print(16, y, "            Always Run");M_DrawCheckbox(220, y, cl_forwardspeed.value > 200);y += 8;
-	M_Print(16, y, "            Lookspring");M_DrawCheckbox(220, y, lookspring.value);y += 8;
-	M_Print(16, y, "            Lookstrafe");M_DrawCheckbox(220, y, lookstrafe.value);y += 8;
+	M_Print(16, y, "            Lookspring");M_DrawCheckbox(220, y, lookspring.integer);y += 8;
+	M_Print(16, y, "            Lookstrafe");M_DrawCheckbox(220, y, lookstrafe.integer);y += 8;
 	M_Print(16, y, "           Mouse Speed");M_DrawSlider(220, y, (sensitivity.value - 1)/50);y += 8;
-	M_Print(16, y, "            Mouse Look");M_DrawCheckbox(220, y, freelook.value);y += 8;
+	M_Print(16, y, "            Mouse Look");M_DrawCheckbox(220, y, freelook.integer);y += 8;
 	M_Print(16, y, "          Invert Mouse");M_DrawCheckbox(220, y, m_pitch.value < 0);y += 8;
-	M_Print(16, y, "             Use Mouse");M_DrawCheckbox(220, y, vid_mouse.value);y += 8;
+	M_Print(16, y, "             Use Mouse");M_DrawCheckbox(220, y, vid_mouse.integer);y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value / 5);y += 8;
-	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.value);y += 8;
+	M_Print(16, y, "        Show Framerate");M_DrawCheckbox(220, y, showfps.integer);y += 8;
 	if (vid_menudrawfn)
 		M_Print(16, y, "         Video Options");
 	y += 8;
@@ -2327,9 +2332,9 @@ void M_GameOptions_Draw (void)
 	M_Print (160, 56, va("%i", maxplayers) );
 
 	M_Print (0, 64, "        Game Type");
-	if (!coop.value && !deathmatch.value)
+	if (!coop.integer && !deathmatch.integer)
 		Cvar_SetValue("deathmatch", 1);
-	if (coop.value)
+	if (coop.integer)
 		M_Print (160, 64, "Cooperative");
 	else
 		M_Print (160, 64, "Deathmatch");
@@ -2339,7 +2344,7 @@ void M_GameOptions_Draw (void)
 	{
 		char *msg;
 
-		switch((int)teamplay.value)
+		switch((int)teamplay.integer)
 		{
 			case 1: msg = "No Friendly Fire"; break;
 			case 2: msg = "Friendly Fire"; break;
@@ -2355,7 +2360,7 @@ void M_GameOptions_Draw (void)
 	{
 		char *msg;
 
-		switch((int)teamplay.value)
+		switch((int)teamplay.integer)
 		{
 			case 1: msg = "No Friendly Fire"; break;
 			case 2: msg = "Friendly Fire"; break;
@@ -2365,26 +2370,26 @@ void M_GameOptions_Draw (void)
 	}
 
 	M_Print (0, 80, "            Skill");
-	if (skill.value == 0)
+	if (skill.integer == 0)
 		M_Print (160, 80, "Easy difficulty");
-	else if (skill.value == 1)
+	else if (skill.integer == 1)
 		M_Print (160, 80, "Normal difficulty");
-	else if (skill.value == 2)
+	else if (skill.integer == 2)
 		M_Print (160, 80, "Hard difficulty");
 	else
 		M_Print (160, 80, "Nightmare difficulty");
 
 	M_Print (0, 88, "       Frag Limit");
-	if (fraglimit.value == 0)
+	if (fraglimit.integer == 0)
 		M_Print (160, 88, "none");
 	else
-		M_Print (160, 88, va("%i frags", (int)fraglimit.value));
+		M_Print (160, 88, va("%i frags", fraglimit.integer));
 
 	M_Print (0, 96, "       Time Limit");
-	if (timelimit.value == 0)
+	if (timelimit.integer == 0)
 		M_Print (160, 96, "none");
 	else
-		M_Print (160, 96, va("%i minutes", (int)timelimit.value));
+		M_Print (160, 96, va("%i minutes", timelimit.integer));
 
 	M_Print (0, 112, "         Episode");
 	//MED 01/06/97 added hipnotic episodes
@@ -2470,7 +2475,7 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 2:
-		if (deathmatch.value) // changing from deathmatch to coop
+		if (deathmatch.integer) // changing from deathmatch to coop
 		{
 			Cvar_SetValue ("coop", 1);
 			Cvar_SetValue ("deathmatch", 0);
@@ -2488,26 +2493,26 @@ void M_NetStart_Change (int dir)
 		else
 			count = 2;
 
-		Cvar_SetValue ("teamplay", teamplay.value + dir);
-		if (teamplay.value > count)
+		Cvar_SetValue ("teamplay", teamplay.integer + dir);
+		if (teamplay.integer > count)
 			Cvar_SetValue ("teamplay", 0);
-		else if (teamplay.value < 0)
+		else if (teamplay.integer < 0)
 			Cvar_SetValue ("teamplay", count);
 		break;
 
 	case 4:
-		Cvar_SetValue ("skill", skill.value + dir);
-		if (skill.value > 3)
+		Cvar_SetValue ("skill", skill.integer + dir);
+		if (skill.integer > 3)
 			Cvar_SetValue ("skill", 0);
-		if (skill.value < 0)
+		if (skill.integer < 0)
 			Cvar_SetValue ("skill", 3);
 		break;
 
 	case 5:
-		Cvar_SetValue ("fraglimit", fraglimit.value + dir*10);
-		if (fraglimit.value > 100)
+		Cvar_SetValue ("fraglimit", fraglimit.integer + dir*10);
+		if (fraglimit.integer > 100)
 			Cvar_SetValue ("fraglimit", 0);
-		if (fraglimit.value < 0)
+		if (fraglimit.integer < 0)
 			Cvar_SetValue ("fraglimit", 100);
 		break;
 
@@ -2530,7 +2535,7 @@ void M_NetStart_Change (int dir)
 			count = 4;
 		else if (gamemode == GAME_NEHAHRA)
 			count = 4;
-		else if (registered.value)
+		else if (registered.integer)
 			count = 7;
 		else
 			count = 2;

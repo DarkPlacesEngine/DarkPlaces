@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -31,12 +31,6 @@ typedef struct
 	int right;
 } portable_samplepair_t;
 
-typedef struct sfx_s
-{
-	char 	name[MAX_QPATH];
-	cache_user_t	cache;
-} sfx_t;
-
 typedef struct
 {
 	int 	length;
@@ -46,6 +40,13 @@ typedef struct
 	int 	stereo;
 	byte	data[1];		// variable sized
 } sfxcache_t;
+
+typedef struct sfx_s
+{
+	char 	name[MAX_QPATH];
+	mempool_t	*mempool;
+	sfxcache_t	*sfxcache;
+} sfx_t;
 
 typedef struct
 {

@@ -67,15 +67,12 @@ extern	lumpinfo_t	*wad_lumps;
 extern	byte		*wad_base;
 
 void	W_LoadWadFile (char *filename);
-void	W_CleanupName (char *in, char *out);
-lumpinfo_t	*W_GetLumpinfo (char *name);
 void	*W_GetLumpName (char *name);
-void	*W_GetLumpNum (int num);
 
 void SwapPic (qpic_t *pic);
 
 // LordHavoc: added alternate texture WAD2/WAD3 system for easier loading of HalfLife texture wads
 extern int image_width, image_height;
 void	W_LoadTextureWadFile (char *filename, int complain);
-byte	*W_GetTexture (char *name); // returns malloc'd image data, width and height are in image_width and image_height
-byte	*W_ConvertWAD3Texture(miptex_t *tex); // returns malloc'd image data, width and height are in image_width and image_height
+byte	*W_GetTexture (char *name); // returns tempmempool allocated image data, width and height are in image_width and image_height
+byte	*W_ConvertWAD3Texture(miptex_t *tex); // returns tempmempool allocated image data, width and height are in image_width and image_height

@@ -7,9 +7,11 @@ cvar_t crosshair_flashrange = {CVAR_SAVE, "crosshair_flashrange", "0.1"};
 
 #define NUMCROSSHAIRS 5
 
-rtexture_t *crosshairtex[NUMCROSSHAIRS];
+static rtexturepool_t *crosshairtexturepool;
 
-byte *crosshairtexdata[NUMCROSSHAIRS] =
+static rtexture_t *crosshairtex[NUMCROSSHAIRS];
+
+static byte *crosshairtexdata[NUMCROSSHAIRS] =
 {
 	"0000000000000000"
 	"0000000000000000"
@@ -97,7 +99,7 @@ byte *crosshairtexdata[NUMCROSSHAIRS] =
 	"0000000000000000"
 };
 
-void crosshairload(int num, byte *in)
+static void crosshairload(int num, byte *in)
 {
 	int i;
 	byte data[16*16][4];
@@ -106,22 +108,24 @@ void crosshairload(int num, byte *in)
 		data[i][0] = data[i][1] = data[i][2] = 255;
 		data[i][3] = (in[i] - '0') * 255 / 7;
 	}
-	crosshairtex[num] = R_LoadTexture(va("crosshair%02d", num), 16, 16, &data[0][0], TEXF_ALPHA | TEXF_RGBA | TEXF_PRECACHE);
+	crosshairtex[num] = R_LoadTexture(crosshairtexturepool, va("crosshair%02d", num), 16, 16, &data[0][0], TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
 }
 
-void r_crosshairs_start(void)
+static void r_crosshairs_start(void)
 {
 	int i;
+	crosshairtexturepool = R_AllocTexturePool();
 	for (i = 0;i < NUMCROSSHAIRS;i++)
 		crosshairload(i, crosshairtexdata[i]);
 //	crosshairtex[1] = crosshairload(crosshairtex2);
 }
 
-void r_crosshairs_shutdown(void)
+static void r_crosshairs_shutdown(void)
 {
+	R_FreeTexturePool(&crosshairtexturepool);
 }
 
-void r_crosshairs_newmap(void)
+static void r_crosshairs_newmap(void)
 {
 }
 

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -85,8 +85,8 @@ loc0:
 			surf = sv.worldmodel->surfaces + node->firstsurface;
 			for (i = 0;i < node->numsurfaces;i++, surf++)
 			{
-				if (surf->flags & SURF_DRAWTILED)
-					continue;	// no lightmaps
+				if (!(surf->flags & SURF_LIGHTMAP))
+					continue;
 
 				ds = (int) (x * surf->texinfo->vecs[0][0] + y * surf->texinfo->vecs[0][1] + mid * surf->texinfo->vecs[0][2] + surf->texinfo->vecs[0][3]);
 				dt = (int) (x * surf->texinfo->vecs[1][0] + y * surf->texinfo->vecs[1][1] + mid * surf->texinfo->vecs[1][2] + surf->texinfo->vecs[1][3]);
@@ -139,12 +139,13 @@ loc0:
 // LordHavoc: added light checking to the server
 void SV_LightPoint (vec3_t color, vec3_t p)
 {
+	Mod_CheckLoaded(sv.worldmodel);
 	if (!sv.worldmodel->lightdata)
 	{
 		color[0] = color[1] = color[2] = 255;
 		return;
 	}
-	
+
 	color[0] = color[1] = color[2] = 0;
 	SV_RecursiveLightPoint (color, sv.worldmodel->nodes, p[0], p[1], p[2], p[2] - 65536);
 }

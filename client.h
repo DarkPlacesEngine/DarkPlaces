@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -18,6 +18,70 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // client.h
+
+typedef struct frameblend_s
+{
+	int frame;
+	float lerp;
+}
+frameblend_t;
+
+// LordHavoc: nothing in this structure is persistant, it may be overwritten by the client every frame, for persistant data use entity_lerp_t.
+typedef struct entity_render_s
+{
+	vec3_t	origin;			// location
+	vec3_t	angles;			// orientation
+	float	alpha;			// opacity (alpha) of the model
+	float	scale;			// size the model is shown
+
+	model_t	*model;			// NULL = no model
+	int		frame;			// current uninterpolated animation frame (for things which do not use interpolation)
+	int		colormap;		// entity shirt and pants colors
+	int		effects;		// light, particles, etc
+	int		skinnum;		// for Alias models
+	int		flags;			// render flags
+
+	// these are copied from the persistent data
+	int		frame1;			// frame that the model is interpolating from
+	int		frame2;			// frame that the model is interpolating to
+	double	framelerp;		// interpolation factor, usually computed from frame2time
+	double	frame1time;		// time frame1 began playing (for framegroup animations)
+	double	frame2time;		// time frame2 began playing (for framegroup animations)
+
+	// calculated by the renderer (but not persistent)
+	int		visframe;		// if visframe == r_framecount, it is visible
+	vec3_t	mins, maxs;		// calculated during R_AddModelEntities
+	frameblend_t	frameblend[4]; // 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
+}
+entity_render_t;
+
+typedef struct entity_persistent_s
+{
+	// particles
+	vec3_t	trail_origin;	// trail rendering
+	float	trail_time;		// trail rendering
+
+	// interpolated animation
+	int		modelindex;		// lerp resets when model changes
+	int		frame1;			// frame that the model is interpolating from
+	int		frame2;			// frame that the model is interpolating to
+	double	framelerp;		// interpolation factor, usually computed from frame2time
+	double	frame1time;		// time frame1 began playing (for framegroup animations)
+	double	frame2time;		// time frame2 began playing (for framegroup animations)
+}
+entity_persistent_t;
+
+typedef struct entity_s
+{
+	entity_state_t state_baseline;	// baseline state (default values)
+	entity_state_t state_previous;	// previous state (interpolating from this)
+	entity_state_t state_current;	// current state (interpolating to this)
+
+	entity_persistent_t persistent; // used for regenerating parts of render
+
+	entity_render_t render; // the only data the renderer should know about
+}
+entity_t;
 
 typedef struct
 {
@@ -64,8 +128,6 @@ typedef struct
 
 #define	SIGNONS		4			// signon messages to receive before connected
 
-#include "r_light.h"
-
 #define	MAX_BEAMS	24
 typedef struct
 {
@@ -96,7 +158,7 @@ typedef struct
 {
 	cactive_t	state;
 
-// personalization data sent to server	
+// personalization data sent to server
 	char		mapstring[MAX_QPATH];
 	char		spawnparms[MAX_MAPSTRING];	// to restart a level
 
@@ -134,7 +196,7 @@ typedef struct
 {
 	int			movemessages;	// since connecting to this server
 								// throw out the first couple, so the player
-								// doesn't accidentally do something the 
+								// doesn't accidentally do something the
 								// first frame
 	usercmd_t	cmd;			// last command sent to the server
 
@@ -154,7 +216,7 @@ typedef struct
 	vec3_t		mviewangles[2];	// during demo playback viewangles is lerped
 								// between these
 	vec3_t		viewangles;
-	
+
 	vec3_t		mvelocity[2];	// update by server, used for lean+bob
 								// (0 is newest)
 	vec3_t		velocity;		// lerped between mvelocity[0] and [1]
@@ -179,7 +241,7 @@ typedef struct
 	int			intermission;	// don't change view angle, full screen, etc
 	int			completed_time;	// latched at intermission start
 
-	double		mtime[2];		// the timestamp of last two messages	
+	double		mtime[2];		// the timestamp of last two messages
 	double		time;			// clients view of time, should be between
 								// servertime and oldservertime to generate
 								// a lerp point for other data
@@ -215,6 +277,7 @@ typedef struct
 }
 client_state_t;
 
+extern mempool_t *cl_scores_mempool;
 
 //
 // cvars
@@ -266,26 +329,22 @@ extern	lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
 extern	entity_t		cl_temp_entities[MAX_TEMP_ENTITIES];
 extern	beam_t			cl_beams[MAX_BEAMS];
 
-//=============================================================================
-
 #include "cl_light.h"
+
+//=============================================================================
 
 //
 // cl_main
 //
 
-extern void CL_Init (void);
+void CL_Init (void);
 
-extern void CL_EstablishConnection (char *host);
-extern void CL_Signon1 (void);
-extern void CL_Signon2 (void);
-extern void CL_Signon3 (void);
-extern void CL_Signon4 (void);
+void CL_EstablishConnection (char *host);
 
-extern void CL_Disconnect (void);
-extern void CL_Disconnect_f (void);
-extern void CL_NextDemo (void);
+void CL_Disconnect (void);
+void CL_Disconnect_f (void);
 
+// LordHavoc: fixme: move this to r_refdef?
 // LordHavoc: raised this from 256 to the maximum possible number of entities visible
 #define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
 extern	int			cl_numvisedicts;
@@ -305,62 +364,134 @@ extern	kbutton_t	in_mlook, in_klook;
 extern 	kbutton_t 	in_strafe;
 extern 	kbutton_t 	in_speed;
 
-extern void CL_InitInput (void);
-extern void CL_SendCmd (void);
-extern void CL_SendMove (usercmd_t *cmd);
+void CL_InitInput (void);
+void CL_SendCmd (void);
+void CL_SendMove (usercmd_t *cmd);
 
-extern void CL_ParseTEnt (void);
-extern void CL_UpdateTEnts (void);
-extern void CL_DoEffects (void);
+void CL_LerpUpdate(entity_t *e, int frame, int modelindex);
+void CL_ParseTEnt (void);
+void CL_UpdateTEnts (void);
 
-extern entity_t *CL_NewTempEntity (void);
+entity_t *CL_NewTempEntity (void);
 
-extern void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
+void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
 
-extern void CL_ClearState (void);
-
-
-extern int  CL_ReadFromServer (void);
-extern void CL_WriteToServer (usercmd_t *cmd);
-extern void CL_BaseMove (usercmd_t *cmd);
+void CL_ClearState (void);
 
 
-extern float CL_KeyState (kbutton_t *key);
-extern char *Key_KeynumToString (int keynum);
+int  CL_ReadFromServer (void);
+void CL_WriteToServer (usercmd_t *cmd);
+void CL_BaseMove (usercmd_t *cmd);
+
+
+float CL_KeyState (kbutton_t *key);
+char *Key_KeynumToString (int keynum);
 
 //
 // cl_demo.c
 //
-extern void CL_StopPlayback (void);
-extern int CL_GetMessage (void);
+void CL_StopPlayback (void);
+int CL_GetMessage (void);
 
-extern void CL_Stop_f (void);
-extern void CL_Record_f (void);
-extern void CL_PlayDemo_f (void);
-extern void CL_TimeDemo_f (void);
+void CL_NextDemo (void);
+void CL_Stop_f (void);
+void CL_Record_f (void);
+void CL_PlayDemo_f (void);
+void CL_TimeDemo_f (void);
 
 //
 // cl_parse.c
 //
-extern void CL_Parse_Init(void);
-extern void CL_ParseServerMessage(void);
-extern void CL_BitProfile_f(void);
+void CL_Parse_Init(void);
+void CL_ParseServerMessage(void);
+void CL_BitProfile_f(void);
 
 //
 // view
 //
-extern void V_StartPitchDrift (void);
-extern void V_StopPitchDrift (void);
+void V_StartPitchDrift (void);
+void V_StopPitchDrift (void);
 
-extern void V_RenderView (void);
-extern void V_UpdateBlends (void);
-extern void V_Register (void);
-extern void V_ParseDamage (void);
-extern void V_SetContentsColor (int contents);
+void V_RenderView (void);
+void V_UpdateBlends (void);
+void V_Register (void);
+void V_ParseDamage (void);
+void V_SetContentsColor (int contents);
 
 
 //
 // cl_tent
 //
-extern void CL_InitTEnts (void);
-extern void CL_SignonReply (void);
+void CL_InitTEnts (void);
+
+//
+// cl_part
+//
+
+#define PARTICLE_INVALID 0
+#define PARTICLE_BILLBOARD 1
+#define PARTICLE_UPRIGHT_FACING 2
+#define PARTICLE_ORIENTED_DOUBLESIDED 3
+
+typedef struct renderparticle_s
+{
+	int			tex;
+	int			orientation;
+	int			dynlight;
+	float		scale;
+	float		org[3];
+	float		dir[3];
+	float		color[4];
+}
+renderparticle_t;
+
+void CL_Particles_Clear(void);
+void CL_Particles_Init(void);
+
+void CL_ParseParticleEffect (void);
+void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
+void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
+void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent);
+void CL_SparkShower (vec3_t org, vec3_t dir, int count);
+void CL_BloodPuff (vec3_t org, vec3_t vel, int count);
+void CL_FlameCube (vec3_t mins, vec3_t maxs, int count);
+void CL_Flames (vec3_t org, vec3_t vel, int count);
+void CL_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count);
+void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel);
+void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type);
+void CL_EntityParticles (entity_t *ent);
+void CL_BlobExplosion (vec3_t org);
+void CL_ParticleExplosion (vec3_t org, int smoke);
+void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
+void CL_LavaSplash (vec3_t org);
+void CL_TeleportSplash (vec3_t org);
+void CL_MoveParticles(void);
+void CL_UpdateDecals(void);
+void R_MoveExplosions(void);
+void R_NewExplosion(vec3_t org);
+
+//
+// cl_decal
+//
+
+typedef struct renderdecal_s
+{
+	entity_render_t *ent;
+	int tex;
+	int surface;
+	float scale;
+	vec3_t org;
+	vec3_t dir;
+	float color[4];
+}
+renderdecal_t;
+
+void CL_Decals_Clear(void);
+void CL_Decals_Init(void);
+void CL_Decal(vec3_t origin, int tex, float scale, float red, float green, float blue, float alpha);
+
+// if contents is not zero, it will impact on content changes
+// (leafs matching contents are considered empty, others are solid)
+extern int traceline_endcontents; // set by TraceLine
+float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents);
+

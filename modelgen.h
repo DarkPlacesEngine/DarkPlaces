@@ -107,7 +107,3 @@ typedef struct {
 typedef struct {
 	aliasskintype_t	type;
 } daliasskintype_t;
-
-#define IDPOLYHEADER	(('O'<<24)+('P'<<16)+('D'<<8)+'I')
-														// little-endian "IDPO"
-

@@ -20,12 +20,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // refresh.h -- public interface to refresh functions
 
+// 1.0f / N table
+extern float ixtable[4096];
+
 // far clip distance for scene
-extern cvar_t r_farclip;
+extern float r_farclip, r_newfarclip;
 
 // fog stuff
 extern void FOG_clear(void);
 extern float fog_density, fog_red, fog_green, fog_blue;
+
+// sky stuff
+extern int R_SetSkyBox(char* sky);
+extern cvar_t r_skyquality;
+// these are exposed because surface rendering uses them
+extern rtexture_t *solidskytexture;
+extern rtexture_t *alphaskytexture;
+extern rtexture_t *mergeskytexture;
+extern int skyrendernow, skyrendermasked, skyrenderglquake;
+extern cvar_t r_mergesky;
+extern void R_SkyStartFrame(void);
+extern void R_Sky(void);
 
 // SHOWLMP stuff (Nehahra)
 extern void SHOWLMP_decodehide(void);
@@ -47,86 +62,18 @@ extern float lightscale;
 // model rendering stuff
 extern float *aliasvert;
 extern float *aliasvertnorm;
-extern byte *aliasvertcolor;
+extern float *aliasvertcolor;
 
 // vis stuff
 extern cvar_t r_novis;
 
 // model transform stuff
-extern cvar_t gl_transform;
-
-// LordHavoc: 1.0f / N table
-extern float ixtable[4096];
+//extern cvar_t gl_transform;
 
 #define	TOP_RANGE		16			// soldier uniform colors
 #define	BOTTOM_RANGE	96
 
 //=============================================================================
-
-typedef struct frameblend_s
-{
-	int frame;
-	float lerp;
-}
-frameblend_t;
-
-// LordHavoc: nothing in this structure is persistant, it may be overwritten by the client every frame, for persistant data use entity_lerp_t.
-typedef struct entity_render_s
-{
-	vec3_t	origin;			// location
-	vec3_t	angles;			// orientation
-	float	colormod[3];	// color tint for model
-	float	alpha;			// opacity (alpha) of the model
-	float	scale;			// size the model is shown
-
-	model_t	*model;			// NULL = no model
-	int		frame;			// current uninterpolated animation frame (for things which do not use interpolation)
-	int		colormap;		// entity shirt and pants colors
-	int		effects;		// light, particles, etc
-	int		skinnum;		// for Alias models
-	int		flags;			// render flags
-
-	// these are copied from the persistent data
-	int		frame1;			// frame that the model is interpolating from
-	int		frame2;			// frame that the model is interpolating to
-	double	framelerp;		// interpolation factor, usually computed from frame2time
-	double	frame1time;		// time frame1 began playing (for framegroup animations)
-	double	frame2time;		// time frame2 began playing (for framegroup animations)
-
-	// calculated by the renderer (but not persistent)
-	int		visframe;		// if visframe == r_framecount, it is visible
-	vec3_t	mins, maxs;		// calculated during R_AddModelEntities
-	frameblend_t	frameblend[4]; // 4 frame numbers (-1 if not used) and their blending scalers (0-1), if interpolation is not desired, use frame instead
-}
-entity_render_t;
-
-typedef struct entity_persistent_s
-{
-	// particles
-	vec3_t	trail_origin;	// trail rendering
-	float	trail_time;		// trail rendering
-
-	// interpolated animation
-	int		modelindex;		// lerp resets when model changes
-	int		frame1;			// frame that the model is interpolating from
-	int		frame2;			// frame that the model is interpolating to
-	double	framelerp;		// interpolation factor, usually computed from frame2time
-	double	frame1time;		// time frame1 began playing (for framegroup animations)
-	double	frame2time;		// time frame2 began playing (for framegroup animations)
-}
-entity_persistent_t;
-
-typedef struct entity_s
-{
-	entity_state_t state_baseline;	// baseline state (default values)
-	entity_state_t state_previous;	// previous state (interpolating from this)
-	entity_state_t state_current;	// current state (interpolating to this)
-
-	entity_persistent_t persistent; // used for regenerating parts of render
-
-	entity_render_t render; // the only data the renderer should know about
-}
-entity_t;
 
 typedef struct
 {
@@ -137,12 +84,20 @@ typedef struct
 	// view point
 	vec3_t	vieworg;
 	vec3_t	viewangles;
+
+	int numdecals;
+	renderdecal_t *decals;
+
+	// LordHavoc: this will be enabled at some point, taking the place of cl_visedicts
+	int numentities;
+	entity_render_t *entities;
+
+	int numparticles;
+	struct renderparticle_s *particles;
 }
 refdef_t;
 
-extern qboolean hlbsp;
 //extern	qboolean	r_cache_thrash;		// compatability
-extern	vec3_t		modelorg;
 extern	entity_render_t	*currentrenderentity;
 extern	int			r_framecount;
 extern	mplane_t	frustum[4];
@@ -161,6 +116,8 @@ extern	vec3_t	r_origin;
 // screen size info
 //
 extern	refdef_t	r_refdef;
+
+
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
@@ -179,48 +136,29 @@ extern	cvar_t	r_waterripple;
 void R_Init (void);
 void R_RenderView (void); // must set r_refdef first
 
-// LordHavoc: changed this for sake of GLQuake
+
 void R_InitSky (byte *src, int bytesperpixel); // called at level load
 
 //int R_VisibleCullBox (vec3_t mins, vec3_t maxs);
 
 void R_NewMap (void);
 
-#include "r_decals.h"
+void R_Decals_Init(void);
+void R_DrawDecals(void);
 
-void R_ParseParticleEffect (void);
-void R_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count);
-void R_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent);
-void R_RocketTrail2 (vec3_t start, vec3_t end, int type, entity_t *ent);
-void R_SparkShower (vec3_t org, vec3_t dir, int count);
-void R_BloodPuff (vec3_t org, vec3_t vel, int count);
-void R_FlameCube (vec3_t mins, vec3_t maxs, int count);
-void R_Flames (vec3_t org, vec3_t vel, int count);
-
-void R_EntityParticles (entity_t *ent);
-void R_BlobExplosion (vec3_t org);
-void R_ParticleExplosion (vec3_t org, int smoke);
-void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
-void R_LavaSplash (vec3_t org);
-void R_TeleportSplash (vec3_t org);
-
-void R_NewExplosion(vec3_t org);
-
-void R_PushDlights (void);
-void R_DrawWorld (void);
-//void R_RenderDlights (void);
-void R_DrawParticles (void);
-void R_MoveParticles (void);
-void R_DrawExplosions (void);
-void R_MoveExplosions (void);
+void R_DrawWorld(void);
+void R_SetupForWorldRendering(void);
+void R_MarkWorldLights(void);
+void R_PrepareSurfaces(void);
+void R_DrawSurfacesAll(void);
+void R_DrawPortals(void);
+void R_DrawParticles(void);
+void R_DrawExplosions(void);
 
 #include "r_clip.h"
 
 // LordHavoc: vertex transform
 #include "transform.h"
-
-// LordHavoc: transparent polygon system
-#include "gl_poly.h"
 
 #define gl_solid_format 3
 #define gl_alpha_format 4
@@ -244,10 +182,8 @@ extern qboolean lighthalf;
 
 #include "r_lerpanim.h"
 
-void GL_LockArray(int first, int count);
-void GL_UnlockArray(void);
-
-void R_DrawBrushModel (void);
+void R_DrawBrushModelSky (void);
+void R_DrawBrushModelNormal (void);
 void R_DrawAliasModel (void);
 void R_DrawSpriteModel (void);
 
@@ -255,11 +191,29 @@ void R_ClipSprite (void);
 void R_Entity_Callback(void *data, void *junk);
 
 extern cvar_t r_render;
-extern cvar_t r_upload;
 extern cvar_t r_ser;
 #include "image.h"
 
-// if contents is not zero, it will impact on content changes
-// (leafs matching contents are considered empty, others are solid)
-extern int traceline_endcontents; // set by TraceLine
-float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int contents);
+extern cvar_t r_multitexture;
+extern cvar_t gl_dither;
+
+// FIXME: this should live in the backend only
+void GL_LockArray(int first, int count);
+void GL_UnlockArray(void);
+
+#include "gl_backend.h"
+
+#include "r_light.h"
+
+extern rtexture_t *particlefonttexture;
+
+// particletexture_t is a rectangle in the particlefonttexture
+typedef struct
+{
+	float s1, t1, s2, t2;
+}
+particletexture_t;
+
+#define MAX_PARTICLETEXTURES 64
+// [0] is normal, [1] is fog, they may be the same
+extern particletexture_t particletexture[MAX_PARTICLETEXTURES][2];

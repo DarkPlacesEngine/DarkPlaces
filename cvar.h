@@ -97,7 +97,7 @@ typedef struct cvar_s
 	char			*string;
 //	qboolean		archive;		// set to true to cause it to be saved to vars.rc
 //	qboolean		server;		// notifies players when changed
-	int				intvalue;
+	int				integer;
 	float			value;
 	float			vector[3];
 	menucvar_t		menuinfo;

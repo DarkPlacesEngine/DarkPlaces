@@ -45,15 +45,6 @@ extern void GL_EndRendering (void);
 
 extern	float	gldepthmin, gldepthmax;
 
-typedef struct
-{
-	float	x, y, z;
-	float	s, t;
-	float	r, g, b;
-} glvert_t;
-
-extern glvert_t glv;
-
 //====================================================
 
 extern	const char *gl_vendor;
@@ -71,14 +62,14 @@ extern	const char *gl_extensions;
 #endif
 
 // GL_ARB_multitexture
-extern int gl_mtexable;
+extern int gl_textureunits;
 extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #ifndef GL_ACTIVE_TEXTURE_ARB
 #define GL_ACTIVE_TEXTURE_ARB			0x84E0
 #define GL_CLIENT_ACTIVE_TEXTURE_ARB	0x84E1
-#define GL_MAX_TEXTURES_UNITS_ARB		0x84E2
+#define GL_MAX_TEXTURE_UNITS_ARB		0x84E2
 #define GL_TEXTURE0_ARB					0x84C0
 #define GL_TEXTURE1_ARB					0x84C1
 #define GL_TEXTURE2_ARB					0x84C2
@@ -153,4 +144,14 @@ extern cvar_t gl_combine;
 //extern void (GLAPIENTRY *glColorTableEXT)(int, int, int, int, int, const void*);
 //#endif
 
+#endif
+
+//#define DEBUGGL
+
+#ifdef DEBUGGL
+#define CHECKGLERROR if ((errornumber = glGetError())) GL_PrintError(errornumber, __FILE__, __LINE__);
+extern int errornumber;
+void GL_PrintError(int errornumber, char *filename, int linenumber);
+#else
+#define CHECKGLERROR
 #endif

@@ -22,8 +22,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int	current_skill;
 
-void Mod_Print (void);
-
 dfunction_t *ED_FindFunction (char *name);
 
 /*
@@ -35,6 +33,7 @@ Host_Quit_f
 // LordHavoc: didn't like it asking me if I wanted to quit
 //extern void M_Menu_Quit_f (void);
 
+extern qboolean host_shuttingdown;
 void Host_Quit_f (void)
 {
 	/*
@@ -44,6 +43,7 @@ void Host_Quit_f (void)
 		return;
 	}
 	*/
+	host_shuttingdown = true;
 	CL_Disconnect ();
 	Host_ShutdownServer(false);
 
@@ -375,10 +375,7 @@ void Host_Connect_f (void)
 	
 	cls.demonum = -1;		// stop demo loop in case this fails
 	if (cls.demoplayback)
-	{
-		CL_StopPlayback ();
 		CL_Disconnect ();
-	}
 	strcpy (name, Cmd_Argv(1));
 	CL_EstablishConnection (name);
 	Host_Reconnect_f ();
@@ -516,6 +513,8 @@ void Host_Savegame_f (void)
 }
 
 
+extern mempool_t *edictstring_mempool;
+
 /*
 ===============
 Host_Loadgame_f
@@ -533,7 +532,7 @@ void Host_Loadgame_f (void)
 	edict_t	*ent;
 	int		entnum;
 	int		version;
-	float			spawn_parms[NUM_SPAWN_PARMS];
+	float	spawn_parms[NUM_SPAWN_PARMS];
 
 	if (cmd_source != src_command)
 		return;
@@ -602,7 +601,7 @@ void Host_Loadgame_f (void)
 	for (i=0 ; i<MAX_LIGHTSTYLES ; i++)
 	{
 		str = Qgetline (f);
-		sv.lightstyles[i] = Hunk_AllocName (strlen(str)+1, "lightstyles");
+		sv.lightstyles[i] = Mem_Alloc(edictstring_mempool, strlen(str)+1);
 		strcpy (sv.lightstyles[i], str);
 	}
 
@@ -676,17 +675,22 @@ Host_Name_f
 */
 void Host_Name_f (void)
 {
-	char	*newName;
+	char newName[64];
 
 	if (Cmd_Argc () == 1)
 	{
 		Con_Printf ("\"name\" is \"%s\"\n", cl_name.string);
 		return;
 	}
+	//if (Cmd_Argc () == 2)
+	//	newName = Cmd_Argv(1);
+	//else
+	//	newName = Cmd_Args();
+	//newName[15] = 0;
 	if (Cmd_Argc () == 2)
-		newName = Cmd_Argv(1);	
+		strncpy(newName, Cmd_Argv(1), 15);
 	else
-		newName = Cmd_Args();
+		strncpy(newName, Cmd_Args(), 15);
 	newName[15] = 0;
 
 	if (cmd_source == src_command)
@@ -773,7 +777,7 @@ void Host_Say(qboolean teamonly)
 	{
 		if (!client || !client->active || !client->spawned)
 			continue;
-		if (teamplay.value && teamonly && client->edict->v.team != save->edict->v.team)
+		if (teamplay.integer && teamonly && client->edict->v.team != save->edict->v.team)
 			continue;
 		host_client = client;
 		SV_ClientPrintf("%s", text);
@@ -862,7 +866,7 @@ void Host_Color_f(void)
 	
 	if (Cmd_Argc() == 1)
 	{
-		Con_Printf ("\"color\" is \"%i %i\"\n", ((int)cl_color.value) >> 4, ((int)cl_color.value) & 0x0f);
+		Con_Printf ("\"color\" is \"%i %i\"\n", cl_color.integer >> 4, cl_color.integer & 15);
 		Con_Printf ("color <0-13> [0-13]\n");
 		return;
 	}
@@ -953,7 +957,7 @@ void Host_Pause_f (void)
 		Cmd_ForwardToServer ();
 		return;
 	}
-	if (!pausable.value)
+	if (!pausable.integer)
 		SV_ClientPrintf ("Pause not allowed.\n");
 	else
 	{
@@ -1439,7 +1443,7 @@ void Host_Viewmodel_f (void)
 	if (!e)
 		return;
 
-	m = Mod_ForName (Cmd_Argv(1), false);
+	m = Mod_ForName (Cmd_Argv(1), false, true, false);
 	if (!m)
 	{
 		Con_Printf ("Can't load %s\n", Cmd_Argv(1));
@@ -1476,9 +1480,8 @@ void Host_Viewframe_f (void)
 
 void PrintFrameName (model_t *m, int frame)
 {
-	int data;
-	if (m->ofs_scenes && (data = (int) Mod_Extradata(m)))
-		Con_Printf("frame %i: %s\n", frame, ((animscene_t *) (m->ofs_scenes + data))[frame].name);
+	if (m->animscenes)
+		Con_Printf("frame %i: %s\n", frame, m->animscenes[frame].name);
 	else
 		Con_Printf("frame %i\n", frame);
 }
@@ -1604,7 +1607,6 @@ void Host_Stopdemo_f (void)
 		return;
 	if (!cls.demoplayback)
 		return;
-	CL_StopPlayback ();
 	CL_Disconnect ();
 }
 
@@ -1664,6 +1666,4 @@ void Host_InitCommands (void)
 	Cmd_AddCommand ("viewframe", Host_Viewframe_f);
 	Cmd_AddCommand ("viewnext", Host_Viewnext_f);
 	Cmd_AddCommand ("viewprev", Host_Viewprev_f);
-
-	Cmd_AddCommand ("mcache", Mod_Print);
 }

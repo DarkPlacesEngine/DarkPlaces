@@ -21,15 +21,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
-cvar_t sv_pvscheckentities = {0, "sv_pvscheckentities", "1"};
-cvar_t sv_vischeckentities = {0, "sv_vischeckentities", "0"}; // extremely accurate visibility checking, but too slow
-cvar_t sv_reportvischeckentities = {0, "sv_reportvischeckentities", "0"};
-int sv_vischeckentitycullcount = 0;
+static cvar_t sv_pvscheckentities = {0, "sv_pvscheckentities", "1"};
+static cvar_t sv_vischeckentities = {0, "sv_vischeckentities", "0"}; // extremely accurate visibility checking, but too slow
+static cvar_t sv_reportvischeckentities = {0, "sv_reportvischeckentities", "0"};
+static int sv_vischeckentitycullcount = 0;
 
 server_t		sv;
 server_static_t	svs;
 
-char	localmodels[MAX_MODELS][5];			// inline model names for precache
+static char localmodels[MAX_MODELS][5];			// inline model names for precache
+
+static mempool_t *sv_edicts_mempool = NULL;
 
 //============================================================================
 
@@ -60,6 +62,8 @@ void SV_Init (void)
 
 	for (i = 0;i < MAX_MODELS;i++)
 		sprintf (localmodels[i], "*%i", i);
+
+	sv_edicts_mempool = Mem_AllocPool("edicts");
 }
 
 /*
@@ -175,13 +179,13 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
         && sv.sound_precache[sound_num] ; sound_num++)
         if (!strcmp(sample, sv.sound_precache[sound_num]))
             break;
-    
+
     if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
     {
         Con_Printf ("SV_StartSound: %s not precached\n", sample);
         return;
     }
-    
+
 	ent = NUM_FOR_EDICT(entity);
 
 	channel = (ent<<3) | channel;
@@ -209,7 +213,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
 		MSG_WriteByte (&sv.datagram, sound_num);
 	for (i=0 ; i<3 ; i++)
 		MSG_WriteFloatCoord (&sv.datagram, entity->v.origin[i]+0.5*(entity->v.mins[i]+entity->v.maxs[i]));
-}           
+}
 
 /*
 ==============================================================================
@@ -240,7 +244,7 @@ void SV_SendServerinfo (client_t *client)
 	MSG_WriteLong (&client->message, DPPROTOCOL_VERSION);
 	MSG_WriteByte (&client->message, svs.maxclients);
 
-	if (!coop.value && deathmatch.value)
+	if (!coop.integer && deathmatch.integer)
 		MSG_WriteByte (&client->message, GAME_DEATHMATCH);
 	else
 		MSG_WriteByte (&client->message, GAME_COOP);
@@ -297,7 +301,7 @@ void SV_ConnectClient (int clientnum)
 	edictnum = clientnum+1;
 
 	ent = EDICT_NUM(edictnum);
-	
+
 // set up the client_t
 	netconnection = client->netconnection;
 
@@ -338,7 +342,7 @@ void SV_CheckForNewClients (void)
 {
 	struct qsocket_s	*ret;
 	int				i;
-		
+
 //
 // check for new connections
 //
@@ -348,7 +352,7 @@ void SV_CheckForNewClients (void)
 		if (!ret)
 			break;
 
-	// 
+	//
 	// init a new client structure
 	//
 		for (i=0 ; i<svs.maxclients ; i++)
@@ -356,10 +360,10 @@ void SV_CheckForNewClients (void)
 				break;
 		if (i == svs.maxclients)
 			Sys_Error ("Host_CheckForNewClients: no free clients");
-		
+
 		svs.clients[i].netconnection = ret;
-		SV_ConnectClient (i);	
-	
+		SV_ConnectClient (i);
+
 		net_activeconnections++;
 	}
 }
@@ -495,15 +499,17 @@ SV_WriteEntitiesToClient
 */
 void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 {
-	int		e, i, clentnum, bits, alpha, glowcolor, glowsize, scale, colormod, effects;
+	int		e, clentnum, bits, alpha, glowcolor, glowsize, scale, effects;
 	byte	*pvs;
 	vec3_t	org, origin, angles, entmins, entmaxs;
-	float	movelerp, moveilerp, nextfullupdate;
+	float	nextfullupdate;
 	edict_t	*ent;
 	eval_t	*val;
 	entity_state_t	*baseline; // LordHavoc: delta or startup baseline
 	trace_t	trace;
 	model_t	*model;
+
+	Mod_CheckLoaded(sv.worldmodel);
 
 // find the client's PVS
 	VectorAdd (clent->v.origin, clent->v.view_ofs, org);
@@ -561,7 +567,10 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			bits |= U_GLOWTRAIL;
 
 		if (ent->v.modelindex >= 0 && ent->v.modelindex < MAX_MODELS && pr_strings[ent->v.model])
+		{
 			model = sv.models[(int)ent->v.modelindex];
+			Mod_CheckLoaded(model);
+		}
 		else
 		{
 			model = NULL;
@@ -570,67 +579,17 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 					continue;
 		}
 
-		if (ent->v.movetype == MOVETYPE_STEP && ((int) ent->v.flags & (FL_ONGROUND | FL_FLY | FL_SWIM))) // monsters have smoothed walking/flying/swimming movement
+		VectorCopy(ent->v.angles, angles);
+		if (DotProduct(ent->v.velocity, ent->v.velocity) >= 1.0f)
 		{
-			if (!ent->steplerptime || ent->steplerptime > sv.time) // when the level just started...
-			{
-				ent->steplerptime = sv.time;
-				VectorCopy(ent->v.origin, ent->stepoldorigin);
-				VectorCopy(ent->v.angles, ent->stepoldangles);
-				VectorCopy(ent->v.origin, ent->steporigin);
-				VectorCopy(ent->v.angles, ent->stepangles);
-			}
-			VectorSubtract(ent->v.origin, ent->steporigin, origin);
-			VectorSubtract(ent->v.angles, ent->stepangles, angles);
-			if (DotProduct(origin, origin) >= 0.125 || DotProduct(angles, angles) >= 1.4)
-			{
-				// update lerp positions
-				ent->steplerptime = sv.time;
-				VectorCopy(ent->steporigin, ent->stepoldorigin);
-				VectorCopy(ent->stepangles, ent->stepoldangles);
-				VectorCopy(ent->v.origin, ent->steporigin);
-				VectorCopy(ent->v.angles, ent->stepangles);
-			}
-			movelerp = (sv.time - ent->steplerptime) * 10.0;
-			if (movelerp > 1) movelerp = 1;
-			moveilerp = 1 - movelerp;
-			origin[0] = ent->stepoldorigin[0] * moveilerp + ent->steporigin[0] * movelerp;
-			origin[1] = ent->stepoldorigin[1] * moveilerp + ent->steporigin[1] * movelerp;
-			origin[2] = ent->stepoldorigin[2] * moveilerp + ent->steporigin[2] * movelerp;
-			// choose shortest rotate (to avoid 'spin around' situations)
-			VectorSubtract(ent->stepangles, ent->stepoldangles, angles);
-			if (angles[0] < -180) angles[0] += 360;if (angles[0] >= 180) angles[0] -= 360;
-			if (angles[1] < -180) angles[1] += 360;if (angles[1] >= 180) angles[1] -= 360;
-			if (angles[2] < -180) angles[2] += 360;if (angles[2] >= 180) angles[2] -= 360;
-			angles[0] = angles[0] * movelerp + ent->stepoldangles[0];
-			angles[1] = angles[1] * movelerp + ent->stepoldangles[1];
-			angles[2] = angles[2] * movelerp + ent->stepoldangles[2];
-			//VectorMA(origin, host_client->latency, ent->v.velocity, origin);
+			VectorMA(ent->v.origin, host_client->latency, ent->v.velocity, origin);
+			// LordHavoc: trace predicted movement to avoid putting things in walls
+			trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, origin, MOVE_NORMAL, ent);
+			VectorCopy(trace.endpos, origin);
 		}
-		else // copy as they are
+		else
 		{
-			if (ent->v.movetype == MOVETYPE_STEP) // monster, but airborn, update lerp info
-			{
-				// update lerp positions
-				ent->steplerptime = sv.time;
-				VectorCopy(ent->v.origin, ent->stepoldorigin);
-				VectorCopy(ent->v.angles, ent->stepoldangles);
-				VectorCopy(ent->v.origin, ent->steporigin);
-				VectorCopy(ent->v.angles, ent->stepangles);
-			}
-
-			VectorCopy(ent->v.angles, angles);
-			if (DotProduct(ent->v.velocity, ent->v.velocity) >= 1.0f)
-			{
-				VectorMA(ent->v.origin, host_client->latency, ent->v.velocity, origin);
-				// LordHavoc: trace predicted movement to avoid putting things in walls
-				trace = SV_Move (ent->v.origin, ent->v.mins, ent->v.maxs, origin, MOVE_NORMAL, ent);
-				VectorCopy(trace.endpos, origin);
-			}
-			else
-			{
-				VectorCopy(ent->v.origin, origin);
-			}
+			VectorCopy(ent->v.origin, origin);
 		}
 
 		// ent has survived every check so far, check if it is visible
@@ -664,11 +623,11 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 			}
 
 			// if not touching a visible leaf
-			if (sv_pvscheckentities.value && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
+			if (sv_pvscheckentities.integer && !SV_BoxTouchingPVS(pvs, entmins, entmaxs, sv.worldmodel->nodes))
 				continue;
 
 			// or not visible through the portals
-			if (sv_vischeckentities.value && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
+			if (sv_vischeckentities.integer && !Portal_CheckBox(sv.worldmodel, org, entmins, entmaxs))
 			{
 				sv_vischeckentitycullcount++;
 				continue;
@@ -678,7 +637,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		alpha = 255;
 		scale = 16;
 		glowcolor = 254;
-		colormod = 255;
 		effects = ent->v.effects;
 
 		if ((val = GETEDICTFIELDVALUE(ent, eval_alpha)))
@@ -706,10 +664,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if ((val = GETEDICTFIELDVALUE(ent, eval_fullbright)))
 		if (val->_float != 0)
 			effects |= EF_FULLBRIGHT;
-
-		if ((val = GETEDICTFIELDVALUE(ent, eval_colormod)))
-		if (val->vector[0] != 0 || val->vector[1] != 0 || val->vector[2] != 0)
-			colormod = (bound(0, (int) (val->vector[0] * 8.0), 7) << 5) | (bound(0, (int) (val->vector[1] * 8.0), 7) << 2) | bound(0, (int) (val->vector[2] * 4.0), 3);
 
 		if (ent != clent)
 		{
@@ -741,7 +695,7 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 // send an update
 		baseline = &ent->baseline;
 
-		if (((int)ent->v.effects & EF_DELTA) && sv_deltacompress.value)
+		if (((int)ent->v.effects & EF_DELTA) && sv_deltacompress.integer)
 		{
 			// every half second a full update is forced
 			if (realtime < client->nextfullupdate[e])
@@ -771,9 +725,9 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (origin[0] != baseline->origin[0])											bits |= U_ORIGIN1;
 		if (origin[1] != baseline->origin[1])											bits |= U_ORIGIN2;
 		if (origin[2] != baseline->origin[2])											bits |= U_ORIGIN3;
-		if ((int)(angles[0]*(256.0/360.0)) != (int)(baseline->angles[0]*(256.0/360.0)))	bits |= U_ANGLE1;
-		if ((int)(angles[1]*(256.0/360.0)) != (int)(baseline->angles[1]*(256.0/360.0)))	bits |= U_ANGLE2;
-		if ((int)(angles[2]*(256.0/360.0)) != (int)(baseline->angles[2]*(256.0/360.0)))	bits |= U_ANGLE3;
+		if (((int)(angles[0]*(256.0/360.0)) & 255) != ((int)(baseline->angles[0]*(256.0/360.0)) & 255))	bits |= U_ANGLE1;
+		if (((int)(angles[1]*(256.0/360.0)) & 255) != ((int)(baseline->angles[1]*(256.0/360.0)) & 255))	bits |= U_ANGLE2;
+		if (((int)(angles[2]*(256.0/360.0)) & 255) != ((int)(baseline->angles[2]*(256.0/360.0)) & 255))	bits |= U_ANGLE3;
 		if (baseline->colormap != (byte) ent->v.colormap)								bits |= U_COLORMAP;
 		if (baseline->skin != (byte) ent->v.skin)										bits |= U_SKIN;
 		if ((baseline->frame & 0x00FF) != ((int) ent->v.frame & 0x00FF))				bits |= U_FRAME;
@@ -786,7 +740,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (((int) baseline->effects & 0xFF00) != ((int) ent->v.effects & 0xFF00))		bits |= U_EFFECTS2;
 		if (baseline->glowsize != glowsize)												bits |= U_GLOWSIZE;
 		if (baseline->glowcolor != glowcolor)											bits |= U_GLOWCOLOR;
-		if (baseline->colormod != colormod)												bits |= U_COLORMOD;
 		if (((int) baseline->frame & 0xFF00) != ((int) ent->v.frame & 0xFF00))			bits |= U_FRAME2;
 		if (((int) baseline->frame & 0xFF00) != ((int) ent->v.modelindex & 0xFF00))		bits |= U_MODEL2;
 
@@ -802,10 +755,6 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		ent->deltabaseline.scale = scale;
 		ent->deltabaseline.glowsize = glowsize;
 		ent->deltabaseline.glowcolor = glowcolor;
-		ent->deltabaseline.colormod = colormod;
-
-		if (bits & (U_ALPHA | U_SCALE | U_EFFECTS2 | U_GLOWSIZE | U_GLOWCOLOR | U_COLORMOD | U_FRAME2 | U_MODEL2))
-			i = -1;
 
 		// write the message
 		if (bits >= 16777216)
@@ -848,12 +797,11 @@ void SV_WriteEntitiesToClient (client_t *client, edict_t *clent, sizebuf_t *msg)
 		if (bits & U_EFFECTS2)	MSG_WriteByte(msg, (int)ent->v.effects >> 8);
 		if (bits & U_GLOWSIZE)	MSG_WriteByte(msg, glowsize);
 		if (bits & U_GLOWCOLOR)	MSG_WriteByte(msg, glowcolor);
-		if (bits & U_COLORMOD)	MSG_WriteByte(msg, colormod);
 		if (bits & U_FRAME2)	MSG_WriteByte(msg, (int)ent->v.frame >> 8);
 		if (bits & U_MODEL2)	MSG_WriteByte(msg, (int)ent->v.modelindex >> 8);
 	}
 
-	if (sv_reportvischeckentities.value)
+	if (sv_reportvischeckentities.integer)
 		Con_Printf("sv_vischeck culled entities: %d\n", sv_vischeckentitycullcount);
 	sv_vischeckentitycullcount = 0;
 }
@@ -871,10 +819,7 @@ void SV_CleanupEnts (void)
 
 	ent = NEXT_EDICT(sv.edicts);
 	for (e=1 ; e<sv.num_edicts ; e++, ent = NEXT_EDICT(ent))
-	{
 		ent->v.effects = (int)ent->v.effects & ~EF_MUZZLEFLASH;
-	}
-
 }
 
 /*
@@ -940,13 +885,13 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		items = (int)ent->v.items | ((int)pr_global_struct->serverflags << 28);
 
 	bits |= SU_ITEMS;
-	
+
 	if ( (int)ent->v.flags & FL_ONGROUND)
 		bits |= SU_ONGROUND;
-	
+
 	if ( ent->v.waterlevel >= 2)
 		bits |= SU_INWATER;
-	
+
 	// dpprotocol
 	VectorClear(punchvector);
 	if ((val = GETEDICTFIELDVALUE(ent, eval_punchvector)))
@@ -1010,7 +955,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte (msg, ent->v.armorvalue);
 	if (bits & SU_WEAPON)
 		MSG_WriteByte (msg, SV_ModelIndex(pr_strings+ent->v.weaponmodel));
-	
+
 	MSG_WriteShort (msg, ent->v.health);
 	MSG_WriteByte (msg, ent->v.currentammo);
 	MSG_WriteByte (msg, ent->v.ammo_shells);
@@ -1044,7 +989,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 {
 	byte		buf[MAX_DATAGRAM];
 	sizebuf_t	msg;
-	
+
 	msg.data = buf;
 	msg.maxsize = sizeof(buf);
 	msg.cursize = 0;
@@ -1098,7 +1043,7 @@ void SV_UpdateToReliableMessages (void)
 			host_client->old_frags = host_client->edict->v.frags;
 		}
 	}
-	
+
 	for (j=0, client = svs.clients ; j<svs.maxclients ; j++, client++)
 	{
 		if (!client->active)
@@ -1122,7 +1067,7 @@ void SV_SendNop (client_t *client)
 {
 	sizebuf_t	msg;
 	byte		buf[4];
-	
+
 	msg.data = buf;
 	msg.maxsize = sizeof(buf);
 	msg.cursize = 0;
@@ -1142,7 +1087,7 @@ SV_SendClientMessages
 void SV_SendClientMessages (void)
 {
 	int			i;
-	
+
 // update frags, names, etc
 	SV_UpdateToReliableMessages ();
 
@@ -1162,7 +1107,7 @@ void SV_SendClientMessages (void)
 		// the player isn't totally in the game yet
 		// send small keepalive messages if too much time has passed
 		// send a full message when the next signon stage has been requested
-		// some other message data (name changes, etc) may accumulate 
+		// some other message data (name changes, etc) may accumulate
 		// between signon stages
 			if (!host_client->sendsignon)
 			{
@@ -1181,7 +1126,7 @@ void SV_SendClientMessages (void)
 			host_client->message.overflowed = false;
 			continue;
 		}
-			
+
 		if (host_client->message.cursize || host_client->dropasap)
 		{
 			if (!NET_CanSendMessage (host_client->netconnection))
@@ -1202,8 +1147,8 @@ void SV_SendClientMessages (void)
 			}
 		}
 	}
-	
-	
+
+
 // clear muzzle flashes
 	SV_CleanupEnts ();
 }
@@ -1226,7 +1171,7 @@ SV_ModelIndex
 int SV_ModelIndex (char *name)
 {
 	int		i;
-	
+
 	if (!name || !name[0])
 		return 0;
 
@@ -1263,9 +1208,7 @@ void SV_CreateBaseline (void)
 		if (entnum > svs.maxclients && !svent->v.modelindex)
 			continue;
 
-	//
 		// create entity baseline
-	//
 		VectorCopy (svent->v.origin, svent->baseline.origin);
 		VectorCopy (svent->v.angles, svent->baseline.angles);
 		svent->baseline.frame = svent->v.frame;
@@ -1284,9 +1227,8 @@ void SV_CreateBaseline (void)
 		large = false;
 		if (svent->baseline.modelindex & 0xFF00 || svent->baseline.frame & 0xFF00)
 			large = true;
-	//
+
 		// add to the message
-	//
 		if (large)
 			MSG_WriteByte (&sv.signon, svc_spawnbaseline2);
 		else
@@ -1366,8 +1308,6 @@ void SV_SaveSpawnparms (void)
 	}
 }
 
-qboolean isworldmodel;
-
 /*
 ================
 SV_SpawnServer
@@ -1394,23 +1334,17 @@ void SV_SpawnServer (char *server)
 // tell all connected clients that we are going to a new level
 //
 	if (sv.active)
-	{
 		SV_SendReconnect ();
-	}
 
 //
 // make cvars consistant
 //
-	if (coop.value)
+	if (coop.integer)
 		Cvar_SetValue ("deathmatch", 0);
-	current_skill = (int)(skill.value + 0.5);
-	if (current_skill < 0)
-		current_skill = 0;
-	if (current_skill > 3)
-		current_skill = 3;
+	current_skill = bound(0, (int)(skill.value + 0.5), 3);
 
 	Cvar_SetValue ("skill", (float)current_skill);
-	
+
 //
 // set up the new server
 //
@@ -1425,17 +1359,19 @@ void SV_SpawnServer (char *server)
 
 // allocate server memory
 	sv.max_edicts = MAX_EDICTS;
-	
-	sv.edicts = Hunk_AllocName (sv.max_edicts*pr_edict_size, "edicts");
+
+	// clear the edict memory pool
+	Mem_EmptyPool(sv_edicts_mempool);
+	sv.edicts = Mem_Alloc(sv_edicts_mempool, sv.max_edicts * pr_edict_size);
 
 	sv.datagram.maxsize = sizeof(sv.datagram_buf);
 	sv.datagram.cursize = 0;
 	sv.datagram.data = sv.datagram_buf;
-	
+
 	sv.reliable_datagram.maxsize = sizeof(sv.reliable_datagram_buf);
 	sv.reliable_datagram.cursize = 0;
 	sv.reliable_datagram.data = sv.reliable_datagram_buf;
-	
+
 	sv.signon.maxsize = sizeof(sv.signon_buf);
 	sv.signon.cursize = 0;
 	sv.signon.data = sv.signon_buf;
@@ -1447,17 +1383,15 @@ void SV_SpawnServer (char *server)
 		ent = EDICT_NUM(i+1);
 		svs.clients[i].edict = ent;
 	}
-	
+
 	sv.state = ss_loading;
 	sv.paused = false;
 
 	sv.time = 1.0;
-	
+
 	strcpy (sv.name, server);
 	sprintf (sv.modelname,"maps/%s.bsp", server);
-	isworldmodel = true; // LordHavoc: only load submodels on the world model
-	sv.worldmodel = Mod_ForName (sv.modelname, false);
-	isworldmodel = false;
+	sv.worldmodel = Mod_ForName(sv.modelname, false, true, true);
 	if (!sv.worldmodel)
 	{
 		Con_Printf ("Couldn't spawn server %s\n", sv.modelname);
@@ -1470,20 +1404,20 @@ void SV_SpawnServer (char *server)
 // clear world interaction links
 //
 	SV_ClearWorld ();
-	
+
 	sv.sound_precache[0] = pr_strings;
 
 	sv.model_precache[0] = pr_strings;
 	sv.model_precache[1] = sv.modelname;
-	for (i=1 ; i<sv.worldmodel->numsubmodels ; i++)
+	for (i = 1;i < sv.worldmodel->numsubmodels;i++)
 	{
-		sv.model_precache[1+i] = localmodels[i];
-		sv.models[i+1] = Mod_ForName (localmodels[i], false);
+		sv.model_precache[i+1] = localmodels[i];
+		sv.models[i+1] = Mod_ForName (localmodels[i], false, true, false);
 	}
 
 //
 // load the rest of the entities
-//	
+//
 	ent = EDICT_NUM(0);
 	memset (&ent->v, 0, progs->entityfields * 4);
 	ent->free = false;
@@ -1492,10 +1426,10 @@ void SV_SpawnServer (char *server)
 	ent->v.solid = SOLID_BSP;
 	ent->v.movetype = MOVETYPE_PUSH;
 
-	if (coop.value)
-		pr_global_struct->coop = coop.value;
+	if (coop.integer)
+		pr_global_struct->coop = coop.integer;
 	else
-		pr_global_struct->deathmatch = deathmatch.value;
+		pr_global_struct->deathmatch = deathmatch.integer;
 
 	pr_global_struct->mapname = sv.name - pr_strings;
 

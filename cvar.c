@@ -144,7 +144,7 @@ Cvar_CompleteBuildList (char *partial)
 	char	**buf;
 
 	len = strlen(partial);
-	buf = qmalloc(sizeofbuf + sizeof (char *));
+	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (char *));
 	// Loop through the alias list and print all matches
 	for (cvar = cvar_vars; cvar; cvar = cvar->next)
 		if (!strncasecmp(partial, cvar->name, len))
@@ -178,6 +178,7 @@ void Cvar_Set (char *var_name, char *value)
 	var->string = Z_Malloc (strlen(value)+1);
 	strcpy (var->string, value);
 	var->value = atof (var->string);
+	var->integer = (int) var->value;
 	if ((var->flags & CVAR_NOTIFY) && changed)
 	{
 		if (sv.active)
@@ -229,6 +230,7 @@ void Cvar_RegisterVariable (cvar_t *variable)
 	variable->string = Z_Malloc (strlen(variable->string)+1);
 	strcpy (variable->string, oldstr);
 	variable->value = atof (variable->string);
+	variable->integer = (int) variable->value;
 
 // link the variable in
 	variable->next = cvar_vars;

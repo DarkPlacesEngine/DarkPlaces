@@ -203,6 +203,7 @@ int Portal_CheckPolygon(model_t *model, vec3_t eye, float *polypoints, int numpo
 
 	portal_markid++;
 
+	Mod_CheckLoaded(model);
 	Portal_PolygonRecursiveMarkLeafs(model->nodes, polypoints, numpoints);
 
 	eyeleaf = Mod_PointInLeaf(eye, model);

@@ -563,53 +563,6 @@ CalcGunAngle
 */
 void CalcGunAngle (void)
 {
-	/*
-	float	yaw, pitch, move;
-	static float oldyaw = 0;
-	static float oldpitch = 0;
-	
-	yaw = r_refdef.viewangles[YAW];
-	pitch = -r_refdef.viewangles[PITCH];
-
-	yaw = angledelta(yaw - r_refdef.viewangles[YAW]) * 0.4;
-	if (yaw > 10)
-		yaw = 10;
-	if (yaw < -10)
-		yaw = -10;
-	pitch = angledelta(-pitch - r_refdef.viewangles[PITCH]) * 0.4;
-	if (pitch > 10)
-		pitch = 10;
-	if (pitch < -10)
-		pitch = -10;
-	move = cl.frametime*20;
-	if (yaw > oldyaw)
-	{
-		if (oldyaw + move < yaw)
-			yaw = oldyaw + move;
-	}
-	else
-	{
-		if (oldyaw - move > yaw)
-			yaw = oldyaw - move;
-	}
-
-	if (pitch > oldpitch)
-	{
-		if (oldpitch + move < pitch)
-			pitch = oldpitch + move;
-	}
-	else
-	{
-		if (oldpitch - move > pitch)
-			pitch = oldpitch - move;
-	}
-	
-	oldyaw = yaw;
-	oldpitch = pitch;
-
-	cl.viewent.angles[YAW] = r_refdef.viewangles[YAW] + yaw;
-	cl.viewent.angles[PITCH] = - (r_refdef.viewangles[PITCH] + pitch);
-	*/
 	cl.viewent.render.angles[YAW] = r_refdef.viewangles[YAW];
 	cl.viewent.render.angles[PITCH] = -r_refdef.viewangles[PITCH];
 
@@ -718,8 +671,6 @@ void V_CalcIntermissionRefdef (void)
 	v_idlescale.value = old;
 }
 
-extern void CL_LerpUpdate(entity_t *e, int frame, int modelindex);
-
 /*
 ==================
 V_CalcRefdef
@@ -811,7 +762,6 @@ void V_CalcRefdef (void)
 		view->render.alpha = ent->render.alpha; // LordHavoc: if the player is transparent, so is the gun
 		view->render.effects = ent->render.effects;
 		view->render.scale = 1;
-		VectorCopy(ent->render.colormod, view->render.colormod);
 
 	// set up the refresh position
 
@@ -858,7 +808,7 @@ the entity origin, so any view position inside that will be valid
 */
 void V_RenderView (void)
 {
-	if (con_forcedup)
+	if (scr_con_current >= vid.conheight)
 		return;
 
 	if (cl.intermission)

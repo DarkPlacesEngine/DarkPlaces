@@ -79,7 +79,7 @@ void Sys_Printf (char *fmt, ...)
 	if (sys_nostdout)
 		return;
 
-	if (timestamps.value)
+	if (timestamps.integer)
 	{
 		mytime = time (NULL);
 		local = localtime (&mytime);

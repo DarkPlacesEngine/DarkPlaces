@@ -31,32 +31,34 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define NUM_SAFE_ARGVS  7
 
-static char     *largv[MAX_NUM_ARGVS + NUM_SAFE_ARGVS + 1];
-static char     *argvdummy = " ";
+static char *largv[MAX_NUM_ARGVS + NUM_SAFE_ARGVS + 1];
+static char *argvdummy = " ";
 
-static char     *safeargvs[NUM_SAFE_ARGVS] =
+static char *safeargvs[NUM_SAFE_ARGVS] =
 	{"-stdvid", "-nolan", "-nosound", "-nocdaudio", "-nojoy", "-nomouse", "-window"};
 
 cvar_t registered = {0, "registered","0"};
 cvar_t cmdline = {0, "cmdline","0"};
 
-qboolean        com_modified;   // set true if using non-id files
+mempool_t *pak_mempool;
 
-//qboolean		proghack;
+qboolean com_modified;   // set true if using non-id files
 
-//int             static_registered = 1;  // only for startup check, then set
+//qboolean proghack;
 
-qboolean		msg_suppress_1 = 0;
+//int static_registered = 1;  // only for startup check, then set
+
+qboolean msg_suppress_1 = 0;
 
 void COM_InitFilesystem (void);
 
-char	com_token[1024];
-int		com_argc;
-char	**com_argv;
+char com_token[1024];
+int com_argc;
+char **com_argv;
 
 // LordHavoc: made commandline 1024 characters instead of 256
 #define CMDLINE_LENGTH	1024
-char	com_cmdline[CMDLINE_LENGTH];
+char com_cmdline[CMDLINE_LENGTH];
 
 int gamemode;
 char *gamename;
@@ -192,7 +194,7 @@ int Q_strcmp (char *s1, char *s2)
 		s1++;
 		s2++;
 	}
-	
+
 	return -1;
 }
 
@@ -209,7 +211,7 @@ int Q_strncmp (char *s1, char *s2, int count)
 		s1++;
 		s2++;
 	}
-	
+
 	return -1;
 }
 */
@@ -224,7 +226,7 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 
 		if (!n--)
 			return 0;               // strings are equal until end point
-		
+
 		if (c1 != c2)
 		{
 			if (c1 >= 'a' && c1 <= 'z')
@@ -239,7 +241,7 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 //              s1++;
 //              s2++;
 	}
-	
+
 	return -1;
 }
 
@@ -410,10 +412,12 @@ short   ShortSwap (short l)
 	return (b1<<8) + b2;
 }
 
+#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 short   ShortNoSwap (short l)
 {
 	return l;
 }
+#endif
 
 int    LongSwap (int l)
 {
@@ -427,10 +431,12 @@ int    LongSwap (int l)
 	return ((int)b1<<24) + ((int)b2<<16) + ((int)b3<<8) + b4;
 }
 
+#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 int     LongNoSwap (int l)
 {
 	return l;
 }
+#endif
 
 float FloatSwap (float f)
 {
@@ -439,8 +445,8 @@ float FloatSwap (float f)
 		float   f;
 		byte    b[4];
 	} dat1, dat2;
-	
-	
+
+
 	dat1.f = f;
 	dat2.b[0] = dat1.b[3];
 	dat2.b[1] = dat1.b[2];
@@ -449,10 +455,12 @@ float FloatSwap (float f)
 	return dat2.f;
 }
 
+#if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 float FloatNoSwap (float f)
 {
 	return f;
 }
+#endif
 
 /*
 ==============================================================================
@@ -496,7 +504,7 @@ void MSG_WriteByte (sizebuf_t *sb, int c)
 void MSG_WriteShort (sizebuf_t *sb, int c)
 {
 	byte    *buf;
-	
+
 //#ifdef PARANOID
 //	if (c < ((short)0x8000) || c > (short)0x7fff)
 //		Sys_Error ("MSG_WriteShort: range error");
@@ -510,7 +518,7 @@ void MSG_WriteShort (sizebuf_t *sb, int c)
 void MSG_WriteLong (sizebuf_t *sb, int c)
 {
 	byte    *buf;
-	
+
 	buf = SZ_GetSpace (sb, 4);
 	buf[0] = c&0xff;
 	buf[1] = (c>>8)&0xff;
@@ -525,11 +533,11 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 		float   f;
 		int     l;
 	} dat;
-	
-	
+
+
 	dat.f = f;
 	dat.l = LittleLong (dat.l);
-	
+
 	SZ_Write (sb, &dat.l, 4);
 }
 
@@ -556,18 +564,29 @@ void MSG_WriteCoord (sizebuf_t *sb, float f)
 	if (dpprotocol)
 		MSG_WriteFloat(sb, f);
 	else
-		MSG_WriteShort (sb, (int)(f*8.0f + 0.5f));
+	{
+		if (f >= 0)
+			MSG_WriteShort (sb, (int)(f*8.0f + 0.5f));
+		else
+			MSG_WriteShort (sb, (int)(f*8.0f - 0.5f));
+	}
 }
 
 void MSG_WritePreciseAngle (sizebuf_t *sb, float f)
 {
-	MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) + 0.5f) & 65535);
+	if (f >= 0)
+		MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) + 0.5f) & 65535);
+	else
+		MSG_WriteShort (sb, (int)(f*(65536.0f/360.0f) - 0.5f) & 65535);
 }
 
-// LordHavoc: round to nearest value, rather than rounding down, fixes crosshair problem
+// LordHavoc: round to nearest value, rather than rounding toward zero, fixes crosshair problem
 void MSG_WriteAngle (sizebuf_t *sb, float f)
 {
-	MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) + 0.5f) & 255);
+	if (f >= 0)
+		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) + 0.5f) & 255);
+	else
+		MSG_WriteByte (sb, (int)(f*(256.0f/360.0f) - 0.5f) & 255);
 }
 
 //
@@ -598,7 +617,7 @@ int MSG_ReadChar (void)
 		
 	c = (signed char)net_message.data[msg_readcount];
 	msg_readcount++;
-	
+
 	return c;
 }
 
@@ -613,7 +632,7 @@ int MSG_ReadByte (void)
 		msg_badread = true;
 		return -1;
 	}
-		
+
 	c = (unsigned char)net_message.data[msg_readcount];
 	msg_readcount++;
 	
@@ -624,7 +643,7 @@ int MSG_ReadByte (void)
 int MSG_ReadShort (void)
 {
 	int     c;
-	
+
 	if (msg_readcount+2 > net_message.cursize)
 	{
 		msg_badread = true;
@@ -737,11 +756,12 @@ float MSG_ReadPreciseAngle (void)
 
 //===========================================================================
 
-void SZ_Alloc (sizebuf_t *buf, int startsize)
+void SZ_Alloc (sizebuf_t *buf, int startsize, char *name)
 {
 	if (startsize < 256)
 		startsize = 256;
-	buf->data = Hunk_AllocName (startsize, "sizebuf");
+	buf->mempool = Mem_AllocPool(name);
+	buf->data = Mem_Alloc(buf->mempool, startsize);
 	buf->maxsize = startsize;
 	buf->cursize = 0;
 }
@@ -749,9 +769,9 @@ void SZ_Alloc (sizebuf_t *buf, int startsize)
 
 void SZ_Free (sizebuf_t *buf)
 {
-//      Z_Free (buf->data);
-//      buf->data = NULL;
-//      buf->maxsize = 0;
+	Mem_FreePool(&buf->mempool);
+	buf->data = NULL;
+	buf->maxsize = 0;
 	buf->cursize = 0;
 }
 
@@ -763,18 +783,18 @@ void SZ_Clear (sizebuf_t *buf)
 void *SZ_GetSpace (sizebuf_t *buf, int length)
 {
 	void    *data;
-	
+
 	if (buf->cursize + length > buf->maxsize)
 	{
 		if (!buf->allowoverflow)
 			Host_Error ("SZ_GetSpace: overflow without allowoverflow set - use -zone on the commandline for more zone memory, default: 128k (quake original default was 48k)");
-		
+
 		if (length > buf->maxsize)
 			Host_Error ("SZ_GetSpace: %i is > full buffer size", length);
-			
+
 		buf->overflowed = true;
 		Con_Printf ("SZ_GetSpace: overflow");
-		SZ_Clear (buf); 
+		SZ_Clear (buf);
 	}
 
 	data = buf->data + buf->cursize;
@@ -813,7 +833,7 @@ COM_SkipPath
 char *COM_SkipPath (char *pathname)
 {
 	char    *last;
-	
+
 	last = pathname;
 	while (*pathname)
 	{
@@ -1056,7 +1076,7 @@ void COM_CheckRegistered (void)
 //			Sys_Error ("You must have the registered version to use modified games");
 		return;
 	}
-	
+
 //	Cvar_Set ("cmdline", com_cmdline);
 	Cvar_Set ("registered", "1");
 //	static_registered = 1;
@@ -1166,42 +1186,6 @@ void COM_InitArgv (int argc, char **argv)
 }
 
 
-unsigned int qmalloctotal_alloc, qmalloctotal_alloccount, qmalloctotal_free, qmalloctotal_freecount;
-
-void *qmalloc(unsigned int size)
-{
-	unsigned int *mem;
-	qmalloctotal_alloc += size;
-	qmalloctotal_alloccount++;
-	mem = malloc(size+sizeof(unsigned int));
-	if (!mem)
-		return mem;
-	*mem = size;
-	return (void *)(mem + 1);
-}
-
-void qfree(void *mem)
-{
-	unsigned int *m;
-	if (!mem)
-		return;
-	m = mem;
-	m--; // back up to size
-	qmalloctotal_free += *m; // size
-	qmalloctotal_freecount++;
-	free(m);
-}
-
-extern void GL_TextureStats_PrintTotal(void);
-extern int hunk_low_used, hunk_high_used, hunk_size;
-void COM_Memstats_f(void)
-{
-	Con_Printf("%i malloc calls totalling %i bytes (%.4gMB)\n%i free calls totalling %i bytes (%.4gMB)\n%i bytes (%.4gMB) currently allocated\n", qmalloctotal_alloccount, qmalloctotal_alloc, qmalloctotal_alloc / 1048576.0, qmalloctotal_freecount, qmalloctotal_free, qmalloctotal_free / 1048576.0, qmalloctotal_alloc - qmalloctotal_free, (qmalloctotal_alloc - qmalloctotal_free) / 1048576.0);
-	GL_TextureStats_PrintTotal();
-	Con_Printf ("%i bytes (%.4gMB) of %.4gMB hunk in use\n", hunk_low_used + hunk_high_used, (hunk_low_used + hunk_high_used) / 1048576.0, hunk_size / 1048576.0);
-}
-
-
 extern void Mathlib_Init(void);
 
 /*
@@ -1209,12 +1193,12 @@ extern void Mathlib_Init(void);
 COM_Init
 ================
 */
-void COM_Init (char *basedir)
+void COM_Init (void)
 {
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
 	byte    swaptest[2] = {1,0};
 
-// set the byte swapping variables in a portable manner 
+// set the byte swapping variables in a portable manner
 	if ( *(short *)swaptest == 1)
 	{
 		BigShort = ShortSwap;
@@ -1235,10 +1219,11 @@ void COM_Init (char *basedir)
 	}
 #endif
 
+	pak_mempool = Mem_AllocPool("paks");
+
 	Cvar_RegisterVariable (&registered);
 	Cvar_RegisterVariable (&cmdline);
 	Cmd_AddCommand ("path", COM_Path_f);
-	Cmd_AddCommand ("memstats", COM_Memstats_f);
 
 	Mathlib_Init();
 
@@ -1297,16 +1282,18 @@ int     com_filesize;
 
 typedef struct
 {
-	char    name[MAX_QPATH];
-	int             filepos, filelen;
+	char name[MAX_QPATH];
+	int filepos, filelen;
 } packfile_t;
 
 typedef struct pack_s
 {
-	char    filename[MAX_OSPATH];
-	int             handle;
-	int             numfiles;
-	packfile_t      *files;
+	char filename[MAX_OSPATH];
+	int handle;
+	int numfiles;
+	packfile_t *files;
+	mempool_t *mempool;
+	struct pack_s *next;
 } pack_t;
 
 //
@@ -1314,19 +1301,21 @@ typedef struct pack_s
 //
 typedef struct
 {
-	char    name[56];
-	int             filepos, filelen;
+	char name[56];
+	int filepos, filelen;
 } dpackfile_t;
 
 typedef struct
 {
-	char    id[4];
-	int             dirofs;
-	int             dirlen;
+	char id[4];
+	int dirofs;
+	int dirlen;
 } dpackheader_t;
 
-// LordHavoc: was 2048, increased to 16384 and changed info[MAX_PACK_FILES] to a temporary malloc to avoid stack overflows
-#define MAX_FILES_IN_PACK       16384
+// LordHavoc: was 2048, increased to 65536 and changed info[MAX_PACK_FILES] to a temporary alloc
+#define MAX_FILES_IN_PACK       65536
+
+pack_t	*packlist = NULL;
 
 #if CACHEENABLE
 char	com_cachedir[MAX_OSPATH];
@@ -1335,8 +1324,8 @@ char	com_gamedir[MAX_OSPATH];
 
 typedef struct searchpath_s
 {
-	char    filename[MAX_OSPATH];
-	pack_t  *pack;          // only one of filename / pack will be used
+	char filename[MAX_OSPATH];
+	pack_t *pack;          // only one of filename / pack will be used
 	struct searchpath_s *next;
 } searchpath_t;
 
@@ -1351,7 +1340,7 @@ COM_Path_f
 void COM_Path_f (void)
 {
 	searchpath_t    *s;
-	
+
 	Con_Printf ("Current search path:\n");
 	for (s=com_searchpaths ; s ; s=s->next)
 	{
@@ -1431,7 +1420,7 @@ void COM_CopyFile (char *netpath, char *cachepath)
 	int             in, out;
 	int             remaining, count;
 	char    buf[4096];
-	
+
 	remaining = Sys_FileOpenRead (netpath, &in);            
 	COM_CreatePath (cachepath);     // create directories up to the cache file
 	out = Sys_FileOpenWrite (cachepath);
@@ -1631,10 +1620,9 @@ Filename are reletive to the quake directory.
 Always appends a 0 byte.
 ============
 */
-cache_user_t	*loadcache;
 byte			*loadbuf;
 int				loadsize;
-byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
+byte *COM_LoadFile (char *path, qboolean quiet)
 {
 	QFile             *h;
 	byte    *buf;
@@ -1650,63 +1638,21 @@ byte *COM_LoadFile (char *path, int usehunk, qboolean quiet)
 		return NULL;
 
 	loadsize = len;
-	
+
 // extract the filename base name for hunk tag
 	COM_FileBase (path, base);
-	
-	switch (usehunk)
-	{
-	case 1:
-		buf = Hunk_AllocName (len+1, va("%s (file)", path));
-		if (!buf)
-			Sys_Error ("COM_LoadFile: not enough hunk space for %s (size %i)", path, len);
-		break;
-//	case 0:
-//		buf = Z_Malloc (len+1);
-//		if (!buf)
-//			Sys_Error ("COM_LoadFile: not enough zone space for %s (size %i)", path, len);
-//		break;
-//	case 3:
-//		buf = Cache_Alloc (loadcache, len+1, base);
-//		if (!buf)
-//			Sys_Error ("COM_LoadFile: not enough cache space for %s (size %i)", path, len);
-//		break;
-	case 5:
-		buf = qmalloc (len+1);
-		if (!buf)
-			Sys_Error ("COM_LoadFile: not enough available memory for %s (size %i)", path, len);
-		break;
-	default:
-		Sys_Error ("COM_LoadFile: bad usehunk");
-		break;
-	}
+
+	buf = Mem_Alloc(tempmempool, len+1);
+	if (!buf)
+		Sys_Error ("COM_LoadFile: not enough available memory for %s (size %i)", path, len);
 
 	((byte *)buf)[len] = 0;
 
-	Qread (h, buf, len);                     
+	Qread (h, buf, len);
 	Qclose (h);
 
 	return buf;
 }
-
-byte *COM_LoadHunkFile (char *path, qboolean quiet)
-{
-	return COM_LoadFile (path, 1, quiet);
-}
-
-// LordHavoc: returns malloc'd memory
-byte *COM_LoadMallocFile (char *path, qboolean quiet)
-{
-	return COM_LoadFile (path, 5, quiet);
-}
-
-/*
-void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet)
-{
-	loadcache = cu;
-	COM_LoadFile (path, 3, quiet);
-}
-*/
 
 /*
 =================
@@ -1722,51 +1668,54 @@ pack_t *COM_LoadPackFile (char *packfile)
 {
 	dpackheader_t	header;
 	int				i;
-	packfile_t		*newfiles;
 	int				numpackfiles;
 	pack_t			*pack;
 	int				packhandle;
-	// LordHavoc: changed from stack array to temporary malloc, allowing huge pack directories
+	// LordHavoc: changed from stack array to temporary alloc, allowing huge pack directories
 	dpackfile_t		*info;
 
 	if (Sys_FileOpenRead (packfile, &packhandle) == -1)
 	{
-//              Con_Printf ("Couldn't open %s\n", packfile);
+		//Con_Printf ("Couldn't open %s\n", packfile);
 		return NULL;
 	}
 	Sys_FileRead (packhandle, (void *)&header, sizeof(header));
-	if (header.id[0] != 'P' || header.id[1] != 'A'
-	|| header.id[2] != 'C' || header.id[3] != 'K')
+	if (memcmp(header.id, "PACK", 4))
 		Sys_Error ("%s is not a packfile", packfile);
 	header.dirofs = LittleLong (header.dirofs);
 	header.dirlen = LittleLong (header.dirlen);
+
+	if (header.dirlen % sizeof(dpackfile_t))
+		Sys_Error ("%s has an invalid directory size", packfile);
 
 	numpackfiles = header.dirlen / sizeof(dpackfile_t);
 
 	if (numpackfiles > MAX_FILES_IN_PACK)
 		Sys_Error ("%s has %i files", packfile, numpackfiles);
 
-	newfiles = Hunk_AllocName (numpackfiles * sizeof(packfile_t), "pack file-table");
+	pack = Mem_Alloc(pak_mempool, sizeof (pack_t));
+	strcpy (pack->filename, packfile);
+	pack->handle = packhandle;
+	pack->numfiles = numpackfiles;
+	pack->mempool = Mem_AllocPool(packfile);
+	pack->files = Mem_Alloc(pack->mempool, numpackfiles * sizeof(packfile_t));
+	pack->next = packlist;
+	packlist = pack;
 
-	info = qmalloc(sizeof(*info)*MAX_FILES_IN_PACK);
+	info = Mem_Alloc(tempmempool, sizeof(*info) * numpackfiles);
 	Sys_FileSeek (packhandle, header.dirofs);
 	Sys_FileRead (packhandle, (void *)info, header.dirlen);
 
 // parse the directory
-	for (i=0 ; i<numpackfiles ; i++)
+	for (i = 0;i < numpackfiles;i++)
 	{
-		strcpy (newfiles[i].name, info[i].name);
-		newfiles[i].filepos = LittleLong(info[i].filepos);
-		newfiles[i].filelen = LittleLong(info[i].filelen);
+		strcpy (pack->files[i].name, info[i].name);
+		pack->files[i].filepos = LittleLong(info[i].filepos);
+		pack->files[i].filelen = LittleLong(info[i].filelen);
 	}
-	qfree(info);
 
-	pack = Hunk_AllocName (sizeof (pack_t), packfile);
-	strcpy (pack->filename, packfile);
-	pack->handle = packhandle;
-	pack->numfiles = numpackfiles;
-	pack->files = newfiles;
-	
+	Mem_Free(info);
+
 	Con_Printf ("Added packfile %s (%i files)\n", packfile, numpackfiles);
 	return pack;
 }
@@ -1777,7 +1726,7 @@ pack_t *COM_LoadPackFile (char *packfile)
 COM_AddGameDirectory
 
 Sets com_gamedir, adds the directory to the head of the path,
-then loads and adds pak1.pak pak2.pak ... 
+then loads and adds pak1.pak pak2.pak ...
 ================
 */
 void COM_AddGameDirectory (char *dir)
@@ -1792,7 +1741,7 @@ void COM_AddGameDirectory (char *dir)
 //
 // add the directory to the search path
 //
-	search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
+	search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
 	strcpy (search->filename, dir);
 	search->next = com_searchpaths;
 	com_searchpaths = search;
@@ -1806,7 +1755,7 @@ void COM_AddGameDirectory (char *dir)
 		pak = COM_LoadPackFile (pakfile);
 		if (!pak)
 			break;
-		search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
+		search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
 		search->pack = pak;
 		search->next = com_searchpaths;
 		com_searchpaths = search;
@@ -1919,7 +1868,7 @@ void COM_InitFilesystem (void)
 			if (!com_argv[i] || com_argv[i][0] == '+' || com_argv[i][0] == '-')
 				break;
 
-			search = Hunk_AllocName (sizeof(searchpath_t), "pack info");
+			search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
 			if ( !strcmp(COM_FileExtension(com_argv[i]), "pak") )
 			{
 				search->pack = COM_LoadPackFile (com_argv[i]);

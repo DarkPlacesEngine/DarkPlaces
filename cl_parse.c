@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -273,19 +273,17 @@ void CL_ParseEntityLump(char *entdata)
 {
 	char *data;
 	char key[128], value[4096];
-	char wadname[128];
 	char targetnamebuffer[65536];
 	char *targetname[8192], *target[MAX_STATICLIGHTS], light_target[256];
 	vec3_t targetnameorigin[8192], targetnametemporigin, v;
 	int targets, targetnames, targetnamebufferpos, targetnameorigintofillin;
-	int i, j, k, n;
+	int i, j, n;
 	float f1, f2, f3, f4;
 	float ambientlight, ambientcolor[3], sunlight, sunlightdirection[3], sunlightcolor[3];
 	int light_fadetype, light_style, hlight, tyrlite, light_enable;
 	float light_origin[3], light_light, light_distancescale, light_lightcolor[3], light_color[3], light_direction[3], light_cone, light_lightradius;
 	FOG_clear(); // LordHavoc: no fog until set
 	R_SetSkyBox(""); // LordHavoc: no environment mapped sky until set
-	r_farclip.value = 6144; // LordHavoc: default farclip distance
 	r_sunlightenabled = false;
 	staticlights = 0;
 	data = entdata;
@@ -335,12 +333,6 @@ void CL_ParseEntityLump(char *entdata)
 			R_SetSkyBox(value);
 		else if (!strcmp("qlsky", key)) // non-standard, introduced by QuakeLives (EEK)
 			R_SetSkyBox(value);
-		else if (!strcmp("farclip", key))
-		{
-			r_farclip.value = atof(value);
-			if (r_farclip.value < 64)
-				r_farclip.value = 64;
-		}
 		else if (!strcmp("fog", key))
 			scanf(value, "%f %f %f %f", &fog_density, &fog_red, &fog_green, &fog_blue);
 		else if (!strcmp("fog_density", key))
@@ -351,36 +343,6 @@ void CL_ParseEntityLump(char *entdata)
 			fog_green = atof(value);
 		else if (!strcmp("fog_blue", key))
 			fog_blue = atof(value);
-		else if (!strcmp("wad", key)) // for HalfLife maps
-		{
-			if (hlbsp)
-			{
-				j = 0;
-				for (i = 0;i < 4096;i++)
-					if (value[i] != ';' && value[i] != '\\' && value[i] != '/' && value[i] != ':')
-						break;
-				if (value[i])
-				{
-					for (;i < 4096;i++)
-					{
-						// ignore path - the \\ check is for HalfLife... stupid windoze 'programmers'...
-						if (value[i] == '\\' || value[i] == '/' || value[i] == ':')
-							j = i+1;
-						else if (value[i] == ';' || value[i] == 0)
-						{
-							k = value[i];
-							value[i] = 0;
-							strcpy(wadname, "textures/");
-							strcat(wadname, &value[j]);
-							W_LoadTextureWadFile (wadname, false);
-							j = i+1;
-							if (!k)
-								break;
-						}
-					}
-				}
-			}
-		}
 		else if (!strcmp("light", key))
 			ambientlight = atof(value);
 		else if (!strcmp("sunlight", key))
@@ -590,7 +552,7 @@ void CL_ParseEntityLump(char *entdata)
 			staticlights++;
 		}
 	}
-	if (hlbsp)
+	if (cl.worldmodel->ishlbsp)
 		n = LIGHTFADE_LDIVX2;
 	else if (tyrlite)
 		n = LIGHTFADE_LMINUSX;
@@ -617,6 +579,56 @@ void CL_ParseEntityLump(char *entdata)
 		}
 		if (staticlight[i].direction[0] == 0 && staticlight[i].direction[1] == 0 && staticlight[i].direction[2] == 0)
 			staticlight[i].cone = 0;
+	}
+}
+
+/*
+=====================
+CL_SignonReply
+
+An svc_signonnum has been received, perform a client side setup
+=====================
+*/
+static void CL_SignonReply (void)
+{
+	char 	str[8192];
+
+Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
+
+	switch (cls.signon)
+	{
+	case 1:
+		MSG_WriteByte (&cls.message, clc_stringcmd);
+		MSG_WriteString (&cls.message, "prespawn");
+		break;
+
+	case 2:
+		MSG_WriteByte (&cls.message, clc_stringcmd);
+		MSG_WriteString (&cls.message, va("name \"%s\"\n", cl_name.string));
+
+		MSG_WriteByte (&cls.message, clc_stringcmd);
+		MSG_WriteString (&cls.message, va("color %i %i\n", cl_color.integer >> 4, cl_color.integer & 15));
+
+		if (cl_pmodel.integer)
+		{
+			MSG_WriteByte (&cls.message, clc_stringcmd);
+			MSG_WriteString (&cls.message, va("pmodel %i\n", cl_pmodel.integer));
+		}
+
+		MSG_WriteByte (&cls.message, clc_stringcmd);
+		sprintf (str, "spawn %s", cls.spawnparms);
+		MSG_WriteString (&cls.message, str);
+		break;
+
+	case 3:
+		MSG_WriteByte (&cls.message, clc_stringcmd);
+		MSG_WriteString (&cls.message, "begin");
+		break;
+
+	case 4:
+//		SCR_EndLoadingPlaque ();		// allow normal screen updates
+		Con_ClearNotify();
+		break;
 	}
 }
 
@@ -649,7 +661,7 @@ void CL_ParseServerInfo (void)
 	Nehahrademcompatibility = false;
 	if (i == 250)
 		Nehahrademcompatibility = true;
-	if (cls.demoplayback && demo_nehahra.value)
+	if (cls.demoplayback && demo_nehahra.integer)
 		Nehahrademcompatibility = true;
 	dpprotocol = i == DPPROTOCOL_VERSION;
 
@@ -660,7 +672,7 @@ void CL_ParseServerInfo (void)
 		Con_Printf("Bad maxclients (%u) from server\n", cl.maxclients);
 		return;
 	}
-	cl.scores = Hunk_AllocName (cl.maxclients*sizeof(*cl.scores), "scores");
+	cl.scores = Mem_Alloc(cl_scores_mempool, cl.maxclients*sizeof(*cl.scores));
 
 // parse gametype
 	cl.gametype = MSG_ReadByte ();
@@ -682,7 +694,11 @@ void CL_ParseServerInfo (void)
 // needlessly purge it
 //
 
-	Hunk_Check ();
+	Mem_CheckSentinelsGlobal();
+
+	Mod_ClearUsed();
+
+	Mem_CheckSentinelsGlobal();
 
 // precache models
 	memset (cl.model_precache, 0, sizeof(cl.model_precache));
@@ -700,9 +716,6 @@ void CL_ParseServerInfo (void)
 			Host_Error ("Server sent a precache name of %i characters (max %i)", strlen(str), MAX_QPATH - 1);
 		strcpy (model_precache[nummodels], str);
 		Mod_TouchModel (str);
-
-//		Hunk_Check ();
-
 	}
 
 // precache sounds
@@ -723,18 +736,20 @@ void CL_ParseServerInfo (void)
 		S_TouchSound (str);
 	}
 
+	Mem_CheckSentinelsGlobal();
+
+	Mod_PurgeUnused();
+
 //
 // now we try to load everything else until a cache allocation fails
 //
 
-	Hunk_Check ();
+	Mem_CheckSentinelsGlobal();
 
 	for (i=1 ; i<nummodels ; i++)
 	{
-		isworldmodel = i == 1; // LordHavoc: first model is the world model
-		cl.model_precache[i] = Mod_ForName (model_precache[i], false);
-
-//		Hunk_Check ();
+		// LordHavoc: i == 1 means the first model is the world model
+		cl.model_precache[i] = Mod_ForName (model_precache[i], false, true, i == 1);
 
 		if (cl.model_precache[i] == NULL)
 		{
@@ -744,7 +759,7 @@ void CL_ParseServerInfo (void)
 		CL_KeepaliveMessage ();
 	}
 
-	Hunk_Check ();
+	Mem_CheckSentinelsGlobal();
 
 	S_BeginPrecaching ();
 	for (i=1 ; i<numsounds ; i++)
@@ -754,15 +769,14 @@ void CL_ParseServerInfo (void)
 	}
 	S_EndPrecaching ();
 
-
 // local state
 	cl_entities[0].render.model = cl.worldmodel = cl.model_precache[1];
-
-//	Hunk_Check ();
+	cl_entities[0].render.scale = 1;
+	cl_entities[0].render.alpha = 1;
 
 	R_NewMap ();
 
-	Hunk_Check ();		// make sure nothing is hurt
+	Mem_CheckSentinelsGlobal();
 
 	noclip_anglehack = false;		// noclip is turned off at start
 }
@@ -782,14 +796,15 @@ void CL_ValidateState(entity_state_t *s)
 		Host_Error ("CL_ValidateState: colormap (%i) > cl.maxclients (%i)", s->colormap, cl.maxclients);
 
 	model = cl.model_precache[s->modelindex];
+	Mod_CheckLoaded(model);
 	if (model && s->frame >= model->numframes)
 	{
-		Con_DPrintf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
+		Con_Printf("CL_ValidateState: no such frame %i in \"%s\"\n", s->frame, model->name);
 		s->frame = 0;
 	}
-	if (model && s->skin >= model->numskins)
+	if (model && s->skin > 0 && s->skin >= model->numskins)
 	{
-		Con_DPrintf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
+		Con_Printf("CL_ValidateState: no such skin %i in \"%s\"\n", s->skin, model->name);
 		s->skin = 0;
 	}
 }
@@ -809,6 +824,7 @@ void CL_ParseUpdate (int bits)
 {
 	int i, num, deltadie;
 	entity_t *ent;
+	entity_state_t new;
 
 	if (cls.signon == SIGNONS - 1)
 	{	// first update is the final signon stage
@@ -825,7 +841,7 @@ void CL_ParseUpdate (int bits)
 			bits |= MSG_ReadByte() << 24;
 	}
 
-	if (bits & U_LONGENTITY)	
+	if (bits & U_LONGENTITY)
 		num = (unsigned) MSG_ReadShort ();
 	else
 		num = (unsigned) MSG_ReadByte ();
@@ -845,43 +861,48 @@ void CL_ParseUpdate (int bits)
 			bitprofile[i]++;
 	bitprofilecount++;
 
-	ent->state_previous = ent->state_current;
 	deltadie = false;
 	if (bits & U_DELTA)
 	{
-		if (!ent->state_current.active)
+		new = ent->state_current;
+		if (!new.active)
 			deltadie = true; // was not present in previous frame, leave hidden until next full update
 	}
 	else
-		ent->state_current = ent->state_baseline;
+		new = ent->state_baseline;
 
-	ent->state_current.time = cl.mtime[0];
+	new.time = cl.mtime[0];
 
-	ent->state_current.flags = 0;
-	ent->state_current.active = true;
-	if (bits & U_MODEL)		ent->state_current.modelindex = (ent->state_current.modelindex & 0xFF00) | MSG_ReadByte();
-	if (bits & U_FRAME)		ent->state_current.frame = (ent->state_current.frame & 0xFF00) | MSG_ReadByte();
-	if (bits & U_COLORMAP)	ent->state_current.colormap = MSG_ReadByte();
-	if (bits & U_SKIN)		ent->state_current.skin = MSG_ReadByte();
-	if (bits & U_EFFECTS)	ent->state_current.effects = (ent->state_current.effects & 0xFF00) | MSG_ReadByte();
-	if (bits & U_ORIGIN1)	ent->state_current.origin[0] = MSG_ReadCoord();
-	if (bits & U_ANGLE1)	ent->state_current.angles[0] = MSG_ReadAngle();
-	if (bits & U_ORIGIN2)	ent->state_current.origin[1] = MSG_ReadCoord();
-	if (bits & U_ANGLE2)	ent->state_current.angles[1] = MSG_ReadAngle();
-	if (bits & U_ORIGIN3)	ent->state_current.origin[2] = MSG_ReadCoord();
-	if (bits & U_ANGLE3)	ent->state_current.angles[2] = MSG_ReadAngle();
-	if (bits & U_STEP)		ent->state_current.flags |= RENDER_STEP;
-	if (bits & U_ALPHA)		ent->state_current.alpha = MSG_ReadByte();
-	if (bits & U_SCALE)		ent->state_current.scale = MSG_ReadByte();
-	if (bits & U_EFFECTS2)	ent->state_current.effects = (ent->state_current.effects & 0x00FF) | (MSG_ReadByte() << 8);
-	if (bits & U_GLOWSIZE)	ent->state_current.glowsize = MSG_ReadByte();
-	if (bits & U_GLOWCOLOR)	ent->state_current.glowcolor = MSG_ReadByte();
-	if (bits & U_GLOWTRAIL) ent->state_current.flags |= RENDER_GLOWTRAIL;
-	if (bits & U_COLORMOD)	ent->state_current.colormod = MSG_ReadByte();
-	if (bits & U_FRAME2)	ent->state_current.frame = (ent->state_current.frame & 0x00FF) | (MSG_ReadByte() << 8);
-	if (bits & U_MODEL2)	ent->state_current.modelindex = (ent->state_current.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
-	if (bits & U_VIEWMODEL)	ent->state_current.flags |= RENDER_VIEWMODEL;
-	if (bits & U_EXTERIORMODEL)	ent->state_current.flags |= RENDER_EXTERIORMODEL;
+	new.flags = 0;
+	new.active = true;
+	if (bits & U_MODEL)		new.modelindex = (new.modelindex & 0xFF00) | MSG_ReadByte();
+	if (bits & U_FRAME)		new.frame = (new.frame & 0xFF00) | MSG_ReadByte();
+	if (bits & U_COLORMAP)	new.colormap = MSG_ReadByte();
+	if (bits & U_SKIN)		new.skin = MSG_ReadByte();
+	if (bits & U_EFFECTS)	new.effects = (new.effects & 0xFF00) | MSG_ReadByte();
+	if (bits & U_ORIGIN1)	new.origin[0] = MSG_ReadCoord();
+	if (bits & U_ANGLE1)	new.angles[0] = MSG_ReadAngle();
+	if (bits & U_ORIGIN2)	new.origin[1] = MSG_ReadCoord();
+	if (bits & U_ANGLE2)	new.angles[1] = MSG_ReadAngle();
+	if (bits & U_ORIGIN3)	new.origin[2] = MSG_ReadCoord();
+	if (bits & U_ANGLE3)	new.angles[2] = MSG_ReadAngle();
+	if (bits & U_STEP)		new.flags |= RENDER_STEP;
+	if (bits & U_ALPHA)		new.alpha = MSG_ReadByte();
+	if (bits & U_SCALE)		new.scale = MSG_ReadByte();
+	if (bits & U_EFFECTS2)	new.effects = (new.effects & 0x00FF) | (MSG_ReadByte() << 8);
+	if (bits & U_GLOWSIZE)	new.glowsize = MSG_ReadByte();
+	if (bits & U_GLOWCOLOR)	new.glowcolor = MSG_ReadByte();
+#if 0
+	if (bits & U_COLORMOD)	{int i = MSG_ReadByte();float r = (((int) i >> 5) & 7) * 1.0 / 7, g = (((int) i >> 2) & 7) * 1.0 / 7, b = ((int) i & 3) * 1.0 / 3;Con_Printf("warning: U_COLORMOD %i (%1.2f %1.2f %1.2f) ignored\n", i, r, g, b);}
+#else
+	// apparently the dpcrush demo uses this (unintended, and it uses white anyway)
+	if (bits & U_COLORMOD)	MSG_ReadByte();
+#endif
+	if (bits & U_GLOWTRAIL) new.flags |= RENDER_GLOWTRAIL;
+	if (bits & U_FRAME2)	new.frame = (new.frame & 0x00FF) | (MSG_ReadByte() << 8);
+	if (bits & U_MODEL2)	new.modelindex = (new.modelindex & 0x00FF) | (MSG_ReadByte() << 8);
+	if (bits & U_VIEWMODEL)	new.flags |= RENDER_VIEWMODEL;
+	if (bits & U_EXTERIORMODEL)	new.flags |= RENDER_EXTERIORMODEL;
 
 	// LordHavoc: to allow playback of the Nehahra movie
 	if (Nehahrademcompatibility && (bits & U_EXTEND1))
@@ -892,44 +913,42 @@ void CL_ParseUpdate (int bits)
 		if (i == 2)
 		{
 			if (MSG_ReadFloat())
-				ent->state_current.effects |= EF_FULLBRIGHT;
+				new.effects |= EF_FULLBRIGHT;
 		}
 		if (j < 0)
-			ent->state_current.alpha = 0;
+			new.alpha = 0;
 		else if (j == 0 || j >= 255)
-			ent->state_current.alpha = 255;
+			new.alpha = 255;
 		else
-			ent->state_current.alpha = j;
+			new.alpha = j;
 	}
 
 	if (deltadie)
 	{
 		// hide the entity
-		ent->state_current.active = false;
+		new.active = false;
+	}
+	else
+		CL_ValidateState(&new);
+
+	if (new.flags & RENDER_STEP) // FIXME: rename this flag?
+	{
+		// make time identical for memcmp
+		new.time = ent->state_current.time;
+		if (memcmp(&new, &ent->state_current, sizeof(entity_state_t)))
+		{
+			// state has changed
+			ent->state_previous = ent->state_current;
+			ent->state_current = new;
+			// assume 10fps animation
+			ent->state_previous.time = cl.mtime[0];
+			ent->state_current.time = cl.mtime[0] + 0.1; //ent->state_previous.time + 0.1;
+		}
 	}
 	else
 	{
-		CL_ValidateState(&ent->state_current);
-
-		/*
-		if (!ent->state_current.active)
-		{
-			if (bits & U_DELTA)
-			{
-				if (bits & U_MODEL)
-					Con_Printf("CL_ParseUpdate: delta NULL model on %i: %i %i\n", num, ent->state_previous.modelindex, ent->state_current.modelindex);
-				else
-					Con_Printf("CL_ParseUpdate: delta NULL model on %i: %i\n", num, ent->state_previous.modelindex);
-			}
-			else
-			{
-				if (bits & U_MODEL)
-					Con_Printf("CL_ParseUpdate:       NULL model on %i: %i %i\n", num, ent->state_baseline.modelindex, ent->state_current.modelindex);
-				else
-					Con_Printf("CL_ParseUpdate:       NULL model on %i: %i\n", num, ent->state_baseline.modelindex);
-			}
-		}
-		*/
+		ent->state_previous = ent->state_current;
+		ent->state_current = new;
 	}
 }
 
@@ -957,7 +976,7 @@ char *bitprofilenames[32] =
 	"U_EFFECTS2",
 	"U_GLOWSIZE",
 	"U_GLOWCOLOR",
-	"U_COLORMOD",
+	"obsolete U_COLORMOD",
 	"U_EXTEND2",
 	"U_GLOWTRAIL",
 	"U_VIEWMODEL",
@@ -1028,7 +1047,6 @@ void CL_ParseBaseline (entity_t *ent, int large)
 	ent->state_baseline.scale = 16;
 	ent->state_baseline.glowsize = 0;
 	ent->state_baseline.glowcolor = 254;
-	ent->state_baseline.colormod = 255;
 	ent->state_previous = ent->state_current = ent->state_baseline;
 
 	CL_ValidateState(&ent->state_baseline);
@@ -1141,7 +1159,6 @@ void CL_ParseStatic (int large)
 	ent->render.alpha = 1;
 	ent->render.scale = 1;
 	ent->render.alpha = 1;
-	ent->render.colormod[0] = ent->render.colormod[1] = ent->render.colormod[2] = 1;
 
 	VectorCopy (ent->state_baseline.origin, ent->render.origin);
 	VectorCopy (ent->state_baseline.angles, ent->render.angles);	
@@ -1197,7 +1214,7 @@ void CL_ParseEffect2 (void)
 }
 
 
-#define SHOWNET(x) if(cl_shownet.value==2)Con_Printf ("%3i:%s\n", msg_readcount-1, x);
+#define SHOWNET(x) if(cl_shownet.integer==2)Con_Printf ("%3i:%s\n", msg_readcount-1, x);
 
 /*
 =====================
@@ -1215,9 +1232,9 @@ void CL_ParseServerMessage (void)
 //
 // if recording demos, copy the message out
 //
-	if (cl_shownet.value == 1)
+	if (cl_shownet.integer == 1)
 		Con_Printf ("%i ",net_message.cursize);
-	else if (cl_shownet.value == 2)
+	else if (cl_shownet.integer == 2)
 		Con_Printf ("------------------\n");
 	
 	cl.onground = false;	// unless the server says otherwise	
@@ -1303,7 +1320,7 @@ void CL_ParseServerMessage (void)
 			cl.mtime[1] = cl.mtime[0];
 			cl.mtime[0] = MSG_ReadFloat ();			
 			break;
-			
+
 		case svc_clientdata:
 			i = MSG_ReadShort ();
 			CL_ParseClientdata (i);
@@ -1316,7 +1333,7 @@ void CL_ParseServerMessage (void)
 			Nehahrademcompatibility = false;
 			if (i == 250)
 				Nehahrademcompatibility = true;
-			if (cls.demoplayback && demo_nehahra.value)
+			if (cls.demoplayback && demo_nehahra.integer)
 				Nehahrademcompatibility = true;
 			dpprotocol = i == DPPROTOCOL_VERSION;
 			break;
@@ -1335,11 +1352,11 @@ void CL_ParseServerMessage (void)
 		case svc_stufftext:
 			Cbuf_AddText (MSG_ReadString ());
 			break;
-			
+
 		case svc_damage:
 			V_ParseDamage ();
 			break;
-			
+
 		case svc_serverinfo:
 			CL_ParseServerInfo ();
 //			vid.recalc_refdef = true;	// leave intermission full screen
@@ -1375,7 +1392,7 @@ void CL_ParseServerMessage (void)
 			i = MSG_ReadShort();
 			S_StopSound(i>>3, i&7);
 			break;
-		
+
 		case svc_updatename:
 			i = MSG_ReadByte ();
 			if (i >= cl.maxclients)
@@ -1398,7 +1415,7 @@ void CL_ParseServerMessage (void)
 			break;
 			
 		case svc_particle:
-			R_ParseParticleEffect ();
+			CL_ParseParticleEffect ();
 			break;
 
 		case svc_effect:
@@ -1487,7 +1504,7 @@ void CL_ParseServerMessage (void)
 			cl.intermission = 2;
 			cl.completed_time = cl.time;
 //			vid.recalc_refdef = true;	// go to full screen
-			SCR_CenterPrint (MSG_ReadString ());			
+			SCR_CenterPrint (MSG_ReadString ());
 			break;
 
 		case svc_cutscene:

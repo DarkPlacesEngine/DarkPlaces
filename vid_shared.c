@@ -6,8 +6,8 @@ qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha,
 qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
 
 // LordHavoc: GL_ARB_multitexture support
-int gl_mtexable = false;
-// LordHavoc: GL_ARB_texture_env_combine support
+int gl_textureunits;
+// LordHavoc: GL_ARB_texture_env_combine or GL_EXT_texture_env_combine support
 int gl_combine_extension = false;
 // LordHavoc: GL_EXT_compiled_vertex_array support
 int gl_supportslockarrays = false;
@@ -57,69 +57,104 @@ static gl_extensionfunctionlist_t compiledvertexarrayfuncs[] =
 	{NULL, NULL}
 };
 
-static gl_extensioninfo_t gl_extensioninfo[] =
-{
-	{"GL_ARB_multitexture", multitexturefuncs, &gl_mtexable, "-nomtex"},
-	{"GL_ARB_texture_env_combine", NULL, &gl_combine_extension, "-nocombine"},
-	{"GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, &gl_supportslockarrays, "-nocva"},
-	{NULL, NULL, NULL, NULL}
-};
-
 #ifndef WIN32
 #include <dlfcn.h>
 #endif
 
-void VID_CheckExtensions(void)
+static void *prjobj = NULL;
+
+static void gl_getfuncs_begin(void)
 {
 #ifndef WIN32
-	void *prjobj;
-#endif
-	gl_extensioninfo_t *info;
-	gl_extensionfunctionlist_t *func;
-//	multitexturefuncs[0].funcvariable = (void **)&qglMultiTexCoord2f;
-	Con_Printf("Checking OpenGL extensions...\n");
-#ifndef WIN32
-	if ((prjobj = dlopen(NULL, RTLD_LAZY)) == NULL)
+	if (prjobj)
+		dlclose(prjobj);
+
+	prjobj = dlopen(NULL, RTLD_LAZY);
+	if (prjobj == NULL)
 	{
 		Con_Printf("Unable to open symbol list for main program.\n");
 		return;
 	}
 #endif
-	for (info = gl_extensioninfo;info && info->name;info++)
-	{
-		*info->enablevariable = false;
-		for (func = info->funcs;func && func->name;func++)
-			*func->funcvariable = NULL;
-		Con_Printf("checking for %s...  ", info->name);
-		if (info->disableparm && COM_CheckParm(info->disableparm))
-		{
-			Con_Printf("disabled by commandline\n");
-			continue;
-		}
-		if (strstr(gl_extensions, info->name))
-		{
-			for (func = info->funcs;func && func->name != NULL;func++)
-			{
-#ifdef WIN32
-				if (!(*func->funcvariable = (void *) wglGetProcAddress(func->name)))
-#else
-				if (!(*func->funcvariable = (void *) dlsym(prjobj, func->name)))
-#endif
-				{
-					Con_Printf("missing function \"%s\"!\n", func->name);
-					goto missingfunc;
-				}
-			}
-			Con_Printf("enabled\n");
-			*info->enablevariable = true;
-			missingfunc:;
-		}
-		else
-			Con_Printf("not detected\n");
-	}
+}
+
+static void gl_getfuncs_end(void)
+{
 #ifndef WIN32
-	dlclose(prjobj);
+	if (prjobj)
+	{
+		dlclose(prjobj);
+		prjobj = NULL;
+	}
 #endif
+}
+
+static void *gl_getfuncaddress(char *name)
+{
+#ifdef WIN32
+	return (void *) wglGetProcAddress(func->name);
+#else
+	return (void *) dlsym(prjobj, name);
+#endif
+}
+
+static int gl_checkextension(char *name, gl_extensionfunctionlist_t *funcs, char *disableparm)
+{
+	gl_extensionfunctionlist_t *func;
+
+	Con_Printf("checking for %s...  ", name);
+
+	for (func = funcs;func && func->name;func++)
+		*func->funcvariable = NULL;
+
+	if (disableparm && COM_CheckParm(disableparm))
+	{
+		Con_Printf("disabled by commandline\n");
+		return false;
+	}
+
+	if (strstr(gl_extensions, name))
+	{
+		for (func = funcs;func && func->name != NULL;func++)
+		{
+			if (!(*func->funcvariable = (void *) gl_getfuncaddress(func->name)))
+			{
+				Con_Printf("missing function \"%s\"!\n", func->name);
+				return false;
+			}
+		}
+		Con_Printf("enabled\n");
+		return true;
+	}
+	else
+	{
+		Con_Printf("not detected\n");
+		return false;
+	}
+}
+
+void VID_CheckExtensions(void)
+{
+	Con_Printf("Checking OpenGL extensions...\n");
+
+	gl_getfuncs_begin();
+
+	gl_combine_extension = false;
+	gl_supportslockarrays = false;
+	gl_textureunits = 1;
+
+	if (gl_checkextension("GL_ARB_multitexture", multitexturefuncs, "-nomtex"))
+	{
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &gl_textureunits);
+		if (gl_textureunits > 1)
+			gl_combine_extension = gl_checkextension("GL_ARB_texture_env_combine", NULL, "-nocombine") || gl_checkextension("GL_EXT_texture_env_combine", NULL, "-nocombine");
+		else
+			gl_textureunits = 1; // for sanity sake, make sure it's not 0
+	}
+
+	gl_supportslockarrays = gl_checkextension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva");
+
+	gl_getfuncs_end();
 }
 
 void Force_CenterView_f (void)

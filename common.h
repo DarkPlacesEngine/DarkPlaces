@@ -19,18 +19,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // comndef.h  -- general definitions
 
-#if !defined BYTE_DEFINED
-typedef unsigned char 		byte;
-#define BYTE_DEFINED 1
-#endif
-
-#undef true
-#undef false
-
-typedef enum {false, true}	qboolean;
-
-#include "quakeio.h"
-
 // LordHavoc: MSVC has a different name for snprintf
 #ifdef WIN32
 #define snprintf _snprintf
@@ -38,32 +26,22 @@ typedef enum {false, true}	qboolean;
 
 //============================================================================
 
-extern void *qmalloc(unsigned int size);
-extern void qfree(void *mem);
-
-//============================================================================
-
 typedef struct sizebuf_s
 {
 	qboolean	allowoverflow;	// if false, do a Sys_Error
 	qboolean	overflowed;		// set to true if the buffer size failed
-	byte	*data;
-	int		maxsize;
-	int		cursize;
+	byte		*data;
+	mempool_t	*mempool;
+	int			maxsize;
+	int			cursize;
 } sizebuf_t;
 
-void SZ_Alloc (sizebuf_t *buf, int startsize);
+void SZ_Alloc (sizebuf_t *buf, int startsize, char *name);
 void SZ_Free (sizebuf_t *buf);
 void SZ_Clear (sizebuf_t *buf);
 void *SZ_GetSpace (sizebuf_t *buf, int length);
 void SZ_Write (sizebuf_t *buf, void *data, int length);
 void SZ_Print (sizebuf_t *buf, char *data);	// strcats onto the sizebuf
-
-//============================================================================
-
-#ifndef NULL
-#define NULL ((void *)0)
-#endif
 
 //============================================================================
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
@@ -179,7 +157,7 @@ extern	int		com_argc;
 extern	char	**com_argv;
 
 int COM_CheckParm (char *parm);
-void COM_Init (char *path);
+void COM_Init (void);
 void COM_InitArgv (int argc, char **argv);
 
 char *COM_SkipPath (char *pathname);
@@ -194,7 +172,6 @@ char	*va(char *format, ...);
 //============================================================================
 
 extern int com_filesize;
-struct cache_user_s;
 
 extern	char	com_gamedir[MAX_OSPATH];
 
@@ -203,11 +180,7 @@ int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip);
 
 // set by COM_LoadFile functions
 extern int loadsize;
-byte *COM_LoadHunkFile (char *path, qboolean quiet);
-byte *COM_LoadMallocFile (char *path, qboolean quiet);
-//void COM_LoadCacheFile (char *path, struct cache_user_s *cu, qboolean quiet);
-
-byte *COM_LoadFile (char *path, int usehunk, qboolean quiet);
+byte *COM_LoadFile (char *path, qboolean quiet);
 
 int COM_FileExists(char *filename);
 
