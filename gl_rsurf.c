@@ -50,12 +50,9 @@ static int dlightdivtable[32768];
 void GL_Surf_Init(void)
 {
 	int i;
-	if (!dlightdivtable[1])
-	{
-		dlightdivtable[0] = 4194304;
-		for (i = 1;i < 32768;i++)
-			dlightdivtable[i] = 4194304 / (i << 7);
-	}
+	dlightdivtable[0] = 4194304;
+	for (i = 1;i < 32768;i++)
+		dlightdivtable[i] = 4194304 / (i << 7);
 
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&r_vertexsurfaces);
