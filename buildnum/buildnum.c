@@ -21,7 +21,7 @@ int main(int argc, char **argv)
 	int inbuildnumber, outbuildnumber, remainder;
 	if (argc != 2)
 	{
-		fprintf(stderr, "usage: buildnum <filename.c or .h>\npurpose: increments build number in version string for darkplaces engine");
+		fprintf(stderr, "usage: buildnum <filename.c or .h>\npurpose: increments build number in version string for darkplaces engine\n");
 		ERROR
 	}
 
