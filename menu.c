@@ -404,7 +404,6 @@ void M_Demo_Key (int k)
 		S_LocalSound ("misc/menu2.wav");
 		m_state = m_none;
 		key_dest = key_game;
-//		SCR_BeginLoadingPlaque ();
 		Cbuf_AddText (va ("playdemo %s\n", Demos[demo_cursor].name));
 		return;
 
@@ -817,11 +816,6 @@ void M_Load_Key (int k)
 			return;
 		m_state = m_none;
 		key_dest = key_game;
-
-		// LordHavoc: made SCR_UpdateScreen use a great deal less stack space, no longer an issue
-		//// Host_Loadgame_f can't bring up the loading plaque because too much
-		//// stack space has been used, so do it now
-////		SCR_BeginLoadingPlaque ();
 
 		// issue the load command
 		Cbuf_AddText (va ("load s%i\n", load_cursor) );
@@ -2651,7 +2645,6 @@ void M_GameOptions_Key (int key)
 				Cbuf_AddText ("disconnect\n");
 			Cbuf_AddText ("listen 0\n");	// so host_netport will be re-examined
 			Cbuf_AddText ( va ("maxplayers %u\n", maxplayers) );
-//			SCR_BeginLoadingPlaque ();
 
 			if (gamemode == GAME_HIPNOTIC)
 				Cbuf_AddText ( va ("map %s\n", hipnoticlevels[hipnoticepisodes[startepisode].firstLevel + startlevel].name) );

@@ -1,25 +1,83 @@
 
 #include "quakedef.h"
 
-cvar_t		r_render = {0, "r_render", "1"};
-cvar_t		gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
+//cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
+cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "8192"};
+//cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
+cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "0"};
+cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
+
+cvar_t r_render = {0, "r_render", "1"};
+cvar_t gl_dither = {CVAR_SAVE, "gl_dither", "1"}; // whether or not to use dithering
+cvar_t gl_lockarrays = {0, "gl_lockarrays", "1"};
+
+#ifdef DEBUGGL
+int errornumber = 0;
+
+void GL_PrintError(int errornumber, char *filename, int linenumber)
+{
+	switch(errornumber)
+	{
+#ifdef GL_INVALID_ENUM
+	case GL_INVALID_ENUM:
+		Con_Printf("GL_INVALID_ENUM at %s:%i\n", filename, linenumber);
+		break;
+#endif
+#ifdef GL_INVALID_VALUE
+	case GL_INVALID_VALUE:
+		Con_Printf("GL_INVALID_VALUE at %s:%i\n", filename, linenumber);
+		break;
+#endif
+#ifdef GL_INVALID_OPERATION
+	case GL_INVALID_OPERATION:
+		Con_Printf("GL_INVALID_OPERATION at %s:%i\n", filename, linenumber);
+		break;
+#endif
+#ifdef GL_STACK_OVERFLOW
+	case GL_STACK_OVERFLOW:
+		Con_Printf("GL_STACK_OVERFLOW at %s:%i\n", filename, linenumber);
+		break;
+#endif
+#ifdef GL_STACK_UNDERFLOW
+	case GL_STACK_UNDERFLOW:
+		Con_Printf("GL_STACK_UNDERFLOW at %s:%i\n", filename, linenumber);
+		break;
+#endif
+#ifdef GL_OUT_OF_MEMORY
+	case GL_OUT_OF_MEMORY:
+		Con_Printf("GL_OUT_OF_MEMORY at %s:%i\n", filename, linenumber);
+		break;
+#endif
+#ifdef GL_TABLE_TOO_LARGE
+    case GL_TABLE_TOO_LARGE:
+		Con_Printf("GL_TABLE_TOO_LARGE at %s:%i\n", filename, linenumber);
+		break;
+#endif
+	default:
+		Con_Printf("GL UNKNOWN (%i) at %s:%i\n", errornumber, filename, linenumber);
+		break;
+	}
+}
+#endif
+
+float r_farclip, r_newfarclip;
+
+int polyindexarray[768];
+
+static float viewdist;
+
+int c_meshs, c_meshtris, c_transmeshs, c_transtris;
 
 int			lightscalebit;
 float		lightscale;
 float		overbrightscale;
 
 void SCR_ScreenShot_f (void);
-static void R_Envmap_f (void);
 
 static int max_meshs;
 static int max_batch;
 static int max_verts; // always max_meshs * 3
 #define TRANSDEPTHRES 4096
-
-//static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "21760"};
-static cvar_t gl_mesh_maxtriangles = {0, "gl_mesh_maxtriangles", "8192"};
-static cvar_t gl_mesh_batchtriangles = {0, "gl_mesh_batchtriangles", "1024"};
-static cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "0"};
 
 typedef struct buf_mesh_s
 {
@@ -185,27 +243,21 @@ static void gl_backend_bufferchanges(int init)
 	}
 }
 
-float r_farclip, r_newfarclip;
-
 static void gl_backend_newmap(void)
 {
 	r_farclip = r_newfarclip = 2048.0f;
 }
 
-int polyindexarray[768];
-
 void gl_backend_init(void)
 {
 	int i;
 
-	Cvar_RegisterVariable (&r_render);
-	Cvar_RegisterVariable (&gl_dither);
+	Cvar_RegisterVariable(&r_render);
+	Cvar_RegisterVariable(&gl_dither);
+	Cvar_RegisterVariable(&gl_lockarrays);
 #ifdef NORENDER
 	Cvar_SetValue("r_render", 0);
 #endif
-
-	Cmd_AddCommand ("screenshot",SCR_ScreenShot_f);
-	Cmd_AddCommand ("envmap", R_Envmap_f);
 
 	Cvar_RegisterVariable(&gl_mesh_maxtriangles);
 	Cvar_RegisterVariable(&gl_mesh_batchtriangles);
@@ -220,16 +272,29 @@ void gl_backend_init(void)
 	}
 }
 
-static void MYgluPerspective(GLdouble fovx, GLdouble fovy, GLdouble aspect, GLdouble zNear, GLdouble zFar )
+int arraylocked = false;
+
+void GL_LockArray(int first, int count)
 {
-	GLdouble xmax, ymax;
-
-	xmax = zNear * tan( fovx * M_PI / 360.0 ) * aspect;
-	ymax = zNear * tan( fovy * M_PI / 360.0 );
-
-	glFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar );
+	if (!arraylocked && gl_supportslockarrays && gl_lockarrays.integer)
+	{
+		qglLockArraysEXT(first, count);
+		CHECKGLERROR
+		arraylocked = true;
+	}
 }
 
+void GL_UnlockArray(void)
+{
+	if (arraylocked)
+	{
+		qglUnlockArraysEXT();
+		CHECKGLERROR
+		arraylocked = false;
+	}
+}
+
+//static float gldepthmin, gldepthmax;
 
 /*
 =============
@@ -238,39 +303,59 @@ GL_SetupFrame
 */
 static void GL_SetupFrame (void)
 {
-	if (!r_render.integer)
-		return;
-
-//	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
-	gldepthmin = 0;
-	gldepthmax = 1;
-	glDepthFunc (GL_LEQUAL);
-
-	glDepthRange (gldepthmin, gldepthmax);
+	double xmax, ymax;
+	double fovx, fovy, zNear, zFar, aspect;
 
 	// update farclip based on previous frame
 	r_farclip = r_newfarclip;
 
+	if (!r_render.integer)
+		return;
+
+//	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: moved to SCR_UpdateScreen
+//	gldepthmin = 0;
+//	gldepthmax = 1;
+	glDepthFunc (GL_LEQUAL);CHECKGLERROR
+
+//	glDepthRange (gldepthmin, gldepthmax);CHECKGLERROR
+
 	// set up viewpoint
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity ();
+	glMatrixMode(GL_PROJECTION);CHECKGLERROR
+	glLoadIdentity ();CHECKGLERROR
 
 	// y is weird beause OpenGL is bottom to top, we use top to bottom
-	glViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);
-//	yfov = 2*atan((float)r_refdef.height/r_refdef.width)*180/M_PI;
-	MYgluPerspective (r_refdef.fov_x, r_refdef.fov_y, r_refdef.width/r_refdef.height, 4.0 / 3.0, r_farclip);
+	glViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);CHECKGLERROR
 
-	glCullFace(GL_FRONT);
+	// depth range
+	zNear = 1.0;
+	zFar = r_farclip;
 
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity ();
+	// fov angles
+	fovx = r_refdef.fov_x;
+	fovy = r_refdef.fov_y;
+	aspect = r_refdef.width / r_refdef.height;
 
-	glRotatef (-90,  1, 0, 0);	    // put Z going up
-	glRotatef (90,  0, 0, 1);	    // put Z going up
-	glRotatef (-r_refdef.viewangles[2],  1, 0, 0);
-	glRotatef (-r_refdef.viewangles[0],  0, 1, 0);
-	glRotatef (-r_refdef.viewangles[1],  0, 0, 1);
-	glTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);
+	// pyramid slopes
+	xmax = zNear * tan(fovx * M_PI / 360.0) * aspect;
+	ymax = zNear * tan(fovy * M_PI / 360.0);
+
+	// set view pyramid
+	glFrustum(-xmax, xmax, -ymax, ymax, zNear, zFar);CHECKGLERROR
+
+//	glCullFace(GL_FRONT);CHECKGLERROR
+
+	glMatrixMode(GL_MODELVIEW);CHECKGLERROR
+	glLoadIdentity ();CHECKGLERROR
+
+	// put Z going up
+	glRotatef (-90,  1, 0, 0);CHECKGLERROR
+	glRotatef (90,  0, 0, 1);CHECKGLERROR
+	// camera rotation
+	glRotatef (-r_refdef.viewangles[2],  1, 0, 0);CHECKGLERROR
+	glRotatef (-r_refdef.viewangles[0],  0, 1, 0);CHECKGLERROR
+	glRotatef (-r_refdef.viewangles[1],  0, 0, 1);CHECKGLERROR
+	// camera location
+	glTranslatef (-r_refdef.vieworg[0],  -r_refdef.vieworg[1],  -r_refdef.vieworg[2]);CHECKGLERROR
 
 //	glGetFloatv (GL_MODELVIEW_MATRIX, r_world_matrix);
 
@@ -278,24 +363,37 @@ static void GL_SetupFrame (void)
 	// set drawing parms
 	//
 //	if (gl_cull.integer)
-		glEnable(GL_CULL_FACE);
+//	{
+//		glEnable(GL_CULL_FACE);CHECKGLERROR
+//	}
 //	else
-//		glDisable(GL_CULL_FACE);
+//	{
+//		glDisable(GL_CULL_FACE);CHECKGLERROR
+//	}
 
-	glEnable(GL_BLEND); // was Disable
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(1);
+//	glEnable(GL_BLEND);CHECKGLERROR
+//	glEnable(GL_DEPTH_TEST);CHECKGLERROR
+//	glDepthMask(1);CHECKGLERROR
 }
 
-static float viewdist;
-
-int c_meshs, c_meshtris, c_transmeshs, c_transtris;
+static int mesh_blendfunc1;
+static int mesh_blendfunc2;
+static int mesh_blend;
+static GLboolean mesh_depthmask;
+static int mesh_depthtest;
+static int mesh_unit;
+static int mesh_clientunit;
+static int mesh_texture[MAX_TEXTUREUNITS];
+static float mesh_texturergbscale[MAX_TEXTUREUNITS];
 
 // called at beginning of frame
-void R_Mesh_Clear(void)
+void R_Mesh_Start(void)
 {
+	int i;
 	if (!backendactive)
 		Sys_Error("R_Mesh_Clear: called when backend is not active\n");
+
+	CHECKGLERROR
 
 	gl_backend_bufferchanges(false);
 
@@ -315,64 +413,120 @@ void R_Mesh_Clear(void)
 	c_transtris = 0;
 
 	GL_SetupFrame();
-}
 
-#ifdef DEBUGGL
-void GL_PrintError(int errornumber, char *filename, int linenumber)
-{
-	switch(errornumber)
+	mesh_unit = 0;
+	mesh_clientunit = 0;
+
+	for (i = 0;i < backendunits;i++)
 	{
-	case GL_INVALID_ENUM:
-		Con_Printf("GL_INVALID_ENUM at %s:%i\n", filename, linenumber);
-		break;
-	case GL_INVALID_VALUE:
-		Con_Printf("GL_INVALID_VALUE at %s:%i\n", filename, linenumber);
-		break;
-	case GL_INVALID_OPERATION:
-		Con_Printf("GL_INVALID_OPERATION at %s:%i\n", filename, linenumber);
-		break;
-	case GL_STACK_OVERFLOW:
-		Con_Printf("GL_STACK_OVERFLOW at %s:%i\n", filename, linenumber);
-		break;
-	case GL_STACK_UNDERFLOW:
-		Con_Printf("GL_STACK_UNDERFLOW at %s:%i\n", filename, linenumber);
-		break;
-	case GL_OUT_OF_MEMORY:
-		Con_Printf("GL_OUT_OF_MEMORY at %s:%i\n", filename, linenumber);
-		break;
-#ifdef GL_TABLE_TOO_LARGE
-    case GL_TABLE_TOO_LARGE:
-		Con_Printf("GL_TABLE_TOO_LARGE at %s:%i\n", filename, linenumber);
-		break;
-#endif
-	default:
-		Con_Printf("GL UNKNOWN (%i) at %s:%i\n", errornumber, filename, linenumber);
-		break;
+		mesh_texture[i] = 0;
+		mesh_texturergbscale[i] = 1;
+	}
+
+	glEnable(GL_CULL_FACE);CHECKGLERROR
+	glCullFace(GL_FRONT);CHECKGLERROR
+
+	mesh_depthtest = true;
+	glEnable(GL_DEPTH_TEST);CHECKGLERROR
+
+	mesh_blendfunc1 = GL_ONE;
+	mesh_blendfunc2 = GL_ZERO;
+	glBlendFunc(mesh_blendfunc1, mesh_blendfunc2);CHECKGLERROR
+
+	mesh_blend = 0;
+	glDisable(GL_BLEND);CHECKGLERROR
+
+	mesh_depthmask = GL_TRUE;
+	glDepthMask(mesh_depthmask);CHECKGLERROR
+
+	glVertexPointer(3, GL_FLOAT, sizeof(buf_vertex_t), &buf_vertex[0].v[0]);CHECKGLERROR
+	glEnableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
+	if (gl_mesh_floatcolors.integer)
+	{
+		glColorPointer(4, GL_FLOAT, sizeof(buf_fcolor_t), &buf_fcolor[0].c[0]);CHECKGLERROR
+	}
+	else
+	{
+		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(buf_bcolor_t), &buf_bcolor[0].c[0]);CHECKGLERROR
+	}
+	glEnableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+
+	if (backendunits > 1)
+	{
+		for (i = 0;i < backendunits;i++)
+		{
+			qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
+			glBindTexture(GL_TEXTURE_2D, mesh_texture[i]);CHECKGLERROR
+			glDisable(GL_TEXTURE_2D);CHECKGLERROR
+			if (gl_combine.integer)
+			{
+				glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_PREVIOUS_ARB);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_CONSTANT_ARB);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
+				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);CHECKGLERROR
+				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, mesh_texturergbscale[i]);CHECKGLERROR
+				glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0f);CHECKGLERROR
+			}
+			else
+			{
+				glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
+			}
+
+			qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
+			glTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[i]);CHECKGLERROR
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+		}
+	}
+	else
+	{
+		glBindTexture(GL_TEXTURE_2D, (mesh_texture[0] = 0));CHECKGLERROR
+		glDisable(GL_TEXTURE_2D);CHECKGLERROR
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
+
+		glTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[0]);CHECKGLERROR
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
 }
-
-int errornumber = 0;
-#endif
 
 // renders mesh buffers, called to flush buffers when full
 void R_Mesh_Render(void)
 {
-	int i, k, blendfunc1, blendfunc2, blend, depthmask, depthtest, unit = 0, clientunit = 0, firsttriangle, endtriangle, indexcount, firstvert, endvert, texture[MAX_TEXTUREUNITS];
-	float farclip, texturergbscale[MAX_TEXTUREUNITS];
+	int i;
+	int k;
+	int firsttriangle;
+	int endtriangle;
+	int indexcount;
+	int firstvert;
+	int endvert;
+	float farclip;
 	buf_mesh_t *mesh;
 	unsigned int *index;
 	// float to byte color conversion
 	int *icolor;
 	float *fcolor;
 	qbyte *bcolor;
+
 	if (!backendactive)
 		Sys_Error("R_Mesh_Render: called when backend is not active\n");
+
 	if (!currentmesh)
 		return;
 
-CHECKGLERROR
+	CHECKGLERROR
 
 	// push out farclip based on vertices
+	// FIXME: wouldn't this be a little slow when using matrix transforms?
 	for (i = 0;i < currentvertex;i++)
 	{
 		farclip = DotProduct(buf_vertex[i].v, vpn);
@@ -386,37 +540,7 @@ CHECKGLERROR
 	if (farclip > r_newfarclip)
 		r_newfarclip = ceil((farclip + 255) / 256) * 256 + 256;
 
-	for (i = 0;i < backendunits;i++)
-		texturergbscale[i] = 1;
-
-	glEnable(GL_CULL_FACE);
-CHECKGLERROR
-	glCullFace(GL_FRONT);
-CHECKGLERROR
-	depthtest = true;
-	glEnable(GL_DEPTH_TEST);
-CHECKGLERROR
-	blendfunc1 = GL_ONE;
-	blendfunc2 = GL_ZERO;
-	glBlendFunc(blendfunc1, blendfunc2);
-CHECKGLERROR
-	blend = 0;
-	glDisable(GL_BLEND);
-CHECKGLERROR
-	depthmask = true;
-	glDepthMask((GLboolean) depthmask);
-CHECKGLERROR
-
-	glVertexPointer(3, GL_FLOAT, sizeof(buf_vertex_t), &buf_vertex[0].v[0]);
-CHECKGLERROR
-	glEnableClientState(GL_VERTEX_ARRAY);
-CHECKGLERROR
-	if (gl_mesh_floatcolors.integer)
-	{
-		glColorPointer(4, GL_FLOAT, sizeof(buf_fcolor_t), &buf_fcolor[0].c[0]);
-CHECKGLERROR
-	}
-	else
+	if (!gl_mesh_floatcolors.integer)
 	{
 		// shift float to have 8bit fraction at base of number
 		for (i = 0, fcolor = &buf_fcolor->c[0];i < currentvertex;i++)
@@ -434,230 +558,118 @@ CHECKGLERROR
 			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
 			k = (*icolor++) & 0x7FFFFF;*bcolor++ = k > 255 ? 255 : k;
 		}
-		glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(buf_bcolor_t), &buf_bcolor[0].c[0]);
-CHECKGLERROR
-	}
-	glEnableClientState(GL_COLOR_ARRAY);
-CHECKGLERROR
-
-	if (backendunits > 1)
-	{
-		for (i = 0;i < backendunits;i++)
-		{
-			qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
-CHECKGLERROR
-			glBindTexture(GL_TEXTURE_2D, (texture[i] = 0));
-CHECKGLERROR
-			glDisable(GL_TEXTURE_2D);
-CHECKGLERROR
-			if (gl_combine.integer)
-			{
-				glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE_ARB);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, GL_MODULATE);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_RGB_ARB, GL_TEXTURE);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_RGB_ARB, GL_PREVIOUS_ARB);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_RGB_ARB, GL_CONSTANT_ARB);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB_ARB, GL_SRC_COLOR);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB_ARB, GL_SRC_COLOR);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_RGB_ARB, GL_SRC_ALPHA);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, GL_MODULATE);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA_ARB, GL_TEXTURE);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE1_ALPHA_ARB, GL_PREVIOUS_ARB);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE2_ALPHA_ARB, GL_CONSTANT_ARB);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA_ARB, GL_SRC_ALPHA);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_ALPHA_ARB, GL_SRC_ALPHA);
-CHECKGLERROR
-				glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND2_ALPHA_ARB, GL_SRC_ALPHA);
-CHECKGLERROR
-				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0f);
-CHECKGLERROR
-				glTexEnvf(GL_TEXTURE_ENV, GL_ALPHA_SCALE, 1.0f);
-CHECKGLERROR
-			}
-			else
-			{
-				glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-CHECKGLERROR
-			}
-
-			qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
-CHECKGLERROR
-			glTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[i]);
-CHECKGLERROR
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
-		}
-	}
-	else
-	{
-		glBindTexture(GL_TEXTURE_2D, (texture[0] = 0));
-CHECKGLERROR
-		glDisable(GL_TEXTURE_2D);
-CHECKGLERROR
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-CHECKGLERROR
-
-		glTexCoordPointer(2, GL_FLOAT, sizeof(buf_texcoord_t), buf_texcoord[0]);
-CHECKGLERROR
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
 	}
 
-	// lock as early as possible
-	GL_LockArray(0, currentvertex);
-CHECKGLERROR
+	// lock the arrays now that they will have no further modifications
+	//GL_LockArray(0, currentvertex);CHECKGLERROR
 
 	for (k = 0, mesh = buf_mesh;k < currentmesh;k++, mesh++)
 	{
 		if (backendunits > 1)
 		{
-//			int topunit = 0;
 			for (i = 0;i < backendunits;i++)
 			{
-				if (texture[i] != mesh->textures[i])
+				if (mesh_texture[i] != mesh->textures[i])
 				{
-					if (unit != i)
+					if (mesh_unit != i)
 					{
-						qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
-CHECKGLERROR
+						qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
 					}
-					if (texture[i] == 0)
+					if (mesh_texture[i] == 0)
 					{
-						glEnable(GL_TEXTURE_2D);
-CHECKGLERROR
+						glEnable(GL_TEXTURE_2D);CHECKGLERROR
 						// have to disable texcoord array on disabled texture
 						// units due to NVIDIA driver bug with
 						// compiled_vertex_array
-						if (clientunit != i)
+						if (mesh_clientunit != i)
 						{
-							qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
-CHECKGLERROR
+							qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
 						}
-						glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
+						glEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 					}
-					glBindTexture(GL_TEXTURE_2D, (texture[i] = mesh->textures[i]));
-CHECKGLERROR
-					if (texture[i] == 0)
+					glBindTexture(GL_TEXTURE_2D, (mesh_texture[i] = mesh->textures[i]));CHECKGLERROR
+					if (mesh_texture[i] == 0)
 					{
-						glDisable(GL_TEXTURE_2D);
-CHECKGLERROR
+						glDisable(GL_TEXTURE_2D);CHECKGLERROR
 						// have to disable texcoord array on disabled texture
 						// units due to NVIDIA driver bug with
 						// compiled_vertex_array
-						if (clientunit != i)
+						if (mesh_clientunit != i)
 						{
-							qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
-CHECKGLERROR
+							qglClientActiveTexture(GL_TEXTURE0_ARB + (mesh_clientunit = i));CHECKGLERROR
 						}
-						glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
+						glDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 					}
 				}
-				if (texturergbscale[i] != mesh->texturergbscale[i])
+				if (mesh_texturergbscale[i] != mesh->texturergbscale[i])
 				{
-					if (unit != i)
+					if (mesh_unit != i)
 					{
-						qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
-CHECKGLERROR
+						qglActiveTexture(GL_TEXTURE0_ARB + (mesh_unit = i));CHECKGLERROR
 					}
-					glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (texturergbscale[i] = mesh->texturergbscale[i]));
-CHECKGLERROR
+					glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (mesh_texturergbscale[i] = mesh->texturergbscale[i]));CHECKGLERROR
 				}
-//				if (texture[i])
-//					topunit = i;
 			}
-//			if (unit != topunit)
-//			{
-//				qglActiveTexture(GL_TEXTURE0_ARB + (unit = topunit));
-//CHECKGLERROR
-//			}
 		}
 		else
 		{
-			if (texture[0] != mesh->textures[0])
+			if (mesh_texture[0] != mesh->textures[0])
 			{
-				if (texture[0] == 0)
+				if (mesh_texture[0] == 0)
 				{
-					glEnable(GL_TEXTURE_2D);
-CHECKGLERROR
-					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
+					glEnable(GL_TEXTURE_2D);CHECKGLERROR
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
-				glBindTexture(GL_TEXTURE_2D, (texture[0] = mesh->textures[0]));
-CHECKGLERROR
-				if (texture[0] == 0)
+				glBindTexture(GL_TEXTURE_2D, (mesh_texture[0] = mesh->textures[0]));CHECKGLERROR
+				if (mesh_texture[0] == 0)
 				{
-					glDisable(GL_TEXTURE_2D);
-CHECKGLERROR
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
+					glDisable(GL_TEXTURE_2D);CHECKGLERROR
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 				}
 			}
 		}
-		if (blendfunc1 != mesh->blendfunc1 || blendfunc2 != mesh->blendfunc2)
+		if (mesh_blendfunc1 != mesh->blendfunc1 || mesh_blendfunc2 != mesh->blendfunc2)
 		{
-			blendfunc1 = mesh->blendfunc1;
-			blendfunc2 = mesh->blendfunc2;
-			glBlendFunc(blendfunc1, blendfunc2);
-CHECKGLERROR
-			if (blendfunc2 == GL_ZERO)
+			glBlendFunc(mesh_blendfunc1 = mesh->blendfunc1, mesh_blendfunc2 = mesh->blendfunc2);CHECKGLERROR
+			if (mesh_blendfunc2 == GL_ZERO)
 			{
-				if (blendfunc1 == GL_ONE)
+				if (mesh_blendfunc1 == GL_ONE)
 				{
-					if (blend)
+					if (mesh_blend)
 					{
-						blend = 0;
-						glDisable(GL_BLEND);
-CHECKGLERROR
+						mesh_blend = 0;
+						glDisable(GL_BLEND);CHECKGLERROR
 					}
 				}
 				else
 				{
-					if (!blend)
+					if (!mesh_blend)
 					{
-						blend = 1;
-						glEnable(GL_BLEND);
-CHECKGLERROR
+						mesh_blend = 1;
+						glEnable(GL_BLEND);CHECKGLERROR
 					}
 				}
 			}
 			else
 			{
-				if (!blend)
+				if (!mesh_blend)
 				{
-					blend = 1;
-					glEnable(GL_BLEND);
-CHECKGLERROR
+					mesh_blend = 1;
+					glEnable(GL_BLEND);CHECKGLERROR
 				}
 			}
 		}
-		if (depthtest != mesh->depthtest)
+		if (mesh_depthtest != mesh->depthtest)
 		{
-			depthtest = mesh->depthtest;
-			if (depthtest)
+			mesh_depthtest = mesh->depthtest;
+			if (mesh_depthtest)
 				glEnable(GL_DEPTH_TEST);
 			else
 				glDisable(GL_DEPTH_TEST);
 		}
-		if (depthmask != mesh->depthmask)
+		if (mesh_depthmask != mesh->depthmask)
 		{
-			depthmask = mesh->depthmask;
-			glDepthMask((GLboolean) depthmask);
-CHECKGLERROR
+			glDepthMask(mesh_depthmask = mesh->depthmask);CHECKGLERROR
 		}
 
 		firsttriangle = mesh->firsttriangle;
@@ -667,79 +679,82 @@ CHECKGLERROR
 
 		indexcount = (endtriangle - firsttriangle) * 3;
 		index = (unsigned int *)&buf_tri[firsttriangle].index[0];
-		for (i = 0;i < indexcount;i++)
-			index[i] += firstvert;
 
+		// if not using batching, skip the index adjustment
+		if (firstvert != 0)
+			for (i = 0;i < indexcount;i++)
+				index[i] += firstvert;
+
+		// lock arrays (this is ignored if already locked)
+		CHECKGLERROR
+		GL_LockArray(0, currentvertex);
 #ifdef WIN32
 		// FIXME: dynamic link to GL so we can get DrawRangeElements on WIN32
-		glDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, index);
+		glDrawElements(GL_TRIANGLES, indexcount, GL_UNSIGNED_INT, index);CHECKGLERROR
 #else
-		glDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, index);
+		glDrawRangeElements(GL_TRIANGLES, firstvert, endvert, indexcount, GL_UNSIGNED_INT, index);CHECKGLERROR
 #endif
-CHECKGLERROR
 	}
 
 	currentmesh = 0;
 	currenttriangle = 0;
 	currentvertex = 0;
 
-	GL_UnlockArray();
-CHECKGLERROR
+	GL_UnlockArray();CHECKGLERROR
+}
+
+// restores backend state, used when done with 3D rendering
+void R_Mesh_Finish(void)
+{
+	int i;
+	// flush any queued meshs
+	R_Mesh_Render();
 
 	if (backendunits > 1)
 	{
 		for (i = backendunits - 1;i >= 0;i--)
 		{
-			qglActiveTexture(GL_TEXTURE0_ARB + (unit = i));
-CHECKGLERROR
-			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-CHECKGLERROR
+			qglActiveTexture(GL_TEXTURE0_ARB + i);CHECKGLERROR
+			glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
 			if (gl_combine.integer)
 			{
-				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0f);
-CHECKGLERROR
+				glTexEnvf(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, 1.0f);CHECKGLERROR
 			}
 			if (i > 0)
 			{
-				glDisable(GL_TEXTURE_2D);
-CHECKGLERROR
+				glDisable(GL_TEXTURE_2D);CHECKGLERROR
 			}
 			else
 			{
-				glEnable(GL_TEXTURE_2D);
-CHECKGLERROR
+				glEnable(GL_TEXTURE_2D);CHECKGLERROR
 			}
-			glBindTexture(GL_TEXTURE_2D, 0);
-CHECKGLERROR
+			glBindTexture(GL_TEXTURE_2D, 0);CHECKGLERROR
 
-			qglClientActiveTexture(GL_TEXTURE0_ARB + (clientunit = i));
-CHECKGLERROR
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
+			qglClientActiveTexture(GL_TEXTURE0_ARB + i);CHECKGLERROR
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 		}
 	}
 	else
 	{
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-CHECKGLERROR
-		glEnable(GL_TEXTURE_2D);
-CHECKGLERROR
-		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-CHECKGLERROR
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);CHECKGLERROR
+		glEnable(GL_TEXTURE_2D);CHECKGLERROR
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
 	}
-	glDisableClientState(GL_COLOR_ARRAY);
-CHECKGLERROR
-	glDisableClientState(GL_VERTEX_ARRAY);
-CHECKGLERROR
+	glDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
+	glDisableClientState(GL_VERTEX_ARRAY);CHECKGLERROR
 
-	glDisable(GL_BLEND);
-CHECKGLERROR
-	glEnable(GL_DEPTH_TEST);
-CHECKGLERROR
-	glDepthMask(true);
-CHECKGLERROR
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-CHECKGLERROR
+	glDisable(GL_BLEND);CHECKGLERROR
+	glEnable(GL_DEPTH_TEST);CHECKGLERROR
+	glDepthMask(true);CHECKGLERROR
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);CHECKGLERROR
+}
+
+void R_Mesh_ClearDepth(void)
+{
+	R_Mesh_AddTransparent();
+	R_Mesh_Finish();
+	glClear(GL_DEPTH_BUFFER_BIT);
+	R_Mesh_Start();
 }
 
 void R_Mesh_AddTransparent(void)
@@ -1366,13 +1381,13 @@ void R_Mesh_DrawPolygon(rmeshinfo_t *m, int numverts)
 ==============================================================================
 */
 
-float CalcFov (float fov_x, float width, float height);
-void R_ClearScreen(void);
-
 void SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 {
 	int i;
 	qbyte *buffer;
+
+	if (!r_render.integer)
+		return;
 
 	buffer = Mem_Alloc(tempmempool, width*height*3);
 	glReadPixels (x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, buffer);
@@ -1388,126 +1403,25 @@ void SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 	Mem_Free(buffer);
 }
 
-/*
-==================
-SCR_ScreenShot_f
-==================
-*/
-void SCR_ScreenShot_f (void)
-{
-	int i;
-	char filename[16];
-	char checkname[MAX_OSPATH];
-//
-// find a file name to save it to
-//
-	strcpy(filename, "dp0000.tga");
-
-	for (i=0 ; i<=9999 ; i++)
-	{
-		filename[2] = (i/1000)%10 + '0';
-		filename[3] = (i/ 100)%10 + '0';
-		filename[4] = (i/  10)%10 + '0';
-		filename[5] = (i/   1)%10 + '0';
-		sprintf (checkname, "%s/%s", com_gamedir, filename);
-		if (Sys_FileTime(checkname) == -1)
-			break;	// file doesn't exist
-	}
-	if (i==10000)
-	{
-		Con_Printf ("SCR_ScreenShot_f: Couldn't create a TGA file\n");
-		return;
- 	}
-
-	SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight);
-	Con_Printf ("Wrote %s\n", filename);
-}
-
-/*
-===============
-R_Envmap_f
-
-Grab six views for environment mapping tests
-===============
-*/
-struct
-{
-	float angles[3];
-	char *name;
-}
-envmapinfo[6] =
-{
-	{{  0,   0, 0}, "ft"},
-	{{  0,  90, 0}, "rt"},
-	{{  0, 180, 0}, "bk"},
-	{{  0, 270, 0}, "lf"},
-	{{-90,  90, 0}, "up"},
-	{{ 90,  90, 0}, "dn"}
-};
-static void R_Envmap_f (void)
-{
-	int j, size;
-	char filename[256], basename[256];
-
-	if (Cmd_Argc() != 3)
-	{
-		Con_Printf ("envmap <basename> <size>: save out 6 cubic environment map images, usable with loadsky, note that size must one of 128, 256, 512, or 1024 and can't be bigger than your current resolution\n");
-		return;
-	}
-
-	if (!r_render.integer)
-		return;
-
-	strcpy(basename, Cmd_Argv(1));
-	size = atoi(Cmd_Argv(2));
-	if (size != 128 && size != 256 && size != 512 && size != 1024)
-	{
-		Con_Printf("envmap: size must be one of 128, 256, 512, or 1024\n");
-		return;
-	}
-	if (size > vid.realwidth || size > vid.realheight)
-	{
-		Con_Printf("envmap: your resolution is not big enough to render that size\n");
-		return;
-	}
-
-	envmap = true;
-
-	r_refdef.x = 0;
-	r_refdef.y = 0;
-	r_refdef.width = size;
-	r_refdef.height = size;
-
-	r_refdef.fov_x = 90;
-	r_refdef.fov_y = 90;
-
-	for (j = 0;j < 6;j++)
-	{
-		sprintf(filename, "env/%s%s.tga", basename, envmapinfo[j].name);
-		VectorCopy(envmapinfo[j].angles, r_refdef.viewangles);
-		R_ClearScreen();
-		R_RenderView ();
-		SCR_ScreenShot(filename, vid.realx, vid.realy, size, size);
-	}
-
-	envmap = false;
-}
-
 //=============================================================================
 
 void R_ClearScreen(void)
 {
 	if (r_render.integer)
 	{
-		glClearColor(0,0,0,0);
-		CHECKGLERROR
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // LordHavoc: clear the screen (around the view as well)
-		CHECKGLERROR
+		// clear to black
+		glClearColor(0,0,0,0);CHECKGLERROR
+		// clear the screen
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);CHECKGLERROR
+		// set dithering mode
 		if (gl_dither.integer)
-			glEnable(GL_DITHER);
+		{
+			glEnable(GL_DITHER);CHECKGLERROR
+		}
 		else
-			glDisable(GL_DITHER);
-		CHECKGLERROR
+		{
+			glDisable(GL_DITHER);CHECKGLERROR
+		}
 	}
 }
 

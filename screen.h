@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -19,17 +19,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // screen.h
 
-void SCR_Init (void);
-
-void SCR_UpdateScreen (void);
-
-
-void SCR_SizeUp (void);
-void SCR_SizeDown (void);
+void CL_Screen_Init (void);
+void CL_UpdateScreen (void);
 void SCR_CenterPrint (char *str);
 
-//void SCR_BeginLoadingPlaque (void);
-//void SCR_EndLoadingPlaque (void);
+void SCR_BeginLoadingPlaque (void);
+void SCR_EndLoadingPlaque (void);
 
 extern float scr_con_current;
 extern float scr_conlines; // lines of console to display
@@ -41,7 +36,7 @@ extern qboolean	scr_disabled_for_loading;
 extern qboolean	scr_skipupdate;
 
 extern cvar_t scr_viewsize;
-extern cvar_t scr_viewsize;
+extern cvar_t showfps;
+
 extern cvar_t crosshair;
 extern cvar_t crosshair_size;
-extern cvar_t showfps;

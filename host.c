@@ -142,7 +142,7 @@ void Host_Error (char *error, ...)
 	}
 	inerror = true;
 	
-//	SCR_EndLoadingPlaque ();		// reenable screen updates
+	SCR_EndLoadingPlaque ();		// reenable screen updates
 
 	va_start (argptr,error);
 	vsprintf (hosterrorstring,error,argptr);

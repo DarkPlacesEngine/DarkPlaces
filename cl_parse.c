@@ -339,7 +339,7 @@ Con_DPrintf ("CL_SignonReply: %i\n", cls.signon);
 		break;
 
 	case 4:
-//		SCR_EndLoadingPlaque ();		// allow normal screen updates
+		SCR_EndLoadingPlaque ();		// allow normal screen updates
 		Con_ClearNotify();
 		break;
 	}

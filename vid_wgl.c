@@ -97,8 +97,6 @@ HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
 viddef_t	vid;				// global video state
 
-float		gldepthmin, gldepthmax;
-
 modestate_t	modestate = MS_UNINIT;
 
 void VID_MenuDraw (void);

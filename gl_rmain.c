@@ -611,7 +611,7 @@ r_refdef must be set before the first call
 void R_RenderView (void)
 {
 	if (!cl.worldmodel)
-		Host_Error ("R_RenderView: NULL worldmodel");
+		return; //Host_Error ("R_RenderView: NULL worldmodel");
 
 	// FIXME: move to client
 	R_MoveExplosions();
@@ -625,7 +625,7 @@ void R_RenderView (void)
 		R_Clip_StartFrame();
 	R_BuildLightList();
 
-	R_Mesh_Clear();
+	R_Mesh_Start();
 
 	R_TimeReport("setup");
 
@@ -700,8 +700,8 @@ void R_RenderView (void)
 	R_TimeReport("blendview");
 
 	// render any queued meshs
-	R_Mesh_Render();
-	R_TimeReport("meshrender");
+	R_Mesh_Finish();
+	R_TimeReport("meshfinish");
 
 	//Mem_CheckSentinelsGlobal();
 	//R_TimeReport("memtest");
