@@ -946,13 +946,12 @@ qboolean ED_ParseEpair(edict_t *ent, ddef_t *key, const char *s)
 		{
 			while (*s && *s <= ' ')
 				s++;
-			if (!*s)
-				break;
-			val->vector[i] = atof(s);
+			if (*s)
+				val->vector[i] = atof(s);
+			else
+				val->vector[i] = 0;
 			while (*s > ' ')
 				s++;
-			if (!*s)
-				break;
 		}
 		break;
 
