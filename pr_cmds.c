@@ -732,17 +732,17 @@ void PF_traceline (void)
 {
 	float	*v1, *v2;
 	trace_t	trace;
-	int		nomonsters;
+	int		move;
 	edict_t	*ent;
 
 	pr_xfunction->builtinsprofile += 30;
 
 	v1 = G_VECTOR(OFS_PARM0);
 	v2 = G_VECTOR(OFS_PARM1);
-	nomonsters = G_FLOAT(OFS_PARM2);
+	move = G_FLOAT(OFS_PARM2);
 	ent = G_EDICT(OFS_PARM3);
 
-	trace = SV_Move (v1, vec3_origin, vec3_origin, v2, nomonsters, ent);
+	trace = SV_Move (v1, vec3_origin, vec3_origin, v2, move, ent);
 
 	pr_global_struct->trace_allsolid = trace.allsolid;
 	pr_global_struct->trace_startsolid = trace.startsolid;
@@ -776,7 +776,7 @@ void PF_tracebox (void)
 {
 	float	*v1, *v2, *m1, *m2;
 	trace_t	trace;
-	int		nomonsters;
+	int		move;
 	edict_t	*ent;
 
 	pr_xfunction->builtinsprofile += 30;
@@ -785,10 +785,10 @@ void PF_tracebox (void)
 	m1 = G_VECTOR(OFS_PARM1);
 	m2 = G_VECTOR(OFS_PARM2);
 	v2 = G_VECTOR(OFS_PARM3);
-	nomonsters = G_FLOAT(OFS_PARM4);
+	move = G_FLOAT(OFS_PARM4);
 	ent = G_EDICT(OFS_PARM5);
 
-	trace = SV_Move (v1, m1, m2, v2, nomonsters ? MOVE_NOMONSTERS : MOVE_NORMAL, ent);
+	trace = SV_Move (v1, m1, m2, v2, move, ent);
 
 	pr_global_struct->trace_allsolid = trace.allsolid;
 	pr_global_struct->trace_startsolid = trace.startsolid;
