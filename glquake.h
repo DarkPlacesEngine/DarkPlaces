@@ -60,7 +60,7 @@ extern const char *gl_extensions;
 
 // GL_ARB_multitexture
 extern int gl_textureunits;
-extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+//extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
 extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 #ifndef GL_ACTIVE_TEXTURE_ARB
