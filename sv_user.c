@@ -630,7 +630,7 @@ void SV_ReadClientMove (usercmd_t *move)
 			angle[i] = MSG_ReadAngle8i();
 		else if (sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3)
 			angle[i] = MSG_ReadAngle32f();
-		else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+		else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 			angle[i] = MSG_ReadAngle16i();
 		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	}
@@ -653,7 +653,10 @@ void SV_ReadClientMove (usercmd_t *move)
 	}
 
 	// read buttons
-	bits = MSG_ReadByte ();
+	if (sv.protocol == PROTOCOL_DARKPLACES6)
+		bits = MSG_ReadLong ();
+	else
+		bits = MSG_ReadByte ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	host_client->edict->v->button0 = bits & 1;
 	host_client->edict->v->button2 = (bits & 2)>>1;
@@ -664,11 +667,50 @@ void SV_ReadClientMove (usercmd_t *move)
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button6))) val->_float = ((bits >> 5) & 1);
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button7))) val->_float = ((bits >> 6) & 1);
 	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_button8))) val->_float = ((bits >> 7) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_buttonuse))) val->_float = ((bits >> 8) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_buttonchat))) val->_float = ((bits >> 9) & 1);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_active))) val->_float = ((bits >> 10) & 1);
 
 	i = MSG_ReadByte ();
 	if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 	if (i)
 		host_client->edict->v->impulse = i;
+
+	// PRYDON_CLIENTCURSOR
+	if (sv.protocol == PROTOCOL_DARKPLACES6)
+	{
+		// 30 bytes
+		move->cursor_screen[0] = MSG_ReadShort() * (1.0f / 32767.0f);
+		move->cursor_screen[1] = MSG_ReadShort() * (1.0f / 32767.0f);
+		move->cursor_start[0] = MSG_ReadFloat();
+		move->cursor_start[1] = MSG_ReadFloat();
+		move->cursor_start[2] = MSG_ReadFloat();
+		move->cursor_impact[0] = MSG_ReadFloat();
+		move->cursor_impact[1] = MSG_ReadFloat();
+		move->cursor_impact[2] = MSG_ReadFloat();
+		move->cursor_entitynumber = MSG_ReadShort();
+		if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
+	}
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_screen))) VectorCopy(move->cursor_screen, val->vector);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_start))) VectorCopy(move->cursor_start, val->vector);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_endpos))) VectorCopy(move->cursor_impact, val->vector);
+	if ((val = GETEDICTFIELDVALUE(host_client->edict, eval_cursor_trace_ent))) val->edict = EDICT_TO_PROG(EDICT_NUM(move->cursor_entitynumber));
+}
+
+void SV_FrameLost(int framenum)
+{
+	if (host_client->entitydatabase5)
+		EntityFrame5_LostFrame(host_client->entitydatabase5, framenum, host_client - svs.clients + 1);
+}
+
+void SV_FrameAck(int framenum)
+{
+	if (host_client->entitydatabase)
+		EntityFrame_AckFrame(host_client->entitydatabase, framenum);
+	else if (host_client->entitydatabase4)
+		EntityFrame4_AckFrame(host_client->entitydatabase4, framenum, true);
+	else if (host_client->entitydatabase5)
+		EntityFrame5_AckFrame(host_client->entitydatabase5, framenum);
 }
 
 /*
@@ -757,18 +799,20 @@ void SV_ReadClientMessage(void)
 			SV_ReadClientMove (&host_client->cmd);
 			break;
 
-		case clc_ackentities:
+		case clc_ackframe:
 			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 			num = MSG_ReadLong();
 			if (msg_badread) Con_Printf("SV_ReadClientMessage: badread at %s:%i\n", __FILE__, __LINE__);
 			if (developer_networkentities.integer >= 1)
-				Con_Printf("recv clc_ackentities %i\n", num);
-			if (host_client->entitydatabase)
-				EntityFrame_AckFrame(host_client->entitydatabase, num);
-			else if (host_client->entitydatabase4)
-				EntityFrame4_AckFrame(host_client->entitydatabase4, num, true);
-			else if (host_client->entitydatabase5)
-				EntityFrame5_AckFrame(host_client->entitydatabase5, num, host_client - svs.clients + 1);
+				Con_Printf("recv clc_ackframe %i\n", num);
+			if (host_client->latestframenum < num)
+			{
+				int i;
+				for (i = host_client->latestframenum + 1;i < num;i++)
+					SV_FrameLost(i);
+				SV_FrameAck(num);
+				host_client->latestframenum = num;
+			}
 			break;
 		}
 	}

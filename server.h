@@ -69,10 +69,14 @@ typedef struct
 	char modelname[64];
 	struct model_s *worldmodel;
 	// NULL terminated
-	char *model_precache[MAX_MODELS];
+	// LordHavoc: precaches are now MAX_QPATH rather than a pointer
+	// updated by SV_ModelIndex
+	char model_precache[MAX_MODELS][MAX_QPATH];
 	struct model_s *models[MAX_MODELS];
 	// NULL terminated
-	char *sound_precache[MAX_SOUNDS];
+	// LordHavoc: precaches are now MAX_QPATH rather than a pointer
+	// updated by SV_SoundIndex
+	char sound_precache[MAX_SOUNDS][MAX_QPATH];
 	char *lightstyles[MAX_LIGHTSTYLES];
 	int num_edicts;
 	int max_edicts;
@@ -162,6 +166,9 @@ typedef struct client_s
 
 	// prevent animated names
 	float nametime;
+
+	// latest received clc_ackframe (used to detect packet loss)
+	int latestframenum;
 
 	entityframe_database_t *entitydatabase;
 	entityframe4_database_t *entitydatabase4;
@@ -267,6 +274,7 @@ extern cvar_t sv_gameplayfix_noairborncorpse;
 extern cvar_t sv_gameplayfix_stepdown;
 extern cvar_t sv_gameplayfix_stepwhilejumping;
 extern cvar_t sv_gameplayfix_swiminbmodels;
+extern cvar_t sv_gameplayfix_setmodelrealbox;
 
 extern mempool_t *sv_clients_mempool;
 extern mempool_t *sv_edicts_mempool;
@@ -296,7 +304,12 @@ void SV_ClearDatagram (void);
 
 void SV_ReadClientMessage(void);
 
-int SV_ModelIndex (const char *name);
+// precachemode values:
+// 0 = fail if not precached,
+// 1 = warn if not found and precache if possible
+// 2 = precache
+int SV_ModelIndex(char *s, int precachemode);
+int SV_SoundIndex(char *s, int precachemode);
 
 void SV_SetIdealPitch (void);
 
@@ -315,7 +328,7 @@ qboolean SV_PlayerCheckGround (edict_t *ent);
 qboolean SV_CheckBottom (edict_t *ent);
 qboolean SV_movestep (edict_t *ent, vec3_t move, qboolean relink);
 
-void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg);
+void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg, int *stats);
 
 void SV_MoveToGoal (void);
 

@@ -737,7 +737,6 @@ void _Host_Frame (float time)
 	static double time2 = 0;
 	static double time3 = 0;
 	int pass1, pass2, pass3;
-	usercmd_t cmd; // Used for receiving input
 
 	if (setjmp(host_abortserver))
 		return;			// something bad happened, or the server disconnected
@@ -758,14 +757,14 @@ void _Host_Frame (float time)
 	IN_Commands();
 
 	// Collect input into cmd
-	IN_ProcessMove(&cmd);
+	IN_ProcessMove();
 
 	// process console commands
 	Cbuf_Execute();
 
 	// if running the server locally, make intentions now
 	if (cls.state == ca_connected && sv.active)
-		CL_SendCmd(&cmd);
+		CL_SendCmd();
 
 //-------------------
 //
@@ -795,7 +794,7 @@ void _Host_Frame (float time)
 		// if running the server remotely, send intentions now after
 		// the incoming messages have been read
 		if (!sv.active)
-			CL_SendCmd(&cmd);
+			CL_SendCmd();
 		CL_ReadFromServer();
 	}
 

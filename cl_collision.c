@@ -143,8 +143,9 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 		ent = &cl_entities[n].render;
 		if (!ent->model || !ent->model->TraceBox)
 			continue;
-		//if (((ent->model->type != mod_brushq1 && ent->model->type != mod_brushq2 && ent->model->type != mod_brushq3) || ent->alpha < 1) && !(cl_entities[n].state_current.effects & EF_SELECTABLE))
-		//	continue;
+		// if transparent and not selectable, skip entity
+		if (!(cl_entities[n].state_current.effects & EF_SELECTABLE) && (ent->alpha < 1 || (ent->effects & (EF_ADDITIVE | EF_NODEPTHTEST))))
+			continue;
 		if (ent->mins[0] > tracemaxs[0] || ent->maxs[0] < tracemins[0]
 		 || ent->mins[1] > tracemaxs[1] || ent->maxs[1] < tracemins[1]
 		 || ent->mins[2] > tracemaxs[2] || ent->maxs[2] < tracemins[2])

@@ -889,10 +889,10 @@ void IN_Commands (void)
 {
 }
 
-void IN_Move (usercmd_t *cmd)
+void IN_Move (void)
 {
 	if (mouse_avail)
-		IN_Mouse(cmd, mouse_x, mouse_y);
+		IN_Mouse(mouse_x, mouse_y);
 	mouse_x = 0;
 	mouse_y = 0;
 }

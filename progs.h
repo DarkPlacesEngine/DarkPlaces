@@ -89,6 +89,8 @@ extern int eval_button5;
 extern int eval_button6;
 extern int eval_button7;
 extern int eval_button8;
+extern int eval_buttonuse;
+extern int eval_buttonchat;
 extern int eval_glow_size;
 extern int eval_glow_trail;
 extern int eval_glow_color;
@@ -123,6 +125,12 @@ extern int eval_light_lev;
 extern int eval_color;
 extern int eval_style;
 extern int eval_pflags;
+extern int eval_cursor_active;
+extern int eval_cursor_screen;
+extern int eval_cursor_trace_start;
+extern int eval_cursor_trace_endpos;
+extern int eval_cursor_trace_ent;
+extern int eval_colormod;
 
 #define GETEDICTFIELDVALUE(ed, fieldoffset) (fieldoffset ? (eval_t *)((qbyte *)ed->v + fieldoffset) : NULL)
 

@@ -218,22 +218,22 @@ void IN_Commands (void)
 {
 }
 
-static void IN_MouseMove (usercmd_t *cmd)
+static void IN_MouseMove (void)
 {
 	int x, y;
 
 	if( !vid_usingmouse ) {
-		IN_Mouse( cmd, 0, 0 );
+		IN_Mouse( 0, 0 );
 		return;
 	}
 
 	SDL_GetRelativeMouseState( &x, &y );
-	IN_Mouse( cmd, x, y );
+	IN_Mouse( x, y );
 }
 
-void IN_Move( usercmd_t *cmd )
+void IN_Move( void )
 {
-	IN_MouseMove( cmd );	
+	IN_MouseMove();	
 }
 
 static void IN_Init( void )

@@ -98,6 +98,9 @@ void R_DrawSpriteModelCallback(const void *calldata1, int calldata2)
 		R_CompleteLightPoint(color, diffusecolor, diffusenormal, ent->origin, true, NULL);
 		VectorMA(color, 0.5f, diffusecolor, color);
 	}
+	color[0] *= ent->colormod[0];
+	color[1] *= ent->colormod[1];
+	color[2] *= ent->colormod[2];
 
 	if (fogenabled)
 	{

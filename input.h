@@ -34,15 +34,15 @@ void IN_Commands (void);
 // oportunity for devices to stick commands on the script buffer
 
 // AK added to allow mouse movement for the menu
-void IN_ProcessMove(usercmd_t *cmd);
+void IN_ProcessMove(void);
 
-void IN_Move (usercmd_t *cmd);
+void IN_Move (void);
 // add additional movement on top of the keyboard move cmd
 
 void IN_PreMove(void);
 void IN_PostMove(void);
 
-void IN_Mouse(usercmd_t *cmd, float mx, float my);
+void IN_Mouse(float mx, float my);
 
 void IN_ClearStates (void);
 // restores all button and position states to defaults

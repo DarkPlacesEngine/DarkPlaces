@@ -832,7 +832,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 	if (surf->flags & SURF_DRAWTURB)
 		base *= 0.5f;
-	if ((surf->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled && fullbright)
+	if ((surf->flags & SURF_DRAWTURB) && gl_textureshader && r_watershader.value && !fogenabled && fullbright && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
 	{
 		// NVIDIA Geforce3 distortion texture shader on water
 		GL_Color(1, 1, 1, currentalpha);
@@ -882,7 +882,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 			m.texrgbscale[0] = 4;
 			colorscale *= 0.25f;
 		}
-		R_FillColors(varray_color4f, surf->mesh.num_vertices, base, base, base, currentalpha);
+		R_FillColors(varray_color4f, surf->mesh.num_vertices, base * ent->colormod[0], base * ent->colormod[1], base * ent->colormod[2], currentalpha);
 		if (!fullbright)
 		{
 			if (surf->dlightframe == r_framecount)
@@ -963,7 +963,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetailGlow(co
 		m.tex[3] = R_GetTexture(texture->skin.glow);
 		m.texcombinergb[3] = GL_ADD;
 	}
-	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+	GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -998,7 +998,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmapDetail(const 
 	m.texrgbscale[1] = 2;
 	m.tex[2] = R_GetTexture(texture->skin.detail);
 	m.texrgbscale[2] = 2;
-	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+	GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 
 	while((surf = *surfchain++) != NULL)
 	{
@@ -1030,7 +1030,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseCombine_TextureLightmap(const entity
 	m.tex[0] = R_GetTexture(texture->skin.base);
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	m.texrgbscale[1] = 2;
-	GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+	GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1058,9 +1058,9 @@ static void RSurfShader_OpaqueWall_Pass_BaseTexture(const entity_render_t *ent, 
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	m.tex[0] = R_GetTexture(texture->skin.base);
 	if (ent->flags & RENDER_LIGHT)
-		GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+		GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 	else
-		GL_Color(1, 1, 1, 1);
+		GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1111,7 +1111,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseAmbient(const entity_render_t *ent, 
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(texture->skin.base);
-	GL_Color(r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), 1);
+	GL_Color(r_ambient.value * (1.0f / 128.0f) * ent->colormod[0], r_ambient.value * (1.0f / 128.0f) * ent->colormod[1], r_ambient.value * (1.0f / 128.0f) * ent->colormod[2], 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1948,20 +1948,20 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 		{
 			m.tex[1] = R_GetTexture(face->lightmaptexture);
 			m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
-			GL_Color(1, 1, 1, ent->alpha);
+			GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], ent->alpha);
 		}
 		else
 		{
-			if (ent->alpha == 1)
+			if (ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1 && ent->alpha == 1)
 				m.pointer_color = face->data_color4f;
 			else
 			{
 				int i;
 				for (i = 0;i < face->num_vertices;i++)
 				{
-					varray_color4f[i*4+0] = face->data_color4f[i*4+0];
-					varray_color4f[i*4+1] = face->data_color4f[i*4+1];
-					varray_color4f[i*4+2] = face->data_color4f[i*4+2];
+					varray_color4f[i*4+0] = face->data_color4f[i*4+0] * ent->colormod[0];
+					varray_color4f[i*4+1] = face->data_color4f[i*4+1] * ent->colormod[1];
+					varray_color4f[i*4+2] = face->data_color4f[i*4+2] * ent->colormod[2];
 					varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
 				}
 				m.pointer_color = varray_color4f;
@@ -1973,9 +1973,9 @@ void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int facenumber)
 		int i;
 		for (i = 0;i < face->num_vertices;i++)
 		{
-			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * 2.0f;
-			varray_color4f[i*4+1] = face->data_color4f[i*4+1] * 2.0f;
-			varray_color4f[i*4+2] = face->data_color4f[i*4+2] * 2.0f;
+			varray_color4f[i*4+0] = face->data_color4f[i*4+0] * ent->colormod[0] * 2.0f;
+			varray_color4f[i*4+1] = face->data_color4f[i*4+1] * ent->colormod[1] * 2.0f;
+			varray_color4f[i*4+2] = face->data_color4f[i*4+2] * ent->colormod[2] * 2.0f;
 			varray_color4f[i*4+3] = face->data_color4f[i*4+3] * ent->alpha;
 		}
 		m.pointer_color = varray_color4f;
@@ -2139,7 +2139,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		GL_DepthMask(true);
 		GL_DepthTest(true);
 		GL_BlendFunc(GL_ONE, GL_ZERO);
-		GL_Color(1, 1, 1, 1);
+		GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], 1);
 		if (t->textureflags & Q3TEXTUREFLAG_TWOSIDED)
 			qglDisable(GL_CULL_FACE);
 		memset(&m, 0, sizeof(m));
@@ -2156,6 +2156,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		}
 		if (t->skin.glow)
 		{
+			GL_Color(1, 1, 1, 1);
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			GL_DepthMask(false);
 			m.tex[0] = R_GetTexture(t->skin.glow);
@@ -2210,19 +2211,19 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 			m.texrgbscale[1] = 2;
 			if (face->lightmaptexture)
 			{
-				GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+				GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 				m.pointer_color = NULL;
 			}
-			else if (r_lightmapintensity == 1)
+			else if (r_lightmapintensity == 1 && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
 				m.pointer_color = face->data_color4f;
 			else
 			{
 				m.pointer_color = varray_color4f;
 				for (i = 0;i < face->num_vertices;i++)
 				{
-					varray_color4f[i*4+0] = face->data_color4f[i*4+0] * r_lightmapintensity;
-					varray_color4f[i*4+1] = face->data_color4f[i*4+1] * r_lightmapintensity;
-					varray_color4f[i*4+2] = face->data_color4f[i*4+2] * r_lightmapintensity;
+					varray_color4f[i*4+0] = face->data_color4f[i*4+0] * ent->colormod[0] * r_lightmapintensity;
+					varray_color4f[i*4+1] = face->data_color4f[i*4+1] * ent->colormod[1] * r_lightmapintensity;
+					varray_color4f[i*4+2] = face->data_color4f[i*4+2] * ent->colormod[2] * r_lightmapintensity;
 					varray_color4f[i*4+3] = face->data_color4f[i*4+3];
 				}
 			}
@@ -2257,7 +2258,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 		}
 		GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
 		GL_DepthMask(false);
-		GL_Color(r_lightmapintensity, r_lightmapintensity, r_lightmapintensity, 1);
+		GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
 		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)
@@ -2275,7 +2276,7 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, q3mtexture_t *t, int texturenumf
 	{
 		GL_BlendFunc(GL_ONE, GL_ONE);
 		GL_DepthMask(false);
-		GL_Color(r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), r_ambient.value * (1.0f / 128.0f), 1);
+		GL_Color(r_ambient.value * (1.0f / 128.0f) * ent->colormod[0], r_ambient.value * (1.0f / 128.0f) * ent->colormod[1], r_ambient.value * (1.0f / 128.0f) * ent->colormod[2], 1);
 		memset(&m, 0, sizeof(m));
 		m.tex[0] = R_GetTexture(t->skin.base);
 		for (texturefaceindex = 0;texturefaceindex < texturenumfaces;texturefaceindex++)

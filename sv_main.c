@@ -22,8 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 
 // select which protocol to host, by name
-// this is named the same as PROTOCOL_DARKPLACES5 for example, minus the PROTOCOL_ prefix
-cvar_t sv_protocolname = {0, "sv_protocolname", "DARKPLACES5"};
+// this is named the same as PROTOCOL_DARKPLACES6 for example, minus the PROTOCOL_ prefix
+cvar_t sv_protocolname = {0, "sv_protocolname", "DARKPLACES6"};
 cvar_t sv_ratelimitlocalplayer = {0, "sv_ratelimitlocalplayer", "0"};
 cvar_t sv_maxrate = {CVAR_SAVE | CVAR_NOTIFY, "sv_maxrate", "10000"};
 
@@ -39,11 +39,10 @@ cvar_t sv_gameplayfix_noairborncorpse = {0, "sv_gameplayfix_noairborncorpse", "1
 cvar_t sv_gameplayfix_stepdown = {0, "sv_gameplayfix_stepdown", "1"};
 cvar_t sv_gameplayfix_stepwhilejumping = {0, "sv_gameplayfix_stepwhilejumping", "1"};
 cvar_t sv_gameplayfix_swiminbmodels = {0, "sv_gameplayfix_swiminbmodels", "1"};
+cvar_t sv_gameplayfix_setmodelrealbox = {0, "sv_gameplayfix_setmodelrealbox", "1"};
 
 server_t sv;
 server_static_t svs;
-
-static char localmodels[MAX_MODELS][5];			// inline model names for precache
 
 mempool_t *sv_edicts_mempool = NULL;
 
@@ -60,8 +59,6 @@ SV_Init
 */
 void SV_Init (void)
 {
-	int i;
-
 	Cmd_AddCommand("sv_saveentfile", SV_SaveEntFile_f);
 	Cvar_RegisterVariable (&sv_maxvelocity);
 	Cvar_RegisterVariable (&sv_gravity);
@@ -83,15 +80,13 @@ void SV_Init (void)
 	Cvar_RegisterVariable (&sv_gameplayfix_stepdown);
 	Cvar_RegisterVariable (&sv_gameplayfix_stepwhilejumping);
 	Cvar_RegisterVariable (&sv_gameplayfix_swiminbmodels);
+	Cvar_RegisterVariable (&sv_gameplayfix_setmodelrealbox);
 	Cvar_RegisterVariable (&sv_protocolname);
 	Cvar_RegisterVariable (&sv_ratelimitlocalplayer);
 	Cvar_RegisterVariable (&sv_maxrate);
 
 	SV_Phys_Init();
 	SV_World_Init();
-
-	for (i = 0;i < MAX_MODELS;i++)
-		sprintf (localmodels[i], "*%i", i);
 
 	sv_edicts_mempool = Mem_AllocPool("server edicts", 0, NULL);
 }
@@ -107,6 +102,7 @@ static void SV_SaveEntFile_f(void)
 	FS_StripExtension(sv.worldmodel->name, basename, sizeof(basename));
 	FS_WriteFile(va("%s.ent", basename), sv.worldmodel->brush.entities, strlen(sv.worldmodel->brush.entities));
 }
+
 
 /*
 =============================================================================
@@ -215,15 +211,9 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume, floa
 		return;
 
 // find precache number for sound
-	for (sound_num=1 ; sound_num<MAX_SOUNDS && sv.sound_precache[sound_num] ; sound_num++)
-		if (!strcmp(sample, sv.sound_precache[sound_num]))
-			break;
-
-	if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
-	{
-		Con_Printf("SV_StartSound: %s not precached\n", sample);
+	sound_num = SV_SoundIndex(sample, 1);
+	if (!sound_num)
 		return;
-	}
 
 	ent = NUM_FOR_EDICT(entity);
 
@@ -277,8 +267,8 @@ This will be sent on the initial connection and upon each server load.
 */
 void SV_SendServerinfo (client_t *client)
 {
-	char			**s;
-	char			message[128];
+	int i;
+	char message[128];
 
 	// edicts get reallocated on level changes, so we need to update it here
 	client->edict = EDICT_NUM((client - svs.clients) + 1);
@@ -287,8 +277,6 @@ void SV_SendServerinfo (client_t *client)
 	// client info that normally requires networking
 	if (!client->netconnection)
 	{
-		int i;
-
 		// set up the edict
 		ED_ClearEdict(client->edict);
 
@@ -306,6 +294,7 @@ void SV_SendServerinfo (client_t *client)
 	}
 
 	// LordHavoc: clear entityframe tracking
+	client->latestframenum = 0;
 
 	if (client->entitydatabase)
 		EntityFrame_FreeDatabase(client->entitydatabase);
@@ -318,7 +307,7 @@ void SV_SendServerinfo (client_t *client)
 		client->entitydatabase = EntityFrame_AllocDatabase(sv_clients_mempool);
 	if (sv.protocol == PROTOCOL_DARKPLACES4)
 		client->entitydatabase4 = EntityFrame4_AllocDatabase(sv_clients_mempool);
-	if (sv.protocol == PROTOCOL_DARKPLACES5)
+	if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 		client->entitydatabase5 = EntityFrame5_AllocDatabase(sv_clients_mempool);
 
 	MSG_WriteByte (&client->message, svc_print);
@@ -336,12 +325,12 @@ void SV_SendServerinfo (client_t *client)
 
 	MSG_WriteString (&client->message,PR_GetString(sv.edicts->v->message));
 
-	for (s = sv.model_precache+1 ; *s ; s++)
-		MSG_WriteString (&client->message, *s);
+	for (i = 1;i < MAX_MODELS && sv.model_precache[i][0];i++)
+		MSG_WriteString (&client->message, sv.model_precache[i]);
 	MSG_WriteByte (&client->message, 0);
 
-	for (s = sv.sound_precache+1 ; *s ; s++)
-		MSG_WriteString (&client->message, *s);
+	for (i = 1;i < MAX_SOUNDS && sv.sound_precache[i][0];i++)
+		MSG_WriteString (&client->message, sv.sound_precache[i]);
 	MSG_WriteByte (&client->message, 0);
 
 // send music
@@ -655,9 +644,12 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 			if (sententities[s->tagentity] != sententitiesmark)
 				return;
 		}
+		// skip invalid modelindexes to avoid crashes
+		else if (s->modelindex >= MAX_MODELS)
+			return;
 		// always send world submodels, they don't generate much traffic
 		// except in PROTOCOL_QUAKE where they hog bandwidth like crazy
-		else if ((!(isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*') && !(s->effects & EF_NODEPTHTEST)) || sv.protocol == PROTOCOL_QUAKE)
+		else if (!(s->effects & EF_NODEPTHTEST) && (sv.protocol == PROTOCOL_QUAKE || !(isbmodel = (model = sv.models[s->modelindex]) != NULL && model->name[0] == '*')))
 		{
 			Mod_CheckLoaded(model);
 			// entity has survived every check so far, check if visible
@@ -752,7 +744,7 @@ void SV_MarkWriteEntityStateToClient(entity_state_t *s)
 
 entity_state_t sendstates[MAX_EDICTS]; 
 
-void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
+void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg, int *stats)
 {
 	int i, numsendstates;
 	entity_state_t *s;
@@ -800,7 +792,7 @@ void SV_WriteEntitiesToClient(client_t *client, edict_t *clent, sizebuf_t *msg)
 		Con_Printf("client \"%s\" entities: %d total, %d visible, %d culled by: %d pvs %d trace\n", client->name, sv_writeentitiestoclient_totalentities, sv_writeentitiestoclient_visibleentities, sv_writeentitiestoclient_culled_pvs + sv_writeentitiestoclient_culled_trace, sv_writeentitiestoclient_culled_pvs, sv_writeentitiestoclient_culled_trace);
 
 	if (client->entitydatabase5)
-		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1);
+		EntityFrame5_WriteFrame(msg, client->entitydatabase5, numsendstates, sendstates, client - svs.clients + 1, stats);
 	else if (client->entitydatabase4)
 		EntityFrame4_WriteFrame(msg, client->entitydatabase4, numsendstates, sendstates);
 	else if (client->entitydatabase)
@@ -831,7 +823,7 @@ SV_WriteClientdataToMessage
 
 ==================
 */
-void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
+void SV_WriteClientdataToMessage (client_t *client, edict_t *ent, sizebuf_t *msg, int *stats)
 {
 	int		bits;
 	int		i;
@@ -840,6 +832,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 	eval_t	*val;
 	vec3_t	punchvector;
 	qbyte	viewzoom;
+	int		weaponmodelindex;
 
 //
 // send a damage message
@@ -871,78 +864,91 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		ent->v->fixangle = 0;
 	}
 
-	bits = 0;
-
-	if (ent->v->view_ofs[2] != DEFAULT_VIEWHEIGHT)
-		bits |= SU_VIEWHEIGHT;
-
-	if (ent->v->idealpitch)
-		bits |= SU_IDEALPITCH;
-
-// stuff the sigil bits into the high bits of items for sbar, or else
-// mix in items2
+	// stuff the sigil bits into the high bits of items for sbar, or else
+	// mix in items2
 	val = GETEDICTFIELDVALUE(ent, eval_items2);
-
 	if (val)
 		items = (int)ent->v->items | ((int)val->_float << 23);
 	else
 		items = (int)ent->v->items | ((int)pr_global_struct->serverflags << 28);
 
-	bits |= SU_ITEMS;
-
-	if ( (int)ent->v->flags & FL_ONGROUND)
-		bits |= SU_ONGROUND;
-
-	if ( ent->v->waterlevel >= 2)
-		bits |= SU_INWATER;
-
-	// PROTOCOL_DARKPLACES
 	VectorClear(punchvector);
 	if ((val = GETEDICTFIELDVALUE(ent, eval_punchvector)))
 		VectorCopy(val->vector, punchvector);
 
-	i = 255;
-	if ((val = GETEDICTFIELDVALUE(ent, eval_viewzoom)))
+	weaponmodelindex = SV_ModelIndex(PR_GetString(ent->v->weaponmodel), 1);
+	if (!weaponmodelindex)
 	{
-		i = val->_float * 255.0f;
-		if (i == 0)
-			i = 255;
-		else
-			i = bound(0, i, 65535);
+		Con_DPrintf("weaponmodel \"%s\" not precached\n", PR_GetString(ent->v->weaponmodel));
+		weaponmodelindex = 0;
 	}
-	viewzoom = i;
 
-	// FIXME: which protocols support this?  does PROTOCOL_DARKPLACES3 support viewzoom?
-	if (sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
-		if (viewzoom != 255)
-			bits |= SU_VIEWZOOM;
+	viewzoom = 255;
+	if ((val = GETEDICTFIELDVALUE(ent, eval_viewzoom)))
+		viewzoom = val->_float * 255.0f;
+	if (viewzoom == 0)
+		viewzoom = 255;
+
+	bits = 0;
+
+	if ((int)ent->v->flags & FL_ONGROUND)
+		bits |= SU_ONGROUND;
+	if (ent->v->waterlevel >= 2)
+		bits |= SU_INWATER;
+	if (ent->v->idealpitch)
+		bits |= SU_IDEALPITCH;
 
 	for (i=0 ; i<3 ; i++)
 	{
 		if (ent->v->punchangle[i])
 			bits |= (SU_PUNCH1<<i);
-		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 			if (punchvector[i])
 				bits |= (SU_PUNCHVEC1<<i);
 		if (ent->v->velocity[i])
 			bits |= (SU_VELOCITY1<<i);
 	}
 
-	if (ent->v->weaponframe)
-		bits |= SU_WEAPONFRAME;
+	memset(stats, 0, sizeof(int[MAX_CL_STATS]));
+	stats[STAT_VIEWHEIGHT] = ent->v->view_ofs[2];
+	stats[STAT_ITEMS] = items;
+	stats[STAT_WEAPONFRAME] = ent->v->weaponframe;
+	stats[STAT_ARMOR] = ent->v->armorvalue;
+	stats[STAT_WEAPON] = weaponmodelindex;
+	stats[STAT_HEALTH] = ent->v->health;
+	stats[STAT_AMMO] = ent->v->currentammo;
+	stats[STAT_SHELLS] = ent->v->ammo_shells;
+	stats[STAT_NAILS] = ent->v->ammo_nails;
+	stats[STAT_ROCKETS] = ent->v->ammo_rockets;
+	stats[STAT_CELLS] = ent->v->ammo_cells;
+	stats[STAT_ACTIVEWEAPON] = ent->v->weapon;
+	stats[STAT_VIEWZOOM] = viewzoom;
+	// the QC bumps these itself by sending svc_'s, so we have to keep them
+	// zero or they'll be corrected by the engine
+	//stats[STAT_TOTALSECRETS] = pr_global_struct->total_secrets;
+	//stats[STAT_TOTALMONSTERS] = pr_global_struct->total_monsters;
+	//stats[STAT_SECRETS] = pr_global_struct->found_secrets;
+	//stats[STAT_MONSTERS] = pr_global_struct->killed_monsters;
 
-	if (ent->v->armorvalue)
-		bits |= SU_ARMOR;
-
-	bits |= SU_WEAPON;
+	if (sv.protocol != PROTOCOL_DARKPLACES6)
+	{
+		if (stats[STAT_VIEWHEIGHT] != DEFAULT_VIEWHEIGHT) bits |= SU_VIEWHEIGHT;
+		bits |= SU_ITEMS;
+		if (stats[STAT_WEAPONFRAME]) bits |= SU_WEAPONFRAME;
+		if (stats[STAT_ARMOR]) bits |= SU_ARMOR;
+		bits |= SU_WEAPON;
+		// FIXME: which protocols support this?  does PROTOCOL_DARKPLACES3 support viewzoom?
+		if (sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+			if (viewzoom != 255)
+				bits |= SU_VIEWZOOM;
+	}
 
 	if (bits >= 65536)
 		bits |= SU_EXTEND1;
 	if (bits >= 16777216)
 		bits |= SU_EXTEND2;
 
-// send the data
-
+	// send the data
 	MSG_WriteByte (msg, svc_clientdata);
 	MSG_WriteShort (msg, bits);
 	if (bits & SU_EXTEND1)
@@ -951,7 +957,7 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		MSG_WriteByte(msg, bits >> 24);
 
 	if (bits & SU_VIEWHEIGHT)
-		MSG_WriteChar (msg, ent->v->view_ofs[2]);
+		MSG_WriteChar (msg, stats[STAT_VIEWHEIGHT]);
 
 	if (bits & SU_IDEALPITCH)
 		MSG_WriteChar (msg, ent->v->idealpitch);
@@ -962,16 +968,16 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		{
 			if (sv.protocol == PROTOCOL_QUAKE)
 				MSG_WriteChar(msg, ent->v->punchangle[i]);
-			else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+			else if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 				MSG_WriteAngle16i(msg, ent->v->punchangle[i]);
 		}
-		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+		if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 		{
 			if (bits & (SU_PUNCHVEC1<<i))
 			{
 				if (sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 					MSG_WriteCoord16i(msg, punchvector[i]);
-				else if (sv.protocol == PROTOCOL_DARKPLACES5)
+				else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 					MSG_WriteCoord32f(msg, punchvector[i]);
 			}
 		}
@@ -979,92 +985,61 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 		{
 			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4)
 				MSG_WriteChar(msg, ent->v->velocity[i] * (1.0f / 16.0f));
-			else if (sv.protocol == PROTOCOL_DARKPLACES5)
+			else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 				MSG_WriteCoord32f(msg, ent->v->velocity[i]);
 		}
 	}
 
-// [always sent]	if (bits & SU_ITEMS)
-	MSG_WriteLong (msg, items);
+	if (bits & SU_ITEMS)
+		MSG_WriteLong (msg, stats[STAT_ITEMS]);
 
 	if (sv.protocol == PROTOCOL_DARKPLACES5)
 	{
 		if (bits & SU_WEAPONFRAME)
-			MSG_WriteShort (msg, ent->v->weaponframe);
+			MSG_WriteShort (msg, stats[STAT_WEAPONFRAME]);
 		if (bits & SU_ARMOR)
-			MSG_WriteShort (msg, ent->v->armorvalue);
+			MSG_WriteShort (msg, stats[STAT_ARMOR]);
 		if (bits & SU_WEAPON)
-		{
-			i = SV_ModelIndex(PR_GetString(ent->v->weaponmodel));
-			if (i < 0)
-			{
-				Con_DPrintf("weaponmodel \"%s\" not precached\n", PR_GetString(ent->v->weaponmodel));
-				i = 0;
-			}
-			MSG_WriteShort (msg, i);
-		}
-
-		MSG_WriteShort (msg, ent->v->health);
-		MSG_WriteShort (msg, ent->v->currentammo);
-		MSG_WriteShort (msg, ent->v->ammo_shells);
-		MSG_WriteShort (msg, ent->v->ammo_nails);
-		MSG_WriteShort (msg, ent->v->ammo_rockets);
-		MSG_WriteShort (msg, ent->v->ammo_cells);
-
-		MSG_WriteShort (msg, ent->v->weapon);
-	
+			MSG_WriteShort (msg, stats[STAT_WEAPON]);
+		MSG_WriteShort (msg, stats[STAT_HEALTH]);
+		MSG_WriteShort (msg, stats[STAT_AMMO]);
+		MSG_WriteShort (msg, stats[STAT_SHELLS]);
+		MSG_WriteShort (msg, stats[STAT_NAILS]);
+		MSG_WriteShort (msg, stats[STAT_ROCKETS]);
+		MSG_WriteShort (msg, stats[STAT_CELLS]);
+		MSG_WriteShort (msg, stats[STAT_ACTIVEWEAPON]);
 		if (bits & SU_VIEWZOOM)
-			MSG_WriteShort (msg, viewzoom);
+			MSG_WriteShort (msg, min(stats[STAT_VIEWZOOM], 65535));
 	}
-	else
+	else if (sv.protocol != PROTOCOL_DARKPLACES6)
 	{
 		if (bits & SU_WEAPONFRAME)
-			MSG_WriteByte (msg, ent->v->weaponframe);
+			MSG_WriteByte (msg, stats[STAT_WEAPONFRAME]);
 		if (bits & SU_ARMOR)
-			MSG_WriteByte (msg, ent->v->armorvalue);
+			MSG_WriteByte (msg, stats[STAT_ARMOR]);
 		if (bits & SU_WEAPON)
-		{
-			i = SV_ModelIndex(PR_GetString(ent->v->weaponmodel));
-			if (i < 0)
-			{
-				Con_DPrintf("weaponmodel \"%s\" not precached\n", PR_GetString(ent->v->weaponmodel));
-				i = 0;
-			}
-			MSG_WriteByte (msg, i);
-		}
-
-		MSG_WriteShort (msg, ent->v->health);
-		MSG_WriteByte (msg, ent->v->currentammo);
-		MSG_WriteByte (msg, ent->v->ammo_shells);
-		MSG_WriteByte (msg, ent->v->ammo_nails);
-		MSG_WriteByte (msg, ent->v->ammo_rockets);
-		MSG_WriteByte (msg, ent->v->ammo_cells);
-
+			MSG_WriteByte (msg, stats[STAT_WEAPON]);
+		MSG_WriteShort (msg, stats[STAT_HEALTH]);
+		MSG_WriteByte (msg, stats[STAT_AMMO]);
+		MSG_WriteByte (msg, stats[STAT_SHELLS]);
+		MSG_WriteByte (msg, stats[STAT_NAILS]);
+		MSG_WriteByte (msg, stats[STAT_ROCKETS]);
+		MSG_WriteByte (msg, stats[STAT_CELLS]);
 		if (gamemode == GAME_HIPNOTIC || gamemode == GAME_ROGUE || gamemode == GAME_NEXUIZ)
 		{
-			for(i=0;i<32;i++)
-			{
-				if ( ((int)ent->v->weapon) & (1<<i) )
-				{
-					MSG_WriteByte (msg, i);
+			for (i = 0;i < 32;i++)
+				if (stats[STAT_WEAPON] & (1<<i))
 					break;
-				}
-			}
+			MSG_WriteByte (msg, i);
 		}
 		else
-		{
-			MSG_WriteByte (msg, ent->v->weapon);
-		}
-	
+			MSG_WriteByte (msg, stats[STAT_WEAPON]);
 		if (bits & SU_VIEWZOOM)
 		{
 			if (sv.protocol == PROTOCOL_DARKPLACES4)
-			{
-				viewzoom = min(viewzoom, 255);
-				MSG_WriteByte (msg, viewzoom);
-			}
-			else if (sv.protocol == PROTOCOL_DARKPLACES5)
-				MSG_WriteShort (msg, viewzoom);
+				MSG_WriteByte (msg, min(stats[STAT_VIEWZOOM], 255));
+			else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
+				MSG_WriteShort (msg, min(stats[STAT_VIEWZOOM], 65535));
 		}
 	}
 }
@@ -1079,6 +1054,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 {
 	int rate, maxrate, maxsize, maxsize2;
 	sizebuf_t msg;
+	int stats[MAX_CL_STATS];
 
 	if (LHNETADDRESS_GetAddressType(&host_client->netconnection->peeraddress) == LHNETADDRESSTYPE_LOOP && !sv_ratelimitlocalplayer.integer)
 	{
@@ -1086,7 +1062,7 @@ qboolean SV_SendClientDatagram (client_t *client)
 		maxsize = sizeof(sv_sendclientdatagram_buf);
 		maxsize2 = sizeof(sv_sendclientdatagram_buf);
 	}
-	else if (sv.protocol == PROTOCOL_DARKPLACES5)
+	else if (sv.protocol == PROTOCOL_DARKPLACES5 || sv.protocol == PROTOCOL_DARKPLACES6)
 	{
 		// PROTOCOL_DARKPLACES5 supports packet size limiting of updates
 		maxrate = bound(NET_MINRATE, sv_maxrate.integer, NET_MAXRATE);
@@ -1115,9 +1091,8 @@ qboolean SV_SendClientDatagram (client_t *client)
 	MSG_WriteFloat (&msg, sv.time);
 
 	// add the client specific data to the datagram
-	SV_WriteClientdataToMessage (client->edict, &msg);
-
-	SV_WriteEntitiesToClient (client, client->edict, &msg);
+	SV_WriteClientdataToMessage (client, client->edict, &msg, stats);
+	SV_WriteEntitiesToClient (client, client->edict, &msg, stats);
 
 	// expand packet size to allow effects to go over the rate limit
 	// (dropping them is FAR too ugly)
@@ -1323,22 +1298,111 @@ SV_ModelIndex
 
 ================
 */
-int SV_ModelIndex (const char *name)
+int SV_ModelIndex(char *s, int precachemode)
 {
-	int i;
-
-	if (!name || !name[0])
+	int i, limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_MODELS);
+	char filename[MAX_QPATH];
+	if (!s || !*s)
 		return 0;
-
-	for (i=0 ; i<MAX_MODELS && sv.model_precache[i] ; i++)
-		if (!strcmp(sv.model_precache[i], name))
-			return i;
-	if (i==MAX_MODELS || !sv.model_precache[i])
+	// testing
+	//if (precachemode == 2)
+	//	return 0;
+	strlcpy(filename, s, sizeof(filename));
+	for (i = 2;i < limit;i++)
 	{
-		Con_DPrintf ("SV_ModelIndex: model %s not precached", name);
-		return -1;
+		if (!sv.model_precache[i][0])
+		{
+			if (precachemode)
+			{
+				if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+				{
+					// not able to precache during game
+					if (precachemode == 2 && sv.state != ss_loading)
+					{
+						Con_Printf("SV_ModelIndex(\"%s\"): precache_model can only be done in spawn functions\n", filename);
+						return 0;
+					}
+				}
+				else
+				{
+					// able to precache during game
+					if (precachemode == 1)
+						Con_Printf("SV_ModelIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
+					strlcpy(sv.model_precache[i], filename, sizeof(sv.model_precache[i]));
+					sv.models[i] = Mod_ForName (sv.model_precache[i], true, false, false);
+					if (sv.state != ss_loading)
+					{
+						MSG_WriteByte(&sv.reliable_datagram, svc_precache);
+						MSG_WriteShort(&sv.reliable_datagram, i);
+						MSG_WriteString(&sv.reliable_datagram, filename);
+					}
+					return i;
+				}
+			}
+			Con_Printf("SV_ModelIndex(\"%s\"): not precached\n", filename);
+			return 0;
+		}
+		if (!strcmp(sv.model_precache[i], filename))
+			return i;
 	}
-	return i;
+	if (precachemode)
+		Con_Printf("SV_ModelIndex(\"%s\"): i == MAX_MODELS\n", filename);
+	else
+		Con_Printf("SV_ModelIndex(\"%s\"): not precached\n", filename);
+	return 0;
+}
+
+/*
+================
+SV_SoundIndex
+
+================
+*/
+int SV_SoundIndex(char *s, int precachemode)
+{
+	int i, limit = (sv.protocol == PROTOCOL_QUAKE ? 256 : MAX_SOUNDS);
+	char filename[MAX_QPATH];
+	if (!s || !*s)
+		return 0;
+	strlcpy(filename, s, sizeof(filename));
+	for (i = 1;i < limit;i++)
+	{
+		if (!sv.sound_precache[i][0])
+		{
+			if (sv.protocol == PROTOCOL_QUAKE || sv.protocol == PROTOCOL_DARKPLACES1 || sv.protocol == PROTOCOL_DARKPLACES2 || sv.protocol == PROTOCOL_DARKPLACES3 || sv.protocol == PROTOCOL_DARKPLACES4 || sv.protocol == PROTOCOL_DARKPLACES5)
+			{
+				// not able to precache during game
+				if (precachemode == 2 && sv.state != ss_loading)
+				{
+					Con_Printf("SV_SoundIndex(\"%s\"): precache_sound can only be done in spawn functions\n", filename);
+					return 0;
+				}
+			}
+			else
+			{
+				// able to precache during game
+				if (precachemode)
+				{
+					if (precachemode == 1)
+						Con_Printf("SV_SoundIndex(\"%s\"): not precached (fix your code), precaching anyway\n", filename);
+					strlcpy(sv.sound_precache[i], filename, sizeof(sv.sound_precache[i]));
+					MSG_WriteByte(&sv.reliable_datagram, svc_precache);
+					MSG_WriteShort(&sv.reliable_datagram, i + 32768);
+					MSG_WriteString(&sv.reliable_datagram, filename);
+					return i;
+				}
+			}
+			Con_Printf("SV_SoundIndex(\"%s\"): not precached\n", filename);
+			return 0;
+		}
+		if (!strcmp(sv.sound_precache[i], filename))
+			return i;
+	}
+	if (precachemode)
+		Con_Printf("SV_SoundIndex(\"%s\"): i == MAX_SOUNDS\n", filename);
+	else
+		Con_Printf("SV_SoundIndex(\"%s\"): not precached\n", filename);
+	return 0;
 }
 
 /*
@@ -1374,10 +1438,7 @@ void SV_CreateBaseline (void)
 		if (entnum > 0 && entnum <= svs.maxclients)
 		{
 			svent->e->baseline.colormap = entnum;
-			i = SV_ModelIndex("progs/player.mdl");
-			if (i < 0)
-				i = 0;
-			svent->e->baseline.modelindex = i;
+			svent->e->baseline.modelindex = SV_ModelIndex("progs/player.mdl", 1);
 		}
 		else
 		{
@@ -1576,47 +1637,30 @@ void SV_SpawnServer (const char *server)
 
 	strlcpy (sv.name, server, sizeof (sv.name));
 
-	// FIXME: cvar
+	sv.netquakecompatible = false;
 	if (!strcasecmp(sv_protocolname.string, "QUAKE"))
 	{
 		sv.protocol = PROTOCOL_QUAKE;
 		sv.netquakecompatible = true;
 	}
 	else if (!strcasecmp(sv_protocolname.string, "QUAKEDP"))
-	{
 		sv.protocol = PROTOCOL_QUAKE;
-		sv.netquakecompatible = false;
-	}
 	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES1"))
-	{
 		sv.protocol = PROTOCOL_DARKPLACES1;
-		sv.netquakecompatible = false;
-	}
 	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES2"))
-	{
 		sv.protocol = PROTOCOL_DARKPLACES2;
-		sv.netquakecompatible = false;
-	}
 	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES3"))
-	{
 		sv.protocol = PROTOCOL_DARKPLACES3;
-		sv.netquakecompatible = false;
-	}
 	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES4"))
-	{
 		sv.protocol = PROTOCOL_DARKPLACES4;
-		sv.netquakecompatible = false;
-	}
 	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES5"))
-	{
 		sv.protocol = PROTOCOL_DARKPLACES5;
-		sv.netquakecompatible = false;
-	}
+	else if (!strcasecmp(sv_protocolname.string, "DARKPLACES6"))
+		sv.protocol = PROTOCOL_DARKPLACES6;
 	else
 	{
-		sv.protocol = PROTOCOL_DARKPLACES5;
-		sv.netquakecompatible = false;
-		Con_Printf("Unknown sv_protocolname \"%s\", valid values are QUAKE, QUAKEDP, DARKPLACES1, DARKPLACES2, DARKPLACES3, DARKPLACES4, DARKPLACES5, falling back to DARKPLACES5 protocol\n", sv_protocolname.string);
+		sv.protocol = PROTOCOL_DARKPLACES6;
+		Con_Printf("Unknown sv_protocolname \"%s\", valid values are QUAKE, QUAKEDP, DARKPLACES1, DARKPLACES2, DARKPLACES3, DARKPLACES4, DARKPLACES5, DARKPLACES6, falling back to DARKPLACES6 protocol\n", sv_protocolname.string);
 	}
 
 // load progs to get entity field count
@@ -1681,14 +1725,14 @@ void SV_SpawnServer (const char *server)
 //
 	SV_ClearWorld ();
 
-	sv.sound_precache[0] = "";
+	strlcpy(sv.sound_precache[0], "", sizeof(sv.sound_precache[0]));
 
-	sv.model_precache[0] = "";
-	sv.model_precache[1] = sv.modelname;
+	strlcpy(sv.model_precache[0], "", sizeof(sv.model_precache[0]));
+	strlcpy(sv.model_precache[1], sv.modelname, sizeof(sv.model_precache[1]));
 	for (i = 1;i < sv.worldmodel->brush.numsubmodels;i++)
 	{
-		sv.model_precache[i+1] = localmodels[i];
-		sv.models[i+1] = Mod_ForName (localmodels[i], false, false, false);
+		snprintf(sv.model_precache[i+1], sizeof(sv.model_precache[i+1]), "*%i", i);
+		sv.models[i+1] = Mod_ForName (sv.model_precache[i+1], false, false, false);
 	}
 
 //

@@ -92,6 +92,8 @@ int eval_button5;
 int eval_button6;
 int eval_button7;
 int eval_button8;
+int eval_buttonuse;
+int eval_buttonchat;
 int eval_glow_size;
 int eval_glow_trail;
 int eval_glow_color;
@@ -126,6 +128,12 @@ int eval_light_lev;
 int eval_color;
 int eval_style;
 int eval_pflags;
+int eval_cursor_active;
+int eval_cursor_screen;
+int eval_cursor_trace_start;
+int eval_cursor_trace_endpos;
+int eval_cursor_trace_ent;
+int eval_colormod;
 
 mfunction_t *SV_PlayerPhysicsQC;
 mfunction_t *EndFrameQC;
@@ -150,6 +158,8 @@ void FindEdictFieldOffsets(void)
 	eval_button6 = FindFieldOffset("button6");
 	eval_button7 = FindFieldOffset("button7");
 	eval_button8 = FindFieldOffset("button8");
+	eval_buttonuse = FindFieldOffset("buttonuse");
+	eval_buttonchat = FindFieldOffset("buttonchat");
 	eval_glow_size = FindFieldOffset("glow_size");
 	eval_glow_trail = FindFieldOffset("glow_trail");
 	eval_glow_color = FindFieldOffset("glow_color");
@@ -184,6 +194,12 @@ void FindEdictFieldOffsets(void)
 	eval_color = FindFieldOffset("color");
 	eval_style = FindFieldOffset("style");
 	eval_pflags = FindFieldOffset("pflags");
+	eval_cursor_active = FindFieldOffset("cursor_active");
+	eval_cursor_screen = FindFieldOffset("cursor_screen");
+	eval_cursor_trace_start = FindFieldOffset("cursor_trace_start");
+	eval_cursor_trace_endpos = FindFieldOffset("cursor_trace_endpos");
+	eval_cursor_trace_ent = FindFieldOffset("cursor_trace_ent");
+	eval_colormod = FindFieldOffset("colormod");
 
 	// LordHavoc: allowing QuakeC to override the player movement code
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
@@ -1205,46 +1221,55 @@ dpfield_t;
 
 dpfield_t dpfields[] =
 {
-	{ev_float, "gravity"},
+	{ev_entity, "cursor_trace_ent"},
+	{ev_entity, "drawonlytoclient"},
+	{ev_entity, "exteriormodeltoclient"},
+	{ev_entity, "nodrawtoclient"},
+	{ev_entity, "tag_entity"},
+	{ev_entity, "viewmodelforclient"},
+	{ev_float, "alpha"},
+	{ev_float, "ammo_cells1"},
+	{ev_float, "ammo_lava_nails"},
+	{ev_float, "ammo_multi_rockets"},
+	{ev_float, "ammo_nails1"},
+	{ev_float, "ammo_plasma"},
+	{ev_float, "ammo_rockets1"},
+	{ev_float, "ammo_shells1"},
 	{ev_float, "button3"},
 	{ev_float, "button4"},
 	{ev_float, "button5"},
 	{ev_float, "button6"},
 	{ev_float, "button7"},
 	{ev_float, "button8"},
+	{ev_float, "buttonchat"},
+	{ev_float, "buttonuse"},
+	{ev_float, "clientcolors"},
+	{ev_float, "cursor_active"},
+	{ev_float, "fullbright"},
+	{ev_float, "glow_color"},
 	{ev_float, "glow_size"},
 	{ev_float, "glow_trail"},
-	{ev_float, "glow_color"},
-	{ev_float, "items2"},
-	{ev_float, "scale"},
-	{ev_float, "alpha"},
-	{ev_float, "renderamt"},
-	{ev_float, "rendermode"},
-	{ev_float, "fullbright"},
-	{ev_float, "ammo_shells1"},
-	{ev_float, "ammo_nails1"},
-	{ev_float, "ammo_lava_nails"},
-	{ev_float, "ammo_rockets1"},
-	{ev_float, "ammo_multi_rockets"},
-	{ev_float, "ammo_cells1"},
-	{ev_float, "ammo_plasma"},
+	{ev_float, "gravity"},
 	{ev_float, "idealpitch"},
-	{ev_float, "pitch_speed"},
-	{ev_entity, "viewmodelforclient"},
-	{ev_entity, "nodrawtoclient"},
-	{ev_entity, "exteriormodeltoclient"},
-	{ev_entity, "drawonlytoclient"},
-	{ev_float, "ping"},
-	{ev_vector, "movement"},
-	{ev_float, "pmodel"},
-	{ev_vector, "punchvector"},
-	{ev_float, "clientcolors"},
-	{ev_entity, "tag_entity"},
-	{ev_float, "tag_index"},
+	{ev_float, "items2"},
 	{ev_float, "light_lev"},
-	{ev_vector, "color"},
+	{ev_float, "pflags"},
+	{ev_float, "ping"},
+	{ev_float, "pitch_speed"},
+	{ev_float, "pmodel"},
+	{ev_float, "renderamt"}, // HalfLife support
+	{ev_float, "rendermode"}, // HalfLife support
+	{ev_float, "scale"},
 	{ev_float, "style"},
-	{ev_float, "pflags"}
+	{ev_float, "tag_index"},
+	{ev_float, "viewzoom"},
+	{ev_vector, "color"},
+	{ev_vector, "colormod"},
+	{ev_vector, "cursor_screen"},
+	{ev_vector, "cursor_trace_endpos"},
+	{ev_vector, "cursor_trace_start"},
+	{ev_vector, "movement"},
+	{ev_vector, "punchvector"}
 };
 
 /*

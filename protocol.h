@@ -42,6 +42,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // entityframe5 protocol
 #define PROTOCOL_DARKPLACES5 3502
+#define PROTOCOL_DARKPLACES6 3503
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -70,6 +71,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define EF_STARDUST				2048	// LordHavoc: showering sparks
 #define EF_NOSHADOW				4096	// LordHavoc: does not cast a shadow
 #define EF_NODEPTHTEST			8192	// LordHavoc: shows through walls
+#define EF_SELECTABLE			16384	// LordHavoc: highlights when PRYDON_CLIENTCURSOR mouse is over it
 
 #define EF_STEP					0x80000000 // internal client use only - present on MOVETYPE_STEP entities, not QC accessible (too many bits)
 
@@ -107,7 +109,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define U_EFFECTS2		(1<<19) // 1 byte, this is .effects & 0xFF00 (second byte)
 #define U_GLOWSIZE		(1<<20) // 1 byte, encoding is float/4.0, unsigned, not sent if 0
 #define U_GLOWCOLOR		(1<<21) // 1 byte, palette index, default is 254 (white), this IS used for darklight (allowing colored darklight), however the particles from a darklight are always black, not sent if default value (even if glowsize or glowtrail is set)
-// LordHavoc: colormod feature has been removed, because no one used it
 #define U_COLORMOD		(1<<22) // 1 byte, 3 bit red, 3 bit green, 2 bit blue, this lets you tint an object artifically, so you could make a red rocket, or a blue fiend...
 #define U_EXTEND2		(1<<23) // another byte to follow
 // LordHavoc: second extend byte
@@ -236,10 +237,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // LordHavoc: my svc_ range, 50-59
 #define svc_cgame			50		// [short] length [bytes] data
-#define svc_unusedlh1		51
+#define svc_updatestatubyte	51		// [byte] stat [byte] value
 #define svc_effect			52		// [vector] org [byte] modelindex [byte] startframe [byte] framecount [byte] framerate
 #define svc_effect2			53		// [vector] org [short] modelindex [short] startframe [byte] framecount [byte] framerate
-#define	svc_sound2			54		// short soundindex instead of byte
+#define	svc_sound2			54		// (obsolete in DP6 and later) short soundindex instead of byte
+#define	svc_precache		54		// [short] precacheindex [string] filename, precacheindex is + 0 for modelindex and +32768 for soundindex
 #define	svc_spawnbaseline2	55		// short modelindex instead of byte
 #define svc_spawnstatic2	56		// short modelindex instead of byte
 #define svc_entities		57		// [int] deltaframe [int] thisframe [float vector] eye [variable length] entitydata
@@ -256,7 +258,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	clc_stringcmd	4		// [string] message
 
 // LordHavoc: my clc_ range, 50-59
-#define clc_ackentities	50		// [int] framenumber
+#define clc_ackframe	50		// [int] framenumber
 #define clc_unusedlh1 	51
 #define clc_unusedlh2 	52
 #define clc_unusedlh3 	53
@@ -357,9 +359,9 @@ typedef struct
 	unsigned char glowcolor;
 	unsigned char flags;
 	unsigned char tagindex;
-	unsigned char colormod;
+	unsigned char colormod[3];
 	// padding to a multiple of 8 bytes (to align the double time)
-	unsigned char unused[4];
+	unsigned char unused[2];
 }
 entity_state_t;
 
@@ -669,8 +671,8 @@ void EntityFrame4_CL_ReadFrame(void);
 #define E5_EFFECTS32 (1<<20)
 // flag
 #define E5_FRAME16 (1<<21)
-// unused
-#define E5_UNUSED22 (1<<22)
+// byte[3] = s->colormod[0], s->colormod[1], s->colormod[2]
+#define E5_COLORMOD (1<<22)
 // bits >= (1<<24)
 #define E5_EXTEND3 (1<<23)
 
@@ -706,6 +708,7 @@ typedef struct entityframe5_packetlog_s
 	int packetnumber;
 	int numstates;
 	entityframe5_changestate_t states[ENTITYFRAME5_MAXSTATES];
+	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];
 }
 entityframe5_packetlog_t;
 
@@ -733,6 +736,10 @@ typedef struct entityframe5_database_s
 	// (derived from states)
 	qbyte visiblebits[(MAX_EDICTS+7)/8];
 
+	// delta compression of stats
+	qbyte statsdeltabits[(MAX_CL_STATS+7)/8];
+	int stats[MAX_CL_STATS];
+
 	// old notes
 
 	// this is used to decide which changestates to set each frame
@@ -755,8 +762,9 @@ int EntityState5_Priority(entityframe5_database_t *d, entity_state_t *view, enti
 void EntityState5_WriteUpdate(int number, const entity_state_t *s, int changedbits, sizebuf_t *msg);
 int EntityState5_DeltaBitsForState(entity_state_t *o, entity_state_t *n);
 void EntityFrame5_CL_ReadFrame(void);
-void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum, int viewentnum);
-void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum);
+void EntityFrame5_LostFrame(entityframe5_database_t *d, int framenum, int viewentnum);
+void EntityFrame5_AckFrame(entityframe5_database_t *d, int framenum);
+void EntityFrame5_WriteFrame(sizebuf_t *msg, entityframe5_database_t *d, int numstates, const entity_state_t *states, int viewentnum, int *stats);
 
 extern cvar_t developer_networkentities;
 
