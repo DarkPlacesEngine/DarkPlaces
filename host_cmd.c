@@ -542,7 +542,6 @@ Host_Loadgame_f
 */
 void Host_Loadgame_f (void)
 {
-	qfile_t *f;
 	char filename[MAX_QPATH];
 	char mapname[MAX_QPATH];
 	float time;
@@ -684,8 +683,6 @@ void Host_Loadgame_f (void)
 
 	sv.num_edicts = entnum;
 	sv.time = time;
-
-	FS_Close (f);
 
 	for (i = 0;i < NUM_SPAWN_PARMS;i++)
 		svs.clients[0].spawn_parms[i] = spawn_parms[i];

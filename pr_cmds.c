@@ -2879,7 +2879,7 @@ void PF_fgets(void)
 	{
 		c = FS_Getc(pr_files[filenum]);
 		if (c != '\n')
-			FS_UnGetc(pr_files[filenum], c);
+			FS_UnGetc(pr_files[filenum], (unsigned char)c);
 	}
 	if (developer.integer)
 		Con_Printf("fgets: %s\n", string);
