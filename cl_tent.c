@@ -99,7 +99,7 @@ void CL_ParseBeam (model_t *m)
 	Con_Printf ("beam list overflow!\n");	
 }
 
-void R_BlastParticles(vec3_t org, vec_t radius, vec_t power);
+//void R_BlastParticles(vec3_t org, vec_t radius, vec_t power);
 void R_BloodShower (vec3_t mins, vec3_t maxs, float velspeed, int count);
 void R_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int gravity, int randomvel);
 void R_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type);
@@ -340,7 +340,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		R_ParticleExplosion (pos, false);
-		R_BlastParticles (pos, 120, 120);
+//		R_BlastParticles (pos, 120, 120);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -355,7 +355,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		R_ParticleExplosion (pos, false);
-		R_BlastParticles (pos, 120, 480);
+//		R_BlastParticles (pos, 120, 480);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 600;
@@ -386,7 +386,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		R_ParticleExplosion (pos, false);
-		R_BlastParticles (pos, 120, 120);
+//		R_BlastParticles (pos, 120, 120);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -401,7 +401,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		R_ParticleExplosion (pos, false);
-		R_BlastParticles (pos, 120, 120);
+//		R_BlastParticles (pos, 120, 120);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;
@@ -416,7 +416,7 @@ void CL_ParseTEnt (void)
 		pos[1] = MSG_ReadCoord ();
 		pos[2] = MSG_ReadCoord ();
 		R_BlobExplosion (pos);
-		R_BlastParticles (pos, 120, 120);
+//		R_BlastParticles (pos, 120, 120);
 
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		dl = CL_AllocDlight (0);
@@ -472,7 +472,7 @@ void CL_ParseTEnt (void)
 		colorStart = MSG_ReadByte ();
 		colorLength = MSG_ReadByte ();
 		R_ParticleExplosion2 (pos, colorStart, colorLength);
-		R_BlastParticles (pos, 80, 80);
+//		R_BlastParticles (pos, 80, 80);
 		dl = CL_AllocDlight (0);
 		VectorCopy (pos, dl->origin);
 		dl->radius = 350;

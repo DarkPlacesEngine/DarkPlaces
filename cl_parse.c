@@ -81,12 +81,14 @@ char *svc_strings[] =
 	"?", // 48
 	"?", // 49
 	"svc_farclip", // [coord] size
-	"svc_fog" // [byte] enable <optional past this point, only included if enable is true> [short * 4096] density [byte] red [byte] green [byte] blue
+	"svc_fog", // [byte] enable <optional past this point, only included if enable is true> [short * 4096] density [byte] red [byte] green [byte] blue
+	"svc_playerposition" // [float] x [float] y [float] z
 };
 
 //=============================================================================
 
-int Nehahrademcompatibility; // LordHavoc: to allow playback of the early Nehahra movie segments
+qboolean Nehahrademcompatibility; // LordHavoc: to allow playback of the early Nehahra movie segments
+qboolean dpprotocol; // LordHavoc: whether or not the current network stream is the enhanced DarkPlaces protocol
 
 /*
 ===============
@@ -343,6 +345,7 @@ void CL_ParseServerInfo (void)
 		Nehahrademcompatibility = true;
 	if (cls.demoplayback && demo_nehahra.value)
 		Nehahrademcompatibility = true;
+	dpprotocol = i == DPPROTOCOL_VERSION;
 
 // parse maxclients
 	cl.maxclients = MSG_ReadByte ();
@@ -573,7 +576,7 @@ void CL_ParseUpdate (int bits)
 	ent->deltabaseline.frame = ent->frame;
 	ent->alpha = (float) alpha * (1.0 / 255.0);
 	ent->scale = (float) scale * (1.0 / 16.0);
-	ent->glowsize = glowsize < 128 ? glowsize * 8.0 : (glowsize - 256) * 8.0;
+	ent->glowsize = glowsize * 4.0;
 	ent->glowcolor = glowcolor;
 	ent->colormod[0] = (float) ((colormod >> 5) & 7) * (1.0 / 7.0);
 	ent->colormod[1] = (float) ((colormod >> 2) & 7) * (1.0 / 7.0);

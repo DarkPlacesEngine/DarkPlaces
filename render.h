@@ -120,7 +120,6 @@ typedef struct
 //
 // refresh
 //
-extern	int		reinit_surfcache;
 
 
 extern	refdef_t	r_refdef;
@@ -162,17 +161,3 @@ void R_LavaSplash (vec3_t org);
 void R_TeleportSplash (vec3_t org);
 
 void R_PushDlights (void);
-
-
-//
-// surface cache related
-//
-extern	int		reinit_surfcache;	// if 1, surface cache is currently empty and
-extern qboolean	r_cache_thrash;	// set if thrashing the surface cache
-
-int	D_SurfaceCacheForRes (int width, int height);
-void D_FlushCaches (void);
-void D_DeleteSurfaceCache (void);
-void D_InitCaches (void *buffer, int size);
-void R_SetVrect (vrect_t *pvrect, vrect_t *pvrectin, int lineadj);
-

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // protocol.h -- communications protocols
 
 #define	PROTOCOL_VERSION	15
+#define	DPPROTOCOL_VERSION	96
 
 // model effects
 #define	EF_ROCKET	1			// leave a trail
@@ -181,6 +182,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define svc_farclip			50		// [coord] size (default is 6144)
 #define svc_fog				51		// [byte] enable <optional past this point, only included if enable is true> [float] density [byte] red [byte] green [byte] blue
+#define svc_playerposition	52		// only used in dpprotocol mode
 
 //
 // client to server

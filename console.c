@@ -166,7 +166,7 @@ void Con_CheckResize (void)
 
 	if (width < 1)			// video hasn't been initialized yet
 	{
-		width = 38;
+		width = 78; // LordHavoc: changed from 38 to 78 (320 -> 640 conversion)
 		con_linewidth = width;
 		con_totallines = CON_TEXTSIZE / con_linewidth;
 		memset (con_text, ' ', CON_TEXTSIZE);

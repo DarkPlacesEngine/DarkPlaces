@@ -567,7 +567,6 @@ void GL_Init (void)
 
 	// LordHavoc: report supported extensions
 	Con_Printf ("\nQSG extensions: %s\n", QSG_EXTENSIONS);
-
 	// LordHavoc: set up state
 //	glEnable(GL_DEPTH_TEST);
 //	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);

@@ -42,6 +42,8 @@ double		realtime;				// without any filtering or bounding
 double		oldrealtime;			// last frame run
 int			host_framecount;
 
+double		sv_frametime;
+
 int			host_hunklevel;
 
 int			minimum_memory;
@@ -479,7 +481,6 @@ not reinitialize anything.
 void Host_ClearMemory (void)
 {
 	Con_DPrintf ("Clearing memory\n");
-	D_FlushCaches ();
 	Mod_ClearAll ();
 	if (host_hunklevel)
 		Hunk_FreeToLowMark (host_hunklevel);
@@ -626,7 +627,7 @@ void Host_ServerFrame (void)
 	if (!isDedicated && svs.maxclients > 1 && ((realtime - lastservertime) < sys_ticrate.value))
 		return;
 // run the world state
-	pr_global_struct->frametime = frametimetotal;
+	sv_frametime = pr_global_struct->frametime = frametimetotal;
 	frametimetotal = 0;
 //	pr_global_struct->frametime = host_frametime;
 

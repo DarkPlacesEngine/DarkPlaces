@@ -96,6 +96,8 @@ typedef struct client_s
 		
 	float			ping_times[NUM_PING_TIMES];
 	int				num_pings;			// ping_times[num_pings%NUM_PING_TIMES]
+	float			ping;				// LordHavoc: can be used for prediction or whatever...
+	float			latency;			// LordHavoc: specifically used for prediction, accounts for sys_ticrate too
 
 // spawn parms are carried from level to level
 	float			spawn_parms[NUM_SPAWN_PARMS];

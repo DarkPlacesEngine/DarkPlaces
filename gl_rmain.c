@@ -33,7 +33,7 @@ int			r_framecount;		// used for dlight push checking
 
 mplane_t	frustum[4];
 
-int			c_brush_polys, c_alias_polys;
+int			c_brush_polys, c_alias_polys, c_light_polys, c_nodes, c_leafs;
 
 qboolean	envmap;				// true during envmap command capture 
 
@@ -85,7 +85,6 @@ cvar_t	r_fullbrights = {"r_fullbrights", "1"};
 //cvar_t	gl_cull = {"gl_cull","1"};
 //cvar_t	gl_affinemodels = {"gl_affinemodels","0"};
 //cvar_t	gl_polyblend = {"gl_polyblend","1"};
-//cvar_t	gl_flashblend = {"gl_flashblend","0"};
 cvar_t	gl_playermip = {"gl_playermip","0"};
 //cvar_t	gl_nocolors = {"gl_nocolors","0"};
 //cvar_t	gl_keeptjunctions = {"gl_keeptjunctions","1"};
@@ -1090,6 +1089,9 @@ void R_DrawQ2AliasFrame (md2mem_t *pheader)
 	glDepthMask(1);
 }
 
+int modeldlightbits[8];
+extern int r_dlightframecount;
+
 /*
 =================
 R_DrawAliasModel
@@ -1118,6 +1120,16 @@ void R_DrawAliasModel (entity_t *e, int cull)
 
 	VectorCopy (currententity->origin, r_entorigin);
 	VectorSubtract (r_origin, r_entorigin, modelorg);
+
+	{
+		mleaf_t *leaf = Mod_PointInLeaf (currententity->origin, cl.worldmodel);
+		if (leaf->dlightframe == r_dlightframecount)
+			for (i = 0;i < 8;i++)
+				modeldlightbits[i] = leaf->dlightbits[i];
+		else
+			for (i = 0;i < 8;i++)
+				modeldlightbits[i] = 0;
+	}
 
 	// get lighting information
 
@@ -1349,6 +1361,9 @@ void R_SetupFrame (void)
 
 	c_brush_polys = 0;
 	c_alias_polys = 0;
+	c_light_polys = 0;
+	c_nodes = 0;
+	c_leafs = 0;
 
 }
 
@@ -1551,6 +1566,7 @@ R_RenderView
 r_refdef must be set before the first call
 ================
 */
+extern qboolean intimerefresh;
 void R_RenderView (void)
 {
 //	double currtime, temptime;
@@ -1580,7 +1596,8 @@ void R_RenderView (void)
 	R_SetupGL ();
 	R_MarkLeaves ();	// done here so we know if we're in water
 	R_DrawWorld ();		// adds static entities to the list
-	S_ExtraUpdate ();	// don't let sound get messed up if going slow
+	if (!intimerefresh)
+		S_ExtraUpdate ();	// don't let sound get messed up if going slow
 	wallpolyclear();
 	R_DrawEntitiesOnList1 (); // BSP models
 	wallpolyrender();

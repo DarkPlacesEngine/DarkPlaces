@@ -84,7 +84,7 @@ extern qboolean m_return_onerror;
 extern char m_return_reason[32];
 
 
-#ifdef DEBUG
+//#ifdef DEBUG
 char *StrAddr (struct qsockaddr *addr)
 {
 	static char buf[34];
@@ -95,7 +95,7 @@ char *StrAddr (struct qsockaddr *addr)
 		sprintf (buf + n * 2, "%02x", *p++);
 	return buf;
 }
-#endif
+//#endif
 
 
 #ifdef BAN_TEST
@@ -1265,12 +1265,12 @@ static qsocket_t *_Datagram_Connect (char *host)
 				// is it from the right place?
 				if (sfunc.AddrCompare(&readaddr, &sendaddr) != 0)
 				{
-#ifdef DEBUG
-					Con_Printf("wrong reply address\n");
-					Con_Printf("Expected: %s\n", StrAddr (&sendaddr));
-					Con_Printf("Received: %s\n", StrAddr (&readaddr));
+//#ifdef DEBUG
+					Con_DPrintf("wrong reply address\n");
+					Con_DPrintf("Expected: %s\n", StrAddr (&sendaddr));
+					Con_DPrintf("Received: %s\n", StrAddr (&readaddr));
 					SCR_UpdateScreen ();
-#endif
+//#endif
 					ret = 0;
 					continue;
 				}

@@ -365,6 +365,7 @@ Draw_Init
 ===============
 */
 void rmain_registercvars();
+extern int buildnumber;
 void Draw_Init (void)
 {
 	int		i;
@@ -412,15 +413,19 @@ void Draw_Init (void)
 	// hack the version number directly into the pic
 #ifdef NEHAHRA
 #if defined(__linux__)
-	sprintf (ver, "DPNehahra Linux GL %.2f", (float) VERSION);
+	sprintf (ver, "DPNehahra Linux GL %.2f build %5i", (float) VERSION, buildnumber);
+#elif defined(WIN32)
+	sprintf (ver, "DPNehahra Windows GL %.2f build %5i", (float) VERSION, buildnumber);
 #else
-	sprintf (ver, "DPNehahra Windows GL %.2f", (float) VERSION);
+	sprintf (ver, "DPNehahra Unknown GL %.2f build %5i", (float) VERSION, buildnumber);
 #endif
 #else
 #if defined(__linux__)
-	sprintf (ver, "DarkPlaces Linux GL %.2f", (float)VERSION);
+	sprintf (ver, "DarkPlaces Linux GL %.2f build %5i", (float) VERSION, buildnumber);
+#elif defined(WIN32)
+	sprintf (ver, "DarkPlaces Windows GL %.2f build %5i", (float) VERSION, buildnumber);
 #else
-	sprintf (ver, "DarkPlaces Windows GL %.2f", (float)VERSION);
+	sprintf (ver, "DarkPlaces Unknown GL %.2f build %5i", (float) VERSION, buildnumber);
 #endif
 #endif
 	dest = cb->data + 320*186 + 320 - 11 - 8*strlen(ver);

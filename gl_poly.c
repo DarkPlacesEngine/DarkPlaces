@@ -18,8 +18,25 @@ unsigned short currentskyvert;
 cvar_t gl_multitexture = {"gl_multitexture", "1"};
 cvar_t gl_vertexarrays = {"gl_vertexarrays", "1"};
 
+typedef struct translistitem_s
+{
+	transpoly_t *poly;
+	struct translistitem_s *next;
+}
+translistitem;
+
+translistitem translist[MAX_TRANSPOLYS];
+translistitem *currenttranslist;
+
+translistitem *translisthash[4096];
+
+float transviewdist; // distance of view origin along the view normal
+
+float transreciptable[256];
+
 void glpoly_init()
 {
+	int i;
 	Cvar_RegisterVariable (&gl_multitexture);
 	Cvar_RegisterVariable (&gl_vertexarrays);
 	transvert = malloc(MAX_TRANSVERTS * sizeof(transvert_t));
@@ -29,11 +46,17 @@ void glpoly_init()
 	wallpoly = malloc(MAX_WALLPOLYS * sizeof(wallpoly_t));
 	skyvert = malloc(MAX_SKYVERTS * sizeof(skyvert_t));
 	skypoly = malloc(MAX_SKYPOLYS * sizeof(skypoly_t));
+	transreciptable[0] = 0.0f;
+	for (i = 1;i < 256;i++)
+		transreciptable[i] = 1.0f / i;
 }
 
 void transpolyclear()
 {
 	currenttranspoly = currenttransvert = 0;
+	currenttranslist = translist;
+	memset(translisthash, 0, sizeof(translisthash));
+	transviewdist = DotProduct(r_refdef.vieworg, vpn);
 }
 
 void transpolybegin(int texnum, int glowtexnum, int fogtexnum, int transpolytype)
@@ -72,15 +95,38 @@ void transpolyvert(float x, float y, float z, float s, float t, int r, int g, in
 
 void transpolyend()
 {
-	if (currenttranspoly >= MAX_TRANSPOLYS)
+	float center, d, maxdist;
+	int i;
+	transvert_t *v;
+	if (currenttranspoly >= MAX_TRANSPOLYS || currenttransvert >= MAX_TRANSVERTS)
 		return;
 	if (transpoly[currenttranspoly].verts < 3) // skip invalid polygons
 	{
 		currenttransvert = transpoly[currenttranspoly].firstvert; // reset vert pointer
 		return;
 	}
-	if (currenttransvert >= MAX_TRANSVERTS)
+	center = 0;
+	maxdist = -1000000000000000.0f; // eh, it's definitely behind it, so...
+	for (i = 0,v = &transvert[transpoly[currenttranspoly].firstvert];i < transpoly[currenttranspoly].verts;i++, v++)
+	{
+		d = DotProduct(v->v, vpn);
+		center += d;
+		if (d > maxdist)
+			maxdist = d;
+	}
+	maxdist -= transviewdist;
+	if (maxdist < 4.0f) // behind view
+	{
+		currenttransvert = transpoly[currenttranspoly].firstvert; // reset vert pointer
 		return;
+	}
+	center *= transreciptable[transpoly[currenttranspoly].verts];
+	center -= transviewdist;
+	i = bound(0, (int) center, 4095);
+	currenttranslist->next = translisthash[i];
+	currenttranslist->poly = transpoly + currenttranspoly;
+	translisthash[i] = currenttranslist;
+	currenttranslist++;
 	currenttranspoly++;
 }
 
@@ -217,11 +263,14 @@ int transpolyqsort(const void *ia, const void *ib)
 }
 */
 
+/*
 int transpolyqsort(const void *ia, const void *ib)
 {
 	return (transpoly[*((unsigned short *)ib)].distance - transpoly[*((unsigned short *)ia)].distance);
 }
+*/
 
+/*
 void transpolyrenderminmax()
 {
 	int i, j, lastvert;
@@ -249,6 +298,7 @@ void transpolyrenderminmax()
 	}
 	qsort(&transpolyindex[0], transpolyindices, sizeof(unsigned short), transpolyqsort);
 }
+*/
 /*
 	int i, j, a;
 	a = true;
@@ -302,9 +352,9 @@ void transpolyrender()
 	transpoly_t *p;
 	if (currenttranspoly < 1)
 		return;
-	transpolyrenderminmax();
-	if (transpolyindices < 1)
-		return;
+//	transpolyrenderminmax();
+//	if (transpolyindices < 1)
+//		return;
 	// testing
 //	Con_DPrintf("transpolyrender: %i polys %i infront %i vertices\n", currenttranspoly, transpolyindices, currenttransvert);
 //	if (transpolyindices >= 2)
@@ -366,116 +416,122 @@ void transpolyrender()
 	*/
 	{
 		int points = -1;
+		translistitem *item;
 		transvert_t *vert;
-		for (i = 0;i < transpolyindices;i++)
+		for (i = 4095;i >= 0;i--)
 		{
-			p = &transpoly[transpolyindex[i]];
-			if (p->texnum != texnum || p->verts != points || p->transpolytype != tpolytype)
+			item = translisthash[i];
+			while (item)
 			{
-				glEnd();
-				if (isG200)
+				p = item->poly;
+				item = item->next;
+				if (p->texnum != texnum || p->verts != points || p->transpolytype != tpolytype)
 				{
-					if (p->fogtexnum) // alpha
-						glEnable(GL_ALPHA_TEST);
-					else
-						glDisable(GL_ALPHA_TEST);
-				}
-				if (p->texnum != texnum)
-				{
-					texnum = p->texnum;
-					glBindTexture(GL_TEXTURE_2D, texnum);
-				}
-				if (p->transpolytype != tpolytype)
-				{
-					tpolytype = p->transpolytype;
-					if (tpolytype == TPOLYTYPE_ADD) // additive
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-					else // alpha
-						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				}
-				points = p->verts;
-				switch (points)
-				{
-				case 3:
-					glBegin(GL_TRIANGLES);
-					break;
-				case 4:
-					glBegin(GL_QUADS);
-					break;
-				default:
-					glBegin(GL_TRIANGLE_FAN);
-					points = -1; // to force a reinit on the next poly
-					break;
-				}
-			}
-			for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
-			{
-				// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
-				glTexCoord2f(vert->s, vert->t);
-				// again, vector version isn't supported I think
-				glColor4ub(vert->r, vert->g, vert->b, vert->a);
-				glVertex3fv(vert->v);
-			}
-			if (p->glowtexnum)
-			{
-				glEnd();
-				texnum = p->glowtexnum; // highly unlikely to match next poly, but...
-				glBindTexture(GL_TEXTURE_2D, texnum);
-				if (tpolytype != TPOLYTYPE_ADD)
-				{
-					tpolytype = TPOLYTYPE_ADD; // might match next poly
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-				}
-				points = -1;
-				glBegin(GL_TRIANGLE_FAN);
-				for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
-				{
-					glColor4ub(255,255,255,vert->a);
-					// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
-					glTexCoord2f(vert->s, vert->t);
-					glVertex3fv(vert->v);
-				}
-				glEnd();
-			}
-			if (fogenabled && p->transpolytype == TPOLYTYPE_ALPHA)
-			{
-				vec3_t diff;
-				glEnd();
-				points = -1; // to force a reinit on the next poly
-				if (tpolytype != TPOLYTYPE_ALPHA)
-				{
-					tpolytype = TPOLYTYPE_ALPHA; // probably matchs next poly
-					glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				}
-				if (p->fogtexnum)
-				{
-					if (texnum != p->fogtexnum) // highly unlikely to match next poly, but...
+					glEnd();
+					if (isG200)
 					{
-						texnum = p->fogtexnum;
+						if (p->fogtexnum) // alpha
+							glEnable(GL_ALPHA_TEST);
+						else
+							glDisable(GL_ALPHA_TEST);
+					}
+					if (p->texnum != texnum)
+					{
+						texnum = p->texnum;
 						glBindTexture(GL_TEXTURE_2D, texnum);
 					}
-					glBegin(GL_TRIANGLE_FAN);
-					for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
+					if (p->transpolytype != tpolytype)
 					{
-						VectorSubtract(vert->v, r_refdef.vieworg,diff);
-						glTexCoord2f(vert->s, vert->t);
-						glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
-						glVertex3fv(vert->v);
+						tpolytype = p->transpolytype;
+						if (tpolytype == TPOLYTYPE_ADD) // additive
+							glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+						else // alpha
+							glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 					}
-					glEnd ();
+					points = p->verts;
+					switch (points)
+					{
+					case 3:
+						glBegin(GL_TRIANGLES);
+						break;
+					case 4:
+						glBegin(GL_QUADS);
+						break;
+					default:
+						glBegin(GL_TRIANGLE_FAN);
+						points = -1; // to force a reinit on the next poly
+						break;
+					}
 				}
-				else
+				for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 				{
-					glDisable(GL_TEXTURE_2D);
+					// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
+					glTexCoord2f(vert->s, vert->t);
+					// again, vector version isn't supported I think
+					glColor4ub(vert->r, vert->g, vert->b, vert->a);
+					glVertex3fv(vert->v);
+				}
+				if (p->glowtexnum)
+				{
+					glEnd();
+					texnum = p->glowtexnum; // highly unlikely to match next poly, but...
+					glBindTexture(GL_TEXTURE_2D, texnum);
+					if (tpolytype != TPOLYTYPE_ADD)
+					{
+						tpolytype = TPOLYTYPE_ADD; // might match next poly
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+					}
+					points = -1;
 					glBegin(GL_TRIANGLE_FAN);
 					for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
 					{
-						VectorSubtract(vert->v, r_refdef.vieworg,diff);
-						glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
+						glColor4ub(255,255,255,vert->a);
+						// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
+						glTexCoord2f(vert->s, vert->t);
 						glVertex3fv(vert->v);
 					}
-					glEnd ();
-					glEnable(GL_TEXTURE_2D);
+					glEnd();
+				}
+				if (fogenabled && p->transpolytype == TPOLYTYPE_ALPHA)
+				{
+					vec3_t diff;
+					glEnd();
+					points = -1; // to force a reinit on the next poly
+					if (tpolytype != TPOLYTYPE_ALPHA)
+					{
+						tpolytype = TPOLYTYPE_ALPHA; // probably matchs next poly
+						glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+					}
+					if (p->fogtexnum)
+					{
+						if (texnum != p->fogtexnum) // highly unlikely to match next poly, but...
+						{
+							texnum = p->fogtexnum;
+							glBindTexture(GL_TEXTURE_2D, texnum);
+						}
+						glBegin(GL_TRIANGLE_FAN);
+						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
+						{
+							VectorSubtract(vert->v, r_refdef.vieworg,diff);
+							glTexCoord2f(vert->s, vert->t);
+							glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
+							glVertex3fv(vert->v);
+						}
+						glEnd ();
+					}
+					else
+					{
+						glDisable(GL_TEXTURE_2D);
+						glBegin(GL_TRIANGLE_FAN);
+						for (j = 0,vert = &transvert[p->firstvert];j < p->verts;j++, vert++)
+						{
+							VectorSubtract(vert->v, r_refdef.vieworg,diff);
+							glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], vert->a*(1.0f/255.0f)*exp(fogdensity/DotProduct(diff,diff)));
+							glVertex3fv(vert->v);
+						}
+						glEnd ();
+						glEnable(GL_TEXTURE_2D);
+					}
 				}
 			}
 		}
@@ -487,6 +543,35 @@ void transpolyrender()
 	glDepthMask(1); // enable zbuffer updates
 	glDisable(GL_ALPHA_TEST);
 }
+
+/*
+void lightpolybegin(int texnum)
+{
+	if (currentlightpoly >= MAX_LIGHTPOLYS || currentlightvert >= MAX_LIGHTVERTS)
+		return;
+	lightpoly[currentlightpoly].texnum = (unsigned short) texnum;
+	lightpoly[currentlightpoly].firstvert = currentlightvert;
+	lightpoly[currentlightpoly].verts = 0;
+}
+
+// lightpolyvert is a #define
+
+void lightpolyend()
+{
+	if (currentlightpoly >= MAX_LIGHTPOLYS)
+		return;
+	if (lightpoly[currentlightpoly].verts < 3) // skip invalid polygons
+	{
+		currentlightvert = lightpoly[currentlightpoly].firstvert; // reset vert pointer
+		return;
+	}
+	if (currentlightvert >= MAX_LIGHTVERTS)
+		return;
+	currentlightpoly++;
+}
+*/
+
+extern qboolean isG200;
 
 void wallpolyclear()
 {
@@ -518,7 +603,7 @@ void wallpolyrender()
 	{
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 		texnum = -1;
-		for (i = 0,p = &wallpoly[0];i < currentwallpoly;i++, p++)
+		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			if (p->texnum != texnum)
 			{
@@ -527,7 +612,7 @@ void wallpolyrender()
 			}
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
 				glTexCoord2f (vert->s, vert->t);
 				glVertex3fv (vert->vert);
@@ -545,20 +630,20 @@ void wallpolyrender()
 		glEnable(GL_TEXTURE_2D);
 		texnum = -1;
 		lighttexnum = -1;
-		for (i = 0,p = &wallpoly[0];i < currentwallpoly;i++, p++)
+		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
 		{
-//			if (p->texnum != texnum || p->lighttexnum != lighttexnum)
-//			{
+			if (p->texnum != texnum || p->lighttexnum != lighttexnum)
+			{
 				texnum = p->texnum;
 				lighttexnum = p->lighttexnum;
 				qglSelectTexture(gl_mtex_enum+0);
 				glBindTexture(GL_TEXTURE_2D, texnum);
 				qglSelectTexture(gl_mtex_enum+1);
 				glBindTexture(GL_TEXTURE_2D, lighttexnum);
-//			}
+			}
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
 				qglMTexCoord2f(gl_mtex_enum, vert->s, vert->t); // texture
 				qglMTexCoord2f((gl_mtex_enum+1), vert->u, vert->v); // lightmap
@@ -578,7 +663,7 @@ void wallpolyrender()
 		// first do the textures
 		glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 		texnum = -1;
-		for (i = 0,p = &wallpoly[0];i < currentwallpoly;i++, p++)
+		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			if (p->texnum != texnum)
 			{
@@ -587,7 +672,7 @@ void wallpolyrender()
 			}
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
 				glTexCoord2f (vert->s, vert->t);
 				glVertex3fv (vert->vert);
@@ -599,7 +684,7 @@ void wallpolyrender()
 		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
 		glEnable(GL_BLEND);
 		texnum = -1;
-		for (i = 0,p = &wallpoly[0];i < currentwallpoly;i++, p++)
+		for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
 		{
 			if (p->lighttexnum != texnum)
 			{
@@ -608,7 +693,7 @@ void wallpolyrender()
 			}
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
 				glTexCoord2f (vert->u, vert->v);
 				glVertex3fv (vert->vert);
@@ -616,17 +701,50 @@ void wallpolyrender()
 			glEnd ();
 		}
 	}
-	// render glow textures
+	// switch to additive mode settings
 	glDepthMask(0);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-	glBlendFunc(GL_ONE, GL_ONE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 	glEnable(GL_BLEND);
+	glDisable(GL_ALPHA_TEST);
+	glShadeModel(GL_SMOOTH);
+	// render vertex lit overlays ontop
+	texnum = -1;
+	for (i = 0, p = wallpoly;i < currentwallpoly;i++, p++)
+	{
+		if (!p->lit)
+			continue;
+		for (j = 0,vert = &wallvert[p->firstvert];j < p->numverts;j++, vert++)
+			if (vert->r || vert->g || vert->b)
+				goto lit;
+		continue;
+lit:
+		c_light_polys++;
+		if (p->texnum != texnum)
+		{
+			texnum = p->texnum;
+			glBindTexture(GL_TEXTURE_2D, texnum);
+		}
+		glBegin(GL_POLYGON);
+		for (j = 0,vert = &wallvert[p->firstvert];j < p->numverts;j++, vert++)
+		{
+			// would be 2fv, but windoze Matrox G200 and probably G400 drivers don't support that (dumb...)
+			glTexCoord2f(vert->s, vert->t);
+			// again, vector version isn't supported I think
+			glColor3ub(vert->r, vert->g, vert->b);
+			glVertex3fv(vert->vert);
+		}
+		glEnd();
+	}
+	// render glow textures
+	glShadeModel(GL_FLAT);
+	glBlendFunc(GL_ONE, GL_ONE);
 	if (lighthalf)
 		glColor3f(0.5,0.5,0.5);
 	else
 		glColor3f(1,1,1);
 	texnum = -1;
-	for (i = 0,p = &wallpoly[0];i < currentwallpoly;i++, p++)
+	for (i = 0,p = wallpoly;i < currentwallpoly;i++, p++)
 	{
 		if (!p->glowtexnum)
 			continue;
@@ -637,12 +755,12 @@ void wallpolyrender()
 		}
 		vert = &wallvert[p->firstvert];
 		glBegin(GL_POLYGON);
-		for (j=0 ; j<p->verts ; j++, vert++)
+		for (j=0 ; j<p->numverts ; j++, vert++)
 		{
 			glTexCoord2f (vert->s, vert->t);
 			glVertex3fv (vert->vert);
 		}
-		glEnd ();
+		glEnd();
 	}
 	glColor3f(1,1,1);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -655,7 +773,7 @@ void wallpolyrender()
 		{
 			vert = &wallvert[p->firstvert];
 			glBegin(GL_POLYGON);
-			for (j=0 ; j<p->verts ; j++, vert++)
+			for (j=0 ; j<p->numverts ; j++, vert++)
 			{
 				VectorSubtract(vert->vert, r_refdef.vieworg,diff);
 				glColor4f(fogcolor[0], fogcolor[1], fogcolor[2], exp(fogdensity/DotProduct(diff,diff)));
@@ -665,6 +783,10 @@ void wallpolyrender()
 		}
 		glEnable(GL_TEXTURE_2D);
 	}
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_ALPHA_TEST);
+	glShadeModel(GL_SMOOTH);
 	glDisable(GL_BLEND);
 	glDepthMask(1);
 }

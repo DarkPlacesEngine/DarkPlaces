@@ -32,7 +32,7 @@ signed blocklights[18*18*3]; // LordHavoc: *3 for colored lighting
 #define	BLOCK_HEIGHT	128
 // LordHavoc: increased lightmap limit from 64 to 1024
 #define	MAX_LIGHTMAPS	1024
-#define LIGHTMAPSIZE	(BLOCK_WIDTH*BLOCK_HEIGHT*3)
+#define LIGHTMAPSIZE	(BLOCK_WIDTH*BLOCK_HEIGHT*4)
 
 int			active_lightmaps;
 
@@ -47,12 +47,15 @@ cvar_t gl_lightmaprgba = {"gl_lightmaprgba", "1"};
 cvar_t gl_nosubimagefragments = {"gl_nosubimagefragments", "0"};
 cvar_t gl_nosubimage = {"gl_nosubimage", "0"};
 cvar_t r_ambient = {"r_ambient", "0"};
+//cvar_t gl_funnywalls = {"gl_funnywalls", "0"}; // LordHavoc: see BuildSurfaceDisplayList
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage;
 int lightmapbytes;
 
 qboolean skyisvisible;
 extern qboolean gl_arrays;
+
+extern int r_dlightframecount;
 
 void glrsurf_init()
 {
@@ -64,6 +67,7 @@ void glrsurf_init()
 	Cvar_RegisterVariable(&gl_nosubimagefragments);
 	Cvar_RegisterVariable(&gl_nosubimage);
 	Cvar_RegisterVariable(&r_ambient);
+//	Cvar_RegisterVariable(&gl_funnywalls);
 	// check if it's the glquake minigl driver
 	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
@@ -71,102 +75,6 @@ void glrsurf_init()
 //		Cvar_SetValue("gl_nosubimagefragments", 1);
 //		Cvar_SetValue("gl_nosubimage", 1);
 		Cvar_SetValue("gl_lightmode", 0);
-	}
-}
-
-int dlightdivtable[8192];
-int dlightdivtableinitialized = 0;
-
-/*
-===============
-R_AddDynamicLights
-===============
-*/
-void R_AddDynamicLights (msurface_t *surf)
-{
-	int			sdtable[18], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, red, green, blue, j;
-	unsigned	*bl;
-	float		dist, f;
-	vec3_t		impact, local;
-	// use 64bit integer...  shame it's not very standardized...
-#if _MSC_VER || __BORLANDC__
-	__int64		k; // MSVC
-#else
-	long long	k; // GCC
-#endif
-
-	if (!dlightdivtableinitialized)
-	{
-		dlightdivtable[0] = 1048576 >> 7;
-		for (s = 1;s < 8192;s++)
-			dlightdivtable[s] = 1048576 / (s << 7);
-		dlightdivtableinitialized = 1;
-	}
-
-	smax = (surf->extents[0]>>4)+1;
-	tmax = (surf->extents[1]>>4)+1;
-
-	for (lnum=0 ; lnum<MAX_DLIGHTS ; lnum++)
-	{
-		if ( !(surf->dlightbits[lnum >> 5] & (1<<(lnum&31)) ) )
-			continue;		// not lit by this light
-
-		VectorSubtract(cl_dlights[lnum].origin, currententity->origin, local);
-		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
-		for (i=0 ; i<3 ; i++)
-			impact[i] = cl_dlights[lnum].origin[i] - surf->plane->normal[i]*dist;
-
-		f = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
-		i = f;
-
-		// reduce calculations
-		t = dist*dist;
-		for (s = 0;s < smax;s++, i -= 16)
-			sdtable[s] = i*i + t;
-
-		f = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
-		i = f;
-
-		maxdist = (int) (cl_dlights[lnum].radius*cl_dlights[lnum].radius); // for comparisons to minimum acceptable light
-		// clamp radius to avoid exceeding 8192 entry division table
-		if (maxdist > 1048576)
-			maxdist = 1048576;
-		maxdist3 = maxdist - (int) (dist*dist);
-		// convert to 8.8 blocklights format
-		if (!cl_dlights[lnum].dark)
-		{
-			f = cl_dlights[lnum].color[0] * maxdist;red = f;
-			f = cl_dlights[lnum].color[1] * maxdist;green = f;
-			f = cl_dlights[lnum].color[2] * maxdist;blue = f;
-		}
-		else // negate for darklight
-		{
-			f = cl_dlights[lnum].color[0] * -maxdist;red = f;
-			f = cl_dlights[lnum].color[1] * -maxdist;green = f;
-			f = cl_dlights[lnum].color[2] * -maxdist;blue = f;
-		}
-		bl = blocklights;
-		for (t = 0;t < tmax;t++,i -= 16)
-		{
-			td = i*i;
-			if (td < maxdist3) // make sure some part of it is visible on this line
-			{
-				maxdist2 = maxdist - td;
-				for (s = 0;s < smax;s++)
-				{
-					if (sdtable[s] < maxdist2)
-					{
-						j = dlightdivtable[(sdtable[s]+td) >> 7];
-						k = (red   * j) >> 8;bl[0] += k;
-						k = (green * j) >> 8;bl[1] += k;
-						k = (blue  * j) >> 8;bl[2] += k;
-					}
-					bl += 3;
-				}
-			}
-			else
-				bl+=smax*3; // skip line
-		}
 	}
 }
 
@@ -188,7 +96,6 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	int			maps;
 	int			*bl;
 
-	surf->cached_dlight = (surf->dlightframe == r_framecount);
 	surf->cached_lighthalf = lighthalf;
 	surf->cached_ambient = r_ambient.value;
 
@@ -234,10 +141,6 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 					*bl++ += *lightmap++ * scale;
 				}
 			}
-
-// add all the dynamic lights
-		if (surf->dlightframe == r_framecount)
-			R_AddDynamicLights (surf);
 	}
 	stride -= (smax*lightmapbytes);
 	bl = blocklights;
@@ -402,7 +305,6 @@ extern char skyname[];
 
 void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
 //extern cvar_t r_dynamicwater;
-extern int r_dlightframecount;
 float	turbsin[256] =
 {
 	#include "gl_warp_sin.h"
@@ -449,14 +351,16 @@ DrawTextureChains
 extern qboolean hlbsp;
 extern void R_Sky();
 extern char skyname[];
+//extern qboolean SV_TestLine (hull_t *hull, int num, vec3_t p1, vec3_t p2);
 void DrawTextureChains (void)
 {
-	int		i, j, maps;
+//	int		i, j, l;
+	int		i, j;
 	msurface_t	*s;
 	texture_t	*t;
 	glpoly_t	*p;
-	float		*v;
-	float		os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
+	float		*v, os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
+//	vec3_t shadecolor;
 
 	// first the sky
 	skypolyclear();
@@ -465,7 +369,6 @@ void DrawTextureChains (void)
 		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
 			continue;
 		// LordHavoc: decide the render type only once, because the surface properties were determined by texture anyway
-		// subdivided water surface warp
 		if (s->flags & SURF_DRAWSKY)
 		{
 			cl.worldmodel->textures[j]->texturechain = NULL;
@@ -504,41 +407,136 @@ void DrawTextureChains (void)
 	{
 		if (!cl.worldmodel->textures[j] || !(s = cl.worldmodel->textures[j]->texturechain))
 			continue;
+		// subdivided water surface warp
 		if (!(s->flags & SURF_DRAWTURB))
 		{
 			cl.worldmodel->textures[j]->texturechain = NULL;
 			t = R_TextureAnimation (cl.worldmodel->textures[j]);
 			for (;s;s = s->texturechain)
 			{
-				if (currentwallpoly < MAX_WALLPOLYS && currentwallvert < MAX_WALLVERTS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
+				// check for lightmap modification
+				if (r_dynamic.value)
 				{
-					// check for lightmap modification
-					if (r_dynamic.value)
-					{
-						if (s->dlightframe == r_framecount || s->cached_dlight || r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed, or r_ambient changed
-							R_UpdateLightmap(s, s->lightmaptexturenum);
-						else
-							for (maps = 0 ; maps < MAXLIGHTMAPS && s->styles[maps] != 255 ; maps++)
-								if (d_lightstylevalue[s->styles[maps]] != s->cached_light[maps])
-								{
-									R_UpdateLightmap(s, s->lightmaptexturenum);
-									break;
-								}
-					}
+					if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
+					|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
+					|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
+					|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
+					|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
+						R_UpdateLightmap(s, s->lightmaptexturenum);
+				}
+				for (p = s->polys;p;p = p->next)
+				{
+					if (currentwallpoly >= MAX_WALLPOLYS)
+						break;
+					v = &s->polys->verts[0][0];
 					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
 					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
 					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
 					wallpoly[currentwallpoly].firstvert = currentwallvert;
-					wallpoly[currentwallpoly++].verts = s->polys->numverts;
-					for (i = 0,v = s->polys->verts[0];i<s->polys->numverts;i++, v += VERTEXSIZE)
+					wallpoly[currentwallpoly].numverts = p->numverts;
+					if (wallpoly[currentwallpoly++].lit = s->dlightframe == r_dlightframecount && r_dynamic.value)
 					{
-						wallvert[currentwallvert].vert[0] = v[0];
-						wallvert[currentwallvert].vert[1] = v[1];
-						wallvert[currentwallvert].vert[2] = v[2];
-						wallvert[currentwallvert].s = v[3];
-						wallvert[currentwallvert].t = v[4];
-						wallvert[currentwallvert].u = v[5];
-						wallvert[currentwallvert++].v = v[6];
+						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
+						{
+							/*
+							int dj;
+							shadecolor[0] = shadecolor[1] = shadecolor[2] = 0;
+							for (dj = 0;dj < (MAX_DLIGHTS >> 5);dj++)
+							{
+								if (s->dlightbits[dj])
+								{
+									int di;
+									for (di=0 ; di<32 ; di++)
+									{
+										if ((1 << (di&31)) & s->dlightbits[di>>5])
+										{
+											vec3_t ddist;
+											dlight_t *dl;
+											float dr;
+											float df;
+											float dt;
+											dl = &cl_dlights[(dj<<5)+di];
+											VectorSubtract(dl->origin, v, ddist);
+											df = DotProduct(ddist, ddist) + 65536.0f;
+											dr = dl->radius * dl->radius * 16.0f;
+											if (df < dr)
+											{
+												VectorNormalize(ddist);
+												dt = DotProduct(ddist, s->plane->normal);
+												if (s->flags & SURF_PLANEBACK)
+													dt = -dt;
+												if (dt > 0.0f)
+												{
+													dr *= (dt * 0.5f + 0.5f);
+													if (df < dr)
+													{
+							*/
+														/*
+														vec3_t v2, v3;
+														VectorSubtract(v, ddist, v3); // pull off surface
+														if (s->flags & SURF_PLANEBACK)
+														{
+															VectorSubtract(dl->origin, s->plane->normal, v2);
+															VectorSubtract(v3, s->plane->normal, v3);
+														}
+														else
+														{
+															VectorAdd(dl->origin, s->plane->normal, v2);
+															VectorAdd(v3, s->plane->normal, v3);
+														}
+														if (SV_TestLine(&cl.worldmodel->hulls[0], 0, v2, v3))
+//														if (SV_TestLine(&cl.worldmodel->hulls[0], 0, dl->origin, v))
+														{
+														*/
+							/*
+															float dbrightness = dr * 16.0f / df;
+															shadecolor[0] += dbrightness * dl->color[0];
+															shadecolor[1] += dbrightness * dl->color[1];
+															shadecolor[2] += dbrightness * dl->color[2];
+														//}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+							//R_DynamicLightPoint(shadecolor, v, s->dlightbits);
+							if (lighthalf)
+							{
+								shadecolor[0] *= 0.5f;
+								shadecolor[1] *= 0.5f;
+								shadecolor[2] *= 0.5f;
+							}
+							wallvert[currentwallvert].r = (byte) (bound(0, (int) shadecolor[0], 255));
+							wallvert[currentwallvert].g = (byte) (bound(0, (int) shadecolor[1], 255));
+							wallvert[currentwallvert].b = (byte) (bound(0, (int) shadecolor[2], 255));
+							*/
+							wallvert[currentwallvert].r = (byte) (bound(0, (int) v[9], 255));
+							wallvert[currentwallvert].g = (byte) (bound(0, (int) v[10], 255));
+							wallvert[currentwallvert].b = (byte) (bound(0, (int) v[11], 255));
+							wallvert[currentwallvert].a = 255;
+							wallvert[currentwallvert].vert[0] = v[0];
+							wallvert[currentwallvert].vert[1] = v[1];
+							wallvert[currentwallvert].vert[2] = v[2];
+							wallvert[currentwallvert].s = v[3];
+							wallvert[currentwallvert].t = v[4];
+							wallvert[currentwallvert].u = v[5];
+							wallvert[currentwallvert++].v = v[6];
+						}
+					}
+					else
+					{
+						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
+						{
+							wallvert[currentwallvert].vert[0] = v[0];
+							wallvert[currentwallvert].vert[1] = v[1];
+							wallvert[currentwallvert].vert[2] = v[2];
+							wallvert[currentwallvert].s = v[3];
+							wallvert[currentwallvert].t = v[4];
+							wallvert[currentwallvert].u = v[5];
+							wallvert[currentwallvert++].v = v[6];
+						}
 					}
 				}
 			}
@@ -558,6 +556,67 @@ void DrawTextureChains (void)
 		// subdivided water surface warp
 		if (s->flags & SURF_DRAWTURB)
 		{
+			int alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
+			// FIXME: make fog texture if water texture is transparent?
+			if (r_waterripple.value)
+			{
+				if (lighthalf)
+				{
+					for (;s;s = s->texturechain)
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+								transpolyvert(v[0], v[1], v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
+							transpolyend();
+						}
+					}
+				}
+				else
+				{
+					for (;s;s = s->texturechain)
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+								transpolyvert(v[0], v[1], v[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
+							transpolyend();
+						}
+					}
+				}
+			}
+			else
+			{
+				if (lighthalf)
+				{
+					for (;s;s = s->texturechain)
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+								transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
+							transpolyend();
+						}
+					}
+				}
+				else
+				{
+					for (;s;s = s->texturechain)
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+								transpolyvert(v[0], v[1], v[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
+							transpolyend();
+						}
+					}
+				}
+			}
+			/*
 			int light, alpha, r = 0, g = 0, b = 0;
 			vec3_t nv, shadecolor;
 			alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
@@ -734,6 +793,7 @@ void DrawTextureChains (void)
 					}
 				}
 			}
+			*/
 		}
 	}
 }
@@ -746,7 +806,7 @@ extern vec3_t shadecolor;
 void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
 void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
 void EmitWaterPolys (msurface_t *fa);
-void R_MarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, mnode_t *node);
+void R_OldMarkLights (vec3_t lightorigin, dlight_t *light, int bit, int bitindex, model_t *model);
 
 /*
 =================
@@ -755,7 +815,7 @@ R_DrawBrushModel
 */
 void R_DrawBrushModel (entity_t *e)
 {
-	int			i, j, k, smax, tmax, size3, maps;
+	int			i, j/*, l*/, smax, tmax, size3, maps;
 	vec3_t		mins, maxs, nv;
 	msurface_t	*s;
 	mplane_t	*pplane;
@@ -765,6 +825,7 @@ void R_DrawBrushModel (entity_t *e)
 	texture_t	*t;
 	byte		*lm;
 	float		os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
+	glpoly_t	*p;
 
 	currententity = e;
 
@@ -808,18 +869,16 @@ void R_DrawBrushModel (entity_t *e)
 // instanced model
 	if (modelalpha == 1 && clmodel->firstmodelsurface != 0 && !(currententity->effects & EF_FULLBRIGHT) && currententity->colormod[0] == 1 && currententity->colormod[2] == 1 && currententity->colormod[2] == 1)
 	{
-//		if (!gl_flashblend.value)
-//		{
-			vec3_t org;
-			for (k=0 ; k<MAX_DLIGHTS ; k++)
-			{
-				if ((cl_dlights[k].die < cl.time) || (!cl_dlights[k].radius))
-					continue;
+		int k;
+		vec3_t org;
+		for (k=0 ; k<MAX_DLIGHTS ; k++)
+		{
+			if ((cl_dlights[k].die < cl.time) || (!cl_dlights[k].radius))
+				continue;
 
-				VectorSubtract(cl_dlights[k].origin, currententity->origin, org);
-				R_MarkLights (org, &cl_dlights[k], 1<<(k&31), k >> 5, clmodel->nodes + clmodel->hulls[0].firstclipnode);
-			}
-//		}
+			VectorSubtract(cl_dlights[k].origin, currententity->origin, org);
+			R_OldMarkLights (org, &cl_dlights[k], 1<<(k&31), k >> 5, clmodel); //, clmodel->nodes + clmodel->hulls[0].firstclipnode);
+		}
 	}
 	else
 		vertexlit = true;
@@ -844,6 +903,67 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 				continue;
 			if (s->flags & SURF_DRAWTURB)
 			{
+				int			alpha = s->flags & SURF_DRAWNOALPHA ? 255 : r_wateralpha.value*255.0f;
+				// FIXME: make fog texture if water texture is transparent?
+				if (r_waterripple.value)
+				{
+					if (lighthalf)
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							{
+								softwaretransform(v, nv);
+								transpolyvert(nv[0], nv[1], nv[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
+							}
+							transpolyend();
+						}
+					}
+					else
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							{
+								softwaretransform(v, nv);
+								transpolyvert(nv[0], nv[1], nv[2] + r_waterripple.value * turbsin[(int)((v[3]*0.125f+realtime) * TURBSCALE) & 255] * turbsin[(int)((v[4]*0.125f+realtime) * TURBSCALE) & 255] * (1.0f / 64.0f), (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
+							}
+							transpolyend();
+						}
+					}
+				}
+				else
+				{
+					if (lighthalf)
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							{
+								softwaretransform(v, nv);
+								transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128) >> 1,(int) (v[10]+128) >> 1,(int) (v[11]+128) >> 1,alpha);
+							}
+							transpolyend();
+						}
+					}
+					else
+					{
+						for (p=s->polys ; p ; p=p->next)
+						{
+							transpolybegin(s->texinfo->texture->gl_texturenum, s->texinfo->texture->gl_glowtexturenum, 0, TPOLYTYPE_ALPHA);
+							for (i = 0,v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+							{
+								softwaretransform(v, nv);
+								transpolyvert(nv[0], nv[1], nv[2], (v[3] + os) * (1.0f/64.0f), (v[4] + ot) * (1.0f/64.0f), (int) (v[9]+128),(int) (v[10]+128),(int) (v[11]+128),alpha);
+							}
+							transpolyend();
+						}
+					}
+				}
+				/*
 				glpoly_t	*p;
 				int			light, alpha, r = 0, g = 0, b = 0;
 				vec3_t		shadecolor;
@@ -915,20 +1035,27 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 					}
 					transpolyend();
 				}
+				*/
 				continue;
 			}
 			t = R_TextureAnimation (s->texinfo->texture);
-			v = s->polys->verts[0];
 			if (vertexlit || s->texinfo->texture->transparent)
 			{
 				// FIXME: could be a transparent water texture
-				transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
 				if ((currententity->effects & EF_FULLBRIGHT) || !s->samples)
 				{
-					for (i = 0;i < s->polys->numverts;i++, v += VERTEXSIZE)
+					for (p = s->polys;p;p = p->next)
 					{
-						softwaretransform(v, nv);
-						transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], 255,255,255,modelalpha*255.0f);
+						if (currenttranspoly >= MAX_TRANSPOLYS)
+							continue;
+						v = &p->verts[0][0];
+						transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+						for (i = 0;i < p->numverts;i++, v += VERTEXSIZE)
+						{
+							softwaretransform(v, nv);
+							transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], 255,255,255,modelalpha*255.0f);
+						}
+						transpolyend();
 					}
 				}
 				else
@@ -936,61 +1063,105 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 					smax = (s->extents[0]>>4)+1;
 					tmax = (s->extents[1]>>4)+1;
 					size3 = smax*tmax*3; // *3 for colored lighting
-					for (i = 0;i < s->polys->numverts;i++, v += VERTEXSIZE)
+					for (p = s->polys;p;p = p->next)
 					{
-						shadecolor[0] = shadecolor[1] = shadecolor[2] = r_ambient.value * 2.0f;
-						lm = (byte *)((long) s->samples + ((int) v[8] * smax + (int) v[7]) * 3); // LordHavoc: *3 for colored lighting
-						for (maps = 0;maps < MAXLIGHTMAPS && s->styles[maps] != 255;maps++)
+						if (currenttranspoly >= MAX_TRANSPOLYS)
+							continue;
+						v = &p->verts[0][0];
+						transpolybegin(t->gl_texturenum, t->gl_glowtexturenum, 0, currententity->effects & EF_ADDITIVE ? TPOLYTYPE_ADD : TPOLYTYPE_ALPHA);
+						for (i = 0;i < p->numverts;i++, v += VERTEXSIZE)
 						{
-							scale = d_lightstylevalue[s->styles[maps]] * (1.0 / 128.0);
-							shadecolor[0] += lm[0] * scale;
-							shadecolor[1] += lm[1] * scale;
-							shadecolor[2] += lm[2] * scale;
-							lm += size3; // LordHavoc: *3 for colored lighting
+							shadecolor[0] = shadecolor[1] = shadecolor[2] = r_ambient.value * 2.0f;
+							lm = (byte *)((long) s->samples + ((int) v[8] * smax + (int) v[7]) * 3); // LordHavoc: *3 for colored lighting
+							for (maps = 0;maps < MAXLIGHTMAPS && s->styles[maps] != 255;maps++)
+							{
+								scale = d_lightstylevalue[s->styles[maps]] * (1.0 / 128.0);
+								shadecolor[0] += lm[0] * scale;
+								shadecolor[1] += lm[1] * scale;
+								shadecolor[2] += lm[2] * scale;
+								lm += size3; // LordHavoc: *3 for colored lighting
+							}
+							softwaretransform(v, nv);
+							R_DynamicLightPointNoMask(shadecolor, nv); // LordHavoc: dynamic lighting
+							if (lighthalf)
+							{
+								transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], (int) shadecolor[0] >> 1, (int) shadecolor[1] >> 1, (int) shadecolor[2] >> 1, modelalpha*255.0f);
+							}
+							else
+							{
+								transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], shadecolor[0], shadecolor[1], shadecolor[2], modelalpha*255.0f);
+							}
 						}
-						softwaretransform(v, nv);
-						R_DynamicLightPointNoMask(shadecolor, nv); // LordHavoc: dynamic lighting
-						if (lighthalf)
-						{
-							transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], (int) shadecolor[0] >> 1, (int) shadecolor[1] >> 1, (int) shadecolor[2] >> 1, modelalpha*255.0f);
-						}
-						else
-						{
-							transpolyvert(nv[0], nv[1], nv[2], v[3], v[4], shadecolor[0], shadecolor[1], shadecolor[2], modelalpha*255.0f);
-						}
+						transpolyend();
 					}
 				}
-				transpolyend();
 			}
 			else
 			{
 				// check for lightmap modification
 				if (r_dynamic.value)
 				{
-					if (s->dlightframe == r_framecount || s->cached_dlight || r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf) // dynamic this frame or previously, or lighthalf changed
+					if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
+					|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
+					|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
+					|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
+					|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
 						R_UpdateLightmap(s, s->lightmaptexturenum);
-					else
-						for (maps = 0 ; maps < MAXLIGHTMAPS && s->styles[maps] != 255 ; maps++)
-							if (d_lightstylevalue[s->styles[maps]] != s->cached_light[maps])
-							{
-								R_UpdateLightmap(s, s->lightmaptexturenum);
-								break;
-							}
 				}
-				if (currentwallpoly < MAX_WALLPOLYS && (currentwallvert + s->polys->numverts) <= MAX_WALLVERTS)
+				for (p = s->polys;p;p = p->next)
 				{
+					if (currentwallpoly >= MAX_WALLPOLYS)
+						break;
+					v = &s->polys->verts[0][0];
 					wallpoly[currentwallpoly].texnum = (unsigned short) t->gl_texturenum;
 					wallpoly[currentwallpoly].lighttexnum = (unsigned short) lightmap_textures + s->lightmaptexturenum;
 					wallpoly[currentwallpoly].glowtexnum = (unsigned short) t->gl_glowtexturenum;
 					wallpoly[currentwallpoly].firstvert = currentwallvert;
-					wallpoly[currentwallpoly++].verts = s->polys->numverts;
-					for (i = 0;i<s->polys->numverts;i++, v += VERTEXSIZE)
+					wallpoly[currentwallpoly].numverts = p->numverts;
+					if (wallpoly[currentwallpoly++].lit = s->dlightframe == r_dlightframecount && r_dynamic.value)
 					{
-						softwaretransform(v, wallvert[currentwallvert].vert);
-						wallvert[currentwallvert].s = v[3];
-						wallvert[currentwallvert].t = v[4];
-						wallvert[currentwallvert].u = v[5];
-						wallvert[currentwallvert++].v = v[6];
+						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
+						{
+							/*
+							softwaretransform(v, nv);
+							shadecolor[0] = shadecolor[1] = shadecolor[2] = 0;
+//							R_DynamicLightPoint(shadecolor, nv, s->dlightbits);
+							R_DynamicLightPointNoMask(shadecolor, nv);
+							if (lighthalf)
+							{
+								shadecolor[0] *= 0.5f;
+								shadecolor[1] *= 0.5f;
+								shadecolor[2] *= 0.5f;
+							}
+							wallvert[currentwallvert].r = (byte) (bound(0, (int) shadecolor[0], 255));
+							wallvert[currentwallvert].g = (byte) (bound(0, (int) shadecolor[1], 255));
+							wallvert[currentwallvert].b = (byte) (bound(0, (int) shadecolor[2], 255));
+							wallvert[currentwallvert].a = 255;
+							wallvert[currentwallvert].vert[0] = nv[0];
+							wallvert[currentwallvert].vert[1] = nv[1];
+							wallvert[currentwallvert].vert[2] = nv[2];
+							*/
+							softwaretransform(v, wallvert[currentwallvert].vert);
+							wallvert[currentwallvert].r = (byte) (bound(0, (int) v[9], 255));
+							wallvert[currentwallvert].g = (byte) (bound(0, (int) v[10], 255));
+							wallvert[currentwallvert].b = (byte) (bound(0, (int) v[11], 255));
+							wallvert[currentwallvert].a = 255;
+							wallvert[currentwallvert].s = v[3];
+							wallvert[currentwallvert].t = v[4];
+							wallvert[currentwallvert].u = v[5];
+							wallvert[currentwallvert++].v = v[6];
+						}
+					}
+					else
+					{
+						for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
+						{
+							softwaretransform(v, wallvert[currentwallvert].vert);
+							wallvert[currentwallvert].s = v[3];
+							wallvert[currentwallvert].t = v[4];
+							wallvert[currentwallvert].u = v[5];
+							wallvert[currentwallvert++].v = v[6];
+						}
 					}
 				}
 			}
@@ -1011,123 +1182,18 @@ void R_StoreEfrags (efrag_t **ppefrag);
 
 /*
 ================
-R_RecursiveWorldNode
+R_WorldNode
 ================
 */
-//extern qboolean R_CullBox (vec3_t mins, vec3_t maxs);
-/*
-void R_RecursiveWorldNode (mnode_t *node)
-{
-	int			c, side;
-	double		dot;
-
-loc0:
-// if a leaf node, draw stuff
-	if (node->contents < 0)
-	{
-		mleaf_t		*pleaf;
-		pleaf = (mleaf_t *)node;
-
-		if (c = pleaf->nummarksurfaces)
-		{
-			msurface_t	**mark;
-			mark = pleaf->firstmarksurface;
-			do
-			{
-				(*mark)->visframe = r_framecount;
-				mark++;
-			} while (--c);
-		}
-
-	// deal with model fragments in this leaf
-		if (pleaf->efrags)
-			R_StoreEfrags (&pleaf->efrags);
-
-		return;
-	}
-
-// node is just a decision point, so go down the apropriate sides
-
-// find which side of the node we are on
-	dot = (node->plane->type < 3 ? modelorg[node->plane->type] : DotProduct (modelorg, node->plane->normal)) - node->plane->dist;
-
-// recurse down the children, front side first
-	side = dot < 0;
-	// LordHavoc: save a stack frame by avoiding a call
-//	if (node->children[side]->contents != CONTENTS_SOLID && node->children[side]->visframe == r_visframecount && !R_CullBox (node->children[side]->minmaxs, node->children[side]->minmaxs+3))
-	// LordHavoc: inlined further to reduce conditions
-	if (node->children[side]->contents != CONTENTS_SOLID
-	 && node->children[side]->visframe == r_visframecount
-	 && frustum[0].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[0]) != 2
-	 && frustum[1].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[1]) != 2
-	 && frustum[2].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[2]) != 2
-	 && frustum[3].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[3]) != 2)
-		R_RecursiveWorldNode (node->children[side]);
-
-	// backside
-	side = dot >= 0;
-// draw stuff
-	if (c = node->numsurfaces)
-	{
-		msurface_t	*surf;
-		surf = cl.worldmodel->surfaces + node->firstsurface;
-
-		// LordHavoc: caused a crash due to texsort (it could render twice...)
-		// back side
-		//side = dot >= -BACKFACE_EPSILON;
-		if (dot < 0)
-		{
-			for (;c;c--, surf++)
-			{
-				if (surf->visframe == r_framecount && (surf->flags & SURF_PLANEBACK))
-				{
-					surf->texturechain = surf->texinfo->texture->texturechain;
-					surf->texinfo->texture->texturechain = surf;
-				}
-			}
-		}
-		else
-		{
-			for (;c;c--, surf++)
-			{
-				if (surf->visframe == r_framecount && (!(surf->flags & SURF_PLANEBACK)))
-				{
-					surf->texturechain = surf->texinfo->texture->texturechain;
-					surf->texinfo->texture->texturechain = surf;
-				}
-			}
-		}
-	}
-
-// recurse down the back side
-	// LordHavoc: save a stack frame by avoiding a call
-//	if (node->children[side]->contents != CONTENTS_SOLID && node->children[side]->visframe == r_visframecount && !R_CullBox (node->children[side]->minmaxs, node->children[side]->minmaxs+3))
-	// LordHavoc: inlined further to reduce conditions
-	if (node->children[side]->contents != CONTENTS_SOLID
-	 && node->children[side]->visframe == r_visframecount
-	 && frustum[0].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[0]) != 2
-	 && frustum[1].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[1]) != 2
-	 && frustum[2].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[2]) != 2
-	 && frustum[3].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[3]) != 2)
-	{
-		node = node->children[side];
-		goto loc0;
-	}
-//		R_RecursiveWorldNode (node->children[side]);
-}
-*/
-
-extern int c_nodes;
 void R_WorldNode ()
 {
-	int		c, side;
+	int		c, side, s = 0;
 	double	dot;
 	struct
 	{
 		double dot;
 		mnode_t *node;
-	} nodestack[1024];
-	int		s = 0;
+	} nodestack[8192];
 	mnode_t *node;
 
 	if (!(node = cl.worldmodel->nodes))
@@ -1136,7 +1202,6 @@ void R_WorldNode ()
 	while(1)
 	{
 	// if a leaf node, draw stuff
-		c_nodes++;
 		if (node->contents < 0)
 		{
 			if (node->contents != CONTENTS_SOLID)
@@ -1144,6 +1209,7 @@ void R_WorldNode ()
 				mleaf_t		*pleaf;
 				pleaf = (mleaf_t *)node;
 
+				c_leafs++;
 				if ((c = pleaf->nummarksurfaces))
 				{
 					msurface_t	**mark;
@@ -1167,6 +1233,8 @@ void R_WorldNode ()
 			goto loc0;
 		}
 
+		c_nodes++;
+
 	// node is just a decision point, so go down the apropriate sides
 
 	// find which side of the node we are on
@@ -1174,11 +1242,7 @@ void R_WorldNode ()
 
 	// recurse down the children, front side first
 		side = dot < 0;
-		if (node->children[side]->visframe == r_visframecount
-		 && frustum[0].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[0]) != 2
-		 && frustum[1].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[1]) != 2
-		 && frustum[2].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[2]) != 2
-		 && frustum[3].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[3]) != 2)
+		if (node->children[side]->visframe == r_visframecount && R_NotCulledBox(node->children[side]->minmaxs, node->children[side]->minmaxs+3))
 		{
 			nodestack[s].node = node;
 			nodestack[s++].dot = dot;
@@ -1220,11 +1284,7 @@ loc0:
 		}
 
 	// recurse down the back side
-		if (node->children[side]->visframe == r_visframecount
-		 && frustum[0].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[0]) != 2
-		 && frustum[1].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[1]) != 2
-		 && frustum[2].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[2]) != 2
-		 && frustum[3].BoxOnPlaneSideFunc(node->children[side]->minmaxs, node->children[side]->minmaxs+3, &frustum[3]) != 2)
+		if (node->children[side]->visframe == r_visframecount && R_NotCulledBox(node->children[side]->minmaxs, node->children[side]->minmaxs+3))
 		{
 			node = node->children[side];
 			continue;
@@ -1265,6 +1325,8 @@ void R_DrawWorld (void)
 		R_WorldNode ();
 
 	glClear (GL_DEPTH_BUFFER_BIT);
+
+	R_PushDlights (); // now mark the lit surfaces
 
 	DrawTextureChains ();
 
@@ -1518,6 +1580,165 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 	*/
 	poly->numverts = lnumverts;
 
+	/*
+	int			i, k, lindex, lnumverts;
+	medge_t		*pedges, *r_pedge;
+	int			vertpage, points;
+	float		*vec;
+	float		s, t;
+	glpoly_t	*poly;
+	float		point1[1024][VERTEXSIZE], point[1024][VERTEXSIZE];
+
+// reconstruct the polygon
+	pedges = currentmodel->edges;
+	lnumverts = fa->numedges;
+	vertpage = 0;
+
+	//
+	// draw texture
+	//
+	for (i=0 ; i<lnumverts ; i++)
+	{
+		lindex = currentmodel->surfedges[fa->firstedge + i];
+
+		if (lindex > 0)
+		{
+			r_pedge = &pedges[lindex];
+			vec = r_pcurrentvertbase[r_pedge->v[0]].position;
+		}
+		else
+		{
+			r_pedge = &pedges[-lindex];
+			vec = r_pcurrentvertbase[r_pedge->v[1]].position;
+		}
+		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
+		s /= fa->texinfo->texture->width;
+
+		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
+		t /= fa->texinfo->texture->height;
+
+		VectorCopy (vec, point1[i]);
+		point1[i][3] = s;
+		point1[i][4] = t;
+
+		//
+		// lightmap texture coordinates
+		//
+		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
+		s -= fa->texturemins[0];
+		point1[i][7] = bound(0l, ((int)s>>4), (fa->extents[0]>>4)); // LordHavoc: raw lightmap coordinates
+		s += fa->light_s*16;
+		s += 8;
+		s /= BLOCK_WIDTH*16; //fa->texinfo->texture->width;
+
+		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
+		t -= fa->texturemins[1];
+		point1[i][8] = bound(0l, ((int)t>>4), (fa->extents[1]>>4)); // LordHavoc: raw lightmap coordinates
+		t += fa->light_t*16;
+		t += 8;
+		t /= BLOCK_HEIGHT*16; //fa->texinfo->texture->height;
+
+		point1[i][5] = s;
+		point1[i][6] = t;
+	}
+
+	if (fa->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
+	{
+		poly = Hunk_Alloc (sizeof(glpoly_t) + (lnumverts-4) * VERTEXSIZE*sizeof(float));
+		poly->next = fa->polys;
+		poly->flags = fa->flags;
+		fa->polys = poly;
+		poly->numverts = lnumverts;
+		memcpy(poly->verts, &point1[0][0], lnumverts*VERTEXSIZE*sizeof(float));
+		return;
+	}
+
+#define VectorCopy9(a,b) {for(k = 0;k < VERTEXSIZE;k++) b[k]=a[k];}
+	points = 0;
+#if 0
+	int			j;
+	float		center[VERTEXSIZE];
+	// subdivide by placing a point at the center (more tris)
+	// LordHavoc:
+	// you, the reader, have stumbled upon the most amusing visual artifact I have
+	// encountered to date, saved here for historical/hysterical reasons :)
+	if (gl_funnywalls.value)
+		for (j = 0;j < 5;j++)
+			center[j] = 0;
+	else
+		for (j = 0;j < VERTEXSIZE;j++)
+			center[j] = 0;
+	for (i = 0;i < lnumverts;i++)
+		for (j = 0;j < VERTEXSIZE;j++)
+			center[j] += point1[i][j];
+	s = 1.0f / lnumverts;
+	for (i = 0;i < VERTEXSIZE;i++)
+		center[i] *= s;
+	for (i = 0;i < lnumverts;i++)
+	{
+		VectorCopy9(center, point[points]);points++;
+		VectorCopy9(point1[i], point[points]);points++;
+		VectorCopy9(point1[(i+1)%lnumverts], point[points]);points++;
+	}
+#else
+	// subdivide by turning it into a fan (less tris)
+	for (i = 1;i < lnumverts-1;i++)
+	{
+		VectorCopy9(point1[0], point[points]);points++;
+		VectorCopy9(point1[i], point[points]);points++;
+		VectorCopy9(point1[i+1], point[points]);points++;
+	}
+#endif
+#if 0
+	{
+		float p1[VERTEXSIZE], p2[VERTEXSIZE], p3[VERTEXSIZE], p4[VERTEXSIZE], p5[VERTEXSIZE], p6[VERTEXSIZE]
+		// now subdivide any large triangles
+		for (j = 0;j < points;j+=3)
+		{
+			if (points > (1024-9))
+				break;
+			while ((max(point[j][0], max(point[j+1][0], point[j+2][0])) - min(point[j][0], min(point[j+1][0], point[j+2][0]))) > 128
+				|| (max(point[j][1], max(point[j+1][1], point[j+2][1])) - min(point[j][1], min(point[j+1][1], point[j+2][1]))) > 128
+				|| (max(point[j][2], max(point[j+1][2], point[j+2][2])) - min(point[j][2], min(point[j+1][2], point[j+2][2]))) > 128)
+			{
+				if (points > (1024-9))
+					break;
+	#define halfway(v, a, b) for (k = 0;k < VERTEXSIZE;k++) v[k] = (a[k] + b[k]) * 0.5f;
+				VectorCopy9(point[j+0], p1);
+				VectorCopy9(point[j+1], p3);
+				VectorCopy9(point[j+2], p5);
+				halfway(p2, p1, p3);
+				halfway(p4, p3, p5);
+				halfway(p6, p5, p1);
+				// build tri 1 (top middle)
+				VectorCopy9(p1, point[j+0]);
+				VectorCopy9(p2, point[j+1]);
+				VectorCopy9(p6, point[j+2]);
+				// build tri 2 (bottom right)
+				VectorCopy9(p2, point[points+0]);
+				VectorCopy9(p3, point[points+1]);
+				VectorCopy9(p4, point[points+2]);
+				// build tri 3 (bottom left)
+				VectorCopy9(p4, point[points+3]);
+				VectorCopy9(p5, point[points+4]);
+				VectorCopy9(p6, point[points+5]);
+				// build tri 4 (middle)
+				VectorCopy9(p2, point[points+6]);
+				VectorCopy9(p4, point[points+7]);
+				VectorCopy9(p6, point[points+8]);
+				points+=9;
+			}
+		}
+	}
+#endif
+	poly = Hunk_Alloc (sizeof(glpoly_t) + (points-4) * VERTEXSIZE*sizeof(float));
+	poly->next = fa->polys;
+	poly->flags = fa->flags;
+	fa->polys = poly;
+	poly->numverts = 0;
+	poly->numtris = points / 3;
+	memcpy(&poly->verts[0][0], &point[0][0], points * VERTEXSIZE*sizeof(float));
+	*/
 }
 
 /*
