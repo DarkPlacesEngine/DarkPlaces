@@ -64,7 +64,10 @@ int UDP_Init (void)
 	// determine my name & address
 	gethostname(buff, MAXHOSTNAMELEN);
 	local = gethostbyname(buff);
-	myAddr = *(int *)local->h_addr_list[0];
+	if (!local)
+		myAddr = htonl(INADDR_LOOPBACK);  // default to the loopback address
+	else
+		myAddr = *(int *)local->h_addr_list[0];
 
 	// if the quake hostname isn't set, set it to the machine name
 	if (strcmp(hostname.string, "UNNAMED") == 0)
@@ -77,7 +80,7 @@ int UDP_Init (void)
 		Sys_Error("UDP_Init: Unable to open control socket\n");
 
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
-	((struct sockaddr_in *)&broadcastaddr)->sin_addr.s_addr = INADDR_BROADCAST;
+	((struct sockaddr_in *)&broadcastaddr)->sin_addr.s_addr = htonl(INADDR_BROADCAST);
 	((struct sockaddr_in *)&broadcastaddr)->sin_port = htons(net_hostport);
 
 	UDP_GetSocketAddr (net_controlsocket, &addr);
