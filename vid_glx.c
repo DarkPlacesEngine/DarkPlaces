@@ -55,7 +55,6 @@ static qboolean		mouse_avail = true;
 static qboolean		mouse_active = false, usingmouse = false;
 // static qboolean		dga_active;
 static float	mouse_x, mouse_y;
-static float	old_mouse_x, old_mouse_y;
 static int p_mouse_x, p_mouse_y;
 
 cvar_t vid_dga = {CVAR_SAVE, "vid_dga", "1"};
@@ -830,8 +829,8 @@ void IN_Commands (void)
 
 void IN_Move (usercmd_t *cmd)
 {
-	if (mouseavail)
-		In_Mouse(cmd, mouse_x, mouse_y);
+	if (mouse_avail)
+		IN_Mouse(cmd, mouse_x, mouse_y);
 	mouse_x = 0;
 	mouse_y = 0;
 }
