@@ -699,7 +699,9 @@ GL_LoadTexture_setup:
 	glt->texeldatasize = R_CalcTexelDataSize(width, height, flags & TEXF_MIPMAP);
 
 	precache = false;
-	if (r_precachetextures.value >= 1)
+	if (flags & TEXF_ALWAYSPRECACHE)
+		precache = true;
+	else if (r_precachetextures.value >= 1)
 	{
 		if (flags & TEXF_PRECACHE)
 			precache = true;
