@@ -223,7 +223,7 @@ extern vec_t fogdensity;
 extern cvar_t gl_vertexarrays;
 extern qboolean lighthalf;
 
-extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, int effects, int flags, int colormap);
+extern void R_DrawAliasModel (entity_t *ent, int cull, float alpha, model_t *clmodel, int frame, int skin, vec3_t org, vec3_t angles, int effects, int flags, int colormap);
 
 extern cvar_t r_render;
 extern cvar_t r_upload;

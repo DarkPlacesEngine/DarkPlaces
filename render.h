@@ -156,11 +156,15 @@ extern void R_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
 extern void R_LavaSplash (vec3_t org);
 extern void R_TeleportSplash (vec3_t org);
 
+extern void R_NewExplosion(vec3_t org);
+
 extern void R_PushDlights (void);
 extern void R_DrawWorld (void);
 //extern void R_RenderDlights (void);
 extern void R_DrawParticles (void);
 extern void R_MoveParticles (void);
+extern void R_DrawExplosions (void);
+extern void R_MoveExplosions (void);
 
 extern void R_DynamicLightPoint(vec3_t color, vec3_t org, int *dlightbits);
 extern void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);

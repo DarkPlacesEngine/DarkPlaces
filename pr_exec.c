@@ -363,7 +363,7 @@ PR_ExecuteProgram
 #define OPB ((eval_t *)&pr_globals[(unsigned short) st->b])
 #define OPC ((eval_t *)&pr_globals[(unsigned short) st->c])
 extern cvar_t pr_boundscheck;
-void PR_ExecuteProgram (func_t fnum)
+void PR_ExecuteProgram (func_t fnum, char *errormessage)
 {
 	dstatement_t	*st;
 	dfunction_t	*f, *newf;
@@ -376,7 +376,7 @@ void PR_ExecuteProgram (func_t fnum)
 	{
 		if (pr_global_struct->self)
 			ED_Print (PROG_TO_EDICT(pr_global_struct->self));
-		Host_Error ("PR_ExecuteProgram: NULL function");
+		Host_Error ("PR_ExecuteProgram: %s", errormessage);
 	}
 	
 	f = &pr_functions[fnum];

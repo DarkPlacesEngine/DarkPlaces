@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int		lightmap_textures;
 
-signed blocklights[18*18*3]; // LordHavoc: *3 for colored lighting
+signed int blocklights[18*18*3]; // LordHavoc: *3 for colored lighting
 
 // LordHavoc: skinny but tall lightmaps for quicker subimage uploads
 #define	BLOCK_WIDTH		128
@@ -50,6 +50,7 @@ cvar_t gl_texsort = {"gl_texsort", "1"};
 //cvar_t gl_funnywalls = {"gl_funnywalls", "0"}; // LordHavoc: see BuildSurfaceDisplayList
 cvar_t r_newworldnode = {"r_newworldnode", "0"};
 cvar_t r_oldclip = {"r_oldclip", "1"};
+cvar_t r_dlightmap = {"r_dlightmap", "1"};
 
 qboolean lightmaprgba, nosubimagefragments, nosubimage, skyisvisible;
 int lightmapbytes;
@@ -81,6 +82,7 @@ void GL_Surf_Init()
 	Cvar_RegisterVariable(&gl_texsort);
 	Cvar_RegisterVariable(&r_newworldnode);
 	Cvar_RegisterVariable(&r_oldclip);
+	Cvar_RegisterVariable(&r_dlightmap);
 	// check if it's the glquake minigl driver
 	if (strncasecmp(gl_vendor,"3Dfx",4)==0)
 	if (!gl_arrays)
@@ -93,6 +95,113 @@ void GL_Surf_Init()
 	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown);
 }
 
+int         dlightdivtable[32768];
+
+/*
+	R_AddDynamicLights
+*/
+int R_AddDynamicLights (msurface_t *surf)
+{
+	int         sdtable[18], lnum, td, maxdist, maxdist2, maxdist3, i, j, s, t, smax, tmax, red, green, blue, lit, dist2, impacts, impactt;
+	unsigned int *bl;
+	float       dist;
+	vec3_t      impact, local;
+
+	// LordHavoc: use 64bit integer...  shame it's not very standardized...
+//#if _MSC_VER || __BORLANDC__
+//	__int64     k;
+//#else
+//	long long   k;
+//#endif
+
+	// LordHavoc: later note: MSVC and hopefully all other C compilers use a 64bit result for 32bit*32bit multiply, so that was not necessary
+	int			k;
+
+	lit = false;
+
+	if (!dlightdivtable[1])
+	{
+		dlightdivtable[0] = 4194304;
+		for (s = 1; s < 32768; s++)
+			dlightdivtable[s] = 4194304 / (s << 7);
+	}
+
+	smax = (surf->extents[0] >> 4) + 1;
+	tmax = (surf->extents[1] >> 4) + 1;
+
+	for (lnum = 0; lnum < MAX_DLIGHTS; lnum++)
+	{
+		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
+			continue;					// not lit by this light
+
+		VectorSubtract (cl_dlights[lnum].origin, currententity->origin, local);
+		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
+
+		// for comparisons to minimum acceptable light
+		maxdist = (int) ((cl_dlights[lnum].radius * cl_dlights[lnum].radius) * LIGHTSCALE);
+
+		// clamp radius to avoid exceeding 32768 entry division table
+		if (maxdist > 4194304)
+			maxdist = 4194304;
+
+		dist2 = dist * dist;
+		if (dist2 >= maxdist)
+			continue;
+
+		impact[0] = cl_dlights[lnum].origin[0] - surf->plane->normal[0] * dist;
+		impact[1] = cl_dlights[lnum].origin[1] - surf->plane->normal[1] * dist;
+		impact[2] = cl_dlights[lnum].origin[2] - surf->plane->normal[2] * dist;
+
+		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+		s = bound(0, impacts, smax * 16) - impacts;
+		t = bound(0, impactt, tmax * 16) - impactt;
+		i = s * s + t * t + dist2;
+		if (i > maxdist)
+			continue;
+
+		// reduce calculations
+		for (s = 0, i = impacts; s < smax; s++, i -= 16)
+			sdtable[s] = i * i + dist2;
+
+		maxdist3 = maxdist - (int) (dist * dist);
+
+		// convert to 8.8 blocklights format and scale up by radius
+		red = cl_dlights[lnum].color[0] * maxdist;
+		green = cl_dlights[lnum].color[1] * maxdist;
+		blue = cl_dlights[lnum].color[2] * maxdist;
+		bl = blocklights;
+
+		i = impactt;
+		for (t = 0; t < tmax; t++, i -= 16)
+		{
+			td = i * i;
+			// make sure some part of it is visible on this line
+			if (td < maxdist3)
+			{
+				maxdist2 = maxdist - td;
+				for (s = 0; s < smax; s++)
+				{
+					if (sdtable[s] < maxdist2)
+					{
+						k = dlightdivtable[(sdtable[s] + td) >> 7];
+						j = (red   * k) >> 9;bl[0] += j;
+						j = (green * k) >> 9;bl[1] += j;
+						j = (blue  * k) >> 9;bl[2] += j;
+						lit = true;
+					}
+					bl += 3;
+				}
+			}
+			else // skip line
+				bl += smax * 3;
+		}
+	}
+	return lit;
+}
+
+
 /*
 ===============
 R_BuildLightMap
@@ -103,18 +212,20 @@ Combine and scale multiple lightmaps into the 8.8 format in blocklights
 void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 {
 	int			smax, tmax;
-	int			i, j, size;
+	int			i, j, size, size3;
 	byte		*lightmap;
 	int			scale;
 	int			maps;
 	int			*bl;
 
+	surf->cached_dlight = 0;
 	surf->cached_lighthalf = lighthalf;
 	surf->cached_ambient = r_ambient.value;
 
 	smax = (surf->extents[0]>>4)+1;
 	tmax = (surf->extents[1]>>4)+1;
 	size = smax*tmax;
+	size3 = size*3;
 	lightmap = surf->samples;
 
 // set to full bright if no light data
@@ -131,14 +242,15 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 	else
 	{
 // clear to no light
-		bl = blocklights;
 		j = r_ambient.value * 512.0f; // would be 256.0f logically, but using 512.0f to match winquake style
-		for (i=0 ; i<size ; i++)
+		if (j)
 		{
-			*bl++ = j;
-			*bl++ = j;
-			*bl++ = j;
+			bl = blocklights;
+			for (i = 0;i < size3;i++)
+				*bl++ = j;
 		}
+		else
+			memset(&blocklights[0], 0, size*3*sizeof(int));
 
 // add all the lightmaps
 		if (lightmap)
@@ -148,14 +260,13 @@ void R_BuildLightMap (msurface_t *surf, byte *dest, int stride)
 				scale = d_lightstylevalue[surf->styles[maps]];
 				surf->cached_light[maps] = scale;	// 8.8 fraction
 				bl = blocklights;
-				for (i=0 ; i<size ; i++)
-				{
+				for (i = 0;i < size3;i++)
 					*bl++ += *lightmap++ * scale;
-					*bl++ += *lightmap++ * scale;
-					*bl++ += *lightmap++ * scale;
-				}
 			}
 		}
+		if (r_dlightmap.value && surf->dlightframe == r_dlightframecount)
+			if ((surf->cached_dlight = R_AddDynamicLights(surf)))
+				c_light_polys++;
 	}
 	stride -= (smax*lightmapbytes);
 	bl = blocklights;
@@ -464,7 +575,7 @@ void RSurf_DrawWater(msurface_t *s, texture_t *t, int transform, int alpha)
 			wv += 6;
 		}
 	}
-	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+	if (s->dlightframe == r_dlightframecount)
 		RSurf_Light(s->dlightbits, s->polys);
 	wv = wvert;
 	// FIXME: make fog texture if water texture is transparent?
@@ -487,11 +598,14 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	// check for lightmap modification
 	if (r_dynamic.value)
 	{
-		if (r_ambient.value != s->cached_ambient || lighthalf != s->cached_lighthalf
-		|| (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
-		|| (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
-		|| (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
-		|| (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
+		if (s->cached_dlight
+		 || (r_dlightmap.value && s->dlightframe == r_dlightframecount)
+		 || r_ambient.value != s->cached_ambient
+		 || lighthalf != s->cached_lighthalf
+		 || (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
+		 || (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
+		 || (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
+		 || (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))
 			R_UpdateLightmap(s, s->lightmaptexturenum);
 	}
 	wv = wvert;
@@ -511,7 +625,7 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	}
 	if ((currentwallpoly + polys > MAX_WALLPOLYS) || (currentwallvert+verts > MAX_WALLVERTS))
 		return;
-	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+	if ((!r_dlightmap.value) && s->dlightframe == r_dlightframecount)
 		lit = RSurf_Light(s->dlightbits, s->polys);
 	wv = wvert;
 	wp = &wallpoly[currentwallpoly];
@@ -600,7 +714,7 @@ void RSurf_DrawWallVertex(msurface_t *s, texture_t *t, int transform, int isbmod
 			wv += 6;
 		}
 	}
-	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
+	if (s->dlightframe == r_dlightframecount)
 		RSurf_Light(s->dlightbits, s->polys);
 	wv = wvert;
 	if (isbmodel && (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1))

@@ -38,19 +38,22 @@ void Chase_Reset (void)
 //	start position 12 units behind head
 }
 
-void TraceLine (vec3_t start, vec3_t end, vec3_t impact)
+float TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal)
 {
 	trace_t	trace;
 
 	memset (&trace, 0, sizeof(trace));
-	VectorCopy (end, trace.endpos); // fix TraceLine endpoint bug
+	VectorCopy (end, trace.endpos);
+	trace.fraction = 1;
 	SV_RecursiveHullCheck (cl.worldmodel->hulls, 0, 0, 1, start, end, &trace);
 	VectorCopy (trace.endpos, impact);
+	VectorCopy (trace.plane.normal, normal);
+	return trace.fraction;
 }
 
 void Chase_Update (void)
 {
-	vec3_t	forward, up, right, stop, chase_dest;
+	vec3_t	forward, up, right, stop, chase_dest, normal;
 	float	dist;
 
 	chase_back.value = bound(0, chase_back.value, 128);
@@ -63,7 +66,7 @@ void Chase_Update (void)
 	chase_dest[1] = r_refdef.vieworg[1] + forward[1] * dist;
 	chase_dest[2] = r_refdef.vieworg[2] + forward[2] * dist + chase_up.value;
 
-	TraceLine (r_refdef.vieworg, chase_dest, stop);
+	TraceLine (r_refdef.vieworg, chase_dest, stop, normal);
 	chase_dest[0] = stop[0] + forward[0] * 8;
 	chase_dest[1] = stop[1] + forward[1] * 8;
 	chase_dest[2] = stop[2] + forward[2] * 8;

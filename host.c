@@ -373,7 +373,7 @@ void SV_DropClient (qboolean crash)
 		// this will set the body to a dead frame, among other things
 			saveSelf = pr_global_struct->self;
 			pr_global_struct->self = EDICT_TO_PROG(host_client->edict);
-			PR_ExecuteProgram (pr_global_struct->ClientDisconnect);
+			PR_ExecuteProgram (pr_global_struct->ClientDisconnect, "QC function ClientDisconnect is missing");
 			pr_global_struct->self = saveSelf;
 		}
 

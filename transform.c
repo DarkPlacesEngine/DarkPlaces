@@ -68,6 +68,18 @@ void softwaretransform_docopy (vec3_t in, vec3_t out)
 	out[2] = in[2];
 }
 
+void softwareuntransform (vec3_t in, vec3_t out)
+{
+	vec3_t v;
+	float s = 1.0f / softwaretransform_scale;
+	v[0] = in[0] - softwaretransform_offset[0];
+	v[1] = in[1] - softwaretransform_offset[1];
+	v[2] = in[2] - softwaretransform_offset[2];
+	out[0] = (v[0] * softwaretransform_x[0] + v[1] * softwaretransform_x[1] + v[2] * softwaretransform_x[2]) * s;
+	out[1] = (v[0] * softwaretransform_y[0] + v[1] * softwaretransform_y[1] + v[2] * softwaretransform_y[2]) * s;
+	out[2] = (v[0] * softwaretransform_z[0] + v[1] * softwaretransform_z[1] + v[2] * softwaretransform_z[2]) * s;
+}
+
 // to save time on transforms, choose the appropriate function
 void softwaretransform_classify()
 {

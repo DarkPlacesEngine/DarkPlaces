@@ -345,6 +345,7 @@ void CL_DecayLights (void)
 	
 	time = cl.time - cl.oldtime;
 
+	c_dlights = 0;
 	dl = cl_dlights;
 	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
 	{

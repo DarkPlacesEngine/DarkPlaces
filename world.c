@@ -325,7 +325,7 @@ loc0:
 		pr_global_struct->self = EDICT_TO_PROG(touch);
 		pr_global_struct->other = EDICT_TO_PROG(ent);
 		pr_global_struct->time = sv.time;
-		PR_ExecuteProgram (touch->v.touch);
+		PR_ExecuteProgram (touch->v.touch, "");
 
 		pr_global_struct->self = old_self;
 		pr_global_struct->other = old_other;
@@ -747,10 +747,6 @@ loc0:
 			trace->startsolid = true;
 		return true;		// empty
 	}
-
-	// LordHavoc: this can be eliminated by validating in the loader...  but Mercury told me not to bother
-	if (num < hull->firstclipnode || num > hull->lastclipnode)
-		Sys_Error ("SV_RecursiveHullCheck: bad node number");
 
 // find the point distances
 	node = hull->clipnodes + num;

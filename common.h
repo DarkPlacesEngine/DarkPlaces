@@ -212,3 +212,7 @@ int COM_FileExists(char *filename);
 extern	struct cvar_s	registered;
 
 extern qboolean		standard_quake, rogue, hipnotic, nehahra;
+
+// LordHavoc: useful...
+extern void COM_ToLowerString(char *in, char *out);
+extern void COM_ToUpperString(char *in, char *out);

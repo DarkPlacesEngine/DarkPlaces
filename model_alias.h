@@ -159,6 +159,7 @@ typedef struct
 {
 	float		scale[3];	// multiply byte verts by this
 	float		translate[3];	// then add this
+	char		name[16];	// LordHavoc: kept for viewthing
 	trivert2	verts[1];	// variable sized
 } md2memframe_t;
 
@@ -221,3 +222,6 @@ typedef struct
 
 #define ALIASTYPE_MDL 1
 #define ALIASTYPE_MD2 2
+#define ALIASTYPE_ZYM 3
+
+#include "model_zymotic.h"
