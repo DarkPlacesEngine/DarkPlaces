@@ -23,7 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define MAX_LIGHTMAP_SIZE 256
 
-static signed int blocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
+static unsigned int intblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
+static float floatblocklights[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*3]; // LordHavoc: *3 for colored lighting
 
 static qbyte templight[MAX_LIGHTMAP_SIZE*MAX_LIGHTMAP_SIZE*4];
 
@@ -32,43 +33,15 @@ cvar_t r_vertexsurfaces = {0, "r_vertexsurfaces", "0"};
 cvar_t r_dlightmap = {CVAR_SAVE, "r_dlightmap", "1"};
 cvar_t r_drawportals = {0, "r_drawportals", "0"};
 cvar_t r_testvis = {0, "r_testvis", "0"};
-
-static void gl_surf_start(void)
-{
-}
-
-static void gl_surf_shutdown(void)
-{
-}
-
-static void gl_surf_newmap(void)
-{
-}
+cvar_t r_floatbuildlightmap = {0, "r_floatbuildlightmap", "0"};
 
 static int dlightdivtable[32768];
 
-void GL_Surf_Init(void)
+static int R_IntAddDynamicLights (msurface_t *surf)
 {
-	int i;
-	dlightdivtable[0] = 4194304;
-	for (i = 1;i < 32768;i++)
-		dlightdivtable[i] = 4194304 / (i << 7);
-
-	Cvar_RegisterVariable(&r_ambient);
-	Cvar_RegisterVariable(&r_vertexsurfaces);
-	Cvar_RegisterVariable(&r_dlightmap);
-	Cvar_RegisterVariable(&r_drawportals);
-	Cvar_RegisterVariable(&r_testvis);
-
-	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
-}
-
-static int R_AddDynamicLights (msurface_t *surf)
-{
-	int         sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract;
+	int sdtable[256], lnum, td, maxdist, maxdist2, maxdist3, i, s, t, smax, tmax, smax3, red, green, blue, lit, dist2, impacts, impactt, subtract;
 	unsigned int *bl;
-	float       dist;
-	vec3_t      impact, local;
+	float dist, impact[3], local[3];
 
 	// LordHavoc: use 64bit integer...  shame it's not very standardized...
 #if _MSC_VER || __BORLANDC__
@@ -81,6 +54,7 @@ static int R_AddDynamicLights (msurface_t *surf)
 
 	smax = (surf->extents[0] >> 4) + 1;
 	tmax = (surf->extents[1] >> 4) + 1;
+	smax3 = smax * 3;
 
 	for (lnum = 0; lnum < r_numdlights; lnum++)
 	{
@@ -131,8 +105,7 @@ static int R_AddDynamicLights (msurface_t *surf)
 		green = r_dlight[lnum].light[1];
 		blue = r_dlight[lnum].light[2];
 		subtract = (int) (r_dlight[lnum].lightsubtract * 4194304.0f);
-		bl = blocklights;
-		smax3 = smax * 3;
+		bl = intblocklights;
 
 		i = impactt;
 		for (t = 0;t < tmax;t++, i -= 16)
@@ -163,6 +136,291 @@ static int R_AddDynamicLights (msurface_t *surf)
 		}
 	}
 	return lit;
+}
+
+static int R_FloatAddDynamicLights (msurface_t *surf)
+{
+	int lnum, s, t, smax, tmax, smax3, lit, impacts, impactt;
+	float sdtable[256], *bl, k, dist, dist2, maxdist, maxdist2, maxdist3, td1, td, red, green, blue, impact[3], local[3], subtract;
+
+	lit = false;
+
+	smax = (surf->extents[0] >> 4) + 1;
+	tmax = (surf->extents[1] >> 4) + 1;
+	smax3 = smax * 3;
+
+	for (lnum = 0; lnum < r_numdlights; lnum++)
+	{
+		if (!(surf->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
+			continue;					// not lit by this light
+
+		softwareuntransform(r_dlight[lnum].origin, local);
+		dist = DotProduct (local, surf->plane->normal) - surf->plane->dist;
+
+		// for comparisons to minimum acceptable light
+		// compensate for LIGHTOFFSET
+		maxdist = (int) r_dlight[lnum].cullradius2 + LIGHTOFFSET;
+
+		dist2 = dist * dist;
+		dist2 += LIGHTOFFSET;
+		if (dist2 >= maxdist)
+			continue;
+
+		if (surf->plane->type < 3)
+		{
+			VectorCopy(local, impact);
+			impact[surf->plane->type] -= dist;
+		}
+		else
+		{
+			impact[0] = local[0] - surf->plane->normal[0] * dist;
+			impact[1] = local[1] - surf->plane->normal[1] * dist;
+			impact[2] = local[2] - surf->plane->normal[2] * dist;
+		}
+
+		impacts = DotProduct (impact, surf->texinfo->vecs[0]) + surf->texinfo->vecs[0][3] - surf->texturemins[0];
+		impactt = DotProduct (impact, surf->texinfo->vecs[1]) + surf->texinfo->vecs[1][3] - surf->texturemins[1];
+
+		td = bound(0, impacts, smax * 16) - impacts;
+		td1 = bound(0, impactt, tmax * 16) - impactt;
+		td = td * td + td1 * td1 + dist2;
+		if (td > maxdist)
+			continue;
+
+		// reduce calculations
+		for (s = 0, td1 = impacts; s < smax; s++, td1 -= 16.0f)
+			sdtable[s] = td1 * td1 + dist2;
+
+		maxdist3 = maxdist - dist2;
+
+		// convert to 8.8 blocklights format
+		red = r_dlight[lnum].light[0];
+		green = r_dlight[lnum].light[1];
+		blue = r_dlight[lnum].light[2];
+		subtract = r_dlight[lnum].lightsubtract * 16384.0f;
+		bl = floatblocklights;
+
+		td1 = impactt;
+		for (t = 0;t < tmax;t++, td1 -= 16.0f)
+		{
+			td = td1 * td1;
+			// make sure some part of it is visible on this line
+			if (td < maxdist3)
+			{
+				maxdist2 = maxdist - td;
+				for (s = 0;s < smax;s++)
+				{
+					if (sdtable[s] < maxdist2)
+					{
+						k = (16384.0f / (sdtable[s] + td)) - subtract;
+						bl[0] += red   * k;
+						bl[1] += green * k;
+						bl[2] += blue  * k;
+						lit = true;
+					}
+					bl += 3;
+				}
+			}
+			else // skip line
+				bl += smax3;
+		}
+	}
+	return lit;
+}
+
+/*
+===============
+R_BuildLightMap
+
+Combine and scale multiple lightmaps into the 8.8 format in blocklights
+===============
+*/
+static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
+{
+	if (!r_floatbuildlightmap.integer)
+	{
+		int smax, tmax, i, j, size, size3, shift, maps, stride, l;
+		unsigned int *bl, scale;
+		qbyte *lightmap, *out, *stain;
+
+		// update cached lighting info
+		surf->cached_dlight = 0;
+		surf->cached_lightscalebit = lightscalebit;
+		surf->cached_ambient = r_ambient.value;
+		surf->cached_light[0] = d_lightstylevalue[surf->styles[0]];
+		surf->cached_light[1] = d_lightstylevalue[surf->styles[1]];
+		surf->cached_light[2] = d_lightstylevalue[surf->styles[2]];
+		surf->cached_light[3] = d_lightstylevalue[surf->styles[3]];
+
+		smax = (surf->extents[0]>>4)+1;
+		tmax = (surf->extents[1]>>4)+1;
+		size = smax*tmax;
+		size3 = size*3;
+		lightmap = surf->samples;
+
+	// set to full bright if no light data
+		bl = intblocklights;
+		if ((currentrenderentity->effects & EF_FULLBRIGHT) || !currentrenderentity->model->lightdata)
+		{
+			for (i = 0;i < size3;i++)
+				bl[i] = 255*256;
+		}
+		else
+		{
+	// clear to no light
+			j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
+			if (j)
+			{
+				for (i = 0;i < size3;i++)
+					*bl++ = j;
+			}
+			else
+				memset(bl, 0, size*3*sizeof(unsigned int));
+
+			if (surf->dlightframe == r_framecount && r_dlightmap.integer)
+			{
+				surf->cached_dlight = R_IntAddDynamicLights(surf);
+				if (surf->cached_dlight)
+					c_light_polys++;
+				else if (dlightchanged)
+					return; // don't upload if only updating dlights and none mattered
+			}
+
+	// add all the lightmaps
+			if (lightmap)
+			{
+				bl = intblocklights;
+				for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
+					for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
+						bl[i] += lightmap[i] * scale;
+			}
+		}
+
+		stain = surf->stainsamples;
+		bl = intblocklights;
+		out = templight;
+		// deal with lightmap brightness scale
+		shift = 7 + lightscalebit + 8;
+		if (currentrenderentity->model->lightmaprgba)
+		{
+			stride = (surf->lightmaptexturestride - smax) * 4;
+			for (i = 0;i < tmax;i++, out += stride)
+			{
+				for (j = 0;j < smax;j++)
+				{
+					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					*out++ = 255;
+				}
+			}
+		}
+		else
+		{
+			stride = (surf->lightmaptexturestride - smax) * 3;
+			for (i = 0;i < tmax;i++, out += stride)
+			{
+				for (j = 0;j < smax;j++)
+				{
+					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+					l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
+				}
+			}
+		}
+
+		R_UpdateTexture(surf->lightmaptexture, templight);
+	}
+	else
+	{
+		int smax, tmax, i, j, size, size3, maps, stride, l;
+		float *bl, scale;
+		qbyte *lightmap, *out, *stain;
+
+		// update cached lighting info
+		surf->cached_dlight = 0;
+		surf->cached_lightscalebit = lightscalebit;
+		surf->cached_ambient = r_ambient.value;
+		surf->cached_light[0] = d_lightstylevalue[surf->styles[0]];
+		surf->cached_light[1] = d_lightstylevalue[surf->styles[1]];
+		surf->cached_light[2] = d_lightstylevalue[surf->styles[2]];
+		surf->cached_light[3] = d_lightstylevalue[surf->styles[3]];
+
+		smax = (surf->extents[0]>>4)+1;
+		tmax = (surf->extents[1]>>4)+1;
+		size = smax*tmax;
+		size3 = size*3;
+		lightmap = surf->samples;
+
+	// set to full bright if no light data
+		bl = floatblocklights;
+		if ((currentrenderentity->effects & EF_FULLBRIGHT) || !currentrenderentity->model->lightdata)
+			j = 255*256;
+		else
+			j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
+
+		// clear to no light
+		if (j)
+		{
+			for (i = 0;i < size3;i++)
+				*bl++ = j;
+		}
+		else
+			memset(bl, 0, size*3*sizeof(float));
+
+		if (surf->dlightframe == r_framecount && r_dlightmap.integer)
+		{
+			surf->cached_dlight = R_FloatAddDynamicLights(surf);
+			if (surf->cached_dlight)
+				c_light_polys++;
+			else if (dlightchanged)
+				return; // don't upload if only updating dlights and none mattered
+		}
+
+		// add all the lightmaps
+		if (lightmap)
+		{
+			bl = floatblocklights;
+			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
+				for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
+					bl[i] += lightmap[i] * scale;
+		}
+
+		stain = surf->stainsamples;
+		bl = floatblocklights;
+		out = templight;
+		// deal with lightmap brightness scale
+		scale = 1.0f / (1 << (7 + lightscalebit + 8));
+		if (currentrenderentity->model->lightmaprgba)
+		{
+			stride = (surf->lightmaptexturestride - smax) * 4;
+			for (i = 0;i < tmax;i++, out += stride)
+			{
+				for (j = 0;j < smax;j++)
+				{
+					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
+					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
+					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
+					*out++ = 255;
+				}
+			}
+		}
+		else
+		{
+			stride = (surf->lightmaptexturestride - smax) * 3;
+			for (i = 0;i < tmax;i++, out += stride)
+			{
+				for (j = 0;j < smax;j++)
+				{
+					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
+					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
+					l = *bl++ * *stain++ * scale;*out++ = min(l, 255);
+				}
+			}
+		}
+
+		R_UpdateTexture(surf->lightmaptexture, templight);
+	}
 }
 
 void R_StainNode (mnode_t *node, model_t *model, vec3_t origin, float radius, int icolor[8])
@@ -348,108 +606,6 @@ void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, i
 			}
 		}
 	}
-}
-
-/*
-===============
-R_BuildLightMap
-
-Combine and scale multiple lightmaps into the 8.8 format in blocklights
-===============
-*/
-static void R_BuildLightMap (msurface_t *surf, int dlightchanged)
-{
-	int smax, tmax, i, j, size, size3, shift, scale, maps, *bl, stride, l;
-	qbyte *lightmap, *out, *stain;
-
-	// update cached lighting info
-	surf->cached_dlight = 0;
-	surf->cached_lightscalebit = lightscalebit;
-	surf->cached_ambient = r_ambient.value;
-	surf->cached_light[0] = d_lightstylevalue[surf->styles[0]];
-	surf->cached_light[1] = d_lightstylevalue[surf->styles[1]];
-	surf->cached_light[2] = d_lightstylevalue[surf->styles[2]];
-	surf->cached_light[3] = d_lightstylevalue[surf->styles[3]];
-
-	smax = (surf->extents[0]>>4)+1;
-	tmax = (surf->extents[1]>>4)+1;
-	size = smax*tmax;
-	size3 = size*3;
-	lightmap = surf->samples;
-
-// set to full bright if no light data
-	if ((currentrenderentity->effects & EF_FULLBRIGHT) || !currentrenderentity->model->lightdata)
-	{
-		bl = blocklights;
-		for (i = 0;i < size3;i++)
-			bl[i] = 255*256;
-	}
-	else
-	{
-// clear to no light
-		j = r_ambient.value * 512.0f; // would be 128.0f logically, but using 512.0f to match winquake style
-		if (j)
-		{
-			bl = blocklights;
-			for (i = 0;i < size3;i++)
-				*bl++ = j;
-		}
-		else
-			memset(&blocklights[0], 0, size*3*sizeof(int));
-
-		if (surf->dlightframe == r_framecount && r_dlightmap.integer)
-		{
-			surf->cached_dlight = R_AddDynamicLights(surf);
-			if (surf->cached_dlight)
-				c_light_polys++;
-			else if (dlightchanged)
-				return; // don't upload if only updating dlights and none mattered
-		}
-
-// add all the lightmaps
-		if (lightmap)
-		{
-			bl = blocklights;
-			for (maps = 0;maps < MAXLIGHTMAPS && surf->styles[maps] != 255;maps++, lightmap += size3)
-				for (scale = d_lightstylevalue[surf->styles[maps]], i = 0;i < size3;i++)
-					bl[i] += lightmap[i] * scale;
-		}
-	}
-
-	stain = surf->stainsamples;
-	bl = blocklights;
-	out = templight;
-	// deal with lightmap brightness scale
-	shift = 15 + lightscalebit;
-	if (currentrenderentity->model->lightmaprgba)
-	{
-		stride = (surf->lightmaptexturestride - smax) * 4;
-		for (i = 0;i < tmax;i++, out += stride)
-		{
-			for (j = 0;j < smax;j++)
-			{
-				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-				*out++ = 255;
-			}
-		}
-	}
-	else
-	{
-		stride = (surf->lightmaptexturestride - smax) * 3;
-		for (i = 0;i < tmax;i++, out += stride)
-		{
-			for (j = 0;j < smax;j++)
-			{
-				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-				l = (*bl++ * *stain++) >> shift;*out++ = min(l, 255);
-			}
-		}
-	}
-
-	R_UpdateTexture(surf->lightmaptexture, templight);
 }
 
 
@@ -2153,5 +2309,34 @@ void R_DrawBrushModelNormal (void)
 	if (!skyrendermasked)
 		R_DrawSurfaces(SHADERSTAGE_SKY);
 	R_DrawSurfaces(SHADERSTAGE_NORMAL);
+}
+
+static void gl_surf_start(void)
+{
+}
+
+static void gl_surf_shutdown(void)
+{
+}
+
+static void gl_surf_newmap(void)
+{
+}
+
+void GL_Surf_Init(void)
+{
+	int i;
+	dlightdivtable[0] = 4194304;
+	for (i = 1;i < 32768;i++)
+		dlightdivtable[i] = 4194304 / (i << 7);
+
+	Cvar_RegisterVariable(&r_ambient);
+	Cvar_RegisterVariable(&r_vertexsurfaces);
+	Cvar_RegisterVariable(&r_dlightmap);
+	Cvar_RegisterVariable(&r_drawportals);
+	Cvar_RegisterVariable(&r_testvis);
+	Cvar_RegisterVariable(&r_floatbuildlightmap);
+
+	R_RegisterModule("GL_Surf", gl_surf_start, gl_surf_shutdown, gl_surf_newmap);
 }
 
