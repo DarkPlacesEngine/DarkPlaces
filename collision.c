@@ -363,11 +363,11 @@ float furthestplanedist_float(const float *normal, const colpointf_t *points, in
 }
 
 
-colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const mplane_t *originalplanes, int supercontents)
+colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalplanes, const mplane_t *originalplanes, int supercontents, winding_t *temp1, winding_t *temp2)
 {
 	int j, k, m;
 	int numpoints, maxpoints, numplanes, maxplanes, numelements, maxelements, numtriangles, numpolypoints, maxpolypoints;
-	winding_t *w;
+	winding_t *w, *temp, *othertemp;
 	colbrushf_t *brush;
 	colpointf_t pointsbuf[256];
 	colplanef_t planesbuf[256];
@@ -399,19 +399,24 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 		}
 
 		// create a large polygon from the plane
-		w = Winding_NewFromPlane(originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist);
+		w = temp1;
+		othertemp = temp2;
+		BufWinding_NewFromPlane(w, originalplanes[j].normal[0], originalplanes[j].normal[1], originalplanes[j].normal[2], originalplanes[j].dist);
 		// clip it by all other planes
-		for (k = 0;k < numoriginalplanes && w;k++)
+		for (k = 0;k < numoriginalplanes && w->numpoints;k++)
 		{
 			if (k != j)
 			{
 				// we want to keep the inside of the brush plane so we flip
 				// the cutting plane
-				w = Winding_Clip(w, -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, true);
+				BufWinding_Divide(w, -originalplanes[k].normal[0], -originalplanes[k].normal[1], -originalplanes[k].normal[2], -originalplanes[k].dist, othertemp, NULL, NULL, NULL);
+				temp = w;
+				w = othertemp;
+				othertemp = temp;
 			}
 		}
 		// if nothing is left, skip it
-		if (!w)
+		if (!w->numpoints)
 			continue;
 
 		// copy off the number of points for later when the winding is freed
@@ -456,8 +461,9 @@ colbrushf_t *Collision_NewBrushFromPlanes(mempool_t *mempool, int numoriginalpla
 			// store the index into a buffer
 			polypointbuf[k] = m;
 		}
-		Winding_Free(w);
 		w = NULL;
+		othertemp = NULL;
+		temp = NULL;
 
 		// add the triangles for the polygon
 		// (this particular code makes a triangle fan)
