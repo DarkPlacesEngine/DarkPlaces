@@ -1085,7 +1085,7 @@ skinfile_t *Mod_LoadSkinFiles(void)
 	int i, words, numtags, line, tagsetsused = false, wordsoverflow;
 	char *text;
 	const char *data;
-	skinfile_t *skinfile, *first = NULL;
+	skinfile_t *skinfile = NULL, *first = NULL;
 	skinfileitem_t *skinfileitem;
 	char word[10][MAX_QPATH];
 	overridetagnameset_t tagsets[MAX_SKINS];
@@ -1111,9 +1111,20 @@ tag_torso,
 	for (i = 0;i < MAX_SKINS && (data = text = FS_LoadFile(va("%s_%i.skin", loadmodel->name, i), tempmempool, true));i++)
 	{
 		numtags = 0;
-		skinfile = Mem_Alloc(tempmempool, sizeof(skinfile_t));
-		skinfile->next = first;
-		first = skinfile;
+
+		// If it's the first file we parse
+		if (skinfile == NULL)
+		{
+			skinfile = Mem_Alloc(tempmempool, sizeof(skinfile_t));
+			first = skinfile;
+		}
+		else
+		{
+			skinfile->next = Mem_Alloc(tempmempool, sizeof(skinfile_t));
+			skinfile = skinfile->next;
+		}
+		skinfile->next = NULL;
+
 		for(line = 0;;line++)
 		{
 			// parse line
