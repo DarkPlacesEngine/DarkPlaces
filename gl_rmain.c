@@ -319,7 +319,7 @@ void GL_Init (void)
 	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions
-	Con_Printf ("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
+	Con_DPrintf("\nengine extensions: %s\n", ENGINE_EXTENSIONS);
 }
 
 int R_CullBox(const vec3_t mins, const vec3_t maxs)

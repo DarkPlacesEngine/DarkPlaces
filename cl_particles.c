@@ -658,7 +658,7 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 	while (count--)
 	{
 		k = particlepalette[color + (rand()&7)];
-		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 1, 1, 255, 512, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-15, 15), lhrandom(-15, 15), lhrandom(-15, 15), 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ALPHA, 5, 5, 255, 300, 9999, 0, 0, org[0] + lhrandom(-8, 8), org[1] + lhrandom(-8, 8), org[2] + lhrandom(-8, 8), lhrandom(-10, 10), lhrandom(-10, 10), lhrandom(-10, 10), 0, 0, 0, 0, 0, 0);
 	}
 }
 
@@ -826,14 +826,28 @@ void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+			if (gamemode == GAME_GOODVSBAD2)
+			{
+				particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 20, 20, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+			}
+			else
+			{
+				particle(pt_rain, PARTICLE_SPARK, k, k, tex_particle, true, PBLEND_ADD, 0.5, 0.02, lhrandom(8, 16), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], cl.time + 9999, dir[0], dir[1], dir[2], 0, 0);
+			}
 		}
 		break;
 	case 1:
 		while(count--)
 		{
 			k = particlepalette[colorbase + (rand()&3)];
-			particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 1, 1, lhrandom(64, 128), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
+			if (gamemode == GAME_GOODVSBAD2)
+			{
+				particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 20, 20, lhrandom(64, 128), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
+			}
+			else
+			{
+				particle(pt_rain, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 1, 1, lhrandom(64, 128), 0, t, 0, 0, lhrandom(mins[0], maxs[0]), lhrandom(mins[1], maxs[1]), lhrandom(minz, maxz), dir[0], dir[1], dir[2], 0, dir[0], dir[1], dir[2], 0, 0);
+			}
 		}
 		break;
 	default:
@@ -910,14 +924,15 @@ CL_LavaSplash
 */
 void CL_LavaSplash (vec3_t origin)
 {
-	int			i, j, k;
+	int			i, j, k, l, inc;
 	float		vel;
 	vec3_t		dir, org;
 	if (!cl_particles.integer) return;
 
-	for (i=-128 ; i<128 ; i+=16)
+	inc = 32;
+	for (i = -128;i < 128;i += inc)
 	{
-		for (j=-128 ; j<128 ; j+=16)
+		for (j = -128;j < 128;j += inc)
 		{
 			dir[0] = j + lhrandom(0, 8);
 			dir[1] = i + lhrandom(0, 8);
@@ -926,8 +941,17 @@ void CL_LavaSplash (vec3_t origin)
 			org[1] = origin[1] + dir[1];
 			org[2] = origin[2] + lhrandom(0, 64);
 			vel = lhrandom(50, 120) / VectorLength(dir); // normalize and scale
-			k = particlepalette[224 + (rand()&7)];
-			particle(pt_static, PARTICLE_BILLBOARD, k, k, tex_particle, false, PBLEND_ADD, 7, 7, 255, 192, 9999, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0, 0, 0, 0);
+			if (gamemode == GAME_GOODVSBAD2)
+			{
+				k = particlepalette[0 + (rand()&255)];
+				l = particlepalette[0 + (rand()&255)];
+				particle(pt_static, PARTICLE_BILLBOARD, k, l, tex_particle, false, PBLEND_ADD, 12, 12, 255, 240, 9999, 0.05, 1, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0, 0, 0, 0);
+			}
+			else
+			{
+				k = l = particlepalette[224 + (rand()&7)];
+				particle(pt_static, PARTICLE_BILLBOARD, k, l, tex_particle, false, PBLEND_ADD, 12, 12, 255, 240, 9999, 0.05, 0, org[0], org[1], org[2], dir[0] * vel, dir[1] * vel, dir[2] * vel, 0, 0, 0, 0, 0, 0);
+			}
 		}
 	}
 }
@@ -1042,7 +1066,14 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 6;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x002000, 0x003000, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					if (gamemode == GAME_GOODVSBAD2)
+					{
+						particle(pt_static, PARTICLE_BILLBOARD, 0x00002E, 0x000030, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					}
+					else
+					{
+						particle(pt_static, PARTICLE_BILLBOARD, 0x002000, 0x003000, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					}
 				}
 				break;
 
@@ -1058,7 +1089,14 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 				dec = 6;
 				if (smoke)
 				{
-					particle(pt_static, PARTICLE_BILLBOARD, 0x502030, 0x502030, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					if (gamemode == GAME_GOODVSBAD2)
+					{
+						particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0 + (rand()&255)], particlepalette[0 + (rand()&255)], tex_particle, false, PBLEND_ALPHA, dec, dec, 255, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					}
+					else
+					{
+						particle(pt_static, PARTICLE_BILLBOARD, 0x502030, 0x502030, tex_particle, false, PBLEND_ADD, dec, dec, 128, 384, 9999, 0, 0, pos[0], pos[1], pos[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(-8, 8), 0, 0, 0, 0, 0, 0);
+					}
 				}
 				break;
 

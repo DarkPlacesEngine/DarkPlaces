@@ -570,13 +570,15 @@ void M_SinglePlayer_Draw (void)
 	p = Draw_CachePic ("gfx/ttl_sgl.lmp");
 
 	// Transfusion doesn't have a single player mode
-	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ)
+	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2)
 	{
 		M_DrawPic ((320 - p->width) / 2, 4, "gfx/ttl_sgl.lmp");
 
 		M_DrawTextBox (60, 8 * 8, 23, 4);
 		if (gamemode == GAME_NEXUIZ)
 			M_PrintWhite (95, 10 * 8, "Nexuiz is for");
+		else if (gamemode == GAME_GOODVSBAD2)
+			M_PrintWhite (95, 10 * 8, "Good Vs Bad 2 is for");
 		else
 			M_PrintWhite (95, 10 * 8, "Transfusion is for");
 		M_PrintWhite (83, 11 * 8, "multiplayer play only");
@@ -597,7 +599,7 @@ void M_SinglePlayer_Draw (void)
 
 void M_SinglePlayer_Key (int key)
 {
-	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ)
+	if (gamemode == GAME_TRANSFUSION || gamemode == GAME_NEXUIZ || gamemode == GAME_GOODVSBAD2)
 	{
 		if (key == K_ESCAPE || key == K_ENTER)
 			m_state = m_main;
@@ -892,17 +894,16 @@ void M_MultiPlayer_Key (int key)
 //=============================================================================
 /* SETUP MENU */
 
-int		setup_cursor = 4;
-int		setup_cursor_table[] = {40, 56, 80, 104, 140};
+int		setup_cursor = 3;
+int		setup_cursor_table[] = {40, 64, 88, 124};
 
-char	setup_hostname[16];
-char	setup_myname[16];
+char	setup_myname[32];
 int		setup_oldtop;
 int		setup_oldbottom;
 int		setup_top;
 int		setup_bottom;
 
-#define	NUM_SETUP_CMDS	5
+#define	NUM_SETUP_CMDS	4
 
 void M_Menu_Setup_f (void)
 {
@@ -910,7 +911,6 @@ void M_Menu_Setup_f (void)
 	m_state = m_setup;
 	m_entersound = true;
 	strcpy(setup_myname, cl_name.string);
-	strcpy(setup_hostname, hostname.string);
 	setup_top = setup_oldtop = cl_color.integer >> 4;
 	setup_bottom = setup_oldbottom = cl_color.integer & 15;
 }
@@ -930,21 +930,18 @@ void M_Setup_Draw (void)
 	p = Draw_CachePic ("gfx/p_multi.lmp");
 	M_DrawPic ( (320-p->width)/2, 4, "gfx/p_multi.lmp");
 
-	M_Print (64, 40, "Hostname");
+	M_Print (64, 40, "Your name");
 	M_DrawTextBox (160, 32, 16, 1);
-	M_Print (168, 40, setup_hostname);
+	M_Print (168, 40, setup_myname);
 
-	M_Print (64, 56, "Your name");
-	M_DrawTextBox (160, 48, 16, 1);
-	M_Print (168, 56, setup_myname);
+	if (gamemode != GAME_GOODVSBAD2)
+	{
+		M_Print (64, 64, "Shirt color");
+		M_Print (64, 88, "Pants color");
+	}
 
-	M_Print (64, 80, "Shirt color");
-	M_Print (64, 104, "Pants color");
-
-	M_DrawTextBox (64, 140-8, 14, 1);
-	M_Print (72, 140, "Accept Changes");
-
-	M_DrawPic (160, 64, "gfx/bigbox.lmp");
+	M_DrawTextBox (64, 124-8, 14, 1);
+	M_Print (72, 124, "Accept Changes");
 
 	// LordHavoc: rewrote this code greatly
 	if (menuplyr_load)
@@ -977,16 +974,14 @@ void M_Setup_Draw (void)
 				menuplyr_translated[i] = palette_complete[translationTable[menuplyr_pixels[i]]];
 			Draw_NewPic("gfx/menuplyr.lmp", menuplyr_width, menuplyr_height, true, (qbyte *)menuplyr_translated);
 		}
-		M_DrawPic(172, 72, "gfx/menuplyr.lmp");
+		M_DrawPic(160, 48, "gfx/bigbox.lmp");
+		M_DrawPic(172, 56, "gfx/menuplyr.lmp");
 	}
 
-	M_DrawCharacter (56, setup_cursor_table [setup_cursor], 12+((int)(realtime*4)&1));
-
 	if (setup_cursor == 0)
-		M_DrawCharacter (168 + 8*strlen(setup_hostname), setup_cursor_table [setup_cursor], 10+((int)(realtime*4)&1));
-
-	if (setup_cursor == 1)
 		M_DrawCharacter (168 + 8*strlen(setup_myname), setup_cursor_table [setup_cursor], 10+((int)(realtime*4)&1));
+	else
+		M_DrawCharacter (56, setup_cursor_table [setup_cursor], 12+((int)(realtime*4)&1));
 }
 
 
@@ -1015,37 +1010,35 @@ void M_Setup_Key (int k)
 		break;
 
 	case K_LEFTARROW:
-		if (setup_cursor < 2)
+		if (setup_cursor < 1)
 			return;
 		S_LocalSound ("misc/menu3.wav");
-		if (setup_cursor == 2)
+		if (setup_cursor == 1)
 			setup_top = setup_top - 1;
-		if (setup_cursor == 3)
+		if (setup_cursor == 2)
 			setup_bottom = setup_bottom - 1;
 		break;
 	case K_RIGHTARROW:
-		if (setup_cursor < 2)
+		if (setup_cursor < 1)
 			return;
 forward:
 		S_LocalSound ("misc/menu3.wav");
-		if (setup_cursor == 2)
+		if (setup_cursor == 1)
 			setup_top = setup_top + 1;
-		if (setup_cursor == 3)
+		if (setup_cursor == 2)
 			setup_bottom = setup_bottom + 1;
 		break;
 
 	case K_ENTER:
-		if (setup_cursor == 0 || setup_cursor == 1)
+		if (setup_cursor == 0)
 			return;
 
-		if (setup_cursor == 2 || setup_cursor == 3)
+		if (setup_cursor == 1 || setup_cursor == 2)
 			goto forward;
 
-		// setup_cursor == 4 (OK)
+		// setup_cursor == 3 (Accept changes)
 		if (strcmp(cl_name.string, setup_myname) != 0)
 			Cbuf_AddText ( va ("name \"%s\"\n", setup_myname) );
-		if (strcmp(hostname.string, setup_hostname) != 0)
-			Cvar_Set("hostname", setup_hostname);
 		if (setup_top != setup_oldtop || setup_bottom != setup_oldbottom)
 			Cbuf_AddText( va ("color %i %i\n", setup_top, setup_bottom) );
 		m_entersound = true;
@@ -1054,12 +1047,6 @@ forward:
 
 	case K_BACKSPACE:
 		if (setup_cursor == 0)
-		{
-			if (strlen(setup_hostname))
-				setup_hostname[strlen(setup_hostname)-1] = 0;
-		}
-
-		if (setup_cursor == 1)
 		{
 			if (strlen(setup_myname))
 				setup_myname[strlen(setup_myname)-1] = 0;
@@ -1070,15 +1057,6 @@ forward:
 		if (k < 32 || k > 127)
 			break;
 		if (setup_cursor == 0)
-		{
-			l = strlen(setup_hostname);
-			if (l < 15)
-			{
-				setup_hostname[l+1] = 0;
-				setup_hostname[l] = k;
-			}
-		}
-		if (setup_cursor == 1)
 		{
 			l = strlen(setup_myname);
 			if (l < 15)
@@ -1128,7 +1106,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 28
+#define OPTIONS_ITEMS 29
 
 int options_cursor;
 
@@ -1139,6 +1117,7 @@ void M_Menu_Options_f (void)
 	m_entersound = true;
 }
 
+extern cvar_t snd_staticvolume;
 extern cvar_t gl_delayfinish;
 extern cvar_t slowmo;
 extern dllhandle_t jpeg_dll;
@@ -1187,19 +1166,22 @@ void M_Menu_Options_AdjustSliders (int dir)
 	case 16: // sfx volume
 		Cvar_SetValueQuick (&volume, bound(0, volume.value + dir * 0.1, 1));
 		break;
-	case 17:
-		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
+	case 17: // static volume
+		Cvar_SetValueQuick (&snd_staticvolume, bound(0, snd_staticvolume.value + dir * 0.1, 1));
 		break;
 	case 18:
+		Cvar_SetValueQuick (&crosshair, bound(0, crosshair.integer + dir, 5));
+		break;
+	case 19:
 		Cvar_SetValueQuick (&crosshair_size, bound(1, crosshair_size.value + dir, 5));
 		break;
-	case 19: // static crosshair
+	case 20: // static crosshair
 		Cvar_SetValueQuick (&crosshair_static, !crosshair_static.integer);
 		break;
-	case 20: // show framerate
+	case 21: // show framerate
 		Cvar_SetValueQuick (&showfps, !showfps.integer);
 		break;
-	case 21: // always run
+	case 22: // always run
 		if (cl_forwardspeed.value > 200)
 		{
 			Cvar_SetValueQuick (&cl_forwardspeed, 200);
@@ -1211,22 +1193,22 @@ void M_Menu_Options_AdjustSliders (int dir)
 			Cvar_SetValueQuick (&cl_backspeed, 400);
 		}
 		break;
-	case 22: // lookspring
+	case 23: // lookspring
 		Cvar_SetValueQuick (&lookspring, !lookspring.integer);
 		break;
-	case 23: // lookstrafe
+	case 24: // lookstrafe
 		Cvar_SetValueQuick (&lookstrafe, !lookstrafe.integer);
 		break;
-	case 24: // mouse speed
+	case 25: // mouse speed
 		Cvar_SetValueQuick (&sensitivity, bound(1, sensitivity.value + dir * 0.5, 50));
 		break;
-	case 25: // mouse look
+	case 26: // mouse look
 		Cvar_SetValueQuick (&freelook, !freelook.integer);
 		break;
-	case 26: // invert mouse
+	case 27: // invert mouse
 		Cvar_SetValueQuick (&m_pitch, -m_pitch.value);
 		break;
-	case 27: // windowed mouse
+	case 28: // windowed mouse
 		Cvar_SetValueQuick (&vid_mouse, !vid_mouse.integer);
 		break;
 	}
@@ -1254,6 +1236,8 @@ void M_Options_Draw (void)
 	M_Print(16, y, "           Screen size");M_DrawSlider(220, y, scr_viewsize.value, 30, 120);y += 8;
 	M_ItemPrint(16, y, "      JPEG screenshots", jpeg_dll != NULL);M_DrawCheckbox(220, y, scr_screenshot_jpeg.integer);y += 8;
 	M_Print(16, y, "                   Sky");M_DrawCheckbox(220, y, r_sky.integer);y += 8;
+	// LordHavoc: FIXME: overbright needs to be disabled in GAME_GOODVSBAD2 but combine should not be disabled
+	// LordHavoc: perhaps it's time for Overbright Bits to die, and a r_lightmapintensity option to be added?
 	M_Print(16, y, "       Overbright Bits");M_DrawSlider(220, y, v_overbrightbits.value, 0, 4);y += 8;
 	M_Print(16, y, "       Texture Combine");M_DrawCheckbox(220, y, gl_combine.integer);y += 8;
 	M_Print(16, y, "             Dithering");M_DrawCheckbox(220, y, gl_dither.integer);y += 8;
@@ -1261,6 +1245,12 @@ void M_Options_Draw (void)
 	M_ItemPrint(16, y, "        Game Speed", sv.active);M_DrawSlider(220, y, slowmo.value, 0, 5);y += 8;
 	M_ItemPrint(16, y, "       CD Music Volume", cdaudioinitialized);M_DrawSlider(220, y, bgmvolume.value, 0, 1);y += 8;
 	M_ItemPrint(16, y, "          Sound Volume", snd_initialized);M_DrawSlider(220, y, volume.value, 0, 1);y += 8;
+	if (gamemode == GAME_GOODVSBAD2)
+		M_ItemPrint(16, y, "          Music Volume", snd_initialized);
+	else
+		M_ItemPrint(16, y, "  Ambient Sound Volume", snd_initialized);
+	M_DrawSlider(220, y, snd_staticvolume.value, 0, 1);
+	y += 8;
 	M_Print(16, y, "             Crosshair");M_DrawSlider(220, y, crosshair.value, 0, 5);y += 8;
 	M_Print(16, y, "        Crosshair Size");M_DrawSlider(220, y, crosshair_size.value, 1, 5);y += 8;
 	M_Print(16, y, "      Static Crosshair");M_DrawCheckbox(220, y, crosshair_static.integer);y += 8;
@@ -1792,6 +1782,29 @@ char *transfusionbindnames[][2] =
 {"impulse 141",		"identify player"},
 {"impulse 16",		"next armor type"},
 {"impulse 20",		"observer mode"}
+};
+
+char *goodvsbad2bindnames[][2] =
+{
+{"impulse 69",		"Power 1"},
+{"impulse 70",		"Power 2"},
+{"impulse 71",		"Power 3"},
+{"+jump", 			"jump / swim up"},
+{"+forward", 		"walk forward"},
+{"+back", 			"backpedal"},
+{"+left", 			"turn left"},
+{"+right", 			"turn right"},
+{"+speed", 			"run"},
+{"+moveleft", 		"step left"},
+{"+moveright", 		"step right"},
+{"+strafe", 		"sidestep"},
+{"+lookup", 		"look up"},
+{"+lookdown", 		"look down"},
+{"centerview", 		"center view"},
+{"+mlook", 			"mouse look"},
+{"kill", 			"kill yourself"},
+{"+moveup",			"swim up"},
+{"+movedown",		"swim down"}
 };
 
 int numcommands;
@@ -2346,6 +2359,70 @@ char *quitMessage [] =
   "                        ",
 };
 
+char *goodvsbad2quitMessage [] =
+{
+/* .........1.........2.... */
+  "  Press Yes To Quit     ",
+  "  ...                   ",
+  "   Yes                  ",
+  "                        ",
+
+  " Do you really want to  ",
+  "   Quit?                ",
+  " Play Good vs bad 3!    ",
+  "                        ",
+
+  " All your quit are      ",
+  "  belong to long duck   ",
+  "        dong            ",
+  "                        ",
+
+  " Press Y to quit        ",
+  "                        ",
+  "  But are you too legit?",
+  "                        ",
+
+  " This game was made by  ",
+  "   e@chip-web.com       ",
+  "  It is by far the best ",
+  "    game ever made.     ",
+
+  "   Even I really dont   ",
+  "  know of a game better ",
+  "  Press Y to quit       ",
+  "   like rougue chedder  ",
+
+  "  After you stop playing",
+  " tell the guys who made ",
+  " counterstrike to just  ",
+  "  kill themselves now   ",
+
+  "  Press Y to exit to DOS",
+  "                        ",
+  "  SSH login as user Y   ",
+  "   to exit to Linux     "
+
+  "                        ",
+  "    Press Y like you    ",
+  "    were waanderers     ",
+  "        from Ys'        ",
+
+  "                        ",
+  "  This game was made in ",
+  "     Nippon like the SS ",
+  " announcer's saying ipon",
+
+  "                        ",
+  "    you                 ",
+  "      want to quit?     ",
+  "                        ",
+
+  "                        ",
+  "   Please stop playing  ",
+  "      this stupid game  ",
+  "                        ",
+};
+
 void M_Menu_Quit_f (void)
 {
 	if (m_state == m_quit)
@@ -2670,7 +2747,7 @@ episode_t quakeepisodes[] =
 	{"Deathmatch Arena", 32, 6}
 };
 
-//MED 01/06/97 added hipnotic levels
+ //MED 01/06/97 added hipnotic levels
 level_t     hipnoticlevels[] =
 {
    {"start", "Command HQ"},  // 0
@@ -2833,12 +2910,31 @@ episode_t	transfusionepisodes[] =
 	{"Conversions", 33, 5}
 };
 
+level_t goodvsbad2levels[] =
+{
+	{"rts", "Many Paths"},  // 0
+	{"chess", "Chess, Scott Hess"},                         // 1
+	{"dot", "Big Wall"},
+	{"city2", "The Big City"},
+	{"bwall", "0 G like Psychic TV"},
+	{"snow", "Wireframed"},
+	{"telep", "Infinite Falling"},
+	{"faces", "Facing Bases"},
+	{"island", "Adventure Islands"},
+};
+
+episode_t goodvsbad2episodes[] =
+{
+	{"Levels? Bevels!", 0, 8},
+};
+
 gamelevels_t sharewarequakegame = {"Shareware Quake", quakelevels, quakeepisodes, 2};
 gamelevels_t registeredquakegame = {"Quake", quakelevels, quakeepisodes, 7};
 gamelevels_t hipnoticgame = {"Scourge of Armagon", hipnoticlevels, hipnoticepisodes, 6};
 gamelevels_t roguegame = {"Dissolution of Eternity", roguelevels, rogueepisodes, 4};
 gamelevels_t nehahragame = {"Nehahra", nehahralevels, nehahraepisodes, 4};
 gamelevels_t transfusiongame = {"Transfusion", transfusionlevels, transfusionepisodes, 7};
+gamelevels_t goodvsbad2game = {"Good Vs. Bad 2", goodvsbad2levels, goodvsbad2episodes, 1};
 
 typedef struct
 {
@@ -2888,8 +2984,8 @@ void M_Menu_GameOptions_f (void)
 }
 
 
-int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 120, 128};
-#define	NUM_GAMEOPTIONS	10
+int gameoptions_cursor_table[] = {40, 56, 64, 72, 80, 88, 96, 104, 132, 152, 160};
+#define	NUM_GAMEOPTIONS	11
 int		gameoptions_cursor;
 
 void M_GameOptions_Draw (void)
@@ -2910,104 +3006,105 @@ void M_GameOptions_Draw (void)
 	M_Print (0, 56, "      Max players");
 	M_Print (160, 56, va("%i", maxplayers) );
 
-	M_Print (0, 64, "        Game Type");
-	if (gamemode == GAME_TRANSFUSION)
+	if (gamemode != GAME_GOODVSBAD2)
 	{
-		if (!deathmatch.integer)
-			Cvar_SetValue("deathmatch", 1);
-		if (deathmatch.integer == 2)
-			M_Print (160, 64, "Capture the Flag");
+		M_Print (0, 64, "        Game Type");
+		if (gamemode == GAME_TRANSFUSION)
+		{
+			if (!deathmatch.integer)
+				Cvar_SetValue("deathmatch", 1);
+			if (deathmatch.integer == 2)
+				M_Print (160, 64, "Capture the Flag");
+			else
+				M_Print (160, 64, "Blood Bath");
+		}
 		else
-			M_Print (160, 64, "Blood Bath");
-	}
-	else
-	{
-		if (!coop.integer && !deathmatch.integer)
-			Cvar_SetValue("deathmatch", 1);
-		if (coop.integer)
-			M_Print (160, 64, "Cooperative");
+		{
+			if (!coop.integer && !deathmatch.integer)
+				Cvar_SetValue("deathmatch", 1);
+			if (coop.integer)
+				M_Print (160, 64, "Cooperative");
+			else
+				M_Print (160, 64, "Deathmatch");
+		}
+
+		M_Print (0, 72, "        Teamplay");
+		if (gamemode == GAME_ROGUE)
+		{
+			char *msg;
+
+			switch((int)teamplay.integer)
+			{
+				case 1: msg = "No Friendly Fire"; break;
+				case 2: msg = "Friendly Fire"; break;
+				case 3: msg = "Tag"; break;
+				case 4: msg = "Capture the Flag"; break;
+				case 5: msg = "One Flag CTF"; break;
+				case 6: msg = "Three Team CTF"; break;
+				default: msg = "Off"; break;
+			}
+			M_Print (160, 72, msg);
+		}
 		else
-			M_Print (160, 64, "Deathmatch");
-	}
-
-	M_Print (0, 72, "        Teamplay");
-	if (gamemode == GAME_ROGUE)
-	{
-		char *msg;
-
-		switch((int)teamplay.integer)
 		{
-			case 1: msg = "No Friendly Fire"; break;
-			case 2: msg = "Friendly Fire"; break;
-			case 3: msg = "Tag"; break;
-			case 4: msg = "Capture the Flag"; break;
-			case 5: msg = "One Flag CTF"; break;
-			case 6: msg = "Three Team CTF"; break;
-			default: msg = "Off"; break;
+			char *msg;
+
+			switch (teamplay.integer)
+			{
+				case 0: msg = "Off"; break;
+				case 2: msg = "Friendly Fire"; break;
+				default: msg = "No Friendly Fire"; break;
+			}
+			M_Print (160, 72, msg);
 		}
-		M_Print (160, 72, msg);
+
+		M_Print (0, 80, "            Skill");
+		if (skill.integer == 0)
+			M_Print (160, 80, "Easy difficulty");
+		else if (skill.integer == 1)
+			M_Print (160, 80, "Normal difficulty");
+		else if (skill.integer == 2)
+			M_Print (160, 80, "Hard difficulty");
+		else
+			M_Print (160, 80, "Nightmare difficulty");
+
+		M_Print (0, 88, "       Frag Limit");
+		if (fraglimit.integer == 0)
+			M_Print (160, 88, "none");
+		else
+			M_Print (160, 88, va("%i frags", fraglimit.integer));
+
+		M_Print (0, 96, "       Time Limit");
+		if (timelimit.integer == 0)
+			M_Print (160, 96, "none");
+		else
+			M_Print (160, 96, va("%i minutes", timelimit.integer));
 	}
-	else if (gamemode == GAME_TRANSFUSION)
-	{
-		char *msg;
-
-		switch (teamplay.integer)
-		{
-			case 0: msg = "Off"; break;
-			case 2: msg = "Friendly Fire"; break;
-			default: msg = "No Friendly Fire"; break;
-		}
-		M_Print (160, 72, msg);
-	}
-	else
-	{
-		char *msg;
-
-		switch((int)teamplay.integer)
-		{
-			case 1: msg = "No Friendly Fire"; break;
-			case 2: msg = "Friendly Fire"; break;
-			default: msg = "Off"; break;
-		}
-		M_Print (160, 72, msg);
-	}
-
-	M_Print (0, 80, "            Skill");
-	if (skill.integer == 0)
-		M_Print (160, 80, "Easy difficulty");
-	else if (skill.integer == 1)
-		M_Print (160, 80, "Normal difficulty");
-	else if (skill.integer == 2)
-		M_Print (160, 80, "Hard difficulty");
-	else
-		M_Print (160, 80, "Nightmare difficulty");
-
-	M_Print (0, 88, "       Frag Limit");
-	if (fraglimit.integer == 0)
-		M_Print (160, 88, "none");
-	else
-		M_Print (160, 88, va("%i frags", fraglimit.integer));
-
-	M_Print (0, 96, "       Time Limit");
-	if (timelimit.integer == 0)
-		M_Print (160, 96, "none");
-	else
-		M_Print (160, 96, va("%i minutes", timelimit.integer));
 
 	M_Print (0, 104, "    Public server");
 	M_Print (160, 104, (sv_public.integer == 0) ? "no" : "yes");
 
+	M_Print (0, 120, "      Server name");
+	M_DrawTextBox (0, 124, 38, 1);
+	M_Print (8, 132, hostname.string);
+
 	g = lookupgameinfo();
 
-	M_Print (0, 120, "         Episode");
-	M_Print (160, 120, g->episodes[startepisode].description);
+	if (gamemode != GAME_GOODVSBAD2)
+	{
+		M_Print (0, 152, "         Episode");
+		M_Print (160, 152, g->episodes[startepisode].description);
+	}
 
-	M_Print (0, 128, "           Level");
-	M_Print (160, 128, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
-	M_Print (160, 136, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
+	M_Print (0, 160, "           Level");
+	M_Print (160, 160, g->levels[g->episodes[startepisode].firstLevel + startlevel].description);
+	M_Print (160, 168, g->levels[g->episodes[startepisode].firstLevel + startlevel].name);
 
 // line cursor
-	M_DrawCharacter (144, gameoptions_cursor_table[gameoptions_cursor], 12+((int)(realtime*4)&1));
+	if (gameoptions_cursor == 8)
+		M_DrawCharacter (8 + 8 * strlen(hostname.string), gameoptions_cursor_table[gameoptions_cursor], 10+((int)(realtime*4)&1));
+	else
+		M_DrawCharacter (144, gameoptions_cursor_table[gameoptions_cursor], 12+((int)(realtime*4)&1));
 
 	if (m_serverInfoMessage)
 	{
@@ -3022,9 +3119,7 @@ void M_GameOptions_Draw (void)
 			M_Print (x, 170, " havoc@telefragged.com  ");
 		}
 		else
-		{
 			m_serverInfoMessage = false;
-		}
 	}
 }
 
@@ -3049,6 +3144,8 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 2:
+		if (gamemode == GAME_GOODVSBAD2)
+			break;
 		if (gamemode == GAME_TRANSFUSION)
 		{
 			if (deathmatch.integer == 2) // changing from CTF to BloodBath
@@ -3072,6 +3169,8 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 3:
+		if (gamemode == GAME_GOODVSBAD2)
+			break;
 		if (gamemode == GAME_ROGUE)
 			count = 6;
 		else
@@ -3085,6 +3184,8 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 4:
+		if (gamemode == GAME_GOODVSBAD2)
+			break;
 		Cvar_SetValueQuick (&skill, skill.integer + dir);
 		if (skill.integer > 3)
 			Cvar_SetValueQuick (&skill, 0);
@@ -3093,6 +3194,8 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 5:
+		if (gamemode == GAME_GOODVSBAD2)
+			break;
 		Cvar_SetValueQuick (&fraglimit, fraglimit.integer + dir*10);
 		if (fraglimit.integer > 100)
 			Cvar_SetValueQuick (&fraglimit, 0);
@@ -3101,6 +3204,8 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 6:
+		if (gamemode == GAME_GOODVSBAD2)
+			break;
 		Cvar_SetValueQuick (&timelimit, timelimit.value + dir*5);
 		if (timelimit.value > 60)
 			Cvar_SetValueQuick (&timelimit, 0);
@@ -3113,6 +3218,11 @@ void M_NetStart_Change (int dir)
 		break;
 
 	case 8:
+		break;
+
+	case 9:
+		if (gamemode == GAME_GOODVSBAD2)
+			break;
 		startepisode += dir;
 		g = lookupgameinfo();
 
@@ -3125,7 +3235,7 @@ void M_NetStart_Change (int dir)
 		startlevel = 0;
 		break;
 
-	case 9:
+	case 10:
 		startlevel += dir;
 		g = lookupgameinfo();
 
@@ -3141,6 +3251,8 @@ void M_NetStart_Change (int dir)
 void M_GameOptions_Key (int key)
 {
 	gamelevels_t *g;
+	int l;
+	char hostnamebuf[128];
 
 	switch (key)
 	{
@@ -3191,6 +3303,35 @@ void M_GameOptions_Key (int key)
 
 		M_NetStart_Change (1);
 		break;
+
+	case K_BACKSPACE:
+		if (gameoptions_cursor == 8)
+		{
+			l = strlen(hostname.string);
+			if (l)
+			{
+				l = min(l - 1, 37);
+				memcpy(hostnamebuf, hostname.string, l);
+				hostnamebuf[l] = 0;
+				Cvar_Set("hostname", hostnamebuf);
+			}
+		}
+		break;
+
+	default:
+		if (key < 32 || key > 127)
+			break;
+		if (gameoptions_cursor == 8)
+		{
+			l = strlen(hostname.string);
+			if (l < 37)
+			{
+				memcpy(hostnamebuf, hostname.string, l);
+				hostnamebuf[l] = key;
+				hostnamebuf[l+1] = 0;
+				Cvar_Set("hostname", hostnamebuf);
+			}
+		}
 	}
 }
 
@@ -3307,6 +3448,11 @@ void M_Init (void)
 	{
 		numcommands = sizeof(transfusionbindnames) / sizeof(transfusionbindnames[0]);
 		bindnames = transfusionbindnames;
+	}
+	else if (gamemode == GAME_GOODVSBAD2)
+	{
+		numcommands = sizeof(goodvsbad2bindnames) / sizeof(goodvsbad2bindnames[0]);
+		bindnames = goodvsbad2bindnames;
 	}
 	else
 	{

@@ -300,7 +300,7 @@ static void Cmd_Exec_f (void)
 		Con_Printf ("couldn't exec %s\n",Cmd_Argv(1));
 		return;
 	}
-	Con_Printf ("execing %s\n",Cmd_Argv(1));
+	Con_DPrintf ("execing %s\n",Cmd_Argv(1));
 
 	Cbuf_InsertText (f);
 	Mem_Free(f);

@@ -25,12 +25,16 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t chase_back = {CVAR_SAVE, "chase_back", "48"};
 cvar_t chase_up = {CVAR_SAVE, "chase_up", "24"};
 cvar_t chase_active = {CVAR_SAVE, "chase_active", "0"};
+// GAME_GOODVSBAD2
+cvar_t chase_stevie = {0, "chase_stevie", "0"};
 
 void Chase_Init (void)
 {
 	Cvar_RegisterVariable (&chase_back);
 	Cvar_RegisterVariable (&chase_up);
 	Cvar_RegisterVariable (&chase_active);
+	if (gamemode == GAME_GOODVSBAD2)
+		Cvar_RegisterVariable (&chase_stevie);
 }
 
 void Chase_Reset (void)
@@ -41,13 +45,23 @@ void Chase_Reset (void)
 
 void Chase_Update (void)
 {
-	vec3_t	forward, stop, chase_dest, normal;
-	float	dist;
+	vec_t camback, camup, dist, forward[3], stop[3], chase_dest[3], normal[3], projectangles[3];
 
-	chase_back.value = bound(0, chase_back.value, 128);
-	chase_up.value = bound(-48, chase_up.value, 96);
+	camback = bound(0, chase_back.value, 128);
+	if (chase_back.value != camback)
+		Cvar_SetValueQuick(&chase_back, camback);
+	camup = bound(-48, chase_up.value, 96);
+	if (chase_up.value != camup)
+		Cvar_SetValueQuick(&chase_up, camup);
 
-	AngleVectors (cl.viewangles, forward, NULL, NULL);
+	VectorCopy(cl.viewangles, projectangles);
+	if (gamemode == GAME_GOODVSBAD2 && chase_stevie.integer)
+	{
+		projectangles[0] = 90;
+		r_refdef.viewangles[0] = 90;
+		camback = 1024;
+	}
+	AngleVectors (projectangles, forward, NULL, NULL);
 
 	dist = -chase_back.value - 8;
 	chase_dest[0] = r_refdef.vieworg[0] + forward[0] * dist;
