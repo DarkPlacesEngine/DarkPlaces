@@ -861,11 +861,10 @@ void R_Mesh_Matrix(const matrix4x4_t *matrix)
 
 void R_Mesh_State(const rmeshstate_t *m)
 {
-	int i, combinergb, combinealpha, scale, arrayis3d;
+	int i, combinergb, combinealpha, scale;
 	gltextureunit_t *unit;
 	const matrix4x4_t *texmatrix;
 	matrix4x4_t tempmatrix;
-	const float *texcoords;
 
 	BACKENDACTIVECHECK
 
@@ -909,158 +908,205 @@ void R_Mesh_State(const rmeshstate_t *m)
 
 	for (i = 0, unit = gl_state.units;i < backendunits;i++, unit++)
 	{
+		// update 1d texture binding
 		if (unit->t1d != m->tex1d[i])
 		{
-			GL_ActiveTexture(i);
 			if (m->tex1d[i])
 			{
 				if (unit->t1d == 0)
+				{
+					GL_ActiveTexture(i);
 					qglEnable(GL_TEXTURE_1D);CHECKGLERROR
+				}
+				unit->t1d = m->tex1d[i];
+				GL_ActiveTexture(i);
+				qglBindTexture(GL_TEXTURE_1D, unit->t1d);CHECKGLERROR
 			}
 			else
 			{
 				if (unit->t1d)
+				{
+					unit->t1d = 0;
+					GL_ActiveTexture(i);
 					qglDisable(GL_TEXTURE_1D);CHECKGLERROR
+				}
 			}
-			qglBindTexture(GL_TEXTURE_1D, (unit->t1d = m->tex1d[i]));CHECKGLERROR
 		}
+		// update 2d texture binding
 		if (unit->t2d != m->tex[i])
 		{
-			GL_ActiveTexture(i);
 			if (m->tex[i])
 			{
 				if (unit->t2d == 0)
+				{
+					GL_ActiveTexture(i);
 					qglEnable(GL_TEXTURE_2D);CHECKGLERROR
+				}
+				unit->t2d = m->tex[i];
+				GL_ActiveTexture(i);
+				qglBindTexture(GL_TEXTURE_2D, unit->t2d);CHECKGLERROR
 			}
 			else
 			{
 				if (unit->t2d)
+				{
+					unit->t2d = 0;
+					GL_ActiveTexture(i);
 					qglDisable(GL_TEXTURE_2D);CHECKGLERROR
+				}
 			}
-			qglBindTexture(GL_TEXTURE_2D, (unit->t2d = m->tex[i]));CHECKGLERROR
 		}
+		// update 3d texture binding
 		if (unit->t3d != m->tex3d[i])
 		{
-			GL_ActiveTexture(i);
 			if (m->tex3d[i])
 			{
 				if (unit->t3d == 0)
+				{
+					GL_ActiveTexture(i);
 					qglEnable(GL_TEXTURE_3D);CHECKGLERROR
+				}
+				unit->t3d = m->tex3d[i];
+				GL_ActiveTexture(i);
+				qglBindTexture(GL_TEXTURE_3D, unit->t3d);CHECKGLERROR
 			}
 			else
 			{
 				if (unit->t3d)
+				{
+					unit->t3d = 0;
+					GL_ActiveTexture(i);
 					qglDisable(GL_TEXTURE_3D);CHECKGLERROR
+				}
 			}
-			qglBindTexture(GL_TEXTURE_3D, (unit->t3d = m->tex3d[i]));CHECKGLERROR
 		}
+		// update cubemap texture binding
 		if (unit->tcubemap != m->texcubemap[i])
 		{
-			GL_ActiveTexture(i);
 			if (m->texcubemap[i])
 			{
 				if (unit->tcubemap == 0)
+				{
+					GL_ActiveTexture(i);
 					qglEnable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
+				}
+				unit->tcubemap = m->texcubemap[i];
+				GL_ActiveTexture(i);
+				qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, unit->tcubemap);CHECKGLERROR
 			}
 			else
 			{
 				if (unit->tcubemap)
+				{
+					unit->tcubemap = 0;
+					GL_ActiveTexture(i);
 					qglDisable(GL_TEXTURE_CUBE_MAP_ARB);CHECKGLERROR
-			}
-			qglBindTexture(GL_TEXTURE_CUBE_MAP_ARB, (unit->tcubemap = m->texcubemap[i]));CHECKGLERROR
-		}
-		combinergb = m->texcombinergb[i];
-		if (!combinergb)
-			combinergb = GL_MODULATE;
-		if (unit->combinergb != combinergb)
-		{
-			GL_ActiveTexture(i);
-			unit->combinergb = combinergb;
-			if (gl_combine.integer) 
-			{
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
-			}
-			else
-			{
-				qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
+				}
 			}
 		}
-		combinealpha = m->texcombinealpha[i];
-		if (!combinealpha)
-			combinealpha = GL_MODULATE;
-		if (unit->combinealpha != combinealpha)
+		// update texture unit settings if the unit is enabled
+		if (unit->t1d || unit->t2d || unit->t3d || unit->tcubemap)
 		{
-			GL_ActiveTexture(i);
-			unit->combinealpha = combinealpha;
+			// texture unit is enabled, enable the array
+			if (!unit->arrayenabled)
+			{
+				unit->arrayenabled = true;
+				GL_ClientActiveTexture(i);
+				qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
+			// update combine settings
 			if (gl_combine.integer)
 			{
-				qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
-			}
-		}
-		scale = max(m->texrgbscale[i], 1);
-		if (unit->rgbscale != scale)
-		{
-			GL_ActiveTexture(i);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (unit->rgbscale = scale));CHECKGLERROR
-		}
-		scale = max(m->texalphascale[i], 1);
-		if (unit->alphascale != scale)
-		{
-			GL_ActiveTexture(i);
-			qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (unit->alphascale = scale));CHECKGLERROR
-		}
-		if (m->pointer_texcoord3f[i])
-		{
-			arrayis3d = true;
-			texcoords = m->pointer_texcoord3f[i];
-		}
-		else
-		{
-			arrayis3d = false;
-			texcoords = m->pointer_texcoord[i];
-		}
-		if (texcoords && !unit->t1d && !unit->t2d && !unit->t3d && !unit->tcubemap)
-			texcoords = NULL;
-		if (unit->pointer_texcoord != texcoords || unit->arrayis3d != arrayis3d)
-		{
-			GL_ClientActiveTexture(i);
-			if (texcoords)
-			{
-				if (!unit->arrayenabled)
+				// GL_ARB_texture_env_combine
+				combinergb = m->texcombinergb[i] ? m->texcombinergb[i] : GL_MODULATE;
+				if (unit->combinergb != combinergb)
 				{
-					unit->arrayenabled = true;
-					qglEnableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+					unit->combinergb = combinergb;
+					GL_ActiveTexture(i);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB_ARB, unit->combinergb);CHECKGLERROR
+				}
+				combinealpha = m->texcombinealpha[i] ? m->texcombinealpha[i] : GL_MODULATE;
+				if (unit->combinealpha != combinealpha)
+				{
+					unit->combinealpha = combinealpha;
+					GL_ActiveTexture(i);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_ALPHA_ARB, unit->combinealpha);CHECKGLERROR
+				}
+				scale = max(m->texrgbscale[i], 1);
+				if (unit->rgbscale != scale)
+				{
+					GL_ActiveTexture(i);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_RGB_SCALE_ARB, (unit->rgbscale = scale));CHECKGLERROR
+				}
+				scale = max(m->texalphascale[i], 1);
+				if (unit->alphascale != scale)
+				{
+					GL_ActiveTexture(i);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_ALPHA_SCALE, (unit->alphascale = scale));CHECKGLERROR
 				}
 			}
 			else
 			{
-				if (unit->arrayenabled)
+				// normal GL texenv
+				combinergb = m->texcombinergb[i] ? m->texcombinergb[i] : GL_MODULATE;
+				if (unit->combinergb != combinergb)
 				{
-					unit->arrayenabled = false;
-					qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+					unit->combinergb = combinergb;
+					GL_ActiveTexture(i);
+					qglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, unit->combinergb);CHECKGLERROR
 				}
 			}
-			unit->pointer_texcoord = texcoords;
-			unit->arrayis3d = arrayis3d;
-			if (unit->arrayis3d)
-				qglTexCoordPointer(3, GL_FLOAT, sizeof(float[3]), unit->pointer_texcoord);
+			// update array settings
+			if (m->pointer_texcoord3f[i])
+			{
+				// 3d texcoord array
+				if (unit->pointer_texcoord != m->pointer_texcoord3f[i] || !unit->arrayis3d)
+				{
+					unit->pointer_texcoord = m->pointer_texcoord3f[i];
+					unit->arrayis3d = true;
+					GL_ClientActiveTexture(i);
+					qglTexCoordPointer(3, GL_FLOAT, sizeof(float[3]), unit->pointer_texcoord);
+					CHECKGLERROR
+				}
+			}
 			else
-				qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), unit->pointer_texcoord);
-			CHECKGLERROR
+			{
+				// 2d texcoord array
+				if (unit->pointer_texcoord != m->pointer_texcoord[i] || unit->arrayis3d)
+				{
+					unit->pointer_texcoord = m->pointer_texcoord[i];
+					unit->arrayis3d = false;
+					GL_ClientActiveTexture(i);
+					qglTexCoordPointer(2, GL_FLOAT, sizeof(float[2]), unit->pointer_texcoord);
+					CHECKGLERROR
+				}
+			}
+			// update texmatrix
+			// if texmatrix is not set (3,3 should always be 1 in a texture matrix) just compare to the identity matrix
+			if (m->texmatrix[i].m[3][3])
+				texmatrix = &m->texmatrix[i];
+			else
+				texmatrix = &r_identitymatrix;
+			if (memcmp(&unit->matrix, texmatrix, sizeof(matrix4x4_t)))
+			{
+				unit->matrix = *texmatrix;
+				Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
+				qglMatrixMode(GL_TEXTURE);
+				GL_ActiveTexture(i);
+				qglLoadMatrixf(&tempmatrix.m[0][0]);
+				qglMatrixMode(GL_MODELVIEW);
+			}
 		}
-		// if texmatrix is not set (3,3 should always be 1 in a texture matrix) just compare to the identity matrix
-		if (m->texmatrix[i].m[3][3])
-			texmatrix = &m->texmatrix[i];
 		else
-			texmatrix = &r_identitymatrix;
-		if (memcmp(&unit->matrix, texmatrix, sizeof(matrix4x4_t)))
 		{
-			unit->matrix = *texmatrix;
-			Matrix4x4_Transpose(&tempmatrix, &unit->matrix);
-			qglMatrixMode(GL_TEXTURE);
-			GL_ActiveTexture(i);
-			qglLoadMatrixf(&tempmatrix.m[0][0]);
-			qglMatrixMode(GL_MODELVIEW);
+			// texture unit is disabled, disable the array
+			if (unit->arrayenabled)
+			{
+				unit->arrayenabled = false;
+				GL_ClientActiveTexture(i);
+				qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
+			}
+			// no need to update most settings on a disabled texture unit
 		}
 	}
 }
