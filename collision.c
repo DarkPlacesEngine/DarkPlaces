@@ -1478,13 +1478,13 @@ void Collision_TraceLineTriangleFloat(trace_t *trace, const vec3_t linestart, co
 
 	// store the new trace plane (because collisions only happen from
 	// the front this is always simply the triangle normal, never flipped)
+	VectorNormalize(faceplanenormal);
 	VectorCopy(faceplanenormal, trace->plane.normal);
-	VectorNormalize(trace->plane.normal);
 	trace->plane.dist = DotProduct(point0, faceplanenormal);
 
 	// calculate the normalized start and end distances
-	d1 = DotProduct(faceplanenormal, linestart) - faceplanedist;
-	d2 = DotProduct(faceplanenormal, lineend) - faceplanedist;
+	d1 = DotProduct(trace->plane.normal, linestart) - trace->plane.dist;
+	d2 = DotProduct(trace->plane.normal, lineend) - trace->plane.dist;
 
 	// calculate a nudged fraction to keep it out of the surface
 	// (the main fraction remains perfect)
