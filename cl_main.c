@@ -224,11 +224,13 @@ void CL_EstablishConnection(const char *host)
 	m_return_reason[0] = 0;
 	cls.demonum = -1;
 
+	// stop demo loop in case this fails
+	CL_Disconnect();
+	NetConn_ClientFrame();
+	NetConn_ServerFrame();
+	
 	if (LHNETADDRESS_FromString(&cls.connect_address, host, 26000) && (cls.connect_mysocket = NetConn_ChooseClientSocketForAddress(&cls.connect_address)))
 	{
-		// stop demo loop in case this fails
-		CL_Disconnect();
-
 		cls.connect_trying = true;
 		cls.connect_remainingtries = 3;
 		cls.connect_nextsendtime = 0;
