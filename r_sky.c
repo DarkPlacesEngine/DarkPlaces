@@ -374,14 +374,16 @@ static void R_SkySphere(void)
 		skyspherecalc();
 	}
 
-	// scroll speed for upper layer
-	speedscale = cl.time*8.0/128.0;
-	// wrap the scroll just to be extra kind to float accuracy
-	speedscale -= (int)speedscale;
+	// wrap the scroll values just to be extra kind to float accuracy
 
-	// scroll the lower cloud layer twice as fast (just like quake did)
-	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale * r_skyscroll1.value, speedscale * r_skyscroll1.value, 0);
-	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale * r_skyscroll2.value, speedscale * r_skyscroll2.value, 0);
+	// scroll speed for upper layer
+	speedscale = cl.time*r_skyscroll1.value*8.0/128.0;
+	speedscale -= (int)speedscale;
+	Matrix4x4_CreateTranslate(&scroll1matrix, speedscale, speedscale, 0);
+	// scroll speed for lower layer (transparent layer)
+	speedscale = cl.time*r_skyscroll2.value*8.0/128.0;
+	speedscale -= (int)speedscale;
+	Matrix4x4_CreateTranslate(&scroll2matrix, speedscale, speedscale, 0);
 
 	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
