@@ -36,7 +36,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 int			starttime;
 qboolean	ActiveApp, Minimized;
 
-qboolean			isDedicated;
 static qboolean		sc_return_on_enter = false;
 HANDLE				hinput, houtput;
 
@@ -231,7 +230,7 @@ void Sys_Error (char *error, ...)
 	vsprintf (text, error, argptr);
 	va_end (argptr);
 
-	if (isDedicated)
+	if (cls.state == ca_dedicated)
 	{
 		va_start (argptr, error);
 		vsprintf (text, error, argptr);
@@ -248,8 +247,7 @@ void Sys_Error (char *error, ...)
 		starttime = Sys_DoubleTime ();
 		sc_return_on_enter = true;	// so Enter will get us out of here
 
-		while (!Sys_ConsoleInput () &&
-				((Sys_DoubleTime () - starttime) < CONSOLE_ERROR_TIMEOUT))
+		while (!Sys_ConsoleInput () && ((Sys_DoubleTime () - starttime) < CONSOLE_ERROR_TIMEOUT))
 		{
 		}
 	}
@@ -261,13 +259,11 @@ void Sys_Error (char *error, ...)
 		{
 			in_sys_error0 = 1;
 			VID_SetDefaultMode ();
-			MessageBox(NULL, text, "Quake Error",
-					   MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+			MessageBox(NULL, text, "Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 		}
 		else
 		{
-			MessageBox(NULL, text, "Double Quake Error",
-					   MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
+			MessageBox(NULL, text, "Double Quake Error", MB_OK | MB_SETFOREGROUND | MB_ICONSTOP);
 		}
 	}
 
@@ -287,22 +283,6 @@ void Sys_Error (char *error, ...)
 	exit (1);
 }
 
-void Sys_Printf (char *fmt, ...)
-{
-	va_list		argptr;
-	char		text[1024];
-	DWORD		dummy;
-	
-	if (isDedicated)
-	{
-		va_start (argptr,fmt);
-		vsprintf (text, fmt, argptr);
-		va_end (argptr);
-
-		WriteFile(houtput, text, strlen (text), &dummy, NULL);	
-	}
-}
-
 void Sys_Quit (void)
 {
 
@@ -311,7 +291,7 @@ void Sys_Quit (void)
 	if (tevent)
 		CloseHandle (tevent);
 
-	if (isDedicated)
+	if (cls.state == ca_dedicated)
 		FreeConsole ();
 
 // shut down QHOST hooks if necessary
@@ -425,7 +405,7 @@ char *Sys_ConsoleInput (void)
 	int		dummy;
 	int		ch, numread, numevents;
 
-	if (!isDedicated)
+	if (cls.state != ca_dedicated)
 		return NULL;
 
 
@@ -553,7 +533,7 @@ static char	*empty_string = "";
 
 int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	double			time, oldtime, newtime/*, timediff*/;
+	double			oldtime, newtime;
 	MEMORYSTATUS	lpBuffer;
 	static	char	cwd[1024];
 	int				t;
@@ -610,7 +590,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	host_parms.argc = com_argc;
 	host_parms.argv = com_argv;
 
-	isDedicated = (COM_CheckParm ("-dedicated") != 0);
+	Sys_Shared_Init();
 
 // take the greater of all the available memory or half the total memory,
 // but at least 8 Mb and no more than 16 Mb, unless they explicitly
@@ -635,12 +615,12 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if (!tevent)
 		Sys_Error ("Couldn't create event");
 
-	if (isDedicated)
+	// LordHavoc: can't check cls.state because it hasn't been initialized yet
+	// if (cls.state == ca_dedicated)
+	if (COM_CheckParm("-dedicated"))
 	{
 		if (!AllocConsole ())
-		{
 			Sys_Error ("Couldn't create dedicated server console");
-		}
 
 		hinput = GetStdHandle (STD_INPUT_HANDLE);
 		houtput = GetStdHandle (STD_OUTPUT_HANDLE);
@@ -687,24 +667,20 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     /* main window message loop */
 	while (1)
 	{
-		if (!isDedicated)
+		if (cls.state != ca_dedicated)
 		{
 		// yield the CPU for a little while when paused, minimized, or not the focus
-			if ((cl.paused && (!ActiveApp && !DDActive)) || Minimized)
+			if ((cl.paused && !ActiveApp) || Minimized)
 			{
 				SleepUntilInput (PAUSE_SLEEP);
 				scr_skipupdate = 1;		// no point in bothering to draw
 			}
-			else if (!ActiveApp && !DDActive)
-			{
+			else if (!ActiveApp)
 				SleepUntilInput (NOT_FOCUS_SLEEP);
-			}
-
-			newtime = Sys_DoubleTime ();
-			time = newtime - oldtime;
 		}
 
-		Host_Frame (time);
+		newtime = Sys_DoubleTime ();
+		Host_Frame (newtime - oldtime);
 		oldtime = newtime;
 	}
 
