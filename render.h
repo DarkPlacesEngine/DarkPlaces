@@ -173,6 +173,11 @@ extern cvar_t gl_dither;
 
 #include "r_light.h"
 
+extern rtexture_t *r_texture_blanknormalmap;
+extern rtexture_t *r_texture_white;
+extern rtexture_t *r_texture_black;
+extern rtexture_t *r_texture_notexture;
+
 void R_TimeReport(char *name);
 void R_TimeReport_Start(void);
 void R_TimeReport_End(void);

@@ -296,7 +296,7 @@ void Mod_BuildAliasSkinFromSkinFrame(aliasskin_t *skin, skinframe_t *skinframe)
 	{
 		skinframe = &missingskinframe;
 		memset(skinframe, 0, sizeof(*skinframe));
-		skinframe->base = r_notexture;
+		skinframe->base = r_texture_notexture;
 	}
 
 	memset(&mod_alias_layersbuffer, 0, sizeof(mod_alias_layersbuffer));

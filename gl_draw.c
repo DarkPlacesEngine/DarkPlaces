@@ -335,7 +335,7 @@ cachepic_t	*Draw_CachePic (char *path)
 	if (pic->tex == NULL)
 	{
 		Con_Printf("Draw_CachePic: failed to load %s\n", path);
-		pic->tex = r_notexture;
+		pic->tex = r_texture_notexture;
 	}
 
 	pic->width = R_TextureWidth(pic->tex);

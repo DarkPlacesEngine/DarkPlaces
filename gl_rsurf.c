@@ -49,6 +49,7 @@ qbyte r_worldleafvisible[32768];
 // TODO: dynamic resize according to r_refdef.worldmodel->brush.num_surfaces
 qbyte r_worldsurfacevisible[262144];
 
+#ifdef LHREMOVESOON
 static int dlightdivtable[32768];
 
 static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface)
@@ -64,14 +65,15 @@ static int R_IntAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surface
 	tmax = (surface->extents[1] >> 4) + 1;
 	smax3 = smax * 3;
 
+	VectorCopy(surface->mesh.data_normal3f, planenormal);
+	planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
+
 	for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 	{
 		if (!(surface->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
 		Matrix4x4_Transform(matrix, light->origin, local);
-		VectorCopy(surface->mesh.data_normal3f, planenormal);
-		planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
 		dist = DotProduct(local, planenormal) - planedist;
 
 		// for comparisons to minimum acceptable light
@@ -150,14 +152,15 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surfa
 	tmax = (surface->extents[1] >> 4) + 1;
 	smax3 = smax * 3;
 
+	VectorCopy(surface->mesh.data_normal3f, planenormal);
+	planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
+
 	for (lnum = 0, light = r_dlight;lnum < r_numdlights;lnum++, light++)
 	{
 		if (!(surface->dlightbits[lnum >> 5] & (1 << (lnum & 31))))
 			continue;					// not lit by this light
 
 		Matrix4x4_Transform(matrix, light->origin, local);
-		VectorCopy(surface->mesh.data_normal3f, planenormal);
-		planedist = DotProduct(surface->mesh.data_vertex3f, planenormal);
 		dist = DotProduct(local, planenormal) - planedist;
 
 		// for comparisons to minimum acceptable light
@@ -220,6 +223,7 @@ static int R_FloatAddDynamicLights (const matrix4x4_t *matrix, msurface_t *surfa
 	}
 	return lit;
 }
+#endif
 
 /*
 ===============
@@ -257,12 +261,15 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 	// clear to no light
 			memset(bl, 0, size*3*sizeof(unsigned int));
 
+#ifdef LHREMOVESOON
 			if (surface->dlightframe == r_framecount)
 			{
+				surface->dlightframe = -1;
 				surface->cached_dlight = R_IntAddDynamicLights(&ent->inversematrix, surface);
 				if (surface->cached_dlight)
 					c_light_polys++;
 			}
+#endif
 
 	// add all the lightmaps
 			if (lightmap)
@@ -337,12 +344,15 @@ static void R_BuildLightMap (const entity_render_t *ent, msurface_t *surface)
 		{
 			memset(bl, 0, size*3*sizeof(float));
 
+#ifdef LHREMOVESOON
 			if (surface->dlightframe == r_framecount)
 			{
+				surface->dlightframe = -1;
 				surface->cached_dlight = R_FloatAddDynamicLights(&ent->inversematrix, surface);
 				if (surface->cached_dlight)
 					c_light_polys++;
 			}
+#endif
 
 			// add all the lightmaps
 			if (lightmap)
@@ -562,6 +572,7 @@ void R_Stain (const vec3_t origin, float radius, int cr1, int cg1, int cb1, int 
 =============================================================
 */
 
+#ifdef LHREMOVESOON
 static void RSurf_AddLightmapToVertexColors_Color4f(const int *lightmapoffsets, float *c, int numverts, const qbyte *samples, int size3, const qbyte *styles)
 {
 	int i;
@@ -595,7 +606,9 @@ static void RSurf_AddLightmapToVertexColors_Color4f(const int *lightmapoffsets, 
 		}
 	}
 }
+#endif
 
+#ifdef LHREMOVESOON
 static void RSurf_FogColors_Vertex3f_Color4f(const float *v, float *c, float colorscale, int numverts, const float *modelorg)
 {
 	int i;
@@ -613,7 +626,9 @@ static void RSurf_FogColors_Vertex3f_Color4f(const float *v, float *c, float col
 		for (i = 0;i < numverts;i++, c += 4)
 			VectorScale(c, colorscale, c);
 }
+#endif
 
+#ifdef LHREMOVESOON
 static void RSurf_FoggedColors_Vertex3f_Color4f(const float *v, float *c, float r, float g, float b, float a, float colorscale, int numverts, const float *modelorg)
 {
 	int i;
@@ -644,7 +659,9 @@ static void RSurf_FoggedColors_Vertex3f_Color4f(const float *v, float *c, float 
 		}
 	}
 }
+#endif
 
+#ifdef LHREMOVESOON
 static void RSurf_FogPassColors_Vertex3f_Color4f(const float *v, float *c, float r, float g, float b, float a, float colorscale, int numverts, const float *modelorg)
 {
 	int i;
@@ -662,7 +679,9 @@ static void RSurf_FogPassColors_Vertex3f_Color4f(const float *v, float *c, float
 		c[3] = a * f;
 	}
 }
+#endif
 
+#ifdef LHREMOVESOON
 static int RSurf_LightSeparate_Vertex3f_Color4f(const matrix4x4_t *matrix, const int *dlightbits, int numverts, const float *vert, float *color, float scale)
 {
 	float f;
@@ -691,50 +710,1024 @@ static int RSurf_LightSeparate_Vertex3f_Color4f(const matrix4x4_t *matrix, const
 	}
 	return lit;
 }
+#endif
+
+static float *RSurf_GetVertexPointer(const entity_render_t *ent, const msurface_t *surface)
+{
+	if (surface->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
+	{
+		texture_t *texture = surface->texture;
+		int i, j;
+		float center[3], center2[3], forward[3], right[3], up[3], v[4][3];
+		matrix4x4_t matrix1, imatrix1;
+		R_Mesh_Matrix(&r_identitymatrix);
+		// a single autosprite surface can contain multiple sprites...
+		for (j = 0;j < surface->mesh.num_vertices - 3;j += 4)
+		{
+			VectorClear(center);
+			for (i = 0;i < 4;i++)
+				VectorAdd(center, surface->mesh.data_vertex3f + (j+i) * 3, center);
+			VectorScale(center, 0.25f, center);
+			Matrix4x4_Transform(&ent->matrix, center, center2);
+			// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
+			Matrix4x4_FromVectors(&matrix1, surface->mesh.data_normal3f + j*3, surface->mesh.data_svector3f + j*3, surface->mesh.data_tvector3f + j*3, center);
+			Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
+			for (i = 0;i < 4;i++)
+				Matrix4x4_Transform(&imatrix1, surface->mesh.data_vertex3f + (j+i)*3, v[i]);
+			if (texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
+			{
+				forward[0] = r_vieworigin[0] - center2[0];
+				forward[1] = r_vieworigin[1] - center2[1];
+				forward[2] = 0;
+				VectorNormalize(forward);
+				right[0] = forward[1];
+				right[1] = -forward[0];
+				right[2] = 0;
+				up[0] = 0;
+				up[1] = 0;
+				up[2] = 1;
+			}
+			else
+			{
+				VectorCopy(r_viewforward, forward);
+				VectorCopy(r_viewright, right);
+				VectorCopy(r_viewup, up);
+			}
+			for (i = 0;i < 4;i++)
+				VectorMAMAMAM(1, center2, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (i+j) * 3);
+		}
+		return varray_vertex3f;
+	}
+	else
+		return surface->mesh.data_vertex3f;
+}
 
 void R_UpdateTextureInfo(const entity_render_t *ent, texture_t *t)
 {
+	// we don't need to set currentframe if t->animated is false because
+	// it was already set up by the texture loader for non-animating
+	if (t->animated)
+	{
+		t->currentframe = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
+		t = t->currentframe;
+	}
 	t->currentmaterialflags = t->basematerialflags;
 	t->currentalpha = ent->alpha;
 	if (t->basematerialflags & MATERIALFLAG_WATERALPHA)
 		t->currentalpha *= r_wateralpha.value;
+	if (!(ent->flags & RENDER_LIGHT))
+		t->currentmaterialflags |= MATERIALFLAG_FULLBRIGHT;
 	if (ent->effects & EF_ADDITIVE)
 		t->currentmaterialflags |= MATERIALFLAG_ADD | MATERIALFLAG_TRANSPARENT;
-	if (t->currentalpha < 1 || t->skin.fog != NULL)
+	else if (t->currentalpha < 1)
 		t->currentmaterialflags |= MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT;
-	// we don't need to set currentframe if t->animated is false because
-	// it was already set up by the texture loader for non-animating
-	if (t->animated)
-		t->currentframe = t->anim_frames[ent->frame != 0][(t->anim_total[ent->frame != 0] >= 2) ? ((int)(r_refdef.time * 5.0f) % t->anim_total[ent->frame != 0]) : 0];
 }
+
+matrix4x4_t r_surf_waterscrollmatrix;
 
 void R_UpdateAllTextureInfo(entity_render_t *ent)
 {
 	int i;
+	Matrix4x4_CreateTranslate(&r_surf_waterscrollmatrix, sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
 	if (ent->model)
 		for (i = 0;i < ent->model->brush.num_textures;i++)
 			R_UpdateTextureInfo(ent, ent->model->brush.data_textures + i);
+}
+
+static void R_DrawSurfaceList(const entity_render_t *ent, texture_t *texture, int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t modelorg)
+{
+	int i;
+	int texturesurfaceindex;
+	const float *v;
+	float *c;
+	float diff[3];
+	float f, r, g, b, a, base, colorscale;
+	const msurface_t *surface;
+	qboolean dolightmap;
+	qboolean dobase;
+	qboolean doambient;
+	qboolean dodetail;
+	qboolean doglow;
+	qboolean dofogpass;
+	qboolean fogallpasses;
+	qboolean waterscrolling;
+	rmeshstate_t m;
+	texture = texture->currentframe;
+	if (texture->currentmaterialflags & MATERIALFLAG_NODRAW)
+		return;
+	c_faces += texturenumsurfaces;
+	// gl_lightmaps debugging mode skips normal texturing
+	if (gl_lightmaps.integer)
+	{
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+		GL_DepthMask(true);
+		GL_DepthTest(true);
+		qglDisable(GL_CULL_FACE);
+		GL_Color(1, 1, 1, 1);
+		memset(&m, 0, sizeof(m));
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			surface = texturesurfacelist[texturesurfaceindex];
+			m.tex[0] = R_GetTexture(surface->lightmaptexture);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+			if (surface->lightmaptexture)
+			{
+				GL_Color(1, 1, 1, 1);
+				m.pointer_color = NULL;
+			}
+			else
+				m.pointer_color = surface->mesh.data_lightmapcolor4f;
+			m.pointer_vertex = surface->mesh.data_vertex3f;
+			R_Mesh_State(&m);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+		qglEnable(GL_CULL_FACE);
+		return;
+	}
+	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
+	GL_DepthMask(!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT));
+	if (texture->currentmaterialflags & MATERIALFLAG_ADD)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else if (texture->currentmaterialflags & MATERIALFLAG_ALPHA)
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	else
+		GL_BlendFunc(GL_ONE, GL_ZERO);
+	// water waterscrolling in texture matrix
+	waterscrolling = (texture->currentmaterialflags & MATERIALFLAG_WATER) && r_waterscroll.value != 0;
+	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglDisable(GL_CULL_FACE);
+	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
+	{
+		if (skyrendernow)
+		{
+			skyrendernow = false;
+			if (skyrendermasked)
+				R_Sky();
+		}
+		// LordHavoc: HalfLife maps have freaky skypolys...
+		if (!ent->model->brush.ishlbsp)
+		{
+			R_Mesh_Matrix(&ent->matrix);
+			GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
+			if (skyrendermasked)
+			{
+				// depth-only (masking)
+				GL_ColorMask(0,0,0,0);
+				// just to make sure that braindead drivers don't draw anything
+				// despite that colormask...
+				GL_BlendFunc(GL_ZERO, GL_ONE);
+			}
+			else
+			{
+				// fog sky
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+			}
+			GL_DepthMask(true);
+			GL_DepthTest(true);
+			memset(&m, 0, sizeof(m));
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				m.pointer_vertex = surface->mesh.data_vertex3f;
+				R_Mesh_State(&m);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
+			GL_ColorMask(r_refdef.colormask[0], r_refdef.colormask[1], r_refdef.colormask[2], 1);
+		}
+	}
+	else if ((texture->currentmaterialflags & MATERIALFLAG_WATER) && r_watershader.value && gl_textureshader && !texture->skin.glow && !fogenabled && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
+	{
+		// NVIDIA Geforce3 distortion texture shader on water
+		float args[4] = {0.05f,0,0,0.04f};
+		memset(&m, 0, sizeof(m));
+		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(r_refdef.time * 16)&63]);
+		m.tex[1] = R_GetTexture(texture->skin.base);
+		m.texcombinergb[0] = GL_REPLACE;
+		m.texcombinergb[1] = GL_REPLACE;
+		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
+		m.texmatrix[1] = r_surf_waterscrollmatrix;
+
+		GL_ActiveTexture(0);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+		GL_ActiveTexture(1);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
+		qglTexEnvfv(GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
+		qglEnable(GL_TEXTURE_SHADER_NV);
+
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			surface = texturesurfacelist[texturesurfaceindex];
+			m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
+			R_Mesh_State(&m);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+
+		qglDisable(GL_TEXTURE_SHADER_NV);
+		qglTexEnvi(GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+		GL_ActiveTexture(0);
+	}
+	else if (texture->currentmaterialflags & (MATERIALFLAG_WATER | MATERIALFLAG_WALL))
+	{
+		// normal surface (wall or water)
+		dobase = true;
+		dolightmap = !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
+		doambient = r_ambient.value >= (1/64.0f);
+		dodetail = texture->skin.detail != NULL && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
+		doglow = texture->skin.glow != NULL;
+		dofogpass = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD);
+		fogallpasses = fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
+		if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+		{
+			if (dobase && dolightmap && gl_combine.integer)
+			{
+				dobase = false;
+				memset(&m, 0, sizeof(m));
+				m.tex[1] = R_GetTexture(texture->skin.base);
+				if (waterscrolling)
+					m.texmatrix[1] = r_surf_waterscrollmatrix;
+				m.texrgbscale[1] = 2;
+				m.pointer_color = varray_color4f;
+				colorscale = 1;
+				r = ent->colormod[0] * colorscale;
+				g = ent->colormod[1] * colorscale;
+				b = ent->colormod[2] * colorscale;
+				a = texture->currentalpha;
+				base = r_ambient.value * (1.0f / 64.0f);
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+					m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
+					if (surface->lightmaptexture)
+					{
+						m.tex[0] = R_GetTexture(surface->lightmaptexture);
+						if (fogallpasses)
+						{
+							m.pointer_color = varray_color4f;
+							for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+							{
+								VectorSubtract(v, modelorg, diff);
+								f = 1 - exp(fogdensity/DotProduct(diff, diff));
+								c[0] = f * r;
+								c[1] = f * g;
+								c[2] = f * b;
+								c[3] = a;
+							}
+						}
+						else
+						{
+							m.pointer_color = NULL;
+							GL_Color(r, g, b, a);
+						}
+					}
+					else
+					{
+						m.tex[0] = R_GetTexture(r_texture_white);
+						m.pointer_color = varray_color4f;
+#ifdef LHREMOVESOON
+						if (surface->styles[0] != 255 || surface->dlightframe == r_framecount)
+#else
+						if (surface->styles[0] != 255)
+#endif
+						{
+							for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+							{
+								c[0] = 0;
+								c[1] = 0;
+								c[2] = 0;
+								if (surface->styles[0] != 255)
+								{
+									if (surface->mesh.data_lightmapcolor4f)
+									{
+										float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 128.0f);
+										VectorMA(c, scale, surface->mesh.data_lightmapcolor4f + i*4, c);
+									}
+									else if (surface->mesh.data_lightmapoffsets)
+									{
+										const qbyte *lm = surface->samples + surface->mesh.data_lightmapoffsets[i];
+										float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 32768.0f);
+										VectorMA(c, scale, lm, c);
+										if (surface->styles[1] != 255)
+										{
+											int size3 = ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3;
+											lm += size3;
+											scale = d_lightstylevalue[surface->styles[1]] * (1.0f / 32768.0f);
+											VectorMA(c, scale, lm, c);
+											if (surface->styles[2] != 255)
+											{
+												lm += size3;
+												scale = d_lightstylevalue[surface->styles[2]] * (1.0f / 32768.0f);
+												VectorMA(c, scale, lm, c);
+												if (surface->styles[3] != 255)
+												{
+													lm += size3;
+													scale = d_lightstylevalue[surface->styles[3]] * (1.0f / 32768.0f);
+													VectorMA(c, scale, lm, c);
+												}
+											}
+										}
+									}
+								}
+#ifdef LHREMOVESOON
+								if (surface->dlightframe == r_framecount)
+								{
+									int l;
+									float worldvertex[3];
+									// TODO: make this work with autosprite which uses identitymatrix
+									Matrix4x4_Transform(&ent->matrix, v, worldvertex);
+									for (l = 0;l < r_numdlights;l++)
+									{
+										if (surface->dlightbits[l >> 5] & (1 << (l & 31)))
+										{
+											float f2;
+											dlight_t *light = &r_dlight[l];
+											f2 = VectorDistance2(worldvertex, light->origin) + LIGHTOFFSET;
+											if (f2 < light->rtlight.lightmap_cullradius2)
+											{
+												f2 = (1.0f / f2) - light->rtlight.lightmap_subtract;
+												VectorMA(c, f2, light->rtlight.lightmap_light, c);
+											}
+										}
+									}
+								}
+#endif
+								c[0] *= r;
+								c[1] *= g;
+								c[2] *= b;
+								if (fogallpasses)
+								{
+									VectorSubtract(v, modelorg, diff);
+									f = 1 - exp(fogdensity/DotProduct(diff, diff));
+									VectorScale(c, f, c);
+								}
+								if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+									c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+								else
+									c[3] = a;
+							}
+						}
+						else
+						{
+							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+							{
+								for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+								{
+									c[0] = 0;
+									c[1] = 0;
+									c[2] = 0;
+									c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+								}
+							}
+							else
+							{
+								m.pointer_color = NULL;
+								GL_Color(0, 0, 0, a);
+							}
+						}
+					}
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			if (dobase)
+			{
+				dobase = false;
+				memset(&m, 0, sizeof(m));
+				m.tex[0] = R_GetTexture(texture->skin.base);
+				if (waterscrolling)
+					m.texmatrix[0] = r_surf_waterscrollmatrix;
+				m.texmatrix[0] = r_surf_waterscrollmatrix;
+				m.pointer_color = varray_color4f;
+				colorscale = 1;
+				if (gl_combine.integer)
+				{
+					m.texrgbscale[0] = 4;
+					colorscale *= 0.25f;
+				}
+				r = ent->colormod[0] * colorscale;
+				g = ent->colormod[1] * colorscale;
+				b = ent->colormod[2] * colorscale;
+				a = texture->currentalpha;
+				if (dolightmap)
+				{
+					for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+					{
+						surface = texturesurfacelist[texturesurfaceindex];
+						m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+						m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							c[0] = 0;
+							c[1] = 0;
+							c[2] = 0;
+							if (surface->styles[0] != 255)
+							{
+								if (surface->mesh.data_lightmapcolor4f)
+								{
+									float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 128.0f);
+									VectorMA(c, scale, surface->mesh.data_lightmapcolor4f + i*4, c);
+								}
+								else if (surface->mesh.data_lightmapoffsets)
+								{
+									const qbyte *lm = surface->samples + surface->mesh.data_lightmapoffsets[i];
+									float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 32768.0f);
+									VectorMA(c, scale, lm, c);
+									if (surface->styles[1] != 255)
+									{
+										int size3 = ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3;
+										lm += size3;
+										scale = d_lightstylevalue[surface->styles[1]] * (1.0f / 32768.0f);
+										VectorMA(c, scale, lm, c);
+										if (surface->styles[2] != 255)
+										{
+											lm += size3;
+											scale = d_lightstylevalue[surface->styles[2]] * (1.0f / 32768.0f);
+											VectorMA(c, scale, lm, c);
+											if (surface->styles[3] != 255)
+											{
+												lm += size3;
+												scale = d_lightstylevalue[surface->styles[3]] * (1.0f / 32768.0f);
+												VectorMA(c, scale, lm, c);
+											}
+										}
+									}
+								}
+							}
+#ifdef LHREMOVESOON
+							if (surface->dlightframe == r_framecount)
+							{
+								// TODO: make this work with autosprite which uses identitymatrix
+								Matrix4x4_Transform(&ent->matrix, v, worldvertex);
+								for (l = 0;l < r_numdlights;l++)
+								{
+									if (surface->dlightbits[l >> 5] & (1 << (l & 31)))
+									{
+										float f2;
+										dlight_t *light = &r_dlight[l];
+										f2 = VectorDistance2(worldvertex, light->origin) + LIGHTOFFSET;
+										if (f2 < light->rtlight.lightmap_cullradius2)
+										{
+											f2 = (1.0f / f2) - light->rtlight.lightmap_subtract;
+											VectorMA(c, f2, light->rtlight.lightmap_light, c);
+										}
+									}
+								}
+							}
+#endif
+							c[0] *= r;
+							c[1] *= g;
+							c[2] *= b;
+							if (fogallpasses)
+							{
+								VectorSubtract(v, modelorg, diff);
+								f = 1 - exp(fogdensity/DotProduct(diff, diff));
+								VectorScale(c, f, c);
+							}
+							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+								c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+							else
+								c[3] = a;
+						}
+						R_Mesh_State(&m);
+						GL_LockArrays(0, surface->mesh.num_vertices);
+						R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+						GL_LockArrays(0, 0);
+					}
+				}
+				else
+				{
+					if (fogallpasses)
+					{
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+						{
+							surface = texturesurfacelist[texturesurfaceindex];
+							m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+							m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+							if (m.tex[1])
+								m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
+							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+							{
+								m.pointer_color = varray_color4f;
+								for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+								{
+									VectorSubtract(v, modelorg, diff);
+									f = 1 - exp(fogdensity/DotProduct(diff, diff));
+									c[0] = r * f;
+									c[1] = g * f;
+									c[2] = b * f;
+									c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+								}
+							}
+							else
+							{
+								m.pointer_color = varray_color4f;
+								for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+								{
+									VectorSubtract(v, modelorg, diff);
+									f = 1 - exp(fogdensity/DotProduct(diff, diff));
+									c[0] = r * f;
+									c[1] = g * f;
+									c[2] = b * f;
+									c[3] = a;
+								}
+							}
+							R_Mesh_State(&m);
+							GL_LockArrays(0, surface->mesh.num_vertices);
+							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+							GL_LockArrays(0, 0);
+						}
+					}
+					else
+					{
+						for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+						{
+							surface = texturesurfacelist[texturesurfaceindex];
+							m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+							m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+							if (m.tex[1])
+								m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
+							if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+							{
+								m.pointer_color = varray_color4f;
+								for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+								{
+									c[0] = r;
+									c[1] = g;
+									c[2] = b;
+									c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+								}
+							}
+							else
+							{
+								m.pointer_color = NULL;
+								GL_Color(r, g, b, a);
+							}
+							R_Mesh_State(&m);
+							GL_LockArrays(0, surface->mesh.num_vertices);
+							R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+							GL_LockArrays(0, 0);
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			if (!dolightmap && dobase)
+			{
+				dolightmap = false;
+				dobase = false;
+				GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], 1);
+				memset(&m, 0, sizeof(m));
+				m.tex[0] = R_GetTexture(texture->skin.base);
+				if (waterscrolling)
+					m.texmatrix[0] = r_surf_waterscrollmatrix;
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			if (r_lightmapintensity <= 0 && dolightmap && dobase)
+			{
+				dolightmap = false;
+				dobase = false;
+				GL_Color(0, 0, 0, 1);
+				memset(&m, 0, sizeof(m));
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			if (r_textureunits.integer >= 2 && gl_combine.integer && dolightmap && dobase)
+			{
+				// dualtexture combine
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+				GL_DepthMask(true);
+				dolightmap = false;
+				dobase = false;
+				memset(&m, 0, sizeof(m));
+				m.tex[1] = R_GetTexture(texture->skin.base);
+				if (waterscrolling)
+					m.texmatrix[1] = r_surf_waterscrollmatrix;
+				m.texrgbscale[1] = 2;
+				r = ent->colormod[0] * r_lightmapintensity;
+				g = ent->colormod[1] * r_lightmapintensity;
+				b = ent->colormod[2] * r_lightmapintensity;
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					memset(&m, 0, sizeof(m));
+					m.tex[1] = R_GetTexture(texture->skin.base);
+					if (waterscrolling)
+						m.texmatrix[1] = r_surf_waterscrollmatrix;
+					m.texrgbscale[1] = 2;
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+					m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
+					if (surface->lightmaptexture)
+					{
+						m.tex[0] = R_GetTexture(surface->lightmaptexture);
+						m.pointer_color = NULL;
+						GL_Color(r, g, b, 1);
+					}
+					else if (r == 1 && g == 1 && b == 1)
+					{
+						m.tex[0] = R_GetTexture(r_texture_white);
+						m.pointer_color = surface->mesh.data_lightmapcolor4f;
+					}
+					else
+					{
+						m.tex[0] = R_GetTexture(r_texture_white);
+						m.pointer_color = varray_color4f;
+						for (i = 0;i < surface->mesh.num_vertices;i++)
+						{
+							varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * r;
+							varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * g;
+							varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * b;
+							varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3];
+						}
+					}
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			// single texture
+			if (dolightmap)
+			{
+				GL_BlendFunc(GL_ONE, GL_ZERO);
+				GL_DepthMask(true);
+				GL_Color(1, 1, 1, 1);
+				memset(&m, 0, sizeof(m));
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.tex[0] = R_GetTexture(surface->lightmaptexture);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordlightmap2f;
+					if (surface->lightmaptexture)
+						m.pointer_color = NULL;
+					else
+						m.pointer_color = surface->mesh.data_lightmapcolor4f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			if (dobase)
+			{
+				GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+				GL_DepthMask(false);
+				GL_Color(r_lightmapintensity * ent->colormod[0], r_lightmapintensity * ent->colormod[1], r_lightmapintensity * ent->colormod[2], 1);
+				memset(&m, 0, sizeof(m));
+				m.tex[0] = R_GetTexture(texture->skin.base);
+				if (waterscrolling)
+					m.texmatrix[0] = r_surf_waterscrollmatrix;
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+		}
+		if (doambient)
+		{
+			doambient = false;
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+			memset(&m, 0, sizeof(m));
+			m.tex[0] = R_GetTexture(texture->skin.base);
+			if (waterscrolling)
+				m.texmatrix[0] = r_surf_waterscrollmatrix;
+			m.pointer_color = varray_color4f;
+			colorscale = 1;
+			if (gl_combine.integer)
+			{
+				m.texrgbscale[0] = 4;
+				colorscale *= 0.25f;
+			}
+			base = r_ambient.value * (1.0f / 64.0f);
+			r = ent->colormod[0] * colorscale * base;
+			g = ent->colormod[1] * colorscale * base;
+			b = ent->colormod[2] * colorscale * base;
+			a = texture->currentalpha;
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+				{
+					c[0] = r;
+					c[1] = g;
+					c[2] = b;
+					if (fogallpasses)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = 1 - exp(fogdensity/DotProduct(diff, diff));
+						VectorScale(c, f, c);
+					}
+					if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+						c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+					else
+						c[3] = a;
+				}
+				R_Mesh_State(&m);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
+		}
+		// marklights based vertex dlight rendering...  evil and broken
+#if 0
+		GL_BlendFunc(GL_ONE, GL_ONE);
+		GL_DepthMask(false);
+		memset(&m, 0, sizeof(m));
+		m.tex[0] = R_GetTexture(texture->skin.base);
+		if (waterscrolling)
+			m.texmatrix[0] = r_surf_waterscrollmatrix;
+		m.pointer_color = varray_color4f;
+		r = ent->colormod[0] * r_lightmapintensity;
+		g = ent->colormod[1] * r_lightmapintensity;
+		b = ent->colormod[2] * r_lightmapintensity;
+		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+		{
+			qboolean lit;
+			surface = texturesurfacelist[texturesurfaceindex];
+			if (surface->dlightframe != r_framecount)
+				continue;
+			m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			lit = false;
+			for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+			{
+				c[0] = 0;
+				c[1] = 0;
+				c[2] = 0;
+				c[3] = 1;
+				// TODO: make this work with autosprite which uses identitymatrix or change autosprite
+				Matrix4x4_Transform(&ent->matrix, v, worldvertex);
+				for (l = 0;l < r_numdlights;l++)
+				{
+					if (surface->dlightbits[l >> 5] & (1 << (l & 31)))
+					{
+						float f2;
+						dlight_t *light = &r_dlight[l];
+						f2 = VectorDistance2(worldvertex, light->origin) + LIGHTOFFSET;
+						if (f2 < light->rtlight.lightmap_cullradius2)
+						{
+							f2 = (1.0f / f2) - light->rtlight.lightmap_subtract;
+							VectorMA(c, f2, light->rtlight.lightmap_light, c);
+							lit = true;
+						}
+					}
+				}
+				c[0] *= r;
+				c[1] *= g;
+				c[2] *= b;
+				if (fogallpasses)
+				{
+					VectorSubtract(v, modelorg, diff);
+					f = 1 - exp(fogdensity/DotProduct(diff, diff));
+					VectorScale(c, f, c);
+				}
+				if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+					c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+				else
+					c[3] = a;
+			}
+			if (!lit)
+				continue;
+			R_Mesh_State(&m);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+#endif
+		if (dodetail)
+		{
+			GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+			GL_DepthMask(false);
+			GL_Color(1, 1, 1, 1);
+			memset(&m, 0, sizeof(m));
+			m.tex[0] = R_GetTexture(texture->skin.detail);
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoorddetail2f;
+				R_Mesh_State(&m);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
+		}
+		if (doglow)
+		{
+			// if glow was not already done using multitexture, do it now.
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+			memset(&m, 0, sizeof(m));
+			m.tex[0] = R_GetTexture(texture->skin.glow);
+			if (waterscrolling)
+				m.texmatrix[0] = r_surf_waterscrollmatrix;
+			m.pointer_color = varray_color4f;
+			colorscale = 1;
+			r = ent->colormod[0] * colorscale;
+			g = ent->colormod[1] * colorscale;
+			b = ent->colormod[2] * colorscale;
+			a = texture->currentalpha;
+			if (fogallpasses)
+			{
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+					{
+						m.pointer_color = varray_color4f;
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							VectorSubtract(v, modelorg, diff);
+							f = 1 - exp(fogdensity/DotProduct(diff, diff));
+							c[0] = f * r;
+							c[1] = f * g;
+							c[2] = f * b;
+							c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+						}
+					}
+					else
+					{
+						m.pointer_color = varray_color4f;
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							VectorSubtract(v, modelorg, diff);
+							f = 1 - exp(fogdensity/DotProduct(diff, diff));
+							c[0] = f * r;
+							c[1] = f * g;
+							c[2] = f * b;
+							c[3] = a;
+						}
+					}
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+			else
+			{
+				for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+				{
+					surface = texturesurfacelist[texturesurfaceindex];
+					m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+					m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+					if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+					{
+						m.pointer_color = varray_color4f;
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							c[0] = r;
+							c[1] = g;
+							c[2] = b;
+							c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+						}
+					}
+					else
+					{
+						m.pointer_color = NULL;
+						GL_Color(r, g, b, a);
+					}
+					R_Mesh_State(&m);
+					GL_LockArrays(0, surface->mesh.num_vertices);
+					R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+					GL_LockArrays(0, 0);
+				}
+			}
+		}
+		if (dofogpass)
+		{
+			// if this is opaque use alpha blend which will darken the earlier
+			// passes cheaply.
+			//
+			// if this is an alpha blended material, all the earlier passes
+			// were darkened by fog already, so we only need to add the fog
+			// color ontop through the fog mask texture
+			//
+			// if this is an additive blended material, all the earlier passes
+			// were darkened by fog already, and we should not add fog color
+			// (because the background was not darkened, there is no fog color
+			// that was lost behind it).
+			if (!fogallpasses)
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			else
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			GL_DepthMask(false);
+			memset(&m, 0, sizeof(m));
+			m.tex[0] = R_GetTexture(texture->skin.fog);
+			if (waterscrolling)
+				m.texmatrix[0] = r_surf_waterscrollmatrix;
+			r = fogcolor[0];
+			g = fogcolor[1];
+			b = fogcolor[2];
+			a = texture->currentalpha;
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				m.pointer_color = varray_color4f;
+				//RSurf_FogPassColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
+				if (surface->mesh.data_lightmapcolor4f && (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT))
+				{
+					m.pointer_color = varray_color4f;
+					for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = exp(fogdensity/DotProduct(diff, diff));
+						c[0] = r;
+						c[1] = g;
+						c[2] = b;
+						c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * f * a;
+					}
+				}
+				else
+				{
+					m.pointer_color = varray_color4f;
+					for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = exp(fogdensity/DotProduct(diff, diff));
+						c[0] = r;
+						c[1] = g;
+						c[2] = b;
+						c[3] = f * a;
+					}
+				}
+				R_Mesh_State(&m);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
+		}
+	}
+	if (texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglEnable(GL_CULL_FACE);
 }
 
 static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surface = ent->model->brush.data_surfaces + calldata2;
-	rmeshstate_t m;
-	float base, colorscale;
 	vec3_t modelorg;
 	texture_t *texture;
+#ifdef LHREMOVESOON
+	rmeshstate_t m;
+	float base, colorscale;
 	float args[4] = {0.05f,0,0,0.04f};
-	int turb, fullbright;
+	matrix4x4_t scrollmatrix;
+#endif
 
 	texture = surface->texture;
-	R_UpdateTextureInfo(ent, texture);
-	if (texture->currentmaterialflags & MATERIALFLAG_SKY)
+	if (texture->basematerialflags & MATERIALFLAG_SKY)
 		return; // transparent sky is too difficult
+	R_UpdateTextureInfo(ent, texture);
 
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-
+	R_DrawSurfaceList(ent, texture, 1, &surface, modelorg);
+#ifdef LHREMOVESOON
 	GL_DepthTest(!(texture->currentmaterialflags & MATERIALFLAG_NODEPTHTEST));
 	GL_DepthMask(!(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT));
 	if (texture->currentmaterialflags & MATERIALFLAG_ADD)
@@ -744,17 +1737,20 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	else
 		GL_BlendFunc(GL_ONE, GL_ZERO);
 
-	turb = texture->currentmaterialflags & MATERIALFLAG_WATER && r_waterscroll.value;
-	fullbright = !(ent->flags & RENDER_LIGHT) || (texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT) || !surface->samples;
-	base = fullbright ? 2.0f : r_ambient.value * (1.0f / 64.0f);
-	if (texture->currentmaterialflags & MATERIALFLAG_WATER)
-		base *= 0.5f;
-	if (texture->currentmaterialflags & MATERIALFLAG_WATER && gl_textureshader && r_watershader.value && !fogenabled && fullbright && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
+	// water scrolling in texture matrix
+	if ((texture->currentmaterialflags & MATERIALFLAG_WATER) && r_waterscroll.value != 0)
+		Matrix4x4_CreateTranslate(&scrollmatrix, sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+	else
+		scrollmatrix = r_identitymatrix;
+
+	if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglDisable(GL_CULL_FACE);
+	if ((texture->currentmaterialflags & MATERIALFLAG_WATER) && r_watershader.value && gl_textureshader && !texture->skin.glow && !fogenabled && ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1)
 	{
 		// NVIDIA Geforce3 distortion texture shader on water
 		GL_Color(1, 1, 1, texture->currentalpha);
 		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = surface->mesh.data_vertex3f;
+		m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
 		m.tex[0] = R_GetTexture(mod_shared_distorttexture[(int)(r_refdef.time * 16)&63]);
 		m.tex[1] = R_GetTexture(texture->skin.base);
 		m.texcombinergb[0] = GL_REPLACE;
@@ -762,7 +1758,7 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 		m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 		m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
 		Matrix4x4_CreateFromQuakeEntity(&m.texmatrix[0], 0, 0, 0, 0, 0, 0, r_watershader.value);
-		Matrix4x4_CreateTranslate(&m.texmatrix[1], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+		m.texmatrix[1] = scrollmatrix;
 		R_Mesh_State(&m);
 
 		GL_ActiveTexture(0);
@@ -783,84 +1779,350 @@ static void RSurfShader_Transparent_Callback(const void *calldata1, int calldata
 	}
 	else
 	{
-		memset(&m, 0, sizeof(m));
-		m.pointer_vertex = surface->mesh.data_vertex3f;
-		m.pointer_color = varray_color4f;
-		m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
-		m.tex[0] = R_GetTexture(texture->skin.base);
-		if (turb)
+		int i;
+		float r, g, b, a, f, *c, diff[3];
+		const float *v;
+		qboolean dolightmaptexture;
+		qboolean dodetail;
+		qboolean doglow;
+		dolightmaptexture = surface->lightmaptexture && gl_combine.integer && !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT);
+		dodetail = texture->skin.detail != NULL && !(texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT);
+		doglow = texture->skin.glow != NULL;
+		// TODO: ideally transparent surface rendering should call
+		// R_RenderLighting instead of using vertex dlights
+		// (it would need scrolling support added though!)
+		if (dolightmaptexture)
 		{
-			// scrolling in texture matrix
-			Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+			{
+				memset(&m, 0, sizeof(m));
+				m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				m.tex[0] = R_GetTexture(texture->skin.base);
+				m.texmatrix[0] = scrollmatrix;
+				m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
+				m.tex[1] = R_GetTexture(surface->lightmaptexture);
+				m.texrgbscale[1] = 2;
+				m.pointer_color = varray_color4f;
+				if (r_textureunits.integer >= 3 && dodetail)
+				{
+					dodetail = false;
+					m.pointer_texcoord[2] = surface->mesh.data_texcoorddetail2f;
+					m.tex[2] = R_GetTexture(texture->skin.detail);
+					m.texmatrix[2] = scrollmatrix;
+					if (r_textureunits.integer >= 4 && doglow)
+					{
+						doglow = false;
+						m.pointer_texcoord[3] = surface->mesh.data_texcoordtexture2f;
+						m.tex[3] = R_GetTexture(texture->skin.glow);
+						m.texmatrix[3] = scrollmatrix;
+					}
+				}
+				else if (r_textureunits.integer >= 3 && doglow && !dodetail)
+				{
+					doglow = false;
+					m.pointer_texcoord[2] = surface->mesh.data_texcoordtexture2f;
+					m.tex[2] = R_GetTexture(texture->skin.glow);
+					m.texmatrix[2] = scrollmatrix;
+				}
+				colorscale = 1;
+				r = ent->colormod[0] * colorscale;
+				g = ent->colormod[1] * colorscale;
+				b = ent->colormod[2] * colorscale;
+				a = texture->currentalpha;
+				for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+				{
+					c[0] = r;
+					c[1] = g;
+					c[2] = b;
+					if (fogenabled)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = 1 - exp(fogdensity/DotProduct(diff, diff));
+						VectorScale(c, f, c);
+					}
+					if (surface->mesh.data_lightmapcolor4f)
+						c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+					else
+						c[3] = a;
+				}
+				R_Mesh_State(&m);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
+			if ((r_ambient.value > 0 || surface->dlightframe == r_framecount) && !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+			{
+				GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+				GL_DepthMask(false);
+				memset(&m, 0, sizeof(m));
+				m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+				m.tex[0] = R_GetTexture(texture->skin.base);
+				m.texmatrix[0] = scrollmatrix;
+				m.pointer_color = varray_color4f;
+				colorscale = 1;
+				if (gl_combine.integer)
+				{
+					m.texrgbscale[0] = 4;
+					colorscale *= 0.25f;
+				}
+				r = ent->colormod[0] * colorscale;
+				g = ent->colormod[1] * colorscale;
+				b = ent->colormod[2] * colorscale;
+				a = texture->currentalpha;
+				base = r_ambient.value * (1.0f / 64.0f);
+				for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+				{
+					c[0] = base;
+					c[1] = base;
+					c[2] = base;
+					if (surface->dlightframe == r_framecount)
+					{
+						// TODO: make this work with autosprite which uses identitymatrix
+						Matrix4x4_Transform(&ent->matrix, v, worldvertex);
+						for (l = 0;l < r_numdlights;l++)
+						{
+							if (surface->dlightbits[l >> 5] & (1 << (l & 31)))
+							{
+								float f2;
+								dlight_t *light = &r_dlight[l];
+								f2 = VectorDistance2(worldvertex, light->origin) + LIGHTOFFSET;
+								if (f2 < light->rtlight.lightmap_cullradius2)
+								{
+									f2 = (1.0f / f2) - light->rtlight.lightmap_subtract;
+									VectorMA(c, f2, light->rtlight.lightmap_light, c);
+								}
+							}
+						}
+					}
+					c[0] *= r;
+					c[1] *= g;
+					c[2] *= b;
+					if (fogenabled)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = 1 - exp(fogdensity/DotProduct(diff, diff));
+						VectorScale(c, f, c);
+					}
+					if (surface->mesh.data_lightmapcolor4f)
+						c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+					else
+						c[3] = a;
+				}
+				R_Mesh_State(&m);
+				GL_LockArrays(0, surface->mesh.num_vertices);
+				R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+				GL_LockArrays(0, 0);
+			}
 		}
-		colorscale = 1;
-		if (gl_combine.integer)
-		{
-			m.texrgbscale[0] = 4;
-			colorscale *= 0.25f;
-		}
-		R_FillColors(varray_color4f, surface->mesh.num_vertices, base * ent->colormod[0], base * ent->colormod[1], base * ent->colormod[2], texture->currentalpha);
-		if (!fullbright)
-		{
-			if (surface->dlightframe == r_framecount)
-				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surface->dlightbits, surface->mesh.num_vertices, surface->mesh.data_vertex3f, varray_color4f, 1);
-			if (surface->samples)
-				RSurf_AddLightmapToVertexColors_Color4f(surface->mesh.data_lightmapoffsets, varray_color4f,surface->mesh.num_vertices, surface->samples, ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3, surface->styles);
-		}
-		RSurf_FogColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, colorscale, surface->mesh.num_vertices, modelorg);
-		R_Mesh_State(&m);
-		GL_LockArrays(0, surface->mesh.num_vertices);
-		R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
-		GL_LockArrays(0, 0);
-		if (texture->skin.glow)
+		else
 		{
 			memset(&m, 0, sizeof(m));
-			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-			GL_DepthMask(false);
+			m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.tex[0] = R_GetTexture(texture->skin.base);
+			m.texmatrix[0] = scrollmatrix;
 			m.pointer_color = varray_color4f;
-			m.tex[0] = R_GetTexture(texture->skin.glow);
-			m.pointer_vertex = surface->mesh.data_vertex3f;
-			if (m.tex[0])
+			colorscale = 1;
+			if (gl_combine.integer)
 			{
-				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
-				if (turb)
+				m.texrgbscale[0] = 4;
+				colorscale *= 0.25f;
+			}
+			if (doglow)
+			{
+				doglow = false;
+				m.pointer_texcoord[1] = surface->mesh.data_texcoordtexture2f;
+				m.tex[1] = R_GetTexture(texture->skin.glow);
+				m.texmatrix[1] = scrollmatrix;
+			}
+			r = ent->colormod[0] * colorscale;
+			g = ent->colormod[1] * colorscale;
+			b = ent->colormod[2] * colorscale;
+			a = texture->currentalpha;
+			base = r_ambient.value * (1.0f / 64.0f);
+			if ((ent->flags & RENDER_LIGHT) && !(texture->currentmaterialflags & MATERIALFLAG_FULLBRIGHT))
+			{
+				for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
 				{
-					// scrolling in texture matrix
-					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
+					c[0] = base;
+					c[1] = base;
+					c[2] = base;
+					if (surface->styles[0] != 255)
+					{
+						if (surface->mesh.data_lightmapcolor4f)
+						{
+							float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 128.0f);
+							VectorMA(c, scale, surface->mesh.data_lightmapcolor4f + i*4, c);
+						}
+						else if (surface->mesh.data_lightmapoffsets)
+						{
+							const qbyte *lm = surface->samples + surface->mesh.data_lightmapoffsets[i];
+							float scale = d_lightstylevalue[surface->styles[0]] * (1.0f / 32768.0f);
+							VectorMA(c, scale, lm, c);
+							if (surface->styles[1] != 255)
+							{
+								int size3 = ((surface->extents[0]>>4)+1)*((surface->extents[1]>>4)+1)*3;
+								lm += size3;
+								scale = d_lightstylevalue[surface->styles[1]] * (1.0f / 32768.0f);
+								VectorMA(c, scale, lm, c);
+								if (surface->styles[2] != 255)
+								{
+									lm += size3;
+									scale = d_lightstylevalue[surface->styles[2]] * (1.0f / 32768.0f);
+									VectorMA(c, scale, lm, c);
+									if (surface->styles[3] != 255)
+									{
+										lm += size3;
+										scale = d_lightstylevalue[surface->styles[3]] * (1.0f / 32768.0f);
+										VectorMA(c, scale, lm, c);
+									}
+								}
+							}
+						}
+					}
+					if (surface->dlightframe == r_framecount)
+					{
+						// TODO: make this work with autosprite which uses identitymatrix
+						Matrix4x4_Transform(&ent->matrix, v, worldvertex);
+						for (l = 0;l < r_numdlights;l++)
+						{
+							if (surface->dlightbits[l >> 5] & (1 << (l & 31)))
+							{
+								float f2;
+								dlight_t *light = &r_dlight[l];
+								f2 = VectorDistance2(worldvertex, light->origin) + LIGHTOFFSET;
+								if (f2 < light->rtlight.lightmap_cullradius2)
+								{
+									f2 = (1.0f / f2) - light->rtlight.lightmap_subtract;
+									VectorMA(c, f2, light->rtlight.lightmap_light, c);
+								}
+							}
+						}
+					}
+					c[0] *= r;
+					c[1] *= g;
+					c[2] *= b;
+					if (fogenabled)
+					{
+						VectorSubtract(v, modelorg, diff);
+						f = 1 - exp(fogdensity/DotProduct(diff, diff));
+						VectorScale(c, f, c);
+					}
+					if (surface->mesh.data_lightmapcolor4f)
+						c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+					else
+						c[3] = a;
+				}
+			}
+			else
+			{
+				if (fogenabled)
+				{
+					if (surface->mesh.data_lightmapcolor4f)
+					{
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							VectorSubtract(v, modelorg, diff);
+							f = 1 - exp(fogdensity/DotProduct(diff, diff));
+							c[0] = r * f;
+							c[1] = g * f;
+							c[2] = b * f;
+							c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+						}
+					}
+					else
+					{
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							VectorSubtract(v, modelorg, diff);
+							f = 1 - exp(fogdensity/DotProduct(diff, diff));
+							c[0] = r * f;
+							c[1] = g * f;
+							c[2] = b * f;
+							c[3] = a;
+						}
+					}
+				}
+				else
+				{
+					if (surface->mesh.data_lightmapcolor4f)
+					{
+						for (i = 0, v = m.pointer_vertex, c = varray_color4f;i < surface->mesh.num_vertices;i++, v += 3, c += 4)
+						{
+							c[0] = r;
+							c[1] = g;
+							c[2] = b;
+							c[3] = surface->mesh.data_lightmapcolor4f[i*4+3] * a;
+						}
+					}
+					else
+					{
+						m.pointer_color = NULL;
+						GL_Color(r, g, b, a);
+					}
 				}
 			}
 			R_Mesh_State(&m);
-			RSurf_FoggedColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, 1, 1, 1, texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+		// note: dodetail is never set if transparent
+		if (dodetail)
+		{
+			GL_BlendFunc(GL_DST_COLOR, GL_SRC_COLOR);
+			GL_DepthMask(false);
+			memset(&m, 0, sizeof(m));
+			m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoorddetail2f;
+			m.tex[0] = R_GetTexture(texture->skin.detail);
+			m.pointer_color = varray_color4f;
+			RSurf_FoggedColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, ent->colormod[0], ent->colormod[1], ent->colormod[2], texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			R_Mesh_State(&m);
+			GL_LockArrays(0, surface->mesh.num_vertices);
+			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
+			GL_LockArrays(0, 0);
+		}
+		if (doglow)
+		{
+			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+			GL_DepthMask(false);
+			memset(&m, 0, sizeof(m));
+			m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
+			m.tex[0] = R_GetTexture(texture->skin.glow);
+			m.texmatrix[0] = scrollmatrix;
+			m.pointer_color = varray_color4f;
+			RSurf_FoggedColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, ent->colormod[0], ent->colormod[1], ent->colormod[2], texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			R_Mesh_State(&m);
 			GL_LockArrays(0, surface->mesh.num_vertices);
 			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 		if (fogenabled && !(texture->currentmaterialflags & MATERIALFLAG_ADD))
 		{
-			memset(&m, 0, sizeof(m));
 			GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
 			GL_DepthMask(false);
-			m.pointer_color = varray_color4f;
+			memset(&m, 0, sizeof(m));
+			m.pointer_vertex = RSurf_GetVertexPointer(ent, surface);
+			m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
 			m.tex[0] = R_GetTexture(texture->skin.fog);
-			m.pointer_vertex = surface->mesh.data_vertex3f;
-			if (m.tex[0])
-			{
-				m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
-				if (turb)
-				{
-					// scrolling in texture matrix
-					Matrix4x4_CreateTranslate(&m.texmatrix[0], sin(r_refdef.time) * 0.025 * r_waterscroll.value, sin(r_refdef.time * 0.8f) * 0.025 * r_waterscroll.value, 0);
-				}
-			}
-			R_Mesh_State(&m);
+			m.texmatrix[0] = scrollmatrix;
+			m.pointer_color = varray_color4f;
 			RSurf_FogPassColors_Vertex3f_Color4f(surface->mesh.data_vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], texture->currentalpha, 1, surface->mesh.num_vertices, modelorg);
+			R_Mesh_State(&m);
 			GL_LockArrays(0, surface->mesh.num_vertices);
 			R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
 			GL_LockArrays(0, 0);
 		}
 	}
+	if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+		qglEnable(GL_CULL_FACE);
+#endif
 }
 
+#ifdef LHREMOVESOON
 void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int texturesurfaceindex;
@@ -903,20 +2165,6 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 			GL_LockArrays(0, 0);
 		}
 		qglEnable(GL_CULL_FACE);
-		return;
-	}
-	// transparent surfaces get sorted for later drawing
-	if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
-	{
-		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
-		{
-			surface = texturesurfacelist[texturesurfaceindex];
-			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-			Matrix4x4_Transform(&ent->matrix, tempcenter, center);
-			R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->brush.data_surfaces);
-		}
 		return;
 	}
 	if (texture->currentmaterialflags & MATERIALFLAG_WALL)
@@ -1194,6 +2442,32 @@ void R_DrawSurfaceList(entity_render_t *ent, texture_t *texture, int texturenums
 		return;
 	}
 }
+#endif
+
+void R_QueueSurfaceList(entity_render_t *ent, texture_t *texture, int texturenumsurfaces, const msurface_t **texturesurfacelist, const vec3_t modelorg)
+{
+	int texturesurfaceindex;
+	const msurface_t *surface;
+	vec3_t tempcenter, center;
+	if (texture->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+	{
+		// drawing sky transparently would be too difficult
+		if (!(texture->currentmaterialflags & MATERIALFLAG_SKY))
+		{
+			for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
+			{
+				surface = texturesurfacelist[texturesurfaceindex];
+				tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+				tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+				tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+				Matrix4x4_Transform(&ent->matrix, tempcenter, center);
+				R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->brush.data_surfaces);
+			}
+		}
+	}
+	else
+		R_DrawSurfaceList(ent, texture, texturenumsurfaces, texturesurfacelist, modelorg);
+}
 
 void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 {
@@ -1204,12 +2478,13 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	vec3_t modelorg;
 	const int maxsurfacelist = 1024;
 	int numsurfacelist = 0;
-	msurface_t *surfacelist[1024];
+	const msurface_t *surfacelist[1024];
 	if (model == NULL)
 		return;
 	R_Mesh_Matrix(&ent->matrix);
 	Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 
+#ifdef LHREMOVESOON
 	if (ent != r_refdef.worldentity)
 	{
 		// because bmodels can be reused, we have to clear dlightframe every time
@@ -1217,12 +2492,15 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 		for (i = 0;i < model->nummodelsurfaces;i++, surface++)
 			surface->dlightframe = -1;
 	}
+#endif
 
 	// update light styles
 	if (!skysurfaces)
 	{
+#ifdef LHREMOVESOON
 		if (r_dynamic.integer && !r_rtdlight)
 			R_MarkLights(ent);
+#endif
 		for (i = 0;i < model->brushq1.light_styles;i++)
 		{
 			if (model->brushq1.light_stylevalue[i] != d_lightstylevalue[model->brushq1.light_style[i]])
@@ -1239,6 +2517,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 	flagsmask = skysurfaces ? MATERIALFLAG_SKY : (MATERIALFLAG_WATER | MATERIALFLAG_WALL);
 	f = 0;
 	t = NULL;
+	texture = NULL;
 	numsurfacelist = 0;
 	for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
 	{
@@ -1249,7 +2528,7 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			{
 				if (numsurfacelist)
 				{
-					R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
+					R_QueueSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
 					numsurfacelist = 0;
 				}
 				t = surface->texture;
@@ -1258,20 +2537,21 @@ void R_DrawSurfaces(entity_render_t *ent, qboolean skysurfaces)
 			}
 			if (f)
 			{
-				// add face to draw list and update lightmap if necessary
-				if (surface->cached_dlight && surface->lightmaptexture != NULL)
+				// if lightmap parameters changed, rebuild lightmap texture
+				if (surface->cached_dlight && surface->samples)
 					R_BuildLightMap(ent, surface);
+				// add face to draw list
 				surfacelist[numsurfacelist++] = surface;
 				if (numsurfacelist >= maxsurfacelist)
 				{
-					R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
+					R_QueueSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
 					numsurfacelist = 0;
 				}
 			}
 		}
 	}
 	if (numsurfacelist)
-		R_DrawSurfaceList(ent, texture, numsurfacelist, surfacelist);
+		R_QueueSurfaceList(ent, texture, numsurfacelist, surfacelist, modelorg);
 }
 
 static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
@@ -1329,6 +2609,36 @@ static void R_DrawPortals(void)
 			R_MeshQueue_AddTransparent(center, R_DrawPortal_Callback, portal, portalnum);
 		}
 	}
+}
+
+static void R_DrawCollisionBrush(colbrushf_t *brush)
+{
+	int i;
+	rmeshstate_t m;
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = brush->points->v;
+	R_Mesh_State(&m);
+	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
+	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
+	GL_LockArrays(0, brush->numpoints);
+	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
+	GL_LockArrays(0, 0);
+}
+
+static void R_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
+{
+	int i;
+	rmeshstate_t m;
+	if (!surface->mesh.num_collisiontriangles)
+		return;
+	memset(&m, 0, sizeof(m));
+	m.pointer_vertex = surface->mesh.data_collisionvertex3f;
+	R_Mesh_State(&m);
+	i = (int)(((size_t)surface) / sizeof(msurface_t));
+	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
+	GL_LockArrays(0, surface->mesh.num_collisionvertices);
+	R_Mesh_Draw(surface->mesh.num_collisionvertices, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i);
+	GL_LockArrays(0, 0);
 }
 
 void R_WorldVisibility(void)
@@ -1424,6 +2734,24 @@ void R_Q1BSP_Draw(entity_render_t *ent)
 	c_bmodels++;
 	if (r_drawcollisionbrushes.integer < 2)
 		R_DrawSurfaces(ent, false);
+	if (r_drawcollisionbrushes.integer >= 1 && ent->model->brush.num_brushes)
+	{
+		int i;
+		model_t *model = ent->model;
+		msurface_t *surface;
+		q3mbrush_t *brush;
+		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
+		GL_DepthMask(false);
+		GL_DepthTest(true);
+		qglPolygonOffset(r_drawcollisionbrushes_polygonfactor.value, r_drawcollisionbrushes_polygonoffset.value);
+		for (i = 0, brush = model->brush.data_brushes + model->firstmodelbrush;i < model->nummodelbrushes;i++, brush++)
+			if (brush->colbrushf && brush->colbrushf->numtriangles)
+				R_DrawCollisionBrush(brush->colbrushf);
+		for (i = 0, surface = model->brush.data_surfaces + model->firstmodelsurface;i < model->nummodelsurfaces;i++, surface++)
+			if (surface->mesh.num_collisiontriangles)
+				R_DrawCollisionSurface(ent, surface);
+		qglPolygonOffset(0, 0);
+	}
 }
 
 void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
@@ -1486,14 +2814,15 @@ void R_Q1BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, floa
 					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 					{
 						surface = model->brush.data_surfaces + surfaceindex;
-						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && ((surface->texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL) && !surface->texture->skin.fog)
+						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
+						if ((surface->texture->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
 						{
 							for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
 							{
 								v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
 								v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
 								v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-								if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+								if (lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
 								{
 									SETPVSBIT(outsurfacepvs, surfaceindex);
 									outsurfacelist[outnumsurfaces++] = surfaceindex;
@@ -1528,9 +2857,15 @@ void R_Q1BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, 
 	{
 		R_Mesh_Matrix(&ent->matrix);
 		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
+		if (!r_shadow_compilingrtlight)
+			R_UpdateAllTextureInfo(ent);
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brush.data_surfaces + surfacelist[surfacelistindex];
+			if ((surface->texture->currentmaterialflags & (MATERIALFLAG_NODRAW | MATERIALFLAG_TRANSPARENT | MATERIALFLAG_WALL)) != MATERIALFLAG_WALL)
+				continue;
+			if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+				continue;
 			R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->mesh.num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
 		}
 		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
@@ -1551,6 +2886,8 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
 			surface = model->brush.data_surfaces + surfacelist[surfacelistindex];
+			if (surface->texture->basematerialflags & MATERIALFLAG_NODRAW || !surface->mesh.num_triangles)
+				continue;
 			if (r_shadow_compilingrtlight)
 			{
 				// if compiling an rtlight, capture the mesh
@@ -1563,156 +2900,23 @@ void R_Q1BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t 
 				t = surface->texture->currentframe;
 				// FIXME: transparent surfaces need to be lit later
 				if ((t->currentmaterialflags & (MATERIALFLAG_WALL | MATERIALFLAG_TRANSPARENT)) == MATERIALFLAG_WALL)
-					R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, t->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
-			}
-		}
-	}
-}
-
-void R_DrawCollisionBrush(colbrushf_t *brush)
-{
-	int i;
-	rmeshstate_t m;
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = brush->points->v;
-	R_Mesh_State(&m);
-	i = (int)(((size_t)brush) / sizeof(colbrushf_t));
-	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_LockArrays(0, brush->numpoints);
-	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
-	GL_LockArrays(0, 0);
-}
-
-void R_Q3BSP_DrawCollisionSurface(entity_render_t *ent, msurface_t *surface)
-{
-	int i;
-	rmeshstate_t m;
-	if (!surface->mesh.num_collisiontriangles)
-		return;
-	memset(&m, 0, sizeof(m));
-	m.pointer_vertex = surface->mesh.data_collisionvertex3f;
-	R_Mesh_State(&m);
-	i = (int)(((size_t)surface) / sizeof(msurface_t));
-	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
-	GL_LockArrays(0, surface->mesh.num_collisionvertices);
-	R_Mesh_Draw(surface->mesh.num_collisionvertices, surface->mesh.num_collisiontriangles, surface->mesh.data_collisionelement3i);
-	GL_LockArrays(0, 0);
-}
-
-void R_Q3BSP_DrawFace_TransparentCallback(const void *voident, int surfacenumber)
-{
-	const entity_render_t *ent = voident;
-	msurface_t *surface = ent->model->brush.data_surfaces + surfacenumber;
-	rmeshstate_t m;
-	R_Mesh_Matrix(&ent->matrix);
-	memset(&m, 0, sizeof(m));
-	if ((ent->effects & EF_ADDITIVE) || (surface->texture->textureflags & Q3TEXTUREFLAG_ADDITIVE))
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else
-		GL_BlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	GL_DepthMask(false);
-	GL_DepthTest(!(ent->effects & EF_NODEPTHTEST));
-	m.tex[0] = R_GetTexture(surface->texture->skin.base);
-	m.pointer_texcoord[0] = surface->mesh.data_texcoordtexture2f;
-	// LordHavoc: quake3 was not able to do this; lit transparent surfaces
-	if (gl_combine.integer)
-	{
-		m.texrgbscale[0] = 2;
-		if (r_textureunits.integer >= 2)
-		{
-			m.tex[1] = R_GetTexture(surface->lightmaptexture);
-			m.pointer_texcoord[1] = surface->mesh.data_texcoordlightmap2f;
-			GL_Color(ent->colormod[0], ent->colormod[1], ent->colormod[2], ent->alpha);
-		}
-		else
-		{
-			if (ent->colormod[0] == 1 && ent->colormod[1] == 1 && ent->colormod[2] == 1 && ent->alpha == 1)
-				m.pointer_color = surface->mesh.data_lightmapcolor4f;
-			else
-			{
-				int i;
-				for (i = 0;i < surface->mesh.num_vertices;i++)
 				{
-					varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0];
-					varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1];
-					varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2];
-					varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3] * ent->alpha;
+					if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+						qglDisable(GL_CULL_FACE);
+					R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, t->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
+					if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
+						qglEnable(GL_CULL_FACE);
 				}
-				m.pointer_color = varray_color4f;
 			}
 		}
 	}
-	else
-	{
-		int i;
-		for (i = 0;i < surface->mesh.num_vertices;i++)
-		{
-			varray_color4f[i*4+0] = surface->mesh.data_lightmapcolor4f[i*4+0] * ent->colormod[0] * 2.0f;
-			varray_color4f[i*4+1] = surface->mesh.data_lightmapcolor4f[i*4+1] * ent->colormod[1] * 2.0f;
-			varray_color4f[i*4+2] = surface->mesh.data_lightmapcolor4f[i*4+2] * ent->colormod[2] * 2.0f;
-			varray_color4f[i*4+3] = surface->mesh.data_lightmapcolor4f[i*4+3] * ent->alpha;
-		}
-		m.pointer_color = varray_color4f;
-	}
-	if (surface->texture->textureflags & (Q3TEXTUREFLAG_AUTOSPRITE | Q3TEXTUREFLAG_AUTOSPRITE2))
-	{
-		int i, j;
-		float center[3], center2[3], forward[3], right[3], up[3], v[4][3];
-		matrix4x4_t matrix1, imatrix1;
-		R_Mesh_Matrix(&r_identitymatrix);
-		// a single autosprite surface can contain multiple sprites...
-		for (j = 0;j < surface->mesh.num_vertices - 3;j += 4)
-		{
-			VectorClear(center);
-			for (i = 0;i < 4;i++)
-				VectorAdd(center, surface->mesh.data_vertex3f + (j+i) * 3, center);
-			VectorScale(center, 0.25f, center);
-			Matrix4x4_Transform(&ent->matrix, center, center2);
-			// FIXME: calculate vectors from triangle edges instead of using texture vectors as an easy way out?
-			Matrix4x4_FromVectors(&matrix1, surface->mesh.data_normal3f + j*3, surface->mesh.data_svector3f + j*3, surface->mesh.data_tvector3f + j*3, center);
-			Matrix4x4_Invert_Simple(&imatrix1, &matrix1);
-			for (i = 0;i < 4;i++)
-				Matrix4x4_Transform(&imatrix1, surface->mesh.data_vertex3f + (j+i)*3, v[i]);
-			if (surface->texture->textureflags & Q3TEXTUREFLAG_AUTOSPRITE2)
-			{
-				forward[0] = r_vieworigin[0] - center2[0];
-				forward[1] = r_vieworigin[1] - center2[1];
-				forward[2] = 0;
-				VectorNormalize(forward);
-				right[0] = forward[1];
-				right[1] = -forward[0];
-				right[2] = 0;
-				up[0] = 0;
-				up[1] = 0;
-				up[2] = 1;
-			}
-			else
-			{
-				VectorCopy(r_viewforward, forward);
-				VectorCopy(r_viewright, right);
-				VectorCopy(r_viewup, up);
-			}
-			for (i = 0;i < 4;i++)
-				VectorMAMAMAM(1, center2, v[i][0], forward, v[i][1], right, v[i][2], up, varray_vertex3f + (i+j) * 3);
-		}
-		m.pointer_vertex = varray_vertex3f;
-	}
-	else
-		m.pointer_vertex = surface->mesh.data_vertex3f;
-	R_Mesh_State(&m);
-	if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-		qglDisable(GL_CULL_FACE);
-	GL_LockArrays(0, surface->mesh.num_vertices);
-	R_Mesh_Draw(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i);
-	GL_LockArrays(0, 0);
-	if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-		qglEnable(GL_CULL_FACE);
 }
 
+#if 0
 void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumsurfaces, msurface_t **texturesurfacelist)
 {
 	int i, texturesurfaceindex;
-	vec3_t modelorg;
+	vec3_t tempcenter, center, modelorg;
 	msurface_t *surface;
 	qboolean dolightmap;
 	qboolean dobase;
@@ -1756,18 +2960,17 @@ void R_Q3BSP_DrawFaceList(entity_render_t *ent, texture_t *t, int texturenumsurf
 	// transparent surfaces get sorted for later drawing
 	if ((t->surfaceparms & Q3SURFACEPARM_TRANS) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
 	{
-		vec3_t facecenter, center;
 		// drawing sky transparently would be too difficult
 		if (t->surfaceparms & Q3SURFACEPARM_SKY)
 			return;
 		for (texturesurfaceindex = 0;texturesurfaceindex < texturenumsurfaces;texturesurfaceindex++)
 		{
 			surface = texturesurfacelist[texturesurfaceindex];
-			facecenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
-			facecenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
-			facecenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
-			Matrix4x4_Transform(&ent->matrix, facecenter, center);
-			R_MeshQueue_AddTransparent(center, R_Q3BSP_DrawFace_TransparentCallback, ent, surface - ent->model->brush.data_surfaces);
+			tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+			tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+			tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+			Matrix4x4_Transform(&ent->matrix, tempcenter, center);
+			R_MeshQueue_AddTransparent(center, RSurfShader_Transparent_Callback, ent, surface - ent->model->brush.data_surfaces);
 		}
 		return;
 	}
@@ -2084,7 +3287,21 @@ void R_Q3BSP_DrawFaces(entity_render_t *ent, int skyfaces)
 			{
 				if (!surface->mesh.num_triangles)
 					continue;
-				surfacelist[numsurfaces++] = surface;
+				if (t->currentmaterialflags & MATERIALFLAG_TRANSPARENT)
+				{
+					// drawing sky transparently would be too difficult
+					if (!(t->currentmaterialflags & MATERIALFLAG_SKY))
+					{
+						vec3_t tempcenter, center;
+						tempcenter[0] = (surface->mins[0] + surface->maxs[0]) * 0.5f;
+						tempcenter[1] = (surface->mins[1] + surface->maxs[1]) * 0.5f;
+						tempcenter[2] = (surface->mins[2] + surface->maxs[2]) * 0.5f;
+						Matrix4x4_Transform(&ent->matrix, tempcenter, center);
+						R_MeshQueue_AddTransparent(ent->effects & EF_NODEPTHTEST ? r_vieworigin : center, RSurfShader_Transparent_Callback, ent, surface - ent->model->brush.data_surfaces);
+					}
+				}
+				else
+					surfacelist[numsurfaces++] = surface;
 				if (numsurfaces >= maxfaces)
 				{
 					R_Q3BSP_DrawFaceList(ent, t, numsurfaces, surfacelist);
@@ -2126,172 +3343,7 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 		qglPolygonOffset(0, 0);
 	}
 }
-
-void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
-{
-	model_t *model = ent->model;
-	vec3_t lightmins, lightmaxs;
-	int t, leafindex, leafsurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
-	const int *e;
-	const float *v[3];
-	msurface_t *surface;
-	mleaf_t *leaf;
-	const qbyte *pvs;
-	lightmins[0] = relativelightorigin[0] - lightradius;
-	lightmins[1] = relativelightorigin[1] - lightradius;
-	lightmins[2] = relativelightorigin[2] - lightradius;
-	lightmaxs[0] = relativelightorigin[0] + lightradius;
-	lightmaxs[1] = relativelightorigin[1] + lightradius;
-	lightmaxs[2] = relativelightorigin[2] + lightradius;
-	*outnumclusterspointer = 0;
-	*outnumsurfacespointer = 0;
-	memset(outclusterpvs, 0, model->brush.num_pvsclusterbytes);
-	memset(outsurfacepvs, 0, (model->nummodelsurfaces + 7) >> 3);
-	if (model == NULL)
-	{
-		VectorCopy(lightmins, outmins);
-		VectorCopy(lightmaxs, outmaxs);
-		return;
-	}
-	VectorCopy(relativelightorigin, outmins);
-	VectorCopy(relativelightorigin, outmaxs);
-	if (model->brush.GetPVS)
-		pvs = model->brush.GetPVS(model, relativelightorigin);
-	else
-		pvs = NULL;
-	// FIXME: use BSP recursion as lights are often small
-	for (leafindex = 0, leaf = model->brush.data_leafs;leafindex < model->brush.num_leafs;leafindex++, leaf++)
-	{
-		if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && (pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
-		{
-			outmins[0] = min(outmins[0], leaf->mins[0]);
-			outmins[1] = min(outmins[1], leaf->mins[1]);
-			outmins[2] = min(outmins[2], leaf->mins[2]);
-			outmaxs[0] = max(outmaxs[0], leaf->maxs[0]);
-			outmaxs[1] = max(outmaxs[1], leaf->maxs[1]);
-			outmaxs[2] = max(outmaxs[2], leaf->maxs[2]);
-			if (outclusterpvs)
-			{
-				if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
-				{
-					SETPVSBIT(outclusterpvs, leaf->clusterindex);
-					outclusterlist[outnumclusters++] = leaf->clusterindex;
-				}
-			}
-			if (outsurfacepvs)
-			{
-				for (leafsurfaceindex = 0;leafsurfaceindex < leaf->numleafsurfaces;leafsurfaceindex++)
-				{
-					surfaceindex = leaf->firstleafsurface[leafsurfaceindex];
-					surface = model->brush.data_surfaces + surfaceindex;
-					if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
-					{
-						if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs) && !(surface->texture->surfaceparms & Q3SURFACEPARM_TRANS) && !(surface->texture->surfaceflags & (Q3SURFACEFLAG_SKY | Q3SURFACEFLAG_NODRAW)) && surface->mesh.num_triangles)
-						{
-							if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-							{
-								for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
-								{
-									v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-									v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-									v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-									if (lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-									{
-										SETPVSBIT(outsurfacepvs, surfaceindex);
-										outsurfacelist[outnumsurfaces++] = surfaceindex;
-										break;
-									}
-								}
-							}
-							else
-							{
-								for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
-								{
-									v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-									v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-									v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-									if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-									{
-										SETPVSBIT(outsurfacepvs, surfaceindex);
-										outsurfacelist[outnumsurfaces++] = surfaceindex;
-										break;
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// limit combined leaf box to light boundaries
-	outmins[0] = max(outmins[0], lightmins[0]);
-	outmins[1] = max(outmins[1], lightmins[1]);
-	outmins[2] = max(outmins[2], lightmins[2]);
-	outmaxs[0] = min(outmaxs[0], lightmaxs[0]);
-	outmaxs[1] = min(outmaxs[1], lightmaxs[1]);
-	outmaxs[2] = min(outmaxs[2], lightmaxs[2]);
-
-	*outnumclusterspointer = outnumclusters;
-	*outnumsurfacespointer = outnumsurfaces;
-}
-
-void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs)
-{
-	model_t *model = ent->model;
-	msurface_t *surface;
-	int surfacelistindex;
-	if (r_drawcollisionbrushes.integer < 2)
-	{
-		R_Mesh_Matrix(&ent->matrix);
-		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-		{
-			surface = model->brush.data_surfaces + surfacelist[surfacelistindex];
-			// FIXME: check some manner of surface->rendermode here?
-			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && !(surface->texture->surfaceparms & (Q3SURFACEPARM_SKY | Q3SURFACEPARM_TRANS)) && !(surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED))
-				R_Shadow_MarkVolumeFromBox(surface->num_firstshadowmeshtriangle, surface->mesh.num_triangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, relativelightorigin, lightmins, lightmaxs, surface->mins, surface->maxs);
-		}
-		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius + r_shadow_projectdistance.value, numshadowmark, shadowmarklist);
-	}
-}
-
-void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist)
-{
-	model_t *model = ent->model;
-	vec3_t lightmins, lightmaxs, modelorg;
-	msurface_t *surface;
-	int surfacelistindex;
-	if (r_drawcollisionbrushes.integer < 2)
-	{
-		lightmins[0] = relativelightorigin[0] - lightradius;
-		lightmins[1] = relativelightorigin[1] - lightradius;
-		lightmins[2] = relativelightorigin[2] - lightradius;
-		lightmaxs[0] = relativelightorigin[0] + lightradius;
-		lightmaxs[1] = relativelightorigin[1] + lightradius;
-		lightmaxs[2] = relativelightorigin[2] + lightradius;
-		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
-		{
-			surface = model->brush.data_surfaces + surfacelist[surfacelistindex];
-			if (r_shadow_compilingrtlight)
-			{
-				// if compiling an rtlight, capture the mesh
-				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
-			}
-			else if ((ent != r_refdef.worldentity || r_worldsurfacevisible[surfacelist[surfacelistindex]]) && !(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->mesh.num_triangles)
-			{
-				if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-					qglDisable(GL_CULL_FACE);
-				R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, surface->texture->skin.base, surface->texture->skin.nmap, surface->texture->skin.gloss, lightcubemap, ambientscale, diffusescale, specularscale);
-				if (surface->texture->textureflags & Q3TEXTUREFLAG_TWOSIDED)
-					qglEnable(GL_CULL_FACE);
-			}
-		}
-	}
-}
+#endif
 
 #if 0
 static void gl_surf_start(void)
@@ -2309,10 +3361,12 @@ static void gl_surf_newmap(void)
 
 void GL_Surf_Init(void)
 {
+#ifdef LHREMOVESOON
 	int i;
 	dlightdivtable[0] = 4194304;
 	for (i = 1;i < 32768;i++)
 		dlightdivtable[i] = 4194304 / (i << 7);
+#endif
 
 	Cvar_RegisterVariable(&r_ambient);
 	Cvar_RegisterVariable(&r_drawportals);

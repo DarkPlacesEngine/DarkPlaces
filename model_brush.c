@@ -26,8 +26,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "wad.h"
 
 
-// note: model_shared.c sets up r_notexture, and r_surf_notexture
-
 qbyte mod_q1bsp_novis[(MAX_MAP_LEAFS + 7)/ 8];
 
 //cvar_t r_subdivide_size = {CVAR_SAVE, "r_subdivide_size", "128"};
@@ -1008,7 +1006,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		strcpy(tx->name, "NO TEXTURE FOUND");
 		tx->width = 16;
 		tx->height = 16;
-		tx->skin.base = r_notexture;
+		tx->skin.base = r_texture_notexture;
 		if (i == loadmodel->brush.num_textures - 1)
 		{
 			tx->basematerialflags |= MATERIALFLAG_WATER | MATERIALFLAG_LIGHTBOTHSIDES;
@@ -1092,7 +1090,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 		}
 		else
 		{
-			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, true, true))
+			if (!Mod_LoadSkinFrame(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_ALPHA | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*', true))
 			{
 				// did not find external texture, load it from the bsp or wad3
 				if (loadmodel->brush.ishlbsp)
@@ -1127,7 +1125,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 						Mem_Free(freepixels);
 				}
 				else if (mtdata) // texture included
-					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, true, tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
+					Mod_LoadSkinFrame_Internal(&tx->skin, tx->name, TEXF_MIPMAP | TEXF_PRECACHE | TEXF_PICMIP, false, tx->name[0] != '*', tx->name[0] != '*' && r_fullbrights.integer, mtdata, tx->width, tx->height);
 			}
 		}
 		if (tx->skin.base == NULL)
@@ -1135,7 +1133,7 @@ static void Mod_Q1BSP_LoadTextures(lump_t *l)
 			// no texture found
 			tx->width = 16;
 			tx->height = 16;
-			tx->skin.base = r_notexture;
+			tx->skin.base = r_texture_notexture;
 		}
 
 		tx->basematerialflags = 0;
@@ -1895,13 +1893,22 @@ static void Mod_Q1BSP_LoadFaces(lump_t *l)
 		surface->lightmaptexture = NULL;
 		i = LittleLong(in->lightofs);
 		if (i == -1)
+		{
 			surface->samples = NULL;
+			// give non-lightmapped water a 1x white lightmap
+			if ((surface->texture->basematerialflags & MATERIALFLAG_WATER) && (surface->texinfo->flags & TEX_SPECIAL) && ssize <= 256 && tsize <= 256)
+			{
+				surface->samples = Mem_Alloc(loadmodel->mempool, ssize * tsize * 3);
+				surface->styles[0] = 0;
+				memset(surface->samples, 128, ssize * tsize * 3);
+			}
+		}
 		else if (loadmodel->brush.ishlbsp) // LordHavoc: HalfLife map (bsp version 30)
 			surface->samples = loadmodel->brushq1.lightdata + i;
 		else // LordHavoc: white lighting (bsp version 29)
 			surface->samples = loadmodel->brushq1.lightdata + (i * 3);
 
-		if (surface->texture->basematerialflags & MATERIALFLAG_WALL)
+		if (!(surface->texinfo->flags & TEX_SPECIAL) || surface->samples)
 		{
 			int i, iu, iv;
 			float u, v, ubase, vbase, uscale, vscale;
@@ -3854,11 +3861,13 @@ parseerror:
 			//if (R_TextureHasAlpha(out->skin.base))
 			//	out->surfaceparms |= Q3SURFACEPARM_TRANS;
 		}
-		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true))
-			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, true, true))
+		if (!Mod_LoadSkinFrame(&out->skin, out->name, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
+			if (!Mod_LoadSkinFrame(&out->skin, out->firstpasstexturename, (((out->textureflags & Q3TEXTUREFLAG_NOMIPMAPS) || (out->surfaceparms & Q3SURFACEPARM_NOMIPMAPS)) ? 0 : TEXF_MIPMAP) | TEXF_ALPHA | TEXF_PRECACHE | (out->textureflags & Q3TEXTUREFLAG_NOPICMIP ? 0 : TEXF_PICMIP), false, false, true))
 				Con_Printf("%s: texture loading for shader \"%s\" failed (first layer \"%s\" not found either)\n", loadmodel->name, out->name, out->firstpasstexturename);
 		if (out->skin.fog)
 			out->basematerialflags |= (MATERIALFLAG_ALPHA | MATERIALFLAG_TRANSPARENT);
+		// no animation
+		out->currentframe = out;
 	}
 	if (c)
 		Con_DPrintf("%s: %i textures missing shaders\n", loadmodel->name, c);
@@ -4395,6 +4404,11 @@ static void Mod_Q3BSP_LoadFaces(lump_t *l)
 				out->maxs[1] += 1.0f;
 				out->maxs[2] += 1.0f;
 			}
+			// set lightmap styles for consistency with q1bsp
+			out->styles[0] = 0;
+			out->styles[1] = 255;
+			out->styles[2] = 255;
+			out->styles[3] = 255;
 		}
 	}
 
@@ -5358,11 +5372,6 @@ void Mod_Q3BSP_RecursiveFindNumLeafs(mnode_t *node)
 		loadmodel->brush.num_leafs = numleafs;
 }
 
-extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
-extern void R_Q3BSP_Draw(struct entity_render_s *ent);
-extern void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
-extern void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist, const vec3_t lightmins, const vec3_t lightmaxs);
-extern void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, vec_t ambientscale, vec_t diffusescale, vec_t specularscale, int numsurfaces, const int *surfacelist);
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
 	int i, j, numshadowmeshtriangles;
@@ -5392,11 +5401,10 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.BoxTouchingVisibleLeafs = Mod_Q1BSP_BoxTouchingVisibleLeafs;
 	mod->brush.LightPoint = Mod_Q3BSP_LightPoint;
 	mod->brush.FindNonSolidLocation = Mod_Q1BSP_FindNonSolidLocation;
-	//mod->DrawSky = R_Q3BSP_DrawSky;
-	mod->Draw = R_Q3BSP_Draw;
-	mod->GetLightInfo = R_Q3BSP_GetLightInfo;
-	mod->DrawShadowVolume = R_Q3BSP_DrawShadowVolume;
-	mod->DrawLight = R_Q3BSP_DrawLight;
+	mod->Draw = R_Q1BSP_Draw;
+	mod->GetLightInfo = R_Q1BSP_GetLightInfo;
+	mod->DrawShadowVolume = R_Q1BSP_DrawShadowVolume;
+	mod->DrawLight = R_Q1BSP_DrawLight;
 
 	mod_base = (qbyte *)header;
 
@@ -5501,7 +5509,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 			if (mod->brush.data_surfaces[j + mod->firstmodelsurface].texture->surfaceflags & Q3SURFACEFLAG_SKY)
 				break;
 		if (j < mod->nummodelsurfaces)
-			mod->DrawSky = R_Q3BSP_DrawSky;
+			mod->DrawSky = R_Q1BSP_DrawSky;
 	}
 }
 
