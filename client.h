@@ -94,8 +94,8 @@ typedef struct frameblend_s
 }
 frameblend_t;
 
-// LordHavoc: disregard the following warning, entlights stuff is semi-persistent...
-// LordHavoc: nothing in this structure is persistent, it may be overwritten by the client every frame, for persistent data use entity_lerp_t.
+// LordHavoc: this struct is intended for the renderer but some fields are
+// used by the client.
 typedef struct entity_render_s
 {
 	// location
@@ -124,14 +124,14 @@ typedef struct entity_render_s
 	// render flags
 	int flags;
 
-	// these are copied from the persistent data
+	// interpolated animation
 
 	// frame that the model is interpolating from
 	int frame1;
 	// frame that the model is interpolating to
 	int frame2;
 	// interpolation factor, usually computed from frame2time
-	double framelerp;
+	float framelerp;
 	// time frame1 began playing (for framegroup animations)
 	double frame1time;
 	// time frame2 began playing (for framegroup animations)
@@ -157,13 +157,8 @@ entity_render_t;
 
 typedef struct entity_persistent_s
 {
-	// particles
-
-	// trail rendering
-	vec3_t trail_origin;
+	// particle trail
 	float trail_time;
-
-	// effects
 
 	// muzzleflash fading
 	float muzzleflash;
@@ -179,21 +174,6 @@ typedef struct entity_persistent_s
 	float oldangles[3];
 	float neworigin[3];
 	float newangles[3];
-
-	// interpolated animation
-
-	// lerp resets when model changes
-	int modelindex;
-	// frame that the model is interpolating from
-	int frame1;
-	// frame that the model is interpolating to
-	int frame2;
-	// interpolation factor, usually computed from frame2time
-	double framelerp;
-	// time frame1 began playing (for framegroup animations)
-	double frame1time;
-	// time frame2 began playing (for framegroup animations)
-	double frame2time;
 }
 entity_persistent_t;
 
@@ -522,6 +502,10 @@ void CL_Disconnect (void);
 void CL_Disconnect_f (void);
 
 void CL_BoundingBoxForEntity(entity_render_t *ent);
+
+extern cvar_t cl_beams_polygons;
+extern cvar_t cl_beams_relative;
+extern cvar_t cl_beams_lightatend;
 
 //
 // cl_input
