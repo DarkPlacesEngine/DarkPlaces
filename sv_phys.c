@@ -1379,7 +1379,7 @@ SV_Physics
 */
 void SV_Physics (void)
 {
-	int i;
+	int i, newnum_edicts;
 	edict_t *ent;
 	qbyte runmove[MAX_EDICTS];
 
@@ -1389,8 +1389,11 @@ void SV_Physics (void)
 	pr_global_struct->time = sv.time;
 	PR_ExecuteProgram (pr_global_struct->StartFrame, "QC function StartFrame is missing");
 
+	newnum_edicts = 0;
 	for (i = 0, ent = sv.edicts;i < sv.num_edicts;i++, ent = NEXT_EDICT(ent))
-		runmove[i] = !ent->e->free;
+		if ((runmove[i] = !ent->e->free))
+			newnum_edicts = i + 1;
+	sv.num_edicts = max(svs.maxclients + 1, newnum_edicts);
 
 //
 // treat each object in turn
