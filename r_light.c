@@ -419,7 +419,7 @@ void R_LightModel(int numverts, vec3_t center)
 			if (cl_dlights[i].die < cl.time || !cl_dlights[i].radius)
 				continue;
 			VectorSubtract (center, cl_dlights[i].origin, dist);
-			if ((t2 = DotProduct(dist,dist)) + 64.0f < (t1 = cl_dlights[i].radius*cl_dlights[i].radius))
+			if ((t2 = DotProduct(dist,dist) + 16.0f) + 64.0f < (t1 = cl_dlights[i].radius*cl_dlights[i].radius))
 			{
 				VectorCopy(cl_dlights[i].origin, nearlight[nearlights].origin);
 				nearlight[nearlights].color[0] = cl_dlights[i].color[0] * cl_dlights[i].radius * cl_dlights[i].radius * 0.5f;
