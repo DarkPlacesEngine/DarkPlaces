@@ -2946,7 +2946,7 @@ void M_Menu_GameOptions_f (void)
 	if (maxplayers == 0)
 		maxplayers = sv_maxplayers.integer;
 	if (maxplayers < 2)
-		maxplayers = MAX_SCOREBOARD;
+		maxplayers = min(8, MAX_SCOREBOARD);
 }
 
 
