@@ -674,8 +674,8 @@ int LHNET_Write(lhnetsocket_t *lhnetsocket, const void *content, int contentleng
 		p->next->prev = p;
 		p->prev->next = p;
 #ifndef STANDALONETEST
-		if (cl_fakelocalping_min.value || cl_fakelocalping_max.value)
-			p->sentdoubletime = Sys_DoubleTime() + lhrandom(cl_fakelocalping_min.value, cl_fakelocalping_max.value) * (0.5 / 1000.0);
+		if (cl_netlocalping_min.value || cl_netlocalping_max.value)
+			p->sentdoubletime = Sys_DoubleTime() + lhrandom(cl_netlocalping_min.value, cl_netlocalping_max.value) * (0.5 / 1000.0);
 #endif
 		value = contentlength;
 	}
