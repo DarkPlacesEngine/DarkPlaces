@@ -108,15 +108,15 @@ void R_DrawWorldCrosshair(void)
 		return;
 	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
 		return;
-	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num + 1));
+	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num));
 	if (!pic)
 		return;
 	R_GetCrosshairColor(color);
-	
+
 	// trace the shot path up to a certain distance
 	VectorCopy(cl_entities[cl.viewentity].render.origin, v1);
 	v1[2] += 16; // HACK: this depends on the QC
-	
+
 	// get the forward vector for the gun (not the view)
 	AngleVectors(cl.viewangles, v2, NULL, NULL);
 	//VectorCopy(r_origin, v1);
@@ -137,10 +137,14 @@ void R_Draw2DCrosshair(void)
 	num = crosshair.integer;
 	if (num < 1 || num > NUMCROSSHAIRS || cl.intermission)
 		return;
-	R_GetCrosshairColor(color);
-	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num + 1));
+	if (!cl.viewentity || !cl_entities[cl.viewentity].state_current.active)
+		return;
+	pic = Draw_CachePic(va("gfx/crosshair%i.tga", num));
 	if (pic)
+	{
+		R_GetCrosshairColor(color);
 		DrawQ_Pic((vid.conwidth - pic->width * crosshair_size.value) * 0.5f, (vid.conheight - pic->height * crosshair_size.value) * 0.5f, pic->name, pic->width * crosshair_size.value, pic->height * crosshair_size.value, color[0], color[1], color[2], color[3], 0);
+	}
 }
 
 
