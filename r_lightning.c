@@ -316,6 +316,7 @@ void R_DrawLightningBeamCallback(const void *calldata1, int calldata2)
 	else
 	{
 		// solid color if fog is not used
+		GL_ColorPointer(NULL);
 		GL_Color(r_lightningbeam_color_red.value, r_lightningbeam_color_green.value, r_lightningbeam_color_blue.value, 1);
 	}
 

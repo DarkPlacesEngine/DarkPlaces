@@ -564,6 +564,7 @@ static void R_BlendView(void)
 	GL_DepthMask(true);
 	GL_DepthTest(false); // magic
 	GL_VertexPointer(vertex3f);
+	GL_ColorPointer(NULL);
 	GL_Color(r_refdef.viewblend[0], r_refdef.viewblend[1], r_refdef.viewblend[2], r_refdef.viewblend[3]);
 	r = 64;
 	vertex3f[0] = r_vieworigin[0] + r_viewforward[0] * 1.5 + r_viewleft[0] * r - r_viewup[0] * r;
@@ -934,6 +935,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	}
 
 	R_Mesh_Matrix(&r_identitymatrix);
+	GL_ColorPointer(NULL);
 	GL_Color(cr, cg, cb, ca);
 	GL_VertexPointer(varray_vertex3f);
 	GL_BlendFunc(blendfunc1, blendfunc2);

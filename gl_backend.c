@@ -451,6 +451,7 @@ void GL_Backend_ResetState(void)
 	qglColorPointer(4, GL_FLOAT, sizeof(float[4]), NULL);CHECKGLERROR
 	qglDisableClientState(GL_COLOR_ARRAY);CHECKGLERROR
 
+	GL_ColorPointer(NULL);
 	GL_Color(0, 0, 0, 0);
 	GL_Color(1, 1, 1, 1);
 
@@ -587,6 +588,9 @@ void GL_ColorPointer(const float *p)
 		{
 			qglDisableClientState(GL_COLOR_ARRAY);
 			CHECKGLERROR
+			// when color array is on the glColor gets trashed, set it again
+			qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
+			CHECKGLERROR
 		}
 		gl_state.pointer_color = p;
 		qglColorPointer(4, GL_FLOAT, sizeof(float[4]), gl_state.pointer_color);
@@ -600,13 +604,12 @@ void GL_Color(float cr, float cg, float cb, float ca)
 	{
 		if (r_showtrispass)
 			return;
-		GL_ColorPointer(NULL);
 		gl_state.color4f[0] = cr;
 		gl_state.color4f[1] = cg;
 		gl_state.color4f[2] = cb;
 		gl_state.color4f[3] = ca;
 		CHECKGLERROR
-		qglColor4f(cr, cg, cb, ca);
+		qglColor4f(gl_state.color4f[0], gl_state.color4f[1], gl_state.color4f[2], gl_state.color4f[3]);
 		CHECKGLERROR
 	}
 }

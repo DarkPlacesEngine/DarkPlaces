@@ -188,6 +188,7 @@ void R_DrawExplosionCallback(const void *calldata1, int calldata2)
 	numtriangles = EXPLOSIONTRIS;
 	numverts = EXPLOSIONVERTS;
 	alpha = e->alpha;
+	GL_ColorPointer(NULL);
 	GL_Color(alpha, alpha, alpha, 1);
 	GL_VertexPointer(e->vert[0]);
 
