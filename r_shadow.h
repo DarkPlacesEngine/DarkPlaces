@@ -15,16 +15,18 @@ extern cvar_t r_shadow_bumpscale_basetexture;
 extern cvar_t r_shadow_worldshadows;
 extern cvar_t r_shadow_dlightshadows;
 
+extern mempool_t *r_shadow_mempool;
+
 void R_Shadow_Init(void);
 void R_Shadow_VolumeFromList(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, int nummarktris, const int *marktris);
 void R_Shadow_VolumeFromBox(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, const vec3_t mins, const vec3_t maxs);
 void R_Shadow_VolumeFromSphere(int numverts, int numtris, const float *invertex3f, const int *elements, const int *neighbors, const vec3_t projectorigin, float projectdistance, float radius);
-void R_Shadow_DiffuseLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *lightcolor, const matrix4x4_t *matrix_worldtolight, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
-void R_Shadow_SpecularLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_worldtolight, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *glosstexture, rtexture_t *bumptexture, rtexture_t *lightcubemap);
+#define LIGHTING_DIFFUSE 1
+#define LIGHTING_SPECULAR 2
+void R_Shadow_RenderLighting(int numverts, int numtriangles, const int *elements, const float *vertices, const float *svectors, const float *tvectors, const float *normals, const float *texcoords, const float *relativelightorigin, const float *relativeeyeorigin, const float *lightcolor, const matrix4x4_t *matrix_worldtolight, const matrix4x4_t *matrix_worldtoattenuationxyz, const matrix4x4_t *matrix_worldtoattenuationz, rtexture_t *basetexture, rtexture_t *bumptexture, rtexture_t *glosstexture, rtexture_t *lightcubemap, int lightingflags);
 void R_Shadow_ClearStencil(void);
 
 void R_Shadow_RenderVolume(int numvertices, int numtriangles, const float *vertex3f, const int *element3i);
-void R_Shadow_RenderShadowMeshVolume(shadowmesh_t *mesh);
 void R_Shadow_Stage_Begin(void);
 void R_Shadow_LoadWorldLightsIfNeeded(void);
 void R_Shadow_Stage_ShadowVolumes(void);
@@ -42,6 +44,8 @@ rtexture_t *R_Shadow_Cubemap(const char *basename);
 extern dlight_t *r_shadow_worldlightchain;
 
 void R_Shadow_UpdateWorldLightSelection(void);
+
+extern rtlight_t *r_shadow_compilingrtlight;
 
 void R_RTLight_UpdateFromDLight(rtlight_t *rtlight, const dlight_t *light, int isstatic);
 void R_RTLight_Compile(rtlight_t *rtlight);

@@ -1833,105 +1833,72 @@ void R_Model_Brush_Draw(entity_render_t *ent)
 	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL, ent->model->brushq1.pvstexturechains);
 }
 
-void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
+void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
 {
-#if 0
-	int i;
-	msurface_t *surf;
-	float projectdistance, f, temp[3], lightradius2;
-	if (ent->model == NULL)
-		return;
-	R_Mesh_Matrix(&ent->matrix);
-	lightradius2 = lightradius * lightradius;
-	R_UpdateTextureInfo(ent);
-	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
-	//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
-	for (i = 0, surf = ent->model->brushq1.surfaces + ent->model->brushq1.firstmodelsurface;i < ent->model->brushq1.nummodelsurfaces;i++, surf++)
-	{
-		if (surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && surf->flags & SURF_SHADOWCAST)
-		{
-			f = PlaneDiff(relativelightorigin, surf->plane);
-			if (surf->flags & SURF_PLANEBACK)
-				f = -f;
-			// draw shadows only for frontfaces and only if they are close
-			if (f >= 0.1 && f < lightradius)
-			{
-				temp[0] = bound(surf->poly_mins[0], relativelightorigin[0], surf->poly_maxs[0]) - relativelightorigin[0];
-				temp[1] = bound(surf->poly_mins[1], relativelightorigin[1], surf->poly_maxs[1]) - relativelightorigin[1];
-				temp[2] = bound(surf->poly_mins[2], relativelightorigin[2], surf->poly_maxs[2]) - relativelightorigin[2];
-				if (DotProduct(temp, temp) < lightradius2)
-					R_Shadow_VolumeFromSphere(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_vertex3f, surf->mesh.data_element3i, surf->mesh.data_neighbor3i, relativelightorigin, projectdistance, lightradius);
-			}
-		}
-	}
-#else
-	int t, leafnum, marksurfnum, trianglenum;
+	model_t *model = ent->model;
+	vec3_t lightmins, lightmaxs;
+	int t, leafindex, marksurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
-	msurface_t *surf;
+	const float *v[3];
+	msurface_t *surface;
 	mleaf_t *leaf;
 	const qbyte *pvs;
-	float projectdistance;
-	const float *v[3];
-	vec3_t lightmins, lightmaxs;
-	if (ent->model == NULL)
-		return;
-	R_Mesh_Matrix(&ent->matrix);
-	R_UpdateTextureInfo(ent);
-	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
 	lightmins[0] = relativelightorigin[0] - lightradius;
 	lightmins[1] = relativelightorigin[1] - lightradius;
 	lightmins[2] = relativelightorigin[2] - lightradius;
 	lightmaxs[0] = relativelightorigin[0] + lightradius;
 	lightmaxs[1] = relativelightorigin[1] + lightradius;
 	lightmaxs[2] = relativelightorigin[2] + lightradius;
-	/*
-	R_Shadow_PrepareShadowMark(ent->model->brush.shadowmesh->numtriangles);
-	maxmarksurfaces = sizeof(surfacelist) / sizeof(surfacelist[0]);
-	ent->model->brushq1.GetVisible(ent->model, relativelightorigin, lightmins, lightmaxs, 0, NULL, NULL, maxmarkleafs, markleaf, &nummarkleafs);
-	for (marksurfacenum = 0;marksurfacenum < nummarksurfaces;marksurfacenum++)
+	*outnumclusterspointer = 0;
+	*outnumsurfacespointer = 0;
+	memset(outclusterpvs, 0, model->brush.num_pvsclusterbytes);
+	memset(outsurfacepvs, 0, (model->numsurfaces + 7) >> 3);
+	if (model == NULL)
 	{
-		surf = marksurface[marksurfacenum];
-		if (surf->shadowmark != shadowmarkcount)
-		{
-			surf->shadowmark = shadowmarkcount;
-			if (BoxesOverlap(lightmins, lightmaxs, surf->poly_mins, surf->poly_maxs) && surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && (surf->flags & SURF_SHADOWCAST))
-			{
-				for (trianglenum = 0, t = surf->num_firstshadowmeshtriangle, e = ent->model->brush.shadowmesh->element3i + t * 3;trianglenum < surf->mesh.num_triangles;trianglenum++, t++, e += 3)
-				{
-					v[0] = ent->model->brush.shadowmesh->vertex3f + e[0] * 3;
-					v[1] = ent->model->brush.shadowmesh->vertex3f + e[1] * 3;
-					v[2] = ent->model->brush.shadowmesh->vertex3f + e[2] * 3;
-					if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-						shadowmarklist[numshadowmark++] = t;
-				}
-			}
-		}
+		VectorCopy(lightmins, outmins);
+		VectorCopy(lightmaxs, outmaxs);
+		return;
 	}
-	*/
-	R_Shadow_PrepareShadowMark(ent->model->brush.shadowmesh->numtriangles);
-	if (ent->model->brush.GetPVS && (pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin)))
+	VectorCopy(relativelightorigin, outmins);
+	VectorCopy(relativelightorigin, outmaxs);
+	if (model->brush.GetPVS)
+		pvs = model->brush.GetPVS(model, relativelightorigin);
+	else
+		pvs = NULL;
+	// FIXME: use BSP recursion as lights are often small
+	for (leafindex = 0, leaf = model->brushq1.data_leafs;leafindex < model->brushq1.num_leafs;leafindex++, leaf++)
 	{
-		pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
-		// FIXME: use BSP recursion in q1bsp as dlights are often small
-		for (leafnum = 0, leaf = ent->model->brushq1.data_leafs;leafnum < ent->model->brushq1.num_leafs;leafnum++, leaf++)
+		if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && (pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
 		{
-			if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && CHECKPVSBIT(pvs, leaf->clusterindex))
+			outmins[0] = min(outmins[0], leaf->mins[0]);
+			outmins[1] = min(outmins[1], leaf->mins[1]);
+			outmins[2] = min(outmins[2], leaf->mins[2]);
+			outmaxs[0] = max(outmaxs[0], leaf->maxs[0]);
+			outmaxs[1] = max(outmaxs[1], leaf->maxs[1]);
+			outmaxs[2] = max(outmaxs[2], leaf->maxs[2]);
+			if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
 			{
-				for (marksurfnum = 0;marksurfnum < leaf->nummarksurfaces;marksurfnum++)
+				SETPVSBIT(outclusterpvs, leaf->clusterindex);
+				outclusterlist[outnumclusters++] = leaf->clusterindex;
+			}
+			for (marksurfaceindex = 0;marksurfaceindex < leaf->nummarksurfaces;marksurfaceindex++)
+			{
+				surfaceindex = leaf->firstmarksurface[marksurfaceindex];
+				if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 				{
-					surf = ent->model->brushq1.surfaces + leaf->firstmarksurface[marksurfnum];
-					if (surf->shadowmark != shadowmarkcount)
+					surface = model->brushq1.surfaces + surfaceindex;
+					if (BoxesOverlap(lightmins, lightmaxs, surface->poly_mins, surface->poly_maxs))
 					{
-						surf->shadowmark = shadowmarkcount;
-						if (BoxesOverlap(lightmins, lightmaxs, surf->poly_mins, surf->poly_maxs) && surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && (surf->flags & SURF_SHADOWCAST))
+						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->mesh.num_triangles;triangleindex++, t++, e += 3)
 						{
-							for (trianglenum = 0, t = surf->num_firstshadowmeshtriangle, e = ent->model->brush.shadowmesh->element3i + t * 3;trianglenum < surf->mesh.num_triangles;trianglenum++, t++, e += 3)
+							v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+							v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+							v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+							if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
 							{
-								v[0] = ent->model->brush.shadowmesh->vertex3f + e[0] * 3;
-								v[1] = ent->model->brush.shadowmesh->vertex3f + e[1] * 3;
-								v[2] = ent->model->brush.shadowmesh->vertex3f + e[2] * 3;
-								if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-									shadowmarklist[numshadowmark++] = t;
+								SETPVSBIT(outsurfacepvs, surfaceindex);
+								outsurfacelist[outnumsurfaces++] = surfaceindex;
+								break;
 							}
 						}
 					}
@@ -1939,85 +1906,83 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 			}
 		}
 	}
-	else
-	{
-		for (marksurfnum = 0, surf = ent->model->brushq1.surfaces + ent->model->brushq1.firstmodelsurface;marksurfnum < ent->model->brushq1.nummodelsurfaces;marksurfnum++, surf++)
-		{
-			if (BoxesOverlap(lightmins, lightmaxs, surf->poly_mins, surf->poly_maxs) && surf->texinfo->texture->rendertype == SURFRENDER_OPAQUE && (surf->flags & SURF_SHADOWCAST))
-			{
-				for (trianglenum = 0, t = surf->num_firstshadowmeshtriangle, e = ent->model->brush.shadowmesh->element3i + t * 3;trianglenum < surf->mesh.num_triangles;trianglenum++, t++, e += 3)
-				{
-					v[0] = ent->model->brush.shadowmesh->vertex3f + e[0] * 3;
-					v[1] = ent->model->brush.shadowmesh->vertex3f + e[1] * 3;
-					v[2] = ent->model->brush.shadowmesh->vertex3f + e[2] * 3;
-					if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-						shadowmarklist[numshadowmark++] = t;
-				}
-			}
-		}
-	}
-	R_Shadow_VolumeFromList(ent->model->brush.shadowmesh->numverts, ent->model->brush.shadowmesh->numtriangles, ent->model->brush.shadowmesh->vertex3f, ent->model->brush.shadowmesh->element3i, ent->model->brush.shadowmesh->neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
-#endif
+
+	// limit combined leaf box to light boundaries
+	outmins[0] = max(outmins[0], lightmins[0]);
+	outmins[1] = max(outmins[1], lightmins[1]);
+	outmins[2] = max(outmins[2], lightmins[2]);
+	outmaxs[0] = min(outmaxs[0], lightmaxs[0]);
+	outmaxs[1] = min(outmaxs[1], lightmaxs[1]);
+	outmaxs[2] = min(outmaxs[2], lightmaxs[2]);
+
+	*outnumclusterspointer = outnumclusters;
+	*outnumsurfacespointer = outnumsurfaces;
 }
 
-void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
+void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
 {
-	int leafnum, marksurfnum;
-	msurface_t *surf;
-	mleaf_t *leaf;
-	const qbyte *pvs;
-	texture_t *t;
-	float lightmins[3], lightmaxs[3];
-	if (ent->model == NULL)
-		return;
-	R_Mesh_Matrix(&ent->matrix);
-	lightmins[0] = relativelightorigin[0] - lightradius;
-	lightmins[1] = relativelightorigin[1] - lightradius;
-	lightmins[2] = relativelightorigin[2] - lightradius;
-	lightmaxs[0] = relativelightorigin[0] + lightradius;
-	lightmaxs[1] = relativelightorigin[1] + lightradius;
-	lightmaxs[2] = relativelightorigin[2] + lightradius;
-	R_UpdateTextureInfo(ent);
-	shadowmarkcount++;
-	if (ent->model->brush.GetPVS && (pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin)))
+	model_t *model = ent->model;
+	vec3_t lightmins, lightmaxs;
+	msurface_t *surface;
+	int surfacelistindex, j, t;
+	const int *e;
+	const float *v[3];
+	if (r_drawcollisionbrushes.integer < 2)
 	{
-		pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
-		for (leafnum = 0, leaf = ent->model->brushq1.data_leafs;leafnum < ent->model->brushq1.num_leafs;leafnum++, leaf++)
+		lightmins[0] = relativelightorigin[0] - lightradius;
+		lightmins[1] = relativelightorigin[1] - lightradius;
+		lightmins[2] = relativelightorigin[2] - lightradius;
+		lightmaxs[0] = relativelightorigin[0] + lightradius;
+		lightmaxs[1] = relativelightorigin[1] + lightradius;
+		lightmaxs[2] = relativelightorigin[2] + lightradius;
+		R_Mesh_Matrix(&ent->matrix);
+		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
+		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && CHECKPVSBIT(pvs, leaf->clusterindex))
+			surface = model->brushq1.surfaces + surfacelist[surfacelistindex];
+			for (j = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < surface->mesh.num_triangles;j++, t++, e += 3)
 			{
-				for (marksurfnum = 0;marksurfnum < leaf->nummarksurfaces;marksurfnum++)
-				{
-					surf = ent->model->brushq1.surfaces + leaf->firstmarksurface[marksurfnum];
-					if (surf->shadowmark != shadowmarkcount)
-					{
-						surf->shadowmark = shadowmarkcount;
-						if (BoxesOverlap(lightmins, lightmaxs, surf->poly_mins, surf->poly_maxs) && (ent != &cl_entities[0].render || surf->visframe == r_framecount))
-						{
-							t = surf->texinfo->texture->currentframe;
-							if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
-							{
-								R_Shadow_DiffuseLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, lightcubemap);
-								R_Shadow_SpecularLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, lightcubemap);
-							}
-						}
-					}
-				}
+				v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+				v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+				v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+				if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+					shadowmarklist[numshadowmark++] = t;
 			}
 		}
+		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius, numshadowmark, shadowmarklist);
 	}
-	else
+}
+
+void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist)
+{
+	model_t *model = ent->model;
+	vec3_t lightmins, lightmaxs, modelorg;
+	msurface_t *surface;
+	texture_t *t;
+	int surfacelistindex;
+	if (r_drawcollisionbrushes.integer < 2)
 	{
-		for (marksurfnum = 0, surf = ent->model->brushq1.surfaces + ent->model->brushq1.firstmodelsurface;marksurfnum < ent->model->brushq1.nummodelsurfaces;marksurfnum++, surf++)
+		lightmins[0] = relativelightorigin[0] - lightradius;
+		lightmins[1] = relativelightorigin[1] - lightradius;
+		lightmins[2] = relativelightorigin[2] - lightradius;
+		lightmaxs[0] = relativelightorigin[0] + lightradius;
+		lightmaxs[1] = relativelightorigin[1] + lightradius;
+		lightmaxs[2] = relativelightorigin[2] + lightradius;
+		R_Mesh_Matrix(&ent->matrix);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			if (BoxesOverlap(lightmins, lightmaxs, surf->poly_mins, surf->poly_maxs) && (ent != &cl_entities[0].render || surf->visframe == r_framecount))
+			surface = model->brushq1.surfaces + surfacelist[surfacelistindex];
+			if (r_shadow_compilingrtlight)
 			{
-				t = surf->texinfo->texture->currentframe;
+				// if compiling an rtlight, capture the mesh
+				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texinfo->texture->skin.base, surface->texinfo->texture->skin.gloss, surface->texinfo->texture->skin.nmap, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, surface->mesh.num_triangles, surface->mesh.data_element3i);
+			}
+			else if (ent != &cl_entities[0].render || surface->visframe == r_framecount)
+			{
+				t = surface->texinfo->texture->currentframe;
 				if (t->rendertype == SURFRENDER_OPAQUE && t->flags & SURF_SHADOWLIGHT)
-				{
-					R_Shadow_DiffuseLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, lightcubemap);
-					R_Shadow_SpecularLighting(surf->mesh.num_vertices, surf->mesh.num_triangles, surf->mesh.data_element3i, surf->mesh.data_vertex3f, surf->mesh.data_svector3f, surf->mesh.data_tvector3f, surf->mesh.data_normal3f, surf->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.gloss, t->skin.nmap, lightcubemap);
-				}
+						R_Shadow_RenderLighting(surface->mesh.num_vertices, surface->mesh.num_triangles, surface->mesh.data_element3i, surface->mesh.data_vertex3f, surface->mesh.data_svector3f, surface->mesh.data_tvector3f, surface->mesh.data_normal3f, surface->mesh.data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, t->skin.base, t->skin.nmap, t->skin.gloss, lightcubemap, LIGHTING_DIFFUSE | LIGHTING_SPECULAR);
 			}
 		}
 	}
@@ -2375,7 +2340,6 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 			return;
 	}
 	c_faces++;
-	face->visframe = r_framecount;
 	if ((face->texture->surfaceparms & Q3SURFACEPARM_TRANS) || ent->alpha < 1 || (ent->effects & EF_ADDITIVE))
 	{
 		vec3_t facecenter, center;
@@ -2477,13 +2441,12 @@ void R_Q3BSP_DrawSky(entity_render_t *ent)
 	q3mface_t *face;
 	vec3_t modelorg;
 	model_t *model;
-	qbyte *pvs;
 	R_Mesh_Matrix(&ent->matrix);
 	model = ent->model;
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		if (ent == &cl_entities[0].render)
 		{
 			if (r_q3bsp_framecount != r_framecount)
 			{
@@ -2514,8 +2477,9 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	if (r_drawcollisionbrushes.integer < 2)
 	{
 		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		if (ent == &cl_entities[0].render && model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
+		if (ent == &cl_entities[0].render)
 		{
+			if (model->brush.num_pvsclusters && !r_novis.integer && (pvs = model->brush.GetPVS(model, modelorg)))
 			if (r_q3bsp_framecount != r_framecount)
 			{
 				r_q3bsp_framecount = r_framecount;
@@ -2546,132 +2510,156 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 	}
 }
 
-void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
+void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer)
 {
-	int j, t, leafnum, marksurfnum;
+	model_t *model = ent->model;
+	vec3_t lightmins, lightmaxs;
+	int t, leafindex, marksurfaceindex, surfaceindex, triangleindex, outnumclusters = 0, outnumsurfaces = 0;
 	const int *e;
-	const qbyte *pvs;
 	const float *v[3];
-	q3mface_t *face;
+	q3mface_t *surface;
 	q3mleaf_t *leaf;
-	vec3_t modelorg, lightmins, lightmaxs;
-	model_t *model;
-	float projectdistance;
-	projectdistance = lightradius + ent->model->radius;//projectdistance = 1000000000.0f;//lightradius + ent->model->radius;
-	if (r_drawcollisionbrushes.integer < 2)
+	const qbyte *pvs;
+	lightmins[0] = relativelightorigin[0] - lightradius;
+	lightmins[1] = relativelightorigin[1] - lightradius;
+	lightmins[2] = relativelightorigin[2] - lightradius;
+	lightmaxs[0] = relativelightorigin[0] + lightradius;
+	lightmaxs[1] = relativelightorigin[1] + lightradius;
+	lightmaxs[2] = relativelightorigin[2] + lightradius;
+	*outnumclusterspointer = 0;
+	*outnumsurfacespointer = 0;
+	memset(outclusterpvs, 0, model->brush.num_pvsclusterbytes);
+	memset(outsurfacepvs, 0, (model->numsurfaces + 7) >> 3);
+	if (model == NULL)
 	{
-		model = ent->model;
-		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
-		lightmins[0] = relativelightorigin[0] - lightradius;
-		lightmins[1] = relativelightorigin[1] - lightradius;
-		lightmins[2] = relativelightorigin[2] - lightradius;
-		lightmaxs[0] = relativelightorigin[0] + lightradius;
-		lightmaxs[1] = relativelightorigin[1] + lightradius;
-		lightmaxs[2] = relativelightorigin[2] + lightradius;
-		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
-		if (ent->model->brush.GetPVS && (pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin)))
-		{	
-			for (leafnum = 0, leaf = ent->model->brushq3.data_leafs;leafnum < ent->model->brushq3.num_leafs;leafnum++, leaf++)
+		VectorCopy(lightmins, outmins);
+		VectorCopy(lightmaxs, outmaxs);
+		return;
+	}
+	VectorCopy(relativelightorigin, outmins);
+	VectorCopy(relativelightorigin, outmaxs);
+	if (model->brush.GetPVS)
+		pvs = model->brush.GetPVS(model, relativelightorigin);
+	else
+		pvs = NULL;
+	// FIXME: use BSP recursion as lights are often small
+	for (leafindex = 0, leaf = model->brushq3.data_leafs;leafindex < model->brushq3.num_leafs;leafindex++, leaf++)
+	{
+		if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && (pvs == NULL || CHECKPVSBIT(pvs, leaf->clusterindex)))
+		{
+			outmins[0] = min(outmins[0], leaf->mins[0]);
+			outmins[1] = min(outmins[1], leaf->mins[1]);
+			outmins[2] = min(outmins[2], leaf->mins[2]);
+			outmaxs[0] = max(outmaxs[0], leaf->maxs[0]);
+			outmaxs[1] = max(outmaxs[1], leaf->maxs[1]);
+			outmaxs[2] = max(outmaxs[2], leaf->maxs[2]);
+			if (!CHECKPVSBIT(outclusterpvs, leaf->clusterindex))
 			{
-				if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && CHECKPVSBIT(pvs, leaf->clusterindex))
+				SETPVSBIT(outclusterpvs, leaf->clusterindex);
+				outclusterlist[outnumclusters++] = leaf->clusterindex;
+			}
+			for (marksurfaceindex = 0;marksurfaceindex < leaf->numleaffaces;marksurfaceindex++)
+			{
+				surface = leaf->firstleafface[marksurfaceindex];
+				surfaceindex = surface - model->brushq3.data_faces;
+				if (!CHECKPVSBIT(outsurfacepvs, surfaceindex))
 				{
-					for (marksurfnum = 0;marksurfnum < leaf->numleaffaces;marksurfnum++)
+					if (BoxesOverlap(lightmins, lightmaxs, surface->mins, surface->maxs))
 					{
-						face = leaf->firstleafface[marksurfnum];
-						if (face->shadowmark != shadowmarkcount)
+						for (triangleindex = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;triangleindex < surface->num_triangles;triangleindex++, t++, e += 3)
 						{
-							face->shadowmark = shadowmarkcount;
-							if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
+							v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+							v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+							v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+							if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
 							{
-								for (j = 0, t = face->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < face->num_triangles;j++, t++, e += 3)
-								{
-									v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-									v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-									v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-									if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-										shadowmarklist[numshadowmark++] = t;
-								}
+								SETPVSBIT(outsurfacepvs, surfaceindex);
+								outsurfacelist[outnumsurfaces++] = surfaceindex;
+								break;
 							}
 						}
 					}
 				}
 			}
 		}
-		else
-		{
-			for (marksurfnum = 0, face = model->brushq3.data_thismodel->firstface;marksurfnum < model->brushq3.data_thismodel->numfaces;marksurfnum++, face++)
-			{
-				if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs))
-				{
-					for (j = 0, t = face->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < face->num_triangles;j++, t++, e += 3)
-					{
-						v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
-						v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
-						v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
-						if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
-							shadowmarklist[numshadowmark++] = t;
-					}
-				}
-			}
-		}
-		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, projectdistance, numshadowmark, shadowmarklist);
 	}
+
+	// limit combined leaf box to light boundaries
+	outmins[0] = max(outmins[0], lightmins[0]);
+	outmins[1] = max(outmins[1], lightmins[1]);
+	outmins[2] = max(outmins[2], lightmins[2]);
+	outmaxs[0] = min(outmaxs[0], lightmaxs[0]);
+	outmaxs[1] = min(outmaxs[1], lightmaxs[1]);
+	outmaxs[2] = min(outmaxs[2], lightmaxs[2]);
+
+	*outnumclusterspointer = outnumclusters;
+	*outnumsurfacespointer = outnumsurfaces;
 }
 
-void R_Q3BSP_DrawFaceLight(entity_render_t *ent, q3mface_t *face, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
+void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist)
 {
-	if ((face->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) || !face->num_triangles)
-		return;
-	R_Shadow_DiffuseLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.base, face->texture->skin.nmap, lightcubemap);
-	R_Shadow_SpecularLighting(face->num_vertices, face->num_triangles, face->data_element3i, face->data_vertex3f, face->data_svector3f, face->data_tvector3f, face->data_normal3f, face->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, face->texture->skin.gloss, face->texture->skin.nmap, lightcubemap);
-}
-
-void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap)
-{
-	int leafnum, marksurfnum;
-	const qbyte *pvs;
-	q3mface_t *face;
-	q3mleaf_t *leaf;
-	vec3_t modelorg, lightmins, lightmaxs;
-	model_t *model;
+	model_t *model = ent->model;
+	vec3_t lightmins, lightmaxs;
+	q3mface_t *surface;
+	int surfacelistindex, j, t;
+	const int *e;
+	const float *v[3];
 	if (r_drawcollisionbrushes.integer < 2)
 	{
-		model = ent->model;
-		R_Mesh_Matrix(&ent->matrix);
-		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
 		lightmins[0] = relativelightorigin[0] - lightradius;
 		lightmins[1] = relativelightorigin[1] - lightradius;
 		lightmins[2] = relativelightorigin[2] - lightradius;
 		lightmaxs[0] = relativelightorigin[0] + lightradius;
 		lightmaxs[1] = relativelightorigin[1] + lightradius;
 		lightmaxs[2] = relativelightorigin[2] + lightradius;
-
-		if (ent->model->brush.GetPVS && (pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin)))
-		{	
-			pvs = ent->model->brush.GetPVS(ent->model, relativelightorigin);
-			for (leafnum = 0, leaf = ent->model->brushq3.data_leafs;leafnum < ent->model->brushq3.num_leafs;leafnum++, leaf++)
+		R_Mesh_Matrix(&ent->matrix);
+		R_Shadow_PrepareShadowMark(model->brush.shadowmesh->numtriangles);
+		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
+		{
+			surface = model->brushq3.data_faces + surfacelist[surfacelistindex];
+			// FIXME: check some manner of face->rendermode here?
+			if (!(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles && !surface->texture->skin.fog)
 			{
-				if (BoxesOverlap(lightmins, lightmaxs, leaf->mins, leaf->maxs) && CHECKPVSBIT(pvs, leaf->clusterindex))
+				for (j = 0, t = surface->num_firstshadowmeshtriangle, e = model->brush.shadowmesh->element3i + t * 3;j < surface->num_triangles;j++, t++, e += 3)
 				{
-					for (marksurfnum = 0;marksurfnum < leaf->numleaffaces;marksurfnum++)
-					{
-						face = leaf->firstleafface[marksurfnum];
-						if (face->shadowmark != shadowmarkcount)
-						{
-							face->shadowmark = shadowmarkcount;
-							if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs) && (ent != &cl_entities[0].render || face->visframe == r_framecount))
-								R_Q3BSP_DrawFaceLight(ent, face, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, lightcubemap);
-						}
-					}
+					v[0] = model->brush.shadowmesh->vertex3f + e[0] * 3;
+					v[1] = model->brush.shadowmesh->vertex3f + e[1] * 3;
+					v[2] = model->brush.shadowmesh->vertex3f + e[2] * 3;
+					if (PointInfrontOfTriangle(relativelightorigin, v[0], v[1], v[2]) && lightmaxs[0] > min(v[0][0], min(v[1][0], v[2][0])) && lightmins[0] < max(v[0][0], max(v[1][0], v[2][0])) && lightmaxs[1] > min(v[0][1], min(v[1][1], v[2][1])) && lightmins[1] < max(v[0][1], max(v[1][1], v[2][1])) && lightmaxs[2] > min(v[0][2], min(v[1][2], v[2][2])) && lightmins[2] < max(v[0][2], max(v[1][2], v[2][2])))
+						shadowmarklist[numshadowmark++] = t;
 				}
 			}
 		}
-		else
+		R_Shadow_VolumeFromList(model->brush.shadowmesh->numverts, model->brush.shadowmesh->numtriangles, model->brush.shadowmesh->vertex3f, model->brush.shadowmesh->element3i, model->brush.shadowmesh->neighbor3i, relativelightorigin, lightradius + model->radius, numshadowmark, shadowmarklist);
+	}
+}
+
+void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist)
+{
+	model_t *model = ent->model;
+	vec3_t lightmins, lightmaxs, modelorg;
+	q3mface_t *surface;
+	int surfacelistindex;
+	if (r_drawcollisionbrushes.integer < 2)
+	{
+		lightmins[0] = relativelightorigin[0] - lightradius;
+		lightmins[1] = relativelightorigin[1] - lightradius;
+		lightmins[2] = relativelightorigin[2] - lightradius;
+		lightmaxs[0] = relativelightorigin[0] + lightradius;
+		lightmaxs[1] = relativelightorigin[1] + lightradius;
+		lightmaxs[2] = relativelightorigin[2] + lightradius;
+		R_Mesh_Matrix(&ent->matrix);
+		Matrix4x4_Transform(&ent->inversematrix, r_vieworigin, modelorg);
+		for (surfacelistindex = 0;surfacelistindex < numsurfaces;surfacelistindex++)
 		{
-			for (marksurfnum = 0, face = model->brushq3.data_thismodel->firstface;marksurfnum < model->brushq3.data_thismodel->numfaces;marksurfnum++, face++)
-				if (BoxesOverlap(lightmins, lightmaxs, face->mins, face->maxs) && (ent != &cl_entities[0].render || face->visframe == r_framecount))
-					R_Q3BSP_DrawFaceLight(ent, face, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, lightcubemap);
+			surface = model->brushq3.data_faces + surfacelist[surfacelistindex];
+			if (r_shadow_compilingrtlight)
+			{
+				// if compiling an rtlight, capture the mesh
+				Mod_ShadowMesh_AddMesh(r_shadow_mempool, r_shadow_compilingrtlight->static_meshchain_light, surface->texture->skin.base, surface->texture->skin.gloss, surface->texture->skin.nmap, surface->data_vertex3f, surface->data_svector3f, surface->data_tvector3f, surface->data_normal3f, surface->data_texcoordtexture2f, surface->num_triangles, surface->data_element3i);
+			}
+			else if ((ent != &cl_entities[0].render || surface->visframe == r_framecount) && !(surface->texture->surfaceflags & Q3SURFACEFLAG_NODRAW) && surface->num_triangles)
+				R_Shadow_RenderLighting(surface->num_vertices, surface->num_triangles, surface->data_element3i, surface->data_vertex3f, surface->data_svector3f, surface->data_tvector3f, surface->data_normal3f, surface->data_texcoordtexture2f, relativelightorigin, relativeeyeorigin, lightcolor, matrix_modeltolight, matrix_modeltoattenuationxyz, matrix_modeltoattenuationz, surface->texture->skin.base, surface->texture->skin.nmap, surface->texture->skin.gloss, lightcubemap, LIGHTING_DIFFUSE | LIGHTING_SPECULAR);
 		}
 	}
 }

@@ -2878,8 +2878,9 @@ void Mod_Q1BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins,
 
 extern void R_Model_Brush_DrawSky(entity_render_t *ent);
 extern void R_Model_Brush_Draw(entity_render_t *ent);
-extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap);
+extern void R_Model_Brush_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+extern void R_Model_Brush_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
+extern void R_Model_Brush_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist);
 void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 {
 	int i, j, k;
@@ -2996,9 +2997,16 @@ void Mod_Q1BSP_Load(model_t *mod, void *buffer)
 		mod->brushq1.firstmodelsurface = bm->firstface;
 		mod->brushq1.nummodelsurfaces = bm->numfaces;
 
+		// make the model surface list (used by shadowing/lighting)
+		mod->numsurfaces = mod->brushq1.nummodelsurfaces;
+		mod->surfacelist = Mem_Alloc(originalloadmodel->mempool, mod->numsurfaces * sizeof(*mod->surfacelist));
+		for (j = 0;j < mod->numsurfaces;j++)
+			mod->surfacelist[j] = mod->brushq1.firstmodelsurface + j;
+
 		// this gets altered below if sky is used
 		mod->DrawSky = NULL;
 		mod->Draw = R_Model_Brush_Draw;
+		mod->GetLightInfo = R_Model_Brush_GetLightInfo;
 		mod->DrawShadowVolume = R_Model_Brush_DrawShadowVolume;
 		mod->DrawLight = R_Model_Brush_DrawLight;
 		if (i != 0)
@@ -5518,8 +5526,9 @@ void Mod_Q3BSP_GetVisible(model_t *model, const vec3_t point, const vec3_t mins,
 
 extern void R_Q3BSP_DrawSky(struct entity_render_s *ent);
 extern void R_Q3BSP_Draw(struct entity_render_s *ent);
-extern void R_Q3BSP_DrawShadowVolume(struct entity_render_s *ent, vec3_t relativelightorigin, float lightradius);
-extern void R_Q3BSP_DrawLight(struct entity_render_s *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap);
+extern void R_Q3BSP_GetLightInfo(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, vec3_t outmins, vec3_t outmaxs, int *outclusterlist, qbyte *outclusterpvs, int *outnumclusterspointer, int *outsurfacelist, qbyte *outsurfacepvs, int *outnumsurfacespointer);
+extern void R_Q3BSP_DrawShadowVolume(entity_render_t *ent, vec3_t relativelightorigin, float lightradius, int numsurfaces, const int *surfacelist);
+extern void R_Q3BSP_DrawLight(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, const matrix4x4_t *matrix_modeltolight, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz, rtexture_t *lightcubemap, int numsurfaces, const int *surfacelist);
 void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 {
 	int i, j, numshadowmeshtriangles;
@@ -5554,6 +5563,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	mod->brush.FindNonSolidLocation = Mod_Q3BSP_FindNonSolidLocation;
 	//mod->DrawSky = R_Q3BSP_DrawSky;
 	mod->Draw = R_Q3BSP_Draw;
+	mod->GetLightInfo = R_Q3BSP_GetLightInfo;
 	mod->DrawShadowVolume = R_Q3BSP_DrawShadowVolume;
 	mod->DrawLight = R_Q3BSP_DrawLight;
 
@@ -5622,6 +5632,12 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 		}
 		mod->brushq3.data_thismodel = loadmodel->brushq3.data_models + i;
 		mod->brushq3.submodel = i;
+
+		// make the model surface list (used by shadowing/lighting)
+		mod->numsurfaces = mod->brushq3.data_thismodel->numfaces;
+		mod->surfacelist = Mem_Alloc(loadmodel->mempool, mod->numsurfaces * sizeof(*mod->surfacelist));
+		for (j = 0;j < mod->numsurfaces;j++)
+			mod->surfacelist[j] = (mod->brushq3.data_thismodel->firstface - mod->brushq3.data_faces) + j;
 
 		VectorCopy(mod->brushq3.data_thismodel->mins, mod->normalmins);
 		VectorCopy(mod->brushq3.data_thismodel->maxs, mod->normalmaxs);
