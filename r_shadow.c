@@ -2691,7 +2691,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 		// calculate lit surfaces and clusters
 		R_Shadow_EnlargeClusterBuffer(r_refdef.worldmodel->brush.num_pvsclusters);
 		R_Shadow_EnlargeSurfaceBuffer(r_refdef.worldmodel->nummodelsurfaces);
-		r_refdef.worldmodel->GetLightInfo(&cl_entities[0].render, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
+		r_refdef.worldmodel->GetLightInfo(r_refdef.worldentity, rtlight->shadoworigin, rtlight->radius, cullmins, cullmaxs, r_shadow_buffer_clusterlist, r_shadow_buffer_clusterpvs, &numclusters, r_shadow_buffer_surfacelist, r_shadow_buffer_surfacepvs, &numsurfaces);
 		clusterlist = r_shadow_buffer_clusterlist;
 		clusterpvs = r_shadow_buffer_clusterpvs;
 		surfacelist = r_shadow_buffer_surfacelist;
@@ -2722,7 +2722,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 			R_Shadow_Stage_ShadowVolumes();
 			usestencil = true;
 		}
-		ent = &cl_entities[0].render;
+		ent = r_refdef.worldentity;
 		if (r_shadow_staticworldlights.integer && rtlight->compiled)
 		{
 			memset(&m, 0, sizeof(m));
@@ -2789,7 +2789,7 @@ void R_DrawRTLight(rtlight_t *rtlight, int visiblevolumes)
 	{
 		R_Shadow_Stage_Light(usestencil);
 
-		ent = &cl_entities[0].render;
+		ent = r_refdef.worldentity;
 		if (ent->model && ent->model->DrawLight && (ent->flags & RENDER_LIGHT))
 		{
 			lightcolor2[0] = lightcolor[0] * ent->colormod[0] * ent->alpha;

@@ -707,6 +707,7 @@ entity_t *CL_NewTempEntity (void);
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
 
 void CL_ClearState (void);
+void CL_ExpandEntities(int num);
 
 
 int  CL_ReadFromServer (void);

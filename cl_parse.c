@@ -144,14 +144,19 @@ void CL_ParseStartSoundPacket(int largesoundindex)
 	else
 		sound_num = MSG_ReadByte ();
 
-	if (sound_num >= MAX_SOUNDS)
-		Host_Error("CL_ParseStartSoundPacket: sound_num (%i) >= MAX_SOUNDS (%i)\n", sound_num, MAX_SOUNDS);
+	MSG_ReadVector(pos, cl.protocol);
 
+	if (sound_num >= MAX_SOUNDS)
+	{
+		Con_Printf("CL_ParseStartSoundPacket: sound_num (%i) >= MAX_SOUNDS (%i)\n", sound_num, MAX_SOUNDS);
+		return;
+	}
 
 	if (ent >= MAX_EDICTS)
-		Host_Error ("CL_ParseStartSoundPacket: ent = %i", ent);
-
-	MSG_ReadVector(pos, cl.protocol);
+	{
+		Con_Printf("CL_ParseStartSoundPacket: ent = %i", ent);
+		return;
+	}
 
 	S_StartSound (ent, channel, cl.sound_precache[sound_num], pos, volume/255.0f, attenuation);
 }
@@ -870,6 +875,9 @@ void CL_ParseBeam (model_t *m, int lightning)
 		ent = 0;
 	}
 
+	if (ent >= cl_max_entities)
+		CL_ExpandEntities(ent);
+
 	// override any beam with the same entity
 	for (i = 0, b = cl_beams;i < cl_max_beams;i++, b++)
 	{
@@ -1487,6 +1495,8 @@ void CL_ParseServerMessage(void)
 			cl.viewentity = (unsigned short)MSG_ReadShort ();
 			if (cl.viewentity >= MAX_EDICTS)
 				Host_Error("svc_setview >= MAX_EDICTS\n");
+			if (cl.viewentity >= cl_max_entities)
+				CL_ExpandEntities(cl.viewentity);
 			// LordHavoc: assume first setview recieved is the real player entity
 			if (!cl.playerentity)
 				cl.playerentity = cl.viewentity;
@@ -1585,12 +1595,16 @@ void CL_ParseServerMessage(void)
 			i = (unsigned short) MSG_ReadShort ();
 			if (i < 0 || i >= MAX_EDICTS)
 				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline: invalid entity number %i", i);
+			if (i >= cl_max_entities)
+				CL_ExpandEntities(i);
 			CL_ParseBaseline (cl_entities + i, false);
 			break;
 		case svc_spawnbaseline2:
 			i = (unsigned short) MSG_ReadShort ();
 			if (i < 0 || i >= MAX_EDICTS)
 				Host_Error ("CL_ParseServerMessage: svc_spawnbaseline2: invalid entity number %i", i);
+			if (i >= cl_max_entities)
+				CL_ExpandEntities(i);
 			CL_ParseBaseline (cl_entities + i, true);
 			break;
 		case svc_spawnstatic:

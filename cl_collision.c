@@ -136,7 +136,7 @@ float CL_SelectTraceLine(const vec3_t start, const vec3_t end, vec3_t impact, ve
 	tracemaxs[2] = max(start[2], end[2]);
 
 	// look for embedded bmodels
-	for (n = 0;n < MAX_EDICTS;n++)
+	for (n = 0;n < cl_num_entities;n++)
 	{
 		if (!cl_entities_active[n])
 			continue;

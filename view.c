@@ -248,7 +248,7 @@ void V_ParseDamage (void)
 	}
 
 	// calculate view angle kicks
-	if (cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
+	if (cl_entities[cl.viewentity].state_current.active)
 	{
 		ent = &cl_entities[cl.viewentity];
 		Matrix4x4_Transform(&ent->render.inversematrix, from, localfrom);

@@ -122,7 +122,7 @@ void CL_ClearState(void)
 	cl_num_brushmodel_entities = 0;
 
 	// tweak these if the game runs out
-	cl_max_entities = MAX_EDICTS;
+	cl_max_entities = 256;
 	cl_max_static_entities = 256;
 	cl_max_temp_entities = 512;
 	cl_max_effects = 256;
@@ -141,10 +141,6 @@ void CL_ClearState(void)
 	cl_lightstyle = Mem_Alloc(cl_entities_mempool, cl_max_lightstyle * sizeof(lightstyle_t));
 	cl_brushmodel_entities = Mem_Alloc(cl_entities_mempool, cl_max_brushmodel_entities * sizeof(entity_render_t *));
 
-	CL_Screen_NewMap();
-
-	CL_Particles_Clear();
-
 	// LordHavoc: have to set up the baseline info for alpha and other stuff
 	for (i = 0;i < cl_max_entities;i++)
 	{
@@ -153,7 +149,32 @@ void CL_ClearState(void)
 		cl_entities[i].state_current = defaultstate;
 	}
 
+	CL_Screen_NewMap();
+	CL_Particles_Clear();
 	CL_CGVM_Clear();
+}
+
+void CL_ExpandEntities(int num)
+{
+	int i, oldmaxentities;
+	entity_t *oldentities;
+	if (num >= cl_max_entities)
+	{
+		if (num >= MAX_EDICTS)
+			Host_Error("CL_ExpandEntities: num %i >= %i\n", num, MAX_EDICTS);
+		oldmaxentities = cl_max_entities;
+		oldentities = cl_entities;
+		cl_max_entities = (num & ~255) + 256;
+		cl_entities = Mem_Alloc(cl_entities_mempool, cl_max_entities * sizeof(entity_t));
+		memcpy(cl_entities, oldentities, oldmaxentities * sizeof(entity_t));
+		Mem_Free(oldentities);
+		for (i = oldmaxentities;i < cl_max_entities;i++)
+		{
+			cl_entities[i].state_baseline = defaultstate;
+			cl_entities[i].state_previous = defaultstate;
+			cl_entities[i].state_current = defaultstate;
+		}
+	}
 }
 
 /*
@@ -541,7 +562,7 @@ void CL_LinkNetworkEntity(entity_t *e)
 			if (cl.viewentity)
 				CL_LinkNetworkEntity(cl_entities + cl.viewentity);
 			matrix = &viewmodelmatrix;
-			if (e == &cl.viewent && cl.viewentity >= 0 && cl.viewentity < MAX_EDICTS && cl_entities[cl.viewentity].state_current.active)
+			if (e == &cl.viewent && cl_entities[cl.viewentity].state_current.active)
 			{
 				e->state_current.alpha = cl_entities[cl.viewentity].state_current.alpha;
 				e->state_current.effects = EF_NOSHADOW | (cl_entities[cl.viewentity].state_current.effects & (EF_ADDITIVE | EF_REFLECTIVE | EF_FULLBRIGHT | EF_NODEPTHTEST));
@@ -549,7 +570,11 @@ void CL_LinkNetworkEntity(entity_t *e)
 		}
 		else
 		{
+			// if the tag entity is currently impossible, skip it
+			if (e->state_current.tagentity >= cl_num_entities)
+				return;
 			t = cl_entities + e->state_current.tagentity;
+			// if the tag entity is inactive, skip it
 			if (!t->state_current.active)
 				return;
 			// note: this can link to world
@@ -871,8 +896,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 		// entities which have a modelindex that resolved to a NULL model)
 		if (e->render.model && !(e->render.effects & EF_NODRAW) && r_refdef.numentities < r_refdef.maxentities)
 			r_refdef.entities[r_refdef.numentities++] = &e->render;
-		if (cl_num_entities < e->state_current.number + 1)
-			cl_num_entities = e->state_current.number + 1;
 		//if (cl.viewentity && e - cl_entities == cl.viewentity)
 		//	Matrix4x4_Print(&e->render.matrix);
 	}
@@ -881,8 +904,6 @@ void CL_LinkNetworkEntity(entity_t *e)
 void CL_RelinkWorld(void)
 {
 	entity_t *ent = &cl_entities[0];
-	if (cl_num_entities < 1)
-		cl_num_entities = 1;
 	cl_brushmodel_entities[cl_num_brushmodel_entities++] = &ent->render;
 	// FIXME: this should be done at load
 	Matrix4x4_CreateIdentity(&ent->render.matrix);
@@ -959,7 +980,7 @@ static void CL_RelinkNetworkEntities(void)
 
 	// start on the entity after the world
 	entitylinkframenumber++;
-	for (i = 1;i < MAX_EDICTS;i++)
+	for (i = 1;i < cl_num_entities;i++)
 	{
 		if (cl_entities_active[i])
 		{
@@ -1183,7 +1204,6 @@ int CL_ReadFromServer(void)
 	r_refdef.time = cl.time;
 	r_refdef.extraupdate = !r_speeds.integer;
 	r_refdef.numentities = 0;
-	cl_num_entities = 0;
 	cl_num_brushmodel_entities = 0;
 
 	if (cls.state == ca_connected && cls.signon == SIGNONS)
