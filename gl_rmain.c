@@ -45,6 +45,13 @@ vec3_t r_viewforward;
 vec3_t r_viewleft;
 vec3_t r_viewright;
 vec3_t r_viewup;
+int r_view_x;
+int r_view_y;
+int r_view_width;
+int r_view_height;
+float r_view_fov_x;
+float r_view_fov_y;
+matrix4x4_t r_view_matrix;
 
 //
 // screen size info
@@ -505,8 +512,8 @@ void R_DrawModels(void)
 
 static void R_SetFrustum(void)
 {
-	// break apart the viewentity matrix into vectors for various purposes
-	Matrix4x4_ToVectors(&r_refdef.viewentitymatrix, r_viewforward, r_viewleft, r_viewup, r_vieworigin);
+	// break apart the view matrix into vectors for various purposes
+	Matrix4x4_ToVectors(&r_view_matrix, r_viewforward, r_viewleft, r_viewup, r_vieworigin);
 	VectorNegate(r_viewleft, r_viewright);
 
 	// LordHavoc: note to all quake engine coders, the special case for 90
@@ -514,22 +521,22 @@ static void R_SetFrustum(void)
 	// disabled as well.
 
 	// rotate R_VIEWFORWARD right by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[0].normal, r_viewup, r_viewforward, -(90 - r_refdef.fov_x / 2));
+	RotatePointAroundVector( frustum[0].normal, r_viewup, r_viewforward, -(90 - r_view_fov_x / 2));
 	frustum[0].dist = DotProduct (r_vieworigin, frustum[0].normal);
 	PlaneClassify(&frustum[0]);
 
 	// rotate R_VIEWFORWARD left by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[1].normal, r_viewup, r_viewforward, (90 - r_refdef.fov_x / 2));
+	RotatePointAroundVector( frustum[1].normal, r_viewup, r_viewforward, (90 - r_view_fov_x / 2));
 	frustum[1].dist = DotProduct (r_vieworigin, frustum[1].normal);
 	PlaneClassify(&frustum[1]);
 
 	// rotate R_VIEWFORWARD up by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[2].normal, r_viewleft, r_viewforward, -(90 - r_refdef.fov_y / 2));
+	RotatePointAroundVector( frustum[2].normal, r_viewleft, r_viewforward, -(90 - r_view_fov_y / 2));
 	frustum[2].dist = DotProduct (r_vieworigin, frustum[2].normal);
 	PlaneClassify(&frustum[2]);
 
 	// rotate R_VIEWFORWARD down by FOV_X/2 degrees
-	RotatePointAroundVector( frustum[3].normal, r_viewleft, r_viewforward, (90 - r_refdef.fov_y / 2));
+	RotatePointAroundVector( frustum[3].normal, r_viewleft, r_viewforward, (90 - r_view_fov_y / 2));
 	frustum[3].dist = DotProduct (r_vieworigin, frustum[3].normal);
 	PlaneClassify(&frustum[3]);
 }
@@ -603,32 +610,31 @@ void R_RenderView(void)
 	if (!r_refdef.entities/* || !cl.worldmodel*/)
 		return; //Host_Error ("R_RenderView: NULL worldmodel");
 	
-	r_refdef.width = bound(0, r_refdef.width, vid.realwidth);
-	r_refdef.height = bound(0, r_refdef.height, vid.realheight);
-	r_refdef.x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
-	r_refdef.y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
-	r_refdef.fov_x = bound(1, r_refdef.fov_x, 170);
-	r_refdef.fov_y = bound(1, r_refdef.fov_y, 170);
+	r_view_width = bound(0, r_refdef.width, vid.realwidth);
+	r_view_height = bound(0, r_refdef.height, vid.realheight);
+	r_view_x = bound(0, r_refdef.x, vid.realwidth - r_refdef.width);
+	r_view_y = bound(0, r_refdef.y, vid.realheight - r_refdef.height);
+	r_view_fov_x = bound(1, r_refdef.fov_x, 170);
+	r_view_fov_y = bound(1, r_refdef.fov_y, 170);
+	r_view_matrix = r_refdef.viewentitymatrix;
 
-	// GL is weird because it's bottom to top, r_refdef.y is top to bottom
-	qglViewport(r_refdef.x, vid.realheight - (r_refdef.y + r_refdef.height), r_refdef.width, r_refdef.height);
-	GL_Scissor(r_refdef.x, r_refdef.y, r_refdef.width, r_refdef.height);
+	// GL is weird because it's bottom to top, r_view_y is top to bottom
+	qglViewport(r_view_x, vid.realheight - (r_view_y + r_view_height), r_view_width, r_view_height);
+	GL_Scissor(r_view_x, r_view_y, r_view_width, r_view_height);
 	GL_ScissorTest(true);
 	R_ClearScreen();
 
-	R_SetFrustum();
-	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
-
-	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
-		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_refdef.fov_x, r_refdef.fov_y, 1.0f);
-	else
-		GL_SetupView_Mode_Perspective(r_refdef.fov_x, r_refdef.fov_y, 1.0f, r_farclip);
-
-	GL_SetupView_Orientation_FromEntity(&r_refdef.viewentitymatrix);
 	R_Mesh_Start();
 	R_TimeReport("setup");
 
+	qglDepthFunc(GL_LEQUAL);
+	qglPolygonOffset(0, 0);
+	qglEnable(GL_POLYGON_OFFSET_FILL);
+
 	R_RenderScene();
+
+	qglPolygonOffset(0, 0);
+	qglDisable(GL_POLYGON_OFFSET_FILL);
 
 	R_BlendView();
 	R_TimeReport("blendview");
@@ -651,6 +657,16 @@ void R_RenderScene(void)
 
 	r_framecount++;
 
+	R_SetFrustum();
+
+	r_farclip = R_FarClip(r_vieworigin, r_viewforward, 768.0f) + 256.0f;
+	if (gl_stencil && ((r_shadow_realtime_world.integer && r_shadow_worldshadows.integer) || ((r_shadow_realtime_world.integer || r_shadow_realtime_dlight.integer) && r_shadow_dlightshadows.integer)))
+		GL_SetupView_Mode_PerspectiveInfiniteFarClip(r_view_fov_x, r_view_fov_y, 1.0f);
+	else
+		GL_SetupView_Mode_Perspective(r_view_fov_x, r_view_fov_y, 1.0f, r_farclip);
+
+	GL_SetupView_Orientation_FromEntity(&r_view_matrix);
+
 	R_SkyStartFrame();
 
 	if (cl.worldmodel && cl.worldmodel->brush.FatPVS)
@@ -661,10 +677,6 @@ void R_RenderScene(void)
 
 	R_MarkEntities();
 	R_TimeReport("markentity");
-
-	qglDepthFunc(GL_LEQUAL);
-	qglPolygonOffset(0, 0);
-	qglEnable(GL_POLYGON_OFFSET_FILL);
 
 	R_MeshQueue_BeginScene();
 
@@ -725,9 +737,6 @@ void R_RenderScene(void)
 		R_ShadowVolumeLighting(true);
 		R_TimeReport("shadowvolume");
 	}
-
-	qglPolygonOffset(0, 0);
-	qglDisable(GL_POLYGON_OFFSET_FILL);
 
 	// don't let sound skip if going slow
 	if (!intimerefresh && !r_speeds.integer)

@@ -90,11 +90,18 @@ extern	int		c_alias_polys, c_light_polys, c_faces, c_nodes, c_leafs, c_models, c
 //
 // view origin
 //
-extern	vec3_t	r_vieworigin;
-extern	vec3_t	r_viewforward;
-extern	vec3_t	r_viewleft;
-extern	vec3_t	r_viewright;
-extern	vec3_t	r_viewup;
+extern vec3_t r_vieworigin;
+extern vec3_t r_viewforward;
+extern vec3_t r_viewleft;
+extern vec3_t r_viewright;
+extern vec3_t r_viewup;
+extern int r_view_x;
+extern int r_view_y;
+extern int r_view_width;
+extern int r_view_height;
+extern float r_view_fov_x;
+extern float r_view_fov_y;
+extern matrix4x4_t r_view_matrix;
 
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
