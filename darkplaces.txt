@@ -12,6 +12,17 @@ I am not very good at writing documentation, so this readme is organized as a
 feature list, with information on each feature, I hope it is still adequate
 documentation.
 
+Tip:
+Visit the Color Control submenu of Options, it's near the top, fiddle with
+gamma (or grey level if using the color levels mode) until the grey box
+surrounding the white/black dither pattern matches up with the grey you see
+while looking at the dither from a distance, this will calibrate quake to look
+approximately as id Software intended, and ensure everyone sees it the same.
+Note: Different resolutions may be different intensities depending on monitor.
+Note2: ATI Radeon Catalyst 3.10 drivers seem to have a weird gamma limiting
+'feature' which rejects gamma settings it doesn't like, feel free to complain
+to ATI about this if it gets in your way (it probably will). 
+
 Questions/comments/bugreports/suggestions?
 Send email to havoc@telefragged.com.
 
