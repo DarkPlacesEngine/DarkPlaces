@@ -318,9 +318,13 @@ void VID_Finish (void)
 	{
 		if (r_speeds.integer || gl_finish.integer)
 			qglFinish();
-		hdc = GetDC(mainwindow);
-		SwapBuffers(hdc);
-		ReleaseDC(mainwindow, hdc);
+		if (qwglGetCurrentDC) 
+			SwapBuffers(qwglGetCurrentDC());
+		else {
+			hdc = GetDC(mainwindow);
+			SwapBuffers(hdc);
+			ReleaseDC(mainwindow, hdc);
+		}
 	}
 
 // handle the mouse state when windowed if that's changed
@@ -993,7 +997,7 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 
 // COMMANDLINEOPTION: Windows WGL: -novideosync disables WGL_EXT_swap_control
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, "-novideosync", false);
-	ReleaseDC(mainwindow, hdc);
+	//ReleaseDC(mainwindow, hdc);
 
 	GL_Init ();
 

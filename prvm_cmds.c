@@ -96,6 +96,9 @@ float	search_getsize(float handle)
 string	search_getfilename(float handle, float num)
 
 string	chr(float ascii)
+
+float	etof(entity ent)
+entity	ftoe(float num)
 		
 perhaps only : Menu : WriteMsg 
 ===============================
@@ -142,7 +145,7 @@ string	findkeysforcommand(string command)
 float	gethostcachevalue(float type)
 string	gethostcachestring(float type, float hostnr)
 
-
+		parseentitydata(entity ent, string data)
 */
 
 #include "quakedef.h"
@@ -832,6 +835,38 @@ void VM_stof(void)
 	char string[VM_STRINGTEMP_LENGTH];
 	VM_VarString(0, string, sizeof(string));
 	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
+}
+
+/*
+========================
+VM_etof
+
+float etof(entity ent)
+========================
+*/
+void VM_etof(void)
+{
+	VM_SAFEPARMCOUNT(1, VM_etof);
+	PRVM_G_FLOAT(OFS_RETURN) = PRVM_G_INT(OFS_PARM0);
+}
+
+/*
+========================
+VM_ftoe
+
+entity ftoe(float num)
+========================
+*/
+void VM_ftoe(void)
+{
+	int ent;
+	VM_SAFEPARMCOUNT(1, VM_ftoe);
+
+	ent = PRVM_G_FLOAT(OFS_PARM0);
+	if(PRVM_PROG_TO_EDICT(ent)->p.e->free)
+		PRVM_ERROR ("VM_ftoe: %s tried to access a freed entity (entity %i)!\n", PRVM_NAME, ent);
+    
+	PRVM_G_INT(OFS_RETURN) = ent;
 }
 
 /*
@@ -2220,6 +2255,34 @@ void VM_loadfromdata(void)
 }
 
 /*
+========================
+VM_M_parseentitydata
+
+parseentitydata(entity ent, string data)
+========================
+*/
+void VM_M_parseentitydata(void)
+{
+	prvm_edict_t *ent;
+	const char *data;
+
+	VM_SAFEPARMCOUNT(2, VM_parseentitydata);
+    
+    // get edict and test it
+	ent = PRVM_G_EDICT(OFS_PARM0);
+	if (ent->p.e->free)
+		PRVM_ERROR ("VM_parseentitydata: %s: Can only set already spawned entities (entity %i is free)!\n", PRVM_NAME, PRVM_NUM_FOR_EDICT(ent));
+
+	data = PRVM_G_STRING(OFS_PARM1);
+
+    // parse the opening brace
+	if (!COM_ParseToken(&data, false) || com_token[0] != '{' )
+		PRVM_ERROR ("VM_parseentitydata: %s: Couldn't parse entity data:\n%s\n", PRVM_NAME, data );
+
+	PRVM_ED_ParseEdict (data, ent);
+}
+
+/*
 =========
 VM_loadfromfile
 
@@ -3277,8 +3340,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_search_end,
 	VM_search_getsize,
 	VM_search_getfilename, // 77
-	VM_chr,	//78
-	0,0,// 80
+	VM_chr,	
+	VM_etof,
+	VM_ftoe,// 80
 	e10,			// 90
 	e10,			// 100
 	e100,			// 200
@@ -3327,7 +3391,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_keynumtostring,
 	VM_M_findkeysforcommand,// 610
 	VM_M_gethostcachevalue,
-	VM_M_gethostcachestring // 612 
+	VM_M_gethostcachestring,
+	VM_M_parseentitydata	// 613
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);

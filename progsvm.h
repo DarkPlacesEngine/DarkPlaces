@@ -174,7 +174,22 @@ typedef struct prvm_edict_s
 	{
 		prvm_edict_private_t *e;
 		void				 *vp;
-		//add other types as you desire
+		// add other private structs as you desire
+		// new structs have to start with the elements of prvm_edit_private_t
+		// e.g. a new struct has to either look like this:
+		//	typedef struct server_edict_private_s {
+		//		prvm_edict_private_t base;
+		//		vec3_t moved_from;
+		//      vec3_t moved_fromangles;
+		//		... } server_edict_private_t;
+		// or:
+		//	typedef struct server_edict_private_s {
+		//		qboolean free;
+		//		float freetime;
+		//		vec3_t moved_from;
+		//      vec3_t moved_fromangles;
+		//		... } server_edict_private_t;
+		// However, the first one should be preferred.
 	} p;
 	// QuakeC fields (stored in dynamically resized array)
 	//entvars_t *v;
