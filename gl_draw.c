@@ -511,11 +511,11 @@ void R_DrawQueue(void)
 			{
 				// We have to convert the con coords into real coords
 				int x , y, width, height;
-				x = dq->x * (vid.realwidth / vid.conwidth) + vid.realx;
+				x = dq->x * ((float)vid.realwidth / vid.conwidth);
 				// OGL uses top to bottom 
-				y = (dq->y + dq->scaley) * (vid.realheight / vid.conheight) + vid.realy;
-				width = dq->scalex * (vid.realwidth / vid.conwidth);
-				height = dq->scaley * (vid.realheight / vid.conheight);
+				y = dq->y * ((float) vid.realheight / vid.conheight);
+				width = dq->scalex * ((float)vid.realwidth / vid.conwidth);
+				height = dq->scaley * ((float)vid.realheight / vid.conheight);
 
 				GL_Scissor(x, y, width, height);
 

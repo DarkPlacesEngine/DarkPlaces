@@ -122,6 +122,9 @@ menu cmd list:
 float	getkeydest
 		setmousetarget(float target)
 float	getmousetarget(void)
+
+		callfunction(...,string function_name)
+		writetofile(float fhandle, entity ent)
 */
 
 #include "quakedef.h"
@@ -154,9 +157,9 @@ mempool_t *vm_strings_mempool[PRVM_MAXPROGS];
 
 // temp string handling
 // LordHavoc: added this to semi-fix the problem of using many ftos calls in a print
-#define STRINGTEMP_BUFFERS 16
-#define STRINGTEMP_LENGTH 4096
-static char vm_string_temp[STRINGTEMP_BUFFERS][STRINGTEMP_LENGTH];
+#define VM_STRINGTEMP_BUFFERS 16
+#define VM_STRINGTEMP_LENGTH 4096
+static char vm_string_temp[VM_STRINGTEMP_BUFFERS][VM_STRINGTEMP_LENGTH];
 static int vm_string_tempindex = 0;
 
 // qc cvar 
@@ -175,7 +178,7 @@ static char *VM_GetTempString(void)
 {
 	char *s;
 	s = vm_string_temp[vm_string_tempindex];
-	vm_string_tempindex = (vm_string_tempindex + 1) % STRINGTEMP_BUFFERS;
+	vm_string_tempindex = (vm_string_tempindex + 1) % VM_STRINGTEMP_BUFFERS;
 	return s;
 }
 
@@ -259,7 +262,7 @@ error(value)
 void VM_error (void)
 {
 	prvm_edict_t	*ed;
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Printf ("======%S ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
@@ -285,7 +288,7 @@ objerror(value)
 void VM_objerror (void)
 {
 	prvm_edict_t	*ed;
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Printf ("======%s OBJECT ERROR in %s:\n%s\n", PRVM_NAME, PRVM_GetString(prog->xfunction->s_name), string);
@@ -312,7 +315,7 @@ print(string)
 */
 void VM_print (void)
 {
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
 	Con_Print(string);
@@ -329,7 +332,7 @@ bprint(...[string])
 */
 void VM_bprint (void)
 {
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	if(!sv.active)
 	{
@@ -354,7 +357,7 @@ void VM_sprint (void)
 {
 	client_t	*client;
 	int			clientnum;
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	//find client for this entity
 	clientnum = PRVM_G_FLOAT(OFS_PARM0);
@@ -383,7 +386,7 @@ centerprint(clientent, value)
 */
 void VM_centerprint (void)
 {
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_VarString(0, string, sizeof(string));
 	SCR_CenterPrint(string);
@@ -680,7 +683,7 @@ dprint(...[string])
 */
 void VM_dprint (void)
 {
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 	if (developer.integer)
 	{
 		VM_VarString(0, string, sizeof(string));
@@ -778,7 +781,7 @@ float stof(...[string])
 */
 void VM_stof(void)
 {
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 	VM_VarString(0, string, sizeof(string));
 	PRVM_G_FLOAT(OFS_RETURN) = atof(string);
 }
@@ -1698,7 +1701,7 @@ string	fgets(float fhandle)
 void VM_fgets(void)
 {
 	int c, end;
-	static char string[STRINGTEMP_LENGTH];
+	static char string[VM_STRINGTEMP_LENGTH];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(1,VM_fgets);
@@ -1720,7 +1723,7 @@ void VM_fgets(void)
 		c = FS_Getc(VM_FILES[filenum]);
 		if (c == '\r' || c == '\n' || c < 0)
 			break;
-		if (end < STRINGTEMP_LENGTH - 1)
+		if (end < VM_STRINGTEMP_LENGTH - 1)
 			string[end++] = c;
 	}
 	string[end] = 0;
@@ -1746,7 +1749,7 @@ fputs(float fhandle, string s)
 void VM_fputs(void)
 {
 	int stringlength;
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 	int filenum;
 
 	VM_SAFEPARMCOUNT(2,VM_fputs);
@@ -1808,7 +1811,7 @@ void VM_strcat(void)
 		PRVM_ERROR("VM_strcat wrong parameter count (min. 2 expected ) !\n");
 	
 	s = VM_GetTempString();
-	VM_VarString(0, s, STRINGTEMP_LENGTH);
+	VM_VarString(0, s, VM_STRINGTEMP_LENGTH);
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(s);
 }
 
@@ -1835,7 +1838,7 @@ void VM_substring(void)
 	if (!s)
 		s = "";
 	for (i = 0;i < start && *s;i++, s++);
-	for (i = 0;i < STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
+	for (i = 0;i < VM_STRINGTEMP_LENGTH - 1 && *s && i < length;i++, s++)
 		string[i] = *s;
 	string[i] = 0;
 	PRVM_G_INT(OFS_RETURN) = PRVM_SetString(string);
@@ -1851,7 +1854,7 @@ vector	stov(string s)
 //vector(string s) stov = #117; // returns vector value from a string
 void VM_stov(void)
 {
-	char string[STRINGTEMP_LENGTH];
+	char string[VM_STRINGTEMP_LENGTH];
 
 	VM_SAFEPARMCOUNT(1,VM_stov);
 
@@ -2439,8 +2442,8 @@ void VM_drawsetcliparea(void)
 
 	x = bound(0,PRVM_G_FLOAT(OFS_PARM0),vid.conwidth);
 	y = bound(0,PRVM_G_FLOAT(OFS_PARM1),vid.conheight);
-	w = bound(0,PRVM_G_FLOAT(OFS_PARM2),x);
-	h = bound(0,PRVM_G_FLOAT(OFS_PARM3),y); 
+	w = bound(0,PRVM_G_FLOAT(OFS_PARM2),(vid.conwidth  - x));
+	h = bound(0,PRVM_G_FLOAT(OFS_PARM3),(vid.conheight - y)); 
 
 	DrawQ_SetClipArea(x,y,w,h);
 }
@@ -2648,6 +2651,69 @@ void VM_M_getkeydest(void)
 	}
 }
 
+/*
+=========
+VM_M_callfunction
+
+	callfunction(...,string function_name)
+=========
+*/
+mfunction_t *PRVM_ED_FindFunction (const char *name);
+int PRVM_EnterFunction (mfunction_t *f);
+void VM_M_callfunction(void)
+{
+	mfunction_t *func;
+	char *s;
+
+	s = PRVM_G_STRING(OFS_PARM0 + (prog->argc - 1));
+
+	if(!s)
+		PRVM_ERROR("VM_M_getfunction: null string !\n");
+
+	VM_CheckEmptyString(s); 
+
+	func = PRVM_ED_FindFunction(s);
+
+	if(func)
+		PRVM_EnterFunction(func);
+}	
+
+/*
+=========
+VM_M_writetofile
+
+	writetofile(float fhandle, entity ent)
+=========
+*/
+void VM_M_writetofile(void)
+{
+	prvm_edict_t * ent;
+	int filenum;
+
+	VM_SAFEPARMCOUNT(2, VM_M_writetofile);
+
+	filenum = PRVM_G_FLOAT(OFS_PARM0);
+	if (filenum < 0 || filenum >= MAX_VMFILES)
+	{
+		Con_Printf("VM_fputs: invalid file handle %i used in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+	if (VM_FILES[filenum] == NULL)
+	{
+		Con_Printf("VM_fputs: no such file handle %i (or file has been closed) in %s\n", filenum, PRVM_NAME);
+		return;
+	}
+
+	ent = PRVM_G_EDICT(OFS_PARM1); 	
+	if(ent->e->free)
+	{
+		Con_Printf("VM_M_writetofile: %s: entity %i is free !\n", PRVM_NAME, PRVM_EDICT_NUM(OFS_PARM1));
+		return;
+	}
+
+	PRVM_ED_Write (VM_FILES[filenum], ent);
+}
+
 prvm_builtin_t vm_m_builtins[] = {
 	0, // to be consistent with the old vm
 	// common builtings (mostly)
@@ -2762,7 +2828,9 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_M_setkeydest,
 	VM_M_getkeydest,
 	VM_M_setmousetarget,
-	VM_M_getmousetarget
+	VM_M_getmousetarget,
+	VM_M_callfunction,
+	VM_M_writetofile	// 606
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);

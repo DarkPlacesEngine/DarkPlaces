@@ -982,7 +982,8 @@ qfile_t *FS_FOpenFile (const char *filename, qboolean quiet)
 
 	filenamelen = strlen (filename);
 
-#ifdef AKVERSION		
+#ifdef AKVERSION
+	// first we search for a real file, after that we start to search through the paks
 	// search through the path, one element at a time
 	search = fs_searchpaths;
 

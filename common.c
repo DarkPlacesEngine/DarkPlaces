@@ -547,8 +547,9 @@ skipwhite:
 		// skip /* comments
 		if (data[1] == '*')
 		{
-			while (*data && *data != '*' && data[1] != '/')
+			while (*data && (*data != '*' || data[1] != '/'))
 				data++;
+			data+=2;
 			goto skipwhite;
 		}
 	}
