@@ -23,7 +23,7 @@ cvar_t in_pitch_max = {0, "in_pitch_max", "90"};
 cvar_t m_filter = {CVAR_SAVE, "m_filter","0"};
 
 // GL_ARB_multitexture
-void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+//void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
 void (GLAPIENTRY *qglActiveTexture) (GLenum);
 void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
 
@@ -49,7 +49,7 @@ gl_extensioninfo_t;
 
 static gl_extensionfunctionlist_t multitexturefuncs[] =
 {
-	{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
+	//{"glMultiTexCoord2fARB", (void **) &qglMultiTexCoord2f},
 	{"glActiveTextureARB", (void **) &qglActiveTexture},
 	{"glClientActiveTextureARB", (void **) &qglClientActiveTexture},
 	{NULL, NULL}
