@@ -468,7 +468,7 @@ void R_DrawQ1Q2AliasModelCallback (const void *calldata1, int calldata2)
 		m.numverts = model->numverts;
 		m.matrix = ent->matrix;
 		m.tex[0] = R_GetTexture(skinframe->fog);
-		if (m.tex[0] && R_Mesh_Draw_GetBuffer(&m, true))
+		if (R_Mesh_Draw_GetBuffer(&m, true))
 		{
 			c_alias_polys += m.numtriangles;
 			R_FillColors(m.color, m.numverts, fogcolor[0] * fog * m.colorscale, fogcolor[1] * fog * m.colorscale, fogcolor[2] * fog * m.colorscale, ent->alpha);
