@@ -225,7 +225,7 @@ void R_Shadow_Volume(int numverts, int numtris, float *vertex, int *elements, in
 			out[5] = e[2] + numverts;
 			out += 6;
 			tris += 2;
-#else if 1
+#elif 1
 			// rear cap
 			out[0] = e[0] + numverts;
 			out[1] = e[1] + numverts;

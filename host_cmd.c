@@ -1533,7 +1533,12 @@ void Host_Startdemos_f (void)
 	if (cls.state == ca_dedicated)
 	{
 		if (!sv.active && !sv_spawnmap[0])
-			Cbuf_AddText ("map start\n");
+		{
+			if (gamemode == GAME_TRANSFUSION)
+				Cbuf_AddText ("map bb1\n");
+			else
+				Cbuf_AddText ("map start\n");
+		}
 		return;
 	}
 
