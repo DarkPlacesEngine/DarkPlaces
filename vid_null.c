@@ -23,9 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 int cl_available = false;
 
-// global video state
-viddef_t vid;
-
 void VID_Shutdown(void)
 {
 }
@@ -67,9 +64,13 @@ int VID_SetGamma(float prescale, float gamma, float scale, float base)
 	return FALSE;
 }
 
-void VID_Init(int fullscreen, int width, int height, int bpp)
+void VID_Init(void)
 {
 	InitSig(); // trap evil signals
+}
+
+int VID_InitMode(int fullscreen, int width, int height, int bpp)
+{
 }
 
 int GL_OpenLibrary(const char *name)

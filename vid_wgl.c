@@ -68,270 +68,47 @@ static gl_extensionfunctionlist_t wglswapintervalfuncs[] =
 	{NULL, NULL}
 };
 
-#define MAX_MODE_LIST	30
-#define VID_ROW_SIZE	3
-#define MAXWIDTH		10000
-#define MAXHEIGHT		10000
-
-#define MODE_WINDOWED			0
-#define NO_MODE					(MODE_WINDOWED - 1)
-#define MODE_FULLSCREEN_DEFAULT	(MODE_WINDOWED + 1)
-
-typedef struct {
-	modestate_t	type;
-	int			width;
-	int			height;
-	int			modenum;
-	int			dib;
-	int			fullscreen;
-	int			bpp;
-	char		modedesc[17];
-} vmode_t;
-
-typedef struct {
-	int			width;
-	int			height;
-} lmode_t;
-
-lmode_t	lowresmodes[] = {
-	{320, 200},
-	{320, 240},
-	{400, 300},
-	{512, 384},
-};
+void VID_RestoreGameGamma(void);
+void VID_GetSystemGamma(void);
+void VID_RestoreSystemGamma(void);
 
 qboolean scr_skipupdate;
 
-static vmode_t modelist[MAX_MODE_LIST];
-static int nummodes;
-static vmode_t badmode;
-
 static DEVMODE gdevmode;
 static qboolean vid_initialized = false;
-static qboolean windowed, leavecurrentmode;
 static qboolean vid_wassuspended = false;
 static int vid_usingmouse;
 extern qboolean mouseactive;  // from in_win.c
 static HICON hIcon;
 
-int DIBWidth, DIBHeight;
-RECT WindowRect;
-DWORD WindowStyle, ExWindowStyle;
-
 HWND mainwindow;
 
-int vid_modenum = NO_MODE;
-int vid_realmode;
-int vid_default = MODE_WINDOWED;
-static int windowed_default;
-unsigned char vid_curpal[256*3];
+//HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
 
-HGLRC baseRC;
-HDC maindc;
+static int vid_isfullscreen;
 
-HWND WINAPI InitializeWindow (HINSTANCE hInstance, int nCmdShow);
+//void VID_MenuDraw (void);
+//void VID_MenuKey (int key);
 
-// global video state
-viddef_t vid;
-
-modestate_t modestate = MS_UNINIT;
-
-void VID_MenuDraw (void);
-void VID_MenuKey (int key);
-
-LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-void AppActivate(BOOL fActive, BOOL minimize);
-char *VID_GetModeDescription (int mode);
-void ClearAllStates (void);
-void VID_UpdateWindowStatus (void);
+//LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+//void AppActivate(BOOL fActive, BOOL minimize);
+//void ClearAllStates (void);
+//void VID_UpdateWindowStatus (void);
 
 //====================================
 
-int window_center_x, window_center_y, window_x, window_y, window_width, window_height;
-RECT window_rect;
+int window_x, window_y, window_width, window_height;
+int window_center_x, window_center_y;
 
-// direct draw software compatability stuff
+void IN_ShowMouse (void);
+void IN_DeactivateMouse (void);
+void IN_HideMouse (void);
+void IN_ActivateMouse (void);
+void IN_MouseEvent (int mstate);
+void IN_UpdateClipCursor (void);
 
-void CenterWindow(HWND hWndCenter, int width, int height, BOOL lefttopjustify)
-{
-	int CenterX, CenterY;
-
-	CenterX = (GetSystemMetrics(SM_CXSCREEN) - width) / 2;
-	CenterY = (GetSystemMetrics(SM_CYSCREEN) - height) / 2;
-	if (CenterX > CenterY*2)
-		CenterX >>= 1;	// dual screens
-	CenterX = (CenterX < 0) ? 0: CenterX;
-	CenterY = (CenterY < 0) ? 0: CenterY;
-	SetWindowPos (hWndCenter, NULL, CenterX, CenterY, 0, 0,
-			SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW | SWP_DRAWFRAME);
-}
-
-qboolean VID_SetWindowedMode (int modenum)
-{
-	int lastmodestate, width, height;
-	RECT rect;
-
-	lastmodestate = modestate;
-
-	WindowRect.top = WindowRect.left = 0;
-
-	WindowRect.right = modelist[modenum].width;
-	WindowRect.bottom = modelist[modenum].height;
-
-	DIBWidth = modelist[modenum].width;
-	DIBHeight = modelist[modenum].height;
-
-	WindowStyle = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-	ExWindowStyle = 0;
-
-	rect = WindowRect;
-	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
-
-	width = rect.right - rect.left;
-	height = rect.bottom - rect.top;
-
-	// Create the DIB window
-	mainwindow = CreateWindowEx (ExWindowStyle, gamename, gamename, WindowStyle, rect.left, rect.top, width, height, NULL, NULL, global_hInstance, NULL);
-
-	if (!mainwindow)
-		Sys_Error ("Couldn't create DIB window");
-
-	// Center and show the DIB window
-	CenterWindow(mainwindow, WindowRect.right - WindowRect.left, WindowRect.bottom - WindowRect.top, false);
-
-	ShowWindow (mainwindow, SW_SHOWDEFAULT);
-	UpdateWindow (mainwindow);
-
-	modestate = MS_WINDOWED;
-
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
-
-	return true;
-}
-
-
-qboolean VID_SetFullDIBMode (int modenum)
-{
-	int lastmodestate, width, height;
-	RECT rect;
-
-	if (!leavecurrentmode)
-	{
-		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-		gdevmode.dmBitsPerPel = modelist[modenum].bpp;
-		gdevmode.dmPelsWidth = modelist[modenum].width;
-		gdevmode.dmPelsHeight = modelist[modenum].height;
-		gdevmode.dmSize = sizeof (gdevmode);
-
-		if (ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
-			Sys_Error ("Couldn't set fullscreen DIB mode");
-	}
-
-	lastmodestate = modestate;
-	modestate = MS_FULLDIB;
-
-	WindowRect.top = WindowRect.left = 0;
-
-	WindowRect.right = modelist[modenum].width;
-	WindowRect.bottom = modelist[modenum].height;
-
-	DIBWidth = modelist[modenum].width;
-	DIBHeight = modelist[modenum].height;
-
-	WindowStyle = WS_POPUP;
-	ExWindowStyle = 0;
-
-	rect = WindowRect;
-	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
-
-	width = rect.right - rect.left;
-	height = rect.bottom - rect.top;
-
-	// Create the DIB window
-	mainwindow = CreateWindowEx (ExWindowStyle, gamename, gamename, WindowStyle, rect.left, rect.top, width, height, NULL, NULL, global_hInstance, NULL);
-
-	if (!mainwindow)
-		Sys_Error ("Couldn't create DIB window");
-
-	ShowWindow (mainwindow, SW_SHOWDEFAULT);
-	UpdateWindow (mainwindow);
-
-// needed because we're not getting WM_MOVE messages fullscreen on NT
-	window_x = 0;
-	window_y = 0;
-
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
-	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
-
-	return true;
-}
-
-
-int VID_SetMode (int modenum)
-{
-	int original_mode;
-	qboolean stat = 0;
-	MSG msg;
-
-	if ((windowed && (modenum != 0)) || (!windowed && (modenum < 1)) || (!windowed && (modenum >= nummodes)))
-		Sys_Error ("Bad video mode\n");
-
-	CDAudio_Pause ();
-
-	if (vid_modenum == NO_MODE)
-		original_mode = windowed_default;
-	else
-		original_mode = vid_modenum;
-
-	// Set either the fullscreen or windowed mode
-	if (modelist[modenum].type == MS_WINDOWED)
-		stat = VID_SetWindowedMode(modenum);
-	else if (modelist[modenum].type == MS_FULLDIB)
-		stat = VID_SetFullDIBMode(modenum);
-	else
-		Sys_Error ("VID_SetMode: Bad mode type in modelist");
-
-	window_width = DIBWidth;
-	window_height = DIBHeight;
-	VID_UpdateWindowStatus ();
-
-	CDAudio_Resume ();
-
-	if (!stat)
-		Sys_Error ("Couldn't set video mode");
-
-// now we try to make sure we get the focus on the mode switch, because
-// sometimes in some systems we don't.  We grab the foreground, then
-// finish setting up, pump all our messages, and sleep for a little while
-// to let messages finish bouncing around the system, then we put
-// ourselves at the top of the z order, then grab the foreground again,
-// Who knows if it helps, but it probably doesn't hurt
-	SetForegroundWindow (mainwindow);
-	vid_modenum = modenum;
-	Cvar_SetValue ("vid_mode", (float)vid_modenum);
-
-	while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE))
-	{
-		TranslateMessage (&msg);
-		DispatchMessage (&msg);
-	}
-
-	Sleep (100);
-
-	SetWindowPos (mainwindow, HWND_TOP, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOCOPYBITS);
-
-	SetForegroundWindow (mainwindow);
-
-// fix the leftover Alt from any Alt-Tab or the like that switched us away
-	ClearAllStates ();
-
-	if (!msg_suppress_1)
-		Con_SafePrintf ("Video mode %s initialized.\n", VID_GetModeDescription (vid_modenum));
-
-	return true;
-}
-
+qboolean mouseinitialized;
+static qboolean dinput;
 
 /*
 ================
@@ -340,14 +117,18 @@ VID_UpdateWindowStatus
 */
 void VID_UpdateWindowStatus (void)
 {
-	window_rect.left = window_x;
-	window_rect.top = window_y;
-	window_rect.right = window_x + window_width;
-	window_rect.bottom = window_y + window_height;
-	window_center_x = (window_rect.left + window_rect.right) / 2;
-	window_center_y = (window_rect.top + window_rect.bottom) / 2;
+	window_center_x = window_x + window_width / 2;
+	window_center_y = window_y + window_height / 2;
 
-	IN_UpdateClipCursor ();
+	if (mouseinitialized && mouseactive && !dinput)
+	{
+		RECT window_rect;
+		window_rect.left = window_x;
+		window_rect.top = window_y;
+		window_rect.right = window_x + window_width;
+		window_rect.bottom = window_y + window_height;
+		ClipCursor (&window_rect);
+	}
 }
 
 
@@ -360,26 +141,30 @@ VID_GetWindowSize
 */
 void VID_GetWindowSize (int *x, int *y, int *width, int *height)
 {
-	*x = *y = 0;
-	*width = WindowRect.right - WindowRect.left;
-	*height = WindowRect.bottom - WindowRect.top;
+	*x = 0;
+	*y = 0;
+	*width = window_width;
+	*height = window_height;
 }
 
 
 void VID_Finish (void)
 {
+	HDC hdc;
 	int vid_usemouse;
 	if (r_render.integer && !scr_skipupdate)
 	{
 		qglFinish();
-		SwapBuffers(maindc);
+		hdc = GetDC(mainwindow);
+		SwapBuffers(hdc);
+		ReleaseDC(mainwindow, hdc);
 	}
 
 // handle the mouse state when windowed if that's changed
 	vid_usemouse = false;
 	if (vid_mouse.integer && !key_consoleactive)
 		vid_usemouse = true;
-	if (modestate == MS_FULLDIB)
+	if (vid_isfullscreen)
 		vid_usemouse = true;
 	if (!vid_activewindow)
 		vid_usemouse = false;
@@ -403,91 +188,8 @@ void VID_Finish (void)
 	}
 }
 
-void VID_SetDefaultMode (void)
-{
-	IN_DeactivateMouse ();
-}
-
-void VID_RestoreSystemGamma(void);
-
-void VID_Shutdown (void)
-{
-	HGLRC hRC;
-	HDC hDC;
-
-	if (vid_initialized)
-	{
-		if (qwglGetCurrentContext)
-			hRC = qwglGetCurrentContext();
-		if (qwglGetCurrentDC)
-			hDC = qwglGetCurrentDC();
-
-		if (qwglMakeCurrent)
-			qwglMakeCurrent(NULL, NULL);
-
-		if (hRC && qwglDeleteContext)
-			qwglDeleteContext(hRC);
-
-		// close the library before we get rid of the window
-		GL_CloseLibrary();
-
-		if (hDC && mainwindow)
-			ReleaseDC(mainwindow, hDC);
-
-		if (modestate == MS_FULLDIB)
-			ChangeDisplaySettings (NULL, 0);
-
-		if (maindc && mainwindow)
-			ReleaseDC (mainwindow, maindc);
-
-		AppActivate(false, false);
-
-		VID_RestoreSystemGamma();
-	}
-}
-
-
 //==========================================================================
 
-
-BOOL bSetupPixelFormat(HDC hDC)
-{
-	static PIXELFORMATDESCRIPTOR pfd = {
-	sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
-	1,				// version number
-	PFD_DRAW_TO_WINDOW 		// support window
-	|  PFD_SUPPORT_OPENGL 	// support OpenGL
-	|  PFD_DOUBLEBUFFER ,	// double buffered
-	PFD_TYPE_RGBA,			// RGBA type
-	24,				// 24-bit color depth
-	0, 0, 0, 0, 0, 0,		// color bits ignored
-	0,				// no alpha buffer
-	0,				// shift bit ignored
-	0,				// no accumulation buffer
-	0, 0, 0, 0, 			// accum bits ignored
-	32,				// 32-bit z-buffer
-	0,				// no stencil buffer
-	0,				// no auxiliary buffer
-	PFD_MAIN_PLANE,			// main layer
-	0,				// reserved
-	0, 0, 0				// layer masks ignored
-	};
-	int pixelformat;
-
-	if ( (pixelformat = ChoosePixelFormat(hDC, &pfd)) == 0 )
-	{
-		MessageBox(NULL, "ChoosePixelFormat failed", "Error", MB_OK);
-		return false;
-	}
-
-	if (SetPixelFormat(hDC, pixelformat, &pfd) == false)
-	{
-		MessageBox(NULL, "SetPixelFormat failed", "Error", MB_OK);
-		return false;
-	}
-
-	return true;
-}
 
 
 
@@ -583,7 +285,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 
 	if (fActive)
 	{
-		if (modestate == MS_FULLDIB)
+		if (vid_isfullscreen)
 		{
 			if (vid_wassuspended)
 			{
@@ -604,7 +306,7 @@ void AppActivate(BOOL fActive, BOOL minimize)
 		vid_usingmouse = false;
 		IN_DeactivateMouse ();
 		IN_ShowMouse ();
-		if (modestate == MS_FULLDIB)
+		if (vid_isfullscreen)
 		{
 			ChangeDisplaySettings (NULL, 0);
 			vid_wassuspended = true;
@@ -628,7 +330,7 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 	switch (uMsg)
 	{
 		case WM_KILLFOCUS:
-			if (modestate == MS_FULLDIB)
+			if (vid_isfullscreen)
 				ShowWindow(mainwindow, SW_SHOWMINNOACTIVE);
 			break;
 
@@ -735,300 +437,6 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 }
 
 
-/*
-=================
-VID_NumModes
-=================
-*/
-int VID_NumModes (void)
-{
-	return nummodes;
-}
-
-
-/*
-=================
-VID_GetModePtr
-=================
-*/
-vmode_t *VID_GetModePtr (int modenum)
-{
-
-	if ((modenum >= 0) && (modenum < nummodes))
-		return &modelist[modenum];
-	else
-		return &badmode;
-}
-
-
-/*
-=================
-VID_GetModeDescription
-=================
-*/
-char *VID_GetModeDescription (int mode)
-{
-	char		*pinfo;
-	vmode_t		*pv;
-	static char	temp[100];
-
-	if ((mode < 0) || (mode >= nummodes))
-		return NULL;
-
-	if (!leavecurrentmode)
-	{
-		pv = VID_GetModePtr (mode);
-		pinfo = pv->modedesc;
-	}
-	else
-	{
-		sprintf (temp, "Desktop resolution (%dx%d)", modelist[MODE_FULLSCREEN_DEFAULT].width, modelist[MODE_FULLSCREEN_DEFAULT].height);
-		pinfo = temp;
-	}
-
-	return pinfo;
-}
-
-
-// KJB: Added this to return the mode driver name in description for console
-
-char *VID_GetExtModeDescription (int mode)
-{
-	static char	pinfo[40];
-	vmode_t		*pv;
-
-	if ((mode < 0) || (mode >= nummodes))
-		return NULL;
-
-	pv = VID_GetModePtr (mode);
-	if (modelist[mode].type == MS_FULLDIB)
-	{
-		if (!leavecurrentmode)
-			sprintf(pinfo,"%s fullscreen", pv->modedesc);
-		else
-			sprintf (pinfo, "Desktop resolution (%dx%d)", modelist[MODE_FULLSCREEN_DEFAULT].width, modelist[MODE_FULLSCREEN_DEFAULT].height);
-	}
-	else
-	{
-		if (modestate == MS_WINDOWED)
-			sprintf(pinfo, "%s windowed", pv->modedesc);
-		else
-			sprintf(pinfo, "windowed");
-	}
-
-	return pinfo;
-}
-
-
-/*
-=================
-VID_DescribeCurrentMode_f
-=================
-*/
-void VID_DescribeCurrentMode_f (void)
-{
-	Con_Printf ("%s\n", VID_GetExtModeDescription (vid_modenum));
-}
-
-
-/*
-=================
-VID_NumModes_f
-=================
-*/
-void VID_NumModes_f (void)
-{
-	if (nummodes == 1)
-		Con_Printf ("%d video mode is available\n", nummodes);
-	else
-		Con_Printf ("%d video modes are available\n", nummodes);
-}
-
-
-/*
-=================
-VID_DescribeMode_f
-=================
-*/
-void VID_DescribeMode_f (void)
-{
-	int		t, modenum;
-
-	modenum = atoi (Cmd_Argv(1));
-
-	t = leavecurrentmode;
-	leavecurrentmode = 0;
-
-	Con_Printf ("%s\n", VID_GetExtModeDescription (modenum));
-
-	leavecurrentmode = t;
-}
-
-
-/*
-=================
-VID_DescribeModes_f
-=================
-*/
-void VID_DescribeModes_f (void)
-{
-	int			i, lnummodes, t;
-	char		*pinfo;
-	vmode_t		*pv;
-
-	lnummodes = VID_NumModes ();
-
-	t = leavecurrentmode;
-	leavecurrentmode = 0;
-
-	for (i=1 ; i<lnummodes ; i++)
-	{
-		pv = VID_GetModePtr (i);
-		pinfo = VID_GetExtModeDescription (i);
-		Con_Printf ("%2d: %s\n", i, pinfo);
-	}
-
-	leavecurrentmode = t;
-}
-
-void VID_AddMode(int type, int width, int height, int modenum, int dib, int fullscreen, int bpp)
-{
-	int i;
-	if (nummodes >= MAX_MODE_LIST)
-		return;
-	modelist[nummodes].type = type;
-	modelist[nummodes].width = width;
-	modelist[nummodes].height = height;
-	modelist[nummodes].modenum = modenum;
-	modelist[nummodes].dib = dib;
-	modelist[nummodes].fullscreen = fullscreen;
-	modelist[nummodes].bpp = bpp;
-	if (bpp == 0)
-		sprintf (modelist[nummodes].modedesc, "%dx%d", width, height);
-	else
-		sprintf (modelist[nummodes].modedesc, "%dx%dx%d", width, height, bpp);
-	for (i = 0;i < nummodes;i++)
-	{
-		if (!memcmp(&modelist[i], &modelist[nummodes], sizeof(vmode_t)))
-			return;
-	}
-	nummodes++;
-}
-
-void VID_InitDIB (HINSTANCE hInstance)
-{
-	int w, h;
-	WNDCLASS		wc;
-
-	// Register the frame class
-	wc.style         = 0;
-	wc.lpfnWndProc   = (WNDPROC)MainWndProc;
-	wc.cbClsExtra    = 0;
-	wc.cbWndExtra    = 0;
-	wc.hInstance     = hInstance;
-	wc.hIcon         = 0;
-	wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
-	wc.hbrBackground = NULL;
-	wc.lpszMenuName  = 0;
-	wc.lpszClassName = gamename;
-
-	if (!RegisterClass (&wc) )
-		Sys_Error ("Couldn't register window class");
-
-	if (COM_CheckParm("-width"))
-		w = atoi(com_argv[COM_CheckParm("-width")+1]);
-	else
-		w = 640;
-
-	if (w < 320)
-		w = 320;
-
-	if (COM_CheckParm("-height"))
-		h = atoi(com_argv[COM_CheckParm("-height")+1]);
-	else
-		h = w * 240/320;
-
-	if (h < 240)
-		h = 240;
-
-	VID_AddMode(MS_WINDOWED, w, h, 0, 1, 0, 0);
-}
-
-
-/*
-=================
-VID_InitFullDIB
-=================
-*/
-void VID_InitFullDIB (HINSTANCE hInstance)
-{
-	DEVMODE	devmode;
-	int		modenum;
-	int		originalnummodes;
-	int		numlowresmodes;
-	int		j;
-	int		bpp;
-	int		done;
-	BOOL	stat;
-
-// enumerate >8 bpp modes
-	originalnummodes = nummodes;
-	modenum = 0;
-
-	do
-	{
-		stat = EnumDisplaySettings (NULL, modenum, &devmode);
-
-		if ((devmode.dmBitsPerPel >= 15) && (devmode.dmPelsWidth <= MAXWIDTH) && (devmode.dmPelsHeight <= MAXHEIGHT) && (nummodes < MAX_MODE_LIST))
-		{
-			devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-
-			if (ChangeDisplaySettings (&devmode, CDS_TEST | CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL)
-				VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth, devmode.dmPelsHeight, 0, 1, 1, devmode.dmBitsPerPel);
-		}
-
-		modenum++;
-	}
-	while (stat);
-
-// see if there are any low-res modes that aren't being reported
-	numlowresmodes = sizeof(lowresmodes) / sizeof(lowresmodes[0]);
-	bpp = 16;
-	done = 0;
-
-	do
-	{
-		for (j=0 ; (j<numlowresmodes) && (nummodes < MAX_MODE_LIST) ; j++)
-		{
-			devmode.dmBitsPerPel = bpp;
-			devmode.dmPelsWidth = lowresmodes[j].width;
-			devmode.dmPelsHeight = lowresmodes[j].height;
-			devmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
-
-			if (ChangeDisplaySettings (&devmode, CDS_TEST | CDS_FULLSCREEN) == DISP_CHANGE_SUCCESSFUL)
-				VID_AddMode(MS_FULLDIB, devmode.dmPelsWidth, devmode.dmPelsHeight, 0, 1, 1, devmode.dmBitsPerPel);
-		}
-		switch (bpp)
-		{
-			case 16:
-				bpp = 32;
-				break;
-
-			case 32:
-				bpp = 24;
-				break;
-
-			case 24:
-				done = 1;
-				break;
-		}
-	}
-	while (!done);
-
-	if (nummodes == originalnummodes)
-		Con_SafePrintf ("No fullscreen DIB modes found\n");
-}
-
 //static int grabsysgamma = true;
 WORD systemgammaramps[3][256], currentgammaramps[3][256];
 
@@ -1077,6 +485,7 @@ void VID_RestoreSystemGamma(void)
 // Video menu stuff
 //========================================================
 
+#if 0
 extern void M_Menu_Options_f (void);
 extern void M_Print (float cx, float cy, char *str);
 extern void M_PrintWhite (float cx, float cy, char *str);
@@ -1183,6 +592,7 @@ void VID_MenuKey (int key)
 		break;
 	}
 }
+#endif
 
 static HINSTANCE gldll;
 
@@ -1219,100 +629,227 @@ void *GL_GetProcAddress(const char *name)
 		p = (void *) GetProcAddress(gldll, name);
 	return p;
 }
-/*
-===================
-VID_Init
-===================
-*/
-void VID_Init (int fullscreen, int width, int height, int bpp)
+
+void VID_Init(void)
 {
-	int i, bestmode;
-	double rating, bestrating;
-	int basenummodes, done;
+	WNDCLASS wc;
+
+	InitCommonControls();
+	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON2));
+
+	// Register the frame class
+	wc.style         = 0;
+	wc.lpfnWndProc   = (WNDPROC)MainWndProc;
+	wc.cbClsExtra    = 0;
+	wc.cbWndExtra    = 0;
+	wc.hInstance     = global_hInstance;
+	wc.hIcon         = 0;
+	wc.hCursor       = LoadCursor (NULL,IDC_ARROW);
+	wc.hbrBackground = NULL;
+	wc.lpszMenuName  = 0;
+	wc.lpszClassName = "DarkPlacesWindowClass";
+
+	if (!RegisterClass (&wc))
+		Sys_Error("Couldn't register window class\n");
+}
+
+int VID_InitMode (int fullscreen, int width, int height, int bpp)
+{
+	int i;
 	HDC hdc;
-	DEVMODE devmode;
+	RECT rect;
+	MSG msg;
+	PIXELFORMATDESCRIPTOR pfd =
+	{
+		sizeof(PIXELFORMATDESCRIPTOR),	// size of this pfd
+		1,				// version number
+		PFD_DRAW_TO_WINDOW 		// support window
+		|  PFD_SUPPORT_OPENGL 	// support OpenGL
+		|  PFD_DOUBLEBUFFER ,	// double buffered
+		PFD_TYPE_RGBA,			// RGBA type
+		24,				// 24-bit color depth
+		0, 0, 0, 0, 0, 0,		// color bits ignored
+		0,				// no alpha buffer
+		0,				// shift bit ignored
+		0,				// no accumulation buffer
+		0, 0, 0, 0, 			// accum bits ignored
+		32,				// 32-bit z-buffer
+		0,				// no stencil buffer
+		0,				// no auxiliary buffer
+		PFD_MAIN_PLANE,			// main layer
+		0,				// reserved
+		0, 0, 0				// layer masks ignored
+	};
+	int pixelformat;
+	DWORD WindowStyle, ExWindowStyle;
+	HGLRC baseRC;
+	int CenterX, CenterY;
+
+	if (vid_initialized)
+		Sys_Error("VID_InitMode called when video is already initialised\n");
 
 	if (!GL_OpenLibrary("opengl32.dll"))
-		Sys_Error("Unable to load GL driver\n");
+	{
+		Con_Printf("Unable to load GL driver\n");
+		return false;
+	}
 
-	memset(&devmode, 0, sizeof(devmode));
-
-	Cmd_AddCommand ("vid_nummodes", VID_NumModes_f);
-	Cmd_AddCommand ("vid_describecurrentmode", VID_DescribeCurrentMode_f);
-	Cmd_AddCommand ("vid_describemode", VID_DescribeMode_f);
-	Cmd_AddCommand ("vid_describemodes", VID_DescribeModes_f);
+	memset(&gdevmode, 0, sizeof(gdevmode));
 
 	VID_GetSystemGamma();
 
-	hIcon = LoadIcon (global_hInstance, MAKEINTRESOURCE (IDI_ICON2));
-
-	InitCommonControls();
-
-	VID_InitDIB (global_hInstance);
-	basenummodes = nummodes = 1;
-
-	VID_InitFullDIB (global_hInstance);
-
-	if (!fullscreen)
+	vid_isfullscreen = false;
+	if (fullscreen)
 	{
-		hdc = GetDC (NULL);
+		gdevmode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
+		gdevmode.dmBitsPerPel = bpp;
+		gdevmode.dmPelsWidth = width;
+		gdevmode.dmPelsHeight = height;
+		gdevmode.dmSize = sizeof (gdevmode);
+		if (ChangeDisplaySettings (&gdevmode, CDS_FULLSCREEN) != DISP_CHANGE_SUCCESSFUL)
+		{
+			VID_Shutdown();
+			Con_Printf("Unable to change to requested mode %dx%dx%dbpp\n", width, height, bpp);
+			return false;
+		}
 
-		if (GetDeviceCaps(hdc, RASTERCAPS) & RC_PALETTE)
-			Sys_Error ("Can't run in non-RGB mode");
-
-		ReleaseDC (NULL, hdc);
-
-		windowed = true;
-
-		vid_default = MODE_WINDOWED;
+		vid_isfullscreen = true;
+		WindowStyle = WS_POPUP;
+		ExWindowStyle = 0;
 	}
 	else
 	{
-		if (nummodes == 1)
-			Sys_Error ("No RGB fullscreen modes available");
-
-		windowed = false;
-
-		done = 0;
-
-		bestmode = -1;
-		bestrating = 1000000000;
-		for (i = 0;i < nummodes;i++)
+		hdc = GetDC (NULL);
+		i = GetDeviceCaps(hdc, RASTERCAPS);
+		ReleaseDC (NULL, hdc);
+		if (i & RC_PALETTE)
 		{
-			if (fullscreen == modelist[i].fullscreen)
-			{
-				rating = VID_CompareMode(width, height, bpp, modelist[i].width, modelist[i].height, modelist[i].bpp);
-				if (bestrating > rating)
-				{
-					bestrating = rating;
-					bestmode = i;
-				}
-			}
+			VID_Shutdown();
+			Con_Printf ("Can't run in non-RGB mode\n");
+			return false;
 		}
 
-		if (bestmode < 0)
-			Sys_Error ("Specified video mode not available");
+		WindowStyle = WS_OVERLAPPED | WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+		ExWindowStyle = 0;
 	}
 
-	vid_initialized = true;
+	rect.top = 0;
+	rect.left = 0;
+	rect.right = width;
+	rect.bottom = height;
+	AdjustWindowRectEx(&rect, WindowStyle, false, 0);
 
-	VID_SetMode (vid_default);
+	if (fullscreen)
+	{
+		CenterX = 0;
+		CenterY = 0;
+	}
+	else
+	{
+		CenterX = (GetSystemMetrics(SM_CXSCREEN) - (rect.right - rect.left)) / 2;
+		CenterY = (GetSystemMetrics(SM_CYSCREEN) - (rect.bottom - rect.top)) / 2;
+	}
+	CenterX = max(0, CenterX);
+	CenterY = max(0, CenterY);
 
-	maindc = GetDC(mainwindow);
-	bSetupPixelFormat(maindc);
+	// x and y may be changed by WM_MOVE messages
+	window_x = CenterX;
+	window_y = CenterY;
+	window_width = width;
+	window_height = height;
+	rect.left += CenterX;
+	rect.right += CenterX;
+	rect.top += CenterY;
+	rect.bottom += CenterY;
+
+	mainwindow = CreateWindowEx (ExWindowStyle, "DarkPlacesWindowClass", gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
+	if (!mainwindow)
+	{
+		VID_Shutdown();
+		Con_Printf("CreateWindowEx(%d, %s, %s, %d, %d, %d, %d, %d, %p, %p, %d, %p) failed\n", ExWindowStyle, gamename, gamename, WindowStyle, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, NULL, NULL, global_hInstance, NULL);
+		return false;
+	}
+
+	/*
+	if (!fullscreen)
+		SetWindowPos (mainwindow, NULL, CenterX, CenterY, 0, 0,SWP_NOSIZE | SWP_NOZORDER | SWP_SHOWWINDOW | SWP_DRAWFRAME);
+	*/
+
+	ShowWindow (mainwindow, SW_SHOWDEFAULT);
+	UpdateWindow (mainwindow);
+
+	SendMessage (mainwindow, WM_SETICON, (WPARAM)true, (LPARAM)hIcon);
+	SendMessage (mainwindow, WM_SETICON, (WPARAM)false, (LPARAM)hIcon);
+
+	VID_UpdateWindowStatus ();
+
+	// now we try to make sure we get the focus on the mode switch, because
+	// sometimes in some systems we don't.  We grab the foreground, then
+	// finish setting up, pump all our messages, and sleep for a little while
+	// to let messages finish bouncing around the system, then we put
+	// ourselves at the top of the z order, then grab the foreground again,
+	// Who knows if it helps, but it probably doesn't hurt
+	SetForegroundWindow (mainwindow);
+
+	while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE))
+	{
+		TranslateMessage (&msg);
+		DispatchMessage (&msg);
+	}
+
+	Sleep (100);
+
+	SetWindowPos (mainwindow, HWND_TOP, 0, 0, 0, 0, SWP_DRAWFRAME | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW | SWP_NOCOPYBITS);
+
+	SetForegroundWindow (mainwindow);
+
+	// fix the leftover Alt from any Alt-Tab or the like that switched us away
+	ClearAllStates ();
+	
+	hdc = GetDC(mainwindow);
+
+	if ((pixelformat = ChoosePixelFormat(hdc, &pfd)) == 0)
+	{
+		VID_Shutdown();
+		Con_Printf("ChoosePixelFormat(%d, %p) failed\n", hdc, &pfd);
+		return false;
+	}
+
+	if (SetPixelFormat(hdc, pixelformat, &pfd) == false)
+	{
+		VID_Shutdown();
+		Con_Printf("SetPixelFormat(%d, %d, %p) failed\n", hdc, pixelformat, &pfd);
+		return false;
+	}
 
 	if (!GL_CheckExtension("wgl", wglfuncs, NULL, false))
-		Sys_Error("wgl functions not found\n");
+	{
+		VID_Shutdown();
+		Con_Printf("wgl functions not found\n");
+		return false;
+	}
 
-	baseRC = qwglCreateContext( maindc );
+	baseRC = qwglCreateContext(hdc);
 	if (!baseRC)
-		Sys_Error ("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.");
-	if (!qwglMakeCurrent( maindc, baseRC ))
-		Sys_Error ("wglMakeCurrent failed");
+	{
+		VID_Shutdown();
+		Con_Printf("Could not initialize GL (wglCreateContext failed).\n\nMake sure you are in 65536 color mode, and try running -window.\n");
+		return false;
+	}
+	if (!qwglMakeCurrent(hdc, baseRC))
+	{
+		VID_Shutdown();
+		Con_Printf("wglMakeCurrent(%d, %d) failed\n", hdc, baseRC);
+		return false;
+	}
 
 	qglGetString = GL_GetProcAddress("glGetString");
 	if (qglGetString == NULL)
-		Sys_Error ("glGetString does not exist");
+	{
+		VID_Shutdown();
+		Con_Printf("glGetString not found\n");
+		return false;
+	}
 	gl_renderer = qglGetString(GL_RENDERER);
 	gl_vendor = qglGetString(GL_VENDOR);
 	gl_version = qglGetString(GL_VERSION);
@@ -1321,9 +858,10 @@ void VID_Init (int fullscreen, int width, int height, int bpp)
 	gl_platformextensions = "";
 
 	if (GL_CheckExtension("WGL_ARB_extensions_string", getextensionsstringfuncs, NULL, false))
-		gl_platformextensions = qwglGetExtensionsStringARB(maindc);
+		gl_platformextensions = qwglGetExtensionsStringARB(hdc);
 
 	gl_videosyncavailable = GL_CheckExtension("WGL_EXT_swap_control", wglswapintervalfuncs, NULL, false);
+	ReleaseDC(mainwindow, hdc);
 
 	GL_Init ();
 
@@ -1336,13 +874,1146 @@ void VID_Init (int fullscreen, int width, int height, int bpp)
 	if (strncasecmp(gl_renderer,"Matrox G200 Direct3D",20)==0) // a D3D driver for GL? sigh...
 		isG200 = true;
 
-	vid_realmode = vid_modenum;
-
-	vid_menudrawfn = VID_MenuDraw;
-	vid_menukeyfn = VID_MenuKey;
-
-	strcpy (badmode.modedesc, "Bad mode");
-
+	//vid_menudrawfn = VID_MenuDraw;
+	//vid_menukeyfn = VID_MenuKey;
 	vid_hidden = false;
+	vid_initialized = true;
+	return true;
+}
+
+void VID_Shutdown (void)
+{
+	HGLRC hRC = 0;
+	HDC hDC = 0;
+
+	if (vid_initialized)
+	{
+		vid_initialized = false;
+		if (qwglGetCurrentContext)
+			hRC = qwglGetCurrentContext();
+		if (qwglGetCurrentDC)
+			hDC = qwglGetCurrentDC();
+
+		if (qwglMakeCurrent)
+			qwglMakeCurrent(NULL, NULL);
+
+		if (hRC && qwglDeleteContext)
+			qwglDeleteContext(hRC);
+
+		// close the library before we get rid of the window
+		GL_CloseLibrary();
+
+		if (hDC && mainwindow)
+			ReleaseDC(mainwindow, hDC);
+
+		if (vid_isfullscreen)
+			ChangeDisplaySettings (NULL, 0);
+
+		AppActivate(false, false);
+
+		VID_RestoreSystemGamma();
+	}
+}
+
+
+// input code
+
+#include <dinput.h>
+
+#define DINPUT_BUFFERSIZE           16
+#define iDirectInputCreate(a,b,c,d)	pDirectInputCreate(a,b,c,d)
+
+HRESULT (WINAPI *pDirectInputCreate)(HINSTANCE hinst, DWORD dwVersion,
+	LPDIRECTINPUT * lplpDirectInput, LPUNKNOWN punkOuter);
+
+// mouse variables
+int			mouse_buttons;
+int			mouse_oldbuttonstate;
+POINT		current_pos;
+int			mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
+
+static qboolean	restore_spi;
+static int		originalmouseparms[3], newmouseparms[3] = {0, 0, 1};
+
+unsigned int uiWheelMessage;
+qboolean	mouseactive;
+//qboolean		mouseinitialized;
+static qboolean	mouseparmsvalid, mouseactivatetoggle;
+static qboolean	mouseshowtoggle = 1;
+static qboolean	dinput_acquired;
+
+static unsigned int		mstate_di;
+
+// joystick defines and variables
+// where should defines be moved?
+#define JOY_ABSOLUTE_AXIS	0x00000000		// control like a joystick
+#define JOY_RELATIVE_AXIS	0x00000010		// control like a mouse, spinner, trackball
+#define	JOY_MAX_AXES		6				// X, Y, Z, R, U, V
+#define JOY_AXIS_X			0
+#define JOY_AXIS_Y			1
+#define JOY_AXIS_Z			2
+#define JOY_AXIS_R			3
+#define JOY_AXIS_U			4
+#define JOY_AXIS_V			5
+
+enum _ControlList
+{
+	AxisNada = 0, AxisForward, AxisLook, AxisSide, AxisTurn
+};
+
+DWORD	dwAxisFlags[JOY_MAX_AXES] =
+{
+	JOY_RETURNX, JOY_RETURNY, JOY_RETURNZ, JOY_RETURNR, JOY_RETURNU, JOY_RETURNV
+};
+
+DWORD	dwAxisMap[JOY_MAX_AXES];
+DWORD	dwControlMap[JOY_MAX_AXES];
+PDWORD	pdwRawValue[JOY_MAX_AXES];
+
+// none of these cvars are saved over a session
+// this means that advanced controller configuration needs to be executed
+// each time.  this avoids any problems with getting back to a default usage
+// or when changing from one controller to another.  this way at least something
+// works.
+cvar_t	in_joystick = {CVAR_SAVE, "joystick","0"};
+cvar_t	joy_name = {0, "joyname", "joystick"};
+cvar_t	joy_advanced = {0, "joyadvanced", "0"};
+cvar_t	joy_advaxisx = {0, "joyadvaxisx", "0"};
+cvar_t	joy_advaxisy = {0, "joyadvaxisy", "0"};
+cvar_t	joy_advaxisz = {0, "joyadvaxisz", "0"};
+cvar_t	joy_advaxisr = {0, "joyadvaxisr", "0"};
+cvar_t	joy_advaxisu = {0, "joyadvaxisu", "0"};
+cvar_t	joy_advaxisv = {0, "joyadvaxisv", "0"};
+cvar_t	joy_forwardthreshold = {0, "joyforwardthreshold", "0.15"};
+cvar_t	joy_sidethreshold = {0, "joysidethreshold", "0.15"};
+cvar_t	joy_pitchthreshold = {0, "joypitchthreshold", "0.15"};
+cvar_t	joy_yawthreshold = {0, "joyyawthreshold", "0.15"};
+cvar_t	joy_forwardsensitivity = {0, "joyforwardsensitivity", "-1.0"};
+cvar_t	joy_sidesensitivity = {0, "joysidesensitivity", "-1.0"};
+cvar_t	joy_pitchsensitivity = {0, "joypitchsensitivity", "1.0"};
+cvar_t	joy_yawsensitivity = {0, "joyyawsensitivity", "-1.0"};
+cvar_t	joy_wwhack1 = {0, "joywwhack1", "0.0"};
+cvar_t	joy_wwhack2 = {0, "joywwhack2", "0.0"};
+
+qboolean	joy_avail, joy_advancedinit, joy_haspov;
+DWORD		joy_oldbuttonstate, joy_oldpovstate;
+
+int			joy_id;
+DWORD		joy_flags;
+DWORD		joy_numbuttons;
+
+static LPDIRECTINPUT		g_pdi;
+static LPDIRECTINPUTDEVICE	g_pMouse;
+
+static JOYINFOEX	ji;
+
+static HINSTANCE hInstDI;
+
+//static qboolean	dinput;
+
+typedef struct MYDATA {
+	LONG  lX;                   // X axis goes here
+	LONG  lY;                   // Y axis goes here
+	LONG  lZ;                   // Z axis goes here
+	BYTE  bButtonA;             // One button goes here
+	BYTE  bButtonB;             // Another button goes here
+	BYTE  bButtonC;             // Another button goes here
+	BYTE  bButtonD;             // Another button goes here
+} MYDATA;
+
+static DIOBJECTDATAFORMAT rgodf[] = {
+  { &GUID_XAxis,    FIELD_OFFSET(MYDATA, lX),       DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
+  { &GUID_YAxis,    FIELD_OFFSET(MYDATA, lY),       DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
+  { &GUID_ZAxis,    FIELD_OFFSET(MYDATA, lZ),       0x80000000 | DIDFT_AXIS | DIDFT_ANYINSTANCE,   0,},
+  { 0,              FIELD_OFFSET(MYDATA, bButtonA), DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
+  { 0,              FIELD_OFFSET(MYDATA, bButtonB), DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
+  { 0,              FIELD_OFFSET(MYDATA, bButtonC), 0x80000000 | DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
+  { 0,              FIELD_OFFSET(MYDATA, bButtonD), 0x80000000 | DIDFT_BUTTON | DIDFT_ANYINSTANCE, 0,},
+};
+
+#define NUM_OBJECTS (sizeof(rgodf) / sizeof(rgodf[0]))
+
+static DIDATAFORMAT	df = {
+	sizeof(DIDATAFORMAT),       // this structure
+	sizeof(DIOBJECTDATAFORMAT), // size of object data format
+	DIDF_RELAXIS,               // absolute axis coordinates
+	sizeof(MYDATA),             // device data size
+	NUM_OBJECTS,                // number of objects
+	rgodf,                      // and here they are
+};
+
+// forward-referenced functions
+void IN_StartupJoystick (void);
+void Joy_AdvancedUpdate_f (void);
+void IN_JoyMove (usercmd_t *cmd);
+
+
+/*
+===========
+IN_ShowMouse
+===========
+*/
+void IN_ShowMouse (void)
+{
+	if (!mouseshowtoggle)
+	{
+		ShowCursor (true);
+		mouseshowtoggle = 1;
+	}
+}
+
+
+/*
+===========
+IN_HideMouse
+===========
+*/
+void IN_HideMouse (void)
+{
+	if (mouseshowtoggle)
+	{
+		ShowCursor (false);
+		mouseshowtoggle = 0;
+	}
+}
+
+
+/*
+===========
+IN_ActivateMouse
+===========
+*/
+void IN_ActivateMouse (void)
+{
+
+	mouseactivatetoggle = true;
+
+	if (mouseinitialized)
+	{
+		if (dinput)
+		{
+			if (g_pMouse)
+			{
+				if (!dinput_acquired)
+				{
+					IDirectInputDevice_Acquire(g_pMouse);
+					dinput_acquired = true;
+				}
+			}
+			else
+			{
+				return;
+			}
+		}
+		else
+		{
+			RECT window_rect;
+			window_rect.left = window_x;
+			window_rect.top = window_y;
+			window_rect.right = window_x + window_width;
+			window_rect.bottom = window_y + window_height;
+
+			if (mouseparmsvalid)
+				restore_spi = SystemParametersInfo (SPI_SETMOUSE, 0, newmouseparms, 0);
+
+			SetCursorPos (window_center_x, window_center_y);
+			SetCapture (mainwindow);
+			ClipCursor (&window_rect);
+		}
+
+		mouseactive = true;
+	}
+}
+
+
+/*
+===========
+IN_DeactivateMouse
+===========
+*/
+void IN_DeactivateMouse (void)
+{
+
+	mouseactivatetoggle = false;
+
+	if (mouseinitialized)
+	{
+		if (dinput)
+		{
+			if (g_pMouse)
+			{
+				if (dinput_acquired)
+				{
+					IDirectInputDevice_Unacquire(g_pMouse);
+					dinput_acquired = false;
+				}
+			}
+		}
+		else
+		{
+			if (restore_spi)
+				SystemParametersInfo (SPI_SETMOUSE, 0, originalmouseparms, 0);
+
+			ClipCursor (NULL);
+			ReleaseCapture ();
+		}
+
+		mouseactive = false;
+	}
+}
+
+
+/*
+===========
+IN_InitDInput
+===========
+*/
+qboolean IN_InitDInput (void)
+{
+    HRESULT		hr;
+	DIPROPDWORD	dipdw = {
+		{
+			sizeof(DIPROPDWORD),        // diph.dwSize
+			sizeof(DIPROPHEADER),       // diph.dwHeaderSize
+			0,                          // diph.dwObj
+			DIPH_DEVICE,                // diph.dwHow
+		},
+		DINPUT_BUFFERSIZE,              // dwData
+	};
+
+	if (!hInstDI)
+	{
+		hInstDI = LoadLibrary("dinput.dll");
+		
+		if (hInstDI == NULL)
+		{
+			Con_SafePrintf ("Couldn't load dinput.dll\n");
+			return false;
+		}
+	}
+
+	if (!pDirectInputCreate)
+	{
+		pDirectInputCreate = (void *)GetProcAddress(hInstDI,"DirectInputCreateA");
+
+		if (!pDirectInputCreate)
+		{
+			Con_SafePrintf ("Couldn't get DI proc addr\n");
+			return false;
+		}
+	}
+
+// register with DirectInput and get an IDirectInput to play with.
+	hr = iDirectInputCreate(global_hInstance, DIRECTINPUT_VERSION, &g_pdi, NULL);
+
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+// obtain an interface to the system mouse device.
+	hr = IDirectInput_CreateDevice(g_pdi, &GUID_SysMouse, &g_pMouse, NULL);
+
+	if (FAILED(hr))
+	{
+		Con_SafePrintf ("Couldn't open DI mouse device\n");
+		return false;
+	}
+
+// set the data format to "mouse format".
+	hr = IDirectInputDevice_SetDataFormat(g_pMouse, &df);
+
+	if (FAILED(hr))
+	{
+		Con_SafePrintf ("Couldn't set DI mouse format\n");
+		return false;
+	}
+
+// set the cooperativity level.
+	hr = IDirectInputDevice_SetCooperativeLevel(g_pMouse, mainwindow,
+			DISCL_EXCLUSIVE | DISCL_FOREGROUND);
+
+	if (FAILED(hr))
+	{
+		Con_SafePrintf ("Couldn't set DI coop level\n");
+		return false;
+	}
+
+
+// set the buffer size to DINPUT_BUFFERSIZE elements.
+// the buffer size is a DWORD property associated with the device
+	hr = IDirectInputDevice_SetProperty(g_pMouse, DIPROP_BUFFERSIZE, &dipdw.diph);
+
+	if (FAILED(hr))
+	{
+		Con_SafePrintf ("Couldn't set DI buffersize\n");
+		return false;
+	}
+
+	return true;
+}
+
+
+/*
+===========
+IN_StartupMouse
+===========
+*/
+void IN_StartupMouse (void)
+{
+	if (COM_CheckParm ("-nomouse") || COM_CheckParm("-safe")) 
+		return; 
+
+	mouseinitialized = true;
+
+	if (COM_CheckParm ("-dinput"))
+	{
+		dinput = IN_InitDInput ();
+
+		if (dinput)
+		{
+			Con_SafePrintf ("DirectInput initialized\n");
+		}
+		else
+		{
+			Con_SafePrintf ("DirectInput not initialized\n");
+		}
+	}
+
+	if (!dinput)
+	{
+		mouseparmsvalid = SystemParametersInfo (SPI_GETMOUSE, 0, originalmouseparms, 0);
+
+		if (mouseparmsvalid)
+		{
+			if ( COM_CheckParm ("-noforcemspd") ) 
+				newmouseparms[2] = originalmouseparms[2];
+
+			if ( COM_CheckParm ("-noforcemaccel") ) 
+			{
+				newmouseparms[0] = originalmouseparms[0];
+				newmouseparms[1] = originalmouseparms[1];
+			}
+
+			if ( COM_CheckParm ("-noforcemparms") ) 
+			{
+				newmouseparms[0] = originalmouseparms[0];
+				newmouseparms[1] = originalmouseparms[1];
+				newmouseparms[2] = originalmouseparms[2];
+			}
+		}
+	}
+
+	mouse_buttons = 3;
+
+// if a fullscreen video mode was set before the mouse was initialized,
+// set the mouse state appropriately
+	if (mouseactivatetoggle)
+		IN_ActivateMouse ();
+}
+
+
+/*
+===========
+IN_Init
+===========
+*/
+void IN_Init (void)
+{
+	// joystick variables
+	Cvar_RegisterVariable (&in_joystick);
+	Cvar_RegisterVariable (&joy_name);
+	Cvar_RegisterVariable (&joy_advanced);
+	Cvar_RegisterVariable (&joy_advaxisx);
+	Cvar_RegisterVariable (&joy_advaxisy);
+	Cvar_RegisterVariable (&joy_advaxisz);
+	Cvar_RegisterVariable (&joy_advaxisr);
+	Cvar_RegisterVariable (&joy_advaxisu);
+	Cvar_RegisterVariable (&joy_advaxisv);
+	Cvar_RegisterVariable (&joy_forwardthreshold);
+	Cvar_RegisterVariable (&joy_sidethreshold);
+	Cvar_RegisterVariable (&joy_pitchthreshold);
+	Cvar_RegisterVariable (&joy_yawthreshold);
+	Cvar_RegisterVariable (&joy_forwardsensitivity);
+	Cvar_RegisterVariable (&joy_sidesensitivity);
+	Cvar_RegisterVariable (&joy_pitchsensitivity);
+	Cvar_RegisterVariable (&joy_yawsensitivity);
+	Cvar_RegisterVariable (&joy_wwhack1);
+	Cvar_RegisterVariable (&joy_wwhack2);
+
+	Cmd_AddCommand ("joyadvancedupdate", Joy_AdvancedUpdate_f);
+
+	uiWheelMessage = RegisterWindowMessage ( "MSWHEEL_ROLLMSG" );
+
+	IN_StartupMouse ();
+	IN_StartupJoystick ();
+}
+
+/*
+===========
+IN_Shutdown
+===========
+*/
+void IN_Shutdown (void)
+{
+	IN_DeactivateMouse ();
+	IN_ShowMouse ();
+
+    if (g_pMouse)
+	{
+		IDirectInputDevice_Release(g_pMouse);
+		g_pMouse = NULL;
+	}
+
+    if (g_pdi)
+	{
+		IDirectInput_Release(g_pdi);
+		g_pdi = NULL;
+	}
+}
+
+
+/*
+===========
+IN_MouseEvent
+===========
+*/
+void IN_MouseEvent (int mstate)
+{
+	int	i;
+
+	if (mouseactive && !dinput)
+	{
+	// perform button actions
+		for (i=0 ; i<mouse_buttons ; i++)
+		{
+			if ( (mstate & (1<<i)) &&
+				!(mouse_oldbuttonstate & (1<<i)) )
+			{
+				Key_Event (K_MOUSE1 + i, true);
+			}
+
+			if ( !(mstate & (1<<i)) &&
+				(mouse_oldbuttonstate & (1<<i)) )
+			{
+				Key_Event (K_MOUSE1 + i, false);
+			}
+		}	
+			
+		mouse_oldbuttonstate = mstate;
+	}
+}
+
+
+/*
+===========
+IN_MouseMove
+===========
+*/
+void IN_MouseMove (usercmd_t *cmd)
+{
+	int					i, mx, my;
+	DIDEVICEOBJECTDATA	od;
+	DWORD				dwElements;
+	HRESULT				hr;
+
+	if (!mouseactive)
+	{
+		GetCursorPos (&current_pos);
+		ui_mouseupdate(current_pos.x - window_x, current_pos.y - window_y);
+		return;
+	}
+
+	if (dinput)
+	{
+		mx = 0;
+		my = 0;
+
+		for (;;)
+		{
+			dwElements = 1;
+
+			hr = IDirectInputDevice_GetDeviceData(g_pMouse,
+					sizeof(DIDEVICEOBJECTDATA), &od, &dwElements, 0);
+
+			if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED))
+			{
+				dinput_acquired = true;
+				IDirectInputDevice_Acquire(g_pMouse);
+				break;
+			}
+
+			/* Unable to read data or no data available */
+			if (FAILED(hr) || dwElements == 0)
+				break;
+
+			/* Look at the element to see what happened */
+
+			switch (od.dwOfs)
+			{
+				case DIMOFS_X:
+					mx += od.dwData;
+					break;
+
+				case DIMOFS_Y:
+					my += od.dwData;
+					break;
+
+				case DIMOFS_BUTTON0:
+					if (od.dwData & 0x80)
+						mstate_di |= 1;
+					else
+						mstate_di &= ~1;
+					break;
+
+				case DIMOFS_BUTTON1:
+					if (od.dwData & 0x80)
+						mstate_di |= (1<<1);
+					else
+						mstate_di &= ~(1<<1);
+					break;
+
+				case DIMOFS_BUTTON2:
+					if (od.dwData & 0x80)
+						mstate_di |= (1<<2);
+					else
+						mstate_di &= ~(1<<2);
+					break;
+			}
+		}
+
+	// perform button actions
+		for (i=0 ; i<mouse_buttons ; i++)
+		{
+			if ( (mstate_di & (1<<i)) &&
+				!(mouse_oldbuttonstate & (1<<i)) )
+			{
+				Key_Event (K_MOUSE1 + i, true);
+			}
+
+			if ( !(mstate_di & (1<<i)) &&
+				(mouse_oldbuttonstate & (1<<i)) )
+			{
+				Key_Event (K_MOUSE1 + i, false);
+			}
+		}
+
+		mouse_oldbuttonstate = mstate_di;
+	}
+	else
+	{
+		GetCursorPos (&current_pos);
+		mx = current_pos.x - window_center_x + mx_accum;
+		my = current_pos.y - window_center_y + my_accum;
+		mx_accum = 0;
+		my_accum = 0;
+	}
+
+	IN_Mouse(cmd, mx, my);
+
+	// if the mouse has moved, force it to the center, so there's room to move
+	if (!dinput && (mx || my))
+		SetCursorPos (window_center_x, window_center_y);
+}
+
+
+/*
+===========
+IN_Move
+===========
+*/
+void IN_Move (usercmd_t *cmd)
+{
+	if (vid_activewindow && !vid_hidden)
+	{
+		IN_MouseMove (cmd);
+		IN_JoyMove (cmd);
+	}
+
+	cl.viewangles[PITCH] = bound (in_pitch_min.value, cl.viewangles[PITCH], in_pitch_max.value);
+}
+
+
+/*
+===========
+IN_Accumulate
+===========
+*/
+void IN_Accumulate (void)
+{
+	if (mouseactive)
+	{
+		if (!dinput)
+		{
+			GetCursorPos (&current_pos);
+
+			mx_accum += current_pos.x - window_center_x;
+			my_accum += current_pos.y - window_center_y;
+
+		// force the mouse to the center, so there's room to move
+			SetCursorPos (window_center_x, window_center_y);
+		}
+	}
+}
+
+
+/*
+===================
+IN_ClearStates
+===================
+*/
+void IN_ClearStates (void)
+{
+	if (mouseactive)
+	{
+		mx_accum = 0;
+		my_accum = 0;
+		mouse_oldbuttonstate = 0;
+	}
+}
+
+
+/* 
+=============== 
+IN_StartupJoystick 
+=============== 
+*/  
+void IN_StartupJoystick (void) 
+{ 
+	int			numdevs;
+	JOYCAPS		jc;
+	MMRESULT	mmr;
+	mmr = 0;
+ 
+ 	// assume no joystick
+	joy_avail = false; 
+
+	// abort startup if user requests no joystick
+	if (COM_CheckParm ("-nojoy") || COM_CheckParm("-safe")) 
+		return; 
+ 
+	// verify joystick driver is present
+	if ((numdevs = joyGetNumDevs ()) == 0)
+	{
+		Con_Printf ("\njoystick not found -- driver not present\n\n");
+		return;
+	}
+
+	// cycle through the joystick ids for the first valid one
+	for (joy_id=0 ; joy_id<numdevs ; joy_id++)
+	{
+		memset (&ji, 0, sizeof(ji));
+		ji.dwSize = sizeof(ji);
+		ji.dwFlags = JOY_RETURNCENTERED;
+
+		if ((mmr = joyGetPosEx (joy_id, &ji)) == JOYERR_NOERROR)
+			break;
+	} 
+
+	// abort startup if we didn't find a valid joystick
+	if (mmr != JOYERR_NOERROR)
+	{
+		Con_Printf ("\njoystick not found -- no valid joysticks (%x)\n\n", mmr);
+		return;
+	}
+
+	// get the capabilities of the selected joystick
+	// abort startup if command fails
+	memset (&jc, 0, sizeof(jc));
+	if ((mmr = joyGetDevCaps (joy_id, &jc, sizeof(jc))) != JOYERR_NOERROR)
+	{
+		Con_Printf ("\njoystick not found -- invalid joystick capabilities (%x)\n\n", mmr); 
+		return;
+	}
+
+	// save the joystick's number of buttons and POV status
+	joy_numbuttons = jc.wNumButtons;
+	joy_haspov = jc.wCaps & JOYCAPS_HASPOV;
+
+	// old button and POV states default to no buttons pressed
+	joy_oldbuttonstate = joy_oldpovstate = 0;
+
+	// mark the joystick as available and advanced initialization not completed
+	// this is needed as cvars are not available during initialization
+
+	joy_avail = true; 
+	joy_advancedinit = false;
+
+	Con_Printf ("\njoystick detected\n\n"); 
+}
+
+
+/*
+===========
+RawValuePointer
+===========
+*/
+PDWORD RawValuePointer (int axis)
+{
+	switch (axis)
+	{
+	case JOY_AXIS_X:
+		return &ji.dwXpos;
+	case JOY_AXIS_Y:
+		return &ji.dwYpos;
+	case JOY_AXIS_Z:
+		return &ji.dwZpos;
+	case JOY_AXIS_R:
+		return &ji.dwRpos;
+	case JOY_AXIS_U:
+		return &ji.dwUpos;
+	case JOY_AXIS_V:
+		return &ji.dwVpos;
+	}
+	return NULL; // LordHavoc: hush compiler warning
+}
+
+
+/*
+===========
+Joy_AdvancedUpdate_f
+===========
+*/
+void Joy_AdvancedUpdate_f (void)
+{
+
+	// called once by IN_ReadJoystick and by user whenever an update is needed
+	// cvars are now available
+	int	i;
+	DWORD dwTemp;
+
+	// initialize all the maps
+	for (i = 0; i < JOY_MAX_AXES; i++)
+	{
+		dwAxisMap[i] = AxisNada;
+		dwControlMap[i] = JOY_ABSOLUTE_AXIS;
+		pdwRawValue[i] = RawValuePointer(i);
+	}
+
+	if( joy_advanced.integer == 0)
+	{
+		// default joystick initialization
+		// 2 axes only with joystick control
+		dwAxisMap[JOY_AXIS_X] = AxisTurn;
+		// dwControlMap[JOY_AXIS_X] = JOY_ABSOLUTE_AXIS;
+		dwAxisMap[JOY_AXIS_Y] = AxisForward;
+		// dwControlMap[JOY_AXIS_Y] = JOY_ABSOLUTE_AXIS;
+	}
+	else
+	{
+		if (strcmp (joy_name.string, "joystick") != 0)
+		{
+			// notify user of advanced controller
+			Con_Printf ("\n%s configured\n\n", joy_name.string);
+		}
+
+		// advanced initialization here
+		// data supplied by user via joy_axisn cvars
+		dwTemp = (DWORD) joy_advaxisx.value;
+		dwAxisMap[JOY_AXIS_X] = dwTemp & 0x0000000f;
+		dwControlMap[JOY_AXIS_X] = dwTemp & JOY_RELATIVE_AXIS;
+		dwTemp = (DWORD) joy_advaxisy.value;
+		dwAxisMap[JOY_AXIS_Y] = dwTemp & 0x0000000f;
+		dwControlMap[JOY_AXIS_Y] = dwTemp & JOY_RELATIVE_AXIS;
+		dwTemp = (DWORD) joy_advaxisz.value;
+		dwAxisMap[JOY_AXIS_Z] = dwTemp & 0x0000000f;
+		dwControlMap[JOY_AXIS_Z] = dwTemp & JOY_RELATIVE_AXIS;
+		dwTemp = (DWORD) joy_advaxisr.value;
+		dwAxisMap[JOY_AXIS_R] = dwTemp & 0x0000000f;
+		dwControlMap[JOY_AXIS_R] = dwTemp & JOY_RELATIVE_AXIS;
+		dwTemp = (DWORD) joy_advaxisu.value;
+		dwAxisMap[JOY_AXIS_U] = dwTemp & 0x0000000f;
+		dwControlMap[JOY_AXIS_U] = dwTemp & JOY_RELATIVE_AXIS;
+		dwTemp = (DWORD) joy_advaxisv.value;
+		dwAxisMap[JOY_AXIS_V] = dwTemp & 0x0000000f;
+		dwControlMap[JOY_AXIS_V] = dwTemp & JOY_RELATIVE_AXIS;
+	}
+
+	// compute the axes to collect from DirectInput
+	joy_flags = JOY_RETURNCENTERED | JOY_RETURNBUTTONS | JOY_RETURNPOV;
+	for (i = 0; i < JOY_MAX_AXES; i++)
+	{
+		if (dwAxisMap[i] != AxisNada)
+		{
+			joy_flags |= dwAxisFlags[i];
+		}
+	}
+}
+
+
+/*
+===========
+IN_Commands
+===========
+*/
+void IN_Commands (void)
+{
+	int		i, key_index;
+	DWORD	buttonstate, povstate;
+
+	if (!joy_avail)
+	{
+		return;
+	}
+
+	
+	// loop through the joystick buttons
+	// key a joystick event or auxillary event for higher number buttons for each state change
+	buttonstate = ji.dwButtons;
+	for (i=0 ; i < (int) joy_numbuttons ; i++)
+	{
+		if ( (buttonstate & (1<<i)) && !(joy_oldbuttonstate & (1<<i)) )
+		{
+			key_index = (i < 4) ? K_JOY1 : K_AUX1;
+			Key_Event (key_index + i, true);
+		}
+
+		if ( !(buttonstate & (1<<i)) && (joy_oldbuttonstate & (1<<i)) )
+		{
+			key_index = (i < 4) ? K_JOY1 : K_AUX1;
+			Key_Event (key_index + i, false);
+		}
+	}
+	joy_oldbuttonstate = buttonstate;
+
+	if (joy_haspov)
+	{
+		// convert POV information into 4 bits of state information
+		// this avoids any potential problems related to moving from one
+		// direction to another without going through the center position
+		povstate = 0;
+		if(ji.dwPOV != JOY_POVCENTERED)
+		{
+			if (ji.dwPOV == JOY_POVFORWARD)
+				povstate |= 0x01;
+			if (ji.dwPOV == JOY_POVRIGHT)
+				povstate |= 0x02;
+			if (ji.dwPOV == JOY_POVBACKWARD)
+				povstate |= 0x04;
+			if (ji.dwPOV == JOY_POVLEFT)
+				povstate |= 0x08;
+		}
+		// determine which bits have changed and key an auxillary event for each change
+		for (i=0 ; i < 4 ; i++)
+		{
+			if ( (povstate & (1<<i)) && !(joy_oldpovstate & (1<<i)) )
+			{
+				Key_Event (K_AUX29 + i, true);
+			}
+
+			if ( !(povstate & (1<<i)) && (joy_oldpovstate & (1<<i)) )
+			{
+				Key_Event (K_AUX29 + i, false);
+			}
+		}
+		joy_oldpovstate = povstate;
+	}
+}
+
+
+/* 
+=============== 
+IN_ReadJoystick
+=============== 
+*/  
+qboolean IN_ReadJoystick (void)
+{
+
+	memset (&ji, 0, sizeof(ji));
+	ji.dwSize = sizeof(ji);
+	ji.dwFlags = joy_flags;
+
+	if (joyGetPosEx (joy_id, &ji) == JOYERR_NOERROR)
+	{
+		// this is a hack -- there is a bug in the Logitech WingMan Warrior DirectInput Driver
+		// rather than having 32768 be the zero point, they have the zero point at 32668
+		// go figure -- anyway, now we get the full resolution out of the device
+		if (joy_wwhack1.integer != 0.0)
+		{
+			ji.dwUpos += 100;
+		}
+		return true;
+	}
+	else
+	{
+		// read error occurred
+		// turning off the joystick seems too harsh for 1 read error,
+		// but what should be done?
+		return false;
+	}
+}
+
+
+/*
+===========
+IN_JoyMove
+===========
+*/
+void IN_JoyMove (usercmd_t *cmd)
+{
+	float	speed, aspeed;
+	float	fAxisValue, fTemp;
+	int		i, mouselook = (in_mlook.state & 1) || freelook.integer;
+
+	// complete initialization if first time in
+	// this is needed as cvars are not available at initialization time
+	if( joy_advancedinit != true )
+	{
+		Joy_AdvancedUpdate_f();
+		joy_advancedinit = true;
+	}
+
+	// verify joystick is available and that the user wants to use it
+	if (!joy_avail || !in_joystick.integer)
+	{
+		return; 
+	}
+
+	// collect the joystick data, if possible
+	if (IN_ReadJoystick () != true)
+	{
+		return;
+	}
+
+	if (in_speed.state & 1)
+		speed = cl_movespeedkey.value;
+	else
+		speed = 1;
+	// LordHavoc: viewzoom affects sensitivity for sniping
+	aspeed = speed * host_realframetime * cl.viewzoom;
+
+	// loop through the axes
+	for (i = 0; i < JOY_MAX_AXES; i++)
+	{
+		// get the floating point zero-centered, potentially-inverted data for the current axis
+		fAxisValue = (float) *pdwRawValue[i];
+		// move centerpoint to zero
+		fAxisValue -= 32768.0;
+
+		if (joy_wwhack2.integer != 0.0)
+		{
+			if (dwAxisMap[i] == AxisTurn)
+			{
+				// this is a special formula for the Logitech WingMan Warrior
+				// y=ax^b; where a = 300 and b = 1.3
+				// also x values are in increments of 800 (so this is factored out)
+				// then bounds check result to level out excessively high spin rates
+				fTemp = 300.0 * pow(abs(fAxisValue) / 800.0, 1.3);
+				if (fTemp > 14000.0)
+					fTemp = 14000.0;
+				// restore direction information
+				fAxisValue = (fAxisValue > 0.0) ? fTemp : -fTemp;
+			}
+		}
+
+		// convert range from -32768..32767 to -1..1 
+		fAxisValue /= 32768.0;
+
+		switch (dwAxisMap[i])
+		{
+		case AxisForward:
+			if ((joy_advanced.integer == 0) && mouselook)
+			{
+				// user wants forward control to become look control
+				if (fabs(fAxisValue) > joy_pitchthreshold.value)
+				{		
+					// if mouse invert is on, invert the joystick pitch value
+					// only absolute control support here (joy_advanced is false)
+					if (m_pitch.value < 0.0)
+					{
+						cl.viewangles[PITCH] -= (fAxisValue * joy_pitchsensitivity.value) * aspeed * cl_pitchspeed.value;
+					}
+					else
+					{
+						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity.value) * aspeed * cl_pitchspeed.value;
+					}
+					V_StopPitchDrift();
+				}
+				else
+				{
+					// no pitch movement
+					// disable pitch return-to-center unless requested by user
+					// *** this code can be removed when the lookspring bug is fixed
+					// *** the bug always has the lookspring feature on
+					if(lookspring.value == 0.0)
+						V_StopPitchDrift();
+				}
+			}
+			else
+			{
+				// user wants forward control to be forward control
+				if (fabs(fAxisValue) > joy_forwardthreshold.value)
+				{
+					cmd->forwardmove += (fAxisValue * joy_forwardsensitivity.value) * speed * cl_forwardspeed.value;
+				}
+			}
+			break;
+
+		case AxisSide:
+			if (fabs(fAxisValue) > joy_sidethreshold.value)
+			{
+				cmd->sidemove += (fAxisValue * joy_sidesensitivity.value) * speed * cl_sidespeed.value;
+			}
+			break;
+
+		case AxisTurn:
+			if ((in_strafe.state & 1) || (lookstrafe.integer && mouselook))
+			{
+				// user wants turn control to become side control
+				if (fabs(fAxisValue) > joy_sidethreshold.value)
+				{
+					cmd->sidemove -= (fAxisValue * joy_sidesensitivity.value) * speed * cl_sidespeed.value;
+				}
+			}
+			else
+			{
+				// user wants turn control to be turn control
+				if (fabs(fAxisValue) > joy_yawthreshold.value)
+				{
+					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
+					{
+						cl.viewangles[YAW] += (fAxisValue * joy_yawsensitivity.value) * aspeed * cl_yawspeed.value;
+					}
+					else
+					{
+						cl.viewangles[YAW] += (fAxisValue * joy_yawsensitivity.value) * speed * 180.0;
+					}
+
+				}
+			}
+			break;
+
+		case AxisLook:
+			if (mouselook)
+			{
+				if (fabs(fAxisValue) > joy_pitchthreshold.value)
+				{
+					// pitch movement detected and pitch movement desired by user
+					if(dwControlMap[i] == JOY_ABSOLUTE_AXIS)
+					{
+						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity.value) * aspeed * cl_pitchspeed.value;
+					}
+					else
+					{
+						cl.viewangles[PITCH] += (fAxisValue * joy_pitchsensitivity.value) * speed * 180.0;
+					}
+					V_StopPitchDrift();
+				}
+				else
+				{
+					// no pitch movement
+					// disable pitch return-to-center unless requested by user
+					// *** this code can be removed when the lookspring bug is fixed
+					// *** the bug always has the lookspring feature on
+					if(lookspring.integer == 0)
+						V_StopPitchDrift();
+				}
+			}
+			break;
+
+		default:
+			break;
+		}
+	}
 }
 

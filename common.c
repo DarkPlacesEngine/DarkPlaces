@@ -36,8 +36,6 @@ mempool_t *pak_mempool;
 
 qboolean com_modified;   // set true if using non-id files
 
-qboolean msg_suppress_1 = 0;
-
 void COM_InitFilesystem (void);
 
 char com_token[1024];

@@ -885,7 +885,18 @@ void Host_Init (void)
 #ifndef _WIN32 // on non win32, mouse comes before video for security reasons
 		IN_Init ();
 #endif
-		VID_Init (vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer);
+		VID_Init();
+		if (!VID_Mode(vid_fullscreen.integer, vid_width.integer, vid_height.integer, vid_bitsperpixel.integer))
+		{
+			if (vid_fullscreen.integer)
+			{
+				if (!VID_Mode(true, 640, 480, 16))
+					if (!VID_Mode(false, 640, 480, 16))
+						Sys_Error("Video modes failed\n");
+			}
+			else
+				Sys_Error("Requested windowed video mode failed\n");
+		}
 
 		Render_Init();
 		S_Init ();

@@ -220,10 +220,6 @@ SOURCE=.\image.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\in_win.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\keys.c
 # End Source File
 # Begin Source File

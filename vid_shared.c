@@ -1,12 +1,15 @@
 
 #include "quakedef.h"
 
+// global video state
+viddef_t vid;
+
 // LordHavoc: these are only set in wgl
 qboolean isG200 = false; // LordHavoc: the Matrox G200 can't do per pixel alpha, and it uses a D3D driver for GL... ugh...
 qboolean isRagePro = false; // LordHavoc: the ATI Rage Pro has limitations with per pixel alpha (the color scaler does not apply to per pixel alpha images...), although not as bad as a G200.
 
 // LordHavoc: GL_ARB_multitexture support
-int gl_textureunits;
+int gl_textureunits = 0;
 // LordHavoc: GL_ARB_texture_env_combine or GL_EXT_texture_env_combine support
 int gl_combine_extension = false;
 // LordHavoc: GL_EXT_compiled_vertex_array support
@@ -21,9 +24,9 @@ int vid_hidden = false;
 int vid_activewindow = true;
 
 cvar_t vid_fullscreen = {0, "vid_fullscreen", "1"};
-cvar_t vid_width = {0, "vid_width", "640"};
-cvar_t vid_height = {0, "vid_height", "480"};
-cvar_t vid_bitsperpixel = {0, "vid_bitsperpixel", "15"};
+cvar_t vid_width = {0, "vid_width", "800"};
+cvar_t vid_height = {0, "vid_height", "600"};
+cvar_t vid_bitsperpixel = {0, "vid_bitsperpixel", "32"};
 
 cvar_t vid_mouse = {CVAR_SAVE, "vid_mouse", "1"};
 cvar_t gl_combine = {0, "gl_combine", "1"};
@@ -427,3 +430,15 @@ void VID_InitCvars(void)
 		Cvar_SetQuick(&vid_bitsperpixel, com_argv[i+1]);
 }
 
+extern int VID_InitMode (int fullscreen, int width, int height, int bpp);
+int VID_Mode(int fullscreen, int width, int height, int bpp)
+{
+	if (fullscreen)
+		Con_Printf("Video: %dx%dx%d fullscreen\n", width, height, bpp);
+	else
+		Con_Printf("Video: %dx%d windowed\n", width, height);
+	if (VID_InitMode(fullscreen, width, height, bpp))
+		return true;
+	else
+		return false;
+}
