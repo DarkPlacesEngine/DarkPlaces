@@ -210,7 +210,7 @@ static void R_SkyBox(void)
 {
 	int i;
 	rmeshstate_t m;
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	GL_Color(1, 1, 1, 1);
 	memset(&m, 0, sizeof(m));
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
@@ -306,7 +306,7 @@ static void R_SkySphere(void)
 	Matrix4x4_CreateIdentity(&identitymatrix);
 
 	GL_VertexPointer(skysphere_vertex3f);
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	GL_Color(1, 1, 1, 1);
 	GL_BlendFunc(GL_ONE, GL_ZERO);
 	GL_DepthMask(true);
 	GL_DepthTest(false); // don't modify or read zbuffer
@@ -314,7 +314,7 @@ static void R_SkySphere(void)
 	m.tex[0] = R_GetTexture(solidskytexture);
 	m.pointer_texcoord[0] = skysphere_texcoord2f;
 	R_Mesh_TextureMatrix(0, &scroll1matrix);
-	if (r_colorscale == 1 && r_textureunits.integer >= 2)
+	if (r_textureunits.integer >= 2)
 	{
 		// one pass using GL_DECAL or GL_INTERPOLATE_ARB for alpha layer
 		// LordHavoc: note that color is not set here because it does not

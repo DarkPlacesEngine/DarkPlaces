@@ -103,7 +103,7 @@ void CL_DrawVideo(void)
 		texcoord2f[2] = s2;texcoord2f[3] = t1;
 		texcoord2f[4] = s2;texcoord2f[5] = t2;
 		texcoord2f[6] = s1;texcoord2f[7] = t2;
-		R_FillColors(color4f, 4, r_colorscale, r_colorscale, r_colorscale, 1);
+		R_FillColors(color4f, 4, 1, 1, 1, 1);
 		vertex3f[ 0] = x1;vertex3f[ 1] = y1;vertex3f[ 2] = 0;
 		vertex3f[ 3] = x2;vertex3f[ 4] = y1;vertex3f[ 5] = 0;
 		vertex3f[ 6] = x2;vertex3f[ 7] = y2;vertex3f[ 8] = 0;

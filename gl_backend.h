@@ -49,9 +49,8 @@ typedef struct
 }
 rmeshstate_t;
 
-// overbright rendering scale for the current state
+// lightmap overbright scaling
 extern int r_lightmapscalebit;
-extern float r_colorscale;
 
 // adds console variables and registers the render module (only call from GL_Init)
 void gl_backend_init(void);

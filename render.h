@@ -148,8 +148,6 @@ void R_Mesh_EnlargeFarClipBBox(vec3_t mins, vec3_t maxs);
 
 #include "meshqueue.h"
 
-extern float overbrightscale;
-
 #include "r_lerpanim.h"
 
 extern cvar_t r_render;

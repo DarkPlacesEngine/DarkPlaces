@@ -1111,7 +1111,7 @@ void M_DrawCheckbox (int x, int y, int on)
 }
 
 
-#define OPTIONS_ITEMS 33
+#define OPTIONS_ITEMS 32
 
 int options_cursor;
 
@@ -1149,8 +1149,6 @@ void M_Menu_Options_AdjustSliders (int dir)
 		Cvar_SetValueQuick (&scr_screenshot_jpeg, !scr_screenshot_jpeg.integer);
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&r_sky, !r_sky.integer);
-	else if (options_cursor == optnum++)
-		Cvar_SetValueQuick (&v_overbrightbits, bound(0, v_overbrightbits.integer + dir, 4));
 	else if (options_cursor == optnum++)
 		Cvar_SetValueQuick (&gl_combine, !gl_combine.integer);
 	else if (options_cursor == optnum++)
@@ -1275,7 +1273,6 @@ void M_Options_Draw (void)
 	M_Options_PrintSlider(  "       Screen size", true, scr_viewsize.value, 30, 120);
 	M_Options_PrintCheckbox("  JPEG screenshots", jpeg_dll != NULL, scr_screenshot_jpeg.integer);
 	M_Options_PrintCheckbox("               Sky", true, r_sky.integer);
-	M_Options_PrintSlider(  "   Overbright Bits", true, v_overbrightbits.value, 0, 4);
 	M_Options_PrintCheckbox("   Texture Combine", true, gl_combine.integer);
 	M_Options_PrintCheckbox("         Dithering", true, gl_dither.integer);
 	M_Options_PrintCheckbox("Delay gfx (faster)", true, gl_delayfinish.integer);

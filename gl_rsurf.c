@@ -742,7 +742,7 @@ static void RSurfShader_Sky(const entity_render_t *ent, const texture_t *texture
 
 	R_Mesh_Matrix(&ent->matrix);
 
-	GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
+	GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
 	if (skyrendermasked)
 	{
 		// depth-only (masking)
@@ -780,7 +780,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 {
 	const entity_render_t *ent = calldata1;
 	const msurface_t *surf = ent->model->brushq1.surfaces + calldata2;
-	float f, colorscale;
+	float colorscale;
 	const surfmesh_t *mesh;
 	rmeshstate_t m;
 	float alpha;
@@ -829,14 +829,28 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 	}
 	else
 		m.tex[0] = R_GetTexture(texture->skin.base);
-	colorscale = r_colorscale;
+	colorscale = 1;
 	if (gl_combine.integer)
 	{
 		m.texrgbscale[0] = 4;
 		colorscale *= 0.25f;
 	}
 	GL_DepthTest(true);
-	GL_ColorPointer(varray_color4f);
+	if (fogenabled)
+		GL_ColorPointer(varray_color4f);
+	else
+		GL_Color(1, 1, 1, alpha);
+	if (gl_textureshader && r_watershader.integer)
+	{
+		GL_ActiveTexture (0);
+		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+		GL_ActiveTexture (1);
+		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
+		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
+		qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
+		qglTexEnvfv (GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
+		qglEnable (GL_TEXTURE_SHADER_NV);
+	}
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		GL_VertexPointer(mesh->vertex3f);
@@ -844,33 +858,17 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 		m.pointer_texcoord[1] = mesh->texcoordtexture2f;
 		m.texcombinergb[1] = GL_REPLACE;
 		R_Mesh_State_Texture(&m);
-		f = surf->flags & SURF_DRAWFULLBRIGHT ? 1.0f : ((surf->flags & SURF_LIGHTMAP) ? 0 : 0.5f);
-		R_FillColors(varray_color4f, mesh->numverts, f, f, f, alpha);
-		if (!(surf->flags & SURF_DRAWFULLBRIGHT || ent->effects & EF_FULLBRIGHT))
+		if (fogenabled)
 		{
-			if (surf->dlightframe == r_framecount)
-				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, 1);
-			if (surf->flags & SURF_LIGHTMAP)
-				RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, varray_color4f, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
-		}
-		RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
-		if (gl_textureshader && r_watershader.integer)
-		{
-			GL_ActiveTexture (0);
-			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
-			GL_ActiveTexture (1);
-			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_TEXTURE_2D);
-			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_SHADER_OPERATION_NV, GL_OFFSET_TEXTURE_2D_NV);
-			qglTexEnvi (GL_TEXTURE_SHADER_NV, GL_PREVIOUS_TEXTURE_INPUT_NV, GL_TEXTURE0_ARB);
-			qglTexEnvfv (GL_TEXTURE_SHADER_NV, GL_OFFSET_TEXTURE_MATRIX_NV, &args[0]);
-			qglEnable (GL_TEXTURE_SHADER_NV);
+			R_FillColors(varray_color4f, mesh->numverts, 1, 1, 1, alpha);
+			RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
 		}
  		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
-		if (gl_textureshader && r_watershader.integer)
-		{
-			qglDisable (GL_TEXTURE_SHADER_NV);
-			GL_ActiveTexture (0);
-		}
+	}
+	if (gl_textureshader && r_watershader.integer)
+	{
+		qglDisable (GL_TEXTURE_SHADER_NV);
+		GL_ActiveTexture (0);
 	}
 
 	if (fogenabled)
@@ -886,7 +884,7 @@ static void RSurfShader_Water_Callback(const void *calldata1, int calldata2)
 			m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 			GL_ColorPointer(varray_color4f);
 			R_Mesh_State_Texture(&m);
-			RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], alpha, r_colorscale, mesh->numverts, modelorg);
+			RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], alpha, 1, mesh->numverts, modelorg);
 			R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 		}
 	}
@@ -945,21 +943,29 @@ static void RSurfShader_Wall_Pass_BaseVertex(const entity_render_t *ent, const m
 		GL_DepthMask(true);
 	}
 	m.tex[0] = R_GetTexture(texture->skin.base);
+	colorscale = 1;
+	if (gl_combine.integer)
+	{
+		m.texrgbscale[0] = 4;
+		colorscale *= 0.25f;
+	}
+	base = ent->effects & EF_FULLBRIGHT ? 2.0f : r_ambient.value * (1.0f / 64.0f);
 	GL_DepthTest(true);
-	if (fogenabled)
-		GL_ColorPointer(varray_color4f);
-	else
-		GL_Color(r_colorscale, r_colorscale, r_colorscale, currentalpha);
+	GL_ColorPointer(varray_color4f);
 	for (mesh = surf->mesh;mesh;mesh = mesh->chain)
 	{
 		GL_VertexPointer(mesh->vertex3f);
 		m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 		R_Mesh_State_Texture(&m);
-		if (fogenabled)
+		R_FillColors(varray_color4f, mesh->numverts, base, base, base, currentalpha);
+		if (!(ent->effects & EF_FULLBRIGHT))
 		{
-			R_FillColors(varray_color4f, mesh->numverts, 1.0f, 1.0f, 1.0f, currentalpha);
-			RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, r_colorscale, mesh->numverts, modelorg);
+			if (surf->dlightframe == r_framecount)
+				RSurf_LightSeparate_Vertex3f_Color4f(&ent->inversematrix, surf->dlightbits, mesh->numverts, mesh->vertex3f, varray_color4f, 1);
+			if (surf->flags & SURF_LIGHTMAP)
+				RSurf_AddLightmapToVertexColors_Color4f(mesh->lightmapoffsets, varray_color4f, mesh->numverts, surf->samples, ((surf->extents[0]>>4)+1)*((surf->extents[1]>>4)+1)*3, surf->styles);
 		}
+		RSurf_FogColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, colorscale, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 	}
 }
@@ -982,7 +988,7 @@ static void RSurfShader_Wall_Pass_Glow(const entity_render_t *ent, const msurfac
 		if (m.tex[0])
 			m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 		R_Mesh_State_Texture(&m);
-		RSurf_FoggedColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, 1, 1, 1, currentalpha, r_colorscale, mesh->numverts, modelorg);
+		RSurf_FoggedColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, 1, 1, 1, currentalpha, 1, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 	}
 }
@@ -1005,7 +1011,7 @@ static void RSurfShader_Wall_Pass_Fog(const entity_render_t *ent, const msurface
 		if (m.tex[0])
 			m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 		R_Mesh_State_Texture(&m);
-		RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, r_colorscale, mesh->numverts, modelorg);
+		RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], currentalpha, 1, mesh->numverts, modelorg);
 		R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 	}
 }
@@ -1027,7 +1033,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseTripleTexCombine(const entity_render
 	m.texrgbscale[0] = 1;
 	m.texrgbscale[1] = 4;
 	m.texrgbscale[2] = 2;
-	cl = (float) (1 << r_lightmapscalebit) * r_colorscale;
+	cl = (float) (1 << r_lightmapscalebit);
 	GL_Color(cl, cl, cl, 1);
 
 	while((surf = *surfchain++) != NULL)
@@ -1067,7 +1073,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseDoubleTex(const entity_render_t *ent
 	m.tex[1] = R_GetTexture((**surfchain).lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[1] = 4;
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1129,7 +1135,7 @@ static void RSurfShader_OpaqueWall_Pass_BaseLightmap(const entity_render_t *ent,
 	m.tex[0] = R_GetTexture((**surfchain).lightmaptexture);
 	if (gl_combine.integer)
 		m.texrgbscale[0] = 4;
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1163,7 +1169,7 @@ static void RSurfShader_OpaqueWall_Pass_Light(const entity_render_t *ent, const 
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(texture->skin.base);
-	colorscale = r_colorscale;
+	colorscale = 1;
 	if (gl_combine.integer)
 	{
 		m.texrgbscale[0] = 4;
@@ -1212,7 +1218,7 @@ static void RSurfShader_OpaqueWall_Pass_Fog(const entity_render_t *ent, const te
 				if (m.tex[0])
 					m.pointer_texcoord[0] = mesh->texcoordtexture2f;
 				R_Mesh_State_Texture(&m);
-				RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, r_colorscale, mesh->numverts, modelorg);
+				RSurf_FogPassColors_Vertex3f_Color4f(mesh->vertex3f, varray_color4f, fogcolor[0], fogcolor[1], fogcolor[2], 1, 1, mesh->numverts, modelorg);
 				R_Mesh_Draw(mesh->numverts, mesh->numtriangles, mesh->element3i);
 			}
 		}
@@ -1255,7 +1261,7 @@ static void RSurfShader_OpaqueWall_Pass_Glow(const entity_render_t *ent, const t
 	GL_DepthMask(false);
 	GL_DepthTest(true);
 	m.tex[0] = R_GetTexture(texture->skin.glow);
-	GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+	GL_Color(1, 1, 1, 1);
 	while((surf = *surfchain++) != NULL)
 	{
 		if (surf->visframe == r_framecount)
@@ -1281,7 +1287,7 @@ static void RSurfShader_OpaqueWall_Pass_OpaqueGlow(const entity_render_t *ent, c
 	GL_DepthMask(true);
 	m.tex[0] = R_GetTexture(texture->skin.glow);
 	if (m.tex[0])
-		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+		GL_Color(1, 1, 1, 1);
 	else
 		GL_Color(0, 0, 0, 1);
 	while((surf = *surfchain++) != NULL)
@@ -1313,8 +1319,6 @@ static void RSurfShader_Wall_Vertex_Callback(const void *calldata1, int calldata
 		texture = texture->anim_frames[ent->frame != 0][(texture->anim_total[ent->frame != 0] >= 2) ? ((int) (cl.time * 5.0f) % texture->anim_total[ent->frame != 0]) : 0];
 
 	currentalpha = ent->alpha;
-	if (texture->flags & SURF_WATERALPHA)
-		currentalpha *= r_wateralpha.value;
 	if (ent->effects & EF_ADDITIVE)
 		rendertype = SURFRENDER_ADD;
 	else if (currentalpha < 1 || texture->skin.fog != NULL)
@@ -1534,9 +1538,9 @@ static void R_DrawPortal_Callback(const void *calldata1, int calldata2)
 	R_Mesh_State_Texture(&m);
 
 	i = portal - ent->model->brushq1.portals;
-	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f) * r_colorscale,
-			 ((i & 0x0038) >> 3) * (1.0f / 7.0f) * r_colorscale,
-			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f) * r_colorscale,
+	GL_Color(((i & 0x0007) >> 0) * (1.0f / 7.0f),
+			 ((i & 0x0038) >> 3) * (1.0f / 7.0f),
+			 ((i & 0x01C0) >> 6) * (1.0f / 7.0f),
 			 0.125f);
 	if (PlaneDiff(r_origin, (&portal->plane)) < 0)
 	{
@@ -1927,7 +1931,7 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 {
 	int i;
 	i = ((int)brush) / sizeof(colbrushf_t);
-	GL_Color((i & 31) * (1.0f / 32.0f) * r_colorscale, ((i >> 5) & 31) * (1.0f / 32.0f) * r_colorscale, ((i >> 10) & 31) * (1.0f / 32.0f) * r_colorscale, 0.2f);
+	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
 	GL_VertexPointer(brush->points->v);
 	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
 }
@@ -1950,7 +1954,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 
 			R_Mesh_Matrix(&ent->matrix);
 
-			GL_Color(fogcolor[0] * r_colorscale, fogcolor[1] * r_colorscale, fogcolor[2] * r_colorscale, 1);
+			GL_Color(fogcolor[0], fogcolor[1], fogcolor[2], 1);
 			if (skyrendermasked)
 			{
 				// depth-only (masking)
@@ -1991,7 +1995,7 @@ void R_Q3BSP_DrawFace(entity_render_t *ent, q3mface_t *face)
 		m.tex[1] = R_GetTexture(face->lightmaptexture);
 		m.pointer_texcoord[1] = face->data_texcoordlightmap2f;
 		m.texrgbscale[1] = 2;
-		GL_Color(r_colorscale, r_colorscale, r_colorscale, 1);
+		GL_Color(1, 1, 1, 1);
 	}
 	else
 	{

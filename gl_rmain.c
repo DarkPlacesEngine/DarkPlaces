@@ -569,7 +569,7 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 		GL_DepthMask(false);
 		GL_DepthTest(r_shadow_visiblevolumes.integer < 2);
 		qglDisable(GL_CULL_FACE);
-		GL_Color(0.0 * r_colorscale, 0.0125 * r_colorscale, 0.1 * r_colorscale, 1);
+		GL_Color(0.0, 0.0125, 0.1, 1);
 	}
 	else
 		R_Shadow_Stage_Begin();
@@ -993,7 +993,7 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 	vertex3f[18] = mins[0];vertex3f[19] = maxs[1];vertex3f[20] = maxs[2];
 	vertex3f[21] = maxs[0];vertex3f[22] = maxs[1];vertex3f[23] = maxs[2];
 	GL_ColorPointer(color);
-	R_FillColors(color, 8, cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
+	R_FillColors(color, 8, cr, cg, cb, ca);
 	if (fogenabled)
 	{
 		for (i = 0, v = vertex, c = color;i < 8;i++, v += 4, c += 4)
@@ -1001,7 +1001,6 @@ void R_DrawBBoxMesh(vec3_t mins, vec3_t maxs, float cr, float cg, float cb, floa
 			VectorSubtract(v, r_origin, diff);
 			f2 = exp(fogdensity/DotProduct(diff, diff));
 			f1 = 1 - f2;
-			f2 *= r_colorscale;
 			c[0] = c[0] * f1 + fogcolor[0] * f2;
 			c[1] = c[1] * f1 + fogcolor[1] * f2;
 			c[2] = c[2] * f1 + fogcolor[2] * f2;
@@ -1081,23 +1080,18 @@ void R_DrawNoModelCallback(const void *calldata1, int calldata2)
 		f1 = 1 - f2;
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
 		{
-			c[0] = (c[0] * f1 + fogcolor[0] * f2) * r_colorscale;
-			c[1] = (c[1] * f1 + fogcolor[1] * f2) * r_colorscale;
-			c[2] = (c[2] * f1 + fogcolor[2] * f2) * r_colorscale;
+			c[0] = (c[0] * f1 + fogcolor[0] * f2);
+			c[1] = (c[1] * f1 + fogcolor[1] * f2);
+			c[2] = (c[2] * f1 + fogcolor[2] * f2);
 			c[3] *= ent->alpha;
 		}
 	}
-	else if (r_colorscale != 1 || ent->alpha != 1)
+	else if (ent->alpha != 1)
 	{
 		memcpy(color4f, nomodelcolor4f, sizeof(float[6*4]));
 		GL_ColorPointer(color4f);
 		for (i = 0, c = color4f;i < 6;i++, c += 4)
-		{
-			c[0] *= r_colorscale;
-			c[1] *= r_colorscale;
-			c[2] *= r_colorscale;
 			c[3] *= ent->alpha;
-		}
 	}
 	else
 		GL_ColorPointer(nomodelcolor4f);
@@ -1157,7 +1151,7 @@ void R_DrawSprite(int blendfunc1, int blendfunc2, rtexture_t *texture, int depth
 	}
 
 	R_Mesh_Matrix(&r_identitymatrix);
-	GL_Color(cr * r_colorscale, cg * r_colorscale, cb * r_colorscale, ca);
+	GL_Color(cr, cg, cb, ca);
 	GL_VertexPointer(varray_vertex3f);
 	GL_BlendFunc(blendfunc1, blendfunc2);
 	GL_DepthMask(false);
