@@ -225,7 +225,7 @@ void CL_UpdateDecals (void)
 		if (p->tex == 0)
 			continue;
 
-		if (p->ent && p->ent->visframe == r_framecount && p->ent->model != p->model)
+		if (p->ent && p->ent->visframe == r_framecount && (p->ent->model != p->model || p->ent->model->type != mod_brush))
 		{
 			p->tex = 0;
 			continue;

@@ -85,6 +85,8 @@ void R_DrawDecals (void)
 				continue;
 
 			Mod_CheckLoaded(r->ent->model);
+			if (r->ent->model->type != mod_brush)
+				continue;
 
 			surf = r->ent->model->surfaces + r->surface;
 
