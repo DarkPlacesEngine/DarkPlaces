@@ -844,6 +844,8 @@ int VID_InitMode(int fullscreen, int width, int height, int bpp)
 	gl_platform = "GLX";
 	gl_platformextensions = qglXQueryExtensionsString(vidx11_display, vidx11_screen);
 
+	gl_videosyncavailable = false;
+
 	GL_CheckExtension("GLX_ARB_get_proc_address", getprocaddressfuncs, "-nogetprocaddress", false);
 	gl_videosyncavailable = GL_CheckExtension("GLX_SGI_video_sync", videosyncfuncs, "-novideosync", false);
 

@@ -311,7 +311,8 @@ void VID_Finish (void)
 	{
 		old_vsync = bound(0, vid_vsync.integer, 1);
 		Cvar_SetValueQuick(&vid_vsync, old_vsync);
-		qwglSwapIntervalEXT (old_vsync);
+		if (gl_videosyncavailable)
+			qwglSwapIntervalEXT (old_vsync);
 	}
 
 	if (r_render.integer && !scr_skipupdate)
@@ -984,6 +985,8 @@ int VID_InitMode (int fullscreen, int width, int height, int bpp)
 	gl_extensions = qglGetString(GL_EXTENSIONS);
 	gl_platform = "WGL";
 	gl_platformextensions = "";
+
+	gl_videosyncavailable = false;
 
 	if (qwglGetExtensionsStringARB)
 		gl_platformextensions = qwglGetExtensionsStringARB(hdc);
