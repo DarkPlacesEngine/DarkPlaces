@@ -171,7 +171,7 @@ void FindEdictFieldOffsets(void)
 	SV_PlayerPhysicsQC = ED_FindFunction ("SV_PlayerPhysics");
 	// LordHavoc: support for endframe
 	EndFrameQC = ED_FindFunction ("EndFrame");
-};
+}
 
 /*
 =================
