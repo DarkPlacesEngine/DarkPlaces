@@ -32,10 +32,6 @@ int gl_texturecubemap = false;
 int gl_dot3arb = false;
 // GL_SGIS_texture_edge_clamp
 int gl_support_clamptoedge = false;
-// GL_NV_vertex_array_range
-int gl_support_var = false;
-// GL_NV_vertex_array_range2
-int gl_support_var2 = false;
 // GL_EXT_texture_filter_anisotropic
 int gl_support_anisotropy = false;
 int gl_max_anisotropy = 1;
@@ -499,24 +495,6 @@ static dllfunction_t texture3dextfuncs[] =
 	{NULL, NULL}
 };
 
-static dllfunction_t glxvarfuncs[] =
-{
-	{"glXAllocateMemoryNV", (void **) &qglAllocateMemoryNV},
-	{"glXFreeMemoryNV", (void **) &qglFreeMemoryNV},
-	{"glVertexArrayRangeNV", (void **) &qglVertexArrayRangeNV},
-	{"glFlushVertexArrayRangeNV", (void **) &qglFlushVertexArrayRangeNV},
-	{NULL, NULL}
-};
-
-static dllfunction_t wglvarfuncs[] =
-{
-	{"wglAllocateMemoryNV", (void **) &qglAllocateMemoryNV},
-	{"wglFreeMemoryNV", (void **) &qglFreeMemoryNV},
-	{"glVertexArrayRangeNV", (void **) &qglVertexArrayRangeNV},
-	{"glFlushVertexArrayRangeNV", (void **) &qglFlushVertexArrayRangeNV},
-	{NULL, NULL}
-};
-
 static dllfunction_t stenciltwosidefuncs[] =
 {
 	{"glActiveStencilFaceEXT", (void **) &qglActiveStencilFaceEXT},
@@ -632,8 +610,6 @@ void VID_CheckExtensions(void)
 	gl_texturecubemap = false;
 	gl_dot3arb = false;
 	gl_support_clamptoedge = false;
-	gl_support_var = false;
-	gl_support_var2 = false;
 	gl_support_anisotropy = false;
 	gl_max_anisotropy = 1;
 	gl_textureshader = false;
@@ -669,13 +645,6 @@ void VID_CheckExtensions(void)
 	gl_texturecubemap = GL_CheckExtension("GL_ARB_texture_cube_map", NULL, "-nocubemap", false);
 	gl_supportslockarrays = GL_CheckExtension("GL_EXT_compiled_vertex_array", compiledvertexarrayfuncs, "-nocva", false);
 	gl_support_clamptoedge = GL_CheckExtension("GL_EXT_texture_edge_clamp", NULL, "-noedgeclamp", false) || GL_CheckExtension("GL_SGIS_texture_edge_clamp", NULL, "-noedgeclamp", false);
-
-	if (!strcmp(gl_platform, "GLX"))
-		gl_support_var = GL_CheckExtension("GL_NV_vertex_array_range", glxvarfuncs, "-novar", false);
-	else if (!strcmp(gl_platform, "WGL"))
-		gl_support_var = GL_CheckExtension("GL_NV_vertex_array_range", wglvarfuncs, "-novar", false);
-	if (gl_support_var)
-		gl_support_var2 = GL_CheckExtension("GL_NV_vertex_array_range2", NULL, "-novar2", false);
 
 	if ((gl_support_anisotropy = GL_CheckExtension("GL_EXT_texture_filter_anisotropic", NULL, "-noanisotropy", false)))
 		qglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &gl_max_anisotropy);

@@ -374,21 +374,6 @@ extern int gl_support_clamptoedge;
 #define GL_CLAMP_TO_EDGE 0x812F
 #endif
 
-//GL_NV_vertex_array_range
-extern GLvoid *(GLAPIENTRY *qglAllocateMemoryNV)(GLsizei size, GLfloat readFrequency, GLfloat writeFrequency, GLfloat priority);
-extern GLvoid (GLAPIENTRY *qglFreeMemoryNV)(GLvoid *pointer);
-extern GLvoid (GLAPIENTRY *qglVertexArrayRangeNV)(GLsizei length, GLvoid *pointer);
-extern GLvoid (GLAPIENTRY *qglFlushVertexArrayRangeNV)(GLvoid);
-#define GL_VERTEX_ARRAY_RANGE_NV 0x851D
-#define GL_VERTEX_ARRAY_RANGE_LENGTH_NV 0x851E
-#define GL_MAX_VERTEX_ARRAY_RANGE_ELEMENT_NV 0x8520
-#define GL_VERTEX_ARRAY_RANGE_POINTER_NV 0x8521
-extern int gl_support_var;
-
-//GL_NV_vertex_array_range2
-#define GL_VERTEX_ARRAY_RANGE_WITHOUT_FLUSH_NV 0x8533
-extern int gl_support_var2;
-
 //GL_EXT_stencil_two_side
 #define GL_STENCIL_TEST_TWO_SIDE_EXT      0x8910
 #define GL_ACTIVE_STENCIL_FACE_EXT        0x8911
