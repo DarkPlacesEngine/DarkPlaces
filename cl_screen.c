@@ -652,35 +652,35 @@ SCR_ScreenShot_f
 */
 void SCR_ScreenShot_f (void)
 {
-	static int i = 0;
-	char filename[16];
-	char checkname[MAX_OSPATH];
-	const char* extens;
+	static int shotnumber = 0;
+	const char *base;
+	char filename[64];
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
-	if (jpeg)
-		extens = "jpg";
-	else
-		extens = "tga";
-
+	base = "screenshots/dp";
+	if (gamemode == GAME_FNIGGIUM)
+		base = "screenshots/fniggium";
+	
 	// find a file name to save it to
-	for (; i<=9999 ; i++)
-	{
-		sprintf (filename, "dp%04i.%s", i, extens);
-		sprintf (checkname, "%s/%s", fs_gamedir, filename);
-		if (!FS_SysFileExists(checkname))
+	for (;shotnumber < 1000000;shotnumber++)
+		if (!FS_SysFileExists(va("%s/%s%06d.tga", fs_gamedir, base, shotnumber)) && !FS_SysFileExists(va("%s/%s%06d.jpg", fs_gamedir, base, shotnumber)))
 			break;
-	}
-	if (i==10000)
+	if (shotnumber >= 1000000)
 	{
-		Con_Printf ("SCR_ScreenShot_f: Couldn't create the image file\n");
+		Con_Printf("SCR_ScreenShot_f: Couldn't create the image file\n");
 		return;
  	}
 
-	if (SCR_ScreenShot (filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
-		Con_Printf ("Wrote %s\n", filename);
+	if (jpeg)
+		sprintf(filename, "%s%06d.jpg", base, shotnumber);
 	else
-		Con_Printf ("unable to write %s\n", filename);
+		sprintf(filename, "%s%06d.tga", base, shotnumber);
+
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
+		Con_Printf("Wrote %s\n", filename);
+	else
+		Con_Printf("unable to write %s\n", filename);
+	shotnumber++;
 }
 
 static int cl_avidemo_frame = 0;
@@ -691,9 +691,9 @@ void SCR_CaptureAVIDemo(void)
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
 	if (jpeg)
-		sprintf(filename, "dpavi%06d.jpg", cl_avidemo_frame);
+		sprintf(filename, "video/dp%06d.jpg", cl_avidemo_frame);
 	else
-		sprintf(filename, "dpavi%06d.tga", cl_avidemo_frame);
+		sprintf(filename, "video/dp%06d.tga", cl_avidemo_frame);
 
 	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
 		cl_avidemo_frame++;
