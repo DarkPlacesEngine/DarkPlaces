@@ -204,8 +204,6 @@ void CL_KeepaliveMessage (void)
 		msg.cursize = 0;
 		MSG_WriteChar(&msg, svc_nop);
 		NetConn_SendUnreliableMessage(cls.netcon, &msg);
-		// try not to utterly crush the computer with work, that's just rude
-		Sys_Sleep(1);
 	}
 }
 
@@ -401,10 +399,7 @@ void CL_ParseServerInfo (void)
 	// anything that isn't needed
 	Mod_ClearUsed();
 	for (i = 1;i < nummodels;i++)
-	{
-		CL_KeepaliveMessage();
 		Mod_FindName(parse_model_precache[i]);
-	}
 	Mod_PurgeUnused();
 
 	// do the same for sounds
