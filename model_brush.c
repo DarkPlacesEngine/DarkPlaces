@@ -2937,9 +2937,432 @@ void Mod_LoadBrushModelQ1orHL (model_t *mod, void *buffer)
 	//Mod_ProcessLightList ();
 }
 
+static void Mod_Q2LoadEntities (lump_t *l)
+{
+}
+
+static void Mod_Q2LoadPlanes (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadVertices (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadVisibility (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadNodes (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadTexInfo (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadFaces (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadLighting (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadLeafs (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadLeafFaces (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadLeafBrushes (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadEdges (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadSurfEdges (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadBrushes (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadBrushSides (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadAreas (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadAreaPortals (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
+static void Mod_Q2LoadModels (lump_t *l)
+{
+/*
+	d_t *in;
+	m_t *out;
+	int i, count;
+
+	in = (void *)(mod_base + l->fileofs);
+	if (l->filelen % sizeof(*in))
+		Host_Error ("MOD_LoadBmodel: funny lump size in %s",loadmodel->name);
+	count = l->filelen / sizeof(*in);
+	out = Mem_Alloc(loadmodel->mempool, count * sizeof(*out));
+
+	loadmodel-> = out;
+	loadmodel->num = count;
+
+	for (i = 0;i < count;i++, in++, out++)
+	{
+	}
+*/
+}
+
 void Mod_LoadBrushModelQ2 (model_t *mod, void *buffer)
 {
-	Host_Error("Mod_LoadBrushModelQ2: not yet implemented\n");
+	int i;
+	q2dheader_t *header;
+
+	mod->type = mod_brushq2;
+
+	header = (q2dheader_t *)buffer;
+
+	i = LittleLong (header->version);
+	if (i != Q2BSPVERSION)
+		Host_Error ("Mod_LoadBrushModelQ2: %s has wrong version number (%i should be %i)", mod->name, i, BSPVERSION);
+	mod->ishlbsp = false;
+	if (loadmodel->isworldmodel)
+	{
+		Cvar_SetValue("halflifebsp", mod->ishlbsp);
+		// until we get a texture for it...
+		R_ResetQuakeSky();
+	}
+
+	mod_base = (qbyte *)header;
+
+	// swap all the lumps
+	for (i = 0;i < (int) sizeof(dheader_t) / 4;i++)
+		((int *)header)[i] = LittleLong ( ((int *)header)[i]);
+
+	// store which lightmap format to use
+	mod->lightmaprgba = r_lightmaprgba.integer;
+
+	Mod_Q2LoadEntities(&header->lumps[Q2LUMP_ENTITIES]);
+	Mod_Q2LoadPlanes(&header->lumps[Q2LUMP_PLANES]);
+	Mod_Q2LoadVertices(&header->lumps[Q2LUMP_VERTEXES]);
+	Mod_Q2LoadVisibility(&header->lumps[Q2LUMP_VISIBILITY]);
+	Mod_Q2LoadNodes(&header->lumps[Q2LUMP_NODES]);
+	Mod_Q2LoadTexInfo(&header->lumps[Q2LUMP_TEXINFO]);
+	Mod_Q2LoadFaces(&header->lumps[Q2LUMP_FACES]);
+	Mod_Q2LoadLighting(&header->lumps[Q2LUMP_LIGHTING]);
+	Mod_Q2LoadLeafs(&header->lumps[Q2LUMP_LEAFS]);
+	Mod_Q2LoadLeafFaces(&header->lumps[Q2LUMP_LEAFFACES]);
+	Mod_Q2LoadLeafBrushes(&header->lumps[Q2LUMP_LEAFBRUSHES]);
+	Mod_Q2LoadEdges(&header->lumps[Q2LUMP_EDGES]);
+	Mod_Q2LoadSurfEdges(&header->lumps[Q2LUMP_SURFEDGES]);
+	Mod_Q2LoadBrushes(&header->lumps[Q2LUMP_BRUSHES]);
+	Mod_Q2LoadBrushSides(&header->lumps[Q2LUMP_BRUSHSIDES]);
+	Mod_Q2LoadAreas(&header->lumps[Q2LUMP_AREAS]);
+	Mod_Q2LoadAreaPortals(&header->lumps[Q2LUMP_AREAPORTALS]);
+	// LordHavoc: must go last because this makes the submodels
+	Mod_Q2LoadModels(&header->lumps[Q2LUMP_MODELS]);
 }
 
 void Mod_LoadBrushModelQ3 (model_t *mod, void *buffer)
