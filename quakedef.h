@@ -195,31 +195,11 @@ extern char *buildstring;
 
 #include "portals.h"
 
-//=============================================================================
-
-// the host system specifies the base of the directory tree
-
-typedef struct
-{
-	char	*basedir;
-#if CACHEENABLE
-	char	*cachedir;		// for development over ISDN lines
-#endif
-} quakeparms_t;
-
-
-//=============================================================================
-
-
-
 extern qboolean noclip_anglehack;
-
 
 //
 // host
 //
-extern	quakeparms_t host_parms;
-
 extern	cvar_t		sys_ticrate;
 extern	cvar_t		developer;
 

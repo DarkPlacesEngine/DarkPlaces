@@ -145,14 +145,8 @@ int main (int argc, char **argv)
 
 	signal(SIGFPE, SIG_IGN);
 
-	memset(&host_parms, 0, sizeof(host_parms));
-
 	com_argc = argc;
 	com_argv = argv;
-	host_parms.basedir = ".";
-#if CACHEENABLE
-	host_parms.cachedir = "/tmp";
-#endif
 
 	fcntl(0, F_SETFL, fcntl (0, F_GETFL, 0) | FNDELAY);
 

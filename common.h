@@ -132,9 +132,9 @@ extern	qboolean	com_eof;
 
 char *COM_Parse (char *data);
 
-
-extern	int		com_argc;
-extern	char	**com_argv;
+extern char com_basedir[MAX_OSPATH];
+extern int com_argc;
+extern char **com_argv;
 
 int COM_CheckParm (char *parm);
 void COM_Init (void);
