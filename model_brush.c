@@ -4341,7 +4341,7 @@ static int Mod_Q3BSP_BoxTouchingPVS(model_t *model, const qbyte *pvs, const vec3
 }
 
 //Returns PVS data for a given point
-//(note: always returns valid data, never NULL)
+//(note: can return NULL)
 static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
 {
 	q3mnode_t *node;
@@ -4349,7 +4349,10 @@ static qbyte *Mod_Q3BSP_GetPVS(model_t *model, const vec3_t p)
 	node = model->brushq3.data_nodes;
 	while (node->isnode)
 		node = node->children[(node->plane->type < 3 ? p[node->plane->type] : DotProduct(p,node->plane->normal)) < node->plane->dist];
-	return model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
+	if (((q3mleaf_t *)node)->clusterindex >= 0)
+		return model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
+	else
+		return NULL;
 }
 
 static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, vec_t radius, qbyte *pvsbuffer, int pvsbytes, q3mnode_t *node)
@@ -4372,10 +4375,13 @@ static void Mod_Q3BSP_FatPVS_RecursiveBSPNode(model_t *model, const vec3_t org, 
 			node = node->children[1];
 		}
 	}
-	// if this is a leaf, accumulate the pvs bits
-	pvs = model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
-	for (i = 0;i < pvsbytes;i++)
-		pvsbuffer[i] |= pvs[i];
+	// if this is a leaf with a pvs, accumulate the pvs bits
+	if (((q3mleaf_t *)node)->clusterindex >= 0)
+	{
+		pvs = model->brushq3.data_pvschains + ((q3mleaf_t *)node)->clusterindex * model->brushq3.num_pvschainlength;
+		for (i = 0;i < pvsbytes;i++)
+			pvsbuffer[i] |= pvs[i];
+	}
 	return;
 }
 
