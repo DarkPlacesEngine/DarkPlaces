@@ -724,11 +724,11 @@ void R_ModelLightPoint (vec3_t color, vec3_t p, int *dlightbits)
 void R_LightModel(int numverts, float colorr, float colorg, float colorb, int worldcoords)
 {
 	int i, j, nearlights = 0;
-	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f, dist2;
+	float color[3], basecolor[3], v[3], t, *av, *avn, *avc, a, number, f, dist2, mscale;
 	struct
 	{
 		vec3_t origin;
-		vec_t cullradius2;
+		//vec_t cullradius2;
 		vec3_t light;
 		vec_t lightsubtract;
 		vec_t falloff;
@@ -763,7 +763,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						softwareuntransform(sl->origin, nl->origin);
 					f = d_lightstylevalue[sl->style] * (1.0f / 32768.0f);
 					VectorScale(sl->light, f, nl->light);
-					nl->cullradius2 = 99999999;
+					//nl->cullradius2 = 99999999;
 					nl->lightsubtract = sl->subtract;
 					nl->offset = sl->distbias;
 					nl++;
@@ -787,7 +787,8 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 						VectorCopy(r_dlight[i].origin, nl->origin);
 					else
 						softwareuntransform(r_dlight[i].origin, nl->origin);
-					nl->cullradius2 = r_dlight[i].cullradius2;
+					// scale the cullradius so culling by distance is done before mscale is applied
+					//nl->cullradius2 = r_dlight[i].cullradius2 * currentrenderentity->scale * currentrenderentity->scale;
 					nl->light[0] = r_dlight[i].light[0] * colorr;
 					nl->light[1] = r_dlight[i].light[1] * colorg;
 					nl->light[2] = r_dlight[i].light[2] * colorb;
@@ -805,6 +806,9 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 	basecolor[1] *= colorg;
 	basecolor[2] *= colorb;
 	avc = aliasvertcolor;
+	// scale of the model's coordinate space, to alter light attenuation to match
+	// make the mscale squared so it can scale the squared distance results
+	mscale = currentrenderentity->scale * currentrenderentity->scale;
 	if (nearlights)
 	{
 		av = aliasvert;
@@ -817,25 +821,22 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 				// distance attenuation
 				VectorSubtract(nl->origin, av, v);
 				dist2 = DotProduct(v,v);
-				if (dist2 < nl->cullradius2)
+				f = (1.0f / (dist2 * mscale + nl->offset)) - nl->lightsubtract;
+				if (f > 0)
 				{
-					f = (1.0f / (dist2 + nl->offset)) - nl->lightsubtract;
-					if (f > 0)
-					{
-						// directional shading
+					// directional shading
 #if SLOWMATH
-						t = 1.0f / sqrt(dist2);
+					t = 1.0f / sqrt(dist2);
 #else
-						number = DotProduct(v, v);
-						*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
-						t = t * (1.5f - (number * 0.5f * t * t));
+					number = DotProduct(v, v);
+					*((int *)&t) = 0x5f3759df - ((* (int *) &number) >> 1);
+					t = t * (1.5f - (number * 0.5f * t * t));
 #endif
-						// DotProduct(avn,v) * t is dotproduct with a normalized v,
-						// the hardness variables are for backlighting/shinyness
-						f *= DotProduct(avn,v) * t;// * hardness + hardnessoffset;
-						if (f > 0)
-							VectorMA(color, f, nl->light, color);
-					}
+					// DotProduct(avn,v) * t is dotproduct with a normalized v,
+					// the hardness variables are for backlighting/shinyness
+					f *= DotProduct(avn,v) * t * 0.5f + 0.5f;// * hardness + hardnessoffset;
+					if (f > 0)
+						VectorMA(color, f, nl->light, color);
 				}
 			}
 
