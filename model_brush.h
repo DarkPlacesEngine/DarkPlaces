@@ -118,7 +118,7 @@ typedef struct msurface_s
 	short		texturemins[2];
 	short		extents[2];
 
-	int			light_s, light_t;	// gl lightmap coordinates
+	short		light_s, light_t;	// gl lightmap coordinates
 
 	glpoly_t	*polys;				// multiple if warped
 	struct	msurface_s	*texturechain;
@@ -133,9 +133,8 @@ typedef struct msurface_s
 
 	int			lightmaptexturenum;
 	byte		styles[MAXLIGHTMAPS];
-	int			cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
-//	qboolean	cached_dlight;				// true if dynamic light in cache
-	qboolean	cached_lighthalf;			// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
+	unsigned short	cached_light[MAXLIGHTMAPS];	// values currently used in lightmap
+	int			cached_lighthalf;			// LordHavoc: to cause lightmap to be rerendered when lighthalf changes
 	float		cached_ambient;				// LordHavoc: rerender lightmaps when r_ambient changes
 	byte		*samples;		// [numstyles*surfsize]
 } msurface_t;

@@ -100,7 +100,7 @@ extern	vec3_t	r_origin;
 extern	refdef_t	r_refdef;
 extern	mleaf_t		*r_viewleaf, *r_oldviewleaf;
 extern	texture_t	*r_notexture_mip;
-extern	int		d_lightstylevalue[256];	// 8.8 fraction of base light value
+extern	unsigned short	d_lightstylevalue[256];	// 8.8 fraction of base light value
 
 extern	qboolean	envmap;
 
