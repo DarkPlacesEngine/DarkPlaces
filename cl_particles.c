@@ -641,7 +641,7 @@ CL_ParticleExplosion
 */
 void CL_ParticleExplosion (vec3_t org)
 {
-	int i, k;
+	int i;
 	//vec3_t v;
 	//vec3_t v2;
 	if (cl_stainmaps.integer)
@@ -702,14 +702,8 @@ void CL_ParticleExplosion (vec3_t org)
 	//	R_NewExplosion(org);
 #else
 		if (cl_particles.integer && cl_particles_sparks.integer)
-		{
-			// sparks
 			for (i = 0;i < 256 * cl_particles_quality.value;i++)
-			{
-				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 1.5f, 0.05f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0.2, 0);
-			}
-		}
+				particle(pt_static, PARTICLE_SPARK, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.5f, 0.05f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0.2, 0);
 	}
 
 	if (cl_explosions.integer)
