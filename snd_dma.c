@@ -285,6 +285,7 @@ sfx_t *S_FindName (char *name)
 		Sys_Error ("S_FindName: out of sfx_t");
 
 	sfx = &known_sfx[i];
+	memset(sfx, 0, sizeof(*sfx));
 	strcpy (sfx->name, name);
 
 	num_sfx++;
@@ -683,6 +684,8 @@ void S_UpdateAmbientSounds (void)
 // calc ambient sound levels
 	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
 	{
+		if (ambient_sfx[ambient_channel] && ambient_sfx[ambient_channel]->silentlymissing)
+			continue;
 		chan = &channels[ambient_channel];
 		chan->sfx = ambient_sfx[ambient_channel];
 

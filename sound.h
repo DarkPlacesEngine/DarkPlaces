@@ -46,6 +46,7 @@ typedef struct sfx_s
 	char 	name[MAX_QPATH];
 	mempool_t	*mempool;
 	sfxcache_t	*sfxcache;
+	int silentlymissing; // true if missing and loaded with complain = false
 } sfx_t;
 
 typedef struct
