@@ -21,6 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+typedef struct
+{
+	int left;
+	int right;
+} portable_samplepair_t;
+
 // LordHavoc: was 512, expanded to 2048
 #define	PAINTBUFFER_SIZE 2048
 portable_samplepair_t paintbuffer[PAINTBUFFER_SIZE];
