@@ -615,7 +615,7 @@ void CL_ParticleCube (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int color
 void CL_ParticleRain (vec3_t mins, vec3_t maxs, vec3_t dir, int count, int colorbase, int type);
 void CL_EntityParticles (entity_t *ent);
 void CL_BlobExplosion (vec3_t org);
-void CL_ParticleExplosion (vec3_t org, int smoke);
+void CL_ParticleExplosion (vec3_t org);
 void CL_ParticleExplosion2 (vec3_t org, int colorStart, int colorLength);
 void CL_LavaSplash (vec3_t org);
 void CL_TeleportSplash (vec3_t org);

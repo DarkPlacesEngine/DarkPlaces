@@ -1178,7 +1178,7 @@ void CL_ParseTempEntity (void)
 		// rocket explosion
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
-		CL_ParticleExplosion (pos, false);
+		CL_ParticleExplosion (pos);
 		// LordHavoc: boosted color from 1.0, 0.8, 0.4 to 1.25, 1.0, 0.5
 		CL_AllocDlight (NULL, pos, 350, 1.25f, 1.0f, 0.5f, 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
@@ -1188,7 +1188,7 @@ void CL_ParseTempEntity (void)
 		// quad rocket explosion
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
-		CL_ParticleExplosion (pos, false);
+		CL_ParticleExplosion (pos);
 		CL_AllocDlight (NULL, pos, 600, 0.5f, 0.4f, 1.0f, 1200, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
@@ -1197,7 +1197,7 @@ void CL_ParseTempEntity (void)
 		// Nehahra movie colored lighting explosion
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
-		CL_ParticleExplosion (pos, false);
+		CL_ParticleExplosion (pos);
 		CL_AllocDlight (NULL, pos, 350, MSG_ReadCoord(), MSG_ReadCoord(), MSG_ReadCoord(), 700, 0.5);
 		S_StartSound (-1, 0, cl_sfx_r_exp3, pos, 1, 1);
 		break;
@@ -1206,7 +1206,7 @@ void CL_ParseTempEntity (void)
 		// colored lighting explosion
 		MSG_ReadVector(pos);
 		Mod_FindNonSolidLocation(pos, cl.worldmodel);
-		CL_ParticleExplosion (pos, false);
+		CL_ParticleExplosion (pos);
 		color[0] = MSG_ReadByte() * (1.0 / 255.0);
 		color[1] = MSG_ReadByte() * (1.0 / 255.0);
 		color[2] = MSG_ReadByte() * (1.0 / 255.0);
