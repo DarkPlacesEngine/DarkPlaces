@@ -184,7 +184,7 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 	float dist;
 
 	// for comparisons to minimum acceptable light
-	while(node->contents >= 0)
+	while(node->plane)
 	{
 		dist = PlaneDiff(lightorigin, node->plane);
 		if (dist > light->rtlight.lightmap_cullradius)
@@ -202,15 +202,14 @@ static void R_RecursiveMarkLights(entity_render_t *ent, vec3_t lightorigin, dlig
 	i = leaf->clusterindex;
 	if (leaf->nummarksurfaces && (i >= pvsbits || CHECKPVSBIT(pvs, i)))
 	{
-		int *surfacevisframes, d, impacts, impactt;
+		int d, impacts, impactt;
 		float sdist, maxdist, dist2, impact[3];
 		msurface_t *surf;
 		// mark the polygons
 		maxdist = light->rtlight.lightmap_cullradius2;
-		surfacevisframes = ent->model->brushq1.surfacevisframes;
 		for (i = 0;i < leaf->nummarksurfaces;i++)
 		{
-			if (surfacevisframes[leaf->firstmarksurface[i]] != r_framecount)
+			if (ent == r_refdef.worldentity && !r_worldsurfacevisible[leaf->firstmarksurface[i]])
 				continue;
 			surf = ent->model->brushq1.surfaces + leaf->firstmarksurface[i];
 			dist = sdist = PlaneDiff(lightorigin, surf->plane);

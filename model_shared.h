@@ -241,7 +241,6 @@ typedef struct model_brushq1_s
 
 	int				numsurfaces;
 	msurface_t		*surfaces;
-	int				*surfacevisframes;
 	msurface_t		*surfacepvsnext;
 
 	int				numsurfedges;
@@ -356,7 +355,6 @@ typedef struct q3mtexture_s
 	char name[Q3PATHLENGTH];
 	char firstpasstexturename[Q3PATHLENGTH];
 	int surfaceflags;
-	int nativecontents;
 	int supercontents;
 	int surfaceparms;
 	int textureflags;
@@ -377,7 +375,8 @@ typedef struct q3mnode_s
 	struct q3mnode_s *parent;
 	vec3_t mins;
 	vec3_t maxs;
-	// this part unique to nodes
+
+	// this part unique to node
 	struct q3mnode_s *children[2];
 }
 q3mnode_t;
@@ -389,8 +388,9 @@ typedef struct q3mleaf_s
 	struct q3mnode_s *parent;
 	vec3_t mins;
 	vec3_t maxs;
-	// this part unique to leafs
-	int clusterindex;
+
+	// this part unique to leaf
+	int clusterindex; // -1 is not in pvs, >= 0 is pvs bit number
 	int areaindex;
 	int numleaffaces;
 	struct q3msurface_s **firstleafface;
@@ -438,14 +438,12 @@ q3meffect_t;
 typedef struct q3msurface_s
 {
 	// FIXME: collisionmarkframe should be kept in a separate array
-	// FIXME: visframe should be kept in a separate array
 	// FIXME: shadowmark should be kept in a separate array
 
 	struct q3mtexture_s *texture;
 	struct q3meffect_s *effect;
 	rtexture_t *lightmaptexture;
 	int collisionmarkframe; // don't collide twice in one trace
-	int visframe; // visframe == r_framecount means it is visible this frame
 	// bounding box for culling
 	float mins[3];
 	float maxs[3];
