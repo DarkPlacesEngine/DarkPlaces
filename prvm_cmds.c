@@ -1543,7 +1543,7 @@ void VM_registercvar (void)
 		return;
 	}
 
-	Cvar_Get(name, value, 0);
+	Cvar_Get(name, value, flags);
 
 	PRVM_G_FLOAT(OFS_RETURN) = 1; // success
 }

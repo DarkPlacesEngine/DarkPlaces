@@ -669,6 +669,8 @@ skipwhite:
 		// quoted string
 		for (data++;*data != '\"';data++)
 		{
+			if (*data == '\\' && data[1] == '"' )
+				data++;
 			if (!*data || len >= (int)sizeof(com_token) - 1)
 			{
 				com_token[0] = 0;
