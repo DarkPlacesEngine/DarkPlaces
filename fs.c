@@ -860,10 +860,12 @@ void FS_AddGameHierarchy (const char *dir)
 	// Add the common game directory
 	FS_AddGameDirectory (va("%s/%s", fs_basedir, dir));
 
+#ifndef WIN32
 	// Add the personal game directory
 	homedir = getenv ("HOME");
 	if (homedir != NULL && homedir[0] != '\0')
 		FS_AddGameDirectory (va("%s/.%s/%s", homedir, gameuserdirname, dir));
+#endif
 }
 
 
