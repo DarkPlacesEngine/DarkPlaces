@@ -50,7 +50,7 @@ CLIENTOBJECTS=	cgame.o cgamevm.o chase.o cl_collision.o cl_demo.o cl_input.o \
 		jpeg.o keys.o menu.o meshqueue.o r_crosshairs.o r_explosion.o \
 		r_lerpanim.o r_light.o r_lightning.o r_modules.o r_sky.o \
 		r_sprites.o sbar.o ui.o vid_shared.o view.o wavefile.o \
-		r_shadow.o prvm_exec.o prvm_edict.o prvm_cms.o
+                r_shadow.o prvm_exec.o prvm_edict.o prvm_cmds.o
 SERVEROBJECTS=	pr_cmds.o pr_edict.o pr_exec.o sv_main.o sv_move.o \
 		sv_phys.o sv_user.o
 SHAREDOBJECTS=	cmd.o collision.o common.o crc.o cvar.o \

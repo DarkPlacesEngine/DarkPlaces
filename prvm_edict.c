@@ -429,16 +429,16 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 	char *s;
 	ddef_t *def;
 	mfunction_t *f;
-
+	
 	type &= ~DEF_SAVEGLOBAL;
-
+	
 	switch (type)
 	{
 	case ev_string:
 		// Parse the string a bit to turn special characters
 		// (like newline, specifically) into escape codes,
 		// this fixes saving games from various mods
-		sprintf (line, "%s", PRVM_GetString(val->string));
+		s = PRVM_GetString (val->string);
 		for (i = 0;i < (int)sizeof(line) - 2 && *s;)
 		{
 			if (*s == '\n')
@@ -456,33 +456,32 @@ char *PRVM_UglyValueString (etype_t type, prvm_eval_t *val)
 			s++;
 		}
 		line[i] = '\0';
-		
 		break;
 	case ev_entity:
-		sprintf (line, "%i", PRVM_NUM_FOR_EDICT(PRVM_PROG_TO_EDICT(val->edict)));
+		snprintf (line, sizeof (line), "%i", PRVM_NUM_FOR_EDICT(PRVM_PROG_TO_EDICT(val->edict)));
 		break;
 	case ev_function:
 		f = pr_functions + val->function;
-		sprintf (line, "%s", PRVM_GetString(f->s_name));
+		snprintf (line, sizeof (line), "%s", PRVM_GetString(f->s_name));
 		break;
 	case ev_field:
 		def = PRVM_ED_FieldAtOfs ( val->_int );
-		s = PRVM_GetString(def->s_name);
+		snprintf (line, sizeof (line), ".%s", PRVM_GetString(def->s_name));
 		break;
 	case ev_void:
-		sprintf (line, "void");
+		snprintf (line, sizeof (line), "void");
 		break;
 	case ev_float:
-		sprintf (line, "%f", val->_float);
+		snprintf (line, sizeof (line), "%f", val->_float);
 		break;
 	case ev_vector:
-		sprintf (line, "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
+		snprintf (line, sizeof (line), "%f %f %f", val->vector[0], val->vector[1], val->vector[2]);
 		break;
 	default:
-		sprintf (line, "bad type %i", type);
+		snprintf (line, sizeof (line), "bad type %i", type);
 		break;
 	}
-
+	
 	return line;
 }
 
@@ -1209,7 +1208,7 @@ void PRVM_ResetProg()
 	prog->edictstring_mempool = t2;
 	prog->edicts_mempool = t3;
 
-	PRVM_GCALL(reset_cmd);
+	PRVM_GCALL(reset_cmd)();
 }
 
 /*
