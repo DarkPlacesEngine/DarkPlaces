@@ -448,6 +448,11 @@ typedef struct q3mface_s
 	int *data_element3i;
 	int *data_neighbor3i;
 
+	int num_collisionvertices;
+	int num_collisiontriangles;
+	float *data_collisionvertex3f;
+	int *data_collisionelement3i;
+
 	// index into model->brush.shadowmesh
 	int num_firstshadowmeshtriangle;
 	

@@ -2037,6 +2037,17 @@ void R_DrawCollisionBrush(colbrushf_t *brush)
 	R_Mesh_Draw(brush->numpoints, brush->numtriangles, brush->elements);
 }
 
+void R_Q3BSP_DrawCollisionFace(entity_render_t *ent, q3mface_t *face)
+{
+	int i;
+	if (!face->num_collisiontriangles)
+		return;
+	i = ((int)face) / sizeof(q3mface_t);
+	GL_Color((i & 31) * (1.0f / 32.0f), ((i >> 5) & 31) * (1.0f / 32.0f), ((i >> 10) & 31) * (1.0f / 32.0f), 0.2f);
+	GL_VertexPointer(face->data_collisionvertex3f);
+	R_Mesh_Draw(face->num_collisionvertices, face->num_collisiontriangles, face->data_collisionelement3i);
+}
+
 void R_Q3BSP_DrawSkyFace(entity_render_t *ent, q3mface_t *face)
 {
 	rmeshstate_t m;
@@ -2504,6 +2515,9 @@ void R_Q3BSP_Draw(entity_render_t *ent)
 		for (i = 0;i < model->brushq3.data_thismodel->numbrushes;i++)
 			if (model->brushq3.data_thismodel->firstbrush[i].colbrushf && model->brushq3.data_thismodel->firstbrush[i].colbrushf->numtriangles)
 				R_DrawCollisionBrush(model->brushq3.data_thismodel->firstbrush[i].colbrushf);
+		for (i = 0, face = model->brushq3.data_thismodel->firstface;i < model->brushq3.data_thismodel->numfaces;i++, face++)
+			if (face->num_collisiontriangles)
+				R_Q3BSP_DrawCollisionFace(ent, face);
 		qglPolygonOffset(0, 0);
 	}
 }
