@@ -152,7 +152,7 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	}
 
 	// make sure nothing got trashed
-	Mem_CheckSentinelsGlobal();
+	//Mem_CheckSentinelsGlobal();
 
 	// allocate a new model
 	loadmodel = mod;
@@ -180,7 +180,7 @@ static model_t *Mod_LoadModel (model_t *mod, qboolean crash, qboolean checkdisk,
 	Mem_Free(buf);
 
 	// make sure nothing got trashed
-	Mem_CheckSentinelsGlobal();
+	//Mem_CheckSentinelsGlobal();
 
 	return mod;
 }
