@@ -5566,7 +5566,7 @@ void Mod_Q3BSP_Load(model_t *mod, void *buffer)
 	Mod_Q3BSP_RecursiveFindNumLeafs(loadmodel->brush.data_nodes);
 
 	mod = loadmodel;
-	for (i = 0;i < loadmodel->brushq3.num_models;i++)
+	for (i = 0;i < loadmodel->brush.numsubmodels;i++)
 	{
 		if (i > 0)
 		{
