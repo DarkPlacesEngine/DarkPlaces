@@ -5,7 +5,6 @@
 #define MAXRECURSIVEPORTALS 256
 
 static tinyplane_t portalplanes[MAXRECURSIVEPORTALPLANES];
-static int portalplanestack[MAXRECURSIVEPORTALS];
 static int portalplanecount;
 static int ranoutofportalplanes;
 static int ranoutofportals;
