@@ -607,6 +607,10 @@ qboolean Host_FilterTime (double time)
 	if (host_framerate.value)
 		host_frametime = host_framerate.value;
 
+	// never run a frame longer than 1 second
+	if (host_frametime > 1)
+		host_frametime = 1;
+
 	cl.frametime = host_frametime;
 
 	return true;
