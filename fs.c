@@ -786,14 +786,6 @@ void FS_AddGameDirectory (char *dir)
 
 	strlcpy (fs_gamedir, dir, sizeof (fs_gamedir));
 
-#ifndef AKVERSION
-	// add the directory to the search path
-	search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
-	strlcpy (search->filename, dir, sizeof (search->filename));
-	search->next = fs_searchpaths;
-	fs_searchpaths = search;
-#endif
-
 	list = listdirectory(dir);
 
 	// add any PAK package in the directory
@@ -835,14 +827,12 @@ void FS_AddGameDirectory (char *dir)
 	}
 	freedirectory(list);
 
-// Unpacked files have the priority over packed files if AKVERSION is defined
-#ifdef AKVERSION
-	// add the directory to the search path
+	// Add the directory to the search path
+	// (unpacked files have the priority over packed files)
 	search = Mem_Alloc(pak_mempool, sizeof(searchpath_t));
 	strlcpy (search->filename, dir, sizeof (search->filename));
 	search->next = fs_searchpaths;
 	fs_searchpaths = search;
-#endif
 }
 
 
