@@ -50,7 +50,11 @@ int R_CompatibleFragmentWidth(int width, int textype, int flags);
 
 // add a texture to a pool and optionally precache (upload) it
 // (note: data == NULL is perfectly acceptable)
-rtexture_t *R_LoadTexture (rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
+rtexture_t *R_LoadTexture(rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
+rtexture_t *R_LoadTexture1D(rtexturepool_t *rtexturepool, char *identifier, int width, qbyte *data, int textype, int flags);
+rtexture_t *R_LoadTexture2D(rtexturepool_t *rtexturepool, char *identifier, int width, int height, qbyte *data, int textype, int flags);
+rtexture_t *R_LoadTexture3D(rtexturepool_t *rtexturepool, char *identifier, int width, int height, int depth, qbyte *data, int textype, int flags);
+rtexture_t *R_LoadTextureCubeMap(rtexturepool_t *rtexturepool, char *identifier, int width, qbyte *data, int textype, int flags);
 
 // free a texture
 void R_FreeTexture(rtexture_t *rt);
@@ -62,6 +66,7 @@ void R_UpdateTexture(rtexture_t *rt, qbyte *data);
 // location of the fragment in the texture (note: any parameter except rt can
 // be NULL)
 void R_FragmentLocation(rtexture_t *rt, int *x, int *y, float *fx1, float *fy1, float *fx2, float *fy2);
+void R_FragmentLocation3D(rtexture_t *rt, int *x, int *y, int *z, float *fx1, float *fy1, float *fz1, float *fx2, float *fy2, float *fz2);
 
 // returns the renderer dependent texture slot number (call this before each
 // use, as a texture might not have been precached)
