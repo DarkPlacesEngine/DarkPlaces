@@ -478,7 +478,9 @@ static void r_textures_start(void)
 	texturedatamempool = Mem_AllocPool("Texture Storage (not yet uploaded)");
 	textureprocessingmempool = Mem_AllocPool("Texture Processing Buffers");
 
-	JPEG_OpenLibrary ();
+	// Disable JPEG screenshots if the DLL isn't loaded
+	if (! JPEG_OpenLibrary ())
+		Cvar_SetValueQuick (&scr_screenshot_jpeg, 0);
 }
 
 static void r_textures_shutdown(void)

@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "image.h"
+#include "jpeg.h"
 
 cvar_t gl_mesh_maxverts = {0, "gl_mesh_maxverts", "21760"};
 cvar_t gl_mesh_floatcolors = {0, "gl_mesh_floatcolors", "1"};
@@ -1060,7 +1061,7 @@ void R_Mesh_State(const rmeshstate_t *m)
 ==============================================================================
 */
 
-qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height)
+qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg)
 {
 	qboolean ret;
 	int i, j;
@@ -1083,7 +1084,10 @@ qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height)
 		}
 	}
 
-	ret = Image_WriteTGARGB_preflipped(filename, width, height, buffer);
+	if (jpeg)
+		ret = JPEG_SaveImage_preflipped (filename, width, height, buffer);
+	else
+		ret = Image_WriteTGARGB_preflipped (filename, width, height, buffer);
 
 	Mem_Free(buffer);
 	return ret;

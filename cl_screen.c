@@ -1,6 +1,7 @@
 
 #include "quakedef.h"
 #include "cl_video.h"
+#include "jpeg.h"
 
 cvar_t scr_viewsize = {CVAR_SAVE, "viewsize","100"};
 cvar_t scr_fov = {CVAR_SAVE, "fov","90"};	// 10 - 170
@@ -11,6 +12,7 @@ cvar_t scr_showturtle = {CVAR_SAVE, "showturtle","0"};
 cvar_t scr_showpause = {CVAR_SAVE, "showpause","1"};
 cvar_t scr_printspeed = {0, "scr_printspeed","8"};
 cvar_t scr_2dresolution = {CVAR_SAVE, "scr_2dresolution", "1"};
+cvar_t scr_screenshot_jpeg = {CVAR_SAVE, "scr_screenshot_jpeg","0"};
 cvar_t cl_avidemo = {0, "cl_avidemo", "0"};
 
 qboolean	scr_initialized;		// ready to draw
@@ -465,6 +467,7 @@ void CL_Screen_Init(void)
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
 	Cvar_RegisterVariable (&scr_2dresolution);
+	Cvar_RegisterVariable (&scr_screenshot_jpeg);
 	Cvar_RegisterVariable (&cl_avidemo);
 
 	Cmd_AddCommand ("sizeup",SCR_SizeUp_f);
@@ -815,23 +818,29 @@ void SCR_ScreenShot_f (void)
 	static int i = 0;
 	char filename[16];
 	char checkname[MAX_OSPATH];
-//
-// find a file name to save it to
-//
+	const char* extens;
+	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
+
+	if (jpeg)
+		extens = "jpg";
+	else
+		extens = "tga";
+
+	// find a file name to save it to
 	for (; i<=9999 ; i++)
 	{
-		sprintf (filename, "dp%04i.tga", i);
+		sprintf (filename, "dp%04i.%s", i, extens);
 		sprintf (checkname, "%s/%s", fs_gamedir, filename);
 		if (!FS_SysFileExists(checkname))
 			break;
 	}
 	if (i==10000)
 	{
-		Con_Printf ("SCR_ScreenShot_f: Couldn't create a TGA file\n");
+		Con_Printf ("SCR_ScreenShot_f: Couldn't create the image file\n");
 		return;
  	}
 
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight))
+	if (SCR_ScreenShot (filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, jpeg))
 		Con_Printf ("Wrote %s\n", filename);
 	else
 		Con_Printf ("unable to write %s\n", filename);
@@ -843,7 +852,7 @@ void SCR_CaptureAVIDemo(void)
 {
 	char filename[32];
 	sprintf(filename, "dpavi%06d.tga", cl_avidemo_frame);
-	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight))
+	if (SCR_ScreenShot(filename, vid.realx, vid.realy, vid.realwidth, vid.realheight, false))
 		cl_avidemo_frame++;
 	else
 	{
@@ -915,7 +924,7 @@ static void R_Envmap_f (void)
 		VectorCopy(envmapinfo[j].angles, r_refdef.viewangles);
 		R_ClearScreen();
 		R_RenderView ();
-		SCR_ScreenShot(filename, vid.realx, vid.realy, size, size);
+		SCR_ScreenShot(filename, vid.realx, vid.realy, size, size, false);
 	}
 
 	envmap = false;

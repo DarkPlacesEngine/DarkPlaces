@@ -83,8 +83,8 @@ void R_Mesh_CopyTexCoord2f(int tmu, const float *texcoord2f, int numverts);
 // copies a color4f array into varray_color4f
 void R_Mesh_CopyColor4f(const float *color4f, int numverts);
 
-// saves a section of the rendered frame to a .tga file
-qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height);
+// saves a section of the rendered frame to a .tga or .jpg file
+qboolean SCR_ScreenShot(char *filename, int x, int y, int width, int height, qboolean jpeg);
 // used by R_Envmap_f and internally in backend, clears the frame
 void R_ClearScreen(void);
 // invoke refresh of frame

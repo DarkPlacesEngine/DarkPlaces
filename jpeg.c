@@ -25,6 +25,7 @@
 #include "quakedef.h"
 #include "jpeg.h"
 
+
 /*
 =================================================================
 
@@ -46,13 +47,23 @@ typedef int jboolean;
 #define JPEG_LIB_VERSION  62  // Version 6b
 
 typedef void *j_common_ptr;
+typedef struct jpeg_compress_struct *j_compress_ptr;
 typedef struct jpeg_decompress_struct *j_decompress_ptr;
-typedef enum {JPEG_DUMMY1} J_COLOR_SPACE;
-typedef enum {JPEG_DUMMY2} J_DCT_METHOD;
-typedef enum {JPEG_DUMMY3} J_DITHER_MODE;
+typedef enum
+{
+	JCS_UNKNOWN,
+	JCS_GRAYSCALE,
+	JCS_RGB,
+	JCS_YCbCr,
+	JCS_CMYK,
+	JCS_YCCK
+} J_COLOR_SPACE;
+typedef enum {JPEG_DUMMY1} J_DCT_METHOD;
+typedef enum {JPEG_DUMMY2} J_DITHER_MODE;
 typedef unsigned int JDIMENSION;
 
-#define JPOOL_PERMANENT 0
+#define JPOOL_PERMANENT	0	// lasts until master record is destroyed
+#define JPOOL_IMAGE		1	// lasts until done with image/datastream
 
 #define JPEG_EOI	0xD9  // EOI marker code
 
@@ -63,6 +74,7 @@ typedef unsigned int JDIMENSION;
 #define NUM_HUFF_TBLS 4
 #define NUM_ARITH_TBLS 16
 #define MAX_COMPS_IN_SCAN 4
+#define C_MAX_BLOCKS_IN_MCU 10
 #define D_MAX_BLOCKS_IN_MCU 10
 
 struct jpeg_memory_mgr
@@ -214,6 +226,90 @@ struct jpeg_decompress_struct
 };
 
 
+struct jpeg_compress_struct
+{
+	struct jpeg_error_mgr *err;
+	struct jpeg_memory_mgr *mem;
+	void *progress;
+	void *client_data;
+	jboolean is_decompressor;
+	int global_state;
+
+	void *dest;
+	JDIMENSION image_width;
+	JDIMENSION image_height;
+	int input_components;
+	J_COLOR_SPACE in_color_space;
+	double input_gamma;
+	int data_precision;
+
+	int num_components;
+	J_COLOR_SPACE jpeg_color_space;
+	void *comp_info;
+	void *quant_tbl_ptrs[NUM_QUANT_TBLS];
+	void *dc_huff_tbl_ptrs[NUM_HUFF_TBLS];
+	void *ac_huff_tbl_ptrs[NUM_HUFF_TBLS];
+	qbyte arith_dc_L[NUM_ARITH_TBLS];
+	qbyte arith_dc_U[NUM_ARITH_TBLS];
+	qbyte arith_ac_K[NUM_ARITH_TBLS];
+
+	int num_scans;
+	const void *scan_info;
+	jboolean raw_data_in;
+	jboolean arith_code;
+	jboolean optimize_coding;
+	jboolean CCIR601_sampling;
+	int smoothing_factor;
+	J_DCT_METHOD dct_method;
+
+	unsigned int restart_interval;
+	int restart_in_rows;
+
+	jboolean write_JFIF_header;
+	qbyte JFIF_major_version;
+	qbyte JFIF_minor_version;
+	qbyte density_unit;
+	unsigned short X_density;
+	unsigned short Y_density;
+	jboolean write_Adobe_marker;
+	JDIMENSION next_scanline;
+
+	jboolean progressive_mode;
+	int max_h_samp_factor;
+	int max_v_samp_factor;
+	JDIMENSION total_iMCU_rows;
+	int comps_in_scan;
+	void *cur_comp_info[MAX_COMPS_IN_SCAN];
+	JDIMENSION MCUs_per_row;
+	JDIMENSION MCU_rows_in_scan;
+	int blocks_in_MCU;
+	int MCU_membership[C_MAX_BLOCKS_IN_MCU];
+	int Ss, Se, Ah, Al;
+
+	void *master;
+	void *main;
+	void *prep;
+	void *coef;
+	void *marker;
+	void *cconvert;
+	void *downsample;
+	void *fdct;
+	void *entropy;
+	void *script_space;
+	int script_space_size;
+};
+
+struct jpeg_destination_mgr
+{
+	qbyte* next_output_byte;
+	size_t free_in_buffer;
+
+	void (*init_destination) (j_compress_ptr cinfo);
+	jboolean (*empty_output_buffer) (j_compress_ptr cinfo);
+	void (*term_destination) (j_compress_ptr cinfo);
+};
+
+
 /*
 =================================================================
 
@@ -223,30 +319,62 @@ struct jpeg_decompress_struct
 */
 
 // Functions exported from libjpeg
+#define qjpeg_create_compress(cinfo) \
+	qjpeg_CreateCompress((cinfo), JPEG_LIB_VERSION, (size_t) sizeof(struct jpeg_compress_struct))
+#define qjpeg_create_decompress(cinfo) \
+	qjpeg_CreateDecompress((cinfo), JPEG_LIB_VERSION, (size_t) sizeof(struct jpeg_decompress_struct))
+
+static void (*qjpeg_CreateCompress) (j_compress_ptr cinfo, int version, size_t structsize);
 static void (*qjpeg_CreateDecompress) (j_decompress_ptr cinfo, int version, size_t structsize);
+static void (*qjpeg_destroy_compress) (j_compress_ptr cinfo);
 static void (*qjpeg_destroy_decompress) (j_decompress_ptr cinfo);
+static void (*qjpeg_finish_compress) (j_compress_ptr cinfo);
 static jboolean (*qjpeg_finish_decompress) (j_decompress_ptr cinfo);
 static jboolean (*qjpeg_resync_to_restart) (j_decompress_ptr cinfo, int desired);
 static int (*qjpeg_read_header) (j_decompress_ptr cinfo, jboolean require_image);
 static JDIMENSION (*qjpeg_read_scanlines) (j_decompress_ptr cinfo, qbyte** scanlines, JDIMENSION max_lines);
+static void (*qjpeg_set_defaults) (j_compress_ptr cinfo);
+static void (*qjpeg_set_quality) (j_compress_ptr cinfo, int quality, jboolean force_baseline);
+static jboolean (*qjpeg_start_compress) (j_compress_ptr cinfo, jboolean write_all_tables);
 static jboolean (*qjpeg_start_decompress) (j_decompress_ptr cinfo);
 static struct jpeg_error_mgr* (*qjpeg_std_error) (struct jpeg_error_mgr *err);
+static JDIMENSION (*qjpeg_write_scanlines) (j_compress_ptr cinfo, qbyte** scanlines, JDIMENSION num_lines);
 
 static dllfunction_t jpegfuncs[] =
 {
+	{"jpeg_CreateCompress",		(void **) &qjpeg_CreateCompress},
 	{"jpeg_CreateDecompress",	(void **) &qjpeg_CreateDecompress},
+	{"jpeg_destroy_compress",	(void **) &qjpeg_destroy_compress},
 	{"jpeg_destroy_decompress",	(void **) &qjpeg_destroy_decompress},
+	{"jpeg_finish_compress",	(void **) &qjpeg_finish_compress},
 	{"jpeg_finish_decompress",	(void **) &qjpeg_finish_decompress},
 	{"jpeg_resync_to_restart",	(void **) &qjpeg_resync_to_restart},
 	{"jpeg_read_header",		(void **) &qjpeg_read_header},
 	{"jpeg_read_scanlines",		(void **) &qjpeg_read_scanlines},
+	{"jpeg_set_defaults",		(void **) &qjpeg_set_defaults},
+	{"jpeg_set_quality",		(void **) &qjpeg_set_quality},
+	{"jpeg_start_compress",		(void **) &qjpeg_start_compress},
 	{"jpeg_start_decompress",	(void **) &qjpeg_start_decompress},
 	{"jpeg_std_error",			(void **) &qjpeg_std_error},
+	{"jpeg_write_scanlines",	(void **) &qjpeg_write_scanlines},
 	{NULL, NULL}
 };
 
 // Handle for JPEG DLL
-static dllhandle_t jpeg_dll = NULL;
+dllhandle_t jpeg_dll = NULL;
+
+static qbyte jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
+static qboolean error_in_jpeg;
+
+// Our own output manager for JPEG compression
+typedef struct
+{
+	struct jpeg_destination_mgr pub;
+
+	qfile_t* outfile;
+	qbyte* buffer;
+} my_destination_mgr;
+typedef my_destination_mgr* my_dest_ptr;
 
 
 /*
@@ -286,7 +414,7 @@ qboolean JPEG_OpenLibrary (void)
 	// Load the DLL
 	if (! (jpeg_dll = Sys_LoadLibrary (dllname)))
 	{
-		Con_Printf("Can't find %s. JPEG support disabled\n", dllname);
+		Con_Printf ("Can't find %s. JPEG support disabled\n", dllname);
 		return false;
 	}
 
@@ -294,12 +422,12 @@ qboolean JPEG_OpenLibrary (void)
 	for (func = jpegfuncs; func && func->name != NULL; func++)
 		if (!(*func->funcvariable = (void *) Sys_GetProcAddress (jpeg_dll, func->name)))
 		{
-			Con_Printf("missing function \"%s\" - broken JPEG library!\n", func->name);
+			Con_Printf ("missing function \"%s\" - broken JPEG library!\n", func->name);
 			JPEG_CloseLibrary ();
 			return false;
 		}
 
-	Con_Printf("%s loaded. JPEG support enabled\n", dllname);
+	Con_Printf ("%s loaded. JPEG support enabled\n", dllname);
 	return true;
 }
 
@@ -324,12 +452,10 @@ void JPEG_CloseLibrary (void)
 /*
 =================================================================
 
-  Functions for handling JPEG images
+	JPEG decompression
 
 =================================================================
 */
-
-static qbyte jpeg_eoi_marker [2] = {0xFF, JPEG_EOI};
 
 static void JPEG_Noop (j_decompress_ptr cinfo) {}
 
@@ -356,7 +482,7 @@ static void JPEG_SkipInputData (j_decompress_ptr cinfo, long num_bytes)
 
 static void JPEG_MemSrc (j_decompress_ptr cinfo, qbyte *buffer)
 {
-	cinfo->src = (*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
+	cinfo->src = cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof (struct jpeg_source_mgr));
 
 	cinfo->src->next_input_byte = buffer;
 	cinfo->src->bytes_in_buffer = fs_filesize;
@@ -366,6 +492,12 @@ static void JPEG_MemSrc (j_decompress_ptr cinfo, qbyte *buffer)
 	cinfo->src->skip_input_data = JPEG_SkipInputData;
 	cinfo->src->resync_to_restart = qjpeg_resync_to_restart; // use the default method
 	cinfo->src->term_source = JPEG_Noop;
+}
+
+static void JPEG_ErrorExit (j_common_ptr cinfo)
+{
+	((struct jpeg_decompress_struct*)cinfo)->err->output_message (cinfo);
+	error_in_jpeg = true;
 }
 
 
@@ -388,7 +520,7 @@ qbyte* JPEG_LoadImage (qbyte *f, int matchwidth, int matchheight)
 		return NULL;
 
 	cinfo.err = qjpeg_std_error (&jerr);
-	qjpeg_CreateDecompress (&cinfo, JPEG_LIB_VERSION, (size_t) sizeof(struct jpeg_decompress_struct));
+	qjpeg_create_decompress (&cinfo);
 	JPEG_MemSrc (&cinfo, f);
 	qjpeg_read_header (&cinfo, TRUE);
 	qjpeg_start_decompress (&cinfo);
@@ -461,4 +593,126 @@ qbyte* JPEG_LoadImage (qbyte *f, int matchwidth, int matchheight)
 	qjpeg_destroy_decompress (&cinfo);
 
 	return image_rgba;
+}
+
+
+/*
+=================================================================
+
+  JPEG compression
+
+=================================================================
+*/
+
+#define JPEG_OUTPUT_BUF_SIZE 4096
+static void JPEG_InitDestination (j_compress_ptr cinfo)
+{
+	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
+	dest->buffer = (qbyte*)cinfo->mem->alloc_small ((j_common_ptr) cinfo, JPOOL_IMAGE, JPEG_OUTPUT_BUF_SIZE * sizeof(qbyte));
+	dest->pub.next_output_byte = dest->buffer;
+	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
+}
+
+static jboolean JPEG_EmptyOutputBuffer (j_compress_ptr cinfo)
+{
+	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
+
+	if (FS_Write (dest->outfile, dest->buffer, JPEG_OUTPUT_BUF_SIZE) != (size_t) JPEG_OUTPUT_BUF_SIZE)
+	{
+		error_in_jpeg = true;
+		return false;
+	}
+
+	dest->pub.next_output_byte = dest->buffer;
+	dest->pub.free_in_buffer = JPEG_OUTPUT_BUF_SIZE;
+	return true;
+}
+
+static void JPEG_TermDestination (j_compress_ptr cinfo)
+{
+	my_dest_ptr dest = (my_dest_ptr)cinfo->dest;
+	size_t datacount = JPEG_OUTPUT_BUF_SIZE - dest->pub.free_in_buffer;
+
+	// Write any data remaining in the buffer
+	if (datacount > 0)
+		if (FS_Write (dest->outfile, dest->buffer, datacount) != datacount)
+			error_in_jpeg = true;
+}
+
+static void JPEG_MemDest (j_compress_ptr cinfo, qfile_t* outfile)
+{
+	my_dest_ptr dest;
+
+	// First time for this JPEG object?
+	if (cinfo->dest == NULL)
+		cinfo->dest = (struct jpeg_destination_mgr *)(*cinfo->mem->alloc_small) ((j_common_ptr) cinfo, JPOOL_PERMANENT, sizeof(my_destination_mgr));
+
+	dest = (my_dest_ptr)cinfo->dest;
+	dest->pub.init_destination = JPEG_InitDestination;
+	dest->pub.empty_output_buffer = JPEG_EmptyOutputBuffer;
+	dest->pub.term_destination = JPEG_TermDestination;
+	dest->outfile = outfile;
+}
+
+
+/*
+====================
+JPEG_SaveImage_preflipped
+
+Save a preflipped JPEG image to a file
+====================
+*/
+qboolean JPEG_SaveImage_preflipped (const char *filename, int width, int height, qbyte *data)
+{
+	struct jpeg_compress_struct cinfo;
+	struct jpeg_error_mgr jerr;
+	qbyte *scanline;
+	unsigned int offset, linesize;
+	qfile_t* file;
+
+	// No DLL = no JPEGs
+	if (!jpeg_dll)
+	{
+		Con_Printf ("You need the libjpeg library to save JPEG images\n");
+		return false;
+	}
+
+	// Open the file
+	file = FS_Open (filename, "wb", true);
+	if (!file)
+		return false;
+
+	cinfo.err = qjpeg_std_error (&jerr);
+	cinfo.err->error_exit = JPEG_ErrorExit;
+	error_in_jpeg = false;
+
+	qjpeg_create_compress (&cinfo);
+	JPEG_MemDest (&cinfo, file);
+
+	// Set the parameters for compression
+	cinfo.image_width = width;
+	cinfo.image_height = height;
+	cinfo.in_color_space = JCS_RGB;
+	cinfo.input_components = 3;
+	qjpeg_set_defaults (&cinfo);
+	qjpeg_set_quality (&cinfo, 90, TRUE);  // 90% quality; FIXME: use a cvar
+	qjpeg_start_compress (&cinfo, true);
+
+	// Compress each scanline
+	linesize = cinfo.image_width * 3;
+	offset = linesize * (cinfo.image_height - 1);
+	while (cinfo.next_scanline < cinfo.image_height)
+	{
+		scanline = &data[offset - cinfo.next_scanline * linesize];
+
+		qjpeg_write_scanlines (&cinfo, &scanline, 1);
+		if (error_in_jpeg)
+			break;
+	}
+
+	qjpeg_finish_compress (&cinfo);
+	qjpeg_destroy_compress (&cinfo);
+
+	FS_Close (file);
+	return true;
 }

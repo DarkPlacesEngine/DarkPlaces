@@ -53,6 +53,7 @@ void SHOWLMP_drawall(void);
 void SHOWLMP_clear(void);
 
 extern cvar_t scr_2dresolution;
+extern cvar_t scr_screenshot_jpeg;
 
 void CL_Screen_NewMap(void);
 void CL_Screen_Init(void);
