@@ -78,12 +78,9 @@ static int R_SpriteSetup (int type, float org[3], float left[3], float up[3])
 	return false;
 }
 
-static int spritepolyindex[6] = {0, 1, 2, 0, 2, 3};
-
 static void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec3_t origin, vec3_t up, vec3_t left, float red, float green, float blue, float alpha)
 {
-	rmeshinfo_t m;
-	float v[4][4], st[4][2];
+	rmeshbufferinfo_t m;
 	memset(&m, 0, sizeof(m));
 	m.transparent = true;
 	m.blendfunc1 = GL_SRC_ALPHA;
@@ -93,41 +90,42 @@ static void GL_DrawSpriteImage (int fog, mspriteframe_t *frame, int texture, vec
 	 || fog)
 		m.blendfunc2 = GL_ONE;
 	m.numtriangles = 2;
-	m.index = spritepolyindex;
 	m.numverts = 4;
-	m.vertex = &v[0][0];
-	m.vertexstep = sizeof(float[4]);
-	m.cr = red;
-	m.cg = green;
-	m.cb = blue;
-	m.ca = alpha;
 	m.tex[0] = texture;
-	m.texcoords[0] = &st[0][0];
-	m.texcoordstep[0] = sizeof(float[2]);
-
-	// FIXME: negate left and right in loader
-	v[0][0] = origin[0] + frame->down * up[0] - frame->left  * left[0];
-	v[0][1] = origin[1] + frame->down * up[1] - frame->left  * left[1];
-	v[0][2] = origin[2] + frame->down * up[2] - frame->left  * left[2];
-	v[1][0] = origin[0] + frame->up   * up[0] - frame->left  * left[0];
-	v[1][1] = origin[1] + frame->up   * up[1] - frame->left  * left[1];
-	v[1][2] = origin[2] + frame->up   * up[2] - frame->left  * left[2];
-	v[2][0] = origin[0] + frame->up   * up[0] - frame->right * left[0];
-	v[2][1] = origin[1] + frame->up   * up[1] - frame->right * left[1];
-	v[2][2] = origin[2] + frame->up   * up[2] - frame->right * left[2];
-	v[3][0] = origin[0] + frame->down * up[0] - frame->right * left[0];
-	v[3][1] = origin[1] + frame->down * up[1] - frame->right * left[1];
-	v[3][2] = origin[2] + frame->down * up[2] - frame->right * left[2];
-	st[0][0] = 0;
-	st[0][1] = 1;
-	st[1][0] = 0;
-	st[1][1] = 0;
-	st[2][0] = 1;
-	st[2][1] = 0;
-	st[3][0] = 1;
-	st[3][1] = 1;
-
-	R_Mesh_Draw(&m);
+	if (R_Mesh_Draw_GetBuffer(&m))
+	{
+		m.index[0] = 0;
+		m.index[1] = 1;
+		m.index[2] = 2;
+		m.index[3] = 0;
+		m.index[4] = 2;
+		m.index[5] = 3;
+		m.color[0] = m.color[4] = m.color[8] = m.color[12] = red * m.colorscale;
+		m.color[1] = m.color[5] = m.color[9] = m.color[13] = green * m.colorscale;
+		m.color[2] = m.color[6] = m.color[10] = m.color[14] = blue * m.colorscale;
+		m.color[3] = m.color[7] = m.color[11] = m.color[15] = alpha;
+		m.texcoords[0][0] = 0;
+		m.texcoords[0][1] = 1;
+		m.texcoords[0][2] = 0;
+		m.texcoords[0][3] = 0;
+		m.texcoords[0][4] = 1;
+		m.texcoords[0][5] = 0;
+		m.texcoords[0][6] = 1;
+		m.texcoords[0][7] = 1;
+		// FIXME: negate left and right in loader
+		m.vertex[0] = origin[0] + frame->down * up[0] - frame->left  * left[0];
+		m.vertex[1] = origin[1] + frame->down * up[1] - frame->left  * left[1];
+		m.vertex[2] = origin[2] + frame->down * up[2] - frame->left  * left[2];
+		m.vertex[4] = origin[0] + frame->up   * up[0] - frame->left  * left[0];
+		m.vertex[5] = origin[1] + frame->up   * up[1] - frame->left  * left[1];
+		m.vertex[6] = origin[2] + frame->up   * up[2] - frame->left  * left[2];
+		m.vertex[8] = origin[0] + frame->up   * up[0] - frame->right * left[0];
+		m.vertex[9] = origin[1] + frame->up   * up[1] - frame->right * left[1];
+		m.vertex[10] = origin[2] + frame->up   * up[2] - frame->right * left[2];
+		m.vertex[12] = origin[0] + frame->down * up[0] - frame->right * left[0];
+		m.vertex[13] = origin[1] + frame->down * up[1] - frame->right * left[1];
+		m.vertex[14] = origin[2] + frame->down * up[2] - frame->right * left[2];
+	}
 }
 
 /*
