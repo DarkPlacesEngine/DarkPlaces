@@ -1021,8 +1021,8 @@ void Sbar_Draw (void)
 				DrawQ_Pic(sbar_x,sbar_y,sb_sbar_overlay->name,0,0,1,1,1,1,DRAWFLAG_MODULATE);
 		}
 
-		if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
-			Sbar_MiniDeathmatchOverlay (0, 17);
+		//if (vid.conwidth > 320 && cl.gametype == GAME_DEATHMATCH)
+		//	Sbar_MiniDeathmatchOverlay (0, 17);
 	}
 	else // Quake and others
 	{
