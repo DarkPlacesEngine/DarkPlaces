@@ -1481,7 +1481,6 @@ void CL_SendCmd (void)
 	// send the unreliable message
 		CL_SendMove (&cmd);
 	}
-#ifndef NOROUTINGFIX
 	else if (cls.signon == 0 && !cls.demoplayback)
 	{
 		// LordHavoc: fix for NAT routing of netquake:
@@ -1507,7 +1506,6 @@ void CL_SendCmd (void)
 			}
 		}
 	}
-#endif
 
 	if (cls.demoplayback)
 	{

@@ -497,7 +497,7 @@ void NET_Stats_f (void)
 	}
 }
 
-
+/*
 static qboolean testInProgress = false;
 static int		testPollCount;
 static int		testDriver;
@@ -751,7 +751,7 @@ JustDoIt:
 	SZ_Clear(&net_message);
 	SchedulePollProcedure(&test2PollProcedure, 0.05);
 }
-
+*/
 
 int Datagram_Init (void)
 {
@@ -777,8 +777,8 @@ int Datagram_Init (void)
 #ifdef BAN_TEST
 	Cmd_AddCommand ("ban", NET_Ban_f);
 #endif
-	Cmd_AddCommand ("test", Test_f);
-	Cmd_AddCommand ("test2", Test2_f);
+	//Cmd_AddCommand ("test", Test_f);
+	//Cmd_AddCommand ("test2", Test2_f);
 
 	return 0;
 }
@@ -1106,6 +1106,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 	//struct qsockaddr myaddr;
 	int control;
 	int c, n, i;
+	char cname[256];
 
 	if (net_message.cursize < (int)sizeof(int))
 		return false;
@@ -1133,15 +1134,16 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 	if (c != CCREP_SERVER_INFO)
 		return false;
 
-	dfunc.GetAddrFromName(MSG_ReadString(), readaddr);
+	// LordHavoc: because the UDP driver reports 0.0.0.0:26000 as the address
+	// string we just ignore it and keep the real address
+	MSG_ReadString();
+	// hostcache only uses text addresses
+	strcpy(cname, dfunc.AddrToString(readaddr));
 	// search the cache for this server
 	for (n = 0; n < hostCacheCount; n++)
-		if (dfunc.AddrCompare(readaddr, &hostcache[n].addr) == 0)
-			break;
-
-	// is it already there?
-	if (n < hostCacheCount)
-		return false;;
+		//if (dfunc.AddrCompare(readaddr, &hostcache[n].addr) == 0)
+		if (!strcmp(cname, hostcache[n].cname))
+			return false;
 
 	// add it
 	hostCacheCount++;
@@ -1152,16 +1154,18 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 	c = MSG_ReadByte();
 	if (c != NET_PROTOCOL_VERSION)
 	{
-		strcpy(hostcache[n].cname, hostcache[n].name);
-		hostcache[n].cname[14] = 0;
+		strncpy(hostcache[n].cname, hostcache[n].name, sizeof(hostcache[n].cname) - 1);
+		hostcache[n].cname[sizeof(hostcache[n].cname) - 1] = 0;
 		strcpy(hostcache[n].name, "*");
-		strcat(hostcache[n].name, hostcache[n].cname);
+		strncat(hostcache[n].name, hostcache[n].cname, sizeof(hostcache[n].name) - 1);
+		hostcache[n].name[sizeof(hostcache[n].name) - 1] = 0;
 	}
-	memcpy(&hostcache[n].addr, readaddr, sizeof(struct qsockaddr));
-	hostcache[n].driver = net_driverlevel;
-	hostcache[n].ldriver = net_landriverlevel;
-	strcpy(hostcache[n].cname, dfunc.AddrToString(readaddr));
+	strcpy(hostcache[n].cname, cname);
+	//memcpy(&hostcache[n].addr, readaddr, sizeof(struct qsockaddr));
+	//hostcache[n].driver = net_driverlevel;
+	//hostcache[n].ldriver = net_landriverlevel;
 
+	/*
 	// check for a name conflict
 	for (i = 0; i < hostCacheCount; i++)
 	{
@@ -1180,6 +1184,7 @@ static qboolean Datagram_HandleServerInfo (struct qsockaddr *readaddr)
 			i = -1;
 		}
 	}
+	*/
 
 	return true;
 }
