@@ -4,11 +4,9 @@
 -n darkplaces: make LHNET_Read print out the names of read errors (yummyluv)
 -n darkplaces: revert noclip movement to match nq for compatibility with mods that trap movement as input (MauveBib)
 -n dpmod: make grapple off-hand (joe hill)
-0 darkplaces: r_shadow_portallight 1 (default) mode is broken currently, does not light all surfaces, maybe even fails to go through some portals? (Vermeulen)
-0 darkplaces: clean up the DrawQ_ blendfunc handling, instead of taking DRAWFLAG_ADDITIVE they should take blendfunc values (Black)
 0 darkplaces: ability to disable fopen builtin access to read /, read data/, write data/, or disable fopen builtin entirely
 0 darkplaces: add DP_GFX_QUAKE3MODELTAGS, DP_GFX_SKINFILES, and any other new extensions to the wiki
-0 darkplaces: add DP_LITSUPPORT extension
+0 darkplaces: add DP_LITSUPPORT extension and document it
 0 darkplaces: add DP_SV_ROTATINGBMODEL extension to explain that MOVETYPE_PUSH/SOLID_BSP support rotation in darkplaces and a demonstration of how to use it without qc modifications (Uffe, Supajoe)
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
@@ -37,6 +35,7 @@
 0 darkplaces: change particle() macro in cl_particles.c to have a do{}while(0) to eat the ;
 0 darkplaces: cl_particles_maximum cvar (default 32768) which would change number of particles allowed at once (TheBeast)
 0 darkplaces: cl_port 26001 causes server browser to read successfully (yummyluv)
+0 darkplaces: clean up the DrawQ_ blendfunc handling, instead of taking DRAWFLAG_ADDITIVE they should take blendfunc values (Black)
 0 darkplaces: client colors being reset to "15 15" each level in prydon gate (FrikaC)
 0 darkplaces: crashes if you type too long a command line in the console (SeienAbunae)
 0 darkplaces: darkplaces-glx -path transfusion crashes, fix the crash even though it's not going to work anyway (Todd)
@@ -86,14 +85,13 @@
 0 darkplaces: make sure that sky works without a valid size (just treat it as single layer clouds or non-animated) (tell Vermeulen)
 0 darkplaces: make sure that sound engine does not remove sounds when volume drops to 0 due to going out of range (SeienAbunae)
 0 darkplaces: make the WriteEntitiesToClient code call TraceBox directly instead of SV_Move because checking all the entities is far too slow in helm18 (banshee21)
-0 darkplaces: may be reading md3 tag matrices wrong (Electro)
 0 darkplaces: model interpolation off crashes?  (SeienAbunae)
 0 darkplaces: net_slist and the server browser should show servers when they are queried, not just when they reply; which would replace the matching entry (yummyluv)
 0 darkplaces: net_slist should print out "No network." if networking is not initialized (yummyluv)
 0 darkplaces: noclipping out the ceiling of q3dm17 crashes (Static_Fiend)
-0 darkplaces: playerprethink being called before clientconnect? (Electro)
 0 darkplaces: pointcontents crash when building harvester in gvb2? (yummyluv)
 0 darkplaces: r_shadow should load .ent when importing light entities
+0 darkplaces: r_shadow_portallight 1 (default) mode is broken currently, does not light all surfaces, maybe even fails to go through some portals? (Vermeulen)
 0 darkplaces: r_skyscroll1 and r_skyscroll2 cvars (SeienAbunae)
 0 darkplaces: remove dead master server from default masters list (yummyluv)
 0 darkplaces: rename r_picmip and r_max_size and such to glquake names
@@ -256,6 +254,7 @@
 3 hmap: add tga support to hqbsp (load base texture and _glow/_luma)
 4 LordHavoc: examine .mb (Maya Binary) file from Electro and learn its format (Electro)
 4 darkplaces: add EF_PARTICLESPAWNER extension (FrikaC, [TACO])
+4 darkplaces: add SKM model support with multianimation support using multiple .frame fields on the entities (Vermeulen)
 4 darkplaces: add builtin to clientside qc for reading triangles of model meshes (useful to orient a ui along a triangle of a model mesh)
 4 darkplaces: add builtins to clientside qc for gl calls
 4 darkplaces: add traceboxwithcontents function (same as tracebox but adds the startcontents parameter) (LTH, SeienAbunae, http://forums.inside3d.com/showflat.pl?Board=Engine&Number=909 )
@@ -346,7 +345,9 @@ d darkplaces: make sprite lerping optional (yummyluv)
 d darkplaces: make sure r_drawportals works
 d darkplaces: make sure that textureless models are white and not invisible, apparently creating a .bmp texture (not supported) made the models black, even more odd... (McKilled, QorpsE)
 d darkplaces: make water scrolling optional
+d darkplaces: may be reading md3 tag matrices wrong (Electro)
 d darkplaces: new dpmaster release (Elric, Vic)
+d darkplaces: playerprethink being called before clientconnect? (Electro)
 d darkplaces: post new darkplaces build.  (email FrikaC at kryten@adelphia.net)
 d darkplaces: post new dpmaster build.
 d darkplaces: put new shell casings in dpmod (Tomaz)
