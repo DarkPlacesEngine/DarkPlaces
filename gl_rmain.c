@@ -329,7 +329,6 @@ GL_Init
 ===============
 */
 extern char *ENGINE_EXTENSIONS;
-extern void VID_CheckCombine(void);
 void GL_Init (void)
 {
 	gl_vendor = glGetString (GL_VENDOR);
@@ -344,9 +343,10 @@ void GL_Init (void)
 
 //	Con_Printf ("%s %s\n", gl_renderer, gl_version);
 
-	VID_CheckMultitexture();
-	VID_CheckCVA();
-	VID_CheckCombine();
+//	VID_CheckMultitexture();
+//	VID_CheckCVA();
+//	VID_CheckCombine();
+	VID_CheckExtensions();
 
 	// LordHavoc: report supported extensions
 	Con_Printf ("\nengine extensions: %s\n", ENGINE_EXTENSIONS);

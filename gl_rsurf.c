@@ -2287,9 +2287,12 @@ void GL_BuildLightmaps (void)
 
 	if (nosubimage || nosubimagefragments)
 	{
+		// LordHavoc: switch to second TMU as an upload hint for voodoo2
+		// (don't know if it really pays attention or not, but original
+		// glquake did this...)
 		if(r_upload.value)
 			if (gl_mtexable)
-				qglSelectTexture(gl_mtex_enum+1);
+				qglActiveTexture(GL_TEXTURE1_ARB);
 		for (i = 0;i < MAX_LIGHTMAPS;i++)
 		{
 			if (!allocated[i][0])
@@ -2309,7 +2312,7 @@ void GL_BuildLightmaps (void)
 		}
 		if(r_upload.value)
 			if (gl_mtexable)
-				qglSelectTexture(gl_mtex_enum+0);
+				qglActiveTexture(GL_TEXTURE0_ARB);
 	}
 }
 

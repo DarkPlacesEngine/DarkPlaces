@@ -46,8 +46,7 @@ void VID_InitCvars(void);
 
 void GL_Init (void);
 
-void VID_CheckMultitexture(void);
-void VID_CheckCVA(void);
+void VID_CheckExtensions(void);
 
 void	VID_Init (void);
 // Called at startup

@@ -8,7 +8,7 @@ of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 See the GNU General Public License for more details.
 
@@ -39,8 +39,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern qboolean isG200;
 extern qboolean isRagePro;
-extern qboolean gl_mtexable;
-extern qboolean gl_supportslockarrays;
 
 extern void GL_BeginRendering (int *x, int *y, int *width, int *height);
 extern void GL_EndRendering (void);
@@ -113,31 +111,21 @@ extern	const char *gl_renderer;
 extern	const char *gl_version;
 extern	const char *gl_extensions;
 
-// Multitexture
-#define    TEXTURE0_SGIS				0x835E
-#define    TEXTURE1_SGIS				0x835F
-
 #ifndef _WIN32
 #define APIENTRY /* */
 #endif
-
-// LordHavoc: ARB multitexure support
-extern int		gl_mtex_enum;
 
 // for platforms (wgl) that do not use GLAPIENTRY
 #ifndef GLAPIENTRY
 #define GLAPIENTRY APIENTRY
 #endif
 
-// multitexture
-extern void (GLAPIENTRY *qglMTexCoord2f) (GLenum, GLfloat, GLfloat);
-extern void (GLAPIENTRY *qglSelectTexture) (GLenum);
-extern void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
-extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
-
-
-#ifndef GL_ACTIVE_TEXTURE_ARB
 // GL_ARB_multitexture
+extern int gl_mtexable;
+extern void (GLAPIENTRY *qglMultiTexCoord2f) (GLenum, GLfloat, GLfloat);
+extern void (GLAPIENTRY *qglActiveTexture) (GLenum);
+extern void (GLAPIENTRY *qglClientActiveTexture) (GLenum);
+#ifndef GL_ACTIVE_TEXTURE_ARB
 #define GL_ACTIVE_TEXTURE_ARB			0x84E0
 #define GL_CLIENT_ACTIVE_TEXTURE_ARB	0x84E1
 #define GL_MAX_TEXTURES_UNITS_ARB		0x84E2
@@ -175,8 +163,14 @@ extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 #define GL_TEXTURE31_ARB				0x84DF
 #endif
 
-#ifndef GL_COMBINE_ARB
+// GL_EXT_compiled_vertex_array
+extern int gl_supportslockarrays;
+extern void (GLAPIENTRY *qglLockArraysEXT) (GLint first, GLint count);
+extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
+
 // GL_ARB_texture_env_combine
+extern int gl_combine_extension;
+#ifndef GL_COMBINE_ARB
 #define GL_COMBINE_ARB					0x8570
 #define GL_COMBINE_RGB_ARB				0x8571
 #define GL_COMBINE_ALPHA_ARB			0x8572
@@ -201,7 +195,6 @@ extern void (GLAPIENTRY *qglUnlockArraysEXT) (void);
 #define GL_PREVIOUS_ARB					0x8578
 #endif
 
-extern qboolean gl_combine_extension;
 extern cvar_t gl_combine;
 
 #ifdef WIN32
