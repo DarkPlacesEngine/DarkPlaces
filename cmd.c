@@ -25,9 +25,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 typedef struct cmdalias_s
 {
-	struct cmdalias_s	*next;
-	char	name[MAX_ALIAS_NAME];
-	char	*value;
+	struct cmdalias_s *next;
+	char name[MAX_ALIAS_NAME];
+	char *value;
 } cmdalias_t;
 
 static cmdalias_t *cmd_alias;
@@ -81,7 +81,7 @@ Cbuf_AddText
 Adds command text at the end of the buffer
 ============
 */
-void Cbuf_AddText (char *text)
+void Cbuf_AddText (const char *text)
 {
 	int		l;
 
@@ -106,7 +106,7 @@ Adds a \n to the text
 FIXME: actually change the command buffer to do less copying
 ============
 */
-void Cbuf_InsertText (char *text)
+void Cbuf_InsertText (const char *text)
 {
 	char	*temp;
 	int		templen;
@@ -140,10 +140,10 @@ Cbuf_Execute
 */
 void Cbuf_Execute (void)
 {
-	int		i;
-	char	*text;
-	char	line[1024];
-	int		quotes;
+	int i;
+	char *text;
+	char line[1024];
+	int quotes;
 
 	while (cmd_text.cursize)
 	{
@@ -279,7 +279,7 @@ Cmd_Exec_f
 */
 static void Cmd_Exec_f (void)
 {
-	char	*f;
+	char *f;
 
 	if (Cmd_Argc () != 2)
 	{
@@ -323,10 +323,9 @@ Cmd_Alias_f
 Creates a new command that executes a command string (possibly ; seperated)
 ===============
 */
-
 static char *CopyString (char *in)
 {
-	char	*out;
+	char *out;
 
 	out = Z_Malloc (strlen(in)+1);
 	strcpy (out, in);
@@ -338,7 +337,7 @@ static void Cmd_Alias_f (void)
 	cmdalias_t	*a;
 	char		cmd[1024];
 	int			i, c;
-	char		*s;
+	const char		*s;
 
 	if (Cmd_Argc() == 1)
 	{
@@ -397,18 +396,18 @@ static void Cmd_Alias_f (void)
 
 typedef struct cmd_function_s
 {
-	struct cmd_function_s	*next;
-	char					*name;
-	xcommand_t				function;
+	struct cmd_function_s *next;
+	const char *name;
+	xcommand_t function;
 } cmd_function_t;
 
 
 #define	MAX_ARGS		80
 
 static int cmd_argc;
-static char *cmd_argv[MAX_ARGS];
-static char *cmd_null_string = "";
-static char *cmd_args = NULL;
+static const char *cmd_argv[MAX_ARGS];
+static const char *cmd_null_string = "";
+static const char *cmd_args = NULL;
 
 cmd_source_t cmd_source;
 
@@ -426,21 +425,24 @@ Cmd_List
 */
 static void Cmd_List_f (void)
 {
-	cmd_function_t	*cmd;
-	char			*partial;
-	int				len;
-	int				count;
+	cmd_function_t *cmd;
+	const char *partial;
+	int len, count;
 
-	if (Cmd_Argc() > 1) {
+	if (Cmd_Argc() > 1)
+	{
 		partial = Cmd_Argv (1);
 		len = strlen(partial);
-	} else {
+	}
+	else
+	{
 		partial = NULL;
 		len = 0;
 	}
 
 	count = 0;
-	for (cmd = cmd_functions; cmd; cmd = cmd->next) {
+	for (cmd = cmd_functions; cmd; cmd = cmd->next)
+	{
 		if (partial && strncmp(partial, cmd->name, len))
 			continue;
 		Con_Printf ("%s\n", cmd->name);
@@ -492,7 +494,7 @@ int		Cmd_Argc (void)
 Cmd_Argv
 ============
 */
-char	*Cmd_Argv (int arg)
+const char *Cmd_Argv (int arg)
 {
 	if (arg >= cmd_argc )
 		return cmd_null_string;
@@ -504,7 +506,7 @@ char	*Cmd_Argv (int arg)
 Cmd_Args
 ============
 */
-char	*Cmd_Args (void)
+const char *Cmd_Args (void)
 {
 	return cmd_args;
 }
@@ -520,7 +522,7 @@ Cmd_TokenizeString
 Parses the given string into command line tokens.
 ============
 */
-static void Cmd_TokenizeString (char *text)
+static void Cmd_TokenizeString (const char *text)
 {
 	int l;
 	int pos;
@@ -549,8 +551,7 @@ static void Cmd_TokenizeString (char *text)
 		if (cmd_argc == 1)
 			 cmd_args = text;
 
-		text = COM_Parse (text);
-		if (!text)
+		if (!COM_ParseToken (&text))
 			return;
 
 		if (cmd_argc < MAX_ARGS)
@@ -558,9 +559,9 @@ static void Cmd_TokenizeString (char *text)
 			l = strlen(com_token) + 1;
 			if (pos + l > CMD_TOKENIZELENGTH)
 				Sys_Error("Cmd_TokenizeString: ran out of %i character buffer space for command arguements\n", CMD_TOKENIZELENGTH);
+			strcpy (cmd_tokenizebuffer + pos, com_token);
 			cmd_argv[cmd_argc] = cmd_tokenizebuffer + pos;
 			pos += l;
-			strcpy (cmd_argv[cmd_argc], com_token);
 			cmd_argc++;
 		}
 	}
@@ -573,9 +574,9 @@ static void Cmd_TokenizeString (char *text)
 Cmd_AddCommand
 ============
 */
-void	Cmd_AddCommand (char *cmd_name, xcommand_t function)
+void Cmd_AddCommand (const char *cmd_name, xcommand_t function)
 {
-	cmd_function_t	*cmd;
+	cmd_function_t *cmd;
 
 // fail if the command is a variable name
 	if (Cvar_VariableString(cmd_name)[0])
@@ -606,7 +607,7 @@ void	Cmd_AddCommand (char *cmd_name, xcommand_t function)
 Cmd_Exists
 ============
 */
-qboolean	Cmd_Exists (char *cmd_name)
+qboolean Cmd_Exists (const char *cmd_name)
 {
 	cmd_function_t	*cmd;
 
@@ -623,10 +624,10 @@ qboolean	Cmd_Exists (char *cmd_name)
 Cmd_CompleteCommand
 ============
 */
-char *Cmd_CompleteCommand (char *partial)
+const char *Cmd_CompleteCommand (const char *partial)
 {
-	cmd_function_t	*cmd;
-	int				len;
+	cmd_function_t *cmd;
+	int len;
 
 	len = strlen(partial);
 
@@ -650,11 +651,10 @@ char *Cmd_CompleteCommand (char *partial)
 	Thanks to taniwha
 
 */
-int Cmd_CompleteCountPossible (char *partial)
+int Cmd_CompleteCountPossible (const char *partial)
 {
-	cmd_function_t	*cmd;
-	int				len;
-	int				h;
+	cmd_function_t *cmd;
+	int len, h;
 
 	h = 0;
 	len = strlen(partial);
@@ -679,16 +679,16 @@ int Cmd_CompleteCountPossible (char *partial)
 	Thanks to taniwha
 
 */
-char **Cmd_CompleteBuildList (char *partial)
+const char **Cmd_CompleteBuildList (const char *partial)
 {
-	cmd_function_t	*cmd;
-	int				len = 0;
-	int				bpos = 0;
-	int				sizeofbuf = (Cmd_CompleteCountPossible (partial) + 1) * sizeof (char *);
-	char			**buf;
+	cmd_function_t *cmd;
+	int len = 0;
+	int bpos = 0;
+	int sizeofbuf = (Cmd_CompleteCountPossible (partial) + 1) * sizeof (const char *);
+	const char **buf;
 
 	len = strlen(partial);
-	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (char *));
+	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
 	for (cmd = cmd_functions; cmd; cmd = cmd->next)
 		if (!strncasecmp(partial, cmd->name, len))
@@ -707,10 +707,10 @@ char **Cmd_CompleteBuildList (char *partial)
 	Thanks to taniwha
 
 */
-char *Cmd_CompleteAlias (char * partial)
+const char *Cmd_CompleteAlias (const char *partial)
 {
-	cmdalias_t	*alias;
-	int			len;
+	cmdalias_t *alias;
+	int len;
 
 	len = strlen(partial);
 
@@ -734,7 +734,7 @@ char *Cmd_CompleteAlias (char * partial)
 	Thanks to taniwha
 
 */
-int Cmd_CompleteAliasCountPossible (char *partial)
+int Cmd_CompleteAliasCountPossible (const char *partial)
 {
 	cmdalias_t	*alias;
 	int			len;
@@ -764,16 +764,16 @@ int Cmd_CompleteAliasCountPossible (char *partial)
 	Thanks to taniwha
 
 */
-char **Cmd_CompleteAliasBuildList (char *partial)
+const char **Cmd_CompleteAliasBuildList (const char *partial)
 {
-	cmdalias_t	*alias;
-	int			len = 0;
-	int			bpos = 0;
-	int			sizeofbuf = (Cmd_CompleteAliasCountPossible (partial) + 1) * sizeof (char *);
-	char		**buf;
+	cmdalias_t *alias;
+	int len = 0;
+	int bpos = 0;
+	int sizeofbuf = (Cmd_CompleteAliasCountPossible (partial) + 1) * sizeof (const char *);
+	const char **buf;
 
 	len = strlen(partial);
-	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (char *));
+	buf = Mem_Alloc(tempmempool, sizeofbuf + sizeof (const char *));
 	// Loop through the alias list and print all matches
 	for (alias = cmd_alias; alias; alias = alias->next)
 		if (!strncasecmp(partial, alias->name, len))
@@ -791,10 +791,10 @@ A complete command line has been parsed, so try to execute it
 FIXME: lookupnoadd the token to speed search?
 ============
 */
-void	Cmd_ExecuteString (char *text, cmd_source_t src)
+void Cmd_ExecuteString (const char *text, cmd_source_t src)
 {
-	cmd_function_t	*cmd;
-	cmdalias_t		*a;
+	cmd_function_t *cmd;
+	cmdalias_t *a;
 
 	cmd_source = src;
 	Cmd_TokenizeString (text);
@@ -869,7 +869,7 @@ where the given parameter apears, or 0 if not present
 ================
 */
 
-int Cmd_CheckParm (char *parm)
+int Cmd_CheckParm (const char *parm)
 {
 	int i;
 

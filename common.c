@@ -43,7 +43,7 @@ void COM_InitFilesystem (void);
 char com_token[1024];
 char com_basedir[MAX_OSPATH];
 int com_argc;
-char **com_argv;
+const char **com_argv;
 
 // LordHavoc: made commandline 1024 characters instead of 256
 #define CMDLINE_LENGTH	1024
@@ -85,7 +85,7 @@ The file "parms.txt" will be read out of the game directory and appended to the 
 ============================================================================
 */
 
-int Q_strncasecmp (char *s1, char *s2, int n)
+int Q_strncasecmp (const char *s1, const char *s2, int n)
 {
 	int             c1, c2;
 
@@ -113,7 +113,7 @@ int Q_strncasecmp (char *s1, char *s2, int n)
 	return -1;
 }
 
-int Q_strcasecmp (char *s1, char *s2)
+int Q_strcasecmp (const char *s1, const char *s2)
 {
 	return Q_strncasecmp (s1, s2, 99999);
 }
@@ -259,7 +259,7 @@ void MSG_WriteFloat (sizebuf_t *sb, float f)
 	SZ_Write (sb, &dat.l, 4);
 }
 
-void MSG_WriteString (sizebuf_t *sb, char *s)
+void MSG_WriteString (sizebuf_t *sb, const char *s)
 {
 	if (!s)
 		SZ_Write (sb, "", 1);
@@ -296,8 +296,8 @@ void MSG_WriteAngle (sizebuf_t *sb, float f)
 //
 // reading functions
 //
-int                     msg_readcount;
-qboolean        msg_badread;
+int msg_readcount;
+qboolean msg_badread;
 
 void MSG_BeginReading (void)
 {
@@ -307,7 +307,7 @@ void MSG_BeginReading (void)
 
 int MSG_ReadShort (void)
 {
-	int     c;
+	int c;
 
 	if (msg_readcount+2 > net_message.cursize)
 	{
@@ -325,7 +325,7 @@ int MSG_ReadShort (void)
 
 int MSG_ReadLong (void)
 {
-	int     c;
+	int c;
 
 	if (msg_readcount+4 > net_message.cursize)
 	{
@@ -347,9 +347,9 @@ float MSG_ReadFloat (void)
 {
 	union
 	{
-		qbyte    b[4];
-		float   f;
-		int     l;
+		qbyte b[4];
+		float f;
+		int l;
 	} dat;
 
 	dat.b[0] =      net_message.data[msg_readcount];
@@ -365,8 +365,8 @@ float MSG_ReadFloat (void)
 
 char *MSG_ReadString (void)
 {
-	static char     string[2048];
-	int             l,c;
+	static char string[2048];
+	int l,c;
 
 	l = 0;
 	do
@@ -403,7 +403,7 @@ float MSG_ReadCoord (void)
 
 //===========================================================================
 
-void SZ_Alloc (sizebuf_t *buf, int startsize, char *name)
+void SZ_Alloc (sizebuf_t *buf, int startsize, const char *name)
 {
 	if (startsize < 256)
 		startsize = 256;
@@ -429,7 +429,7 @@ void SZ_Clear (sizebuf_t *buf)
 
 void *SZ_GetSpace (sizebuf_t *buf, int length)
 {
-	void    *data;
+	void *data;
 
 	if (buf->cursize + length > buf->maxsize)
 	{
@@ -446,19 +446,18 @@ void *SZ_GetSpace (sizebuf_t *buf, int length)
 
 	data = buf->data + buf->cursize;
 	buf->cursize += length;
-	
+
 	return data;
 }
 
-void SZ_Write (sizebuf_t *buf, void *data, int length)
+void SZ_Write (sizebuf_t *buf, const void *data, int length)
 {
-	memcpy (SZ_GetSpace(buf,length),data,length);         
+	memcpy (SZ_GetSpace(buf,length),data,length);
 }
 
-void SZ_Print (sizebuf_t *buf, char *data)
+void SZ_Print (sizebuf_t *buf, const char *data)
 {
-	int             len;
-
+	int len;
 	len = strlen(data)+1;
 
 // byte * cast to keep VC++ happy
@@ -469,7 +468,7 @@ void SZ_Print (sizebuf_t *buf, char *data)
 }
 
 static char *hexchar = "0123456789ABCDEF";
-void SZ_HexDumpToConsole(sizebuf_t *buf)
+void SZ_HexDumpToConsole(const sizebuf_t *buf)
 {
 	int i;
 	char text[1024];
@@ -523,30 +522,11 @@ void SZ_HexDumpToConsole(sizebuf_t *buf)
 
 /*
 ============
-COM_SkipPath
-============
-*/
-char *COM_SkipPath (char *pathname)
-{
-	char    *last;
-
-	last = pathname;
-	while (*pathname)
-	{
-		if (*pathname=='/')
-			last = pathname+1;
-		pathname++;
-	}
-	return last;
-}
-
-/*
-============
 COM_StripExtension
 ============
 */
 // LordHavoc: replacement for severely broken COM_StripExtension that was used in original quake.
-void COM_StripExtension (char *in, char *out)
+void COM_StripExtension (const char *in, char *out)
 {
 	char *last = NULL;
 	while (*in)
@@ -568,10 +548,10 @@ void COM_StripExtension (char *in, char *out)
 COM_FileExtension
 ============
 */
-char *COM_FileExtension (char *in)
+char *COM_FileExtension (const char *in)
 {
 	static char exten[8];
-	int             i;
+	int i;
 
 	while (*in && *in != '.')
 		in++;
@@ -589,10 +569,9 @@ char *COM_FileExtension (char *in)
 COM_FileBase
 ============
 */
-void COM_FileBase (char *in, char *out)
+void COM_FileBase (const char *in, char *out)
 {
-	char *slash, *dot;
-	char *s;
+	const char *slash, *dot, *s;
 
 	slash = in;
 	dot = NULL;
@@ -623,9 +602,9 @@ void COM_FileBase (char *in, char *out)
 COM_DefaultExtension
 ==================
 */
-void COM_DefaultExtension (char *path, char *extension)
+void COM_DefaultExtension (char *path, const char *extension)
 {
-	char    *src;
+	const char *src;
 //
 // if path doesn't have a .EXT, append extension
 // (extension should include the .)
@@ -645,28 +624,36 @@ void COM_DefaultExtension (char *path, char *extension)
 
 /*
 ==============
-COM_Parse
+COM_ParseToken
 
 Parse a token out of a string
 ==============
 */
-char *COM_Parse (char *data)
+int COM_ParseToken (const char **datapointer)
 {
-	int             c;
-	int             len;
-	
+	int c;
+	int len;
+	const char *data = *datapointer;
+
 	len = 0;
 	com_token[0] = 0;
-	
+
 	if (!data)
-		return NULL;
-		
+	{
+		*datapointer = NULL;
+		return false;
+	}
+
 // skip whitespace
 skipwhite:
-	while ( (c = *data) <= ' ')
+	while ((c = *data) <= ' ')
 	{
 		if (c == 0)
-			return NULL;                    // end of file;
+		{
+			// end of file
+			*datapointer = NULL;
+			return false;
+		}
 		data++;
 	}
 
@@ -677,7 +664,7 @@ skipwhite:
 			data++;
 		goto skipwhite;
 	}
-	
+
 
 // handle quoted strings specially
 	if (c == '\"')
@@ -689,7 +676,8 @@ skipwhite:
 			if (c=='\"' || !c)
 			{
 				com_token[len] = 0;
-				return data;
+				*datapointer = data;
+				return true;
 			}
 			com_token[len] = c;
 			len++;
@@ -702,7 +690,8 @@ skipwhite:
 		com_token[len] = c;
 		len++;
 		com_token[len] = 0;
-		return data+1;
+		*datapointer = data+1;
+		return true;
 	}
 
 // parse a regular word
@@ -712,12 +701,13 @@ skipwhite:
 		data++;
 		len++;
 		c = *data;
-	if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
+		if (c=='{' || c=='}'|| c==')'|| c=='(' || c=='\'' || c==':')
 			break;
 	} while (c>32);
-	
+
 	com_token[len] = 0;
-	return data;
+	*datapointer = data;
+	return true;
 }
 
 
@@ -729,10 +719,10 @@ Returns the position (1 to argc-1) in the program's argument list
 where the given parameter apears, or 0 if not present
 ================
 */
-int COM_CheckParm (char *parm)
+int COM_CheckParm (const char *parm)
 {
-	int             i;
-	
+	int i;
+
 	for (i=1 ; i<com_argc ; i++)
 	{
 		if (!com_argv[i])
@@ -740,7 +730,7 @@ int COM_CheckParm (char *parm)
 		if (!strcmp (parm,com_argv[i]))
 			return i;
 	}
-		
+
 	return 0;
 }
 
@@ -865,7 +855,7 @@ COM_Init
 void COM_Init (void)
 {
 #if !defined(ENDIAN_LITTLE) && !defined(ENDIAN_BIG)
-	qbyte    swaptest[2] = {1,0};
+	qbyte swaptest[2] = {1,0};
 
 // set the byte swapping variables in a portable manner
 	if ( *(short *)swaptest == 1)
@@ -898,6 +888,8 @@ void COM_Init (void)
 
 	COM_InitFilesystem ();
 	COM_CheckRegistered ();
+
+	COM_InitGameType();
 }
 
 
@@ -910,7 +902,7 @@ varargs versions of all text functions.
 FIXME: make this buffer size safe someday
 ============
 */
-char    *va(char *format, ...)
+char *va(const char *format, ...)
 {
 	va_list argptr;
 	// LordHavoc: now cycles through 8 buffers to avoid problems in most cases
@@ -935,7 +927,7 @@ QUAKE FILESYSTEM
 =============================================================================
 */
 
-int     com_filesize;
+int com_filesize;
 
 
 //
@@ -977,21 +969,22 @@ typedef struct
 // LordHavoc: was 2048, increased to 65536 and changed info[MAX_PACK_FILES] to a temporary alloc
 #define MAX_FILES_IN_PACK       65536
 
-pack_t	*packlist = NULL;
+pack_t *packlist = NULL;
 
 #if CACHEENABLE
-char	com_cachedir[MAX_OSPATH];
+char com_cachedir[MAX_OSPATH];
 #endif
-char	com_gamedir[MAX_OSPATH];
+char com_gamedir[MAX_OSPATH];
 
 typedef struct searchpath_s
 {
+	// only one of filename / pack will be used
 	char filename[MAX_OSPATH];
-	pack_t *pack;          // only one of filename / pack will be used
+	pack_t *pack;
 	struct searchpath_s *next;
 } searchpath_t;
 
-searchpath_t    *com_searchpaths;
+searchpath_t *com_searchpaths;
 
 /*
 ============
@@ -1001,7 +994,7 @@ COM_Path_f
 */
 void COM_Path_f (void)
 {
-	searchpath_t    *s;
+	searchpath_t *s;
 
 	Con_Printf ("Current search path:\n");
 	for (s=com_searchpaths ; s ; s=s->next)
@@ -1024,7 +1017,7 @@ LordHavoc: Previously only used for CopyFile, now also used for COM_WriteFile.
 */
 void    COM_CreatePath (char *path)
 {
-	char    *ofs, save;
+	char *ofs, save;
 
 	for (ofs = path+1 ; *ofs ; ofs++)
 	{
@@ -1047,15 +1040,16 @@ COM_WriteFile
 The filename will be prefixed by the current game directory
 ============
 */
-qboolean COM_WriteFile (char *filename, void *data, int len)
+qboolean COM_WriteFile (const char *filename, void *data, int len)
 {
-	int             handle;
-	char    name[MAX_OSPATH];
+	int handle;
+	char name[MAX_OSPATH];
 
 	sprintf (name, "%s/%s", com_gamedir, filename);
 
 	// LordHavoc: added this
-	COM_CreatePath (name); // create directories up to the file
+	// create directories up to the file
+	COM_CreatePath (name);
 
 	handle = Sys_FileOpenWrite (name);
 	if (handle == -1)
@@ -1081,14 +1075,13 @@ needed.  This is for the convenience of developers using ISDN from home.
 */
 void COM_CopyFile (char *netpath, char *cachepath)
 {
-	int             in, out;
-	int             remaining, count;
-	char    buf[4096];
+	int in, out, remaining, count;
+	char buf[4096];
 
-	remaining = Sys_FileOpenRead (netpath, &in);            
+	remaining = Sys_FileOpenRead (netpath, &in);
 	COM_CreatePath (cachepath);     // create directories up to the cache file
 	out = Sys_FileOpenWrite (cachepath);
-	
+
 	while (remaining)
 	{
 		if (remaining < sizeof(buf))
@@ -1101,7 +1094,7 @@ void COM_CopyFile (char *netpath, char *cachepath)
 	}
 
 	Sys_FileClose (in);
-	Sys_FileClose (out);    
+	Sys_FileClose (out);
 }
 
 /*
@@ -1111,9 +1104,8 @@ COM_OpenRead
 */
 QFile * COM_OpenRead (const char *path, int offs, int len, qboolean zip)
 {
-	int				fd = open (path, O_RDONLY);
-	unsigned char	id[2];
-	unsigned char	len_bytes[4];
+	int fd = open (path, O_RDONLY);
+	unsigned char id[2], len_bytes[4];
 
 	if (fd == -1)
 	{
@@ -1161,26 +1153,24 @@ Finds the file in the search path.
 Sets com_filesize and one of handle or file
 ===========
 */
-int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
+int COM_FindFile (const char *filename, QFile **file, qboolean quiet, qboolean zip)
 {
-	searchpath_t	*search;
-	char			netpath[MAX_OSPATH];
+	searchpath_t *search;
+	char netpath[MAX_OSPATH];
 #if CACHEENABLE
-	char			cachepath[MAX_OSPATH];
-	int				cachetime;
+	char cachepath[MAX_OSPATH];
+	int cachetime;
 #endif
-	pack_t			*pak;
-	int				i;
-	int				findtime;
-	char			gzfilename[MAX_OSPATH];
-	int				filenamelen;
+	pack_t *pak;
+	int i, findtime, filenamelen;
+	char gzfilename[MAX_OSPATH];
 
 	filenamelen = strlen (filename);
 	sprintf (gzfilename, "%s.gz", filename);
 
 	if (!file)
 		Sys_Error ("COM_FindFile: file not set");
-		
+
 //
 // search through the path, one element at a time
 //
@@ -1205,17 +1195,17 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 				}
 		}
 		else
-		{               
+		{
 			sprintf (netpath, "%s/%s",search->filename, filename);
-			
+
 			findtime = Sys_FileTime (netpath);
 			if (findtime == -1)
 				continue;
-				
+
 #if CACHEENABLE
 			// see if the file needs to be updated in the cache
 			if (com_cachedir[0])
-			{	
+			{
 #if defined(_WIN32)
 				if ((strlen(netpath) < 2) || (netpath[1] != ':'))
 					sprintf (cachepath,"%s%s", com_cachedir, netpath);
@@ -1230,20 +1220,18 @@ int COM_FindFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
 				if (cachetime < findtime)
 					COM_CopyFile (netpath, cachepath);
 				strcpy (netpath, cachepath);
-			}	
+			}
 #endif
-
 			if (!quiet)
 				Sys_Printf ("FindFile: %s\n",netpath);
 			*file = COM_OpenRead (netpath, -1, -1, zip);
 			return com_filesize;
 		}
-		
 	}
-	
+
 	if (!quiet)
 		Sys_Printf ("FindFile: can't find %s\n", filename);
-	
+
 	*file = NULL;
 	com_filesize = -1;
 	return -1;
@@ -1258,7 +1246,7 @@ If the requested file is inside a packfile, a new QFile * will be opened
 into the file.
 ===========
 */
-int COM_FOpenFile (char *filename, QFile **file, qboolean quiet, qboolean zip)
+int COM_FOpenFile (const char *filename, QFile **file, qboolean quiet, qboolean zip)
 {
 	return COM_FindFile (filename, file, quiet, zip);
 }
@@ -1274,7 +1262,7 @@ Always appends a 0 byte.
 */
 qbyte *loadbuf;
 int loadsize;
-qbyte *COM_LoadFile (char *path, qboolean quiet)
+qbyte *COM_LoadFile (const char *path, qboolean quiet)
 {
 	QFile *h;
 	qbyte *buf;
@@ -1316,15 +1304,13 @@ Loads the header and directory, adding the files at the beginning
 of the list so they override previous pack files.
 =================
 */
-pack_t *COM_LoadPackFile (char *packfile)
+pack_t *COM_LoadPackFile (const char *packfile)
 {
-	dpackheader_t	header;
-	int				i;
-	int				numpackfiles;
-	pack_t			*pack;
-	int				packhandle;
+	dpackheader_t header;
+	int i, numpackfiles, packhandle;
+	pack_t *pack;
 	// LordHavoc: changed from stack array to temporary alloc, allowing huge pack directories
-	dpackfile_t		*info;
+	dpackfile_t *info;
 
 	if (Sys_FileOpenRead (packfile, &packhandle) == -1)
 		return NULL;
@@ -1484,13 +1470,12 @@ void COM_InitFilesystem (void)
 	}
 }
 
-int COM_FileExists(char *filename)
+int COM_FileExists(const char *filename)
 {
-	searchpath_t	*search;
-	char			netpath[MAX_OSPATH];
-	pack_t			*pak;
-	int				i;
-	int				findtime;
+	searchpath_t *search;
+	char netpath[MAX_OSPATH];
+	pack_t *pak;
+	int i, findtime;
 
 	for (search = com_searchpaths;search;search = search->next)
 	{
@@ -1507,7 +1492,7 @@ int COM_FileExists(char *filename)
 			findtime = Sys_FileTime (netpath);
 			if (findtime != -1)
 				return true;
-		}		
+		}
 	}
 
 	return false;
@@ -1517,7 +1502,7 @@ int COM_FileExists(char *filename)
 //======================================
 // LordHavoc: added these because they are useful
 
-void COM_ToLowerString(char *in, char *out)
+void COM_ToLowerString(const char *in, char *out)
 {
 	while (*in)
 	{
@@ -1528,7 +1513,7 @@ void COM_ToLowerString(char *in, char *out)
 	}
 }
 
-void COM_ToUpperString(char *in, char *out)
+void COM_ToUpperString(const char *in, char *out)
 {
 	while (*in)
 	{
@@ -1546,4 +1531,3 @@ int COM_StringBeginsWith(const char *s, const char *match)
 			return false;
 	return true;
 }
-

@@ -52,7 +52,7 @@ typedef struct memheader_s
 	// size of the memory after the header (excluding header and sentinel2)
 	int size;
 	// file name and line where Mem_Alloc was called
-	char *filename;
+	const char *filename;
 	int fileline;
 	// should always be MEMHEADER_SENTINEL1
 	int sentinel1;
@@ -104,7 +104,7 @@ typedef struct mempool_s
 	// linked into global mempool list
 	struct mempool_s *next;
 	// file name and line where Mem_AllocPool was called
-	char *filename;
+	const char *filename;
 	int fileline;
 	// should always be MEMHEADER_SENTINEL1
 	int sentinel2;
@@ -119,13 +119,13 @@ mempool_t;
 #define Mem_FreePool(pool) _Mem_FreePool(pool, __FILE__, __LINE__)
 #define Mem_EmptyPool(pool) _Mem_EmptyPool(pool, __FILE__, __LINE__)
 
-void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline);
-void _Mem_Free(void *data, char *filename, int fileline);
-mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline);
-void _Mem_FreePool(mempool_t **pool, char *filename, int fileline);
-void _Mem_EmptyPool(mempool_t *pool, char *filename, int fileline);
-void _Mem_CheckSentinels(void *data, char *filename, int fileline);
-void _Mem_CheckSentinelsGlobal(char *filename, int fileline);
+void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline);
+void _Mem_Free(void *data, const char *filename, int fileline);
+mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline);
+void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline);
+void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline);
+void _Mem_CheckSentinels(void *data, const char *filename, int fileline);
+void _Mem_CheckSentinelsGlobal(const char *filename, int fileline);
 
 // used for temporary allocations
 mempool_t *tempmempool;

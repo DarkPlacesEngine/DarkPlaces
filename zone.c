@@ -23,7 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 mempool_t *poolchain = NULL;
 
-void *_Mem_Alloc(mempool_t *pool, int size, char *filename, int fileline)
+void *_Mem_Alloc(mempool_t *pool, int size, const char *filename, int fileline)
 {
 #if MEMCLUMPING
 	int i, j, k, needed, endbit, largest;
@@ -119,7 +119,7 @@ choseclump:
 	return (void *)((qbyte *) mem + sizeof(memheader_t));
 }
 
-void _Mem_Free(void *data, char *filename, int fileline)
+void _Mem_Free(void *data, const char *filename, int fileline)
 {
 #if MEMCLUMPING
 	int i, firstblock, endblock;
@@ -197,7 +197,7 @@ void _Mem_Free(void *data, char *filename, int fileline)
 #endif
 }
 
-mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline)
+mempool_t *_Mem_AllocPool(const char *name, const char *filename, int fileline)
 {
 	mempool_t *pool;
 	pool = malloc(sizeof(mempool_t));
@@ -217,7 +217,7 @@ mempool_t *_Mem_AllocPool(char *name, char *filename, int fileline)
 	return pool;
 }
 
-void _Mem_FreePool(mempool_t **pool, char *filename, int fileline)
+void _Mem_FreePool(mempool_t **pool, const char *filename, int fileline)
 {
 	mempool_t **chainaddress;
 	if (*pool)
@@ -243,7 +243,7 @@ void _Mem_FreePool(mempool_t **pool, char *filename, int fileline)
 	}
 }
 
-void _Mem_EmptyPool(mempool_t *pool, char *filename, int fileline)
+void _Mem_EmptyPool(mempool_t *pool, const char *filename, int fileline)
 {
 	if (pool == NULL)
 		Sys_Error("Mem_EmptyPool: pool == NULL (emptypool at %s:%i)", filename, fileline);
@@ -257,7 +257,7 @@ void _Mem_EmptyPool(mempool_t *pool, char *filename, int fileline)
 		Mem_Free((void *)((qbyte *) pool->chain + sizeof(memheader_t)));
 }
 
-void _Mem_CheckSentinels(void *data, char *filename, int fileline)
+void _Mem_CheckSentinels(void *data, const char *filename, int fileline)
 {
 	memheader_t *mem;
 
@@ -272,7 +272,7 @@ void _Mem_CheckSentinels(void *data, char *filename, int fileline)
 }
 
 #if MEMCLUMPING
-static void _Mem_CheckClumpSentinels(memclump_t *clump, char *filename, int fileline)
+static void _Mem_CheckClumpSentinels(memclump_t *clump, const char *filename, int fileline)
 {
 	// this isn't really very useful
 	if (clump->sentinel1 != MEMCLUMP_SENTINEL)
@@ -282,7 +282,7 @@ static void _Mem_CheckClumpSentinels(memclump_t *clump, char *filename, int file
 }
 #endif
 
-void _Mem_CheckSentinelsGlobal(char *filename, int fileline)
+void _Mem_CheckSentinelsGlobal(const char *filename, int fileline)
 {
 	memheader_t *mem;
 #if MEMCLUMPING

@@ -678,22 +678,20 @@ static void Mod_LoadVisibility (lump_t *l)
 }
 
 // used only for HalfLife maps
-void Mod_ParseWadsFromEntityLump(char *data)
+void Mod_ParseWadsFromEntityLump(const char *data)
 {
 	char key[128], value[4096];
 	char wadname[128];
 	int i, j, k;
 	if (!data)
 		return;
-	data = COM_Parse(data);
-	if (!data)
+	if (!COM_ParseToken(&data))
 		return; // error
 	if (com_token[0] != '{')
 		return; // error
 	while (1)
 	{
-		data = COM_Parse(data);
-		if (!data)
+		if (!COM_ParseToken(&data))
 			return; // error
 		if (com_token[0] == '}')
 			break; // end of worldspawn
@@ -703,8 +701,7 @@ void Mod_ParseWadsFromEntityLump(char *data)
 			strcpy(key, com_token);
 		while (key[strlen(key)-1] == ' ') // remove trailing spaces
 			key[strlen(key)-1] = 0;
-		data = COM_Parse(data);
-		if (!data)
+		if (!COM_ParseToken(&data))
 			return; // error
 		strcpy(value, com_token);
 		if (!strcmp("wad", key)) // for HalfLife maps

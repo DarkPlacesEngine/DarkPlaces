@@ -200,40 +200,42 @@ extern qboolean noclip_anglehack;
 //
 // host
 //
-extern	cvar_t		sys_ticrate;
-extern	cvar_t		developer;
+extern cvar_t sys_ticrate;
+extern cvar_t developer;
 
-extern	qboolean	host_initialized;		// true if into command execution
-extern	double		host_frametime;
-extern	double		host_realframetime;	// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
-extern	int			host_framecount;	// incremented every frame, never reset
-extern	double		realtime;			// not bounded in any way, changed at
-										// start of every frame, never reset
+// true if into command execution
+extern qboolean host_initialized;
+extern double host_frametime;
+// LordHavoc: the real frametime, before slowmo and clamping are applied (used for console scrolling)
+extern double host_realframetime;
+// incremented every frame, never reset
+extern int host_framecount;
+// not bounded in any way, changed at start of every frame, never reset
+extern double realtime;
 
 void Host_ClearMemory (void);
 void Host_ServerFrame (void);
 void Host_InitCommands (void);
 void Host_Init (void);
 void Host_Shutdown(void);
-void Host_Error (char *error, ...);
-void Host_EndGame (char *message, ...);
+void Host_Error (const char *error, ...);
+void Host_EndGame (const char *message, ...);
 void Host_Frame (float time);
 void Host_Quit_f (void);
-void Host_ClientCommands (char *fmt, ...);
+void Host_ClientCommands (const char *fmt, ...);
 void Host_ShutdownServer (qboolean crash);
 
-extern qboolean		msg_suppress_1;		// suppresses resolution and cache size console output
-										//  an fullscreen DIB focus gain/loss
-extern int			current_skill;		// skill level for currently loaded level (in case
-										//  the user changes the cvar while the level is
-										//  running, this reflects the level actually in use)
+// suppresses resolution and cache size console output and fullscreen DIB focus gain/loss
+extern qboolean msg_suppress_1;
+// skill level for currently loaded level (in case the user changes the cvar while the level is running, this reflects the level actually in use)
+extern int current_skill;
 
-extern int			minimum_memory;
+extern int minimum_memory;
 
 //
 // chase
 //
-extern	cvar_t	chase_active;
+extern cvar_t chase_active;
 
 void Chase_Init (void);
 void Chase_Reset (void);

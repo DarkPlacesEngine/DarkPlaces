@@ -40,7 +40,7 @@ mempool_t		*edictstring_mempool;
 int		type_size[8] = {1,sizeof(string_t)/4,1,3,1,1,sizeof(func_t)/4,sizeof(void *)/4};
 
 ddef_t *ED_FieldAtOfs (int ofs);
-qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s);
+qboolean ED_ParseEpair (void *base, ddef_t *key, const char *s);
 
 cvar_t	pr_checkextension = {0, "pr_checkextension", "1"};
 cvar_t	nomonsters = {0, "nomonsters", "0"};
@@ -79,8 +79,8 @@ typedef struct {
 
 static gefv_cache	gefvCache[GEFV_CACHESIZE] = {{NULL, ""}, {NULL, ""}};
 
-ddef_t *ED_FindField (char *name);
-dfunction_t *ED_FindFunction (char *name);
+ddef_t *ED_FindField (const char *name);
+dfunction_t *ED_FindFunction (const char *name);
 
 // LordHavoc: in an effort to eliminate time wasted on GetEdictFieldValue...  these are defined as externs in progs.h
 int eval_gravity;
@@ -121,7 +121,7 @@ int eval_viewzoom;
 dfunction_t *SV_PlayerPhysicsQC;
 dfunction_t *EndFrameQC;
 
-int FindFieldOffset(char *field)
+int FindFieldOffset(const char *field)
 {
 	ddef_t *d;
 	d = ED_FindField(field);
@@ -296,10 +296,10 @@ ddef_t *ED_FieldAtOfs (int ofs)
 ED_FindField
 ============
 */
-ddef_t *ED_FindField (char *name)
+ddef_t *ED_FindField (const char *name)
 {
-	ddef_t		*def;
-	int			i;
+	ddef_t *def;
+	int i;
 
 	for (i=0 ; i<progs->numfielddefs ; i++)
 	{
@@ -315,11 +315,11 @@ ddef_t *ED_FindField (char *name)
 ED_FindGlobal
 ============
 */
-ddef_t *ED_FindGlobal (char *name)
+ddef_t *ED_FindGlobal (const char *name)
 {
-	ddef_t		*def;
-	int			i;
-	
+	ddef_t *def;
+	int i;
+
 	for (i=0 ; i<progs->numglobaldefs ; i++)
 	{
 		def = &pr_globaldefs[i];
@@ -335,11 +335,11 @@ ddef_t *ED_FindGlobal (char *name)
 ED_FindFunction
 ============
 */
-dfunction_t *ED_FindFunction (char *name)
+dfunction_t *ED_FindFunction (const char *name)
 {
 	dfunction_t		*func;
 	int				i;
-	
+
 	for (i=0 ; i<progs->numfunctions ; i++)
 	{
 		func = &pr_functions[i];
@@ -782,25 +782,23 @@ void ED_WriteGlobals (QFile *f)
 ED_ParseGlobals
 =============
 */
-void ED_ParseGlobals (char *data)
+void ED_ParseGlobals (const char *data)
 {
-	char	keyname[1024]; // LordHavoc: good idea? bad idea?  was 64
-	ddef_t	*key;
+	char keyname[1024]; // LordHavoc: good idea? bad idea?  was 64
+	ddef_t *key;
 
 	while (1)
 	{
-	// parse key
-		data = COM_Parse (data);
+		// parse key
+		if (!COM_ParseToken (&data))
+			Host_Error ("ED_ParseEntity: EOF without closing brace");
 		if (com_token[0] == '}')
 			break;
-		if (!data)
-			Host_Error ("ED_ParseEntity: EOF without closing brace");
 
 		strcpy (keyname, com_token);
 
-	// parse value
-		data = COM_Parse (data);
-		if (!data)
+		// parse value
+		if (!COM_ParseToken (&data))
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
 
 		if (com_token[0] == '}')
@@ -826,10 +824,10 @@ void ED_ParseGlobals (char *data)
 ED_NewString
 =============
 */
-char *ED_NewString (char *string)
+char *ED_NewString (const char *string)
 {
-	char	*new, *new_p;
-	int		i,l;
+	char *new, *new_p;
+	int i,l;
 
 	l = strlen(string) + 1;
 	new = Mem_Alloc(edictstring_mempool, l);
@@ -861,7 +859,7 @@ Can parse either fields or globals
 returns false if error
 =============
 */
-qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
+qboolean	ED_ParseEpair (void *base, ddef_t *key, const char *s)
 {
 	int		i;
 	char	string[128];
@@ -937,13 +935,13 @@ ed should be a properly initialized empty edict.
 Used for initial level load and for savegames.
 ====================
 */
-char *ED_ParseEdict (char *data, edict_t *ent)
+const char *ED_ParseEdict (const char *data, edict_t *ent)
 {
-	ddef_t		*key;
-	qboolean	anglehack;
-	qboolean	init;
-	char		keyname[256];
-	int			n;
+	ddef_t *key;
+	qboolean anglehack;
+	qboolean init;
+	char keyname[256];
+	int n;
 
 	init = false;
 
@@ -955,11 +953,10 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 	while (1)
 	{
 	// parse key
-		data = COM_Parse (data);
+		if (!COM_ParseToken (&data))
+			Host_Error ("ED_ParseEntity: EOF without closing brace");
 		if (com_token[0] == '}')
 			break;
-		if (!data)
-			Host_Error ("ED_ParseEntity: EOF without closing brace");
 
 		// anglehack is to allow QuakeEd to write single scalar angles
 		// and allow them to be turned into vectors. (FIXME...)
@@ -986,8 +983,7 @@ char *ED_ParseEdict (char *data, edict_t *ent)
 		}
 
 	// parse value
-		data = COM_Parse (data);
-		if (!data)
+		if (!COM_ParseToken (&data))
 			Host_Error ("ED_ParseEntity: EOF without closing brace");
 
 		if (com_token[0] == '}')
@@ -1040,11 +1036,11 @@ Used for both fresh maps and savegame loads.  A fresh map would also need
 to call ED_CallSpawnFunctions () to let the objects initialize themselves.
 ================
 */
-void ED_LoadFromFile (char *data)
-{	
-	edict_t		*ent;
-	int			inhibit;
-	dfunction_t	*func;
+void ED_LoadFromFile (const char *data)
+{
+	edict_t *ent;
+	int inhibit;
+	dfunction_t *func;
 
 	ent = NULL;
 	inhibit = 0;
@@ -1054,8 +1050,7 @@ void ED_LoadFromFile (char *data)
 	while (1)
 	{
 // parse the opening brace
-		data = COM_Parse (data);
-		if (!data)
+		if (!COM_ParseToken (&data))
 			break;
 		if (com_token[0] != '{')
 			Host_Error ("ED_LoadFromFile: found %s when expecting {",com_token);

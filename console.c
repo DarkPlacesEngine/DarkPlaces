@@ -33,41 +33,47 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <fcntl.h>
 #include "quakedef.h"
 
-int 		con_linewidth;
+int con_linewidth;
 
-float		con_cursorspeed = 4;
+float con_cursorspeed = 4;
 
 #define		CON_TEXTSIZE	131072
 
-int			con_totallines;		// total lines in console scrollback
-int			con_backscroll;		// lines up from bottom to display
-int			con_current;		// where next message will be printed
-int			con_x;				// offset in current line for next print
-char		*con_text = 0;
+// total lines in console scrollback
+int con_totallines;
+// lines up from bottom to display
+int con_backscroll;
+// where next message will be printed
+int con_current;
+// offset in current line for next print
+int con_x;
+char *con_text = 0;
 
-cvar_t		con_notifytime = {CVAR_SAVE, "con_notifytime","3"};	//seconds
-cvar_t		logfile = {0, "logfile","0"};
+//seconds
+cvar_t con_notifytime = {CVAR_SAVE, "con_notifytime","3"};
+cvar_t logfile = {0, "logfile","0"};
 
 #define	NUM_CON_TIMES 4
-float		con_times[NUM_CON_TIMES];	// realtime time the line was generated
-						// for transparent notify lines
+// realtime time the line was generated for transparent notify lines
+float con_times[NUM_CON_TIMES];
 
-int			con_vislines;
+int con_vislines;
 
-qboolean	con_debuglog;
+qboolean con_debuglog;
 
-#define	MAXCMDLINE	256
-extern	char	key_lines[32][MAXCMDLINE];
-extern	int		edit_line;
-extern	int		key_linepos;
-extern	int		key_insert;
+#define MAXCMDLINE	256
+extern char key_lines[32][MAXCMDLINE];
+extern int edit_line;
+extern int key_linepos;
+extern int key_insert;
 
 
-qboolean	con_initialized;
+qboolean con_initialized;
 
-mempool_t	*console_mempool;
+mempool_t *console_mempool;
 
-int		con_notifylines;		// scan lines to clear for notify lines
+// scan lines to clear for notify lines
+int con_notifylines;
 
 extern void M_Menu_Main_f (void);
 
@@ -102,7 +108,7 @@ Con_ClearNotify
 */
 void Con_ClearNotify (void)
 {
-	int		i;
+	int i;
 
 	for (i=0 ; i<NUM_CON_TIMES ; i++)
 		con_times[i] = 0;
@@ -144,8 +150,8 @@ If the line width has changed, reformat the buffer.
 */
 void Con_CheckResize (void)
 {
-	int		i, j, width, oldwidth, oldtotallines, numlines, numchars;
-	char	tbuf[CON_TEXTSIZE];
+	int i, j, width, oldwidth, oldtotallines, numlines, numchars;
+	char tbuf[CON_TEXTSIZE];
 
 	width = (vid.conwidth >> 3);
 
@@ -203,9 +209,9 @@ Con_Init
 */
 void Con_Init (void)
 {
-#define MAXGAMEDIRLEN	1000
-	char	temp[MAXGAMEDIRLEN+1];
-	char	*t2 = "/qconsole.log";
+#define MAXGAMEDIRLEN 1000
+	char temp[MAXGAMEDIRLEN+1];
+	char *t2 = "/qconsole.log";
 
 	Cvar_RegisterVariable(&logfile);
 	con_debuglog = COM_CheckParm("-condebug");
@@ -262,12 +268,10 @@ All console printing must go through this in order to be logged to disk
 If no console is visible, the notify window will pop up.
 ================
 */
-void Con_Print (char *txt)
+void Con_Print (const char *txt)
 {
-	int		y;
-	int		c, l;
-	static int	cr;
-	int		mask;
+	int y, c, l, mask;
+	static int cr;
 
 	con_backscroll = 0;
 
@@ -344,7 +348,7 @@ void Con_Print (char *txt)
 Con_DebugLog
 ================
 */
-void Con_DebugLog(char *file, char *fmt, ...)
+void Con_DebugLog(const char *file, const char *fmt, ...)
 {
     va_list argptr;
     FILE* fd;
@@ -367,10 +371,10 @@ Handles cursor positioning, line wrapping, etc
 // LordHavoc: increased from 4096 to 16384
 #define	MAXPRINTMSG	16384
 // FIXME: make a buffer size safe vsprintf?
-void Con_Printf (char *fmt, ...)
+void Con_Printf (const char *fmt, ...)
 {
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	va_list argptr;
+	char msg[MAXPRINTMSG];
 
 	va_start (argptr,fmt);
 	vsprintf (msg,fmt,argptr);
@@ -405,10 +409,10 @@ Con_DPrintf
 A Con_Printf that only shows up if the "developer" cvar is set
 ================
 */
-void Con_DPrintf (char *fmt, ...)
+void Con_DPrintf (const char *fmt, ...)
 {
-	va_list		argptr;
-	char		msg[MAXPRINTMSG];
+	va_list argptr;
+	char msg[MAXPRINTMSG];
 
 	if (!developer.integer)
 		return;			// don't confuse non-developers with techie stuff...
@@ -428,7 +432,7 @@ Con_SafePrintf
 Okay to call even when the screen can't be updated
 ==================
 */
-void Con_SafePrintf (char *fmt, ...)
+void Con_SafePrintf (const char *fmt, ...)
 {
 	va_list		argptr;
 	char		msg[1024];
@@ -568,10 +572,8 @@ extern cvar_t scr_conalpha;
 extern char engineversion[40];
 void Con_DrawConsole (int lines)
 {
-	int				i, y;
-	int				rows;
-	char			*text;
-	int				j;
+	int i, y, rows, j;
+	char *text;
 
 	if (lines <= 0)
 		return;
@@ -606,15 +608,10 @@ void Con_DrawConsole (int lines)
 	MEGA Thanks to Taniwha
 
 */
-void
-Con_DisplayList(char **list)
+void Con_DisplayList(const char **list)
 {
-	int	i = 0;
-	int	pos = 0;
-	int	len = 0;
-	int	maxlen = 0;
-	int	width = (con_linewidth - 4);
-	char	**walk = list;
+	int i = 0, pos = 0, len = 0, maxlen = 0, width = (con_linewidth - 4);
+	const char **walk = list;
 
 	while (*walk) {
 		len = strlen(*walk);
@@ -652,14 +649,11 @@ Con_DisplayList(char **list)
 	Thanks to taniwha
 
 */
-void
-Con_CompleteCommandLine (void)
+void Con_CompleteCommandLine (void)
 {
-	char	*cmd = "";
-	char	*s;
-	int		c, v, a, i;
-	int		cmd_len;
-	char	**list[3] = {0, 0, 0};
+	const char *cmd = "", *s;
+	const char **list[3] = {0, 0, 0};
+	int c, v, a, i, cmd_len;
 
 	s = key_lines[edit_line] + 1;
 	// Count number of possible matches
@@ -691,7 +685,7 @@ Con_CompleteCommandLine (void)
 		do {
 			for (i = 0; i < 3; i++) {
 				char ch = cmd[cmd_len];
-				char **l = list[i];
+				const char **l = list[i];
 				if (l) {
 					while (*l && (*l)[cmd_len] == ch)
 						l++;

@@ -223,8 +223,9 @@ extern cvar_t r_fullbrights;
 void Mod_Init (void);
 void Mod_CheckLoaded (model_t *mod);
 void Mod_ClearAll (void);
-model_t *Mod_ForName (char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
-void Mod_TouchModel (char *name);
+model_t *Mod_FindName (const char *name);
+model_t *Mod_ForName (const char *name, qboolean crash, qboolean checkdisk, qboolean isworldmodel);
+void Mod_TouchModel (const char *name);
 void Mod_UnloadModel (model_t *mod);
 
 void Mod_ClearUsed(void);
@@ -232,8 +233,6 @@ void Mod_PurgeUnused(void);
 
 extern model_t *loadmodel;
 extern char loadname[32];	// for hunk tags
-
-extern model_t *Mod_FindName (char *name);
 
 #endif	// __MODEL__
 
