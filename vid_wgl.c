@@ -513,6 +513,11 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 {
 	LONG    lRet = 1;
 	int		fActive, fMinimized, temp;
+	char	state[256];
+	short	ascchar;
+	int		vkey;
+	qboolean down = false;
+
 	extern unsigned int uiWheelMessage;
 
 	if ( uMsg == uiWheelMessage )
@@ -533,15 +538,16 @@ LONG WINAPI MainWndProc (HWND hWnd, UINT uMsg, WPARAM  wParam, LPARAM lParam)
 			window_y = (int) HIWORD(lParam);
 			VID_UpdateWindowStatus ();
 			break;
-
+	
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
-			Key_Event (MapKey(lParam, wParam), true);
-			break;
-
+			down = true;
 		case WM_KEYUP:
 		case WM_SYSKEYUP:
-			Key_Event (MapKey(lParam, wParam), false);
+			vkey = MapKey(lParam, wParam);
+			GetKeyboardState (state);
+			ToAscii (wParam, vkey, state, &ascchar, 0);
+			Key_Event (vkey, ascchar & 0xFF, down);
 			break;
 
 		case WM_SYSCHAR:

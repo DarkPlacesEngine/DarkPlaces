@@ -2520,7 +2520,8 @@ prvm_builtin_t vm_m_builtins[] = {
 	e10,			// 490
 	e10,			// 500
 	// menu functions
-
+	VM_M_setkeydest,
+	VM_M_getkeydest
 };
 
 const int vm_m_numbuiltins = sizeof(vm_m_builtins) / sizeof(prvm_builtin_t);
