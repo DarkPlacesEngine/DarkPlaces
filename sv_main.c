@@ -1385,13 +1385,13 @@ void SV_WriteClientdataToMessage (edict_t *ent, sizebuf_t *msg)
 SV_SendClientDatagram
 =======================
 */
+static qbyte sv_sendclientdatagram_buf[MAX_DATAGRAM]; // FIXME?
 qboolean SV_SendClientDatagram (client_t *client)
 {
-	qbyte		buf[MAX_DATAGRAM];
 	sizebuf_t	msg;
 
-	msg.data = buf;
-	msg.maxsize = sizeof(buf);
+	msg.data = sv_sendclientdatagram_buf;
+	msg.maxsize = sizeof(sv_sendclientdatagram_buf);
 	msg.cursize = 0;
 
 	MSG_WriteByte (&msg, svc_time);
