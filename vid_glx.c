@@ -112,9 +112,10 @@ static int XLateKey(XKeyEvent *ev)
 {
 	int key = 0;
 	char buf[64];
-	KeySym keysym;
+	KeySym keysym, shifted;
 
-	XLookupString(ev, buf, sizeof buf, &keysym, 0);
+	keysym = XLookupKeysym (ev, 0);
+	XLookupString(ev, buf, sizeof buf, &shifted, 0);
 
 	switch(keysym)
 	{
@@ -226,7 +227,7 @@ static int XLateKey(XKeyEvent *ev)
 #endif
 
 		default:
-			key = *(unsigned char*)buf;
+			key = buf[0];
 			if (key >= 'A' && key <= 'Z')
 				key = key - 'A' + 'a';
 			break;
