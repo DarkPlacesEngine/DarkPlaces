@@ -367,7 +367,7 @@ int WINAPI WinMain (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	com_argc = 1;
 	program_name[sizeof(program_name)-1] = 0;
-	GetModuleFileNameA(NULL, &program_name, sizeof(program_name - 1));
+	GetModuleFileNameA(NULL, program_name, sizeof(program_name) - 1);
 	argv[0] = program_name;
 
 	while (*lpCmdLine && (com_argc < MAX_NUM_ARGVS))
