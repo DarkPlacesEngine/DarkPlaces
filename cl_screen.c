@@ -32,9 +32,6 @@ qboolean	scr_initialized;		// ready to draw
 float		scr_con_current;
 float		scr_conlines;		// lines of console to display
 
-int			clearconsole;
-int			clearnotify;
-
 extern int	con_vislines;
 
 qboolean	scr_drawloading = false;
@@ -291,10 +288,7 @@ SCR_DrawConsole
 void SCR_DrawConsole (void)
 {
 	if (scr_con_current)
-	{
 		Con_DrawConsole (scr_con_current);
-		clearconsole = 0;
-	}
 	else
 	{
 		con_vislines = 0;
