@@ -377,15 +377,60 @@ void R_SkySurf(msurface_t *s, qboolean transform)
 	}
 }
 
+void R_LightSurface(int *dlightbits, glpoly_t *polys, float *wvert)
+{
+	float		cr, cg, cb, radius, radius2, f, *v, *wv;
+	int			i, a, b;
+	unsigned int c;
+	dlight_t	*light;
+	vec_t		*lightorigin;
+	glpoly_t	*p;
+	for (a = 0;a < 8;a++)
+	{
+		if (c = dlightbits[a])
+		{
+			for (b = 0;c && b < 32;b++)
+			{
+				if (c & (1 << b))
+				{
+					c -= (1 << b);
+					light = &cl_dlights[a * 32 + b];
+					lightorigin = light->origin;
+					cr = light->color[0];
+					cg = light->color[1];
+					cb = light->color[2];
+					radius = light->radius*light->radius*16.0f;
+					radius2 = radius * 16.0f;
+					wv = wvert;
+					for (p = polys;p;p = p->next)
+					{
+						for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
+						{
+							f = VectorDistance2(wv, lightorigin);
+							if (f < radius)
+							{
+								f = radius2 / (f + 65536.0f);
+								wv[3] += cr * f;
+								wv[4] += cg * f;
+								wv[5] += cb * f;
+							}
+							wv += 6;
+						}
+					}
+				}
+				c >>= 1;
+				b++;
+			}
+		}
+	}
+}
+
 void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
 {
-	int		i, a, b;
-	unsigned int c;
-	float	cr, cg, cb, radius, radius2, f;
+	int		i;
 	float	os = turbsin[(int)(realtime * TURBSCALE) & 255], ot = turbsin[(int)(realtime * TURBSCALE + 96.0) & 255];
 	glpoly_t *p;
-	float	wvert[64*6], *wv, *v, *lightorigin;
-	dlight_t *light;
+	float	wvert[64*6], *wv, *v;
 	wv = wvert;
 	for (p = s->polys;p;p = p->next)
 	{
@@ -402,45 +447,7 @@ void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
 		}
 	}
 	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
-	{
-		for (a = 0;a < 8;a++)
-		{
-			if (c = s->dlightbits[a])
-			{
-				for (b = 0;c && b < 32;b++)
-				{
-					if (c & (1 << b))
-					{
-						c -= (1 << b);
-						light = &cl_dlights[a * 32 + b];
-						lightorigin = light->origin;
-						cr = light->color[0];
-						cg = light->color[1];
-						cb = light->color[2];
-						radius = light->radius*light->radius*16.0f;
-						radius2 = radius * 16.0f;
-						wv = wvert;
-						for (p = s->polys;p;p = p->next)
-						{
-							for (i = 0;i < p->numverts;i++, wv += 6)
-							{
-								f = VectorDistance2(wv, lightorigin);
-								if (f < radius)
-								{
-									f = radius2 / (f + 65536.0f);
-									wv[3] += cr * f;
-									wv[4] += cg * f;
-									wv[5] += cb * f;
-								}
-							}
-						}
-					}
-					c >>= 1;
-					b++;
-				}
-			}
-		}
-	}
+		R_LightSurface(s->dlightbits, s->polys, wvert);
 	wv = wvert;
 	// FIXME: make fog texture if water texture is transparent?
 	if (lighthalf)
@@ -467,11 +474,9 @@ void R_WaterSurf(msurface_t *s, texture_t *t, qboolean transform, int alpha)
 
 void R_WallSurf(msurface_t *s, texture_t *t, qboolean transform)
 {
-	int			i, a, b;
-	unsigned int c;
+	int			i;
 	glpoly_t	*p;
-	float		wvert[64*6], *wv, *v, cr, cg, cb, radius, radius2, f, *lightorigin;
-	dlight_t	*light;
+	float		wvert[64*6], *wv, *v;
 	// check for lightmap modification
 	if (r_dynamic.value)
 	{
@@ -496,44 +501,7 @@ void R_WallSurf(msurface_t *s, texture_t *t, qboolean transform)
 		}
 	}
 	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
-	{
-		for (a = 0;a < 8;a++)
-		{
-			if (c = s->dlightbits[a])
-			{
-				for (b = 0;c && b < 32;b++)
-				{
-					if (c & (1 << b))
-					{
-						c -= (1 << b);
-						light = &cl_dlights[a * 32 + b];
-						lightorigin = light->origin;
-						cr = light->color[0];
-						cg = light->color[1];
-						cb = light->color[2];
-						radius = light->radius*light->radius*16.0f;
-						radius2 = radius * 16.0f;
-						wv = wvert;
-						for (p = s->polys;p;p = p->next)
-						{
-							for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								f = VectorDistance2(wv, lightorigin);
-								if (f < radius)
-								{
-									f = radius2 / (f + 65536.0f);
-									wv[3] += cr * f;
-									wv[4] += cg * f;
-									wv[5] += cb * f;
-								}
-								wv += 6;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+		R_LightSurface(s->dlightbits, s->polys, wvert);
 	wv = wvert;
 	for (p = s->polys;p;p = p->next)
 	{
@@ -548,10 +516,20 @@ void R_WallSurf(msurface_t *s, texture_t *t, qboolean transform)
 		wallpoly[currentwallpoly++].lit = true;
 		for (i = 0;i<p->numverts;i++, v += VERTEXSIZE)
 		{
-			wallvert[currentwallvert].r = (byte) (bound(0, (int) wv[3], 255));
-			wallvert[currentwallvert].g = (byte) (bound(0, (int) wv[4], 255));
-			wallvert[currentwallvert].b = (byte) (bound(0, (int) wv[5], 255));
-			wallvert[currentwallvert].a = 255;
+			if (lighthalf)
+			{
+				wallvert[currentwallvert].r = (byte) (bound(0, (int) wv[3] >> 1, 255));
+				wallvert[currentwallvert].g = (byte) (bound(0, (int) wv[4] >> 1, 255));
+				wallvert[currentwallvert].b = (byte) (bound(0, (int) wv[5] >> 1, 255));
+				wallvert[currentwallvert].a = 255;
+			}
+			else
+			{
+				wallvert[currentwallvert].r = (byte) (bound(0, (int) wv[3], 255));
+				wallvert[currentwallvert].g = (byte) (bound(0, (int) wv[4], 255));
+				wallvert[currentwallvert].b = (byte) (bound(0, (int) wv[5], 255));
+				wallvert[currentwallvert].a = 255;
+			}
 			wallvert[currentwallvert].vert[0] = wv[0];
 			wallvert[currentwallvert].vert[1] = wv[1];
 			wallvert[currentwallvert].vert[2] = wv[2];
@@ -573,19 +551,15 @@ extern float modelalpha;
 //void R_DynamicLightPointNoMask(vec3_t color, vec3_t org);
 //void EmitWaterPolys (msurface_t *fa);
 
-void R_WallSurfVertex(msurface_t *s, texture_t *t, qboolean transform)
+void R_WallSurfVertex(msurface_t *s, texture_t *t, qboolean transform, qboolean isbmodel)
 {
-	int			i, a, b, alpha;
-	unsigned int c;
+	int			i, alpha;
 	glpoly_t	*p;
-	float		wvert[64*6], *wv, *v, cr, cg, cb, radius, radius2, f, *lightorigin;
-	int			smax, tmax, size3;
+	float		wvert[64*6], *wv, *v;
+	int			size3;
 	float		scale;
 	byte		*lm;
-	dlight_t	*light;
-	smax = (s->extents[0]>>4)+1;
-	tmax = (s->extents[1]>>4)+1;
-	size3 = smax*tmax*3; // *3 for colored lighting
+	size3 = ((s->extents[0]>>4)+1)*((s->extents[1]>>4)+1)*3; // *3 for colored lighting
 	alpha = (int) (modelalpha * 255.0f);
 	// check for lightmap modification
 	if (r_dynamic.value)
@@ -609,7 +583,7 @@ void R_WallSurfVertex(msurface_t *s, texture_t *t, qboolean transform)
 			wv[3] = wv[4] = wv[5] = r_ambient.value * 2.0f;
 			if (s->styles[0] != 255)
 			{
-				lm = (byte *)((long) s->samples + ((int) v[8] * smax + (int) v[7]) * 3); // LordHavoc: *3 for colored lighting
+				lm = (byte *)((long) s->samples + (int) v[7]);
 				scale = d_lightstylevalue[s->styles[0]] * (1.0f / 128.0f);wv[3] += lm[size3*0+0] * scale;wv[4] += lm[size3*0+1] * scale;wv[5] += lm[size3*0+2] * scale;
 				if (s->styles[1] != 255)
 				{
@@ -628,48 +602,9 @@ void R_WallSurfVertex(msurface_t *s, texture_t *t, qboolean transform)
 		}
 	}
 	if (s->dlightframe == r_dlightframecount && r_dynamic.value)
-	{
-		for (a = 0;a < 8;a++)
-		{
-			if (c = s->dlightbits[a])
-			{
-				for (b = 0;c && b < 32;b++)
-				{
-					if (c & (1 << b))
-					{
-						c -= (1 << b);
-						light = &cl_dlights[a * 32 + b];
-						lightorigin = light->origin;
-						cr = light->color[0];
-						cg = light->color[1];
-						cb = light->color[2];
-						radius = light->radius*light->radius*16.0f;
-						radius2 = radius * 16.0f;
-						wv = wvert;
-						for (p = s->polys;p;p = p->next)
-						{
-							for (i = 0, v = p->verts[0];i < p->numverts;i++, v += VERTEXSIZE)
-							{
-								f = VectorDistance2(wv, lightorigin);
-								if (f < radius)
-								{
-									f = radius2 / (f + 65536.0f);
-									wv[3] += cr * f;
-									wv[4] += cg * f;
-									wv[5] += cb * f;
-								}
-								wv += 6;
-							}
-						}
-					}
-					c >>= 1;
-					b++;
-				}
-			}
-		}
-	}
+		R_LightSurface(s->dlightbits, s->polys, wvert);
 	wv = wvert;
-	if (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1)
+	if (isbmodel && (currententity->colormod[0] != 1 || currententity->colormod[1] != 1 || currententity->colormod[2] != 1))
 	{
 		if (lighthalf)
 		{
@@ -761,7 +696,7 @@ void DrawTextureChains (void)
 		}
 		if (gl_vertex.value)
 			for (;s;s = s->texturechain)
-				R_WallSurfVertex(s, t, false);
+				R_WallSurfVertex(s, t, false, false);
 		else
 			for (;s;s = s->texturechain)
 				R_WallSurf(s, t, false);
@@ -856,7 +791,7 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 				continue;
 			}
 			if (vertexlit || s->texinfo->texture->transparent)
-				R_WallSurfVertex(s, t, true);
+				R_WallSurfVertex(s, t, true, true);
 			else
 				R_WallSurf(s, t, true);
 		}
@@ -1164,7 +1099,7 @@ BuildSurfaceDisplayList
 */
 void BuildSurfaceDisplayList (msurface_t *fa)
 {
-	int			i, lindex, lnumverts;
+	int			i, j, lindex, lnumverts;
 	medge_t		*pedges, *r_pedge;
 	int			vertpage;
 	float		*vec;
@@ -1200,30 +1135,26 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 			vec = r_pcurrentvertbase[r_pedge->v[1]].position;
 		}
 		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
-		s /= fa->texinfo->texture->width;
-
 		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
-		t /= fa->texinfo->texture->height;
 
 		VectorCopy (vec, poly->verts[i]);
-		poly->verts[i][3] = s;
-		poly->verts[i][4] = t;
+		poly->verts[i][3] = s / fa->texinfo->texture->width;
+		poly->verts[i][4] = t / fa->texinfo->texture->height;
 
 		//
 		// lightmap texture coordinates
 		//
-		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
 		s -= fa->texturemins[0];
-		poly->verts[i][7] = bound(0l, ((int)s>>4), (fa->extents[0]>>4)); // LordHavoc: raw lightmap coordinates
-		s += fa->light_s*16;
+		t -= fa->texturemins[1];
 		s += 8;
+		t += 8;
+		// LordHavoc: calc lightmap data offset
+		j = (bound(0l, (int)t>>4, fa->extents[1]>>4) * ((fa->extents[0]>>4)+1) + bound(0l, (int)s>>4, fa->extents[0]>>4)) * 3;
+		poly->verts[i][7] = j;
+		s += fa->light_s*16;
 		s /= BLOCK_WIDTH*16; //fa->texinfo->texture->width;
 
-		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
-		t -= fa->texturemins[1];
-		poly->verts[i][8] = bound(0l, ((int)t>>4), (fa->extents[1]>>4)); // LordHavoc: raw lightmap coordinates
 		t += fa->light_t*16;
-		t += 8;
 		t /= BLOCK_HEIGHT*16; //fa->texinfo->texture->height;
 
 		poly->verts[i][5] = s;
@@ -1272,166 +1203,6 @@ void BuildSurfaceDisplayList (msurface_t *fa)
 	}
 	*/
 	poly->numverts = lnumverts;
-
-	/*
-	int			i, k, lindex, lnumverts;
-	medge_t		*pedges, *r_pedge;
-	int			vertpage, points;
-	float		*vec;
-	float		s, t;
-	glpoly_t	*poly;
-	float		point1[1024][VERTEXSIZE], point[1024][VERTEXSIZE];
-
-// reconstruct the polygon
-	pedges = currentmodel->edges;
-	lnumverts = fa->numedges;
-	vertpage = 0;
-
-	//
-	// draw texture
-	//
-	for (i=0 ; i<lnumverts ; i++)
-	{
-		lindex = currentmodel->surfedges[fa->firstedge + i];
-
-		if (lindex > 0)
-		{
-			r_pedge = &pedges[lindex];
-			vec = r_pcurrentvertbase[r_pedge->v[0]].position;
-		}
-		else
-		{
-			r_pedge = &pedges[-lindex];
-			vec = r_pcurrentvertbase[r_pedge->v[1]].position;
-		}
-		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
-		s /= fa->texinfo->texture->width;
-
-		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
-		t /= fa->texinfo->texture->height;
-
-		VectorCopy (vec, point1[i]);
-		point1[i][3] = s;
-		point1[i][4] = t;
-
-		//
-		// lightmap texture coordinates
-		//
-		s = DotProduct (vec, fa->texinfo->vecs[0]) + fa->texinfo->vecs[0][3];
-		s -= fa->texturemins[0];
-		point1[i][7] = bound(0l, ((int)s>>4), (fa->extents[0]>>4)); // LordHavoc: raw lightmap coordinates
-		s += fa->light_s*16;
-		s += 8;
-		s /= BLOCK_WIDTH*16; //fa->texinfo->texture->width;
-
-		t = DotProduct (vec, fa->texinfo->vecs[1]) + fa->texinfo->vecs[1][3];
-		t -= fa->texturemins[1];
-		point1[i][8] = bound(0l, ((int)t>>4), (fa->extents[1]>>4)); // LordHavoc: raw lightmap coordinates
-		t += fa->light_t*16;
-		t += 8;
-		t /= BLOCK_HEIGHT*16; //fa->texinfo->texture->height;
-
-		point1[i][5] = s;
-		point1[i][6] = t;
-	}
-
-	if (fa->flags & (SURF_DRAWSKY | SURF_DRAWTURB))
-	{
-		poly = Hunk_Alloc (sizeof(glpoly_t) + (lnumverts-4) * VERTEXSIZE*sizeof(float));
-		poly->next = fa->polys;
-		poly->flags = fa->flags;
-		fa->polys = poly;
-		poly->numverts = lnumverts;
-		memcpy(poly->verts, &point1[0][0], lnumverts*VERTEXSIZE*sizeof(float));
-		return;
-	}
-
-#define VectorCopy9(a,b) {for(k = 0;k < VERTEXSIZE;k++) b[k]=a[k];}
-	points = 0;
-#if 0
-	int			j;
-	float		center[VERTEXSIZE];
-	// subdivide by placing a point at the center (more tris)
-	// LordHavoc:
-	// you, the reader, have stumbled upon the most amusing visual artifact I have
-	// encountered to date, saved here for historical/hysterical reasons :)
-	if (gl_funnywalls.value)
-		for (j = 0;j < 5;j++)
-			center[j] = 0;
-	else
-		for (j = 0;j < VERTEXSIZE;j++)
-			center[j] = 0;
-	for (i = 0;i < lnumverts;i++)
-		for (j = 0;j < VERTEXSIZE;j++)
-			center[j] += point1[i][j];
-	s = 1.0f / lnumverts;
-	for (i = 0;i < VERTEXSIZE;i++)
-		center[i] *= s;
-	for (i = 0;i < lnumverts;i++)
-	{
-		VectorCopy9(center, point[points]);points++;
-		VectorCopy9(point1[i], point[points]);points++;
-		VectorCopy9(point1[(i+1)%lnumverts], point[points]);points++;
-	}
-#else
-	// subdivide by turning it into a fan (less tris)
-	for (i = 1;i < lnumverts-1;i++)
-	{
-		VectorCopy9(point1[0], point[points]);points++;
-		VectorCopy9(point1[i], point[points]);points++;
-		VectorCopy9(point1[i+1], point[points]);points++;
-	}
-#endif
-#if 0
-	{
-		float p1[VERTEXSIZE], p2[VERTEXSIZE], p3[VERTEXSIZE], p4[VERTEXSIZE], p5[VERTEXSIZE], p6[VERTEXSIZE]
-		// now subdivide any large triangles
-		for (j = 0;j < points;j+=3)
-		{
-			if (points > (1024-9))
-				break;
-			while ((max(point[j][0], max(point[j+1][0], point[j+2][0])) - min(point[j][0], min(point[j+1][0], point[j+2][0]))) > 128
-				|| (max(point[j][1], max(point[j+1][1], point[j+2][1])) - min(point[j][1], min(point[j+1][1], point[j+2][1]))) > 128
-				|| (max(point[j][2], max(point[j+1][2], point[j+2][2])) - min(point[j][2], min(point[j+1][2], point[j+2][2]))) > 128)
-			{
-				if (points > (1024-9))
-					break;
-	#define halfway(v, a, b) for (k = 0;k < VERTEXSIZE;k++) v[k] = (a[k] + b[k]) * 0.5f;
-				VectorCopy9(point[j+0], p1);
-				VectorCopy9(point[j+1], p3);
-				VectorCopy9(point[j+2], p5);
-				halfway(p2, p1, p3);
-				halfway(p4, p3, p5);
-				halfway(p6, p5, p1);
-				// build tri 1 (top middle)
-				VectorCopy9(p1, point[j+0]);
-				VectorCopy9(p2, point[j+1]);
-				VectorCopy9(p6, point[j+2]);
-				// build tri 2 (bottom right)
-				VectorCopy9(p2, point[points+0]);
-				VectorCopy9(p3, point[points+1]);
-				VectorCopy9(p4, point[points+2]);
-				// build tri 3 (bottom left)
-				VectorCopy9(p4, point[points+3]);
-				VectorCopy9(p5, point[points+4]);
-				VectorCopy9(p6, point[points+5]);
-				// build tri 4 (middle)
-				VectorCopy9(p2, point[points+6]);
-				VectorCopy9(p4, point[points+7]);
-				VectorCopy9(p6, point[points+8]);
-				points+=9;
-			}
-		}
-	}
-#endif
-	poly = Hunk_Alloc (sizeof(glpoly_t) + (points-4) * VERTEXSIZE*sizeof(float));
-	poly->next = fa->polys;
-	poly->flags = fa->flags;
-	fa->polys = poly;
-	poly->numverts = 0;
-	poly->numtris = points / 3;
-	memcpy(&poly->verts[0][0], &point[0][0], points * VERTEXSIZE*sizeof(float));
-	*/
 }
 
 /*
