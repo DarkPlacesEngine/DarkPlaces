@@ -1127,8 +1127,9 @@ void PF_Remove (void)
 		Host_Error("remove: tried to remove world\n");
 	if (NUM_FOR_EDICT(ed) <= svs.maxclients)
 		Host_Error("remove: tried to remove a client\n");
-	if (ed->e->free)
-		Host_Error("remove: tried to remove an entity that was already removed\n");
+	// LordHavoc: not an error because id1 progs did this in some cases (killtarget removes entities, even if they are already removed in some cases...)
+	if (ed->e->free && developer.integer)
+		Con_Printf("remove: tried to remove an entity that was already removed\n");
 	ED_Free (ed);
 }
 
