@@ -19,7 +19,61 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "quakedef.h"
+
+#ifdef WORKINGLQUAKE
+#define lhrandom(MIN,MAX) ((rand() & 32767) * (((MAX)-(MIN)) * (1.0f / 32767.0f)) + (MIN))
+#define NUMVERTEXNORMALS	162
+siextern float r_avertexnormals[NUMVERTEXNORMALS][3];
+#define m_bytenormals r_avertexnormals
+#define VectorNormalizeFast VectorNormalize
+#define Mod_PointContents(v,m) (Mod_PointInLeaf(v,m)->contents)
+typedef unsigned char qbyte;
+#define cl_stainmaps.integer 0
+void R_Stain (vec3_t origin, float radius, int cr1, int cg1, int cb1, int ca1, int cr2, int cg2, int cb2, int ca2)
+{
+}
+#define CL_EntityParticles R_EntityParticles
+#define CL_ReadPointFile_f R_ReadPointFile_f
+#define CL_ParseParticleEffect R_ParseParticleEffect
+#define CL_ParticleExplosion R_ParticleExplosion
+#define CL_ParticleExplosion2 R_ParticleExplosion2
+#define CL_BlobExplosion R_BlobExplosion
+#define CL_RunParticleEffect R_RunParticleEffect
+#define CL_LavaSplash R_LavaSplash
+#define CL_RocketTrail2 R_RocketTrail2
+void R_CalcBeamVerts (float *vert, vec3_t org1, vec3_t org2, float width)
+{
+	vec3_t right1, right2, diff, normal;
+
+	VectorSubtract (org2, org1, normal);
+	VectorNormalizeFast (normal);
+
+	// calculate 'right' vector for start
+	VectorSubtract (r_origin, org1, diff);
+	VectorNormalizeFast (diff);
+	CrossProduct (normal, diff, right1);
+
+	// calculate 'right' vector for end
+	VectorSubtract (r_origin, org2, diff);
+	VectorNormalizeFast (diff);
+	CrossProduct (normal, diff, right2);
+
+	vert[ 0] = org1[0] + width * right1[0];
+	vert[ 1] = org1[1] + width * right1[1];
+	vert[ 2] = org1[2] + width * right1[2];
+	vert[ 4] = org1[0] - width * right1[0];
+	vert[ 5] = org1[1] - width * right1[1];
+	vert[ 6] = org1[2] - width * right1[2];
+	vert[ 8] = org2[0] - width * right2[0];
+	vert[ 9] = org2[1] - width * right2[1];
+	vert[10] = org2[2] - width * right2[2];
+	vert[12] = org2[0] + width * right2[0];
+	vert[13] = org2[1] + width * right2[1];
+	vert[14] = org2[2] + width * right2[2];
+}
+#else
 #include "cl_collision.h"
+#endif
 
 #define MAX_PARTICLES			8192	// default max # of particles at one time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's on the command line
@@ -126,7 +180,9 @@ cvar_t cl_particles_smoke = {CVAR_SAVE, "cl_particles_smoke", "1"};
 cvar_t cl_particles_sparks = {CVAR_SAVE, "cl_particles_sparks", "1"};
 cvar_t cl_particles_bubbles = {CVAR_SAVE, "cl_particles_bubbles", "1"};
 
+#ifndef WORKINGLQUAKE
 static mempool_t *cl_part_mempool;
+#endif
 
 void CL_Particles_Clear(void)
 {
@@ -167,9 +223,14 @@ void CL_Particles_Init (void)
 	Cvar_RegisterVariable (&cl_particles_sparks);
 	Cvar_RegisterVariable (&cl_particles_bubbles);
 
+#ifdef WORKINGLQUAKE
+	particles = (particle_t *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t), "particles");
+	freeparticles = (void *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t *), "particles");
+#else
 	cl_part_mempool = Mem_AllocPool("CL_Part");
 	particles = (particle_t *) Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(particle_t));
 	freeparticles = (void *) Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(particle_t *));
+#endif
 	cl_numparticles = 0;
 }
 
@@ -266,7 +327,11 @@ void CL_EntityParticles (entity_t *ent)
 		forward[1] = cp*sy;
 		forward[2] = -sp;
 
+#ifdef WORKINGLQUAKE
+		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, false, 2, 2, 255, 0, 0, 0, 0, ent->origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+#else
 		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[0x6f], particlepalette[0x6f], tex_particle, false, false, 2, 2, 255, 0, 0, 0, 0, ent->render.origin[0] + m_bytenormals[i][0]*dist + forward[0]*beamlength, ent->render.origin[1] + m_bytenormals[i][1]*dist + forward[1]*beamlength, ent->render.origin[2] + m_bytenormals[i][2]*dist + forward[2]*beamlength, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+#endif
 	}
 }
 
@@ -275,16 +340,33 @@ void CL_ReadPointFile_f (void)
 {
 	vec3_t	org;
 	int		r, c;
-	char	*pointfile, *pointfilepos, *t, tchar;
-
-	pointfile = COM_LoadFile(va("maps/%s.pts", sv.name), true);
+	char	*pointfile = NULL, *pointfilepos, *t, tchar;
+#if WORKINGLQUAKE
+	char	name[MAX_OSPATH];
+	
+	sprintf (name,"maps/%s.pts", cl.worldmodel->name);
+	COM_FOpenFile (name, &f);
+	if (f)
+	{
+		int pointfilelength;
+		fseek(f, 0, SEEK_END);
+		pointfilelength = ftell(f);
+		fseek(f, 0, SEEK_SET);
+		pointfile = malloc(pointfilelength + 1);
+		fread(pointfile, 1, pointfilelength, f);
+		pointfile[pointfilelength] = 0;
+		fclose(f);
+	}
+#else
+	pointfile = COM_LoadFile(va("maps/%s.pts", cl.worldmodel->name), true);
+#endif
 	if (!pointfile)
 	{
-		Con_Printf ("couldn't open %s.pts\n", sv.name);
+		Con_Printf ("couldn't open %s.pts\n", cl.worldmodel->name);
 		return;
 	}
 
-	Con_Printf ("Reading %s.pts...\n", sv.name);
+	Con_Printf ("Reading %s.pts...\n", cl.worldmodel->name);
 	c = 0;
 	pointfilepos = pointfile;
 	while (*pointfilepos)
@@ -313,7 +395,11 @@ void CL_ReadPointFile_f (void)
 		particle(pt_static, PARTICLE_BILLBOARD, particlepalette[(-c)&15], particlepalette[(-c)&15], tex_particle, false, false, 2, 2, 255, 0, 99999, 0, 0, org[0], org[1], org[2], 0, 0, 0, 0, 0, 0, 0, 0, 0);
 	}
 
+#ifdef WORKINGLQUAKE
+	free(pointfile);
+#else
 	Mem_Free(pointfile);
+#endif
 	Con_Printf ("%i points read\n", c);
 }
 
@@ -326,8 +412,8 @@ Parse an effect out of the server message
 */
 void CL_ParseParticleEffect (void)
 {
-	vec3_t		org, dir;
-	int			i, count, msgcount, color;
+	vec3_t org, dir;
+	int i, count, msgcount, color;
 
 	for (i=0 ; i<3 ; i++)
 		org[i] = MSG_ReadCoord ();
@@ -350,9 +436,11 @@ CL_ParticleExplosion
 
 ===============
 */
-void CL_ParticleExplosion (vec3_t org, int smoke)
+void CL_ParticleExplosion (vec3_t org)
 {
-	int i;
+	int i, k;
+	vec3_t v;
+	vec3_t v2;
 	if (cl_stainmaps.integer)
 		R_Stain(org, 96, 80, 80, 80, 64, 176, 176, 176, 64);
 
@@ -362,6 +450,37 @@ void CL_ParticleExplosion (vec3_t org, int smoke)
 		for (i = 0;i < 128;i++)
 		{
 			particle(pt_bubble, PARTICLE_BILLBOARD, 0x404040, 0x808080, tex_bubble, false, true, 2, 2, lhrandom(128, 255), 256, 9999, -0.25, 1.5, org[0] + lhrandom(-16, 16), org[1] + lhrandom(-16, 16), org[2] + lhrandom(-16, 16), lhrandom(-96, 96), lhrandom(-96, 96), lhrandom(-96, 96), 0, 0, 0, 0, (1.0 / 16.0), 0);
+		}
+	}
+	else
+	{
+		// smoke puff
+		if (cl_particles_smoke.integer)
+		{
+			for (i = 0;i < 64;i++)
+			{
+				for (k = 0;k < 16;k++)
+				{
+					v[0] = org[0] + lhrandom(-64, 64);
+					v[1] = org[1] + lhrandom(-64, 64);
+					v[2] = org[2] + lhrandom(-8, 24);
+					if (CL_TraceLine(org, v, v2, NULL, 0, true, NULL) >= 0.1)
+						break;
+				}
+				VectorSubtract(v2, org, v2);
+				VectorScale(v2, 2.0f, v2);
+				particle(pt_static, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, true, 12, 12, 255, 512, 9999, 0, 0, org[0], org[1], org[2], v2[0], v2[1], v2[2], 0, 0, 0, 0, 0, 0);
+			}
+		}
+
+		if (cl_particles_sparks.integer)
+		{
+			// sparks
+			for (i = 0;i < 256;i++)
+			{
+				k = particlepalette[0x68 + (rand() & 7)];
+				particle(pt_static, PARTICLE_BEAM, k, k, tex_particle, false, true, 1.5f, 0.05f, lhrandom(0, 255), 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0, 0);
+			}
 		}
 	}
 
@@ -414,7 +533,7 @@ void CL_RunParticleEffect (vec3_t org, vec3_t dir, int color, int count)
 
 	if (count == 1024)
 	{
-		CL_ParticleExplosion(org, false);
+		CL_ParticleExplosion(org);
 		return;
 	}
 	if (!cl_particles.integer) return;
@@ -682,8 +801,8 @@ CL_TeleportSplash
 
 ===============
 */
-/*
-void CL_TeleportSplash (vec3_t org)
+#if WORKINGLQUAKE
+void R_TeleportSplash (vec3_t org)
 {
 	int i, j, k;
 	if (!cl_particles.integer) return;
@@ -693,9 +812,13 @@ void CL_TeleportSplash (vec3_t org)
 			for (k=-24 ; k<32 ; k+=8)
 				particle(pt_static, PARTICLE_BILLBOARD, 0xA0A0A0, 0xFFFFFF, tex_particle, false, true, 10, 10, lhrandom(64, 128), 256, 9999, 0, 0, org[0] + i + lhrandom(0, 8), org[1] + j + lhrandom(0, 8), org[2] + k + lhrandom(0, 8), lhrandom(-64, 64), lhrandom(-64, 64), lhrandom(-256, 256), 0, 0, 0, 0, 1, 0);
 }
-*/
+#endif
 
+#ifdef WORKINGLQUAKE
+void R_RocketTrail (vec3_t start, vec3_t end, int type)
+#else
 void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
+#endif
 {
 	vec3_t vec, dir, vel, pos;
 	float len, dec, speed, r;
@@ -705,22 +828,29 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 	VectorNormalize(dir);
 
 	VectorSubtract (end, start, vec);
+#ifdef WORKINGLQUAKE
+	len = VectorNormalize (vec);
+	dec = 0;
+	speed = 1.0f / (cl.time - cl.oldtime);
+	VectorSubtract(end, start, vel);
+#else
 	len = VectorNormalizeLength (vec);
 	dec = -ent->persistent.trail_time;
 	ent->persistent.trail_time += len;
 	if (ent->persistent.trail_time < 0.01f)
 		return;
 
+	// if we skip out, leave it reset
+	ent->persistent.trail_time = 0.0f;
+
 	speed = 1.0f / (ent->state_current.time - ent->state_previous.time);
 	VectorSubtract(ent->state_current.origin, ent->state_previous.origin, vel);
+#endif
 	VectorScale(vel, speed, vel);
 
 	// advance into this frame to reach the first puff location
 	VectorMA(start, dec, vec, pos);
 	len -= dec;
-
-	// if we skip out, leave it reset
-	ent->persistent.trail_time = 0.0f;
 
 	contents = Mod_PointContents(pos, cl.worldmodel);
 	if (contents == CONTENTS_SKY || contents == CONTENTS_LAVA)
@@ -804,7 +934,9 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, entity_t *ent)
 		len -= dec;
 		VectorMA (pos, dec, vec, pos);
 	}
+#ifndef WORKINGLQUAKE
 	ent->persistent.trail_time = len;
+#endif
 }
 
 void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
@@ -816,7 +948,11 @@ void CL_RocketTrail2 (vec3_t start, vec3_t end, int color, entity_t *ent)
 
 	VectorCopy(start, pos);
 	VectorSubtract (end, start, vec);
+#ifdef WORKINGLQUAKE
+	len = (int) (VectorNormalize (vec) * (1.0f / 3.0f));
+#else
 	len = (int) (VectorNormalizeLength (vec) * (1.0f / 3.0f));
+#endif
 	VectorScale(vec, 3, vec);
 	color = particlepalette[color];
 	while (len--)
@@ -842,7 +978,11 @@ void CL_MoveParticles (void)
 	if (!cl_numparticles)
 		return;
 
+#ifdef WORKINGLQUAKE
+	frametime = cl.frametime;
+#else
 	frametime = cl.time - cl.oldtime;
+#endif
 	gravity = frametime * sv_gravity.value;
 	dvel = 1+4*frametime;
 	bloodwaterfade = max(cl_particles_blood_alpha.value, 0.01f) * frametime * 128.0f;
@@ -856,6 +996,7 @@ void CL_MoveParticles (void)
 		VectorCopy(p->org, p->oldorg);
 		VectorMA(p->org, frametime, p->vel, p->org);
 		VectorCopy(p->org, org);
+#ifndef WORKINGLQUAKE
 		if (p->bounce)
 		{
 			if (CL_TraceLine(p->oldorg, p->org, v, normal, 0, true, NULL) < 1)
@@ -879,6 +1020,7 @@ void CL_MoveParticles (void)
 				}
 			}
 		}
+#endif
 		p->vel[2] -= p->gravity * gravity;
 		p->alpha -= p->alphafade * frametime;
 		if (p->friction)
@@ -1004,17 +1146,20 @@ typedef struct
 }
 particletexture_t;
 
+#if WORKINGLQUAKE
+static int particlefonttexture;
+#else
 static rtexturepool_t *particletexturepool;
-
 static rtexture_t *particlefonttexture;
+#endif
 static particletexture_t particletexture[MAX_PARTICLETEXTURES];
 
 static cvar_t r_drawparticles = {0, "r_drawparticles", "1"};
 
 static qbyte shadebubble(float dx, float dy, vec3_t light)
 {
-	float	dz, f, dot;
-	vec3_t	normal;
+	float dz, f, dot;
+	vec3_t normal;
 	dz = 1 - (dx*dx+dy*dy);
 	if (dz > 0) // it does hit the sphere
 	{
@@ -1059,11 +1204,11 @@ static void setuptex(int cltexnum, int rtexnum, qbyte *data, qbyte *particletext
 
 static void R_InitParticleTexture (void)
 {
-	int		x,y,d,i,m;
-	float	dx, dy, radius, f, f2;
-	qbyte	data[32][32][4], noise1[64][64], noise2[64][64];
-	vec3_t	light;
-	qbyte	particletexturedata[256*256*4];
+	int x,y,d,i,m;
+	float dx, dy, radius, f, f2;
+	qbyte data[32][32][4], noise1[64][64], noise2[64][64];
+	vec3_t light;
+	qbyte particletexturedata[256*256*4];
 
 	memset(particletexturedata, 255, sizeof(particletexturedata));
 
@@ -1160,7 +1305,13 @@ static void R_InitParticleTexture (void)
 	}
 	setuptex(26, 34, &data[0][0][0], particletexturedata);
 
+#if WORKINGLQUAKE
+	glBindTexture(GL_TEXTURE_2D, (particlefonttexture = gl_extension_number++));
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+#else
 	particlefonttexture = R_LoadTexture (particletexturepool, "particlefont", 256, 256, particletexturedata, TEXTYPE_RGBA, TEXF_ALPHA | TEXF_PRECACHE);
+#endif
 }
 
 static void r_part_start(void)
@@ -1181,15 +1332,31 @@ static void r_part_newmap(void)
 void R_Particles_Init (void)
 {
 	Cvar_RegisterVariable(&r_drawparticles);
+#ifdef WORKINGLQUAKE
+	r_part_start();
+#else
 	R_RegisterModule("R_Particles", r_part_start, r_part_shutdown, r_part_newmap);
+#endif
 }
+
+#ifdef WORKINGLQUAKE
+void R_InitParticles(void)
+{
+	CL_Particles_Init();
+	R_Particles_Init();
+}
+
+float varray_vertex[16];
+#endif
 
 void R_DrawParticleCallback(const void *calldata1, int calldata2)
 {
 	int additive, texnum, orientation;
 	float org[3], up2[3], v[3], right[3], up[3], fog, ifog, fogvec[3], cr, cg, cb, ca;
 	particletexture_t *tex;
+#ifndef WORKINGLQUAKE
 	rmeshstate_t m;
+#endif
 	const particle_t *p = calldata1;
 
 	VectorCopy(p->org, org);
@@ -1198,6 +1365,12 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	//dynlight = p->flags & P_DYNLIGHT;
 	additive = p->flags & P_ADDITIVE;
 
+#ifdef WORKINGLQUAKE
+	if (additive)
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#else
 	memset(&m, 0, sizeof(m));
 	m.blendfunc1 = GL_SRC_ALPHA;
 	if (additive)
@@ -1207,12 +1380,14 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	m.tex[0] = R_GetTexture(particlefonttexture);
 	R_Mesh_Matrix(&r_identitymatrix);
 	R_Mesh_State(&m);
+#endif
 
 	tex = &particletexture[texnum];
 	cr = p->color[0] * (1.0f / 255.0f);
 	cg = p->color[1] * (1.0f / 255.0f);
 	cb = p->color[2] * (1.0f / 255.0f);
 	ca = p->alpha * (1.0f / 255.0f);
+#ifndef WORKINGLQUAKE
 	if (fogenabled)
 	{
 		VectorSubtract(org, r_origin, fogvec);
@@ -1240,6 +1415,7 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	varray_texcoord[0][2] = tex->s1;varray_texcoord[0][3] = tex->t1;
 	varray_texcoord[0][4] = tex->s1;varray_texcoord[0][5] = tex->t2;
 	varray_texcoord[0][6] = tex->s2;varray_texcoord[0][7] = tex->t2;
+#endif
 
 	if (orientation == PARTICLE_BEAM)
 	{
@@ -1291,7 +1467,17 @@ void R_DrawParticleCallback(const void *calldata1, int calldata2)
 	}
 	else
 		Host_Error("R_DrawParticles: unknown particle orientation %i\n", orientation);
+#if WORKINGLQUAKE
+	glBegin(GL_QUADS);
+	glColor4f(cr, cg, cb, ca);
+	glTexCoord2f(tex->s2, tex->t1);glVertex3f(varray_vertex[ 0], varray_vertex[ 1], varray_vertex[ 2]);
+	glTexCoord2f(tex->s1, tex->t1);glVertex3f(varray_vertex[ 4], varray_vertex[ 5], varray_vertex[ 6]);
+	glTexCoord2f(tex->s1, tex->t2);glVertex3f(varray_vertex[ 8], varray_vertex[ 9], varray_vertex[10]);
+	glTexCoord2f(tex->s2, tex->t2);glVertex3f(varray_vertex[12], varray_vertex[13], varray_vertex[14]);
+	glEnd();
+#else
 	R_Mesh_Draw(4, 2, polygonelements);
+#endif
 }
 
 void R_DrawParticles (void)
@@ -1304,13 +1490,25 @@ void R_DrawParticles (void)
 	if ((!cl_numparticles) || (!r_drawparticles.integer))
 		return;
 
-	c_particles += cl_numparticles;
-
 	minparticledist = DotProduct(r_origin, vpn) + 16.0f;
 
+#ifdef WORKINGLQUAKE
+	// helper code if anyone wants to port this to stock glquake engines
+	glBindTexture(GL_TEXTURE_2D, particlefonttexture);
+	glEnable(GL_BLEND);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 	// LordHavoc: only render if not too close
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
 		if (DotProduct(p->org, vpn) >= minparticledist)
+			R_DrawParticleCallback(p, 0);
+	// helper code if anyone wants to port this to stock glquake engines
+	glDisable(GL_BLEND);
+#else
+	// LordHavoc: only render if not too close
+	c_particles += cl_numparticles;
+	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
+		if (DotProduct(p->org, vpn) >= minparticledist)
 			R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
+#endif
 }
 
