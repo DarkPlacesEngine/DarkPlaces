@@ -1323,83 +1323,77 @@ static void R_DrawPortals(void)
 
 void R_WorldVisibility(void)
 {
+	int i, j, *mark;
+	mleaf_t *leaf;
+	mleaf_t *viewleaf;
 	model_t *model = r_refdef.worldmodel;
 
 	if (!model)
 		return;
 
-	if (model->type == mod_brushq3)
+	// if possible find the leaf the view origin is in
+	viewleaf = model->brushq1.PointInLeaf ? model->brushq1.PointInLeaf(model, r_vieworigin) : NULL;
+
+	// clear the visible surface flags array
+	memset(r_worldsurfacevisible, 0, model->brush.num_surfaces);
+
+	// if the user prefers surfaceworldnode (testing?) or the viewleaf could
+	// not be found, or the viewleaf is not part of the visible world
+	// (floating around in the void), use the pvs method
+	if (r_surfaceworldnode.integer || !viewleaf || viewleaf->clusterindex < 0)
 	{
-		int i, j;
-		mleaf_t *leaf;
-		memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brush.num_surfaces);
-		for (j = 0, leaf = r_refdef.worldmodel->brush.data_leafs;j < r_refdef.worldmodel->brush.num_leafs;j++, leaf++)
+		// pvs method:
+		// similar to quake's RecursiveWorldNode but without cache misses
+		for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
 		{
+			// if leaf is in current pvs and on the screen, mark its surfaces
 			if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox(leaf->mins, leaf->maxs))
 			{
 				c_leafs++;
-				for (i = 0;i < leaf->numleafsurfaces;i++)
-					r_worldsurfacevisible[leaf->firstleafsurface[i]] = 1;
+				if (leaf->numleafsurfaces)
+					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
+						r_worldsurfacevisible[*mark] = true;
 			}
 		}
 	}
-	else if (model->type == mod_brushq1)
+	else
 	{
-		int i, j, *mark;
-		mleaf_t *leaf;
-		mleaf_t *viewleaf;
 		int leafstackpos;
 		mportal_t *p;
 		mleaf_t *leafstack[8192];
 		qbyte leafvisited[32768];
-
-		viewleaf = model->brushq1.PointInLeaf(model, r_vieworigin);
-		if (!viewleaf)
-			return;
-
-		memset(r_worldsurfacevisible, 0, r_refdef.worldmodel->brush.num_surfaces);
-		if (viewleaf->clusterindex < 0 || r_surfaceworldnode.integer)
+		// portal method:
+		// follows portals leading outward from viewleaf, does not venture
+		// offscreen or into leafs that are not visible, faster than Quake's
+		// RecursiveWorldNode and vastly better in unvised maps, often culls a
+		// lot of surface that pvs alone would miss
+		leafstack[0] = viewleaf;
+		leafstackpos = 1;
+		memset(leafvisited, 0, model->brush.num_leafs);
+		while (leafstackpos)
 		{
-			// equivilant to quake's RecursiveWorldNode but faster and more effective
-			for (j = 0, leaf = model->brush.data_leafs;j < model->brush.num_leafs;j++, leaf++)
-			{
-				if (CHECKPVSBIT(r_pvsbits, leaf->clusterindex) && !R_CullBox (leaf->mins, leaf->maxs))
-				{
-					c_leafs++;
-					if (leaf->numleafsurfaces)
-						for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-							r_worldsurfacevisible[*mark] = true;
-				}
-			}
+			c_leafs++;
+			leaf = leafstack[--leafstackpos];
+			leafvisited[leaf - model->brush.data_leafs] = 1;
+			// mark any surfaces bounding this leaf
+			if (leaf->numleafsurfaces)
+				for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
+					r_worldsurfacevisible[*mark] = true;
+			// follow portals into other leafs
+			// the checks are:
+			// if viewer is behind portal (portal faces outward into the scene)
+			// and the portal polygon's bounding box is on the screen
+			// and the leaf has not been visited yet
+			// and the leaf is visible in the pvs
+			// (the first two checks won't cause as many cache misses as the leaf checks)
+			for (p = leaf->portals;p;p = p->next)
+				if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !R_CullBox(p->mins, p->maxs) && !leafvisited[p->past - model->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex))
+					leafstack[leafstackpos++] = p->past;
 		}
-		else
-		{
-			// LordHavoc: portal-passage worldnode with PVS;
-			// follows portals leading outward from viewleaf, does not venture
-			// offscreen or into leafs that are not visible, faster than Quake's
-			// RecursiveWorldNode
-			leafstack[0] = viewleaf;
-			leafstackpos = 1;
-			memset(leafvisited, 0, r_refdef.worldmodel->brush.num_leafs);
-			while (leafstackpos)
-			{
-				c_leafs++;
-				leaf = leafstack[--leafstackpos];
-				leafvisited[leaf - r_refdef.worldmodel->brush.data_leafs] = 1;
-				// draw any surfaces bounding this leaf
-				if (leaf->numleafsurfaces)
-					for (i = 0, mark = leaf->firstleafsurface;i < leaf->numleafsurfaces;i++, mark++)
-						r_worldsurfacevisible[*mark] = true;
-				// follow portals into other leafs
-				for (p = leaf->portals;p;p = p->next)
-					if (DotProduct(r_vieworigin, p->plane.normal) < (p->plane.dist + 1) && !leafvisited[p->past - r_refdef.worldmodel->brush.data_leafs] && CHECKPVSBIT(r_pvsbits, p->past->clusterindex) && !R_CullBox(p->mins, p->maxs))
-						leafstack[leafstackpos++] = p->past;
-			}
-		}
-
-		if (r_drawportals.integer)
-			R_DrawPortals();
 	}
+
+	if (r_drawportals.integer)
+		R_DrawPortals();
 }
 
 void R_Q1BSP_DrawSky(entity_render_t *ent)
