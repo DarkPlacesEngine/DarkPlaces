@@ -125,7 +125,7 @@ void R_BuildLightList(void)
 			rd->cullradius = 2048.0f;
 		rd->cullradius2 = rd->cullradius * rd->cullradius;
 		rd->lightsubtract = 1.0f / rd->cullradius2;
-		rd->ent = cd->ent;
+		//rd->ent = cd->ent;
 		r_numdlights++;
 		c_dlights++; // count every dlight in use
 	}
@@ -830,6 +830,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 			{
 				if (!(modeldlightbits[i >> 5] & (1 << (i & 31))))
 					continue;
+				/*
 				if (currentrenderentity == r_dlight[i].ent)
 				{
 					f = (1.0f / LIGHTOFFSET) - nl->lightsubtract;
@@ -838,6 +839,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 				}
 				else
 				{
+				*/
 					// transform the light into the model's coordinate system
 					if (worldcoords)
 						VectorCopy(r_dlight[i].origin, nl->origin);
@@ -854,7 +856,7 @@ void R_LightModel(int numverts, float colorr, float colorg, float colorb, int wo
 					nl->offset = LIGHTOFFSET;
 					nl++;
 					nearlights++;
-				}
+				//}
 			}
 		}
 		else

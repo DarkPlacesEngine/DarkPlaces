@@ -861,7 +861,8 @@ void CL_MoveParticles (void)
 				if (p->bounce < 0)
 				{
 					// assume it's blood (lame, but...)
-					R_Stain(v, 64, 32, 16, 16, p->alpha * p->scalex * (1.0f / 100.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 100.0f));
+					if (cl_stainmaps.integer)
+						R_Stain(v, 64, 32, 16, 16, p->alpha * p->scalex * (1.0f / 100.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 100.0f));
 					p->die = -1;
 					freeparticles[j++] = p;
 					continue;

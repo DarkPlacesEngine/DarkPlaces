@@ -480,7 +480,7 @@ void DrawQ_Pic(float x, float y, char *picname, float width, float height, float
 	if (alpha < (1.0f / 255.0f))
 		return;
 	size = sizeof(*dq) + ((strlen(picname) + 1 + 3) & ~3);
-	if (r_refdef.drawqueuesize + size > MAX_DRAWQUEUE)
+	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
 	red = bound(0, red, 1);
 	green = bound(0, green, 1);
@@ -518,7 +518,7 @@ void DrawQ_String(float x, float y, char *string, int maxlen, float scalex, floa
 	if (x >= vid.conwidth || y >= vid.conheight || x < (-scalex * maxlen) || y < (-scaley))
 		return;
 	size = sizeof(*dq) + ((len + 1 + 3) & ~3);
-	if (r_refdef.drawqueuesize + size > MAX_DRAWQUEUE)
+	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
 	red = bound(0, red, 1);
 	green = bound(0, green, 1);
@@ -546,7 +546,7 @@ void DrawQ_Fill (float x, float y, float w, float h, float red, float green, flo
 	if (alpha < (1.0f / 255.0f))
 		return;
 	size = sizeof(*dq) + 4;
-	if (r_refdef.drawqueuesize + size > MAX_DRAWQUEUE)
+	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
 	red = bound(0, red, 1);
 	green = bound(0, green, 1);
@@ -578,7 +578,7 @@ void DrawQ_Mesh (drawqueuemesh_t *mesh, int flags)
 	size += sizeof(float[3]) * mesh->numvertices;
 	size += sizeof(float[2]) * mesh->numvertices;
 	size += sizeof(float[4]) * mesh->numvertices;
-	if (r_refdef.drawqueuesize + size > MAX_DRAWQUEUE)
+	if (r_refdef.drawqueuesize + size > r_refdef.maxdrawqueuesize)
 		return;
 	dq = (void *)(r_refdef.drawqueue + r_refdef.drawqueuesize);
 	dq->size = size;

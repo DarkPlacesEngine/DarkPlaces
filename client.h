@@ -22,14 +22,67 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef CLIENT_H
 #define CLIENT_H
 
+// LordHavoc: 256 dynamic lights
+#define MAX_DLIGHTS 256
+// LordHavoc: this affects the lighting scale of the whole game
+#define LIGHTOFFSET 1024.0f
+// max lights shining on one entity
+#define MAXENTLIGHTS 128
+
+extern int cl_max_entities;
+extern int cl_max_static_entities;
+extern int cl_max_temp_entities;
+extern int cl_max_effects;
+extern int cl_max_beams;
+
+typedef struct effect_s
+{
+	int active;
+	vec3_t origin;
+	float starttime;
+	float framerate;
+	int modelindex;
+	int startframe;
+	int endframe;
+	// these are for interpolation
+	int frame;
+	double frame1time;
+	double frame2time;
+}
+cl_effect_t;
+
+typedef struct
+{
+	int		entity;
+	struct model_s	*model;
+	float	endtime;
+	vec3_t	start, end;
+}
+beam_t;
+
+typedef struct
+{
+	// location
+	vec3_t	origin;
+	// stop lighting after this time
+	float	die;
+	// color of light
+	vec3_t	color;
+	// brightness (not really radius anymore)
+	float	radius;
+	// drop this each second
+	float	decay;
+	// the entity that spawned this light (can be NULL if it will never be replaced)
+	//entity_render_t *ent;
+}
+dlight_t;
+
 typedef struct frameblend_s
 {
 	int frame;
 	float lerp;
 }
 frameblend_t;
-
-#define MAXENTLIGHTS 128
 
 // LordHavoc: disregard the following warning, entlights stuff is semi-persistent...
 // LordHavoc: nothing in this structure is persistent, it may be overwritten by the client every frame, for persistent data use entity_lerp_t.
@@ -179,16 +232,6 @@ typedef struct
 
 #define	SIGNONS		4			// signon messages to receive before connected
 
-#define	MAX_BEAMS	24
-typedef struct
-{
-	int		entity;
-	struct model_s	*model;
-	float	endtime;
-	vec3_t	start, end;
-}
-beam_t;
-
 #define	MAX_MAPSTRING	2048
 #define	MAX_DEMOS		8
 #define	MAX_DEMONAME	16
@@ -207,33 +250,44 @@ cactive_t;
 //
 typedef struct
 {
-	cactive_t	state;
+	cactive_t state;
 
 // personalization data sent to server
-	char		mapstring[MAX_QPATH];
-	char		spawnparms[MAX_MAPSTRING];	// to restart a level
+	char mapstring[MAX_QPATH];
+	// to restart a level
+	//char spawnparms[MAX_MAPSTRING];
 
 // demo loop control
-	int			demonum;		// -1 = don't play demos
-	char		demos[MAX_DEMOS][MAX_DEMONAME];		// when not playing
+	// -1 = don't play demos
+	int demonum;
+	// list of demos in loop
+	char demos[MAX_DEMOS][MAX_DEMONAME];
 
 // demo recording info must be here, because record is started before
 // entering a map (and clearing client_state_t)
-	qboolean	demorecording;
-	qboolean	demoplayback;
-	qboolean	timedemo;
-	int			forcetrack;			// -1 = use normal cd track
-	QFile		*demofile;
-	int			td_lastframe;		// to meter out one message a frame
-	int			td_startframe;		// host_framecount at start
-	double		td_starttime;		// realtime at second frame of timedemo (LordHavoc: changed to double)
-	qboolean	demopaused;			// LordHavoc: pausedemo
+	qboolean demorecording;
+	qboolean demoplayback;
+	qboolean timedemo;
+	// -1 = use normal cd track
+	int forcetrack;
+	QFile *demofile;
+	// to meter out one message a frame
+	int td_lastframe;
+	// host_framecount at start
+	int td_startframe;
+	// realtime at second frame of timedemo (LordHavoc: changed to double)
+	double td_starttime;
+	// LordHavoc: pausedemo
+	qboolean demopaused;
 
 
 // connection information
-	int			signon;			// 0 to SIGNONS
-	struct qsocket_s	*netcon;
-	sizebuf_t	message;		// writing buffer to send to server
+	// 0 to SIGNONS
+	int signon;
+	// network socket
+	struct qsocket_s *netcon;
+	// writing buffer to send to server
+	sizebuf_t message;
 }
 client_static_t;
 
@@ -245,93 +299,119 @@ extern client_static_t	cls;
 //
 typedef struct
 {
-	int			movemessages;	// since connecting to this server
-								// throw out the first couple, so the player
-								// doesn't accidentally do something the
-								// first frame
-	float		sendnoptime;	// send a clc_nop periodically until connected
-	usercmd_t	cmd;			// last command sent to the server
+	// when connecting to the server throw out the first couple move messages
+	// so the player doesn't accidentally do something the first frame
+	int movemessages;
+
+	// send a clc_nop periodically until connected
+	float sendnoptime;
+
+	// last command sent to the server
+	usercmd_t cmd;
 
 // information for local display
-	int			stats[MAX_CL_STATS];	// health, etc
-	int			items;			// inventory bit flags
-	float		item_gettime[32];	// cl.time of acquiring item, for blinking
-	float		faceanimtime;	// use anim frame if cl.time < this
+	// health, etc
+	int stats[MAX_CL_STATS];
+	// inventory bit flags
+	int items;
+	// cl.time of acquiring item, for blinking
+	float item_gettime[32];
+	// use pain anim frame if cl.time < this
+	float faceanimtime;
 
-	cshift_t	cshifts[NUM_CSHIFTS];	// color shifts for damage, powerups
-	cshift_t	prev_cshifts[NUM_CSHIFTS];	// and content types
+	// color shifts for damage, powerups
+	cshift_t cshifts[NUM_CSHIFTS];
+	// and content types
+	cshift_t prev_cshifts[NUM_CSHIFTS];
 
 // the client maintains its own idea of view angles, which are
 // sent to the server each frame.  The server sets punchangle when
-// the view is temporarliy offset, and an angle reset commands at the start
+// the view is temporarily offset, and an angle reset commands at the start
 // of each level and after teleporting.
-	vec3_t		mviewangles[2];	// during demo playback viewangles is lerped
-								// between these
-	vec3_t		viewangles;
 
-	vec3_t		mvelocity[2];	// update by server, used for lean+bob
-								// (0 is newest)
-	vec3_t		velocity;		// lerped between mvelocity[0] and [1]
+	// during demo playback viewangles is lerped between these
+	vec3_t mviewangles[2];
+	// either client controlled, or lerped from demo mviewangles
+	vec3_t viewangles;
 
-	vec3_t		punchangle;		// temporary offset
-	vec3_t		punchvector;	// LordHavoc: origin view kick
+	// update by server, used for lean+bob (0 is newest)
+	vec3_t mvelocity[2];
+	// lerped between mvelocity[0] and [1]
+	vec3_t velocity;
+
+	// temporary offset
+	vec3_t punchangle;
+	// LordHavoc: origin view kick
+	vec3_t punchvector;
 
 // pitch drifting vars
-	float		idealpitch;
-	float		pitchvel;
-	qboolean	nodrift;
-	float		driftmove;
-	double		laststop;
+	float idealpitch;
+	float pitchvel;
+	qboolean nodrift;
+	float driftmove;
+	double laststop;
 
-	float		viewheight;
-	float		crouch;			// local amount for smoothing stepups
+	float viewheight;
+	// local amount for smoothing stepups
+	//float crouch;
 
-	qboolean	paused;			// send over by server
-	qboolean	onground;
-	qboolean	inwater;
+	// sent by server
+	qboolean paused;
+	qboolean onground;
+	qboolean inwater;
 
-	int			intermission;	// don't change view angle, full screen, etc
-	int			completed_time;	// latched at intermission start
+	// don't change view angle, full screen, etc
+	int intermission;
+	// latched at intermission start
+	int completed_time;
 
-	double		mtime[2];		// the timestamp of last two messages
-	double		time;			// clients view of time, should be between
-								// servertime and oldservertime to generate
-								// a lerp point for other data
-	double		oldtime;		// previous cl.time, time-oldtime is used
-								// to decay light values and smooth step ups
+	// the timestamp of the last two messages
+	double mtime[2];
 
-	double		frametime;
+	// clients view of time, time should be between mtime[0] and mtime[1] to
+	// generate a lerp point for other data, oldtime is the previous frame's
+	// value of time, frametime is the difference between time and oldtime
+	double time, oldtime, frametime;
 
+	// copy of realtime from last recieved message, for net trouble icon
+	float last_received_message;
 
-	float		last_received_message;	// (realtime) for net trouble icon
-
-//
 // information that is static for the entire time connected to a server
-//
-	struct model_s		*model_precache[MAX_MODELS];
-	struct sfx_s		*sound_precache[MAX_SOUNDS];
+	struct model_s *model_precache[MAX_MODELS];
+	struct sfx_s *sound_precache[MAX_SOUNDS];
 
-	char		levelname[40];	// for display on solo scoreboard
-	int			viewentity;		// cl_entitites[cl.viewentity] = player
-	int			maxclients;
-	int			gametype;
+	// for display on solo scoreboard
+	char levelname[40];
+	// cl_entitites[cl.viewentity] = player
+	int viewentity;
+	int maxclients;
+	int gametype;
 
 // refresh related state
-	struct model_s	*worldmodel;	// cl_entitites[0].model
-	int			num_statics;	// held in cl_staticentities array
-	entity_t	viewent;			// the gun model
 
-	int			cdtrack, looptrack;	// cd audio
+	// cl_entitites[0].model
+	struct model_s *worldmodel;
+
+	// the gun model
+	entity_t viewent;
+
+	// cd audio
+	int cdtrack, looptrack;
 
 // frag scoreboard
-	scoreboard_t	*scores;		// [cl.maxclients]
 
-	vec3_t		viewentorigin;
-	float		viewzoom;			// LordHavoc: sniping zoom, QC controlled
-	float		viewzoomold, viewzoomnew; // for interpolation
+	// [cl.maxclients]
+	scoreboard_t *scores;
+
+	// used by view code for setting up eye position
+	vec3_t viewentorigin;
+	// LordHavoc: sniping zoom, QC controlled
+	float viewzoom;
+	// for interpolation
+	float viewzoomold, viewzoomnew;
 
 	// entity database stuff
-	vec3_t		viewentoriginold, viewentoriginnew;
+	vec3_t viewentoriginold, viewentoriginnew;
 	entity_database_t entitydatabase;
 }
 client_state_t;
@@ -379,21 +459,26 @@ extern cvar_t r_draweffects;
 extern cvar_t cl_explosions;
 extern cvar_t cl_stainmaps;
 
+// these are updated by
+extern int cl_num_entities;
+extern int cl_num_static_entities;
+extern int cl_num_temp_entities;
+extern int cl_num_brushmodel_entities;
 
-// LordHavoc: raised these from 64 and 128 to 512 and 256
-#define	MAX_TEMP_ENTITIES	512			// lightning bolts, effects, etc
-#define	MAX_STATIC_ENTITIES	256			// torches, etc
+extern entity_t *cl_entities;
+extern entity_t *cl_static_entities;
+extern entity_t *cl_temp_entities;
+extern entity_render_t **cl_brushmodel_entities;
+extern cl_effect_t *cl_effects;
+extern beam_t *cl_beams;
+extern dlight_t *cl_dlights;
+extern lightstyle_t *cl_lightstyle;
+
 
 extern client_state_t cl;
 
-// FIXME, allocate dynamically
-extern	entity_t		cl_entities[MAX_EDICTS];
-extern	entity_t		cl_static_entities[MAX_STATIC_ENTITIES];
-extern	lightstyle_t	cl_lightstyle[MAX_LIGHTSTYLES];
-extern	entity_t		cl_temp_entities[MAX_TEMP_ENTITIES];
-extern	beam_t			cl_beams[MAX_BEAMS];
-
-#include "cl_light.h"
+extern void CL_AllocDlight (entity_render_t *ent, vec3_t org, float radius, float red, float green, float blue, float decay, float lifetime);
+extern void CL_DecayLights (void);
 
 //=============================================================================
 
@@ -428,8 +513,9 @@ void CL_SendMove (usercmd_t *cmd);
 
 void CL_LerpUpdate(entity_t *e);
 void CL_ParseTEnt (void);
-void CL_UpdateTEnts (void);
+void CL_RelinkBeams (void);
 
+void CL_ClearTempEntities (void);
 entity_t *CL_NewTempEntity (void);
 
 void CL_Effect(vec3_t org, int modelindex, int startframe, int framecount, float framerate);
@@ -518,8 +604,6 @@ void R_NewExplosion(vec3_t org);
 
 #include "cl_screen.h"
 
-#define MAX_VISEDICTS (MAX_EDICTS + MAX_STATIC_ENTITIES + MAX_TEMP_ENTITIES)
-
 typedef struct
 {
 	// area to render in
@@ -536,11 +620,13 @@ typedef struct
 	// weapon model
 	entity_render_t viewent;
 
-	int numentities;
 	entity_render_t **entities;
+	int numentities;
+	int maxentities;
 
-	qbyte drawqueue[MAX_DRAWQUEUE];
+	qbyte *drawqueue;
 	int drawqueuesize;
+	int maxdrawqueuesize;
 }
 refdef_t;
 

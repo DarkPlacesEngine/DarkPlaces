@@ -3,8 +3,6 @@
 #define CL_SCREEN_H
 
 // drawqueue stuff for use by client to feed 2D art to renderer
-#define MAX_DRAWQUEUE 262144
-
 #define DRAWQUEUE_PIC 0
 #define DRAWQUEUE_STRING 1
 #define DRAWQUEUE_MESH 2
