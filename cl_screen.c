@@ -684,10 +684,7 @@ void SCR_ScreenShot_f (void)
 		return;
  	}
 
-	if (jpeg)
-		sprintf(filename, "%s%06d.jpg", base, shotnumber);
-	else
-		sprintf(filename, "%s%06d.tga", base, shotnumber);
+	sprintf(filename, "%s%06d.%s", base, shotnumber, jpeg ? "jpg" : "tga");
 
 	buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
 	buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
@@ -715,16 +712,7 @@ void SCR_CaptureAVIDemo(void)
 	char filename[32];
 	qboolean jpeg = (scr_screenshot_jpeg.integer != 0);
 
-	if (cl_avidemo.integer)
-	{
-		if (avi_buffer1 == NULL)
-		{
-			avi_buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
-			avi_buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
-			avi_buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
-		}
-	}
-	else
+	if (!cl_avidemo.integer)
 	{
 		if (avi_buffer1 != NULL)
 		{
@@ -739,10 +727,14 @@ void SCR_CaptureAVIDemo(void)
 		return;
 	}
 
-	if (jpeg)
-		sprintf(filename, "video/dp%06d.jpg", cl_avidemo_frame);
-	else
-		sprintf(filename, "video/dp%06d.tga", cl_avidemo_frame);
+	if (avi_buffer1 == NULL)
+	{
+		avi_buffer1 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+		avi_buffer2 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3);
+		avi_buffer3 = Mem_Alloc(tempmempool, vid.realwidth * vid.realheight * 3 + 18);
+	}
+
+	sprintf(filename, "video/dp%06d.%s", cl_avidemo_frame, jpeg ? "jpg" : "tga");
 
 	if (SCR_ScreenShot(filename, avi_buffer1, avi_buffer2, avi_buffer3, vid.realx, vid.realy, vid.realwidth, vid.realheight, false, false, false, jpeg))
 		cl_avidemo_frame++;
