@@ -200,6 +200,9 @@ typedef struct model_s
 	mleaf_t			*pvsviewleaf;
 	int				pvsviewleafnovis;
 	int				pvsframecount;
+	mleaf_t			*pvsleafchain;
+	int				*pvssurflist;
+	int				pvssurflistlength;
 
 	// skin animation info
 	animscene_t		*skinscenes; // [numskins]

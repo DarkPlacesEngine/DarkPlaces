@@ -1582,101 +1582,47 @@ void R_PrepareBrushModel(entity_render_t *ent)
 
 void R_SurfaceWorldNode (entity_render_t *ent)
 {
-	int i, numsurfaces, *surfacevisframes, *surfacepvsframes;
-	msurface_t *surfaces, *surf;
+	int i, *surfacevisframes, *surfacepvsframes, surfnum;
+	msurface_t *surf;
+	mleaf_t *leaf;
 	model_t *model;
 	vec3_t modelorg;
 
 	model = ent->model;
-	numsurfaces = model->nummodelsurfaces;
-	surfaces = model->surfaces + model->firstmodelsurface;
 	surfacevisframes = model->surfacevisframes + model->firstmodelsurface;
 	surfacepvsframes = model->surfacepvsframes + model->firstmodelsurface;
 	Matrix4x4_Transform(&ent->inversematrix, r_origin, modelorg);
 
-	for (i = 0, surf = surfaces;i < numsurfaces;i++, surf++)
+	for (leaf = model->pvsleafchain;leaf;leaf = leaf->pvschain)
 	{
-		if (surfacepvsframes[i] == model->pvsframecount)
+		if (!R_CullBox (leaf->mins, leaf->maxs))
 		{
-#if WORLDNODECULLBACKFACES
-			if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
-			{
-				if ((surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
-					surfacevisframes[i] = r_framecount;
-			}
-			else
-			{
-				if (!(surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
-					surfacevisframes[i] = r_framecount;
-			}
-#else
-			if (!R_CullBox (surf->poly_mins, surf->poly_maxs))
-				surfacevisframes[i] = r_framecount;
-#endif
+			c_leafs++;
+			leaf->visframe = r_framecount;
 		}
 	}
-}
 
-/*
-static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
-{
-	int portalstack, i;
-	mportal_t *p, *pstack[8192];
-	msurface_t *surf, **mark, **endmark;
-	mleaf_t *leaf;
-	// LordHavoc: portal-passage worldnode with PVS;
-	// follows portals leading outward from viewleaf, does not venture
-	// offscreen or into leafs that are not visible, faster than Quake's
-	// RecursiveWorldNode
-	leaf = viewleaf;
-	leaf->worldnodeframe = r_framecount;
-	portalstack = 0;
-loc0:
-	c_leafs++;
-	if (leaf->nummarksurfaces)
+	for (i = 0;i < model->pvssurflistlength;i++)
 	{
-		for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
+		surfnum = model->pvssurflist[i];
+		surf = model->surfaces + surfnum;
+#if WORLDNODECULLBACKFACES
+		if (PlaneDist(modelorg, surf->plane) < surf->plane->dist)
 		{
-			surf = *mark++;
-			// make sure surfaces are only processed once
-			if (surf->worldnodeframe != r_framecount)
-			{
-				surf->worldnodeframe = r_framecount;
-				if (PlaneDist(r_origin, surf->plane) < surf->plane->dist)
-				{
-					if (surf->flags & SURF_PLANEBACK)
-						surf->visframe = r_framecount;
-				}
-				else
-				{
-					if (!(surf->flags & SURF_PLANEBACK))
-						surf->visframe = r_framecount;
-				}
-			}
+			if ((surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
+				surfacevisframes[surfnum] = r_framecount;
 		}
-	}
-	// follow portals into other leafs
-	for (p = leaf->portals;p;p = p->next)
-	{
-		leaf = p->past;
-		if (leaf->worldnodeframe != r_framecount)
+		else
 		{
-			leaf->worldnodeframe = r_framecount;
-			// FIXME: R_CullBox is absolute, should be done relative
-			if (leaf->pvsframe == ent->model->pvsframecount && !R_CullBox(leaf->mins, leaf->maxs))
-			{
-				p->visframe = r_framecount;
-				pstack[portalstack++] = p;
-				goto loc0;
-loc1:
-				p = pstack[--portalstack];
-			}
+			if (!(surf->flags & SURF_PLANEBACK) && !R_CullBox (surf->poly_mins, surf->poly_maxs))
+				surfacevisframes[surfnum] = r_framecount;
 		}
+#else
+		if (!R_CullBox (surf->poly_mins, surf->poly_maxs))
+			surfacevisframes[surfnum] = r_framecount;
+#endif
 	}
-	if (portalstack)
-		goto loc1;
 }
-*/
 
 static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 {
@@ -1703,6 +1649,7 @@ static void R_PortalWorldNode(entity_render_t *ent, mleaf_t *viewleaf)
 	{
 		c_leafs++;
 		leaf = leafstack[--leafstackpos];
+		leaf->visframe = r_framecount;
 		// draw any surfaces bounding this leaf
 		if (leaf->nummarksurfaces)
 		{
@@ -1764,6 +1711,8 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 		model->pvsframecount++;
 		model->pvsviewleaf = viewleaf;
 		model->pvsviewleafnovis = r_novis.integer;
+		model->pvsleafchain = NULL;
+		model->pvssurflistlength = 0;
 		if (viewleaf)
 		{
 			surfacepvsframes = model->surfacepvsframes;
@@ -1781,24 +1730,32 @@ void R_PVSUpdate (entity_render_t *ent, mleaf_t *viewleaf)
 						if (bits & (1 << i))
 						{
 							leaf = &model->leafs[j + i + 1];
+							leaf->pvschain = model->pvsleafchain;
+							model->pvsleafchain = leaf;
 							leaf->pvsframe = model->pvsframecount;
 							// mark surfaces bounding this leaf as visible
-							for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--)
-								surfacepvsframes[*mark++] = model->pvsframecount;
+							for (c = leaf->nummarksurfaces, mark = leaf->firstmarksurface;c;c--, mark++)
+							{
+								if (surfacepvsframes[*mark] != model->pvsframecount)
+								{
+									surfacepvsframes[*mark] = model->pvsframecount;
+									model->pvssurflist[model->pvssurflistlength++] = *mark;
+								}
+							}
 						}
 					}
 				}
 			}
+			/*
+			for (i = 0, j = model->firstmodelsurface;i < model->nummodelsurfaces;i++, j++)
+				if (model->surfacepvsframes[j] == model->pvsframecount)
+					model->pvssurflist[model->pvssurflistlength++] = j;
+			*/
 		}
 	}
 }
 
-/*
-=============
-R_DrawWorld
-=============
-*/
-void R_DrawWorld (entity_render_t *ent)
+void R_WorldVisibility (entity_render_t *ent)
 {
 	vec3_t modelorg;
 	mleaf_t *viewleaf;
@@ -1814,6 +1771,10 @@ void R_DrawWorld (entity_render_t *ent)
 		R_SurfaceWorldNode (ent);
 	else
 		R_PortalWorldNode (ent, viewleaf);
+}
+
+void R_DrawWorld (entity_render_t *ent)
+{
 	R_PrepareSurfaces(ent);
 	R_DrawSurfaces(ent, SHADERSTAGE_SKY);
 	R_DrawSurfaces(ent, SHADERSTAGE_NORMAL);
@@ -1836,7 +1797,7 @@ void R_Model_Brush_Draw (entity_render_t *ent)
 
 void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelightorigin, float lightradius)
 {
-#if 1
+#if 0
 	float projectdistance, temp[3];
 	shadowmesh_t *mesh;
 	VectorSubtract(relativelightorigin, ent->model->shadowmesh_center, temp);
@@ -1860,13 +1821,13 @@ void R_Model_Brush_DrawShadowVolume (entity_render_t *ent, vec3_t relativelighto
 	lightradius2 = lightradius * lightradius;
 	for (i = 0, surf = ent->model->surfaces + ent->model->firstmodelsurface;i < ent->model->nummodelsurfaces;i++, surf++)
 	{
-		if (surf->rendertype == SURFRENDER_OPAQUE && surf->flags & SURF_SHADOWCAST)
+		if (surf->flags & SURF_SHADOWCAST)
 		{
 			f = PlaneDiff(relativelightorigin, surf->plane);
 			if (surf->flags & SURF_PLANEBACK)
 				f = -f;
-			// draw shadows only for backfaces
-			projectdistance = lightradius + f;
+			// draw shadows only for frontfaces
+			projectdistance = lightradius - f;
 			if (projectdistance >= 0.1 && projectdistance < lightradius)
 			{
 				VectorSubtract(relativelightorigin, surf->poly_center, temp);
