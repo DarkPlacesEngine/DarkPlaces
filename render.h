@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern float ixtable[4096];
 
 // far clip distance for scene
-extern float r_farclip, r_newfarclip;
+extern float r_farclip;
 
 // fog stuff
 extern void FOG_clear(void);
@@ -131,6 +131,17 @@ extern vec3_t fogcolor;
 extern vec_t fogdensity;
 #define calcfog(v) (exp(-(fogdensity*fogdensity*(((v)[0] - r_origin[0])*((v)[0] - r_origin[0])+((v)[1] - r_origin[1])*((v)[1] - r_origin[1])+((v)[2] - r_origin[2])*((v)[2] - r_origin[2])))))
 #define calcfogbyte(v) ((qbyte) (bound(0, ((int) ((float) (calcfog((v)) * 255.0f))), 255)))
+
+// start a farclip measuring session
+void R_FarClip_Start(vec3_t origin, vec3_t direction, vec_t startfarclip);
+// enlarge farclip to accomodate box
+void R_FarClip_Box(vec3_t mins, vec3_t maxs);
+// return farclip value
+float R_FarClip_Finish(void);
+
+// updates farclip distance so it is large enough for the specified box
+// (*important*)
+void R_Mesh_EnlargeFarClipBBox(vec3_t mins, vec3_t maxs);
 
 #include "r_modules.h"
 

@@ -168,19 +168,23 @@ void LoadSky_f (void)
 	}
 }
 
-#define R_SkyBoxPolyVec(i,s,t,x,y,z) \
-	vert[i][0] = (x) * 1024.0f + r_origin[0];\
-	vert[i][1] = (y) * 1024.0f + r_origin[1];\
-	vert[i][2] = (z) * 1024.0f + r_origin[2];\
-	st[i][0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
-	st[i][1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
-
 int skyboxindex[6] = {0, 1, 2, 0, 2, 3};
 
 static void R_SkyBox(void)
 {
+	float r;
 	float vert[4][4], st[4][2];
 	rmeshinfo_t m;
+
+#define R_SkyBoxPolyVec(i,s,t,x,y,z) \
+	vert[i][0] = (x) * r + r_origin[0];\
+	vert[i][1] = (y) * r + r_origin[1];\
+	vert[i][2] = (z) * r + r_origin[2];\
+	st[i][0] = (s) * (254.0f/256.0f) + (1.0f/256.0f);\
+	st[i][1] = (t) * (254.0f/256.0f) + (1.0f/256.0f);
+
+	r = 16.0f;
+
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;
 	m.blendfunc1 = GL_ONE;
@@ -315,7 +319,7 @@ static void R_SkySphere(void)
 	if (!skysphereinitialized)
 	{
 		skysphereinitialized = true;
-		skyspherecalc(skysphere, 1024, 1024, 1024 / 3);
+		skyspherecalc(skysphere, 16, 16, 16 / 3);
 	}
 	memset(&m, 0, sizeof(m));
 	m.transparent = false;

@@ -54,7 +54,7 @@ rmeshbufferinfo_t;
 void gl_backend_init(void);
 
 // starts mesh rendering for the frame
-void R_Mesh_Start(void);
+void R_Mesh_Start(float farclip);
 
 // ends mesh rendering for the frame
 // (only valid after R_Mesh_Start)
