@@ -652,10 +652,10 @@ void RSurf_DrawWall(msurface_t *s, texture_t *t, int transform)
 	 || r_ambient.value != s->cached_ambient
 	 || lighthalf != s->cached_lighthalf
 	 || (r_dynamic.value
-	 && (s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
+	 && ((s->styles[0] != 255 && d_lightstylevalue[s->styles[0]] != s->cached_light[0])
 	 || (s->styles[1] != 255 && d_lightstylevalue[s->styles[1]] != s->cached_light[1])
 	 || (s->styles[2] != 255 && d_lightstylevalue[s->styles[2]] != s->cached_light[2])
-	 || (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3])))
+	 || (s->styles[3] != 255 && d_lightstylevalue[s->styles[3]] != s->cached_light[3]))))
 		R_UpdateLightmap(s, s->lightmaptexturenum);
 	if (r_dlightmap.value || s->dlightframe != r_dlightframecount)
 	{
