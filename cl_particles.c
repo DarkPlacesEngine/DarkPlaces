@@ -1125,6 +1125,7 @@ void CL_RocketTrail (vec3_t start, vec3_t end, int type, int color, entity_t *en
 	if (speed)
 		speed = 1.0f / speed;
 	VectorSubtract(ent->state_current.origin, ent->state_previous.origin, vel);
+	color = particlepalette[color];
 #endif
 	VectorScale(vel, speed, vel);
 
