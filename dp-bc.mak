@@ -129,6 +129,8 @@ EXT2=.obj
 #EXT2=.asm
 
 DEPEND = \
+   $(OBJS)\r_sprites.obj\
+   $(OBJS)\palette.obj\
    $(OBJS)\r_crosshairs.obj\
    $(OBJS)\r_modules.obj\
    $(OBJS)\gl_textures.obj\
@@ -205,6 +207,8 @@ $(EXE)\darkplaces.exe : $(DEPEND)
   $(TLINK32) @&&|
  /v $(LINKOPTS) +
 $(CROOT)\LIB\c0w32.obj+
+$(OBJS)\r_sprites.obj+
+$(OBJS)\palette.obj+
 $(OBJS)\r_crosshairs.obj+
 $(OBJS)\r_modules.obj+
 $(OBJS)\gl_textures.obj+
@@ -281,11 +285,22 @@ $(DPROOT)\opengl32.lib+
 ($CROOT)\LIB\cw32.lib
 
 |
+$(OBJS)\r_sprites.obj :  $(DPROOT)\r_sprites.c
+  $(BCC32) -P- -c @&&|
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_sprites.c
+
+|
 $(OBJS)\r_crosshairs.obj :  $(DPROOT)\r_crosshairs.c
   $(BCC32) -P- -c @&&|
   $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_crosshairs.c
-|
 
+|
+$(OBJS)\palette.obj :  $(DPROOT)\palette.c
+  $(BCC32) -P- -c @&&|
+  $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\palette.c
+
+
+|
 $(OBJS)\r_modules.obj :  $(DPROOT)\r_modules.c
   $(BCC32) -P- -c @&&|
   $(COMPOPTS) -I$(INCLUDES) -D$(DEFINES) -o$@ $(DPROOT)\r_modules.c
