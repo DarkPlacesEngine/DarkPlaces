@@ -272,7 +272,7 @@ cachepic_t *Draw_NewPic(char *picname, int width, int height, int alpha, qbyte *
 
 	if (pic)
 	{
-		if (pic->tex && R_TextureWidth(pic->tex) == width && R_TextureHeight(pic->tex) == height && (R_TextureHasAlpha(pic->tex) != 0) == (alpha != 0))
+		if (pic->tex && pic->width == width && pic->height == height)
 		{
 			R_UpdateTexture(pic->tex, pixels);
 			return pic;
