@@ -74,8 +74,8 @@ typedef struct
 	float	radius;
 	// drop this each second
 	float	decay;
-	// the entity that spawned this light (can be NULL if it will never be replaced)
-	//entity_render_t *ent;
+	// the entity that owns this light (can be NULL)
+	struct entity_render_s *ent;
 }
 dlight_t;
 
