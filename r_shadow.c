@@ -3218,16 +3218,23 @@ void R_Shadow_EditLights_EditAll_f(void)
 
 void R_Shadow_EditLights_DrawSelectedLightProperties(void)
 {
+	int lightnumber, lightcount;
+	dlight_t *light;
 	float x, y;
 	char temp[256];
 	if (!r_editlights.integer)
 		return;
 	x = 0;
 	y = con_vislines;
-	sprintf(temp, "Cursor  %f %f %f", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	lightnumber = -1;
+	lightcount = 0;
+	for (lightcount = 0, light = r_shadow_worldlightchain;light;lightcount++, light = light->next)
+		if (light == r_shadow_selectedlight)
+			lightnumber = lightcount;
+	sprintf(temp, "Cursor  %f %f %f  Total Lights %i", r_editlights_cursorlocation[0], r_editlights_cursorlocation[1], r_editlights_cursorlocation[2], lightcount);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	if (r_shadow_selectedlight == NULL)
 		return;
-	sprintf(temp, "Light properties");DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
+	sprintf(temp, "Light #%i properties", lightnumber);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Origin  %f %f %f", r_shadow_selectedlight->origin[0], r_shadow_selectedlight->origin[1], r_shadow_selectedlight->origin[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Angles  %f %f %f", r_shadow_selectedlight->angles[0], r_shadow_selectedlight->angles[1], r_shadow_selectedlight->angles[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
 	sprintf(temp, "Color   %f %f %f", r_shadow_selectedlight->color[0], r_shadow_selectedlight->color[1], r_shadow_selectedlight->color[2]);DrawQ_String(x, y, temp, 0, 8, 8, 1, 1, 1, 1, 0);y += 8;
