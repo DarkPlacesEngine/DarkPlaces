@@ -544,11 +544,12 @@ void R_DrawQueue(void)
 		varray_texcoord[0][2] = 0;varray_texcoord[0][3] = 0;
 		varray_texcoord[0][4] = 0;varray_texcoord[0][5] = 0;
 		varray_vertex[0] = -5000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
-		varray_vertex[4] = 10000;varray_vertex[1] = -5000;varray_vertex[2] = 10;
-		varray_vertex[8] = -5000;varray_vertex[1] = 10000;varray_vertex[2] = 10;
+		varray_vertex[4] = 10000;varray_vertex[5] = -5000;varray_vertex[6] = 10;
+		varray_vertex[8] = -5000;varray_vertex[9] = 10000;varray_vertex[10] = 10;
 		// alpha is 1 for all these
 		varray_color[3] = varray_color[7] = varray_color[11] = 1;
 		// all the blends ignore depth
+		memset(&m, 0, sizeof(m));
 		m.depthdisable = true;
 		t = v_contrast.value * (float) (1 << v_overbrightbits.integer);
 		if (t >= 1.01f)
