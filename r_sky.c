@@ -280,7 +280,6 @@ static void skyspherecalc(void)
 			*e++ = (j + 1) * skygridx1 + i + 1;
 			*e++ = (j + 1) * skygridx1 + i;
 		}
-		i++;
 	}
 }
 
