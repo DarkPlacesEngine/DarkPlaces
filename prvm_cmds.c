@@ -112,8 +112,8 @@ perhaps only : Menu : WriteMsg
 		WriteString(string data, float dest, float desto)
 		WriteEntity(entity data, float dest, float desto)
 		
-Client & Menu : draw functions 
-===============================
+Client & Menu : draw functions & video functions
+===================================================
 
 float	iscachedpic(string pic)
 string	precache_pic(string pic) 
@@ -125,7 +125,12 @@ float	drawfill(vector position, vector size, vector rgb, float alpha, float flag
 		drawsetcliparea(float x, float y, float width, float height)
 		drawresetcliparea()
 vector	getimagesize(string pic)
-		
+
+float	cin_open(string file, string name)
+void	cin_close(string name)
+void	cin_setstate(string name, float type)
+float	cin_getstate(string name)		
+void	cin_restart(string name)
 
 ==============================================================================
 menu cmd list:
@@ -153,6 +158,8 @@ string	gethostcachestring(float type, float hostnr)
 #include "progsvm.h"
 #include "clprogdefs.h"
 #include "mprogdefs.h"
+
+#include "cl_video.h"
 
 //============================================================================
 // nice helper macros
@@ -2818,6 +2825,113 @@ void VM_getimagesize(void)
 	PRVM_G_VECTOR(OFS_RETURN)[2] = 0;
 }
 
+// CL_Video interface functions
+
+/*
+========================
+VM_cin_open
+
+float cin_open(string file, string name)
+========================
+*/
+void VM_cin_open( void )
+{
+	char *file;
+	char *name;
+
+	file = PRVM_G_STRING( OFS_PARM0 );
+	name = PRVM_G_STRING( OFS_PARM1 );
+
+	VM_CheckEmptyString( file );
+    VM_CheckEmptyString( name );
+
+	if( CL_OpenVideo( file, name, MENUOWNER ) )
+		PRVM_G_FLOAT( OFS_RETURN ) = 1;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+}
+
+/*
+========================
+VM_cin_close
+
+void cin_close(string name)
+========================
+*/
+void VM_cin_close( void )
+{
+	char *name;
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+
+	CL_CloseVideo( CL_GetVideo( name ) ); 
+}
+
+/*
+========================
+VM_cin_setstate
+void cin_setstate(string name, float type)
+========================
+*/
+void VM_cin_setstate( void )
+{
+	char *name;
+	clvideostate_t 	state;
+	clvideo_t		*video;
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+
+	state = PRVM_G_FLOAT( OFS_PARM1 );
+
+	video = CL_GetVideo( name );
+	if( video && state > CLVIDEO_UNUSED && state < CLVIDEO_STATECOUNT )
+		CL_SetVideoState( video, state );		
+}
+
+/*
+========================
+VM_cin_getstate
+
+float cin_getstate(string name)
+========================
+*/
+void VM_cin_getstate( void )
+{
+	char *name;
+	clvideo_t		*video;
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+
+	video = CL_GetVideo( name );
+	if( video )
+		PRVM_G_FLOAT( OFS_RETURN ) = (int)video->state;
+	else
+		PRVM_G_FLOAT( OFS_RETURN ) = 0;
+}
+
+/*
+========================
+VM_cin_restart
+
+void cin_restart(string name)
+========================
+*/
+void VM_cin_restart( void )
+{
+	char *name;
+	clvideo_t		*video;
+
+	name = PRVM_G_STRING( OFS_PARM0 );
+	VM_CheckEmptyString( name );
+
+	video = CL_GetVideo( name );
+	if( video )
+		CL_RestartVideo( video );
+}
+
 void VM_Cmd_Init(void)
 {
 	// only init the stuff for the current prog
@@ -2838,6 +2952,7 @@ void VM_Cmd_Reset(void)
 	}
 
 	Mem_FreePool(&VM_STRINGS_MEMPOOL);
+	CL_PurgeOwner( MENUOWNER );
 	VM_Search_Reset();
 	VM_Files_CloseAll();
 }
@@ -3383,7 +3498,12 @@ prvm_builtin_t vm_m_builtins[] = {
 	VM_drawsetcliparea,
 	VM_drawresetcliparea,
 	VM_getimagesize,// 460
-	e10,			// 470
+	VM_cin_open,
+	VM_cin_close,
+	VM_cin_setstate,	
+	VM_cin_getstate,
+	VM_cin_restart, // 465
+	0,0,0,0,0,	// 470
 	e10,			// 480
 	e10,			// 490
 	e10,			// 500

@@ -268,12 +268,6 @@ cachepic_t	*Draw_CachePic (char *path)
 	cachepic_t *pic;
 	qpic_t *p;
 
-	crc = CRC_Block(path, strlen(path));
-	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
-	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
-		if (!strcmp (path, pic->name))
-			return pic;
-
 	if (!strncmp(CLVIDEOPREFIX, path, sizeof(CLVIDEOPREFIX) - 1)) {
 		clvideo_t *video;
 
@@ -281,6 +275,12 @@ cachepic_t	*Draw_CachePic (char *path)
 		if( video )
 			return &video->cpif;
 	}
+
+	crc = CRC_Block(path, strlen(path));
+	hashkey = ((crc >> 8) ^ crc) % CACHEPICHASHSIZE;
+	for (pic = cachepichash[hashkey];pic;pic = pic->chain)
+		if (!strcmp (path, pic->name))
+			return pic;
 
 	if (numcachepics == MAX_CACHED_PICS)
 		Sys_Error ("numcachepics == MAX_CACHED_PICS");
