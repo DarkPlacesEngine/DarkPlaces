@@ -56,7 +56,7 @@ void CL_CGVM_ParseNetwork(byte *netbuffer, int length)
 	{
 		num = CGVM_MSG_ReadByte();
 		if (cgvm_networkcode[num])
-			cgvm_networkcode[num](num);
+			cgvm_networkcode[num]((byte)num);
 		else
 			Host_Error("CL_CGVM_ParseNetwork: unregistered network code %i", num);
 	}
@@ -183,7 +183,7 @@ void *CGVM_Malloc(const int size)
 
 void CGVM_Free(void *mem)
 {
-	return Mem_Free(mem);
+	Mem_Free(mem);
 }
 
 float CGVM_RandomRange(const float r1, const float r2)

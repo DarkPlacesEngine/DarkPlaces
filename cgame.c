@@ -77,7 +77,7 @@ static localentity_t *entspawn(void)
 static void entremove(localentity_t *e)
 {
 	memset(e, 0, sizeof(*e));
-	e->freetime = gametime + 1;
+	e->freetime = (float)gametime + 1.0f;
 }
 
 static void phys_setupphysentities(void)
@@ -122,7 +122,7 @@ static void phys_update(localentity_t *e)
 	vec3_t impactpos, impactnormal, end;
 	int impactentnum;
 	float t, f, frac, bounce;
-	t = frametime;
+	t = (float)frametime;
 	if (t == 0)
 		return;
 	VectorMA(e->draw.angles, t, e->avelocity, e->draw.angles);
@@ -179,7 +179,7 @@ static void explosiondebris_framethink(localentity_t *self)
 {
 	if (gametime > self->dietime)
 	{
-		self->draw.scale -= frametime * 3;
+		self->draw.scale -= (float)frametime * 3.0f;
 		if (self->draw.scale < 0.05f)
 		{
 			entremove(self);
@@ -213,7 +213,7 @@ static void net_explosion(unsigned char num)
 		e->draw.angles[2] = CGVM_RandomRange(0, 360);
 		VectorRandom(e->velocity);
 		VectorScale(e->velocity, 300, e->velocity);
-		e->velocity[2] -= cg_gravity * 0.1;
+		e->velocity[2] -= (float)cg_gravity * 0.1f;
 		e->avelocity[0] = CGVM_RandomRange(0, 1440);
 		e->avelocity[1] = CGVM_RandomRange(0, 1440);
 		e->avelocity[2] = CGVM_RandomRange(0, 1440);
@@ -234,11 +234,11 @@ static void net_explosion(unsigned char num)
 		VectorSet(e->worldmaxs, 0, 0, -8);
 		VectorSet(e->entitymins, -8, -8, -8);
 		VectorSet(e->entitymaxs, 8, 8, 8);
-		e->bouncescale = 1.4;
+		e->bouncescale = 1.4f;
 		e->gravityscale = 1;
 		e->airfrictionscale = 1;
 		e->framethink = explosiondebris_framethink;
-		e->dietime = time + 5;
+		e->dietime = (float)time + 5.0f;
 	}
 }
 
