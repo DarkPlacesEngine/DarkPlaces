@@ -33,7 +33,7 @@ aliasskin_t *R_FetchAliasSkin(const entity_render_t *ent, const aliasmesh_t *mes
 
 void R_DrawAliasModelCallback (const void *calldata1, int calldata2)
 {
-	int c, fullbright, layernum, firstpass, generatenormals = true;
+	int c, fullbright, layernum, firstpass;
 	float tint[3], fog, ifog, colorscale, ambientcolor4f[4], diffusecolor[3], diffusenormal[3];
 	float *vertex3f, *normal3f;
 	vec3_t diff;
