@@ -28,7 +28,7 @@ void PolygonF_QuadForPlane(float *outpoints, float planenormalx, float planenorm
 	quadup[1] += d * planenormaly;
 	quadup[2] += d * planenormalz;
 	// VectorNormalize(quadup);
-	d = 1.0 / sqrt(quadup[0] * quadup[0] + quadup[1] * quadup[1] + quadup[2] * quadup[2]);
+	d = (float)(1.0 / sqrt(quadup[0] * quadup[0] + quadup[1] * quadup[1] + quadup[2] * quadup[2]));
 	quadup[0] *= d;
 	quadup[1] *= d;
 	quadup[2] *= d;
