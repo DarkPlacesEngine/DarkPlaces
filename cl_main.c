@@ -30,7 +30,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t cl_shownet = {0, "cl_shownet","0"};
 cvar_t cl_nolerp = {0, "cl_nolerp", "0"};
 
-cvar_t cl_itembobheight = {0, "cl_itembobheight", "8"};
+cvar_t cl_itembobheight = {0, "cl_itembobheight", "0"}; // try 8
 cvar_t cl_itembobspeed = {0, "cl_itembobspeed", "0.5"};
 
 cvar_t lookspring = {CVAR_SAVE, "lookspring","0"};
