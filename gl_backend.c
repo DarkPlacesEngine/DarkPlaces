@@ -366,7 +366,7 @@ void GL_SetupTextureState(void)
 		unit->combinealpha = GL_MODULATE;
 		unit->arrayenabled = false;
 		qglDisableClientState(GL_TEXTURE_COORD_ARRAY);CHECKGLERROR
-		if (gl_texture3d)
+		if (gl_texture3d || gl_texturecubemap)
 		{
 			qglTexCoordPointer(3, GL_FLOAT, sizeof(float[4]), varray_texcoord[i]);CHECKGLERROR
 		}
