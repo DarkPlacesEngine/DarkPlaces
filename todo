@@ -3,9 +3,11 @@
 -n darkplaces: add bullet hole decals to the particlefont (Vermeulen)
 -n darkplaces: add cl_particles_quality cvar (1-10) which would scale count of particles and inversely scale alpha of particles (TheBeast)
 -n darkplaces: add error messages to LHNET_OpenSocket_Connectionless or its callers (Zombie13)
+-n darkplaces: add gl_texture_anisotropy to menu (Static_Fiend)
 -n darkplaces: add slowmo to options menu (Cristian Beltramo)
 -n darkplaces: add stats to slist menu displaying how many masters/servers have been queried and replied (tell yummyluv)
 -n darkplaces: check out qe1 textures and make sure they load in all the e1 maps, report of crashing in most but not all maps (Linny Amore)
+-n darkplaces: default to sv_cullentities_pvs mode again...  trace is too slow in q3bsp and unreliable by nature anyway
 -n darkplaces: display "No servers found" instead of a cursor when there are none (yummyluv)
 -n darkplaces: don't accept connect packets after first one (tell Willis)
 -n darkplaces: examine the surface rendering code to make sure it has no bugs regarding texture selection for any of the passes (sublim3)
@@ -33,8 +35,9 @@
 0 darkplaces: add _reflect textures which filter use of skybox as a cubemap reflection (FrikaC)
 0 darkplaces: add a .collision_cancollide QC function call to decide if an entity should collide with another, or pass through it (Uffe)
 0 darkplaces: add a clipmask thingy to allow QC to mask off collisions as it wishes (Uffe)
+0 darkplaces: add a config saving command (Speeds)
 0 darkplaces: add a scr_screenshot_jpeg_quality cvar (Electro)
-0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan)
+0 darkplaces: add ability to load gfx/particlefont.tga (Vermeulen, frightfan, Error)
 0 darkplaces: add automatic binding to whatever address the machine's hostname resolves to (in addition to 0.0.0.0); see original quake code for examples (yummyluv)
 0 darkplaces: add chase_pitch cvar to control pitch angle of chase camera, and chase_angle cvar to control yaw angle of chase camera, and add back chase_right cvar (Electro)
 0 darkplaces: add cl_particles_particleffect_bloodhack cvar to enable converting id1 blood effects to TE_BLOOD style (Alex Boveri)
@@ -312,6 +315,7 @@ d darkplaces: dedicated server should error out if it has no sockets (yummyluv)
 d darkplaces: dedicated server should not bother allocating a loopback socket (yummyluv)
 d darkplaces: default deathmatch 1 in multiplayer games like Nexuiz incase someone starts a game from console (Vermeulen)
 d darkplaces: default to 32bit color
+d darkplaces: disable mod_q3bsp_optimizedtraceline by default until it works
 d darkplaces: figure out what is broken about the shadow volumes or stencil comparisons
 d darkplaces: figure out what is wrong with loading _glow/_luma textures on md3 models (not bsp textures) (kd23 Nexuiz)
 d darkplaces: figure out why disconnections are showing up as " disconnected"

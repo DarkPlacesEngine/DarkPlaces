@@ -524,7 +524,6 @@ void R_TestAndDrawShadowVolume(entity_render_t *ent, vec3_t lightorigin, float c
 
 void R_Shadow_DrawWorldLightShadowVolume(matrix4x4_t *matrix, worldlight_t *light);
 
-extern void R_Model_Brush_DrawLightForSurfaceList(entity_render_t *ent, vec3_t relativelightorigin, vec3_t relativeeyeorigin, float lightradius, float *lightcolor, msurface_t **surflist, int numsurfaces, const matrix4x4_t *matrix_modeltofilter, const matrix4x4_t *matrix_modeltoattenuationxyz, const matrix4x4_t *matrix_modeltoattenuationz);
 void R_ShadowVolumeLighting(int visiblevolumes)
 {
 	int i;
@@ -585,8 +584,8 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 				if (!visiblevolumes)
 					R_Shadow_Stage_ShadowVolumes();
 				ent = &cl_entities[0].render;
-				if (wl->shadowvolume && r_shadow_staticworldlights.integer)
-					R_Shadow_DrawWorldLightShadowVolume(&ent->matrix, wl);
+				if (r_shadow_staticworldlights.integer)
+					R_Shadow_DrawStaticWorldLight_Shadow(wl, &ent->matrix);
 				else
 					R_TestAndDrawShadowVolume(ent, wl->origin, cullradius, lightradius, wl->mins, wl->maxs, clipmins, clipmaxs, true);
 				if (r_drawentities.integer)
@@ -622,8 +621,8 @@ void R_ShadowVolumeLighting(int visiblevolumes)
 					Matrix4x4_Concat(&matrix_modeltofilter, &matrix_worldtofilter, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationxyz, &matrix_worldtoattenuationxyz, &ent->matrix);
 					Matrix4x4_Concat(&matrix_modeltoattenuationz, &matrix_worldtoattenuationz, &ent->matrix);
-					if (wl->numsurfaces)
-						R_Model_Brush_DrawLightForSurfaceList(ent, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, wl->surfaces, wl->numsurfaces, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz);
+					if (r_shadow_staticworldlights.integer)
+						R_Shadow_DrawStaticWorldLight_Light(wl, &ent->matrix, relativelightorigin, relativeeyeorigin, lightradius, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz);
 					else
 						ent->model->DrawLight(ent, relativelightorigin, relativeeyeorigin, lightradius / ent->scale, lightcolor, &matrix_modeltofilter, &matrix_modeltoattenuationxyz, &matrix_modeltoattenuationz);
 				}

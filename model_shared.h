@@ -84,11 +84,25 @@ shadowmeshvertexhash_t;
 
 typedef struct shadowmesh_s
 {
+	// next mesh in chain
 	struct shadowmesh_s *next;
+	// used for light mesh (NULL on shadow mesh)
+	rtexture_t *map_diffuse;
+	rtexture_t *map_specular;
+	rtexture_t *map_normal;
+	// buffer sizes
 	int numverts, maxverts;
 	int numtriangles, maxtriangles;
+	// used always
 	float *vertex3f;
+	// used for light mesh (NULL on shadow mesh)
+	float *svector3f;
+	float *tvector3f;
+	float *normal3f;
+	float *texcoord2f;
+	// used always
 	int *element3i;
+	// used for shadow mesh (NULL on light mesh)
 	int *neighbor3i;
 	// these are NULL after Mod_ShadowMesh_Finish is performed, only used
 	// while building meshes
@@ -377,6 +391,9 @@ typedef struct q3mface_s
 	float *data_color4f;
 	int *data_element3i;
 	int *data_neighbor3i;
+
+	// temporary use by light processing
+	int lighttemp_castshadow;
 }
 q3mface_t;
 
@@ -573,14 +590,13 @@ void Mod_BuildTriangleNeighbors(int *neighbors, const int *elements, int numtria
 void Mod_ValidateElements(const int *elements, int numtriangles, int numverts, const char *filename, int fileline);
 void Mod_BuildTextureVectorsAndNormals(int numverts, int numtriangles, const float *vertex, const float *texcoord, const int *elements, float *svectors, float *tvectors, float *normals);
 
-shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts);
-shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh);
-int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *v);
-void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, float *vert0, float *vert1, float *vert2);
-void Mod_ShadowMesh_AddPolygon(mempool_t *mempool, shadowmesh_t *mesh, int numverts, float *verts);
-void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, float *verts, int numtris, int *elements);
-shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int initialnumtriangles);
-shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh);
+shadowmesh_t *Mod_ShadowMesh_Alloc(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
+shadowmesh_t *Mod_ShadowMesh_ReAlloc(mempool_t *mempool, shadowmesh_t *oldmesh, int light, int neighbors);
+int Mod_ShadowMesh_AddVertex(shadowmesh_t *mesh, float *vertex14f);
+void Mod_ShadowMesh_AddTriangle(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, float *vertex14f);
+void Mod_ShadowMesh_AddMesh(mempool_t *mempool, shadowmesh_t *mesh, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, float *vertex3f, float *svector3f, float *tvector3f, float *normal3f, float *texcoord2f, int numtris, int *element3i);
+shadowmesh_t *Mod_ShadowMesh_Begin(mempool_t *mempool, int maxverts, int maxtriangles, rtexture_t *map_diffuse, rtexture_t *map_specular, rtexture_t *map_normal, int light, int neighbors, int expandable);
+shadowmesh_t *Mod_ShadowMesh_Finish(mempool_t *mempool, shadowmesh_t *firstmesh, int light, int neighbors);
 void Mod_ShadowMesh_CalcBBox(shadowmesh_t *firstmesh, vec3_t mins, vec3_t maxs, vec3_t center, float *radius);
 void Mod_ShadowMesh_Free(shadowmesh_t *mesh);
 

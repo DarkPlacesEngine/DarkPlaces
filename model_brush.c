@@ -36,7 +36,7 @@ cvar_t r_lightmaprgba = {0, "r_lightmaprgba", "1"};
 cvar_t r_nosurftextures = {0, "r_nosurftextures", "0"};
 cvar_t mod_q3bsp_curves_subdivide_level = {0, "mod_q3bsp_curves_subdivide_level", "2"};
 cvar_t mod_q3bsp_curves_collisions = {0, "mod_q3bsp_curves_collisions", "1"};
-cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "1"};
+cvar_t mod_q3bsp_optimizedtraceline = {0, "mod_q3bsp_optimizedtraceline", "0"};
 
 void Mod_BrushInit(void)
 {

@@ -223,7 +223,7 @@ typedef struct msurface_s
 	// neighboring surfaces (one per poly_numverts)
 	//struct msurface_s **neighborsurfaces;
 	// currently used only for generating static shadow volumes
-	int castshadow;
+	int lighttemp_castshadow;
 }
 msurface_t;
 
