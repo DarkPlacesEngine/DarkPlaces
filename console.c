@@ -688,6 +688,70 @@ DRAWING
 ==============================================================================
 */
 
+static vec4_t _con_colors[] =
+{
+	{1.0, 1.0, 1.0, 1.0},
+	{1.0, 0.0, 0.0, 1.0},
+	{0.0, 1.0, 0.0, 1.0},
+	{0.0, 0.0, 1.0, 1.0},
+	{1.0, 1.0, 0.0, 1.0},
+	{0.0, 1.0, 1.0, 1.0},
+	{1.0, 0.0, 1.0, 1.0},
+	{0.1, 0.1, 0.1, 1.0}
+};
+
+#define _con_colors_count	(sizeof(_con_colors) / sizeof(vec3_t))
+#define _con_color_tag		'@'
+
+// color is read and changed in the end
+static void _Con_DrawString( float x, float y, const char *text, int maxlen, float scalex, float scaley, int flags )
+{
+	vec_t *color;
+	const char *first, *last;
+	int len;
+
+	color = _con_colors[0];
+	if( maxlen < 1)
+		len = strlen( text );
+	else
+		len = min( maxlen, (signed) strlen( text ));
+
+    first = last = text;
+	while( 1 ) {
+		// iterate until we get the next color tag or reach the end of the text part to draw
+		for( ; len && *last != _con_color_tag ; len--, last++ )
+			;
+		// draw the string
+		DrawQ_String( x, y, first, last - first, scalex, scaley, color[0], color[1], color[2], color[3], flags );
+		// update x to be at the new start position
+		x += (last - first) * scalex;
+		// if we have reached the end, we have finished
+		if( !len )
+			break;
+		first = last;
+		// jump over the tag
+		last++;
+		len--;
+		if( len && '0' <= *last && *last <= '9' ) {
+			int index = 0;
+
+			while( '0' <= *last && *last <= '9' && len ) {
+				index = index * 10 + *last - '0';
+				if( index < _con_colors_count ) {
+					last++;
+					len--;
+				} else {
+					index /= 10;
+					break;
+				}
+			}
+
+			color = _con_colors[index];
+			// we dont want to display the color tag and the color index
+			first = last;
+		} 
+	}
+}
 
 /*
 ================
@@ -731,7 +795,7 @@ void Con_DrawInput (void)
 		text += 1 + key_linepos - con_linewidth;
 
 	// draw it
-	DrawQ_String(0, con_vislines - 16, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+	_Con_DrawString(0, con_vislines - 16, text, con_linewidth, 8, 8, 0);
 
 	// remove cursor
 //	key_lines[edit_line][key_linepos] = 0;
@@ -782,7 +846,7 @@ void Con_DrawNotify (void)
 		} else
 			x = 0;
 
-		DrawQ_String(x, v, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+		_Con_DrawString(x, v, text, con_linewidth, 8, 8, 0);
 
 		v += 8;
 	}
@@ -840,13 +904,13 @@ void Con_DrawConsole (int lines)
 
 	rows = (lines-16)>>3;		// rows of text to draw
 	y = lines - 16 - (rows<<3);	// may start slightly negative
-
+    
 	for (i = con_current - rows + 1;i <= con_current;i++, y += 8)
 	{
 		j = max(i - con_backscroll, 0);
 		text = con_text + (j % con_totallines)*con_linewidth;
 
-		DrawQ_String(0, y, text, con_linewidth, 8, 8, 1, 1, 1, 1, 0);
+		_Con_DrawString(0, y, text, con_linewidth, 8, 8, 0);
 	}
 
 // draw the input prompt, user text, and cursor if desired
