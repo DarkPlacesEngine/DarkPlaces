@@ -601,9 +601,11 @@ typedef struct model_s
 	int				nummodelsurfaces;
 	// list of surface numbers in this (sub)model
 	int				*surfacelist;
-	// entire static model in one set of arrays
-	// (portions referenced by each surface)
-	surfmesh_t		*entiremesh;
+	// surface meshes are merged to a smaller set of meshes to allow reduced
+	// vertex array switching, the meshes are limited to 65536 vertices each
+	// to play nice with Geforce1 hardware
+	int				nummeshes;
+	surfmesh_t		**meshlist;
 	// draw the model's sky polygons (only used by brush models)
 	void(*DrawSky)(struct entity_render_s *ent);
 	// draw the model using lightmap/dlight shading
