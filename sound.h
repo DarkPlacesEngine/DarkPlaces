@@ -22,6 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef SOUND_H
 #define SOUND_H
 
+#include "matrixlib.h"
+
 //AK: TODO: find a better solution instead of using a define
 #if defined( _WIN32 ) && !defined( USE_SDL )
 #	define USE_DSOUND
@@ -118,7 +120,7 @@ void S_StopAllSounds(qboolean clear);
 void S_PauseGameSounds (void);
 void S_ResumeGameSounds (void);
 void S_SetChannelVolume (unsigned int ch_ind, float fvol);
-void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up);
+void S_Update(const matrix4x4_t *listenermatrix);
 void S_ExtraUpdate (void);
 
 sfx_t *S_GetCached(const char *name, qboolean stdpath);

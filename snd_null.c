@@ -103,7 +103,7 @@ sfx_t *S_PrecacheSound (const char *sample, qboolean complain, qboolean stdpath)
 	return NULL;
 }
 
-void S_Update(vec3_t origin, vec3_t forward, vec3_t left, vec3_t up)
+void S_Update(const matrix4x4_t *matrix)
 {
 }
 
