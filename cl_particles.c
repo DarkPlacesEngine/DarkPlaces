@@ -180,7 +180,7 @@ float CL_TraceLine (vec3_t start, vec3_t end, vec3_t impact, vec3_t normal, int 
 
 typedef enum
 {
-	pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_decalfade
+	pt_dead, pt_static, pt_rain, pt_bubble, pt_blood, pt_grow, pt_decal, pt_decalfade
 }
 ptype_t;
 
@@ -282,8 +282,8 @@ static const int tex_beam = 60;
 
 static int			cl_maxparticles;
 static int			cl_numparticles;
+static int			cl_freeparticle;
 static particle_t	*particles;
-static particle_t	**freeparticles; // list used only in compacting particles array
 
 cvar_t cl_particles = {CVAR_SAVE, "cl_particles", "1"};
 cvar_t cl_particles_quality = {CVAR_SAVE, "cl_particles_quality", "1"};
@@ -309,6 +309,7 @@ static mempool_t *cl_part_mempool;
 void CL_Particles_Clear(void)
 {
 	cl_numparticles = 0;
+	cl_freeparticle = 0;
 }
 
 /*
@@ -353,13 +354,12 @@ void CL_Particles_Init (void)
 
 #ifdef WORKINGLQUAKE
 	particles = (particle_t *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t), "particles");
-	freeparticles = (void *) Hunk_AllocName(cl_maxparticles * sizeof(particle_t *), "particles");
 #else
 	cl_part_mempool = Mem_AllocPool("CL_Part");
 	particles = (particle_t *) Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(particle_t));
-	freeparticles = (void *) Mem_Alloc(cl_part_mempool, cl_maxparticles * sizeof(particle_t *));
 #endif
 	cl_numparticles = 0;
+	cl_freeparticle = 0;
 }
 
 // list of all 26 parameters:
@@ -383,57 +383,58 @@ void CL_Particles_Init (void)
 // ppressure - pushes other particles away if they are within 64 units distance, the force is based on scalex, this feature is supported but not currently used
 particle_t *particle(ptype_t ptype, porientation_t porientation, int pcolor1, int pcolor2, int ptex, int plight, pblend_t pblendmode, float pscalex, float pscaley, float palpha, float palphafade, float ptime, float pgravity, float pbounce, float px, float py, float pz, float pvx, float pvy, float pvz, float ptime2, float pvx2, float pvy2, float pvz2, float pfriction, float ppressure)
 {
-	if (cl_numparticles < cl_maxparticles)
+	particle_t *part;
+	int ptempcolor, ptempcolor2, pcr1, pcg1, pcb1, pcr2, pcg2, pcb2;
+	ptempcolor = (pcolor1);
+	ptempcolor2 = (pcolor2);
+	pcr2 = ((ptempcolor2) >> 16) & 0xFF;
+	pcg2 = ((ptempcolor2) >> 8) & 0xFF;
+	pcb2 = (ptempcolor2) & 0xFF;
+	if (ptempcolor != ptempcolor2)
 	{
-		particle_t *part;
-		int ptempcolor, ptempcolor2, pcr1, pcg1, pcb1, pcr2, pcg2, pcb2;
-		ptempcolor = (pcolor1);
-		ptempcolor2 = (pcolor2);
-		pcr2 = ((ptempcolor2) >> 16) & 0xFF;
-		pcg2 = ((ptempcolor2) >> 8) & 0xFF;
-		pcb2 = (ptempcolor2) & 0xFF;
-		if (ptempcolor != ptempcolor2)
-		{
-			pcr1 = ((ptempcolor) >> 16) & 0xFF;
-			pcg1 = ((ptempcolor) >> 8) & 0xFF;
-			pcb1 = (ptempcolor) & 0xFF;
-			ptempcolor = rand() & 0xFF;
-			pcr2 = (((pcr2 - pcr1) * ptempcolor) >> 8) + pcr1;
-			pcg2 = (((pcg2 - pcg1) * ptempcolor) >> 8) + pcg1;
-			pcb2 = (((pcb2 - pcb1) * ptempcolor) >> 8) + pcb1;
-		}
-		part = &particles[cl_numparticles++];
-		memset(part, 0, sizeof(*part));
-		part->type = (ptype);
-		part->color[0] = pcr2;
-		part->color[1] = pcg2;
-		part->color[2] = pcb2;
-		part->color[3] = 0xFF;
-		part->orientation = porientation;
-		part->texnum = ptex;
-		part->blendmode = pblendmode;
-		part->scalex = (pscalex);
-		part->scaley = (pscaley);
-		part->alpha = (palpha);
-		part->alphafade = (palphafade);
-		part->die = cl.time + (ptime);
-		part->gravity = (pgravity);
-		part->bounce = (pbounce);
-		part->org[0] = (px);
-		part->org[1] = (py);
-		part->org[2] = (pz);
-		part->vel[0] = (pvx);
-		part->vel[1] = (pvy);
-		part->vel[2] = (pvz);
-		part->time2 = (ptime2);
-		part->vel2[0] = (pvx2);
-		part->vel2[1] = (pvy2);
-		part->vel2[2] = (pvz2);
-		part->friction = (pfriction);
-		part->pressure = (ppressure);
-		return part;
+		pcr1 = ((ptempcolor) >> 16) & 0xFF;
+		pcg1 = ((ptempcolor) >> 8) & 0xFF;
+		pcb1 = (ptempcolor) & 0xFF;
+		ptempcolor = rand() & 0xFF;
+		pcr2 = (((pcr2 - pcr1) * ptempcolor) >> 8) + pcr1;
+		pcg2 = (((pcg2 - pcg1) * ptempcolor) >> 8) + pcg1;
+		pcb2 = (((pcb2 - pcb1) * ptempcolor) >> 8) + pcb1;
 	}
-	return NULL;
+	for (;cl_freeparticle < cl_maxparticles && particles[cl_freeparticle].type;cl_freeparticle++);
+	if (cl_freeparticle >= cl_maxparticles)
+		return NULL;
+	part = &particles[cl_freeparticle++];
+	if (cl_numparticles < cl_freeparticle)
+		cl_numparticles = cl_freeparticle;
+	memset(part, 0, sizeof(*part));
+	part->type = (ptype);
+	part->color[0] = pcr2;
+	part->color[1] = pcg2;
+	part->color[2] = pcb2;
+	part->color[3] = 0xFF;
+	part->orientation = porientation;
+	part->texnum = ptex;
+	part->blendmode = pblendmode;
+	part->scalex = (pscalex);
+	part->scaley = (pscaley);
+	part->alpha = (palpha);
+	part->alphafade = (palphafade);
+	part->die = cl.time + (ptime);
+	part->gravity = (pgravity);
+	part->bounce = (pbounce);
+	part->org[0] = (px);
+	part->org[1] = (py);
+	part->org[2] = (pz);
+	part->vel[0] = (pvx);
+	part->vel[1] = (pvy);
+	part->vel[2] = (pvz);
+	part->time2 = (ptime2);
+	part->vel2[0] = (pvx2);
+	part->vel2[1] = (pvy2);
+	part->vel2[2] = (pvz2);
+	part->friction = (pfriction);
+	part->pressure = (ppressure);
+	return part;
 }
 
 void CL_SpawnDecalParticleForSurface(void *hitent, const vec3_t org, const vec3_t normal, int color1, int color2, int texnum, float size, float alpha)
@@ -689,7 +690,7 @@ void CL_ParticleExplosion (vec3_t org)
 			for (i = 0;i < 256 * cl_particles_quality.value;i++)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 1.5f, 0.05f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 1.5f, 0.05f, (1.0f / cl_particles_quality.value) * lhrandom(0, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-192, 192), lhrandom(-192, 192), lhrandom(-192, 192) + 160, 0, 0, 0, 0, 0.2, 0);
 			}
 		}
 	}
@@ -788,7 +789,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 				org2[1] = org[1] + 0.125f * lhrandom(-count, count);
 				org2[2] = org[2] + 0.125f * lhrandom(-count, count);
 				CL_TraceLine(org, org2, org3, NULL, true, NULL, SUPERCONTENTS_SOLID);
-				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 9999, -0.2, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0, 0);
+				particle(pt_grow, PARTICLE_BILLBOARD, 0x101010, 0x202020, tex_smoke[rand()&7], true, PBLEND_ADD, 3, 3, (1.0f / cl_particles_quality.value) * 255, (1.0f / cl_particles_quality.value) * 1024, 9999, -0.2, 0, org3[0], org3[1], org3[2], lhrandom(-8, 8), lhrandom(-8, 8), lhrandom(0, 16), 15, 0, 0, 0, 0.2, 0);
 			}
 		}
 
@@ -799,7 +800,7 @@ void CL_SparkShower (vec3_t org, vec3_t dir, int count)
 			while(count--)
 			{
 				k = particlepalette[0x68 + (rand() & 7)];
-				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 0.4f, 0.015f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0, 0);
+				particle(pt_static, PARTICLE_SPARK, k, k, tex_particle, false, PBLEND_ADD, 0.4f, 0.015f, (1.0f / cl_particles_quality.value) * lhrandom(64, 255), (1.0f / cl_particles_quality.value) * 512, 9999, 1, 0, org[0], org[1], org[2], lhrandom(-64, 64) + dir[0], lhrandom(-64, 64) + dir[1], lhrandom(0, 128) + dir[2], 0, 0, 0, 0, 0.2, 0);
 			}
 		}
 	}
@@ -974,7 +975,7 @@ void CL_Stardust (vec3_t mins, vec3_t maxs, int count)
 		VectorNormalizeFast(v);
 		VectorScale(v, 100, v);
 		v[2] += sv_gravity.value * 0.15f;
-		particle(pt_static, PARTICLE_BILLBOARD, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.5, 1.5, lhrandom(64, 128) / cl_particles_quality.value, 128 / cl_particles_quality.value, 9999, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0, 0, 0, 0, 0, 0);
+		particle(pt_static, PARTICLE_BILLBOARD, 0x903010, 0xFFD030, tex_particle, false, PBLEND_ADD, 1.5, 1.5, lhrandom(64, 128) / cl_particles_quality.value, 128 / cl_particles_quality.value, 9999, 1, 0, o[0], o[1], o[2], v[0], v[1], v[2], 0, 0, 0, 0, 0.2, 0);
 	}
 }
 
@@ -1276,13 +1277,15 @@ CL_MoveParticles
 void CL_MoveParticles (void)
 {
 	particle_t *p;
-	int i, activeparticles, maxparticle, j, a, pressureused = false, content;
+	int i, maxparticle, j, a, content;
 	float gravity, dvel, bloodwaterfade, frametime, f, dist, normal[3], v[3], org[3];
 #ifdef WORKINGLQUAKE
 	void *hitent;
 #else
 	entity_render_t *hitent;
 #endif
+
+	cl_freeparticle = 0;
 
 	// LordHavoc: early out condition
 	if (!cl_numparticles)
@@ -1297,11 +1300,13 @@ void CL_MoveParticles (void)
 	dvel = 1+4*frametime;
 	bloodwaterfade = max(cl_particles_blood_alpha.value, 0.01f) * frametime * 128.0f;
 
-	activeparticles = 0;
 	maxparticle = -1;
 	j = 0;
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
 	{
+		if (!p->type)
+			continue;
+		maxparticle = i;
 		content = 0;
 		VectorCopy(p->org, p->oldorg);
 		VectorMA(p->org, frametime, p->vel, p->org);
@@ -1318,37 +1323,34 @@ void CL_MoveParticles (void)
 					if (cl_stainmaps.integer)
 						R_Stain(v, 32, 32, 16, 16, p->alpha * p->scalex * (1.0f / 40.0f), 192, 48, 48, p->alpha * p->scalex * (1.0f / 40.0f));
 #endif
-					if (cl_decals.integer)
+					if (!cl_decals.integer)
 					{
-						p->type = pt_decal;
-						p->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
-						// convert from a blood particle to a blood decal
-						p->texnum = tex_blooddecal[rand()&7];
-#ifndef WORKINGLQUAKE
-						p->owner = hitent;
-						p->ownermodel = hitent->model;
-						Matrix4x4_Transform(&hitent->inversematrix, v, p->relativeorigin);
-						Matrix4x4_Transform3x3(&hitent->inversematrix, normal, p->relativedirection);
-						VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
-#endif
-						p->time2 = cl.time + cl_decals_time.value;
-						p->die = p->time2 + cl_decals_fadetime.value;
-						p->alphafade = 0;
-						VectorCopy(normal, p->vel2);
-						VectorClear(p->vel);
-						VectorAdd(p->org, normal, p->org);
-						p->bounce = 0;
-						p->friction = 0;
-						p->gravity = 0;
-						p->scalex *= 1.25f;
-						p->scaley *= 1.25f;
-					}
-					else
-					{
-						p->die = -1;
-						freeparticles[j++] = p;
+						p->type = pt_dead;
 						continue;
 					}
+
+					p->type = pt_decal;
+					p->orientation = PARTICLE_ORIENTED_DOUBLESIDED;
+					// convert from a blood particle to a blood decal
+					p->texnum = tex_blooddecal[rand()&7];
+#ifndef WORKINGLQUAKE
+					p->owner = hitent;
+					p->ownermodel = hitent->model;
+					Matrix4x4_Transform(&hitent->inversematrix, v, p->relativeorigin);
+					Matrix4x4_Transform3x3(&hitent->inversematrix, normal, p->relativedirection);
+					VectorAdd(p->relativeorigin, p->relativedirection, p->relativeorigin);
+#endif
+					p->time2 = cl.time + cl_decals_time.value;
+					p->die = p->time2 + cl_decals_fadetime.value;
+					p->alphafade = 0;
+					VectorCopy(normal, p->vel2);
+					VectorClear(p->vel);
+					VectorAdd(p->org, normal, p->org);
+					p->bounce = 0;
+					p->friction = 0;
+					p->gravity = 0;
+					p->scalex *= 1.25f;
+					p->scaley *= 1.25f;
 				}
 				else
 				{
@@ -1359,8 +1361,17 @@ void CL_MoveParticles (void)
 				}
 			}
 		}
+
 		p->vel[2] -= p->gravity * gravity;
+
 		p->alpha -= p->alphafade * frametime;
+
+		if (p->alpha <= 0 || cl.time > p->die)
+		{
+			p->type = pt_dead;
+			continue;
+		}
+
 		if (p->friction)
 		{
 			f = p->friction * frametime;
@@ -1389,7 +1400,7 @@ void CL_MoveParticles (void)
 						//p->alpha -= bloodwaterfade;
 					}
 					else
-						p->die = -1;
+						p->type = pt_dead;
 				}
 				else
 					p->vel[2] -= gravity;
@@ -1399,7 +1410,7 @@ void CL_MoveParticles (void)
 					content = CL_PointQ1Contents(p->org);
 				if (content != CONTENTS_WATER && content != CONTENTS_SLIME)
 				{
-					p->die = -1;
+					p->type = pt_dead;
 					break;
 				}
 				break;
@@ -1416,7 +1427,7 @@ void CL_MoveParticles (void)
 					content = CL_PointQ1Contents(p->org);
 				a = content;
 				if (a != CONTENTS_EMPTY && a != CONTENTS_SKY)
-					p->die = -1;
+					p->type = pt_dead;
 				break;
 			case pt_grow:
 				p->scalex += frametime * p->time2;
@@ -1428,15 +1439,15 @@ void CL_MoveParticles (void)
 				{
 					Matrix4x4_Transform(&p->owner->matrix, p->relativeorigin, p->org);
 					Matrix4x4_Transform3x3(&p->owner->matrix, p->relativedirection, p->vel2);
+					if (cl.time > p->time2)
+					{
+						p->alphafade = p->alpha / (p->die - cl.time);
+						p->type = pt_decalfade;
+					}
 				}
 				else
-					p->die = -1;
+					p->type = pt_dead;
 #endif
-				if (cl.time > p->time2)
-				{
-					p->alphafade = p->alpha / (p->die - cl.time);
-					p->type = pt_decalfade;
-				}
 				break;
 			case pt_decalfade:
 #ifndef WORKINGLQUAKE
@@ -1446,65 +1457,17 @@ void CL_MoveParticles (void)
 					Matrix4x4_Transform3x3(&p->owner->matrix, p->relativedirection, p->vel2);
 				}
 				else
-					p->die = -1;
+					p->type = pt_dead;
 #endif
 				break;
 			default:
 				Con_Printf("unknown particle type %i\n", p->type);
-				p->die = -1;
+				p->type = pt_dead;
 				break;
 			}
 		}
-
-		// remove dead particles
-		if (p->alpha < 1 || p->die < cl.time)
-			freeparticles[j++] = p;
-		else
-		{
-			maxparticle = i;
-			activeparticles++;
-			if (p->pressure)
-				pressureused = true;
-		}
 	}
-	// fill in gaps to compact the array
-	i = 0;
-	while (maxparticle >= activeparticles)
-	{
-		*freeparticles[i++] = particles[maxparticle--];
-		while (maxparticle >= activeparticles && particles[maxparticle].die < cl.time)
-			maxparticle--;
-	}
-	cl_numparticles = activeparticles;
-
-	if (pressureused)
-	{
-		activeparticles = 0;
-		for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-			if (p->pressure)
-				freeparticles[activeparticles++] = p;
-
-		if (activeparticles)
-		{
-			for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-			{
-				for (j = 0;j < activeparticles;j++)
-				{
-					if (freeparticles[j] != p)
-					{
-						float dist, diff[3];
-						VectorSubtract(p->org, freeparticles[j]->org, diff);
-						dist = DotProduct(diff, diff);
-						if (dist < 4096 && dist >= 1)
-						{
-							dist = freeparticles[j]->scalex * 4.0f * frametime / sqrt(dist);
-							VectorMA(p->vel, dist, diff, p->vel);
-						}
-					}
-				}
-			}
-		}
-	}
+	cl_numparticles = maxparticle + 1;
 }
 
 #define MAX_PARTICLETEXTURES 64
@@ -1808,6 +1771,7 @@ static void r_part_shutdown(void)
 static void r_part_newmap(void)
 {
 	cl_numparticles = 0;
+	cl_freeparticle = 0;
 }
 
 void R_Particles_Init (void)
@@ -2000,17 +1964,22 @@ void R_DrawParticles (void)
 	glDepthMask(0);
 	// LordHavoc: only render if not too close
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-		if (DotProduct(p->org, r_viewforward) >= minparticledist)
+		if (p->type && DotProduct(p->org, r_viewforward) >= minparticledist)
 			R_DrawParticle(p);
 	glDepthMask(1);
 	glDisable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 #else
 	// LordHavoc: only render if not too close
-	c_particles += cl_numparticles;
 	for (i = 0, p = particles;i < cl_numparticles;i++, p++)
-		if (DotProduct(p->org, r_viewforward) >= minparticledist || p->orientation == PARTICLE_BEAM)
-			R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
+	{
+		if (p->type)
+		{
+			c_particles++;
+			if (DotProduct(p->org, r_viewforward) >= minparticledist || p->orientation == PARTICLE_BEAM)
+				R_MeshQueue_AddTransparent(p->org, R_DrawParticleCallback, p, 0);
+		}
+	}
 #endif
 }
 
